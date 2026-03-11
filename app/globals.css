@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fbf6ea;
+  --foreground: #1f2a1f;
+  --panel: rgba(255, 251, 242, 0.86);
+  --line: rgba(47, 58, 39, 0.12);
+  --brand: #d56a3a;
+  --brand-deep: #9f4a23;
+  --olive: #6e7c4a;
+  --muted: #6f725f;
+  --shadow: 0 24px 60px rgba(109, 77, 42, 0.12);
+  --font-body:
+    "Avenir Next", "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+  --font-display:
+    "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(255, 220, 188, 0.9), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(193, 210, 158, 0.52), transparent 30%),
+    linear-gradient(180deg, #fbf7ef 0%, #f6efe1 100%);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 20px 16px 104px;
+}
+
+.glass-panel {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.display {
+  font-family: var(--font-display);
+}
+
+.bottom-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 88px);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    padding: 28px 24px 108px;
+  }
+}
