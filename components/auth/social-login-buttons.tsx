@@ -3,28 +3,16 @@
 import { useState, useTransition } from "react";
 
 import {
+  AUTH_PROVIDER_META,
+  getEnabledAuthProviders,
+  type AuthProviderId,
+} from "@/lib/auth/providers";
+import {
   type PendingRecipeAction,
   savePendingAction,
 } from "@/lib/auth/pending-action";
+import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
-
-const PROVIDERS = [
-  {
-    id: "kakao",
-    label: "카카오로 시작하기",
-    className: "bg-[#FEE500] text-[#181600]",
-  },
-  {
-    id: "naver",
-    label: "네이버로 시작하기",
-    className: "bg-[#03C75A] text-white",
-  },
-  {
-    id: "google",
-    label: "Google로 시작하기",
-    className: "border border-black/10 bg-white text-[#2c2c2c]",
-  },
-] as const;
 
 interface SocialLoginButtonsProps {
   nextPath: string;
@@ -40,12 +28,19 @@ export function SocialLoginButtons({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const providers = getEnabledAuthProviders();
 
-  const handleSignIn = (provider: (typeof PROVIDERS)[number]["id"]) => {
+  const handleSignIn = (provider: AuthProviderId) => {
     startTransition(async () => {
       try {
         setErrorMessage(null);
         setPendingProvider(provider);
+
+        if (!hasSupabasePublicEnv()) {
+          throw new Error(
+            "Supabase 공개 환경변수를 읽지 못했습니다. .env.local 작성 후 개발 서버를 다시 시작하세요.",
+          );
+        }
 
         if (pendingAction) {
           savePendingAction(pendingAction);
@@ -81,17 +76,25 @@ export function SocialLoginButtons({
 
   return (
     <div className="space-y-3">
-      {PROVIDERS.map((provider) => (
+      {providers.map((providerId) => {
+        const provider = AUTH_PROVIDER_META[providerId];
+
+        return (
         <button
-          key={provider.id}
+          key={providerId}
           className={`flex w-full items-center justify-center rounded-[18px] px-4 py-4 text-sm font-semibold transition hover:translate-y-[-1px] ${provider.className}`}
           disabled={isPending}
-          onClick={() => handleSignIn(provider.id)}
+          onClick={() => handleSignIn(providerId)}
           type="button"
         >
-          {pendingProvider === provider.id ? "이동 중..." : provider.label}
+          {pendingProvider === providerId ? "이동 중..." : provider.label}
         </button>
-      ))}
+        );
+      })}
+      <p className="text-xs text-[var(--muted)]">
+        현재 테스트 가능한 로그인:{" "}
+        {providers.map((provider) => AUTH_PROVIDER_META[provider].label).join(", ")}
+      </p>
       {errorMessage ? (
         <p className="text-sm text-red-600">{errorMessage}</p>
       ) : null}

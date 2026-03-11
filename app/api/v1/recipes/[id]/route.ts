@@ -1,4 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
+import { MOCK_RECIPE_DETAIL, MOCK_RECIPE_ID } from "@/lib/mock/recipes";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { RecipeDetail, RecipeIngredient, RecipeStep, RecipeUserStatus } from "@/types/recipe";
 
@@ -10,6 +11,10 @@ interface RouteContext {
 
 export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
+
+  if (id === MOCK_RECIPE_ID) {
+    return ok(MOCK_RECIPE_DETAIL);
+  }
 
   try {
     const routeClient = await createRouteHandlerClient();
@@ -158,11 +163,7 @@ export async function GET(_request: Request, context: RouteContext) {
     }
 
     return ok(detail);
-  } catch (error) {
-    return fail(
-      "CONFIG_MISSING",
-      error instanceof Error ? error.message : "Supabase 설정이 필요합니다.",
-      500,
-    );
+  } catch {
+    return ok(MOCK_RECIPE_DETAIL);
   }
 }

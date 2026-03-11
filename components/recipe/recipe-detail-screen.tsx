@@ -13,6 +13,7 @@ import {
 import { fetchJson } from "@/lib/api/fetch-json";
 import { formatCount, formatScaledIngredient } from "@/lib/recipe";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useAuthGateStore } from "@/stores/ui-store";
 import type { RecipeDetail } from "@/types/recipe";
 
@@ -54,6 +55,11 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
   }, [recipe]);
 
   useEffect(() => {
+    if (!hasSupabasePublicEnv()) {
+      setIsAuthenticated(false);
+      return;
+    }
+
     const supabase = getSupabaseBrowserClient();
 
     void supabase.auth

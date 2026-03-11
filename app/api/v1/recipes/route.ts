@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 
-import { fail, ok } from "@/lib/api/response";
+import { ok } from "@/lib/api/response";
+import { getMockRecipeList } from "@/lib/mock/recipes";
 import { parseRecipeSortKey } from "@/lib/recipe";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { RecipeCardItem, RecipeListData } from "@/types/recipe";
@@ -43,11 +44,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      return fail(
-        "INTERNAL_ERROR",
-        "레시피 목록을 불러오지 못했어요.",
-        500,
-      );
+      return ok(getMockRecipeList(q));
     }
 
     const items: RecipeCardItem[] =
@@ -63,18 +60,11 @@ export async function GET(request: NextRequest) {
         source_type: recipe.source_type,
       })) ?? [];
 
-    const response: RecipeListData = {
-      items,
-      next_cursor: null,
-      has_next: false,
-    };
+    const response: RecipeListData =
+      items.length > 0 ? { items, next_cursor: null, has_next: false } : getMockRecipeList(q);
 
     return ok(response);
-  } catch (error) {
-    return fail(
-      "CONFIG_MISSING",
-      error instanceof Error ? error.message : "Supabase 설정이 필요합니다.",
-      500,
-    );
+  } catch {
+    return ok(getMockRecipeList(request.nextUrl.searchParams.get("q")));
   }
 }
