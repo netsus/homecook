@@ -3,6 +3,11 @@
 ## Goal
 이 슬라이스가 끝났을 때 사용자가 얻게 되는 가치와 구현 목표를 2~4문장으로 적는다.
 
+## Branches
+
+- 백엔드: `feat/be-<slice-name>`
+- 프론트엔드: `feat/fe-<slice-name>`
+
 ## In Scope
 - 화면:
 - API:
@@ -15,8 +20,19 @@
 ## Dependencies
 - 선행 슬라이스 또는 전제 조건
 
+## Backend First Contract
+- request body / query / path 파라미터
+- response `{ success, data, error }`
+- 권한 / 소유자 검증 / 상태 전이 / 멱등성
+
+## Frontend Delivery Mode
+- 디자인 확정 전: 기능 가능한 임시 UI
+- 필수 상태: `loading / empty / error / read-only / unauthorized`
+- 로그인 보호 액션이면 return-to-action 포함
+
 ## Source Links
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
+- `docs/workpacks/README.md`
 - 관련 공식 문서 경로
 - 필요한 경우에만 관련 wireframe 1~2개
 
@@ -30,8 +46,10 @@
 3. 결과 화면 또는 상태 변화
 
 ## Delivery Checklist
-- [ ] UI 연결
+- [ ] 백엔드 계약 고정
 - [ ] API 또는 adapter 연결
 - [ ] 타입 반영
-- [ ] 상태 전이 테스트
-- [ ] 수동 QA 시나리오 정리
+- [ ] UI 연결
+- [ ] 상태 전이 / 권한 / 멱등성 테스트
+- [ ] `loading / empty / error / read-only` 상태 점검
+- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리
