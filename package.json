@@ -6,9 +6,12 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "eslint . --ignore-pattern '.agents/**'",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "validate:branch": "node scripts/check-branch-name.mjs",
+    "validate:commits": "node scripts/check-commit-messages.mjs",
+    "validate:pr": "node scripts/check-pr-body.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

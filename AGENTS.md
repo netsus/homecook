@@ -6,6 +6,7 @@
 2. 관련 `docs/workpacks/<slice>/README.md`
 3. 관련 공식 문서 in `docs/`
 4. 필요한 경우에만 `docs/reference/wireframes/`
+5. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
 
 ## Source of Truth
 
@@ -24,6 +25,8 @@
 - 한 슬라이스 안에서 화면, 상태 전이, API, DB 영향, 테스트를 같이 닫는다.
 - 새로운 기능 작업 전 `docs/workpacks/<slice>/README.md`를 먼저 만든다.
 - 문서 간 충돌이 보이면 구현보다 충돌 정리를 우선한다.
+- 메인 Codex는 작업 전 `문서 확인 -> 테스트 전략 -> 구현 -> 리뷰` 순서를 기본 흐름으로 따른다.
+- 품질 판단이 필요한 작업은 `docs/engineering/subagents.md`의 역할 기반 체크리스트를 사용한다.
 
 ## Domain Rules
 
@@ -61,6 +64,9 @@
 - `add_to_pantry_item_ids`의 `null / [] / 선택값`이 구분되는가
 - 다른 사용자 리소스를 수정할 수 없는가
 - 독립 요리와 플래너 요리의 상태 전이가 섞이지 않는가
+- 브랜치, 커밋, PR 본문이 Git/PR 규칙을 만족하는가
+- 테스트가 happy path만이 아니라 상태 전이, 에러, read-only를 고정하는가
+- 보안/성능/디자인 영향이 PR 템플릿에 기록되어 있는가
 
 ## Commands
 
@@ -70,3 +76,6 @@
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm build`
+- `pnpm validate:branch`
+- `pnpm validate:commits`
+- `pnpm validate:pr`

@@ -1,0 +1,68 @@
+type:feature:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "app/**"
+          - "components/**"
+          - "lib/**"
+          - "types/**"
+
+type:test:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "tests/**"
+          - "vitest.config.ts"
+
+type:docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "README.md"
+          - "AGENTS.md"
+
+type:ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "scripts/**"
+          - "package.json"
+          - "pnpm-lock.yaml"
+
+area:auth:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "app/login/**"
+          - "app/auth/**"
+          - "components/auth/**"
+          - "lib/auth/**"
+
+area:recipes:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "app/api/v1/recipes/**"
+          - "app/recipe/**"
+          - "components/recipe/**"
+          - "lib/recipe.ts"
+          - "types/recipe.ts"
+
+area:ui:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "app/**"
+          - "components/**"
+          - "app/globals.css"
+
+needs:security-review:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "app/api/**"
+          - "app/auth/**"
+          - "lib/api/**"
+          - "lib/auth/**"
+          - "lib/supabase/**"
+
+needs:performance-review:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "app/**"
+          - "components/**"
+          - "next.config.ts"
