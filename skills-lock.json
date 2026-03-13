@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "skills": {
+    "cicd-expert": {
+      "source": "martinholovsky/claude-skills-generator",
+      "sourceType": "github",
+      "computedHash": "0bdbb10c296b5f70e4fe588f4be30bd77f300b06873557af09498fffcd294360"
+    },
+    "code-review-and-quality": {
+      "source": "addyosmani/agent-skills",
+      "sourceType": "github",
+      "computedHash": "1e6fdd46125290fa228cb0d49e49e18ec568860f4b696eacf86c6ee75c3f8341"
+    },
+    "code-review-quality": {
+      "source": "proffesor-for-testing/agentic-qe",
+      "sourceType": "github",
+      "computedHash": "c13d7ef11d4ff5f571f48cded13b2925df3398c3bd00eb266cec2596b08fa6b0"
+    },
+    "eslint-prettier-config": {
+      "source": "patricio0312rev/skills",
+      "sourceType": "github",
+      "computedHash": "dd1365afc6c06f6c8555d0624669e70c6873057da70a92b045e948329dc1b906"
+    },
+    "eslint-prettier-husky-config": {
+      "source": "hopeoverture/worldbuilding-app-skills",
+      "sourceType": "github",
+      "computedHash": "0cd7211de6ae658564977bcc6e17d7ae1d0ff6fb1553780cb8a54ef5b137a78d"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "computedHash": "6412eb4eb3b91595ebab937f0c69501240e7ba761b3d82510b5cf506ec5c7adc"
+    },
+    "git-storytelling-branch-strategy": {
+      "source": "thebushidocollective/han",
+      "sourceType": "github",
+      "computedHash": "b4be61d42dea66570f1752a0e313a795952441bcb1a6ab722d4f536dd54a1696"
+    },
+    "git-workflow": {
+      "source": "oakoss/agent-skills",
+      "sourceType": "github",
+      "computedHash": "a53897b2b2493669ce89ff9fd53505e97c80e32016977ac342acde191e7a2d31"
+    },
+    "ln-732-cicd-generator": {
+      "source": "levnikolaevich/claude-code-skills",
+      "sourceType": "github",
+      "computedHash": "ee70e360156c5981a7d3c77b9205be53d0efc0f63633549bbbcdbb1e9cc5f62d"
+    },
+    "owasp-security": {
+      "source": "hoodini/ai-agents-skills",
+      "sourceType": "github",
+      "computedHash": "96ddeeb1eab361ebb8e18c1770a3baab804526fb94966f644a21ae72cc7841e2"
+    },
+    "owasp-top-10": {
+      "source": "nickcrew/claude-ctx-plugin",
+      "sourceType": "github",
+      "computedHash": "350e6daee9f2053c8994b063e8d07e4252284dfae68f4a5286f9d7707e7982f6"
+    },
+    "perf-lighthouse": {
+      "source": "tech-leads-club/agent-skills",
+      "sourceType": "github",
+      "computedHash": "2ef96cebc94fda975a7bba9e37511bff65739c91e61b950be0bd3048b8c9760d"
+    },
+    "pr-template-builder": {
+      "source": "patricio0312rev/skills",
+      "sourceType": "github",
+      "computedHash": "25f030f3f07e406c460253fcc243dc1d2531f0078bc7f96711a71713e00239bd"
+    },
+    "tdd": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "computedHash": "09b4598d374af2e1872c4b59ac316859a58b5e8cf0aef6c5f41c1b31a818eb89"
+    },
+    "tdd:test-driven-development": {
+      "source": "neolabhq/context-engineering-kit",
+      "sourceType": "github",
+      "computedHash": "ad7a583061aebd9636aca2572c0a6582ececaa2c297492d31e7059331f71a06d"
+    },
+    "vitest-testing-patterns": {
+      "source": "erichowens/some_claude_skills",
+      "sourceType": "github",
+      "computedHash": "e981217e37acb8472d85e72f792428e7db8ccfa363f1e9fa336133ae4889f355"
+    }
+  }
+}
