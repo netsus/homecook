@@ -17,9 +17,7 @@ export type AuthProviderId = keyof typeof AUTH_PROVIDER_META;
 
 const DEFAULT_PROVIDERS: AuthProviderId[] = ["google"];
 
-export function getEnabledAuthProviders() {
-  const raw = process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS;
-
+export function parseEnabledAuthProviders(raw?: string | null) {
   if (!raw) {
     return DEFAULT_PROVIDERS;
   }
@@ -30,4 +28,10 @@ export function getEnabledAuthProviders() {
     .filter((value): value is AuthProviderId => value in AUTH_PROVIDER_META);
 
   return providers.length ? providers : DEFAULT_PROVIDERS;
+}
+
+export function getEnabledAuthProviders() {
+  return parseEnabledAuthProviders(
+    process.env.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS,
+  );
 }

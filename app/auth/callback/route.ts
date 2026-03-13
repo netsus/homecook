@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 
-function resolveNextPath(raw: string | null) {
-  if (!raw || !raw.startsWith("/")) {
+export function resolveNextPath(raw: string | null) {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
     return "/";
   }
 

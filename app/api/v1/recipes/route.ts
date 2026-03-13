@@ -6,7 +6,7 @@ import { parseRecipeSortKey } from "@/lib/recipe";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { RecipeCardItem, RecipeListData } from "@/types/recipe";
 
-function clampLimit(value: string | null) {
+export function clampLimit(value: string | null) {
   if (!value) {
     return 20;
   }

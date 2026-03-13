@@ -9,6 +9,27 @@ export interface PendingRecipeAction {
 
 export const PENDING_ACTION_KEY = "homecook.pending-recipe-action";
 
+export function parsePendingAction(raw: string) {
+  try {
+    const value = JSON.parse(raw) as Partial<PendingRecipeAction>;
+
+    if (
+      (value.type === "like" ||
+        value.type === "save" ||
+        value.type === "planner") &&
+      typeof value.recipeId === "string" &&
+      typeof value.redirectTo === "string" &&
+      Number.isFinite(value.createdAt)
+    ) {
+      return value as PendingRecipeAction;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 export function savePendingAction(action: PendingRecipeAction) {
   if (typeof window === "undefined") {
     return;
@@ -28,12 +49,13 @@ export function readPendingAction() {
     return null;
   }
 
-  try {
-    return JSON.parse(raw) as PendingRecipeAction;
-  } catch {
+  const action = parsePendingAction(raw);
+
+  if (!action) {
     window.localStorage.removeItem(PENDING_ACTION_KEY);
-    return null;
   }
+
+  return action;
 }
 
 export function clearPendingAction() {
