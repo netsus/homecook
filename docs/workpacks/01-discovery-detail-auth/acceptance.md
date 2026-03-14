@@ -23,3 +23,20 @@
 1. HOME에서 검색과 정렬을 바꿔본다.
 2. 상세에서 보호 액션을 눌러 로그인 게이트를 확인한다.
 3. 소셜 로그인 후 같은 레시피로 복귀하는지 확인한다.
+
+## Automation Split
+
+### Vitest
+- [x] pending action 저장 키와 parser가 안정적으로 동작한다
+- [x] auth provider env parsing이 기본값과 fallback을 지킨다
+- [x] callback next sanitization과 route helper가 고정되어 있다
+
+### Playwright
+- [x] HOME 목록, 검색, 정렬이 브라우저에서 동작한다
+- [x] 카드 클릭 후 상세 페이지로 이동한다
+- [x] 비로그인 보호 액션 시 로그인 게이트가 열린다
+- [x] 로그인 게이트가 닫기 버튼, ESC, 배경 클릭으로 닫힌다
+- [x] `authError=oauth_failed` 피드백이 보인다
+
+### Manual Only
+- [ ] 실제 Google OAuth 로그인 후 원래 레시피 상세로 복귀한다

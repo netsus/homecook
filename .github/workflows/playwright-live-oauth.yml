@@ -1,0 +1,46 @@
+name: Playwright Live OAuth
+
+on:
+  workflow_dispatch:
+
+jobs:
+  live-oauth:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS: ${{ secrets.NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS }}
+      E2E_GOOGLE_EMAIL: ${{ secrets.E2E_GOOGLE_EMAIL }}
+      E2E_GOOGLE_PASSWORD: ${{ secrets.E2E_GOOGLE_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run live OAuth Playwright suite
+        run: pnpm test:e2e:oauth
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-live-oauth-report
+          path: |
+            playwright-report
+            test-results

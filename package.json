@@ -9,6 +9,10 @@
     "lint": "eslint . --ignore-pattern '.agents/**'",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "playwright test tests/e2e/slice-01-basic.spec.ts",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:oauth": "playwright test tests/e2e/slice-01-live-oauth.spec.ts",
+    "test:all": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e",
     "validate:branch": "node scripts/check-branch-name.mjs",
     "validate:commits": "node scripts/check-commit-messages.mjs",
     "validate:pr": "node scripts/check-pr-body.mjs"

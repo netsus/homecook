@@ -51,5 +51,6 @@
 - [ ] 타입 반영
 - [ ] UI 연결
 - [ ] 상태 전이 / 권한 / 멱등성 테스트
+- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분
 - [ ] `loading / empty / error / read-only` 상태 점검
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리
