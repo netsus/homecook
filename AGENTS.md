@@ -37,8 +37,13 @@
 - 기능 작업은 기본 브랜치에서 직접 하지 않고 작업 전용 브랜치에서 진행한다.
 - 브랜치 하나에는 가능한 한 하나의 작은 기능 단위 또는 명확한 하위 작업만 담는다.
 - 백엔드/프론트엔드 작업은 필요하면 분리하되, 네이밍 규칙 자체는 `docs/engineering/git-workflow.md`를 따른다.
-- 구현 후에는 최소 `lint`, `typecheck`, `test`, 핵심 사용자 흐름 1회 수동 스모크를 통과시킨 뒤 푸시한다.
+- 구현 후에는 `pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test`를 모두 통과시킨 뒤 푸시한다.
 - 푸시 후 실제 동작까지 확인된 변경만 머지한다.
+
+## Dependency Management
+
+- 의존성 추가/제거 시 반드시 `package.json`과 `pnpm-lock.yaml` 양쪽을 일치시킨다.
+- lockfile만 수정하고 `package.json`에 반영하지 않으면 CI에서 `--frozen-lockfile` 실패한다.
 
 ## Tech Stack
 
