@@ -28,6 +28,17 @@ describe("git policy", () => {
     expect(isValidCommitMessage("feat add login flow")).toBe(false);
   });
 
+  it("accepts merge commit messages", () => {
+    expect(
+      isValidCommitMessage(
+        "Merge cd887bb into dff7451bb4de10fc18845c48b138f992257ba3e8",
+      ),
+    ).toBe(true);
+    expect(
+      isValidCommitMessage("Merge branch 'master' into feature/login"),
+    ).toBe(true);
+  });
+
   it("reports missing PR template sections", () => {
     const missing = findMissingPrSections("## Summary\n\n## Test Plan");
 

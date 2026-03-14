@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useState, useTransition } from "react";
 
 import {
@@ -80,20 +81,22 @@ export function SocialLoginButtons({
         const provider = AUTH_PROVIDER_META[providerId];
 
         return (
-        <button
-          key={providerId}
-          className={`flex w-full items-center justify-center rounded-[18px] px-4 py-4 text-sm font-semibold transition hover:translate-y-[-1px] ${provider.className}`}
-          disabled={isPending}
-          onClick={() => handleSignIn(providerId)}
-          type="button"
-        >
-          {pendingProvider === providerId ? "이동 중..." : provider.label}
-        </button>
+          <button
+            key={providerId}
+            className={`flex w-full items-center justify-center rounded-[18px] px-4 py-4 text-sm font-semibold transition hover:translate-y-[-1px] ${provider.className}`}
+            disabled={isPending}
+            onClick={() => handleSignIn(providerId)}
+            type="button"
+          >
+            {pendingProvider === providerId ? "이동 중..." : provider.label}
+          </button>
         );
       })}
       <p className="text-xs text-[var(--muted)]">
         현재 테스트 가능한 로그인:{" "}
-        {providers.map((provider) => AUTH_PROVIDER_META[provider].label).join(", ")}
+        {providers
+          .map((provider) => AUTH_PROVIDER_META[provider].label)
+          .join(", ")}
       </p>
       {errorMessage ? (
         <p className="text-sm text-red-600">{errorMessage}</p>

@@ -36,6 +36,32 @@
 - happy path만으로 끝내지 말고 에러, 상태 전이, 인증 경계도 본다.
 - 상세 기준은 `docs/engineering/tdd-vitest.md`를 따른다.
 
+## Dependency Management
+
+- 의존성 추가/제거 시 반드시 `package.json`과 `pnpm-lock.yaml` 양쪽을 일치시킨다.
+- `pnpm install --frozen-lockfile`이 실패하면 push하지 않는다.
+- lockfile만 수정하고 `package.json`에 반영하지 않으면 CI가 실패한다.
+
+## Agent Roles
+
+이 프로젝트는 두 에이전트가 협업한다.
+
+### Codex (구현 담당)
+- TDD 기반 백엔드/프론트엔드 기능 구현
+- API 계약 고정, 타입 정의
+- 커밋/PR 생성
+- 테스트 작성 (실패 테스트 먼저 → 구현 → 통과)
+
+### Claude (리뷰 + 디자인 담당)
+- 코드 리뷰, 아키텍처 제안
+- CI 실패 디버깅, 품질 게이트 통과 지원
+- 디자인/UX 개선 (Tailwind 클래스, 공용 컴포넌트, 레이아웃 조정)
+- 디자인 변경 범위는 스타일링과 레이아웃에 한정하고, 컴포넌트 구조 변경이 필요하면 Codex와 협의한다.
+
+### 공통 영역 (테스트 보강, 리팩토링)
+- 테스트 보강: Codex가 초안, Claude가 리뷰 시 누락 케이스 추가
+- 리팩토링: Claude가 제안, Codex가 실행
+
 ## Commands
 
 - `pnpm install`
@@ -51,5 +77,8 @@
 ## Before Opening A PR
 
 - 관련 workpack 문서와 공식 문서를 다시 확인한다.
-- `pnpm lint`, `pnpm typecheck`, `pnpm test`를 통과시킨다.
+- 아래 명령을 모두 통과시킨다 (하나라도 실패하면 push하지 않는다):
+  ```
+  pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test
+  ```
 - PR 본문에 workpack, 테스트, 문서 영향, 보안/성능/디자인 영향을 적는다.

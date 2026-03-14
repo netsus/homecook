@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
@@ -24,6 +26,7 @@ interface RecipeDetailScreenProps {
 }
 
 export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
+  const searchParams = useSearchParams();
   const [detailState, setDetailState] = useState<DetailState>("loading");
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [selectedServings, setSelectedServings] = useState(1);
@@ -103,6 +106,12 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
     );
     clearPendingAction();
   }, [isAuthenticated, recipeId]);
+
+  useEffect(() => {
+    if (searchParams.get("authError") === "oauth_failed") {
+      setFeedback("로그인을 완료하지 못했어요. 다시 시도해주세요.");
+    }
+  }, [searchParams]);
 
   const scaledIngredients = useMemo(() => {
     if (!recipe) {

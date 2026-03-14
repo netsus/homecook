@@ -21,8 +21,12 @@ export function isAllowedBranchName(branchName) {
   return ALLOWED_BRANCH_PATTERNS.some((pattern) => pattern.test(branchName));
 }
 
+const MERGE_COMMIT_PATTERN = /^Merge\s/;
+
 export function isValidCommitMessage(message) {
-  return COMMIT_MESSAGE_PATTERN.test(message.trim());
+  const trimmed = message.trim();
+  if (MERGE_COMMIT_PATTERN.test(trimmed)) return true;
+  return COMMIT_MESSAGE_PATTERN.test(trimmed);
 }
 
 export function findMissingPrSections(body) {
