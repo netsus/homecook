@@ -6,8 +6,10 @@
 2. `docs/workpacks/README.md`
 3. 관련 `docs/workpacks/<slice>/README.md`
 4. 관련 공식 문서 in `docs/`
-5. 필요한 경우에만 `docs/reference/wireframes/`
-6. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
+5. 테스트 작성 시 → `docs/engineering/tdd-vitest.md`
+6. 브라우저 흐름 검증 시 → `docs/engineering/playwright-e2e.md`
+7. 필요한 경우에만 `docs/reference/wireframes/`
+8. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
 
 ## Source of Truth
 
