@@ -10,7 +10,8 @@
 3. 해당 작업의 `docs/workpacks/<slice>/README.md`
 4. 필요 시 `docs/engineering/git-workflow.md`
 5. 필요 시 `docs/engineering/tdd-vitest.md`
-6. 필요 시 `.github/pull_request_template.md`
+6. 필요 시 `docs/engineering/playwright-e2e.md`
+7. 필요 시 `.github/pull_request_template.md`
 
 ## Core Rules
 
