@@ -26,7 +26,8 @@
 - 기능 구현은 가능한 한 더 작은 작업 단위로 쪼개서 순차적으로 진행한다.
 - 한 슬라이스 안에서 화면, 상태 전이, API, DB 영향, 테스트를 같이 닫는다.
 - 현재 저장소에 이미 들어온 탐색/상세/로그인 게이트는 `01-discovery-detail-auth` 부트스트랩 슬라이스로 간주한다.
-- 새로운 기능 작업 전 `docs/workpacks/<slice>/README.md`를 먼저 만든다.
+- 새로운 기능 작업 전 **Codex가** `docs/workpacks/<slice>/README.md`를 먼저 만든다.
+- **Claude는** 리뷰 전 해당 슬라이스의 `docs/workpacks/<slice>/README.md`를 반드시 확인한다. 없으면 Codex에 먼저 요청한다.
 - 문서 간 충돌이 보이면 구현보다 충돌 정리를 우선한다.
 - 메인 Codex는 작업 전 `문서 확인 -> 테스트 전략 -> 구현 -> 리뷰` 순서를 기본 흐름으로 따른다.
 - 품질 판단이 필요한 작업은 `docs/engineering/subagents.md`의 역할 기반 체크리스트를 사용한다.
