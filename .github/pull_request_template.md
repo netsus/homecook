@@ -12,6 +12,7 @@
 - [ ] `pnpm lint`
 - [ ] `pnpm typecheck`
 - [ ] `pnpm test`
+- [ ] `pnpm test:e2e`
 - 추가 검증:
 
 ## Docs Impact

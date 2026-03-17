@@ -9,6 +9,7 @@
 ## Operating Rules
 
 - 슬라이스 시작 전 `docs/workpacks/<slice>/README.md`를 먼저 만든다.
+- 슬라이스 시작 전 Dependencies 테이블의 모든 선행 슬라이스가 merged 상태임을 확인한다.
 - 백엔드 브랜치는 API, 권한, 상태 전이, 테스트를 먼저 닫는다.
 - 프론트엔드 브랜치는 백엔드 계약을 기준으로 `loading / empty / error / read-only / 로그인 게이트` 흐름을 닫는다.
 - 디자인이 아직 없어도 기능 가능한 임시 UI로 먼저 개발한다.
@@ -16,8 +17,8 @@
 
 ## Branch Convention
 
-- 백엔드: `feat/be-<slice>`
-- 프론트엔드: `feat/fe-<slice>`
+- 백엔드: `feature/be-<slice>`
+- 프론트엔드: `feature/fe-<slice>`
 
 ## Slice Order
 

@@ -19,9 +19,9 @@
 
 ## Default Commands
 
-- `pnpm test:e2e`: 기본 Slice E2E 실행
+- `pnpm test:e2e`: 모든 슬라이스 기본 E2E 실행 (`@live-oauth` 태그 제외)
 - `pnpm test:e2e:ui`: Playwright UI 모드
-- `pnpm test:e2e:oauth`: 실제 Google OAuth 시나리오
+- `pnpm test:e2e:oauth`: `@live-oauth` 태그 테스트만 실행 (실제 외부 서비스 포함)
 - `pnpm test:all`: lint, typecheck, vitest, 기본 Playwright
 
 브라우저 바이너리가 없으면 아래 명령을 먼저 실행한다.
@@ -52,3 +52,10 @@ npx playwright install --with-deps chromium
 - 스타일 세부값이나 애니메이션 완료 타이밍에는 의존하지 않는다.
 - 외부 서비스는 기본 게이트에서 제외한다.
 - DOM 구조보다 역할(role), 레이블, URL, 사용자 문구를 우선 사용한다.
+
+## Live OAuth 태그 컨벤션
+
+- 실제 외부 서비스(Google OAuth 등) 시나리오는 테스트 제목에 `@live-oauth` 태그를 붙인다.
+- `@live-oauth` 태그가 있는 테스트는 `pnpm test:e2e:oauth`로만 실행된다.
+- 기본 CI(`pnpm test:e2e`)는 `@live-oauth` 태그를 자동으로 제외한다.
+- 예시: `test("@live-oauth returns to recipe after Google login", ...)`
