@@ -30,8 +30,8 @@
 - 기능 구현은 가능한 한 더 작은 작업 단위로 쪼개서 순차적으로 진행한다.
 - 한 슬라이스 안에서 화면, 상태 전이, API, DB 영향, 테스트를 같이 닫는다.
 - 현재 저장소에 이미 들어온 탐색/상세/로그인 게이트는 `01-discovery-detail-auth` 부트스트랩 슬라이스로 간주한다.
-- 새로운 기능 작업 전 **Codex가** `docs/workpacks/<slice>/README.md`를 먼저 만든다.
-- **Claude는** 리뷰 전 해당 슬라이스의 `docs/workpacks/<slice>/README.md`를 반드시 확인한다. 없으면 Codex에 먼저 요청한다.
+- 새로운 기능 작업 전 **Claude가** `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 먼저 만들고 main에 머지한다 (1단계).
+- **Codex는** 구현 전 해당 슬라이스의 `docs/workpacks/<slice>/README.md`를 반드시 확인한다. 없으면 Claude에 먼저 요청한다.
 - 문서 간 충돌이 보이면 구현보다 충돌 정리를 우선한다.
 - 메인 Codex는 작업 전 `문서 확인 -> 테스트 전략 -> 구현 -> 리뷰` 순서를 기본 흐름으로 따른다.
 - 품질 판단이 필요한 작업은 `docs/engineering/subagents.md`의 역할 기반 체크리스트를 사용한다.
@@ -44,6 +44,7 @@
 - 브랜치 하나에는 가능한 한 하나의 작은 기능 단위 또는 명확한 하위 작업만 담는다.
 - 백엔드/프론트엔드 작업은 필요하면 분리하되, 네이밍 규칙 자체는 `docs/engineering/git-workflow.md`를 따른다.
 - 브랜치 접두어는 `feat/`가 아니라 `feature/`를 사용한다. (CI 검증 기준)
+- **슬라이스 순서**: 1단계(Claude) 문서가 main에 머지된 뒤에 2단계(Codex) 백엔드 구현을 시작한다. 문서 PR이 Ready for Review 상태이더라도 머지 전에는 구현을 시작하지 않는다.
 - 구현 후에는 `pnpm install --frozen-lockfile && pnpm test:all`을 통과시킨 뒤 푸시한다.
 - PR은 Draft로 열고, CI green 확인 후 Ready for Review로 전환한다.
 - 푸시 후 실제 동작까지 확인된 변경만 머지한다.

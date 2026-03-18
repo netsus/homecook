@@ -46,7 +46,7 @@
 ### 사전 조건
 
 - 슬라이스 ID와 목표가 전달됨
-- `docs/workpacks/README.md` Slice Order에서 해당 슬라이스의 Dependencies 선행 슬라이스가 전부 `merged` 상태임을 확인
+- `docs/workpacks/README.md` Slice Order 표의 **Status 열**에서 현재 슬라이스보다 먼저 완료돼야 하는 선행 슬라이스가 전부 `merged` 상태임을 확인 (슬라이스 번호 순서가 기본 의존 순서이며, 예외는 Slice Notes 참조)
 
 ### 읽을 것 (이 순서로)
 
@@ -57,7 +57,7 @@
 5. `docs/화면정의서-v1.2.md` — 해당 화면 정의
 6. `docs/api문서-v1.2.1.md` — 해당 API 섹션
 7. `docs/db설계-v1.3.md` — 영향받는 테이블
-8. `docs/workpacks/README.md` — Dependencies 선행 슬라이스 상태
+8. `docs/workpacks/README.md` — Slice Order의 Status 열로 선행 슬라이스 `merged` 여부 확인
 
 ### 산출물
 
