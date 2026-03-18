@@ -31,16 +31,18 @@
 | `05-recipe-to-planner` | planned | 상세에서 플래너 추가, 날짜/끼니/인분 입력, Meal 생성 |
 | `06-planner-week-core` | planned | 위클리 플래너 조회, 컬럼 CRUD, 상단 CTA와 상태 뱃지 |
 | `07-meal-manage` | planned | `MEAL_SCREEN` 조회/수정/삭제와 409 예외 상태 |
-| `08-meal-add-picker` | planned | `MENU_ADD`, `RECIPE_SEARCH_PICKER`, 일반 식사 추가 |
+| `08-meal-add-picker` | planned | `MENU_ADD`, `RECIPE_SEARCH_PICKER`, 일반 식사 추가 *(착수 시점에 분할 여부 결정)* |
 | `09-shopping-preview-create` | planned | 장보기 preview, 대상 검증, 리스트 생성, 상세 이동 |
-| `10-shopping-detail-edit` | planned | 장보기 상세 조회, 체크, 제외/되살리기, 공유 텍스트 |
+| `10a-shopping-detail-interact` | planned | 장보기 상세 조회, 체크 토글, 제외/되살리기 (`exclude→uncheck` 규칙 포함) |
+| `10b-shopping-share-text` | planned | 장보기 공유 텍스트 생성 (`is_pantry_excluded=false` 항목만 포함) |
 | `11-shopping-reorder-readonly` | planned | 장보기 순서 변경, 완료 후 read-only 재열람 |
-| `12-shopping-complete-pantry` | planned | 장보기 완료, 팬트리 반영 선택값 처리, `shopping_done` 전이 |
+| `12a-shopping-complete` | planned | 장보기 완료 core, `shopping_done` 전이, `is_completed=true`, 멱등성 |
+| `12b-shopping-pantry-reflect` | planned | 팬트리 반영 선택 팝업, `null/[]/선택값` 3-way 처리, 4단계 서버 검증 |
 | `13-pantry-core` | planned | 팬트리 조회, 직접 추가, 묶음 추가, 삭제 |
 | `14-cook-session-start` | planned | `COOK_READY_LIST`, 요리 세션 시작/취소 |
-| `15-cook-complete` | planned | `COOK_MODE`, pantry 소진, `cook_done` 전이 |
+| `15-cook-complete` | planned | `COOK_MODE`, pantry 소진, `cook_done` 전이 *(14 착수 시점에 15a/15b로 분할 예정 — 플래너 경유 / 독립 요리 기준)* |
 | `16-leftovers` | planned | 남은요리 저장, 재등록, 다먹은 목록 |
-| `17-mypage-books-history` | planned | 마이페이지, 레시피북, 저장 해제, 장보기 기록 조회 |
+| `17-mypage-books-history` | planned | 마이페이지, 레시피북, 저장 해제, 장보기 기록 조회 *(착수 시점에 분할 여부 결정)* |
 | `18-manual-recipe-create` | planned | 직접 레시피 등록과 상세/플래너 연계 |
 | `19-youtube-import` | planned | 유튜브 검증, 추출, 등록, 신규 조리방법 반영 |
 
@@ -49,3 +51,5 @@
 - `02`부터는 한 슬라이스를 더 작은 기능 단위 하나로 제한한다.
 - 장보기 슬라이스에서는 `exclude -> uncheck`, read-only, `add_to_pantry_item_ids`, `pantry_added` 규칙을 항상 테스트로 고정한다.
 - 요리 슬라이스에서는 플래너 경유 요리와 독립 요리의 상태 전이를 절대 섞지 않는다.
+- `15`는 `14` 착수 시점에 `15a-cook-planner-complete`(세션 기반, `cook_done` 전이)와 `15b-cook-standalone-complete`(레시피 기반, 상태 전이 없음)로 분할한다.
+- `08`, `17`은 착수 시점에 화면 정의와 API 범위를 재확인한 뒤 분할 여부를 결정한다.
