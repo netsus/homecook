@@ -22,29 +22,29 @@
 
 ## Slice Order
 
-| Slice | Status | Goal |
-| --- | --- | --- |
-| `01-discovery-detail-auth` | bootstrap | 레시피 탐색, 상세 조회, 로그인 게이트, 소셜 로그인 복귀 |
-| `02-discovery-filter` | planned | HOME 재료 필터 모달과 필터 조회 계약 |
-| `03-recipe-like` | planned | RECIPE_DETAIL 좋아요 토글과 로그인 복귀 |
-| `04-recipe-save` | planned | 저장 모달, 저장 대상 책 선택, `saved/custom` 제한 |
-| `05-recipe-to-planner` | planned | 상세에서 플래너 추가, 날짜/끼니/인분 입력, Meal 생성 |
-| `06-planner-week-core` | planned | 위클리 플래너 조회, 컬럼 CRUD, 상단 CTA와 상태 뱃지 |
-| `07-meal-manage` | planned | `MEAL_SCREEN` 조회/수정/삭제와 409 예외 상태 |
-| `08-meal-add-picker` | planned | `MENU_ADD`, `RECIPE_SEARCH_PICKER`, 일반 식사 추가 *(착수 시점에 분할 여부 결정)* |
-| `09-shopping-preview-create` | planned | 장보기 preview, 대상 검증, 리스트 생성, 상세 이동 |
-| `10a-shopping-detail-interact` | planned | 장보기 상세 조회, 체크 토글, 제외/되살리기 (`exclude→uncheck` 규칙 포함) |
-| `10b-shopping-share-text` | planned | 장보기 공유 텍스트 생성 (`is_pantry_excluded=false` 항목만 포함) |
-| `11-shopping-reorder-readonly` | planned | 장보기 순서 변경, 완료 후 read-only 재열람 |
-| `12a-shopping-complete` | planned | 장보기 완료 core, `shopping_done` 전이, `is_completed=true`, 멱등성 |
-| `12b-shopping-pantry-reflect` | planned | 팬트리 반영 선택 팝업, `null/[]/선택값` 3-way 처리, 4단계 서버 검증 |
-| `13-pantry-core` | planned | 팬트리 조회, 직접 추가, 묶음 추가, 삭제 |
-| `14-cook-session-start` | planned | `COOK_READY_LIST`, 요리 세션 시작/취소 |
-| `15-cook-complete` | planned | `COOK_MODE`, pantry 소진, `cook_done` 전이 *(14 착수 시점에 15a/15b로 분할 예정 — 플래너 경유 / 독립 요리 기준)* |
-| `16-leftovers` | planned | 남은요리 저장, 재등록, 다먹은 목록 |
-| `17-mypage-books-history` | planned | 마이페이지, 레시피북, 저장 해제, 장보기 기록 조회 *(착수 시점에 분할 여부 결정)* |
-| `18-manual-recipe-create` | planned | 직접 레시피 등록과 상세/플래너 연계 |
-| `19-youtube-import` | planned | 유튜브 검증, 추출, 등록, 신규 조리방법 반영 |
+| Slice                          | Status    | Goal                                                                                                             |
+| ------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------- |
+| `01-discovery-detail-auth`     | bootstrap | 레시피 탐색, 상세 조회, 로그인 게이트, 소셜 로그인 복귀                                                          |
+| `02-discovery-filter`          | planned   | HOME 재료 필터 모달과 필터 조회 계약                                                                             |
+| `03-recipe-like`               | planned   | RECIPE_DETAIL 좋아요 토글과 로그인 복귀                                                                          |
+| `04-recipe-save`               | planned   | 저장 모달, 저장 대상 책 선택, `saved/custom` 제한                                                                |
+| `05-recipe-to-planner`         | planned   | 상세에서 플래너 추가, 날짜/끼니/인분 입력, Meal 생성                                                             |
+| `06-planner-week-core`         | planned   | 위클리 플래너 조회, 컬럼 CRUD, 상단 CTA와 상태 뱃지                                                              |
+| `07-meal-manage`               | planned   | `MEAL_SCREEN` 조회/수정/삭제와 409 예외 상태                                                                     |
+| `08-meal-add-picker`           | planned   | `MENU_ADD`, `RECIPE_SEARCH_PICKER`, 일반 식사 추가 _(착수 시점에 분할 여부 결정)_                                |
+| `09-shopping-preview-create`   | planned   | 장보기 preview, 대상 검증, 리스트 생성, 상세 이동                                                                |
+| `10a-shopping-detail-interact` | planned   | 장보기 상세 조회, 체크 토글, 제외/되살리기 (`exclude→uncheck` 규칙 포함)                                         |
+| `10b-shopping-share-text`      | planned   | 장보기 공유 텍스트 생성 (`is_pantry_excluded=false` 항목만 포함)                                                 |
+| `11-shopping-reorder-readonly` | planned   | 장보기 순서 변경, 완료 후 read-only 재열람                                                                       |
+| `12a-shopping-complete`        | planned   | 장보기 완료 core, `shopping_done` 전이, `is_completed=true`, 멱등성                                              |
+| `12b-shopping-pantry-reflect`  | planned   | 팬트리 반영 선택 팝업, `null/[]/선택값` 3-way 처리, 4단계 서버 검증                                              |
+| `13-pantry-core`               | planned   | 팬트리 조회, 직접 추가, 묶음 추가, 삭제                                                                          |
+| `14-cook-session-start`        | planned   | `COOK_READY_LIST`, 요리 세션 시작/취소                                                                           |
+| `15-cook-complete`             | planned   | `COOK_MODE`, pantry 소진, `cook_done` 전이 _(14 착수 시점에 15a/15b로 분할 예정 — 플래너 경유 / 독립 요리 기준)_ |
+| `16-leftovers`                 | planned   | 남은요리 저장, 재등록, 다먹은 목록                                                                               |
+| `17-mypage-books-history`      | planned   | 마이페이지, 레시피북, 저장 해제, 장보기 기록 조회 _(착수 시점에 분할 여부 결정)_                                 |
+| `18-manual-recipe-create`      | planned   | 직접 레시피 등록과 상세/플래너 연계                                                                              |
+| `19-youtube-import`            | planned   | 유튜브 검증, 추출, 등록, 신규 조리방법 반영                                                                      |
 
 ## Slice Notes
 

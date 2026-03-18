@@ -6,11 +6,12 @@
 2. `docs/workpacks/README.md`
 3. 관련 `docs/workpacks/<slice>/README.md`
 4. 관련 공식 문서 in `docs/`
-5. 테스트 작성 시 → `docs/engineering/tdd-vitest.md`
-6. 브라우저 흐름 검증 시 → `docs/engineering/playwright-e2e.md`
-7. 필요한 경우에만 `docs/reference/wireframes/`
-8. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
-9. 필요 시 `docs/engineering/security-performance-design.md`
+5. 슬라이스 개발 단계 실행 시 → `docs/engineering/slice-workflow.md`
+6. 테스트 작성 시 → `docs/engineering/tdd-vitest.md`
+7. 브라우저 흐름 검증 시 → `docs/engineering/playwright-e2e.md`
+8. 필요한 경우에만 `docs/reference/wireframes/`
+9. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
+10. 필요 시 `docs/engineering/security-performance-design.md`
 
 ## Source of Truth
 
@@ -34,6 +35,7 @@
 - 문서 간 충돌이 보이면 구현보다 충돌 정리를 우선한다.
 - 메인 Codex는 작업 전 `문서 확인 -> 테스트 전략 -> 구현 -> 리뷰` 순서를 기본 흐름으로 따른다.
 - 품질 판단이 필요한 작업은 `docs/engineering/subagents.md`의 역할 기반 체크리스트를 사용한다.
+- 슬라이스 개발 단계를 요청받으면 `docs/engineering/slice-workflow.md`를 읽고 해당 단계의 담당 AI를 확인한다. 자신이 담당하지 않는 단계는 수행하지 않고 올바른 AI를 안내한다.
 
 ## Branch And Delivery
 
