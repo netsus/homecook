@@ -6,10 +6,21 @@
 - 각 슬라이스는 공식 문서 기준의 사용자 가치 하나를 닫아야 한다.
 - 같은 슬라이스에서도 개발 브랜치는 `백엔드`와 `프론트엔드`로 분리한다.
 
+## Status 정의
+
+| Status | 의미 |
+|--------|------|
+| `bootstrap` | 초기 설정 슬라이스 (`01` 전용, 별도 SOP 없이 직접 투입) |
+| `planned` | 착수 전 |
+| `docs` | 1단계(Claude) README + acceptance.md PR 진행 중 |
+| `in-progress` | 2~4단계 구현 진행 중 |
+| `merged` | 모든 브랜치 main merge 완료 |
+
 ## Operating Rules
 
-- 슬라이스 시작 전 `docs/workpacks/<slice>/README.md`를 먼저 만든다.
-- 슬라이스 시작 전 Dependencies 테이블의 모든 선행 슬라이스가 merged 상태임을 확인한다.
+- **1단계(Claude)**: `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 작성하고 main에 merge한다. 단계별 절차는 `docs/engineering/slice-workflow.md` 참조.
+- **2단계 시작 조건**: 1단계 문서 PR이 main에 **merge된 후**에만 백엔드 구현(2단계)을 시작한다.
+- Slice Order에서 선행 슬라이스 Status가 전부 `merged`인지 확인한 뒤 착수한다.
 - 백엔드 브랜치는 API, 권한, 상태 전이, 테스트를 먼저 닫는다.
 - 프론트엔드 브랜치는 백엔드 계약을 기준으로 `loading / empty / error / read-only / 로그인 게이트` 흐름을 닫는다.
 - 디자인이 아직 없어도 기능 가능한 임시 UI로 먼저 개발한다.
