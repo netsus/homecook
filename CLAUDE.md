@@ -10,9 +10,9 @@
 3. 해당 슬라이스의 `docs/workpacks/<slice>/README.md`
 4. 슬라이스 단계 실행·리뷰 시 → `docs/engineering/slice-workflow.md`
 5. 필요 시 `docs/engineering/git-workflow.md`
-5. 필요 시 `docs/engineering/tdd-vitest.md`
-6. 필요 시 `docs/engineering/playwright-e2e.md`
-7. 필요 시 `.github/pull_request_template.md`
+6. 필요 시 `docs/engineering/tdd-vitest.md`
+7. 필요 시 `docs/engineering/playwright-e2e.md`
+8. 필요 시 `.github/pull_request_template.md`
 
 ## Claude 역할
 
