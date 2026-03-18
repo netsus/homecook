@@ -21,22 +21,22 @@ AGENTS.md → CURRENT_SOURCE_OF_TRUTH.md → workpacks/<slice>/README.md
 
 **기능 개발**
 ```
-Orchestrator → TDD Driver → Git Reviewer → PR Reviewer → Test Reviewer
+Orchestrator → TDD Driver → Git Workflow Reviewer → PR Governance Reviewer → Test Reviewer
 ```
 
 **API/인증 변경**
 ```
-Orchestrator → TDD Driver → Security Reviewer → Test Reviewer → PR Reviewer
+Orchestrator → TDD Driver → Security Reviewer → Test Reviewer → PR Governance Reviewer
 ```
 
 **UI 변경**
 ```
-Orchestrator → TDD Driver → Design Reviewer → Performance Reviewer → PR Reviewer
+Orchestrator → TDD Driver → Design and System Reviewer → Performance Reviewer → PR Governance Reviewer
 ```
 
 **설정/CI 변경**
 ```
-Orchestrator → Git Reviewer → Lint Reviewer → PR Reviewer
+Orchestrator → Git Workflow Reviewer → Lint and Format Reviewer → PR Governance Reviewer
 ```
 
 ### 3단계 — 구현 순서

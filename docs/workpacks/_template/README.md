@@ -13,7 +13,9 @@
 - API:
 - 상태 전이:
 - DB 영향: (이 슬라이스가 건드리는 테이블 목록)
-- Schema Change: [ ] 없음 (읽기 전용) / [ ] 있음 → `supabase/migrations/<파일명>.sql` 생성 필요
+- Schema Change:
+  - [ ] 없음 (읽기 전용)
+  - [ ] 있음 → `supabase/migrations/<파일명>.sql` 생성 필요
 
 ## Out of Scope
 - 이번 슬라이스에서 의도적으로 제외하는 항목
