@@ -10,6 +10,7 @@
 6. 브라우저 흐름 검증 시 → `docs/engineering/playwright-e2e.md`
 7. 필요한 경우에만 `docs/reference/wireframes/`
 8. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
+9. 필요 시 `docs/engineering/security-performance-design.md`
 
 ## Source of Truth
 
@@ -40,7 +41,9 @@
 - 기능 작업은 기본 브랜치에서 직접 하지 않고 작업 전용 브랜치에서 진행한다.
 - 브랜치 하나에는 가능한 한 하나의 작은 기능 단위 또는 명확한 하위 작업만 담는다.
 - 백엔드/프론트엔드 작업은 필요하면 분리하되, 네이밍 규칙 자체는 `docs/engineering/git-workflow.md`를 따른다.
-- 구현 후에는 `pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test`를 모두 통과시킨 뒤 푸시한다.
+- 브랜치 접두어는 `feat/`가 아니라 `feature/`를 사용한다. (CI 검증 기준)
+- 구현 후에는 `pnpm install --frozen-lockfile && pnpm test:all`을 통과시킨 뒤 푸시한다.
+- PR은 Draft로 열고, CI green 확인 후 Ready for Review로 전환한다.
 - 푸시 후 실제 동작까지 확인된 변경만 머지한다.
 
 ## Dependency Management
@@ -109,6 +112,10 @@
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm test`
+- `pnpm test:e2e`
+- `pnpm test:e2e:ui`
+- `pnpm test:e2e:oauth`
+- `pnpm test:all`
 - `pnpm build`
 - `pnpm validate:branch`
 - `pnpm validate:commits`

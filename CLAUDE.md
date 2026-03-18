@@ -71,6 +71,10 @@
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm test`
+- `pnpm test:e2e`
+- `pnpm test:e2e:ui`
+- `pnpm test:e2e:oauth`
+- `pnpm test:all`
 - `pnpm build`
 - `pnpm validate:branch`
 - `pnpm validate:commits`
@@ -81,6 +85,6 @@
 - 관련 workpack 문서와 공식 문서를 다시 확인한다.
 - 아래 명령을 모두 통과시킨다 (하나라도 실패하면 push하지 않는다):
   ```
-  pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test
+  pnpm install --frozen-lockfile && pnpm test:all
   ```
 - PR 본문에 workpack, 테스트, 문서 영향, 보안/성능/디자인 영향을 적는다.

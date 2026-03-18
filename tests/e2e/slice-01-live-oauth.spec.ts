@@ -9,7 +9,7 @@ test.describe("Slice 01 live Google OAuth", () => {
     "E2E_GOOGLE_EMAIL and E2E_GOOGLE_PASSWORD are required for live OAuth",
   );
 
-  test("returns to recipe detail after Google login", async ({ page }) => {
+  test("@live-oauth returns to recipe detail after Google login", async ({ page }) => {
     await page.goto("/recipe/mock-kimchi-jjigae");
     await page.getByRole("button", { name: "플래너에 추가" }).click();
     await page.getByRole("button", { name: "Google로 시작하기" }).click();

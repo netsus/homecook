@@ -21,22 +21,22 @@ AGENTS.md → CURRENT_SOURCE_OF_TRUTH.md → workpacks/<slice>/README.md
 
 **기능 개발**
 ```
-Orchestrator → TDD Driver → Git Reviewer → PR Reviewer → Test Reviewer
+Orchestrator → TDD Driver → Git Workflow Reviewer → PR Governance Reviewer → Test Reviewer
 ```
 
 **API/인증 변경**
 ```
-Orchestrator → TDD Driver → Security Reviewer → Test Reviewer → PR Reviewer
+Orchestrator → TDD Driver → Security Reviewer → Test Reviewer → PR Governance Reviewer
 ```
 
 **UI 변경**
 ```
-Orchestrator → TDD Driver → Design Reviewer → Performance Reviewer → PR Reviewer
+Orchestrator → TDD Driver → Design and System Reviewer → Performance Reviewer → PR Governance Reviewer
 ```
 
 **설정/CI 변경**
 ```
-Orchestrator → Git Reviewer → Lint Reviewer → PR Reviewer
+Orchestrator → Git Workflow Reviewer → Lint and Format Reviewer → PR Governance Reviewer
 ```
 
 ### 3단계 — 구현 순서
@@ -46,9 +46,24 @@ Orchestrator → Git Reviewer → Lint Reviewer → PR Reviewer
 
 ### 4단계 — Push 전 로컬 CI 게이트
 ```
-pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test
+pnpm install --frozen-lockfile && pnpm test:all
 ```
 하나라도 실패하면 push하지 않는다.
+
+---
+
+## Handoff Protocol
+
+Codex → Claude:
+1. 로컬 CI 게이트(`pnpm test:all`) 통과 후 PR을 Draft로 open한다.
+2. `ci.yml` + `playwright.yml` green 확인 후 "Ready for Review"로 전환한다.
+
+Claude 리뷰 시작 조건:
+- PR이 Draft 상태가 아니다.
+- `ci.yml` + `playwright.yml` 모두 green이다.
+- `docs/workpacks/<slice>/README.md`가 존재한다.
+
+Draft PR은 Claude가 리뷰를 시작하지 않는다.
 
 ---
 

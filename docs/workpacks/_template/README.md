@@ -5,20 +5,28 @@
 
 ## Branches
 
-- 백엔드: `feat/be-<slice-name>`
-- 프론트엔드: `feat/fe-<slice-name>`
+- 백엔드: `feature/be-<slice-name>`
+- 프론트엔드: `feature/fe-<slice-name>`
 
 ## In Scope
 - 화면:
 - API:
 - 상태 전이:
-- DB 영향:
+- DB 영향: (이 슬라이스가 건드리는 테이블 목록)
+- Schema Change:
+  - [ ] 없음 (읽기 전용)
+  - [ ] 있음 → `supabase/migrations/<파일명>.sql` 생성 필요
 
 ## Out of Scope
 - 이번 슬라이스에서 의도적으로 제외하는 항목
 
 ## Dependencies
-- 선행 슬라이스 또는 전제 조건
+
+| 선행 슬라이스 | 상태 | 확인 |
+| --- | --- | --- |
+| `NN-slice-name` | merged / in-progress / planned | [ ] |
+
+> 모든 선행 슬라이스가 `merged` 상태가 아니면 이 슬라이스를 시작하지 않는다.
 
 ## Backend First Contract
 - request body / query / path 파라미터
@@ -29,6 +37,15 @@
 - 디자인 확정 전: 기능 가능한 임시 UI
 - 필수 상태: `loading / empty / error / read-only / unauthorized`
 - 로그인 보호 액션이면 return-to-action 포함
+
+## Design Status
+
+- [ ] 임시 UI (temporary) — 기능 완성 우선, 디자인 리뷰 불필요
+- [ ] 리뷰 대기 (pending-review) — Claude 디자인 리뷰 필요
+- [ ] 확정 (confirmed) — Tailwind/공용 컴포넌트 정리 완료
+
+> temporary: 기능 동작·상태 분기(loading/empty/error/read-only)만 검토
+> pending-review 이상: spacing, hierarchy, 공용 컴포넌트 일관성까지 검토
 
 ## Source Links
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
