@@ -205,7 +205,7 @@ README.md + acceptance.md가 main에 merge됨.
 
 - PR이 Draft 상태가 아님
 - required CI 워크플로가 모두 green
-- `docs/workpacks/<slice>/README.md`가 존재함
+- `docs/workpacks/<slice>/README.md`와 `acceptance.md`가 존재함
 
 ### 읽을 것 (이 순서로)
 
@@ -385,7 +385,7 @@ README.md + acceptance.md가 main에 merge됨.
 
 - PR이 Draft 상태가 아님
 - required CI 워크플로가 모두 green
-- `docs/workpacks/<slice>/README.md`가 존재함
+- `docs/workpacks/<slice>/README.md`와 `acceptance.md`가 존재함
 
 ### 읽을 것 (이 순서로)
 
