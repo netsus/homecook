@@ -4,12 +4,12 @@
 
 이 문서는 제품 기능 workpack이 아니라 `docs/engineering/` 아래의 repo-engineering automation 설계 문서다.
 - governance 기준은 `AGENTS.md`, `CLAUDE.md`, `docs/workpacks/README.md`에 정의된 engineering 예외 규칙을 따른다.
-- `docs/workpacks/<slice>/README.md`는 product slice를 `--workpack`으로 함께 검토할 때만 추가 컨텍스트로 요구된다.
+- `docs/workpacks/<slice>/README.md`와 `acceptance.md`는 product slice를 `--workpack`으로 함께 검토할 때만 추가 컨텍스트로 요구된다.
 
 이 자동 local review loop는 `CLAUDE.md`의 일반 PR-ready 게이트에 대한 좁은 예외다.
 - 범위는 구조화된 diff 리뷰 자동화에 한정한다.
 - 사람이 수행하는 일반 PR 리뷰 규칙은 계속 `CLAUDE.md`를 따른다.
-- `--workpack`으로 slice 범위를 명시한 실행은 해당 `docs/workpacks/<slice>/README.md`를 컨텍스트에 포함해야 한다.
+- `--workpack`으로 slice 범위를 명시한 실행은 해당 `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 컨텍스트에 포함해야 한다.
 
 ## Why
 
@@ -100,7 +100,7 @@ pnpm agent:review-loop -- \
 추가 규칙:
 - repo-engineering automation 설계/구현 검토에서는 위 companion wrapper/schema/test 파일까지 자동 포함하는 것이 기본 동작이다.
 - 즉, engineering 예외 작업의 핵심 설계 문서와 직접 연결된 implementation/test context는 operator가 임의로 기억해 추가하는 선택 문맥이 아니다.
-- `--workpack <slice>`가 있으면 `docs/workpacks/<slice>/README.md`를 반드시 포함한다.
+- `--workpack <slice>`가 있으면 `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 반드시 포함한다. (미존재 시 오류)
 - `--context-file <path>`는 반복 지정 가능하며, 지정된 파일을 그대로 추가한다.
 - 각 라운드 프롬프트에는 최신 review target diff, 최신 verification context, 위 컨텍스트 번들이 함께 들어간다.
 

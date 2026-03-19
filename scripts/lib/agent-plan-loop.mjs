@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+
 import {
   buildIssueSignature,
   buildPingPongLogMarkdown,
@@ -9,6 +12,45 @@ import {
   parseCodexInvocationMetadata,
   parseStructuredOutput,
 } from "./agent-loop-core.mjs";
+
+export const DEFAULT_PLAN_CONTEXT_FILES = [
+  "AGENTS.md",
+  "CLAUDE.md",
+  "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+  "docs/workpacks/README.md",
+  "docs/engineering/subagents.md",
+  "docs/engineering/agent-workflow-overview.md",
+];
+
+/**
+ * @param {{ workpack?: string | null, contextFiles?: string[], workingDirectory?: string }} options
+ * @returns {string[]}
+ */
+export function resolveContextFiles({
+  workpack = null,
+  contextFiles = [],
+  workingDirectory = process.cwd(),
+}) {
+  const basePaths = DEFAULT_PLAN_CONTEXT_FILES.map((f) => resolve(workingDirectory, f));
+  const workpackPaths = workpack
+    ? [
+        resolve(workingDirectory, "docs", "workpacks", workpack, "README.md"),
+        resolve(workingDirectory, "docs", "workpacks", workpack, "acceptance.md"),
+      ].filter((p) => existsSync(p))
+    : [];
+  const extraPaths = contextFiles.map((f) => resolve(workingDirectory, f));
+  const allPaths = [
+    ...new Set([...basePaths, ...workpackPaths, ...extraPaths].map((p) => resolve(p))),
+  ];
+
+  for (const filePath of allPaths) {
+    if (!existsSync(filePath)) {
+      throw new Error(`Context file not found: ${filePath}`);
+    }
+  }
+
+  return allPaths;
+}
 
 function ensureObject(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
