@@ -41,7 +41,7 @@
 
 ### 1단계 — 문서 확인 (항상 이 순서)
 ```
-AGENTS.md → CURRENT_SOURCE_OF_TRUTH.md → workpacks/<slice>/README.md
+AGENTS.md → CURRENT_SOURCE_OF_TRUTH.md → workpacks/<slice>/README.md + acceptance.md
 → (필요 시) git-workflow.md, tdd-vitest.md
 ```
 
