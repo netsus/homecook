@@ -16,6 +16,16 @@
 | `in-progress` | 2~4단계 구현 진행 중 |
 | `merged` | 모든 브랜치 main merge 완료 |
 
+**Status 전이 규칙**
+
+| 전이 | 시점 | 담당 |
+|------|------|------|
+| `planned` → `docs` | Stage 1 PR 오픈 시 | Claude |
+| `docs` → `in-progress` | Stage 1 merge + Stage 2 착수 시 | Codex |
+| `in-progress` → `merged` | Stage 6 FE PR merge 시 | Claude |
+
+Slice Order 표의 Status 값은 위 규칙에 따라 PR 오픈/merge 시점에 해당 PR에 포함해 갱신한다.
+
 ## Operating Rules
 
 - **1단계(Claude)**: `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 작성하고 main에 merge한다. 단계별 절차는 `docs/engineering/slice-workflow.md` 참조.

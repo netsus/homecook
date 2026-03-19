@@ -96,7 +96,8 @@
 
 ### 완료 기준
 
-README.md + acceptance.md가 main에 merge됨
+README.md + acceptance.md가 main에 merge됨.
+**이 PR에 `docs/workpacks/README.md` Slice Order의 해당 슬라이스 Status를 `planned` → `docs`로 변경하는 커밋을 포함한다.**
 
 ### 완료 요약 (단계 종료 시 Claude가 출력)
 
@@ -129,6 +130,7 @@ README.md + acceptance.md가 main에 merge됨
 
 - 1단계 README.md + acceptance.md가 main에 merge됨
 - `docs/workpacks/<slice>/README.md`의 Dependencies 선행 슬라이스 전부 merged
+- **`docs/workpacks/README.md` Slice Order에서 해당 슬라이스 Status를 `docs` → `in-progress`로 변경한다** (2단계 첫 커밋에 포함)
 
 ### 읽을 것 (이 순서로)
 
@@ -409,7 +411,8 @@ README.md + acceptance.md가 main에 merge됨
 
 ### 완료 기준
 
-수정 요청 없이 승인 → merge
+수정 요청 없이 승인 → merge.
+**merge 시 `docs/workpacks/README.md` Slice Order의 해당 슬라이스 Status를 `in-progress` → `merged`로 변경한다** (이 PR에 포함).
 
 ### 완료 요약 (슬라이스 최종 완료 요약 포함, Claude가 출력)
 
