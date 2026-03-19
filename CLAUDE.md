@@ -7,7 +7,7 @@
 
 1. `AGENTS.md` — 공통 규칙의 단일 소스
 2. `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-3. 해당 슬라이스의 `docs/workpacks/<slice>/README.md`
+3. 해당 슬라이스의 `docs/workpacks/<slice>/README.md` + `acceptance.md`
 4. 슬라이스 단계 실행·리뷰 시 → `docs/engineering/slice-workflow.md`
    - 단, `docs/engineering/` 아래의 repo-engineering automation / workflow 작업이면 관련 `docs/engineering/*.md`
 5. 필요 시 `docs/engineering/git-workflow.md`
@@ -30,7 +30,7 @@
 모두 충족 시에만 리뷰를 시작한다:
 - PR이 Draft 상태가 아니다
 - PR required 워크플로가 모두 green
-- `docs/workpacks/<slice>/README.md`가 존재한다
+- `docs/workpacks/<slice>/README.md`와 `acceptance.md`가 존재한다
 
 예외:
 - `agent-review-loop`의 자동 로컬 실행은 위 PR-ready 게이트의 좁은 예외다.

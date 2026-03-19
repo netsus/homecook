@@ -36,7 +36,7 @@
 ## Codex 작업 흐름 (2·4단계)
 
 ### 시작 조건
-- 해당 슬라이스의 `docs/workpacks/<slice>/README.md`가 main에 merge된 상태
+- 해당 슬라이스의 `docs/workpacks/<slice>/README.md`와 `acceptance.md`가 main에 merge된 상태
 - (1단계 Claude 문서가 없으면 Claude에 먼저 요청)
 
 ### 1단계 — 문서 확인 (항상 이 순서)

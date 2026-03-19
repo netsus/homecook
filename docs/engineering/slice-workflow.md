@@ -46,7 +46,7 @@
 ### 사전 조건
 
 - 슬라이스 ID와 목표가 전달됨
-- `docs/workpacks/README.md` Slice Order 표의 **Status 열**에서 현재 슬라이스보다 먼저 완료돼야 하는 선행 슬라이스가 전부 `merged` 상태임을 확인 (슬라이스 번호 순서가 기본 의존 순서이며, 예외는 Slice Notes 참조)
+- `docs/workpacks/README.md` Slice Order 표의 **Status 열**에서 현재 슬라이스보다 먼저 완료돼야 하는 선행 슬라이스가 전부 `merged` 상태임을 확인 (슬라이스 번호 순서가 기본 의존 순서이며, 예외는 Slice Notes 참조). **`bootstrap`은 `merged`와 동등하게 취급한다.**
 
 ### 읽을 것 (이 순서로)
 
