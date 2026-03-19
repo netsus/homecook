@@ -20,20 +20,13 @@ import {
   parseClaudeInvocationMetadata,
   parseCodexInvocationMetadata,
   parseStructuredOutput,
+  resolveContextFiles,
 } from "./lib/agent-plan-loop.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const DEFAULT_MAX_ROUNDS = 3;
-const DEFAULT_CONTEXT_FILES = [
-  "AGENTS.md",
-  "CLAUDE.md",
-  "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-  "docs/workpacks/README.md",
-  "docs/engineering/subagents.md",
-  "docs/engineering/agent-workflow-overview.md",
-];
 const PLAN_SCHEMA_PATH = join(__dirname, "schemas", "agent-plan.schema.json");
 const REVIEW_SCHEMA_PATH = join(
   __dirname,
@@ -55,7 +48,7 @@ function printUsage() {
       "Options:",
       "  --goal <text>               Planning request text",
       "  --goal-file <path>          Read planning request text from a file",
-      "  --workpack <slice>          Include docs/workpacks/<slice>/README.md",
+      "  --workpack <slice>          Include docs/workpacks/<slice>/README.md and acceptance.md (if present)",
       "  --context-file <path>       Additional context file (repeatable)",
       "  --max-rounds <n>            Maximum Claude/Codex review rounds (default: 3)",
       "  --output-dir <path>         Output directory for prompts, reviews, and summaries",
@@ -141,29 +134,6 @@ function resolveGoal(options) {
   }
 
   throw new Error("A planning request is required via --goal or --goal-file.");
-}
-
-function uniquePaths(paths) {
-  return [...new Set(paths.map((filePath) => resolve(filePath)))];
-}
-
-function resolveContextFiles(options) {
-  const workpackPath = options.workpack
-    ? resolve("docs", "workpacks", options.workpack, "README.md")
-    : null;
-  const basePaths = DEFAULT_CONTEXT_FILES.map((filePath) => resolve(filePath));
-  const extraPaths = options.contextFiles.map((filePath) => resolve(filePath));
-  const allPaths = uniquePaths(
-    workpackPath ? [...basePaths, workpackPath, ...extraPaths] : [...basePaths, ...extraPaths],
-  );
-
-  for (const filePath of allPaths) {
-    if (!existsSync(filePath)) {
-      throw new Error(`Context file not found: ${filePath}`);
-    }
-  }
-
-  return allPaths;
 }
 
 function readRequiredFile(filePath) {
@@ -707,7 +677,10 @@ function main() {
   }
 
   const outputDir = resolveOutputDir(options);
-  const contextFiles = resolveContextFiles(options);
+  const contextFiles = resolveContextFiles({
+    workpack: options.workpack ?? null,
+    contextFiles: options.contextFiles ?? [],
+  });
   const contextBundle = buildContextBundle(contextFiles);
   const codexDefaultConfig = readCodexDefaultConfig();
   const claudeDefaultConfig = readClaudeDefaultConfig();

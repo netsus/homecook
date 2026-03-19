@@ -43,6 +43,12 @@ jobs:
           HEAD_REF: HEAD
         run: node scripts/check-commit-messages.mjs
 
+      - name: Validate workpack docs for feature branches
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+          BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
+        run: node scripts/check-workpack-docs.mjs
+
   quality:
     runs-on: ubuntu-latest
     steps:

@@ -32,3 +32,30 @@ export function isValidCommitMessage(message) {
 export function findMissingPrSections(body) {
   return REQUIRED_PR_SECTIONS.filter((section) => !body.includes(section));
 }
+
+const EMPTY_LINE_PATTERNS = [
+  /^-?\s*$/, // empty or just "-"
+  /^-\s+(?!\[).+:\s*$/, // "- 라벨:" placeholder ending with colon (not a checkbox)
+  /^-\s+\[\s\]\s/, // unchecked checkbox "- [ ] something"
+];
+
+function isEffectivelyEmpty(line) {
+  return EMPTY_LINE_PATTERNS.some((pattern) => pattern.test(line));
+}
+
+export function findEmptyPrSections(body) {
+  return REQUIRED_PR_SECTIONS.filter((section) => {
+    const start = body.indexOf(section);
+    if (start === -1) return false;
+    const afterHeader = body.slice(start + section.length);
+    const nextSectionStart =
+      REQUIRED_PR_SECTIONS.map((s) => afterHeader.indexOf(s))
+        .filter((i) => i > 0)
+        .sort((a, b) => a - b)[0] ?? afterHeader.length;
+    const sectionContent = afterHeader.slice(0, nextSectionStart);
+    return !sectionContent
+      .split("\n")
+      .map((l) => l.trim())
+      .some((l) => !isEffectivelyEmpty(l));
+  });
+}

@@ -1,8 +1,13 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+
 import { describe, expect, it } from "vitest";
 
 import {
   buildPingPongLogMarkdown,
   buildIssueSignature,
+  DEFAULT_PLAN_CONTEXT_FILES,
   evaluateLoopRound,
   formatAgentSetting,
   normalizePlanResponse,
@@ -10,6 +15,7 @@ import {
   parseClaudeInvocationMetadata,
   parseCodexInvocationMetadata,
   parseStructuredOutput,
+  resolveContextFiles,
 } from "../scripts/lib/agent-plan-loop.mjs";
 
 describe("agent plan loop", () => {
@@ -757,5 +763,74 @@ describe("agent plan loop", () => {
       status: "max_rounds_reached",
       shouldContinue: false,
     });
+  });
+});
+
+describe("resolveContextFiles", () => {
+  function createStubRepo(extraFiles: string[] = []) {
+    const dir = mkdtempSync(join(tmpdir(), "plan-ctx-"));
+    for (const relPath of DEFAULT_PLAN_CONTEXT_FILES) {
+      const full = join(dir, relPath);
+      mkdirSync(join(full, ".."), { recursive: true });
+      writeFileSync(full, `# stub ${relPath}`);
+    }
+    for (const relPath of extraFiles) {
+      const full = join(dir, relPath);
+      mkdirSync(join(full, ".."), { recursive: true });
+      writeFileSync(full, "# stub");
+    }
+    return dir;
+  }
+
+  it("returns only base files when no workpack is given", () => {
+    const dir = createStubRepo();
+    try {
+      const paths = resolveContextFiles({ workingDirectory: dir });
+      const relPaths = paths.map((p) => p.replace(dir + "/", ""));
+      for (const f of DEFAULT_PLAN_CONTEXT_FILES) {
+        expect(relPaths).toContain(f);
+      }
+      expect(relPaths).not.toContain("docs/workpacks/02-foo/README.md");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("includes README.md but not acceptance.md when only README exists", () => {
+    const dir = createStubRepo(["docs/workpacks/02-foo/README.md"]);
+    try {
+      const paths = resolveContextFiles({ workpack: "02-foo", workingDirectory: dir });
+      const relPaths = paths.map((p) => p.replace(dir + "/", ""));
+      expect(relPaths).toContain("docs/workpacks/02-foo/README.md");
+      expect(relPaths).not.toContain("docs/workpacks/02-foo/acceptance.md");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("includes both README.md and acceptance.md when both exist", () => {
+    const dir = createStubRepo([
+      "docs/workpacks/02-foo/README.md",
+      "docs/workpacks/02-foo/acceptance.md",
+    ]);
+    try {
+      const paths = resolveContextFiles({ workpack: "02-foo", workingDirectory: dir });
+      const relPaths = paths.map((p) => p.replace(dir + "/", ""));
+      expect(relPaths).toContain("docs/workpacks/02-foo/README.md");
+      expect(relPaths).toContain("docs/workpacks/02-foo/acceptance.md");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("throws when a required base context file is missing", () => {
+    const dir = mkdtempSync(join(tmpdir(), "plan-ctx-missing-"));
+    try {
+      expect(() => resolveContextFiles({ workingDirectory: dir })).toThrow(
+        /Context file not found/,
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

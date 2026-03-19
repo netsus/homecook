@@ -91,6 +91,10 @@ function uniqueResolvedPaths(paths) {
   return [...new Set(paths.map((filePath) => resolve(filePath)))];
 }
 
+/**
+ * @param {{ workingDirectory: string, workpack?: string | null, extraContextFiles?: string[] }} options
+ * @returns {string[]}
+ */
 export function resolveReviewLoopContextFiles({
   workingDirectory,
   workpack = null,
@@ -100,15 +104,16 @@ export function resolveReviewLoopContextFiles({
   const basePaths = DEFAULT_REVIEW_LOOP_CONTEXT_FILES.map((filePath) =>
     resolve(resolvedWorkingDirectory, filePath),
   );
-  const workpackPath = workpack
-    ? resolve(resolvedWorkingDirectory, "docs", "workpacks", workpack, "README.md")
-    : null;
+  const workpackPaths = workpack
+    ? [
+        resolve(resolvedWorkingDirectory, "docs", "workpacks", workpack, "README.md"),
+        resolve(resolvedWorkingDirectory, "docs", "workpacks", workpack, "acceptance.md"),
+      ]
+    : [];
   const extraPaths = extraContextFiles.map((filePath) =>
     resolve(resolvedWorkingDirectory, filePath),
   );
-  const allPaths = uniqueResolvedPaths(
-    workpackPath ? [...basePaths, workpackPath, ...extraPaths] : [...basePaths, ...extraPaths],
-  );
+  const allPaths = uniqueResolvedPaths([...basePaths, ...workpackPaths, ...extraPaths]);
 
   for (const filePath of allPaths) {
     if (!existsSync(filePath)) {

@@ -74,7 +74,7 @@ function printUsage() {
       "Options:",
       "  --goal <text>               Review loop goal text",
       "  --goal-file <path>          Read review loop goal from a file",
-      "  --workpack <slice>          Include docs/workpacks/<slice>/README.md",
+      "  --workpack <slice>          Include docs/workpacks/<slice>/README.md and acceptance.md",
       "  --context-file <path>       Additional context file (repeatable)",
       "  --max-rounds <n>            Maximum Claude/Codex review rounds (default: 3)",
       "  --verify-cmd <command>      Verification command to run after each Codex fix (repeatable)",

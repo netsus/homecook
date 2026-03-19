@@ -83,7 +83,7 @@ pnpm agent:plan-loop -- \
 - `docs/engineering/subagents.md`
 - `docs/engineering/agent-workflow-overview.md`
 
-`--workpack <slice>`가 주어지면 `docs/workpacks/<slice>/README.md`도 자동 포함한다.
+`--workpack <slice>`가 주어지면 `docs/workpacks/<slice>/README.md`와 `acceptance.md` (존재 시) 도 자동 포함한다.
 
 ## Artifacts
 
@@ -108,7 +108,7 @@ effort가 CLI에서 실제 resolved 값으로 확인되지 않으면 configured/
 
 ## Recommended Operating Pattern
 
-1. 새 슬라이스 시작 전 `docs/workpacks/<slice>/README.md`를 먼저 만든다.
+1. 새 슬라이스 시작 전 `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 먼저 만든다.
 2. 위 CLI로 계획 루프를 돌린다.
 3. `final-summary.md`에서 승인 상태, 남은 `required_changes`, `open_questions`를 확인한다.
 4. `approved`가 아닐 경우 사람이 `stalled` 또는 `blocker` 원인을 정리한다.

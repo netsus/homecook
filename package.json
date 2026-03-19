@@ -17,7 +17,8 @@
     "test:all": "pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e",
     "validate:branch": "node scripts/check-branch-name.mjs",
     "validate:commits": "node scripts/check-commit-messages.mjs",
-    "validate:pr": "node scripts/check-pr-body.mjs"
+    "validate:pr": "node scripts/check-pr-body.mjs",
+    "validate:workpack": "BRANCH_NAME=$(git branch --show-current) node scripts/check-workpack-docs.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

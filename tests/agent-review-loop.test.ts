@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -423,6 +423,52 @@ describe("agent review loop", () => {
     expect(bundle).toContain("### scripts/schemas/agent-plan-review.schema.json");
     expect(bundle).toContain("### scripts/schemas/agent-review-fix.schema.json");
     expect(bundle).toContain("### tests/agent-review-loop.test.ts");
+  });
+
+  it("includes both README.md and acceptance.md when --workpack is given and both exist", () => {
+    const dir = mkdtempSync(join(tmpdir(), "review-ctx-workpack-"));
+    try {
+      for (const relPath of DEFAULT_REVIEW_LOOP_CONTEXT_FILES) {
+        const full = join(dir, relPath);
+        mkdirSync(join(full, ".."), { recursive: true });
+        writeFileSync(full, `# stub ${relPath}`);
+      }
+      const readmePath = join(dir, "docs/workpacks/02-foo/README.md");
+      const acceptancePath = join(dir, "docs/workpacks/02-foo/acceptance.md");
+      mkdirSync(join(dir, "docs/workpacks/02-foo"), { recursive: true });
+      writeFileSync(readmePath, "# README stub");
+      writeFileSync(acceptancePath, "# acceptance stub");
+
+      const contextFiles = resolveReviewLoopContextFiles({
+        workingDirectory: dir,
+        workpack: "02-foo",
+      });
+
+      expect(contextFiles).toContain(readmePath);
+      expect(contextFiles).toContain(acceptancePath);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("throws when --workpack acceptance.md is missing", () => {
+    const dir = mkdtempSync(join(tmpdir(), "review-ctx-missing-"));
+    try {
+      for (const relPath of DEFAULT_REVIEW_LOOP_CONTEXT_FILES) {
+        const full = join(dir, relPath);
+        mkdirSync(join(full, ".."), { recursive: true });
+        writeFileSync(full, `# stub ${relPath}`);
+      }
+      mkdirSync(join(dir, "docs/workpacks/02-foo"), { recursive: true });
+      writeFileSync(join(dir, "docs/workpacks/02-foo/README.md"), "# README stub");
+      // acceptance.md intentionally omitted
+
+      expect(() =>
+        resolveReviewLoopContextFiles({ workingDirectory: dir, workpack: "02-foo" }),
+      ).toThrow(/Context file not found/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("maps verification commands to passed, failed, and skipped states", () => {

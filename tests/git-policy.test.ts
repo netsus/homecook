@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  findEmptyPrSections,
   findMissingPrSections,
   isAllowedBranchName,
   isValidCommitMessage,
@@ -45,5 +46,88 @@ describe("git policy", () => {
     expect(missing).toContain("## Workpack / Slice");
     expect(missing).toContain("## Security Review");
     expect(missing).not.toContain("## Summary");
+  });
+});
+
+describe("findEmptyPrSections", () => {
+  function buildBody(sections: Record<string, string>): string {
+    return [
+      "## Summary",
+      sections["## Summary"] ?? "- 실제 변경 내용",
+      "## Workpack / Slice",
+      sections["## Workpack / Slice"] ?? "- 관련 workpack: docs/workpacks/02-discovery-filter/",
+      "## Test Plan",
+      sections["## Test Plan"] ?? "- [x] `pnpm lint`",
+      "## Docs Impact",
+      sections["## Docs Impact"] ?? "- [x] 공식 문서 영향 없음",
+      "## Security Review",
+      sections["## Security Review"] ?? "- 인증/인가 영향: 없음",
+      "## Performance",
+      sections["## Performance"] ?? "- UI 또는 fetch 변경 여부: 없음",
+      "## Design / Accessibility",
+      sections["## Design / Accessibility"] ?? "- 디자인 시스템 영향: 없음",
+      "## Breaking Changes",
+      sections["## Breaking Changes"] ?? "- [x] 없음",
+    ].join("\n");
+  }
+
+  it("detects empty Summary (bare bullet)", () => {
+    const body = buildBody({ "## Summary": "- " });
+    expect(findEmptyPrSections(body)).toContain("## Summary");
+  });
+
+  it("detects label-only Workpack section", () => {
+    const body = buildBody({
+      "## Workpack / Slice": "- 관련 workpack:\n- 변경 범위:",
+    });
+    expect(findEmptyPrSections(body)).toContain("## Workpack / Slice");
+  });
+
+  it("detects section with only unchecked checkboxes", () => {
+    const body = buildBody({
+      "## Test Plan":
+        "- [ ] `pnpm lint`\n- [ ] `pnpm typecheck`\n- [ ] `pnpm test`\n- [ ] `pnpm test:e2e`\n- 추가 검증:",
+    });
+    expect(findEmptyPrSections(body)).toContain("## Test Plan");
+  });
+
+  it("detects Breaking Changes section with all unchecked + label", () => {
+    const body = buildBody({
+      "## Breaking Changes": "- [ ] 없음\n- [ ] 있음\n- 설명:",
+    });
+    expect(findEmptyPrSections(body)).toContain("## Breaking Changes");
+  });
+
+  it("passes section with at least one checked checkbox", () => {
+    const body = buildBody({
+      "## Test Plan": "- [x] `pnpm lint`\n- [ ] `pnpm typecheck`",
+    });
+    expect(findEmptyPrSections(body)).not.toContain("## Test Plan");
+  });
+
+  it("passes label with actual value", () => {
+    const body = buildBody({
+      "## Workpack / Slice": "- 관련 workpack: docs/workpacks/02-discovery-filter/",
+    });
+    expect(findEmptyPrSections(body)).not.toContain("## Workpack / Slice");
+  });
+
+  it("passes plain text content", () => {
+    const body = buildBody({ "## Summary": "- 로그인 게이트 추가" });
+    expect(findEmptyPrSections(body)).not.toContain("## Summary");
+  });
+
+  it("passes fully filled template (no empty sections)", () => {
+    const body = buildBody({});
+    expect(findEmptyPrSections(body)).toHaveLength(0);
+  });
+
+  it("returns empty array for a completely filled PR", () => {
+    const body = buildBody({
+      "## Summary": "- OAuth 콜백 처리 추가",
+      "## Test Plan": "- [x] `pnpm lint`\n- [x] `pnpm test`",
+      "## Breaking Changes": "- [x] 없음",
+    });
+    expect(findEmptyPrSections(body)).toHaveLength(0);
   });
 });
