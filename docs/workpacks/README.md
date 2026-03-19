@@ -9,6 +9,8 @@
 ## Operating Rules
 
 - 슬라이스 시작 전 `docs/workpacks/<slice>/README.md`를 먼저 만든다.
+- 예외: `docs/engineering/` 아래의 repo-engineering automation, workflow tooling, agent 운영 규칙 변경은 제품 workpack roadmap 바깥이다.
+- 이런 engineering 작업은 `docs/workpacks/<slice>/README.md` 대신 관련 `docs/engineering/*.md`를 source of truth로 사용한다.
 - 슬라이스 시작 전 Dependencies 테이블의 모든 선행 슬라이스가 merged 상태임을 확인한다.
 - 백엔드 브랜치는 API, 권한, 상태 전이, 테스트를 먼저 닫는다.
 - 프론트엔드 브랜치는 백엔드 계약을 기준으로 `loading / empty / error / read-only / 로그인 게이트` 흐름을 닫는다.
