@@ -12,7 +12,7 @@
 |--------|------|
 | `bootstrap` | 초기 설정 슬라이스 (`01` 전용, 별도 SOP 없이 직접 투입). **의존성 gate에서는 `merged`와 동등하게 간주한다.** |
 | `planned` | 착수 전 |
-| `docs` | 1단계(Claude) README + acceptance.md PR 진행 중 |
+| `docs` | 1단계(Claude) README + acceptance.md 작업 중 또는 완료, 구현 착수 전 |
 | `in-progress` | 2~4단계 구현 진행 중 |
 | `merged` | 모든 브랜치 main merge 완료 |
 

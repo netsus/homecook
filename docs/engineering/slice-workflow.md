@@ -137,11 +137,12 @@ README.md + acceptance.md가 main에 merge됨.
 1. `AGENTS.md` — 공통 규칙 전체
 2. `docs/engineering/slice-workflow.md` — 2단계 항목
 3. `docs/workpacks/<slice>/README.md` — Backend First Contract, Key Rules, In Scope
-4. `docs/api문서-v1.2.1.md` — 해당 섹션 전체
-5. `docs/db설계-v1.3.md` — 해당 테이블
-6. `docs/engineering/tdd-vitest.md` — 테스트 전략
-7. `docs/engineering/supabase-migrations.md` — Schema 변경 있는 경우만
-8. `docs/engineering/git-workflow.md` — 브랜치·커밋 규칙
+4. `docs/workpacks/<slice>/acceptance.md` — 상태 전이·에러·권한 시나리오 확인
+5. `docs/api문서-v1.2.1.md` — 해당 섹션 전체
+6. `docs/db설계-v1.3.md` — 해당 테이블
+7. `docs/engineering/tdd-vitest.md` — 테스트 전략
+8. `docs/engineering/supabase-migrations.md` — Schema 변경 있는 경우만
+9. `docs/engineering/git-workflow.md` — 브랜치·커밋 규칙
 
 ### 산출물
 
@@ -268,11 +269,12 @@ README.md + acceptance.md가 main에 merge됨.
 1. `AGENTS.md` — 공통 규칙 전체
 2. `docs/engineering/slice-workflow.md` — 4단계 항목
 3. `docs/workpacks/<slice>/README.md` — Frontend Delivery Mode, Design Status, Key Rules
-4. `docs/화면정의서-v1.2.md` — 해당 화면 정의
-5. 백엔드 브랜치 TypeScript 타입 파일 — API 계약 확인
-6. `docs/engineering/tdd-vitest.md`
-7. `docs/engineering/playwright-e2e.md`
-8. `docs/engineering/git-workflow.md`
+4. `docs/workpacks/<slice>/acceptance.md` — 자동화 대상·Manual Only 분리 확인
+5. `docs/화면정의서-v1.2.md` — 해당 화면 정의
+6. 백엔드 브랜치 TypeScript 타입 파일 — API 계약 확인
+7. `docs/engineering/tdd-vitest.md`
+8. `docs/engineering/playwright-e2e.md`
+9. `docs/engineering/git-workflow.md`
 
 ### 산출물
 
