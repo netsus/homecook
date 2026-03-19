@@ -4,12 +4,40 @@
 
 | 에이전트 | 역할 |
 |----------|------|
-| **Codex** | TDD 기반 기능 구현, API 계약 고정, 커밋/PR 생성 |
-| **Claude** | 코드 리뷰, CI 디버깅, 디자인/UX 개선 |
+| **Claude** | Workpack 문서 작성 (1단계), 코드 리뷰 (3·6단계), 디자인 리뷰 (5단계), CI 디버깅 |
+| **Codex** | TDD 기반 백엔드 구현 (2단계), 프론트엔드 구현 (4단계), API 계약 고정, 커밋/PR 생성 |
 
 ---
 
-## Codex 작업 흐름
+> **슬라이스 단계별 상세 절차** (읽을 것·산출물·자가 점검·완료 요약 형식)는
+> `docs/engineering/slice-workflow.md`를 참조한다.
+> 이 문서는 에이전트 간 고수준 협업 흐름만 기술한다.
+
+## 슬라이스 개발 흐름
+
+```
+1단계 (Claude) — Workpack README + acceptance.md 작성 → main merge
+       ↓ (merge 완료 후)
+2단계 (Codex) — feature/be-<slice> 백엔드 구현 → CI green → PR
+       ↓
+3단계 (Claude) — 백엔드 PR 리뷰 → merge
+       ↓
+4단계 (Codex) — feature/fe-<slice> 프론트엔드 구현 → CI green → PR
+       ↓
+5단계 (Claude) — 디자인 리뷰 (Design Status 기준)
+       ↓
+6단계 (Claude) — 프론트엔드 PR 리뷰 → merge
+```
+
+단계별 상세 절차(사전 조건·읽을 것·산출물·자가 점검·완료 요약)는 `docs/engineering/slice-workflow.md` 참조.
+
+---
+
+## Codex 작업 흐름 (2·4단계)
+
+### 시작 조건
+- 해당 슬라이스의 `docs/workpacks/<slice>/README.md`가 main에 merge된 상태
+- (1단계 Claude 문서가 없으면 Claude에 먼저 요청)
 
 ### 1단계 — 문서 확인 (항상 이 순서)
 ```
@@ -96,7 +124,7 @@ Claude 리뷰 시작 조건:
 ## Claude 리뷰 흐름
 
 ```
-workpacks/<slice>/README.md 확인 (Codex가 작성한 슬라이스 문서 기준 검토)
+workpacks/<slice>/README.md 확인 (Claude가 1단계에서 작성한 슬라이스 문서 기준 검토)
 → PR 코드 리뷰 (AGENTS.md 기준)
 → CI 실패 시 디버깅 지원
 → 디자인 피드백 (Tailwind/레이아웃/공용 컴포넌트)

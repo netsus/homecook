@@ -6,11 +6,12 @@
 2. `docs/workpacks/README.md`
 3. 관련 `docs/workpacks/<slice>/README.md`
 4. 관련 공식 문서 in `docs/`
-5. 테스트 작성 시 → `docs/engineering/tdd-vitest.md`
-6. 브라우저 흐름 검증 시 → `docs/engineering/playwright-e2e.md`
-7. 필요한 경우에만 `docs/reference/wireframes/`
-8. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
-9. 필요 시 `docs/engineering/security-performance-design.md`
+5. 슬라이스 개발 단계 실행 시 → `docs/engineering/slice-workflow.md`
+6. 테스트 작성 시 → `docs/engineering/tdd-vitest.md`
+7. 브라우저 흐름 검증 시 → `docs/engineering/playwright-e2e.md`
+8. 필요한 경우에만 `docs/reference/wireframes/`
+9. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
+10. 필요 시 `docs/engineering/security-performance-design.md`
 
 ## Source of Truth
 
@@ -31,12 +32,13 @@
 - 예외: `docs/engineering/` 아래의 repo-engineering automation, workflow tooling, agent 운영 규칙은 제품 기능 슬라이스가 아니다.
 - 이런 engineering 작업은 `docs/workpacks/<slice>/README.md`를 새로 만드는 대신 관련 `docs/engineering/*.md`를 설계와 운영 기준 문서로 사용한다.
 - 현재 저장소에 이미 들어온 탐색/상세/로그인 게이트는 `01-discovery-detail-auth` 부트스트랩 슬라이스로 간주한다.
-- 새로운 기능 작업 전 **Codex가** `docs/workpacks/<slice>/README.md`를 먼저 만든다.
-- **Claude는** 리뷰 전 해당 슬라이스의 `docs/workpacks/<slice>/README.md`를 반드시 확인한다. 없으면 Codex에 먼저 요청한다.
+- 새로운 기능 작업 전 **Claude가** `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 먼저 만들고 main에 머지한다 (1단계).
+- **Codex는** 구현 전 해당 슬라이스의 `docs/workpacks/<slice>/README.md`를 반드시 확인한다. 없으면 Claude에 먼저 요청한다.
 - engineering 예외 작업에서는 Codex와 Claude 모두 대상 `docs/engineering/*.md`를 우선 확인하고, 필요 시 `AGENTS.md`, `CLAUDE.md`, `docs/engineering/subagents.md` 같은 governing doc을 함께 갱신한다.
 - 문서 간 충돌이 보이면 구현보다 충돌 정리를 우선한다.
 - 메인 Codex는 작업 전 `문서 확인 -> 테스트 전략 -> 구현 -> 리뷰` 순서를 기본 흐름으로 따른다.
 - 품질 판단이 필요한 작업은 `docs/engineering/subagents.md`의 역할 기반 체크리스트를 사용한다.
+- 슬라이스 개발 단계를 요청받으면 `docs/engineering/slice-workflow.md`를 읽고 해당 단계의 담당 AI를 확인한다. 자신이 담당하지 않는 단계는 수행하지 않고 올바른 AI를 안내한다.
 
 ## Branch And Delivery
 
@@ -45,6 +47,7 @@
 - 브랜치 하나에는 가능한 한 하나의 작은 기능 단위 또는 명확한 하위 작업만 담는다.
 - 백엔드/프론트엔드 작업은 필요하면 분리하되, 네이밍 규칙 자체는 `docs/engineering/git-workflow.md`를 따른다.
 - 브랜치 접두어는 `feat/`가 아니라 `feature/`를 사용한다. (CI 검증 기준)
+- **슬라이스 순서**: 1단계(Claude) 문서가 main에 머지된 뒤에 2단계(Codex) 백엔드 구현을 시작한다. 문서 PR이 Ready for Review 상태이더라도 머지 전에는 구현을 시작하지 않는다.
 - 구현 후에는 `pnpm install --frozen-lockfile && pnpm test:all`을 통과시킨 뒤 푸시한다.
 - PR은 Draft로 열고, CI green 확인 후 Ready for Review로 전환한다.
 - 푸시 후 실제 동작까지 확인된 변경만 머지한다.

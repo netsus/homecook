@@ -8,14 +8,16 @@
 1. `AGENTS.md` — 공통 규칙의 단일 소스
 2. `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 3. 해당 슬라이스의 `docs/workpacks/<slice>/README.md`
+4. 슬라이스 단계 실행·리뷰 시 → `docs/engineering/slice-workflow.md`
    - 단, `docs/engineering/` 아래의 repo-engineering automation / workflow 작업이면 관련 `docs/engineering/*.md`
-4. 필요 시 `docs/engineering/git-workflow.md`
-5. 필요 시 `docs/engineering/tdd-vitest.md`
-6. 필요 시 `docs/engineering/playwright-e2e.md`
-7. 필요 시 `.github/pull_request_template.md`
+5. 필요 시 `docs/engineering/git-workflow.md`
+6. 필요 시 `docs/engineering/tdd-vitest.md`
+7. 필요 시 `docs/engineering/playwright-e2e.md`
+8. 필요 시 `.github/pull_request_template.md`
 
 ## Claude 역할
 
+- 슬라이스 개발 1·3·5·6단계 담당. 2·4단계(Codex 담당)를 요청받으면 "이 단계는 Codex 담당입니다. Codex에게 요청해주세요."라고 안내하고 코드 구현을 진행하지 않는다.
 - 코드 리뷰, 아키텍처 제안
 - CI 실패 디버깅, 품질 게이트 통과 지원
 - 디자인/UX 개선 (Tailwind 클래스, 공용 컴포넌트, 레이아웃 조정)
