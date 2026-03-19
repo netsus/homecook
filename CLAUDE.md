@@ -9,6 +9,7 @@
 2. `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 3. 해당 슬라이스의 `docs/workpacks/<slice>/README.md`
 4. 슬라이스 단계 실행·리뷰 시 → `docs/engineering/slice-workflow.md`
+   - 단, `docs/engineering/` 아래의 repo-engineering automation / workflow 작업이면 관련 `docs/engineering/*.md`
 5. 필요 시 `docs/engineering/git-workflow.md`
 6. 필요 시 `docs/engineering/tdd-vitest.md`
 7. 필요 시 `docs/engineering/playwright-e2e.md`
@@ -30,3 +31,10 @@
 - PR이 Draft 상태가 아니다
 - PR required 워크플로가 모두 green
 - `docs/workpacks/<slice>/README.md`가 존재한다
+
+예외:
+- `agent-review-loop`의 자동 로컬 실행은 위 PR-ready 게이트의 좁은 예외다.
+- 이 예외는 **구조화된 diff 리뷰 자동화**에만 적용한다.
+- 일반적인 사람이 읽고 판단하는 PR 리뷰 규칙은 그대로 유지한다.
+- `--workpack` 기반 실행이면 해당 `docs/workpacks/<slice>/README.md`가 컨텍스트에 포함되어야 한다.
+- `docs/engineering/` 아래의 repo-engineering automation / workflow 문서 작업은 제품 슬라이스 workpack 의무 대상이 아니다. 이 경우 관련 `docs/engineering/*.md`가 리뷰 기준 문서다.

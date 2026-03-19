@@ -6,6 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "agent:plan-loop": "node scripts/agent-plan-loop.mjs",
+    "agent:review-loop": "node scripts/agent-review-loop.mjs",
     "lint": "eslint . --ignore-pattern '.agents/**'",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

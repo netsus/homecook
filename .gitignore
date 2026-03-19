@@ -47,5 +47,8 @@ Thumbs.db
 playwright-report/
 test-results/
 
+# local agent artifacts
+.artifacts/
+
 # supabase local
 supabase/.temp/
