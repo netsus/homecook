@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>집밥 — 레시피 제목 폰트 비교</title>
+<style>
+  :root {
+    --bg:        #fff9f2;
+    --fg:        #1a1a2e;
+    --brand:     #FF6C3C;
+    --brand-d:   #E05020;
+    --olive:     #2ea67a;
+    --surface:   #ffffff;
+    --line:      rgba(0,0,0,0.07);
+    --muted:     #999;
+    --font-body: "Avenir Next", "Pretendard", "Apple SD Gothic Neo", sans-serif;
+    --font-disp: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    background: #1a1a1a;
+    padding: 36px 24px 72px;
+  }
+
+  h1 { text-align:center; font-size:16px; font-weight:700; color:#ddd; margin-bottom:6px; font-family:var(--font-body); }
+  .sub { text-align:center; font-size:12px; color:#555; margin-bottom:36px; }
+
+  /* Toggle bar */
+  .toggle-bar {
+    display:flex; justify-content:center; gap:8px; margin-bottom:32px;
+  }
+  .tog {
+    padding:7px 18px; border-radius:20px; border:1.5px solid #333;
+    font-size:12px; font-weight:600; cursor:pointer;
+    background:transparent; color:#777; transition:all .15s;
+    font-family:var(--font-body);
+  }
+  .tog.on { background:#FF6C3C; color:#fff; border-color:#FF6C3C; }
+
+  /* Phones row */
+  .row {
+    display:flex; gap:28px; justify-content:center;
+    flex-wrap:wrap;
+  }
+
+  .col { display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .col-label { font-size:11px; font-weight:700; color:#555; letter-spacing:0.3px; }
+
+  /* Phone shell */
+  .phone {
+    width:375px;
+    border-radius:44px;
+    background: var(--bg);
+    box-shadow: 0 0 0 8px #222, 0 0 0 9px #111, 0 24px 60px rgba(0,0,0,0.55);
+    overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+
+  /* ── HOME screen ── */
+  .app-bar {
+    padding:52px 20px 10px;
+    display:flex; align-items:center; gap:10px;
+    background:var(--bg);
+  }
+  .logo { font-size:22px; font-weight:900; letter-spacing:-1px; color:var(--fg); flex:1; }
+  .icon-btn {
+    width:36px; height:36px; border-radius:50%;
+    background:rgba(255,108,60,.10); border:1.5px solid rgba(255,108,60,.2);
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+  }
+
+  .filter-row {
+    padding:0 16px 12px; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none;
+  }
+  .chip {
+    white-space:nowrap; padding:6px 13px; border-radius:20px;
+    font-size:12px; font-weight:600; border:1.5px solid var(--line);
+    background:#fff; color:var(--muted); flex-shrink:0;
+    font-family:var(--font-body);
+  }
+  .chip.on { background:var(--brand); color:#fff; border-color:transparent; }
+
+  .scroll-body { padding:0 16px 24px; }
+
+  .section-header {
+    display:flex; align-items:center; justify-content:space-between; margin:4px 0 12px;
+  }
+  .sec-title { font-size:16px; font-weight:800; color:var(--fg); letter-spacing:-.3px; }
+  .sec-more  { font-size:12px; font-weight:600; color:var(--brand); }
+
+  /* Card grid */
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:24px; }
+
+  .card {
+    background:#fff; border-radius:16px; overflow:hidden;
+    box-shadow:0 2px 10px rgba(0,0,0,.08);
+  }
+  .thumb {
+    height:108px; position:relative;
+    background:#f5f0e8;
+    display:flex; align-items:center; justify-content:center;
+    font-size:36px; overflow:hidden;
+  }
+  .thumb img { width:100%; height:100%; object-fit:cover; position:absolute; inset:0; }
+  .badge {
+    position:absolute; top:8px; left:8px; z-index:1;
+    padding:2px 7px; border-radius:20px;
+    font-size:9px; font-weight:700; color:#fff;
+    background:var(--brand); font-family:var(--font-body);
+  }
+  .card-body { padding:10px 11px 12px; }
+
+  /* ★ This is what we're demoing */
+  .card-title {
+    font-size:14px; font-weight:700; color:var(--fg);
+    line-height:1.28; margin-bottom:3px; letter-spacing:-.1px;
+  }
+  .card-title.serif { font-family:var(--font-disp); font-weight:600; letter-spacing:0; }
+
+  .card-sub  { font-size:11px; color:var(--muted); margin-bottom:6px; }
+  .card-tags { display:flex; gap:4px; margin-bottom:6px; }
+  .tag {
+    font-size:10px; font-weight:600; padding:2px 7px; border-radius:20px;
+    background:rgba(46,166,122,.10); color:var(--olive);
+    font-family:var(--font-body);
+  }
+  .card-stats { display:flex; gap:8px; }
+  .stat { font-size:11px; color:#bbb; font-family:var(--font-body); }
+  .stat b { color:var(--fg); }
+
+  /* ── RECIPE DETAIL screen ── */
+  .detail-screen { background:var(--bg); }
+
+  .detail-hero {
+    height:220px; position:relative; overflow:hidden;
+    background:#f0e8dc;
+    display:flex; align-items:center; justify-content:center;
+    font-size:72px;
+  }
+  .detail-hero img { width:100%; height:100%; object-fit:cover; position:absolute; inset:0; }
+  .detail-hero-scrim {
+    position:absolute; inset:0;
+    background:linear-gradient(to top, rgba(0,0,0,.55) 0%, transparent 55%);
+  }
+  /* Title on top of hero */
+  .detail-hero-title {
+    position:absolute; bottom:16px; left:20px; right:60px; z-index:1;
+    color:#fff;
+  }
+  .detail-hero-title .recipe-name {
+    font-size:26px; font-weight:700; line-height:1.2;
+    text-shadow:0 2px 8px rgba(0,0,0,.35);
+  }
+  .detail-hero-title .recipe-name.serif {
+    font-family:var(--font-disp); font-weight:600; font-size:28px;
+  }
+  .detail-hero-title .recipe-sub {
+    font-size:13px; color:rgba(255,255,255,.75); margin-top:4px;
+    font-family:var(--font-body);
+  }
+
+  .detail-body { padding:20px 20px 28px; }
+
+  .detail-title-block { margin-bottom:16px; }
+  /* Alt layout: title below hero */
+  .detail-title-block .recipe-name {
+    font-size:24px; font-weight:800; color:var(--fg); line-height:1.25;
+    letter-spacing:-.3px;
+  }
+  .detail-title-block .recipe-name.serif {
+    font-family:var(--font-disp); font-weight:700; font-size:26px;
+    letter-spacing:0;
+  }
+  .detail-title-block .recipe-meta {
+    font-size:13px; color:var(--muted); margin-top:5px; display:flex; gap:12px;
+    font-family:var(--font-body);
+  }
+
+  .detail-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+  .detail-tag {
+    padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600;
+    background:rgba(46,166,122,.10); color:var(--olive); font-family:var(--font-body);
+  }
+
+  .detail-stats {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:20px;
+  }
+  .stat-box {
+    background:#fff; border-radius:12px; padding:10px;
+    text-align:center; box-shadow:0 1px 6px rgba(0,0,0,.06);
+  }
+  .stat-box .lbl { font-size:10px; color:var(--muted); font-family:var(--font-body); }
+  .stat-box .val { font-size:15px; font-weight:800; color:var(--fg); margin-top:2px; font-family:var(--font-body); }
+
+  .detail-btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+  .btn {
+    height:44px; border-radius:12px; border:none; cursor:pointer;
+    font-size:14px; font-weight:700; font-family:var(--font-body);
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .btn-primary { background:var(--brand); color:#fff; grid-column:1/-1; }
+  .btn-outline  { background:transparent; color:var(--brand); border:2px solid var(--brand); }
+  .btn-ghost    { background:#f5f0e8; color:var(--fg); }
+
+  .divider { height:1px; background:var(--line); margin:16px 0; }
+
+  /* Ingredients section title */
+  .ing-title {
+    font-size:17px; font-weight:700; color:var(--fg); margin-bottom:12px;
+    letter-spacing:-.2px;
+  }
+  .ing-title.serif { font-family:var(--font-disp); font-weight:600; font-size:18px; }
+
+  .ing-list { display:flex; flex-direction:column; gap:6px; }
+  .ing-row {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:8px 12px; background:#fff; border-radius:10px;
+    font-size:13px; font-family:var(--font-body);
+  }
+  .ing-name  { font-weight:600; color:var(--fg); }
+  .ing-amt   { color:var(--muted); }
+
+  /* Bottom nav */
+  .bottom-tab {
+    display:flex; justify-content:space-around;
+    padding:10px 0 28px; border-top:1px solid var(--line);
+    background:rgba(255,252,248,.96); backdrop-filter:blur(12px);
+  }
+  .tab-item {
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    font-size:10px; font-weight:500; color:#ccc; min-width:56px;
+    font-family:var(--font-body);
+  }
+  .tab-item.on { font-weight:700; color:var(--brand); }
+  .tab-icon { font-size:20px; line-height:1.1; }
+</style>
+</head>
+<body>
+
+<h1>레시피 제목 폰트 비교</h1>
+<p class="sub">Sans-serif(본문체) vs Serif(디스플레이체) — HOME 카드 & RECIPE_DETAIL</p>
+
+<div class="toggle-bar">
+  <button class="tog on" id="tog-sans" onclick="setFont('sans')">Sans-serif (고딕)</button>
+  <button class="tog"    id="tog-serif" onclick="setFont('serif')">Serif (명조)</button>
+  <button class="tog"    id="tog-both" onclick="setFont('both')">나란히 비교</button>
+</div>
+
+<div class="row" id="row">
+
+  <!-- ── COLUMN: HOME card grid ── -->
+  <div class="col" id="col-home-sans">
+    <div class="col-label">HOME — Sans-serif</div>
+    <div class="phone">
+      <div class="app-bar">
+        <div class="logo">집밥<span style="color:var(--brand);">!</span></div>
+        <div class="icon-btn">🔔</div>
+        <div class="icon-btn">👤</div>
+      </div>
+      <div class="filter-row">
+        <div class="chip on">전체</div>
+        <div class="chip">한식</div>
+        <div class="chip">양식</div>
+        <div class="chip">간단</div>
+      </div>
+      <div class="scroll-body">
+        <div class="section-header">
+          <span class="sec-title">🔥 인기 레시피</span>
+          <span class="sec-more">더보기 ›</span>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <div class="thumb"><img src="https://picsum.photos/seed/doenjang/300/240" alt="" loading="lazy"/><div class="badge">YT</div></div>
+            <div class="card-body">
+              <div class="card-title">된장찌개</div>
+              <div class="card-sub">기본 4인분</div>
+              <div class="card-tags"><span class="tag">#한식</span><span class="tag">#국</span></div>
+              <div class="card-stats"><span class="stat">👁 <b>18.2k</b></span><span class="stat" style="color:var(--brand);">♥ 2.3k</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="thumb"><img src="https://picsum.photos/seed/kimchirice/300/240" alt="" loading="lazy"/><div class="badge">MT</div></div>
+            <div class="card-body">
+              <div class="card-title">김치볶음밥</div>
+              <div class="card-sub">기본 2인분</div>
+              <div class="card-tags"><span class="tag">#볶음</span></div>
+              <div class="card-stats"><span class="stat">👁 <b>14.7k</b></span><span class="stat" style="color:var(--brand);">♥ 980</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="thumb"><img src="https://picsum.photos/seed/pork/300/240" alt="" loading="lazy"/><div class="badge">YT</div></div>
+            <div class="card-body">
+              <div class="card-title">제육볶음</div>
+              <div class="card-sub">기본 3인분</div>
+              <div class="card-tags"><span class="tag">#매콤</span></div>
+              <div class="card-stats"><span class="stat">👁 <b>11.1k</b></span><span class="stat" style="color:var(--brand);">♥ 1.5k</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="thumb"><img src="https://picsum.photos/seed/eggrice/300/240" alt="" loading="lazy"/><div class="badge">MT</div></div>
+            <div class="card-body">
+              <div class="card-title">계란후라이덮밥</div>
+              <div class="card-sub">기본 1인분</div>
+              <div class="card-tags"><span class="tag">#10분</span></div>
+              <div class="card-stats"><span class="stat">👁 <b>8.9k</b></span><span class="stat" style="color:var(--brand);">♥ 640</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="section-header">
+          <span class="sec-title">⚡ 간단 한끼</span>
+          <span class="sec-more">더보기 ›</span>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <div class="thumb"><img src="https://picsum.photos/seed/ramen42/300/240" alt="" loading="lazy"/></div>
+            <div class="card-body">
+              <div class="card-title">참치마요덮밥</div>
+              <div class="card-sub">기본 1인분</div>
+              <div class="card-tags"><span class="tag">#간단</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="thumb"><img src="https://picsum.photos/seed/salad99/300/240" alt="" loading="lazy"/></div>
+            <div class="card-body">
+              <div class="card-title">아보카도 토스트</div>
+              <div class="card-sub">기본 1인분</div>
+              <div class="card-tags"><span class="tag">#브런치</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-tab">
+        <div class="tab-item on"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item"><span class="tab-icon">📅</span>플래너</div>
+        <div class="tab-item"><span class="tab-icon">🥦</span>팬트리</div>
+        <div class="tab-item"><span class="tab-icon">👤</span>마이</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col" id="col-home-serif">
+    <div class="col-label">HOME — Serif (디스플레이)</div>
+    <div class="phone">
+      <div class="app-bar">
+        <div class="logo">집밥<span style="color:var(--brand);">!</span></div>
+        <div class="icon-btn">🔔</div>
+        <div class="icon-btn">👤</div>
+      </div>
+      <div class="filter-row">
+        <div class="chip on">전체</div>
+        <div class="chip">한식</div>
+        <div class="chip">양식</div>
+        <div class="chip">간단</div>
+      </div>
+      <div class="scroll-body">
+        <div class="section-header">
+          <span class="sec-title">🔥 인기 레시피</span>
+          <span class="sec-more">더보기 ›</span>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <div class="thumb"><img src="https://picsum.photos/seed/doenjang/300/240" alt="" loading="lazy"/><div class="badge">YT</div></div>
+            <div class="card-body">
+              <div class="card-title serif">된장찌개</div>
+              <div class="card-sub">기본 4인분</div>
+              <div class="card-tags"><span class="tag">#한식</span><span class="tag">#국</span></div>
+              <div class="card-stats"><span class="stat">👁 <b>18.2k</b></span><span class="stat" style="color:var(--brand);">♥ 2.3k</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="thumb"><img src="https://picsum.photos/seed/kimchirice/300/240" alt="" loading="lazy"/><div class="badge">MT</div></div>
+            <div class="card-body">
+              <div class="card-title serif">김치볶음밥</div>
+              <div class="card-sub">기본 2인분</div>
+              <div class="card-tags"><span class="tag">#볶음</span></div>
+              <div class="card-stats"><span class="stat">👁 <b>14.7k</b></span><span class="stat" style="color:var(--brand);">♥ 980</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="thumb"><img src="https://picsum.photos/seed/pork/300/240" alt="" loading="lazy"/><div class="badge">YT</div></div>
+            <div class="card-body">
+              <div class="card-title serif">제육볶음</div>
+              <div class="card-sub">기본 3인분</div>
+              <div class="card-tags"><span class="tag">#매콤</span></div>
+              <div class="card-stats"><span class="stat">👁 <b>11.1k</b></span><span class="stat" style="color:var(--brand);">♥ 1.5k</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="thumb"><img src="https://picsum.photos/seed/eggrice/300/240" alt="" loading="lazy"/><div class="badge">MT</div></div>
+            <div class="card-body">
+              <div class="card-title serif">계란후라이덮밥</div>
+              <div class="card-sub">기본 1인분</div>
+              <div class="card-tags"><span class="tag">#10분</span></div>
+              <div class="card-stats"><span class="stat">👁 <b>8.9k</b></span><span class="stat" style="color:var(--brand);">♥ 640</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="section-header">
+          <span class="sec-title">⚡ 간단 한끼</span>
+          <span class="sec-more">더보기 ›</span>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <div class="thumb"><img src="https://picsum.photos/seed/ramen42/300/240" alt="" loading="lazy"/></div>
+            <div class="card-body">
+              <div class="card-title serif">참치마요덮밥</div>
+              <div class="card-sub">기본 1인분</div>
+              <div class="card-tags"><span class="tag">#간단</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="thumb"><img src="https://picsum.photos/seed/salad99/300/240" alt="" loading="lazy"/></div>
+            <div class="card-body">
+              <div class="card-title serif">아보카도 토스트</div>
+              <div class="card-sub">기본 1인분</div>
+              <div class="card-tags"><span class="tag">#브런치</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-tab">
+        <div class="tab-item on"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item"><span class="tab-icon">📅</span>플래너</div>
+        <div class="tab-item"><span class="tab-icon">🥦</span>팬트리</div>
+        <div class="tab-item"><span class="tab-icon">👤</span>마이</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── COLUMN: RECIPE DETAIL ── -->
+  <div class="col" id="col-detail-sans">
+    <div class="col-label">RECIPE_DETAIL — Sans-serif</div>
+    <div class="phone detail-screen">
+      <div class="detail-hero">
+        <img src="https://picsum.photos/seed/doenjang/750/440" alt="" loading="lazy" />
+        <div class="detail-hero-scrim"></div>
+        <div class="detail-hero-title">
+          <div class="recipe-name">된장찌개</div>
+          <div class="recipe-sub">기본 4인분 · #한식 #국</div>
+        </div>
+      </div>
+      <div class="detail-body">
+        <div class="detail-stats">
+          <div class="stat-box"><div class="lbl">조회</div><div class="val">18.2k</div></div>
+          <div class="stat-box"><div class="lbl">좋아요</div><div class="val" style="color:var(--brand);">2.3k</div></div>
+          <div class="stat-box"><div class="lbl">저장</div><div class="val">1.1k</div></div>
+        </div>
+        <div class="detail-btns">
+          <button class="btn btn-primary">🍳 요리하기</button>
+          <button class="btn btn-outline">📅 플래너 추가</button>
+          <button class="btn btn-ghost">♥ 좋아요</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ing-title">재료 (4인분)</div>
+        <div class="ing-list">
+          <div class="ing-row"><span class="ing-name">된장</span><span class="ing-amt">3 큰술</span></div>
+          <div class="ing-row"><span class="ing-name">두부</span><span class="ing-amt">1/2 모</span></div>
+          <div class="ing-row"><span class="ing-name">애호박</span><span class="ing-amt">1/2 개</span></div>
+          <div class="ing-row"><span class="ing-name">양파</span><span class="ing-amt">1/4 개</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col" id="col-detail-serif">
+    <div class="col-label">RECIPE_DETAIL — Serif</div>
+    <div class="phone detail-screen">
+      <div class="detail-hero">
+        <img src="https://picsum.photos/seed/doenjang/750/440" alt="" loading="lazy" />
+        <div class="detail-hero-scrim"></div>
+        <div class="detail-hero-title">
+          <div class="recipe-name serif">된장찌개</div>
+          <div class="recipe-sub">기본 4인분 · #한식 #국</div>
+        </div>
+      </div>
+      <div class="detail-body">
+        <div class="detail-stats">
+          <div class="stat-box"><div class="lbl">조회</div><div class="val">18.2k</div></div>
+          <div class="stat-box"><div class="lbl">좋아요</div><div class="val" style="color:var(--brand);">2.3k</div></div>
+          <div class="stat-box"><div class="lbl">저장</div><div class="val">1.1k</div></div>
+        </div>
+        <div class="detail-btns">
+          <button class="btn btn-primary">🍳 요리하기</button>
+          <button class="btn btn-outline">📅 플래너 추가</button>
+          <button class="btn btn-ghost">♥ 좋아요</button>
+        </div>
+        <div class="divider"></div>
+        <div class="ing-title serif">재료 (4인분)</div>
+        <div class="ing-list">
+          <div class="ing-row"><span class="ing-name">된장</span><span class="ing-amt">3 큰술</span></div>
+          <div class="ing-row"><span class="ing-name">두부</span><span class="ing-amt">1/2 모</span></div>
+          <div class="ing-row"><span class="ing-name">애호박</span><span class="ing-amt">1/2 개</span></div>
+          <div class="ing-row"><span class="ing-name">양파</span><span class="ing-amt">1/4 개</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /row -->
+
+<script>
+const cols = {
+  sans:  ['col-home-sans',  'col-detail-sans'],
+  serif: ['col-home-serif', 'col-detail-serif'],
+  both:  ['col-home-sans',  'col-home-serif', 'col-detail-sans', 'col-detail-serif'],
+};
+const all = ['col-home-sans','col-home-serif','col-detail-sans','col-detail-serif'];
+
+function setFont(type) {
+  document.querySelectorAll('.tog').forEach(t => t.classList.remove('on'));
+  document.getElementById('tog-' + type).classList.add('on');
+  all.forEach(id => {
+    const el = document.getElementById(id);
+    el.style.display = cols[type].includes(id) ? 'flex' : 'none';
+  });
+}
+
+// default: 나란히 비교
+setFont('both');
+document.getElementById('tog-both').classList.add('on');
+document.getElementById('tog-sans').classList.remove('on');
+</script>
+</body>
+</html>

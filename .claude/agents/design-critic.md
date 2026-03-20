@@ -32,6 +32,7 @@ tools:
    - `docs/화면정의서-v1.2.md` — 해당 화면 정의와 대조
    - `docs/요구사항기준선-v1.6.md` — 요구사항 누락/오류 확인
    - `docs/유저flow맵-v1.2.md` — 진입/이탈 경로 정확성 확인
+   - `docs/design/design-tokens.md` — 확정 토큰 기준으로 색상·간격·반경 위반 여부 확인
    - `AGENTS.md` — Domain Rules, Implementation Rules 위반 여부
 
 3. **검토 기준 적용** (아래 체크리스트 전체 수행)
@@ -68,6 +69,15 @@ tools:
 - [ ] 장보기 D&D (sort_order) UI가 명확한가 (해당 화면만)
 - [ ] 팬트리 제외 섹션 2-영역 구조가 올바른가 (SHOPPING_DETAIL만)
 - [ ] AI스러운 제네릭 UI 사용 여부 (글로우, 과도한 그라디언트 등)
+
+### F. 디자인 토큰 준수 (docs/design/design-tokens.md 기준)
+- [ ] CTA 버튼에 `--brand (#FF6C3C)` 사용됐는가
+- [ ] 카드 배경에 `--surface (#ffffff)` 명시됐는가
+- [ ] 태그·칩에 `--olive (#2ea67a)` 사용됐는가
+- [ ] 보조 텍스트에 `--muted (#999999)` 사용됐는가
+- [ ] 카드 border-radius 16px 준수됐는가
+- [ ] 수평 여백 16px(모바일) 기준 준수됐는가
+- [ ] 확정 토큰 외 임의 색상(`#d56a3a`, `#6e7c4a` 등 구버전)이 사용됐는가
 
 ### E. 도메인 규칙 정합성
 - [ ] `meals.status` 전이 (registered → shopping_done → cook_done) 표현 정확성
@@ -121,6 +131,9 @@ tools:
 - [x/◻] ...
 
 ### E. 도메인 규칙 정합성
+- [x/◻] ...
+
+### F. 디자인 토큰 준수
 - [x/◻] ...
 
 ## design-generator 재작업 요청 항목

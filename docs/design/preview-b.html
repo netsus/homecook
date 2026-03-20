@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>집밥 — 명랑한 주방 5가지 후보</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: "Apple SD Gothic Neo", "Pretendard", -apple-system, sans-serif;
+  background: #1a1a1a;
+  min-height: 100vh;
+  padding: 32px 24px 64px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  color: #eee;
+  margin-bottom: 6px;
+}
+.subtitle {
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 28px;
+}
+
+/* Tab bar */
+.tab-bar {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.tab-btn {
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 1.5px solid #444;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: #aaa;
+  transition: all 0.15s;
+}
+.tab-btn.active {
+  border-color: transparent;
+  color: #fff;
+}
+
+/* Phones container */
+.phones {
+  display: flex;
+  justify-content: flex-start;
+  gap: 24px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  scrollbar-color: #444 transparent;
+}
+.phones::-webkit-scrollbar { height: 4px; }
+.phones::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+
+.phone-wrap {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.phone-wrap.hidden { display: none; }
+
+.phone-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* Phone shell */
+.phone {
+  width: 375px;
+  height: 780px;
+  border-radius: 44px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 8px #2a2a2a,
+    0 0 0 9px #111,
+    0 24px 60px rgba(0,0,0,0.55);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #fffdf6;
+  font-family: "Apple SD Gothic Neo", "Pretendard", sans-serif;
+}
+
+/* ── Shared inner layout ── */
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-bar {
+  padding: 52px 20px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: inherit;
+}
+.logo {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  color: #1a1a2e;
+  flex: 1;
+}
+.logo-dot { /* colored per variant */ }
+.icon-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  border: 1.5px solid;
+}
+
+.search-wrap { padding: 2px 16px 10px; }
+.search-bar {
+  background: #fff;
+  border: 1.5px solid rgba(0,0,0,0.08);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #aaa;
+  display: flex; align-items: center; gap: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.filter-row {
+  padding: 0 16px 12px;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  align-items: center;
+}
+.filter-row::-webkit-scrollbar { display: none; }
+
+.chip {
+  white-space: nowrap;
+  padding: 6px 13px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1.5px solid rgba(0,0,0,0.09);
+  background: #fff;
+  color: #888;
+  flex-shrink: 0;
+}
+.chip.active { color: #fff; border-color: transparent; }
+.chip.outline { background: transparent; }
+
+.sort-chip {
+  margin-left: auto;
+  white-space: nowrap;
+  padding: 6px 11px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1.5px solid rgba(0,0,0,0.09);
+  background: #fff;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.scroll-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px 8px;
+  scrollbar-width: none;
+}
+.scroll-body::-webkit-scrollbar { display: none; }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 2px 0 12px;
+}
+.section-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1a1a2e;
+  letter-spacing: -0.3px;
+}
+.section-more { font-size: 12px; font-weight: 600; }
+
+/* ── Uniform 2-col card grid ── */
+.recipe-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+  margin-bottom: 20px;
+}
+
+.recipe-card {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.recipe-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+/* Thumbnail — flat color, NO gradient */
+.card-thumb {
+  height: 108px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  position: relative;
+}
+.card-source-badge {
+  position: absolute;
+  top: 7px; left: 7px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #fff;
+}
+
+.card-body { padding: 10px 11px 12px; }
+
+.card-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1a1a2e;
+  line-height: 1.25;
+  margin-bottom: 3px;
+  letter-spacing: -0.2px;
+}
+.card-sub { font-size: 11px; color: #999; margin-bottom: 7px; }
+.card-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 7px; }
+.card-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+.card-stats {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.stat { font-size: 11px; color: #aaa; }
+.stat strong { font-weight: 700; color: #1a1a2e; }
+
+/* Bottom tab */
+.bottom-tab {
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0 28px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.05);
+  flex-shrink: 0;
+}
+.tab-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #bbb;
+  min-width: 56px;
+}
+.tab-item.active { font-weight: 700; }
+.tab-icon { font-size: 20px; line-height: 1.1; }
+
+/* Swatch row */
+.swatch-row { display: flex; gap: 5px; flex-wrap: wrap; max-width: 375px; }
+.swatch {
+  width: 30px; height: 30px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.15);
+  cursor: default;
+  position: relative;
+}
+.swatch:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 36px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Thumbnail bg colors (flat, no gradient) */
+.thumb-warm  { background: #FFF0EA; }
+.thumb-peach { background: #FFE8DF; }
+.thumb-pink  { background: #FFEAE8; }
+.thumb-yellow{ background: #FFF8E0; }
+.thumb-green { background: #E8F8EF; }
+.thumb-blue  { background: #E8F4FF; }
+</style>
+</head>
+<body>
+
+<h1>명랑한 주방 — 주황 색상 5가지 후보</h1>
+<p class="subtitle">카드 크기 균일화 · 이미지 그라데이션 제거 적용 완료 | 색상 스와치에 마우스를 올리면 hex 확인</p>
+
+<div class="tab-bar">
+  <button class="tab-btn active" style="background:#555;border-color:#555;" onclick="showAll()">전체 비교</button>
+  <button class="tab-btn" id="btn-b1" onclick="showOne('b1')">B1 코랄 오렌지</button>
+  <button class="tab-btn" id="btn-b2" onclick="showOne('b2')">B2 귤빛 오렌지</button>
+  <button class="tab-btn" id="btn-b3" onclick="showOne('b3')">B3 선명 오렌지</button>
+  <button class="tab-btn" id="btn-b4" onclick="showOne('b4')">B4 황금 오렌지</button>
+  <button class="tab-btn" id="btn-b5" onclick="showOne('b5')">B5 소프트 오렌지</button>
+</div>
+
+<div class="phones" id="phones">
+
+<!-- ════════════════════════════════════
+     B1: 코랄 오렌지  #FF6243
+     원본(#e8521a)보다 밝고 살짝 코랄 기운
+════════════════════════════════════ -->
+<div class="phone-wrap" id="b1">
+  <div class="phone-label" style="color:#FF6243;">B1 — 코랄 오렌지 #FF6243</div>
+  <div class="phone" style="background:#fffdf5;">
+    <div class="screen">
+      <div class="app-bar" style="background:#fffdf5;">
+        <div class="logo">집밥<span style="color:#FF6243;">!</span></div>
+        <div class="icon-btn" style="background:#FFF1EE;border-color:#FFCFC5;">🔔</div>
+        <div class="icon-btn" style="background:#FFF1EE;border-color:#FFCFC5;">👤</div>
+      </div>
+      <div class="search-wrap"><div class="search-bar">🔍 레시피 검색...</div></div>
+      <div class="filter-row">
+        <div class="chip active" style="background:#FF6243;">전체</div>
+        <div class="chip">한식</div>
+        <div class="chip">양식</div>
+        <div class="chip outline" style="border-color:rgba(46,166,122,0.4);color:#2ea67a;">재료검색</div>
+        <div class="chip">간단</div>
+        <div class="sort-chip">조회수순 ▾</div>
+      </div>
+      <div class="scroll-body">
+        <div class="section-header">
+          <span class="section-title">🔥 인기 레시피</span>
+          <span class="section-more" style="color:#FF6243;">더보기 ›</span>
+        </div>
+        <div class="recipe-grid">
+          <div class="recipe-card"><div class="card-thumb thumb-warm">🍲<div class="card-source-badge" style="background:#FF6243;">YT</div></div><div class="card-body"><div class="card-title">된장찌개</div><div class="card-sub">기본 4인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#한식</span></div><div class="card-stats"><span class="stat">👁 18.2k</span><span class="stat" style="color:#FF6243;">♥ 2.3k</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-peach">🥘<div class="card-source-badge" style="background:#FF6243;">MT</div></div><div class="card-body"><div class="card-title">김치볶음밥</div><div class="card-sub">기본 2인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#볶음</span></div><div class="card-stats"><span class="stat">👁 14.7k</span><span class="stat" style="color:#FF6243;">♥ 980</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-pink">🥩<div class="card-source-badge" style="background:#FF6243;">YT</div></div><div class="card-body"><div class="card-title">제육볶음</div><div class="card-sub">기본 3인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#매콤</span></div><div class="card-stats"><span class="stat">👁 11.1k</span><span class="stat" style="color:#FF6243;">♥ 1.5k</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-yellow">🥚<div class="card-source-badge" style="background:#FF6243;">MT</div></div><div class="card-body"><div class="card-title">계란후라이덮밥</div><div class="card-sub">기본 1인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#10분</span></div><div class="card-stats"><span class="stat">👁 8.9k</span><span class="stat" style="color:#FF6243;">♥ 640</span></div></div></div>
+        </div>
+        <div class="section-header"><span class="section-title">⚡ 간단 한끼</span><span class="section-more" style="color:#FF6243;">더보기 ›</span></div>
+        <div class="recipe-grid">
+          <div class="recipe-card"><div class="card-thumb thumb-warm">🍜</div><div class="card-body"><div class="card-title">라면 끓이기</div><div class="card-sub">기본 1인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#면</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-green">🥗</div><div class="card-body"><div class="card-title">콥 샐러드</div><div class="card-sub">기본 2인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#샐러드</span></div></div></div>
+        </div>
+      </div>
+      <div class="bottom-tab">
+        <div class="tab-item active" style="color:#FF6243;"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item"><span class="tab-icon">📅</span>플래너</div>
+        <div class="tab-item"><span class="tab-icon">🥦</span>팬트리</div>
+        <div class="tab-item"><span class="tab-icon">👤</span>마이</div>
+      </div>
+    </div>
+  </div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#fffdf5;" title="배경 #fffdf5"></div>
+    <div class="swatch" style="background:#1a1a2e;" title="텍스트 #1a1a2e"></div>
+    <div class="swatch" style="background:#FF6243;" title="브랜드 #FF6243 ← 핵심"></div>
+    <div class="swatch" style="background:#E04828;" title="강조 #E04828"></div>
+    <div class="swatch" style="background:#2ea67a;" title="민트 #2ea67a"></div>
+    <div class="swatch" style="background:#ffffff;border:1px solid #ddd;" title="카드 #ffffff"></div>
+    <div class="swatch" style="background:#999999;" title="뮤트 #999999"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     B2: 귤빛 오렌지  #FF7B30
+     더 순수한 오렌지, 따뜻하고 경쾌
+════════════════════════════════════ -->
+<div class="phone-wrap" id="b2">
+  <div class="phone-label" style="color:#FF7B30;">B2 — 귤빛 오렌지 #FF7B30</div>
+  <div class="phone" style="background:#fffef8;">
+    <div class="screen">
+      <div class="app-bar" style="background:#fffef8;">
+        <div class="logo">집밥<span style="color:#FF7B30;">!</span></div>
+        <div class="icon-btn" style="background:#FFF4EE;border-color:#FFD9C0;">🔔</div>
+        <div class="icon-btn" style="background:#FFF4EE;border-color:#FFD9C0;">👤</div>
+      </div>
+      <div class="search-wrap"><div class="search-bar">🔍 레시피 검색...</div></div>
+      <div class="filter-row">
+        <div class="chip active" style="background:#FF7B30;">전체</div>
+        <div class="chip">한식</div>
+        <div class="chip">양식</div>
+        <div class="chip outline" style="border-color:rgba(46,166,122,0.4);color:#2ea67a;">재료검색</div>
+        <div class="chip">간단</div>
+        <div class="sort-chip">조회수순 ▾</div>
+      </div>
+      <div class="scroll-body">
+        <div class="section-header">
+          <span class="section-title">🔥 인기 레시피</span>
+          <span class="section-more" style="color:#FF7B30;">더보기 ›</span>
+        </div>
+        <div class="recipe-grid">
+          <div class="recipe-card"><div class="card-thumb thumb-warm">🍲<div class="card-source-badge" style="background:#FF7B30;">YT</div></div><div class="card-body"><div class="card-title">된장찌개</div><div class="card-sub">기본 4인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#한식</span></div><div class="card-stats"><span class="stat">👁 18.2k</span><span class="stat" style="color:#FF7B30;">♥ 2.3k</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-peach">🥘<div class="card-source-badge" style="background:#FF7B30;">MT</div></div><div class="card-body"><div class="card-title">김치볶음밥</div><div class="card-sub">기본 2인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#볶음</span></div><div class="card-stats"><span class="stat">👁 14.7k</span><span class="stat" style="color:#FF7B30;">♥ 980</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-pink">🥩<div class="card-source-badge" style="background:#FF7B30;">YT</div></div><div class="card-body"><div class="card-title">제육볶음</div><div class="card-sub">기본 3인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#매콤</span></div><div class="card-stats"><span class="stat">👁 11.1k</span><span class="stat" style="color:#FF7B30;">♥ 1.5k</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-yellow">🥚<div class="card-source-badge" style="background:#FF7B30;">MT</div></div><div class="card-body"><div class="card-title">계란후라이덮밥</div><div class="card-sub">기본 1인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#10분</span></div><div class="card-stats"><span class="stat">👁 8.9k</span><span class="stat" style="color:#FF7B30;">♥ 640</span></div></div></div>
+        </div>
+        <div class="section-header"><span class="section-title">⚡ 간단 한끼</span><span class="section-more" style="color:#FF7B30;">더보기 ›</span></div>
+        <div class="recipe-grid">
+          <div class="recipe-card"><div class="card-thumb thumb-warm">🍜</div><div class="card-body"><div class="card-title">라면 끓이기</div><div class="card-sub">기본 1인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#면</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-green">🥗</div><div class="card-body"><div class="card-title">콥 샐러드</div><div class="card-sub">기본 2인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#샐러드</span></div></div></div>
+        </div>
+      </div>
+      <div class="bottom-tab">
+        <div class="tab-item active" style="color:#FF7B30;"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item"><span class="tab-icon">📅</span>플래너</div>
+        <div class="tab-item"><span class="tab-icon">🥦</span>팬트리</div>
+        <div class="tab-item"><span class="tab-icon">👤</span>마이</div>
+      </div>
+    </div>
+  </div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#fffef8;" title="배경 #fffef8"></div>
+    <div class="swatch" style="background:#1a1a2e;" title="텍스트 #1a1a2e"></div>
+    <div class="swatch" style="background:#FF7B30;" title="브랜드 #FF7B30 ← 핵심"></div>
+    <div class="swatch" style="background:#E06018;" title="강조 #E06018"></div>
+    <div class="swatch" style="background:#2ea67a;" title="민트 #2ea67a"></div>
+    <div class="swatch" style="background:#ffffff;border:1px solid #ddd;" title="카드 #ffffff"></div>
+    <div class="swatch" style="background:#999999;" title="뮤트 #999999"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     B3: 선명 오렌지  #F97316  (Tailwind orange-500)
+     가장 표준적인 오렌지, 모던하고 깔끔
+════════════════════════════════════ -->
+<div class="phone-wrap" id="b3">
+  <div class="phone-label" style="color:#F97316;">B3 — 선명 오렌지 #F97316</div>
+  <div class="phone" style="background:#fffdf8;">
+    <div class="screen">
+      <div class="app-bar" style="background:#fffdf8;">
+        <div class="logo">집밥<span style="color:#F97316;">!</span></div>
+        <div class="icon-btn" style="background:#FFF3EA;border-color:#FFD8B2;">🔔</div>
+        <div class="icon-btn" style="background:#FFF3EA;border-color:#FFD8B2;">👤</div>
+      </div>
+      <div class="search-wrap"><div class="search-bar">🔍 레시피 검색...</div></div>
+      <div class="filter-row">
+        <div class="chip active" style="background:#F97316;">전체</div>
+        <div class="chip">한식</div>
+        <div class="chip">양식</div>
+        <div class="chip outline" style="border-color:rgba(16,185,129,0.4);color:#10B981;">재료검색</div>
+        <div class="chip">간단</div>
+        <div class="sort-chip">조회수순 ▾</div>
+      </div>
+      <div class="scroll-body">
+        <div class="section-header">
+          <span class="section-title">🔥 인기 레시피</span>
+          <span class="section-more" style="color:#F97316;">더보기 ›</span>
+        </div>
+        <div class="recipe-grid">
+          <div class="recipe-card"><div class="card-thumb thumb-warm">🍲<div class="card-source-badge" style="background:#F97316;">YT</div></div><div class="card-body"><div class="card-title">된장찌개</div><div class="card-sub">기본 4인분</div><div class="card-tags"><span class="card-tag" style="background:#ECFDF5;color:#10B981;">#한식</span></div><div class="card-stats"><span class="stat">👁 18.2k</span><span class="stat" style="color:#F97316;">♥ 2.3k</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-peach">🥘<div class="card-source-badge" style="background:#F97316;">MT</div></div><div class="card-body"><div class="card-title">김치볶음밥</div><div class="card-sub">기본 2인분</div><div class="card-tags"><span class="card-tag" style="background:#ECFDF5;color:#10B981;">#볶음</span></div><div class="card-stats"><span class="stat">👁 14.7k</span><span class="stat" style="color:#F97316;">♥ 980</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-pink">🥩<div class="card-source-badge" style="background:#F97316;">YT</div></div><div class="card-body"><div class="card-title">제육볶음</div><div class="card-sub">기본 3인분</div><div class="card-tags"><span class="card-tag" style="background:#ECFDF5;color:#10B981;">#매콤</span></div><div class="card-stats"><span class="stat">👁 11.1k</span><span class="stat" style="color:#F97316;">♥ 1.5k</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-yellow">🥚<div class="card-source-badge" style="background:#F97316;">MT</div></div><div class="card-body"><div class="card-title">계란후라이덮밥</div><div class="card-sub">기본 1인분</div><div class="card-tags"><span class="card-tag" style="background:#ECFDF5;color:#10B981;">#10분</span></div><div class="card-stats"><span class="stat">👁 8.9k</span><span class="stat" style="color:#F97316;">♥ 640</span></div></div></div>
+        </div>
+        <div class="section-header"><span class="section-title">⚡ 간단 한끼</span><span class="section-more" style="color:#F97316;">더보기 ›</span></div>
+        <div class="recipe-grid">
+          <div class="recipe-card"><div class="card-thumb thumb-warm">🍜</div><div class="card-body"><div class="card-title">라면 끓이기</div><div class="card-sub">기본 1인분</div><div class="card-tags"><span class="card-tag" style="background:#ECFDF5;color:#10B981;">#면</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-green">🥗</div><div class="card-body"><div class="card-title">콥 샐러드</div><div class="card-sub">기본 2인분</div><div class="card-tags"><span class="card-tag" style="background:#ECFDF5;color:#10B981;">#샐러드</span></div></div></div>
+        </div>
+      </div>
+      <div class="bottom-tab">
+        <div class="tab-item active" style="color:#F97316;"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item"><span class="tab-icon">📅</span>플래너</div>
+        <div class="tab-item"><span class="tab-icon">🥦</span>팬트리</div>
+        <div class="tab-item"><span class="tab-icon">👤</span>마이</div>
+      </div>
+    </div>
+  </div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#fffdf8;" title="배경 #fffdf8"></div>
+    <div class="swatch" style="background:#1a1a2e;" title="텍스트 #1a1a2e"></div>
+    <div class="swatch" style="background:#F97316;" title="브랜드 #F97316 ← 핵심"></div>
+    <div class="swatch" style="background:#EA580C;" title="강조 #EA580C"></div>
+    <div class="swatch" style="background:#10B981;" title="에메랄드 #10B981"></div>
+    <div class="swatch" style="background:#ffffff;border:1px solid #ddd;" title="카드 #ffffff"></div>
+    <div class="swatch" style="background:#999999;" title="뮤트 #999999"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     B4: 황금 오렌지  #FF9500  (iOS 오렌지)
+     가장 밝고 노란 기운, 화사하고 따뜻함
+════════════════════════════════════ -->
+<div class="phone-wrap" id="b4">
+  <div class="phone-label" style="color:#E88800;">B4 — 황금 오렌지 #FF9500</div>
+  <div class="phone" style="background:#fffef5;">
+    <div class="screen">
+      <div class="app-bar" style="background:#fffef5;">
+        <div class="logo">집밥<span style="color:#FF9500;">!</span></div>
+        <div class="icon-btn" style="background:#FFF8E0;border-color:#FFE099;">🔔</div>
+        <div class="icon-btn" style="background:#FFF8E0;border-color:#FFE099;">👤</div>
+      </div>
+      <div class="search-wrap"><div class="search-bar">🔍 레시피 검색...</div></div>
+      <div class="filter-row">
+        <div class="chip active" style="background:#FF9500;color:#fff;">전체</div>
+        <div class="chip">한식</div>
+        <div class="chip">양식</div>
+        <div class="chip outline" style="border-color:rgba(46,166,122,0.4);color:#2ea67a;">재료검색</div>
+        <div class="chip">간단</div>
+        <div class="sort-chip">조회수순 ▾</div>
+      </div>
+      <div class="scroll-body">
+        <div class="section-header">
+          <span class="section-title">🔥 인기 레시피</span>
+          <span class="section-more" style="color:#E88800;">더보기 ›</span>
+        </div>
+        <div class="recipe-grid">
+          <div class="recipe-card"><div class="card-thumb thumb-yellow">🍲<div class="card-source-badge" style="background:#FF9500;">YT</div></div><div class="card-body"><div class="card-title">된장찌개</div><div class="card-sub">기본 4인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#한식</span></div><div class="card-stats"><span class="stat">👁 18.2k</span><span class="stat" style="color:#E88800;">♥ 2.3k</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-peach">🥘<div class="card-source-badge" style="background:#FF9500;">MT</div></div><div class="card-body"><div class="card-title">김치볶음밥</div><div class="card-sub">기본 2인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#볶음</span></div><div class="card-stats"><span class="stat">👁 14.7k</span><span class="stat" style="color:#E88800;">♥ 980</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-warm">🥩<div class="card-source-badge" style="background:#FF9500;">YT</div></div><div class="card-body"><div class="card-title">제육볶음</div><div class="card-sub">기본 3인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#매콤</span></div><div class="card-stats"><span class="stat">👁 11.1k</span><span class="stat" style="color:#E88800;">♥ 1.5k</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-yellow">🥚<div class="card-source-badge" style="background:#FF9500;">MT</div></div><div class="card-body"><div class="card-title">계란후라이덮밥</div><div class="card-sub">기본 1인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#10분</span></div><div class="card-stats"><span class="stat">👁 8.9k</span><span class="stat" style="color:#E88800;">♥ 640</span></div></div></div>
+        </div>
+        <div class="section-header"><span class="section-title">⚡ 간단 한끼</span><span class="section-more" style="color:#E88800;">더보기 ›</span></div>
+        <div class="recipe-grid">
+          <div class="recipe-card"><div class="card-thumb thumb-yellow">🍜</div><div class="card-body"><div class="card-title">라면 끓이기</div><div class="card-sub">기본 1인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#면</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-green">🥗</div><div class="card-body"><div class="card-title">콥 샐러드</div><div class="card-sub">기본 2인분</div><div class="card-tags"><span class="card-tag" style="background:#E8F8EF;color:#2ea67a;">#샐러드</span></div></div></div>
+        </div>
+      </div>
+      <div class="bottom-tab">
+        <div class="tab-item active" style="color:#E88800;"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item"><span class="tab-icon">📅</span>플래너</div>
+        <div class="tab-item"><span class="tab-icon">🥦</span>팬트리</div>
+        <div class="tab-item"><span class="tab-icon">👤</span>마이</div>
+      </div>
+    </div>
+  </div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#fffef5;" title="배경 #fffef5"></div>
+    <div class="swatch" style="background:#1a1a2e;" title="텍스트 #1a1a2e"></div>
+    <div class="swatch" style="background:#FF9500;" title="브랜드 #FF9500 ← 핵심"></div>
+    <div class="swatch" style="background:#D47B00;" title="강조 #D47B00"></div>
+    <div class="swatch" style="background:#2ea67a;" title="민트 #2ea67a"></div>
+    <div class="swatch" style="background:#ffffff;border:1px solid #ddd;" title="카드 #ffffff"></div>
+    <div class="swatch" style="background:#999999;" title="뮤트 #999999"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     B5: 소프트 오렌지  #FF7043
+     따뜻하지만 부드럽고 덜 자극적
+════════════════════════════════════ -->
+<div class="phone-wrap" id="b5">
+  <div class="phone-label" style="color:#FF7043;">B5 — 소프트 오렌지 #FF7043</div>
+  <div class="phone" style="background:#fffef8;">
+    <div class="screen">
+      <div class="app-bar" style="background:#fffef8;">
+        <div class="logo">집밥<span style="color:#FF7043;">!</span></div>
+        <div class="icon-btn" style="background:#FFF2EE;border-color:#FFD0C4;">🔔</div>
+        <div class="icon-btn" style="background:#FFF2EE;border-color:#FFD0C4;">👤</div>
+      </div>
+      <div class="search-wrap"><div class="search-bar">🔍 레시피 검색...</div></div>
+      <div class="filter-row">
+        <div class="chip active" style="background:#FF7043;">전체</div>
+        <div class="chip">한식</div>
+        <div class="chip">양식</div>
+        <div class="chip outline" style="border-color:rgba(56,178,172,0.4);color:#38B2AC;">재료검색</div>
+        <div class="chip">간단</div>
+        <div class="sort-chip">조회수순 ▾</div>
+      </div>
+      <div class="scroll-body">
+        <div class="section-header">
+          <span class="section-title">🔥 인기 레시피</span>
+          <span class="section-more" style="color:#FF7043;">더보기 ›</span>
+        </div>
+        <div class="recipe-grid">
+          <div class="recipe-card"><div class="card-thumb thumb-warm">🍲<div class="card-source-badge" style="background:#FF7043;">YT</div></div><div class="card-body"><div class="card-title">된장찌개</div><div class="card-sub">기본 4인분</div><div class="card-tags"><span class="card-tag" style="background:#E6FFFA;color:#38B2AC;">#한식</span></div><div class="card-stats"><span class="stat">👁 18.2k</span><span class="stat" style="color:#FF7043;">♥ 2.3k</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-peach">🥘<div class="card-source-badge" style="background:#FF7043;">MT</div></div><div class="card-body"><div class="card-title">김치볶음밥</div><div class="card-sub">기본 2인분</div><div class="card-tags"><span class="card-tag" style="background:#E6FFFA;color:#38B2AC;">#볶음</span></div><div class="card-stats"><span class="stat">👁 14.7k</span><span class="stat" style="color:#FF7043;">♥ 980</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-pink">🥩<div class="card-source-badge" style="background:#FF7043;">YT</div></div><div class="card-body"><div class="card-title">제육볶음</div><div class="card-sub">기본 3인분</div><div class="card-tags"><span class="card-tag" style="background:#E6FFFA;color:#38B2AC;">#매콤</span></div><div class="card-stats"><span class="stat">👁 11.1k</span><span class="stat" style="color:#FF7043;">♥ 1.5k</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-yellow">🥚<div class="card-source-badge" style="background:#FF7043;">MT</div></div><div class="card-body"><div class="card-title">계란후라이덮밥</div><div class="card-sub">기본 1인분</div><div class="card-tags"><span class="card-tag" style="background:#E6FFFA;color:#38B2AC;">#10분</span></div><div class="card-stats"><span class="stat">👁 8.9k</span><span class="stat" style="color:#FF7043;">♥ 640</span></div></div></div>
+        </div>
+        <div class="section-header"><span class="section-title">⚡ 간단 한끼</span><span class="section-more" style="color:#FF7043;">더보기 ›</span></div>
+        <div class="recipe-grid">
+          <div class="recipe-card"><div class="card-thumb thumb-warm">🍜</div><div class="card-body"><div class="card-title">라면 끓이기</div><div class="card-sub">기본 1인분</div><div class="card-tags"><span class="card-tag" style="background:#E6FFFA;color:#38B2AC;">#면</span></div></div></div>
+          <div class="recipe-card"><div class="card-thumb thumb-green">🥗</div><div class="card-body"><div class="card-title">콥 샐러드</div><div class="card-sub">기본 2인분</div><div class="card-tags"><span class="card-tag" style="background:#E6FFFA;color:#38B2AC;">#샐러드</span></div></div></div>
+        </div>
+      </div>
+      <div class="bottom-tab">
+        <div class="tab-item active" style="color:#FF7043;"><span class="tab-icon">🏠</span>홈</div>
+        <div class="tab-item"><span class="tab-icon">📅</span>플래너</div>
+        <div class="tab-item"><span class="tab-icon">🥦</span>팬트리</div>
+        <div class="tab-item"><span class="tab-icon">👤</span>마이</div>
+      </div>
+    </div>
+  </div>
+  <div class="swatch-row">
+    <div class="swatch" style="background:#fffef8;" title="배경 #fffef8"></div>
+    <div class="swatch" style="background:#1a1a2e;" title="텍스트 #1a1a2e"></div>
+    <div class="swatch" style="background:#FF7043;" title="브랜드 #FF7043 ← 핵심"></div>
+    <div class="swatch" style="background:#E05530;" title="강조 #E05530"></div>
+    <div class="swatch" style="background:#38B2AC;" title="틸 #38B2AC"></div>
+    <div class="swatch" style="background:#ffffff;border:1px solid #ddd;" title="카드 #ffffff"></div>
+    <div class="swatch" style="background:#999999;" title="뮤트 #999999"></div>
+  </div>
+</div>
+
+</div><!-- /phones -->
+
+<p style="text-align:center;font-size:11px;color:#555;margin-top:24px;line-height:1.7;">
+  B1 #FF6243 — 코랄 기운의 생생한 오렌지<br>
+  B2 #FF7B30 — 가장 오렌지다운 귤빛<br>
+  B3 #F97316 — Tailwind 기반, 모던하고 깔끔<br>
+  B4 #FF9500 — 황금빛, iOS 느낌, 가장 밝음<br>
+  B5 #FF7043 — 가장 부드럽고 덜 자극적
+</p>
+
+<script>
+const allIds = ['b1','b2','b3','b4','b5'];
+const colors = { b1:'#FF6243', b2:'#FF7B30', b3:'#F97316', b4:'#E88800', b5:'#FF7043' };
+
+function showAll() {
+  allIds.forEach(id => document.getElementById(id).classList.remove('hidden'));
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.style.background = 'transparent';
+    b.style.color = '#aaa';
+    b.style.borderColor = '#444';
+  });
+  const allBtn = document.querySelector('.tab-btn');
+  allBtn.style.background = '#555';
+  allBtn.style.color = '#fff';
+  allBtn.style.borderColor = '#555';
+}
+
+function showOne(id) {
+  allIds.forEach(i => {
+    document.getElementById(i).classList.toggle('hidden', i !== id);
+  });
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.style.background = 'transparent';
+    b.style.color = '#aaa';
+    b.style.borderColor = '#444';
+  });
+  const btn = document.getElementById('btn-' + id);
+  const c = colors[id];
+  btn.style.background = c;
+  btn.style.color = '#fff';
+  btn.style.borderColor = c;
+}
+</script>
+</body>
+</html>

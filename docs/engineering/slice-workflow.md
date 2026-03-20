@@ -58,6 +58,7 @@
 6. `docs/api문서-v1.2.1.md` — 해당 API 섹션
 7. `docs/db설계-v1.3.md` — 영향받는 테이블
 8. `docs/workpacks/README.md` — Slice Order의 Status 열로 선행 슬라이스 `merged` 여부 확인
+9. `docs/design/design-tokens.md` — 확정 디자인 토큰 (와이어프레임 작성 전 확인)
 
 ### 산출물
 
@@ -271,10 +272,12 @@ README.md + acceptance.md가 main에 merge됨.
 3. `docs/workpacks/<slice>/README.md` — Frontend Delivery Mode, Design Status, Key Rules
 4. `docs/workpacks/<slice>/acceptance.md` — 자동화 대상·Manual Only 분리 확인
 5. `docs/화면정의서-v1.2.md` — 해당 화면 정의
-6. 백엔드 브랜치 TypeScript 타입 파일 — API 계약 확인
-7. `docs/engineering/tdd-vitest.md`
-8. `docs/engineering/playwright-e2e.md`
-9. `docs/engineering/git-workflow.md`
+6. `docs/design/design-tokens.md` — 확정 색상·간격·컴포넌트 토큰 (Tailwind 클래스 작성 전 확인)
+7. `ui/designs/<SCREEN_ID>.md` — 화면 설계 와이어프레임 (파일이 있는 경우)
+8. 백엔드 브랜치 TypeScript 타입 파일 — API 계약 확인
+9. `docs/engineering/tdd-vitest.md`
+10. `docs/engineering/playwright-e2e.md`
+11. `docs/engineering/git-workflow.md`
 
 ### 산출물
 
@@ -304,6 +307,8 @@ README.md + acceptance.md가 main에 merge됨.
 - [ ] 보호 액션이 있다면 로그인 게이트·return-to-action이 동작하는가
 - [ ] 상태 전이 로직이 테스트로 고정되었는가
 - [ ] Design Status `temporary`이면 스타일이 나중에 교체 가능한 구조인가
+- [ ] 디자인 토큰(`--brand`, `--olive`, `--surface`, `--muted` 등)을 올바르게 사용했는가 (구버전 `#d56a3a`, `#6e7c4a` 사용 금지)
+- [ ] 카드 border-radius 16px, 터치 타겟 44px 기준을 준수했는가
 - [ ] `pnpm install --frozen-lockfile && pnpm test:all` 통과
 - [ ] 브랜치명이 `feature/fe-<slice>`인가
 - [ ] 커밋이 Conventional Commits를 따르는가
@@ -347,8 +352,10 @@ README.md + acceptance.md가 main에 merge됨.
 
 1. `docs/workpacks/<slice>/README.md` — Design Status 확인
 2. `docs/화면정의서-v1.2.md` — 해당 화면 정의
-3. 현재 컴포넌트 코드
-4. Figma 디자인 컨텍스트 (URL 있는 경우)
+3. `docs/design/design-tokens.md` — 확정 토큰 기준 (색상·간격·컴포넌트 규칙)
+4. `ui/designs/<SCREEN_ID>.md` — 화면 설계 와이어프레임 (파일이 있는 경우)
+5. 현재 컴포넌트 코드
+6. Figma 디자인 컨텍스트 (URL 있는 경우)
 
 ### 산출물
 

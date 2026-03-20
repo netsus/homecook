@@ -29,12 +29,15 @@ tools:
    - `docs/화면정의서-v1.2.md` — 해당 화면의 화면 정의 찾기
    - `docs/요구사항기준선-v1.6.md` — 관련 요구사항 확인
    - `docs/유저flow맵-v1.2.md` — 진입/이탈 플로우 확인
+   - `docs/design/design-tokens.md` — 확정 색상·간격·컴포넌트 토큰 (반드시 읽기)
    - `docs/reference/wireframes/` — 보조 참고 (충돌 시 공식 문서 우선)
 
 2. **설계 생성**
    - 화면 정의서의 구성 요소를 ASCII 블록 와이어프레임으로 표현
    - 각 컴포넌트별 상태 (loading / empty / error / read-only) 명시
    - 인터랙션 노트: 탭, 스크롤, 모달, 로그인 게이트 동작
+   - **토큰 힌트 명시**: 각 컴포넌트 옆에 사용할 토큰을 주석으로 표기
+     예) `← --brand CTA 버튼`, `← --surface 카드 배경`, `← --olive 태그 칩`
 
 3. **출력 파일 저장**
    - 경로: `ui/designs/<SCREEN_ID>.md`
@@ -98,6 +101,21 @@ tools:
 - **공통 상태**: 모든 리스트/데이터 화면은 loading / empty / error 포함
 - **read-only 정책**: 완료된 장보기 리스트는 수정 UI 비노출
 - **일반 AI스러운 UI 금지**: 과도한 그라디언트, 글로우 효과, 제네릭 카드 레이아웃 피하기
+
+## 확정 디자인 토큰 요약 (docs/design/design-tokens.md 기준)
+
+| 토큰 | 값 | 주요 용도 |
+|------|---|----------|
+| `--background` | `#fff9f2` | 앱 배경 |
+| `--foreground` | `#1a1a2e` | 기본 텍스트 |
+| `--brand` | `#FF6C3C` | CTA 버튼, 활성 탭, 배지 |
+| `--brand-deep` | `#E05020` | hover / pressed |
+| `--olive` | `#2ea67a` | 태그, 재료 필터 칩 |
+| `--surface` | `#ffffff` | 카드, 입력 필드 |
+| `--muted` | `#999999` | 보조 텍스트 |
+| card radius | `16px` | 레시피 카드 등 |
+| touch target | `44×44px` | 버튼, 탭 아이템 최소 크기 |
+| 수평 여백 | `16px` (모바일) / `24px` (≥768px) | 컨테이너 패딩 |
 
 ## 제약 사항
 
