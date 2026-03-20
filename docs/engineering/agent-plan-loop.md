@@ -1,6 +1,7 @@
 # Codex-Claude Plan Loop
 
 문서 보완, 개발 계획 수립, 문제점 찾기 같은 `계획 단계`에서 Codex와 Claude를 무한 핑퐁시키지 않고, 역할과 종료 조건을 고정한 자동화 루프를 정의한다.
+이 문서는 `권장 자동화`를 설명하며, 모든 계획 작업의 의무 게이트는 아니다.
 
 ## Why
 
@@ -113,6 +114,18 @@ effort가 CLI에서 실제 resolved 값으로 확인되지 않으면 configured/
 3. `final-summary.md`에서 승인 상태, 남은 `required_changes`, `open_questions`를 확인한다.
 4. `approved`가 아닐 경우 사람이 `stalled` 또는 `blocker` 원인을 정리한다.
 5. `approved`일 때만 구현 단계로 넘긴다.
+
+## When To Use
+
+- 새 슬라이스 착수 전 합의가 필요한 경우
+- 여러 governing doc이 충돌할 수 있는 engineering governance 변경
+- open question이 남아 사람에게 바로 handoff하기 어려운 계획 문서
+
+## When You Can Skip
+
+- low-risk docs/config 정리
+- 이미 합의된 작은 문서 보강
+- 구조적 논쟁보다 기록 보강이 중심인 작업
 
 ## Guardrails
 

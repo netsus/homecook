@@ -68,8 +68,8 @@ N/A (BE-only 슬라이스, FE 화면 없음 → Stage 4~6 스킵)
 | 에이전트 | 실행 시점 | 목적 |
 |---------|----------|------|
 | `design-consultant` | 1회, 개발 초기 | 디자인 시스템 토큰 기반 확정 |
-| `design-generator` | Stage 1 산출물 | 화면별 와이어프레임 생성 (Stage 4 전 필수 입력) |
-| `design-critic` | Stage 1 산출물 | **설계 문서** 리뷰 (Stage 4 전 품질 게이트) |
+| `design-generator` | Stage 1 산출물 | 신규 화면·high-risk UI change용 화면별 와이어프레임 생성 |
+| `design-critic` | Stage 1 산출물 | 신규 화면·high-risk UI change용 **설계 문서** 리뷰 |
 | Stage 5 (Claude 직접) | Stage 4 완료 후 | **구현 코드** 디자인 리뷰 → `confirmed` 판정 |
 
 ---
@@ -79,3 +79,4 @@ N/A (BE-only 슬라이스, FE 화면 없음 → Stage 4~6 스킵)
 - `design-consultant`는 파일을 직접 수정하지 않는다. 출력만 하며, 저장은 사용자 또는 Codex가 한다.
 - `docs/design/design-tokens.md`가 없으면 에이전트가 Phase 5에서 전체 내용을 출력한다.
 - 재실행이 필요할 때는 `docs/design/design-tokens.md`를 먼저 확인 후 부분 수정 요청.
+- low-risk UI change는 `design-generator`와 `design-critic`을 생략할 수 있으며, 이 경우 근거는 workpack README 또는 PR 본문에 남긴다.

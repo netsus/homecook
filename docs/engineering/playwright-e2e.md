@@ -19,10 +19,12 @@
 
 ## Default Commands
 
-- `pnpm test:e2e`: 모든 슬라이스 기본 E2E 실행 (`@live-oauth` 태그 제외)
+- `pnpm test:e2e`: product slice 기본 E2E 실행 (`@live-oauth` 태그 제외)
 - `pnpm test:e2e:ui`: Playwright UI 모드
 - `pnpm test:e2e:oauth`: `@live-oauth` 태그 테스트만 실행 (실제 외부 서비스 포함)
 - `pnpm test:all`: lint, typecheck, vitest, 기본 Playwright
+
+`docs-governance`와 `low-risk docs/config`는 `docs/engineering/agent-workflow-overview.md`의 Change Type Matrix에 따라 E2E를 생략할 수 있다.
 
 브라우저 바이너리가 없으면 아래 명령을 먼저 실행한다.
 

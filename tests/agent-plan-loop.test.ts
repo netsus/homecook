@@ -66,6 +66,45 @@ describe("agent plan loop", () => {
     expect(review.unresolved_questions).toEqual(["Which slice is next?"]);
   });
 
+  it("coerces compatible unresolved question objects into strings", () => {
+    const review = normalizeReview(
+      "claude",
+      parseStructuredOutput(
+        JSON.stringify({
+          type: "result",
+          subtype: "success",
+          result: [
+            "```json",
+            JSON.stringify(
+              {
+                status: "needs_revision",
+                summary: "Need sharper validation criteria.",
+                blocker_status: "non-blocker",
+                required_changes: [],
+                recommended_changes: [],
+                unresolved_questions: [
+                  {
+                    id: "uq1",
+                    question: "Should low-risk doc-only changes skip full e2e?",
+                    blocking: false,
+                  },
+                ],
+              },
+              null,
+              2,
+            ),
+            "```",
+          ].join("\n"),
+        }),
+      ),
+    );
+
+    expect(review.decision).toBe("revise");
+    expect(review.unresolved_questions).toEqual([
+      "Should low-risk doc-only changes skip full e2e?",
+    ]);
+  });
+
   it("fails when a required review field is missing", () => {
     expect(() =>
       normalizeReview("codex", {

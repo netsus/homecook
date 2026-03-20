@@ -1,6 +1,7 @@
 # Codex-Claude Review Loop
 
 구현 후 로컬 pre-PR 단계에서 현재 워크트리의 변경분을 Claude와 Codex가 구조화된 리뷰/수정 루프로 수렴시키는 자동화다.
+이 문서는 `권장 자동화`를 설명하며, 모든 변경의 의무 게이트는 아니다.
 
 이 문서는 제품 기능 workpack이 아니라 `docs/engineering/` 아래의 repo-engineering automation 설계 문서다.
 - governance 기준은 `AGENTS.md`, `CLAUDE.md`, `docs/workpacks/README.md`에 정의된 engineering 예외 규칙을 따른다.
@@ -79,6 +80,18 @@ pnpm agent:review-loop -- \
 - `--codex-effort <level>`
 - `--claude-model <model>`
 - `--claude-effort <level>`
+
+## When To Use
+
+- large diff 또는 cross-cutting change
+- reviewer 코멘트가 반복될 가능성이 높은 구현
+- merge 전 local sanity review가 필요한 product 변경
+
+## When You Can Skip
+
+- low-risk docs/config
+- reviewer가 바로 읽고 판단 가능한 작은 문서 변경
+- 단일 파일의 명확한 수정으로 추가 loop 가치가 낮은 경우
 
 ## Included Context
 

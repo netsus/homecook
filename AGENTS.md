@@ -7,11 +7,12 @@
 3. 관련 `docs/workpacks/<slice>/README.md`
 4. 관련 공식 문서 in `docs/`
 5. 슬라이스 개발 단계 실행 시 → `docs/engineering/slice-workflow.md`
-6. 테스트 작성 시 → `docs/engineering/tdd-vitest.md`
-7. 브라우저 흐름 검증 시 → `docs/engineering/playwright-e2e.md`
-8. 필요한 경우에만 `docs/reference/wireframes/`
-9. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
-10. 필요 시 `docs/engineering/security-performance-design.md`
+6. 변경 유형별 게이트/리뷰/자동화 기준 확인 시 → `docs/engineering/agent-workflow-overview.md`
+7. 테스트 작성 시 → `docs/engineering/tdd-vitest.md`
+8. 브라우저 흐름 검증 시 → `docs/engineering/playwright-e2e.md`
+9. 필요한 경우에만 `docs/reference/wireframes/`
+10. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
+11. 필요 시 `docs/engineering/security-performance-design.md`
 
 ## Source of Truth
 
@@ -40,17 +41,36 @@
 - 품질 판단이 필요한 작업은 `docs/engineering/subagents.md`의 역할 기반 체크리스트를 사용한다.
 - 슬라이스 개발 단계를 요청받으면 `docs/engineering/slice-workflow.md`를 읽고 해당 단계의 담당 AI를 확인한다. 자신이 담당하지 않는 단계는 수행하지 않고 올바른 AI를 안내한다.
 
+## Rule Layers
+
+- `AGENTS.md`는 원칙, 절대 유지 규칙, engineering 예외 규칙의 단일 소스다.
+- `docs/engineering/agent-workflow-overview.md`는 변경 유형별 게이트, optional review, loop 사용 조건의 단일 소스다.
+- `docs/engineering/slice-workflow.md`는 product slice Stage 1~6 절차의 단일 소스다.
+- `docs/engineering/git-workflow.md`는 브랜치/커밋/PR 크기 규칙의 단일 소스다.
+- 같은 규칙이 여러 문서에 보이면 먼저 `중복`인지 `계층적 위임`인지 판정한다.
+- `중복`: 같은 actor, trigger, action, success condition, scope를 추가 정보 없이 반복할 때만 본다.
+- `계층적 위임`: 상위 문서가 원칙을 말하고 하위 문서가 단계, 예외, 산출물, 체크리스트를 구체화할 때 본다.
+- 단일 소스화는 `중복`으로 판정된 경우에만 진행한다. `계층적 위임`은 삭제보다 링크와 책임 경계를 정리한다.
+
+## Absolute Safeguards
+
+- 공식 문서 우선, 문서 충돌 시 충돌 정리 우선.
+- 문서에 없는 API/status/field/endpoint를 임의 추가하지 않는다.
+- public contract 변경 시 문서 영향도를 먼저 적는다.
+- 권한, 소유권, read-only, 멱등성, 상태 전이 보호 규칙은 완화 대상이 아니다.
+- 상태 전이, 권한 경계, read-only, 에러 시나리오는 테스트로 고정한다.
+- 제품 규칙 완화 제안에는 반드시 대체 안전장치 또는 완화 불가 근거가 있어야 한다.
+
 ## Branch And Delivery
 
 - 브랜치, 커밋, worktree, PR 크기 규칙의 단일 기준은 `docs/engineering/git-workflow.md`다.
+- 변경 유형별 `required_checks`, `optional_reviews`, `N/A 허용 기준`, loop 사용 기준은 `docs/engineering/agent-workflow-overview.md`를 따른다.
 - 기능 작업은 기본 브랜치에서 직접 하지 않고 작업 전용 브랜치에서 진행한다.
 - 브랜치 하나에는 가능한 한 하나의 작은 기능 단위 또는 명확한 하위 작업만 담는다.
-- 백엔드/프론트엔드 작업은 필요하면 분리하되, 네이밍 규칙 자체는 `docs/engineering/git-workflow.md`를 따른다.
 - 브랜치 접두어는 `feat/`가 아니라 `feature/`를 사용한다. (CI 검증 기준)
-- **슬라이스 순서**: 1단계(Claude) 문서가 main에 머지된 뒤에 2단계(Codex) 백엔드 구현을 시작한다. 문서 PR이 Ready for Review 상태이더라도 머지 전에는 구현을 시작하지 않는다.
-- 구현 후에는 `pnpm install --frozen-lockfile && pnpm test:all`을 통과시킨 뒤 푸시한다.
-- PR은 Draft로 열고, CI green 확인 후 Ready for Review로 전환한다.
-- 푸시 후 실제 동작까지 확인된 변경만 머지한다.
+- product slice 구현은 슬라이스 순서를 유지한다. 1단계(Claude) 문서가 main에 머지된 뒤에만 2단계(Codex)를 시작한다.
+- product 구현 PR은 기본적으로 `Draft -> required checks green -> Ready for Review -> 실제 동작 확인` 흐름을 따른다.
+- docs/governance와 low-risk docs/config 변경은 `docs/engineering/agent-workflow-overview.md`의 축약 경로를 따른다.
 
 ## Dependency Management
 

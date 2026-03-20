@@ -55,6 +55,7 @@
 - PR 하나는 한 가지 의도만 담는다.
 - 문서, 리팩터링, 기능을 한 PR에 섞지 않는다.
 - 불가피하게 섞이면 PR 본문에 이유를 남긴다.
+- 해당 변경을 설명하기 위한 필수 bookkeeping 업데이트(예: workpack status, Design Status, 관련 운영 문서 동기화)는 같은 PR에 포함할 수 있다.
 
 ## Enforcement
 

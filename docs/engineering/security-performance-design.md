@@ -12,6 +12,7 @@
 - dependency risk
 
 PR에는 보안 영향이 없더라도 근거를 간단히 남긴다.
+`docs-governance`와 `low-risk docs/config` 변경은 `영향 없음` 또는 `N/A`를 허용하되, 왜 보안 경계를 건드리지 않는지 한 줄 근거를 남긴다.
 
 ## Performance Reviewer
 
@@ -24,6 +25,7 @@ PR에는 보안 영향이 없더라도 근거를 간단히 남긴다.
 - 서버와 클라이언트 경계 혼선
 
 UI나 데이터 fetching이 바뀌면 Lighthouse 또는 수동 성능 검토 근거를 남긴다.
+문서 전용 변경이나 low-risk config 정리는 Lighthouse를 요구하지 않는다. 이 경우 `N/A`와 근거를 남긴다.
 
 ## Design and System Reviewer
 
@@ -35,3 +37,4 @@ UI나 데이터 fetching이 바뀌면 Lighthouse 또는 수동 성능 검토 근
 - 기본 접근성 준수
 
 wireframe은 참고 자료이며, 공식 문서가 충돌 시 우선한다.
+UI 영향이 없는 변경은 Design / Accessibility 섹션을 `N/A`로 둘 수 있지만, 왜 해당 없음인지 설명을 남긴다.

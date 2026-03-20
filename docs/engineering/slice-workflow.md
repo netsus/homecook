@@ -34,8 +34,9 @@
 
 - 백엔드 브랜치: `feature/be-<slice>`
 - 프론트엔드 브랜치: `feature/fe-<slice>`
-- PR은 **Draft**로 열고 → `pnpm test:all` 통과 → CI green → **Ready for Review** 전환
+- product slice 구현 PR은 **Draft**로 열고 → `pnpm install --frozen-lockfile && pnpm test:all` 통과 → CI green → **Ready for Review** 전환
 - 머지 전 실제 동작 확인
+- 변경 유형별 축약 경로와 `N/A` 허용 기준은 `docs/engineering/agent-workflow-overview.md`의 Change Type Matrix를 따른다.
 
 ---
 
@@ -64,7 +65,7 @@
 
 - `docs/workpacks/<slice>/README.md` — 모든 섹션 채움
 - `docs/workpacks/<slice>/acceptance.md` — Happy Path·State·Error·DataIntegrity·ManualQA·AutomationSplit 채움
-- (FE 화면이 있는 슬라이스만) In Scope의 **각 FE 화면마다**:
+- (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스만) In Scope의 **각 FE 화면마다**:
   - `ui/designs/<SCREEN_ID>.md` — design-generator 실행
   - `ui/designs/critiques/<SCREEN_ID>-critique.md` — design-critic 실행 (🟢/🟡 통과 필수)
 
@@ -87,9 +88,10 @@
 - Error/Permission: 5개 상태, return-to-action
 - Manual Only: 자동화 불가 시나리오 명시
 
-**디자인 산출물 (FE 화면 있는 슬라이스만)**
+**디자인 산출물 (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스만)**
 - In Scope의 각 FE 화면마다 design-generator → design-critic 순서로 실행
 - design-critic 등급이 🔴(재작업)이면 재작업 완료 후 Stage 2로 넘어간다
+- 기존 confirmed 화면의 low-risk UI change는 design-generator·design-critic을 생략할 수 있다. 이 경우 README 또는 PR에 생략 근거를 남긴다.
 - BE-only 슬라이스(In Scope에 FE 화면 없음)는 design-generator·design-critic 불필요
 
 ### 자가 점검 체크리스트
@@ -102,14 +104,15 @@
 - [ ] Out of Scope에 의도적 제외 항목이 명시되었는가 (빈칸이면 재확인)
 - [ ] Design Status가 올바르게 설정됐는가 (FE 화면 있으면 `temporary`, BE-only면 `N/A`)
 - [ ] acceptance.md에 자동화 불가 시나리오가 Manual Only로 분리되었는가
-- [ ] FE 화면이 있다면 각 화면의 `ui/designs/<SCREEN_ID>.md`가 생성됐는가
-- [ ] 각 화면의 design-critic 등급이 🟢 또는 🟡인가 (🔴이면 재작업)
+- [ ] 신규 화면 또는 high-risk UI change가 있다면 각 화면의 `ui/designs/<SCREEN_ID>.md`가 생성됐는가
+- [ ] 신규 화면 또는 high-risk UI change가 있다면 각 화면의 design-critic 등급이 🟢 또는 🟡인가 (🔴이면 재작업)
+- [ ] low-risk UI change라면 design-generator / design-critic 생략 근거가 README 또는 PR에 기록됐는가
 
 ### 완료 기준
 
 다음이 같은 PR에 포함되어 main에 merge됨:
 - `docs/workpacks/<slice>/README.md` + `acceptance.md`
-- (FE 화면 있는 슬라이스) In Scope 각 FE 화면의 `ui/designs/<SCREEN_ID>.md` + `ui/designs/critiques/<SCREEN_ID>-critique.md`
+- (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스) In Scope 각 FE 화면의 `ui/designs/<SCREEN_ID>.md` + `ui/designs/critiques/<SCREEN_ID>-critique.md`
 
 **이 PR에 `docs/workpacks/README.md` Slice Order의 해당 슬라이스 Status를 `planned` → `docs`로 변경하는 커밋을 포함한다.**
 
@@ -129,7 +132,7 @@
 - Out of Scope 이유: <내용>
 - Schema 변경 여부: 있음 / 없음
 
-### Design 산출물 (FE 화면 있는 슬라이스만)
+### Design 산출물 (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스만)
 - <SCREEN_ID>: critique 등급 🟢/🟡
 
 ### 다음 단계
@@ -312,7 +315,7 @@
 4. `docs/workpacks/<slice>/acceptance.md` — 자동화 대상·Manual Only 분리 확인
 5. `docs/화면정의서-v1.2.md` — 해당 화면 정의
 6. `docs/design/design-tokens.md` — 확정 색상·간격·컴포넌트 토큰 (Tailwind 클래스 작성 전 확인)
-7. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
+7. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — 신규 화면 또는 high-risk UI change인 경우 Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
 8. 백엔드 브랜치 TypeScript 타입 파일 — API 계약 확인
 9. `docs/engineering/tdd-vitest.md`
 10. `docs/engineering/playwright-e2e.md`
@@ -337,8 +340,9 @@
 - 상태 전이 로직은 테스트로 고정
 - Design Status `temporary`: 기능 가능한 임시 UI, Tailwind 클래스 나중에 교체 가능한 구조 유지
 - 비로그인 보호 액션: 로그인 안내 모달 → return-to-action URL 보존
-- In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` 와이어프레임을 참조하여 구현
-- 구현 완료 시 workpack README의 Design Status를 `temporary → pending-review`로 변경
+- 신규 화면 또는 high-risk UI change인 경우 In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` 와이어프레임을 참조하여 구현
+- 신규 화면 또는 high-risk UI change인 경우 구현 완료 시 workpack README의 Design Status를 `temporary → pending-review`로 변경
+- 기존 confirmed 화면의 low-risk UI change는 Design Status를 유지할 수 있다. 이 경우 PR 본문에 low-risk 판단 근거를 남긴다.
 
 ### 자가 점검 체크리스트
 
@@ -348,8 +352,9 @@
 - [ ] 보호 액션이 있다면 로그인 게이트·return-to-action이 동작하는가
 - [ ] 상태 전이 로직이 테스트로 고정되었는가
 - [ ] Design Status `temporary`이면 스타일이 나중에 교체 가능한 구조인가
-- [ ] 각 FE 화면의 `ui/designs/<SCREEN_ID>.md`를 참조하여 구현했는가
-- [ ] 구현 완료 후 workpack README의 Design Status를 `pending-review`로 변경했는가
+- [ ] 신규 화면 또는 high-risk UI change라면 각 FE 화면의 `ui/designs/<SCREEN_ID>.md`를 참조하여 구현했는가
+- [ ] 신규 화면 또는 high-risk UI change라면 구현 완료 후 workpack README의 Design Status를 `pending-review`로 변경했는가
+- [ ] low-risk UI change라면 Design Status 유지 근거를 PR 본문에 남겼는가
 - [ ] 디자인 토큰(`--brand`, `--olive`, `--surface`, `--muted` 등)을 올바르게 사용했는가 (구버전 `#d56a3a`, `#6e7c4a` 사용 금지)
 - [ ] 카드 border-radius 16px, 터치 타겟 44px 기준을 준수했는가
 - [ ] `pnpm install --frozen-lockfile && pnpm test:all` 통과
@@ -371,7 +376,7 @@
 - 구현 화면: <목록>
 - UI 상태: loading ✅ / empty ✅ / error ✅ / read-only ✅ / unauthorized ✅
 - 로그인 게이트: 있음 / 없음
-- Design Status: pending-review
+- Design Status: pending-review / confirmed 유지
 - 주요 결정 사항: <임시 UI 구조 선택 이유 등>
 ```
 
@@ -383,24 +388,26 @@
 
 ### 트리거 조건
 
-- **기본**: workpack README의 Design Status가 `pending-review` 상태 (Stage 4 완료 후 자동 전이)
-- **예외**: `temporary` 상태에서 명시적 요청이 있으면 기능 검토(5개 UI 상태·화면정의서 일치)만 수행, 스타일 리뷰 제외
+- **기본**: 신규 화면 또는 high-risk UI change에서 workpack README의 Design Status가 `pending-review` 상태
+- **예외 1**: `temporary` 상태에서 명시적 요청이 있으면 기능 검토(5개 UI 상태·화면정의서 일치)만 수행, 스타일 리뷰 제외
+- **예외 2**: 기존 confirmed 화면의 low-risk UI change는 Stage 5를 생략하고 Stage 6에서 lightweight design check로 흡수할 수 있다
 - Figma URL은 트리거가 아닌 **추가 컨텍스트** — 제공되면 리뷰 시 참조
 
 > Stage 5는 **구현된 코드** 리뷰다. design-critic(Stage 1 설계 문서 리뷰)과 다르며,
 > Tailwind 클래스·토큰 사용·컴포넌트 구조의 코드 수준 검토를 담당한다.
 
-### 리뷰 범위 (Design Status에 따라)
+### 리뷰 범위 (Design Status와 변경 강도에 따라)
 
 - `pending-review` (기본): In Scope의 각 FE 화면마다 spacing·typography·color hierarchy·공용 컴포넌트 일관성·Tailwind 클래스·접근성 기본 요소(aria, focus, contrast) + 5개 UI 상태·화면정의서 일치
 - `temporary` (예외·명시적 요청): 기능 동작·5개 UI 상태 존재·화면정의서 기준 필수 요소 누락 여부만 검토
+- `confirmed` 유지 대상의 low-risk UI change: token 사용, spacing drift, loading/empty/error/read-only 회귀 여부만 점검
 
 ### 읽을 것 (이 순서로)
 
 1. `docs/workpacks/<slice>/README.md` — Design Status 확인
 2. `docs/화면정의서-v1.2.md` — 해당 화면 정의
 3. `docs/design/design-tokens.md` — 확정 토큰 기준 (색상·간격·컴포넌트 규칙)
-4. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
+4. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — 신규 화면 또는 high-risk UI change인 경우 Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
 5. 현재 컴포넌트 코드
 6. Figma 디자인 컨텍스트 (URL 있는 경우, 추가 컨텍스트)
 
@@ -415,8 +422,9 @@
 ```
 ## 5단계 완료: <slice-name> 디자인 리뷰
 
-### Design Status: pending-review → confirmed
+### Design Status: pending-review → confirmed / confirmed 유지
 ※ temporary 상태에서 명시적 요청 시: 기능 검토만 수행, 스타일 리뷰 제외
+※ low-risk UI change는 confirmed 유지 + lightweight design check 가능
 
 ### 확인 항목
 - 필수 UI 상태 5개: ✅/❌
@@ -455,6 +463,7 @@
 
 - `temporary`: 기능 동작·5개 UI 상태·상태 전이·권한 게이트
 - `confirmed`: 위 + spacing·hierarchy·공용 컴포넌트·Tailwind 일관성
+- `confirmed` 유지의 low-risk UI change: 기능 동작 + token/spacing drift + 핵심 상태 UI 회귀
 
 ### 리뷰 항목 (전부 확인)
 

@@ -205,6 +205,41 @@ function coerceCompatibleIssueArray(value, label, fallbackPrefix) {
   );
 }
 
+function coerceCompatibleQuestionArray(value, label) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((entry, index) => {
+    if (entry === null || entry === undefined) {
+      return [];
+    }
+
+    if (typeof entry === "string") {
+      const trimmed = entry.trim();
+      return trimmed.length > 0 ? [trimmed] : [];
+    }
+
+    if (typeof entry === "object" && !Array.isArray(entry)) {
+      const question =
+        entry.question ??
+        entry.title ??
+        entry.summary ??
+        entry.details ??
+        entry.context ??
+        null;
+
+      if (typeof question === "string" && question.trim().length > 0) {
+        return [question.trim()];
+      }
+    }
+
+    throw new Error(
+      `${label}[${index}] must be a non-empty string or compatible question object.`,
+    );
+  });
+}
+
 function normalizeNarrativeLine(line) {
   return line
     .replace(/^[#>*\-\d.\)\s]+/, "")
@@ -351,8 +386,10 @@ function coerceCompatibleReview(review) {
       (decision === "block" || hasCompatibleBlocker ? "blocker" : "non-blocker"),
     required_changes: [...requiredChanges, ...blockerIssues],
     recommended_changes: recommendedChanges,
-    unresolved_questions:
+    unresolved_questions: coerceCompatibleQuestionArray(
       normalized.unresolved_questions ?? normalized.open_questions ?? [],
+      "review.unresolved_questions",
+    ),
   };
 }
 
