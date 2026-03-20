@@ -43,16 +43,22 @@ Stage 4 (FE 구현) 시작 전에 토큰 확정 완료.
 
 ## 슬라이스 Design Status 연동
 
-`slice-workflow.md`의 Design Status 흐름:
+`design-consultant`는 프로젝트 전체 토큰 기반을 **1회** 확정하는 역할이며,
+각 슬라이스의 Design Status 전이와는 별개다.
+
+**슬라이스별 Design Status 흐름:**
 
 ```
-temporary (Stage 1 기본값)
-  ↓ design-consultant 실행 후 토큰 확정
-confirmed (Stage 5 리뷰 기준)
+temporary (Stage 1 기본값, FE 화면 있는 슬라이스)
+  ↓ Stage 4 완료, Codex가 변경
+pending-review
+  ↓ Stage 5 리뷰 통과, Claude가 변경
+confirmed
+
+N/A (BE-only 슬라이스, FE 화면 없음 → Stage 4~6 스킵)
 ```
 
-- design-consultant 실행 **전**: 모든 슬라이스 Design Status = `temporary`
-- design-consultant 실행 **후**: Stage 5 리뷰 시 `confirmed` 토큰 기준으로 검토
+- design-consultant 확정 후: 모든 슬라이스 Stage 4·5에서 `docs/design/design-tokens.md` 기준 적용
 - 소급 적용: Slice 01 컴포넌트도 확정 토큰 기준으로 Stage 5 진입 시 리뷰
 
 ---
@@ -62,8 +68,9 @@ confirmed (Stage 5 리뷰 기준)
 | 에이전트 | 실행 시점 | 목적 |
 |---------|----------|------|
 | `design-consultant` | 1회, 개발 초기 | 디자인 시스템 토큰 기반 확정 |
-| `design-generator` | 슬라이스별 Stage 1 | 화면별 와이어프레임 생성 |
-| `design-critic` | 슬라이스별 Stage 5 | 구현된 화면 설계 리뷰 |
+| `design-generator` | Stage 1 산출물 | 화면별 와이어프레임 생성 (Stage 4 전 필수 입력) |
+| `design-critic` | Stage 1 산출물 | **설계 문서** 리뷰 (Stage 4 전 품질 게이트) |
+| Stage 5 (Claude 직접) | Stage 4 완료 후 | **구현 코드** 디자인 리뷰 → `confirmed` 판정 |
 
 ---
 
