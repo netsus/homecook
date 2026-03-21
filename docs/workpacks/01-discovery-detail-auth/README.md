@@ -19,7 +19,8 @@
 
 - 백엔드: `feature/be-01-discovery-detail-auth` (merged)
 - 프론트엔드: `feature/fe-01-discovery-detail-auth` (merged)
-- 리트로핏: `feature/fe-01-retrofit` (디자인토큰/TDD 보완 전용)
+- 리트로핏 백엔드: `feature/be-01-retrofit` (Vitest 테스트 보강 + 계약 검증)
+- 리트로핏 프론트엔드: `feature/fe-01-retrofit` (디자인토큰/TDD 보완 전용)
 
 ## In Scope
 
@@ -174,6 +175,10 @@
 - [x] 상태 전이 / 권한 / 멱등성 테스트 (기초 범위)
 - [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분
 - [x] `loading / empty / error` 상태 구현
+- [ ] **[Retrofit BE — Stage 2]** 기존 백엔드 코드 검토: 현재 시스템 기준 정합 여부 확인
+- [ ] **[Retrofit BE — Stage 2]** Vitest 테스트 보강: happy path + 에러 + 권한 + callback sanitization
+- [ ] **[Retrofit BE — Stage 2]** API 응답 계약(`{ success, data, error }`) 일관성 검증
+- [ ] **[Retrofit BE — Stage 2]** `GET /recipes/themes` 엔드포인트 존재 여부 확인 및 보완
 - [ ] `unauthorized` 상태 테스트 고정 (Vitest)
 - [ ] 디자인 토큰(C2) 적용 (Retrofit Stage 4)
 - [ ] `read-only` 명시적 N/A 처리 (Stage 4)

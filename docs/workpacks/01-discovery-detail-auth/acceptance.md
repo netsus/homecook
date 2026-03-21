@@ -56,8 +56,10 @@
 - [x] pending action 저장 키와 parser가 안정적으로 동작한다
 - [x] auth provider env parsing이 기본값과 fallback을 지킨다
 - [x] callback next sanitization과 route helper가 고정되어 있다
-- [ ] `GET /recipes` 응답 타입 계약이 단위 테스트로 고정되어 있다
-- [ ] `GET /recipes/{recipe_id}` 응답 타입 계약이 단위 테스트로 고정되어 있다
+- [ ] **[Retrofit BE]** `GET /recipes` 응답 계약(`{ success, data, error }` 래퍼)이 단위 테스트로 고정되어 있다
+- [ ] **[Retrofit BE]** `GET /recipes/themes` 엔드포인트 존재 및 응답 형식이 고정되어 있다
+- [ ] **[Retrofit BE]** `GET /recipes/{recipe_id}` 404 에러 응답 형식이 고정되어 있다
+- [ ] **[Retrofit BE]** `POST /auth/login` invalid provider 에러 처리가 고정되어 있다
 - [ ] 로그인 게이트 트리거 조건(비로그인 + 보호 액션)이 단위 테스트로 고정되어 있다
 
 ### Playwright
