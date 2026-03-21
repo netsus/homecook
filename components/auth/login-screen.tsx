@@ -46,7 +46,11 @@ export function LoginScreen() {
             </div>
           ) : null}
 
-          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
+          <p
+            className={`text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)] ${
+              showAuthError ? "mt-4" : "mt-1"
+            }`}
+          >
             Login
           </p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
