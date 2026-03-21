@@ -7,14 +7,14 @@
 ## Happy Path
 
 - [x] HOME 목록이 보인다
-- [ ] HOME 테마 섹션(`GET /recipes/themes`)이 보인다 — **bootstrap 미구현, Retrofit Stage 2에서 구현**
+- [x] HOME 테마 섹션(`GET /recipes/themes`)이 보인다
 - [x] 검색어 입력 시 제목 기준으로 목록이 갱신된다
 - [x] 정렬 변경 시 목록 순서가 갱신된다
 - [x] 카드 선택 시 RECIPE_DETAIL로 이동한다
 - [x] 비로그인 상태에서 보호 액션 시 로그인 모달이 열린다
 - [x] 로그인 후 원래 레시피 상세 화면으로 복귀한다
-- [ ] API 응답이 `{ success, data, error }` 형식을 따른다 (Vitest로 계약 고정)
-- [ ] 백엔드 계약 TypeScript 타입과 프론트 타입이 일치한다 (Vitest)
+- [x] API 응답이 `{ success, data, error }` 형식을 따른다 (Vitest로 계약 고정)
+- [x] 백엔드 계약 TypeScript 타입과 프론트 타입이 일치한다 (Vitest)
 
 ## State / Policy
 
@@ -32,14 +32,14 @@
 - [x] conflict 처리 — 해당 없음 (이 슬라이스는 읽기 전용)
 - [x] 로그인 게이트 후 return-to-action이 원래 레시피로 복귀한다
 - [x] Supabase 설정 누락 시 API가 실패 응답을 준다
-- [ ] `unauthorized` 상태 흐름이 Vitest 단위 테스트로 고정되어 있다
+- [x] `unauthorized` 상태 흐름이 Vitest 단위 테스트로 고정되어 있다
 
 ## Data Integrity
 
 - [x] 타인 리소스를 수정할 수 없다 — 해당 없음 (읽기 전용)
 - [x] invalid input을 적절히 거부하거나 무시한다 — 검색어 sanitization, 콜백 URL 검증
 - [x] 파생 필드와 비정규화 값이 맞다 — 해당 없음 (읽기 전용)
-- [ ] `GET /auth/callback` next 파라미터 sanitization이 Vitest로 고정되어 있다
+- [x] `GET /auth/callback` next 파라미터 sanitization이 Vitest로 고정되어 있다
 
 ## Manual QA
 
@@ -56,15 +56,16 @@
 - [x] pending action 저장 키와 parser가 안정적으로 동작한다
 - [x] auth provider env parsing이 기본값과 fallback을 지킨다
 - [x] callback next sanitization과 route helper가 고정되어 있다
-- [ ] **[Retrofit BE]** `GET /recipes` 응답 계약(`{ success, data, error }` 래퍼)이 단위 테스트로 고정되어 있다
-- [ ] **[Retrofit BE]** `GET /recipes/themes` 엔드포인트 존재 및 응답 형식이 고정되어 있다
-- [ ] **[Retrofit BE]** `GET /recipes/{recipe_id}` 404 에러 응답 형식이 고정되어 있다
-- [ ] **[Retrofit BE]** `POST /auth/login` invalid provider 에러 처리가 고정되어 있다
-- [ ] 로그인 게이트 트리거 조건(비로그인 + 보호 액션)이 단위 테스트로 고정되어 있다
+- [x] **[Retrofit BE]** `GET /recipes` 응답 계약(`{ success, data, error }` 래퍼)이 단위 테스트로 고정되어 있다
+- [x] **[Retrofit BE]** `GET /recipes/themes` 엔드포인트 존재 및 응답 형식이 고정되어 있다
+- [x] **[Retrofit BE]** `GET /recipes/{recipe_id}` 404 에러 응답 형식이 고정되어 있다
+- [x] **[Retrofit BE]** `POST /auth/login` invalid provider 에러 처리가 고정되어 있다
+- [x] 로그인 게이트 트리거 조건(비로그인 + 보호 액션)이 단위 테스트로 고정되어 있다
 
 ### Playwright
 
 - [x] HOME 목록, 검색, 정렬이 브라우저에서 동작한다
+- [x] HOME 테마 섹션이 브라우저에서 보인다
 - [x] 카드 클릭 후 상세 페이지로 이동한다
 - [x] 비로그인 보호 액션 시 로그인 게이트가 열린다
 - [x] 로그인 게이트가 닫기 버튼, ESC, 배경 클릭으로 닫힌다

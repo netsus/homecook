@@ -83,23 +83,31 @@ export function SocialLoginButtons({
         return (
           <button
             key={providerId}
-            className={`flex w-full items-center justify-center rounded-[18px] px-4 py-4 text-sm font-semibold transition hover:translate-y-[-1px] ${provider.className}`}
+            className={`flex min-h-[52px] w-full items-center justify-center rounded-[12px] px-4 py-4 text-base font-semibold transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60 ${provider.className}`}
             disabled={isPending}
             onClick={() => handleSignIn(providerId)}
             type="button"
           >
-            {pendingProvider === providerId ? "이동 중..." : provider.label}
+            <span
+              aria-hidden="true"
+              className="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/5 text-xs font-bold uppercase"
+            >
+              {providerId.slice(0, 1)}
+            </span>
+            {pendingProvider === providerId ? `${provider.label} 로그인 중...` : provider.label}
           </button>
         );
       })}
-      <p className="text-xs text-[var(--muted)]">
+      <p className="text-xs leading-5 text-[var(--muted)]">
         현재 테스트 가능한 로그인:{" "}
         {providers
           .map((provider) => AUTH_PROVIDER_META[provider].label)
           .join(", ")}
       </p>
       {errorMessage ? (
-        <p className="text-sm text-red-600">{errorMessage}</p>
+        <p className="rounded-[12px] border border-[color:rgba(255,108,60,0.2)] bg-[color:rgba(255,108,60,0.08)] px-4 py-3 text-sm text-[var(--brand-deep)]">
+          {errorMessage}
+        </p>
       ) : null}
     </div>
   );

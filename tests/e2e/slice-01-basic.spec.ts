@@ -9,13 +9,20 @@ test.describe("Slice 01 basic flow", () => {
     await expect(
       page.getByRole("heading", { name: "오늘 만들 집밥을 바로 찾으세요" }),
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: /집밥 김치찌개/i })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "이번 주 인기 레시피" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /집밥 김치찌개/i }).first(),
+    ).toBeVisible();
 
     await page.getByPlaceholder("레시피 제목 검색").fill("없는 레시피");
     await expect(page.getByText("다른 조합을 찾아보세요")).toBeVisible();
 
     await page.getByRole("button", { name: "검색 초기화" }).click();
-    await expect(page.getByRole("link", { name: /집밥 김치찌개/i })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /집밥 김치찌개/i }).first(),
+    ).toBeVisible();
 
     const sortSelect = page.getByRole("combobox", { name: "정렬 기준" });
     await sortSelect.selectOption("like_count");
@@ -26,7 +33,7 @@ test.describe("Slice 01 basic flow", () => {
     page,
   }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: /집밥 김치찌개/i }).click();
+    await page.getByRole("link", { name: /집밥 김치찌개/i }).first().click();
 
     await expect(page).toHaveURL(/\/recipe\/mock-kimchi-jjigae$/);
     await expect(

@@ -50,23 +50,26 @@ export function LoginGateModal() {
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-black/30 p-4 md:items-center md:justify-center"
+      className="fixed inset-0 z-40 flex items-end bg-black/50 p-4 md:items-center md:justify-center"
       onClick={close}
     >
       <div
         aria-labelledby="login-gate-title"
         aria-modal="true"
-        className="glass-panel w-full max-w-md rounded-[30px] px-5 py-6 md:px-6"
+        className="glass-panel w-full max-w-md rounded-[20px] px-5 py-6 md:px-6"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="flex-1">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[color:rgba(255,108,60,0.12)] text-xl text-[var(--brand-deep)]">
+              잠금
+            </div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
               Login Gate
             </p>
             <h2
-              className="display mt-2 text-3xl text-[var(--brand-deep)]"
+              className="mt-2 text-2xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]"
               id="login-gate-title"
             >
               로그인이 필요한 작업이에요
@@ -85,6 +88,14 @@ export function LoginGateModal() {
         <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
           {description}
         </p>
+        <div className="mt-5 rounded-[16px] border border-[var(--line)] bg-white/70 p-4">
+          <p className="text-sm font-semibold text-[var(--foreground)]">
+            로그인하면 원래 레시피로 바로 돌아옵니다.
+          </p>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            보호 액션 위치를 저장해 두었다가 로그인 완료 후 한 번만 복구합니다.
+          </p>
+        </div>
         <div className="mt-5">
           <SocialLoginButtons
             nextPath={action.redirectTo}

@@ -19,8 +19,8 @@
 
 - 백엔드: `feature/be-01-discovery-detail-auth` (merged)
 - 프론트엔드: `feature/fe-01-discovery-detail-auth` (merged)
-- 리트로핏 백엔드: `feature/be-01-retrofit` (**미생성 — Stage 2 착수 시 Codex가 생성**)
-- 리트로핏 프론트엔드: `feature/fe-01-retrofit` (**미생성 — Stage 4 착수 시 Codex가 생성**)
+- 리트로핏 백엔드: `feature/be-01-retrofit` (merged)
+- 리트로핏 프론트엔드: `feature/fe-01-retrofit` (active)
 
 ## In Scope
 
@@ -118,9 +118,9 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 기준으로 전달됨 (bootstrap 시점)
+- [ ] 임시 UI (temporary) — 기능 완성 기준으로 전달됨 (bootstrap 시점)
 - [ ] 리뷰 대기 (pending-review) — Stage 4 리트로핏 완료 후 전환
-- [ ] 확정 (confirmed) — Stage 5 디자인 리뷰 통과 후 전환
+- [x] 확정 (confirmed) — Stage 5 디자인 리뷰 통과 후 전환
 - [ ] N/A
 
 > **Retrofit 디자인 목표**: 디자인 토큰 C2(명랑한 주방) 적용.
@@ -175,11 +175,11 @@
 - [x] 상태 전이 / 권한 / 멱등성 테스트 (기초 범위)
 - [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분
 - [x] `loading / empty / error` 상태 구현
-- [ ] **[Retrofit BE — Stage 2]** 기존 백엔드 코드 검토: 현재 시스템 기준 정합 여부 확인
-- [ ] **[Retrofit BE — Stage 2]** Vitest 테스트 보강: happy path + 에러 + 권한 + callback sanitization
-- [ ] **[Retrofit BE — Stage 2]** API 응답 계약(`{ success, data, error }`) 일관성 검증
-- [ ] **[Retrofit BE — Stage 2]** `GET /recipes/themes` 엔드포인트 존재 여부 확인 및 보완
-- [ ] `unauthorized` 상태 테스트 고정 (Vitest)
-- [ ] 디자인 토큰(C2) 적용 (Retrofit Stage 4)
-- [ ] `read-only` 명시적 N/A 처리 (Stage 4)
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 최신화 (Stage 4)
+- [x] **[Retrofit BE — Stage 2]** 기존 백엔드 코드 검토: 현재 시스템 기준 정합 여부 확인
+- [x] **[Retrofit BE — Stage 2]** Vitest 테스트 보강: happy path + 에러 + 권한 + callback sanitization
+- [x] **[Retrofit BE — Stage 2]** API 응답 계약(`{ success, data, error }`) 일관성 검증
+- [x] **[Retrofit BE — Stage 2]** `GET /recipes/themes` 엔드포인트 존재 여부 확인 및 보완
+- [x] `unauthorized` 상태 테스트 고정 (Vitest)
+- [x] 디자인 토큰(C2) 적용 (Retrofit Stage 4)
+- [x] `read-only` 명시적 N/A 처리 (Stage 4)
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 최신화 (Stage 4)
