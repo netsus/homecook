@@ -10,12 +10,28 @@ export function resolveNextPath(raw: string | null) {
   return raw;
 }
 
+function getFailurePath(nextPath: string) {
+  return nextPath === "/" ? "/login" : nextPath;
+}
+
+function buildFailureRedirectUrl(requestUrl: URL, nextPath: string) {
+  const redirectUrl = new URL(getFailurePath(nextPath), requestUrl.origin);
+  redirectUrl.searchParams.set("authError", "oauth_failed");
+
+  return redirectUrl;
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const nextPath = resolveNextPath(requestUrl.searchParams.get("next"));
+  const oauthError = requestUrl.searchParams.get("error");
 
   if (!code) {
+    if (oauthError) {
+      return NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath));
+    }
+
     return NextResponse.redirect(new URL(nextPath, requestUrl.origin));
   }
 
@@ -25,11 +41,11 @@ export async function GET(request: Request) {
     const redirectUrl = new URL(nextPath, requestUrl.origin);
 
     if (error) {
-      redirectUrl.searchParams.set("authError", "oauth_failed");
+      return NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath));
     }
 
     return NextResponse.redirect(redirectUrl);
   } catch {
-    return NextResponse.redirect(new URL(nextPath, requestUrl.origin));
+    return NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath));
   }
 }

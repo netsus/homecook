@@ -39,4 +39,32 @@ describe("auth callback", () => {
       "http://localhost:3000/recipe/mock-kimchi-jjigae?authError=oauth_failed",
     );
   });
+
+  it("redirects login-page OAuth failures back to /login with authError", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      error: new Error("oauth failed"),
+    });
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(
+      new Request("http://localhost:3000/auth/callback?code=abc&next=/"),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/login?authError=oauth_failed",
+    );
+  });
+
+  it("adds authError when the provider returns without a code", async () => {
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(
+      new Request(
+        "http://localhost:3000/auth/callback?error=access_denied&next=/",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/login?authError=oauth_failed",
+    );
+  });
 });
