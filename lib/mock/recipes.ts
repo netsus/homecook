@@ -1,4 +1,9 @@
-import type { RecipeCardItem, RecipeDetail, RecipeListData } from "@/types/recipe";
+import type {
+  RecipeCardItem,
+  RecipeDetail,
+  RecipeListData,
+  RecipeThemesData,
+} from "@/types/recipe";
 
 export const MOCK_RECIPE_ID = "mock-kimchi-jjigae";
 
@@ -151,5 +156,17 @@ export function getMockRecipeList(query?: string | null): RecipeListData {
     items,
     next_cursor: null,
     has_next: false,
+  };
+}
+
+export function getMockRecipeThemes(): RecipeThemesData {
+  return {
+    themes: [
+      {
+        id: "popular",
+        title: "이번 주 인기 레시피",
+        recipes: [MOCK_RECIPE_CARD],
+      },
+    ],
   };
 }
