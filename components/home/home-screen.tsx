@@ -46,6 +46,20 @@ export function HomeScreen() {
     };
   }, [query]);
 
+  useEffect(() => {
+    if (!filterFeedback) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setFilterFeedback(null);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [filterFeedback]);
+
   const loadRecipes = useCallback(async () => {
     try {
       setScreenState("loading");
@@ -58,10 +72,20 @@ export function HomeScreen() {
         params.set("q", debouncedQuery.trim());
       }
 
-      const [recipeData, themeData] = await Promise.all([
+      const [recipeResult, themeResult] = await Promise.allSettled([
         fetchJson<RecipeListData>(`/api/v1/recipes?${params}`),
         fetchJson<RecipeThemesData>("/api/v1/recipes/themes"),
       ]);
+
+      if (recipeResult.status === "rejected") {
+        throw recipeResult.reason;
+      }
+
+      const recipeData = recipeResult.value;
+      const themeData =
+        themeResult.status === "fulfilled"
+          ? themeResult.value
+          : { themes: [] };
 
       setRecipes(recipeData);
       setThemes(themeData);

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -34,6 +34,10 @@ describe("home screen", () => {
     });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("shows themed sections together with the recipe list on initial load", async () => {
     render(<HomeScreen />);
 
@@ -64,6 +68,43 @@ describe("home screen", () => {
     expect(
       await screen.findByRole("heading", { name: "다른 조합을 찾아보세요" }),
     ).toBeTruthy();
+  });
+
+  it("keeps the recipe list visible when only themes fail", async () => {
+    fetchJson.mockImplementation((input: string) => {
+      if (input.startsWith("/api/v1/recipes/themes")) {
+        return Promise.reject(new Error("themes failed"));
+      }
+
+      return Promise.resolve(getMockRecipeList());
+    });
+
+    render(<HomeScreen />);
+
+    expect(
+      await screen.findByRole("heading", { name: "모든 레시피" }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: "레시피를 불러오지 못했어요" }),
+    ).toBeNull();
+  });
+
+  it("auto-dismisses the ingredient filter feedback", async () => {
+    vi.useFakeTimers();
+
+    render(<HomeScreen />);
+
+    fireEvent.click(screen.getByRole("button", { name: "재료로 검색" }));
+
+    expect(
+      screen.getByText("재료 필터는 다음 슬라이스에서 연결됩니다."),
+    ).toBeTruthy();
+
+    await vi.advanceTimersByTimeAsync(3000);
+
+    expect(
+      screen.queryByText("재료 필터는 다음 슬라이스에서 연결됩니다."),
+    ).toBeNull();
   });
 
   it("filters the recipe list without removing the section shell", async () => {
