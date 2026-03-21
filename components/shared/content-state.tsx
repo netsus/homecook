@@ -1,3 +1,5 @@
+import React from "react";
+
 interface ContentStateProps {
   title: string;
   description: string;
@@ -13,7 +15,9 @@ export function ContentState({
 }: ContentStateProps) {
   return (
     <div className="glass-panel rounded-[28px] px-5 py-8 text-center md:px-8">
-      <p className="display text-2xl text-[var(--brand-deep)]">{title}</p>
+      <h2 className="text-2xl font-extrabold tracking-[-0.02em] text-[var(--brand-deep)]">
+        {title}
+      </h2>
       <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
         {description}
       </p>
