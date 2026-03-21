@@ -219,6 +219,67 @@ describe("recipe API contracts", () => {
     });
   });
 
+  it("exchanges the social token and returns a wrapped login payload", async () => {
+    const signInWithIdToken = vi.fn(async () => ({
+      data: {
+        session: {
+          access_token: "supabase-access-token",
+          refresh_token: "supabase-refresh-token",
+        },
+        user: {
+          id: "user-1",
+          email: "cook@example.com",
+          user_metadata: {
+            avatar_url: "https://example.com/profile.png",
+          },
+        },
+      },
+      error: null,
+    }));
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        signInWithIdToken,
+      },
+    });
+
+    const { POST } = await import("@/app/api/v1/auth/login/route");
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/auth/login", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          provider: "google",
+          access_token: "google-id-token",
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(signInWithIdToken).toHaveBeenCalledWith({
+      provider: "google",
+      token: "google-id-token",
+      access_token: "google-id-token",
+    });
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      error: null,
+      data: {
+        token: "supabase-access-token",
+        refresh_token: "supabase-refresh-token",
+        user: {
+          id: "user-1",
+          email: "cook@example.com",
+          profile_image_url: "https://example.com/profile.png",
+          is_new_user: true,
+        },
+      },
+    });
+  });
+
   it("requires authentication before updating the profile", async () => {
     createRouteHandlerClient.mockResolvedValue({
       auth: {

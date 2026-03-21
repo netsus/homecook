@@ -52,6 +52,6 @@ export async function PATCH(request: Request) {
     nickname: data.nickname,
     email: data.email,
     profile_image_url: data.profile_image_url,
-    is_new_user: false,
+    is_new_user: normalizeNickname(data.nickname).length === 0,
   });
 }

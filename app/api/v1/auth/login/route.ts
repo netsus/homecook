@@ -19,6 +19,10 @@ function normalizeProfileImage(userMetadata: Record<string, unknown> | undefined
   return typeof image === "string" ? image : null;
 }
 
+function normalizeNickname(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export async function POST(request: Request) {
   let body: LoginRequestBody;
 
@@ -47,31 +51,32 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createRouteHandlerClient();
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider,
+    token: accessToken,
+    access_token: accessToken,
+  });
   const session = data.session;
+  const user = data.user;
 
-  if (error || !session?.user) {
+  if (error || !session || !user) {
     return fail("INVALID_REQUEST", "로그인 세션을 확인하지 못했어요.", 400, [
       { field: "access_token", reason: "session_not_found" },
     ]);
   }
 
-  const nickname =
-    typeof session.user.user_metadata?.nickname === "string"
-      ? session.user.user_metadata.nickname
-      : typeof session.user.user_metadata?.name === "string"
-        ? session.user.user_metadata.name
-        : "";
+  const nickname = normalizeNickname(user.user_metadata?.nickname);
+  const isNewUser = nickname.length === 0;
 
   return ok({
     token: session.access_token,
     refresh_token: session.refresh_token,
     user: {
-      id: session.user.id,
+      id: user.id,
       nickname,
-      email: session.user.email ?? null,
-      profile_image_url: normalizeProfileImage(session.user.user_metadata),
-      is_new_user: false,
+      email: user.email ?? null,
+      profile_image_url: normalizeProfileImage(user.user_metadata),
+      is_new_user: isNewUser,
     },
   });
 }
