@@ -119,8 +119,8 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 기준으로 전달됨 (bootstrap 시점)
-- [x] 리뷰 대기 (pending-review) — Stage 4 리트로핏 완료 후 전환
-- [ ] 확정 (confirmed) — Stage 5 디자인 리뷰 통과 후 전환
+- [ ] 리뷰 대기 (pending-review) — Stage 4 리트로핏 완료 후 전환
+- [x] 확정 (confirmed) — Stage 5 디자인 리뷰 통과 후 전환
 - [ ] N/A
 
 > **Retrofit 디자인 목표**: 디자인 토큰 C2(명랑한 주방) 적용.
