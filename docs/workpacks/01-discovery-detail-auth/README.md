@@ -146,7 +146,7 @@
 ## Key Rules
 
 - `HOME`은 제목 검색(`q`)과 정렬(`sort`)을 지원한다. 재료 필터(`ingredient_ids`)는 Slice 02.
-- `HOME`에 테마 섹션(`GET /recipes/themes`)이 있다.
+- `HOME`에 테마 섹션(`GET /recipes/themes`)이 있어야 한다. — **bootstrap 미구현, Retrofit Stage 2에서 추가**
 - `RECIPE_DETAIL`은 비로그인 조회가 가능하다.
 - 보호 액션(좋아요/저장/플래너 추가) 시 즉시 로그인 이동이 아니라 안내 모달을 먼저 보여준다.
 - 로그인 성공 후 원래 보던 레시피 화면으로 복귀한다 (return-to-action).

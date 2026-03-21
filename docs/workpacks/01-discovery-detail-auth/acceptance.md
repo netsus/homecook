@@ -7,7 +7,7 @@
 ## Happy Path
 
 - [x] HOME 목록이 보인다
-- [x] HOME 테마 섹션(`GET /recipes/themes`)이 보인다
+- [ ] HOME 테마 섹션(`GET /recipes/themes`)이 보인다 — **bootstrap 미구현, Retrofit Stage 2에서 구현**
 - [x] 검색어 입력 시 제목 기준으로 목록이 갱신된다
 - [x] 정렬 변경 시 목록 순서가 갱신된다
 - [x] 카드 선택 시 RECIPE_DETAIL로 이동한다
