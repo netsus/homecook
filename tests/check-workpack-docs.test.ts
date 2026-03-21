@@ -4,6 +4,7 @@ import {
   checkWorkpackDocs,
   resolveBaseRef,
   resolveSliceFromBranch,
+  resolveWorkpackSlice,
 } from "../scripts/lib/check-workpack-docs.mjs";
 
 describe("resolveSliceFromBranch", () => {
@@ -59,6 +60,56 @@ describe("resolveBaseRef", () => {
   it("returns null when git auto-detect fails", () => {
     const spawnSyncFn = () => ({ status: 128, stdout: "" });
     expect(resolveBaseRef({}, spawnSyncFn)).toBeNull();
+  });
+});
+
+describe("resolveWorkpackSlice", () => {
+  it("keeps normal slice names unchanged", () => {
+    const spawnSyncFn = () => ({ status: 0, stdout: "" });
+    expect(
+      resolveWorkpackSlice({
+        slice: "02-discovery-filter",
+        baseRef: "master",
+        spawnSyncFn,
+      }),
+    ).toBe("02-discovery-filter");
+  });
+
+  it("maps retrofit branches to the matching workpack folder by numeric prefix", () => {
+    const spawnSyncFn = () => ({
+      status: 0,
+      stdout: [
+        "docs/workpacks/01-discovery-detail-auth/README.md",
+        "docs/workpacks/01-discovery-detail-auth/acceptance.md",
+        "docs/workpacks/02-discovery-filter/README.md",
+      ].join("\n"),
+    });
+
+    expect(
+      resolveWorkpackSlice({
+        slice: "01-retrofit",
+        baseRef: "master",
+        spawnSyncFn,
+      }),
+    ).toBe("01-discovery-detail-auth");
+  });
+
+  it("falls back to the retrofit name when the numeric prefix is ambiguous", () => {
+    const spawnSyncFn = () => ({
+      status: 0,
+      stdout: [
+        "docs/workpacks/01-discovery-detail-auth/README.md",
+        "docs/workpacks/01-other-slice/README.md",
+      ].join("\n"),
+    });
+
+    expect(
+      resolveWorkpackSlice({
+        slice: "01-retrofit",
+        baseRef: "master",
+        spawnSyncFn,
+      }),
+    ).toBe("01-retrofit");
   });
 });
 
@@ -121,5 +172,33 @@ describe("checkWorkpackDocs", () => {
     checkWorkpackDocs({ slice: "03-recipe-like", baseRef: "master", spawnSyncFn });
     expect(calls[0]).toContain("origin/master:docs/workpacks/03-recipe-like/README.md");
     expect(calls[1]).toContain("origin/master:docs/workpacks/03-recipe-like/acceptance.md");
+  });
+
+  it("uses the mapped workpack folder for retrofit branches", () => {
+    const calls: string[][] = [];
+    const spawnSyncFn = (_cmd: string, args: string[]) => {
+      calls.push(args);
+
+      if (args[0] === "ls-tree") {
+        return {
+          status: 0,
+          stdout: [
+            "docs/workpacks/01-discovery-detail-auth/README.md",
+            "docs/workpacks/01-discovery-detail-auth/acceptance.md",
+          ].join("\n"),
+        };
+      }
+
+      return { status: 0 };
+    };
+
+    checkWorkpackDocs({ slice: "01-retrofit", baseRef: "master", spawnSyncFn });
+
+    expect(calls[1]).toContain(
+      "origin/master:docs/workpacks/01-discovery-detail-auth/README.md",
+    );
+    expect(calls[2]).toContain(
+      "origin/master:docs/workpacks/01-discovery-detail-auth/acceptance.md",
+    );
   });
 });

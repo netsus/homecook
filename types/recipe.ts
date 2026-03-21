@@ -22,6 +22,16 @@ export interface RecipeListData {
   has_next: boolean;
 }
 
+export interface RecipeTheme {
+  id: string;
+  title: string;
+  recipes: RecipeCardItem[];
+}
+
+export interface RecipeThemesData {
+  themes: RecipeTheme[];
+}
+
 export interface RecipeIngredient {
   id: string;
   ingredient_id: string;
