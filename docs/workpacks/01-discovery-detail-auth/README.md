@@ -19,8 +19,8 @@
 
 - 백엔드: `feature/be-01-discovery-detail-auth` (merged)
 - 프론트엔드: `feature/fe-01-discovery-detail-auth` (merged)
-- 리트로핏 백엔드: `feature/be-01-retrofit` (Vitest 테스트 보강 + 계약 검증)
-- 리트로핏 프론트엔드: `feature/fe-01-retrofit` (디자인토큰/TDD 보완 전용)
+- 리트로핏 백엔드: `feature/be-01-retrofit` (**미생성 — Stage 2 착수 시 Codex가 생성**)
+- 리트로핏 프론트엔드: `feature/fe-01-retrofit` (**미생성 — Stage 4 착수 시 Codex가 생성**)
 
 ## In Scope
 
@@ -30,7 +30,7 @@
   - `LOGIN` (소셜 로그인 화면 + 로그인 게이트 모달)
 - API:
   - `GET /api/v1/recipes` (목록 조회: `q`, `sort`, `cursor`, `limit`)
-  - `GET /api/v1/recipes/themes` (테마 섹션 조회) ← 기존 문서 누락, 추가
+  - `GET /api/v1/recipes/themes` (테마 섹션 조회) ← **bootstrap 미구현, Retrofit Stage 2에서 추가**
   - `GET /api/v1/recipes/{recipe_id}` (상세 조회)
   - `POST /api/v1/auth/login` (소셜 로그인)
   - `PATCH /api/v1/auth/profile` (닉네임 설정, 신규 회원)
@@ -84,7 +84,7 @@
 
 ### `GET /api/v1/recipes/{recipe_id}`
 
-- 비로그인 허용. 로그인 시 `user_liked`, `user_saved` 필드 포함
+- 비로그인 허용. 로그인 시 `user_status: { is_liked, is_saved, saved_book_ids }` 포함. 비로그인 시 `user_status: null`
 - Response 200: `{ success: true, data: Recipe (ingredients + steps 포함), error: null }`
 - Error: 404 (`RESOURCE_NOT_FOUND`) — 존재하지 않는 레시피
 
