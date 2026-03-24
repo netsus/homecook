@@ -43,9 +43,9 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "needs_revision",
-    "verification_status": "pending"
+    "lifecycle": "ready_for_review",
+    "approval_state": "codex_approved",
+    "verification_status": "passed"
   },
   "out_of_scope": [
     "full GitHub approval enforcement",
