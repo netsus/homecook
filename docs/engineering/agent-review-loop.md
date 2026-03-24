@@ -1,6 +1,6 @@
 # Codex-Claude Review Loop
 
-구현 후 로컬 pre-PR 단계에서 현재 워크트리의 변경분을 Claude와 Codex가 구조화된 리뷰/수정 루프로 수렴시키는 자동화다.
+구현 후 로컬 pre-PR 단계에서 현재 워크트리 변경분 또는 지정한 PR diff / commit range를 Claude와 Codex가 구조화된 리뷰/수정 루프로 수렴시키는 자동화다.
 이 문서는 `권장 자동화`를 설명하며, 모든 변경의 의무 게이트는 아니다.
 
 이 문서는 제품 기능 workpack이 아니라 `docs/engineering/` 아래의 repo-engineering automation 설계 문서다.
@@ -46,10 +46,13 @@
 ## Review Target
 
 - 기본 대상은 현재 `HEAD` 대비 작업 트리 diff다.
+- `--commit-range <base>..<head>` 또는 `--commit-range <base>...<head>`로 특정 commit range를 review target으로 지정할 수 있다.
+- `--base-ref <ref> --head-ref <ref>`를 함께 주면 PR-style compare target으로 간주하고 `base...head` diff를 사용한다.
 - tracked staged/unstaged 변경을 포함한다.
-- untracked non-ignored text file도 포함한다.
+- working tree mode에서는 untracked non-ignored text file도 포함한다.
+- commit range mode에서는 untracked working tree file을 포함하지 않는다.
 - binary 또는 `50,000` byte보다 큰 파일은 본문 대신 `review target omitted` 메모를 남긴다.
-- 이 omission rule은 working tree에 남아 있는 파일뿐 아니라 deleted tracked file의 `HEAD` blob에도 동일하게 적용한다.
+- 이 omission rule은 working tree에 남아 있는 파일뿐 아니라 deleted tracked file의 compared blob에도 동일하게 적용한다.
 - `50,000` byte inline threshold는 V1 고정값이다. 설정 가능화는 V1 범위 밖이다.
 - diff가 비어 있으면 루프는 즉시 실패한다.
 - diff는 있지만 모든 review target이 omitted이면 루프는 즉시 실패한다.
@@ -69,11 +72,21 @@ pnpm agent:review-loop -- \
   --max-rounds 3
 ```
 
+```bash
+pnpm agent:review-loop -- \
+  --goal "PR #19 diff를 리뷰하고 필수 수정이 없을 때까지 수렴시켜줘" \
+  --base-ref origin/master \
+  --head-ref HEAD \
+  --verify-cmd "pnpm exec vitest run tests/agent-review-loop.test.ts"
+```
+
 ### Optional Flags
 
 - `--goal-file <path>`
 - `--workpack <slice>`
 - `--context-file <path>`
+- `--commit-range <base>..<head|base...head>`
+- `--base-ref <ref>` + `--head-ref <ref>`: PR-style compare target. 둘 다 함께 줘야 한다.
 - `--output-dir <path>`
 - `--verify-cmd <command>`: 각 Codex 수정 라운드 뒤 순서대로 실행한다.
 - `--codex-model <model>`

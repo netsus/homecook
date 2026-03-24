@@ -21,6 +21,7 @@ import {
   enforceOmittedTargetApprovalGate,
   mergeStableAgentReview,
   normalizeFixResponse,
+  normalizeReviewTargetSpec,
   resolveReviewLoopContextFiles,
   runApprovalVerificationGate,
   runVerificationCommands,
@@ -337,6 +338,96 @@ describe("agent review loop", () => {
     }
   });
 
+  it("collects commit range review targets without including unrelated working tree files", () => {
+    const repoDir = createTempGitRepo();
+
+    try {
+      const featurePath = join(repoDir, "feature.txt");
+      writeFileSync(featurePath, "feature change\n");
+      execFileSync("git", ["add", "feature.txt"], { cwd: repoDir, stdio: "pipe" });
+      execFileSync("git", ["commit", "-m", "add feature file"], {
+        cwd: repoDir,
+        stdio: "pipe",
+      });
+
+      writeFileSync(join(repoDir, "working-tree-only.txt"), "local only\n");
+
+      const targets = collectReviewTargets({
+        workingDirectory: repoDir,
+        reviewTarget: {
+          mode: "commit_range",
+          baseRef: "HEAD~1",
+          headRef: "HEAD",
+          rangeNotation: "..",
+        },
+      });
+
+      expect(targets.diffText).toContain("+++ b/feature.txt");
+      expect(targets.diffText).toContain("+feature change");
+      expect(targets.diffText).not.toContain("working-tree-only.txt");
+      expect(targets.includedPaths).toContain("feature.txt");
+      expect(targets.untrackedFiles).toEqual([]);
+      expect(targets.reviewTarget).toMatchObject({
+        mode: "commit_range",
+        baseRef: "HEAD~1",
+        headRef: "HEAD",
+        rangeNotation: "..",
+      });
+    } finally {
+      rmSync(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  it("omits deleted commit range targets using the base-side blob instead of HEAD", () => {
+    const repoDir = createTempGitRepo();
+
+    try {
+      const largePath = join(repoDir, "range-deleted-large.txt");
+      writeFileSync(largePath, "a".repeat(60_000));
+      execFileSync("git", ["add", "range-deleted-large.txt"], {
+        cwd: repoDir,
+        stdio: "pipe",
+      });
+      execFileSync("git", ["commit", "-m", "add range deletion target"], {
+        cwd: repoDir,
+        stdio: "pipe",
+      });
+      execFileSync("git", ["rm", "range-deleted-large.txt"], {
+        cwd: repoDir,
+        stdio: "pipe",
+      });
+      execFileSync("git", ["commit", "-m", "delete range target"], {
+        cwd: repoDir,
+        stdio: "pipe",
+      });
+
+      const targets = collectReviewTargets({
+        workingDirectory: repoDir,
+        reviewTarget: {
+          mode: "commit_range",
+          baseRef: "HEAD~1",
+          headRef: "HEAD",
+          rangeNotation: "..",
+        },
+      });
+
+      expect(targets.diffText).toContain(
+        "review target omitted: range-deleted-large.txt (too large)",
+      );
+      expect(targets.includedPaths).not.toContain("range-deleted-large.txt");
+      expect(targets.omittedTargets).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            filePath: "range-deleted-large.txt",
+            reason: "too large",
+          }),
+        ]),
+      );
+    } finally {
+      rmSync(repoDir, { recursive: true, force: true });
+    }
+  });
+
   it("omits deleted tracked files when the removed blob exceeds the inline threshold", () => {
     const repoDir = createTempGitRepo();
 
@@ -597,6 +688,33 @@ describe("agent review loop", () => {
         },
       }),
     ).toThrow(/fatal git index failure/i);
+  });
+
+  it("normalizes working tree and commit range review target specs", () => {
+    expect(normalizeReviewTargetSpec({})).toMatchObject({
+      mode: "working_tree",
+      label: "working tree diff against HEAD",
+    });
+
+    expect(
+      normalizeReviewTargetSpec({
+        baseRef: "origin/master",
+        headRef: "HEAD",
+      }),
+    ).toMatchObject({
+      mode: "commit_range",
+      baseRef: "origin/master",
+      headRef: "HEAD",
+      rangeNotation: "...",
+      label: "commit range origin/master...HEAD",
+    });
+
+    expect(() =>
+      normalizeReviewTargetSpec({
+        commitRange: "main..feature",
+        baseRef: "main",
+      }),
+    ).toThrow(/use either --commit-range or --base-ref\/--head-ref/i);
   });
 
   it("writes run-local failure artifacts with machine-readable details", () => {

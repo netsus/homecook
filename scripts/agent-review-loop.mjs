@@ -30,6 +30,7 @@ import {
   formatFixMarkdown,
   mergeStableAgentReview,
   normalizeFixResponse,
+  normalizeReviewTargetSpec,
   ReviewLoopError,
   resolveReviewLoopContextFiles,
   runApprovalVerificationGate,
@@ -76,6 +77,9 @@ function printUsage() {
       "  --goal-file <path>          Read review loop goal from a file",
       "  --workpack <slice>          Include docs/workpacks/<slice>/README.md and acceptance.md",
       "  --context-file <path>       Additional context file (repeatable)",
+      "  --commit-range <range>      Review a git commit range like base..head or base...head",
+      "  --base-ref <ref>            Base git ref for PR-style review targets (use with --head-ref)",
+      "  --head-ref <ref>            Head git ref for PR-style review targets (use with --base-ref)",
       "  --max-rounds <n>            Maximum Claude/Codex review rounds (default: 3)",
       "  --verify-cmd <command>      Verification command to run after each Codex fix (repeatable)",
       "  --output-dir <path>         Output directory for prompts, reviews, fixes, and summaries",
@@ -126,6 +130,9 @@ function parseArgs(argv) {
       token === "--goal" ||
       token === "--goal-file" ||
       token === "--workpack" ||
+      token === "--commit-range" ||
+      token === "--base-ref" ||
+      token === "--head-ref" ||
       token === "--max-rounds" ||
       token === "--output-dir" ||
       token === "--codex-model" ||
@@ -293,12 +300,13 @@ function buildClaudeReviewPrompt({
   goal,
   contextBundle,
   targetDiff,
+  reviewTargetLabel,
   verification,
   round,
 }) {
   return [
     "You are the adversarial code reviewer for this repository.",
-    "Review only the current git diff against HEAD that is included below.",
+    `Review only the current git diff for ${reviewTargetLabel} that is included below.`,
     "Focus on correctness, hidden blockers, missing tests, security, performance, and doc-contract drift.",
     "Prefer concrete required changes over broad rewrites.",
     "Return JSON that matches the provided schema exactly.",
@@ -310,7 +318,7 @@ function buildClaudeReviewPrompt({
     "Latest Verification Context:",
     buildVerificationContext(verification),
     "",
-    "Current Review Target Diff:",
+    `Current Review Target Diff (${reviewTargetLabel}):`,
     targetDiff,
     "",
     "Repository Context:",
@@ -322,6 +330,7 @@ function buildCodexFixPrompt({
   goal,
   contextBundle,
   targetDiff,
+  reviewTargetLabel,
   review,
   verification,
   round,
@@ -355,7 +364,7 @@ function buildCodexFixPrompt({
     "Latest Verification Context:",
     buildVerificationContext(verification),
     "",
-    "Current Review Target Diff:",
+    `Current Review Target Diff (${reviewTargetLabel}):`,
     targetDiff,
     "",
     "Repository Context:",
@@ -367,13 +376,14 @@ function buildCodexFinalReviewPrompt({
   goal,
   contextBundle,
   targetDiff,
+  reviewTargetLabel,
   claudeReview,
   verification,
   round,
 }) {
   return [
     "You are performing the final Codex sanity review for the current repository diff.",
-    "Approve only if the current diff is ready for a human to commit after review.",
+    `Approve only if the current diff for ${reviewTargetLabel} is ready for a human to commit after review.`,
     "If you request changes, keep them concrete and limited to what still blocks merge readiness.",
     "Return JSON that matches the provided schema exactly.",
     "",
@@ -395,7 +405,7 @@ function buildCodexFinalReviewPrompt({
     "Latest Verification Context:",
     buildVerificationContext(verification),
     "",
-    "Current Review Target Diff:",
+    `Current Review Target Diff (${reviewTargetLabel}):`,
     targetDiff,
     "",
     "Repository Context:",
@@ -625,7 +635,9 @@ function createSyntheticRevisionReview(agent, summary) {
 }
 
 function buildTargetSummary(targets) {
-  const parts = [`Included ${targets.includedPaths.length} file(s)`];
+  const parts = [
+    `${targets.reviewTarget.label}: included ${targets.includedPaths.length} file(s)`,
+  ];
 
   if (targets.omittedTargets.length > 0) {
     parts.push(`omitted ${targets.omittedTargets.length} file(s)`);
@@ -800,6 +812,11 @@ function main() {
   const codexDefaultConfig = readCodexDefaultConfig();
   const claudeDefaultConfig = readClaudeDefaultConfig();
   const verifyCommands = options.verifyCmds ?? [];
+  const reviewTarget = normalizeReviewTargetSpec({
+    commitRange: options.commitRange,
+    baseRef: options.baseRef,
+    headRef: options.headRef,
+  });
 
   writeFileSync(join(outputDir, "goal.md"), `${goal}\n`);
   writeFileSync(
@@ -874,6 +891,7 @@ function main() {
     setRunStage("collect_review_targets");
     const targets = collectReviewTargets({
       workingDirectory: process.cwd(),
+      reviewTarget,
     });
     const roundTargetPath = `targets/${roundString}-review-target.diff`;
     writeTargetArtifact(outputDir, `${roundString}-review-target`, targets.diffText);
@@ -892,6 +910,7 @@ function main() {
       goal,
       contextBundle,
       targetDiff: targets.diffText,
+      reviewTargetLabel: reviewTarget.label,
       verification: lastVerification,
       round,
     });
@@ -1011,6 +1030,7 @@ function main() {
           goal,
           contextBundle,
           targetDiff: targets.diffText,
+          reviewTargetLabel: reviewTarget.label,
           claudeReview: lastClaudeReview,
           verification: lastVerification,
           round,
@@ -1136,6 +1156,7 @@ function main() {
       goal,
       contextBundle,
       targetDiff: targets.diffText,
+      reviewTargetLabel: reviewTarget.label,
       review: reviewToAddress,
       verification: lastVerification,
       round,
@@ -1229,6 +1250,7 @@ function main() {
   setRunStage("collect_current_target");
   const currentTargetSnapshot = collectCurrentReviewTargetSnapshot({
     workingDirectory: process.cwd(),
+    reviewTarget,
   });
   writeTargetArtifact(outputDir, "current", currentTargetSnapshot.diffText);
   currentTargetPath = "targets/current.diff";
