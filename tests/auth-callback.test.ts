@@ -67,4 +67,19 @@ describe("auth callback", () => {
       "http://localhost:3000/login?authError=oauth_failed",
     );
   });
+
+  it("adds authError when Supabase client throws", async () => {
+    exchangeCodeForSession.mockRejectedValue(new Error("network error"));
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(
+      new Request(
+        "http://localhost:3000/auth/callback?code=abc&next=/recipe/kimchi",
+      ),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/recipe/kimchi?authError=oauth_failed",
+    );
+  });
 });
