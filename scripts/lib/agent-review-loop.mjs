@@ -244,14 +244,103 @@ function runGitBufferCommand(workingDirectory, args) {
     : Buffer.from(result.stdout ?? "");
 }
 
-function listTrackedDiffFiles(workingDirectory) {
-  const output = runGitCommand(workingDirectory, [
-    "diff",
-    "--name-only",
-    "--relative",
-    "HEAD",
-    "--",
-  ]);
+export function normalizeReviewTargetSpec(options = {}) {
+  if (options && typeof options === "object" && options.mode === "working_tree") {
+    return {
+      mode: "working_tree",
+      label: "working tree diff against HEAD",
+    };
+  }
+
+  if (options && typeof options === "object" && options.mode === "commit_range") {
+    const baseRef =
+      typeof options.baseRef === "string" ? options.baseRef.trim() : "";
+    const headRef =
+      typeof options.headRef === "string" ? options.headRef.trim() : "";
+    const rangeNotation =
+      options.rangeNotation === ".." || options.rangeNotation === "..."
+        ? options.rangeNotation
+        : "...";
+
+    if (baseRef.length === 0 || headRef.length === 0) {
+      throw new Error("commit_range review targets require baseRef and headRef.");
+    }
+
+    return {
+      mode: "commit_range",
+      baseRef,
+      headRef,
+      rangeNotation,
+      label: `commit range ${baseRef}${rangeNotation}${headRef}`,
+    };
+  }
+
+  const commitRange =
+    typeof options.commitRange === "string" ? options.commitRange.trim() : "";
+  const baseRef = typeof options.baseRef === "string" ? options.baseRef.trim() : "";
+  const headRef = typeof options.headRef === "string" ? options.headRef.trim() : "";
+
+  if (commitRange.length > 0 && (baseRef.length > 0 || headRef.length > 0)) {
+    throw new Error("Use either --commit-range or --base-ref/--head-ref, not both.");
+  }
+
+  if (commitRange.length > 0) {
+    const match = commitRange.match(/^(.+?)(\.\.\.?)(.+)$/);
+    if (!match) {
+      throw new Error(
+        "--commit-range must look like <base>..<head> or <base>...<head>.",
+      );
+    }
+
+    return {
+      mode: "commit_range",
+      baseRef: match[1].trim(),
+      headRef: match[3].trim(),
+      rangeNotation: match[2],
+      label: `commit range ${match[1].trim()}${match[2]}${match[3].trim()}`,
+    };
+  }
+
+  if (baseRef.length > 0 || headRef.length > 0) {
+    if (baseRef.length === 0 || headRef.length === 0) {
+      throw new Error("--base-ref and --head-ref must be provided together.");
+    }
+
+    return {
+      mode: "commit_range",
+      baseRef,
+      headRef,
+      rangeNotation: "...",
+      label: `commit range ${baseRef}...${headRef}`,
+    };
+  }
+
+  return {
+    mode: "working_tree",
+    label: "working tree diff against HEAD",
+  };
+}
+
+function buildGitDiffRangeArg(reviewTarget) {
+  if (reviewTarget.mode !== "commit_range") {
+    return null;
+  }
+
+  return `${reviewTarget.baseRef}${reviewTarget.rangeNotation}${reviewTarget.headRef}`;
+}
+
+function listTrackedDiffFiles(workingDirectory, reviewTarget) {
+  const rangeArg = buildGitDiffRangeArg(reviewTarget);
+  const diffArgs = ["diff", "--name-only", "--relative"];
+
+  if (rangeArg) {
+    diffArgs.push(rangeArg);
+  } else {
+    diffArgs.push("HEAD");
+  }
+
+  diffArgs.push("--");
+  const output = runGitCommand(workingDirectory, diffArgs);
 
   return output
     .split("\n")
@@ -295,12 +384,16 @@ function classifyInlineTarget(filePath, maxInlineBytes) {
   };
 }
 
-function classifyDeletedTrackedTarget(
-  workingDirectory,
-  relativePath,
-  maxInlineBytes,
-) {
-  const blobSpec = `HEAD:${relativePath}`;
+function blobExists(workingDirectory, blobSpec) {
+  const result = spawnSync("git", ["cat-file", "-e", blobSpec], {
+    cwd: workingDirectory,
+    encoding: "utf8",
+  });
+
+  return result.status === 0;
+}
+
+function classifyBlobTarget(workingDirectory, blobSpec, relativePath, maxInlineBytes) {
   const size = Number.parseInt(
     runGitCommand(workingDirectory, ["cat-file", "-s", blobSpec]),
     10,
@@ -335,14 +428,35 @@ function classifyTrackedTarget({
   workingDirectory,
   relativePath,
   maxInlineBytes,
+  reviewTarget,
 }) {
   const absolutePath = resolve(workingDirectory, relativePath);
 
-  if (existsSync(absolutePath)) {
+  if (reviewTarget.mode === "working_tree" && existsSync(absolutePath)) {
     return classifyInlineTarget(absolutePath, maxInlineBytes);
   }
 
-  return classifyDeletedTrackedTarget(workingDirectory, relativePath, maxInlineBytes);
+  if (reviewTarget.mode === "commit_range") {
+    const headBlobSpec = `${reviewTarget.headRef}:${relativePath}`;
+    const baseBlobSpec = `${reviewTarget.baseRef}:${relativePath}`;
+    const blobSpec = blobExists(workingDirectory, headBlobSpec)
+      ? headBlobSpec
+      : baseBlobSpec;
+
+    return classifyBlobTarget(
+      workingDirectory,
+      blobSpec,
+      relativePath,
+      maxInlineBytes,
+    );
+  }
+
+  return classifyBlobTarget(
+    workingDirectory,
+    `HEAD:${relativePath}`,
+    relativePath,
+    maxInlineBytes,
+  );
 }
 
 function buildUntrackedFileDiff(relativePath, content) {
@@ -363,11 +477,14 @@ function buildOmittedTargetNote(filePath, reason) {
   return `# review target omitted: ${filePath} (${reason})`;
 }
 
-function createEmptyReviewTargetError() {
-  return new ReviewLoopError("No review targets found against HEAD.", {
+function createEmptyReviewTargetError(reviewTarget) {
+  return new ReviewLoopError(
+    `No review targets found for ${reviewTarget.label}.`,
+    {
     code: "empty_review_target",
     stage: "collect_review_targets",
-  });
+    },
+  );
 }
 
 function isEmptyReviewTargetError(error) {
@@ -381,12 +498,15 @@ function isEmptyReviewTargetError(error) {
 export function collectReviewTargets({
   workingDirectory,
   maxInlineBytes = MAX_INLINE_REVIEW_BYTES,
+  reviewTarget: requestedReviewTarget = normalizeReviewTargetSpec(),
 }) {
-  const trackedFiles = listTrackedDiffFiles(workingDirectory);
-  const untrackedFiles = listUntrackedFiles(workingDirectory);
+  const reviewTarget = normalizeReviewTargetSpec(requestedReviewTarget);
+  const trackedFiles = listTrackedDiffFiles(workingDirectory, reviewTarget);
+  const untrackedFiles =
+    reviewTarget.mode === "working_tree" ? listUntrackedFiles(workingDirectory) : [];
 
   if (trackedFiles.length === 0 && untrackedFiles.length === 0) {
-    throw createEmptyReviewTargetError();
+    throw createEmptyReviewTargetError(reviewTarget);
   }
 
   const segments = [];
@@ -398,6 +518,7 @@ export function collectReviewTargets({
       workingDirectory,
       relativePath,
       maxInlineBytes,
+      reviewTarget,
     });
     if (!classification.include) {
       omittedTargets.push({
@@ -408,15 +529,15 @@ export function collectReviewTargets({
       continue;
     }
 
-    const diff = runGitCommand(workingDirectory, [
-      "diff",
-      "--no-ext-diff",
-      "--submodule=diff",
-      "--relative",
-      "HEAD",
-      "--",
-      relativePath,
-    ]);
+    const rangeArg = buildGitDiffRangeArg(reviewTarget);
+    const diffArgs = ["diff", "--no-ext-diff", "--submodule=diff", "--relative"];
+    if (rangeArg) {
+      diffArgs.push(rangeArg);
+    } else {
+      diffArgs.push("HEAD");
+    }
+    diffArgs.push("--", relativePath);
+    const diff = runGitCommand(workingDirectory, diffArgs);
 
     if (diff.trim().length > 0) {
       segments.push(diff);
@@ -453,6 +574,7 @@ export function collectReviewTargets({
     omittedTargets,
     trackedFiles,
     untrackedFiles,
+    reviewTarget,
   };
 }
 
@@ -612,10 +734,12 @@ export function runApprovalVerificationGate({
 export function collectCurrentReviewTargetSnapshot({
   workingDirectory,
   collectTargets = collectReviewTargets,
+  reviewTarget = normalizeReviewTargetSpec(),
 }) {
   try {
     const currentTargets = collectTargets({
       workingDirectory,
+      reviewTarget,
     });
 
     return {
@@ -626,7 +750,10 @@ export function collectCurrentReviewTargetSnapshot({
   } catch (error) {
     if (isEmptyReviewTargetError(error)) {
       return {
-        diffText: "# No review targets remain against HEAD.\n",
+        diffText:
+          reviewTarget.mode === "working_tree"
+            ? "# No review targets remain against HEAD.\n"
+            : `# No review targets remain for ${reviewTarget.label}.\n`,
         omittedTargets: [],
         isEmpty: true,
       };
