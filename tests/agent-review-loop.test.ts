@@ -359,6 +359,7 @@ describe("agent review loop", () => {
           baseRef: "HEAD~1",
           headRef: "HEAD",
           rangeNotation: "..",
+          label: "commit range HEAD~1..HEAD",
         },
       });
 
@@ -408,6 +409,7 @@ describe("agent review loop", () => {
           baseRef: "HEAD~1",
           headRef: "HEAD",
           rangeNotation: "..",
+          label: "commit range HEAD~1..HEAD",
         },
       });
 
