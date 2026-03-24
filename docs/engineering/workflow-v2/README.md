@@ -27,28 +27,28 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 ## Reading Order
 
-1. [charter.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/charter.md)
-2. [core.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/core.md)
-3. [presets.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/presets.md)
-4. [approval-and-loops.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/approval-and-loops.md)
-5. [TEMPLATE.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/profiles/TEMPLATE.md)
-6. [homecook.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/profiles/homecook.md)
-7. [migration.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/migration.md)
+1. [charter.md](./charter.md)
+2. [core.md](./core.md)
+3. [presets.md](./presets.md)
+4. [approval-and-loops.md](./approval-and-loops.md)
+5. [TEMPLATE.md](./profiles/TEMPLATE.md)
+6. [homecook.md](./profiles/homecook.md)
+7. [migration.md](./migration.md)
 
 ## Directory Map
 
-- [.workflow-v2/README.md](/Users/shj/2025/2026/homecook1/.workflow-v2/README.md): 실제 pilot 상태 저장 위치
-- [charter.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/charter.md): v2가 해결할 문제, 유지할 원칙, 비범위
-- [core.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/core.md): 공통 개념, 책임, lifecycle
-- [presets.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/presets.md): 작업 유형별 기본 경로
-- [approval-and-loops.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/approval-and-loops.md): plan/review loop와 dual-approval 규칙
-- [profiles/TEMPLATE.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/profiles/TEMPLATE.md): 다른 프로젝트용 profile template
-- [profiles/homecook.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/profiles/homecook.md): 현재 저장소에 적용되는 profile
-- [schemas/work-item.schema.json](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/schemas/work-item.schema.json): work item 메타데이터 스키마
-- [schemas/workflow-status.schema.json](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/schemas/workflow-status.schema.json): 상태 보드 스키마
-- [templates/work-item.example.json](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/templates/work-item.example.json): 예시 work item
-- [templates/workflow-status.example.json](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/templates/workflow-status.example.json): 예시 상태 보드
-- [migration.md](/Users/shj/2025/2026/homecook1/docs/engineering/workflow-v2/migration.md): v1 -> v2 점진 전환 경로
+- [.workflow-v2/README.md](../../../.workflow-v2/README.md): 실제 pilot 상태 저장 위치
+- [charter.md](./charter.md): v2가 해결할 문제, 유지할 원칙, 비범위
+- [core.md](./core.md): 공통 개념, 책임, lifecycle
+- [presets.md](./presets.md): 작업 유형별 기본 경로
+- [approval-and-loops.md](./approval-and-loops.md): plan/review loop와 dual-approval 규칙
+- [profiles/TEMPLATE.md](./profiles/TEMPLATE.md): 다른 프로젝트용 profile template
+- [profiles/homecook.md](./profiles/homecook.md): 현재 저장소에 적용되는 profile
+- [schemas/work-item.schema.json](./schemas/work-item.schema.json): work item 메타데이터 스키마
+- [schemas/workflow-status.schema.json](./schemas/workflow-status.schema.json): 상태 보드 스키마
+- [templates/work-item.example.json](./templates/work-item.example.json): 예시 work item
+- [templates/workflow-status.example.json](./templates/workflow-status.example.json): 예시 상태 보드
+- [migration.md](./migration.md): v1 -> v2 점진 전환 경로
 
 ## Adoption Rules
 

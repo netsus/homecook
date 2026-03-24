@@ -1,5 +1,5 @@
 {
-  "id": "workflow-v2-foundation",
+  "id": "your-work-item-id",
   "title": "Establish workflow v2 foundation docs and schemas",
   "summary": "Introduce reusable workflow v2 docs and machine-readable schema without replacing v1.",
   "project_profile": "homecook",
