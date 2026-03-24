@@ -39,6 +39,7 @@
 - `docs/engineering/agent-workflow-overview.md`: 변경 유형별 게이트, optional review, loop 사용 기준
 - `docs/engineering/slice-workflow.md`: product slice Stage 1~6 절차
 - `docs/engineering/git-workflow.md`: 브랜치/커밋/PR 크기 규칙
+- `docs/engineering/workflow-v2/*`: next-generation reusable workflow 설계와 파일럿 규칙
 
 같은 규칙이 여러 문서에 보이면 먼저 아래 기준으로 판정한다.
 
@@ -46,6 +47,12 @@
 - `계층적 위임`: 상위 문서가 원칙을 선언하고 하위 문서가 단계, 예외, 산출물, 체크리스트를 구체화한다
 
 `중복`으로 판정된 규칙만 단일 소스화 대상으로 본다. `계층적 위임`은 삭제보다 링크와 책임 경계를 정리한다.
+
+## V2 Pilot Note
+
+- 현재 product slice의 운영 기본값은 계속 이 문서와 `docs/engineering/slice-workflow.md`다.
+- `docs/engineering/workflow-v2/*`는 reusable workflow v2의 설계·파일럿 문서이며, 명시적 승격 전까지 v1을 자동 대체하지 않는다.
+- `docs-governance` 또는 workflow tooling 개선 작업이 `workflow-v2`를 명시적으로 대상으로 삼을 때만 해당 문서를 직접 source of truth로 사용한다.
 
 ---
 

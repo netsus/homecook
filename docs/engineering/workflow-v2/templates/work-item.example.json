@@ -1,0 +1,41 @@
+{
+  "id": "workflow-v2-foundation",
+  "title": "Establish workflow v2 foundation docs and schemas",
+  "summary": "Introduce reusable workflow v2 docs and machine-readable schema without replacing v1.",
+  "project_profile": "homecook",
+  "change_type": "infra-governance",
+  "surface": "workflow",
+  "risk": "medium",
+  "preset": "infra-governance",
+  "goal": "Create the workflow v2 foundation as a pilot path for reusable multi-agent execution.",
+  "owners": {
+    "claude": "supervision-and-review",
+    "codex": "implementation-and-integration",
+    "workers": ["test-reviewer", "pr-governance-reviewer"]
+  },
+  "dependencies": ["agent-plan-loop", "agent-review-loop"],
+  "docs_refs": {
+    "source_of_truth": ["AGENTS.md", "docs/engineering/agent-workflow-overview.md"],
+    "governing_docs": [
+      "docs/engineering/workflow-v2/charter.md",
+      "docs/engineering/workflow-v2/core.md",
+      "docs/engineering/workflow-v2/approval-and-loops.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": []
+  },
+  "verification": {
+    "required_checks": ["targeted-vitest", "docs-consistency-review"],
+    "verify_commands": ["pnpm test -- workflow-v2"]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "needs_revision",
+    "verification_status": "pending"
+  },
+  "out_of_scope": ["CI gate migration", "README auto-generation"],
+  "open_questions": ["When should v2 become the default for product-light work?"]
+}

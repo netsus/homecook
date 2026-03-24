@@ -13,6 +13,7 @@
 9. 필요한 경우에만 `docs/reference/wireframes/`
 10. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
 11. 필요 시 `docs/engineering/security-performance-design.md`
+12. workflow v2 설계/파일럿 작업 시 `docs/engineering/workflow-v2/README.md`
 
 ## Source of Truth
 
@@ -47,6 +48,7 @@
 - `docs/engineering/agent-workflow-overview.md`는 변경 유형별 게이트, optional review, loop 사용 조건의 단일 소스다.
 - `docs/engineering/slice-workflow.md`는 product slice Stage 1~6 절차의 단일 소스다.
 - `docs/engineering/git-workflow.md`는 브랜치/커밋/PR 크기 규칙의 단일 소스다.
+- `docs/engineering/workflow-v2/*`는 차세대 reusable workflow의 설계·파일럿 문서다. 별도 승격 공지가 있기 전까지 현재 product slice의 운영 규칙을 직접 대체하지 않는다.
 - 같은 규칙이 여러 문서에 보이면 먼저 `중복`인지 `계층적 위임`인지 판정한다.
 - `중복`: 같은 actor, trigger, action, success condition, scope를 추가 정보 없이 반복할 때만 본다.
 - `계층적 위임`: 상위 문서가 원칙을 말하고 하위 문서가 단계, 예외, 산출물, 체크리스트를 구체화할 때 본다.
