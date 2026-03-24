@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "docs/engineering/workflow-v2/schemas/workflow-status.schema.json",
+  "title": "Workflow V2 Status Board",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "project_profile", "updated_at", "items"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "project_profile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "preset",
+          "lifecycle",
+          "approval_state",
+          "verification_status",
+          "required_checks"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "preset": {
+            "type": "string",
+            "enum": [
+              "vertical-slice-strict",
+              "vertical-slice-light",
+              "bugfix-patch",
+              "ui-polish",
+              "infra-governance",
+              "docs-only"
+            ]
+          },
+          "branch": {
+            "type": "string"
+          },
+          "pr_path": {
+            "type": "string"
+          },
+          "lifecycle": {
+            "type": "string",
+            "enum": ["planned", "in_progress", "ready_for_review", "blocked", "merged", "archived"]
+          },
+          "approval_state": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "needs_revision",
+              "claude_approved",
+              "codex_approved",
+              "dual_approved",
+              "human_escalation"
+            ]
+          },
+          "verification_status": {
+            "type": "string",
+            "enum": ["pending", "passed", "failed", "skipped"]
+          },
+          "required_checks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

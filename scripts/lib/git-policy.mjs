@@ -33,6 +33,24 @@ export function findMissingPrSections(body) {
   return REQUIRED_PR_SECTIONS.filter((section) => !body.includes(section));
 }
 
+const WORKFLOW_V2_REF_PATTERN = /^-\s+workflow v2 work item:\s*(.+)$/gim;
+const ALLOWED_WORKFLOW_V2_REF_PATTERN =
+  /^(?:`?\.workflow-v2\/work-items\/[a-z0-9][a-z0-9-]*\.json`?|`?N\/A`?|`?해당 없음`?|`?없음`?)$/;
+
+export function findInvalidWorkflowV2Refs(body) {
+  const invalid = [];
+
+  for (const match of body.matchAll(WORKFLOW_V2_REF_PATTERN)) {
+    const value = match[1]?.trim() ?? "";
+    if (value.length === 0) continue;
+    if (!ALLOWED_WORKFLOW_V2_REF_PATTERN.test(value)) {
+      invalid.push(value);
+    }
+  }
+
+  return invalid;
+}
+
 const EMPTY_LINE_PATTERNS = [
   /^-?\s*$/, // empty or just "-"
   /^-\s+(?!\[).+:\s*$/, // "- 라벨:" placeholder ending with colon (not a checkbox)

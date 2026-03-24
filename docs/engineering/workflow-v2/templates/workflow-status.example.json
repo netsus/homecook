@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "project_profile": "homecook",
+  "updated_at": "2026-03-25T00:00:00+09:00",
+  "items": [
+    {
+      "id": "workflow-v2-foundation",
+      "preset": "infra-governance",
+      "branch": "docs/workflow-v2-foundation",
+      "pr_path": "pending",
+      "lifecycle": "in_progress",
+      "approval_state": "needs_revision",
+      "verification_status": "pending",
+      "required_checks": ["targeted-vitest", "docs-consistency-review"],
+      "notes": "Foundation phase for workflow v2 pilot."
+    }
+  ]
+}

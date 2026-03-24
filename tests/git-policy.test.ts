@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   findEmptyPrSections,
+  findInvalidWorkflowV2Refs,
   findMissingPrSections,
   isAllowedBranchName,
   isValidCommitMessage,
@@ -46,6 +47,21 @@ describe("git policy", () => {
     expect(missing).toContain("## Workpack / Slice");
     expect(missing).toContain("## Security Review");
     expect(missing).not.toContain("## Summary");
+  });
+
+  it("accepts N/A workflow v2 work item refs in PR body", () => {
+    const body = "## Workpack / Slice\n- workflow v2 work item: `N/A`";
+    expect(findInvalidWorkflowV2Refs(body)).toEqual([]);
+  });
+
+  it("accepts valid workflow v2 work item paths in PR body", () => {
+    const body = "## Workpack / Slice\n- workflow v2 work item: `.workflow-v2/work-items/workflow-v2-foundation.json`";
+    expect(findInvalidWorkflowV2Refs(body)).toEqual([]);
+  });
+
+  it("rejects invalid workflow v2 work item refs in PR body", () => {
+    const body = "## Workpack / Slice\n- workflow v2 work item: docs/workflow-v2-foundation.md";
+    expect(findInvalidWorkflowV2Refs(body)).toEqual(["docs/workflow-v2-foundation.md"]);
   });
 });
 

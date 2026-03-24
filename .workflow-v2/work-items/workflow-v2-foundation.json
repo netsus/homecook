@@ -1,0 +1,57 @@
+{
+  "id": "workflow-v2-foundation",
+  "title": "Establish workflow v2 foundation and pilot integration",
+  "summary": "Create the reusable workflow v2 docs, validator, tracked pilot state, and minimal CI/PR integration.",
+  "project_profile": "homecook",
+  "change_type": "infra-governance",
+  "surface": "workflow",
+  "risk": "medium",
+  "preset": "infra-governance",
+  "goal": "Introduce workflow v2 as a pilot path with actual tracked state and machine-checked validation.",
+  "owners": {
+    "claude": "supervision-and-review",
+    "codex": "implementation-and-integration",
+    "workers": ["test-reviewer", "pr-governance-reviewer"]
+  },
+  "dependencies": ["agent-plan-loop", "agent-review-loop"],
+  "docs_refs": {
+    "source_of_truth": [
+      "AGENTS.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/workflow-v2/README.md"
+    ],
+    "governing_docs": [
+      "docs/engineering/workflow-v2/charter.md",
+      "docs/engineering/workflow-v2/core.md",
+      "docs/engineering/workflow-v2/approval-and-loops.md",
+      "docs/engineering/workflow-v2/migration.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": []
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts"
+    ],
+    "verify_commands": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts"
+    ]
+  },
+  "status": {
+    "lifecycle": "ready_for_review",
+    "approval_state": "codex_approved",
+    "verification_status": "passed"
+  },
+  "out_of_scope": [
+    "full GitHub approval enforcement",
+    "automatic README rendering from status board"
+  ],
+  "open_questions": [
+    "When should vertical-slice-light become the default for product-light work?"
+  ]
+}
