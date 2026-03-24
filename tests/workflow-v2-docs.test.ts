@@ -5,7 +5,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   validateKnownShape,
+  validateWorkflowV2Bundle,
   validateWorkflowV2Examples,
+  validateWorkflowV2TrackedState,
 } from "../scripts/lib/validate-workflow-v2.mjs";
 
 const repoRoot = process.cwd();
@@ -54,6 +56,20 @@ describe("workflow v2 docs", () => {
     const results = validateWorkflowV2Examples({ rootDir: repoRoot });
 
     expect(results).toHaveLength(2);
+    expect(results.every((result) => result.errors.length === 0)).toBe(true);
+  });
+
+  it("validates tracked workflow v2 pilot state", () => {
+    const results = validateWorkflowV2TrackedState({ rootDir: repoRoot });
+
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.every((result) => result.errors.length === 0)).toBe(true);
+  });
+
+  it("returns a combined validation bundle with no errors", () => {
+    const results = validateWorkflowV2Bundle({ rootDir: repoRoot });
+
+    expect(results.length).toBeGreaterThanOrEqual(4);
     expect(results.every((result) => result.errors.length === 0)).toBe(true);
   });
 });

@@ -15,6 +15,7 @@
 ## Workpack / Slice
 
 - 관련 workpack:
+- workflow v2 work item: `N/A` (v1 기본 경로 또는 미사용 시)
 - 변경 범위:
 - 변경 유형 기준 required checks:
 

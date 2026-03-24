@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { validateWorkflowV2Examples } from "./lib/validate-workflow-v2.mjs";
+import { validateWorkflowV2Bundle } from "./lib/validate-workflow-v2.mjs";
 
-const results = validateWorkflowV2Examples();
+const results = validateWorkflowV2Bundle();
 const failed = results.filter((result) => result.errors.length > 0);
 
 if (failed.length === 0) {

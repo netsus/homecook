@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 
-import { findEmptyPrSections, findMissingPrSections } from "./lib/git-policy.mjs";
+import {
+  findEmptyPrSections,
+  findInvalidWorkflowV2Refs,
+  findMissingPrSections,
+} from "./lib/git-policy.mjs";
 
 const filePath = process.argv[2] ?? process.env.PR_BODY_FILE;
 
@@ -26,6 +30,16 @@ if (empty.length > 0) {
   console.error("PR body has empty required sections (template placeholders not filled):");
   for (const section of empty) {
     console.error(`- ${section}`);
+  }
+  process.exit(1);
+}
+
+const invalidWorkflowV2Refs = findInvalidWorkflowV2Refs(body);
+
+if (invalidWorkflowV2Refs.length > 0) {
+  console.error("PR body has invalid workflow v2 work item references:");
+  for (const ref of invalidWorkflowV2Refs) {
+    console.error(`- ${ref}`);
   }
   process.exit(1);
 }

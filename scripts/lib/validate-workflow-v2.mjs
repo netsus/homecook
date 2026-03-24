@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 function readJson(filePath) {
@@ -104,4 +104,112 @@ export function validateWorkflowV2Examples({ rootDir = process.cwd() } = {}) {
       errors: validateKnownShape(schema, example),
     };
   });
+}
+
+function normalizeStringArray(values) {
+  return [...values].sort();
+}
+
+export function validateWorkflowV2TrackedState({ rootDir = process.cwd() } = {}) {
+  const workflowDir = path.join(rootDir, ".workflow-v2");
+  if (!existsSync(workflowDir)) {
+    return [];
+  }
+
+  const workItemSchema = readJson(
+    path.join(rootDir, "docs/engineering/workflow-v2/schemas/work-item.schema.json"),
+  );
+  const statusSchema = readJson(
+    path.join(rootDir, "docs/engineering/workflow-v2/schemas/workflow-status.schema.json"),
+  );
+  const workItemsDir = path.join(workflowDir, "work-items");
+  const statusPath = path.join(workflowDir, "status.json");
+  const results = [];
+
+  const workItemFiles = existsSync(workItemsDir)
+    ? readdirSync(workItemsDir)
+        .filter((name) => name.endsWith(".json"))
+        .map((name) => path.join(workItemsDir, name))
+    : [];
+
+  const workItems = workItemFiles.map((filePath) => {
+    const data = readJson(filePath);
+    const errors = validateKnownShape(workItemSchema, data);
+    results.push({
+      name: `tracked-work-item:${path.basename(filePath)}`,
+      errors,
+    });
+    return data;
+  });
+
+  if (!existsSync(statusPath)) {
+    results.push({
+      name: "tracked-status",
+      errors: [
+        {
+          path: ".workflow-v2.status.json",
+          message: "Missing .workflow-v2/status.json",
+        },
+      ],
+    });
+    return results;
+  }
+
+  const statusData = readJson(statusPath);
+  const statusErrors = validateKnownShape(statusSchema, statusData);
+  const crossErrors = [];
+
+  const workItemsById = new Map(workItems.map((item) => [item.id, item]));
+  const statusItems = Array.isArray(statusData.items) ? statusData.items : [];
+
+  for (const statusItem of statusItems) {
+    const workItem = workItemsById.get(statusItem.id);
+    if (!workItem) {
+      crossErrors.push({
+        path: `.workflow-v2/status.json.items.${statusItem.id}`,
+        message: `Missing matching work item for status entry '${statusItem.id}'.`,
+      });
+      continue;
+    }
+
+    if (statusItem.preset !== workItem.preset) {
+      crossErrors.push({
+        path: `.workflow-v2/status.json.items.${statusItem.id}.preset`,
+        message: `Preset mismatch with work item '${statusItem.id}'.`,
+      });
+    }
+
+    const statusChecks = Array.isArray(statusItem.required_checks) ? statusItem.required_checks : [];
+    const workItemChecks = Array.isArray(workItem.verification?.required_checks)
+      ? workItem.verification.required_checks
+      : [];
+
+    if (JSON.stringify(normalizeStringArray(statusChecks)) !== JSON.stringify(normalizeStringArray(workItemChecks))) {
+      crossErrors.push({
+        path: `.workflow-v2/status.json.items.${statusItem.id}.required_checks`,
+        message: `Required checks mismatch with work item '${statusItem.id}'.`,
+      });
+    }
+  }
+
+  for (const workItem of workItems) {
+    const found = statusItems.some((statusItem) => statusItem.id === workItem.id);
+    if (!found) {
+      crossErrors.push({
+        path: `.workflow-v2/work-items/${workItem.id}.json`,
+        message: `Missing matching status entry for work item '${workItem.id}'.`,
+      });
+    }
+  }
+
+  results.push({
+    name: "tracked-status",
+    errors: [...statusErrors, ...crossErrors],
+  });
+
+  return results;
+}
+
+export function validateWorkflowV2Bundle({ rootDir = process.cwd() } = {}) {
+  return [...validateWorkflowV2Examples({ rootDir }), ...validateWorkflowV2TrackedState({ rootDir })];
 }
