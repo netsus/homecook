@@ -23,7 +23,7 @@ Claude와 Codex를 대등한 자유 토론자로 두지 않는다.
 
 ## Plan Loop
 
-기존 [agent-plan-loop.md](/Users/shj/2025/2026/homecook1/docs/engineering/agent-plan-loop.md)를 v2의 기본 planning engine으로 사용한다.
+기존 [agent-plan-loop.md](../agent-plan-loop.md)를 v2의 기본 planning engine으로 사용한다.
 
 기본 순서:
 
@@ -45,7 +45,7 @@ Claude와 Codex를 대등한 자유 토론자로 두지 않는다.
 
 ## Review Loop
 
-기존 [agent-review-loop.md](/Users/shj/2025/2026/homecook1/docs/engineering/agent-review-loop.md)를 v2의 기본 implementation review engine으로 사용한다.
+기존 [agent-review-loop.md](../agent-review-loop.md)를 v2의 기본 implementation review engine으로 사용한다.
 
 기본 순서:
 
