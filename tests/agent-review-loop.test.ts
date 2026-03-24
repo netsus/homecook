@@ -700,6 +700,18 @@ describe("agent review loop", () => {
 
     expect(
       normalizeReviewTargetSpec({
+        commitRange: "main..feature",
+      }),
+    ).toMatchObject({
+      mode: "commit_range",
+      baseRef: "main",
+      headRef: "feature",
+      rangeNotation: "..",
+      label: "commit range main..feature",
+    });
+
+    expect(
+      normalizeReviewTargetSpec({
         baseRef: "origin/master",
         headRef: "HEAD",
       }),
