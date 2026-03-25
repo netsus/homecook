@@ -115,6 +115,13 @@ effort가 CLI에서 실제 resolved 값으로 확인되지 않으면 configured/
 4. `approved`가 아닐 경우 사람이 `stalled` 또는 `blocker` 원인을 정리한다.
 5. `approved`일 때만 구현 단계로 넘긴다.
 
+공식 문서에 없는 더 나은 계약 후보가 `open_questions`나 `unresolved_questions`로 올라오면:
+
+1. 현재 공식 문서 기준 구현은 계속 보수적으로 유지한다.
+2. 사용자에게 현재 계약 / 제안 계약 / 기대 사용자 가치 / 영향 범위를 짧게 설명하고 승인 여부를 묻는다.
+3. 승인되면 별도 `contract-evolution` docs PR로 공식 문서와 `CURRENT_SOURCE_OF_TRUTH`를 먼저 갱신한다.
+4. 그 뒤에 workpack 또는 계획을 새 공식 문서 기준으로 다시 잠그고, 필요하면 plan loop를 재실행한다.
+
 ## When To Use
 
 - 새 슬라이스 착수 전 합의가 필요한 경우
@@ -129,7 +136,8 @@ effort가 CLI에서 실제 resolved 값으로 확인되지 않으면 configured/
 
 ## Guardrails
 
-- 공식 문서에 없는 필드, API, 상태 전이는 계획에 추가하지 않는다.
+- 공식 문서에 없는 필드, API, 상태 전이는 승인된 계획에 추가하지 않는다.
+- 사용자 가치가 있는 미문서 계약 후보를 발견하면 추정 구현으로 밀어붙이지 말고 `open_questions` 또는 `unresolved_questions`에 `user approval required`로 남긴다.
 - 문서 충돌이 보이면 추정하지 말고 `open_questions`로 남긴다.
 - Claude는 전체 재작성보다 `필수 수정` 위주로 리뷰한다.
 - Codex는 Claude의 요구가 공식 문서와 충돌하면 그대로 따르지 않고 충돌 사실을 명시한다.

@@ -60,6 +60,11 @@
 - 이 슬라이스에서 반드시 지켜야 하는 정책과 상태 전이
 - read-only, 권한, 멱등성, 예외 처리 규칙
 
+## Contract Evolution Candidates (Optional)
+- 공식 문서에는 없지만 사용자 승인 시 더 나은 제품/API 계약이 될 수 있는 후보가 있으면 적는다
+- 각 후보는 `현재 계약 / 제안 계약 / 기대 사용자 가치 / 영향 문서 / 승인 상태`를 남긴다
+- 승인 전에는 In Scope, Backend First Contract, acceptance 기준에 포함하지 않는다
+
 ## Primary User Path
 1. 사용자의 시작 화면
 2. 주요 액션

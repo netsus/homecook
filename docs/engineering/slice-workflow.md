@@ -80,6 +80,7 @@
 - **Frontend Delivery Mode**: 5개 필수 상태(`loading / empty / error / read-only / unauthorized`) 명시
 - **Design Status**: FE 화면 있으면 `temporary`, BE-only 슬라이스(FE 화면 없음)면 `N/A`
 - **Key Rules**: 이 슬라이스 전용 정책 (도메인 규칙 + 예외 처리)
+- **Contract Evolution Candidates (optional)**: 공식 문서엔 없지만 사용자 승인 시 더 나은 계약이 될 수 있는 후보가 있다면 현재 계약 / 제안 계약 / 기대 사용자 가치 / 영향 문서 / 승인 상태를 기록
 - **Primary User Path**: 3단계 이상의 구체적 사용자 흐름
 
 **acceptance.md**
@@ -104,6 +105,7 @@
 - [ ] Out of Scope에 의도적 제외 항목이 명시되었는가 (빈칸이면 재확인)
 - [ ] Design Status가 올바르게 설정됐는가 (FE 화면 있으면 `temporary`, BE-only면 `N/A`)
 - [ ] acceptance.md에 자동화 불가 시나리오가 Manual Only로 분리되었는가
+- [ ] 공식 문서에 없는 더 나은 계약 후보가 있다면 workpack에 `Contract Evolution Candidates`로만 기록했고, 승인 전 In Scope 계약에 섞지 않았는가
 - [ ] 신규 화면 또는 high-risk UI change가 있다면 각 화면의 `ui/designs/<SCREEN_ID>.md`가 생성됐는가
 - [ ] 신규 화면 또는 high-risk UI change가 있다면 각 화면의 design-critic 등급이 🟢 또는 🟡인가 (🔴이면 재작업)
 - [ ] low-risk UI change라면 design-generator / design-critic 생략 근거가 README 또는 PR에 기록됐는가
@@ -115,6 +117,11 @@
 - (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스) In Scope 각 FE 화면의 `ui/designs/<SCREEN_ID>.md` + `ui/designs/critiques/<SCREEN_ID>-critique.md`
 
 **이 PR에 `docs/workpacks/README.md` Slice Order의 해당 슬라이스 Status를 `planned` → `docs`로 변경하는 커밋을 포함한다.**
+
+공식 source-of-truth 문서 변경이 필요한 사용자 승인 계약 후보가 있다면:
+- Stage 1 결과를 바로 Stage 2 시작 신호로 쓰지 않는다.
+- 먼저 별도 `contract-evolution` docs PR에서 공식 문서와 `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`를 갱신한다.
+- 그 후 Stage 1 workpack/acceptance를 새 공식 문서 기준으로 다시 잠그고 main에 merge한다.
 
 ### 완료 요약 (단계 종료 시 Claude가 출력)
 
@@ -131,6 +138,7 @@
 ### 결정 사항
 - Out of Scope 이유: <내용>
 - Schema 변경 여부: 있음 / 없음
+- Contract Evolution: 없음 / 후보 N건 / 사용자 승인 후 별도 docs PR 필요
 
 ### Design 산출물 (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스만)
 - <SCREEN_ID>: critique 등급 🟢/🟡
@@ -138,6 +146,7 @@
 ### 다음 단계
 → 2단계(Codex): feature/be-<slice> 백엔드 구현
 → 사전 조건: 이 README main merge 완료
+→ 단, 사용자 승인된 Contract Evolution 후보가 있으면 해당 docs PR merge 후 시작
 ```
 
 ---
@@ -150,6 +159,7 @@
 
 - 1단계 README.md + acceptance.md가 main에 merge됨
 - `docs/workpacks/<slice>/README.md`의 Dependencies 선행 슬라이스 전부 merged
+- 이 슬라이스에 영향 있는 `Contract Evolution Candidates`가 있다면, 승인된 항목은 별도 `contract-evolution` PR로 official docs와 `CURRENT_SOURCE_OF_TRUTH`가 먼저 merge됨
 - **`docs/workpacks/README.md` Slice Order에서 해당 슬라이스 Status를 `docs` → `in-progress`로 변경한다** (2단계 첫 커밋에 포함)
 
 ### 읽을 것 (이 순서로)
@@ -191,6 +201,7 @@
 - [ ] 다른 사용자 리소스를 수정할 수 없는가 (403)
 - [ ] read-only 정책이 우회되지 않는가 (완료 후 수정 시 409)
 - [ ] 문서에 없는 필드·상태·엔드포인트를 임의 추가하지 않았는가
+- [ ] 승인되지 않았거나 문서화되지 않은 `Contract Evolution Candidates`를 구현 scope에 섞지 않았는가
 - [ ] 테스트가 상태 전이·에러·권한·read-only를 고정하는가 (happy path만이 아닌가)
 - [ ] `pnpm install --frozen-lockfile && pnpm test:all` 통과
 - [ ] 브랜치명이 `feature/be-<slice>`인가
@@ -303,6 +314,7 @@
 ### 사전 조건
 
 - 3단계 백엔드 PR이 main에 merged됨
+- 프론트에 영향 있는 공식 계약 변경이 있다면 관련 `contract-evolution` docs PR도 main에 merged됨
 
 > **BE-only 슬라이스** (workpack README에 `Design Status: N/A` 또는 FE 화면 없음 명시):
 > Stage 4~6 스킵. Stage 3 완료 요약에 슬라이스 종료 처리 포함.
@@ -349,6 +361,7 @@
 - [ ] 5개 UI 상태 모두 존재하는가 (`loading / empty / error / read-only / unauthorized`)
 - [ ] 백엔드 계약 타입을 임의 변경하지 않았는가
 - [ ] 문서에 없는 UI 상태·기능을 추가하지 않았는가
+- [ ] 승인되지 않았거나 문서화되지 않은 `Contract Evolution Candidates`를 UI 구현 scope에 섞지 않았는가
 - [ ] 보호 액션이 있다면 로그인 게이트·return-to-action이 동작하는가
 - [ ] 상태 전이 로직이 테스트로 고정되었는가
 - [ ] Design Status `temporary`이면 스타일이 나중에 교체 가능한 구조인가
