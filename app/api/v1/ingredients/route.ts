@@ -89,15 +89,15 @@ export async function GET(request: NextRequest) {
     const [{ data: ingredientRows, error: ingredientsError }, { data: synonymRows, error: synonymsError }] =
       await Promise.all([ingredientsQuery, synonymsQuery]);
 
-    if (ingredientsError || synonymsError) {
+    if (ingredientsError && synonymsError) {
       return ok(createEmptyIngredientList());
     }
 
     const items = mergeIngredientItems(
-      ((ingredientRows ?? []) as IngredientRow[])
+      (ingredientsError ? [] : ((ingredientRows ?? []) as IngredientRow[]))
         .map((row) => normalizeIngredientRow(row))
         .filter((row): row is IngredientItem => row !== null),
-      ((synonymRows ?? []) as IngredientSynonymRow[])
+      (synonymsError ? [] : ((synonymRows ?? []) as IngredientSynonymRow[]))
         .map((row) => normalizeSynonymIngredient(row))
         .filter((row): row is IngredientItem => row !== null),
     );

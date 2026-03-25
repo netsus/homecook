@@ -121,7 +121,8 @@ GET /api/v1/recipes
 **필터 규칙**:
 - `ingredient_ids` 미전달 시 전체 목록 조회 (기존 동작 유지)
 - `ingredient_ids` 전달 시 각 재료 ID가 **모두 포함된** 레시피만 반환 (AND 조건)
-  - 구현: `recipe_ingredients` JOIN + `HAVING COUNT(DISTINCT ingredient_id) = N` 방식 권장
+  - 현재 구현 잠금: `recipe_ingredients`에서 후보 행을 읽은 뒤 `ingredient_id`를 recipe 단위로 DISTINCT 집계해 AND 조건을 판정한다
+  - DB-side aggregate/HAVING 최적화는 PostgREST 실환경에서 의미 검증이 끝난 뒤에만 허용한다
 - `ingredient_ids`는 쉼표 기준으로 파싱하고, 빈 값 / 중복 / malformed token은 무시한다
 - 유효 UUID가 하나도 남지 않으면 `200 { items: [] }`를 반환한다
 - 유효 UUID는 있으나 매칭 레시피가 없으면 `200 { items: [] }`를 반환한다
@@ -216,8 +217,9 @@ GET /api/v1/recipes
 
 ### 3. `ingredient_ids` AND 필터 SQL
 
-- `recipe_ingredients` 기반 AND 필터는 `JOIN + GROUP BY + HAVING COUNT(DISTINCT ingredient_id) = N` 방식으로 고정한다.
-- 중첩 `EXISTS` 기반 구현은 이번 슬라이스 기본안으로 사용하지 않는다.
+- 현재 Stage 2 잠금 구현은 `recipe_ingredients` 후보 행 조회 후, route 내부에서 `COUNT(DISTINCT ingredient_id)`와 같은 의미가 되도록 recipe별 고유 `ingredient_id` 개수를 집계해 AND 필터를 판정하는 방식이다.
+- PostgREST 공식 문서상 aggregate와 함께 `HAVING`은 아직 직접 지원되지 않으므로, 실환경 검증 전까지 alias 기반 aggregate filter를 기본안으로 채택하지 않는다.
+- 이후 DB-side aggregate 최적화를 도입하려면 실제 Supabase 환경에서 의미 검증을 먼저 수행하고, 그 결과를 근거로 이 README를 갱신한다.
 
 ### 4. `GET /ingredients` 검색 / 테스트 정책
 
@@ -233,6 +235,8 @@ GET /api/v1/recipes
 ### 6. 실제 동작 확인 gate
 
 - Stage 2는 `pnpm test:all` 이후 실제 API smoke 확인을 거쳐 Ready for Review로 넘긴다.
+  - 현재 필수 smoke는 response envelope/분기 확인이다.
+  - `ingredient_ids`의 AND 의미는 Vitest fixture로 고정하고, Supabase product schema가 준비된 환경이 있을 때만 실 DB smoke를 추가 수행한다.
 - Stage 4는 `pnpm test:all` 이후 실제 브라우저에서 `HOME → 모달 열기 → 선택 → 적용 → URL 반영 → hard refresh 초기화 → 필터 초기화` smoke 확인을 거쳐 Ready for Review로 넘긴다.
 
 ## Primary User Path

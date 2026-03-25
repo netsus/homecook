@@ -203,6 +203,46 @@ describe("recipe API contracts", () => {
     ]);
   });
 
+  it("falls back to standard-name matches when the synonym query fails", async () => {
+    const ingredientsQuery = createQuery({
+      data: [
+        {
+          id: "550e8400-e29b-41d4-a716-446655440010",
+          standard_name: "양파",
+          category: "채소",
+        },
+      ],
+      error: null,
+    });
+    const synonymsQuery = createQuery({
+      data: null,
+      error: { message: "boom" },
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsQuery;
+        if (table === "ingredient_synonyms") return synonymsQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/ingredients/route");
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/ingredients?q=%EC%96%91%ED%8C%8C"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items).toEqual([
+      {
+        id: "550e8400-e29b-41d4-a716-446655440010",
+        standard_name: "양파",
+        category: "채소",
+      },
+    ]);
+  });
+
   it("returns an empty wrapped recipe list when ingredient_ids contains no valid UUIDs", async () => {
     const { GET } = await import("@/app/api/v1/recipes/route");
     const response = await GET(
@@ -228,7 +268,19 @@ describe("recipe API contracts", () => {
       data: [
         {
           recipe_id: "recipe-1",
-          count: 2,
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440000",
+        },
+        {
+          recipe_id: "recipe-1",
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440001",
+        },
+        {
+          recipe_id: "recipe-1",
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440000",
+        },
+        {
+          recipe_id: "recipe-2",
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440000",
         },
       ],
       error: null,
@@ -283,8 +335,7 @@ describe("recipe API contracts", () => {
       "550e8400-e29b-41d4-a716-446655440000",
       "550e8400-e29b-41d4-a716-446655440001",
     ]);
-    expect(ingredientRowsQuery.select).toHaveBeenCalledWith("recipe_id, ingredient_id.count()");
-    expect(ingredientRowsQuery.eq).toHaveBeenCalledWith("ingredient_id.count()", 2);
+    expect(ingredientRowsQuery.select).toHaveBeenCalledWith("recipe_id, ingredient_id");
     expect(listQuery.in).toHaveBeenCalledWith("id", ["recipe-1"]);
     expect(listQuery.ilike).toHaveBeenCalledWith("title", "%김치%");
   });

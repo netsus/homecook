@@ -11,7 +11,7 @@ const UUID_PATTERN =
 
 interface RecipeIngredientMatchRow {
   recipe_id: string;
-  count: number | string | null;
+  ingredient_id: string;
 }
 
 export function clampLimit(value: string | null) {
@@ -48,6 +48,28 @@ export function parseIngredientIds(value: string | null) {
   }
 
   return parsed;
+}
+
+export function filterRecipeIdsByIngredients(
+  rows: RecipeIngredientMatchRow[],
+  ingredientIds: string[],
+) {
+  const requiredIds = new Set(ingredientIds);
+  const matchedIngredientsByRecipe = new Map<string, Set<string>>();
+
+  for (const row of rows) {
+    if (!requiredIds.has(row.ingredient_id)) {
+      continue;
+    }
+
+    const current = matchedIngredientsByRecipe.get(row.recipe_id) ?? new Set<string>();
+    current.add(row.ingredient_id);
+    matchedIngredientsByRecipe.set(row.recipe_id, current);
+  }
+
+  return Array.from(matchedIngredientsByRecipe.entries())
+    .filter(([, matchedIds]) => matchedIds.size === requiredIds.size)
+    .map(([recipeId]) => recipeId);
 }
 
 function createEmptyRecipeList(): RecipeListData {
@@ -104,20 +126,18 @@ export async function GET(request: NextRequest) {
     let filteredRecipeIds: string[] | null = null;
 
     if (listQuery.ingredient_ids?.length) {
-      // PostgREST aggregates group by the non-aggregate select columns, matching
-      // the workpack's locked JOIN + GROUP BY + HAVING filter shape in the DB.
       const { data: ingredientMatches, error: ingredientError } = await supabase
         .from("recipe_ingredients")
-        .select("recipe_id, ingredient_id.count()")
-        .in("ingredient_id", listQuery.ingredient_ids)
-        .eq("ingredient_id.count()", listQuery.ingredient_ids.length);
+        .select("recipe_id, ingredient_id")
+        .in("ingredient_id", listQuery.ingredient_ids);
 
       if (ingredientError) {
         return ok(createEmptyRecipeList());
       }
 
-      filteredRecipeIds = ((ingredientMatches ?? []) as RecipeIngredientMatchRow[]).map(
-        (row) => row.recipe_id,
+      filteredRecipeIds = filterRecipeIdsByIngredients(
+        (ingredientMatches ?? []) as RecipeIngredientMatchRow[],
+        listQuery.ingredient_ids,
       );
 
       if (filteredRecipeIds.length === 0) {
