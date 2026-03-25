@@ -202,7 +202,7 @@ GET /api/v1/recipes
 - 이 Stage 0는 현재 공식 계약을 잠그는 단계이며, `Contract Evolution Candidates` 채택 여부를 결정하는 단계가 아니다.
 - Stage 2 착수 전 HEAD에서 아래 흔적이 제거되었는지 다시 확인한다:
   - `count_only`
-  - `ingredients` query param
+  - `previewCount` / `count_only` / 비공식 `ingredients` query 계약 (design 파일 §디자인 결정 사항 참조)
   - `category=all`
   - `[레시피 N개 보기]`
   - 체크리스트 정의와 충돌하는 모호한 칩 전용 설명

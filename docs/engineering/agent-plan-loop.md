@@ -115,6 +115,8 @@ effort가 CLI에서 실제 resolved 값으로 확인되지 않으면 configured/
 4. `approved`가 아닐 경우 사람이 `stalled` 또는 `blocker` 원인을 정리한다.
 5. `approved`일 때만 구현 단계로 넘긴다.
 
+### Contract Evolution Escalation
+
 공식 문서에 없는 더 나은 계약 후보가 `open_questions`나 `unresolved_questions`로 올라오면:
 
 1. 현재 공식 문서 기준 구현은 계속 보수적으로 유지한다.
