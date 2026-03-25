@@ -91,6 +91,255 @@ describe("recipe API contracts", () => {
     });
   });
 
+  it("returns a wrapped ingredient list for standard-name matches", async () => {
+    const ingredientsQuery = createQuery({
+      data: [
+        {
+          id: "550e8400-e29b-41d4-a716-446655440010",
+          standard_name: "양파",
+          category: "채소",
+        },
+      ],
+      error: null,
+    });
+    const synonymsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsQuery;
+        if (table === "ingredient_synonyms") return synonymsQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/ingredients/route");
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/ingredients?q=%EC%96%91%ED%8C%8C&category=%EC%B1%84%EC%86%8C"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      error: null,
+      data: {
+        items: [
+          {
+            id: "550e8400-e29b-41d4-a716-446655440010",
+            standard_name: "양파",
+            category: "채소",
+          },
+        ],
+      },
+    });
+    expect(ingredientsQuery.eq).toHaveBeenCalledWith("category", "채소");
+    expect(ingredientsQuery.ilike).toHaveBeenCalledWith("standard_name", "%양파%");
+    expect(synonymsQuery.eq).toHaveBeenCalledWith("ingredients.category", "채소");
+    expect(synonymsQuery.ilike).toHaveBeenCalledWith("synonym", "%양파%");
+  });
+
+  it("returns ingredient matches from synonyms without duplicating the same ingredient", async () => {
+    const ingredientsQuery = createQuery({
+      data: [
+        {
+          id: "550e8400-e29b-41d4-a716-446655440010",
+          standard_name: "양파",
+          category: "채소",
+        },
+      ],
+      error: null,
+    });
+    const synonymsQuery = createQuery({
+      data: [
+        {
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440010",
+          ingredients: {
+            id: "550e8400-e29b-41d4-a716-446655440010",
+            standard_name: "양파",
+            category: "채소",
+          },
+        },
+        {
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440011",
+          ingredients: {
+            id: "550e8400-e29b-41d4-a716-446655440011",
+            standard_name: "대파",
+            category: "채소",
+          },
+        },
+      ],
+      error: null,
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsQuery;
+        if (table === "ingredient_synonyms") return synonymsQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/ingredients/route");
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/ingredients?q=%ED%8C%8C"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items).toEqual([
+      {
+        id: "550e8400-e29b-41d4-a716-446655440010",
+        standard_name: "양파",
+        category: "채소",
+      },
+      {
+        id: "550e8400-e29b-41d4-a716-446655440011",
+        standard_name: "대파",
+        category: "채소",
+      },
+    ]);
+  });
+
+  it("falls back to standard-name matches when the synonym query fails", async () => {
+    const ingredientsQuery = createQuery({
+      data: [
+        {
+          id: "550e8400-e29b-41d4-a716-446655440010",
+          standard_name: "양파",
+          category: "채소",
+        },
+      ],
+      error: null,
+    });
+    const synonymsQuery = createQuery({
+      data: null,
+      error: { message: "boom" },
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === "ingredients") return ingredientsQuery;
+        if (table === "ingredient_synonyms") return synonymsQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/ingredients/route");
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/ingredients?q=%EC%96%91%ED%8C%8C"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items).toEqual([
+      {
+        id: "550e8400-e29b-41d4-a716-446655440010",
+        standard_name: "양파",
+        category: "채소",
+      },
+    ]);
+  });
+
+  it("returns an empty wrapped recipe list when ingredient_ids contains no valid UUIDs", async () => {
+    const { GET } = await import("@/app/api/v1/recipes/route");
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/recipes?ingredient_ids=bad,,123"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        items: [],
+        next_cursor: null,
+        has_next: false,
+      },
+      error: null,
+    });
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
+  });
+
+  it("applies ingredient_ids as an AND filter before loading recipe cards", async () => {
+    const ingredientRowsQuery = createQuery({
+      data: [
+        {
+          recipe_id: "recipe-1",
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440000",
+        },
+        {
+          recipe_id: "recipe-1",
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440001",
+        },
+        {
+          recipe_id: "recipe-1",
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440000",
+        },
+        {
+          recipe_id: "recipe-2",
+          ingredient_id: "550e8400-e29b-41d4-a716-446655440000",
+        },
+      ],
+      error: null,
+    });
+    const listQuery = createQuery({
+      data: [
+        {
+          id: "recipe-1",
+          title: "김치찌개",
+          thumbnail_url: "https://example.com/kimchi.jpg",
+          tags: ["한식"],
+          base_servings: 2,
+          view_count: 10,
+          like_count: 4,
+          save_count: 2,
+          source_type: "system",
+        },
+      ],
+      error: null,
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === "recipe_ingredients") return ingredientRowsQuery;
+        if (table === "recipes") return listQuery;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/route");
+    const response = await GET(
+      new NextRequest(
+        "http://localhost:3000/api/v1/recipes?q=%EA%B9%80%EC%B9%98&ingredient_ids=550e8400-e29b-41d4-a716-446655440000,550e8400-e29b-41d4-a716-446655440001",
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      error: null,
+      data: {
+        items: [
+          {
+            id: "recipe-1",
+            title: "김치찌개",
+          },
+        ],
+      },
+    });
+    expect(ingredientRowsQuery.in).toHaveBeenCalledWith("ingredient_id", [
+      "550e8400-e29b-41d4-a716-446655440000",
+      "550e8400-e29b-41d4-a716-446655440001",
+    ]);
+    expect(ingredientRowsQuery.select).toHaveBeenCalledWith("recipe_id, ingredient_id");
+    expect(listQuery.in).toHaveBeenCalledWith("id", ["recipe-1"]);
+    expect(listQuery.ilike).toHaveBeenCalledWith("title", "%김치%");
+  });
+
   it("returns themed recipe sections in the API envelope", async () => {
     const listQuery = createQuery({
       data: [
