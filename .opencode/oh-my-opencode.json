@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
+  "default_run_agent": "hephaestus",
+  "disabled_hooks": ["comment-checker", "ralph-loop", "startup-toast"],
+  "disabled_commands": ["ralph-loop", "ulw-loop"],
+  "agents": {
+    "hephaestus": {
+      "model": "openai/gpt-5.3-codex",
+      "variant": "high",
+      "mode": "primary",
+      "description": "Homecook default Codex supervisor for stage dispatch, implementation, and recovery."
+    },
+    "sisyphus": {
+      "model": "openai/gpt-5.3-codex",
+      "variant": "medium",
+      "description": "Codex-based planner for plan-loop style orchestration without spending Claude budget by default."
+    },
+    "oracle": {
+      "model": "openai/gpt-5.4",
+      "variant": "high",
+      "description": "Secondary reasoning agent for governance summaries, risk checks, and hard questions."
+    },
+    "explore": {
+      "model": "openai/gpt-5.4-mini",
+      "description": "Low-cost codebase exploration for repo-local discovery and context gathering."
+    },
+    "librarian": {
+      "model": "openai/gpt-5.4-mini",
+      "description": "Low-cost document retrieval for workpacks, workflow docs, and operational references."
+    }
+  },
+  "experimental": {
+    "auto_resume": false
+  }
+}

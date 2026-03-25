@@ -21,6 +21,9 @@ Claude와 Codex를 대등한 자유 토론자로 두지 않는다.
 
 위 조건 중 하나라도 빠지면 최종 상태는 `approved`가 될 수 없다.
 
+Claude budget 문제로 임시 Codex review summary만 남은 경우 상태는 `awaiting_claude_or_human`으로 기록한다.
+이 상태는 provisional이며 `dual_approved`와 동일하지 않다.
+
 ## Plan Loop
 
 기존 [agent-plan-loop.md](../agent-plan-loop.md)를 v2의 기본 planning engine으로 사용한다.

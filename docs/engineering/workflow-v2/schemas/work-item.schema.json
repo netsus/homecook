@@ -164,6 +164,7 @@
             "needs_revision",
             "claude_approved",
             "codex_approved",
+            "awaiting_claude_or_human",
             "dual_approved",
             "human_escalation"
           ]

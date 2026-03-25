@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["oh-my-opencode@latest"],
+  "instructions": [
+    "AGENTS.md",
+    "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+    "docs/engineering/agent-workflow-overview.md",
+    "docs/engineering/slice-workflow.md",
+    "docs/engineering/agent-plan-loop.md",
+    "docs/engineering/agent-review-loop.md",
+    "docs/engineering/workflow-v2/README.md",
+    "docs/engineering/workflow-v2/omo-lite-architecture.md",
+    "docs/engineering/workflow-v2/omo-lite-supervisor-spec.md",
+    "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
+    ".opencode/README.md"
+  ]
+}

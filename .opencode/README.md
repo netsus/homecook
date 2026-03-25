@@ -1,0 +1,30 @@
+# Repo-Local OpenCode / OMO Configuration
+
+이 디렉터리는 Homecook 저장소에서만 적용되는 OpenCode / Oh My OpenCode 설정을 둔다.
+
+## Rules
+
+- 이 저장소 루트에서 OpenCode `/init`를 실행하지 않는다.
+- 이유: 저장소에는 이미 공식 운영 규칙인 `AGENTS.md`가 있고, 자동 생성된 `AGENTS.md`로 덮어쓰면 안 된다.
+- authoritative policy는 계속 `AGENTS.md`, `docs/engineering/slice-workflow.md`, `docs/engineering/agent-workflow-overview.md`다.
+- `.opencode/oh-my-opencode.json`은 그 규칙을 따르는 `Codex supervisor 기본값`만 추가한다.
+
+## Current Homecook Defaults
+
+- 기본 실행 에이전트: `hephaestus`
+- 의도:
+  - Codex 중심 supervisor / execution
+  - Claude는 sparse approval checkpoint에서만 사용
+- `ralph-loop`와 `ulw-loop`는 아직 Homecook stage dispatcher와 연결되지 않았으므로 project 레벨에서 비활성화한다.
+- `comment-checker` hook는 현재 로컬 설치 상태 차이로 false positive가 날 수 있어 project 레벨에서 비활성화한다.
+
+## Local Auth
+
+- provider 인증은 사용자 로컬 상태다.
+- 필요 시 아래 명령으로 로그인한다.
+
+```bash
+opencode auth login
+```
+
+- 이 인증 상태는 Git에 커밋하지 않는다.
