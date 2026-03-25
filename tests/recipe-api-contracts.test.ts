@@ -228,15 +228,7 @@ describe("recipe API contracts", () => {
       data: [
         {
           recipe_id: "recipe-1",
-          ingredient_id: "550e8400-e29b-41d4-a716-446655440000",
-        },
-        {
-          recipe_id: "recipe-1",
-          ingredient_id: "550e8400-e29b-41d4-a716-446655440001",
-        },
-        {
-          recipe_id: "recipe-2",
-          ingredient_id: "550e8400-e29b-41d4-a716-446655440000",
+          count: 2,
         },
       ],
       error: null,
@@ -291,6 +283,8 @@ describe("recipe API contracts", () => {
       "550e8400-e29b-41d4-a716-446655440000",
       "550e8400-e29b-41d4-a716-446655440001",
     ]);
+    expect(ingredientRowsQuery.select).toHaveBeenCalledWith("recipe_id, ingredient_id.count()");
+    expect(ingredientRowsQuery.eq).toHaveBeenCalledWith("ingredient_id.count()", 2);
     expect(listQuery.in).toHaveBeenCalledWith("id", ["recipe-1"]);
     expect(listQuery.ilike).toHaveBeenCalledWith("title", "%김치%");
   });

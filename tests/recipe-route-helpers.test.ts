@@ -7,7 +7,6 @@ import {
 } from "@/app/api/v1/recipes/[id]/route";
 import {
   clampLimit,
-  filterRecipeIdsByIngredients,
   parseIngredientIds,
 } from "@/app/api/v1/recipes/route";
 
@@ -32,35 +31,6 @@ describe("recipe route helpers", () => {
 
   it("returns empty ingredient ids when nothing valid remains", () => {
     expect(parseIngredientIds("bad,, ,123")).toEqual([]);
-  });
-
-  it("keeps only recipe ids that contain every selected ingredient", () => {
-    expect(
-      filterRecipeIdsByIngredients(
-        [
-          {
-            recipe_id: "recipe-a",
-            ingredient_id: "550e8400-e29b-41d4-a716-446655440000",
-          },
-          {
-            recipe_id: "recipe-a",
-            ingredient_id: "550e8400-e29b-41d4-a716-446655440001",
-          },
-          {
-            recipe_id: "recipe-b",
-            ingredient_id: "550e8400-e29b-41d4-a716-446655440000",
-          },
-          {
-            recipe_id: "recipe-a",
-            ingredient_id: "550e8400-e29b-41d4-a716-446655440000",
-          },
-        ],
-        [
-          "550e8400-e29b-41d4-a716-446655440000",
-          "550e8400-e29b-41d4-a716-446655440001",
-        ],
-      ),
-    ).toEqual(["recipe-a"]);
   });
 
   it("maps recipe user status from liked and saved rows", () => {

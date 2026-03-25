@@ -9,9 +9,9 @@ import type { RecipeCardItem, RecipeListData, RecipeListQuery } from "@/types/re
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-interface RecipeIngredientRow {
+interface RecipeIngredientMatchRow {
   recipe_id: string;
-  ingredient_id: string;
+  count: number | string | null;
 }
 
 export function clampLimit(value: string | null) {
@@ -48,28 +48,6 @@ export function parseIngredientIds(value: string | null) {
   }
 
   return parsed;
-}
-
-export function filterRecipeIdsByIngredients(
-  rows: RecipeIngredientRow[],
-  ingredientIds: string[],
-) {
-  const selected = new Set(ingredientIds);
-  const matches = new Map<string, Set<string>>();
-
-  for (const row of rows) {
-    if (!selected.has(row.ingredient_id)) {
-      continue;
-    }
-
-    const recipeIngredients = matches.get(row.recipe_id) ?? new Set<string>();
-    recipeIngredients.add(row.ingredient_id);
-    matches.set(row.recipe_id, recipeIngredients);
-  }
-
-  return Array.from(matches.entries())
-    .filter(([, recipeIngredients]) => recipeIngredients.size === selected.size)
-    .map(([recipeId]) => recipeId);
 }
 
 function createEmptyRecipeList(): RecipeListData {
@@ -126,18 +104,20 @@ export async function GET(request: NextRequest) {
     let filteredRecipeIds: string[] | null = null;
 
     if (listQuery.ingredient_ids?.length) {
-      const { data: ingredientRows, error: ingredientError } = await supabase
+      // PostgREST aggregates group by the non-aggregate select columns, matching
+      // the workpack's locked JOIN + GROUP BY + HAVING filter shape in the DB.
+      const { data: ingredientMatches, error: ingredientError } = await supabase
         .from("recipe_ingredients")
-        .select("recipe_id, ingredient_id")
-        .in("ingredient_id", listQuery.ingredient_ids);
+        .select("recipe_id, ingredient_id.count()")
+        .in("ingredient_id", listQuery.ingredient_ids)
+        .eq("ingredient_id.count()", listQuery.ingredient_ids.length);
 
       if (ingredientError) {
         return ok(createEmptyRecipeList());
       }
 
-      filteredRecipeIds = filterRecipeIdsByIngredients(
-        (ingredientRows ?? []) as RecipeIngredientRow[],
-        listQuery.ingredient_ids,
+      filteredRecipeIds = ((ingredientMatches ?? []) as RecipeIngredientMatchRow[]).map(
+        (row) => row.recipe_id,
       );
 
       if (filteredRecipeIds.length === 0) {
