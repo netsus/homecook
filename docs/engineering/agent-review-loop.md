@@ -10,6 +10,7 @@
 이 자동 local review loop는 `CLAUDE.md`의 일반 PR-ready 게이트에 대한 좁은 예외다.
 - 범위는 구조화된 diff 리뷰 자동화에 한정한다.
 - 사람이 수행하는 일반 PR 리뷰 규칙은 계속 `CLAUDE.md`를 따른다.
+- product slice의 기본 Stage 경로에는 넣지 않는다. slice workflow에는 이미 Stage 3, 5, 6의 정식 리뷰 단계가 있기 때문이다.
 - `--workpack`으로 slice 범위를 명시한 실행은 해당 `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 컨텍스트에 포함해야 한다.
 
 ## Why
@@ -96,12 +97,14 @@ pnpm agent:review-loop -- \
 
 ## When To Use
 
-- large diff 또는 cross-cutting change
-- reviewer 코멘트가 반복될 가능성이 높은 구현
-- merge 전 local sanity review가 필요한 product 변경
+- docs-governance
+- workflow/tooling 변경
+- cross-cutting diff
+- 정식 Stage 리뷰를 대체하지 않는 exceptional recovery
 
 ## When You Can Skip
 
+- 일반 product slice Stage 2/4 구현
 - low-risk docs/config
 - reviewer가 바로 읽고 판단 가능한 작은 문서 변경
 - 단일 파일의 명확한 수정으로 추가 loop 가치가 낮은 경우

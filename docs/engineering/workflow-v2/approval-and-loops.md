@@ -45,7 +45,8 @@ Claude와 Codex를 대등한 자유 토론자로 두지 않는다.
 
 ## Review Loop
 
-기존 [agent-review-loop.md](../agent-review-loop.md)를 v2의 기본 implementation review engine으로 사용한다.
+기존 [agent-review-loop.md](../agent-review-loop.md)는 v2에서 `non-slice governance / tooling / exceptional recovery`용 review engine으로 사용한다.
+product slice의 기본 Stage 경로에는 넣지 않는다. 이유는 slice workflow에 이미 Stage 3, 5, 6의 정식 리뷰 단계가 있기 때문이다.
 
 기본 순서:
 
@@ -58,12 +59,13 @@ Claude와 Codex를 대등한 자유 토론자로 두지 않는다.
 
 필수 조건:
 
-- medium/high risk product change
 - infra-governance
-- cross-cutting diff
+- cross-cutting workflow/tooling diff
+- 정식 Stage 리뷰를 대체하지 않는 exceptional recovery
 
 생략 가능:
 
+- 일반 product slice Stage 2/4 구현
 - docs-only
 - 작은 UI polish
 
