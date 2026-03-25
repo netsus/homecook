@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-03-26T00:48:55+09:00",
+  "updated_at": "2026-03-26T00:53:41+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -21,15 +21,15 @@
       "id": "omo-lite-bootstrap",
       "preset": "infra-governance",
       "branch": "docs/omo-lite-bootstrap",
-      "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/25",
+      "lifecycle": "ready_for_review",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:workflow-v2",
         "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts"
       ],
-      "notes": "Phase 1-3 bootstrap for repo-local OpenCode and OMO-lite supervisor config. Provider auth stays user-local until each machine runs opencode auth login."
+      "notes": "Phase 1-3 bootstrap for repo-local OpenCode and OMO-lite supervisor config. Local required checks passed and PR #25 is ready for review while GitHub CI is still in progress. Provider auth stays user-local until each machine runs opencode auth login."
     }
   ]
 }
