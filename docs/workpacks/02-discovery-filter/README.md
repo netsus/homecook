@@ -184,6 +184,7 @@ GET /api/v1/recipes
 ## Contract Evolution Candidates
 
 - 현재 이 슬라이스에서 사용자 승인된 공식 계약 변경은 없다. Stage 2/4 구현은 위 `Backend First Contract`와 `Key Rules`만 기준으로 한다.
+- 아래 후보는 참고용 backlog이며, 이 README의 In Scope / acceptance / Ready for Review gate를 바꾸지 않는다.
 - 후보 1: 실시간 결과 수 미리보기 (`count_only` 또는 별도 preview 계약)
   현재 공식 API 문서와 화면정의서에는 없지만, 사용자가 적용 전 예상 결과 수를 보는 UX 가치는 있다.
   채택하려면 공식 API/화면 문서 갱신과 별도 `contract-evolution` PR이 먼저 필요하다.
@@ -198,6 +199,7 @@ GET /api/v1/recipes
 
 - Stage 0 문서 잠금은 별도 `docs-governance` PR로 분리한다.
 - 대상 파일: `docs/workpacks/02-discovery-filter/README.md`, `acceptance.md`, `ui/designs/INGREDIENT_FILTER_MODAL.md`, `ui/designs/critiques/INGREDIENT_FILTER_MODAL-critique.md`
+- 이 Stage 0는 현재 공식 계약을 잠그는 단계이며, `Contract Evolution Candidates` 채택 여부를 결정하는 단계가 아니다.
 - Stage 2 착수 전 HEAD에서 아래 흔적이 제거되었는지 다시 확인한다:
   - `count_only`
   - `ingredients` query param
