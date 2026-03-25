@@ -25,6 +25,9 @@
   - API 문서 `docs/api문서-v1.2.1.md`
 - `wireframes`는 보조 레퍼런스다.
 - wireframe과 공식 문서가 충돌하면 공식 문서가 우선이다.
+- 공식 문서는 현재 구현의 기본 기준이다. 더 나은 제품/API 계약이 필요해 보여도 사용자 승인 없이 공식 문서보다 구현을 앞세우지 않는다.
+- 사용자 승인 하의 공식 계약 변경은 `contract-evolution` 경로로 처리한다:
+  명시적 사용자 승인 → 공식 문서 갱신(필요 시 새 버전 파일) → `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` 동기화 → 관련 workpack/acceptance 재잠금 → 이후 구현
 
 ## Working Model
 
@@ -56,9 +59,10 @@
 
 ## Absolute Safeguards
 
-- 공식 문서 우선, 문서 충돌 시 충돌 정리 우선.
+- 공식 문서 우선, 문서 충돌 시 충돌 정리 우선. 공식 계약 변경이 필요하면 먼저 `contract-evolution` docs-governance PR로 문서를 갱신한다.
 - 문서에 없는 API/status/field/endpoint를 임의 추가하지 않는다.
 - public contract 변경 시 문서 영향도를 먼저 적는다.
+- 사용자 승인 없는 `contract-evolution`은 금지한다.
 - 권한, 소유권, read-only, 멱등성, 상태 전이 보호 규칙은 완화 대상이 아니다.
 - 상태 전이, 권한 경계, read-only, 에러 시나리오는 테스트로 고정한다.
 - 제품 규칙 완화 제안에는 반드시 대체 안전장치 또는 완화 불가 근거가 있어야 한다.

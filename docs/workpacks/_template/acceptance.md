@@ -1,5 +1,7 @@
 # Acceptance Checklist
 
+> README의 `Contract Evolution Candidates`는 사용자 승인과 공식 문서 갱신 전까지 acceptance 범위에 포함하지 않는다.
+
 ## Happy Path
 - [ ] 대표 사용자 흐름이 정상 동작한다
 - [ ] 문서 기준 화면 상태와 액션이 맞다
