@@ -22,6 +22,29 @@ export interface RecipeListData {
   has_next: boolean;
 }
 
+export interface RecipeListQuery {
+  q?: string;
+  ingredient_ids?: string[];
+  sort?: RecipeSortKey;
+  cursor?: string | null;
+  limit?: number;
+}
+
+export interface IngredientItem {
+  id: string;
+  standard_name: string;
+  category: string;
+}
+
+export interface IngredientListQuery {
+  q?: string;
+  category?: string;
+}
+
+export interface IngredientListData {
+  items: IngredientItem[];
+}
+
 export interface RecipeTheme {
   id: string;
   title: string;
