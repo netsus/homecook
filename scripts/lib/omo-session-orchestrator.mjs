@@ -100,11 +100,37 @@ function determineNextStage(runtimeState, now) {
   return runtimeState.last_completed_stage + 1;
 }
 
+/**
+ * @typedef {object} OmoWorkItemSessionOptions
+ * @property {string} [rootDir]
+ * @property {string} workItemId
+ * @property {string} [slice]
+ * @property {string} [owner]
+ * @property {string} [now]
+ * @property {"available"|"constrained"|"unavailable"} [claudeBudgetState]
+ * @property {"artifact-only"|"execute"} [mode]
+ * @property {string} [opencodeBin]
+ * @property {Record<string, string>} [environment]
+ */
+
+/**
+ * @typedef {object} OmoResumePendingOptions
+ * @property {string} [rootDir]
+ * @property {string} [now]
+ * @property {"available"|"constrained"|"unavailable"} [claudeBudgetState]
+ * @property {"artifact-only"|"execute"} [mode]
+ * @property {string} [opencodeBin]
+ * @property {Record<string, string>} [environment]
+ */
+
+/**
+ * @param {OmoWorkItemSessionOptions & { action: "start"|"continue" }} options
+ */
 function orchestrateStage({
   action,
   rootDir = process.cwd(),
   workItemId,
-  slice,
+  slice = undefined,
   owner,
   now,
   ...options
@@ -162,6 +188,9 @@ function orchestrateStage({
   );
 }
 
+/**
+ * @param {OmoWorkItemSessionOptions} options
+ */
 export function startWorkItemSession(options) {
   return orchestrateStage({
     ...options,
@@ -169,6 +198,9 @@ export function startWorkItemSession(options) {
   });
 }
 
+/**
+ * @param {OmoWorkItemSessionOptions} options
+ */
 export function continueWorkItemSession(options) {
   return orchestrateStage({
     ...options,
@@ -176,6 +208,9 @@ export function continueWorkItemSession(options) {
   });
 }
 
+/**
+ * @param {OmoResumePendingOptions} [options]
+ */
 export function resumePendingWorkItems({
   rootDir = process.cwd(),
   now,
@@ -219,10 +254,13 @@ export function resumePendingWorkItems({
   );
 }
 
+/**
+ * @param {{ rootDir?: string, workItemId: string, slice?: string }} options
+ */
 export function readWorkItemSessionStatus({
   rootDir = process.cwd(),
   workItemId,
-  slice,
+  slice = undefined,
 }) {
   const normalizedWorkItemId = ensureNonEmptyString(workItemId, "workItemId");
   const resolvedSlice = resolveSliceForWorkItem({
