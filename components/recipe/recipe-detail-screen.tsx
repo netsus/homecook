@@ -8,6 +8,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { LoginGateModal } from "@/components/auth/login-gate-modal";
 import { ContentState } from "@/components/shared/content-state";
+import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
   clearPendingAction,
   readPendingAction,
@@ -17,9 +18,10 @@ import { formatCount, formatScaledIngredient } from "@/lib/recipe";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useAuthGateStore } from "@/stores/ui-store";
-import type { RecipeDetail } from "@/types/recipe";
+import type { RecipeDetail, RecipeLikeData, RecipeUserStatus } from "@/types/recipe";
 
 type DetailState = "loading" | "ready" | "error";
+type LikeRequestState = "idle" | "pending";
 
 interface RecipeDetailScreenProps {
   recipeId: string;
@@ -41,6 +43,7 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
   const [selectedServings, setSelectedServings] = useState(1);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [likeRequestState, setLikeRequestState] = useState<LikeRequestState>("idle");
   const openAuthGate = useAuthGateStore((state) => state.open);
 
   const loadRecipe = useCallback(async () => {
@@ -67,6 +70,13 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
   }, [recipe]);
 
   useEffect(() => {
+    const e2eAuthOverride = readE2EAuthOverride();
+
+    if (e2eAuthOverride !== null) {
+      setIsAuthenticated(e2eAuthOverride);
+      return;
+    }
+
     if (!hasSupabasePublicEnv()) {
       setIsAuthenticated(false);
       return;
@@ -94,29 +104,6 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-
-    const pendingAction = readPendingAction();
-
-    if (!pendingAction || pendingAction.recipeId !== recipeId) {
-      return;
-    }
-
-    const labelMap = {
-      like: "좋아요",
-      save: "저장",
-      planner: "플래너 추가",
-    } as const;
-
-    setFeedback(
-      `로그인 완료. ${labelMap[pendingAction.type]} 액션 위치로 돌아왔어요.`,
-    );
-    clearPendingAction();
-  }, [isAuthenticated, recipeId]);
-
-  useEffect(() => {
     if (searchParams.get("authError") === "oauth_failed") {
       setFeedback("로그인을 완료하지 못했어요. 다시 시도해주세요.");
     }
@@ -137,7 +124,84 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
     }));
   }, [recipe, selectedServings]);
 
+  const updateRecipeLikeState = useCallback((result: RecipeLikeData) => {
+    setRecipe((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const nextUserStatus: RecipeUserStatus = current.user_status
+        ? {
+            ...current.user_status,
+            is_liked: result.is_liked,
+          }
+        : {
+            is_liked: result.is_liked,
+            is_saved: false,
+            saved_book_ids: [],
+          };
+
+      return {
+        ...current,
+        like_count: result.like_count,
+        user_status: nextUserStatus,
+      };
+    });
+  }, []);
+
+  const handleLikeToggle = useCallback(
+    async ({ source }: { source: "manual" | "return-to-action" }) => {
+      if (!isAuthenticated) {
+        openAuthGate({ recipeId, type: "like" });
+        return;
+      }
+
+      if (!recipe || likeRequestState === "pending") {
+        return;
+      }
+
+      setLikeRequestState("pending");
+
+      if (source === "manual") {
+        setFeedback(null);
+      }
+
+      try {
+        const data = await fetchJson<RecipeLikeData>(
+          `/api/v1/recipes/${recipeId}/like`,
+          {
+            method: "POST",
+          },
+        );
+
+        updateRecipeLikeState(data);
+        setFeedback(
+          source === "return-to-action"
+            ? "로그인 완료. 좋아요를 반영했어요."
+            : null,
+        );
+      } catch {
+        setFeedback("좋아요 처리에 실패했어요. 다시 시도해주세요.");
+      } finally {
+        setLikeRequestState("idle");
+      }
+    },
+    [
+      isAuthenticated,
+      likeRequestState,
+      openAuthGate,
+      recipe,
+      recipeId,
+      updateRecipeLikeState,
+    ],
+  );
+
   const handleProtectedAction = (type: "like" | "save" | "planner") => {
+    if (type === "like") {
+      void handleLikeToggle({ source: "manual" });
+      return;
+    }
+
     if (!isAuthenticated) {
       openAuthGate({ recipeId, type });
       return;
@@ -145,6 +209,34 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
 
     setFeedback("이 액션의 실제 저장 연결은 다음 슬라이스에서 닫습니다.");
   };
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const pendingAction = readPendingAction();
+
+    if (!pendingAction || pendingAction.recipeId !== recipeId || !recipe) {
+      return;
+    }
+
+    clearPendingAction();
+
+    if (pendingAction.type === "like") {
+      void handleLikeToggle({ source: "return-to-action" });
+      return;
+    }
+
+    const labelMap = {
+      save: "저장",
+      planner: "플래너 추가",
+    } as const;
+
+    setFeedback(
+      `로그인 완료. ${labelMap[pendingAction.type]} 액션 위치로 돌아왔어요.`,
+    );
+  }, [handleLikeToggle, isAuthenticated, recipe, recipeId]);
 
   const handleShare = async () => {
     if (!recipe) {
@@ -329,7 +421,13 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
                 tone="olive"
               />
               <ActionButton
-                label={`좋아요${recipe.user_status?.is_liked ? "됨" : ""}`}
+                ariaPressed={recipe.user_status?.is_liked ?? false}
+                disabled={likeRequestState === "pending"}
+                label={
+                  likeRequestState === "pending"
+                    ? "좋아요 처리 중..."
+                    : `${recipe.user_status?.is_liked ? "♥" : "♡"} 좋아요 ${formatCount(recipe.like_count)}`
+                }
                 onClick={() => handleProtectedAction("like")}
                 tone={recipe.user_status?.is_liked ? "brand" : "neutral"}
               />
@@ -431,10 +529,10 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
               Slice Note
             </p>
             <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
-              좋아요, 저장, 플래너 추가는 로그인 게이트까지 연결되고 실제 쓰기 완료는 다음 슬라이스에서 이어집니다.
+              저장, 플래너 추가는 로그인 게이트까지 연결되고 실제 쓰기 완료는 다음 슬라이스에서 이어집니다. 좋아요는 이번 슬라이스에서 토글까지 연결됩니다.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {["비로그인 조회", "보호 액션 게이트", "return-to-action"].map(
+              {["좋아요 토글", "보호 액션 게이트", "return-to-action"].map(
                 (item) => (
                   <span
                     key={item}
@@ -462,10 +560,14 @@ function resolveCookingMethodColor(colorKey?: string | null) {
 }
 
 function ActionButton({
+  ariaPressed,
+  disabled = false,
   label,
   onClick,
   tone,
 }: {
+  ariaPressed?: boolean;
+  disabled?: boolean;
   label: string;
   onClick: () => void;
   tone: "brand" | "olive" | "neutral";
@@ -479,7 +581,9 @@ function ActionButton({
 
   return (
     <button
-      className={`min-h-11 rounded-[12px] border px-4 py-3 text-sm font-semibold ${className}`}
+      aria-pressed={ariaPressed}
+      className={`min-h-11 rounded-[12px] border px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      disabled={disabled}
       onClick={onClick}
       type="button"
     >
