@@ -30,8 +30,8 @@
 
 ## Out of Scope
 
-- 좋아요한 레시피북(`liked`) 목록 직접 조회 — Slice 17
-- `DELETE /recipe-books/{book_id}/recipes/{recipe_id}`에서 liked 책 제거로 좋아요 해제하는 경로 — Slice 17
+- 좋아요한 레시피북(`liked`) 목록 직접 조회 — Slice 17a
+- `DELETE /recipe-books/{book_id}/recipes/{recipe_id}`에서 liked 책 제거로 좋아요 해제하는 경로 — Slice 17b
 - 레시피 목록(HOME)에서 좋아요 카운트 실시간 반영 — 정렬/UI 변경 없음, 이번 범위 아님
 - 낙관적 업데이트(Optimistic UI) + 롤백 — MVP 기본 처리만 (pending → 응답 후 UI 갱신)
 
