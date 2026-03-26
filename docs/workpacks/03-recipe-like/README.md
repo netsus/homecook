@@ -113,8 +113,8 @@ POST /recipes/{recipe_id}/like
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [x] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed)
 - [ ] N/A
 
 > **기존 화면 (`RECIPE_DETAIL`)**: 좋아요 버튼 토글 상태(채워진/빈 하트 아이콘 + like_count 표시) 추가는 low-risk UI change.
