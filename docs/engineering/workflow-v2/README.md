@@ -68,6 +68,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - v2 승격 전까지는 product slice merge gate를 v1 기준으로 계속 유지한다.
 - Phase 4부터는 최소 executable helper(`pnpm omo:dispatch-stage`, `pnpm omo:sync-status`)를 함께 관리한다.
 - Phase 5부터는 `pnpm omo:run-stage`로 Codex stage를 repo-local OpenCode/OMO 실행과 artifact bundle에 직접 연결한다.
+- Phase 7부터는 `pnpm omo:claude-budget`과 repo-local override를 통해 Claude reviewer availability를 자동 해석하고, 필요 시 `awaiting_claude_or_human` fallback을 기록한다.
 
 ## Immediate Scope
 
@@ -76,6 +77,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - repo-local OpenCode / OMO config bootstrap
 - minimal `omo:dispatch-stage` / `omo:sync-status` helper 도입
 - direct `omo:run-stage` execution binding + `.artifacts/omo-lite-dispatch/` artifact bundle
+- automatic Claude budget resolution + repo-local override
 - JSON schema와 예시 파일 추가
 - `validate:workflow-v2` 최소 validator 추가
 - 현재 entry-point 문서에서 v2 pilot 경로를 발견 가능하게 연결
@@ -90,6 +92,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 6. medium/high risk 작업이면 plan loop summary artifact를 남긴다.
 7. review loop summary artifact는 docs-governance, workflow/tooling 변경, 또는 exceptional recovery일 때만 남긴다.
 8. OMO-lite supervised execution이 필요하면 `pnpm omo:run-stage -- --slice <id> --stage <n>`으로 dispatch artifact를 만들고, Codex stage에 한해 `--mode execute`를 사용한다.
+9. Claude reviewer availability를 로컬에서 강제로 조정해야 하면 `pnpm omo:claude-budget -- --set unavailable --reason "<reason>"` 또는 `--clear`를 사용한다.
+10. reviewer fallback도 tracked state에 같이 남기려면 `pnpm omo:run-stage -- --slice <id> --stage <n> --sync-status`를 사용한다.
 
 ## Not Yet Included
 

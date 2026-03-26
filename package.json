@@ -8,6 +8,7 @@
     "start": "next start",
     "agent:plan-loop": "node scripts/agent-plan-loop.mjs",
     "agent:review-loop": "node scripts/agent-review-loop.mjs",
+    "omo:claude-budget": "node scripts/omo-lite-claude-budget.mjs",
     "omo:dispatch-stage": "node scripts/omo-lite-dispatch-stage.mjs",
     "omo:run-stage": "node scripts/omo-lite-run-stage.mjs",
     "omo:sync-status": "node scripts/omo-lite-sync-status.mjs",

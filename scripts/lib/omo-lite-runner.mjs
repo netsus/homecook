@@ -2,7 +2,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
-import { buildStageDispatch } from "./omo-lite-supervisor.mjs";
+import { resolveClaudeBudgetState } from "./omo-lite-claude-budget.mjs";
+import { buildStageDispatch, syncWorkflowV2Status } from "./omo-lite-supervisor.mjs";
 
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -165,6 +166,8 @@ function runOpencode({
  * @property {string} [opencodeBin]
  * @property {string} [agent]
  * @property {Record<string, string>} [environment]
+ * @property {string} [homeDir]
+ * @property {boolean} [syncStatus]
  * @property {string} [now]
  */
 
@@ -176,19 +179,27 @@ export function runStageWithArtifacts({
   slice,
   stage,
   workItemId,
-  claudeBudgetState = "available",
+  claudeBudgetState,
   mode = "artifact-only",
   artifactDir,
   opencodeBin = "opencode",
   agent,
   environment,
+  homeDir,
+  syncStatus = false,
   now,
 }) {
   const normalizedSlice = ensureNonEmptyString(slice, "slice");
+  const resolvedBudget = resolveClaudeBudgetState({
+    rootDir,
+    homeDir,
+    explicitState: claudeBudgetState,
+    environment,
+  });
   const dispatch = buildStageDispatch({
     slice: normalizedSlice,
     stage,
-    claudeBudgetState,
+    claudeBudgetState: resolvedBudget.state,
   });
   const targetArtifactDir =
     artifactDir ??
@@ -206,7 +217,7 @@ export function runStageWithArtifacts({
     stage: dispatch.stage,
     actor: dispatch.actor,
     workItemId: workItemId ?? null,
-    claudeBudgetState,
+    claudeBudget: resolvedBudget,
     execution: {
       mode,
       executable: executionBinding.executable,
@@ -265,6 +276,23 @@ export function runStageWithArtifacts({
     };
   }
 
+  let statusSync = null;
+  if (syncStatus && workItemId) {
+    statusSync = syncWorkflowV2Status({
+      rootDir,
+      workItemId,
+      patch: {
+        ...dispatch.statusPatch,
+        notes: [
+          `OMO-lite stage ${dispatch.stage} artifact prepared at ${targetArtifactDir}.`,
+          `claude_budget=${resolvedBudget.state}`,
+          `source=${resolvedBudget.source}`,
+        ].join(" "),
+      },
+      updatedAt: now,
+    });
+  }
+
   writeArtifacts({
     artifactDir: targetArtifactDir,
     dispatch,
@@ -272,8 +300,19 @@ export function runStageWithArtifacts({
     metadata: {
       ...metadata,
       execution: result.execution,
+      statusSync: statusSync
+        ? {
+            workItemId,
+            lifecycle: statusSync.statusItem.lifecycle,
+            approval_state: statusSync.statusItem.approval_state,
+            verification_status: statusSync.statusItem.verification_status,
+          }
+        : null,
     },
   });
 
-  return result;
+  return {
+    ...result,
+    statusSync,
+  };
 }

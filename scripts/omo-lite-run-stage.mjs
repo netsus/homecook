@@ -11,11 +11,12 @@ function printUsage() {
       "  --slice <id>                      Product slice id",
       "  --stage <1-6>                    Product slice stage number",
       "  --work-item <id>                 Optional workflow-v2 work item id for artifact metadata",
-      "  --claude-budget-state <state>    available | constrained | unavailable",
+      "  --claude-budget-state <state>    Optional override: available | constrained | unavailable",
       "  --mode <artifact-only|execute>   Artifact bundle only or run opencode for Codex stages",
       "  --artifact-dir <path>            Override artifact output directory",
       "  --opencode-bin <path>            Override opencode binary path",
       "  --agent <name>                   Override OMO/OpenCode agent for executable stages",
+      "  --sync-status                    Apply the dispatch status patch to workflow-v2 tracked state",
       "  --json                           Print run result as JSON",
       "  --help                           Show this help text",
       "",
@@ -34,7 +35,6 @@ function requireValue(argv, index, token) {
 
 function parseArgs(argv) {
   const options = {
-    claudeBudgetState: "available",
     mode: "artifact-only",
     json: false,
   };
@@ -49,6 +49,10 @@ function parseArgs(argv) {
     }
     if (token === "--json") {
       options.json = true;
+      continue;
+    }
+    if (token === "--sync-status") {
+      options.syncStatus = true;
       continue;
     }
 
@@ -93,6 +97,7 @@ function main() {
     artifactDir: options.artifactDir,
     opencodeBin: options.opencodeBin,
     agent: options.agent,
+    syncStatus: options.syncStatus,
   });
 
   if (options.json) {
