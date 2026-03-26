@@ -58,7 +58,7 @@ test.describe("Slice 01 basic flow", () => {
     await page.getByRole("button", { name: "닫기" }).click();
     await expect(dialog).toBeHidden();
 
-    await page.getByRole("button", { name: "좋아요" }).click();
+    await page.getByRole("button", { name: /좋아요/ }).click();
     await expect(dialog).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();

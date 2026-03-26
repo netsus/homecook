@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-03-26T14:16:32.657Z",
+  "updated_at": "2026-03-27T00:06:00+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -87,9 +87,9 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "branch": "feature/be-03-recipe-like",
+      "branch": "feature/fe-03-recipe-like",
       "pr_path": "pending",
-      "notes": "Phase 8 pilot backend Stage 2 started on feature/be-03-recipe-like. Manual plan checkpoint reviewed by Claude; UNIQUE conflict handling and like_count floor test are explicit Stage 2 requirements."
+      "notes": "Stage 4 frontend implementation is in progress on feature/fe-03-recipe-like. OMO-lite stage 4 artifact was prepared at /Users/shj/2025/2026/homecook1/.artifacts/omo-lite-dispatch/2026-03-26T14-52-33-467Z-03-recipe-like-stage-4, and the actual like toggle/pending/return-to-action implementation is being completed on this branch."
     },
     {
       "id": "omo-session-orchestrator-spec",

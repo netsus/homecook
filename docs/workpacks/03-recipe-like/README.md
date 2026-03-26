@@ -112,8 +112,8 @@ POST /recipes/{recipe_id}/like
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review)
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [x] 리뷰 대기 (pending-review)
 - [ ] 확정 (confirmed)
 - [ ] N/A
 
