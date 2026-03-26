@@ -167,6 +167,30 @@ describe("OMO-lite Claude budget resolution", () => {
 
     expect(existsSync(overridePath)).toBe(false);
   });
+
+  it("prefers the environment override over the repo-local override file", () => {
+    const { rootDir, homeDir } = createBudgetFixture();
+
+    writeClaudeBudgetOverride({
+      rootDir,
+      state: "unavailable",
+      reason: "Claude Pro budget exhausted",
+      updatedAt: "2026-03-26T22:05:00+09:00",
+    });
+
+    const resolved = resolveClaudeBudgetState({
+      rootDir,
+      homeDir,
+      environment: {
+        OMO_CLAUDE_BUDGET_STATE: "constrained",
+      } as NodeJS.ProcessEnv,
+    });
+
+    expect(resolved).toMatchObject({
+      state: "constrained",
+      source: "env",
+    });
+  });
 });
 
 describe("OMO-lite stage runner budget-aware fallback", () => {
