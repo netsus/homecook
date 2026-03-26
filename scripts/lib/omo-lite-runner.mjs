@@ -153,6 +153,24 @@ function runOpencode({
   };
 }
 
+/**
+ * @typedef {object} RunStageWithArtifactsOptions
+ * @property {string} [rootDir]
+ * @property {string} slice
+ * @property {number|string} stage
+ * @property {string} [workItemId]
+ * @property {"available"|"constrained"|"unavailable"} [claudeBudgetState]
+ * @property {"artifact-only"|"execute"} [mode]
+ * @property {string} [artifactDir]
+ * @property {string} [opencodeBin]
+ * @property {string} [agent]
+ * @property {Record<string, string>} [environment]
+ * @property {string} [now]
+ */
+
+/**
+ * @param {RunStageWithArtifactsOptions} options
+ */
 export function runStageWithArtifacts({
   rootDir = process.cwd(),
   slice,
