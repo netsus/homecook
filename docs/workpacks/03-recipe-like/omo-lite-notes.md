@@ -152,4 +152,6 @@ Stage 2 (BE) / Stage 4 (FE) 완료 시 외부 smoke가 필요한가?
 
 > 파일럿 중 발견되면 여기에 추가한다.
 
-- (기입 전)
+- manual fallback plan checkpoint는 Stage 2 착수 gate로는 작동했지만, 자동 plan loop 대비 acceptance coverage가 낮았다.
+- 이번 slice에서는 Claude sanity review로 `UNIQUE 충돌 처리`와 `like_count floor test`를 추가 보강했다.
+- 후속 OMO 업데이트에서는 plan checkpoint artifact가 acceptance의 data integrity / race condition 항목을 자동 체크리스트로 끌어오는지 확인이 필요하다.

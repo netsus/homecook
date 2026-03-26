@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-03-26T21:10:00+09:00",
+  "updated_at": "2026-03-26T14:16:32.657Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -79,7 +79,7 @@
     {
       "id": "03-recipe-like",
       "preset": "vertical-slice-strict",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -87,9 +87,9 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "branch": "pending",
+      "branch": "feature/be-03-recipe-like",
       "pr_path": "pending",
-      "notes": "Phase 8 — 첫 번째 제품 슬라이스 OMO-lite 감독 파일럿. Stage 1 workpack 작성 완료. Stage 2 시작 전 required plan-loop checkpoint와 external smoke checklist 기준을 확인한다. 파일럿 확인 포인트: docs/workpacks/03-recipe-like/omo-lite-notes.md"
+      "notes": "Phase 8 pilot backend Stage 2 started on feature/be-03-recipe-like. Manual plan checkpoint reviewed by Claude; UNIQUE conflict handling and like_count floor test are explicit Stage 2 requirements."
     },
     {
       "id": "omo-session-orchestrator-spec",
