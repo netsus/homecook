@@ -256,7 +256,7 @@ describe("POST /api/v1/recipes/[id]/like", () => {
     expect(recipesTable.update).toHaveBeenCalledWith({ like_count: 4 });
   });
 
-  it("deletes an existing like and never lets like_count go below zero", async () => {
+  it("deletes only the authenticated user's like and never lets like_count go below zero", async () => {
     const recipesTable = createRecipesTable({
       selectResults: [
         {
@@ -317,6 +317,8 @@ describe("POST /api/v1/recipes/[id]/like", () => {
       },
     });
     expect(recipeLikesTable.delete).toHaveBeenCalled();
+    expect(recipeLikesTable.__deleteQuery.eq).toHaveBeenNthCalledWith(1, "id", "like-1");
+    expect(recipeLikesTable.__deleteQuery.eq).toHaveBeenNthCalledWith(2, "user_id", "user-1");
     expect(recipesTable.update).toHaveBeenCalledWith({ like_count: 0 });
   });
 
