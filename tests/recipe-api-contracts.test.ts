@@ -46,6 +46,7 @@ describe("recipe API contracts", () => {
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
     createServiceRoleClient.mockReturnValue(null);
+    delete process.env.HOMECOOK_ENABLE_DISCOVERY_FILTER_MOCK;
   });
 
   it("wraps recipe list responses in the API envelope", async () => {
@@ -139,6 +140,31 @@ describe("recipe API contracts", () => {
     expect(ingredientsQuery.ilike).toHaveBeenCalledWith("standard_name", "%양파%");
     expect(synonymsQuery.eq).toHaveBeenCalledWith("ingredients.category", "채소");
     expect(synonymsQuery.ilike).toHaveBeenCalledWith("synonym", "%양파%");
+  });
+
+  it("returns mock ingredients for manual browser testing when discovery-filter mock mode is enabled", async () => {
+    process.env.HOMECOOK_ENABLE_DISCOVERY_FILTER_MOCK = "1";
+
+    const { GET } = await import("@/app/api/v1/ingredients/route");
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/ingredients?q=%ED%8C%8C&category=%EC%B1%84%EC%86%8C"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items).toEqual([
+      {
+        id: "550e8400-e29b-41d4-a716-446655440010",
+        standard_name: "양파",
+        category: "채소",
+      },
+      {
+        id: "550e8400-e29b-41d4-a716-446655440011",
+        standard_name: "대파",
+        category: "채소",
+      },
+    ]);
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
   });
 
   it("returns ingredient matches from synonyms without duplicating the same ingredient", async () => {
@@ -263,6 +289,27 @@ describe("recipe API contracts", () => {
     expect(createRouteHandlerClient).not.toHaveBeenCalled();
   });
 
+  it("returns a mock filtered recipe list for manual browser testing when discovery-filter mock mode is enabled", async () => {
+    process.env.HOMECOOK_ENABLE_DISCOVERY_FILTER_MOCK = "1";
+
+    const { GET } = await import("@/app/api/v1/recipes/route");
+    const response = await GET(
+      new NextRequest(
+        "http://localhost:3000/api/v1/recipes?ingredient_ids=550e8400-e29b-41d4-a716-446655440010,550e8400-e29b-41d4-a716-446655440011",
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.items).toEqual([
+      expect.objectContaining({
+        id: "mock-kimchi-jjigae",
+        title: "집밥 김치찌개",
+      }),
+    ]);
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
+  });
+
   it("applies ingredient_ids as an AND filter before loading recipe cards", async () => {
     const ingredientRowsQuery = createQuery({
       data: [
@@ -384,6 +431,33 @@ describe("recipe API contracts", () => {
         ],
       },
     });
+  });
+
+  it("returns mock themed recipe sections for manual browser testing when discovery-filter mock mode is enabled", async () => {
+    process.env.HOMECOOK_ENABLE_DISCOVERY_FILTER_MOCK = "1";
+
+    const { GET } = await import("@/app/api/v1/recipes/themes/route");
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      error: null,
+      data: {
+        themes: [
+          {
+            id: "popular",
+            recipes: [
+              {
+                id: "mock-kimchi-jjigae",
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
   });
 
   it("returns a wrapped 404 when the recipe does not exist", async () => {

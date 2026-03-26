@@ -1,7 +1,10 @@
 import { NextRequest } from "next/server";
 
 import { ok } from "@/lib/api/response";
-import { getMockRecipeList } from "@/lib/mock/recipes";
+import {
+  getMockRecipeList,
+  isDiscoveryFilterManualMockEnabled,
+} from "@/lib/mock/recipes";
 import { parseRecipeSortKey } from "@/lib/recipe";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { RecipeCardItem, RecipeListData, RecipeListQuery } from "@/types/recipe";
@@ -120,6 +123,10 @@ export async function GET(request: NextRequest) {
 
     if (hasIngredientFilter && listQuery.ingredient_ids?.length === 0) {
       return ok(createEmptyRecipeList());
+    }
+
+    if (isDiscoveryFilterManualMockEnabled()) {
+      return ok(getMockRecipeList(listQuery.q, listQuery.ingredient_ids));
     }
 
     const supabase = await createRouteHandlerClient();

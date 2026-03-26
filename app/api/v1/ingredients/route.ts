@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 
 import { ok } from "@/lib/api/response";
+import {
+  getMockIngredientList,
+  isDiscoveryFilterManualMockEnabled,
+} from "@/lib/mock/recipes";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { IngredientItem, IngredientListData, IngredientListQuery } from "@/types/recipe";
 
@@ -64,6 +68,11 @@ export async function GET(request: NextRequest) {
       q: searchParams.get("q")?.trim() || undefined,
       category: searchParams.get("category")?.trim() || undefined,
     };
+
+    if (isDiscoveryFilterManualMockEnabled()) {
+      return ok(getMockIngredientList(query.q, query.category));
+    }
+
     const supabase = await createRouteHandlerClient();
 
     let ingredientsQuery = supabase
