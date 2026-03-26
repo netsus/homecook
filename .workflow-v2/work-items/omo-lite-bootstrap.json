@@ -55,6 +55,7 @@
     "product slice runtime migration"
   ],
   "open_questions": [
-    "When should Homecook re-enable ralph-loop after a repo-local stage dispatcher exists?"
+    "When should Homecook re-enable ralph-loop after a repo-local stage dispatcher exists?",
+    "What is the cleanest path to re-enable comment-checker once the published binary link issue is resolved?"
   ]
 }

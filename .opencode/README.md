@@ -17,6 +17,7 @@
   - Claude는 sparse approval checkpoint에서만 사용
 - `ralph-loop`와 `ulw-loop`는 아직 Homecook stage dispatcher와 연결되지 않았으므로 project 레벨에서 비활성화한다.
 - `comment-checker` hook는 현재 로컬 설치 상태 차이로 false positive가 날 수 있어 project 레벨에서 비활성화한다.
+- `comment-checker`는 영구 제거가 아니라 known issue다. 바이너리 링크 이슈가 해결되면 re-enable 여부를 다시 판단한다.
 
 ## Local Auth
 

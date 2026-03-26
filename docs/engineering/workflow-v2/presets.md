@@ -40,6 +40,7 @@ preset은 작업마다 같은 절차를 강제하지 않기 위한 기본 경로
 - 운영 중 발견된 회귀 버그나 post-merge fix에 사용한다.
 - 문제 재현 테스트가 최우선이다.
 - full workpack 대신 짧은 work item + 관련 source refs를 사용한다.
+- review loop를 권장 상태로 유지한다. 이 preset에는 vertical slice의 Stage 3/5/6 같은 고정 리뷰 단계가 없기 때문이다.
 - auth/payment 같은 외부 연동이면 smoke checklist를 붙인다.
 
 ### `ui-polish`
