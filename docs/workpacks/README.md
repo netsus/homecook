@@ -49,7 +49,7 @@ Slice Order 표의 Status 값은 위 규칙에 따라 PR 오픈/merge 시점에 
 | Slice                          | Status    | Goal                                                                                                             |
 | ------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------- |
 | `01-discovery-detail-auth`     | bootstrap | 레시피 탐색, 상세 조회, 로그인 게이트, 소셜 로그인 복귀                                                          |
-| `02-discovery-filter`          | in-progress | HOME 재료 필터 모달과 필터 조회 계약                                                                           |
+| `02-discovery-filter`          | merged      | HOME 재료 필터 모달과 필터 조회 계약                                                                           |
 | `03-recipe-like`               | planned   | RECIPE_DETAIL 좋아요 토글과 로그인 복귀                                                                          |
 | `04-recipe-save`               | planned   | 저장 모달, 저장 대상 책 선택, `saved/custom` 제한                                                                |
 | `05-recipe-to-planner`         | planned   | 상세에서 플래너 추가, 날짜/끼니/인분 입력, Meal 생성                                                             |
