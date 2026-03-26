@@ -74,6 +74,21 @@ function parseArgs(argv) {
   return options;
 }
 
+function buildPatch(options) {
+  return {
+    ...(options.branch !== undefined ? { branch: options.branch } : {}),
+    ...(options.prPath !== undefined ? { pr_path: options.prPath } : {}),
+    ...(options.lifecycle !== undefined ? { lifecycle: options.lifecycle } : {}),
+    ...(options.approvalState !== undefined
+      ? { approval_state: options.approvalState }
+      : {}),
+    ...(options.verificationStatus !== undefined
+      ? { verification_status: options.verificationStatus }
+      : {}),
+    ...(options.notes !== undefined ? { notes: options.notes } : {}),
+  };
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
 
@@ -85,14 +100,7 @@ function main() {
   const result = syncWorkflowV2Status({
     workItemId: options.workItem,
     updatedAt: options.updatedAt,
-    patch: {
-      branch: options.branch,
-      pr_path: options.prPath,
-      lifecycle: options.lifecycle,
-      approval_state: options.approvalState,
-      verification_status: options.verificationStatus,
-      notes: options.notes,
-    },
+    patch: buildPatch(options),
   });
 
   if (options.json) {

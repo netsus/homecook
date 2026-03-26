@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -139,6 +140,21 @@ describe("OMO-lite stage dispatch", () => {
     });
     expect(dispatch.escalationIfBlocked).toContain("Claude");
   });
+
+  it("keeps Stage 4 assigned to Codex even when Claude is unavailable", () => {
+    const dispatch = buildStageDispatch({
+      slice: "02-discovery-filter",
+      stage: 4,
+      claudeBudgetState: "unavailable",
+    });
+
+    expect(dispatch.actor).toBe("codex");
+    expect(dispatch.statusPatch).toMatchObject({
+      branch: "feature/fe-02-discovery-filter",
+      lifecycle: "in_progress",
+      approval_state: "not_started",
+    });
+  });
 });
 
 describe("OMO-lite workflow status sync", () => {
@@ -245,5 +261,88 @@ describe("OMO-lite workflow status sync", () => {
       "pnpm validate:workflow-v2",
       "pnpm exec vitest run tests/omo-lite-supervisor.test.ts",
     ]);
+  });
+
+  it("supports partial status patches without requiring unspecified enum fields", () => {
+    const rootDir = createWorkflowFixture();
+
+    syncWorkflowV2Status({
+      rootDir,
+      workItemId: "omo-lite-phase4-supervisor",
+      patch: {
+        branch: "feature/omo-lite-phase4-supervisor",
+        pr_path: "pending",
+        lifecycle: "in_progress",
+        approval_state: "not_started",
+        verification_status: "pending",
+        notes: "Phase 4 started.",
+      },
+      updatedAt: "2026-03-26T14:00:00+09:00",
+    });
+
+    const result = syncWorkflowV2Status({
+      rootDir,
+      workItemId: "omo-lite-phase4-supervisor",
+      patch: {
+        notes: "Only the notes field changed.",
+      },
+      updatedAt: "2026-03-26T14:30:00+09:00",
+    });
+
+    expect(result.statusItem).toMatchObject({
+      branch: "feature/omo-lite-phase4-supervisor",
+      pr_path: "pending",
+      lifecycle: "in_progress",
+      approval_state: "not_started",
+      verification_status: "pending",
+      notes: "Only the notes field changed.",
+    });
+  });
+
+  it("allows the sync CLI to update only provided fields", () => {
+    const rootDir = createWorkflowFixture();
+
+    syncWorkflowV2Status({
+      rootDir,
+      workItemId: "omo-lite-phase4-supervisor",
+      patch: {
+        branch: "feature/omo-lite-phase4-supervisor",
+        pr_path: "pending",
+        lifecycle: "in_progress",
+        approval_state: "not_started",
+        verification_status: "pending",
+        notes: "Phase 4 started.",
+      },
+      updatedAt: "2026-03-26T15:00:00+09:00",
+    });
+
+    execFileSync(
+      "node",
+      [
+        join(process.cwd(), "scripts", "omo-lite-sync-status.mjs"),
+        "--work-item",
+        "omo-lite-phase4-supervisor",
+        "--notes",
+        "CLI partial patch worked.",
+      ],
+      {
+        cwd: rootDir,
+      },
+    );
+
+    const statusBoard = JSON.parse(
+      readFileSync(join(rootDir, ".workflow-v2", "status.json"), "utf8"),
+    ) as Record<string, unknown> & {
+      items: Array<Record<string, unknown>>;
+    };
+
+    expect(statusBoard.items[0]).toMatchObject({
+      branch: "feature/omo-lite-phase4-supervisor",
+      pr_path: "pending",
+      lifecycle: "in_progress",
+      approval_state: "not_started",
+      verification_status: "pending",
+      notes: "CLI partial patch worked.",
+    });
   });
 });
