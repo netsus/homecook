@@ -643,6 +643,10 @@ export function runStageWithArtifacts({
   let runtimeSync = null;
   if (workItemId && runtimeSnapshot) {
     let nextRuntimeState = runtimeSnapshot.state;
+    const scheduledRetryAt =
+      result.dispatch.retryDecision.action === "schedule_retry"
+        ? result.dispatch.retryDecision.retryAt ?? retryAt ?? null
+        : null;
 
     if (
       (result.execution.mode === "execute" && result.execution.executed) ||
@@ -672,7 +676,7 @@ export function runStageWithArtifacts({
       nextRuntimeState = scheduleStageRetry({
         state: nextRuntimeState,
         stage: dispatch.stage,
-        retryAt,
+        retryAt: scheduledRetryAt,
         reason: "claude_budget_unavailable",
         attemptCount: (retryState?.attempt_count ?? 0) + 1,
         maxAttempts: maxRetryAttempts,
@@ -698,7 +702,9 @@ export function runStageWithArtifacts({
   let statusSync = null;
   if (syncStatus && workItemId) {
     const appliedRetryAt =
-      dispatch.retryDecision.action === "schedule_retry" ? retryAt : null;
+      result.dispatch.retryDecision.action === "schedule_retry"
+        ? result.dispatch.retryDecision.retryAt ?? retryAt ?? null
+        : null;
     statusSync = syncWorkflowV2Status({
       rootDir,
       workItemId,

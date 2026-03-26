@@ -247,6 +247,111 @@ function updateRuntimeStatusForWait({
   });
 }
 
+function resolveRunResultRuntimeState({
+  rootDir,
+  workItemId,
+  slice,
+  runResult,
+}) {
+  return (
+    runResult.runtimeSync?.state ??
+    loadRuntime({
+      rootDir,
+      workItemId,
+      slice,
+    })
+  );
+}
+
+function handleDeferredStageExecution({
+  rootDir,
+  workItemId,
+  slice,
+  stage,
+  prRole,
+  prPath,
+  headSha,
+  runResult,
+  now,
+}) {
+  if (runResult.execution?.mode === "execute") {
+    return null;
+  }
+
+  const runtimeState = resolveRunResultRuntimeState({
+    rootDir,
+    workItemId,
+    slice,
+    runResult,
+  });
+
+  if (runResult.execution?.mode === "scheduled-retry") {
+    const nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setWaitState({
+        state: runtimeState,
+        kind: "blocked_retry",
+        prRole,
+        stage,
+        headSha,
+        reason: runResult.execution.reason,
+        until: runtimeState.retry?.at ?? null,
+        updatedAt: now,
+      }),
+    });
+    updateRuntimeStatusForWait({
+      rootDir,
+      workItemId,
+      wait: nextState.wait,
+      prPath,
+      now,
+      approvalState: "awaiting_claude_or_human",
+      lifecycle: "blocked",
+      verificationStatus: "pending",
+      extraNotes: [
+        `artifact_dir=${runResult.artifactDir}`,
+        ...(runtimeState.retry?.at ? [`retry_at=${runtimeState.retry.at}`] : []),
+      ],
+    });
+    return {
+      state: nextState,
+      wait: nextState.wait,
+      transitioned: false,
+    };
+  }
+
+  const nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setWaitState({
+      state: runtimeState,
+      kind: "human_escalation",
+      prRole,
+      stage,
+      headSha,
+      reason: runResult.execution?.reason ?? "stage execution could not continue",
+      updatedAt: now,
+    }),
+  });
+  updateRuntimeStatusForWait({
+    rootDir,
+    workItemId,
+    wait: nextState.wait,
+    prPath,
+    now,
+    approvalState: "human_escalation",
+    lifecycle: "blocked",
+    verificationStatus: "pending",
+    extraNotes: [`artifact_dir=${runResult.artifactDir}`],
+  });
+  return {
+    state: nextState,
+    wait: nextState.wait,
+    transitioned: false,
+  };
+}
+
 function determineInitialStage(state) {
   if (state.wait?.kind === "ready_for_next_stage" && Number.isInteger(state.wait.stage)) {
     return state.wait.stage;
@@ -570,6 +675,7 @@ function handleCodeStage({
 }) {
   const branchRole = resolveBranchRole(stage);
   const branchName = resolveBranchName({ slice, stage });
+  const prRole = resolvePrRole(stage);
   worktree.checkoutBranch({
     branch: branchName,
     startPoint: "master",
@@ -585,6 +691,7 @@ function handleCodeStage({
       updatedAt: now,
     }),
   });
+  const existingPr = getActivePullRequest(nextState, prRole);
 
   const runResult = stageRunner({
     rootDir,
@@ -593,6 +700,20 @@ function handleCodeStage({
     stage,
     executionDir: state.workspace?.path,
   });
+  const deferredOutcome = handleDeferredStageExecution({
+    rootDir,
+    workItemId,
+    slice,
+    stage,
+    prRole,
+    prPath: existingPr?.url ?? null,
+    headSha: existingPr?.head_sha ?? null,
+    runResult,
+    now,
+  });
+  if (deferredOutcome) {
+    return deferredOutcome;
+  }
   const stageResult = validateStageResult(stage, runResult.stageResult);
   worktree.assertClean();
 
@@ -604,9 +725,7 @@ function handleCodeStage({
     artifactDir: runResult.artifactDir,
   });
 
-  const prRole = resolvePrRole(stage);
   const headSha = worktree.getHeadSha();
-  const existingPr = getActivePullRequest(nextState, prRole);
 
   worktree.pushBranch({
     branch: branchName,
@@ -826,6 +945,20 @@ function handleReviewStage({
     stage,
     executionDir: state.workspace?.path,
   });
+  const deferredOutcome = handleDeferredStageExecution({
+    rootDir,
+    workItemId,
+    slice: state.slice ?? workItemId,
+    stage,
+    prRole,
+    prPath: activePr.url,
+    headSha: activePr.head_sha ?? null,
+    runResult,
+    now,
+  });
+  if (deferredOutcome) {
+    return deferredOutcome;
+  }
   const stageResult = validateStageResult(stage, runResult.stageResult);
   nextState = ensureStageRecorded({
     rootDir,
