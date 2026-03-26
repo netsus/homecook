@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-03-26T19:10:02+09:00",
+  "updated_at": "2026-03-26T19:20:00+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -34,17 +34,17 @@
     {
       "id": "omo-lite-phase4-supervisor",
       "preset": "infra-governance",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "ready_for_review",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm validate:workflow-v2",
         "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts tests/omo-lite-supervisor.test.ts",
         "pnpm exec eslint scripts/omo-lite-dispatch-stage.mjs scripts/omo-lite-sync-status.mjs scripts/lib/omo-lite-supervisor.mjs tests/omo-lite-supervisor.test.ts"
       ],
       "branch": "feature/omo-lite-phase4-supervisor",
-      "pr_path": "pending",
-      "notes": "Phase 4 implementation branch created for minimal stage dispatcher and workflow status sync helper."
+      "pr_path": "https://github.com/netsus/homecook/pull/26",
+      "notes": "Phase 4 helper implementation is complete locally and PR #26 is ready for governance review while CI runs."
     }
   ]
 }

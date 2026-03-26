@@ -53,9 +53,9 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending"
+    "lifecycle": "ready_for_review",
+    "approval_state": "codex_approved",
+    "verification_status": "passed"
   },
   "out_of_scope": [
     "direct OMO agent execution from the dispatcher",
