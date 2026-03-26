@@ -75,6 +75,21 @@
       "branch": "feature/omo-lite-phase7-budget-mode",
       "pr_path": "https://github.com/netsus/homecook/pull/28",
       "notes": "Phase 7 budget-aware reviewer fallback is implemented locally and PR #28 is ready for governance review."
+    },
+    {
+      "id": "03-recipe-like",
+      "preset": "feature",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "not_run",
+      "required_checks": [
+        "pnpm install --frozen-lockfile && pnpm test:all",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "branch": "pending",
+      "pr_path": "pending",
+      "notes": "Phase 8 — 첫 번째 제품 슬라이스 OMO-lite 감독 파일럿. Stage 1 workpack 작성 완료. 파일럿 확인 포인트: docs/workpacks/03-recipe-like/omo-lite-notes.md"
     }
   ]
 }

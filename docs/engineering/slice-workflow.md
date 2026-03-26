@@ -32,6 +32,7 @@
 
 ## 공통 브랜치·PR 규칙
 
+- 1단계(docs) 브랜치: `docs/<slice>`
 - 백엔드 브랜치: `feature/be-<slice>`
 - 프론트엔드 브랜치: `feature/fe-<slice>`
 - product slice 구현 PR은 **Draft**로 열고 → `pnpm install --frozen-lockfile && pnpm test:all` 통과 → CI green → **Ready for Review** 전환
@@ -112,7 +113,7 @@
 
 ### 완료 기준
 
-다음이 같은 PR에 포함되어 main에 merge됨:
+브랜치 `docs/<slice>`에서 PR을 열고, 다음이 같은 PR에 포함되어 main에 merge됨:
 - `docs/workpacks/<slice>/README.md` + `acceptance.md`
 - (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스) In Scope 각 FE 화면의 `ui/designs/<SCREEN_ID>.md` + `ui/designs/critiques/<SCREEN_ID>-critique.md`
 
