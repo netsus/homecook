@@ -15,6 +15,7 @@
 - 의도:
   - Codex 중심 supervisor / execution
   - Claude는 sparse approval checkpoint에서만 사용
+- Stage `1 / 3 / 5 / 6`용 Claude primary agent는 `athena`다.
 - `ralph-loop`와 `ulw-loop`는 아직 Homecook stage dispatcher와 연결되지 않았으므로 project 레벨에서 비활성화한다.
 - `comment-checker` hook는 현재 로컬 설치 상태 차이로 false positive가 날 수 있어 project 레벨에서 비활성화한다.
 - `comment-checker`는 영구 제거가 아니라 known issue다. 바이너리 링크 이슈가 해결되면 re-enable 여부를 다시 판단한다.
@@ -43,9 +44,9 @@ pnpm omo:claude-budget -- --clear
 
 - override 파일은 `.opencode/claude-budget-state.json`이며 Git에 커밋하지 않는다.
 
-## Planned Runtime State
+## Runtime State
 
-- 다음 phase의 session-orchestrated runner는 repo-local runtime state를 `.opencode/omo-runtime/` 아래에 저장한다.
+- session-orchestrated runner는 repo-local runtime state를 `.opencode/omo-runtime/` 아래에 저장한다.
 - 여기에 work item별 session ID, retry timer, lock, 마지막 artifact 경로를 둔다.
 - tracked 상태인 `.workflow-v2/status.json`에는 session ID를 넣지 않는다.
 - 이 runtime state도 Git에 커밋하지 않는다.
@@ -53,13 +54,17 @@ pnpm omo:claude-budget -- --clear
 ## Phase 5 Runner
 
 - `pnpm omo:run-stage -- --slice <id> --stage <n>`은 stage dispatch artifact를 `.artifacts/omo-lite-dispatch/` 아래에 만든다.
-- `--mode execute`는 현재 `Codex executable stage`에만 적용된다.
-- reviewer stage는 실행 대신 handoff artifact만 남긴다.
-- `--sync-status`를 함께 주면 artifact 경로와 fallback approval patch를 `.workflow-v2/status.json`에 같이 기록한다.
+- `--mode execute`는 `Codex`와 `Claude` primary stage 모두에 적용된다.
+- Claude budget unavailable이면 실행 대신 same-stage retry artifact와 runtime state를 남긴다.
+- `--sync-status`를 함께 주면 artifact 경로와 blocked/human escalation patch를 `.workflow-v2/status.json`에 같이 기록한다.
 
-## Next Phase Runner
+## Session-Orchestrated Runner
 
-- 다음 구현 브랜치에서는 상위 명령 `pnpm omo:start`, `pnpm omo:continue`, `pnpm omo:resume-pending`, `pnpm omo:status`를 추가한다.
+- 상위 명령:
+  - `pnpm omo:start -- --work-item <id>`
+  - `pnpm omo:continue -- --work-item <id>`
+  - `pnpm omo:resume-pending`
+  - `pnpm omo:status -- --work-item <id>`
 - Stage `1 / 3 / 5 / 6`은 `claude_primary`, Stage `2 / 4`는 `codex_primary` 세션을 재사용한다.
 - Claude budget unavailable이면 기본 동작은 human handoff가 아니라 `pause + scheduled resume`다.
 - scheduler는 `resume-pending`을 주기적으로 호출하고, 기본 retry delay는 5시간이다.

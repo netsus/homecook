@@ -44,17 +44,25 @@ describe("OMO-lite repo config", () => {
 
   it("defaults Homecook OMO to a Codex supervisor baseline", () => {
     const config = readJson(".opencode/oh-my-opencode.json");
+    const pkg = readJson("package.json");
     const disabledHooks = Array.isArray(config.disabled_hooks) ? config.disabled_hooks : [];
     const disabledCommands = Array.isArray(config.disabled_commands) ? config.disabled_commands : [];
     const agents =
       config.agents && typeof config.agents === "object" ? (config.agents as Record<string, Record<string, unknown>>) : {};
+    const scripts =
+      pkg.scripts && typeof pkg.scripts === "object" ? (pkg.scripts as Record<string, string>) : {};
 
     expect(config.default_run_agent).toBe("hephaestus");
     expect(disabledHooks).toEqual(expect.arrayContaining(["comment-checker", "ralph-loop"]));
     expect(disabledCommands).toEqual(expect.arrayContaining(["ralph-loop", "ulw-loop"]));
     expect(agents.hephaestus?.model).toBe("openai/gpt-5.3-codex");
+    expect(agents.athena?.model).toBe("anthropic/claude-sonnet-4-0");
     expect(agents.sisyphus?.model).toBe("openai/gpt-5.3-codex");
     expect(agents.oracle?.model).toBe("openai/gpt-5.4");
+    expect(scripts["omo:start"]).toBe("node scripts/omo-start.mjs");
+    expect(scripts["omo:continue"]).toBe("node scripts/omo-continue.mjs");
+    expect(scripts["omo:resume-pending"]).toBe("node scripts/omo-resume-pending.mjs");
+    expect(scripts["omo:status"]).toBe("node scripts/omo-status.mjs");
   });
 
   it("ignores the repo-local Claude budget override file", () => {

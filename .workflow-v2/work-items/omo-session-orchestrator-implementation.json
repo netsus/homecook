@@ -1,0 +1,74 @@
+{
+  "id": "omo-session-orchestrator-implementation",
+  "title": "Implement the generic OMO session-orchestrated runner",
+  "summary": "Add repo-local runtime state, session reuse, Claude pause/resume, and top-level OMO supervisor commands for Homecook's workflow-v2 pilot.",
+  "project_profile": "homecook",
+  "change_type": "infra-governance",
+  "surface": "workflow",
+  "risk": "high",
+  "preset": "infra-governance",
+  "goal": "Turn the locked session-orchestrator spec into executable Homecook tooling without replacing existing slice governance.",
+  "owners": {
+    "claude": "sparse-review-and-approval",
+    "codex": "implementation-and-integration",
+    "workers": [
+      "testing",
+      "ci-governance"
+    ]
+  },
+  "dependencies": [
+    "workflow-v2-foundation",
+    "omo-lite-bootstrap",
+    "omo-lite-phase4-supervisor",
+    "omo-lite-phase5-runner",
+    "omo-lite-phase7-budget-mode",
+    "omo-session-orchestrator-spec"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "AGENTS.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md"
+    ],
+    "governing_docs": [
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/omo-session-orchestrator.md",
+      "docs/engineering/workflow-v2/omo-lite-architecture.md",
+      "docs/engineering/workflow-v2/omo-lite-supervisor-spec.md",
+      "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
+      ".opencode/README.md",
+      ".opencode/oh-my-opencode.json",
+      "opencode.json"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "recommended",
+    "review_loop": "required",
+    "external_smokes": []
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/omo-lite-supervisor.test.ts tests/omo-lite-runner.test.ts tests/omo-lite-budget.test.ts tests/omo-session-orchestrator.test.ts tests/omo-lite-config.test.ts",
+      "pnpm exec eslint scripts/lib/omo-lite-supervisor.mjs scripts/lib/omo-lite-runner.mjs scripts/lib/omo-session-runtime.mjs scripts/lib/omo-session-orchestrator.mjs scripts/omo-start.mjs scripts/omo-continue.mjs scripts/omo-resume-pending.mjs scripts/omo-status.mjs tests/omo-lite-supervisor.test.ts tests/omo-lite-runner.test.ts tests/omo-lite-budget.test.ts tests/omo-session-orchestrator.test.ts tests/omo-lite-config.test.ts"
+    ],
+    "verify_commands": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/omo-lite-supervisor.test.ts tests/omo-lite-runner.test.ts tests/omo-lite-budget.test.ts tests/omo-session-orchestrator.test.ts tests/omo-lite-config.test.ts",
+      "pnpm exec eslint scripts/lib/omo-lite-supervisor.mjs scripts/lib/omo-lite-runner.mjs scripts/lib/omo-session-runtime.mjs scripts/lib/omo-session-orchestrator.mjs scripts/omo-start.mjs scripts/omo-continue.mjs scripts/omo-resume-pending.mjs scripts/omo-status.mjs tests/omo-lite-supervisor.test.ts tests/omo-lite-runner.test.ts tests/omo-lite-budget.test.ts tests/omo-session-orchestrator.test.ts tests/omo-lite-config.test.ts"
+    ]
+  },
+  "status": {
+    "lifecycle": "ready_for_review",
+    "approval_state": "codex_approved",
+    "verification_status": "passed"
+  },
+  "out_of_scope": [
+    "Replacing current slice workflow governance with workflow-v2",
+    "Long-running daemonized retry processes",
+    "Silent session recreation after session loss"
+  ],
+  "open_questions": [
+    "Whether start/continue should eventually infer stage prerequisites from PR and CI metadata instead of runtime stage counters"
+  ]
+}

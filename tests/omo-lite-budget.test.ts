@@ -195,7 +195,7 @@ describe("OMO-lite Claude budget resolution", () => {
 });
 
 describe("OMO-lite stage runner budget-aware fallback", () => {
-  it("routes reviewer stages to manual handoff when the resolved budget state is unavailable", () => {
+  it("schedules a retry when the resolved budget state is unavailable for a Claude-owned stage", () => {
     const { rootDir, homeDir } = createBudgetFixture();
 
     writeClaudeBudgetOverride({
@@ -210,15 +210,34 @@ describe("OMO-lite stage runner budget-aware fallback", () => {
       homeDir,
       slice: "02-discovery-filter",
       stage: 5,
+      workItemId: "02-discovery-filter",
       mode: "execute",
       now: "2026-03-26T22:20:00+09:00",
     });
 
-    expect(result.dispatch.actor).toBe("human");
+    const runtime = JSON.parse(
+      readFileSync(join(rootDir, ".opencode", "omo-runtime", "02-discovery-filter.json"), "utf8"),
+    ) as {
+      blocked_stage: number;
+      retry: {
+        reason: string;
+        attempt_count: number;
+      };
+    };
+
+    expect(result.dispatch.actor).toBe("claude");
     expect(result.execution).toMatchObject({
-      mode: "manual-handoff",
+      mode: "scheduled-retry",
       executed: false,
       executable: false,
+      reason: "claude_budget_unavailable",
+    });
+    expect(runtime).toMatchObject({
+      blocked_stage: 5,
+      retry: {
+        reason: "claude_budget_unavailable",
+        attempt_count: 1,
+      },
     });
 
     const metadata = JSON.parse(
@@ -236,7 +255,7 @@ describe("OMO-lite stage runner budget-aware fallback", () => {
     });
   });
 
-  it("syncs awaiting_claude_or_human to workflow-v2 status when fallback is triggered", () => {
+  it("syncs blocked retry state to workflow-v2 status when Claude budget fallback is triggered", () => {
     const { rootDir, homeDir } = createBudgetFixture();
     const workItemId = "phase7-budget-fallback";
 
@@ -271,13 +290,15 @@ describe("OMO-lite stage runner budget-aware fallback", () => {
       }>;
     };
 
-    expect(result.dispatch.actor).toBe("human");
+    expect(result.dispatch.actor).toBe("claude");
     expect(statusBoard.items[0]).toMatchObject({
       id: workItemId,
-      lifecycle: "ready_for_review",
+      lifecycle: "blocked",
       approval_state: "awaiting_claude_or_human",
-      verification_status: "passed",
+      verification_status: "pending",
     });
     expect(statusBoard.items[0].notes).toContain(result.artifactDir);
+    expect(statusBoard.items[0].notes).toContain("retry_at=");
+    expect(statusBoard.items[0].notes).toContain("session_role=claude_primary");
   });
 });

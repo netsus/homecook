@@ -104,6 +104,21 @@
         "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts"
       ],
       "notes": "Local docs-governance branch validated. Locks the generic session-orchestrated runner spec, repo-local runtime state contract, and Claude pause/resume policy before the implementation branch starts."
+    },
+    {
+      "id": "omo-session-orchestrator-implementation",
+      "preset": "infra-governance",
+      "branch": "feature/omo-session-orchestrator",
+      "pr_path": "pending",
+      "lifecycle": "ready_for_review",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm validate:workflow-v2",
+        "pnpm exec vitest run tests/omo-lite-supervisor.test.ts tests/omo-lite-runner.test.ts tests/omo-lite-budget.test.ts tests/omo-session-orchestrator.test.ts tests/omo-lite-config.test.ts",
+        "pnpm exec eslint scripts/lib/omo-lite-supervisor.mjs scripts/lib/omo-lite-runner.mjs scripts/lib/omo-session-runtime.mjs scripts/lib/omo-session-orchestrator.mjs scripts/omo-start.mjs scripts/omo-continue.mjs scripts/omo-resume-pending.mjs scripts/omo-status.mjs tests/omo-lite-supervisor.test.ts tests/omo-lite-runner.test.ts tests/omo-lite-budget.test.ts tests/omo-session-orchestrator.test.ts tests/omo-lite-config.test.ts"
+      ],
+      "notes": "Implements session reuse, repo-local runtime state, Claude scheduled retry, and top-level OMO start/continue/resume/status commands on feature/omo-session-orchestrator."
     }
   ]
 }

@@ -133,10 +133,20 @@ describe("OMO-lite stage dispatch", () => {
       claudeBudgetState: "unavailable",
     });
 
-    expect(dispatch.actor).toBe("human");
+    expect(dispatch.actor).toBe("claude");
+    expect(dispatch.sessionBinding).toMatchObject({
+      role: "claude_primary",
+      sessionId: null,
+      resumeMode: "fresh",
+    });
+    expect(dispatch.retryDecision).toMatchObject({
+      action: "schedule_retry",
+      reason: "claude_budget_unavailable",
+    });
     expect(dispatch.statusPatch).toMatchObject({
       approval_state: "awaiting_claude_or_human",
-      lifecycle: "ready_for_review",
+      lifecycle: "blocked",
+      verification_status: "pending",
     });
     expect(dispatch.escalationIfBlocked).toContain("Claude");
   });
@@ -149,6 +159,14 @@ describe("OMO-lite stage dispatch", () => {
     });
 
     expect(dispatch.actor).toBe("codex");
+    expect(dispatch.sessionBinding).toMatchObject({
+      role: "codex_primary",
+      sessionId: null,
+      resumeMode: "fresh",
+    });
+    expect(dispatch.retryDecision).toMatchObject({
+      action: "none",
+    });
     expect(dispatch.statusPatch).toMatchObject({
       branch: "feature/fe-02-discovery-filter",
       lifecycle: "in_progress",
