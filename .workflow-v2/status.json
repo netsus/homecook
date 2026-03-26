@@ -73,7 +73,8 @@
         "pnpm exec eslint scripts/lib/omo-lite-claude-budget.mjs scripts/lib/omo-lite-runner.mjs scripts/omo-lite-claude-budget.mjs scripts/omo-lite-run-stage.mjs tests/omo-lite-budget.test.ts tests/omo-lite-runner.test.ts"
       ],
       "branch": "feature/omo-lite-phase7-budget-mode",
-      "notes": "Phase 7 budget-aware reviewer fallback is implemented locally and ready for governance review."
+      "pr_path": "https://github.com/netsus/homecook/pull/28",
+      "notes": "Phase 7 budget-aware reviewer fallback is implemented locally and PR #28 is ready for governance review."
     }
   ]
 }
