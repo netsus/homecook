@@ -1,5 +1,8 @@
 import { ok } from "@/lib/api/response";
-import { getMockRecipeThemes } from "@/lib/mock/recipes";
+import {
+  getMockRecipeThemes,
+  isDiscoveryFilterManualMockEnabled,
+} from "@/lib/mock/recipes";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
 import type { RecipeCardItem, RecipeThemesData } from "@/types/recipe";
 
@@ -16,6 +19,10 @@ function createThemeResponse(items: RecipeCardItem[]): RecipeThemesData {
 }
 
 export async function GET() {
+  if (isDiscoveryFilterManualMockEnabled()) {
+    return ok(getMockRecipeThemes());
+  }
+
   try {
     const supabase = await createRouteHandlerClient();
     const { data, error } = await supabase

@@ -1,4 +1,6 @@
 import type {
+  IngredientItem,
+  IngredientListData,
   RecipeCardItem,
   RecipeDetail,
   RecipeListData,
@@ -6,6 +8,32 @@ import type {
 } from "@/types/recipe";
 
 export const MOCK_RECIPE_ID = "mock-kimchi-jjigae";
+export const MOCK_DISCOVERY_FILTER_ONION_ID = "550e8400-e29b-41d4-a716-446655440010";
+export const MOCK_DISCOVERY_FILTER_GREEN_ONION_ID = "550e8400-e29b-41d4-a716-446655440011";
+export const MOCK_DISCOVERY_FILTER_BEEF_ID = "550e8400-e29b-41d4-a716-446655440012";
+
+const MOCK_DISCOVERY_FILTER_INGREDIENTS: IngredientItem[] = [
+  {
+    id: MOCK_DISCOVERY_FILTER_ONION_ID,
+    standard_name: "양파",
+    category: "채소",
+  },
+  {
+    id: MOCK_DISCOVERY_FILTER_GREEN_ONION_ID,
+    standard_name: "대파",
+    category: "채소",
+  },
+  {
+    id: MOCK_DISCOVERY_FILTER_BEEF_ID,
+    standard_name: "소고기",
+    category: "육류",
+  },
+];
+
+const MOCK_RECIPE_INGREDIENT_IDS = [
+  MOCK_DISCOVERY_FILTER_ONION_ID,
+  MOCK_DISCOVERY_FILTER_GREEN_ONION_ID,
+];
 
 export const MOCK_RECIPE_CARD: RecipeCardItem = {
   id: MOCK_RECIPE_ID,
@@ -142,13 +170,46 @@ export const MOCK_RECIPE_DETAIL: RecipeDetail = {
   user_status: null,
 };
 
-export function getMockRecipeList(query?: string | null): RecipeListData {
+export function isDiscoveryFilterManualMockEnabled() {
+  return process.env.HOMECOOK_ENABLE_DISCOVERY_FILTER_MOCK === "1";
+}
+
+export function getMockIngredientList(
+  query?: string | null,
+  category?: string | null,
+): IngredientListData {
+  const normalizedQuery = query?.trim() ?? "";
+  const normalizedCategory = category?.trim() ?? "";
+
+  const items = MOCK_DISCOVERY_FILTER_INGREDIENTS.filter((ingredient) => {
+    const matchesCategory =
+      normalizedCategory.length === 0 || ingredient.category === normalizedCategory;
+    const matchesQuery =
+      normalizedQuery.length === 0 || ingredient.standard_name.includes(normalizedQuery);
+
+    return matchesCategory && matchesQuery;
+  });
+
+  return { items };
+}
+
+export function getMockRecipeList(
+  query?: string | null,
+  ingredientIds?: string[] | null,
+): RecipeListData {
   const normalized = query?.trim().toLowerCase() ?? "";
+  const hasRequiredIngredients = !ingredientIds?.length
+    || ingredientIds.every((ingredientId) =>
+      MOCK_RECIPE_INGREDIENT_IDS.includes(ingredientId),
+    );
 
   const items =
-    !normalized ||
-    MOCK_RECIPE_CARD.title.toLowerCase().includes(normalized) ||
-    MOCK_RECIPE_CARD.tags.some((tag) => tag.toLowerCase().includes(normalized))
+    hasRequiredIngredients
+    && (
+      !normalized
+      || MOCK_RECIPE_CARD.title.toLowerCase().includes(normalized)
+      || MOCK_RECIPE_CARD.tags.some((tag) => tag.toLowerCase().includes(normalized))
+    )
       ? [MOCK_RECIPE_CARD]
       : [];
 
