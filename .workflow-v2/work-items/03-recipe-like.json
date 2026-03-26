@@ -37,7 +37,7 @@
     ]
   },
   "workflow": {
-    "plan_loop": "skipped",
+    "plan_loop": "required",
     "review_loop": "skipped",
     "external_smokes": [
       "Supabase recipe_likes UNIQUE 제약 + like_count 원자 갱신 smoke (실 DB 환경 필요)",
