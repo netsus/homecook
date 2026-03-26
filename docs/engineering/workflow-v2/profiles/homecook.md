@@ -105,6 +105,8 @@
   - `hotfix/`
 - product 구현 PR:
   - 기본 `Draft -> CI green -> Ready for Review`
+- autonomous supervisor:
+  - local machine + `gh` CLI + dedicated worktree 기본값
 - required approval 의미:
   - v1 운영에서는 문서상 stage 통과 + 리뷰 기록
   - v2 pilot에서는 dual-approval artifact + verification
@@ -124,3 +126,4 @@
 - 테스트 없이 상태 전이 규칙을 바꾸지 않는다.
 - external integration 이슈를 코드 문제로만 가정하지 않는다.
 - reviewer approval 없이 merge-ready를 선언하지 않는다.
+- autonomous supervisor가 현재 IDE worktree를 직접 수정하지 않는다.

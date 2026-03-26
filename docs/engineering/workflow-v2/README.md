@@ -37,11 +37,12 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 4. [approval-and-loops.md](./approval-and-loops.md)
 5. [omo-lite-architecture.md](./omo-lite-architecture.md)
 6. [omo-session-orchestrator.md](./omo-session-orchestrator.md)
-7. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
-8. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
-9. [TEMPLATE.md](./profiles/TEMPLATE.md)
-10. [homecook.md](./profiles/homecook.md)
-11. [migration.md](./migration.md)
+7. [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md)
+8. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
+9. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
+10. [TEMPLATE.md](./profiles/TEMPLATE.md)
+11. [homecook.md](./profiles/homecook.md)
+12. [migration.md](./migration.md)
 
 ## Directory Map
 
@@ -52,6 +53,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [approval-and-loops.md](./approval-and-loops.md): plan/review loop와 dual-approval 규칙
 - [omo-lite-architecture.md](./omo-lite-architecture.md): Codex supervisor 기반 Homecook OMO-lite 설계안
 - [omo-session-orchestrator.md](./omo-session-orchestrator.md): generic session reuse / runtime state / scheduled resume 규격
+- [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md): local worktree / PR / CI / merge / scheduler supervisor 규격
 - [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md): supervisor 책임, 상태, stage state machine
 - [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md): stage별 actor dispatch 입출력 계약
 - [profiles/TEMPLATE.md](./profiles/TEMPLATE.md): 다른 프로젝트용 profile template
@@ -99,6 +101,9 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - reviewer stage direct execution with Claude session reuse
 - scheduled sweeper 기반 pause/resume
 - `awaiting_claude_or_human` 상태의 blocked-retry 의미 확장
+- dedicated worktree policy
+- `omo:supervise` / `omo:tick`
+- `gh` 기반 PR / CI / merge automation
 
 ## Pilot Usage
 
@@ -120,6 +125,4 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - README 자동 생성
 - v1 slice status 표의 자동 동기화
 - preset 기반 branch/PR gate의 강제 실행
-- generic session orchestrator CLI implementation
-- repo-local runtime state store와 scheduled sweeper 구현
-- merge automation
+- merge queue 우회
