@@ -28,17 +28,24 @@ work-item: `.workflow-v2/work-items/03-recipe-like.json`
 
 ---
 
-### 2. status.json lifecycle 자동 패치
+### 2. v1 / v2 상태 모델 동기 검증
 
 **언제**: Stage 2 착수 시 (Codex 첫 커밋), Stage 2 PR merge 시.
 
 확인 사항:
 - Codex가 `--sync-status` 플래그로 실행할 경우
   `.workflow-v2/status.json`의 `03-recipe-like` 항목이
-  `planned → docs → in_progress → ready_for_review → merged` 순으로 전이되는가?
+  `planned → in_progress → ready_for_review → merged` 순으로 전이되는가?
+- 같은 시점에 v1 roadmap인 `docs/workpacks/README.md`는
+  `planned → docs → in-progress → merged` 규칙을 계속 따르는가?
 - `pnpm omo:sync-status`를 수동 실행해도 같은 패치가 적용되는가?
 
-기대 결과: v1 `docs/workpacks/README.md` Status 표와 v2 `status.json`이 동기된 상태.
+기대 결과: v1 `docs/workpacks/README.md` Status 표와 v2 `status.json`이
+각자 정의된 상태 어휘 안에서 동기된 상태.
+
+주의:
+- `docs`는 v1 roadmap 전용 상태다.
+- `workflow-v2/status.json` lifecycle에는 `docs`가 없으므로 기록하지 않는다.
 
 ---
 
@@ -64,15 +71,18 @@ pnpm omo:claude-budget -- --clear
 
 ---
 
-### 4. Plan loop 미트리거 검증
+### 4. Required plan loop checkpoint 검증
 
-**이 슬라이스는 low-risk**다: 계약이 명확하고, 스키마 변경 없고, 선행 슬라이스 의존성 clean.
+`03-recipe-like`는 risk는 low지만, preset이 `vertical-slice-strict`다.
+따라서 OMO-lite pilot에서는 Stage 2 착수 전에 plan loop checkpoint를 남기는 것이 맞다.
 
 확인 사항:
-- supervisor가 Stage 2 전 plan loop를 자동 트리거하지 않는가?
-- `dispatch.json`의 `plan_loop_required: false` (또는 해당 필드 없음)가 확인되는가?
+- `pnpm agent:plan-loop -- --goal "03-recipe-like 구현 계획을 workpack 기준으로 확정해줘" --workpack 03-recipe-like --max-rounds 3`
+  실행 후 final summary artifact가 남는가?
+- plan loop 결과가 `approved` 또는 동등한 진행 가능 상태로 정리되는가?
+- 이 checkpoint가 `.workflow-v2/work-items/03-recipe-like.json`의 `plan_loop: required`와 일치하는가?
 
-기대 결과: plan loop skip. 만약 plan loop가 트리거된다면 risk 판정 기준을 재검토.
+기대 결과: Stage 2 시작 전에 required plan loop checkpoint가 한 번 기록된다.
 
 ---
 
@@ -100,8 +110,14 @@ Stage 2 (BE) / Stage 4 (FE) 완료 시 외부 smoke가 필요한가?
 - Supabase `recipe_likes` 테이블 + UNIQUE 제약 — 실 DB smoke 필요
 - 소셜 OAuth return-to-action — `pnpm test:e2e:oauth` 별도 실행 필요
 
-OMO-lite에서 smoke 결과를 `dispatch.json`의 `external_smoke_needed: true`로 기록하고,
-Codex supervisor가 smoke 통과 여부를 확인한 뒤에만 Stage 3/6 reviewer에게 넘기는지 확인.
+현재 OMO-lite helper는 `external_smoke_needed`를 `dispatch.json` 출력 필드로 고정하지 않는다.
+이번 파일럿에서는 아래를 확인한다.
+
+- `.workflow-v2/work-items/03-recipe-like.json`의 `workflow.external_smokes[]`가 source of truth로 유지되는가?
+- smoke 실행 결과 또는 미실행 근거가 PR notes / 리뷰 notes / 이 파일의 결과 로그 중 하나에 남는가?
+- Codex supervisor가 smoke 필요 항목을 누락하지 않고 Stage 3/6 handoff에 같이 전달하는가?
+
+기대 결과: external smoke 요구사항은 dispatch 필드가 아니라 work item + handoff notes 기준으로 추적된다.
 
 ---
 
