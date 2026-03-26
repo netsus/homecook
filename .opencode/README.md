@@ -43,9 +43,23 @@ pnpm omo:claude-budget -- --clear
 
 - override 파일은 `.opencode/claude-budget-state.json`이며 Git에 커밋하지 않는다.
 
+## Planned Runtime State
+
+- 다음 phase의 session-orchestrated runner는 repo-local runtime state를 `.opencode/omo-runtime/` 아래에 저장한다.
+- 여기에 work item별 session ID, retry timer, lock, 마지막 artifact 경로를 둔다.
+- tracked 상태인 `.workflow-v2/status.json`에는 session ID를 넣지 않는다.
+- 이 runtime state도 Git에 커밋하지 않는다.
+
 ## Phase 5 Runner
 
 - `pnpm omo:run-stage -- --slice <id> --stage <n>`은 stage dispatch artifact를 `.artifacts/omo-lite-dispatch/` 아래에 만든다.
 - `--mode execute`는 현재 `Codex executable stage`에만 적용된다.
 - reviewer stage는 실행 대신 handoff artifact만 남긴다.
 - `--sync-status`를 함께 주면 artifact 경로와 fallback approval patch를 `.workflow-v2/status.json`에 같이 기록한다.
+
+## Next Phase Runner
+
+- 다음 구현 브랜치에서는 상위 명령 `pnpm omo:start`, `pnpm omo:continue`, `pnpm omo:resume-pending`, `pnpm omo:status`를 추가한다.
+- Stage `1 / 3 / 5 / 6`은 `claude_primary`, Stage `2 / 4`는 `codex_primary` 세션을 재사용한다.
+- Claude budget unavailable이면 기본 동작은 human handoff가 아니라 `pause + scheduled resume`다.
+- scheduler는 `resume-pending`을 주기적으로 호출하고, 기본 retry delay는 5시간이다.

@@ -50,6 +50,7 @@ test-results/
 # local agent artifacts
 .artifacts/
 .opencode/claude-budget-state.json
+.opencode/omo-runtime/
 
 # supabase local
 supabase/.temp/

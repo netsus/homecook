@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-03-26T20:12:00+09:00",
+  "updated_at": "2026-03-26T21:10:00+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -90,6 +90,20 @@
       "branch": "pending",
       "pr_path": "pending",
       "notes": "Phase 8 — 첫 번째 제품 슬라이스 OMO-lite 감독 파일럿. Stage 1 workpack 작성 완료. Stage 2 시작 전 required plan-loop checkpoint와 external smoke checklist 기준을 확인한다. 파일럿 확인 포인트: docs/workpacks/03-recipe-like/omo-lite-notes.md"
+    },
+    {
+      "id": "omo-session-orchestrator-spec",
+      "preset": "infra-governance",
+      "branch": "docs/omo-session-orchestrator-spec",
+      "pr_path": "pending",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm validate:workflow-v2",
+        "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts"
+      ],
+      "notes": "Local docs-governance branch validated. Locks the generic session-orchestrated runner spec, repo-local runtime state contract, and Claude pause/resume policy before the implementation branch starts."
     }
   ]
 }

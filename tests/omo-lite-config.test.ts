@@ -33,6 +33,7 @@ describe("OMO-lite repo config", () => {
         "AGENTS.md",
         "docs/engineering/agent-workflow-overview.md",
         "docs/engineering/slice-workflow.md",
+        "docs/engineering/workflow-v2/omo-session-orchestrator.md",
         "docs/engineering/workflow-v2/omo-lite-architecture.md",
         "docs/engineering/workflow-v2/omo-lite-supervisor-spec.md",
         "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
@@ -60,5 +61,6 @@ describe("OMO-lite repo config", () => {
     const rootGitignore = readFileSync(join(repoRoot, ".gitignore"), "utf8");
 
     expect(rootGitignore).toContain(".opencode/claude-budget-state.json");
+    expect(rootGitignore).toContain(".opencode/omo-runtime/");
   });
 });

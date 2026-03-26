@@ -25,6 +25,7 @@ describe("workflow v2 docs", () => {
       "docs/engineering/workflow-v2/presets.md",
       "docs/engineering/workflow-v2/approval-and-loops.md",
       "docs/engineering/workflow-v2/omo-lite-architecture.md",
+      "docs/engineering/workflow-v2/omo-session-orchestrator.md",
       "docs/engineering/workflow-v2/omo-lite-supervisor-spec.md",
       "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
       "docs/engineering/workflow-v2/profiles/TEMPLATE.md",
