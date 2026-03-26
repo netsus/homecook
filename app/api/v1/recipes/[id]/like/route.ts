@@ -32,12 +32,6 @@ interface RecipesSelectQuery {
   maybeSingle(): MaybeSingleResult<RecipeCountRow>;
 }
 
-interface RecipesUpdateQuery {
-  eq(column: string, value: string): RecipesUpdateQuery;
-  select(columns: string): RecipesUpdateQuery;
-  maybeSingle(): MaybeSingleResult<{ like_count: number }>;
-}
-
 interface RecipeLikesSelectQuery {
   eq(column: string, value: string): RecipeLikesSelectQuery;
   maybeSingle(): MaybeSingleResult<RecipeLikeRow>;
@@ -56,7 +50,6 @@ interface RecipeLikesDeleteQuery {
 
 interface RecipesTable {
   select(columns: string): RecipesSelectQuery;
-  update(values: { like_count: number }): RecipesUpdateQuery;
 }
 
 interface RecipeLikesTable {
@@ -97,6 +90,19 @@ async function readRecipeCount(dbClient: RecipeLikeDbClient, recipeId: string) {
     .maybeSingle();
 }
 
+async function readRecipeLikeSnapshot(dbClient: RecipeLikeDbClient, recipeId: string) {
+  const recipeResult = await readRecipeCount(dbClient, recipeId);
+
+  if (recipeResult.error || !recipeResult.data) {
+    return null;
+  }
+
+  return {
+    is_liked: true,
+    like_count: clampLikeCount(recipeResult.data.like_count),
+  } satisfies RecipeLikeData;
+}
+
 async function readExistingLike(
   dbClient: RecipeLikeDbClient,
   recipeId: string,
@@ -107,19 +113,6 @@ async function readExistingLike(
     .select("id")
     .eq("recipe_id", recipeId)
     .eq("user_id", userId)
-    .maybeSingle();
-}
-
-async function updateRecipeLikeCount(
-  dbClient: RecipeLikeDbClient,
-  recipeId: string,
-  likeCount: number,
-) {
-  return dbClient
-    .from("recipes")
-    .update({ like_count: likeCount })
-    .eq("id", recipeId)
-    .select("like_count")
     .maybeSingle();
 }
 
@@ -164,8 +157,7 @@ export async function POST(_request: Request, context: RouteContext) {
       return fail("INTERNAL_ERROR", "좋아요를 해제하지 못했어요.", 500);
     }
 
-    const nextLikeCount = clampLikeCount(recipeResult.data.like_count - 1);
-    const updateResult = await updateRecipeLikeCount(dbClient, id, nextLikeCount);
+    const updateResult = await readRecipeCount(dbClient, id);
 
     if (updateResult.error || !updateResult.data) {
       return fail("INTERNAL_ERROR", "좋아요 수를 갱신하지 못했어요.", 500);
@@ -189,26 +181,20 @@ export async function POST(_request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (isRecipeLikeUniqueConflict(insertResult.error)) {
-    const currentRecipeResult = await readRecipeCount(dbClient, id);
+    const currentSnapshot = await readRecipeLikeSnapshot(dbClient, id);
 
-    if (currentRecipeResult.error || !currentRecipeResult.data) {
+    if (!currentSnapshot) {
       return fail("INTERNAL_ERROR", "좋아요 상태를 확인하지 못했어요.", 500);
     }
 
-    const response: RecipeLikeData = {
-      is_liked: true,
-      like_count: clampLikeCount(currentRecipeResult.data.like_count),
-    };
-
-    return ok(response);
+    return ok(currentSnapshot);
   }
 
   if (insertResult.error) {
     return fail("INTERNAL_ERROR", "좋아요를 등록하지 못했어요.", 500);
   }
 
-  const nextLikeCount = clampLikeCount(recipeResult.data.like_count + 1);
-  const updateResult = await updateRecipeLikeCount(dbClient, id, nextLikeCount);
+  const updateResult = await readRecipeCount(dbClient, id);
 
   if (updateResult.error || !updateResult.data) {
     return fail("INTERNAL_ERROR", "좋아요 수를 갱신하지 못했어요.", 500);

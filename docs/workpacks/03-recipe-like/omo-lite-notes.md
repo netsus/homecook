@@ -154,5 +154,5 @@ Stage 2 (BE) / Stage 4 (FE) 완료 시 외부 smoke가 필요한가?
 
 - manual fallback plan checkpoint는 Stage 2 착수 gate로는 작동했지만, 자동 plan loop 대비 acceptance coverage가 낮았다.
 - 이번 slice에서는 Claude sanity review로 `UNIQUE 충돌 처리`와 `like_count floor test`를 추가 보강했다.
-- Stage 3 리뷰에서 `recipe_likes` DELETE ownership guard는 테스트로 고정했지만, `like_count` 갱신은 아직 DB 레벨 원자 증분이 아니라 read-modify-write 패턴이라 동시 요청 시 수치 drift 가능성이 남아 있다.
+- Stage 3 리뷰 후 follow-up으로 `recipe_likes` INSERT/DELETE 시 `recipes.like_count`를 DB 트리거가 갱신하도록 마이그레이션을 추가했다. reviewer note였던 원자 증분 gap은 이 경로로 닫았다.
 - 후속 OMO 업데이트에서는 plan checkpoint artifact가 acceptance의 data integrity / race condition 항목을 자동 체크리스트로 끌어오는지 확인이 필요하다.

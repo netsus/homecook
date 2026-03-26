@@ -31,10 +31,8 @@ function createAwaitableQuery<T>(result: QueryResult<T>) {
 
 function createRecipesTable({
   selectResults,
-  updateResults = [],
 }: {
   selectResults: Array<QueryResult<{ id: string; like_count: number } | null>>;
-  updateResults?: Array<QueryResult<{ like_count: number } | null>>;
 }) {
   const selectQuery = {
     eq: vi.fn(() => selectQuery),
@@ -44,20 +42,9 @@ function createRecipesTable({
     })),
   };
 
-  const updateQuery = {
-    eq: vi.fn(() => updateQuery),
-    select: vi.fn(() => updateQuery),
-    maybeSingle: vi.fn(() => createAwaitableQuery(updateResults.shift() ?? {
-      data: null,
-      error: { message: "missing update result" },
-    })),
-  };
-
   return {
     select: vi.fn(() => selectQuery),
-    update: vi.fn(() => updateQuery),
     __selectQuery: selectQuery,
-    __updateQuery: updateQuery,
   };
 }
 
@@ -196,10 +183,8 @@ describe("POST /api/v1/recipes/[id]/like", () => {
           data: { id: "recipe-1", like_count: 3 },
           error: null,
         },
-      ],
-      updateResults: [
         {
-          data: { like_count: 4 },
+          data: { id: "recipe-1", like_count: 4 },
           error: null,
         },
       ],
@@ -253,7 +238,7 @@ describe("POST /api/v1/recipes/[id]/like", () => {
       user_id: "user-1",
       recipe_id: "550e8400-e29b-41d4-a716-446655440022",
     });
-    expect(recipesTable.update).toHaveBeenCalledWith({ like_count: 4 });
+    expect(recipesTable.select).toHaveBeenCalledTimes(2);
   });
 
   it("deletes only the authenticated user's like and never lets like_count go below zero", async () => {
@@ -263,10 +248,8 @@ describe("POST /api/v1/recipes/[id]/like", () => {
           data: { id: "recipe-1", like_count: 0 },
           error: null,
         },
-      ],
-      updateResults: [
         {
-          data: { like_count: 0 },
+          data: { id: "recipe-1", like_count: 0 },
           error: null,
         },
       ],
@@ -319,7 +302,7 @@ describe("POST /api/v1/recipes/[id]/like", () => {
     expect(recipeLikesTable.delete).toHaveBeenCalled();
     expect(recipeLikesTable.__deleteQuery.eq).toHaveBeenNthCalledWith(1, "id", "like-1");
     expect(recipeLikesTable.__deleteQuery.eq).toHaveBeenNthCalledWith(2, "user_id", "user-1");
-    expect(recipesTable.update).toHaveBeenCalledWith({ like_count: 0 });
+    expect(recipesTable.select).toHaveBeenCalledTimes(2);
   });
 
   it("handles UNIQUE conflicts by returning the final liked state", async () => {
