@@ -147,8 +147,8 @@ GET /api/v1/recipes
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review)
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [x] 리뷰 대기 (pending-review)
 - [ ] 확정 (confirmed)
 - [ ] N/A
 
@@ -249,16 +249,16 @@ GET /api/v1/recipes
 
 ## Delivery Checklist
 
-- [ ] Stage 0 `docs-governance` PR merge 완료
-- [ ] 백엔드 계약 고정 (`IngredientItem` 타입, `RecipeListQuery` 타입 업데이트)
-- [ ] `GET /api/v1/ingredients` Route Handler 구현
-- [ ] `GET /api/v1/recipes` `ingredient_ids` 파라미터 추가 및 AND 필터 로직 구현
-- [ ] `INGREDIENT_FILTER_MODAL` 컴포넌트 구현 (검색 + 카테고리 탭 + 다중 선택 + 버튼)
-- [ ] HOME "재료로 검색" 버튼 + 필터 활성 상태 표시 업데이트
-- [ ] Zustand `selectedIngredientIds` 상태 관리 구현
-- [ ] `loading / empty / error` 상태 구현 (모달 + HOME 목록 양쪽)
-- [ ] Vitest: `ingredient_ids` 파싱·필터 로직, 동의어 검색 유닛 테스트
-- [ ] Playwright: HOME → 모달 열기 → 재료 선택 → 적용 → 필터 결과 E2E
-- [ ] 실제 API smoke: `GET /api/v1/ingredients`, `GET /api/v1/recipes?ingredient_ids=...`
-- [ ] 실제 브라우저 smoke: HOME → 모달 → 적용 → URL 동기화 → hard refresh 초기화 → 필터 초기화
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리
+- [x] Stage 0 `docs-governance` PR merge 완료
+- [x] 백엔드 계약 고정 (`IngredientItem` 타입, `RecipeListQuery` 타입 업데이트)
+- [x] `GET /api/v1/ingredients` Route Handler 구현
+- [x] `GET /api/v1/recipes` `ingredient_ids` 파라미터 추가 및 AND 필터 로직 구현
+- [x] `INGREDIENT_FILTER_MODAL` 컴포넌트 구현 (검색 + 카테고리 탭 + 다중 선택 + 버튼)
+- [x] HOME "재료로 검색" 버튼 + 필터 활성 상태 표시 업데이트
+- [x] Zustand `selectedIngredientIds` 상태 관리 구현
+- [x] `loading / empty / error` 상태 구현 (모달 + HOME 목록 양쪽)
+- [x] Vitest: `ingredient_ids` 파싱·필터 로직, 동의어 검색 유닛 테스트
+- [x] Playwright: HOME → 모달 열기 → 재료 선택 → 적용 → 필터 결과 E2E
+- [x] 실제 API smoke: `GET /api/v1/ingredients`, `GET /api/v1/recipes?ingredient_ids=...`
+- [x] 실제 브라우저 smoke: HOME → 모달 → 적용 → URL 동기화 → hard refresh 초기화 → 필터 초기화
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리
