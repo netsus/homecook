@@ -29,3 +29,9 @@ opencode auth login
 ```
 
 - 이 인증 상태는 Git에 커밋하지 않는다.
+
+## Phase 5 Runner
+
+- `pnpm omo:run-stage -- --slice <id> --stage <n>`은 stage dispatch artifact를 `.artifacts/omo-lite-dispatch/` 아래에 만든다.
+- `--mode execute`는 현재 `Codex executable stage`에만 적용된다.
+- reviewer stage는 실행 대신 handoff artifact만 남긴다.

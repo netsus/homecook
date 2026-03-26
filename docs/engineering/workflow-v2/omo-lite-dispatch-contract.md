@@ -14,6 +14,7 @@ dispatch contract가 고정되면:
 
 - `scripts/omo-lite-dispatch-stage.mjs`
 - `scripts/omo-lite-sync-status.mjs`
+- `scripts/omo-lite-run-stage.mjs`
 
 ## Input Contract
 
@@ -47,6 +48,7 @@ dispatch 결과는 아래를 포함한다.
 - `status_patch`
 - `success_condition`
 - `escalation_if_blocked`
+- `artifact_dir` (stage run 시)
 
 ## Dispatch Matrix
 
@@ -156,6 +158,18 @@ Codex supervisor는 아래에서만 review loop dispatch를 만든다.
 - exceptional recovery로 정식 Stage 리뷰 이후 반복 수정이 길어질 때
 
 product slice 기본 경로에서는 review loop dispatch를 만들지 않는다.
+
+## Direct Execution Binding
+
+Phase 5부터 Codex supervisor는 dispatch 결과를 repo-local OpenCode/OMO 실행에 연결할 수 있다.
+
+현재 규칙:
+
+- `actor == codex`인 Stage 2/4만 `pnpm omo:run-stage -- --mode execute` 대상이다.
+- Stage 1/3/5/6은 reviewer stage이므로 실행 대신 handoff artifact만 만든다.
+- 모든 run은 `.artifacts/omo-lite-dispatch/<timestamp>-<slice>-stage-<n>/` 아래에 `dispatch.json`, `prompt.md`, `run-metadata.json`을 남긴다.
+- executable run이면 같은 경로에 `opencode.stdout.log`, `opencode.stderr.log`도 남긴다.
+- direct execution은 merge automation을 포함하지 않는다.
 
 ## Fallback Routing
 
