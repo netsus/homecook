@@ -264,6 +264,7 @@ dispatch가 끝나면 supervisor는 최소한 아래 patch를 계산한다.
 현재 repo-local 기본값은:
 
 - default run agent = `hephaestus`
+- `opencode.json`의 direct `agent` / `default_agent` 설정을 우선 사용
 - Codex 중심 supervisor 실행
 - `ralph-loop` / `ulw-loop` 비활성화
 - comment-checker 비활성화

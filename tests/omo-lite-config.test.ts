@@ -26,8 +26,19 @@ describe("OMO-lite repo config", () => {
     const config = readJson("opencode.json");
     const plugin = Array.isArray(config.plugin) ? config.plugin : [];
     const instructions = Array.isArray(config.instructions) ? config.instructions : [];
+    const agents =
+      config.agent && typeof config.agent === "object"
+        ? (config.agent as Record<string, Record<string, unknown>>)
+        : {};
 
     expect(plugin).toContain("oh-my-opencode@latest");
+    expect(config.default_agent).toBe("hephaestus");
+    expect(agents.hephaestus?.model).toBe("openai/gpt-5.3-codex");
+    expect(agents.athena?.model).toBe("anthropic/claude-sonnet-4-0");
+    expect(agents.sisyphus?.model).toBe("openai/gpt-5.3-codex");
+    expect(agents.oracle?.model).toBe("openai/gpt-5.4");
+    expect(agents.explore?.mode).toBe("subagent");
+    expect(agents.librarian?.mode).toBe("subagent");
     expect(instructions).toEqual(
       expect.arrayContaining([
         "AGENTS.md",

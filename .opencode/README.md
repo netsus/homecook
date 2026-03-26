@@ -7,7 +7,8 @@
 - 이 저장소 루트에서 OpenCode `/init`를 실행하지 않는다.
 - 이유: 저장소에는 이미 공식 운영 규칙인 `AGENTS.md`가 있고, 자동 생성된 `AGENTS.md`로 덮어쓰면 안 된다.
 - authoritative policy는 계속 `AGENTS.md`, `docs/engineering/slice-workflow.md`, `docs/engineering/agent-workflow-overview.md`다.
-- `.opencode/oh-my-opencode.json`은 그 규칙을 따르는 `Codex supervisor 기본값`만 추가한다.
+- 실제 OpenCode CLI 실행 기준은 repo root의 `opencode.json`이다.
+- `.opencode/oh-my-opencode.json`은 Homecook agent/hook 기본값의 compatibility snapshot으로 계속 추적한다.
 
 ## Current Homecook Defaults
 
@@ -16,6 +17,7 @@
   - Codex 중심 supervisor / execution
   - Claude는 sparse approval checkpoint에서만 사용
 - Stage `1 / 3 / 5 / 6`용 Claude primary agent는 `athena`다.
+- 위 agent/default 값은 `opencode.json`에 직접 등록하고, `.opencode/oh-my-opencode.json`은 같은 값을 mirrored snapshot으로 유지한다.
 - `ralph-loop`와 `ulw-loop`는 아직 Homecook stage dispatcher와 연결되지 않았으므로 project 레벨에서 비활성화한다.
 - `comment-checker` hook는 현재 로컬 설치 상태 차이로 false positive가 날 수 있어 project 레벨에서 비활성화한다.
 - `comment-checker`는 영구 제거가 아니라 known issue다. 바이너리 링크 이슈가 해결되면 re-enable 여부를 다시 판단한다.
