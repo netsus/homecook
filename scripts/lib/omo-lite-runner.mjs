@@ -9,6 +9,10 @@ import {
   syncWorkflowV2Status,
 } from "./omo-lite-supervisor.mjs";
 import {
+  readStageResult,
+  resolveStageResultPath,
+} from "./omo-stage-result.mjs";
+import {
   DEFAULT_MAX_RETRY_ATTEMPTS,
   DEFAULT_RETRY_DELAY_HOURS,
   OMO_SESSION_ROLE_TO_AGENT,
@@ -82,7 +86,7 @@ function resolveExecutionBinding(dispatch, { agent }) {
   };
 }
 
-function buildPrompt({ slice, stage, workItemId, dispatch }) {
+function buildPrompt({ slice, stage, workItemId, dispatch, stageResultPath }) {
   return [
     "# Homecook OMO-lite Stage Dispatch",
     "",
@@ -135,6 +139,10 @@ function buildPrompt({ slice, stage, workItemId, dispatch }) {
     "- Follow AGENTS.md and official docs before implementation.",
     "- Do not invent undocumented API fields, status values, or endpoints.",
     "- Keep branch, verification, and review behavior aligned with slice workflow and workflow-v2 rules.",
+    "",
+    "## Stage Result Output",
+    `- Write a JSON file to \`${stageResultPath}\` before finishing the task.`,
+    "- The JSON must follow the stage result contract locked in workflow-v2 docs.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -179,15 +187,16 @@ function createProcessFailure(message, details) {
 }
 
 function runOpencode({
-  rootDir,
+  executionDir,
   artifactDir,
   prompt,
   agent,
   sessionId,
   opencodeBin,
   environment,
+  stageResultPath,
 }) {
-  const commandArgs = ["run", "--dir", rootDir, "--format", "json"];
+  const commandArgs = ["run", "--dir", executionDir, "--format", "json"];
 
   if (sessionId) {
     commandArgs.push("--session", sessionId);
@@ -198,10 +207,12 @@ function runOpencode({
   commandArgs.push(prompt);
 
   const result = spawnSync(opencodeBin, commandArgs, {
-    cwd: rootDir,
+    cwd: executionDir,
     env: {
       ...process.env,
       ...(environment ?? {}),
+      OMO_STAGE_RESULT_PATH: stageResultPath,
+      OMO_STAGE_ARTIFACT_DIR: artifactDir,
     },
     encoding: "utf8",
   });
@@ -322,6 +333,7 @@ function resolveStatusPatch({ dispatch, execution }) {
  * @property {"available"|"constrained"|"unavailable"} [claudeBudgetState]
  * @property {"artifact-only"|"execute"} [mode]
  * @property {string} [artifactDir]
+ * @property {string} [executionDir]
  * @property {string} [opencodeBin]
  * @property {string} [agent]
  * @property {Record<string, string>} [environment]
@@ -343,6 +355,7 @@ export function runStageWithArtifacts({
   claudeBudgetState,
   mode = "artifact-only",
   artifactDir,
+  executionDir,
   opencodeBin,
   agent,
   environment,
@@ -363,6 +376,11 @@ export function runStageWithArtifacts({
   const targetArtifactDir =
     artifactDir ??
     defaultArtifactDir(rootDir, normalizedSlice, normalizedStage, now);
+  const resolvedExecutionDir =
+    typeof executionDir === "string" && executionDir.trim().length > 0
+      ? executionDir.trim()
+      : rootDir;
+  const stageResultPath = resolveStageResultPath(targetArtifactDir);
   const runtimeSnapshot = workItemId
     ? readRuntimeState({
         rootDir,
@@ -395,6 +413,7 @@ export function runStageWithArtifacts({
     stage: dispatch.stage,
     workItemId,
     dispatch,
+    stageResultPath,
   });
   const resolvedOpencodeBin = opencodeBin ?? resolveDefaultOpencodeBin(environment);
 
@@ -420,6 +439,8 @@ export function runStageWithArtifacts({
       agent: executionBinding.agent,
       reason: executionBinding.reason,
     },
+    executionDir: resolvedExecutionDir,
+    stageResultPath,
   };
 
   let result;
@@ -476,13 +497,14 @@ export function runStageWithArtifacts({
         dispatch,
         prompt,
         execution: runOpencode({
-          rootDir,
+          executionDir: resolvedExecutionDir,
           artifactDir: targetArtifactDir,
           prompt,
           agent: executionBinding.agent,
           sessionId: existingSessionId,
           opencodeBin: resolvedOpencodeBin,
           environment,
+          stageResultPath,
         }),
       };
     } catch (error) {
@@ -617,12 +639,17 @@ export function runStageWithArtifacts({
             verification_status: statusSync.statusItem.verification_status,
           }
         : null,
+      stageResultPath,
+      stageResult: readStageResult(targetArtifactDir),
     },
   });
+
+  const stageResult = readStageResult(targetArtifactDir);
 
   return {
     ...result,
     runtimeSync,
     statusSync,
+    stageResult,
   };
 }

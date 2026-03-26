@@ -49,6 +49,7 @@ test-results/
 
 # local agent artifacts
 .artifacts/
+.worktrees/
 .opencode/claude-budget-state.json
 .opencode/omo-runtime/
 

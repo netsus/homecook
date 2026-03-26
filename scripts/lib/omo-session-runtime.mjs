@@ -102,6 +102,147 @@ function normalizeLock(lock) {
   };
 }
 
+function normalizeWorkspace(workspace) {
+  if (!workspace || typeof workspace !== "object") {
+    return {
+      path: null,
+      branch_role: null,
+      updated_at: null,
+    };
+  }
+
+  return {
+    path:
+      typeof workspace.path === "string" && workspace.path.trim().length > 0
+        ? workspace.path.trim()
+        : null,
+    branch_role:
+      typeof workspace.branch_role === "string" && workspace.branch_role.trim().length > 0
+        ? workspace.branch_role.trim()
+        : null,
+    updated_at:
+      typeof workspace.updated_at === "string" && workspace.updated_at.trim().length > 0
+        ? workspace.updated_at.trim()
+        : null,
+  };
+}
+
+function normalizePullRequestEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  return {
+    number: Number.isInteger(entry.number) ? entry.number : null,
+    url:
+      typeof entry.url === "string" && entry.url.trim().length > 0
+        ? entry.url.trim()
+        : null,
+    draft: typeof entry.draft === "boolean" ? entry.draft : null,
+    branch:
+      typeof entry.branch === "string" && entry.branch.trim().length > 0
+        ? entry.branch.trim()
+        : null,
+    head_sha:
+      typeof entry.head_sha === "string" && entry.head_sha.trim().length > 0
+        ? entry.head_sha.trim()
+        : null,
+    updated_at:
+      typeof entry.updated_at === "string" && entry.updated_at.trim().length > 0
+        ? entry.updated_at.trim()
+        : null,
+  };
+}
+
+function normalizePullRequests(prs) {
+  if (!prs || typeof prs !== "object") {
+    return {
+      docs: null,
+      backend: null,
+      frontend: null,
+    };
+  }
+
+  return {
+    docs: normalizePullRequestEntry(prs.docs),
+    backend: normalizePullRequestEntry(prs.backend),
+    frontend: normalizePullRequestEntry(prs.frontend),
+  };
+}
+
+function normalizeWait(wait) {
+  if (!wait || typeof wait !== "object") {
+    return null;
+  }
+
+  const kind =
+    typeof wait.kind === "string" && wait.kind.trim().length > 0 ? wait.kind.trim() : null;
+  if (!kind) {
+    return null;
+  }
+
+  return {
+    kind,
+    pr_role:
+      typeof wait.pr_role === "string" && wait.pr_role.trim().length > 0
+        ? wait.pr_role.trim()
+        : null,
+    stage: Number.isInteger(wait.stage) ? wait.stage : null,
+    head_sha:
+      typeof wait.head_sha === "string" && wait.head_sha.trim().length > 0
+        ? wait.head_sha.trim()
+        : null,
+    reason:
+      typeof wait.reason === "string" && wait.reason.trim().length > 0
+        ? wait.reason.trim()
+        : null,
+    until:
+      typeof wait.until === "string" && wait.until.trim().length > 0
+        ? wait.until.trim()
+        : null,
+    updated_at:
+      typeof wait.updated_at === "string" && wait.updated_at.trim().length > 0
+        ? wait.updated_at.trim()
+        : null,
+  };
+}
+
+function normalizeReviewEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  return {
+    decision:
+      typeof entry.decision === "string" && entry.decision.trim().length > 0
+        ? entry.decision.trim()
+        : null,
+    route_back_stage: Number.isInteger(entry.route_back_stage) ? entry.route_back_stage : null,
+    approved_head_sha:
+      typeof entry.approved_head_sha === "string" && entry.approved_head_sha.trim().length > 0
+        ? entry.approved_head_sha.trim()
+        : null,
+    updated_at:
+      typeof entry.updated_at === "string" && entry.updated_at.trim().length > 0
+        ? entry.updated_at.trim()
+        : null,
+  };
+}
+
+function normalizeLastReview(lastReview) {
+  if (!lastReview || typeof lastReview !== "object") {
+    return {
+      backend: null,
+      frontend: null,
+    };
+  }
+
+  return {
+    backend: normalizeReviewEntry(lastReview.backend),
+    frontend: normalizeReviewEntry(lastReview.frontend),
+  };
+}
+
 function baseRuntimeState({ rootDir, workItemId, slice }) {
   return {
     version: 1,
@@ -118,6 +259,10 @@ function baseRuntimeState({ rootDir, workItemId, slice }) {
     retry: null,
     last_artifact_dir: null,
     lock: null,
+    workspace: normalizeWorkspace(null),
+    prs: normalizePullRequests(null),
+    wait: null,
+    last_review: normalizeLastReview(null),
   };
 }
 
@@ -165,6 +310,10 @@ function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
         ? runtime.last_artifact_dir.trim()
         : null,
     lock: normalizeLock(runtime.lock),
+    workspace: normalizeWorkspace(runtime.workspace),
+    prs: normalizePullRequests(runtime.prs),
+    wait: normalizeWait(runtime.wait),
+    last_review: normalizeLastReview(runtime.last_review),
   };
 }
 
@@ -326,6 +475,122 @@ export function markSessionUnavailable({
       max_attempts: ensureInteger(maxAttempts, "maxAttempts"),
     },
     last_artifact_dir: artifactDir ?? state.last_artifact_dir,
+  };
+}
+
+export function setWorkspaceBinding({
+  state,
+  path,
+  branchRole,
+  updatedAt,
+}) {
+  return {
+    ...state,
+    workspace: {
+      path: typeof path === "string" && path.trim().length > 0 ? path.trim() : null,
+      branch_role:
+        typeof branchRole === "string" && branchRole.trim().length > 0
+          ? branchRole.trim()
+          : null,
+      updated_at: toIsoString(updatedAt),
+    },
+  };
+}
+
+export function setPullRequestRef({
+  state,
+  role,
+  number,
+  url,
+  draft,
+  branch,
+  headSha,
+  updatedAt,
+}) {
+  const normalizedRole = ensureNonEmptyString(role, "role");
+
+  return {
+    ...state,
+    prs: {
+      ...state.prs,
+      [normalizedRole]: {
+        number: Number.isInteger(number) ? number : null,
+        url: typeof url === "string" && url.trim().length > 0 ? url.trim() : null,
+        draft: typeof draft === "boolean" ? draft : null,
+        branch:
+          typeof branch === "string" && branch.trim().length > 0 ? branch.trim() : null,
+        head_sha:
+          typeof headSha === "string" && headSha.trim().length > 0 ? headSha.trim() : null,
+        updated_at: toIsoString(updatedAt),
+      },
+    },
+  };
+}
+
+export function setWaitState({
+  state,
+  kind,
+  prRole,
+  stage,
+  headSha,
+  reason,
+  until,
+  updatedAt,
+}) {
+  if (!kind) {
+    return {
+      ...state,
+      wait: null,
+    };
+  }
+
+  return {
+    ...state,
+    wait: {
+      kind: ensureNonEmptyString(kind, "kind"),
+      pr_role:
+        typeof prRole === "string" && prRole.trim().length > 0 ? prRole.trim() : null,
+      stage: Number.isInteger(Number(stage)) ? Number(stage) : null,
+      head_sha:
+        typeof headSha === "string" && headSha.trim().length > 0 ? headSha.trim() : null,
+      reason:
+        typeof reason === "string" && reason.trim().length > 0 ? reason.trim() : null,
+      until:
+        typeof until === "string" && until.trim().length > 0 ? until.trim() : null,
+      updated_at: toIsoString(updatedAt),
+    },
+  };
+}
+
+export function setLastReview({
+  state,
+  role,
+  decision,
+  routeBackStage,
+  approvedHeadSha,
+  updatedAt,
+}) {
+  const normalizedRole = ensureNonEmptyString(role, "role");
+
+  return {
+    ...state,
+    last_review: {
+      ...state.last_review,
+      [normalizedRole]: {
+        decision:
+          typeof decision === "string" && decision.trim().length > 0
+            ? decision.trim()
+            : null,
+        route_back_stage: Number.isInteger(Number(routeBackStage))
+          ? Number(routeBackStage)
+          : null,
+        approved_head_sha:
+          typeof approvedHeadSha === "string" && approvedHeadSha.trim().length > 0
+            ? approvedHeadSha.trim()
+            : null,
+        updated_at: toIsoString(updatedAt),
+      },
+    },
   };
 }
 

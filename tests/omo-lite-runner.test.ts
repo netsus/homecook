@@ -347,6 +347,69 @@ describe("OMO-lite stage runner", () => {
     });
   });
 
+  it("loads a structured stage result artifact when opencode writes one", () => {
+    const rootDir = createRunnerFixture();
+    const stageResultPath = join(rootDir, "fake-stage-result.json");
+    const { binPath } = createFakeOpencodeBin(rootDir, {
+      sessionId: "ses_stage_result",
+      stdout: [
+        `{"type":"step_start","sessionID":"ses_stage_result","part":{"type":"step-start"}}`,
+        `{"type":"text","sessionID":"ses_stage_result","part":{"type":"text","text":"OK"}}`,
+        `{"type":"step_finish","sessionID":"ses_stage_result","part":{"type":"step-finish","reason":"stop"}}`,
+      ],
+    });
+
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "printf '%s\\n' \"$@\" > \"$FAKE_OPENCODE_ARGS_PATH\"",
+        "cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
+        JSON.stringify(
+          {
+            result: "done",
+            summary_markdown: "Stage 2 complete",
+            pr: {
+              title: "feat: backend slice",
+              body_markdown: "## Summary\\n- backend",
+            },
+            checks_run: ["pnpm test:all"],
+            next_route: "wait_for_ci",
+          },
+          null,
+          2,
+        ),
+        "EOF",
+        "printf '%s\\n' '{\"type\":\"step_start\",\"sessionID\":\"ses_stage_result\",\"part\":{\"type\":\"step-start\"}}'",
+        "printf '%s\\n' '{\"type\":\"step_finish\",\"sessionID\":\"ses_stage_result\",\"part\":{\"type\":\"step-finish\",\"reason\":\"stop\"}}'",
+        "exit 0",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "03-recipe-like",
+      stage: 2,
+      workItemId: "03-recipe-like",
+      mode: "execute",
+      opencodeBin: binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: stageResultPath,
+      },
+      now: "2026-03-27T00:10:00+09:00",
+    });
+
+    expect(result.stageResult).toMatchObject({
+      result: "done",
+      summary_markdown: "Stage 2 complete",
+      next_route: "wait_for_ci",
+    });
+    expect(result.stageResult?.pr).toMatchObject({
+      title: "feat: backend slice",
+    });
+  });
+
   it("writes logs and throws when opencode execution exits non-zero", () => {
     const rootDir = createRunnerFixture();
     const artifactDir = join(rootDir, ".artifacts", "failed-run");

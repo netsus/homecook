@@ -107,6 +107,7 @@ function determineNextStage(runtimeState, now) {
  * @property {string} [slice]
  * @property {string} [owner]
  * @property {string} [now]
+ * @property {string} [executionDir]
  * @property {"available"|"constrained"|"unavailable"} [claudeBudgetState]
  * @property {"artifact-only"|"execute"} [mode]
  * @property {string} [opencodeBin]
@@ -124,7 +125,7 @@ function determineNextStage(runtimeState, now) {
  */
 
 /**
- * @param {OmoWorkItemSessionOptions & { action: "start"|"continue" }} options
+ * @param {OmoWorkItemSessionOptions & { action: "start"|"continue", stage?: number }} options
  */
 function orchestrateStage({
   action,
@@ -133,6 +134,7 @@ function orchestrateStage({
   slice = undefined,
   owner,
   now,
+  stage = undefined,
   ...options
 }) {
   const normalizedWorkItemId = ensureNonEmptyString(workItemId, "workItemId");
@@ -166,11 +168,16 @@ function orchestrateStage({
         );
       }
 
-      const stage = action === "start" ? 1 : determineNextStage(runtimeSnapshot.state, now);
+      const resolvedStage =
+        Number.isInteger(Number(stage)) && Number(stage) >= 1
+          ? Number(stage)
+          : action === "start"
+            ? 1
+            : determineNextStage(runtimeSnapshot.state, now);
       const runResult = runStageWithArtifacts({
         rootDir,
         slice: resolvedSlice,
-        stage,
+        stage: resolvedStage,
         workItemId: normalizedWorkItemId,
         syncStatus: true,
         now,
@@ -181,7 +188,7 @@ function orchestrateStage({
         action,
         workItemId: normalizedWorkItemId,
         slice: resolvedSlice,
-        stage,
+        stage: resolvedStage,
         ...runResult,
       };
     },
@@ -205,6 +212,17 @@ export function continueWorkItemSession(options) {
   return orchestrateStage({
     ...options,
     action: "continue",
+  });
+}
+
+/**
+ * @param {OmoWorkItemSessionOptions & { stage: number|string }} options
+ */
+export function runWorkItemStage(options) {
+  return orchestrateStage({
+    ...options,
+    action: "continue",
+    stage: Number(options.stage),
   });
 }
 
