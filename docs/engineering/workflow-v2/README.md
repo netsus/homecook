@@ -31,9 +31,10 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 2. [core.md](./core.md)
 3. [presets.md](./presets.md)
 4. [approval-and-loops.md](./approval-and-loops.md)
-5. [TEMPLATE.md](./profiles/TEMPLATE.md)
-6. [homecook.md](./profiles/homecook.md)
-7. [migration.md](./migration.md)
+5. [omo-lite-architecture.md](./omo-lite-architecture.md)
+6. [TEMPLATE.md](./profiles/TEMPLATE.md)
+7. [homecook.md](./profiles/homecook.md)
+8. [migration.md](./migration.md)
 
 ## Directory Map
 
@@ -42,6 +43,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [core.md](./core.md): 공통 개념, 책임, lifecycle
 - [presets.md](./presets.md): 작업 유형별 기본 경로
 - [approval-and-loops.md](./approval-and-loops.md): plan/review loop와 dual-approval 규칙
+- [omo-lite-architecture.md](./omo-lite-architecture.md): Codex supervisor 기반 Homecook OMO-lite 설계안
 - [profiles/TEMPLATE.md](./profiles/TEMPLATE.md): 다른 프로젝트용 profile template
 - [profiles/homecook.md](./profiles/homecook.md): 현재 저장소에 적용되는 profile
 - [schemas/work-item.schema.json](./schemas/work-item.schema.json): work item 메타데이터 스키마
@@ -72,7 +74,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 3. 작업 브랜치와 preset, required checks를 status에 기록한다.
 4. PR 본문의 `## Workpack / Slice`에 `workflow v2 work item` 경로를 적는다.
 5. `pnpm validate:workflow-v2`를 통과시킨다.
-6. medium/high risk 작업이면 plan loop와 review loop summary artifact를 함께 남긴다.
+6. medium/high risk 작업이면 plan loop summary artifact를 남긴다.
+7. review loop summary artifact는 docs-governance, workflow/tooling 변경, 또는 exceptional recovery일 때만 남긴다.
 
 ## Not Yet Included
 

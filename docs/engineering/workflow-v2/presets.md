@@ -9,8 +9,8 @@ preset은 작업마다 같은 절차를 강제하지 않기 위한 기본 경로
 
 | Preset | Use For | Plan Loop | Review Loop | External Smoke | Branch/PR Path | Typical Lead |
 |--------|---------|-----------|-------------|----------------|----------------|--------------|
-| `vertical-slice-strict` | 새 vertical slice, contract-heavy product work | required | required | conditional-required | backend/fe split + Draft PR | Codex implementation, Claude supervision |
-| `vertical-slice-light` | 작은 fullstack product change, contract stable | recommended | required | conditional | single feature/fix branch + Draft PR | Codex |
+| `vertical-slice-strict` | 새 vertical slice, contract-heavy product work | required | not-in-default-path | conditional-required | backend/fe split + Draft PR | Codex implementation, Claude supervision |
+| `vertical-slice-light` | 작은 fullstack product change, contract stable | recommended | not-in-default-path | conditional | single feature/fix branch + Draft PR | Codex |
 | `bugfix-patch` | post-merge bugfix, regression fix | optional | recommended | conditional | `fix/<item>` short PR | Codex |
 | `ui-polish` | spacing, copy, token swap, low-risk UX polish | optional | conditional | skipped by default | `fix/` or `feature/` short PR | Codex |
 | `infra-governance` | workflow, docs/engineering, CI policy, repo automation | required | required | skipped unless external service touched | `docs/`, `chore/`, or `refactor/` PR | Codex |
@@ -22,7 +22,8 @@ preset은 작업마다 같은 절차를 강제하지 않기 위한 기본 경로
 
 - 현재 v1 slice workflow와 가장 가깝다.
 - workpack 문서와 acceptance가 있어야 한다.
-- plan loop와 review loop를 모두 실행한다.
+- plan loop를 실행한다.
+- review loop는 기본 Stage 경로에 넣지 않는다. 정식 리뷰는 Stage 3, 5, 6이 담당한다.
 - backend/fe 분리를 기본값으로 둔다.
 - external integration이 있으면 smoke checklist를 필수로 붙인다.
 
@@ -32,6 +33,7 @@ preset은 작업마다 같은 절차를 강제하지 않기 위한 기본 경로
 - work item은 필요하지만 full stage split은 강제하지 않는다.
 - branch는 하나로 갈 수 있다.
 - Claude 리뷰는 유지하되 design/code review를 합칠 수 있다.
+- review loop는 정식 리뷰가 없는 exceptional recovery에서만 사용한다.
 
 ### `bugfix-patch`
 
