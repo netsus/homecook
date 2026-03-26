@@ -1,0 +1,61 @@
+{
+  "id": "omo-lite-bootstrap",
+  "title": "Bootstrap repo-local OpenCode and OMO-lite supervisor foundation",
+  "summary": "Install OpenCode and Oh My OpenCode locally, add repo-local config, and lock the Homecook OMO-lite supervisor contract.",
+  "project_profile": "homecook",
+  "change_type": "infra-governance",
+  "surface": "workflow",
+  "risk": "medium",
+  "preset": "infra-governance",
+  "goal": "Make Homecook ready for Codex-supervisor-based OMO-lite rollout by bootstrapping the runtime, repo config, and supervisor spec.",
+  "owners": {
+    "claude": "sparse-review-and-approval",
+    "codex": "installation-config-and-spec",
+    "workers": ["testing", "ci-governance"]
+  },
+  "dependencies": ["workflow-v2-foundation", "agent-plan-loop"],
+  "docs_refs": {
+    "source_of_truth": [
+      "AGENTS.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/slice-workflow.md"
+    ],
+    "governing_docs": [
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/omo-lite-architecture.md",
+      "docs/engineering/workflow-v2/omo-lite-supervisor-spec.md",
+      "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
+      "opencode.json",
+      ".opencode/oh-my-opencode.json"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "recommended",
+    "review_loop": "optional",
+    "external_smokes": ["opencode-install", "provider-auth"]
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts"
+    ],
+    "verify_commands": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts"
+    ]
+  },
+  "status": {
+    "lifecycle": "ready_for_review",
+    "approval_state": "codex_approved",
+    "verification_status": "passed"
+  },
+  "out_of_scope": [
+    "fully automated stage dispatcher script",
+    "checked-in provider auth tokens",
+    "product slice runtime migration"
+  ],
+  "open_questions": [
+    "When should Homecook re-enable ralph-loop after a repo-local stage dispatcher exists?",
+    "What is the cleanest path to re-enable comment-checker once the published binary link issue is resolved?"
+  ]
+}

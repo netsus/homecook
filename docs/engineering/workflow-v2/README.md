@@ -32,9 +32,11 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 3. [presets.md](./presets.md)
 4. [approval-and-loops.md](./approval-and-loops.md)
 5. [omo-lite-architecture.md](./omo-lite-architecture.md)
-6. [TEMPLATE.md](./profiles/TEMPLATE.md)
-7. [homecook.md](./profiles/homecook.md)
-8. [migration.md](./migration.md)
+6. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
+7. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
+8. [TEMPLATE.md](./profiles/TEMPLATE.md)
+9. [homecook.md](./profiles/homecook.md)
+10. [migration.md](./migration.md)
 
 ## Directory Map
 
@@ -44,6 +46,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [presets.md](./presets.md): 작업 유형별 기본 경로
 - [approval-and-loops.md](./approval-and-loops.md): plan/review loop와 dual-approval 규칙
 - [omo-lite-architecture.md](./omo-lite-architecture.md): Codex supervisor 기반 Homecook OMO-lite 설계안
+- [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md): supervisor 책임, 상태, stage state machine
+- [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md): stage별 actor dispatch 입출력 계약
 - [profiles/TEMPLATE.md](./profiles/TEMPLATE.md): 다른 프로젝트용 profile template
 - [profiles/homecook.md](./profiles/homecook.md): 현재 저장소에 적용되는 profile
 - [schemas/work-item.schema.json](./schemas/work-item.schema.json): work item 메타데이터 스키마
@@ -51,6 +55,9 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [templates/work-item.example.json](./templates/work-item.example.json): 예시 work item
 - [templates/workflow-status.example.json](./templates/workflow-status.example.json): 예시 상태 보드
 - [migration.md](./migration.md): v1 -> v2 점진 전환 경로
+- [opencode.json](../../../opencode.json): repo-local OpenCode instructions + OMO plugin bootstrap
+- [.opencode/README.md](../../../.opencode/README.md): repo-local OMO 운영 메모
+- [.opencode/oh-my-opencode.json](../../../.opencode/oh-my-opencode.json): Homecook용 OMO override
 
 ## Adoption Rules
 
@@ -63,6 +70,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 ## Immediate Scope
 
 - v2 charter/core/profile/preset/loop 문서화
+- OMO-lite architecture / supervisor / dispatch spec 고정
+- repo-local OpenCode / OMO config bootstrap
 - JSON schema와 예시 파일 추가
 - `validate:workflow-v2` 최소 validator 추가
 - 현재 entry-point 문서에서 v2 pilot 경로를 발견 가능하게 연결
@@ -83,3 +92,4 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - README 자동 생성
 - v1 slice status 표의 자동 동기화
 - preset 기반 branch/PR gate의 강제 실행
+- OMO-lite stage dispatcher executable
