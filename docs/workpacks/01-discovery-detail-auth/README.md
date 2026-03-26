@@ -53,7 +53,7 @@
 ## Out of Scope
 
 - 재료 필터 팝업 (`INGREDIENT_FILTER_MODAL`) — Slice 02
-- 좋아요/저장/플래너 추가 실제 쓰기 완료 — Slice 03/04/05
+- 좋아요/저장/플래너 추가 실제 쓰기 완료 — Slice 03/04/06
 - 플래너/장보기/요리/팬트리 기능
 - 인분 조절 후 재료량 즉시 변경 계산 — RECIPE_DETAIL에는 UI 있으나 이 슬라이스에서 테스트 범위 아님
 - `GET /ingredients` (재료 필터용) — Out of Scope (Slice 02)
