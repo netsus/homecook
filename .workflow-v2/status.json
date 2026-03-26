@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-03-26T19:20:00+09:00",
+  "updated_at": "2026-03-26T19:48:00+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -34,8 +34,8 @@
     {
       "id": "omo-lite-phase4-supervisor",
       "preset": "infra-governance",
-      "lifecycle": "ready_for_review",
-      "approval_state": "codex_approved",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm validate:workflow-v2",
@@ -44,7 +44,22 @@
       ],
       "branch": "feature/omo-lite-phase4-supervisor",
       "pr_path": "https://github.com/netsus/homecook/pull/26",
-      "notes": "Phase 4 helper implementation is complete locally and PR #26 is ready for governance review while CI runs."
+      "notes": "Phase 4 stage dispatcher and status sync helper merged on 2026-03-26 after governance review."
+    },
+    {
+      "id": "omo-lite-phase5-runner",
+      "preset": "infra-governance",
+      "lifecycle": "ready_for_review",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm validate:workflow-v2",
+        "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts tests/omo-lite-supervisor.test.ts tests/omo-lite-runner.test.ts",
+        "pnpm exec eslint scripts/omo-lite-run-stage.mjs scripts/lib/omo-lite-runner.mjs scripts/omo-lite-sync-status.mjs tests/omo-lite-runner.test.ts tests/omo-lite-supervisor.test.ts"
+      ],
+      "branch": "feature/omo-lite-phase5-runner",
+      "pr_path": "https://github.com/netsus/homecook/pull/27",
+      "notes": "Phase 5 direct execution binding is implemented locally and PR #27 is ready for governance review while CI runs."
     }
   ]
 }

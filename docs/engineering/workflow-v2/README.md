@@ -67,6 +67,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - machine-readable 파일이 들어와도 README 표를 즉시 제거하지 않는다.
 - v2 승격 전까지는 product slice merge gate를 v1 기준으로 계속 유지한다.
 - Phase 4부터는 최소 executable helper(`pnpm omo:dispatch-stage`, `pnpm omo:sync-status`)를 함께 관리한다.
+- Phase 5부터는 `pnpm omo:run-stage`로 Codex stage를 repo-local OpenCode/OMO 실행과 artifact bundle에 직접 연결한다.
 
 ## Immediate Scope
 
@@ -74,6 +75,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - OMO-lite architecture / supervisor / dispatch spec 고정
 - repo-local OpenCode / OMO config bootstrap
 - minimal `omo:dispatch-stage` / `omo:sync-status` helper 도입
+- direct `omo:run-stage` execution binding + `.artifacts/omo-lite-dispatch/` artifact bundle
 - JSON schema와 예시 파일 추가
 - `validate:workflow-v2` 최소 validator 추가
 - 현재 entry-point 문서에서 v2 pilot 경로를 발견 가능하게 연결
@@ -87,6 +89,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 5. `pnpm validate:workflow-v2`를 통과시킨다.
 6. medium/high risk 작업이면 plan loop summary artifact를 남긴다.
 7. review loop summary artifact는 docs-governance, workflow/tooling 변경, 또는 exceptional recovery일 때만 남긴다.
+8. OMO-lite supervised execution이 필요하면 `pnpm omo:run-stage -- --slice <id> --stage <n>`으로 dispatch artifact를 만들고, Codex stage에 한해 `--mode execute`를 사용한다.
 
 ## Not Yet Included
 
@@ -94,4 +97,5 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - README 자동 생성
 - v1 slice status 표의 자동 동기화
 - preset 기반 branch/PR gate의 강제 실행
-- OMO-lite의 direct agent execution and merge automation
+- OMO-lite의 reviewer stage direct execution
+- merge automation

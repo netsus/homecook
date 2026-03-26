@@ -336,14 +336,12 @@ auth / OAuth / deployment 같은 외부 의존 작업은 test green만으로 닫
 - `.workflow-v2` 상태 추적
 - Claude sparse review model
 - Codex provisional fallback review
+- Codex stage direct execution binding + `.artifacts/omo-lite-dispatch/*` artifact bundle
 
 ### 아직 추가로 만들어야 할 것
 
-- stage dispatcher script
-- status sync helper
-- prompt template library
 - supervisor summary artifact
-- `awaiting_claude_or_human` 같은 fallback state vocabulary 확장
+- reviewer-stage handoff automation
 - external smoke artifact schema
 
 ## Recommended Rollout
@@ -380,6 +378,14 @@ Claude budget-aware mode 추가:
 - human escalation path
 
 ### Phase 4
+
+direct execution binding:
+
+- Codex stage runner
+- dispatch artifact bundle
+- repo-local OpenCode/OMO execution path
+
+### Phase 5
 
 external smoke gate 정식화:
 

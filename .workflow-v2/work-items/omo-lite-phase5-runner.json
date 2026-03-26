@@ -1,0 +1,71 @@
+{
+  "id": "omo-lite-phase5-runner",
+  "title": "Bind OMO-lite stage dispatch to repo-local OpenCode execution and artifacts",
+  "summary": "Add a runner that turns stage dispatch payloads into reusable artifact bundles and can execute Codex stages through repo-local OpenCode/OMO configuration.",
+  "project_profile": "homecook",
+  "change_type": "infra-governance",
+  "surface": "workflow",
+  "risk": "medium",
+  "preset": "infra-governance",
+  "goal": "Move Homecook OMO-lite from helper-only supervision into a direct Codex stage execution path with persisted dispatch artifacts.",
+  "owners": {
+    "claude": "sparse-review-and-approval",
+    "codex": "implementation-and-integration",
+    "workers": [
+      "testing",
+      "ci-governance"
+    ]
+  },
+  "dependencies": [
+    "omo-lite-bootstrap",
+    "workflow-v2-foundation",
+    "omo-lite-phase4-supervisor"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "AGENTS.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/slice-workflow.md"
+    ],
+    "governing_docs": [
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/omo-lite-architecture.md",
+      "docs/engineering/workflow-v2/omo-lite-supervisor-spec.md",
+      "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
+      "scripts/omo-lite-dispatch-stage.mjs",
+      "scripts/omo-lite-sync-status.mjs",
+      "scripts/omo-lite-run-stage.mjs"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "recommended",
+    "review_loop": "required",
+    "external_smokes": []
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts tests/omo-lite-supervisor.test.ts tests/omo-lite-runner.test.ts",
+      "pnpm exec eslint scripts/omo-lite-run-stage.mjs scripts/lib/omo-lite-runner.mjs scripts/omo-lite-sync-status.mjs tests/omo-lite-runner.test.ts tests/omo-lite-supervisor.test.ts"
+    ],
+    "verify_commands": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts tests/omo-lite-supervisor.test.ts tests/omo-lite-runner.test.ts",
+      "pnpm exec eslint scripts/omo-lite-run-stage.mjs scripts/lib/omo-lite-runner.mjs scripts/omo-lite-sync-status.mjs tests/omo-lite-runner.test.ts tests/omo-lite-supervisor.test.ts"
+    ]
+  },
+  "status": {
+    "lifecycle": "ready_for_review",
+    "approval_state": "codex_approved",
+    "verification_status": "passed"
+  },
+  "out_of_scope": [
+    "automatic GitHub PR creation or merge actions",
+    "reviewer-stage direct execution",
+    "external smoke automation"
+  ],
+  "open_questions": [
+    "Should future stages persist a human/Claude handoff artifact with a stricter schema than prompt.md",
+    "When should stage execution auto-sync artifact paths back into workflow-v2 notes"
+  ]
+}
