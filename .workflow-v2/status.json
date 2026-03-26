@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-03-27T00:57:05+09:00",
+  "updated_at": "2026-03-27T01:36:40+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -87,9 +87,21 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "branch": "feature/fe-03-recipe-like",
       "pr_path": "https://github.com/netsus/homecook/pull/35",
       "notes": "Merged via PR #35 on 2026-03-27. Stage 6 approved. 5 UI states, state transition tests (Vitest), login gate return-to-action verified. Design Status confirmed. Slice-03 Playwright E2E spec now covers logged-in like/unlike, pending disabled state, and simulated login return-to-action. Live OAuth smoke remains manual-only by design."
+    },
+    {
+      "id": "04-recipe-save",
+      "preset": "vertical-slice-strict",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm install --frozen-lockfile && pnpm test:all",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "OMO supervisor pilot target. Scope includes recipe-book lookup, custom book creation, and save flow with saved/custom restriction."
     },
     {
       "id": "omo-session-orchestrator-spec",
