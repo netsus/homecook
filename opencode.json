@@ -9,6 +9,7 @@
     "docs/engineering/agent-plan-loop.md",
     "docs/engineering/agent-review-loop.md",
     "docs/engineering/workflow-v2/README.md",
+    "docs/engineering/workflow-v2/omo-session-orchestrator.md",
     "docs/engineering/workflow-v2/omo-lite-architecture.md",
     "docs/engineering/workflow-v2/omo-lite-supervisor-spec.md",
     "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",

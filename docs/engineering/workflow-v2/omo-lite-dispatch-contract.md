@@ -33,6 +33,11 @@ dispatch contract가 고정되면:
 - `verification_status`
 - `approval_state`
 - `claude_budget_state`: `available | constrained | unavailable`
+- `session_role`: `claude_primary | codex_primary`
+- `session_id` 또는 `missing`
+- `resume_mode`: `fresh | continue | scheduled_retry`
+- `retry_at`
+- `attempt_count`
 - `open_questions`
 - `external_smoke_needed`
 
@@ -53,6 +58,9 @@ dispatch 결과는 아래를 포함한다.
 - `deliverables[]`
 - `verify_commands[]`
 - `status_patch`
+- `runtime_patch`
+- `session_binding`
+- `retry_decision`
 - `success_condition`
 - `escalation_if_blocked`
 - `artifact_dir` (stage run 시)
@@ -67,6 +75,24 @@ dispatch 결과는 아래를 포함한다.
 | 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, design refs | tests, FE impl, Draft PR |
 | 5 | Claude | design review | FE PR diff, design tokens, workpack UI scope | design findings or approve |
 | 6 | Claude | frontend PR review | FE PR diff, CI, acceptance | review summary, requested changes or approve |
+
+## Session Binding Contract
+
+session binding은 dispatch 전에 계산한다.
+
+기본 매핑:
+
+- Stage `1 / 3 / 5 / 6` -> `claude_primary`
+- Stage `2 / 4` -> `codex_primary`
+
+규칙:
+
+1. `session_id`가 없으면 해당 역할의 첫 실행으로 간주한다.
+2. `resume_mode = fresh`이면 새 세션을 만들고 저장한다.
+3. `resume_mode = continue`이면 저장된 session ID로 이어간다.
+4. `resume_mode = scheduled_retry`이면 같은 stage를 같은 session ID로 다시 시도한다.
+5. 저장된 session ID가 유효하지 않으면 `actor=human`으로 즉시 바꾸지 않고, 먼저 `human_escalation` 상태와 함께 blocker를 남긴다.
+6. silent session recreation은 금지한다.
 
 ## Stage Prompt Skeletons
 
@@ -170,10 +196,12 @@ product slice 기본 경로에서는 review loop dispatch를 만들지 않는다
 
 Phase 5부터 Codex supervisor는 dispatch 결과를 repo-local OpenCode/OMO 실행에 연결할 수 있다.
 
-현재 규칙:
+target 규칙:
 
-- `actor == codex`인 Stage 2/4만 `pnpm omo:run-stage -- --mode execute` 대상이다.
-- Stage 1/3/5/6은 reviewer stage이므로 실행 대신 handoff artifact만 만든다.
+- `actor == codex`인 Stage 2/4는 `codex_primary` session으로 실행한다.
+- `actor == claude`인 Stage 1/3/5/6은 `claude_primary` session으로 실행한다.
+- 각 역할의 첫 실행만 새 세션 생성 대상이다.
+- 후속 stage는 반드시 저장된 session ID로 이어간다.
 - 모든 run은 `.artifacts/omo-lite-dispatch/<timestamp>-<slice>-stage-<n>/` 아래에 `dispatch.json`, `prompt.md`, `run-metadata.json`을 남긴다.
 - executable run이면 같은 경로에 `opencode.stdout.log`, `opencode.stderr.log`도 남긴다.
 - `--sync-status`를 함께 주면 dispatch의 `status_patch`와 artifact 경로가 `.workflow-v2/status.json`에 같이 반영된다.
@@ -193,10 +221,12 @@ Phase 5부터 Codex supervisor는 dispatch 결과를 repo-local OpenCode/OMO 실
 
 ### Claude Unavailable
 
-- Stage 1 / 3 / 5 / 6 자동 진행 금지
-- Codex supervisor는 provisional summary만 생성 가능
-- `approval_state = awaiting_claude_or_human`
-- next actor는 `claude` 또는 `human`
+- Claude-owned stage는 시작하지 않고 `scheduled_retry`로 전환한다.
+- `status_patch.lifecycle = blocked`
+- `status_patch.approval_state = awaiting_claude_or_human`
+- `runtime_patch.retry.at = now + 5h`가 기본값이다.
+- next actor는 계속 `claude`이며, due 시점이 되면 같은 session ID로 재개한다.
+- session loss 또는 retry exhaustion일 때만 `human` escalation을 계산한다.
 - repo-local override를 강제로 두고 싶으면 `pnpm omo:claude-budget -- --set unavailable --reason "<reason>"`를 사용한다.
 
 ## Status Patch Contract
@@ -214,7 +244,7 @@ dispatch가 끝나면 supervisor는 최소한 아래 patch를 계산한다.
 
 - Stage 2 시작: `lifecycle = in_progress`
 - verify green + PR ready: `lifecycle = ready_for_review`, `approval_state = codex_approved`
-- Claude unavailable: `approval_state = awaiting_claude_or_human`
+- Claude unavailable: `lifecycle = blocked`, `approval_state = awaiting_claude_or_human`
 - merge: `lifecycle = merged`, `approval_state = dual_approved`
 
 ## Repo-Local OMO Binding
@@ -232,5 +262,4 @@ dispatch가 끝나면 supervisor는 최소한 아래 patch를 계산한다.
 - `ralph-loop` / `ulw-loop` 비활성화
 - comment-checker 비활성화
 - Claude budget override file은 `.opencode/claude-budget-state.json`이며 Git에는 커밋하지 않는다.
-
-이 기본값은 direct agent execution까지는 아직 연결되지 않았기 때문에 보수적으로 잡아둔 것이다.
+- session runtime state는 `.opencode/omo-runtime/` 아래에 두고 Git에는 커밋하지 않는다.

@@ -8,6 +8,10 @@
 - 이 디렉터리의 역할:
   - reusable workflow v2 설계와 파일럿
   - 현재 v1을 즉시 대체하지 않는 next-generation path
+- 새로 잠그는 범위:
+  - `generic OMO session-orchestrated runner` 설계
+  - per-work-item session reuse
+  - repo-local runtime state + scheduled resume policy
 - 승격 전 규칙:
   - v2 문서는 `workflow-v2`를 명시적으로 대상으로 한 engineering 작업에서만 직접적인 source of truth다.
   - 일반 product slice 구현은 계속 v1 절차를 따른다.
@@ -32,11 +36,12 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 3. [presets.md](./presets.md)
 4. [approval-and-loops.md](./approval-and-loops.md)
 5. [omo-lite-architecture.md](./omo-lite-architecture.md)
-6. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
-7. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
-8. [TEMPLATE.md](./profiles/TEMPLATE.md)
-9. [homecook.md](./profiles/homecook.md)
-10. [migration.md](./migration.md)
+6. [omo-session-orchestrator.md](./omo-session-orchestrator.md)
+7. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
+8. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
+9. [TEMPLATE.md](./profiles/TEMPLATE.md)
+10. [homecook.md](./profiles/homecook.md)
+11. [migration.md](./migration.md)
 
 ## Directory Map
 
@@ -46,6 +51,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [presets.md](./presets.md): 작업 유형별 기본 경로
 - [approval-and-loops.md](./approval-and-loops.md): plan/review loop와 dual-approval 규칙
 - [omo-lite-architecture.md](./omo-lite-architecture.md): Codex supervisor 기반 Homecook OMO-lite 설계안
+- [omo-session-orchestrator.md](./omo-session-orchestrator.md): generic session reuse / runtime state / scheduled resume 규격
 - [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md): supervisor 책임, 상태, stage state machine
 - [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md): stage별 actor dispatch 입출력 계약
 - [profiles/TEMPLATE.md](./profiles/TEMPLATE.md): 다른 프로젝트용 profile template
@@ -69,11 +75,14 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - Phase 4부터는 최소 executable helper(`pnpm omo:dispatch-stage`, `pnpm omo:sync-status`)를 함께 관리한다.
 - Phase 5부터는 `pnpm omo:run-stage`로 Codex stage를 repo-local OpenCode/OMO 실행과 artifact bundle에 직접 연결한다.
 - Phase 7부터는 `pnpm omo:claude-budget`과 repo-local override를 통해 Claude reviewer availability를 자동 해석하고, 필요 시 `awaiting_claude_or_human` fallback을 기록한다.
+- session-orchestrated runner 규격은 구현보다 먼저 문서로 잠근다.
+- 구현이 merge되기 전까지는 기존 helper CLI가 현재 executable path다.
 
 ## Immediate Scope
 
 - v2 charter/core/profile/preset/loop 문서화
 - OMO-lite architecture / supervisor / dispatch spec 고정
+- generic session orchestrator spec 고정
 - repo-local OpenCode / OMO config bootstrap
 - minimal `omo:dispatch-stage` / `omo:sync-status` helper 도입
 - direct `omo:run-stage` execution binding + `.artifacts/omo-lite-dispatch/` artifact bundle
@@ -81,6 +90,15 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - JSON schema와 예시 파일 추가
 - `validate:workflow-v2` 최소 validator 추가
 - 현재 entry-point 문서에서 v2 pilot 경로를 발견 가능하게 연결
+
+## Next Locked Scope
+
+- 상위 supervisor CLI: `omo:start`, `omo:continue`, `omo:resume-pending`, `omo:status`
+- per-work-item Claude/Codex session registry
+- repo-local runtime state in `.opencode/omo-runtime/`
+- reviewer stage direct execution with Claude session reuse
+- scheduled sweeper 기반 pause/resume
+- `awaiting_claude_or_human` 상태의 blocked-retry 의미 확장
 
 ## Pilot Usage
 
@@ -94,6 +112,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 8. OMO-lite supervised execution이 필요하면 `pnpm omo:run-stage -- --slice <id> --stage <n>`으로 dispatch artifact를 만들고, Codex stage에 한해 `--mode execute`를 사용한다.
 9. Claude reviewer availability를 로컬에서 강제로 조정해야 하면 `pnpm omo:claude-budget -- --set unavailable --reason "<reason>"` 또는 `--clear`를 사용한다.
 10. reviewer fallback도 tracked state에 같이 남기려면 `pnpm omo:run-stage -- --slice <id> --stage <n> --sync-status`를 사용한다.
+11. session-orchestrated path는 문서로 잠겨 있지만 아직 구현 전이므로, 실제 실행은 현재 helper CLI 기준으로 유지한다.
 
 ## Not Yet Included
 
@@ -101,5 +120,6 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - README 자동 생성
 - v1 slice status 표의 자동 동기화
 - preset 기반 branch/PR gate의 강제 실행
-- OMO-lite의 reviewer stage direct execution
+- generic session orchestrator CLI implementation
+- repo-local runtime state store와 scheduled sweeper 구현
 - merge automation

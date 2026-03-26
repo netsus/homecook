@@ -6,6 +6,7 @@
 - 아직 저장소의 기본 운영 규칙을 직접 대체하지 않는다.
 - 현재 authoritative path는 계속 `AGENTS.md`, `docs/engineering/slice-workflow.md`, `docs/engineering/agent-workflow-overview.md`다.
 - 이 설계안은 full OpenCode migration이 아니라, 현재 저장소 위에 얹는 `workflow supervisor` 아키텍처를 정의한다.
+- 다음 phase에서는 `generic session-orchestrator core + Homecook adapter` 구조를 추가하며, 이 문서는 그 target architecture를 먼저 잠근다.
 
 ## Core Definition
 
@@ -71,6 +72,8 @@ OMO-lite는 이 plane의 집행자일 뿐, 규칙 생성자가 아니다.
 실제 orchestration을 담당한다.
 
 - `Codex supervisor`
+- generic session-orchestrator core
+- project adapter
 - stage state machine
 - dispatch engine
 - loop trigger engine
@@ -93,9 +96,24 @@ OMO-lite는 이 plane의 집행자일 뿐, 규칙 생성자가 아니다.
 
 - `.workflow-v2/work-items/*.json`
 - `.workflow-v2/status.json`
+- `.opencode/omo-runtime/*.json`
 - `.artifacts/agent-plan-loop/*`
 - `.artifacts/agent-review-loop/*`
 - PR / CI / verification logs
+
+## Session-Orchestrated Runtime
+
+다음 phase의 핵심 확장은 `session reuse + runtime state + scheduled resume`다.
+
+구성:
+
+- generic core가 work item별 session ID와 retry timer를 관리한다.
+- project adapter는 stage ownership과 prompt/verify semantics만 제공한다.
+- Claude primary session은 Stage `1 / 3 / 5 / 6`에서 재사용한다.
+- Codex primary session은 Stage `2 / 4`에서 재사용한다.
+- runtime state는 tracked `.workflow-v2`가 아니라 repo-local `.opencode/omo-runtime/`에 둔다.
+
+이 분리로 project-specific stage 규칙을 보존하면서도, 세션 재사용과 자동 재개는 다른 저장소에 이식 가능한 core로 만들 수 있다.
 
 ## Actor Model
 
@@ -266,12 +284,13 @@ supervisor 동작:
 
 Claude가 토큰 소진 등으로 멈추면 아래처럼 동작한다.
 
-1. Codex supervisor는 임시 reviewer subagent를 생성할 수 있다.
-2. 이 결과는 `provisional review`로만 기록한다.
-3. 최종 상태는 `dual-approved`가 아니라 `awaiting_claude_or_human`이다.
-4. Claude 복귀 또는 human approval이 있어야 final merge-ready가 된다.
+1. Claude-owned stage는 시작하지 않고 `blocked`로 기록한다.
+2. runtime state에 `retry.at = now + 5h`를 남긴다.
+3. tracked 상태는 `awaiting_claude_or_human`으로 기록한다.
+4. scheduled sweeper가 같은 stage를 같은 Claude session으로 다시 시도한다.
+5. session loss 또는 retry exhaustion일 때만 human escalation으로 전환한다.
 
-즉, Claude 대체가 아니라 `Claude 절약 + fallback buffering`이다.
+즉, 기본 정책은 `Claude 대체`가 아니라 `Claude pause + same-session resume`다.
 
 ## Worker Orchestration Rules
 
@@ -335,9 +354,16 @@ auth / OAuth / deployment 같은 외부 의존 작업은 test green만으로 닫
 - review loop는 non-slice governance / exceptional recovery에만 사용
 - `.workflow-v2` 상태 추적
 - Claude sparse review model
-- Codex provisional fallback review
 - Codex stage direct execution binding + `.artifacts/omo-lite-dispatch/*` artifact bundle
 - automatic Claude budget resolution + repo-local override file
+
+### 이번 spec으로 잠근 다음 phase
+
+- generic session-orchestrator core
+- per-work-item session registry
+- reviewer stage direct execution with Claude session reuse
+- `.opencode/omo-runtime/*.json` runtime state
+- scheduled sweeper 기반 `pause + resume`
 
 ### 아직 추가로 만들어야 할 것
 
@@ -387,6 +413,15 @@ supervisor helper 추가:
 - repo-local OpenCode/OMO execution path
 
 ### Phase 5
+
+다음:
+
+- generic session-orchestrator core
+- repo-local runtime state store
+- reviewer stage direct execution
+- scheduled sweeper
+
+### Phase 6
 
 다음:
 
