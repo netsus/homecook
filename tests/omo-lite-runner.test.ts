@@ -185,6 +185,7 @@ describe("OMO-lite stage runner", () => {
       slice: "03-recipe-like",
       stage: 1,
       workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
       mode: "execute",
       opencodeBin: stage1.binPath,
       environment: {
@@ -198,6 +199,7 @@ describe("OMO-lite stage runner", () => {
       slice: "03-recipe-like",
       stage: 3,
       workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
       mode: "execute",
       opencodeBin: stage3.binPath,
       environment: {

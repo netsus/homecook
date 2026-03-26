@@ -149,6 +149,7 @@ describe("OMO session orchestrator", () => {
     const first = startWorkItemSession({
       rootDir,
       workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
       mode: "execute",
       opencodeBin: stage1.binPath,
       environment: {
@@ -169,6 +170,7 @@ describe("OMO session orchestrator", () => {
     const third = continueWorkItemSession({
       rootDir,
       workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
       mode: "execute",
       opencodeBin: stage3.binPath,
       environment: {
@@ -263,6 +265,7 @@ describe("OMO session orchestrator", () => {
 
     const resumed = resumePendingWorkItems({
       rootDir,
+      claudeBudgetState: "available",
       mode: "execute",
       opencodeBin: resumeRun.binPath,
       environment: {
