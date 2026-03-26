@@ -55,4 +55,10 @@ describe("OMO-lite repo config", () => {
     expect(agents.sisyphus?.model).toBe("openai/gpt-5.3-codex");
     expect(agents.oracle?.model).toBe("openai/gpt-5.4");
   });
+
+  it("ignores the repo-local Claude budget override file", () => {
+    const rootGitignore = readFileSync(join(repoRoot, ".gitignore"), "utf8");
+
+    expect(rootGitignore).toContain(".opencode/claude-budget-state.json");
+  });
 });

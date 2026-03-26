@@ -337,11 +337,11 @@ auth / OAuth / deployment 같은 외부 의존 작업은 test green만으로 닫
 - Claude sparse review model
 - Codex provisional fallback review
 - Codex stage direct execution binding + `.artifacts/omo-lite-dispatch/*` artifact bundle
+- automatic Claude budget resolution + repo-local override file
 
 ### 아직 추가로 만들어야 할 것
 
 - supervisor summary artifact
-- reviewer-stage handoff automation
 - external smoke artifact schema
 
 ## Recommended Rollout
@@ -371,15 +371,16 @@ supervisor helper 추가:
 
 ### Phase 3
 
-Claude budget-aware mode 추가:
+완료:
 
+- Claude budget-aware mode
 - sparse review scheduling
 - provisional fallback review
-- human escalation path
+- repo-local override file
 
 ### Phase 4
 
-direct execution binding:
+완료:
 
 - Codex stage runner
 - dispatch artifact bundle
@@ -387,7 +388,7 @@ direct execution binding:
 
 ### Phase 5
 
-external smoke gate 정식화:
+다음:
 
 - Supabase / OAuth / env / callback URL
 

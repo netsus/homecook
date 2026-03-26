@@ -36,6 +36,13 @@ dispatch contract가 고정되면:
 - `open_questions`
 - `external_smoke_needed`
 
+`claude_budget_state`는 아래 우선순위로 해석한다.
+
+1. `--claude-budget-state`
+2. `OMO_CLAUDE_BUDGET_STATE`
+3. `.opencode/claude-budget-state.json`
+4. OpenCode auth(`~/.local/share/opencode/auth.json`)에서 Anthropic provider 존재 여부
+
 ## Output Contract
 
 dispatch 결과는 아래를 포함한다.
@@ -169,6 +176,7 @@ Phase 5부터 Codex supervisor는 dispatch 결과를 repo-local OpenCode/OMO 실
 - Stage 1/3/5/6은 reviewer stage이므로 실행 대신 handoff artifact만 만든다.
 - 모든 run은 `.artifacts/omo-lite-dispatch/<timestamp>-<slice>-stage-<n>/` 아래에 `dispatch.json`, `prompt.md`, `run-metadata.json`을 남긴다.
 - executable run이면 같은 경로에 `opencode.stdout.log`, `opencode.stderr.log`도 남긴다.
+- `--sync-status`를 함께 주면 dispatch의 `status_patch`와 artifact 경로가 `.workflow-v2/status.json`에 같이 반영된다.
 - direct execution은 merge automation을 포함하지 않는다.
 
 ## Fallback Routing
@@ -189,6 +197,7 @@ Phase 5부터 Codex supervisor는 dispatch 결과를 repo-local OpenCode/OMO 실
 - Codex supervisor는 provisional summary만 생성 가능
 - `approval_state = awaiting_claude_or_human`
 - next actor는 `claude` 또는 `human`
+- repo-local override를 강제로 두고 싶으면 `pnpm omo:claude-budget -- --set unavailable --reason "<reason>"`를 사용한다.
 
 ## Status Patch Contract
 
@@ -222,5 +231,6 @@ dispatch가 끝나면 supervisor는 최소한 아래 patch를 계산한다.
 - Codex 중심 supervisor 실행
 - `ralph-loop` / `ulw-loop` 비활성화
 - comment-checker 비활성화
+- Claude budget override file은 `.opencode/claude-budget-state.json`이며 Git에는 커밋하지 않는다.
 
 이 기본값은 direct agent execution까지는 아직 연결되지 않았기 때문에 보수적으로 잡아둔 것이다.

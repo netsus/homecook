@@ -1,0 +1,72 @@
+{
+  "id": "omo-lite-phase7-budget-mode",
+  "title": "Automate Claude budget-aware fallback for OMO-lite reviewer stages",
+  "summary": "Resolve Claude reviewer availability automatically from repo-local signals, allow a local override, and persist fallback status when reviewer stages cannot run.",
+  "project_profile": "homecook",
+  "change_type": "infra-governance",
+  "surface": "workflow",
+  "risk": "medium",
+  "preset": "infra-governance",
+  "goal": "Finish the OMO-lite Phase 7 budget-aware supervisor path so reviewer-stage fallback no longer depends on a manual flag for every run.",
+  "owners": {
+    "claude": "sparse-review-and-approval",
+    "codex": "implementation-and-integration",
+    "workers": [
+      "testing",
+      "ci-governance"
+    ]
+  },
+  "dependencies": [
+    "omo-lite-bootstrap",
+    "workflow-v2-foundation",
+    "omo-lite-phase4-supervisor",
+    "omo-lite-phase5-runner"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "AGENTS.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/slice-workflow.md"
+    ],
+    "governing_docs": [
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/omo-lite-architecture.md",
+      "docs/engineering/workflow-v2/omo-lite-supervisor-spec.md",
+      "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
+      ".opencode/README.md",
+      "scripts/omo-lite-claude-budget.mjs",
+      "scripts/omo-lite-run-stage.mjs"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "recommended",
+    "review_loop": "required",
+    "external_smokes": []
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts tests/omo-lite-supervisor.test.ts tests/omo-lite-runner.test.ts tests/omo-lite-budget.test.ts",
+      "pnpm exec eslint scripts/lib/omo-lite-claude-budget.mjs scripts/lib/omo-lite-runner.mjs scripts/omo-lite-claude-budget.mjs scripts/omo-lite-run-stage.mjs tests/omo-lite-budget.test.ts tests/omo-lite-runner.test.ts"
+    ],
+    "verify_commands": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts tests/omo-lite-supervisor.test.ts tests/omo-lite-runner.test.ts tests/omo-lite-budget.test.ts",
+      "pnpm exec eslint scripts/lib/omo-lite-claude-budget.mjs scripts/lib/omo-lite-runner.mjs scripts/omo-lite-claude-budget.mjs scripts/omo-lite-run-stage.mjs tests/omo-lite-budget.test.ts tests/omo-lite-runner.test.ts"
+    ]
+  },
+  "status": {
+    "lifecycle": "ready_for_review",
+    "approval_state": "codex_approved",
+    "verification_status": "passed"
+  },
+  "out_of_scope": [
+    "automatic GitHub merge or PR actions",
+    "reviewer-stage direct execution",
+    "external smoke automation"
+  ],
+  "open_questions": [
+    "Should future pilot runs update Claude budget state from a machine-readable usage signal instead of auth presence only",
+    "How should prolonged awaiting_claude_or_human states be surfaced in a future dashboard"
+  ]
+}

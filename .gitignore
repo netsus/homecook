@@ -49,6 +49,7 @@ test-results/
 
 # local agent artifacts
 .artifacts/
+.opencode/claude-budget-state.json
 
 # supabase local
 supabase/.temp/

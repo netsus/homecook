@@ -30,8 +30,22 @@ opencode auth login
 
 - 이 인증 상태는 Git에 커밋하지 않는다.
 
+## Claude Budget Override
+
+- reviewer stage에서 Claude 사용 가능 여부는 기본적으로 OpenCode auth 상태를 보고 해석한다.
+- 강제로 상태를 바꿔야 하면 아래 명령을 사용한다.
+
+```bash
+pnpm omo:claude-budget -- --status
+pnpm omo:claude-budget -- --set unavailable --reason "Claude Pro budget exhausted"
+pnpm omo:claude-budget -- --clear
+```
+
+- override 파일은 `.opencode/claude-budget-state.json`이며 Git에 커밋하지 않는다.
+
 ## Phase 5 Runner
 
 - `pnpm omo:run-stage -- --slice <id> --stage <n>`은 stage dispatch artifact를 `.artifacts/omo-lite-dispatch/` 아래에 만든다.
 - `--mode execute`는 현재 `Codex executable stage`에만 적용된다.
 - reviewer stage는 실행 대신 handoff artifact만 남긴다.
+- `--sync-status`를 함께 주면 artifact 경로와 fallback approval patch를 `.workflow-v2/status.json`에 같이 기록한다.
