@@ -66,12 +66,14 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - 실제 pilot 운영 상태는 저장소 루트의 `.workflow-v2/` 아래 JSON으로 기록한다.
 - machine-readable 파일이 들어와도 README 표를 즉시 제거하지 않는다.
 - v2 승격 전까지는 product slice merge gate를 v1 기준으로 계속 유지한다.
+- Phase 4부터는 최소 executable helper(`pnpm omo:dispatch-stage`, `pnpm omo:sync-status`)를 함께 관리한다.
 
 ## Immediate Scope
 
 - v2 charter/core/profile/preset/loop 문서화
 - OMO-lite architecture / supervisor / dispatch spec 고정
 - repo-local OpenCode / OMO config bootstrap
+- minimal `omo:dispatch-stage` / `omo:sync-status` helper 도입
 - JSON schema와 예시 파일 추가
 - `validate:workflow-v2` 최소 validator 추가
 - 현재 entry-point 문서에서 v2 pilot 경로를 발견 가능하게 연결
@@ -92,4 +94,4 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - README 자동 생성
 - v1 slice status 표의 자동 동기화
 - preset 기반 branch/PR gate의 강제 실행
-- OMO-lite stage dispatcher executable
+- OMO-lite의 direct agent execution and merge automation

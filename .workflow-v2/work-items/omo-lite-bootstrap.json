@@ -11,9 +11,15 @@
   "owners": {
     "claude": "sparse-review-and-approval",
     "codex": "installation-config-and-spec",
-    "workers": ["testing", "ci-governance"]
+    "workers": [
+      "testing",
+      "ci-governance"
+    ]
   },
-  "dependencies": ["workflow-v2-foundation", "agent-plan-loop"],
+  "dependencies": [
+    "workflow-v2-foundation",
+    "agent-plan-loop"
+  ],
   "docs_refs": {
     "source_of_truth": [
       "AGENTS.md",
@@ -32,7 +38,10 @@
   "workflow": {
     "plan_loop": "recommended",
     "review_loop": "optional",
-    "external_smokes": ["opencode-install", "provider-auth"]
+    "external_smokes": [
+      "opencode-install",
+      "provider-auth"
+    ]
   },
   "verification": {
     "required_checks": [
@@ -45,8 +54,8 @@
     ]
   },
   "status": {
-    "lifecycle": "ready_for_review",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed"
   },
   "out_of_scope": [

@@ -1,0 +1,69 @@
+{
+  "id": "omo-lite-phase4-supervisor",
+  "title": "Implement OMO-lite stage dispatcher and workflow status sync helper",
+  "summary": "Add minimal executable helpers that turn the OMO-lite supervisor spec into reusable CLI tooling for slice stage dispatch and tracked status updates.",
+  "project_profile": "homecook",
+  "change_type": "infra-governance",
+  "surface": "workflow",
+  "risk": "medium",
+  "preset": "infra-governance",
+  "goal": "Move Homecook OMO-lite from docs-only supervision into an executable phase with stage dispatch and workflow status synchronization helpers.",
+  "owners": {
+    "claude": "sparse-review-and-approval",
+    "codex": "implementation-and-integration",
+    "workers": [
+      "testing",
+      "ci-governance"
+    ]
+  },
+  "dependencies": [
+    "omo-lite-bootstrap",
+    "workflow-v2-foundation"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "AGENTS.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/slice-workflow.md"
+    ],
+    "governing_docs": [
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/omo-lite-architecture.md",
+      "docs/engineering/workflow-v2/omo-lite-supervisor-spec.md",
+      "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
+      "scripts/omo-lite-dispatch-stage.mjs",
+      "scripts/omo-lite-sync-status.mjs"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "recommended",
+    "review_loop": "required",
+    "external_smokes": []
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts tests/omo-lite-supervisor.test.ts",
+      "pnpm exec eslint scripts/omo-lite-dispatch-stage.mjs scripts/omo-lite-sync-status.mjs scripts/lib/omo-lite-supervisor.mjs tests/omo-lite-supervisor.test.ts"
+    ],
+    "verify_commands": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts tests/omo-lite-supervisor.test.ts",
+      "pnpm exec eslint scripts/omo-lite-dispatch-stage.mjs scripts/omo-lite-sync-status.mjs scripts/lib/omo-lite-supervisor.mjs tests/omo-lite-supervisor.test.ts"
+    ]
+  },
+  "status": {
+    "lifecycle": "ready_for_review",
+    "approval_state": "codex_approved",
+    "verification_status": "passed"
+  },
+  "out_of_scope": [
+    "direct OMO agent execution from the dispatcher",
+    "automatic GitHub PR creation or merge actions",
+    "full product slice autopilot"
+  ],
+  "open_questions": [
+    "When should the dispatcher start writing stage artifacts under .artifacts/omo-lite-dispatch/",
+    "Should product slices eventually expose a single-command supervisor path after more pilot data is collected?"
+  ]
+}
