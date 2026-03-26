@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -24,6 +24,39 @@ function createBudgetFixture() {
     homeDir,
     authPath: join(homeDir, ".local", "share", "opencode", "auth.json"),
     overridePath: join(rootDir, ".opencode", "claude-budget-state.json"),
+  };
+}
+
+let fakeOpencodeCounter = 0;
+
+function createFakeOpencodeBin(
+  rootDir: string,
+  options?: {
+    exitCode?: number;
+    stdout?: string[];
+    stderr?: string;
+  },
+) {
+  fakeOpencodeCounter += 1;
+  const suffix = String(fakeOpencodeCounter);
+  const binPath = join(rootDir, `fake-opencode-budget-${suffix}.sh`);
+  const exitCode = options?.exitCode ?? 0;
+  const stdout = options?.stdout ?? [];
+  const stderr = options?.stderr ?? "";
+
+  writeFileSync(
+    binPath,
+    [
+      "#!/bin/sh",
+      ...stdout.map((line) => `printf '%s\\n' '${line}'`),
+      stderr.length > 0 ? `printf '${stderr}\\n' >&2` : "",
+      `exit ${exitCode}`,
+    ].join("\n"),
+  );
+  chmodSync(binPath, 0o755);
+
+  return {
+    binPath,
   };
 }
 
@@ -300,5 +333,76 @@ describe("OMO-lite stage runner budget-aware fallback", () => {
     expect(statusBoard.items[0].notes).toContain(result.artifactDir);
     expect(statusBoard.items[0].notes).toContain("retry_at=");
     expect(statusBoard.items[0].notes).toContain("session_role=claude_primary");
+  });
+
+  it("schedules a retry when Claude execution emits an Anthropic low-credit error event", () => {
+    const { rootDir, homeDir, authPath } = createBudgetFixture();
+    const workItemId = "stage1-runtime-budget";
+
+    seedWorkflowState(rootDir, workItemId);
+    writeFileSync(
+      authPath,
+      JSON.stringify(
+        {
+          openai: { type: "oauth" },
+          anthropic: { type: "api", key: "test-key" },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const { binPath } = createFakeOpencodeBin(rootDir, {
+      stdout: [
+        "{\"type\":\"step_start\",\"sessionID\":\"ses_runtime_budget\",\"part\":{\"type\":\"step-start\"}}",
+        "{\"type\":\"error\",\"sessionID\":\"ses_runtime_budget\",\"error\":{\"name\":\"APIError\",\"data\":{\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"}}}",
+      ],
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "04-recipe-save",
+      stage: 1,
+      workItemId,
+      mode: "execute",
+      opencodeBin: binPath,
+      now: "2026-03-27T01:50:00+09:00",
+    });
+
+    const runtime = JSON.parse(
+      readFileSync(join(rootDir, ".opencode", "omo-runtime", `${workItemId}.json`), "utf8"),
+    ) as {
+      current_stage: number;
+      last_completed_stage: number;
+      blocked_stage: number;
+      retry: {
+        reason: string;
+        attempt_count: number;
+      };
+      sessions: {
+        claude_primary: {
+          session_id: string | null;
+        };
+      };
+    };
+
+    expect(result.execution).toMatchObject({
+      mode: "scheduled-retry",
+      executed: false,
+      executable: false,
+      reason: "claude_budget_unavailable",
+      sessionId: "ses_runtime_budget",
+    });
+    expect(runtime).toMatchObject({
+      current_stage: 1,
+      last_completed_stage: 0,
+      blocked_stage: 1,
+      retry: {
+        reason: "claude_budget_unavailable",
+        attempt_count: 1,
+      },
+    });
+    expect(runtime.sessions.claude_primary.session_id).toBe("ses_runtime_budget");
   });
 });
