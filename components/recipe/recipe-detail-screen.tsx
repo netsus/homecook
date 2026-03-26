@@ -8,6 +8,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { LoginGateModal } from "@/components/auth/login-gate-modal";
 import { ContentState } from "@/components/shared/content-state";
+import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
   clearPendingAction,
   readPendingAction,
@@ -69,6 +70,13 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
   }, [recipe]);
 
   useEffect(() => {
+    const e2eAuthOverride = readE2EAuthOverride();
+
+    if (e2eAuthOverride !== null) {
+      setIsAuthenticated(e2eAuthOverride);
+      return;
+    }
+
     if (!hasSupabasePublicEnv()) {
       setIsAuthenticated(false);
       return;
