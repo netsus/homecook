@@ -182,8 +182,9 @@ describe("OMO-lite Claude budget resolution", () => {
       rootDir,
       homeDir,
       environment: {
+        ...process.env,
         OMO_CLAUDE_BUDGET_STATE: "constrained",
-      } as NodeJS.ProcessEnv,
+      },
     });
 
     expect(resolved).toMatchObject({
