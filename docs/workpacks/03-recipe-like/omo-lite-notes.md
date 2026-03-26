@@ -139,12 +139,14 @@ Stage 2 (BE) / Stage 4 (FE) 완료 시 외부 smoke가 필요한가?
 
 | Stage | 완료 시각 | 소요 | 주요 관찰 |
 | --- | --- | --- | --- |
-| Stage 1 (README + acceptance) | — | — | — |
-| Stage 2 (BE 구현 PR merge) | — | — | — |
-| Stage 3 (BE 리뷰) | — | — | — |
-| Stage 4 (FE 구현 PR merge) | — | — | — |
-| Stage 5 (디자인 리뷰) | — | — | — |
-| Stage 6 (FE 리뷰 + slice 종료) | — | — | — |
+| Stage 1 (README + acceptance) | 2026-03-26 22:24:09 +0900 | 10m 38s | PR #30 merge. workpack, acceptance, Phase 8 pilot note가 main에 들어왔고, 이후 22:43 pilot alignment PR #31로 v2 tracking 문구를 보정했다. |
+| Stage 2 (BE 구현 PR merge) | 2026-03-26 23:47:45 +0900 | 29m 39s | PR #32 merge. `POST /api/v1/recipes/{id}/like`, Vitest coverage, `recipe_likes -> recipes.like_count` DB trigger migration까지 backend scope를 닫았다. |
+| Stage 3 (BE 리뷰) | 2026-03-26 23:47:45 +0900 | 약 9m 28s | 전용 Stage 3 sync commit은 없었다. Claude sanity review에서 `UNIQUE` conflict 처리와 `like_count floor` 검증이 강화됐고, reviewer note 후 follow-up fix를 거쳐 backend merge로 닫혔다. |
+| Stage 4 (FE 구현 PR merge) | 2026-03-27 00:57:05 +0900 | 49m 16s | PR #35 merge. RECIPE_DETAIL like toggle, pending/return-to-action, Vitest/Playwright coverage가 main에 반영됐다. OMO `--mode execute` artifact는 남았지만 실제 diff 생성은 수동 구현이 필요했다. |
+| Stage 5 (디자인 리뷰) | 2026-03-27 00:35:22 +0900 | 별도 측정 없음 | 기존 `RECIPE_DETAIL`의 low-risk UI change라 Stage 5가 별도 artifact 없이 lightweight check로 정리됐고, `Design Status confirmed` 판단이 Stage 6 review sync에 함께 반영됐다. |
+| Stage 6 (FE 리뷰 + slice 종료) | 2026-03-27 00:57:05 +0900 | 21m 43s | 00:35의 Stage 6 approval sync 후 PR #35 merge로 slice가 종료됐다. Live OAuth smoke는 manual-only로 남았고, merge 후 v1/v2 status 종료 반영은 별도 sync가 필요했다. |
+
+> 기록 기준: Stage 1/2/4/6은 merge commit 시각 기준이다. Stage 3은 reviewer follow-up 이후 backend merge 시점 기준으로 보수적으로 적었고, Stage 5는 low-risk UI change라 Stage 6 lightweight design check에 흡수된 것으로 정리했다.
 
 ---
 
