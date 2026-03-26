@@ -1,0 +1,75 @@
+{
+  "id": "04-recipe-save",
+  "title": "RECIPE_DETAIL 저장 모달과 saved/custom 저장 제한",
+  "summary": "사용자가 RECIPE_DETAIL에서 저장 버튼을 눌러 저장 가능한 레시피북을 조회하고, 필요 시 새 커스텀 레시피북을 만든 뒤 레시피를 저장한다. Phase 9 autonomous supervisor pilot target.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "저장 모달에서 saved/custom 레시피북만 대상으로 선택 또는 생성 후 저장하고, save_count 및 saved_book_ids를 API와 UI에서 일관되게 반영한다.",
+  "owners": {
+    "claude": "stage-1-workpack-and-review",
+    "codex": "stage-2-backend-and-stage-4-frontend",
+    "workers": [
+      "testing",
+      "design-system"
+    ]
+  },
+  "dependencies": [
+    "01-discovery-detail-auth",
+    "02-discovery-filter",
+    "03-recipe-like"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "AGENTS.md",
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/workpacks/04-recipe-save/README.md",
+      "docs/workpacks/04-recipe-save/acceptance.md"
+    ],
+    "governing_docs": [
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/요구사항기준선-v1.6.md",
+      "docs/화면정의서-v1.2.md",
+      "docs/api문서-v1.2.1.md",
+      "docs/db설계-v1.3.md",
+      "docs/engineering/workflow-v2/omo-autonomous-supervisor.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "skipped",
+    "external_smokes": [
+      "소셜 OAuth 저장 return-to-action smoke (실 provider 환경 필요)",
+      "실 DB 환경의 save_count / recipe_book_items 정합성 smoke"
+    ]
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm install --frozen-lockfile && pnpm test:all",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm install --frozen-lockfile",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm test",
+      "pnpm test:e2e"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "RECIPEBOOK_DETAIL에서 저장 해제 UI 및 DELETE /recipe-books/{book_id}/recipes/{recipe_id} 연계",
+    "my_added 또는 liked 책으로 저장 허용",
+    "마이페이지 레시피북 관리 전체 구현",
+    "저장 기능의 낙관적 업데이트와 롤백"
+  ],
+  "open_questions": []
+}
