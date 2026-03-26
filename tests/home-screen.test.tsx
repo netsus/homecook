@@ -306,6 +306,60 @@ describe("home screen", () => {
     expect(window.location.search).toBe("");
   });
 
+  it("discards unapplied draft selections when the modal closes", async () => {
+    const user = userEvent.setup();
+
+    useDiscoveryFilterStore.setState({ appliedIngredientIds: [ONION_ID] });
+
+    render(<HomeScreen />);
+
+    await user.click(await screen.findByRole("button", { name: "재료로 검색 (1)" }));
+    await screen.findByRole("dialog", { name: "재료로 검색" });
+
+    expect(await screen.findByRole("checkbox", { name: "양파" })).toHaveProperty(
+      "checked",
+      true,
+    );
+
+    await user.click(screen.getByRole("checkbox", { name: "소고기" }));
+    expect(screen.getByRole("checkbox", { name: "소고기" })).toHaveProperty(
+      "checked",
+      true,
+    );
+
+    await user.click(screen.getByRole("button", { name: "닫기" }));
+    await user.click(screen.getByRole("button", { name: "재료로 검색 (1)" }));
+
+    expect(await screen.findByRole("checkbox", { name: "양파" })).toHaveProperty(
+      "checked",
+      true,
+    );
+    expect(screen.getByRole("checkbox", { name: "소고기" })).toHaveProperty(
+      "checked",
+      false,
+    );
+  });
+
+  it("keeps keyboard focus trapped inside the ingredient modal", async () => {
+    const user = userEvent.setup();
+
+    render(<HomeScreen />);
+
+    await user.click(await screen.findByRole("button", { name: "재료로 검색" }));
+    await screen.findByRole("dialog", { name: "재료로 검색" });
+
+    const closeButton = screen.getByRole("button", { name: "닫기" });
+    const applyButton = screen.getByRole("button", { name: "적용" });
+
+    expect(document.activeElement).toBe(closeButton);
+
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(applyButton);
+
+    await user.tab();
+    expect(document.activeElement).toBe(closeButton);
+  });
+
   it("resets modal query and category when reopening while keeping applied selections", async () => {
     const user = userEvent.setup();
 

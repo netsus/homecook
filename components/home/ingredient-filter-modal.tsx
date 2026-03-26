@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { fetchJson } from "@/lib/api/fetch-json";
 import type { IngredientItem, IngredientListData } from "@/types/recipe";
@@ -41,6 +47,14 @@ function buildIngredientQueryString(query: string, category: string) {
   return queryString ? `?${queryString}` : "";
 }
 
+function getFocusableElements(container: HTMLElement) {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+    ),
+  );
+}
+
 export function IngredientFilterModal({
   isOpen,
   appliedIngredientIds,
@@ -55,6 +69,7 @@ export function IngredientFilterModal({
   const [screenState, setScreenState] = useState<IngredientModalState>("loading");
   const [reloadKey, setReloadKey] = useState(0);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const requestIdRef = useRef(0);
 
   useEffect(() => {
@@ -67,6 +82,10 @@ export function IngredientFilterModal({
     };
   }, [query]);
 
+  const handleClose = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -77,7 +96,42 @@ export function IngredientFilterModal({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        handleClose();
+        return;
+      }
+
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const dialog = dialogRef.current;
+
+      if (!dialog) {
+        return;
+      }
+
+      const focusableElements = getFocusableElements(dialog);
+
+      if (focusableElements.length === 0) {
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      const activeElement = document.activeElement;
+
+      if (event.shiftKey) {
+        if (activeElement === firstElement || !dialog.contains(activeElement)) {
+          event.preventDefault();
+          lastElement.focus();
+        }
+
+        return;
+      }
+
+      if (activeElement === lastElement || !dialog.contains(activeElement)) {
+        event.preventDefault();
+        firstElement.focus();
       }
     };
 
@@ -86,7 +140,7 @@ export function IngredientFilterModal({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [appliedIngredientIds, isOpen, onClose]);
+  }, [appliedIngredientIds, handleClose, isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -96,7 +150,8 @@ export function IngredientFilterModal({
     setQuery("");
     setDebouncedQuery("");
     setActiveCategory(ALL_CATEGORY);
-  }, [isOpen]);
+    setDraftIngredientIds(appliedIngredientIds);
+  }, [appliedIngredientIds, isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -160,13 +215,14 @@ export function IngredientFilterModal({
   return (
     <div
       className="fixed inset-0 z-40 flex items-end bg-black/50 p-0 md:items-center md:justify-center md:p-4"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         aria-labelledby="ingredient-filter-title"
         aria-modal="true"
         className="glass-panel flex max-h-[85vh] w-full flex-col rounded-t-[20px] bg-[var(--panel)] md:max-w-2xl md:rounded-[20px]"
         onClick={(event) => event.stopPropagation()}
+        ref={dialogRef}
         role="dialog"
       >
         <div className="border-b border-[var(--line)] px-5 pb-5 pt-4 md:px-6">
@@ -186,7 +242,7 @@ export function IngredientFilterModal({
             <button
               aria-label="닫기"
               className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
-              onClick={onClose}
+              onClick={handleClose}
               ref={closeButtonRef}
               type="button"
             >
