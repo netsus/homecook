@@ -377,6 +377,7 @@ describe("OMO-lite stage runner budget-aware fallback", () => {
       last_completed_stage: number;
       blocked_stage: number;
       retry: {
+        at: string | null;
         reason: string;
         attempt_count: number;
       };
@@ -399,6 +400,7 @@ describe("OMO-lite stage runner budget-aware fallback", () => {
       last_completed_stage: 0,
       blocked_stage: 1,
       retry: {
+        at: "2026-03-26T21:50:00.000Z",
         reason: "claude_budget_unavailable",
         attempt_count: 1,
       },
