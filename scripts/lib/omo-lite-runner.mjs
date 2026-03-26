@@ -215,14 +215,12 @@ export function runStageWithArtifacts({
     },
   };
 
-  writeArtifacts({
-    artifactDir: targetArtifactDir,
-    dispatch,
-    prompt,
-  });
+  mkdirSync(targetArtifactDir, { recursive: true });
+
+  let result;
 
   if (mode !== "execute") {
-    const result = {
+    result = {
       artifactDir: targetArtifactDir,
       dispatch,
       prompt,
@@ -236,21 +234,8 @@ export function runStageWithArtifacts({
       },
     };
 
-    writeArtifacts({
-      artifactDir: targetArtifactDir,
-      dispatch,
-      prompt,
-      metadata: {
-        ...metadata,
-        execution: result.execution,
-      },
-    });
-
-    return result;
-  }
-
-  if (!executionBinding.executable) {
-    const result = {
+  } else if (!executionBinding.executable) {
+    result = {
       artifactDir: targetArtifactDir,
       dispatch,
       prompt,
@@ -264,32 +249,21 @@ export function runStageWithArtifacts({
       },
     };
 
-    writeArtifacts({
+  } else {
+    result = {
       artifactDir: targetArtifactDir,
       dispatch,
       prompt,
-      metadata: {
-        ...metadata,
-        execution: result.execution,
-      },
-    });
-
-    return result;
+      execution: runOpencode({
+        rootDir,
+        artifactDir: targetArtifactDir,
+        prompt,
+        agent: executionBinding.agent,
+        opencodeBin,
+        environment,
+      }),
+    };
   }
-
-  const result = {
-    artifactDir: targetArtifactDir,
-    dispatch,
-    prompt,
-    execution: runOpencode({
-      rootDir,
-      artifactDir: targetArtifactDir,
-      prompt,
-      agent: executionBinding.agent,
-      opencodeBin,
-      environment,
-    }),
-  };
 
   writeArtifacts({
     artifactDir: targetArtifactDir,

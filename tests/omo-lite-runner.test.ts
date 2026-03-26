@@ -6,16 +6,28 @@ import { describe, expect, it } from "vitest";
 
 import { runStageWithArtifacts } from "../scripts/lib/omo-lite-runner.mjs";
 
-function createFakeOpencodeBin(rootDir: string) {
+function createFakeOpencodeBin(
+  rootDir: string,
+  options?: {
+    exitCode?: number;
+    stdout?: string;
+    stderr?: string;
+  },
+) {
   const binPath = join(rootDir, "fake-opencode.sh");
   const argsPath = join(rootDir, "fake-opencode-args.log");
+  const exitCode = options?.exitCode ?? 0;
+  const stdout = options?.stdout ?? "fake-opencode-ok";
+  const stderr = options?.stderr ?? "";
 
   writeFileSync(
     binPath,
     [
       "#!/bin/sh",
       "printf '%s\\n' \"$@\" > \"$FAKE_OPENCODE_ARGS_PATH\"",
-      "printf 'fake-opencode-ok\\n'",
+      `printf '${stdout}\\n'`,
+      stderr.length > 0 ? `printf '${stderr}\\n' >&2` : "",
+      `exit ${exitCode}`,
     ].join("\n"),
   );
   chmodSync(binPath, 0o755);
@@ -140,6 +152,34 @@ describe("OMO-lite stage runner", () => {
     expect(() => readFileSync(argsPath, "utf8")).toThrow();
     expect(readFileSync(join(result.artifactDir, "prompt.md"), "utf8")).toContain(
       "슬라이스 02-discovery-filter 5단계 진행",
+    );
+  });
+
+  it("writes logs and throws when opencode execution exits non-zero", () => {
+    const rootDir = createRunnerFixture();
+    const artifactDir = join(rootDir, ".artifacts", "failed-run");
+    const { binPath } = createFakeOpencodeBin(rootDir, {
+      exitCode: 7,
+      stdout: "fake-opencode-failed",
+      stderr: "simulated failure",
+    });
+
+    expect(() =>
+      runStageWithArtifacts({
+        rootDir,
+        slice: "02-discovery-filter",
+        stage: 2,
+        mode: "execute",
+        artifactDir,
+        opencodeBin: binPath,
+        now: "2026-03-26T21:30:00+09:00",
+      }),
+    ).toThrow(/exit code 7/);
+    expect(readFileSync(join(artifactDir, "opencode.stdout.log"), "utf8")).toContain(
+      "fake-opencode-failed",
+    );
+    expect(readFileSync(join(artifactDir, "opencode.stderr.log"), "utf8")).toContain(
+      "simulated failure",
     );
   });
 });
