@@ -21,6 +21,16 @@ const APPROVAL_STATES = new Set([
 ]);
 const VERIFICATION_STATES = new Set(["pending", "passed", "failed", "skipped"]);
 
+export function resolveStageSessionRole(stage) {
+  const normalizedStage = ensureStage(stage);
+
+  if ([1, 3, 5, 6].includes(normalizedStage)) {
+    return "claude_primary";
+  }
+
+  return "codex_primary";
+}
+
 function readJson(filePath) {
   if (!existsSync(filePath)) {
     throw new Error(`File not found: ${filePath}`);
@@ -190,33 +200,14 @@ function buildGoal(stage, slice) {
   return `슬라이스 ${slice} ${stage}단계 진행`;
 }
 
-function applyClaudeFallback(dispatch, stage, claudeBudgetState) {
-  if (claudeBudgetState !== "unavailable") {
-    return dispatch;
-  }
-
-  if (![1, 3, 5, 6].includes(stage)) {
-    return dispatch;
-  }
-
-  return {
-    ...dispatch,
-    actor: "human",
-    statusPatch: {
-      ...dispatch.statusPatch,
-      approval_state: "awaiting_claude_or_human",
-    },
-    successCondition:
-      "Claude or human review is recorded before the workflow can proceed.",
-    escalationIfBlocked:
-      "Claude is unavailable. Escalate to Claude when budget recovers or route to human review.",
-  };
-}
-
 export function buildStageDispatch({
   slice,
   stage,
   claudeBudgetState = "available",
+  sessionId = null,
+  retryAt = null,
+  attemptCount = 0,
+  forceHumanEscalation = false,
 }) {
   const normalizedSlice = ensureNonEmptyString(slice, "slice");
   const normalizedStage = ensureStage(stage);
@@ -231,6 +222,19 @@ export function buildStageDispatch({
     throw new Error(`Unsupported stage: ${normalizedStage}`);
   }
 
+  const normalizedSessionId =
+    typeof sessionId === "string" && sessionId.trim().length > 0 ? sessionId.trim() : null;
+  const normalizedRetryAt =
+    typeof retryAt === "string" && retryAt.trim().length > 0 ? retryAt.trim() : null;
+  const normalizedAttemptCount =
+    Number.isInteger(attemptCount) && attemptCount >= 0 ? attemptCount : 0;
+  const sessionRole = resolveStageSessionRole(normalizedStage);
+  const resumeMode = normalizedRetryAt
+    ? "scheduled_retry"
+    : normalizedSessionId
+      ? "continue"
+      : "fresh";
+
   const dispatch = {
     stage: normalizedStage,
     actor: spec.actor,
@@ -244,12 +248,88 @@ export function buildStageDispatch({
       approval_state: spec.approval_state,
       verification_status: spec.verification_status,
     },
+    runtimePatch: {
+      blocked_stage: null,
+      retry: null,
+    },
+    sessionBinding: {
+      role: sessionRole,
+      sessionId: normalizedSessionId,
+      resumeMode,
+    },
+    retryDecision: {
+      action: "none",
+      reason: null,
+      retryAt: normalizedRetryAt,
+      attemptCount: normalizedAttemptCount,
+    },
     successCondition: spec.successCondition,
     escalationIfBlocked: spec.escalationIfBlocked,
     claudeBudgetState: normalizedBudgetState,
   };
 
-  return applyClaudeFallback(dispatch, normalizedStage, normalizedBudgetState);
+  if (forceHumanEscalation) {
+    return {
+      ...dispatch,
+      actor: "human",
+      statusPatch: {
+        ...dispatch.statusPatch,
+        lifecycle: "blocked",
+        approval_state: "human_escalation",
+        verification_status: "pending",
+      },
+      runtimePatch: {
+        blocked_stage: normalizedStage,
+        retry: {
+          at: null,
+          reason: "session_unavailable",
+          attempt_count: normalizedAttemptCount,
+        },
+      },
+      retryDecision: {
+        action: "escalate",
+        reason: "session_unavailable",
+        retryAt: null,
+        attemptCount: normalizedAttemptCount,
+      },
+      successCondition:
+        "Human escalation is recorded because the stored session cannot be resumed safely.",
+      escalationIfBlocked:
+        "Stored session reuse failed. Escalate to human review or recovery instead of silently creating a new session.",
+    };
+  }
+
+  if (normalizedBudgetState === "unavailable" && spec.actor === "claude") {
+    return {
+      ...dispatch,
+      statusPatch: {
+        ...dispatch.statusPatch,
+        lifecycle: "blocked",
+        approval_state: "awaiting_claude_or_human",
+        verification_status: "pending",
+      },
+      runtimePatch: {
+        blocked_stage: normalizedStage,
+        retry: {
+          at: normalizedRetryAt,
+          reason: "claude_budget_unavailable",
+          attempt_count: normalizedAttemptCount + 1,
+        },
+      },
+      retryDecision: {
+        action: "schedule_retry",
+        reason: "claude_budget_unavailable",
+        retryAt: normalizedRetryAt,
+        attemptCount: normalizedAttemptCount + 1,
+      },
+      successCondition:
+        "Claude review resumes on the same session after budget recovers or a human recovery path is explicitly chosen.",
+      escalationIfBlocked:
+        "Claude is unavailable. Keep the stage blocked for scheduled retry and escalate to human only if the session is lost or retries are exhausted.",
+    };
+  }
+
+  return dispatch;
 }
 
 function resolveWorkflowPaths(rootDir, workItemId) {
