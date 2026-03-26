@@ -34,6 +34,7 @@ describe("OMO-lite repo config", () => {
         "docs/engineering/agent-workflow-overview.md",
         "docs/engineering/slice-workflow.md",
         "docs/engineering/workflow-v2/omo-session-orchestrator.md",
+        "docs/engineering/workflow-v2/omo-autonomous-supervisor.md",
         "docs/engineering/workflow-v2/omo-lite-architecture.md",
         "docs/engineering/workflow-v2/omo-lite-supervisor-spec.md",
         "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
@@ -63,6 +64,8 @@ describe("OMO-lite repo config", () => {
     expect(scripts["omo:continue"]).toBe("node scripts/omo-continue.mjs");
     expect(scripts["omo:resume-pending"]).toBe("node scripts/omo-resume-pending.mjs");
     expect(scripts["omo:status"]).toBe("node scripts/omo-status.mjs");
+    expect(scripts["omo:supervise"]).toBe("node scripts/omo-supervise.mjs");
+    expect(scripts["omo:tick"]).toBe("node scripts/omo-tick.mjs");
   });
 
   it("ignores the repo-local Claude budget override file", () => {
@@ -70,5 +73,6 @@ describe("OMO-lite repo config", () => {
 
     expect(rootGitignore).toContain(".opencode/claude-budget-state.json");
     expect(rootGitignore).toContain(".opencode/omo-runtime/");
+    expect(rootGitignore).toContain(".worktrees/");
   });
 });
