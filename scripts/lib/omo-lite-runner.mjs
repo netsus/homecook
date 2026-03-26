@@ -180,10 +180,66 @@ function parseSessionId(stdout, fallbackSessionId) {
   return fallbackSessionId ?? null;
 }
 
+function parseErrorEvent(stdout) {
+  const lines = typeof stdout === "string" ? stdout.split(/\r?\n/) : [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || !trimmed.startsWith("{")) {
+      continue;
+    }
+
+    try {
+      const event = JSON.parse(trimmed);
+      if (event?.type === "error" && event.error && typeof event.error === "object") {
+        return event;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
 function createProcessFailure(message, details) {
   const error = new Error(message);
   Object.assign(error, details);
   return error;
+}
+
+function isClaudeBudgetRuntimeFailure(error) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const fragments = [];
+
+  if (typeof error.message === "string") {
+    fragments.push(error.message);
+  }
+
+  if (typeof error.stderrPath === "string" && existsSync(error.stderrPath)) {
+    fragments.push(readFileSync(error.stderrPath, "utf8"));
+  }
+
+  if (typeof error.stdoutPath === "string" && existsSync(error.stdoutPath)) {
+    fragments.push(readFileSync(error.stdoutPath, "utf8"));
+  }
+
+  if (error.errorEvent?.error?.data?.message) {
+    fragments.push(String(error.errorEvent.error.data.message));
+  }
+
+  if (error.errorEvent?.error?.data?.responseBody) {
+    fragments.push(String(error.errorEvent.error.data.responseBody));
+  }
+
+  const haystack = fragments.join("\n");
+
+  return /(credit balance is too low|insufficient credits|quota|billing|budget exhausted|rate limit)/i.test(
+    haystack,
+  );
 }
 
 function runOpencode({
@@ -234,6 +290,7 @@ function runOpencode({
   }
 
   const capturedSessionId = parseSessionId(result.stdout, sessionId);
+  const errorEvent = parseErrorEvent(result.stdout);
 
   if (result.status !== 0) {
     throw createProcessFailure(
@@ -243,6 +300,24 @@ function runOpencode({
         stdoutPath,
         stderrPath,
         sessionId: capturedSessionId,
+      },
+    );
+  }
+
+  if (errorEvent) {
+    const eventMessage =
+      errorEvent.error?.data?.message ??
+      errorEvent.error?.message ??
+      "Unknown opencode runtime error.";
+
+    throw createProcessFailure(
+      `opencode run emitted an error event: ${eventMessage}`,
+      {
+        exitCode: result.status ?? 0,
+        stdoutPath,
+        stderrPath,
+        sessionId: capturedSessionId,
+        errorEvent,
       },
     );
   }
@@ -532,6 +607,33 @@ export function runStageWithArtifacts({
             stderrPath: error.stderrPath ?? null,
           },
         };
+      } else if (sessionRole === "claude_primary" && isClaudeBudgetRuntimeFailure(error)) {
+        result = {
+          artifactDir: targetArtifactDir,
+          dispatch: buildStageDispatch({
+            slice: normalizedSlice,
+            stage: normalizedStage,
+            claudeBudgetState: "unavailable",
+            sessionId: error.sessionId ?? existingSessionId,
+            retryAt: resolveRetryAt({
+              now,
+              delayHours: retryDelayHours,
+            }),
+            attemptCount: (retryState?.attempt_count ?? 0) + 1,
+          }),
+          prompt,
+          execution: {
+            mode: "scheduled-retry",
+            executed: false,
+            executable: false,
+            agent: executionBinding.agent,
+            reason: "claude_budget_unavailable",
+            exitCode: error.exitCode ?? null,
+            sessionId: error.sessionId ?? existingSessionId,
+            stdoutPath: error.stdoutPath ?? null,
+            stderrPath: error.stderrPath ?? null,
+          },
+        };
       } else {
         throw error;
       }
@@ -542,7 +644,10 @@ export function runStageWithArtifacts({
   if (workItemId && runtimeSnapshot) {
     let nextRuntimeState = runtimeSnapshot.state;
 
-    if (result.execution.mode === "execute" && result.execution.executed) {
+    if (
+      (result.execution.mode === "execute" && result.execution.executed) ||
+      (result.execution.mode === "scheduled-retry" && result.execution.sessionId)
+    ) {
       if (result.execution.sessionId) {
         nextRuntimeState = setSessionBinding({
           state: nextRuntimeState,
@@ -552,7 +657,9 @@ export function runStageWithArtifacts({
           updatedAt: now,
         });
       }
+    }
 
+    if (result.execution.mode === "execute" && result.execution.executed) {
       nextRuntimeState = markStageCompleted({
         state: nextRuntimeState,
         stage: dispatch.stage,
