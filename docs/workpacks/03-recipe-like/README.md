@@ -25,8 +25,8 @@
   - `recipe_likes` (INSERT / DELETE)
   - `recipes` (`like_count` 갱신)
 - Schema Change:
-  - [x] 없음 (테이블은 DB 설계 v1.3에 이미 존재)
-  - [ ] 있음 → `supabase/migrations/<파일명>.sql` 생성 필요
+  - [ ] 없음 (테이블은 DB 설계 v1.3에 이미 존재)
+  - [x] 있음 → `supabase/migrations/20260326233638_slice03_recipe_like_count_trigger.sql` (recipe_likes ↔ recipes.like_count 동기 트리거)
 
 ## Out of Scope
 
@@ -135,7 +135,7 @@ POST /recipes/{recipe_id}/like
 
 - `POST /like`는 **토글**이다. 좋아요 상태이면 해제, 아니면 등록한다.
 - `recipe_likes`의 UNIQUE 제약 `(user_id, recipe_id)`이 race condition 방어 1차 라인이다.
-- `recipes.like_count`는 비정규화 카운트다. INSERT 시 +1, DELETE 시 -1로 **원자 갱신**한다 (P1-3 정합성 규칙).
+- `recipes.like_count`는 비정규화 카운트다. `recipe_likes` INSERT/DELETE 시 DB 트리거로 **원자 갱신**한다 (P1-3 정합성 규칙).
 - `liked` 레시피북은 `recipe_likes`가 source of truth이며, `POST /like`가 그 유일한 진입점이다 (이 슬라이스 scope).
 - FE는 좋아요 요청 중 버튼을 pending 상태로 두어 중복 호출을 방지한다.
 - 비로그인 좋아요 시도: 로그인 게이트 모달 → 로그인 완료 후 RECIPE_DETAIL return-to-action.

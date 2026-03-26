@@ -1,3 +1,5 @@
+import type { ApiResponse } from "@/types/api";
+
 export type RecipeSortKey =
   | "view_count"
   | "like_count"
@@ -93,6 +95,13 @@ export interface RecipeUserStatus {
   is_saved: boolean;
   saved_book_ids: string[];
 }
+
+export interface RecipeLikeData {
+  is_liked: boolean;
+  like_count: number;
+}
+
+export type RecipeLikeResponse = ApiResponse<RecipeLikeData>;
 
 export interface RecipeDetail {
   id: string;
