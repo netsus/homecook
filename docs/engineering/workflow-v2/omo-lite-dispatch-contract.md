@@ -40,6 +40,10 @@ dispatch contract가 고정되면:
 - `attempt_count`
 - `open_questions`
 - `external_smoke_needed`
+- `workspace_path`
+- `workspace_branch`
+- `active_pr`
+- `active_pr_head_sha`
 
 `claude_budget_state`는 아래 우선순위로 해석한다.
 
@@ -64,6 +68,7 @@ dispatch 결과는 아래를 포함한다.
 - `success_condition`
 - `escalation_if_blocked`
 - `artifact_dir` (stage run 시)
+- `stage_result_schema`
 
 ## Dispatch Matrix
 
@@ -204,8 +209,9 @@ target 규칙:
 - 후속 stage는 반드시 저장된 session ID로 이어간다.
 - 모든 run은 `.artifacts/omo-lite-dispatch/<timestamp>-<slice>-stage-<n>/` 아래에 `dispatch.json`, `prompt.md`, `run-metadata.json`을 남긴다.
 - executable run이면 같은 경로에 `opencode.stdout.log`, `opencode.stderr.log`도 남긴다.
+- stage agent는 supervisor가 읽을 수 있는 structured stage result를 artifact에 남긴다.
 - `--sync-status`를 함께 주면 dispatch의 `status_patch`와 artifact 경로가 `.workflow-v2/status.json`에 같이 반영된다.
-- direct execution은 merge automation을 포함하지 않는다.
+- direct execution은 merge automation 자체를 수행하지 않지만, autonomous supervisor가 이어서 읽을 수 있는 stage result를 남겨야 한다.
 
 ## Fallback Routing
 

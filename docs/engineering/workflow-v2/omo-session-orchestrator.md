@@ -17,6 +17,7 @@ generic OMO session-orchestrator는 project-specific workflow 규칙과 OpenCode
 - runtime state와 retry timer를 repo-local로 기록한다.
 - Claude budget unavailable 상황에서 같은 stage를 같은 세션으로 재개한다.
 - project adapter가 제공하는 stage graph, prompt, verify command를 실제 실행으로 연결한다.
+- 상위 autonomous supervisor가 읽을 수 있도록 stage execution metadata를 안정적으로 남긴다.
 
 즉, project adapter가 `무엇을 실행할지`를 정하고, session-orchestrator가 `어떻게 같은 세션으로 이어갈지`를 책임진다.
 
@@ -150,6 +151,14 @@ generic core가 책임지는 것:
 - lock 획득/해제
 - artifact directory 연결
 - scheduler-friendly `resume-pending` 실행
+
+autonomous supervisor가 따로 책임지는 것:
+
+- worktree 생성/재사용
+- branch checkout / fetch / sync
+- PR create / ready / review / merge
+- CI 상태 polling
+- stage 간 route 결정
 
 ## Homecook Mapping
 

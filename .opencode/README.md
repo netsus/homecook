@@ -48,6 +48,7 @@ pnpm omo:claude-budget -- --clear
 
 - session-orchestrated runner는 repo-local runtime state를 `.opencode/omo-runtime/` 아래에 저장한다.
 - 여기에 work item별 session ID, retry timer, lock, 마지막 artifact 경로를 둔다.
+- autonomous supervisor를 켜면 worktree 경로, active PR, wait reason도 같은 runtime state에 저장한다.
 - tracked 상태인 `.workflow-v2/status.json`에는 session ID를 넣지 않는다.
 - 이 runtime state도 Git에 커밋하지 않는다.
 
@@ -68,3 +69,12 @@ pnpm omo:claude-budget -- --clear
 - Stage `1 / 3 / 5 / 6`은 `claude_primary`, Stage `2 / 4`는 `codex_primary` 세션을 재사용한다.
 - Claude budget unavailable이면 기본 동작은 human handoff가 아니라 `pause + scheduled resume`다.
 - scheduler는 `resume-pending`을 주기적으로 호출하고, 기본 retry delay는 5시간이다.
+
+## Autonomous Supervisor
+
+- 상위 명령:
+  - `pnpm omo:supervise -- --work-item <id>`
+  - `pnpm omo:tick -- --all`
+- supervisor는 기본적으로 `.worktrees/<work-item-id>` 전용 worktree에서만 실행한다.
+- GitHub 자동화는 `gh` CLI만 사용한다.
+- 기본 scheduler cadence는 10분이며, macOS에서는 `launchd` 예시를 우선 제공한다.
