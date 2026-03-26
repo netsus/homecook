@@ -78,10 +78,10 @@
     },
     {
       "id": "03-recipe-like",
-      "preset": "feature",
+      "preset": "vertical-slice-strict",
       "lifecycle": "planned",
       "approval_state": "not_started",
-      "verification_status": "not_run",
+      "verification_status": "pending",
       "required_checks": [
         "pnpm install --frozen-lockfile && pnpm test:all",
         "pnpm lint",
