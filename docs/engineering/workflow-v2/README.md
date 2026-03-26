@@ -63,9 +63,9 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [templates/work-item.example.json](./templates/work-item.example.json): 예시 work item
 - [templates/workflow-status.example.json](./templates/workflow-status.example.json): 예시 상태 보드
 - [migration.md](./migration.md): v1 -> v2 점진 전환 경로
-- [opencode.json](../../../opencode.json): repo-local OpenCode instructions + OMO plugin bootstrap
+- [opencode.json](../../../opencode.json): repo-local OpenCode instructions + direct agent/default bindings
 - [.opencode/README.md](../../../.opencode/README.md): repo-local OMO 운영 메모
-- [.opencode/oh-my-opencode.json](../../../.opencode/oh-my-opencode.json): Homecook용 OMO override
+- [.opencode/oh-my-opencode.json](../../../.opencode/oh-my-opencode.json): Homecook agent/hook compatibility snapshot
 
 ## Adoption Rules
 
