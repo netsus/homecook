@@ -10,6 +10,11 @@ dispatch contract가 고정되면:
 - stage handoff를 재현 가능하게 만들 수 있으며
 - 이후 dispatcher script 구현도 같은 contract를 사용할 수 있다.
 
+현재 이 contract의 최소 구현은:
+
+- `scripts/omo-lite-dispatch-stage.mjs`
+- `scripts/omo-lite-sync-status.mjs`
+
 ## Input Contract
 
 각 dispatch는 최소한 아래 정보를 입력으로 가진다.
@@ -204,4 +209,4 @@ dispatch가 끝나면 supervisor는 최소한 아래 patch를 계산한다.
 - `ralph-loop` / `ulw-loop` 비활성화
 - comment-checker 비활성화
 
-이 기본값은 Homecook stage dispatcher가 아직 구현되지 않았기 때문에 보수적으로 잡아둔 것이다.
+이 기본값은 direct agent execution까지는 아직 연결되지 않았기 때문에 보수적으로 잡아둔 것이다.

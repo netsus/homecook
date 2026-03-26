@@ -11,9 +11,15 @@
   "owners": {
     "claude": "supervision-and-review",
     "codex": "implementation-and-integration",
-    "workers": ["test-reviewer", "pr-governance-reviewer"]
+    "workers": [
+      "test-reviewer",
+      "pr-governance-reviewer"
+    ]
   },
-  "dependencies": ["agent-plan-loop", "agent-review-loop"],
+  "dependencies": [
+    "agent-plan-loop",
+    "agent-review-loop"
+  ],
   "docs_refs": {
     "source_of_truth": [
       "AGENTS.md",
@@ -43,8 +49,8 @@
     ]
   },
   "status": {
-    "lifecycle": "ready_for_review",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed"
   },
   "out_of_scope": [
