@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { runStageWithArtifacts } from "../scripts/lib/omo-lite-runner.mjs";
 
 let fakeOpencodeCounter = 0;
+let fakeClaudeCounter = 0;
 
 function createFakeOpencodeBin(
   rootDir: string,
@@ -50,12 +51,121 @@ function createFakeOpencodeBin(
   };
 }
 
+function createFakeClaudeBin(
+  rootDir: string,
+  homeDir: string,
+  options?: {
+    exitCode?: number;
+    sessionId?: string | null;
+    stdoutJson?: Record<string, unknown> | null;
+    stderr?: string;
+    transcriptSessionId?: string | null;
+    transcriptLocation?: "projects" | "transcripts";
+  },
+) {
+  fakeClaudeCounter += 1;
+  const suffix = String(fakeClaudeCounter);
+  const binPath = join(rootDir, `fake-claude-${suffix}.sh`);
+  const argsPath = join(rootDir, `fake-claude-${suffix}.args.log`);
+  const stdinPath = join(rootDir, `fake-claude-${suffix}.stdin.log`);
+  const exitCode = options?.exitCode ?? 0;
+  const sessionId = options?.sessionId ?? `ses_fake_claude_${suffix}`;
+  const transcriptSessionId =
+    options?.transcriptSessionId === undefined ? sessionId : options.transcriptSessionId;
+  const transcriptLocation = options?.transcriptLocation ?? "projects";
+  const stdoutJson =
+    options?.stdoutJson === undefined
+      ? {
+          type: "result",
+          subtype: "success",
+          is_error: false,
+          session_id: sessionId,
+          total_cost_usd: 0,
+          usage: {
+            input_tokens: 10,
+            output_tokens: 20,
+          },
+          modelUsage: {
+            "claude-sonnet-4-6": {
+              inputTokens: 10,
+              outputTokens: 20,
+              costUSD: 0,
+            },
+          },
+        }
+      : options.stdoutJson;
+  const stderr = options?.stderr ?? "";
+  const transcriptBlock =
+    typeof transcriptSessionId === "string" && transcriptSessionId.length > 0
+      ? [
+          transcriptLocation === "projects"
+            ? "mkdir -p \"$HOME/.claude/projects/-Users-test-homecook\""
+            : "mkdir -p \"$HOME/.claude/transcripts\"",
+          transcriptLocation === "projects"
+            ? `cat <<'EOF' > "$HOME/.claude/projects/-Users-test-homecook/${transcriptSessionId}.jsonl"`
+            : `cat <<'EOF' > "$HOME/.claude/transcripts/${transcriptSessionId}.jsonl"`,
+          "{\"type\":\"user\",\"content\":\"hello\"}",
+          "EOF",
+        ].join("\n")
+      : "";
+  const stdoutBlock =
+    stdoutJson === null
+      ? ""
+      : [
+          "cat <<'EOF'",
+          JSON.stringify(stdoutJson),
+          "EOF",
+        ].join("\n");
+
+  writeFileSync(
+    binPath,
+    [
+      "#!/bin/sh",
+      "printf '%s\\n' \"$@\" > \"$FAKE_CLAUDE_ARGS_PATH\"",
+      "cat > \"$FAKE_CLAUDE_STDIN_PATH\"",
+      transcriptBlock,
+      stdoutBlock,
+      stderr.length > 0 ? `printf '%s\\n' '${stderr}' >&2` : "",
+      `exit ${exitCode}`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
+  chmodSync(binPath, 0o755);
+
+  mkdirSync(join(homeDir, ".claude"), { recursive: true });
+
+  return {
+    binPath,
+    argsPath,
+    stdinPath,
+  };
+}
+
 function createRunnerFixture() {
   const rootDir = mkdtempSync(join(tmpdir(), "omo-lite-runner-"));
 
   mkdirSync(join(rootDir, ".artifacts"), { recursive: true });
 
   return rootDir;
+}
+
+function createClaudeHomeDir() {
+  const homeDir = mkdtempSync(join(tmpdir(), "omo-lite-claude-home-"));
+  mkdirSync(join(homeDir, ".claude", "transcripts"), { recursive: true });
+  mkdirSync(join(homeDir, ".claude", "projects", "-Users-test-homecook"), { recursive: true });
+  writeFileSync(
+    join(homeDir, ".claude", "settings.json"),
+    JSON.stringify(
+      {
+        model: "sonnet",
+        effortLevel: "high",
+      },
+      null,
+      2,
+    ),
+  );
+  return homeDir;
 }
 
 describe("OMO-lite stage runner", () => {
@@ -171,44 +281,50 @@ describe("OMO-lite stage runner", () => {
     expect(runtime.sessions.codex_primary.session_id).toBe("ses_codex_stage2");
   });
 
-  it("reuses the stored Claude session id for follow-up reviewer stages", () => {
+  it("executes Claude stages through raw claude CLI, captures session_id, and reuses it with --resume", () => {
     const rootDir = createRunnerFixture();
-    const stage1 = createFakeOpencodeBin(rootDir, {
+    const homeDir = createClaudeHomeDir();
+    const stage1 = createFakeClaudeBin(rootDir, homeDir, {
       sessionId: "ses_claude_stage1",
     });
-    const stage3 = createFakeOpencodeBin(rootDir, {
+    const stage3 = createFakeClaudeBin(rootDir, homeDir, {
       sessionId: "ses_claude_stage1",
     });
 
     runStageWithArtifacts({
       rootDir,
+      homeDir,
       slice: "03-recipe-like",
       stage: 1,
       workItemId: "03-recipe-like",
       claudeBudgetState: "available",
       mode: "execute",
-      opencodeBin: stage1.binPath,
+      claudeBin: stage1.binPath,
       environment: {
-        FAKE_OPENCODE_ARGS_PATH: stage1.argsPath,
+        FAKE_CLAUDE_ARGS_PATH: stage1.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage1.stdinPath,
       },
       now: "2026-03-26T21:12:00+09:00",
     });
 
     const result = runStageWithArtifacts({
       rootDir,
+      homeDir,
       slice: "03-recipe-like",
       stage: 3,
       workItemId: "03-recipe-like",
       claudeBudgetState: "available",
       mode: "execute",
-      opencodeBin: stage3.binPath,
+      claudeBin: stage3.binPath,
       environment: {
-        FAKE_OPENCODE_ARGS_PATH: stage3.argsPath,
+        FAKE_CLAUDE_ARGS_PATH: stage3.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage3.stdinPath,
       },
       now: "2026-03-26T21:18:00+09:00",
     });
 
     const args = readFileSync(stage3.argsPath, "utf8");
+    const stdin = readFileSync(stage3.stdinPath, "utf8");
     const runtime = JSON.parse(
       readFileSync(join(rootDir, ".opencode", "omo-runtime", "03-recipe-like.json"), "utf8"),
     ) as {
@@ -217,6 +333,7 @@ describe("OMO-lite stage runner", () => {
       sessions: {
         claude_primary: {
           session_id: string;
+          provider: string;
         };
       };
     };
@@ -224,17 +341,27 @@ describe("OMO-lite stage runner", () => {
     expect(result.execution).toMatchObject({
       mode: "execute",
       executed: true,
-      agent: "athena",
+      provider: "claude-cli",
       sessionId: "ses_claude_stage1",
     });
-    expect(args).toContain("--session");
+    expect(args).toContain("-p");
+    expect(args).toContain("--output-format");
+    expect(args).toContain("json");
+    expect(args).toContain("--resume");
     expect(args).toContain("ses_claude_stage1");
+    expect(args).toContain("--effort");
+    expect(args).toContain("high");
+    expect(args).toContain("--model");
+    expect(args).toContain("sonnet");
+    expect(args).not.toContain("--continue");
     expect(args).not.toContain("--agent");
+    expect(stdin).toContain("# Homecook OMO-lite Stage Dispatch");
     expect(runtime).toMatchObject({
       current_stage: 3,
       last_completed_stage: 3,
     });
     expect(runtime.sessions.claude_primary.session_id).toBe("ses_claude_stage1");
+    expect(runtime.sessions.claude_primary.provider).toBe("claude-cli");
   });
 
   it("schedules a retry instead of executing when a Claude-owned stage is unavailable", () => {
@@ -344,6 +471,164 @@ describe("OMO-lite stage runner", () => {
       retry: {
         reason: "session_unavailable",
       },
+    });
+  });
+
+  it("falls back to the project transcript filename when Claude stdout omits session_id", () => {
+    const rootDir = createRunnerFixture();
+    const homeDir = createClaudeHomeDir();
+    const stage1 = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: null,
+      transcriptSessionId: "ses_transcript_fallback",
+      transcriptLocation: "projects",
+      stdoutJson: {
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        total_cost_usd: 0,
+        usage: {
+          input_tokens: 12,
+          output_tokens: 34,
+        },
+        modelUsage: {
+          "claude-sonnet-4-6": {
+            inputTokens: 12,
+            outputTokens: 34,
+            costUSD: 0,
+          },
+        },
+      },
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "03-recipe-like",
+      stage: 1,
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: stage1.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: stage1.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage1.stdinPath,
+      },
+      now: "2026-03-26T22:05:00+09:00",
+    });
+
+    const runtime = JSON.parse(
+      readFileSync(join(rootDir, ".opencode", "omo-runtime", "03-recipe-like.json"), "utf8"),
+    ) as {
+      sessions: {
+        claude_primary: {
+          session_id: string;
+          provider: string;
+        };
+      };
+    };
+
+    expect(result.execution).toMatchObject({
+      sessionId: "ses_transcript_fallback",
+      provider: "claude-cli",
+    });
+    expect(runtime.sessions.claude_primary).toMatchObject({
+      session_id: "ses_transcript_fallback",
+      provider: "claude-cli",
+    });
+  });
+
+  it("still supports the legacy transcripts directory as a fallback source", () => {
+    const rootDir = createRunnerFixture();
+    const homeDir = createClaudeHomeDir();
+    const stage1 = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: null,
+      transcriptSessionId: "ses_legacy_transcript_fallback",
+      transcriptLocation: "transcripts",
+      stdoutJson: {
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        total_cost_usd: 0,
+        usage: {
+          input_tokens: 12,
+          output_tokens: 34,
+        },
+        modelUsage: {
+          "claude-sonnet-4-6": {
+            inputTokens: 12,
+            outputTokens: 34,
+            costUSD: 0,
+          },
+        },
+      },
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "03-recipe-like",
+      stage: 1,
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: stage1.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: stage1.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage1.stdinPath,
+      },
+      now: "2026-03-26T22:06:00+09:00",
+    });
+
+    expect(result.execution).toMatchObject({
+      sessionId: "ses_legacy_transcript_fallback",
+      provider: "claude-cli",
+    });
+  });
+
+  it("allows an explicit opencode fallback for Claude-owned stages", () => {
+    const rootDir = createRunnerFixture();
+    const { binPath, argsPath } = createFakeOpencodeBin(rootDir, {
+      sessionId: "ses_claude_opencode",
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "03-recipe-like",
+      stage: 1,
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeProvider: "opencode",
+      opencodeBin: binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: argsPath,
+      },
+      now: "2026-03-26T22:15:00+09:00",
+    });
+
+    const runtime = JSON.parse(
+      readFileSync(join(rootDir, ".opencode", "omo-runtime", "03-recipe-like.json"), "utf8"),
+    ) as {
+      sessions: {
+        claude_primary: {
+          session_id: string;
+          provider: string;
+          agent: string;
+        };
+      };
+    };
+
+    expect(result.execution).toMatchObject({
+      mode: "execute",
+      provider: "opencode",
+      agent: "athena",
+      sessionId: "ses_claude_opencode",
+    });
+    expect(readFileSync(argsPath, "utf8")).toContain("--agent");
+    expect(runtime.sessions.claude_primary).toMatchObject({
+      session_id: "ses_claude_opencode",
+      provider: "opencode",
+      agent: "athena",
     });
   });
 

@@ -40,11 +40,19 @@ function toIsoString(value) {
 }
 
 function normalizeSessionEntry(role, entry) {
+  const sessionId =
+    entry && typeof entry.session_id === "string" && entry.session_id.trim().length > 0
+      ? entry.session_id.trim()
+      : null;
+
   return {
-    session_id:
-      entry && typeof entry.session_id === "string" && entry.session_id.trim().length > 0
-        ? entry.session_id.trim()
-        : null,
+    session_id: sessionId,
+    provider:
+      entry && typeof entry.provider === "string" && entry.provider.trim().length > 0
+        ? entry.provider.trim()
+        : sessionId
+          ? "opencode"
+          : null,
     agent:
       entry && typeof entry.agent === "string" && entry.agent.trim().length > 0
         ? entry.agent.trim()
@@ -396,10 +404,12 @@ export function setSessionBinding({
   state,
   role,
   sessionId,
+  provider,
   agent,
   updatedAt,
 }) {
   const normalizedRole = ensureNonEmptyString(role, "role");
+  const normalizedProvider = ensureNonEmptyString(provider, "provider");
 
   return {
     ...state,
@@ -407,6 +417,7 @@ export function setSessionBinding({
       ...state.sessions,
       [normalizedRole]: {
         session_id: ensureNonEmptyString(sessionId, "sessionId"),
+        provider: normalizedProvider,
         agent:
           typeof agent === "string" && agent.trim().length > 0
             ? agent.trim()
@@ -460,6 +471,7 @@ export function scheduleStageRetry({
 export function markSessionUnavailable({
   state,
   stage,
+  reason = "session_unavailable",
   attemptCount,
   maxAttempts = DEFAULT_MAX_RETRY_ATTEMPTS,
   artifactDir,
@@ -470,7 +482,7 @@ export function markSessionUnavailable({
     blocked_stage: ensureInteger(Number(stage), "stage"),
     retry: {
       at: null,
-      reason: "session_unavailable",
+      reason: ensureNonEmptyString(reason, "reason"),
       attempt_count: ensureInteger(attemptCount, "attemptCount"),
       max_attempts: ensureInteger(maxAttempts, "maxAttempts"),
     },

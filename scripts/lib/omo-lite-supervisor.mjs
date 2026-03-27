@@ -208,6 +208,7 @@ export function buildStageDispatch({
   retryAt = null,
   attemptCount = 0,
   forceHumanEscalation = false,
+  humanEscalationReason = "session_unavailable",
 }) {
   const normalizedSlice = ensureNonEmptyString(slice, "slice");
   const normalizedStage = ensureStage(stage);
@@ -282,13 +283,13 @@ export function buildStageDispatch({
         blocked_stage: normalizedStage,
         retry: {
           at: null,
-          reason: "session_unavailable",
+          reason: humanEscalationReason,
           attempt_count: normalizedAttemptCount,
         },
       },
       retryDecision: {
         action: "escalate",
-        reason: "session_unavailable",
+        reason: humanEscalationReason,
         retryAt: null,
         attemptCount: normalizedAttemptCount,
       },

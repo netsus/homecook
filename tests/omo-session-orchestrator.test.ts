@@ -52,6 +52,67 @@ function createFakeOpencodeBin(
   };
 }
 
+function createFakeClaudeBin(
+  rootDir: string,
+  homeDir: string,
+  name: string,
+  options?: {
+    exitCode?: number;
+    sessionId?: string;
+    stderr?: string;
+  },
+) {
+  const binPath = join(rootDir, `${name}.sh`);
+  const argsPath = join(rootDir, `${name}.args.log`);
+  const stdinPath = join(rootDir, `${name}.stdin.log`);
+  const exitCode = options?.exitCode ?? 0;
+  const sessionId = options?.sessionId ?? `ses_${name}`;
+  const stderr = options?.stderr ?? "";
+
+  writeFileSync(
+    binPath,
+    [
+      "#!/bin/sh",
+      "printf '%s\\n' \"$@\" > \"$FAKE_CLAUDE_ARGS_PATH\"",
+      "cat > \"$FAKE_CLAUDE_STDIN_PATH\"",
+      "mkdir -p \"$HOME/.claude/projects/-Users-test-homecook\"",
+      `cat <<'EOF' > "$HOME/.claude/projects/-Users-test-homecook/${sessionId}.jsonl"`,
+      "{\"type\":\"user\",\"content\":\"hello\"}",
+      "EOF",
+      "cat <<'EOF'",
+      JSON.stringify({
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        session_id: sessionId,
+        total_cost_usd: 0,
+        usage: {
+          input_tokens: 10,
+          output_tokens: 20,
+        },
+        modelUsage: {
+          "claude-sonnet-4-6": {
+            inputTokens: 10,
+            outputTokens: 20,
+            costUSD: 0,
+          },
+        },
+      }),
+      "EOF",
+      stderr.length > 0 ? `printf '%s\\n' '${stderr}' >&2` : "",
+      `exit ${exitCode}`,
+    ].join("\n"),
+  );
+  chmodSync(binPath, 0o755);
+  mkdirSync(join(homeDir, ".claude", "projects", "-Users-test-homecook"), { recursive: true });
+
+  return {
+    binPath,
+    argsPath,
+    stdinPath,
+  };
+}
+
 function seedProductWorkItem(rootDir: string, workItemId: string) {
   mkdirSync(join(rootDir, ".artifacts"), { recursive: true });
   mkdirSync(join(rootDir, ".workflow-v2", "work-items"), { recursive: true });
@@ -130,30 +191,56 @@ function createOrchestratorFixture() {
   return rootDir;
 }
 
+function createClaudeHomeDir() {
+  const homeDir = mkdtempSync(join(tmpdir(), "omo-session-claude-home-"));
+  mkdirSync(join(homeDir, ".claude", "projects", "-Users-test-homecook"), { recursive: true });
+  writeFileSync(
+    join(homeDir, ".claude", "settings.json"),
+    JSON.stringify(
+      {
+        model: "sonnet",
+        effortLevel: "high",
+      },
+      null,
+      2,
+    ),
+  );
+  return homeDir;
+}
+
 describe("OMO session orchestrator", () => {
-  it("reuses Claude and Codex sessions across Stage 1-4 progression", () => {
+  it("reuses the same Claude session across Stage 1/3/5/6 and the same Codex session across Stage 2/4", () => {
     const rootDir = createOrchestratorFixture();
-    const stage1 = createFakeOpencodeBin(rootDir, "stage1", {
+    const homeDir = createClaudeHomeDir();
+    const stage1 = createFakeClaudeBin(rootDir, homeDir, "stage1", {
       sessionId: "ses_claude_primary",
     });
     const stage2 = createFakeOpencodeBin(rootDir, "stage2", {
       sessionId: "ses_codex_primary",
     });
-    const stage3 = createFakeOpencodeBin(rootDir, "stage3", {
+    const stage3 = createFakeClaudeBin(rootDir, homeDir, "stage3", {
       sessionId: "ses_claude_primary",
     });
     const stage4 = createFakeOpencodeBin(rootDir, "stage4", {
       sessionId: "ses_codex_primary",
     });
+    const stage5 = createFakeClaudeBin(rootDir, homeDir, "stage5", {
+      sessionId: "ses_claude_primary",
+    });
+    const stage6 = createFakeClaudeBin(rootDir, homeDir, "stage6", {
+      sessionId: "ses_claude_primary",
+    });
 
     const first = startWorkItemSession({
       rootDir,
+      homeDir,
       workItemId: "03-recipe-like",
       claudeBudgetState: "available",
       mode: "execute",
-      opencodeBin: stage1.binPath,
+      claudeBin: stage1.binPath,
       environment: {
-        FAKE_OPENCODE_ARGS_PATH: stage1.argsPath,
+        FAKE_CLAUDE_ARGS_PATH: stage1.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage1.stdinPath,
       },
       now: "2026-03-26T21:00:00+09:00",
     });
@@ -169,12 +256,14 @@ describe("OMO session orchestrator", () => {
     });
     const third = continueWorkItemSession({
       rootDir,
+      homeDir,
       workItemId: "03-recipe-like",
       claudeBudgetState: "available",
       mode: "execute",
-      opencodeBin: stage3.binPath,
+      claudeBin: stage3.binPath,
       environment: {
-        FAKE_OPENCODE_ARGS_PATH: stage3.argsPath,
+        FAKE_CLAUDE_ARGS_PATH: stage3.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage3.stdinPath,
       },
       now: "2026-03-26T21:20:00+09:00",
     });
@@ -188,9 +277,37 @@ describe("OMO session orchestrator", () => {
       },
       now: "2026-03-26T21:30:00+09:00",
     });
+    const fifth = continueWorkItemSession({
+      rootDir,
+      homeDir,
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: stage5.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: stage5.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage5.stdinPath,
+      },
+      now: "2026-03-26T21:40:00+09:00",
+    });
+    const sixth = continueWorkItemSession({
+      rootDir,
+      homeDir,
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: stage6.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: stage6.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage6.stdinPath,
+      },
+      now: "2026-03-26T21:50:00+09:00",
+    });
 
     const stage3Args = readFileSync(stage3.argsPath, "utf8");
     const stage4Args = readFileSync(stage4.argsPath, "utf8");
+    const stage5Args = readFileSync(stage5.argsPath, "utf8");
+    const stage6Args = readFileSync(stage6.argsPath, "utf8");
     const status = readWorkItemSessionStatus({
       rootDir,
       workItemId: "03-recipe-like",
@@ -200,20 +317,28 @@ describe("OMO session orchestrator", () => {
     expect(second.stage).toBe(2);
     expect(third.stage).toBe(3);
     expect(fourth.stage).toBe(4);
-    expect(stage3Args).toContain("--session");
+    expect(fifth.stage).toBe(5);
+    expect(sixth.stage).toBe(6);
+    expect(stage3Args).toContain("--resume");
     expect(stage3Args).toContain("ses_claude_primary");
+    expect(stage5Args).toContain("--resume");
+    expect(stage5Args).toContain("ses_claude_primary");
+    expect(stage6Args).toContain("--resume");
+    expect(stage6Args).toContain("ses_claude_primary");
     expect(stage4Args).toContain("--session");
     expect(stage4Args).toContain("ses_codex_primary");
     expect(status.runtime).toMatchObject({
-      current_stage: 4,
-      last_completed_stage: 4,
+      current_stage: 6,
+      last_completed_stage: 6,
       blocked_stage: null,
       sessions: {
         claude_primary: {
           session_id: "ses_claude_primary",
+          provider: "claude-cli",
         },
         codex_primary: {
           session_id: "ses_codex_primary",
+          provider: "opencode",
         },
       },
     });
@@ -221,7 +346,8 @@ describe("OMO session orchestrator", () => {
 
   it("resumes due blocked stages from the stored Claude session", () => {
     const rootDir = createOrchestratorFixture();
-    const resumeRun = createFakeOpencodeBin(rootDir, "resume", {
+    const homeDir = createClaudeHomeDir();
+    const resumeRun = createFakeClaudeBin(rootDir, homeDir, "resume", {
       sessionId: "ses_claude_primary",
     });
 
@@ -240,11 +366,13 @@ describe("OMO session orchestrator", () => {
           sessions: {
             claude_primary: {
               session_id: "ses_claude_primary",
+              provider: "claude-cli",
               agent: "athena",
               updated_at: "2026-03-26T12:00:00.000Z",
             },
             codex_primary: {
               session_id: "ses_codex_primary",
+              provider: "opencode",
               agent: "hephaestus",
               updated_at: "2026-03-26T11:00:00.000Z",
             },
@@ -265,11 +393,13 @@ describe("OMO session orchestrator", () => {
 
     const resumed = resumePendingWorkItems({
       rootDir,
+      homeDir,
       claudeBudgetState: "available",
       mode: "execute",
-      opencodeBin: resumeRun.binPath,
+      claudeBin: resumeRun.binPath,
       environment: {
-        FAKE_OPENCODE_ARGS_PATH: resumeRun.argsPath,
+        FAKE_CLAUDE_ARGS_PATH: resumeRun.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: resumeRun.stdinPath,
       },
       now: "2026-03-27T03:00:00+09:00",
     });
@@ -284,7 +414,7 @@ describe("OMO session orchestrator", () => {
       workItemId: "03-recipe-like",
       stage: 3,
     });
-    expect(args).toContain("--session");
+    expect(args).toContain("--resume");
     expect(args).toContain("ses_claude_primary");
     expect(status.runtime).toMatchObject({
       current_stage: 3,
