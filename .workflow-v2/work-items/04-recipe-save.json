@@ -61,9 +61,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending"
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed"
   },
   "out_of_scope": [
     "RECIPEBOOK_DETAIL에서 저장 해제 UI 및 DELETE /recipe-books/{book_id}/recipes/{recipe_id} 연계",

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-03-27T17:20:11+09:00",
+  "updated_at": "2026-03-27T14:06:34.958Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -93,15 +93,16 @@
     {
       "id": "04-recipe-save",
       "preset": "vertical-slice-strict",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm install --frozen-lockfile && pnpm test:all",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "OMO supervisor pilot target. Scope includes recipe-book lookup, custom book creation, and save flow with saved/custom restriction."
+      "notes": "wait_kind=none merged=true",
+      "pr_path": "https://github.com/netsus/homecook/pull/50"
     },
     {
       "id": "omo-session-orchestrator-spec",
