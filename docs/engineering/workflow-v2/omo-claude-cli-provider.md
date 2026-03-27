@@ -57,12 +57,14 @@ claude -p \
 Claude session ID는 아래 우선순위로 추출한다.
 
 1. Claude JSON stdout의 `session_id`
-2. `~/.claude/transcripts/<session_id>.jsonl` 파일명
+2. `~/.claude/projects/**/<session_id>.jsonl` 파일명
+3. legacy `~/.claude/transcripts/<session_id>.jsonl` 파일명
 
 규칙:
 
 - JSON stdout에 `session_id`가 있으면 그것이 authoritative source다.
-- stdout에 `session_id`가 없을 때만 transcript filename fallback을 사용한다.
+- stdout에 `session_id`가 없을 때만 local transcript filename fallback을 사용한다.
+- fallback은 프로젝트별 `~/.claude/projects/**` 저장 구조를 먼저 보고, legacy `~/.claude/transcripts`는 보조 경로로만 본다.
 - 저장된 session ID로 `--resume`이 실패하면 조용히 새 세션을 만들지 않는다.
 - transcript가 없거나 resume 대상 session이 invalid하면 `human_escalation`으로 끝낸다.
 
