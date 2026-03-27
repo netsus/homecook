@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
 
+import { findInvalidWorkflowV2Refs } from "./git-policy.mjs";
+
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string.`);
@@ -21,6 +23,41 @@ function parsePullRequestUrl(url) {
   };
 }
 
+function tryParsePullRequestUrl(text) {
+  if (typeof text !== "string" || text.trim().length === 0) {
+    return null;
+  }
+
+  const match = text.match(/https:\/\/github\.com\/[^\s]+\/pull\/\d+/);
+  if (!match) {
+    return null;
+  }
+
+  return parsePullRequestUrl(match[0]);
+}
+
+function normalizePullRequestBody(body, workItemId) {
+  const normalizedBody = ensureNonEmptyString(body, "body");
+  const normalizedWorkItemId =
+    typeof workItemId === "string" && workItemId.trim().length > 0 ? workItemId.trim() : null;
+
+  if (!normalizedWorkItemId) {
+    return normalizedBody;
+  }
+
+  const invalidRefs = findInvalidWorkflowV2Refs(normalizedBody);
+  if (invalidRefs.length === 0) {
+    return normalizedBody;
+  }
+
+  const workflowRefPath = `.workflow-v2/work-items/${normalizedWorkItemId}.json`;
+
+  return normalizedBody.replace(
+    /^-\s+workflow v2 work item:\s*(.+)$/gim,
+    `- workflow v2 work item: \`${workflowRefPath}\``,
+  );
+}
+
 function summarizeChecks(checks) {
   const buckets = checks.map((check) => check.bucket ?? "pass");
 
@@ -33,6 +70,23 @@ function summarizeChecks(checks) {
   }
 
   return "pass";
+}
+
+function summarizeMergeState(summary) {
+  if (typeof summary !== "object" || summary === null) {
+    return {
+      state: null,
+      mergedAt: null,
+      mergeStateStatus: null,
+    };
+  }
+
+  return {
+    state: typeof summary.state === "string" ? summary.state : null,
+    mergedAt: typeof summary.mergedAt === "string" && summary.mergedAt.trim().length > 0 ? summary.mergedAt : null,
+    mergeStateStatus:
+      typeof summary.mergeStateStatus === "string" ? summary.mergeStateStatus : null,
+  };
 }
 
 /**
@@ -61,6 +115,18 @@ export function createGithubAutomationClient({
     throw new Error(stderr.length > 0 ? stderr : `gh ${args.join(" ")} failed.`);
   }
 
+  function getPullRequestMergeSummary(prRef) {
+    const stdout = runGh([
+      "pr",
+      "view",
+      ensureNonEmptyString(prRef, "prRef"),
+      "--json",
+      "state,mergedAt,mergeStateStatus",
+    ]);
+
+    return summarizeMergeState(stdout.length > 0 ? JSON.parse(stdout) : null);
+  }
+
   return {
     assertAuth() {
       runGh(["auth", "status"]);
@@ -71,29 +137,64 @@ export function createGithubAutomationClient({
       title,
       body,
       draft,
-    }) {
+      workItemId,
+    } = {}) {
+      const normalizedHead = ensureNonEmptyString(head, "head");
       const args = [
         "pr",
         "create",
         "--base",
         ensureNonEmptyString(base, "base"),
         "--head",
-        ensureNonEmptyString(head, "head"),
+        normalizedHead,
         "--title",
         ensureNonEmptyString(title, "title"),
         "--body",
-        ensureNonEmptyString(body, "body"),
+        normalizePullRequestBody(body, workItemId),
       ];
 
       if (draft) {
         args.push("--draft");
       }
 
-      const output = runGh(args);
-      const parsed = parsePullRequestUrl(output);
+      let parsed;
+
+      try {
+        parsed = parsePullRequestUrl(runGh(args));
+      } catch (error) {
+        if (error instanceof Error && /already exists/i.test(error.message)) {
+          parsed =
+            tryParsePullRequestUrl(error.message) ??
+            (() => {
+              const existingStdout = runGh([
+                "pr",
+                "list",
+                "--head",
+                normalizedHead,
+                "--json",
+                "number,url,isDraft",
+              ]);
+              const existingPullRequests = existingStdout.length > 0 ? JSON.parse(existingStdout) : [];
+              const existingPullRequest = existingPullRequests[0];
+
+              if (!existingPullRequest?.url || !existingPullRequest?.number) {
+                throw error;
+              }
+
+              return {
+                url: existingPullRequest.url,
+                number: Number(existingPullRequest.number),
+                draft: Boolean(existingPullRequest.isDraft),
+              };
+            })();
+        } else {
+          throw error;
+        }
+      }
+
       return {
         ...parsed,
-        draft: Boolean(draft),
+        draft: typeof parsed.draft === "boolean" ? parsed.draft : Boolean(draft),
       };
     },
     getRequiredChecks({
@@ -117,9 +218,18 @@ export function createGithubAutomationClient({
           error instanceof Error &&
           /no required checks reported/i.test(error.message)
         ) {
+          const fallbackStdout = runGh([
+            "pr",
+            "checks",
+            ensureNonEmptyString(prRef, "prRef"),
+            "--json",
+            "bucket,name,state,workflow,link",
+          ]);
+          const fallbackChecks = fallbackStdout.length > 0 ? JSON.parse(fallbackStdout) : [];
+
           return {
-            bucket: "pending",
-            checks: [],
+            bucket: fallbackChecks.length > 0 ? summarizeChecks(fallbackChecks) : "pending",
+            checks: fallbackChecks,
           };
         }
 
@@ -170,14 +280,22 @@ export function createGithubAutomationClient({
       prRef,
       headSha,
     }) {
+      const normalizedPrRef = ensureNonEmptyString(prRef, "prRef");
       runGh([
         "pr",
         "merge",
-        ensureNonEmptyString(prRef, "prRef"),
+        normalizedPrRef,
         "--merge",
         "--match-head-commit",
         ensureNonEmptyString(headSha, "headSha"),
       ]);
+
+      const mergeSummary = getPullRequestMergeSummary(normalizedPrRef);
+      if (!mergeSummary.mergedAt) {
+        throw new Error(
+          `Pull request merge did not complete. state=${mergeSummary.state ?? "unknown"} mergeStateStatus=${mergeSummary.mergeStateStatus ?? "unknown"}`,
+        );
+      }
 
       return {
         merged: true,

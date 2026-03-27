@@ -66,6 +66,8 @@ describe("OMO-lite repo config", () => {
       provider: "opencode",
       bin: "opencode",
       agent: "hephaestus",
+      model: "openai/gpt-5.3-codex",
+      variant: "high",
     });
   });
 

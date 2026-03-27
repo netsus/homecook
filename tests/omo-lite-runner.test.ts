@@ -287,7 +287,7 @@ describe("OMO-lite stage runner", () => {
       mode: "execute",
       executed: true,
       executable: true,
-      agent: "hephaestus",
+      agent: null,
       exitCode: 0,
       sessionId: "ses_codex_stage2",
     });
@@ -314,8 +314,11 @@ describe("OMO-lite stage runner", () => {
 
     expect(stdout).toContain("\"sessionID\":\"ses_codex_stage2\"");
     expect(args).toContain("run");
-    expect(args).toContain("--agent");
-    expect(args).toContain("hephaestus");
+    expect(args).toContain("--model");
+    expect(args).toContain("openai/gpt-5.3-codex");
+    expect(args).toContain("--variant");
+    expect(args).toContain("high");
+    expect(args).not.toContain("--agent");
     expect(args).toContain("--dir");
     expect(args).toContain(rootDir);
     expect(metadata.execution).toMatchObject({
@@ -665,6 +668,69 @@ describe("OMO-lite stage runner", () => {
         reason: "session_unavailable",
       },
     });
+  });
+
+  it("falls back to the standard opencode install path when PATH does not expose the binary", () => {
+    const rootDir = createRunnerFixture();
+    const homeDir = mkdtempSync(join(tmpdir(), "omo-opencode-home-"));
+    const opencodeDir = join(homeDir, ".opencode", "bin");
+    const binPath = join(opencodeDir, "opencode");
+    const argsPath = join(rootDir, "home-opencode.args.log");
+
+    mkdirSync(opencodeDir, { recursive: true });
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "printf '%s\\n' \"$@\" > \"$FAKE_OPENCODE_ARGS_PATH\"",
+        "cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
+        JSON.stringify(
+          {
+            result: "done",
+            summary_markdown: "Stage complete",
+            pr: {
+              title: "feat: fake backend slice",
+              body_markdown: "## Summary\n- fake",
+            },
+            checks_run: [],
+            next_route: "open_pr",
+          },
+          null,
+          2,
+        ),
+        "EOF",
+        "printf '%s\\n' '{\"type\":\"step_start\",\"sessionID\":\"ses_home_opencode\",\"part\":{\"type\":\"step-start\"}}'",
+        "printf '%s\\n' '{\"type\":\"step_finish\",\"sessionID\":\"ses_home_opencode\",\"part\":{\"type\":\"step-finish\",\"reason\":\"stop\"}}'",
+        "exit 0",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "03-recipe-like",
+      stage: 2,
+      workItemId: "03-recipe-like",
+      mode: "execute",
+      environment: {
+        HOME: homeDir,
+        FAKE_OPENCODE_ARGS_PATH: argsPath,
+      },
+      now: "2026-03-27T00:05:00+09:00",
+    });
+
+    expect(result.execution).toMatchObject({
+      mode: "execute",
+      provider: "opencode",
+      sessionId: "ses_home_opencode",
+    });
+    const args = readFileSync(argsPath, "utf8");
+    expect(args).toContain("--model");
+    expect(args).toContain("openai/gpt-5.3-codex");
+    expect(args).toContain("--variant");
+    expect(args).toContain("high");
+    expect(args).not.toContain("--agent");
   });
 
   it("falls back to the project transcript filename when Claude stdout omits session_id", () => {

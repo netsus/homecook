@@ -54,11 +54,18 @@ function defaultArtifactDir(rootDir, slice, stage, now) {
   );
 }
 
-function resolveDefaultOpencodeBin(environment) {
+function resolveDefaultOpencodeBin(environment, homeDir) {
+  const candidateHomeDir =
+    environment?.HOME ??
+    homeDir ??
+    process.env.HOME ??
+    null;
   const fromEnvironment =
     environment?.OPENCODE_BIN ??
     process.env.OPENCODE_BIN ??
-    (process.env.HOME ? resolve(process.env.HOME, ".opencode", "bin", "opencode") : null);
+    (typeof candidateHomeDir === "string" && candidateHomeDir.trim().length > 0
+      ? resolve(candidateHomeDir, ".opencode", "bin", "opencode")
+      : null);
 
   if (typeof fromEnvironment === "string" && fromEnvironment.trim().length > 0) {
     if (fromEnvironment.includes("/") && existsSync(fromEnvironment)) {
@@ -79,6 +86,8 @@ function resolveExecutionBinding(dispatch, { agent, providerConfig }) {
       executable: false,
       provider: null,
       agent: null,
+      model: null,
+      variant: null,
       reason: "actor requires human escalation",
     };
   }
@@ -88,16 +97,28 @@ function resolveExecutionBinding(dispatch, { agent, providerConfig }) {
       executable: true,
       provider: "claude-cli",
       agent: null,
+      model: null,
+      variant: null,
       reason: null,
     };
   }
 
   const fallbackAgent = providerConfig.agent ?? OMO_SESSION_ROLE_TO_AGENT[dispatch.sessionBinding.role];
+  const resolvedModel =
+    typeof providerConfig.model === "string" && providerConfig.model.trim().length > 0
+      ? providerConfig.model.trim()
+      : null;
+  const resolvedVariant =
+    typeof providerConfig.variant === "string" && providerConfig.variant.trim().length > 0
+      ? providerConfig.variant.trim()
+      : null;
 
   return {
     executable: true,
     provider: "opencode",
-    agent: agent ?? fallbackAgent,
+    agent: resolvedModel ? null : agent ?? fallbackAgent,
+    model: resolvedModel,
+    variant: resolvedVariant,
     reason: null,
   };
 }
@@ -459,6 +480,8 @@ function runOpencode({
   artifactDir,
   prompt,
   agent,
+  model,
+  variant,
   sessionId,
   opencodeBin,
   environment,
@@ -469,7 +492,14 @@ function runOpencode({
   if (sessionId) {
     commandArgs.push("--session", sessionId);
   } else {
-    commandArgs.push("--agent", agent);
+    if (typeof model === "string" && model.trim().length > 0) {
+      commandArgs.push("--model", model.trim());
+      if (typeof variant === "string" && variant.trim().length > 0) {
+        commandArgs.push("--variant", variant.trim());
+      }
+    } else {
+      commandArgs.push("--agent", agent);
+    }
   }
 
   commandArgs.push(prompt);
@@ -975,8 +1005,10 @@ export function runStageWithArtifacts({
   });
   const resolvedOpencodeBin =
     activeProviderConfig.provider === "opencode"
-      ? activeProviderConfig.bin ?? resolveDefaultOpencodeBin(environment)
-      : resolveDefaultOpencodeBin(environment);
+      ? !activeProviderConfig.bin || activeProviderConfig.bin === "opencode"
+        ? resolveDefaultOpencodeBin(environment, homeDir)
+        : activeProviderConfig.bin
+      : resolveDefaultOpencodeBin(environment, homeDir);
 
   mkdirSync(targetArtifactDir, { recursive: true });
 
@@ -1102,6 +1134,8 @@ export function runStageWithArtifacts({
               artifactDir: targetArtifactDir,
               prompt,
               agent: executionBinding.agent,
+              model: executionBinding.model,
+              variant: executionBinding.variant,
               sessionId: existingSessionId,
               opencodeBin: resolvedOpencodeBin,
               environment,
