@@ -173,6 +173,35 @@ describe("OMO-lite Claude budget resolution", () => {
     });
   });
 
+  it("treats Claude CLI local state as available when the claude-cli provider is selected", () => {
+    const { rootDir, homeDir } = createBudgetFixture();
+
+    mkdirSync(join(homeDir, ".claude", "transcripts"), { recursive: true });
+    writeFileSync(
+      join(homeDir, ".claude", "settings.json"),
+      JSON.stringify(
+        {
+          model: "sonnet",
+          effortLevel: "high",
+        },
+        null,
+        2,
+      ),
+    );
+
+    const resolved = resolveClaudeBudgetState({
+      rootDir,
+      homeDir,
+      provider: "claude-cli",
+    });
+
+    expect(resolved).toMatchObject({
+      state: "available",
+      source: "claude-cli-local",
+      providerConfigured: true,
+    });
+  });
+
   it("prefers a repo-local override and can clear it again", () => {
     const { rootDir, homeDir, overridePath } = createBudgetFixture();
 
@@ -366,6 +395,7 @@ describe("OMO-lite stage runner budget-aware fallback", () => {
       stage: 1,
       workItemId,
       mode: "execute",
+      claudeProvider: "opencode",
       opencodeBin: binPath,
       now: "2026-03-27T01:50:00+09:00",
     });

@@ -13,6 +13,10 @@ function printUsage() {
       "  --claude-budget-state <state>    Optional override: available | constrained | unavailable",
       "  --mode <artifact-only|execute>   Default: execute",
       "  --gh-bin <path>                  Override gh binary path",
+      "  --claude-provider <name>         Override Claude provider: opencode | claude-cli",
+      "  --claude-bin <path>              Override claude binary path",
+      "  --claude-model <model>           Override Claude model alias/name",
+      "  --claude-effort <level>          Override Claude effort: low | medium | high",
       "  --opencode-bin <path>            Override opencode binary path",
       "  --now <iso-timestamp>            Override timestamp for deterministic runs/tests",
       "  --json                           Print JSON output",
@@ -60,6 +64,10 @@ function parseArgs(argv) {
       token === "--claude-budget-state" ||
       token === "--mode" ||
       token === "--gh-bin" ||
+      token === "--claude-provider" ||
+      token === "--claude-bin" ||
+      token === "--claude-model" ||
+      token === "--claude-effort" ||
       token === "--opencode-bin" ||
       token === "--now"
     ) {
@@ -91,6 +99,10 @@ function main() {
     claudeBudgetState: options.claudeBudgetState,
     mode: options.mode,
     ghBin: options.ghBin,
+    claudeProvider: options.claudeProvider,
+    claudeBin: options.claudeBin,
+    claudeModel: options.claudeModel,
+    claudeEffort: options.claudeEffort,
     opencodeBin: options.opencodeBin,
     now: options.now,
   });

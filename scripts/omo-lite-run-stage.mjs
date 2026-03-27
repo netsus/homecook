@@ -14,6 +14,10 @@ function printUsage() {
       "  --claude-budget-state <state>    Optional override: available | constrained | unavailable",
       "  --mode <artifact-only|execute>   Artifact bundle only or run opencode for Codex stages",
       "  --artifact-dir <path>            Override artifact output directory",
+      "  --claude-provider <name>         Override Claude provider: opencode | claude-cli",
+      "  --claude-bin <path>              Override claude binary path",
+      "  --claude-model <model>           Override Claude model alias/name",
+      "  --claude-effort <level>          Override Claude effort: low | medium | high",
       "  --opencode-bin <path>            Override opencode binary path",
       "  --agent <name>                   Override OMO/OpenCode agent for executable stages",
       "  --sync-status                    Apply the dispatch status patch to workflow-v2 tracked state",
@@ -63,6 +67,10 @@ function parseArgs(argv) {
       token === "--claude-budget-state" ||
       token === "--mode" ||
       token === "--artifact-dir" ||
+      token === "--claude-provider" ||
+      token === "--claude-bin" ||
+      token === "--claude-model" ||
+      token === "--claude-effort" ||
       token === "--opencode-bin" ||
       token === "--agent"
     ) {
@@ -95,6 +103,10 @@ function main() {
     claudeBudgetState: options.claudeBudgetState,
     mode: options.mode,
     artifactDir: options.artifactDir,
+    claudeProvider: options.claudeProvider,
+    claudeBin: options.claudeBin,
+    claudeModel: options.claudeModel,
+    claudeEffort: options.claudeEffort,
     opencodeBin: options.opencodeBin,
     agent: options.agent,
     syncStatus: options.syncStatus,
@@ -111,6 +123,7 @@ function main() {
       `Artifact dir: ${result.artifactDir}`,
       `Execution mode: ${result.execution.mode}`,
       `Actor: ${result.dispatch.actor}`,
+      `Provider: ${result.execution.provider ?? "n/a"}`,
       result.execution.executed
         ? `Executed via agent: ${result.execution.agent}`
         : `Execution skipped: ${result.execution.reason ?? "artifact-only mode"}`,

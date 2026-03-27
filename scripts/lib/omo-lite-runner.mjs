@@ -1,8 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { resolveClaudeBudgetState } from "./omo-lite-claude-budget.mjs";
+import {
+  resolveClaudeProviderConfig,
+  resolveCodexProviderConfig,
+} from "./omo-provider-config.mjs";
 import {
   buildStageDispatch,
   resolveStageSessionRole,
@@ -68,19 +72,30 @@ function resolveDefaultOpencodeBin(environment) {
   return "opencode";
 }
 
-function resolveExecutionBinding(dispatch, { agent }) {
+function resolveExecutionBinding(dispatch, { agent, providerConfig }) {
   if (dispatch.actor === "human") {
     return {
       executable: false,
+      provider: null,
       agent: null,
       reason: "actor requires human escalation",
     };
   }
 
-  const fallbackAgent = OMO_SESSION_ROLE_TO_AGENT[dispatch.sessionBinding.role];
+  if (providerConfig.provider === "claude-cli") {
+    return {
+      executable: true,
+      provider: "claude-cli",
+      agent: null,
+      reason: null,
+    };
+  }
+
+  const fallbackAgent = providerConfig.agent ?? OMO_SESSION_ROLE_TO_AGENT[dispatch.sessionBinding.role];
 
   return {
     executable: true,
+    provider: "opencode",
     agent: agent ?? fallbackAgent,
     reason: null,
   };
@@ -158,8 +173,65 @@ function writeArtifacts({ artifactDir, dispatch, prompt, metadata }) {
   }
 }
 
+function parseJsonObject(stdout) {
+  const text = typeof stdout === "string" ? stdout.trim() : "";
+  if (text.length === 0) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed;
+    }
+  } catch {
+    // Ignore full-buffer parse failures and fall back to line-based parsing.
+  }
+
+  const lines = text.split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || !trimmed.startsWith("{")) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+function extractSessionId(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  if (typeof value.sessionID === "string" && value.sessionID.trim().length > 0) {
+    return value.sessionID.trim();
+  }
+
+  if (typeof value.session_id === "string" && value.session_id.trim().length > 0) {
+    return value.session_id.trim();
+  }
+
+  return null;
+}
+
 function parseSessionId(stdout, fallbackSessionId) {
   const lines = typeof stdout === "string" ? stdout.split(/\r?\n/) : [];
+
+  const fullObject = parseJsonObject(stdout);
+  const fullObjectSessionId = extractSessionId(fullObject);
+  if (fullObjectSessionId) {
+    return fullObjectSessionId;
+  }
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -169,8 +241,9 @@ function parseSessionId(stdout, fallbackSessionId) {
 
     try {
       const event = JSON.parse(trimmed);
-      if (typeof event.sessionID === "string" && event.sessionID.trim().length > 0) {
-        return event.sessionID.trim();
+      const sessionId = extractSessionId(event);
+      if (sessionId) {
+        return sessionId;
       }
     } catch {
       continue;
@@ -178,6 +251,43 @@ function parseSessionId(stdout, fallbackSessionId) {
   }
 
   return fallbackSessionId ?? null;
+}
+
+function parseClaudeJsonOutput(stdout) {
+  const parsed = parseJsonObject(stdout);
+  return parsed && typeof parsed === "object" ? parsed : null;
+}
+
+function listClaudeTranscriptIds(homeDir) {
+  const transcriptDir = resolve(homeDir ?? process.env.HOME ?? "", ".claude", "transcripts");
+  if (!existsSync(transcriptDir)) {
+    return {
+      transcriptDir,
+      ids: new Set(),
+    };
+  }
+
+  const ids = new Set(
+    readdirSync(transcriptDir)
+      .map((entry) => entry.match(/^(ses_[^.]+)\.jsonl$/)?.[1] ?? null)
+      .filter(Boolean),
+  );
+
+  return {
+    transcriptDir,
+    ids,
+  };
+}
+
+function detectNewClaudeTranscriptSessionId({ beforeIds, homeDir }) {
+  const { ids } = listClaudeTranscriptIds(homeDir);
+  const createdIds = [...ids].filter((entry) => !beforeIds.has(entry));
+
+  if (createdIds.length === 1) {
+    return createdIds[0];
+  }
+
+  return null;
 }
 
 function parseErrorEvent(stdout) {
@@ -326,6 +436,7 @@ function runOpencode({
     mode: "execute",
     executed: true,
     executable: true,
+    provider: "opencode",
     agent,
     reason: null,
     exitCode: result.status ?? 0,
@@ -333,6 +444,154 @@ function runOpencode({
     commandArgs,
     stdoutPath,
     stderrPath,
+  };
+}
+
+function runClaudeCli({
+  executionDir,
+  artifactDir,
+  prompt,
+  sessionId,
+  claudeBin,
+  claudeModel,
+  claudeEffort,
+  permissionMode,
+  environment,
+  homeDir,
+  stageResultPath,
+}) {
+  const beforeTranscripts = listClaudeTranscriptIds(homeDir);
+  const commandArgs = [
+    "-p",
+    "--output-format",
+    "json",
+    "--input-format",
+    "text",
+    "--permission-mode",
+    permissionMode,
+  ];
+
+  if (claudeEffort) {
+    commandArgs.push("--effort", claudeEffort);
+  }
+
+  if (claudeModel) {
+    commandArgs.push("--model", claudeModel);
+  }
+
+  if (sessionId) {
+    commandArgs.push("--resume", sessionId);
+  }
+
+  const result = spawnSync(claudeBin, commandArgs, {
+    cwd: executionDir,
+    env: {
+      ...process.env,
+      ...(environment ?? {}),
+      HOME: homeDir ?? process.env.HOME,
+      OMO_STAGE_RESULT_PATH: stageResultPath,
+      OMO_STAGE_ARTIFACT_DIR: artifactDir,
+    },
+    input: prompt,
+    encoding: "utf8",
+    maxBuffer: 20 * 1024 * 1024,
+  });
+
+  const stdoutPath = resolve(artifactDir, "claude.stdout.log");
+  const stderrPath = resolve(artifactDir, "claude.stderr.log");
+
+  writeFileSync(stdoutPath, result.stdout ?? "");
+  writeFileSync(stderrPath, result.stderr ?? "");
+
+  const parsedOutput = parseClaudeJsonOutput(result.stdout);
+  const capturedSessionId =
+    extractSessionId(parsedOutput) ??
+    detectNewClaudeTranscriptSessionId({
+      beforeIds: beforeTranscripts.ids,
+      homeDir,
+    }) ??
+    sessionId ??
+    null;
+
+  if (result.error) {
+    throw createProcessFailure(result.error.message, {
+      cause: result.error,
+      exitCode: result.status ?? null,
+      stdoutPath,
+      stderrPath,
+      sessionId: capturedSessionId,
+      parsedOutput,
+    });
+  }
+
+  if (result.status !== 0) {
+    throw createProcessFailure(
+      `claude CLI failed with exit code ${result.status}. See ${stderrPath}`,
+      {
+        exitCode: result.status ?? null,
+        stdoutPath,
+        stderrPath,
+        sessionId: capturedSessionId,
+        parsedOutput,
+      },
+    );
+  }
+
+  if (!parsedOutput) {
+    throw createProcessFailure(
+      "claude CLI emitted non-JSON output.",
+      {
+        exitCode: result.status ?? 0,
+        stdoutPath,
+        stderrPath,
+        sessionId: capturedSessionId,
+        contractViolation: true,
+      },
+    );
+  }
+
+  if (!capturedSessionId) {
+    throw createProcessFailure(
+      "claude CLI did not expose a session_id or transcript fallback.",
+      {
+        exitCode: result.status ?? 0,
+        stdoutPath,
+        stderrPath,
+        sessionId: null,
+        contractViolation: true,
+      },
+    );
+  }
+
+  if (parsedOutput.is_error === true) {
+    throw createProcessFailure(
+      `claude CLI emitted an error result: ${parsedOutput.result ?? "Unknown Claude CLI error."}`,
+      {
+        exitCode: result.status ?? 0,
+        stdoutPath,
+        stderrPath,
+        sessionId: capturedSessionId,
+        parsedOutput,
+      },
+    );
+  }
+
+  return {
+    mode: "execute",
+    executed: true,
+    executable: true,
+    provider: "claude-cli",
+    agent: null,
+    reason: null,
+    exitCode: result.status ?? 0,
+    sessionId: capturedSessionId,
+    commandArgs,
+    stdoutPath,
+    stderrPath,
+    usage: parsedOutput.usage ?? null,
+    modelUsage: parsedOutput.modelUsage ?? null,
+    totalCostUsd:
+      typeof parsedOutput.total_cost_usd === "number" ? parsedOutput.total_cost_usd : null,
   };
 }
 
@@ -352,6 +611,54 @@ function isSessionUnavailableFailure(error) {
   return /session/i.test(`${message}\n${stderr}`) && /(not found|missing|invalid|unknown)/i.test(`${message}\n${stderr}`);
 }
 
+function isClaudeRetryableFailure(error) {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const fragments = [];
+
+  if (typeof error.message === "string") {
+    fragments.push(error.message);
+  }
+
+  if (typeof error.stderrPath === "string" && existsSync(error.stderrPath)) {
+    fragments.push(readFileSync(error.stderrPath, "utf8"));
+  }
+
+  if (typeof error.stdoutPath === "string" && existsSync(error.stdoutPath)) {
+    fragments.push(readFileSync(error.stdoutPath, "utf8"));
+  }
+
+  const parsedOutput =
+    error.parsedOutput && typeof error.parsedOutput === "object" ? error.parsedOutput : null;
+  if (parsedOutput?.result) {
+    fragments.push(String(parsedOutput.result));
+  }
+
+  const haystack = fragments.join("\n");
+
+  return /(credit balance is too low|insufficient credits|quota|billing|budget exhausted|rate limit|temporarily unavailable|try again|overloaded|service unavailable|server error|timed out|timeout|login required|authentication required|auth required)/i.test(
+    haystack,
+  );
+}
+
+function resolveStoredSessionProvider(role, entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  if (typeof entry.provider === "string" && entry.provider.trim().length > 0) {
+    return entry.provider.trim();
+  }
+
+  if (typeof entry.session_id === "string" && entry.session_id.trim().length > 0) {
+    return role === "codex_primary" ? "opencode" : "opencode";
+  }
+
+  return null;
+}
+
 function buildStatusNotes({
   artifactDir,
   resolvedBudget,
@@ -366,6 +673,10 @@ function buildStatusNotes({
     `session_role=${dispatch.sessionBinding.role}`,
     `resume_mode=${dispatch.sessionBinding.resumeMode}`,
   ];
+
+  if (execution?.provider) {
+    notes.push(`session_provider=${execution.provider}`);
+  }
 
   if (dispatch.sessionBinding.sessionId) {
     notes.push(`session_id=${dispatch.sessionBinding.sessionId}`);
@@ -387,7 +698,7 @@ function buildStatusNotes({
 }
 
 function resolveStatusPatch({ dispatch, execution }) {
-  if (execution?.mode === "session-missing") {
+  if (execution?.mode === "session-missing" || execution?.mode === "provider-mismatch") {
     return {
       ...dispatch.statusPatch,
       lifecycle: "blocked",
@@ -410,6 +721,10 @@ function resolveStatusPatch({ dispatch, execution }) {
  * @property {string} [artifactDir]
  * @property {string} [executionDir]
  * @property {string} [opencodeBin]
+ * @property {"opencode"|"claude-cli"} [claudeProvider]
+ * @property {string} [claudeBin]
+ * @property {string} [claudeModel]
+ * @property {"low"|"medium"|"high"} [claudeEffort]
  * @property {string} [agent]
  * @property {Record<string, string>} [environment]
  * @property {string} [homeDir]
@@ -432,6 +747,10 @@ export function runStageWithArtifacts({
   artifactDir,
   executionDir,
   opencodeBin,
+  claudeProvider,
+  claudeBin,
+  claudeModel,
+  claudeEffort,
   agent,
   environment,
   homeDir,
@@ -442,12 +761,6 @@ export function runStageWithArtifacts({
 }) {
   const normalizedSlice = ensureNonEmptyString(slice, "slice");
   const normalizedStage = Number(stage);
-  const resolvedBudget = resolveClaudeBudgetState({
-    rootDir,
-    homeDir,
-    explicitState: claudeBudgetState,
-    environment,
-  });
   const targetArtifactDir =
     artifactDir ??
     defaultArtifactDir(rootDir, normalizedSlice, normalizedStage, now);
@@ -464,7 +777,66 @@ export function runStageWithArtifacts({
       })
     : null;
   const sessionRole = resolveStageSessionRole(normalizedStage);
-  const existingSessionId = runtimeSnapshot?.state?.sessions?.[sessionRole]?.session_id ?? null;
+  const existingSessionEntry = runtimeSnapshot?.state?.sessions?.[sessionRole] ?? null;
+  const existingSessionId = existingSessionEntry?.session_id ?? null;
+  const existingSessionProvider = resolveStoredSessionProvider(sessionRole, existingSessionEntry);
+  const explicitClaudeProvider =
+    typeof claudeProvider === "string" && claudeProvider.trim().length > 0
+      ? claudeProvider.trim()
+      : null;
+  const claudeProviderConfig = resolveClaudeProviderConfig({
+    rootDir,
+    provider: explicitClaudeProvider ?? undefined,
+    bin: claudeBin,
+    model: claudeModel,
+    effort: claudeEffort,
+  });
+  const codexProviderConfig = resolveCodexProviderConfig({
+    rootDir,
+    bin: opencodeBin,
+    agent,
+  });
+  const desiredProviderConfig =
+    sessionRole === "claude_primary"
+      ? claudeProviderConfig.provider === "opencode"
+        ? {
+            provider: "opencode",
+            bin: codexProviderConfig.bin,
+            agent: OMO_SESSION_ROLE_TO_AGENT.claude_primary,
+          }
+        : claudeProviderConfig
+      : codexProviderConfig;
+  const activeProviderConfig =
+    sessionRole === "claude_primary" &&
+    existingSessionId &&
+    existingSessionProvider &&
+    !explicitClaudeProvider
+      ? {
+          ...claudeProviderConfig,
+          provider: existingSessionProvider,
+          bin:
+            existingSessionProvider === "opencode"
+              ? codexProviderConfig.bin
+              : claudeProviderConfig.bin,
+          agent:
+            existingSessionProvider === "opencode"
+              ? OMO_SESSION_ROLE_TO_AGENT.claude_primary
+              : null,
+        }
+      : desiredProviderConfig;
+  const hasProviderMismatch =
+    sessionRole === "claude_primary" &&
+    Boolean(existingSessionId && existingSessionProvider) &&
+    activeProviderConfig.provider !== existingSessionProvider;
+  const resolvedBudget = resolveClaudeBudgetState({
+    rootDir,
+    homeDir,
+    provider:
+      sessionRole === "claude_primary" ? activeProviderConfig.provider : claudeProviderConfig.provider,
+    explicitState: claudeBudgetState,
+    claudeBin: claudeProviderConfig.bin,
+    environment,
+  });
   const retryState =
     runtimeSnapshot?.state?.blocked_stage === normalizedStage ? runtimeSnapshot.state.retry : null;
   const retryAt =
@@ -482,7 +854,10 @@ export function runStageWithArtifacts({
     retryAt,
     attemptCount: retryState?.attempt_count ?? 0,
   });
-  const executionBinding = resolveExecutionBinding(dispatch, { agent });
+  const executionBinding = resolveExecutionBinding(dispatch, {
+    agent,
+    providerConfig: activeProviderConfig,
+  });
   const prompt = buildPrompt({
     slice: normalizedSlice,
     stage: dispatch.stage,
@@ -490,7 +865,10 @@ export function runStageWithArtifacts({
     dispatch,
     stageResultPath,
   });
-  const resolvedOpencodeBin = opencodeBin ?? resolveDefaultOpencodeBin(environment);
+  const resolvedOpencodeBin =
+    activeProviderConfig.provider === "opencode"
+      ? activeProviderConfig.bin ?? resolveDefaultOpencodeBin(environment)
+      : resolveDefaultOpencodeBin(environment);
 
   mkdirSync(targetArtifactDir, { recursive: true });
 
@@ -502,6 +880,7 @@ export function runStageWithArtifacts({
     claudeBudget: resolvedBudget,
     sessionBinding: dispatch.sessionBinding,
     retryDecision: dispatch.retryDecision,
+    providerConfig: activeProviderConfig,
     runtimePath: workItemId
       ? resolveRuntimePath({
           rootDir,
@@ -511,6 +890,7 @@ export function runStageWithArtifacts({
     execution: {
       mode,
       executable: executionBinding.executable,
+      provider: executionBinding.provider,
       agent: executionBinding.agent,
       reason: executionBinding.reason,
     },
@@ -529,6 +909,7 @@ export function runStageWithArtifacts({
         mode: "artifact-only",
         executed: false,
         executable: executionBinding.executable,
+        provider: executionBinding.provider,
         agent: executionBinding.agent,
         reason: executionBinding.reason,
         exitCode: null,
@@ -544,6 +925,7 @@ export function runStageWithArtifacts({
         mode: "scheduled-retry",
         executed: false,
         executable: false,
+        provider: executionBinding.provider,
         agent: executionBinding.agent,
         reason: "claude_budget_unavailable",
         exitCode: null,
@@ -559,28 +941,70 @@ export function runStageWithArtifacts({
         mode: "manual-handoff",
         executed: false,
         executable: false,
+        provider: executionBinding.provider,
         agent: null,
         reason: executionBinding.reason,
         exitCode: null,
         sessionId: existingSessionId,
       },
     };
+  } else if (hasProviderMismatch) {
+    result = {
+      artifactDir: targetArtifactDir,
+      dispatch: buildStageDispatch({
+        slice: normalizedSlice,
+        stage: normalizedStage,
+        claudeBudgetState: resolvedBudget.state,
+        sessionId: existingSessionId,
+        attemptCount: (retryState?.attempt_count ?? 0) + 1,
+        forceHumanEscalation: true,
+        humanEscalationReason: "session_provider_mismatch",
+      }),
+      prompt,
+      execution: {
+        mode: "provider-mismatch",
+        executed: false,
+        executable: false,
+        provider: executionBinding.provider,
+        agent: executionBinding.agent,
+        reason: "stored session provider does not match the requested provider",
+        exitCode: null,
+        sessionId: existingSessionId,
+      },
+    };
   } else {
     try {
+      const execution =
+        executionBinding.provider === "claude-cli"
+          ? runClaudeCli({
+              executionDir: resolvedExecutionDir,
+              artifactDir: targetArtifactDir,
+              prompt,
+              sessionId: existingSessionId,
+              claudeBin: claudeProviderConfig.bin,
+              claudeModel: claudeProviderConfig.model,
+              claudeEffort: claudeProviderConfig.effort,
+              permissionMode: claudeProviderConfig.permissionMode,
+              environment,
+              homeDir,
+              stageResultPath,
+            })
+          : runOpencode({
+              executionDir: resolvedExecutionDir,
+              artifactDir: targetArtifactDir,
+              prompt,
+              agent: executionBinding.agent,
+              sessionId: existingSessionId,
+              opencodeBin: resolvedOpencodeBin,
+              environment,
+              stageResultPath,
+            });
+
       result = {
         artifactDir: targetArtifactDir,
         dispatch,
         prompt,
-        execution: runOpencode({
-          executionDir: resolvedExecutionDir,
-          artifactDir: targetArtifactDir,
-          prompt,
-          agent: executionBinding.agent,
-          sessionId: existingSessionId,
-          opencodeBin: resolvedOpencodeBin,
-          environment,
-          stageResultPath,
-        }),
+        execution,
       };
     } catch (error) {
       if (existingSessionId && isSessionUnavailableFailure(error)) {
@@ -593,12 +1017,14 @@ export function runStageWithArtifacts({
             sessionId: existingSessionId,
             attemptCount: (retryState?.attempt_count ?? 0) + 1,
             forceHumanEscalation: true,
+            humanEscalationReason: "session_unavailable",
           }),
           prompt,
           execution: {
             mode: "session-missing",
             executed: false,
             executable: false,
+            provider: executionBinding.provider,
             agent: executionBinding.agent,
             reason: "stored session could not be continued",
             exitCode: error.exitCode ?? null,
@@ -607,7 +1033,10 @@ export function runStageWithArtifacts({
             stderrPath: error.stderrPath ?? null,
           },
         };
-      } else if (sessionRole === "claude_primary" && isClaudeBudgetRuntimeFailure(error)) {
+      } else if (
+        sessionRole === "claude_primary" &&
+        (isClaudeBudgetRuntimeFailure(error) || isClaudeRetryableFailure(error))
+      ) {
         result = {
           artifactDir: targetArtifactDir,
           dispatch: buildStageDispatch({
@@ -626,6 +1055,7 @@ export function runStageWithArtifacts({
             mode: "scheduled-retry",
             executed: false,
             executable: false,
+            provider: executionBinding.provider,
             agent: executionBinding.agent,
             reason: "claude_budget_unavailable",
             exitCode: error.exitCode ?? null,
@@ -657,6 +1087,7 @@ export function runStageWithArtifacts({
           state: nextRuntimeState,
           role: dispatch.sessionBinding.role,
           sessionId: result.execution.sessionId,
+          provider: result.execution.provider ?? executionBinding.provider ?? "opencode",
           agent: executionBinding.agent,
           updatedAt: now,
         });
@@ -682,10 +1113,14 @@ export function runStageWithArtifacts({
         maxAttempts: maxRetryAttempts,
         artifactDir: targetArtifactDir,
       });
-    } else if (result.execution.mode === "session-missing") {
+    } else if (result.execution.mode === "session-missing" || result.execution.mode === "provider-mismatch") {
       nextRuntimeState = markSessionUnavailable({
         state: nextRuntimeState,
         stage: dispatch.stage,
+        reason:
+          result.execution.mode === "provider-mismatch"
+            ? "session_provider_mismatch"
+            : "session_unavailable",
         attemptCount: (retryState?.attempt_count ?? 0) + 1,
         maxAttempts: maxRetryAttempts,
         artifactDir: targetArtifactDir,
@@ -734,6 +1169,7 @@ export function runStageWithArtifacts({
       sessionBinding: {
         ...result.dispatch.sessionBinding,
         sessionId: result.dispatch.sessionBinding.sessionId ?? result.execution.sessionId ?? null,
+        provider: result.execution.provider ?? activeProviderConfig.provider,
       },
       execution: result.execution,
       runtimeSync: runtimeSync
