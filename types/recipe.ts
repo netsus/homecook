@@ -103,6 +103,49 @@ export interface RecipeLikeData {
 
 export type RecipeLikeResponse = ApiResponse<RecipeLikeData>;
 
+export type RecipeBookType = "my_added" | "saved" | "liked" | "custom";
+export type SaveableRecipeBookType = Extract<RecipeBookType, "saved" | "custom">;
+
+export interface RecipeBookSummary {
+  id: string;
+  name: string;
+  book_type: SaveableRecipeBookType;
+  recipe_count: number;
+  sort_order: number;
+}
+
+export interface RecipeBookListData {
+  books: RecipeBookSummary[];
+}
+
+export interface RecipeBookCreateBody {
+  name: string;
+}
+
+export interface RecipeBookCreateData {
+  id: string;
+  name: string;
+  book_type: "custom";
+  recipe_count: number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecipeSaveBody {
+  book_id: string;
+}
+
+export interface RecipeSaveData {
+  saved: true;
+  save_count: number;
+  book_id: string;
+}
+
+export type RecipeBookListResponse = ApiResponse<RecipeBookListData>;
+export type RecipeBookCreateResponse = ApiResponse<RecipeBookCreateData>;
+export type RecipeSaveResponse = ApiResponse<RecipeSaveData>;
+
 export interface RecipeDetail {
   id: string;
   title: string;
