@@ -8,6 +8,7 @@
 - 이유: 저장소에는 이미 공식 운영 규칙인 `AGENTS.md`가 있고, 자동 생성된 `AGENTS.md`로 덮어쓰면 안 된다.
 - authoritative policy는 계속 `AGENTS.md`, `docs/engineering/slice-workflow.md`, `docs/engineering/agent-workflow-overview.md`다.
 - 실제 OpenCode CLI 실행 기준은 repo root의 `opencode.json`이다.
+- OMO provider 기본값은 `.opencode/omo-provider.json`에 둔다.
 - `.opencode/oh-my-opencode.json`은 Homecook agent/hook 기본값의 compatibility snapshot으로 계속 추적한다.
 
 ## Current Homecook Defaults
@@ -16,7 +17,8 @@
 - 의도:
   - Codex 중심 supervisor / execution
   - Claude는 sparse approval checkpoint에서만 사용
-- Stage `1 / 3 / 5 / 6`용 Claude primary agent는 `athena`다.
+- Stage `1 / 3 / 5 / 6`의 기본 provider는 raw `claude` CLI다.
+- Stage `1 / 3 / 5 / 6`용 OpenCode emergency fallback agent는 `athena`다.
 - 위 agent/default 값은 `opencode.json`에 직접 등록하고, `.opencode/oh-my-opencode.json`은 같은 값을 mirrored snapshot으로 유지한다.
 - `ralph-loop`와 `ulw-loop`는 아직 Homecook stage dispatcher와 연결되지 않았으므로 project 레벨에서 비활성화한다.
 - `comment-checker` hook는 현재 로컬 설치 상태 차이로 false positive가 날 수 있어 project 레벨에서 비활성화한다.
@@ -28,10 +30,13 @@
 - 필요 시 아래 명령으로 로그인한다.
 
 ```bash
+claude login
 opencode auth login
 ```
 
 - 이 인증 상태는 Git에 커밋하지 않는다.
+- `claude-cli` provider는 로컬 `claude login` 상태를 사용한다.
+- `opencode` fallback provider는 `opencode auth login` 상태를 사용한다.
 
 ## Claude Budget Override
 
@@ -45,6 +50,21 @@ pnpm omo:claude-budget -- --clear
 ```
 
 - override 파일은 `.opencode/claude-budget-state.json`이며 Git에 커밋하지 않는다.
+
+## OMO Provider Defaults
+
+- tracked config: `.opencode/omo-provider.json`
+- Claude defaults:
+  - `provider = claude-cli`
+  - `bin = claude`
+  - `model = sonnet`
+  - `effort = high`
+  - `permission_mode = dontAsk`
+- Codex defaults:
+  - `provider = opencode`
+  - `bin = opencode`
+  - `agent = hephaestus`
+- CLI override가 repo-local default보다 우선한다.
 
 ## Runtime State
 
@@ -69,6 +89,8 @@ pnpm omo:claude-budget -- --clear
   - `pnpm omo:resume-pending`
   - `pnpm omo:status -- --work-item <id>`
 - Stage `1 / 3 / 5 / 6`은 `claude_primary`, Stage `2 / 4`는 `codex_primary` 세션을 재사용한다.
+- Claude-owned stage의 canonical resume 경로는 `claude --resume <session_id>`다.
+- `--continue`는 deterministic하지 않으므로 자동화에서 사용하지 않는다.
 - Claude budget unavailable이면 기본 동작은 human handoff가 아니라 `pause + scheduled resume`다.
 - scheduler는 `resume-pending`을 주기적으로 호출하고, 기본 retry delay는 5시간이다.
 

@@ -50,7 +50,7 @@ dispatch contract가 고정되면:
 1. `--claude-budget-state`
 2. `OMO_CLAUDE_BUDGET_STATE`
 3. `.opencode/claude-budget-state.json`
-4. OpenCode auth(`~/.local/share/opencode/auth.json`)에서 Anthropic provider 존재 여부
+4. provider-aware local auth / health hint
 
 ## Output Contract
 
@@ -98,6 +98,12 @@ session binding은 dispatch 전에 계산한다.
 4. `resume_mode = scheduled_retry`이면 같은 stage를 같은 session ID로 다시 시도한다.
 5. 저장된 session ID가 유효하지 않으면 `actor=human`으로 즉시 바꾸지 않고, 먼저 `human_escalation` 상태와 함께 blocker를 남긴다.
 6. silent session recreation은 금지한다.
+
+provider별 resume 규칙:
+
+- `claude-cli` -> `claude --resume <session_id>`
+- `opencode` -> `opencode run --session <session_id>`
+- `--continue`는 deterministic하지 않으므로 자동화에서 사용하지 않는다.
 
 ## Stage Prompt Skeletons
 
@@ -208,7 +214,8 @@ target 규칙:
 - 각 역할의 첫 실행만 새 세션 생성 대상이다.
 - 후속 stage는 반드시 저장된 session ID로 이어간다.
 - 모든 run은 `.artifacts/omo-lite-dispatch/<timestamp>-<slice>-stage-<n>/` 아래에 `dispatch.json`, `prompt.md`, `run-metadata.json`을 남긴다.
-- executable run이면 같은 경로에 `opencode.stdout.log`, `opencode.stderr.log`도 남긴다.
+- executable run이면 같은 경로에 provider-specific stdout/stderr log도 남긴다.
+- `claude-cli` run은 JSON stdout에서 `session_id`, `modelUsage`, `usage`, `total_cost_usd`를 파싱해 metadata에 남긴다.
 - stage agent는 supervisor가 읽을 수 있는 structured stage result를 artifact에 남긴다.
 - `--sync-status`를 함께 주면 dispatch의 `status_patch`와 artifact 경로가 `.workflow-v2/status.json`에 같이 반영된다.
 - direct execution은 merge automation 자체를 수행하지 않지만, autonomous supervisor가 이어서 읽을 수 있는 stage result를 남겨야 한다.
@@ -259,12 +266,14 @@ dispatch가 끝나면 supervisor는 최소한 아래 patch를 계산한다.
 
 - [opencode.json](../../../opencode.json)
 - [.opencode/README.md](../../../.opencode/README.md)
+- [.opencode/omo-provider.json](../../../.opencode/omo-provider.json)
 - [.opencode/oh-my-opencode.json](../../../.opencode/oh-my-opencode.json)
 
 현재 repo-local 기본값은:
 
 - default run agent = `hephaestus`
 - `opencode.json`의 direct `agent` / `default_agent` 설정을 우선 사용
+- Claude provider 기본값은 `.opencode/omo-provider.json`의 `claude-cli` 설정을 따른다.
 - Codex 중심 supervisor 실행
 - `ralph-loop` / `ulw-loop` 비활성화
 - comment-checker 비활성화

@@ -1,0 +1,14 @@
+{
+  "claude": {
+    "provider": "claude-cli",
+    "bin": "claude",
+    "model": "sonnet",
+    "effort": "high",
+    "permission_mode": "dontAsk"
+  },
+  "codex": {
+    "provider": "opencode",
+    "bin": "opencode",
+    "agent": "hephaestus"
+  }
+}
