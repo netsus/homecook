@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-03-27T01:36:40+09:00",
+  "updated_at": "2026-03-27T13:20:39+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -131,6 +131,20 @@
         "pnpm exec eslint scripts/lib/omo-lite-supervisor.mjs scripts/lib/omo-lite-runner.mjs scripts/lib/omo-session-runtime.mjs scripts/lib/omo-session-orchestrator.mjs scripts/omo-start.mjs scripts/omo-continue.mjs scripts/omo-resume-pending.mjs scripts/omo-status.mjs tests/omo-lite-supervisor.test.ts tests/omo-lite-runner.test.ts tests/omo-lite-budget.test.ts tests/omo-session-orchestrator.test.ts tests/omo-lite-config.test.ts"
       ],
       "notes": "Implements session reuse, repo-local runtime state, Claude scheduled retry, and top-level OMO start/continue/resume/status commands on feature/omo-session-orchestrator."
+    },
+    {
+      "id": "omo-claude-cli-provider-spec",
+      "preset": "infra-governance",
+      "branch": "docs/omo-claude-cli-provider-spec",
+      "pr_path": "pending",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm validate:workflow-v2",
+        "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts"
+      ],
+      "notes": "Locks the raw claude CLI provider contract, deterministic session_id extraction, and canonical --resume reuse before adapter implementation starts."
     }
   ]
 }

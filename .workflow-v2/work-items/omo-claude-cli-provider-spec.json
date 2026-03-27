@@ -1,0 +1,68 @@
+{
+  "id": "omo-claude-cli-provider-spec",
+  "title": "Lock the OMO Claude CLI provider contract before implementation",
+  "summary": "Define the raw claude CLI execution contract, deterministic session extraction and resume, provider-aware runtime state, and retry classification before implementation starts.",
+  "project_profile": "homecook",
+  "change_type": "infra-governance",
+  "surface": "workflow",
+  "risk": "high",
+  "preset": "infra-governance",
+  "goal": "Freeze the Claude CLI provider adapter contract so the follow-up implementation branch can build against a stable workflow-v2 spec.",
+  "owners": {
+    "claude": "sparse-review-and-approval",
+    "codex": "implementation-and-integration",
+    "workers": [
+      "testing",
+      "ci-governance"
+    ]
+  },
+  "dependencies": [
+    "workflow-v2-foundation",
+    "omo-lite-bootstrap",
+    "omo-session-orchestrator-spec",
+    "omo-session-orchestrator-implementation"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "AGENTS.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md"
+    ],
+    "governing_docs": [
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/omo-session-orchestrator.md",
+      "docs/engineering/workflow-v2/omo-claude-cli-provider.md",
+      "docs/engineering/workflow-v2/omo-autonomous-supervisor.md",
+      "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
+      ".opencode/README.md",
+      ".opencode/omo-provider.json",
+      "opencode.json"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "recommended",
+    "review_loop": "required",
+    "external_smokes": []
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts"
+    ],
+    "verify_commands": [
+      "pnpm validate:workflow-v2",
+      "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "codex_approved",
+    "verification_status": "passed"
+  },
+  "out_of_scope": [
+    "claude-cli adapter implementation",
+    "runtime migration code for existing OpenCode Claude sessions",
+    "oh-my-claudecode wrapper adapter"
+  ],
+  "open_questions": []
+}
