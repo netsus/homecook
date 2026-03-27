@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-03-27T13:20:39+09:00",
+  "updated_at": "2026-03-27T17:20:11+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -145,6 +145,22 @@
         "pnpm exec vitest run tests/workflow-v2-docs.test.ts tests/omo-lite-config.test.ts"
       ],
       "notes": "Locks the raw claude CLI provider contract, deterministic session_id extraction, and canonical --resume reuse before adapter implementation starts."
+    },
+    {
+      "id": "omo-claude-cli-provider-implementation",
+      "preset": "infra-governance",
+      "branch": "feature/omo-claude-cli-provider",
+      "pr_path": "pending",
+      "lifecycle": "ready_for_review",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm validate:workflow-v2",
+        "pnpm test",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Implements raw claude CLI execution for Stage 1/3/5/6, deterministic --resume session reuse, transcript fallback session discovery, provider-aware runtime bindings, and explicit opencode fallback for emergency use."
     }
   ]
 }
