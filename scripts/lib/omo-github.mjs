@@ -99,17 +99,32 @@ export function createGithubAutomationClient({
     getRequiredChecks({
       prRef,
     }) {
-      const stdout = runGh(
-        [
-          "pr",
-          "checks",
-          ensureNonEmptyString(prRef, "prRef"),
-          "--required",
-          "--json",
-          "bucket,name,state,workflow,link",
-        ],
-        { allowPendingExit: true },
-      );
+      let stdout;
+      try {
+        stdout = runGh(
+          [
+            "pr",
+            "checks",
+            ensureNonEmptyString(prRef, "prRef"),
+            "--required",
+            "--json",
+            "bucket,name,state,workflow,link",
+          ],
+          { allowPendingExit: true },
+        );
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          /no required checks reported/i.test(error.message)
+        ) {
+          return {
+            bucket: "pending",
+            checks: [],
+          };
+        }
+
+        throw error;
+      }
       const checks = stdout.length > 0 ? JSON.parse(stdout) : [];
 
       return {

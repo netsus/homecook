@@ -767,6 +767,140 @@ describe("OMO autonomous supervisor", () => {
     expect(runtime.last_review.backend).toBeNull();
   });
 
+  it("fails closed when a stage finishes without a structured stage result", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-03-27T01:05:00+09:00",
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            mkdirSync(workspacePath, { recursive: true });
+            return { path: workspacePath, created: true };
+          },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          pushBranch() {
+            throw new Error("not expected");
+          },
+          syncBaseBranch() {
+            throw new Error("not expected");
+          },
+          getHeadSha() {
+            return "docs123";
+          },
+        },
+        stageRunner() {
+          const runtimeSync = writeRuntimeState({
+            rootDir,
+            workItemId: "03-recipe-like",
+            state: {
+              ...readRuntimeState({
+                rootDir,
+                workItemId: "03-recipe-like",
+                slice: "03-recipe-like",
+              }).state,
+              slice: "03-recipe-like",
+              current_stage: 1,
+              last_completed_stage: 0,
+              blocked_stage: 1,
+              retry: {
+                at: null,
+                reason: "contract_violation",
+                attempt_count: 1,
+                max_attempts: 3,
+              },
+              sessions: {
+                claude_primary: {
+                  session_id: "ses_claude_docs",
+                  provider: "claude-cli",
+                  agent: "athena",
+                  updated_at: "2026-03-27T01:05:00.000Z",
+                },
+                codex_primary: {
+                  session_id: null,
+                  provider: null,
+                  agent: "hephaestus",
+                  updated_at: null,
+                },
+              },
+              workspace: {
+                path: workspacePath,
+                branch_role: "docs",
+                updated_at: "2026-03-27T01:05:00.000Z",
+              },
+            },
+          });
+
+          return {
+            artifactDir: join(rootDir, ".artifacts", "stage1-contract-violation"),
+            dispatch: { actor: "claude", stage: 1 },
+            execution: {
+              mode: "contract-violation",
+              executed: true,
+              provider: "claude-cli",
+              sessionId: "ses_claude_docs",
+              reason: "claude CLI did not write stage-result.json; permission denied for Bash, Write.",
+            },
+            runtimeSync,
+            stageResult: null,
+          };
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            throw new Error("not expected");
+          },
+          markReady() {
+            throw new Error("not expected");
+          },
+          reviewPullRequest() {
+            throw new Error("not expected");
+          },
+          commentPullRequest() {
+            throw new Error("not expected");
+          },
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {
+            throw new Error("not expected");
+          },
+        },
+      },
+    );
+
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      slice: "03-recipe-like",
+    }).state as {
+      wait: { kind: string; reason: string; stage: number | null };
+      retry: { reason: string | null };
+    };
+
+    expect(result.wait?.kind).toBe("human_escalation");
+    expect(runtime.wait).toMatchObject({
+      kind: "human_escalation",
+      stage: 1,
+    });
+    expect(runtime.wait.reason).toContain("stage-result.json");
+    expect(runtime.retry?.reason).toBe("contract_violation");
+  });
+
   it("fails closed when the dedicated worktree is dirty", () => {
     const rootDir = createFixture();
 

@@ -25,7 +25,7 @@ Claude provider의 표준 fresh-session 실행:
 claude -p \
   --output-format json \
   --input-format text \
-  --permission-mode dontAsk \
+  --permission-mode acceptEdits \
   --effort high \
   --model <repo-default-or-cli-override>
 ```
@@ -36,7 +36,7 @@ Claude provider의 표준 resumed-session 실행:
 claude -p \
   --output-format json \
   --input-format text \
-  --permission-mode dontAsk \
+  --permission-mode acceptEdits \
   --effort high \
   --model <repo-default-or-cli-override> \
   --resume <session_id>
@@ -46,7 +46,7 @@ claude -p \
 
 1. prompt는 항상 stdin으로 전달한다.
 2. JSON stdout은 artifact로 그대로 저장한다.
-3. 기본 permission mode는 `dontAsk`다.
+3. 기본 permission mode는 `acceptEdits`다.
 4. 기본 effort는 `high`다.
 5. `--continue`는 directory-local recent conversation에 의존하므로 자동화에서 금지한다.
 6. `--fork-session`은 기본 경로가 아니라 명시적 operator recovery에서만 허용한다.
@@ -122,7 +122,7 @@ Claude/Codex provider 기본값은 tracked repo-local config에 둔다.
 - `claude.bin = "claude"`
 - `claude.model = "sonnet"`
 - `claude.effort = "high"`
-- `claude.permission_mode = "dontAsk"`
+- `claude.permission_mode = "acceptEdits"`
 - `codex.provider = "opencode"`
 - `codex.bin = "opencode"`
 - `codex.agent = "hephaestus"`

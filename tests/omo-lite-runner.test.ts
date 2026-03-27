@@ -16,6 +16,7 @@ function createFakeOpencodeBin(
     sessionId?: string;
     stdout?: string[];
     stderr?: string;
+    stageResult?: Record<string, unknown> | null;
   },
 ) {
   fakeOpencodeCounter += 1;
@@ -32,12 +33,36 @@ function createFakeOpencodeBin(
       `{"type":"step_finish","sessionID":"${sessionId}","part":{"type":"step-finish","reason":"stop"}}`,
     ];
   const stderr = options?.stderr ?? "";
+  const stageResult =
+    options?.stageResult === undefined
+      ? {
+          result: "done",
+          summary_markdown: "Stage complete",
+          pr: {
+            title: "docs: fake slice",
+            body_markdown: "## Summary\n- fake",
+          },
+          checks_run: [],
+          next_route: "open_pr",
+          decision: "approve",
+          body_markdown: "## Review\n- approved",
+          route_back_stage: null,
+          approved_head_sha: "abc123",
+        }
+      : options.stageResult;
 
   writeFileSync(
     binPath,
     [
       "#!/bin/sh",
       "printf '%s\\n' \"$@\" > \"$FAKE_OPENCODE_ARGS_PATH\"",
+      stageResult
+        ? [
+            "cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
+            JSON.stringify(stageResult, null, 2),
+            "EOF",
+          ].join("\n")
+        : "",
       ...stdout.map((line) => `printf '%s\\n' '${line}'`),
       stderr.length > 0 ? `printf '${stderr}\\n' >&2` : "",
       `exit ${exitCode}`,
@@ -61,6 +86,7 @@ function createFakeClaudeBin(
     stderr?: string;
     transcriptSessionId?: string | null;
     transcriptLocation?: "projects" | "transcripts";
+    stageResult?: Record<string, unknown> | null;
   },
 ) {
   fakeClaudeCounter += 1;
@@ -95,6 +121,23 @@ function createFakeClaudeBin(
         }
       : options.stdoutJson;
   const stderr = options?.stderr ?? "";
+  const stageResult =
+    options?.stageResult === undefined
+      ? {
+          result: "done",
+          summary_markdown: "Stage complete",
+          pr: {
+            title: "docs: fake slice",
+            body_markdown: "## Summary\n- fake",
+          },
+          checks_run: [],
+          next_route: "open_pr",
+          decision: "approve",
+          body_markdown: "## Review\n- approved",
+          route_back_stage: null,
+          approved_head_sha: "abc123",
+        }
+      : options.stageResult;
   const transcriptBlock =
     typeof transcriptSessionId === "string" && transcriptSessionId.length > 0
       ? [
@@ -123,6 +166,13 @@ function createFakeClaudeBin(
       "#!/bin/sh",
       "printf '%s\\n' \"$@\" > \"$FAKE_CLAUDE_ARGS_PATH\"",
       "cat > \"$FAKE_CLAUDE_STDIN_PATH\"",
+      stageResult
+        ? [
+            "cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
+            JSON.stringify(stageResult, null, 2),
+            "EOF",
+          ].join("\n")
+        : "",
       transcriptBlock,
       stdoutBlock,
       stderr.length > 0 ? `printf '%s\\n' '${stderr}' >&2` : "",
@@ -198,6 +248,11 @@ describe("OMO-lite stage runner", () => {
     expect(dispatch.actor).toBe("codex");
     expect(prompt).toContain("슬라이스 02-discovery-filter 2단계 진행");
     expect(prompt).toContain("feature/be-02-discovery-filter");
+    expect(prompt).toContain("\"result\"");
+    expect(prompt).toContain("\"summary_markdown\"");
+    expect(prompt).toContain("\"body_markdown\"");
+    expect(prompt).toContain("\"checks_run\"");
+    expect(prompt).toContain("\"next_route\"");
     expect(metadata.actor).toBe("codex");
     expect(metadata.execution).toMatchObject({
       mode: "artifact-only",
@@ -353,6 +408,8 @@ describe("OMO-lite stage runner", () => {
     expect(args).toContain("high");
     expect(args).toContain("--model");
     expect(args).toContain("sonnet");
+    expect(args).toContain("--add-dir");
+    expect(args).toContain(result.artifactDir);
     expect(args).not.toContain("--continue");
     expect(args).not.toContain("--agent");
     expect(stdin).toContain("# Homecook OMO-lite Stage Dispatch");
@@ -362,6 +419,142 @@ describe("OMO-lite stage runner", () => {
     });
     expect(runtime.sessions.claude_primary.session_id).toBe("ses_claude_stage1");
     expect(runtime.sessions.claude_primary.provider).toBe("claude-cli");
+  });
+
+  it("fails closed when Claude returns success but does not write stage-result.json", () => {
+    const rootDir = createRunnerFixture();
+    const homeDir = createClaudeHomeDir();
+    const stage1 = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: "ses_claude_missing_stage_result",
+      stageResult: null,
+      stdoutJson: {
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        session_id: "ses_claude_missing_stage_result",
+        result: "I need permission to write the requested files before I can finish this stage.",
+        permission_denials: [
+          {
+            tool_name: "Bash",
+            tool_input: {
+              command: "mkdir -p docs/workpacks/04-recipe-save",
+            },
+          },
+          {
+            tool_name: "Write",
+            tool_input: {
+              file_path: "/tmp/fake/README.md",
+            },
+          },
+        ],
+        total_cost_usd: 0,
+        usage: {
+          input_tokens: 10,
+          output_tokens: 20,
+        },
+        modelUsage: {
+          "claude-sonnet-4-6": {
+            inputTokens: 10,
+            outputTokens: 20,
+            costUSD: 0,
+          },
+        },
+      },
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "04-recipe-save",
+      stage: 1,
+      workItemId: "04-recipe-save",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: stage1.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: stage1.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage1.stdinPath,
+      },
+      now: "2026-03-27T09:28:11+09:00",
+    });
+
+    const runtime = JSON.parse(
+      readFileSync(join(rootDir, ".opencode", "omo-runtime", "04-recipe-save.json"), "utf8"),
+    ) as {
+      current_stage: number;
+      last_completed_stage: number;
+      blocked_stage: number;
+      retry: {
+        reason: string | null;
+      };
+      sessions: {
+        claude_primary: {
+          session_id: string;
+          provider: string;
+        };
+      };
+    };
+
+    expect(result.execution).toMatchObject({
+      mode: "contract-violation",
+      provider: "claude-cli",
+      sessionId: "ses_claude_missing_stage_result",
+    });
+    expect(result.execution.reason).toContain("stage-result.json");
+    expect(result.execution.reason).toContain("Bash");
+    expect(result.execution.reason).toContain("Write");
+    expect(result.stageResult).toBeNull();
+    expect(runtime).toMatchObject({
+      current_stage: 1,
+      last_completed_stage: 0,
+      blocked_stage: 1,
+      retry: {
+        reason: "contract_violation",
+      },
+    });
+    expect(runtime.sessions.claude_primary).toMatchObject({
+      session_id: "ses_claude_missing_stage_result",
+      provider: "claude-cli",
+    });
+  });
+
+  it("fails closed when Claude writes an invalid stage-result shape", () => {
+    const rootDir = createRunnerFixture();
+    const homeDir = createClaudeHomeDir();
+    const stage1 = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: "ses_claude_invalid_stage_result",
+      stageResult: {
+        status: "success",
+        actor: "claude",
+      },
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "04-recipe-save",
+      stage: 1,
+      workItemId: "04-recipe-save",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: stage1.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: stage1.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage1.stdinPath,
+      },
+      now: "2026-03-27T10:15:00+09:00",
+    });
+
+    expect(result.execution).toMatchObject({
+      mode: "contract-violation",
+      provider: "claude-cli",
+      sessionId: "ses_claude_invalid_stage_result",
+    });
+    expect(result.execution.reason).toContain("stageResult.result must be a non-empty string");
+    expect(result.stageResult).toMatchObject({
+      status: "success",
+      actor: "claude",
+    });
   });
 
   it("schedules a retry instead of executing when a Claude-owned stage is unavailable", () => {

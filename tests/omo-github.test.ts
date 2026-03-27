@@ -106,4 +106,40 @@ describe("OMO GitHub automation client", () => {
     expect(argsLog).toContain("--match-head-commit");
     expect(argsLog).toContain("update-branch");
   });
+
+  it("treats 'no required checks reported' as pending instead of throwing", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-no-checks-"));
+    const binPath = join(rootDir, "fake-gh-no-checks.sh");
+
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "case \"$1 $2\" in",
+        "  'pr checks')",
+        "    printf '%s\\n' \"no required checks reported on the 'docs/04-recipe-save' branch\" >&2",
+        "    exit 1",
+        "    ;;",
+        "  *)",
+        "    exit 0",
+        "    ;;",
+        "esac",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+    });
+
+    const checks = client.getRequiredChecks({
+      prRef: "https://github.com/netsus/homecook/pull/47",
+    });
+
+    expect(checks).toEqual({
+      bucket: "pending",
+      checks: [],
+    });
+  });
 });

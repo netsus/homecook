@@ -15,6 +15,7 @@ import {
 import {
   readStageResult,
   resolveStageResultPath,
+  validateStageResult,
 } from "./omo-stage-result.mjs";
 import {
   DEFAULT_MAX_RETRY_ATTEMPTS,
@@ -102,6 +103,26 @@ function resolveExecutionBinding(dispatch, { agent, providerConfig }) {
 }
 
 function buildPrompt({ slice, stage, workItemId, dispatch, stageResultPath }) {
+  const normalizedStage = Number(stage);
+  const stageResultTemplate =
+    [1, 2, 4].includes(normalizedStage)
+      ? {
+          result: "done",
+          summary_markdown: "짧은 요약",
+          pr: {
+            title: "docs: or feat: title",
+            body_markdown: "## Summary\n- bullet",
+          },
+          checks_run: ["pnpm test:all"],
+          next_route: "open_pr",
+        }
+      : {
+          decision: "approve",
+          body_markdown: "## Review\n- approved",
+          route_back_stage: null,
+          approved_head_sha: "abc123",
+        };
+
   return [
     "# Homecook OMO-lite Stage Dispatch",
     "",
@@ -158,6 +179,13 @@ function buildPrompt({ slice, stage, workItemId, dispatch, stageResultPath }) {
     "## Stage Result Output",
     `- Write a JSON file to \`${stageResultPath}\` before finishing the task.`,
     "- The JSON must follow the stage result contract locked in workflow-v2 docs.",
+    "- Use this exact JSON shape for this stage:",
+    "```json",
+    JSON.stringify(stageResultTemplate, null, 2),
+    "```",
+    [1, 2, 4].includes(normalizedStage)
+      ? "- Required keys: result, summary_markdown, pr.title, pr.body_markdown, checks_run, next_route"
+      : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha",
   ]
     .filter(Boolean)
     .join("\n");
@@ -256,6 +284,55 @@ function parseSessionId(stdout, fallbackSessionId) {
 function parseClaudeJsonOutput(stdout) {
   const parsed = parseJsonObject(stdout);
   return parsed && typeof parsed === "object" ? parsed : null;
+}
+
+function extractClaudePermissionDeniedTools(parsedOutput) {
+  if (!parsedOutput || typeof parsedOutput !== "object" || !Array.isArray(parsedOutput.permission_denials)) {
+    return [];
+  }
+
+  return [...new Set(
+    parsedOutput.permission_denials
+      .map((entry) =>
+        entry && typeof entry === "object" && typeof entry.tool_name === "string"
+          ? entry.tool_name.trim()
+          : null,
+      )
+      .filter((entry) => typeof entry === "string" && entry.length > 0),
+  )];
+}
+
+function buildStageResultContractViolationReason({ artifactDir, execution }) {
+  const stageResultPath = resolveStageResultPath(artifactDir);
+  const genericMessage = `stage-result missing: ${stageResultPath} was not written before the stage finished.`;
+
+  if (!execution || typeof execution !== "object") {
+    return genericMessage;
+  }
+
+  if (
+    execution.provider === "claude-cli" &&
+    typeof execution.stdoutPath === "string" &&
+    existsSync(execution.stdoutPath)
+  ) {
+    const parsedOutput = parseClaudeJsonOutput(readFileSync(execution.stdoutPath, "utf8"));
+    const deniedTools = extractClaudePermissionDeniedTools(parsedOutput);
+    const details = [];
+
+    if (deniedTools.length > 0) {
+      details.push(`permission denied for ${deniedTools.join(", ")}`);
+    }
+
+    if (parsedOutput?.result && typeof parsedOutput.result === "string") {
+      details.push(parsedOutput.result.trim());
+    }
+
+    if (details.length > 0) {
+      return `${genericMessage} ${details.join(" ")}`.trim();
+    }
+  }
+
+  return genericMessage;
 }
 
 function extractClaudeTranscriptFileSessionId(filename) {
@@ -494,6 +571,8 @@ function runClaudeCli({
     "text",
     "--permission-mode",
     permissionMode,
+    "--add-dir",
+    artifactDir,
   ];
 
   if (claudeEffort) {
@@ -723,7 +802,11 @@ function buildStatusNotes({
 }
 
 function resolveStatusPatch({ dispatch, execution }) {
-  if (execution?.mode === "session-missing" || execution?.mode === "provider-mismatch") {
+  if (
+    execution?.mode === "session-missing" ||
+    execution?.mode === "provider-mismatch" ||
+    execution?.mode === "contract-violation"
+  ) {
     return {
       ...dispatch.statusPatch,
       lifecycle: "blocked",
@@ -1096,6 +1179,35 @@ export function runStageWithArtifacts({
   }
 
   let runtimeSync = null;
+  let stageResult = readStageResult(targetArtifactDir);
+
+  if (result.execution.mode === "execute" && result.execution.executed && !stageResult) {
+    result = {
+      ...result,
+      execution: {
+        ...result.execution,
+        mode: "contract-violation",
+        reason: buildStageResultContractViolationReason({
+          artifactDir: targetArtifactDir,
+          execution: result.execution,
+        }),
+      },
+    };
+  } else if (result.execution.mode === "execute" && result.execution.executed && stageResult) {
+    try {
+      validateStageResult(normalizedStage, stageResult);
+    } catch (error) {
+      result = {
+        ...result,
+        execution: {
+          ...result.execution,
+          mode: "contract-violation",
+          reason: error instanceof Error ? error.message : "stageResult contract violation",
+        },
+      };
+    }
+  }
+
   if (workItemId && runtimeSnapshot) {
     let nextRuntimeState = runtimeSnapshot.state;
     const scheduledRetryAt =
@@ -1105,7 +1217,8 @@ export function runStageWithArtifacts({
 
     if (
       (result.execution.mode === "execute" && result.execution.executed) ||
-      (result.execution.mode === "scheduled-retry" && result.execution.sessionId)
+      (result.execution.mode === "scheduled-retry" && result.execution.sessionId) ||
+      (result.execution.mode === "contract-violation" && result.execution.sessionId)
     ) {
       if (result.execution.sessionId) {
         nextRuntimeState = setSessionBinding({
@@ -1146,6 +1259,15 @@ export function runStageWithArtifacts({
           result.execution.mode === "provider-mismatch"
             ? "session_provider_mismatch"
             : "session_unavailable",
+        attemptCount: (retryState?.attempt_count ?? 0) + 1,
+        maxAttempts: maxRetryAttempts,
+        artifactDir: targetArtifactDir,
+      });
+    } else if (result.execution.mode === "contract-violation") {
+      nextRuntimeState = markSessionUnavailable({
+        state: nextRuntimeState,
+        stage: dispatch.stage,
+        reason: "contract_violation",
         attemptCount: (retryState?.attempt_count ?? 0) + 1,
         maxAttempts: maxRetryAttempts,
         artifactDir: targetArtifactDir,
@@ -1214,11 +1336,9 @@ export function runStageWithArtifacts({
           }
         : null,
       stageResultPath,
-      stageResult: readStageResult(targetArtifactDir),
+      stageResult,
     },
   });
-
-  const stageResult = readStageResult(targetArtifactDir);
 
   return {
     ...result,

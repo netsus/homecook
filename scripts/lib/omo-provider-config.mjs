@@ -7,7 +7,7 @@ export const DEFAULT_OMO_PROVIDER_CONFIG = {
     bin: "claude",
     model: "sonnet",
     effort: "high",
-    permission_mode: "dontAsk",
+    permission_mode: "acceptEdits",
   },
   codex: {
     provider: "opencode",

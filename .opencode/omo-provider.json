@@ -4,7 +4,7 @@
     "bin": "claude",
     "model": "sonnet",
     "effort": "high",
-    "permission_mode": "dontAsk"
+    "permission_mode": "acceptEdits"
   },
   "codex": {
     "provider": "opencode",
