@@ -59,7 +59,7 @@ pnpm omo:claude-budget -- --clear
   - `bin = claude`
   - `model = sonnet`
   - `effort = high`
-  - `permission_mode = dontAsk`
+  - `permission_mode = acceptEdits`
 - Codex defaults:
   - `provider = opencode`
   - `bin = opencode`

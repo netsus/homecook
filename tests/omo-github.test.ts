@@ -28,6 +28,9 @@ function createFakeGhBin(rootDir: string) {
       "  'pr merge')",
       "    printf '%s\\n' '{\"merged\":true}'",
       "    ;;",
+      "  'pr view')",
+      "    printf '%s\\n' '{\"state\":\"MERGED\",\"mergedAt\":\"2026-03-27T11:54:00Z\",\"mergeStateStatus\":\"UNKNOWN\"}'",
+      "    ;;",
       "  *)",
       "    printf '%s\\n' '{\"ok\":true}'",
       "    ;;",
@@ -105,5 +108,194 @@ describe("OMO GitHub automation client", () => {
     expect(argsLog).toContain("merge");
     expect(argsLog).toContain("--match-head-commit");
     expect(argsLog).toContain("update-branch");
+  });
+
+  it("treats 'no required checks reported' as pending instead of throwing", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-no-checks-"));
+    const binPath = join(rootDir, "fake-gh-no-checks.sh");
+
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "case \"$1 $2\" in",
+        "  'pr checks')",
+        "    shift 2",
+        "    if printf '%s\\n' \"$@\" | grep -q -- '--required'; then",
+        "      printf '%s\\n' \"no required checks reported on the 'docs/04-recipe-save' branch\" >&2",
+        "      exit 1",
+        "    fi",
+        "    printf '%s\\n' '[]'",
+        "    exit 0",
+        "    ;;",
+        "  *)",
+        "    exit 0",
+        "    ;;",
+        "esac",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+    });
+
+    const checks = client.getRequiredChecks({
+      prRef: "https://github.com/netsus/homecook/pull/47",
+    });
+
+    expect(checks).toEqual({
+      bucket: "pending",
+      checks: [],
+    });
+  });
+
+  it("falls back to all checks when GitHub reports no required checks for the branch", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-fallback-checks-"));
+    const binPath = join(rootDir, "fake-gh-fallback-checks.sh");
+    const argsPath = join(rootDir, "fake-gh-fallback-checks.args.log");
+
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "printf '%s\\n' \"$@\" >> \"$FAKE_GH_ARGS_PATH\"",
+        "if [ \"$1 $2\" = 'pr checks' ]; then",
+        "  shift 2",
+        "  if printf '%s\\n' \"$@\" | grep -q -- '--required'; then",
+        "    printf '%s\\n' \"no required checks reported on the 'docs/04-recipe-save' branch\" >&2",
+        "    exit 1",
+        "  fi",
+        "  printf '%s\\n' '[{\"name\":\"quality\",\"bucket\":\"pass\",\"state\":\"SUCCESS\"},{\"name\":\"policy\",\"bucket\":\"pass\",\"state\":\"SUCCESS\"}]'",
+        "  exit 0",
+        "fi",
+        "exit 0",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+      environment: {
+        FAKE_GH_ARGS_PATH: argsPath,
+      },
+    });
+
+    const checks = client.getRequiredChecks({
+      prRef: "https://github.com/netsus/homecook/pull/47",
+    });
+    const argsLog = readFileSync(argsPath, "utf8");
+
+    expect(checks.bucket).toBe("pass");
+    expect(checks.checks).toHaveLength(2);
+    expect(argsLog).toContain("--required");
+    expect(argsLog).toContain("--json");
+  });
+
+  it("reuses an existing pull request when gh reports the branch already has one", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-existing-pr-"));
+    const binPath = join(rootDir, "fake-gh-existing-pr.sh");
+    const argsPath = join(rootDir, "fake-gh-existing-pr.args.log");
+
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "printf '%s\\n' \"$@\" >> \"$FAKE_GH_ARGS_PATH\"",
+        "if [ \"$1 $2\" = 'pr create' ]; then",
+        "  printf '%s\\n' 'a pull request for branch \"feature/be-04-recipe-save\" into branch \"master\" already exists:' >&2",
+        "  printf '%s\\n' 'https://github.com/netsus/homecook/pull/49' >&2",
+        "  exit 1",
+        "fi",
+        "exit 0",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+      environment: {
+        FAKE_GH_ARGS_PATH: argsPath,
+      },
+    });
+
+    const created = client.createPullRequest({
+      base: "master",
+      head: "feature/be-04-recipe-save",
+      title: "feat: backend slice",
+      body: "## Summary\n- backend",
+      draft: true,
+    });
+
+    expect(created).toMatchObject({
+      url: "https://github.com/netsus/homecook/pull/49",
+      number: 49,
+      draft: true,
+    });
+  });
+
+  it("normalizes workflow v2 work item refs in PR bodies before create", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-workitem-ref-"));
+    const { binPath, argsPath } = createFakeGhBin(rootDir);
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+      environment: {
+        FAKE_GH_ARGS_PATH: argsPath,
+      },
+    });
+
+    client.createPullRequest({
+      base: "master",
+      head: "feature/be-04-recipe-save",
+      title: "feat: backend slice",
+      body: "## Workpack / Slice\n- workflow v2 work item: `04-recipe-save`",
+      draft: true,
+      workItemId: "04-recipe-save",
+    });
+
+    const argsLog = readFileSync(argsPath, "utf8");
+
+    expect(argsLog).toContain(".workflow-v2/work-items/04-recipe-save.json");
+  });
+
+  it("fails closed when gh merge returns success but the pull request is still open", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-merge-open-"));
+    const binPath = join(rootDir, "fake-gh-merge-open.sh");
+
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "case \"$1 $2\" in",
+        "  'pr merge')",
+        "    exit 0",
+        "    ;;",
+        "  'pr view')",
+        "    printf '%s\\n' '{\"state\":\"OPEN\",\"mergedAt\":null,\"mergeStateStatus\":\"CLEAN\"}'",
+        "    exit 0",
+        "    ;;",
+        "  *)",
+        "    exit 0",
+        "    ;;",
+        "esac",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+    });
+
+    expect(() =>
+      client.mergePullRequest({
+        prRef: "https://github.com/netsus/homecook/pull/49",
+        headSha: "73cb1d2415b5fe81650513de4887b5e121e36fe9",
+      }),
+    ).toThrow(/merge did not complete/i);
   });
 });

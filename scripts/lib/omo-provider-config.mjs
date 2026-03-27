@@ -7,12 +7,14 @@ export const DEFAULT_OMO_PROVIDER_CONFIG = {
     bin: "claude",
     model: "sonnet",
     effort: "high",
-    permission_mode: "dontAsk",
+    permission_mode: "acceptEdits",
   },
   codex: {
     provider: "opencode",
     bin: "opencode",
     agent: "hephaestus",
+    model: "openai/gpt-5.3-codex",
+    variant: "high",
   },
 };
 
@@ -87,6 +89,8 @@ export function resolveCodexProviderConfig({
   rootDir = process.cwd(),
   bin,
   agent,
+  model,
+  variant,
 } = {}) {
   const { config, configPath } = readOmoProviderConfig(rootDir);
 
@@ -100,6 +104,14 @@ export function resolveCodexProviderConfig({
       typeof agent === "string" && agent.trim().length > 0
         ? agent.trim()
         : config.codex.agent,
+    model:
+      typeof model === "string" && model.trim().length > 0
+        ? model.trim()
+        : config.codex.model,
+    variant:
+      typeof variant === "string" && variant.trim().length > 0
+        ? variant.trim()
+        : config.codex.variant,
     configPath,
   };
 }

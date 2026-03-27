@@ -19,12 +19,14 @@ function createFakeOpencodeBin(
     sessionId?: string;
     stdout?: string[];
     stderr?: string;
+    stage?: number;
   },
 ) {
   const binPath = join(rootDir, `${name}.sh`);
   const argsPath = join(rootDir, `${name}.args.log`);
   const exitCode = options?.exitCode ?? 0;
   const sessionId = options?.sessionId ?? `ses_${name}`;
+  const stage = options?.stage ?? Number(name.replace(/[^0-9]/g, ""));
   const stdout =
     options?.stdout ??
     [
@@ -39,6 +41,25 @@ function createFakeOpencodeBin(
     [
       "#!/bin/sh",
       "printf '%s\\n' \"$@\" > \"$FAKE_OPENCODE_ARGS_PATH\"",
+      "if [ -n \"$OMO_STAGE_RESULT_PATH\" ]; then",
+      "  mkdir -p \"$(dirname \"$OMO_STAGE_RESULT_PATH\")\"",
+      "  cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
+      JSON.stringify(
+        {
+          result: "done",
+          summary_markdown: `Stage ${stage} complete`,
+          pr: {
+            title: `feat: fake stage ${stage}`,
+            body_markdown: "## Summary\n- fake",
+          },
+          checks_run: ["pnpm test:all"],
+          next_route: stage === 1 ? "open_pr" : "wait_for_ci",
+        },
+        null,
+        2,
+      ),
+      "EOF",
+      "fi",
       ...stdout.map((line) => `printf '%s\\n' '${line}'`),
       stderr.length > 0 ? `printf '${stderr}\\n' >&2` : "",
       `exit ${exitCode}`,
@@ -60,6 +81,7 @@ function createFakeClaudeBin(
     exitCode?: number;
     sessionId?: string;
     stderr?: string;
+    stage?: number;
   },
 ) {
   const binPath = join(rootDir, `${name}.sh`);
@@ -68,6 +90,25 @@ function createFakeClaudeBin(
   const exitCode = options?.exitCode ?? 0;
   const sessionId = options?.sessionId ?? `ses_${name}`;
   const stderr = options?.stderr ?? "";
+  const stage = options?.stage ?? Number(name.replace(/[^0-9]/g, ""));
+  const stageResult =
+    [1, 2, 4].includes(stage)
+      ? {
+          result: "done",
+          summary_markdown: `Stage ${stage} complete`,
+          pr: {
+            title: `feat: fake stage ${stage}`,
+            body_markdown: "## Summary\n- fake",
+          },
+          checks_run: ["pnpm test:all"],
+          next_route: stage === 1 ? "open_pr" : "wait_for_ci",
+        }
+      : {
+          decision: "approve",
+          body_markdown: `Stage ${stage} approved`,
+          route_back_stage: null,
+          approved_head_sha: sessionId.slice(0, 7),
+        };
 
   writeFileSync(
     binPath,
@@ -76,6 +117,12 @@ function createFakeClaudeBin(
       "printf '%s\\n' \"$@\" > \"$FAKE_CLAUDE_ARGS_PATH\"",
       "cat > \"$FAKE_CLAUDE_STDIN_PATH\"",
       "mkdir -p \"$HOME/.claude/projects/-Users-test-homecook\"",
+      "if [ -n \"$OMO_STAGE_RESULT_PATH\" ]; then",
+      "  mkdir -p \"$(dirname \"$OMO_STAGE_RESULT_PATH\")\"",
+      "  cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
+      JSON.stringify(stageResult, null, 2),
+      "EOF",
+      "fi",
       `cat <<'EOF' > "$HOME/.claude/projects/-Users-test-homecook/${sessionId}.jsonl"`,
       "{\"type\":\"user\",\"content\":\"hello\"}",
       "EOF",
@@ -214,21 +261,27 @@ describe("OMO session orchestrator", () => {
     const homeDir = createClaudeHomeDir();
     const stage1 = createFakeClaudeBin(rootDir, homeDir, "stage1", {
       sessionId: "ses_claude_primary",
+      stage: 1,
     });
     const stage2 = createFakeOpencodeBin(rootDir, "stage2", {
       sessionId: "ses_codex_primary",
+      stage: 2,
     });
     const stage3 = createFakeClaudeBin(rootDir, homeDir, "stage3", {
       sessionId: "ses_claude_primary",
+      stage: 3,
     });
     const stage4 = createFakeOpencodeBin(rootDir, "stage4", {
       sessionId: "ses_codex_primary",
+      stage: 4,
     });
     const stage5 = createFakeClaudeBin(rootDir, homeDir, "stage5", {
       sessionId: "ses_claude_primary",
+      stage: 5,
     });
     const stage6 = createFakeClaudeBin(rootDir, homeDir, "stage6", {
       sessionId: "ses_claude_primary",
+      stage: 6,
     });
 
     const first = startWorkItemSession({
@@ -349,6 +402,7 @@ describe("OMO session orchestrator", () => {
     const homeDir = createClaudeHomeDir();
     const resumeRun = createFakeClaudeBin(rootDir, homeDir, "resume", {
       sessionId: "ses_claude_primary",
+      stage: 3,
     });
 
     mkdirSync(join(rootDir, ".opencode", "omo-runtime"), { recursive: true });

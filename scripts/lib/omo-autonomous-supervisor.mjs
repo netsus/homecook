@@ -257,6 +257,43 @@ function updateRuntimeStatusForWait({
   });
 }
 
+function isOwnPullRequestApprovalError(error) {
+  return (
+    error instanceof Error &&
+    /can not approve your own pull request/i.test(error.message)
+  );
+}
+
+function resolveApprovedHeadSha({
+  approvedHeadSha,
+  activeHeadSha,
+}) {
+  const normalizedApproved =
+    typeof approvedHeadSha === "string" && approvedHeadSha.trim().length > 0
+      ? approvedHeadSha.trim()
+      : null;
+  const normalizedActive =
+    typeof activeHeadSha === "string" && activeHeadSha.trim().length > 0 ? activeHeadSha.trim() : null;
+
+  if (!normalizedApproved) {
+    return normalizedActive;
+  }
+
+  if (!normalizedActive) {
+    return normalizedApproved;
+  }
+
+  if (
+    normalizedApproved === normalizedActive ||
+    (normalizedApproved.length < normalizedActive.length &&
+      normalizedActive.startsWith(normalizedApproved))
+  ) {
+    return normalizedActive;
+  }
+
+  return normalizedApproved;
+}
+
 function resolveRunResultRuntimeState({
   rootDir,
   workItemId,
@@ -754,6 +791,7 @@ function handleCodeStage({
           title: stageResult.pr.title,
           body: stageResult.pr.body_markdown,
           draft: prRole !== "docs",
+          workItemId,
         });
 
   nextState = upsertPullRequest({
@@ -998,11 +1036,22 @@ function handleReviewStage({
       body: stageResult.body_markdown,
     });
   } else {
-    github.reviewPullRequest({
-      prRef: activePr.url,
-      decision: stageResult.decision,
-      body: stageResult.body_markdown,
-    });
+    try {
+      github.reviewPullRequest({
+        prRef: activePr.url,
+        decision: stageResult.decision,
+        body: stageResult.body_markdown,
+      });
+    } catch (error) {
+      if (stageResult.decision === "approve" && isOwnPullRequestApprovalError(error)) {
+        github.commentPullRequest({
+          prRef: activePr.url,
+          body: stageResult.body_markdown,
+        });
+      } else {
+        throw error;
+      }
+    }
   }
 
   if (stageResult.decision === "approve") {
@@ -1036,7 +1085,10 @@ function handleReviewStage({
       };
     }
 
-    const approvedHeadSha = stageResult.approved_head_sha ?? activePr.head_sha;
+    const approvedHeadSha = resolveApprovedHeadSha({
+      approvedHeadSha: stageResult.approved_head_sha,
+      activeHeadSha: activePr.head_sha,
+    });
     try {
       github.mergePullRequest({
         prRef: activePr.url,

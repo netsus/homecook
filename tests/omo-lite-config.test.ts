@@ -60,12 +60,14 @@ describe("OMO-lite repo config", () => {
       bin: "claude",
       model: "sonnet",
       effort: "high",
-      permission_mode: "dontAsk",
+      permission_mode: "acceptEdits",
     });
     expect(omoProvider.codex).toMatchObject({
       provider: "opencode",
       bin: "opencode",
       agent: "hephaestus",
+      model: "openai/gpt-5.3-codex",
+      variant: "high",
     });
   });
 
