@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { resolveClaudeBudgetState } from "./omo-lite-claude-budget.mjs";
@@ -258,23 +258,48 @@ function parseClaudeJsonOutput(stdout) {
   return parsed && typeof parsed === "object" ? parsed : null;
 }
 
-function listClaudeTranscriptIds(homeDir) {
-  const transcriptDir = resolve(homeDir ?? process.env.HOME ?? "", ".claude", "transcripts");
-  if (!existsSync(transcriptDir)) {
-    return {
-      transcriptDir,
-      ids: new Set(),
-    };
+function extractClaudeTranscriptFileSessionId(filename) {
+  if (typeof filename !== "string" || !filename.endsWith(".jsonl")) {
+    return null;
   }
 
-  const ids = new Set(
-    readdirSync(transcriptDir)
-      .map((entry) => entry.match(/^(ses_[^.]+)\.jsonl$/)?.[1] ?? null)
-      .filter(Boolean),
-  );
+  const sessionId = filename.slice(0, -".jsonl".length).trim();
+  return sessionId.length > 0 ? sessionId : null;
+}
+
+function collectClaudeTranscriptIds(dirPath, ids) {
+  if (!existsSync(dirPath)) {
+    return;
+  }
+
+  for (const entry of readdirSync(dirPath, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      collectClaudeTranscriptIds(join(dirPath, entry.name), ids);
+      continue;
+    }
+
+    if (!entry.isFile()) {
+      continue;
+    }
+
+    const sessionId = extractClaudeTranscriptFileSessionId(entry.name);
+    if (sessionId) {
+      ids.add(sessionId);
+    }
+  }
+}
+
+function listClaudeTranscriptIds(homeDir) {
+  const transcriptDir = resolve(homeDir ?? process.env.HOME ?? "", ".claude", "transcripts");
+  const projectTranscriptDir = resolve(homeDir ?? process.env.HOME ?? "", ".claude", "projects");
+  const ids = new Set();
+
+  collectClaudeTranscriptIds(projectTranscriptDir, ids);
+  collectClaudeTranscriptIds(transcriptDir, ids);
 
   return {
     transcriptDir,
+    projectTranscriptDir,
     ids,
   };
 }

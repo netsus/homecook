@@ -75,8 +75,8 @@ function createFakeClaudeBin(
       "#!/bin/sh",
       "printf '%s\\n' \"$@\" > \"$FAKE_CLAUDE_ARGS_PATH\"",
       "cat > \"$FAKE_CLAUDE_STDIN_PATH\"",
-      "mkdir -p \"$HOME/.claude/transcripts\"",
-      `cat <<'EOF' > "$HOME/.claude/transcripts/${sessionId}.jsonl"`,
+      "mkdir -p \"$HOME/.claude/projects/-Users-test-homecook\"",
+      `cat <<'EOF' > "$HOME/.claude/projects/-Users-test-homecook/${sessionId}.jsonl"`,
       "{\"type\":\"user\",\"content\":\"hello\"}",
       "EOF",
       "cat <<'EOF'",
@@ -104,7 +104,7 @@ function createFakeClaudeBin(
     ].join("\n"),
   );
   chmodSync(binPath, 0o755);
-  mkdirSync(join(homeDir, ".claude", "transcripts"), { recursive: true });
+  mkdirSync(join(homeDir, ".claude", "projects", "-Users-test-homecook"), { recursive: true });
 
   return {
     binPath,
@@ -193,7 +193,7 @@ function createOrchestratorFixture() {
 
 function createClaudeHomeDir() {
   const homeDir = mkdtempSync(join(tmpdir(), "omo-session-claude-home-"));
-  mkdirSync(join(homeDir, ".claude", "transcripts"), { recursive: true });
+  mkdirSync(join(homeDir, ".claude", "projects", "-Users-test-homecook"), { recursive: true });
   writeFileSync(
     join(homeDir, ".claude", "settings.json"),
     JSON.stringify(

@@ -60,6 +60,7 @@ function createFakeClaudeBin(
     stdoutJson?: Record<string, unknown> | null;
     stderr?: string;
     transcriptSessionId?: string | null;
+    transcriptLocation?: "projects" | "transcripts";
   },
 ) {
   fakeClaudeCounter += 1;
@@ -71,6 +72,7 @@ function createFakeClaudeBin(
   const sessionId = options?.sessionId ?? `ses_fake_claude_${suffix}`;
   const transcriptSessionId =
     options?.transcriptSessionId === undefined ? sessionId : options.transcriptSessionId;
+  const transcriptLocation = options?.transcriptLocation ?? "projects";
   const stdoutJson =
     options?.stdoutJson === undefined
       ? {
@@ -96,8 +98,12 @@ function createFakeClaudeBin(
   const transcriptBlock =
     typeof transcriptSessionId === "string" && transcriptSessionId.length > 0
       ? [
-          "mkdir -p \"$HOME/.claude/transcripts\"",
-          `cat <<'EOF' > "$HOME/.claude/transcripts/${transcriptSessionId}.jsonl"`,
+          transcriptLocation === "projects"
+            ? "mkdir -p \"$HOME/.claude/projects/-Users-test-homecook\""
+            : "mkdir -p \"$HOME/.claude/transcripts\"",
+          transcriptLocation === "projects"
+            ? `cat <<'EOF' > "$HOME/.claude/projects/-Users-test-homecook/${transcriptSessionId}.jsonl"`
+            : `cat <<'EOF' > "$HOME/.claude/transcripts/${transcriptSessionId}.jsonl"`,
           "{\"type\":\"user\",\"content\":\"hello\"}",
           "EOF",
         ].join("\n")
@@ -147,6 +153,7 @@ function createRunnerFixture() {
 function createClaudeHomeDir() {
   const homeDir = mkdtempSync(join(tmpdir(), "omo-lite-claude-home-"));
   mkdirSync(join(homeDir, ".claude", "transcripts"), { recursive: true });
+  mkdirSync(join(homeDir, ".claude", "projects", "-Users-test-homecook"), { recursive: true });
   writeFileSync(
     join(homeDir, ".claude", "settings.json"),
     JSON.stringify(
@@ -467,12 +474,13 @@ describe("OMO-lite stage runner", () => {
     });
   });
 
-  it("falls back to the transcript filename when Claude stdout omits session_id", () => {
+  it("falls back to the project transcript filename when Claude stdout omits session_id", () => {
     const rootDir = createRunnerFixture();
     const homeDir = createClaudeHomeDir();
     const stage1 = createFakeClaudeBin(rootDir, homeDir, {
       sessionId: null,
       transcriptSessionId: "ses_transcript_fallback",
+      transcriptLocation: "projects",
       stdoutJson: {
         type: "result",
         subtype: "success",
@@ -525,6 +533,54 @@ describe("OMO-lite stage runner", () => {
     });
     expect(runtime.sessions.claude_primary).toMatchObject({
       session_id: "ses_transcript_fallback",
+      provider: "claude-cli",
+    });
+  });
+
+  it("still supports the legacy transcripts directory as a fallback source", () => {
+    const rootDir = createRunnerFixture();
+    const homeDir = createClaudeHomeDir();
+    const stage1 = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: null,
+      transcriptSessionId: "ses_legacy_transcript_fallback",
+      transcriptLocation: "transcripts",
+      stdoutJson: {
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        total_cost_usd: 0,
+        usage: {
+          input_tokens: 12,
+          output_tokens: 34,
+        },
+        modelUsage: {
+          "claude-sonnet-4-6": {
+            inputTokens: 12,
+            outputTokens: 34,
+            costUSD: 0,
+          },
+        },
+      },
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "03-recipe-like",
+      stage: 1,
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: stage1.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: stage1.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage1.stdinPath,
+      },
+      now: "2026-03-26T22:06:00+09:00",
+    });
+
+    expect(result.execution).toMatchObject({
+      sessionId: "ses_legacy_transcript_fallback",
       provider: "claude-cli",
     });
   });
