@@ -1096,6 +1096,8 @@ export function setWaitState({
   headSha,
   reason,
   until,
+  phase,
+  nextAction,
   updatedAt,
 }) {
   if (!kind) {
@@ -1136,11 +1138,17 @@ export function setWaitState({
         typeof until === "string" && until.trim().length > 0 ? until.trim() : null,
       updated_at: toIsoString(updatedAt),
     },
-    phase: "wait",
-    next_action: inferActionFromWait({
-      kind,
-      stage: Number.isInteger(Number(stage)) ? Number(stage) : null,
-    }),
+    phase:
+      typeof phase === "string" && phase.trim().length > 0
+        ? phase.trim()
+        : "wait",
+    next_action:
+      typeof nextAction === "string" && nextAction.trim().length > 0
+        ? nextAction.trim()
+        : inferActionFromWait({
+            kind,
+            stage: Number.isInteger(Number(stage)) ? Number(stage) : null,
+          }),
   };
 }
 

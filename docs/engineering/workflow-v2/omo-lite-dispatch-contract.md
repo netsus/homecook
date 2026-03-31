@@ -108,7 +108,7 @@ review feedback는 runtime `last_review.<role>.body_markdown`에 저장되고, S
 | 3 | Claude | backend PR review | workpack, PR diff, CI, acceptance | review summary, requested changes or approve |
 | 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, design refs, 이전 frontend review feedback(있으면) | tests, FE impl, Design Status `pending-review`, valid stage result |
 | 5 | Claude | design review | FE PR diff, design tokens, workpack UI scope | design findings or approve, Design Status `confirmed` 근거 |
-| 6 | Claude | frontend PR review | FE PR diff, CI, acceptance, merged bookkeeping 포함 최종 PR diff | review summary, requested changes or approve, manual merge handoff |
+| 6 | Claude | frontend PR review | FE PR diff, CI, acceptance, merged bookkeeping 포함 최종 PR diff | review summary, requested changes or approve, approve 뒤 merged bookkeeping CI -> manual merge handoff |
 
 ## Session Binding Contract
 
@@ -222,7 +222,7 @@ provider별 resume 규칙:
 - success:
   - code-quality findings
   - `approve | revise`
-  - supervisor가 최종 PR에 slice status `merged` bookkeeping을 포함시킨 뒤 human verification/merge handoff
+  - supervisor가 Stage 6 approve 뒤 최종 PR에 slice status `merged` bookkeeping commit/push를 반영하고, 그 CI가 끝나면 human verification/merge handoff
 
 ## Loop Dispatch Rules
 

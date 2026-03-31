@@ -2071,64 +2071,7 @@ function handleReviewStage({
   });
   const phase = resolveStatePhase(nextState);
 
-  if (stage === 6 && !isPendingReviewPhase(phase)) {
-    const bookkeeping = applyFrontendMergeBookkeeping({
-      worktreePath: nextState.workspace.path,
-      slice: state.slice ?? workItemId,
-    });
-
-    if (bookkeeping.changed) {
-      commitWorktreeChanges({
-        worktreePath: nextState.workspace.path,
-        subject: `docs(workpacks): mark ${state.slice ?? workItemId} merged`,
-        body: "Stage 6 최종 리뷰 전에 roadmap slice status를 merged로 정렬합니다.",
-      });
-      worktree.pushBranch({
-        branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
-      });
-      const headSha = worktree.getHeadSha();
-      nextState = upsertPullRequest({
-        rootDir,
-        workItemId,
-        state: nextState,
-        role: prRole,
-        pr: activePr,
-        branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
-        headSha,
-        now,
-      });
-      nextState = saveRuntime({
-        rootDir,
-        workItemId,
-        state: setWaitState({
-          state: nextState,
-          kind: "ci",
-          prRole: "frontend",
-          stage: 6,
-          headSha,
-          updatedAt: now,
-        }),
-      });
-      updateRuntimeStatusForWait({
-        rootDir,
-        workItemId,
-        wait: nextState.wait,
-        prPath: activePr.url,
-        now,
-        approvalState: "not_started",
-        lifecycle: "ready_for_review",
-        verificationStatus: "pending",
-        extraNotes: ["bookkeeping=slice_status_merged"],
-      });
-      return {
-        state: nextState,
-        wait: nextState.wait,
-        transitioned: false,
-      };
-    }
-  }
-
-  if (!isPendingReviewPhase(phase) || nextState.active_stage !== stage) {
+  if ((!isPendingReviewPhase(phase) && phase !== "merge_pending") || nextState.active_stage !== stage) {
     const runResult = stageRunner({
       rootDir,
       workItemId,
@@ -2347,6 +2290,71 @@ function handleReviewStage({
           wait: nextState.wait,
           transitioned: true,
         };
+      }
+
+      if (stage === 6) {
+        const bookkeeping = applyFrontendMergeBookkeeping({
+          worktreePath: nextState.workspace.path,
+          slice: state.slice ?? workItemId,
+        });
+
+        if (bookkeeping.changed) {
+          commitWorktreeChanges({
+            worktreePath: nextState.workspace.path,
+            subject: `docs(workpacks): mark ${state.slice ?? workItemId} merged`,
+            body: "Stage 6 최종 승인 뒤 frontend PR에 merged bookkeeping을 반영합니다.",
+          });
+          worktree.pushBranch({
+            branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
+          });
+          const headSha = worktree.getHeadSha();
+          nextState = upsertPullRequest({
+            rootDir,
+            workItemId,
+            state: nextState,
+            role: prRole,
+            pr: activePr,
+            branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
+            headSha,
+            now,
+          });
+          nextState = saveRuntime({
+            rootDir,
+            workItemId,
+            state: setWaitState({
+              state: setExecutionState({
+                state: nextState,
+                activeStage: stage,
+                nextAction: "poll_ci",
+                artifactDir,
+                execution: nextState.execution,
+              }),
+              kind: "ci",
+              prRole: "frontend",
+              stage: 6,
+              headSha,
+              phase: "merge_pending",
+              nextAction: "poll_ci",
+              updatedAt: now,
+            }),
+          });
+          updateRuntimeStatusForWait({
+            rootDir,
+            workItemId,
+            wait: nextState.wait,
+            prPath: activePr.url,
+            now,
+            approvalState: "claude_approved",
+            lifecycle: "ready_for_review",
+            verificationStatus: "pending",
+            extraNotes: ["bookkeeping=slice_status_merged", "manual_action=verify_behavior_and_merge"],
+          });
+          return {
+            state: nextState,
+            wait: nextState.wait,
+            transitioned: false,
+          };
+        }
       }
 
       nextState = setManualGateWait({
