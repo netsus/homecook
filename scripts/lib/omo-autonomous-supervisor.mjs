@@ -138,6 +138,171 @@ function resolvePrRole(stage) {
   return "frontend";
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function writeTextFileIfChanged(filePath, nextContents) {
+  const previous = readFileSync(filePath, "utf8");
+  if (previous === nextContents) {
+    return false;
+  }
+  writeFileSync(filePath, nextContents);
+  return true;
+}
+
+function updateSliceRoadmapStatus({
+  worktreePath,
+  slice,
+  status,
+}) {
+  const roadmapPath = resolve(
+    ensureNonEmptyString(worktreePath, "worktreePath"),
+    "docs",
+    "workpacks",
+    "README.md",
+  );
+  const contents = readFileSync(roadmapPath, "utf8");
+  const rowPattern = new RegExp(
+    `^(\\|\\s*\`${escapeRegExp(ensureNonEmptyString(slice, "slice"))}\`\\s*\\|\\s*)([^|]+)(\\|.*)$`,
+    "m",
+  );
+  const match = contents.match(rowPattern);
+  if (!match) {
+    throw new Error(`Slice roadmap row for ${slice} not found.`);
+  }
+
+  const currentCell = match[2];
+  const currentStatus = currentCell.trim();
+  const nextStatus = ensureNonEmptyString(status, "status");
+  if (currentStatus === nextStatus) {
+    return {
+      changed: false,
+      filePath: roadmapPath,
+    };
+  }
+
+  const paddedStatus =
+    nextStatus.length <= currentCell.length ? nextStatus.padEnd(currentCell.length, " ") : nextStatus;
+  const nextContents = contents.replace(rowPattern, `$1${paddedStatus}$3`);
+
+  return {
+    changed: writeTextFileIfChanged(roadmapPath, nextContents),
+    filePath: roadmapPath,
+  };
+}
+
+function updateWorkpackDesignStatus({
+  worktreePath,
+  slice,
+  targetStatus,
+}) {
+  const workpackPath = resolve(
+    ensureNonEmptyString(worktreePath, "worktreePath"),
+    "docs",
+    "workpacks",
+    ensureNonEmptyString(slice, "slice"),
+    "README.md",
+  );
+  const contents = readFileSync(workpackPath, "utf8");
+  const lines = contents.split(/\r?\n/);
+  const startIndex = lines.findIndex((line) => line.trim() === "## Design Status");
+  if (startIndex === -1) {
+    throw new Error(`Design Status section missing in ${workpackPath}`);
+  }
+  const nextSectionIndex = lines.findIndex(
+    (line, index) => index > startIndex && /^##\s+/.test(line.trim()),
+  );
+  const endIndex = nextSectionIndex === -1 ? lines.length : nextSectionIndex;
+  const statusMatchers = {
+    temporary: /\(temporary\)/,
+    "pending-review": /\(pending-review\)/,
+    confirmed: /\(confirmed\)/,
+    "N/A": /\bN\/A\b/,
+  };
+  let changed = false;
+
+  for (let index = startIndex + 1; index < endIndex; index += 1) {
+    const line = lines[index];
+    if (!/^- \[[x ]\]/.test(line)) {
+      continue;
+    }
+
+    for (const [status, matcher] of Object.entries(statusMatchers)) {
+      if (!matcher.test(line)) {
+        continue;
+      }
+      const nextPrefix = status === targetStatus ? "- [x]" : "- [ ]";
+      const nextLine = line.replace(/^- \[[x ]\]/, nextPrefix);
+      if (nextLine !== line) {
+        lines[index] = nextLine;
+        changed = true;
+      }
+    }
+  }
+
+  if (!changed) {
+    return {
+      changed: false,
+      filePath: workpackPath,
+    };
+  }
+
+  return {
+    changed: writeTextFileIfChanged(workpackPath, `${lines.join("\n")}\n`),
+    filePath: workpackPath,
+  };
+}
+
+function applyCodeStageBookkeeping({
+  worktreePath,
+  slice,
+  stage,
+}) {
+  if (stage === 2) {
+    return updateSliceRoadmapStatus({
+      worktreePath,
+      slice,
+      status: "in-progress",
+    });
+  }
+
+  if (stage === 4) {
+    return updateWorkpackDesignStatus({
+      worktreePath,
+      slice,
+      targetStatus: "pending-review",
+    });
+  }
+
+  return {
+    changed: false,
+    filePath: null,
+  };
+}
+
+function applyDesignReviewBookkeeping({
+  worktreePath,
+  slice,
+}) {
+  return updateWorkpackDesignStatus({
+    worktreePath,
+    slice,
+    targetStatus: "confirmed",
+  });
+}
+
+function applyFrontendMergeBookkeeping({
+  worktreePath,
+  slice,
+}) {
+  return updateSliceRoadmapStatus({
+    worktreePath,
+    slice,
+    status: "merged",
+  });
+}
+
 function defaultBackRoute(stage) {
   if (stage === 3) return 2;
   return 4;
@@ -523,6 +688,121 @@ function resolveApprovedHeadSha({
   return normalizedApproved;
 }
 
+function setManualGateWait({
+  rootDir,
+  workItemId,
+  state,
+  kind,
+  prRole,
+  stage,
+  headSha,
+  reason = null,
+  now,
+  prPath,
+  approvalState,
+  verificationStatus = "passed",
+  extraNotes = [],
+}) {
+  const nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setWaitState({
+      state,
+      kind,
+      prRole,
+      stage,
+      headSha,
+      reason,
+      updatedAt: now,
+    }),
+  });
+  updateRuntimeStatusForWait({
+    rootDir,
+    workItemId,
+    wait: nextState.wait,
+    prPath,
+    now,
+    approvalState,
+    lifecycle: "ready_for_review",
+    verificationStatus,
+    extraNotes,
+  });
+  return nextState;
+}
+
+function finalizeMergedReviewStage({
+  rootDir,
+  workItemId,
+  state,
+  stage,
+  activePr,
+  artifactDir,
+  worktree,
+  now,
+}) {
+  if (stage === 3) {
+    worktree.syncBaseBranch();
+    const nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setWaitState({
+        state: markStageCompleted({
+          state,
+          stage,
+          artifactDir,
+        }),
+        kind: "ready_for_next_stage",
+        stage: 4,
+        updatedAt: now,
+      }),
+    });
+    updateRuntimeStatusForWait({
+      rootDir,
+      workItemId,
+      wait: nextState.wait,
+      prPath: activePr.url,
+      now,
+      approvalState: "claude_approved",
+      lifecycle: "in_progress",
+      verificationStatus: "passed",
+      extraNotes: ["merge_source=human_verification"],
+    });
+    return {
+      state: nextState,
+      wait: nextState.wait,
+      transitioned: true,
+    };
+  }
+
+  const nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: markStageCompleted({
+      state,
+      stage,
+      artifactDir,
+    }),
+  });
+  syncStatus({
+    rootDir,
+    workItemId,
+    patch: {
+      pr_path: activePr.url,
+      lifecycle: "merged",
+      approval_state: "dual_approved",
+      verification_status: "passed",
+      notes: "wait_kind=none merged_after_human_verification",
+    },
+    now,
+  });
+  return {
+    state: nextState,
+    wait: null,
+    transitioned: true,
+    merged: true,
+  };
+}
+
 function resolveRunResultRuntimeState({
   rootDir,
   workItemId,
@@ -765,6 +1045,77 @@ function processWaitState({
     };
   }
 
+  if (state.wait.kind === "human_review" || state.wait.kind === "human_verification") {
+    const prRole = state.wait.pr_role;
+    const activePr = prRole ? state.prs?.[prRole] : null;
+    if (!activePr?.url) {
+      throw new Error("Active pull request is missing for manual review/verification wait.");
+    }
+
+    const summary = github.getPullRequestSummary({
+      prRef: activePr.url,
+    });
+
+    if (summary.mergedAt) {
+      return finalizeMergedReviewStage({
+        rootDir,
+        workItemId,
+        state,
+        stage: state.wait.stage ?? state.active_stage,
+        activePr,
+        artifactDir: state.execution?.artifact_dir ?? state.last_artifact_dir,
+        worktree,
+        now,
+      });
+    }
+
+    if (
+      state.wait.kind === "human_review" &&
+      typeof summary.reviewDecision === "string" &&
+      summary.reviewDecision.toUpperCase() === "APPROVED"
+    ) {
+      const nextState = setManualGateWait({
+        rootDir,
+        workItemId,
+        state,
+        kind: "human_verification",
+        prRole,
+        stage: state.wait.stage ?? state.active_stage,
+        headSha: activePr.head_sha ?? state.wait.head_sha ?? null,
+        now,
+        prPath: activePr.url,
+        approvalState: "claude_approved",
+        extraNotes: ["manual_review=approved", "manual_action=verify_behavior_and_merge"],
+      });
+      return {
+        state: nextState,
+        action: "wait",
+        nextStage: null,
+      };
+    }
+
+    updateRuntimeStatusForWait({
+      rootDir,
+      workItemId,
+      wait: state.wait,
+      prPath: activePr.url,
+      now,
+      approvalState:
+        state.wait.kind === "human_review" ? "awaiting_claude_or_human" : "claude_approved",
+      lifecycle: "ready_for_review",
+      verificationStatus: "passed",
+      extraNotes:
+        state.wait.kind === "human_review"
+          ? ["manual_action=record_github_approval"]
+          : ["manual_action=verify_behavior_and_merge"],
+    });
+    return {
+      state,
+      action: "wait",
+      nextStage: null,
+    };
+  }
+
   if (state.wait.kind === "blocked_retry") {
     if (!isRetryDue(state.retry, now)) {
       return {
@@ -973,6 +1324,62 @@ function processWaitState({
         state: nextState,
         action: "run-stage",
         nextStage: 5,
+      };
+    }
+
+    if (prRole === "frontend" && state.wait.stage === 5) {
+      const nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state: setPullRequestRef({
+            state,
+            role: "frontend",
+            number: activePr.number,
+            url: activePr.url,
+            draft: false,
+            branch: activePr.branch,
+            headSha: activePr.head_sha,
+            updatedAt: now,
+          }),
+          kind: "ready_for_next_stage",
+          prRole: "frontend",
+          stage: 6,
+          headSha: activePr.head_sha,
+          updatedAt: now,
+        }),
+      });
+      updateRuntimeStatusForWait({
+        rootDir,
+        workItemId,
+        wait: nextState.wait,
+        prPath: activePr.url,
+        now,
+        approvalState: "claude_approved",
+        lifecycle: "ready_for_review",
+        verificationStatus: "passed",
+      });
+      return {
+        state: nextState,
+        action: "run-stage",
+        nextStage: 6,
+      };
+    }
+
+    if (prRole === "frontend" && state.wait.stage === 6) {
+      const nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state,
+          kind: null,
+          updatedAt: now,
+        }),
+      });
+      return {
+        state: nextState,
+        action: "run-stage",
+        nextStage: 6,
       };
     }
 
@@ -1238,6 +1645,11 @@ function finalizeCodeStage({
   }
 
   if (resolveStatePhase(nextState) === "commit_pending") {
+    applyCodeStageBookkeeping({
+      worktreePath: nextState.workspace.path,
+      slice,
+      stage,
+    });
     const currentHeadSha = worktree.getHeadSha();
 
     try {
@@ -1659,6 +2071,63 @@ function handleReviewStage({
   });
   const phase = resolveStatePhase(nextState);
 
+  if (stage === 6 && !isPendingReviewPhase(phase)) {
+    const bookkeeping = applyFrontendMergeBookkeeping({
+      worktreePath: nextState.workspace.path,
+      slice: state.slice ?? workItemId,
+    });
+
+    if (bookkeeping.changed) {
+      commitWorktreeChanges({
+        worktreePath: nextState.workspace.path,
+        subject: `docs(workpacks): mark ${state.slice ?? workItemId} merged`,
+        body: "Stage 6 최종 리뷰 전에 roadmap slice status를 merged로 정렬합니다.",
+      });
+      worktree.pushBranch({
+        branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
+      });
+      const headSha = worktree.getHeadSha();
+      nextState = upsertPullRequest({
+        rootDir,
+        workItemId,
+        state: nextState,
+        role: prRole,
+        pr: activePr,
+        branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
+        headSha,
+        now,
+      });
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state: nextState,
+          kind: "ci",
+          prRole: "frontend",
+          stage: 6,
+          headSha,
+          updatedAt: now,
+        }),
+      });
+      updateRuntimeStatusForWait({
+        rootDir,
+        workItemId,
+        wait: nextState.wait,
+        prPath: activePr.url,
+        now,
+        approvalState: "not_started",
+        lifecycle: "ready_for_review",
+        verificationStatus: "pending",
+        extraNotes: ["bookkeeping=slice_status_merged"],
+      });
+      return {
+        state: nextState,
+        wait: nextState.wait,
+        transitioned: false,
+      };
+    }
+  }
+
   if (!isPendingReviewPhase(phase) || nextState.active_stage !== stage) {
     const runResult = stageRunner({
       rootDir,
@@ -1738,6 +2207,7 @@ function handleReviewStage({
         decision: stageResult.decision,
         routeBackStage: stageResult.route_back_stage,
         approvedHeadSha: stageResult.approved_head_sha,
+        bodyMarkdown: stageResult.body_markdown,
         updatedAt: now,
       }),
     });
@@ -1760,6 +2230,25 @@ function handleReviewStage({
             prRef: activePr.url,
             body: stageResult.body_markdown,
           });
+          nextState = setManualGateWait({
+            rootDir,
+            workItemId,
+            state: nextState,
+            kind: "human_review",
+            prRole,
+            stage,
+            headSha: activePr.head_sha ?? null,
+            reason: "formal_github_review_required",
+            now,
+            prPath: activePr.url,
+            approvalState: "awaiting_claude_or_human",
+            extraNotes: ["manual_action=record_github_approval"],
+          });
+          return {
+            state: nextState,
+            wait: nextState.wait,
+            transitioned: false,
+          };
         } else {
           throw error;
         }
@@ -1768,6 +2257,65 @@ function handleReviewStage({
 
     if (stageResult.decision === "approve") {
       if (stage === 5) {
+        const bookkeeping = applyDesignReviewBookkeeping({
+          worktreePath: nextState.workspace.path,
+          slice: state.slice ?? workItemId,
+        });
+
+        if (bookkeeping.changed) {
+          commitWorktreeChanges({
+            worktreePath: nextState.workspace.path,
+            subject: `docs(workpack): confirm ${state.slice ?? workItemId} design status`,
+            body: "Stage 5 디자인 리뷰 승인에 따라 Design Status를 confirmed로 정렬합니다.",
+          });
+          worktree.pushBranch({
+            branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
+          });
+          const headSha = worktree.getHeadSha();
+          nextState = upsertPullRequest({
+            rootDir,
+            workItemId,
+            state: nextState,
+            role: "frontend",
+            pr: activePr,
+            branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
+            headSha,
+            now,
+          });
+          nextState = saveRuntime({
+            rootDir,
+            workItemId,
+            state: setWaitState({
+              state: markStageCompleted({
+                state: nextState,
+                stage,
+                artifactDir,
+              }),
+              kind: "ci",
+              prRole: "frontend",
+              stage: 5,
+              headSha,
+              updatedAt: now,
+            }),
+          });
+          updateRuntimeStatusForWait({
+            rootDir,
+            workItemId,
+            wait: nextState.wait,
+            prPath: activePr.url,
+            now,
+            approvalState: "claude_approved",
+            lifecycle: "ready_for_review",
+            verificationStatus: "pending",
+            extraNotes: ["bookkeeping=design_status_confirmed"],
+          });
+          return {
+            state: nextState,
+            wait: nextState.wait,
+            transitioned: false,
+          };
+        }
+
         nextState = saveRuntime({
           rootDir,
           workItemId,
@@ -1801,18 +2349,27 @@ function handleReviewStage({
         };
       }
 
-      nextState = saveRuntime({
+      nextState = setManualGateWait({
         rootDir,
         workItemId,
-        state: setExecutionState({
-          state: nextState,
-          activeStage: stage,
-          phase: "merge_pending",
-          nextAction: "merge_pr",
-          artifactDir,
-          execution: nextState.execution,
+        state: nextState,
+        kind: "human_verification",
+        prRole,
+        stage,
+        headSha: resolveApprovedHeadSha({
+          approvedHeadSha: stageResult.approved_head_sha,
+          activeHeadSha: activePr.head_sha,
         }),
+        now,
+        prPath: activePr.url,
+        approvalState: "claude_approved",
+        extraNotes: ["manual_action=verify_behavior_and_merge"],
       });
+      return {
+        state: nextState,
+        wait: nextState.wait,
+        transitioned: false,
+      };
     } else {
       const routeBackStage = stageResult.route_back_stage ?? defaultBackRoute(stage);
       nextState = saveRuntime({
@@ -1850,6 +2407,30 @@ function handleReviewStage({
   }
 
   if (resolveStatePhase(nextState) === "merge_pending") {
+    if ([3, 6].includes(stage)) {
+      nextState = setManualGateWait({
+        rootDir,
+        workItemId,
+        state: nextState,
+        kind: "human_verification",
+        prRole,
+        stage,
+        headSha: resolveApprovedHeadSha({
+          approvedHeadSha: stageResult.approved_head_sha,
+          activeHeadSha: activePr.head_sha,
+        }),
+        now,
+        prPath: activePr.url,
+        approvalState: "claude_approved",
+        extraNotes: ["migrated_from=merge_pending", "manual_action=verify_behavior_and_merge"],
+      });
+      return {
+        state: nextState,
+        wait: nextState.wait,
+        transitioned: false,
+      };
+    }
+
     const approvedHeadSha = resolveApprovedHeadSha({
       approvedHeadSha: stageResult.approved_head_sha,
       activeHeadSha: activePr.head_sha,
@@ -1903,66 +2484,16 @@ function handleReviewStage({
       throw error;
     }
 
-    if (stage === 3) {
-      worktree.syncBaseBranch();
-      nextState = saveRuntime({
-        rootDir,
-        workItemId,
-        state: setWaitState({
-          state: markStageCompleted({
-            state: nextState,
-            stage,
-            artifactDir,
-          }),
-          kind: "ready_for_next_stage",
-          stage: 4,
-          updatedAt: now,
-        }),
-      });
-      updateRuntimeStatusForWait({
-        rootDir,
-        workItemId,
-        wait: nextState.wait,
-        prPath: activePr.url,
-        now,
-        approvalState: "claude_approved",
-        lifecycle: "in_progress",
-        verificationStatus: "passed",
-      });
-      return {
-        state: nextState,
-        wait: nextState.wait,
-        transitioned: true,
-      };
-    }
-
-    nextState = saveRuntime({
+    return finalizeMergedReviewStage({
       rootDir,
       workItemId,
-      state: markStageCompleted({
-        state: nextState,
-        stage,
-        artifactDir,
-      }),
-    });
-    syncStatus({
-      rootDir,
-      workItemId,
-      patch: {
-        pr_path: activePr.url,
-        lifecycle: "merged",
-        approval_state: "dual_approved",
-        verification_status: "passed",
-        notes: "wait_kind=none merged=true",
-      },
+      state: nextState,
+      stage,
+      activePr,
+      artifactDir,
+      worktree,
       now,
     });
-    return {
-      state: nextState,
-      wait: null,
-      transitioned: false,
-      merged: true,
-    };
   }
 
   return {

@@ -83,6 +83,11 @@ code stage 결과 schema는 아래 필드를 포함한다.
 
 사람이 읽는 필드(`summary_markdown`, `pr.title`, `pr.body_markdown`)는 기본적으로 한국어로 작성한다.
 
+code stage supervisor-owned bookkeeping:
+
+- Stage 2 finalize 시 `docs/workpacks/README.md` Slice Status `docs -> in-progress`
+- Stage 4 finalize 시 `docs/workpacks/<slice>/README.md` Design Status `temporary -> pending-review`
+
 review stage 결과 schema는 아래 필드를 포함한다.
 
 - `decision`
@@ -92,16 +97,18 @@ review stage 결과 schema는 아래 필드를 포함한다.
 
 review stage의 `body_markdown`도 기본적으로 한국어로 작성한다.
 
+review feedback는 runtime `last_review.<role>.body_markdown`에 저장되고, Stage 2/4 재실행 시 prompt에 다시 주입된다.
+
 ## Dispatch Matrix
 
 | Stage | Actor | Goal | Required Reads | Deliverables |
 |------|-------|------|----------------|--------------|
 | 1 | Claude | workpack 문서 작성 | AGENTS, current source, template, official docs | README, acceptance, valid stage result |
-| 2 | Codex | backend contract-first 구현 | AGENTS, slice workflow, workpack, acceptance, API/DB docs | tests, backend impl, valid stage result |
+| 2 | Codex | backend contract-first 구현 | AGENTS, slice workflow, workpack, acceptance, API/DB docs, 이전 backend review feedback(있으면) | tests, backend impl, roadmap status `in-progress`, valid stage result |
 | 3 | Claude | backend PR review | workpack, PR diff, CI, acceptance | review summary, requested changes or approve |
-| 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, design refs | tests, FE impl, valid stage result |
-| 5 | Claude | design review | FE PR diff, design tokens, workpack UI scope | design findings or approve |
-| 6 | Claude | frontend PR review | FE PR diff, CI, acceptance | review summary, requested changes or approve |
+| 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, design refs, 이전 frontend review feedback(있으면) | tests, FE impl, Design Status `pending-review`, valid stage result |
+| 5 | Claude | design review | FE PR diff, design tokens, workpack UI scope | design findings or approve, Design Status `confirmed` 근거 |
+| 6 | Claude | frontend PR review | FE PR diff, CI, acceptance, merged bookkeeping 포함 최종 PR diff | review summary, requested changes or approve, manual merge handoff |
 
 ## Session Binding Contract
 
@@ -158,6 +165,7 @@ provider별 resume 규칙:
   - contract-first test
   - backend implementation
   - valid `stage-result.json`
+  - `docs/workpacks/README.md` Slice Status `docs -> in-progress`는 supervisor finalize에 포함됨
   - in-scope 파일만 수정
   - verify command 실행
   - supervisor handoff용 commit subject/body 제안 작성
@@ -186,6 +194,7 @@ provider별 resume 규칙:
   - FE implementation
   - state UI
   - valid `stage-result.json`
+  - Design Status `temporary -> pending-review`는 supervisor finalize에 포함됨
   - in-scope 파일만 수정
   - verify command 실행
   - supervisor handoff용 commit subject/body 제안 작성
@@ -201,6 +210,7 @@ provider별 resume 규칙:
 - success:
   - visual / interaction findings
   - `confirmed` or fix request
+  - 승인 시 Design Status `confirmed` 변경 근거 제시
 
 ### Stage 6 → Claude
 
@@ -212,6 +222,7 @@ provider별 resume 규칙:
 - success:
   - code-quality findings
   - `approve | revise`
+  - supervisor가 최종 PR에 slice status `merged` bookkeeping을 포함시킨 뒤 human verification/merge handoff
 
 ## Loop Dispatch Rules
 
@@ -255,6 +266,7 @@ target 규칙:
 - `--sync-status`를 함께 주면 dispatch의 `status_patch`와 artifact 경로가 `.workflow-v2/status.json`에 같이 반영된다.
 - direct execution은 merge automation 자체를 수행하지 않지만, autonomous supervisor가 이어서 읽을 수 있는 stage result를 남겨야 한다.
 - supervisor lifecycle에서 code stage는 `stage_result_ready -> verify_pending -> commit_pending -> push_pending -> pr_pending -> wait` 순서로 auto-finalize될 수 있다.
+- product review stage approve 후에는 바로 merge하지 않고 `human_review` 또는 `human_verification` wait로 handoff할 수 있다.
 
 ## Fallback Routing
 

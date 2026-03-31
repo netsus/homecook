@@ -272,6 +272,78 @@ describe("OMO-lite stage runner", () => {
     });
   });
 
+  it("includes prior review feedback in Stage 2 rerun prompts", () => {
+    const rootDir = createRunnerFixture();
+    mkdirSync(join(rootDir, ".opencode", "omo-runtime"), { recursive: true });
+
+    writeFileSync(
+      join(rootDir, ".opencode", "omo-runtime", "02-discovery-filter.json"),
+      JSON.stringify(
+        {
+          slice: "02-discovery-filter",
+          current_stage: 2,
+          last_completed_stage: 2,
+          blocked_stage: null,
+          retry: null,
+          wait: null,
+          sessions: {
+            claude_primary: {
+              session_id: null,
+              provider: null,
+              agent: "athena",
+              updated_at: null,
+            },
+            codex_primary: {
+              session_id: "ses_codex_stage2",
+              provider: "opencode",
+              agent: "hephaestus",
+              updated_at: "2026-04-01T00:00:00.000Z",
+            },
+          },
+          prs: {
+            docs: null,
+            backend: {
+              number: 99,
+              url: "https://github.com/netsus/homecook/pull/99",
+              draft: false,
+              branch: "feature/be-02-discovery-filter",
+              head_sha: "be123",
+              updated_at: "2026-04-01T00:00:00.000Z",
+            },
+            frontend: null,
+          },
+          last_review: {
+            backend: {
+              decision: "request_changes",
+              route_back_stage: 2,
+              approved_head_sha: null,
+              body_markdown: "테스트 계약을 더 엄격하게 고정해 주세요.",
+              updated_at: "2026-04-01T00:00:00.000Z",
+            },
+            frontend: null,
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "02-discovery-filter",
+      stage: 2,
+      workItemId: "02-discovery-filter",
+      mode: "artifact-only",
+      now: "2026-04-01T00:10:00+09:00",
+    });
+
+    const prompt = readFileSync(join(result.artifactDir, "prompt.md"), "utf8");
+
+    expect(prompt).toContain("## Prior Review Feedback");
+    expect(prompt).toContain("https://github.com/netsus/homecook/pull/99");
+    expect(prompt).toContain("테스트 계약을 더 엄격하게 고정해 주세요.");
+  });
+
   it("executes Codex stages through opencode run, captures the session id, and writes runtime state", () => {
     const rootDir = createRunnerFixture();
     const { binPath, argsPath } = createFakeOpencodeBin(rootDir, {

@@ -82,6 +82,7 @@ export function ensureWorktreeBranch({
   const normalizedWorktreePath = ensureNonEmptyString(worktreePath, "worktreePath");
   const normalizedBranch = ensureNonEmptyString(branch, "branch");
   const normalizedStartPoint = ensureNonEmptyString(startPoint, "startPoint");
+  const remoteStartPointMatch = normalizedStartPoint.match(/^origin\/(.+)$/);
 
   const currentBranch = runGit({
     cwd: normalizedWorktreePath,
@@ -112,6 +113,13 @@ export function ensureWorktreeBranch({
       branch: normalizedBranch,
       created: false,
     };
+  }
+
+  if (remoteStartPointMatch) {
+    runGit({
+      cwd: rootDir,
+      args: ["fetch", "origin", remoteStartPointMatch[1]],
+    });
   }
 
   runGit({

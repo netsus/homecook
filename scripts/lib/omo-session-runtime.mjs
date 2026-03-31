@@ -431,6 +431,10 @@ function normalizeReviewEntry(entry) {
       typeof entry.approved_head_sha === "string" && entry.approved_head_sha.trim().length > 0
         ? entry.approved_head_sha.trim()
         : null,
+    body_markdown:
+      typeof entry.body_markdown === "string" && entry.body_markdown.trim().length > 0
+        ? entry.body_markdown.trim()
+        : null,
     updated_at:
       typeof entry.updated_at === "string" && entry.updated_at.trim().length > 0
         ? entry.updated_at.trim()
@@ -1146,6 +1150,7 @@ export function setLastReview({
   decision,
   routeBackStage,
   approvedHeadSha,
+  bodyMarkdown,
   updatedAt,
 }) {
   const normalizedRole = ensureNonEmptyString(role, "role");
@@ -1165,6 +1170,10 @@ export function setLastReview({
         approved_head_sha:
           typeof approvedHeadSha === "string" && approvedHeadSha.trim().length > 0
             ? approvedHeadSha.trim()
+            : null,
+        body_markdown:
+          typeof bodyMarkdown === "string" && bodyMarkdown.trim().length > 0
+            ? bodyMarkdown.trim()
             : null,
         updated_at: toIsoString(updatedAt),
       },
