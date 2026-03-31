@@ -75,6 +75,7 @@ describe("OMO worktree manager", () => {
     const syncCloneDir = mkdtempSync(join(tmpdir(), "omo-worktree-sync-clone-"));
 
     execFileSync("git", ["clone", remoteDir, syncCloneDir]);
+    execFileSync("git", ["checkout", "-B", "master", "origin/master"], { cwd: syncCloneDir });
     execFileSync("git", ["config", "user.name", "OMO Sync"], { cwd: syncCloneDir });
     execFileSync("git", ["config", "user.email", "omo-sync@example.com"], { cwd: syncCloneDir });
     writeFileSync(join(syncCloneDir, "NEXT.md"), "new remote change\n");

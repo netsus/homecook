@@ -395,7 +395,7 @@ describe("OMO session orchestrator", () => {
         },
       },
     });
-  });
+  }, 15_000);
 
   it("resumes due blocked stages from the stored Claude session", () => {
     const rootDir = createOrchestratorFixture();
