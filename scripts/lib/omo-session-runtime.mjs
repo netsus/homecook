@@ -1,5 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
+
+import { readStageResult, validateStageResult } from "./omo-stage-result.mjs";
 
 export const DEFAULT_RETRY_DELAY_HOURS = 5;
 export const DEFAULT_MAX_RETRY_ATTEMPTS = 3;
@@ -7,6 +10,27 @@ export const OMO_SESSION_ROLE_TO_AGENT = {
   claude_primary: "athena",
   codex_primary: "hephaestus",
 };
+const OMO_RUNTIME_PHASES = new Set([
+  "stage_running",
+  "stage_result_ready",
+  "verify_pending",
+  "commit_pending",
+  "push_pending",
+  "pr_pending",
+  "wait",
+  "review_pending",
+  "merge_pending",
+  "escalated",
+  "done",
+]);
+const OMO_RUNTIME_ACTIONS = new Set([
+  "run_stage",
+  "finalize_stage",
+  "poll_ci",
+  "run_review",
+  "merge_pr",
+  "noop",
+]);
 
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -37,6 +61,183 @@ function toIsoString(value) {
   }
 
   return new Date().toISOString();
+}
+
+function normalizePhase(phase) {
+  if (typeof phase !== "string" || phase.trim().length === 0) {
+    return null;
+  }
+
+  const normalized = phase.trim();
+  return OMO_RUNTIME_PHASES.has(normalized) ? normalized : null;
+}
+
+function normalizeNextAction(nextAction) {
+  if (typeof nextAction !== "string" || nextAction.trim().length === 0) {
+    return "noop";
+  }
+
+  const normalized = nextAction.trim();
+  return OMO_RUNTIME_ACTIONS.has(normalized) ? normalized : "noop";
+}
+
+function normalizeExecution(execution) {
+  if (!execution || typeof execution !== "object") {
+    return null;
+  }
+
+  return {
+    provider:
+      typeof execution.provider === "string" && execution.provider.trim().length > 0
+        ? execution.provider.trim()
+        : null,
+    session_role:
+      typeof execution.session_role === "string" && execution.session_role.trim().length > 0
+        ? execution.session_role.trim()
+        : null,
+    session_id:
+      typeof execution.session_id === "string" && execution.session_id.trim().length > 0
+        ? execution.session_id.trim()
+        : null,
+    artifact_dir:
+      typeof execution.artifact_dir === "string" && execution.artifact_dir.trim().length > 0
+        ? execution.artifact_dir.trim()
+        : null,
+    stage_result_path:
+      typeof execution.stage_result_path === "string" && execution.stage_result_path.trim().length > 0
+        ? execution.stage_result_path.trim()
+        : null,
+    started_at:
+      typeof execution.started_at === "string" && execution.started_at.trim().length > 0
+        ? execution.started_at.trim()
+        : null,
+    finished_at:
+      typeof execution.finished_at === "string" && execution.finished_at.trim().length > 0
+        ? execution.finished_at.trim()
+        : null,
+    verify_commands: Array.isArray(execution.verify_commands)
+      ? execution.verify_commands
+          .filter((entry) => typeof entry === "string" && entry.trim().length > 0)
+          .map((entry) => entry.trim())
+      : [],
+    verify_bucket:
+      typeof execution.verify_bucket === "string" && execution.verify_bucket.trim().length > 0
+        ? execution.verify_bucket.trim()
+        : null,
+    commit_sha:
+      typeof execution.commit_sha === "string" && execution.commit_sha.trim().length > 0
+        ? execution.commit_sha.trim()
+        : null,
+    pr_role:
+      typeof execution.pr_role === "string" && execution.pr_role.trim().length > 0
+        ? execution.pr_role.trim()
+        : null,
+  };
+}
+
+function inferActionFromWait(wait) {
+  if (!wait?.kind) {
+    return "noop";
+  }
+
+  if (wait.kind === "ci") {
+    return "poll_ci";
+  }
+
+  if (wait.kind === "ready_for_next_stage" || wait.kind === "blocked_retry") {
+    return "run_stage";
+  }
+
+  return "noop";
+}
+
+function inferPhaseFromWait(wait) {
+  return wait?.kind ? "wait" : null;
+}
+
+function inferActiveStage({
+  activeStage,
+  wait,
+  currentStage,
+  blockedStage,
+  lastCompletedStage,
+}) {
+  if (Number.isInteger(activeStage) && activeStage >= 1 && activeStage <= 6) {
+    return activeStage;
+  }
+
+  if (Number.isInteger(wait?.stage) && wait.stage >= 1 && wait.stage <= 6) {
+    return wait.stage;
+  }
+
+  if (Number.isInteger(currentStage) && currentStage >= 1 && currentStage <= 6) {
+    return currentStage;
+  }
+
+  if (Number.isInteger(blockedStage) && blockedStage >= 1 && blockedStage <= 6) {
+    return blockedStage;
+  }
+
+  if (Number.isInteger(lastCompletedStage) && lastCompletedStage >= 1 && lastCompletedStage <= 6) {
+    return lastCompletedStage;
+  }
+
+  return null;
+}
+
+function getWorktreeDirtyState(worktreePath) {
+  if (typeof worktreePath !== "string" || worktreePath.trim().length === 0 || !existsSync(worktreePath)) {
+    return {
+      dirty: false,
+      changedFiles: [],
+    };
+  }
+
+  const result = spawnSync("git", ["status", "--porcelain"], {
+    cwd: worktreePath,
+    encoding: "utf8",
+  });
+
+  if (result.status !== 0) {
+    return {
+      dirty: false,
+      changedFiles: [],
+    };
+  }
+
+  const lines = (result.stdout ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter(Boolean);
+
+  return {
+    dirty: lines.length > 0,
+    changedFiles: lines
+      .map((line) => line.slice(3).trim())
+      .map((path) => {
+        const renameMatch = path.match(/->\s+(.+)$/);
+        return renameMatch ? renameMatch[1].trim() : path;
+      })
+      .filter(Boolean),
+  };
+}
+
+function hasValidLegacyStageResult({ artifactDir, stage }) {
+  if (typeof artifactDir !== "string" || artifactDir.trim().length === 0) {
+    return false;
+  }
+
+  try {
+    const stageResult = readStageResult(artifactDir);
+    if (!stageResult) {
+      return false;
+    }
+
+    validateStageResult(stage, stageResult);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function normalizeSessionEntry(role, entry) {
@@ -332,10 +533,11 @@ function normalizeRecovery(recovery) {
 
 function baseRuntimeState({ rootDir, workItemId, slice }) {
   return {
-    version: 1,
+    version: 2,
     work_item_id: workItemId,
     slice: slice ?? null,
     repo_root: resolve(rootDir),
+    active_stage: null,
     current_stage: null,
     last_completed_stage: 0,
     blocked_stage: null,
@@ -349,6 +551,9 @@ function baseRuntimeState({ rootDir, workItemId, slice }) {
     workspace: normalizeWorkspace(null),
     prs: normalizePullRequests(null),
     wait: null,
+    phase: null,
+    next_action: "noop",
+    execution: null,
     last_review: normalizeLastReview(null),
     recovery: null,
   };
@@ -357,10 +562,7 @@ function baseRuntimeState({ rootDir, workItemId, slice }) {
 function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
   const base = baseRuntimeState({ rootDir, workItemId, slice });
   const runtime = rawState && typeof rawState === "object" ? rawState : {};
-  const currentStage =
-    Number.isInteger(runtime.current_stage) && runtime.current_stage >= 1 && runtime.current_stage <= 6
-      ? runtime.current_stage
-      : base.current_stage;
+  const wait = normalizeWait(runtime.wait);
   const lastCompletedStage =
     Number.isInteger(runtime.last_completed_stage) &&
     runtime.last_completed_stage >= 0 &&
@@ -371,15 +573,30 @@ function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
     Number.isInteger(runtime.blocked_stage) && runtime.blocked_stage >= 1 && runtime.blocked_stage <= 6
       ? runtime.blocked_stage
       : null;
-
-  return {
+  const currentStage =
+    Number.isInteger(runtime.current_stage) && runtime.current_stage >= 1 && runtime.current_stage <= 6
+      ? runtime.current_stage
+      : base.current_stage;
+  const activeStage = inferActiveStage({
+    activeStage:
+      Number.isInteger(runtime.active_stage) && runtime.active_stage >= 1 && runtime.active_stage <= 6
+        ? runtime.active_stage
+        : null,
+    wait,
+    currentStage,
+    blockedStage,
+    lastCompletedStage,
+  });
+  const recovery = normalizeRecovery(runtime.recovery);
+  let normalized = {
     ...base,
     version: Number.isInteger(runtime.version) ? runtime.version : base.version,
     slice:
       typeof runtime.slice === "string" && runtime.slice.trim().length > 0
         ? runtime.slice.trim()
         : base.slice,
-    current_stage: currentStage,
+    active_stage: activeStage,
+    current_stage: activeStage ?? currentStage,
     last_completed_stage: lastCompletedStage,
     blocked_stage: blockedStage,
     sessions: {
@@ -400,10 +617,100 @@ function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
     lock: normalizeLock(runtime.lock),
     workspace: normalizeWorkspace(runtime.workspace),
     prs: normalizePullRequests(runtime.prs),
-    wait: normalizeWait(runtime.wait),
+    wait,
+    phase: normalizePhase(runtime.phase) ?? inferPhaseFromWait(wait),
+    next_action: normalizeNextAction(runtime.next_action ?? inferActionFromWait(wait)),
+    execution: normalizeExecution(runtime.execution),
     last_review: normalizeLastReview(runtime.last_review),
-    recovery: normalizeRecovery(runtime.recovery),
+    recovery,
   };
+
+  if (!normalized.phase) {
+    const codeStage =
+      Number.isInteger(normalized.active_stage) && [1, 2, 4].includes(normalized.active_stage)
+        ? normalized.active_stage
+        : null;
+    const dirtyState = getWorktreeDirtyState(normalized.workspace?.path);
+    const hasValidStageResult =
+      codeStage !== null &&
+      hasValidLegacyStageResult({
+        artifactDir: normalized.last_artifact_dir,
+        stage: codeStage,
+      });
+    const prRole =
+      codeStage === 1 ? "docs" : codeStage === 2 ? "backend" : codeStage === 4 ? "frontend" : null;
+    const hasActivePr = prRole ? Boolean(normalized.prs?.[prRole]?.url) : false;
+
+    if (normalized.wait?.kind) {
+      normalized = {
+        ...normalized,
+        phase: "wait",
+        next_action: inferActionFromWait(normalized.wait),
+      };
+    } else if (normalized.recovery?.kind) {
+      normalized = {
+        ...normalized,
+        phase: "escalated",
+        next_action: "noop",
+      };
+    } else if (hasValidStageResult && !hasActivePr) {
+      normalized = {
+        ...normalized,
+        phase: "stage_result_ready",
+        next_action: "finalize_stage",
+        execution: normalizeExecution({
+          ...normalized.execution,
+          artifact_dir: normalized.last_artifact_dir,
+          stage_result_path: normalized.last_artifact_dir
+            ? resolve(normalized.last_artifact_dir, "stage-result.json")
+            : null,
+          session_role: [1, 3, 5, 6].includes(codeStage) ? "claude_primary" : "codex_primary",
+          session_id:
+            [1, 3, 5, 6].includes(codeStage)
+              ? normalized.sessions.claude_primary.session_id
+              : normalized.sessions.codex_primary.session_id,
+          provider:
+            [1, 3, 5, 6].includes(codeStage)
+              ? normalized.sessions.claude_primary.provider
+              : normalized.sessions.codex_primary.provider,
+          pr_role: prRole,
+        }),
+      };
+    } else if (dirtyState.dirty) {
+      normalized = {
+        ...normalized,
+        phase: "escalated",
+        next_action: "noop",
+        recovery:
+          normalized.recovery ??
+          normalizeRecovery({
+            kind: "legacy_dirty_worktree",
+            stage: normalized.active_stage,
+            branch: normalized.workspace?.branch_role,
+            reason: hasValidStageResult ? "dirty worktree with legacy stage result" : "dirty worktree without stage result",
+            artifact_dir: normalized.last_artifact_dir,
+            changed_files: dirtyState.changedFiles,
+            salvage_candidate: dirtyState.changedFiles.length > 0,
+            updated_at: new Date().toISOString(),
+          }),
+      };
+    } else if (normalized.last_completed_stage >= 6) {
+      normalized = {
+        ...normalized,
+        phase: "done",
+        next_action: "noop",
+      };
+    }
+  }
+
+  if (normalized.phase === "wait") {
+    normalized = {
+      ...normalized,
+      next_action: inferActionFromWait(normalized.wait),
+    };
+  }
+
+  return normalized;
 }
 
 export function resolveRuntimeDirectory(rootDir = process.cwd()) {
@@ -459,11 +766,16 @@ export function writeRuntimeState({
   });
 
   mkdirSync(runtimeDir, { recursive: true });
-  writeFileSync(runtimePath, `${JSON.stringify(state, null, 2)}\n`);
+  const normalizedState = normalizeRuntimeState(state, {
+    rootDir,
+    workItemId: normalizedWorkItemId,
+  });
+
+  writeFileSync(runtimePath, `${JSON.stringify(normalizedState, null, 2)}\n`);
 
   return {
     runtimePath,
-    state,
+    state: normalizedState,
   };
 }
 
@@ -509,6 +821,145 @@ export function setSessionBinding({
   };
 }
 
+export function setExecutionState({
+  state,
+  activeStage,
+  phase,
+  nextAction,
+  artifactDir,
+  execution,
+  clearRecovery = false,
+}) {
+  const normalizedActiveStage =
+    Number.isInteger(Number(activeStage)) && Number(activeStage) >= 1 && Number(activeStage) <= 6
+      ? Number(activeStage)
+      : state.active_stage;
+  const normalizedPhase = normalizePhase(phase) ?? state.phase ?? null;
+
+  return {
+    ...state,
+    active_stage: normalizedActiveStage ?? null,
+    current_stage: normalizedActiveStage ?? null,
+    blocked_stage: null,
+    retry: null,
+    last_artifact_dir: artifactDir ?? state.last_artifact_dir,
+    phase: normalizedPhase,
+    next_action: normalizeNextAction(nextAction),
+    execution: normalizeExecution({
+      ...(state.execution ?? {}),
+      ...(execution ?? {}),
+      artifact_dir: artifactDir ?? execution?.artifact_dir ?? state.execution?.artifact_dir ?? state.last_artifact_dir,
+    }),
+    recovery: clearRecovery ? null : state.recovery,
+  };
+}
+
+export function markStageRunning({
+  state,
+  stage,
+  artifactDir,
+  provider,
+  sessionRole,
+  sessionId,
+  stageResultPath,
+  verifyCommands = [],
+  prRole,
+  startedAt,
+}) {
+  return setExecutionState({
+    state,
+    activeStage: stage,
+    phase: "stage_running",
+    nextAction: "run_stage",
+    artifactDir,
+    execution: {
+      provider,
+      session_role: sessionRole,
+      session_id: sessionId,
+      artifact_dir: artifactDir,
+      stage_result_path: stageResultPath,
+      started_at: toIsoString(startedAt),
+      finished_at: null,
+      verify_commands: verifyCommands,
+      verify_bucket: null,
+      commit_sha: null,
+      pr_role: prRole,
+    },
+    clearRecovery: true,
+  });
+}
+
+export function markStageResultReady({
+  state,
+  stage,
+  artifactDir,
+  provider,
+  sessionRole,
+  sessionId,
+  stageResultPath,
+  verifyCommands = [],
+  prRole,
+  startedAt,
+  finishedAt,
+}) {
+  return setExecutionState({
+    state,
+    activeStage: stage,
+    phase: "stage_result_ready",
+    nextAction: "finalize_stage",
+    artifactDir,
+    execution: {
+      provider,
+      session_role: sessionRole,
+      session_id: sessionId,
+      artifact_dir: artifactDir,
+      stage_result_path: stageResultPath,
+      started_at: startedAt ? toIsoString(startedAt) : state.execution?.started_at ?? null,
+      finished_at: toIsoString(finishedAt),
+      verify_commands: verifyCommands,
+      verify_bucket: state.execution?.verify_bucket ?? null,
+      commit_sha: state.execution?.commit_sha ?? null,
+      pr_role: prRole,
+    },
+    clearRecovery: true,
+  });
+}
+
+export function markReviewPending({
+  state,
+  stage,
+  artifactDir,
+  provider,
+  sessionRole,
+  sessionId,
+  stageResultPath,
+  prRole,
+  startedAt,
+  finishedAt,
+}) {
+  return setExecutionState({
+    state,
+    activeStage: stage,
+    phase: "review_pending",
+    nextAction: "run_review",
+    artifactDir,
+    execution: {
+      provider,
+      session_role: sessionRole,
+      session_id: sessionId,
+      artifact_dir: artifactDir,
+      stage_result_path: stageResultPath,
+      started_at: startedAt ? toIsoString(startedAt) : state.execution?.started_at ?? null,
+      finished_at: toIsoString(finishedAt),
+      verify_commands: [],
+      verify_bucket: null,
+      commit_sha: state.execution?.commit_sha ?? null,
+      pr_role: prRole,
+    },
+    clearRecovery: true,
+  });
+}
+
 export function markStageCompleted({
   state,
   stage,
@@ -518,11 +969,15 @@ export function markStageCompleted({
 
   return {
     ...state,
+    active_stage: normalizedStage,
     current_stage: normalizedStage,
     last_completed_stage: normalizedStage,
     blocked_stage: null,
     retry: null,
     last_artifact_dir: artifactDir ?? state.last_artifact_dir,
+    phase: normalizedStage >= 6 ? "done" : null,
+    next_action: "noop",
+    execution: null,
     recovery: null,
   };
 }
@@ -538,6 +993,7 @@ export function scheduleStageRetry({
 }) {
   return {
     ...state,
+    active_stage: ensureInteger(Number(stage), "stage"),
     current_stage: ensureInteger(Number(stage), "stage"),
     blocked_stage: ensureInteger(Number(stage), "stage"),
     retry: {
@@ -547,6 +1003,8 @@ export function scheduleStageRetry({
       max_attempts: ensureInteger(maxAttempts, "maxAttempts"),
     },
     last_artifact_dir: artifactDir ?? state.last_artifact_dir,
+    phase: "wait",
+    next_action: "run_stage",
     recovery: null,
   };
 }
@@ -561,6 +1019,7 @@ export function markSessionUnavailable({
 }) {
   return {
     ...state,
+    active_stage: ensureInteger(Number(stage), "stage"),
     current_stage: ensureInteger(Number(stage), "stage"),
     blocked_stage: ensureInteger(Number(stage), "stage"),
     retry: {
@@ -570,6 +1029,8 @@ export function markSessionUnavailable({
       max_attempts: ensureInteger(maxAttempts, "maxAttempts"),
     },
     last_artifact_dir: artifactDir ?? state.last_artifact_dir,
+    phase: "escalated",
+    next_action: "noop",
     recovery: null,
   };
 }
@@ -637,11 +1098,27 @@ export function setWaitState({
     return {
       ...state,
       wait: null,
+      phase:
+        state.phase === "wait"
+          ? null
+          : state.phase,
+      next_action:
+        state.phase === "wait"
+          ? "noop"
+          : state.next_action,
     };
   }
 
   return {
     ...state,
+    active_stage:
+      Number.isInteger(Number(stage)) && Number(stage) >= 1 && Number(stage) <= 6
+        ? Number(stage)
+        : state.active_stage,
+    current_stage:
+      Number.isInteger(Number(stage)) && Number(stage) >= 1 && Number(stage) <= 6
+        ? Number(stage)
+        : state.current_stage,
     wait: {
       kind: ensureNonEmptyString(kind, "kind"),
       pr_role:
@@ -655,6 +1132,11 @@ export function setWaitState({
         typeof until === "string" && until.trim().length > 0 ? until.trim() : null,
       updated_at: toIsoString(updatedAt),
     },
+    phase: "wait",
+    next_action: inferActionFromWait({
+      kind,
+      stage: Number.isInteger(Number(stage)) ? Number(stage) : null,
+    }),
   };
 }
 

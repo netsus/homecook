@@ -12,6 +12,7 @@
     "omo:continue": "node scripts/omo-continue.mjs",
     "omo:resume-pending": "node scripts/omo-resume-pending.mjs",
     "omo:status": "node scripts/omo-status.mjs",
+    "omo:status:brief": "node scripts/omo-status-brief.mjs",
     "omo:supervise": "node scripts/omo-supervise.mjs",
     "omo:tick": "node scripts/omo-tick.mjs",
     "omo:claude-budget": "node scripts/omo-lite-claude-budget.mjs",

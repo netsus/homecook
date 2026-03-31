@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -1261,6 +1261,9 @@ describe("OMO autonomous supervisor", () => {
           listChangedFiles() {
             return ["docs/workpacks/03-recipe-like/README.md"];
           },
+          getBinaryDiff() {
+            return "diff --git a/docs/workpacks/03-recipe-like/README.md b/docs/workpacks/03-recipe-like/README.md\n";
+          },
         },
         stageRunner() {
           const runtimeSync = writeRuntimeState({
@@ -1372,6 +1375,11 @@ describe("OMO autonomous supervisor", () => {
       changed_files: ["docs/workpacks/03-recipe-like/README.md"],
       salvage_candidate: true,
     });
+    expect(existsSync(join(result.artifactDir, "recovery.json"))).toBe(true);
+    expect(existsSync(join(result.artifactDir, "recovery.changed-files.txt"))).toBe(true);
+    expect(readFileSync(join(result.artifactDir, "recovery.patch"), "utf8")).toContain(
+      "diff --git a/docs/workpacks/03-recipe-like/README.md",
+    );
   });
 
   it("fails closed when the dedicated worktree is dirty", () => {

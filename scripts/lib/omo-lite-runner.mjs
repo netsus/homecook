@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -21,8 +21,11 @@ import {
   DEFAULT_MAX_RETRY_ATTEMPTS,
   DEFAULT_RETRY_DELAY_HOURS,
   OMO_SESSION_ROLE_TO_AGENT,
+  markReviewPending,
   markSessionUnavailable,
   markStageCompleted,
+  markStageResultReady,
+  markStageRunning,
   readRuntimeState,
   resolveRetryAt,
   resolveRuntimePath,
@@ -130,6 +133,10 @@ function buildPrompt({ slice, stage, workItemId, dispatch, stageResultPath }) {
       ? {
           result: "done",
           summary_markdown: "짧은 요약",
+          commit: {
+            subject: "docs: or feat: title",
+            body_markdown: "선택 사항",
+          },
           pr: {
             title: "docs: or feat: title",
             body_markdown: "## Summary\n- bullet",
@@ -196,7 +203,8 @@ function buildPrompt({ slice, stage, workItemId, dispatch, stageResultPath }) {
     "- Follow AGENTS.md and official docs before implementation.",
     "- Do not invent undocumented API fields, status values, or endpoints.",
     "- Keep branch, verification, and review behavior aligned with slice workflow and workflow-v2 rules.",
-    "- Do not create, update, ready, review, or merge GitHub pull requests yourself; supervisor handles GitHub automation.",
+    "- Limit changes to files directly required by the locked slice scope. Avoid unrelated refactors, opportunistic cleanup, or out-of-scope file edits.",
+    "- Your responsibility is scoped code/doc updates, local verification, and valid stage-result writing. Do not create, update, ready, review, or merge GitHub pull requests yourself; supervisor handles GitHub automation.",
     "",
     "## Stage Result Output",
     `- Write a JSON file to \`${stageResultPath}\` before finishing the task.`,
@@ -206,7 +214,7 @@ function buildPrompt({ slice, stage, workItemId, dispatch, stageResultPath }) {
     JSON.stringify(stageResultTemplate, null, 2),
     "```",
     [1, 2, 4].includes(normalizedStage)
-      ? "- Required keys: result, summary_markdown, pr.title, pr.body_markdown, checks_run, next_route"
+      ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route"
       : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha",
   ]
     .filter(Boolean)
@@ -442,6 +450,46 @@ function createProcessFailure(message, details) {
   return error;
 }
 
+function resolveProcessFailureKind(error) {
+  if (!error || typeof error !== "object") {
+    return "nonzero_exit";
+  }
+
+  const directCode =
+    typeof error.code === "string"
+      ? error.code
+      : typeof error.cause?.code === "string"
+        ? error.cause.code
+        : null;
+
+  if (directCode === "ENOBUFS") {
+    return "buffer_overflow";
+  }
+
+  if (directCode === "SIGTERM" || directCode === "SIGKILL") {
+    return "signal_terminated";
+  }
+
+  const fragments = [];
+  if (typeof error.message === "string") {
+    fragments.push(error.message);
+  }
+  if (typeof error.stderrPath === "string" && existsSync(error.stderrPath)) {
+    fragments.push(readFileSync(error.stderrPath, "utf8"));
+  }
+  if (typeof error.stdoutPath === "string" && existsSync(error.stdoutPath)) {
+    fragments.push(readFileSync(error.stdoutPath, "utf8"));
+  }
+
+  if (/non-JSON output/i.test(fragments.join("\n"))) {
+    return "malformed_output";
+  }
+
+  return /ENOBUFS|maxBuffer/i.test(fragments.join("\n"))
+    ? "buffer_overflow"
+    : "nonzero_exit";
+}
+
 function isClaudeBudgetRuntimeFailure(error) {
   if (!error || typeof error !== "object") {
     return false;
@@ -476,6 +524,35 @@ function isClaudeBudgetRuntimeFailure(error) {
   );
 }
 
+function runCommandToArtifactLogs({
+  bin,
+  args,
+  cwd,
+  environment,
+  stdoutPath,
+  stderrPath,
+  input,
+}) {
+  const stdoutFd = openSync(stdoutPath, "w");
+  const stderrFd = openSync(stderrPath, "w");
+
+  try {
+    return spawnSync(bin, args, {
+      cwd,
+      env: {
+        ...process.env,
+        ...(environment ?? {}),
+      },
+      input,
+      encoding: "utf8",
+      stdio: ["pipe", stdoutFd, stderrFd],
+    });
+  } finally {
+    closeSync(stdoutFd);
+    closeSync(stderrFd);
+  }
+}
+
 function runOpencode({
   executionDir,
   artifactDir,
@@ -489,6 +566,8 @@ function runOpencode({
   stageResultPath,
 }) {
   const commandArgs = ["run", "--dir", executionDir, "--format", "json"];
+  const stdoutPath = resolve(artifactDir, "opencode.stdout.log");
+  const stderrPath = resolve(artifactDir, "opencode.stderr.log");
 
   if (sessionId) {
     commandArgs.push("--session", sessionId);
@@ -505,35 +584,37 @@ function runOpencode({
 
   commandArgs.push(prompt);
 
-  const result = spawnSync(opencodeBin, commandArgs, {
+  const result = runCommandToArtifactLogs({
+    bin: opencodeBin,
+    args: commandArgs,
     cwd: executionDir,
-    env: {
-      ...process.env,
+    environment: {
       ...(environment ?? {}),
       OMO_STAGE_RESULT_PATH: stageResultPath,
       OMO_STAGE_ARTIFACT_DIR: artifactDir,
     },
-    encoding: "utf8",
+    stdoutPath,
+    stderrPath,
   });
-
-  const stdoutPath = resolve(artifactDir, "opencode.stdout.log");
-  const stderrPath = resolve(artifactDir, "opencode.stderr.log");
-
-  writeFileSync(stdoutPath, result.stdout ?? "");
-  writeFileSync(stderrPath, result.stderr ?? "");
+  const stdout = existsSync(stdoutPath) ? readFileSync(stdoutPath, "utf8") : "";
 
   if (result.error) {
-    throw createProcessFailure(result.error.message, {
-      cause: result.error,
-      exitCode: result.status ?? null,
-      stdoutPath,
-      stderrPath,
-      sessionId: parseSessionId(result.stdout, sessionId),
-    });
+    throw createProcessFailure(
+      result.error.message,
+      {
+        cause: result.error,
+        exitCode: result.status ?? null,
+        stdoutPath,
+        stderrPath,
+        sessionId: parseSessionId(stdout, sessionId),
+        code: result.error?.code ?? null,
+        failureKind: "process_failure",
+      },
+    );
   }
 
-  const capturedSessionId = parseSessionId(result.stdout, sessionId);
-  const errorEvent = parseErrorEvent(result.stdout);
+  const capturedSessionId = parseSessionId(stdout, sessionId);
+  const errorEvent = parseErrorEvent(stdout);
 
   if (result.status !== 0) {
     throw createProcessFailure(
@@ -594,6 +675,8 @@ function runClaudeCli({
   stageResultPath,
 }) {
   const beforeTranscripts = listClaudeTranscriptIds(homeDir);
+  const stdoutPath = resolve(artifactDir, "claude.stdout.log");
+  const stderrPath = resolve(artifactDir, "claude.stderr.log");
   const commandArgs = [
     "-p",
     "--output-format",
@@ -618,27 +701,22 @@ function runClaudeCli({
     commandArgs.push("--resume", sessionId);
   }
 
-  const result = spawnSync(claudeBin, commandArgs, {
+  const result = runCommandToArtifactLogs({
+    bin: claudeBin,
+    args: commandArgs,
     cwd: executionDir,
-    env: {
-      ...process.env,
+    environment: {
       ...(environment ?? {}),
       HOME: homeDir ?? process.env.HOME,
       OMO_STAGE_RESULT_PATH: stageResultPath,
       OMO_STAGE_ARTIFACT_DIR: artifactDir,
     },
     input: prompt,
-    encoding: "utf8",
-    maxBuffer: 20 * 1024 * 1024,
+    stdoutPath,
+    stderrPath,
   });
-
-  const stdoutPath = resolve(artifactDir, "claude.stdout.log");
-  const stderrPath = resolve(artifactDir, "claude.stderr.log");
-
-  writeFileSync(stdoutPath, result.stdout ?? "");
-  writeFileSync(stderrPath, result.stderr ?? "");
-
-  const parsedOutput = parseClaudeJsonOutput(result.stdout);
+  const stdout = existsSync(stdoutPath) ? readFileSync(stdoutPath, "utf8") : "";
+  const parsedOutput = parseClaudeJsonOutput(stdout);
   const capturedSessionId =
     extractSessionId(parsedOutput) ??
     detectNewClaudeTranscriptSessionId({
@@ -829,6 +907,10 @@ function buildStatusNotes({
     notes.push(`execution_mode=${execution.mode}`);
   }
 
+  if (execution?.failureKind) {
+    notes.push(`failure_kind=${execution.failureKind}`);
+  }
+
   return notes.join(" ");
 }
 
@@ -836,7 +918,8 @@ function resolveStatusPatch({ dispatch, execution }) {
   if (
     execution?.mode === "session-missing" ||
     execution?.mode === "provider-mismatch" ||
-    execution?.mode === "contract-violation"
+    execution?.mode === "contract-violation" ||
+    execution?.mode === "process-failure"
   ) {
     return {
       ...dispatch.statusPatch,
@@ -871,6 +954,7 @@ function resolveStatusPatch({ dispatch, execution }) {
  * @property {string} [now]
  * @property {number} [retryDelayHours]
  * @property {number} [maxRetryAttempts]
+ * @property {"standalone"|"supervisor"} [lifecycleMode]
  */
 
 /**
@@ -897,6 +981,7 @@ export function runStageWithArtifacts({
   now,
   retryDelayHours = DEFAULT_RETRY_DELAY_HOURS,
   maxRetryAttempts = DEFAULT_MAX_RETRY_ATTEMPTS,
+  lifecycleMode = "standalone",
 }) {
   const normalizedSlice = ensureNonEmptyString(slice, "slice");
   const normalizedStage = Number(stage);
@@ -934,6 +1019,8 @@ export function runStageWithArtifacts({
     rootDir,
     bin: opencodeBin,
     agent,
+    environment,
+    homeDir,
   });
   const desiredProviderConfig =
     sessionRole === "claude_primary"
@@ -1038,6 +1125,41 @@ export function runStageWithArtifacts({
     executionDir: resolvedExecutionDir,
     stageResultPath,
   };
+  let runtimeStartSync = null;
+
+  if (
+    workItemId &&
+    runtimeSnapshot &&
+    mode === "execute" &&
+    executionBinding.executable &&
+    dispatch.retryDecision.action !== "schedule_retry" &&
+    !hasProviderMismatch
+  ) {
+    runtimeStartSync = writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: markStageRunning({
+        state: runtimeSnapshot.state,
+        stage: dispatch.stage,
+        artifactDir: targetArtifactDir,
+        provider: executionBinding.provider,
+        sessionRole: dispatch.sessionBinding.role,
+        sessionId: existingSessionId,
+        stageResultPath,
+        verifyCommands: dispatch.verifyCommands,
+        prRole: [1, 2, 4].includes(dispatch.stage)
+          ? dispatch.stage === 1
+            ? "docs"
+            : dispatch.stage === 2
+              ? "backend"
+              : "frontend"
+          : dispatch.stage === 3
+            ? "backend"
+            : "frontend",
+        startedAt: now,
+      }),
+    });
+  }
 
   let result;
 
@@ -1207,14 +1329,38 @@ export function runStageWithArtifacts({
             stderrPath: error.stderrPath ?? null,
           },
         };
+      } else if (
+        error &&
+        typeof error === "object" &&
+        (typeof error.stdoutPath === "string" || typeof error.stderrPath === "string")
+      ) {
+        result = {
+          artifactDir: targetArtifactDir,
+          dispatch,
+          prompt,
+          execution: {
+            mode: "process-failure",
+            executed: false,
+            executable: false,
+            provider: executionBinding.provider,
+            agent: executionBinding.agent,
+            reason: error.message ?? "stage execution process failed",
+            failureKind: resolveProcessFailureKind(error),
+            exitCode: error.exitCode ?? null,
+            sessionId: error.sessionId ?? existingSessionId,
+            stdoutPath: error.stdoutPath ?? null,
+            stderrPath: error.stderrPath ?? null,
+          },
+        };
       } else {
         throw error;
       }
     }
   }
 
-  let runtimeSync = null;
+  let runtimeSync = runtimeStartSync;
   let stageResult = readStageResult(targetArtifactDir);
+  let validStageResult = false;
 
   if (result.execution.mode === "execute" && result.execution.executed && !stageResult) {
     result = {
@@ -1228,9 +1374,10 @@ export function runStageWithArtifacts({
         }),
       },
     };
-  } else if (result.execution.mode === "execute" && result.execution.executed && stageResult) {
+  } else if (stageResult) {
     try {
       validateStageResult(normalizedStage, stageResult);
+      validStageResult = true;
     } catch (error) {
       result = {
         ...result,
@@ -1244,7 +1391,7 @@ export function runStageWithArtifacts({
   }
 
   if (workItemId && runtimeSnapshot) {
-    let nextRuntimeState = runtimeSnapshot.state;
+    let nextRuntimeState = runtimeStartSync?.state ?? runtimeSnapshot.state;
     const scheduledRetryAt =
       result.dispatch.retryDecision.action === "schedule_retry"
         ? result.dispatch.retryDecision.retryAt ?? retryAt ?? null
@@ -1253,7 +1400,8 @@ export function runStageWithArtifacts({
     if (
       (result.execution.mode === "execute" && result.execution.executed) ||
       (result.execution.mode === "scheduled-retry" && result.execution.sessionId) ||
-      (result.execution.mode === "contract-violation" && result.execution.sessionId)
+      (result.execution.mode === "contract-violation" && result.execution.sessionId) ||
+      (result.execution.mode === "process-failure" && result.execution.sessionId)
     ) {
       if (result.execution.sessionId) {
         nextRuntimeState = setSessionBinding({
@@ -1267,12 +1415,39 @@ export function runStageWithArtifacts({
       }
     }
 
-    if (result.execution.mode === "execute" && result.execution.executed) {
-      nextRuntimeState = markStageCompleted({
-        state: nextRuntimeState,
-        stage: dispatch.stage,
-        artifactDir: targetArtifactDir,
-      });
+    if (validStageResult) {
+      if (lifecycleMode === "supervisor") {
+        const stageStateWriter =
+          [1, 2, 4].includes(dispatch.stage) ? markStageResultReady : markReviewPending;
+
+        nextRuntimeState = stageStateWriter({
+          state: nextRuntimeState,
+          stage: dispatch.stage,
+          artifactDir: targetArtifactDir,
+          provider: result.execution.provider ?? executionBinding.provider ?? "opencode",
+          sessionRole: dispatch.sessionBinding.role,
+          sessionId: result.execution.sessionId ?? existingSessionId,
+          stageResultPath,
+          verifyCommands: dispatch.verifyCommands,
+          prRole: [1, 2, 4].includes(dispatch.stage)
+            ? dispatch.stage === 1
+              ? "docs"
+              : dispatch.stage === 2
+                ? "backend"
+                : "frontend"
+            : dispatch.stage === 3
+              ? "backend"
+              : "frontend",
+          startedAt: runtimeStartSync?.state?.execution?.started_at ?? now,
+          finishedAt: now,
+        });
+      } else if (result.execution.mode === "execute" && result.execution.executed) {
+        nextRuntimeState = markStageCompleted({
+          state: nextRuntimeState,
+          stage: dispatch.stage,
+          artifactDir: targetArtifactDir,
+        });
+      }
     } else if (
       result.execution.mode === "scheduled-retry" ||
       dispatch.retryDecision.action === "schedule_retry"
@@ -1303,6 +1478,15 @@ export function runStageWithArtifacts({
         state: nextRuntimeState,
         stage: dispatch.stage,
         reason: "contract_violation",
+        attemptCount: (retryState?.attempt_count ?? 0) + 1,
+        maxAttempts: maxRetryAttempts,
+        artifactDir: targetArtifactDir,
+      });
+    } else if (result.execution.mode === "process-failure") {
+      nextRuntimeState = markSessionUnavailable({
+        state: nextRuntimeState,
+        stage: dispatch.stage,
+        reason: result.execution.failureKind ?? "process_failure",
         attemptCount: (retryState?.attempt_count ?? 0) + 1,
         maxAttempts: maxRetryAttempts,
         artifactDir: targetArtifactDir,
@@ -1356,11 +1540,14 @@ export function runStageWithArtifacts({
       execution: result.execution,
       runtimeSync: runtimeSync
         ? {
-            runtimePath: runtimeSync.runtimePath,
-            current_stage: runtimeSync.state.current_stage,
-            last_completed_stage: runtimeSync.state.last_completed_stage,
-            blocked_stage: runtimeSync.state.blocked_stage,
-          }
+          runtimePath: runtimeSync.runtimePath,
+          active_stage: runtimeSync.state.active_stage,
+          current_stage: runtimeSync.state.current_stage,
+          last_completed_stage: runtimeSync.state.last_completed_stage,
+          blocked_stage: runtimeSync.state.blocked_stage,
+          phase: runtimeSync.state.phase,
+          next_action: runtimeSync.state.next_action,
+        }
         : null,
       statusSync: statusSync
         ? {

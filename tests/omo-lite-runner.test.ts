@@ -624,6 +624,7 @@ describe("OMO-lite stage runner", () => {
       exitCode: 9,
       stderr: "session not found",
       stdout: [],
+      stageResult: null,
     });
 
     runStageWithArtifacts({
@@ -669,10 +670,15 @@ describe("OMO-lite stage runner", () => {
       reason: "stored session could not be continued",
     });
     expect(runtime).toMatchObject({
+      active_stage: 4,
+      current_stage: 4,
+      last_completed_stage: 2,
       blocked_stage: 4,
       retry: {
         reason: "session_unavailable",
       },
+      phase: "escalated",
+      next_action: "noop",
     });
   });
 
@@ -960,7 +966,122 @@ describe("OMO-lite stage runner", () => {
     });
   });
 
-  it("writes logs and throws when opencode execution exits non-zero", () => {
+  it("keeps large opencode stdout within the expanded buffer and still parses the session", () => {
+    const rootDir = createRunnerFixture();
+    const binPath = join(rootDir, "fake-opencode-large-buffer.sh");
+    const argsPath = join(rootDir, "fake-opencode-large-buffer.args.log");
+
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "printf '%s\\n' \"$@\" > \"$FAKE_OPENCODE_ARGS_PATH\"",
+        "cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
+        JSON.stringify(
+          {
+            result: "done",
+            summary_markdown: "Large stdout stage complete",
+            pr: {
+              title: "feat: planner backend",
+              body_markdown: "## Summary\\n- planner",
+            },
+            checks_run: ["pnpm test:all"],
+            next_route: "wait_for_ci",
+          },
+          null,
+          2,
+        ),
+        "EOF",
+        "node -e 'const payload = JSON.stringify({ type: \"text\", sessionID: \"ses_large_stdout\", part: { type: \"text\", text: \"x\".repeat(1024 * 1024 + 512) } }); process.stdout.write(payload + \"\\n\")'",
+        "node -e 'process.stdout.write(JSON.stringify({ type: \"step_finish\", sessionID: \"ses_large_stdout\", part: { type: \"step-finish\", reason: \"stop\" } }) + \"\\n\")'",
+        "exit 0",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "05-planner-week-core",
+      stage: 2,
+      workItemId: "05-planner-week-core",
+      mode: "execute",
+      opencodeBin: binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: argsPath,
+      },
+      now: "2026-04-01T10:00:00+09:00",
+    });
+
+    expect(result.execution).toMatchObject({
+      mode: "execute",
+      provider: "opencode",
+      sessionId: "ses_large_stdout",
+    });
+    expect(result.stageResult).toMatchObject({
+      next_route: "wait_for_ci",
+    });
+  });
+
+  it("streams very large opencode stdout without truncation and still parses the session", () => {
+    const rootDir = createRunnerFixture();
+    const binPath = join(rootDir, "fake-opencode-overflow.sh");
+    const argsPath = join(rootDir, "fake-opencode-overflow.args.log");
+
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "printf '%s\\n' \"$@\" > \"$FAKE_OPENCODE_ARGS_PATH\"",
+        "cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
+        JSON.stringify(
+          {
+            result: "done",
+            summary_markdown: "Stage complete after large stdout",
+            pr: {
+              title: "feat: planner backend",
+              body_markdown: "## Summary\\n- planner",
+            },
+            checks_run: ["pnpm test:all"],
+            next_route: "wait_for_ci",
+          },
+          null,
+          2,
+        ),
+        "EOF",
+        "node -e 'const chunk = \"x\".repeat(1024 * 1024); for (let i = 0; i < 22; i += 1) { process.stdout.write(JSON.stringify({ type: \"text\", sessionID: \"ses_overflow\", part: { type: \"text\", text: chunk } }) + \"\\n\"); }'",
+        "node -e 'process.stdout.write(JSON.stringify({ type: \"step_finish\", sessionID: \"ses_overflow\", part: { type: \"step-finish\", reason: \"stop\" } }) + \"\\n\")'",
+        "exit 0",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "05-planner-week-core",
+      stage: 2,
+      workItemId: "05-planner-week-core",
+      mode: "execute",
+      opencodeBin: binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: argsPath,
+      },
+      now: "2026-04-01T10:05:00+09:00",
+    });
+
+    expect(result.execution).toMatchObject({
+      mode: "execute",
+      provider: "opencode",
+      sessionId: "ses_overflow",
+    });
+    expect(result.stageResult).toMatchObject({
+      next_route: "wait_for_ci",
+    });
+    expect(readFileSync(join(result.artifactDir, "opencode.stdout.log"), "utf8").length).toBeGreaterThan(
+      20 * 1024 * 1024,
+    );
+  });
+
+  it("writes logs and records a process failure when opencode execution exits non-zero", () => {
     const rootDir = createRunnerFixture();
     const artifactDir = join(rootDir, ".artifacts", "failed-run");
     const { binPath } = createFakeOpencodeBin(rootDir, {
@@ -969,17 +1090,22 @@ describe("OMO-lite stage runner", () => {
       stderr: "simulated failure",
     });
 
-    expect(() =>
-      runStageWithArtifacts({
-        rootDir,
-        slice: "02-discovery-filter",
-        stage: 2,
-        mode: "execute",
-        artifactDir,
-        opencodeBin: binPath,
-        now: "2026-03-26T21:30:00+09:00",
-      }),
-    ).toThrow(/exit code 7/);
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "02-discovery-filter",
+      stage: 2,
+      mode: "execute",
+      artifactDir,
+      opencodeBin: binPath,
+      now: "2026-03-26T21:30:00+09:00",
+    });
+
+    expect(result.execution).toMatchObject({
+      mode: "process-failure",
+      failureKind: "nonzero_exit",
+      exitCode: 7,
+      sessionId: "ses_failed_run",
+    });
     expect(readFileSync(join(artifactDir, "opencode.stdout.log"), "utf8")).toContain(
       "\"sessionID\":\"ses_failed_run\"",
     );

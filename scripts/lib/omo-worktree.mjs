@@ -2,6 +2,9 @@ import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
+const DEFAULT_BASE_BRANCH = "master";
+const DEFAULT_BASE_REF = "origin/master";
+
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string.`);
@@ -38,7 +41,8 @@ export function resolveSupervisorWorktreePath({
 export function ensureSupervisorWorktree({
   rootDir = process.cwd(),
   workItemId,
-  baseRef = "master",
+  baseRef = DEFAULT_BASE_REF,
+  baseBranch = DEFAULT_BASE_BRANCH,
 }) {
   const worktreePath = resolveSupervisorWorktreePath({
     rootDir,
@@ -56,7 +60,11 @@ export function ensureSupervisorWorktree({
   mkdirSync(resolve(rootDir, ".worktrees"), { recursive: true });
   runGit({
     cwd: rootDir,
-    args: ["worktree", "add", "--detach", worktreePath, baseRef],
+    args: ["fetch", "origin", ensureNonEmptyString(baseBranch, "baseBranch")],
+  });
+  runGit({
+    cwd: rootDir,
+    args: ["worktree", "add", "--detach", worktreePath, ensureNonEmptyString(baseRef, "baseRef")],
   });
 
   return {
@@ -69,7 +77,7 @@ export function ensureWorktreeBranch({
   rootDir = process.cwd(),
   worktreePath,
   branch,
-  startPoint = "master",
+  startPoint = DEFAULT_BASE_REF,
 }) {
   const normalizedWorktreePath = ensureNonEmptyString(worktreePath, "worktreePath");
   const normalizedBranch = ensureNonEmptyString(branch, "branch");
@@ -173,10 +181,34 @@ export function pushWorktreeBranch({
   });
 }
 
+export function commitWorktreeChanges({
+  worktreePath,
+  subject,
+  body = null,
+}) {
+  const normalizedWorktreePath = ensureNonEmptyString(worktreePath, "worktreePath");
+  const normalizedSubject = ensureNonEmptyString(subject, "subject");
+
+  runGit({
+    cwd: normalizedWorktreePath,
+    args: ["add", "-A"],
+  });
+
+  const args = ["commit", "-m", normalizedSubject];
+  if (typeof body === "string" && body.trim().length > 0) {
+    args.push("-m", body.trim());
+  }
+
+  runGit({
+    cwd: normalizedWorktreePath,
+    args,
+  });
+}
+
 export function syncWorktreeWithBaseBranch({
   rootDir = process.cwd(),
   worktreePath,
-  baseBranch = "master",
+  baseBranch = DEFAULT_BASE_BRANCH,
 }) {
   const normalizedBaseBranch = ensureNonEmptyString(baseBranch, "baseBranch");
   runGit({
@@ -185,11 +217,7 @@ export function syncWorktreeWithBaseBranch({
   });
   runGit({
     cwd: ensureNonEmptyString(worktreePath, "worktreePath"),
-    args: ["checkout", normalizedBaseBranch],
-  });
-  runGit({
-    cwd: ensureNonEmptyString(worktreePath, "worktreePath"),
-    args: ["pull", "--ff-only", "origin", normalizedBaseBranch],
+    args: ["checkout", "--detach", `origin/${normalizedBaseBranch}`],
   });
 }
 
@@ -199,5 +227,14 @@ export function getWorktreeHeadSha({
   return runGit({
     cwd: ensureNonEmptyString(worktreePath, "worktreePath"),
     args: ["rev-parse", "HEAD"],
+  });
+}
+
+export function getWorktreeBinaryDiff({
+  worktreePath,
+}) {
+  return runGit({
+    cwd: ensureNonEmptyString(worktreePath, "worktreePath"),
+    args: ["diff", "--binary", "--no-ext-diff"],
   });
 }
