@@ -1,0 +1,401 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "03-recipe-like",
+  "generatedAt": "2026-03-31T15:47:40.985Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "sourceFiles": {
+    "readme": "docs/workpacks/03-recipe-like/README.md",
+    "acceptance": "docs/workpacks/03-recipe-like/acceptance.md"
+  },
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "primaryUserPath": [
+    "사용자가 `RECIPE_DETAIL` 화면에서 좋아요(하트) 버튼을 탭한다.",
+    "**로그인 상태**: `POST /recipes/{id}/like`가 호출되고 버튼이 pending 상태(비활성)로 전환된다.",
+    "응답 수신 후 `is_liked` 상태와 `like_count`가 갱신되며 버튼이 활성/비활성으로 토글된다.",
+    "**비로그인 상태**: 로그인 게이트 모달이 표시되고, 로그인 완료 후 같은 RECIPE_DETAIL로 복귀해 자동으로 좋아요 동작을 실행한다."
+  ],
+  "checklistItems": [
+    {
+      "id": "happy-path-1",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "로그인 사용자가 `RECIPE_DETAIL`에서 좋아요 버튼을 탭하면 `POST /api/v1/recipes/{id}/like`가 호출된다",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-2",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "응답 `{ success: true, data: { is_liked: true, like_count: N } }` 형식이 맞다",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-3",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "좋아요 등록 후 버튼이 활성 상태(채워진 하트)로 전환되고 like_count가 +1 증가한다",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-4",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "이미 좋아요 상태에서 다시 탭하면 `is_liked: false`를 반환하고 버튼이 비활성(빈 하트)으로 전환되며 like_count가 -1 감소한다",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-5",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "백엔드 계약 타입 `RecipeLikeResponse`와 프론트 타입이 일치한다",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-1",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "`recipe_likes` 테이블에서 `(user_id, recipe_id)` 행 존재 여부로 토글을 결정한다",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-2",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "INSERT 시 `recipes.like_count += 1`, DELETE 시 `recipes.like_count -= 1`이 원자적으로 갱신된다",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-3",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "동일 사용자가 동일 레시피에 중복 INSERT를 시도하면 UNIQUE 제약으로 차단된다 (race condition 방어)",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-4",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "`GET /recipes/{id}` 응답의 `user_status.is_liked`가 실제 `recipe_likes` 행 존재와 일치한다",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-5",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "`liked` 레시피북(`book_type='liked'`)의 source of truth는 `recipe_likes`다 — 이 슬라이스 API 이외 경로로 like 상태가 변경되지 않는다",
+      "priority": "normal"
+    },
+    {
+      "id": "error-permission-1",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "`loading` 상태: 좋아요 요청 중 버튼이 비활성(pending)이어서 중복 호출이 방지된다",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-2",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "`empty` 상태: N/A (버튼은 항상 노출)",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-3",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "`error` 상태: 요청 실패(네트워크/서버 오류) 시 토스트 메시지가 표시되고 버튼 상태는 요청 전으로 복원된다",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-4",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "`unauthorized` 처리: 비로그인 사용자가 좋아요 버튼을 탭하면 로그인 게이트 모달이 표시된다",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-5",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "`conflict` 처리: UNIQUE 제약 위반은 서버에서 처리하며 FE에는 최종 is_liked 상태가 반환된다",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-6",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "401 응답: 비로그인 상태에서 직접 API 호출 시 `UNAUTHORIZED` 에러가 반환된다",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-7",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "404 응답: 존재하지 않는 `recipe_id`로 호출 시 `NOT_FOUND` 에러가 반환된다",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-8",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "로그인 게이트 후 return-to-action: 로그인 완료 후 동일 `RECIPE_DETAIL` 화면으로 복귀한다",
+      "priority": "high"
+    },
+    {
+      "id": "data-integrity-1",
+      "section": "Data Integrity",
+      "subsection": null,
+      "text": "타인 `recipe_likes` 행을 수정할 수 없다 (본인 `user_id`만 INSERT/DELETE)",
+      "priority": "normal"
+    },
+    {
+      "id": "data-integrity-2",
+      "section": "Data Integrity",
+      "subsection": null,
+      "text": "`recipes.like_count`가 음수가 되지 않는다 (DELETE 전 행 존재 확인)",
+      "priority": "normal"
+    },
+    {
+      "id": "data-integrity-3",
+      "section": "Data Integrity",
+      "subsection": null,
+      "text": "invalid `recipe_id`(uuid 형식 아님 또는 존재하지 않음)를 적절히 거부한다 (404)",
+      "priority": "normal"
+    },
+    {
+      "id": "data-integrity-4",
+      "section": "Data Integrity",
+      "subsection": null,
+      "text": "`like_count` 비정규화 값이 실제 `recipe_likes COUNT(*)` 와 일치한다 (P1-3 규칙)",
+      "priority": "normal"
+    },
+    {
+      "id": "manual-qa-1",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "로그인 상태에서 좋아요 버튼 탭 → 버튼 활성 전환 + like_count +1 확인",
+      "priority": "high"
+    },
+    {
+      "id": "manual-qa-2",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "동일 레시피 다시 탭 → 버튼 비활성 전환 + like_count -1 확인",
+      "priority": "high"
+    },
+    {
+      "id": "manual-qa-3",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "비로그인 상태에서 좋아요 버튼 탭 → 로그인 게이트 모달 → 소셜 로그인 → RECIPE_DETAIL 복귀 + 좋아요 상태 반영 확인",
+      "priority": "high"
+    },
+    {
+      "id": "manual-qa-4",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "좋아요 요청 중(네트워크 지연 시뮬레이션) 버튼 중복 탭 시도 → pending 동안 반응 없음 확인",
+      "priority": "high"
+    },
+    {
+      "id": "manual-qa-5",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "오프라인 또는 서버 오류 시 → 토스트 표시 + 버튼 상태 원복 확인",
+      "priority": "high"
+    },
+    {
+      "id": "manual-qa-6",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "`GET /recipes/{id}` 로그인 상태 응답에서 `user_status.is_liked`가 실제 좋아요 상태와 일치하는지 확인",
+      "priority": "high"
+    },
+    {
+      "id": "automation-split-1",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "토글 로직: `(user_id, recipe_id)` 행 없을 때 INSERT + `is_liked: true` 반환",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-2",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "토글 로직: 행 있을 때 DELETE + `is_liked: false` 반환",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-3",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "`like_count` +1 / -1 원자 갱신 검증",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-4",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "401 반환: 비로그인 호출",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-5",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "404 반환: 존재하지 않는 `recipe_id`",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-6",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "응답 envelope `{ success, data: { is_liked, like_count }, error }` 형식 검증",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-7",
+      "section": "Automation Split",
+      "subsection": "Playwright",
+      "text": "로그인 사용자 → 좋아요 버튼 탭 → 활성 상태 전환 + like_count 증가 확인 (E2E)",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-8",
+      "section": "Automation Split",
+      "subsection": "Playwright",
+      "text": "로그인 사용자 → 좋아요 해제 탭 → 비활성 전환 + like_count 감소 확인 (E2E)",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-9",
+      "section": "Automation Split",
+      "subsection": "Playwright",
+      "text": "비로그인 → 좋아요 탭 → 로그인 게이트 모달 → 로그인 완료 → RECIPE_DETAIL 복귀 확인 (E2E)",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-10",
+      "section": "Automation Split",
+      "subsection": "Playwright",
+      "text": "요청 중 버튼 pending 상태 (버튼 비활성) 확인 (E2E, 네트워크 스로틀)",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-11",
+      "section": "Automation Split",
+      "subsection": "Manual Only",
+      "text": "실제 Supabase 환경에서 `recipe_likes` 행과 `recipes.like_count` 동기화 smoke (product schema 필요)",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-12",
+      "section": "Automation Split",
+      "subsection": "Manual Only",
+      "text": "소셜 로그인 전체 OAuth 흐름 + return-to-action 복귀 smoke (`pnpm test:e2e:oauth` 별도 실행)",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-13",
+      "section": "Automation Split",
+      "subsection": "Manual Only",
+      "text": "네트워크 지연/오프라인 조건에서 토스트 + 버튼 원복 수동 확인",
+      "priority": "normal"
+    },
+    {
+      "id": "heuristic-mobile-readability",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "모바일에서 정렬, 필터, CTA처럼 자주 쓰는 control의 텍스트가 읽기 어려울 정도로 작지 않은지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-small-viewport-cta",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "작은 높이 viewport(iPhone SE 급)에서 primary CTA가 가려지지 않고 짧은 스크롤 안에서 도달 가능한지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-duplicate-cta",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "같은 기능을 수행하는 CTA가 한 화면에 중복으로 노출되지 않는지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-information-hierarchy",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "핵심 정보와 그 정보에 대한 액션이 물리적으로 멀리 떨어지지 않고 같은 맥락 안에 배치되는지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-copy-sanity",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "h1/h2, 버튼, 상태 메시지 카피가 과하게 길거나 어색하지 않은지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-empty-noop",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "empty, loading, error 상태에서 사용자가 의미 없는 no-op CTA를 누를 수 없는지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-placeholder-polish",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "아이콘, 버튼, 피드백 표현이 placeholder나 MVP 임시 UI처럼 보이지 않는지 확인한다.",
+      "priority": "high"
+    }
+  ],
+  "edgeCases": [
+    {
+      "id": "desktop-happy-path",
+      "text": "Desktop viewport에서 대표 사용자 흐름을 처음부터 끝까지 다시 검증한다."
+    },
+    {
+      "id": "mobile-happy-path",
+      "text": "Mobile viewport에서 동일 흐름을 다시 검증한다."
+    },
+    {
+      "id": "small-viewport-fold",
+      "text": "작은 iOS viewport(iPhone SE 급)에서 above-the-fold 영역과 하단 CTA 가시성을 확인한다."
+    },
+    {
+      "id": "hard-refresh",
+      "text": "중간 상태에서 hard refresh 후 상태 복원과 URL 정합성을 확인한다."
+    },
+    {
+      "id": "back-forward",
+      "text": "뒤로가기/앞으로가기 후 UI와 상태가 어긋나지 않는지 확인한다."
+    },
+    {
+      "id": "slow-network",
+      "text": "느린 네트워크에서 pending, skeleton, retry UX를 확인한다."
+    },
+    {
+      "id": "offline-recovery",
+      "text": "오프라인 또는 서버 오류에서 에러 메시지와 복구 동선을 확인한다."
+    },
+    {
+      "id": "keyboard-only",
+      "text": "키보드만으로 주요 동선과 모달 닫기/탐색이 가능한지 확인한다."
+    },
+    {
+      "id": "double-submit",
+      "text": "중복 탭/연속 클릭 시 중복 호출 방지와 최종 상태 일관성을 확인한다."
+    },
+    {
+      "id": "auth-return-to-action",
+      "text": "비로그인 보호 액션 후 로그인 복귀와 return-to-action 재실행을 확인한다."
+    }
+  ]
+}

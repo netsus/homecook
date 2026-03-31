@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildExploratoryChecklist,
   createExploratoryReportTemplate,
+  evaluateExploratoryEvalCaseFile,
   parseChecklistSections,
   renderExploratoryInstructions,
+  runEvalSuite,
   scoreExploratoryReport,
   validateExploratoryReport,
 } from "../scripts/lib/qa-system.mjs";
@@ -224,5 +226,40 @@ describe("qa system helpers", () => {
         "finding[0].evidence_paths must not be empty.",
       ]),
     );
+  });
+
+  it("evaluates a real Layer 3 benchmark case against ground truth", () => {
+    const result = evaluateExploratoryEvalCaseFile(
+      "qa/evals/cases/real-slice-03-rerun.json",
+    );
+
+    expect(result.expectedPass).toBe(true);
+    expect(result.verdictMatched).toBe(true);
+    expect(result.score.pass).toBe(true);
+    expect(result.score.breakdown.detectionRecall).toBe(1);
+    expect(result.score.breakdown.falsePositiveRate).toBe(0);
+    expect(result.score.breakdown.severityCalibration).toBe(1);
+  });
+
+  it("fails a synthetic benchmark case when recall is too low", () => {
+    const result = evaluateExploratoryEvalCaseFile(
+      "qa/evals/cases/synthetic-low-recall.json",
+    );
+
+    expect(result.expectedPass).toBe(false);
+    expect(result.verdictMatched).toBe(true);
+    expect(result.score.pass).toBe(false);
+    expect(result.score.breakdown.detectionRecall).toBe(0.5);
+    expect(result.missedFindings).toHaveLength(1);
+  });
+
+  it("runs the Layer 3 suite and classifies all benchmark cases as expected", () => {
+    const result = runEvalSuite("qa/evals/manifest.json");
+
+    expect(result.pass).toBe(true);
+    expect(result.overallScore).toBe(100);
+    expect(result.failedCases).toEqual([]);
+    expect(result.cases).toHaveLength(7);
+    expect(result.breakdown.classificationAccuracy).toBe(1);
   });
 });

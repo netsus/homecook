@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "caseId": "synthetic-shared-surface",
+  "expectedFindings": [
+    {
+      "id": "filter-empty-noop-apply",
+      "category": "functional",
+      "severity": "major",
+      "titleEquals": "Applying a no-result ingredient filter leaves stale recipes visible",
+      "requiredTags": ["filter", "empty", "apply"],
+      "requiredEvidenceCount": 1,
+      "requiredEvidenceHints": ["mobile-ios-small"]
+    },
+    {
+      "id": "duplicate-share-cta",
+      "category": "ux",
+      "severity": "major",
+      "titleEquals": "Recipe detail duplicates the share action in two separate rows",
+      "requiredTags": ["duplicate-cta", "share"],
+      "requiredEvidenceCount": 1,
+      "requiredEvidenceHints": ["recipe-detail"]
+    }
+  ]
+}

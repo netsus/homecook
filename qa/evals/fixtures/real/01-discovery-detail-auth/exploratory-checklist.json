@@ -1,0 +1,444 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "01-discovery-detail-auth",
+  "generatedAt": "2026-03-31T15:47:40.984Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "sourceFiles": {
+    "readme": "docs/workpacks/01-discovery-detail-auth/README.md",
+    "acceptance": "docs/workpacks/01-discovery-detail-auth/acceptance.md"
+  },
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "primaryUserPath": [
+    "사용자가 `HOME`에서 검색어를 입력하거나 정렬을 변경한다.",
+    "테마 섹션 또는 검색 결과에서 레시피 카드를 눌러 `RECIPE_DETAIL`로 이동한다.",
+    "좋아요/저장/플래너 추가를 누른다.",
+    "로그인 게이트 모달에서 소셜 로그인 버튼을 누른다.",
+    "로그인 성공 후 같은 레시피 상세 화면으로 돌아온다."
+  ],
+  "checklistItems": [
+    {
+      "id": "happy-path-1",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "HOME 목록이 보인다",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-2",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "HOME 테마 섹션(`GET /recipes/themes`)이 보인다",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-3",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "검색어 입력 시 제목 기준으로 목록이 갱신된다",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-4",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "정렬 변경 시 목록 순서가 갱신된다",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-5",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "카드 선택 시 RECIPE_DETAIL로 이동한다",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-6",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "비로그인 상태에서 보호 액션 시 로그인 모달이 열린다",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-7",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "로그인 후 원래 레시피 상세 화면으로 복귀한다",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-8",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "API 응답이 `{ success, data, error }` 형식을 따른다 (Vitest로 계약 고정)",
+      "priority": "normal"
+    },
+    {
+      "id": "happy-path-9",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "백엔드 계약 TypeScript 타입과 프론트 타입이 일치한다 (Vitest)",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-1",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "조회는 비로그인 허용이다",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-2",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "보호 액션은 로그인 전 실행되지 않는다",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-3",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "요리모드/쓰기 액션은 이번 슬라이스 밖으로 남겨둔다",
+      "priority": "normal"
+    },
+    {
+      "id": "state-policy-4",
+      "section": "State / Policy",
+      "subsection": null,
+      "text": "중복 호출에도 결과가 꼬이지 않는다 — 읽기 전용 슬라이스, 멱등성 N/A",
+      "priority": "normal"
+    },
+    {
+      "id": "error-permission-1",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "loading 상태가 있다 (HOME 목록, RECIPE_DETAIL 각각)",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-2",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "empty 상태가 있다 (\"조건에 맞는 레시피가 없어요\" + [필터 초기화])",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-3",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "error 상태가 있다 (\"레시피를 불러오지 못했어요\" + [다시 시도])",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-4",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "unauthorized 처리 — 보호 액션 시 로그인 게이트 모달이 열린다",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-5",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "conflict 처리 — 해당 없음 (이 슬라이스는 읽기 전용)",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-6",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "로그인 게이트 후 return-to-action이 원래 레시피로 복귀한다",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-7",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "Supabase 설정 누락 시 API가 실패 응답을 준다",
+      "priority": "high"
+    },
+    {
+      "id": "error-permission-8",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "`unauthorized` 상태 흐름이 Vitest 단위 테스트로 고정되어 있다",
+      "priority": "high"
+    },
+    {
+      "id": "data-integrity-1",
+      "section": "Data Integrity",
+      "subsection": null,
+      "text": "타인 리소스를 수정할 수 없다 — 해당 없음 (읽기 전용)",
+      "priority": "normal"
+    },
+    {
+      "id": "data-integrity-2",
+      "section": "Data Integrity",
+      "subsection": null,
+      "text": "invalid input을 적절히 거부하거나 무시한다 — 검색어 sanitization, 콜백 URL 검증",
+      "priority": "normal"
+    },
+    {
+      "id": "data-integrity-3",
+      "section": "Data Integrity",
+      "subsection": null,
+      "text": "파생 필드와 비정규화 값이 맞다 — 해당 없음 (읽기 전용)",
+      "priority": "normal"
+    },
+    {
+      "id": "data-integrity-4",
+      "section": "Data Integrity",
+      "subsection": null,
+      "text": "`GET /auth/callback` next 파라미터 sanitization이 Vitest로 고정되어 있다",
+      "priority": "normal"
+    },
+    {
+      "id": "manual-qa-1",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "HOME에서 검색과 정렬을 바꿔본다.",
+      "priority": "high"
+    },
+    {
+      "id": "manual-qa-2",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "상세에서 보호 액션을 눌러 로그인 게이트를 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "manual-qa-3",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "소셜 로그인 후 같은 레시피로 복귀하는지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "manual-qa-4",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "**(Retrofit)** 디자인 토큰 적용 후: 배경색 `#fff9f2`, 주요 버튼 `#FF6C3C`, 카드 border-radius 16px 확인.",
+      "priority": "high"
+    },
+    {
+      "id": "manual-qa-5",
+      "section": "Manual QA",
+      "subsection": null,
+      "text": "**(Retrofit)** 구버전 색상(`#d56a3a`, `#6e7c4a`) 잔존 여부 확인.",
+      "priority": "high"
+    },
+    {
+      "id": "automation-split-1",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "pending action 저장 키와 parser가 안정적으로 동작한다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-2",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "auth provider env parsing이 기본값과 fallback을 지킨다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-3",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "callback next sanitization과 route helper가 고정되어 있다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-4",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "**[Retrofit BE]** `GET /recipes` 응답 계약(`{ success, data, error }` 래퍼)이 단위 테스트로 고정되어 있다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-5",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "**[Retrofit BE]** `GET /recipes/themes` 엔드포인트 존재 및 응답 형식이 고정되어 있다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-6",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "**[Retrofit BE]** `GET /recipes/{recipe_id}` 404 에러 응답 형식이 고정되어 있다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-7",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "**[Retrofit BE]** `POST /auth/login` invalid provider 에러 처리가 고정되어 있다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-8",
+      "section": "Automation Split",
+      "subsection": "Vitest",
+      "text": "로그인 게이트 트리거 조건(비로그인 + 보호 액션)이 단위 테스트로 고정되어 있다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-9",
+      "section": "Automation Split",
+      "subsection": "Playwright",
+      "text": "HOME 목록, 검색, 정렬이 브라우저에서 동작한다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-10",
+      "section": "Automation Split",
+      "subsection": "Playwright",
+      "text": "HOME 테마 섹션이 브라우저에서 보인다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-11",
+      "section": "Automation Split",
+      "subsection": "Playwright",
+      "text": "카드 클릭 후 상세 페이지로 이동한다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-12",
+      "section": "Automation Split",
+      "subsection": "Playwright",
+      "text": "비로그인 보호 액션 시 로그인 게이트가 열린다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-13",
+      "section": "Automation Split",
+      "subsection": "Playwright",
+      "text": "로그인 게이트가 닫기 버튼, ESC, 배경 클릭으로 닫힌다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-14",
+      "section": "Automation Split",
+      "subsection": "Playwright",
+      "text": "`authError=oauth_failed` 피드백이 보인다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-15",
+      "section": "Automation Split",
+      "subsection": "Playwright",
+      "text": "**(Retrofit)** 디자인 토큰 적용 후 HOME/RECIPE_DETAIL 스냅샷 테스트 추가 (선택)",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-16",
+      "section": "Automation Split",
+      "subsection": "Manual Only",
+      "text": "실제 Google OAuth 로그인 후 원래 레시피 상세로 복귀한다",
+      "priority": "normal"
+    },
+    {
+      "id": "automation-split-17",
+      "section": "Automation Split",
+      "subsection": "Manual Only",
+      "text": "**(Retrofit)** 실기기에서 터치 타겟 44×44px 및 모바일 레이아웃 확인",
+      "priority": "normal"
+    },
+    {
+      "id": "heuristic-mobile-readability",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "모바일에서 정렬, 필터, CTA처럼 자주 쓰는 control의 텍스트가 읽기 어려울 정도로 작지 않은지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-small-viewport-cta",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "작은 높이 viewport(iPhone SE 급)에서 primary CTA가 가려지지 않고 짧은 스크롤 안에서 도달 가능한지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-duplicate-cta",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "같은 기능을 수행하는 CTA가 한 화면에 중복으로 노출되지 않는지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-information-hierarchy",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "핵심 정보와 그 정보에 대한 액션이 물리적으로 멀리 떨어지지 않고 같은 맥락 안에 배치되는지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-copy-sanity",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "h1/h2, 버튼, 상태 메시지 카피가 과하게 길거나 어색하지 않은지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-empty-noop",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "empty, loading, error 상태에서 사용자가 의미 없는 no-op CTA를 누를 수 없는지 확인한다.",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-placeholder-polish",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "아이콘, 버튼, 피드백 표현이 placeholder나 MVP 임시 UI처럼 보이지 않는지 확인한다.",
+      "priority": "high"
+    }
+  ],
+  "edgeCases": [
+    {
+      "id": "desktop-happy-path",
+      "text": "Desktop viewport에서 대표 사용자 흐름을 처음부터 끝까지 다시 검증한다."
+    },
+    {
+      "id": "mobile-happy-path",
+      "text": "Mobile viewport에서 동일 흐름을 다시 검증한다."
+    },
+    {
+      "id": "small-viewport-fold",
+      "text": "작은 iOS viewport(iPhone SE 급)에서 above-the-fold 영역과 하단 CTA 가시성을 확인한다."
+    },
+    {
+      "id": "hard-refresh",
+      "text": "중간 상태에서 hard refresh 후 상태 복원과 URL 정합성을 확인한다."
+    },
+    {
+      "id": "back-forward",
+      "text": "뒤로가기/앞으로가기 후 UI와 상태가 어긋나지 않는지 확인한다."
+    },
+    {
+      "id": "slow-network",
+      "text": "느린 네트워크에서 pending, skeleton, retry UX를 확인한다."
+    },
+    {
+      "id": "offline-recovery",
+      "text": "오프라인 또는 서버 오류에서 에러 메시지와 복구 동선을 확인한다."
+    },
+    {
+      "id": "keyboard-only",
+      "text": "키보드만으로 주요 동선과 모달 닫기/탐색이 가능한지 확인한다."
+    },
+    {
+      "id": "double-submit",
+      "text": "중복 탭/연속 클릭 시 중복 호출 방지와 최종 상태 일관성을 확인한다."
+    },
+    {
+      "id": "auth-return-to-action",
+      "text": "비로그인 보호 액션 후 로그인 복귀와 return-to-action 재실행을 확인한다."
+    }
+  ]
+}

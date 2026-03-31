@@ -36,6 +36,7 @@
     "verify": "pnpm verify:frontend",
     "qa:explore": "node scripts/qa-explore.mjs",
     "qa:eval": "node scripts/qa-eval.mjs",
+    "qa:eval:suite": "node scripts/qa-eval-suite.mjs",
     "validate:branch": "node scripts/check-branch-name.mjs",
     "validate:commits": "node scripts/check-commit-messages.mjs",
     "validate:pr": "node scripts/check-pr-body.mjs",

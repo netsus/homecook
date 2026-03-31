@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0",
+  "id": "synthetic-device-gap",
+  "kind": "synthetic",
+  "slice": "synthetic-layer3",
+  "description": "Synthetic report with correct findings but missing the small-mobile device pass.",
+  "candidate": {
+    "checklist": "qa/evals/fixtures/synthetic/exploratory-checklist.json",
+    "report": "qa/evals/fixtures/synthetic/report-device-gap.json"
+  },
+  "groundTruth": "qa/evals/ground-truth/synthetic-shared-surface.json",
+  "expected": {
+    "pass": false
+  }
+}

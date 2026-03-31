@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0",
+  "id": "synthetic-low-recall",
+  "kind": "synthetic",
+  "slice": "synthetic-layer3",
+  "description": "Synthetic report that misses one required finding and should fail recall thresholds.",
+  "candidate": {
+    "checklist": "qa/evals/fixtures/synthetic/exploratory-checklist.json",
+    "report": "qa/evals/fixtures/synthetic/report-low-recall.json"
+  },
+  "groundTruth": "qa/evals/ground-truth/synthetic-shared-surface.json",
+  "expected": {
+    "pass": false
+  }
+}

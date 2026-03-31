@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0",
+  "caseId": "real-slice-02-rerun",
+  "expectedFindings": [
+    {
+      "id": "ingredient-row-check-redundancy",
+      "category": "visual",
+      "severity": "suggestion",
+      "titleEquals": "Ingredient row check indicator is visually redundant with the selected pill styling",
+      "requiredTags": ["ingredient-filter", "selection-state"],
+      "requiredEvidenceCount": 1,
+      "requiredEvidenceHints": ["ingredient-filter-modal"]
+    }
+  ]
+}

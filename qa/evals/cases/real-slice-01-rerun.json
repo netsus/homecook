@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0",
+  "id": "real-slice-01-rerun",
+  "kind": "real",
+  "slice": "01-discovery-detail-auth",
+  "description": "Slice 01 strengthened Layer 2 rerun should pass with four known findings preserved.",
+  "candidate": {
+    "checklist": "qa/evals/fixtures/real/01-discovery-detail-auth/exploratory-checklist.json",
+    "report": "qa/evals/fixtures/real/01-discovery-detail-auth/exploratory-report.json"
+  },
+  "groundTruth": "qa/evals/ground-truth/real-slice-01-rerun.json",
+  "expected": {
+    "pass": true
+  }
+}

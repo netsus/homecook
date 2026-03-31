@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0",
+  "caseId": "real-slice-01-rerun",
+  "expectedFindings": [
+    {
+      "id": "home-heading-mobile-verbosity",
+      "category": "content",
+      "severity": "minor",
+      "titleEquals": "HOME heading hierarchy and copy feel overly long on small mobile",
+      "requiredTags": ["home", "headings"],
+      "requiredEvidenceCount": 1,
+      "requiredEvidenceHints": ["mobile-ios-small"]
+    },
+    {
+      "id": "recipe-detail-mobile-stats-stack",
+      "category": "ux",
+      "severity": "major",
+      "titleEquals": "Recipe detail stats collapse into a stacked layout that burns scroll on mobile",
+      "requiredTags": ["recipe-detail", "stats"],
+      "requiredEvidenceCount": 1,
+      "requiredEvidenceHints": ["mobile"]
+    },
+    {
+      "id": "recipe-detail-action-hierarchy",
+      "category": "ux",
+      "severity": "major",
+      "titleEquals": "Recipe detail actions are separated from their related stats by the ingredients block",
+      "requiredTags": ["recipe-detail", "actions"],
+      "requiredEvidenceCount": 1,
+      "requiredEvidenceHints": ["recipe-detail"]
+    },
+    {
+      "id": "recipe-detail-duplicate-share",
+      "category": "ux",
+      "severity": "major",
+      "titleEquals": "Recipe detail exposes duplicate share actions on the same screen",
+      "requiredTags": ["duplicate-cta", "share"],
+      "requiredEvidenceCount": 1,
+      "requiredEvidenceHints": ["recipe-detail"]
+    }
+  ]
+}

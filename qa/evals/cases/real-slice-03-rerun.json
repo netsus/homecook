@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0",
+  "id": "real-slice-03-rerun",
+  "kind": "real",
+  "slice": "03-recipe-like",
+  "description": "Slice 03 strengthened Layer 2 rerun should pass with one known like-control polish finding.",
+  "candidate": {
+    "checklist": "qa/evals/fixtures/real/03-recipe-like/exploratory-checklist.json",
+    "report": "qa/evals/fixtures/real/03-recipe-like/exploratory-report.json"
+  },
+  "groundTruth": "qa/evals/ground-truth/real-slice-03-rerun.json",
+  "expected": {
+    "pass": true
+  }
+}

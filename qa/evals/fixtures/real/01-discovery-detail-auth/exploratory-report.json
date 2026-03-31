@@ -1,0 +1,427 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "01-discovery-detail-auth",
+  "generatedAt": "2026-04-01T00:00:00.000Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "summary": "Strengthened Layer 2 rerun on desktop, mobile-chrome, and mobile-ios-small caught four concrete UX/content issues on the shared HOME/RECIPE_DETAIL surface. The remaining gap is native sort option popup readability, which still needs either real-device inspection or a custom control.",
+  "findings": [
+    {
+      "category": "content",
+      "severity": "minor",
+      "title": "HOME heading hierarchy and copy feel overly long on small mobile",
+      "expected": "The first-screen headings should scan quickly on mobile and avoid sounding verbose or awkward.",
+      "actual": "On the small mobile HOME shell, the top banner headline and the discovery headline together create a long, crowded first impression before the search controls.",
+      "repro_steps": [
+        "Open HOME on mobile-ios-small viewport.",
+        "Observe the top banner headline and the HOME discovery heading before interacting with controls."
+      ],
+      "evidence_paths": [
+        ".artifacts/qa/01-discovery-detail-auth/2026-04-01-layer2-rerun/evidence/qa-home-default-mobile-ios-small-darwin.png",
+        ".artifacts/qa/01-discovery-detail-auth/2026-04-01-layer2-rerun/evidence/qa-home-default-desktop-chrome-darwin.png"
+      ],
+      "tags": [
+        "content",
+        "mobile",
+        "headings",
+        "home"
+      ]
+    },
+    {
+      "category": "ux",
+      "severity": "major",
+      "title": "Recipe detail stats collapse into a stacked layout that burns scroll on mobile",
+      "expected": "Core recipe stats should stay compact and easy to scan without forcing unnecessary vertical scrolling on mobile.",
+      "actual": "On mobile and especially mobile-ios-small, the stats area becomes a tall stacked block that pushes more important interaction content farther down the screen.",
+      "repro_steps": [
+        "Open RECIPE_DETAIL on mobile-chrome or mobile-ios-small.",
+        "Inspect the stats block directly under the title and compare how much vertical space it consumes before the ingredient section."
+      ],
+      "evidence_paths": [
+        ".artifacts/qa/01-discovery-detail-auth/2026-04-01-layer2-rerun/evidence/qa-recipe-detail-mobile-chrome-darwin.png",
+        ".artifacts/qa/01-discovery-detail-auth/2026-04-01-layer2-rerun/evidence/qa-recipe-detail-mobile-ios-small-darwin.png"
+      ],
+      "tags": [
+        "ux",
+        "mobile",
+        "stats",
+        "recipe-detail"
+      ]
+    },
+    {
+      "category": "ux",
+      "severity": "major",
+      "title": "Recipe detail actions are separated from their related stats by the ingredients block",
+      "expected": "Actions such as planner, like, save, and share should sit close to the primary recipe information they act on.",
+      "actual": "The user sees the title and stats first, then the ingredient block, and only after that reaches the main action row, which breaks information hierarchy and adds extra scroll.",
+      "repro_steps": [
+        "Open RECIPE_DETAIL on mobile-chrome or desktop.",
+        "Follow the page from title and stats to ingredients and then down to the action row."
+      ],
+      "evidence_paths": [
+        ".artifacts/qa/01-discovery-detail-auth/2026-04-01-layer2-rerun/evidence/qa-recipe-detail-mobile-chrome-darwin.png",
+        ".artifacts/qa/01-discovery-detail-auth/2026-04-01-layer2-rerun/evidence/qa-recipe-detail-desktop-chrome-darwin.png"
+      ],
+      "tags": [
+        "ux",
+        "information-hierarchy",
+        "recipe-detail",
+        "actions"
+      ]
+    },
+    {
+      "category": "ux",
+      "severity": "major",
+      "title": "Recipe detail exposes duplicate share actions on the same screen",
+      "expected": "A single clear share affordance should exist for the same action on one screen.",
+      "actual": "The detail hero already contains a share button, but the lower action row repeats another share button, creating duplicate CTA clutter.",
+      "repro_steps": [
+        "Open RECIPE_DETAIL on desktop or mobile-chrome.",
+        "Inspect the hero controls and the lower action row on the same screen."
+      ],
+      "evidence_paths": [
+        ".artifacts/qa/01-discovery-detail-auth/2026-04-01-layer2-rerun/evidence/qa-recipe-detail-desktop-chrome-darwin.png",
+        ".artifacts/qa/01-discovery-detail-auth/2026-04-01-layer2-rerun/evidence/qa-recipe-detail-mobile-chrome-darwin.png"
+      ],
+      "tags": [
+        "ux",
+        "duplicate-cta",
+        "share",
+        "recipe-detail"
+      ]
+    }
+  ],
+  "remainingRisks": [
+    "Sort option popup readability on mobile remains a Layer 2 blind spot because the native select sheet is rendered outside the page canvas. The closed control itself is readable, but the actual option popup still needs real-device inspection or a custom control."
+  ],
+  "checklistCoverage": [
+    {
+      "item_id": "happy-path-1",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-2",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-3",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-4",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-5",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-6",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-7",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-8",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-9",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-1",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-2",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-3",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-4",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-1",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-2",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-3",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-4",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-5",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-6",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-7",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-8",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-1",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-2",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-3",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-4",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-1",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-2",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-3",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-4",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-5",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-1",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-2",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-3",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-4",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-5",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-6",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-7",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-8",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-9",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-10",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-11",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-12",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-13",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-14",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-15",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-16",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-17",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-mobile-readability",
+      "status": "blocked",
+      "notes": "Covered for visible controls, but the native mobile sort option popup itself could not be captured from the page canvas in this rerun.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-small-viewport-cta",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-duplicate-cta",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-information-hierarchy",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-copy-sanity",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-empty-noop",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-placeholder-polish",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    }
+  ]
+}

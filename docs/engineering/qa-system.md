@@ -72,6 +72,7 @@ CI 실행:
 2. 생성된 `.artifacts/qa/<slice>/<timestamp>/` 번들을 기준으로 Codex 또는 사용자가 브라우저 탐색 QA 수행
 3. `exploratory-report.json` 작성
 4. `pnpm qa:eval -- --checklist <.../exploratory-checklist.json> --report <.../exploratory-report.json>` 실행
+5. 기본값으로 같은 폴더의 `eval-result.json`에 단건 결과 저장
 
 기본 타이밍:
 
@@ -95,22 +96,48 @@ CI 실행:
 목적:
 
 - QA용 prompt, checklist 생성기, report schema, scoring 로직을 무비판적으로 신뢰하지 않도록 측정한다.
+- 실제 rerun fixture와 synthetic failure fixture를 섞어, 좋은 QA report는 통과시키고 나쁜 QA report는 실패시키는지 검증한다.
 
 언제 실행하나:
 
 - `docs/engineering/qa-system.md`
 - `scripts/qa-explore.mjs`
 - `scripts/qa-eval.mjs`
+- `scripts/qa-eval-suite.mjs`
 - `scripts/lib/qa-system.mjs`
 - `qa/schemas/*`
+- `qa/evals/*`
+- `tests/qa-system.test.ts`
 - QA 관련 GitHub Actions/Playwright 구조
 
 위 파일들을 변경하는 docs-governance / tooling 작업에서 실행한다.
 
 실행 방식:
 
-- sample 또는 실제 exploratory report에 대해 `pnpm qa:eval ...` 실행
-- score, coverage, device coverage, evidence completeness를 기록
+- 단건 점검:
+  - `pnpm qa:eval -- --checklist <...> --report <...>`
+  - 또는 `pnpm qa:eval -- --case qa/evals/cases/<case>.json`
+- 전체 benchmark:
+  - `pnpm qa:eval:suite`
+- 단건 결과는 기본값으로 `eval-result.json`에 저장한다.
+- suite 결과는 `.artifacts/qa/evals/<timestamp>/summary.json`, `.artifacts/qa/evals/<timestamp>/<case-id>.json`, `.artifacts/qa/evals/latest.json`에 저장한다.
+
+평가 기준:
+
+- positive case는 아래 기준을 모두 만족해야 pass다.
+  - `total >= 85`
+  - `detectionRecall >= 0.8`
+  - `falsePositiveRate <= 0.2`
+  - `evidenceCompleteness >= 0.8`
+  - `severityCalibration >= 0.8`
+  - required device coverage 충족
+- negative synthetic case는 위 기준을 통과하면 안 된다.
+- Layer 3 suite는 각 case의 `expected.pass`와 실제 판정이 모두 일치해야 green이다.
+
+CI 실행:
+
+- `.github/workflows/qa-eval.yml`이 QA 시스템 관련 파일 변경 시 자동 실행된다.
+- CI artifact로 `.artifacts/qa/evals`를 업로드한다.
 
 ## 산출물
 
@@ -125,10 +152,11 @@ PR에는 아래를 남긴다.
 - deterministic gate 실행 결과
 - exploratory QA 실행 여부와 보고서 경로
 - qa eval 결과 또는 `N/A` 근거
+- Layer 3 변경이면 `pnpm qa:eval:suite` 결과와 artifact 경로
 
 ## 운영 원칙
 
 - Layer 1은 사람이 따로 지시하지 않아도 PR/CI에서 자동으로 돈다.
 - Layer 2는 브라우저 탐색과 판단이 포함되므로 **명시적으로 실행**한다.
-- Layer 3는 QA 시스템 변경이나 보정 작업에서만 실행한다.
+- Layer 3 단건 평가는 exploratory QA 직후 명시적으로 실행할 수 있고, suite는 QA 시스템 변경에서 자동 + 명시 실행 둘 다 지원한다.
 - exploratory QA가 manual/agentic이라고 해서 optional evidence가 되지는 않는다. 실행했다면 보고서와 점수를 남긴다.

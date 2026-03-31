@@ -11,6 +11,29 @@ const EXPLORATORY_DEVICES = [
   "mobile-chrome",
   "mobile-ios-small",
 ];
+const EXPLORATORY_FINDING_CATEGORIES = [
+  "functional",
+  "ux",
+  "accessibility",
+  "visual",
+  "performance",
+  "security",
+  "content",
+];
+const EXPLORATORY_FINDING_SEVERITIES = [
+  "blocker",
+  "major",
+  "minor",
+  "suggestion",
+];
+const DEFAULT_EVAL_THRESHOLDS = {
+  minTotal: 85,
+  minDetectionRecall: 0.8,
+  maxFalsePositiveRate: 0.2,
+  minEvidenceCompleteness: 0.8,
+  minSeverityCalibration: 0.8,
+  requireDeviceCoverage: true,
+};
 const EXPLORATORY_HEURISTICS = [
   {
     id: "heuristic-mobile-readability",
@@ -52,6 +75,120 @@ function slugify(value) {
 
 function normalizeSection(title) {
   return title.trim().toLowerCase();
+}
+
+function normalizeText(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function uniqueStrings(items) {
+  return [...new Set(
+    (Array.isArray(items) ? items : [])
+      .filter((item) => typeof item === "string")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  )];
+}
+
+function resolveRepoPath(filePath, cwd = process.cwd()) {
+  if (typeof filePath !== "string" || filePath.trim().length === 0) {
+    throw new Error("file path must be a non-empty string");
+  }
+
+  return path.isAbsolute(filePath)
+    ? filePath
+    : path.resolve(cwd, filePath);
+}
+
+function createTimestampSlug(value = new Date()) {
+  return value.toISOString().replace(/[:.]/g, "-");
+}
+
+function mergeEvalThresholds(overrides = {}) {
+  return {
+    ...DEFAULT_EVAL_THRESHOLDS,
+    ...(overrides && typeof overrides === "object" ? overrides : {}),
+  };
+}
+
+function severityRank(severity) {
+  return {
+    blocker: 4,
+    major: 3,
+    minor: 2,
+    suggestion: 1,
+  }[severity] ?? 0;
+}
+
+function titleMatchesRule(title, rule) {
+  const normalizedTitle = normalizeText(title);
+
+  if (typeof rule.titleEquals === "string") {
+    return normalizedTitle === normalizeText(rule.titleEquals);
+  }
+
+  const fragments = uniqueStrings(rule.titleIncludes);
+
+  if (fragments.length === 0) {
+    return true;
+  }
+
+  return fragments.every((fragment) => normalizedTitle.includes(normalizeText(fragment)));
+}
+
+function findingMatchesRule(finding, rule) {
+  if (typeof finding !== "object" || !finding) {
+    return false;
+  }
+
+  if (
+    typeof rule.category === "string" &&
+    normalizeText(finding.category) !== normalizeText(rule.category)
+  ) {
+    return false;
+  }
+
+  if (!titleMatchesRule(finding.title, rule)) {
+    return false;
+  }
+
+  const requiredTags = uniqueStrings(rule.requiredTags).map(normalizeText);
+
+  if (requiredTags.length > 0) {
+    const candidateTags = uniqueStrings(finding.tags).map(normalizeText);
+
+    if (!requiredTags.every((tag) => candidateTags.includes(tag))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function evidenceIsComplete(evidencePaths, rule) {
+  const normalizedEvidencePaths = uniqueStrings(evidencePaths).map(normalizeText);
+  const requiredCount = Number(rule.requiredEvidenceCount ?? 1);
+  const requiredHints = uniqueStrings(rule.requiredEvidenceHints).map(normalizeText);
+
+  if (normalizedEvidencePaths.length < requiredCount) {
+    return false;
+  }
+
+  if (requiredHints.length === 0) {
+    return true;
+  }
+
+  return requiredHints.every((hint) =>
+    normalizedEvidencePaths.some((evidencePath) => evidencePath.includes(hint))
+  );
+}
+
+function average(values) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return 0;
+  }
+
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
 export function parseChecklistSections(markdown) {
@@ -239,6 +376,7 @@ export function createExploratoryReportTemplate(checklist) {
 export function renderExploratoryInstructions(checklist, outputDir) {
   const reportPath = path.join(outputDir, "exploratory-report.json");
   const checklistPath = path.join(outputDir, "exploratory-checklist.json");
+  const evalResultPath = path.join(outputDir, "eval-result.json");
 
   return [
     `# Exploratory QA: ${checklist.slice}`,
@@ -265,6 +403,7 @@ export function renderExploratoryInstructions(checklist, outputDir) {
     "- `pnpm dev`로 앱을 띄운다.",
     `- \`${checklist.baseUrl}\`에서 브라우저 탐색을 시작한다.`,
     `- 완료 후 \`${reportPath}\`를 채우고 \`pnpm qa:eval -- --checklist ${checklistPath} --report ${reportPath}\`로 점수화한다.`,
+    `- eval 결과는 기본값으로 \`${evalResultPath}\`에 저장된다.`,
     "",
     "## 필수 휴리스틱",
     ...EXPLORATORY_HEURISTICS.map((item) => `- ${item.text}`),
@@ -332,11 +471,11 @@ export function validateExploratoryReport(report, checklist) {
         errors.push(`${prefix}.title is required.`);
       }
 
-      if (!["functional", "ux", "accessibility", "visual", "performance", "security", "content"].includes(finding.category)) {
+      if (!EXPLORATORY_FINDING_CATEGORIES.includes(finding.category)) {
         errors.push(`${prefix}.category is invalid.`);
       }
 
-      if (!["blocker", "major", "minor", "suggestion"].includes(finding.severity)) {
+      if (!EXPLORATORY_FINDING_SEVERITIES.includes(finding.severity)) {
         errors.push(`${prefix}.severity is invalid.`);
       }
 
@@ -384,7 +523,7 @@ export function scoreExploratoryReport(report, checklist) {
   const severityRate = findings.length === 0
     ? 1
     : findings.filter((finding) =>
-      ["blocker", "major", "minor", "suggestion"].includes(finding.severity)
+      EXPLORATORY_FINDING_SEVERITIES.includes(finding.severity)
     ).length / findings.length;
 
   const summaryRate =
@@ -410,6 +549,399 @@ export function scoreExploratoryReport(report, checklist) {
       severityRate,
       summaryRate,
     },
+  };
+}
+
+export function readJsonFile(filePath) {
+  return JSON.parse(readFileSync(resolveRepoPath(filePath), "utf8"));
+}
+
+export function buildEvalArtifactPaths({
+  baseDir = path.join(".artifacts", "qa", "evals"),
+  timestamp = new Date(),
+}) {
+  const timestampSlug = createTimestampSlug(timestamp);
+  const outputDir = resolveRepoPath(path.join(baseDir, timestampSlug));
+
+  return {
+    outputDir,
+    summaryPath: path.join(outputDir, "summary.json"),
+    latestPath: resolveRepoPath(path.join(baseDir, "latest.json")),
+  };
+}
+
+export function validateEvalManifest(manifest) {
+  const errors = [];
+
+  if (manifest?.schemaVersion !== "1.0") {
+    errors.push("manifest.schemaVersion must be '1.0'.");
+  }
+
+  if (typeof manifest?.suiteId !== "string" || manifest.suiteId.trim().length === 0) {
+    errors.push("manifest.suiteId is required.");
+  }
+
+  if (!Array.isArray(manifest?.cases) || manifest.cases.length === 0) {
+    errors.push("manifest.cases must be a non-empty array.");
+  } else if (manifest.cases.some((casePath) => typeof casePath !== "string" || casePath.trim().length === 0)) {
+    errors.push("manifest.cases entries must be non-empty strings.");
+  }
+
+  return errors;
+}
+
+export function validateEvalGroundTruth(groundTruth) {
+  const errors = [];
+
+  if (groundTruth?.schemaVersion !== "1.0") {
+    errors.push("groundTruth.schemaVersion must be '1.0'.");
+  }
+
+  if (typeof groundTruth?.caseId !== "string" || groundTruth.caseId.trim().length === 0) {
+    errors.push("groundTruth.caseId is required.");
+  }
+
+  if (!Array.isArray(groundTruth?.expectedFindings)) {
+    errors.push("groundTruth.expectedFindings must be an array.");
+  } else {
+    groundTruth.expectedFindings.forEach((finding, index) => {
+      const prefix = `groundTruth.expectedFindings[${index}]`;
+
+      if (typeof finding?.id !== "string" || finding.id.trim().length === 0) {
+        errors.push(`${prefix}.id is required.`);
+      }
+
+      if (!EXPLORATORY_FINDING_CATEGORIES.includes(finding?.category)) {
+        errors.push(`${prefix}.category is invalid.`);
+      }
+
+      if (!EXPLORATORY_FINDING_SEVERITIES.includes(finding?.severity)) {
+        errors.push(`${prefix}.severity is invalid.`);
+      }
+
+      const hasTitleEquals = typeof finding?.titleEquals === "string" && finding.titleEquals.trim().length > 0;
+      const hasTitleIncludes = Array.isArray(finding?.titleIncludes) && finding.titleIncludes.length > 0;
+
+      if (!hasTitleEquals && !hasTitleIncludes) {
+        errors.push(`${prefix} requires titleEquals or titleIncludes.`);
+      }
+    });
+  }
+
+  return errors;
+}
+
+export function validateEvalCaseDefinition(caseDefinition) {
+  const errors = [];
+
+  if (caseDefinition?.schemaVersion !== "1.0") {
+    errors.push("case.schemaVersion must be '1.0'.");
+  }
+
+  if (typeof caseDefinition?.id !== "string" || caseDefinition.id.trim().length === 0) {
+    errors.push("case.id is required.");
+  }
+
+  if (!["real", "synthetic"].includes(caseDefinition?.kind)) {
+    errors.push("case.kind must be 'real' or 'synthetic'.");
+  }
+
+  if (typeof caseDefinition?.slice !== "string" || caseDefinition.slice.trim().length === 0) {
+    errors.push("case.slice is required.");
+  }
+
+  if (typeof caseDefinition?.description !== "string" || caseDefinition.description.trim().length === 0) {
+    errors.push("case.description is required.");
+  }
+
+  if (typeof caseDefinition?.candidate !== "object" || !caseDefinition.candidate) {
+    errors.push("case.candidate is required.");
+  } else {
+    if (typeof caseDefinition.candidate.checklist !== "string" || caseDefinition.candidate.checklist.trim().length === 0) {
+      errors.push("case.candidate.checklist is required.");
+    }
+
+    if (typeof caseDefinition.candidate.report !== "string" || caseDefinition.candidate.report.trim().length === 0) {
+      errors.push("case.candidate.report is required.");
+    }
+  }
+
+  if (typeof caseDefinition?.groundTruth !== "string" || caseDefinition.groundTruth.trim().length === 0) {
+    errors.push("case.groundTruth is required.");
+  }
+
+  if (typeof caseDefinition?.expected !== "object" || caseDefinition.expected === null) {
+    errors.push("case.expected is required.");
+  } else if (typeof caseDefinition.expected.pass !== "boolean") {
+    errors.push("case.expected.pass must be a boolean.");
+  }
+
+  return errors;
+}
+
+export function loadEvalManifest(manifestPath = "qa/evals/manifest.json") {
+  const resolvedManifestPath = resolveRepoPath(manifestPath);
+  const manifest = JSON.parse(readFileSync(resolvedManifestPath, "utf8"));
+  const errors = validateEvalManifest(manifest);
+
+  if (errors.length > 0) {
+    throw new Error(`Invalid eval manifest:\n- ${errors.join("\n- ")}`);
+  }
+
+  return {
+    manifestPath: resolvedManifestPath,
+    manifest,
+  };
+}
+
+export function loadEvalCaseDefinition(casePath) {
+  const resolvedCasePath = resolveRepoPath(casePath);
+  const caseDefinition = JSON.parse(readFileSync(resolvedCasePath, "utf8"));
+  const errors = validateEvalCaseDefinition(caseDefinition);
+
+  if (errors.length > 0) {
+    throw new Error(`Invalid eval case ${resolvedCasePath}:\n- ${errors.join("\n- ")}`);
+  }
+
+  return {
+    casePath: resolvedCasePath,
+    caseDefinition,
+  };
+}
+
+export function loadEvalGroundTruth(groundTruthPath) {
+  const resolvedGroundTruthPath = resolveRepoPath(groundTruthPath);
+  const groundTruth = JSON.parse(readFileSync(resolvedGroundTruthPath, "utf8"));
+  const errors = validateEvalGroundTruth(groundTruth);
+
+  if (errors.length > 0) {
+    throw new Error(`Invalid eval ground truth ${resolvedGroundTruthPath}:\n- ${errors.join("\n- ")}`);
+  }
+
+  return {
+    groundTruthPath: resolvedGroundTruthPath,
+    groundTruth,
+  };
+}
+
+export function evaluateExploratoryReportCase({
+  caseId,
+  slice,
+  checklist,
+  report,
+  groundTruth,
+  candidatePaths = {},
+  groundTruthPath = "",
+  casePath = "",
+  thresholds = {},
+}) {
+  const validationErrors = validateExploratoryReport(report, checklist);
+  const completenessScore = scoreExploratoryReport(report, checklist);
+  const findings = Array.isArray(report?.findings) ? report.findings : [];
+  const expectedFindings = Array.isArray(groundTruth?.expectedFindings)
+    ? groundTruth.expectedFindings
+    : [];
+  const matchedCandidateIndexes = new Set();
+  const matchedFindings = [];
+  const missedFindings = [];
+
+  for (const expectedFinding of expectedFindings) {
+    const matchedIndex = findings.findIndex((finding, index) =>
+      !matchedCandidateIndexes.has(index) && findingMatchesRule(finding, expectedFinding)
+    );
+
+    if (matchedIndex === -1) {
+      missedFindings.push({
+        id: expectedFinding.id,
+        titleEquals: expectedFinding.titleEquals ?? null,
+        titleIncludes: expectedFinding.titleIncludes ?? [],
+        category: expectedFinding.category,
+        severity: expectedFinding.severity,
+        requiredTags: uniqueStrings(expectedFinding.requiredTags),
+      });
+      continue;
+    }
+
+    matchedCandidateIndexes.add(matchedIndex);
+    const candidateFinding = findings[matchedIndex];
+    const evidenceComplete = evidenceIsComplete(
+      candidateFinding.evidence_paths,
+      expectedFinding,
+    );
+
+    matchedFindings.push({
+      expectedFindingId: expectedFinding.id,
+      expectedTitle: expectedFinding.titleEquals ?? expectedFinding.titleIncludes ?? [],
+      matchedTitle: candidateFinding.title,
+      category: candidateFinding.category,
+      expectedSeverity: expectedFinding.severity,
+      actualSeverity: candidateFinding.severity,
+      severityMatches: candidateFinding.severity === expectedFinding.severity,
+      severityDelta: Math.abs(
+        severityRank(candidateFinding.severity) - severityRank(expectedFinding.severity),
+      ),
+      evidenceComplete,
+      requiredTags: uniqueStrings(expectedFinding.requiredTags),
+      matchedTags: uniqueStrings(candidateFinding.tags),
+      requiredEvidenceHints: uniqueStrings(expectedFinding.requiredEvidenceHints),
+      evidencePaths: uniqueStrings(candidateFinding.evidence_paths),
+    });
+  }
+
+  const falsePositives = findings
+    .map((finding, index) => ({ finding, index }))
+    .filter(({ index }) => !matchedCandidateIndexes.has(index))
+    .map(({ finding }) => ({
+      title: finding.title,
+      category: finding.category,
+      severity: finding.severity,
+      tags: uniqueStrings(finding.tags),
+    }));
+
+  const matchedCount = matchedFindings.length;
+  const expectedCount = expectedFindings.length;
+  const detectionRecall = expectedCount === 0
+    ? (findings.length === 0 ? 1 : 0)
+    : matchedCount / expectedCount;
+  const falsePositiveRate = findings.length === 0
+    ? 0
+    : falsePositives.length / findings.length;
+  const severityCalibration = matchedCount === 0
+    ? (expectedCount === 0 ? 1 : 0)
+    : matchedFindings.filter((finding) => finding.severityMatches).length / matchedCount;
+  const evidenceCompleteness = matchedCount === 0
+    ? (expectedCount === 0 ? 1 : 0)
+    : matchedFindings.filter((finding) => finding.evidenceComplete).length / matchedCount;
+
+  const total = Math.round(
+    completenessScore.breakdown.coverageRate * 15 +
+      completenessScore.breakdown.deviceCoverage * 10 +
+      completenessScore.breakdown.findingQualityRate * 10 +
+      completenessScore.breakdown.summaryRate * 5 +
+      detectionRecall * 25 +
+      (1 - falsePositiveRate) * 15 +
+      severityCalibration * 10 +
+      evidenceCompleteness * 10,
+  );
+
+  const resolvedThresholds = mergeEvalThresholds(thresholds);
+  const pass =
+    validationErrors.length === 0 &&
+    total >= resolvedThresholds.minTotal &&
+    detectionRecall >= resolvedThresholds.minDetectionRecall &&
+    falsePositiveRate <= resolvedThresholds.maxFalsePositiveRate &&
+    evidenceCompleteness >= resolvedThresholds.minEvidenceCompleteness &&
+    severityCalibration >= resolvedThresholds.minSeverityCalibration &&
+    (!resolvedThresholds.requireDeviceCoverage ||
+      completenessScore.breakdown.deviceCoverage === 1);
+
+  return {
+    schemaVersion: "1.0",
+    caseId,
+    slice,
+    generatedAt: new Date().toISOString(),
+    casePath,
+    candidatePaths,
+    groundTruthPath,
+    validationErrors,
+    score: {
+      total,
+      pass,
+      thresholds: resolvedThresholds,
+      breakdown: {
+        coverageRate: completenessScore.breakdown.coverageRate,
+        deviceCoverage: completenessScore.breakdown.deviceCoverage,
+        findingQualityRate: completenessScore.breakdown.findingQualityRate,
+        severityFieldRate: completenessScore.breakdown.severityRate,
+        summaryRate: completenessScore.breakdown.summaryRate,
+        detectionRecall,
+        falsePositiveRate,
+        severityCalibration,
+        evidenceCompleteness,
+      },
+    },
+    matchedFindings,
+    missedFindings,
+    falsePositives,
+  };
+}
+
+export function evaluateExploratoryEvalCaseFile(casePath) {
+  const { caseDefinition, casePath: resolvedCasePath } = loadEvalCaseDefinition(casePath);
+  const checklistPath = resolveRepoPath(caseDefinition.candidate.checklist);
+  const reportPath = resolveRepoPath(caseDefinition.candidate.report);
+  const { groundTruth, groundTruthPath } = loadEvalGroundTruth(caseDefinition.groundTruth);
+  const checklist = JSON.parse(readFileSync(checklistPath, "utf8"));
+  const report = JSON.parse(readFileSync(reportPath, "utf8"));
+  const evaluation = evaluateExploratoryReportCase({
+    caseId: caseDefinition.id,
+    slice: caseDefinition.slice,
+    checklist,
+    report,
+    groundTruth,
+    candidatePaths: {
+      checklist: checklistPath,
+      report: reportPath,
+    },
+    groundTruthPath,
+    casePath: resolvedCasePath,
+    thresholds: caseDefinition.thresholds,
+  });
+  const expectedPass = caseDefinition.expected.pass;
+
+  return {
+    ...evaluation,
+    kind: caseDefinition.kind,
+    description: caseDefinition.description,
+    expectedPass,
+    verdictMatched: evaluation.score.pass === expectedPass,
+  };
+}
+
+export function runEvalSuite(manifestPath = "qa/evals/manifest.json") {
+  const { manifest, manifestPath: resolvedManifestPath } = loadEvalManifest(manifestPath);
+  const caseResults = manifest.cases.map((caseFile) =>
+    evaluateExploratoryEvalCaseFile(caseFile)
+  );
+  const failedCases = caseResults
+    .filter((result) => !result.verdictMatched)
+    .map((result) => result.caseId);
+  const classificationAccuracy = caseResults.length === 0
+    ? 0
+    : caseResults.filter((result) => result.verdictMatched).length / caseResults.length;
+  const positiveCaseResults = caseResults.filter((result) => result.expectedPass);
+  const overallScore = Math.round(classificationAccuracy * 100);
+
+  return {
+    schemaVersion: "1.0",
+    suiteId: manifest.suiteId,
+    generatedAt: new Date().toISOString(),
+    manifestPath: resolvedManifestPath,
+    thresholds: {
+      minCaseClassificationAccuracy: 1,
+    },
+    overallScore,
+    pass: failedCases.length === 0,
+    breakdown: {
+      classificationAccuracy,
+      caseCount: caseResults.length,
+      expectedPassCases: positiveCaseResults.length,
+      expectedFailCases: caseResults.length - positiveCaseResults.length,
+      positiveCaseAverages: {
+        total: average(positiveCaseResults.map((result) => result.score.total)),
+        detectionRecall: average(
+          positiveCaseResults.map((result) => result.score.breakdown.detectionRecall),
+        ),
+        falsePositiveRate: average(
+          positiveCaseResults.map((result) => result.score.breakdown.falsePositiveRate),
+        ),
+        evidenceCompleteness: average(
+          positiveCaseResults.map((result) => result.score.breakdown.evidenceCompleteness),
+        ),
+      },
+    },
+    failedCases,
+    cases: caseResults,
   };
 }
 

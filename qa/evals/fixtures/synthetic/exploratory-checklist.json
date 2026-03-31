@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "synthetic-layer3",
+  "generatedAt": "2026-04-01T00:00:00.000Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "primaryUserPath": [
+    "HOME에서 재료 필터를 연다.",
+    "결과가 없는 재료를 적용한다.",
+    "RECIPE_DETAIL에서 공유 액션을 확인한다."
+  ],
+  "checklistItems": [
+    {
+      "id": "happy-path-1",
+      "section": "Happy Path",
+      "subsection": null,
+      "text": "필터 적용 시 결과 상태가 갱신된다",
+      "priority": "normal"
+    },
+    {
+      "id": "error-permission-1",
+      "section": "Error / Permission",
+      "subsection": null,
+      "text": "결과 없음 상태에서 no-op CTA를 막는다",
+      "priority": "high"
+    },
+    {
+      "id": "heuristic-duplicate-cta",
+      "section": "Exploratory Heuristics",
+      "subsection": null,
+      "text": "중복 CTA를 확인한다",
+      "priority": "high"
+    }
+  ],
+  "edgeCases": [
+    {
+      "id": "small-viewport-fold",
+      "text": "작은 iOS viewport에서 CTA 가시성을 확인한다."
+    },
+    {
+      "id": "offline-recovery",
+      "text": "오류 상태에서 복구 동선을 확인한다."
+    }
+  ]
+}
