@@ -153,14 +153,14 @@ test.describe("QA visual regression", () => {
     });
 
     await page.getByRole("button", { name: "플래너에 추가" }).click();
-    await expect(
-      page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" }),
-    ).toBeVisible();
+    const loginGate = page.getByRole("dialog", {
+      name: "로그인이 필요한 작업이에요",
+    });
+    await expect(loginGate).toBeVisible();
 
     await stabilizeVisualSnapshot(page);
-    await expect(page).toHaveScreenshot("qa-login-gate-modal.png", {
+    await expect(loginGate).toHaveScreenshot("qa-login-gate-modal.png", {
       animations: "disabled",
-      fullPage: true,
     });
   });
 });
