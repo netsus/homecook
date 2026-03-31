@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0",
+  "caseId": "real-slice-03-rerun",
+  "expectedFindings": [
+    {
+      "id": "recipe-like-raw-heart-glyph",
+      "category": "visual",
+      "severity": "minor",
+      "titleEquals": "Like control still uses a raw heart glyph that reads like placeholder UI",
+      "requiredTags": ["recipe-like", "iconography"],
+      "requiredEvidenceCount": 1,
+      "requiredEvidenceHints": ["recipe-detail"]
+    }
+  ]
+}

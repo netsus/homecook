@@ -23,7 +23,7 @@ export function ContentState({
       </p>
       {actionLabel && onAction ? (
         <button
-          className="mt-5 rounded-full bg-[var(--brand)] px-5 py-3 text-sm font-semibold text-white"
+          className="mt-5 rounded-full bg-[var(--brand)] px-5 py-3 text-sm font-semibold text-[var(--foreground)]"
           onClick={onAction}
           type="button"
         >

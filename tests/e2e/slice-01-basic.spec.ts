@@ -1,13 +1,24 @@
 import { expect, test } from "@playwright/test";
 
+import {
+  installDiscoveryRoutes,
+  installRecipeDetailRoutes,
+  RECIPE_PATH,
+} from "./helpers/mock-routes";
+
 test.describe("Slice 01 basic flow", () => {
+  test.beforeEach(async ({ page }) => {
+    await installDiscoveryRoutes(page);
+    await installRecipeDetailRoutes(page);
+  });
+
   test("HOME shows list, supports search, and updates sort state", async ({
     page,
   }) => {
     await page.goto("/");
 
     await expect(
-      page.getByRole("heading", { name: "오늘 만들 집밥을 바로 찾으세요" }),
+      page.getByRole("heading", { name: "먹고 싶은 집밥을 골라보세요" }),
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "이번 주 인기 레시피" }),
@@ -24,29 +35,61 @@ test.describe("Slice 01 basic flow", () => {
       page.getByRole("link", { name: /집밥 김치찌개/i }).first(),
     ).toBeVisible();
 
-    const sortSelect = page.getByRole("combobox", { name: "정렬 기준" });
-    await sortSelect.selectOption("like_count");
-    await expect(sortSelect).toHaveValue("like_count");
+    const sortButton = page.getByRole("button", { name: /정렬 기준/i });
+    await sortButton.click();
+    const plannerOption = page.getByRole("option", { name: "플래너 등록순" });
+    await expect(plannerOption).toBeVisible();
+    const optionBounds = await plannerOption.boundingBox();
+    const viewport = page.viewportSize();
+
+    expect(optionBounds).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    expect((optionBounds?.y ?? 0) + (optionBounds?.height ?? 0)).toBeLessThanOrEqual(
+      (viewport?.height ?? 0) - 4,
+    );
+    await page.getByRole("option", { name: "좋아요순" }).click();
+    await expect(sortButton).toContainText("좋아요순");
   });
 
-  test("Recipe detail opens from HOME and shows key sections", async ({
+  test("Recipe detail route shows key sections", async ({
     page,
   }) => {
-    await page.goto("/");
-    await page.getByRole("link", { name: /집밥 김치찌개/i }).first().click();
+    await page.goto(RECIPE_PATH);
 
-    await expect(page).toHaveURL(/\/recipe\/mock-kimchi-jjigae$/);
+    await expect(page).toHaveURL(new RegExp(`${RECIPE_PATH}$`));
     await expect(
       page.getByRole("heading", { name: "집밥 김치찌개" }),
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: "인분에 따라 재료량이 바뀝니다" })).toBeVisible();
     await expect(page.getByRole("button", { name: "플래너에 추가" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "공유하기" })).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "좋아요 203" })).toBeVisible();
+
+    const likeChipPrecedesIngredients = await page.evaluate(() => {
+      const likeButton = document.querySelector(
+        'button[aria-label="좋아요 203"]',
+      );
+      const ingredientHeading = Array.from(document.querySelectorAll("h2, h3")).find(
+        (element) => element.textContent?.trim() === "인분에 따라 재료량이 바뀝니다",
+      );
+
+      if (!(likeButton instanceof HTMLElement) || !(ingredientHeading instanceof HTMLElement)) {
+        return false;
+      }
+
+      return Boolean(
+        likeButton.compareDocumentPosition(ingredientHeading) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+
+    expect(likeChipPrecedesIngredients).toBe(true);
   });
 
   test("Protected action opens login gate and modal can close with button, ESC, and backdrop", async ({
     page,
   }) => {
-    await page.goto("/recipe/mock-kimchi-jjigae");
+    await page.goto(RECIPE_PATH);
 
     await page.getByRole("button", { name: "플래너에 추가" }).click();
     const dialog = page.getByRole("dialog");
@@ -70,7 +113,7 @@ test.describe("Slice 01 basic flow", () => {
   });
 
   test("Recipe detail shows callback failure feedback", async ({ page }) => {
-    await page.goto("/recipe/mock-kimchi-jjigae?authError=oauth_failed");
+    await page.goto(`${RECIPE_PATH}?authError=oauth_failed`);
 
     await expect(
       page.getByText("로그인을 완료하지 못했어요. 다시 시도해주세요."),

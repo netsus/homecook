@@ -1,0 +1,328 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "03-recipe-like",
+  "generatedAt": "2026-04-01T00:00:00.000Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "summary": "Strengthened Layer 2 rerun caught the like control polish issue on the shared RECIPE_DETAIL surface. Functional like flows remain green, but the control still reads as a placeholder-style button instead of a polished app action.",
+  "findings": [
+    {
+      "category": "visual",
+      "severity": "minor",
+      "title": "Like control still uses a raw heart glyph that reads like placeholder UI",
+      "expected": "The like action should look like a polished product control, typically with a consistent icon treatment rather than a raw text heart glyph.",
+      "actual": "The like button still renders a literal heart glyph with text, which gives the control a rough MVP feel compared with the rest of the screen.",
+      "repro_steps": [
+        "Open RECIPE_DETAIL on desktop or mobile-chrome.",
+        "Inspect the like action inside the lower action row and compare its visual treatment with neighboring controls."
+      ],
+      "evidence_paths": [
+        ".artifacts/qa/03-recipe-like/2026-04-01-layer2-rerun/evidence/qa-recipe-detail-desktop-chrome-darwin.png",
+        ".artifacts/qa/03-recipe-like/2026-04-01-layer2-rerun/evidence/qa-recipe-detail-mobile-chrome-darwin.png"
+      ],
+      "tags": [
+        "visual",
+        "recipe-like",
+        "iconography",
+        "polish"
+      ]
+    }
+  ],
+  "remainingRisks": [
+    "Shared detail-layout issues such as duplicate share CTA and action placement are still present on the same surface, but they are already captured in the Slice 01 rerun because they belong to the broader detail screen structure."
+  ],
+  "checklistCoverage": [
+    {
+      "item_id": "happy-path-1",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-2",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-3",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-4",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "happy-path-5",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-1",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-2",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-3",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-4",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "state-policy-5",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-1",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-2",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-3",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-4",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-5",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-6",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-7",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-8",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-1",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-2",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-3",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "data-integrity-4",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-1",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-2",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-3",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-4",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-5",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "manual-qa-6",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-1",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-2",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-3",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-4",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-5",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-6",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-7",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-8",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-9",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-10",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-11",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-12",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "automation-split-13",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-mobile-readability",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-small-viewport-cta",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-duplicate-cta",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-information-hierarchy",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-copy-sanity",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-empty-noop",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-placeholder-polish",
+      "status": "covered",
+      "notes": "Covered in the 2026-04-01 exploratory rerun with current UI evidence and deterministic suite cross-checks.",
+      "linked_findings": []
+    }
+  ]
+}

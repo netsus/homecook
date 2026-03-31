@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QA Eval Result",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "overallScore",
+    "pass"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "suiteId": { "type": "string" },
+    "caseId": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "overallScore": { "type": "number" },
+    "pass": { "type": "boolean" },
+    "thresholds": { "type": "object" },
+    "breakdown": { "type": "object" },
+    "failedCases": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "cases": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "validationErrors": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "score": {
+      "type": "object",
+      "properties": {
+        "total": { "type": "number" },
+        "pass": { "type": "boolean" },
+        "thresholds": { "type": "object" },
+        "breakdown": { "type": "object" }
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QA Eval Case",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "kind",
+    "slice",
+    "description",
+    "candidate",
+    "groundTruth",
+    "expected"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "id": { "type": "string" },
+    "kind": { "enum": ["real", "synthetic"] },
+    "slice": { "type": "string" },
+    "description": { "type": "string" },
+    "candidate": {
+      "type": "object",
+      "required": ["checklist", "report"],
+      "properties": {
+        "checklist": { "type": "string" },
+        "report": { "type": "string" }
+      }
+    },
+    "groundTruth": { "type": "string" },
+    "thresholds": {
+      "type": "object",
+      "properties": {
+        "minTotal": { "type": "number" },
+        "minDetectionRecall": { "type": "number" },
+        "maxFalsePositiveRate": { "type": "number" },
+        "minEvidenceCompleteness": { "type": "number" },
+        "minSeverityCalibration": { "type": "number" },
+        "requireDeviceCoverage": { "type": "boolean" }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "required": ["pass"],
+      "properties": {
+        "pass": { "type": "boolean" }
+      }
+    }
+  }
+}

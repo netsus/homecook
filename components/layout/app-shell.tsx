@@ -18,7 +18,7 @@ export function AppShell({ children, currentTab }: AppShellProps) {
                 Homecook
               </p>
               <h1 className="display mt-2 text-3xl text-[var(--brand-deep)] md:text-4xl">
-                집밥 흐름을 한 번에 이어붙이는 주방
+                오늘 집밥 메뉴를 찾는 주방
               </h1>
             </div>
             <div className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-1 text-xs font-medium text-[var(--muted)]">

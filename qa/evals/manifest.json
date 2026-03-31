@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0",
+  "suiteId": "layer3-core-suite",
+  "generatedAt": "2026-04-01T00:00:00.000Z",
+  "cases": [
+    "qa/evals/cases/real-slice-01-rerun.json",
+    "qa/evals/cases/real-slice-02-rerun.json",
+    "qa/evals/cases/real-slice-03-rerun.json",
+    "qa/evals/cases/synthetic-low-recall.json",
+    "qa/evals/cases/synthetic-false-positive-heavy.json",
+    "qa/evals/cases/synthetic-device-gap.json",
+    "qa/evals/cases/synthetic-severity-mismatch.json"
+  ]
+}

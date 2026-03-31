@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "synthetic-layer3",
+  "generatedAt": "2026-04-01T00:00:00.000Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome"
+  ],
+  "summary": "Expected issues were captured, but the small-mobile pass was skipped.",
+  "findings": [
+    {
+      "category": "functional",
+      "severity": "major",
+      "title": "Applying a no-result ingredient filter leaves stale recipes visible",
+      "expected": "Applying an empty filter should either disable the CTA or show an empty result state.",
+      "actual": "The stale recipe list remains visible after applying a no-result ingredient filter.",
+      "repro_steps": [
+        "Open the ingredient filter on mobile-chrome.",
+        "Search for a non-existent ingredient and tap apply."
+      ],
+      "evidence_paths": [
+        ".artifacts/qa/synthetic/evidence/filter-empty-mobile-chrome.png"
+      ],
+      "tags": ["filter", "empty", "apply"]
+    },
+    {
+      "category": "ux",
+      "severity": "major",
+      "title": "Recipe detail duplicates the share action in two separate rows",
+      "expected": "The detail screen should expose one share affordance for the same action.",
+      "actual": "The screen shows a share action in both the hero and lower action row.",
+      "repro_steps": [
+        "Open RECIPE_DETAIL on desktop-chrome.",
+        "Compare the hero controls and the lower action row."
+      ],
+      "evidence_paths": [
+        ".artifacts/qa/synthetic/evidence/recipe-detail-desktop-share.png"
+      ],
+      "tags": ["duplicate-cta", "share", "recipe-detail"]
+    }
+  ],
+  "remainingRisks": [
+    "Small iOS viewport was skipped."
+  ],
+  "checklistCoverage": [
+    {
+      "item_id": "happy-path-1",
+      "status": "covered",
+      "notes": "Flow covered without the small iOS pass.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "error-permission-1",
+      "status": "covered",
+      "notes": "No-op apply bug captured.",
+      "linked_findings": []
+    },
+    {
+      "item_id": "heuristic-duplicate-cta",
+      "status": "covered",
+      "notes": "Duplicate CTA captured.",
+      "linked_findings": []
+    }
+  ]
+}

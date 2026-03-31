@@ -86,9 +86,16 @@
 - spacing, hierarchy, interaction, accessibility 일관성을 점검한다.
 - wireframe은 참고 자료이며, 공식 문서가 우선이다.
 
+### 10. QA Explorer
+
+- workpack README와 acceptance.md를 읽고 exploratory QA checklist를 만든다.
+- desktop/mobile에서 핵심 흐름, edge case, 회복 UX를 탐색한다.
+- severity, repro, evidence, remaining risk를 구조화된 보고서로 남긴다.
+
 ## Default Invocation Matrix
 
 - 기능 개발: Orchestrator -> TDD Driver -> Git Workflow Reviewer -> PR Governance Reviewer -> Test Reviewer
 - API/인증 변경: Orchestrator -> TDD Driver -> Security Reviewer -> Test Reviewer -> PR Governance Reviewer
 - UI 변경: Orchestrator -> TDD Driver -> Design and System Reviewer -> Performance Reviewer -> PR Governance Reviewer
+- High-risk UI 검증: Orchestrator -> QA Explorer -> Design and System Reviewer -> PR Governance Reviewer
 - 설정/CI 변경: Orchestrator -> Git Workflow Reviewer -> Lint and Format Reviewer -> PR Governance Reviewer

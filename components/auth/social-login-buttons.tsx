@@ -15,7 +15,7 @@ import {
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-interface SocialLoginButtonsProps {
+export interface SocialLoginButtonsProps {
   nextPath: string;
   pendingAction?: PendingRecipeAction | null;
   onStarted?: () => void;

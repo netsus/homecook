@@ -190,4 +190,61 @@ test.describe("Slice 02 discovery filter flow", () => {
       page.getByRole("link", { name: /집밥 김치찌개/i }).first(),
     ).toBeVisible();
   });
+
+  test("keeps apply disabled when ingredient search has no results and no selection", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "재료로 검색" }).click();
+    await page
+      .getByRole("textbox", { name: "재료명으로 검색" })
+      .fill("없는재료");
+    await expect(
+      page.getByRole("heading", { name: "검색 결과가 없어요" }),
+    ).toBeVisible();
+
+    await expect(page.getByRole("button", { name: "적용" })).toBeDisabled();
+  });
+
+  test("keeps footer actions readable on small mobile viewports", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "재료로 검색" }).click();
+    const resetButton = page.getByRole("button", { name: "초기화" });
+    const applyButton = page.getByRole("button", { name: "적용" });
+
+    await expect(resetButton).toBeVisible();
+    await expect(applyButton).toBeVisible();
+
+    const [resetMetrics, applyMetrics, viewport] = await Promise.all([
+      resetButton.evaluate((element) => {
+        const target = element as HTMLElement;
+        const rect = target.getBoundingClientRect();
+
+        return {
+          right: rect.right,
+          height: rect.height,
+        };
+      }),
+      applyButton.evaluate((element) => {
+        const target = element as HTMLElement;
+        const rect = target.getBoundingClientRect();
+
+        return {
+          right: rect.right,
+          height: rect.height,
+        };
+      }),
+      Promise.resolve(page.viewportSize()),
+    ]);
+
+    expect(viewport).not.toBeNull();
+    expect(resetMetrics.height).toBeLessThanOrEqual(52);
+    expect(applyMetrics.height).toBeLessThanOrEqual(52);
+    expect(resetMetrics.right).toBeLessThanOrEqual((viewport?.width ?? 0) - 4);
+    expect(applyMetrics.right).toBeLessThanOrEqual((viewport?.width ?? 0) - 4);
+  });
 });

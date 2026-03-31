@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0",
+  "id": "synthetic-false-positive-heavy",
+  "kind": "synthetic",
+  "slice": "synthetic-layer3",
+  "description": "Synthetic report that finds the core issues but adds too many unrelated findings.",
+  "candidate": {
+    "checklist": "qa/evals/fixtures/synthetic/exploratory-checklist.json",
+    "report": "qa/evals/fixtures/synthetic/report-false-positive-heavy.json"
+  },
+  "groundTruth": "qa/evals/ground-truth/synthetic-shared-surface.json",
+  "expected": {
+    "pass": false
+  }
+}

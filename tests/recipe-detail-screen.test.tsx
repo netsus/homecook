@@ -20,7 +20,6 @@ const fetchJson = vi.fn();
 const getSession = vi.fn();
 const onAuthStateChange = vi.fn();
 const hasSupabasePublicEnv = vi.fn();
-const useSearchParams = vi.fn();
 
 vi.mock("@/lib/api/fetch-json", () => ({
   fetchJson: (...args: unknown[]) => fetchJson(...args),
@@ -39,8 +38,10 @@ vi.mock("@/lib/supabase/env", () => ({
   hasSupabasePublicEnv: () => hasSupabasePublicEnv(),
 }));
 
-vi.mock("next/navigation", () => ({
-  useSearchParams: () => useSearchParams(),
+vi.mock("@/components/auth/social-login-buttons-deferred", () => ({
+  SocialLoginButtonsDeferred: ({ nextPath }: { nextPath: string }) => (
+    <div>social-buttons:{nextPath}</div>
+  ),
 }));
 
 function buildRecipeDetail(overrides?: Partial<RecipeDetail>): RecipeDetail {
@@ -92,21 +93,17 @@ function buildSaveableBooks(): RecipeBookListData {
   };
 }
 
-async function findSaveCountMetricCard() {
-  const labels = await screen.findAllByText("저장");
-  const label = labels.find((node) => node.tagName === "DT");
+async function findSaveActionButton() {
+  const buttons = await screen.findAllByRole("button", { name: "저장" });
+  const button = buttons.find(
+    (node) => node.getAttribute("aria-pressed") !== null,
+  );
 
-  if (!label) {
-    throw new Error("Could not find the save_count metric label.");
+  if (!button) {
+    throw new Error("Could not find the save action button.");
   }
 
-  const card = label.closest("div");
-
-  if (!card) {
-    throw new Error("Could not find the save_count metric card.");
-  }
-
-  return card;
+  return button;
 }
 
 describe("recipe detail screen", () => {
@@ -119,7 +116,6 @@ describe("recipe detail screen", () => {
     getSession.mockReset();
     onAuthStateChange.mockReset();
     hasSupabasePublicEnv.mockReset();
-    useSearchParams.mockReset();
     useAuthGateStore.setState({ isOpen: false, action: null });
     window.localStorage.clear();
 
@@ -129,7 +125,6 @@ describe("recipe detail screen", () => {
       data: { subscription: { unsubscribe: vi.fn() } },
     });
     hasSupabasePublicEnv.mockReturnValue(true);
-    useSearchParams.mockReturnValue(new URLSearchParams());
   });
 
   it("opens the login gate when a protected action is clicked by a guest", async () => {
@@ -141,6 +136,27 @@ describe("recipe detail screen", () => {
 
     expect(await screen.findByRole("dialog")).toBeTruthy();
     expect(screen.getByText("로그인이 필요한 작업이에요")).toBeTruthy();
+  });
+
+  it("keeps a single share action and places interactive chips above the ingredient section", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const shareButtons = await screen.findAllByRole("button", {
+      name: "공유하기",
+    });
+    expect(shareButtons).toHaveLength(1);
+
+    const likeButton = screen.getByRole("button", { name: "좋아요 203" });
+    const ingredientHeading = screen.getByRole("heading", {
+      name: "인분에 따라 재료량이 바뀝니다",
+    });
+
+    expect(
+      likeButton.compareDocumentPosition(ingredientHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByText("조회")).toBeNull();
+    expect(screen.queryByText("요리완료")).toBeNull();
   });
 
   it("disables the like button while pending and updates the count from the API response", async () => {
@@ -160,7 +176,7 @@ describe("recipe detail screen", () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
     const button = await screen.findByRole("button", {
-      name: "♡ 좋아요 203",
+      name: "좋아요 203",
     });
 
     await userEvent.click(button);
@@ -178,7 +194,7 @@ describe("recipe detail screen", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "♥ 좋아요 204" }),
+        screen.getByRole("button", { name: "좋아요 204" }),
       ).toBeTruthy();
     });
   });
@@ -199,7 +215,7 @@ describe("recipe detail screen", () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "♡ 좋아요 203" }),
+      await screen.findByRole("button", { name: "좋아요 203" }),
     );
 
     await waitFor(() => {
@@ -207,8 +223,11 @@ describe("recipe detail screen", () => {
         screen.getByText("좋아요 처리에 실패했어요. 다시 시도해주세요."),
       ).toBeTruthy();
     });
+    expect(screen.getByRole("alert").textContent).toBe(
+      "좋아요 처리에 실패했어요. 다시 시도해주세요.",
+    );
 
-    expect(screen.getByRole("button", { name: "♡ 좋아요 203" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "좋아요 203" })).toBeTruthy();
   });
 
   it("replays the pending like action after login and clears it", async () => {
@@ -248,7 +267,7 @@ describe("recipe detail screen", () => {
     expect(
       await screen.findByText("로그인 완료. 좋아요를 반영했어요."),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "♥ 좋아요 204" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "좋아요 204" })).toBeTruthy();
     expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
@@ -349,7 +368,7 @@ describe("recipe detail screen", () => {
 
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "저장됨" }));
+    await userEvent.click(await findSaveActionButton());
     const modal = await screen.findByRole("dialog");
     const modalScope = within(modal);
     const saveButton = modalScope.getByRole("button", { name: "저장" }) as HTMLButtonElement;
@@ -410,8 +429,8 @@ describe("recipe detail screen", () => {
 
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
-    const saveCountMetric = await findSaveCountMetricCard();
-    expect(within(saveCountMetric).getByText("89")).toBeTruthy();
+    const saveActionButton = await findSaveActionButton();
+    expect(within(saveActionButton).getByText("89")).toBeTruthy();
 
     await userEvent.click(await screen.findByRole("button", { name: "저장" }));
     const modal = await screen.findByRole("dialog");
@@ -432,9 +451,9 @@ describe("recipe detail screen", () => {
     });
 
     expect(await screen.findByText("레시피를 저장했어요.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "저장됨" })).toBeTruthy();
+    expect((await findSaveActionButton()).getAttribute("aria-pressed")).toBe("true");
     await waitFor(() => {
-      expect(within(saveCountMetric).getByText("90")).toBeTruthy();
+      expect(within(screen.getByRole("button", { name: "저장" })).getByText("90")).toBeTruthy();
     });
   });
 
@@ -511,11 +530,12 @@ describe("recipe detail screen", () => {
   });
 
   it("shows OAuth failure feedback from the callback query string", async () => {
-    useSearchParams.mockReturnValue(
-      new URLSearchParams("authError=oauth_failed"),
+    render(
+      <RecipeDetailScreen
+        authError="oauth_failed"
+        recipeId={MOCK_RECIPE_DETAIL.id}
+      />,
     );
-
-    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
     await waitFor(() => {
       expect(

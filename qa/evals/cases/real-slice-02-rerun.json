@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0",
+  "id": "real-slice-02-rerun",
+  "kind": "real",
+  "slice": "02-discovery-filter",
+  "description": "Slice 02 strengthened Layer 2 rerun should pass with one low-severity polish finding.",
+  "candidate": {
+    "checklist": "qa/evals/fixtures/real/02-discovery-filter/exploratory-checklist.json",
+    "report": "qa/evals/fixtures/real/02-discovery-filter/exploratory-report.json"
+  },
+  "groundTruth": "qa/evals/ground-truth/real-slice-02-rerun.json",
+  "expected": {
+    "pass": true
+  }
+}

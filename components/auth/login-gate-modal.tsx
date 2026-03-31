@@ -3,7 +3,7 @@
 import React from "react";
 import { useEffect, useMemo, useRef } from "react";
 
-import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import { SocialLoginButtonsDeferred } from "@/components/auth/social-login-buttons-deferred";
 import { useAuthGateStore } from "@/stores/ui-store";
 
 const ACTION_LABELS = {
@@ -62,7 +62,7 @@ export function LoginGateModal() {
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[color:rgba(255,108,60,0.12)] text-xl text-[var(--brand-deep)]">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-[color:rgba(224,80,32,0.16)] bg-[color:rgba(255,108,60,0.14)] text-xl text-[var(--foreground)]">
               잠금
             </div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
@@ -97,7 +97,7 @@ export function LoginGateModal() {
           </p>
         </div>
         <div className="mt-5">
-          <SocialLoginButtons
+          <SocialLoginButtonsDeferred
             nextPath={action.redirectTo}
             onStarted={close}
             pendingAction={action}

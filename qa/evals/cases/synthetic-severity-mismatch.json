@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0",
+  "id": "synthetic-severity-mismatch",
+  "kind": "synthetic",
+  "slice": "synthetic-layer3",
+  "description": "Synthetic report with correct titles but downgraded severities that should fail calibration.",
+  "candidate": {
+    "checklist": "qa/evals/fixtures/synthetic/exploratory-checklist.json",
+    "report": "qa/evals/fixtures/synthetic/report-severity-mismatch.json"
+  },
+  "groundTruth": "qa/evals/ground-truth/synthetic-shared-surface.json",
+  "expected": {
+    "pass": false
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0",
+  "slice": "synthetic-layer3",
+  "generatedAt": "2026-04-01T00:00:00.000Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "devices": [
+    "desktop-chrome",
+    "mobile-chrome",
+    "mobile-ios-small"
+  ],
+  "summary": "One real issue was captured, but the duplicate CTA regression was missed.",
+  "findings": [
+    {
+      "category": "functional",
+      "severity": "major",
+      "title": "Applying a no-result ingredient filter leaves stale recipes visible",
+      "expected": "Applying an empty filter should either disable the CTA or show an empty result state.",
+      "actual": "The stale recipe list remains visible after applying a no-result ingredient filter.",
+      "repro_steps": [
+        "Open the ingredient filter on mobile-ios-small.",
+        "Search for a non-existent ingredient and tap apply."
+      ],
+      "evidence_paths": [
+        ".artifacts/qa/synthetic/evidence/filter-empty-mobile-ios-small.png"
+      ],
+      "tags": ["filter", "empty", "apply"]
+    }
+  ],
+  "remainingRisks": [
+    "The detail surface was not fully re-checked for duplicate share actions."
+  ],
+  "checklistCoverage": [
+    {
+      "item_id": "happy-path-1",
+      "status": "covered",
+      "notes": "Filter flow checked end-to-end.",
+      "linked_findings": ["Applying a no-result ingredient filter leaves stale recipes visible"]
+    },
+    {
+      "item_id": "error-permission-1",
+      "status": "covered",
+      "notes": "No-op apply bug captured.",
+      "linked_findings": ["Applying a no-result ingredient filter leaves stale recipes visible"]
+    },
+    {
+      "item_id": "heuristic-duplicate-cta",
+      "status": "covered",
+      "notes": "Looked at the detail surface but did not record a duplicate CTA issue.",
+      "linked_findings": []
+    }
+  ]
+}

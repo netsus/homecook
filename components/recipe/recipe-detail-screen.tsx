@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -34,10 +33,12 @@ import type {
 
 type DetailState = "loading" | "ready" | "error";
 type LikeRequestState = "idle" | "pending";
+type FeedbackTone = "error" | "status";
 type SaveModalState = "idle" | "loading" | "ready" | "error";
 
 interface RecipeDetailScreenProps {
   recipeId: string;
+  authError?: string | null;
 }
 
 const COOKING_METHOD_COLORS: Record<string, string> = {
@@ -49,13 +50,27 @@ const COOKING_METHOD_COLORS: Record<string, string> = {
   green: "var(--cook-mix)",
 };
 
-export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
-  const searchParams = useSearchParams();
+const COOKING_METHOD_TINTS: Record<string, string> = {
+  orange: "rgba(255, 140, 66, 0.16)",
+  red: "rgba(232, 69, 60, 0.14)",
+  brown: "rgba(139, 94, 60, 0.16)",
+  blue: "rgba(74, 144, 217, 0.16)",
+  yellow: "rgba(245, 197, 24, 0.18)",
+  green: "rgba(46, 166, 122, 0.16)",
+};
+
+export function RecipeDetailScreen({
+  recipeId,
+  authError,
+}: RecipeDetailScreenProps) {
   const [detailState, setDetailState] = useState<DetailState>("loading");
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [selectedServings, setSelectedServings] = useState(1);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    message: string;
+    tone: FeedbackTone;
+  } | null>(null);
   const [likeRequestState, setLikeRequestState] = useState<LikeRequestState>("idle");
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [saveModalState, setSaveModalState] = useState<SaveModalState>("idle");
@@ -126,10 +141,13 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
   }, []);
 
   useEffect(() => {
-    if (searchParams.get("authError") === "oauth_failed") {
-      setFeedback("로그인을 완료하지 못했어요. 다시 시도해주세요.");
+    if (authError === "oauth_failed") {
+      setFeedback({
+        message: "로그인을 완료하지 못했어요. 다시 시도해주세요.",
+        tone: "error",
+      });
     }
-  }, [searchParams]);
+  }, [authError]);
 
   const scaledIngredients = useMemo(() => {
     if (!recipe) {
@@ -328,7 +346,10 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
       updateRecipeSaveState(result);
       setIsSaveModalOpen(false);
       setSaveModalState("idle");
-      setFeedback("레시피를 저장했어요.");
+      setFeedback({
+        message: "레시피를 저장했어요.",
+        tone: "status",
+      });
     } catch (error) {
       setSaveSubmitError(
         error instanceof Error ? error.message : "레시피를 저장하지 못했어요.",
@@ -374,11 +395,17 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
         updateRecipeLikeState(data);
         setFeedback(
           source === "return-to-action"
-            ? "로그인 완료. 좋아요를 반영했어요."
+            ? {
+                message: "로그인 완료. 좋아요를 반영했어요.",
+                tone: "status",
+              }
             : null,
         );
       } catch {
-        setFeedback("좋아요 처리에 실패했어요. 다시 시도해주세요.");
+        setFeedback({
+          message: "좋아요 처리에 실패했어요. 다시 시도해주세요.",
+          tone: "error",
+        });
       } finally {
         setLikeRequestState("idle");
       }
@@ -409,7 +436,10 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
       return;
     }
 
-    setFeedback("이 액션의 실제 저장 연결은 다음 슬라이스에서 닫습니다.");
+    setFeedback({
+      message: "이 액션의 실제 저장 연결은 다음 슬라이스에서 닫습니다.",
+      tone: "status",
+    });
   };
 
   useEffect(() => {
@@ -431,7 +461,10 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
     }
 
     if (pendingAction.type === "save") {
-      setFeedback("로그인 완료. 저장할 레시피북을 선택해 주세요.");
+      setFeedback({
+        message: "로그인 완료. 저장할 레시피북을 선택해 주세요.",
+        tone: "status",
+      });
       void openSaveModal({ source: "return-to-action" });
       return;
     }
@@ -440,9 +473,10 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
       planner: "플래너 추가",
     } as const;
 
-    setFeedback(
-      `로그인 완료. ${labelMap[pendingAction.type]} 액션 위치로 돌아왔어요.`,
-    );
+    setFeedback({
+      message: `로그인 완료. ${labelMap[pendingAction.type]} 액션 위치로 돌아왔어요.`,
+      tone: "status",
+    });
   }, [handleLikeToggle, isAuthenticated, openSaveModal, recipe, recipeId]);
 
   const handleShare = async () => {
@@ -463,16 +497,20 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
       }
 
       await navigator.clipboard.writeText(url);
-      setFeedback("링크를 복사했어요.");
+      setFeedback({
+        message: "링크를 복사했어요.",
+        tone: "status",
+      });
     } catch {
-      setFeedback("공유를 완료하지 못했어요.");
+      setFeedback({
+        message: "공유를 완료하지 못했어요.",
+        tone: "error",
+      });
     }
   };
 
   if (detailState === "loading") {
-    return (
-      <div className="glass-panel min-h-[540px] animate-pulse rounded-[20px] bg-white/60" />
-    );
+    return <RecipeDetailLoadingSkeleton />;
   }
 
   if (detailState === "error" || !recipe) {
@@ -504,19 +542,10 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
               }
             />
             <div className="space-y-5 px-5 py-5 md:px-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
-                  <Link href="/">Home</Link>
-                  <span>/</span>
-                  <span>Recipe detail</span>
-                </div>
-                <button
-                  className="min-h-11 rounded-[12px] border border-[var(--line)] bg-white/80 px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
-                  onClick={handleShare}
-                  type="button"
-                >
-                  공유하기
-                </button>
+              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+                <Link href="/">Home</Link>
+                <span>/</span>
+                <span>Recipe detail</span>
               </div>
               <div>
                 <h2 className="text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:text-[2rem]">
@@ -536,25 +565,60 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
                   ))}
                 </div>
               </div>
-              <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                {[
-                  ["조회", recipe.view_count],
-                  ["좋아요", recipe.like_count],
-                  ["저장", recipe.save_count],
-                  ["플래너", recipe.plan_count],
-                  ["요리완료", recipe.cook_count],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="rounded-[12px] bg-white/72 px-3 py-3 text-sm"
-                  >
-                    <dt className="text-[var(--muted)]">{label}</dt>
-                    <dd className="mt-1 font-semibold text-[var(--foreground)]">
-                      {formatCount(Number(value))}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
+              <div className="flex flex-wrap gap-2">
+                <MetricActionButton
+                  ariaLabel={
+                    likeRequestState === "pending"
+                      ? "좋아요 처리 중..."
+                      : `좋아요 ${formatCount(recipe.like_count)}`
+                  }
+                  ariaPressed={recipe.user_status?.is_liked ?? false}
+                  count={formatCount(recipe.like_count)}
+                  disabled={likeRequestState === "pending"}
+                  icon={
+                    <HeartIcon
+                      filled={recipe.user_status?.is_liked ?? false}
+                    />
+                  }
+                  label={likeRequestState === "pending" ? "처리 중" : "좋아요"}
+                  onClick={() => handleProtectedAction("like")}
+                  tone={recipe.user_status?.is_liked ? "brand" : "neutral"}
+                />
+                <MetricActionButton
+                  ariaLabel="저장"
+                  ariaPressed={recipe.user_status?.is_saved ?? false}
+                  count={formatCount(recipe.save_count)}
+                  icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
+                  label="저장"
+                  onClick={() => handleProtectedAction("save")}
+                  tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
+                />
+                <MetricActionButton
+                  ariaLabel="플래너에 추가"
+                  count={formatCount(recipe.plan_count)}
+                  icon={<PlannerIcon />}
+                  label="플래너"
+                  onClick={() => handleProtectedAction("planner")}
+                  tone="olive"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <ActionButton
+                  label="요리하기"
+                  onClick={() =>
+                    setFeedback({
+                      message: "요리모드는 다음 슬라이스에서 이어서 구현합니다.",
+                      tone: "status",
+                    })
+                  }
+                  tone="brand"
+                />
+                <IconActionButton
+                  ariaLabel="공유하기"
+                  icon={<ShareIcon />}
+                  onClick={handleShare}
+                />
+              </div>
             </div>
           </div>
 
@@ -608,48 +672,6 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
                 </li>
               ))}
             </ul>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              <ActionButton
-                label="요리하기"
-                onClick={() =>
-                  setFeedback("요리모드는 다음 슬라이스에서 이어서 구현합니다.")
-                }
-                tone="brand"
-              />
-              <ActionButton
-                label="공유하기"
-                onClick={handleShare}
-                tone="neutral"
-              />
-              <ActionButton
-                label="플래너에 추가"
-                onClick={() => handleProtectedAction("planner")}
-                tone="olive"
-              />
-              <ActionButton
-                ariaPressed={recipe.user_status?.is_liked ?? false}
-                disabled={likeRequestState === "pending"}
-                label={
-                  likeRequestState === "pending"
-                    ? "좋아요 처리 중..."
-                    : `${recipe.user_status?.is_liked ? "♥" : "♡"} 좋아요 ${formatCount(recipe.like_count)}`
-                }
-                onClick={() => handleProtectedAction("like")}
-                tone={recipe.user_status?.is_liked ? "brand" : "neutral"}
-              />
-              <ActionButton
-                label={`저장${recipe.user_status?.is_saved ? "됨" : ""}`}
-                onClick={() => handleProtectedAction("save")}
-                tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
-              />
-            </div>
-
-            {feedback ? (
-              <p className="mt-4 rounded-[16px] bg-white/75 px-4 py-3 text-sm text-[var(--muted)]">
-                {feedback}
-              </p>
-            ) : null}
           </div>
 
           <div className="glass-panel rounded-[20px] p-5 md:p-6">
@@ -668,9 +690,12 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
                         {step.step_number}
                       </span>
                       <span
-                        className="rounded-full px-3 py-1 text-xs font-semibold text-white"
+                        className="rounded-full border px-3 py-1 text-xs font-semibold text-[var(--foreground)]"
                         style={{
-                          backgroundColor: resolveCookingMethodColor(
+                          backgroundColor: resolveCookingMethodTint(
+                            step.cooking_method?.color_key,
+                          ),
+                          borderColor: resolveCookingMethodColor(
                             step.cooking_method?.color_key,
                           ),
                         }}
@@ -777,8 +802,111 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
         selectedBookId={selectedSaveBookId}
         viewState={saveModalState === "idle" ? "loading" : saveModalState}
       />
+      {feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
       <LoginGateModal />
     </>
+  );
+}
+
+function RecipeDetailLoadingSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_360px]"
+    >
+      <section className="space-y-6">
+          <div className="glass-panel overflow-hidden rounded-[20px]">
+          <div className="min-h-72 animate-pulse border-b border-[var(--line)] bg-white/60" />
+          <div className="space-y-5 px-5 py-5 md:px-6">
+            <div className="h-4 w-28 animate-pulse rounded-full bg-white/70" />
+            <div className="space-y-3">
+              <div className="h-10 w-3/4 animate-pulse rounded-[16px] bg-white/70" />
+              <div className="h-4 w-full animate-pulse rounded-full bg-white/70" />
+              <div className="h-4 w-5/6 animate-pulse rounded-full bg-white/70" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  className="h-7 w-20 animate-pulse rounded-full bg-white/70"
+                  key={`hero-tag-${index}`}
+                />
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  className="h-12 w-28 animate-pulse rounded-full bg-white/72"
+                  key={`hero-stat-${index}`}
+                />
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <div className="h-12 w-28 animate-pulse rounded-[14px] bg-white/72" />
+              <div className="h-12 w-12 animate-pulse rounded-[14px] bg-white/72" />
+            </div>
+          </div>
+        </div>
+
+        <div className="glass-panel rounded-[20px] p-5 md:p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-3">
+              <div className="h-4 w-16 animate-pulse rounded-full bg-white/70" />
+              <div className="h-8 w-64 animate-pulse rounded-[16px] bg-white/70" />
+            </div>
+            <div className="h-20 w-full animate-pulse rounded-[16px] bg-white/70 md:w-40" />
+          </div>
+          <div className="mt-5 grid gap-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                className="h-14 animate-pulse rounded-[16px] bg-white/70"
+                key={`ingredient-${index}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="glass-panel rounded-[20px] p-5 md:p-6">
+          <div className="h-4 w-16 animate-pulse rounded-full bg-white/70" />
+          <div className="mt-4 space-y-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                className="rounded-[16px] bg-white/70 px-4 py-4"
+                key={`step-${index}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 animate-pulse rounded-full bg-white/80" />
+                    <div className="h-7 w-20 animate-pulse rounded-full bg-white/80" />
+                  </div>
+                  <div className="h-4 w-12 animate-pulse rounded-full bg-white/80" />
+                </div>
+                <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-white/80" />
+                <div className="mt-2 h-4 w-5/6 animate-pulse rounded-full bg-white/80" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <aside className="space-y-4">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <div
+            className="glass-panel rounded-[20px] p-5"
+            key={`sidebar-${index}`}
+          >
+            <div className="h-4 w-24 animate-pulse rounded-full bg-white/70" />
+            <div className="mt-4 space-y-3">
+              {Array.from({ length: 4 }).map((__, rowIndex) => (
+                <div
+                  className="h-5 animate-pulse rounded-full bg-white/70"
+                  key={`sidebar-${index}-row-${rowIndex}`}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </aside>
+    </div>
   );
 }
 
@@ -788,6 +916,14 @@ function resolveCookingMethodColor(colorKey?: string | null) {
   }
 
   return COOKING_METHOD_COLORS[colorKey] ?? "var(--cook-etc)";
+}
+
+function resolveCookingMethodTint(colorKey?: string | null) {
+  if (!colorKey) {
+    return "rgba(170, 170, 170, 0.16)";
+  }
+
+  return COOKING_METHOD_TINTS[colorKey] ?? "rgba(170, 170, 170, 0.16)";
 }
 
 function ActionButton({
@@ -805,7 +941,7 @@ function ActionButton({
 }) {
   const className =
     tone === "brand"
-      ? "border-transparent bg-[color:rgba(255,108,60,0.12)] text-[var(--brand-deep)]"
+      ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.16)] text-[var(--foreground)]"
       : tone === "olive"
         ? "border-transparent bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
         : "border-[var(--line)] bg-white text-[var(--foreground)]";
@@ -820,5 +956,165 @@ function ActionButton({
     >
       {label}
     </button>
+  );
+}
+
+function IconActionButton({
+  ariaLabel,
+  icon,
+  onClick,
+}: {
+  ariaLabel: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-label={ariaLabel}
+      className="flex h-12 w-12 items-center justify-center rounded-[14px] border border-[var(--line)] bg-white/85 text-[var(--foreground)] shadow-[var(--shadow)]"
+      onClick={onClick}
+      type="button"
+    >
+      {icon}
+    </button>
+  );
+}
+
+function MetricActionButton({
+  ariaLabel,
+  ariaPressed,
+  count,
+  disabled = false,
+  icon,
+  label,
+  onClick,
+  tone,
+}: {
+  ariaLabel: string;
+  ariaPressed?: boolean;
+  count: string;
+  disabled?: boolean;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  tone: "brand" | "olive" | "neutral";
+}) {
+  const className =
+    tone === "brand"
+      ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.16)] text-[var(--foreground)]"
+      : tone === "olive"
+        ? "border-transparent bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
+        : "border-[var(--line)] bg-white text-[var(--foreground)]";
+
+  return (
+    <button
+      aria-label={ariaLabel}
+      aria-pressed={ariaPressed}
+      className={`flex min-h-11 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
+      <span aria-hidden="true" className="shrink-0">
+        {icon}
+      </span>
+      <span>{label}</span>
+      <span
+        aria-hidden={ariaLabel !== `좋아요 ${count}`}
+        className="rounded-full bg-white/72 px-2.5 py-1 text-xs font-bold text-[var(--foreground)]"
+      >
+          {count}
+      </span>
+    </button>
+  );
+}
+
+function HeartIcon({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      fill={filled ? "currentColor" : "none"}
+      height="18"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M12 20.2 4.9 13.4a4.8 4.8 0 0 1 6.8-6.8L12 7l.3-.4a4.8 4.8 0 0 1 6.8 6.8Z" />
+    </svg>
+  );
+}
+
+function BookmarkIcon({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      fill={filled ? "currentColor" : "none"}
+      height="18"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.7L6 20V5.5a1 1 0 0 1 1-1Z" />
+    </svg>
+  );
+}
+
+function PlannerIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M7 3.5v3M17 3.5v3M5.5 8.5h13M6.5 5.5h11a1 1 0 0 1 1 1v11a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-11a1 1 0 0 1 1-1Z" />
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M15.5 8.5 9 12l6.5 3.5M18.5 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM6 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12.5 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+    </svg>
+  );
+}
+
+function FeedbackToast({
+  message,
+  tone,
+}: {
+  message: string;
+  tone: FeedbackTone;
+}) {
+  const isError = tone === "error";
+
+  return (
+    <div className="pointer-events-none fixed inset-x-4 top-4 z-50 flex justify-center md:inset-x-auto md:right-6">
+      <div
+        aria-live={isError ? "assertive" : "polite"}
+        className={`max-w-sm rounded-[16px] border px-4 py-3 text-sm font-medium shadow-[0_18px_44px_rgba(34,24,14,0.14)] ${
+          isError
+            ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.96)] text-white"
+            : "border-[color:rgba(46,166,122,0.18)] bg-[color:rgba(250,255,252,0.96)] text-[var(--foreground)]"
+        }`}
+        role={isError ? "alert" : "status"}
+      >
+        {message}
+      </div>
+    </div>
   );
 }

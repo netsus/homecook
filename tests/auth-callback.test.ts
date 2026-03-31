@@ -16,7 +16,7 @@ describe("auth callback", () => {
   });
 
   it("sanitizes external redirect targets", async () => {
-    const { resolveNextPath } = await import("@/app/auth/callback/route");
+    const { resolveNextPath } = await import("@/lib/auth/callback");
 
     expect(resolveNextPath("https://evil.example")).toBe("/");
     expect(resolveNextPath("//evil.example")).toBe("/");

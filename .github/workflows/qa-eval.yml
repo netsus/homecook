@@ -1,0 +1,71 @@
+name: QA Eval
+
+on:
+  pull_request:
+    paths:
+      - "docs/engineering/qa-system.md"
+      - "docs/engineering/agent-workflow-overview.md"
+      - "scripts/qa-explore.mjs"
+      - "scripts/qa-eval.mjs"
+      - "scripts/qa-eval-suite.mjs"
+      - "scripts/lib/qa-system.mjs"
+      - "qa/**"
+      - "tests/qa-system.test.ts"
+      - ".github/workflows/qa-eval.yml"
+      - ".github/workflows/playwright.yml"
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - "feature/**"
+      - "fix/**"
+      - "chore/**"
+      - "docs/**"
+      - "refactor/**"
+      - "test/**"
+    paths:
+      - "docs/engineering/qa-system.md"
+      - "docs/engineering/agent-workflow-overview.md"
+      - "scripts/qa-explore.mjs"
+      - "scripts/qa-eval.mjs"
+      - "scripts/qa-eval-suite.mjs"
+      - "scripts/lib/qa-system.mjs"
+      - "qa/**"
+      - "tests/qa-system.test.ts"
+      - ".github/workflows/qa-eval.yml"
+      - ".github/workflows/playwright.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qa-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Layer 3 eval suite
+        run: pnpm qa:eval:suite
+
+      - name: Upload Layer 3 eval artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-eval-artifacts
+          path: .artifacts/qa/evals
