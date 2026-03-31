@@ -134,19 +134,19 @@ function buildPrompt({ slice, stage, workItemId, dispatch, stageResultPath }) {
           result: "done",
           summary_markdown: "짧은 요약",
           commit: {
-            subject: "docs: or feat: title",
+            subject: "docs: 제목 또는 feat: 제목",
             body_markdown: "선택 사항",
           },
           pr: {
-            title: "docs: or feat: title",
-            body_markdown: "## Summary\n- bullet",
+            title: "docs: 제목 또는 feat: 제목",
+            body_markdown: "## Summary\n- 변경 요약",
           },
           checks_run: ["pnpm test:all"],
           next_route: "open_pr",
         }
       : {
           decision: "approve",
-          body_markdown: "## Review\n- approved",
+          body_markdown: "## Review\n- 승인",
           route_back_stage: null,
           approved_head_sha: "abc123",
         };
@@ -205,6 +205,7 @@ function buildPrompt({ slice, stage, workItemId, dispatch, stageResultPath }) {
     "- Keep branch, verification, and review behavior aligned with slice workflow and workflow-v2 rules.",
     "- Limit changes to files directly required by the locked slice scope. Avoid unrelated refactors, opportunistic cleanup, or out-of-scope file edits.",
     "- Your responsibility is scoped code/doc updates, local verification, and valid stage-result writing. Do not create, update, ready, review, or merge GitHub pull requests yourself; supervisor handles GitHub automation.",
+    "- PR 제목/본문, summary_markdown, review body_markdown은 특별한 이유가 없으면 한국어로 작성하세요.",
     "",
     "## Stage Result Output",
     `- Write a JSON file to \`${stageResultPath}\` before finishing the task.`,

@@ -256,6 +256,8 @@ describe("OMO-lite stage runner", () => {
     expect(prompt).toContain("valid stage result");
     expect(prompt).not.toContain("Draft PR");
     expect(prompt).not.toContain("green CI");
+    expect(prompt).toContain("PR 제목/본문, summary_markdown, review body_markdown은 특별한 이유가 없으면 한국어로 작성하세요.");
+    expect(prompt).toContain("\"body_markdown\": \"## Summary\\n- 변경 요약\"");
     expect(prompt).toContain(
       "Do not create, update, ready, review, or merge GitHub pull requests yourself",
     );

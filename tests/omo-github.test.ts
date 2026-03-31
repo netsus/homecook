@@ -416,6 +416,8 @@ describe("OMO GitHub automation client", () => {
     expect(argsLog).toContain("## Docs Impact");
     expect(argsLog).toContain("## Breaking Changes");
     expect(argsLog).toContain("## Design / Accessibility");
+    expect(argsLog).toContain("Supervisor 검증 명령과 필수 CI 체크를 기준으로 확인");
+    expect(argsLog).toContain("사용자 노출 변경 없음");
   });
 
   it("fails closed when gh merge returns success but the pull request is still open", () => {

@@ -81,12 +81,16 @@ code stage 결과 schema는 아래 필드를 포함한다.
 - `checks_run`
 - `next_route`
 
+사람이 읽는 필드(`summary_markdown`, `pr.title`, `pr.body_markdown`)는 기본적으로 한국어로 작성한다.
+
 review stage 결과 schema는 아래 필드를 포함한다.
 
 - `decision`
 - `body_markdown`
 - `route_back_stage`
 - `approved_head_sha`
+
+review stage의 `body_markdown`도 기본적으로 한국어로 작성한다.
 
 ## Dispatch Matrix
 
