@@ -206,6 +206,11 @@ test.describe("Slice 04 recipe save flow", () => {
     await mockRecipeSaveRoutes(page);
 
     await page.goto(RECIPE_PATH);
+    const saveMetric = page.locator("dl > div").filter({
+      has: page.locator("dt", { hasText: "저장" }),
+    });
+    await expect(saveMetric.getByText("89")).toBeVisible();
+
     await page.getByRole("button", { name: "저장" }).click();
 
     const modal = page.getByRole("dialog");
@@ -220,6 +225,7 @@ test.describe("Slice 04 recipe save flow", () => {
     await expect(modal).not.toBeVisible();
     await expect(page.getByRole("button", { name: "저장됨" })).toBeVisible();
     await expect(page.getByText("레시피를 저장했어요.")).toBeVisible();
+    await expect(saveMetric.getByText("90")).toBeVisible();
   });
 
   test("logged-in user can quick-create a custom book and save", async ({ page }) => {
@@ -227,6 +233,11 @@ test.describe("Slice 04 recipe save flow", () => {
     await mockRecipeSaveRoutes(page);
 
     await page.goto(RECIPE_PATH);
+    const saveMetric = page.locator("dl > div").filter({
+      has: page.locator("dt", { hasText: "저장" }),
+    });
+    await expect(saveMetric.getByText("89")).toBeVisible();
+
     await page.getByRole("button", { name: "저장" }).click();
 
     const modal = page.getByRole("dialog");
@@ -241,6 +252,7 @@ test.describe("Slice 04 recipe save flow", () => {
 
     await expect(modal).not.toBeVisible();
     await expect(page.getByRole("button", { name: "저장됨" })).toBeVisible();
+    await expect(saveMetric.getByText("90")).toBeVisible();
   });
 
   test("guest user sees login gate and save modal reopens after return-to-action", async ({
