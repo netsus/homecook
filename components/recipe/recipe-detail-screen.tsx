@@ -6,22 +6,35 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { LoginGateModal } from "@/components/auth/login-gate-modal";
+import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
   clearPendingAction,
   readPendingAction,
 } from "@/lib/auth/pending-action";
+import {
+  createCustomRecipeBook,
+  fetchSaveableRecipeBooks,
+  saveRecipeToBook,
+} from "@/lib/api/recipe-save";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { formatCount, formatScaledIngredient } from "@/lib/recipe";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useAuthGateStore } from "@/stores/ui-store";
-import type { RecipeDetail, RecipeLikeData, RecipeUserStatus } from "@/types/recipe";
+import type {
+  RecipeBookSummary,
+  RecipeDetail,
+  RecipeLikeData,
+  RecipeSaveData,
+  RecipeUserStatus,
+} from "@/types/recipe";
 
 type DetailState = "loading" | "ready" | "error";
 type LikeRequestState = "idle" | "pending";
 type FeedbackTone = "error" | "status";
+type SaveModalState = "idle" | "loading" | "ready" | "error";
 
 interface RecipeDetailScreenProps {
   recipeId: string;
@@ -59,6 +72,15 @@ export function RecipeDetailScreen({
     tone: FeedbackTone;
   } | null>(null);
   const [likeRequestState, setLikeRequestState] = useState<LikeRequestState>("idle");
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [saveModalState, setSaveModalState] = useState<SaveModalState>("idle");
+  const [saveBooks, setSaveBooks] = useState<RecipeBookSummary[]>([]);
+  const [selectedSaveBookId, setSelectedSaveBookId] = useState<string | null>(null);
+  const [newSaveBookName, setNewSaveBookName] = useState("");
+  const [saveLoadError, setSaveLoadError] = useState<string | null>(null);
+  const [saveSubmitError, setSaveSubmitError] = useState<string | null>(null);
+  const [isCreatingBook, setIsCreatingBook] = useState(false);
+  const [isSavingRecipe, setIsSavingRecipe] = useState(false);
   const openAuthGate = useAuthGateStore((state) => state.open);
 
   const loadRecipe = useCallback(async () => {
@@ -167,6 +189,184 @@ export function RecipeDetailScreen({
     });
   }, []);
 
+  const updateRecipeSaveState = useCallback((result: RecipeSaveData) => {
+    setRecipe((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const previousUserStatus = current.user_status;
+      const previousSavedBookIds = previousUserStatus?.saved_book_ids ?? [];
+      const hasBook = previousSavedBookIds.includes(result.book_id);
+
+      const nextUserStatus: RecipeUserStatus = {
+        is_liked: previousUserStatus?.is_liked ?? false,
+        is_saved: true,
+        saved_book_ids: hasBook
+          ? previousSavedBookIds
+          : [...previousSavedBookIds, result.book_id],
+      };
+
+      return {
+        ...current,
+        save_count: result.save_count,
+        user_status: nextUserStatus,
+      };
+    });
+  }, []);
+
+  const closeSaveModal = useCallback(() => {
+    if (isSavingRecipe) {
+      return;
+    }
+
+    setIsSaveModalOpen(false);
+    setSaveSubmitError(null);
+    setSaveLoadError(null);
+    setSaveModalState("idle");
+    setNewSaveBookName("");
+  }, [isSavingRecipe]);
+
+  const loadSaveBooks = useCallback(async () => {
+    setSaveModalState("loading");
+    setSaveLoadError(null);
+    setSaveSubmitError(null);
+
+    try {
+      const books = await fetchSaveableRecipeBooks();
+      setSaveBooks(books);
+      setSelectedSaveBookId((currentSelectedBookId) => {
+        if (books.length === 0) {
+          return null;
+        }
+
+        if (currentSelectedBookId && books.some((book) => book.id === currentSelectedBookId)) {
+          return currentSelectedBookId;
+        }
+
+        return books[0]?.id ?? null;
+      });
+      setSaveModalState("ready");
+    } catch (error) {
+      setSaveLoadError(
+        error instanceof Error
+          ? error.message
+          : "레시피북 목록을 불러오지 못했어요.",
+      );
+      setSaveModalState("error");
+    }
+  }, []);
+
+  const openSaveModal = useCallback(
+    async ({ source }: { source: "manual" | "return-to-action" }) => {
+      if (!isAuthenticated) {
+        openAuthGate({ recipeId, type: "save" });
+        return;
+      }
+
+      setIsSaveModalOpen(true);
+      setSaveSubmitError(null);
+
+      if (source === "manual") {
+        setFeedback(null);
+      }
+
+      await loadSaveBooks();
+    },
+    [isAuthenticated, loadSaveBooks, openAuthGate, recipeId],
+  );
+
+  const handleCreateSaveBook = useCallback(async () => {
+    const normalizedName = newSaveBookName.trim();
+
+    if (!normalizedName) {
+      setSaveSubmitError("레시피북 이름을 입력해 주세요.");
+      return;
+    }
+
+    if (normalizedName.length > 50) {
+      setSaveSubmitError("레시피북 이름은 50자를 넘길 수 없어요.");
+      return;
+    }
+
+    setIsCreatingBook(true);
+    setSaveSubmitError(null);
+
+    try {
+      const createdBook = await createCustomRecipeBook(normalizedName);
+      setSaveBooks((currentBooks) => {
+        const hasSameBook = currentBooks.some((book) => book.id === createdBook.id);
+
+        if (hasSameBook) {
+          return currentBooks;
+        }
+
+        const nextBooks = [
+          ...currentBooks,
+          {
+            id: createdBook.id,
+            name: createdBook.name,
+            book_type: createdBook.book_type,
+            recipe_count: createdBook.recipe_count,
+            sort_order: createdBook.sort_order,
+          },
+        ];
+
+        return nextBooks.sort((left, right) => {
+          if (left.sort_order === right.sort_order) {
+            return left.id.localeCompare(right.id);
+          }
+
+          return left.sort_order - right.sort_order;
+        });
+      });
+      setSelectedSaveBookId(createdBook.id);
+      setNewSaveBookName("");
+      setSaveModalState("ready");
+      setSaveSubmitError(null);
+    } catch (error) {
+      setSaveSubmitError(
+        error instanceof Error ? error.message : "레시피북을 만들지 못했어요.",
+      );
+    } finally {
+      setIsCreatingBook(false);
+    }
+  }, [newSaveBookName]);
+
+  const handleSaveRecipe = useCallback(async () => {
+    if (!recipe || !selectedSaveBookId || isSavingRecipe) {
+      return;
+    }
+
+    setIsSavingRecipe(true);
+    setSaveSubmitError(null);
+
+    try {
+      const result = await saveRecipeToBook(recipe.id, selectedSaveBookId);
+      updateRecipeSaveState(result);
+      setIsSaveModalOpen(false);
+      setSaveModalState("idle");
+      setFeedback({
+        message: "레시피를 저장했어요.",
+        tone: "status",
+      });
+    } catch (error) {
+      setSaveSubmitError(
+        error instanceof Error ? error.message : "레시피를 저장하지 못했어요.",
+      );
+    } finally {
+      setIsSavingRecipe(false);
+    }
+  }, [isSavingRecipe, recipe, selectedSaveBookId, updateRecipeSaveState]);
+
+  const isSelectedBookReadOnly = useMemo(() => {
+    if (!selectedSaveBookId || !recipe?.user_status) {
+      return false;
+    }
+
+    return recipe.user_status.saved_book_ids.includes(selectedSaveBookId);
+  }, [recipe?.user_status, selectedSaveBookId]);
+
   const handleLikeToggle = useCallback(
     async ({ source }: { source: "manual" | "return-to-action" }) => {
       if (!isAuthenticated) {
@@ -226,6 +426,11 @@ export function RecipeDetailScreen({
       return;
     }
 
+    if (type === "save") {
+      void openSaveModal({ source: "manual" });
+      return;
+    }
+
     if (!isAuthenticated) {
       openAuthGate({ recipeId, type });
       return;
@@ -255,8 +460,16 @@ export function RecipeDetailScreen({
       return;
     }
 
+    if (pendingAction.type === "save") {
+      setFeedback({
+        message: "로그인 완료. 저장할 레시피북을 선택해 주세요.",
+        tone: "status",
+      });
+      void openSaveModal({ source: "return-to-action" });
+      return;
+    }
+
     const labelMap = {
-      save: "저장",
       planner: "플래너 추가",
     } as const;
 
@@ -264,7 +477,7 @@ export function RecipeDetailScreen({
       message: `로그인 완료. ${labelMap[pendingAction.type]} 액션 위치로 돌아왔어요.`,
       tone: "status",
     });
-  }, [handleLikeToggle, isAuthenticated, recipe, recipeId]);
+  }, [handleLikeToggle, isAuthenticated, openSaveModal, recipe, recipeId]);
 
   const handleShare = async () => {
     if (!recipe) {
@@ -548,10 +761,10 @@ export function RecipeDetailScreen({
               Slice Note
             </p>
             <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
-              저장, 플래너 추가는 로그인 게이트까지 연결되고 실제 쓰기 완료는 다음 슬라이스에서 이어집니다. 좋아요는 이번 슬라이스에서 토글까지 연결됩니다.
+              저장은 레시피북 선택/생성 모달까지 연결됩니다. 플래너 추가는 로그인 게이트 복귀 패턴만 먼저 고정하고 다음 슬라이스에서 실제 등록을 닫습니다.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {["좋아요 토글", "보호 액션 게이트", "return-to-action"].map(
+              {["좋아요 토글", "저장 모달", "return-to-action"].map(
                 (item) => (
                   <span
                     key={item}
@@ -565,6 +778,30 @@ export function RecipeDetailScreen({
           </div>
         </aside>
       </div>
+      <SaveModal
+        books={saveBooks}
+        isCreatingBook={isCreatingBook}
+        isOpen={isSaveModalOpen}
+        isSavingRecipe={isSavingRecipe}
+        isSelectedBookReadOnly={isSelectedBookReadOnly}
+        loadErrorMessage={saveLoadError}
+        newBookName={newSaveBookName}
+        onClose={closeSaveModal}
+        onCreateBook={() => {
+          void handleCreateSaveBook();
+        }}
+        onNewBookNameChange={setNewSaveBookName}
+        onRetry={() => {
+          void loadSaveBooks();
+        }}
+        onSaveRecipe={() => {
+          void handleSaveRecipe();
+        }}
+        onSelectBook={setSelectedSaveBookId}
+        saveErrorMessage={saveSubmitError}
+        selectedBookId={selectedSaveBookId}
+        viewState={saveModalState === "idle" ? "loading" : saveModalState}
+      />
       {feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
       <LoginGateModal />
     </>

@@ -36,7 +36,7 @@
 - 재료 목록 페이지네이션 — `GET /ingredients`는 전체 로드 (api문서 기준, cursor/limit 없음)
 - 실시간 결과 수 미리보기 (`count_only`, `[레시피 N개 보기]`) — 공식 API 문서에 없음
 - 팬트리 보유 재료와 필터 연동 (보유 표시 등) — Slice 13
-- `RECIPE_SEARCH_PICKER`의 재료 필터 — Slice 08
+- `RECIPE_SEARCH_PICKER`의 재료 필터 — Slice 08a
 - 필터 선택 상태 영구 저장 (로컬스토리지 등) — 세션 내 Zustand 상태만 유지
 - 공유 가능한 deep-link / 세션 외 URL 유지 — 이번 슬라이스 범위 제외
 

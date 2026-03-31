@@ -1,10 +1,19 @@
-# Workpack Roadmap
+# Workpack Roadmap v2
 
 ## Purpose
 
 - 앞으로의 구현은 `작은 세로 슬라이스` 단위로 진행한다.
 - 각 슬라이스는 공식 문서 기준의 사용자 가치 하나를 닫아야 한다.
 - 같은 슬라이스에서도 개발 브랜치는 `백엔드`와 `프론트엔드`로 분리한다.
+
+## Revision Notes
+
+- `v2` (2026-03-27)
+  - slice workflow / OMO pilot 이후 기준으로 planned slice를 다시 검토해 기능 누락, 과대 슬라이스, 선후 의존성을 재정렬했다.
+  - `05/06` 순서를 실제 UX 의존성에 맞게 교정했다. 플래너 shell/column이 먼저 잠기고, 그 다음 상세에서 플래너 추가가 온다.
+  - `08`, `15`, `17`의 "착수 시점 분할" 메모를 제거하고 stable slice ID로 미리 분할했다.
+  - 빠져 있던 `SETTINGS + logout + account actions`를 독립 slice로 추가했다.
+  - `MENU_ADD`의 레시피북/팬트리 경로, `RECIPEBOOK_DETAIL` 제거 경로, `manual/youtube`의 조리방법/플래너 연계를 roadmap goal에 명시했다.
 
 ## Status 정의
 
@@ -31,6 +40,8 @@ Slice Order 표의 Status 값은 위 규칙에 따라 PR 오픈/merge 시점에 
 - **1단계(Claude)**: `docs/workpacks/<slice>/README.md`와 `acceptance.md`를 작성하고 main에 merge한다. 단계별 절차는 `docs/engineering/slice-workflow.md` 참조.
 - **2단계 시작 조건**: 1단계 문서 PR이 main에 **merge된 후**에만 백엔드 구현(2단계)을 시작한다.
 - Slice Order에서 선행 슬라이스 Status가 전부 `merged`인지 확인한 뒤 착수한다.
+- `workflow-v2` / `OMO` 대상 product slice는 Stage 1 전에 **slice ID / goal / 분기 경로를 고정**한다.
+- `planned` 상태 slice에 `착수 시점에 분할 여부 결정` 메모를 남기지 않는다. 분할이 필요하면 roadmap PR에서 `08a/08b`처럼 먼저 쪼갠다.
 - 예외: `docs/engineering/` 아래의 repo-engineering automation, workflow tooling, agent 운영 규칙 변경은 제품 workpack roadmap 바깥이다.
 - 이런 engineering 작업은 `docs/workpacks/<slice>/README.md` 대신 관련 `docs/engineering/*.md`를 source of truth로 사용한다.
 - engineering 작업에서도 관련 governing doc과 검증 문서를 먼저 갱신한 뒤 구현/자동화를 진행한다.
@@ -51,29 +62,41 @@ Slice Order 표의 Status 값은 위 규칙에 따라 PR 오픈/merge 시점에 
 | `01-discovery-detail-auth`     | bootstrap | 레시피 탐색, 상세 조회, 로그인 게이트, 소셜 로그인 복귀                                                          |
 | `02-discovery-filter`          | merged      | HOME 재료 필터 모달과 필터 조회 계약                                                                           |
 | `03-recipe-like`               | merged      | RECIPE_DETAIL 좋아요 토글과 로그인 복귀                                                                        |
-| `04-recipe-save`               | planned   | 저장 모달, 저장 대상 책 선택, `saved/custom` 제한                                                                |
-| `05-recipe-to-planner`         | planned   | 상세에서 플래너 추가, 날짜/끼니/인분 입력, Meal 생성                                                             |
-| `06-planner-week-core`         | planned   | 위클리 플래너 조회, 컬럼 CRUD, 상단 CTA와 상태 뱃지                                                              |
+| `04-recipe-save`               | merged      | 저장 모달, 저장 대상 책 조회/생성, `saved/custom` 제한                                                           |
+| `05-planner-week-core`         | in-progress      | 위클리 플래너 조회, 컬럼 CRUD, 상단 CTA와 상태 뱃지                                                              |
+| `06-recipe-to-planner`         | planned   | 상세에서 날짜/끼니/인분 선택 후 Meal 생성                                                                        |
 | `07-meal-manage`               | planned   | `MEAL_SCREEN` 조회/수정/삭제와 409 예외 상태                                                                     |
-| `08-meal-add-picker`           | planned   | `MENU_ADD`, `RECIPE_SEARCH_PICKER`, 일반 식사 추가 _(착수 시점에 분할 여부 결정)_                                |
+| `08a-meal-add-search-core`     | planned   | `MENU_ADD` shell, `RECIPE_SEARCH_PICKER`, 검색 기반 일반 식사 추가                                               |
+| `08b-meal-add-books-pantry`    | planned   | 레시피북에서 추가, 팬트리 기반 추천에서 추가                                                                     |
 | `09-shopping-preview-create`   | planned   | 장보기 preview, 대상 검증, 리스트 생성, 상세 이동                                                                |
 | `10a-shopping-detail-interact` | planned   | 장보기 상세 조회, 체크 토글, 제외/되살리기 (`exclude→uncheck` 규칙 포함)                                         |
 | `10b-shopping-share-text`      | planned   | 장보기 공유 텍스트 생성 (`is_pantry_excluded=false` 항목만 포함)                                                 |
-| `11-shopping-reorder-readonly` | planned   | 장보기 순서 변경, 완료 후 read-only 재열람                                                                       |
-| `12a-shopping-complete`        | planned   | 장보기 완료 core, `shopping_done` 전이, `is_completed=true`, 멱등성                                              |
+| `11-shopping-reorder`          | planned   | 장보기 순서 변경과 미완료 리스트 reorder persistence                                                             |
+| `12a-shopping-complete`        | planned   | 장보기 완료 core, `shopping_done` 전이, `is_completed=true`, 완료 직후 read-only lock, 멱등성                   |
 | `12b-shopping-pantry-reflect`  | planned   | 팬트리 반영 선택 팝업, `null/[]/선택값` 3-way 처리, 4단계 서버 검증                                              |
 | `13-pantry-core`               | planned   | 팬트리 조회, 직접 추가, 묶음 추가, 삭제                                                                          |
 | `14-cook-session-start`        | planned   | `COOK_READY_LIST`, 요리 세션 시작/취소                                                                           |
-| `15-cook-complete`             | planned   | `COOK_MODE`, pantry 소진, `cook_done` 전이 _(14 착수 시점에 15a/15b로 분할 예정 — 플래너 경유 / 독립 요리 기준)_ |
+| `15a-cook-planner-complete`    | planned   | 플래너 경유 `COOK_MODE`, pantry 소진, `cook_done` 전이                                                           |
+| `15b-cook-standalone-complete` | planned   | 상세 직행 `COOK_MODE`, standalone complete, pantry 소진, leftover 저장                                            |
 | `16-leftovers`                 | planned   | 남은요리 저장, 재등록, 다먹은 목록                                                                               |
-| `17-mypage-books-history`      | planned   | 마이페이지, 레시피북, 저장 해제, 장보기 기록 조회 _(착수 시점에 분할 여부 결정)_                                 |
-| `18-manual-recipe-create`      | planned   | 직접 레시피 등록과 상세/플래너 연계                                                                              |
-| `19-youtube-import`            | planned   | 유튜브 검증, 추출, 등록, 신규 조리방법 반영                                                                      |
+| `17a-mypage-overview-history`  | planned   | `MYPAGE` shell, 내 정보, 레시피북 목록/생성/수정/삭제, 장보기 기록 목록                                          |
+| `17b-recipebook-detail-remove` | planned   | `RECIPEBOOK_DETAIL` 조회, saved/custom 제거, liked 책에서 좋아요 해제                                            |
+| `17c-settings-account`         | planned   | `SETTINGS`, 로그아웃, 화면 꺼짐 방지, 닉네임 변경, 회원 탈퇴                                                     |
+| `18-manual-recipe-create`      | planned   | 직접 레시피 등록, 조리방법 선택, 상세/플래너 연계, `my_added` 반영                                               |
+| `19-youtube-import`            | planned   | 유튜브 검증/추출/등록, 신규 조리방법 반영, 플래너 연계, `my_added` 반영                                          |
 
 ## Slice Notes
 
 - `02`부터는 한 슬라이스를 더 작은 기능 단위 하나로 제한한다.
+- `04`는 공식 저장 플로우를 닫기 위해 `POST /recipes/{id}/save`뿐 아니라 저장 대상 책 조회와 **커스텀 책 quick-create**까지 포함한다.
+- `05`는 planner shell과 column contract를 먼저 닫고, `06`에서 상세 화면의 planner add flow를 그 계약 위에 얹는다.
+- `08a`는 `MENU_ADD`의 공통 shell + 검색 path만 닫는다. leftovers path는 `16`, manual path는 `18`, youtube path는 `19`가 담당한다.
+- `08b`는 `GET /recipe-books/{id}/recipes`와 `GET /recipes/pantry-match`를 사용한 식사 추가 path를 닫는다.
 - 장보기 슬라이스에서는 `exclude -> uncheck`, read-only, `add_to_pantry_item_ids`, `pantry_added` 규칙을 항상 테스트로 고정한다.
+- `11`은 reorder만 담당한다. 완료 후 read-only UX는 `12a`와 `17a`/`SHOPPING_DETAIL` 재열람에서 닫는다.
 - 요리 슬라이스에서는 플래너 경유 요리와 독립 요리의 상태 전이를 절대 섞지 않는다.
-- `15`는 `14` 착수 시점에 `15a-cook-planner-complete`(세션 기반, `cook_done` 전이)와 `15b-cook-standalone-complete`(레시피 기반, 상태 전이 없음)로 분할한다.
-- `08`, `17`은 착수 시점에 화면 정의와 API 범위를 재확인한 뒤 분할 여부를 결정한다.
+- `15a`/`15b`는 shared `COOK_MODE`를 쓰더라도 workpack과 acceptance를 분리한다.
+- `17a`/`17b`/`17c`는 각각 overview/list, detail/remove, account/settings를 닫는 별도 slice다.
+- `SETTINGS`와 `POST /auth/logout`은 기존 roadmap 누락 항목이었고 `17c`에서 닫는다.
+- `GET /cooking-methods`는 `18`에서 manual recipe 작성용으로 먼저 소비하고, `19`가 youtube import에서 재사용한다.
+- `SHOPPING_DETAIL` 상단의 `[쿠팡/컬리(검색 링크)]`는 공식 문서상 선택 구현이므로 core roadmap에서는 잠그지 않고 필요 시 후속 low-risk slice로 분리한다.

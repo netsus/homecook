@@ -111,7 +111,12 @@ function determineNextStage(runtimeState, now) {
  * @property {"available"|"constrained"|"unavailable"} [claudeBudgetState]
  * @property {"artifact-only"|"execute"} [mode]
  * @property {string} [opencodeBin]
+ * @property {"opencode"|"claude-cli"} [claudeProvider]
+ * @property {string} [claudeBin]
+ * @property {string} [claudeModel]
+ * @property {"low"|"medium"|"high"} [claudeEffort]
  * @property {Record<string, string>} [environment]
+ * @property {string} [homeDir]
  */
 
 /**
@@ -121,7 +126,12 @@ function determineNextStage(runtimeState, now) {
  * @property {"available"|"constrained"|"unavailable"} [claudeBudgetState]
  * @property {"artifact-only"|"execute"} [mode]
  * @property {string} [opencodeBin]
+ * @property {"opencode"|"claude-cli"} [claudeProvider]
+ * @property {string} [claudeBin]
+ * @property {string} [claudeModel]
+ * @property {"low"|"medium"|"high"} [claudeEffort]
  * @property {Record<string, string>} [environment]
+ * @property {string} [homeDir]
  */
 
 /**

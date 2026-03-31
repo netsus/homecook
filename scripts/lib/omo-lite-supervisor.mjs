@@ -88,10 +88,11 @@ function productStageSpec(stage, slice) {
       deliverables: [
         `docs/workpacks/${slice}/README.md`,
         `docs/workpacks/${slice}/acceptance.md`,
-        "docs PR",
+        "valid stage result",
       ],
       verifyCommands: [],
-      successCondition: "Stage 1 docs are merged on main and slice status moves to docs.",
+      successCondition:
+        "Stage 1 docs are written, local checks are complete, and a valid stage result is ready for supervisor handoff.",
       escalationIfBlocked: "Escalate to human if the workpack conflicts with official docs or dependencies are not merged.",
     },
     2: {
@@ -110,12 +111,14 @@ function productStageSpec(stage, slice) {
       ],
       deliverables: [
         `branch feature/be-${slice}`,
+        "docs/workpacks/README.md slice status docs -> in-progress",
         "contract-first tests",
         "backend implementation",
-        "Draft PR",
+        "valid stage result",
       ],
       verifyCommands: ["pnpm install --frozen-lockfile", "pnpm test:all"],
-      successCondition: "Backend Draft PR is open, CI is green, and the PR is ready for review.",
+      successCondition:
+        "Backend implementation and required local verification are complete, and a valid stage result is ready for supervisor handoff.",
       escalationIfBlocked: "Escalate to human if official docs conflict or contract evolution approval is required.",
     },
     3: {
@@ -152,10 +155,12 @@ function productStageSpec(stage, slice) {
         `branch feature/fe-${slice}`,
         "frontend tests",
         "frontend implementation",
-        "Draft PR",
+        `docs/workpacks/${slice}/README.md design status temporary -> pending-review`,
+        "valid stage result",
       ],
       verifyCommands: ["pnpm install --frozen-lockfile", "pnpm test:all"],
-      successCondition: "Frontend Draft PR is open, CI is green, and the PR is ready for design/code review.",
+      successCondition:
+        "Frontend implementation and required local verification are complete, and a valid stage result is ready for supervisor handoff.",
       escalationIfBlocked: "Escalate to human if backend contract and UI scope are no longer aligned.",
     },
     5: {
@@ -169,7 +174,11 @@ function productStageSpec(stage, slice) {
         "frontend PR diff",
         "docs/design/design-tokens.md",
       ],
-      deliverables: ["design review summary", "requested changes or confirmed status"],
+      deliverables: [
+        "design review summary",
+        `docs/workpacks/${slice}/README.md design status confirmed update when approved`,
+        "requested changes or confirmed status",
+      ],
       verifyCommands: [],
       successCondition: "Design review feedback is recorded and the PR can proceed or route fixes back to Codex.",
       escalationIfBlocked: "Escalate to human if design intent conflicts with the workpack or official screen definitions.",
@@ -186,10 +195,16 @@ function productStageSpec(stage, slice) {
         "frontend PR diff",
         "CI context",
       ],
-      deliverables: ["frontend review summary", "requested changes or approval"],
+      deliverables: [
+        "frontend review summary",
+        "requested changes or approval",
+        "manual actual behavior verification + merge handoff",
+      ],
       verifyCommands: [],
-      successCondition: "Frontend PR receives final review feedback or approval and can proceed to merge.",
-      escalationIfBlocked: "Escalate to Claude or human if final review cannot run or if unresolved risks remain.",
+      successCondition:
+        "Frontend PR receives final review feedback or approval and can proceed to manual actual-behavior verification and merge handoff.",
+      escalationIfBlocked:
+        "Escalate to Claude or human if final review cannot run, formal GitHub approval is unavailable, or unresolved risks remain.",
     },
   };
 
@@ -200,6 +215,24 @@ function buildGoal(stage, slice) {
   return `슬라이스 ${slice} ${stage}단계 진행`;
 }
 
+/**
+ * @param {{
+ *   slice: string,
+ *   stage: number|string,
+ *   claudeBudgetState?: "available"|"constrained"|"unavailable",
+ *   sessionId?: string|null,
+ *   retryAt?: string|null,
+ *   attemptCount?: number,
+ *   reviewContext?: {
+ *     decision?: string|null,
+ *     body_markdown?: string|null,
+ *     pr_url?: string|null,
+ *     updated_at?: string|null,
+ *   } | null,
+ *   forceHumanEscalation?: boolean,
+ *   humanEscalationReason?: string,
+ * }} args
+ */
 export function buildStageDispatch({
   slice,
   stage,
@@ -207,7 +240,9 @@ export function buildStageDispatch({
   sessionId = null,
   retryAt = null,
   attemptCount = 0,
+  reviewContext = null,
   forceHumanEscalation = false,
+  humanEscalationReason = "session_unavailable",
 }) {
   const normalizedSlice = ensureNonEmptyString(slice, "slice");
   const normalizedStage = ensureStage(stage);
@@ -228,6 +263,28 @@ export function buildStageDispatch({
     typeof retryAt === "string" && retryAt.trim().length > 0 ? retryAt.trim() : null;
   const normalizedAttemptCount =
     Number.isInteger(attemptCount) && attemptCount >= 0 ? attemptCount : 0;
+  const normalizedReviewContext =
+    reviewContext && typeof reviewContext === "object"
+      ? {
+          decision:
+            typeof reviewContext.decision === "string" && reviewContext.decision.trim().length > 0
+              ? reviewContext.decision.trim()
+              : null,
+          body_markdown:
+            typeof reviewContext.body_markdown === "string" &&
+            reviewContext.body_markdown.trim().length > 0
+              ? reviewContext.body_markdown.trim()
+              : null,
+          pr_url:
+            typeof reviewContext.pr_url === "string" && reviewContext.pr_url.trim().length > 0
+              ? reviewContext.pr_url.trim()
+              : null,
+          updated_at:
+            typeof reviewContext.updated_at === "string" && reviewContext.updated_at.trim().length > 0
+              ? reviewContext.updated_at.trim()
+              : null,
+        }
+      : null;
   const sessionRole = resolveStageSessionRole(normalizedStage);
   const resumeMode = normalizedRetryAt
     ? "scheduled_retry"
@@ -235,11 +292,21 @@ export function buildStageDispatch({
       ? "continue"
       : "fresh";
 
+  const reviewFeedbackRead =
+    normalizedReviewContext?.body_markdown && [2, 4].includes(normalizedStage)
+      ? [
+          normalizedStage === 2
+            ? "previous backend review feedback (runtime.last_review.backend)"
+            : "previous frontend review feedback (runtime.last_review.frontend)",
+          normalizedReviewContext.pr_url ? `active PR context: ${normalizedReviewContext.pr_url}` : null,
+        ].filter(Boolean)
+      : [];
+
   const dispatch = {
     stage: normalizedStage,
     actor: spec.actor,
     goal: buildGoal(normalizedStage, normalizedSlice),
-    requiredReads: spec.requiredReads,
+    requiredReads: [...spec.requiredReads, ...reviewFeedbackRead],
     deliverables: spec.deliverables,
     verifyCommands: spec.verifyCommands,
     statusPatch: {
@@ -263,6 +330,7 @@ export function buildStageDispatch({
       retryAt: normalizedRetryAt,
       attemptCount: normalizedAttemptCount,
     },
+    reviewContext: normalizedReviewContext,
     successCondition: spec.successCondition,
     escalationIfBlocked: spec.escalationIfBlocked,
     claudeBudgetState: normalizedBudgetState,
@@ -282,13 +350,13 @@ export function buildStageDispatch({
         blocked_stage: normalizedStage,
         retry: {
           at: null,
-          reason: "session_unavailable",
+          reason: humanEscalationReason,
           attempt_count: normalizedAttemptCount,
         },
       },
       retryDecision: {
         action: "escalate",
-        reason: "session_unavailable",
+        reason: humanEscalationReason,
         retryAt: null,
         attemptCount: normalizedAttemptCount,
       },

@@ -8,7 +8,7 @@
 
 ## Purpose
 
-generic OMO session-orchestrator는 project-specific workflow 규칙과 OpenCode CLI 실행을 분리하는 reusable core다.
+generic OMO session-orchestrator는 project-specific workflow 규칙과 provider-specific CLI 실행을 분리하는 reusable core다.
 
 역할:
 
@@ -61,10 +61,13 @@ Homecook 저장소에서는 repo script alias를 함께 둔다.
 
 1. 어떤 역할이 처음 필요한 stage에서만 새 세션을 만든다.
 2. 이후 같은 역할의 stage는 항상 저장된 session ID로 `continue`한다.
-3. 기본 재개 방식은 `opencode run --session <id>`다.
-4. `--fork`는 기본 경로가 아니라 명시적 operator recovery에서만 사용한다.
-5. 저장된 session ID가 사라졌거나 재개가 불가능하면 조용히 새 세션을 만들지 않는다.
-6. session loss는 `blocked + human_escalation` 조건이다.
+3. 기본 재개 방식은 provider-aware deterministic resume다.
+4. `claude-cli` provider는 `claude --resume <id>`를 사용한다.
+5. `opencode` provider는 `opencode run --session <id>`를 사용한다.
+6. `--continue`는 deterministic하지 않으므로 자동화에서 금지한다.
+7. `--fork`는 기본 경로가 아니라 명시적 operator recovery에서만 사용한다.
+8. 저장된 session ID가 사라졌거나 재개가 불가능하면 조용히 새 세션을 만들지 않는다.
+9. session loss는 `blocked + human_escalation` 조건이다.
 
 이 규칙으로 Stage 1을 수행한 Claude 세션이 Stage 3/5/6에서도 같은 문맥을 유지하고, Stage 2를 수행한 Codex 세션이 Stage 4를 이어받는다.
 
@@ -89,7 +92,9 @@ runtime state는 tracked workflow 상태와 분리한다.
 - `current_stage`
 - `last_completed_stage`
 - `blocked_stage`
+- `sessions.claude_primary.provider`
 - `sessions.claude_primary.session_id`
+- `sessions.codex_primary.provider`
 - `sessions.codex_primary.session_id`
 - `retry.at`
 - `retry.reason`
@@ -97,11 +102,21 @@ runtime state는 tracked workflow 상태와 분리한다.
 - `last_artifact_dir`
 - `lock.owner`
 - `lock.acquired_at`
+- `recovery.kind`
+- `recovery.stage`
+- `recovery.branch`
+- `recovery.reason`
+- `recovery.artifact_dir`
+- `recovery.changed_files[]`
+- `recovery.existing_pr`
+- `recovery.salvage_candidate`
+- `recovery.updated_at`
 
 분리 원칙:
 
 - `.workflow-v2/status.json`은 사람과 PR이 읽는 공식 상태다.
-- `.opencode/omo-runtime/*.json`은 세션 ID, retry timer, lock 같은 실행 상태만 저장한다.
+- `.opencode/omo-runtime/*.json`은 session provider, 세션 ID, retry timer, lock 같은 실행 상태만 저장한다.
+- partial-stage recovery evidence도 repo-local runtime에 저장한다.
 - tracked 상태에는 세션 ID를 넣지 않는다.
 
 ## Retry And Resume Policy
@@ -120,6 +135,7 @@ Claude unavailable이면:
 3. `.workflow-v2/status.json`에는 `lifecycle = blocked`, `approval_state = awaiting_claude_or_human`을 기록한다.
 4. `notes`에는 `retry_at`, `session_role`, `artifact_dir`를 남긴다.
 5. `resume-pending`이 due item을 찾아 같은 stage를 같은 `claude_primary` session ID로 다시 시도한다.
+6. `claude-cli` provider의 canonical retry path는 `claude --resume <session_id>`다.
 
 재시도 중단 조건:
 
@@ -176,4 +192,5 @@ Homecook에서는 아래 원칙으로 adapter를 둔다.
 - `awaiting_claude_or_human`를 `dual_approved`와 동등하게 취급하기
 - session loss 시 자동 새 세션 생성
 - long-running `sleep 5h` 프로세스를 기본 경로로 채택하기
+- `--continue`를 deterministic automation resume 경로로 채택하기
 - project profile 없이 generic core만으로 stage semantics를 추론하기

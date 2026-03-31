@@ -50,7 +50,7 @@ dispatch contract가 고정되면:
 1. `--claude-budget-state`
 2. `OMO_CLAUDE_BUDGET_STATE`
 3. `.opencode/claude-budget-state.json`
-4. OpenCode auth(`~/.local/share/opencode/auth.json`)에서 Anthropic provider 존재 여부
+4. provider-aware local auth / health hint
 
 ## Output Contract
 
@@ -70,16 +70,45 @@ dispatch 결과는 아래를 포함한다.
 - `artifact_dir` (stage run 시)
 - `stage_result_schema`
 
+code stage 결과 schema는 아래 필드를 포함한다.
+
+- `result`
+- `summary_markdown`
+- `pr.title`
+- `pr.body_markdown`
+- `commit.subject`
+- `commit.body_markdown` optional
+- `checks_run`
+- `next_route`
+
+사람이 읽는 필드(`summary_markdown`, `pr.title`, `pr.body_markdown`)는 기본적으로 한국어로 작성한다.
+
+code stage supervisor-owned bookkeeping:
+
+- Stage 2 finalize 시 `docs/workpacks/README.md` Slice Status `docs -> in-progress`
+- Stage 4 finalize 시 `docs/workpacks/<slice>/README.md` Design Status `temporary -> pending-review`
+
+review stage 결과 schema는 아래 필드를 포함한다.
+
+- `decision`
+- `body_markdown`
+- `route_back_stage`
+- `approved_head_sha`
+
+review stage의 `body_markdown`도 기본적으로 한국어로 작성한다.
+
+review feedback는 runtime `last_review.<role>.body_markdown`에 저장되고, Stage 2/4 재실행 시 prompt에 다시 주입된다.
+
 ## Dispatch Matrix
 
 | Stage | Actor | Goal | Required Reads | Deliverables |
 |------|-------|------|----------------|--------------|
-| 1 | Claude | workpack 문서 작성 | AGENTS, current source, template, official docs | README, acceptance, docs PR |
-| 2 | Codex | backend contract-first 구현 | AGENTS, slice workflow, workpack, acceptance, API/DB docs | tests, backend impl, Draft PR |
+| 1 | Claude | workpack 문서 작성 | AGENTS, current source, template, official docs | README, acceptance, valid stage result |
+| 2 | Codex | backend contract-first 구현 | AGENTS, slice workflow, workpack, acceptance, API/DB docs, 이전 backend review feedback(있으면) | tests, backend impl, roadmap status `in-progress`, valid stage result |
 | 3 | Claude | backend PR review | workpack, PR diff, CI, acceptance | review summary, requested changes or approve |
-| 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, design refs | tests, FE impl, Draft PR |
-| 5 | Claude | design review | FE PR diff, design tokens, workpack UI scope | design findings or approve |
-| 6 | Claude | frontend PR review | FE PR diff, CI, acceptance | review summary, requested changes or approve |
+| 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, design refs, 이전 frontend review feedback(있으면) | tests, FE impl, Design Status `pending-review`, valid stage result |
+| 5 | Claude | design review | FE PR diff, design tokens, workpack UI scope | design findings or approve, Design Status `confirmed` 근거 |
+| 6 | Claude | frontend PR review | FE PR diff, CI, acceptance, merged bookkeeping 포함 최종 PR diff | review summary, requested changes or approve, approve 뒤 merged bookkeeping CI -> manual merge handoff |
 
 ## Session Binding Contract
 
@@ -99,6 +128,12 @@ session binding은 dispatch 전에 계산한다.
 5. 저장된 session ID가 유효하지 않으면 `actor=human`으로 즉시 바꾸지 않고, 먼저 `human_escalation` 상태와 함께 blocker를 남긴다.
 6. silent session recreation은 금지한다.
 
+provider별 resume 규칙:
+
+- `claude-cli` -> `claude --resume <session_id>`
+- `opencode` -> `opencode run --session <session_id>`
+- `--continue`는 deterministic하지 않으므로 자동화에서 사용하지 않는다.
+
 ## Stage Prompt Skeletons
 
 ### Stage 1 → Claude
@@ -111,8 +146,11 @@ session binding은 dispatch 전에 계산한다.
   - 공식 문서 해당 섹션
 - success:
   - README + acceptance 작성
-  - status `planned -> docs`
-  - docs PR merge 준비
+  - valid `stage-result.json`
+  - in-scope docs 변경만 반영
+  - verify command 실행
+  - supervisor handoff용 commit subject/body 제안 작성
+  - GitHub PR 생성/merge는 하지 않음
 
 ### Stage 2 → Codex
 
@@ -126,7 +164,12 @@ session binding은 dispatch 전에 계산한다.
 - success:
   - contract-first test
   - backend implementation
-  - Draft PR + required checks green
+  - valid `stage-result.json`
+  - `docs/workpacks/README.md` Slice Status `docs -> in-progress`는 supervisor finalize에 포함됨
+  - in-scope 파일만 수정
+  - verify command 실행
+  - supervisor handoff용 commit subject/body 제안 작성
+  - GitHub PR 생성/merge는 하지 않음
 
 ### Stage 3 → Claude
 
@@ -150,7 +193,12 @@ session binding은 dispatch 전에 계산한다.
 - success:
   - FE implementation
   - state UI
-  - Draft PR + green CI
+  - valid `stage-result.json`
+  - Design Status `temporary -> pending-review`는 supervisor finalize에 포함됨
+  - in-scope 파일만 수정
+  - verify command 실행
+  - supervisor handoff용 commit subject/body 제안 작성
+  - GitHub PR 생성/merge는 하지 않음
 
 ### Stage 5 → Claude
 
@@ -162,6 +210,7 @@ session binding은 dispatch 전에 계산한다.
 - success:
   - visual / interaction findings
   - `confirmed` or fix request
+  - 승인 시 Design Status `confirmed` 변경 근거 제시
 
 ### Stage 6 → Claude
 
@@ -173,6 +222,7 @@ session binding은 dispatch 전에 계산한다.
 - success:
   - code-quality findings
   - `approve | revise`
+  - supervisor가 Stage 6 approve 뒤 최종 PR에 slice status `merged` bookkeeping commit/push를 반영하고, 그 CI가 끝나면 human verification/merge handoff
 
 ## Loop Dispatch Rules
 
@@ -208,10 +258,15 @@ target 규칙:
 - 각 역할의 첫 실행만 새 세션 생성 대상이다.
 - 후속 stage는 반드시 저장된 session ID로 이어간다.
 - 모든 run은 `.artifacts/omo-lite-dispatch/<timestamp>-<slice>-stage-<n>/` 아래에 `dispatch.json`, `prompt.md`, `run-metadata.json`을 남긴다.
-- executable run이면 같은 경로에 `opencode.stdout.log`, `opencode.stderr.log`도 남긴다.
+- executable run이면 같은 경로에 provider-specific stdout/stderr log도 남긴다.
+- `claude-cli` run은 JSON stdout에서 `session_id`, `modelUsage`, `usage`, `total_cost_usd`를 파싱해 metadata에 남긴다.
 - stage agent는 supervisor가 읽을 수 있는 structured stage result를 artifact에 남긴다.
+- stage agent는 GitHub PR 생성/Ready/merge를 직접 수행하지 않는다.
+- code stage의 git commit/push ownership도 supervisor가 가진다.
 - `--sync-status`를 함께 주면 dispatch의 `status_patch`와 artifact 경로가 `.workflow-v2/status.json`에 같이 반영된다.
 - direct execution은 merge automation 자체를 수행하지 않지만, autonomous supervisor가 이어서 읽을 수 있는 stage result를 남겨야 한다.
+- supervisor lifecycle에서 code stage는 `stage_result_ready -> verify_pending -> commit_pending -> push_pending -> pr_pending -> wait` 순서로 auto-finalize될 수 있다.
+- product review stage approve 후에는 바로 merge하지 않고 `human_review` 또는 `human_verification` wait로 handoff할 수 있다.
 
 ## Fallback Routing
 
@@ -259,12 +314,14 @@ dispatch가 끝나면 supervisor는 최소한 아래 patch를 계산한다.
 
 - [opencode.json](../../../opencode.json)
 - [.opencode/README.md](../../../.opencode/README.md)
+- [.opencode/omo-provider.json](../../../.opencode/omo-provider.json)
 - [.opencode/oh-my-opencode.json](../../../.opencode/oh-my-opencode.json)
 
 현재 repo-local 기본값은:
 
 - default run agent = `hephaestus`
 - `opencode.json`의 direct `agent` / `default_agent` 설정을 우선 사용
+- Claude provider 기본값은 `.opencode/omo-provider.json`의 `claude-cli` 설정을 따른다.
 - Codex 중심 supervisor 실행
 - `ralph-loop` / `ulw-loop` 비활성화
 - comment-checker 비활성화

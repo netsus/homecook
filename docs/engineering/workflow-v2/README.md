@@ -37,12 +37,13 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 4. [approval-and-loops.md](./approval-and-loops.md)
 5. [omo-lite-architecture.md](./omo-lite-architecture.md)
 6. [omo-session-orchestrator.md](./omo-session-orchestrator.md)
-7. [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md)
-8. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
-9. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
-10. [TEMPLATE.md](./profiles/TEMPLATE.md)
-11. [homecook.md](./profiles/homecook.md)
-12. [migration.md](./migration.md)
+7. [omo-claude-cli-provider.md](./omo-claude-cli-provider.md)
+8. [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md)
+9. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
+10. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
+11. [TEMPLATE.md](./profiles/TEMPLATE.md)
+12. [homecook.md](./profiles/homecook.md)
+13. [migration.md](./migration.md)
 
 ## Directory Map
 
@@ -53,6 +54,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [approval-and-loops.md](./approval-and-loops.md): plan/review loop와 dual-approval 규칙
 - [omo-lite-architecture.md](./omo-lite-architecture.md): Codex supervisor 기반 Homecook OMO-lite 설계안
 - [omo-session-orchestrator.md](./omo-session-orchestrator.md): generic session reuse / runtime state / scheduled resume 규격
+- [omo-claude-cli-provider.md](./omo-claude-cli-provider.md): raw `claude` CLI provider, session extraction, deterministic resume 규격
 - [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md): local worktree / PR / CI / merge / scheduler supervisor 규격
 - [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md): supervisor 책임, 상태, stage state machine
 - [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md): stage별 actor dispatch 입출력 계약
@@ -65,6 +67,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [migration.md](./migration.md): v1 -> v2 점진 전환 경로
 - [opencode.json](../../../opencode.json): repo-local OpenCode instructions + direct agent/default bindings
 - [.opencode/README.md](../../../.opencode/README.md): repo-local OMO 운영 메모
+- [.opencode/omo-provider.json](../../../.opencode/omo-provider.json): Claude/Codex provider defaults for OMO
 - [.opencode/oh-my-opencode.json](../../../.opencode/oh-my-opencode.json): Homecook agent/hook compatibility snapshot
 
 ## Adoption Rules
@@ -104,6 +107,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - dedicated worktree policy
 - `omo:supervise` / `omo:tick`
 - `gh` 기반 PR / CI / merge automation
+- Claude-owned stage용 raw `claude` CLI provider adapter + deterministic `--resume`
 
 ## Pilot Usage
 
@@ -117,7 +121,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 8. OMO-lite supervised execution이 필요하면 `pnpm omo:run-stage -- --slice <id> --stage <n>`으로 dispatch artifact를 만들고, Codex stage에 한해 `--mode execute`를 사용한다.
 9. Claude reviewer availability를 로컬에서 강제로 조정해야 하면 `pnpm omo:claude-budget -- --set unavailable --reason "<reason>"` 또는 `--clear`를 사용한다.
 10. reviewer fallback도 tracked state에 같이 남기려면 `pnpm omo:run-stage -- --slice <id> --stage <n> --sync-status`를 사용한다.
-11. session-orchestrated path는 문서로 잠겨 있지만 아직 구현 전이므로, 실제 실행은 현재 helper CLI 기준으로 유지한다.
+11. Claude CLI provider path는 문서로 잠겨 있지만 구현이 merge되기 전까지는 현재 executable helper 기준을 따른다.
 
 ## Not Yet Included
 

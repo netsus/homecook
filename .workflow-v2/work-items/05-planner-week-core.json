@@ -1,0 +1,78 @@
+{
+  "id": "05-planner-week-core",
+  "title": "PLANNER_WEEK 위클리 조회와 컬럼 CRUD 코어",
+  "summary": "사용자가 planner 탭에서 PLANNER_WEEK에 진입해 주간 그리드, 기본 끼니 컬럼, 식사 상태 뱃지, 상단 CTA를 확인하고 컬럼을 추가/수정/삭제할 수 있게 한다. workflow-v2 OMO pilot 대상으로, CTA는 후속 슬라이스 전까지 비활성화된 상태로 노출한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "GET /planner와 planner column CRUD를 구현하고, 로그인 사용자가 PLANNER_WEEK에서 상태 뱃지와 disabled CTA를 포함한 planner shell을 사용할 수 있게 한다.",
+  "owners": {
+    "claude": "stage-1-workpack-and-review",
+    "codex": "stage-2-backend-and-stage-4-frontend",
+    "workers": [
+      "testing",
+      "design-system"
+    ]
+  },
+  "dependencies": [
+    "01-discovery-detail-auth",
+    "02-discovery-filter",
+    "03-recipe-like",
+    "04-recipe-save"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "AGENTS.md",
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/workpacks/05-planner-week-core/README.md",
+      "docs/workpacks/05-planner-week-core/acceptance.md"
+    ],
+    "governing_docs": [
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/요구사항기준선-v1.6.md",
+      "docs/화면정의서-v1.2.md",
+      "docs/api문서-v1.2.1.md",
+      "docs/db설계-v1.3.md",
+      "docs/유저flow맵-v1.2.md",
+      "docs/engineering/workflow-v2/omo-autonomous-supervisor.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "skipped",
+    "external_smokes": [
+      "실 Supabase 환경의 planner column seed 및 user isolation smoke",
+      "로그인 후 planner 탭 진입과 PLANNER_WEEK return-to-action smoke"
+    ]
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm install --frozen-lockfile && pnpm test:all",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm install --frozen-lockfile",
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm test",
+      "pnpm test:e2e"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "MEAL_SCREEN 조회/수정/삭제와 meal CRUD 전체",
+    "MENU_ADD와 recipe/manual/youtube/leftover 기반 meal 생성",
+    "RECIPE_DETAIL에서 planner 추가 flow",
+    "상단 CTA의 실제 destination 진입과 후속 화면 구현",
+    "장보기/요리하기/남은요리 상세 플로우"
+  ],
+  "open_questions": []
+}

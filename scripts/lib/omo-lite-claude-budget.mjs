@@ -37,6 +37,10 @@ export function getOpencodeAuthPath(homeDir = process.env.HOME) {
   return resolve(homeDir ?? "", ".local", "share", "opencode", "auth.json");
 }
 
+export function getClaudeCliStatePath(homeDir = process.env.HOME) {
+  return resolve(homeDir ?? "", ".claude");
+}
+
 export function writeClaudeBudgetOverride({
   rootDir = process.cwd(),
   state,
@@ -82,7 +86,9 @@ export function clearClaudeBudgetOverride({
  * @typedef {object} ResolveClaudeBudgetStateOptions
  * @property {string} [rootDir]
  * @property {string} [homeDir]
+ * @property {"opencode"|"claude-cli"} [provider]
  * @property {"available"|"constrained"|"unavailable"} [explicitState]
+ * @property {string} [claudeBin]
  * @property {NodeJS.ProcessEnv} [environment]
  */
 
@@ -92,7 +98,9 @@ export function clearClaudeBudgetOverride({
 export function resolveClaudeBudgetState({
   rootDir = process.cwd(),
   homeDir = process.env.HOME,
+  provider = "opencode",
   explicitState,
+  claudeBin,
   environment = process.env,
 }) {
   if (explicitState !== undefined) {
@@ -100,6 +108,7 @@ export function resolveClaudeBudgetState({
       state: ensureState(explicitState, "explicitState"),
       source: "explicit",
       providerConfigured: true,
+      provider,
       reason: null,
       authPath: getOpencodeAuthPath(homeDir),
       overridePath: getClaudeBudgetOverridePath(rootDir),
@@ -111,6 +120,7 @@ export function resolveClaudeBudgetState({
       state: ensureState(environment.OMO_CLAUDE_BUDGET_STATE, "OMO_CLAUDE_BUDGET_STATE"),
       source: "env",
       providerConfigured: true,
+      provider,
       reason: null,
       authPath: getOpencodeAuthPath(homeDir),
       overridePath: getClaudeBudgetOverridePath(rootDir),
@@ -124,9 +134,45 @@ export function resolveClaudeBudgetState({
       state: ensureState(override.state, "override.state"),
       source: "override-file",
       providerConfigured: true,
+      provider,
       reason: typeof override.reason === "string" ? override.reason : null,
       updatedAt: typeof override.updated_at === "string" ? override.updated_at : null,
       authPath: getOpencodeAuthPath(homeDir),
+      overridePath,
+    };
+  }
+
+  if (provider === "claude-cli") {
+    const claudePath = getClaudeCliStatePath(homeDir);
+    const providerConfigured =
+      existsSync(claudePath) &&
+      (existsSync(resolve(claudePath, "settings.json")) ||
+        existsSync(resolve(claudePath, "transcripts")) ||
+        existsSync(resolve(claudePath, "stats-cache.json")));
+
+    if (!providerConfigured) {
+      return {
+        state: "unavailable",
+        source: "missing-auth",
+        providerConfigured: false,
+        provider,
+        reason: "Claude CLI local state is not configured for this machine.",
+        authPath: null,
+        providerHintPath: claudePath,
+        claudeBin: claudeBin ?? "claude",
+        overridePath,
+      };
+    }
+
+    return {
+      state: "available",
+      source: "claude-cli-local",
+      providerConfigured: true,
+      provider,
+      reason: null,
+      authPath: null,
+      providerHintPath: claudePath,
+      claudeBin: claudeBin ?? "claude",
       overridePath,
     };
   }
@@ -145,6 +191,7 @@ export function resolveClaudeBudgetState({
       state: "unavailable",
       source: "missing-auth",
       providerConfigured: false,
+      provider,
       reason: "Anthropic auth is not configured for this machine.",
       authPath,
       overridePath,
@@ -155,6 +202,7 @@ export function resolveClaudeBudgetState({
     state: "available",
     source: "opencode-auth",
     providerConfigured: true,
+    provider,
     reason: null,
     authPath,
     overridePath,

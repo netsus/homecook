@@ -14,6 +14,7 @@ describe("OMO-lite repo config", () => {
     const requiredFiles = [
       "opencode.json",
       ".opencode/README.md",
+      ".opencode/omo-provider.json",
       ".opencode/oh-my-opencode.json",
     ];
 
@@ -24,6 +25,7 @@ describe("OMO-lite repo config", () => {
 
   it("registers the OMO plugin and repo-local instruction bundle", () => {
     const config = readJson("opencode.json");
+    const omoProvider = readJson(".opencode/omo-provider.json");
     const plugin = Array.isArray(config.plugin) ? config.plugin : [];
     const instructions = Array.isArray(config.instructions) ? config.instructions : [];
     const agents =
@@ -45,6 +47,7 @@ describe("OMO-lite repo config", () => {
         "docs/engineering/agent-workflow-overview.md",
         "docs/engineering/slice-workflow.md",
         "docs/engineering/workflow-v2/omo-session-orchestrator.md",
+        "docs/engineering/workflow-v2/omo-claude-cli-provider.md",
         "docs/engineering/workflow-v2/omo-autonomous-supervisor.md",
         "docs/engineering/workflow-v2/omo-lite-architecture.md",
         "docs/engineering/workflow-v2/omo-lite-supervisor-spec.md",
@@ -52,6 +55,20 @@ describe("OMO-lite repo config", () => {
         ".opencode/README.md",
       ]),
     );
+    expect(omoProvider.claude).toMatchObject({
+      provider: "claude-cli",
+      bin: "claude",
+      model: "sonnet",
+      effort: "high",
+      permission_mode: "acceptEdits",
+    });
+    expect(omoProvider.codex).toMatchObject({
+      provider: "opencode",
+      bin: "opencode",
+      agent: "hephaestus",
+      model: "openai/gpt-5.3-codex",
+      variant: "high",
+    });
   });
 
   it("defaults Homecook OMO to a Codex supervisor baseline", () => {

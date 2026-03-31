@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -9,7 +9,12 @@ import { RecipeDetailScreen } from "@/components/recipe/recipe-detail-screen";
 import { MOCK_RECIPE_DETAIL } from "@/lib/mock/recipes";
 import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
 import { useAuthGateStore } from "@/stores/ui-store";
-import type { RecipeDetail, RecipeLikeData } from "@/types/recipe";
+import type {
+  RecipeBookListData,
+  RecipeDetail,
+  RecipeLikeData,
+  RecipeSaveData,
+} from "@/types/recipe";
 
 const fetchJson = vi.fn();
 const getSession = vi.fn();
@@ -65,6 +70,40 @@ function createDeferred<T>() {
     resolve,
     reject,
   };
+}
+
+function buildSaveableBooks(): RecipeBookListData {
+  return {
+    books: [
+      {
+        id: "book-saved",
+        name: "저장한 레시피",
+        book_type: "saved",
+        recipe_count: 8,
+        sort_order: 1,
+      },
+      {
+        id: "book-custom",
+        name: "주말 파티",
+        book_type: "custom",
+        recipe_count: 2,
+        sort_order: 2,
+      },
+    ],
+  };
+}
+
+async function findSaveActionButton() {
+  const buttons = await screen.findAllByRole("button", { name: "저장" });
+  const button = buttons.find(
+    (node) => node.getAttribute("aria-pressed") !== null,
+  );
+
+  if (!button) {
+    throw new Error("Could not find the save action button.");
+  }
+
+  return button;
 }
 
 describe("recipe detail screen", () => {
@@ -229,6 +268,264 @@ describe("recipe detail screen", () => {
       await screen.findByText("로그인 완료. 좋아요를 반영했어요."),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "좋아요 204" })).toBeTruthy();
+    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+  });
+
+  it("opens the save modal with recipe books for authenticated users", async () => {
+    const detail = buildRecipeDetail();
+
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+    fetchJson.mockImplementation((input: string, init?: RequestInit) => {
+      if (!init?.method && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`) {
+        return Promise.resolve(detail);
+      }
+
+      if (!init?.method && input === "/api/v1/recipe-books") {
+        return Promise.resolve(buildSaveableBooks());
+      }
+
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    });
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "저장" }));
+
+    const modal = await screen.findByRole("dialog");
+    const modalScope = within(modal);
+
+    expect(
+      modalScope.getByRole("heading", { name: "저장할 레시피북을 선택하세요" }),
+    ).toBeTruthy();
+    expect(modalScope.getByRole("button", { name: /저장한 레시피/ })).toBeTruthy();
+    expect(modalScope.getByRole("button", { name: /주말 파티/ })).toBeTruthy();
+  });
+
+  it("shows load error UI and retries recipe-book loading", async () => {
+    const detail = buildRecipeDetail();
+    let recipeBookRequests = 0;
+
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+    fetchJson.mockImplementation((input: string, init?: RequestInit) => {
+      if (!init?.method && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`) {
+        return Promise.resolve(detail);
+      }
+
+      if (!init?.method && input === "/api/v1/recipe-books") {
+        recipeBookRequests += 1;
+
+        if (recipeBookRequests === 1) {
+          return Promise.reject(new Error("레시피북 목록을 불러오지 못했어요."));
+        }
+
+        return Promise.resolve(buildSaveableBooks());
+      }
+
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    });
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "저장" }));
+    const modal = await screen.findByRole("dialog");
+    const modalScope = within(modal);
+
+    await waitFor(() => {
+      expect(
+        modalScope.getByText("레시피북 목록을 불러오지 못했어요."),
+      ).toBeTruthy();
+    });
+
+    await userEvent.click(modalScope.getByRole("button", { name: "다시 시도" }));
+
+    await waitFor(() => {
+      expect(modalScope.getByRole("button", { name: /저장한 레시피/ })).toBeTruthy();
+    });
+    expect(recipeBookRequests).toBe(2);
+  });
+
+  it("disables save when the selected recipe book already contains the recipe", async () => {
+    const detail = buildRecipeDetail({
+      user_status: {
+        is_liked: false,
+        is_saved: true,
+        saved_book_ids: ["book-saved"],
+      },
+    });
+
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+    fetchJson.mockImplementation((input: string, init?: RequestInit) => {
+      if (!init?.method && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`) {
+        return Promise.resolve(detail);
+      }
+
+      if (!init?.method && input === "/api/v1/recipe-books") {
+        return Promise.resolve(buildSaveableBooks());
+      }
+
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    });
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(await findSaveActionButton());
+    const modal = await screen.findByRole("dialog");
+    const modalScope = within(modal);
+    const saveButton = modalScope.getByRole("button", { name: "저장" }) as HTMLButtonElement;
+
+    await waitFor(() => {
+      expect(
+        modalScope.getByText("이미 선택한 레시피북에 저장된 레시피예요. 다른 레시피북을 선택해 주세요."),
+      ).toBeTruthy();
+    });
+    expect(saveButton.disabled).toBe(true);
+
+    await userEvent.click(modalScope.getByRole("button", { name: /주말 파티/ }));
+
+    await waitFor(() => {
+      expect(
+        modalScope.queryByText("이미 선택한 레시피북에 저장된 레시피예요. 다른 레시피북을 선택해 주세요."),
+      ).toBeNull();
+    });
+    expect(saveButton.disabled).toBe(false);
+  });
+
+  it("creates a custom recipe book and saves the recipe", async () => {
+    const detail = buildRecipeDetail();
+    const createdBookId = "book-fresh";
+
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+    fetchJson.mockImplementation((input: string, init?: RequestInit) => {
+      if (!init?.method && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`) {
+        return Promise.resolve(detail);
+      }
+
+      if (!init?.method && input === "/api/v1/recipe-books") {
+        return Promise.resolve(buildSaveableBooks());
+      }
+
+      if (init?.method === "POST" && input === "/api/v1/recipe-books") {
+        return Promise.resolve({
+          id: createdBookId,
+          name: "새로운 책",
+          book_type: "custom",
+          recipe_count: 0,
+          sort_order: 9,
+          created_at: "2026-03-27T10:00:00Z",
+          updated_at: "2026-03-27T10:00:00Z",
+        });
+      }
+
+      if (init?.method === "POST" && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}/save`) {
+        return Promise.resolve({
+          saved: true,
+          save_count: 90,
+          book_id: createdBookId,
+        } satisfies RecipeSaveData);
+      }
+
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    });
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const saveActionButton = await findSaveActionButton();
+    expect(within(saveActionButton).getByText("89")).toBeTruthy();
+
+    await userEvent.click(await screen.findByRole("button", { name: "저장" }));
+    const modal = await screen.findByRole("dialog");
+    const modalScope = within(modal);
+
+    await userEvent.type(modalScope.getByPlaceholderText("예: 주말 파티"), "새로운 책");
+    await userEvent.click(modalScope.getByRole("button", { name: "생성" }));
+
+    await waitFor(() => {
+      expect(modalScope.getByRole("button", { name: /새로운 책/ })).toBeTruthy();
+    });
+
+    await userEvent.click(modalScope.getByRole("button", { name: /새로운 책/ }));
+    await userEvent.click(modalScope.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    expect(await screen.findByText("레시피를 저장했어요.")).toBeTruthy();
+    expect((await findSaveActionButton()).getAttribute("aria-pressed")).toBe("true");
+    await waitFor(() => {
+      expect(within(screen.getByRole("button", { name: "저장" })).getByText("90")).toBeTruthy();
+    });
+  });
+
+  it("keeps the save modal open and shows an error when save fails", async () => {
+    const detail = buildRecipeDetail();
+
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+    fetchJson.mockImplementation((input: string, init?: RequestInit) => {
+      if (!init?.method && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`) {
+        return Promise.resolve(detail);
+      }
+
+      if (!init?.method && input === "/api/v1/recipe-books") {
+        return Promise.resolve(buildSaveableBooks());
+      }
+
+      if (init?.method === "POST" && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}/save`) {
+        return Promise.reject(new Error("이미 저장된 레시피예요."));
+      }
+
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    });
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "저장" }));
+    const modal = await screen.findByRole("dialog");
+    const modalScope = within(modal);
+
+    await userEvent.click(modalScope.getByRole("button", { name: "저장" }));
+
+    await waitFor(() => {
+      expect(modalScope.getByText("이미 저장된 레시피예요.")).toBeTruthy();
+    });
+
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  it("replays the pending save action after login by reopening the save modal", async () => {
+    const detail = buildRecipeDetail();
+
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+    fetchJson.mockImplementation((input: string, init?: RequestInit) => {
+      if (!init?.method && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`) {
+        return Promise.resolve(detail);
+      }
+
+      if (!init?.method && input === "/api/v1/recipe-books") {
+        return Promise.resolve(buildSaveableBooks());
+      }
+
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    });
+
+    window.localStorage.setItem(
+      PENDING_ACTION_KEY,
+      JSON.stringify({
+        type: "save",
+        recipeId: MOCK_RECIPE_DETAIL.id,
+        redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
+        createdAt: 1,
+      }),
+    );
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    expect(
+      await screen.findByRole("heading", { name: "저장할 레시피북을 선택하세요" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("로그인 완료. 저장할 레시피북을 선택해 주세요."),
+    ).toBeTruthy();
     expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 

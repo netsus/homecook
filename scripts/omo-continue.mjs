@@ -12,6 +12,10 @@ function printUsage() {
       "  --slice <id>                     Optional slice override for non-product work items",
       "  --claude-budget-state <state>    Optional override: available | constrained | unavailable",
       "  --mode <artifact-only|execute>   Default: execute",
+      "  --claude-provider <name>         Override Claude provider: opencode | claude-cli",
+      "  --claude-bin <path>              Override claude binary path",
+      "  --claude-model <model>           Override Claude model alias/name",
+      "  --claude-effort <level>          Override Claude effort: low | medium | high",
       "  --opencode-bin <path>            Override opencode binary path",
       "  --now <iso-timestamp>            Override timestamp for deterministic runs/tests",
       "  --json                           Print JSON output",
@@ -54,6 +58,10 @@ function parseArgs(argv) {
       token === "--slice" ||
       token === "--claude-budget-state" ||
       token === "--mode" ||
+      token === "--claude-provider" ||
+      token === "--claude-bin" ||
+      token === "--claude-model" ||
+      token === "--claude-effort" ||
       token === "--opencode-bin" ||
       token === "--now"
     ) {
@@ -84,6 +92,10 @@ function main() {
     slice: options.slice,
     claudeBudgetState: options.claudeBudgetState,
     mode: options.mode,
+    claudeProvider: options.claudeProvider,
+    claudeBin: options.claudeBin,
+    claudeModel: options.claudeModel,
+    claudeEffort: options.claudeEffort,
     opencodeBin: options.opencodeBin,
     now: options.now,
   });
