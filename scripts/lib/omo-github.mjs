@@ -73,15 +73,15 @@ function buildDefaultPrSectionContent(section, { body, workItemId }) {
     case "## Test Plan":
       return "- Supervisor 검증 명령과 필수 CI 체크를 기준으로 확인";
     case "## Docs Impact":
-      return "- 해당 없음";
+      return "- 자동 보정: 문서 영향 분석이 stage result에 없어 수동 확인이 필요합니다.";
     case "## Security Review":
-      return "- 기존 권한/소유권/read-only 규칙 유지";
+      return "- 자동 보정: 보안 영향 분석이 stage result에 없어 수동 확인이 필요합니다.";
     case "## Performance":
-      return "- 해당 없음";
+      return "- 자동 보정: 성능 영향 분석이 stage result에 없어 수동 확인이 필요합니다.";
     case "## Design / Accessibility":
-      return "- 사용자 노출 변경 없음";
+      return "- 자동 보정: 디자인/접근성 영향 분석이 stage result에 없어 수동 확인이 필요합니다.";
     case "## Breaking Changes":
-      return "- 없음";
+      return "- 자동 보정: breaking change 여부를 수동 확인해 주세요.";
     default:
       return "- 해당 없음";
   }
@@ -318,6 +318,7 @@ function summarizeMergeState(summary) {
       state: null,
       mergedAt: null,
       mergeStateStatus: null,
+      reviewDecision: null,
     };
   }
 
@@ -326,6 +327,10 @@ function summarizeMergeState(summary) {
     mergedAt: typeof summary.mergedAt === "string" && summary.mergedAt.trim().length > 0 ? summary.mergedAt : null,
     mergeStateStatus:
       typeof summary.mergeStateStatus === "string" ? summary.mergeStateStatus : null,
+    reviewDecision:
+      typeof summary.reviewDecision === "string" && summary.reviewDecision.trim().length > 0
+        ? summary.reviewDecision
+        : null,
   };
 }
 
@@ -361,7 +366,7 @@ export function createGithubAutomationClient({
       "view",
       ensureNonEmptyString(prRef, "prRef"),
       "--json",
-      "state,mergedAt,mergeStateStatus",
+      "state,mergedAt,mergeStateStatus,reviewDecision",
     ]);
 
     return summarizeMergeState(stdout.length > 0 ? JSON.parse(stdout) : null);
@@ -533,6 +538,11 @@ export function createGithubAutomationClient({
         bucket: summarizeChecks(reconciledChecks),
         checks: reconciledChecks,
       };
+    },
+    getPullRequestSummary({
+      prRef,
+    }) {
+      return getPullRequestMergeSummary(ensureNonEmptyString(prRef, "prRef"));
     },
     markReady({
       prRef,

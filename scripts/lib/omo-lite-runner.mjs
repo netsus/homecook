@@ -206,6 +206,16 @@ function buildPrompt({ slice, stage, workItemId, dispatch, stageResultPath }) {
     "- Limit changes to files directly required by the locked slice scope. Avoid unrelated refactors, opportunistic cleanup, or out-of-scope file edits.",
     "- Your responsibility is scoped code/doc updates, local verification, and valid stage-result writing. Do not create, update, ready, review, or merge GitHub pull requests yourself; supervisor handles GitHub automation.",
     "- PR 제목/본문, summary_markdown, review body_markdown은 특별한 이유가 없으면 한국어로 작성하세요.",
+    dispatch.reviewContext?.body_markdown ? "" : null,
+    dispatch.reviewContext?.body_markdown ? "## Prior Review Feedback" : null,
+    dispatch.reviewContext?.pr_url ? `- active PR: \`${dispatch.reviewContext.pr_url}\`` : null,
+    dispatch.reviewContext?.updated_at
+      ? `- reviewed at: \`${dispatch.reviewContext.updated_at}\``
+      : null,
+    dispatch.reviewContext?.decision
+      ? `- previous decision: \`${dispatch.reviewContext.decision}\``
+      : null,
+    dispatch.reviewContext?.body_markdown ?? null,
     "",
     "## Stage Result Output",
     `- Write a JSON file to \`${stageResultPath}\` before finishing the task.`,
@@ -1066,6 +1076,21 @@ export function runStageWithArtifacts({
   });
   const retryState =
     runtimeSnapshot?.state?.blocked_stage === normalizedStage ? runtimeSnapshot.state.retry : null;
+  const reviewRole =
+    normalizedStage === 2 ? "backend" : normalizedStage === 4 ? "frontend" : null;
+  const reviewEntry =
+    reviewRole && runtimeSnapshot?.state?.last_review?.[reviewRole]
+      ? runtimeSnapshot.state.last_review[reviewRole]
+      : null;
+  const reviewContext =
+    reviewEntry?.decision === "request_changes" && reviewEntry?.body_markdown
+      ? {
+          decision: reviewEntry.decision,
+          body_markdown: reviewEntry.body_markdown,
+          pr_url: runtimeSnapshot?.state?.prs?.[reviewRole]?.url ?? null,
+          updated_at: reviewEntry.updated_at ?? null,
+        }
+      : null;
   const retryAt =
     resolvedBudget.state === "unavailable" && sessionRole === "claude_primary"
       ? resolveRetryAt({
@@ -1080,6 +1105,7 @@ export function runStageWithArtifacts({
     sessionId: existingSessionId,
     retryAt,
     attemptCount: retryState?.attempt_count ?? 0,
+    reviewContext,
   });
   const executionBinding = resolveExecutionBinding(dispatch, {
     agent,

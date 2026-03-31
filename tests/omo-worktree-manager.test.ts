@@ -110,4 +110,43 @@ describe("OMO worktree manager", () => {
     expect(rootBranch).toBe("master");
     expect(worktreeBranch).toBe("");
   });
+
+  it("fetches origin/master before creating a new worktree branch from origin/master", () => {
+    const { rootDir, remoteDir } = createGitFixture();
+    const ensured = ensureSupervisorWorktree({
+      rootDir,
+      workItemId: "06-recipe-to-planner",
+    });
+    const syncCloneDir = mkdtempSync(join(tmpdir(), "omo-worktree-branch-clone-"));
+
+    execFileSync("git", ["clone", remoteDir, syncCloneDir]);
+    execFileSync("git", ["checkout", "-B", "master", "origin/master"], { cwd: syncCloneDir });
+    execFileSync("git", ["config", "user.name", "OMO Sync"], { cwd: syncCloneDir });
+    execFileSync("git", ["config", "user.email", "omo-sync@example.com"], { cwd: syncCloneDir });
+    writeFileSync(join(syncCloneDir, "BRANCH.md"), "new branch base\n");
+    execFileSync("git", ["add", "BRANCH.md"], { cwd: syncCloneDir });
+    execFileSync("git", ["commit", "-m", "feat: branch base update"], { cwd: syncCloneDir });
+    execFileSync("git", ["push", "origin", "master"], { cwd: syncCloneDir });
+
+    const branch = ensureWorktreeBranch({
+      rootDir,
+      worktreePath: ensured.path,
+      branch: "feature/be-06-recipe-to-planner",
+      startPoint: "origin/master",
+    });
+    const branchHead = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: ensured.path,
+      encoding: "utf8",
+    }).trim();
+    const remoteHead = execFileSync("git", ["rev-parse", "origin/master"], {
+      cwd: rootDir,
+      encoding: "utf8",
+    }).trim();
+
+    expect(branch).toMatchObject({
+      branch: "feature/be-06-recipe-to-planner",
+      created: true,
+    });
+    expect(branchHead).toBe(remoteHead);
+  });
 });

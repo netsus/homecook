@@ -173,6 +173,32 @@ describe("OMO-lite stage dispatch", () => {
       approval_state: "not_started",
     });
   });
+
+  it("injects prior review feedback into Stage 2 reruns", () => {
+    const dispatch = buildStageDispatch({
+      slice: "02-discovery-filter",
+      stage: 2,
+      claudeBudgetState: "available",
+      sessionId: "ses_codex_stage2",
+      reviewContext: {
+        decision: "request_changes",
+        body_markdown: "테스트 계약을 더 엄격하게 고정해 주세요.",
+        pr_url: "https://github.com/netsus/homecook/pull/99",
+        updated_at: "2026-04-01T00:00:00.000Z",
+      },
+    });
+
+    expect(dispatch.requiredReads).toEqual(
+      expect.arrayContaining([
+        "previous backend review feedback (runtime.last_review.backend)",
+        "active PR context: https://github.com/netsus/homecook/pull/99",
+      ]),
+    );
+    expect(dispatch.reviewContext).toMatchObject({
+      decision: "request_changes",
+      body_markdown: "테스트 계약을 더 엄격하게 고정해 주세요.",
+    });
+  });
 });
 
 describe("OMO-lite workflow status sync", () => {
