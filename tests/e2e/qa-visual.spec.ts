@@ -9,12 +9,14 @@ import {
   RECIPE_PATH,
 } from "./helpers/mock-routes";
 
-const qaSnapshotFontFaces = [
+const qaSnapshotFonts = [
   ["NotoSans-Regular.ttf", 400],
   ["NotoSans-Medium.ttf", 500],
   ["NotoSans-SemiBold.ttf", 600],
   ["NotoSans-Bold.ttf", 700],
-]
+] as const satisfies ReadonlyArray<readonly [string, number]>;
+
+const qaSnapshotFontFaces = qaSnapshotFonts
   .map(([fileName, weight]) => {
     const fontData = readFileSync(
       join(process.cwd(), "tests/e2e/assets/fonts", fileName),
