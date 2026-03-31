@@ -8,6 +8,8 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: [["line"], ["html", { open: "never" }]],
+  snapshotPathTemplate:
+    "{testDir}/{testFilePath}-snapshots/{arg}-{projectName}{ext}",
   timeout: 30_000,
   expect: {
     timeout: 5_000,
