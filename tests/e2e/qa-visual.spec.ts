@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { expect, test, type Page } from "@playwright/test";
 
 import {
@@ -6,20 +9,56 @@ import {
   RECIPE_PATH,
 } from "./helpers/mock-routes";
 
+const qaSnapshotFontFaces = [
+  ["NotoSans-Regular.ttf", 400],
+  ["NotoSans-Medium.ttf", 500],
+  ["NotoSans-SemiBold.ttf", 600],
+  ["NotoSans-Bold.ttf", 700],
+]
+  .map(([fileName, weight]) => {
+    const fontData = readFileSync(
+      join(process.cwd(), "tests/e2e/assets/fonts", fileName),
+    ).toString("base64");
+
+    return `
+      @font-face {
+        font-family: "QaSnapshotSans";
+        src: url("data:font/ttf;base64,${fontData}") format("truetype");
+        font-style: normal;
+        font-weight: ${weight};
+        font-display: block;
+      }
+    `;
+  })
+  .join("\n");
+
 async function stabilizeVisualSnapshot(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addStyleTag({
     content: `
+      ${qaSnapshotFontFaces}
+
       *,
       *::before,
       *::after {
         animation: none !important;
         transition: none !important;
         caret-color: transparent !important;
+        -webkit-font-smoothing: antialiased !important;
       }
 
-      body {
-        font-family: sans-serif !important;
+      html {
+        text-size-adjust: 100% !important;
+        -webkit-text-size-adjust: 100% !important;
+      }
+
+      body,
+      button,
+      input,
+      select,
+      textarea,
+      [role="dialog"] {
+        font-family: "QaSnapshotSans", sans-serif !important;
       }
 
       nextjs-portal,
