@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
@@ -14,6 +14,7 @@ import {
   readRuntimeState,
   releaseRuntimeLock,
   setRecoveryState,
+  setExecutionState,
   setLastReview,
   setPullRequestRef,
   setWaitState,
@@ -26,9 +27,11 @@ import {
   assertWorktreeClean,
   ensureSupervisorWorktree,
   ensureWorktreeBranch,
+  getWorktreeBinaryDiff,
   getWorktreeHeadSha,
   getWorktreeCurrentBranch,
   listWorktreeChangedFiles,
+  commitWorktreeChanges,
   pushWorktreeBranch,
   syncWorktreeWithBaseBranch,
 } from "./omo-worktree.mjs";
@@ -65,6 +68,8 @@ function writeSupervisorArtifact({
   workItemId,
   now,
   summary,
+  runtimeState = null,
+  worktree = null,
 }) {
   const artifactDir = resolveSupervisorArtifactDir({
     rootDir,
@@ -73,6 +78,35 @@ function writeSupervisorArtifact({
   });
   mkdirSync(artifactDir, { recursive: true });
   writeFileSync(resolve(artifactDir, "summary.json"), `${JSON.stringify(summary, null, 2)}\n`);
+
+  const recovery = summary?.recovery ?? runtimeState?.recovery ?? null;
+  if (recovery) {
+    writeFileSync(resolve(artifactDir, "recovery.json"), `${JSON.stringify(recovery, null, 2)}\n`);
+
+    if (Array.isArray(recovery.changed_files) && recovery.changed_files.length > 0) {
+      writeFileSync(resolve(artifactDir, "recovery.changed-files.txt"), `${recovery.changed_files.join("\n")}\n`);
+    }
+
+    const worktreePath = runtimeState?.workspace?.path ?? null;
+    if (
+      recovery.salvage_candidate &&
+      typeof worktreePath === "string" &&
+      worktreePath.trim().length > 0 &&
+      typeof worktree?.getBinaryDiff === "function"
+    ) {
+      try {
+        const patch = worktree.getBinaryDiff({
+          worktreePath,
+        });
+        if (typeof patch === "string" && patch.length > 0) {
+          writeFileSync(resolve(artifactDir, "recovery.patch"), patch);
+        }
+      } catch {
+        // Best-effort evidence only; summary/recovery JSON remains the source of truth.
+      }
+    }
+  }
+
   return artifactDir;
 }
 
@@ -121,6 +155,27 @@ function bucketToVerification(bucket) {
   return "pending";
 }
 
+function resolveStatePhase(state) {
+  return typeof state?.phase === "string" && state.phase.trim().length > 0
+    ? state.phase.trim()
+    : null;
+}
+
+function isPendingFinalizePhase(phase) {
+  return ["stage_result_ready", "verify_pending", "commit_pending", "push_pending", "pr_pending"].includes(
+    phase,
+  );
+}
+
+function isPendingReviewPhase(phase) {
+  return ["review_pending", "merge_pending"].includes(phase);
+}
+
+function shouldAllowDirtyWorktree(state) {
+  const phase = resolveStatePhase(state);
+  return ["stage_result_ready", "verify_pending", "commit_pending"].includes(phase);
+}
+
 function createTickResult({
   workItemId,
   slice = null,
@@ -147,11 +202,13 @@ function resolveStageProvider({
   claudeModel,
   claudeEffort,
   opencodeBin,
+  environment,
 }) {
   if ([2, 4].includes(stage)) {
     const codexProviderConfig = resolveCodexProviderConfig({
       rootDir,
       bin: opencodeBin,
+      environment,
     });
 
     return {
@@ -304,6 +361,7 @@ function createDefaultStageRunner({
       homeDir,
       now,
       syncStatus: false,
+      lifecycleMode: "supervisor",
     });
 }
 
@@ -481,6 +539,59 @@ function resolveRunResultRuntimeState({
   );
 }
 
+function loadExecutionStageResult(state) {
+  const stage = state.active_stage ?? state.current_stage ?? null;
+  const stageResultPath = state.execution?.stage_result_path ?? null;
+  if (!Number.isInteger(stage)) {
+    throw new Error("Active stage is missing for execution finalization.");
+  }
+
+  if (typeof stageResultPath !== "string" || stageResultPath.trim().length === 0 || !existsSync(stageResultPath)) {
+    throw new Error("stage-result.json is missing for execution finalization.");
+  }
+
+  return validateStageResult(stage, JSON.parse(readFileSync(stageResultPath, "utf8")));
+}
+
+function runVerifyCommands({
+  worktreePath,
+  commands,
+  artifactDir,
+}) {
+  const normalizedCommands = Array.isArray(commands)
+    ? commands.filter((entry) => typeof entry === "string" && entry.trim().length > 0)
+    : [];
+
+  if (normalizedCommands.length === 0) {
+    return {
+      bucket: "pass",
+      commands: [],
+    };
+  }
+
+  const results = normalizedCommands.map((command, index) => {
+    const result = spawnSync("zsh", ["-lc", command], {
+      cwd: worktreePath,
+      encoding: "utf8",
+      maxBuffer: 20 * 1024 * 1024,
+    });
+    const prefix = resolve(artifactDir, `verify-${index + 1}`);
+    writeFileSync(`${prefix}.stdout.log`, result.stdout ?? "");
+    writeFileSync(`${prefix}.stderr.log`, result.stderr ?? "");
+
+    return {
+      command,
+      exitCode: result.status ?? null,
+      ok: result.status === 0 && !result.error,
+    };
+  });
+
+  return {
+    bucket: results.every((entry) => entry.ok) ? "pass" : "fail",
+    commands: results,
+  };
+}
+
 function handleDeferredStageExecution({
   rootDir,
   workItemId,
@@ -503,6 +614,11 @@ function handleDeferredStageExecution({
     slice,
     runResult,
   });
+  const runtimePhase = resolveStatePhase(runtimeState);
+
+  if (isPendingFinalizePhase(runtimePhase) || isPendingReviewPhase(runtimePhase)) {
+    return null;
+  }
 
   if (runResult.execution?.mode === "scheduled-retry") {
     const nextState = saveRuntime({
@@ -596,6 +712,11 @@ function handleDeferredStageExecution({
 }
 
 function determineInitialStage(state) {
+  const phase = resolveStatePhase(state);
+  if ((isPendingFinalizePhase(phase) || isPendingReviewPhase(phase)) && Number.isInteger(state.active_stage)) {
+    return state.active_stage;
+  }
+
   if (state.wait?.kind === "ready_for_next_stage" && Number.isInteger(state.wait.stage)) {
     return state.wait.stage;
   }
@@ -623,11 +744,16 @@ function processWaitState({
   worktree,
   now,
 }) {
+  const phase = resolveStatePhase(state);
+
   if (!state.wait?.kind) {
     return {
       state,
       action: "run-stage",
-      nextStage: determineInitialStage(state),
+      nextStage:
+        (isPendingFinalizePhase(phase) || isPendingReviewPhase(phase)) && Number.isInteger(state.active_stage)
+          ? state.active_stage
+          : determineInitialStage(state),
     };
   }
 
@@ -715,6 +841,23 @@ function processWaitState({
     }
 
     if (prRole === "docs") {
+      if (phase === "merge_pending") {
+        const nextState = saveRuntime({
+          rootDir,
+          workItemId,
+          state: setWaitState({
+            state,
+            kind: null,
+            updatedAt: now,
+          }),
+        });
+        return {
+          state: nextState,
+          action: "run-stage",
+          nextStage: state.active_stage ?? state.wait.stage,
+        };
+      }
+
       github.mergePullRequest({
         prRef: activePr.url,
         headSha: activePr.head_sha ?? state.wait.head_sha ?? "HEAD",
@@ -833,6 +976,23 @@ function processWaitState({
       };
     }
 
+    if (phase === "merge_pending") {
+      const nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state,
+          kind: null,
+          updatedAt: now,
+        }),
+      });
+      return {
+        state: nextState,
+        action: "run-stage",
+        nextStage: state.active_stage ?? state.wait.stage,
+      };
+    }
+
     const nextState = saveRuntime({
       rootDir,
       workItemId,
@@ -868,6 +1028,7 @@ function assertStageProviderReady({
   claudeModel,
   claudeEffort,
   opencodeBin,
+  environment,
 }) {
   const provider =
     typeof auth?.resolveStageProvider === "function"
@@ -880,6 +1041,7 @@ function assertStageProviderReady({
           claudeModel,
           claudeEffort,
           opencodeBin,
+          environment,
         }).provider;
 
   if (typeof auth?.assertStageProviderReady === "function") {
@@ -896,22 +1058,6 @@ function assertStageProviderReady({
   }
 
   auth?.assertClaudeAuth?.();
-}
-
-function ensureStageRecorded({ rootDir, workItemId, state, stage, artifactDir }) {
-  if (state.last_completed_stage >= stage) {
-    return state;
-  }
-
-  return saveRuntime({
-    rootDir,
-    workItemId,
-    state: markStageCompleted({
-      state,
-      stage,
-      artifactDir,
-    }),
-  });
 }
 
 function upsertPullRequest({
@@ -944,110 +1090,339 @@ function getActivePullRequest(state, role) {
   return state.prs?.[role] ?? null;
 }
 
-function handleCodeStage({
+function buildStageRecovery({
+  state,
+  stage,
+  prRole,
+  reason,
+  now,
+  worktree,
+}) {
+  return buildRecoverySnapshot({
+    state,
+    stage,
+    kind: "partial_stage_failure",
+    reason,
+    prRole,
+    artifactDir: state.execution?.artifact_dir ?? state.last_artifact_dir,
+    worktreePath: state.workspace?.path,
+    worktree,
+    now,
+  });
+}
+
+function blockWithRecovery({
   rootDir,
   workItemId,
   slice,
   state,
   stage,
-  stageRunner,
+  prRole,
+  reason,
+  now,
+  worktree,
+}) {
+  const recovery = buildStageRecovery({
+    state,
+    stage,
+    prRole,
+    reason,
+    now,
+    worktree,
+  });
+
+  const blocked = applyBlocker({
+    rootDir,
+    workItemId,
+    slice,
+    state: setExecutionState({
+      state,
+      activeStage: stage,
+      phase: "escalated",
+      nextAction: "noop",
+      artifactDir: state.execution?.artifact_dir ?? state.last_artifact_dir,
+      execution: state.execution,
+    }),
+    reason,
+    recovery,
+    prPath: state.prs?.[prRole]?.url ?? null,
+    now,
+  });
+
+  return {
+    state: blocked.runtime,
+    wait: blocked.wait,
+    transitioned: false,
+  };
+}
+
+function finalizeCodeStage({
+  rootDir,
+  workItemId,
+  slice,
+  state,
+  stage,
+  prRole,
+  branchName,
   worktree,
   github,
   now,
 }) {
-  const branchRole = resolveBranchRole(stage);
-  const branchName = resolveBranchName({ slice, stage });
-  const prRole = resolvePrRole(stage);
-  worktree.checkoutBranch({
-    branch: branchName,
-    startPoint: "master",
-  });
+  let nextState = state;
+  const stageResult = loadExecutionStageResult(nextState);
+  const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
+  const verifyCommands = nextState.execution?.verify_commands ?? [];
 
-  let nextState = saveRuntime({
-    rootDir,
-    workItemId,
-    state: setWorkspaceBinding({
-      state,
-      path: state.workspace?.path,
-      branchRole,
-      updatedAt: now,
-    }),
-  });
-  const existingPr = getActivePullRequest(nextState, prRole);
+  if (["stage_result_ready", "verify_pending"].includes(resolveStatePhase(nextState))) {
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setExecutionState({
+        state: nextState,
+        activeStage: stage,
+        phase: "verify_pending",
+        nextAction: "finalize_stage",
+        artifactDir,
+        execution: nextState.execution,
+      }),
+    });
 
-  const runResult = stageRunner({
-    rootDir,
-    workItemId,
-    slice,
-    stage,
-    executionDir: state.workspace?.path,
-  });
-  const deferredOutcome = handleDeferredStageExecution({
-    rootDir,
-    workItemId,
-    slice,
-    stage,
-    prRole,
-    prPath: existingPr?.url ?? null,
-    headSha: existingPr?.head_sha ?? null,
-    runResult,
-    worktree,
-    now,
-  });
-  if (deferredOutcome) {
-    return deferredOutcome;
-  }
-  const stageResult = validateStageResult(stage, runResult.stageResult);
-  worktree.assertClean();
-
-  nextState = ensureStageRecorded({
-    rootDir,
-    workItemId,
-    state: nextState,
-    stage,
-    artifactDir: runResult.artifactDir,
-  });
-
-  const headSha = worktree.getHeadSha();
-
-  worktree.pushBranch({
-    branch: branchName,
-  });
-
-  const pr =
-    existingPr?.url
-      ? {
-          number: existingPr.number,
-          url: existingPr.url,
-          draft: existingPr.draft ?? (prRole !== "docs"),
-        }
-      : github.createPullRequest({
-          base: "master",
-          head: branchName,
-          title: stageResult.pr.title,
-          body: stageResult.pr.body_markdown,
-          draft: prRole !== "docs",
+    const verify = runVerifyCommands({
+      worktreePath: nextState.workspace.path,
+      commands: verifyCommands,
+      artifactDir,
+    });
+    if (verify.bucket === "fail") {
+      return blockWithRecovery({
+        rootDir,
+        workItemId,
+        slice,
+        state: saveRuntime({
+          rootDir,
           workItemId,
-        });
+          state: setExecutionState({
+            state: nextState,
+            activeStage: stage,
+            phase: "verify_pending",
+            nextAction: "noop",
+            artifactDir,
+            execution: {
+              ...nextState.execution,
+              verify_bucket: "fail",
+            },
+          }),
+        }),
+        stage,
+        prRole,
+        reason: "Supervisor verify commands failed.",
+        now,
+        worktree,
+      });
+    }
 
-  nextState = upsertPullRequest({
-    rootDir,
-    workItemId,
-    state: nextState,
-    role: prRole,
-    pr,
-    branch: branchName,
-    headSha,
-    now,
-  });
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setExecutionState({
+        state: nextState,
+        activeStage: stage,
+        phase: "commit_pending",
+        nextAction: "finalize_stage",
+        artifactDir,
+        execution: {
+          ...nextState.execution,
+          verify_bucket: "pass",
+        },
+      }),
+    });
+  }
 
-  if (prRole === "docs") {
+  if (resolveStatePhase(nextState) === "commit_pending") {
+    const currentHeadSha = worktree.getHeadSha();
+
+    try {
+      worktree.assertClean();
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setExecutionState({
+          state: nextState,
+          activeStage: stage,
+          phase: "push_pending",
+          nextAction: "finalize_stage",
+          artifactDir,
+          execution: {
+            ...nextState.execution,
+            commit_sha: nextState.execution?.commit_sha ?? currentHeadSha,
+          },
+        }),
+      });
+    } catch {
+      commitWorktreeChanges({
+        worktreePath: nextState.workspace.path,
+        subject: stageResult.commit.subject,
+        body: stageResult.commit.body_markdown,
+      });
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setExecutionState({
+          state: nextState,
+          activeStage: stage,
+          phase: "push_pending",
+          nextAction: "finalize_stage",
+          artifactDir,
+          execution: {
+            ...nextState.execution,
+            commit_sha: worktree.getHeadSha(),
+          },
+        }),
+      });
+    }
+  }
+
+  if (resolveStatePhase(nextState) === "push_pending") {
+    worktree.pushBranch({
+      branch: branchName,
+    });
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setExecutionState({
+        state: nextState,
+        activeStage: stage,
+        phase: "pr_pending",
+        nextAction: "finalize_stage",
+        artifactDir,
+        execution: nextState.execution,
+      }),
+    });
+  }
+
+  if (resolveStatePhase(nextState) === "pr_pending") {
+    const existingPr = getActivePullRequest(nextState, prRole);
+    const headSha = nextState.execution?.commit_sha ?? worktree.getHeadSha();
+    let pr;
+    if (existingPr?.url) {
+      github.editPullRequest?.({
+        prRef: existingPr.url,
+        title: stageResult.pr.title,
+        body: stageResult.pr.body_markdown,
+        workItemId,
+      });
+      pr = {
+        number: existingPr.number,
+        url: existingPr.url,
+        draft: existingPr.draft ?? (prRole !== "docs"),
+      };
+    } else {
+      pr = github.createPullRequest({
+        base: "master",
+        head: branchName,
+        title: stageResult.pr.title,
+        body: stageResult.pr.body_markdown,
+        draft: prRole !== "docs",
+        workItemId,
+      });
+    }
+
+    nextState = upsertPullRequest({
+      rootDir,
+      workItemId,
+      state: nextState,
+      role: prRole,
+      pr,
+      branch: branchName,
+      headSha,
+      now,
+    });
+
     const checks = github.getRequiredChecks({
       prRef: pr.url,
     });
 
     if (checks.bucket === "fail") {
-      throw new Error("Required checks failed.");
+      return blockWithRecovery({
+        rootDir,
+        workItemId,
+        slice,
+        state: nextState,
+        stage,
+        prRole,
+        reason: "Required checks failed.",
+        now,
+        worktree,
+      });
+    }
+
+    if (prRole === "docs") {
+      if (checks.bucket === "pending") {
+        nextState = saveRuntime({
+          rootDir,
+          workItemId,
+          state: setWaitState({
+            state: setExecutionState({
+              state: nextState,
+              activeStage: stage,
+              phase: "wait",
+              nextAction: "poll_ci",
+              artifactDir,
+              execution: nextState.execution,
+            }),
+            kind: "ci",
+            prRole: "docs",
+            stage,
+            headSha,
+            updatedAt: now,
+          }),
+        });
+        updateRuntimeStatusForWait({
+          rootDir,
+          workItemId,
+          wait: nextState.wait,
+          prPath: pr.url,
+          now,
+          verificationStatus: "pending",
+        });
+        return {
+          state: nextState,
+          wait: nextState.wait,
+          transitioned: false,
+        };
+      }
+
+      github.mergePullRequest({
+        prRef: pr.url,
+        headSha,
+      });
+      worktree.syncBaseBranch();
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state: markStageCompleted({
+            state: nextState,
+            stage,
+            artifactDir,
+          }),
+          kind: "ready_for_next_stage",
+          stage: 2,
+          updatedAt: now,
+        }),
+      });
+      updateRuntimeStatusForWait({
+        rootDir,
+        workItemId,
+        wait: nextState.wait,
+        prPath: pr.url,
+        now,
+        verificationStatus: "passed",
+      });
+      return {
+        state: nextState,
+        wait: nextState.wait,
+        transitioned: true,
+      };
     }
 
     if (checks.bucket === "pending") {
@@ -1055,9 +1430,13 @@ function handleCodeStage({
         rootDir,
         workItemId,
         state: setWaitState({
-          state: nextState,
+          state: markStageCompleted({
+            state: nextState,
+            stage,
+            artifactDir,
+          }),
           kind: "ci",
-          prRole: "docs",
+          prRole,
           stage,
           headSha,
           updatedAt: now,
@@ -1078,53 +1457,34 @@ function handleCodeStage({
       };
     }
 
-    github.mergePullRequest({
+    github.markReady({
       prRef: pr.url,
-      headSha,
     });
-    worktree.syncBaseBranch();
-    nextState = saveRuntime({
+    nextState = upsertPullRequest({
       rootDir,
       workItemId,
-      state: setWaitState({
-        state: nextState,
-        kind: "ready_for_next_stage",
-        stage: 2,
-        updatedAt: now,
-      }),
-    });
-    updateRuntimeStatusForWait({
-      rootDir,
-      workItemId,
-      wait: nextState.wait,
-      prPath: pr.url,
-      now,
-      verificationStatus: "passed",
-    });
-    return {
       state: nextState,
-      wait: nextState.wait,
-      transitioned: true,
-    };
-  }
-
-  const checks = github.getRequiredChecks({
-    prRef: pr.url,
-  });
-
-  if (checks.bucket === "fail") {
-    throw new Error("Required checks failed.");
-  }
-
-  if (checks.bucket === "pending") {
+      role: prRole,
+      pr: {
+        ...pr,
+        draft: false,
+      },
+      branch: branchName,
+      headSha,
+      now,
+    });
     nextState = saveRuntime({
       rootDir,
       workItemId,
       state: setWaitState({
-        state: nextState,
-        kind: "ci",
+        state: markStageCompleted({
+          state: nextState,
+          stage,
+          artifactDir,
+        }),
+        kind: "ready_for_next_stage",
         prRole,
-        stage,
+        stage: stage === 2 ? 3 : 5,
         headSha,
         updatedAt: now,
       }),
@@ -1135,58 +1495,133 @@ function handleCodeStage({
       wait: nextState.wait,
       prPath: pr.url,
       now,
-      verificationStatus: "pending",
+      approvalState: "codex_approved",
+      lifecycle: "ready_for_review",
+      verificationStatus: "passed",
     });
     return {
       state: nextState,
       wait: nextState.wait,
-      transitioned: false,
+      transitioned: true,
     };
   }
 
-  github.markReady({
-    prRef: pr.url,
-  });
-  nextState = upsertPullRequest({
-    rootDir,
-    workItemId,
-    state: nextState,
-    role: prRole,
-    pr: {
-      ...pr,
-      draft: false,
-    },
-    branch: branchName,
-    headSha,
-    now,
-  });
-  nextState = saveRuntime({
-    rootDir,
-    workItemId,
-    state: setWaitState({
-      state: nextState,
-      kind: "ready_for_next_stage",
-      prRole,
-      stage: stage === 2 ? 3 : 5,
-      headSha,
-      updatedAt: now,
-    }),
-  });
-  updateRuntimeStatusForWait({
-    rootDir,
-    workItemId,
-    wait: nextState.wait,
-    prPath: pr.url,
-    now,
-    approvalState: "codex_approved",
-    lifecycle: "ready_for_review",
-    verificationStatus: "passed",
-  });
   return {
     state: nextState,
     wait: nextState.wait,
-    transitioned: true,
+    transitioned: false,
   };
+}
+
+function handleCodeStage({
+  rootDir,
+  workItemId,
+  slice,
+  state,
+  stage,
+  stageRunner,
+  worktree,
+  github,
+  now,
+}) {
+  const branchRole = resolveBranchRole(stage);
+  const branchName = resolveBranchName({ slice, stage });
+  const prRole = resolvePrRole(stage);
+  worktree.checkoutBranch({
+    branch: branchName,
+    startPoint: "origin/master",
+  });
+
+  let nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setWorkspaceBinding({
+      state,
+      path: state.workspace?.path,
+      branchRole,
+      updatedAt: now,
+    }),
+  });
+  const existingPr = getActivePullRequest(nextState, prRole);
+  const phase = resolveStatePhase(nextState);
+
+  if (!isPendingFinalizePhase(phase) || nextState.active_stage !== stage) {
+    const runResult = stageRunner({
+      rootDir,
+      workItemId,
+      slice,
+      stage,
+      executionDir: state.workspace?.path,
+    });
+    const deferredOutcome = handleDeferredStageExecution({
+      rootDir,
+      workItemId,
+      slice,
+      stage,
+      prRole,
+      prPath: existingPr?.url ?? null,
+      headSha: existingPr?.head_sha ?? null,
+      runResult,
+      worktree,
+      now,
+    });
+    if (deferredOutcome) {
+      return deferredOutcome;
+    }
+
+    nextState = resolveRunResultRuntimeState({
+      rootDir,
+      workItemId,
+      slice,
+      runResult,
+    });
+
+    if (!isPendingFinalizePhase(resolveStatePhase(nextState)) && runResult.stageResult) {
+      const stageResultPath = resolve(runResult.artifactDir, "stage-result.json");
+      mkdirSync(runResult.artifactDir, { recursive: true });
+      if (!existsSync(stageResultPath)) {
+        writeFileSync(stageResultPath, `${JSON.stringify(runResult.stageResult, null, 2)}\n`);
+      }
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setExecutionState({
+          state: nextState,
+          activeStage: stage,
+          phase: "stage_result_ready",
+          nextAction: "finalize_stage",
+          artifactDir: runResult.artifactDir,
+          execution: {
+            provider: runResult.execution?.provider ?? null,
+            session_role: stage === 1 ? "claude_primary" : "codex_primary",
+            session_id: runResult.execution?.sessionId ?? null,
+            artifact_dir: runResult.artifactDir,
+            stage_result_path: stageResultPath,
+            started_at: now,
+            finished_at: now,
+            verify_commands: [],
+            verify_bucket: null,
+            commit_sha: null,
+            pr_role: prRole,
+          },
+          clearRecovery: true,
+        }),
+      });
+    }
+  }
+
+  return finalizeCodeStage({
+    rootDir,
+    workItemId,
+    slice,
+    state: nextState,
+    stage,
+    prRole,
+    branchName,
+    worktree,
+    github,
+    now,
+  });
 }
 
 function handleReviewStage({
@@ -1201,106 +1636,197 @@ function handleReviewStage({
 }) {
   const branchRole = resolveBranchRole(stage);
   const prRole = resolvePrRole(stage);
-  const activePr = getActivePullRequest(state, prRole);
+  let nextState = state;
+  let activePr = getActivePullRequest(nextState, prRole);
   if (!activePr?.url) {
     throw new Error(`No active ${prRole} pull request found.`);
   }
 
   worktree.checkoutBranch({
     branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
-    startPoint: "master",
+    startPoint: "origin/master",
   });
 
-  let nextState = saveRuntime({
+  nextState = saveRuntime({
     rootDir,
     workItemId,
     state: setWorkspaceBinding({
-      state,
+      state: nextState,
       path: state.workspace?.path,
       branchRole,
       updatedAt: now,
     }),
   });
+  const phase = resolveStatePhase(nextState);
 
-  const runResult = stageRunner({
-    rootDir,
-    workItemId,
-    slice: state.slice ?? workItemId,
-    stage,
-    executionDir: state.workspace?.path,
-  });
-  const deferredOutcome = handleDeferredStageExecution({
-    rootDir,
-    workItemId,
-    slice: state.slice ?? workItemId,
-    stage,
-    prRole,
-    prPath: activePr.url,
-    headSha: activePr.head_sha ?? null,
-    runResult,
-    worktree,
-    now,
-  });
-  if (deferredOutcome) {
-    return deferredOutcome;
-  }
-  const stageResult = validateStageResult(stage, runResult.stageResult);
-  nextState = ensureStageRecorded({
-    rootDir,
-    workItemId,
-    state: nextState,
-    stage,
-    artifactDir: runResult.artifactDir,
-  });
-
-  const reviewRole = prRole === "backend" ? "backend" : "frontend";
-  nextState = saveRuntime({
-    rootDir,
-    workItemId,
-    state: setLastReview({
-      state: nextState,
-      role: reviewRole,
-      decision: stageResult.decision,
-      routeBackStage: stageResult.route_back_stage,
-      approvedHeadSha: stageResult.approved_head_sha,
-      updatedAt: now,
-    }),
-  });
-
-  if (stage === 5) {
-    github.commentPullRequest({
-      prRef: activePr.url,
-      body: stageResult.body_markdown,
+  if (!isPendingReviewPhase(phase) || nextState.active_stage !== stage) {
+    const runResult = stageRunner({
+      rootDir,
+      workItemId,
+      slice: state.slice ?? workItemId,
+      stage,
+      executionDir: state.workspace?.path,
     });
-  } else {
-    try {
-      github.reviewPullRequest({
-        prRef: activePr.url,
-        decision: stageResult.decision,
-        body: stageResult.body_markdown,
-      });
-    } catch (error) {
-      if (stageResult.decision === "approve" && isOwnPullRequestApprovalError(error)) {
-        github.commentPullRequest({
-          prRef: activePr.url,
-          body: stageResult.body_markdown,
-        });
-      } else {
-        throw error;
+    const deferredOutcome = handleDeferredStageExecution({
+      rootDir,
+      workItemId,
+      slice: state.slice ?? workItemId,
+      stage,
+      prRole,
+      prPath: activePr.url,
+      headSha: activePr.head_sha ?? null,
+      runResult,
+      worktree,
+      now,
+    });
+    if (deferredOutcome) {
+      return deferredOutcome;
+    }
+    nextState = resolveRunResultRuntimeState({
+      rootDir,
+      workItemId,
+      slice: state.slice ?? workItemId,
+      runResult,
+    });
+
+    if (!isPendingReviewPhase(resolveStatePhase(nextState)) && runResult.stageResult) {
+      const stageResultPath = resolve(runResult.artifactDir, "stage-result.json");
+      mkdirSync(runResult.artifactDir, { recursive: true });
+      if (!existsSync(stageResultPath)) {
+        writeFileSync(stageResultPath, `${JSON.stringify(runResult.stageResult, null, 2)}\n`);
       }
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setExecutionState({
+          state: nextState,
+          activeStage: stage,
+          phase: "review_pending",
+          nextAction: "run_review",
+          artifactDir: runResult.artifactDir,
+          execution: {
+            provider: runResult.execution?.provider ?? null,
+            session_role: "claude_primary",
+            session_id: runResult.execution?.sessionId ?? null,
+            artifact_dir: runResult.artifactDir,
+            stage_result_path: stageResultPath,
+            started_at: now,
+            finished_at: now,
+            verify_commands: [],
+            verify_bucket: null,
+            commit_sha: null,
+            pr_role: prRole,
+          },
+          clearRecovery: true,
+        }),
+      });
     }
   }
 
-  if (stageResult.decision === "approve") {
+  activePr = getActivePullRequest(nextState, prRole);
+  const stageResult = loadExecutionStageResult(nextState);
+  const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
+  const reviewRole = prRole === "backend" ? "backend" : "frontend";
+
+  if (resolveStatePhase(nextState) === "review_pending") {
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setLastReview({
+        state: nextState,
+        role: reviewRole,
+        decision: stageResult.decision,
+        routeBackStage: stageResult.route_back_stage,
+        approvedHeadSha: stageResult.approved_head_sha,
+        updatedAt: now,
+      }),
+    });
+
     if (stage === 5) {
+      github.commentPullRequest({
+        prRef: activePr.url,
+        body: stageResult.body_markdown,
+      });
+    } else {
+      try {
+        github.reviewPullRequest({
+          prRef: activePr.url,
+          decision: stageResult.decision,
+          body: stageResult.body_markdown,
+        });
+      } catch (error) {
+        if (stageResult.decision === "approve" && isOwnPullRequestApprovalError(error)) {
+          github.commentPullRequest({
+            prRef: activePr.url,
+            body: stageResult.body_markdown,
+          });
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (stageResult.decision === "approve") {
+      if (stage === 5) {
+        nextState = saveRuntime({
+          rootDir,
+          workItemId,
+          state: setWaitState({
+            state: markStageCompleted({
+              state: nextState,
+              stage,
+              artifactDir,
+            }),
+            kind: "ready_for_next_stage",
+            prRole: "frontend",
+            stage: 6,
+            headSha: activePr.head_sha,
+            updatedAt: now,
+          }),
+        });
+        updateRuntimeStatusForWait({
+          rootDir,
+          workItemId,
+          wait: nextState.wait,
+          prPath: activePr.url,
+          now,
+          approvalState: "claude_approved",
+          lifecycle: "ready_for_review",
+          verificationStatus: "passed",
+        });
+        return {
+          state: nextState,
+          wait: nextState.wait,
+          transitioned: true,
+        };
+      }
+
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setExecutionState({
+          state: nextState,
+          activeStage: stage,
+          phase: "merge_pending",
+          nextAction: "merge_pr",
+          artifactDir,
+          execution: nextState.execution,
+        }),
+      });
+    } else {
+      const routeBackStage = stageResult.route_back_stage ?? defaultBackRoute(stage);
       nextState = saveRuntime({
         rootDir,
         workItemId,
         state: setWaitState({
-          state: nextState,
+          state: markStageCompleted({
+            state: nextState,
+            stage,
+            artifactDir,
+          }),
           kind: "ready_for_next_stage",
-          prRole: "frontend",
-          stage: 6,
+          prRole,
+          stage: routeBackStage,
           headSha: activePr.head_sha,
           updatedAt: now,
         }),
@@ -1311,9 +1837,9 @@ function handleReviewStage({
         wait: nextState.wait,
         prPath: activePr.url,
         now,
-        approvalState: "claude_approved",
-        lifecycle: "ready_for_review",
-        verificationStatus: "passed",
+        approvalState: "needs_revision",
+        lifecycle: "in_progress",
+        verificationStatus: "pending",
       });
       return {
         state: nextState,
@@ -1321,7 +1847,9 @@ function handleReviewStage({
         transitioned: true,
       };
     }
+  }
 
+  if (resolveStatePhase(nextState) === "merge_pending") {
     const approvedHeadSha = resolveApprovedHeadSha({
       approvedHeadSha: stageResult.approved_head_sha,
       activeHeadSha: activePr.head_sha,
@@ -1340,7 +1868,14 @@ function handleReviewStage({
           rootDir,
           workItemId,
           state: setWaitState({
-            state: nextState,
+            state: setExecutionState({
+              state: nextState,
+              activeStage: stage,
+              phase: "merge_pending",
+              nextAction: "poll_ci",
+              artifactDir,
+              execution: nextState.execution,
+            }),
             kind: "ci",
             prRole,
             stage,
@@ -1374,7 +1909,11 @@ function handleReviewStage({
         rootDir,
         workItemId,
         state: setWaitState({
-          state: nextState,
+          state: markStageCompleted({
+            state: nextState,
+            stage,
+            artifactDir,
+          }),
           kind: "ready_for_next_stage",
           stage: 4,
           updatedAt: now,
@@ -1400,10 +1939,10 @@ function handleReviewStage({
     nextState = saveRuntime({
       rootDir,
       workItemId,
-      state: setWaitState({
+      state: markStageCompleted({
         state: nextState,
-        kind: null,
-        updatedAt: now,
+        stage,
+        artifactDir,
       }),
     });
     syncStatus({
@@ -1426,33 +1965,10 @@ function handleReviewStage({
     };
   }
 
-  const routeBackStage = stageResult.route_back_stage ?? defaultBackRoute(stage);
-  nextState = saveRuntime({
-    rootDir,
-    workItemId,
-    state: setWaitState({
-      state: nextState,
-      kind: "ready_for_next_stage",
-      prRole,
-      stage: routeBackStage,
-      headSha: activePr.head_sha,
-      updatedAt: now,
-    }),
-  });
-  updateRuntimeStatusForWait({
-    rootDir,
-    workItemId,
-    wait: nextState.wait,
-    prPath: activePr.url,
-    now,
-    approvalState: "needs_revision",
-    lifecycle: "in_progress",
-    verificationStatus: "pending",
-  });
   return {
     state: nextState,
     wait: nextState.wait,
-    transitioned: true,
+    transitioned: false,
   };
 }
 
@@ -1485,6 +2001,7 @@ function createDefaultDependencies({
   const codexProviderConfig = resolveCodexProviderConfig({
     rootDir,
     bin: opencodeBin,
+    environment,
   });
 
   return {
@@ -1523,6 +2040,7 @@ function createDefaultDependencies({
           claudeModel: claudeProviderConfig.model,
           claudeEffort: claudeProviderConfig.effort,
           opencodeBin: codexProviderConfig.bin,
+          environment,
         }).provider;
       },
     },
@@ -1570,6 +2088,11 @@ function createDefaultDependencies({
       },
       listChangedFiles({ worktreePath }) {
         return listWorktreeChangedFiles({
+          worktreePath,
+        });
+      },
+      getBinaryDiff({ worktreePath }) {
+        return getWorktreeBinaryDiff({
           worktreePath,
         });
       },
@@ -1692,6 +2215,8 @@ export function superviseWorkItem(
           wait: blocked.wait,
           recovery: blocked.runtime.recovery,
         },
+        runtimeState: blocked.runtime,
+        worktree: dependencies.worktree,
       });
 
       return {
@@ -1720,59 +2245,63 @@ export function superviseWorkItem(
     const transitions = [];
 
     for (let transitionIndex = 0; transitionIndex < maxTransitions; transitionIndex += 1) {
-      try {
-        dependencies.worktree.assertClean({
-          worktreePath: state.workspace.path,
-        });
-      } catch (error) {
-        const recovery = buildRecoverySnapshot({
-          state,
-          stage: state.wait?.stage ?? state.current_stage ?? state.blocked_stage ?? state.last_completed_stage ?? 1,
-          kind: "dirty_worktree",
-          reason: error.message,
-          prRole: state.wait?.pr_role ?? state.workspace?.branch_role ?? null,
-          artifactDir: state.last_artifact_dir,
-          worktreePath: state.workspace.path,
-          worktree: {
-            getCurrentBranch: ({ worktreePath }) =>
-              dependencies.worktree.getCurrentBranch({
-                worktreePath,
-              }),
-            listChangedFiles: ({ worktreePath }) =>
-              dependencies.worktree.listChangedFiles({
-                worktreePath,
-              }),
-          },
-          now,
-        });
-        const blocked = applyBlocker({
-          rootDir,
-          workItemId: normalizedWorkItemId,
-          slice: resolvedSlice,
-          state,
-          reason: error.message,
-          recovery,
-          prPath: state.prs?.[state.wait?.pr_role ?? ""]?.url ?? null,
-          now,
-        });
-        const artifactDir = writeSupervisorArtifact({
-          rootDir,
-          workItemId: normalizedWorkItemId,
-          now,
-          summary: {
+      if (!shouldAllowDirtyWorktree(state)) {
+        try {
+          dependencies.worktree.assertClean({
+            worktreePath: state.workspace.path,
+          });
+        } catch (error) {
+          const recovery = buildRecoverySnapshot({
+            state,
+            stage: state.wait?.stage ?? state.current_stage ?? state.blocked_stage ?? state.last_completed_stage ?? 1,
+            kind: "dirty_worktree",
+            reason: error.message,
+            prRole: state.wait?.pr_role ?? state.workspace?.branch_role ?? null,
+            artifactDir: state.last_artifact_dir,
+            worktreePath: state.workspace.path,
+            worktree: {
+              getCurrentBranch: ({ worktreePath }) =>
+                dependencies.worktree.getCurrentBranch({
+                  worktreePath,
+                }),
+              listChangedFiles: ({ worktreePath }) =>
+                dependencies.worktree.listChangedFiles({
+                  worktreePath,
+                }),
+            },
+            now,
+          });
+          const blocked = applyBlocker({
+            rootDir,
             workItemId: normalizedWorkItemId,
             slice: resolvedSlice,
-            transitions,
-            wait: blocked.wait,
-            recovery: blocked.runtime.recovery,
-          },
-        });
+            state,
+            reason: error.message,
+            recovery,
+            prPath: state.prs?.[state.wait?.pr_role ?? ""]?.url ?? null,
+            now,
+          });
+          const artifactDir = writeSupervisorArtifact({
+            rootDir,
+            workItemId: normalizedWorkItemId,
+            now,
+            summary: {
+              workItemId: normalizedWorkItemId,
+              slice: resolvedSlice,
+              transitions,
+              wait: blocked.wait,
+              recovery: blocked.runtime.recovery,
+            },
+            runtimeState: blocked.runtime,
+            worktree: dependencies.worktree,
+          });
 
-        return {
-          ...blocked,
-          artifactDir,
-          transitions,
-        };
+          return {
+            ...blocked,
+            artifactDir,
+            transitions,
+          };
+        }
       }
 
       let waitProcessing;
@@ -1805,14 +2334,16 @@ export function superviseWorkItem(
           rootDir,
           workItemId: normalizedWorkItemId,
           now,
-        summary: {
-          workItemId: normalizedWorkItemId,
-          slice: resolvedSlice,
-          transitions,
-          wait: blocked.wait,
-          recovery: blocked.runtime.recovery,
-        },
-      });
+          summary: {
+            workItemId: normalizedWorkItemId,
+            slice: resolvedSlice,
+            transitions,
+            wait: blocked.wait,
+            recovery: blocked.runtime.recovery,
+          },
+          runtimeState: blocked.runtime,
+          worktree: dependencies.worktree,
+        });
 
         return {
           ...blocked,
@@ -1827,14 +2358,16 @@ export function superviseWorkItem(
           rootDir,
           workItemId: normalizedWorkItemId,
           now,
-        summary: {
-          workItemId: normalizedWorkItemId,
-          slice: resolvedSlice,
-          transitions,
-          wait: state.wait,
-          recovery: state.recovery,
-        },
-      });
+          summary: {
+            workItemId: normalizedWorkItemId,
+            slice: resolvedSlice,
+            transitions,
+            wait: state.wait,
+            recovery: state.recovery,
+          },
+          runtimeState: state,
+          worktree: dependencies.worktree,
+        });
 
         return {
           workItemId: normalizedWorkItemId,
@@ -1852,14 +2385,16 @@ export function superviseWorkItem(
           rootDir,
           workItemId: normalizedWorkItemId,
           now,
-        summary: {
-          workItemId: normalizedWorkItemId,
-          slice: resolvedSlice,
-          transitions,
-          wait: state.wait,
-          recovery: state.recovery,
-        },
-      });
+          summary: {
+            workItemId: normalizedWorkItemId,
+            slice: resolvedSlice,
+            transitions,
+            wait: state.wait,
+            recovery: state.recovery,
+          },
+          runtimeState: state,
+          worktree: dependencies.worktree,
+        });
 
         return {
           workItemId: normalizedWorkItemId,
@@ -1881,6 +2416,7 @@ export function superviseWorkItem(
           claudeModel,
           claudeEffort,
           opencodeBin,
+          environment,
         });
       } catch (error) {
         const blocked = applyBlocker({
@@ -1903,6 +2439,8 @@ export function superviseWorkItem(
             wait: blocked.wait,
             recovery: blocked.runtime.recovery,
           },
+          runtimeState: blocked.runtime,
+          worktree: dependencies.worktree,
         });
 
         return {
@@ -1946,6 +2484,10 @@ export function superviseWorkItem(
           dependencies.worktree.listChangedFiles({
             worktreePath,
           }),
+        getBinaryDiff: ({ worktreePath }) =>
+          dependencies.worktree.getBinaryDiff({
+            worktreePath,
+          }),
       };
 
       const handler =
@@ -1975,14 +2517,16 @@ export function superviseWorkItem(
           rootDir,
           workItemId: normalizedWorkItemId,
           now,
-        summary: {
-          workItemId: normalizedWorkItemId,
-          slice: resolvedSlice,
-          transitions,
-          wait: state.wait,
-          recovery: state.recovery,
-        },
-      });
+          summary: {
+            workItemId: normalizedWorkItemId,
+            slice: resolvedSlice,
+            transitions,
+            wait: state.wait,
+            recovery: state.recovery,
+          },
+          runtimeState: state,
+          worktree: stageWorktree,
+        });
 
         return {
           workItemId: normalizedWorkItemId,
@@ -2007,6 +2551,8 @@ export function superviseWorkItem(
         wait: cappedState.wait,
         recovery: cappedState.recovery,
       },
+      runtimeState: cappedState,
+      worktree: dependencies.worktree,
     });
     syncStatus({
       rootDir,
@@ -2069,6 +2615,42 @@ export function tickSupervisorWorkItems(
   } = {},
   dependencies = {},
 ) {
+  const isResumableState = (state) => {
+    const phase = resolveStatePhase(state);
+    if (isPendingFinalizePhase(phase) || isPendingReviewPhase(phase)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (!state.wait?.kind) {
+      return {
+        resumable: false,
+        reason: "no_wait_state",
+      };
+    }
+
+    if (!["ci", "blocked_retry", "ready_for_next_stage"].includes(state.wait.kind)) {
+      return {
+        resumable: false,
+        reason: `unsupported_wait_kind=${state.wait.kind}`,
+      };
+    }
+
+    if (state.wait.kind === "blocked_retry" && !isRetryDue(state.retry, now)) {
+      return {
+        resumable: false,
+        reason: "retry_not_due",
+      };
+    }
+
+    return {
+      resumable: true,
+      reason: null,
+    };
+  };
+
   if (typeof workItemId === "string" && workItemId.trim().length > 0) {
     const normalizedWorkItemId = workItemId.trim();
     const runtimePath = resolveRuntimePath({
@@ -2103,40 +2685,15 @@ export function tickSupervisorWorkItems(
       ];
     }
 
-    if (!state.wait?.kind) {
+    const resumable = isResumableState(state);
+    if (!resumable.resumable) {
       return [
         createTickResult({
           workItemId: normalizedWorkItemId,
           slice: state.slice,
           action: "noop",
-          reason: "no_wait_state",
-          wait: null,
-          runtime: state,
-        }),
-      ];
-    }
-
-    if (!["ci", "blocked_retry", "ready_for_next_stage"].includes(state.wait.kind)) {
-      return [
-        createTickResult({
-          workItemId: normalizedWorkItemId,
-          slice: state.slice,
-          action: "noop",
-          reason: `unsupported_wait_kind=${state.wait.kind}`,
-          wait: state.wait,
-          runtime: state,
-        }),
-      ];
-    }
-
-    if (state.wait.kind === "blocked_retry" && !isRetryDue(state.retry, now)) {
-      return [
-        createTickResult({
-          workItemId: normalizedWorkItemId,
-          slice: state.slice,
-          action: "noop",
-          reason: "retry_not_due",
-          wait: state.wait,
+          reason: resumable.reason,
+          wait: state.wait ?? null,
           runtime: state,
         }),
       ];
@@ -2161,15 +2718,6 @@ export function tickSupervisorWorkItems(
 
   return listRuntimeStates(rootDir)
     .flatMap(({ state }) => {
-      const kind = state.wait?.kind;
-      if (!kind) {
-        return [];
-      }
-
-      if (!["ci", "blocked_retry", "ready_for_next_stage"].includes(kind)) {
-        return [];
-      }
-
       if (state.lock?.owner) {
         return [
           createTickResult({
@@ -2183,19 +2731,21 @@ export function tickSupervisorWorkItems(
         ];
       }
 
-      if (kind === "blocked_retry") {
-        if (!isRetryDue(state.retry, now)) {
-          return [
-            createTickResult({
-              workItemId: state.work_item_id,
-              slice: state.slice,
-              action: "noop",
-              reason: "retry_not_due",
-              wait: state.wait,
-              runtime: state,
-            }),
-          ];
+      const resumable = isResumableState(state);
+      if (!resumable.resumable) {
+        if (resumable.reason === "no_wait_state" || resumable.reason?.startsWith("unsupported_wait_kind=")) {
+          return [];
         }
+        return [
+          createTickResult({
+            workItemId: state.work_item_id,
+            slice: state.slice,
+            action: "noop",
+            reason: resumable.reason,
+            wait: state.wait ?? null,
+            runtime: state,
+          }),
+        ];
       }
 
       return [

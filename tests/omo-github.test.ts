@@ -68,6 +68,12 @@ describe("OMO GitHub automation client", () => {
     const checks = client.getRequiredChecks({
       prRef: created.url,
     });
+    client.editPullRequest({
+      prRef: created.url,
+      title: "feat: backend slice",
+      body: "## Summary\n- backend",
+      workItemId: "05-planner-week-core",
+    });
     client.markReady({
       prRef: created.url,
     });
@@ -99,6 +105,10 @@ describe("OMO GitHub automation client", () => {
     expect(argsLog).toContain("pr");
     expect(argsLog).toContain("create");
     expect(argsLog).toContain("--draft");
+    expect(argsLog).toContain("## Workpack / Slice");
+    expect(argsLog).toContain("## Test Plan");
+    expect(argsLog).toContain("## Security Review");
+    expect(argsLog).toContain("edit");
     expect(argsLog).toContain("checks");
     expect(argsLog).toContain("--required");
     expect(argsLog).toContain("ready");
@@ -229,12 +239,15 @@ describe("OMO GitHub automation client", () => {
       body: "## Summary\n- backend",
       draft: true,
     });
+    const argsLog = readFileSync(argsPath, "utf8");
 
     expect(created).toMatchObject({
       url: "https://github.com/netsus/homecook/pull/49",
       number: 49,
       draft: true,
     });
+    expect(argsLog).toContain("pr");
+    expect(argsLog).toContain("edit");
   });
 
   it("normalizes workflow v2 work item refs in PR bodies before create", () => {
@@ -260,6 +273,35 @@ describe("OMO GitHub automation client", () => {
     const argsLog = readFileSync(argsPath, "utf8");
 
     expect(argsLog).toContain(".workflow-v2/work-items/04-recipe-save.json");
+  });
+
+  it("fills missing required PR template sections with safe defaults", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-template-sections-"));
+    const { binPath, argsPath } = createFakeGhBin(rootDir);
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+      environment: {
+        FAKE_GH_ARGS_PATH: argsPath,
+      },
+    });
+
+    client.createPullRequest({
+      base: "master",
+      head: "feature/be-05-planner-week-core",
+      title: "feat: planner backend",
+      body: "## Summary\n- planner backend",
+      draft: true,
+      workItemId: "05-planner-week-core",
+    });
+
+    const argsLog = readFileSync(argsPath, "utf8");
+
+    expect(argsLog).toContain("## Workpack / Slice");
+    expect(argsLog).toContain(".workflow-v2/work-items/05-planner-week-core.json");
+    expect(argsLog).toContain("## Docs Impact");
+    expect(argsLog).toContain("## Breaking Changes");
+    expect(argsLog).toContain("## Design / Accessibility");
   });
 
   it("fails closed when gh merge returns success but the pull request is still open", () => {

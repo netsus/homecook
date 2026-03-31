@@ -81,9 +81,12 @@ function main() {
     [
       `Work item: ${status.workItemId}`,
       `Slice: ${status.slice}`,
+      `Active stage: ${status.runtime.active_stage ?? status.runtime.current_stage ?? "N/A"}`,
       `Current stage: ${status.runtime.current_stage ?? "N/A"}`,
       `Last completed stage: ${status.runtime.last_completed_stage ?? 0}`,
       `Blocked stage: ${status.runtime.blocked_stage ?? "none"}`,
+      `Phase: ${status.runtime.phase ?? "none"}`,
+      `Next action: ${status.runtime.next_action ?? "noop"}`,
       `Claude session: ${status.runtime.sessions.claude_primary.session_id ?? "missing"} (${status.runtime.sessions.claude_primary.provider ?? "pending"})`,
       `Codex session: ${status.runtime.sessions.codex_primary.session_id ?? "missing"} (${status.runtime.sessions.codex_primary.provider ?? "pending"})`,
       `Tracked lifecycle: ${status.trackedStatus?.lifecycle ?? status.trackedWorkItem.status.lifecycle}`,

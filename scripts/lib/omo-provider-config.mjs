@@ -33,6 +33,32 @@ function mergeProviderSection(defaults, raw) {
   };
 }
 
+function resolveDefaultOpencodeBin({ environment, homeDir } = {}) {
+  const candidateHomeDir =
+    environment?.HOME ??
+    homeDir ??
+    process.env.HOME ??
+    null;
+  const fromEnvironment =
+    environment?.OPENCODE_BIN ??
+    process.env.OPENCODE_BIN ??
+    (typeof candidateHomeDir === "string" && candidateHomeDir.trim().length > 0
+      ? resolve(candidateHomeDir, ".opencode", "bin", "opencode")
+      : null);
+
+  if (typeof fromEnvironment === "string" && fromEnvironment.trim().length > 0) {
+    if (fromEnvironment.includes("/") && existsSync(fromEnvironment)) {
+      return fromEnvironment;
+    }
+
+    if (!fromEnvironment.includes("/")) {
+      return fromEnvironment;
+    }
+  }
+
+  return "opencode";
+}
+
 export function getOmoProviderConfigPath(rootDir = process.cwd()) {
   return resolve(rootDir, ".opencode", "omo-provider.json");
 }
@@ -91,15 +117,29 @@ export function resolveCodexProviderConfig({
   agent,
   model,
   variant,
+  environment,
+  homeDir,
 } = {}) {
   const { config, configPath } = readOmoProviderConfig(rootDir);
+  const configuredBin =
+    typeof bin === "string" && bin.trim().length > 0
+      ? bin.trim()
+      : config.codex.bin;
 
   return {
     provider: "opencode",
     bin:
-      typeof bin === "string" && bin.trim().length > 0
-        ? bin.trim()
-        : config.codex.bin,
+      typeof configuredBin === "string" && configuredBin.trim().length > 0
+        ? configuredBin === "opencode"
+          ? resolveDefaultOpencodeBin({
+              environment,
+              homeDir,
+            })
+          : configuredBin
+        : resolveDefaultOpencodeBin({
+            environment,
+            homeDir,
+          }),
     agent:
       typeof agent === "string" && agent.trim().length > 0
         ? agent.trim()

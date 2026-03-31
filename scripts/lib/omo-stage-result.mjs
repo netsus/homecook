@@ -45,12 +45,25 @@ export function validateStageResult(stage, stageResult) {
   const result = ensureObject(stageResult, "stageResult");
 
   if ([1, 2, 4].includes(normalizedStage)) {
+    const fallbackCommitSubject =
+      typeof result.commit?.subject === "string" && result.commit.subject.trim().length > 0
+        ? result.commit.subject
+        : result.pr?.title;
+
     return {
       result: ensureNonEmptyString(result.result, "stageResult.result"),
       summary_markdown: ensureNonEmptyString(
         result.summary_markdown,
         "stageResult.summary_markdown",
       ),
+      commit: {
+        subject: ensureNonEmptyString(fallbackCommitSubject, "stageResult.commit.subject"),
+        body_markdown:
+          typeof result.commit?.body_markdown === "string" &&
+          result.commit.body_markdown.trim().length > 0
+            ? result.commit.body_markdown.trim()
+            : null,
+      },
       pr: {
         title: ensureNonEmptyString(result.pr?.title, "stageResult.pr.title"),
         body_markdown: ensureNonEmptyString(

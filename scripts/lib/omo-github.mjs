@@ -1,6 +1,11 @@
 import { spawnSync } from "node:child_process";
 
-import { findInvalidWorkflowV2Refs } from "./git-policy.mjs";
+import {
+  REQUIRED_PR_SECTIONS,
+  findEmptyPrSections,
+  findInvalidWorkflowV2Refs,
+  findMissingPrSections,
+} from "./git-policy.mjs";
 
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -36,26 +41,89 @@ function tryParsePullRequestUrl(text) {
   return parsePullRequestUrl(match[0]);
 }
 
+function extractSectionContent(body, section) {
+  const start = body.indexOf(section);
+  if (start === -1) {
+    return null;
+  }
+
+  const afterHeader = body.slice(start + section.length);
+  const nextSectionStart =
+    REQUIRED_PR_SECTIONS.map((candidate) => afterHeader.indexOf(candidate))
+      .filter((index) => index > 0)
+      .sort((left, right) => left - right)[0] ?? afterHeader.length;
+  const sectionContent = afterHeader.slice(0, nextSectionStart).trim();
+
+  return sectionContent.length > 0 ? sectionContent : null;
+}
+
+function buildDefaultPrSectionContent(section, { body, workItemId }) {
+  const workflowRefPath =
+    typeof workItemId === "string" && workItemId.trim().length > 0
+      ? `.workflow-v2/work-items/${workItemId.trim()}.json`
+      : "N/A";
+
+  switch (section) {
+    case "## Summary":
+      return body.includes("## ")
+        ? "- Automated supervisor-generated summary."
+        : body;
+    case "## Workpack / Slice":
+      return `- workflow v2 work item: \`${workflowRefPath}\``;
+    case "## Test Plan":
+      return "- Supervisor verify commands and required CI checks";
+    case "## Docs Impact":
+      return "- 해당 없음";
+    case "## Security Review":
+      return "- 기존 권한/소유권/read-only 규칙 유지";
+    case "## Performance":
+      return "- 해당 없음";
+    case "## Design / Accessibility":
+      return "- 해당 없음";
+    case "## Breaking Changes":
+      return "- 없음";
+    default:
+      return "- 해당 없음";
+  }
+}
+
 function normalizePullRequestBody(body, workItemId) {
   const normalizedBody = ensureNonEmptyString(body, "body");
   const normalizedWorkItemId =
     typeof workItemId === "string" && workItemId.trim().length > 0 ? workItemId.trim() : null;
-
-  if (!normalizedWorkItemId) {
-    return normalizedBody;
-  }
-
-  const invalidRefs = findInvalidWorkflowV2Refs(normalizedBody);
-  if (invalidRefs.length === 0) {
-    return normalizedBody;
-  }
-
-  const workflowRefPath = `.workflow-v2/work-items/${normalizedWorkItemId}.json`;
-
-  return normalizedBody.replace(
+  const workflowRefPath = normalizedWorkItemId
+    ? `.workflow-v2/work-items/${normalizedWorkItemId}.json`
+    : "N/A";
+  const refNormalizedBody = normalizedBody.replace(
     /^-\s+workflow v2 work item:\s*(.+)$/gim,
     `- workflow v2 work item: \`${workflowRefPath}\``,
   );
+  const missingSections = new Set(findMissingPrSections(refNormalizedBody));
+  const emptySections = new Set(findEmptyPrSections(refNormalizedBody));
+
+  if (missingSections.size === 0 && emptySections.size === 0) {
+    return findInvalidWorkflowV2Refs(refNormalizedBody).length === 0
+      ? refNormalizedBody
+      : refNormalizedBody.replace(
+          /^-\s+workflow v2 work item:\s*(.+)$/gim,
+          `- workflow v2 work item: \`${workflowRefPath}\``,
+        );
+  }
+
+  return REQUIRED_PR_SECTIONS.map((section) => {
+    const existingContent =
+      !missingSections.has(section) && !emptySections.has(section)
+        ? extractSectionContent(refNormalizedBody, section)
+        : null;
+    const content =
+      existingContent ??
+      buildDefaultPrSectionContent(section, {
+        body: refNormalizedBody,
+        workItemId: normalizedWorkItemId,
+      });
+
+    return `${section}\n${content}`;
+  }).join("\n\n");
 }
 
 function summarizeChecks(checks) {
@@ -158,8 +226,10 @@ export function createGithubAutomationClient({
       }
 
       let parsed;
+      const normalizedBody = normalizePullRequestBody(body, workItemId);
 
       try {
+        args[args.indexOf("--body") + 1] = normalizedBody;
         parsed = parsePullRequestUrl(runGh(args));
       } catch (error) {
         if (error instanceof Error && /already exists/i.test(error.message)) {
@@ -187,6 +257,15 @@ export function createGithubAutomationClient({
                 draft: Boolean(existingPullRequest.isDraft),
               };
             })();
+          runGh([
+            "pr",
+            "edit",
+            ensureNonEmptyString(parsed.url, "parsed.url"),
+            "--title",
+            ensureNonEmptyString(title, "title"),
+            "--body",
+            normalizedBody,
+          ]);
         } else {
           throw error;
         }
@@ -196,6 +275,22 @@ export function createGithubAutomationClient({
         ...parsed,
         draft: typeof parsed.draft === "boolean" ? parsed.draft : Boolean(draft),
       };
+    },
+    editPullRequest({
+      prRef,
+      title,
+      body,
+      workItemId,
+    } = {}) {
+      runGh([
+        "pr",
+        "edit",
+        ensureNonEmptyString(prRef, "prRef"),
+        "--title",
+        ensureNonEmptyString(title, "title"),
+        "--body",
+        normalizePullRequestBody(body, workItemId),
+      ]);
     },
     getRequiredChecks({
       prRef,
