@@ -127,7 +127,7 @@ test.describe("Slice 03 recipe like flow", () => {
 
     await page.goto(RECIPE_PATH);
 
-    const likeButton = page.getByRole("button", { name: "♡ 좋아요 203" });
+    const likeButton = page.getByRole("button", { name: "좋아요 203" });
     await expect(likeButton).toBeVisible();
 
     await likeButton.click();
@@ -138,7 +138,7 @@ test.describe("Slice 03 recipe like flow", () => {
     await expect(pendingButton).toBeDisabled();
 
     await expect(
-      page.getByRole("button", { name: "♥ 좋아요 204" }),
+      page.getByRole("button", { name: "좋아요 204" }),
     ).toBeVisible();
   });
 
@@ -153,10 +153,10 @@ test.describe("Slice 03 recipe like flow", () => {
 
     await page.goto(RECIPE_PATH);
 
-    await page.getByRole("button", { name: "♥ 좋아요 204" }).click();
+    await page.getByRole("button", { name: "좋아요 204" }).click();
 
     await expect(
-      page.getByRole("button", { name: "♡ 좋아요 203" }),
+      page.getByRole("button", { name: "좋아요 203" }),
     ).toBeVisible();
   });
 
@@ -166,7 +166,7 @@ test.describe("Slice 03 recipe like flow", () => {
     await mockRecipeLikeRoutes(page);
 
     await page.goto(RECIPE_PATH);
-    await page.getByRole("button", { name: "♡ 좋아요 203" }).click();
+    await page.getByRole("button", { name: "좋아요 203" }).click();
 
     await expect(page.getByRole("dialog")).toBeVisible();
     await expect(
@@ -201,7 +201,7 @@ test.describe("Slice 03 recipe like flow", () => {
       page.getByText("로그인 완료. 좋아요를 반영했어요."),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "♥ 좋아요 204" }),
+      page.getByRole("button", { name: "좋아요 204" }),
     ).toBeVisible();
 
     await expect

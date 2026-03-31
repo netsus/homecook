@@ -41,6 +41,78 @@ async function expectReadableTouchTarget(
   expect(metrics.height).toBeGreaterThanOrEqual(minimumHeight);
 }
 
+async function readTypographyMetrics(
+  locator: import("@playwright/test").Locator,
+) {
+  await expect(locator).toBeVisible();
+
+  return locator.evaluate((element) => {
+    const style = window.getComputedStyle(element as HTMLElement);
+
+    return {
+      fontSize: Number.parseFloat(style.fontSize),
+      fontWeight: style.fontWeight,
+      letterSpacing: style.letterSpacing,
+    };
+  });
+}
+
+async function expectMatchingControlTypography(
+  reference: import("@playwright/test").Locator,
+  candidate: import("@playwright/test").Locator,
+) {
+  const [referenceMetrics, candidateMetrics] = await Promise.all([
+    readTypographyMetrics(reference),
+    readTypographyMetrics(candidate),
+  ]);
+
+  expect(candidateMetrics.fontSize).toBe(referenceMetrics.fontSize);
+  expect(candidateMetrics.fontWeight).toBe(referenceMetrics.fontWeight);
+  expect(candidateMetrics.letterSpacing).toBe(referenceMetrics.letterSpacing);
+}
+
+async function expectSingleLineControlLabel(
+  locator: import("@playwright/test").Locator,
+) {
+  await expect(locator).toBeVisible();
+
+  const metrics = await locator.evaluate((element) => {
+    const target = element as HTMLElement;
+    const style = window.getComputedStyle(target);
+    const rect = target.getBoundingClientRect();
+
+    return {
+      height: rect.height,
+      whiteSpace: style.whiteSpace,
+      writingMode: style.writingMode,
+    };
+  });
+
+  expect(metrics.whiteSpace).toBe("nowrap");
+  expect(metrics.writingMode).toBe("horizontal-tb");
+  expect(metrics.height).toBeLessThanOrEqual(52);
+}
+
+async function expectCompactToolbarControl(
+  locator: import("@playwright/test").Locator,
+) {
+  await expect(locator).toBeVisible();
+
+  const metrics = await locator.evaluate((element) => {
+    const target = element as HTMLElement;
+    const style = window.getComputedStyle(target);
+    const rect = target.getBoundingClientRect();
+
+    return {
+      height: rect.height,
+      whiteSpace: style.whiteSpace,
+    };
+  });
+
+  expect(metrics.whiteSpace).toBe("nowrap");
+  expect(metrics.height).toBeLessThanOrEqual(48);
+}
+
 test.describe("QA accessibility smoke", () => {
   test("home and recipe detail are axe-clean", async ({ page }) => {
     await installDiscoveryRoutes(page);
@@ -48,14 +120,29 @@ test.describe("QA accessibility smoke", () => {
 
     await page.goto("/");
     await expect(
-      page.getByRole("heading", { name: "오늘 만들 집밥을 바로 찾으세요" }),
+      page.getByRole("heading", { name: "먹고 싶은 집밥을 골라보세요" }),
     ).toBeVisible();
     await expectNoAxeViolations(page);
     await expectReadableTouchTarget(
       page.getByRole("button", { name: "재료로 검색" }),
     );
+    await expectMatchingControlTypography(
+      page.getByRole("button", { name: "재료로 검색" }),
+      page.getByRole("button", { name: /정렬 기준/i }),
+    );
+    await expectCompactToolbarControl(
+      page.getByRole("button", { name: /정렬 기준/i }),
+    );
     await expectReadableTouchTarget(
-      page.getByRole("combobox", { name: "정렬 기준" }),
+      page.getByRole("button", { name: /정렬 기준/i }),
+    );
+    await page.getByRole("button", { name: /정렬 기준/i }).click();
+    await expect(
+      page.getByRole("option", { name: "플래너 등록순" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page);
+    await expectReadableTouchTarget(
+      page.getByRole("option", { name: "플래너 등록순" }),
     );
 
     await page.goto(RECIPE_PATH);
@@ -84,6 +171,12 @@ test.describe("QA accessibility smoke", () => {
     ).toBeVisible();
     await expectNoAxeViolations(page);
     await expectReadableTouchTarget(
+      page.getByRole("button", { name: "적용" }),
+    );
+    await expectSingleLineControlLabel(
+      page.getByRole("button", { name: "초기화" }),
+    );
+    await expectSingleLineControlLabel(
       page.getByRole("button", { name: "적용" }),
     );
     await expectReadableTouchTarget(

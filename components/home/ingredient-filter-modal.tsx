@@ -334,7 +334,7 @@ export function IngredientFilterModal({
                 return (
                   <li key={ingredient.id}>
                     <label
-                      className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                      className={`flex min-h-11 cursor-pointer items-center rounded-full border px-4 py-2 text-sm font-semibold transition ${
                         isChecked
                           ? "border-[var(--olive)] bg-[var(--olive)] text-white"
                           : "border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)]"
@@ -346,16 +346,6 @@ export function IngredientFilterModal({
                         onChange={() => toggleIngredient(ingredient.id)}
                         type="checkbox"
                       />
-                      <span
-                        aria-hidden="true"
-                        className={`pointer-events-none flex h-4 w-4 items-center justify-center rounded-full border text-[11px] ${
-                          isChecked
-                            ? "border-white/80 bg-white/20 text-white"
-                            : "border-[var(--line)] text-transparent"
-                        }`}
-                      >
-                        ✓
-                      </span>
                       <span>{ingredient.standard_name}</span>
                     </label>
                   </li>
@@ -366,11 +356,11 @@ export function IngredientFilterModal({
         </div>
 
         <div className="border-t border-[var(--line)] px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:px-6 md:pb-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-[var(--muted)]">{selectionMessage}</p>
-            <div className="flex items-center gap-2">
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
               <button
-                className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-11 items-center justify-center whitespace-nowrap rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-center text-sm font-semibold text-[var(--muted)] disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={draftIngredientIds.length === 0}
                 onClick={() => setDraftIngredientIds([])}
                 type="button"
@@ -378,7 +368,7 @@ export function IngredientFilterModal({
                 초기화
               </button>
               <button
-                className="min-h-11 rounded-full bg-[var(--brand)] px-5 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-11 items-center justify-center whitespace-nowrap rounded-full bg-[var(--brand)] px-5 py-2 text-center text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isApplyDisabled}
                 onClick={() => onApply(draftIngredientIds)}
                 type="button"

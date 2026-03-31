@@ -329,19 +329,10 @@ export function RecipeDetailScreen({
               }
             />
             <div className="space-y-5 px-5 py-5 md:px-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
-                  <Link href="/">Home</Link>
-                  <span>/</span>
-                  <span>Recipe detail</span>
-                </div>
-                <button
-                  className="min-h-11 rounded-[12px] border border-[var(--line)] bg-white/80 px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
-                  onClick={handleShare}
-                  type="button"
-                >
-                  공유하기
-                </button>
+              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+                <Link href="/">Home</Link>
+                <span>/</span>
+                <span>Recipe detail</span>
               </div>
               <div>
                 <h2 className="text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:text-[2rem]">
@@ -361,25 +352,60 @@ export function RecipeDetailScreen({
                   ))}
                 </div>
               </div>
-              <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                {[
-                  ["조회", recipe.view_count],
-                  ["좋아요", recipe.like_count],
-                  ["저장", recipe.save_count],
-                  ["플래너", recipe.plan_count],
-                  ["요리완료", recipe.cook_count],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="rounded-[12px] bg-white/72 px-3 py-3 text-sm"
-                  >
-                    <dt className="text-[var(--muted)]">{label}</dt>
-                    <dd className="mt-1 font-semibold text-[var(--foreground)]">
-                      {formatCount(Number(value))}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
+              <div className="flex flex-wrap gap-2">
+                <MetricActionButton
+                  ariaLabel={
+                    likeRequestState === "pending"
+                      ? "좋아요 처리 중..."
+                      : `좋아요 ${formatCount(recipe.like_count)}`
+                  }
+                  ariaPressed={recipe.user_status?.is_liked ?? false}
+                  count={formatCount(recipe.like_count)}
+                  disabled={likeRequestState === "pending"}
+                  icon={
+                    <HeartIcon
+                      filled={recipe.user_status?.is_liked ?? false}
+                    />
+                  }
+                  label={likeRequestState === "pending" ? "처리 중" : "좋아요"}
+                  onClick={() => handleProtectedAction("like")}
+                  tone={recipe.user_status?.is_liked ? "brand" : "neutral"}
+                />
+                <MetricActionButton
+                  ariaLabel="저장"
+                  ariaPressed={recipe.user_status?.is_saved ?? false}
+                  count={formatCount(recipe.save_count)}
+                  icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
+                  label="저장"
+                  onClick={() => handleProtectedAction("save")}
+                  tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
+                />
+                <MetricActionButton
+                  ariaLabel="플래너에 추가"
+                  count={formatCount(recipe.plan_count)}
+                  icon={<PlannerIcon />}
+                  label="플래너"
+                  onClick={() => handleProtectedAction("planner")}
+                  tone="olive"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <ActionButton
+                  label="요리하기"
+                  onClick={() =>
+                    setFeedback({
+                      message: "요리모드는 다음 슬라이스에서 이어서 구현합니다.",
+                      tone: "status",
+                    })
+                  }
+                  tone="brand"
+                />
+                <IconActionButton
+                  ariaLabel="공유하기"
+                  icon={<ShareIcon />}
+                  onClick={handleShare}
+                />
+              </div>
             </div>
           </div>
 
@@ -433,46 +459,6 @@ export function RecipeDetailScreen({
                 </li>
               ))}
             </ul>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              <ActionButton
-                label="요리하기"
-                onClick={() =>
-                  setFeedback({
-                    message: "요리모드는 다음 슬라이스에서 이어서 구현합니다.",
-                    tone: "status",
-                  })
-                }
-                tone="brand"
-              />
-              <ActionButton
-                label="공유하기"
-                onClick={handleShare}
-                tone="neutral"
-              />
-              <ActionButton
-                label="플래너에 추가"
-                onClick={() => handleProtectedAction("planner")}
-                tone="olive"
-              />
-              <ActionButton
-                ariaPressed={recipe.user_status?.is_liked ?? false}
-                disabled={likeRequestState === "pending"}
-                label={
-                  likeRequestState === "pending"
-                    ? "좋아요 처리 중..."
-                    : `${recipe.user_status?.is_liked ? "♥" : "♡"} 좋아요 ${formatCount(recipe.like_count)}`
-                }
-                onClick={() => handleProtectedAction("like")}
-                tone={recipe.user_status?.is_liked ? "brand" : "neutral"}
-              />
-              <ActionButton
-                label={`저장${recipe.user_status?.is_saved ? "됨" : ""}`}
-                onClick={() => handleProtectedAction("save")}
-                tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
-              />
-            </div>
-
           </div>
 
           <div className="glass-panel rounded-[20px] p-5 md:p-6">
@@ -592,7 +578,7 @@ function RecipeDetailLoadingSkeleton() {
       className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_360px]"
     >
       <section className="space-y-6">
-        <div className="glass-panel overflow-hidden rounded-[20px]">
+          <div className="glass-panel overflow-hidden rounded-[20px]">
           <div className="min-h-72 animate-pulse border-b border-[var(--line)] bg-white/60" />
           <div className="space-y-5 px-5 py-5 md:px-6">
             <div className="h-4 w-28 animate-pulse rounded-full bg-white/70" />
@@ -609,16 +595,17 @@ function RecipeDetailLoadingSkeleton() {
                 />
               ))}
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              {Array.from({ length: 5 }).map((_, index) => (
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: 3 }).map((_, index) => (
                 <div
-                  className="rounded-[12px] bg-white/72 px-3 py-3"
+                  className="h-12 w-28 animate-pulse rounded-full bg-white/72"
                   key={`hero-stat-${index}`}
-                >
-                  <div className="h-4 w-12 animate-pulse rounded-full bg-white/70" />
-                  <div className="mt-2 h-5 w-16 animate-pulse rounded-full bg-white/70" />
-                </div>
+                />
               ))}
+            </div>
+            <div className="flex gap-3">
+              <div className="h-12 w-28 animate-pulse rounded-[14px] bg-white/72" />
+              <div className="h-12 w-12 animate-pulse rounded-[14px] bg-white/72" />
             </div>
           </div>
         </div>
@@ -636,14 +623,6 @@ function RecipeDetailLoadingSkeleton() {
               <div
                 className="h-14 animate-pulse rounded-[16px] bg-white/70"
                 key={`ingredient-${index}`}
-              />
-            ))}
-          </div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <div
-                className="h-12 animate-pulse rounded-[12px] bg-white/70"
-                key={`action-${index}`}
               />
             ))}
           </div>
@@ -740,6 +719,140 @@ function ActionButton({
     >
       {label}
     </button>
+  );
+}
+
+function IconActionButton({
+  ariaLabel,
+  icon,
+  onClick,
+}: {
+  ariaLabel: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-label={ariaLabel}
+      className="flex h-12 w-12 items-center justify-center rounded-[14px] border border-[var(--line)] bg-white/85 text-[var(--foreground)] shadow-[var(--shadow)]"
+      onClick={onClick}
+      type="button"
+    >
+      {icon}
+    </button>
+  );
+}
+
+function MetricActionButton({
+  ariaLabel,
+  ariaPressed,
+  count,
+  disabled = false,
+  icon,
+  label,
+  onClick,
+  tone,
+}: {
+  ariaLabel: string;
+  ariaPressed?: boolean;
+  count: string;
+  disabled?: boolean;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  tone: "brand" | "olive" | "neutral";
+}) {
+  const className =
+    tone === "brand"
+      ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.16)] text-[var(--foreground)]"
+      : tone === "olive"
+        ? "border-transparent bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
+        : "border-[var(--line)] bg-white text-[var(--foreground)]";
+
+  return (
+    <button
+      aria-label={ariaLabel}
+      aria-pressed={ariaPressed}
+      className={`flex min-h-11 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
+      <span aria-hidden="true" className="shrink-0">
+        {icon}
+      </span>
+      <span>{label}</span>
+      <span
+        aria-hidden={ariaLabel !== `좋아요 ${count}`}
+        className="rounded-full bg-white/72 px-2.5 py-1 text-xs font-bold text-[var(--foreground)]"
+      >
+          {count}
+      </span>
+    </button>
+  );
+}
+
+function HeartIcon({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      fill={filled ? "currentColor" : "none"}
+      height="18"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M12 20.2 4.9 13.4a4.8 4.8 0 0 1 6.8-6.8L12 7l.3-.4a4.8 4.8 0 0 1 6.8 6.8Z" />
+    </svg>
+  );
+}
+
+function BookmarkIcon({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      fill={filled ? "currentColor" : "none"}
+      height="18"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.7L6 20V5.5a1 1 0 0 1 1-1Z" />
+    </svg>
+  );
+}
+
+function PlannerIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M7 3.5v3M17 3.5v3M5.5 8.5h13M6.5 5.5h11a1 1 0 0 1 1 1v11a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-11a1 1 0 0 1 1-1Z" />
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M15.5 8.5 9 12l6.5 3.5M18.5 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM6 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12.5 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+    </svg>
   );
 }
 

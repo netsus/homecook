@@ -91,6 +91,36 @@ describe("home screen", () => {
     expect(screen.getAllByRole("link", { name: /집밥 김치찌개/i }).length).toBe(2);
   });
 
+  it("uses a custom sort menu so the selected option stays readable on mobile", async () => {
+    const user = userEvent.setup();
+
+    render(<HomeScreen />);
+
+    const sortButton = await screen.findByRole("button", { name: /정렬 기준/i });
+    expect(sortButton.textContent).toContain("조회수순");
+
+    await user.click(sortButton);
+
+    const listbox = screen.getByRole("listbox", { name: "정렬 기준" });
+    expect(listbox).toBeTruthy();
+
+    await user.click(screen.getByRole("option", { name: "좋아요순" }));
+
+    await waitFor(() => {
+      expect(sortButton.textContent).toContain("좋아요순");
+      expect(
+        fetchJson.mock.calls.some(([input]) => {
+          if (typeof input !== "string" || !input.startsWith("/api/v1/recipes?")) {
+            return false;
+          }
+
+          const url = new URL(input, "http://localhost:3000");
+          return url.searchParams.get("sort") === "like_count";
+        }),
+      ).toBe(true);
+    });
+  });
+
   it("shows the empty state when both recipes and themes are empty", async () => {
     fetchJson.mockImplementation((input: string) => {
       if (input.startsWith("/api/v1/recipes/themes")) {

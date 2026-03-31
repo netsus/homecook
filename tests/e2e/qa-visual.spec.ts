@@ -28,6 +28,16 @@ async function stabilizeVisualSnapshot(page: Page) {
       [data-nextjs-toast] {
         display: none !important;
       }
+
+      [style*="background-image"] {
+        background-image: linear-gradient(
+          135deg,
+          rgba(255, 108, 60, 0.22),
+          rgba(255, 249, 242, 0.84),
+          rgba(46, 166, 122, 0.18)
+        ) !important;
+        background-color: #f7efe5 !important;
+      }
     `,
   });
   await page.evaluate(() => {
@@ -43,11 +53,27 @@ test.describe("QA visual regression", () => {
 
     await page.goto("/");
     await expect(
-      page.getByRole("heading", { name: "오늘 만들 집밥을 바로 찾으세요" }),
+      page.getByRole("heading", { name: "먹고 싶은 집밥을 골라보세요" }),
     ).toBeVisible();
 
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-home-default.png", {
+      animations: "disabled",
+      fullPage: true,
+    });
+  });
+
+  test("home sort menu open matches the visual baseline", async ({ page }) => {
+    await installDiscoveryRoutes(page);
+
+    await page.goto("/");
+    await page.getByRole("button", { name: /정렬 기준/i }).click();
+    await expect(
+      page.getByRole("option", { name: "플래너 등록순" }),
+    ).toBeVisible();
+
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-home-sort-open.png", {
       animations: "disabled",
       fullPage: true,
     });

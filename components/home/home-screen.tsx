@@ -34,11 +34,13 @@ export function HomeScreen() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [sort, setSort] = useState<RecipeSortKey>("view_count");
+  const [isSortMenuOpen, setSortMenuOpen] = useState(false);
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [recipes, setRecipes] = useState<RecipeListData | null>(null);
   const [themes, setThemes] = useState<RecipeThemesData | null>(null);
   const [isIngredientModalOpen, setIngredientModalOpen] = useState(false);
   const recipeRequestIdRef = useRef(0);
+  const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const appliedIngredientIds = useDiscoveryFilterStore(
     (state) => state.appliedIngredientIds,
   );
@@ -75,6 +77,38 @@ export function HomeScreen() {
       window.history.replaceState({}, "", nextUrl);
     }
   }, [appliedIngredientIds]);
+
+  useEffect(() => {
+    if (!isSortMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!(event.target instanceof Node)) {
+        return;
+      }
+
+      if (!sortMenuRef.current?.contains(event.target)) {
+        setSortMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSortMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("touchstart", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("touchstart", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSortMenuOpen]);
 
   const loadRecipes = useCallback(async () => {
     const currentRequestId = recipeRequestIdRef.current + 1;
@@ -147,6 +181,10 @@ export function HomeScreen() {
     () => (hasActiveFilters ? [] : themes?.themes ?? []),
     [hasActiveFilters, themes],
   );
+  const selectedSortLabel = useMemo(
+    () => SORT_OPTIONS.find((option) => option.value === sort)?.label ?? "조회수순",
+    [sort],
+  );
   const listTitle = hasActiveFilters ? "검색 결과" : "모든 레시피";
 
   const clearIngredientFilters = useCallback(() => {
@@ -166,11 +204,16 @@ export function HomeScreen() {
     [setAppliedIngredientIds],
   );
 
+  const selectSort = useCallback((nextSort: RecipeSortKey) => {
+    setSort(nextSort);
+    setSortMenuOpen(false);
+  }, []);
+
   return (
     <>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_320px]">
         <section className="space-y-6">
-          <div className="glass-panel overflow-hidden rounded-[20px]">
+          <div className="glass-panel rounded-[20px]">
             <div className="relative border-b border-[var(--line)] px-5 py-6 md:px-6">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top_left,rgba(255,108,60,0.18),transparent_60%),radial-gradient(circle_at_top_right,rgba(46,166,122,0.16),transparent_58%)]" />
               <div>
@@ -178,14 +221,14 @@ export function HomeScreen() {
                   Home / Discovery
                 </p>
                 <h2 className="mt-3 text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:text-[2rem]">
-                  오늘 만들 집밥을 바로 찾으세요
+                  먹고 싶은 집밥을 골라보세요
                 </h2>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
-                  제목 검색, 정렬 변경, 테마 탐색에 재료 필터까지 더해 한 화면에서
-                  바로 저녁 메뉴를 좁혀볼 수 있게 정리했습니다.
+                  제목 검색, 정렬, 테마, 재료 필터를 한 화면에 모아 오늘 메뉴를
+                  빠르게 좁혀볼 수 있어요.
                 </p>
               </div>
-              <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_180px] md:items-center">
+              <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_220px] md:items-center">
                 <label className="flex min-h-14 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow)]">
                   <span className="visually-hidden">레시피 제목 검색</span>
                   <input
@@ -219,23 +262,16 @@ export function HomeScreen() {
                     </button>
                   ) : null}
                 </div>
-                <label className="min-h-11 rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow)]">
-                  <span className="visually-hidden">정렬 기준</span>
-                  <select
-                    aria-label="정렬 기준"
-                    className="min-h-11 w-full bg-transparent outline-none"
-                    onChange={(event) =>
-                      setSort(event.target.value as RecipeSortKey)
-                    }
-                    value={sort}
-                  >
-                    {SORT_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <SortMenu
+                  currentLabel={selectedSortLabel}
+                  isOpen={isSortMenuOpen}
+                  onClose={() => setSortMenuOpen(false)}
+                  onSelect={selectSort}
+                  onToggle={() => setSortMenuOpen((current) => !current)}
+                  options={SORT_OPTIONS}
+                  selectedValue={sort}
+                  sortMenuRef={sortMenuRef}
+                />
               </div>
               {hasIngredientFilter ? (
                 <p className="mt-3 rounded-[12px] bg-[color:rgba(46,166,122,0.08)] px-4 py-3 text-sm text-[var(--olive)]">
@@ -348,7 +384,7 @@ export function HomeScreen() {
               <div className="flex justify-between gap-4">
                 <dt>정렬</dt>
                 <dd className="font-semibold text-[var(--foreground)]">
-                  {SORT_OPTIONS.find((option) => option.value === sort)?.label}
+                  {selectedSortLabel}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
@@ -397,6 +433,154 @@ function ThemeSection({ theme }: { theme: RecipeTheme }) {
         ))}
       </div>
     </section>
+  );
+}
+
+function SortMenu({
+  currentLabel,
+  isOpen,
+  onClose,
+  onSelect,
+  onToggle,
+  options,
+  selectedValue,
+  sortMenuRef,
+}: {
+  currentLabel: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (value: RecipeSortKey) => void;
+  onToggle: () => void;
+  options: Array<{ label: string; value: RecipeSortKey }>;
+  selectedValue: RecipeSortKey;
+  sortMenuRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const [isDesktopView, setDesktopView] = useState(false);
+
+  useEffect(() => {
+    const syncViewport = () => {
+      setDesktopView(window.innerWidth >= 768);
+    };
+
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+
+    return () => {
+      window.removeEventListener("resize", syncViewport);
+    };
+  }, []);
+
+  return (
+    <div className="relative" ref={sortMenuRef}>
+      <button
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-label={`정렬 기준 ${currentLabel}`}
+        className="flex min-h-11 w-full items-center justify-between gap-3 whitespace-nowrap rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-left text-sm font-semibold text-[var(--foreground)] shadow-[var(--shadow)]"
+        onClick={onToggle}
+        type="button"
+      >
+        <span className="truncate">정렬 기준 · {currentLabel}</span>
+        <span
+          aria-hidden="true"
+          className={`shrink-0 text-base text-[var(--muted)] transition ${isOpen ? "rotate-180" : ""}`}
+        >
+          ˅
+        </span>
+      </button>
+      {isOpen && !isDesktopView ? (
+        <>
+          <button
+            aria-label="정렬 메뉴 닫기"
+            className="fixed inset-0 z-30 bg-black/45 md:hidden"
+            onClick={onClose}
+            type="button"
+          />
+          <div className="fixed inset-x-0 bottom-0 z-40 rounded-t-[24px] border-t border-[var(--line)] bg-[var(--panel)] px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 shadow-[0_-18px_44px_rgba(34,24,14,0.2)] md:hidden">
+            <div className="mx-auto h-1.5 w-14 rounded-full bg-black/10" />
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+                  Sort
+                </p>
+                <h3 className="mt-1 text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                  정렬 기준
+                </h3>
+              </div>
+              <button
+                className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+                onClick={onClose}
+                type="button"
+              >
+                닫기
+              </button>
+            </div>
+            <div
+              aria-label="정렬 기준"
+              className="mt-4 space-y-2"
+              role="listbox"
+            >
+              {options.map((option) => {
+                const isSelected = option.value === selectedValue;
+
+                return (
+                  <button
+                  aria-selected={isSelected}
+                  className={`flex min-h-14 w-full items-center justify-between rounded-[16px] px-4 py-3 text-left text-sm font-semibold ${
+                    isSelected
+                      ? "bg-[var(--foreground)] text-white"
+                      : "border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]"
+                  }`}
+                    key={`mobile-${option.value}`}
+                    onClick={() => onSelect(option.value)}
+                    role="option"
+                    type="button"
+                  >
+                    <span>{option.label}</span>
+                    {isSelected ? (
+                      <span aria-hidden="true" className="text-white/88">
+                        현재
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      ) : null}
+      {isOpen && isDesktopView ? (
+        <div className="absolute right-0 top-[calc(100%+8px)] z-20 w-full min-w-52 rounded-[16px] border border-[var(--line)] bg-[var(--panel)] p-2 shadow-[0_18px_44px_rgba(34,24,14,0.14)]">
+            <div aria-label="정렬 기준" className="space-y-1" role="listbox">
+              {options.map((option) => {
+                const isSelected = option.value === selectedValue;
+
+                return (
+                  <button
+                  aria-selected={isSelected}
+                  className={`flex min-h-12 w-full items-center justify-between rounded-[12px] px-3 py-3 text-sm font-semibold ${
+                    isSelected
+                      ? "bg-[var(--foreground)] text-white"
+                      : "text-[var(--muted)] hover:bg-white/70"
+                  }`}
+                    key={`desktop-${option.value}`}
+                    onClick={() => onSelect(option.value)}
+                    role="option"
+                    type="button"
+                  >
+                    <span>{option.label}</span>
+                    {isSelected ? (
+                      <span aria-hidden="true" className="text-white/88">
+                        현재
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

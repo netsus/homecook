@@ -99,6 +99,27 @@ describe("recipe detail screen", () => {
     expect(screen.getByText("로그인이 필요한 작업이에요")).toBeTruthy();
   });
 
+  it("keeps a single share action and places interactive chips above the ingredient section", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const shareButtons = await screen.findAllByRole("button", {
+      name: "공유하기",
+    });
+    expect(shareButtons).toHaveLength(1);
+
+    const likeButton = screen.getByRole("button", { name: "좋아요 203" });
+    const ingredientHeading = screen.getByRole("heading", {
+      name: "인분에 따라 재료량이 바뀝니다",
+    });
+
+    expect(
+      likeButton.compareDocumentPosition(ingredientHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByText("조회")).toBeNull();
+    expect(screen.queryByText("요리완료")).toBeNull();
+  });
+
   it("disables the like button while pending and updates the count from the API response", async () => {
     const detail = buildRecipeDetail();
     const deferred = createDeferred<RecipeLikeData>();
@@ -116,7 +137,7 @@ describe("recipe detail screen", () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
     const button = await screen.findByRole("button", {
-      name: "♡ 좋아요 203",
+      name: "좋아요 203",
     });
 
     await userEvent.click(button);
@@ -134,7 +155,7 @@ describe("recipe detail screen", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "♥ 좋아요 204" }),
+        screen.getByRole("button", { name: "좋아요 204" }),
       ).toBeTruthy();
     });
   });
@@ -155,7 +176,7 @@ describe("recipe detail screen", () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "♡ 좋아요 203" }),
+      await screen.findByRole("button", { name: "좋아요 203" }),
     );
 
     await waitFor(() => {
@@ -167,7 +188,7 @@ describe("recipe detail screen", () => {
       "좋아요 처리에 실패했어요. 다시 시도해주세요.",
     );
 
-    expect(screen.getByRole("button", { name: "♡ 좋아요 203" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "좋아요 203" })).toBeTruthy();
   });
 
   it("replays the pending like action after login and clears it", async () => {
@@ -207,7 +228,7 @@ describe("recipe detail screen", () => {
     expect(
       await screen.findByText("로그인 완료. 좋아요를 반영했어요."),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "♥ 좋아요 204" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "좋아요 204" })).toBeTruthy();
     expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
