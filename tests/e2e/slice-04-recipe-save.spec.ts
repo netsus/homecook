@@ -206,10 +206,8 @@ test.describe("Slice 04 recipe save flow", () => {
     await mockRecipeSaveRoutes(page);
 
     await page.goto(RECIPE_PATH);
-    const saveMetric = page.locator("dl > div").filter({
-      has: page.locator("dt", { hasText: "저장" }),
-    });
-    await expect(saveMetric.getByText("89")).toBeVisible();
+    const saveActionButton = page.locator('button[aria-label="저장"][aria-pressed]');
+    await expect(saveActionButton.getByText("89")).toBeVisible();
 
     await page.getByRole("button", { name: "저장" }).click();
 
@@ -223,9 +221,9 @@ test.describe("Slice 04 recipe save flow", () => {
     await modal.getByRole("button", { name: /^저장$/ }).click();
 
     await expect(modal).not.toBeVisible();
-    await expect(page.getByRole("button", { name: "저장됨" })).toBeVisible();
+    await expect(saveActionButton).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByText("레시피를 저장했어요.")).toBeVisible();
-    await expect(saveMetric.getByText("90")).toBeVisible();
+    await expect(saveActionButton.getByText("90")).toBeVisible();
   });
 
   test("logged-in user can quick-create a custom book and save", async ({ page }) => {
@@ -233,10 +231,8 @@ test.describe("Slice 04 recipe save flow", () => {
     await mockRecipeSaveRoutes(page);
 
     await page.goto(RECIPE_PATH);
-    const saveMetric = page.locator("dl > div").filter({
-      has: page.locator("dt", { hasText: "저장" }),
-    });
-    await expect(saveMetric.getByText("89")).toBeVisible();
+    const saveActionButton = page.locator('button[aria-label="저장"][aria-pressed]');
+    await expect(saveActionButton.getByText("89")).toBeVisible();
 
     await page.getByRole("button", { name: "저장" }).click();
 
@@ -251,8 +247,8 @@ test.describe("Slice 04 recipe save flow", () => {
     await modal.getByRole("button", { name: /^저장$/ }).click();
 
     await expect(modal).not.toBeVisible();
-    await expect(page.getByRole("button", { name: "저장됨" })).toBeVisible();
-    await expect(saveMetric.getByText("90")).toBeVisible();
+    await expect(saveActionButton).toHaveAttribute("aria-pressed", "true");
+    await expect(saveActionButton.getByText("90")).toBeVisible();
   });
 
   test("guest user sees login gate and save modal reopens after return-to-action", async ({
