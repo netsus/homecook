@@ -1,13 +1,15 @@
 "use client";
 
 import React from "react";
-import { useSearchParams } from "next/navigation";
 
-import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import { SocialLoginButtonsDeferred } from "@/components/auth/social-login-buttons-deferred";
 
-export function LoginScreen() {
-  const searchParams = useSearchParams();
-  const showAuthError = searchParams.get("authError") === "oauth_failed";
+interface LoginScreenProps {
+  authError?: string | null;
+}
+
+export function LoginScreen({ authError }: LoginScreenProps) {
+  const showAuthError = authError === "oauth_failed";
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -61,7 +63,7 @@ export function LoginScreen() {
           </p>
 
           <div className="mt-7">
-            <SocialLoginButtons nextPath="/" />
+            <SocialLoginButtonsDeferred nextPath="/" />
           </div>
 
           <div className="mt-8 grid gap-3 rounded-[16px] border border-[var(--line)] bg-white/70 p-4 text-sm text-[var(--muted)]">

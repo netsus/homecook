@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -25,6 +24,7 @@ type LikeRequestState = "idle" | "pending";
 
 interface RecipeDetailScreenProps {
   recipeId: string;
+  authError?: string | null;
 }
 
 const COOKING_METHOD_COLORS: Record<string, string> = {
@@ -36,8 +36,19 @@ const COOKING_METHOD_COLORS: Record<string, string> = {
   green: "var(--cook-mix)",
 };
 
-export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
-  const searchParams = useSearchParams();
+const COOKING_METHOD_TINTS: Record<string, string> = {
+  orange: "rgba(255, 140, 66, 0.16)",
+  red: "rgba(232, 69, 60, 0.14)",
+  brown: "rgba(139, 94, 60, 0.16)",
+  blue: "rgba(74, 144, 217, 0.16)",
+  yellow: "rgba(245, 197, 24, 0.18)",
+  green: "rgba(46, 166, 122, 0.16)",
+};
+
+export function RecipeDetailScreen({
+  recipeId,
+  authError,
+}: RecipeDetailScreenProps) {
   const [detailState, setDetailState] = useState<DetailState>("loading");
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [selectedServings, setSelectedServings] = useState(1);
@@ -104,10 +115,10 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
   }, []);
 
   useEffect(() => {
-    if (searchParams.get("authError") === "oauth_failed") {
+    if (authError === "oauth_failed") {
       setFeedback("로그인을 완료하지 못했어요. 다시 시도해주세요.");
     }
-  }, [searchParams]);
+  }, [authError]);
 
   const scaledIngredients = useMemo(() => {
     if (!recipe) {
@@ -263,9 +274,7 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
   };
 
   if (detailState === "loading") {
-    return (
-      <div className="glass-panel min-h-[540px] animate-pulse rounded-[20px] bg-white/60" />
-    );
+    return <RecipeDetailLoadingSkeleton />;
   }
 
   if (detailState === "error" || !recipe) {
@@ -461,9 +470,12 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
                         {step.step_number}
                       </span>
                       <span
-                        className="rounded-full px-3 py-1 text-xs font-semibold text-white"
+                        className="rounded-full border px-3 py-1 text-xs font-semibold text-[var(--foreground)]"
                         style={{
-                          backgroundColor: resolveCookingMethodColor(
+                          backgroundColor: resolveCookingMethodTint(
+                            step.cooking_method?.color_key,
+                          ),
+                          borderColor: resolveCookingMethodColor(
                             step.cooking_method?.color_key,
                           ),
                         }}
@@ -551,12 +563,129 @@ export function RecipeDetailScreen({ recipeId }: RecipeDetailScreenProps) {
   );
 }
 
+function RecipeDetailLoadingSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_360px]"
+    >
+      <section className="space-y-6">
+        <div className="glass-panel overflow-hidden rounded-[20px]">
+          <div className="min-h-72 animate-pulse border-b border-[var(--line)] bg-white/60" />
+          <div className="space-y-5 px-5 py-5 md:px-6">
+            <div className="h-4 w-28 animate-pulse rounded-full bg-white/70" />
+            <div className="space-y-3">
+              <div className="h-10 w-3/4 animate-pulse rounded-[16px] bg-white/70" />
+              <div className="h-4 w-full animate-pulse rounded-full bg-white/70" />
+              <div className="h-4 w-5/6 animate-pulse rounded-full bg-white/70" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  className="h-7 w-20 animate-pulse rounded-full bg-white/70"
+                  key={`hero-tag-${index}`}
+                />
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div
+                  className="rounded-[12px] bg-white/72 px-3 py-3"
+                  key={`hero-stat-${index}`}
+                >
+                  <div className="h-4 w-12 animate-pulse rounded-full bg-white/70" />
+                  <div className="mt-2 h-5 w-16 animate-pulse rounded-full bg-white/70" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="glass-panel rounded-[20px] p-5 md:p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-3">
+              <div className="h-4 w-16 animate-pulse rounded-full bg-white/70" />
+              <div className="h-8 w-64 animate-pulse rounded-[16px] bg-white/70" />
+            </div>
+            <div className="h-20 w-full animate-pulse rounded-[16px] bg-white/70 md:w-40" />
+          </div>
+          <div className="mt-5 grid gap-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                className="h-14 animate-pulse rounded-[16px] bg-white/70"
+                key={`ingredient-${index}`}
+              />
+            ))}
+          </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                className="h-12 animate-pulse rounded-[12px] bg-white/70"
+                key={`action-${index}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="glass-panel rounded-[20px] p-5 md:p-6">
+          <div className="h-4 w-16 animate-pulse rounded-full bg-white/70" />
+          <div className="mt-4 space-y-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                className="rounded-[16px] bg-white/70 px-4 py-4"
+                key={`step-${index}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 animate-pulse rounded-full bg-white/80" />
+                    <div className="h-7 w-20 animate-pulse rounded-full bg-white/80" />
+                  </div>
+                  <div className="h-4 w-12 animate-pulse rounded-full bg-white/80" />
+                </div>
+                <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-white/80" />
+                <div className="mt-2 h-4 w-5/6 animate-pulse rounded-full bg-white/80" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <aside className="space-y-4">
+        {Array.from({ length: 2 }).map((_, index) => (
+          <div
+            className="glass-panel rounded-[20px] p-5"
+            key={`sidebar-${index}`}
+          >
+            <div className="h-4 w-24 animate-pulse rounded-full bg-white/70" />
+            <div className="mt-4 space-y-3">
+              {Array.from({ length: 4 }).map((__, rowIndex) => (
+                <div
+                  className="h-5 animate-pulse rounded-full bg-white/70"
+                  key={`sidebar-${index}-row-${rowIndex}`}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </aside>
+    </div>
+  );
+}
+
 function resolveCookingMethodColor(colorKey?: string | null) {
   if (!colorKey) {
     return "var(--cook-etc)";
   }
 
   return COOKING_METHOD_COLORS[colorKey] ?? "var(--cook-etc)";
+}
+
+function resolveCookingMethodTint(colorKey?: string | null) {
+  if (!colorKey) {
+    return "rgba(170, 170, 170, 0.16)";
+  }
+
+  return COOKING_METHOD_TINTS[colorKey] ?? "rgba(170, 170, 170, 0.16)";
 }
 
 function ActionButton({
@@ -574,7 +703,7 @@ function ActionButton({
 }) {
   const className =
     tone === "brand"
-      ? "border-transparent bg-[color:rgba(255,108,60,0.12)] text-[var(--brand-deep)]"
+      ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.16)] text-[var(--foreground)]"
       : tone === "olive"
         ? "border-transparent bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
         : "border-[var(--line)] bg-white text-[var(--foreground)]";

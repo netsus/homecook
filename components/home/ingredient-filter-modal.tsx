@@ -267,7 +267,7 @@ export function IngredientFilterModal({
                   aria-pressed={isActive}
                   className={`min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition ${
                     isActive
-                      ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                      ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--foreground)]"
                       : "border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--olive)] hover:text-[var(--olive)]"
                   }`}
                   key={category}
@@ -302,7 +302,7 @@ export function IngredientFilterModal({
                 잠시 후 다시 시도하면 현재 검색 조건으로 재료를 불러와요.
               </p>
               <button
-                className="mt-5 min-h-11 rounded-full bg-[var(--brand)] px-5 py-3 text-sm font-semibold text-white"
+                className="mt-5 min-h-11 rounded-full bg-[var(--brand)] px-5 py-3 text-sm font-semibold text-[var(--foreground)]"
                 onClick={() => setReloadKey((current) => current + 1)}
                 type="button"
               >
@@ -374,7 +374,7 @@ export function IngredientFilterModal({
                 초기화
               </button>
               <button
-                className="min-h-11 rounded-full bg-[var(--brand)] px-5 py-2 text-sm font-semibold text-white"
+                className="min-h-11 rounded-full bg-[var(--brand)] px-5 py-2 text-sm font-semibold text-[var(--foreground)]"
                 onClick={() => onApply(draftIngredientIds)}
                 type="button"
               >

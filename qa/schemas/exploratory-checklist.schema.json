@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Exploratory Checklist",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "slice",
+    "generatedAt",
+    "baseUrl",
+    "devices",
+    "checklistItems",
+    "edgeCases"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "slice": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "baseUrl": { "type": "string" },
+    "devices": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "primaryUserPath": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "checklistItems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "section", "text", "priority"],
+        "properties": {
+          "id": { "type": "string" },
+          "section": { "type": "string" },
+          "subsection": { "type": ["string", "null"] },
+          "text": { "type": "string" },
+          "priority": { "type": "string" }
+        }
+      }
+    },
+    "edgeCases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text"],
+        "properties": {
+          "id": { "type": "string" },
+          "text": { "type": "string" }
+        }
+      }
+    }
+  }
+}

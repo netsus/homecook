@@ -1,14 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { resolveNextPath } from "@/lib/auth/callback";
 import { createRouteHandlerClient } from "@/lib/supabase/server";
-
-export function resolveNextPath(raw: string | null) {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
-    return "/";
-  }
-
-  return raw;
-}
 
 function getFailurePath(nextPath: string) {
   return nextPath === "/" ? "/login" : nextPath;

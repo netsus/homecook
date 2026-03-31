@@ -13,12 +13,25 @@ export default defineConfig({
     timeout: 5_000,
   },
   use: {
-    ...devices["Desktop Chrome"],
     baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
+  projects: [
+    {
+      name: "desktop-chrome",
+      use: {
+        ...devices["Desktop Chrome"],
+      },
+    },
+    {
+      name: "mobile-chrome",
+      use: {
+        ...devices["Pixel 7"],
+      },
+    },
+  ],
   webServer: {
     command: "corepack pnpm exec next dev --turbopack --hostname 127.0.0.1 --port 3000",
     url: baseURL,

@@ -1,4 +1,5 @@
 import { fail, ok } from "@/lib/api/response";
+import { clampLikeCount, isRecipeLikeUniqueConflict } from "@/lib/recipe-like";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { RecipeLikeData } from "@/types/recipe";
 
@@ -65,18 +66,6 @@ interface RecipeLikeDbClient {
 
 const UUID_PATTERN
   = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-export function clampLikeCount(value: number) {
-  return Math.max(0, value);
-}
-
-export function isRecipeLikeUniqueConflict(error: QueryError | null | undefined) {
-  if (!error) {
-    return false;
-  }
-
-  return error.code === "23505" || error.message.toLowerCase().includes("duplicate key");
-}
 
 function isUuid(value: string) {
   return UUID_PATTERN.test(value);

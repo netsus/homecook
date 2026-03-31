@@ -5,14 +5,24 @@ interface RecipePageProps {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{
+    authError?: string;
+  }>;
 }
 
-export default async function RecipePage({ params }: RecipePageProps) {
+export default async function RecipePage({
+  params,
+  searchParams,
+}: RecipePageProps) {
   const { id } = await params;
+  const resolvedSearchParams = await searchParams;
 
   return (
     <AppShell currentTab="home">
-      <RecipeDetailScreen recipeId={id} />
+      <RecipeDetailScreen
+        authError={resolvedSearchParams.authError ?? null}
+        recipeId={id}
+      />
     </AppShell>
   );
 }

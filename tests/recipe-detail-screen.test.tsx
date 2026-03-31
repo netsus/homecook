@@ -15,7 +15,6 @@ const fetchJson = vi.fn();
 const getSession = vi.fn();
 const onAuthStateChange = vi.fn();
 const hasSupabasePublicEnv = vi.fn();
-const useSearchParams = vi.fn();
 
 vi.mock("@/lib/api/fetch-json", () => ({
   fetchJson: (...args: unknown[]) => fetchJson(...args),
@@ -34,8 +33,10 @@ vi.mock("@/lib/supabase/env", () => ({
   hasSupabasePublicEnv: () => hasSupabasePublicEnv(),
 }));
 
-vi.mock("next/navigation", () => ({
-  useSearchParams: () => useSearchParams(),
+vi.mock("@/components/auth/social-login-buttons-deferred", () => ({
+  SocialLoginButtonsDeferred: ({ nextPath }: { nextPath: string }) => (
+    <div>social-buttons:{nextPath}</div>
+  ),
 }));
 
 function buildRecipeDetail(overrides?: Partial<RecipeDetail>): RecipeDetail {
@@ -76,7 +77,6 @@ describe("recipe detail screen", () => {
     getSession.mockReset();
     onAuthStateChange.mockReset();
     hasSupabasePublicEnv.mockReset();
-    useSearchParams.mockReset();
     useAuthGateStore.setState({ isOpen: false, action: null });
     window.localStorage.clear();
 
@@ -86,7 +86,6 @@ describe("recipe detail screen", () => {
       data: { subscription: { unsubscribe: vi.fn() } },
     });
     hasSupabasePublicEnv.mockReturnValue(true);
-    useSearchParams.mockReturnValue(new URLSearchParams());
   });
 
   it("opens the login gate when a protected action is clicked by a guest", async () => {
@@ -210,11 +209,12 @@ describe("recipe detail screen", () => {
   });
 
   it("shows OAuth failure feedback from the callback query string", async () => {
-    useSearchParams.mockReturnValue(
-      new URLSearchParams("authError=oauth_failed"),
+    render(
+      <RecipeDetailScreen
+        authError="oauth_failed"
+        recipeId={MOCK_RECIPE_DETAIL.id}
+      />,
     );
-
-    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
     await waitFor(() => {
       expect(

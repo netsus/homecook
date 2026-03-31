@@ -10,10 +10,11 @@
 6. 변경 유형별 게이트/리뷰/자동화 기준 확인 시 → `docs/engineering/agent-workflow-overview.md`
 7. 테스트 작성 시 → `docs/engineering/tdd-vitest.md`
 8. 브라우저 흐름 검증 시 → `docs/engineering/playwright-e2e.md`
-9. 필요한 경우에만 `docs/reference/wireframes/`
-10. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
-11. 필요 시 `docs/engineering/security-performance-design.md`
-12. workflow v2 설계/파일럿 작업 시 `docs/engineering/workflow-v2/README.md`
+9. QA 시스템/게이트/탐색 QA/eval 작업 시 → `docs/engineering/qa-system.md`
+10. 필요한 경우에만 `docs/reference/wireframes/`
+11. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
+12. 필요 시 `docs/engineering/security-performance-design.md`
+13. workflow v2 설계/파일럿 작업 시 `docs/engineering/workflow-v2/README.md`
 
 ## Source of Truth
 
@@ -51,6 +52,7 @@
 - `docs/engineering/agent-workflow-overview.md`는 변경 유형별 게이트, optional review, loop 사용 조건의 단일 소스다.
 - `docs/engineering/slice-workflow.md`는 product slice Stage 1~6 절차의 단일 소스다.
 - `docs/engineering/git-workflow.md`는 브랜치/커밋/PR 크기 규칙의 단일 소스다.
+- `docs/engineering/qa-system.md`는 deterministic QA, exploratory QA, qa eval 실행 기준의 단일 소스다.
 - `docs/engineering/workflow-v2/*`는 차세대 reusable workflow의 설계·파일럿 문서다. 별도 승격 공지가 있기 전까지 현재 product slice의 운영 규칙을 직접 대체하지 않는다.
 - 같은 규칙이 여러 문서에 보이면 먼저 `중복`인지 `계층적 위임`인지 판정한다.
 - `중복`: 같은 actor, trigger, action, success condition, scope를 추가 정보 없이 반복할 때만 본다.
@@ -145,9 +147,20 @@
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm test:e2e`
+- `pnpm test:e2e:smoke`
+- `pnpm test:e2e:a11y`
+- `pnpm test:e2e:visual`
+- `pnpm test:e2e:visual:update`
+- `pnpm test:e2e:security`
 - `pnpm test:e2e:ui`
 - `pnpm test:e2e:oauth`
+- `pnpm test:lighthouse`
 - `pnpm test:all`
+- `pnpm verify:backend`
+- `pnpm verify:frontend`
+- `pnpm verify`
+- `pnpm qa:explore`
+- `pnpm qa:eval`
 - `pnpm build`
 - `pnpm validate:branch`
 - `pnpm validate:commits`

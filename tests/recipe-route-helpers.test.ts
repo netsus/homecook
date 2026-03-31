@@ -4,12 +4,12 @@ import {
   mapRecipeUserStatus,
   normalizeRecipeIngredients,
   normalizeRecipeSteps,
-} from "@/app/api/v1/recipes/[id]/route";
+} from "@/lib/recipe-detail";
 import {
   clampLimit,
   filterRecipeIdsByIngredients,
   parseIngredientIds,
-} from "@/app/api/v1/recipes/route";
+} from "@/lib/recipe-list";
 
 describe("recipe route helpers", () => {
   it("clamps limit query to allowed range", () => {

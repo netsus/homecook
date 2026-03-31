@@ -46,6 +46,7 @@ Thumbs.db
 # tests
 playwright-report/
 test-results/
+.lighthouseci/
 
 # local agent artifacts
 .artifacts/

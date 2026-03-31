@@ -19,10 +19,16 @@
 
 ## Default Commands
 
-- `pnpm test:e2e`: product slice 기본 E2E 실행 (`@live-oauth` 태그 제외)
+- `pnpm test:e2e`: `pnpm test:e2e:smoke`의 alias
+- `pnpm test:e2e:smoke`: product slice 핵심 브라우저 흐름 smoke
+- `pnpm test:e2e:a11y`: axe 기반 접근성 smoke
+- `pnpm test:e2e:visual`: Playwright screenshot baseline 기반 visual regression
+- `pnpm test:e2e:security`: auth/session/return-to-action security smoke
 - `pnpm test:e2e:ui`: Playwright UI 모드
 - `pnpm test:e2e:oauth`: `@live-oauth` 태그 테스트만 실행 (실제 외부 서비스 포함)
 - `pnpm test:all`: lint, typecheck, vitest, 기본 Playwright
+- `pnpm verify:frontend`: lint, typecheck, vitest, build, smoke/a11y/visual/security, Lighthouse
+- `pnpm verify:backend`: lint, typecheck, vitest, build, auth/session security smoke
 
 `docs-governance`와 `low-risk docs/config`는 `docs/engineering/agent-workflow-overview.md`의 Change Type Matrix에 따라 E2E를 생략할 수 있다.
 
@@ -34,9 +40,14 @@ npx playwright install --with-deps chromium
 
 ## CI Policy
 
-- 기본 PR 게이트에는 안정적인 Playwright E2E만 포함한다.
+- 기본 PR 게이트에는 안정적인 Playwright smoke, a11y, visual, security smoke를 포함한다.
 - 외부 OAuth가 필요한 시나리오는 `workflow_dispatch`로만 실행한다.
 - 실패 시 trace, screenshot, video를 아티팩트로 남긴다.
+
+## Device Matrix
+
+- smoke / a11y / security smoke는 `desktop-chrome`, `mobile-chrome` 프로젝트 둘 다 실행한다.
+- visual regression은 baseline 안정성을 위해 기본값으로 `desktop-chrome`만 실행한다.
 
 ## Local Live OAuth
 

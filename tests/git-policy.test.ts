@@ -45,6 +45,7 @@ describe("git policy", () => {
     const missing = findMissingPrSections("## Summary\n\n## Test Plan");
 
     expect(missing).toContain("## Workpack / Slice");
+    expect(missing).toContain("## QA Evidence");
     expect(missing).toContain("## Security Review");
     expect(missing).not.toContain("## Summary");
   });
@@ -74,6 +75,8 @@ describe("findEmptyPrSections", () => {
       sections["## Workpack / Slice"] ?? "- 관련 workpack: docs/workpacks/02-discovery-filter/",
       "## Test Plan",
       sections["## Test Plan"] ?? "- [x] `pnpm lint`",
+      "## QA Evidence",
+      sections["## QA Evidence"] ?? "- deterministic gates: `pnpm verify:frontend`",
       "## Docs Impact",
       sections["## Docs Impact"] ?? "- [x] 공식 문서 영향 없음",
       "## Security Review",

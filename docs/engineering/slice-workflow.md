@@ -35,7 +35,7 @@
 - 1단계(docs) 브랜치: `docs/<slice>`
 - 백엔드 브랜치: `feature/be-<slice>`
 - 프론트엔드 브랜치: `feature/fe-<slice>`
-- product slice 구현 PR은 **Draft**로 열고 → `pnpm install --frozen-lockfile && pnpm test:all` 통과 → CI green → **Ready for Review** 전환
+- product slice 구현 PR은 **Draft**로 열고 → backend는 `pnpm install --frozen-lockfile && pnpm verify:backend`, frontend는 `pnpm install --frozen-lockfile && pnpm verify:frontend` 통과 → CI green → **Ready for Review** 전환
 - 머지 전 실제 동작 확인
 - 변경 유형별 축약 경로와 `N/A` 허용 기준은 `docs/engineering/agent-workflow-overview.md`의 Change Type Matrix를 따른다.
 
@@ -204,13 +204,13 @@
 - [ ] 문서에 없는 필드·상태·엔드포인트를 임의 추가하지 않았는가
 - [ ] 승인되지 않았거나 문서화되지 않은 `Contract Evolution Candidates`를 구현 scope에 섞지 않았는가
 - [ ] 테스트가 상태 전이·에러·권한·read-only를 고정하는가 (happy path만이 아닌가)
-- [ ] `pnpm install --frozen-lockfile && pnpm test:all` 통과
+- [ ] `pnpm install --frozen-lockfile && pnpm verify:backend` 통과
 - [ ] 브랜치명이 `feature/be-<slice>`인가
 - [ ] 커밋이 Conventional Commits를 따르는가
 
 ### 완료 기준
 
-`pnpm test:all` 통과 → push → CI green → Draft 해제 → Ready for Review
+`pnpm verify:backend` 통과 → push → CI green → Draft 해제 → Ready for Review
 
 ### PR 본문 완료 요약 (PR ## Summary, ## Workpack/Slice 섹션에 작성)
 
@@ -371,13 +371,14 @@
 - [ ] low-risk UI change라면 Design Status 유지 근거를 PR 본문에 남겼는가
 - [ ] 디자인 토큰(`--brand`, `--olive`, `--surface`, `--muted` 등)을 올바르게 사용했는가 (구버전 `#d56a3a`, `#6e7c4a` 사용 금지)
 - [ ] 카드 border-radius 16px, 터치 타겟 44px 기준을 준수했는가
-- [ ] `pnpm install --frozen-lockfile && pnpm test:all` 통과
+- [ ] `pnpm install --frozen-lockfile && pnpm verify:frontend` 통과
+- [ ] 신규 화면 또는 high-risk UI change라면 `pnpm qa:explore -- --slice <slice>` 번들을 만들고 exploratory QA 보고서를 남겼는가
 - [ ] 브랜치명이 `feature/fe-<slice>`인가
 - [ ] 커밋이 Conventional Commits를 따르는가
 
 ### 완료 기준
 
-`pnpm test:all` 통과 → push → CI green → Draft 해제 → Ready for Review
+`pnpm verify:frontend` 통과 → push → CI green → Draft 해제 → Ready for Review
 
 ### PR 본문 완료 요약 (PR ## Summary, ## Workpack/Slice 섹션에 작성)
 

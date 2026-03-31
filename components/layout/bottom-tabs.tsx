@@ -24,7 +24,7 @@ export function BottomTabs({ currentTab }: BottomTabsProps) {
               aria-disabled={!active && tab.href === "#"}
               className={`flex min-w-0 flex-1 flex-col items-center rounded-[18px] px-3 py-2 text-sm transition ${
                 active
-                  ? "bg-[var(--brand)] text-white"
+                  ? "bg-[var(--brand)] text-[var(--foreground)]"
                   : "text-[var(--muted)] hover:bg-white/60"
               }`}
               href={tab.href}

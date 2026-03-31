@@ -32,6 +32,13 @@
 - 생략 또는 `N/A` 근거: docs-governance 변경으로 브라우저 흐름 영향 없음
 -->
 
+## QA Evidence
+
+- deterministic gates:
+- exploratory QA:
+- qa eval:
+- 아티팩트 / 보고서 경로:
+
 ## Docs Impact
 
 - [ ] 공식 문서 영향 없음
