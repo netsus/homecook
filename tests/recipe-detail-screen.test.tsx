@@ -163,6 +163,9 @@ describe("recipe detail screen", () => {
         screen.getByText("좋아요 처리에 실패했어요. 다시 시도해주세요."),
       ).toBeTruthy();
     });
+    expect(screen.getByRole("alert").textContent).toBe(
+      "좋아요 처리에 실패했어요. 다시 시도해주세요.",
+    );
 
     expect(screen.getByRole("button", { name: "♡ 좋아요 203" })).toBeTruthy();
   });

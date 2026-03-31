@@ -440,6 +440,10 @@ describe("home screen", () => {
         name: "재료 목록을 불러오지 못했어요",
       }),
     ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "적용" })).toHaveProperty(
+      "disabled",
+      true,
+    );
 
     await user.click(screen.getByRole("button", { name: "다시 시도" }));
 

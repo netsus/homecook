@@ -199,6 +199,8 @@ export function IngredientFilterModal({
 
     return `${draftIngredientIds.length}개 선택됨`;
   }, [draftIngredientIds.length]);
+  const isApplyDisabled =
+    screenState === "loading" || screenState === "error";
 
   const toggleIngredient = (ingredientId: string) => {
     setDraftIngredientIds((current) =>
@@ -374,7 +376,8 @@ export function IngredientFilterModal({
                 초기화
               </button>
               <button
-                className="min-h-11 rounded-full bg-[var(--brand)] px-5 py-2 text-sm font-semibold text-[var(--foreground)]"
+                className="min-h-11 rounded-full bg-[var(--brand)] px-5 py-2 text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isApplyDisabled}
                 onClick={() => onApply(draftIngredientIds)}
                 type="button"
               >

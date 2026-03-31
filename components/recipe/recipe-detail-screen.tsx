@@ -21,6 +21,7 @@ import type { RecipeDetail, RecipeLikeData, RecipeUserStatus } from "@/types/rec
 
 type DetailState = "loading" | "ready" | "error";
 type LikeRequestState = "idle" | "pending";
+type FeedbackTone = "error" | "status";
 
 interface RecipeDetailScreenProps {
   recipeId: string;
@@ -53,7 +54,10 @@ export function RecipeDetailScreen({
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [selectedServings, setSelectedServings] = useState(1);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    message: string;
+    tone: FeedbackTone;
+  } | null>(null);
   const [likeRequestState, setLikeRequestState] = useState<LikeRequestState>("idle");
   const openAuthGate = useAuthGateStore((state) => state.open);
 
@@ -116,7 +120,10 @@ export function RecipeDetailScreen({
 
   useEffect(() => {
     if (authError === "oauth_failed") {
-      setFeedback("로그인을 완료하지 못했어요. 다시 시도해주세요.");
+      setFeedback({
+        message: "로그인을 완료하지 못했어요. 다시 시도해주세요.",
+        tone: "error",
+      });
     }
   }, [authError]);
 
@@ -188,11 +195,17 @@ export function RecipeDetailScreen({
         updateRecipeLikeState(data);
         setFeedback(
           source === "return-to-action"
-            ? "로그인 완료. 좋아요를 반영했어요."
+            ? {
+                message: "로그인 완료. 좋아요를 반영했어요.",
+                tone: "status",
+              }
             : null,
         );
       } catch {
-        setFeedback("좋아요 처리에 실패했어요. 다시 시도해주세요.");
+        setFeedback({
+          message: "좋아요 처리에 실패했어요. 다시 시도해주세요.",
+          tone: "error",
+        });
       } finally {
         setLikeRequestState("idle");
       }
@@ -218,7 +231,10 @@ export function RecipeDetailScreen({
       return;
     }
 
-    setFeedback("이 액션의 실제 저장 연결은 다음 슬라이스에서 닫습니다.");
+    setFeedback({
+      message: "이 액션의 실제 저장 연결은 다음 슬라이스에서 닫습니다.",
+      tone: "status",
+    });
   };
 
   useEffect(() => {
@@ -244,9 +260,10 @@ export function RecipeDetailScreen({
       planner: "플래너 추가",
     } as const;
 
-    setFeedback(
-      `로그인 완료. ${labelMap[pendingAction.type]} 액션 위치로 돌아왔어요.`,
-    );
+    setFeedback({
+      message: `로그인 완료. ${labelMap[pendingAction.type]} 액션 위치로 돌아왔어요.`,
+      tone: "status",
+    });
   }, [handleLikeToggle, isAuthenticated, recipe, recipeId]);
 
   const handleShare = async () => {
@@ -267,9 +284,15 @@ export function RecipeDetailScreen({
       }
 
       await navigator.clipboard.writeText(url);
-      setFeedback("링크를 복사했어요.");
+      setFeedback({
+        message: "링크를 복사했어요.",
+        tone: "status",
+      });
     } catch {
-      setFeedback("공유를 완료하지 못했어요.");
+      setFeedback({
+        message: "공유를 완료하지 못했어요.",
+        tone: "error",
+      });
     }
   };
 
@@ -415,7 +438,10 @@ export function RecipeDetailScreen({
               <ActionButton
                 label="요리하기"
                 onClick={() =>
-                  setFeedback("요리모드는 다음 슬라이스에서 이어서 구현합니다.")
+                  setFeedback({
+                    message: "요리모드는 다음 슬라이스에서 이어서 구현합니다.",
+                    tone: "status",
+                  })
                 }
                 tone="brand"
               />
@@ -447,11 +473,6 @@ export function RecipeDetailScreen({
               />
             </div>
 
-            {feedback ? (
-              <p className="mt-4 rounded-[16px] bg-white/75 px-4 py-3 text-sm text-[var(--muted)]">
-                {feedback}
-              </p>
-            ) : null}
           </div>
 
           <div className="glass-panel rounded-[20px] p-5 md:p-6">
@@ -558,6 +579,7 @@ export function RecipeDetailScreen({
           </div>
         </aside>
       </div>
+      {feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
       <LoginGateModal />
     </>
   );
@@ -718,5 +740,31 @@ function ActionButton({
     >
       {label}
     </button>
+  );
+}
+
+function FeedbackToast({
+  message,
+  tone,
+}: {
+  message: string;
+  tone: FeedbackTone;
+}) {
+  const isError = tone === "error";
+
+  return (
+    <div className="pointer-events-none fixed inset-x-4 top-4 z-50 flex justify-center md:inset-x-auto md:right-6">
+      <div
+        aria-live={isError ? "assertive" : "polite"}
+        className={`max-w-sm rounded-[16px] border px-4 py-3 text-sm font-medium shadow-[0_18px_44px_rgba(34,24,14,0.14)] ${
+          isError
+            ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.96)] text-white"
+            : "border-[color:rgba(46,166,122,0.18)] bg-[color:rgba(250,255,252,0.96)] text-[var(--foreground)]"
+        }`}
+        role={isError ? "alert" : "status"}
+      >
+        {message}
+      </div>
+    </div>
   );
 }
