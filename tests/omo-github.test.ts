@@ -204,6 +204,120 @@ describe("OMO GitHub automation client", () => {
     expect(argsLog).toContain("--json");
   });
 
+  it("prefers the latest status rollup entry when stale failed required checks share the same name", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-stale-fail-pending-"));
+    const binPath = join(rootDir, "fake-gh-stale-fail-pending.sh");
+
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "if [ \"$1 $2\" = 'pr checks' ]; then",
+        "  printf '%s\\n' '[",
+        "    {\"name\":\"template-check\",\"workflow\":\"PR Governance\",\"bucket\":\"fail\",\"state\":\"FAILURE\",\"link\":\"https://example.com/old-template\"},",
+        "    {\"name\":\"template-check\",\"workflow\":\"PR Governance\",\"bucket\":\"pending\",\"state\":\"PENDING\",\"link\":\"https://example.com/new-template\"},",
+        "    {\"name\":\"quality\",\"workflow\":\"CI\",\"bucket\":\"pending\",\"state\":\"PENDING\",\"link\":\"https://example.com/new-quality\"}",
+        "  ]'",
+        "  exit 8",
+        "fi",
+        "if [ \"$1 $2\" = 'pr view' ]; then",
+        "  printf '%s\\n' '{\"statusCheckRollup\":[",
+        "    {\"__typename\":\"CheckRun\",\"name\":\"template-check\",\"workflowName\":\"PR Governance\",\"status\":\"COMPLETED\",\"conclusion\":\"FAILURE\",\"detailsUrl\":\"https://example.com/old-template\",\"startedAt\":\"2026-03-31T16:50:00Z\",\"completedAt\":\"2026-03-31T16:50:05Z\"},",
+        "    {\"__typename\":\"CheckRun\",\"name\":\"template-check\",\"workflowName\":\"PR Governance\",\"status\":\"IN_PROGRESS\",\"conclusion\":\"\",\"detailsUrl\":\"https://example.com/new-template\",\"startedAt\":\"2026-03-31T17:10:00Z\",\"completedAt\":\"0001-01-01T00:00:00Z\"},",
+        "    {\"__typename\":\"CheckRun\",\"name\":\"quality\",\"workflowName\":\"CI\",\"status\":\"IN_PROGRESS\",\"conclusion\":\"\",\"detailsUrl\":\"https://example.com/new-quality\",\"startedAt\":\"2026-03-31T17:10:01Z\",\"completedAt\":\"0001-01-01T00:00:00Z\"}",
+        "  ]}'",
+        "  exit 0",
+        "fi",
+        "exit 0",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+    });
+
+    const checks = client.getRequiredChecks({
+      prRef: "https://github.com/netsus/homecook/pull/61",
+    });
+
+    expect(checks.bucket).toBe("pending");
+    expect(checks.checks).toEqual([
+      {
+        name: "template-check",
+        workflow: "PR Governance",
+        link: "https://example.com/new-template",
+        bucket: "pending",
+        state: "IN_PROGRESS",
+      },
+      {
+        name: "quality",
+        workflow: "CI",
+        link: "https://example.com/new-quality",
+        bucket: "pending",
+        state: "IN_PROGRESS",
+      },
+    ]);
+  });
+
+  it("prefers the latest passing status rollup entry over an older failed run with the same name", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-stale-fail-pass-"));
+    const binPath = join(rootDir, "fake-gh-stale-fail-pass.sh");
+
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "if [ \"$1 $2\" = 'pr checks' ]; then",
+        "  printf '%s\\n' '[",
+        "    {\"name\":\"template-check\",\"workflow\":\"PR Governance\",\"bucket\":\"fail\",\"state\":\"FAILURE\",\"link\":\"https://example.com/old-template\"},",
+        "    {\"name\":\"template-check\",\"workflow\":\"PR Governance\",\"bucket\":\"pass\",\"state\":\"SUCCESS\",\"link\":\"https://example.com/new-template\"},",
+        "    {\"name\":\"quality\",\"workflow\":\"CI\",\"bucket\":\"pass\",\"state\":\"SUCCESS\",\"link\":\"https://example.com/new-quality\"}",
+        "  ]'",
+        "  exit 0",
+        "fi",
+        "if [ \"$1 $2\" = 'pr view' ]; then",
+        "  printf '%s\\n' '{\"statusCheckRollup\":[",
+        "    {\"__typename\":\"CheckRun\",\"name\":\"template-check\",\"workflowName\":\"PR Governance\",\"status\":\"COMPLETED\",\"conclusion\":\"FAILURE\",\"detailsUrl\":\"https://example.com/old-template\",\"startedAt\":\"2026-03-31T16:50:00Z\",\"completedAt\":\"2026-03-31T16:50:05Z\"},",
+        "    {\"__typename\":\"CheckRun\",\"name\":\"template-check\",\"workflowName\":\"PR Governance\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"detailsUrl\":\"https://example.com/new-template\",\"startedAt\":\"2026-03-31T17:10:00Z\",\"completedAt\":\"2026-03-31T17:10:08Z\"},",
+        "    {\"__typename\":\"CheckRun\",\"name\":\"quality\",\"workflowName\":\"CI\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"detailsUrl\":\"https://example.com/new-quality\",\"startedAt\":\"2026-03-31T17:10:01Z\",\"completedAt\":\"2026-03-31T17:10:09Z\"}",
+        "  ]}'",
+        "  exit 0",
+        "fi",
+        "exit 0",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+    });
+
+    const checks = client.getRequiredChecks({
+      prRef: "https://github.com/netsus/homecook/pull/61",
+    });
+
+    expect(checks.bucket).toBe("pass");
+    expect(checks.checks).toEqual([
+      {
+        name: "template-check",
+        workflow: "PR Governance",
+        link: "https://example.com/new-template",
+        bucket: "pass",
+        state: "SUCCESS",
+      },
+      {
+        name: "quality",
+        workflow: "CI",
+        link: "https://example.com/new-quality",
+        bucket: "pass",
+        state: "SUCCESS",
+      },
+    ]);
+  });
+
   it("reuses an existing pull request when gh reports the branch already has one", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-existing-pr-"));
     const binPath = join(rootDir, "fake-gh-existing-pr.sh");

@@ -140,6 +140,178 @@ function summarizeChecks(checks) {
   return "pass";
 }
 
+function normalizeCheckLabel(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function createCheckKey(check) {
+  const name = normalizeCheckLabel(check?.name);
+  if (name.length === 0) {
+    return "";
+  }
+
+  const workflow = normalizeCheckLabel(check?.workflow ?? check?.workflowName);
+  return `${workflow.toLowerCase()}::${name.toLowerCase()}`;
+}
+
+function hasDuplicateCheckKeys(checks) {
+  const seen = new Set();
+  for (const check of checks) {
+    const key = createCheckKey(check);
+    if (key.length === 0) {
+      continue;
+    }
+    if (seen.has(key)) {
+      return true;
+    }
+    seen.add(key);
+  }
+  return false;
+}
+
+function parseCheckTimestamp(value) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return 0;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function bucketPriority(bucket) {
+  switch (bucket) {
+    case "pending":
+      return 4;
+    case "pass":
+      return 3;
+    case "fail":
+      return 2;
+    case "cancel":
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+function chooseMoreRecentCheck(current, candidate) {
+  if (!current) {
+    return candidate;
+  }
+
+  if ((candidate._sortTimestamp ?? 0) > (current._sortTimestamp ?? 0)) {
+    return candidate;
+  }
+
+  if ((candidate._sortTimestamp ?? 0) < (current._sortTimestamp ?? 0)) {
+    return current;
+  }
+
+  return bucketPriority(candidate.bucket) >= bucketPriority(current.bucket) ? candidate : current;
+}
+
+function normalizeStatusRollupBucket(entry) {
+  const status = normalizeCheckLabel(entry?.status).toUpperCase();
+  if (status !== "COMPLETED") {
+    return "pending";
+  }
+
+  const conclusion = normalizeCheckLabel(entry?.conclusion).toUpperCase();
+  switch (conclusion) {
+    case "SUCCESS":
+    case "NEUTRAL":
+    case "SKIPPED":
+      return "pass";
+    case "CANCELLED":
+      return "cancel";
+    default:
+      return "fail";
+  }
+}
+
+function normalizeStatusRollupEntry(entry) {
+  const name = normalizeCheckLabel(entry?.name);
+  if (name.length === 0) {
+    return null;
+  }
+
+  return {
+    name,
+    workflow: normalizeCheckLabel(entry?.workflowName),
+    link:
+      normalizeCheckLabel(entry?.detailsUrl) ||
+      normalizeCheckLabel(entry?.targetUrl) ||
+      null,
+    bucket: normalizeStatusRollupBucket(entry),
+    state: normalizeCheckLabel(entry?.conclusion) || normalizeCheckLabel(entry?.status) || "UNKNOWN",
+    _sortTimestamp: Math.max(
+      parseCheckTimestamp(entry?.startedAt),
+      parseCheckTimestamp(entry?.completedAt),
+    ),
+  };
+}
+
+function summarizeCheckGroup(checks) {
+  const buckets = checks.map((check) => check.bucket ?? "pass");
+  if (buckets.includes("pending")) {
+    return "pending";
+  }
+  if (buckets.includes("fail")) {
+    return "fail";
+  }
+  if (buckets.includes("cancel")) {
+    return "cancel";
+  }
+  return "pass";
+}
+
+function reconcileChecksWithStatusRollup(checks, statusCheckRollup) {
+  const groupedChecks = new Map();
+  for (const check of checks) {
+    const key = createCheckKey(check);
+    if (key.length === 0) {
+      continue;
+    }
+    const existing = groupedChecks.get(key) ?? [];
+    existing.push(check);
+    groupedChecks.set(key, existing);
+  }
+
+  const latestRollupByKey = new Map();
+  for (const entry of statusCheckRollup ?? []) {
+    const normalized = normalizeStatusRollupEntry(entry);
+    if (!normalized) {
+      continue;
+    }
+    const key = createCheckKey(normalized);
+    if (!groupedChecks.has(key)) {
+      continue;
+    }
+    latestRollupByKey.set(key, chooseMoreRecentCheck(latestRollupByKey.get(key), normalized));
+  }
+
+  return Array.from(groupedChecks.entries()).map(([key, group]) => {
+    const latest = latestRollupByKey.get(key);
+    if (latest) {
+      return {
+        name: latest.name,
+        workflow: latest.workflow,
+        link: latest.link,
+        bucket: latest.bucket,
+        state: latest.state,
+      };
+    }
+
+    const representative = group[0];
+    return {
+      name: representative.name,
+      workflow: representative.workflow ?? null,
+      link: representative.link ?? null,
+      bucket: summarizeCheckGroup(group),
+      state: representative.state ?? "UNKNOWN",
+    };
+  });
+}
+
 function summarizeMergeState(summary) {
   if (typeof summary !== "object" || summary === null) {
     return {
@@ -193,6 +365,18 @@ export function createGithubAutomationClient({
     ]);
 
     return summarizeMergeState(stdout.length > 0 ? JSON.parse(stdout) : null);
+  }
+
+  function getPullRequestStatusRollup(prRef) {
+    const stdout = runGh([
+      "pr",
+      "view",
+      ensureNonEmptyString(prRef, "prRef"),
+      "--json",
+      "statusCheckRollup",
+    ]);
+    const parsed = stdout.length > 0 ? JSON.parse(stdout) : null;
+    return Array.isArray(parsed?.statusCheckRollup) ? parsed.statusCheckRollup : [];
   }
 
   return {
@@ -296,12 +480,13 @@ export function createGithubAutomationClient({
       prRef,
     }) {
       let stdout;
+      const normalizedPrRef = ensureNonEmptyString(prRef, "prRef");
       try {
         stdout = runGh(
           [
             "pr",
             "checks",
-            ensureNonEmptyString(prRef, "prRef"),
+            normalizedPrRef,
             "--required",
             "--json",
             "bucket,name,state,workflow,link",
@@ -316,25 +501,37 @@ export function createGithubAutomationClient({
           const fallbackStdout = runGh([
             "pr",
             "checks",
-            ensureNonEmptyString(prRef, "prRef"),
+            normalizedPrRef,
             "--json",
             "bucket,name,state,workflow,link",
           ]);
           const fallbackChecks = fallbackStdout.length > 0 ? JSON.parse(fallbackStdout) : [];
+          const shouldReconcile =
+            summarizeChecks(fallbackChecks) === "fail" || hasDuplicateCheckKeys(fallbackChecks);
+          const reconciledChecks = shouldReconcile
+            ? reconcileChecksWithStatusRollup(
+                fallbackChecks,
+                getPullRequestStatusRollup(normalizedPrRef),
+              )
+            : fallbackChecks;
 
           return {
-            bucket: fallbackChecks.length > 0 ? summarizeChecks(fallbackChecks) : "pending",
-            checks: fallbackChecks,
+            bucket: reconciledChecks.length > 0 ? summarizeChecks(reconciledChecks) : "pending",
+            checks: reconciledChecks,
           };
         }
 
         throw error;
       }
       const checks = stdout.length > 0 ? JSON.parse(stdout) : [];
+      const shouldReconcile = summarizeChecks(checks) === "fail" || hasDuplicateCheckKeys(checks);
+      const reconciledChecks = shouldReconcile
+        ? reconcileChecksWithStatusRollup(checks, getPullRequestStatusRollup(normalizedPrRef))
+        : checks;
 
       return {
-        bucket: summarizeChecks(checks),
-        checks,
+        bucket: summarizeChecks(reconciledChecks),
+        checks: reconciledChecks,
       };
     },
     markReady({
