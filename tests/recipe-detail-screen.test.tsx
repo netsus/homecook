@@ -92,6 +92,23 @@ function buildSaveableBooks(): RecipeBookListData {
   };
 }
 
+async function findSaveCountMetricCard() {
+  const labels = await screen.findAllByText("저장");
+  const label = labels.find((node) => node.tagName === "DT");
+
+  if (!label) {
+    throw new Error("Could not find the save_count metric label.");
+  }
+
+  const card = label.closest("div");
+
+  if (!card) {
+    throw new Error("Could not find the save_count metric card.");
+  }
+
+  return card;
+}
+
 describe("recipe detail screen", () => {
   afterEach(() => {
     cleanup();
@@ -265,6 +282,95 @@ describe("recipe detail screen", () => {
     expect(modalScope.getByRole("button", { name: /주말 파티/ })).toBeTruthy();
   });
 
+  it("shows load error UI and retries recipe-book loading", async () => {
+    const detail = buildRecipeDetail();
+    let recipeBookRequests = 0;
+
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+    fetchJson.mockImplementation((input: string, init?: RequestInit) => {
+      if (!init?.method && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`) {
+        return Promise.resolve(detail);
+      }
+
+      if (!init?.method && input === "/api/v1/recipe-books") {
+        recipeBookRequests += 1;
+
+        if (recipeBookRequests === 1) {
+          return Promise.reject(new Error("레시피북 목록을 불러오지 못했어요."));
+        }
+
+        return Promise.resolve(buildSaveableBooks());
+      }
+
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    });
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "저장" }));
+    const modal = await screen.findByRole("dialog");
+    const modalScope = within(modal);
+
+    await waitFor(() => {
+      expect(
+        modalScope.getByText("레시피북 목록을 불러오지 못했어요."),
+      ).toBeTruthy();
+    });
+
+    await userEvent.click(modalScope.getByRole("button", { name: "다시 시도" }));
+
+    await waitFor(() => {
+      expect(modalScope.getByRole("button", { name: /저장한 레시피/ })).toBeTruthy();
+    });
+    expect(recipeBookRequests).toBe(2);
+  });
+
+  it("disables save when the selected recipe book already contains the recipe", async () => {
+    const detail = buildRecipeDetail({
+      user_status: {
+        is_liked: false,
+        is_saved: true,
+        saved_book_ids: ["book-saved"],
+      },
+    });
+
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+    fetchJson.mockImplementation((input: string, init?: RequestInit) => {
+      if (!init?.method && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`) {
+        return Promise.resolve(detail);
+      }
+
+      if (!init?.method && input === "/api/v1/recipe-books") {
+        return Promise.resolve(buildSaveableBooks());
+      }
+
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    });
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "저장됨" }));
+    const modal = await screen.findByRole("dialog");
+    const modalScope = within(modal);
+    const saveButton = modalScope.getByRole("button", { name: "저장" }) as HTMLButtonElement;
+
+    await waitFor(() => {
+      expect(
+        modalScope.getByText("이미 선택한 레시피북에 저장된 레시피예요. 다른 레시피북을 선택해 주세요."),
+      ).toBeTruthy();
+    });
+    expect(saveButton.disabled).toBe(true);
+
+    await userEvent.click(modalScope.getByRole("button", { name: /주말 파티/ }));
+
+    await waitFor(() => {
+      expect(
+        modalScope.queryByText("이미 선택한 레시피북에 저장된 레시피예요. 다른 레시피북을 선택해 주세요."),
+      ).toBeNull();
+    });
+    expect(saveButton.disabled).toBe(false);
+  });
+
   it("creates a custom recipe book and saves the recipe", async () => {
     const detail = buildRecipeDetail();
     const createdBookId = "book-fresh";
@@ -304,6 +410,9 @@ describe("recipe detail screen", () => {
 
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
+    const saveCountMetric = await findSaveCountMetricCard();
+    expect(within(saveCountMetric).getByText("89")).toBeTruthy();
+
     await userEvent.click(await screen.findByRole("button", { name: "저장" }));
     const modal = await screen.findByRole("dialog");
     const modalScope = within(modal);
@@ -324,6 +433,9 @@ describe("recipe detail screen", () => {
 
     expect(await screen.findByText("레시피를 저장했어요.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "저장됨" })).toBeTruthy();
+    await waitFor(() => {
+      expect(within(saveCountMetric).getByText("90")).toBeTruthy();
+    });
   });
 
   it("keeps the save modal open and shows an error when save fails", async () => {
