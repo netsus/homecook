@@ -196,6 +196,7 @@ function buildPrompt({ slice, stage, workItemId, dispatch, stageResultPath }) {
     "- Follow AGENTS.md and official docs before implementation.",
     "- Do not invent undocumented API fields, status values, or endpoints.",
     "- Keep branch, verification, and review behavior aligned with slice workflow and workflow-v2 rules.",
+    "- Do not create, update, ready, review, or merge GitHub pull requests yourself; supervisor handles GitHub automation.",
     "",
     "## Stage Result Output",
     `- Write a JSON file to \`${stageResultPath}\` before finishing the task.`,

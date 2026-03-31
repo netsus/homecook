@@ -251,6 +251,85 @@ function normalizeLastReview(lastReview) {
   };
 }
 
+function normalizeRecoveryExistingPr(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  return {
+    role:
+      typeof entry.role === "string" && entry.role.trim().length > 0 ? entry.role.trim() : null,
+    number: Number.isInteger(entry.number) ? entry.number : null,
+    url:
+      typeof entry.url === "string" && entry.url.trim().length > 0
+        ? entry.url.trim()
+        : null,
+    draft: typeof entry.draft === "boolean" ? entry.draft : null,
+    branch:
+      typeof entry.branch === "string" && entry.branch.trim().length > 0
+        ? entry.branch.trim()
+        : null,
+    head_sha:
+      typeof entry.head_sha === "string" && entry.head_sha.trim().length > 0
+        ? entry.head_sha.trim()
+        : null,
+  };
+}
+
+function normalizeRecovery(recovery) {
+  if (!recovery || typeof recovery !== "object") {
+    return null;
+  }
+
+  const kind =
+    typeof recovery.kind === "string" && recovery.kind.trim().length > 0
+      ? recovery.kind.trim()
+      : null;
+  if (!kind) {
+    return null;
+  }
+
+  return {
+    kind,
+    stage: Number.isInteger(recovery.stage) ? recovery.stage : null,
+    branch:
+      typeof recovery.branch === "string" && recovery.branch.trim().length > 0
+        ? recovery.branch.trim()
+        : null,
+    reason:
+      typeof recovery.reason === "string" && recovery.reason.trim().length > 0
+        ? recovery.reason.trim()
+        : null,
+    artifact_dir:
+      typeof recovery.artifact_dir === "string" && recovery.artifact_dir.trim().length > 0
+        ? recovery.artifact_dir.trim()
+        : null,
+    changed_files: Array.isArray(recovery.changed_files)
+      ? recovery.changed_files
+          .filter((entry) => typeof entry === "string" && entry.trim().length > 0)
+          .map((entry) => entry.trim())
+      : [],
+    existing_pr: normalizeRecoveryExistingPr(recovery.existing_pr),
+    salvage_candidate: typeof recovery.salvage_candidate === "boolean" ? recovery.salvage_candidate : false,
+    session_role:
+      typeof recovery.session_role === "string" && recovery.session_role.trim().length > 0
+        ? recovery.session_role.trim()
+        : null,
+    session_provider:
+      typeof recovery.session_provider === "string" && recovery.session_provider.trim().length > 0
+        ? recovery.session_provider.trim()
+        : null,
+    session_id:
+      typeof recovery.session_id === "string" && recovery.session_id.trim().length > 0
+        ? recovery.session_id.trim()
+        : null,
+    updated_at:
+      typeof recovery.updated_at === "string" && recovery.updated_at.trim().length > 0
+        ? recovery.updated_at.trim()
+        : null,
+  };
+}
+
 function baseRuntimeState({ rootDir, workItemId, slice }) {
   return {
     version: 1,
@@ -271,6 +350,7 @@ function baseRuntimeState({ rootDir, workItemId, slice }) {
     prs: normalizePullRequests(null),
     wait: null,
     last_review: normalizeLastReview(null),
+    recovery: null,
   };
 }
 
@@ -322,6 +402,7 @@ function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
     prs: normalizePullRequests(runtime.prs),
     wait: normalizeWait(runtime.wait),
     last_review: normalizeLastReview(runtime.last_review),
+    recovery: normalizeRecovery(runtime.recovery),
   };
 }
 
@@ -442,6 +523,7 @@ export function markStageCompleted({
     blocked_stage: null,
     retry: null,
     last_artifact_dir: artifactDir ?? state.last_artifact_dir,
+    recovery: null,
   };
 }
 
@@ -465,6 +547,7 @@ export function scheduleStageRetry({
       max_attempts: ensureInteger(maxAttempts, "maxAttempts"),
     },
     last_artifact_dir: artifactDir ?? state.last_artifact_dir,
+    recovery: null,
   };
 }
 
@@ -487,6 +570,7 @@ export function markSessionUnavailable({
       max_attempts: ensureInteger(maxAttempts, "maxAttempts"),
     },
     last_artifact_dir: artifactDir ?? state.last_artifact_dir,
+    recovery: null,
   };
 }
 
@@ -603,6 +687,23 @@ export function setLastReview({
         updated_at: toIsoString(updatedAt),
       },
     },
+  };
+}
+
+export function setRecoveryState({
+  state,
+  recovery,
+}) {
+  if (!recovery) {
+    return {
+      ...state,
+      recovery: null,
+    };
+  }
+
+  return {
+    ...state,
+    recovery: normalizeRecovery(recovery),
   };
 }
 

@@ -119,7 +119,12 @@ function main() {
 
   process.stdout.write(
     `${results
-      .map((result) => `${result.workItemId}: ${result.wait?.kind ?? "none"}`)
+      .map((result) => {
+        const action = result.action ?? "run";
+        const wait = result.wait?.kind ?? "none";
+        const reason = result.reason ? ` (${result.reason})` : "";
+        return `${result.workItemId}: ${action} -> ${wait}${reason}`;
+      })
       .join("\n")}\n`,
   );
 }

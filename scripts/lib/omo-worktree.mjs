@@ -130,6 +130,39 @@ export function assertWorktreeClean({
   }
 }
 
+export function listWorktreeChangedFiles({
+  worktreePath,
+}) {
+  const status = runGit({
+    cwd: ensureNonEmptyString(worktreePath, "worktreePath"),
+    args: ["status", "--porcelain"],
+  });
+
+  if (status.length === 0) {
+    return [];
+  }
+
+  return status
+    .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter(Boolean)
+    .map((line) => line.slice(3).trim())
+    .map((path) => {
+      const renameMatch = path.match(/->\s+(.+)$/);
+      return renameMatch ? renameMatch[1].trim() : path;
+    })
+    .filter(Boolean);
+}
+
+export function getWorktreeCurrentBranch({
+  worktreePath,
+}) {
+  return runGit({
+    cwd: ensureNonEmptyString(worktreePath, "worktreePath"),
+    args: ["branch", "--show-current"],
+  });
+}
+
 export function pushWorktreeBranch({
   worktreePath,
   branch,
