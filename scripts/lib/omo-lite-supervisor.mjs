@@ -88,10 +88,11 @@ function productStageSpec(stage, slice) {
       deliverables: [
         `docs/workpacks/${slice}/README.md`,
         `docs/workpacks/${slice}/acceptance.md`,
-        "docs PR",
+        "valid stage result",
       ],
       verifyCommands: [],
-      successCondition: "Stage 1 docs are merged on main and slice status moves to docs.",
+      successCondition:
+        "Stage 1 docs are written, local checks are complete, and a valid stage result is ready for supervisor handoff.",
       escalationIfBlocked: "Escalate to human if the workpack conflicts with official docs or dependencies are not merged.",
     },
     2: {
@@ -112,10 +113,11 @@ function productStageSpec(stage, slice) {
         `branch feature/be-${slice}`,
         "contract-first tests",
         "backend implementation",
-        "Draft PR",
+        "valid stage result",
       ],
       verifyCommands: ["pnpm install --frozen-lockfile", "pnpm test:all"],
-      successCondition: "Backend Draft PR is open, CI is green, and the PR is ready for review.",
+      successCondition:
+        "Backend implementation and required local verification are complete, and a valid stage result is ready for supervisor handoff.",
       escalationIfBlocked: "Escalate to human if official docs conflict or contract evolution approval is required.",
     },
     3: {
@@ -152,10 +154,11 @@ function productStageSpec(stage, slice) {
         `branch feature/fe-${slice}`,
         "frontend tests",
         "frontend implementation",
-        "Draft PR",
+        "valid stage result",
       ],
       verifyCommands: ["pnpm install --frozen-lockfile", "pnpm test:all"],
-      successCondition: "Frontend Draft PR is open, CI is green, and the PR is ready for design/code review.",
+      successCondition:
+        "Frontend implementation and required local verification are complete, and a valid stage result is ready for supervisor handoff.",
       escalationIfBlocked: "Escalate to human if backend contract and UI scope are no longer aligned.",
     },
     5: {

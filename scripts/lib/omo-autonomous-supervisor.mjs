@@ -1,15 +1,19 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
 import { runStageWithArtifacts } from "./omo-lite-runner.mjs";
 import { syncWorkflowV2Status } from "./omo-lite-supervisor.mjs";
 import { createGithubAutomationClient } from "./omo-github.mjs";
+import { resolveClaudeProviderConfig, resolveCodexProviderConfig } from "./omo-provider-config.mjs";
 import {
   acquireRuntimeLock,
+  resolveRuntimePath,
   listRuntimeStates,
   markStageCompleted,
   readRuntimeState,
   releaseRuntimeLock,
+  setRecoveryState,
   setLastReview,
   setPullRequestRef,
   setWaitState,
@@ -23,6 +27,8 @@ import {
   ensureSupervisorWorktree,
   ensureWorktreeBranch,
   getWorktreeHeadSha,
+  getWorktreeCurrentBranch,
+  listWorktreeChangedFiles,
   pushWorktreeBranch,
   syncWorktreeWithBaseBranch,
 } from "./omo-worktree.mjs";
@@ -115,6 +121,158 @@ function bucketToVerification(bucket) {
   return "pending";
 }
 
+function createTickResult({
+  workItemId,
+  slice = null,
+  action,
+  reason = null,
+  wait = null,
+  runtime = null,
+}) {
+  return {
+    workItemId,
+    slice,
+    action,
+    reason,
+    wait,
+    runtime,
+  };
+}
+
+function resolveStageProvider({
+  rootDir,
+  stage,
+  claudeProvider,
+  claudeBin,
+  claudeModel,
+  claudeEffort,
+  opencodeBin,
+}) {
+  if ([2, 4].includes(stage)) {
+    const codexProviderConfig = resolveCodexProviderConfig({
+      rootDir,
+      bin: opencodeBin,
+    });
+
+    return {
+      provider: "opencode",
+      bin: codexProviderConfig.bin,
+      label: "Codex OpenCode",
+    };
+  }
+
+  const claudeProviderConfig = resolveClaudeProviderConfig({
+    rootDir,
+    provider: claudeProvider,
+    bin: claudeBin,
+    model: claudeModel,
+    effort: claudeEffort,
+  });
+
+  return {
+    provider: claudeProviderConfig.provider,
+    bin: claudeProviderConfig.bin,
+    label: claudeProviderConfig.provider === "opencode" ? "Claude OpenCode" : "Claude CLI",
+  };
+}
+
+function runProviderPreflight({
+  bin,
+  args,
+  rootDir,
+  environment,
+  errorPrefix,
+}) {
+  const result = spawnSync(bin, args, {
+    cwd: rootDir,
+    env: {
+      ...process.env,
+      ...(environment ?? {}),
+    },
+    encoding: "utf8",
+  });
+
+  if (result.error) {
+    throw new Error(`${errorPrefix}: ${result.error.message}`);
+  }
+
+  if (result.status !== 0) {
+    const stderr = typeof result.stderr === "string" ? result.stderr.trim() : "";
+    const stdout = typeof result.stdout === "string" ? result.stdout.trim() : "";
+    const details = stderr || stdout || `exit code ${result.status}`;
+    throw new Error(`${errorPrefix}: ${details}`);
+  }
+
+  return {
+    stdout: typeof result.stdout === "string" ? result.stdout.trim() : "",
+    stderr: typeof result.stderr === "string" ? result.stderr.trim() : "",
+  };
+}
+
+function buildRecoverySnapshot({
+  state,
+  stage,
+  kind,
+  reason,
+  prRole,
+  artifactDir,
+  worktreePath,
+  worktree,
+  now,
+}) {
+  if (typeof worktreePath !== "string" || worktreePath.trim().length === 0) {
+    return null;
+  }
+
+  let branch = null;
+  let changedFiles = [];
+
+  try {
+    branch = worktree.getCurrentBranch({
+      worktreePath,
+    });
+  } catch {
+    branch = state.prs?.[prRole ?? ""]?.branch ?? null;
+  }
+
+  try {
+    changedFiles = worktree.listChangedFiles({
+      worktreePath,
+    });
+  } catch {
+    changedFiles = [];
+  }
+
+  const sessionRole = [1, 3, 5, 6].includes(stage) ? "claude_primary" : "codex_primary";
+  const session = state.sessions?.[sessionRole] ?? null;
+  const existingPr = prRole ? state.prs?.[prRole] ?? null : null;
+
+  return {
+    kind,
+    stage,
+    branch,
+    reason,
+    artifact_dir: artifactDir ?? state.last_artifact_dir,
+    changed_files: changedFiles,
+    existing_pr:
+      existingPr?.url
+        ? {
+            role: prRole,
+            number: existingPr.number ?? null,
+            url: existingPr.url,
+            draft: existingPr.draft ?? null,
+            branch: existingPr.branch ?? null,
+            head_sha: existingPr.head_sha ?? null,
+          }
+        : null,
+    salvage_candidate: changedFiles.length > 0,
+    session_role: sessionRole,
+    session_provider: session?.provider ?? null,
+    session_id: session?.session_id ?? null,
+    updated_at: now,
+  };
+}
+
 function createDefaultStageRunner({
   rootDir,
   claudeBudgetState,
@@ -185,26 +343,39 @@ function applyBlocker({
   slice,
   state,
   reason,
+  recovery = null,
+  prPath = null,
   now,
 }) {
   const nextState = saveRuntime({
     rootDir,
     workItemId,
-    state: setWaitState({
-      state,
-      kind: "human_escalation",
-      reason,
-      updatedAt: now,
+    state: setRecoveryState({
+      state: setWaitState({
+        state,
+        kind: "human_escalation",
+        reason,
+        updatedAt: now,
+      }),
+      recovery,
     }),
   });
+  const notes = [`wait_kind=human_escalation`, `reason=${reason}`];
+  if (recovery?.kind) {
+    notes.push(`recovery_kind=${recovery.kind}`);
+  }
+  if (recovery?.artifact_dir) {
+    notes.push(`artifact_dir=${recovery.artifact_dir}`);
+  }
   syncStatus({
     rootDir,
     workItemId,
     patch: {
+      pr_path: prPath ?? undefined,
       lifecycle: "blocked",
       approval_state: "human_escalation",
       verification_status: "pending",
-      notes: `wait_kind=human_escalation reason=${reason}`,
+      notes: notes.join(" "),
     },
     now,
   });
@@ -319,6 +490,7 @@ function handleDeferredStageExecution({
   prPath,
   headSha,
   runResult,
+  worktree,
   now,
 }) {
   if (runResult.execution?.mode === "execute") {
@@ -336,15 +508,18 @@ function handleDeferredStageExecution({
     const nextState = saveRuntime({
       rootDir,
       workItemId,
-      state: setWaitState({
-        state: runtimeState,
-        kind: "blocked_retry",
-        prRole,
-        stage,
-        headSha,
-        reason: runResult.execution.reason,
-        until: runtimeState.retry?.at ?? null,
-        updatedAt: now,
+      state: setRecoveryState({
+        state: setWaitState({
+          state: runtimeState,
+          kind: "blocked_retry",
+          prRole,
+          stage,
+          headSha,
+          reason: runResult.execution.reason,
+          until: runtimeState.retry?.at ?? null,
+          updatedAt: now,
+        }),
+        recovery: null,
       }),
     });
     updateRuntimeStatusForWait({
@@ -368,17 +543,35 @@ function handleDeferredStageExecution({
     };
   }
 
+  const recovery =
+    worktree && runtimeState.workspace?.path
+      ? buildRecoverySnapshot({
+          state: runtimeState,
+          stage,
+          kind: "partial_stage_failure",
+          reason: runResult.execution?.reason ?? "stage execution could not continue",
+          prRole,
+          artifactDir: runResult.artifactDir,
+          worktreePath: runtimeState.workspace.path,
+          worktree,
+          now,
+        })
+      : null;
+
   const nextState = saveRuntime({
     rootDir,
     workItemId,
-    state: setWaitState({
-      state: runtimeState,
-      kind: "human_escalation",
-      prRole,
-      stage,
-      headSha,
-      reason: runResult.execution?.reason ?? "stage execution could not continue",
-      updatedAt: now,
+    state: setRecoveryState({
+      state: setWaitState({
+        state: runtimeState,
+        kind: "human_escalation",
+        prRole,
+        stage,
+        headSha,
+        reason: runResult.execution?.reason ?? "stage execution could not continue",
+        updatedAt: now,
+      }),
+      recovery,
     }),
   });
   updateRuntimeStatusForWait({
@@ -390,7 +583,10 @@ function handleDeferredStageExecution({
     approvalState: "human_escalation",
     lifecycle: "blocked",
     verificationStatus: "pending",
-    extraNotes: [`artifact_dir=${runResult.artifactDir}`],
+    extraNotes: [
+      `artifact_dir=${runResult.artifactDir}`,
+      ...(recovery?.kind ? [`recovery_kind=${recovery.kind}`] : []),
+    ],
   });
   return {
     state: nextState,
@@ -663,6 +859,45 @@ function processWaitState({
   };
 }
 
+function assertStageProviderReady({
+  auth,
+  rootDir,
+  stage,
+  claudeProvider,
+  claudeBin,
+  claudeModel,
+  claudeEffort,
+  opencodeBin,
+}) {
+  const provider =
+    typeof auth?.resolveStageProvider === "function"
+      ? auth.resolveStageProvider(stage)
+      : resolveStageProvider({
+          rootDir,
+          stage,
+          claudeProvider,
+          claudeBin,
+          claudeModel,
+          claudeEffort,
+          opencodeBin,
+        }).provider;
+
+  if (typeof auth?.assertStageProviderReady === "function") {
+    auth.assertStageProviderReady({
+      stage,
+      provider,
+    });
+    return;
+  }
+
+  if (provider === "opencode") {
+    auth?.assertOpencodeAuth?.();
+    return;
+  }
+
+  auth?.assertClaudeAuth?.();
+}
+
 function ensureStageRecorded({ rootDir, workItemId, state, stage, artifactDir }) {
   if (state.last_completed_stage >= stage) {
     return state;
@@ -756,6 +991,7 @@ function handleCodeStage({
     prPath: existingPr?.url ?? null,
     headSha: existingPr?.head_sha ?? null,
     runResult,
+    worktree,
     now,
   });
   if (deferredOutcome) {
@@ -1002,6 +1238,7 @@ function handleReviewStage({
     prPath: activePr.url,
     headSha: activePr.head_sha ?? null,
     runResult,
+    worktree,
     now,
   });
   if (deferredOutcome) {
@@ -1238,13 +1475,56 @@ function createDefaultDependencies({
     ghBin,
     environment,
   });
+  const claudeProviderConfig = resolveClaudeProviderConfig({
+    rootDir,
+    provider: claudeProvider,
+    bin: claudeBin,
+    model: claudeModel,
+    effort: claudeEffort,
+  });
+  const codexProviderConfig = resolveCodexProviderConfig({
+    rootDir,
+    bin: opencodeBin,
+  });
 
   return {
     auth: {
       assertGhAuth() {
         github.assertAuth();
       },
-      assertOpencodeAuth() {},
+      assertOpencodeAuth() {
+        const result = runProviderPreflight({
+          bin: codexProviderConfig.bin,
+          args: ["auth", "list"],
+          rootDir,
+          environment,
+          errorPrefix: "OpenCode auth is unavailable",
+        });
+        const output = `${result.stdout}\n${result.stderr}`;
+        if (/0 credentials|no credentials/i.test(output)) {
+          throw new Error("OpenCode auth is not configured for this machine.");
+        }
+      },
+      assertClaudeAuth() {
+        runProviderPreflight({
+          bin: claudeProviderConfig.bin,
+          args: ["--version"],
+          rootDir,
+          environment,
+          errorPrefix: "Claude CLI is unavailable",
+        });
+      },
+      resolveStageProvider(stage) {
+        return resolveStageProvider({
+          rootDir,
+          stage,
+          claudeProvider: claudeProviderConfig.provider,
+          claudeBin: claudeProviderConfig.bin,
+          claudeModel: claudeProviderConfig.model,
+          claudeEffort: claudeProviderConfig.effort,
+          opencodeBin: codexProviderConfig.bin,
+        }).provider;
+      },
     },
     worktree: {
       ensureWorktree({ workItemId }) {
@@ -1280,6 +1560,16 @@ function createDefaultDependencies({
       },
       getHeadSha({ worktreePath }) {
         return getWorktreeHeadSha({
+          worktreePath,
+        });
+      },
+      getCurrentBranch({ worktreePath }) {
+        return getWorktreeCurrentBranch({
+          worktreePath,
+        });
+      },
+      listChangedFiles({ worktreePath }) {
+        return listWorktreeChangedFiles({
           worktreePath,
         });
       },
@@ -1382,7 +1672,6 @@ export function superviseWorkItem(
 
     try {
       dependencies.auth?.assertGhAuth?.();
-      dependencies.auth?.assertOpencodeAuth?.();
     } catch (error) {
       const blocked = applyBlocker({
         rootDir,
@@ -1401,6 +1690,7 @@ export function superviseWorkItem(
           slice: resolvedSlice,
           transitions: [],
           wait: blocked.wait,
+          recovery: blocked.runtime.recovery,
         },
       });
 
@@ -1435,12 +1725,34 @@ export function superviseWorkItem(
           worktreePath: state.workspace.path,
         });
       } catch (error) {
+        const recovery = buildRecoverySnapshot({
+          state,
+          stage: state.wait?.stage ?? state.current_stage ?? state.blocked_stage ?? state.last_completed_stage ?? 1,
+          kind: "dirty_worktree",
+          reason: error.message,
+          prRole: state.wait?.pr_role ?? state.workspace?.branch_role ?? null,
+          artifactDir: state.last_artifact_dir,
+          worktreePath: state.workspace.path,
+          worktree: {
+            getCurrentBranch: ({ worktreePath }) =>
+              dependencies.worktree.getCurrentBranch({
+                worktreePath,
+              }),
+            listChangedFiles: ({ worktreePath }) =>
+              dependencies.worktree.listChangedFiles({
+                worktreePath,
+              }),
+          },
+          now,
+        });
         const blocked = applyBlocker({
           rootDir,
           workItemId: normalizedWorkItemId,
           slice: resolvedSlice,
           state,
           reason: error.message,
+          recovery,
+          prPath: state.prs?.[state.wait?.pr_role ?? ""]?.url ?? null,
           now,
         });
         const artifactDir = writeSupervisorArtifact({
@@ -1452,6 +1764,7 @@ export function superviseWorkItem(
             slice: resolvedSlice,
             transitions,
             wait: blocked.wait,
+            recovery: blocked.runtime.recovery,
           },
         });
 
@@ -1492,13 +1805,14 @@ export function superviseWorkItem(
           rootDir,
           workItemId: normalizedWorkItemId,
           now,
-          summary: {
-            workItemId: normalizedWorkItemId,
-            slice: resolvedSlice,
-            transitions,
-            wait: blocked.wait,
-          },
-        });
+        summary: {
+          workItemId: normalizedWorkItemId,
+          slice: resolvedSlice,
+          transitions,
+          wait: blocked.wait,
+          recovery: blocked.runtime.recovery,
+        },
+      });
 
         return {
           ...blocked,
@@ -1513,13 +1827,14 @@ export function superviseWorkItem(
           rootDir,
           workItemId: normalizedWorkItemId,
           now,
-          summary: {
-            workItemId: normalizedWorkItemId,
-            slice: resolvedSlice,
-            transitions,
-            wait: state.wait,
-          },
-        });
+        summary: {
+          workItemId: normalizedWorkItemId,
+          slice: resolvedSlice,
+          transitions,
+          wait: state.wait,
+          recovery: state.recovery,
+        },
+      });
 
         return {
           workItemId: normalizedWorkItemId,
@@ -1537,19 +1852,61 @@ export function superviseWorkItem(
           rootDir,
           workItemId: normalizedWorkItemId,
           now,
-          summary: {
-            workItemId: normalizedWorkItemId,
-            slice: resolvedSlice,
-            transitions,
-            wait: state.wait,
-          },
-        });
+        summary: {
+          workItemId: normalizedWorkItemId,
+          slice: resolvedSlice,
+          transitions,
+          wait: state.wait,
+          recovery: state.recovery,
+        },
+      });
 
         return {
           workItemId: normalizedWorkItemId,
           slice: resolvedSlice,
           wait: state.wait,
           runtime: state,
+          artifactDir,
+          transitions,
+        };
+      }
+
+      try {
+        assertStageProviderReady({
+          auth: dependencies.auth,
+          rootDir,
+          stage,
+          claudeProvider,
+          claudeBin,
+          claudeModel,
+          claudeEffort,
+          opencodeBin,
+        });
+      } catch (error) {
+        const blocked = applyBlocker({
+          rootDir,
+          workItemId: normalizedWorkItemId,
+          slice: resolvedSlice,
+          state,
+          reason: error.message,
+          prPath: state.prs?.[resolvePrRole(stage)]?.url ?? null,
+          now,
+        });
+        const artifactDir = writeSupervisorArtifact({
+          rootDir,
+          workItemId: normalizedWorkItemId,
+          now,
+          summary: {
+            workItemId: normalizedWorkItemId,
+            slice: resolvedSlice,
+            transitions,
+            wait: blocked.wait,
+            recovery: blocked.runtime.recovery,
+          },
+        });
+
+        return {
+          ...blocked,
           artifactDir,
           transitions,
         };
@@ -1581,6 +1938,14 @@ export function superviseWorkItem(
           dependencies.worktree.assertClean({
             worktreePath: state.workspace.path,
           }),
+        getCurrentBranch: ({ worktreePath }) =>
+          dependencies.worktree.getCurrentBranch({
+            worktreePath,
+          }),
+        listChangedFiles: ({ worktreePath }) =>
+          dependencies.worktree.listChangedFiles({
+            worktreePath,
+          }),
       };
 
       const handler =
@@ -1610,13 +1975,14 @@ export function superviseWorkItem(
           rootDir,
           workItemId: normalizedWorkItemId,
           now,
-          summary: {
-            workItemId: normalizedWorkItemId,
-            slice: resolvedSlice,
-            transitions,
-            wait: state.wait,
-          },
-        });
+        summary: {
+          workItemId: normalizedWorkItemId,
+          slice: resolvedSlice,
+          transitions,
+          wait: state.wait,
+          recovery: state.recovery,
+        },
+      });
 
         return {
           workItemId: normalizedWorkItemId,
@@ -1639,6 +2005,7 @@ export function superviseWorkItem(
         slice: resolvedSlice,
         transitions,
         wait: cappedState.wait,
+        recovery: cappedState.recovery,
       },
     });
     syncStatus({
@@ -1703,11 +2070,83 @@ export function tickSupervisorWorkItems(
   dependencies = {},
 ) {
   if (typeof workItemId === "string" && workItemId.trim().length > 0) {
+    const normalizedWorkItemId = workItemId.trim();
+    const runtimePath = resolveRuntimePath({
+      rootDir,
+      workItemId: normalizedWorkItemId,
+    });
+    if (!existsSync(runtimePath)) {
+      return [
+        createTickResult({
+          workItemId: normalizedWorkItemId,
+          action: "noop",
+          reason: "missing_runtime",
+        }),
+      ];
+    }
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId: normalizedWorkItemId,
+    });
+
+    if (state.lock?.owner) {
+      return [
+        createTickResult({
+          workItemId: normalizedWorkItemId,
+          slice: state.slice,
+          action: "skip_locked",
+          reason: `locked_by=${state.lock.owner}`,
+          wait: state.wait,
+          runtime: state,
+        }),
+      ];
+    }
+
+    if (!state.wait?.kind) {
+      return [
+        createTickResult({
+          workItemId: normalizedWorkItemId,
+          slice: state.slice,
+          action: "noop",
+          reason: "no_wait_state",
+          wait: null,
+          runtime: state,
+        }),
+      ];
+    }
+
+    if (!["ci", "blocked_retry", "ready_for_next_stage"].includes(state.wait.kind)) {
+      return [
+        createTickResult({
+          workItemId: normalizedWorkItemId,
+          slice: state.slice,
+          action: "noop",
+          reason: `unsupported_wait_kind=${state.wait.kind}`,
+          wait: state.wait,
+          runtime: state,
+        }),
+      ];
+    }
+
+    if (state.wait.kind === "blocked_retry" && !isRetryDue(state.retry, now)) {
+      return [
+        createTickResult({
+          workItemId: normalizedWorkItemId,
+          slice: state.slice,
+          action: "noop",
+          reason: "retry_not_due",
+          wait: state.wait,
+          runtime: state,
+        }),
+      ];
+    }
+
     const supervise = dependencies.supervise ?? superviseWorkItem;
     return [
       supervise({
         rootDir,
-        workItemId: workItemId.trim(),
+        workItemId: normalizedWorkItemId,
         now,
         ...options,
       }),
@@ -1721,28 +2160,52 @@ export function tickSupervisorWorkItems(
   const supervise = dependencies.supervise ?? superviseWorkItem;
 
   return listRuntimeStates(rootDir)
-    .filter(({ state }) => {
+    .flatMap(({ state }) => {
       const kind = state.wait?.kind;
       if (!kind) {
-        return false;
+        return [];
       }
 
-      if (!["ci", "merge", "blocked_retry", "ready_for_next_stage"].includes(kind)) {
-        return false;
+      if (!["ci", "blocked_retry", "ready_for_next_stage"].includes(kind)) {
+        return [];
+      }
+
+      if (state.lock?.owner) {
+        return [
+          createTickResult({
+            workItemId: state.work_item_id,
+            slice: state.slice,
+            action: "skip_locked",
+            reason: `locked_by=${state.lock.owner}`,
+            wait: state.wait,
+            runtime: state,
+          }),
+        ];
       }
 
       if (kind === "blocked_retry") {
-        return isRetryDue(state.retry, now);
+        if (!isRetryDue(state.retry, now)) {
+          return [
+            createTickResult({
+              workItemId: state.work_item_id,
+              slice: state.slice,
+              action: "noop",
+              reason: "retry_not_due",
+              wait: state.wait,
+              runtime: state,
+            }),
+          ];
+        }
       }
 
-      return true;
+      return [
+        supervise({
+          rootDir,
+          workItemId: state.work_item_id,
+          now,
+          ...options,
+        }),
+      ];
     })
-    .map(({ state }) =>
-      supervise({
-        rootDir,
-        workItemId: state.work_item_id,
-        now,
-        ...options,
-      }),
-    );
+    .filter(Boolean);
 }

@@ -82,6 +82,58 @@ function createFixture() {
 }
 
 describe("OMO autonomous supervisor", () => {
+  it("tick on a specific work item is a no-op when runtime is missing", () => {
+    const rootDir = createFixture();
+
+    const results = tickSupervisorWorkItems({
+      rootDir,
+      workItemId: "99-missing-runtime",
+      now: "2026-03-27T01:00:00.000Z",
+    });
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        workItemId: "99-missing-runtime",
+        action: "noop",
+        reason: "missing_runtime",
+      }),
+    ]);
+  });
+
+  it("tick on a specific work item is a no-op when runtime has no active wait", () => {
+    const rootDir = createFixture();
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        current_stage: 6,
+        last_completed_stage: 6,
+        wait: null,
+      },
+    });
+
+    const results = tickSupervisorWorkItems({
+      rootDir,
+      workItemId: "03-recipe-like",
+      now: "2026-03-27T01:00:00.000Z",
+    });
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        workItemId: "03-recipe-like",
+        action: "noop",
+        reason: "no_wait_state",
+      }),
+    ]);
+  });
+
   it("runs Stage 1, merges docs, then opens a backend Draft PR in a dedicated worktree", () => {
     const rootDir = createFixture();
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
@@ -521,9 +573,10 @@ describe("OMO autonomous supervisor", () => {
     ]);
   });
 
-  it("tick resumes only due work items", () => {
+  it("tick resumes due work items, skips future retries, and reports locked items without failing", () => {
     const rootDir = createFixture();
     seedProductWorkItem(rootDir, "04-shopping-list");
+    seedProductWorkItem(rootDir, "05-locked-slice");
 
     writeRuntimeState({
       rootDir,
@@ -575,6 +628,35 @@ describe("OMO autonomous supervisor", () => {
         },
       },
     });
+    writeRuntimeState({
+      rootDir,
+      workItemId: "05-locked-slice",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "05-locked-slice",
+          slice: "05-locked-slice",
+        }).state,
+        slice: "05-locked-slice",
+        blocked_stage: 3,
+        retry: {
+          at: "2026-03-27T00:00:00.000Z",
+          reason: "claude_budget_unavailable",
+          attempt_count: 1,
+          max_attempts: 3,
+        },
+        wait: {
+          kind: "blocked_retry",
+          stage: 3,
+          pr_role: "backend",
+          head_sha: "be555",
+        },
+        lock: {
+          owner: "manual-lock",
+          acquired_at: "2026-03-27T00:30:00.000Z",
+        },
+      },
+    });
 
     const seen: string[] = [];
     const results = tickSupervisorWorkItems(
@@ -597,8 +679,21 @@ describe("OMO autonomous supervisor", () => {
     );
 
     expect(seen).toEqual(["03-recipe-like"]);
-    expect(results).toHaveLength(1);
-    expect(results[0].workItemId).toBe("03-recipe-like");
+    expect(results).toEqual([
+      expect.objectContaining({
+        workItemId: "03-recipe-like",
+      }),
+      expect.objectContaining({
+        workItemId: "04-shopping-list",
+        action: "noop",
+        reason: "retry_not_due",
+      }),
+      expect.objectContaining({
+        workItemId: "05-locked-slice",
+        action: "skip_locked",
+        reason: "locked_by=manual-lock",
+      }),
+    ]);
   });
 
   it("records blocked_retry when Stage 1 schedules a Claude retry", () => {
@@ -737,6 +832,215 @@ describe("OMO autonomous supervisor", () => {
       stage: 1,
       reason: "claude_budget_unavailable",
       until: "2026-03-27T01:10:00.000Z",
+    });
+  });
+
+  it("does not require OpenCode auth before a Claude Stage 1 run", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-03-27T00:30:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {
+            throw new Error("should not be called");
+          },
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            mkdirSync(workspacePath, { recursive: true });
+            return { path: workspacePath, created: true };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            return { branch: "docs/03-recipe-like" };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "docs123";
+          },
+          getCurrentBranch() {
+            return "docs/03-recipe-like";
+          },
+          listChangedFiles() {
+            return [];
+          },
+        },
+        stageRunner() {
+          return {
+            artifactDir: join(rootDir, ".artifacts", "stage1"),
+            dispatch: { actor: "claude", stage: 1 },
+            execution: { mode: "execute", executed: true, sessionId: "ses_claude" },
+            stageResult: {
+              result: "done",
+              summary_markdown: "Stage 1 docs complete",
+              pr: {
+                title: "docs: lock slice docs",
+                body_markdown: "## Summary\n- docs",
+              },
+              checks_run: [],
+              next_route: "open_pr",
+            },
+          };
+        },
+        github: {
+          createPullRequest() {
+            return { number: 34, url: "https://github.com/netsus/homecook/pull/34", draft: false };
+          },
+          getRequiredChecks() {
+            return { bucket: "pending", checks: [] };
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            return { merged: true };
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(result.wait?.kind).toBe("ci");
+  });
+
+  it("fails closed before Stage 2 when OpenCode auth is unavailable", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        current_stage: 1,
+        last_completed_stage: 1,
+        wait: {
+          kind: "ready_for_next_stage",
+          stage: 2,
+          pr_role: "docs",
+          head_sha: "docs123",
+        },
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-03-27T00:35:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {
+            throw new Error("OpenCode auth is not configured for this machine.");
+          },
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            mkdirSync(workspacePath, { recursive: true });
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            throw new Error("not expected");
+          },
+          pushBranch() {
+            throw new Error("not expected");
+          },
+          syncBaseBranch() {
+            throw new Error("not expected");
+          },
+          getHeadSha() {
+            return "be123";
+          },
+          getCurrentBranch() {
+            return "master";
+          },
+          listChangedFiles() {
+            return [];
+          },
+        },
+      },
+    );
+
+    expect(result.wait).toMatchObject({
+      kind: "human_escalation",
+      reason: "OpenCode auth is not configured for this machine.",
+    });
+  });
+
+  it("fails closed before a Claude stage when Claude CLI preflight fails", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-03-27T00:40:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+          assertClaudeAuth() {
+            throw new Error("Claude CLI is unavailable: login required");
+          },
+        },
+        worktree: {
+          ensureWorktree() {
+            mkdirSync(workspacePath, { recursive: true });
+            return { path: workspacePath, created: true };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            throw new Error("not expected");
+          },
+          pushBranch() {
+            throw new Error("not expected");
+          },
+          syncBaseBranch() {
+            throw new Error("not expected");
+          },
+          getHeadSha() {
+            return "docs123";
+          },
+          getCurrentBranch() {
+            return "master";
+          },
+          listChangedFiles() {
+            return [];
+          },
+        },
+      },
+    );
+
+    expect(result.wait).toMatchObject({
+      kind: "human_escalation",
+      reason: "Claude CLI is unavailable: login required",
     });
   });
 
@@ -951,6 +1255,12 @@ describe("OMO autonomous supervisor", () => {
           getHeadSha() {
             return "docs123";
           },
+          getCurrentBranch() {
+            return "docs/03-recipe-like";
+          },
+          listChangedFiles() {
+            return ["docs/workpacks/03-recipe-like/README.md"];
+          },
         },
         stageRunner() {
           const runtimeSync = writeRuntimeState({
@@ -1041,6 +1351,12 @@ describe("OMO autonomous supervisor", () => {
     }).state as {
       wait: { kind: string; reason: string; stage: number | null };
       retry: { reason: string | null };
+      recovery: {
+        kind: string;
+        changed_files: string[];
+        salvage_candidate: boolean;
+        branch: string | null;
+      } | null;
     };
 
     expect(result.wait?.kind).toBe("human_escalation");
@@ -1050,6 +1366,12 @@ describe("OMO autonomous supervisor", () => {
     });
     expect(runtime.wait.reason).toContain("stage-result.json");
     expect(runtime.retry?.reason).toBe("contract_violation");
+    expect(runtime.recovery).toMatchObject({
+      kind: "partial_stage_failure",
+      branch: "docs/03-recipe-like",
+      changed_files: ["docs/workpacks/03-recipe-like/README.md"],
+      salvage_candidate: true,
+    });
   });
 
   it("fails closed when the dedicated worktree is dirty", () => {
@@ -1085,6 +1407,12 @@ describe("OMO autonomous supervisor", () => {
           getHeadSha() {
             return "abc123";
           },
+          getCurrentBranch() {
+            return "feature/fe-03-recipe-like";
+          },
+          listChangedFiles() {
+            return ["components/recipe/save-modal.tsx"];
+          },
         },
       },
     );
@@ -1095,12 +1423,18 @@ describe("OMO autonomous supervisor", () => {
       slice: "03-recipe-like",
     }).state as {
       wait: { kind: string; reason: string };
+      recovery: { kind: string; changed_files: string[]; salvage_candidate: boolean } | null;
     };
 
     expect(result.wait?.kind).toBe("human_escalation");
     expect(runtime.wait).toMatchObject({
       kind: "human_escalation",
       reason: "Worktree is dirty.",
+    });
+    expect(runtime.recovery).toMatchObject({
+      kind: "dirty_worktree",
+      changed_files: ["components/recipe/save-modal.tsx"],
+      salvage_candidate: true,
     });
   });
 });

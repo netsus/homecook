@@ -253,6 +253,12 @@ describe("OMO-lite stage runner", () => {
     expect(prompt).toContain("\"body_markdown\"");
     expect(prompt).toContain("\"checks_run\"");
     expect(prompt).toContain("\"next_route\"");
+    expect(prompt).toContain("valid stage result");
+    expect(prompt).not.toContain("Draft PR");
+    expect(prompt).not.toContain("green CI");
+    expect(prompt).toContain(
+      "Do not create, update, ready, review, or merge GitHub pull requests yourself",
+    );
     expect(metadata.actor).toBe("codex");
     expect(metadata.execution).toMatchObject({
       mode: "artifact-only",
