@@ -4,6 +4,7 @@ import {
   buildExploratoryChecklist,
   createExploratoryReportTemplate,
   parseChecklistSections,
+  renderExploratoryInstructions,
   scoreExploratoryReport,
   validateExploratoryReport,
 } from "../scripts/lib/qa-system.mjs";
@@ -88,7 +89,7 @@ describe("qa system helpers", () => {
     });
   });
 
-  it("builds an exploratory checklist with devices, primary path, and auth edge case", () => {
+  it("builds an exploratory checklist with small-mobile coverage, primary path, and UX heuristics", () => {
     const checklist = buildExploratoryChecklist({
       slice: "03-recipe-like",
       baseUrl: "http://127.0.0.1:3000",
@@ -96,15 +97,57 @@ describe("qa system helpers", () => {
       acceptanceMarkdown: ACCEPTANCE_MARKDOWN,
     });
 
-    expect(checklist.devices).toEqual(["desktop-chrome", "mobile-chrome"]);
+    expect(checklist.devices).toEqual([
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small",
+    ]);
     expect(checklist.primaryUserPath).toEqual([
       "HOME에서 검색한다.",
       "상세로 진입한다.",
       "보호 액션을 시도한다.",
     ]);
+    expect(checklist.checklistItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "heuristic-mobile-readability",
+          section: "Exploratory Heuristics",
+        }),
+        expect.objectContaining({
+          id: "heuristic-small-viewport-cta",
+          section: "Exploratory Heuristics",
+        }),
+        expect.objectContaining({
+          id: "heuristic-duplicate-cta",
+          section: "Exploratory Heuristics",
+        }),
+      ]),
+    );
     expect(checklist.edgeCases.map((item) => item.id)).toContain(
       "auth-return-to-action",
     );
+    expect(checklist.edgeCases.map((item) => item.id)).toContain(
+      "small-viewport-fold",
+    );
+  });
+
+  it("renders exploratory instructions with mandatory heuristic and evidence prompts", () => {
+    const checklist = buildExploratoryChecklist({
+      slice: "01-discovery-detail-auth",
+      baseUrl: "http://127.0.0.1:3000",
+      readmeMarkdown: README_MARKDOWN,
+      acceptanceMarkdown: ACCEPTANCE_MARKDOWN,
+    });
+
+    const instructions = renderExploratoryInstructions(
+      checklist,
+      ".artifacts/qa/01-discovery-detail-auth/manual",
+    );
+
+    expect(instructions).toContain("desktop-chrome, mobile-chrome, mobile-ios-small");
+    expect(instructions).toContain("작은 높이 viewport");
+    expect(instructions).toContain("중복");
+    expect(instructions).toContain("above-the-fold");
   });
 
   it("validates and scores a complete exploratory report", () => {
@@ -176,6 +219,7 @@ describe("qa system helpers", () => {
     expect(errors).toEqual(
       expect.arrayContaining([
         "missing required device coverage: mobile-chrome",
+        "missing required device coverage: mobile-ios-small",
         "missing checklist coverage item: happy-path-1",
         "finding[0].evidence_paths must not be empty.",
       ]),

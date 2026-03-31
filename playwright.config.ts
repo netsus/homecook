@@ -31,6 +31,13 @@ export default defineConfig({
         ...devices["Pixel 7"],
       },
     },
+    {
+      name: "mobile-ios-small",
+      use: {
+        ...devices["iPhone SE"],
+        browserName: "chromium",
+      },
+    },
   ],
   webServer: {
     command: "corepack pnpm exec next dev --turbopack --hostname 127.0.0.1 --port 3000",

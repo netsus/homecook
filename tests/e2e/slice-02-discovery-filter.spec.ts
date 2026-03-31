@@ -190,4 +190,20 @@ test.describe("Slice 02 discovery filter flow", () => {
       page.getByRole("link", { name: /집밥 김치찌개/i }).first(),
     ).toBeVisible();
   });
+
+  test("keeps apply disabled when ingredient search has no results and no selection", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "재료로 검색" }).click();
+    await page
+      .getByRole("textbox", { name: "재료명으로 검색" })
+      .fill("없는재료");
+    await expect(
+      page.getByRole("heading", { name: "검색 결과가 없어요" }),
+    ).toBeVisible();
+
+    await expect(page.getByRole("button", { name: "적용" })).toBeDisabled();
+  });
 });

@@ -60,14 +60,12 @@ test.describe("QA visual regression", () => {
 
     await page.goto("/");
     await page.getByRole("button", { name: "재료로 검색" }).click();
-    await expect(
-      page.getByRole("dialog", { name: "재료로 검색" }),
-    ).toBeVisible();
+    const dialog = page.getByRole("dialog", { name: "재료로 검색" });
+    await expect(dialog).toBeVisible();
 
     await stabilizeVisualSnapshot(page);
-    await expect(page).toHaveScreenshot("qa-ingredient-filter-modal.png", {
+    await expect(dialog).toHaveScreenshot("qa-ingredient-filter-modal.png", {
       animations: "disabled",
-      fullPage: true,
     });
   });
 

@@ -200,7 +200,9 @@ export function IngredientFilterModal({
     return `${draftIngredientIds.length}개 선택됨`;
   }, [draftIngredientIds.length]);
   const isApplyDisabled =
-    screenState === "loading" || screenState === "error";
+    screenState === "loading" ||
+    screenState === "error" ||
+    (screenState === "empty" && draftIngredientIds.length === 0);
 
   const toggleIngredient = (ingredientId: string) => {
     setDraftIngredientIds((current) =>
@@ -222,7 +224,7 @@ export function IngredientFilterModal({
       <div
         aria-labelledby="ingredient-filter-title"
         aria-modal="true"
-        className="glass-panel flex max-h-[85vh] w-full flex-col rounded-t-[20px] bg-[var(--panel)] md:max-w-2xl md:rounded-[20px]"
+        className="glass-panel flex max-h-screen w-full flex-col rounded-t-[20px] bg-[var(--panel)] md:max-h-[85vh] md:max-w-2xl md:rounded-[20px]"
         onClick={(event) => event.stopPropagation()}
         ref={dialogRef}
         role="dialog"
@@ -283,7 +285,7 @@ export function IngredientFilterModal({
           </div>
         </div>
 
-        <div className="min-h-[280px] flex-1 overflow-y-auto px-5 py-5 md:px-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 md:min-h-[280px] md:px-6">
           {screenState === "loading" ? (
             <div className="grid gap-3 sm:grid-cols-2">
               {Array.from({ length: 6 }).map((_, index) => (
@@ -363,7 +365,7 @@ export function IngredientFilterModal({
           ) : null}
         </div>
 
-        <div className="border-t border-[var(--line)] px-5 py-4 md:px-6">
+        <div className="border-t border-[var(--line)] px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:px-6 md:pb-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm text-[var(--muted)]">{selectionMessage}</p>
             <div className="flex items-center gap-2">

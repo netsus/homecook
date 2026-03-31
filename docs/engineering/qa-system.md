@@ -24,6 +24,19 @@
 - Playwright auth/session security smoke
 - Lighthouse budget
 
+기본 device matrix:
+
+- `desktop-chrome`
+- `mobile-chrome` (`Pixel 7`)
+- `mobile-ios-small` (`iPhone SE` 급 작은 iOS viewport sentinel)
+
+운영 메모:
+
+- 작은 viewport는 한국 서비스에서도 여전히 유효한 회귀 감지 센서로 본다.
+- 하단 CTA 가림, 정보 과적층, 작은 control 글자, modal footer 잘림 같은 문제를 조기에 드러내기 위한 sentinel device다.
+- visual regression은 위 device matrix 전체에서 실행한다.
+- accessibility smoke는 axe scan 외에도 핵심 control의 최소 가독성/터치 타깃 바닥선을 함께 확인한다.
+
 로컬 실행:
 
 - 백엔드 구현 PR 전: `pnpm verify:backend`
@@ -41,6 +54,17 @@ CI 실행:
 
 - acceptance checklist를 읽고 desktop/mobile에서 실제 사용자 흐름을 훑는다.
 - deterministic gate로 잡히지 않는 UX, 디자인, copy, recovery, affordance 문제를 찾는다.
+- acceptance에 없더라도 아래 휴리스틱은 기본 점검 항목으로 강제한다.
+
+기본 휴리스틱:
+
+- 모바일 가독성: 정렬, 필터, CTA, 상태 문구가 읽기 어려울 정도로 작지 않은가
+- 작은 viewport CTA 가시성: iPhone SE 급에서 primary CTA가 가려지지 않는가
+- 중복 CTA: 같은 기능 버튼이 한 화면에 불필요하게 두 번 이상 노출되지 않는가
+- 정보 계층: 핵심 정보와 그 액션이 물리적으로 과하게 분리되지 않는가
+- copy sanity: h1/h2/버튼/상태 문구가 과하게 길거나 어색하지 않은가
+- empty/error/no-op: 결과 없음이나 실패 상태에서 의미 없는 CTA를 누르게 하지 않는가
+- visual polish: 아이콘, 버튼, 피드백이 placeholder/MVP 임시 UI처럼 보이지 않는가
 
 실행 방식:
 
@@ -59,6 +83,12 @@ CI 실행:
 - `new-screen`, `high-risk-ui-change`: 기본 실행
 - `low-risk-ui-change`: 권장, 필요 시 생략 가능하되 PR 본문에 근거 기록
 - `product-backend`: 기본 생략, UI 영향이 있거나 인증 복귀 흐름을 바꾸면 선택 실행
+
+필수 evidence:
+
+- required device마다 최소 1개 이상 스크린샷 또는 녹화 경로
+- 작은 viewport의 above-the-fold 캡처
+- 중복 CTA, 정보 계층, copy sanity 확인 결과를 finding 또는 coverage notes에 기록
 
 ### Layer 3 — QA System Eval
 

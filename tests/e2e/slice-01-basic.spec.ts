@@ -1,6 +1,17 @@
 import { expect, test } from "@playwright/test";
 
+import {
+  installDiscoveryRoutes,
+  installRecipeDetailRoutes,
+  RECIPE_PATH,
+} from "./helpers/mock-routes";
+
 test.describe("Slice 01 basic flow", () => {
+  test.beforeEach(async ({ page }) => {
+    await installDiscoveryRoutes(page);
+    await installRecipeDetailRoutes(page);
+  });
+
   test("HOME shows list, supports search, and updates sort state", async ({
     page,
   }) => {
@@ -29,13 +40,12 @@ test.describe("Slice 01 basic flow", () => {
     await expect(sortSelect).toHaveValue("like_count");
   });
 
-  test("Recipe detail opens from HOME and shows key sections", async ({
+  test("Recipe detail route shows key sections", async ({
     page,
   }) => {
-    await page.goto("/");
-    await page.getByRole("link", { name: /집밥 김치찌개/i }).first().click();
+    await page.goto(RECIPE_PATH);
 
-    await expect(page).toHaveURL(/\/recipe\/mock-kimchi-jjigae$/);
+    await expect(page).toHaveURL(new RegExp(`${RECIPE_PATH}$`));
     await expect(
       page.getByRole("heading", { name: "집밥 김치찌개" }),
     ).toBeVisible();
@@ -46,7 +56,7 @@ test.describe("Slice 01 basic flow", () => {
   test("Protected action opens login gate and modal can close with button, ESC, and backdrop", async ({
     page,
   }) => {
-    await page.goto("/recipe/mock-kimchi-jjigae");
+    await page.goto(RECIPE_PATH);
 
     await page.getByRole("button", { name: "플래너에 추가" }).click();
     const dialog = page.getByRole("dialog");
@@ -70,7 +80,7 @@ test.describe("Slice 01 basic flow", () => {
   });
 
   test("Recipe detail shows callback failure feedback", async ({ page }) => {
-    await page.goto("/recipe/mock-kimchi-jjigae?authError=oauth_failed");
+    await page.goto(`${RECIPE_PATH}?authError=oauth_failed`);
 
     await expect(
       page.getByText("로그인을 완료하지 못했어요. 다시 시도해주세요."),

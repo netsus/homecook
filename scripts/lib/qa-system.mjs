@@ -6,6 +6,41 @@ const SUBSECTION_HEADER_PATTERN = /^###\s+(.+)$/;
 const CHECKBOX_PATTERN = /^- \[[ xX]\]\s+(.+)$/;
 const BULLET_PATTERN = /^-\s+(.+)$/;
 const NUMBERED_PATTERN = /^\d+\.\s+(.+)$/;
+const EXPLORATORY_DEVICES = [
+  "desktop-chrome",
+  "mobile-chrome",
+  "mobile-ios-small",
+];
+const EXPLORATORY_HEURISTICS = [
+  {
+    id: "heuristic-mobile-readability",
+    text: "모바일에서 정렬, 필터, CTA처럼 자주 쓰는 control의 텍스트가 읽기 어려울 정도로 작지 않은지 확인한다.",
+  },
+  {
+    id: "heuristic-small-viewport-cta",
+    text: "작은 높이 viewport(iPhone SE 급)에서 primary CTA가 가려지지 않고 짧은 스크롤 안에서 도달 가능한지 확인한다.",
+  },
+  {
+    id: "heuristic-duplicate-cta",
+    text: "같은 기능을 수행하는 CTA가 한 화면에 중복으로 노출되지 않는지 확인한다.",
+  },
+  {
+    id: "heuristic-information-hierarchy",
+    text: "핵심 정보와 그 정보에 대한 액션이 물리적으로 멀리 떨어지지 않고 같은 맥락 안에 배치되는지 확인한다.",
+  },
+  {
+    id: "heuristic-copy-sanity",
+    text: "h1/h2, 버튼, 상태 메시지 카피가 과하게 길거나 어색하지 않은지 확인한다.",
+  },
+  {
+    id: "heuristic-empty-noop",
+    text: "empty, loading, error 상태에서 사용자가 의미 없는 no-op CTA를 누를 수 없는지 확인한다.",
+  },
+  {
+    id: "heuristic-placeholder-polish",
+    text: "아이콘, 버튼, 피드백 표현이 placeholder나 MVP 임시 UI처럼 보이지 않는지 확인한다.",
+  },
+];
 
 function slugify(value) {
   return value
@@ -87,6 +122,10 @@ function buildEdgeCaseMatrix(checklistItems) {
       text: "Mobile viewport에서 동일 흐름을 다시 검증한다.",
     },
     {
+      id: "small-viewport-fold",
+      text: "작은 iOS viewport(iPhone SE 급)에서 above-the-fold 영역과 하단 CTA 가시성을 확인한다.",
+    },
+    {
       id: "hard-refresh",
       text: "중간 상태에서 hard refresh 후 상태 복원과 URL 정합성을 확인한다.",
     },
@@ -130,6 +169,16 @@ function buildEdgeCaseMatrix(checklistItems) {
   return baseline;
 }
 
+function buildHeuristicChecklistItems() {
+  return EXPLORATORY_HEURISTICS.map((heuristic) => ({
+    id: heuristic.id,
+    section: "Exploratory Heuristics",
+    subsection: null,
+    text: heuristic.text,
+    priority: "high",
+  }));
+}
+
 export function buildExploratoryChecklist({
   slice,
   baseUrl,
@@ -150,6 +199,7 @@ export function buildExploratoryChecklist({
           : "normal",
     })),
   );
+  const heuristicItems = buildHeuristicChecklistItems();
 
   return {
     schemaVersion: "1.0",
@@ -160,10 +210,10 @@ export function buildExploratoryChecklist({
       readme: `docs/workpacks/${slice}/README.md`,
       acceptance: `docs/workpacks/${slice}/acceptance.md`,
     },
-    devices: ["desktop-chrome", "mobile-chrome"],
+    devices: EXPLORATORY_DEVICES,
     primaryUserPath,
-    checklistItems,
-    edgeCases: buildEdgeCaseMatrix(checklistItems),
+    checklistItems: [...checklistItems, ...heuristicItems],
+    edgeCases: buildEdgeCaseMatrix([...checklistItems, ...heuristicItems]),
   };
 }
 
@@ -201,18 +251,28 @@ export function renderExploratoryInstructions(checklist, outputDir) {
     `- 체크리스트: \`${checklistPath}\``,
     `- 보고서 템플릿: \`${reportPath}\``,
     `- 기본 URL: \`${checklist.baseUrl}\``,
+    `- 필수 device coverage: \`${checklist.devices.join(", ")}\``,
     "",
     "## 실행 규칙",
     "1. checklistItems를 순서대로 훑고 coverage 상태를 채운다.",
-    "2. desktop과 mobile 둘 다 확인한다.",
+    "2. desktop, 일반 mobile, 작은 iOS viewport를 모두 확인한다.",
     "3. edgeCases 항목을 실제로 시도한다.",
     "4. finding마다 severity, repro_steps, expected, actual, evidence_paths, remaining_risk를 남긴다.",
-    "5. 마지막에 남은 리스크와 미커버 항목을 summary에 요약한다.",
+    "5. 작은 높이 viewport에서는 above-the-fold 상태와 CTA 가시성을 캡처한다.",
+    "6. 마지막에 남은 리스크와 미커버 항목을 summary에 요약한다.",
     "",
     "## 권장 실행 예시",
     "- `pnpm dev`로 앱을 띄운다.",
     `- \`${checklist.baseUrl}\`에서 브라우저 탐색을 시작한다.`,
     `- 완료 후 \`${reportPath}\`를 채우고 \`pnpm qa:eval -- --checklist ${checklistPath} --report ${reportPath}\`로 점수화한다.`,
+    "",
+    "## 필수 휴리스틱",
+    ...EXPLORATORY_HEURISTICS.map((item) => `- ${item.text}`),
+    "",
+    "## 필수 증거 가이드",
+    "- 각 required device별로 최소 1개 이상 스크린샷 또는 녹화 경로를 남긴다.",
+    "- 작은 viewport에서는 above-the-fold 캡처를 남긴다.",
+    "- 중복 CTA, 정보 계층, 카피 이상 여부를 찾지 못했더라도 확인 결과를 notes에 남긴다.",
     "",
     "## Edge Cases",
     ...checklist.edgeCases.map((item) => `- ${item.text}`),
