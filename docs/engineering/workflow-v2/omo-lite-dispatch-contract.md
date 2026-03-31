@@ -70,6 +70,24 @@ dispatch 결과는 아래를 포함한다.
 - `artifact_dir` (stage run 시)
 - `stage_result_schema`
 
+code stage 결과 schema는 아래 필드를 포함한다.
+
+- `result`
+- `summary_markdown`
+- `pr.title`
+- `pr.body_markdown`
+- `commit.subject`
+- `commit.body_markdown` optional
+- `checks_run`
+- `next_route`
+
+review stage 결과 schema는 아래 필드를 포함한다.
+
+- `decision`
+- `body_markdown`
+- `route_back_stage`
+- `approved_head_sha`
+
 ## Dispatch Matrix
 
 | Stage | Actor | Goal | Required Reads | Deliverables |
@@ -118,7 +136,10 @@ provider별 resume 규칙:
 - success:
   - README + acceptance 작성
   - valid `stage-result.json`
-  - clean branch state for supervisor handoff
+  - in-scope docs 변경만 반영
+  - verify command 실행
+  - supervisor handoff용 commit subject/body 제안 작성
+  - GitHub PR 생성/merge는 하지 않음
 
 ### Stage 2 → Codex
 
@@ -133,7 +154,10 @@ provider별 resume 규칙:
   - contract-first test
   - backend implementation
   - valid `stage-result.json`
-  - clean branch state for supervisor handoff
+  - in-scope 파일만 수정
+  - verify command 실행
+  - supervisor handoff용 commit subject/body 제안 작성
+  - GitHub PR 생성/merge는 하지 않음
 
 ### Stage 3 → Claude
 
@@ -158,7 +182,10 @@ provider별 resume 규칙:
   - FE implementation
   - state UI
   - valid `stage-result.json`
-  - clean branch state for supervisor handoff
+  - in-scope 파일만 수정
+  - verify command 실행
+  - supervisor handoff용 commit subject/body 제안 작성
+  - GitHub PR 생성/merge는 하지 않음
 
 ### Stage 5 → Claude
 
@@ -220,8 +247,10 @@ target 규칙:
 - `claude-cli` run은 JSON stdout에서 `session_id`, `modelUsage`, `usage`, `total_cost_usd`를 파싱해 metadata에 남긴다.
 - stage agent는 supervisor가 읽을 수 있는 structured stage result를 artifact에 남긴다.
 - stage agent는 GitHub PR 생성/Ready/merge를 직접 수행하지 않는다.
+- code stage의 git commit/push ownership도 supervisor가 가진다.
 - `--sync-status`를 함께 주면 dispatch의 `status_patch`와 artifact 경로가 `.workflow-v2/status.json`에 같이 반영된다.
 - direct execution은 merge automation 자체를 수행하지 않지만, autonomous supervisor가 이어서 읽을 수 있는 stage result를 남겨야 한다.
+- supervisor lifecycle에서 code stage는 `stage_result_ready -> verify_pending -> commit_pending -> push_pending -> pr_pending -> wait` 순서로 auto-finalize될 수 있다.
 
 ## Fallback Routing
 
