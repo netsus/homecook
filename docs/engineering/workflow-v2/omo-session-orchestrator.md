@@ -102,11 +102,21 @@ runtime state는 tracked workflow 상태와 분리한다.
 - `last_artifact_dir`
 - `lock.owner`
 - `lock.acquired_at`
+- `recovery.kind`
+- `recovery.stage`
+- `recovery.branch`
+- `recovery.reason`
+- `recovery.artifact_dir`
+- `recovery.changed_files[]`
+- `recovery.existing_pr`
+- `recovery.salvage_candidate`
+- `recovery.updated_at`
 
 분리 원칙:
 
 - `.workflow-v2/status.json`은 사람과 PR이 읽는 공식 상태다.
 - `.opencode/omo-runtime/*.json`은 session provider, 세션 ID, retry timer, lock 같은 실행 상태만 저장한다.
+- partial-stage recovery evidence도 repo-local runtime에 저장한다.
 - tracked 상태에는 세션 ID를 넣지 않는다.
 
 ## Retry And Resume Policy

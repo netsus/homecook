@@ -74,10 +74,10 @@ dispatch 결과는 아래를 포함한다.
 
 | Stage | Actor | Goal | Required Reads | Deliverables |
 |------|-------|------|----------------|--------------|
-| 1 | Claude | workpack 문서 작성 | AGENTS, current source, template, official docs | README, acceptance, docs PR |
-| 2 | Codex | backend contract-first 구현 | AGENTS, slice workflow, workpack, acceptance, API/DB docs | tests, backend impl, Draft PR |
+| 1 | Claude | workpack 문서 작성 | AGENTS, current source, template, official docs | README, acceptance, valid stage result |
+| 2 | Codex | backend contract-first 구현 | AGENTS, slice workflow, workpack, acceptance, API/DB docs | tests, backend impl, valid stage result |
 | 3 | Claude | backend PR review | workpack, PR diff, CI, acceptance | review summary, requested changes or approve |
-| 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, design refs | tests, FE impl, Draft PR |
+| 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, design refs | tests, FE impl, valid stage result |
 | 5 | Claude | design review | FE PR diff, design tokens, workpack UI scope | design findings or approve |
 | 6 | Claude | frontend PR review | FE PR diff, CI, acceptance | review summary, requested changes or approve |
 
@@ -117,8 +117,8 @@ provider별 resume 규칙:
   - 공식 문서 해당 섹션
 - success:
   - README + acceptance 작성
-  - status `planned -> docs`
-  - docs PR merge 준비
+  - valid `stage-result.json`
+  - clean branch state for supervisor handoff
 
 ### Stage 2 → Codex
 
@@ -132,7 +132,8 @@ provider별 resume 규칙:
 - success:
   - contract-first test
   - backend implementation
-  - Draft PR + required checks green
+  - valid `stage-result.json`
+  - clean branch state for supervisor handoff
 
 ### Stage 3 → Claude
 
@@ -156,7 +157,8 @@ provider별 resume 규칙:
 - success:
   - FE implementation
   - state UI
-  - Draft PR + green CI
+  - valid `stage-result.json`
+  - clean branch state for supervisor handoff
 
 ### Stage 5 → Claude
 
@@ -217,6 +219,7 @@ target 규칙:
 - executable run이면 같은 경로에 provider-specific stdout/stderr log도 남긴다.
 - `claude-cli` run은 JSON stdout에서 `session_id`, `modelUsage`, `usage`, `total_cost_usd`를 파싱해 metadata에 남긴다.
 - stage agent는 supervisor가 읽을 수 있는 structured stage result를 artifact에 남긴다.
+- stage agent는 GitHub PR 생성/Ready/merge를 직접 수행하지 않는다.
 - `--sync-status`를 함께 주면 dispatch의 `status_patch`와 artifact 경로가 `.workflow-v2/status.json`에 같이 반영된다.
 - direct execution은 merge automation 자체를 수행하지 않지만, autonomous supervisor가 이어서 읽을 수 있는 stage result를 남겨야 한다.
 
