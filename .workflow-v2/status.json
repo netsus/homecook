@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-03-31T14:08:38.300Z",
+  "updated_at": "2026-03-31T14:40:00.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -107,7 +107,7 @@
     {
       "id": "05-planner-week-core",
       "preset": "vertical-slice-strict",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -115,7 +115,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "OMO pilot target. Bootstrap tracks planner-week core scope before Stage 1 docs kickoff."
+      "notes": "Stage 1 docs branch generated via OMO kickoff and recovered into docs PR scope. PLANNER_WEEK shell, disabled CTA, design artifact, and critique are locked before backend starts."
     },
     {
       "id": "omo-session-orchestrator-spec",
