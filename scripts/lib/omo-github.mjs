@@ -66,12 +66,12 @@ function buildDefaultPrSectionContent(section, { body, workItemId }) {
   switch (section) {
     case "## Summary":
       return body.includes("## ")
-        ? "- Automated supervisor-generated summary."
+        ? "- Supervisor가 생성한 변경 요약입니다."
         : body;
     case "## Workpack / Slice":
       return `- workflow v2 work item: \`${workflowRefPath}\``;
     case "## Test Plan":
-      return "- Supervisor verify commands and required CI checks";
+      return "- Supervisor 검증 명령과 필수 CI 체크를 기준으로 확인";
     case "## Docs Impact":
       return "- 해당 없음";
     case "## Security Review":
@@ -79,7 +79,7 @@ function buildDefaultPrSectionContent(section, { body, workItemId }) {
     case "## Performance":
       return "- 해당 없음";
     case "## Design / Accessibility":
-      return "- 해당 없음";
+      return "- 사용자 노출 변경 없음";
     case "## Breaking Changes":
       return "- 없음";
     default:
