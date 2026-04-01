@@ -94,6 +94,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - automatic Claude budget resolution + repo-local override
 - JSON schema와 예시 파일 추가
 - `validate:workflow-v2` 최소 validator 추가
+- `validate:omo-bookkeeping` official docs drift validator 추가
+- `omo:reconcile` docs-only closeout PR repair path 추가
 - 현재 entry-point 문서에서 v2 pilot 경로를 발견 가능하게 연결
 
 ## Next Locked Scope
@@ -127,6 +129,6 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 - GitHub Actions의 전면 재구성
 - README 자동 생성
-- v1 slice status 표의 자동 동기화
+- v1 slice status 표의 완전 자동 동기화
 - preset 기반 branch/PR gate의 강제 실행
 - merge queue 우회

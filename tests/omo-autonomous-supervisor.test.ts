@@ -15,31 +15,36 @@ function seedProductWorkItem(rootDir: string, workItemId: string) {
   mkdirSync(join(rootDir, ".artifacts"), { recursive: true });
   mkdirSync(join(rootDir, ".workflow-v2", "work-items"), { recursive: true });
   mkdirSync(join(rootDir, "docs", "workpacks", workItemId), { recursive: true });
+  mkdirSync(join(rootDir, ".worktrees", workItemId, "docs", "workpacks", workItemId), {
+    recursive: true,
+  });
 
+  const roadmapContents = [
+    "# Workpack Roadmap v2",
+    "",
+    "## Slice Order",
+    "",
+    "| Slice | Status | Goal |",
+    "| --- | --- | --- |",
+    `| \`${workItemId}\` | docs | test slice |`,
+  ].join("\n");
+  const workpackContents = [
+    `# ${workItemId}`,
+    "",
+    "## Design Status",
+    "",
+    "- [x] 임시 UI (temporary)",
+    "- [ ] 리뷰 대기 (pending-review)",
+    "- [ ] 확정 (confirmed)",
+    "- [ ] N/A",
+  ].join("\n");
+
+  writeFileSync(join(rootDir, "docs", "workpacks", "README.md"), roadmapContents);
+  writeFileSync(join(rootDir, ".worktrees", workItemId, "docs", "workpacks", "README.md"), roadmapContents);
+  writeFileSync(join(rootDir, "docs", "workpacks", workItemId, "README.md"), workpackContents);
   writeFileSync(
-    join(rootDir, "docs", "workpacks", "README.md"),
-    [
-      "# Workpack Roadmap v2",
-      "",
-      "## Slice Order",
-      "",
-      "| Slice | Status | Goal |",
-      "| --- | --- | --- |",
-      `| \`${workItemId}\` | docs | test slice |`,
-    ].join("\n"),
-  );
-  writeFileSync(
-    join(rootDir, "docs", "workpacks", workItemId, "README.md"),
-    [
-      `# ${workItemId}`,
-      "",
-      "## Design Status",
-      "",
-      "- [x] 임시 UI (temporary)",
-      "- [ ] 리뷰 대기 (pending-review)",
-      "- [ ] 확정 (confirmed)",
-      "- [ ] N/A",
-    ].join("\n"),
+    join(rootDir, ".worktrees", workItemId, "docs", "workpacks", workItemId, "README.md"),
+    workpackContents,
   );
   writeFileSync(
     join(rootDir, "docs", "workpacks", workItemId, "acceptance.md"),
@@ -111,6 +116,45 @@ function createGitWorkspace(workspacePath: string, branch: string) {
   execFileSync("git", ["init", "-b", branch], { cwd: workspacePath });
   execFileSync("git", ["config", "user.name", "OMO Test"], { cwd: workspacePath });
   execFileSync("git", ["config", "user.email", "omo@example.com"], { cwd: workspacePath });
+}
+
+function seedWorktreeBookkeeping(
+  workspacePath: string,
+  workItemId: string,
+  {
+    roadmapStatus = "docs",
+    designStatus = "temporary",
+  }: {
+    roadmapStatus?: "docs" | "in-progress" | "merged";
+    designStatus?: "temporary" | "pending-review" | "confirmed" | "N/A";
+  } = {},
+) {
+  mkdirSync(join(workspacePath, "docs", "workpacks", workItemId), { recursive: true });
+  writeFileSync(
+    join(workspacePath, "docs", "workpacks", "README.md"),
+    [
+      "# Workpack Roadmap v2",
+      "",
+      "## Slice Order",
+      "",
+      "| Slice | Status | Goal |",
+      "| --- | --- | --- |",
+      `| \`${workItemId}\` | ${roadmapStatus} | test slice |`,
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(workspacePath, "docs", "workpacks", workItemId, "README.md"),
+    [
+      `# ${workItemId}`,
+      "",
+      "## Design Status",
+      "",
+      `- [${designStatus === "temporary" ? "x" : " "}] 임시 UI (temporary)`,
+      `- [${designStatus === "pending-review" ? "x" : " "}] 리뷰 대기 (pending-review)`,
+      `- [${designStatus === "confirmed" ? "x" : " "}] 확정 (confirmed)`,
+      `- [${designStatus === "N/A" ? "x" : " "}] N/A`,
+    ].join("\n"),
+  );
 }
 
 describe("OMO autonomous supervisor", () => {
@@ -354,6 +398,9 @@ describe("OMO autonomous supervisor", () => {
 
   it("routes Stage 3 request-changes back to Stage 2 on the same backend PR", () => {
     const rootDir = createFixture();
+    seedWorktreeBookkeeping(join(rootDir, ".worktrees", "03-recipe-like"), "03-recipe-like", {
+      roadmapStatus: "in-progress",
+    });
 
     writeRuntimeState({
       rootDir,
@@ -490,6 +537,9 @@ describe("OMO autonomous supervisor", () => {
     const ghLog: string[] = [];
     const activeHeadSha = "be1234567890abcdef1234567890abcdef123456";
     const approvedHeadSha = "be12345";
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "in-progress",
+    });
 
     writeRuntimeState({
       rootDir,
@@ -647,6 +697,9 @@ describe("OMO autonomous supervisor", () => {
   it("waits for manual merge verification after a successful Stage 3 approval", () => {
     const rootDir = createFixture();
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "in-progress",
+    });
 
     writeRuntimeState({
       rootDir,
@@ -822,6 +875,10 @@ describe("OMO autonomous supervisor", () => {
     const workpackReadme = join(workspacePath, "docs", "workpacks", "03-recipe-like", "README.md");
 
     createGitWorkspace(workspacePath, "feature/fe-03-recipe-like");
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "in-progress",
+      designStatus: "pending-review",
+    });
     mkdirSync(join(workspacePath, "docs", "workpacks", "03-recipe-like"), { recursive: true });
     writeFileSync(
       workpackReadme,
@@ -960,9 +1017,10 @@ describe("OMO autonomous supervisor", () => {
     const rootDir = createFixture();
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
     const roadmapPath = join(workspacePath, "docs", "workpacks", "README.md");
+    const workpackReadme = join(workspacePath, "docs", "workpacks", "03-recipe-like", "README.md");
 
     createGitWorkspace(workspacePath, "feature/fe-03-recipe-like");
-    mkdirSync(join(workspacePath, "docs", "workpacks"), { recursive: true });
+    mkdirSync(join(workspacePath, "docs", "workpacks", "03-recipe-like"), { recursive: true });
     writeFileSync(
       roadmapPath,
       [
@@ -973,6 +1031,19 @@ describe("OMO autonomous supervisor", () => {
         "| Slice | Status | Goal |",
         "| --- | --- | --- |",
         "| `03-recipe-like` | in-progress | test slice |",
+      ].join("\n"),
+    );
+    writeFileSync(
+      workpackReadme,
+      [
+        "# 03-recipe-like",
+        "",
+        "## Design Status",
+        "",
+        "- [ ] 임시 UI (temporary)",
+        "- [ ] 리뷰 대기 (pending-review)",
+        "- [x] 확정 (confirmed)",
+        "- [ ] N/A",
       ].join("\n"),
     );
     execFileSync("git", ["add", "-A"], { cwd: workspacePath });
@@ -1101,9 +1172,10 @@ describe("OMO autonomous supervisor", () => {
     const rootDir = createFixture();
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
     const roadmapPath = join(workspacePath, "docs", "workpacks", "README.md");
+    const workpackReadme = join(workspacePath, "docs", "workpacks", "03-recipe-like", "README.md");
 
     createGitWorkspace(workspacePath, "feature/fe-03-recipe-like");
-    mkdirSync(join(workspacePath, "docs", "workpacks"), { recursive: true });
+    mkdirSync(join(workspacePath, "docs", "workpacks", "03-recipe-like"), { recursive: true });
     writeFileSync(
       roadmapPath,
       [
@@ -1114,6 +1186,19 @@ describe("OMO autonomous supervisor", () => {
         "| Slice | Status | Goal |",
         "| --- | --- | --- |",
         "| `03-recipe-like` | in-progress | test slice |",
+      ].join("\n"),
+    );
+    writeFileSync(
+      workpackReadme,
+      [
+        "# 03-recipe-like",
+        "",
+        "## Design Status",
+        "",
+        "- [ ] 임시 UI (temporary)",
+        "- [ ] 리뷰 대기 (pending-review)",
+        "- [x] 확정 (confirmed)",
+        "- [ ] N/A",
       ].join("\n"),
     );
     execFileSync("git", ["add", "-A"], { cwd: workspacePath });
@@ -1306,6 +1391,315 @@ describe("OMO autonomous supervisor", () => {
     });
   });
 
+  it("repairs missing merged roadmap bookkeeping before Stage 6 human verification", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    const roadmapPath = join(workspacePath, "docs", "workpacks", "README.md");
+    const workpackReadme = join(workspacePath, "docs", "workpacks", "03-recipe-like", "README.md");
+
+    createGitWorkspace(workspacePath, "feature/fe-03-recipe-like");
+    mkdirSync(join(workspacePath, "docs", "workpacks", "03-recipe-like"), { recursive: true });
+    writeFileSync(
+      roadmapPath,
+      [
+        "# Workpack Roadmap v2",
+        "",
+        "## Slice Order",
+        "",
+        "| Slice | Status | Goal |",
+        "| --- | --- | --- |",
+        "| `03-recipe-like` | in-progress | test slice |",
+      ].join("\n"),
+    );
+    writeFileSync(
+      workpackReadme,
+      [
+        "# 03-recipe-like",
+        "",
+        "## Design Status",
+        "",
+        "- [ ] 임시 UI (temporary)",
+        "- [ ] 리뷰 대기 (pending-review)",
+        "- [x] 확정 (confirmed)",
+        "- [ ] N/A",
+      ].join("\n"),
+    );
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "feat: seed frontend branch"], { cwd: workspacePath });
+    const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: workspacePath,
+      encoding: "utf8",
+    }).trim();
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        active_stage: 6,
+        current_stage: 6,
+        last_completed_stage: 5,
+        phase: "wait",
+        next_action: "noop",
+        workspace: {
+          path: workspacePath,
+          branch_role: "frontend",
+        },
+        prs: {
+          docs: null,
+          backend: null,
+          frontend: {
+            number: 36,
+            url: "https://github.com/netsus/homecook/pull/36",
+            draft: false,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: headSha,
+          },
+          closeout: null,
+        },
+        wait: {
+          kind: "human_verification",
+          pr_role: "frontend",
+          stage: 6,
+          head_sha: headSha,
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-04-01T02:30:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            return { branch: "feature/fe-03-recipe-like" };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return execFileSync("git", ["rev-parse", "HEAD"], {
+              cwd: workspacePath,
+              encoding: "utf8",
+            }).trim();
+          },
+          getCurrentBranch() {
+            return "feature/fe-03-recipe-like";
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            return { bucket: "pending", checks: [] };
+          },
+          markReady() {
+            throw new Error("not expected");
+          },
+          reviewPullRequest() {
+            throw new Error("not expected");
+          },
+          commentPullRequest() {
+            throw new Error("not expected");
+          },
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          getPullRequestSummary() {
+            return {
+              state: "OPEN",
+              mergedAt: null,
+              mergeStateStatus: "CLEAN",
+              reviewDecision: "APPROVED",
+            };
+          },
+          updateBranch() {
+            throw new Error("not expected");
+          },
+        },
+      },
+    );
+
+    const updatedRoadmap = readFileSync(roadmapPath, "utf8");
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      slice: "03-recipe-like",
+    }).state as {
+      phase: string;
+      wait: { kind: string; stage: number; pr_role: string };
+    };
+
+    expect(result.wait).toMatchObject({
+      kind: "ci",
+      stage: 6,
+      pr_role: "frontend",
+    });
+    expect(runtime.phase).toBe("merge_pending");
+    expect(updatedRoadmap).toContain("| `03-recipe-like` | merged");
+  });
+
+  it("finalizes merged closeout PRs while keeping slice state done", () => {
+    const rootDir = createFixture();
+    seedWorktreeBookkeeping(join(rootDir, ".worktrees", "03-recipe-like"), "03-recipe-like", {
+      roadmapStatus: "merged",
+      designStatus: "confirmed",
+    });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        active_stage: 6,
+        current_stage: 6,
+        last_completed_stage: 6,
+        phase: "wait",
+        next_action: "poll_ci",
+        prs: {
+          docs: null,
+          backend: null,
+          frontend: {
+            number: 36,
+            url: "https://github.com/netsus/homecook/pull/36",
+            draft: false,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: "fe123",
+          },
+          closeout: {
+            number: 99,
+            url: "https://github.com/netsus/homecook/pull/99",
+            draft: false,
+            branch: "docs/omo-closeout-03-recipe-like",
+            head_sha: "close123",
+          },
+        },
+        wait: {
+          kind: "ci",
+          pr_role: "closeout",
+          stage: 6,
+          head_sha: "close123",
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-04-01T02:40:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: join(rootDir, ".worktrees", "03-recipe-like"), created: false };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            return { branch: "docs/omo-closeout-03-recipe-like" };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "close123";
+          },
+          getCurrentBranch() {
+            return "docs/omo-closeout-03-recipe-like";
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            throw new Error("not expected");
+          },
+          markReady() {
+            throw new Error("not expected");
+          },
+          reviewPullRequest() {
+            throw new Error("not expected");
+          },
+          commentPullRequest() {
+            throw new Error("not expected");
+          },
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          getPullRequestSummary() {
+            return {
+              state: "MERGED",
+              mergedAt: "2026-04-01T02:39:00.000Z",
+              mergeStateStatus: "UNKNOWN",
+              reviewDecision: null,
+            };
+          },
+          updateBranch() {
+            throw new Error("not expected");
+          },
+        },
+      },
+    );
+
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      slice: "03-recipe-like",
+    }).state as {
+      phase: string;
+      wait: null;
+    };
+
+    expect(result.wait).toBeNull();
+    expect(runtime.phase).toBe("done");
+    expect(runtime.wait).toBeNull();
+  });
+
   it("tick resumes due work items, skips future retries, and reports locked items without failing", () => {
     const rootDir = createFixture();
     seedProductWorkItem(rootDir, "04-shopping-list");
@@ -1431,6 +1825,10 @@ describe("OMO autonomous supervisor", () => {
 
   it("tick resumes human_review waits and promotes approved PRs to human_verification", () => {
     const rootDir = createFixture();
+    seedWorktreeBookkeeping(join(rootDir, ".worktrees", "03-recipe-like"), "03-recipe-like", {
+      roadmapStatus: "in-progress",
+      designStatus: "confirmed",
+    });
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
 
     writeRuntimeState({
@@ -1558,6 +1956,10 @@ describe("OMO autonomous supervisor", () => {
 
   it("tick keeps human_review waits active until a formal approval exists", () => {
     const rootDir = createFixture();
+    seedWorktreeBookkeeping(join(rootDir, ".worktrees", "03-recipe-like"), "03-recipe-like", {
+      roadmapStatus: "in-progress",
+      designStatus: "confirmed",
+    });
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
 
     writeRuntimeState({
@@ -1685,6 +2087,10 @@ describe("OMO autonomous supervisor", () => {
 
   it("tick resumes human_verification waits and finalizes merged Stage 6 reviews", () => {
     const rootDir = createFixture();
+    seedWorktreeBookkeeping(join(rootDir, ".worktrees", "03-recipe-like"), "03-recipe-like", {
+      roadmapStatus: "merged",
+      designStatus: "confirmed",
+    });
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
 
     writeRuntimeState({
@@ -2166,6 +2572,9 @@ describe("OMO autonomous supervisor", () => {
   it("records blocked_retry when a Claude review stage schedules a retry", () => {
     const rootDir = createFixture();
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "in-progress",
+    });
 
     writeRuntimeState({
       rootDir,

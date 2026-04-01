@@ -109,6 +109,7 @@ function formatStatus(status) {
     `branchRole      : ${runtime.workspace?.branch_role ?? "-"}`,
     `backendPr       : ${runtime.prs?.backend?.url ?? "-"}`,
     `frontendPr      : ${runtime.prs?.frontend?.url ?? "-"}`,
+    `closeoutPr      : ${runtime.prs?.closeout?.url ?? "-"}`,
     `recovery        : ${runtime.recovery?.kind ?? "-"}`,
     `lockOwner       : ${runtime.lock?.owner ?? "-"}`,
   ].join("\n");

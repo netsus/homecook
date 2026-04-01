@@ -30,6 +30,7 @@ autonomous supervisor는 `그 stage 결과를 다음 GitHub 상태와 다음 sta
 - `pnpm omo:supervise -- --work-item <id>`
 - `pnpm omo:tick -- --all`
 - `pnpm omo:tick -- --work-item <id>`
+- `pnpm omo:reconcile -- --work-item <id>`
 
 기존 low-level 명령:
 
@@ -50,7 +51,26 @@ autonomous supervisor는 `그 stage 결과를 다음 GitHub 상태와 다음 sta
 7. `omo:tick -- --work-item <id>`는 kickoff를 하지 않고 existing runtime의 unfinished action만 재개한다.
 8. runtime이 없으면 `omo:tick`은 `noop: missing_runtime`을 반환한다.
 9. runtime은 있지만 `wait`와 pending phase가 모두 없으면 `omo:tick`은 `noop: no_wait_state`를 반환한다.
-9. 운영자가 현재 단계와 대기 상태를 빠르게 읽을 때는 `omo:status:brief`를 사용한다.
+10. 운영자가 현재 단계와 대기 상태를 빠르게 읽을 때는 `omo:status:brief`를 사용한다.
+
+## Bookkeeping Invariants
+
+공식 external bookkeeping의 canonical source는 다음 두 파일이다.
+
+- `docs/workpacks/README.md`의 Slice Order Status
+- `docs/workpacks/<slice>/README.md`의 Design Status
+
+runtime과 `.workflow-v2/*`는 orchestration state이며, official docs와 drift가 나면 official docs를 기준으로 복구한다.
+
+고정 invariant:
+
+1. Stage 2 finalize 이후 slice status는 최소 `in-progress`여야 한다.
+2. Stage 5 approve 이후 frontend slice의 Design Status는 `confirmed`여야 한다.
+3. Stage 6 closeout 이후 slice status는 반드시 `merged`여야 한다.
+4. runtime `phase=done` 또는 workflow-v2 `lifecycle=merged`인데 roadmap이 `merged`가 아니면 post-merge drift다.
+5. active slice drift가 현재 branch에서 docs-only로 안전하게 반영 가능하면 supervisor가 먼저 bookkeeping commit/push를 수행하고 계속 진행한다.
+6. drift source가 모호하거나 docs-only가 아니면 `human_escalation`으로 fail-closed 한다.
+7. 이미 merge된 뒤 발견된 safe docs-only drift는 `omo:reconcile`이 closeout PR로 복구한다.
 
 ## Dedicated Worktree Policy
 
@@ -225,6 +245,8 @@ runtime state는 아래 대기 이유를 저장할 수 있어야 한다.
 12. code stage auto-finalize는 `valid stage-result + supervisor verify pass`일 때만 진행한다.
 13. `human_review`는 정식 GitHub approve가 필요한 상태이고, `human_verification`은 실제 동작 확인 후 사람이 merge해야 하는 상태다.
 14. `omo:tick`은 `human_review`와 `human_verification`도 scheduler 재개 대상으로 처리해, 승인/수동 merge 이후 후속 상태 전이를 계속 수행한다.
+15. closeout PR는 `wait.kind=ci`, `pr_role=closeout`으로 추적한다.
+16. closeout PR의 required checks가 green이면 상태는 `ready_for_review`를 유지하고, 수동 merge 후 다음 `omo:tick`이 closeout finalize를 수행한다.
 
 ## Fail-Closed Rules
 
@@ -234,6 +256,7 @@ runtime state는 아래 대기 이유를 저장할 수 있어야 한다.
 - `gh auth` 없음
 - `opencode` auth 없음
 - worktree dirty
+- active slice bookkeeping drift가 ambiguous
 - PR body validation 실패
 - push reject
 - required checks fail
@@ -281,6 +304,18 @@ runtime state는 아래 대기 이유를 저장할 수 있어야 한다.
 - in-scope 변경과 clean commit/push/PR 후처리가 가능한 상태
 
 즉, `assisted recovery`는 invalid/missing artifact용 경로이고, `auto-finalize`는 valid artifact용 경로다.
+
+## Reconcile Command
+
+`pnpm omo:reconcile -- --work-item <id>`는 이미 merge된 slice의 docs-only bookkeeping drift를 closeout PR로 복구한다.
+
+원칙:
+
+1. closeout branch는 `docs/omo-closeout-<slice>`다.
+2. 허용 수정 범위는 `docs/workpacks/README.md`와 target workpack README bookkeeping뿐이다.
+3. closeout PR는 runtime `prs.closeout`에 기록한다.
+4. closeout PR 생성 후 workflow-v2 status는 `ready_for_review`를 유지하고 notes에 `closeout_pr=<url>`를 남긴다.
+5. closeout PR에 docs 외 파일이 섞이면 validator와 supervisor가 fail-closed 한다.
 
 ## Evidence Contract
 
