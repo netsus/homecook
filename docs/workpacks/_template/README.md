@@ -38,6 +38,13 @@
 - 필수 상태: `loading / empty / error / read-only / unauthorized`
 - 로그인 보호 액션이면 return-to-action 포함
 
+## QA / Test Data Plan
+- 기본 검증 모드: `fixture` / `seeded-db` / `mixed`
+- 최소 재현 상태: `happy / empty / unauthorized / error / conflict(read-only 포함) / other-user(해당 시)`
+- 어떤 상태를 어떤 데이터 모드로 재현하는지
+- setup / reset 방법 (명령, helper, env, SQL seed 등)
+- live/external 의존 시 manual-only 또는 opt-in 분리 근거
+
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
@@ -77,5 +84,7 @@
 - [ ] UI 연결
 - [ ] 상태 전이 / 권한 / 멱등성 테스트
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분
+- [ ] `QA / Test Data Plan` 작성 및 setup/reset 경로 문서화
+- [ ] 구현 직후 clean reset으로 수동 QA와 exploratory QA를 시작할 수 있음
 - [ ] `loading / empty / error / read-only` 상태 점검
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리

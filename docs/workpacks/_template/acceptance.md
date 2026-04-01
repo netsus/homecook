@@ -26,6 +26,12 @@
 - [ ] invalid input을 적절히 거부하거나 무시한다
 - [ ] 파생 필드와 비정규화 값이 맞다
 
+## Data Setup / Preconditions
+- [ ] clean reset 뒤 바로 수동 QA와 exploratory QA를 시작할 수 있다
+- [ ] `happy / empty / unauthorized / error / conflict(read-only 포함) / other-user(해당 시)` 상태의 재현 경로가 문서화돼 있다
+- [ ] fixture/mock 데이터가 공식 계약 밖의 필드·상태를 만들지 않는다
+- [ ] seeded DB 데이터가 합성 데이터이며 reset 가능하다
+
 ## Manual QA
 1.
 2.

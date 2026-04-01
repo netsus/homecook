@@ -37,6 +37,60 @@
 - visual regression은 위 device matrix 전체에서 실행한다.
 - accessibility smoke는 axe scan 외에도 핵심 control의 최소 가독성/터치 타깃 바닥선을 함께 확인한다.
 
+## QA Test Data Strategy
+
+QA는 데이터가 없어서 막히면 안 된다. product slice는 구현뿐 아니라 `바로 재현 가능한 데이터 상태`까지 준비돼야 QA-ready로 본다.
+
+### 데이터 모드
+
+- `fixture/mock`
+  - 공식 계약을 따르는 고정 응답 또는 앱 내부 fixture 상태
+  - 기본 용도: Layer 2 exploratory QA, slice Playwright smoke, 수동 UX 점검
+  - 장점: 재현성, 속도, edge case 구성 용이
+- `seeded-db`
+  - 로컬 또는 전용 QA DB에 넣는 합성 테스트 데이터
+  - 기본 용도: 실제 쿼리, RLS, 소유권, 상태 전이, 마이그레이션 영향 smoke
+  - 장점: mock이 가리지 못하는 DB 연동 문제 확인
+- `live/external`
+  - 실제 OAuth/provider/외부 서비스
+  - 기본 게이트 제외, opt-in 실행
+
+### 기본 원칙
+
+- 모든 product slice는 Stage 1 workpack에 `QA / Test Data Plan`을 적는다.
+- slice 완료 시점에는 clean reset 뒤 바로 수동 QA와 exploratory QA를 시작할 수 있어야 한다.
+- 데이터 계획은 최소 아래 상태를 어떻게 재현하는지 포함한다.
+  - `happy path`
+  - `empty`
+  - `unauthorized`
+  - `error`
+  - `conflict` 또는 `read-only`
+  - `other-user / forbidden` (권한 경계가 있는 slice만)
+- 기본값은 `fixture/mock 우선 + seeded-db 보강`이다.
+- fixture 데이터는 공식 문서에 없는 필드, 상태, 엔드포인트를 만들면 안 된다.
+- seeded DB 데이터는 실제 사용자 데이터가 아니라 reset 가능한 합성 데이터여야 한다.
+- shared staging/production 데이터를 QA 전제 조건으로 요구하지 않는다.
+
+### 권장 사용 방식
+
+- Layer 1 deterministic gate
+  - 기본: fixture 또는 테스트 내부 route mock
+  - 보강: seeded-db smoke를 선택적으로 추가
+- Layer 2 exploratory QA
+  - 기본: fixture/mock 기반으로 빠르게 반복
+  - 필요 시 seeded-db로 실제 DB 동작 재확인
+- Layer 3 QA system eval
+  - fixture가 기본이다. 같은 입력에 같은 결과가 나와야 eval scoring이 안정적이다.
+
+### 문서화 필수 항목
+
+각 slice workpack의 `QA / Test Data Plan`에는 최소 아래를 남긴다.
+
+- 기본 검증 모드: `fixture`, `seeded-db`, `mixed`
+- 어떤 상태를 어떤 데이터 모드로 재현하는지
+- setup / reset 방법
+- live/external 의존 시 manual-only 또는 opt-in 분리 근거
+
 로컬 실행:
 
 - 백엔드 구현 PR 전: `pnpm verify:backend`
@@ -69,6 +123,7 @@ CI 실행:
 실행 방식:
 
 1. `pnpm qa:explore -- --slice <slice-id>` 실행
+   - 실행 전 workpack의 `QA / Test Data Plan` 기준으로 fixture/seed setup을 먼저 맞춘다.
 2. 생성된 `.artifacts/qa/<slice>/<timestamp>/` 번들을 기준으로 Codex 또는 사용자가 브라우저 탐색 QA 수행
 3. `exploratory-report.json` 작성
 4. `pnpm qa:eval -- --checklist <.../exploratory-checklist.json> --report <.../exploratory-report.json>` 실행

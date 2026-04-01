@@ -79,6 +79,7 @@
 - **Dependencies 테이블**: 선행 슬라이스 ID + 현재 상태
 - **Backend First Contract**: request/response/error 계약 + 권한 조건 + 멱등성 정책
 - **Frontend Delivery Mode**: 5개 필수 상태(`loading / empty / error / read-only / unauthorized`) 명시
+- **QA / Test Data Plan**: 기본 검증 모드(`fixture` / `seeded-db` / `mixed`), setup/reset 방법, 필수 상태 재현 경로
 - **Design Status**: FE 화면 있으면 `temporary`, BE-only 슬라이스(FE 화면 없음)면 `N/A`
 - **Key Rules**: 이 슬라이스 전용 정책 (도메인 규칙 + 예외 처리)
 - **Contract Evolution Candidates (optional)**: 공식 문서엔 없지만 사용자 승인 시 더 나은 계약이 될 수 있는 후보가 있다면 현재 계약 / 제안 계약 / 기대 사용자 가치 / 영향 문서 / 승인 상태를 기록
@@ -88,6 +89,7 @@
 - Happy Path: 대표 흐름, API 응답 형식, 타입 일치
 - State/Policy: 상태 전이 일치, read-only, 멱등성
 - Error/Permission: 5개 상태, return-to-action
+- Data Setup / Preconditions: clean reset 뒤 바로 재현 가능한 fixture/seed 경로
 - Manual Only: 자동화 불가 시나리오 명시
 
 **디자인 산출물 (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스만)**
@@ -104,7 +106,9 @@
 - [ ] Dependencies 선행 슬라이스 상태가 실제 저장소 상태와 일치하는가
 - [ ] Schema Change 체크박스가 올바르게 표시되었는가
 - [ ] Out of Scope에 의도적 제외 항목이 명시되었는가 (빈칸이면 재확인)
+- [ ] `QA / Test Data Plan`이 있고, 최소 `happy / empty / unauthorized / error / conflict(read-only 포함) / other-user(해당 시)` 재현 경로가 적혔는가
 - [ ] Design Status가 올바르게 설정됐는가 (FE 화면 있으면 `temporary`, BE-only면 `N/A`)
+- [ ] acceptance.md에 `Data Setup / Preconditions`가 있고 setup/reset 경로가 적혔는가
 - [ ] acceptance.md에 자동화 불가 시나리오가 Manual Only로 분리되었는가
 - [ ] 공식 문서에 없는 더 나은 계약 후보가 있다면 workpack에 `Contract Evolution Candidates`로만 기록했고, 승인 전 In Scope 계약에 섞지 않았는가
 - [ ] 신규 화면 또는 high-risk UI change가 있다면 각 화면의 `ui/designs/<SCREEN_ID>.md`가 생성됐는가
@@ -168,7 +172,7 @@
 1. `AGENTS.md` — 공통 규칙 전체
 2. `docs/engineering/slice-workflow.md` — 2단계 항목
 3. `docs/workpacks/<slice>/README.md` — Backend First Contract, Key Rules, In Scope
-4. `docs/workpacks/<slice>/acceptance.md` — 상태 전이·에러·권한 시나리오 확인
+4. `docs/workpacks/<slice>/acceptance.md` — 상태 전이·에러·권한 시나리오 + Data Setup / Preconditions 확인
 5. `docs/api문서-v1.2.1.md` — 해당 섹션 전체
 6. `docs/db설계-v1.3.md` — 해당 테이블
 7. `docs/engineering/tdd-vitest.md` — 테스트 전략
@@ -184,6 +188,7 @@
 - 상태 전이 로직
 - Vitest 단위 테스트
 - Schema 변경 있으면 `supabase/migrations/<timestamp>_<slice>_<desc>.sql`
+- workpack `QA / Test Data Plan`을 충족하는 fixture/seed/scenario setup (필요 시)
 - Draft PR (본문에 아래 완료 요약 포함)
 
 ### 포함 필수 사항
@@ -194,6 +199,7 @@
 - 상태 전이: 문서 기준 상태만 허용, 불일치 시 409
 - 멱등성: complete·cancel 성 API는 이미 완료/취소 시 200 + 동일 결과
 - 테스트 최소 시나리오: happy path + 상태 전이 오류 + 권한 거부 + read-only 409
+- BE-only 슬라이스 또는 backend-owned 정책 상태가 있는 경우, clean reset 뒤 바로 검증 가능한 fixture/seed 경로를 남긴다.
 
 ### 자가 점검 체크리스트
 
@@ -204,6 +210,7 @@
 - [ ] 문서에 없는 필드·상태·엔드포인트를 임의 추가하지 않았는가
 - [ ] 승인되지 않았거나 문서화되지 않은 `Contract Evolution Candidates`를 구현 scope에 섞지 않았는가
 - [ ] 테스트가 상태 전이·에러·권한·read-only를 고정하는가 (happy path만이 아닌가)
+- [ ] workpack의 `QA / Test Data Plan`을 기준으로 backend fixture/seed가 필요한 상태를 재현 가능하게 했는가
 - [ ] `pnpm install --frozen-lockfile && pnpm verify:backend` 통과
 - [ ] 브랜치명이 `feature/be-<slice>`인가
 - [ ] 커밋이 Conventional Commits를 따르는가
@@ -259,6 +266,7 @@
 - [ ] 테스트가 상태 전이·에러·read-only를 고정하는가
 - [ ] PR 템플릿 Security·Performance·Design 섹션이 기록되었는가
 - [ ] README Backend First Contract와 실제 구현이 일치하는가
+- [ ] BE-only slice 또는 backend-owned 정책 상태에 필요한 fixture/seed setup이 workpack 계획과 어긋나지 않는가
 
 ### 완료 기준
 
@@ -325,14 +333,15 @@
 1. `AGENTS.md` — 공통 규칙 전체
 2. `docs/engineering/slice-workflow.md` — 4단계 항목
 3. `docs/workpacks/<slice>/README.md` — Frontend Delivery Mode, Design Status, Key Rules
-4. `docs/workpacks/<slice>/acceptance.md` — 자동화 대상·Manual Only 분리 확인
+4. `docs/workpacks/<slice>/acceptance.md` — 자동화 대상·Manual Only·Data Setup / Preconditions 확인
 5. `docs/화면정의서-v1.2.md` — 해당 화면 정의
 6. `docs/design/design-tokens.md` — 확정 색상·간격·컴포넌트 토큰 (Tailwind 클래스 작성 전 확인)
 7. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — 신규 화면 또는 high-risk UI change인 경우 Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
 8. 백엔드 브랜치 TypeScript 타입 파일 — API 계약 확인
 9. `docs/engineering/tdd-vitest.md`
 10. `docs/engineering/playwright-e2e.md`
-11. `docs/engineering/git-workflow.md`
+11. `docs/engineering/qa-system.md`
+12. `docs/engineering/git-workflow.md`
 
 ### 산출물
 
@@ -344,6 +353,7 @@
 - 로그인 게이트 + return-to-action (보호 액션 있는 경우)
 - Vitest 단위 테스트 (상태 전이, 유틸)
 - Playwright E2E (핵심 사용자 흐름)
+- workpack `QA / Test Data Plan`을 충족하는 fixture/seed/reset 경로
 - Draft PR (본문에 아래 완료 요약 포함)
 
 ### 포함 필수 사항
@@ -356,6 +366,8 @@
 - 신규 화면 또는 high-risk UI change인 경우 In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` 와이어프레임을 참조하여 구현
 - 신규 화면 또는 high-risk UI change인 경우 구현 완료 시 workpack README의 Design Status를 `temporary → pending-review`로 변경
 - 기존 confirmed 화면의 low-risk UI change는 Design Status를 유지할 수 있다. 이 경우 PR 본문에 low-risk 판단 근거를 남긴다.
+- 구현 종료 시점에는 clean reset 뒤 바로 수동 QA와 exploratory QA를 시작할 수 있어야 한다.
+- 기본값은 `fixture/mock 우선 + seeded-db 보강`이다. 단, DB/RLS 확인이 핵심이면 seeded-db smoke를 추가한다.
 
 ### 자가 점검 체크리스트
 
@@ -369,6 +381,9 @@
 - [ ] 신규 화면 또는 high-risk UI change라면 각 FE 화면의 `ui/designs/<SCREEN_ID>.md`를 참조하여 구현했는가
 - [ ] 신규 화면 또는 high-risk UI change라면 구현 완료 후 workpack README의 Design Status를 `pending-review`로 변경했는가
 - [ ] low-risk UI change라면 Design Status 유지 근거를 PR 본문에 남겼는가
+- [ ] workpack의 `QA / Test Data Plan`이 실제 fixture/seed/setup 경로와 일치하는가
+- [ ] `happy / empty / unauthorized / error / conflict(read-only 포함) / other-user(해당 시)` 상태를 수동 DB 수정 없이 재현할 수 있는가
+- [ ] setup/reset 방법이 workpack 또는 PR 본문에 기록되었는가
 - [ ] 디자인 토큰(`--brand`, `--olive`, `--surface`, `--muted` 등)을 올바르게 사용했는가 (구버전 `#d56a3a`, `#6e7c4a` 사용 금지)
 - [ ] 카드 border-radius 16px, 터치 타겟 44px 기준을 준수했는가
 - [ ] `pnpm install --frozen-lockfile && pnpm verify:frontend` 통과
@@ -391,6 +406,7 @@
 - 구현 화면: <목록>
 - UI 상태: loading ✅ / empty ✅ / error ✅ / read-only ✅ / unauthorized ✅
 - 로그인 게이트: 있음 / 없음
+- QA/Test Data: fixture / seeded-db / mixed
 - Design Status: pending-review / confirmed 유지
 - 주요 결정 사항: <임시 UI 구조 선택 이유 등>
 ```
@@ -486,6 +502,7 @@
 - [ ] 백엔드 계약 타입이 그대로 소비되었는가 (임의 변경 없음)
 - [ ] 상태 전이 로직이 테스트로 고정되었는가
 - [ ] 로그인 게이트·return-to-action이 올바른가 (해당 시)
+- [ ] `QA / Test Data Plan`이 실제 diff 및 실행 경로와 일치하는가
 - [ ] acceptance.md 미체크 항목이 없는가
 - [ ] 브랜치·커밋·PR 본문이 규칙을 만족하는가
 - [ ] 보안/성능/디자인 영향이 PR 템플릿에 기록되었는가
@@ -521,6 +538,7 @@
 | 구현 화면 | <목록> |
 | 상태 전이 | <목록> |
 | 테스트 커버리지 | Vitest: <범위> / Playwright: <범위> |
+| QA/Test Data | fixture / seeded-db / mixed + reset 경로 |
 | Design Status | <최종 상태> |
 | 주요 결정 사항 | <내용> |
 

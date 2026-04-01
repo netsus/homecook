@@ -86,6 +86,7 @@
 - deterministic QA 실행 기준은 `docs/engineering/qa-system.md`가 단일 소스다.
 - Layer 1 deterministic QA는 PR/CI에서 자동 실행되며, 로컬에서는 change type에 맞는 `verify:*` 스크립트로 재현한다.
 - Layer 2 exploratory QA는 기본적으로 자동 실행되지 않는다. `product-frontend` Stage 4 구현 후, `Ready for Review` 전에 명시적으로 `pnpm qa:explore -- --slice <slice>`를 실행한다.
+- exploratory QA와 수동 QA를 시작하기 전에, 해당 slice의 fixture/seed setup과 reset 경로가 workpack에 기록되어 있어야 한다. 자세한 전략은 `docs/engineering/qa-system.md`를 따른다.
 - exploratory QA는 `new-screen`과 `high-risk-ui-change`에서 기본 수행이다. low-risk UI change는 생략 가능하지만 PR 본문에 근거를 남긴다.
 - Layer 3 qa eval은 QA 시스템 자체를 변경할 때 명시적으로 `pnpm qa:eval:suite`를 실행하며, 같은 변경 범위에서는 `.github/workflows/qa-eval.yml`이 자동으로 재실행된다.
 
