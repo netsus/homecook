@@ -167,8 +167,12 @@
     - 해제: `localStorage.removeItem("homecook.qa-fixture-faults")`
   - 일반 `pnpm dev`에서는 QA localStorage override를 읽지 않는다
 - 실 DB smoke:
+  - 가장 쉬운 시작: `pnpm dev:demo`
+  - 깨끗한 local demo dataset으로 다시 시작: `pnpm dev:demo:reset`
+  - 팀 공용 local demo dataset 재생성: `pnpm local:reset:demo`
   - 브라우저에서 real local DB 흐름 확인: `pnpm dev:local-supabase`
-  - local-only 로그인 카드로 테스트 계정 진입 후 기본 `saved` 책이 자동 보정되는지 확인
+  - local-only 로그인 카드에서 메인/다른 테스트 계정으로 진입 가능
+  - 메인 계정 기준으로 기본 `saved` 책과 `QA 주말 파티` 책이 바로 보여야 한다
   - local 테스트 계정 seed: `pnpm qa:seed:01-05 -- --user-email local-tester@homecook.local`
   - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
   - baseline: 현재 사용자는 target recipe 미저장, 다른 QA 유저 저장 1건으로 `save_count > 0`

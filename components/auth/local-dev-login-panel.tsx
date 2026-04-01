@@ -4,6 +4,7 @@ import React from "react";
 import { useState, useTransition } from "react";
 
 import {
+  getLocalDevAuthAccounts,
   getLocalDevAuthCredentials,
   isLocalDevAuthEnabled,
 } from "@/lib/auth/local-dev-auth";
@@ -37,12 +38,13 @@ export function LocalDevLoginPanel({
 }: LocalDevLoginPanelProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const accounts = getLocalDevAuthAccounts();
 
   if (!isLocalDevAuthEnabled()) {
     return null;
   }
 
-  const handleLocalLogin = () => {
+  const handleLocalLogin = (accountId: "main" | "other") => {
     startTransition(async () => {
       try {
         setErrorMessage(null);
@@ -55,7 +57,7 @@ export function LocalDevLoginPanel({
           savePendingAction(pendingAction);
         }
 
-        const credentials = getLocalDevAuthCredentials();
+        const credentials = getLocalDevAuthCredentials(accountId);
         const supabase = getSupabaseBrowserClient();
         let signInResult = await supabase.auth.signInWithPassword({
           email: credentials.email,
@@ -105,14 +107,27 @@ export function LocalDevLoginPanel({
       <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
         mock 없이 로컬 Supabase DB를 바로 테스트할 수 있도록, 개발 전용 계정으로 로그인합니다.
       </p>
-      <button
-        className="mt-4 flex min-h-[52px] w-full items-center justify-center rounded-[12px] bg-[var(--olive)] px-4 py-4 text-base font-semibold text-white transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={isPending}
-        onClick={handleLocalLogin}
-        type="button"
-      >
-        {isPending ? "로컬 테스트 계정 로그인 중..." : "로컬 테스트 계정으로 시작"}
-      </button>
+      <div className="mt-4 space-y-3">
+        {accounts.map((account, index) => (
+          <div className="space-y-2" key={account.id}>
+            <button
+              className={
+                index === 0
+                  ? "flex min-h-[52px] w-full items-center justify-center rounded-[12px] bg-[var(--olive)] px-4 py-4 text-base font-semibold text-white transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
+                  : "flex min-h-[52px] w-full items-center justify-center rounded-[12px] border border-[color:rgba(46,166,122,0.24)] bg-white px-4 py-4 text-base font-semibold text-[var(--olive)] transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
+              }
+              disabled={isPending}
+              onClick={() => handleLocalLogin(account.id)}
+              type="button"
+            >
+              {isPending ? "로컬 테스트 계정 로그인 중..." : account.buttonLabel}
+            </button>
+            <p className="px-1 text-xs leading-5 text-[var(--muted)]">
+              {account.helperText}
+            </p>
+          </div>
+        ))}
+      </div>
       <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
         첫 로그인에서는 계정을 만들고, 이후에는 같은 계정과 같은 local DB를 계속 사용합니다.
       </p>

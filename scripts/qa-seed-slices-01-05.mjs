@@ -341,7 +341,7 @@ async function ensureRecipeBook(supabase, { userId, preferredId, name, bookType 
   }
 
   const now = new Date().toISOString();
-  const insertResult = await supabase
+  let insertResult = await supabase
     .from("recipe_books")
     .insert({
       id: preferredId,
@@ -354,6 +354,22 @@ async function ensureRecipeBook(supabase, { userId, preferredId, name, bookType 
     })
     .select("id, name, book_type, sort_order")
     .single();
+
+  if (insertResult.error?.message?.toLowerCase().includes("duplicate key")) {
+    insertResult = await supabase
+      .from("recipe_books")
+      .insert({
+        id: crypto.randomUUID(),
+        user_id: userId,
+        name,
+        book_type: bookType,
+        sort_order: getNextSortOrder(currentBooks),
+        created_at: now,
+        updated_at: now,
+      })
+      .select("id, name, book_type, sort_order")
+      .single();
+  }
 
   assertNoError(insertResult, `recipe_books 생성 실패 (${name})`);
   return insertResult.data;

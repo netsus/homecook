@@ -43,4 +43,26 @@ describe("local dev auth helpers", () => {
 
     expect(isLocalDevAuthEnabled()).toBe(false);
   });
+
+  it("returns the seeded local demo accounts in a stable order", async () => {
+    const { getLocalDevAuthAccounts, getLocalDevAuthCredentials } = await importLocalDevAuthModule();
+
+    expect(getLocalDevAuthAccounts()).toEqual([
+      expect.objectContaining({
+        id: "main",
+        email: "local-tester@homecook.local",
+        password: "homecook-local-dev",
+      }),
+      expect.objectContaining({
+        id: "other",
+        email: "local-other@homecook.local",
+        password: "homecook-local-peer",
+      }),
+    ]);
+    expect(getLocalDevAuthCredentials("other")).toEqual({
+      email: "local-other@homecook.local",
+      password: "homecook-local-peer",
+      nickname: "로컬 다른 유저",
+    });
+  });
 });

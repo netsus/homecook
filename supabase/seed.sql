@@ -1,4 +1,8 @@
 -- Seed data for local development
+-- Reproducible local demo dataset for slices 01-05:
+--   pnpm local:reset:demo
+--   pnpm local:seed:demo
+--
 -- Local DB smoke data for slices 01-05 is seeded with:
 --   pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>
 --

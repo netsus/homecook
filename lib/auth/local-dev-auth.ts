@@ -1,6 +1,30 @@
-const DEFAULT_LOCAL_DEV_AUTH_EMAIL = "local-tester@homecook.local";
-const DEFAULT_LOCAL_DEV_AUTH_PASSWORD = "homecook-local-dev";
-const DEFAULT_LOCAL_DEV_AUTH_NICKNAME = "로컬 테스트 계정";
+export interface LocalDevAuthAccount {
+  id: "main" | "other";
+  email: string;
+  password: string;
+  nickname: string;
+  buttonLabel: string;
+  helperText: string;
+}
+
+const LOCAL_DEV_AUTH_ACCOUNTS: LocalDevAuthAccount[] = [
+  {
+    id: "main",
+    email: "local-tester@homecook.local",
+    password: "homecook-local-dev",
+    nickname: "로컬 테스트 계정",
+    buttonLabel: "로컬 테스트 계정으로 시작",
+    helperText: "기본 저장/좋아요/플래너 데모 데이터가 연결된 메인 계정",
+  },
+  {
+    id: "other",
+    email: "local-other@homecook.local",
+    password: "homecook-local-peer",
+    nickname: "로컬 다른 유저",
+    buttonLabel: "다른 테스트 계정으로 시작",
+    helperText: "소유권과 다른 유저 데이터 경계를 확인할 때 쓰는 보조 계정",
+  },
+];
 
 function isLocalSupabaseUrl(value: string | undefined) {
   if (!value) {
@@ -24,10 +48,17 @@ export function isLocalDevAuthEnabled() {
   );
 }
 
-export function getLocalDevAuthCredentials() {
+export function getLocalDevAuthAccounts() {
+  return LOCAL_DEV_AUTH_ACCOUNTS.map((account) => ({ ...account }));
+}
+
+export function getLocalDevAuthCredentials(accountId: LocalDevAuthAccount["id"] = "main") {
+  const account = LOCAL_DEV_AUTH_ACCOUNTS.find((item) => item.id === accountId)
+    ?? LOCAL_DEV_AUTH_ACCOUNTS[0];
+
   return {
-    email: DEFAULT_LOCAL_DEV_AUTH_EMAIL,
-    password: DEFAULT_LOCAL_DEV_AUTH_PASSWORD,
-    nickname: DEFAULT_LOCAL_DEV_AUTH_NICKNAME,
+    email: account.email,
+    password: account.password,
+    nickname: account.nickname,
   };
 }

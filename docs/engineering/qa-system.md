@@ -42,6 +42,9 @@
 - 백엔드 구현 PR 전: `pnpm verify:backend`
 - 프론트엔드 구현 PR 전: `pnpm verify:frontend`
 - 전체 수동 점검 한 번에: `pnpm verify`
+- one-command local demo 실행: `pnpm dev:demo`
+- clean local demo reset + 실행: `pnpm dev:demo:reset`
+- local Supabase + demo dataset 초기화: `pnpm local:reset:demo`
 - real local Supabase + local auth 브라우저 검증: `pnpm dev:local-supabase`
 - fixture 기반 브라우저 QA 시작: `pnpm dev:qa-fixtures`
 

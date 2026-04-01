@@ -9,6 +9,7 @@ import { LocalDevLoginPanel } from "@/components/auth/local-dev-login-panel";
 import type { PendingRecipeAction } from "@/lib/auth/pending-action";
 
 const isLocalDevAuthEnabled = vi.fn();
+const getLocalDevAuthAccounts = vi.fn();
 const getLocalDevAuthCredentials = vi.fn();
 const hasSupabasePublicEnv = vi.fn();
 const savePendingAction = vi.fn();
@@ -17,7 +18,8 @@ const signUp = vi.fn();
 
 vi.mock("@/lib/auth/local-dev-auth", () => ({
   isLocalDevAuthEnabled: () => isLocalDevAuthEnabled(),
-  getLocalDevAuthCredentials: () => getLocalDevAuthCredentials(),
+  getLocalDevAuthAccounts: () => getLocalDevAuthAccounts(),
+  getLocalDevAuthCredentials: (accountId?: string) => getLocalDevAuthCredentials(accountId),
 }));
 
 vi.mock("@/lib/auth/pending-action", () => ({
@@ -48,6 +50,7 @@ describe("local dev login panel", () => {
 
   beforeEach(() => {
     isLocalDevAuthEnabled.mockReset();
+    getLocalDevAuthAccounts.mockReset();
     getLocalDevAuthCredentials.mockReset();
     hasSupabasePublicEnv.mockReset();
     savePendingAction.mockReset();
@@ -55,6 +58,24 @@ describe("local dev login panel", () => {
     signUp.mockReset();
 
     isLocalDevAuthEnabled.mockReturnValue(true);
+    getLocalDevAuthAccounts.mockReturnValue([
+      {
+        id: "main",
+        email: "local-tester@homecook.local",
+        password: "homecook-local-dev",
+        nickname: "로컬 테스트 계정",
+        buttonLabel: "로컬 테스트 계정으로 시작",
+        helperText: "메인 계정",
+      },
+      {
+        id: "other",
+        email: "local-other@homecook.local",
+        password: "homecook-local-peer",
+        nickname: "로컬 다른 유저",
+        buttonLabel: "다른 테스트 계정으로 시작",
+        helperText: "보조 계정",
+      },
+    ]);
     getLocalDevAuthCredentials.mockReturnValue({
       email: "local-tester@homecook.local",
       password: "homecook-local-dev",
@@ -127,5 +148,39 @@ describe("local dev login panel", () => {
     expect(savePendingAction).toHaveBeenCalledWith(pendingAction);
     expect(onStarted).toHaveBeenCalledTimes(1);
     expect(assign).toHaveBeenCalledWith("/recipe/recipe-1");
+  });
+
+  it("can sign in with the secondary demo account", async () => {
+    const user = userEvent.setup();
+
+    getLocalDevAuthCredentials.mockImplementation((accountId?: string) => (
+      accountId === "other"
+        ? {
+            email: "local-other@homecook.local",
+            password: "homecook-local-peer",
+            nickname: "로컬 다른 유저",
+          }
+        : {
+            email: "local-tester@homecook.local",
+            password: "homecook-local-dev",
+            nickname: "로컬 테스트 계정",
+          }
+    ));
+    signInWithPassword.mockResolvedValue({
+      data: { session: { access_token: "token" }, user: { id: "user-2" } },
+      error: null,
+    });
+
+    render(<LocalDevLoginPanel nextPath="/planner" />);
+
+    await user.click(screen.getByRole("button", { name: "다른 테스트 계정으로 시작" }));
+
+    await waitFor(() => {
+      expect(signInWithPassword).toHaveBeenCalledWith({
+        email: "local-other@homecook.local",
+        password: "homecook-local-peer",
+      });
+    });
+    expect(assign).toHaveBeenCalledWith("/planner");
   });
 });
