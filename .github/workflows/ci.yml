@@ -55,6 +55,12 @@ jobs:
       - name: Validate workflow v2 files
         run: node scripts/validate-workflow-v2.mjs
 
+      - name: Validate OMO bookkeeping invariants
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+          BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
+        run: node scripts/validate-omo-bookkeeping.mjs
+
   quality:
     runs-on: ubuntu-latest
     steps:

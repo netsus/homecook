@@ -369,6 +369,7 @@ function normalizePullRequests(prs) {
       docs: null,
       backend: null,
       frontend: null,
+      closeout: null,
     };
   }
 
@@ -376,6 +377,7 @@ function normalizePullRequests(prs) {
     docs: normalizePullRequestEntry(prs.docs),
     backend: normalizePullRequestEntry(prs.backend),
     frontend: normalizePullRequestEntry(prs.frontend),
+    closeout: normalizePullRequestEntry(prs.closeout),
   };
 }
 

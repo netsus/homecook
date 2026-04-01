@@ -101,9 +101,11 @@ pnpm omo:claude-budget -- --clear
 - 상위 명령:
   - `pnpm omo:supervise -- --work-item <id>`
   - `pnpm omo:tick -- --all`
+  - `pnpm omo:reconcile -- --work-item <id>`
 - runtime이 없는 work item에서 `omo:tick -- --work-item <id>`는 kickoff하지 않고 no-op로 끝난다.
 - `omo:tick`은 이제 `wait.kind`뿐 아니라 unfinished `phase`도 재개한다.
 - code stage에서 valid `stage-result.json`이 있고 supervisor verify가 통과하면, supervisor가 commit/push/PR 생성/CI wait까지 auto-finalize한다.
+- 이미 merge된 slice에서 공식 docs bookkeeping만 어긋나면 `omo:reconcile`이 docs-only closeout PR를 생성해 drift를 복구한다.
 - 빠른 운영 확인은 `pnpm omo:status:brief -- --work-item <id>`로 `activeStage`, `phase`, `nextAction`, `mode`를 함께 읽는다.
 - supervisor는 기본적으로 `.worktrees/<work-item-id>` 전용 worktree에서만 실행한다.
 - GitHub 자동화는 `gh` CLI만 사용한다.
@@ -111,3 +113,11 @@ pnpm omo:claude-budget -- --clear
 - `launchd`에서는 login shell PATH를 가정하지 않는다. `pnpm`, `gh`, `claude`, `opencode`는 절대경로 또는 고정 PATH로 실행하는 것을 기본값으로 둔다.
 - active pilot 동안 루트 repo는 `ops/omo-<slice>-runtime-anchor` 같은 운영 브랜치에 두는 것을 기본값으로 권장한다.
 - 이 운영 브랜치는 hygiene 목적이다. supervisor worktree의 base sync correctness는 이제 local `master`가 아니라 `origin/master` detached 정책이 담당한다.
+
+## Bookkeeping Validation
+
+- `pnpm validate:omo-bookkeeping`는 runtime / workflow-v2 / 공식 workpack docs 사이의 drift를 검사한다.
+- 특히 아래를 막는다.
+  - runtime 또는 workflow-v2는 merged인데 `docs/workpacks/README.md`가 아직 `merged`가 아님
+  - Stage 5 이후인데 workpack README의 Design Status가 `confirmed`가 아님
+  - closeout branch가 docs 외 파일을 수정함

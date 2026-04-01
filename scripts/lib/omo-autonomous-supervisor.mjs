@@ -7,6 +7,12 @@ import { syncWorkflowV2Status } from "./omo-lite-supervisor.mjs";
 import { createGithubAutomationClient } from "./omo-github.mjs";
 import { resolveClaudeProviderConfig, resolveCodexProviderConfig } from "./omo-provider-config.mjs";
 import {
+  applyBookkeepingRepairPlan,
+  evaluateBookkeepingInvariant,
+  updateSliceRoadmapStatus,
+  updateWorkpackDesignStatus,
+} from "./omo-bookkeeping.mjs";
+import {
   acquireRuntimeLock,
   resolveRuntimePath,
   listRuntimeStates,
@@ -138,122 +144,6 @@ function resolvePrRole(stage) {
   return "frontend";
 }
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function writeTextFileIfChanged(filePath, nextContents) {
-  const previous = readFileSync(filePath, "utf8");
-  if (previous === nextContents) {
-    return false;
-  }
-  writeFileSync(filePath, nextContents);
-  return true;
-}
-
-function updateSliceRoadmapStatus({
-  worktreePath,
-  slice,
-  status,
-}) {
-  const roadmapPath = resolve(
-    ensureNonEmptyString(worktreePath, "worktreePath"),
-    "docs",
-    "workpacks",
-    "README.md",
-  );
-  const contents = readFileSync(roadmapPath, "utf8");
-  const rowPattern = new RegExp(
-    `^(\\|\\s*\`${escapeRegExp(ensureNonEmptyString(slice, "slice"))}\`\\s*\\|\\s*)([^|]+)(\\|.*)$`,
-    "m",
-  );
-  const match = contents.match(rowPattern);
-  if (!match) {
-    throw new Error(`Slice roadmap row for ${slice} not found.`);
-  }
-
-  const currentCell = match[2];
-  const currentStatus = currentCell.trim();
-  const nextStatus = ensureNonEmptyString(status, "status");
-  if (currentStatus === nextStatus) {
-    return {
-      changed: false,
-      filePath: roadmapPath,
-    };
-  }
-
-  const paddedStatus =
-    nextStatus.length <= currentCell.length ? nextStatus.padEnd(currentCell.length, " ") : nextStatus;
-  const nextContents = contents.replace(rowPattern, `$1${paddedStatus}$3`);
-
-  return {
-    changed: writeTextFileIfChanged(roadmapPath, nextContents),
-    filePath: roadmapPath,
-  };
-}
-
-function updateWorkpackDesignStatus({
-  worktreePath,
-  slice,
-  targetStatus,
-}) {
-  const workpackPath = resolve(
-    ensureNonEmptyString(worktreePath, "worktreePath"),
-    "docs",
-    "workpacks",
-    ensureNonEmptyString(slice, "slice"),
-    "README.md",
-  );
-  const contents = readFileSync(workpackPath, "utf8");
-  const lines = contents.split(/\r?\n/);
-  const startIndex = lines.findIndex((line) => line.trim() === "## Design Status");
-  if (startIndex === -1) {
-    throw new Error(`Design Status section missing in ${workpackPath}`);
-  }
-  const nextSectionIndex = lines.findIndex(
-    (line, index) => index > startIndex && /^##\s+/.test(line.trim()),
-  );
-  const endIndex = nextSectionIndex === -1 ? lines.length : nextSectionIndex;
-  const statusMatchers = {
-    temporary: /\(temporary\)/,
-    "pending-review": /\(pending-review\)/,
-    confirmed: /\(confirmed\)/,
-    "N/A": /\bN\/A\b/,
-  };
-  let changed = false;
-
-  for (let index = startIndex + 1; index < endIndex; index += 1) {
-    const line = lines[index];
-    if (!/^- \[[x ]\]/.test(line)) {
-      continue;
-    }
-
-    for (const [status, matcher] of Object.entries(statusMatchers)) {
-      if (!matcher.test(line)) {
-        continue;
-      }
-      const nextPrefix = status === targetStatus ? "- [x]" : "- [ ]";
-      const nextLine = line.replace(/^- \[[x ]\]/, nextPrefix);
-      if (nextLine !== line) {
-        lines[index] = nextLine;
-        changed = true;
-      }
-    }
-  }
-
-  if (!changed) {
-    return {
-      changed: false,
-      filePath: workpackPath,
-    };
-  }
-
-  return {
-    changed: writeTextFileIfChanged(workpackPath, `${lines.join("\n")}\n`),
-    filePath: workpackPath,
-  };
-}
-
 function applyCodeStageBookkeeping({
   worktreePath,
   slice,
@@ -301,6 +191,196 @@ function applyFrontendMergeBookkeeping({
     slice,
     status: "merged",
   });
+}
+
+function summarizeBookkeepingIssues(issues) {
+  const normalizedIssues = Array.isArray(issues) ? issues : [];
+  return normalizedIssues
+    .map((issue) => {
+      const kind = issue?.kind ?? "unknown";
+      const actual = issue?.actual ?? "missing";
+      const expected = issue?.expected ?? "unknown";
+      return `${kind}:${actual}->${expected}`;
+    })
+    .join(",");
+}
+
+function buildBookkeepingRepairCommit({
+  slice,
+  issues,
+}) {
+  const normalizedSlice = ensureNonEmptyString(slice, "slice");
+  const kinds = new Set((Array.isArray(issues) ? issues : []).map((issue) => issue?.kind));
+  if (kinds.size === 1 && kinds.has("design_status")) {
+    return {
+      subject: `docs(workpack): reconcile ${normalizedSlice} design status`,
+      body: "OMO bookkeeping drift를 복구하기 위해 Design Status를 공식 상태와 정렬합니다.",
+    };
+  }
+
+  if (kinds.size === 1 && kinds.has("roadmap_status")) {
+    return {
+      subject: `docs(workpacks): reconcile ${normalizedSlice} status`,
+      body: "OMO bookkeeping drift를 복구하기 위해 공식 Slice Status를 runtime 상태와 정렬합니다.",
+    };
+  }
+
+  return {
+    subject: `docs(workpacks): reconcile ${normalizedSlice} bookkeeping`,
+    body: "OMO bookkeeping drift를 복구하기 위해 공식 roadmap/workpack 상태를 runtime 상태와 정렬합니다.",
+  };
+}
+
+function resolveBookkeepingRepairLifecycle({
+  stage,
+  prRole,
+}) {
+  if (prRole === "docs") {
+    return "in_progress";
+  }
+
+  if (prRole === "closeout") {
+    return "ready_for_review";
+  }
+
+  if (stage >= 3) {
+    return "ready_for_review";
+  }
+
+  return "in_progress";
+}
+
+function repairActiveBookkeepingDrift({
+  rootDir,
+  workItemId,
+  slice,
+  state,
+  invariant,
+  stage,
+  prRole,
+  branchName,
+  activePr,
+  worktree,
+  now,
+}) {
+  if (!state.workspace?.path) {
+    throw new Error("Worktree path is missing for bookkeeping repair.");
+  }
+
+  const repair = applyBookkeepingRepairPlan({
+    worktreePath: state.workspace.path,
+    slice,
+    repairActions: invariant.repairActions,
+  });
+  if (!repair.changed) {
+    return state;
+  }
+
+  const commitMessage = buildBookkeepingRepairCommit({
+    slice,
+    issues: invariant.issues,
+  });
+  commitWorktreeChanges({
+    worktreePath: state.workspace.path,
+    subject: commitMessage.subject,
+    body: commitMessage.body,
+  });
+  worktree.pushBranch({
+    branch: branchName,
+  });
+
+  const headSha = worktree.getHeadSha();
+  const updatedPr = activePr?.url
+    ? upsertPullRequest({
+        rootDir,
+        workItemId,
+        state,
+        role: prRole,
+        pr: activePr,
+        branch: branchName,
+        headSha,
+        now,
+      })
+    : state;
+  const repairStage = Number.isInteger(stage) ? stage : state.wait?.stage ?? state.active_stage ?? null;
+  const repairedState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setWaitState({
+      state: setExecutionState({
+        state: updatedPr,
+        activeStage: repairStage,
+        phase: repairStage === 6 ? "merge_pending" : "wait",
+        nextAction: "poll_ci",
+        artifactDir: updatedPr.execution?.artifact_dir ?? updatedPr.last_artifact_dir,
+        execution: updatedPr.execution,
+      }),
+      kind: "ci",
+      prRole,
+      stage: repairStage,
+      headSha,
+      phase: repairStage === 6 ? "merge_pending" : "wait",
+      nextAction: "poll_ci",
+      updatedAt: now,
+    }),
+  });
+  updateRuntimeStatusForWait({
+    rootDir,
+    workItemId,
+    wait: repairedState.wait,
+    prPath: activePr?.url ?? null,
+    now,
+    approvalState: repairStage >= 5 ? "claude_approved" : "codex_approved",
+    lifecycle: resolveBookkeepingRepairLifecycle({
+      stage: repairStage,
+      prRole,
+    }),
+    verificationStatus: "pending",
+    extraNotes: [
+      `bookkeeping_repair=${summarizeBookkeepingIssues(invariant.issues)}`,
+    ],
+  });
+
+  return repairedState;
+}
+
+function finalizeCloseoutReconciliation({
+  rootDir,
+  workItemId,
+  state,
+  activePr,
+  now,
+}) {
+  const nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: {
+      ...state,
+      wait: null,
+      phase: "done",
+      next_action: "noop",
+      recovery: null,
+    },
+  });
+  syncStatus({
+    rootDir,
+    workItemId,
+    patch: {
+      pr_path: activePr.url,
+      lifecycle: "merged",
+      approval_state: "dual_approved",
+      verification_status: "passed",
+      notes: `wait_kind=none closeout_pr=${activePr.url} closeout_status=merged`,
+    },
+    now,
+  });
+
+  return {
+    state: nextState,
+    wait: null,
+    transitioned: false,
+    merged: true,
+  };
 }
 
 function defaultBackRoute(stage) {
@@ -1171,6 +1251,22 @@ function processWaitState({
       throw new Error("Active pull request is missing for CI wait.");
     }
 
+    if (prRole === "closeout") {
+      const summary = github.getPullRequestSummary({
+        prRef: activePr.url,
+      });
+
+      if (summary.mergedAt) {
+        return finalizeCloseoutReconciliation({
+          rootDir,
+          workItemId,
+          state,
+          activePr,
+          now,
+        });
+      }
+    }
+
     const checks = github.getRequiredChecks({
       prRef: activePr.url,
     });
@@ -1187,6 +1283,26 @@ function processWaitState({
         prPath: activePr.url,
         now,
         verificationStatus: bucketToVerification(checks.bucket),
+        extraNotes: prRole === "closeout" ? [`closeout_pr=${activePr.url}`] : [],
+      });
+      return {
+        state,
+        action: "wait",
+        nextStage: null,
+      };
+    }
+
+    if (prRole === "closeout") {
+      updateRuntimeStatusForWait({
+        rootDir,
+        workItemId,
+        wait: state.wait,
+        prPath: activePr.url,
+        now,
+        approvalState: "dual_approved",
+        lifecycle: "ready_for_review",
+        verificationStatus: "passed",
+        extraNotes: [`closeout_pr=${activePr.url}`, "manual_action=merge_closeout_pr"],
       });
       return {
         state,
@@ -2784,6 +2900,129 @@ export function superviseWorkItem(
         updatedAt: now,
       }),
     });
+
+    const invariant = evaluateBookkeepingInvariant({
+      rootDir,
+      workItemId: normalizedWorkItemId,
+      slice: resolvedSlice,
+      runtimeState: state,
+      worktreePath: state.workspace?.path,
+    });
+
+    if (invariant.outcome === "ambiguous_drift") {
+      const blocked = applyBlocker({
+        rootDir,
+        workItemId: normalizedWorkItemId,
+        slice: resolvedSlice,
+        state,
+        reason: `Bookkeeping drift is ambiguous: ${invariant.reason ?? "unknown"}`,
+        now,
+      });
+      const artifactDir = writeSupervisorArtifact({
+        rootDir,
+        workItemId: normalizedWorkItemId,
+        now,
+        summary: {
+          workItemId: normalizedWorkItemId,
+          slice: resolvedSlice,
+          transitions: [],
+          wait: blocked.wait,
+          recovery: blocked.runtime.recovery,
+          bookkeeping_invariant: invariant,
+        },
+        runtimeState: blocked.runtime,
+        worktree: dependencies.worktree,
+      });
+
+      return {
+        ...blocked,
+        artifactDir,
+        transitions: [],
+      };
+    }
+
+    if (invariant.outcome === "repairable_pre_merge" && invariant.repairActions.length > 0) {
+      const repairStage =
+        state.wait?.stage ??
+        state.active_stage ??
+        state.current_stage ??
+        state.last_completed_stage ??
+        null;
+      const repairPrRole =
+        state.wait?.pr_role ??
+        (Number.isInteger(repairStage) ? resolvePrRole(repairStage) : null);
+      const activeRepairPr = repairPrRole ? state.prs?.[repairPrRole] ?? null : null;
+      const repairBranch =
+        activeRepairPr?.branch ??
+        (Number.isInteger(repairStage)
+          ? resolveBranchName({
+              slice: resolvedSlice,
+              stage: repairStage,
+            })
+          : null);
+
+      if (!Number.isInteger(repairStage) || !repairPrRole || !activeRepairPr?.url || !repairBranch) {
+        const blocked = applyBlocker({
+          rootDir,
+          workItemId: normalizedWorkItemId,
+          slice: resolvedSlice,
+          state,
+          reason: `Bookkeeping drift requires manual recovery: ${summarizeBookkeepingIssues(invariant.issues)}`,
+          now,
+        });
+        const artifactDir = writeSupervisorArtifact({
+          rootDir,
+          workItemId: normalizedWorkItemId,
+          now,
+          summary: {
+            workItemId: normalizedWorkItemId,
+            slice: resolvedSlice,
+            transitions: [],
+            wait: blocked.wait,
+            recovery: blocked.runtime.recovery,
+            bookkeeping_invariant: invariant,
+          },
+          runtimeState: blocked.runtime,
+          worktree: dependencies.worktree,
+        });
+
+        return {
+          ...blocked,
+          artifactDir,
+          transitions: [],
+        };
+      }
+
+      dependencies.worktree.checkoutBranch({
+        rootDir,
+        worktreePath: state.workspace.path,
+        branch: repairBranch,
+        startPoint: "origin/master",
+      });
+      state = repairActiveBookkeepingDrift({
+        rootDir,
+        workItemId: normalizedWorkItemId,
+        slice: resolvedSlice,
+        state,
+        invariant,
+        stage: repairStage,
+        prRole: repairPrRole,
+        branchName: repairBranch,
+        activePr: activeRepairPr,
+        worktree: {
+          pushBranch: ({ branch }) =>
+            dependencies.worktree.pushBranch({
+              worktreePath: state.workspace.path,
+              branch,
+            }),
+          getHeadSha: () =>
+            dependencies.worktree.getHeadSha({
+              worktreePath: state.workspace.path,
+            }),
+        },
+        now,
+      });
+    }
 
     const transitions = [];
 
