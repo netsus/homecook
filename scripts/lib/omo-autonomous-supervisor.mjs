@@ -777,10 +777,14 @@ function finalizeMergedReviewStage({
   const nextState = saveRuntime({
     rootDir,
     workItemId,
-    state: markStageCompleted({
-      state,
-      stage,
-      artifactDir,
+    state: setWaitState({
+      state: markStageCompleted({
+        state,
+        stage,
+        artifactDir,
+      }),
+      kind: null,
+      updatedAt: now,
     }),
   });
   syncStatus({
@@ -3170,7 +3174,7 @@ export function tickSupervisorWorkItems(
       };
     }
 
-    if (!["ci", "blocked_retry", "ready_for_next_stage"].includes(state.wait.kind)) {
+    if (!["ci", "blocked_retry", "ready_for_next_stage", "human_review", "human_verification"].includes(state.wait.kind)) {
       return {
         resumable: false,
         reason: `unsupported_wait_kind=${state.wait.kind}`,

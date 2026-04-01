@@ -224,6 +224,7 @@ runtime state는 아래 대기 이유를 저장할 수 있어야 한다.
 11. `tick -- --work-item <id>`는 `phase=stage_result_ready | verify_pending | commit_pending | push_pending | pr_pending | merge_pending`도 재개 대상으로 본다.
 12. code stage auto-finalize는 `valid stage-result + supervisor verify pass`일 때만 진행한다.
 13. `human_review`는 정식 GitHub approve가 필요한 상태이고, `human_verification`은 실제 동작 확인 후 사람이 merge해야 하는 상태다.
+14. `omo:tick`은 `human_review`와 `human_verification`도 scheduler 재개 대상으로 처리해, 승인/수동 merge 이후 후속 상태 전이를 계속 수행한다.
 
 ## Fail-Closed Rules
 
