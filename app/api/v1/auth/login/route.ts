@@ -3,7 +3,13 @@ import {
   AUTH_PROVIDER_META,
   type AuthProviderId,
 } from "@/lib/auth/providers";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import {
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
+  formatBootstrapErrorMessage,
+  type UserBootstrapDbClient,
+} from "@/lib/server/user-bootstrap";
+import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 interface LoginRequestBody {
   provider?: string;
@@ -67,6 +73,21 @@ export async function POST(request: Request) {
 
   const nickname = normalizeNickname(user.user_metadata?.nickname);
   const isNewUser = nickname.length === 0;
+
+  try {
+    const dbClient = (createServiceRoleClient() ?? supabase) as unknown as UserBootstrapDbClient;
+    await ensurePublicUserRow(dbClient, user);
+
+    if (!isNewUser) {
+      await ensureUserBootstrapState(dbClient, user.id);
+    }
+  } catch (bootstrapError) {
+    return fail(
+      "INTERNAL_ERROR",
+      formatBootstrapErrorMessage(bootstrapError, "로그인 설정을 완료하지 못했어요."),
+      500,
+    );
+  }
 
   return ok({
     token: session.access_token,

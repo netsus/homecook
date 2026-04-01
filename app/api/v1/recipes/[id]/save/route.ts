@@ -1,10 +1,17 @@
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
+import { readQaFixtureFaultsHeader } from "@/lib/mock/qa-fixture-overrides";
 import {
   isQaFixtureModeEnabled,
   MOCK_RECIPE_ID,
   saveQaFixtureRecipeToBook,
 } from "@/lib/mock/recipes";
+import {
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
+  formatBootstrapErrorMessage,
+  type UserBootstrapDbClient,
+} from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { RecipeBookType, RecipeSaveBody, RecipeSaveData, SaveableRecipeBookType } from "@/types/recipe";
 
@@ -184,8 +191,34 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   if (isQaFixtureModeEnabled()) {
+    const faultOverrides = readQaFixtureFaultsHeader(request.headers);
+
+    if (faultOverrides?.recipe_save === "missing_recipe") {
+      return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
+    }
+
     if (id !== MOCK_RECIPE_ID) {
       return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
+    }
+
+    if (faultOverrides?.recipe_save === "missing_book") {
+      return fail("RESOURCE_NOT_FOUND", "레시피북을 찾을 수 없어요.", 404);
+    }
+
+    if (faultOverrides?.recipe_save === "forbidden_book") {
+      return fail("FORBIDDEN", "내 레시피북만 선택할 수 있어요.", 403);
+    }
+
+    if (faultOverrides?.recipe_save === "invalid_book_type") {
+      return fail("CONFLICT", "저장 가능한 레시피북이 아니에요.", 409);
+    }
+
+    if (faultOverrides?.recipe_save === "duplicate_save") {
+      return fail("CONFLICT", "이미 저장된 레시피예요.", 409);
+    }
+
+    if (faultOverrides?.recipe_save === "internal_error") {
+      return fail("INTERNAL_ERROR", "레시피를 저장하지 못했어요.", 500);
     }
 
     const saveResult = saveQaFixtureRecipeToBook(bookId);
@@ -205,7 +238,20 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as RecipeSaveDbClient;
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    RecipeSaveDbClient & UserBootstrapDbClient;
+
+  try {
+    await ensurePublicUserRow(dbClient, user);
+    await ensureUserBootstrapState(dbClient, user.id);
+  } catch (bootstrapError) {
+    return fail(
+      "INTERNAL_ERROR",
+      formatBootstrapErrorMessage(bootstrapError, "레시피를 저장하지 못했어요."),
+      500,
+    );
+  }
+
   const recipeResult = await dbClient
     .from("recipes")
     .select("id, save_count")

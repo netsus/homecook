@@ -5,7 +5,7 @@ import {
   getMockIngredientList,
   isDiscoveryFilterManualMockEnabled,
 } from "@/lib/mock/recipes";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { IngredientItem, IngredientListData, IngredientListQuery } from "@/types/recipe";
 
 interface IngredientRow {
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       return ok(getMockIngredientList(query.q, query.category));
     }
 
-    const supabase = await createRouteHandlerClient();
+    const supabase = createServiceRoleClient() ?? await createRouteHandlerClient();
 
     let ingredientsQuery = supabase
       .from("ingredients")

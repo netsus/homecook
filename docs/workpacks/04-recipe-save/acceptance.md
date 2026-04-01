@@ -43,8 +43,14 @@
 ## Data Setup / Preconditions
 
 - QA fixture:
-  - `HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`
-  - `localStorage["homecook.e2e-auth-override"] = "guest" | "authenticated"`
+  - `pnpm dev:qa-fixtures`
+  - 우선 QA toolbar에서 `guest` / `authenticated`와 fault를 조작한다
+  - console 수동 override: `localStorage["homecook.e2e-auth-override"] = "guest" | "authenticated"`
+  - `localStorage["homecook.qa-fixture-faults"] = JSON.stringify({ "recipe_books_list": "internal_error" })`
+  - `localStorage["homecook.qa-fixture-faults"] = JSON.stringify({ "recipe_books_create": "internal_error" })`
+  - `localStorage["homecook.qa-fixture-faults"] = JSON.stringify({ "recipe_save": "missing_recipe" | "missing_book" | "forbidden_book" | "invalid_book_type" | "duplicate_save" | "internal_error" })`
+  - 해제: `localStorage.removeItem("homecook.qa-fixture-faults")`
+  - 일반 `pnpm dev`에서는 QA override가 무시된다
   - fixture 경로: `/recipe/mock-kimchi-jjigae`
 - 실 DB smoke:
   - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`

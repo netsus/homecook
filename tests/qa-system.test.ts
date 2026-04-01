@@ -47,6 +47,14 @@ const README_MARKDOWN = `# Slice
 1. HOME에서 검색한다.
 2. 상세로 진입한다.
 3. 보호 액션을 시도한다.
+
+## QA / Test Data Plan
+
+- QA fixture mode:
+  - \`HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev\`
+  - \`localStorage["homecook.e2e-auth-override"] = "guest" | "authenticated"\`
+- 실 DB smoke:
+  - \`pnpm qa:seed:01-05 -- --user-id <uuid>\`
 `;
 
 const ACCEPTANCE_MARKDOWN = `# Acceptance
@@ -64,6 +72,12 @@ const ACCEPTANCE_MARKDOWN = `# Acceptance
 
 1. 모바일에서 같은 동선을 확인한다
 2. hard refresh를 시도한다
+3. 별도 슬라이스 17b에서 최종 검증한다
+
+## Data Setup / Preconditions
+
+- QA fixture:
+  - \`HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev\`
 
 ## Automation Split
 
@@ -80,12 +94,16 @@ describe("qa system helpers", () => {
       "Happy Path",
       "Error / Permission",
       "Manual QA",
+      "Data Setup / Preconditions",
       "Automation Split",
     ]);
     expect(sections[2].items[0]).toMatchObject({
       text: "모바일에서 같은 동선을 확인한다",
     });
-    expect(sections[3].items[0]).toMatchObject({
+    const automationSection = sections.find(
+      (section) => section.title === "Automation Split",
+    );
+    expect(automationSection?.items[0]).toMatchObject({
       subsection: "Playwright",
       text: "브라우저 흐름을 확인한다",
     });
@@ -109,6 +127,34 @@ describe("qa system helpers", () => {
       "상세로 진입한다.",
       "보호 액션을 시도한다.",
     ]);
+    expect(checklist.testDataSetup).toEqual([
+      {
+        title: "QA fixture mode",
+        steps: [
+          "`HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`",
+          "`localStorage[\"homecook.e2e-auth-override\"] = \"guest\" | \"authenticated\"`",
+        ],
+      },
+      {
+        title: "실 DB smoke",
+        steps: [
+          "`pnpm qa:seed:01-05 -- --user-id <uuid>`",
+        ],
+      },
+    ]);
+    expect(checklist.checklistItems).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          section: "Automation Split",
+        }),
+        expect.objectContaining({
+          section: "Data Setup / Preconditions",
+        }),
+        expect.objectContaining({
+          text: expect.stringContaining("별도 슬라이스"),
+        }),
+      ]),
+    );
     expect(checklist.checklistItems).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -150,6 +196,9 @@ describe("qa system helpers", () => {
     expect(instructions).toContain("작은 높이 viewport");
     expect(instructions).toContain("중복");
     expect(instructions).toContain("above-the-fold");
+    expect(instructions).toContain("## 권장 데이터 셋업");
+    expect(instructions).toContain("HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev");
+    expect(instructions).toContain("homecook.e2e-auth-override");
   });
 
   it("validates and scores a complete exploratory report", () => {
@@ -189,6 +238,47 @@ describe("qa system helpers", () => {
 
     expect(validateExploratoryReport(report, checklist)).toEqual([]);
     expect(scoreExploratoryReport(report, checklist).total).toBeGreaterThanOrEqual(90);
+  });
+
+  it("penalizes blocked checklist items in exploratory score", () => {
+    const checklist = buildExploratoryChecklist({
+      slice: "04-recipe-save",
+      baseUrl: "http://127.0.0.1:3000",
+      readmeMarkdown: README_MARKDOWN,
+      acceptanceMarkdown: ACCEPTANCE_MARKDOWN,
+    });
+    const report = createExploratoryReportTemplate(checklist) as ExploratoryReport;
+
+    report.generatedAt = "2026-04-01T00:00:00.000Z";
+    report.summary = "happy path는 확인했지만 다수 항목이 blocked였다.";
+    report.remainingRisks = ["fault injection 부재로 error/data-integrity 다수가 blocked"];
+    report.findings = [
+      {
+        category: "ux",
+        severity: "major",
+        title: "small viewport에서 CTA가 첫 화면 아래로 밀린다",
+        expected: "작은 viewport에서도 핵심 CTA를 바로 인지할 수 있어야 한다.",
+        actual: "초기 진입 시 제목과 CTA가 fold 아래에 있어 즉시 보이지 않는다.",
+        repro_steps: [
+          "iPhone SE viewport로 상세 페이지에 진입한다.",
+          "첫 화면에서 제목과 CTA 위치를 확인한다.",
+        ],
+        evidence_paths: ["test-results/mobile-ios-small-cta.png"],
+        tags: ["mobile", "small-viewport", "cta"],
+      },
+    ];
+    report.checklistCoverage = checklist.checklistItems.map((item, index) => ({
+      item_id: item.id,
+      status: index % 2 === 0 ? "covered" : "blocked",
+      notes: index % 2 === 0 ? "covered in exploratory pass" : "blocked by missing fault injection",
+      linked_findings: [],
+    }));
+
+    const score = scoreExploratoryReport(report, checklist);
+
+    expect(score.breakdown.coverageRate).toBe(0.5);
+    expect(score.breakdown.blockedRate).toBe(0.5);
+    expect(score.total).toBeLessThan(85);
   });
 
   it("reports validation failures for missing device coverage and empty evidence", () => {

@@ -64,6 +64,15 @@ const EXPLORATORY_HEURISTICS = [
     text: "아이콘, 버튼, 피드백 표현이 placeholder나 MVP 임시 UI처럼 보이지 않는지 확인한다.",
   },
 ];
+const EXPLORATORY_EXCLUDED_SECTIONS = new Set([
+  "data setup / preconditions",
+  "automation split",
+]);
+const EXPLORATORY_DEFERRED_ITEM_HINTS = [
+  "별도 슬라이스",
+  "후속 슬라이스",
+  "최종 검증",
+];
 
 function slugify(value) {
   return value
@@ -239,6 +248,90 @@ export function parseChecklistSections(markdown) {
   return sections.filter((section) => section.items.length > 0);
 }
 
+function extractMarkdownSectionLines(markdown, title) {
+  const lines = markdown.split(/\r?\n/);
+  const collected = [];
+  let inSection = false;
+
+  for (const line of lines) {
+    const sectionMatch = line.match(SECTION_HEADER_PATTERN);
+
+    if (sectionMatch) {
+      const matchesTarget = normalizeSection(sectionMatch[1]) === normalizeSection(title);
+
+      if (inSection && !matchesTarget) {
+        break;
+      }
+
+      inSection = matchesTarget;
+      continue;
+    }
+
+    if (inSection) {
+      collected.push(line);
+    }
+  }
+
+  return collected;
+}
+
+function parseSetupGroups(lines) {
+  const groups = [];
+  let currentGroup = null;
+
+  for (const rawLine of lines) {
+    const trimmedLine = rawLine.trim();
+
+    if (!trimmedLine) {
+      continue;
+    }
+
+    const itemMatch = trimmedLine.match(BULLET_PATTERN) ?? trimmedLine.match(NUMBERED_PATTERN);
+
+    if (!itemMatch) {
+      continue;
+    }
+
+    const text = itemMatch[1].trim();
+    const indent = rawLine.match(/^\s*/)?.[0]?.length ?? 0;
+
+    if (indent === 0) {
+      currentGroup = {
+        title: text.replace(/:\s*$/, ""),
+        steps: [],
+      };
+      groups.push(currentGroup);
+      continue;
+    }
+
+    if (!currentGroup) {
+      currentGroup = {
+        title: "Setup",
+        steps: [],
+      };
+      groups.push(currentGroup);
+    }
+
+    currentGroup.steps.push(text);
+  }
+
+  return groups.filter((group) => group.title || group.steps.length > 0);
+}
+
+function extractExploratorySetup(readmeMarkdown, acceptanceMarkdown) {
+  const readmeSetup = parseSetupGroups(
+    extractMarkdownSectionLines(readmeMarkdown, "QA / Test Data Plan"),
+  );
+
+  if (readmeSetup.length > 0) {
+    return readmeSetup;
+  }
+
+  return parseSetupGroups(
+    extractMarkdownSectionLines(acceptanceMarkdown, "Data Setup / Preconditions"),
+  );
+}
+
 function extractPrimaryUserPath(readmeMarkdown) {
   const sections = parseChecklistSections(readmeMarkdown);
   const primaryUserPathSection = sections.find(
@@ -296,7 +389,7 @@ function buildEdgeCaseMatrix(checklistItems) {
     });
   }
 
-  if (joined.includes("read-only") || joined.includes("409")) {
+  if (joined.includes("read-only") || joined.includes("읽기 전용")) {
     baseline.push({
       id: "read-only-bypass",
       text: "read-only 상태에서 우회 수정 시도와 409/차단 UX를 확인한다.",
@@ -316,6 +409,14 @@ function buildHeuristicChecklistItems() {
   }));
 }
 
+function shouldIncludeExploratorySection(sectionTitle) {
+  return !EXPLORATORY_EXCLUDED_SECTIONS.has(normalizeSection(sectionTitle));
+}
+
+function shouldIncludeExploratoryItem(text) {
+  return !EXPLORATORY_DEFERRED_ITEM_HINTS.some((hint) => text.includes(hint));
+}
+
 export function buildExploratoryChecklist({
   slice,
   baseUrl,
@@ -324,17 +425,22 @@ export function buildExploratoryChecklist({
 }) {
   const acceptanceSections = parseChecklistSections(acceptanceMarkdown);
   const primaryUserPath = extractPrimaryUserPath(readmeMarkdown);
+  const testDataSetup = extractExploratorySetup(readmeMarkdown, acceptanceMarkdown);
   const checklistItems = acceptanceSections.flatMap((section) =>
-    section.items.map((item, index) => ({
-      id: `${slugify(section.title)}-${index + 1}`,
-      section: section.title,
-      subsection: item.subsection,
-      text: item.text,
-      priority:
-        section.title === "Error / Permission" || section.title === "Manual QA"
-          ? "high"
-          : "normal",
-    })),
+    shouldIncludeExploratorySection(section.title)
+      ? section.items
+        .filter((item) => shouldIncludeExploratoryItem(item.text))
+        .map((item, index) => ({
+          id: `${slugify(section.title)}-${index + 1}`,
+          section: section.title,
+          subsection: item.subsection,
+          text: item.text,
+          priority:
+            section.title === "Error / Permission" || section.title === "Manual QA"
+              ? "high"
+              : "normal",
+        }))
+      : [],
   );
   const heuristicItems = buildHeuristicChecklistItems();
 
@@ -349,6 +455,7 @@ export function buildExploratoryChecklist({
     },
     devices: EXPLORATORY_DEVICES,
     primaryUserPath,
+    testDataSetup,
     checklistItems: [...checklistItems, ...heuristicItems],
     edgeCases: buildEdgeCaseMatrix([...checklistItems, ...heuristicItems]),
   };
@@ -377,6 +484,14 @@ export function renderExploratoryInstructions(checklist, outputDir) {
   const reportPath = path.join(outputDir, "exploratory-report.json");
   const checklistPath = path.join(outputDir, "exploratory-checklist.json");
   const evalResultPath = path.join(outputDir, "eval-result.json");
+  const setupGroups = Array.isArray(checklist.testDataSetup) ? checklist.testDataSetup : [];
+  const preferredAppStartCommand =
+    setupGroups
+      .flatMap((group) => group.steps)
+      .find((step) => step.includes("pnpm dev")) ?? "pnpm dev";
+  const formattedPreferredAppStartCommand = preferredAppStartCommand.includes("`")
+    ? preferredAppStartCommand
+    : `\`${preferredAppStartCommand}\``;
 
   return [
     `# Exploratory QA: ${checklist.slice}`,
@@ -391,6 +506,16 @@ export function renderExploratoryInstructions(checklist, outputDir) {
     `- 기본 URL: \`${checklist.baseUrl}\``,
     `- 필수 device coverage: \`${checklist.devices.join(", ")}\``,
     "",
+    ...(setupGroups.length > 0
+      ? [
+          "## 권장 데이터 셋업",
+          ...setupGroups.flatMap((group) => [
+            `- ${group.title}`,
+            ...group.steps.map((step) => `  - ${step}`),
+          ]),
+          "",
+        ]
+      : []),
     "## 실행 규칙",
     "1. checklistItems를 순서대로 훑고 coverage 상태를 채운다.",
     "2. desktop, 일반 mobile, 작은 iOS viewport를 모두 확인한다.",
@@ -400,7 +525,7 @@ export function renderExploratoryInstructions(checklist, outputDir) {
     "6. 마지막에 남은 리스크와 미커버 항목을 summary에 요약한다.",
     "",
     "## 권장 실행 예시",
-    "- `pnpm dev`로 앱을 띄운다.",
+    `- ${formattedPreferredAppStartCommand}로 앱을 띄운다.`,
     `- \`${checklist.baseUrl}\`에서 브라우저 탐색을 시작한다.`,
     `- 완료 후 \`${reportPath}\`를 채우고 \`pnpm qa:eval -- --checklist ${checklistPath} --report ${reportPath}\`로 점수화한다.`,
     `- eval 결과는 기본값으로 \`${evalResultPath}\`에 저장된다.`,
@@ -499,9 +624,13 @@ export function validateExploratoryReport(report, checklist) {
 export function scoreExploratoryReport(report, checklist) {
   const totalChecklistItems = checklist.checklistItems.length || 1;
   const coveredChecklistItems = (report.checklistCoverage ?? []).filter(
-    (item) => item.status === "covered" || item.status === "blocked",
+    (item) => item.status === "covered",
+  ).length;
+  const blockedChecklistItems = (report.checklistCoverage ?? []).filter(
+    (item) => item.status === "blocked",
   ).length;
   const coverageRate = coveredChecklistItems / totalChecklistItems;
+  const blockedRate = blockedChecklistItems / totalChecklistItems;
 
   const deviceCoverage = checklist.devices.every((device) => report.devices.includes(device))
     ? 1
@@ -544,6 +673,7 @@ export function scoreExploratoryReport(report, checklist) {
     total: Math.round(score),
     breakdown: {
       coverageRate,
+      blockedRate,
       deviceCoverage,
       findingQualityRate,
       severityRate,

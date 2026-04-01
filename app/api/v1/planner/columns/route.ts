@@ -1,6 +1,12 @@
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
 import { createQaFixturePlannerColumn, isQaFixtureModeEnabled } from "@/lib/mock/recipes";
+import {
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
+  formatBootstrapErrorMessage,
+  type UserBootstrapDbClient,
+} from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { PlannerColumnCreateBody, PlannerColumnData } from "@/types/planner";
 
@@ -139,7 +145,20 @@ export async function POST(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as PlannerColumnsDbClient;
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    PlannerColumnsDbClient & UserBootstrapDbClient;
+
+  try {
+    await ensurePublicUserRow(dbClient, user);
+    await ensureUserBootstrapState(dbClient, user.id);
+  } catch (bootstrapError) {
+    return fail(
+      "INTERNAL_ERROR",
+      formatBootstrapErrorMessage(bootstrapError, "끼니 컬럼을 추가하지 못했어요."),
+      500,
+    );
+  }
+
   const columnsResult = await dbClient
     .from("meal_plan_columns")
     .select("id, sort_order")

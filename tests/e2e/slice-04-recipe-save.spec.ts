@@ -300,4 +300,34 @@ test.describe("Slice 04 recipe save flow", () => {
       )
       .toBeNull();
   });
+
+  test("small iOS viewport keeps title and save CTA above the fold", async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "mobile-ios-small");
+
+    await mockRecipeSaveRoutes(page);
+    await page.goto(RECIPE_PATH);
+    await expect(
+      page.getByRole("heading", { name: "집밥 김치찌개" }),
+    ).toBeVisible();
+
+    const metrics = await page.evaluate(() => {
+      const title = document.querySelector("section h2");
+      const saveButton = document.querySelector('button[aria-label="저장"][aria-pressed]');
+      const titleRect = title?.getBoundingClientRect();
+      const saveRect = saveButton?.getBoundingClientRect();
+
+      return {
+        viewportHeight: window.innerHeight,
+        titleTop: titleRect?.top ?? null,
+        saveButtonTop: saveRect?.top ?? null,
+      };
+    });
+
+    expect(metrics.titleTop).not.toBeNull();
+    expect(metrics.saveButtonTop).not.toBeNull();
+    expect(metrics.titleTop!).toBeLessThan(metrics.viewportHeight);
+    expect(metrics.saveButtonTop!).toBeLessThan(metrics.viewportHeight);
+  });
 });

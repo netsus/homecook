@@ -1,5 +1,11 @@
 import { fail, ok } from "@/lib/api/response";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import {
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
+  formatBootstrapErrorMessage,
+  type UserBootstrapDbClient,
+} from "@/lib/server/user-bootstrap";
+import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 interface ProfileRequestBody {
   nickname?: string;
@@ -36,15 +42,40 @@ export async function PATCH(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const { data, error } = await supabase
+  const dbClient = (createServiceRoleClient() ?? supabase) as unknown as UserBootstrapDbClient;
+
+  try {
+    await ensurePublicUserRow(dbClient, user);
+  } catch (bootstrapError) {
+    return fail(
+      "INTERNAL_ERROR",
+      formatBootstrapErrorMessage(bootstrapError, "프로필을 저장하지 못했어요."),
+      500,
+    );
+  }
+
+  const { data, error } = await dbClient
     .from("users")
-    .update({ nickname })
+    .update({
+      nickname,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", user.id)
     .select("id, nickname, email, profile_image_url")
     .maybeSingle();
 
   if (error || !data) {
     return fail("INTERNAL_ERROR", "프로필을 저장하지 못했어요.", 500);
+  }
+
+  try {
+    await ensureUserBootstrapState(dbClient, user.id);
+  } catch (bootstrapError) {
+    return fail(
+      "INTERNAL_ERROR",
+      formatBootstrapErrorMessage(bootstrapError, "프로필을 저장하지 못했어요."),
+      500,
+    );
   }
 
   return ok({

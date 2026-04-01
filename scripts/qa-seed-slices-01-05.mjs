@@ -130,6 +130,17 @@ async function ensureUser(supabase, { id, nickname, email, socialId }) {
   return id;
 }
 
+async function findUserIdByEmail(supabase, email) {
+  const result = await supabase
+    .from("users")
+    .select("id")
+    .eq("email", email)
+    .limit(1);
+
+  assertNoError(result, `users 이메일 조회 실패 (${email})`);
+  return result.data?.[0]?.id ?? null;
+}
+
 async function ensureIngredient(supabase, ingredient) {
   const existingResult = await supabase
     .from("ingredients")
@@ -330,7 +341,7 @@ async function ensureRecipeBook(supabase, { userId, preferredId, name, bookType 
   }
 
   const now = new Date().toISOString();
-  const insertResult = await supabase
+  let insertResult = await supabase
     .from("recipe_books")
     .insert({
       id: preferredId,
@@ -343,6 +354,22 @@ async function ensureRecipeBook(supabase, { userId, preferredId, name, bookType 
     })
     .select("id, name, book_type, sort_order")
     .single();
+
+  if (insertResult.error?.message?.toLowerCase().includes("duplicate key")) {
+    insertResult = await supabase
+      .from("recipe_books")
+      .insert({
+        id: crypto.randomUUID(),
+        user_id: userId,
+        name,
+        book_type: bookType,
+        sort_order: getNextSortOrder(currentBooks),
+        created_at: now,
+        updated_at: now,
+      })
+      .select("id, name, book_type, sort_order")
+      .single();
+  }
 
   assertNoError(insertResult, `recipe_books 생성 실패 (${name})`);
   return insertResult.data;
@@ -546,7 +573,7 @@ async function main() {
   if (args.help === "true") {
     process.stdout.write(
       [
-        "Usage: pnpm qa:seed:01-05 -- --user-id <uuid> [--other-user-id <uuid>] [--start-date YYYY-MM-DD]",
+        "Usage: pnpm qa:seed:01-05 -- (--user-id <uuid> | --user-email <email>) [--other-user-id <uuid>] [--start-date YYYY-MM-DD]",
         "",
         "Seeds real Supabase rows for slices 01-05 smoke testing.",
         "Use a clean QA account for the most deterministic planner results.",
@@ -555,16 +582,25 @@ async function main() {
     return;
   }
 
-  const mainUserId = args["user-id"];
-
-  if (!mainUserId) {
-    fail("--user-id <uuid> 가 필요합니다.");
-  }
-
   const fixtureData = readFixtureData();
   const otherUserId = args["other-user-id"] ?? fixtureData.ids.otherFixtureUserId;
   const seedWindow = buildSeedWindow(args["start-date"]);
   const supabase = createSupabaseClient();
+  let mainUserId = args["user-id"];
+
+  if (!mainUserId && args["user-email"]) {
+    mainUserId = await findUserIdByEmail(supabase, args["user-email"]);
+
+    if (!mainUserId) {
+      fail(
+        `email ${args["user-email"]} 에 해당하는 users row가 없어요. local 로그인 후 보호 API를 한 번 호출해 bootstrap을 완료해주세요.`,
+      );
+    }
+  }
+
+  if (!mainUserId) {
+    fail("--user-id <uuid> 또는 --user-email <email> 이 필요합니다.");
+  }
 
   await ensureUser(supabase, {
     id: mainUserId,

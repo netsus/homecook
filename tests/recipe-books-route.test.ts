@@ -2,10 +2,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const ensurePublicUserRow = vi.fn();
+const ensureUserBootstrapState = vi.fn();
+const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
+  if (error instanceof Error) {
+    return `formatted: ${error.message}`;
+  }
+
+  return fallbackMessage;
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+}));
+
+vi.mock("@/lib/server/user-bootstrap", () => ({
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
+  formatBootstrapErrorMessage,
 }));
 
 interface QueryError {
@@ -106,7 +121,13 @@ describe("/api/v1/recipe-books", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    ensurePublicUserRow.mockReset();
+    ensureUserBootstrapState.mockReset();
+    formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
+    ensurePublicUserRow.mockResolvedValue({});
+    ensureUserBootstrapState.mockResolvedValue(undefined);
+    delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 
   it("GET returns 401 when the user is not authenticated", async () => {
@@ -209,8 +230,65 @@ describe("/api/v1/recipe-books", () => {
       },
       error: null,
     });
+    expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: "user-1" });
+    expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
     expect(recipeBooksTable.__selectQuery.in).toHaveBeenCalledWith("book_type", ["saved", "custom"]);
     expect(recipeBookItemsTable.__selectQuery.in).toHaveBeenCalledWith("book_id", ["book-saved", "book-custom"]);
+  });
+
+  it("GET returns schema guidance when bootstrap fails before listing books", async () => {
+    ensurePublicUserRow.mockRejectedValue(
+      new Error("Could not find the table 'public.recipe_books' in the schema cache"),
+    );
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: {
+            user: { id: "user-1" },
+          },
+        })),
+      },
+      from: vi.fn(),
+    });
+
+    const { GET } = await importRoute();
+    const response = await GET(new Request("http://localhost:3000/api/v1/recipe-books"));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "formatted: Could not find the table 'public.recipe_books' in the schema cache",
+      },
+    });
+    expect(formatBootstrapErrorMessage).toHaveBeenCalled();
+  });
+
+  it("GET returns 500 in fixture mode when recipe book list fault is injected", async () => {
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = "1";
+
+    const { GET } = await importRoute();
+    const response = await GET(new Request("http://localhost:3000/api/v1/recipe-books", {
+      headers: {
+        "x-homecook-e2e-auth": "authenticated",
+        "x-homecook-qa-fixture-faults": JSON.stringify({
+          recipe_books_list: "internal_error",
+        }),
+      },
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+      },
+    });
   });
 
   it("POST returns 422 when name is missing", async () => {
@@ -379,6 +457,33 @@ describe("/api/v1/recipe-books", () => {
       name: "주말 브런치",
       book_type: "custom",
       sort_order: 4,
+    });
+  });
+
+  it("POST returns 500 in fixture mode when recipe book create fault is injected", async () => {
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = "1";
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipe-books", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-homecook-e2e-auth": "authenticated",
+        "x-homecook-qa-fixture-faults": JSON.stringify({
+          recipe_books_create: "internal_error",
+        }),
+      },
+      body: JSON.stringify({ name: "주말 브런치" }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+      },
     });
   });
 });

@@ -3,10 +3,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const ensurePublicUserRow = vi.fn();
+const ensureUserBootstrapState = vi.fn();
+const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
+  if (error instanceof Error) {
+    return `formatted: ${error.message}`;
+  }
+
+  return fallbackMessage;
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+}));
+
+vi.mock("@/lib/server/user-bootstrap", () => ({
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
+  formatBootstrapErrorMessage,
 }));
 
 interface QueryError {
@@ -50,7 +65,12 @@ describe("GET /api/v1/planner", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    ensurePublicUserRow.mockReset();
+    ensureUserBootstrapState.mockReset();
+    formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
+    ensurePublicUserRow.mockResolvedValue({});
+    ensureUserBootstrapState.mockResolvedValue(undefined);
   });
 
   it("returns 401 when user is not authenticated", async () => {
@@ -204,8 +224,39 @@ describe("GET /api/v1/planner", () => {
       },
       error: null,
     });
+    expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: "user-1" });
+    expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
     expect(mealsQuery.order).toHaveBeenNthCalledWith(1, "plan_date", { ascending: true });
     expect(mealsQuery.order).toHaveBeenNthCalledWith(2, "column_id", { ascending: true });
     expect(mealsQuery.order).toHaveBeenNthCalledWith(3, "created_at", { ascending: true });
+  });
+
+  it("returns schema guidance when bootstrap fails before reading planner data", async () => {
+    ensurePublicUserRow.mockRejectedValue(
+      new Error("Could not find the table 'public.meal_plan_columns' in the schema cache"),
+    );
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn(),
+    });
+
+    const { GET } = await importRoute();
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/planner?start_date=2026-03-01&end_date=2026-03-07"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "formatted: Could not find the table 'public.meal_plan_columns' in the schema cache",
+      },
+    });
+    expect(formatBootstrapErrorMessage).toHaveBeenCalled();
   });
 });

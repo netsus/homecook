@@ -2,10 +2,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const ensurePublicUserRow = vi.fn();
+const ensureUserBootstrapState = vi.fn();
+const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
+  if (error instanceof Error) {
+    return `formatted: ${error.message}`;
+  }
+
+  return fallbackMessage;
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+}));
+
+vi.mock("@/lib/server/user-bootstrap", () => ({
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
+  formatBootstrapErrorMessage,
 }));
 
 interface QueryError {
@@ -148,7 +163,13 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    ensurePublicUserRow.mockReset();
+    ensureUserBootstrapState.mockReset();
+    formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
+    ensurePublicUserRow.mockResolvedValue({});
+    ensureUserBootstrapState.mockResolvedValue(undefined);
+    delete process.env.HOMECOOK_ENABLE_QA_FIXTURES;
   });
 
   it("returns 401 when the user is not authenticated", async () => {
@@ -428,6 +449,180 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     });
   });
 
+  it("returns 404 in fixture mode when save route injects missing recipe fault", async () => {
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = "1";
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/mock-kimchi-jjigae/save", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-homecook-e2e-auth": "authenticated",
+        "x-homecook-qa-fixture-faults": JSON.stringify({
+          recipe_save: "missing_recipe",
+        }),
+      },
+      body: JSON.stringify({ book_id: "550e8400-e29b-41d4-a716-446655440040" }),
+    }), {
+      params: Promise.resolve({ id: "mock-kimchi-jjigae" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "RESOURCE_NOT_FOUND",
+      },
+    });
+  });
+
+  it("returns 403 in fixture mode when save route injects forbidden book fault", async () => {
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = "1";
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/mock-kimchi-jjigae/save", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-homecook-e2e-auth": "authenticated",
+        "x-homecook-qa-fixture-faults": JSON.stringify({
+          recipe_save: "forbidden_book",
+        }),
+      },
+      body: JSON.stringify({ book_id: "550e8400-e29b-41d4-a716-446655440040" }),
+    }), {
+      params: Promise.resolve({ id: "mock-kimchi-jjigae" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "FORBIDDEN",
+      },
+    });
+  });
+
+  it("returns 409 in fixture mode when save route injects duplicate save fault", async () => {
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = "1";
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/mock-kimchi-jjigae/save", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-homecook-e2e-auth": "authenticated",
+        "x-homecook-qa-fixture-faults": JSON.stringify({
+          recipe_save: "duplicate_save",
+        }),
+      },
+      body: JSON.stringify({ book_id: "550e8400-e29b-41d4-a716-446655440040" }),
+    }), {
+      params: Promise.resolve({ id: "mock-kimchi-jjigae" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "CONFLICT",
+      },
+    });
+  });
+
+  it("returns 404 in fixture mode when save route injects missing book fault", async () => {
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = "1";
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/mock-kimchi-jjigae/save", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-homecook-e2e-auth": "authenticated",
+        "x-homecook-qa-fixture-faults": JSON.stringify({
+          recipe_save: "missing_book",
+        }),
+      },
+      body: JSON.stringify({ book_id: "550e8400-e29b-41d4-a716-446655440040" }),
+    }), {
+      params: Promise.resolve({ id: "mock-kimchi-jjigae" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "RESOURCE_NOT_FOUND",
+      },
+    });
+  });
+
+  it("returns 409 in fixture mode when save route injects invalid book type fault", async () => {
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = "1";
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/mock-kimchi-jjigae/save", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-homecook-e2e-auth": "authenticated",
+        "x-homecook-qa-fixture-faults": JSON.stringify({
+          recipe_save: "invalid_book_type",
+        }),
+      },
+      body: JSON.stringify({ book_id: "550e8400-e29b-41d4-a716-446655440040" }),
+    }), {
+      params: Promise.resolve({ id: "mock-kimchi-jjigae" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "CONFLICT",
+      },
+    });
+  });
+
+  it("returns 500 in fixture mode when save route injects internal error fault", async () => {
+    process.env.HOMECOOK_ENABLE_QA_FIXTURES = "1";
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/mock-kimchi-jjigae/save", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-homecook-e2e-auth": "authenticated",
+        "x-homecook-qa-fixture-faults": JSON.stringify({
+          recipe_save: "internal_error",
+        }),
+      },
+      body: JSON.stringify({ book_id: "550e8400-e29b-41d4-a716-446655440040" }),
+    }), {
+      params: Promise.resolve({ id: "mock-kimchi-jjigae" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "INTERNAL_ERROR",
+      },
+    });
+  });
+
   it("saves the recipe and returns the updated save_count", async () => {
     const recipesTable = createRecipesTable({
       selectResults: [
@@ -512,6 +707,8 @@ describe("POST /api/v1/recipes/[id]/save", () => {
       },
       error: null,
     });
+    expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: "user-1" });
+    expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
     expect(recipeBookItemsTable.insert).toHaveBeenCalledWith({
       book_id: "550e8400-e29b-41d4-a716-446655440010",
       recipe_id: "550e8400-e29b-41d4-a716-446655440025",
@@ -519,6 +716,43 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     expect(recipesTable.update).toHaveBeenCalledWith({
       save_count: 4,
     });
+  });
+
+  it("returns schema guidance when bootstrap fails before saving", async () => {
+    ensurePublicUserRow.mockRejectedValue(
+      new Error("Could not find the table 'public.recipe_books' in the schema cache"),
+    );
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+      from: vi.fn(),
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/recipe-1/save", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ book_id: "550e8400-e29b-41d4-a716-446655440010" }),
+    }), {
+      params: Promise.resolve({ id: "550e8400-e29b-41d4-a716-446655440025" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "formatted: Could not find the table 'public.recipe_books' in the schema cache",
+      },
+    });
+    expect(formatBootstrapErrorMessage).toHaveBeenCalled();
   });
 
   it("returns 404 when the recipe book does not exist", async () => {
