@@ -102,11 +102,13 @@ pnpm omo:claude-budget -- --clear
   - `pnpm omo:supervise -- --work-item <id>`
   - `pnpm omo:tick -- --all`
   - `pnpm omo:reconcile -- --work-item <id>`
+  - `pnpm omo:tick:watch -- --work-item <id>`
 - runtime이 없는 work item에서 `omo:tick -- --work-item <id>`는 kickoff하지 않고 no-op로 끝난다.
 - `omo:tick`은 이제 `wait.kind`뿐 아니라 unfinished `phase`도 재개한다.
 - code stage에서 valid `stage-result.json`이 있고 supervisor verify가 통과하면, supervisor가 commit/push/PR 생성/CI wait까지 auto-finalize한다.
 - 이미 merge된 slice에서 공식 docs bookkeeping만 어긋나면 `omo:reconcile`이 docs-only closeout PR를 생성해 drift를 복구한다.
 - 빠른 운영 확인은 `pnpm omo:status:brief -- --work-item <id>`로 `activeStage`, `phase`, `nextAction`, `mode`를 함께 읽는다.
+- scheduler 자체가 지금 도는지, 마지막으로 언제 로그를 남겼는지는 `pnpm omo:tick:watch -- --work-item <id>`로 본다.
 - supervisor는 기본적으로 `.worktrees/<work-item-id>` 전용 worktree에서만 실행한다.
 - GitHub 자동화는 `gh` CLI만 사용한다.
 - 기본 scheduler cadence는 10분이며, macOS에서는 `launchd` 예시를 우선 제공한다.

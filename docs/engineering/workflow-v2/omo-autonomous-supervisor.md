@@ -31,6 +31,7 @@ autonomous supervisor는 `그 stage 결과를 다음 GitHub 상태와 다음 sta
 - `pnpm omo:tick -- --all`
 - `pnpm omo:tick -- --work-item <id>`
 - `pnpm omo:reconcile -- --work-item <id>`
+- `pnpm omo:tick:watch -- --work-item <id>`
 
 기존 low-level 명령:
 
@@ -52,6 +53,7 @@ autonomous supervisor는 `그 stage 결과를 다음 GitHub 상태와 다음 sta
 8. runtime이 없으면 `omo:tick`은 `noop: missing_runtime`을 반환한다.
 9. runtime은 있지만 `wait`와 pending phase가 모두 없으면 `omo:tick`은 `noop: no_wait_state`를 반환한다.
 10. 운영자가 현재 단계와 대기 상태를 빠르게 읽을 때는 `omo:status:brief`를 사용한다.
+11. scheduler가 실제로 등록되어 있는지, 현재 running인지, 마지막 로그 갱신 시각이 언제인지는 `omo:tick:watch`로 읽는다.
 
 ## Bookkeeping Invariants
 
