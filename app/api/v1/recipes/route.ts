@@ -11,7 +11,7 @@ import {
   filterRecipeIdsByIngredients,
   parseIngredientIds,
 } from "@/lib/recipe-list";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { RecipeCardItem, RecipeListData, RecipeListQuery } from "@/types/recipe";
 
 interface RecipeIngredientMatchRow {
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       return ok(getMockRecipeList(listQuery.q, listQuery.ingredient_ids));
     }
 
-    const supabase = await createRouteHandlerClient();
+    const supabase = createServiceRoleClient() ?? await createRouteHandlerClient();
     let filteredRecipeIds: string[] | null = null;
 
     if (listQuery.ingredient_ids?.length) {

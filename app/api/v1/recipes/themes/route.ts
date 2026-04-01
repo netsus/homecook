@@ -3,7 +3,7 @@ import {
   getMockRecipeThemes,
   isDiscoveryFilterManualMockEnabled,
 } from "@/lib/mock/recipes";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { RecipeCardItem, RecipeThemesData } from "@/types/recipe";
 
 function createThemeResponse(items: RecipeCardItem[]): RecipeThemesData {
@@ -24,7 +24,7 @@ export async function GET() {
   }
 
   try {
-    const supabase = await createRouteHandlerClient();
+    const supabase = createServiceRoleClient() ?? await createRouteHandlerClient();
     const { data, error } = await supabase
       .from("recipes")
       .select(

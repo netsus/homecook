@@ -3,6 +3,12 @@ import { NextRequest } from "next/server";
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
 import { getQaFixturePlannerData, isQaFixtureModeEnabled } from "@/lib/mock/recipes";
+import {
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
+  formatBootstrapErrorMessage,
+  type UserBootstrapDbClient,
+} from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { MealStatus, PlannerColumnData, PlannerData, PlannerMealData } from "@/types/planner";
 
@@ -184,7 +190,20 @@ export async function GET(request: NextRequest) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as PlannerDbClient;
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    PlannerDbClient & UserBootstrapDbClient;
+
+  try {
+    await ensurePublicUserRow(dbClient, user);
+    await ensureUserBootstrapState(dbClient, user.id);
+  } catch (bootstrapError) {
+    return fail(
+      "INTERNAL_ERROR",
+      formatBootstrapErrorMessage(bootstrapError, "플래너를 불러오지 못했어요."),
+      500,
+    );
+  }
+
   const columnsResult = await dbClient
     .from("meal_plan_columns")
     .select("id, name, sort_order")

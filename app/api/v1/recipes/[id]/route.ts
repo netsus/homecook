@@ -11,6 +11,7 @@ import {
   normalizeRecipeIngredients,
   normalizeRecipeSteps,
 } from "@/lib/recipe-detail";
+import { formatBootstrapErrorMessage } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { RecipeDetail, RecipeUserStatus } from "@/types/recipe";
 
@@ -31,10 +32,6 @@ export async function GET(request: Request, context: RouteContext) {
         ? getQaFixtureRecipeDetail()
         : MOCK_RECIPE_DETAIL,
     );
-  }
-
-  if (id === MOCK_RECIPE_ID) {
-    return ok(MOCK_RECIPE_DETAIL);
   }
 
   try {
@@ -94,14 +91,15 @@ export async function GET(request: Request, context: RouteContext) {
     let userStatus: RecipeUserStatus | null = null;
 
     if (user) {
+      const userStatusClient = serviceClient ?? routeClient;
       const [likedResult, savedResult] = await Promise.all([
-        routeClient
+        userStatusClient
           .from("recipe_likes")
           .select("id")
           .eq("recipe_id", id)
           .eq("user_id", user.id)
           .limit(1),
-        routeClient
+        userStatusClient
           .from("recipe_book_items")
           .select("book_id, recipe_books!inner(book_type, user_id)")
           .eq("recipe_id", id)
@@ -149,7 +147,11 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     return ok(detail);
-  } catch {
-    return ok(MOCK_RECIPE_DETAIL);
+  } catch (error) {
+    return fail(
+      "INTERNAL_ERROR",
+      formatBootstrapErrorMessage(error, "레시피 상세를 불러오지 못했어요."),
+      500,
+    );
   }
 }

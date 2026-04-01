@@ -1,10 +1,17 @@
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
+import { readQaFixtureFaultsHeader } from "@/lib/mock/qa-fixture-overrides";
 import {
   createQaFixtureRecipeBook,
   getQaFixtureRecipeBooks,
   isQaFixtureModeEnabled,
 } from "@/lib/mock/recipes";
+import {
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
+  formatBootstrapErrorMessage,
+  type UserBootstrapDbClient,
+} from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type {
   RecipeBookCreateBody,
@@ -150,9 +157,14 @@ function toRecipeBookListData(
 export async function GET(request: Request) {
   if (isQaFixtureModeEnabled()) {
     const authOverride = readE2EAuthOverrideHeader(request.headers);
+    const faultOverrides = readQaFixtureFaultsHeader(request.headers);
 
     if (authOverride !== "authenticated") {
       return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    if (faultOverrides?.recipe_books_list === "internal_error") {
+      return fail("INTERNAL_ERROR", "레시피북 목록을 불러오지 못했어요.", 500);
     }
 
     return ok(getQaFixtureRecipeBooks());
@@ -166,7 +178,20 @@ export async function GET(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as RecipeBookDbClient;
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    RecipeBookDbClient & UserBootstrapDbClient;
+
+  try {
+    await ensurePublicUserRow(dbClient, user);
+    await ensureUserBootstrapState(dbClient, user.id);
+  } catch (bootstrapError) {
+    return fail(
+      "INTERNAL_ERROR",
+      formatBootstrapErrorMessage(bootstrapError, "레시피북 목록을 불러오지 못했어요."),
+      500,
+    );
+  }
+
   const booksQuery = dbClient
     .from("recipe_books")
     .select("id, name, book_type, sort_order") as RecipeBooksSelectQuery;
@@ -242,9 +267,14 @@ export async function POST(request: Request) {
 
   if (isQaFixtureModeEnabled()) {
     const authOverride = readE2EAuthOverrideHeader(request.headers);
+    const faultOverrides = readQaFixtureFaultsHeader(request.headers);
 
     if (authOverride !== "authenticated") {
       return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    if (faultOverrides?.recipe_books_create === "internal_error") {
+      return fail("INTERNAL_ERROR", "레시피북을 만들지 못했어요.", 500);
     }
 
     return ok(createQaFixtureRecipeBook(normalizedName), { status: 201 });
@@ -258,7 +288,20 @@ export async function POST(request: Request) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as RecipeBookDbClient;
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    RecipeBookDbClient & UserBootstrapDbClient;
+
+  try {
+    await ensurePublicUserRow(dbClient, user);
+    await ensureUserBootstrapState(dbClient, user.id);
+  } catch (bootstrapError) {
+    return fail(
+      "INTERNAL_ERROR",
+      formatBootstrapErrorMessage(bootstrapError, "레시피북을 만들지 못했어요."),
+      500,
+    );
+  }
+
   const latestSortQuery = dbClient
     .from("recipe_books")
     .select("sort_order") as RecipeBookSortOrderSelectQuery;

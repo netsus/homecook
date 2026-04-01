@@ -3,10 +3,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const ensurePublicUserRow = vi.fn();
+const ensureUserBootstrapState = vi.fn();
+const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
+  if (error instanceof Error) {
+    return `formatted: ${error.message}`;
+  }
+
+  return fallbackMessage;
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+}));
+
+vi.mock("@/lib/server/user-bootstrap", () => ({
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
+  formatBootstrapErrorMessage,
 }));
 
 interface QueryResult<T> {
@@ -45,7 +60,12 @@ describe("recipe API contracts", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    ensurePublicUserRow.mockReset();
+    ensureUserBootstrapState.mockReset();
+    formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
+    ensurePublicUserRow.mockResolvedValue({});
+    ensureUserBootstrapState.mockResolvedValue(undefined);
     delete process.env.HOMECOOK_ENABLE_DISCOVERY_FILTER_MOCK;
   });
 
@@ -507,6 +527,56 @@ describe("recipe API contracts", () => {
       error: {
         code: "RESOURCE_NOT_FOUND",
         fields: [],
+      },
+    });
+  });
+
+  it("does not serve the QA mock recipe from the real DB route when fixture mode is off", async () => {
+    const recipeQuery = createQuery({
+      data: null,
+      error: null,
+    });
+    const sourceQuery = createQuery({
+      data: null,
+      error: null,
+    });
+    const ingredientsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+    const stepsQuery = createQuery({
+      data: [],
+      error: null,
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: null },
+        })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipeQuery;
+        if (table === "recipe_sources") return sourceQuery;
+        if (table === "recipe_ingredients") return ingredientsQuery;
+        if (table === "recipe_steps") return stepsQuery;
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/[id]/route");
+    const response = await GET(new Request("http://localhost:3000/api/v1/recipes/mock-kimchi-jjigae"), {
+      params: Promise.resolve({ id: "mock-kimchi-jjigae" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "RESOURCE_NOT_FOUND",
       },
     });
   });

@@ -2,6 +2,6 @@
 -- Local DB smoke data for slices 01-05 is seeded with:
 --   pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>
 --
--- This repo does not yet carry the full schema migration history required for a
--- deterministic `supabase db reset` bootstrap, so slice smoke data lives in the
--- service-role seeder script instead of this static SQL file.
+-- The repo now carries the baseline schema required for slices 01-05, but the
+-- richer smoke dataset still lives in the service-role seeder script so a
+-- tester can target a specific authenticated user account on demand.

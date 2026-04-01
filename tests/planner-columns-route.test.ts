@@ -2,10 +2,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const ensurePublicUserRow = vi.fn();
+const ensureUserBootstrapState = vi.fn();
+const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
+  if (error instanceof Error) {
+    return `formatted: ${error.message}`;
+  }
+
+  return fallbackMessage;
+});
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+}));
+
+vi.mock("@/lib/server/user-bootstrap", () => ({
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
+  formatBootstrapErrorMessage,
 }));
 
 interface QueryError {
@@ -131,7 +146,12 @@ describe("planner column routes", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    ensurePublicUserRow.mockReset();
+    ensureUserBootstrapState.mockReset();
+    formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
+    ensurePublicUserRow.mockResolvedValue({});
+    ensureUserBootstrapState.mockResolvedValue(undefined);
   });
 
   it("POST /api/v1/planner/columns returns 401 when user is not authenticated", async () => {
@@ -288,11 +308,46 @@ describe("planner column routes", () => {
       },
       error: null,
     });
+    expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: "user-1" });
+    expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
     expect(columnsTable.insert).toHaveBeenCalledWith({
       user_id: "user-1",
       name: "간식",
       sort_order: 3,
     });
+  });
+
+  it("POST /api/v1/planner/columns returns schema guidance when bootstrap fails", async () => {
+    ensurePublicUserRow.mockRejectedValue(
+      new Error("Could not find the table 'public.meal_plan_columns' in the schema cache"),
+    );
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn(),
+    });
+
+    const { POST } = await importColumnsRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/planner/columns", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ name: "간식" }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      success: false,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "formatted: Could not find the table 'public.meal_plan_columns' in the schema cache",
+      },
+    });
+    expect(formatBootstrapErrorMessage).toHaveBeenCalled();
   });
 
   it("POST /api/v1/planner/columns returns 409 when insert hits duplicate key", async () => {
