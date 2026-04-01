@@ -1429,6 +1429,392 @@ describe("OMO autonomous supervisor", () => {
     ]);
   });
 
+  it("tick resumes human_review waits and promotes approved PRs to human_verification", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        active_stage: 3,
+        current_stage: 3,
+        last_completed_stage: 2,
+        workspace: {
+          path: workspacePath,
+          branch_role: "backend",
+        },
+        prs: {
+          docs: null,
+          backend: {
+            number: 35,
+            url: "https://github.com/netsus/homecook/pull/35",
+            draft: false,
+            branch: "feature/be-03-recipe-like",
+            head_sha: "be123",
+          },
+          frontend: null,
+        },
+        wait: {
+          kind: "human_review",
+          stage: 3,
+          pr_role: "backend",
+          head_sha: "be123",
+          reason: "formal_github_review_required",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-03-27T01:00:00.000Z",
+      },
+      {
+        supervise(args: { rootDir: string; workItemId: string; now?: string }) {
+          return superviseWorkItem(args, {
+            auth: {
+              assertGhAuth() {},
+              assertOpencodeAuth() {},
+            },
+            worktree: {
+              ensureWorktree() {
+                mkdirSync(workspacePath, { recursive: true });
+                return { path: workspacePath, created: false };
+              },
+              assertClean() {},
+              checkoutBranch() {
+                return { branch: "feature/be-03-recipe-like" };
+              },
+              pushBranch() {},
+              syncBaseBranch() {},
+              getHeadSha() {
+                return "be123";
+              },
+            },
+            stageRunner() {
+              throw new Error("not expected");
+            },
+            github: {
+              createPullRequest() {
+                throw new Error("not expected");
+              },
+              getRequiredChecks() {
+                return { bucket: "pass", checks: [] };
+              },
+              markReady() {},
+              reviewPullRequest() {
+                throw new Error("not expected");
+              },
+              commentPullRequest() {
+                throw new Error("not expected");
+              },
+              mergePullRequest() {
+                throw new Error("not expected");
+              },
+              getPullRequestSummary() {
+                return {
+                  state: "OPEN",
+                  mergedAt: null,
+                  mergeStateStatus: "CLEAN",
+                  reviewDecision: "APPROVED",
+                };
+              },
+              updateBranch() {},
+            },
+          });
+        },
+      },
+    );
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        wait: expect.objectContaining({
+          kind: "human_verification",
+          stage: 3,
+          pr_role: "backend",
+        }),
+      }),
+    ]);
+    expect(
+      readRuntimeState({
+        rootDir,
+        workItemId: "03-recipe-like",
+        slice: "03-recipe-like",
+      }).state.wait,
+    ).toMatchObject({
+      kind: "human_verification",
+      stage: 3,
+      pr_role: "backend",
+    });
+  });
+
+  it("tick keeps human_review waits active until a formal approval exists", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        active_stage: 3,
+        current_stage: 3,
+        last_completed_stage: 2,
+        workspace: {
+          path: workspacePath,
+          branch_role: "backend",
+        },
+        prs: {
+          docs: null,
+          backend: {
+            number: 35,
+            url: "https://github.com/netsus/homecook/pull/35",
+            draft: false,
+            branch: "feature/be-03-recipe-like",
+            head_sha: "be123",
+          },
+          frontend: null,
+        },
+        wait: {
+          kind: "human_review",
+          stage: 3,
+          pr_role: "backend",
+          head_sha: "be123",
+          reason: "formal_github_review_required",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-03-27T01:05:00.000Z",
+      },
+      {
+        supervise(args: { rootDir: string; workItemId: string; now?: string }) {
+          return superviseWorkItem(args, {
+            auth: {
+              assertGhAuth() {},
+              assertOpencodeAuth() {},
+            },
+            worktree: {
+              ensureWorktree() {
+                mkdirSync(workspacePath, { recursive: true });
+                return { path: workspacePath, created: false };
+              },
+              assertClean() {},
+              checkoutBranch() {
+                return { branch: "feature/be-03-recipe-like" };
+              },
+              pushBranch() {},
+              syncBaseBranch() {},
+              getHeadSha() {
+                return "be123";
+              },
+            },
+            stageRunner() {
+              throw new Error("not expected");
+            },
+            github: {
+              createPullRequest() {
+                throw new Error("not expected");
+              },
+              getRequiredChecks() {
+                return { bucket: "pass", checks: [] };
+              },
+              markReady() {},
+              reviewPullRequest() {
+                throw new Error("not expected");
+              },
+              commentPullRequest() {
+                throw new Error("not expected");
+              },
+              mergePullRequest() {
+                throw new Error("not expected");
+              },
+              getPullRequestSummary() {
+                return {
+                  state: "OPEN",
+                  mergedAt: null,
+                  mergeStateStatus: "CLEAN",
+                  reviewDecision: "REVIEW_REQUIRED",
+                };
+              },
+              updateBranch() {},
+            },
+          });
+        },
+      },
+    );
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        wait: expect.objectContaining({
+          kind: "human_review",
+          stage: 3,
+          pr_role: "backend",
+        }),
+      }),
+    ]);
+    expect(
+      readRuntimeState({
+        rootDir,
+        workItemId: "03-recipe-like",
+        slice: "03-recipe-like",
+      }).state.wait,
+    ).toMatchObject({
+      kind: "human_review",
+      stage: 3,
+      pr_role: "backend",
+    });
+  });
+
+  it("tick resumes human_verification waits and finalizes merged Stage 6 reviews", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        active_stage: 6,
+        current_stage: 6,
+        last_completed_stage: 5,
+        workspace: {
+          path: workspacePath,
+          branch_role: "frontend",
+        },
+        prs: {
+          docs: null,
+          backend: {
+            number: 35,
+            url: "https://github.com/netsus/homecook/pull/35",
+            draft: false,
+            branch: "feature/be-03-recipe-like",
+            head_sha: "be123",
+          },
+          frontend: {
+            number: 64,
+            url: "https://github.com/netsus/homecook/pull/64",
+            draft: false,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: "fe123",
+          },
+        },
+        wait: {
+          kind: "human_verification",
+          stage: 6,
+          pr_role: "frontend",
+          head_sha: "fe123",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-03-27T01:10:00.000Z",
+      },
+      {
+        supervise(args: { rootDir: string; workItemId: string; now?: string }) {
+          return superviseWorkItem(args, {
+            auth: {
+              assertGhAuth() {},
+              assertOpencodeAuth() {},
+            },
+            worktree: {
+              ensureWorktree() {
+                mkdirSync(workspacePath, { recursive: true });
+                return { path: workspacePath, created: false };
+              },
+              assertClean() {},
+              checkoutBranch() {
+                return { branch: "feature/fe-03-recipe-like" };
+              },
+              pushBranch() {},
+              syncBaseBranch() {},
+              getHeadSha() {
+                return "fe123";
+              },
+            },
+            stageRunner() {
+              throw new Error("not expected");
+            },
+            github: {
+              createPullRequest() {
+                throw new Error("not expected");
+              },
+              getRequiredChecks() {
+                return { bucket: "pass", checks: [] };
+              },
+              markReady() {},
+              reviewPullRequest() {
+                throw new Error("not expected");
+              },
+              commentPullRequest() {
+                throw new Error("not expected");
+              },
+              mergePullRequest() {
+                throw new Error("not expected");
+              },
+              getPullRequestSummary() {
+                return {
+                  state: "MERGED",
+                  mergedAt: "2026-03-27T01:09:30.000Z",
+                  mergeStateStatus: "UNKNOWN",
+                  reviewDecision: "APPROVED",
+                };
+              },
+              updateBranch() {},
+            },
+          });
+        },
+      },
+    );
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        wait: null,
+        runtime: expect.objectContaining({
+          last_completed_stage: 6,
+          phase: "done",
+          wait: null,
+        }),
+      }),
+    ]);
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      slice: "03-recipe-like",
+    }).state as {
+      last_completed_stage: number;
+      wait: null;
+    };
+    expect(runtime.last_completed_stage).toBe(6);
+    expect(runtime.wait).toBeNull();
+  });
+
   it("records blocked_retry when Stage 1 schedules a Claude retry", () => {
     const rootDir = createFixture();
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
