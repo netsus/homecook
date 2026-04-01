@@ -3,6 +3,7 @@
 import React from "react";
 import { useState, useTransition } from "react";
 
+import { LocalDevLoginPanel } from "@/components/auth/local-dev-login-panel";
 import {
   AUTH_PROVIDER_META,
   getEnabledAuthProviders,
@@ -98,12 +99,19 @@ export function SocialLoginButtons({
           </button>
         );
       })}
-      <p className="text-xs leading-5 text-[var(--muted)]">
-        현재 테스트 가능한 로그인:{" "}
-        {providers
-          .map((provider) => AUTH_PROVIDER_META[provider].label)
-          .join(", ")}
-      </p>
+      {providers.length > 0 ? (
+        <p className="text-xs leading-5 text-[var(--muted)]">
+          현재 테스트 가능한 로그인:{" "}
+          {providers
+            .map((provider) => AUTH_PROVIDER_META[provider].label)
+            .join(", ")}
+        </p>
+      ) : null}
+      <LocalDevLoginPanel
+        nextPath={nextPath}
+        onStarted={onStarted}
+        pendingAction={pendingAction}
+      />
       {errorMessage ? (
         <p className="rounded-[12px] border border-[color:rgba(255,108,60,0.2)] bg-[color:rgba(255,108,60,0.08)] px-4 py-3 text-sm text-[var(--brand-deep)]">
           {errorMessage}

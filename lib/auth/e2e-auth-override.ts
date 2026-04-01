@@ -1,3 +1,5 @@
+import { isQaFixtureClientModeEnabled } from "@/lib/mock/qa-fixture-client";
+
 export const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 export const E2E_AUTH_OVERRIDE_HEADER = "x-homecook-e2e-auth";
 
@@ -14,7 +16,7 @@ function normalizeE2EAuthOverride(
 }
 
 export function readE2EAuthOverrideState() {
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || !isQaFixtureClientModeEnabled()) {
     return null;
   }
 
@@ -40,6 +42,10 @@ export function readE2EAuthOverrideHeader(headers: Headers) {
 }
 
 export function withE2EAuthOverrideHeaders(init?: RequestInit): RequestInit {
+  if (!isQaFixtureClientModeEnabled()) {
+    return init ?? {};
+  }
+
   const override = readE2EAuthOverrideState();
 
   if (!override) {

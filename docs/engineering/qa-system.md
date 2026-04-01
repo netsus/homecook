@@ -42,6 +42,8 @@
 - 백엔드 구현 PR 전: `pnpm verify:backend`
 - 프론트엔드 구현 PR 전: `pnpm verify:frontend`
 - 전체 수동 점검 한 번에: `pnpm verify`
+- real local Supabase + local auth 브라우저 검증: `pnpm dev:local-supabase`
+- fixture 기반 브라우저 QA 시작: `pnpm dev:qa-fixtures`
 
 CI 실행:
 
@@ -73,6 +75,11 @@ CI 실행:
 3. `exploratory-report.json` 작성
 4. `pnpm qa:eval -- --checklist <.../exploratory-checklist.json> --report <.../exploratory-report.json>` 실행
 5. 기본값으로 같은 폴더의 `eval-result.json`에 단건 결과 저장
+
+운영 메모:
+
+- 단건 `qa:eval --checklist --report`는 report completeness만 보는 것이 아니라 실제 `covered`된 checklist 비중을 점수에 반영한다.
+- `blocked`는 evidence가 남아 있더라도 실행 완료로 계산하지 않는다. blocked가 많으면 fixture/fault injection/checklist 설계를 먼저 보강한다.
 
 기본 타이밍:
 

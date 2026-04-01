@@ -43,7 +43,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "corepack pnpm exec next dev --hostname 127.0.0.1 --port 3000",
+    command:
+      "HOMECOOK_ENABLE_QA_FIXTURES=1 NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES=1 corepack pnpm exec next dev --hostname 127.0.0.1 --port 3000",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

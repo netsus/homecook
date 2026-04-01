@@ -60,7 +60,7 @@ const validationErrors = validateExploratoryReport(report, checklist);
 const score = scoreExploratoryReport(report, checklist);
 const result = {
   schemaVersion: "1.0",
-  mode: "completeness-only",
+  mode: "coverage-sensitive",
   generatedAt: new Date().toISOString(),
   checklistPath,
   reportPath,

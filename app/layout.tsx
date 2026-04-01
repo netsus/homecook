@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { QaFixtureToolbar } from "@/components/layout/qa-fixture-toolbar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>
+        {children}
+        <QaFixtureToolbar />
+      </body>
     </html>
   );
 }

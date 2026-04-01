@@ -528,9 +528,9 @@ export function RecipeDetailScreen({
     <>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_360px]">
         <section className="space-y-6">
-          <div className="glass-panel overflow-hidden rounded-[20px]">
+          <div className="glass-panel flex flex-col overflow-hidden rounded-[20px]">
             <div
-              className="min-h-72 border-b border-[var(--line)] bg-[linear-gradient(135deg,rgba(255,108,60,0.22),rgba(255,249,242,0.78),rgba(46,166,122,0.18))]"
+              className="order-2 min-h-40 border-t border-[var(--line)] bg-[linear-gradient(135deg,rgba(255,108,60,0.22),rgba(255,249,242,0.78),rgba(46,166,122,0.18))] sm:order-1 sm:min-h-56 sm:border-t-0 sm:border-b md:min-h-72"
               style={
                 recipe.thumbnail_url
                   ? {
@@ -541,7 +541,7 @@ export function RecipeDetailScreen({
                   : undefined
               }
             />
-            <div className="space-y-5 px-5 py-5 md:px-6">
+            <div className="order-1 space-y-4 px-5 py-5 sm:order-2 sm:space-y-5 md:px-6">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
                 <Link href="/">Home</Link>
                 <span>/</span>
@@ -815,9 +815,9 @@ function RecipeDetailLoadingSkeleton() {
       className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_360px]"
     >
       <section className="space-y-6">
-          <div className="glass-panel overflow-hidden rounded-[20px]">
-          <div className="min-h-72 animate-pulse border-b border-[var(--line)] bg-white/60" />
-          <div className="space-y-5 px-5 py-5 md:px-6">
+          <div className="glass-panel flex flex-col overflow-hidden rounded-[20px]">
+          <div className="order-2 min-h-40 animate-pulse border-t border-[var(--line)] bg-white/60 sm:order-1 sm:min-h-56 sm:border-t-0 sm:border-b md:min-h-72" />
+          <div className="order-1 space-y-4 px-5 py-5 sm:order-2 sm:space-y-5 md:px-6">
             <div className="h-4 w-28 animate-pulse rounded-full bg-white/70" />
             <div className="space-y-3">
               <div className="h-10 w-3/4 animate-pulse rounded-[16px] bg-white/70" />

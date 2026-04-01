@@ -199,6 +199,9 @@
   - auth override 필요: guest / authenticated
   - fixture baseline: 컬럼 `아침 / 점심 / 저녁 / 간식`, 식사 3건 (`registered / shopping_done / cook_done`)
 - 실 DB smoke:
+  - 브라우저에서 real local DB 흐름 확인: `pnpm dev:local-supabase`
+  - local-only 로그인 카드로 테스트 계정 진입 후 기본 `아침 / 점심 / 저녁` 컬럼 자동 보정을 확인
+  - local 테스트 계정 seed: `pnpm qa:seed:01-05 -- --user-email local-tester@homecook.local`
   - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
   - seed window는 실행 시점 기준 현재 기본 플래너 범위 안으로 생성된다
   - clean QA 계정을 쓰면 가장 결정적인 planner smoke를 얻을 수 있다

@@ -156,10 +156,20 @@
 ## QA / Test Data Plan
 
 - QA fixture mode:
-  - `HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`
-  - auth override 필요: guest / authenticated
+  - 권장 실행: `pnpm dev:qa-fixtures`
+  - QA toolbar에서 auth / fault / reset을 바로 조작할 수 있다
+  - console 수동 override도 가능: guest / authenticated
   - fixture baseline: saved/custom book 2개 제공, target recipe는 현재 사용자 기준 `unsaved`
+  - fault injection 필요 시:
+    - `localStorage["homecook.qa-fixture-faults"] = JSON.stringify({ "recipe_books_list": "internal_error" })`
+    - `localStorage["homecook.qa-fixture-faults"] = JSON.stringify({ "recipe_books_create": "internal_error" })`
+    - `localStorage["homecook.qa-fixture-faults"] = JSON.stringify({ "recipe_save": "missing_recipe" | "missing_book" | "forbidden_book" | "invalid_book_type" | "duplicate_save" | "internal_error" })`
+    - 해제: `localStorage.removeItem("homecook.qa-fixture-faults")`
+  - 일반 `pnpm dev`에서는 QA localStorage override를 읽지 않는다
 - 실 DB smoke:
+  - 브라우저에서 real local DB 흐름 확인: `pnpm dev:local-supabase`
+  - local-only 로그인 카드로 테스트 계정 진입 후 기본 `saved` 책이 자동 보정되는지 확인
+  - local 테스트 계정 seed: `pnpm qa:seed:01-05 -- --user-email local-tester@homecook.local`
   - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
   - baseline: 현재 사용자는 target recipe 미저장, 다른 QA 유저 저장 1건으로 `save_count > 0`
 
