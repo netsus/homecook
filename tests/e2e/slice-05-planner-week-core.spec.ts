@@ -215,8 +215,9 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByText("김치찌개")).toBeVisible();
     await expect(page.getByRole("button", { name: "장보기" })).toBeDisabled();
 
-    await page.getByPlaceholder("새 끼니 컬럼 이름").fill("간식");
-    await page.getByRole("button", { name: "컬럼 추가" }).click();
+    const addColumnInput = page.getByPlaceholder("새 끼니 컬럼 이름");
+    await addColumnInput.fill("간식");
+    await addColumnInput.press("Enter");
 
     await expect(page.locator('input[value="간식"]').first()).toBeVisible();
 

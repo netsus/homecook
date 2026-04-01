@@ -131,6 +131,16 @@ POST /recipes/{recipe_id}/like
 - `docs/db설계-v1.3.md` — §11-1 recipe_likes, §4-1 recipes(like_count)
 - `docs/design/design-tokens.md` — `--brand` 활성 하트, `--muted` 비활성 하트
 
+## QA / Test Data Plan
+
+- QA fixture mode:
+  - `HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`
+  - auth override 필요: guest / authenticated
+  - fixture 경로: `/recipe/mock-kimchi-jjigae`
+- 실 DB smoke:
+  - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
+  - baseline: 현재 사용자는 target recipe 미좋아요, 다른 QA 유저 1건 like로 `like_count > 0`
+
 ## Key Rules
 
 - `POST /like`는 **토글**이다. 좋아요 상태이면 해제, 아니면 등록한다.

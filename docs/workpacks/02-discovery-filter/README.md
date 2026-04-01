@@ -167,6 +167,15 @@ GET /api/v1/recipes
 - `docs/db설계-v1.3.md` — §2 재료 마스터 (`ingredients`, `ingredient_synonyms`)
 - `docs/design/design-tokens.md` — `--olive` 필터 칩, `--brand` 활성 버튼 색상
 
+## QA / Test Data Plan
+
+- QA fixture mode:
+  - `HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`
+  - 제공 데이터: `양파 / 대파 / 소고기`, 동의어 `파 -> 대파`, AND 필터 대상 레시피 1건
+- 실 DB smoke:
+  - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
+  - seed 테이블: `ingredients`, `ingredient_synonyms`, `recipes`, `recipe_ingredients`
+
 ## Key Rules
 
 - `ingredient_ids` 필터는 **AND 조건**이다. 선택 재료가 모두 포함된 레시피만 반환한다.

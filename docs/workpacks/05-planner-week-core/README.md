@@ -192,6 +192,17 @@
 - `docs/유저flow맵-v1.2.md` — ③ 식단 계획 여정
 - `docs/design/design-tokens.md` — 확정 디자인 토큰 (색상·간격·컴포넌트 규칙)
 
+## QA / Test Data Plan
+
+- QA fixture mode:
+  - `HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`
+  - auth override 필요: guest / authenticated
+  - fixture baseline: 컬럼 `아침 / 점심 / 저녁 / 간식`, 식사 3건 (`registered / shopping_done / cook_done`)
+- 실 DB smoke:
+  - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
+  - seed window는 실행 시점 기준 현재 기본 플래너 범위 안으로 생성된다
+  - clean QA 계정을 쓰면 가장 결정적인 planner smoke를 얻을 수 있다
+
 ## Key Rules
 
 ### 플래너 조회 규칙

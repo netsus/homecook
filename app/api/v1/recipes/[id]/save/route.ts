@@ -1,4 +1,10 @@
+import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
+import {
+  isQaFixtureModeEnabled,
+  MOCK_RECIPE_ID,
+  saveQaFixtureRecipeToBook,
+} from "@/lib/mock/recipes";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { RecipeBookType, RecipeSaveBody, RecipeSaveData, SaveableRecipeBookType } from "@/types/recipe";
 
@@ -139,17 +145,27 @@ async function rollbackSavedRecipeItem(
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const routeClient = await createRouteHandlerClient();
-  const authResult = await routeClient.auth.getUser();
-  const user = authResult.data.user;
+  if (isQaFixtureModeEnabled()) {
+    const authOverride = readE2EAuthOverrideHeader(request.headers);
 
-  if (!user) {
-    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    if (authOverride !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+  }
+
+  if (!isQaFixtureModeEnabled()) {
+    const routeClient = await createRouteHandlerClient();
+    const authResult = await routeClient.auth.getUser();
+    const user = authResult.data.user;
+
+    if (!user) {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
   }
 
   const { id } = await context.params;
 
-  if (!isUuid(id)) {
+  if (!isQaFixtureModeEnabled() && !isUuid(id)) {
     return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
   }
 
@@ -165,6 +181,28 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (!bookId) {
     return fail("RESOURCE_NOT_FOUND", "레시피북을 찾을 수 없어요.", 404);
+  }
+
+  if (isQaFixtureModeEnabled()) {
+    if (id !== MOCK_RECIPE_ID) {
+      return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
+    }
+
+    const saveResult = saveQaFixtureRecipeToBook(bookId);
+
+    if (!saveResult.ok) {
+      return fail(saveResult.code, saveResult.message, saveResult.status);
+    }
+
+    return ok(saveResult.data);
+  }
+
+  const routeClient = await createRouteHandlerClient();
+  const authResult = await routeClient.auth.getUser();
+  const user = authResult.data.user;
+
+  if (!user) {
+    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as RecipeSaveDbClient;

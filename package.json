@@ -38,6 +38,8 @@
     "qa:explore": "node scripts/qa-explore.mjs",
     "qa:eval": "node scripts/qa-eval.mjs",
     "qa:eval:suite": "node scripts/qa-eval-suite.mjs",
+    "qa:seed:01-05": "node scripts/qa-seed-slices-01-05.mjs",
+    "dev:qa-fixtures": "HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev",
     "validate:branch": "node scripts/check-branch-name.mjs",
     "validate:commits": "node scripts/check-commit-messages.mjs",
     "validate:pr": "node scripts/check-pr-body.mjs",

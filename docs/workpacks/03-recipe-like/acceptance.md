@@ -36,6 +36,16 @@
 - [ ] invalid `recipe_id`(uuid 형식 아님 또는 존재하지 않음)를 적절히 거부한다 (404)
 - [ ] `like_count` 비정규화 값이 실제 `recipe_likes COUNT(*)` 와 일치한다 (P1-3 규칙)
 
+## Data Setup / Preconditions
+
+- QA fixture:
+  - `HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`
+  - `localStorage["homecook.e2e-auth-override"] = "guest" | "authenticated"`
+  - fixture 경로: `/recipe/mock-kimchi-jjigae`
+- 실 DB smoke:
+  - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
+  - DB smoke 경로: `/recipe/550e8400-e29b-41d4-a716-446655440022`
+
 ## Manual QA
 
 1. 로그인 상태에서 좋아요 버튼 탭 → 버튼 활성 전환 + like_count +1 확인
@@ -65,6 +75,6 @@
 
 ### Manual Only
 
-- [ ] 실제 Supabase 환경에서 `recipe_likes` 행과 `recipes.like_count` 동기화 smoke (product schema 필요)
+- [ ] 실제 Supabase 환경에서 `recipe_likes` 행과 `recipes.like_count` 동기화 smoke (`pnpm qa:seed:01-05` 후)
 - [ ] 소셜 로그인 전체 OAuth 흐름 + return-to-action 복귀 smoke (`pnpm test:e2e:oauth` 별도 실행)
 - [ ] 네트워크 지연/오프라인 조건에서 토스트 + 버튼 원복 수동 확인

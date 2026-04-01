@@ -153,6 +153,16 @@
 - `docs/api문서-v1.2.1.md` — 2-3 레시피 저장, 12-2 레시피북 목록 조회, 12-3 레시피북 생성
 - `docs/db설계-v1.3.md` — 10-1 recipe_books, 10-2 recipe_book_items
 
+## QA / Test Data Plan
+
+- QA fixture mode:
+  - `HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`
+  - auth override 필요: guest / authenticated
+  - fixture baseline: saved/custom book 2개 제공, target recipe는 현재 사용자 기준 `unsaved`
+- 실 DB smoke:
+  - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
+  - baseline: 현재 사용자는 target recipe 미저장, 다른 QA 유저 저장 1건으로 `save_count > 0`
+
 ## Key Rules
 - **저장 가능 book_type 제한**: `saved` 또는 `custom`만 허용. `my_added`, `liked`로 저장 시도 시 `409 CONFLICT`
 - **중복 저장 방지**: 동일 레시피를 동일 레시피북에 재저장 시 `409 CONFLICT`

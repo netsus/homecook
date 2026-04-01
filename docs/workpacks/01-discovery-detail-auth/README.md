@@ -143,6 +143,19 @@
 - `docs/design/design-tokens.md`
 - `docs/reference/wireframes/jibhap-wireframe-session3.md`
 
+## QA / Test Data Plan
+
+- QA fixture mode:
+  - `HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`
+  - fixture source: `qa/fixtures/slices-01-05.json`
+  - 확인 경로: `/`, `/recipe/mock-kimchi-jjigae`
+- 실 DB smoke:
+  - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
+  - 확인 경로: `/recipe/550e8400-e29b-41d4-a716-446655440022`
+- auth override:
+  - `localStorage["homecook.e2e-auth-override"] = "guest" | "authenticated"`
+  - fixture mode에서 로그인 게이트와 로그인 필수 write 흐름을 QA용으로 재현한다
+
 ## Key Rules
 
 - `HOME`은 제목 검색(`q`)과 정렬(`sort`)을 지원한다. 재료 필터(`ingredient_ids`)는 Slice 02.

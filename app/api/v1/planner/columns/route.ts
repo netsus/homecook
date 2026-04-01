@@ -1,4 +1,6 @@
+import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
+import { createQaFixturePlannerColumn, isQaFixtureModeEnabled } from "@/lib/mock/recipes";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { PlannerColumnCreateBody, PlannerColumnData } from "@/types/planner";
 
@@ -81,12 +83,12 @@ function getNextSortOrder(rows: PlannerColumnSortRow[] | null) {
 }
 
 export async function POST(request: Request) {
-  const routeClient = await createRouteHandlerClient();
-  const authResult = await routeClient.auth.getUser();
-  const user = authResult.data.user;
+  if (isQaFixtureModeEnabled()) {
+    const authOverride = readE2EAuthOverrideHeader(request.headers);
 
-  if (!user) {
-    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    if (authOverride !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
   }
 
   let body: unknown;
@@ -117,6 +119,24 @@ export async function POST(request: Request) {
     return fail("VALIDATION_ERROR", "컬럼 이름은 30자를 넘길 수 없어요.", 422, [
       { field: "name", reason: "max_length" },
     ]);
+  }
+
+  if (isQaFixtureModeEnabled()) {
+    const createResult = createQaFixturePlannerColumn(normalizedName);
+
+    if (!createResult.ok) {
+      return fail(createResult.code, createResult.message, createResult.status);
+    }
+
+    return ok(createResult.data, { status: 201 });
+  }
+
+  const routeClient = await createRouteHandlerClient();
+  const authResult = await routeClient.auth.getUser();
+  const user = authResult.data.user;
+
+  if (!user) {
+    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as PlannerColumnsDbClient;
