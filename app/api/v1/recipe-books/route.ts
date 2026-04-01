@@ -1,4 +1,10 @@
+import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
+import {
+  createQaFixtureRecipeBook,
+  getQaFixtureRecipeBooks,
+  isQaFixtureModeEnabled,
+} from "@/lib/mock/recipes";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type {
   RecipeBookCreateBody,
@@ -141,8 +147,16 @@ function toRecipeBookListData(
   };
 }
 
-export async function GET(_request: Request) {
-  void _request;
+export async function GET(request: Request) {
+  if (isQaFixtureModeEnabled()) {
+    const authOverride = readE2EAuthOverrideHeader(request.headers);
+
+    if (authOverride !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    return ok(getQaFixtureRecipeBooks());
+  }
 
   const routeClient = await createRouteHandlerClient();
   const authResult = await routeClient.auth.getUser();
@@ -184,12 +198,22 @@ export async function GET(_request: Request) {
 }
 
 export async function POST(request: Request) {
-  const routeClient = await createRouteHandlerClient();
-  const authResult = await routeClient.auth.getUser();
-  const user = authResult.data.user;
+  if (isQaFixtureModeEnabled()) {
+    const authOverride = readE2EAuthOverrideHeader(request.headers);
 
-  if (!user) {
-    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    if (authOverride !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+  }
+
+  if (!isQaFixtureModeEnabled()) {
+    const routeClient = await createRouteHandlerClient();
+    const authResult = await routeClient.auth.getUser();
+    const user = authResult.data.user;
+
+    if (!user) {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
   }
 
   let body: RecipeBookCreateBody;
@@ -214,6 +238,24 @@ export async function POST(request: Request) {
     return fail("VALIDATION_ERROR", "레시피북 이름은 50자를 넘길 수 없어요.", 422, [
       { field: "name", reason: "max_length" },
     ]);
+  }
+
+  if (isQaFixtureModeEnabled()) {
+    const authOverride = readE2EAuthOverrideHeader(request.headers);
+
+    if (authOverride !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    return ok(createQaFixtureRecipeBook(normalizedName), { status: 201 });
+  }
+
+  const routeClient = await createRouteHandlerClient();
+  const authResult = await routeClient.auth.getUser();
+  const user = authResult.data.user;
+
+  if (!user) {
+    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as RecipeBookDbClient;

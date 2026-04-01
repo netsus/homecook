@@ -1,0 +1,263 @@
+{
+  "ids": {
+    "mockRecipeId": "mock-kimchi-jjigae",
+    "dbSmokeRecipeId": "550e8400-e29b-41d4-a716-446655440022",
+    "mainFixtureUserId": "550e8400-e29b-41d4-a716-446655440030",
+    "otherFixtureUserId": "550e8400-e29b-41d4-a716-446655440031",
+    "savedBookId": "550e8400-e29b-41d4-a716-446655440040",
+    "customBookId": "550e8400-e29b-41d4-a716-446655440041",
+    "otherCustomBookId": "550e8400-e29b-41d4-a716-446655440042",
+    "breakfastColumnId": "550e8400-e29b-41d4-a716-446655440050",
+    "lunchColumnId": "550e8400-e29b-41d4-a716-446655440051",
+    "dinnerColumnId": "550e8400-e29b-41d4-a716-446655440052",
+    "snackColumnId": "550e8400-e29b-41d4-a716-446655440053"
+  },
+  "fixture": {
+    "recipe": {
+      "cardViewCount": 1284,
+      "detailViewCount": 1285,
+      "likeCount": 203,
+      "saveCount": 89,
+      "planCount": 52,
+      "cookCount": 34
+    },
+    "books": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440040",
+        "name": "저장한 레시피",
+        "bookType": "saved",
+        "recipeCount": 8,
+        "sortOrder": 1
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440041",
+        "name": "주말 파티",
+        "bookType": "custom",
+        "recipeCount": 2,
+        "sortOrder": 2
+      }
+    ]
+  },
+  "ingredients": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440010",
+      "standardName": "양파",
+      "category": "채소",
+      "defaultUnit": "개"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440011",
+      "standardName": "대파",
+      "category": "채소",
+      "defaultUnit": "대"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440012",
+      "standardName": "소고기",
+      "category": "육류",
+      "defaultUnit": "g"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440013",
+      "standardName": "김치",
+      "category": "기타",
+      "defaultUnit": "g"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440014",
+      "standardName": "돼지고기",
+      "category": "육류",
+      "defaultUnit": "g"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440015",
+      "standardName": "소금",
+      "category": "양념",
+      "defaultUnit": null
+    }
+  ],
+  "ingredientSynonyms": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440110",
+      "ingredientId": "550e8400-e29b-41d4-a716-446655440011",
+      "synonym": "파"
+    }
+  ],
+  "cookingMethods": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440210",
+      "code": "stir_fry",
+      "label": "볶기",
+      "colorKey": "orange",
+      "isSystem": true,
+      "displayOrder": 1
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440211",
+      "code": "boil",
+      "label": "끓이기",
+      "colorKey": "red",
+      "isSystem": true,
+      "displayOrder": 2
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440212",
+      "code": "finish",
+      "label": "마무리",
+      "colorKey": "green",
+      "isSystem": false,
+      "displayOrder": 3
+    }
+  ],
+  "recipe": {
+    "title": "집밥 김치찌개",
+    "description": "신김치와 돼지고기만 있으면 금방 끓일 수 있는 가장 기본적인 집밥 김치찌개예요.",
+    "thumbnailUrl": "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=1200&q=80",
+    "tags": ["한식", "찌개", "저녁"],
+    "baseServings": 2,
+    "sourceType": "system",
+    "recipeCardIngredientIds": [
+      "550e8400-e29b-41d4-a716-446655440010",
+      "550e8400-e29b-41d4-a716-446655440011"
+    ],
+    "ingredients": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440310",
+        "ingredientId": "550e8400-e29b-41d4-a716-446655440013",
+        "standardName": "김치",
+        "amount": 200,
+        "unit": "g",
+        "ingredientType": "QUANT",
+        "displayText": "김치 200g",
+        "scalable": true,
+        "sortOrder": 1
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440311",
+        "ingredientId": "550e8400-e29b-41d4-a716-446655440014",
+        "standardName": "돼지고기",
+        "amount": 180,
+        "unit": "g",
+        "ingredientType": "QUANT",
+        "displayText": "돼지고기 180g",
+        "scalable": true,
+        "sortOrder": 2
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440312",
+        "ingredientId": "550e8400-e29b-41d4-a716-446655440010",
+        "standardName": "양파",
+        "amount": 0.5,
+        "unit": "개",
+        "ingredientType": "QUANT",
+        "displayText": "양파 1/2개",
+        "scalable": true,
+        "sortOrder": 3
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440313",
+        "ingredientId": "550e8400-e29b-41d4-a716-446655440011",
+        "standardName": "대파",
+        "amount": 0.5,
+        "unit": "대",
+        "ingredientType": "QUANT",
+        "displayText": "대파 1/2대",
+        "scalable": true,
+        "sortOrder": 4
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440314",
+        "ingredientId": "550e8400-e29b-41d4-a716-446655440015",
+        "standardName": "소금",
+        "amount": null,
+        "unit": null,
+        "ingredientType": "TO_TASTE",
+        "displayText": "소금 약간",
+        "scalable": false,
+        "sortOrder": 5
+      }
+    ],
+    "steps": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440320",
+        "stepNumber": 1,
+        "instruction": "냄비에 돼지고기와 김치를 먼저 볶아 향을 올립니다.",
+        "cookingMethodId": "550e8400-e29b-41d4-a716-446655440210",
+        "ingredientsUsed": [],
+        "heatLevel": "중",
+        "durationSeconds": 180,
+        "durationText": "3분"
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440321",
+        "stepNumber": 2,
+        "instruction": "물을 붓고 양파를 넣은 뒤 10분 정도 끓입니다.",
+        "cookingMethodId": "550e8400-e29b-41d4-a716-446655440211",
+        "ingredientsUsed": [],
+        "heatLevel": "중",
+        "durationSeconds": 600,
+        "durationText": "10분"
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440322",
+        "stepNumber": 3,
+        "instruction": "대파를 올리고 소금으로 간을 마무리합니다.",
+        "cookingMethodId": "550e8400-e29b-41d4-a716-446655440212",
+        "ingredientsUsed": [],
+        "heatLevel": null,
+        "durationSeconds": 60,
+        "durationText": "1분"
+      }
+    ]
+  },
+  "planner": {
+    "columns": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440050",
+        "name": "아침",
+        "sortOrder": 0
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440051",
+        "name": "점심",
+        "sortOrder": 1
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440052",
+        "name": "저녁",
+        "sortOrder": 2
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440053",
+        "name": "간식",
+        "sortOrder": 3
+      }
+    ],
+    "meals": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440060",
+        "columnId": "550e8400-e29b-41d4-a716-446655440050",
+        "plannedServings": 2,
+        "status": "registered",
+        "isLeftover": false,
+        "dateAnchor": "start"
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440061",
+        "columnId": "550e8400-e29b-41d4-a716-446655440051",
+        "plannedServings": 2,
+        "status": "shopping_done",
+        "isLeftover": false,
+        "dateAnchor": "mid"
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440062",
+        "columnId": "550e8400-e29b-41d4-a716-446655440052",
+        "plannedServings": 2,
+        "status": "cook_done",
+        "isLeftover": false,
+        "dateAnchor": "end"
+      }
+    ]
+  }
+}

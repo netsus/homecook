@@ -41,6 +41,16 @@
 - [x] 파생 필드와 비정규화 값이 맞다 — 해당 없음 (읽기 전용)
 - [x] `GET /auth/callback` next 파라미터 sanitization이 Vitest로 고정되어 있다
 
+## Data Setup / Preconditions
+
+- QA fixture:
+  - `HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`
+  - 기본 경로: `/`, `/recipe/mock-kimchi-jjigae`
+  - auth override: `localStorage["homecook.e2e-auth-override"]`
+- 실 DB smoke:
+  - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
+  - DB smoke 상세 경로: `/recipe/550e8400-e29b-41d4-a716-446655440022`
+
 ## Manual QA
 
 1. HOME에서 검색과 정렬을 바꿔본다.

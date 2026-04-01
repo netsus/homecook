@@ -1,4 +1,10 @@
+import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
+import {
+  deleteQaFixturePlannerColumn,
+  isQaFixtureModeEnabled,
+  updateQaFixturePlannerColumn,
+} from "@/lib/mock/recipes";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { PlannerColumnData, PlannerColumnUpdateBody } from "@/types/planner";
 
@@ -295,12 +301,12 @@ async function reorderColumns(
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const routeClient = await createRouteHandlerClient();
-  const authResult = await routeClient.auth.getUser();
-  const user = authResult.data.user;
+  if (isQaFixtureModeEnabled()) {
+    const authOverride = readE2EAuthOverrideHeader(request.headers);
 
-  if (!user) {
-    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    if (authOverride !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
   }
 
   const { column_id: columnId } = await context.params;
@@ -334,13 +340,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     ]);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as PlannerColumnDbClient;
-  const ownedColumnResult = await getOwnedColumn(dbClient, columnId, user.id);
-
-  if (!ownedColumnResult.ok) {
-    return ownedColumnResult.response;
-  }
-
   let normalizedName: string | undefined;
 
   if (hasName) {
@@ -359,6 +358,28 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
   }
 
+  let dbClient: PlannerColumnDbClient | null = null;
+  let userId = "";
+
+  if (!isQaFixtureModeEnabled()) {
+    const routeClient = await createRouteHandlerClient();
+    const authResult = await routeClient.auth.getUser();
+    const user = authResult.data.user;
+
+    if (!user) {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    dbClient = (createServiceRoleClient() ?? routeClient) as unknown as PlannerColumnDbClient;
+    userId = user.id;
+
+    const ownedColumnResult = await getOwnedColumn(dbClient, columnId, user.id);
+
+    if (!ownedColumnResult.ok) {
+      return ownedColumnResult.response;
+    }
+  }
+
   if (hasSortOrder) {
     const parsedSortOrder = parseSortOrder(body.sort_order);
 
@@ -368,9 +389,28 @@ export async function PATCH(request: Request, context: RouteContext) {
       ]);
     }
 
+    if (isQaFixtureModeEnabled()) {
+      const authOverride = readE2EAuthOverrideHeader(request.headers);
+
+      if (authOverride !== "authenticated") {
+        return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+      }
+
+      const updateResult = updateQaFixturePlannerColumn(columnId, {
+        name: normalizedName,
+        sort_order: parsedSortOrder,
+      });
+
+      if (!updateResult.ok) {
+        return fail(updateResult.code, updateResult.message, updateResult.status);
+      }
+
+      return ok(updateResult.data);
+    }
+
     const reorderResult = await reorderColumns(
-      dbClient,
-      user.id,
+      dbClient!,
+      userId,
       columnId,
       parsedSortOrder,
       normalizedName,
@@ -389,11 +429,29 @@ export async function PATCH(request: Request, context: RouteContext) {
     return ok(responseData);
   }
 
-  const updateResult = await dbClient
+  if (isQaFixtureModeEnabled()) {
+    const authOverride = readE2EAuthOverrideHeader(request.headers);
+
+    if (authOverride !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    const updateResult = updateQaFixturePlannerColumn(columnId, {
+      name: normalizedName,
+    });
+
+    if (!updateResult.ok) {
+      return fail(updateResult.code, updateResult.message, updateResult.status);
+    }
+
+    return ok(updateResult.data);
+  }
+
+  const updateResult = await dbClient!
     .from("meal_plan_columns")
     .update({ name: normalizedName })
     .eq("id", columnId)
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .select("id, name, sort_order")
     .maybeSingle();
 
@@ -410,8 +468,30 @@ export async function PATCH(request: Request, context: RouteContext) {
   return ok(responseData);
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
-  void _request;
+export async function DELETE(request: Request, context: RouteContext) {
+  if (isQaFixtureModeEnabled()) {
+    const authOverride = readE2EAuthOverrideHeader(request.headers);
+
+    if (authOverride !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+  }
+
+  const { column_id: columnId } = await context.params;
+
+  if (!isUuid(columnId)) {
+    return fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404);
+  }
+
+  if (isQaFixtureModeEnabled()) {
+    const deleteResult = deleteQaFixturePlannerColumn(columnId);
+
+    if (!deleteResult.ok) {
+      return fail(deleteResult.code, deleteResult.message, deleteResult.status);
+    }
+
+    return new Response(null, { status: 204 });
+  }
 
   const routeClient = await createRouteHandlerClient();
   const authResult = await routeClient.auth.getUser();
@@ -419,12 +499,6 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   if (!user) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
-  }
-
-  const { column_id: columnId } = await context.params;
-
-  if (!isUuid(columnId)) {
-    return fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404);
   }
 
   const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as PlannerColumnDbClient;

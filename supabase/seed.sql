@@ -1,2 +1,7 @@
 -- Seed data for local development
--- Add development seed data below this line
+-- Local DB smoke data for slices 01-05 is seeded with:
+--   pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>
+--
+-- This repo does not yet carry the full schema migration history required for a
+-- deterministic `supabase db reset` bootstrap, so slice smoke data lives in the
+-- service-role seeder script instead of this static SQL file.

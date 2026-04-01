@@ -1,5 +1,11 @@
+import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
-import { MOCK_RECIPE_DETAIL, MOCK_RECIPE_ID } from "@/lib/mock/recipes";
+import {
+  getQaFixtureRecipeDetail,
+  isQaFixtureModeEnabled,
+  MOCK_RECIPE_DETAIL,
+  MOCK_RECIPE_ID,
+} from "@/lib/mock/recipes";
 import {
   mapRecipeUserStatus,
   normalizeRecipeIngredients,
@@ -14,8 +20,18 @@ interface RouteContext {
   }>;
 }
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { id } = await context.params;
+
+  if (isQaFixtureModeEnabled() && id === MOCK_RECIPE_ID) {
+    const authOverride = readE2EAuthOverrideHeader(request.headers);
+
+    return ok(
+      authOverride === "authenticated"
+        ? getQaFixtureRecipeDetail()
+        : MOCK_RECIPE_DETAIL,
+    );
+  }
 
   if (id === MOCK_RECIPE_ID) {
     return ok(MOCK_RECIPE_DETAIL);

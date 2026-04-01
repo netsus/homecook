@@ -45,12 +45,21 @@
 - [ ] 재료 검색이 `standard_name` + `ingredient_synonyms` 모두에서 일치하는 결과를 반환한다
 - [ ] malformed / 빈 / 중복 `ingredient_ids` token은 무시하고, 유효 UUID가 하나도 없으면 `items: []`를 반환한다
 
+## Data Setup / Preconditions
+
+- QA fixture:
+  - `HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`
+  - 확인 데이터: `양파`, `대파`, 동의어 `파`, 레시피 `집밥 김치찌개`
+- 실 DB smoke:
+  - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
+  - ingredient filter smoke는 seed 후 HOME에서 바로 확인 가능
+
 ## Manual QA
 
 1. HOME에서 "재료로 검색" 버튼 탭 → 재료 2~3개 다중 선택 → [적용] → 레시피 목록 확인 (선택 재료 모두 포함 레시피만 표시되는지)
 2. 필터 적용 상태에서 HOME [필터 초기화] → 전체 목록 복귀 확인
 3. 모달 닫기 → "재료로 검색" 버튼 재탭 → 이전 선택 재료가 유지되는지 확인
-4. 동의어로 재료 검색 (예: "파" → "대파" 포함 결과 확인) — `seed data required`, DB 데이터 의존 수동 확인
+4. 동의어로 재료 검색 (예: "파" → "대파" 포함 결과 확인)
 5. 결과 없는 재료 조합 선택 → empty 상태 확인 + [필터 초기화] 동작 확인
 6. 카테고리 탭 변경 → 해당 카테고리 재료만 노출되는지 확인
 7. 재료 목록 로딩 실패 시뮬레이션 → error 상태 메시지 확인
@@ -75,7 +84,7 @@
 
 ### Manual Only
 
-- [ ] 동의어 데이터가 실제 Supabase DB에 존재하는지 확인 (데이터 의존)
+- [ ] 동의어 데이터가 실제 Supabase DB에 seed 되었는지 확인 (`pnpm qa:seed:01-05`)
 - [ ] 카테고리 탭 목록이 공식 DB 문서 기본값과 실제 DB `ingredients.category` 값에 모두 부합하는지 확인 (데이터 의존)
-- [ ] 재료 마스터 seed 데이터 존재 여부 확인 (초기 데이터 없으면 모달 empty 상태로 보임)
+- [ ] 재료 마스터 seed 데이터 존재 여부 확인 (`ingredients`, `ingredient_synonyms`)
 - [ ] 재료 수가 많을 때 전체 로드 응답 시간 체감 확인 (MVP 허용 범위 주관 판단)

@@ -326,11 +326,11 @@ export function PlannerWeekScreen() {
         </div>
 
         <div className="glass-panel rounded-[20px] px-5 py-5 md:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-lg font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
               {formatDateLabel(rangeStartDate)} ~ {formatDateLabel(rangeEndDate)}
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
                 onClick={() => handleRangeShift("prev")}
@@ -351,18 +351,24 @@ export function PlannerWeekScreen() {
             플래너 영역에서 위/아래 스크롤하면 주간 범위를 이동할 수 있어요.
           </p>
 
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            <label className="flex min-h-11 w-full flex-1 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3 md:max-w-sm">
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label className="flex min-h-11 min-w-0 flex-1 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3 sm:max-w-sm">
               <span className="visually-hidden">새 끼니 컬럼 이름</span>
               <input
                 className="w-full bg-transparent outline-none placeholder:text-[var(--muted)]"
                 onChange={(event) => setNewColumnName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void handleAddColumn();
+                  }
+                }}
                 placeholder="새 끼니 컬럼 이름"
                 value={newColumnName}
               />
             </label>
             <button
-              className="min-h-11 rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              className="min-h-11 shrink-0 rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               disabled={isMutating}
               onClick={() => void handleAddColumn()}
               type="button"

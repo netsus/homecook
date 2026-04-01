@@ -1,4 +1,10 @@
+import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
 import { fail, ok } from "@/lib/api/response";
+import {
+  isQaFixtureModeEnabled,
+  MOCK_RECIPE_ID,
+  toggleQaFixtureRecipeLike,
+} from "@/lib/mock/recipes";
 import { clampLikeCount, isRecipeLikeUniqueConflict } from "@/lib/recipe-like";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { RecipeLikeData } from "@/types/recipe";
@@ -105,8 +111,22 @@ async function readExistingLike(
     .maybeSingle();
 }
 
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params;
+
+  if (isQaFixtureModeEnabled()) {
+    const authOverride = readE2EAuthOverrideHeader(request.headers);
+
+    if (authOverride !== "authenticated") {
+      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    }
+
+    if (id !== MOCK_RECIPE_ID) {
+      return fail("NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
+    }
+
+    return ok(toggleQaFixtureRecipeLike());
+  }
 
   if (!isUuid(id)) {
     return fail("NOT_FOUND", "레시피를 찾을 수 없어요.", 404);

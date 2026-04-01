@@ -45,6 +45,16 @@
 - [ ] 회원가입 시 생성된 기본 컬럼(아침/점심/저녁)이 정상 조회됨
 - [ ] `GET /planner` 응답의 `columns`와 `meals` 데이터 무결성이 유지됨
 
+## Data Setup / Preconditions
+
+- QA fixture:
+  - `HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`
+  - `localStorage["homecook.e2e-auth-override"] = "guest" | "authenticated"`
+  - fixture 경로: `/planner`
+- 실 DB smoke:
+  - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
+  - seed 결과로 현재 범위에 planner meals 3건이 생성된다
+
 ## Manual QA
 
 1. **플래너 화면 진입 및 조회**

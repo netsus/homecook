@@ -1,3 +1,4 @@
+import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
   PlannerColumnCreateBody,
@@ -50,7 +51,7 @@ async function requestPlanner<T>(
   input: string,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(input, init);
+  const response = await fetch(input, withE2EAuthOverrideHeaders(init));
 
   if (response.status === 204) {
     return null as T;

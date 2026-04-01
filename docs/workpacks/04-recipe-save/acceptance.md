@@ -40,6 +40,16 @@
 - [ ] 저장 후 recipe_book_items 테이블에 (book_id, recipe_id) row가 생성된다
 - [ ] 중복 저장 시도 시 recipe_book_items UNIQUE 제약으로 409 반환된다
 
+## Data Setup / Preconditions
+
+- QA fixture:
+  - `HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`
+  - `localStorage["homecook.e2e-auth-override"] = "guest" | "authenticated"`
+  - fixture 경로: `/recipe/mock-kimchi-jjigae`
+- 실 DB smoke:
+  - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
+  - DB smoke 경로: `/recipe/550e8400-e29b-41d4-a716-446655440022`
+
 ## Manual QA
 1. 비로그인 상태에서 저장 버튼 클릭 → 로그인 게이트 모달 확인 → 로그인 → 저장 모달 재오픈 확인
 2. 저장 모달에서 "저장한 레시피" 책 선택 후 저장 → 성공 메시지 및 모달 닫힘 확인
