@@ -39,6 +39,22 @@
 - qa eval:
 - 아티팩트 / 보고서 경로:
 
+## Actual Verification
+
+- verifier:
+- environment:
+- scope:
+- result:
+- 남은 manual/live 확인:
+
+## Closeout Sync
+
+- roadmap status:
+- README Delivery Checklist:
+- acceptance:
+- Design Status:
+- 남은 Manual Only / follow-up:
+
 ## Docs Impact
 
 - [ ] 공식 문서 영향 없음

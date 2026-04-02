@@ -180,6 +180,8 @@ PR에는 아래를 남긴다.
 - exploratory QA 실행 여부와 보고서 경로
 - qa eval 결과 또는 `N/A` 근거
 - Layer 3 변경이면 `pnpm qa:eval:suite` 결과와 artifact 경로
+- 실제 브라우저 확인 / local demo / local Supabase / live 외부 연동 여부는 PR `Actual Verification` 섹션에 verifier, environment, result 형태로 남긴다.
+- README `Delivery Checklist`, acceptance, `Design Status`와 PR evidence가 어긋나지 않았는지는 PR `Closeout Sync` 섹션에서 정리한다.
 
 ## 운영 원칙
 

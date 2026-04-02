@@ -39,6 +39,19 @@
 - 머지 전 실제 동작 확인
 - 변경 유형별 축약 경로와 `N/A` 허용 기준은 `docs/engineering/agent-workflow-overview.md`의 Change Type Matrix를 따른다.
 
+## Closeout Sync Contract
+
+- workpack README의 `Delivery Checklist`, `Design Status`, roadmap status, acceptance 체크박스, PR 본문 evidence는 서로 따로 노는 참고 문서가 아니라 **같은 closeout 상태**를 표현해야 한다.
+- Stage 2/4 구현 담당인 Codex는 PR을 `Ready for Review`로 넘기기 전에 자신이 닫은 범위에 맞춰 `Delivery Checklist`, acceptance, PR 본문 `Actual Verification`, `Closeout Sync`를 갱신한다.
+- Stage 3/5/6 리뷰 담당인 Claude는 승인 전에 위 문서들이 서로 일치하는지 확인하고, mismatch가 있으면 코드 이슈가 없어도 closeout drift로 수정 요청한다.
+- Stage 6 merge 시점에는 아래가 동시에 만족해야 한다:
+  - roadmap status가 실제 단계와 맞다
+  - `Design Status`가 최종 리뷰 결과와 맞다
+  - README `Delivery Checklist`에 In Scope인데도 남은 unchecked 항목이 없다
+  - acceptance에서 `Manual Only`를 제외한 In Scope 미체크 항목이 없다
+  - PR 본문 `Actual Verification`, `Closeout Sync`가 최신 evidence를 반영한다
+- 남길 수 있는 미체크 항목은 `Manual Only` 또는 명시적 `N/A` / 후속 slice 이관뿐이며, 이 경우 README 또는 PR 본문에 근거가 있어야 한다.
+
 ## Slice Readiness Safeguards
 
 - fixture/mock green만으로 슬라이스가 닫혔다고 간주하지 않는다. 해당 슬라이스가 기존 DB 테이블, 시스템 row, 회원 bootstrap에 의존하면 최소 1회는 real DB smoke 또는 동등한 검증 경로를 가져야 한다.
@@ -210,6 +223,9 @@
 - 테스트 최소 시나리오: happy path + 상태 전이 오류 + 권한 거부 + read-only 409
 - `Schema Change: 없음`이어도 이 슬라이스가 읽는 기존 테이블이 real DB/local Supabase에 존재하는지 확인
 - 시스템 row/bootstrap 의존 슬라이스면 fixture만이 아니라 real DB smoke 또는 seed 검증 경로를 최소 1회 실행
+- README `Delivery Checklist`와 acceptance의 백엔드 범위를 PR 준비 전에 갱신
+- PR 본문 `Actual Verification`에 real DB/schema/bootstrap smoke 또는 `N/A` 근거 기록
+- PR 본문 `Closeout Sync`에 Stage 2 시점에 닫은 항목과 남은 프론트 범위 기록
 
 ### 자가 점검 체크리스트
 
@@ -222,6 +238,8 @@
 - [ ] 테스트가 상태 전이·에러·권한·read-only를 고정하는가 (happy path만이 아닌가)
 - [ ] 로컬 또는 합의된 smoke DB에서 referenced table 부재가 없는지 확인했는가 (`Schema Change: 없음`이어도 적용)
 - [ ] bootstrap/system row 의존 슬라이스라면 real DB smoke 또는 seed 경로로 `recipe_books`, `meal_plan_columns` 같은 선행 데이터가 실제 생성되는지 확인했는가
+- [ ] README `Delivery Checklist`와 acceptance의 백엔드 항목을 최신 구현/evidence 기준으로 갱신했는가
+- [ ] PR 본문 `Actual Verification`, `Closeout Sync`가 최신 상태와 일치하는가
 - [ ] `pnpm install --frozen-lockfile && pnpm verify:backend` 통과
 - [ ] 브랜치명이 `feature/be-<slice>`인가
 - [ ] 커밋이 Conventional Commits를 따르는가
@@ -278,6 +296,8 @@
 - [ ] PR 템플릿 Security·Performance·Design 섹션이 기록되었는가
 - [ ] README Backend First Contract와 실제 구현이 일치하는가
 - [ ] referenced table / bootstrap readiness를 real DB smoke나 seed evidence로 확인했는가 (해당 슬라이스)
+- [ ] README `Delivery Checklist`와 acceptance의 백엔드 범위가 실제 머지 상태와 일치하는가
+- [ ] PR 본문 `Actual Verification`, `Closeout Sync`가 비어 있지 않고 실제 evidence를 반영하는가
 
 ### 완료 기준
 
@@ -380,6 +400,9 @@
 - Layer 1 deterministic gate(`pnpm verify:frontend`)를 먼저 green으로 만들고, exploratory QA는 그 다음에 실행
 - 시스템 row/bootstrap 의존 슬라이스면 fixture mode만이 아니라 real DB/local Supabase smoke 경로도 최소 1회 검증
 - Layer 2 exploratory QA를 실행했다면 Layer 3 단건 `pnpm qa:eval -- --checklist ... --report ...` 결과까지 PR에 남긴다
+- README `Delivery Checklist`, acceptance, Design Status를 PR 준비 전에 최신화
+- PR 본문 `Actual Verification`에 실제 브라우저 확인 / local demo / local Supabase / `N/A` 근거 기록
+- PR 본문 `Closeout Sync`에 남은 Manual Only, 후속 slice 이관, 최종 closeout 변경사항 기록
 
 ### 자가 점검 체크리스트
 
@@ -400,6 +423,8 @@
 - [ ] 최신 QA tooling이나 fixture/auth 시스템이 다른 브랜치에서 먼저 merge되었다면, 최신 base를 반영한 뒤 Layer 1 deterministic gate를 다시 실행했는가
 - [ ] 신규 화면 또는 high-risk UI change라면 `pnpm qa:explore -- --slice <slice>` 번들을 만들고 exploratory QA 보고서를 남겼는가
 - [ ] Layer 2 exploratory QA를 실행했다면 `pnpm qa:eval -- --checklist <.../exploratory-checklist.json> --report <.../exploratory-report.json>` 결과를 남겼는가
+- [ ] README `Delivery Checklist`, acceptance, Design Status가 최신 구현/evidence 기준으로 갱신됐는가
+- [ ] PR 본문 `Actual Verification`, `Closeout Sync`가 최신 상태와 일치하는가
 - [ ] 브랜치명이 `feature/fe-<slice>`인가
 - [ ] 커밋이 Conventional Commits를 따르는가
 
@@ -516,11 +541,13 @@
 - [ ] 백엔드 계약 타입이 그대로 소비되었는가 (임의 변경 없음)
 - [ ] 상태 전이 로직이 테스트로 고정되었는가
 - [ ] 로그인 게이트·return-to-action이 올바른가 (해당 시)
-- [ ] acceptance.md 미체크 항목이 없는가
+- [ ] acceptance에서 `Manual Only`를 제외한 In Scope 미체크 항목이 없는가
 - [ ] Layer 1 deterministic gate와 real DB/bootstrap smoke evidence가 PR에 남아 있는가
 - [ ] exploratory QA가 required인 변경이면 report와 qa eval 결과가 있고, 주요 finding이 처리되었거나 근거와 함께 남아 있는가
 - [ ] 브랜치·커밋·PR 본문이 규칙을 만족하는가
 - [ ] 보안/성능/디자인 영향이 PR 템플릿에 기록되었는가
+- [ ] README `Delivery Checklist`, roadmap status, Design Status, acceptance가 서로 일치하는가
+- [ ] PR 본문 `Actual Verification`, `Closeout Sync`가 최종 merge 상태를 반영하는가
 
 ### 완료 기준
 
