@@ -192,7 +192,7 @@ jobs:
         run: pnpm build
 
       - name: Run Lighthouse budget checks
-        run: lhci autorun --config=./lighthouserc.js
+        run: pnpm exec lhci autorun --config=./lighthouserc.js
 
       - name: Upload Lighthouse report
         if: always()
