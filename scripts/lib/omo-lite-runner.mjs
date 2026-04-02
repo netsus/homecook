@@ -42,6 +42,10 @@ function ensureNonEmptyString(value, label) {
   return value.trim();
 }
 
+function optionalString(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
 function formatTimestampSlug(value) {
   const source = typeof value === "string" && value.trim().length > 0 ? value : new Date().toISOString();
 
@@ -126,7 +130,88 @@ function resolveExecutionBinding(dispatch, { agent, providerConfig }) {
   };
 }
 
-function buildPrompt({ slice, stage, workItemId, dispatch, stageResultPath }) {
+function resolveStoredSessionSelection(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  return {
+    sessionId: optionalString(entry.session_id),
+    provider: optionalString(entry.provider),
+    agent: optionalString(entry.agent),
+    model: optionalString(entry.model),
+    variant: optionalString(entry.variant),
+    effort: optionalString(entry.effort),
+    updatedAt: optionalString(entry.updated_at),
+  };
+}
+
+function resolveEffectiveProviderSelection({
+  existingSessionId,
+  storedSessionSelection,
+  executionBinding,
+  activeProviderConfig,
+  claudeProviderConfig,
+  sessionBinding,
+}) {
+  const configuredModel = optionalString(activeProviderConfig?.model);
+  const configuredVariant = optionalString(activeProviderConfig?.variant);
+  const configuredEffort =
+    executionBinding.provider === "claude-cli"
+      ? optionalString(claudeProviderConfig?.effort)
+      : optionalString(activeProviderConfig?.effort);
+  const configuredAgent = optionalString(activeProviderConfig?.agent);
+  const storedSelectionAvailable = Boolean(
+    existingSessionId &&
+      storedSessionSelection &&
+      (
+        storedSessionSelection.provider ||
+        storedSessionSelection.agent ||
+        storedSessionSelection.model ||
+        storedSessionSelection.variant ||
+        storedSessionSelection.effort
+      ),
+  );
+
+  return {
+    provider:
+      storedSessionSelection?.provider ??
+      executionBinding.provider ??
+      optionalString(activeProviderConfig?.provider),
+    agent:
+      storedSessionSelection?.agent ??
+      executionBinding.agent ??
+      configuredAgent,
+    model:
+      storedSessionSelection?.model ??
+      optionalString(executionBinding.model) ??
+      configuredModel,
+    variant:
+      storedSessionSelection?.variant ??
+      optionalString(executionBinding.variant) ??
+      configuredVariant,
+    effort:
+      storedSessionSelection?.effort ??
+      configuredEffort,
+    sessionId: existingSessionId ?? null,
+    resumeMode: optionalString(sessionBinding?.resumeMode),
+    source:
+      existingSessionId
+        ? storedSelectionAvailable
+          ? "stored_session_binding"
+          : "provider_config_fallback"
+        : "provider_config",
+  };
+}
+
+function buildPrompt({
+  slice,
+  stage,
+  workItemId,
+  dispatch,
+  stageResultPath,
+  extraPromptSections = [],
+}) {
   const normalizedStage = Number(stage);
   const stageResultTemplate =
     [1, 2, 4].includes(normalizedStage)
@@ -227,6 +312,7 @@ function buildPrompt({ slice, stage, workItemId, dispatch, stageResultPath }) {
     [1, 2, 4].includes(normalizedStage)
       ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route"
       : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha",
+    ...extraPromptSections,
   ]
     .filter(Boolean)
     .join("\n");
@@ -543,6 +629,7 @@ function runCommandToArtifactLogs({
   stdoutPath,
   stderrPath,
   input,
+  timeoutMs,
 }) {
   const stdoutFd = openSync(stdoutPath, "w");
   const stderrFd = openSync(stderrPath, "w");
@@ -556,6 +643,7 @@ function runCommandToArtifactLogs({
       },
       input,
       encoding: "utf8",
+      timeout: typeof timeoutMs === "number" && Number.isFinite(timeoutMs) ? timeoutMs : undefined,
       stdio: ["pipe", stdoutFd, stderrFd],
     });
   } finally {
@@ -564,7 +652,7 @@ function runCommandToArtifactLogs({
   }
 }
 
-function runOpencode({
+export function runOpencode({
   executionDir,
   artifactDir,
   prompt,
@@ -575,6 +663,7 @@ function runOpencode({
   opencodeBin,
   environment,
   stageResultPath,
+  timeoutMs,
 }) {
   const commandArgs = ["run", "--dir", executionDir, "--format", "json"];
   const stdoutPath = resolve(artifactDir, "opencode.stdout.log");
@@ -606,6 +695,7 @@ function runOpencode({
     },
     stdoutPath,
     stderrPath,
+    timeoutMs,
   });
   const stdout = existsSync(stdoutPath) ? readFileSync(stdoutPath, "utf8") : "";
 
@@ -672,7 +762,7 @@ function runOpencode({
   };
 }
 
-function runClaudeCli({
+export function runClaudeCli({
   executionDir,
   artifactDir,
   prompt,
@@ -684,6 +774,7 @@ function runClaudeCli({
   environment,
   homeDir,
   stageResultPath,
+  timeoutMs,
 }) {
   const beforeTranscripts = listClaudeTranscriptIds(homeDir);
   const stdoutPath = resolve(artifactDir, "claude.stdout.log");
@@ -725,6 +816,7 @@ function runClaudeCli({
     input: prompt,
     stdoutPath,
     stderrPath,
+    timeoutMs,
   });
   const stdout = existsSync(stdoutPath) ? readFileSync(stdoutPath, "utf8") : "";
   const parsedOutput = parseClaudeJsonOutput(stdout);
@@ -962,10 +1054,12 @@ function resolveStatusPatch({ dispatch, execution }) {
  * @property {Record<string, string>} [environment]
  * @property {string} [homeDir]
  * @property {boolean} [syncStatus]
+ * @property {boolean} [persistRuntime]
  * @property {string} [now]
  * @property {number} [retryDelayHours]
  * @property {number} [maxRetryAttempts]
  * @property {"standalone"|"supervisor"} [lifecycleMode]
+ * @property {string[]} [extraPromptSections]
  */
 
 /**
@@ -989,10 +1083,12 @@ export function runStageWithArtifacts({
   environment,
   homeDir,
   syncStatus = false,
+  persistRuntime = true,
   now,
   retryDelayHours = DEFAULT_RETRY_DELAY_HOURS,
   maxRetryAttempts = DEFAULT_MAX_RETRY_ATTEMPTS,
   lifecycleMode = "standalone",
+  extraPromptSections = [],
 }) {
   const normalizedSlice = ensureNonEmptyString(slice, "slice");
   const normalizedStage = Number(stage);
@@ -1111,12 +1207,22 @@ export function runStageWithArtifacts({
     agent,
     providerConfig: activeProviderConfig,
   });
+  const storedSessionSelection = resolveStoredSessionSelection(existingSessionEntry);
+  const effectiveProviderSelection = resolveEffectiveProviderSelection({
+    existingSessionId,
+    storedSessionSelection,
+    executionBinding,
+    activeProviderConfig,
+    claudeProviderConfig,
+    sessionBinding: dispatch.sessionBinding,
+  });
   const prompt = buildPrompt({
     slice: normalizedSlice,
     stage: dispatch.stage,
     workItemId,
     dispatch,
     stageResultPath,
+    extraPromptSections,
   });
   const resolvedOpencodeBin =
     activeProviderConfig.provider === "opencode"
@@ -1134,6 +1240,8 @@ export function runStageWithArtifacts({
     workItemId: workItemId ?? null,
     claudeBudget: resolvedBudget,
     sessionBinding: dispatch.sessionBinding,
+    storedSessionSelection,
+    effectiveProviderSelection,
     retryDecision: dispatch.retryDecision,
     providerConfig: activeProviderConfig,
     runtimePath: workItemId
@@ -1155,6 +1263,7 @@ export function runStageWithArtifacts({
   let runtimeStartSync = null;
 
   if (
+    persistRuntime &&
     workItemId &&
     runtimeSnapshot &&
     mode === "execute" &&
@@ -1417,7 +1526,7 @@ export function runStageWithArtifacts({
     }
   }
 
-  if (workItemId && runtimeSnapshot) {
+  if (persistRuntime && workItemId && runtimeSnapshot) {
     let nextRuntimeState = runtimeStartSync?.state ?? runtimeSnapshot.state;
     const scheduledRetryAt =
       result.dispatch.retryDecision.action === "schedule_retry"
@@ -1437,6 +1546,9 @@ export function runStageWithArtifacts({
           sessionId: result.execution.sessionId,
           provider: result.execution.provider ?? executionBinding.provider ?? "opencode",
           agent: executionBinding.agent,
+          model: effectiveProviderSelection.model,
+          variant: effectiveProviderSelection.variant,
+          effort: effectiveProviderSelection.effort,
           updatedAt: now,
         });
       }

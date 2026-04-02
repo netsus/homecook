@@ -377,6 +377,13 @@ describe("OMO-lite stage runner", () => {
     const metadata = JSON.parse(
       readFileSync(join(result.artifactDir, "run-metadata.json"), "utf8"),
     ) as {
+      effectiveProviderSelection: {
+        provider: string;
+        model: string | null;
+        variant: string | null;
+        effort: string | null;
+        source: string;
+      };
       execution: { mode: string; executed: boolean; exitCode: number; sessionId: string };
       sessionBinding: { role: string; resumeMode: string; sessionId: string | null };
     };
@@ -388,6 +395,8 @@ describe("OMO-lite stage runner", () => {
       sessions: {
         codex_primary: {
           session_id: string;
+          model: string | null;
+          variant: string | null;
         };
       };
     };
@@ -412,11 +421,99 @@ describe("OMO-lite stage runner", () => {
       resumeMode: "fresh",
       sessionId: "ses_codex_stage2",
     });
+    expect(metadata.effectiveProviderSelection).toMatchObject({
+      provider: "opencode",
+      model: "openai/gpt-5.3-codex",
+      variant: "high",
+      effort: null,
+      source: "provider_config",
+    });
     expect(runtime).toMatchObject({
       current_stage: 2,
       last_completed_stage: 2,
     });
     expect(runtime.sessions.codex_primary.session_id).toBe("ses_codex_stage2");
+    expect(runtime.sessions.codex_primary).toMatchObject({
+      model: "openai/gpt-5.3-codex",
+      variant: "high",
+    });
+  });
+
+  it("keeps Codex model and variant traceable in run metadata when reusing a stored session", () => {
+    const rootDir = createRunnerFixture();
+    const firstRun = createFakeOpencodeBin(rootDir, {
+      sessionId: "ses_codex_traceable",
+    });
+    const resumedRun = createFakeOpencodeBin(rootDir, {
+      sessionId: "ses_codex_traceable",
+    });
+
+    runStageWithArtifacts({
+      rootDir,
+      slice: "02-discovery-filter",
+      stage: 2,
+      workItemId: "02-discovery-filter",
+      mode: "execute",
+      opencodeBin: firstRun.binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: firstRun.argsPath,
+      },
+      now: "2026-03-26T21:10:00+09:00",
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "02-discovery-filter",
+      stage: 4,
+      workItemId: "02-discovery-filter",
+      mode: "execute",
+      syncStatus: false,
+      opencodeBin: resumedRun.binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: resumedRun.argsPath,
+      },
+      now: "2026-03-26T21:30:00+09:00",
+    });
+
+    const args = readFileSync(resumedRun.argsPath, "utf8");
+    const metadata = JSON.parse(
+      readFileSync(join(result.artifactDir, "run-metadata.json"), "utf8"),
+    ) as {
+      effectiveProviderSelection: {
+        provider: string;
+        model: string | null;
+        variant: string | null;
+        effort: string | null;
+        source: string;
+        sessionId: string | null;
+      };
+      storedSessionSelection: {
+        model: string | null;
+        variant: string | null;
+      } | null;
+      sessionBinding: { resumeMode: string; sessionId: string | null };
+    };
+
+    expect(args).toContain("--session");
+    expect(args).toContain("ses_codex_traceable");
+    expect(args).not.toContain("--model");
+    expect(args).not.toContain("--variant");
+    expect(metadata.sessionBinding).toMatchObject({
+      resumeMode: "continue",
+      sessionId: "ses_codex_traceable",
+    });
+    expect(metadata.storedSessionSelection).toMatchObject({
+      model: "openai/gpt-5.3-codex",
+      variant: "high",
+    });
+    expect(metadata.effectiveProviderSelection).toMatchObject({
+      provider: "opencode",
+      model: "openai/gpt-5.3-codex",
+      variant: "high",
+      effort: null,
+      source: "stored_session_binding",
+      sessionId: "ses_codex_traceable",
+    });
   });
 
   it("executes Claude stages through raw claude CLI, captures session_id, and reuses it with --resume", () => {
@@ -463,6 +560,17 @@ describe("OMO-lite stage runner", () => {
 
     const args = readFileSync(stage3.argsPath, "utf8");
     const stdin = readFileSync(stage3.stdinPath, "utf8");
+    const metadata = JSON.parse(
+      readFileSync(join(result.artifactDir, "run-metadata.json"), "utf8"),
+    ) as {
+      effectiveProviderSelection: {
+        provider: string;
+        model: string | null;
+        variant: string | null;
+        effort: string | null;
+        source: string;
+      };
+    };
     const runtime = JSON.parse(
       readFileSync(join(rootDir, ".opencode", "omo-runtime", "03-recipe-like.json"), "utf8"),
     ) as {
@@ -472,6 +580,8 @@ describe("OMO-lite stage runner", () => {
         claude_primary: {
           session_id: string;
           provider: string;
+          model: string | null;
+          effort: string | null;
         };
       };
     };
@@ -496,12 +606,23 @@ describe("OMO-lite stage runner", () => {
     expect(args).not.toContain("--continue");
     expect(args).not.toContain("--agent");
     expect(stdin).toContain("# Homecook OMO-lite Stage Dispatch");
+    expect(metadata.effectiveProviderSelection).toMatchObject({
+      provider: "claude-cli",
+      model: "sonnet",
+      variant: null,
+      effort: "high",
+      source: "stored_session_binding",
+    });
     expect(runtime).toMatchObject({
       current_stage: 3,
       last_completed_stage: 3,
     });
-    expect(runtime.sessions.claude_primary.session_id).toBe("ses_claude_stage1");
-    expect(runtime.sessions.claude_primary.provider).toBe("claude-cli");
+    expect(runtime.sessions.claude_primary).toMatchObject({
+      session_id: "ses_claude_stage1",
+      provider: "claude-cli",
+      model: "sonnet",
+      effort: "high",
+    });
   });
 
   it("fails closed when Claude returns success but does not write stage-result.json", () => {

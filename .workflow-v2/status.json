@@ -116,7 +116,7 @@
         "pnpm typecheck"
       ],
       "pr_path": "https://github.com/netsus/homecook/pull/64",
-      "notes": "Merged via PR #61 and PR #64 on 2026-04-01, with roadmap closeout corrected in PR #69. Closeout sync backfill on 2026-04-02 restored README/acceptance/workflow-v2 alignment and expanded slice-05 planner coverage for loading/error states, column CRUD, status badges, scroll range shift, and guest return-to-action."
+      "notes": "Merged via PR #61 and PR #64 on 2026-04-01 after human verification, with roadmap closeout corrected in PR #69. Closeout sync backfill on 2026-04-02 restored README/acceptance/workflow-v2 alignment and expanded slice-05 planner coverage for loading/error states, column CRUD, status badges, scroll range shift, and guest return-to-action."
     },
     {
       "id": "omo-session-orchestrator-spec",

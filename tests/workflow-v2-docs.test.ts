@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   validateKnownShape,
+  validateWorkflowV2DocContract,
   validateWorkflowV2Bundle,
   validateWorkflowV2Examples,
   validateWorkflowV2TrackedState,
@@ -67,6 +68,13 @@ describe("workflow v2 docs", () => {
 
   it("validates tracked workflow v2 pilot state", () => {
     const results = validateWorkflowV2TrackedState({ rootDir: repoRoot });
+
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.every((result) => result.errors.length === 0)).toBe(true);
+  });
+
+  it("keeps the workflow-v2 entry docs aligned with the executable pilot baseline", () => {
+    const results = validateWorkflowV2DocContract({ rootDir: repoRoot });
 
     expect(results.length).toBeGreaterThan(0);
     expect(results.every((result) => result.errors.length === 0)).toBe(true);
