@@ -50,6 +50,9 @@
 - workpack README의 `Delivery Checklist`, `Design Status`, roadmap status, acceptance 체크박스, PR 본문 evidence는 서로 따로 노는 참고 문서가 아니라 **같은 closeout 상태**를 표현해야 한다.
 - Stage 2/4 구현 담당인 Codex는 PR을 `Ready for Review`로 넘기기 전에 자신이 닫은 범위에 맞춰 `Delivery Checklist`, acceptance, PR 본문 `Actual Verification`, `Closeout Sync`를 갱신한다.
 - Stage 3/5/6 리뷰 담당인 Claude는 승인 전에 위 문서들이 서로 일치하는지 확인하고, mismatch가 있으면 코드 이슈가 없어도 closeout drift로 수정 요청한다.
+- policy 자동화는 `pnpm validate:closeout-sync`로 closeout drift를 검사한다.
+  - non-draft `feature/fe-<slice>` PR은 `Ready for Review` 전에 README `Delivery Checklist`, acceptance(`Manual Only` 제외), `Design Status`가 closeout-ready 상태인지 통과해야 한다.
+  - roadmap status가 이미 `merged`인 changed slice와 `docs/omo-closeout-<slice>` 브랜치는 merged closeout 기준을 통과해야 한다.
 - Stage 6 merge 시점에는 아래가 동시에 만족해야 한다:
   - roadmap status가 실제 단계와 맞다
   - `Design Status`가 최종 리뷰 결과와 맞다

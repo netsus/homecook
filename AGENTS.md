@@ -172,3 +172,4 @@
 - `pnpm validate:branch`
 - `pnpm validate:commits`
 - `pnpm validate:pr`
+- `pnpm validate:closeout-sync`
