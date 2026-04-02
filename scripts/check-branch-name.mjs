@@ -51,6 +51,7 @@ if (isProtectedBranchName(branchName) && process.env.ALLOW_PROTECTED_BRANCH !== 
     [
       `Protected base branch is not allowed for direct work: ${branchName}`,
       "Create and checkout a dedicated work branch before editing files or opening a PR.",
+      "Quick start: pnpm branch:start -- --branch <work-branch>",
       "Allowed work branch patterns:",
       "  feature/<slug>",
       "  fix/<slug>",
