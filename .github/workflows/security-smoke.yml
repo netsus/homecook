@@ -1,0 +1,101 @@
+name: Security Smoke
+
+on:
+  pull_request:
+    paths:
+      - "app/api/**"
+      - "app/auth/**"
+      - "app/globals.css"
+      - "app/layout.tsx"
+      - "app/login/**"
+      - "app/page.tsx"
+      - "app/planner/**"
+      - "app/recipe/**"
+      - "components/**"
+      - "lib/*.ts"
+      - "lib/api/**"
+      - "lib/auth/**"
+      - "lib/mock/**"
+      - "lib/server/**"
+      - "lib/supabase/**"
+      - "stores/**"
+      - "supabase/**"
+      - "tests/e2e/helpers/**"
+      - "tests/e2e/qa-security.spec.ts"
+      - "playwright.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/security-smoke.yml"
+  push:
+    branches:
+      - main
+      - master
+      - develop
+    paths:
+      - "app/api/**"
+      - "app/auth/**"
+      - "app/globals.css"
+      - "app/layout.tsx"
+      - "app/login/**"
+      - "app/page.tsx"
+      - "app/planner/**"
+      - "app/recipe/**"
+      - "components/**"
+      - "lib/*.ts"
+      - "lib/api/**"
+      - "lib/auth/**"
+      - "lib/mock/**"
+      - "lib/server/**"
+      - "lib/supabase/**"
+      - "stores/**"
+      - "supabase/**"
+      - "tests/e2e/helpers/**"
+      - "tests/e2e/qa-security.spec.ts"
+      - "playwright.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/security-smoke.yml"
+
+permissions:
+  contents: read
+
+env:
+  NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
+  NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
+
+jobs:
+  security-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run auth and session security smoke suite
+        run: pnpm test:e2e:security
+
+      - name: Upload security smoke report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-security-report
+          path: |
+            playwright-report
+            test-results

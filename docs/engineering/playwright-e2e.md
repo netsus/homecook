@@ -53,6 +53,9 @@ npx playwright install --with-deps chromium
 ## CI Policy
 
 - 기본 PR 게이트에는 안정적인 Playwright smoke, a11y, visual, security smoke를 포함한다.
+- `smoke`, `a11y`, `visual`, `lighthouse`는 frontend/e2e 영향이 있는 PR에서만 자동 실행한다.
+- `security smoke`는 별도 workflow에서 auth/backend/frontend security 관련 변경에만 자동 실행한다.
+- docs-only 또는 governance-only PR은 전체 Playwright gate 대신 관련 최소 검증만 보일 수 있다.
 - 외부 OAuth가 필요한 시나리오는 `workflow_dispatch`로만 실행한다.
 - 실패 시 trace, screenshot, video를 아티팩트로 남긴다.
 

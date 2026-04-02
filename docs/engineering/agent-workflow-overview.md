@@ -74,6 +74,7 @@
 - `contract-evolution`이 필요한 슬라이스는 해당 docs PR이 main에 merge되기 전까지 Stage 2/4 product 구현을 시작하지 않는다.
 - `low-risk docs/config`는 리스크가 낮고 제품 계약을 바꾸지 않는 변경만 해당한다.
 - `required_checks`는 이 문서가 단일 소스다. 다른 문서는 change type을 가정하지 않고 이 문서를 참조한다.
+- GitHub Actions는 변경 범위에 따라 무거운 job만 자동 실행한다. policy/PR governance는 기본 유지하고, code CI·frontend QA·security smoke·qa eval은 관련 파일 변경이 있을 때만 뜨는 것을 기본값으로 본다.
 
 ### PR Template Guidance
 

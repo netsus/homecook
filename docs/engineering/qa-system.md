@@ -55,8 +55,9 @@
 
 CI 실행:
 
-- PR / push 시 `.github/workflows/ci.yml` + `.github/workflows/playwright.yml`에서 자동 실행
-- dependency audit은 `.github/workflows/security-review.yml`에서 자동 실행
+- PR / protected branch push 시 `Policy`, `.github/workflows/ci.yml`, `.github/workflows/playwright.yml`, `.github/workflows/security-smoke.yml`이 변경 범위에 맞게 자동 실행된다.
+- branch/commit/workpack 같은 governance 검증은 항상 유지하고, quality/build/QA는 관련 파일 변경이 있을 때만 뜬다.
+- dependency audit은 `.github/workflows/security-review.yml`에서 protected branch push, schedule, manual dispatch 기준으로 실행한다.
 
 ### Layer 2 — Agentic Exploratory QA
 

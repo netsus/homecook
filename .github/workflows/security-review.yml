@@ -1,13 +1,17 @@
 name: Security Review
 
 on:
-  pull_request:
   push:
     branches:
       - main
       - master
+    paths-ignore:
+      - "docs/**"
+      - "ui/designs/**"
+      - "**/*.md"
   schedule:
     - cron: "0 3 * * 1"
+  workflow_dispatch:
 
 jobs:
   dependency-audit:

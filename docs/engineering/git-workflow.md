@@ -59,6 +59,16 @@
 - `ci`
 - `revert`
 
+## PR Title Convention
+
+- PR 제목은 기본적으로 Conventional Commits 스타일을 따른다.
+- 권장 형식은 `type(scope): summary` 또는 scope가 없을 때 `type: summary`다.
+- 예시:
+  - `fix(planner): keep login CTA above mobile tabs`
+  - `docs(workflow): slim CI triggers for docs-only PRs`
+- 정규 리뷰용 PR 제목에는 `[codex]`, `[claude]` 같은 작성자 접두사는 기본값으로 쓰지 않는다.
+- 이 규칙은 우선 문서 규칙으로 운영하며, 별도 공지 전까지 CI 필수 체크로 강제하지 않는다.
+
 ## Worktree Strategy
 
 - 큰 기능은 worktree를 분리한다.
