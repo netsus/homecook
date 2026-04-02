@@ -4,7 +4,9 @@
 
 - 이 문서는 `generic session-orchestrator` 위에 얹는 `local autonomous supervisor` 규격을 고정한다.
 - 현재 executable baseline은 `omo:supervise`, `omo:tick`, dedicated worktree manager, `gh` automation, `omo:status`, `omo:status:brief`까지 포함한다.
+- hardening baseline은 `omo:smoke:control-plane`, `omo:smoke:providers`, `omo:scheduler:install/uninstall/verify`까지 포함한다.
 - `omo:start`, `omo:continue`, `omo:resume-pending`은 low-level primitive로 남고, product slice full-autonomy는 supervisor state machine이 담당한다.
+- fullauto v1은 수동 리뷰/실동작 확인 직전까지 자동화하는 의미로 고정한다.
 
 ## Purpose
 
@@ -32,6 +34,12 @@ autonomous supervisor는 `그 stage 결과를 다음 GitHub 상태와 다음 sta
 - `pnpm omo:tick -- --work-item <id>`
 - `pnpm omo:reconcile -- --work-item <id>`
 - `pnpm omo:tick:watch -- --work-item <id>`
+- `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`
+- `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name> --live-providers`
+- `pnpm omo:smoke:providers`
+- `pnpm omo:scheduler:install -- --work-item <id>`
+- `pnpm omo:scheduler:uninstall -- --work-item <id>`
+- `pnpm omo:scheduler:verify -- --work-item <id>`
 
 기존 low-level 명령:
 
@@ -54,6 +62,9 @@ autonomous supervisor는 `그 stage 결과를 다음 GitHub 상태와 다음 sta
 9. runtime은 있지만 `wait`와 pending phase가 모두 없으면 `omo:tick`은 `noop: no_wait_state`를 반환한다.
 10. 운영자가 현재 단계와 대기 상태를 빠르게 읽을 때는 `omo:status:brief`를 사용한다.
 11. scheduler가 실제로 등록되어 있는지, 현재 running인지, 마지막 로그 갱신 시각이 언제인지는 `omo:tick:watch`로 읽는다.
+12. live smoke는 sandbox GitHub repo와 실제 provider/auth 상태를 사용하지만, `human_review`와 `human_verification` 게이트는 그대로 유지한다.
+13. `--live-providers` 모드의 backend smoke contract는 Stage 2/3만 실제 provider를 사용한다. Stage 3 첫 리뷰를 강제로 `request_changes`로 만들고, Codex Stage 2 재실행에는 최소 확인용 prompt만 주입해 같은 feedback token이 실제 marker file에 반영되는지까지 검증한다.
+14. `omo:scheduler:verify`는 `launchctl print`와 `omo:tick:watch --json`을 비교해 label, interval, log path를 함께 점검한다.
 
 ## Bookkeeping Invariants
 
@@ -249,6 +260,7 @@ runtime state는 아래 대기 이유를 저장할 수 있어야 한다.
 14. `omo:tick`은 `human_review`와 `human_verification`도 scheduler 재개 대상으로 처리해, 승인/수동 merge 이후 후속 상태 전이를 계속 수행한다.
 15. closeout PR는 `wait.kind=ci`, `pr_role=closeout`으로 추적한다.
 16. closeout PR의 required checks가 green이면 상태는 `ready_for_review`를 유지하고, 수동 merge 후 다음 `omo:tick`이 closeout finalize를 수행한다.
+17. macOS launchd install/uninstall/verify는 저장소가 관리하는 템플릿과 CLI로 제공한다.
 
 ## Fail-Closed Rules
 

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>__LABEL__</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__PNPM_BIN__</string>
+    <string>omo:tick</string>
+    <string>--</string>
+    <string>--work-item</string>
+    <string>__WORK_ITEM_ID__</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>__HOME__</string>
+    <key>PATH</key>
+    <string>__PATH__</string>
+    <key>GITHUB_NO_UPDATE_NOTIFIER</key>
+    <string>1</string>
+  </dict>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StartInterval</key>
+  <integer>__INTERVAL_SECONDS__</integer>
+  <key>WorkingDirectory</key>
+  <string>__WORKING_DIRECTORY__</string>
+  <key>StandardOutPath</key>
+  <string>__STDOUT_LOG__</string>
+  <key>StandardErrorPath</key>
+  <string>__STDERR_LOG__</string>
+</dict>
+</plist>

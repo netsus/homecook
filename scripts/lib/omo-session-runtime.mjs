@@ -258,6 +258,18 @@ function normalizeSessionEntry(role, entry) {
       entry && typeof entry.agent === "string" && entry.agent.trim().length > 0
         ? entry.agent.trim()
         : OMO_SESSION_ROLE_TO_AGENT[role],
+    model:
+      entry && typeof entry.model === "string" && entry.model.trim().length > 0
+        ? entry.model.trim()
+        : null,
+    variant:
+      entry && typeof entry.variant === "string" && entry.variant.trim().length > 0
+        ? entry.variant.trim()
+        : null,
+    effort:
+      entry && typeof entry.effort === "string" && entry.effort.trim().length > 0
+        ? entry.effort.trim()
+        : null,
     updated_at:
       entry && typeof entry.updated_at === "string" && entry.updated_at.trim().length > 0
         ? entry.updated_at.trim()
@@ -805,6 +817,9 @@ export function setSessionBinding({
   sessionId,
   provider,
   agent,
+  model,
+  variant,
+  effort,
   updatedAt,
 }) {
   const normalizedRole = ensureNonEmptyString(role, "role");
@@ -821,6 +836,18 @@ export function setSessionBinding({
           typeof agent === "string" && agent.trim().length > 0
             ? agent.trim()
             : OMO_SESSION_ROLE_TO_AGENT[normalizedRole] ?? null,
+        model:
+          typeof model === "string" && model.trim().length > 0
+            ? model.trim()
+            : null,
+        variant:
+          typeof variant === "string" && variant.trim().length > 0
+            ? variant.trim()
+            : null,
+        effort:
+          typeof effort === "string" && effort.trim().length > 0
+            ? effort.trim()
+            : null,
         updated_at: toIsoString(updatedAt),
       },
     },
