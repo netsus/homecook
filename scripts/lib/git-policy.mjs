@@ -1,6 +1,12 @@
-export const ALLOWED_BRANCH_PATTERNS = [
+export const WORK_BRANCH_PATTERNS = [
   /^(feature|fix|chore|docs|refactor|test|release|hotfix)\/[a-z0-9]+(?:-[a-z0-9]+)*$/,
-  /^(main|master|develop)$/,
+];
+
+export const PROTECTED_BRANCH_PATTERN = /^(main|master|develop)$/;
+
+export const ALLOWED_BRANCH_PATTERNS = [
+  ...WORK_BRANCH_PATTERNS,
+  PROTECTED_BRANCH_PATTERN,
 ];
 
 export const COMMIT_MESSAGE_PATTERN =
@@ -20,6 +26,14 @@ export const REQUIRED_PR_SECTIONS = [
 
 export function isAllowedBranchName(branchName) {
   return ALLOWED_BRANCH_PATTERNS.some((pattern) => pattern.test(branchName));
+}
+
+export function isAllowedWorkBranchName(branchName) {
+  return WORK_BRANCH_PATTERNS.some((pattern) => pattern.test(branchName));
+}
+
+export function isProtectedBranchName(branchName) {
+  return PROTECTED_BRANCH_PATTERN.test(branchName);
 }
 
 const MERGE_COMMIT_PATTERN = /^Merge\s/;

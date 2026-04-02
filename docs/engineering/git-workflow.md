@@ -21,6 +21,22 @@
 
 `main`, `master`, `develop`는 기본 장기 브랜치로 유지할 수 있다.
 
+## Protected Base Branch Rule
+
+- `main`, `master`, `develop`는 merge 대상이 되는 protected base branch다.
+- 코드, 문서, 설정 변경을 시작할 때 이 브랜치들 위에서 직접 작업하지 않는다.
+- 파일을 수정하기 전에는 반드시 허용된 작업 브랜치로 `checkout`한 뒤 진행한다.
+- working branch 또는 PR head branch는 아래 패턴 중 하나여야 한다.
+  - `feature/<slug>`
+  - `fix/<slug>`
+  - `chore/<slug>`
+  - `docs/<slug>`
+  - `refactor/<slug>`
+  - `test/<slug>`
+  - `release/<slug>`
+  - `hotfix/<slug>`
+- `pnpm validate:branch`와 CI branch validation은 protected base branch를 작업 브랜치로 쓰는 경우 실패해야 한다.
+
 ## Commit Convention
 
 커밋 메시지는 Conventional Commits 형식을 따른다.

@@ -32,6 +32,18 @@
 
 `docs-governance`와 `low-risk docs/config`는 `docs/engineering/agent-workflow-overview.md`의 Change Type Matrix에 따라 E2E를 생략할 수 있다.
 
+기본 동작:
+
+- deterministic Playwright suite는 QA fixture 전용 Next 서버를 `http://127.0.0.1:3100`에 직접 띄운다.
+- 로컬 앱 개발 서버(`pnpm dev`, `pnpm dev:qa-fixtures`)가 `3000`에 떠 있어도 기본 Playwright gate는 재사용하지 않는다.
+- 이미 띄운 서버를 의도적으로 재사용하려면 `PLAYWRIGHT_BASE_URL`과 `PLAYWRIGHT_REUSE_EXISTING_SERVER=1`을 함께 명시한다.
+
+예시:
+
+```bash
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 PLAYWRIGHT_REUSE_EXISTING_SERVER=1 pnpm test:e2e:smoke
+```
+
 브라우저 바이너리가 없으면 아래 명령을 먼저 실행한다.
 
 ```bash

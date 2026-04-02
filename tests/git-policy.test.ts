@@ -5,6 +5,8 @@ import {
   findInvalidWorkflowV2Refs,
   findMissingPrSections,
   isAllowedBranchName,
+  isAllowedWorkBranchName,
+  isProtectedBranchName,
   isValidCommitMessage,
 } from "../scripts/lib/git-policy.mjs";
 
@@ -13,6 +15,19 @@ describe("git policy", () => {
     expect(isAllowedBranchName("feature/login-gate-modal")).toBe(true);
     expect(isAllowedBranchName("hotfix/auth-callback")).toBe(true);
     expect(isAllowedBranchName("master")).toBe(true);
+  });
+
+  it("accepts only work branches for direct implementation branches", () => {
+    expect(isAllowedWorkBranchName("feature/login-gate-modal")).toBe(true);
+    expect(isAllowedWorkBranchName("docs/git-policy-guardrail")).toBe(true);
+    expect(isAllowedWorkBranchName("master")).toBe(false);
+  });
+
+  it("marks main/master/develop as protected base branches", () => {
+    expect(isProtectedBranchName("master")).toBe(true);
+    expect(isProtectedBranchName("main")).toBe(true);
+    expect(isProtectedBranchName("develop")).toBe(true);
+    expect(isProtectedBranchName("fix/auth-callback")).toBe(false);
   });
 
   it("rejects invalid branch names", () => {
