@@ -51,6 +51,8 @@ test-results/
 # local agent artifacts
 .artifacts/
 .worktrees/
+.opencode/branch-session.json
+.opencode/branch-prompt-state.json
 .opencode/claude-budget-state.json
 .opencode/omo-runtime/
 

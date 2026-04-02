@@ -35,6 +35,12 @@
 - 1단계(docs) 브랜치: `docs/<slice>`
 - 백엔드 브랜치: `feature/be-<slice>`
 - 프론트엔드 브랜치: `feature/fe-<slice>`
+- 파일 수정 전에는 먼저 해당 단계 브랜치로 전환한다. 표준 명령:
+  - `pnpm branch:start -- --slice <slice> --role docs`
+  - `pnpm branch:start -- --slice <slice> --role be`
+  - `pnpm branch:start -- --slice <slice> --role fe`
+- 일반 세션에서는 위 명령이 해당 단계 브랜치를 active intent로 기록한다.
+- 새 user prompt 뒤에 다시 수정하려면 같은 명령으로 branch intent를 재확인해야 하며, project hook가 그 턴의 첫 `Write/Edit` 전에 recorded intent와 current checkout을 맞춘다.
 - product slice 구현 PR은 **Draft**로 열고 → backend는 `pnpm install --frozen-lockfile && pnpm verify:backend`, frontend는 `pnpm install --frozen-lockfile && pnpm verify:frontend` 통과 → CI green → **Ready for Review** 전환
 - 머지 전 실제 동작 확인
 - 변경 유형별 축약 경로와 `N/A` 허용 기준은 `docs/engineering/agent-workflow-overview.md`의 Change Type Matrix를 따른다.
