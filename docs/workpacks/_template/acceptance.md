@@ -26,6 +26,11 @@
 - [ ] invalid input을 적절히 거부하거나 무시한다
 - [ ] 파생 필드와 비정규화 값이 맞다
 
+## Data Setup / Preconditions
+- [ ] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다
+- [ ] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다
+- [ ] 시스템 row 자동 생성이 필요한 슬라이스면 owning flow와 기대 결과가 명시되어 있다
+
 ## Manual QA
 1.
 2.
