@@ -107,15 +107,16 @@
     {
       "id": "05-planner-week-core",
       "preset": "vertical-slice-strict",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm install --frozen-lockfile && pnpm test:all",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs branch generated via OMO kickoff and recovered into docs PR scope. PLANNER_WEEK shell, disabled CTA, design artifact, and critique are locked before backend starts."
+      "notes": "wait_kind=none merged_after_human_verification",
+      "pr_path": "https://github.com/netsus/homecook/pull/64"
     },
     {
       "id": "omo-session-orchestrator-spec",
