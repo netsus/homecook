@@ -52,3 +52,10 @@ jobs:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
           BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
         run: node scripts/validate-omo-bookkeeping.mjs
+
+      - name: Validate closeout sync
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+          BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
+          PR_IS_DRAFT: ${{ github.event.pull_request.draft }}
+        run: node scripts/validate-closeout-sync.mjs
