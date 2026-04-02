@@ -271,20 +271,20 @@ export function PlannerWeekScreen() {
 
   if (authState === "unauthorized") {
     return (
-      <div className="glass-panel rounded-[20px] p-6 md:p-8">
+      <div className="glass-panel rounded-[20px] p-5 md:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
           Planner Access
         </p>
-        <h2 className="mt-3 text-2xl font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
+        <h2 className="mt-2 text-xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:mt-3 md:text-2xl">
           이 화면은 로그인이 필요해요
         </h2>
-        <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+        <p className="mt-2 text-sm leading-6 text-[var(--muted)] md:mt-3">
           플래너를 사용하려면 로그인해주세요. 로그인 후에는 다시 플래너 화면으로 돌아옵니다.
         </p>
-        <div className="mt-6">
+        <div className="mt-4 md:mt-6">
           <SocialLoginButtons nextPath="/planner" />
         </div>
-        <div className="mt-4">
+        <div className="mt-3 md:mt-4">
           <Link
             className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
             href="/"
