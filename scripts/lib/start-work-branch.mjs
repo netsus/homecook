@@ -35,6 +35,17 @@ function branchExists({ rootDir, ref, spawnSyncFn = spawnSync }) {
   );
 }
 
+/**
+ * @typedef {object} ResolveTargetWorkBranchInput
+ * @property {string | null | undefined} [branch]
+ * @property {string | null | undefined} [slice]
+ * @property {"docs" | "be" | "fe" | null | undefined} [role]
+ */
+
+/**
+ * @param {ResolveTargetWorkBranchInput} params
+ * @returns {string}
+ */
 export function resolveTargetWorkBranch({ branch = null, slice = null, role = null }) {
   const normalizedBranch = typeof branch === "string" ? branch.trim() : "";
   const normalizedSlice = typeof slice === "string" ? slice.trim() : "";
@@ -66,6 +77,26 @@ export function resolveTargetWorkBranch({ branch = null, slice = null, role = nu
   }
 }
 
+/**
+ * @typedef {object} StartWorkBranchInput
+ * @property {string | undefined} [rootDir]
+ * @property {string | null | undefined} [branch]
+ * @property {string | null | undefined} [slice]
+ * @property {"docs" | "be" | "fe" | null | undefined} [role]
+ * @property {string | undefined} [baseRef]
+ * @property {boolean | undefined} [persistSession]
+ * @property {typeof spawnSync | undefined} [spawnSyncFn]
+ */
+
+/**
+ * @param {StartWorkBranchInput} params
+ * @returns {{
+ *   branch: string;
+ *   created: boolean;
+ *   changed: boolean;
+ *   source: "current" | "local" | "base";
+ * }}
+ */
 export function startWorkBranch({
   rootDir = process.cwd(),
   branch = null,
