@@ -198,7 +198,7 @@ GitHub 자동화는 `gh CLI`만 사용한다.
 - `gh pr create`
 - `gh pr edit`
 - `gh pr ready`
-- `gh pr checks --required --json`
+- `gh pr checks --json`
 - `gh pr review`
 - `gh pr comment`
 - `gh pr merge --merge --match-head-commit`
@@ -208,6 +208,7 @@ GitHub 자동화는 `gh CLI`만 사용한다.
 
 1. docs PR는 일반 PR로 생성한다.
 2. backend / frontend PR는 Draft로 생성하고 required checks green 뒤에만 `gh pr ready`를 호출한다.
+   merge 판단은 required subset이 아니라 current head 기준 시작된 PR checks 전체를 사용한다.
 3. Stage 3 / 6 approve는 `gh pr review --approve`로 기록한다.
 4. Stage 5 approve 또는 findings는 PR comment로 기록한다.
 5. merge는 기본 `merge commit`만 사용한다.
@@ -216,7 +217,7 @@ GitHub 자동화는 `gh CLI`만 사용한다.
 8. force-push, auto-rebase, silent branch recreation은 금지한다.
 9. 기존 PR을 재사용하는 경우에도 title/body는 supervisor가 `gh pr edit`로 최신 stage result에 맞춰 정렬할 수 있다.
 10. product backend/frontend PR은 Claude approve만으로 자동 merge하지 않는다. `gh pr review --approve`가 self-approval로 거부되면 `human_review` wait로 멈춘다.
-11. product backend/frontend PR은 CI green + Claude approve 뒤에도 `human_verification` wait에서 실제 동작 확인과 수동 merge를 기다린다.
+11. product backend/frontend PR은 current head 기준 전체 PR checks green + Claude approve 뒤에도 `human_verification` wait에서 실제 동작 확인과 수동 merge를 기다린다.
 
 ## Wait And Scheduler Contract
 
@@ -248,7 +249,7 @@ runtime state는 아래 대기 이유를 저장할 수 있어야 한다.
 13. `human_review`는 정식 GitHub approve가 필요한 상태이고, `human_verification`은 실제 동작 확인 후 사람이 merge해야 하는 상태다.
 14. `omo:tick`은 `human_review`와 `human_verification`도 scheduler 재개 대상으로 처리해, 승인/수동 merge 이후 후속 상태 전이를 계속 수행한다.
 15. closeout PR는 `wait.kind=ci`, `pr_role=closeout`으로 추적한다.
-16. closeout PR의 required checks가 green이면 상태는 `ready_for_review`를 유지하고, 수동 merge 후 다음 `omo:tick`이 closeout finalize를 수행한다.
+16. closeout PR의 current head 기준 started PR checks가 모두 green이면 상태는 `ready_for_review`를 유지하고, 수동 merge 후 다음 `omo:tick`이 closeout finalize를 수행한다.
 
 ## Fail-Closed Rules
 
@@ -261,7 +262,7 @@ runtime state는 아래 대기 이유를 저장할 수 있어야 한다.
 - active slice bookkeeping drift가 ambiguous
 - PR body validation 실패
 - push reject
-- required checks fail
+- started PR checks fail
 - external smoke fail
 - merge conflict
 - review ping-pong 반복 초과

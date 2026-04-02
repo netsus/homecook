@@ -1272,7 +1272,7 @@ function processWaitState({
     });
 
     if (checks.bucket === "fail") {
-      throw new Error("Required checks failed.");
+      throw new Error("PR checks failed.");
     }
 
     if (checks.bucket === "pending") {
@@ -1881,7 +1881,7 @@ function finalizeCodeStage({
         state: nextState,
         stage,
         prRole,
-        reason: "Required checks failed.",
+        reason: "PR checks failed.",
         now,
         worktree,
       });

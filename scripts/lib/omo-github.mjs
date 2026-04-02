@@ -74,6 +74,8 @@ function buildDefaultPrSectionContent(section, { body, workItemId }) {
       return "- Supervisor 검증 명령과 필수 CI 체크를 기준으로 확인";
     case "## Docs Impact":
       return "- 자동 보정: 문서 영향 분석이 stage result에 없어 수동 확인이 필요합니다.";
+    case "## Merge Gate":
+      return "- current head SHA: 수동 확인 필요\n- started PR checks: 수동 확인 필요\n- all checks completed green: 아니오 (확인 필요)\n- pending / failed / rerun checks: 수동 확인 필요";
     case "## Security Review":
       return "- 자동 보정: 보안 영향 분석이 stage result에 없어 수동 확인이 필요합니다.";
     case "## Performance":
@@ -484,58 +486,28 @@ export function createGithubAutomationClient({
     getRequiredChecks({
       prRef,
     }) {
-      let stdout;
       const normalizedPrRef = ensureNonEmptyString(prRef, "prRef");
-      try {
-        stdout = runGh(
-          [
-            "pr",
-            "checks",
-            normalizedPrRef,
-            "--required",
-            "--json",
-            "bucket,name,state,workflow,link",
-          ],
-          { allowPendingExit: true },
-        );
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          /no required checks reported/i.test(error.message)
-        ) {
-          const fallbackStdout = runGh([
-            "pr",
-            "checks",
-            normalizedPrRef,
-            "--json",
-            "bucket,name,state,workflow,link",
-          ]);
-          const fallbackChecks = fallbackStdout.length > 0 ? JSON.parse(fallbackStdout) : [];
-          const shouldReconcile =
-            summarizeChecks(fallbackChecks) === "fail" || hasDuplicateCheckKeys(fallbackChecks);
-          const reconciledChecks = shouldReconcile
-            ? reconcileChecksWithStatusRollup(
-                fallbackChecks,
-                getPullRequestStatusRollup(normalizedPrRef),
-              )
-            : fallbackChecks;
-
-          return {
-            bucket: reconciledChecks.length > 0 ? summarizeChecks(reconciledChecks) : "pending",
-            checks: reconciledChecks,
-          };
-        }
-
-        throw error;
-      }
+      const stdout = runGh(
+        [
+          "pr",
+          "checks",
+          normalizedPrRef,
+          "--json",
+          "bucket,name,state,workflow,link",
+        ],
+        { allowPendingExit: true },
+      );
       const checks = stdout.length > 0 ? JSON.parse(stdout) : [];
-      const shouldReconcile = summarizeChecks(checks) === "fail" || hasDuplicateCheckKeys(checks);
+      // Legacy method name: merge gate now waits for every check that started on the PR head,
+      // not only GitHub-required checks.
+      const shouldReconcile =
+        summarizeChecks(checks) !== "pass" || hasDuplicateCheckKeys(checks);
       const reconciledChecks = shouldReconcile
         ? reconcileChecksWithStatusRollup(checks, getPullRequestStatusRollup(normalizedPrRef))
         : checks;
 
       return {
-        bucket: summarizeChecks(reconciledChecks),
+        bucket: reconciledChecks.length > 0 ? summarizeChecks(reconciledChecks) : "pending",
         checks: reconciledChecks,
       };
     },

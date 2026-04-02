@@ -106,6 +106,14 @@ pnpm branch:clear
 - 불가피하게 섞이면 PR 본문에 이유를 남긴다.
 - 해당 변경을 설명하기 위한 필수 bookkeeping 업데이트(예: workpack status, Design Status, 관련 운영 문서 동기화)는 같은 PR에 포함할 수 있다.
 
+## Merge Gate
+
+- merge는 GitHub가 버튼을 허용한다고 바로 진행하지 않는다.
+- 현재 PR head SHA에서 시작된 check가 하나라도 `pending`, `queued`, `rerun 중`, `fail`, `cancel`이면 merge하지 않는다.
+- `gh pr checks --required`는 merge 판단의 충분조건이 아니다. required가 아닌 check라도 PR에 시작되었다면 모두 완료/green이어야 한다.
+- review 승인과 실제 동작 확인이 끝났더라도, merge 직전에는 다시 한 번 current head 기준 전체 PR checks 상태를 확인한다.
+- 새 commit push나 rerun으로 head 기준 check가 다시 열리면, 이전 green은 merge 근거로 재사용하지 않는다.
+
 ## Enforcement
 
 - 로컬 또는 CI에서 브랜치 이름을 검증한다.

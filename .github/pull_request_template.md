@@ -55,6 +55,13 @@
 - Design Status:
 - 남은 Manual Only / follow-up:
 
+## Merge Gate
+
+- current head SHA:
+- started PR checks:
+- all checks completed green:
+- pending / failed / rerun checks:
+
 ## Docs Impact
 
 - [ ] 공식 문서 영향 없음

@@ -199,7 +199,8 @@ OMO-lite는 slice workflow의 각 stage를 상태 기계처럼 다룬다.
 2. required CI green 확인
 3. Claude 리뷰 요청
 4. 수정 요청이면 다시 Codex에 routing
-5. 승인되면 merge 감시
+5. 승인되면 current head 기준 시작된 PR checks 전체 green 재확인
+6. merge 감시
 
 ### Stage 4
 
@@ -217,11 +218,12 @@ OMO-lite는 slice workflow의 각 stage를 상태 기계처럼 다룬다.
 
 ### Stage 6
 
-1. FE PR not Draft + CI green 확인
+1. FE PR not Draft + required CI green 확인
 2. Claude FE 코드 리뷰 요청
 3. 수정 요청이면 Codex fix routing
-4. 승인 후 merge 감시
-5. 상태 `in-progress -> merged`
+4. 승인 후 current head 기준 시작된 PR checks 전체 green 재확인
+5. merge 감시
+6. 상태 `in-progress -> merged`
 
 ## Loop Placement
 

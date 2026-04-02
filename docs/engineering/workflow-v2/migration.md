@@ -31,6 +31,7 @@ v1 문서를 즉시 덮어쓰지 않고, 작은 PR 여러 개로 옮긴다.
   - PR body와 work item/status의 기본 정합성 검증
   - dual-approval artifact 존재 여부 확인
   - preset별 required checks 매핑
+  - current head 기준 started PR checks merge gate 규칙 반영
 - 완료 기준:
   - docs-governance 파일럿 PR에서 gate로 사용 가능
   - `.workflow-v2/work-items/*.json` + `.workflow-v2/status.json`이 저장소에 실제로 존재

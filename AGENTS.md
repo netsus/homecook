@@ -83,7 +83,8 @@
 - 브랜치 하나에는 가능한 한 하나의 작은 기능 단위 또는 명확한 하위 작업만 담는다.
 - 브랜치 접두어는 `feat/`가 아니라 `feature/`를 사용한다. (CI 검증 기준)
 - product slice 구현은 슬라이스 순서를 유지한다. 1단계(Claude) 문서가 main에 머지된 뒤에만 2단계(Codex)를 시작한다.
-- product 구현 PR은 기본적으로 `Draft -> required checks green -> Ready for Review -> 실제 동작 확인` 흐름을 따른다.
+- product 구현 PR은 기본적으로 `Draft -> required checks green -> Ready for Review -> 실제 동작 확인 -> current head 기준 전체 PR checks green -> merge` 흐름을 따른다.
+- merge 판단은 GitHub branch protection의 required 여부가 아니라 현재 PR head SHA에 대해 시작된 check 전체를 기준으로 한다. pending, rerun 중, fail인 check가 하나라도 남아 있으면 merge하지 않는다.
 - docs/governance와 low-risk docs/config 변경은 `docs/engineering/agent-workflow-overview.md`의 축약 경로를 따른다.
 
 ## Dependency Management

@@ -104,7 +104,7 @@
   - `release/`
   - `hotfix/`
 - product 구현 PR:
-  - 기본 `Draft -> CI green -> Ready for Review`
+  - 기본 `Draft -> required CI green -> Ready for Review -> current head 기준 전체 PR checks green -> merge`
 - autonomous supervisor:
   - local machine + `gh` CLI + dedicated worktree 기본값
 - required approval 의미:

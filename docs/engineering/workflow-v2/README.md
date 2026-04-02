@@ -116,6 +116,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 1. `.workflow-v2/work-items/<id>.json`을 만든다.
 2. `.workflow-v2/status.json`에 같은 `id`의 status item을 추가한다.
 3. 작업 브랜치와 preset, required checks를 status에 기록한다.
+   merge gate는 required subset이 아니라 current head 기준 시작된 PR checks 전체 green 여부로 판단한다.
 4. PR 본문의 `## Workpack / Slice`에 `workflow v2 work item` 경로를 적는다.
 5. `pnpm validate:workflow-v2`를 통과시킨다.
 6. medium/high risk 작업이면 plan loop summary artifact를 남긴다.

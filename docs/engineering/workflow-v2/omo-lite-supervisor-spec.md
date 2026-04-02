@@ -130,10 +130,10 @@ Codex supervisor는 아래를 하지 않는다.
 |------|---------------|--------------|-------------------|----------------|
 | 1 | Claude | 선행 slice `merged/bootstrap`, slice status `planned` | workpack README, acceptance, docs PR, `claude_primary` session binding | docs merge + status `docs` |
 | 2 | Codex | Stage 1 merged, dependencies resolved | branch `feature/be-<slice>`, tests, backend PR, `codex_primary` session binding | Draft PR + green CI + Ready |
-| 3 | Claude | PR not Draft, required CI green | review summary, requested changes or approval, reused `claude_primary` session | merge or fix routing |
+| 3 | Claude | PR not Draft, required CI green | review summary, requested changes or approval, reused `claude_primary` session | merge 또는 fix routing (merge 직전 current head all started PR checks green 재확인) |
 | 4 | Codex | backend merged, FE scope unlocked | branch `feature/fe-<slice>`, tests, frontend PR, reused `codex_primary` session | Draft PR + green CI + Ready |
 | 5 | Claude | FE PR ready, design scope defined | design review note, requested changes or approval, reused `claude_primary` session | proceed to Stage 6 or fix routing |
-| 6 | Claude | FE PR not Draft, required CI green | FE review summary, reused `claude_primary` session | merge or fix routing |
+| 6 | Claude | FE PR not Draft, required CI green | FE review summary, reused `claude_primary` session | merge 또는 fix routing (merge 직전 current head all started PR checks green 재확인) |
 
 ## Session Model
 
@@ -261,19 +261,19 @@ product slice Stage 2/4 기본 경로에서는 사용하지 않는다.
 1. stage 실행
 2. structured result 검증
 3. git push / PR 상태 정리
-4. required checks 판정
+4. required checks 판정 + merge 직전 current head started PR checks 재확인
 5. 다음 stage 또는 wait condition 계산
 
 기본 stage 경로:
 
-- Stage 1 완료 -> docs PR 생성 -> checks green -> merge -> Stage 2
+- Stage 1 완료 -> docs PR 생성 -> checks green -> current head started PR checks green -> merge -> Stage 2
 - Stage 2 완료 -> backend Draft PR 생성 -> checks green -> Ready -> Stage 3
 - Stage 3 approve -> backend merge -> Stage 4
 - Stage 3 request changes -> Stage 2
 - Stage 4 완료 -> frontend Draft PR 생성 -> checks green -> Ready -> Stage 5
 - Stage 5 approve -> Stage 6
 - Stage 5 request changes -> Stage 4
-- Stage 6 approve -> frontend merge -> slice merged
+- Stage 6 approve -> current head started PR checks green 재확인 -> frontend merge -> slice merged
 - Stage 6 request changes -> Stage 4
 
 원칙:

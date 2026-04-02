@@ -63,6 +63,7 @@ describe("git policy", () => {
     expect(missing).toContain("## QA Evidence");
     expect(missing).toContain("## Actual Verification");
     expect(missing).toContain("## Closeout Sync");
+    expect(missing).toContain("## Merge Gate");
     expect(missing).toContain("## Security Review");
     expect(missing).not.toContain("## Summary");
   });
@@ -98,6 +99,8 @@ describe("findEmptyPrSections", () => {
       sections["## Actual Verification"] ?? "- verifier: Codex\n- environment: local demo\n- scope: planner smoke\n- result: pass",
       "## Closeout Sync",
       sections["## Closeout Sync"] ?? "- roadmap status: in-progress 유지\n- README Delivery Checklist: Stage 4 항목 반영 완료\n- acceptance: Manual Only 제외 모두 체크",
+      "## Merge Gate",
+      sections["## Merge Gate"] ?? "- current head SHA: abc123\n- started PR checks: quality, smoke, policy\n- all checks completed green: 예\n- pending / failed / rerun checks: 없음",
       "## Docs Impact",
       sections["## Docs Impact"] ?? "- [x] 공식 문서 영향 없음",
       "## Security Review",
