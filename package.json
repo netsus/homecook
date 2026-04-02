@@ -52,12 +52,16 @@
     "dev:demo:reset": "node scripts/dev-demo.mjs --reset",
     "dev:local-supabase": "node scripts/dev-local-supabase.mjs",
     "dev:qa-fixtures": "HOMECOOK_ENABLE_QA_FIXTURES=1 NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev",
+    "branch:start": "node scripts/start-work-branch.mjs",
+    "branch:status": "node scripts/branch-session-status.mjs",
+    "branch:clear": "node scripts/branch-session-clear.mjs",
     "validate:branch": "node scripts/check-branch-name.mjs",
     "validate:commits": "node scripts/check-commit-messages.mjs",
     "validate:pr": "node scripts/check-pr-body.mjs",
     "validate:workpack": "BRANCH_NAME=$(git branch --show-current) node scripts/check-workpack-docs.mjs",
     "validate:workflow-v2": "node scripts/validate-workflow-v2.mjs",
-    "validate:omo-bookkeeping": "node scripts/validate-omo-bookkeeping.mjs"
+    "validate:omo-bookkeeping": "node scripts/validate-omo-bookkeeping.mjs",
+    "validate:closeout-sync": "node scripts/validate-closeout-sync.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -23,6 +23,12 @@
 - `ralph-loop`와 `ulw-loop`는 아직 Homecook stage dispatcher와 연결되지 않았으므로 project 레벨에서 비활성화한다.
 - `comment-checker` hook는 현재 로컬 설치 상태 차이로 false positive가 날 수 있어 project 레벨에서 비활성화한다.
 - `comment-checker`는 영구 제거가 아니라 known issue다. 바이너리 링크 이슈가 해결되면 re-enable 여부를 다시 판단한다.
+- 일반 로컬 세션은 OMO supervisor처럼 stage branch를 미리 계산하지는 않는다.
+- 대신 `pnpm branch:start -- --branch <name>` 또는 slice shortcut이 active work branch intent를 기록한다.
+- project-level `.claude/settings.json` hook는 새 user prompt마다 branch reassert를 요구하고, 같은 prompt 안에서는 `Write/Edit` 전에 recorded intent 기준 auto-checkout 또는 deny를 수행한다.
+- 따라서 같은 세션이라도 다른 PR 또는 다른 work item으로 넘어간 뒤 수정하려면 먼저 다시 `pnpm branch:start ...`를 실행해야 한다.
+- 현재 intent 확인/초기화는 `pnpm branch:status`, `pnpm branch:clear`를 사용한다.
+- OMO supervisor 경로만 `.worktrees/<work-item>` 안에서 stage별 branch checkout을 자동으로 수행한다.
 
 ## Local Auth
 

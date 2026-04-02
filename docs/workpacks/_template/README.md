@@ -56,6 +56,13 @@
 - 관련 공식 문서 경로
 - 필요한 경우에만 관련 wireframe 1~2개
 
+## QA / Test Data Plan
+- fixture baseline / auth override / fault injection
+- real DB smoke 경로 (`pnpm dev:demo`, `pnpm dev:local-supabase`, seed script 등)
+- seed / reset 명령
+- bootstrap이 생성해야 하는 시스템 row / 기본 데이터
+- blocker 조건 (예: referenced table 부재, bootstrap 미완료)
+
 ## Key Rules
 - 이 슬라이스에서 반드시 지켜야 하는 정책과 상태 전이
 - read-only, 권한, 멱등성, 예외 처리 규칙
@@ -71,11 +78,17 @@
 3. 결과 화면 또는 상태 변화
 
 ## Delivery Checklist
+> 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
+> Stage 2/3에서는 백엔드 관련 항목을, Stage 4~6에서는 남은 프론트/QA/디자인/closeout 항목을 닫는다.
+> Stage 6 merge 시점에는 In Scope인데도 남아 있는 unchecked 항목이 없어야 하며, `N/A` 또는 후속 분리는 README/PR 본문에 근거를 남긴다.
+
 - [ ] 백엔드 계약 고정
 - [ ] API 또는 adapter 연결
 - [ ] 타입 반영
 - [ ] UI 연결
 - [ ] 상태 전이 / 권한 / 멱등성 테스트
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분
+- [ ] fixture와 real DB smoke 경로 구분
+- [ ] seed / bootstrap / system row 준비 여부 점검
 - [ ] `loading / empty / error / read-only` 상태 점검
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리

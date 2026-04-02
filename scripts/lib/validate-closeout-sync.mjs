@@ -1,0 +1,365 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+
+import { resolveBaseRef } from "./check-workpack-docs.mjs";
+import { readSliceRoadmapStatus, readWorkpackDesignStatus } from "./omo-bookkeeping.mjs";
+
+function resolveBranchName(rootDir, env) {
+  const branchName = env.BRANCH_NAME ?? env.GITHUB_HEAD_REF;
+  if (typeof branchName === "string" && branchName.trim().length > 0) {
+    return branchName.trim();
+  }
+
+  const result = spawnSync("git", ["branch", "--show-current"], {
+    cwd: rootDir,
+    encoding: "utf8",
+  });
+
+  return result.status === 0 ? (result.stdout ?? "").trim() : "";
+}
+
+function listChangedFilesAgainstBase({ rootDir, baseRef }) {
+  if (typeof baseRef !== "string" || baseRef.trim().length === 0) {
+    return [];
+  }
+
+  const result = spawnSync("git", ["diff", "--name-only", `origin/${baseRef}...HEAD`], {
+    cwd: rootDir,
+    encoding: "utf8",
+  });
+
+  if (result.status !== 0) {
+    return [];
+  }
+
+  return (result.stdout ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function resolveBranchContext(branchName) {
+  const featureMatch = /^feature\/(be|fe)-(.+)$/.exec(branchName);
+  if (featureMatch) {
+    return {
+      kind: `feature-${featureMatch[1]}`,
+      slice: featureMatch[2],
+    };
+  }
+
+  const closeoutMatch = /^docs\/omo-closeout-(.+)$/.exec(branchName);
+  if (closeoutMatch) {
+    return {
+      kind: "omo-closeout",
+      slice: closeoutMatch[1],
+    };
+  }
+
+  return {
+    kind: null,
+    slice: null,
+  };
+}
+
+function resolveChangedSlices(changedFiles) {
+  return Array.from(
+    new Set(
+      changedFiles
+        .map((filePath) => {
+          const match = /^docs\/workpacks\/([^/]+)\/(?:README|acceptance)\.md$/.exec(filePath);
+          if (!match) {
+            return null;
+          }
+
+          return match[1] === "_template" ? null : match[1];
+        })
+        .filter(Boolean),
+    ),
+  );
+}
+
+function parseDraftState(value) {
+  if (value === true || value === "true") {
+    return true;
+  }
+
+  if (value === false || value === "false") {
+    return false;
+  }
+
+  return null;
+}
+
+function readLines(filePath) {
+  return readFileSync(filePath, "utf8").split(/\r?\n/);
+}
+
+function parseChecklistSection({ filePath, sectionHeading }) {
+  if (!existsSync(filePath)) {
+    return {
+      filePath,
+      missing: true,
+      reason: "file_missing",
+      unchecked: [],
+    };
+  }
+
+  const lines = readLines(filePath);
+  const startIndex = lines.findIndex((line) => line.trim() === sectionHeading);
+  if (startIndex === -1) {
+    return {
+      filePath,
+      missing: true,
+      reason: "section_missing",
+      unchecked: [],
+    };
+  }
+
+  const nextSectionIndex = lines.findIndex(
+    (line, index) => index > startIndex && /^##\s+/.test(line.trim()),
+  );
+  const endIndex = nextSectionIndex === -1 ? lines.length : nextSectionIndex;
+  const unchecked = [];
+
+  for (let index = startIndex + 1; index < endIndex; index += 1) {
+    const line = lines[index];
+    const match = /^- \[ \]\s+(.*)$/.exec(line);
+    if (!match) {
+      continue;
+    }
+
+    unchecked.push({
+      lineNumber: index + 1,
+      text: match[1].trim(),
+    });
+  }
+
+  return {
+    filePath,
+    missing: false,
+    reason: null,
+    unchecked,
+  };
+}
+
+function parseAcceptanceChecklist(filePath) {
+  if (!existsSync(filePath)) {
+    return {
+      filePath,
+      missing: true,
+      reason: "file_missing",
+      unchecked: [],
+    };
+  }
+
+  const lines = readLines(filePath);
+  let currentSubsection = null;
+  const unchecked = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const trimmed = line.trim();
+
+    if (/^##\s+/.test(trimmed)) {
+      currentSubsection = null;
+    } else if (/^###\s+/.test(trimmed)) {
+      currentSubsection = trimmed.replace(/^###\s+/, "");
+    }
+
+    const match = /^- \[ \]\s+(.*)$/.exec(trimmed);
+    if (!match) {
+      continue;
+    }
+
+    if (currentSubsection === "Manual Only") {
+      continue;
+    }
+
+    unchecked.push({
+      lineNumber: index + 1,
+      text: match[1].trim(),
+    });
+  }
+
+  return {
+    filePath,
+    missing: false,
+    reason: null,
+    unchecked,
+  };
+}
+
+function resolveWorkpackPaths({ rootDir, slice }) {
+  return {
+    readmePath: resolve(rootDir, "docs", "workpacks", slice, "README.md"),
+    acceptancePath: resolve(rootDir, "docs", "workpacks", slice, "acceptance.md"),
+  };
+}
+
+function pushMissingSectionError(errors, parsedSection, label) {
+  if (!parsedSection.missing) {
+    return;
+  }
+
+  errors.push({
+    path: parsedSection.filePath,
+    message:
+      parsedSection.reason === "section_missing"
+        ? `${label} section is missing.`
+        : `${label} file is missing.`,
+  });
+}
+
+function buildChecklistErrors({ entries, filePath, reason }) {
+  return entries.map((entry) => ({
+    path: `${filePath}:${entry.lineNumber}`,
+    message: `${reason}: ${entry.text}`,
+  }));
+}
+
+function validateStrictSlice({
+  rootDir,
+  slice,
+  roadmapStatus,
+  strictMode,
+}) {
+  const errors = [];
+  const { readmePath, acceptancePath } = resolveWorkpackPaths({ rootDir, slice });
+  const designStatus = readWorkpackDesignStatus({
+    rootDir,
+    slice,
+  });
+  const deliveryChecklist = parseChecklistSection({
+    filePath: readmePath,
+    sectionHeading: "## Delivery Checklist",
+  });
+  const acceptanceChecklist = parseAcceptanceChecklist(acceptancePath);
+
+  if (strictMode === "ready-for-review") {
+    if (!["in-progress", "merged"].includes(roadmapStatus.status ?? "")) {
+      errors.push({
+        path: roadmapStatus.filePath,
+        message: `Ready-for-review frontend slice '${slice}' must be 'in-progress' or 'merged' in docs/workpacks/README.md.`,
+      });
+    }
+
+    if (!["pending-review", "confirmed", "N/A"].includes(designStatus.status ?? "")) {
+      errors.push({
+        path: designStatus.filePath,
+        message: `Ready-for-review frontend slice '${slice}' requires Design Status 'pending-review', 'confirmed', or 'N/A'.`,
+      });
+    }
+  }
+
+  if (strictMode === "merged") {
+    if (roadmapStatus.status !== "merged") {
+      errors.push({
+        path: roadmapStatus.filePath,
+        message: `Merged slice '${slice}' must be marked 'merged' in docs/workpacks/README.md.`,
+      });
+    }
+
+    if (!["confirmed", "N/A"].includes(designStatus.status ?? "")) {
+      errors.push({
+        path: designStatus.filePath,
+        message: `Merged slice '${slice}' requires Design Status 'confirmed' or 'N/A'.`,
+      });
+    }
+  }
+
+  pushMissingSectionError(errors, deliveryChecklist, "Delivery Checklist");
+  pushMissingSectionError(errors, acceptanceChecklist, "Acceptance");
+
+  if (deliveryChecklist.unchecked.length > 0) {
+    errors.push(
+      ...buildChecklistErrors({
+        entries: deliveryChecklist.unchecked,
+        filePath: deliveryChecklist.filePath,
+        reason: "Delivery Checklist item must be checked before closeout-ready review or merge",
+      }),
+    );
+  }
+
+  if (acceptanceChecklist.unchecked.length > 0) {
+    errors.push(
+      ...buildChecklistErrors({
+        entries: acceptanceChecklist.unchecked,
+        filePath: acceptanceChecklist.filePath,
+        reason: "Acceptance item outside Manual Only must be checked before closeout-ready review or merge",
+      }),
+    );
+  }
+
+  return errors;
+}
+
+/**
+ * @param {{
+ *   rootDir?: string;
+ *   env?: NodeJS.ProcessEnv & { PR_IS_DRAFT?: string | boolean };
+ *   changedFiles?: string[] | null;
+ * }} [options]
+ */
+export function validateCloseoutSync({
+  rootDir = process.cwd(),
+  env = process.env,
+  changedFiles = null,
+} = {}) {
+  const branchName = resolveBranchName(rootDir, env);
+  const branchContext = resolveBranchContext(branchName);
+  const baseRef = resolveBaseRef(env, spawnSync) ?? "master";
+  const resolvedChangedFiles =
+    Array.isArray(changedFiles) && changedFiles.length >= 0
+      ? changedFiles
+      : listChangedFilesAgainstBase({ rootDir, baseRef });
+  const changedSlices = resolveChangedSlices(resolvedChangedFiles);
+  const slices = new Set(changedSlices);
+  const prIsDraft = parseDraftState(env.PR_IS_DRAFT);
+
+  if (branchContext.slice) {
+    slices.add(branchContext.slice);
+  }
+
+  const results = [];
+
+  for (const slice of slices) {
+    const roadmapStatus = readSliceRoadmapStatus({
+      rootDir,
+      slice,
+    });
+
+    let strictMode = null;
+    if (roadmapStatus.status === "merged") {
+      strictMode = "merged";
+    } else if (
+      branchContext.kind === "feature-fe" &&
+      branchContext.slice === slice &&
+      prIsDraft === false
+    ) {
+      strictMode = "ready-for-review";
+    } else if (branchContext.kind === "omo-closeout" && branchContext.slice === slice) {
+      strictMode = "merged";
+    }
+
+    if (!strictMode) {
+      continue;
+    }
+
+    const errors = validateStrictSlice({
+      rootDir,
+      slice,
+      roadmapStatus,
+      strictMode,
+    });
+
+    if (errors.length > 0) {
+      results.push({
+        name: `closeout-sync:${slice}`,
+        errors,
+      });
+    }
+  }
+
+  return results;
+}

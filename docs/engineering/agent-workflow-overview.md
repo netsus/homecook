@@ -22,7 +22,7 @@
        ↓
 3단계 (Claude) — 백엔드 PR 리뷰 → merge
        ↓
-4단계 (Codex) — feature/fe-<slice> 프론트엔드 구현 → CI green → PR
+4단계 (Codex) — feature/fe-<slice> 프론트엔드 구현 → Layer 1 green → Layer 2 exploratory QA → Layer 3 qa:eval → PR
        ↓
 5단계 (Claude) — 디자인 리뷰 (Design Status 기준)
        ↓
@@ -74,18 +74,23 @@
 - `contract-evolution`이 필요한 슬라이스는 해당 docs PR이 main에 merge되기 전까지 Stage 2/4 product 구현을 시작하지 않는다.
 - `low-risk docs/config`는 리스크가 낮고 제품 계약을 바꾸지 않는 변경만 해당한다.
 - `required_checks`는 이 문서가 단일 소스다. 다른 문서는 change type을 가정하지 않고 이 문서를 참조한다.
+- GitHub Actions는 변경 범위에 따라 무거운 job만 자동 실행한다. policy/PR governance는 기본 유지하고, code CI·frontend QA·security smoke·qa eval은 관련 파일 변경이 있을 때만 뜨는 것을 기본값으로 본다.
 
 ### PR Template Guidance
 
 - PR 템플릿의 모든 섹션은 무조건 채우기 대상이 아니다.
 - `N/A`를 쓸 때는 `영향 없음` 또는 `해당 없음`의 근거를 한 줄로 남긴다.
 - `docs-governance`, `contract-evolution`, `low-risk docs/config`는 E2E, Lighthouse, Design 항목을 무조건 체크하지 않는다.
+- `Actual Verification`은 “누가 / 어디서 / 무엇을 / 어떤 결과로” 확인했는지 남기는 섹션이다.
+- `Closeout Sync`는 roadmap status, README `Delivery Checklist`, acceptance, `Design Status`가 현재 PR 상태와 맞는지 남기는 섹션이다.
+- product slice는 `Ready for Review` 전에 두 섹션을 비워두지 않는다.
 
 ### QA Execution Rules
 
 - deterministic QA 실행 기준은 `docs/engineering/qa-system.md`가 단일 소스다.
 - Layer 1 deterministic QA는 PR/CI에서 자동 실행되며, 로컬에서는 change type에 맞는 `verify:*` 스크립트로 재현한다.
 - Layer 2 exploratory QA는 기본적으로 자동 실행되지 않는다. `product-frontend` Stage 4 구현 후, `Ready for Review` 전에 명시적으로 `pnpm qa:explore -- --slice <slice>`를 실행한다.
+- Layer 2 exploratory QA를 실행했다면 같은 Stage 4 안에서 `pnpm qa:eval -- --checklist <...> --report <...>`로 report 품질도 남긴다.
 - exploratory QA는 `new-screen`과 `high-risk-ui-change`에서 기본 수행이다. low-risk UI change는 생략 가능하지만 PR 본문에 근거를 남긴다.
 - Layer 3 qa eval은 QA 시스템 자체를 변경할 때 명시적으로 `pnpm qa:eval:suite`를 실행하며, 같은 변경 범위에서는 `.github/workflows/qa-eval.yml`이 자동으로 재실행된다.
 
@@ -208,6 +213,7 @@ Codex → Claude:
 1. change type별 `required_checks`를 통과한 뒤 PR을 연다.
 2. product 구현은 Draft로 시작하고 required CI가 green이면 `Ready for Review`로 전환한다.
 3. docs-governance, contract-evolution, low-risk docs/config는 작은 변경이면 Draft를 생략할 수 있지만, PR 본문에 근거와 review path를 남긴다.
+4. product slice는 handoff 전에 `Actual Verification`, `Closeout Sync`, 관련 workpack/acceptance를 최신 상태로 맞춘다.
 
 Claude 리뷰 시작 조건:
 → `CLAUDE.md` 리뷰 시작 조건 참조

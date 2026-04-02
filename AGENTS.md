@@ -74,6 +74,12 @@
 - 브랜치, 커밋, worktree, PR 크기 규칙의 단일 기준은 `docs/engineering/git-workflow.md`다.
 - 변경 유형별 `required_checks`, `optional_reviews`, `N/A 허용 기준`, loop 사용 기준은 `docs/engineering/agent-workflow-overview.md`를 따른다.
 - 기능 작업은 기본 브랜치에서 직접 하지 않고 작업 전용 브랜치에서 진행한다.
+- 파일 수정 전에는 먼저 작업 브랜치로 전환한다. 표준 명령은 `pnpm branch:start -- --branch <name>` 또는 slice 작업의 경우 `pnpm branch:start -- --slice <slice> --role <docs|be|fe>`다.
+- `pnpm branch:start`는 일반 세션의 active work branch intent도 함께 기록한다.
+- 일반 세션에서는 `.claude/settings.json`의 project hook가 새 user prompt마다 branch reassert를 요구한다.
+- 따라서 같은 세션이어도 새 user prompt 뒤에 파일을 수정하려면 먼저 `pnpm branch:start ...`를 다시 실행해 이번 턴의 work branch intent를 재확인한다.
+- reassert가 끝난 뒤 `Write/Edit` hook는 recorded intent와 현재 checkout을 비교한다. clean worktree면 recorded branch로 자동 전환하고, intent가 없거나 dirty mismatch면 수정이 차단된다.
+- 필요 시 `pnpm branch:status`, `pnpm branch:clear`로 현재 intent와 reassert 상태를 확인/초기화한다.
 - 브랜치 하나에는 가능한 한 하나의 작은 기능 단위 또는 명확한 하위 작업만 담는다.
 - 브랜치 접두어는 `feat/`가 아니라 `feature/`를 사용한다. (CI 검증 기준)
 - product slice 구현은 슬라이스 순서를 유지한다. 1단계(Claude) 문서가 main에 머지된 뒤에만 2단계(Codex)를 시작한다.
@@ -162,6 +168,8 @@
 - `pnpm qa:explore`
 - `pnpm qa:eval`
 - `pnpm build`
+- `pnpm branch:start -- --branch <name>`
 - `pnpm validate:branch`
 - `pnpm validate:commits`
 - `pnpm validate:pr`
+- `pnpm validate:closeout-sync`

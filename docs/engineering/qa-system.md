@@ -55,8 +55,9 @@
 
 CI 실행:
 
-- PR / push 시 `.github/workflows/ci.yml` + `.github/workflows/playwright.yml`에서 자동 실행
-- dependency audit은 `.github/workflows/security-review.yml`에서 자동 실행
+- PR / protected branch push 시 `Policy`, `.github/workflows/ci.yml`, `.github/workflows/playwright.yml`, `.github/workflows/security-smoke.yml`이 변경 범위에 맞게 자동 실행된다.
+- branch/commit/workpack 같은 governance 검증은 항상 유지하고, quality/build/QA는 관련 파일 변경이 있을 때만 뜬다.
+- dependency audit은 `.github/workflows/security-review.yml`에서 protected branch push, schedule, manual dispatch 기준으로 실행한다.
 
 ### Layer 2 — Agentic Exploratory QA
 
@@ -157,6 +158,14 @@ CI 실행:
 - `.github/workflows/qa-eval.yml`이 QA 시스템 관련 파일 변경 시 자동 실행된다.
 - CI artifact로 `.artifacts/qa/evals`를 업로드한다.
 
+## Slice Workflow 연결
+
+- Stage 1: workpack README와 acceptance에 `QA / Test Data Plan`, `Data Setup / Preconditions`를 적어 fixture 경로, real DB smoke 경로, seed/reset 명령, bootstrap/system row 기대치를 먼저 잠근다.
+- Stage 2: 백엔드 구현은 Layer 1 deterministic gate를 통과하고, 스키마/테이블/bootstrap 의존 슬라이스라면 real DB smoke 또는 동등한 검증을 추가로 남긴다.
+- Stage 4: 프론트 구현은 Layer 1 deterministic gate를 먼저 green으로 만든 뒤 Layer 2 exploratory QA를 실행한다. exploratory QA를 실행했다면 바로 Layer 3 단건 `qa:eval`로 report 품질도 남긴다.
+- Stage 5~6: 디자인 리뷰와 PR 리뷰는 Layer 1 결과, exploratory report, qa eval 결과를 함께 읽고 finding 처리 여부를 판단한다.
+- QA 시스템 자체를 바꾸는 docs/tooling 작업은 product slice와 별도로 Layer 3 suite(`pnpm qa:eval:suite`)를 실행한다.
+
 ## 산출물
 
 exploratory QA 번들은 아래 파일을 만든다.
@@ -171,6 +180,8 @@ PR에는 아래를 남긴다.
 - exploratory QA 실행 여부와 보고서 경로
 - qa eval 결과 또는 `N/A` 근거
 - Layer 3 변경이면 `pnpm qa:eval:suite` 결과와 artifact 경로
+- 실제 브라우저 확인 / local demo / local Supabase / live 외부 연동 여부는 PR `Actual Verification` 섹션에 verifier, environment, result 형태로 남긴다.
+- README `Delivery Checklist`, acceptance, `Design Status`와 PR evidence가 어긋나지 않았는지는 PR `Closeout Sync` 섹션에서 정리한다.
 
 ## 운영 원칙
 

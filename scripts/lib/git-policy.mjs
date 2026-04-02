@@ -17,6 +17,8 @@ export const REQUIRED_PR_SECTIONS = [
   "## Workpack / Slice",
   "## Test Plan",
   "## QA Evidence",
+  "## Actual Verification",
+  "## Closeout Sync",
   "## Docs Impact",
   "## Security Review",
   "## Performance",
