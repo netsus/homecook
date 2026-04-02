@@ -48,6 +48,11 @@
 - real local Supabase + local auth 브라우저 검증: `pnpm dev:local-supabase`
 - fixture 기반 브라우저 QA 시작: `pnpm dev:qa-fixtures`
 
+운영 메모:
+
+- Layer 1 Playwright gate는 기본적으로 `http://127.0.0.1:3100`의 전용 QA fixture 서버를 직접 띄운다.
+- `pnpm dev:qa-fixtures`의 `3000` 포트는 Layer 2 exploratory QA나 수동 브라우저 확인용으로 유지한다.
+
 CI 실행:
 
 - PR / push 시 `.github/workflows/ci.yml` + `.github/workflows/playwright.yml`에서 자동 실행

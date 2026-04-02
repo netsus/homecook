@@ -1,7 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+const DEFAULT_PLAYWRIGHT_BASE_URL = "http://127.0.0.1:3100";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? DEFAULT_PLAYWRIGHT_BASE_URL;
 const snapshotPlatform = process.platform === "darwin" ? "darwin" : "linux";
+const webServerUrl = new URL(baseURL);
+const webServerHost = webServerUrl.hostname;
+const webServerPort =
+  webServerUrl.port.length > 0
+    ? Number.parseInt(webServerUrl.port, 10)
+    : webServerUrl.protocol === "https:"
+      ? 443
+      : 80;
+const shouldReuseExistingServer = process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === "1";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -44,9 +54,14 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      "HOMECOOK_ENABLE_QA_FIXTURES=1 NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES=1 corepack pnpm exec next dev --hostname 127.0.0.1 --port 3000",
+      [
+        "HOMECOOK_ENABLE_QA_FIXTURES=1",
+        "NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES=1",
+        `NEXT_PUBLIC_APP_URL=${webServerUrl.origin}`,
+        `corepack pnpm exec next dev --hostname ${webServerHost} --port ${webServerPort}`,
+      ].join(" "),
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: shouldReuseExistingServer,
     timeout: 120_000,
   },
 });
