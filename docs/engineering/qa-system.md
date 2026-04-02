@@ -157,6 +157,14 @@ CI 실행:
 - `.github/workflows/qa-eval.yml`이 QA 시스템 관련 파일 변경 시 자동 실행된다.
 - CI artifact로 `.artifacts/qa/evals`를 업로드한다.
 
+## Slice Workflow 연결
+
+- Stage 1: workpack README와 acceptance에 `QA / Test Data Plan`, `Data Setup / Preconditions`를 적어 fixture 경로, real DB smoke 경로, seed/reset 명령, bootstrap/system row 기대치를 먼저 잠근다.
+- Stage 2: 백엔드 구현은 Layer 1 deterministic gate를 통과하고, 스키마/테이블/bootstrap 의존 슬라이스라면 real DB smoke 또는 동등한 검증을 추가로 남긴다.
+- Stage 4: 프론트 구현은 Layer 1 deterministic gate를 먼저 green으로 만든 뒤 Layer 2 exploratory QA를 실행한다. exploratory QA를 실행했다면 바로 Layer 3 단건 `qa:eval`로 report 품질도 남긴다.
+- Stage 5~6: 디자인 리뷰와 PR 리뷰는 Layer 1 결과, exploratory report, qa eval 결과를 함께 읽고 finding 처리 여부를 판단한다.
+- QA 시스템 자체를 바꾸는 docs/tooling 작업은 product slice와 별도로 Layer 3 suite(`pnpm qa:eval:suite`)를 실행한다.
+
 ## 산출물
 
 exploratory QA 번들은 아래 파일을 만든다.

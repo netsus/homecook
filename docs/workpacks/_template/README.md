@@ -56,6 +56,13 @@
 - 관련 공식 문서 경로
 - 필요한 경우에만 관련 wireframe 1~2개
 
+## QA / Test Data Plan
+- fixture baseline / auth override / fault injection
+- real DB smoke 경로 (`pnpm dev:demo`, `pnpm dev:local-supabase`, seed script 등)
+- seed / reset 명령
+- bootstrap이 생성해야 하는 시스템 row / 기본 데이터
+- blocker 조건 (예: referenced table 부재, bootstrap 미완료)
+
 ## Key Rules
 - 이 슬라이스에서 반드시 지켜야 하는 정책과 상태 전이
 - read-only, 권한, 멱등성, 예외 처리 규칙
@@ -77,5 +84,7 @@
 - [ ] UI 연결
 - [ ] 상태 전이 / 권한 / 멱등성 테스트
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분
+- [ ] fixture와 real DB smoke 경로 구분
+- [ ] seed / bootstrap / system row 준비 여부 점검
 - [ ] `loading / empty / error / read-only` 상태 점검
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리

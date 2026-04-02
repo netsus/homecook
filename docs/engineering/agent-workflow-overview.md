@@ -22,7 +22,7 @@
        ↓
 3단계 (Claude) — 백엔드 PR 리뷰 → merge
        ↓
-4단계 (Codex) — feature/fe-<slice> 프론트엔드 구현 → CI green → PR
+4단계 (Codex) — feature/fe-<slice> 프론트엔드 구현 → Layer 1 green → Layer 2 exploratory QA → Layer 3 qa:eval → PR
        ↓
 5단계 (Claude) — 디자인 리뷰 (Design Status 기준)
        ↓
@@ -86,6 +86,7 @@
 - deterministic QA 실행 기준은 `docs/engineering/qa-system.md`가 단일 소스다.
 - Layer 1 deterministic QA는 PR/CI에서 자동 실행되며, 로컬에서는 change type에 맞는 `verify:*` 스크립트로 재현한다.
 - Layer 2 exploratory QA는 기본적으로 자동 실행되지 않는다. `product-frontend` Stage 4 구현 후, `Ready for Review` 전에 명시적으로 `pnpm qa:explore -- --slice <slice>`를 실행한다.
+- Layer 2 exploratory QA를 실행했다면 같은 Stage 4 안에서 `pnpm qa:eval -- --checklist <...> --report <...>`로 report 품질도 남긴다.
 - exploratory QA는 `new-screen`과 `high-risk-ui-change`에서 기본 수행이다. low-risk UI change는 생략 가능하지만 PR 본문에 근거를 남긴다.
 - Layer 3 qa eval은 QA 시스템 자체를 변경할 때 명시적으로 `pnpm qa:eval:suite`를 실행하며, 같은 변경 범위에서는 `.github/workflows/qa-eval.yml`이 자동으로 재실행된다.
 
