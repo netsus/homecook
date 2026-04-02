@@ -148,8 +148,8 @@ GET /api/v1/recipes
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [x] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed)
 - [ ] N/A
 
 > **신규 화면 (`INGREDIENT_FILTER_MODAL`)**: Stage 1에서 design-generator + design-critic 실행 완료

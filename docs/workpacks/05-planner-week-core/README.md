@@ -266,20 +266,20 @@
 
 ## Delivery Checklist
 
-- [ ] 백엔드 계약 고정 (`GET /planner`, `POST /planner/columns`, `PATCH /planner/columns/{id}`, `DELETE /planner/columns/{id}`)
-- [ ] API Route Handlers 구현 (`app/api/v1/planner/...`)
-- [ ] TypeScript 타입 정의 (request/response/error)
-- [ ] 권한 검증 (로그인 필수, 소유자 일치)
-- [ ] 끼니 컬럼 최대 5개 제한 로직
-- [ ] 컬럼 삭제 시 소속 meals 검증 (409 CONFLICT)
-- [ ] Vitest 단위 테스트 (권한, 상태 전이, 예외 케이스)
-- [ ] 프론트엔드 `PLANNER_WEEK` 화면 구현
-- [ ] Zustand 상태 관리 (플래너 데이터, 컬럼 CRUD)
-- [ ] 5개 UI 상태 구현 (`loading / empty / error / read-only / unauthorized`)
-- [ ] 상단 CTA 버튼 UI (장보기/요리하기/남은요리) — 동작은 추후 슬라이스
-- [ ] 상태 뱃지 시각화 (registered / shopping_done / cook_done)
-- [ ] 날짜 범위 스크롤 인터랙션
-- [ ] `ui/designs/PLANNER_WEEK.md` + critique 산출물 유지
-- [ ] Playwright E2E (플래너 조회, 컬럼 추가/수정/삭제 흐름)
-- [ ] 자동화 범위 구분 (Vitest vs Playwright)
-- [ ] 수동 QA 시나리오 정리 (acceptance.md Manual Only 섹션)
+- [x] 백엔드 계약 고정 (`GET /planner`, `POST /planner/columns`, `PATCH /planner/columns/{id}`, `DELETE /planner/columns/{id}`)
+- [x] API Route Handlers 구현 (`app/api/v1/planner/...`)
+- [x] TypeScript 타입 정의 (request/response/error)
+- [x] 권한 검증 (로그인 필수, 소유자 일치)
+- [x] 끼니 컬럼 최대 5개 제한 로직
+- [x] 컬럼 삭제 시 소속 meals 검증 (409 CONFLICT)
+- [x] Vitest 단위 테스트 (권한, 상태 전이, 예외 케이스)
+- [x] 프론트엔드 `PLANNER_WEEK` 화면 구현
+- [x] Zustand 상태 관리 (플래너 데이터, 컬럼 CRUD)
+- [x] 5개 UI 상태 구현 (`loading / empty / error / read-only / unauthorized`)
+- [x] 상단 CTA 버튼 UI (장보기/요리하기/남은요리) — 동작은 추후 슬라이스
+- [x] 상태 뱃지 시각화 (registered / shopping_done / cook_done)
+- [x] 날짜 범위 스크롤 인터랙션
+- [x] `ui/designs/PLANNER_WEEK.md` + critique 산출물 유지
+- [x] Playwright E2E (플래너 조회, 컬럼 추가/수정/삭제 흐름)
+- [x] 자동화 범위 구분 (Vitest vs Playwright)
+- [x] 수동 QA 시나리오 정리 (acceptance.md Manual Only 섹션)
