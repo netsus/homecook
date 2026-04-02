@@ -93,6 +93,9 @@ CI 실행:
 
 - `product-frontend`에서 Stage 4 구현 완료 후
 - deterministic gate green 후, `Ready for Review` 전
+- QA fixture, Playwright, auth/session, exploratory checklist 같은 QA 시스템 변경이 다른 브랜치에서 먼저 merge되었다면 exploratory QA 전에 최신 base를 반영한 브랜치에서 Layer 1 deterministic gate를 다시 실행한다.
+- 위 rerun이 red면 exploratory QA를 진행하지 않고 harness 또는 merge drift를 먼저 복구한다.
+- 이전 exploratory QA 결과는 참고 evidence로만 유지하고, 최신 deterministic gate를 다시 통과하기 전에는 현재 출고 신호로 간주하지 않는다.
 
 실행 강도:
 

@@ -15,7 +15,6 @@
     "omo:status:brief": "node scripts/omo-status-brief.mjs",
     "omo:supervise": "node scripts/omo-supervise.mjs",
     "omo:tick": "node scripts/omo-tick.mjs",
-    "omo:reconcile": "node scripts/omo-reconcile.mjs",
     "omo:tick:watch": "node scripts/omo-tick-watch.mjs",
     "omo:reconcile": "node scripts/omo-reconcile.mjs",
     "omo:claude-budget": "node scripts/omo-lite-claude-budget.mjs",
