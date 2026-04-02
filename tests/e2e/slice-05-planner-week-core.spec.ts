@@ -233,4 +233,24 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByText("이 화면은 로그인이 필요해요")).toBeVisible();
     await expect(page.getByRole("button", { name: "Google로 시작하기" })).toBeVisible();
   });
+
+  test("guest user keeps the primary login CTA above bottom tabs on small iOS viewport", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "mobile-ios-small");
+
+    await setAuthOverride(page, "guest");
+
+    await page.goto("/planner");
+
+    const primaryCta = page.getByRole("button", { name: "Google로 시작하기" });
+    const bottomTabs = page.locator("nav").first();
+
+    await expect(primaryCta).toBeVisible();
+
+    const primaryCtaBox = await primaryCta.boundingBox();
+    const bottomTabsBox = await bottomTabs.boundingBox();
+
+    expect(primaryCtaBox).not.toBeNull();
+    expect(bottomTabsBox).not.toBeNull();
+    expect(primaryCtaBox!.y + primaryCtaBox!.height).toBeLessThanOrEqual(bottomTabsBox!.y - 8);
+  });
 });
