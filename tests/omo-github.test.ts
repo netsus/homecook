@@ -110,7 +110,7 @@ describe("OMO GitHub automation client", () => {
     expect(argsLog).toContain("## Security Review");
     expect(argsLog).toContain("edit");
     expect(argsLog).toContain("checks");
-    expect(argsLog).toContain("--required");
+    expect(argsLog).not.toContain("--required");
     expect(argsLog).toContain("ready");
     expect(argsLog).toContain("review");
     expect(argsLog).toContain("--approve");
@@ -120,7 +120,7 @@ describe("OMO GitHub automation client", () => {
     expect(argsLog).toContain("update-branch");
   });
 
-  it("treats 'no required checks reported' as pending instead of throwing", () => {
+  it("treats zero visible PR checks as pending instead of passing", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-no-checks-"));
     const binPath = join(rootDir, "fake-gh-no-checks.sh");
 
@@ -130,11 +130,6 @@ describe("OMO GitHub automation client", () => {
         "#!/bin/sh",
         "case \"$1 $2\" in",
         "  'pr checks')",
-        "    shift 2",
-        "    if printf '%s\\n' \"$@\" | grep -q -- '--required'; then",
-        "      printf '%s\\n' \"no required checks reported on the 'docs/04-recipe-save' branch\" >&2",
-        "      exit 1",
-        "    fi",
         "    printf '%s\\n' '[]'",
         "    exit 0",
         "    ;;",
@@ -161,10 +156,10 @@ describe("OMO GitHub automation client", () => {
     });
   });
 
-  it("falls back to all checks when GitHub reports no required checks for the branch", () => {
-    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-fallback-checks-"));
-    const binPath = join(rootDir, "fake-gh-fallback-checks.sh");
-    const argsPath = join(rootDir, "fake-gh-fallback-checks.args.log");
+  it("uses all started PR checks as the merge gate input", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-merge-gate-checks-"));
+    const binPath = join(rootDir, "fake-gh-merge-gate-checks.sh");
+    const argsPath = join(rootDir, "fake-gh-merge-gate-checks.args.log");
 
     writeFileSync(
       binPath,
@@ -172,11 +167,6 @@ describe("OMO GitHub automation client", () => {
         "#!/bin/sh",
         "printf '%s\\n' \"$@\" >> \"$FAKE_GH_ARGS_PATH\"",
         "if [ \"$1 $2\" = 'pr checks' ]; then",
-        "  shift 2",
-        "  if printf '%s\\n' \"$@\" | grep -q -- '--required'; then",
-        "    printf '%s\\n' \"no required checks reported on the 'docs/04-recipe-save' branch\" >&2",
-        "    exit 1",
-        "  fi",
         "  printf '%s\\n' '[{\"name\":\"quality\",\"bucket\":\"pass\",\"state\":\"SUCCESS\"},{\"name\":\"policy\",\"bucket\":\"pass\",\"state\":\"SUCCESS\"}]'",
         "  exit 0",
         "fi",
@@ -200,11 +190,11 @@ describe("OMO GitHub automation client", () => {
 
     expect(checks.bucket).toBe("pass");
     expect(checks.checks).toHaveLength(2);
-    expect(argsLog).toContain("--required");
     expect(argsLog).toContain("--json");
+    expect(argsLog).not.toContain("--required");
   });
 
-  it("prefers the latest status rollup entry when stale failed required checks share the same name", () => {
+  it("prefers the latest status rollup entry when stale failed PR checks share the same name", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-stale-fail-pending-"));
     const binPath = join(rootDir, "fake-gh-stale-fail-pending.sh");
 

@@ -41,14 +41,15 @@
   - `pnpm branch:start -- --slice <slice> --role fe`
 - 일반 세션에서는 위 명령이 해당 단계 브랜치를 active intent로 기록한다.
 - 새 user prompt 뒤에 다시 수정하려면 같은 명령으로 branch intent를 재확인해야 하며, project hook가 그 턴의 첫 `Write/Edit` 전에 recorded intent와 current checkout을 맞춘다.
-- product slice 구현 PR은 **Draft**로 열고 → backend는 `pnpm install --frozen-lockfile && pnpm verify:backend`, frontend는 `pnpm install --frozen-lockfile && pnpm verify:frontend` 통과 → CI green → **Ready for Review** 전환
+- product slice 구현 PR은 **Draft**로 열고 → backend는 `pnpm install --frozen-lockfile && pnpm verify:backend`, frontend는 `pnpm install --frozen-lockfile && pnpm verify:frontend` 통과 → required CI green → **Ready for Review** 전환
 - 머지 전 실제 동작 확인
+- merge 직전에는 현재 PR head SHA에 대해 시작된 check 전체가 완료/green인지 다시 확인한다. required가 아닌 check라도 pending, rerun, fail 상태면 merge하지 않는다.
 - 변경 유형별 축약 경로와 `N/A` 허용 기준은 `docs/engineering/agent-workflow-overview.md`의 Change Type Matrix를 따른다.
 
 ## Closeout Sync Contract
 
 - workpack README의 `Delivery Checklist`, `Design Status`, roadmap status, acceptance 체크박스, PR 본문 evidence는 서로 따로 노는 참고 문서가 아니라 **같은 closeout 상태**를 표현해야 한다.
-- Stage 2/4 구현 담당인 Codex는 PR을 `Ready for Review`로 넘기기 전에 자신이 닫은 범위에 맞춰 `Delivery Checklist`, acceptance, PR 본문 `Actual Verification`, `Closeout Sync`를 갱신한다.
+- Stage 2/4 구현 담당인 Codex는 PR을 `Ready for Review`로 넘기기 전에 자신이 닫은 범위에 맞춰 `Delivery Checklist`, acceptance, PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`를 갱신한다.
 - Stage 3/5/6 리뷰 담당인 Claude는 승인 전에 위 문서들이 서로 일치하는지 확인하고, mismatch가 있으면 코드 이슈가 없어도 closeout drift로 수정 요청한다.
 - policy 자동화는 `pnpm validate:closeout-sync`로 closeout drift를 검사한다.
   - non-draft `feature/fe-<slice>` PR은 `Ready for Review` 전에 README `Delivery Checklist`, acceptance(`Manual Only` 제외), `Design Status`가 closeout-ready 상태인지 통과해야 한다.
@@ -58,7 +59,7 @@
   - `Design Status`가 최종 리뷰 결과와 맞다
   - README `Delivery Checklist`에 In Scope인데도 남은 unchecked 항목이 없다
   - acceptance에서 `Manual Only`를 제외한 In Scope 미체크 항목이 없다
-  - PR 본문 `Actual Verification`, `Closeout Sync`가 최신 evidence를 반영한다
+  - PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`가 최신 evidence를 반영한다
 - 남길 수 있는 미체크 항목은 `Manual Only` 또는 명시적 `N/A` / 후속 slice 이관뿐이며, 이 경우 README 또는 PR 본문에 근거가 있어야 한다.
 
 ## Slice Readiness Safeguards
@@ -235,6 +236,7 @@
 - README `Delivery Checklist`와 acceptance의 백엔드 범위를 PR 준비 전에 갱신
 - PR 본문 `Actual Verification`에 real DB/schema/bootstrap smoke 또는 `N/A` 근거 기록
 - PR 본문 `Closeout Sync`에 Stage 2 시점에 닫은 항목과 남은 프론트 범위 기록
+- PR 본문 `Merge Gate`에 current head SHA, 시작된 PR checks, 남은 pending/fail/rerun 여부 기록
 
 ### 자가 점검 체크리스트
 
@@ -248,14 +250,14 @@
 - [ ] 로컬 또는 합의된 smoke DB에서 referenced table 부재가 없는지 확인했는가 (`Schema Change: 없음`이어도 적용)
 - [ ] bootstrap/system row 의존 슬라이스라면 real DB smoke 또는 seed 경로로 `recipe_books`, `meal_plan_columns` 같은 선행 데이터가 실제 생성되는지 확인했는가
 - [ ] README `Delivery Checklist`와 acceptance의 백엔드 항목을 최신 구현/evidence 기준으로 갱신했는가
-- [ ] PR 본문 `Actual Verification`, `Closeout Sync`가 최신 상태와 일치하는가
+- [ ] PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`가 최신 상태와 일치하는가
 - [ ] `pnpm install --frozen-lockfile && pnpm verify:backend` 통과
 - [ ] 브랜치명이 `feature/be-<slice>`인가
 - [ ] 커밋이 Conventional Commits를 따르는가
 
 ### 완료 기준
 
-`pnpm verify:backend` 통과 + 필요한 real DB/schema/bootstrap smoke 확인 → push → CI green → Draft 해제 → Ready for Review
+`pnpm verify:backend` 통과 + 필요한 real DB/schema/bootstrap smoke 확인 → push → required CI green → Draft 해제 → Ready for Review
 
 ### PR 본문 완료 요약 (PR ## Summary, ## Workpack/Slice 섹션에 작성)
 
@@ -306,7 +308,7 @@
 - [ ] README Backend First Contract와 실제 구현이 일치하는가
 - [ ] referenced table / bootstrap readiness를 real DB smoke나 seed evidence로 확인했는가 (해당 슬라이스)
 - [ ] README `Delivery Checklist`와 acceptance의 백엔드 범위가 실제 머지 상태와 일치하는가
-- [ ] PR 본문 `Actual Verification`, `Closeout Sync`가 비어 있지 않고 실제 evidence를 반영하는가
+- [ ] PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`가 비어 있지 않고 실제 evidence를 반영하는가
 
 ### 완료 기준
 
@@ -412,6 +414,7 @@
 - README `Delivery Checklist`, acceptance, Design Status를 PR 준비 전에 최신화
 - PR 본문 `Actual Verification`에 실제 브라우저 확인 / local demo / local Supabase / `N/A` 근거 기록
 - PR 본문 `Closeout Sync`에 남은 Manual Only, 후속 slice 이관, 최종 closeout 변경사항 기록
+- PR 본문 `Merge Gate`에 current head SHA, 시작된 PR checks, 남은 pending/fail/rerun 여부 기록
 
 ### 자가 점검 체크리스트
 
@@ -433,13 +436,13 @@
 - [ ] 신규 화면 또는 high-risk UI change라면 `pnpm qa:explore -- --slice <slice>` 번들을 만들고 exploratory QA 보고서를 남겼는가
 - [ ] Layer 2 exploratory QA를 실행했다면 `pnpm qa:eval -- --checklist <.../exploratory-checklist.json> --report <.../exploratory-report.json>` 결과를 남겼는가
 - [ ] README `Delivery Checklist`, acceptance, Design Status가 최신 구현/evidence 기준으로 갱신됐는가
-- [ ] PR 본문 `Actual Verification`, `Closeout Sync`가 최신 상태와 일치하는가
+- [ ] PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`가 최신 상태와 일치하는가
 - [ ] 브랜치명이 `feature/fe-<slice>`인가
 - [ ] 커밋이 Conventional Commits를 따르는가
 
 ### 완료 기준
 
-`pnpm verify:frontend` 통과 + 필요한 real DB/bootstrap smoke 완료 + required exploratory QA/eval evidence 확보 → push → CI green → Draft 해제 → Ready for Review
+`pnpm verify:frontend` 통과 + 필요한 real DB/bootstrap smoke 완료 + required exploratory QA/eval evidence 확보 → push → required CI green → Draft 해제 → Ready for Review
 
 ### PR 본문 완료 요약 (PR ## Summary, ## Workpack/Slice 섹션에 작성)
 
@@ -515,7 +518,7 @@
 
 ### 다음 단계
 → 6단계(Claude): 프론트엔드 PR 리뷰
-→ 사전 조건: CI green + Draft 해제
+→ 사전 조건: required CI green + Draft 해제
 ```
 
 ---
@@ -556,11 +559,11 @@
 - [ ] 브랜치·커밋·PR 본문이 규칙을 만족하는가
 - [ ] 보안/성능/디자인 영향이 PR 템플릿에 기록되었는가
 - [ ] README `Delivery Checklist`, roadmap status, Design Status, acceptance가 서로 일치하는가
-- [ ] PR 본문 `Actual Verification`, `Closeout Sync`가 최종 merge 상태를 반영하는가
+- [ ] PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`가 최종 merge 상태를 반영하는가
 
 ### 완료 기준
 
-수정 요청 없이 승인 → merge.
+수정 요청 없이 승인 + current head 기준 started PR checks 전체 green 확인 → merge.
 **merge 시 `docs/workpacks/README.md` Slice Order의 해당 슬라이스 Status를 `in-progress` → `merged`로 변경한다** (이 PR에 포함).
 
 ### 완료 요약 (슬라이스 최종 완료 요약 포함, Claude가 출력)

@@ -19,6 +19,7 @@ export const REQUIRED_PR_SECTIONS = [
   "## QA Evidence",
   "## Actual Verification",
   "## Closeout Sync",
+  "## Merge Gate",
   "## Docs Impact",
   "## Security Review",
   "## Performance",

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 
@@ -231,8 +231,26 @@ async function readColumnNames(page: Page) {
   );
 }
 
+function isMobileProject(testInfo: TestInfo) {
+  return testInfo.project.name.startsWith("mobile-");
+}
+
+async function activateButton(page: Page, button: Locator, testInfo: TestInfo) {
+  await button.scrollIntoViewIfNeeded();
+  await expect(button).toBeVisible();
+  await expect(button).toBeEnabled();
+
+  if (isMobileProject(testInfo)) {
+    await button.focus();
+    await page.keyboard.press("Enter");
+    return;
+  }
+
+  await button.click();
+}
+
 test.describe("Slice 05 planner week core", () => {
-  test("authenticated user can manage planner columns and see planner status badges", async ({ page }) => {
+  test("authenticated user can manage planner columns and see planner status badges", async ({ page }, testInfo) => {
     await setAuthOverride(page, "authenticated");
     const tracker = await mockPlannerRoutes(page);
 
@@ -246,42 +264,43 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByText("요리 완료")).toBeVisible();
 
     const addColumnInput = page.getByPlaceholder("새 끼니 컬럼 이름");
-    const addColumnButton = page.getByRole("button", { name: "컬럼 추가" });
     await addColumnInput.fill("간식");
-    await addColumnButton.click();
+    await addColumnInput.press("Enter");
 
     await expect(page.locator('input[value="간식"]').first()).toBeVisible();
-    await expect(addColumnButton).toBeEnabled();
+    await expect(page.getByRole("button", { name: "컬럼 추가" })).toBeEnabled();
 
     await addColumnInput.fill("야식");
-    await addColumnButton.click();
+    await addColumnInput.press("Enter");
     await expect(page.locator('input[value="야식"]').first()).toBeVisible();
-    await expect(addColumnButton).toBeEnabled();
+    await expect(page.getByRole("button", { name: "컬럼 추가" })).toBeEnabled();
 
     await addColumnInput.fill("브런치");
-    await addColumnButton.click();
+    await addColumnInput.press("Enter");
     await expect(page.getByText("최대 5개까지 추가할 수 있어요")).toBeVisible();
 
     await page.locator('input:not([placeholder])').nth(1).fill("브런치");
-    await page.getByRole("button", { name: "저장" }).nth(1).click();
+    await activateButton(page, page.getByRole("button", { name: "저장" }).nth(1), testInfo);
     await expect(page.locator('input[value="브런치"]').first()).toBeVisible();
 
-    await page.getByRole("button", { name: "→" }).nth(1).click();
+    await activateButton(page, page.getByRole("button", { name: "→" }).nth(1), testInfo);
     await expect
       .poll(async () => readColumnNames(page))
       .toEqual(["아침", "저녁", "브런치", "간식", "야식"]);
 
-    await page.getByRole("button", { name: "삭제" }).nth(0).click();
+    await activateButton(page, page.getByRole("button", { name: "삭제" }).nth(0), testInfo);
     await expect(page.getByText("식사가 등록된 컬럼은 삭제할 수 없어요.")).toBeVisible();
 
-    await page.getByRole("button", { name: "삭제" }).nth(4).click();
+    await activateButton(page, page.getByRole("button", { name: "삭제" }).nth(4), testInfo);
     await expect(page.locator('input[value="야식"]')).toHaveCount(0);
 
-    await page.getByRole("button", { name: "다음 범위" }).click();
+    await activateButton(page, page.getByRole("button", { name: "다음 범위" }), testInfo);
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(1);
   });
 
-  test("authenticated user can shift the planner range by wheel scrolling", async ({ page }) => {
+  test("authenticated user can shift the planner range by wheel scrolling", async ({ page }, testInfo) => {
+    test.skip(isMobileProject(testInfo), "wheel interaction is covered on desktop; mobile smoke uses explicit range controls");
+
     await setAuthOverride(page, "authenticated");
     const tracker = await mockPlannerRoutes(page);
 
