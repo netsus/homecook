@@ -1,12 +1,29 @@
+import { spawnSync } from "node:child_process";
+
 import {
   isAllowedBranchName,
   isProtectedBranchName,
 } from "./lib/git-policy.mjs";
 
-const branchName = process.env.BRANCH_NAME ?? process.argv[2];
+function readCurrentBranchName() {
+  const result = spawnSync("git", ["branch", "--show-current"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+  });
+
+  if (result.status !== 0) {
+    return null;
+  }
+
+  const branchName = result.stdout.trim();
+
+  return branchName.length > 0 ? branchName : null;
+}
+
+const branchName = process.env.BRANCH_NAME ?? process.argv[2] ?? readCurrentBranchName();
 
 if (!branchName) {
-  console.error("Branch name is required via BRANCH_NAME or argv.");
+  console.error("Branch name is required via BRANCH_NAME, argv, or the current git checkout.");
   process.exit(1);
 }
 
