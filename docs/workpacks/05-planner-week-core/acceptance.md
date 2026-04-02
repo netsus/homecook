@@ -4,46 +4,46 @@
 
 ## Happy Path
 
-- [ ] 플래너 화면 진입 시 기본 주간 범위(오늘 ±7일)로 플래너 조회 성공
-- [ ] 끼니 컬럼 목록과 식사 목록이 정상 표시됨 (columns + meals)
-- [ ] 상단 CTA `[장보기] [요리하기] [남은요리]`가 disabled 상태로 노출됨
-- [ ] 끼니 컬럼 추가 시 새로운 컬럼이 생성되고 화면에 즉시 반영됨
-- [ ] 끼니 컬럼명 수정 시 변경사항이 즉시 반영됨
-- [ ] 끼니 컬럼 순서 변경(sort_order) 시 그리드 순서가 즉시 반영됨
-- [ ] 비어있는 끼니 컬럼 삭제 시 정상 삭제됨 (204 응답)
-- [ ] API 응답 형식이 `{ success, data, error }` 래퍼를 따름
-- [ ] 백엔드 계약과 프론트엔드 타입이 일치함 (columns, meals 구조)
-- [ ] 식사 상태 뱃지(registered / shopping_done / cook_done)가 시각적으로 구분됨
-- [ ] 날짜 범위 스크롤 시 새로운 범위로 플래너 재조회 성공
+- [x] 플래너 화면 진입 시 기본 주간 범위(오늘 ±7일)로 플래너 조회 성공
+- [x] 끼니 컬럼 목록과 식사 목록이 정상 표시됨 (columns + meals)
+- [x] 상단 CTA `[장보기] [요리하기] [남은요리]`가 disabled 상태로 노출됨
+- [x] 끼니 컬럼 추가 시 새로운 컬럼이 생성되고 화면에 즉시 반영됨
+- [x] 끼니 컬럼명 수정 시 변경사항이 즉시 반영됨
+- [x] 끼니 컬럼 순서 변경(sort_order) 시 그리드 순서가 즉시 반영됨
+- [x] 비어있는 끼니 컬럼 삭제 시 정상 삭제됨 (204 응답)
+- [x] API 응답 형식이 `{ success, data, error }` 래퍼를 따름
+- [x] 백엔드 계약과 프론트엔드 타입이 일치함 (columns, meals 구조)
+- [x] 식사 상태 뱃지(registered / shopping_done / cook_done)가 시각적으로 구분됨
+- [x] 날짜 범위 스크롤 시 새로운 범위로 플래너 재조회 성공
 
 ## State / Policy
 
-- [ ] 끼니 컬럼 최대 5개 제한: 6번째 추가 시도 시 409 CONFLICT 반환
-- [ ] 상단 CTA는 노출되지만 클릭/탭/키보드 활성화로 이동하지 않는다
-- [ ] 소속 meals 존재하는 컬럼 삭제 시도 시 409 CONFLICT 반환
-- [ ] 중복 컬럼 추가 호출에도 결과가 꼬이지 않음 (멱등성 불필요, 각각 새 컬럼 생성)
-- [ ] 존재하지 않는 column_id로 수정/삭제 시도 시 404 반환
-- [ ] `meals` 배열이 `plan_date ASC, column_id ASC, created_at ASC` 순서로 정렬됨
-- [ ] 끼니 컬럼 `sort_order`가 UNIQUE 제약 조건을 만족함 (user_id, sort_order)
+- [x] 끼니 컬럼 최대 5개 제한: 6번째 추가 시도 시 409 CONFLICT 반환
+- [x] 상단 CTA는 노출되지만 클릭/탭/키보드 활성화로 이동하지 않는다
+- [x] 소속 meals 존재하는 컬럼 삭제 시도 시 409 CONFLICT 반환
+- [x] 중복 컬럼 추가 호출에도 결과가 꼬이지 않음 (멱등성 불필요, 각각 새 컬럼 생성)
+- [x] 존재하지 않는 column_id로 수정/삭제 시도 시 404 반환
+- [x] `meals` 배열이 `plan_date ASC, column_id ASC, created_at ASC` 순서로 정렬됨
+- [x] 끼니 컬럼 `sort_order`가 UNIQUE 제약 조건을 만족함 (user_id, sort_order)
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 (플래너 조회 중 스켈레톤)
-- [ ] empty 상태가 있다 (주간 범위 내 식사 없음 안내)
-- [ ] error 상태가 있다 (플래너 조회 실패 시 오류 안내 + 재시도)
-- [ ] unauthorized 처리 흐름이 있다 (비로그인 시 플래너 탭 진입 차단 또는 로그인 안내)
-- [ ] conflict 처리 흐름이 있다 (최대 5개 제한, 소속 meals 존재 시 삭제 불가)
-- [ ] 로그인 게이트 후 return-to-action이 맞다 (플래너 탭은 로그인 필수 화면)
-- [ ] 비로그인 시 모든 플래너 API 호출 시 401 Unauthorized 반환
-- [ ] 다른 사용자의 끼니 컬럼 수정/삭제 시도 시 403 FORBIDDEN 반환
+- [x] loading 상태가 있다 (플래너 조회 중 스켈레톤)
+- [x] empty 상태가 있다 (주간 범위 내 식사 없음 안내)
+- [x] error 상태가 있다 (플래너 조회 실패 시 오류 안내 + 재시도)
+- [x] unauthorized 처리 흐름이 있다 (비로그인 시 플래너 탭 진입 차단 또는 로그인 안내)
+- [x] conflict 처리 흐름이 있다 (최대 5개 제한, 소속 meals 존재 시 삭제 불가)
+- [x] 로그인 게이트 후 return-to-action이 맞다 (플래너 탭은 로그인 필수 화면)
+- [x] 비로그인 시 모든 플래너 API 호출 시 401 Unauthorized 반환
+- [x] 다른 사용자의 끼니 컬럼 수정/삭제 시도 시 403 FORBIDDEN 반환
 
 ## Data Integrity
 
-- [ ] 타인 리소스를 수정할 수 없다 (컬럼 수정/삭제 시 user_id 검증)
-- [ ] invalid input을 적절히 거부한다 (name 빈 문자열, sort_order 음수 등 422)
-- [ ] 끼니 컬럼 추가 시 sort_order가 자동 할당됨 (마지막 순서 + 1)
-- [ ] 회원가입 시 생성된 기본 컬럼(아침/점심/저녁)이 정상 조회됨
-- [ ] `GET /planner` 응답의 `columns`와 `meals` 데이터 무결성이 유지됨
+- [x] 타인 리소스를 수정할 수 없다 (컬럼 수정/삭제 시 user_id 검증)
+- [x] invalid input을 적절히 거부한다 (name 빈 문자열, sort_order 음수 등 422)
+- [x] 끼니 컬럼 추가 시 sort_order가 자동 할당됨 (마지막 순서 + 1)
+- [x] 회원가입 시 생성된 기본 컬럼(아침/점심/저녁)이 정상 조회됨
+- [x] `GET /planner` 응답의 `columns`와 `meals` 데이터 무결성이 유지됨
 
 ## Data Setup / Preconditions
 
@@ -98,28 +98,28 @@
 
 ### Vitest
 
-- [ ] `GET /planner` 권한 검증 (로그인 필수, 401)
-- [ ] `POST /planner/columns` 최대 5개 제한 (409)
-- [ ] `DELETE /planner/columns/{id}` 소속 meals 존재 시 409
-- [ ] 타인 컬럼 수정/삭제 시 403 FORBIDDEN
-- [ ] 존재하지 않는 column_id로 수정/삭제 시 404
-- [ ] invalid input 검증 (name 빈 문자열, sort_order 음수 등 422)
-- [ ] `meals` 배열 정렬 순서 검증 (plan_date, column_id, created_at)
-- [ ] 끼니 컬럼 sort_order 자동 할당 로직
-- [ ] API 응답 형식 검증 (`{ success, data, error }`)
+- [x] `GET /planner` 권한 검증 (로그인 필수, 401)
+- [x] `POST /planner/columns` 최대 5개 제한 (409)
+- [x] `DELETE /planner/columns/{id}` 소속 meals 존재 시 409
+- [x] 타인 컬럼 수정/삭제 시 403 FORBIDDEN
+- [x] 존재하지 않는 column_id로 수정/삭제 시 404
+- [x] invalid input 검증 (name 빈 문자열, sort_order 음수 등 422)
+- [x] `meals` 배열 정렬 순서 검증 (plan_date, column_id, created_at)
+- [x] 끼니 컬럼 sort_order 자동 할당 로직
+- [x] API 응답 형식 검증 (`{ success, data, error }`)
 
 ### Playwright
 
-- [ ] 플래너 화면 진입 후 끼니 컬럼과 식사 목록 표시 확인
-- [ ] 끼니 컬럼 추가 → 화면 반영 확인
-- [ ] 끼니 컬럼 수정 (name, sort_order) → 화면 반영 확인
-- [ ] 끼니 컬럼 삭제 (비어있는 컬럼) → 화면 반영 확인
-- [ ] 최대 5개 제한 초과 시 409 에러 안내 확인
-- [ ] 소속 meals 존재하는 컬럼 삭제 시 409 에러 안내 확인
-- [ ] 비로그인 시 플래너 탭 진입 → 로그인 게이트 확인
-- [ ] 로그인 후 플래너로 복귀 확인 (return-to-action)
-- [ ] 식사 상태 뱃지 시각적 구분 확인 (registered / shopping_done / cook_done)
-- [ ] 날짜 범위 스크롤 → 플래너 재조회 확인
+- [x] 플래너 화면 진입 후 끼니 컬럼과 식사 목록 표시 확인
+- [x] 끼니 컬럼 추가 → 화면 반영 확인
+- [x] 끼니 컬럼 수정 (name, sort_order) → 화면 반영 확인
+- [x] 끼니 컬럼 삭제 (비어있는 컬럼) → 화면 반영 확인
+- [x] 최대 5개 제한 초과 시 409 에러 안내 확인
+- [x] 소속 meals 존재하는 컬럼 삭제 시 409 에러 안내 확인
+- [x] 비로그인 시 플래너 탭 진입 → 로그인 게이트 확인
+- [x] 로그인 후 플래너로 복귀 확인 (return-to-action)
+- [x] 식사 상태 뱃지 시각적 구분 확인 (registered / shopping_done / cook_done)
+- [x] 날짜 범위 스크롤 → 플래너 재조회 확인
 
 ### Manual Only
 

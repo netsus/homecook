@@ -89,6 +89,22 @@ function createPlannerData({
   };
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return {
+    promise,
+    resolve,
+    reject,
+  };
+}
+
 describe("planner week screen", () => {
   beforeEach(() => {
     readE2EAuthOverride.mockReset();
@@ -141,6 +157,25 @@ describe("planner week screen", () => {
     ).toBe(true);
   });
 
+  it("shows loading placeholders while planner data is pending", async () => {
+    const deferred = createDeferred<ReturnType<typeof createPlannerData>>();
+
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockImplementation(() => deferred.promise);
+
+    const { container } = render(<PlannerWeekScreen />);
+
+    await waitFor(() => {
+      expect(container.querySelectorAll(".animate-pulse")).toHaveLength(6);
+    });
+
+    deferred.resolve(createPlannerData({ meals: [] }));
+
+    expect(
+      await screen.findByText("아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요."),
+    ).toBeTruthy();
+  });
+
   it("shows empty state while keeping column management visible", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
@@ -151,6 +186,27 @@ describe("planner week screen", () => {
       await screen.findByText("아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요."),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "컬럼 추가" })).toBeTruthy();
+  });
+
+  it("shows fetch error UI and retries planner loading", async () => {
+    const user = userEvent.setup();
+
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner
+      .mockRejectedValueOnce(new Error("planner failed"))
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    expect(await screen.findByText("플래너를 불러오지 못했어요")).toBeTruthy();
+    expect(screen.getByText("planner failed")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    expect(
+      await screen.findByText("아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요."),
+    ).toBeTruthy();
+    expect(fetchPlanner).toHaveBeenCalledTimes(2);
   });
 
   it("adds a column and refreshes planner data", async () => {

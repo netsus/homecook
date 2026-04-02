@@ -169,12 +169,12 @@ POST /recipes/{recipe_id}/like
 
 ## Delivery Checklist
 
-- [ ] 백엔드 계약 고정 (`RecipeLikeResponse` 타입, 401/404 에러 계약)
-- [ ] `POST /api/v1/recipes/{recipe_id}/like` Route Handler 구현 (toggle 로직, like_count 원자 갱신)
-- [ ] Vitest: toggle 로직, 401/404 에러, like_count 갱신, race condition 방어 단위 테스트
-- [ ] RECIPE_DETAIL 좋아요 버튼 상태(채워진/빈 하트 + like_count) 구현
-- [ ] 좋아요 요청 pending 상태(버튼 비활성) 구현
-- [ ] error 상태(토스트) 구현
-- [ ] 비로그인 로그인 게이트 모달 → return-to-action 구현
-- [ ] Playwright: 로그인 상태 좋아요 토글 E2E, 비로그인 → 로그인 게이트 → 복귀 E2E
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리
+- [x] 백엔드 계약 고정 (`RecipeLikeResponse` 타입, 401/404 에러 계약)
+- [x] `POST /api/v1/recipes/{recipe_id}/like` Route Handler 구현 (toggle 로직, like_count 원자 갱신)
+- [x] Vitest: toggle 로직, 401/404 에러, like_count 갱신, race condition 방어 단위 테스트
+- [x] RECIPE_DETAIL 좋아요 버튼 상태(채워진/빈 하트 + like_count) 구현
+- [x] 좋아요 요청 pending 상태(버튼 비활성) 구현
+- [x] error 상태(토스트) 구현
+- [x] 비로그인 로그인 게이트 모달 → return-to-action 구현
+- [x] Playwright: 로그인 상태 좋아요 토글 E2E, 비로그인 → 로그인 게이트 → 복귀 E2E
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리

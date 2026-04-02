@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-03-31T14:40:00.000Z",
+  "updated_at": "2026-04-02T15:33:05.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -107,15 +107,16 @@
     {
       "id": "05-planner-week-core",
       "preset": "vertical-slice-strict",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm install --frozen-lockfile && pnpm test:all",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs branch generated via OMO kickoff and recovered into docs PR scope. PLANNER_WEEK shell, disabled CTA, design artifact, and critique are locked before backend starts."
+      "pr_path": "https://github.com/netsus/homecook/pull/64",
+      "notes": "Merged via PR #61 and PR #64 on 2026-04-01, with roadmap closeout corrected in PR #69. Closeout sync backfill on 2026-04-02 restored README/acceptance/workflow-v2 alignment and expanded slice-05 planner coverage for loading/error states, column CRUD, status badges, scroll range shift, and guest return-to-action."
     },
     {
       "id": "omo-session-orchestrator-spec",
