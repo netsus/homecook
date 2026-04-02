@@ -1,18 +1,54 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const exchangeCodeForSession = vi.fn();
+const getUser = vi.fn();
+const createRouteHandlerClient = vi.fn();
+const createServiceRoleClient = vi.fn();
+const ensurePublicUserRow = vi.fn();
+const ensureUserBootstrapState = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
-  createRouteHandlerClient: vi.fn(async () => ({
-    auth: {
-      exchangeCodeForSession,
-    },
-  })),
+  createRouteHandlerClient,
+  createServiceRoleClient,
+}));
+
+vi.mock("@/lib/server/user-bootstrap", () => ({
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
 }));
 
 describe("auth callback", () => {
   beforeEach(() => {
     exchangeCodeForSession.mockReset();
+    getUser.mockReset();
+    createRouteHandlerClient.mockReset();
+    createServiceRoleClient.mockReset();
+    ensurePublicUserRow.mockReset();
+    ensureUserBootstrapState.mockReset();
+
+    const routeClient = {
+      auth: {
+        exchangeCodeForSession,
+        getUser,
+      },
+    };
+
+    createRouteHandlerClient.mockResolvedValue(routeClient);
+    createServiceRoleClient.mockReturnValue(null);
+    getUser.mockResolvedValue({
+      data: {
+        user: {
+          id: "user-1",
+          email: "cook@example.com",
+          app_metadata: { provider: "google" },
+          user_metadata: {
+            nickname: "집밥러",
+          },
+        },
+      },
+    });
+    ensurePublicUserRow.mockResolvedValue({});
+    ensureUserBootstrapState.mockResolvedValue(undefined);
   });
 
   it("sanitizes external redirect targets", async () => {
@@ -81,5 +117,36 @@ describe("auth callback", () => {
     expect(response.headers.get("location")).toBe(
       "http://localhost:3000/recipe/kimchi?authError=oauth_failed",
     );
+  });
+
+  it("bootstraps public user data after successful OAuth exchange", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      error: null,
+    });
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(
+      new Request("http://localhost:3000/auth/callback?code=abc&next=/planner"),
+    );
+
+    expect(ensurePublicUserRow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auth: expect.objectContaining({
+          getUser,
+        }),
+      }),
+      expect.objectContaining({
+        id: "user-1",
+      }),
+    );
+    expect(ensureUserBootstrapState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auth: expect.objectContaining({
+          getUser,
+        }),
+      }),
+      "user-1",
+    );
+    expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
   });
 });
