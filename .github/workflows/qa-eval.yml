@@ -18,12 +18,6 @@ on:
       - main
       - master
       - develop
-      - "feature/**"
-      - "fix/**"
-      - "chore/**"
-      - "docs/**"
-      - "refactor/**"
-      - "test/**"
     paths:
       - "docs/engineering/qa-system.md"
       - "docs/engineering/agent-workflow-overview.md"

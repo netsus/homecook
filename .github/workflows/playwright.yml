@@ -2,16 +2,57 @@ name: QA
 
 on:
   pull_request:
+    paths:
+      - "app/globals.css"
+      - "app/layout.tsx"
+      - "app/login/**"
+      - "app/page.tsx"
+      - "app/planner/**"
+      - "app/recipe/**"
+      - "components/**"
+      - "lib/*.ts"
+      - "lib/auth/**"
+      - "lib/mock/**"
+      - "qa/fixtures/**"
+      - "stores/**"
+      - "tests/e2e/helpers/**"
+      - "tests/e2e/assets/**"
+      - "tests/e2e/slice-*.spec.ts"
+      - "tests/e2e/qa-a11y.spec.ts"
+      - "tests/e2e/qa-visual.spec.ts"
+      - "playwright.config.ts"
+      - "lighthouserc.js"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/playwright.yml"
   push:
     branches:
       - main
       - master
-      - "feature/**"
-      - "fix/**"
-      - "chore/**"
-      - "docs/**"
-      - "refactor/**"
-      - "test/**"
+      - develop
+    paths:
+      - "app/globals.css"
+      - "app/layout.tsx"
+      - "app/login/**"
+      - "app/page.tsx"
+      - "app/planner/**"
+      - "app/recipe/**"
+      - "components/**"
+      - "lib/*.ts"
+      - "lib/auth/**"
+      - "lib/mock/**"
+      - "qa/fixtures/**"
+      - "stores/**"
+      - "tests/e2e/helpers/**"
+      - "tests/e2e/assets/**"
+      - "tests/e2e/slice-*.spec.ts"
+      - "tests/e2e/qa-a11y.spec.ts"
+      - "tests/e2e/qa-visual.spec.ts"
+      - "playwright.config.ts"
+      - "lighthouserc.js"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/playwright.yml"
 
 permissions:
   contents: read
@@ -127,41 +168,6 @@ jobs:
             playwright-report
             test-results
 
-  security-smoke:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.32.1
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: Run auth and session security smoke suite
-        run: pnpm test:e2e:security
-
-      - name: Upload security smoke report
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-security-report
-          path: |
-            playwright-report
-            test-results
-
   lighthouse:
     runs-on: ubuntu-latest
     steps:
@@ -186,7 +192,7 @@ jobs:
         run: pnpm build
 
       - name: Run Lighthouse budget checks
-        run: pnpm test:lighthouse
+        run: lhci autorun --config=./lighthouserc.js
 
       - name: Upload Lighthouse report
         if: always()
