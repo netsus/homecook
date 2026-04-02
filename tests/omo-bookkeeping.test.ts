@@ -173,6 +173,10 @@ function createFakeGh(rootDir: string, prNumber = 123) {
       "  echo '[{\"bucket\":\"pending\",\"name\":\"quality\",\"state\":\"PENDING\",\"workflow\":\"CI\",\"link\":null}]'",
       "  exit 0",
       "fi",
+      "if [[ \"$1\" == \"pr\" && \"$2\" == \"view\" ]]; then",
+      "  echo '{\"statusCheckRollup\":[]}'",
+      "  exit 0",
+      "fi",
       "echo \"unsupported gh args: $*\" >&2",
       "exit 1",
       "",
@@ -414,6 +418,7 @@ describe("OMO bookkeeping", () => {
     const ghLog = readFileSync(ghLogPath, "utf8");
     expect(ghLog).toContain("auth status");
     expect(ghLog).toContain("pr create");
-    expect(ghLog).toContain("pr checks https://github.com/netsus/homecook/pull/321 --required");
+    expect(ghLog).toContain("pr checks https://github.com/netsus/homecook/pull/321 --json");
+    expect(ghLog).not.toContain("--required");
   });
 });
