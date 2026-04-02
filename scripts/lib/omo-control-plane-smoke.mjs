@@ -14,6 +14,115 @@ import {
 const LIVE_BACKEND_FIX_TOKENS = ["backend-request-1", "backend-request-2"];
 const LIVE_PROVIDER_STAGE_TIMEOUT_MS = 90_000;
 
+/**
+ * @typedef {object} SmokeReviewLoopState
+ * @property {number} requested_changes
+ * @property {number} code_retries
+ * @property {number} approvals
+ * @property {boolean} feedback_seen_by_codex
+ * @property {string|null} [last_feedback]
+ */
+
+/**
+ * @typedef {object} SmokeLiveProviderBackendState
+ * @property {string[]} requested_tokens
+ * @property {string[]} applied_tokens
+ * @property {string[]} prompt_feedback_tokens
+ */
+
+/**
+ * @typedef {object} ControlPlaneSmokeState
+ * @property {number} version
+ * @property {string} work_item_id
+ * @property {Record<string, number>} attempts
+ * @property {{ backend: SmokeReviewLoopState, frontend: SmokeReviewLoopState }} review_loops
+ * @property {{ backend: SmokeLiveProviderBackendState }} live_provider
+ * @property {unknown[]} events
+ */
+
+/**
+ * @typedef {object} ControlPlaneSmokeStatePathOptions
+ * @property {string} [rootDir]
+ * @property {string} [workItemId]
+ */
+
+/**
+ * @typedef {object} SeedControlPlaneSmokeWorkspaceOptions
+ * @property {string} [rootDir]
+ * @property {string} [workItemId]
+ * @property {string} [sandboxRepo]
+ */
+
+/**
+ * @typedef {object} ControlPlaneStageRunnerArgs
+ * @property {string} [rootDir]
+ * @property {string} [workItemId]
+ * @property {string} [slice]
+ * @property {number} stage
+ * @property {string} executionDir
+ */
+
+/**
+ * @typedef {object} ControlPlaneStageRunResult
+ * @property {string} artifactDir
+ * @property {string} [prompt]
+ * @property {unknown} [dispatch]
+ * @property {unknown} execution
+ * @property {any} stageResult
+ */
+
+/**
+ * @typedef {object} CreateControlPlaneSmokeStageRunnerOptions
+ * @property {string} [rootDir]
+ * @property {string} [artifactBaseDir]
+ * @property {string} [workItemId]
+ * @property {string} [now]
+ */
+
+/**
+ * @typedef {object} LiveProviderExecuteStageArgs
+ * @property {string} rootDir
+ * @property {string} executionDir
+ * @property {string} workItemId
+ * @property {string} [slice]
+ * @property {number} stage
+ * @property {string} artifactDir
+ * @property {string} [provider]
+ * @property {string} prompt
+ * @property {"opencode"|"claude-cli"} [claudeProvider]
+ * @property {string} [claudeBin]
+ * @property {string} [claudeModel]
+ * @property {"low"|"medium"|"high"} [claudeEffort]
+ * @property {string} [opencodeBin]
+ * @property {string} [homeDir]
+ * @property {Record<string, string>} [environment]
+ * @property {string[]} [extraPromptSections]
+ * @property {string} [now]
+ */
+
+/**
+ * @typedef {object} CreateLiveProviderControlPlaneSmokeStageRunnerOptions
+ * @property {string} [rootDir]
+ * @property {string} [artifactBaseDir]
+ * @property {string} [workItemId]
+ * @property {string} [now]
+ * @property {"opencode"|"claude-cli"} [claudeProvider]
+ * @property {string} [claudeBin]
+ * @property {string} [claudeModel]
+ * @property {"low"|"medium"|"high"} [claudeEffort]
+ * @property {string} [opencodeBin]
+ * @property {string} [homeDir]
+ * @property {Record<string, string>} [environment]
+ * @property {(args: LiveProviderExecuteStageArgs) => ControlPlaneStageRunResult} [executeStage]
+ * @property {(args: { rootDir: string, workItemId: string, role: string }) => any} [reviewContextReader]
+ */
+
+/**
+ * @typedef {object} CollectControlPlaneSmokeCheckpointsOptions
+ * @property {any} [runtime]
+ * @property {Partial<ControlPlaneSmokeState>|null} [smokeState]
+ */
+
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string.`);
@@ -260,6 +369,9 @@ function ensureSmokeStateShape(state, workItemId) {
   };
 }
 
+/**
+ * @param {ControlPlaneSmokeStatePathOptions} [options]
+ */
 export function resolveControlPlaneSmokeStatePath({
   rootDir,
   workItemId = "99-omo-control-plane-smoke",
@@ -273,6 +385,10 @@ export function resolveControlPlaneSmokeStatePath({
   );
 }
 
+/**
+ * @param {ControlPlaneSmokeStatePathOptions} [options]
+ * @returns {ControlPlaneSmokeState}
+ */
 export function readControlPlaneSmokeState({
   rootDir,
   workItemId = "99-omo-control-plane-smoke",
@@ -312,6 +428,9 @@ export function assertSafeSandboxRepoRef(repoRef) {
   return normalizedRepoRef;
 }
 
+/**
+ * @param {SeedControlPlaneSmokeWorkspaceOptions} [options]
+ */
 export function seedControlPlaneSmokeWorkspace({
   rootDir,
   workItemId = "99-omo-control-plane-smoke",
@@ -583,6 +702,10 @@ function buildReviewStageResult({ stage, attempt }) {
   };
 }
 
+/**
+ * @param {CreateControlPlaneSmokeStageRunnerOptions} [options]
+ * @returns {(args: ControlPlaneStageRunnerArgs) => ControlPlaneStageRunResult}
+ */
 export function createControlPlaneSmokeStageRunner({
   rootDir = process.cwd(),
   artifactBaseDir = resolve(rootDir, ".artifacts", "omo-control-plane-smoke"),
@@ -864,6 +987,10 @@ function buildMinimalLiveProviderPrompt({
     .join("\n");
 }
 
+/**
+ * @param {LiveProviderExecuteStageArgs & { timeoutMs?: number }} options
+ * @returns {ControlPlaneStageRunResult}
+ */
 function executeMinimalLiveProviderStage({
   rootDir,
   artifactDir,
@@ -1120,6 +1247,10 @@ function assertLiveCodeStageRetry({
   }
 }
 
+/**
+ * @param {CreateLiveProviderControlPlaneSmokeStageRunnerOptions} [options]
+ * @returns {(args: ControlPlaneStageRunnerArgs) => ControlPlaneStageRunResult}
+ */
 export function createLiveProviderControlPlaneSmokeStageRunner({
   rootDir = process.cwd(),
   artifactBaseDir = resolve(rootDir, ".artifacts", "omo-control-plane-smoke"),
@@ -1215,7 +1346,7 @@ export function createLiveProviderControlPlaneSmokeStageRunner({
       executionDir: smokeExecutionDir,
       workItemId,
       slice,
-      stage,
+      stage: Number(stage),
       artifactDir,
       provider: stage === 2 ? "opencode" : "claude-cli",
       prompt,
@@ -1283,6 +1414,9 @@ export function createLiveProviderControlPlaneSmokeStageRunner({
   };
 }
 
+/**
+ * @param {CollectControlPlaneSmokeCheckpointsOptions} [options]
+ */
 export function collectControlPlaneSmokeCheckpoints({ runtime, smokeState = null } = {}) {
   const lastCompletedStage = Number(runtime?.last_completed_stage ?? 0);
   const waitKind = runtime?.wait?.kind ?? null;

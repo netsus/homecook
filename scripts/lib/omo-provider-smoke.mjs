@@ -18,6 +18,19 @@ const DEFAULT_PROVIDER_TARGETS = [
   },
 ];
 
+/**
+ * @typedef {object} ProviderSmokeOptions
+ * @property {string} [rootDir]
+ * @property {string} [artifactBaseDir]
+ * @property {string} [homeDir]
+ * @property {Record<string, string>} [environment]
+ * @property {string} [claudeBin]
+ * @property {string} [opencodeBin]
+ * @property {boolean} [claudeOnly]
+ * @property {boolean} [codexOnly]
+ * @property {boolean} [assertClean]
+ */
+
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string.`);
@@ -75,6 +88,9 @@ function assertTrackedFilesClean(rootDir) {
   }
 }
 
+/**
+ * @param {{ claudeOnly?: boolean, codexOnly?: boolean }} [options]
+ */
 export function buildProviderSmokeTargets({ claudeOnly = false, codexOnly = false } = {}) {
   if (claudeOnly && codexOnly) {
     throw new Error("--claude-only and --codex-only cannot be used together.");
@@ -178,6 +194,9 @@ function runSingleProviderSmoke({
   };
 }
 
+/**
+ * @param {ProviderSmokeOptions} [options]
+ */
 export function runProviderSmoke({
   rootDir = process.cwd(),
   artifactBaseDir = resolve(rootDir, ".artifacts", "omo-provider-smoke"),

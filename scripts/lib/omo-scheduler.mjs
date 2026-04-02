@@ -17,6 +17,72 @@ const SCHEDULER_TEMPLATE_PATH = resolve(
   "omo-tick.launch-agent.plist.template",
 );
 
+/**
+ * @typedef {object} SchedulerBins
+ * @property {string} pnpm
+ * @property {string} gh
+ * @property {string} claude
+ * @property {string} opencode
+ * @property {string} [path]
+ */
+
+/**
+ * @typedef {object} LaunchAgentSnapshot
+ * @property {string} workItem
+ * @property {string} label
+ * @property {boolean} loaded
+ * @property {boolean} runningNow
+ * @property {string} state
+ * @property {number|null} runs
+ * @property {number|null} lastExitCode
+ * @property {number|null} intervalSeconds
+ * @property {string} stdoutLog
+ * @property {string} stderrLog
+ * @property {Date|null} stdoutUpdatedAt
+ * @property {Date|null} stderrUpdatedAt
+ * @property {Date|null} lastActivityAt
+ * @property {string|null} error
+ */
+
+/**
+ * @typedef {object} ResolveSchedulerBinsOptions
+ * @property {string} [rootDir]
+ * @property {string} [pnpmBin]
+ * @property {string} [ghBin]
+ * @property {string} [claudeBin]
+ * @property {string} [opencodeBin]
+ * @property {Record<string, string>} [environment]
+ * @property {string} [homeDir]
+ * @property {typeof spawnSync} [spawn]
+ */
+
+/**
+ * @typedef {object} RenderLaunchAgentPlistOptions
+ * @property {string} [rootDir]
+ * @property {string} workItemId
+ * @property {string} [homeDir]
+ * @property {number} [intervalSeconds]
+ * @property {SchedulerBins} [bins]
+ */
+
+/**
+ * @typedef {object} ParseLaunchAgentSnapshotOutputOptions
+ * @property {string} workItemId
+ * @property {string} [homeDir]
+ * @property {string} [output]
+ * @property {number|null} [status]
+ * @property {string} [errorText]
+ */
+
+/**
+ * @typedef {object} VerifyLaunchAgentAlignmentOptions
+ * @property {string} workItemId
+ * @property {number} [expectedIntervalSeconds]
+ * @property {string} [homeDir]
+ * @property {LaunchAgentSnapshot} launchSnapshot
+ * @property {LaunchAgentSnapshot} tickWatchSnapshot
+ */
+
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string.`);
@@ -112,6 +178,9 @@ export function resolveLaunchAgentPlistPath(workItemId, homeDir = process.env.HO
   );
 }
 
+/**
+ * @param {ResolveSchedulerBinsOptions} [options]
+ */
 export function resolveSchedulerBins({
   rootDir = process.cwd(),
   pnpmBin,
@@ -145,6 +214,9 @@ export function resolveSchedulerBins({
   };
 }
 
+/**
+ * @param {RenderLaunchAgentPlistOptions} [options]
+ */
 export function renderLaunchAgentPlist({
   rootDir = process.cwd(),
   workItemId,
@@ -174,6 +246,10 @@ export function renderLaunchAgentPlist({
     .replaceAll("__STDERR_LOG__", logPaths.stderr);
 }
 
+/**
+ * @param {ParseLaunchAgentSnapshotOutputOptions} [options]
+ * @returns {LaunchAgentSnapshot}
+ */
 export function parseLaunchAgentSnapshotOutput({
   workItemId,
   homeDir = process.env.HOME ?? "",
@@ -305,6 +381,9 @@ export function formatLaunchAgentSnapshot(snapshot) {
   ].join("\n");
 }
 
+/**
+ * @param {VerifyLaunchAgentAlignmentOptions} [options]
+ */
 export function verifyLaunchAgentAlignment({
   workItemId,
   expectedIntervalSeconds = DEFAULT_TICK_INTERVAL_SECONDS,
