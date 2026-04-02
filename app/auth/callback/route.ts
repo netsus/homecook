@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { resolveNextPath } from "@/lib/auth/callback";
-import { createRouteHandlerClient } from "@/lib/supabase/server";
+import {
+  ensurePublicUserRow,
+  ensureUserBootstrapState,
+  type UserBootstrapDbClient,
+} from "@/lib/server/user-bootstrap";
+import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 function getFailurePath(nextPath: string) {
   return nextPath === "/" ? "/login" : nextPath;
@@ -36,6 +41,17 @@ export async function GET(request: Request) {
     if (error) {
       return NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath));
     }
+
+    const authResult = await supabase.auth.getUser();
+    const user = authResult.data.user;
+
+    if (!user) {
+      return NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath));
+    }
+
+    const dbClient = (createServiceRoleClient() ?? supabase) as unknown as UserBootstrapDbClient;
+    await ensurePublicUserRow(dbClient, user);
+    await ensureUserBootstrapState(dbClient, user.id);
 
     return NextResponse.redirect(redirectUrl);
   } catch {
