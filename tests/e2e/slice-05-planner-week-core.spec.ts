@@ -49,6 +49,28 @@ async function mockPlannerRoutes(page: Page) {
       status: "registered",
       is_leftover: false,
     },
+    {
+      id: "meal-2",
+      recipe_id: "recipe-2",
+      recipe_title: "된장찌개",
+      recipe_thumbnail_url: null,
+      plan_date: "",
+      column_id: "column-lunch",
+      planned_servings: 1,
+      status: "shopping_done",
+      is_leftover: false,
+    },
+    {
+      id: "meal-3",
+      recipe_id: "recipe-3",
+      recipe_title: "계란말이",
+      recipe_thumbnail_url: null,
+      plan_date: "",
+      column_id: "column-dinner",
+      planned_servings: 3,
+      status: "cook_done",
+      is_leftover: false,
+    },
   ];
 
   await page.route("**/api/v1/planner?*", async (route) => {
@@ -56,10 +78,9 @@ async function mockPlannerRoutes(page: Page) {
     const startDate = url.searchParams.get("start_date") ?? "";
     const endDate = url.searchParams.get("end_date") ?? "";
     requestedRanges.push(`${startDate}:${endDate}`);
-    meals[0] = {
-      ...meals[0]!,
-      plan_date: startDate,
-    };
+    for (const meal of meals) {
+      meal.plan_date = startDate;
+    }
 
     await route.fulfill({
       json: {
@@ -204,8 +225,14 @@ async function mockPlannerRoutes(page: Page) {
   };
 }
 
+async function readColumnNames(page: Page) {
+  return page.locator('input:not([placeholder])').evaluateAll((elements) =>
+    elements.map((element) => (element as HTMLInputElement).value),
+  );
+}
+
 test.describe("Slice 05 planner week core", () => {
-  test("authenticated user can view planner and add a column", async ({ page }) => {
+  test("authenticated user can manage planner columns and see planner status badges", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     const tracker = await mockPlannerRoutes(page);
 
@@ -214,14 +241,56 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByRole("heading", { name: "식단 플래너" })).toBeVisible();
     await expect(page.getByText("김치찌개")).toBeVisible();
     await expect(page.getByRole("button", { name: "장보기" })).toBeDisabled();
+    await expect(page.getByText("식사 등록 완료")).toBeVisible();
+    await expect(page.getByText("장보기 완료")).toBeVisible();
+    await expect(page.getByText("요리 완료")).toBeVisible();
 
     const addColumnInput = page.getByPlaceholder("새 끼니 컬럼 이름");
+    const addColumnButton = page.getByRole("button", { name: "컬럼 추가" });
     await addColumnInput.fill("간식");
-    await addColumnInput.press("Enter");
+    await addColumnButton.click();
 
     await expect(page.locator('input[value="간식"]').first()).toBeVisible();
+    await expect(addColumnButton).toBeEnabled();
+
+    await addColumnInput.fill("야식");
+    await addColumnButton.click();
+    await expect(page.locator('input[value="야식"]').first()).toBeVisible();
+    await expect(addColumnButton).toBeEnabled();
+
+    await addColumnInput.fill("브런치");
+    await addColumnButton.click();
+    await expect(page.getByText("최대 5개까지 추가할 수 있어요")).toBeVisible();
+
+    await page.locator('input:not([placeholder])').nth(1).fill("브런치");
+    await page.getByRole("button", { name: "저장" }).nth(1).click();
+    await expect(page.locator('input[value="브런치"]').first()).toBeVisible();
+
+    await page.getByRole("button", { name: "→" }).nth(1).click();
+    await expect
+      .poll(async () => readColumnNames(page))
+      .toEqual(["아침", "저녁", "브런치", "간식", "야식"]);
+
+    await page.getByRole("button", { name: "삭제" }).nth(0).click();
+    await expect(page.getByText("식사가 등록된 컬럼은 삭제할 수 없어요.")).toBeVisible();
+
+    await page.getByRole("button", { name: "삭제" }).nth(4).click();
+    await expect(page.locator('input[value="야식"]')).toHaveCount(0);
 
     await page.getByRole("button", { name: "다음 범위" }).click();
+    await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(1);
+  });
+
+  test("authenticated user can shift the planner range by wheel scrolling", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    const tracker = await mockPlannerRoutes(page);
+
+    await page.goto("/planner");
+
+    const grid = page.locator("div.overflow-x-auto").first();
+    await grid.hover();
+    await page.mouse.wheel(0, 160);
+
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(1);
   });
 
@@ -232,6 +301,20 @@ test.describe("Slice 05 planner week core", () => {
 
     await expect(page.getByText("이 화면은 로그인이 필요해요")).toBeVisible();
     await expect(page.getByRole("button", { name: "Google로 시작하기" })).toBeVisible();
+  });
+
+  test("guest user can return to planner after login", async ({ page }) => {
+    await setAuthOverride(page, "guest");
+    await mockPlannerRoutes(page);
+
+    await page.goto("/planner");
+    await expect(page.getByText("이 화면은 로그인이 필요해요")).toBeVisible();
+
+    await setAuthOverride(page, "authenticated");
+    await page.goto("/planner");
+
+    await expect(page.getByRole("heading", { name: "식단 플래너" })).toBeVisible();
+    await expect(page.getByText("김치찌개")).toBeVisible();
   });
 
   test("guest user keeps the primary login CTA above bottom tabs on small iOS viewport", async ({ page }, testInfo) => {
