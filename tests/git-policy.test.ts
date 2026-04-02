@@ -61,6 +61,8 @@ describe("git policy", () => {
 
     expect(missing).toContain("## Workpack / Slice");
     expect(missing).toContain("## QA Evidence");
+    expect(missing).toContain("## Actual Verification");
+    expect(missing).toContain("## Closeout Sync");
     expect(missing).toContain("## Security Review");
     expect(missing).not.toContain("## Summary");
   });
@@ -92,6 +94,10 @@ describe("findEmptyPrSections", () => {
       sections["## Test Plan"] ?? "- [x] `pnpm lint`",
       "## QA Evidence",
       sections["## QA Evidence"] ?? "- deterministic gates: `pnpm verify:frontend`",
+      "## Actual Verification",
+      sections["## Actual Verification"] ?? "- verifier: Codex\n- environment: local demo\n- scope: planner smoke\n- result: pass",
+      "## Closeout Sync",
+      sections["## Closeout Sync"] ?? "- roadmap status: in-progress 유지\n- README Delivery Checklist: Stage 4 항목 반영 완료\n- acceptance: Manual Only 제외 모두 체크",
       "## Docs Impact",
       sections["## Docs Impact"] ?? "- [x] 공식 문서 영향 없음",
       "## Security Review",

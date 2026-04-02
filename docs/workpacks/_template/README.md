@@ -78,6 +78,10 @@
 3. 결과 화면 또는 상태 변화
 
 ## Delivery Checklist
+> 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
+> Stage 2/3에서는 백엔드 관련 항목을, Stage 4~6에서는 남은 프론트/QA/디자인/closeout 항목을 닫는다.
+> Stage 6 merge 시점에는 In Scope인데도 남아 있는 unchecked 항목이 없어야 하며, `N/A` 또는 후속 분리는 README/PR 본문에 근거를 남긴다.
+
 - [ ] 백엔드 계약 고정
 - [ ] API 또는 adapter 연결
 - [ ] 타입 반영

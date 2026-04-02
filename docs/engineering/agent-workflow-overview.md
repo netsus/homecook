@@ -81,6 +81,9 @@
 - PR 템플릿의 모든 섹션은 무조건 채우기 대상이 아니다.
 - `N/A`를 쓸 때는 `영향 없음` 또는 `해당 없음`의 근거를 한 줄로 남긴다.
 - `docs-governance`, `contract-evolution`, `low-risk docs/config`는 E2E, Lighthouse, Design 항목을 무조건 체크하지 않는다.
+- `Actual Verification`은 “누가 / 어디서 / 무엇을 / 어떤 결과로” 확인했는지 남기는 섹션이다.
+- `Closeout Sync`는 roadmap status, README `Delivery Checklist`, acceptance, `Design Status`가 현재 PR 상태와 맞는지 남기는 섹션이다.
+- product slice는 `Ready for Review` 전에 두 섹션을 비워두지 않는다.
 
 ### QA Execution Rules
 
@@ -210,6 +213,7 @@ Codex → Claude:
 1. change type별 `required_checks`를 통과한 뒤 PR을 연다.
 2. product 구현은 Draft로 시작하고 required CI가 green이면 `Ready for Review`로 전환한다.
 3. docs-governance, contract-evolution, low-risk docs/config는 작은 변경이면 Draft를 생략할 수 있지만, PR 본문에 근거와 review path를 남긴다.
+4. product slice는 handoff 전에 `Actual Verification`, `Closeout Sync`, 관련 workpack/acceptance를 최신 상태로 맞춘다.
 
 Claude 리뷰 시작 조건:
 → `CLAUDE.md` 리뷰 시작 조건 참조
