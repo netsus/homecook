@@ -8,6 +8,9 @@
 - 이 디렉터리의 역할:
   - reusable workflow v2 설계와 파일럿
   - 현재 v1을 즉시 대체하지 않는 next-generation path
+- 현재 executable pilot baseline:
+  - `pnpm omo:supervise`, `pnpm omo:tick`, `pnpm omo:tick:watch`, `pnpm omo:reconcile`, `pnpm omo:status`
+  - `pnpm validate:workflow-v2`, `pnpm validate:omo-bookkeeping`
 - 새로 잠그는 범위:
   - `generic OMO session-orchestrated runner` 설계
   - per-work-item session reuse
@@ -78,10 +81,12 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - machine-readable 파일이 들어와도 README 표를 즉시 제거하지 않는다.
 - v2 승격 전까지는 product slice merge gate를 v1 기준으로 계속 유지한다.
 - Phase 4부터는 최소 executable helper(`pnpm omo:dispatch-stage`, `pnpm omo:sync-status`)를 함께 관리한다.
-- Phase 5부터는 `pnpm omo:run-stage`로 Codex stage를 repo-local OpenCode/OMO 실행과 artifact bundle에 직접 연결한다.
+- Phase 5부터는 `pnpm omo:run-stage`로 Codex/Claude stage를 repo-local OpenCode/OMO 실행과 artifact bundle에 직접 연결한다.
 - Phase 7부터는 `pnpm omo:claude-budget`과 repo-local override를 통해 Claude reviewer availability를 자동 해석하고, 필요 시 `awaiting_claude_or_human` fallback을 기록한다.
+- Phase 8 pilot baseline은 `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:reconcile`, `validate:omo-bookkeeping`까지 포함한다.
+- fullauto v1의 의미는 `무인 merge`가 아니라 `수동 리뷰/실동작 확인 직전까지 자동화`다.
 - session-orchestrated runner 규격은 구현보다 먼저 문서로 잠근다.
-- 구현이 merge되기 전까지는 기존 helper CLI가 현재 executable path다.
+- 구현 baseline과 상위 문서가 다시 어긋나면 `pnpm validate:workflow-v2`가 fail한다.
 
 ## Immediate Scope
 
@@ -96,20 +101,41 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - `validate:workflow-v2` 최소 validator 추가
 - `validate:omo-bookkeeping` official docs drift validator 추가
 - `omo:reconcile` docs-only closeout PR repair path 추가
+- executable supervisor baseline: `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:status`
+- live smoke entrypoints: `omo:smoke:control-plane`, `omo:smoke:providers`
+- `omo:smoke:control-plane -- --live-providers`는 backend Stage 2/3만 실제 Claude/Codex를 사용하고, 나머지 단계는 deterministic smoke로 유지한 채 최소 확인용 프롬프트로 review loop(`request_changes -> Codex 반영 -> 추가 review -> 추가 반영`)를 검증한다.
+- macOS repo-managed scheduler entrypoints: `omo:scheduler:install`, `omo:scheduler:uninstall`, `omo:scheduler:verify`
 - 현재 entry-point 문서에서 v2 pilot 경로를 발견 가능하게 연결
+
+## Executable Pilot Baseline
+
+- 현재 구현된 supervisor/control-plane 명령:
+  - `pnpm omo:supervise`
+  - `pnpm omo:tick`
+  - `pnpm omo:tick:watch`
+  - `pnpm omo:reconcile`
+  - `pnpm omo:status`
+  - `pnpm omo:status:brief`
+- 현재 구현된 validation/smoke/scheduler 명령:
+  - `pnpm validate:workflow-v2`
+  - `pnpm validate:omo-bookkeeping`
+  - `pnpm omo:smoke:control-plane`
+  - `pnpm omo:smoke:providers`
+  - `pnpm omo:scheduler:install`
+  - `pnpm omo:scheduler:uninstall`
+  - `pnpm omo:scheduler:verify`
+- 현재 baseline의 해석:
+  - `fullauto v1`은 수동 리뷰/실동작 확인 직전까지 자동화한다.
+  - `human_review`와 `human_verification`은 의도된 수동 게이트다.
+  - live smoke는 일반 PR CI 필수 단계가 아니라 sandbox/on-demand 운영 검증 경로다.
+  - scheduler 운영 기준 플랫폼은 우선 macOS `launchd`다.
 
 ## Next Locked Scope
 
-- 상위 supervisor CLI: `omo:start`, `omo:continue`, `omo:resume-pending`, `omo:status`
-- per-work-item Claude/Codex session registry
-- repo-local runtime state in `.opencode/omo-runtime/`
-- reviewer stage direct execution with Claude session reuse
-- scheduled sweeper 기반 pause/resume
-- `awaiting_claude_or_human` 상태의 blocked-retry 의미 확장
-- dedicated worktree policy
-- `omo:supervise` / `omo:tick`
-- `gh` 기반 PR / CI / merge automation
-- Claude-owned stage용 raw `claude` CLI provider adapter + deterministic `--resume`
+- sandbox live smoke의 운영 표준화와 주기적 rehearsal cadence
+- scheduler 운영 범위의 추가 승격 여부 판단
+- multi-project reusable promotion 기준과 profile extraction
+- optional GitHub Actions 기반 smoke orchestration 여부 판단
 
 ## Pilot Usage
 
@@ -123,7 +149,11 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 8. OMO-lite supervised execution이 필요하면 `pnpm omo:run-stage -- --slice <id> --stage <n>`으로 dispatch artifact를 만들고, Codex stage에 한해 `--mode execute`를 사용한다.
 9. Claude reviewer availability를 로컬에서 강제로 조정해야 하면 `pnpm omo:claude-budget -- --set unavailable --reason "<reason>"` 또는 `--clear`를 사용한다.
 10. reviewer fallback도 tracked state에 같이 남기려면 `pnpm omo:run-stage -- --slice <id> --stage <n> --sync-status`를 사용한다.
-11. Claude CLI provider path는 문서로 잠겨 있지만 구현이 merge되기 전까지는 현재 executable helper 기준을 따른다.
+11. sandbox GitHub repo에서 supervisor control plane을 점검할 때는 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`를 사용한다.
+12. 실제 Claude 첫 리뷰가 반드시 `request_changes`를 내고 Codex가 그 피드백 토큰을 반영하는지까지 최소 프롬프트로 보려면 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name> --live-providers`를 사용한다. 이 모드는 backend Stage 2/3만 실제 provider를 사용한다.
+13. 실제 Claude/Codex provider 경로, session reuse, stage-result 생성을 분리 검증할 때는 `pnpm omo:smoke:providers`를 사용한다.
+14. macOS scheduler는 `pnpm omo:scheduler:install -- --work-item <id>`로 설치하고 `pnpm omo:scheduler:verify -- --work-item <id>`로 확인한다.
+15. `pnpm validate:workflow-v2`는 schema/example뿐 아니라 상위 workflow-v2 entry docs가 executable baseline과 drift 나는지도 함께 검사한다.
 
 ## Not Yet Included
 

@@ -110,6 +110,26 @@ function normalizeStringArray(values) {
   return [...values].sort();
 }
 
+function readText(filePath) {
+  return readFileSync(filePath, "utf8");
+}
+
+function extractMarkdownSection(text, heading) {
+  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`^${escapedHeading}\\n([\\s\\S]*?)(?=^##\\s|\\Z)`, "m");
+  const match = text.match(pattern);
+  return match?.[1] ?? "";
+}
+
+function containsAll(text, fragments) {
+  return fragments
+    .filter((fragment) => !text.includes(fragment))
+    .map((fragment) => ({
+      path: fragment,
+      message: `Missing required fragment: ${fragment}`,
+    }));
+}
+
 export function validateWorkflowV2TrackedState({ rootDir = process.cwd() } = {}) {
   const workflowDir = path.join(rootDir, ".workflow-v2");
   if (!existsSync(workflowDir)) {
@@ -210,6 +230,84 @@ export function validateWorkflowV2TrackedState({ rootDir = process.cwd() } = {})
   return results;
 }
 
+export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) {
+  const workflowReadmePath = path.join(rootDir, "docs/engineering/workflow-v2/README.md");
+  const supervisorDocPath = path.join(
+    rootDir,
+    "docs/engineering/workflow-v2/omo-autonomous-supervisor.md",
+  );
+  const opencodeReadmePath = path.join(rootDir, ".opencode/README.md");
+
+  const workflowReadme = readText(workflowReadmePath);
+  const supervisorDoc = readText(supervisorDocPath);
+  const opencodeReadme = readText(opencodeReadmePath);
+  const nextLockedScope = extractMarkdownSection(workflowReadme, "## Next Locked Scope");
+
+  const workflowReadmeErrors = [
+    ...containsAll(workflowReadme, [
+      "## Executable Pilot Baseline",
+      "`pnpm omo:supervise`",
+      "`pnpm omo:tick`",
+      "`pnpm omo:tick:watch`",
+      "`pnpm omo:reconcile`",
+      "`pnpm omo:status`",
+      "`pnpm validate:omo-bookkeeping`",
+      "수동 리뷰/실동작 확인 직전까지 자동화",
+    ]),
+  ];
+
+  for (const fragment of ["omo:supervise", "omo:tick", "omo:tick:watch", "omo:reconcile"]) {
+    if (nextLockedScope.includes(fragment)) {
+      workflowReadmeErrors.push({
+        path: "docs/engineering/workflow-v2/README.md#next-locked-scope",
+        message: `Already-implemented command is still documented as future scope: ${fragment}`,
+      });
+    }
+  }
+
+  const supervisorDocErrors = [
+    ...containsAll(supervisorDoc, [
+      "`pnpm omo:scheduler:install -- --work-item <id>`",
+      "`pnpm omo:scheduler:verify -- --work-item <id>`",
+      "`pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`",
+      "`pnpm omo:smoke:providers`",
+      "`human_review`는 정식 GitHub approve가 필요한 상태",
+      "`human_verification`은 실제 동작 확인 후 사람이 merge해야 하는 상태",
+    ]),
+  ];
+
+  const opencodeReadmeErrors = [
+    ...containsAll(opencodeReadme, [
+      "`pnpm omo:supervise -- --work-item <id>`",
+      "`pnpm omo:tick -- --all`",
+      "`pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`",
+      "`pnpm omo:smoke:providers`",
+      "`pnpm omo:scheduler:install -- --work-item <id>`",
+      "`pnpm omo:scheduler:verify -- --work-item <id>`",
+      "macOS에서는 `launchd` 예시를 우선 제공한다",
+    ]),
+  ];
+
+  return [
+    {
+      name: "workflow-v2-doc-contract:README",
+      errors: workflowReadmeErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:supervisor",
+      errors: supervisorDocErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:opencode",
+      errors: opencodeReadmeErrors,
+    },
+  ];
+}
+
 export function validateWorkflowV2Bundle({ rootDir = process.cwd() } = {}) {
-  return [...validateWorkflowV2Examples({ rootDir }), ...validateWorkflowV2TrackedState({ rootDir })];
+  return [
+    ...validateWorkflowV2Examples({ rootDir }),
+    ...validateWorkflowV2TrackedState({ rootDir }),
+    ...validateWorkflowV2DocContract({ rootDir }),
+  ];
 }

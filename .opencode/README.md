@@ -103,6 +103,12 @@ pnpm omo:claude-budget -- --clear
   - `pnpm omo:tick -- --all`
   - `pnpm omo:reconcile -- --work-item <id>`
   - `pnpm omo:tick:watch -- --work-item <id>`
+  - `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`
+  - `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name> --live-providers`
+  - `pnpm omo:smoke:providers`
+  - `pnpm omo:scheduler:install -- --work-item <id>`
+  - `pnpm omo:scheduler:uninstall -- --work-item <id>`
+  - `pnpm omo:scheduler:verify -- --work-item <id>`
 - runtime이 없는 work item에서 `omo:tick -- --work-item <id>`는 kickoff하지 않고 no-op로 끝난다.
 - `omo:tick`은 이제 `wait.kind`뿐 아니라 unfinished `phase`도 재개한다.
 - code stage에서 valid `stage-result.json`이 있고 supervisor verify가 통과하면, supervisor가 commit/push/PR 생성/CI wait까지 auto-finalize한다.
@@ -112,6 +118,12 @@ pnpm omo:claude-budget -- --clear
 - supervisor는 기본적으로 `.worktrees/<work-item-id>` 전용 worktree에서만 실행한다.
 - GitHub 자동화는 `gh` CLI만 사용한다.
 - 기본 scheduler cadence는 10분이며, macOS에서는 `launchd` 예시를 우선 제공한다.
+- `omo:scheduler:install`은 절대경로 `pnpm`, `gh`, `claude`, `opencode`와 `~/Library/Logs/homecook/` 로그 경로를 렌더링한다.
+- `omo:scheduler:verify`는 `launchctl print`와 `omo:tick:watch --json`을 비교해 label/interval/log path drift를 막는다.
+- `omo:smoke:control-plane`은 반드시 별도 sandbox GitHub repo에서만 실행하고, `homecook` 본 repo를 대상으로는 거부한다.
+- `omo:smoke:control-plane -- --live-providers`는 backend Stage 2/3만 실제 Claude/Codex를 사용하고, backend review 첫 시도에서 `request_changes` token contract를 강제한 뒤 Codex가 최소 확인용 prompt만으로 그 feedback을 marker file에 반영했는지까지 검증한다.
+- `omo:smoke:providers`는 실제 Claude/Codex auth 상태에서 session reuse와 stage-result 생성을 분리 검증한다.
+- fullauto v1은 수동 리뷰/실동작 확인 직전까지 자동화한다.
 - `launchd`에서는 login shell PATH를 가정하지 않는다. `pnpm`, `gh`, `claude`, `opencode`는 절대경로 또는 고정 PATH로 실행하는 것을 기본값으로 둔다.
 - active pilot 동안 루트 repo는 `ops/omo-<slice>-runtime-anchor` 같은 운영 브랜치에 두는 것을 기본값으로 권장한다.
 - 이 운영 브랜치는 hygiene 목적이다. supervisor worktree의 base sync correctness는 이제 local `master`가 아니라 `origin/master` detached 정책이 담당한다.
