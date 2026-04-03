@@ -13,6 +13,7 @@ import {
   isLocalDevAuthEnabled,
   isLocalGoogleOAuthEnabled,
 } from "@/lib/auth/local-dev-auth";
+import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
 import {
   type PendingRecipeAction,
   savePendingAction,
@@ -55,6 +56,8 @@ export function SocialLoginButtons({
         if (pendingAction) {
           savePendingAction(pendingAction);
         }
+
+        document.cookie = createPostAuthNextCookie(nextPath);
 
         onStarted?.();
 
