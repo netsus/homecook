@@ -8,6 +8,8 @@ import { LocalDevSessionControls } from "@/components/auth/local-dev-session-con
 
 const isLocalDevAuthEnabled = vi.fn();
 const readE2EAuthOverride = vi.fn();
+const usePathname = vi.fn();
+const useSearchParams = vi.fn();
 
 vi.mock("@/lib/auth/local-dev-auth", () => ({
   isLocalDevAuthEnabled: () => isLocalDevAuthEnabled(),
@@ -17,21 +19,23 @@ vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => readE2EAuthOverride(),
 }));
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => usePathname(),
+  useSearchParams: () => useSearchParams(),
+}));
+
 describe("local dev session controls", () => {
   beforeEach(() => {
     isLocalDevAuthEnabled.mockReset();
     readE2EAuthOverride.mockReset();
+    usePathname.mockReset();
+    useSearchParams.mockReset();
 
     isLocalDevAuthEnabled.mockReturnValue(true);
     readE2EAuthOverride.mockReturnValue(null);
-
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      value: {
-        ...window.location,
-        pathname: "/planner",
-        search: "?from=test",
-      },
+    usePathname.mockReturnValue("/planner");
+    useSearchParams.mockReturnValue({
+      toString: () => "from=test",
     });
   });
 
@@ -53,6 +57,19 @@ describe("local dev session controls", () => {
 
     render(<LocalDevSessionControls />);
 
-    expect(screen.queryByRole("button", { name: "로컬 세션 종료" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "로컬 세션 종료" })).toBeNull();
+  });
+
+  it("updates the logout link when the route changes", () => {
+    usePathname.mockReturnValue("/recipe/mock-kimchi-jjigae");
+    useSearchParams.mockReturnValue({
+      toString: () => "",
+    });
+
+    render(<LocalDevSessionControls />);
+
+    expect(screen.getByRole("link", { name: "로컬 세션 종료" }).getAttribute("href")).toBe(
+      "/auth/logout?next=%2Frecipe%2Fmock-kimchi-jjigae",
+    );
   });
 });

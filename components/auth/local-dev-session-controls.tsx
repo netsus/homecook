@@ -2,18 +2,19 @@
 
 import React from "react";
 import { useMemo } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { isLocalDevAuthEnabled } from "@/lib/auth/local-dev-auth";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 
 export function LocalDevSessionControls() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const nextPath = useMemo(() => {
-    if (typeof window === "undefined") {
-      return "/";
-    }
+    const query = searchParams.toString();
 
-    return `${window.location.pathname}${window.location.search}`;
-  }, []);
+    return `${pathname}${query ? `?${query}` : ""}`;
+  }, [pathname, searchParams]);
   const authOverride = readE2EAuthOverride();
 
   if (!isLocalDevAuthEnabled()) {
