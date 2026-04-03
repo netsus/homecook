@@ -56,12 +56,12 @@ function normalizeMaxFixRounds(value) {
   const backend = Number(normalized.backend);
   const frontend = Number(normalized.frontend);
 
-  if (!Number.isInteger(backend) || backend < 1) {
-    throw new Error("automationSpec.max_fix_rounds.backend must be a positive integer.");
+  if (!Number.isInteger(backend) || backend < 0) {
+    throw new Error("automationSpec.max_fix_rounds.backend must be a non-negative integer.");
   }
 
-  if (!Number.isInteger(frontend) || frontend < 1) {
-    throw new Error("automationSpec.max_fix_rounds.frontend must be a positive integer.");
+  if (!Number.isInteger(frontend) || frontend < 0) {
+    throw new Error("automationSpec.max_fix_rounds.frontend must be a non-negative integer.");
   }
 
   return {

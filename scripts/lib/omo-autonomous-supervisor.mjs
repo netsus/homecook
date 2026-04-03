@@ -9,9 +9,18 @@ import { resolveClaudeProviderConfig, resolveCodexProviderConfig } from "./omo-p
 import {
   applyBookkeepingRepairPlan,
   evaluateBookkeepingInvariant,
+  readSliceRoadmapStatus,
   updateSliceRoadmapStatus,
   updateWorkpackDesignStatus,
 } from "./omo-bookkeeping.mjs";
+import {
+  isChecklistContractActive,
+  readWorkpackChecklistContract,
+  resolveChecklistIds,
+  resolveOwnedChecklistItems,
+  resolveReviewChecklistItems,
+  resolveUncheckedChecklistItems,
+} from "./omo-checklist-contract.mjs";
 import {
   acquireRuntimeLock,
   resolveRuntimePath,
@@ -156,6 +165,279 @@ function readTrackedWorkItem({ rootDir, workItemId }) {
     workItemPath,
     workItem: JSON.parse(readFileSync(workItemPath, "utf8")),
   };
+}
+
+function normalizeStringArray(values) {
+  return [...new Set(
+    (Array.isArray(values) ? values : [])
+      .filter((value) => typeof value === "string" && value.trim().length > 0)
+      .map((value) => value.trim()),
+  )];
+}
+
+function summarizeChecklistIssues(issues) {
+  return normalizeStringArray(issues).join("; ");
+}
+
+function resolveExpectedReviewScope(stage) {
+  if (stage === 3) return "backend";
+  if (stage === 5) return "frontend";
+  return "closeout";
+}
+
+function resolveChecklistContractValidation({
+  rootDir,
+  worktreePath,
+  slice,
+}) {
+  const checklistContract = readWorkpackChecklistContract({
+    rootDir,
+    worktreePath,
+    slice,
+  });
+
+  return {
+    checklistContract,
+    issues: normalizeStringArray(
+      (checklistContract.errors ?? []).map((error) => `${error.path} ${error.message}`),
+    ),
+  };
+}
+
+function validateProductCodeStageEntry({
+  rootDir,
+  worktreePath,
+  workItem,
+  slice,
+  stage,
+}) {
+  const { checklistContract, issues } = resolveChecklistContractValidation({
+    rootDir,
+    worktreePath,
+    slice,
+  });
+  if (workItem?.change_type !== "product") {
+    return {
+      checklistContract,
+      issues: [],
+    };
+  }
+
+  if (stage === 1) {
+    const roadmap = readSliceRoadmapStatus({
+      worktreePath,
+      slice,
+    });
+    const normalizedIssues = [];
+    if (roadmap.status !== "planned") {
+      normalizedIssues.push(
+        `Stage 1 entry requires roadmap status planned but found ${roadmap.status ?? "missing"}.`,
+      );
+    }
+
+    const dependencies = normalizeStringArray(workItem?.dependencies);
+    for (const dependency of dependencies) {
+      const dependencyStatus = readSliceRoadmapStatus({
+        worktreePath,
+        slice: dependency,
+      }).status;
+      if (!["merged", "bootstrap"].includes(dependencyStatus ?? "")) {
+        normalizedIssues.push(
+          `Dependency slice '${dependency}' must be merged/bootstrap before Stage 1, found ${dependencyStatus ?? "missing"}.`,
+        );
+      }
+    }
+
+    return {
+      checklistContract,
+      issues: normalizeStringArray(normalizedIssues),
+    };
+  }
+
+  const normalizedIssues = isChecklistContractActive(checklistContract) ? [...issues] : [];
+  const roadmap = readSliceRoadmapStatus({
+    worktreePath,
+    slice,
+  });
+  const currentStatus = roadmap.status ?? null;
+  const allowedStatuses = stage === 2 ? ["docs", "in-progress", "merged"] : ["in-progress", "merged"];
+
+  if (!allowedStatuses.includes(currentStatus)) {
+    normalizedIssues.push(
+      `Stage ${stage} entry requires roadmap status ${allowedStatuses.join("|")} but found ${currentStatus ?? "missing"}.`,
+    );
+  }
+
+  if (isChecklistContractActive(checklistContract) && !checklistContract.automationSpecExists) {
+    normalizedIssues.push(`Stage ${stage} entry requires automation-spec.json for ${slice}.`);
+  }
+
+  const dependencies = normalizeStringArray(workItem?.dependencies);
+  for (const dependency of dependencies) {
+    const dependencyStatus = readSliceRoadmapStatus({
+      worktreePath,
+      slice: dependency,
+    }).status;
+    if (!["merged", "bootstrap"].includes(dependencyStatus ?? "")) {
+      normalizedIssues.push(
+        `Dependency slice '${dependency}' must be merged/bootstrap before Stage ${stage}, found ${dependencyStatus ?? "missing"}.`,
+      );
+    }
+  }
+
+  return {
+    checklistContract,
+    issues: normalizeStringArray(normalizedIssues),
+  };
+}
+
+function validateStage1Outputs({
+  worktreePath,
+  slice,
+}) {
+  const issues = [];
+  const requiredPaths = [
+    resolve(worktreePath, "docs", "workpacks", slice, "README.md"),
+    resolve(worktreePath, "docs", "workpacks", slice, "acceptance.md"),
+    resolve(worktreePath, "docs", "workpacks", slice, "automation-spec.json"),
+  ];
+
+  for (const filePath of requiredPaths) {
+    if (!existsSync(filePath)) {
+      issues.push(`Stage 1 output is missing: ${filePath}.`);
+    }
+  }
+
+  const roadmap = readSliceRoadmapStatus({
+    worktreePath,
+    slice,
+  });
+  if (roadmap.status !== "docs") {
+    issues.push(`Stage 1 outputs require roadmap status docs but found ${roadmap.status ?? "missing"}.`);
+  }
+
+  return normalizeStringArray(issues);
+}
+
+function validateCodeStageChecklistContract({
+  checklistContract,
+  stage,
+  stageResult,
+}) {
+  if (!isChecklistContractActive(checklistContract)) {
+    return [];
+  }
+
+  if (stage === 1) {
+    return [];
+  }
+
+  const ownedItems = resolveOwnedChecklistItems(checklistContract, stage);
+  const ownedIds = resolveChecklistIds(ownedItems);
+  const uncheckedOwnedIds = resolveChecklistIds(resolveUncheckedChecklistItems(ownedItems));
+  const checklistUpdates = Array.isArray(stageResult?.checklist_updates)
+    ? stageResult.checklist_updates
+    : [];
+  const updatedIds = normalizeStringArray(checklistUpdates.map((entry) => entry.id));
+  const issues = [];
+
+  if (ownedIds.length === 0) {
+    issues.push(`Checklist contract does not define any Stage ${stage} owned checklist items.`);
+  }
+
+  if (uncheckedOwnedIds.length > 0) {
+    issues.push(
+      `Stage ${stage} owned checklist items remain unchecked: ${uncheckedOwnedIds.join(", ")}.`,
+    );
+  }
+
+  const invalidStatuses = checklistUpdates
+    .filter((entry) => entry?.status !== "checked")
+    .map((entry) => entry?.id)
+    .filter(Boolean);
+  if (invalidStatuses.length > 0) {
+    issues.push(`Stage ${stage} checklist_updates must mark items as checked: ${invalidStatuses.join(", ")}.`);
+  }
+
+  const foreignIds = updatedIds.filter((id) => !ownedIds.includes(id));
+  if (foreignIds.length > 0) {
+    issues.push(`Stage ${stage} cannot update checklist ids it does not own: ${foreignIds.join(", ")}.`);
+  }
+
+  const missingIds = ownedIds.filter((id) => !updatedIds.includes(id));
+  if (missingIds.length > 0) {
+    issues.push(`Stage ${stage} stage-result is missing checklist updates for: ${missingIds.join(", ")}.`);
+  }
+
+  return normalizeStringArray(issues);
+}
+
+function validateReviewStageChecklistContract({
+  checklistContract,
+  stage,
+  stageResult,
+}) {
+  if (!isChecklistContractActive(checklistContract)) {
+    return [];
+  }
+
+  const expectedItems = resolveReviewChecklistItems(checklistContract, stage);
+  const expectedIds = resolveChecklistIds(expectedItems);
+  const reviewScope = stageResult?.review_scope ?? {
+    scope: null,
+    checklist_ids: [],
+  };
+  const scopeIds = normalizeStringArray(reviewScope.checklist_ids);
+  const reviewedIds = normalizeStringArray(stageResult?.reviewed_checklist_ids);
+  const requiredFixIds = normalizeStringArray(stageResult?.required_fix_ids);
+  const issues = [];
+  const expectedScope = resolveExpectedReviewScope(stage);
+
+  if (expectedIds.length === 0) {
+    issues.push(`Checklist contract does not define any review checklist items for Stage ${stage}.`);
+  }
+
+  if (reviewScope.scope !== expectedScope) {
+    issues.push(`Stage ${stage} review_scope.scope must be '${expectedScope}'.`);
+  }
+
+  const missingScopeIds = expectedIds.filter((id) => !scopeIds.includes(id));
+  const foreignScopeIds = scopeIds.filter((id) => !expectedIds.includes(id));
+  if (missingScopeIds.length > 0) {
+    issues.push(`Stage ${stage} review_scope is missing checklist ids: ${missingScopeIds.join(", ")}.`);
+  }
+  if (foreignScopeIds.length > 0) {
+    issues.push(`Stage ${stage} review_scope includes out-of-scope checklist ids: ${foreignScopeIds.join(", ")}.`);
+  }
+
+  const missingReviewedIds = expectedIds.filter((id) => !reviewedIds.includes(id));
+  const foreignReviewedIds = reviewedIds.filter((id) => !expectedIds.includes(id));
+  if (missingReviewedIds.length > 0) {
+    issues.push(`Stage ${stage} reviewed_checklist_ids is missing: ${missingReviewedIds.join(", ")}.`);
+  }
+  if (foreignReviewedIds.length > 0) {
+    issues.push(`Stage ${stage} reviewed_checklist_ids includes out-of-scope ids: ${foreignReviewedIds.join(", ")}.`);
+  }
+
+  const unknownFixIds = requiredFixIds.filter((id) => !expectedIds.includes(id));
+  if (unknownFixIds.length > 0) {
+    issues.push(`Stage ${stage} required_fix_ids includes out-of-scope ids: ${unknownFixIds.join(", ")}.`);
+  }
+
+  const unreviewedFixIds = requiredFixIds.filter((id) => !reviewedIds.includes(id));
+  if (unreviewedFixIds.length > 0) {
+    issues.push(`Stage ${stage} required_fix_ids must be included in reviewed_checklist_ids: ${unreviewedFixIds.join(", ")}.`);
+  }
+
+  if (stageResult?.decision === "request_changes" && requiredFixIds.length === 0) {
+    issues.push(`Stage ${stage} request_changes reviews must include required_fix_ids.`);
+  }
+
+  if (stageResult?.decision === "approve" && requiredFixIds.length > 0) {
+    issues.push(`Stage ${stage} approved reviews must not include required_fix_ids.`);
+  }
+
+  return normalizeStringArray(issues);
 }
 
 function resolveAutonomousStageContext({
@@ -920,7 +1202,7 @@ function resolveRunResultRuntimeState({
   );
 }
 
-function loadExecutionStageResult(state) {
+function loadExecutionStageResult(state, options = {}) {
   const stage = state.active_stage ?? state.current_stage ?? null;
   const stageResultPath = state.execution?.stage_result_path ?? null;
   if (!Number.isInteger(stage)) {
@@ -931,7 +1213,7 @@ function loadExecutionStageResult(state) {
     throw new Error("stage-result.json is missing for execution finalization.");
   }
 
-  return validateStageResult(stage, JSON.parse(readFileSync(stageResultPath, "utf8")));
+  return validateStageResult(stage, JSON.parse(readFileSync(stageResultPath, "utf8")), options);
 }
 
 function syncEvaluationStatus({
@@ -986,6 +1268,14 @@ function runAutonomousEvaluationLoop({
   }
 
   const maxRounds = context.stageConfig.max_fix_rounds ?? 1;
+  if (maxRounds <= 0) {
+    return {
+      state: nextState,
+      transitioned: false,
+      wait: nextState.wait,
+      autonomous: true,
+    };
+  }
 
   for (let evaluationRound = 1; evaluationRound <= maxRounds; evaluationRound += 1) {
     const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
@@ -1851,12 +2141,41 @@ function finalizeCodeStage({
   branchName,
   worktree,
   github,
+  checklistContract = null,
   now,
 }) {
   let nextState = state;
-  const stageResult = loadExecutionStageResult(nextState);
+  const stageResult = loadExecutionStageResult(nextState, {
+    strictExtendedContract: isChecklistContractActive(checklistContract),
+  });
   const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
   const verifyCommands = nextState.execution?.verify_commands ?? [];
+  const stage1OutputIssues =
+    stage === 1
+      ? validateStage1Outputs({
+          worktreePath: nextState.workspace.path,
+          slice,
+        })
+      : [];
+  const checklistIssues = validateCodeStageChecklistContract({
+    checklistContract,
+    stage,
+    stageResult,
+  });
+
+  if (stage1OutputIssues.length > 0 || checklistIssues.length > 0) {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice,
+      state: nextState,
+      stage,
+      prRole,
+      reason: summarizeChecklistIssues([...stage1OutputIssues, ...checklistIssues]),
+      now,
+      worktree,
+    });
+  }
 
   if (["stage_result_ready", "verify_pending"].includes(resolveStatePhase(nextState))) {
     if ([2, 4].includes(stage)) {
@@ -2191,7 +2510,14 @@ function finalizeCodeStage({
         }),
         kind: "ready_for_next_stage",
         prRole,
-        stage: stage === 2 ? 3 : 5,
+        stage: (() => {
+          if (stage === 2) return 3;
+          const lastFrontendReview = nextState.last_review?.frontend;
+          return lastFrontendReview?.decision === "request_changes" &&
+            lastFrontendReview?.source_review_stage === 6
+            ? 6
+            : 5;
+        })(),
         headSha,
         updatedAt: now,
       }),
@@ -2249,6 +2575,30 @@ function handleCodeStage({
       updatedAt: now,
     }),
   });
+  const { workItem } = readTrackedWorkItem({
+    rootDir,
+    workItemId,
+  });
+  const entryValidation = validateProductCodeStageEntry({
+    rootDir,
+    worktreePath: nextState.workspace?.path,
+    workItem,
+    slice,
+    stage,
+  });
+  if (entryValidation.issues.length > 0) {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice,
+      state: nextState,
+      stage,
+      prRole,
+      reason: summarizeChecklistIssues(entryValidation.issues),
+      now,
+      worktree,
+    });
+  }
   const existingPr = getActivePullRequest(nextState, prRole);
   const phase = resolveStatePhase(nextState);
 
@@ -2317,6 +2667,12 @@ function handleCodeStage({
     }
   }
 
+  const refreshedChecklistContract = resolveChecklistContractValidation({
+    rootDir,
+    worktreePath: nextState.workspace?.path,
+    slice,
+  }).checklistContract;
+
   return finalizeCodeStage({
     rootDir,
     workItemId,
@@ -2328,6 +2684,7 @@ function handleCodeStage({
     branchName,
     worktree,
     github,
+    checklistContract: refreshedChecklistContract,
     now,
   });
 }
@@ -2374,6 +2731,27 @@ function handleReviewStage({
       updatedAt: now,
     }),
   });
+  const {
+    checklistContract,
+    issues: checklistContractIssues,
+  } = resolveChecklistContractValidation({
+    rootDir,
+    worktreePath: nextState.workspace?.path,
+    slice: state.slice ?? workItemId,
+  });
+  if (checklistContractIssues.length > 0 && isChecklistContractActive(checklistContract)) {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice: state.slice ?? workItemId,
+      state: nextState,
+      stage,
+      prRole,
+      reason: summarizeChecklistIssues(checklistContractIssues),
+      now,
+      worktree,
+    });
+  }
   const phase = resolveStatePhase(nextState);
 
   if ((!isPendingReviewPhase(phase) && phase !== "merge_pending") || nextState.active_stage !== stage) {
@@ -2450,9 +2828,30 @@ function handleReviewStage({
   }
 
   activePr = getActivePullRequest(nextState, prRole);
-  const stageResult = loadExecutionStageResult(nextState);
+  const stageResult = loadExecutionStageResult(nextState, {
+    strictExtendedContract: isChecklistContractActive(checklistContract),
+  });
   const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
   const reviewRole = prRole === "backend" ? "backend" : "frontend";
+  const reviewChecklistIssues = validateReviewStageChecklistContract({
+    checklistContract,
+    stage,
+    stageResult,
+  });
+
+  if (reviewChecklistIssues.length > 0) {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice: state.slice ?? workItemId,
+      state: nextState,
+      stage,
+      prRole,
+      reason: summarizeChecklistIssues(reviewChecklistIssues),
+      now,
+      worktree,
+    });
+  }
 
   if (resolveStatePhase(nextState) === "review_pending") {
     nextState = saveRuntime({
@@ -2466,6 +2865,9 @@ function handleReviewStage({
         approvedHeadSha: stageResult.approved_head_sha,
         bodyMarkdown: stageResult.body_markdown,
         findings: stageResult.findings ?? [],
+        reviewScope: stageResult.review_scope ?? null,
+        reviewedChecklistIds: stageResult.reviewed_checklist_ids ?? [],
+        requiredFixIds: stageResult.required_fix_ids ?? [],
         updatedAt: now,
       }),
     });
@@ -2712,6 +3114,46 @@ function handleReviewStage({
       });
     } else {
       const routeBackStage = stageResult.route_back_stage ?? defaultBackRoute(stage);
+      const MAX_PING_PONG_ROUNDS = 3;
+      // Read from the original state, not nextState: the first setLastReview in review_pending
+      // already overwrote nextState.last_review with ping_pong_rounds defaulting to 0.
+      const currentRounds = state.last_review?.[reviewRole]?.ping_pong_rounds ?? 0;
+      const nextPingPongRounds = currentRounds + 1;
+
+      if (nextPingPongRounds > MAX_PING_PONG_ROUNDS) {
+        return blockWithRecovery({
+          rootDir,
+          workItemId,
+          slice: state.slice ?? workItemId,
+          state: nextState,
+          stage,
+          prRole,
+          reason: `Review ping-pong stalled after ${MAX_PING_PONG_ROUNDS} rounds. Human intervention required.`,
+          now,
+          worktree,
+        });
+      }
+
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setLastReview({
+          state: nextState,
+          role: reviewRole,
+          decision: stageResult.decision,
+          routeBackStage: stageResult.route_back_stage,
+          approvedHeadSha: stageResult.approved_head_sha,
+          bodyMarkdown: stageResult.body_markdown,
+          findings: stageResult.findings ?? [],
+          reviewScope: stageResult.review_scope ?? null,
+          reviewedChecklistIds: stageResult.reviewed_checklist_ids ?? [],
+          requiredFixIds: stageResult.required_fix_ids ?? [],
+          sourceReviewStage: stage,
+          pingPongRounds: nextPingPongRounds,
+          updatedAt: now,
+        }),
+      });
+
       nextState = saveRuntime({
         rootDir,
         workItemId,

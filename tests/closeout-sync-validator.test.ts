@@ -6,6 +6,10 @@ import { describe, expect, it } from "vitest";
 
 import { validateCloseoutSync } from "../scripts/lib/validate-closeout-sync.mjs";
 
+function metadata(id: string, stage: 2 | 4, scope: "backend" | "frontend" | "shared", review: string) {
+  return `<!-- omo:id=${id};stage=${stage};scope=${scope};review=${review} -->`;
+}
+
 function writeFixtureFile(rootDir: string, relativePath: string, contents: string) {
   const filePath = join(rootDir, relativePath);
   mkdirSync(join(filePath, ".."), { recursive: true });
@@ -17,7 +21,7 @@ function buildReadme({
   deliveryItems,
 }: {
   designStatus?: "temporary" | "pending-review" | "confirmed" | "N/A";
-  deliveryItems: Array<{ checked: boolean; text: string }>;
+  deliveryItems: Array<{ checked: boolean; text: string; meta?: string }>;
 }) {
   return [
     "# Slice: 05-planner-week-core",
@@ -30,7 +34,7 @@ function buildReadme({
     `- [${designStatus === "N/A" ? "x" : " "}] N/A`,
     "",
     "## Delivery Checklist",
-    ...deliveryItems.map((item) => `- [${item.checked ? "x" : " "}] ${item.text}`),
+    ...deliveryItems.map((item) => `- [${item.checked ? "x" : " "}] ${item.text}${item.meta ? ` ${item.meta}` : ""}`),
     "",
   ].join("\n");
 }
@@ -39,14 +43,14 @@ function buildAcceptance({
   generalItems,
   manualOnlyItems = [],
 }: {
-  generalItems: Array<{ checked: boolean; text: string }>;
+  generalItems: Array<{ checked: boolean; text: string; meta?: string }>;
   manualOnlyItems?: Array<{ checked: boolean; text: string }>;
 }) {
   return [
     "# Acceptance Checklist",
     "",
     "## Happy Path",
-    ...generalItems.map((item) => `- [${item.checked ? "x" : " "}] ${item.text}`),
+    ...generalItems.map((item) => `- [${item.checked ? "x" : " "}] ${item.text}${item.meta ? ` ${item.meta}` : ""}`),
     "",
     "## Automation Split",
     "",
@@ -62,12 +66,14 @@ function createFixture({
   deliveryItems,
   acceptanceItems,
   manualOnlyItems = [],
+  withAutomationSpec = false,
 }: {
   roadmapStatus: string;
   designStatus: "temporary" | "pending-review" | "confirmed" | "N/A";
-  deliveryItems: Array<{ checked: boolean; text: string }>;
-  acceptanceItems: Array<{ checked: boolean; text: string }>;
+  deliveryItems: Array<{ checked: boolean; text: string; meta?: string }>;
+  acceptanceItems: Array<{ checked: boolean; text: string; meta?: string }>;
   manualOnlyItems?: Array<{ checked: boolean; text: string }>;
+  withAutomationSpec?: boolean;
 }) {
   const rootDir = mkdtempSync(join(tmpdir(), "closeout-sync-"));
 
@@ -100,6 +106,41 @@ function createFixture({
       manualOnlyItems,
     }),
   );
+
+  if (withAutomationSpec) {
+    writeFixtureFile(
+      rootDir,
+      "docs/workpacks/05-planner-week-core/automation-spec.json",
+      JSON.stringify(
+        {
+          slice_id: "05-planner-week-core",
+          execution_mode: "autonomous",
+          risk_class: "medium",
+          merge_policy: "conditional-auto",
+          backend: {
+            required_endpoints: [],
+            invariants: [],
+            verify_commands: [],
+            required_test_targets: [],
+          },
+          frontend: {
+            required_routes: [],
+            required_states: [],
+            playwright_projects: [],
+            artifact_assertions: [],
+          },
+          external_smokes: ["true"],
+          blocked_conditions: [],
+          max_fix_rounds: {
+            backend: 2,
+            frontend: 2,
+          },
+        },
+        null,
+        2,
+      ),
+    );
+  }
 
   return rootDir;
 }
@@ -231,5 +272,158 @@ describe("closeout sync validator", () => {
     });
 
     expect(results).toEqual([]);
+  });
+
+  it("enforces Stage 2-owned checklist items for non-draft backend PRs under the metadata contract", () => {
+    const rootDir = createFixture({
+      roadmapStatus: "in-progress",
+      designStatus: "temporary",
+      withAutomationSpec: true,
+      deliveryItems: [
+        {
+          checked: false,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "UI 연결",
+          meta: metadata("delivery-ui", 4, "frontend", "5,6"),
+        },
+      ],
+      acceptanceItems: [
+        {
+          checked: false,
+          text: "API 응답 형식이 { success, data, error }를 따른다",
+          meta: metadata("accept-backend-api", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "loading 상태가 있다",
+          meta: metadata("accept-loading", 4, "frontend", "5,6"),
+        },
+      ],
+    });
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "feature/be-05-planner-week-core",
+        PR_IS_DRAFT: "false",
+      },
+      changedFiles: [],
+    });
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("Stage 2-owned checklist item must be checked"),
+        }),
+      ]),
+    );
+  });
+
+  it("enforces Stage 4-owned checklist items and pending-review design status for metadata-contract frontend PRs", () => {
+    const rootDir = createFixture({
+      roadmapStatus: "in-progress",
+      designStatus: "temporary",
+      withAutomationSpec: true,
+      deliveryItems: [
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "UI 연결",
+          meta: metadata("delivery-ui", 4, "frontend", "5,6"),
+        },
+      ],
+      acceptanceItems: [
+        {
+          checked: true,
+          text: "API 응답 형식이 { success, data, error }를 따른다",
+          meta: metadata("accept-backend-api", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "loading 상태가 있다",
+          meta: metadata("accept-loading", 4, "frontend", "5,6"),
+        },
+      ],
+    });
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "feature/fe-05-planner-week-core",
+        PR_IS_DRAFT: "false",
+      },
+      changedFiles: [],
+    });
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("Design Status 'pending-review'"),
+        }),
+        expect.objectContaining({
+          message: expect.stringContaining("Stage 4-owned checklist item must be checked"),
+        }),
+      ]),
+    );
+  });
+
+  it("enforces all non-Manual checklist items at merge closeout for metadata-contract slices", () => {
+    const rootDir = createFixture({
+      roadmapStatus: "merged",
+      designStatus: "confirmed",
+      withAutomationSpec: true,
+      deliveryItems: [
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "UI 연결",
+          meta: metadata("delivery-ui", 4, "frontend", "5,6"),
+        },
+      ],
+      acceptanceItems: [
+        {
+          checked: true,
+          text: "API 응답 형식이 { success, data, error }를 따른다",
+          meta: metadata("accept-backend-api", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "loading 상태가 있다",
+          meta: metadata("accept-loading", 4, "frontend", "5,6"),
+        },
+      ],
+      manualOnlyItems: [{ checked: false, text: "실제 OAuth smoke" }],
+    });
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "docs/cleanup-workpack-notes",
+      },
+      changedFiles: ["docs/workpacks/05-planner-week-core/README.md"],
+    });
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("Checklist item outside Manual Only must be checked before merge closeout"),
+        }),
+      ]),
+    );
   });
 });

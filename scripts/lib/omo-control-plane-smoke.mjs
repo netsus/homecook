@@ -10,8 +10,18 @@ import {
   resolveStageResultPath,
   validateStageResult,
 } from "./omo-stage-result.mjs";
+import {
+  readRuntimeState,
+  writeRuntimeState,
+} from "./omo-session-runtime.mjs";
 
 const LIVE_BACKEND_FIX_TOKENS = ["backend-request-1", "backend-request-2"];
+const SMOKE_CHECKLIST_IDS = {
+  backendDelivery: "delivery-backend-contract",
+  backendAcceptance: "accept-backend-api",
+  frontendDelivery: "delivery-ui",
+  frontendAcceptance: "accept-loading",
+};
 const LIVE_PROVIDER_STAGE_TIMEOUT_MS = 90_000;
 
 /**
@@ -279,7 +289,7 @@ function ensureStatusShape(rootDir) {
 
 function ensureRoadmapContents(rootDir, workItemId) {
   const roadmapPath = join(rootDir, "docs", "workpacks", "README.md");
-  const row = `| \`${workItemId}\` | docs | OMO control-plane smoke |`;
+  const row = `| \`${workItemId}\` | planned | OMO control-plane smoke |`;
 
   if (!existsSync(roadmapPath)) {
     return [
@@ -318,6 +328,10 @@ function ensureWorkpackReadme(workItemId) {
     "- [ ] 리뷰 대기 (pending-review)",
     "- [ ] 확정 (confirmed)",
     "- [ ] N/A",
+    "",
+    "## Delivery Checklist",
+    `- [x] 백엔드 계약 고정 <!-- omo:id=${SMOKE_CHECKLIST_IDS.backendDelivery};stage=2;scope=backend;review=3,6 -->`,
+    `- [ ] UI 연결 <!-- omo:id=${SMOKE_CHECKLIST_IDS.frontendDelivery};stage=4;scope=frontend;review=5,6 -->`,
     "",
   ].join("\n");
 }
@@ -489,8 +503,8 @@ export function seedControlPlaneSmokeWorkspace({
       execution_mode: "autonomous",
       merge_policy: "conditional-auto",
       max_fix_rounds: {
-        backend: 2,
-        frontend: 2,
+        backend: 0,
+        frontend: 0,
       },
     },
     verification: {
@@ -577,8 +591,8 @@ export function seedControlPlaneSmokeWorkspace({
         external_smokes: ["true"],
         blocked_conditions: [],
         max_fix_rounds: {
-          backend: 2,
-          frontend: 2,
+          backend: 0,
+          frontend: 0,
         },
       },
       null,
@@ -588,11 +602,16 @@ export function seedControlPlaneSmokeWorkspace({
   writeFileSync(
     acceptancePath,
     [
-      `# ${normalizedWorkItemId} acceptance`,
+      "# Acceptance Checklist",
       "",
-      "- smoke control-plane workflow can create docs/backend/frontend PRs in a sandbox repo",
-      "- smoke runtime can resume autonomous merge gates without manual approval states",
-      "- live provider mode must validate Claude request_changes -> Codex reflection with backend-request-1 and backend-request-2 tokens",
+      "## Happy Path",
+      `- [x] API 응답 형식이 { success, data, error }를 따른다 <!-- omo:id=${SMOKE_CHECKLIST_IDS.backendAcceptance};stage=2;scope=backend;review=3,6 -->`,
+      `- [ ] loading 상태가 있다 <!-- omo:id=${SMOKE_CHECKLIST_IDS.frontendAcceptance};stage=4;scope=frontend;review=5,6 -->`,
+      "",
+      "## Automation Split",
+      "",
+      "### Manual Only",
+      "- [ ] live OAuth smoke",
       "",
     ].join("\n"),
   );
@@ -737,16 +756,71 @@ function buildCodeStageResult({ stage, workItemId, attempt }) {
     changed_files: [changedFile],
     tests_touched: [],
     artifacts_written: [],
+    checklist_updates:
+      stage === 2
+        ? [
+            {
+              id: SMOKE_CHECKLIST_IDS.backendDelivery,
+              status: "checked",
+              evidence_refs: ["pnpm validate:workflow-v2"],
+            },
+            {
+              id: SMOKE_CHECKLIST_IDS.backendAcceptance,
+              status: "checked",
+              evidence_refs: ["pnpm validate:workflow-v2"],
+            },
+          ]
+        : stage === 4
+          ? [
+              {
+                id: SMOKE_CHECKLIST_IDS.frontendDelivery,
+                status: "checked",
+                evidence_refs: ["pnpm validate:workflow-v2"],
+              },
+              {
+                id: SMOKE_CHECKLIST_IDS.frontendAcceptance,
+                status: "checked",
+                evidence_refs: ["pnpm validate:workflow-v2"],
+              },
+            ]
+          : [],
   };
 }
 
 function buildReviewStageResult({ stage, attempt }) {
+  const reviewedChecklistIds =
+    stage === 3
+      ? [SMOKE_CHECKLIST_IDS.backendDelivery, SMOKE_CHECKLIST_IDS.backendAcceptance]
+      : stage === 5
+        ? [SMOKE_CHECKLIST_IDS.frontendDelivery, SMOKE_CHECKLIST_IDS.frontendAcceptance]
+        : [
+            SMOKE_CHECKLIST_IDS.backendDelivery,
+            SMOKE_CHECKLIST_IDS.backendAcceptance,
+            SMOKE_CHECKLIST_IDS.frontendDelivery,
+            SMOKE_CHECKLIST_IDS.frontendAcceptance,
+          ];
   if (stage === 3 && attempt <= 2) {
     return {
       decision: "request_changes",
       body_markdown: `Backend smoke review loop request ${attempt}: tighten the API contract and rerun the backend stage.`,
       route_back_stage: 2,
       approved_head_sha: null,
+      review_scope: {
+        scope: "backend",
+        checklist_ids: reviewedChecklistIds,
+      },
+      reviewed_checklist_ids: reviewedChecklistIds,
+      required_fix_ids: [SMOKE_CHECKLIST_IDS.backendAcceptance],
+      findings: [
+        {
+          file: "app/api/v1/smoke-backend/route.ts",
+          line_hint: 1,
+          severity: "major",
+          category: "contract",
+          issue: `Backend smoke request ${attempt} still needs a tighter API contract.`,
+          suggestion: "Apply the requested backend smoke fix and rerun Stage 2.",
+        },
+      ],
     };
   }
 
@@ -756,6 +830,47 @@ function buildReviewStageResult({ stage, attempt }) {
       body_markdown: "Frontend smoke review loop request: adjust the UI state copy and rerun the frontend stage.",
       route_back_stage: 4,
       approved_head_sha: null,
+      review_scope: {
+        scope: "frontend",
+        checklist_ids: reviewedChecklistIds,
+      },
+      reviewed_checklist_ids: reviewedChecklistIds,
+      required_fix_ids: [SMOKE_CHECKLIST_IDS.frontendDelivery],
+      findings: [
+        {
+          file: "app/smoke/frontend/page.tsx",
+          line_hint: 1,
+          severity: "major",
+          category: "logic",
+          issue: "Frontend smoke UI state copy still needs adjustment.",
+          suggestion: "Update the requested UI copy and rerun Stage 4.",
+        },
+      ],
+    };
+  }
+
+  if (stage === 6 && attempt === 1) {
+    return {
+      decision: "request_changes",
+      body_markdown: "Frontend smoke review loop request: closeout checklist and CTA polish still need another frontend pass.",
+      route_back_stage: 4,
+      approved_head_sha: null,
+      review_scope: {
+        scope: "closeout",
+        checklist_ids: reviewedChecklistIds,
+      },
+      reviewed_checklist_ids: reviewedChecklistIds,
+      required_fix_ids: [SMOKE_CHECKLIST_IDS.frontendAcceptance],
+      findings: [
+        {
+          file: "app/smoke/frontend/page.tsx",
+          line_hint: 1,
+          severity: "major",
+          category: "logic",
+          issue: "Closeout CTA polish is incomplete in the smoke frontend pass.",
+          suggestion: "Apply the closeout polish feedback and rerun Stage 4.",
+        },
+      ],
     };
   }
 
@@ -764,6 +879,12 @@ function buildReviewStageResult({ stage, attempt }) {
     body_markdown: `## Review\n- OMO smoke stage ${stage} approve (attempt ${attempt})`,
     route_back_stage: null,
     approved_head_sha: null,
+    review_scope: {
+      scope: stage === 3 ? "backend" : stage === 5 ? "frontend" : "closeout",
+      checklist_ids: reviewedChecklistIds,
+    },
+    reviewed_checklist_ids: reviewedChecklistIds,
+    required_fix_ids: [],
   };
 }
 
@@ -791,25 +912,26 @@ export function createControlPlaneSmokeStageRunner({
     smokeState.attempts[String(stage)] = attempt;
 
     if (stage === 1) {
-      writeSmokeFile(
-        normalizedExecutionDir,
-        `docs/workpacks/${workItemId}/README.md`,
-        [
-          `# ${workItemId}`,
-          "",
-          "## Smoke Notes",
-          "",
-          `- Stage 1 docs smoke wrote this file at ${now}`,
-          "",
-          "## Design Status",
-          "",
-          "- [x] 임시 UI (temporary)",
-          "- [ ] 리뷰 대기 (pending-review)",
-          "- [ ] 확정 (confirmed)",
-          "- [ ] N/A",
-          "",
-        ].join("\n"),
-      );
+      const roadmapPath = resolve(normalizedExecutionDir, "docs", "workpacks", "README.md");
+      const workpackReadmePath = resolve(normalizedExecutionDir, "docs", "workpacks", workItemId, "README.md");
+      if (existsSync(roadmapPath)) {
+        writeFileSync(
+          roadmapPath,
+          readFileSync(roadmapPath, "utf8").replace(
+            `| \`${workItemId}\` | planned | OMO control-plane smoke |`,
+            `| \`${workItemId}\` | docs | OMO control-plane smoke |`,
+          ),
+        );
+      }
+      if (existsSync(workpackReadmePath)) {
+        writeFileSync(
+          workpackReadmePath,
+          appendUniqueLine(
+            readFileSync(workpackReadmePath, "utf8"),
+            `- Stage 1 docs smoke touched this workpack at ${now}`,
+          ),
+        );
+      }
     }
 
     if (stage === 2) {
@@ -821,16 +943,14 @@ export function createControlPlaneSmokeStageRunner({
         });
 
         if (
-          typeof reviewContext?.body_markdown !== "string" ||
-          !reviewContext.body_markdown.includes("Backend smoke review loop request")
+          typeof reviewContext?.body_markdown === "string" &&
+          reviewContext.body_markdown.includes("Backend smoke review loop request")
         ) {
-          throw new Error("Control-plane smoke expected backend review feedback before Stage 2 retry.");
+          smokeState.review_loops.backend.code_retries += 1;
+          smokeState.review_loops.backend.feedback_seen_by_codex = true;
+          smokeState.review_loops.backend.last_feedback = reviewContext.body_markdown;
+          reviewFeedbackSeen = true;
         }
-
-        smokeState.review_loops.backend.code_retries += 1;
-        smokeState.review_loops.backend.feedback_seen_by_codex = true;
-        smokeState.review_loops.backend.last_feedback = reviewContext.body_markdown;
-        reviewFeedbackSeen = true;
       }
 
       writeSmokeFile(
@@ -849,16 +969,14 @@ export function createControlPlaneSmokeStageRunner({
         });
 
         if (
-          typeof reviewContext?.body_markdown !== "string" ||
-          !reviewContext.body_markdown.includes("Frontend smoke review loop request")
+          typeof reviewContext?.body_markdown === "string" &&
+          reviewContext.body_markdown.includes("Frontend smoke review loop request")
         ) {
-          throw new Error("Control-plane smoke expected frontend review feedback before Stage 4 retry.");
+          smokeState.review_loops.frontend.code_retries += 1;
+          smokeState.review_loops.frontend.feedback_seen_by_codex = true;
+          smokeState.review_loops.frontend.last_feedback = reviewContext.body_markdown;
+          reviewFeedbackSeen = true;
         }
-
-        smokeState.review_loops.frontend.code_retries += 1;
-        smokeState.review_loops.frontend.feedback_seen_by_codex = true;
-        smokeState.review_loops.frontend.last_feedback = reviewContext.body_markdown;
-        reviewFeedbackSeen = true;
       }
 
       writeSmokeFile(
@@ -866,6 +984,28 @@ export function createControlPlaneSmokeStageRunner({
         `smoke/omo-control-plane/${workItemId}/frontend.txt`,
         `frontend smoke stage completed at ${now} (attempt ${attempt})\n`,
       );
+      const workpackReadmePath = resolve(normalizedExecutionDir, "docs", "workpacks", workItemId, "README.md");
+      const acceptancePath = resolve(normalizedExecutionDir, "docs", "workpacks", workItemId, "acceptance.md");
+      if (existsSync(workpackReadmePath)) {
+        const readmeContents = readFileSync(workpackReadmePath, "utf8");
+        writeFileSync(
+          workpackReadmePath,
+          readmeContents.replace(
+            new RegExp(`- \\[ \\] UI 연결 <!-- omo:id=${SMOKE_CHECKLIST_IDS.frontendDelivery};stage=4;scope=frontend;review=5,6 -->`),
+            `- [x] UI 연결 <!-- omo:id=${SMOKE_CHECKLIST_IDS.frontendDelivery};stage=4;scope=frontend;review=5,6 -->`,
+          ),
+        );
+      }
+      if (existsSync(acceptancePath)) {
+        const acceptanceContents = readFileSync(acceptancePath, "utf8");
+        writeFileSync(
+          acceptancePath,
+          acceptanceContents.replace(
+            new RegExp(`- \\[ \\] loading 상태가 있다 <!-- omo:id=${SMOKE_CHECKLIST_IDS.frontendAcceptance};stage=4;scope=frontend;review=5,6 -->`),
+            `- [x] loading 상태가 있다 <!-- omo:id=${SMOKE_CHECKLIST_IDS.frontendAcceptance};stage=4;scope=frontend;review=5,6 -->`,
+          ),
+        );
+      }
     }
 
     if (stage === 3) {
@@ -887,7 +1027,12 @@ export function createControlPlaneSmokeStageRunner({
     }
 
     if (stage === 6) {
-      outcome = "approve";
+      outcome = attempt === 1 ? "request_changes" : "approve";
+      if (attempt === 1) {
+        smokeState.review_loops.frontend.requested_changes += 1;
+      } else {
+        smokeState.review_loops.frontend.approvals += 1;
+      }
     }
 
     const stageResult =
@@ -911,6 +1056,45 @@ export function createControlPlaneSmokeStageRunner({
       state: smokeState,
     });
 
+    let runtimeSync = null;
+    if ([2, 4].includes(stage)) {
+      mkdirSync(artifactDir, { recursive: true });
+      const stageResultPath = resolveStageResultPath(artifactDir);
+      writeFileSync(stageResultPath, `${JSON.stringify(stageResult, null, 2)}\n`);
+      runtimeSync = {
+        state: writeRuntimeState({
+          rootDir,
+          workItemId,
+          state: {
+            ...readRuntimeState({
+              rootDir,
+              workItemId,
+              slice: workItemId,
+            }).state,
+            slice: workItemId,
+            current_stage: stage,
+            active_stage: stage,
+            phase: "stage_result_ready",
+            next_action: "finalize_stage",
+            last_artifact_dir: artifactDir,
+            execution: {
+              provider: stage === 2 ? "opencode" : "opencode",
+              session_role: "codex_primary",
+              session_id: "ses_omo_codex_smoke",
+              artifact_dir: artifactDir,
+              stage_result_path: stageResultPath,
+              started_at: now,
+              finished_at: now,
+              verify_commands: [],
+              verify_bucket: null,
+              commit_sha: null,
+              pr_role: stage === 2 ? "backend" : "frontend",
+            },
+          },
+        }).state,
+      };
+    }
+
     return {
       artifactDir,
       dispatch: {
@@ -923,6 +1107,7 @@ export function createControlPlaneSmokeStageRunner({
         provider: [1, 3, 5, 6].includes(stage) ? "claude-cli" : "opencode",
         sessionId: [1, 3, 5, 6].includes(stage) ? "ses_omo_claude_smoke" : "ses_omo_codex_smoke",
       },
+      runtimeSync,
       stageResult,
     };
   };
@@ -959,6 +1144,16 @@ function buildLiveProviderStageResultTemplate({ stage, attempt, workItemId }) {
       ].join("\n"),
       route_back_stage: 2,
       approved_head_sha: null,
+      findings: [
+        {
+          file: `smoke/omo-control-plane/${workItemId}/backend-review-loop.md`,
+          line_hint: 1,
+          severity: "major",
+          category: "tests",
+          issue: `Live smoke token ${LIVE_BACKEND_FIX_TOKENS[attempt - 1]} has not been reflected yet.`,
+          suggestion: "Reflect the requested live smoke token and rerun Stage 2.",
+        },
+      ],
     };
   }
 
@@ -1524,11 +1719,13 @@ export function collectControlPlaneSmokeCheckpoints({ runtime, smokeState = null
     frontendFixApplied:
       Number(frontendLoop.code_retries ?? 0) > 0 && frontendLoop.feedback_seen_by_codex === true,
     frontendAdditionalReviewCompleted:
-      Number(smokeState?.attempts?.["5"] ?? 0) >= 2 && Number(frontendLoop.approvals ?? 0) > 0,
+      Number(smokeState?.attempts?.["5"] ?? 0) >= 2 &&
+      Number(smokeState?.attempts?.["6"] ?? 0) >= 2 &&
+      Number(frontendLoop.approvals ?? 0) > 1,
     frontendReviewLoopValidated:
       Number(frontendLoop.requested_changes ?? 0) > 0 &&
-      Number(frontendLoop.code_retries ?? 0) > 0 &&
-      Number(frontendLoop.approvals ?? 0) > 0 &&
+      Number(frontendLoop.code_retries ?? 0) > 1 &&
+      Number(frontendLoop.approvals ?? 0) > 1 &&
       frontendLoop.feedback_seen_by_codex === true,
     reviewLoopsValidated:
       Number(backendLoop.requested_changes ?? 0) > 0 &&
@@ -1536,8 +1733,8 @@ export function collectControlPlaneSmokeCheckpoints({ runtime, smokeState = null
       Number(backendLoop.approvals ?? 0) > 0 &&
       backendLoop.feedback_seen_by_codex === true &&
       Number(frontendLoop.requested_changes ?? 0) > 0 &&
-      Number(frontendLoop.code_retries ?? 0) > 0 &&
-      Number(frontendLoop.approvals ?? 0) > 0 &&
+      Number(frontendLoop.code_retries ?? 0) > 1 &&
+      Number(frontendLoop.approvals ?? 0) > 1 &&
       frontendLoop.feedback_seen_by_codex === true,
     backendMergeGateReached:
       (waitKind === "ci" && (runtime?.wait?.stage ?? null) === 3) || lastCompletedStage >= 3,

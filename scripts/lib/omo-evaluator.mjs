@@ -3,6 +3,13 @@ import { spawnSync } from "node:child_process";
 import { basename, resolve } from "node:path";
 
 import { readAutomationSpec, resolveAutonomousSlicePolicy, resolveStageAutomationConfig } from "./omo-automation-spec.mjs";
+import {
+  isChecklistContractActive,
+  readWorkpackChecklistContract,
+  resolveChecklistIds,
+  resolveOwnedChecklistItems,
+  resolveUncheckedChecklistItems,
+} from "./omo-checklist-contract.mjs";
 import { readRuntimeState } from "./omo-session-runtime.mjs";
 import { readStageResult, resolveStageResultPath, validateStageResult } from "./omo-stage-result.mjs";
 
@@ -215,6 +222,7 @@ function ensureStageResultMetadata({
   stage,
   stageResult,
   stageConfig,
+  checklistContract,
   changedFiles,
   worktreePath,
   stageResultPath,
@@ -223,6 +231,7 @@ function ensureStageResultMetadata({
   const resultChangedFiles = normalizeStringArray(stageResult.changed_files);
   const testsTouched = normalizeStringArray(stageResult.tests_touched);
   const artifactsWritten = normalizeStringArray(stageResult.artifacts_written);
+  const checklistUpdates = Array.isArray(stageResult.checklist_updates) ? stageResult.checklist_updates : [];
 
   if (resultChangedFiles.length === 0) {
     addFinding(findings, {
@@ -362,6 +371,54 @@ function ensureStageResultMetadata({
       }
     }
   }
+
+  if (isChecklistContractActive(checklistContract)) {
+    const ownedItems = resolveOwnedChecklistItems(checklistContract, stage === "backend" ? 2 : 4);
+    const ownedIds = resolveChecklistIds(ownedItems);
+    const uncheckedOwnedIds = resolveChecklistIds(resolveUncheckedChecklistItems(ownedItems));
+    const updatedIds = normalizeStringArray(checklistUpdates.map((entry) => entry.id));
+    const foreignIds = updatedIds.filter((id) => !ownedIds.includes(id));
+    const missingIds = ownedIds.filter((id) => !updatedIds.includes(id));
+
+    if (uncheckedOwnedIds.length > 0) {
+      addFinding(findings, {
+        id: `${stage}-checklist-unchecked`,
+        category: "closeout",
+        severity: "major",
+        message: `Stage-owned checklist items remain unchecked: ${uncheckedOwnedIds.join(", ")}`,
+        evidence_paths: [checklistContract.readmePath, checklistContract.acceptancePath],
+        remediation_hint: "Check every current-stage checklist item before ready-for-review handoff.",
+        owner: "codex",
+        fixable: true,
+      });
+    }
+
+    if (foreignIds.length > 0) {
+      addFinding(findings, {
+        id: `${stage}-checklist-foreign-ids`,
+        category: "closeout",
+        severity: "major",
+        message: `stage-result.checklist_updates references checklist ids outside the current stage: ${foreignIds.join(", ")}`,
+        evidence_paths: [stageResultPath],
+        remediation_hint: "Only include checklist ids owned by the current stage in checklist_updates.",
+        owner: "codex",
+        fixable: true,
+      });
+    }
+
+    if (missingIds.length > 0) {
+      addFinding(findings, {
+        id: `${stage}-checklist-missing-ids`,
+        category: "closeout",
+        severity: "major",
+        message: `stage-result.checklist_updates is missing stage-owned checklist ids: ${missingIds.join(", ")}`,
+        evidence_paths: [stageResultPath],
+        remediation_hint: "List every current-stage checklist id in checklist_updates once it is satisfied.",
+        owner: "codex",
+        fixable: true,
+      });
+    }
+  }
 }
 
 function buildOutcome(findings) {
@@ -464,6 +521,11 @@ export function evaluateWorkItemStage({
     slice: resolvedSlice,
   });
   const worktreePath = resolveWorktreePath(runtimeSnapshot.state);
+  const checklistContract = readWorkpackChecklistContract({
+    rootDir,
+    worktreePath,
+    slice: resolvedSlice,
+  });
   const executionArtifactDir = resolveArtifactDir({
     runtimeState: runtimeSnapshot.state,
     artifactDir,
@@ -512,6 +574,21 @@ export function evaluateWorkItemStage({
     });
   }
 
+  if (isChecklistContractActive(checklistContract) && checklistContract.errors.length > 0) {
+    for (const error of checklistContract.errors) {
+      addFinding(findings, {
+        id: `${stageLabel}-checklist-contract-${findings.length + 1}`,
+        category: "contract",
+        severity: "blocker",
+        message: error.message,
+        evidence_paths: [error.path],
+        remediation_hint: "Fix the workpack checklist metadata contract before rerunning automation.",
+        owner: "human",
+        fixable: false,
+      });
+    }
+  }
+
   if (!stageResult) {
     addFinding(findings, {
       id: `${stageLabel}-stage-result-missing`,
@@ -525,7 +602,9 @@ export function evaluateWorkItemStage({
     });
   } else {
     try {
-      validateStageResult(stageNumber, stageResult);
+      validateStageResult(stageNumber, stageResult, {
+        strictExtendedContract: isChecklistContractActive(checklistContract),
+      });
     } catch (error) {
       addFinding(findings, {
         id: `${stageLabel}-stage-result-invalid`,
@@ -546,6 +625,7 @@ export function evaluateWorkItemStage({
       stage: stageLabel,
       stageResult,
       stageConfig,
+      checklistContract,
       changedFiles,
       worktreePath,
       stageResultPath,

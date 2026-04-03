@@ -227,6 +227,42 @@ describe("OMO-lite stage dispatch", () => {
     expect(dispatch.extraPromptSections[0]).toContain("withAuth 래퍼 추가");
   });
 
+  it("injects structured findings and required fix ids into Stage 4 rerun prompt sections", () => {
+    const dispatch = buildStageDispatch({
+      slice: "02-discovery-filter",
+      stage: 4,
+      reviewContext: {
+        decision: "request_changes",
+        body_markdown: "CTA 상태를 다시 맞춰 주세요.",
+        pr_url: "https://github.com/netsus/homecook/pull/101",
+        updated_at: "2026-04-01T01:00:00.000Z",
+        findings: [
+          {
+            file: "app/planner/page.tsx",
+            line_hint: 22,
+            severity: "major",
+            category: "logic",
+            issue: "Disabled CTA state is inconsistent.",
+            suggestion: "Use the same disabled treatment across all planner CTAs.",
+          },
+        ],
+        required_fix_ids: ["delivery-ui-connection"],
+      },
+    });
+
+    expect(dispatch.requiredReads).toEqual(
+      expect.arrayContaining([
+        "previous frontend review feedback (runtime.last_review.frontend)",
+        "active PR context: https://github.com/netsus/homecook/pull/101",
+      ]),
+    );
+    expect(dispatch.extraPromptSections).toHaveLength(2);
+    expect(dispatch.extraPromptSections[0]).toContain("Structured Findings from Prior Review");
+    expect(dispatch.extraPromptSections[0]).toContain("Disabled CTA state is inconsistent.");
+    expect(dispatch.extraPromptSections[1]).toContain("Required Checklist Fix IDs");
+    expect(dispatch.extraPromptSections[1]).toContain("delivery-ui-connection");
+  });
+
   it("does NOT inject findings section for review stages (stage 3)", () => {
     const dispatch = buildStageDispatch({
       slice: "02-discovery-filter",
@@ -270,6 +306,20 @@ describe("OMO-lite stage dispatch", () => {
     });
 
     expect(dispatch.requiredReads.join(" ")).not.toContain("prior stage result:");
+  });
+
+  it("includes acceptance.md in Stage 5 requiredReads", () => {
+    const dispatch = buildStageDispatch({
+      slice: "02-discovery-filter",
+      stage: 5,
+    });
+
+    expect(dispatch.requiredReads).toEqual(
+      expect.arrayContaining([
+        "docs/workpacks/02-discovery-filter/README.md",
+        "docs/workpacks/02-discovery-filter/acceptance.md",
+      ]),
+    );
   });
 });
 

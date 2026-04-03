@@ -97,6 +97,7 @@
 
 - `docs/workpacks/<slice>/README.md` — 모든 섹션 채움
 - `docs/workpacks/<slice>/acceptance.md` — Happy Path·State·Error·DataIntegrity·ManualQA·AutomationSplit 채움
+- `docs/workpacks/<slice>/automation-spec.json` — autonomous/closeout validator가 읽는 machine-checkable stage contract
 - (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스만) In Scope의 **각 FE 화면마다**:
   - `ui/designs/<SCREEN_ID>.md` — design-generator 실행
   - `ui/designs/critiques/<SCREEN_ID>-critique.md` — design-critic 실행 (🟢/🟡 통과 필수)
@@ -122,6 +123,14 @@
 - Error/Permission: 5개 상태, return-to-action
 - Data Setup / Preconditions: fixture, real DB smoke, seed, bootstrap 완료 기준
 - Manual Only: 자동화 불가 시나리오 명시
+
+**README Delivery Checklist + acceptance metadata**
+- `Manual Only`를 제외한 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 붙인다
+- `stage`: 해당 항목을 실제로 닫는 code stage (`2 | 4`)
+- `scope`: `backend | frontend | shared`
+- `review`: 이 항목을 구조적으로 다시 확인해야 하는 review stage (`3`, `5`, `6`)
+- Stage 5는 `scope=frontend`이면서 `review`에 `5`가 포함된 acceptance / README 항목만 리뷰한다
+- Stage 6는 `Manual Only`를 제외한 non-manual checklist 전체를 최종 closeout 기준으로 리뷰한다
 
 **디자인 산출물 (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스만)**
 - In Scope의 각 FE 화면마다 design-generator → design-critic 순서로 실행
@@ -150,6 +159,7 @@
 
 브랜치 `docs/<slice>`에서 PR을 열고, 다음이 같은 PR에 포함되어 main에 merge됨:
 - `docs/workpacks/<slice>/README.md` + `acceptance.md`
+- `docs/workpacks/<slice>/automation-spec.json`
 - (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스) In Scope 각 FE 화면의 `ui/designs/<SCREEN_ID>.md` + `ui/designs/critiques/<SCREEN_ID>-critique.md`
 
 **이 PR에 `docs/workpacks/README.md` Slice Order의 해당 슬라이스 Status를 `planned` → `docs`로 변경하는 커밋을 포함한다.**
@@ -195,6 +205,7 @@
 ### 사전 조건
 
 - 1단계 README.md + acceptance.md가 main에 merge됨
+- `docs/workpacks/<slice>/automation-spec.json`이 main에 merge됨
 - `docs/workpacks/<slice>/README.md`의 Dependencies 선행 슬라이스 전부 merged
 - 이 슬라이스에 영향 있는 `Contract Evolution Candidates`가 있다면, 승인된 항목은 별도 `contract-evolution` PR로 official docs와 `CURRENT_SOURCE_OF_TRUTH`가 먼저 merge됨
 - **`docs/workpacks/README.md` Slice Order에서 해당 슬라이스 Status를 `docs` → `in-progress`로 변경한다** (2단계 첫 커밋에 포함)
@@ -205,12 +216,13 @@
 2. `docs/engineering/slice-workflow.md` — 2단계 항목
 3. `docs/workpacks/<slice>/README.md` — Backend First Contract, Key Rules, In Scope
 4. `docs/workpacks/<slice>/acceptance.md` — 상태 전이·에러·권한 시나리오 확인
-5. `docs/api문서-v1.2.1.md` — 해당 섹션 전체
-6. `docs/db설계-v1.3.md` — 해당 테이블
-7. `docs/engineering/tdd-vitest.md` — 테스트 전략
-8. `docs/engineering/qa-system.md` — Layer 1 deterministic gate + real DB smoke 운영 기준
-9. `docs/engineering/supabase-migrations.md` — Schema 변경 있는 경우만
-10. `docs/engineering/git-workflow.md` — 브랜치·커밋 규칙
+5. `docs/workpacks/<slice>/automation-spec.json` — autonomous/evaluator/closeout contract 확인
+6. `docs/api문서-v1.2.1.md` — 해당 섹션 전체
+7. `docs/db설계-v1.3.md` — 해당 테이블
+8. `docs/engineering/tdd-vitest.md` — 테스트 전략
+9. `docs/engineering/qa-system.md` — Layer 1 deterministic gate + real DB smoke 운영 기준
+10. `docs/engineering/supabase-migrations.md` — Schema 변경 있는 경우만
+11. `docs/engineering/git-workflow.md` — 브랜치·커밋 규칙
 
 ### 산출물
 
@@ -234,6 +246,7 @@
 - `Schema Change: 없음`이어도 이 슬라이스가 읽는 기존 테이블이 real DB/local Supabase에 존재하는지 확인
 - 시스템 row/bootstrap 의존 슬라이스면 fixture만이 아니라 real DB smoke 또는 seed 검증 경로를 최소 1회 실행
 - README `Delivery Checklist`와 acceptance의 백엔드 범위를 PR 준비 전에 갱신
+- stage-result에는 이번 run에서 닫은 checklist id(`checklist_updates[]`)와 evidence ref를 남긴다
 - PR 본문 `Actual Verification`에 real DB/schema/bootstrap smoke 또는 `N/A` 근거 기록
 - PR 본문 `Closeout Sync`에 Stage 2 시점에 닫은 항목과 남은 프론트 범위 기록
 - PR 본문 `Merge Gate`에 current head SHA, 시작된 PR checks, 남은 pending/fail/rerun 여부 기록
@@ -309,6 +322,7 @@
 - [ ] referenced table / bootstrap readiness를 real DB smoke나 seed evidence로 확인했는가 (해당 슬라이스)
 - [ ] README `Delivery Checklist`와 acceptance의 백엔드 범위가 실제 머지 상태와 일치하는가
 - [ ] PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`가 비어 있지 않고 실제 evidence를 반영하는가
+- [ ] README + acceptance의 backend/shared checklist 중 review 대상(`review=3`)이 모두 검토되었는가
 
 ### 완료 기준
 
@@ -376,14 +390,15 @@
 2. `docs/engineering/slice-workflow.md` — 4단계 항목
 3. `docs/workpacks/<slice>/README.md` — Frontend Delivery Mode, Design Status, Key Rules
 4. `docs/workpacks/<slice>/acceptance.md` — 자동화 대상·Manual Only 분리 확인
-5. `docs/화면정의서-v1.2.md` — 해당 화면 정의
-6. `docs/design/design-tokens.md` — 확정 색상·간격·컴포넌트 토큰 (Tailwind 클래스 작성 전 확인)
-7. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — 신규 화면 또는 high-risk UI change인 경우 Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
-8. 백엔드 브랜치 TypeScript 타입 파일 — API 계약 확인
-9. `docs/engineering/tdd-vitest.md`
-10. `docs/engineering/playwright-e2e.md`
-11. `docs/engineering/qa-system.md`
-12. `docs/engineering/git-workflow.md`
+5. `docs/workpacks/<slice>/automation-spec.json` — stage ownership / required states / artifact contract 확인
+6. `docs/화면정의서-v1.2.md` — 해당 화면 정의
+7. `docs/design/design-tokens.md` — 확정 색상·간격·컴포넌트 토큰 (Tailwind 클래스 작성 전 확인)
+8. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — 신규 화면 또는 high-risk UI change인 경우 Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
+9. 백엔드 브랜치 TypeScript 타입 파일 — API 계약 확인
+10. `docs/engineering/tdd-vitest.md`
+11. `docs/engineering/playwright-e2e.md`
+12. `docs/engineering/qa-system.md`
+13. `docs/engineering/git-workflow.md`
 
 ### 산출물
 
@@ -412,6 +427,7 @@
 - 시스템 row/bootstrap 의존 슬라이스면 fixture mode만이 아니라 real DB/local Supabase smoke 경로도 최소 1회 검증
 - Layer 2 exploratory QA를 실행했다면 Layer 3 단건 `pnpm qa:eval -- --checklist ... --report ...` 결과까지 PR에 남긴다
 - README `Delivery Checklist`, acceptance, Design Status를 PR 준비 전에 최신화
+- stage-result에는 이번 run에서 닫은 checklist id(`checklist_updates[]`)와 evidence ref를 남긴다
 - PR 본문 `Actual Verification`에 실제 브라우저 확인 / local demo / local Supabase / `N/A` 근거 기록
 - PR 본문 `Closeout Sync`에 남은 Manual Only, 후속 slice 이관, 최종 closeout 변경사항 기록
 - PR 본문 `Merge Gate`에 current head SHA, 시작된 PR checks, 남은 pending/fail/rerun 여부 기록
@@ -485,18 +501,20 @@
 ### 읽을 것 (이 순서로)
 
 1. `docs/workpacks/<slice>/README.md` — Design Status 확인
-2. `docs/화면정의서-v1.2.md` — 해당 화면 정의
-3. `docs/design/design-tokens.md` — 확정 토큰 기준 (색상·간격·컴포넌트 규칙)
-4. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — 신규 화면 또는 high-risk UI change인 경우 Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
-5. 현재 컴포넌트 코드
-6. exploratory QA report / eval result (있는 경우)
-7. Figma 디자인 컨텍스트 (URL 있는 경우, 추가 컨텍스트)
+2. `docs/workpacks/<slice>/acceptance.md` — FE 관련 checklist와 `review=5` 대상 확인
+3. `docs/화면정의서-v1.2.md` — 해당 화면 정의
+4. `docs/design/design-tokens.md` — 확정 토큰 기준 (색상·간격·컴포넌트 규칙)
+5. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — 신규 화면 또는 high-risk UI change인 경우 Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
+6. 현재 컴포넌트 코드
+7. exploratory QA report / eval result (있는 경우)
+8. Figma 디자인 컨텍스트 (URL 있는 경우, 추가 컨텍스트)
 
 ### 산출물
 
 - 디자인 피드백 (구체적 수정 위치·파일명·라인 포함)
 - Tailwind 클래스 교체 제안 (컴포넌트 구조 변경은 Codex와 협의)
 - workpack README Design Status 업데이트 (`confirmed`으로 변경 가능 시)
+- stage-result에 `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`를 남긴다
 
 ### 완료 요약 (리뷰 종료 시 Claude가 출력)
 
@@ -560,6 +578,7 @@
 - [ ] 보안/성능/디자인 영향이 PR 템플릿에 기록되었는가
 - [ ] README `Delivery Checklist`, roadmap status, Design Status, acceptance가 서로 일치하는가
 - [ ] PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`가 최종 merge 상태를 반영하는가
+- [ ] `Manual Only`를 제외한 non-manual checklist 전체가 review 범위에 포함되었는가
 
 ### 완료 기준
 
