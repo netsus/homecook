@@ -450,6 +450,38 @@ function normalizeReviewEntry(entry) {
         ? entry.body_markdown.trim()
         : null,
     findings: Array.isArray(entry.findings) ? entry.findings : [],
+    review_scope:
+      entry.review_scope && typeof entry.review_scope === "object" && !Array.isArray(entry.review_scope)
+        ? {
+            scope:
+              typeof entry.review_scope.scope === "string" && entry.review_scope.scope.trim().length > 0
+                ? entry.review_scope.scope.trim()
+                : null,
+            checklist_ids: Array.isArray(entry.review_scope.checklist_ids)
+              ? entry.review_scope.checklist_ids
+                  .filter((value) => typeof value === "string" && value.trim().length > 0)
+                  .map((value) => value.trim())
+              : [],
+          }
+        : {
+            scope: null,
+            checklist_ids: [],
+          },
+    reviewed_checklist_ids: Array.isArray(entry.reviewed_checklist_ids)
+      ? entry.reviewed_checklist_ids
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    required_fix_ids: Array.isArray(entry.required_fix_ids)
+      ? entry.required_fix_ids
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    source_review_stage: Number.isInteger(entry.source_review_stage) ? entry.source_review_stage : null,
+    ping_pong_rounds:
+      typeof entry.ping_pong_rounds === "number" && entry.ping_pong_rounds >= 0
+        ? entry.ping_pong_rounds
+        : 0,
     updated_at:
       typeof entry.updated_at === "string" && entry.updated_at.trim().length > 0
         ? entry.updated_at.trim()
@@ -1190,6 +1222,11 @@ export function setLastReview({
   approvedHeadSha,
   bodyMarkdown,
   findings,
+  reviewScope,
+  reviewedChecklistIds,
+  requiredFixIds,
+  sourceReviewStage,
+  pingPongRounds,
   updatedAt,
 }) {
   const normalizedRole = ensureNonEmptyString(role, "role");
@@ -1215,6 +1252,38 @@ export function setLastReview({
             ? bodyMarkdown.trim()
             : null,
         findings: Array.isArray(findings) ? findings : [],
+        review_scope:
+          reviewScope && typeof reviewScope === "object" && !Array.isArray(reviewScope)
+            ? {
+                scope:
+                  typeof reviewScope.scope === "string" && reviewScope.scope.trim().length > 0
+                    ? reviewScope.scope.trim()
+                    : null,
+                checklist_ids: Array.isArray(reviewScope.checklist_ids)
+                  ? reviewScope.checklist_ids
+                      .filter((value) => typeof value === "string" && value.trim().length > 0)
+                      .map((value) => value.trim())
+                  : [],
+              }
+            : {
+                scope: null,
+                checklist_ids: [],
+              },
+        reviewed_checklist_ids: Array.isArray(reviewedChecklistIds)
+          ? reviewedChecklistIds
+              .filter((value) => typeof value === "string" && value.trim().length > 0)
+              .map((value) => value.trim())
+          : [],
+        required_fix_ids: Array.isArray(requiredFixIds)
+          ? requiredFixIds
+              .filter((value) => typeof value === "string" && value.trim().length > 0)
+              .map((value) => value.trim())
+          : [],
+        source_review_stage: Number.isInteger(Number(sourceReviewStage))
+          ? Number(sourceReviewStage)
+          : null,
+        ping_pong_rounds:
+          typeof pingPongRounds === "number" && pingPongRounds >= 0 ? pingPongRounds : 0,
         updated_at: toIsoString(updatedAt),
       },
     },

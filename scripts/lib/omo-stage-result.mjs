@@ -27,6 +27,14 @@ function ensureStringArray(value, label) {
   );
 }
 
+function ensureOptionalStringArray(value, label) {
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  return ensureStringArray(value, label);
+}
+
 function ensureEnum(value, allowed, label) {
   if (!allowed.includes(value)) {
     throw new Error(`${label} must be one of: ${allowed.join(", ")}. Got: ${JSON.stringify(value)}`);
@@ -53,6 +61,74 @@ function validateOptionalFindings(value) {
   return value.map((f, i) => validateFinding(f, i));
 }
 
+function validateClaimedScope(scope, { strict = false } = {}) {
+  if ((scope === null || scope === undefined) && !strict) {
+    return {
+      files: [],
+      endpoints: [],
+      routes: [],
+      states: [],
+      invariants: [],
+    };
+  }
+
+  const normalizedScope = ensureObject(scope, "stageResult.claimed_scope");
+  return {
+    files: ensureStringArray(normalizedScope.files ?? [], "stageResult.claimed_scope.files"),
+    endpoints: ensureStringArray(normalizedScope.endpoints ?? [], "stageResult.claimed_scope.endpoints"),
+    routes: ensureStringArray(normalizedScope.routes ?? [], "stageResult.claimed_scope.routes"),
+    states: ensureStringArray(normalizedScope.states ?? [], "stageResult.claimed_scope.states"),
+    invariants: ensureStringArray(normalizedScope.invariants ?? [], "stageResult.claimed_scope.invariants"),
+  };
+}
+
+function validateChecklistUpdates(value, { strict = false } = {}) {
+  if ((value === null || value === undefined) && !strict) {
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error("stageResult.checklist_updates must be an array.");
+  }
+
+  return value.map((entry, index) => {
+    const normalizedEntry = ensureObject(entry, `stageResult.checklist_updates[${index}]`);
+    return {
+      id: ensureNonEmptyString(normalizedEntry.id, `stageResult.checklist_updates[${index}].id`),
+      status: ensureEnum(
+        normalizedEntry.status,
+        ["checked", "unchecked"],
+        `stageResult.checklist_updates[${index}].status`,
+      ),
+      evidence_refs: ensureOptionalStringArray(
+        normalizedEntry.evidence_refs ?? [],
+        `stageResult.checklist_updates[${index}].evidence_refs`,
+      ),
+    };
+  });
+}
+
+function validateReviewScope(value, { strict = false } = {}) {
+  if ((value === null || value === undefined) && !strict) {
+    return {
+      scope: null,
+      checklist_ids: [],
+    };
+  }
+
+  const reviewScope = ensureObject(value, "stageResult.review_scope");
+  return {
+    scope:
+      reviewScope.scope === null || reviewScope.scope === undefined
+        ? null
+        : ensureNonEmptyString(reviewScope.scope, "stageResult.review_scope.scope"),
+    checklist_ids: ensureStringArray(
+      reviewScope.checklist_ids ?? [],
+      "stageResult.review_scope.checklist_ids",
+    ),
+  };
+}
+
 export function resolveStageResultPath(artifactDir) {
   return resolve(ensureNonEmptyString(artifactDir, "artifactDir"), "stage-result.json");
 }
@@ -66,7 +142,8 @@ export function readStageResult(artifactDir) {
   return JSON.parse(readFileSync(stageResultPath, "utf8"));
 }
 
-export function validateStageResult(stage, stageResult) {
+export function validateStageResult(stage, stageResult, options = {}) {
+  const strictExtendedContract = Boolean(options?.strictExtendedContract);
   const normalizedStage = Number(stage);
   const result = ensureObject(stageResult, "stageResult");
 
@@ -99,11 +176,50 @@ export function validateStageResult(stage, stageResult) {
       },
       checks_run: ensureStringArray(result.checks_run ?? [], "stageResult.checks_run"),
       next_route: ensureNonEmptyString(result.next_route, "stageResult.next_route"),
+      claimed_scope: validateClaimedScope(result.claimed_scope, {
+        strict: strictExtendedContract,
+      }),
+      changed_files: strictExtendedContract
+        ? ensureStringArray(result.changed_files, "stageResult.changed_files")
+        : ensureOptionalStringArray(result.changed_files, "stageResult.changed_files"),
+      tests_touched: strictExtendedContract
+        ? ensureStringArray(result.tests_touched, "stageResult.tests_touched")
+        : ensureOptionalStringArray(result.tests_touched, "stageResult.tests_touched"),
+      artifacts_written: strictExtendedContract
+        ? ensureStringArray(result.artifacts_written, "stageResult.artifacts_written")
+        : ensureOptionalStringArray(result.artifacts_written, "stageResult.artifacts_written"),
+      checklist_updates: validateChecklistUpdates(result.checklist_updates, {
+        strict: strictExtendedContract,
+      }),
     };
   }
 
+  const decision = ensureNonEmptyString(result.decision, "stageResult.decision");
+  const findings = validateOptionalFindings(result.findings);
+  const reviewScope = validateReviewScope(result.review_scope, {
+    strict: strictExtendedContract,
+  });
+  const reviewedChecklistIds = strictExtendedContract
+    ? ensureStringArray(result.reviewed_checklist_ids, "stageResult.reviewed_checklist_ids")
+    : ensureOptionalStringArray(result.reviewed_checklist_ids, "stageResult.reviewed_checklist_ids");
+  const requiredFixIds = strictExtendedContract
+    ? ensureStringArray(result.required_fix_ids ?? [], "stageResult.required_fix_ids")
+    : ensureOptionalStringArray(result.required_fix_ids ?? [], "stageResult.required_fix_ids");
+
+  if (strictExtendedContract && decision === "request_changes" && findings.length === 0) {
+    throw new Error("stageResult.findings must include at least one entry for request_changes reviews.");
+  }
+
+  if (strictExtendedContract && decision === "request_changes" && requiredFixIds.length === 0) {
+    throw new Error("stageResult.required_fix_ids must include at least one entry for request_changes reviews.");
+  }
+
+  if (strictExtendedContract && decision === "approve" && requiredFixIds.length > 0) {
+    throw new Error("stageResult.required_fix_ids must be empty for approve reviews.");
+  }
+
   return {
-    decision: ensureNonEmptyString(result.decision, "stageResult.decision"),
+    decision,
     body_markdown: ensureNonEmptyString(
       result.body_markdown,
       "stageResult.body_markdown",
@@ -117,6 +233,9 @@ export function validateStageResult(stage, stageResult) {
       result.approved_head_sha.trim().length > 0
         ? result.approved_head_sha.trim()
         : null,
-    findings: validateOptionalFindings(result.findings),
+    findings,
+    review_scope: reviewScope,
+    reviewed_checklist_ids: reviewedChecklistIds,
+    required_fix_ids: requiredFixIds,
   };
 }

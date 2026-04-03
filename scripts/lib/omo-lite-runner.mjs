@@ -228,12 +228,35 @@ function buildPrompt({
           },
           checks_run: ["pnpm test:all"],
           next_route: "open_pr",
+          claimed_scope: {
+            files: ["path/to/file.ts"],
+            endpoints: ["POST /api/v1/example"],
+            routes: ["/example"],
+            states: ["loading", "error"],
+            invariants: ["documented-state-transition"],
+          },
+          changed_files: ["path/to/file.ts"],
+          tests_touched: ["tests/example.test.ts"],
+          artifacts_written: [".artifacts/example.log"],
+          checklist_updates: [
+            {
+              id: "accept-example",
+              status: "checked",
+              evidence_refs: ["pnpm test:all", "tests/example.test.ts"],
+            },
+          ],
         }
       : {
           decision: "approve | request_changes",
           body_markdown: "## Review\n- 승인 또는 변경 요청 요약 (findings 항목도 여기 요약할 것)",
           route_back_stage: null,
           approved_head_sha: "abc123",
+          review_scope: {
+            scope: "backend | frontend | closeout",
+            checklist_ids: ["accept-example"],
+          },
+          reviewed_checklist_ids: ["accept-example"],
+          required_fix_ids: [],
           findings: [
             {
               file: "path/to/file.ts",
@@ -310,6 +333,12 @@ function buildPrompt({
     dispatch.reviewContext?.decision
       ? `- previous decision: \`${dispatch.reviewContext.decision}\``
       : null,
+    dispatch.reviewContext?.reviewed_checklist_ids?.length
+      ? `- previously reviewed checklist ids: \`${dispatch.reviewContext.reviewed_checklist_ids.join(", ")}\``
+      : null,
+    dispatch.reviewContext?.required_fix_ids?.length
+      ? `- required fix ids: \`${dispatch.reviewContext.required_fix_ids.join(", ")}\``
+      : null,
     dispatch.reviewContext?.body_markdown ?? null,
     "",
     "## Stage Result Output",
@@ -320,8 +349,8 @@ function buildPrompt({
     JSON.stringify(stageResultTemplate, null, 2),
     "```",
     [1, 2, 4].includes(normalizedStage)
-      ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route"
-      : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, findings (optional — 문제가 있으면 structured findings 배열을 반드시 포함하세요)",
+      ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route, claimed_scope, changed_files, tests_touched, artifacts_written, checklist_updates"
+      : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, review_scope, reviewed_checklist_ids, required_fix_ids, findings (optional — 문제가 있으면 structured findings 배열을 반드시 포함하세요)",
     ...extraPromptSections,
   ]
     .filter(Boolean)
@@ -1197,6 +1226,12 @@ export function runStageWithArtifacts({
           pr_url: runtimeSnapshot?.state?.prs?.[reviewRole]?.url ?? null,
           updated_at: reviewEntry.updated_at ?? null,
           findings: Array.isArray(reviewEntry.findings) ? reviewEntry.findings : [],
+          reviewed_checklist_ids: Array.isArray(reviewEntry.reviewed_checklist_ids)
+            ? reviewEntry.reviewed_checklist_ids
+            : [],
+          required_fix_ids: Array.isArray(reviewEntry.required_fix_ids)
+            ? reviewEntry.required_fix_ids
+            : [],
         }
       : null;
   const retryAt =

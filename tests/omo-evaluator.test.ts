@@ -8,6 +8,13 @@ import { describe, expect, it } from "vitest";
 import { evaluateWorkItemStage } from "../scripts/lib/omo-evaluator.mjs";
 import { readRuntimeState, writeRuntimeState } from "../scripts/lib/omo-session-runtime.mjs";
 
+const EVALUATOR_CHECKLIST_IDS = {
+  backendDelivery: "delivery-backend-contract",
+  backendAcceptance: "accept-backend-api",
+  frontendDelivery: "delivery-ui-connection",
+  frontendAcceptance: "accept-frontend-loading",
+};
+
 function createEvaluatorFixture({
   workItemId = "03-recipe-like",
   externalSmokes = ["true"],
@@ -22,14 +29,74 @@ function createEvaluatorFixture({
   const stageArtifactDir = join(rootDir, ".artifacts", "stage2");
   const routeFile = "app/api/v1/recipes/[id]/like/route.ts";
   const testFile = "tests/recipe-like.backend.test.ts";
+  const roadmapFile = "docs/workpacks/README.md";
+  const workpackReadmeFile = `docs/workpacks/${workItemId}/README.md`;
+  const workpackAcceptanceFile = `docs/workpacks/${workItemId}/acceptance.md`;
+  const workpackAutomationSpecFile = `docs/workpacks/${workItemId}/automation-spec.json`;
 
   mkdirSync(join(rootDir, ".workflow-v2", "work-items"), { recursive: true });
   mkdirSync(join(rootDir, "docs", "workpacks", workItemId), { recursive: true });
   mkdirSync(stageArtifactDir, { recursive: true });
+  mkdirSync(join(worktreePath, "docs", "workpacks", workItemId), { recursive: true });
   mkdirSync(join(worktreePath, "app", "api", "v1", "recipes", "[id]", "like"), {
     recursive: true,
   });
   mkdirSync(join(worktreePath, "tests"), { recursive: true });
+
+  writeFileSync(
+    join(rootDir, "docs", "workpacks", workItemId, "README.md"),
+    [
+      `# ${workItemId}`,
+      "",
+      "## Design Status",
+      "",
+      "- [x] 임시 UI (temporary)",
+      "- [ ] 리뷰 대기 (pending-review)",
+      "- [ ] 확정 (confirmed)",
+      "- [ ] N/A",
+      "",
+      "## Delivery Checklist",
+      `- [x] 백엔드 계약 고정 <!-- omo:id=${EVALUATOR_CHECKLIST_IDS.backendDelivery};stage=2;scope=backend;review=3,6 -->`,
+      `- [ ] UI 연결 <!-- omo:id=${EVALUATOR_CHECKLIST_IDS.frontendDelivery};stage=4;scope=frontend;review=5,6 -->`,
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(rootDir, "docs", "workpacks", workItemId, "acceptance.md"),
+    [
+      "# Acceptance Checklist",
+      "",
+      "## Happy Path",
+      `- [x] API 응답 형식이 { success, data, error }를 따른다 <!-- omo:id=${EVALUATOR_CHECKLIST_IDS.backendAcceptance};stage=2;scope=backend;review=3,6 -->`,
+      `- [ ] loading 상태가 있다 <!-- omo:id=${EVALUATOR_CHECKLIST_IDS.frontendAcceptance};stage=4;scope=frontend;review=5,6 -->`,
+      "",
+      "## Automation Split",
+      "",
+      "### Manual Only",
+      "- [ ] 실제 OAuth smoke",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(worktreePath, "docs", "workpacks", workItemId, "README.md"),
+    readFileSync(join(rootDir, "docs", "workpacks", workItemId, "README.md"), "utf8"),
+  );
+  writeFileSync(
+    join(worktreePath, "docs", "workpacks", workItemId, "acceptance.md"),
+    readFileSync(join(rootDir, "docs", "workpacks", workItemId, "acceptance.md"), "utf8"),
+  );
+  writeFileSync(
+    join(worktreePath, "docs", "workpacks", "README.md"),
+    [
+      "# Workpack Roadmap v2",
+      "",
+      "## Slice Order",
+      "",
+      "| Slice | Status | Goal |",
+      "| --- | --- | --- |",
+      `| \`${workItemId}\` | in-progress | evaluator fixture |`,
+    ].join("\n"),
+  );
 
   execFileSync("git", ["init", "-b", `feature/be-${workItemId}`], { cwd: worktreePath });
   execFileSync("git", ["config", "user.name", "OMO Evaluator Test"], { cwd: worktreePath });
@@ -123,6 +190,10 @@ function createEvaluatorFixture({
       2,
     ),
   );
+  writeFileSync(
+    join(worktreePath, "docs", "workpacks", workItemId, "automation-spec.json"),
+    readFileSync(join(rootDir, "docs", "workpacks", workItemId, "automation-spec.json"), "utf8"),
+  );
 
   writeFileSync(join(worktreePath, routeFile), "export async function POST() { return Response.json({ success: true }); }\n");
   writeFileSync(join(worktreePath, testFile), "import { describe, it, expect } from \"vitest\";\n\ndescribe(\"recipe like\", () => {\n  it(\"locks the contract\", () => {\n    expect(true).toBe(true);\n  });\n});\n");
@@ -136,16 +207,28 @@ function createEvaluatorFixture({
     },
     checks_run: ["pnpm verify:backend"],
     next_route: "wait_for_ci",
-    claimed_scope: {
-      files: [routeFile, testFile],
-      endpoints: ["POST /api/v1/recipes/{id}/like"],
-      routes: [],
-      states: [],
-      invariants: ["toggle-idempotency"],
-    },
-    changed_files: [routeFile, testFile],
+        claimed_scope: {
+          files: [routeFile, testFile, roadmapFile, workpackReadmeFile, workpackAcceptanceFile, workpackAutomationSpecFile],
+          endpoints: ["POST /api/v1/recipes/{id}/like"],
+          routes: [],
+          states: [],
+          invariants: ["toggle-idempotency"],
+        },
+        changed_files: [routeFile, testFile, roadmapFile, workpackReadmeFile, workpackAcceptanceFile, workpackAutomationSpecFile],
     tests_touched: [testFile],
     artifacts_written: [],
+    checklist_updates: [
+      {
+        id: EVALUATOR_CHECKLIST_IDS.backendDelivery,
+        status: "checked",
+        evidence_refs: ["pnpm verify:backend"],
+      },
+      {
+        id: EVALUATOR_CHECKLIST_IDS.backendAcceptance,
+        status: "checked",
+        evidence_refs: [testFile],
+      },
+    ],
     ...stageResultOverrides,
   };
 

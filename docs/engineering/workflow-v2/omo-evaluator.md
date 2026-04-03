@@ -14,6 +14,7 @@ evaluator는 LLM judge가 아니라 `deterministic merge gate aggregator`다.
 역할:
 
 - Stage 1에서 잠근 `automation-spec.json`을 읽는다.
+- README `Delivery Checklist`와 acceptance checkbox metadata contract를 읽는다.
 - stage-result contract가 완전한지 검사한다.
 - required test target, verify command, external smoke, artifact evidence를 실행/검증한다.
 - 결과를 `pass | fixable | blocked`로 정규화한다.
@@ -40,6 +41,10 @@ evaluator는 LLM judge가 아니라 `deterministic merge gate aggregator`다.
 Stage 1 docs PR은 markdown 2개만으로 끝나지 않는다. 아래 파일도 같이 main에 merge되어야 한다.
 
 - `docs/workpacks/<slice>/automation-spec.json`
+
+새 contract slice는 아래 markdown metadata도 같이 만족해야 한다.
+
+- README `Delivery Checklist`와 acceptance 각 checkbox 끝의 `<!-- omo:id=...;stage=...;scope=...;review=... -->`
 
 필수 필드:
 
@@ -74,6 +79,7 @@ code stage의 `stage-result.json`은 아래 추가 필드를 포함해야 한다
 - `changed_files`
 - `tests_touched`
 - `artifacts_written`
+- `checklist_updates[]`
 
 `claimed_scope` 최소 키:
 
@@ -83,12 +89,20 @@ code stage의 `stage-result.json`은 아래 추가 필드를 포함해야 한다
 - `states`
 - `invariants`
 
+`checklist_updates[]` 최소 키:
+
+- `id`
+- `status`
+- `evidence_refs[]`
+
 원칙:
 
 1. evaluator는 runtime worktree diff와 `changed_files`를 비교한다.
 2. 실제 변경 파일이 `claimed_scope.files`에 없으면 drift로 본다.
 3. backend required endpoint / invariant / test target이 stage-result metadata에 없으면 fixable finding이다.
 4. frontend required route / state / artifact assertion이 없으면 fixable finding이다.
+5. strict checklist contract가 활성화된 slice면 current stage-owned checklist id가 모두 checked 상태인지 검사한다.
+6. strict checklist contract가 활성화된 slice면 `checklist_updates[]`가 current stage-owned checklist id만 포함하는지 검사한다.
 
 ## Outcomes
 

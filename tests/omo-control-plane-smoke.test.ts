@@ -14,12 +14,18 @@ import {
   seedControlPlaneSmokeWorkspace,
 } from "../scripts/lib/omo-control-plane-smoke.mjs";
 import { superviseWorkItem } from "../scripts/lib/omo-autonomous-supervisor.mjs";
+import { readRuntimeState, writeRuntimeState } from "../scripts/lib/omo-session-runtime.mjs";
 
 function createGitWorkspace(workspacePath: string) {
   mkdirSync(workspacePath, { recursive: true });
   execFileSync("git", ["init", "-b", "master"], { cwd: workspacePath });
   execFileSync("git", ["config", "user.name", "OMO Smoke"], { cwd: workspacePath });
   execFileSync("git", ["config", "user.email", "omo-smoke@example.com"], { cwd: workspacePath });
+  execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+  execFileSync("git", ["commit", "--allow-empty", "-m", "chore: seed smoke workspace"], {
+    cwd: workspacePath,
+    stdio: "ignore",
+  });
 }
 
 describe("OMO control-plane smoke", () => {
@@ -92,9 +98,9 @@ describe("OMO control-plane smoke", () => {
             last_feedback: "Backend smoke review loop request 2: tighten the API contract and rerun the backend stage.",
           },
           frontend: {
-            requested_changes: 1,
-            code_retries: 1,
-            approvals: 1,
+            requested_changes: 2,
+            code_retries: 2,
+            approvals: 2,
             feedback_seen_by_codex: true,
           },
         },
@@ -109,6 +115,7 @@ describe("OMO control-plane smoke", () => {
           "2": 2,
           "3": 3,
           "5": 2,
+          "6": 2,
         },
       },
     });
@@ -390,6 +397,14 @@ describe("OMO control-plane smoke", () => {
       join(workspacePath, "docs", "workpacks", "99-omo-control-plane-smoke", "README.md"),
       readFileSync(join(rootDir, "docs", "workpacks", "99-omo-control-plane-smoke", "README.md"), "utf8"),
     );
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "99-omo-control-plane-smoke", "acceptance.md"),
+      readFileSync(join(rootDir, "docs", "workpacks", "99-omo-control-plane-smoke", "acceptance.md"), "utf8"),
+    );
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "99-omo-control-plane-smoke", "automation-spec.json"),
+      readFileSync(join(rootDir, "docs", "workpacks", "99-omo-control-plane-smoke", "automation-spec.json"), "utf8"),
+    );
     execFileSync("git", ["add", "-A"], { cwd: workspacePath });
     execFileSync("git", ["commit", "-m", "docs: seed smoke workspace"], { cwd: workspacePath });
 
@@ -405,6 +420,145 @@ describe("OMO control-plane smoke", () => {
       string,
       { number: number; url: string; draft: boolean; branch: string; headSha: string | null }
     >();
+
+    superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "99-omo-control-plane-smoke",
+        now: "2026-04-02T10:00:00.000Z",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean({ worktreePath }: { worktreePath: string }) {
+            const output = execFileSync("git", ["status", "--porcelain"], {
+              cwd: worktreePath,
+              encoding: "utf8",
+            })
+              .trim()
+              .split("\n")
+              .filter(Boolean)
+              .filter((line) => !line.includes(".opencode/"))
+              .filter((line) => !line.includes(".workflow-v2/"))
+              .filter((line) => !line.includes(".artifacts/"))
+              .filter((line) => !line.includes("smoke/omo-control-plane/") || !line.includes("/state.json"))
+              .join("\n");
+            if (output.length > 0) {
+              throw new Error(`dirty_worktree\n${output}`);
+            }
+          },
+          checkoutBranch({ branch }: { branch: string }) {
+            execFileSync("git", ["checkout", "-B", branch], {
+              cwd: workspacePath,
+              stdio: "ignore",
+            });
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return execFileSync("git", ["rev-parse", "HEAD"], {
+              cwd: workspacePath,
+              encoding: "utf8",
+            }).trim();
+          },
+          getCurrentBranch({ worktreePath }: { worktreePath: string }) {
+            return execFileSync("git", ["branch", "--show-current"], {
+              cwd: worktreePath,
+              encoding: "utf8",
+            }).trim();
+          },
+          listChangedFiles({ worktreePath }: { worktreePath: string }) {
+            return execFileSync("git", ["diff", "--name-only"], {
+              cwd: worktreePath,
+              encoding: "utf8",
+            })
+              .trim()
+              .split("\n")
+              .filter(Boolean)
+              .map((relativePath) => join(worktreePath, relativePath));
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner,
+        github: {
+          createPullRequest({
+            head,
+            draft,
+          }: {
+            head: string;
+            draft: boolean;
+          }) {
+            prCounter += 1;
+            const pr = {
+              number: prCounter,
+              url: `https://github.com/example/homecook-sandbox/pull/${prCounter}`,
+              draft,
+              branch: head,
+              headSha: null,
+            };
+            pullRequests.set(pr.url, pr);
+            return pr;
+          },
+          editPullRequest({ prRef }: { prRef: string }) {
+            return pullRequests.get(prRef) ?? null;
+          },
+          getRequiredChecks() {
+            return { bucket: "pass", checks: [] };
+          },
+          markReady({ prRef }: { prRef: string }) {
+            const existing = pullRequests.get(prRef);
+            if (existing) {
+              existing.draft = false;
+            }
+          },
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            return { merged: true };
+          },
+          getPullRequestSummary() {
+            return {
+              state: "OPEN",
+              mergedAt: null,
+              mergeStateStatus: "CLEAN",
+              reviewDecision: "REVIEW_REQUIRED",
+            };
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "99-omo-control-plane-smoke",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "99-omo-control-plane-smoke",
+          slice: "99-omo-control-plane-smoke",
+        }).state,
+        slice: "99-omo-control-plane-smoke",
+        active_stage: 1,
+        current_stage: 1,
+        last_completed_stage: 1,
+        wait: null,
+        phase: null,
+        next_action: "noop",
+        execution: null,
+      },
+    });
 
     const first = superviseWorkItem(
       {
@@ -432,6 +586,9 @@ describe("OMO control-plane smoke", () => {
               .split("\n")
               .filter(Boolean)
               .filter((line) => !line.includes(".opencode/"))
+              .filter((line) => !line.includes(".workflow-v2/"))
+              .filter((line) => !line.includes(".artifacts/"))
+              .filter((line) => !line.includes("smoke/omo-control-plane/") || !line.includes("/state.json"))
               .join("\n");
             if (output.length > 0) {
               throw new Error(`dirty_worktree\n${output}`);
@@ -535,10 +692,10 @@ describe("OMO control-plane smoke", () => {
       kind: "ci",
       stage: 5,
     });
-    expect(smokeState.attempts["2"]).toBe(2);
+    expect(smokeState.attempts["2"]).toBe(3);
     expect(smokeState.attempts["3"]).toBe(3);
     expect(smokeState.review_loops.backend.requested_changes).toBe(2);
-    expect(smokeState.review_loops.backend.code_retries).toBe(1);
+    expect(smokeState.review_loops.backend.code_retries).toBe(2);
     expect(smokeState.review_loops.backend.approvals).toBe(1);
     expect(smokeState.review_loops.backend.feedback_seen_by_codex).toBe(true);
     expect(smokeState.review_loops.backend.last_feedback).toContain("request 2");

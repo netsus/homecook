@@ -95,6 +95,7 @@ function productStageSpec(stage, slice) {
       deliverables: [
         `docs/workpacks/${slice}/README.md`,
         `docs/workpacks/${slice}/acceptance.md`,
+        `docs/workpacks/${slice}/automation-spec.json`,
         "valid stage result",
       ],
       verifyCommands: [],
@@ -113,6 +114,7 @@ function productStageSpec(stage, slice) {
         "docs/engineering/slice-workflow.md",
         `docs/workpacks/${slice}/README.md`,
         `docs/workpacks/${slice}/acceptance.md`,
+        `docs/workpacks/${slice}/automation-spec.json`,
         "docs/api문서-v1.2.1.md",
         "docs/db설계-v1.3.md",
       ],
@@ -158,6 +160,7 @@ function productStageSpec(stage, slice) {
         "docs/engineering/slice-workflow.md",
         `docs/workpacks/${slice}/README.md`,
         `docs/workpacks/${slice}/acceptance.md`,
+        `docs/workpacks/${slice}/automation-spec.json`,
         "docs/design/design-tokens.md",
       ],
       deliverables: [
@@ -180,6 +183,7 @@ function productStageSpec(stage, slice) {
       verification_status: "passed",
       requiredReads: [
         `docs/workpacks/${slice}/README.md`,
+        `docs/workpacks/${slice}/acceptance.md`,
         "frontend PR diff",
         "docs/design/design-tokens.md",
       ],
@@ -238,6 +242,8 @@ function buildGoal(stage, slice) {
  *     pr_url?: string|null,
  *     updated_at?: string|null,
  *     findings?: Array<{file: string, line_hint?: number|null, severity: string, category: string, issue: string, suggestion: string}>,
+ *     reviewed_checklist_ids?: string[],
+ *     required_fix_ids?: string[],
  *   } | null,
  *   priorStageResultPath?: string|null,
  *   forceHumanEscalation?: boolean,
@@ -296,6 +302,12 @@ export function buildStageDispatch({
               ? reviewContext.updated_at.trim()
               : null,
           findings: Array.isArray(reviewContext.findings) ? reviewContext.findings : [],
+          reviewed_checklist_ids: Array.isArray(reviewContext.reviewed_checklist_ids)
+            ? reviewContext.reviewed_checklist_ids
+            : [],
+          required_fix_ids: Array.isArray(reviewContext.required_fix_ids)
+            ? reviewContext.required_fix_ids
+            : [],
         }
       : null;
   const normalizedPriorStageResultPath =
@@ -335,6 +347,14 @@ export function buildStageDispatch({
           ),
         ].join("\n")
       : null;
+  const requiredFixIdsSection =
+    normalizedReviewContext?.required_fix_ids?.length > 0 && [2, 4].includes(normalizedStage)
+      ? [
+          "## Required Checklist Fix IDs",
+          "아래 checklist id를 반영한 뒤 stage-result에 다시 기록하세요.",
+          ...normalizedReviewContext.required_fix_ids.map((id) => `- \`${id}\``),
+        ].join("\n")
+      : null;
 
   const dispatch = {
     stage: normalizedStage,
@@ -365,7 +385,7 @@ export function buildStageDispatch({
       attemptCount: normalizedAttemptCount,
     },
     reviewContext: normalizedReviewContext,
-    extraPromptSections: findingsSection ? [findingsSection] : [],
+    extraPromptSections: [findingsSection, requiredFixIdsSection].filter(Boolean),
     successCondition: spec.successCondition,
     escalationIfBlocked: spec.escalationIfBlocked,
     claudeBudgetState: normalizedBudgetState,

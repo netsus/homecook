@@ -4,6 +4,12 @@ import { spawnSync } from "node:child_process";
 
 import { resolveBaseRef } from "./check-workpack-docs.mjs";
 import { readSliceRoadmapStatus, readWorkpackDesignStatus } from "./omo-bookkeeping.mjs";
+import {
+  isChecklistContractActive,
+  readWorkpackChecklistContract,
+  resolveOwnedChecklistItems,
+  resolveUncheckedChecklistItems,
+} from "./omo-checklist-contract.mjs";
 
 function resolveBranchName(rootDir, env) {
   const branchName = env.BRANCH_NAME ?? env.GITHUB_HEAD_REF;
@@ -218,12 +224,138 @@ function buildChecklistErrors({ entries, filePath, reason }) {
   }));
 }
 
+function buildContractErrors(contract) {
+  return (contract?.errors ?? []).map((error) => ({
+    path: error.path,
+    message: error.message,
+  }));
+}
+
+function buildScopedChecklistErrors({ items, reason }) {
+  return (Array.isArray(items) ? items : []).map((item) => ({
+    path: `${item.filePath}:${item.lineNumber}`,
+    message: `${reason}: ${item.text}`,
+  }));
+}
+
+function validateChecklistContractSlice({
+  rootDir,
+  slice,
+  roadmapStatus,
+  strictMode,
+}) {
+  const errors = [];
+  const designStatus = readWorkpackDesignStatus({
+    rootDir,
+    slice,
+  });
+  const checklistContract = readWorkpackChecklistContract({
+    rootDir,
+    slice,
+  });
+
+  errors.push(...buildContractErrors(checklistContract));
+
+  if (strictMode === "backend-ready-for-review") {
+    if (!["in-progress", "merged"].includes(roadmapStatus.status ?? "")) {
+      errors.push({
+        path: roadmapStatus.filePath,
+        message: `Ready-for-review backend slice '${slice}' must be 'in-progress' or 'merged' in docs/workpacks/README.md.`,
+      });
+    }
+
+    const uncheckedStage2Items = resolveUncheckedChecklistItems(
+      resolveOwnedChecklistItems(checklistContract, 2),
+    );
+    if (uncheckedStage2Items.length > 0) {
+      errors.push(
+        ...buildScopedChecklistErrors({
+          items: uncheckedStage2Items,
+          reason: "Stage 2-owned checklist item must be checked before backend ready-for-review",
+        }),
+      );
+    }
+  }
+
+  if (strictMode === "ready-for-review") {
+    if (!["in-progress", "merged"].includes(roadmapStatus.status ?? "")) {
+      errors.push({
+        path: roadmapStatus.filePath,
+        message: `Ready-for-review frontend slice '${slice}' must be 'in-progress' or 'merged' in docs/workpacks/README.md.`,
+      });
+    }
+
+    if (designStatus.status !== "pending-review") {
+      errors.push({
+        path: designStatus.filePath,
+        message: `Ready-for-review frontend slice '${slice}' requires Design Status 'pending-review'.`,
+      });
+    }
+
+    const uncheckedStage4Items = resolveUncheckedChecklistItems(
+      resolveOwnedChecklistItems(checklistContract, 4),
+    );
+    if (uncheckedStage4Items.length > 0) {
+      errors.push(
+        ...buildScopedChecklistErrors({
+          items: uncheckedStage4Items,
+          reason: "Stage 4-owned checklist item must be checked before frontend ready-for-review",
+        }),
+      );
+    }
+  }
+
+  if (strictMode === "merged") {
+    if (roadmapStatus.status !== "merged") {
+      errors.push({
+        path: roadmapStatus.filePath,
+        message: `Merged slice '${slice}' must be marked 'merged' in docs/workpacks/README.md.`,
+      });
+    }
+
+    if (!["confirmed", "N/A"].includes(designStatus.status ?? "")) {
+      errors.push({
+        path: designStatus.filePath,
+        message: `Merged slice '${slice}' requires Design Status 'confirmed' or 'N/A'.`,
+      });
+    }
+
+    const uncheckedNonManualItems = resolveUncheckedChecklistItems(
+      checklistContract.items.filter((item) => !item.manualOnly),
+    );
+    if (uncheckedNonManualItems.length > 0) {
+      errors.push(
+        ...buildScopedChecklistErrors({
+          items: uncheckedNonManualItems,
+          reason: "Checklist item outside Manual Only must be checked before merge closeout",
+        }),
+      );
+    }
+  }
+
+  return errors;
+}
+
 function validateStrictSlice({
   rootDir,
   slice,
   roadmapStatus,
   strictMode,
 }) {
+  const checklistContract = readWorkpackChecklistContract({
+    rootDir,
+    slice,
+  });
+
+  if (isChecklistContractActive(checklistContract)) {
+    return validateChecklistContractSlice({
+      rootDir,
+      slice,
+      roadmapStatus,
+      strictMode,
+    });
+  }
+
   const errors = [];
   const { readmePath, acceptancePath } = resolveWorkpackPaths({ rootDir, slice });
   const designStatus = readWorkpackDesignStatus({
@@ -332,6 +464,12 @@ export function validateCloseoutSync({
     let strictMode = null;
     if (roadmapStatus.status === "merged") {
       strictMode = "merged";
+    } else if (
+      branchContext.kind === "feature-be" &&
+      branchContext.slice === slice &&
+      prIsDraft === false
+    ) {
+      strictMode = "backend-ready-for-review";
     } else if (
       branchContext.kind === "feature-fe" &&
       branchContext.slice === slice &&

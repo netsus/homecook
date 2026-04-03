@@ -344,6 +344,94 @@ describe("OMO-lite stage runner", () => {
     expect(prompt).toContain("테스트 계약을 더 엄격하게 고정해 주세요.");
   });
 
+  it("includes structured findings and required fix ids in Stage 4 rerun prompts", () => {
+    const rootDir = createRunnerFixture();
+    mkdirSync(join(rootDir, ".opencode", "omo-runtime"), { recursive: true });
+
+    writeFileSync(
+      join(rootDir, ".opencode", "omo-runtime", "02-discovery-filter.json"),
+      JSON.stringify(
+        {
+          slice: "02-discovery-filter",
+          current_stage: 4,
+          last_completed_stage: 5,
+          blocked_stage: null,
+          retry: null,
+          wait: null,
+          sessions: {
+            claude_primary: {
+              session_id: "ses_claude_stage5",
+              provider: "claude-cli",
+              agent: null,
+              updated_at: "2026-04-01T01:00:00.000Z",
+            },
+            codex_primary: {
+              session_id: "ses_codex_stage4",
+              provider: "opencode",
+              agent: "hephaestus",
+              updated_at: "2026-04-01T01:05:00.000Z",
+            },
+          },
+          prs: {
+            docs: null,
+            backend: null,
+            frontend: {
+              number: 101,
+              url: "https://github.com/netsus/homecook/pull/101",
+              draft: false,
+              branch: "feature/fe-02-discovery-filter",
+              head_sha: "fe123",
+              updated_at: "2026-04-01T01:05:00.000Z",
+            },
+          },
+          last_review: {
+            backend: null,
+            frontend: {
+              decision: "request_changes",
+              route_back_stage: 4,
+              approved_head_sha: null,
+              body_markdown: "CTA 상태를 다시 맞춰 주세요.",
+              findings: [
+                {
+                  file: "app/planner/page.tsx",
+                  line_hint: 22,
+                  severity: "major",
+                  category: "logic",
+                  issue: "Disabled CTA state is inconsistent.",
+                  suggestion: "Use the same disabled treatment across all planner CTAs.",
+                },
+              ],
+              reviewed_checklist_ids: ["delivery-ui-connection"],
+              required_fix_ids: ["delivery-ui-connection"],
+              updated_at: "2026-04-01T01:00:00.000Z",
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "02-discovery-filter",
+      stage: 4,
+      workItemId: "02-discovery-filter",
+      mode: "artifact-only",
+      now: "2026-04-01T01:10:00+09:00",
+    });
+
+    const prompt = readFileSync(join(result.artifactDir, "prompt.md"), "utf8");
+
+    expect(prompt).toContain("## Prior Review Feedback");
+    expect(prompt).toContain("https://github.com/netsus/homecook/pull/101");
+    expect(prompt).toContain("CTA 상태를 다시 맞춰 주세요.");
+    expect(prompt).toContain("## Structured Findings from Prior Review");
+    expect(prompt).toContain("Disabled CTA state is inconsistent.");
+    expect(prompt).toContain("## Required Checklist Fix IDs");
+    expect(prompt).toContain("delivery-ui-connection");
+  });
+
   it("executes Codex stages through opencode run, captures the session id, and writes runtime state", () => {
     const rootDir = createRunnerFixture();
     const { binPath, argsPath } = createFakeOpencodeBin(rootDir, {
