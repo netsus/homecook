@@ -1,25 +1,26 @@
 "use client";
 
 import React from "react";
-import { useMemo } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
 
 import { isLocalDevAuthEnabled } from "@/lib/auth/local-dev-auth";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 
-export function LocalDevSessionControls() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const nextPath = useMemo(() => {
-    const query = searchParams.toString();
+export function buildLocalLogoutHref(locationLike: Pick<Location, "pathname" | "search">) {
+  const nextPath = `${locationLike.pathname}${locationLike.search || ""}`;
 
-    return `${pathname}${query ? `?${query}` : ""}`;
-  }, [pathname, searchParams]);
+  return `/auth/logout?next=${encodeURIComponent(nextPath || "/")}`;
+}
+
+export function LocalDevSessionControls() {
   const authOverride = readE2EAuthOverride();
 
   if (!isLocalDevAuthEnabled()) {
     return null;
   }
+
+  const handleLogout = () => {
+    window.location.assign(buildLocalLogoutHref(window.location));
+  };
 
   return (
     <div className="flex justify-end px-5 pb-4 md:px-7 md:pb-5">
@@ -31,12 +32,13 @@ export function LocalDevSessionControls() {
               ? "fixture auth: guest"
               : "local auth tools"}
         </div>
-        <a
+        <button
           className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-1 text-xs font-semibold text-[var(--muted)]"
-          href={`/auth/logout?next=${encodeURIComponent(nextPath)}`}
+          onClick={handleLogout}
+          type="button"
         >
           로컬 세션 종료
-        </a>
+        </button>
       </div>
     </div>
   );
