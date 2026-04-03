@@ -564,7 +564,7 @@ export function RecipeDetailScreen({
                   : undefined
               }
             />
-            <div className="order-1 space-y-3.5 px-5 py-5 sm:order-2 sm:space-y-5 md:px-6">
+            <div className="order-1 space-y-4 px-5 py-5 sm:order-2 sm:space-y-5 md:px-6">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
                 <Link href="/">Home</Link>
                 <span>/</span>
@@ -574,10 +574,10 @@ export function RecipeDetailScreen({
                 <h2 className="text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:text-[2rem]">
                   {recipe.title}
                 </h2>
-                <p className="mt-2.5 text-sm leading-6 text-[var(--muted)] sm:mt-3">
+                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
                   {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2 sm:mt-4">
+                <div className="mt-4 flex flex-wrap gap-2">
                   {recipe.tags.map((tag) => (
                     <span
                       key={tag}
@@ -588,7 +588,7 @@ export function RecipeDetailScreen({
                   ))}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+              <div className="flex flex-wrap gap-2">
                 <MetricActionButton
                   ariaLabel={
                     likeRequestState === "pending"
@@ -625,7 +625,7 @@ export function RecipeDetailScreen({
                   tone="olive"
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <ActionButton
                   label="요리하기"
                   onClick={() =>
@@ -1033,7 +1033,7 @@ function MetricActionButton({
     <button
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
-      className={`flex min-h-11 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm ${className}`}
+      className={`flex min-h-11 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       disabled={disabled}
       onClick={onClick}
       type="button"

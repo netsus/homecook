@@ -31,11 +31,12 @@ describe("local Google OAuth env helpers", () => {
   });
 
   it("maps legacy Google env names to the official Supabase keys", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "local-google-oauth-env-legacy-"));
     const env = withLocalGoogleOAuthEnv({
       ...process.env,
       SUPABASE_AUTH_GOOGLE_CLIENT_ID: "legacy-client-id",
       SUPABASE_AUTH_GOOGLE_SECRET: "legacy-client-secret",
-    });
+    }, rootDir);
     const googleEnv = env as Record<string, string | undefined>;
 
     expect(googleEnv.SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID).toBe("legacy-client-id");

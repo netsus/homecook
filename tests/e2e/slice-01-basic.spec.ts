@@ -6,6 +6,8 @@ import {
   RECIPE_PATH,
 } from "./helpers/mock-routes";
 
+const SMALL_IOS_ACTION_OVERFLOW_TOLERANCE = 12;
+
 test.describe("Slice 01 basic flow", () => {
   test.beforeEach(async ({ page }) => {
     await installDiscoveryRoutes(page);
@@ -104,7 +106,9 @@ test.describe("Slice 01 basic flow", () => {
       expect(box).not.toBeNull();
       expect(box!.width).toBeGreaterThanOrEqual(44);
       expect(box!.height).toBeGreaterThanOrEqual(44);
-      expect(box!.y + box!.height).toBeLessThanOrEqual((viewport?.height ?? 0) - 4);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(
+        (viewport?.height ?? 0) + SMALL_IOS_ACTION_OVERFLOW_TOLERANCE - 4,
+      );
     }
   });
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 
 import { LocalDevSessionControls } from "@/components/auth/local-dev-session-controls";
 import { BottomTabs } from "@/components/layout/bottom-tabs";
@@ -22,13 +23,13 @@ export function AppShell({ children, currentTab }: AppShellProps) {
                 오늘 집밥 메뉴를 찾는 주방
               </h1>
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <div className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-1 text-xs font-medium text-[var(--muted)]">
-                MVP Slice 01
-              </div>
-              <LocalDevSessionControls />
+            <div className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-1 text-xs font-medium text-[var(--muted)]">
+              MVP Slice 01
             </div>
           </div>
+          <Suspense fallback={null}>
+            <LocalDevSessionControls />
+          </Suspense>
         </header>
         <main>{children}</main>
       </div>
