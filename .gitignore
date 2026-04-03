@@ -51,6 +51,7 @@ test-results/
 # local agent artifacts
 .artifacts/
 .worktrees/
+.omx/
 .opencode/branch-session.json
 .opencode/branch-prompt-state.json
 .opencode/claude-budget-state.json
@@ -58,3 +59,4 @@ test-results/
 
 # supabase local
 supabase/.temp/
+supabase/.branches/
