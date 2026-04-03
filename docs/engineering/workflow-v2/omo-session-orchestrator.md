@@ -132,7 +132,7 @@ Claude unavailable이면:
 
 1. 해당 stage 실행을 시작하지 않는다.
 2. runtime state에 `blocked_stage`와 `retry.at = now + 5h`를 기록한다.
-3. `.workflow-v2/status.json`에는 `lifecycle = blocked`, `approval_state = awaiting_claude_or_human`을 기록한다.
+3. `.workflow-v2/status.json`에는 `lifecycle = blocked`를 기록하고 approval_state는 이전 값을 유지한다.
 4. `notes`에는 `retry_at`, `session_role`, `artifact_dir`를 남긴다.
 5. `resume-pending`이 due item을 찾아 같은 stage를 같은 `claude_primary` session ID로 다시 시도한다.
 6. `claude-cli` provider의 canonical retry path는 `claude --resume <session_id>`다.
@@ -189,7 +189,7 @@ Homecook에서는 아래 원칙으로 adapter를 둔다.
 ## Non-Goals
 
 - Claude stage ownership 제거
-- `awaiting_claude_or_human`를 `dual_approved`와 동등하게 취급하기
+- blocked retry 중에는 approval_state를 덮어쓰지 않고 이전 승인 상태를 유지하기
 - session loss 시 자동 새 세션 생성
 - long-running `sleep 5h` 프로세스를 기본 경로로 채택하기
 - `--continue`를 deterministic automation resume 경로로 채택하기

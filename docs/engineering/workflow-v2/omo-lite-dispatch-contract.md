@@ -266,7 +266,7 @@ target 규칙:
 - `--sync-status`를 함께 주면 dispatch의 `status_patch`와 artifact 경로가 `.workflow-v2/status.json`에 같이 반영된다.
 - direct execution은 merge automation 자체를 수행하지 않지만, autonomous supervisor가 이어서 읽을 수 있는 stage result를 남겨야 한다.
 - supervisor lifecycle에서 code stage는 `stage_result_ready -> verify_pending -> commit_pending -> push_pending -> pr_pending -> wait` 순서로 auto-finalize될 수 있다.
-- product review stage approve 후에는 바로 merge하지 않고 `human_review` 또는 `human_verification` wait로 handoff할 수 있다.
+- autonomous product review stage approve 후에는 current head 전체 PR checks와 external smoke가 green이면 바로 merge할 수 있다.
 
 ## Fallback Routing
 
@@ -284,7 +284,7 @@ target 규칙:
 
 - Claude-owned stage는 시작하지 않고 `scheduled_retry`로 전환한다.
 - `status_patch.lifecycle = blocked`
-- `status_patch.approval_state = awaiting_claude_or_human`
+- blocked retry 중 `status_patch`는 approval_state를 덮어쓰지 않는다.
 - `runtime_patch.retry.at = now + 5h`가 기본값이다.
 - next actor는 계속 `claude`이며, due 시점이 되면 같은 session ID로 재개한다.
 - session loss 또는 retry exhaustion일 때만 `human` escalation을 계산한다.
@@ -305,7 +305,7 @@ dispatch가 끝나면 supervisor는 최소한 아래 patch를 계산한다.
 
 - Stage 2 시작: `lifecycle = in_progress`
 - verify green + PR ready: `lifecycle = ready_for_review`, `approval_state = codex_approved`
-- Claude unavailable: `lifecycle = blocked`, `approval_state = awaiting_claude_or_human`
+- Claude unavailable: `lifecycle = blocked`, approval_state는 이전 값을 유지
 - merge: `lifecycle = merged`, `approval_state = dual_approved`
 
 ## Repo-Local OMO Binding

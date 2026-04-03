@@ -82,9 +82,9 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - v2 승격 전까지는 product slice merge gate를 v1 기준으로 계속 유지한다.
 - Phase 4부터는 최소 executable helper(`pnpm omo:dispatch-stage`, `pnpm omo:sync-status`)를 함께 관리한다.
 - Phase 5부터는 `pnpm omo:run-stage`로 Codex/Claude stage를 repo-local OpenCode/OMO 실행과 artifact bundle에 직접 연결한다.
-- Phase 7부터는 `pnpm omo:claude-budget`과 repo-local override를 통해 Claude reviewer availability를 자동 해석하고, 필요 시 `awaiting_claude_or_human` fallback을 기록한다.
+- Phase 7부터는 `pnpm omo:claude-budget`과 repo-local override를 통해 Claude reviewer availability를 자동 해석하고, 필요 시 blocked retry를 기록한다.
 - Phase 8 pilot baseline은 `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:reconcile`, `validate:omo-bookkeeping`까지 포함한다.
-- fullauto v1의 의미는 `무인 merge`가 아니라 `수동 리뷰/실동작 확인 직전까지 자동화`다.
+- fullauto v1의 의미는 low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함한다.
 - session-orchestrated runner 규격은 구현보다 먼저 문서로 잠근다.
 - 구현 baseline과 상위 문서가 다시 어긋나면 `pnpm validate:workflow-v2`가 fail한다.
 
@@ -125,8 +125,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
   - `pnpm omo:scheduler:uninstall`
   - `pnpm omo:scheduler:verify`
 - 현재 baseline의 해석:
-  - `fullauto v1`은 수동 리뷰/실동작 확인 직전까지 자동화한다.
-  - `human_review`와 `human_verification`은 의도된 수동 게이트다.
+  - `fullauto v1`은 low/medium autonomous slice의 무인 merge까지 자동화한다.
+  - merge authority는 GitHub formal approval이 아니라 Claude review artifact + 전체 PR checks + external smoke다.
   - live smoke는 일반 PR CI 필수 단계가 아니라 sandbox/on-demand 운영 검증 경로다.
   - scheduler 운영 기준 플랫폼은 우선 macOS `launchd`다.
 

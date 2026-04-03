@@ -117,10 +117,9 @@ Codex supervisor는 아래를 하지 않는다.
 - `codex_approved`
 - `claude_approved`
 - `dual_approved`
-- `awaiting_claude_or_human`
 - `human_escalation`
 
-`awaiting_claude_or_human`은 Claude-owned stage가 budget 또는 session availability 문제로 pause 되었거나, 예외적 recovery에서 provisional review만 남은 상태를 뜻한다.
+Claude-owned stage가 budget 또는 session availability 문제로 pause 되면 `lifecycle = blocked`와 scheduled retry를 기록하고 approval_state는 이전 값을 유지한다.
 기본 의미는 `Claude-owned stage가 blocked 상태로 pause 되었고 Claude 또는 human intervention을 기다리는 상태`다.
 이 상태는 절대 `dual_approved`와 동등하지 않다.
 
@@ -298,7 +297,7 @@ Claude가 unavailable이면:
 
 1. Claude-owned stage는 시작하지 않는다.
 2. runtime state에 `blocked_stage`, `retry.at`, `retry.reason=claude_budget_unavailable`, `retry.attempt_count`를 기록한다.
-3. `.workflow-v2/status.json`에는 `lifecycle = blocked`, `approval_state = awaiting_claude_or_human`을 기록한다.
+3. `.workflow-v2/status.json`에는 `lifecycle = blocked`를 기록하고 approval_state는 이전 값을 유지한다.
 4. `notes`에는 `retry_at`, `session_role=claude_primary`, `artifact_dir`를 남긴다.
 5. `resume-pending` 또는 scheduler가 due 시점 이후 같은 stage를 같은 Claude session으로 재시도한다.
 6. repeated retry exhaustion 또는 session loss일 때만 `human_escalation`으로 전환한다.
@@ -372,7 +371,7 @@ pause/resume가 개입한 경우 `notes`에는 아래를 포함한다.
 - `scripts/omo-lite-sync-status.mjs`
 - `scripts/omo-lite-run-stage.mjs`
 - `scripts/omo-lite-claude-budget.mjs`
-- reviewer fallback의 automatic `awaiting_claude_or_human` routing
+- reviewer fallback의 automatic blocked-retry routing
 - optional fallback status sync with artifact note
 
 다음 phase에서 구현할 목표는 아래다.

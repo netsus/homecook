@@ -15,11 +15,18 @@ const APPROVAL_STATES = new Set([
   "needs_revision",
   "claude_approved",
   "codex_approved",
-  "awaiting_claude_or_human",
   "dual_approved",
   "human_escalation",
 ]);
 const VERIFICATION_STATES = new Set(["pending", "passed", "failed", "skipped"]);
+const EVALUATION_STATES = new Set([
+  "not_started",
+  "running",
+  "fixable",
+  "passed",
+  "blocked",
+  "stalled",
+]);
 
 export function resolveStageSessionRole(stage) {
   const normalizedStage = ensureStage(stage);
@@ -135,8 +142,10 @@ function productStageSpec(stage, slice) {
       ],
       deliverables: ["review summary", "requested changes or approval"],
       verifyCommands: [],
-      successCondition: "Backend PR receives review feedback or approval and can proceed to merge or fix routing.",
-      escalationIfBlocked: "Escalate to human if CI and review conclusions disagree or if scope exceeds the locked contract.",
+      successCondition:
+        "Backend PR receives review feedback or approval and can proceed to automatic merge or fix routing.",
+      escalationIfBlocked:
+        "Escalate to human if CI, autonomous merge policy, and review conclusions disagree or if scope exceeds the locked contract.",
     },
     4: {
       actor: "codex",
@@ -198,13 +207,13 @@ function productStageSpec(stage, slice) {
       deliverables: [
         "frontend review summary",
         "requested changes or approval",
-        "manual actual behavior verification + merge handoff",
+        "external smoke validation + merge handoff",
       ],
       verifyCommands: [],
       successCondition:
-        "Frontend PR receives final review feedback or approval and can proceed to manual actual-behavior verification and merge handoff.",
+        "Frontend PR receives final review feedback or approval and can proceed to external smoke validation and automatic merge.",
       escalationIfBlocked:
-        "Escalate to Claude or human if final review cannot run, formal GitHub approval is unavailable, or unresolved risks remain.",
+        "Escalate to Claude or human if final review cannot run, autonomous merge policy is unavailable, or unresolved risks remain.",
     },
   };
 
@@ -397,9 +406,7 @@ export function buildStageDispatch({
     return {
       ...dispatch,
       statusPatch: {
-        ...dispatch.statusPatch,
         lifecycle: "blocked",
-        approval_state: "awaiting_claude_or_human",
         verification_status: "pending",
       },
       runtimePatch: {
@@ -417,9 +424,9 @@ export function buildStageDispatch({
         attemptCount: normalizedAttemptCount + 1,
       },
       successCondition:
-        "Claude review resumes on the same session after budget recovers or a human recovery path is explicitly chosen.",
+        "Claude review resumes on the same session after budget recovers or a recovery path is explicitly chosen.",
       escalationIfBlocked:
-        "Claude is unavailable. Keep the stage blocked for scheduled retry and escalate to human only if the session is lost or retries are exhausted.",
+        "Claude is unavailable. Keep the stage blocked for scheduled retry and escalate only if the session is lost or retries are exhausted.",
     };
   }
 
@@ -466,6 +473,11 @@ function createStatusEntryFromWorkItem(workItem) {
     lifecycle: workItem.status.lifecycle,
     approval_state: workItem.status.approval_state,
     verification_status: workItem.status.verification_status,
+    evaluation_status: workItem.status.evaluation_status,
+    evaluation_round: workItem.status.evaluation_round,
+    last_evaluator_result: workItem.status.last_evaluator_result,
+    auto_merge_eligible: workItem.status.auto_merge_eligible,
+    blocked_reason_code: workItem.status.blocked_reason_code,
     required_checks: [...workItem.verification.required_checks],
   };
 }
@@ -495,6 +507,43 @@ function applyStatusPatch(statusItem, patch) {
       VERIFICATION_STATES,
       "patch.verification_status",
     );
+  }
+
+  if ("evaluation_status" in patch && patch.evaluation_status !== undefined) {
+    next.evaluation_status = ensureEnum(
+      patch.evaluation_status,
+      EVALUATION_STATES,
+      "patch.evaluation_status",
+    );
+  }
+
+  if ("evaluation_round" in patch) {
+    const round = Number(patch.evaluation_round);
+    if (!Number.isInteger(round) || round < 0) {
+      throw new Error("patch.evaluation_round must be a non-negative integer.");
+    }
+    next.evaluation_round = round;
+  }
+
+  if ("last_evaluator_result" in patch) {
+    next.last_evaluator_result =
+      typeof patch.last_evaluator_result === "string" && patch.last_evaluator_result.trim().length > 0
+        ? patch.last_evaluator_result.trim()
+        : null;
+  }
+
+  if ("auto_merge_eligible" in patch) {
+    if (patch.auto_merge_eligible !== undefined && typeof patch.auto_merge_eligible !== "boolean") {
+      throw new Error("patch.auto_merge_eligible must be a boolean when provided.");
+    }
+    next.auto_merge_eligible = patch.auto_merge_eligible;
+  }
+
+  if ("blocked_reason_code" in patch) {
+    next.blocked_reason_code =
+      typeof patch.blocked_reason_code === "string" && patch.blocked_reason_code.trim().length > 0
+        ? patch.blocked_reason_code.trim()
+        : null;
   }
 
   return next;
@@ -544,9 +593,25 @@ export function syncWorkflowV2Status({
   const nextWorkItem = {
     ...workItem,
     status: {
+      ...workItem.status,
       lifecycle: nextStatusItem.lifecycle,
       approval_state: nextStatusItem.approval_state,
       verification_status: nextStatusItem.verification_status,
+      ...(Object.prototype.hasOwnProperty.call(nextStatusItem, "evaluation_status")
+        ? { evaluation_status: nextStatusItem.evaluation_status ?? null }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(nextStatusItem, "evaluation_round")
+        ? { evaluation_round: nextStatusItem.evaluation_round ?? null }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(nextStatusItem, "last_evaluator_result")
+        ? { last_evaluator_result: nextStatusItem.last_evaluator_result ?? null }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(nextStatusItem, "auto_merge_eligible")
+        ? { auto_merge_eligible: nextStatusItem.auto_merge_eligible ?? false }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(nextStatusItem, "blocked_reason_code")
+        ? { blocked_reason_code: nextStatusItem.blocked_reason_code ?? null }
+        : {}),
     },
   };
 

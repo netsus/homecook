@@ -29,6 +29,8 @@ import {
   isRetryDue,
 } from "./omo-session-runtime.mjs";
 import { validateStageResult } from "./omo-stage-result.mjs";
+import { readAutomationSpec, resolveAutonomousSlicePolicy, resolveStageAutomationConfig } from "./omo-automation-spec.mjs";
+import { evaluateWorkItemStage } from "./omo-evaluator.mjs";
 import {
   assertWorktreeClean,
   ensureSupervisorWorktree,
@@ -142,6 +144,62 @@ function resolvePrRole(stage) {
   if (stage === 1) return "docs";
   if (stage === 2 || stage === 3) return "backend";
   return "frontend";
+}
+
+function readTrackedWorkItem({ rootDir, workItemId }) {
+  const workItemPath = resolve(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`);
+  if (!existsSync(workItemPath)) {
+    throw new Error(`Tracked workflow-v2 work item not found: ${workItemPath}`);
+  }
+
+  return {
+    workItemPath,
+    workItem: JSON.parse(readFileSync(workItemPath, "utf8")),
+  };
+}
+
+function resolveAutonomousStageContext({
+  rootDir,
+  workItemId,
+  slice,
+  stage,
+}) {
+  const { workItemPath, workItem } = readTrackedWorkItem({
+    rootDir,
+    workItemId,
+  });
+  const { automationSpecPath, automationSpec } = readAutomationSpec({
+    rootDir,
+    slice,
+    required: false,
+  });
+  const policy = resolveAutonomousSlicePolicy({
+    workItem,
+    automationSpec,
+  });
+  const stageConfig = resolveStageAutomationConfig({
+    automationSpec,
+    stage,
+  });
+
+  return {
+    workItem,
+    workItemPath,
+    automationSpec,
+    automationSpecPath,
+    policy,
+    stageConfig,
+  };
+}
+
+function isApprovalRequirementMergeError(error) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return /(approving review|required reviews|review required|at least .* approving review)/i.test(
+    error.message,
+  );
 }
 
 function applyCodeStageBookkeeping({
@@ -588,7 +646,14 @@ function createDefaultStageRunner({
   homeDir,
   now,
 }) {
-  return ({ workItemId, slice, stage, executionDir, priorStageResultPath = null }) =>
+  return ({
+    workItemId,
+    slice,
+    stage,
+    executionDir,
+    priorStageResultPath = null,
+    extraPromptSections = [],
+  }) =>
     runStageWithArtifacts({
       rootDir,
       executionDir,
@@ -607,6 +672,7 @@ function createDefaultStageRunner({
       now,
       syncStatus: false,
       lifecycleMode: "supervisor",
+      extraPromptSections,
       priorStageResultPath,
     });
 }
@@ -732,13 +798,6 @@ function updateRuntimeStatusForWait({
   });
 }
 
-function isOwnPullRequestApprovalError(error) {
-  return (
-    error instanceof Error &&
-    /can not approve your own pull request/i.test(error.message)
-  );
-}
-
 function resolveApprovedHeadSha({
   approvedHeadSha,
   activeHeadSha,
@@ -768,49 +827,6 @@ function resolveApprovedHeadSha({
 
   return normalizedApproved;
 }
-
-function setManualGateWait({
-  rootDir,
-  workItemId,
-  state,
-  kind,
-  prRole,
-  stage,
-  headSha,
-  reason = null,
-  now,
-  prPath,
-  approvalState,
-  verificationStatus = "passed",
-  extraNotes = [],
-}) {
-  const nextState = saveRuntime({
-    rootDir,
-    workItemId,
-    state: setWaitState({
-      state,
-      kind,
-      prRole,
-      stage,
-      headSha,
-      reason,
-      updatedAt: now,
-    }),
-  });
-  updateRuntimeStatusForWait({
-    rootDir,
-    workItemId,
-    wait: nextState.wait,
-    prPath,
-    now,
-    approvalState,
-    lifecycle: "ready_for_review",
-    verificationStatus,
-    extraNotes,
-  });
-  return nextState;
-}
-
 function finalizeMergedReviewStage({
   rootDir,
   workItemId,
@@ -843,10 +859,10 @@ function finalizeMergedReviewStage({
       wait: nextState.wait,
       prPath: activePr.url,
       now,
-      approvalState: "claude_approved",
+      approvalState: "dual_approved",
       lifecycle: "in_progress",
       verificationStatus: "passed",
-      extraNotes: ["merge_source=human_verification"],
+      extraNotes: ["merge_source=autonomous_review_artifact"],
     });
     return {
       state: nextState,
@@ -876,7 +892,7 @@ function finalizeMergedReviewStage({
       lifecycle: "merged",
       approval_state: "dual_approved",
       verification_status: "passed",
-      notes: "wait_kind=none merged_after_human_verification",
+      notes: "wait_kind=none merged_after_autonomous_review",
     },
     now,
   });
@@ -916,6 +932,212 @@ function loadExecutionStageResult(state) {
   }
 
   return validateStageResult(stage, JSON.parse(readFileSync(stageResultPath, "utf8")));
+}
+
+function syncEvaluationStatus({
+  rootDir,
+  workItemId,
+  evaluationStatus,
+  evaluationRound,
+  evaluatorResultPath,
+  autoMergeEligible,
+  blockedReasonCode = null,
+  now,
+}) {
+  syncStatus({
+    rootDir,
+    workItemId,
+    patch: {
+      evaluation_status: evaluationStatus,
+      evaluation_round: evaluationRound,
+      last_evaluator_result: evaluatorResultPath,
+      auto_merge_eligible: autoMergeEligible,
+      blocked_reason_code: blockedReasonCode,
+    },
+    now,
+  });
+}
+
+function runAutonomousEvaluationLoop({
+  rootDir,
+  workItemId,
+  slice,
+  stage,
+  state,
+  stageRunner,
+  worktree,
+  now,
+}) {
+  let nextState = state;
+  const context = resolveAutonomousStageContext({
+    rootDir,
+    workItemId,
+    slice,
+    stage,
+  });
+
+  if (!context.policy.autonomous || !context.stageConfig) {
+    return {
+      state: nextState,
+      transitioned: false,
+      wait: nextState.wait,
+      autonomous: false,
+    };
+  }
+
+  const maxRounds = context.stageConfig.max_fix_rounds ?? 1;
+
+  for (let evaluationRound = 1; evaluationRound <= maxRounds; evaluationRound += 1) {
+    const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
+    const evaluation = evaluateWorkItemStage({
+      rootDir,
+      workItemId,
+      slice,
+      stage,
+      artifactDir,
+      now,
+    });
+    const evaluatorResultPath = resolve(evaluation.artifactDir, "result.json");
+    syncEvaluationStatus({
+      rootDir,
+      workItemId,
+      evaluationStatus:
+        evaluation.outcome === "pass"
+          ? "passed"
+          : evaluation.outcome === "fixable"
+            ? "fixable"
+            : "blocked",
+      evaluationRound,
+      evaluatorResultPath,
+      autoMergeEligible: evaluation.mergeEligible,
+      blockedReasonCode:
+        evaluation.outcome === "blocked" ? evaluation.findings[0]?.id ?? "evaluation_blocked" : null,
+      now,
+    });
+
+    if (evaluation.outcome === "pass") {
+      return {
+        state: nextState,
+        transitioned: false,
+        wait: nextState.wait,
+        autonomous: true,
+      };
+    }
+
+    if (evaluation.outcome === "blocked") {
+      return blockWithRecovery({
+        rootDir,
+        workItemId,
+        slice,
+        state: nextState,
+        stage,
+        prRole: resolvePrRole(stage),
+        reason: evaluation.summary,
+        now,
+        worktree,
+      });
+    }
+
+    if (evaluationRound >= maxRounds) {
+      syncEvaluationStatus({
+        rootDir,
+        workItemId,
+        evaluationStatus: "stalled",
+        evaluationRound,
+        evaluatorResultPath,
+        autoMergeEligible: false,
+        blockedReasonCode: "max_fix_rounds_exhausted",
+        now,
+      });
+      return blockWithRecovery({
+        rootDir,
+        workItemId,
+        slice,
+        state: nextState,
+        stage,
+        prRole: resolvePrRole(stage),
+        reason: `Autonomous ${stage === 2 ? "backend" : "frontend"} remediation exhausted max_fix_rounds.`,
+        now,
+        worktree,
+      });
+    }
+
+    const remediationPrompt =
+      evaluation.remediation.promptPath && existsSync(evaluation.remediation.promptPath)
+        ? readFileSync(evaluation.remediation.promptPath, "utf8").trim()
+        : null;
+    const rerun = stageRunner({
+      rootDir,
+      workItemId,
+      slice,
+      stage,
+      executionDir: nextState.workspace?.path,
+      priorStageResultPath: nextState.execution?.stage_result_path ?? null,
+      extraPromptSections: remediationPrompt ? [remediationPrompt] : [],
+    });
+    const deferredOutcome = handleDeferredStageExecution({
+      rootDir,
+      workItemId,
+      slice,
+      stage,
+      prRole: resolvePrRole(stage),
+      prPath: getActivePullRequest(nextState, resolvePrRole(stage))?.url ?? null,
+      headSha: getActivePullRequest(nextState, resolvePrRole(stage))?.head_sha ?? null,
+      runResult: rerun,
+      worktree,
+      now,
+    });
+    if (deferredOutcome) {
+      return deferredOutcome;
+    }
+
+    nextState = resolveRunResultRuntimeState({
+      rootDir,
+      workItemId,
+      slice,
+      runResult: rerun,
+    });
+
+    if (!isPendingFinalizePhase(resolveStatePhase(nextState)) && rerun.stageResult) {
+      const stageResultPath = resolve(rerun.artifactDir, "stage-result.json");
+      mkdirSync(rerun.artifactDir, { recursive: true });
+      if (!existsSync(stageResultPath)) {
+        writeFileSync(stageResultPath, `${JSON.stringify(rerun.stageResult, null, 2)}\n`);
+      }
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setExecutionState({
+          state: nextState,
+          activeStage: stage,
+          phase: "stage_result_ready",
+          nextAction: "finalize_stage",
+          artifactDir: rerun.artifactDir,
+          execution: {
+            provider: rerun.execution?.provider ?? null,
+            session_role: stage === 1 ? "claude_primary" : "codex_primary",
+            session_id: rerun.execution?.sessionId ?? null,
+            artifact_dir: rerun.artifactDir,
+            stage_result_path: stageResultPath,
+            started_at: now,
+            finished_at: now,
+            verify_commands: [],
+            verify_bucket: null,
+            commit_sha: null,
+            pr_role: resolvePrRole(stage),
+          },
+          clearRecovery: true,
+        }),
+      });
+    }
+  }
+
+  return {
+    state: nextState,
+    transitioned: false,
+    wait: nextState.wait,
+    autonomous: true,
+  };
 }
 
 function runVerifyCommands({
@@ -1009,7 +1231,6 @@ function handleDeferredStageExecution({
       wait: nextState.wait,
       prPath,
       now,
-      approvalState: "awaiting_claude_or_human",
       lifecycle: "blocked",
       verificationStatus: "pending",
       extraNotes: [
@@ -1131,74 +1352,9 @@ function processWaitState({
   }
 
   if (state.wait.kind === "human_review" || state.wait.kind === "human_verification") {
-    const prRole = state.wait.pr_role;
-    const activePr = prRole ? state.prs?.[prRole] : null;
-    if (!activePr?.url) {
-      throw new Error("Active pull request is missing for manual review/verification wait.");
-    }
-
-    const summary = github.getPullRequestSummary({
-      prRef: activePr.url,
-    });
-
-    if (summary.mergedAt) {
-      return finalizeMergedReviewStage({
-        rootDir,
-        workItemId,
-        state,
-        stage: state.wait.stage ?? state.active_stage,
-        activePr,
-        artifactDir: state.execution?.artifact_dir ?? state.last_artifact_dir,
-        worktree,
-        now,
-      });
-    }
-
-    if (
-      state.wait.kind === "human_review" &&
-      typeof summary.reviewDecision === "string" &&
-      summary.reviewDecision.toUpperCase() === "APPROVED"
-    ) {
-      const nextState = setManualGateWait({
-        rootDir,
-        workItemId,
-        state,
-        kind: "human_verification",
-        prRole,
-        stage: state.wait.stage ?? state.active_stage,
-        headSha: activePr.head_sha ?? state.wait.head_sha ?? null,
-        now,
-        prPath: activePr.url,
-        approvalState: "claude_approved",
-        extraNotes: ["manual_review=approved", "manual_action=verify_behavior_and_merge"],
-      });
-      return {
-        state: nextState,
-        action: "wait",
-        nextStage: null,
-      };
-    }
-
-    updateRuntimeStatusForWait({
-      rootDir,
-      workItemId,
-      wait: state.wait,
-      prPath: activePr.url,
-      now,
-      approvalState:
-        state.wait.kind === "human_review" ? "awaiting_claude_or_human" : "claude_approved",
-      lifecycle: "ready_for_review",
-      verificationStatus: "passed",
-      extraNotes:
-        state.wait.kind === "human_review"
-          ? ["manual_action=record_github_approval"]
-          : ["manual_action=verify_behavior_and_merge"],
-    });
-    return {
-      state,
-      action: "wait",
-      nextStage: null,
-    };
+    throw new Error(
+      `Legacy wait state '${state.wait.kind}' is no longer supported. Clear the runtime or migrate it to the autonomous merge flow.`,
+    );
   }
 
   if (state.wait.kind === "blocked_retry") {
@@ -1690,6 +1846,7 @@ function finalizeCodeStage({
   slice,
   state,
   stage,
+  stageRunner,
   prRole,
   branchName,
   worktree,
@@ -1702,6 +1859,23 @@ function finalizeCodeStage({
   const verifyCommands = nextState.execution?.verify_commands ?? [];
 
   if (["stage_result_ready", "verify_pending"].includes(resolveStatePhase(nextState))) {
+    if ([2, 4].includes(stage)) {
+      const evaluation = runAutonomousEvaluationLoop({
+        rootDir,
+        workItemId,
+        slice,
+        stage,
+        state: nextState,
+        stageRunner,
+        worktree,
+        now,
+      });
+      if (evaluation.wait?.kind === "human_escalation" || evaluation.merged || evaluation.transitioned) {
+        return evaluation;
+      }
+      nextState = evaluation.state;
+    }
+
     nextState = saveRuntime({
       rootDir,
       workItemId,
@@ -2149,6 +2323,7 @@ function handleCodeStage({
     slice,
     state: nextState,
     stage,
+    stageRunner,
     prRole,
     branchName,
     worktree,
@@ -2169,11 +2344,20 @@ function handleReviewStage({
 }) {
   const branchRole = resolveBranchRole(stage);
   const prRole = resolvePrRole(stage);
+  const reviewPolicyStage = stage === 3 ? 2 : stage === 6 ? 4 : stage;
   let nextState = state;
   let activePr = getActivePullRequest(nextState, prRole);
   if (!activePr?.url) {
     throw new Error(`No active ${prRole} pull request found.`);
   }
+  const autonomousContext = [3, 6].includes(stage)
+    ? resolveAutonomousStageContext({
+        rootDir,
+        workItemId,
+        slice: state.slice ?? workItemId,
+        stage: reviewPolicyStage,
+      })
+    : null;
 
   worktree.checkoutBranch({
     branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
@@ -2286,48 +2470,10 @@ function handleReviewStage({
       }),
     });
 
-    if (stage === 5) {
-      github.commentPullRequest({
-        prRef: activePr.url,
-        body: stageResult.body_markdown,
-      });
-    } else {
-      try {
-        github.reviewPullRequest({
-          prRef: activePr.url,
-          decision: stageResult.decision,
-          body: stageResult.body_markdown,
-        });
-      } catch (error) {
-        if (stageResult.decision === "approve" && isOwnPullRequestApprovalError(error)) {
-          github.commentPullRequest({
-            prRef: activePr.url,
-            body: stageResult.body_markdown,
-          });
-          nextState = setManualGateWait({
-            rootDir,
-            workItemId,
-            state: nextState,
-            kind: "human_review",
-            prRole,
-            stage,
-            headSha: activePr.head_sha ?? null,
-            reason: "formal_github_review_required",
-            now,
-            prPath: activePr.url,
-            approvalState: "awaiting_claude_or_human",
-            extraNotes: ["manual_action=record_github_approval"],
-          });
-          return {
-            state: nextState,
-            wait: nextState.wait,
-            transitioned: false,
-          };
-        } else {
-          throw error;
-        }
-      }
-    }
+    github.commentPullRequest({
+      prRef: activePr.url,
+      body: stageResult.body_markdown,
+    });
 
     if (stageResult.decision === "approve") {
       if (stage === 5) {
@@ -2423,6 +2569,47 @@ function handleReviewStage({
         };
       }
 
+      if ([3, 6].includes(stage)) {
+        if (!autonomousContext?.policy.autonomous) {
+          return blockWithRecovery({
+            rootDir,
+            workItemId,
+            slice: state.slice ?? workItemId,
+            state: nextState,
+            stage,
+            prRole,
+            reason: `Slice is not eligible for autonomous Stage ${stage} merge.`,
+            now,
+            worktree,
+          });
+        }
+
+        const approvalRequirement =
+          typeof github.getApprovalRequirement === "function"
+            ? github.getApprovalRequirement({
+                prRef: activePr.url,
+              })
+            : {
+                required: false,
+                requiredApprovingReviewCount: 0,
+                source: "unavailable",
+              };
+        if (approvalRequirement.required) {
+          return blockWithRecovery({
+            rootDir,
+            workItemId,
+            slice: state.slice ?? workItemId,
+            state: nextState,
+            stage,
+            prRole,
+            reason:
+              `Repository ruleset still requires ${approvalRequirement.requiredApprovingReviewCount} approving review(s); autonomous merge cannot continue.`,
+            now,
+            worktree,
+          });
+        }
+      }
+
       if (stage === 6) {
         const bookkeeping = applyFrontendMergeBookkeeping({
           worktreePath: nextState.workspace.path,
@@ -2475,10 +2662,10 @@ function handleReviewStage({
             wait: nextState.wait,
             prPath: activePr.url,
             now,
-            approvalState: "claude_approved",
+            approvalState: "dual_approved",
             lifecycle: "ready_for_review",
             verificationStatus: "pending",
-            extraNotes: ["bookkeeping=slice_status_merged", "manual_action=verify_behavior_and_merge"],
+            extraNotes: ["bookkeeping=slice_status_merged", "merge_gate=external_smoke"],
           });
           return {
             state: nextState,
@@ -2488,27 +2675,41 @@ function handleReviewStage({
         }
       }
 
-      nextState = setManualGateWait({
+      nextState = saveRuntime({
         rootDir,
         workItemId,
-        state: nextState,
-        kind: "human_verification",
-        prRole,
-        stage,
-        headSha: resolveApprovedHeadSha({
-          approvedHeadSha: stageResult.approved_head_sha,
-          activeHeadSha: activePr.head_sha,
+        state: setWaitState({
+          state: setExecutionState({
+            state: nextState,
+            activeStage: stage,
+            phase: "merge_pending",
+            nextAction: "poll_ci",
+            artifactDir,
+            execution: nextState.execution,
+          }),
+          kind: "ci",
+          prRole,
+          stage,
+          headSha: resolveApprovedHeadSha({
+            approvedHeadSha: stageResult.approved_head_sha,
+            activeHeadSha: activePr.head_sha,
+          }),
+          phase: "merge_pending",
+          nextAction: "poll_ci",
+          updatedAt: now,
         }),
-        now,
-        prPath: activePr.url,
-        approvalState: "claude_approved",
-        extraNotes: ["manual_action=verify_behavior_and_merge"],
       });
-      return {
-        state: nextState,
+      updateRuntimeStatusForWait({
+        rootDir,
+        workItemId,
         wait: nextState.wait,
-        transitioned: false,
-      };
+        prPath: activePr.url,
+        now,
+        approvalState: "dual_approved",
+        lifecycle: "ready_for_review",
+        verificationStatus: "pending",
+        extraNotes: ["merge_gate=external_smoke"],
+      });
     } else {
       const routeBackStage = stageResult.route_back_stage ?? defaultBackRoute(stage);
       nextState = saveRuntime({
@@ -2546,30 +2747,6 @@ function handleReviewStage({
   }
 
   if (resolveStatePhase(nextState) === "merge_pending") {
-    if ([3, 6].includes(stage)) {
-      nextState = setManualGateWait({
-        rootDir,
-        workItemId,
-        state: nextState,
-        kind: "human_verification",
-        prRole,
-        stage,
-        headSha: resolveApprovedHeadSha({
-          approvedHeadSha: stageResult.approved_head_sha,
-          activeHeadSha: activePr.head_sha,
-        }),
-        now,
-        prPath: activePr.url,
-        approvalState: "claude_approved",
-        extraNotes: ["migrated_from=merge_pending", "manual_action=verify_behavior_and_merge"],
-      });
-      return {
-        state: nextState,
-        wait: nextState.wait,
-        transitioned: false,
-      };
-    }
-
     if (!stageResult || stageResult.decision !== "approve") {
       return blockWithRecovery({
         rootDir,
@@ -2623,7 +2800,7 @@ function handleReviewStage({
           wait: nextState.wait,
           prPath: activePr.url,
           now,
-          approvalState: "claude_approved",
+          approvalState: "dual_approved",
           lifecycle: "ready_for_review",
           verificationStatus: "pending",
         });
@@ -2632,6 +2809,20 @@ function handleReviewStage({
           wait: nextState.wait,
           transitioned: false,
         };
+      }
+
+      if (isApprovalRequirementMergeError(error)) {
+        return blockWithRecovery({
+          rootDir,
+          workItemId,
+          slice: state.slice ?? workItemId,
+          state: nextState,
+          stage,
+          prRole,
+          reason: error.message,
+          now,
+          worktree,
+        });
       }
 
       throw error;
@@ -3438,7 +3629,7 @@ export function tickSupervisorWorkItems(
       };
     }
 
-    if (!["ci", "blocked_retry", "ready_for_next_stage", "human_review", "human_verification"].includes(state.wait.kind)) {
+    if (!["ci", "blocked_retry", "ready_for_next_stage"].includes(state.wait.kind)) {
       return {
         resumable: false,
         reason: `unsupported_wait_kind=${state.wait.kind}`,

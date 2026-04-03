@@ -67,6 +67,6 @@
   ],
   "open_questions": [
     "Should future pilot runs update Claude budget state from a machine-readable usage signal instead of auth presence only",
-    "How should prolonged awaiting_claude_or_human states be surfaced in a future dashboard"
+    "How should prolonged blocked retry states be surfaced in a future dashboard"
   ]
 }

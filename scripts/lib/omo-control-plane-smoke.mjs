@@ -445,6 +445,7 @@ export function seedControlPlaneSmokeWorkspace({
   const workpackDir = join(normalizedRootDir, "docs", "workpacks", normalizedWorkItemId);
   const acceptancePath = join(workpackDir, "acceptance.md");
   const workpackReadmePath = join(workpackDir, "README.md");
+  const automationSpecPath = join(workpackDir, "automation-spec.json");
   const roadmapPath = join(normalizedRootDir, "docs", "workpacks", "README.md");
   const smokeNotesPath = join(normalizedRootDir, "smoke", "omo-control-plane", normalizedWorkItemId, "README.md");
   const backendLoopPath = resolveBackendReviewLoopPath({
@@ -464,7 +465,7 @@ export function seedControlPlaneSmokeWorkspace({
     id: normalizedWorkItemId,
     title: "OMO control-plane smoke",
     project_profile: "homecook",
-    change_type: "workflow_tooling",
+    change_type: "product",
     surface: "fullstack",
     risk: "medium",
     preset: "vertical-slice-strict",
@@ -485,15 +486,28 @@ export function seedControlPlaneSmokeWorkspace({
       plan_loop: "recommended",
       review_loop: "required",
       external_smokes: ["pnpm omo:smoke:control-plane"],
+      execution_mode: "autonomous",
+      merge_policy: "conditional-auto",
+      max_fix_rounds: {
+        backend: 2,
+        frontend: 2,
+      },
     },
     verification: {
       required_checks: ["pnpm validate:workflow-v2"],
       verify_commands: ["pnpm validate:workflow-v2"],
+      evaluator_commands: [],
+      artifact_assertions: [],
     },
     status: {
       lifecycle: "planned",
       approval_state: "not_started",
       verification_status: "pending",
+      evaluation_status: "not_started",
+      evaluation_round: 0,
+      last_evaluator_result: null,
+      auto_merge_eligible: false,
+      blocked_reason_code: null,
     },
     notes: {
       sandbox_repo: normalizedSandboxRepo,
@@ -532,18 +546,52 @@ export function seedControlPlaneSmokeWorkspace({
   const previousSmokeNotes = existsSync(smokeNotesPath) ? readFileSync(smokeNotesPath, "utf8") : null;
   const previousBackendLoop = existsSync(backendLoopPath) ? readFileSync(backendLoopPath, "utf8") : null;
   const previousSmokeState = readJsonIfExists(smokeStatePath);
+  const previousAutomationSpec = existsSync(automationSpecPath)
+    ? readFileSync(automationSpecPath, "utf8")
+    : null;
 
   writeFileSync(workItemPath, `${JSON.stringify(workItem, null, 2)}\n`);
   writeFileSync(statusPath, `${JSON.stringify(statusData, null, 2)}\n`);
   writeFileSync(roadmapPath, ensureRoadmapContents(normalizedRootDir, normalizedWorkItemId));
   writeFileSync(workpackReadmePath, ensureWorkpackReadme(normalizedWorkItemId));
   writeFileSync(
+    automationSpecPath,
+    `${JSON.stringify(
+      {
+        slice_id: normalizedWorkItemId,
+        execution_mode: "autonomous",
+        risk_class: "medium",
+        merge_policy: "conditional-auto",
+        backend: {
+          required_endpoints: [],
+          invariants: [],
+          verify_commands: [],
+          required_test_targets: [],
+        },
+        frontend: {
+          required_routes: [],
+          required_states: [],
+          playwright_projects: [],
+          artifact_assertions: [],
+        },
+        external_smokes: ["true"],
+        blocked_conditions: [],
+        max_fix_rounds: {
+          backend: 2,
+          frontend: 2,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
     acceptancePath,
     [
       `# ${normalizedWorkItemId} acceptance`,
       "",
       "- smoke control-plane workflow can create docs/backend/frontend PRs in a sandbox repo",
-      "- smoke runtime can stop at manual gates and resume on rerun",
+      "- smoke runtime can resume autonomous merge gates without manual approval states",
       "- live provider mode must validate Claude request_changes -> Codex reflection with backend-request-1 and backend-request-2 tokens",
       "",
     ].join("\n"),
@@ -570,6 +618,7 @@ export function seedControlPlaneSmokeWorkspace({
     JSON.stringify(previousStatus) !== JSON.stringify(statusData) ||
     previousRoadmap !== ensureRoadmapContents(normalizedRootDir, normalizedWorkItemId) ||
     previousWorkpack !== ensureWorkpackReadme(normalizedWorkItemId) ||
+    previousAutomationSpec === null ||
     previousAcceptance === null ||
     previousSmokeNotes === null ||
     previousBackendLoop === null ||
@@ -658,6 +707,12 @@ function createSmokeEvent({
 function buildCodeStageResult({ stage, workItemId, attempt }) {
   const prefix = stage === 1 ? "docs" : "feat";
   const summary = stage === 1 ? "docs smoke" : stage === 2 ? "backend smoke" : "frontend smoke";
+  const changedFile =
+    stage === 2
+      ? `smoke/omo-control-plane/${workItemId}/backend.txt`
+      : stage === 4
+        ? `smoke/omo-control-plane/${workItemId}/frontend.txt`
+        : `docs/workpacks/${workItemId}/README.md`;
 
   return {
     result: "done",
@@ -672,6 +727,16 @@ function buildCodeStageResult({ stage, workItemId, attempt }) {
     },
     checks_run: ["pnpm validate:workflow-v2"],
     next_route: stage === 1 ? "open_pr" : "wait_for_ci",
+    claimed_scope: {
+      files: [changedFile],
+      endpoints: [],
+      routes: [],
+      states: [],
+      invariants: [],
+    },
+    changed_files: [changedFile],
+    tests_touched: [],
+    artifacts_written: [],
   };
 }
 
@@ -1474,8 +1539,10 @@ export function collectControlPlaneSmokeCheckpoints({ runtime, smokeState = null
       Number(frontendLoop.code_retries ?? 0) > 0 &&
       Number(frontendLoop.approvals ?? 0) > 0 &&
       frontendLoop.feedback_seen_by_codex === true,
-    humanReviewReached: waitKind === "human_review" || lastCompletedStage >= 3,
-    humanVerificationReached: waitKind === "human_verification" || lastCompletedStage >= 6,
+    backendMergeGateReached:
+      (waitKind === "ci" && (runtime?.wait?.stage ?? null) === 3) || lastCompletedStage >= 3,
+    finalAutonomousMergeReached:
+      (waitKind === "ci" && (runtime?.wait?.stage ?? null) === 6) || lastCompletedStage >= 6,
     closeoutPrCreated: Boolean(runtime?.prs?.closeout?.url),
     closeoutFinalized:
       runtime?.phase === "done" ||
@@ -1492,10 +1559,6 @@ export function describeControlPlaneNextStep(wait) {
   switch (wait.kind) {
     case "ci":
       return "Wait for required checks to turn green, then rerun the control-plane smoke.";
-    case "human_review":
-      return "Record a formal GitHub approval from a non-author account, then rerun the control-plane smoke.";
-    case "human_verification":
-      return "Verify behavior, merge the pull request manually, then rerun the control-plane smoke.";
     case "ready_for_next_stage":
       return "Rerun the control-plane smoke to continue into the next stage.";
     default:

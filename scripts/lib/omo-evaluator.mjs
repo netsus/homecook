@@ -499,6 +499,19 @@ export function evaluateWorkItemStage({
     });
   }
 
+  if (policy.autonomous && (stageConfig.external_smokes ?? []).length === 0) {
+    addFinding(findings, {
+      id: `${stageLabel}-external-smokes-missing`,
+      category: "policy",
+      severity: "blocker",
+      message: `Autonomous ${stageLabel} execution requires at least one external smoke command.`,
+      evidence_paths: [automationSpecPath],
+      remediation_hint: "Declare at least one external smoke command in automation-spec.json before enabling autonomous merge.",
+      owner: "human",
+      fixable: false,
+    });
+  }
+
   if (!stageResult) {
     addFinding(findings, {
       id: `${stageLabel}-stage-result-missing`,

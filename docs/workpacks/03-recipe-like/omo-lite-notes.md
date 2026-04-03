@@ -57,7 +57,7 @@ work-item: `.workflow-v2/work-items/03-recipe-like.json`
 - `pnpm omo:claude-budget` 해석 결과가 Stage 1/3/5/6 routing에 반영되는가?
 - Claude가 `available` 상태일 때 Stage 3/5/6 reviewer로 정상 배정되는가?
 - Claude가 `constrained/unavailable` 상태로 강제 설정 후
-  Stage 3 호출 시 `approval_state: awaiting_claude_or_human`으로 fallback되는가?
+  Stage 3 호출 시 blocked retry가 approval_state를 덮어쓰지 않는가?
 
 검증 명령:
 ```bash

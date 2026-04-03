@@ -252,7 +252,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "`pnpm omo:reconcile`",
       "`pnpm omo:status`",
       "`pnpm validate:omo-bookkeeping`",
-      "수동 리뷰/실동작 확인 직전까지 자동화",
+      "low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함",
     ]),
   ];
 
@@ -271,8 +271,8 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "`pnpm omo:scheduler:verify -- --work-item <id>`",
       "`pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`",
       "`pnpm omo:smoke:providers`",
-      "`human_review`는 정식 GitHub approve가 필요한 상태",
-      "`human_verification`은 실제 동작 확인 후 사람이 merge해야 하는 상태",
+      "GitHub formal approval을 merge gate로 사용하지 않는다",
+      "current head 기준 전체 PR checks green + Claude approve artifact + external smoke pass 뒤 자동 merge한다",
     ]),
   ];
 

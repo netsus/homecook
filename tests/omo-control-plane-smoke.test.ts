@@ -76,7 +76,8 @@ describe("OMO control-plane smoke", () => {
           closeout: { url: "https://github.com/example/homecook-sandbox/pull/3" },
         },
         wait: {
-          kind: "human_verification",
+          kind: "ci",
+          stage: 6,
         },
         last_completed_stage: 6,
         phase: "done",
@@ -121,7 +122,7 @@ describe("OMO control-plane smoke", () => {
     expect(checkpoints.backendLiveProviderLoopValidated).toBe(true);
     expect(checkpoints.frontendReviewLoopValidated).toBe(true);
     expect(checkpoints.reviewLoopsValidated).toBe(true);
-    expect(checkpoints.humanVerificationReached).toBe(true);
+    expect(checkpoints.finalAutonomousMergeReached).toBe(true);
     expect(checkpoints.closeoutPrCreated).toBe(true);
     expect(checkpoints.closeoutFinalized).toBe(true);
   });
@@ -323,7 +324,8 @@ describe("OMO control-plane smoke", () => {
           backend: { url: "https://github.com/example/homecook-sandbox/pull/2" },
         },
         wait: {
-          kind: "human_verification",
+          kind: "ci",
+          stage: 3,
         },
         last_completed_stage: 3,
       },
@@ -530,9 +532,8 @@ describe("OMO control-plane smoke", () => {
     });
 
     expect(first.wait).toMatchObject({
-      kind: "human_verification",
-      stage: 3,
-      pr_role: "backend",
+      kind: "ci",
+      stage: 5,
     });
     expect(smokeState.attempts["2"]).toBe(2);
     expect(smokeState.attempts["3"]).toBe(3);

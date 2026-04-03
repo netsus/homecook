@@ -10,7 +10,7 @@ import { readRuntimeState, writeRuntimeState } from "../scripts/lib/omo-session-
 
 function createEvaluatorFixture({
   workItemId = "03-recipe-like",
-  externalSmokes = [],
+  externalSmokes = ["true"],
   stageResultOverrides = {},
 }: {
   workItemId?: string;
@@ -201,7 +201,10 @@ describe("OMO evaluator", () => {
     expect(result.outcome).toBe("pass");
     expect(result.mergeEligible).toBe(true);
     expect(result.findings).toEqual([]);
-    expect(result.requiredCommands).toEqual(["test -f tests/recipe-like.backend.test.ts"]);
+    expect(result.requiredCommands).toEqual([
+      "test -f tests/recipe-like.backend.test.ts",
+      "true",
+    ]);
     expect(existsSync(join(result.artifactDir, "result.json"))).toBe(true);
   });
 

@@ -25,16 +25,25 @@
   "workflow": {
     "plan_loop": "required",
     "review_loop": "required",
-    "external_smokes": []
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual"
   },
   "verification": {
     "required_checks": ["targeted-vitest", "docs-consistency-review"],
-    "verify_commands": ["pnpm test -- workflow-v2"]
+    "verify_commands": ["pnpm test -- workflow-v2"],
+    "evaluator_commands": [],
+    "artifact_assertions": []
   },
   "status": {
     "lifecycle": "in_progress",
     "approval_state": "needs_revision",
-    "verification_status": "pending"
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
   },
   "out_of_scope": ["CI gate migration", "README auto-generation"],
   "open_questions": ["When should v2 become the default for product-light work?"]
