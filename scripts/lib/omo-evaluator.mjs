@@ -133,7 +133,8 @@ function resolveWorktreePath(runtimeState) {
 }
 
 function runCommand(command, cwd, artifactPrefix) {
-  const result = spawnSync("zsh", ["-lc", command], {
+  const shell = process.env.SHELL ?? "/bin/sh";
+  const result = spawnSync(shell, ["-c", command], {
     cwd,
     encoding: "utf8",
     maxBuffer: 20 * 1024 * 1024,
