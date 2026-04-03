@@ -80,9 +80,9 @@
 - [x] 비로그인 보호 액션 시 로그인 게이트가 열린다
 - [x] 로그인 게이트가 닫기 버튼, ESC, 배경 클릭으로 닫힌다
 - [x] `authError=oauth_failed` 피드백이 보인다
+- [x] **(Retrofit)** `mobile-ios-small` viewport에서 보호 액션 버튼이 화면 내에 노출되고 터치 타겟이 44x44px 이상 유지된다
 - [ ] **(Retrofit)** 디자인 토큰 적용 후 HOME/RECIPE_DETAIL 스냅샷 테스트 추가 (선택)
 
 ### Manual Only
 
 - [ ] 실제 Google OAuth 로그인 후 원래 레시피 상세로 복귀한다
-- [ ] **(Retrofit)** 실기기에서 터치 타겟 44×44px 및 모바일 레이아웃 확인
