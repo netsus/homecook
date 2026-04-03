@@ -126,6 +126,31 @@
           "items": {
             "type": "string"
           }
+        },
+        "execution_mode": {
+          "type": "string",
+          "enum": ["manual", "autonomous"]
+        },
+        "evaluator_profile": {
+          "type": "string"
+        },
+        "merge_policy": {
+          "type": "string",
+          "enum": ["manual", "conditional-auto"]
+        },
+        "max_fix_rounds": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "backend": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "frontend": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
         }
       }
     },
@@ -141,6 +166,18 @@
           }
         },
         "verify_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evaluator_commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "artifact_assertions": {
           "type": "array",
           "items": {
             "type": "string"
@@ -164,7 +201,6 @@
             "needs_revision",
             "claude_approved",
             "codex_approved",
-            "awaiting_claude_or_human",
             "dual_approved",
             "human_escalation"
           ]
@@ -172,6 +208,23 @@
         "verification_status": {
           "type": "string",
           "enum": ["pending", "passed", "failed", "skipped"]
+        },
+        "evaluation_status": {
+          "type": "string",
+          "enum": ["not_started", "running", "fixable", "passed", "blocked", "stalled"]
+        },
+        "evaluation_round": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "last_evaluator_result": {
+          "type": ["string", "null"]
+        },
+        "auto_merge_eligible": {
+          "type": "boolean"
+        },
+        "blocked_reason_code": {
+          "type": ["string", "null"]
         }
       }
     },

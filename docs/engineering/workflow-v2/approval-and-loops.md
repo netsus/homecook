@@ -21,7 +21,7 @@ Claude와 Codex를 대등한 자유 토론자로 두지 않는다.
 
 위 조건 중 하나라도 빠지면 최종 상태는 `approved`가 될 수 없다.
 
-Claude budget 문제로 Claude-owned stage가 pause 되거나, 예외적 recovery에서 임시 Codex review summary만 남은 경우 상태는 `awaiting_claude_or_human`으로 기록한다.
+Claude budget 문제로 Claude-owned stage가 pause 되면 상태는 blocked retry로 기록하고 approval_state는 이전 값을 유지한다.
 기본 정책은 `pause + scheduled retry`이며, provisional Codex summary는 manual recovery에서만 사용한다.
 이 상태는 provisional이며 `dual_approved`와 동일하지 않다.
 

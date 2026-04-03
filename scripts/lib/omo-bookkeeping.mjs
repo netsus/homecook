@@ -310,7 +310,7 @@ function shouldRequireMergedRoadmap({ runtimeState, lifecycleStates, maxStage })
     return true;
   }
 
-  return maxStage >= 6 && ["human_review", "human_verification"].includes(runtimeState?.wait?.kind ?? "");
+  return maxStage >= 6 && runtimeState?.phase === "merge_pending";
 }
 
 function shouldRequireInProgressRoadmap({ requireMergedRoadmap, runtimeState, lifecycleStates, maxStage }) {

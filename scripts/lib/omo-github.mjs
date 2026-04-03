@@ -17,14 +17,16 @@ function ensureNonEmptyString(value, label) {
 
 function parsePullRequestUrl(url) {
   const normalizedUrl = ensureNonEmptyString(url, "url");
-  const match = normalizedUrl.match(/\/pull\/(\d+)(?:\/?|$)/);
+  const match = normalizedUrl.match(/https:\/\/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:\/?|$)/);
   if (!match) {
     throw new Error(`Unable to parse pull request number from ${normalizedUrl}`);
   }
 
   return {
     url: normalizedUrl,
-    number: Number(match[1]),
+    owner: match[1],
+    repo: match[2],
+    number: Number(match[3]),
   };
 }
 
@@ -336,6 +338,15 @@ function summarizeMergeState(summary) {
   };
 }
 
+function summarizeApprovalRequirement(data) {
+  const reviewPolicy = data?.required_pull_request_reviews;
+  const count = Number(reviewPolicy?.required_approving_review_count ?? 0);
+  return {
+    required: Number.isInteger(count) && count > 0,
+    requiredApprovingReviewCount: Number.isInteger(count) && count > 0 ? count : 0,
+  };
+}
+
 /**
  * @param {{ rootDir?: string, ghBin?: string, environment?: Record<string, string> }} [options]
  */
@@ -515,6 +526,32 @@ export function createGithubAutomationClient({
       prRef,
     }) {
       return getPullRequestMergeSummary(ensureNonEmptyString(prRef, "prRef"));
+    },
+    getApprovalRequirement({
+      prRef,
+      baseBranch = "master",
+    }) {
+      const parsed = parsePullRequestUrl(ensureNonEmptyString(prRef, "prRef"));
+      try {
+        const stdout = runGh([
+          "api",
+          `repos/${parsed.owner}/${parsed.repo}/branches/${ensureNonEmptyString(baseBranch, "baseBranch")}/protection`,
+        ]);
+        return {
+          ...summarizeApprovalRequirement(stdout.length > 0 ? JSON.parse(stdout) : null),
+          source: "branch-protection",
+        };
+      } catch (error) {
+        if (error instanceof Error && /404|Branch not protected/i.test(error.message)) {
+          return {
+            required: false,
+            requiredApprovingReviewCount: 0,
+            source: "unprotected",
+          };
+        }
+
+        throw error;
+      }
     },
     markReady({
       prRef,

@@ -64,7 +64,6 @@
               "needs_revision",
               "claude_approved",
               "codex_approved",
-              "awaiting_claude_or_human",
               "dual_approved",
               "human_escalation"
             ]
@@ -72,6 +71,23 @@
           "verification_status": {
             "type": "string",
             "enum": ["pending", "passed", "failed", "skipped"]
+          },
+          "evaluation_status": {
+            "type": "string",
+            "enum": ["not_started", "running", "fixable", "passed", "blocked", "stalled"]
+          },
+          "evaluation_round": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "last_evaluator_result": {
+            "type": ["string", "null"]
+          },
+          "auto_merge_eligible": {
+            "type": "boolean"
+          },
+          "blocked_reason_code": {
+            "type": ["string", "null"]
           },
           "required_checks": {
             "type": "array",

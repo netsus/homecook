@@ -126,7 +126,7 @@ describe("OMO-lite stage dispatch", () => {
     );
   });
 
-  it("routes Stage 6 to human fallback when Claude is unavailable", () => {
+  it("keeps the previous approval state when Stage 6 is blocked for a Claude retry", () => {
     const dispatch = buildStageDispatch({
       slice: "02-discovery-filter",
       stage: 6,
@@ -144,10 +144,10 @@ describe("OMO-lite stage dispatch", () => {
       reason: "claude_budget_unavailable",
     });
     expect(dispatch.statusPatch).toMatchObject({
-      approval_state: "awaiting_claude_or_human",
       lifecycle: "blocked",
       verification_status: "pending",
     });
+    expect("approval_state" in dispatch.statusPatch).toBe(false);
     expect(dispatch.escalationIfBlocked).toContain("Claude");
   });
 
@@ -322,6 +322,11 @@ describe("OMO-lite workflow status sync", () => {
       lifecycle: "ready_for_review",
       approval_state: "codex_approved",
       verification_status: "passed",
+      evaluation_status: null,
+      evaluation_round: null,
+      last_evaluator_result: null,
+      auto_merge_eligible: false,
+      blocked_reason_code: null,
     });
 
     const statusBoard = JSON.parse(

@@ -288,7 +288,7 @@ Claude가 토큰 소진 등으로 멈추면 아래처럼 동작한다.
 
 1. Claude-owned stage는 시작하지 않고 `blocked`로 기록한다.
 2. runtime state에 `retry.at = now + 5h`를 남긴다.
-3. tracked 상태는 `awaiting_claude_or_human`으로 기록한다.
+3. Claude retry 중 tracked 상태는 `blocked`로 기록하고 approval_state는 이전 값을 유지한다.
 4. scheduled sweeper가 같은 stage를 같은 Claude session으로 다시 시도한다.
 5. session loss 또는 retry exhaustion일 때만 human escalation으로 전환한다.
 

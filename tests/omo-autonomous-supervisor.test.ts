@@ -111,6 +111,87 @@ function createFixture() {
   return rootDir;
 }
 
+function seedAutonomousPolicy(
+  rootDir: string,
+  workItemId: string,
+  {
+    externalSmokes = ["true"],
+    risk = "medium",
+  }: {
+    externalSmokes?: string[];
+    risk?: "low" | "medium" | "high" | "critical";
+  } = {},
+) {
+  const workItemPath = join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`);
+  const workItem = JSON.parse(readFileSync(workItemPath, "utf8")) as Record<string, unknown>;
+  writeFileSync(
+    workItemPath,
+    JSON.stringify(
+      {
+        ...workItem,
+        risk,
+        workflow: {
+          ...(workItem.workflow as Record<string, unknown>),
+          execution_mode: "autonomous",
+          evaluator_profile: "slice-autonomous-v1",
+          merge_policy: "conditional-auto",
+          max_fix_rounds: {
+            backend: 2,
+            frontend: 2,
+          },
+        },
+        verification: {
+          ...(workItem.verification as Record<string, unknown>),
+          evaluator_commands: [],
+          artifact_assertions: [],
+        },
+        status: {
+          ...(workItem.status as Record<string, unknown>),
+          evaluation_status: "not_started",
+          evaluation_round: 0,
+          last_evaluator_result: null,
+          auto_merge_eligible: false,
+          blocked_reason_code: null,
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  writeFileSync(
+    join(rootDir, "docs", "workpacks", workItemId, "automation-spec.json"),
+    JSON.stringify(
+      {
+        slice_id: workItemId,
+        execution_mode: "autonomous",
+        risk_class: risk,
+        merge_policy: "conditional-auto",
+        backend: {
+          required_endpoints: [],
+          invariants: [],
+          verify_commands: [],
+          required_test_targets: [],
+        },
+        frontend: {
+          required_routes: [],
+          required_states: [],
+          playwright_projects: [],
+          artifact_assertions: [],
+        },
+        external_smokes: externalSmokes,
+        blocked_conditions: [],
+        max_fix_rounds: {
+          backend: 2,
+          frontend: 2,
+        },
+      },
+      null,
+      2,
+    ),
+  );
+}
+
 function createGitWorkspace(workspacePath: string, branch: string) {
   mkdirSync(workspacePath, { recursive: true });
   execFileSync("git", ["init", "-b", branch], { cwd: workspacePath });
@@ -490,9 +571,7 @@ describe("OMO autonomous supervisor", () => {
           },
           markReady() {},
           reviewPullRequest() {},
-          commentPullRequest() {
-            throw new Error("not expected");
-          },
+          commentPullRequest() {},
           mergePullRequest() {
             throw new Error("not expected");
           },
@@ -530,8 +609,9 @@ describe("OMO autonomous supervisor", () => {
     });
   });
 
-  it("waits for a human GitHub approval when Stage 3 cannot approve its own backend pull request", () => {
+  it("auto merges the backend PR after a Stage 3 approval for an autonomous slice", () => {
     const rootDir = createFixture();
+    seedAutonomousPolicy(rootDir, "03-recipe-like");
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
     const gitLog: string[] = [];
     const ghLog: string[] = [];
@@ -635,10 +715,6 @@ describe("OMO autonomous supervisor", () => {
           markReady() {
             throw new Error("not expected");
           },
-          reviewPullRequest({ prRef }: { prRef: string }) {
-            ghLog.push(`review:${prRef}`);
-            throw new Error("GraphQL: Review Can not approve your own pull request (addPullRequestReview)");
-          },
           commentPullRequest({ prRef, body }: { prRef: string; body: string }) {
             ghLog.push(`comment:${prRef}:${body}`);
           },
@@ -646,12 +722,19 @@ describe("OMO autonomous supervisor", () => {
             ghLog.push(`merge:${prRef}:${headSha}`);
             return { merged: true };
           },
+          getApprovalRequirement() {
+            return {
+              required: false,
+              requiredApprovingReviewCount: 0,
+              source: "branch-protection",
+            };
+          },
           getPullRequestSummary() {
             return {
               state: "OPEN",
               mergedAt: null,
               mergeStateStatus: "CLEAN",
-              reviewDecision: "REVIEW_REQUIRED",
+              reviewDecision: null,
             };
           },
           updateBranch() {
@@ -673,29 +756,28 @@ describe("OMO autonomous supervisor", () => {
     };
 
     expect(result.wait).toMatchObject({
-      kind: "human_review",
-      stage: 3,
-      reason: "formal_github_review_required",
+      kind: "ready_for_next_stage",
+      stage: 4,
     });
     expect(runtime.wait).toMatchObject({
-      kind: "human_review",
-      stage: 3,
-      reason: "formal_github_review_required",
+      kind: "ready_for_next_stage",
+      stage: 4,
     });
     expect(runtime.last_review.backend).toMatchObject({
       decision: "approve",
       approved_head_sha: approvedHeadSha,
       body_markdown: "Backend review approved.",
     });
-    expect(gitLog).toEqual([]);
+    expect(gitLog).toEqual(["sync:master"]);
     expect(ghLog).toEqual([
-      "review:https://github.com/netsus/homecook/pull/35",
       "comment:https://github.com/netsus/homecook/pull/35:Backend review approved.",
+      "merge:https://github.com/netsus/homecook/pull/35:be1234567890abcdef1234567890abcdef123456",
     ]);
   });
 
-  it("waits for manual merge verification after a successful Stage 3 approval", () => {
+  it("blocks Stage 3 autonomous merge when branch protection still requires formal approval", () => {
     const rootDir = createFixture();
+    seedAutonomousPolicy(rootDir, "03-recipe-like");
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
     seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
       roadmapStatus: "in-progress",
@@ -737,7 +819,7 @@ describe("OMO autonomous supervisor", () => {
       },
     });
 
-    const first = superviseWorkItem(
+    const result = superviseWorkItem(
       {
         rootDir,
         workItemId: "03-recipe-like",
@@ -785,88 +867,34 @@ describe("OMO autonomous supervisor", () => {
             return { bucket: "pass", checks: [] };
           },
           markReady() {},
-          reviewPullRequest() {},
           commentPullRequest() {},
+          getApprovalRequirement() {
+            return {
+              required: true,
+              requiredApprovingReviewCount: 1,
+              source: "branch-protection",
+            };
+          },
           mergePullRequest() {
             throw new Error("not expected");
-          },
-          getPullRequestSummary() {
-            return {
-              state: "OPEN",
-              mergedAt: null,
-              mergeStateStatus: "CLEAN",
-              reviewDecision: "APPROVED",
-            };
           },
           updateBranch() {},
         },
       },
     );
 
-    expect(first.wait).toMatchObject({
-      kind: "human_verification",
-      stage: 3,
+    expect(result.wait).toMatchObject({
+      kind: "human_escalation",
     });
-
-    const second = superviseWorkItem(
-      {
-        rootDir,
-        workItemId: "03-recipe-like",
-        now: "2026-03-27T00:47:00+09:00",
-        maxTransitions: 1,
-      },
-      {
-        auth: {
-          assertGhAuth() {},
-          assertOpencodeAuth() {},
-        },
-        worktree: {
-          ensureWorktree() {
-            return { path: workspacePath, created: false };
-          },
-          assertClean() {},
-          checkoutBranch() {
-            return { branch: "feature/be-03-recipe-like" };
-          },
-          pushBranch() {},
-          syncBaseBranch() {},
-          getHeadSha() {
-            return "be123";
-          },
-        },
-        stageRunner() {
-          throw new Error("not expected");
-        },
-        github: {
-          createPullRequest() {
-            throw new Error("not expected");
-          },
-          getRequiredChecks() {
-            return { bucket: "pass", checks: [] };
-          },
-          markReady() {},
-          reviewPullRequest() {},
-          commentPullRequest() {},
-          mergePullRequest() {
-            throw new Error("not expected");
-          },
-          getPullRequestSummary() {
-            return {
-              state: "MERGED",
-              mergedAt: "2026-03-27T00:47:00.000Z",
-              mergeStateStatus: "UNKNOWN",
-              reviewDecision: "APPROVED",
-            };
-          },
-          updateBranch() {},
-        },
-      },
-    );
-
-    expect(second.wait).toMatchObject({
-      kind: "ready_for_next_stage",
-      stage: 4,
-    });
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      slice: "03-recipe-like",
+    }).state as {
+      wait: { kind: string; stage: number | null; pr_role: string | null; reason: string };
+    };
+    expect(runtime.wait.kind).toBe("human_escalation");
+    expect(runtime.wait.reason).toContain("requires 1 approving review");
   });
 
   it("commits Design Status confirmed after Stage 5 approval and waits for CI", () => {
@@ -1170,6 +1198,7 @@ describe("OMO autonomous supervisor", () => {
 
   it("adds merged slice bookkeeping after Stage 6 approval and waits for CI on the updated frontend PR", () => {
     const rootDir = createFixture();
+    seedAutonomousPolicy(rootDir, "03-recipe-like");
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
     const roadmapPath = join(workspacePath, "docs", "workpacks", "README.md");
     const workpackReadme = join(workspacePath, "docs", "workpacks", "03-recipe-like", "README.md");
@@ -1294,7 +1323,13 @@ describe("OMO autonomous supervisor", () => {
             return { bucket: "pass", checks: [] };
           },
           markReady() {},
-          reviewPullRequest() {},
+          getApprovalRequirement() {
+            return {
+              required: false,
+              requiredApprovingReviewCount: 0,
+              source: "branch-protection",
+            };
+          },
           commentPullRequest() {},
           mergePullRequest() {
             throw new Error("not expected");
@@ -1369,30 +1404,36 @@ describe("OMO autonomous supervisor", () => {
             return { bucket: "pass", checks: [] };
           },
           markReady() {},
-          reviewPullRequest() {
-            throw new Error("not expected");
+          getApprovalRequirement() {
+            return {
+              required: false,
+              requiredApprovingReviewCount: 0,
+              source: "branch-protection",
+            };
           },
           commentPullRequest() {},
           mergePullRequest() {
-            throw new Error("not expected");
+            return { merged: true };
           },
           getPullRequestSummary() {
-            throw new Error("not expected");
+            return {
+              state: "OPEN",
+              mergedAt: null,
+              mergeStateStatus: "CLEAN",
+              reviewDecision: null,
+            };
           },
           updateBranch() {},
         },
       },
     );
 
-    expect(second.wait).toMatchObject({
-      kind: "human_verification",
-      stage: 6,
-      pr_role: "frontend",
-    });
+    expect(second.wait).toBeNull();
   });
 
-  it("repairs missing merged roadmap bookkeeping before Stage 6 human verification", () => {
+  it("repairs missing merged roadmap bookkeeping before autonomous Stage 6 merge", () => {
     const rootDir = createFixture();
+    seedAutonomousPolicy(rootDir, "03-recipe-like");
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
     const roadmapPath = join(workspacePath, "docs", "workpacks", "README.md");
     const workpackReadme = join(workspacePath, "docs", "workpacks", "03-recipe-like", "README.md");
@@ -1444,8 +1485,8 @@ describe("OMO autonomous supervisor", () => {
         active_stage: 6,
         current_stage: 6,
         last_completed_stage: 5,
-        phase: "wait",
-        next_action: "noop",
+        phase: "merge_pending",
+        next_action: "poll_ci",
         workspace: {
           path: workspacePath,
           branch_role: "frontend",
@@ -1463,7 +1504,7 @@ describe("OMO autonomous supervisor", () => {
           closeout: null,
         },
         wait: {
-          kind: "human_verification",
+          kind: "ci",
           pr_role: "frontend",
           stage: 6,
           head_sha: headSha,
@@ -1520,9 +1561,6 @@ describe("OMO autonomous supervisor", () => {
             return { bucket: "pending", checks: [] };
           },
           markReady() {
-            throw new Error("not expected");
-          },
-          reviewPullRequest() {
             throw new Error("not expected");
           },
           commentPullRequest() {
@@ -1823,13 +1861,8 @@ describe("OMO autonomous supervisor", () => {
     ]);
   });
 
-  it("tick resumes human_review waits and promotes approved PRs to human_verification", () => {
+  it("tick treats legacy human_review waits as unsupported", () => {
     const rootDir = createFixture();
-    seedWorktreeBookkeeping(join(rootDir, ".worktrees", "03-recipe-like"), "03-recipe-like", {
-      roadmapStatus: "in-progress",
-      designStatus: "confirmed",
-    });
-    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
 
     writeRuntimeState({
       rootDir,
@@ -1841,126 +1874,31 @@ describe("OMO autonomous supervisor", () => {
           slice: "03-recipe-like",
         }).state,
         slice: "03-recipe-like",
-        active_stage: 3,
-        current_stage: 3,
-        last_completed_stage: 2,
-        workspace: {
-          path: workspacePath,
-          branch_role: "backend",
-        },
-        prs: {
-          docs: null,
-          backend: {
-            number: 35,
-            url: "https://github.com/netsus/homecook/pull/35",
-            draft: false,
-            branch: "feature/be-03-recipe-like",
-            head_sha: "be123",
-          },
-          frontend: null,
-        },
         wait: {
           kind: "human_review",
           stage: 3,
           pr_role: "backend",
-          head_sha: "be123",
-          reason: "formal_github_review_required",
         },
       },
     });
 
-    const results = tickSupervisorWorkItems(
-      {
-        rootDir,
-        workItemId: "03-recipe-like",
-        now: "2026-03-27T01:00:00.000Z",
-      },
-      {
-        supervise(args: { rootDir: string; workItemId: string; now?: string }) {
-          return superviseWorkItem(args, {
-            auth: {
-              assertGhAuth() {},
-              assertOpencodeAuth() {},
-            },
-            worktree: {
-              ensureWorktree() {
-                mkdirSync(workspacePath, { recursive: true });
-                return { path: workspacePath, created: false };
-              },
-              assertClean() {},
-              checkoutBranch() {
-                return { branch: "feature/be-03-recipe-like" };
-              },
-              pushBranch() {},
-              syncBaseBranch() {},
-              getHeadSha() {
-                return "be123";
-              },
-            },
-            stageRunner() {
-              throw new Error("not expected");
-            },
-            github: {
-              createPullRequest() {
-                throw new Error("not expected");
-              },
-              getRequiredChecks() {
-                return { bucket: "pass", checks: [] };
-              },
-              markReady() {},
-              reviewPullRequest() {
-                throw new Error("not expected");
-              },
-              commentPullRequest() {
-                throw new Error("not expected");
-              },
-              mergePullRequest() {
-                throw new Error("not expected");
-              },
-              getPullRequestSummary() {
-                return {
-                  state: "OPEN",
-                  mergedAt: null,
-                  mergeStateStatus: "CLEAN",
-                  reviewDecision: "APPROVED",
-                };
-              },
-              updateBranch() {},
-            },
-          });
-        },
-      },
-    );
+    const results = tickSupervisorWorkItems({
+      rootDir,
+      workItemId: "03-recipe-like",
+      now: "2026-03-27T01:00:00.000Z",
+    });
 
     expect(results).toEqual([
       expect.objectContaining({
-        wait: expect.objectContaining({
-          kind: "human_verification",
-          stage: 3,
-          pr_role: "backend",
-        }),
+        workItemId: "03-recipe-like",
+        action: "noop",
+        reason: "unsupported_wait_kind=human_review",
       }),
     ]);
-    expect(
-      readRuntimeState({
-        rootDir,
-        workItemId: "03-recipe-like",
-        slice: "03-recipe-like",
-      }).state.wait,
-    ).toMatchObject({
-      kind: "human_verification",
-      stage: 3,
-      pr_role: "backend",
-    });
   });
 
-  it("tick keeps human_review waits active until a formal approval exists", () => {
+  it("tick treats legacy human_verification waits as unsupported", () => {
     const rootDir = createFixture();
-    seedWorktreeBookkeeping(join(rootDir, ".worktrees", "03-recipe-like"), "03-recipe-like", {
-      roadmapStatus: "in-progress",
-      designStatus: "confirmed",
-    });
-    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
 
     writeRuntimeState({
       rootDir,
@@ -1972,253 +1910,27 @@ describe("OMO autonomous supervisor", () => {
           slice: "03-recipe-like",
         }).state,
         slice: "03-recipe-like",
-        active_stage: 3,
-        current_stage: 3,
-        last_completed_stage: 2,
-        workspace: {
-          path: workspacePath,
-          branch_role: "backend",
-        },
-        prs: {
-          docs: null,
-          backend: {
-            number: 35,
-            url: "https://github.com/netsus/homecook/pull/35",
-            draft: false,
-            branch: "feature/be-03-recipe-like",
-            head_sha: "be123",
-          },
-          frontend: null,
-        },
-        wait: {
-          kind: "human_review",
-          stage: 3,
-          pr_role: "backend",
-          head_sha: "be123",
-          reason: "formal_github_review_required",
-        },
-      },
-    });
-
-    const results = tickSupervisorWorkItems(
-      {
-        rootDir,
-        workItemId: "03-recipe-like",
-        now: "2026-03-27T01:05:00.000Z",
-      },
-      {
-        supervise(args: { rootDir: string; workItemId: string; now?: string }) {
-          return superviseWorkItem(args, {
-            auth: {
-              assertGhAuth() {},
-              assertOpencodeAuth() {},
-            },
-            worktree: {
-              ensureWorktree() {
-                mkdirSync(workspacePath, { recursive: true });
-                return { path: workspacePath, created: false };
-              },
-              assertClean() {},
-              checkoutBranch() {
-                return { branch: "feature/be-03-recipe-like" };
-              },
-              pushBranch() {},
-              syncBaseBranch() {},
-              getHeadSha() {
-                return "be123";
-              },
-            },
-            stageRunner() {
-              throw new Error("not expected");
-            },
-            github: {
-              createPullRequest() {
-                throw new Error("not expected");
-              },
-              getRequiredChecks() {
-                return { bucket: "pass", checks: [] };
-              },
-              markReady() {},
-              reviewPullRequest() {
-                throw new Error("not expected");
-              },
-              commentPullRequest() {
-                throw new Error("not expected");
-              },
-              mergePullRequest() {
-                throw new Error("not expected");
-              },
-              getPullRequestSummary() {
-                return {
-                  state: "OPEN",
-                  mergedAt: null,
-                  mergeStateStatus: "CLEAN",
-                  reviewDecision: "REVIEW_REQUIRED",
-                };
-              },
-              updateBranch() {},
-            },
-          });
-        },
-      },
-    );
-
-    expect(results).toEqual([
-      expect.objectContaining({
-        wait: expect.objectContaining({
-          kind: "human_review",
-          stage: 3,
-          pr_role: "backend",
-        }),
-      }),
-    ]);
-    expect(
-      readRuntimeState({
-        rootDir,
-        workItemId: "03-recipe-like",
-        slice: "03-recipe-like",
-      }).state.wait,
-    ).toMatchObject({
-      kind: "human_review",
-      stage: 3,
-      pr_role: "backend",
-    });
-  });
-
-  it("tick resumes human_verification waits and finalizes merged Stage 6 reviews", () => {
-    const rootDir = createFixture();
-    seedWorktreeBookkeeping(join(rootDir, ".worktrees", "03-recipe-like"), "03-recipe-like", {
-      roadmapStatus: "merged",
-      designStatus: "confirmed",
-    });
-    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
-
-    writeRuntimeState({
-      rootDir,
-      workItemId: "03-recipe-like",
-      state: {
-        ...readRuntimeState({
-          rootDir,
-          workItemId: "03-recipe-like",
-          slice: "03-recipe-like",
-        }).state,
-        slice: "03-recipe-like",
-        active_stage: 6,
-        current_stage: 6,
-        last_completed_stage: 5,
-        workspace: {
-          path: workspacePath,
-          branch_role: "frontend",
-        },
-        prs: {
-          docs: null,
-          backend: {
-            number: 35,
-            url: "https://github.com/netsus/homecook/pull/35",
-            draft: false,
-            branch: "feature/be-03-recipe-like",
-            head_sha: "be123",
-          },
-          frontend: {
-            number: 64,
-            url: "https://github.com/netsus/homecook/pull/64",
-            draft: false,
-            branch: "feature/fe-03-recipe-like",
-            head_sha: "fe123",
-          },
-        },
         wait: {
           kind: "human_verification",
           stage: 6,
           pr_role: "frontend",
-          head_sha: "fe123",
         },
       },
     });
 
-    const results = tickSupervisorWorkItems(
-      {
-        rootDir,
-        workItemId: "03-recipe-like",
-        now: "2026-03-27T01:10:00.000Z",
-      },
-      {
-        supervise(args: { rootDir: string; workItemId: string; now?: string }) {
-          return superviseWorkItem(args, {
-            auth: {
-              assertGhAuth() {},
-              assertOpencodeAuth() {},
-            },
-            worktree: {
-              ensureWorktree() {
-                mkdirSync(workspacePath, { recursive: true });
-                return { path: workspacePath, created: false };
-              },
-              assertClean() {},
-              checkoutBranch() {
-                return { branch: "feature/fe-03-recipe-like" };
-              },
-              pushBranch() {},
-              syncBaseBranch() {},
-              getHeadSha() {
-                return "fe123";
-              },
-            },
-            stageRunner() {
-              throw new Error("not expected");
-            },
-            github: {
-              createPullRequest() {
-                throw new Error("not expected");
-              },
-              getRequiredChecks() {
-                return { bucket: "pass", checks: [] };
-              },
-              markReady() {},
-              reviewPullRequest() {
-                throw new Error("not expected");
-              },
-              commentPullRequest() {
-                throw new Error("not expected");
-              },
-              mergePullRequest() {
-                throw new Error("not expected");
-              },
-              getPullRequestSummary() {
-                return {
-                  state: "MERGED",
-                  mergedAt: "2026-03-27T01:09:30.000Z",
-                  mergeStateStatus: "UNKNOWN",
-                  reviewDecision: "APPROVED",
-                };
-              },
-              updateBranch() {},
-            },
-          });
-        },
-      },
-    );
+    const results = tickSupervisorWorkItems({
+      rootDir,
+      workItemId: "03-recipe-like",
+      now: "2026-03-27T01:10:00.000Z",
+    });
 
     expect(results).toEqual([
       expect.objectContaining({
-        wait: null,
-        runtime: expect.objectContaining({
-          last_completed_stage: 6,
-          phase: "done",
-          wait: null,
-        }),
+        workItemId: "03-recipe-like",
+        action: "noop",
+        reason: "unsupported_wait_kind=human_verification",
       }),
     ]);
-    const runtime = readRuntimeState({
-      rootDir,
-      workItemId: "03-recipe-like",
-      slice: "03-recipe-like",
-    }).state as {
-      last_completed_stage: number;
-      wait: null;
-    };
-    expect(runtime.last_completed_stage).toBe(6);
-    expect(runtime.wait).toBeNull();
   });
 
   it("records blocked_retry when Stage 1 schedules a Claude retry", () => {

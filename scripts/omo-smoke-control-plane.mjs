@@ -329,7 +329,7 @@ function runSupervisorCycle({
 }
 
 function maybeRunCloseoutSmoke({ workspace, workItemId, ghBin, checkpoints }) {
-  if (!checkpoints.humanVerificationReached || checkpoints.closeoutPrCreated) {
+  if (!checkpoints.finalAutonomousMergeReached || checkpoints.closeoutPrCreated) {
     return null;
   }
 
@@ -459,8 +459,8 @@ function main() {
       `Backend live provider loop validated: ${finalCheckpoints.backendLiveProviderLoopValidated ? "yes" : "no"}`,
       `Frontend review loop validated: ${finalCheckpoints.frontendReviewLoopValidated ? "yes" : "no"}`,
       `All review loops validated: ${finalCheckpoints.reviewLoopsValidated ? "yes" : "no"}`,
-      `Reached human_review: ${finalCheckpoints.humanReviewReached ? "yes" : "no"}`,
-      `Reached human_verification: ${finalCheckpoints.humanVerificationReached ? "yes" : "no"}`,
+      `Reached backend merge gate: ${finalCheckpoints.backendMergeGateReached ? "yes" : "no"}`,
+      `Reached final autonomous merge: ${finalCheckpoints.finalAutonomousMergeReached ? "yes" : "no"}`,
       `Closeout PR created: ${finalCheckpoints.closeoutPrCreated ? "yes" : "no"}`,
       `Closeout finalized: ${finalCheckpoints.closeoutFinalized ? "yes" : "no"}`,
       `Next step: ${result.nextStep}`,

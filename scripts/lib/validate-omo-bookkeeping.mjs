@@ -142,11 +142,11 @@ export function validateOmoBookkeeping({
         if (
           issue.kind === "roadmap_status" &&
           issue.expected === "merged" &&
-          (runtimeState?.wait?.kind === "human_review" || runtimeState?.wait?.kind === "human_verification" || runtimeState?.phase === "merge_pending")
+          runtimeState?.phase === "merge_pending"
         ) {
           errors.push({
             path: invariant.docs.roadmap.filePath,
-            message: `Slice '${workItemId}' must update docs/workpacks/README.md to '${issue.expected}' before Stage 6 human verification.`,
+            message: `Slice '${workItemId}' must update docs/workpacks/README.md to '${issue.expected}' before autonomous Stage 6 merge.`,
           });
         }
       }

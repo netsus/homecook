@@ -12,7 +12,7 @@ function printUsage() {
       "  --branch <name>                  Branch name to record",
       "  --pr-path <url>                  PR URL or pending marker",
       "  --lifecycle <state>              planned | in_progress | ready_for_review | blocked | merged | archived",
-      "  --approval-state <state>         not_started | needs_revision | claude_approved | codex_approved | awaiting_claude_or_human | dual_approved | human_escalation",
+      "  --approval-state <state>         not_started | needs_revision | claude_approved | codex_approved | dual_approved | human_escalation",
       "  --verification-status <state>    pending | passed | failed | skipped",
       "  --notes <text>                   Notes string to record",
       "  --updated-at <timestamp>         Override updated_at timestamp",

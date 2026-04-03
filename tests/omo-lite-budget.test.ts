@@ -356,7 +356,7 @@ describe("OMO-lite stage runner budget-aware fallback", () => {
     expect(statusBoard.items[0]).toMatchObject({
       id: workItemId,
       lifecycle: "blocked",
-      approval_state: "awaiting_claude_or_human",
+      approval_state: "not_started",
       verification_status: "pending",
     });
     expect(statusBoard.items[0].notes).toContain(result.artifactDir);
