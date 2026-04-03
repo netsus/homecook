@@ -210,4 +210,36 @@ test.describe("Slice 03 recipe like flow", () => {
       )
       .toBeNull();
   });
+
+  test("request failure shows toast feedback and restores the previous like state", async ({
+    page,
+  }) => {
+    await installAuthenticatedSession(page);
+    await mockRecipeLikeRoutes(page);
+    await page.route(`**/api/v1/recipes/${RECIPE_ID}/like`, async (route) => {
+      await route.fulfill({
+        status: 500,
+        json: {
+          success: false,
+          data: null,
+          error: {
+            code: "LIKE_FAILED",
+            message: "좋아요 처리에 실패했어요. 다시 시도해주세요.",
+            fields: [],
+          },
+        },
+      });
+    });
+
+    await page.goto(RECIPE_PATH);
+    const likeButton = page.getByRole("button", { name: "좋아요 203" });
+    await expect(likeButton).toBeVisible();
+
+    await likeButton.click();
+
+    await expect(
+      page.getByRole("alert").getByText("좋아요 처리에 실패했어요. 다시 시도해주세요."),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "좋아요 203" })).toBeVisible();
+  });
 });

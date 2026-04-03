@@ -249,6 +249,18 @@ async function activateButton(page: Page, button: Locator, testInfo: TestInfo) {
   await button.click();
 }
 
+async function expectVisibleWithinViewport(page: Page, locator: Locator) {
+  const box = await locator.boundingBox();
+  const viewport = page.viewportSize();
+
+  expect(box).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual((viewport?.width ?? 0) - 4);
+  expect(box!.y).toBeGreaterThanOrEqual(0);
+  expect(box!.y + box!.height).toBeLessThanOrEqual((viewport?.height ?? 0) - 4);
+}
+
 test.describe("Slice 05 planner week core", () => {
   test("authenticated user can manage planner columns and see planner status badges", async ({ page }, testInfo) => {
     await setAuthOverride(page, "authenticated");
@@ -311,6 +323,57 @@ test.describe("Slice 05 planner week core", () => {
     await page.mouse.wheel(0, 160);
 
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(1);
+  });
+
+  test("planner grid stays reachable across tablet and mobile widths", async ({ page }, testInfo) => {
+    await setAuthOverride(page, "authenticated");
+    await mockPlannerRoutes(page);
+
+    if (testInfo.project.name === "desktop-chrome") {
+      await page.setViewportSize({ width: 900, height: 1180 });
+    }
+
+    await page.goto("/planner");
+
+    const scroller = page.locator("div.overflow-x-auto").first();
+    const dinnerInput = page.locator('input[value="저녁"]').first();
+    await expect(scroller).toBeVisible();
+
+    if (isMobileProject(testInfo)) {
+      await scroller.evaluate((element) => {
+        element.scrollLeft = element.scrollWidth;
+      });
+    }
+
+    await dinnerInput.scrollIntoViewIfNeeded();
+    await expectVisibleWithinViewport(page, dinnerInput);
+  });
+
+  test("planner CTA buttons keep a consistent disabled treatment", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await mockPlannerRoutes(page);
+
+    await page.goto("/planner");
+
+    const styles = await Promise.all(
+      ["장보기", "요리하기", "남은요리"].map(async (name) => {
+        const button = page.getByRole("button", { name });
+        await expect(button).toBeDisabled();
+
+        return button.evaluate((element) => {
+          const style = window.getComputedStyle(element);
+          return {
+            backgroundColor: style.backgroundColor,
+            borderColor: style.borderColor,
+            color: style.color,
+            cursor: style.cursor,
+            opacity: style.opacity,
+          };
+        });
+      }),
+    );
+
+    expect(new Set(styles.map((style) => JSON.stringify(style))).size).toBe(1);
   });
 
   test("guest user sees unauthorized state on planner route", async ({ page }) => {

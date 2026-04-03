@@ -86,6 +86,28 @@ test.describe("Slice 01 basic flow", () => {
     expect(likeChipPrecedesIngredients).toBe(true);
   });
 
+  test("small iOS viewport keeps detail actions above the fold with touch-friendly targets", async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== "mobile-ios-small");
+
+    await page.goto(RECIPE_PATH);
+
+    const viewport = page.viewportSize();
+    expect(viewport).not.toBeNull();
+
+    for (const name of ["좋아요 203", "저장", "플래너에 추가"]) {
+      const button = page.getByRole("button", { name });
+      await expect(button).toBeVisible();
+      const box = await button.boundingBox();
+
+      expect(box).not.toBeNull();
+      expect(box!.width).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+      expect(box!.y + box!.height).toBeLessThanOrEqual((viewport?.height ?? 0) - 4);
+    }
+  });
+
   test("Protected action opens login gate and modal can close with button, ESC, and backdrop", async ({
     page,
   }) => {
