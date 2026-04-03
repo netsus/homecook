@@ -175,6 +175,11 @@ GET /api/v1/recipes
 - 실 DB smoke:
   - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
   - seed 테이블: `ingredients`, `ingredient_synonyms`, `recipes`, `recipe_ingredients`
+- local bulk performance smoke:
+  - `pnpm dev:demo`
+  - `pnpm qa:perf:02`
+  - 기본 bulk fixture: `ingredients=280`, `ingredient_synonyms=280`, `recipes=120`, `recipe_ingredients=618`, 필터 적용 후 결과 `18건`
+  - `pnpm qa:perf:02 -- --ingredient-count <n> --recipe-count <n>` 으로 더 큰 데이터셋 재주입 가능
 
 ## Key Rules
 
