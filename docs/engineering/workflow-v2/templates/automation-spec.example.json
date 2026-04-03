@@ -1,0 +1,53 @@
+{
+  "slice_id": "03-recipe-like",
+  "execution_mode": "autonomous",
+  "risk_class": "low",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/recipes/{id}/like"
+    ],
+    "invariants": [
+      "owner-authorization",
+      "toggle-idempotency",
+      "like-count-consistency"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/recipes-like.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/recipes/[id]"
+    ],
+    "required_states": [
+      "loading",
+      "error",
+      "unauthorized"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ]
+  },
+  "external_smokes": [
+    "pnpm test:e2e:oauth"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "oauth-live-only"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

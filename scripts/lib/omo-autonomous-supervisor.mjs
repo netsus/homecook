@@ -588,7 +588,7 @@ function createDefaultStageRunner({
   homeDir,
   now,
 }) {
-  return ({ workItemId, slice, stage, executionDir }) =>
+  return ({ workItemId, slice, stage, executionDir, priorStageResultPath = null }) =>
     runStageWithArtifacts({
       rootDir,
       executionDir,
@@ -607,6 +607,7 @@ function createDefaultStageRunner({
       now,
       syncStatus: false,
       lifecycleMode: "supervisor",
+      priorStageResultPath,
     });
 }
 
@@ -2192,12 +2193,21 @@ function handleReviewStage({
   const phase = resolveStatePhase(nextState);
 
   if ((!isPendingReviewPhase(phase) && phase !== "merge_pending") || nextState.active_stage !== stage) {
+    const priorStageResultPath = [3, 5].includes(stage)
+      ? (() => {
+          const dir = nextState.last_artifact_dir;
+          if (typeof dir !== "string" || dir.trim().length === 0) return null;
+          const candidate = resolve(dir.trim(), "stage-result.json");
+          return existsSync(candidate) ? candidate : null;
+        })()
+      : null;
     const runResult = stageRunner({
       rootDir,
       workItemId,
       slice: state.slice ?? workItemId,
       stage,
       executionDir: state.workspace?.path,
+      priorStageResultPath,
     });
     const deferredOutcome = handleDeferredStageExecution({
       rootDir,
@@ -2271,6 +2281,7 @@ function handleReviewStage({
         routeBackStage: stageResult.route_back_stage,
         approvedHeadSha: stageResult.approved_head_sha,
         bodyMarkdown: stageResult.body_markdown,
+        findings: stageResult.findings ?? [],
         updatedAt: now,
       }),
     });
@@ -2557,6 +2568,20 @@ function handleReviewStage({
         wait: nextState.wait,
         transitioned: false,
       };
+    }
+
+    if (!stageResult || stageResult.decision !== "approve") {
+      return blockWithRecovery({
+        rootDir,
+        workItemId,
+        slice: state.slice ?? workItemId,
+        state: nextState,
+        stage,
+        prRole,
+        reason: "auto_merge_guard: stageResult.decision is not 'approve'. Cannot auto-merge.",
+        now,
+        worktree,
+      });
     }
 
     const approvedHeadSha = resolveApprovedHeadSha({
