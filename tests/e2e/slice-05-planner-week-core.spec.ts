@@ -382,7 +382,9 @@ test.describe("Slice 05 planner week core", () => {
     await page.goto("/planner");
 
     await expect(page.getByText("이 화면은 로그인이 필요해요")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Google로 시작하기" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Google로 시작하기|로컬 테스트 계정으로 시작/ }),
+    ).toBeVisible();
   });
 
   test("guest user can return to planner after login", async ({ page }) => {
@@ -406,7 +408,9 @@ test.describe("Slice 05 planner week core", () => {
 
     await page.goto("/planner");
 
-    const primaryCta = page.getByRole("button", { name: "Google로 시작하기" });
+    const primaryCta = page.getByRole("button", {
+      name: /Google로 시작하기|로컬 테스트 계정으로 시작/,
+    });
     const bottomTabs = page.locator("nav").first();
 
     await expect(primaryCta).toBeVisible();

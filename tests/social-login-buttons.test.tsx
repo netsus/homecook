@@ -10,6 +10,15 @@ import { PENDING_ACTION_KEY } from "@/lib/auth/pending-action";
 
 const signInWithOAuth = vi.fn();
 const hasSupabasePublicEnv = vi.fn();
+const isLocalDevAuthEnabled = vi.fn();
+
+vi.mock("@/components/auth/local-dev-login-panel", () => ({
+  LocalDevLoginPanel: () => <div>local-dev-panel</div>,
+}));
+
+vi.mock("@/lib/auth/local-dev-auth", () => ({
+  isLocalDevAuthEnabled: () => isLocalDevAuthEnabled(),
+}));
 
 vi.mock("@/lib/supabase/env", () => ({
   hasSupabasePublicEnv: () => hasSupabasePublicEnv(),
@@ -31,7 +40,9 @@ describe("social login buttons", () => {
   beforeEach(() => {
     signInWithOAuth.mockReset();
     hasSupabasePublicEnv.mockReset();
+    isLocalDevAuthEnabled.mockReset();
     window.localStorage.clear();
+    isLocalDevAuthEnabled.mockReturnValue(false);
   });
 
   it("shows a consistent message when public env is missing", async () => {
@@ -72,5 +83,17 @@ describe("social login buttons", () => {
     expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toContain(
       '"type":"save"',
     );
+  });
+
+  it("hides external providers and explains the local Supabase override in local dev auth mode", () => {
+    isLocalDevAuthEnabled.mockReturnValue(true);
+
+    render(<SocialLoginButtons nextPath="/planner" />);
+
+    expect(screen.queryByRole("button", { name: "Google로 시작하기" })).toBeNull();
+    expect(screen.getByText("local-dev-panel")).toBeTruthy();
+    expect(
+      screen.getByText(/실제 Google OAuth\/manual 확인은 `.env.development.local`의 local Supabase override를 끄고/),
+    ).toBeTruthy();
   });
 });

@@ -125,7 +125,9 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     expect(await screen.findByText("이 화면은 로그인이 필요해요")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Google로 시작하기" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /Google로 시작하기|로컬 테스트 계정으로 시작/ }),
+    ).toBeTruthy();
   });
 
   it("loads planner data and renders meals with status badges", async () => {

@@ -9,6 +9,7 @@ import {
   getEnabledAuthProviders,
   type AuthProviderId,
 } from "@/lib/auth/providers";
+import { isLocalDevAuthEnabled } from "@/lib/auth/local-dev-auth";
 import {
   type PendingRecipeAction,
   savePendingAction,
@@ -30,7 +31,8 @@ export function SocialLoginButtons({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const providers = getEnabledAuthProviders();
+  const localDevAuthEnabled = isLocalDevAuthEnabled();
+  const providers = localDevAuthEnabled ? [] : getEnabledAuthProviders();
 
   const handleSignIn = (provider: AuthProviderId) => {
     startTransition(async () => {
@@ -112,6 +114,12 @@ export function SocialLoginButtons({
         onStarted={onStarted}
         pendingAction={pendingAction}
       />
+      {localDevAuthEnabled ? (
+        <p className="text-xs leading-5 text-[var(--muted)]">
+          실제 Google OAuth/manual 확인은 `.env.development.local`의 local Supabase
+          override를 끄고 개발 서버를 다시 시작한 뒤 진행하세요.
+        </p>
+      ) : null}
       {errorMessage ? (
         <p className="rounded-[12px] border border-[color:rgba(255,108,60,0.2)] bg-[color:rgba(255,108,60,0.08)] px-4 py-3 text-sm text-[var(--brand-deep)]">
           {errorMessage}
