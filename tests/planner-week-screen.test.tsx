@@ -159,6 +159,17 @@ describe("planner week screen", () => {
     ).toBe(true);
   });
 
+  it("uses the server-authenticated flag when browser session is not hydrated yet", async () => {
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen initialAuthenticated />);
+
+    expect(
+      await screen.findByText("아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요."),
+    ).toBeTruthy();
+    expect(fetchPlanner).toHaveBeenCalledTimes(1);
+  });
+
   it("shows loading placeholders while planner data is pending", async () => {
     const deferred = createDeferred<ReturnType<typeof createPlannerData>>();
 

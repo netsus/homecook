@@ -16,6 +16,10 @@ import type { MealStatus, PlannerColumnData, PlannerMealData } from "@/types/pla
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 
+export interface PlannerWeekScreenProps {
+  initialAuthenticated?: boolean;
+}
+
 const RANGE_SHIFT_DAYS = 7;
 const SCROLL_SHIFT_DEBOUNCE_MS = 650;
 const CTA_BUTTONS = ["장보기", "요리하기", "남은요리"] as const;
@@ -81,7 +85,9 @@ function buildMealMap(meals: PlannerMealData[]) {
   return mealMap;
 }
 
-export function PlannerWeekScreen() {
+export function PlannerWeekScreen({
+  initialAuthenticated = false,
+}: PlannerWeekScreenProps) {
   const rangeStartDate = usePlannerStore((state) => state.rangeStartDate);
   const rangeEndDate = usePlannerStore((state) => state.rangeEndDate);
   const columns = usePlannerStore((state) => state.columns);
@@ -98,7 +104,9 @@ export function PlannerWeekScreen() {
   const reorderColumn = usePlannerStore((state) => state.reorderColumn);
   const removeColumn = usePlannerStore((state) => state.removeColumn);
 
-  const [authState, setAuthState] = useState<AuthState>("checking");
+  const [authState, setAuthState] = useState<AuthState>(
+    initialAuthenticated ? "authenticated" : "checking",
+  );
   const [newColumnName, setNewColumnName] = useState("");
   const [columnNameDrafts, setColumnNameDrafts] = useState<Record<string, string>>({});
   const scrollShiftAtRef = useRef(0);
@@ -125,9 +133,30 @@ export function PlannerWeekScreen() {
   useEffect(() => {
     const e2eAuthOverride = readE2EAuthOverride();
 
-    if (e2eAuthOverride !== null) {
+    if (typeof e2eAuthOverride === "boolean") {
       setAuthState(e2eAuthOverride ? "authenticated" : "unauthorized");
       return;
+    }
+
+    if (initialAuthenticated) {
+      setAuthState("authenticated");
+
+      if (!hasSupabasePublicEnv()) {
+        return;
+      }
+
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(
+        (_event: AuthChangeEvent, session: Session | null) => {
+          setAuthState(session ? "authenticated" : "unauthorized");
+        },
+      );
+
+      return () => {
+        subscription.unsubscribe();
+      };
     }
 
     if (!hasSupabasePublicEnv()) {
@@ -160,7 +189,7 @@ export function PlannerWeekScreen() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [initialAuthenticated]);
 
   useEffect(() => {
     if (authState !== "authenticated") {

@@ -1,66 +1,29 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LocalDevSessionControls } from "@/components/auth/local-dev-session-controls";
 
 const isLocalDevAuthEnabled = vi.fn();
-const hasSupabasePublicEnv = vi.fn();
-const getSession = vi.fn();
-const onAuthStateChange = vi.fn();
-const signOut = vi.fn();
+const readE2EAuthOverride = vi.fn();
 
 vi.mock("@/lib/auth/local-dev-auth", () => ({
   isLocalDevAuthEnabled: () => isLocalDevAuthEnabled(),
 }));
 
-vi.mock("@/lib/supabase/env", () => ({
-  hasSupabasePublicEnv: () => hasSupabasePublicEnv(),
-}));
-
-vi.mock("@/lib/supabase/browser", () => ({
-  getSupabaseBrowserClient: () => ({
-    auth: {
-      getSession,
-      onAuthStateChange,
-      signOut,
-    },
-  }),
+vi.mock("@/lib/auth/e2e-auth-override", () => ({
+  readE2EAuthOverride: () => readE2EAuthOverride(),
 }));
 
 describe("local dev session controls", () => {
-  const assign = vi.fn();
-
   beforeEach(() => {
     isLocalDevAuthEnabled.mockReset();
-    hasSupabasePublicEnv.mockReset();
-    getSession.mockReset();
-    onAuthStateChange.mockReset();
-    signOut.mockReset();
-    assign.mockReset();
+    readE2EAuthOverride.mockReset();
 
     isLocalDevAuthEnabled.mockReturnValue(true);
-    hasSupabasePublicEnv.mockReturnValue(true);
-    getSession.mockResolvedValue({
-      data: {
-        session: {
-          user: {
-            email: "cook@example.com",
-          },
-        },
-      },
-    });
-    onAuthStateChange.mockReturnValue({
-      data: {
-        subscription: {
-          unsubscribe: vi.fn(),
-        },
-      },
-    });
-    signOut.mockResolvedValue({ error: null });
+    readE2EAuthOverride.mockReturnValue(null);
 
     Object.defineProperty(window, "location", {
       configurable: true,
@@ -68,7 +31,6 @@ describe("local dev session controls", () => {
         ...window.location,
         pathname: "/planner",
         search: "?from=test",
-        assign,
       },
     });
   });
@@ -77,19 +39,13 @@ describe("local dev session controls", () => {
     cleanup();
   });
 
-  it("shows the current local session and signs out back to the current page", async () => {
-    const user = userEvent.setup();
-
+  it("shows a logout link for the current local page", () => {
     render(<LocalDevSessionControls />);
 
-    expect(await screen.findByText("local session: cook@example.com")).toBeTruthy();
+    const logoutLink = screen.getByRole("link", { name: "로컬 세션 종료" });
 
-    await user.click(screen.getByRole("button", { name: "로컬 세션 종료" }));
-
-    await waitFor(() => {
-      expect(signOut).toHaveBeenCalledTimes(1);
-    });
-    expect(assign).toHaveBeenCalledWith("/planner?from=test");
+    expect(screen.getByText("local auth tools")).toBeTruthy();
+    expect(logoutLink.getAttribute("href")).toBe("/auth/logout?next=%2Fplanner%3Ffrom%3Dtest");
   });
 
   it("does not render outside local dev auth mode", () => {

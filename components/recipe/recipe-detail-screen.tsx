@@ -39,6 +39,7 @@ type SaveModalState = "idle" | "loading" | "ready" | "error";
 interface RecipeDetailScreenProps {
   recipeId: string;
   authError?: string | null;
+  initialAuthenticated?: boolean;
 }
 
 const COOKING_METHOD_COLORS: Record<string, string> = {
@@ -62,11 +63,12 @@ const COOKING_METHOD_TINTS: Record<string, string> = {
 export function RecipeDetailScreen({
   recipeId,
   authError,
+  initialAuthenticated = false,
 }: RecipeDetailScreenProps) {
   const [detailState, setDetailState] = useState<DetailState>("loading");
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [selectedServings, setSelectedServings] = useState(1);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(initialAuthenticated);
   const [feedback, setFeedback] = useState<{
     message: string;
     tone: FeedbackTone;
@@ -109,9 +111,30 @@ export function RecipeDetailScreen({
   useEffect(() => {
     const e2eAuthOverride = readE2EAuthOverride();
 
-    if (e2eAuthOverride !== null) {
+    if (typeof e2eAuthOverride === "boolean") {
       setIsAuthenticated(e2eAuthOverride);
       return;
+    }
+
+    if (initialAuthenticated) {
+      setIsAuthenticated(true);
+
+      if (!hasSupabasePublicEnv()) {
+        return;
+      }
+
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(
+        (_event: AuthChangeEvent, session: Session | null) => {
+          setIsAuthenticated(Boolean(session));
+        },
+      );
+
+      return () => {
+        subscription.unsubscribe();
+      };
     }
 
     if (!hasSupabasePublicEnv()) {
@@ -131,14 +154,14 @@ export function RecipeDetailScreen({
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, session: Session | null) => {
-      setIsAuthenticated(Boolean(session));
+        setIsAuthenticated(Boolean(session));
       },
     );
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [initialAuthenticated]);
 
   useEffect(() => {
     if (authError === "oauth_failed") {
