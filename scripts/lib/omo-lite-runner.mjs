@@ -230,10 +230,20 @@ function buildPrompt({
           next_route: "open_pr",
         }
       : {
-          decision: "approve",
-          body_markdown: "## Review\n- 승인",
+          decision: "approve | request_changes",
+          body_markdown: "## Review\n- 승인 또는 변경 요청 요약 (findings 항목도 여기 요약할 것)",
           route_back_stage: null,
           approved_head_sha: "abc123",
+          findings: [
+            {
+              file: "path/to/file.ts",
+              line_hint: 42,
+              severity: "critical | major | minor",
+              category: "contract | tests | scope | logic | style",
+              issue: "발견된 문제 설명",
+              suggestion: "구체적인 수정 제안",
+            },
+          ],
         };
 
   return [
@@ -311,7 +321,7 @@ function buildPrompt({
     "```",
     [1, 2, 4].includes(normalizedStage)
       ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route"
-      : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha",
+      : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, findings (optional — 문제가 있으면 structured findings 배열을 반드시 포함하세요)",
     ...extraPromptSections,
   ]
     .filter(Boolean)
@@ -1089,6 +1099,7 @@ export function runStageWithArtifacts({
   maxRetryAttempts = DEFAULT_MAX_RETRY_ATTEMPTS,
   lifecycleMode = "standalone",
   extraPromptSections = [],
+  priorStageResultPath = null,
 }) {
   const normalizedSlice = ensureNonEmptyString(slice, "slice");
   const normalizedStage = Number(stage);
@@ -1185,6 +1196,7 @@ export function runStageWithArtifacts({
           body_markdown: reviewEntry.body_markdown,
           pr_url: runtimeSnapshot?.state?.prs?.[reviewRole]?.url ?? null,
           updated_at: reviewEntry.updated_at ?? null,
+          findings: Array.isArray(reviewEntry.findings) ? reviewEntry.findings : [],
         }
       : null;
   const retryAt =
@@ -1202,6 +1214,10 @@ export function runStageWithArtifacts({
     retryAt,
     attemptCount: retryState?.attempt_count ?? 0,
     reviewContext,
+    priorStageResultPath:
+      typeof priorStageResultPath === "string" && priorStageResultPath.trim().length > 0
+        ? priorStageResultPath.trim()
+        : null,
   });
   const executionBinding = resolveExecutionBinding(dispatch, {
     agent,
@@ -1222,7 +1238,7 @@ export function runStageWithArtifacts({
     workItemId,
     dispatch,
     stageResultPath,
-    extraPromptSections,
+    extraPromptSections: [...(dispatch.extraPromptSections ?? []), ...extraPromptSections],
   });
   const resolvedOpencodeBin =
     activeProviderConfig.provider === "opencode"

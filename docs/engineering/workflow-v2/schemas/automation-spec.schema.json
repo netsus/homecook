@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "docs/engineering/workflow-v2/schemas/automation-spec.schema.json",
+  "title": "Slice Automation Spec",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "slice_id",
+    "execution_mode",
+    "risk_class",
+    "merge_policy",
+    "backend",
+    "frontend",
+    "external_smokes",
+    "blocked_conditions",
+    "max_fix_rounds"
+  ],
+  "properties": {
+    "slice_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "execution_mode": {
+      "type": "string",
+      "enum": ["manual", "autonomous"]
+    },
+    "risk_class": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"]
+    },
+    "merge_policy": {
+      "type": "string",
+      "enum": ["manual", "conditional-auto"]
+    },
+    "backend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_endpoints",
+        "invariants",
+        "verify_commands",
+        "required_test_targets"
+      ],
+      "properties": {
+        "required_endpoints": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "invariants": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "verify_commands": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "required_test_targets": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "frontend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_routes",
+        "required_states",
+        "playwright_projects",
+        "artifact_assertions"
+      ],
+      "properties": {
+        "required_routes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "required_states": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "playwright_projects": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "artifact_assertions": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "external_smokes": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "blocked_conditions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "max_fix_rounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend", "frontend"],
+      "properties": {
+        "backend": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "frontend": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

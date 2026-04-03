@@ -199,6 +199,78 @@ describe("OMO-lite stage dispatch", () => {
       body_markdown: "테스트 계약을 더 엄격하게 고정해 주세요.",
     });
   });
+
+  it("injects structured findings into Stage 2 rerun prompt sections", () => {
+    const dispatch = buildStageDispatch({
+      slice: "02-discovery-filter",
+      stage: 2,
+      reviewContext: {
+        decision: "request_changes",
+        body_markdown: "권한 체크 누락.",
+        findings: [
+          {
+            file: "app/api/v1/recipes/route.ts",
+            line_hint: 10,
+            severity: "critical",
+            category: "contract",
+            issue: "Missing auth middleware",
+            suggestion: "withAuth 래퍼 추가",
+          },
+        ],
+      },
+    });
+
+    expect(dispatch.extraPromptSections).toHaveLength(1);
+    expect(dispatch.extraPromptSections[0]).toContain("Structured Findings from Prior Review");
+    expect(dispatch.extraPromptSections[0]).toContain("CRITICAL");
+    expect(dispatch.extraPromptSections[0]).toContain("Missing auth middleware");
+    expect(dispatch.extraPromptSections[0]).toContain("withAuth 래퍼 추가");
+  });
+
+  it("does NOT inject findings section for review stages (stage 3)", () => {
+    const dispatch = buildStageDispatch({
+      slice: "02-discovery-filter",
+      stage: 3,
+      reviewContext: {
+        decision: "approve",
+        body_markdown: "LGTM",
+        findings: [
+          {
+            file: "x.ts",
+            line_hint: null,
+            severity: "minor",
+            category: "style",
+            issue: "이슈",
+            suggestion: "제안",
+          },
+        ],
+      },
+    });
+
+    expect(dispatch.extraPromptSections ?? []).toHaveLength(0);
+  });
+
+  it("injects prior stage-result path into Stage 3 requiredReads", () => {
+    const dispatch = buildStageDispatch({
+      slice: "02-discovery-filter",
+      stage: 3,
+      priorStageResultPath: "/tmp/fake/.artifacts/stage2/stage-result.json",
+    });
+
+    expect(dispatch.requiredReads).toContain(
+      "prior stage result: /tmp/fake/.artifacts/stage2/stage-result.json",
+    );
+  });
+
+  it("does NOT inject prior stage-result path for code stages (stage 2)", () => {
+    const dispatch = buildStageDispatch({
+      slice: "02-discovery-filter",
+      stage: 2,
+      priorStageResultPath: "/tmp/fake/.artifacts/stage1/stage-result.json",
+    });
+
+    expect(dispatch.requiredReads.join(" ")).not.toContain("prior stage result:");
+  });
 });
 
 describe("OMO-lite workflow status sync", () => {

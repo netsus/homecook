@@ -228,7 +228,9 @@ function buildGoal(stage, slice) {
  *     body_markdown?: string|null,
  *     pr_url?: string|null,
  *     updated_at?: string|null,
+ *     findings?: Array<{file: string, line_hint?: number|null, severity: string, category: string, issue: string, suggestion: string}>,
  *   } | null,
+ *   priorStageResultPath?: string|null,
  *   forceHumanEscalation?: boolean,
  *   humanEscalationReason?: string,
  * }} args
@@ -241,6 +243,7 @@ export function buildStageDispatch({
   retryAt = null,
   attemptCount = 0,
   reviewContext = null,
+  priorStageResultPath = null,
   forceHumanEscalation = false,
   humanEscalationReason = "session_unavailable",
 }) {
@@ -283,7 +286,12 @@ export function buildStageDispatch({
             typeof reviewContext.updated_at === "string" && reviewContext.updated_at.trim().length > 0
               ? reviewContext.updated_at.trim()
               : null,
+          findings: Array.isArray(reviewContext.findings) ? reviewContext.findings : [],
         }
+      : null;
+  const normalizedPriorStageResultPath =
+    typeof priorStageResultPath === "string" && priorStageResultPath.trim().length > 0
+      ? priorStageResultPath.trim()
       : null;
   const sessionRole = resolveStageSessionRole(normalizedStage);
   const resumeMode = normalizedRetryAt
@@ -302,11 +310,28 @@ export function buildStageDispatch({
         ].filter(Boolean)
       : [];
 
+  const priorStageResultRead =
+    normalizedPriorStageResultPath && [3, 5].includes(normalizedStage)
+      ? [`prior stage result: ${normalizedPriorStageResultPath}`]
+      : [];
+
+  const findingsSection =
+    normalizedReviewContext?.findings?.length > 0 && [2, 4].includes(normalizedStage)
+      ? [
+          "## Structured Findings from Prior Review",
+          "아래 항목을 모두 반영한 뒤 stage-result를 작성하세요.",
+          ...normalizedReviewContext.findings.map(
+            (f, i) =>
+              `### Finding ${i + 1}: [${f.severity?.toUpperCase() ?? "?"}] ${f.file ?? "unknown"}${f.line_hint !== null && f.line_hint !== undefined ? `:${f.line_hint}` : ""}\n- **Category:** ${f.category ?? "-"}\n- **Issue:** ${f.issue ?? "-"}\n- **Suggestion:** ${f.suggestion ?? "-"}`,
+          ),
+        ].join("\n")
+      : null;
+
   const dispatch = {
     stage: normalizedStage,
     actor: spec.actor,
     goal: buildGoal(normalizedStage, normalizedSlice),
-    requiredReads: [...spec.requiredReads, ...reviewFeedbackRead],
+    requiredReads: [...spec.requiredReads, ...reviewFeedbackRead, ...priorStageResultRead],
     deliverables: spec.deliverables,
     verifyCommands: spec.verifyCommands,
     statusPatch: {
@@ -331,6 +356,7 @@ export function buildStageDispatch({
       attemptCount: normalizedAttemptCount,
     },
     reviewContext: normalizedReviewContext,
+    extraPromptSections: findingsSection ? [findingsSection] : [],
     successCondition: spec.successCondition,
     escalationIfBlocked: spec.escalationIfBlocked,
     claudeBudgetState: normalizedBudgetState,

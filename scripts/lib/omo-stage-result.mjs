@@ -27,6 +27,32 @@ function ensureStringArray(value, label) {
   );
 }
 
+function ensureEnum(value, allowed, label) {
+  if (!allowed.includes(value)) {
+    throw new Error(`${label} must be one of: ${allowed.join(", ")}. Got: ${JSON.stringify(value)}`);
+  }
+  return value;
+}
+
+function validateFinding(finding, index) {
+  const label = `stageResult.findings[${index}]`;
+  const f = ensureObject(finding, label);
+  return {
+    file: ensureNonEmptyString(f.file, `${label}.file`),
+    line_hint:
+      typeof f.line_hint === "number" && Number.isInteger(f.line_hint) ? f.line_hint : null,
+    severity: ensureEnum(f.severity, ["critical", "major", "minor"], `${label}.severity`),
+    category: ensureNonEmptyString(f.category, `${label}.category`),
+    issue: ensureNonEmptyString(f.issue, `${label}.issue`),
+    suggestion: ensureNonEmptyString(f.suggestion, `${label}.suggestion`),
+  };
+}
+
+function validateOptionalFindings(value) {
+  if (!Array.isArray(value) || value.length === 0) return [];
+  return value.map((f, i) => validateFinding(f, i));
+}
+
 export function resolveStageResultPath(artifactDir) {
   return resolve(ensureNonEmptyString(artifactDir, "artifactDir"), "stage-result.json");
 }
@@ -91,5 +117,6 @@ export function validateStageResult(stage, stageResult) {
       result.approved_head_sha.trim().length > 0
         ? result.approved_head_sha.trim()
         : null,
+    findings: validateOptionalFindings(result.findings),
   };
 }
