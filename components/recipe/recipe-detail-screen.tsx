@@ -547,6 +547,46 @@ export function RecipeDetailScreen({
     );
   }
 
+  const renderPrimaryActions = () => (
+    <>
+      <MetricActionButton
+        ariaLabel={
+          likeRequestState === "pending"
+            ? "좋아요 처리 중..."
+            : `좋아요 ${formatCount(recipe.like_count)}`
+        }
+        ariaPressed={recipe.user_status?.is_liked ?? false}
+        count={formatCount(recipe.like_count)}
+        disabled={likeRequestState === "pending"}
+        icon={
+          <HeartIcon
+            filled={recipe.user_status?.is_liked ?? false}
+          />
+        }
+        label={likeRequestState === "pending" ? "처리 중" : "좋아요"}
+        onClick={() => handleProtectedAction("like")}
+        tone={recipe.user_status?.is_liked ? "brand" : "neutral"}
+      />
+      <MetricActionButton
+        ariaLabel="저장"
+        ariaPressed={recipe.user_status?.is_saved ?? false}
+        count={formatCount(recipe.save_count)}
+        icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
+        label="저장"
+        onClick={() => handleProtectedAction("save")}
+        tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
+      />
+      <MetricActionButton
+        ariaLabel="플래너에 추가"
+        count={formatCount(recipe.plan_count)}
+        icon={<PlannerIcon />}
+        label="플래너"
+        onClick={() => handleProtectedAction("planner")}
+        tone="olive"
+      />
+    </>
+  );
+
   return (
     <>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_360px]">
@@ -564,66 +604,34 @@ export function RecipeDetailScreen({
                   : undefined
               }
             />
-            <div className="order-1 space-y-4 px-5 py-5 sm:order-2 sm:space-y-5 md:px-6">
+            <div className="order-1 flex flex-col gap-4 px-5 py-5 sm:order-2 sm:gap-5 md:px-6">
               <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
                 <Link href="/">Home</Link>
                 <span>/</span>
                 <span>Recipe detail</span>
               </div>
-              <div>
+              <div className="flex flex-col gap-4">
                 <h2 className="text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:text-[2rem]">
                   {recipe.title}
                 </h2>
-                <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                  {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {recipe.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-[color:rgba(46,166,122,0.1)] px-3 py-1 text-xs font-semibold text-[var(--olive)]"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
+                <div className="order-2 flex flex-wrap gap-2 sm:order-3">
+                  {renderPrimaryActions()}
                 </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <MetricActionButton
-                  ariaLabel={
-                    likeRequestState === "pending"
-                      ? "좋아요 처리 중..."
-                      : `좋아요 ${formatCount(recipe.like_count)}`
-                  }
-                  ariaPressed={recipe.user_status?.is_liked ?? false}
-                  count={formatCount(recipe.like_count)}
-                  disabled={likeRequestState === "pending"}
-                  icon={
-                    <HeartIcon
-                      filled={recipe.user_status?.is_liked ?? false}
-                    />
-                  }
-                  label={likeRequestState === "pending" ? "처리 중" : "좋아요"}
-                  onClick={() => handleProtectedAction("like")}
-                  tone={recipe.user_status?.is_liked ? "brand" : "neutral"}
-                />
-                <MetricActionButton
-                  ariaLabel="저장"
-                  ariaPressed={recipe.user_status?.is_saved ?? false}
-                  count={formatCount(recipe.save_count)}
-                  icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
-                  label="저장"
-                  onClick={() => handleProtectedAction("save")}
-                  tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
-                />
-                <MetricActionButton
-                  ariaLabel="플래너에 추가"
-                  count={formatCount(recipe.plan_count)}
-                  icon={<PlannerIcon />}
-                  label="플래너"
-                  onClick={() => handleProtectedAction("planner")}
-                  tone="olive"
-                />
+                <div className="order-3 sm:order-2">
+                  <p className="text-sm leading-6 text-[var(--muted)]">
+                    {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {recipe.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-[color:rgba(46,166,122,0.1)] px-3 py-1 text-xs font-semibold text-[var(--olive)]"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <ActionButton
