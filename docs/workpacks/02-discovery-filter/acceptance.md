@@ -84,7 +84,7 @@
 
 ### Manual Only
 
-- [ ] 동의어 데이터가 실제 Supabase DB에 seed 되었는지 확인 (`pnpm qa:seed:01-05`)
-- [ ] 카테고리 탭 목록이 공식 DB 문서 기본값과 실제 DB `ingredients.category` 값에 모두 부합하는지 확인 (데이터 의존)
-- [ ] 재료 마스터 seed 데이터 존재 여부 확인 (`ingredients`, `ingredient_synonyms`)
+- [x] 동의어 데이터가 실제 Supabase DB에 seed 되었는지 확인 (`2026-04-03`, local Supabase, `pnpm qa:seed:01-05 -- --user-email local-tester@homecook.local`)
+- [x] 카테고리 탭 목록이 공식 DB 문서 기본값과 실제 DB `ingredients.category` 값에 모두 부합하는지 확인 (`2026-04-03`, UI 기본값 전체 일치 + local Supabase 값은 허용 카테고리 subset 확인)
+- [x] 재료 마스터 seed 데이터 존재 여부 확인 (`2026-04-03`, local Supabase `ingredients=6`, `ingredient_synonyms=1`)
 - [ ] 재료 수가 많을 때 전체 로드 응답 시간 체감 확인 (MVP 허용 범위 주관 판단)

@@ -125,7 +125,9 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     expect(await screen.findByText("이 화면은 로그인이 필요해요")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Google로 시작하기" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /Google로 시작하기|로컬 테스트 계정으로 시작/ }),
+    ).toBeTruthy();
   });
 
   it("loads planner data and renders meals with status badges", async () => {
@@ -155,6 +157,17 @@ describe("planner week screen", () => {
     expect(
       (screen.getByRole("button", { name: "장보기" }) as HTMLButtonElement).disabled,
     ).toBe(true);
+  });
+
+  it("uses the server-authenticated flag when browser session is not hydrated yet", async () => {
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen initialAuthenticated />);
+
+    expect(
+      await screen.findByText("아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요."),
+    ).toBeTruthy();
+    expect(fetchPlanner).toHaveBeenCalledTimes(1);
   });
 
   it("shows loading placeholders while planner data is pending", async () => {

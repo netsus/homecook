@@ -271,6 +271,51 @@ describe("recipe detail screen", () => {
     expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });
 
+  it("replays the pending like action from the server-authenticated callback state", async () => {
+    const detail = buildRecipeDetail();
+
+    getSession.mockResolvedValue({ data: { session: null } });
+    fetchJson.mockImplementation((input: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        return Promise.resolve({
+          is_liked: true,
+          like_count: 204,
+        });
+      }
+
+      expect(input).toBe(`/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`);
+      return Promise.resolve(detail);
+    });
+    window.localStorage.setItem(
+      PENDING_ACTION_KEY,
+      JSON.stringify({
+        type: "like",
+        recipeId: MOCK_RECIPE_DETAIL.id,
+        redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
+        createdAt: 1,
+      }),
+    );
+
+    render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(fetchJson).toHaveBeenCalledWith(
+        `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}/like`,
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    expect(
+      await screen.findByText("로그인 완료. 좋아요를 반영했어요."),
+    ).toBeTruthy();
+    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+  });
+
   it("opens the save modal with recipe books for authenticated users", async () => {
     const detail = buildRecipeDetail();
 
@@ -525,6 +570,45 @@ describe("recipe detail screen", () => {
     ).toBeTruthy();
     expect(
       screen.getByText("로그인 완료. 저장할 레시피북을 선택해 주세요."),
+    ).toBeTruthy();
+    expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
+  });
+
+  it("replays the pending save action from the server-authenticated callback state", async () => {
+    const detail = buildRecipeDetail();
+
+    getSession.mockResolvedValue({ data: { session: null } });
+    fetchJson.mockImplementation((input: string, init?: RequestInit) => {
+      if (!init?.method && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`) {
+        return Promise.resolve(detail);
+      }
+
+      if (!init?.method && input === "/api/v1/recipe-books") {
+        return Promise.resolve(buildSaveableBooks());
+      }
+
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    });
+
+    window.localStorage.setItem(
+      PENDING_ACTION_KEY,
+      JSON.stringify({
+        type: "save",
+        recipeId: MOCK_RECIPE_DETAIL.id,
+        redirectTo: `/recipe/${MOCK_RECIPE_DETAIL.id}`,
+        createdAt: 1,
+      }),
+    );
+
+    render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+      />,
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "저장할 레시피북을 선택하세요" }),
     ).toBeTruthy();
     expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });

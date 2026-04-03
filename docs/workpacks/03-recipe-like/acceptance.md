@@ -72,9 +72,9 @@
 - [x] 로그인 사용자 → 좋아요 해제 탭 → 비활성 전환 + like_count 감소 확인 (E2E)
 - [x] 비로그인 → 좋아요 탭 → 로그인 게이트 모달 → 로그인 완료 → RECIPE_DETAIL 복귀 확인 (E2E)
 - [x] 요청 중 버튼 pending 상태 (버튼 비활성) 확인 (E2E, 네트워크 스로틀)
+- [x] 요청 실패(네트워크/서버 오류) 시 토스트가 표시되고 버튼 상태가 요청 전 값으로 복원된다 (E2E)
 
 ### Manual Only
 
-- [ ] 실제 Supabase 환경에서 `recipe_likes` 행과 `recipes.like_count` 동기화 smoke (`pnpm qa:seed:01-05` 후)
-- [ ] 소셜 로그인 전체 OAuth 흐름 + return-to-action 복귀 smoke (`pnpm test:e2e:oauth` 별도 실행)
-- [ ] 네트워크 지연/오프라인 조건에서 토스트 + 버튼 원복 수동 확인
+- [x] 실제 Supabase 환경에서 `recipe_likes` 행과 `recipes.like_count` 동기화 smoke (`2026-04-03`, local Supabase seed 후 insert/delete smoke 확인)
+- [x] 소셜 로그인 전체 OAuth 흐름 + return-to-action 복귀 smoke (`2026-04-04`, local Supabase Google OAuth + `http://localhost:3000`, 게스트 상세 → 좋아요/로그인 → 동일 상세 복귀 + like 반영 확인)

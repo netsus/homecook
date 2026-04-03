@@ -1,15 +1,57 @@
 "use client";
 
 import React from "react";
+import { useEffect } from "react";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtonsDeferred } from "@/components/auth/social-login-buttons-deferred";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 
 interface LoginScreenProps {
   authError?: string | null;
+  nextPath?: string;
 }
 
-export function LoginScreen({ authError }: LoginScreenProps) {
+export function LoginScreen({
+  authError,
+  nextPath = "/",
+}: LoginScreenProps) {
   const showAuthError = authError === "oauth_failed";
+
+  useEffect(() => {
+    if (!hasSupabasePublicEnv()) {
+      return;
+    }
+
+    const supabase = getSupabaseBrowserClient();
+    let mounted = true;
+
+    void supabase.auth
+      .getSession()
+      .then((result: { data: { session: { user?: unknown } | null } }) => {
+        if (!mounted || !result.data.session) {
+          return;
+        }
+
+        window.location.replace(nextPath);
+      });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, session: Session | null) => {
+      if (session) {
+        window.location.replace(nextPath);
+      }
+      },
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [nextPath]);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -63,14 +105,14 @@ export function LoginScreen({ authError }: LoginScreenProps) {
           </p>
 
           <div className="mt-7">
-            <SocialLoginButtonsDeferred nextPath="/" />
+            <SocialLoginButtonsDeferred nextPath={nextPath} />
           </div>
 
           <div className="mt-8 grid gap-3 rounded-[16px] border border-[var(--line)] bg-white/70 p-4 text-sm text-[var(--muted)]">
             <div className="flex items-center justify-between gap-3">
               <span>복귀 경로</span>
               <strong className="font-semibold text-[var(--foreground)]">
-                HOME 또는 원래 레시피
+                {nextPath === "/" ? "HOME 또는 원래 레시피" : nextPath}
               </strong>
             </div>
             <div className="flex items-center justify-between gap-3">

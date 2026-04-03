@@ -6,10 +6,16 @@ const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
+const cookies = vi.fn();
+const cookieGet = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+}));
+
+vi.mock("next/headers", () => ({
+  cookies,
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -25,6 +31,8 @@ describe("auth callback", () => {
     createServiceRoleClient.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
+    cookies.mockReset();
+    cookieGet.mockReset();
 
     const routeClient = {
       auth: {
@@ -35,6 +43,10 @@ describe("auth callback", () => {
 
     createRouteHandlerClient.mockResolvedValue(routeClient);
     createServiceRoleClient.mockReturnValue(null);
+    cookies.mockResolvedValue({
+      get: cookieGet,
+    });
+    cookieGet.mockReturnValue(undefined);
     getUser.mockResolvedValue({
       data: {
         user: {
@@ -147,6 +159,22 @@ describe("auth callback", () => {
       }),
       "user-1",
     );
+    expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
+  });
+
+  it("falls back to the saved post-auth next cookie when the callback query omits next", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      error: null,
+    });
+    cookieGet.mockReturnValue({
+      value: "%2Fplanner",
+    });
+
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(
+      new Request("http://localhost:3000/auth/callback?code=abc"),
+    );
+
     expect(response.headers.get("location")).toBe("http://localhost:3000/planner");
   });
 });

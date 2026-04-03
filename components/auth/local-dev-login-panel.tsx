@@ -104,10 +104,10 @@ export function LocalDevLoginPanel({
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
         Local Supabase
       </p>
-      <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">
+      <p className="mt-2 hidden text-sm leading-6 text-[var(--foreground)] sm:block">
         mock 없이 로컬 Supabase DB를 바로 테스트할 수 있도록, 개발 전용 계정으로 로그인합니다.
       </p>
-      <div className="mt-4 space-y-3">
+      <div className="mt-3 space-y-2 sm:mt-4 sm:space-y-3">
         {accounts.map((account, index) => (
           <div className="space-y-2" key={account.id}>
             <button
@@ -122,13 +122,13 @@ export function LocalDevLoginPanel({
             >
               {isPending ? "로컬 테스트 계정 로그인 중..." : account.buttonLabel}
             </button>
-            <p className="px-1 text-xs leading-5 text-[var(--muted)]">
+            <p className="hidden px-1 text-xs leading-5 text-[var(--muted)] sm:block">
               {account.helperText}
             </p>
           </div>
         ))}
       </div>
-      <p className="mt-3 text-xs leading-5 text-[var(--muted)]">
+      <p className="mt-3 hidden text-xs leading-5 text-[var(--muted)] sm:block">
         첫 로그인에서는 계정을 만들고, 이후에는 같은 계정과 같은 local DB를 계속 사용합니다.
       </p>
       {errorMessage ? (

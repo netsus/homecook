@@ -48,6 +48,11 @@ export function isLocalDevAuthEnabled() {
   );
 }
 
+export function isLocalGoogleOAuthEnabled() {
+  return isLocalDevAuthEnabled()
+    && process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_LOCAL_GOOGLE_OAUTH === "1";
+}
+
 export function getLocalDevAuthAccounts() {
   return LOCAL_DEV_AUTH_ACCOUNTS.map((account) => ({ ...account }));
 }

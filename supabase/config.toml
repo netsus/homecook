@@ -50,9 +50,9 @@ file_size_limit = "50MiB"
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
-# A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+site_url = "http://localhost:3000"
+# Redirect URLs support wildcard patterns. Keep both localhost and 127.0.0.1 available for local QA.
+additional_redirect_urls = ["http://localhost:3000/**", "http://127.0.0.1:3000/**"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # If disabled, the refresh token will never expire.
@@ -85,12 +85,12 @@ enable_confirmations = false
 template = "Your code is {{ .Code }} ."
 
 [auth.external.google]
-enabled = false
-client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
-secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET)"
 # Overrides the default auth redirectUrl.
 redirect_uri = ""
 # The base URL used for constructing the URLs to request access tokens and user data.
 url = ""
-# If enabled, the nonce check will be skipped. Required for local sign in with Google auth.
+# Keep nonce validation enabled for the browser PKCE flow used in local Google OAuth.
 skip_nonce_check = false

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 import { resolveNextPath } from "@/lib/auth/callback";
+import {
+  parsePostAuthNextCookie,
+  POST_AUTH_NEXT_COOKIE,
+} from "@/lib/auth/post-auth-next";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -19,18 +24,35 @@ function buildFailureRedirectUrl(requestUrl: URL, nextPath: string) {
   return redirectUrl;
 }
 
+function clearPostAuthNextCookie(response: NextResponse) {
+  response.cookies.set(POST_AUTH_NEXT_COOKIE, "", {
+    maxAge: 0,
+    path: "/",
+  });
+
+  return response;
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const nextPath = resolveNextPath(requestUrl.searchParams.get("next"));
+  const cookieStore = await cookies();
+  const cookieNextPath = parsePostAuthNextCookie(
+    cookieStore.get(POST_AUTH_NEXT_COOKIE)?.value,
+  );
+  const nextPath = resolveNextPath(requestUrl.searchParams.get("next") ?? cookieNextPath);
   const oauthError = requestUrl.searchParams.get("error");
 
   if (!code) {
     if (oauthError) {
-      return NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath));
+      return clearPostAuthNextCookie(
+        NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
+      );
     }
 
-    return NextResponse.redirect(new URL(nextPath, requestUrl.origin));
+    return clearPostAuthNextCookie(
+      NextResponse.redirect(new URL(nextPath, requestUrl.origin)),
+    );
   }
 
   try {
@@ -39,22 +61,28 @@ export async function GET(request: Request) {
     const redirectUrl = new URL(nextPath, requestUrl.origin);
 
     if (error) {
-      return NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath));
+      return clearPostAuthNextCookie(
+        NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
+      );
     }
 
     const authResult = await supabase.auth.getUser();
     const user = authResult.data.user;
 
     if (!user) {
-      return NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath));
+      return clearPostAuthNextCookie(
+        NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
+      );
     }
 
     const dbClient = (createServiceRoleClient() ?? supabase) as unknown as UserBootstrapDbClient;
     await ensurePublicUserRow(dbClient, user);
     await ensureUserBootstrapState(dbClient, user.id);
 
-    return NextResponse.redirect(redirectUrl);
+    return clearPostAuthNextCookie(NextResponse.redirect(redirectUrl));
   } catch {
-    return NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath));
+    return clearPostAuthNextCookie(
+      NextResponse.redirect(buildFailureRedirectUrl(requestUrl, nextPath)),
+    );
   }
 }

@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
 
+import { withLocalGoogleOAuthEnv } from "./local-google-oauth-env.mjs";
+
 function stripWrappingQuotes(value) {
   if (value.length >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
     return value.slice(1, -1);
@@ -54,13 +56,14 @@ export function readLocalSupabaseEnv() {
 
 export function createLocalSupabaseNextEnv(baseEnv = process.env) {
   const localSupabaseEnv = readLocalSupabaseEnv();
+  const nextEnv = withLocalGoogleOAuthEnv(baseEnv);
 
   return {
-    ...baseEnv,
+    ...nextEnv,
     NEXT_PUBLIC_SUPABASE_URL: localSupabaseEnv.API_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: localSupabaseEnv.ANON_KEY,
     SUPABASE_SERVICE_ROLE_KEY: localSupabaseEnv.SERVICE_ROLE_KEY,
-    NEXT_PUBLIC_APP_URL: baseEnv.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:3000",
+    NEXT_PUBLIC_APP_URL: baseEnv.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     HOMECOOK_ENABLE_LOCAL_DEV_AUTH: "1",
     NEXT_PUBLIC_HOMECOOK_ENABLE_LOCAL_DEV_AUTH: "1",
   };

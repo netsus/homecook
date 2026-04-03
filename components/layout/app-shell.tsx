@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { LocalDevSessionControls } from "@/components/auth/local-dev-session-controls";
+import { isLocalDevAuthEnabled } from "@/lib/auth/local-dev-auth";
 import { BottomTabs } from "@/components/layout/bottom-tabs";
 
 interface AppShellProps {
@@ -8,6 +10,8 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, currentTab }: AppShellProps) {
+  const showLocalDevSessionControls = isLocalDevAuthEnabled();
+
   return (
     <div className="app-shell bottom-safe">
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -25,6 +29,7 @@ export function AppShell({ children, currentTab }: AppShellProps) {
               MVP Slice 01
             </div>
           </div>
+          {showLocalDevSessionControls ? <LocalDevSessionControls /> : null}
         </header>
         <main>{children}</main>
       </div>

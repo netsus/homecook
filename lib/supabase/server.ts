@@ -38,3 +38,10 @@ export function createServiceRoleClient() {
     },
   });
 }
+
+export async function getServerAuthUser() {
+  const supabase = await createRouteHandlerClient();
+  const authResult = await supabase.auth.getUser();
+
+  return authResult.data.user ?? null;
+}

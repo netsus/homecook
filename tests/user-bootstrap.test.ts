@@ -355,6 +355,41 @@ describe("user bootstrap", () => {
     expect(client.state.plannerColumns).toHaveLength(0);
   });
 
+  it("bootstraps recipe books and planner columns even when nickname is empty", async () => {
+    const client = createMemoryBootstrapClient({
+      users: [
+        {
+          id: "user-1",
+          nickname: "",
+          email: "cook@example.com",
+          profile_image_url: null,
+          social_provider: "google",
+          social_id: "social-1",
+          settings_json: {},
+          created_at: "2026-04-01T00:00:00.000Z",
+          updated_at: "2026-04-01T00:00:00.000Z",
+          deleted_at: null,
+        },
+      ],
+    });
+
+    await ensureUserBootstrapState(client as never, "user-1");
+
+    expect(client.state.recipeBooks.map((book) => book.book_type)).toEqual([
+      "my_added",
+      "saved",
+      "liked",
+    ]);
+    expect(client.state.plannerColumns.map((column) => column.name)).toEqual([
+      "아침",
+      "점심",
+      "저녁",
+    ]);
+    expect(client.state.users[0]?.settings_json.user_bootstrap_version).toBe(
+      USER_BOOTSTRAP_VERSION,
+    );
+  });
+
   it("formats missing-table bootstrap errors into schema guidance", () => {
     const message = formatBootstrapErrorMessage(
       new Error("Could not find the table 'public.recipe_books' in the schema cache"),

@@ -10,6 +10,11 @@ import {
   type AuthProviderId,
 } from "@/lib/auth/providers";
 import {
+  isLocalDevAuthEnabled,
+  isLocalGoogleOAuthEnabled,
+} from "@/lib/auth/local-dev-auth";
+import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
+import {
   type PendingRecipeAction,
   savePendingAction,
 } from "@/lib/auth/pending-action";
@@ -30,7 +35,11 @@ export function SocialLoginButtons({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const providers = getEnabledAuthProviders();
+  const localDevAuthEnabled = isLocalDevAuthEnabled();
+  const localGoogleOAuthEnabled = isLocalGoogleOAuthEnabled();
+  const providers = localDevAuthEnabled && !localGoogleOAuthEnabled
+    ? []
+    : getEnabledAuthProviders();
 
   const handleSignIn = (provider: AuthProviderId) => {
     startTransition(async () => {
@@ -47,6 +56,8 @@ export function SocialLoginButtons({
         if (pendingAction) {
           savePendingAction(pendingAction);
         }
+
+        document.cookie = createPostAuthNextCookie(nextPath);
 
         onStarted?.();
 
@@ -112,6 +123,21 @@ export function SocialLoginButtons({
         onStarted={onStarted}
         pendingAction={pendingAction}
       />
+      {localDevAuthEnabled && localGoogleOAuthEnabled ? (
+        <p className="text-xs leading-5 text-[var(--muted)]">
+          local Supabase에서 Google OAuth와 로컬 테스트 계정을 함께 사용할 수 있어요.
+          신규 유저 bootstrap/manual OAuth는 Google로, 데모 데이터와 소유권 확인은 로컬
+          테스트 계정을 사용하세요.
+        </p>
+      ) : null}
+      {localDevAuthEnabled && !localGoogleOAuthEnabled ? (
+        <p className="text-xs leading-5 text-[var(--muted)]">
+          local Supabase에서 Google OAuth도 쓰려면
+          `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`와
+          `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET`을 `.env.local` 또는 현재 셸에
+          넣은 뒤 `pnpm dev:demo`를 다시 시작하세요.
+        </p>
+      ) : null}
       {errorMessage ? (
         <p className="rounded-[12px] border border-[color:rgba(255,108,60,0.2)] bg-[color:rgba(255,108,60,0.08)] px-4 py-3 text-sm text-[var(--brand-deep)]">
           {errorMessage}

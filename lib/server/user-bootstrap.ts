@@ -322,10 +322,6 @@ export async function ensureUserBootstrapState(
     throw new Error("public.users row is missing");
   }
 
-  if (normalizeNickname(userRow.nickname).length === 0) {
-    return userRow;
-  }
-
   const settings = normalizeSettings(userRow.settings_json);
 
   if (getBootstrapVersion(settings) >= USER_BOOTSTRAP_VERSION) {
