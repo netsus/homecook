@@ -85,4 +85,4 @@
 
 ### Manual Only
 
-- [ ] 실제 Google OAuth 로그인 후 원래 레시피 상세로 복귀한다
+- [x] 실제 Google OAuth 로그인 후 원래 레시피 상세로 복귀한다 (`2026-04-04`, local Supabase Google OAuth + `http://localhost:3000`, 게스트 상세 → 좋아요/로그인 → 동일 상세 복귀 확인)

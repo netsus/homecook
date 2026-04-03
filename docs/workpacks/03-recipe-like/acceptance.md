@@ -77,4 +77,4 @@
 ### Manual Only
 
 - [x] 실제 Supabase 환경에서 `recipe_likes` 행과 `recipes.like_count` 동기화 smoke (`2026-04-03`, local Supabase seed 후 insert/delete smoke 확인)
-- [ ] 소셜 로그인 전체 OAuth 흐름 + return-to-action 복귀 smoke (`pnpm test:e2e:oauth` 별도 실행)
+- [x] 소셜 로그인 전체 OAuth 흐름 + return-to-action 복귀 smoke (`2026-04-04`, local Supabase Google OAuth + `http://localhost:3000`, 게스트 상세 → 좋아요/로그인 → 동일 상세 복귀 + like 반영 확인)
