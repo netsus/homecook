@@ -3,13 +3,14 @@
 import { spawnSync } from "node:child_process";
 
 import { ensureDockerRunning } from "./lib/local-docker.mjs";
+import { withLocalGoogleOAuthEnv } from "./lib/local-google-oauth-env.mjs";
 
 function runStep(command, args, label) {
   process.stdout.write(`${label}\n`);
 
   const result = spawnSync(command, args, {
     cwd: process.cwd(),
-    env: process.env,
+    env: withLocalGoogleOAuthEnv(process.env),
     stdio: "inherit",
   });
 

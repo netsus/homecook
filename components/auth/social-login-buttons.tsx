@@ -9,7 +9,10 @@ import {
   getEnabledAuthProviders,
   type AuthProviderId,
 } from "@/lib/auth/providers";
-import { isLocalDevAuthEnabled } from "@/lib/auth/local-dev-auth";
+import {
+  isLocalDevAuthEnabled,
+  isLocalGoogleOAuthEnabled,
+} from "@/lib/auth/local-dev-auth";
 import {
   type PendingRecipeAction,
   savePendingAction,
@@ -32,7 +35,10 @@ export function SocialLoginButtons({
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const localDevAuthEnabled = isLocalDevAuthEnabled();
-  const providers = localDevAuthEnabled ? [] : getEnabledAuthProviders();
+  const localGoogleOAuthEnabled = isLocalGoogleOAuthEnabled();
+  const providers = localDevAuthEnabled && !localGoogleOAuthEnabled
+    ? []
+    : getEnabledAuthProviders();
 
   const handleSignIn = (provider: AuthProviderId) => {
     startTransition(async () => {
@@ -114,10 +120,19 @@ export function SocialLoginButtons({
         onStarted={onStarted}
         pendingAction={pendingAction}
       />
-      {localDevAuthEnabled ? (
+      {localDevAuthEnabled && localGoogleOAuthEnabled ? (
         <p className="text-xs leading-5 text-[var(--muted)]">
-          실제 Google OAuth/manual 확인은 `.env.development.local`의 local Supabase
-          override를 끄고 개발 서버를 다시 시작한 뒤 진행하세요.
+          local Supabase에서 Google OAuth와 로컬 테스트 계정을 함께 사용할 수 있어요.
+          신규 유저 bootstrap/manual OAuth는 Google로, 데모 데이터와 소유권 확인은 로컬
+          테스트 계정을 사용하세요.
+        </p>
+      ) : null}
+      {localDevAuthEnabled && !localGoogleOAuthEnabled ? (
+        <p className="text-xs leading-5 text-[var(--muted)]">
+          local Supabase에서 Google OAuth도 쓰려면
+          `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`와
+          `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET`을 `.env.local` 또는 현재 셸에
+          넣은 뒤 `pnpm dev:demo`를 다시 시작하세요.
         </p>
       ) : null}
       {errorMessage ? (

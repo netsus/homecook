@@ -5,6 +5,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 
 import { ensureDockerRunning } from "./lib/local-docker.mjs";
+import { withLocalGoogleOAuthEnv } from "./lib/local-google-oauth-env.mjs";
 import { readLocalSupabaseEnv } from "./lib/local-supabase-env.mjs";
 
 const DEMO_MAIN_EMAIL = "local-tester@homecook.local";
@@ -68,7 +69,7 @@ function runStep(command, args, label) {
 
   const result = spawnSync(command, args, {
     cwd: process.cwd(),
-    env: process.env,
+    env: withLocalGoogleOAuthEnv(process.env),
     stdio: "inherit",
   });
 
@@ -137,7 +138,7 @@ function startNextDev(nextArgs) {
     ["scripts/dev-local-supabase.mjs", ...nextArgs],
     {
       cwd: process.cwd(),
-      env: process.env,
+      env: withLocalGoogleOAuthEnv(process.env),
       stdio: "inherit",
     },
   );

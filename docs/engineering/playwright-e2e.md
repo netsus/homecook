@@ -73,13 +73,15 @@ npx playwright install --with-deps chromium
 - `NEXT_PUBLIC_ENABLED_AUTH_PROVIDERS=google`
 - `E2E_GOOGLE_EMAIL`
 - `E2E_GOOGLE_PASSWORD`
+- local Supabase에서 same flow를 쓰려면 `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`, `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET`
 
 주의:
 
 - Next dev는 `.env.development.local`이 `.env.local`보다 우선한다.
-- `.env.development.local`이 local Supabase(`127.0.0.1` / `localhost`)를 가리키면 `LocalDevLoginPanel`이 활성화되고, 기본 local Supabase 설정에서는 Google OAuth가 비활성화되어 있다.
-- 이 상태에서는 `Google로 시작하기` 대신 로컬 테스트 계정으로 검증해야 한다.
-- 실제 Google OAuth/manual closeout을 확인하려면 local override를 끄고 dev 서버를 다시 시작해 remote Supabase 환경으로 띄운다.
+- `.env.development.local`이 local Supabase(`127.0.0.1` / `localhost`)를 가리키면 `LocalDevLoginPanel`이 활성화된다.
+- local Google OAuth env가 없으면 `Google로 시작하기` 대신 로컬 테스트 계정으로 검증해야 한다.
+- local Google OAuth env가 있으면 `pnpm dev:demo`에서도 Google OAuth와 로컬 테스트 계정을 함께 사용할 수 있다.
+- 실제 remote Supabase 기준 manual closeout을 확인하려면 local override를 끄고 dev 서버를 다시 시작해 remote Supabase 환경으로 띄운다.
 
 ## Flaky Rules
 
