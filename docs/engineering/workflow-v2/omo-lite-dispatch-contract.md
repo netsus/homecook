@@ -98,15 +98,16 @@ review stage 결과 schema는 아래 필드를 포함한다.
 review stage의 `body_markdown`도 기본적으로 한국어로 작성한다.
 
 review feedback는 runtime `last_review.<role>.body_markdown`에 저장되고, Stage 2/4 재실행 시 prompt에 다시 주입된다.
+Codex rebuttal bundle은 runtime `last_rebuttal.<role>`에 저장되고, 다음 Stage 3/5/6 review prompt에 다시 주입된다.
 
 ## Dispatch Matrix
 
 | Stage | Actor | Goal | Required Reads | Deliverables |
 |------|-------|------|----------------|--------------|
 | 1 | Claude | workpack 문서 작성 | AGENTS, current source, template, official docs | README, acceptance, automation-spec, valid stage result |
-| 2 | Codex | backend contract-first 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, API/DB docs, 이전 backend review feedback(있으면) | tests, backend impl, roadmap status `in-progress`, checklist updates, valid stage result |
+| 2 | Codex | backend contract-first 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, API/DB docs, 이전 backend review feedback(있으면) | `$ralph`-driven backend impl, roadmap status `in-progress`, checklist updates/rebuttals, valid stage result |
 | 3 | Claude | backend PR review | workpack, acceptance, PR diff, CI | review summary, reviewed checklist ids, requested changes or approve |
-| 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, design refs, 이전 frontend review feedback(있으면) | tests, FE impl, Design Status `pending-review`, checklist updates, valid stage result |
+| 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, design refs, 이전 frontend review feedback(있으면) | `$ralph`-driven FE impl, Design Status `pending-review`, checklist updates/rebuttals, valid stage result |
 | 5 | Claude | design review | FE PR diff, workpack UI scope, acceptance FE checklist, design tokens | design findings or approve, reviewed checklist ids, Design Status `confirmed` 근거 |
 | 6 | Claude | frontend PR review | FE PR diff, CI, acceptance, merged bookkeeping 포함 최종 PR diff | review summary, closeout checklist coverage, requested changes or approve, approve 뒤 merged bookkeeping CI -> manual merge handoff |
 
@@ -165,8 +166,10 @@ provider별 resume 규칙:
 - success:
   - contract-first test
   - backend implementation
+  - strict slice에서는 `$ralph` skill loop로 실행
   - valid `stage-result.json`
   - `checklist_updates[]`에 Stage 2 소유 checklist id 기록
+  - 필요 시 `contested_fix_ids[]`, `rebuttals[]` 작성
   - `docs/workpacks/README.md` Slice Status `docs -> in-progress`는 supervisor finalize에 포함됨
   - in-scope 파일만 수정
   - verify command 실행
@@ -183,7 +186,7 @@ provider별 resume 규칙:
   - failing or passing CI context
 - success:
   - `approve | revise`
-  - `review_scope`, `reviewed_checklist_ids`, `required_fix_ids` 작성
+  - `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`, `waived_fix_ids` 작성
   - blocking / non-blocking 분리
 
 ### Stage 4 → Codex
@@ -198,8 +201,10 @@ provider별 resume 규칙:
 - success:
   - FE implementation
   - state UI
+  - strict slice에서는 `$ralph` skill loop로 실행
   - valid `stage-result.json`
   - `checklist_updates[]`에 Stage 4 소유 checklist id 기록
+  - 필요 시 `contested_fix_ids[]`, `rebuttals[]` 작성
   - Design Status `temporary -> pending-review`는 supervisor finalize에 포함됨
   - in-scope 파일만 수정
   - verify command 실행
@@ -217,7 +222,7 @@ provider별 resume 규칙:
   - relevant screen definition
 - success:
   - visual / interaction findings
-  - `review_scope`, `reviewed_checklist_ids`, `required_fix_ids` 작성
+  - `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`, `waived_fix_ids` 작성
   - `confirmed` or fix request
   - 승인 시 Design Status `confirmed` 변경 근거 제시
 
@@ -231,7 +236,7 @@ provider별 resume 규칙:
   - CI context
 - success:
   - code-quality findings
-  - `review_scope`, `reviewed_checklist_ids`, `required_fix_ids` 작성
+  - `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`, `waived_fix_ids` 작성
   - `approve | revise`
   - supervisor가 Stage 6 approve 뒤 최종 PR에 slice status `merged` bookkeeping commit/push를 반영하고, 그 CI가 끝나면 human verification/merge handoff
 
@@ -334,7 +339,9 @@ dispatch가 끝나면 supervisor는 최소한 아래 patch를 계산한다.
 - `opencode.json`의 direct `agent` / `default_agent` 설정을 우선 사용
 - Claude provider 기본값은 `.opencode/omo-provider.json`의 `claude-cli` 설정을 따른다.
 - Codex 중심 supervisor 실행
-- `ralph-loop` / `ulw-loop` 비활성화
+- `ralph-loop` command는 전역 허용
+- OMO actual execution은 Stage 2/4에서 `$ralph` skill-only
+- `ralph-loop` hook와 `ulw-loop`는 계속 비활성화
 - comment-checker 비활성화
 - Claude budget override file은 `.opencode/claude-budget-state.json`이며 Git에는 커밋하지 않는다.
 - session runtime state는 `.opencode/omo-runtime/` 아래에 두고 Git에는 커밋하지 않는다.

@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
   "default_run_agent": "hephaestus",
   "disabled_hooks": ["comment-checker", "ralph-loop", "startup-toast"],
-  "disabled_commands": ["ralph-loop", "ulw-loop"],
+  "disabled_commands": ["ulw-loop"],
   "agents": {
     "hephaestus": {
       "model": "openai/gpt-5.3-codex",

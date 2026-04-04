@@ -20,7 +20,9 @@
 - Stage `1 / 3 / 5 / 6`의 기본 provider는 raw `claude` CLI다.
 - Stage `1 / 3 / 5 / 6`용 OpenCode emergency fallback agent는 `athena`다.
 - 위 agent/default 값은 `opencode.json`에 직접 등록하고, `.opencode/oh-my-opencode.json`은 같은 값을 mirrored snapshot으로 유지한다.
-- `ralph-loop`와 `ulw-loop`는 아직 Homecook stage dispatcher와 연결되지 않았으므로 project 레벨에서 비활성화한다.
+- `ralph-loop` command는 전역에서 사용할 수 있게 허용한다.
+- 다만 Homecook OMO supervisor의 실제 자동 실행 표면은 계속 `$ralph` skill이다.
+- `ralph-loop` hook는 일반 세션 UX와 충돌을 막기 위해 project 레벨에서 계속 비활성화한다.
 - `comment-checker` hook는 현재 로컬 설치 상태 차이로 false positive가 날 수 있어 project 레벨에서 비활성화한다.
 - `comment-checker`는 영구 제거가 아니라 known issue다. 바이너리 링크 이슈가 해결되면 re-enable 여부를 다시 판단한다.
 - 일반 로컬 세션은 OMO supervisor처럼 stage branch를 미리 계산하지는 않는다.

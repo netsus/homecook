@@ -14,6 +14,7 @@ import {
   updateWorkpackDesignStatus,
 } from "./omo-bookkeeping.mjs";
 import {
+  applyChecklistWaiverMetadata,
   isChecklistContractActive,
   readWorkpackChecklistContract,
   resolveChecklistIds,
@@ -30,6 +31,7 @@ import {
   releaseRuntimeLock,
   setRecoveryState,
   setExecutionState,
+  setLastRebuttal,
   setLastReview,
   setPullRequestRef,
   setWaitState,
@@ -179,6 +181,10 @@ function summarizeChecklistIssues(issues) {
   return normalizeStringArray(issues).join("; ");
 }
 
+function summarizeFixIds(values) {
+  return normalizeStringArray(values).join(", ");
+}
+
 function resolveExpectedReviewScope(stage) {
   if (stage === 3) return "backend";
   if (stage === 5) return "frontend";
@@ -323,6 +329,7 @@ function validateCodeStageChecklistContract({
   checklistContract,
   stage,
   stageResult,
+  reviewEntry = null,
 }) {
   if (!isChecklistContractActive(checklistContract)) {
     return [];
@@ -338,16 +345,22 @@ function validateCodeStageChecklistContract({
   const checklistUpdates = Array.isArray(stageResult?.checklist_updates)
     ? stageResult.checklist_updates
     : [];
+  const contestedFixIds = normalizeStringArray(stageResult?.contested_fix_ids);
   const updatedIds = normalizeStringArray(checklistUpdates.map((entry) => entry.id));
+  const currentRequiredFixIds = normalizeStringArray(reviewEntry?.required_fix_ids);
   const issues = [];
 
   if (ownedIds.length === 0) {
     issues.push(`Checklist contract does not define any Stage ${stage} owned checklist items.`);
   }
 
-  if (uncheckedOwnedIds.length > 0) {
+  const unresolvedUncheckedIds =
+    currentRequiredFixIds.length > 0
+      ? uncheckedOwnedIds.filter((id) => !contestedFixIds.includes(id) && !updatedIds.includes(id))
+      : uncheckedOwnedIds.filter((id) => !updatedIds.includes(id));
+  if (unresolvedUncheckedIds.length > 0) {
     issues.push(
-      `Stage ${stage} owned checklist items remain unchecked: ${uncheckedOwnedIds.join(", ")}.`,
+      `Stage ${stage} owned checklist items remain unchecked: ${unresolvedUncheckedIds.join(", ")}.`,
     );
   }
 
@@ -364,9 +377,27 @@ function validateCodeStageChecklistContract({
     issues.push(`Stage ${stage} cannot update checklist ids it does not own: ${foreignIds.join(", ")}.`);
   }
 
-  const missingIds = ownedIds.filter((id) => !updatedIds.includes(id));
+  const missingIds = ownedIds.filter(
+    (id) => !updatedIds.includes(id) && !contestedFixIds.includes(id),
+  );
   if (missingIds.length > 0) {
     issues.push(`Stage ${stage} stage-result is missing checklist updates for: ${missingIds.join(", ")}.`);
+  }
+
+  const invalidContestedIds = contestedFixIds.filter((id) => !currentRequiredFixIds.includes(id));
+  if (invalidContestedIds.length > 0) {
+    issues.push(
+      `Stage ${stage} contested_fix_ids must be a subset of current review required_fix_ids: ${invalidContestedIds.join(", ")}.`,
+    );
+  }
+
+  const unresolvedReviewFixIds = currentRequiredFixIds.filter(
+    (id) => !updatedIds.includes(id) && !contestedFixIds.includes(id),
+  );
+  if (unresolvedReviewFixIds.length > 0) {
+    issues.push(
+      `Stage ${stage} must either fix or contest all required review fix ids: ${unresolvedReviewFixIds.join(", ")}.`,
+    );
   }
 
   return normalizeStringArray(issues);
@@ -376,6 +407,7 @@ function validateReviewStageChecklistContract({
   checklistContract,
   stage,
   stageResult,
+  rebuttalEntry = null,
 }) {
   if (!isChecklistContractActive(checklistContract)) {
     return [];
@@ -390,6 +422,8 @@ function validateReviewStageChecklistContract({
   const scopeIds = normalizeStringArray(reviewScope.checklist_ids);
   const reviewedIds = normalizeStringArray(stageResult?.reviewed_checklist_ids);
   const requiredFixIds = normalizeStringArray(stageResult?.required_fix_ids);
+  const waivedFixIds = normalizeStringArray(stageResult?.waived_fix_ids);
+  const contestedFixIds = normalizeStringArray(rebuttalEntry?.contested_fix_ids);
   const issues = [];
   const expectedScope = resolveExpectedReviewScope(stage);
 
@@ -437,7 +471,58 @@ function validateReviewStageChecklistContract({
     issues.push(`Stage ${stage} approved reviews must not include required_fix_ids.`);
   }
 
+  const unknownWaivedIds = waivedFixIds.filter((id) => !contestedFixIds.includes(id));
+  if (unknownWaivedIds.length > 0) {
+    issues.push(
+      `Stage ${stage} waived_fix_ids must be a subset of the latest contested_fix_ids: ${unknownWaivedIds.join(", ")}.`,
+    );
+  }
+
   return normalizeStringArray(issues);
+}
+
+function applyReviewWaivers({
+  checklistContract,
+  waivedFixIds,
+  waivedStage,
+}) {
+  if (!isChecklistContractActive(checklistContract) || !Array.isArray(waivedFixIds) || waivedFixIds.length === 0) {
+    return [];
+  }
+
+  return applyChecklistWaiverMetadata({
+    contract: checklistContract,
+    waivedFixIds,
+    waivedStage,
+    waivedReason: "rebuttal_accepted",
+  });
+}
+
+function resolveNextReviewStageForCodeStage(stage, state) {
+  if (stage === 2) {
+    return 3;
+  }
+
+  const lastFrontendReview = state.last_review?.frontend;
+  return lastFrontendReview?.decision === "request_changes" &&
+    lastFrontendReview?.source_review_stage === 6
+    ? 6
+    : 5;
+}
+
+function shouldReturnToReviewWithRebuttal({
+  stage,
+  reviewEntry,
+  stageResult,
+}) {
+  const currentRequiredFixIds = normalizeStringArray(reviewEntry?.required_fix_ids);
+  const contestedFixIds = normalizeStringArray(stageResult?.contested_fix_ids);
+
+  if (![2, 4].includes(stage) || currentRequiredFixIds.length === 0) {
+    return false;
+  }
+
+  return currentRequiredFixIds.every((id) => contestedFixIds.includes(id));
 }
 
 function resolveAutonomousStageContext({
@@ -2142,11 +2227,12 @@ function finalizeCodeStage({
   worktree,
   github,
   checklistContract = null,
+  reviewEntry = null,
   now,
 }) {
   let nextState = state;
   const stageResult = loadExecutionStageResult(nextState, {
-    strictExtendedContract: isChecklistContractActive(checklistContract),
+    strictExtendedContract: stage !== 1 && isChecklistContractActive(checklistContract),
   });
   const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
   const verifyCommands = nextState.execution?.verify_commands ?? [];
@@ -2161,6 +2247,7 @@ function finalizeCodeStage({
     checklistContract,
     stage,
     stageResult,
+    reviewEntry,
   });
 
   if (stage1OutputIssues.length > 0 || checklistIssues.length > 0) {
@@ -2175,6 +2262,62 @@ function finalizeCodeStage({
       now,
       worktree,
     });
+  }
+
+  if ([2, 4].includes(stage)) {
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setLastRebuttal({
+        state: nextState,
+        role: stage === 2 ? "backend" : "frontend",
+        sourceReviewStage: reviewEntry?.source_review_stage ?? null,
+        contestedFixIds: stageResult.contested_fix_ids ?? [],
+        rebuttals: stageResult.rebuttals ?? [],
+        updatedAt: now,
+      }),
+    });
+  }
+
+  if (
+    shouldReturnToReviewWithRebuttal({
+      stage,
+      reviewEntry,
+      stageResult,
+    })
+  ) {
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setWaitState({
+        state: markStageCompleted({
+          state: nextState,
+          stage,
+          artifactDir,
+        }),
+        kind: "ready_for_next_stage",
+        prRole,
+        stage: resolveNextReviewStageForCodeStage(stage, nextState),
+        headSha: nextState.prs?.[prRole]?.head_sha ?? null,
+        updatedAt: now,
+      }),
+    });
+    updateRuntimeStatusForWait({
+      rootDir,
+      workItemId,
+      wait: nextState.wait,
+      prPath: nextState.prs?.[prRole]?.url ?? null,
+      now,
+      approvalState: "codex_approved",
+      lifecycle: "ready_for_review",
+      verificationStatus: "pending",
+      extraNotes: ["rebuttal_handoff=true"],
+    });
+    return {
+      state: nextState,
+      wait: nextState.wait,
+      transitioned: true,
+    };
   }
 
   if (["stage_result_ready", "verify_pending"].includes(resolveStatePhase(nextState))) {
@@ -2510,14 +2653,7 @@ function finalizeCodeStage({
         }),
         kind: "ready_for_next_stage",
         prRole,
-        stage: (() => {
-          if (stage === 2) return 3;
-          const lastFrontendReview = nextState.last_review?.frontend;
-          return lastFrontendReview?.decision === "request_changes" &&
-            lastFrontendReview?.source_review_stage === 6
-            ? 6
-            : 5;
-        })(),
+        stage: resolveNextReviewStageForCodeStage(stage, nextState),
         headSha,
         updatedAt: now,
       }),
@@ -2599,6 +2735,10 @@ function handleCodeStage({
       worktree,
     });
   }
+  const reviewEntry =
+    prRole === "backend"
+      ? nextState.last_review?.backend ?? null
+      : nextState.last_review?.frontend ?? null;
   const existingPr = getActivePullRequest(nextState, prRole);
   const phase = resolveStatePhase(nextState);
 
@@ -2685,6 +2825,7 @@ function handleCodeStage({
     worktree,
     github,
     checklistContract: refreshedChecklistContract,
+    reviewEntry,
     now,
   });
 }
@@ -2833,10 +2974,12 @@ function handleReviewStage({
   });
   const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
   const reviewRole = prRole === "backend" ? "backend" : "frontend";
+  const rebuttalEntry = nextState.last_rebuttal?.[reviewRole] ?? null;
   const reviewChecklistIssues = validateReviewStageChecklistContract({
     checklistContract,
     stage,
     stageResult,
+    rebuttalEntry,
   });
 
   if (reviewChecklistIssues.length > 0) {
@@ -2868,6 +3011,7 @@ function handleReviewStage({
         reviewScope: stageResult.review_scope ?? null,
         reviewedChecklistIds: stageResult.reviewed_checklist_ids ?? [],
         requiredFixIds: stageResult.required_fix_ids ?? [],
+        waivedFixIds: stageResult.waived_fix_ids ?? [],
         updatedAt: now,
       }),
     });
@@ -2876,6 +3020,33 @@ function handleReviewStage({
       prRef: activePr.url,
       body: stageResult.body_markdown,
     });
+
+    const waivedFiles = applyReviewWaivers({
+      checklistContract,
+      waivedFixIds: stageResult.waived_fix_ids ?? [],
+      waivedStage: stage,
+    });
+    if (waivedFiles.length > 0) {
+      commitWorktreeChanges({
+        worktreePath: nextState.workspace.path,
+        subject: `docs(workpack): record ${state.slice ?? workItemId} waived checklist fixes`,
+        body: `Claude accepted rebuttals for: ${summarizeFixIds(stageResult.waived_fix_ids ?? [])}.`,
+      });
+      worktree.pushBranch({
+        branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
+      });
+      nextState = upsertPullRequest({
+        rootDir,
+        workItemId,
+        state: nextState,
+        role: prRole,
+        pr: activePr,
+        branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
+        headSha: worktree.getHeadSha(),
+        now,
+      });
+      activePr = getActivePullRequest(nextState, prRole);
+    }
 
     if (stageResult.decision === "approve") {
       if (stage === 5) {
@@ -3148,6 +3319,7 @@ function handleReviewStage({
           reviewScope: stageResult.review_scope ?? null,
           reviewedChecklistIds: stageResult.reviewed_checklist_ids ?? [],
           requiredFixIds: stageResult.required_fix_ids ?? [],
+          waivedFixIds: stageResult.waived_fix_ids ?? [],
           sourceReviewStage: stage,
           pingPongRounds: nextPingPongRounds,
           updatedAt: now,

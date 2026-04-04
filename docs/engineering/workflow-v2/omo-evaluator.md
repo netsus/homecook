@@ -80,6 +80,8 @@ code stage의 `stage-result.json`은 아래 추가 필드를 포함해야 한다
 - `tests_touched`
 - `artifacts_written`
 - `checklist_updates[]`
+- `contested_fix_ids[]`
+- `rebuttals[]`
 
 `claimed_scope` 최소 키:
 
@@ -103,6 +105,8 @@ code stage의 `stage-result.json`은 아래 추가 필드를 포함해야 한다
 4. frontend required route / state / artifact assertion이 없으면 fixable finding이다.
 5. strict checklist contract가 활성화된 slice면 current stage-owned checklist id가 모두 checked 상태인지 검사한다.
 6. strict checklist contract가 활성화된 slice면 `checklist_updates[]`가 current stage-owned checklist id만 포함하는지 검사한다.
+7. strict checklist contract가 활성화된 slice면 `contested_fix_ids[]`가 latest review의 `required_fix_ids[]` subset인지 검사한다.
+8. strict checklist contract가 활성화된 slice면 `rebuttals[]`가 `contested_fix_ids[]`와 정확히 대응하는지 검사한다.
 
 ## Outcomes
 

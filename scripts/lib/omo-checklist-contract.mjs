@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const SECTION_PATTERN = /^##\s+(.+)$/;
@@ -61,6 +61,10 @@ function parseMetadataComment({
     stage: null,
     scope: null,
     review: [],
+    waived: false,
+    waived_by: null,
+    waived_stage: null,
+    waived_reason: null,
   };
   const errors = [];
 
@@ -86,6 +90,27 @@ function parseMetadataComment({
         .split(",")
         .map((value) => Number(value.trim()))
         .filter((value) => Number.isInteger(value));
+      continue;
+    }
+
+    if (segment.key === "waived") {
+      metadata.waived = segment.value === "true";
+      continue;
+    }
+
+    if (segment.key === "waived_by") {
+      metadata.waived_by = segment.value || null;
+      continue;
+    }
+
+    if (segment.key === "waived_stage") {
+      const stage = Number(segment.value);
+      metadata.waived_stage = Number.isInteger(stage) ? stage : null;
+      continue;
+    }
+
+    if (segment.key === "waived_reason") {
+      metadata.waived_reason = segment.value || null;
       continue;
     }
 
@@ -383,6 +408,29 @@ export function validateChecklistContract(contract) {
         message: "Review stage 5 can only be assigned to Stage 4-owned frontend checklist items.",
       });
     }
+
+    if (item.metadata.waived === true) {
+      if (item.metadata.waived_by !== "claude") {
+        errors.push({
+          path: `${item.filePath}:${item.lineNumber}`,
+          message: "Checklist waived metadata must set waived_by=claude.",
+        });
+      }
+
+      if (!VALID_REVIEW_STAGES.has(item.metadata.waived_stage)) {
+        errors.push({
+          path: `${item.filePath}:${item.lineNumber}`,
+          message: "Checklist waived metadata must set waived_stage to 3, 5, or 6.",
+        });
+      }
+
+      if (typeof item.metadata.waived_reason !== "string" || item.metadata.waived_reason.trim().length === 0) {
+        errors.push({
+          path: `${item.filePath}:${item.lineNumber}`,
+          message: "Checklist waived metadata must include waived_reason.",
+        });
+      }
+    }
   }
 
   return errors;
@@ -481,5 +529,95 @@ export function resolveChecklistIds(items) {
 }
 
 export function resolveUncheckedChecklistItems(items) {
-  return (Array.isArray(items) ? items : []).filter((item) => item && item.checked === false);
+  return (Array.isArray(items) ? items : []).filter(
+    (item) => item && item.checked === false && item?.metadata?.waived !== true,
+  );
+}
+
+function buildMetadataComment(metadata) {
+  const segments = [];
+
+  if (metadata?.id) segments.push(`id=${metadata.id}`);
+  if (metadata?.stage !== null && metadata?.stage !== undefined) segments.push(`stage=${metadata.stage}`);
+  if (metadata?.scope) segments.push(`scope=${metadata.scope}`);
+  if (Array.isArray(metadata?.review) && metadata.review.length > 0) {
+    segments.push(`review=${metadata.review.join(",")}`);
+  }
+  if (metadata?.waived === true) segments.push("waived=true");
+  if (metadata?.waived_by) segments.push(`waived_by=${metadata.waived_by}`);
+  if (metadata?.waived_stage) segments.push(`waived_stage=${metadata.waived_stage}`);
+  if (metadata?.waived_reason) segments.push(`waived_reason=${metadata.waived_reason}`);
+
+  return `<!-- omo:${segments.join(";")} -->`;
+}
+
+export function applyChecklistWaiverMetadata({
+  contract,
+  waivedFixIds = [],
+  waivedStage,
+  waivedReason = "rebuttal_accepted",
+}) {
+  const normalizedIds = resolveChecklistIds(
+    (Array.isArray(contract?.items) ? contract.items : []).filter((item) =>
+      waivedFixIds.includes(item?.metadata?.id),
+    ),
+  );
+  if (!isChecklistContractActive(contract) || normalizedIds.length === 0) {
+    return [];
+  }
+
+  const updatesByFile = new Map();
+  for (const item of contract.items) {
+    const id = item?.metadata?.id;
+    if (!normalizedIds.includes(id)) {
+      continue;
+    }
+
+    const nextMetadata = {
+      ...item.metadata,
+      waived: true,
+      waived_by: "claude",
+      waived_stage: waivedStage,
+      waived_reason: waivedReason,
+    };
+    const currentFileUpdates = updatesByFile.get(item.filePath) ?? [];
+    currentFileUpdates.push({
+      lineNumber: item.lineNumber,
+      text: item.text,
+      metadata: nextMetadata,
+    });
+    updatesByFile.set(item.filePath, currentFileUpdates);
+  }
+
+  const changedFiles = [];
+  for (const [filePath, entries] of updatesByFile.entries()) {
+    if (!existsSync(filePath)) {
+      continue;
+    }
+
+    const lines = readFileSync(filePath, "utf8").split(/\r?\n/);
+    let changed = false;
+    for (const entry of entries) {
+      const index = entry.lineNumber - 1;
+      const originalLine = lines[index] ?? "";
+      const checkboxMatch = originalLine.match(CHECKBOX_PATTERN);
+      if (!checkboxMatch) {
+        continue;
+      }
+      const prefix = originalLine.slice(0, originalLine.indexOf("- ["));
+      const checkedMarker = checkboxMatch[1];
+      const nextLine = `${prefix}- [${checkedMarker}] ${entry.text} ${buildMetadataComment(entry.metadata)}`;
+      if (lines[index] !== nextLine) {
+        lines[index] = nextLine;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      writeFileSync(filePath, `${lines.join("\n")}\n`);
+      changedFiles.push(filePath);
+    }
+  }
+
+  return changedFiles;
 }

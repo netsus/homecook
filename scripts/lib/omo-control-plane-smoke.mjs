@@ -781,9 +781,11 @@ function buildCodeStageResult({ stage, workItemId, attempt }) {
                 id: SMOKE_CHECKLIST_IDS.frontendAcceptance,
                 status: "checked",
                 evidence_refs: ["pnpm validate:workflow-v2"],
-              },
-            ]
+            },
+          ]
           : [],
+    contested_fix_ids: [],
+    rebuttals: [],
   };
 }
 
@@ -811,6 +813,7 @@ function buildReviewStageResult({ stage, attempt }) {
       },
       reviewed_checklist_ids: reviewedChecklistIds,
       required_fix_ids: [SMOKE_CHECKLIST_IDS.backendAcceptance],
+      waived_fix_ids: [],
       findings: [
         {
           file: "app/api/v1/smoke-backend/route.ts",
@@ -836,6 +839,7 @@ function buildReviewStageResult({ stage, attempt }) {
       },
       reviewed_checklist_ids: reviewedChecklistIds,
       required_fix_ids: [SMOKE_CHECKLIST_IDS.frontendDelivery],
+      waived_fix_ids: [],
       findings: [
         {
           file: "app/smoke/frontend/page.tsx",
@@ -861,6 +865,7 @@ function buildReviewStageResult({ stage, attempt }) {
       },
       reviewed_checklist_ids: reviewedChecklistIds,
       required_fix_ids: [SMOKE_CHECKLIST_IDS.frontendAcceptance],
+      waived_fix_ids: [],
       findings: [
         {
           file: "app/smoke/frontend/page.tsx",
@@ -885,6 +890,7 @@ function buildReviewStageResult({ stage, attempt }) {
     },
     reviewed_checklist_ids: reviewedChecklistIds,
     required_fix_ids: [],
+    waived_fix_ids: [],
   };
 }
 

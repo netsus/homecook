@@ -426,4 +426,48 @@ describe("closeout sync validator", () => {
       ]),
     );
   });
+
+  it("treats waived metadata items as closed for metadata-contract merge closeout", () => {
+    const rootDir = createFixture({
+      roadmapStatus: "merged",
+      designStatus: "confirmed",
+      withAutomationSpec: true,
+      deliveryItems: [
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "UI 연결",
+          meta: `${metadata("delivery-ui", 4, "frontend", "5,6").replace("-->", ";waived=true;waived_by=claude;waived_stage=6;waived_reason=rebuttal_accepted -->")}`,
+        },
+      ],
+      acceptanceItems: [
+        {
+          checked: true,
+          text: "API 응답 형식이 { success, data, error }를 따른다",
+          meta: metadata("accept-backend-api", 2, "backend", "3,6"),
+        },
+        {
+          checked: false,
+          text: "loading 상태가 있다",
+          meta: `${metadata("accept-loading", 4, "frontend", "5,6").replace("-->", ";waived=true;waived_by=claude;waived_stage=6;waived_reason=rebuttal_accepted -->")}`,
+        },
+      ],
+      manualOnlyItems: [{ checked: false, text: "실제 OAuth smoke" }],
+    });
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "docs/cleanup-workpack-notes",
+      },
+      changedFiles: ["docs/workpacks/05-planner-week-core/README.md"],
+    });
+
+    expect(results).toEqual([]);
+  });
 });

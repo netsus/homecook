@@ -73,6 +73,7 @@ function buildReviewStageResult({
   stage,
   reviewedChecklistIds,
   requiredFixIds = [],
+  waivedFixIds = [],
   findings,
   bodyMarkdown,
   routeBackStage = null,
@@ -82,6 +83,7 @@ function buildReviewStageResult({
   stage: 3 | 5 | 6;
   reviewedChecklistIds: string[];
   requiredFixIds?: string[];
+  waivedFixIds?: string[];
   findings?: Array<Record<string, unknown>>;
   bodyMarkdown: string;
   routeBackStage?: number | null;
@@ -98,6 +100,7 @@ function buildReviewStageResult({
     },
     reviewed_checklist_ids: reviewedChecklistIds,
     required_fix_ids: requiredFixIds,
+    waived_fix_ids: waivedFixIds,
     findings:
       findings ??
       (decision === "request_changes"
@@ -121,12 +124,16 @@ function buildCodeStageResult({
   title,
   checklistUpdates,
   changedFiles = [],
+  contestedFixIds = [],
+  rebuttals = [],
 }: {
   summary: string;
   subject: string;
   title: string;
   checklistUpdates: string[];
   changedFiles?: string[];
+  contestedFixIds?: string[];
+  rebuttals?: Array<{ fix_id: string; rationale_markdown: string; evidence_refs: string[] }>;
 }) {
   return {
     result: "done",
@@ -150,6 +157,8 @@ function buildCodeStageResult({
       status: "checked",
       evidence_refs: [],
     })),
+    contested_fix_ids: contestedFixIds,
+    rebuttals,
   };
 }
 
@@ -1161,6 +1170,321 @@ describe("OMO autonomous supervisor", () => {
       route_back_stage: 2,
       body_markdown: "Please tighten the contract tests.",
     });
+  });
+
+  it("hands Stage 2 contested-only rebuttals back to Stage 3 without forcing further fixes", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    seedAutonomousPolicy(rootDir, "03-recipe-like");
+
+    createGitWorkspace(workspacePath, "feature/be-03-recipe-like");
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "in-progress",
+    });
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "feat: seed backend branch"], { cwd: workspacePath });
+    const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: workspacePath,
+      encoding: "utf8",
+    }).trim();
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({ rootDir, workItemId: "03-recipe-like", slice: "03-recipe-like" }).state,
+        slice: "03-recipe-like",
+        current_stage: 3,
+        last_completed_stage: 3,
+        workspace: {
+          path: workspacePath,
+          branch_role: "backend",
+        },
+        prs: {
+          docs: null,
+          backend: {
+            number: 35,
+            url: "https://github.com/netsus/homecook/pull/35",
+            draft: false,
+            branch: "feature/be-03-recipe-like",
+            head_sha: headSha,
+          },
+          frontend: null,
+        },
+        wait: {
+          kind: "ready_for_next_stage",
+          pr_role: "backend",
+          stage: 2,
+          head_sha: headSha,
+        },
+        last_review: {
+          backend: {
+            decision: "request_changes",
+            route_back_stage: 2,
+            approved_head_sha: null,
+            body_markdown: "The API envelope concern is not actually a bug.",
+            findings: [],
+            review_scope: {
+              scope: "backend",
+              checklist_ids: [
+                CHECKLIST_IDS.backendDelivery,
+                CHECKLIST_IDS.backendAcceptance,
+              ],
+            },
+            reviewed_checklist_ids: [
+              CHECKLIST_IDS.backendDelivery,
+              CHECKLIST_IDS.backendAcceptance,
+            ],
+            required_fix_ids: [CHECKLIST_IDS.backendAcceptance],
+            waived_fix_ids: [],
+            source_review_stage: 3,
+            ping_pong_rounds: 1,
+            updated_at: "2026-03-27T00:30:00+09:00",
+          },
+          frontend: null,
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-03-27T00:35:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            return { branch: "feature/be-03-recipe-like" };
+          },
+          pushBranch() {
+            throw new Error("not expected");
+          },
+          syncBaseBranch() {
+            throw new Error("not expected");
+          },
+          getHeadSha() {
+            return headSha;
+          },
+        },
+        stageRunner() {
+          return {
+            artifactDir: join(rootDir, ".artifacts", "stage2-rebuttal"),
+            dispatch: { actor: "codex", stage: 2 },
+            execution: { mode: "execute", executed: true, sessionId: "ses_codex" },
+            stageResult: buildCodeStageResult({
+              summary: "Contested backend finding only.",
+              subject: "feat: contest backend fix",
+              title: "feat: contest backend fix",
+              checklistUpdates: [CHECKLIST_IDS.backendDelivery],
+              contestedFixIds: [CHECKLIST_IDS.backendAcceptance],
+              rebuttals: [
+                {
+                  fix_id: CHECKLIST_IDS.backendAcceptance,
+                  rationale_markdown: "The response envelope already matches the documented contract.",
+                  evidence_refs: ["docs/workpacks/03-recipe-like/README.md"],
+                },
+              ],
+            }),
+          };
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          editPullRequest() {},
+          getRequiredChecks() {
+            return { bucket: "pass", checks: [] };
+          },
+          markReady() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      slice: "03-recipe-like",
+    }).state as {
+      wait: { kind: string; stage: number; pr_role: string };
+      last_rebuttal: {
+        backend: { contested_fix_ids: string[]; source_review_stage: number };
+      };
+    };
+
+    expect(result.wait).toMatchObject({
+      kind: "ready_for_next_stage",
+      stage: 3,
+      pr_role: "backend",
+    });
+    expect(runtime.last_rebuttal.backend).toMatchObject({
+      contested_fix_ids: [CHECKLIST_IDS.backendAcceptance],
+      source_review_stage: 3,
+    });
+  });
+
+  it("records waived checklist metadata when Claude accepts a rebuttal and requests only the remaining fix ids", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    seedAutonomousPolicy(rootDir, "03-recipe-like");
+
+    createGitWorkspace(workspacePath, "feature/be-03-recipe-like");
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "in-progress",
+    });
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "feat: seed backend branch"], { cwd: workspacePath });
+    const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: workspacePath,
+      encoding: "utf8",
+    }).trim();
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({ rootDir, workItemId: "03-recipe-like", slice: "03-recipe-like" }).state,
+        slice: "03-recipe-like",
+        current_stage: 2,
+        last_completed_stage: 2,
+        workspace: {
+          path: workspacePath,
+          branch_role: "backend",
+        },
+        prs: {
+          docs: null,
+          backend: {
+            number: 35,
+            url: "https://github.com/netsus/homecook/pull/35",
+            draft: false,
+            branch: "feature/be-03-recipe-like",
+            head_sha: headSha,
+          },
+          frontend: null,
+        },
+        wait: {
+          kind: "ready_for_next_stage",
+          pr_role: "backend",
+          stage: 3,
+          head_sha: headSha,
+        },
+        last_rebuttal: {
+          backend: {
+            source_review_stage: 3,
+            contested_fix_ids: [CHECKLIST_IDS.backendAcceptance],
+            rebuttals: [
+              {
+                fix_id: CHECKLIST_IDS.backendAcceptance,
+                rationale_markdown: "The response envelope already matches the documented contract.",
+                evidence_refs: ["docs/workpacks/03-recipe-like/README.md"],
+              },
+            ],
+            updated_at: "2026-03-27T00:34:00+09:00",
+          },
+          frontend: null,
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-03-27T00:40:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            return { branch: "feature/be-03-recipe-like" };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return execFileSync("git", ["rev-parse", "HEAD"], {
+              cwd: workspacePath,
+              encoding: "utf8",
+            }).trim();
+          },
+          getCurrentBranch() {
+            return "feature/be-03-recipe-like";
+          },
+          listChangedFiles() {
+            return ["docs/workpacks/03-recipe-like/acceptance.md"];
+          },
+        },
+        stageRunner() {
+          return {
+            artifactDir: join(rootDir, ".artifacts", "stage3-waiver"),
+            dispatch: { actor: "claude", stage: 3 },
+            execution: { mode: "execute", executed: true, sessionId: "ses_claude" },
+            stageResult: buildReviewStageResult({
+              decision: "request_changes",
+              stage: 3,
+              reviewedChecklistIds: [
+                CHECKLIST_IDS.backendDelivery,
+                CHECKLIST_IDS.backendAcceptance,
+              ],
+              requiredFixIds: [CHECKLIST_IDS.backendDelivery],
+              waivedFixIds: [CHECKLIST_IDS.backendAcceptance],
+              bodyMarkdown: "Backend contract note accepted; only the delivery checklist item remains.",
+              routeBackStage: 2,
+            }),
+          };
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            return { bucket: "pass", checks: [] };
+          },
+          markReady() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    const acceptance = readFileSync(
+      join(workspacePath, "docs", "workpacks", "03-recipe-like", "acceptance.md"),
+      "utf8",
+    );
+
+    expect(result.wait).toMatchObject({
+      kind: "ready_for_next_stage",
+      stage: 2,
+      pr_role: "backend",
+    });
+    expect(acceptance).toContain("waived=true");
+    expect(acceptance).toContain("waived_by=claude");
+    expect(acceptance).toContain("waived_stage=3");
+    expect(acceptance).toContain("waived_reason=rebuttal_accepted");
   });
 
   it("auto merges the backend PR after a Stage 3 approval for an autonomous slice", () => {
