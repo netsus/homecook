@@ -125,7 +125,7 @@ function productStageSpec(stage, slice) {
         "backend implementation",
         "valid stage result",
       ],
-      verifyCommands: ["pnpm install --frozen-lockfile", "pnpm test:all"],
+      verifyCommands: ["pnpm install --frozen-lockfile", "pnpm verify:backend"],
       successCondition:
         "Backend implementation and required local verification are complete, and a valid stage result is ready for supervisor handoff.",
       escalationIfBlocked: "Escalate to human if official docs conflict or contract evolution approval is required.",
@@ -170,7 +170,7 @@ function productStageSpec(stage, slice) {
         `docs/workpacks/${slice}/README.md design status temporary -> pending-review`,
         "valid stage result",
       ],
-      verifyCommands: ["pnpm install --frozen-lockfile", "pnpm test:all"],
+      verifyCommands: ["pnpm install --frozen-lockfile", "pnpm verify:frontend"],
       successCondition:
         "Frontend implementation and required local verification are complete, and a valid stage result is ready for supervisor handoff.",
       escalationIfBlocked: "Escalate to human if backend contract and UI scope are no longer aligned.",

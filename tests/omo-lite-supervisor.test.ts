@@ -122,7 +122,28 @@ describe("OMO-lite stage dispatch", () => {
       verification_status: "pending",
     });
     expect(dispatch.verifyCommands).toEqual(
-      expect.arrayContaining(["pnpm install --frozen-lockfile", "pnpm test:all"]),
+      expect.arrayContaining(["pnpm install --frozen-lockfile", "pnpm verify:backend"]),
+    );
+  });
+
+  it("builds a Stage 4 Codex dispatch with frontend SOP verification defaults", () => {
+    const dispatch = buildStageDispatch({
+      slice: "02-discovery-filter",
+      stage: 4,
+      claudeBudgetState: "available",
+    });
+
+    expect(dispatch.actor).toBe("codex");
+    expect(dispatch.requiredReads).toEqual(
+      expect.arrayContaining([
+        "AGENTS.md",
+        "docs/engineering/slice-workflow.md",
+        "docs/workpacks/02-discovery-filter/README.md",
+        "docs/workpacks/02-discovery-filter/acceptance.md",
+      ]),
+    );
+    expect(dispatch.verifyCommands).toEqual(
+      expect.arrayContaining(["pnpm install --frozen-lockfile", "pnpm verify:frontend"]),
     );
   });
 

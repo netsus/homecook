@@ -167,7 +167,7 @@ describe("OMO stage-result contract", () => {
           title: "feat: frontend",
           body_markdown: "body",
         },
-        checks_run: ["pnpm test:all"],
+        checks_run: ["pnpm verify:frontend"],
         next_route: "open_pr",
         claimed_scope: {
           files: ["app/example.tsx"],
@@ -183,7 +183,7 @@ describe("OMO stage-result contract", () => {
           {
             id: "accept-loading",
             status: "checked",
-            evidence_refs: ["pnpm test:all"],
+            evidence_refs: ["pnpm verify:frontend"],
           },
         ],
         contested_fix_ids: [],
@@ -205,7 +205,7 @@ describe("OMO stage-result contract", () => {
       {
         id: "accept-loading",
         status: "checked",
-        evidence_refs: ["pnpm test:all"],
+        evidence_refs: ["pnpm verify:frontend"],
       },
     ]);
     expect(codeStageResult.contested_fix_ids).toEqual([]);

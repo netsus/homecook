@@ -210,6 +210,108 @@ function resolveEffectiveProviderSelection({
   };
 }
 
+function buildCodeStageResultTemplate(stage) {
+  if (stage === 2) {
+    return {
+      result: "done",
+      summary_markdown: "짧은 요약",
+      commit: {
+        subject: "feat: 제목",
+        body_markdown: "선택 사항",
+      },
+      pr: {
+        title: "feat: 제목",
+        body_markdown: "## Summary\n- 변경 요약",
+      },
+      checks_run: ["pnpm verify:backend"],
+      next_route: "open_pr",
+      claimed_scope: {
+        files: ["app/api/v1/example/route.ts"],
+        endpoints: ["POST /api/v1/example"],
+        routes: [],
+        states: [],
+        invariants: ["documented-state-transition"],
+      },
+      changed_files: ["app/api/v1/example/route.ts"],
+      tests_touched: ["tests/example.backend.test.ts"],
+      artifacts_written: [".artifacts/example.log"],
+      checklist_updates: [
+        {
+          id: "accept-backend-example",
+          status: "checked",
+          evidence_refs: ["pnpm verify:backend", "tests/example.backend.test.ts"],
+        },
+      ],
+      contested_fix_ids: [],
+      rebuttals: [],
+    };
+  }
+
+  if (stage === 4) {
+    return {
+      result: "done",
+      summary_markdown: "짧은 요약",
+      commit: {
+        subject: "feat: 제목",
+        body_markdown: "선택 사항",
+      },
+      pr: {
+        title: "feat: 제목",
+        body_markdown: "## Summary\n- 변경 요약",
+      },
+      checks_run: ["pnpm verify:frontend"],
+      next_route: "open_pr",
+      claimed_scope: {
+        files: ["app/example/page.tsx"],
+        endpoints: [],
+        routes: ["/example"],
+        states: ["loading", "error"],
+        invariants: [],
+      },
+      changed_files: ["app/example/page.tsx"],
+      tests_touched: ["tests/example.frontend.test.ts"],
+      artifacts_written: [".artifacts/example.log"],
+      checklist_updates: [
+        {
+          id: "accept-frontend-example",
+          status: "checked",
+          evidence_refs: ["pnpm verify:frontend", "tests/example.frontend.test.ts"],
+        },
+      ],
+      contested_fix_ids: [],
+      rebuttals: [],
+    };
+  }
+
+  return {
+    result: "done",
+    summary_markdown: "짧은 요약",
+    commit: {
+      subject: "docs: 제목",
+      body_markdown: "선택 사항",
+    },
+    pr: {
+      title: "docs: 제목",
+      body_markdown: "## Summary\n- 변경 요약",
+    },
+    checks_run: ["pnpm lint"],
+    next_route: "open_pr",
+    claimed_scope: {
+      files: ["docs/workpacks/example/README.md"],
+      endpoints: [],
+      routes: [],
+      states: [],
+      invariants: [],
+    },
+    changed_files: ["docs/workpacks/example/README.md"],
+    tests_touched: [],
+    artifacts_written: [".artifacts/example.log"],
+    checklist_updates: [],
+    contested_fix_ids: [],
+    rebuttals: [],
+  };
+}
+
 function buildPrompt({
   slice,
   stage,
@@ -221,39 +323,7 @@ function buildPrompt({
   const normalizedStage = Number(stage);
   const stageResultTemplate =
     [1, 2, 4].includes(normalizedStage)
-      ? {
-          result: "done",
-          summary_markdown: "짧은 요약",
-          commit: {
-            subject: "docs: 제목 또는 feat: 제목",
-            body_markdown: "선택 사항",
-          },
-          pr: {
-            title: "docs: 제목 또는 feat: 제목",
-            body_markdown: "## Summary\n- 변경 요약",
-          },
-          checks_run: ["pnpm test:all"],
-          next_route: "open_pr",
-          claimed_scope: {
-            files: ["path/to/file.ts"],
-            endpoints: ["POST /api/v1/example"],
-            routes: ["/example"],
-            states: ["loading", "error"],
-            invariants: ["documented-state-transition"],
-          },
-          changed_files: ["path/to/file.ts"],
-          tests_touched: ["tests/example.test.ts"],
-          artifacts_written: [".artifacts/example.log"],
-          checklist_updates: [
-            {
-              id: "accept-example",
-              status: "checked",
-              evidence_refs: ["pnpm test:all", "tests/example.test.ts"],
-            },
-          ],
-          contested_fix_ids: [],
-          rebuttals: [],
-        }
+      ? buildCodeStageResultTemplate(normalizedStage)
       : {
           decision: "approve | request_changes",
           body_markdown: "## Review\n- 승인 또는 변경 요청 요약 (findings 항목도 여기 요약할 것)",

@@ -73,7 +73,8 @@
   - `pnpm test:all`
 - product 변경 기본값:
   - `pnpm install --frozen-lockfile`
-  - `pnpm test:all`
+  - backend: `pnpm verify:backend`
+  - frontend: `pnpm verify:frontend`
 - docs-governance 기본값:
   - 변경 범위에 맞는 targeted test
   - schema/example validation
