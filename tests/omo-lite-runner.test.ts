@@ -314,6 +314,7 @@ describe("OMO-lite stage runner", () => {
     expect(prompt).toContain("\"summary_markdown\"");
     expect(prompt).toContain("\"body_markdown\"");
     expect(prompt).toContain("\"checks_run\"");
+    expect(prompt).toContain("\"pnpm verify:backend\"");
     expect(prompt).toContain("\"next_route\"");
     expect(prompt).toContain("valid stage result");
     expect(prompt).not.toContain("Draft PR");
@@ -545,6 +546,7 @@ describe("OMO-lite stage runner", () => {
     expect(prompt).toContain("## Latest Rebuttal Bundle");
     expect(prompt).toContain("CTA mismatch is intentional in temporary mode.");
     expect(prompt).toContain("$ralph strict-stage-4");
+    expect(prompt).toContain("\"pnpm verify:frontend\"");
   });
 
   it("executes Codex stages through opencode run, captures the session id, and writes runtime state", () => {
@@ -1327,7 +1329,7 @@ describe("OMO-lite stage runner", () => {
               title: "feat: backend slice",
               body_markdown: "## Summary\\n- backend",
             },
-            checks_run: ["pnpm test:all"],
+            checks_run: ["pnpm verify:backend"],
             next_route: "wait_for_ci",
           },
           null,
@@ -1383,7 +1385,7 @@ describe("OMO-lite stage runner", () => {
               title: "feat: planner backend",
               body_markdown: "## Summary\\n- planner",
             },
-            checks_run: ["pnpm test:all"],
+            checks_run: ["pnpm verify:backend"],
             next_route: "wait_for_ci",
           },
           null,
@@ -1439,7 +1441,7 @@ describe("OMO-lite stage runner", () => {
               title: "feat: planner backend",
               body_markdown: "## Summary\\n- planner",
             },
-            checks_run: ["pnpm test:all"],
+            checks_run: ["pnpm verify:backend"],
             next_route: "wait_for_ci",
           },
           null,
