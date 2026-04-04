@@ -229,6 +229,8 @@ function createEvaluatorFixture({
         evidence_refs: [testFile],
       },
     ],
+    contested_fix_ids: [],
+    rebuttals: [],
     ...stageResultOverrides,
   };
 

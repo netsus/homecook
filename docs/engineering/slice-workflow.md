@@ -129,6 +129,7 @@
 - `stage`: 해당 항목을 실제로 닫는 code stage (`2 | 4`)
 - `scope`: `backend | frontend | shared`
 - `review`: 이 항목을 구조적으로 다시 확인해야 하는 review stage (`3`, `5`, `6`)
+- Claude가 Codex rebuttal을 수용한 항목은 checkbox를 바꾸지 않고 `waived=true;waived_by=claude;waived_stage=<3|5|6>;waived_reason=<slug>` metadata를 추가해 닫는다
 - Stage 5는 `scope=frontend`이면서 `review`에 `5`가 포함된 acceptance / README 항목만 리뷰한다
 - Stage 6는 `Manual Only`를 제외한 non-manual checklist 전체를 최종 closeout 기준으로 리뷰한다
 
@@ -247,6 +248,7 @@
 - 시스템 row/bootstrap 의존 슬라이스면 fixture만이 아니라 real DB smoke 또는 seed 검증 경로를 최소 1회 실행
 - README `Delivery Checklist`와 acceptance의 백엔드 범위를 PR 준비 전에 갱신
 - stage-result에는 이번 run에서 닫은 checklist id(`checklist_updates[]`)와 evidence ref를 남긴다
+- Claude review의 `required_fix_ids`가 잘못 짚은 항목이라고 판단되면 Codex는 `contested_fix_ids[]`와 `rebuttals[]`로 반박 근거를 제출할 수 있다
 - PR 본문 `Actual Verification`에 real DB/schema/bootstrap smoke 또는 `N/A` 근거 기록
 - PR 본문 `Closeout Sync`에 Stage 2 시점에 닫은 항목과 남은 프론트 범위 기록
 - PR 본문 `Merge Gate`에 current head SHA, 시작된 PR checks, 남은 pending/fail/rerun 여부 기록
@@ -515,6 +517,7 @@
 - Tailwind 클래스 교체 제안 (컴포넌트 구조 변경은 Codex와 협의)
 - workpack README Design Status 업데이트 (`confirmed`으로 변경 가능 시)
 - stage-result에 `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`를 남긴다
+- Claude가 rebuttal을 받아들이면 `waived_fix_ids[]`로 남기고, supervisor가 README/acceptance metadata에 waiver comment를 반영한다
 
 ### 완료 요약 (리뷰 종료 시 Claude가 출력)
 

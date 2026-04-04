@@ -8,6 +8,12 @@ import {
   resolveCodexProviderConfig,
 } from "./omo-provider-config.mjs";
 import {
+  isChecklistContractActive,
+  readWorkpackChecklistContract,
+  resolveChecklistIds,
+  resolveOwnedChecklistItems,
+} from "./omo-checklist-contract.mjs";
+import {
   buildStageDispatch,
   resolveStageSessionRole,
   syncWorkflowV2Status,
@@ -245,6 +251,8 @@ function buildPrompt({
               evidence_refs: ["pnpm test:all", "tests/example.test.ts"],
             },
           ],
+          contested_fix_ids: [],
+          rebuttals: [],
         }
       : {
           decision: "approve | request_changes",
@@ -257,6 +265,7 @@ function buildPrompt({
           },
           reviewed_checklist_ids: ["accept-example"],
           required_fix_ids: [],
+          waived_fix_ids: [],
           findings: [
             {
               file: "path/to/file.ts",
@@ -339,6 +348,9 @@ function buildPrompt({
     dispatch.reviewContext?.required_fix_ids?.length
       ? `- required fix ids: \`${dispatch.reviewContext.required_fix_ids.join(", ")}\``
       : null,
+    dispatch.reviewContext?.waived_fix_ids?.length
+      ? `- waived fix ids: \`${dispatch.reviewContext.waived_fix_ids.join(", ")}\``
+      : null,
     dispatch.reviewContext?.body_markdown ?? null,
     "",
     "## Stage Result Output",
@@ -349,9 +361,61 @@ function buildPrompt({
     JSON.stringify(stageResultTemplate, null, 2),
     "```",
     [1, 2, 4].includes(normalizedStage)
-      ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route, claimed_scope, changed_files, tests_touched, artifacts_written, checklist_updates"
-      : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, review_scope, reviewed_checklist_ids, required_fix_ids, findings (optional — 문제가 있으면 structured findings 배열을 반드시 포함하세요)",
+      ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route, claimed_scope, changed_files, tests_touched, artifacts_written, checklist_updates, contested_fix_ids, rebuttals"
+      : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, review_scope, reviewed_checklist_ids, required_fix_ids, waived_fix_ids, findings (optional — 문제가 있으면 structured findings 배열을 반드시 포함하세요)",
     ...extraPromptSections,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function buildRalphPrompt({
+  stage,
+  goalIds,
+  origin,
+  reviewContext,
+  rebuttalEntry,
+  basePrompt,
+}) {
+  const normalizedGoalIds = Array.isArray(goalIds) ? goalIds.filter(Boolean) : [];
+
+  return [
+    `$ralph strict-stage-${stage}`,
+    "",
+    "## Ralph Loop Goal",
+    `- stage: \`${stage}\``,
+    `- origin: \`${origin}\``,
+    normalizedGoalIds.length > 0
+      ? `- target checklist ids: \`${normalizedGoalIds.join(", ")}\``
+      : "- target checklist ids: `none`",
+    stage === 2
+      ? "- completion condition: Stage 2 owned checklist ids all checked, backend verify green, evaluator pass"
+      : "- completion condition: Stage 4 owned checklist ids all checked, frontend verify green, evaluator pass",
+    reviewContext?.required_fix_ids?.length
+      ? `- required fix ids from review: \`${reviewContext.required_fix_ids.join(", ")}\``
+      : null,
+    rebuttalEntry?.contested_fix_ids?.length
+      ? `- prior contested fix ids: \`${rebuttalEntry.contested_fix_ids.join(", ")}\``
+      : null,
+    "",
+    "## Ralph Rules",
+    "- Do not stop after a single edit if the stage-owned checklist is still open.",
+    "- Do not mark contested fix ids as checked in checklist_updates.",
+    "- If a review fix id appears invalid, record it in contested_fix_ids and rebuttals[] instead of silently ignoring it.",
+    "- If all remaining review fix ids are contested with evidence, stop editing and hand back a rebuttal bundle for Claude re-review.",
+    "",
+    reviewContext?.body_markdown ? "## Review Context" : null,
+    reviewContext?.body_markdown ?? null,
+    "",
+    rebuttalEntry?.rebuttals?.length ? "## Prior Rebuttal Context" : null,
+    ...(Array.isArray(rebuttalEntry?.rebuttals)
+      ? rebuttalEntry.rebuttals.map(
+          (entry) =>
+            `- \`${entry.fix_id}\`: ${entry.rationale_markdown}${entry.evidence_refs?.length ? ` (evidence: ${entry.evidence_refs.join(", ")})` : ""}`,
+        )
+      : []),
+    "",
+    basePrompt,
   ]
     .filter(Boolean)
     .join("\n");
@@ -1213,7 +1277,11 @@ export function runStageWithArtifacts({
   const retryState =
     runtimeSnapshot?.state?.blocked_stage === normalizedStage ? runtimeSnapshot.state.retry : null;
   const reviewRole =
-    normalizedStage === 2 ? "backend" : normalizedStage === 4 ? "frontend" : null;
+    normalizedStage === 2 || normalizedStage === 3
+      ? "backend"
+      : normalizedStage === 4 || normalizedStage === 5 || normalizedStage === 6
+        ? "frontend"
+        : null;
   const reviewEntry =
     reviewRole && runtimeSnapshot?.state?.last_review?.[reviewRole]
       ? runtimeSnapshot.state.last_review[reviewRole]
@@ -1232,7 +1300,41 @@ export function runStageWithArtifacts({
           required_fix_ids: Array.isArray(reviewEntry.required_fix_ids)
             ? reviewEntry.required_fix_ids
             : [],
+          waived_fix_ids: Array.isArray(reviewEntry.waived_fix_ids)
+            ? reviewEntry.waived_fix_ids
+            : [],
         }
+      : null;
+  const rebuttalEntry =
+    reviewRole && runtimeSnapshot?.state?.last_rebuttal?.[reviewRole]
+      ? runtimeSnapshot.state.last_rebuttal[reviewRole]
+      : null;
+  const checklistContract = normalizedStage > 1
+    ? readWorkpackChecklistContract({
+        rootDir,
+        slice: normalizedSlice,
+      })
+    : null;
+  const strictChecklistContractActive = isChecklistContractActive(checklistContract);
+  const ownedChecklistIds = strictChecklistContractActive
+    ? resolveChecklistIds(resolveOwnedChecklistItems(checklistContract, normalizedStage))
+    : [];
+  const requiredFixIds = Array.isArray(reviewContext?.required_fix_ids)
+    ? reviewContext.required_fix_ids
+    : [];
+  const ralphGoalIds =
+    [2, 4].includes(normalizedStage) && strictChecklistContractActive
+      ? requiredFixIds.length > 0
+        ? requiredFixIds
+        : ownedChecklistIds
+      : [];
+  const loopMode =
+    [2, 4].includes(normalizedStage) && strictChecklistContractActive ? "ralph" : "single_pass";
+  const ralphOrigin =
+    loopMode === "ralph"
+      ? requiredFixIds.length > 0
+        ? "review_fix"
+        : "initial_stage"
       : null;
   const retryAt =
     resolvedBudget.state === "unavailable" && sessionRole === "claude_primary"
@@ -1267,14 +1369,43 @@ export function runStageWithArtifacts({
     claudeProviderConfig,
     sessionBinding: dispatch.sessionBinding,
   });
-  const prompt = buildPrompt({
+  const basePrompt = buildPrompt({
     slice: normalizedSlice,
     stage: dispatch.stage,
     workItemId,
     dispatch,
     stageResultPath,
-    extraPromptSections: [...(dispatch.extraPromptSections ?? []), ...extraPromptSections],
+    extraPromptSections: [
+      ...(dispatch.extraPromptSections ?? []),
+      ...(rebuttalEntry?.rebuttals?.length
+        ? [
+            [
+              "## Latest Rebuttal Bundle",
+              `- source review stage: \`${rebuttalEntry.source_review_stage ?? "unknown"}\``,
+              ...(rebuttalEntry.contested_fix_ids?.length
+                ? [`- contested fix ids: \`${rebuttalEntry.contested_fix_ids.join(", ")}\``]
+                : []),
+              ...rebuttalEntry.rebuttals.map(
+                (entry) =>
+                  `- \`${entry.fix_id}\`: ${entry.rationale_markdown}${entry.evidence_refs?.length ? ` (evidence: ${entry.evidence_refs.join(", ")})` : ""}`,
+              ),
+            ].join("\n"),
+          ]
+        : []),
+      ...extraPromptSections,
+    ],
   });
+  const prompt =
+    loopMode === "ralph"
+      ? buildRalphPrompt({
+          stage: dispatch.stage,
+          goalIds: ralphGoalIds,
+          origin: ralphOrigin,
+          reviewContext,
+          rebuttalEntry,
+          basePrompt,
+        })
+      : basePrompt;
   const resolvedOpencodeBin =
     activeProviderConfig.provider === "opencode"
       ? !activeProviderConfig.bin || activeProviderConfig.bin === "opencode"
@@ -1307,6 +1438,9 @@ export function runStageWithArtifacts({
       provider: executionBinding.provider,
       agent: executionBinding.agent,
       reason: executionBinding.reason,
+      loop_mode: loopMode,
+      ralph_goal_ids: ralphGoalIds,
+      ralph_origin: ralphOrigin,
     },
     executionDir: resolvedExecutionDir,
     stageResultPath,
@@ -1344,6 +1478,9 @@ export function runStageWithArtifacts({
             ? "backend"
             : "frontend",
         startedAt: now,
+        loopMode,
+        ralphGoalIds,
+        ralphOrigin,
       }),
     });
   }
@@ -1364,6 +1501,9 @@ export function runStageWithArtifacts({
         reason: executionBinding.reason,
         exitCode: null,
         sessionId: existingSessionId,
+        loop_mode: loopMode,
+        ralph_goal_ids: ralphGoalIds,
+        ralph_origin: ralphOrigin,
       },
     };
   } else if (dispatch.retryDecision.action === "schedule_retry") {
@@ -1380,6 +1520,9 @@ export function runStageWithArtifacts({
         reason: "claude_budget_unavailable",
         exitCode: null,
         sessionId: existingSessionId,
+        loop_mode: loopMode,
+        ralph_goal_ids: ralphGoalIds,
+        ralph_origin: ralphOrigin,
       },
     };
   } else if (!executionBinding.executable) {
@@ -1396,6 +1539,9 @@ export function runStageWithArtifacts({
         reason: executionBinding.reason,
         exitCode: null,
         sessionId: existingSessionId,
+        loop_mode: loopMode,
+        ralph_goal_ids: ralphGoalIds,
+        ralph_origin: ralphOrigin,
       },
     };
   } else if (hasProviderMismatch) {
@@ -1420,6 +1566,9 @@ export function runStageWithArtifacts({
         reason: "stored session provider does not match the requested provider",
         exitCode: null,
         sessionId: existingSessionId,
+        loop_mode: loopMode,
+        ralph_goal_ids: ralphGoalIds,
+        ralph_origin: ralphOrigin,
       },
     };
   } else {
@@ -1456,7 +1605,12 @@ export function runStageWithArtifacts({
         artifactDir: targetArtifactDir,
         dispatch,
         prompt,
-        execution,
+        execution: {
+          ...execution,
+          loop_mode: loopMode,
+          ralph_goal_ids: ralphGoalIds,
+          ralph_origin: ralphOrigin,
+        },
       };
     } catch (error) {
       if (existingSessionId && isSessionUnavailableFailure(error)) {
@@ -1483,6 +1637,9 @@ export function runStageWithArtifacts({
             sessionId: existingSessionId,
             stdoutPath: error.stdoutPath ?? null,
             stderrPath: error.stderrPath ?? null,
+            loop_mode: loopMode,
+            ralph_goal_ids: ralphGoalIds,
+            ralph_origin: ralphOrigin,
           },
         };
       } else if (
@@ -1514,6 +1671,9 @@ export function runStageWithArtifacts({
             sessionId: error.sessionId ?? existingSessionId,
             stdoutPath: error.stdoutPath ?? null,
             stderrPath: error.stderrPath ?? null,
+            loop_mode: loopMode,
+            ralph_goal_ids: ralphGoalIds,
+            ralph_origin: ralphOrigin,
           },
         };
       } else if (
@@ -1537,6 +1697,9 @@ export function runStageWithArtifacts({
             sessionId: error.sessionId ?? existingSessionId,
             stdoutPath: error.stdoutPath ?? null,
             stderrPath: error.stderrPath ?? null,
+            loop_mode: loopMode,
+            ralph_goal_ids: ralphGoalIds,
+            ralph_origin: ralphOrigin,
           },
         };
       } else {
@@ -1563,7 +1726,9 @@ export function runStageWithArtifacts({
     };
   } else if (stageResult) {
     try {
-      validateStageResult(normalizedStage, stageResult);
+      validateStageResult(normalizedStage, stageResult, {
+        strictExtendedContract: Boolean(checklistContract && isChecklistContractActive(checklistContract)),
+      });
       validStageResult = true;
     } catch (error) {
       result = {
@@ -1630,6 +1795,9 @@ export function runStageWithArtifacts({
               : "frontend",
           startedAt: runtimeStartSync?.state?.execution?.started_at ?? now,
           finishedAt: now,
+          loopMode,
+          ralphGoalIds,
+          ralphOrigin,
         });
       } else if (result.execution.mode === "execute" && result.execution.executed) {
         nextRuntimeState = markStageCompleted({

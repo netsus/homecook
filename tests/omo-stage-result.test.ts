@@ -24,7 +24,7 @@ describe("OMO stage-result contract", () => {
           strictExtendedContract: true,
         },
       ),
-    ).toThrow(/claimed_scope|changed_files|tests_touched|artifacts_written|checklist_updates/);
+    ).toThrow(/claimed_scope|changed_files|tests_touched|artifacts_written|checklist_updates|contested_fix_ids|rebuttals/);
   });
 
   it("requires extended review-stage fields when strictExtendedContract is enabled", () => {
@@ -41,7 +41,7 @@ describe("OMO stage-result contract", () => {
           strictExtendedContract: true,
         },
       ),
-    ).toThrow(/review_scope|reviewed_checklist_ids|required_fix_ids/);
+    ).toThrow(/review_scope|reviewed_checklist_ids|required_fix_ids|waived_fix_ids/);
   });
 
   it("requires findings for strict request_changes reviews", () => {
@@ -59,6 +59,7 @@ describe("OMO stage-result contract", () => {
           },
           reviewed_checklist_ids: ["delivery-ui"],
           required_fix_ids: ["delivery-ui"],
+          waived_fix_ids: [],
           findings: [],
         },
         {
@@ -83,6 +84,7 @@ describe("OMO stage-result contract", () => {
           },
           reviewed_checklist_ids: ["delivery-ui"],
           required_fix_ids: [],
+          waived_fix_ids: [],
           findings: [
             {
               file: "app/example.tsx",
@@ -114,11 +116,15 @@ describe("OMO stage-result contract", () => {
         },
         reviewed_checklist_ids: ["delivery-ui"],
         required_fix_ids: [],
+        waived_fix_ids: [],
       },
       {
         strictExtendedContract: true,
       },
-    );
+    ) as {
+      findings: unknown[];
+      required_fix_ids: string[];
+    };
 
     expect(result.findings).toEqual([]);
     expect(result.required_fix_ids).toEqual([]);
@@ -139,6 +145,7 @@ describe("OMO stage-result contract", () => {
           },
           reviewed_checklist_ids: ["delivery-backend-contract"],
           required_fix_ids: ["delivery-backend-contract"],
+          waived_fix_ids: [],
         },
         {
           strictExtendedContract: true,
@@ -179,6 +186,8 @@ describe("OMO stage-result contract", () => {
             evidence_refs: ["pnpm test:all"],
           },
         ],
+        contested_fix_ids: [],
+        rebuttals: [],
       },
       {
         strictExtendedContract: true,
@@ -188,6 +197,7 @@ describe("OMO stage-result contract", () => {
     const codeStageResult = result as {
       claimed_scope: { routes: string[] };
       checklist_updates: Array<{ id: string; status: string; evidence_refs: string[] }>;
+      contested_fix_ids: string[];
     };
 
     expect(codeStageResult.claimed_scope.routes).toEqual(["/example"]);
@@ -198,5 +208,62 @@ describe("OMO stage-result contract", () => {
         evidence_refs: ["pnpm test:all"],
       },
     ]);
+    expect(codeStageResult.contested_fix_ids).toEqual([]);
+  });
+
+  it("requires rebuttals to match contested_fix_ids for strict code stages", () => {
+    expect(() =>
+      validateStageResult(
+        2,
+        {
+          result: "done",
+          summary_markdown: "backend updated",
+          commit: { subject: "feat: backend" },
+          pr: { title: "feat: backend", body_markdown: "body" },
+          checks_run: [],
+          next_route: "open_pr",
+          claimed_scope: {
+            files: ["app/example.ts"],
+            endpoints: [],
+            routes: [],
+            states: [],
+            invariants: [],
+          },
+          changed_files: ["app/example.ts"],
+          tests_touched: [],
+          artifacts_written: [],
+          checklist_updates: [],
+          contested_fix_ids: ["delivery-backend-contract"],
+          rebuttals: [],
+        },
+        {
+          strictExtendedContract: true,
+        },
+      ),
+    ).toThrow(/rebuttals must exactly match/);
+  });
+
+  it("rejects waived_fix_ids outside reviewed_checklist_ids", () => {
+    expect(() =>
+      validateStageResult(
+        6,
+        {
+          decision: "approve",
+          body_markdown: "approved",
+          route_back_stage: null,
+          approved_head_sha: null,
+          review_scope: {
+            scope: "closeout",
+            checklist_ids: ["delivery-ui"],
+          },
+          reviewed_checklist_ids: ["delivery-ui"],
+          required_fix_ids: [],
+          waived_fix_ids: ["delivery-backend-contract"],
+        },
+        {
+          strictExtendedContract: true,
+        },
+      ),
+    ).toThrow(/waived_fix_ids must be a subset/);
   });
 });

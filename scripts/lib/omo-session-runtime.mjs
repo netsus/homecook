@@ -132,6 +132,19 @@ function normalizeExecution(execution) {
       typeof execution.pr_role === "string" && execution.pr_role.trim().length > 0
         ? execution.pr_role.trim()
         : null,
+    loop_mode:
+      typeof execution.loop_mode === "string" && execution.loop_mode.trim().length > 0
+        ? execution.loop_mode.trim()
+        : "single_pass",
+    ralph_goal_ids: Array.isArray(execution.ralph_goal_ids)
+      ? execution.ralph_goal_ids
+          .filter((entry) => typeof entry === "string" && entry.trim().length > 0)
+          .map((entry) => entry.trim())
+      : [],
+    ralph_origin:
+      typeof execution.ralph_origin === "string" && execution.ralph_origin.trim().length > 0
+        ? execution.ralph_origin.trim()
+        : null,
   };
 }
 
@@ -477,6 +490,11 @@ function normalizeReviewEntry(entry) {
           .filter((value) => typeof value === "string" && value.trim().length > 0)
           .map((value) => value.trim())
       : [],
+    waived_fix_ids: Array.isArray(entry.waived_fix_ids)
+      ? entry.waived_fix_ids
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
     source_review_stage: Number.isInteger(entry.source_review_stage) ? entry.source_review_stage : null,
     ping_pong_rounds:
       typeof entry.ping_pong_rounds === "number" && entry.ping_pong_rounds >= 0
@@ -500,6 +518,59 @@ function normalizeLastReview(lastReview) {
   return {
     backend: normalizeReviewEntry(lastReview.backend),
     frontend: normalizeReviewEntry(lastReview.frontend),
+  };
+}
+
+function normalizeRebuttalEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  return {
+    source_review_stage: Number.isInteger(entry.source_review_stage) ? entry.source_review_stage : null,
+    contested_fix_ids: Array.isArray(entry.contested_fix_ids)
+      ? entry.contested_fix_ids
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    rebuttals: Array.isArray(entry.rebuttals)
+      ? entry.rebuttals
+          .filter((value) => value && typeof value === "object" && !Array.isArray(value))
+          .map((value) => ({
+            fix_id:
+              typeof value.fix_id === "string" && value.fix_id.trim().length > 0
+                ? value.fix_id.trim()
+                : null,
+            rationale_markdown:
+              typeof value.rationale_markdown === "string" && value.rationale_markdown.trim().length > 0
+                ? value.rationale_markdown.trim()
+                : null,
+            evidence_refs: Array.isArray(value.evidence_refs)
+              ? value.evidence_refs
+                  .filter((entry) => typeof entry === "string" && entry.trim().length > 0)
+                  .map((entry) => entry.trim())
+              : [],
+          }))
+          .filter((value) => value.fix_id && value.rationale_markdown)
+      : [],
+    updated_at:
+      typeof entry.updated_at === "string" && entry.updated_at.trim().length > 0
+        ? entry.updated_at.trim()
+        : null,
+  };
+}
+
+function normalizeLastRebuttal(lastRebuttal) {
+  if (!lastRebuttal || typeof lastRebuttal !== "object") {
+    return {
+      backend: null,
+      frontend: null,
+    };
+  }
+
+  return {
+    backend: normalizeRebuttalEntry(lastRebuttal.backend),
+    frontend: normalizeRebuttalEntry(lastRebuttal.frontend),
   };
 }
 
@@ -606,6 +677,7 @@ function baseRuntimeState({ rootDir, workItemId, slice }) {
     next_action: "noop",
     execution: null,
     last_review: normalizeLastReview(null),
+    last_rebuttal: normalizeLastRebuttal(null),
     recovery: null,
   };
 }
@@ -673,6 +745,7 @@ function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
     next_action: normalizeNextAction(runtime.next_action ?? inferActionFromWait(wait)),
     execution: normalizeExecution(runtime.execution),
     last_review: normalizeLastReview(runtime.last_review),
+    last_rebuttal: normalizeLastRebuttal(runtime.last_rebuttal),
     recovery,
   };
 
@@ -931,6 +1004,9 @@ export function markStageRunning({
   verifyCommands = [],
   prRole,
   startedAt,
+  loopMode = "single_pass",
+  ralphGoalIds = [],
+  ralphOrigin = null,
 }) {
   return setExecutionState({
     state,
@@ -950,6 +1026,9 @@ export function markStageRunning({
       verify_bucket: null,
       commit_sha: null,
       pr_role: prRole,
+      loop_mode: loopMode,
+      ralph_goal_ids: ralphGoalIds,
+      ralph_origin: ralphOrigin,
     },
     clearRecovery: true,
   });
@@ -967,6 +1046,9 @@ export function markStageResultReady({
   prRole,
   startedAt,
   finishedAt,
+  loopMode = "single_pass",
+  ralphGoalIds = [],
+  ralphOrigin = null,
 }) {
   return setExecutionState({
     state,
@@ -986,6 +1068,9 @@ export function markStageResultReady({
       verify_bucket: state.execution?.verify_bucket ?? null,
       commit_sha: state.execution?.commit_sha ?? null,
       pr_role: prRole,
+      loop_mode: loopMode,
+      ralph_goal_ids: ralphGoalIds,
+      ralph_origin: ralphOrigin,
     },
     clearRecovery: true,
   });
@@ -1002,6 +1087,9 @@ export function markReviewPending({
   prRole,
   startedAt,
   finishedAt,
+  loopMode = "single_pass",
+  ralphGoalIds = [],
+  ralphOrigin = null,
 }) {
   return setExecutionState({
     state,
@@ -1021,6 +1109,9 @@ export function markReviewPending({
       verify_bucket: null,
       commit_sha: state.execution?.commit_sha ?? null,
       pr_role: prRole,
+      loop_mode: loopMode,
+      ralph_goal_ids: ralphGoalIds,
+      ralph_origin: ralphOrigin,
     },
     clearRecovery: true,
   });
@@ -1225,6 +1316,7 @@ export function setLastReview({
   reviewScope,
   reviewedChecklistIds,
   requiredFixIds,
+  waivedFixIds,
   sourceReviewStage,
   pingPongRounds,
   updatedAt,
@@ -1279,11 +1371,68 @@ export function setLastReview({
               .filter((value) => typeof value === "string" && value.trim().length > 0)
               .map((value) => value.trim())
           : [],
+        waived_fix_ids: Array.isArray(waivedFixIds)
+          ? waivedFixIds
+              .filter((value) => typeof value === "string" && value.trim().length > 0)
+              .map((value) => value.trim())
+          : [],
         source_review_stage: Number.isInteger(Number(sourceReviewStage))
           ? Number(sourceReviewStage)
           : null,
         ping_pong_rounds:
           typeof pingPongRounds === "number" && pingPongRounds >= 0 ? pingPongRounds : 0,
+        updated_at: toIsoString(updatedAt),
+      },
+    },
+  };
+}
+
+export function setLastRebuttal({
+  state,
+  role,
+  sourceReviewStage,
+  contestedFixIds,
+  rebuttals,
+  updatedAt,
+}) {
+  const normalizedRole = ensureNonEmptyString(role, "role");
+
+  return {
+    ...state,
+    last_rebuttal: {
+      ...(state.last_rebuttal ?? {
+        backend: null,
+        frontend: null,
+      }),
+      [normalizedRole]: {
+        source_review_stage: Number.isInteger(Number(sourceReviewStage))
+          ? Number(sourceReviewStage)
+          : null,
+        contested_fix_ids: Array.isArray(contestedFixIds)
+          ? contestedFixIds
+              .filter((value) => typeof value === "string" && value.trim().length > 0)
+              .map((value) => value.trim())
+          : [],
+        rebuttals: Array.isArray(rebuttals)
+          ? rebuttals
+              .filter((value) => value && typeof value === "object" && !Array.isArray(value))
+              .map((value) => ({
+                fix_id:
+                  typeof value.fix_id === "string" && value.fix_id.trim().length > 0
+                    ? value.fix_id.trim()
+                    : null,
+                rationale_markdown:
+                  typeof value.rationale_markdown === "string" && value.rationale_markdown.trim().length > 0
+                    ? value.rationale_markdown.trim()
+                    : null,
+                evidence_refs: Array.isArray(value.evidence_refs)
+                  ? value.evidence_refs
+                      .filter((entry) => typeof entry === "string" && entry.trim().length > 0)
+                      .map((entry) => entry.trim())
+                  : [],
+              }))
+              .filter((value) => value.fix_id && value.rationale_markdown)
+          : [],
         updated_at: toIsoString(updatedAt),
       },
     },

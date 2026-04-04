@@ -83,7 +83,8 @@ describe("OMO-lite repo config", () => {
 
     expect(config.default_run_agent).toBe("hephaestus");
     expect(disabledHooks).toEqual(expect.arrayContaining(["comment-checker", "ralph-loop"]));
-    expect(disabledCommands).toEqual(expect.arrayContaining(["ralph-loop", "ulw-loop"]));
+    expect(disabledCommands).toEqual(expect.arrayContaining(["ulw-loop"]));
+    expect(disabledCommands).not.toEqual(expect.arrayContaining(["ralph-loop"]));
     expect(agents.hephaestus?.model).toBe("openai/gpt-5.3-codex");
     expect(agents.athena?.model).toBe("anthropic/claude-sonnet-4-0");
     expect(agents.sisyphus?.model).toBe("openai/gpt-5.3-codex");

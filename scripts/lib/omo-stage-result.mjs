@@ -108,6 +108,31 @@ function validateChecklistUpdates(value, { strict = false } = {}) {
   });
 }
 
+function validateRebuttals(value, { strict = false } = {}) {
+  if ((value === null || value === undefined) && !strict) {
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error("stageResult.rebuttals must be an array.");
+  }
+
+  return value.map((entry, index) => {
+    const normalizedEntry = ensureObject(entry, `stageResult.rebuttals[${index}]`);
+    return {
+      fix_id: ensureNonEmptyString(normalizedEntry.fix_id, `stageResult.rebuttals[${index}].fix_id`),
+      rationale_markdown: ensureNonEmptyString(
+        normalizedEntry.rationale_markdown,
+        `stageResult.rebuttals[${index}].rationale_markdown`,
+      ),
+      evidence_refs: ensureOptionalStringArray(
+        normalizedEntry.evidence_refs ?? [],
+        `stageResult.rebuttals[${index}].evidence_refs`,
+      ),
+    };
+  });
+}
+
 function validateReviewScope(value, { strict = false } = {}) {
   if ((value === null || value === undefined) && !strict) {
     return {
@@ -153,7 +178,7 @@ export function validateStageResult(stage, stageResult, options = {}) {
         ? result.commit.subject
         : result.pr?.title;
 
-    return {
+    const normalizedCodeStageResult = {
       result: ensureNonEmptyString(result.result, "stageResult.result"),
       summary_markdown: ensureNonEmptyString(
         result.summary_markdown,
@@ -191,7 +216,33 @@ export function validateStageResult(stage, stageResult, options = {}) {
       checklist_updates: validateChecklistUpdates(result.checklist_updates, {
         strict: strictExtendedContract,
       }),
+      contested_fix_ids: strictExtendedContract
+        ? ensureStringArray(result.contested_fix_ids ?? [], "stageResult.contested_fix_ids")
+        : ensureOptionalStringArray(result.contested_fix_ids ?? [], "stageResult.contested_fix_ids"),
+      rebuttals: validateRebuttals(result.rebuttals, {
+        strict: strictExtendedContract,
+      }),
     };
+
+    if (strictExtendedContract) {
+      const rebuttalFixIds = normalizedCodeStageResult.rebuttals.map((entry) => entry.fix_id);
+      const contestedFixIds = normalizedCodeStageResult.contested_fix_ids;
+      const missingRebuttals = contestedFixIds.filter((id) => !rebuttalFixIds.includes(id));
+      const foreignRebuttals = rebuttalFixIds.filter((id) => !contestedFixIds.includes(id));
+      if (missingRebuttals.length > 0 || foreignRebuttals.length > 0) {
+        throw new Error("stageResult.rebuttals must exactly match stageResult.contested_fix_ids.");
+      }
+
+      const checkedIds = normalizedCodeStageResult.checklist_updates
+        .filter((entry) => entry.status === "checked")
+        .map((entry) => entry.id);
+      const contestedAsChecked = contestedFixIds.filter((id) => checkedIds.includes(id));
+      if (contestedAsChecked.length > 0) {
+        throw new Error("stageResult.contested_fix_ids cannot also appear as checked checklist_updates.");
+      }
+    }
+
+    return normalizedCodeStageResult;
   }
 
   const decision = ensureNonEmptyString(result.decision, "stageResult.decision");
@@ -205,6 +256,9 @@ export function validateStageResult(stage, stageResult, options = {}) {
   const requiredFixIds = strictExtendedContract
     ? ensureStringArray(result.required_fix_ids ?? [], "stageResult.required_fix_ids")
     : ensureOptionalStringArray(result.required_fix_ids ?? [], "stageResult.required_fix_ids");
+  const waivedFixIds = strictExtendedContract
+    ? ensureStringArray(result.waived_fix_ids ?? [], "stageResult.waived_fix_ids")
+    : ensureOptionalStringArray(result.waived_fix_ids ?? [], "stageResult.waived_fix_ids");
 
   if (strictExtendedContract && decision === "request_changes" && findings.length === 0) {
     throw new Error("stageResult.findings must include at least one entry for request_changes reviews.");
@@ -216,6 +270,18 @@ export function validateStageResult(stage, stageResult, options = {}) {
 
   if (strictExtendedContract && decision === "approve" && requiredFixIds.length > 0) {
     throw new Error("stageResult.required_fix_ids must be empty for approve reviews.");
+  }
+
+  if (strictExtendedContract) {
+    const overlap = requiredFixIds.filter((id) => waivedFixIds.includes(id));
+    if (overlap.length > 0) {
+      throw new Error("stageResult.required_fix_ids and stageResult.waived_fix_ids must be disjoint.");
+    }
+
+    const unknownWaivedIds = waivedFixIds.filter((id) => !reviewedChecklistIds.includes(id));
+    if (unknownWaivedIds.length > 0) {
+      throw new Error("stageResult.waived_fix_ids must be a subset of reviewed_checklist_ids.");
+    }
   }
 
   return {
@@ -237,5 +303,6 @@ export function validateStageResult(stage, stageResult, options = {}) {
     review_scope: reviewScope,
     reviewed_checklist_ids: reviewedChecklistIds,
     required_fix_ids: requiredFixIds,
+    waived_fix_ids: waivedFixIds,
   };
 }

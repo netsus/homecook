@@ -200,6 +200,68 @@ function createRunnerFixture() {
   return rootDir;
 }
 
+function seedStrictSlice(rootDir: string, slice = "02-discovery-filter") {
+  mkdirSync(join(rootDir, "docs", "workpacks", slice), { recursive: true });
+  writeFileSync(
+    join(rootDir, "docs", "workpacks", slice, "README.md"),
+    [
+      `# ${slice}`,
+      "",
+      "## Delivery Checklist",
+      "- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->",
+      "- [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(rootDir, "docs", "workpacks", slice, "acceptance.md"),
+    [
+      "# Acceptance Checklist",
+      "",
+      "## Happy Path",
+      "- [ ] API 응답 형식이 { success, data, error }를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->",
+      "- [ ] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->",
+      "",
+      "## Automation Split",
+      "",
+      "### Manual Only",
+      "- [ ] 실제 OAuth smoke",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(rootDir, "docs", "workpacks", slice, "automation-spec.json"),
+    JSON.stringify(
+      {
+        slice_id: slice,
+        execution_mode: "autonomous",
+        risk_class: "medium",
+        merge_policy: "conditional-auto",
+        backend: {
+          required_endpoints: [],
+          invariants: [],
+          verify_commands: [],
+          required_test_targets: [],
+        },
+        frontend: {
+          required_routes: [],
+          required_states: [],
+          playwright_projects: [],
+          artifact_assertions: [],
+        },
+        external_smokes: ["true"],
+        blocked_conditions: [],
+        max_fix_rounds: {
+          backend: 2,
+          frontend: 2,
+        },
+      },
+      null,
+      2,
+    ),
+  );
+}
+
 function createClaudeHomeDir() {
   const homeDir = mkdtempSync(join(tmpdir(), "omo-lite-claude-home-"));
   mkdirSync(join(homeDir, ".claude", "transcripts"), { recursive: true });
@@ -270,6 +332,39 @@ describe("OMO-lite stage runner", () => {
       role: "codex_primary",
       resumeMode: "fresh",
     });
+  });
+
+  it("wraps strict Stage 2 artifact-only prompts in $ralph mode", () => {
+    const rootDir = createRunnerFixture();
+    seedStrictSlice(rootDir);
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "02-discovery-filter",
+      stage: 2,
+      workItemId: "02-discovery-filter",
+      mode: "artifact-only",
+      now: "2026-04-04T10:00:00+09:00",
+    });
+
+    const prompt = readFileSync(join(result.artifactDir, "prompt.md"), "utf8");
+    const metadata = JSON.parse(
+      readFileSync(join(result.artifactDir, "run-metadata.json"), "utf8"),
+    ) as {
+      execution: {
+        loop_mode: string;
+        ralph_goal_ids: string[];
+      };
+    };
+
+    expect(prompt).toContain("$ralph strict-stage-2");
+    expect(prompt).toContain("delivery-backend-contract");
+    expect(prompt).toContain("accept-api-envelope");
+    expect(metadata.execution.loop_mode).toBe("ralph");
+    expect(metadata.execution.ralph_goal_ids).toEqual([
+      "delivery-backend-contract",
+      "accept-api-envelope",
+    ]);
   });
 
   it("includes prior review feedback in Stage 2 rerun prompts", () => {
@@ -346,6 +441,7 @@ describe("OMO-lite stage runner", () => {
 
   it("includes structured findings and required fix ids in Stage 4 rerun prompts", () => {
     const rootDir = createRunnerFixture();
+    seedStrictSlice(rootDir);
     mkdirSync(join(rootDir, ".opencode", "omo-runtime"), { recursive: true });
 
     writeFileSync(
@@ -403,7 +499,23 @@ describe("OMO-lite stage runner", () => {
               ],
               reviewed_checklist_ids: ["delivery-ui-connection"],
               required_fix_ids: ["delivery-ui-connection"],
+              waived_fix_ids: [],
               updated_at: "2026-04-01T01:00:00.000Z",
+            },
+          },
+          last_rebuttal: {
+            backend: null,
+            frontend: {
+              source_review_stage: 5,
+              contested_fix_ids: ["delivery-ui-connection"],
+              rebuttals: [
+                {
+                  fix_id: "delivery-ui-connection",
+                  rationale_markdown: "CTA mismatch is intentional in temporary mode.",
+                  evidence_refs: ["docs/workpacks/02-discovery-filter/README.md"],
+                },
+              ],
+              updated_at: "2026-04-01T01:02:00.000Z",
             },
           },
         },
@@ -430,6 +542,9 @@ describe("OMO-lite stage runner", () => {
     expect(prompt).toContain("Disabled CTA state is inconsistent.");
     expect(prompt).toContain("## Required Checklist Fix IDs");
     expect(prompt).toContain("delivery-ui-connection");
+    expect(prompt).toContain("## Latest Rebuttal Bundle");
+    expect(prompt).toContain("CTA mismatch is intentional in temporary mode.");
+    expect(prompt).toContain("$ralph strict-stage-4");
   });
 
   it("executes Codex stages through opencode run, captures the session id, and writes runtime state", () => {
