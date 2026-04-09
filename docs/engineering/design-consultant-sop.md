@@ -13,6 +13,7 @@
 | `docs/design/design-tokens.md`가 이미 채워져 있음 | ❌ 이미 완료됨 |
 | 슬라이스 도중 개별 화면 설계 필요 | ❌ `design-generator` 사용 |
 | 완성된 설계 리뷰 필요 | ❌ `design-critic` 사용 |
+| 모바일 앱답지 않은 UX, screenshot/Figma 기반 authority 판정 필요 | ❌ `product-design-authority` 사용 |
 
 **권장 타이밍**: Slice 02 Stage 2–3 (Codex 백엔드) 진행 중에 병렬로 실행.
 Stage 4 (FE 구현) 시작 전에 토큰 확정 완료.
@@ -46,6 +47,11 @@ Stage 4 (FE 구현) 시작 전에 토큰 확정 완료.
 `design-consultant`는 프로젝트 전체 토큰 기반을 **1회** 확정하는 역할이며,
 각 슬라이스의 Design Status 전이와는 별개다.
 
+즉, `design-consultant`가 끝났다고 해서
+각 화면의 모바일 UX 품질이나 익숙한 앱 패턴 적합성이 자동 보장되지는 않는다.
+신규 화면, high-risk UI change, anchor screen 확장은
+`docs/engineering/product-design-authority.md` 기준 authority review를 따로 거친다.
+
 **슬라이스별 Design Status 흐름:**
 
 ```
@@ -70,6 +76,7 @@ N/A (BE-only 슬라이스, FE 화면 없음 → Stage 4~6 스킵)
 | `design-consultant` | 1회, 개발 초기 | 디자인 시스템 토큰 기반 확정 |
 | `design-generator` | Stage 1 산출물 | 신규 화면·high-risk UI change용 화면별 와이어프레임 생성 |
 | `design-critic` | Stage 1 산출물 | 신규 화면·high-risk UI change용 **설계 문서** 리뷰 |
+| `product-design-authority` | Stage 1/4/5 연결 | screenshot/Figma 기반 모바일 UX · 시각 위계 · 익숙한 앱 패턴 authority 리뷰 |
 | Stage 5 (Claude 직접) | Stage 4 완료 후 | **구현 코드** 디자인 리뷰 → `confirmed` 판정 |
 
 ---
@@ -80,3 +87,4 @@ N/A (BE-only 슬라이스, FE 화면 없음 → Stage 4~6 스킵)
 - `docs/design/design-tokens.md`가 없으면 에이전트가 Phase 5에서 전체 내용을 출력한다.
 - 재실행이 필요할 때는 `docs/design/design-tokens.md`를 먼저 확인 후 부분 수정 요청.
 - low-risk UI change는 `design-generator`와 `design-critic`을 생략할 수 있으며, 이 경우 근거는 workpack README 또는 PR 본문에 남긴다.
+- `design-consultant`는 브랜드/토큰 authority이고, `product-design-authority`는 화면 품질 authority다. 둘은 대체 관계가 아니다.

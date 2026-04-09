@@ -92,6 +92,9 @@
 8. `docs/engineering/qa-system.md` — QA 3-Layer와 real DB / fixture 운영 기준
 9. `docs/workpacks/README.md` — Slice Order의 Status 열로 선행 슬라이스 `merged` 여부 확인
 10. `docs/design/design-tokens.md` — 확정 디자인 토큰 (와이어프레임 작성 전 확인)
+11. `docs/design/mobile-ux-rules.md` — 모바일 UX blocker 규칙
+12. `docs/design/anchor-screens.md` — anchor screen / anchor extension 판정
+13. `docs/engineering/product-design-authority.md` — screenshot/Figma authority review 트리거와 evidence 규칙
 
 ### 산출물
 
@@ -101,6 +104,9 @@
 - (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스만) In Scope의 **각 FE 화면마다**:
   - `ui/designs/<SCREEN_ID>.md` — design-generator 실행
   - `ui/designs/critiques/<SCREEN_ID>-critique.md` — design-critic 실행 (🟢/🟡 통과 필수)
+- (신규 화면, high-risk UI change, anchor extension이 있는 FE 슬라이스만) In Scope의 **각 FE 화면마다**:
+  - Figma frame URL 또는 screenshot evidence 경로
+  - workpack README `Design Authority` 섹션 기입
 
 ### 포함 필수 사항
 
@@ -139,6 +145,15 @@
 - 기존 confirmed 화면의 low-risk UI change는 design-generator·design-critic을 생략할 수 있다. 이 경우 README 또는 PR에 생략 근거를 남긴다.
 - BE-only 슬라이스(In Scope에 FE 화면 없음)는 design-generator·design-critic 불필요
 
+**Design Authority (신규 화면, high-risk UI change, anchor extension이 있는 FE 슬라이스만)**
+- 텍스트 와이어프레임만으로 FE 품질을 잠갔다고 보지 않는다
+- workpack README `Design Authority`에 아래를 남긴다
+  - UI risk
+  - anchor screen dependency
+  - visual artifact(Figma frame URL 또는 screenshot evidence 경로)
+  - authority status
+- `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK`를 직접 수정하거나 핵심 행동을 확장하는 슬라이스는 `anchor-extension`으로 본다
+
 ### 자가 점검 체크리스트
 
 - [ ] Goal이 사용자 가치 하나만 기술하는가 (복수 가치 혼합 금지)
@@ -155,6 +170,9 @@
 - [ ] 신규 화면 또는 high-risk UI change가 있다면 각 화면의 `ui/designs/<SCREEN_ID>.md`가 생성됐는가
 - [ ] 신규 화면 또는 high-risk UI change가 있다면 각 화면의 design-critic 등급이 🟢 또는 🟡인가 (🔴이면 재작업)
 - [ ] low-risk UI change라면 design-generator / design-critic 생략 근거가 README 또는 PR에 기록됐는가
+- [ ] 신규 화면, high-risk UI change, anchor extension이라면 README `Design Authority` 섹션이 채워졌는가
+- [ ] 신규 화면, high-risk UI change, anchor extension이라면 각 화면의 Figma frame URL 또는 screenshot evidence 계획이 남았는가
+- [ ] anchor screen(`HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK`)을 직접 수정하거나 확장한다면 low-risk로 잘못 분류하지 않았는가
 
 ### 완료 기준
 
@@ -162,6 +180,7 @@
 - `docs/workpacks/<slice>/README.md` + `acceptance.md`
 - `docs/workpacks/<slice>/automation-spec.json`
 - (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스) In Scope 각 FE 화면의 `ui/designs/<SCREEN_ID>.md` + `ui/designs/critiques/<SCREEN_ID>-critique.md`
+- (신규 화면, high-risk UI change, anchor extension이 있는 FE 슬라이스) workpack README `Design Authority` 섹션 + Figma frame URL 또는 screenshot evidence 계획
 
 **이 PR에 `docs/workpacks/README.md` Slice Order의 해당 슬라이스 Status를 `planned` → `docs`로 변경하는 커밋을 포함한다.**
 
@@ -395,12 +414,15 @@
 5. `docs/workpacks/<slice>/automation-spec.json` — stage ownership / required states / artifact contract 확인
 6. `docs/화면정의서-v1.2.md` — 해당 화면 정의
 7. `docs/design/design-tokens.md` — 확정 색상·간격·컴포넌트 토큰 (Tailwind 클래스 작성 전 확인)
-8. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — 신규 화면 또는 high-risk UI change인 경우 Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
-9. 백엔드 브랜치 TypeScript 타입 파일 — API 계약 확인
-10. `docs/engineering/tdd-vitest.md`
-11. `docs/engineering/playwright-e2e.md`
-12. `docs/engineering/qa-system.md`
-13. `docs/engineering/git-workflow.md`
+8. `docs/design/mobile-ux-rules.md`
+9. `docs/design/anchor-screens.md`
+10. `docs/engineering/product-design-authority.md`
+11. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — 신규 화면 또는 high-risk UI change인 경우 Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
+12. 백엔드 브랜치 TypeScript 타입 파일 — API 계약 확인
+13. `docs/engineering/tdd-vitest.md`
+14. `docs/engineering/playwright-e2e.md`
+15. `docs/engineering/qa-system.md`
+16. `docs/engineering/git-workflow.md`
 
 ### 산출물
 
@@ -423,11 +445,13 @@
 - Design Status `temporary`: 기능 가능한 임시 UI, Tailwind 클래스 나중에 교체 가능한 구조 유지
 - 비로그인 보호 액션: 로그인 안내 모달 → return-to-action URL 보존
 - 신규 화면 또는 high-risk UI change인 경우 In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` 와이어프레임을 참조하여 구현
+- 신규 화면, high-risk UI change, anchor extension인 경우 screenshot 또는 Figma evidence 기반 `product-design-authority` 리뷰를 거친다
 - 신규 화면 또는 high-risk UI change인 경우 구현 완료 시 workpack README의 Design Status를 `temporary → pending-review`로 변경
 - 기존 confirmed 화면의 low-risk UI change는 Design Status를 유지할 수 있다. 이 경우 PR 본문에 low-risk 판단 근거를 남긴다.
 - Layer 1 deterministic gate(`pnpm verify:frontend`)를 먼저 green으로 만들고, exploratory QA는 그 다음에 실행
 - 시스템 row/bootstrap 의존 슬라이스면 fixture mode만이 아니라 real DB/local Supabase smoke 경로도 최소 1회 검증
 - Layer 2 exploratory QA를 실행했다면 Layer 3 단건 `pnpm qa:eval -- --checklist ... --report ...` 결과까지 PR에 남긴다
+- unresolved authority blocker가 있으면 `Ready for Review`로 넘기지 않는다
 - README `Delivery Checklist`, acceptance, Design Status를 PR 준비 전에 최신화
 - stage-result에는 이번 run에서 닫은 checklist id(`checklist_updates[]`)와 evidence ref를 남긴다
 - PR 본문 `Actual Verification`에 실제 브라우저 확인 / local demo / local Supabase / `N/A` 근거 기록
@@ -444,6 +468,8 @@
 - [ ] 상태 전이 로직이 테스트로 고정되었는가
 - [ ] Design Status `temporary`이면 스타일이 나중에 교체 가능한 구조인가
 - [ ] 신규 화면 또는 high-risk UI change라면 각 FE 화면의 `ui/designs/<SCREEN_ID>.md`를 참조하여 구현했는가
+- [ ] 신규 화면, high-risk UI change, anchor extension이라면 screenshot 또는 Figma evidence 기반 authority review를 남겼는가
+- [ ] authority review 결과 unresolved blocker가 0개인가
 - [ ] 신규 화면 또는 high-risk UI change라면 구현 완료 후 workpack README의 Design Status를 `pending-review`로 변경했는가
 - [ ] low-risk UI change라면 Design Status 유지 근거를 PR 본문에 남겼는가
 - [ ] 디자인 토큰(`--brand`, `--olive`, `--surface`, `--muted` 등)을 올바르게 사용했는가 (구버전 `#d56a3a`, `#6e7c4a` 사용 금지)
@@ -460,7 +486,7 @@
 
 ### 완료 기준
 
-`pnpm verify:frontend` 통과 + 필요한 real DB/bootstrap smoke 완료 + required exploratory QA/eval evidence 확보 → push → required CI green → Draft 해제 → Ready for Review
+`pnpm verify:frontend` 통과 + 필요한 real DB/bootstrap smoke 완료 + required exploratory QA/eval evidence 확보 + authority blocker 0개 확인(해당 시) → push → required CI green → Draft 해제 → Ready for Review
 
 ### PR 본문 완료 요약 (PR ## Summary, ## Workpack/Slice 섹션에 작성)
 
@@ -474,6 +500,7 @@
 - UI 상태: loading ✅ / empty ✅ / error ✅ / read-only ✅ / unauthorized ✅
 - 로그인 게이트: 있음 / 없음
 - Design Status: pending-review / confirmed 유지
+- Design Authority: reviewed / not-required / blocker 잔여 없음
 - QA: Layer 1 결과 + exploratory 보고서 경로 + qa eval 결과
 - 주요 결정 사항: <임시 UI 구조 선택 이유 등>
 ```
@@ -487,6 +514,7 @@
 ### 트리거 조건
 
 - **기본**: 신규 화면 또는 high-risk UI change에서 workpack README의 Design Status가 `pending-review` 상태
+- **기본 추가**: 신규 화면, high-risk UI change, anchor extension은 authority report가 있어야 `confirmed` 판정을 검토할 수 있다
 - **예외 1**: `temporary` 상태에서 명시적 요청이 있으면 기능 검토(5개 UI 상태·화면정의서 일치)만 수행, 스타일 리뷰 제외
 - **예외 2**: 기존 confirmed 화면의 low-risk UI change는 Stage 5를 생략하고 Stage 6에서 lightweight design check로 흡수할 수 있다
 - Figma URL은 트리거가 아닌 **추가 컨텍스트** — 제공되면 리뷰 시 참조
@@ -499,6 +527,7 @@
 - `pending-review` (기본): In Scope의 각 FE 화면마다 spacing·typography·color hierarchy·공용 컴포넌트 일관성·Tailwind 클래스·접근성 기본 요소(aria, focus, contrast) + 5개 UI 상태·화면정의서 일치
 - `temporary` (예외·명시적 요청): 기능 동작·5개 UI 상태 존재·화면정의서 기준 필수 요소 누락 여부만 검토
 - `confirmed` 유지 대상의 low-risk UI change: token 사용, spacing drift, loading/empty/error/read-only 회귀 여부만 점검
+- authority report가 있는 화면: 위 항목 + blocker/major issue 해결 여부 + screenshot/Figma evidence 적정성 확인
 
 ### 읽을 것 (이 순서로)
 
@@ -506,16 +535,20 @@
 2. `docs/workpacks/<slice>/acceptance.md` — FE 관련 checklist와 `review=5` 대상 확인
 3. `docs/화면정의서-v1.2.md` — 해당 화면 정의
 4. `docs/design/design-tokens.md` — 확정 토큰 기준 (색상·간격·컴포넌트 규칙)
-5. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — 신규 화면 또는 high-risk UI change인 경우 Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
-6. 현재 컴포넌트 코드
-7. exploratory QA report / eval result (있는 경우)
-8. Figma 디자인 컨텍스트 (URL 있는 경우, 추가 컨텍스트)
+5. `docs/design/mobile-ux-rules.md`
+6. `docs/design/anchor-screens.md`
+7. In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` — 신규 화면 또는 high-risk UI change인 경우 Stage 1에서 생성된 화면 설계 와이어프레임 (필수)
+8. 현재 컴포넌트 코드
+9. `ui/designs/authority/<SCREEN_ID>-authority.md` — 신규 화면, high-risk UI change, anchor extension인 경우 필수
+10. exploratory QA report / eval result (있는 경우)
+11. Figma 디자인 컨텍스트 (URL 있는 경우, 추가 컨텍스트)
 
 ### 산출물
 
 - 디자인 피드백 (구체적 수정 위치·파일명·라인 포함)
 - Tailwind 클래스 교체 제안 (컴포넌트 구조 변경은 Codex와 협의)
 - workpack README Design Status 업데이트 (`confirmed`으로 변경 가능 시)
+- authority blocker가 남으면 `confirmed` 보류와 재검토 조건 명시
 - stage-result에 `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`를 남긴다
 - Claude가 rebuttal을 받아들이면 `waived_fix_ids[]`로 남기고, supervisor가 README/acceptance metadata에 waiver comment를 반영한다
 
@@ -524,7 +557,7 @@
 ```
 ## 5단계 완료: <slice-name> 디자인 리뷰
 
-### Design Status: pending-review → confirmed / confirmed 유지
+### Design Status: pending-review → confirmed / confirmed 유지 / confirmed 보류
 ※ temporary 상태에서 명시적 요청 시: 기능 검토만 수행, 스타일 리뷰 제외
 ※ low-risk UI change는 confirmed 유지 + lightweight design check 가능
 
@@ -533,6 +566,7 @@
 - 화면정의서 일치: ✅/❌
 - 공용 컴포넌트 일관성: ✅/❌ (confirmed 시만)
 - 접근성 기본 요소: ✅/❌ (confirmed 시만)
+- authority blocker 해소: ✅/❌ (해당 시)
 
 ### 피드백 요약
 - <수정 제안 항목 (파일명·위치 포함)>
@@ -558,9 +592,10 @@
 
 1. `docs/workpacks/<slice>/README.md` — Design Status, Frontend Delivery Mode, Key Rules
 2. `docs/workpacks/<slice>/acceptance.md` — 체크리스트 전체
-3. exploratory QA report / eval result (해당 시)
-4. `AGENTS.md` Review Checks 섹션
-5. PR diff 코드
+3. `ui/designs/authority/<SCREEN_ID>-authority.md` — 해당 시
+4. exploratory QA report / eval result (해당 시)
+5. `AGENTS.md` Review Checks 섹션
+6. PR diff 코드
 
 ### 리뷰 깊이 (Design Status에 따라)
 
@@ -577,6 +612,7 @@
 - [ ] acceptance에서 `Manual Only`를 제외한 In Scope 미체크 항목이 없는가
 - [ ] Layer 1 deterministic gate와 real DB/bootstrap smoke evidence가 PR에 남아 있는가
 - [ ] exploratory QA가 required인 변경이면 report와 qa eval 결과가 있고, 주요 finding이 처리되었거나 근거와 함께 남아 있는가
+- [ ] 신규 화면, high-risk UI change, anchor extension이면 authority report가 있고 unresolved blocker가 0개인가
 - [ ] 브랜치·커밋·PR 본문이 규칙을 만족하는가
 - [ ] 보안/성능/디자인 영향이 PR 템플릿에 기록되었는가
 - [ ] README `Delivery Checklist`, roadmap status, Design Status, acceptance가 서로 일치하는가

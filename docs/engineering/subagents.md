@@ -86,7 +86,13 @@
 - spacing, hierarchy, interaction, accessibility 일관성을 점검한다.
 - wireframe은 참고 자료이며, 공식 문서가 우선이다.
 
-### 10. QA Explorer
+### 10. Product Design Authority
+
+- screenshot/Figma evidence 기준으로 모바일 UX 완성도를 본다.
+- whole-page horizontal scroll, scroll containment, CTA hierarchy, 익숙한 앱 패턴 적합성을 blocker 관점에서 판정한다.
+- anchor screen (`HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK`) 변경은 low-risk로 보지 않는다.
+
+### 11. QA Explorer
 
 - workpack README와 acceptance.md를 읽고 exploratory QA checklist를 만든다.
 - desktop/mobile에서 핵심 흐름, edge case, 회복 UX를 탐색한다.
@@ -97,5 +103,6 @@
 - 기능 개발: Orchestrator -> TDD Driver -> Git Workflow Reviewer -> PR Governance Reviewer -> Test Reviewer
 - API/인증 변경: Orchestrator -> TDD Driver -> Security Reviewer -> Test Reviewer -> PR Governance Reviewer
 - UI 변경: Orchestrator -> TDD Driver -> Design and System Reviewer -> Performance Reviewer -> PR Governance Reviewer
-- High-risk UI 검증: Orchestrator -> QA Explorer -> Design and System Reviewer -> PR Governance Reviewer
+- 신규 화면 / anchor extension: Orchestrator -> Product Design Authority -> Design and System Reviewer -> PR Governance Reviewer
+- High-risk UI 검증: Orchestrator -> QA Explorer -> Product Design Authority -> Design and System Reviewer -> PR Governance Reviewer
 - 설정/CI 변경: Orchestrator -> Git Workflow Reviewer -> Lint and Format Reviewer -> PR Governance Reviewer

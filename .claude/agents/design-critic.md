@@ -33,6 +33,8 @@ tools:
    - `docs/요구사항기준선-v1.6.md` — 요구사항 누락/오류 확인
    - `docs/유저flow맵-v1.2.md` — 진입/이탈 경로 정확성 확인
    - `docs/design/design-tokens.md` — 확정 토큰 기준으로 색상·간격·반경 위반 여부 확인
+   - `docs/design/mobile-ux-rules.md` — 모바일 UX blocker 규칙
+   - `docs/design/anchor-screens.md` — anchor screen / anchor extension 판정
    - `AGENTS.md` — Domain Rules, Implementation Rules 위반 여부
 
 3. **검토 기준 적용** (아래 체크리스트 전체 수행)
@@ -65,7 +67,10 @@ tools:
 ### D. UX 품질
 - [ ] 터치 타겟 최소 44px 준수 (텍스트로 명시 또는 레이아웃으로 유추)
 - [ ] 모바일 퍼스트 (375px 기준) 레이아웃
+- [ ] 작은 모바일 sentinel에서도 구조가 유지되는가
 - [ ] 핵심 액션이 시각적으로 명확한가 (primary CTA 위치)
+- [ ] whole-page horizontal scroll을 유도하지 않는가
+- [ ] scroll containment가 명확한가
 - [ ] 장보기 D&D (sort_order) UI가 명확한가 (해당 화면만)
 - [ ] 팬트리 제외 섹션 2-영역 구조가 올바른가 (SHOPPING_DETAIL만)
 - [ ] AI스러운 제네릭 UI 사용 여부 (글로우, 과도한 그라디언트 등)
@@ -157,4 +162,4 @@ tools:
 | 🟡 조건부 통과 | 크리티컬 이슈 0, 마이너 이슈 3+ |
 | 🔴 재작업 | 크리티컬 이슈 1+ |
 
-**크리티컬 기준**: 요구사항 누락, 도메인 규칙 위반, 로그인 게이트 미처리, read-only 정책 위반
+**크리티컬 기준**: 요구사항 누락, 도메인 규칙 위반, 로그인 게이트 미처리, read-only 정책 위반, whole-page horizontal scroll, 모호한 scroll containment, anchor screen 확장의 명백한 모바일 UX 후퇴
