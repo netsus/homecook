@@ -249,6 +249,10 @@ async function activateButton(page: Page, button: Locator, testInfo: TestInfo) {
   await button.click();
 }
 
+async function dragColumnHandle(page: Page, source: Locator, target: Locator) {
+  await source.dragTo(target);
+}
+
 async function expectVisibleWithinViewport(page: Page, locator: Locator) {
   const box = await locator.boundingBox();
   const viewport = page.viewportSize();
@@ -295,7 +299,13 @@ test.describe("Slice 05 planner week core", () => {
     await activateButton(page, page.getByRole("button", { name: "저장" }).nth(1), testInfo);
     await expect(page.locator('input[value="브런치"]').first()).toBeVisible();
 
-    await activateButton(page, page.getByRole("button", { name: "→" }).nth(1), testInfo);
+    await expect(page.getByRole("button", { name: "←" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "→" })).toHaveCount(0);
+
+    const brunchHandle = page.getByRole("button", { name: "브런치 컬럼 순서 변경" });
+    await brunchHandle.focus();
+    await page.keyboard.press("ArrowRight");
+
     await expect
       .poll(async () => readColumnNames(page))
       .toEqual(["아침", "저녁", "브런치", "간식", "야식"]);
@@ -308,6 +318,32 @@ test.describe("Slice 05 planner week core", () => {
 
     await activateButton(page, page.getByRole("button", { name: "다음 범위" }), testInfo);
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(1);
+  });
+
+  test("desktop user can drag planner columns with the handle and keep the reordered grid", async ({
+    page,
+  }, testInfo) => {
+    test.skip(isMobileProject(testInfo), "pointer drag reorder is covered on desktop only");
+
+    await setAuthOverride(page, "authenticated");
+    await mockPlannerRoutes(page);
+
+    await page.goto("/planner");
+
+    const sourceHandle = page.getByRole("button", { name: "점심 컬럼 순서 변경" });
+    const targetColumn = page.locator('[data-column-id="column-dinner"]');
+
+    await dragColumnHandle(page, sourceHandle, targetColumn);
+
+    await expect
+      .poll(async () => readColumnNames(page))
+      .toEqual(["아침", "저녁", "점심"]);
+
+    await page.reload();
+
+    await expect
+      .poll(async () => readColumnNames(page))
+      .toEqual(["아침", "저녁", "점심"]);
   });
 
   test("authenticated user can shift the planner range by wheel scrolling", async ({ page }, testInfo) => {

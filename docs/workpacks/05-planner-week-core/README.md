@@ -293,6 +293,6 @@
 - [x] 상태 뱃지 시각화 (registered / shopping_done / cook_done)
 - [x] 날짜 범위 스크롤 인터랙션
 - [x] `ui/designs/PLANNER_WEEK.md` + critique 산출물 유지
-- [x] Playwright E2E (플래너 조회, 컬럼 추가/수정/삭제 흐름)
+- [x] Playwright E2E (플래너 조회, 컬럼 추가/수정/삭제 흐름, drag reorder 유지)
 - [x] 자동화 범위 구분 (Vitest vs Playwright)
 - [x] 수동 QA 시나리오 정리 (acceptance.md Manual Only 섹션)

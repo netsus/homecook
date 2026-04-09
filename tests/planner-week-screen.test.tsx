@@ -269,4 +269,76 @@ describe("planner week screen", () => {
 
     expect(await screen.findByText("식사가 등록된 컬럼은 삭제할 수 없어요.")).toBeTruthy();
   });
+
+  it("reorders columns with drag handles and removes arrow reorder buttons", async () => {
+    const user = userEvent.setup();
+
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
+      .mockResolvedValueOnce({
+        columns: [
+          { id: "column-breakfast", name: "아침", sort_order: 0 },
+          { id: "column-dinner", name: "저녁", sort_order: 1 },
+          { id: "column-lunch", name: "점심", sort_order: 2 },
+        ],
+        meals: [],
+      });
+    updatePlannerColumn.mockResolvedValue({
+      id: "column-lunch",
+      name: "점심",
+      sort_order: 2,
+    });
+
+    render(<PlannerWeekScreen />);
+
+    const lunchHandle = await screen.findByRole("button", {
+      name: "점심 컬럼 순서 변경",
+    });
+
+    expect(screen.queryByRole("button", { name: "←" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "→" })).toBeNull();
+
+    lunchHandle.focus();
+    await user.keyboard("{ArrowRight}");
+
+    await waitFor(() => {
+      expect(updatePlannerColumn).toHaveBeenCalledWith("column-lunch", {
+        sort_order: 2,
+      });
+    });
+
+    const orderedColumns = screen
+      .getAllByRole("textbox")
+      .filter((element) => !element.getAttribute("placeholder"))
+      .map((element) => (element as HTMLInputElement).value);
+
+    expect(orderedColumns).toEqual(["아침", "저녁", "점심"]);
+  });
+
+  it("keeps the previous order and shows feedback when reorder save fails", async () => {
+    const user = userEvent.setup();
+
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+    updatePlannerColumn.mockRejectedValue(new Error("순서를 저장하지 못했어요."));
+
+    render(<PlannerWeekScreen />);
+
+    const lunchHandle = await screen.findByRole("button", {
+      name: "점심 컬럼 순서 변경",
+    });
+
+    lunchHandle.focus();
+    await user.keyboard("{ArrowRight}");
+
+    expect(await screen.findByText("순서를 저장하지 못했어요.")).toBeTruthy();
+
+    const orderedColumns = screen
+      .getAllByRole("textbox")
+      .filter((element) => !element.getAttribute("placeholder"))
+      .map((element) => (element as HTMLInputElement).value);
+
+    expect(orderedColumns).toEqual(["아침", "점심", "저녁"]);
+  });
 });
