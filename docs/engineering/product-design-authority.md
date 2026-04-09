@@ -40,6 +40,13 @@
 - design-critic은 통과했지만 실제 구현이 어색했던 경험이 누적된 경우
 - Stage 5에서 반복적으로 hierarchy / spacing / scroll / CTA 문제가 발견된 경우
 
+특히 아래 유형은 authority가 적극적으로 잡아야 한다.
+
+- 첫 화면에 실제 핵심 콘텐츠보다 설명/통계/여백이 더 많이 보이는 경우
+- 범위 이동, 필터, 주간 전환 같은 컨트롤이 대상 콘텐츠와 멀리 떨어진 경우
+- 같은 날짜의 식단처럼 한 덩어리로 봐야 할 정보가 여러 카드나 여러 축으로 흩어진 경우
+- 4~5컬럼을 지원한다는 이유로 한 슬롯이 지나치게 좁아진 경우
+
 ---
 
 ## 필수 입력물
@@ -95,6 +102,26 @@ authority 리뷰는 아래 evidence가 있어야 한다.
 
 - `PLANNER_WEEK`에서 planner 자체가 horizontally scrollable content여야 하는데,
   화면 전체 wrapper가 좌우로 밀리는 구조는 blocker다.
+- `PLANNER_WEEK`에서 같은 날짜의 아침/점심/저녁이 서로 떨어져 보여
+  사용자가 하루 식단을 한 번에 읽지 못하면 major 이상으로 본다.
+- `PLANNER_WEEK`에서 주간 이동 컨트롤이 planner 본문과 멀리 떨어져 있으면
+  control proximity 문제로 본다.
+
+### Planner-Specific Heuristics
+
+`PLANNER_WEEK`는 아래 질문을 별도로 본다.
+
+- 모바일 첫 화면에서 며칠치 식단이 바로 보이는가
+- 주간 범위와 주간 이동 컨트롤이 planner 본문에 붙어 있는가
+- 같은 날짜의 끼니가 한 card 또는 한 block 안에서 함께 읽히는가
+- 설명/칩/여백이 실제 식단 카드보다 더 큰 비중을 차지하지 않는가
+- 4~5컬럼에서도 한 슬롯의 정보 밀도가 무너지지 않는가
+
+권장 guardrail:
+
+- mobile default viewport에서 `2일 이상`의 day summary가 보여야 한다.
+- 4~5컬럼이 되더라도 모바일에서 `5 equal-width slots in one row`는 기본안으로 두지 않는다.
+- 한 슬롯 안에 `끼니명 + 식사명 또는 empty state + 상태/보조 정보`가 안정적으로 읽히지 않으면 그 레이아웃은 실패다.
 
 ---
 

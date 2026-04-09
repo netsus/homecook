@@ -5,10 +5,12 @@
 파일 규칙:
 
 - `ui/designs/authority/<SCREEN_ID>-authority.md`
+- 리디자인 preflight는 필요 시 `ui/designs/authority/<SCREEN_ID>-redesign-preflight.md`
 
 현재 baseline:
 
 - `ui/designs/authority/PLANNER_WEEK-authority.md`
+- `ui/designs/authority/PLANNER_WEEK-redesign-preflight.md`
 - `ui/designs/authority/RECIPE_DETAIL-authority.md`
 
 권장 포함 항목:

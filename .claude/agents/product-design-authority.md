@@ -30,10 +30,13 @@ tools:
 - page-level overflow와 localized overflow의 구분
 - scroll containment clarity
 - primary CTA hierarchy
+- first-viewport density와 콘텐츠 대비 설명/여백 비율
+- 컨트롤과 실제 콘텐츠의 거리
 - 정보 구조의 익숙한 앱 패턴 적합성
 - 좁은 모바일 폭에서의 안정성
 - 색감과 위계가 행동 유도에 기여하는지
 - 이미 설득력 있는 interaction model을 불필요하게 깨지 않았는지
+- 같은 날짜/같은 단위 정보가 불필요하게 흩어져 있지 않은지
 
 ## 필수 입력
 
@@ -86,6 +89,8 @@ tools:
 - localized scroll 문제를 과대 해석해 기존 table/list/sheet mental model을 다른 구조로 치환함
 - 스크롤 대상이 불명확함
 - primary CTA hierarchy가 약함
+- 첫 화면에 실제 핵심 콘텐츠보다 설명/칩/여백이 더 많이 보여 overview성이 약함
+- 범위 이동이나 필터 컨트롤이 실제 콘텐츠와 멀리 떨어져 있어 control proximity가 나쁨
 - narrow mobile에서 레이아웃 붕괴
 - anchor screen extension인데 기존 패턴을 거칠게 깨뜨림
 - unresolved critique/authority blocker가 남았는데 `confirmed`를 주려 함
@@ -143,4 +148,6 @@ tools:
 - `PLANNER_WEEK`의 전체 페이지 가로 스크롤은 기본적으로 blocker로 본다.
 - `PLANNER_WEEK`의 내부 table scroll은 자동 blocker가 아니다. page-level expansion인지, planner 내부 containment인지 먼저 구분한다.
 - 익숙한 interaction model을 바꾸는 제안은 사용자 승인 없이는 `hold`로 남긴다.
+- `PLANNER_WEEK`는 첫 화면에서 여러 날짜가 보여야 하고, 같은 날짜의 끼니는 가능한 한 한 card 안에서 같이 읽혀야 한다.
+- `PLANNER_WEEK`에서 4~5컬럼을 한 줄 동일 폭으로 압축해 슬롯 가독성이 무너지면 실패로 본다.
 - 텍스트 설계가 괜찮아 보여도 screenshot/Figma evidence가 어색하면 `hold`를 줄 수 있다.
