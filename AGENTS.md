@@ -11,10 +11,11 @@
 7. 테스트 작성 시 → `docs/engineering/tdd-vitest.md`
 8. 브라우저 흐름 검증 시 → `docs/engineering/playwright-e2e.md`
 9. QA 시스템/게이트/탐색 QA/eval 작업 시 → `docs/engineering/qa-system.md`
-10. 필요한 경우에만 `docs/reference/wireframes/`
-11. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
-12. 필요 시 `docs/engineering/security-performance-design.md`
-13. workflow v2 설계/파일럿 작업 시 `docs/engineering/workflow-v2/README.md`
+10. 모바일 UI/UX 품질, screenshot/Figma authority review 기준 확인 시 → `docs/engineering/product-design-authority.md`, `docs/design/mobile-ux-rules.md`, `docs/design/anchor-screens.md`
+11. 필요한 경우에만 `docs/reference/wireframes/`
+12. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
+13. 필요 시 `docs/engineering/security-performance-design.md`
+14. workflow v2 설계/파일럿 작업 시 `docs/engineering/workflow-v2/README.md`
 
 ## Source of Truth
 

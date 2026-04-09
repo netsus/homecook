@@ -30,6 +30,8 @@ tools:
    - `docs/요구사항기준선-v1.6.md` — 관련 요구사항 확인
    - `docs/유저flow맵-v1.2.md` — 진입/이탈 플로우 확인
    - `docs/design/design-tokens.md` — 확정 색상·간격·컴포넌트 토큰 (반드시 읽기)
+   - `docs/design/mobile-ux-rules.md` — 모바일 UX blocker 규칙
+   - `docs/design/anchor-screens.md` — anchor screen / anchor extension 판정
    - `docs/reference/wireframes/` — 보조 참고 (충돌 시 공식 문서 우선)
 
 2. **설계 생성**
@@ -96,10 +98,13 @@ tools:
 ## 디자인 원칙
 
 - **모바일 퍼스트**: 375px 기준, 터치 타겟 최소 44px
+- **작은 모바일 sentinel 고려**: 320px 수준에서도 레이아웃이 붕괴하지 않게 설계
 - **하단 탭 구조**: 홈 / 플래너 / 팬트리 / 마이페이지 (4탭 고정)
 - **로그인 게이트**: 보호 액션은 즉시 이동 X → 안내 모달 → return-to-action
 - **공통 상태**: 모든 리스트/데이터 화면은 loading / empty / error 포함
 - **read-only 정책**: 완료된 장보기 리스트는 수정 UI 비노출
+- **whole-page horizontal scroll 금지**: 가로 이동이 필요해도 페이지 전체 wrapper가 아니라 의도된 내부 컨테이너만 스크롤
+- **scroll containment 명시**: 어디를 세로/가로 스크롤하는지 인터랙션 노트에 분명히 적는다
 - **일반 AI스러운 UI 금지**: 과도한 그라디언트, 글로우 효과, 제네릭 카드 레이아웃 피하기
 
 ## 확정 디자인 토큰 요약 (docs/design/design-tokens.md 기준)
@@ -122,3 +127,4 @@ tools:
 - 문서에 없는 화면/기능/필드를 임의로 추가하지 않는다
 - 와이어프레임과 공식 문서가 충돌하면 공식 문서 기준으로 설계한다
 - 충돌을 발견하면 **출력 파일의 "디자인 결정 사항" 섹션에 명시**하고 설계를 계속한다
+- anchor screen(`HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK`)을 수정/확장하는 화면이면, low-risk처럼 다루지 말고 모바일 UX 리스크를 별도 메모한다
