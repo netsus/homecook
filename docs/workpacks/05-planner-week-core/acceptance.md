@@ -70,7 +70,9 @@
 3. **끼니 컬럼 수정**
    - 기존 컬럼명 클릭 → 수정(예: "점심" → "브런치") → 저장
    - 컬럼명 변경이 즉시 반영되는지 확인
-   - 컬럼 순서 드래그 변경 (가능하다면) → sort_order 변경 반영 확인
+   - drag handle로 컬럼 순서를 변경 → sort_order 변경 반영 확인
+   - 저장 실패 시 직전 순서로 원복되고 오류 안내가 보이는지 확인
+   - 화살표 버튼 기반 순서 변경 UI가 제거되었는지 확인
 
 4. **끼니 컬럼 삭제**
    - 비어있는 컬럼 삭제 버튼 클릭 → 삭제 성공 확인 (204)
@@ -125,6 +127,6 @@
 
 ### Manual Only
 
-- [ ] 끼니 컬럼 순서 드래그 변경 인터랙션 (디자인 단계에서 구현 방식 결정 후 자동화 추가 검토)
+- [ ] drag handle 기반 끼니 컬럼 순서 변경 인터랙션 (드롭 저장, 실패 시 원복, 화살표 제거, 자동화 추가 검토)
 - [x] 플래너 화면 장시간 사용 시 성능 확인 (많은 식사 데이터) (`2026-04-09`, local Supabase + `pnpm dev:demo` + `pnpm qa:perf:05`, 계정 `local-other@homecook.local`, 컬럼 `5개`, 레시피 `72개`, meals `343개`, 초기 범위 `89건`, `initialReady=1130ms`, `averageShift=199ms`, `maxShift=221ms`, `horizontalReach=53ms`)
 - [x] 회원가입 직후 기본 컬럼(아침/점심/저녁) 3개 자동 생성 확인 (auth flow 검증) (`2026-04-04`, 새 Google 계정 + local Supabase Google OAuth + `http://localhost:3000`, `/planner` 첫 로그인 직후 3개 컬럼 생성 확인)
