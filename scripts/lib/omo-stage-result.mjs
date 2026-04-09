@@ -169,8 +169,121 @@ export function readStageResult(artifactDir) {
 
 export function validateStageResult(stage, stageResult, options = {}) {
   const strictExtendedContract = Boolean(options?.strictExtendedContract);
+  const subphase =
+    typeof options?.subphase === "string" && options.subphase.trim().length > 0
+      ? options.subphase.trim()
+      : "implementation";
   const normalizedStage = Number(stage);
   const result = ensureObject(stageResult, "stageResult");
+
+  if (normalizedStage === 2 && subphase === "doc_gate_repair") {
+    const fallbackCommitSubject =
+      typeof result.commit?.subject === "string" && result.commit.subject.trim().length > 0
+        ? result.commit.subject
+        : result.pr?.title;
+
+    const normalizedRepairResult = {
+      result: ensureNonEmptyString(result.result, "stageResult.result"),
+      summary_markdown: ensureNonEmptyString(result.summary_markdown, "stageResult.summary_markdown"),
+      commit: {
+        subject: ensureNonEmptyString(fallbackCommitSubject, "stageResult.commit.subject"),
+        body_markdown:
+          typeof result.commit?.body_markdown === "string" && result.commit.body_markdown.trim().length > 0
+            ? result.commit.body_markdown.trim()
+            : null,
+      },
+      pr: {
+        title: ensureNonEmptyString(result.pr?.title, "stageResult.pr.title"),
+        body_markdown: ensureNonEmptyString(result.pr?.body_markdown, "stageResult.pr.body_markdown"),
+      },
+      checks_run: ensureStringArray(result.checks_run ?? [], "stageResult.checks_run"),
+      next_route: ensureNonEmptyString(result.next_route, "stageResult.next_route"),
+      claimed_scope: validateClaimedScope(result.claimed_scope, {
+        strict: true,
+      }),
+      changed_files: ensureStringArray(result.changed_files, "stageResult.changed_files"),
+      tests_touched: ensureOptionalStringArray(result.tests_touched ?? [], "stageResult.tests_touched"),
+      artifacts_written: ensureStringArray(result.artifacts_written ?? [], "stageResult.artifacts_written"),
+      resolved_doc_finding_ids: ensureStringArray(
+        result.resolved_doc_finding_ids ?? [],
+        "stageResult.resolved_doc_finding_ids",
+      ),
+      contested_doc_fix_ids: ensureStringArray(
+        result.contested_doc_fix_ids ?? [],
+        "stageResult.contested_doc_fix_ids",
+      ),
+      rebuttals: validateRebuttals(result.rebuttals, {
+        strict: true,
+      }),
+    };
+
+    const rebuttalFixIds = normalizedRepairResult.rebuttals.map((entry) => entry.fix_id);
+    const missingRebuttals = normalizedRepairResult.contested_doc_fix_ids.filter((id) => !rebuttalFixIds.includes(id));
+    const foreignRebuttals = rebuttalFixIds.filter((id) => !normalizedRepairResult.contested_doc_fix_ids.includes(id));
+    if (missingRebuttals.length > 0 || foreignRebuttals.length > 0) {
+      throw new Error("stageResult.rebuttals must exactly match stageResult.contested_doc_fix_ids.");
+    }
+
+    const overlap = normalizedRepairResult.resolved_doc_finding_ids.filter((id) =>
+      normalizedRepairResult.contested_doc_fix_ids.includes(id),
+    );
+    if (overlap.length > 0) {
+      throw new Error("stageResult.resolved_doc_finding_ids and stageResult.contested_doc_fix_ids must be disjoint.");
+    }
+
+    return normalizedRepairResult;
+  }
+
+  if (normalizedStage === 2 && subphase === "doc_gate_review") {
+    const findings = validateOptionalFindings(result.findings);
+    const reviewedDocFindingIds = ensureStringArray(
+      result.reviewed_doc_finding_ids ?? [],
+      "stageResult.reviewed_doc_finding_ids",
+    );
+    const requiredDocFixIds = ensureStringArray(
+      result.required_doc_fix_ids ?? [],
+      "stageResult.required_doc_fix_ids",
+    );
+    const waivedDocFixIds = ensureStringArray(
+      result.waived_doc_fix_ids ?? [],
+      "stageResult.waived_doc_fix_ids",
+    );
+    const decision = ensureNonEmptyString(result.decision, "stageResult.decision");
+
+    if (decision === "request_changes" && requiredDocFixIds.length === 0) {
+      throw new Error("stageResult.required_doc_fix_ids must include at least one entry for request_changes reviews.");
+    }
+
+    if (decision === "approve" && requiredDocFixIds.length > 0) {
+      throw new Error("stageResult.required_doc_fix_ids must be empty for approve reviews.");
+    }
+
+    const overlap = requiredDocFixIds.filter((id) => waivedDocFixIds.includes(id));
+    if (overlap.length > 0) {
+      throw new Error("stageResult.required_doc_fix_ids and stageResult.waived_doc_fix_ids must be disjoint.");
+    }
+
+    return {
+      decision,
+      body_markdown: ensureNonEmptyString(result.body_markdown, "stageResult.body_markdown"),
+      route_back_stage:
+        result.route_back_stage === null || result.route_back_stage === undefined
+          ? null
+          : Number(result.route_back_stage),
+      approved_head_sha:
+        typeof result.approved_head_sha === "string" && result.approved_head_sha.trim().length > 0
+          ? result.approved_head_sha.trim()
+          : null,
+      review_scope: {
+        scope: "doc_gate",
+        checklist_ids: [],
+      },
+      reviewed_doc_finding_ids: reviewedDocFindingIds,
+      required_doc_fix_ids: requiredDocFixIds,
+      waived_doc_fix_ids: waivedDocFixIds,
+      findings,
+    };
+  }
 
   if ([1, 2, 4].includes(normalizedStage)) {
     const fallbackCommitSubject =

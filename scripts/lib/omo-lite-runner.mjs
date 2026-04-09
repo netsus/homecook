@@ -210,7 +210,37 @@ function resolveEffectiveProviderSelection({
   };
 }
 
-function buildCodeStageResultTemplate(stage) {
+function buildCodeStageResultTemplate(stage, subphase = null) {
+  if (stage === 2 && subphase === "doc_gate_repair") {
+    return {
+      result: "done",
+      summary_markdown: "짧은 요약",
+      commit: {
+        subject: "docs: 제목",
+        body_markdown: "선택 사항",
+      },
+      pr: {
+        title: "docs: 제목",
+        body_markdown: "## Summary\n- 변경 요약",
+      },
+      checks_run: [],
+      next_route: "open_pr",
+      claimed_scope: {
+        files: ["docs/workpacks/example/README.md"],
+        endpoints: [],
+        routes: [],
+        states: [],
+        invariants: [],
+      },
+      changed_files: ["docs/workpacks/example/README.md"],
+      tests_touched: [],
+      artifacts_written: [".artifacts/doc-gate.log"],
+      resolved_doc_finding_ids: ["doc-gate-finding-example"],
+      contested_doc_fix_ids: [],
+      rebuttals: [],
+    };
+  }
+
   if (stage === 2) {
     return {
       result: "done",
@@ -315,6 +345,7 @@ function buildCodeStageResultTemplate(stage) {
 function buildPrompt({
   slice,
   stage,
+  subphase = null,
   workItemId,
   dispatch,
   stageResultPath,
@@ -322,8 +353,32 @@ function buildPrompt({
 }) {
   const normalizedStage = Number(stage);
   const stageResultTemplate =
-    [1, 2, 4].includes(normalizedStage)
-      ? buildCodeStageResultTemplate(normalizedStage)
+    normalizedStage === 2 && subphase === "doc_gate_review"
+      ? {
+          decision: "approve | request_changes",
+          body_markdown: "## Review\n- 승인 또는 변경 요청 요약",
+          route_back_stage: 2,
+          approved_head_sha: "abc123",
+          review_scope: {
+            scope: "doc_gate",
+            checklist_ids: [],
+          },
+          reviewed_doc_finding_ids: ["doc-gate-finding-example"],
+          required_doc_fix_ids: [],
+          waived_doc_fix_ids: [],
+          findings: [
+            {
+              file: "docs/workpacks/example/README.md",
+              line_hint: 42,
+              severity: "critical | major | minor",
+              category: "contract | tests | scope | logic | style",
+              issue: "발견된 문제 설명",
+              suggestion: "구체적인 수정 제안",
+            },
+          ],
+        }
+      : [1, 2, 4].includes(normalizedStage)
+        ? buildCodeStageResultTemplate(normalizedStage, subphase)
       : {
           decision: "approve | request_changes",
           body_markdown: "## Review\n- 승인 또는 변경 요청 요약 (findings 항목도 여기 요약할 것)",
@@ -353,6 +408,7 @@ function buildPrompt({
     "",
     `- slice: \`${slice}\``,
     `- stage: \`${stage}\``,
+    subphase ? `- subphase: \`${subphase}\`` : null,
     `- actor: \`${dispatch.actor}\``,
     workItemId ? `- workflow v2 work item: \`${workItemId}\`` : null,
     `- session role: \`${dispatch.sessionBinding.role}\``,
@@ -430,9 +486,13 @@ function buildPrompt({
     "```json",
     JSON.stringify(stageResultTemplate, null, 2),
     "```",
-    [1, 2, 4].includes(normalizedStage)
-      ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route, claimed_scope, changed_files, tests_touched, artifacts_written, checklist_updates, contested_fix_ids, rebuttals"
-      : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, review_scope, reviewed_checklist_ids, required_fix_ids, waived_fix_ids, findings (optional — 문제가 있으면 structured findings 배열을 반드시 포함하세요)",
+    normalizedStage === 2 && subphase === "doc_gate_repair"
+      ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route, claimed_scope, changed_files, artifacts_written, resolved_doc_finding_ids, contested_doc_fix_ids, rebuttals"
+      : normalizedStage === 2 && subphase === "doc_gate_review"
+        ? "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, review_scope.scope=doc_gate, reviewed_doc_finding_ids, required_doc_fix_ids, waived_doc_fix_ids, findings"
+        : [1, 2, 4].includes(normalizedStage)
+          ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route, claimed_scope, changed_files, tests_touched, artifacts_written, checklist_updates, contested_fix_ids, rebuttals"
+          : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, review_scope, reviewed_checklist_ids, required_fix_ids, waived_fix_ids, findings (optional — 문제가 있으면 structured findings 배열을 반드시 포함하세요)",
     ...extraPromptSections,
   ]
     .filter(Boolean)
@@ -1242,6 +1302,7 @@ export function runStageWithArtifacts({
   rootDir = process.cwd(),
   slice,
   stage,
+  subphase = null,
   workItemId,
   claudeBudgetState,
   mode = "artifact-only",
@@ -1266,6 +1327,8 @@ export function runStageWithArtifacts({
 }) {
   const normalizedSlice = ensureNonEmptyString(slice, "slice");
   const normalizedStage = Number(stage);
+  const normalizedSubphase =
+    typeof subphase === "string" && subphase.trim().length > 0 ? subphase.trim() : null;
   const targetArtifactDir =
     artifactDir ??
     defaultArtifactDir(rootDir, normalizedSlice, normalizedStage, now);
@@ -1281,7 +1344,7 @@ export function runStageWithArtifacts({
         slice: normalizedSlice,
       })
     : null;
-  const sessionRole = resolveStageSessionRole(normalizedStage);
+  const sessionRole = resolveStageSessionRole(normalizedStage, normalizedSubphase);
   const existingSessionEntry = runtimeSnapshot?.state?.sessions?.[sessionRole] ?? null;
   const existingSessionId = existingSessionEntry?.session_id ?? null;
   const existingSessionProvider = resolveStoredSessionProvider(sessionRole, existingSessionEntry);
@@ -1347,15 +1410,19 @@ export function runStageWithArtifacts({
   const retryState =
     runtimeSnapshot?.state?.blocked_stage === normalizedStage ? runtimeSnapshot.state.retry : null;
   const reviewRole =
-    normalizedStage === 2 || normalizedStage === 3
-      ? "backend"
-      : normalizedStage === 4 || normalizedStage === 5 || normalizedStage === 6
-        ? "frontend"
-        : null;
+    normalizedStage === 2 && normalizedSubphase === "doc_gate_review"
+      ? "doc_gate"
+      : normalizedStage === 2 || normalizedStage === 3
+        ? "backend"
+        : normalizedStage === 4 || normalizedStage === 5 || normalizedStage === 6
+          ? "frontend"
+          : null;
   const reviewEntry =
-    reviewRole && runtimeSnapshot?.state?.last_review?.[reviewRole]
-      ? runtimeSnapshot.state.last_review[reviewRole]
-      : null;
+    reviewRole === "doc_gate"
+      ? runtimeSnapshot?.state?.doc_gate?.last_review ?? null
+      : reviewRole && runtimeSnapshot?.state?.last_review?.[reviewRole]
+        ? runtimeSnapshot.state.last_review[reviewRole]
+        : null;
   const reviewContext =
     reviewEntry?.decision === "request_changes" && reviewEntry?.body_markdown
       ? {
@@ -1373,19 +1440,33 @@ export function runStageWithArtifacts({
           waived_fix_ids: Array.isArray(reviewEntry.waived_fix_ids)
             ? reviewEntry.waived_fix_ids
             : [],
+          reviewed_doc_finding_ids: Array.isArray(reviewEntry.reviewed_doc_finding_ids)
+            ? reviewEntry.reviewed_doc_finding_ids
+            : [],
+          required_doc_fix_ids: Array.isArray(reviewEntry.required_doc_fix_ids)
+            ? reviewEntry.required_doc_fix_ids
+            : [],
+          waived_doc_fix_ids: Array.isArray(reviewEntry.waived_doc_fix_ids)
+            ? reviewEntry.waived_doc_fix_ids
+            : [],
         }
       : null;
   const rebuttalEntry =
-    reviewRole && runtimeSnapshot?.state?.last_rebuttal?.[reviewRole]
-      ? runtimeSnapshot.state.last_rebuttal[reviewRole]
-      : null;
+    reviewRole === "doc_gate"
+      ? runtimeSnapshot?.state?.doc_gate?.last_rebuttal ?? null
+      : reviewRole && runtimeSnapshot?.state?.last_rebuttal?.[reviewRole]
+        ? runtimeSnapshot.state.last_rebuttal[reviewRole]
+        : null;
   const checklistContract = normalizedStage > 1
     ? readWorkpackChecklistContract({
         rootDir,
         slice: normalizedSlice,
       })
     : null;
-  const strictChecklistContractActive = isChecklistContractActive(checklistContract);
+  const strictChecklistContractActive =
+    normalizedSubphase === null || normalizedSubphase === "implementation"
+      ? isChecklistContractActive(checklistContract)
+      : false;
   const ownedChecklistIds = strictChecklistContractActive
     ? resolveChecklistIds(resolveOwnedChecklistItems(checklistContract, normalizedStage))
     : [];
@@ -1416,6 +1497,7 @@ export function runStageWithArtifacts({
   const dispatch = buildStageDispatch({
     slice: normalizedSlice,
     stage: normalizedStage,
+    subphase: normalizedSubphase,
     claudeBudgetState: resolvedBudget.state,
     sessionId: existingSessionId,
     retryAt,
@@ -1442,6 +1524,7 @@ export function runStageWithArtifacts({
   const basePrompt = buildPrompt({
     slice: normalizedSlice,
     stage: dispatch.stage,
+    subphase: normalizedSubphase,
     workItemId,
     dispatch,
     stageResultPath,
@@ -1508,6 +1591,7 @@ export function runStageWithArtifacts({
       provider: executionBinding.provider,
       agent: executionBinding.agent,
       reason: executionBinding.reason,
+      subphase: normalizedSubphase ?? "implementation",
       loop_mode: loopMode,
       ralph_goal_ids: ralphGoalIds,
       ralph_origin: ralphOrigin,
@@ -1548,6 +1632,7 @@ export function runStageWithArtifacts({
             ? "backend"
             : "frontend",
         startedAt: now,
+        subphase: normalizedSubphase ?? "implementation",
         loopMode,
         ralphGoalIds,
         ralphOrigin,
@@ -1571,6 +1656,7 @@ export function runStageWithArtifacts({
         reason: executionBinding.reason,
         exitCode: null,
         sessionId: existingSessionId,
+        subphase: normalizedSubphase ?? "implementation",
         loop_mode: loopMode,
         ralph_goal_ids: ralphGoalIds,
         ralph_origin: ralphOrigin,
@@ -1590,6 +1676,7 @@ export function runStageWithArtifacts({
         reason: "claude_budget_unavailable",
         exitCode: null,
         sessionId: existingSessionId,
+        subphase: normalizedSubphase ?? "implementation",
         loop_mode: loopMode,
         ralph_goal_ids: ralphGoalIds,
         ralph_origin: ralphOrigin,
@@ -1609,6 +1696,7 @@ export function runStageWithArtifacts({
         reason: executionBinding.reason,
         exitCode: null,
         sessionId: existingSessionId,
+        subphase: normalizedSubphase ?? "implementation",
         loop_mode: loopMode,
         ralph_goal_ids: ralphGoalIds,
         ralph_origin: ralphOrigin,
@@ -1620,6 +1708,7 @@ export function runStageWithArtifacts({
       dispatch: buildStageDispatch({
         slice: normalizedSlice,
         stage: normalizedStage,
+        subphase: normalizedSubphase,
         claudeBudgetState: resolvedBudget.state,
         sessionId: existingSessionId,
         attemptCount: (retryState?.attempt_count ?? 0) + 1,
@@ -1636,6 +1725,7 @@ export function runStageWithArtifacts({
         reason: "stored session provider does not match the requested provider",
         exitCode: null,
         sessionId: existingSessionId,
+        subphase: normalizedSubphase ?? "implementation",
         loop_mode: loopMode,
         ralph_goal_ids: ralphGoalIds,
         ralph_origin: ralphOrigin,
@@ -1677,6 +1767,7 @@ export function runStageWithArtifacts({
         prompt,
         execution: {
           ...execution,
+          subphase: normalizedSubphase ?? "implementation",
           loop_mode: loopMode,
           ralph_goal_ids: ralphGoalIds,
           ralph_origin: ralphOrigin,
@@ -1689,6 +1780,7 @@ export function runStageWithArtifacts({
           dispatch: buildStageDispatch({
             slice: normalizedSlice,
             stage: normalizedStage,
+            subphase: normalizedSubphase,
             claudeBudgetState: resolvedBudget.state,
             sessionId: existingSessionId,
             attemptCount: (retryState?.attempt_count ?? 0) + 1,
@@ -1707,6 +1799,7 @@ export function runStageWithArtifacts({
             sessionId: existingSessionId,
             stdoutPath: error.stdoutPath ?? null,
             stderrPath: error.stderrPath ?? null,
+            subphase: normalizedSubphase ?? "implementation",
             loop_mode: loopMode,
             ralph_goal_ids: ralphGoalIds,
             ralph_origin: ralphOrigin,
@@ -1721,6 +1814,7 @@ export function runStageWithArtifacts({
           dispatch: buildStageDispatch({
             slice: normalizedSlice,
             stage: normalizedStage,
+            subphase: normalizedSubphase,
             claudeBudgetState: "unavailable",
             sessionId: error.sessionId ?? existingSessionId,
             retryAt: resolveRetryAt({
@@ -1741,6 +1835,7 @@ export function runStageWithArtifacts({
             sessionId: error.sessionId ?? existingSessionId,
             stdoutPath: error.stdoutPath ?? null,
             stderrPath: error.stderrPath ?? null,
+            subphase: normalizedSubphase ?? "implementation",
             loop_mode: loopMode,
             ralph_goal_ids: ralphGoalIds,
             ralph_origin: ralphOrigin,
@@ -1767,6 +1862,7 @@ export function runStageWithArtifacts({
             sessionId: error.sessionId ?? existingSessionId,
             stdoutPath: error.stdoutPath ?? null,
             stderrPath: error.stderrPath ?? null,
+            subphase: normalizedSubphase ?? "implementation",
             loop_mode: loopMode,
             ralph_goal_ids: ralphGoalIds,
             ralph_origin: ralphOrigin,
@@ -1798,6 +1894,7 @@ export function runStageWithArtifacts({
     try {
       validateStageResult(normalizedStage, stageResult, {
         strictExtendedContract: Boolean(checklistContract && isChecklistContractActive(checklistContract)),
+        subphase: normalizedSubphase,
       });
       validStageResult = true;
     } catch (error) {
@@ -1843,7 +1940,11 @@ export function runStageWithArtifacts({
     if (validStageResult) {
       if (lifecycleMode === "supervisor") {
         const stageStateWriter =
-          [1, 2, 4].includes(dispatch.stage) ? markStageResultReady : markReviewPending;
+          dispatch.stage === 2 && normalizedSubphase === "doc_gate_review"
+            ? markReviewPending
+            : [1, 2, 4].includes(dispatch.stage)
+              ? markStageResultReady
+              : markReviewPending;
 
         nextRuntimeState = stageStateWriter({
           state: nextRuntimeState,
@@ -1854,17 +1955,21 @@ export function runStageWithArtifacts({
           sessionId: result.execution.sessionId ?? existingSessionId,
           stageResultPath,
           verifyCommands: dispatch.verifyCommands,
-          prRole: [1, 2, 4].includes(dispatch.stage)
-            ? dispatch.stage === 1
+          prRole:
+            dispatch.stage === 1
               ? "docs"
               : dispatch.stage === 2
-                ? "backend"
-                : "frontend"
-            : dispatch.stage === 3
-              ? "backend"
-              : "frontend",
+                ? normalizedSubphase === "implementation"
+                  ? "backend"
+                  : "docs"
+                : dispatch.stage === 4
+                  ? "frontend"
+                  : dispatch.stage === 3
+                    ? "backend"
+                    : "frontend",
           startedAt: runtimeStartSync?.state?.execution?.started_at ?? now,
           finishedAt: now,
+          subphase: normalizedSubphase ?? "implementation",
           loopMode,
           ralphGoalIds,
           ralphOrigin,

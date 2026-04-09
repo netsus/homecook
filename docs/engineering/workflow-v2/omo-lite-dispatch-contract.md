@@ -100,12 +100,20 @@ review stage의 `body_markdown`도 기본적으로 한국어로 작성한다.
 review feedback는 runtime `last_review.<role>.body_markdown`에 저장되고, Stage 2/4 재실행 시 prompt에 다시 주입된다.
 Codex rebuttal bundle은 runtime `last_rebuttal.<role>`에 저장되고, 다음 Stage 3/5/6 review prompt에 다시 주입된다.
 
+internal 1.5 subphase:
+
+- `doc_gate_repair`는 `stage=2`, `subphase=doc_gate_repair`로 dispatch한다.
+- `doc_gate_review`는 `stage=2`, `subphase=doc_gate_review`로 dispatch한다.
+- 둘 다 public stage number를 바꾸지 않는다.
+- `doc_gate_repair`는 `docs/<slice>-repair` 브랜치에서 docs-only 변경만 허용한다.
+- `doc_gate_review approve` 뒤에만 docs PR merge와 Stage 2 implementation handoff가 가능하다.
+
 ## Dispatch Matrix
 
 | Stage | Actor | Goal | Required Reads | Deliverables |
 |------|-------|------|----------------|--------------|
 | 1 | Claude | workpack 문서 작성 | AGENTS, current source, template, official docs | README, acceptance, automation-spec, valid stage result |
-| 2 | Codex | backend contract-first 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, API/DB docs, 이전 backend review feedback(있으면) | `$ralph`-driven backend impl, roadmap status `in-progress`, checklist updates/rebuttals, valid stage result |
+| 2 | Codex | backend contract-first 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, API/DB docs, 이전 backend review feedback(있으면) | internal 1.5 `pass` 뒤 `$ralph`-driven backend impl, roadmap status `in-progress`, checklist updates/rebuttals, valid stage result |
 | 3 | Claude | backend PR review | workpack, acceptance, PR diff, CI | review summary, reviewed checklist ids, requested changes or approve |
 | 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, design refs, 이전 frontend review feedback(있으면) | `$ralph`-driven FE impl, Design Status `pending-review`, checklist updates/rebuttals, valid stage result |
 | 5 | Claude | design review | FE PR diff, workpack UI scope, acceptance FE checklist, design tokens | design findings or approve, reviewed checklist ids, Design Status `confirmed` 근거 |
@@ -164,6 +172,7 @@ provider별 resume 규칙:
   - `docs/workpacks/<slice>/automation-spec.json`
   - 관련 공식 API / DB 문서
 - success:
+  - 내부 `doc_gate_check`가 이미 `pass`
   - contract-first test
   - backend implementation
   - strict slice에서는 `$ralph` skill loop로 실행
@@ -175,6 +184,35 @@ provider별 resume 규칙:
   - verify command 실행
   - supervisor handoff용 commit subject/body 제안 작성
   - GitHub PR 생성/merge는 하지 않음
+
+### Internal 1.5 → Codex (`stage=2`, `subphase=doc_gate_repair`)
+
+- goal: `슬라이스 <id> internal 1.5 docs repair`
+- must read:
+  - `AGENTS.md`
+  - `docs/engineering/workflow-v2/omo-autonomous-supervisor.md`
+  - `docs/workpacks/<slice>/README.md`
+  - `docs/workpacks/<slice>/acceptance.md`
+  - `docs/workpacks/<slice>/automation-spec.json`
+  - doc gate findings bundle
+- success:
+  - docs-only remediation
+  - 허용 파일 3개 외 수정 없음
+  - valid doc gate repair stage result
+  - 필요 시 `contested_doc_fix_ids[]`, `rebuttals[]` 작성
+  - GitHub PR 생성/merge는 하지 않음
+
+### Internal 1.5 → Claude (`stage=2`, `subphase=doc_gate_review`)
+
+- goal: `슬라이스 <id> internal 1.5 docs review`
+- must read:
+  - latest merged workpack docs
+  - docs repair PR diff
+  - doc gate findings / rebuttals
+- success:
+  - `approve | request_changes | blocked`
+  - `reviewed_doc_finding_ids[]`, `required_doc_fix_ids[]`, `waived_doc_fix_ids[]`
+  - 승인 시 docs PR merge handoff, 이후 `doc_gate_recheck`
 
 ### Stage 3 → Claude
 
