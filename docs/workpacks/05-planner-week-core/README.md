@@ -44,6 +44,7 @@
 
 - planner column reorder UX를 화살표 버튼에서 drag handle 기반 reorder로 확정
 - API/DB 계약은 변경하지 않고 기존 `PATCH /planner/columns/{column_id}` + `sort_order`를 그대로 사용
+- 긴 거리 drag는 drop target 컬럼과 직접 순서를 교환하며, 중간 컬럼은 유지
 - 드롭 직후 저장, 실패 시 직전 순서로 원복하고 오류 안내를 노출
 - 화살표 버튼 기반 순서 변경 UI는 제거
 

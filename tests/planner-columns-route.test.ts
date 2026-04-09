@@ -662,6 +662,133 @@ describe("planner column routes", () => {
     expect(columnsTable.update).toHaveBeenCalledTimes(6);
   });
 
+  it("PATCH /api/v1/planner/columns/{id} swaps with the target sort_order column instead of shifting the middle columns", async () => {
+    const targetColumnId = "550e8400-e29b-41d4-a716-446655440012";
+    const middleColumnId = "550e8400-e29b-41d4-a716-446655440112";
+    const rightColumnId = "550e8400-e29b-41d4-a716-446655440212";
+
+    const columnsTable = createMealPlanColumnsTable({
+      selectResults: [
+        {
+          data: [
+            { id: targetColumnId, sort_order: 0 },
+            { id: middleColumnId, sort_order: 1 },
+            { id: rightColumnId, sort_order: 2 },
+          ],
+          error: null,
+        },
+      ],
+      maybeSingleResults: [
+        {
+          data: {
+            id: targetColumnId,
+            user_id: "user-1",
+            name: "아침",
+            sort_order: 0,
+          },
+          error: null,
+        },
+      ],
+      updateResults: [
+        {
+          data: {
+            id: rightColumnId,
+            name: "저녁",
+            sort_order: 1000,
+          },
+          error: null,
+        },
+        {
+          data: {
+            id: middleColumnId,
+            name: "점심",
+            sort_order: 1001,
+          },
+          error: null,
+        },
+        {
+          data: {
+            id: targetColumnId,
+            name: "아침",
+            sort_order: 1002,
+          },
+          error: null,
+        },
+        {
+          data: {
+            id: rightColumnId,
+            name: "저녁",
+            sort_order: 0,
+          },
+          error: null,
+        },
+        {
+          data: {
+            id: middleColumnId,
+            name: "점심",
+            sort_order: 1,
+          },
+          error: null,
+        },
+        {
+          data: {
+            id: targetColumnId,
+            name: "아침",
+            sort_order: 2,
+          },
+          error: null,
+        },
+      ],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "meal_plan_columns") return columnsTable;
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { PATCH } = await importColumnDetailRoute();
+    const response = await PATCH(new Request("http://localhost:3000/api/v1/planner/columns/column-1", {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ sort_order: 2 }),
+    }), {
+      params: Promise.resolve({ column_id: targetColumnId }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        id: targetColumnId,
+        name: "아침",
+        sort_order: 2,
+      },
+      error: null,
+    });
+
+    const updatedIds = (columnsTable.__updateQuery.eq.mock.calls as unknown as Array<[string, string]>)
+      .filter((call) => call[0] === "id")
+      .map((call) => call[1]);
+
+    expect(updatedIds).toEqual([
+      rightColumnId,
+      middleColumnId,
+      targetColumnId,
+      rightColumnId,
+      middleColumnId,
+      targetColumnId,
+    ]);
+  });
+
   it("DELETE /api/v1/planner/columns/{id} returns 404 when column does not exist", async () => {
     const columnsTable = createMealPlanColumnsTable({
       maybeSingleResults: [

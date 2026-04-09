@@ -496,8 +496,12 @@ export function updateQaFixturePlannerColumn(
 
   if (typeof updates.sort_order === "number") {
     const nextIndex = Math.max(0, Math.min(updates.sort_order, orderedColumns.length - 1));
-    const [removed] = orderedColumns.splice(currentIndex, 1);
-    orderedColumns.splice(nextIndex, 0, removed!);
+
+    if (currentIndex !== nextIndex) {
+      const swapColumn = orderedColumns[nextIndex];
+      orderedColumns[currentIndex] = swapColumn!;
+      orderedColumns[nextIndex] = target;
+    }
   }
 
   state.plannerColumns = orderedColumns.map((column, index) => ({

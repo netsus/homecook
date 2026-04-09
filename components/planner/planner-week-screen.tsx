@@ -102,6 +102,10 @@ interface PlannerColumnCardProps {
   isDragTarget: boolean;
   onDraftNameChange: (columnId: string, value: string) => void;
   onKeyboardReorder: (columnId: string, nextSortOrder: number) => void;
+  onTouchDragStart: (
+    columnId: string,
+    event: React.PointerEvent<HTMLButtonElement>,
+  ) => void;
   onDragStart: (columnId: string) => void;
   onDragOver: (columnId: string) => void;
   onDrop: (columnId: string) => void;
@@ -119,6 +123,7 @@ function PlannerColumnCard({
   isDragTarget,
   onDraftNameChange,
   onKeyboardReorder,
+  onTouchDragStart,
   onDragStart,
   onDragOver,
   onDrop,
@@ -147,7 +152,7 @@ function PlannerColumnCard({
 
   return (
     <div
-      className={`rounded-[12px] border bg-[var(--surface)] px-3 py-3 transition-colors ${
+      className={`min-w-0 rounded-[12px] border bg-[var(--surface)] px-3 py-3 transition-colors ${
         isDragTarget
           ? "border-[var(--brand)] bg-[color:rgba(255,108,60,0.08)]"
           : "border-[var(--line)]"
@@ -162,47 +167,58 @@ function PlannerColumnCard({
         onDrop(column.id);
       }}
     >
-      <div className="flex items-start gap-2">
-        <button
-          aria-label={`${column.name} 컬럼 순서 변경`}
-          className="mt-0.5 inline-flex min-h-11 min-w-11 shrink-0 cursor-grab items-center justify-center rounded-[10px] border border-[var(--line)] text-[18px] font-semibold leading-none text-[var(--muted)] transition active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-45"
-          disabled={isMutating}
-          draggable={!isMutating}
-          onDragEnd={onDragEnd}
-          onDragStart={(event) => {
-            event.dataTransfer.effectAllowed = "move";
-            event.dataTransfer.setData("text/plain", column.id);
-            onDragStart(column.id);
-          }}
-          onKeyDown={handleKeyDown}
-          type="button"
-        >
-          ⋮⋮
-        </button>
-        <div className="min-w-0 flex-1">
-          <input
-            className="w-full bg-transparent text-sm font-semibold text-[var(--foreground)] outline-none"
-            onChange={(event) => onDraftNameChange(column.id, event.target.value)}
-            value={draftName}
-          />
-          <div className="mt-2 grid grid-cols-2 gap-1">
-            <button
-              className="min-h-11 rounded-[10px] border border-[var(--line)] text-xs font-semibold text-[var(--muted)] disabled:opacity-45"
-              disabled={isMutating}
-              onClick={() => onRename(column.id)}
-              type="button"
-            >
-              저장
-            </button>
-            <button
-              className="min-h-11 rounded-[10px] border border-[var(--line)] text-xs font-semibold text-[var(--muted)] disabled:opacity-45"
-              disabled={isMutating}
-              onClick={() => onDelete(column.id)}
-              type="button"
-            >
-              삭제
-            </button>
-          </div>
+      <div className="space-y-3">
+        <div className="grid grid-cols-[44px_minmax(0,1fr)] items-center gap-3">
+          <button
+            aria-label={`${column.name} 컬럼 순서 변경`}
+            className="inline-flex min-h-11 min-w-11 shrink-0 cursor-grab items-center justify-center rounded-[10px] border border-[var(--line)] text-[18px] font-semibold leading-none text-[var(--muted)] transition active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-45"
+            disabled={isMutating}
+            draggable={!isMutating}
+            onDragEnd={onDragEnd}
+            onDragStart={(event) => {
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", column.id);
+              onDragStart(column.id);
+            }}
+            onKeyDown={handleKeyDown}
+            onPointerDown={(event) => {
+              if (event.pointerType === "mouse") {
+                return;
+              }
+
+              onTouchDragStart(column.id, event);
+            }}
+            style={{ touchAction: "none" }}
+            type="button"
+          >
+            ⋮⋮
+          </button>
+          <label className="flex min-h-11 min-w-0 items-center rounded-[10px] border border-[var(--line)] px-3">
+            <span className="visually-hidden">{column.name} 컬럼 이름</span>
+            <input
+              className="w-full min-w-0 bg-transparent text-sm font-semibold text-[var(--foreground)] outline-none"
+              onChange={(event) => onDraftNameChange(column.id, event.target.value)}
+              value={draftName}
+            />
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            className="min-h-11 rounded-[10px] border border-[var(--line)] px-3 text-sm font-semibold text-[var(--muted)] disabled:opacity-45"
+            disabled={isMutating}
+            onClick={() => onRename(column.id)}
+            type="button"
+          >
+            저장
+          </button>
+          <button
+            className="min-h-11 rounded-[10px] border border-[var(--line)] px-3 text-sm font-semibold text-[var(--muted)] disabled:opacity-45"
+            disabled={isMutating}
+            onClick={() => onDelete(column.id)}
+            type="button"
+          >
+            삭제
+          </button>
         </div>
       </div>
     </div>
@@ -237,6 +253,7 @@ export function PlannerWeekScreen({
   const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
   const activeDragColumnIdRef = useRef<string | null>(null);
   const dragOverColumnIdRef = useRef<string | null>(null);
+  const dragCleanupRef = useRef<(() => void) | null>(null);
   const scrollShiftAtRef = useRef(0);
 
   const sortedColumns = useMemo(() => sortColumns(columns), [columns]);
@@ -254,6 +271,12 @@ export function PlannerWeekScreen({
   useEffect(() => {
     dragOverColumnIdRef.current = dragOverColumnId;
   }, [dragOverColumnId]);
+
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.();
+    };
+  }, []);
 
   useEffect(() => {
     const nextDrafts: Record<string, string> = {};
@@ -429,11 +452,97 @@ export function PlannerWeekScreen({
   );
 
   const clearDragState = useCallback(() => {
+    dragCleanupRef.current?.();
+    dragCleanupRef.current = null;
     activeDragColumnIdRef.current = null;
     dragOverColumnIdRef.current = null;
     setActiveDragColumnId(null);
     setDragOverColumnId(null);
   }, []);
+
+  const handleTouchDragStart = useCallback(
+    (columnId: string, event: React.PointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+
+      dragCleanupRef.current?.();
+
+      const pointerId = event.pointerId;
+      const target = event.currentTarget;
+
+      target.setPointerCapture?.(pointerId);
+      activeDragColumnIdRef.current = columnId;
+      dragOverColumnIdRef.current = columnId;
+      setActiveDragColumnId(columnId);
+      setDragOverColumnId(columnId);
+
+      const updateDragTarget = (clientX: number, clientY: number) => {
+        const elementAtPoint = document.elementFromPoint(clientX, clientY);
+        const nextColumnId =
+          elementAtPoint instanceof Element
+            ? (elementAtPoint.closest("[data-column-id]") as HTMLElement | null)?.dataset.columnId
+            : null;
+
+        if (!nextColumnId || dragOverColumnIdRef.current === nextColumnId) {
+          return;
+        }
+
+        dragOverColumnIdRef.current = nextColumnId;
+        setDragOverColumnId(nextColumnId);
+      };
+
+      const handlePointerMove = (moveEvent: PointerEvent) => {
+        if (moveEvent.pointerId !== pointerId) {
+          return;
+        }
+
+        updateDragTarget(moveEvent.clientX, moveEvent.clientY);
+      };
+
+      const finishTouchDrag = (endEvent?: PointerEvent) => {
+        if (endEvent && endEvent.pointerId !== pointerId) {
+          return;
+        }
+
+        const activeColumnId = activeDragColumnIdRef.current;
+        const nextColumnId = dragOverColumnIdRef.current;
+
+        target.releasePointerCapture?.(pointerId);
+
+        activeDragColumnIdRef.current = null;
+        dragOverColumnIdRef.current = null;
+        setActiveDragColumnId(null);
+        setDragOverColumnId(null);
+
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerup", finishTouchDrag);
+        window.removeEventListener("pointercancel", finishTouchDrag);
+        dragCleanupRef.current = null;
+
+        if (!activeColumnId || !nextColumnId || activeColumnId === nextColumnId) {
+          return;
+        }
+
+        const nextSortOrder = sortedColumns.findIndex((column) => column.id === nextColumnId);
+
+        if (nextSortOrder < 0) {
+          return;
+        }
+
+        void handleReorderColumn(activeColumnId, nextSortOrder);
+      };
+
+      window.addEventListener("pointermove", handlePointerMove);
+      window.addEventListener("pointerup", finishTouchDrag);
+      window.addEventListener("pointercancel", finishTouchDrag);
+      dragCleanupRef.current = () => {
+        target.releasePointerCapture?.(pointerId);
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerup", finishTouchDrag);
+        window.removeEventListener("pointercancel", finishTouchDrag);
+      };
+    },
+    [handleReorderColumn, sortedColumns],
+  );
 
   const handleColumnDragStart = useCallback((columnId: string) => {
     activeDragColumnIdRef.current = columnId;
@@ -679,6 +788,7 @@ export function PlannerWeekScreen({
                         onDragOver={handleColumnDragOver}
                         onDragStart={handleColumnDragStart}
                         onDrop={handleColumnDrop}
+                        onTouchDragStart={handleTouchDragStart}
                         onRename={(columnId) => void handleRenameColumn(columnId)}
                       />
                     );

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -340,5 +340,76 @@ describe("planner week screen", () => {
       .map((element) => (element as HTMLInputElement).value);
 
     expect(orderedColumns).toEqual(["아침", "점심", "저녁"]);
+  });
+
+  it("supports touch drag reorder with the handle", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
+      .mockResolvedValueOnce({
+        columns: [
+          { id: "column-breakfast", name: "아침", sort_order: 0 },
+          { id: "column-dinner", name: "저녁", sort_order: 1 },
+          { id: "column-lunch", name: "점심", sort_order: 2 },
+        ],
+        meals: [],
+      });
+    updatePlannerColumn.mockResolvedValue({
+      id: "column-lunch",
+      name: "점심",
+      sort_order: 2,
+    });
+
+    render(<PlannerWeekScreen />);
+
+    const lunchHandle = await screen.findByRole("button", {
+      name: "점심 컬럼 순서 변경",
+    });
+    const dinnerCard = document.querySelector('[data-column-id="column-dinner"]');
+
+    expect(dinnerCard).toBeTruthy();
+
+    const originalElementFromPoint = document.elementFromPoint;
+    const elementFromPointMock = vi.fn(() => dinnerCard as Element);
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: elementFromPointMock,
+      writable: true,
+    });
+
+    fireEvent.pointerDown(lunchHandle, {
+      button: 0,
+      clientX: 40,
+      clientY: 40,
+      isPrimary: true,
+      pointerId: 1,
+      pointerType: "touch",
+    });
+    fireEvent.pointerMove(window, {
+      clientX: 220,
+      clientY: 40,
+      isPrimary: true,
+      pointerId: 1,
+      pointerType: "touch",
+    });
+    fireEvent.pointerUp(window, {
+      clientX: 220,
+      clientY: 40,
+      isPrimary: true,
+      pointerId: 1,
+      pointerType: "touch",
+    });
+
+    await waitFor(() => {
+      expect(updatePlannerColumn).toHaveBeenCalledWith("column-lunch", {
+        sort_order: 2,
+      });
+    });
+
+    Object.defineProperty(document, "elementFromPoint", {
+      configurable: true,
+      value: originalElementFromPoint,
+      writable: true,
+    });
   });
 });

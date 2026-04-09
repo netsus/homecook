@@ -5,7 +5,11 @@ import { createClient } from "@supabase/supabase-js";
 
 import { getServiceRoleKey, getSupabaseEnv } from "@/lib/supabase/env";
 
-export async function createRouteHandlerClient() {
+async function createServerSupabaseClient({
+  allowCookieWrites,
+}: {
+  allowCookieWrites: boolean;
+}) {
   const cookieStore = await cookies();
   const { url, anonKey } = getSupabaseEnv();
 
@@ -16,11 +20,29 @@ export async function createRouteHandlerClient() {
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value, options }) => {
+          if (!allowCookieWrites) {
+            try {
+              cookieStore.set(name, value, options);
+            } catch {
+              return;
+            }
+
+            return;
+          }
+
           cookieStore.set(name, value, options);
         });
       },
     },
   });
+}
+
+export async function createRouteHandlerClient() {
+  return createServerSupabaseClient({ allowCookieWrites: true });
+}
+
+export async function createServerComponentClient() {
+  return createServerSupabaseClient({ allowCookieWrites: false });
 }
 
 export function createServiceRoleClient() {
@@ -40,7 +62,7 @@ export function createServiceRoleClient() {
 }
 
 export async function getServerAuthUser() {
-  const supabase = await createRouteHandlerClient();
+  const supabase = await createServerComponentClient();
   const authResult = await supabase.auth.getUser();
 
   return authResult.data.user ?? null;

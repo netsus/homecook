@@ -2,6 +2,10 @@ import fs from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
 
+import {
+  buildLocalSupabaseNextDevArgs,
+  getLocalSupabaseNextArtifactsToReset,
+} from "./lib/dev-local-supabase-runtime.mjs";
 import { createLocalSupabaseNextEnv } from "./lib/local-supabase-env.mjs";
 
 const envFilePath = path.join(process.cwd(), ".env.development.local");
@@ -22,6 +26,13 @@ function toEnvFileContent(env) {
 
 fs.writeFileSync(envFilePath, toEnvFileContent(envEntries), "utf8");
 
+for (const artifactPath of getLocalSupabaseNextArtifactsToReset(process.cwd())) {
+  fs.rmSync(artifactPath, {
+    force: true,
+    recursive: true,
+  });
+}
+
 let cleanedUp = false;
 
 function cleanupEnvFile() {
@@ -38,7 +49,7 @@ function cleanupEnvFile() {
 
 const child = spawn(
   "pnpm",
-  ["exec", "next", "dev", ...process.argv.slice(2)],
+  buildLocalSupabaseNextDevArgs(process.argv.slice(2)),
   {
     env: envEntries,
     stdio: "inherit",

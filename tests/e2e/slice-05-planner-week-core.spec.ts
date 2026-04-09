@@ -172,9 +172,14 @@ async function mockPlannerRoutes(page: Page) {
       if (typeof body.sort_order === "number") {
         const sorted = [...columns].sort((left, right) => left.sort_order - right.sort_order);
         const currentIndex = sorted.findIndex((column) => column.id === columnId);
-        const [removed] = sorted.splice(currentIndex, 1);
+        const nextIndex = Math.max(0, Math.min(body.sort_order, sorted.length - 1));
 
-        sorted.splice(body.sort_order, 0, removed!);
+        if (currentIndex !== nextIndex) {
+          const swapColumn = sorted[nextIndex];
+          sorted[currentIndex] = swapColumn!;
+          sorted[nextIndex] = targetColumn;
+        }
+
         columns = sorted.map((column, index) => ({
           ...column,
           sort_order: index,
@@ -251,6 +256,62 @@ async function activateButton(page: Page, button: Locator, testInfo: TestInfo) {
 
 async function dragColumnHandle(page: Page, source: Locator, target: Locator) {
   await source.dragTo(target);
+}
+
+async function touchDragColumnHandle(page: Page, source: Locator, target: Locator) {
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+
+  expect(sourceBox).not.toBeNull();
+  expect(targetBox).not.toBeNull();
+
+  const sourceX = sourceBox!.x + sourceBox!.width / 2;
+  const sourceY = sourceBox!.y + sourceBox!.height / 2;
+  const targetX = targetBox!.x + targetBox!.width / 2;
+  const targetY = targetBox!.y + targetBox!.height / 2;
+
+  await source.dispatchEvent("pointerdown", {
+    button: 0,
+    clientX: sourceX,
+    clientY: sourceY,
+    isPrimary: true,
+    pointerId: 1,
+    pointerType: "touch",
+  });
+
+  await page.evaluate(
+    ({ x, y }) => {
+      window.dispatchEvent(
+        new PointerEvent("pointermove", {
+          bubbles: true,
+          cancelable: true,
+          clientX: x,
+          clientY: y,
+          isPrimary: true,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+    },
+    { x: targetX, y: targetY },
+  );
+
+  await page.evaluate(
+    ({ x, y }) => {
+      window.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          cancelable: true,
+          clientX: x,
+          clientY: y,
+          isPrimary: true,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+    },
+    { x: targetX, y: targetY },
+  );
 }
 
 async function expectVisibleWithinViewport(page: Page, locator: Locator) {
@@ -340,6 +401,46 @@ test.describe("Slice 05 planner week core", () => {
       .toEqual(["아침", "저녁", "점심"]);
 
     await page.reload();
+
+    await expect
+      .poll(async () => readColumnNames(page))
+      .toEqual(["아침", "저녁", "점심"]);
+  });
+
+  test("desktop drag swaps only the source and target columns on long moves", async ({
+    page,
+  }, testInfo) => {
+    test.skip(isMobileProject(testInfo), "desktop-only ordering semantics check");
+
+    await setAuthOverride(page, "authenticated");
+    await mockPlannerRoutes(page);
+
+    await page.goto("/planner");
+
+    const sourceHandle = page.getByRole("button", { name: "아침 컬럼 순서 변경" });
+    const targetColumn = page.locator('[data-column-id="column-dinner"]');
+
+    await dragColumnHandle(page, sourceHandle, targetColumn);
+
+    await expect
+      .poll(async () => readColumnNames(page))
+      .toEqual(["저녁", "점심", "아침"]);
+  });
+
+  test("mobile user can reorder planner columns with the touch drag handle", async ({
+    page,
+  }, testInfo) => {
+    test.skip(!isMobileProject(testInfo), "touch drag reorder is verified on mobile projects");
+
+    await setAuthOverride(page, "authenticated");
+    await mockPlannerRoutes(page);
+
+    await page.goto("/planner");
+
+    const sourceHandle = page.getByRole("button", { name: "점심 컬럼 순서 변경" });
+    const targetColumn = page.locator('[data-column-id="column-dinner"]');
+
+    await touchDragColumnHandle(page, sourceHandle, targetColumn);
 
     await expect
       .poll(async () => readColumnNames(page))
