@@ -209,6 +209,11 @@
   - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
   - seed window는 실행 시점 기준 현재 기본 플래너 범위 안으로 생성된다
   - clean QA 계정을 쓰면 가장 결정적인 planner smoke를 얻을 수 있다
+  - local 장시간 성능 smoke:
+    - `pnpm local:seed:05-performance`
+    - `pnpm qa:perf:05`
+    - 기준 계정: `local-other@homecook.local`
+    - 기본 bulk fixture: 컬럼 `5개`, 레시피 `72개`, meals `343개`, 초기 범위 meals `89건`, repeated shift meal counts `91 / 89 / 91 / 89 / 91 / 89`
 
 ## Key Rules
 
