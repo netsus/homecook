@@ -2,7 +2,7 @@
 
 ## Goal
 
-사용자가 위클리 플래너 화면에서 날짜×끼니 그리드를 통해 자신의 식단 계획을 한눈에 조회하고, 끼니 컬럼을 추가/수정/삭제하여 플래너를 자신의 생활 패턴에 맞게 관리할 수 있다. 플래너 상단의 [장보기] [요리하기] [남은요리] CTA 버튼은 후속 슬라이스 전까지 비활성화된 상태로 노출하여 다음 목적지를 예고하되, 실제 이동은 허용하지 않는다. 각 식사 셀에는 상태 뱃지(식사 등록 완료/장보기 완료/요리 완료)를 표시하여 현재 진행 상황을 시각적으로 전달한다.
+사용자가 위클리 플래너 화면에서 날짜×끼니 그리드를 통해 자신의 식단 계획을 한눈에 조회하고, 끼니 컬럼을 추가/수정/삭제하며 drag handle로 순서를 바꿔 자신의 생활 패턴에 맞게 관리할 수 있다. 플래너 상단의 [장보기] [요리하기] [남은요리] CTA 버튼은 후속 슬라이스 전까지 비활성화된 상태로 노출하여 다음 목적지를 예고하되, 실제 이동은 허용하지 않는다. 각 식사 셀에는 상태 뱃지(식사 등록 완료/장보기 완료/요리 완료)를 표시하여 현재 진행 상황을 시각적으로 전달한다.
 
 ## Branches
 
@@ -20,6 +20,7 @@
   - `DELETE /planner/columns/{column_id}` — 끼니 컬럼 삭제 (소속 meals 존재 시 409)
 - 상태 전이:
   - 끼니 컬럼 추가/수정/삭제 (최대 5개 제한, 소속 meals 존재 시 삭제 불가)
+  - drag handle 기반 끼니 컬럼 순서 변경 (`sort_order` 저장, 실패 시 원복)
   - 식사 상태 뱃지 표시 (`registered` / `shopping_done` / `cook_done`)
 - DB 영향:
   - `meal_plan_columns` — 조회, 생성, 수정, 삭제
@@ -38,6 +39,13 @@
 - 남은요리 화면 (`LEFTOVERS`): 슬라이스 16에서 처리
 - 상단 CTA의 실제 destination 진입 또는 "준비 중" placeholder 안내: 이번 슬라이스에서는 제공하지 않음
 - 플래너 날짜/끼니 그리드의 세부 UI 디자인 확정: Stage 5 디자인 리뷰에서 확정
+
+## Contract Evolution Accepted
+
+- planner column reorder UX를 화살표 버튼에서 drag handle 기반 reorder로 확정
+- API/DB 계약은 변경하지 않고 기존 `PATCH /planner/columns/{column_id}` + `sort_order`를 그대로 사용
+- 드롭 직후 저장, 실패 시 직전 순서로 원복하고 오류 안내를 노출
+- 화살표 버튼 기반 순서 변경 UI는 제거
 
 ## Dependencies
 
@@ -185,11 +193,11 @@
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 - `docs/workpacks/README.md`
-- `docs/요구사항기준선-v1.6.md` — 1-4. 식단 플래너(위클리) + 끼니 화면
-- `docs/화면정의서-v1.2.md` — 5) PLANNER_WEEK: 식단 플래너(위클리)
+- `docs/요구사항기준선-v1.6.1.md` — 1-4. 식단 플래너(위클리) + 끼니 화면
+- `docs/화면정의서-v1.2.1.md` — 5) PLANNER_WEEK: 식단 플래너(위클리)
 - `docs/api문서-v1.2.1.md` — 3. 식단 플래너 (PLANNER_WEEK)
 - `docs/db설계-v1.3.md` — 5. 식단 플래너 (Meal Plan)
-- `docs/유저flow맵-v1.2.md` — ③ 식단 계획 여정
+- `docs/유저flow맵-v1.2.1.md` — ③ 식단 계획 여정
 - `docs/design/design-tokens.md` — 확정 디자인 토큰 (색상·간격·컴포넌트 규칙)
 
 ## QA / Test Data Plan
@@ -264,7 +272,7 @@
    - 각 셀에는 레시피명, 인분, 상태 뱃지가 표시됨
 4. [+] 버튼으로 끼니 컬럼 추가 (`POST /planner/columns`)
    - 최대 5개 제한, 초과 시 409 안내
-5. 컬럼명 편집 또는 순서 변경 (`PATCH /planner/columns/{id}`)
+5. 컬럼명 편집 또는 drag handle 순서 변경 (`PATCH /planner/columns/{id}`)
 6. 컬럼 삭제 버튼 클릭 (`DELETE /planner/columns/{id}`)
    - 소속 meals 존재 시 409 안내
 7. 상단 CTA는 비활성화 상태로만 노출되어 후속 목적지를 예고하고, 위/아래 스크롤 시 새로운 범위로 플래너 재조회

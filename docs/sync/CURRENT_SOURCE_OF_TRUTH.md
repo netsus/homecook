@@ -1,16 +1,16 @@
 # Current Source of Truth
 
 ## Official Versions
-- Requirements: `v1.6`
-- Screens: `v1.2`
-- Flow: `v1.2`
+- Requirements: `v1.6.1`
+- Screens: `v1.2.1`
+- Flow: `v1.2.1`
 - DB: `v1.3`
 - API: `v1.2.1`
 
 ## Official Files
-- `docs/요구사항기준선-v1.6.md`
-- `docs/화면정의서-v1.2.md`
-- `docs/유저flow맵-v1.2.md`
+- `docs/요구사항기준선-v1.6.1.md`
+- `docs/화면정의서-v1.2.1.md`
+- `docs/유저flow맵-v1.2.1.md`
 - `docs/db설계-v1.3.md`
 - `docs/api문서-v1.2.1.md`
 
