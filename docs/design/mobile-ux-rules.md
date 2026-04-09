@@ -13,6 +13,7 @@
 - 화면 전체가 아니라 **의도된 영역만** 스크롤되어야 한다.
 - 사용자는 첫 화면에서 "지금 뭘 해야 하는지"를 바로 이해할 수 있어야 한다.
 - 모바일에서 자주 보는 앱 패턴을 불필요하게 뒤집지 않는다.
+- 이미 설득력 있게 작동하는 interaction model은 문제 수정 과정에서도 함부로 갈아엎지 않는다.
 - 레이아웃은 좁은 폭에서 먼저 성립하고, 넓은 폭은 그 다음이다.
 
 ## 규칙
@@ -21,6 +22,8 @@
 
 - 모바일에서 페이지 전체 wrapper에 가로 스크롤을 두지 않는다.
 - 예외가 필요하면 workpack README와 authority report에 명시 승인 근거를 남긴다.
+- page-level horizontal scroll과 localized horizontal scroll은 구분해서 본다.
+- localized scroll 자체는 허용 가능하지만, 그것이 화면 전체 확장처럼 느껴지면 실패다.
 - 가로 이동이 꼭 필요한 정보 구조라면:
   - 해당 영역만 별도 scroll container로 제한
   - 시각적 affordance를 제공
@@ -43,6 +46,12 @@
 - planner, detail, list, modal, bottom sheet는 보편적인 모바일 앱 패턴과 크게 어긋나지 않게 설계한다.
 - 익숙한 앱이면 모달이나 섹션 내부 스크롤로 처리할 내용을
   굳이 전체 페이지 구조로 바꿔 학습 비용을 높이지 않는다.
+
+### 4a. 검증된 interaction model은 보존한다
+
+- 기존 table, list, sheet, tab 같은 구조가 이미 제품의 mental model로 자리잡았다면, 레이아웃 문제를 고친다는 이유만으로 card stack이나 full-page flow로 바꾸지 않는다.
+- interaction model을 바꿔야 한다면 단순 polish가 아니라 `high-risk-ui-change`로 취급한다.
+- authority review는 문제를 지적할 수는 있어도, 사용자 승인 없이 interaction model 교체를 사실상 강제하는 근거가 되어서는 안 된다.
 
 ### 5. 작은 모바일 sentinel을 기준으로 검토한다
 
@@ -70,6 +79,7 @@
 - planner는 "표가 넓어서 페이지 전체가 밀리는 앱"처럼 느껴지면 안 된다.
 - planner의 탐색 구조는 날짜/끼니/컬럼 조작을 쉽게 느끼게 해야 한다.
 - 가로 정보가 필요하면 planner 내부 컨테이너의 역할, 현재 위치, 이동 가능성을 분명히 드러낸다.
+- planner에서 문제는 표 자체보다 page-level overflow일 가능성이 크므로, overflow 수정이 곧 table mental model 폐기를 의미하지는 않는다.
 
 ## 판단 질문
 

@@ -101,6 +101,34 @@ function readColumnIdFromTarget(target: EventTarget | null) {
   return (target.closest("[data-column-id]") as HTMLElement | null)?.dataset.columnId ?? null;
 }
 
+function resolveColumnIdFromPoint(clientX: number, clientY: number) {
+  const directColumnId = readColumnIdFromTarget(document.elementFromPoint(clientX, clientY));
+
+  if (directColumnId) {
+    return directColumnId;
+  }
+
+  const columnElements = Array.from(document.querySelectorAll<HTMLElement>("[data-column-id]"));
+  let closestColumnId: string | null = null;
+  let closestDistance = Number.POSITIVE_INFINITY;
+
+  columnElements.forEach((element) => {
+    const rect = element.getBoundingClientRect();
+    const horizontalDistance =
+      clientX < rect.left ? rect.left - clientX : clientX > rect.right ? clientX - rect.right : 0;
+    const verticalDistance =
+      clientY < rect.top ? rect.top - clientY : clientY > rect.bottom ? clientY - rect.bottom : 0;
+    const distance = horizontalDistance + verticalDistance * 2;
+
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestColumnId = element.dataset.columnId ?? null;
+    }
+  });
+
+  return closestColumnId;
+}
+
 interface PlannerColumnCardProps {
   column: PlannerColumnData;
   draftName: string;
@@ -160,11 +188,11 @@ function PlannerColumnCard({
 
   return (
     <div
-      className={`min-w-0 shrink-0 rounded-[12px] border bg-[var(--surface)] px-3 py-3 transition-colors ${
+      className={`min-w-0 rounded-[12px] border bg-[var(--surface)] px-3 py-3 transition-colors ${
         isDragTarget
           ? "border-[var(--brand)] bg-[color:rgba(255,108,60,0.08)]"
           : "border-[var(--line)]"
-      } ${isActiveDrag ? "opacity-55" : ""} w-[220px]`}
+      } ${isActiveDrag ? "opacity-55" : ""} w-full`}
       data-column-id={column.id}
       onDragOver={(event) => {
         event.preventDefault();
@@ -266,6 +294,7 @@ export function PlannerWeekScreen({
     [rangeEndDate, rangeStartDate],
   );
   const mealsByDateAndColumn = useMemo(() => buildMealMap(meals), [meals]);
+  const plannerGridMinWidth = 160 + sortedColumns.length * 220;
 
   useEffect(() => {
     activeDragColumnIdRef.current = activeDragColumnId;
@@ -479,11 +508,7 @@ export function PlannerWeekScreen({
       setDragOverColumnId(columnId);
 
       const updateDragTarget = (clientX: number, clientY: number) => {
-        const elementAtPoint = document.elementFromPoint(clientX, clientY);
-        const nextColumnId =
-          elementAtPoint instanceof Element
-            ? (elementAtPoint.closest("[data-column-id]") as HTMLElement | null)?.dataset.columnId
-            : null;
+        const nextColumnId = resolveColumnIdFromPoint(clientX, clientY);
 
         if (!nextColumnId || dragOverColumnIdRef.current === nextColumnId) {
           return;
@@ -563,7 +588,7 @@ export function PlannerWeekScreen({
     setDragOverColumnId(columnId);
   }, []);
 
-  const handleColumnRailDragOver = useCallback(
+  const handlePlannerGridDragOver = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       if (!activeDragColumnIdRef.current) {
         return;
@@ -605,9 +630,7 @@ export function PlannerWeekScreen({
 
   const handleColumnDragEnd = useCallback(
     (event: React.DragEvent<HTMLButtonElement>) => {
-      const nextColumnId = readColumnIdFromTarget(
-        document.elementFromPoint(event.clientX, event.clientY),
-      );
+      const nextColumnId = resolveColumnIdFromPoint(event.clientX, event.clientY);
 
       if (
         nextColumnId &&
@@ -623,7 +646,7 @@ export function PlannerWeekScreen({
     [clearDragState, handleColumnDrop],
   );
 
-  const handleColumnRailDrop = useCallback(
+  const handlePlannerGridDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
 
@@ -649,17 +672,17 @@ export function PlannerWeekScreen({
 
   if (authState === "unauthorized") {
     return (
-      <div className="glass-panel rounded-[20px] p-4 md:p-8">
+      <div className="-mt-5 glass-panel rounded-[20px] p-4 md:mt-0 md:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
           Planner Access
         </p>
         <h2 className="mt-2 text-xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:mt-3 md:text-2xl">
           이 화면은 로그인이 필요해요
         </h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--muted)] md:mt-3">
+        <p className="mt-1.5 text-sm leading-6 text-[var(--muted)] md:mt-3">
           플래너를 사용하려면 로그인해주세요. 로그인 후에는 다시 플래너 화면으로 돌아옵니다.
         </p>
-        <div className="mt-3 md:mt-6">
+        <div className="mt-2 md:mt-6">
           <SocialLoginButtons nextPath="/planner" />
         </div>
         <div className="mt-2 md:mt-4">
@@ -779,195 +802,176 @@ export function PlannerWeekScreen({
       ) : null}
 
       {screenState === "ready" || screenState === "empty" ? (
-        <div className="grid gap-6 xl:grid-cols-[minmax(280px,0.82fr)_minmax(0,1.18fr)] xl:items-start">
-          <section className="glass-panel rounded-[20px] p-5 md:p-6">
-            <div className="flex flex-col gap-4">
+        <section className="glass-panel min-w-0 overflow-hidden rounded-[20px]">
+          <div className="border-b border-[var(--line)] px-5 py-5 md:px-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-                  Column Rail
+                  Planner Grid
                 </p>
                 <h3 className="mt-2 text-2xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-                  끼니 컬럼 정리
+                  주간 플래너 표
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                  자주 쓰는 끼니 순서대로 정리해두면 날짜 카드에서도 같은 흐름으로 식사를 확인할 수 있어요.
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+                  날짜와 끼니 컬럼을 한눈에 보면서 식단을 관리해요. 가로 이동이 필요하면 아래 플래너 표 안에서만 움직이고, 세로 스크롤은 날짜 범위를 넘기는 데 사용해요.
                 </p>
               </div>
-
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <label className="flex min-h-11 min-w-0 flex-1 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3">
-                  <span className="visually-hidden">새 끼니 컬럼 이름</span>
-                  <input
-                    className="w-full bg-transparent outline-none placeholder:text-[var(--muted)]"
-                    onChange={(event) => setNewColumnName(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        void handleAddColumn();
-                      }
-                    }}
-                    placeholder="새 끼니 컬럼 이름"
-                    value={newColumnName}
-                  />
-                </label>
-                <button
-                  className="min-h-11 shrink-0 rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                  disabled={isMutating}
-                  onClick={() => void handleAddColumn()}
-                  type="button"
-                >
-                  컬럼 추가
-                </button>
+              <div className="flex flex-wrap gap-2 text-xs font-semibold text-[var(--muted)]">
+                <span className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-2">
+                  등록된 식사 {meals.length}건
+                </span>
+                <span className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-2">
+                  컬럼 {sortedColumns.length}개
+                </span>
               </div>
+            </div>
 
-              {feedbackMessage ? (
-                <p className="rounded-[12px] border border-[color:rgba(255,108,60,0.25)] bg-[color:rgba(255,108,60,0.08)] px-4 py-3 text-sm text-[var(--brand-deep)]">
-                  {feedbackMessage}
-                </p>
-              ) : null}
-
-              <div
-                className="overflow-x-auto pb-1"
-                onDragOver={handleColumnRailDragOver}
-                onDrop={handleColumnRailDrop}
-                onWheel={handleGridWheel}
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex min-h-11 min-w-0 flex-1 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3 sm:max-w-sm">
+                <span className="visually-hidden">새 끼니 컬럼 이름</span>
+                <input
+                  className="w-full bg-transparent outline-none placeholder:text-[var(--muted)]"
+                  onChange={(event) => setNewColumnName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void handleAddColumn();
+                    }
+                  }}
+                  placeholder="새 끼니 컬럼 이름"
+                  value={newColumnName}
+                />
+              </label>
+              <button
+                className="min-h-11 shrink-0 rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                disabled={isMutating}
+                onClick={() => void handleAddColumn()}
+                type="button"
               >
-                <div className="flex min-w-max gap-3">
-                  {sortedColumns.map((column) => {
-                    const draftName = columnNameDrafts[column.id] ?? column.name;
+                컬럼 추가
+              </button>
+            </div>
 
-                    return (
-                      <PlannerColumnCard
-                        key={column.id}
-                        column={column}
-                        columnCount={sortedColumns.length}
-                        draftName={draftName}
-                        isActiveDrag={activeDragColumnId === column.id}
-                        isDragTarget={Boolean(
-                          activeDragColumnId &&
-                            dragOverColumnId === column.id &&
-                            activeDragColumnId !== column.id,
-                        )}
-                        isMutating={isMutating}
-                        onDelete={(columnId) => void handleDeleteColumn(columnId)}
-                        onDraftNameChange={(columnId, value) =>
-                          setColumnNameDrafts((current) => ({
-                            ...current,
-                            [columnId]: value,
-                          }))
-                        }
-                        onKeyboardReorder={(columnId, nextSortOrder) =>
-                          void handleReorderColumn(columnId, nextSortOrder)
-                        }
-                        onDragEnd={handleColumnDragEnd}
-                        onDragOver={handleColumnDragOver}
-                        onDragStart={handleColumnDragStart}
-                        onDrop={handleColumnDrop}
-                        onTouchDragStart={handleTouchDragStart}
-                        onRename={(columnId) => void handleRenameColumn(columnId)}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
+            {feedbackMessage ? (
+              <p className="mt-3 rounded-[12px] border border-[color:rgba(255,108,60,0.25)] bg-[color:rgba(255,108,60,0.08)] px-4 py-3 text-sm text-[var(--brand-deep)]">
+                {feedbackMessage}
+              </p>
+            ) : null}
+          </div>
 
-              <p className="text-xs leading-5 text-[var(--muted)]">
-                컬럼 rail에서 위아래로 스크롤하면 날짜 범위를 빠르게 넘길 수 있어요.
+          {screenState === "empty" ? (
+            <div className="border-b border-[var(--line)] px-5 py-4 md:px-6">
+              <p className="text-sm leading-6 text-[var(--muted)]">
+                아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요.
               </p>
             </div>
-          </section>
+          ) : null}
 
-          <section className="space-y-4">
-            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-                  Daily Flow
-                </p>
-                <h3 className="mt-2 text-2xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-                  요일별 식단
-                </h3>
-              </div>
-              {screenState === "empty" ? (
-                <p className="text-sm leading-6 text-[var(--muted)]">
-                  아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요.
-                </p>
-              ) : null}
-            </div>
+          <div
+            className="min-w-0 overflow-x-auto overscroll-x-contain"
+            onDragOver={handlePlannerGridDragOver}
+            onDrop={handlePlannerGridDrop}
+            onWheel={handleGridWheel}
+          >
+            <div className="px-5 py-5 md:px-6">
+              <div
+                className="grid gap-3"
+                style={{
+                  gridTemplateColumns: `160px repeat(${sortedColumns.length}, minmax(220px, 1fr))`,
+                  minWidth: `${plannerGridMinWidth}px`,
+                }}
+              >
+                <div className="rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+                  날짜
+                </div>
+                {sortedColumns.map((column) => {
+                  const draftName = columnNameDrafts[column.id] ?? column.name;
 
-            <div className="grid gap-4 md:grid-cols-2">
-              {dateKeys.map((dateKey) => {
-                const mealsForDate = meals.filter((meal) => meal.plan_date === dateKey);
+                  return (
+                    <PlannerColumnCard
+                      key={column.id}
+                      column={column}
+                      columnCount={sortedColumns.length}
+                      draftName={draftName}
+                      isActiveDrag={activeDragColumnId === column.id}
+                      isDragTarget={Boolean(
+                        activeDragColumnId &&
+                          dragOverColumnId === column.id &&
+                          activeDragColumnId !== column.id,
+                      )}
+                      isMutating={isMutating}
+                      onDelete={(columnId) => void handleDeleteColumn(columnId)}
+                      onDraftNameChange={(columnId, value) =>
+                        setColumnNameDrafts((current) => ({
+                          ...current,
+                          [columnId]: value,
+                        }))
+                      }
+                      onKeyboardReorder={(columnId, nextSortOrder) =>
+                        void handleReorderColumn(columnId, nextSortOrder)
+                      }
+                      onDragEnd={handleColumnDragEnd}
+                      onDragOver={handleColumnDragOver}
+                      onDragStart={handleColumnDragStart}
+                      onDrop={handleColumnDrop}
+                      onTouchDragStart={handleTouchDragStart}
+                      onRename={(columnId) => void handleRenameColumn(columnId)}
+                    />
+                  );
+                })}
 
-                return (
-                  <article
-                    className="glass-panel rounded-[20px] p-4 md:p-5"
-                    key={dateKey}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h4 className="text-lg font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-                          {formatDateLabel(dateKey)}
-                        </h4>
-                        <p className="mt-1 text-xs text-[var(--muted)]">
-                          {mealsForDate.length > 0
-                            ? `등록된 식사 ${mealsForDate.length}건`
-                            : "아직 등록된 식사가 없어요"}
-                        </p>
-                      </div>
+                {dateKeys.map((dateKey) => (
+                  <React.Fragment key={dateKey}>
+                    <div className="rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-sm font-semibold text-[var(--foreground)]">
+                      {formatDateLabel(dateKey)}
                     </div>
+                    {sortedColumns.map((column) => {
+                      const cellKey = `${dateKey}:${column.id}`;
+                      const cellMeals = mealsByDateAndColumn.get(cellKey) ?? [];
+                      const primaryMeal = cellMeals[0] ?? null;
 
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      {sortedColumns.map((column) => {
-                        const cellKey = `${dateKey}:${column.id}`;
-                        const cellMeals = mealsByDateAndColumn.get(cellKey) ?? [];
-                        const primaryMeal = cellMeals[0] ?? null;
-
-                        return (
-                          <div
-                            className={`rounded-[18px] border px-4 py-4 ${
-                              primaryMeal?.is_leftover
-                                ? "border-[color:rgba(46,166,122,0.2)] bg-[color:rgba(46,166,122,0.08)]"
-                                : "border-[var(--line)] bg-white/72"
-                            }`}
-                            key={cellKey}
-                          >
-                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                              {column.name}
-                            </p>
-                            {primaryMeal ? (
-                              <>
-                                <p className="mt-3 text-base font-semibold text-[var(--foreground)]">
-                                  {primaryMeal.recipe_title}
-                                </p>
-                                <p className="mt-1 text-xs text-[var(--muted)]">
-                                  {primaryMeal.planned_servings}인분
-                                </p>
-                                <span
-                                  className={`mt-3 inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${STATUS_META[primaryMeal.status].className}`}
-                                >
-                                  {STATUS_META[primaryMeal.status].label}
-                                </span>
-                                {cellMeals.length > 1 ? (
-                                  <p className="mt-2 text-[11px] text-[var(--muted)]">
-                                    외 {cellMeals.length - 1}건 더 있어요
-                                  </p>
-                                ) : null}
-                              </>
-                            ) : (
-                              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                                등록된 식사가 없어요
+                      return (
+                        <div
+                          key={cellKey}
+                          className={`rounded-[12px] border px-3 py-3 ${
+                            primaryMeal?.is_leftover
+                              ? "border-[color:rgba(46,166,122,0.2)] bg-[color:rgba(46,166,122,0.08)]"
+                              : "border-[var(--line)] bg-[var(--surface)]"
+                          }`}
+                        >
+                          {primaryMeal ? (
+                            <>
+                              <p className="text-sm font-semibold text-[var(--foreground)]">
+                                {primaryMeal.recipe_title}
                               </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </article>
-                );
-              })}
+                              <p className="mt-1 text-xs text-[var(--muted)]">
+                                {primaryMeal.planned_servings}인분
+                              </p>
+                              <span
+                                className={`mt-2 inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${STATUS_META[primaryMeal.status].className}`}
+                              >
+                                {STATUS_META[primaryMeal.status].label}
+                              </span>
+                              {cellMeals.length > 1 ? (
+                                <p className="mt-2 text-[11px] text-[var(--muted)]">
+                                  외 {cellMeals.length - 1}건 더 있어요
+                                </p>
+                              ) : null}
+                            </>
+                          ) : (
+                            <p className="text-xs leading-5 text-[var(--muted)]">
+                              등록된 식사가 없어요
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </React.Fragment>
+                ))}
+              </div>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
       ) : null}
     </div>
   );

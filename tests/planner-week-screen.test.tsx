@@ -201,18 +201,15 @@ describe("planner week screen", () => {
     expect(screen.getByRole("button", { name: "컬럼 추가" })).toBeTruthy();
   });
 
-  it("uses a dedicated column rail and removes internal scaffolding cards", async () => {
+  it("keeps the planner grid mental model while removing internal scaffolding cards", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
 
     render(<PlannerWeekScreen />);
 
-    expect(
-      await screen.findByRole("heading", { name: "끼니 컬럼 정리" }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "요일별 식단" }),
-    ).toBeTruthy();
+    expect(await screen.findByText("날짜")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "끼니 컬럼 정리" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "요일별 식단" })).toBeNull();
     expect(screen.queryByText("Planner Status")).toBeNull();
     expect(screen.queryByText("Stage 4 Scope")).toBeNull();
   });

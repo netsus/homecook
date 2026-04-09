@@ -440,13 +440,13 @@ test.describe("Slice 05 planner week core", () => {
     await page.goto("/planner");
 
     const sourceHandle = page.getByRole("button", { name: "점심 컬럼 순서 변경" });
-    const targetColumn = page.locator('[data-column-id="column-dinner"]');
+    const targetColumn = page.locator('[data-column-id="column-breakfast"]');
 
     await touchDragColumnHandle(page, sourceHandle, targetColumn);
 
     await expect
       .poll(async () => readColumnNames(page))
-      .toEqual(["아침", "저녁", "점심"]);
+      .toEqual(["점심", "아침", "저녁"]);
   });
 
   test("authenticated user can shift the planner range by wheel scrolling", async ({ page }, testInfo) => {
@@ -521,9 +521,7 @@ test.describe("Slice 05 planner week core", () => {
     await page.goto("/planner");
 
     await expect(page.getByText("이 화면은 로그인이 필요해요")).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /Google로 시작하기|로컬 테스트 계정으로 시작/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Google로 시작하기" })).toBeVisible();
   });
 
   test("guest user can return to planner after login", async ({ page }) => {
@@ -547,9 +545,7 @@ test.describe("Slice 05 planner week core", () => {
 
     await page.goto("/planner");
 
-    const primaryCta = page.getByRole("button", {
-      name: /Google로 시작하기|로컬 테스트 계정으로 시작/,
-    });
+    const primaryCta = page.getByRole("button", { name: "Google로 시작하기" });
     const bottomTabs = page.locator("nav").first();
 
     await expect(primaryCta).toBeVisible();

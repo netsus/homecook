@@ -19,6 +19,8 @@
 - 텍스트 와이어프레임만으로 authority pass를 줄 수 없다.
 - 신규 화면, high-risk UI change, anchor screen 확장은 screenshot 또는 Figma frame evidence가 필요하다.
 - unresolved authority blocker가 남아 있으면 `Design Status: confirmed`를 줄 수 없다.
+- authority는 critique와 hold 권한을 가지지만, 사용자 승인 없이 익숙한 interaction model을 다른 모델로 교체하는 근거가 되어서는 안 된다.
+- overflow 문제를 잡는 것과 interaction model을 바꾸는 것은 별개로 본다.
 
 ---
 
@@ -81,6 +83,7 @@ authority 리뷰는 아래 evidence가 있어야 한다.
 아래는 기본적으로 `blocker`다.
 
 - 모바일에서 화면 전체가 좌우로 흔들리거나 전체 페이지 가로 스크롤이 생김
+- page-level overflow 문제를 고친다는 이유로 기존 table/list/sheet mental model을 card stack, full-page flow 등 다른 모델로 거칠게 바꿈
 - 스크롤 컨테이너 경계가 모호해서 사용자가 어디를 움직여야 하는지 헷갈림
 - primary CTA가 시각적으로 약하거나 위치상 뒤로 밀려 핵심 작업이 바로 보이지 않음
 - 정보 구조가 일반적인 모바일 앱 기대와 크게 달라 학습 비용이 높음
@@ -138,6 +141,8 @@ authority report에는 아래를 반드시 포함한다.
 - 신규 화면, high-risk UI change, anchor screen 확장은
   `Ready for Review` 전에 authority review를 거친다.
 - unresolved blocker가 있으면 Stage 4 closeout을 닫지 않는다.
+- interaction model 자체를 바꾸는 제안이면 authority 단독으로 `pass`를 주지 않고,
+  사용자 승인 또는 별도 design artifact 보강 전까지 `hold`를 기본값으로 둔다.
 
 ### Stage 5
 
