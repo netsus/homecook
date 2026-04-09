@@ -108,6 +108,7 @@
 - [x] invalid input 검증 (name 빈 문자열, sort_order 음수 등 422)
 - [x] `meals` 배열 정렬 순서 검증 (plan_date, column_id, created_at)
 - [x] 끼니 컬럼 sort_order 자동 할당 로직
+- [x] 끼니 컬럼 순서 변경 저장 실패 시 직전 순서 유지 + 오류 안내 확인
 - [x] API 응답 형식 검증 (`{ success, data, error }`)
 
 ### Playwright
@@ -122,11 +123,13 @@
 - [x] 로그인 후 플래너로 복귀 확인 (return-to-action)
 - [x] 식사 상태 뱃지 시각적 구분 확인 (registered / shopping_done / cook_done)
 - [x] 날짜 범위 스크롤 → 플래너 재조회 확인
+- [x] drag handle 기반 끼니 컬럼 reorder → 새로고침 후 순서 유지 확인
+- [x] 긴 거리 drag 시 source 컬럼과 drop target 컬럼만 직접 교환되고 중간 컬럼 순서는 유지된다
 - [x] 상단 CTA 버튼([장보기] [요리하기] [남은요리])이 동일한 disabled 시각 상태를 유지한다
 - [x] 다양한 화면 크기(모바일/태블릿)에서도 플래너 그리드 핵심 입력 영역이 화면 내에서 접근 가능하다
 
 ### Manual Only
 
-- [ ] drag handle 기반 끼니 컬럼 순서 변경 인터랙션 (드롭 저장, 실패 시 원복, 화살표 제거, 자동화 추가 검토)
+- [x] drag handle 기반 끼니 컬럼 순서 변경 인터랙션 (드롭 저장, 실패 시 원복, 화살표 제거, 긴 거리 drag 시 source/target 직접 교환) (`2026-04-09`, `pnpm exec vitest run tests/planner-columns-route.test.ts tests/planner-week-screen.test.tsx`, `pnpm exec playwright test tests/e2e/slice-05-planner-week-core.spec.ts --project=desktop-chrome --project=mobile-chrome --grep "manage planner columns|drag planner columns|touch drag handle|swaps only the source and target columns on long moves"`, drag handle reorder + 새로고침 유지 + 저장 실패 원복/오류 안내 + 화살표 제거 + 긴 거리 swap 확인)
 - [x] 플래너 화면 장시간 사용 시 성능 확인 (많은 식사 데이터) (`2026-04-09`, local Supabase + `pnpm dev:demo` + `pnpm qa:perf:05`, 계정 `local-other@homecook.local`, 컬럼 `5개`, 레시피 `72개`, meals `343개`, 초기 범위 `89건`, `initialReady=1130ms`, `averageShift=199ms`, `maxShift=221ms`, `horizontalReach=53ms`)
 - [x] 회원가입 직후 기본 컬럼(아침/점심/저녁) 3개 자동 생성 확인 (auth flow 검증) (`2026-04-04`, 새 Google 계정 + local Supabase Google OAuth + `http://localhost:3000`, `/planner` 첫 로그인 직후 3개 컬럼 생성 확인)

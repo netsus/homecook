@@ -85,6 +85,146 @@ function buildMealMap(meals: PlannerMealData[]) {
   return mealMap;
 }
 
+function clampSortOrder(nextSortOrder: number, columnCount: number) {
+  if (columnCount <= 0) {
+    return 0;
+  }
+
+  return Math.min(Math.max(nextSortOrder, 0), columnCount - 1);
+}
+
+interface PlannerColumnCardProps {
+  column: PlannerColumnData;
+  draftName: string;
+  columnCount: number;
+  isMutating: boolean;
+  isActiveDrag: boolean;
+  isDragTarget: boolean;
+  onDraftNameChange: (columnId: string, value: string) => void;
+  onKeyboardReorder: (columnId: string, nextSortOrder: number) => void;
+  onTouchDragStart: (
+    columnId: string,
+    event: React.PointerEvent<HTMLButtonElement>,
+  ) => void;
+  onDragStart: (columnId: string) => void;
+  onDragOver: (columnId: string) => void;
+  onDrop: (columnId: string) => void;
+  onDragEnd: () => void;
+  onRename: (columnId: string) => void;
+  onDelete: (columnId: string) => void;
+}
+
+function PlannerColumnCard({
+  column,
+  draftName,
+  columnCount,
+  isMutating,
+  isActiveDrag,
+  isDragTarget,
+  onDraftNameChange,
+  onKeyboardReorder,
+  onTouchDragStart,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  onRename,
+  onDelete,
+}: PlannerColumnCardProps) {
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+        return;
+      }
+
+      event.preventDefault();
+      const direction = event.key === "ArrowLeft" ? -1 : 1;
+      const nextSortOrder = clampSortOrder(column.sort_order + direction, columnCount);
+
+      if (nextSortOrder === column.sort_order) {
+        return;
+      }
+
+      onKeyboardReorder(column.id, nextSortOrder);
+    },
+    [column.id, column.sort_order, columnCount, onKeyboardReorder],
+  );
+
+  return (
+    <div
+      className={`min-w-0 rounded-[12px] border bg-[var(--surface)] px-3 py-3 transition-colors ${
+        isDragTarget
+          ? "border-[var(--brand)] bg-[color:rgba(255,108,60,0.08)]"
+          : "border-[var(--line)]"
+      } ${isActiveDrag ? "opacity-55" : ""}`}
+      data-column-id={column.id}
+      onDragOver={(event) => {
+        event.preventDefault();
+        onDragOver(column.id);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        onDrop(column.id);
+      }}
+    >
+      <div className="space-y-3">
+        <div className="grid grid-cols-[44px_minmax(0,1fr)] items-center gap-3">
+          <button
+            aria-label={`${column.name} 컬럼 순서 변경`}
+            className="inline-flex min-h-11 min-w-11 shrink-0 cursor-grab items-center justify-center rounded-[10px] border border-[var(--line)] text-[18px] font-semibold leading-none text-[var(--muted)] transition active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-45"
+            disabled={isMutating}
+            draggable={!isMutating}
+            onDragEnd={onDragEnd}
+            onDragStart={(event) => {
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", column.id);
+              onDragStart(column.id);
+            }}
+            onKeyDown={handleKeyDown}
+            onPointerDown={(event) => {
+              if (event.pointerType === "mouse") {
+                return;
+              }
+
+              onTouchDragStart(column.id, event);
+            }}
+            style={{ touchAction: "none" }}
+            type="button"
+          >
+            ⋮⋮
+          </button>
+          <label className="flex min-h-11 min-w-0 items-center rounded-[10px] border border-[var(--line)] px-3">
+            <span className="visually-hidden">{column.name} 컬럼 이름</span>
+            <input
+              className="w-full min-w-0 bg-transparent text-sm font-semibold text-[var(--foreground)] outline-none"
+              onChange={(event) => onDraftNameChange(column.id, event.target.value)}
+              value={draftName}
+            />
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            className="min-h-11 rounded-[10px] border border-[var(--line)] px-3 text-sm font-semibold text-[var(--muted)] disabled:opacity-45"
+            disabled={isMutating}
+            onClick={() => onRename(column.id)}
+            type="button"
+          >
+            저장
+          </button>
+          <button
+            className="min-h-11 rounded-[10px] border border-[var(--line)] px-3 text-sm font-semibold text-[var(--muted)] disabled:opacity-45"
+            disabled={isMutating}
+            onClick={() => onDelete(column.id)}
+            type="button"
+          >
+            삭제
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PlannerWeekScreen({
   initialAuthenticated = false,
 }: PlannerWeekScreenProps) {
@@ -109,6 +249,11 @@ export function PlannerWeekScreen({
   );
   const [newColumnName, setNewColumnName] = useState("");
   const [columnNameDrafts, setColumnNameDrafts] = useState<Record<string, string>>({});
+  const [activeDragColumnId, setActiveDragColumnId] = useState<string | null>(null);
+  const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
+  const activeDragColumnIdRef = useRef<string | null>(null);
+  const dragOverColumnIdRef = useRef<string | null>(null);
+  const dragCleanupRef = useRef<(() => void) | null>(null);
   const scrollShiftAtRef = useRef(0);
 
   const sortedColumns = useMemo(() => sortColumns(columns), [columns]);
@@ -118,6 +263,20 @@ export function PlannerWeekScreen({
   );
   const mealsByDateAndColumn = useMemo(() => buildMealMap(meals), [meals]);
   const hasMeals = meals.length > 0;
+
+  useEffect(() => {
+    activeDragColumnIdRef.current = activeDragColumnId;
+  }, [activeDragColumnId]);
+
+  useEffect(() => {
+    dragOverColumnIdRef.current = dragOverColumnId;
+  }, [dragOverColumnId]);
+
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.();
+    };
+  }, []);
 
   useEffect(() => {
     const nextDrafts: Record<string, string> = {};
@@ -274,11 +433,13 @@ export function PlannerWeekScreen({
 
   const handleReorderColumn = useCallback(
     async (columnId: string, nextSortOrder: number) => {
+      const clampedSortOrder = clampSortOrder(nextSortOrder, sortedColumns.length);
+
       await runMutation(async () => {
-        await reorderColumn(columnId, nextSortOrder);
+        await reorderColumn(columnId, clampedSortOrder);
       });
     },
-    [reorderColumn, runMutation],
+    [reorderColumn, runMutation, sortedColumns.length],
   );
 
   const handleDeleteColumn = useCallback(
@@ -288,6 +449,136 @@ export function PlannerWeekScreen({
       });
     },
     [removeColumn, runMutation],
+  );
+
+  const clearDragState = useCallback(() => {
+    dragCleanupRef.current?.();
+    dragCleanupRef.current = null;
+    activeDragColumnIdRef.current = null;
+    dragOverColumnIdRef.current = null;
+    setActiveDragColumnId(null);
+    setDragOverColumnId(null);
+  }, []);
+
+  const handleTouchDragStart = useCallback(
+    (columnId: string, event: React.PointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+
+      dragCleanupRef.current?.();
+
+      const pointerId = event.pointerId;
+      const target = event.currentTarget;
+
+      target.setPointerCapture?.(pointerId);
+      activeDragColumnIdRef.current = columnId;
+      dragOverColumnIdRef.current = columnId;
+      setActiveDragColumnId(columnId);
+      setDragOverColumnId(columnId);
+
+      const updateDragTarget = (clientX: number, clientY: number) => {
+        const elementAtPoint = document.elementFromPoint(clientX, clientY);
+        const nextColumnId =
+          elementAtPoint instanceof Element
+            ? (elementAtPoint.closest("[data-column-id]") as HTMLElement | null)?.dataset.columnId
+            : null;
+
+        if (!nextColumnId || dragOverColumnIdRef.current === nextColumnId) {
+          return;
+        }
+
+        dragOverColumnIdRef.current = nextColumnId;
+        setDragOverColumnId(nextColumnId);
+      };
+
+      const handlePointerMove = (moveEvent: PointerEvent) => {
+        if (moveEvent.pointerId !== pointerId) {
+          return;
+        }
+
+        updateDragTarget(moveEvent.clientX, moveEvent.clientY);
+      };
+
+      const finishTouchDrag = (endEvent?: PointerEvent) => {
+        if (endEvent && endEvent.pointerId !== pointerId) {
+          return;
+        }
+
+        const activeColumnId = activeDragColumnIdRef.current;
+        const nextColumnId = dragOverColumnIdRef.current;
+
+        target.releasePointerCapture?.(pointerId);
+
+        activeDragColumnIdRef.current = null;
+        dragOverColumnIdRef.current = null;
+        setActiveDragColumnId(null);
+        setDragOverColumnId(null);
+
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerup", finishTouchDrag);
+        window.removeEventListener("pointercancel", finishTouchDrag);
+        dragCleanupRef.current = null;
+
+        if (!activeColumnId || !nextColumnId || activeColumnId === nextColumnId) {
+          return;
+        }
+
+        const nextSortOrder = sortedColumns.findIndex((column) => column.id === nextColumnId);
+
+        if (nextSortOrder < 0) {
+          return;
+        }
+
+        void handleReorderColumn(activeColumnId, nextSortOrder);
+      };
+
+      window.addEventListener("pointermove", handlePointerMove);
+      window.addEventListener("pointerup", finishTouchDrag);
+      window.addEventListener("pointercancel", finishTouchDrag);
+      dragCleanupRef.current = () => {
+        target.releasePointerCapture?.(pointerId);
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerup", finishTouchDrag);
+        window.removeEventListener("pointercancel", finishTouchDrag);
+      };
+    },
+    [handleReorderColumn, sortedColumns],
+  );
+
+  const handleColumnDragStart = useCallback((columnId: string) => {
+    activeDragColumnIdRef.current = columnId;
+    dragOverColumnIdRef.current = columnId;
+    setActiveDragColumnId(columnId);
+    setDragOverColumnId(columnId);
+  }, []);
+
+  const handleColumnDragOver = useCallback((columnId: string) => {
+    if (!activeDragColumnIdRef.current || dragOverColumnIdRef.current === columnId) {
+      return;
+    }
+
+    dragOverColumnIdRef.current = columnId;
+    setDragOverColumnId(columnId);
+  }, []);
+
+  const handleColumnDrop = useCallback(
+    (columnId: string) => {
+      const activeColumnId = activeDragColumnIdRef.current;
+
+      clearDragState();
+
+      if (!activeColumnId || activeColumnId === columnId) {
+        return;
+      }
+
+      const nextSortOrder = sortedColumns.findIndex((column) => column.id === columnId);
+
+      if (nextSortOrder < 0) {
+        return;
+      }
+
+      void handleReorderColumn(activeColumnId, nextSortOrder);
+    },
+    [clearDragState, handleReorderColumn, sortedColumns],
   );
 
   if (authState === "checking") {
@@ -460,63 +751,46 @@ export function PlannerWeekScreen({
 
             <div className="overflow-x-auto" onWheel={handleGridWheel}>
               <div className="min-w-[760px] px-5 py-5 md:px-6">
-                <div className="grid gap-2" style={{ gridTemplateColumns: `160px repeat(${sortedColumns.length}, minmax(160px, 1fr))` }}>
+                <div
+                  className="grid gap-2"
+                  style={{ gridTemplateColumns: `160px repeat(${sortedColumns.length}, minmax(160px, 1fr))` }}
+                >
                   <div className="rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
                     날짜
                   </div>
-                  {sortedColumns.map((column, index) => {
+                  {sortedColumns.map((column) => {
                     const draftName = columnNameDrafts[column.id] ?? column.name;
 
                     return (
-                      <div
+                      <PlannerColumnCard
                         key={column.id}
-                        className="rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3"
-                      >
-                        <input
-                          className="w-full bg-transparent text-sm font-semibold text-[var(--foreground)] outline-none"
-                          onChange={(event) =>
-                            setColumnNameDrafts((current) => ({
-                              ...current,
-                              [column.id]: event.target.value,
-                            }))
-                          }
-                          value={draftName}
-                        />
-                        <div className="mt-2 grid grid-cols-2 gap-1">
-                          <button
-                            className="min-h-11 rounded-[10px] border border-[var(--line)] text-xs font-semibold text-[var(--muted)] disabled:opacity-45"
-                            disabled={isMutating || index === 0}
-                            onClick={() => void handleReorderColumn(column.id, index - 1)}
-                            type="button"
-                          >
-                            ←
-                          </button>
-                          <button
-                            className="min-h-11 rounded-[10px] border border-[var(--line)] text-xs font-semibold text-[var(--muted)] disabled:opacity-45"
-                            disabled={isMutating || index === sortedColumns.length - 1}
-                            onClick={() => void handleReorderColumn(column.id, index + 1)}
-                            type="button"
-                          >
-                            →
-                          </button>
-                          <button
-                            className="min-h-11 rounded-[10px] border border-[var(--line)] text-xs font-semibold text-[var(--muted)] disabled:opacity-45"
-                            disabled={isMutating}
-                            onClick={() => void handleRenameColumn(column.id)}
-                            type="button"
-                          >
-                            저장
-                          </button>
-                          <button
-                            className="min-h-11 rounded-[10px] border border-[var(--line)] text-xs font-semibold text-[var(--muted)] disabled:opacity-45"
-                            disabled={isMutating}
-                            onClick={() => void handleDeleteColumn(column.id)}
-                            type="button"
-                          >
-                            삭제
-                          </button>
-                        </div>
-                      </div>
+                        column={column}
+                        columnCount={sortedColumns.length}
+                        draftName={draftName}
+                        isActiveDrag={activeDragColumnId === column.id}
+                        isDragTarget={Boolean(
+                          activeDragColumnId &&
+                            dragOverColumnId === column.id &&
+                            activeDragColumnId !== column.id,
+                        )}
+                        isMutating={isMutating}
+                        onDelete={(columnId) => void handleDeleteColumn(columnId)}
+                        onDraftNameChange={(columnId, value) =>
+                          setColumnNameDrafts((current) => ({
+                            ...current,
+                            [columnId]: value,
+                          }))
+                        }
+                        onKeyboardReorder={(columnId, nextSortOrder) =>
+                          void handleReorderColumn(columnId, nextSortOrder)
+                        }
+                        onDragEnd={clearDragState}
+                        onDragOver={handleColumnDragOver}
+                        onDragStart={handleColumnDragStart}
+                        onDrop={handleColumnDrop}
+                        onTouchDragStart={handleTouchDragStart}
+                        onRename={(columnId) => void handleRenameColumn(columnId)}
+                      />
                     );
                   })}
 

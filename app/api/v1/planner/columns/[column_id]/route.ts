@@ -224,8 +224,9 @@ async function reorderColumns(
   const reorderedIds = [...orderedIds];
 
   if (currentIndex !== nextIndex) {
-    reorderedIds.splice(currentIndex, 1);
-    reorderedIds.splice(nextIndex, 0, targetColumnId);
+    const swapColumnId = reorderedIds[nextIndex];
+    reorderedIds[currentIndex] = swapColumnId!;
+    reorderedIds[nextIndex] = targetColumnId;
   }
 
   for (let index = 0; index < reorderedIds.length; index += 1) {

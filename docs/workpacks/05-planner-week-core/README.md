@@ -44,6 +44,7 @@
 
 - planner column reorder UX를 화살표 버튼에서 drag handle 기반 reorder로 확정
 - API/DB 계약은 변경하지 않고 기존 `PATCH /planner/columns/{column_id}` + `sort_order`를 그대로 사용
+- 긴 거리 drag는 drop target 컬럼과 직접 순서를 교환하며, 중간 컬럼은 유지
 - 드롭 직후 저장, 실패 시 직전 순서로 원복하고 오류 안내를 노출
 - 화살표 버튼 기반 순서 변경 UI는 제거
 
@@ -293,6 +294,6 @@
 - [x] 상태 뱃지 시각화 (registered / shopping_done / cook_done)
 - [x] 날짜 범위 스크롤 인터랙션
 - [x] `ui/designs/PLANNER_WEEK.md` + critique 산출물 유지
-- [x] Playwright E2E (플래너 조회, 컬럼 추가/수정/삭제 흐름)
+- [x] Playwright E2E (플래너 조회, 컬럼 추가/수정/삭제 흐름, drag reorder 유지)
 - [x] 자동화 범위 구분 (Vitest vs Playwright)
 - [x] 수동 QA 시나리오 정리 (acceptance.md Manual Only 섹션)
