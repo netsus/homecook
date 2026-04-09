@@ -159,6 +159,24 @@ describe("recipe detail screen", () => {
     expect(screen.queryByText("요리완료")).toBeNull();
   });
 
+  it("removes internal scaffolding cards and keeps primary actions above the recipe body", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const plannerButton = await screen.findByRole("button", {
+      name: "플래너에 추가",
+    });
+    const ingredientHeading = screen.getByRole("heading", {
+      name: "인분에 따라 재료량이 바뀝니다",
+    });
+
+    expect(
+      plannerButton.compareDocumentPosition(ingredientHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByText("Recipe Snapshot")).toBeNull();
+    expect(screen.queryByText("Slice Note")).toBeNull();
+  });
+
   it("disables the like button while pending and updates the count from the API response", async () => {
     const detail = buildRecipeDetail();
     const deferred = createDeferred<RecipeLikeData>();

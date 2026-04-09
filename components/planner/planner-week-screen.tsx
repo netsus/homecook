@@ -93,6 +93,14 @@ function clampSortOrder(nextSortOrder: number, columnCount: number) {
   return Math.min(Math.max(nextSortOrder, 0), columnCount - 1);
 }
 
+function readColumnIdFromTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return null;
+  }
+
+  return (target.closest("[data-column-id]") as HTMLElement | null)?.dataset.columnId ?? null;
+}
+
 interface PlannerColumnCardProps {
   column: PlannerColumnData;
   draftName: string;
@@ -109,7 +117,7 @@ interface PlannerColumnCardProps {
   onDragStart: (columnId: string) => void;
   onDragOver: (columnId: string) => void;
   onDrop: (columnId: string) => void;
-  onDragEnd: () => void;
+  onDragEnd: (event: React.DragEvent<HTMLButtonElement>) => void;
   onRename: (columnId: string) => void;
   onDelete: (columnId: string) => void;
 }
@@ -152,11 +160,11 @@ function PlannerColumnCard({
 
   return (
     <div
-      className={`min-w-0 rounded-[12px] border bg-[var(--surface)] px-3 py-3 transition-colors ${
+      className={`min-w-0 shrink-0 rounded-[12px] border bg-[var(--surface)] px-3 py-3 transition-colors ${
         isDragTarget
           ? "border-[var(--brand)] bg-[color:rgba(255,108,60,0.08)]"
           : "border-[var(--line)]"
-      } ${isActiveDrag ? "opacity-55" : ""}`}
+      } ${isActiveDrag ? "opacity-55" : ""} w-[220px]`}
       data-column-id={column.id}
       onDragOver={(event) => {
         event.preventDefault();
@@ -182,10 +190,6 @@ function PlannerColumnCard({
             }}
             onKeyDown={handleKeyDown}
             onPointerDown={(event) => {
-              if (event.pointerType === "mouse") {
-                return;
-              }
-
               onTouchDragStart(column.id, event);
             }}
             style={{ touchAction: "none" }}
@@ -262,7 +266,6 @@ export function PlannerWeekScreen({
     [rangeEndDate, rangeStartDate],
   );
   const mealsByDateAndColumn = useMemo(() => buildMealMap(meals), [meals]);
-  const hasMeals = meals.length > 0;
 
   useEffect(() => {
     activeDragColumnIdRef.current = activeDragColumnId;
@@ -560,6 +563,25 @@ export function PlannerWeekScreen({
     setDragOverColumnId(columnId);
   }, []);
 
+  const handleColumnRailDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!activeDragColumnIdRef.current) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const nextColumnId = readColumnIdFromTarget(event.target);
+
+      if (!nextColumnId) {
+        return;
+      }
+
+      handleColumnDragOver(nextColumnId);
+    },
+    [handleColumnDragOver],
+  );
+
   const handleColumnDrop = useCallback(
     (columnId: string) => {
       const activeColumnId = activeDragColumnIdRef.current;
@@ -579,6 +601,42 @@ export function PlannerWeekScreen({
       void handleReorderColumn(activeColumnId, nextSortOrder);
     },
     [clearDragState, handleReorderColumn, sortedColumns],
+  );
+
+  const handleColumnDragEnd = useCallback(
+    (event: React.DragEvent<HTMLButtonElement>) => {
+      const nextColumnId = readColumnIdFromTarget(
+        document.elementFromPoint(event.clientX, event.clientY),
+      );
+
+      if (
+        nextColumnId &&
+        activeDragColumnIdRef.current &&
+        nextColumnId !== activeDragColumnIdRef.current
+      ) {
+        handleColumnDrop(nextColumnId);
+        return;
+      }
+
+      clearDragState();
+    },
+    [clearDragState, handleColumnDrop],
+  );
+
+  const handleColumnRailDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+
+      const columnId = readColumnIdFromTarget(event.target);
+
+      if (!columnId) {
+        clearDragState();
+        return;
+      }
+
+      handleColumnDrop(columnId);
+    },
+    [clearDragState, handleColumnDrop],
   );
 
   if (authState === "checking") {
@@ -617,39 +675,40 @@ export function PlannerWeekScreen({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_320px]">
-      <section className="space-y-6">
-        <div className="glass-panel rounded-[20px] px-5 py-6 md:px-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-            Planner Week
-          </p>
-          <h2 className="mt-3 text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
-            식단 플래너
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-            날짜와 끼니 컬럼을 한눈에 보면서 식단을 관리해요.
-          </p>
-
-          <div className="mt-5 flex flex-wrap gap-2">
-            {CTA_BUTTONS.map((label) => (
-              <button
-                key={label}
-                aria-disabled="true"
-                className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)] opacity-60"
-                disabled
-                type="button"
-              >
-                {label}
-              </button>
-            ))}
+    <div className="space-y-6">
+      <section className="glass-panel rounded-[24px] px-5 py-6 md:px-6">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
+                Planner Week
+              </p>
+              <h2 className="mt-3 text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
+                식단 플래너
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+                날짜 범위를 넘기며 이번 주 집밥 흐름을 보고, 끼니 컬럼을 원하는 순서로 정리해요.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs font-semibold text-[var(--muted)]">
+              <span className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-2">
+                등록된 식사 {meals.length}건
+              </span>
+              <span className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-2">
+                컬럼 {sortedColumns.length}개
+              </span>
+            </div>
           </div>
-        </div>
 
-        <div className="glass-panel rounded-[20px] px-5 py-5 md:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-lg font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-              {formatDateLabel(rangeStartDate)} ~ {formatDateLabel(rangeEndDate)}
-            </h3>
+          <div className="flex flex-col gap-3 rounded-[20px] border border-[var(--line)] bg-white/72 px-4 py-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+                현재 범위
+              </p>
+              <h3 className="mt-2 text-lg font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                {formatDateLabel(rangeStartDate)} ~ {formatDateLabel(rangeEndDate)}
+              </h3>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
@@ -667,97 +726,113 @@ export function PlannerWeekScreen({
               </button>
             </div>
           </div>
-          <p className="mt-2 text-xs text-[var(--muted)]">
-            플래너 영역에서 위/아래 스크롤하면 주간 범위를 이동할 수 있어요.
-          </p>
 
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
-            <label className="flex min-h-11 min-w-0 flex-1 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3 sm:max-w-sm">
-              <span className="visually-hidden">새 끼니 컬럼 이름</span>
-              <input
-                className="w-full bg-transparent outline-none placeholder:text-[var(--muted)]"
-                onChange={(event) => setNewColumnName(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    void handleAddColumn();
-                  }
-                }}
-                placeholder="새 끼니 컬럼 이름"
-                value={newColumnName}
-              />
-            </label>
-            <button
-              className="min-h-11 shrink-0 rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-              disabled={isMutating}
-              onClick={() => void handleAddColumn()}
-              type="button"
-            >
-              컬럼 추가
-            </button>
+          <div className="flex flex-wrap gap-2">
+            {CTA_BUTTONS.map((label) => (
+              <button
+                key={label}
+                aria-disabled="true"
+                className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)] opacity-60"
+                disabled
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
           </div>
-
-          {feedbackMessage ? (
-            <p className="mt-3 rounded-[12px] border border-[color:rgba(255,108,60,0.25)] bg-[color:rgba(255,108,60,0.08)] px-4 py-3 text-sm text-[var(--brand-deep)]">
-              {feedbackMessage}
-            </p>
-          ) : null}
         </div>
+      </section>
 
-        {screenState === "loading" ? (
-          <div className="glass-panel rounded-[20px] p-5">
-            <div className="grid gap-3 md:grid-cols-2">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="min-h-24 animate-pulse rounded-[16px] bg-white/70"
-                />
-              ))}
-            </div>
+      {screenState === "loading" ? (
+        <div className="glass-panel rounded-[20px] p-5">
+          <div className="grid gap-3 md:grid-cols-2">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="min-h-24 animate-pulse rounded-[16px] bg-white/70"
+              />
+            ))}
           </div>
-        ) : null}
+        </div>
+      ) : null}
 
-        {screenState === "error" ? (
-          <ContentState
-            actionLabel="다시 시도"
-            description={errorMessage ?? "잠시 후 다시 시도해주세요."}
-            onAction={() => {
-              void loadPlanner().catch((error) => {
-                if (isPlannerApiError(error) && error.status === 401) {
-                  setAuthState("unauthorized");
-                }
-              });
-            }}
-            title="플래너를 불러오지 못했어요"
-          />
-        ) : null}
+      {screenState === "error" ? (
+        <ContentState
+          actionLabel="다시 시도"
+          description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+          onAction={() => {
+            void loadPlanner().catch((error) => {
+              if (isPlannerApiError(error) && error.status === 401) {
+                setAuthState("unauthorized");
+              }
+            });
+          }}
+          title="플래너를 불러오지 못했어요"
+        />
+      ) : null}
 
-        {screenState === "read-only" ? (
-          <ContentState
-            description="현재 슬라이스에서는 플래너 조회 화면이 항상 수정 가능한 상태로 제공돼요."
-            title="읽기 전용 상태는 이번 단계에서 사용하지 않아요"
-          />
-        ) : null}
+      {screenState === "read-only" ? (
+        <ContentState
+          description="현재 슬라이스에서는 플래너 조회 화면이 항상 수정 가능한 상태로 제공돼요."
+          title="읽기 전용 상태는 이번 단계에서 사용하지 않아요"
+        />
+      ) : null}
 
-        {screenState === "ready" || screenState === "empty" ? (
-          <div className="glass-panel overflow-hidden rounded-[20px]">
-            {screenState === "empty" ? (
-              <div className="border-b border-[var(--line)] px-5 py-4 md:px-6">
-                <p className="text-sm text-[var(--muted)]">
-                  아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요.
+      {screenState === "ready" || screenState === "empty" ? (
+        <div className="grid gap-6 xl:grid-cols-[minmax(280px,0.82fr)_minmax(0,1.18fr)] xl:items-start">
+          <section className="glass-panel rounded-[20px] p-5 md:p-6">
+            <div className="flex flex-col gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
+                  Column Rail
+                </p>
+                <h3 className="mt-2 text-2xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                  끼니 컬럼 정리
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                  자주 쓰는 끼니 순서대로 정리해두면 날짜 카드에서도 같은 흐름으로 식사를 확인할 수 있어요.
                 </p>
               </div>
-            ) : null}
 
-            <div className="overflow-x-auto" onWheel={handleGridWheel}>
-              <div className="min-w-[760px] px-5 py-5 md:px-6">
-                <div
-                  className="grid gap-2"
-                  style={{ gridTemplateColumns: `160px repeat(${sortedColumns.length}, minmax(160px, 1fr))` }}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <label className="flex min-h-11 min-w-0 flex-1 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3">
+                  <span className="visually-hidden">새 끼니 컬럼 이름</span>
+                  <input
+                    className="w-full bg-transparent outline-none placeholder:text-[var(--muted)]"
+                    onChange={(event) => setNewColumnName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void handleAddColumn();
+                      }
+                    }}
+                    placeholder="새 끼니 컬럼 이름"
+                    value={newColumnName}
+                  />
+                </label>
+                <button
+                  className="min-h-11 shrink-0 rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                  disabled={isMutating}
+                  onClick={() => void handleAddColumn()}
+                  type="button"
                 >
-                  <div className="rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                    날짜
-                  </div>
+                  컬럼 추가
+                </button>
+              </div>
+
+              {feedbackMessage ? (
+                <p className="rounded-[12px] border border-[color:rgba(255,108,60,0.25)] bg-[color:rgba(255,108,60,0.08)] px-4 py-3 text-sm text-[var(--brand-deep)]">
+                  {feedbackMessage}
+                </p>
+              ) : null}
+
+              <div
+                className="overflow-x-auto pb-1"
+                onDragOver={handleColumnRailDragOver}
+                onDrop={handleColumnRailDrop}
+                onWheel={handleGridWheel}
+              >
+                <div className="flex min-w-max gap-3">
                   {sortedColumns.map((column) => {
                     const draftName = columnNameDrafts[column.id] ?? column.name;
 
@@ -784,7 +859,7 @@ export function PlannerWeekScreen({
                         onKeyboardReorder={(columnId, nextSortOrder) =>
                           void handleReorderColumn(columnId, nextSortOrder)
                         }
-                        onDragEnd={clearDragState}
+                        onDragEnd={handleColumnDragEnd}
                         onDragOver={handleColumnDragOver}
                         onDragStart={handleColumnDragStart}
                         onDrop={handleColumnDrop}
@@ -793,12 +868,55 @@ export function PlannerWeekScreen({
                       />
                     );
                   })}
+                </div>
+              </div>
 
-                  {dateKeys.map((dateKey) => (
-                    <React.Fragment key={dateKey}>
-                      <div className="rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-sm font-semibold text-[var(--foreground)]">
-                        {formatDateLabel(dateKey)}
+              <p className="text-xs leading-5 text-[var(--muted)]">
+                컬럼 rail에서 위아래로 스크롤하면 날짜 범위를 빠르게 넘길 수 있어요.
+              </p>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
+                  Daily Flow
+                </p>
+                <h3 className="mt-2 text-2xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                  요일별 식단
+                </h3>
+              </div>
+              {screenState === "empty" ? (
+                <p className="text-sm leading-6 text-[var(--muted)]">
+                  아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {dateKeys.map((dateKey) => {
+                const mealsForDate = meals.filter((meal) => meal.plan_date === dateKey);
+
+                return (
+                  <article
+                    className="glass-panel rounded-[20px] p-4 md:p-5"
+                    key={dateKey}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h4 className="text-lg font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                          {formatDateLabel(dateKey)}
+                        </h4>
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          {mealsForDate.length > 0
+                            ? `등록된 식사 ${mealsForDate.length}건`
+                            : "아직 등록된 식사가 없어요"}
+                        </p>
                       </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       {sortedColumns.map((column) => {
                         const cellKey = `${dateKey}:${column.id}`;
                         const cellMeals = mealsByDateAndColumn.get(cellKey) ?? [];
@@ -806,23 +924,26 @@ export function PlannerWeekScreen({
 
                         return (
                           <div
-                            key={cellKey}
-                            className={`rounded-[12px] border border-[var(--line)] px-3 py-3 ${
+                            className={`rounded-[18px] border px-4 py-4 ${
                               primaryMeal?.is_leftover
-                                ? "bg-[color:rgba(46,166,122,0.1)]"
-                                : "bg-[var(--surface)]"
+                                ? "border-[color:rgba(46,166,122,0.2)] bg-[color:rgba(46,166,122,0.08)]"
+                                : "border-[var(--line)] bg-white/72"
                             }`}
+                            key={cellKey}
                           >
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+                              {column.name}
+                            </p>
                             {primaryMeal ? (
                               <>
-                                <p className="text-sm font-semibold text-[var(--foreground)]">
+                                <p className="mt-3 text-base font-semibold text-[var(--foreground)]">
                                   {primaryMeal.recipe_title}
                                 </p>
                                 <p className="mt-1 text-xs text-[var(--muted)]">
                                   {primaryMeal.planned_servings}인분
                                 </p>
                                 <span
-                                  className={`mt-2 inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${STATUS_META[primaryMeal.status].className}`}
+                                  className={`mt-3 inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${STATUS_META[primaryMeal.status].className}`}
                                 >
                                   {STATUS_META[primaryMeal.status].label}
                                 </span>
@@ -833,64 +954,21 @@ export function PlannerWeekScreen({
                                 ) : null}
                               </>
                             ) : (
-                              <p className="text-xs text-[var(--muted)]">등록된 식사가 없어요</p>
+                              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+                                등록된 식사가 없어요
+                              </p>
                             )}
                           </div>
                         );
                       })}
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
-          </div>
-        ) : null}
-      </section>
-
-      <aside className="space-y-4">
-        <div className="glass-panel rounded-[20px] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-            Planner Status
-          </p>
-          <dl className="mt-4 space-y-3 text-sm text-[var(--muted)]">
-            <div className="flex items-center justify-between gap-3">
-              <dt>화면 상태</dt>
-              <dd className="font-semibold text-[var(--foreground)]">{screenState}</dd>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <dt>컬럼 수</dt>
-              <dd className="font-semibold text-[var(--foreground)]">{sortedColumns.length}개</dd>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <dt>식사 수</dt>
-              <dd className="font-semibold text-[var(--foreground)]">{meals.length}건</dd>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <dt>범위</dt>
-              <dd className="font-semibold text-[var(--foreground)]">
-                {rangeStartDate} ~ {rangeEndDate}
-              </dd>
-            </div>
-          </dl>
+          </section>
         </div>
-        <div className="glass-panel rounded-[20px] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-            Stage 4 Scope
-          </p>
-          <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--muted)]">
-            <li>플래너 주간 조회</li>
-            <li>끼니 컬럼 CRUD</li>
-            <li>상태 뱃지 표시</li>
-            <li>상단 CTA 비활성 노출</li>
-            <li>로그인 필요 상태 안내</li>
-          </ul>
-          {!hasMeals && screenState === "empty" ? (
-            <p className="mt-4 rounded-[12px] bg-[color:rgba(46,166,122,0.08)] px-4 py-3 text-sm text-[var(--olive)]">
-              식사가 없더라도 컬럼 관리 기능은 계속 사용할 수 있어요.
-            </p>
-          ) : null}
-        </div>
-      </aside>
+      ) : null}
     </div>
   );
 }

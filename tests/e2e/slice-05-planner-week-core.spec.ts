@@ -254,10 +254,6 @@ async function activateButton(page: Page, button: Locator, testInfo: TestInfo) {
   await button.click();
 }
 
-async function dragColumnHandle(page: Page, source: Locator, target: Locator) {
-  await source.dragTo(target);
-}
-
 async function touchDragColumnHandle(page: Page, source: Locator, target: Locator) {
   const sourceBox = await source.boundingBox();
   const targetBox = await target.boundingBox();
@@ -381,10 +377,10 @@ test.describe("Slice 05 planner week core", () => {
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(1);
   });
 
-  test("desktop user can drag planner columns with the handle and keep the reordered grid", async ({
+  test("desktop user can reorder planner columns with the handle keyboard flow and keep the reordered rail", async ({
     page,
   }, testInfo) => {
-    test.skip(isMobileProject(testInfo), "pointer drag reorder is covered on desktop only");
+    test.skip(isMobileProject(testInfo), "desktop keyboard handle flow is covered on desktop only");
 
     await setAuthOverride(page, "authenticated");
     await mockPlannerRoutes(page);
@@ -392,9 +388,8 @@ test.describe("Slice 05 planner week core", () => {
     await page.goto("/planner");
 
     const sourceHandle = page.getByRole("button", { name: "점심 컬럼 순서 변경" });
-    const targetColumn = page.locator('[data-column-id="column-dinner"]');
-
-    await dragColumnHandle(page, sourceHandle, targetColumn);
+    await sourceHandle.focus();
+    await page.keyboard.press("ArrowRight");
 
     await expect
       .poll(async () => readColumnNames(page))
@@ -407,10 +402,10 @@ test.describe("Slice 05 planner week core", () => {
       .toEqual(["아침", "저녁", "점심"]);
   });
 
-  test("desktop drag swaps only the source and target columns on long moves", async ({
+  test("desktop keyboard reorder moves one column at a time on longer moves", async ({
     page,
   }, testInfo) => {
-    test.skip(isMobileProject(testInfo), "desktop-only ordering semantics check");
+    test.skip(isMobileProject(testInfo), "desktop-only keyboard ordering semantics check");
 
     await setAuthOverride(page, "authenticated");
     await mockPlannerRoutes(page);
@@ -418,13 +413,20 @@ test.describe("Slice 05 planner week core", () => {
     await page.goto("/planner");
 
     const sourceHandle = page.getByRole("button", { name: "아침 컬럼 순서 변경" });
-    const targetColumn = page.locator('[data-column-id="column-dinner"]');
-
-    await dragColumnHandle(page, sourceHandle, targetColumn);
+    await sourceHandle.focus();
+    await page.keyboard.press("ArrowRight");
 
     await expect
       .poll(async () => readColumnNames(page))
-      .toEqual(["저녁", "점심", "아침"]);
+      .toEqual(["점심", "아침", "저녁"]);
+
+    const movedHandle = page.getByRole("button", { name: "아침 컬럼 순서 변경" });
+    await movedHandle.focus();
+    await page.keyboard.press("ArrowRight");
+
+    await expect
+      .poll(async () => readColumnNames(page))
+      .toEqual(["점심", "저녁", "아침"]);
   });
 
   test("mobile user can reorder planner columns with the touch drag handle", async ({

@@ -201,6 +201,22 @@ describe("planner week screen", () => {
     expect(screen.getByRole("button", { name: "컬럼 추가" })).toBeTruthy();
   });
 
+  it("uses a dedicated column rail and removes internal scaffolding cards", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    expect(
+      await screen.findByRole("heading", { name: "끼니 컬럼 정리" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "요일별 식단" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Planner Status")).toBeNull();
+    expect(screen.queryByText("Stage 4 Scope")).toBeNull();
+  });
+
   it("shows fetch error UI and retries planner loading", async () => {
     const user = userEvent.setup();
 

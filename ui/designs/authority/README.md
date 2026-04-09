@@ -6,6 +6,11 @@
 
 - `ui/designs/authority/<SCREEN_ID>-authority.md`
 
+현재 baseline:
+
+- `ui/designs/authority/PLANNER_WEEK-authority.md`
+- `ui/designs/authority/RECIPE_DETAIL-authority.md`
+
 권장 포함 항목:
 
 - verdict
