@@ -266,4 +266,116 @@ describe("OMO stage-result contract", () => {
       ),
     ).toThrow(/waived_fix_ids must be a subset/);
   });
+
+  it("validates doc gate repair stage results", () => {
+    const result = validateStageResult(
+      2,
+      {
+        result: "done",
+        summary_markdown: "doc gate repaired",
+        commit: { subject: "docs: repair workpack" },
+        pr: { title: "docs: repair workpack", body_markdown: "body" },
+        checks_run: [],
+        next_route: "open_pr",
+        claimed_scope: {
+          files: ["docs/workpacks/06-foo/README.md"],
+          endpoints: [],
+          routes: [],
+          states: [],
+          invariants: [],
+        },
+        changed_files: ["docs/workpacks/06-foo/README.md"],
+        tests_touched: [],
+        artifacts_written: [".artifacts/doc-gate.log"],
+        resolved_doc_finding_ids: ["doc-gate-missing-section-goal"],
+        contested_doc_fix_ids: [],
+        rebuttals: [],
+      },
+      {
+        subphase: "doc_gate_repair",
+      },
+    ) as {
+      resolved_doc_finding_ids: string[];
+      contested_doc_fix_ids: string[];
+    };
+
+    expect(result.resolved_doc_finding_ids).toEqual(["doc-gate-missing-section-goal"]);
+    expect(result.contested_doc_fix_ids).toEqual([]);
+  });
+
+  it("rejects overlapping resolved and contested doc gate ids", () => {
+    expect(() =>
+      validateStageResult(
+        2,
+        {
+          result: "done",
+          summary_markdown: "doc gate repaired",
+          commit: { subject: "docs: repair workpack" },
+          pr: { title: "docs: repair workpack", body_markdown: "body" },
+          checks_run: [],
+          next_route: "open_pr",
+          claimed_scope: {
+            files: ["docs/workpacks/06-foo/README.md"],
+            endpoints: [],
+            routes: [],
+            states: [],
+            invariants: [],
+          },
+          changed_files: ["docs/workpacks/06-foo/README.md"],
+          tests_touched: [],
+          artifacts_written: [".artifacts/doc-gate.log"],
+          resolved_doc_finding_ids: ["doc-gate-missing-section-goal"],
+          contested_doc_fix_ids: ["doc-gate-missing-section-goal"],
+          rebuttals: [
+            {
+              fix_id: "doc-gate-missing-section-goal",
+              rationale_markdown: "Already satisfied.",
+              evidence_refs: ["docs/workpacks/06-foo/README.md"],
+            },
+          ],
+        },
+        {
+          subphase: "doc_gate_repair",
+        },
+      ),
+    ).toThrow(/resolved_doc_finding_ids and stageResult.contested_doc_fix_ids must be disjoint/);
+  });
+
+  it("validates doc gate review stage results", () => {
+    const result = validateStageResult(
+      2,
+      {
+        decision: "request_changes",
+        body_markdown: "Fix the workpack wording.",
+        route_back_stage: 2,
+        approved_head_sha: null,
+        review_scope: {
+          scope: "doc_gate",
+          checklist_ids: [],
+        },
+        reviewed_doc_finding_ids: ["doc-gate-missing-section-goal"],
+        required_doc_fix_ids: ["doc-gate-missing-section-goal"],
+        waived_doc_fix_ids: [],
+        findings: [
+          {
+            file: "docs/workpacks/06-foo/README.md",
+            line_hint: 1,
+            severity: "major",
+            category: "contract",
+            issue: "Goal section is incomplete.",
+            suggestion: "Lock the user-facing goal in the README.",
+          },
+        ],
+      },
+      {
+        subphase: "doc_gate_review",
+      },
+    ) as {
+      reviewed_doc_finding_ids: string[];
+      required_doc_fix_ids: string[];
+    };
+
+    expect(result.reviewed_doc_finding_ids).toEqual(["doc-gate-missing-section-goal"]);
+    expect(result.required_doc_fix_ids).toEqual(["doc-gate-missing-section-goal"]);
+  });
 });

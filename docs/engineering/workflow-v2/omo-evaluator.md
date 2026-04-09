@@ -16,6 +16,7 @@ evaluator는 LLM judge가 아니라 `deterministic merge gate aggregator`다.
 - Stage 1에서 잠근 `automation-spec.json`을 읽는다.
 - README `Delivery Checklist`와 acceptance checkbox metadata contract를 읽는다.
 - stage-result contract가 완전한지 검사한다.
+- Stage 2 implementation 전에 supervisor-only `internal 1.5` doc gate가 workpack lock completeness를 deterministic하게 점검한다.
 - required test target, verify command, external smoke, artifact evidence를 실행/검증한다.
 - 결과를 `pass | fixable | blocked`로 정규화한다.
 - `fixable`이면 Codex remediation loop 입력 번들을 생성한다.
@@ -40,6 +41,12 @@ evaluator는 LLM judge가 아니라 `deterministic merge gate aggregator`다.
 
 Stage 1 docs PR은 markdown 2개만으로 끝나지 않는다. 아래 파일도 같이 main에 merge되어야 한다.
 
+- `docs/workpacks/<slice>/automation-spec.json`
+
+`internal 1.5` doc gate는 Stage 1 merge 이후, 아래 세 파일만을 대상으로 follow-up docs repair를 허용한다.
+
+- `docs/workpacks/<slice>/README.md`
+- `docs/workpacks/<slice>/acceptance.md`
 - `docs/workpacks/<slice>/automation-spec.json`
 
 새 contract slice는 아래 markdown metadata도 같이 만족해야 한다.
@@ -107,6 +114,16 @@ code stage의 `stage-result.json`은 아래 추가 필드를 포함해야 한다
 6. strict checklist contract가 활성화된 slice면 `checklist_updates[]`가 current stage-owned checklist id만 포함하는지 검사한다.
 7. strict checklist contract가 활성화된 slice면 `contested_fix_ids[]`가 latest review의 `required_fix_ids[]` subset인지 검사한다.
 8. strict checklist contract가 활성화된 slice면 `rebuttals[]`가 `contested_fix_ids[]`와 정확히 대응하는지 검사한다.
+
+## Internal 1.5 Boundary
+
+`internal 1.5`는 evaluator가 아니라 supervisor-owned deterministic doc gate가 담당한다.
+
+원칙:
+
+1. doc gate는 “문서가 구현을 잠갔는가”를 판단한다.
+2. evaluator는 doc gate `pass` 이후의 Stage 2/4 implementation만 평가한다.
+3. docs repair PR은 `doc_gate_review approve`와 merge 후 recheck `pass`가 있기 전까지 Stage 2 implementation을 열지 않는다.
 
 ## Outcomes
 

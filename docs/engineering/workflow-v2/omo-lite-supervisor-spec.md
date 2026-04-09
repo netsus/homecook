@@ -128,7 +128,7 @@ Claude-owned stage가 budget 또는 session availability 문제로 pause 되면 
 | Stage | Primary Actor | Entry Checks | Required Evidence | Exit Condition |
 |------|---------------|--------------|-------------------|----------------|
 | 1 | Claude | 선행 slice `merged/bootstrap`, slice status `planned` | workpack README, acceptance, docs PR, `claude_primary` session binding | docs merge + status `docs` |
-| 2 | Codex | Stage 1 merged, dependencies resolved | branch `feature/be-<slice>`, tests, backend PR, `codex_primary` session binding | Draft PR + green CI + Ready |
+| 2 | Codex | Stage 1 merged, internal 1.5 pass, dependencies resolved | `doc_gate_check/pass`, branch `feature/be-<slice>`, tests, backend PR, `codex_primary` session binding | Draft PR + green CI + Ready |
 | 3 | Claude | PR not Draft, required CI green | review summary, requested changes or approval, reused `claude_primary` session | merge 또는 fix routing (merge 직전 current head all started PR checks green 재확인) |
 | 4 | Codex | backend merged, FE scope unlocked | branch `feature/fe-<slice>`, tests, frontend PR, reused `codex_primary` session | Draft PR + green CI + Ready |
 | 5 | Claude | FE PR ready, design scope defined | design review note, requested changes or approval, reused `claude_primary` session | proceed to Stage 6 or fix routing |
@@ -140,6 +140,11 @@ Claude-owned stage가 budget 또는 session availability 문제로 pause 되면 
 
 - Stage `1 / 3 / 5 / 6` -> `claude_primary`
 - Stage `2 / 4` -> `codex_primary`
+
+`internal 1.5`에서는 아래처럼 재사용한다.
+
+- `doc_gate_review` -> `claude_primary`
+- `doc_gate_repair` -> `codex_primary`
 
 규칙:
 
@@ -199,8 +204,17 @@ runtime state는 repo-local non-tracked 상태로 둔다.
 
 - Stage 1 PR main merge 확인
 - workpack README / acceptance 존재 확인
+- `internal 1.5`가 `pass`인지 확인
 - 필요 시 `agent-plan-loop` 실행
 - branch naming rule 확인
+
+### Internal 1.5
+
+- supervisor-only subphase이며 public stage numbering에는 포함하지 않는다
+- `doc_gate_check` -> `doc_gate_repair` -> `doc_gate_review` -> `doc_gate_recheck`
+- `doc_gate_repair`는 `docs/<slice>-repair` 브랜치에서 docs-only 변경만 허용한다
+- `doc_gate_review` approve 뒤에는 docs PR merge -> `origin/master` sync -> `doc_gate_recheck`가 필수다
+- `doc_gate_recheck pass` 뒤에만 Stage 2 implementation 진입이 가능하다
 
 ### Stage 3
 

@@ -10,6 +10,12 @@ export const OMO_SESSION_ROLE_TO_AGENT = {
   claude_primary: "athena",
   codex_primary: "hephaestus",
 };
+const OMO_EXECUTION_SUBPHASES = new Set([
+  "doc_gate_check",
+  "doc_gate_repair",
+  "doc_gate_review",
+  "implementation",
+]);
 const OMO_RUNTIME_PHASES = new Set([
   "stage_running",
   "stage_result_ready",
@@ -132,6 +138,10 @@ function normalizeExecution(execution) {
       typeof execution.pr_role === "string" && execution.pr_role.trim().length > 0
         ? execution.pr_role.trim()
         : null,
+    subphase:
+      typeof execution.subphase === "string" && OMO_EXECUTION_SUBPHASES.has(execution.subphase.trim())
+        ? execution.subphase.trim()
+        : "implementation",
     loop_mode:
       typeof execution.loop_mode === "string" && execution.loop_mode.trim().length > 0
         ? execution.loop_mode.trim()
@@ -574,6 +584,184 @@ function normalizeLastRebuttal(lastRebuttal) {
   };
 }
 
+function normalizeDocGateFinding(entry) {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    return null;
+  }
+
+  return {
+    id:
+      typeof entry.id === "string" && entry.id.trim().length > 0
+        ? entry.id.trim()
+        : null,
+    category:
+      typeof entry.category === "string" && entry.category.trim().length > 0
+        ? entry.category.trim()
+        : null,
+    severity:
+      typeof entry.severity === "string" && entry.severity.trim().length > 0
+        ? entry.severity.trim()
+        : null,
+    message:
+      typeof entry.message === "string" && entry.message.trim().length > 0
+        ? entry.message.trim()
+        : null,
+    evidence_paths: Array.isArray(entry.evidence_paths)
+      ? entry.evidence_paths
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    remediation_hint:
+      typeof entry.remediation_hint === "string" && entry.remediation_hint.trim().length > 0
+        ? entry.remediation_hint.trim()
+        : null,
+    fixable: typeof entry.fixable === "boolean" ? entry.fixable : true,
+  };
+}
+
+function normalizeDocGateReviewEntry(entry) {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    return null;
+  }
+
+  return {
+    decision:
+      typeof entry.decision === "string" && entry.decision.trim().length > 0
+        ? entry.decision.trim()
+        : null,
+    route_back_stage: Number.isInteger(entry.route_back_stage) ? entry.route_back_stage : null,
+    approved_head_sha:
+      typeof entry.approved_head_sha === "string" && entry.approved_head_sha.trim().length > 0
+        ? entry.approved_head_sha.trim()
+        : null,
+    body_markdown:
+      typeof entry.body_markdown === "string" && entry.body_markdown.trim().length > 0
+        ? entry.body_markdown.trim()
+        : null,
+    findings: Array.isArray(entry.findings)
+      ? entry.findings.map((value) => normalizeDocGateFinding(value)).filter(Boolean)
+      : [],
+    reviewed_doc_finding_ids: Array.isArray(entry.reviewed_doc_finding_ids)
+      ? entry.reviewed_doc_finding_ids
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    required_doc_fix_ids: Array.isArray(entry.required_doc_fix_ids)
+      ? entry.required_doc_fix_ids
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    waived_doc_fix_ids: Array.isArray(entry.waived_doc_fix_ids)
+      ? entry.waived_doc_fix_ids
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    source_review_stage: Number.isInteger(entry.source_review_stage) ? entry.source_review_stage : null,
+    ping_pong_rounds:
+      typeof entry.ping_pong_rounds === "number" && entry.ping_pong_rounds >= 0
+        ? entry.ping_pong_rounds
+        : 0,
+    updated_at:
+      typeof entry.updated_at === "string" && entry.updated_at.trim().length > 0
+        ? entry.updated_at.trim()
+        : null,
+  };
+}
+
+function normalizeDocGateRebuttalEntry(entry) {
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+    return null;
+  }
+
+  return {
+    source_review_stage: Number.isInteger(entry.source_review_stage) ? entry.source_review_stage : null,
+    contested_doc_fix_ids: Array.isArray(entry.contested_doc_fix_ids)
+      ? entry.contested_doc_fix_ids
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    rebuttals: Array.isArray(entry.rebuttals)
+      ? entry.rebuttals
+          .filter((value) => value && typeof value === "object" && !Array.isArray(value))
+          .map((value) => ({
+            fix_id:
+              typeof value.fix_id === "string" && value.fix_id.trim().length > 0
+                ? value.fix_id.trim()
+                : null,
+            rationale_markdown:
+              typeof value.rationale_markdown === "string" && value.rationale_markdown.trim().length > 0
+                ? value.rationale_markdown.trim()
+                : null,
+            evidence_refs: Array.isArray(value.evidence_refs)
+              ? value.evidence_refs
+                  .filter((entry) => typeof entry === "string" && entry.trim().length > 0)
+                  .map((entry) => entry.trim())
+              : [],
+          }))
+          .filter((value) => value.fix_id && value.rationale_markdown)
+      : [],
+    updated_at:
+      typeof entry.updated_at === "string" && entry.updated_at.trim().length > 0
+        ? entry.updated_at.trim()
+        : null,
+  };
+}
+
+function normalizeDocGate(docGate) {
+  if (!docGate || typeof docGate !== "object" || Array.isArray(docGate)) {
+    return {
+      status: null,
+      round: 0,
+      source_master_sha: null,
+      artifact_dir: null,
+      result_path: null,
+      repair_branch: null,
+      repair_pr: null,
+      findings: [],
+      last_review: null,
+      last_rebuttal: null,
+      updated_at: null,
+    };
+  }
+
+  return {
+    status:
+      typeof docGate.status === "string" && docGate.status.trim().length > 0
+        ? docGate.status.trim()
+        : null,
+    round:
+      typeof docGate.round === "number" && docGate.round >= 0
+        ? docGate.round
+        : 0,
+    source_master_sha:
+      typeof docGate.source_master_sha === "string" && docGate.source_master_sha.trim().length > 0
+        ? docGate.source_master_sha.trim()
+        : null,
+    artifact_dir:
+      typeof docGate.artifact_dir === "string" && docGate.artifact_dir.trim().length > 0
+        ? docGate.artifact_dir.trim()
+        : null,
+    result_path:
+      typeof docGate.result_path === "string" && docGate.result_path.trim().length > 0
+        ? docGate.result_path.trim()
+        : null,
+    repair_branch:
+      typeof docGate.repair_branch === "string" && docGate.repair_branch.trim().length > 0
+        ? docGate.repair_branch.trim()
+        : null,
+    repair_pr: normalizePullRequestEntry(docGate.repair_pr),
+    findings: Array.isArray(docGate.findings)
+      ? docGate.findings.map((value) => normalizeDocGateFinding(value)).filter(Boolean)
+      : [],
+    last_review: normalizeDocGateReviewEntry(docGate.last_review),
+    last_rebuttal: normalizeDocGateRebuttalEntry(docGate.last_rebuttal),
+    updated_at:
+      typeof docGate.updated_at === "string" && docGate.updated_at.trim().length > 0
+        ? docGate.updated_at.trim()
+        : null,
+  };
+}
+
 function normalizeRecoveryExistingPr(entry) {
   if (!entry || typeof entry !== "object") {
     return null;
@@ -678,6 +866,7 @@ function baseRuntimeState({ rootDir, workItemId, slice }) {
     execution: null,
     last_review: normalizeLastReview(null),
     last_rebuttal: normalizeLastRebuttal(null),
+    doc_gate: normalizeDocGate(null),
     recovery: null,
   };
 }
@@ -746,6 +935,7 @@ function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
     execution: normalizeExecution(runtime.execution),
     last_review: normalizeLastReview(runtime.last_review),
     last_rebuttal: normalizeLastRebuttal(runtime.last_rebuttal),
+    doc_gate: normalizeDocGate(runtime.doc_gate),
     recovery,
   };
 
@@ -798,6 +988,7 @@ function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
               ? normalized.sessions.claude_primary.provider
               : normalized.sessions.codex_primary.provider,
           pr_role: prRole,
+          subphase: "implementation",
         }),
       };
     } else if (dirtyState.dirty) {
@@ -1004,6 +1195,7 @@ export function markStageRunning({
   verifyCommands = [],
   prRole,
   startedAt,
+  subphase = "implementation",
   loopMode = "single_pass",
   ralphGoalIds = [],
   ralphOrigin = null,
@@ -1026,6 +1218,7 @@ export function markStageRunning({
       verify_bucket: null,
       commit_sha: null,
       pr_role: prRole,
+      subphase,
       loop_mode: loopMode,
       ralph_goal_ids: ralphGoalIds,
       ralph_origin: ralphOrigin,
@@ -1046,6 +1239,7 @@ export function markStageResultReady({
   prRole,
   startedAt,
   finishedAt,
+  subphase = "implementation",
   loopMode = "single_pass",
   ralphGoalIds = [],
   ralphOrigin = null,
@@ -1068,6 +1262,7 @@ export function markStageResultReady({
       verify_bucket: state.execution?.verify_bucket ?? null,
       commit_sha: state.execution?.commit_sha ?? null,
       pr_role: prRole,
+      subphase,
       loop_mode: loopMode,
       ralph_goal_ids: ralphGoalIds,
       ralph_origin: ralphOrigin,
@@ -1087,6 +1282,7 @@ export function markReviewPending({
   prRole,
   startedAt,
   finishedAt,
+  subphase = "implementation",
   loopMode = "single_pass",
   ralphGoalIds = [],
   ralphOrigin = null,
@@ -1109,6 +1305,7 @@ export function markReviewPending({
       verify_bucket: null,
       commit_sha: state.execution?.commit_sha ?? null,
       pr_role: prRole,
+      subphase,
       loop_mode: loopMode,
       ralph_goal_ids: ralphGoalIds,
       ralph_origin: ralphOrigin,
@@ -1436,6 +1633,125 @@ export function setLastRebuttal({
         updated_at: toIsoString(updatedAt),
       },
     },
+  };
+}
+
+export function setDocGateState({
+  state,
+  status,
+  round,
+  sourceMasterSha,
+  artifactDir,
+  resultPath,
+  repairBranch,
+  repairPr,
+  findings,
+  updatedAt,
+}) {
+  return {
+    ...state,
+    doc_gate: normalizeDocGate({
+      ...(state.doc_gate ?? {}),
+      status:
+        typeof status === "string" && status.trim().length > 0
+          ? status.trim()
+          : state.doc_gate?.status ?? null,
+      round:
+        typeof round === "number" && round >= 0
+          ? round
+          : state.doc_gate?.round ?? 0,
+      source_master_sha:
+        typeof sourceMasterSha === "string" && sourceMasterSha.trim().length > 0
+          ? sourceMasterSha.trim()
+          : state.doc_gate?.source_master_sha ?? null,
+      artifact_dir:
+        typeof artifactDir === "string" && artifactDir.trim().length > 0
+          ? artifactDir.trim()
+          : state.doc_gate?.artifact_dir ?? null,
+      result_path:
+        typeof resultPath === "string" && resultPath.trim().length > 0
+          ? resultPath.trim()
+          : state.doc_gate?.result_path ?? null,
+      repair_branch:
+        typeof repairBranch === "string" && repairBranch.trim().length > 0
+          ? repairBranch.trim()
+          : state.doc_gate?.repair_branch ?? null,
+      repair_pr:
+        repairPr && typeof repairPr === "object"
+          ? {
+              ...(state.doc_gate?.repair_pr ?? {}),
+              ...repairPr,
+              updated_at: toIsoString(updatedAt),
+            }
+          : state.doc_gate?.repair_pr ?? null,
+      findings: Array.isArray(findings) ? findings : state.doc_gate?.findings ?? [],
+      updated_at: toIsoString(updatedAt),
+    }),
+  };
+}
+
+export function setDocGateReview({
+  state,
+  decision,
+  routeBackStage,
+  approvedHeadSha,
+  bodyMarkdown,
+  findings,
+  reviewedDocFindingIds,
+  requiredDocFixIds,
+  waivedDocFixIds,
+  sourceReviewStage,
+  pingPongRounds,
+  updatedAt,
+}) {
+  return {
+    ...state,
+    doc_gate: normalizeDocGate({
+      ...(state.doc_gate ?? {}),
+      last_review: {
+        decision,
+        route_back_stage: Number.isInteger(Number(routeBackStage)) ? Number(routeBackStage) : null,
+        approved_head_sha:
+          typeof approvedHeadSha === "string" && approvedHeadSha.trim().length > 0
+            ? approvedHeadSha.trim()
+            : null,
+        body_markdown:
+          typeof bodyMarkdown === "string" && bodyMarkdown.trim().length > 0
+            ? bodyMarkdown.trim()
+            : null,
+        findings: Array.isArray(findings) ? findings : [],
+        reviewed_doc_finding_ids: Array.isArray(reviewedDocFindingIds) ? reviewedDocFindingIds : [],
+        required_doc_fix_ids: Array.isArray(requiredDocFixIds) ? requiredDocFixIds : [],
+        waived_doc_fix_ids: Array.isArray(waivedDocFixIds) ? waivedDocFixIds : [],
+        source_review_stage: Number.isInteger(Number(sourceReviewStage)) ? Number(sourceReviewStage) : null,
+        ping_pong_rounds:
+          typeof pingPongRounds === "number" && pingPongRounds >= 0 ? pingPongRounds : 0,
+        updated_at: toIsoString(updatedAt),
+      },
+      updated_at: toIsoString(updatedAt),
+    }),
+  };
+}
+
+export function setDocGateRebuttal({
+  state,
+  sourceReviewStage,
+  contestedDocFixIds,
+  rebuttals,
+  updatedAt,
+}) {
+  return {
+    ...state,
+    doc_gate: normalizeDocGate({
+      ...(state.doc_gate ?? {}),
+      last_rebuttal: {
+        source_review_stage: Number.isInteger(Number(sourceReviewStage)) ? Number(sourceReviewStage) : null,
+        contested_doc_fix_ids: Array.isArray(contestedDocFixIds) ? contestedDocFixIds : [],
+        rebuttals: Array.isArray(rebuttals) ? rebuttals : [],
+        updated_at: toIsoString(updatedAt),
+      },
+      updated_at: toIsoString(updatedAt),
+    }),
   };
 }
 

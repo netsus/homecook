@@ -28,8 +28,12 @@ const EVALUATION_STATES = new Set([
   "stalled",
 ]);
 
-export function resolveStageSessionRole(stage) {
+export function resolveStageSessionRole(stage, subphase = null) {
   const normalizedStage = ensureStage(stage);
+
+  if (normalizedStage === 2 && subphase === "doc_gate_review") {
+    return "claude_primary";
+  }
 
   if ([1, 3, 5, 6].includes(normalizedStage)) {
     return "claude_primary";
@@ -78,7 +82,59 @@ function ensureStage(value) {
   return stage;
 }
 
-function productStageSpec(stage, slice) {
+function productStageSpec(stage, slice, subphase = null) {
+  if (stage === 2 && subphase === "doc_gate_repair") {
+    return {
+      actor: "codex",
+      branch: `docs/${slice}-repair`,
+      lifecycle: "planned",
+      approval_state: "not_started",
+      verification_status: "pending",
+      requiredReads: [
+        "AGENTS.md",
+        "docs/engineering/workflow-v2/omo-autonomous-supervisor.md",
+        `docs/workpacks/${slice}/README.md`,
+        `docs/workpacks/${slice}/acceptance.md`,
+        `docs/workpacks/${slice}/automation-spec.json`,
+        "doc gate findings bundle",
+      ],
+      deliverables: [
+        `branch docs/${slice}-repair`,
+        "docs-only remediation",
+        "valid doc gate repair stage result",
+      ],
+      verifyCommands: [],
+      successCondition:
+        "Doc gate findings are resolved or contested with docs-only changes and a valid repair stage result is ready for supervisor handoff.",
+      escalationIfBlocked: "Escalate to human if the workpack cannot be safely locked by docs-only changes.",
+    };
+  }
+
+  if (stage === 2 && subphase === "doc_gate_review") {
+    return {
+      actor: "claude",
+      branch: null,
+      lifecycle: "ready_for_review",
+      approval_state: "claude_approved",
+      verification_status: "passed",
+      requiredReads: [
+        `docs/workpacks/${slice}/README.md`,
+        `docs/workpacks/${slice}/acceptance.md`,
+        `docs/workpacks/${slice}/automation-spec.json`,
+        "docs repair PR diff",
+        "doc gate findings / rebuttals",
+      ],
+      deliverables: [
+        "doc gate review summary",
+        "requested changes or approval",
+      ],
+      verifyCommands: [],
+      successCondition:
+        "Docs repair PR receives review feedback or approval and can proceed to merge + recheck or fix routing.",
+      escalationIfBlocked: "Escalate to human if docs lock ambiguity remains after review.",
+    };
+  }
+
   const shared = {
     1: {
       actor: "claude",
@@ -224,7 +280,15 @@ function productStageSpec(stage, slice) {
   return shared[stage];
 }
 
-function buildGoal(stage, slice) {
+function buildGoal(stage, slice, subphase = null) {
+  if (stage === 2 && subphase === "doc_gate_repair") {
+    return `슬라이스 ${slice} internal 1.5 docs repair`;
+  }
+
+  if (stage === 2 && subphase === "doc_gate_review") {
+    return `슬라이스 ${slice} internal 1.5 docs review`;
+  }
+
   return `슬라이스 ${slice} ${stage}단계 진행`;
 }
 
@@ -253,6 +317,7 @@ function buildGoal(stage, slice) {
 export function buildStageDispatch({
   slice,
   stage,
+  subphase = null,
   claudeBudgetState = "available",
   sessionId = null,
   retryAt = null,
@@ -264,12 +329,14 @@ export function buildStageDispatch({
 }) {
   const normalizedSlice = ensureNonEmptyString(slice, "slice");
   const normalizedStage = ensureStage(stage);
+  const normalizedSubphase =
+    typeof subphase === "string" && subphase.trim().length > 0 ? subphase.trim() : null;
   const normalizedBudgetState = ensureEnum(
     claudeBudgetState,
     CLAUDE_BUDGET_STATES,
     "claudeBudgetState",
   );
-  const spec = productStageSpec(normalizedStage, normalizedSlice);
+  const spec = productStageSpec(normalizedStage, normalizedSlice, normalizedSubphase);
 
   if (!spec) {
     throw new Error(`Unsupported stage: ${normalizedStage}`);
@@ -314,7 +381,7 @@ export function buildStageDispatch({
     typeof priorStageResultPath === "string" && priorStageResultPath.trim().length > 0
       ? priorStageResultPath.trim()
       : null;
-  const sessionRole = resolveStageSessionRole(normalizedStage);
+  const sessionRole = resolveStageSessionRole(normalizedStage, normalizedSubphase);
   const resumeMode = normalizedRetryAt
     ? "scheduled_retry"
     : normalizedSessionId
@@ -359,7 +426,7 @@ export function buildStageDispatch({
   const dispatch = {
     stage: normalizedStage,
     actor: spec.actor,
-    goal: buildGoal(normalizedStage, normalizedSlice),
+    goal: buildGoal(normalizedStage, normalizedSlice, normalizedSubphase),
     requiredReads: [...spec.requiredReads, ...reviewFeedbackRead, ...priorStageResultRead],
     deliverables: spec.deliverables,
     verifyCommands: spec.verifyCommands,
@@ -385,6 +452,7 @@ export function buildStageDispatch({
       attemptCount: normalizedAttemptCount,
     },
     reviewContext: normalizedReviewContext,
+    subphase: normalizedSubphase,
     extraPromptSections: [findingsSection, requiredFixIdsSection].filter(Boolean),
     successCondition: spec.successCondition,
     escalationIfBlocked: spec.escalationIfBlocked,

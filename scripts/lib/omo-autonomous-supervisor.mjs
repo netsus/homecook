@@ -29,6 +29,9 @@ import {
   markStageCompleted,
   readRuntimeState,
   releaseRuntimeLock,
+  setDocGateRebuttal,
+  setDocGateReview,
+  setDocGateState,
   setRecoveryState,
   setExecutionState,
   setLastRebuttal,
@@ -41,6 +44,7 @@ import {
 } from "./omo-session-runtime.mjs";
 import { validateStageResult } from "./omo-stage-result.mjs";
 import { readAutomationSpec, resolveAutonomousSlicePolicy, resolveStageAutomationConfig } from "./omo-automation-spec.mjs";
+import { evaluateDocGate, writeDocGateResult } from "./omo-doc-gate.mjs";
 import { evaluateWorkItemStage } from "./omo-evaluator.mjs";
 import {
   assertWorktreeClean,
@@ -155,6 +159,18 @@ function resolvePrRole(stage) {
   if (stage === 1) return "docs";
   if (stage === 2 || stage === 3) return "backend";
   return "frontend";
+}
+
+function resolveDocGateRepairBranch(slice) {
+  return `docs/${slice}-repair`;
+}
+
+function resolveDocGateAllowedFiles(slice) {
+  return [
+    `docs/workpacks/${slice}/README.md`,
+    `docs/workpacks/${slice}/acceptance.md`,
+    `docs/workpacks/${slice}/automation-spec.json`,
+  ];
 }
 
 function readTrackedWorkItem({ rootDir, workItemId }) {
@@ -525,6 +541,137 @@ function shouldReturnToReviewWithRebuttal({
   return currentRequiredFixIds.every((id) => contestedFixIds.includes(id));
 }
 
+function resolveStage2Subphase(state) {
+  const activeSubphase = state.execution?.subphase ?? null;
+  if (
+    state.active_stage === 2 &&
+    isPendingFinalizePhase(resolveStatePhase(state)) &&
+    ["doc_gate_repair", "implementation"].includes(activeSubphase)
+  ) {
+    return activeSubphase;
+  }
+
+  if (
+    state.active_stage === 2 &&
+    isPendingReviewPhase(resolveStatePhase(state)) &&
+    activeSubphase === "doc_gate_review"
+  ) {
+    return activeSubphase;
+  }
+
+  if (state.prs?.backend?.url || state.last_completed_stage >= 2) {
+    return "implementation";
+  }
+
+  const status = state.doc_gate?.status ?? null;
+  if (!status || status === "pending_check" || status === "pending_recheck") {
+    return "doc_gate_check";
+  }
+
+  if (status === "fixable") {
+    return "doc_gate_repair";
+  }
+
+  if (status === "awaiting_review") {
+    return "doc_gate_review";
+  }
+
+  if (status === "passed") {
+    return "implementation";
+  }
+
+  return "doc_gate_check";
+}
+
+function validateDocGateRepairStageResult({
+  slice,
+  stageResult,
+  reviewEntry,
+  docGateState,
+}) {
+  const allowedFiles = resolveDocGateAllowedFiles(slice);
+  const actualFiles = normalizeStringArray(stageResult?.changed_files);
+  const claimedFiles = normalizeStringArray(stageResult?.claimed_scope?.files);
+  const resolvedDocFindingIds = normalizeStringArray(stageResult?.resolved_doc_finding_ids);
+  const contestedDocFixIds = normalizeStringArray(stageResult?.contested_doc_fix_ids);
+  const currentRequiredDocFixIds = normalizeStringArray(reviewEntry?.required_doc_fix_ids);
+  const currentDocFindingIds = normalizeStringArray((docGateState?.findings ?? []).map((entry) => entry?.id));
+  const targetDocIds = currentRequiredDocFixIds.length > 0 ? currentRequiredDocFixIds : currentDocFindingIds;
+  const issues = [];
+
+  const unexpectedChangedFiles = actualFiles.filter((filePath) => !allowedFiles.includes(filePath));
+  if (unexpectedChangedFiles.length > 0) {
+    issues.push(`Doc gate repair may only change workpack docs: ${unexpectedChangedFiles.join(", ")}.`);
+  }
+
+  const unexpectedClaimedFiles = claimedFiles.filter((filePath) => !allowedFiles.includes(filePath));
+  if (unexpectedClaimedFiles.length > 0) {
+    issues.push(`Doc gate repair claimed_scope.files contains out-of-scope paths: ${unexpectedClaimedFiles.join(", ")}.`);
+  }
+
+  const overlap = resolvedDocFindingIds.filter((id) => contestedDocFixIds.includes(id));
+  if (overlap.length > 0) {
+    issues.push(`Doc gate repair cannot both resolve and contest the same finding ids: ${overlap.join(", ")}.`);
+  }
+
+  const unresolvedIds = targetDocIds.filter((id) => !resolvedDocFindingIds.includes(id) && !contestedDocFixIds.includes(id));
+  if (unresolvedIds.length > 0) {
+    issues.push(`Doc gate repair must resolve or contest all target doc findings: ${unresolvedIds.join(", ")}.`);
+  }
+
+  const invalidContestedIds =
+    currentRequiredDocFixIds.length > 0
+      ? contestedDocFixIds.filter((id) => !currentRequiredDocFixIds.includes(id))
+      : [];
+  if (invalidContestedIds.length > 0) {
+    issues.push(`Doc gate contested ids must be a subset of current required doc fix ids: ${invalidContestedIds.join(", ")}.`);
+  }
+
+  return normalizeStringArray(issues);
+}
+
+function validateDocGateReviewStageResult({
+  docGateState,
+  stageResult,
+}) {
+  const currentDocFindingIds = normalizeStringArray((docGateState?.findings ?? []).map((entry) => entry?.id));
+  const rebuttalEntry = docGateState?.last_rebuttal ?? null;
+  const reviewedIds = normalizeStringArray(stageResult?.reviewed_doc_finding_ids);
+  const requiredIds = normalizeStringArray(stageResult?.required_doc_fix_ids);
+  const waivedIds = normalizeStringArray(stageResult?.waived_doc_fix_ids);
+  const contestedIds = normalizeStringArray(rebuttalEntry?.contested_doc_fix_ids);
+  const issues = [];
+
+  if (reviewedIds.length === 0) {
+    issues.push("Doc gate review must include reviewed_doc_finding_ids.");
+  }
+
+  const missingReviewedIds = currentDocFindingIds.filter((id) => !reviewedIds.includes(id));
+  if (missingReviewedIds.length > 0) {
+    issues.push(`Doc gate review is missing reviewed finding ids: ${missingReviewedIds.join(", ")}.`);
+  }
+
+  const invalidRequiredIds = requiredIds.filter((id) => !reviewedIds.includes(id));
+  if (invalidRequiredIds.length > 0) {
+    issues.push(`Doc gate required_doc_fix_ids must be included in reviewed_doc_finding_ids: ${invalidRequiredIds.join(", ")}.`);
+  }
+
+  const invalidWaivedIds = waivedIds.filter((id) => !contestedIds.includes(id));
+  if (invalidWaivedIds.length > 0) {
+    issues.push(`Doc gate waived_doc_fix_ids must be a subset of contested_doc_fix_ids: ${invalidWaivedIds.join(", ")}.`);
+  }
+
+  if (stageResult?.decision === "request_changes" && requiredIds.length === 0) {
+    issues.push("Doc gate request_changes reviews must include required_doc_fix_ids.");
+  }
+
+  if (stageResult?.decision === "approve" && requiredIds.length > 0) {
+    issues.push("Doc gate approve reviews must not include required_doc_fix_ids.");
+  }
+
+  return normalizeStringArray(issues);
+}
+
 function resolveAutonomousStageContext({
   rootDir,
   workItemId,
@@ -867,6 +1014,7 @@ function createTickResult({
 function resolveStageProvider({
   rootDir,
   stage,
+  subphase = null,
   claudeProvider,
   claudeBin,
   claudeModel,
@@ -874,6 +1022,22 @@ function resolveStageProvider({
   opencodeBin,
   environment,
 }) {
+  if (stage === 2 && subphase === "doc_gate_review") {
+    const claudeProviderConfig = resolveClaudeProviderConfig({
+      rootDir,
+      provider: claudeProvider,
+      bin: claudeBin,
+      model: claudeModel,
+      effort: claudeEffort,
+    });
+
+    return {
+      provider: claudeProviderConfig.provider,
+      bin: claudeProviderConfig.bin,
+      label: claudeProviderConfig.provider === "opencode" ? "Claude OpenCode" : "Claude CLI",
+    };
+  }
+
   if ([2, 4].includes(stage)) {
     const codexProviderConfig = resolveCodexProviderConfig({
       rootDir,
@@ -970,7 +1134,9 @@ function buildRecoverySnapshot({
     changedFiles = [];
   }
 
-  const sessionRole = [1, 3, 5, 6].includes(stage) ? "claude_primary" : "codex_primary";
+  const sessionRole =
+    state.execution?.session_role ??
+    ([1, 3, 5, 6].includes(stage) ? "claude_primary" : "codex_primary");
   const session = state.sessions?.[sessionRole] ?? null;
   const existingPr = prRole ? state.prs?.[prRole] ?? null : null;
 
@@ -1017,6 +1183,7 @@ function createDefaultStageRunner({
     workItemId,
     slice,
     stage,
+    subphase = null,
     executionDir,
     priorStageResultPath = null,
     extraPromptSections = [],
@@ -1027,6 +1194,7 @@ function createDefaultStageRunner({
       workItemId,
       slice,
       stage,
+      subphase,
       claudeBudgetState,
       mode,
       opencodeBin,
@@ -1298,7 +1466,10 @@ function loadExecutionStageResult(state, options = {}) {
     throw new Error("stage-result.json is missing for execution finalization.");
   }
 
-  return validateStageResult(stage, JSON.parse(readFileSync(stageResultPath, "utf8")), options);
+  return validateStageResult(stage, JSON.parse(readFileSync(stageResultPath, "utf8")), {
+    ...options,
+    subphase: options?.subphase ?? state.execution?.subphase ?? "implementation",
+  });
 }
 
 function syncEvaluationStatus({
@@ -1844,6 +2015,34 @@ function processWaitState({
     }
 
     if (prRole === "docs") {
+      if (state.wait.stage === 2 && state.doc_gate?.status === "awaiting_review") {
+        const nextState = saveRuntime({
+          rootDir,
+          workItemId,
+          state: setWaitState({
+            state,
+            kind: "ready_for_next_stage",
+            prRole: "docs",
+            stage: 2,
+            headSha: activePr.head_sha ?? state.wait.head_sha ?? null,
+            updatedAt: now,
+          }),
+        });
+        updateRuntimeStatusForWait({
+          rootDir,
+          workItemId,
+          wait: nextState.wait,
+          prPath: activePr.url,
+          now,
+          verificationStatus: "passed",
+        });
+        return {
+          state: nextState,
+          action: "run-stage",
+          nextStage: 2,
+        };
+      }
+
       if (phase === "merge_pending") {
         const nextState = saveRuntime({
           rootDir,
@@ -2082,6 +2281,7 @@ function assertStageProviderReady({
   auth,
   rootDir,
   stage,
+  subphase = null,
   claudeProvider,
   claudeBin,
   claudeModel,
@@ -2091,10 +2291,11 @@ function assertStageProviderReady({
 }) {
   const provider =
     typeof auth?.resolveStageProvider === "function"
-      ? auth.resolveStageProvider(stage)
+      ? auth.resolveStageProvider(stage, subphase)
       : resolveStageProvider({
           rootDir,
           stage,
+          subphase,
           claudeProvider,
           claudeBin,
           claudeModel,
@@ -2212,6 +2413,25 @@ function blockWithRecovery({
     state: blocked.runtime,
     wait: blocked.wait,
     transitioned: false,
+  };
+}
+
+function clearExecutionForSubphase({
+  state,
+  stage,
+  artifactDir,
+}) {
+  return {
+    ...state,
+    active_stage: stage,
+    current_stage: stage,
+    blocked_stage: null,
+    retry: null,
+    last_artifact_dir: artifactDir ?? state.last_artifact_dir,
+    phase: null,
+    next_action: "noop",
+    execution: null,
+    recovery: null,
   };
 }
 
@@ -2682,7 +2902,7 @@ function finalizeCodeStage({
   };
 }
 
-function handleCodeStage({
+function handleImplementationCodeStage({
   rootDir,
   workItemId,
   slice,
@@ -2691,6 +2911,7 @@ function handleCodeStage({
   stageRunner,
   worktree,
   github,
+  subphase = "implementation",
   now,
 }) {
   const branchRole = resolveBranchRole(stage);
@@ -2748,6 +2969,7 @@ function handleCodeStage({
       workItemId,
       slice,
       stage,
+      subphase,
       executionDir: state.workspace?.path,
     });
     const deferredOutcome = handleDeferredStageExecution({
@@ -2790,7 +3012,8 @@ function handleCodeStage({
           artifactDir: runResult.artifactDir,
           execution: {
             provider: runResult.execution?.provider ?? null,
-            session_role: stage === 1 ? "claude_primary" : "codex_primary",
+            session_role:
+              runResult.dispatch?.sessionBinding?.role ?? (stage === 1 ? "claude_primary" : "codex_primary"),
             session_id: runResult.execution?.sessionId ?? null,
             artifact_dir: runResult.artifactDir,
             stage_result_path: stageResultPath,
@@ -2800,6 +3023,7 @@ function handleCodeStage({
             verify_bucket: null,
             commit_sha: null,
             pr_role: prRole,
+            subphase: runResult.dispatch?.subphase ?? subphase,
           },
           clearRecovery: true,
         }),
@@ -2826,6 +3050,837 @@ function handleCodeStage({
     github,
     checklistContract: refreshedChecklistContract,
     reviewEntry,
+    now,
+  });
+}
+
+function handleDocGateRepairStage({
+  rootDir,
+  workItemId,
+  slice,
+  state,
+  stageRunner,
+  worktree,
+  github,
+  now,
+}) {
+  const stage = 2;
+  const branchRole = "docs";
+  const branchName = resolveDocGateRepairBranch(slice);
+  const prRole = "docs";
+  worktree.checkoutBranch({
+    branch: branchName,
+    startPoint: "origin/master",
+  });
+
+  let nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setWorkspaceBinding({
+      state,
+      path: state.workspace?.path,
+      branchRole,
+      updatedAt: now,
+    }),
+  });
+  const reviewEntry = nextState.doc_gate?.last_review ?? null;
+  const existingPr = getActivePullRequest(nextState, prRole);
+  const phase = resolveStatePhase(nextState);
+
+  if (
+    !isPendingFinalizePhase(phase) ||
+    nextState.active_stage !== stage ||
+    nextState.execution?.subphase !== "doc_gate_repair"
+  ) {
+    const runResult = stageRunner({
+      rootDir,
+      workItemId,
+      slice,
+      stage,
+      subphase: "doc_gate_repair",
+      executionDir: state.workspace?.path,
+    });
+    const deferredOutcome = handleDeferredStageExecution({
+      rootDir,
+      workItemId,
+      slice,
+      stage,
+      prRole,
+      prPath: existingPr?.url ?? null,
+      headSha: existingPr?.head_sha ?? null,
+      runResult,
+      worktree,
+      now,
+    });
+    if (deferredOutcome) {
+      return deferredOutcome;
+    }
+
+    nextState = resolveRunResultRuntimeState({
+      rootDir,
+      workItemId,
+      slice,
+      runResult,
+    });
+
+    if (!isPendingFinalizePhase(resolveStatePhase(nextState)) && runResult.stageResult) {
+      const stageResultPath = resolve(runResult.artifactDir, "stage-result.json");
+      mkdirSync(runResult.artifactDir, { recursive: true });
+      if (!existsSync(stageResultPath)) {
+        writeFileSync(stageResultPath, `${JSON.stringify(runResult.stageResult, null, 2)}\n`);
+      }
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setExecutionState({
+          state: nextState,
+          activeStage: stage,
+          phase: "stage_result_ready",
+          nextAction: "finalize_stage",
+          artifactDir: runResult.artifactDir,
+          execution: {
+            provider: runResult.execution?.provider ?? null,
+            session_role: runResult.dispatch?.sessionBinding?.role ?? "codex_primary",
+            session_id: runResult.execution?.sessionId ?? null,
+            artifact_dir: runResult.artifactDir,
+            stage_result_path: stageResultPath,
+            started_at: now,
+            finished_at: now,
+            verify_commands: [],
+            verify_bucket: null,
+            commit_sha: null,
+            pr_role: prRole,
+            subphase: "doc_gate_repair",
+          },
+          clearRecovery: true,
+        }),
+      });
+    }
+  }
+
+  const stageResult = loadExecutionStageResult(nextState, {
+    strictExtendedContract: false,
+    subphase: "doc_gate_repair",
+  });
+  const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
+  const repairIssues = validateDocGateRepairStageResult({
+    slice,
+    stageResult,
+    reviewEntry,
+    docGateState: nextState.doc_gate,
+  });
+  if (repairIssues.length > 0) {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice,
+      state: nextState,
+      stage,
+      prRole,
+      reason: summarizeChecklistIssues(repairIssues),
+      now,
+      worktree,
+    });
+  }
+
+  nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setDocGateRebuttal({
+      state: nextState,
+      sourceReviewStage: reviewEntry?.source_review_stage ?? 2,
+      contestedDocFixIds: stageResult.contested_doc_fix_ids ?? [],
+      rebuttals: stageResult.rebuttals ?? [],
+      updatedAt: now,
+    }),
+  });
+
+  const currentRequiredDocFixIds = normalizeStringArray(reviewEntry?.required_doc_fix_ids);
+  const contestedDocFixIds = normalizeStringArray(stageResult.contested_doc_fix_ids);
+  const allRequiredContested =
+    currentRequiredDocFixIds.length > 0 &&
+    currentRequiredDocFixIds.every((id) => contestedDocFixIds.includes(id));
+
+  if (allRequiredContested && existingPr?.url) {
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setDocGateState({
+        state: clearExecutionForSubphase({
+          state: nextState,
+          stage,
+          artifactDir,
+        }),
+        status: "awaiting_review",
+        repairBranch: branchName,
+        repairPr: existingPr,
+        updatedAt: now,
+      }),
+    });
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setWaitState({
+        state: nextState,
+        kind: "ready_for_next_stage",
+        prRole,
+        stage,
+        headSha: existingPr.head_sha ?? null,
+        updatedAt: now,
+      }),
+    });
+    return {
+      state: nextState,
+      wait: nextState.wait,
+      transitioned: true,
+    };
+  }
+
+  if (["stage_result_ready", "verify_pending"].includes(resolveStatePhase(nextState))) {
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setExecutionState({
+        state: nextState,
+        activeStage: stage,
+        phase: "verify_pending",
+        nextAction: "finalize_stage",
+        artifactDir,
+        execution: {
+          ...nextState.execution,
+          subphase: "doc_gate_repair",
+        },
+      }),
+    });
+
+    const verify = runVerifyCommands({
+      worktreePath: nextState.workspace.path,
+      commands: [],
+      artifactDir,
+    });
+    if (verify.bucket === "fail") {
+      return blockWithRecovery({
+        rootDir,
+        workItemId,
+        slice,
+        state: nextState,
+        stage,
+        prRole,
+        reason: "Doc gate repair verify commands failed.",
+        now,
+        worktree,
+      });
+    }
+
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setExecutionState({
+        state: nextState,
+        activeStage: stage,
+        phase: "commit_pending",
+        nextAction: "finalize_stage",
+        artifactDir,
+        execution: {
+          ...nextState.execution,
+          verify_bucket: "pass",
+          subphase: "doc_gate_repair",
+        },
+      }),
+    });
+  }
+
+  if (resolveStatePhase(nextState) === "commit_pending") {
+    const currentHeadSha = worktree.getHeadSha();
+
+    try {
+      worktree.assertClean();
+      if (!existingPr?.url) {
+        return blockWithRecovery({
+          rootDir,
+          workItemId,
+          slice,
+          state: nextState,
+          stage,
+          prRole,
+          reason: "Doc gate repair produced no docs changes and no existing docs PR is available for rebuttal review.",
+          now,
+          worktree,
+        });
+      }
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setExecutionState({
+          state: nextState,
+          activeStage: stage,
+          phase: "push_pending",
+          nextAction: "finalize_stage",
+          artifactDir,
+          execution: {
+            ...nextState.execution,
+            commit_sha: nextState.execution?.commit_sha ?? currentHeadSha,
+            subphase: "doc_gate_repair",
+          },
+        }),
+      });
+    } catch {
+      const actualChangedFiles = worktree.listChangedFiles({
+        worktreePath: nextState.workspace.path,
+      });
+      const unexpectedActualFiles = actualChangedFiles.filter(
+        (filePath) => !resolveDocGateAllowedFiles(slice).includes(filePath),
+      );
+      if (unexpectedActualFiles.length > 0) {
+        return blockWithRecovery({
+          rootDir,
+          workItemId,
+          slice,
+          state: nextState,
+          stage,
+          prRole,
+          reason: `Doc gate repair may only modify workpack docs: ${unexpectedActualFiles.join(", ")}.`,
+          now,
+          worktree,
+        });
+      }
+
+      commitWorktreeChanges({
+        worktreePath: nextState.workspace.path,
+        subject: stageResult.commit.subject,
+        body: stageResult.commit.body_markdown,
+      });
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setExecutionState({
+          state: nextState,
+          activeStage: stage,
+          phase: "push_pending",
+          nextAction: "finalize_stage",
+          artifactDir,
+          execution: {
+            ...nextState.execution,
+            commit_sha: worktree.getHeadSha(),
+            subphase: "doc_gate_repair",
+          },
+        }),
+      });
+    }
+  }
+
+  if (resolveStatePhase(nextState) === "push_pending") {
+    worktree.pushBranch({
+      branch: branchName,
+    });
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setExecutionState({
+        state: nextState,
+        activeStage: stage,
+        phase: "pr_pending",
+        nextAction: "finalize_stage",
+        artifactDir,
+        execution: {
+          ...nextState.execution,
+          subphase: "doc_gate_repair",
+        },
+      }),
+    });
+  }
+
+  if (resolveStatePhase(nextState) === "pr_pending") {
+    const refreshedExistingPr = getActivePullRequest(nextState, prRole);
+    const headSha = nextState.execution?.commit_sha ?? worktree.getHeadSha();
+    let pr;
+    if (refreshedExistingPr?.url) {
+      github.editPullRequest?.({
+        prRef: refreshedExistingPr.url,
+        title: stageResult.pr.title,
+        body: stageResult.pr.body_markdown,
+        workItemId,
+      });
+      pr = {
+        number: refreshedExistingPr.number,
+        url: refreshedExistingPr.url,
+        draft: false,
+      };
+    } else {
+      pr = github.createPullRequest({
+        base: "master",
+        head: branchName,
+        title: stageResult.pr.title,
+        body: stageResult.pr.body_markdown,
+        draft: false,
+        workItemId,
+      });
+    }
+
+    nextState = upsertPullRequest({
+      rootDir,
+      workItemId,
+      state: nextState,
+      role: prRole,
+      pr,
+      branch: branchName,
+      headSha,
+      now,
+    });
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setDocGateState({
+        state: nextState,
+        status: "awaiting_review",
+        repairBranch: branchName,
+        repairPr: {
+          number: pr.number,
+          url: pr.url,
+          draft: false,
+          branch: branchName,
+          head_sha: headSha,
+        },
+        updatedAt: now,
+      }),
+    });
+
+    const checks = github.getRequiredChecks({
+      prRef: pr.url,
+    });
+
+    if (checks.bucket === "fail") {
+      return blockWithRecovery({
+        rootDir,
+        workItemId,
+        slice,
+        state: nextState,
+        stage,
+        prRole,
+        reason: "Doc gate repair PR checks failed.",
+        now,
+        worktree,
+      });
+    }
+
+    if (checks.bucket === "pending") {
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state: clearExecutionForSubphase({
+            state: nextState,
+            stage,
+            artifactDir,
+          }),
+          kind: "ci",
+          prRole,
+          stage,
+          headSha,
+          updatedAt: now,
+        }),
+      });
+      return {
+        state: nextState,
+        wait: nextState.wait,
+        transitioned: false,
+      };
+    }
+
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setWaitState({
+        state: clearExecutionForSubphase({
+          state: nextState,
+          stage,
+          artifactDir,
+        }),
+        kind: "ready_for_next_stage",
+        prRole,
+        stage,
+        headSha,
+        updatedAt: now,
+      }),
+    });
+    return {
+      state: nextState,
+      wait: nextState.wait,
+      transitioned: true,
+    };
+  }
+
+  return {
+    state: nextState,
+    wait: nextState.wait,
+    transitioned: false,
+  };
+}
+
+function handleDocGateReviewStage({
+  rootDir,
+  workItemId,
+  slice,
+  state,
+  stageRunner,
+  worktree,
+  github,
+  now,
+}) {
+  const stage = 2;
+  const branchRole = "docs";
+  const prRole = "docs";
+  let nextState = state;
+  let activePr = getActivePullRequest(nextState, prRole);
+  if (!activePr?.url) {
+    throw new Error("No active docs repair pull request found.");
+  }
+
+  worktree.checkoutBranch({
+    branch: activePr.branch ?? resolveDocGateRepairBranch(slice),
+    startPoint: "origin/master",
+  });
+
+  nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setWorkspaceBinding({
+      state: nextState,
+      path: state.workspace?.path,
+      branchRole,
+      updatedAt: now,
+    }),
+  });
+
+  const phase = resolveStatePhase(nextState);
+  if (
+    !isPendingReviewPhase(phase) ||
+    nextState.active_stage !== stage ||
+    nextState.execution?.subphase !== "doc_gate_review"
+  ) {
+    const runResult = stageRunner({
+      rootDir,
+      workItemId,
+      slice,
+      stage,
+      subphase: "doc_gate_review",
+      executionDir: state.workspace?.path,
+    });
+    const deferredOutcome = handleDeferredStageExecution({
+      rootDir,
+      workItemId,
+      slice,
+      stage,
+      prRole,
+      prPath: activePr.url,
+      headSha: activePr.head_sha ?? null,
+      runResult,
+      worktree,
+      now,
+    });
+    if (deferredOutcome) {
+      return deferredOutcome;
+    }
+    nextState = resolveRunResultRuntimeState({
+      rootDir,
+      workItemId,
+      slice,
+      runResult,
+    });
+
+    if (!isPendingReviewPhase(resolveStatePhase(nextState)) && runResult.stageResult) {
+      const stageResultPath = resolve(runResult.artifactDir, "stage-result.json");
+      mkdirSync(runResult.artifactDir, { recursive: true });
+      if (!existsSync(stageResultPath)) {
+        writeFileSync(stageResultPath, `${JSON.stringify(runResult.stageResult, null, 2)}\n`);
+      }
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setExecutionState({
+          state: nextState,
+          activeStage: stage,
+          phase: "review_pending",
+          nextAction: "run_review",
+          artifactDir: runResult.artifactDir,
+          execution: {
+            provider: runResult.execution?.provider ?? null,
+            session_role: runResult.dispatch?.sessionBinding?.role ?? "claude_primary",
+            session_id: runResult.execution?.sessionId ?? null,
+            artifact_dir: runResult.artifactDir,
+            stage_result_path: stageResultPath,
+            started_at: now,
+            finished_at: now,
+            verify_commands: [],
+            verify_bucket: null,
+            commit_sha: null,
+            pr_role: prRole,
+            subphase: "doc_gate_review",
+          },
+          clearRecovery: true,
+        }),
+      });
+    }
+  }
+
+  activePr = getActivePullRequest(nextState, prRole);
+  const stageResult = loadExecutionStageResult(nextState, {
+    strictExtendedContract: false,
+    subphase: "doc_gate_review",
+  });
+  const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
+  const reviewIssues = validateDocGateReviewStageResult({
+    docGateState: nextState.doc_gate,
+    stageResult,
+  });
+  if (reviewIssues.length > 0) {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice,
+      state: nextState,
+      stage,
+      prRole,
+      reason: summarizeChecklistIssues(reviewIssues),
+      now,
+      worktree,
+    });
+  }
+
+  nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setDocGateReview({
+      state: nextState,
+      decision: stageResult.decision,
+      routeBackStage: stageResult.route_back_stage,
+      approvedHeadSha: stageResult.approved_head_sha,
+      bodyMarkdown: stageResult.body_markdown,
+      findings: stageResult.findings ?? [],
+      reviewedDocFindingIds: stageResult.reviewed_doc_finding_ids ?? [],
+      requiredDocFixIds: stageResult.required_doc_fix_ids ?? [],
+      waivedDocFixIds: stageResult.waived_doc_fix_ids ?? [],
+      sourceReviewStage: stage,
+      pingPongRounds: nextState.doc_gate?.round ?? 0,
+      updatedAt: now,
+    }),
+  });
+
+  github.commentPullRequest({
+    prRef: activePr.url,
+    body: stageResult.body_markdown,
+  });
+
+  if (stageResult.decision === "approve") {
+    github.mergePullRequest({
+      prRef: activePr.url,
+      headSha: activePr.head_sha ?? state.wait?.head_sha ?? "HEAD",
+    });
+    worktree.syncBaseBranch();
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setDocGateState({
+        state: clearExecutionForSubphase({
+          state: nextState,
+          stage,
+          artifactDir,
+        }),
+        status: "pending_recheck",
+        updatedAt: now,
+      }),
+    });
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setWaitState({
+        state: nextState,
+        kind: "ready_for_next_stage",
+        prRole,
+        stage,
+        headSha: activePr.head_sha ?? null,
+        updatedAt: now,
+      }),
+    });
+    return {
+      state: nextState,
+      wait: nextState.wait,
+      transitioned: true,
+    };
+  }
+
+  const nextRound = (nextState.doc_gate?.round ?? 0) + 1;
+  if (nextRound > 3) {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice,
+      state: nextState,
+      stage,
+      prRole,
+      reason: "Doc gate review ping-pong stalled after 3 rounds. Human intervention required.",
+      now,
+      worktree,
+    });
+  }
+
+  nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setDocGateState({
+      state: clearExecutionForSubphase({
+        state: nextState,
+        stage,
+        artifactDir,
+      }),
+      status: "fixable",
+      round: nextRound,
+      updatedAt: now,
+    }),
+  });
+  nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setWaitState({
+      state: nextState,
+      kind: "ready_for_next_stage",
+      prRole,
+      stage,
+      headSha: activePr.head_sha ?? null,
+      updatedAt: now,
+    }),
+  });
+  return {
+    state: nextState,
+    wait: nextState.wait,
+    transitioned: true,
+  };
+}
+
+function handleCodeStage({
+  rootDir,
+  workItemId,
+  slice,
+  state,
+  stage,
+  stageRunner,
+  worktree,
+  github,
+  now,
+}) {
+  if (stage === 2) {
+    const initialSubphase = resolveStage2Subphase(state);
+    if (initialSubphase === "doc_gate_check") {
+      const docGateResult = evaluateDocGate({
+        rootDir,
+        worktreePath: state.workspace?.path,
+        slice,
+      });
+      const docGateArtifact = writeDocGateResult({
+        rootDir,
+        workItemId,
+        result: docGateResult,
+        now,
+      });
+      const sourceMasterSha = worktree.getHeadSha();
+      let nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setDocGateState({
+          state,
+          status:
+            docGateResult.outcome === "pass"
+              ? "passed"
+              : docGateResult.outcome === "fixable"
+                ? "fixable"
+                : "blocked",
+          sourceMasterSha,
+          artifactDir: docGateArtifact.artifactDir,
+          resultPath: docGateArtifact.resultPath,
+          repairBranch: resolveDocGateRepairBranch(slice),
+          findings: docGateResult.findings,
+          updatedAt: now,
+        }),
+      });
+
+      if (docGateResult.outcome === "blocked") {
+        return blockWithRecovery({
+          rootDir,
+          workItemId,
+          slice,
+          state: nextState,
+          stage,
+          prRole: "docs",
+          reason: docGateResult.summary,
+          now,
+          worktree,
+        });
+      }
+
+      if (docGateResult.outcome === "fixable") {
+        return handleDocGateRepairStage({
+          rootDir,
+          workItemId,
+          slice,
+          state: nextState,
+          stageRunner,
+          worktree,
+          github,
+          now,
+        });
+      }
+
+      return handleImplementationCodeStage({
+        rootDir,
+        workItemId,
+        slice,
+        state: nextState,
+        stage,
+        stageRunner,
+        worktree,
+        github,
+        subphase: "implementation",
+        now,
+      });
+    }
+
+    if (initialSubphase === "doc_gate_repair") {
+      return handleDocGateRepairStage({
+        rootDir,
+        workItemId,
+        slice,
+        state,
+        stageRunner,
+        worktree,
+        github,
+        now,
+      });
+    }
+
+    if (initialSubphase === "doc_gate_review") {
+      return handleDocGateReviewStage({
+        rootDir,
+        workItemId,
+        slice,
+        state,
+        stageRunner,
+        worktree,
+        github,
+        now,
+      });
+    }
+  }
+
+  return handleImplementationCodeStage({
+    rootDir,
+    workItemId,
+    slice,
+    state,
+    stage,
+    stageRunner,
+    worktree,
+    github,
+    subphase: "implementation",
     now,
   });
 }
@@ -3520,10 +4575,11 @@ function createDefaultDependencies({
           errorPrefix: "Claude CLI is unavailable",
         });
       },
-      resolveStageProvider(stage) {
+      resolveStageProvider(stage, subphase = null) {
         return resolveStageProvider({
           rootDir,
           stage,
+          subphase,
           claudeProvider: claudeProviderConfig.provider,
           claudeBin: claudeProviderConfig.bin,
           claudeModel: claudeProviderConfig.model,
@@ -4019,10 +5075,12 @@ export function superviseWorkItem(
       }
 
       try {
+        const stageSubphase = stage === 2 ? resolveStage2Subphase(state) : null;
         assertStageProviderReady({
           auth: dependencies.auth,
           rootDir,
           stage,
+          subphase: stageSubphase,
           claudeProvider,
           claudeBin,
           claudeModel,

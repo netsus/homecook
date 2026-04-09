@@ -540,6 +540,21 @@ describe("OMO control-plane smoke", () => {
       },
     );
 
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "README.md"),
+      readFileSync(join(rootDir, "docs", "workpacks", "README.md"), "utf8").replace(
+        "| `99-omo-control-plane-smoke` | planned",
+        "| `99-omo-control-plane-smoke` | docs",
+      ),
+    );
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "README.md"),
+      readFileSync(join(workspacePath, "docs", "workpacks", "README.md"), "utf8").replace(
+        "| `99-omo-control-plane-smoke` | planned",
+        "| `99-omo-control-plane-smoke` | docs",
+      ),
+    );
+
     writeRuntimeState({
       rootDir,
       workItemId: "99-omo-control-plane-smoke",
@@ -557,6 +572,7 @@ describe("OMO control-plane smoke", () => {
         phase: null,
         next_action: "noop",
         execution: null,
+        recovery: null,
       },
     });
 

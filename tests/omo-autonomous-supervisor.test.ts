@@ -162,6 +162,106 @@ function buildCodeStageResult({
   };
 }
 
+function buildDocGateFinding(id: string) {
+  return {
+    id,
+    category: "checklist_contract",
+    severity: "major",
+    message: `Doc gate finding: ${id}`,
+    evidence_paths: ["docs/workpacks/03-recipe-like/README.md"],
+    remediation_hint: "Fix the workpack lock.",
+    fixable: true,
+  };
+}
+
+function buildDocGateRepairStageResult({
+  summary,
+  subject,
+  title,
+  resolvedDocFindingIds,
+  changedFiles = ["docs/workpacks/03-recipe-like/README.md"],
+  contestedDocFixIds = [],
+  rebuttals = [],
+}: {
+  summary: string;
+  subject: string;
+  title: string;
+  resolvedDocFindingIds: string[];
+  changedFiles?: string[];
+  contestedDocFixIds?: string[];
+  rebuttals?: Array<{ fix_id: string; rationale_markdown: string; evidence_refs: string[] }>;
+}) {
+  return {
+    result: "done",
+    summary_markdown: summary,
+    pr: { title, body_markdown: "doc gate fixed" },
+    commit: { subject },
+    checks_run: [],
+    next_route: "open_pr",
+    claimed_scope: {
+      files: changedFiles,
+      endpoints: [],
+      routes: [],
+      states: [],
+      invariants: [],
+    },
+    changed_files: changedFiles,
+    tests_touched: [],
+    artifacts_written: [".artifacts/doc-gate.log"],
+    resolved_doc_finding_ids: resolvedDocFindingIds,
+    contested_doc_fix_ids: contestedDocFixIds,
+    rebuttals,
+  };
+}
+
+function buildDocGateReviewStageResult({
+  decision,
+  reviewedDocFindingIds,
+  requiredDocFixIds = [],
+  waivedDocFixIds = [],
+  findings,
+  bodyMarkdown,
+  routeBackStage = 2,
+  approvedHeadSha = null,
+}: {
+  decision: "approve" | "request_changes";
+  reviewedDocFindingIds: string[];
+  requiredDocFixIds?: string[];
+  waivedDocFixIds?: string[];
+  findings?: Array<Record<string, unknown>>;
+  bodyMarkdown: string;
+  routeBackStage?: number | null;
+  approvedHeadSha?: string | null;
+}) {
+  return {
+    decision,
+    body_markdown: bodyMarkdown,
+    route_back_stage: routeBackStage,
+    approved_head_sha: approvedHeadSha,
+    review_scope: {
+      scope: "doc_gate",
+      checklist_ids: [],
+    },
+    reviewed_doc_finding_ids: reviewedDocFindingIds,
+    required_doc_fix_ids: requiredDocFixIds,
+    waived_doc_fix_ids: waivedDocFixIds,
+    findings:
+      findings ??
+      (decision === "request_changes"
+        ? [
+            {
+              file: "docs/workpacks/03-recipe-like/README.md",
+              line_hint: 1,
+              severity: "major",
+              category: "contract",
+              issue: "Doc gate follow-up is required.",
+              suggestion: "Tighten the workpack wording and metadata.",
+            },
+          ]
+        : []),
+  };
+}
+
 function seedProductWorkItem(rootDir: string, workItemId: string) {
   mkdirSync(join(rootDir, ".artifacts"), { recursive: true });
   mkdirSync(join(rootDir, ".workflow-v2", "work-items"), { recursive: true });
@@ -809,6 +909,622 @@ describe("OMO autonomous supervisor", () => {
       "create:feature/be-03-recipe-like:draft",
       "checks:https://github.com/netsus/homecook/pull/35",
     ]);
+  });
+
+  it("routes Stage 2 through doc_gate_repair when doc gate findings are fixable", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    const docFindingId = "doc-gate-missing-goal";
+    let observedSubphase: string | null = null;
+
+    createGitWorkspace(workspacePath, "docs/03-recipe-like-repair");
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "docs",
+    });
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "docs: seed doc gate repair"], { cwd: workspacePath });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        active_stage: 2,
+        current_stage: 2,
+        last_completed_stage: 1,
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        phase: null,
+        next_action: "noop",
+        wait: null,
+        execution: null,
+        doc_gate: {
+          status: "fixable",
+          round: 0,
+          repair_branch: "docs/03-recipe-like-repair",
+          findings: [buildDocGateFinding(docFindingId)],
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-04-09T20:40:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean({ worktreePath }: { worktreePath: string }) {
+            const output = execFileSync("git", ["status", "--porcelain"], {
+              cwd: worktreePath,
+              encoding: "utf8",
+            }).trim();
+            if (output.length > 0) {
+              throw new Error(`dirty_worktree\n${output}`);
+            }
+          },
+          checkoutBranch({ branch }: { branch: string }) {
+            execFileSync("git", ["checkout", "-B", branch], {
+              cwd: workspacePath,
+              stdio: "ignore",
+            });
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return execFileSync("git", ["rev-parse", "HEAD"], {
+              cwd: workspacePath,
+              encoding: "utf8",
+            }).trim();
+          },
+          getCurrentBranch({ worktreePath }: { worktreePath: string }) {
+            return execFileSync("git", ["branch", "--show-current"], {
+              cwd: worktreePath,
+              encoding: "utf8",
+            }).trim();
+          },
+          listChangedFiles({ worktreePath }: { worktreePath: string }) {
+            return execFileSync("git", ["diff", "--name-only"], {
+              cwd: worktreePath,
+              encoding: "utf8",
+            })
+              .trim()
+              .split("\n")
+              .filter(Boolean);
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner({ subphase }: { subphase?: string | null }) {
+          observedSubphase = subphase ?? null;
+          const readmePath = join(workspacePath, "docs", "workpacks", "03-recipe-like", "README.md");
+          writeFileSync(readmePath, `${readFileSync(readmePath, "utf8")}\n## Goal\n- locked during doc gate repair\n`);
+          return {
+            artifactDir: join(rootDir, ".artifacts", "doc-gate-repair"),
+            dispatch: {
+              actor: "codex",
+              stage: 2,
+              subphase: "doc_gate_repair",
+              sessionBinding: {
+                role: "codex_primary",
+              },
+            },
+            execution: { mode: "execute", executed: true, sessionId: "ses_codex_doc_gate" },
+            stageResult: buildDocGateRepairStageResult({
+              summary: "Doc gate repaired the workpack.",
+              subject: "docs: repair workpack lock",
+              title: "docs: repair workpack lock",
+              resolvedDocFindingIds: [docFindingId],
+            }),
+          };
+        },
+        github: {
+          createPullRequest({
+            head,
+            draft,
+          }: {
+            head: string;
+            draft: boolean;
+          }) {
+            return {
+              number: 77,
+              url: "https://github.com/netsus/homecook/pull/77",
+              draft,
+              branch: head,
+            };
+          },
+          editPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            return { bucket: "pending", checks: [] };
+          },
+          markReady() {
+            throw new Error("not expected");
+          },
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      slice: "03-recipe-like",
+    }).state as {
+      wait: { kind: string; pr_role: string; stage: number };
+      prs: { docs: { branch: string; url: string } };
+      doc_gate: { status: string };
+    };
+
+    expect(observedSubphase).toBe("doc_gate_repair");
+    expect(result.wait).toMatchObject({
+      kind: "ci",
+      pr_role: "docs",
+      stage: 2,
+    });
+    expect(runtime.prs.docs).toMatchObject({
+      branch: "docs/03-recipe-like-repair",
+      url: "https://github.com/netsus/homecook/pull/77",
+    });
+    expect(runtime.doc_gate.status).toBe("awaiting_review");
+  });
+
+  it("fails closed when doc_gate_repair touches non-doc files", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    const docFindingId = "doc-gate-missing-goal";
+    const artifactDir = join(rootDir, ".artifacts", "doc-gate-invalid-repair");
+    const stageResultPath = join(artifactDir, "stage-result.json");
+
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "docs",
+    });
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      stageResultPath,
+      `${JSON.stringify(
+        buildDocGateRepairStageResult({
+          summary: "Invalid doc gate repair",
+          subject: "docs: invalid repair",
+          title: "docs: invalid repair",
+          resolvedDocFindingIds: [docFindingId],
+          changedFiles: ["app/api/v1/example/route.ts"],
+        }),
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        active_stage: 2,
+        current_stage: 2,
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        phase: "stage_result_ready",
+        next_action: "finalize_stage",
+        last_artifact_dir: artifactDir,
+        execution: {
+          provider: "opencode",
+          session_role: "codex_primary",
+          session_id: "ses_codex_doc_gate",
+          artifact_dir: artifactDir,
+          stage_result_path: stageResultPath,
+          started_at: "2026-04-09T20:41:00+09:00",
+          finished_at: "2026-04-09T20:41:00+09:00",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "docs",
+          subphase: "doc_gate_repair",
+        },
+        doc_gate: {
+          status: "fixable",
+          round: 0,
+          repair_branch: "docs/03-recipe-like-repair",
+          findings: [buildDocGateFinding(docFindingId)],
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-04-09T20:41:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "docgate123";
+          },
+          getCurrentBranch() {
+            return "docs/03-recipe-like-repair";
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            return { bucket: "pass", checks: [] };
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(result.wait).toMatchObject({
+      kind: "human_escalation",
+    });
+    expect(result.wait?.reason ?? "").toContain("Doc gate repair may only change workpack docs");
+  });
+
+  it("routes doc_gate_review request_changes back to Stage 2 doc repair", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    const docFindingId = "doc-gate-missing-goal";
+    const artifactDir = join(rootDir, ".artifacts", "doc-gate-review-request-changes");
+    const stageResultPath = join(artifactDir, "stage-result.json");
+
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "docs",
+    });
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      stageResultPath,
+      `${JSON.stringify(
+        buildDocGateReviewStageResult({
+          decision: "request_changes",
+          reviewedDocFindingIds: [docFindingId],
+          requiredDocFixIds: [docFindingId],
+          bodyMarkdown: "Workpack wording needs another pass.",
+        }),
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        active_stage: 2,
+        current_stage: 2,
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        phase: "review_pending",
+        next_action: "run_review",
+        last_artifact_dir: artifactDir,
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: "ses_claude_doc_gate",
+          artifact_dir: artifactDir,
+          stage_result_path: stageResultPath,
+          started_at: "2026-04-09T20:42:00+09:00",
+          finished_at: "2026-04-09T20:42:00+09:00",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "docs",
+          subphase: "doc_gate_review",
+        },
+        prs: {
+          docs: {
+            number: 77,
+            url: "https://github.com/netsus/homecook/pull/77",
+            draft: false,
+            branch: "docs/03-recipe-like-repair",
+            head_sha: "docs123",
+          },
+          backend: null,
+          frontend: null,
+        },
+        doc_gate: {
+          status: "awaiting_review",
+          round: 1,
+          repair_branch: "docs/03-recipe-like-repair",
+          findings: [buildDocGateFinding(docFindingId)],
+        },
+      },
+    });
+
+    const reviewLog: string[] = [];
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-04-09T20:42:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "docs123";
+          },
+          getCurrentBranch() {
+            return "docs/03-recipe-like-repair";
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            return { bucket: "pass", checks: [] };
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest({ body }: { body: string }) {
+            reviewLog.push(body);
+          },
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      slice: "03-recipe-like",
+    }).state as {
+      wait: { kind: string; pr_role: string; stage: number };
+      doc_gate: {
+        status: string;
+        round: number;
+        last_review: { decision: string; required_doc_fix_ids: string[] };
+      };
+    };
+
+    expect(result.wait).toMatchObject({
+      kind: "ready_for_next_stage",
+      pr_role: "docs",
+      stage: 2,
+    });
+    expect(runtime.doc_gate.status).toBe("fixable");
+    expect(runtime.doc_gate.round).toBe(2);
+    expect(runtime.doc_gate.last_review).toMatchObject({
+      decision: "request_changes",
+      required_doc_fix_ids: [docFindingId],
+    });
+    expect(reviewLog).toEqual(["Workpack wording needs another pass."]);
+  });
+
+  it("escalates when doc_gate_review exceeds max ping-pong rounds", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    const docFindingId = "doc-gate-missing-goal";
+    const artifactDir = join(rootDir, ".artifacts", "doc-gate-review-stalled");
+    const stageResultPath = join(artifactDir, "stage-result.json");
+
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "docs",
+    });
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      stageResultPath,
+      `${JSON.stringify(
+        buildDocGateReviewStageResult({
+          decision: "request_changes",
+          reviewedDocFindingIds: [docFindingId],
+          requiredDocFixIds: [docFindingId],
+          bodyMarkdown: "Still not locked enough.",
+        }),
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        active_stage: 2,
+        current_stage: 2,
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        phase: "review_pending",
+        next_action: "run_review",
+        last_artifact_dir: artifactDir,
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: "ses_claude_doc_gate",
+          artifact_dir: artifactDir,
+          stage_result_path: stageResultPath,
+          started_at: "2026-04-09T20:43:00+09:00",
+          finished_at: "2026-04-09T20:43:00+09:00",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "docs",
+          subphase: "doc_gate_review",
+        },
+        prs: {
+          docs: {
+            number: 77,
+            url: "https://github.com/netsus/homecook/pull/77",
+            draft: false,
+            branch: "docs/03-recipe-like-repair",
+            head_sha: "docs123",
+          },
+          backend: null,
+          frontend: null,
+        },
+        doc_gate: {
+          status: "awaiting_review",
+          round: 3,
+          repair_branch: "docs/03-recipe-like-repair",
+          findings: [buildDocGateFinding(docFindingId)],
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-04-09T20:43:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "docs123";
+          },
+          getCurrentBranch() {
+            return "docs/03-recipe-like-repair";
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            return { bucket: "pass", checks: [] };
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(result.wait).toMatchObject({
+      kind: "human_escalation",
+    });
+    expect(result.wait?.reason ?? "").toContain("Doc gate review ping-pong stalled");
   });
 
   it("blocks Stage 1 when a dependency slice is not merged or bootstrap", () => {
