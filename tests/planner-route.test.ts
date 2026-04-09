@@ -47,9 +47,7 @@ function createThenableQuery<T>(results: Array<QueryResult<T>>) {
         error: { message: "missing select result" },
       };
 
-      return Promise.resolve(
-        results.shift() ?? fallback,
-      ).then(onFulfilled, onRejected);
+      return Promise.resolve(results.shift() ?? fallback).then(onFulfilled, onRejected);
     },
   };
 
@@ -121,13 +119,13 @@ describe("GET /api/v1/planner", () => {
     });
   });
 
-  it("returns planner columns and meals in wrapped response", async () => {
+  it("returns fixed four planner slots even when legacy users only have three columns", async () => {
     const mealPlanColumnsQuery = createThenableQuery([
       {
         data: [
-          { id: "column-1", name: "아침", sort_order: 0 },
-          { id: "column-2", name: "점심", sort_order: 1 },
-          { id: "column-3", name: "저녁", sort_order: 2 },
+          { id: "column-breakfast", name: "아침", sort_order: 0 },
+          { id: "column-lunch", name: "점심", sort_order: 1 },
+          { id: "column-dinner", name: "저녁", sort_order: 2 },
         ],
         error: null,
       },
@@ -139,7 +137,7 @@ describe("GET /api/v1/planner", () => {
             id: "meal-1",
             recipe_id: "recipe-1",
             plan_date: "2026-03-01",
-            column_id: "column-1",
+            column_id: "column-breakfast",
             planned_servings: 2,
             status: "registered",
             is_leftover: false,
@@ -149,7 +147,7 @@ describe("GET /api/v1/planner", () => {
             id: "meal-2",
             recipe_id: "recipe-2",
             plan_date: "2026-03-01",
-            column_id: "column-2",
+            column_id: "column-lunch",
             planned_servings: 1,
             status: "shopping_done",
             is_leftover: false,
@@ -189,46 +187,127 @@ describe("GET /api/v1/planner", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body).toEqual({
-      success: true,
-      data: {
-        columns: [
-          { id: "column-1", name: "아침", sort_order: 0 },
-          { id: "column-2", name: "점심", sort_order: 1 },
-          { id: "column-3", name: "저녁", sort_order: 2 },
+    expect(body.success).toBe(true);
+    expect(body.data.columns).toHaveLength(4);
+    expect(body.data.columns.map((column: { name: string }) => column.name)).toEqual([
+      "아침",
+      "점심",
+      "간식",
+      "저녁",
+    ]);
+    expect(body.data.columns[2]).toMatchObject({
+      name: "간식",
+      sort_order: 2,
+      id: expect.any(String),
+    });
+    expect(body.data.meals).toMatchObject([
+      {
+        id: "meal-1",
+        recipe_title: "김치찌개",
+        column_id: "column-breakfast",
+      },
+      {
+        id: "meal-2",
+        recipe_title: "된장찌개",
+        column_id: "column-lunch",
+      },
+    ]);
+    expect(mealsQuery.order).toHaveBeenNthCalledWith(1, "plan_date", { ascending: true });
+    expect(mealsQuery.order).toHaveBeenNthCalledWith(2, "column_id", { ascending: true });
+    expect(mealsQuery.order).toHaveBeenNthCalledWith(3, "created_at", { ascending: true });
+  });
+
+  it("normalizes legacy custom columns into the fixed four-slot response", async () => {
+    const mealPlanColumnsQuery = createThenableQuery([
+      {
+        data: [
+          { id: "column-brunch", name: "브런치", sort_order: 0 },
+          { id: "column-lunch", name: "점심", sort_order: 1 },
+          { id: "column-dinner", name: "저녁", sort_order: 2 },
+          { id: "column-night", name: "야식", sort_order: 3 },
         ],
-        meals: [
+        error: null,
+      },
+    ]);
+    const mealsQuery = createThenableQuery([
+      {
+        data: [
           {
             id: "meal-1",
             recipe_id: "recipe-1",
-            recipe_title: "김치찌개",
-            recipe_thumbnail_url: "https://example.com/kimchi.jpg",
-            plan_date: "2026-03-01",
-            column_id: "column-1",
+            plan_date: "2026-03-02",
+            column_id: "column-brunch",
             planned_servings: 2,
             status: "registered",
             is_leftover: false,
+            created_at: "2026-03-02T08:00:00Z",
           },
           {
             id: "meal-2",
             recipe_id: "recipe-2",
-            recipe_title: "된장찌개",
-            recipe_thumbnail_url: null,
-            plan_date: "2026-03-01",
-            column_id: "column-2",
+            plan_date: "2026-03-02",
+            column_id: "column-night",
             planned_servings: 1,
-            status: "shopping_done",
+            status: "cook_done",
             is_leftover: false,
+            created_at: "2026-03-02T09:00:00Z",
           },
         ],
+        error: null,
       },
-      error: null,
+    ]);
+    const recipesQuery = createThenableQuery([
+      {
+        data: [
+          { id: "recipe-1", title: "오믈렛", thumbnail_url: null },
+          { id: "recipe-2", title: "과일볼", thumbnail_url: null },
+        ],
+        error: null,
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "meal_plan_columns") return { select: vi.fn(() => mealPlanColumnsQuery) };
+        if (table === "meals") return { select: vi.fn(() => mealsQuery) };
+        if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
     });
-    expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: "user-1" });
-    expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
-    expect(mealsQuery.order).toHaveBeenNthCalledWith(1, "plan_date", { ascending: true });
-    expect(mealsQuery.order).toHaveBeenNthCalledWith(2, "column_id", { ascending: true });
-    expect(mealsQuery.order).toHaveBeenNthCalledWith(3, "created_at", { ascending: true });
+
+    const { GET } = await importRoute();
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/planner?start_date=2026-03-01&end_date=2026-03-07"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.columns.map((column: { name: string }) => column.name)).toEqual([
+      "아침",
+      "점심",
+      "간식",
+      "저녁",
+    ]);
+
+    const breakfastSlot = body.data.columns.find((column: { name: string }) => column.name === "아침");
+    const snackSlot = body.data.columns.find((column: { name: string }) => column.name === "간식");
+
+    expect(body.data.meals).toMatchObject([
+      {
+        id: "meal-1",
+        recipe_title: "오믈렛",
+        column_id: breakfastSlot?.id,
+      },
+      {
+        id: "meal-2",
+        recipe_title: "과일볼",
+        column_id: snackSlot?.id,
+      },
+    ]);
   });
 
   it("returns schema guidance when bootstrap fails before reading planner data", async () => {

@@ -321,6 +321,7 @@ describe("user bootstrap", () => {
     expect(client.state.plannerColumns.map((column) => column.name)).toEqual([
       "아침",
       "점심",
+      "간식",
       "저녁",
     ]);
     expect(client.state.users[0]?.settings_json.user_bootstrap_version).toBe(
@@ -383,7 +384,64 @@ describe("user bootstrap", () => {
     expect(client.state.plannerColumns.map((column) => column.name)).toEqual([
       "아침",
       "점심",
+      "간식",
       "저녁",
+    ]);
+    expect(client.state.users[0]?.settings_json.user_bootstrap_version).toBe(
+      USER_BOOTSTRAP_VERSION,
+    );
+  });
+
+  it("backfills the fixed snack slot for already-bootstrapped users from v1", async () => {
+    const client = createMemoryBootstrapClient({
+      users: [
+        {
+          id: "user-1",
+          nickname: "집밥러",
+          email: "cook@example.com",
+          profile_image_url: null,
+          social_provider: "google",
+          social_id: "social-1",
+          settings_json: {
+            user_bootstrap_version: 1,
+          },
+          created_at: "2026-04-01T00:00:00.000Z",
+          updated_at: "2026-04-01T00:00:00.000Z",
+          deleted_at: null,
+        },
+      ],
+      plannerColumns: [
+        {
+          id: "column-breakfast",
+          user_id: "user-1",
+          name: "아침",
+          sort_order: 0,
+          created_at: "2026-04-01T00:00:00.000Z",
+        },
+        {
+          id: "column-lunch",
+          user_id: "user-1",
+          name: "점심",
+          sort_order: 1,
+          created_at: "2026-04-01T00:00:00.000Z",
+        },
+        {
+          id: "column-dinner",
+          user_id: "user-1",
+          name: "저녁",
+          sort_order: 2,
+          created_at: "2026-04-01T00:00:00.000Z",
+        },
+      ],
+    });
+
+    await ensureUserBootstrapState(client as never, "user-1");
+
+    expect(client.state.plannerColumns.map((column) => column.name)).toEqual([
+      "아침",
+      "점심",
+      "저녁",
+      "간식",
     ]);
     expect(client.state.users[0]?.settings_json.user_bootstrap_version).toBe(
       USER_BOOTSTRAP_VERSION,

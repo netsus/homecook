@@ -1,5 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 
+import { PLANNER_FIXED_SLOT_NAMES } from "@/types/planner";
+
 interface QueryError {
   code?: string;
   message: string;
@@ -131,7 +133,7 @@ export interface UserBootstrapDbClient {
   from(table: "meal_plan_columns"): PlannerColumnsTable;
 }
 
-export const USER_BOOTSTRAP_VERSION = 1;
+export const USER_BOOTSTRAP_VERSION = 2;
 
 const USER_BOOTSTRAP_VERSION_KEY = "user_bootstrap_version";
 const DEFAULT_RECIPE_BOOKS = [
@@ -139,11 +141,10 @@ const DEFAULT_RECIPE_BOOKS = [
   { name: "저장한 레시피", book_type: "saved" as const, sort_order: 1 },
   { name: "좋아요한 레시피", book_type: "liked" as const, sort_order: 2 },
 ];
-const DEFAULT_PLANNER_COLUMNS = [
-  { name: "아침", sort_order: 0 },
-  { name: "점심", sort_order: 1 },
-  { name: "저녁", sort_order: 2 },
-];
+const DEFAULT_PLANNER_COLUMNS = PLANNER_FIXED_SLOT_NAMES.map((name, sort_order) => ({
+  name,
+  sort_order,
+}));
 
 function normalizeMetadata(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -255,6 +256,10 @@ async function listPlannerColumns(dbClient: UserBootstrapDbClient, userId: strin
   return result.data ?? [];
 }
 
+function findPlannerColumnByName(columns: PlannerColumnRow[], name: string) {
+  return columns.find((column) => column.name.trim() === name) ?? null;
+}
+
 function getNextSortOrder(rows: Array<{ sort_order: number }>) {
   if (rows.length === 0) {
     return 0;
@@ -364,24 +369,33 @@ export async function ensureUserBootstrapState(
 
   const currentColumns = await listPlannerColumns(dbClient, userId);
 
-  if (currentColumns.length === 0) {
-    for (const defaultColumn of DEFAULT_PLANNER_COLUMNS) {
-      const createResult = await dbClient
-        .from("meal_plan_columns")
-        .insert({
-          id: crypto.randomUUID(),
-          user_id: userId,
-          name: defaultColumn.name,
-          sort_order: defaultColumn.sort_order,
-          created_at: new Date().toISOString(),
-        })
-        .select("id, name, sort_order")
-        .maybeSingle();
+  for (const defaultColumn of DEFAULT_PLANNER_COLUMNS) {
+    const existing = findPlannerColumnByName(currentColumns, defaultColumn.name);
 
-      if (createResult.error || !createResult.data) {
-        throw new Error(createResult.error?.message ?? "meal_plan_columns insert failed");
-      }
+    if (existing) {
+      continue;
     }
+
+    const createResult = await dbClient
+      .from("meal_plan_columns")
+      .insert({
+        id: crypto.randomUUID(),
+        user_id: userId,
+        name: defaultColumn.name,
+        sort_order:
+          currentColumns.length === 0
+            ? defaultColumn.sort_order
+            : getNextSortOrder(currentColumns),
+        created_at: new Date().toISOString(),
+      })
+      .select("id, name, sort_order")
+      .maybeSingle();
+
+    if (createResult.error || !createResult.data) {
+      throw new Error(createResult.error?.message ?? "meal_plan_columns insert failed");
+    }
+
+    currentColumns.push(createResult.data);
   }
 
   const updateResult = await dbClient

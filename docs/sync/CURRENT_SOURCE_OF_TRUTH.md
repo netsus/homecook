@@ -1,18 +1,18 @@
 # Current Source of Truth
 
 ## Official Versions
-- Requirements: `v1.6.1`
-- Screens: `v1.2.1`
-- Flow: `v1.2.1`
-- DB: `v1.3`
-- API: `v1.2.1`
+- Requirements: `v1.6.2`
+- Screens: `v1.2.2`
+- Flow: `v1.2.2`
+- DB: `v1.3.1`
+- API: `v1.2.2`
 
 ## Official Files
-- `docs/요구사항기준선-v1.6.1.md`
-- `docs/화면정의서-v1.2.1.md`
-- `docs/유저flow맵-v1.2.1.md`
-- `docs/db설계-v1.3.md`
-- `docs/api문서-v1.2.1.md`
+- `docs/요구사항기준선-v1.6.2.md`
+- `docs/화면정의서-v1.2.2.md`
+- `docs/유저flow맵-v1.2.2.md`
+- `docs/db설계-v1.3.1.md`
+- `docs/api문서-v1.2.2.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.

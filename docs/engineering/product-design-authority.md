@@ -102,7 +102,7 @@ authority 리뷰는 아래 evidence가 있어야 한다.
 
 - `PLANNER_WEEK`에서 planner 자체가 horizontally scrollable content여야 하는데,
   화면 전체 wrapper가 좌우로 밀리는 구조는 blocker다.
-- `PLANNER_WEEK`에서 같은 날짜의 아침/점심/저녁이 서로 떨어져 보여
+- `PLANNER_WEEK`에서 같은 날짜의 아침/점심/간식/저녁이 서로 떨어져 보여
   사용자가 하루 식단을 한 번에 읽지 못하면 major 이상으로 본다.
 - `PLANNER_WEEK`에서 주간 이동 컨트롤이 planner 본문과 멀리 떨어져 있으면
   control proximity 문제로 본다.
@@ -115,7 +115,7 @@ authority 리뷰는 아래 evidence가 있어야 한다.
 - 주간 범위와 주간 이동 컨트롤이 planner 본문에 붙어 있는가
 - 같은 날짜의 끼니가 한 card 또는 한 block 안에서 함께 읽히는가
 - 설명/칩/여백이 실제 식단 카드보다 더 큰 비중을 차지하지 않는가
-- 4~5컬럼에서도 한 슬롯의 정보 밀도가 무너지지 않는가
+- 4끼 고정 카드에서도 각 슬롯의 정보 밀도가 무너지지 않는가
 
 권장 guardrail:
 

@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { ContentState } from "@/components/shared/content-state";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
-import { isPlannerApiError } from "@/lib/api/planner";
+import { createDefaultPlannerRange, isPlannerApiError } from "@/lib/api/planner";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { usePlannerStore } from "@/stores/planner-store";
-import type { MealStatus, PlannerColumnData, PlannerMealData } from "@/types/planner";
+import type { MealStatus, PlannerMealData } from "@/types/planner";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 
@@ -21,7 +21,6 @@ export interface PlannerWeekScreenProps {
 }
 
 const RANGE_SHIFT_DAYS = 7;
-const SCROLL_SHIFT_DEBOUNCE_MS = 650;
 const CTA_BUTTONS = ["장보기", "요리하기", "남은요리"] as const;
 
 const STATUS_META: Record<MealStatus, { label: string; className: string }> = {
@@ -39,17 +38,6 @@ const STATUS_META: Record<MealStatus, { label: string; className: string }> = {
   },
 };
 
-function formatDateLabel(dateKey: string) {
-  const date = new Date(`${dateKey}T00:00:00.000Z`);
-
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-    timeZone: "UTC",
-  }).format(date);
-}
-
 function buildDateKeys(startDate: string, endDate: string) {
   const start = new Date(`${startDate}T00:00:00.000Z`);
   const end = new Date(`${endDate}T00:00:00.000Z`);
@@ -63,14 +51,27 @@ function buildDateKeys(startDate: string, endDate: string) {
   return dateKeys;
 }
 
-function sortColumns(columns: PlannerColumnData[]) {
-  return [...columns].sort((left, right) => {
-    if (left.sort_order === right.sort_order) {
-      return left.id.localeCompare(right.id);
-    }
+function formatDateLabel(dateKey: string) {
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
 
-    return left.sort_order - right.sort_order;
-  });
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+function formatWeekdayLabel(dateKey: string) {
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    weekday: "short",
+    timeZone: "UTC",
+  }).format(date);
+}
+
+function formatRangeLabel(startDate: string, endDate: string) {
+  return `${formatDateLabel(startDate)} ~ ${formatDateLabel(endDate)}`;
 }
 
 function buildMealMap(meals: PlannerMealData[]) {
@@ -85,178 +86,6 @@ function buildMealMap(meals: PlannerMealData[]) {
   return mealMap;
 }
 
-function clampSortOrder(nextSortOrder: number, columnCount: number) {
-  if (columnCount <= 0) {
-    return 0;
-  }
-
-  return Math.min(Math.max(nextSortOrder, 0), columnCount - 1);
-}
-
-function readColumnIdFromTarget(target: EventTarget | null) {
-  if (!(target instanceof Element)) {
-    return null;
-  }
-
-  return (target.closest("[data-column-id]") as HTMLElement | null)?.dataset.columnId ?? null;
-}
-
-function resolveColumnIdFromPoint(clientX: number, clientY: number) {
-  const directColumnId = readColumnIdFromTarget(document.elementFromPoint(clientX, clientY));
-
-  if (directColumnId) {
-    return directColumnId;
-  }
-
-  const columnElements = Array.from(document.querySelectorAll<HTMLElement>("[data-column-id]"));
-  let closestColumnId: string | null = null;
-  let closestDistance = Number.POSITIVE_INFINITY;
-
-  columnElements.forEach((element) => {
-    const rect = element.getBoundingClientRect();
-    const horizontalDistance =
-      clientX < rect.left ? rect.left - clientX : clientX > rect.right ? clientX - rect.right : 0;
-    const verticalDistance =
-      clientY < rect.top ? rect.top - clientY : clientY > rect.bottom ? clientY - rect.bottom : 0;
-    const distance = horizontalDistance + verticalDistance * 2;
-
-    if (distance < closestDistance) {
-      closestDistance = distance;
-      closestColumnId = element.dataset.columnId ?? null;
-    }
-  });
-
-  return closestColumnId;
-}
-
-interface PlannerColumnCardProps {
-  column: PlannerColumnData;
-  draftName: string;
-  columnCount: number;
-  isMutating: boolean;
-  isActiveDrag: boolean;
-  isDragTarget: boolean;
-  onDraftNameChange: (columnId: string, value: string) => void;
-  onKeyboardReorder: (columnId: string, nextSortOrder: number) => void;
-  onTouchDragStart: (
-    columnId: string,
-    event: React.PointerEvent<HTMLButtonElement>,
-  ) => void;
-  onDragStart: (columnId: string) => void;
-  onDragOver: (columnId: string) => void;
-  onDrop: (columnId: string) => void;
-  onDragEnd: (event: React.DragEvent<HTMLButtonElement>) => void;
-  onRename: (columnId: string) => void;
-  onDelete: (columnId: string) => void;
-}
-
-function PlannerColumnCard({
-  column,
-  draftName,
-  columnCount,
-  isMutating,
-  isActiveDrag,
-  isDragTarget,
-  onDraftNameChange,
-  onKeyboardReorder,
-  onTouchDragStart,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onDragEnd,
-  onRename,
-  onDelete,
-}: PlannerColumnCardProps) {
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
-        return;
-      }
-
-      event.preventDefault();
-      const direction = event.key === "ArrowLeft" ? -1 : 1;
-      const nextSortOrder = clampSortOrder(column.sort_order + direction, columnCount);
-
-      if (nextSortOrder === column.sort_order) {
-        return;
-      }
-
-      onKeyboardReorder(column.id, nextSortOrder);
-    },
-    [column.id, column.sort_order, columnCount, onKeyboardReorder],
-  );
-
-  return (
-    <div
-      className={`min-w-0 rounded-[12px] border bg-[var(--surface)] px-3 py-3 transition-colors ${
-        isDragTarget
-          ? "border-[var(--brand)] bg-[color:rgba(255,108,60,0.08)]"
-          : "border-[var(--line)]"
-      } ${isActiveDrag ? "opacity-55" : ""} w-full`}
-      data-column-id={column.id}
-      onDragOver={(event) => {
-        event.preventDefault();
-        onDragOver(column.id);
-      }}
-      onDrop={(event) => {
-        event.preventDefault();
-        onDrop(column.id);
-      }}
-    >
-      <div className="space-y-3">
-        <div className="grid grid-cols-[44px_minmax(0,1fr)] items-center gap-3">
-          <button
-            aria-label={`${column.name} 컬럼 순서 변경`}
-            className="inline-flex min-h-11 min-w-11 shrink-0 cursor-grab items-center justify-center rounded-[10px] border border-[var(--line)] text-[18px] font-semibold leading-none text-[var(--muted)] transition active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-45"
-            disabled={isMutating}
-            draggable={!isMutating}
-            onDragEnd={onDragEnd}
-            onDragStart={(event) => {
-              event.dataTransfer.effectAllowed = "move";
-              event.dataTransfer.setData("text/plain", column.id);
-              onDragStart(column.id);
-            }}
-            onKeyDown={handleKeyDown}
-            onPointerDown={(event) => {
-              onTouchDragStart(column.id, event);
-            }}
-            style={{ touchAction: "none" }}
-            type="button"
-          >
-            ⋮⋮
-          </button>
-          <label className="flex min-h-11 min-w-0 items-center rounded-[10px] border border-[var(--line)] px-3">
-            <span className="visually-hidden">{column.name} 컬럼 이름</span>
-            <input
-              className="w-full min-w-0 bg-transparent text-sm font-semibold text-[var(--foreground)] outline-none"
-              onChange={(event) => onDraftNameChange(column.id, event.target.value)}
-              value={draftName}
-            />
-          </label>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            className="min-h-11 rounded-[10px] border border-[var(--line)] px-3 text-sm font-semibold text-[var(--muted)] disabled:opacity-45"
-            disabled={isMutating}
-            onClick={() => onRename(column.id)}
-            type="button"
-          >
-            저장
-          </button>
-          <button
-            className="min-h-11 rounded-[10px] border border-[var(--line)] px-3 text-sm font-semibold text-[var(--muted)] disabled:opacity-45"
-            disabled={isMutating}
-            onClick={() => onDelete(column.id)}
-            type="button"
-          >
-            삭제
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function PlannerWeekScreen({
   initialAuthenticated = false,
 }: PlannerWeekScreenProps) {
@@ -266,60 +95,22 @@ export function PlannerWeekScreen({
   const meals = usePlannerStore((state) => state.meals);
   const screenState = usePlannerStore((state) => state.screenState);
   const errorMessage = usePlannerStore((state) => state.errorMessage);
-  const feedbackMessage = usePlannerStore((state) => state.feedbackMessage);
-  const isMutating = usePlannerStore((state) => state.isMutating);
   const loadPlanner = usePlannerStore((state) => state.loadPlanner);
+  const resetRange = usePlannerStore((state) => state.resetRange);
   const shiftRange = usePlannerStore((state) => state.shiftRange);
-  const clearFeedback = usePlannerStore((state) => state.clearFeedback);
-  const addColumn = usePlannerStore((state) => state.addColumn);
-  const renameColumn = usePlannerStore((state) => state.renameColumn);
-  const reorderColumn = usePlannerStore((state) => state.reorderColumn);
-  const removeColumn = usePlannerStore((state) => state.removeColumn);
 
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
-  const [newColumnName, setNewColumnName] = useState("");
-  const [columnNameDrafts, setColumnNameDrafts] = useState<Record<string, string>>({});
-  const [activeDragColumnId, setActiveDragColumnId] = useState<string | null>(null);
-  const [dragOverColumnId, setDragOverColumnId] = useState<string | null>(null);
-  const activeDragColumnIdRef = useRef<string | null>(null);
-  const dragOverColumnIdRef = useRef<string | null>(null);
-  const dragCleanupRef = useRef<(() => void) | null>(null);
-  const scrollShiftAtRef = useRef(0);
 
-  const sortedColumns = useMemo(() => sortColumns(columns), [columns]);
   const dateKeys = useMemo(
     () => buildDateKeys(rangeStartDate, rangeEndDate),
     [rangeEndDate, rangeStartDate],
   );
   const mealsByDateAndColumn = useMemo(() => buildMealMap(meals), [meals]);
-  const plannerGridMinWidth = 160 + sortedColumns.length * 220;
-
-  useEffect(() => {
-    activeDragColumnIdRef.current = activeDragColumnId;
-  }, [activeDragColumnId]);
-
-  useEffect(() => {
-    dragOverColumnIdRef.current = dragOverColumnId;
-  }, [dragOverColumnId]);
-
-  useEffect(() => {
-    return () => {
-      dragCleanupRef.current?.();
-    };
-  }, []);
-
-  useEffect(() => {
-    const nextDrafts: Record<string, string> = {};
-
-    sortedColumns.forEach((column) => {
-      nextDrafts[column.id] = columnNameDrafts[column.id] ?? column.name;
-    });
-
-    setColumnNameDrafts(nextDrafts);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedColumns]);
+  const defaultRange = createDefaultPlannerRange();
+  const isCurrentRange =
+    rangeStartDate === defaultRange.startDate && rangeEndDate === defaultRange.endDate;
 
   useEffect(() => {
     const e2eAuthOverride = readE2EAuthOverride();
@@ -394,274 +185,6 @@ export function PlannerWeekScreen({
     });
   }, [authState, loadPlanner, rangeEndDate, rangeStartDate]);
 
-  const runMutation = useCallback(
-    async (mutation: () => Promise<void>) => {
-      clearFeedback();
-
-      try {
-        await mutation();
-      } catch (error) {
-        if (isPlannerApiError(error) && error.status === 401) {
-          setAuthState("unauthorized");
-        }
-      }
-    },
-    [clearFeedback],
-  );
-
-  const handleRangeShift = useCallback(
-    (direction: "next" | "prev") => {
-      clearFeedback();
-      shiftRange(direction === "next" ? RANGE_SHIFT_DAYS : -RANGE_SHIFT_DAYS);
-    },
-    [clearFeedback, shiftRange],
-  );
-
-  const handleGridWheel = useCallback(
-    (event: React.WheelEvent<HTMLDivElement>) => {
-      if (authState !== "authenticated") {
-        return;
-      }
-
-      if (Math.abs(event.deltaY) < 48) {
-        return;
-      }
-
-      const now = Date.now();
-
-      if (now - scrollShiftAtRef.current < SCROLL_SHIFT_DEBOUNCE_MS) {
-        return;
-      }
-
-      scrollShiftAtRef.current = now;
-      handleRangeShift(event.deltaY > 0 ? "next" : "prev");
-    },
-    [authState, handleRangeShift],
-  );
-
-  const handleAddColumn = useCallback(async () => {
-    const name = newColumnName.trim();
-
-    if (!name) {
-      return;
-    }
-
-    await runMutation(async () => {
-      await addColumn(name);
-      setNewColumnName("");
-    });
-  }, [addColumn, newColumnName, runMutation]);
-
-  const handleRenameColumn = useCallback(
-    async (columnId: string) => {
-      const draftName = columnNameDrafts[columnId] ?? "";
-
-      await runMutation(async () => {
-        await renameColumn(columnId, draftName);
-      });
-    },
-    [columnNameDrafts, renameColumn, runMutation],
-  );
-
-  const handleReorderColumn = useCallback(
-    async (columnId: string, nextSortOrder: number) => {
-      const clampedSortOrder = clampSortOrder(nextSortOrder, sortedColumns.length);
-
-      await runMutation(async () => {
-        await reorderColumn(columnId, clampedSortOrder);
-      });
-    },
-    [reorderColumn, runMutation, sortedColumns.length],
-  );
-
-  const handleDeleteColumn = useCallback(
-    async (columnId: string) => {
-      await runMutation(async () => {
-        await removeColumn(columnId);
-      });
-    },
-    [removeColumn, runMutation],
-  );
-
-  const clearDragState = useCallback(() => {
-    dragCleanupRef.current?.();
-    dragCleanupRef.current = null;
-    activeDragColumnIdRef.current = null;
-    dragOverColumnIdRef.current = null;
-    setActiveDragColumnId(null);
-    setDragOverColumnId(null);
-  }, []);
-
-  const handleTouchDragStart = useCallback(
-    (columnId: string, event: React.PointerEvent<HTMLButtonElement>) => {
-      event.preventDefault();
-
-      dragCleanupRef.current?.();
-
-      const pointerId = event.pointerId;
-      const target = event.currentTarget;
-
-      target.setPointerCapture?.(pointerId);
-      activeDragColumnIdRef.current = columnId;
-      dragOverColumnIdRef.current = columnId;
-      setActiveDragColumnId(columnId);
-      setDragOverColumnId(columnId);
-
-      const updateDragTarget = (clientX: number, clientY: number) => {
-        const nextColumnId = resolveColumnIdFromPoint(clientX, clientY);
-
-        if (!nextColumnId || dragOverColumnIdRef.current === nextColumnId) {
-          return;
-        }
-
-        dragOverColumnIdRef.current = nextColumnId;
-        setDragOverColumnId(nextColumnId);
-      };
-
-      const handlePointerMove = (moveEvent: PointerEvent) => {
-        if (moveEvent.pointerId !== pointerId) {
-          return;
-        }
-
-        updateDragTarget(moveEvent.clientX, moveEvent.clientY);
-      };
-
-      const finishTouchDrag = (endEvent?: PointerEvent) => {
-        if (endEvent && endEvent.pointerId !== pointerId) {
-          return;
-        }
-
-        const activeColumnId = activeDragColumnIdRef.current;
-        const nextColumnId = dragOverColumnIdRef.current;
-
-        target.releasePointerCapture?.(pointerId);
-
-        activeDragColumnIdRef.current = null;
-        dragOverColumnIdRef.current = null;
-        setActiveDragColumnId(null);
-        setDragOverColumnId(null);
-
-        window.removeEventListener("pointermove", handlePointerMove);
-        window.removeEventListener("pointerup", finishTouchDrag);
-        window.removeEventListener("pointercancel", finishTouchDrag);
-        dragCleanupRef.current = null;
-
-        if (!activeColumnId || !nextColumnId || activeColumnId === nextColumnId) {
-          return;
-        }
-
-        const nextSortOrder = sortedColumns.findIndex((column) => column.id === nextColumnId);
-
-        if (nextSortOrder < 0) {
-          return;
-        }
-
-        void handleReorderColumn(activeColumnId, nextSortOrder);
-      };
-
-      window.addEventListener("pointermove", handlePointerMove);
-      window.addEventListener("pointerup", finishTouchDrag);
-      window.addEventListener("pointercancel", finishTouchDrag);
-      dragCleanupRef.current = () => {
-        target.releasePointerCapture?.(pointerId);
-        window.removeEventListener("pointermove", handlePointerMove);
-        window.removeEventListener("pointerup", finishTouchDrag);
-        window.removeEventListener("pointercancel", finishTouchDrag);
-      };
-    },
-    [handleReorderColumn, sortedColumns],
-  );
-
-  const handleColumnDragStart = useCallback((columnId: string) => {
-    activeDragColumnIdRef.current = columnId;
-    dragOverColumnIdRef.current = columnId;
-    setActiveDragColumnId(columnId);
-    setDragOverColumnId(columnId);
-  }, []);
-
-  const handleColumnDragOver = useCallback((columnId: string) => {
-    if (!activeDragColumnIdRef.current || dragOverColumnIdRef.current === columnId) {
-      return;
-    }
-
-    dragOverColumnIdRef.current = columnId;
-    setDragOverColumnId(columnId);
-  }, []);
-
-  const handlePlannerGridDragOver = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
-      if (!activeDragColumnIdRef.current) {
-        return;
-      }
-
-      event.preventDefault();
-
-      const nextColumnId = readColumnIdFromTarget(event.target);
-
-      if (!nextColumnId) {
-        return;
-      }
-
-      handleColumnDragOver(nextColumnId);
-    },
-    [handleColumnDragOver],
-  );
-
-  const handleColumnDrop = useCallback(
-    (columnId: string) => {
-      const activeColumnId = activeDragColumnIdRef.current;
-
-      clearDragState();
-
-      if (!activeColumnId || activeColumnId === columnId) {
-        return;
-      }
-
-      const nextSortOrder = sortedColumns.findIndex((column) => column.id === columnId);
-
-      if (nextSortOrder < 0) {
-        return;
-      }
-
-      void handleReorderColumn(activeColumnId, nextSortOrder);
-    },
-    [clearDragState, handleReorderColumn, sortedColumns],
-  );
-
-  const handleColumnDragEnd = useCallback(
-    (event: React.DragEvent<HTMLButtonElement>) => {
-      const nextColumnId = resolveColumnIdFromPoint(event.clientX, event.clientY);
-
-      if (
-        nextColumnId &&
-        activeDragColumnIdRef.current &&
-        nextColumnId !== activeDragColumnIdRef.current
-      ) {
-        handleColumnDrop(nextColumnId);
-        return;
-      }
-
-      clearDragState();
-    },
-    [clearDragState, handleColumnDrop],
-  );
-
-  const handlePlannerGridDrop = useCallback(
-    (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-
-      const columnId = readColumnIdFromTarget(event.target);
-
-      if (!columnId) {
-        clearDragState();
-        return;
-      }
-
-      handleColumnDrop(columnId);
-    },
-    [clearDragState, handleColumnDrop],
-  );
-
   if (authState === "checking") {
     return (
       <div className="glass-panel rounded-[20px] p-6">
@@ -698,84 +221,112 @@ export function PlannerWeekScreen({
   }
 
   return (
-    <div className="space-y-6">
-      <section className="glass-panel rounded-[24px] px-5 py-6 md:px-6">
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-4">
+      <section className="glass-panel rounded-[24px] px-5 py-5 md:px-6">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
                 Planner Week
               </p>
-              <h2 className="mt-3 text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
+              <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
                 식단 플래너
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-                날짜 범위를 넘기며 이번 주 집밥 흐름을 보고, 끼니 컬럼을 원하는 순서로 정리해요.
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                주간 범위와 하루 카드에서 집밥 흐름을 빠르게 살펴봐요.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs font-semibold text-[var(--muted)]">
-              <span className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-2">
-                등록된 식사 {meals.length}건
-              </span>
-              <span className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-2">
-                컬럼 {sortedColumns.length}개
-              </span>
+            <div className="flex flex-wrap gap-2">
+              {CTA_BUTTONS.map((label) => (
+                <button
+                  key={label}
+                  aria-disabled="true"
+                  className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)] opacity-60"
+                  disabled
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-[20px] border border-[var(--line)] bg-white/72 px-4 py-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
-                현재 범위
-              </p>
-              <h3 className="mt-2 text-lg font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-                {formatDateLabel(rangeStartDate)} ~ {formatDateLabel(rangeEndDate)}
-              </h3>
+          <div className="rounded-[20px] border border-[var(--line)] bg-white/78 px-4 py-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+                  현재 범위
+                </p>
+                <h3 className="mt-2 text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                  {formatRangeLabel(rangeStartDate, rangeEndDate)}
+                </h3>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+                  onClick={() => shiftRange(-RANGE_SHIFT_DAYS)}
+                  type="button"
+                >
+                  이전 주
+                </button>
+                <button
+                  className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+                  disabled={isCurrentRange}
+                  onClick={() => resetRange()}
+                  type="button"
+                >
+                  이번주로 가기
+                </button>
+                <button
+                  className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+                  onClick={() => shiftRange(RANGE_SHIFT_DAYS)}
+                  type="button"
+                >
+                  다음 주
+                </button>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
-                onClick={() => handleRangeShift("prev")}
-                type="button"
-              >
-                이전 범위
-              </button>
-              <button
-                className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
-                onClick={() => handleRangeShift("next")}
-                type="button"
-              >
-                다음 범위
-              </button>
-            </div>
+
+            <dl className="mt-4 grid gap-2 text-sm text-[var(--muted)] sm:grid-cols-3">
+              <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3">
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.18em]">범위</dt>
+                <dd className="mt-1 font-semibold text-[var(--foreground)]">
+                  {rangeStartDate} ~ {rangeEndDate}
+                </dd>
+              </div>
+              <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3">
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.18em]">식사 수</dt>
+                <dd className="mt-1 font-semibold text-[var(--foreground)]">{meals.length}건</dd>
+              </div>
+              <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3">
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.18em]">화면 상태</dt>
+                <dd className="mt-1 font-semibold text-[var(--foreground)]">{screenState}</dd>
+              </div>
+            </dl>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {CTA_BUTTONS.map((label) => (
-              <button
-                key={label}
-                aria-disabled="true"
-                className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)] opacity-60"
-                disabled
-                type="button"
+          <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-[var(--muted)]">
+            {dateKeys.slice(0, 7).map((dateKey) => (
+              <div
+                key={dateKey}
+                className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-2 py-2"
               >
-                {label}
-              </button>
+                <p>{formatWeekdayLabel(dateKey)}</p>
+                <p className="mt-1 text-sm text-[var(--foreground)]">{dateKey.slice(8)}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {screenState === "loading" ? (
-        <div className="glass-panel rounded-[20px] p-5">
-          <div className="grid gap-3 md:grid-cols-2">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div
-                key={index}
-                className="min-h-24 animate-pulse rounded-[16px] bg-white/70"
-              />
-            ))}
-          </div>
+        <div className="grid gap-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={index}
+              className="glass-panel min-h-36 animate-pulse rounded-[20px] bg-white/70"
+            />
+          ))}
         </div>
       ) : null}
 
@@ -794,183 +345,86 @@ export function PlannerWeekScreen({
         />
       ) : null}
 
-      {screenState === "read-only" ? (
-        <ContentState
-          description="현재 슬라이스에서는 플래너 조회 화면이 항상 수정 가능한 상태로 제공돼요."
-          title="읽기 전용 상태는 이번 단계에서 사용하지 않아요"
-        />
-      ) : null}
-
       {screenState === "ready" || screenState === "empty" ? (
-        <section className="glass-panel min-w-0 overflow-hidden rounded-[20px]">
-          <div className="border-b border-[var(--line)] px-5 py-5 md:px-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-                  Planner Grid
-                </p>
-                <h3 className="mt-2 text-2xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-                  주간 플래너 표
-                </h3>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-                  날짜와 끼니 컬럼을 한눈에 보면서 식단을 관리해요. 가로 이동이 필요하면 아래 플래너 표 안에서만 움직이고, 세로 스크롤은 날짜 범위를 넘기는 데 사용해요.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2 text-xs font-semibold text-[var(--muted)]">
-                <span className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-2">
-                  등록된 식사 {meals.length}건
-                </span>
-                <span className="rounded-full border border-[var(--line)] bg-white/80 px-3 py-2">
-                  컬럼 {sortedColumns.length}개
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="flex min-h-11 min-w-0 flex-1 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3 sm:max-w-sm">
-                <span className="visually-hidden">새 끼니 컬럼 이름</span>
-                <input
-                  className="w-full bg-transparent outline-none placeholder:text-[var(--muted)]"
-                  onChange={(event) => setNewColumnName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      void handleAddColumn();
-                    }
-                  }}
-                  placeholder="새 끼니 컬럼 이름"
-                  value={newColumnName}
-                />
-              </label>
-              <button
-                className="min-h-11 shrink-0 rounded-full bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                disabled={isMutating}
-                onClick={() => void handleAddColumn()}
-                type="button"
-              >
-                컬럼 추가
-              </button>
-            </div>
-
-            {feedbackMessage ? (
-              <p className="mt-3 rounded-[12px] border border-[color:rgba(255,108,60,0.25)] bg-[color:rgba(255,108,60,0.08)] px-4 py-3 text-sm text-[var(--brand-deep)]">
-                {feedbackMessage}
-              </p>
-            ) : null}
-          </div>
-
+        <section className="space-y-3">
           {screenState === "empty" ? (
-            <div className="border-b border-[var(--line)] px-5 py-4 md:px-6">
-              <p className="text-sm leading-6 text-[var(--muted)]">
-                아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요.
-              </p>
+            <div className="glass-panel rounded-[20px] px-4 py-4">
+              <p className="text-sm text-[var(--muted)]">아직 등록된 식사가 없어요</p>
             </div>
           ) : null}
 
-          <div
-            className="min-w-0 overflow-x-auto overscroll-x-contain"
-            onDragOver={handlePlannerGridDragOver}
-            onDrop={handlePlannerGridDrop}
-            onWheel={handleGridWheel}
-          >
-            <div className="px-5 py-5 md:px-6">
-              <div
-                className="grid gap-3"
-                style={{
-                  gridTemplateColumns: `160px repeat(${sortedColumns.length}, minmax(220px, 1fr))`,
-                  minWidth: `${plannerGridMinWidth}px`,
-                }}
-              >
-                <div className="rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                  날짜
+          {dateKeys.map((dateKey) => (
+            <article
+              key={dateKey}
+              aria-label={`${formatDateLabel(dateKey)} 식단 카드`}
+              className="glass-panel rounded-[22px] px-4 py-4"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-[12px] bg-[var(--foreground)] px-3 text-sm font-bold text-white">
+                    {formatWeekdayLabel(dateKey)}
+                  </span>
+                  <div>
+                    <p className="text-lg font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                      {formatDateLabel(dateKey)}
+                    </p>
+                    <p className="text-xs text-[var(--muted)]">{dateKey}</p>
+                  </div>
                 </div>
-                {sortedColumns.map((column) => {
-                  const draftName = columnNameDrafts[column.id] ?? column.name;
+                <button
+                  aria-disabled="true"
+                  className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full border border-[var(--line)] text-lg text-[var(--muted)] opacity-55"
+                  disabled
+                  type="button"
+                >
+                  ⋯
+                </button>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {columns.map((column) => {
+                  const slotKey = `${dateKey}:${column.id}`;
+                  const slotMeals = mealsByDateAndColumn.get(slotKey) ?? [];
+                  const meal = slotMeals[0] ?? null;
 
                   return (
-                    <PlannerColumnCard
-                      key={column.id}
-                      column={column}
-                      columnCount={sortedColumns.length}
-                      draftName={draftName}
-                      isActiveDrag={activeDragColumnId === column.id}
-                      isDragTarget={Boolean(
-                        activeDragColumnId &&
-                          dragOverColumnId === column.id &&
-                          activeDragColumnId !== column.id,
+                    <section
+                      key={slotKey}
+                      className={`rounded-[18px] border px-3 py-3 ${
+                        meal?.is_leftover
+                          ? "border-[color:rgba(46,166,122,0.2)] bg-[color:rgba(46,166,122,0.08)]"
+                          : "border-[var(--line)] bg-[var(--surface)]"
+                      }`}
+                    >
+                      <h4 className="text-sm font-bold text-[var(--foreground)]">{column.name}</h4>
+                      {meal ? (
+                        <>
+                          <p className="mt-2 line-clamp-2 text-sm font-semibold text-[var(--foreground)]">
+                            {meal.recipe_title}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--muted)]">
+                            {meal.planned_servings}인분
+                          </p>
+                          <span
+                            className={`mt-2 inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${STATUS_META[meal.status].className}`}
+                          >
+                            {STATUS_META[meal.status].label}
+                          </span>
+                          {slotMeals.length > 1 ? (
+                            <p className="mt-2 text-[11px] text-[var(--muted)]">
+                              +{slotMeals.length - 1}건 더 있음
+                            </p>
+                          ) : null}
+                        </>
+                      ) : (
+                        <p className="mt-2 text-sm text-[var(--muted)]">비어 있음</p>
                       )}
-                      isMutating={isMutating}
-                      onDelete={(columnId) => void handleDeleteColumn(columnId)}
-                      onDraftNameChange={(columnId, value) =>
-                        setColumnNameDrafts((current) => ({
-                          ...current,
-                          [columnId]: value,
-                        }))
-                      }
-                      onKeyboardReorder={(columnId, nextSortOrder) =>
-                        void handleReorderColumn(columnId, nextSortOrder)
-                      }
-                      onDragEnd={handleColumnDragEnd}
-                      onDragOver={handleColumnDragOver}
-                      onDragStart={handleColumnDragStart}
-                      onDrop={handleColumnDrop}
-                      onTouchDragStart={handleTouchDragStart}
-                      onRename={(columnId) => void handleRenameColumn(columnId)}
-                    />
+                    </section>
                   );
                 })}
-
-                {dateKeys.map((dateKey) => (
-                  <React.Fragment key={dateKey}>
-                    <div className="rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-sm font-semibold text-[var(--foreground)]">
-                      {formatDateLabel(dateKey)}
-                    </div>
-                    {sortedColumns.map((column) => {
-                      const cellKey = `${dateKey}:${column.id}`;
-                      const cellMeals = mealsByDateAndColumn.get(cellKey) ?? [];
-                      const primaryMeal = cellMeals[0] ?? null;
-
-                      return (
-                        <div
-                          key={cellKey}
-                          className={`rounded-[12px] border px-3 py-3 ${
-                            primaryMeal?.is_leftover
-                              ? "border-[color:rgba(46,166,122,0.2)] bg-[color:rgba(46,166,122,0.08)]"
-                              : "border-[var(--line)] bg-[var(--surface)]"
-                          }`}
-                        >
-                          {primaryMeal ? (
-                            <>
-                              <p className="text-sm font-semibold text-[var(--foreground)]">
-                                {primaryMeal.recipe_title}
-                              </p>
-                              <p className="mt-1 text-xs text-[var(--muted)]">
-                                {primaryMeal.planned_servings}인분
-                              </p>
-                              <span
-                                className={`mt-2 inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${STATUS_META[primaryMeal.status].className}`}
-                              >
-                                {STATUS_META[primaryMeal.status].label}
-                              </span>
-                              {cellMeals.length > 1 ? (
-                                <p className="mt-2 text-[11px] text-[var(--muted)]">
-                                  외 {cellMeals.length - 1}건 더 있어요
-                                </p>
-                              ) : null}
-                            </>
-                          ) : (
-                            <p className="text-xs leading-5 text-[var(--muted)]">
-                              등록된 식사가 없어요
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
               </div>
-            </div>
-          </div>
+            </article>
+          ))}
         </section>
       ) : null}
     </div>
