@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
@@ -25,11 +25,9 @@ export interface PlannerWeekScreenProps {
 }
 
 const RANGE_SHIFT_DAYS = 7;
-const SWIPE_THRESHOLD_PX = 44;
-const SWIPE_PREVIEW_OFFSET_PX = 16;
-const SWIPE_MAX_DRAG_PX = 36;
+const WEEK_PAGE_INDEX_CURRENT = 1;
+const WEEK_SCROLL_SETTLE_MS = 96;
 const CTA_BUTTONS = ["장보기", "요리하기", "남은요리"] as const;
-type SwipeDirection = -1 | 0 | 1;
 
 const STATUS_META: Record<
   MealStatus,
@@ -88,10 +86,6 @@ function formatRangeLabel(startDate: string, endDate: string) {
   return `${formatDateLabel(startDate)} ~ ${formatDateLabel(endDate)}`;
 }
 
-function clampSwipeOffset(deltaX: number) {
-  return Math.max(-SWIPE_MAX_DRAG_PX, Math.min(SWIPE_MAX_DRAG_PX, deltaX));
-}
-
 function getRangeContextLabel(startDate: string, defaultStartDate: string) {
   if (startDate === defaultStartDate) {
     return "이번 주";
@@ -112,31 +106,6 @@ function buildMealMap(meals: PlannerMealData[]) {
   return mealMap;
 }
 
-function getDragPreviewDirection(
-  isWeekStripDragging: boolean,
-  weekStripOffset: number,
-): SwipeDirection {
-  if (!isWeekStripDragging || weekStripOffset === 0) {
-    return 0;
-  }
-
-  return weekStripOffset < 0 ? 1 : -1;
-}
-
-function buildPreviewTrackTransform(direction: SwipeDirection, weekStripOffset: number) {
-  if (direction === 1) {
-    const offset = Math.abs(weekStripOffset);
-    return `translateX(calc(100% - ${offset}px))`;
-  }
-
-  if (direction === -1) {
-    const offset = Math.abs(weekStripOffset);
-    return `translateX(calc(-100% + ${offset}px))`;
-  }
-
-  return "translateX(0px)";
-}
-
 export function PlannerWeekScreen({
   initialAuthenticated = false,
 }: PlannerWeekScreenProps) {
@@ -154,9 +123,6 @@ export function PlannerWeekScreen({
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
-  const [isWeekStripDragging, setIsWeekStripDragging] = useState(false);
-  const [weekStripOffset, setWeekStripOffset] = useState(0);
-  const [refreshDirection, setRefreshDirection] = useState<SwipeDirection>(0);
 
   const dateKeys = useMemo(
     () => buildDateKeys(rangeStartDate, rangeEndDate),
@@ -166,34 +132,42 @@ export function PlannerWeekScreen({
   const defaultRange = createDefaultPlannerRange();
   const isCurrentRange =
     rangeStartDate === defaultRange.startDate && rangeEndDate === defaultRange.endDate;
-  const dragPreviewDirection = getDragPreviewDirection(
-    isWeekStripDragging,
-    weekStripOffset,
-  );
-  const previewRange = useMemo(() => {
-    if (dragPreviewDirection === 0) {
-      return null;
-    }
-
-    return shiftPlannerRange(
+  const weekStripViewportRef = useRef<HTMLDivElement | null>(null);
+  const weekStripSettleTimerRef = useRef<number | null>(null);
+  const isWeekStripInteractingRef = useRef(false);
+  const isRecenteringWeekStripRef = useRef(false);
+  const rangeContextLabel = getRangeContextLabel(rangeStartDate, defaultRange.startDate);
+  const weekPages = useMemo(() => {
+    const previousRange = shiftPlannerRange(
       {
         startDate: rangeStartDate,
         endDate: rangeEndDate,
       },
-      dragPreviewDirection === 1 ? RANGE_SHIFT_DAYS : -RANGE_SHIFT_DAYS,
+      -RANGE_SHIFT_DAYS,
     );
-  }, [dragPreviewDirection, rangeEndDate, rangeStartDate]);
-  const previewDateKeys = useMemo(() => {
-    if (!previewRange) {
-      return [];
-    }
+    const nextRange = shiftPlannerRange(
+      {
+        startDate: rangeStartDate,
+        endDate: rangeEndDate,
+      },
+      RANGE_SHIFT_DAYS,
+    );
 
-    return buildDateKeys(previewRange.startDate, previewRange.endDate);
-  }, [previewRange]);
-  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
-  const gestureSourceRef = useRef<"pointer" | "touch" | null>(null);
-  const activePointerIdRef = useRef<number | null>(null);
-  const rangeContextLabel = getRangeContextLabel(rangeStartDate, defaultRange.startDate);
+    return [
+      {
+        key: "prev",
+        dateKeys: buildDateKeys(previousRange.startDate, previousRange.endDate),
+      },
+      {
+        key: "current",
+        dateKeys,
+      },
+      {
+        key: "next",
+        dateKeys: buildDateKeys(nextRange.startDate, nextRange.endDate),
+      },
+    ] as const;
+  }, [dateKeys, rangeEndDate, rangeStartDate]);
 
   function runPlannerAction(action: Promise<void>) {
     void action.catch((error) => {
@@ -203,129 +177,86 @@ export function PlannerWeekScreen({
     });
   }
 
-  function resetWeekStripGesture() {
-    swipeStartRef.current = null;
-    gestureSourceRef.current = null;
-    activePointerIdRef.current = null;
-    setIsWeekStripDragging(false);
-    setWeekStripOffset(0);
+  function clearWeekStripSettleTimer() {
+    if (weekStripSettleTimerRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(weekStripSettleTimerRef.current);
+    weekStripSettleTimerRef.current = null;
   }
 
-  function beginWeekStripGesture(
-    source: "pointer" | "touch",
-    clientX: number,
-    clientY: number,
-  ) {
-    if (gestureSourceRef.current && gestureSourceRef.current !== source) {
+  function recenterWeekStripViewport() {
+    const viewport = weekStripViewportRef.current;
+
+    if (!viewport) {
       return;
     }
 
-    if (isRefreshing || screenState === "loading") {
-      return;
-    }
-
-    gestureSourceRef.current = source;
-    swipeStartRef.current = {
-      x: clientX,
-      y: clientY,
-    };
-    setIsWeekStripDragging(true);
-    setWeekStripOffset(0);
+    const targetLeft = viewport.clientWidth * WEEK_PAGE_INDEX_CURRENT;
+    isRecenteringWeekStripRef.current = true;
+    viewport.scrollLeft = targetLeft;
+    window.requestAnimationFrame(() => {
+      isRecenteringWeekStripRef.current = false;
+    });
   }
 
-  function updateWeekStripGesture(
-    source: "pointer" | "touch",
-    clientX: number,
-    clientY: number,
-  ) {
-    if (gestureSourceRef.current !== source) {
-      return false;
-    }
+  function commitSettledWeekStripPage() {
+    const viewport = weekStripViewportRef.current;
 
-    const swipeStart = swipeStartRef.current;
-
-    if (!swipeStart) {
-      return false;
-    }
-
-    const deltaX = clientX - swipeStart.x;
-    const deltaY = clientY - swipeStart.y;
-    const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
-
-    if (isHorizontalSwipe) {
-      setWeekStripOffset(clampSwipeOffset(deltaX));
-    }
-
-    return isHorizontalSwipe;
-  }
-
-  function completeWeekStripGesture(
-    source: "pointer" | "touch",
-    clientX: number,
-    clientY: number,
-  ) {
-    if (gestureSourceRef.current !== source) {
+    if (!viewport) {
       return;
     }
 
-    const swipeStart = swipeStartRef.current;
-    gestureSourceRef.current = null;
-    swipeStartRef.current = null;
-    setIsWeekStripDragging(false);
+    const pageWidth = viewport.clientWidth;
 
-    if (!swipeStart) {
-      setWeekStripOffset(0);
+    if (pageWidth <= 0) {
       return;
     }
 
-    const deltaX = clientX - swipeStart.x;
-    const deltaY = clientY - swipeStart.y;
+    const pageIndex = Math.round(viewport.scrollLeft / pageWidth);
 
-    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX || Math.abs(deltaX) <= Math.abs(deltaY)) {
-      setWeekStripOffset(0);
+    if (pageIndex === WEEK_PAGE_INDEX_CURRENT) {
       return;
     }
 
-    const nextDirection: SwipeDirection = deltaX < 0 ? 1 : -1;
-    setRefreshDirection(nextDirection);
-    setWeekStripOffset(nextDirection === 1 ? -SWIPE_PREVIEW_OFFSET_PX : SWIPE_PREVIEW_OFFSET_PX);
     runPlannerAction(
-      shiftRange(nextDirection === 1 ? RANGE_SHIFT_DAYS : -RANGE_SHIFT_DAYS),
+      shiftRange(pageIndex > WEEK_PAGE_INDEX_CURRENT ? RANGE_SHIFT_DAYS : -RANGE_SHIFT_DAYS),
     );
   }
 
-  function handleWeekStripPointerEnd(event: React.PointerEvent<HTMLDivElement>) {
-    if (activePointerIdRef.current !== event.pointerId) {
+  function scheduleWeekStripCommit() {
+    if (isRecenteringWeekStripRef.current || isRefreshing) {
       return;
     }
 
-    activePointerIdRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    completeWeekStripGesture("pointer", event.clientX, event.clientY);
+    clearWeekStripSettleTimer();
+    weekStripSettleTimerRef.current = window.setTimeout(() => {
+      if (isWeekStripInteractingRef.current) {
+        scheduleWeekStripCommit();
+        return;
+      }
+
+      commitSettledWeekStripPage();
+    }, WEEK_SCROLL_SETTLE_MS);
   }
 
-  function handleWeekStripPointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    if (event.pointerType === "touch") {
+  function handleWeekStripScroll() {
+    if (!weekStripViewportRef.current) {
       return;
     }
 
-    if (event.pointerType === "mouse" && event.button !== 0) {
-      return;
-    }
-
-    activePointerIdRef.current = event.pointerId;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    beginWeekStripGesture("pointer", event.clientX, event.clientY);
+    scheduleWeekStripCommit();
   }
 
-  function handleWeekStripPointerMove(event: React.PointerEvent<HTMLDivElement>) {
-    if (activePointerIdRef.current !== event.pointerId) {
-      return;
-    }
+  function handleWeekStripInteractionStart() {
+    isWeekStripInteractingRef.current = true;
+    clearWeekStripSettleTimer();
+  }
 
-    updateWeekStripGesture("pointer", event.clientX, event.clientY);
+  function handleWeekStripInteractionEnd() {
+    isWeekStripInteractingRef.current = false;
+    scheduleWeekStripCommit();
   }
 
   function handleWeekStripKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
@@ -346,60 +277,6 @@ export function PlannerWeekScreen({
       runPlannerAction(resetRange());
     }
   }
-
-  function handleWeekStripTouchStart(event: React.TouchEvent<HTMLDivElement>) {
-    const touch = event.touches[0];
-
-    if (!touch) {
-      return;
-    }
-
-    beginWeekStripGesture("touch", touch.clientX, touch.clientY);
-  }
-
-  function handleWeekStripTouchMove(event: React.TouchEvent<HTMLDivElement>) {
-    const touch = event.touches[0];
-
-    if (!touch) {
-      return;
-    }
-
-    const isHorizontalSwipe = updateWeekStripGesture("touch", touch.clientX, touch.clientY);
-
-    if (isHorizontalSwipe) {
-      event.preventDefault();
-    }
-  }
-
-  function handleWeekStripTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
-    const touch = event.changedTouches[0];
-
-    if (!touch) {
-      resetWeekStripGesture();
-      return;
-    }
-
-    completeWeekStripGesture("touch", touch.clientX, touch.clientY);
-  }
-
-  useEffect(() => {
-    if (isRefreshing) {
-      return;
-    }
-
-    if (refreshDirection === 0 && weekStripOffset === 0) {
-      return;
-    }
-
-    const resetMotion = window.requestAnimationFrame(() => {
-      setWeekStripOffset(0);
-      setRefreshDirection(0);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(resetMotion);
-    };
-  }, [isRefreshing, refreshDirection, weekStripOffset]);
 
   useEffect(() => {
     const e2eAuthOverride = readE2EAuthOverride();
@@ -470,24 +347,24 @@ export function PlannerWeekScreen({
     runPlannerAction(loadPlanner());
   }, [authState, loadPlanner]);
 
-  const weekStripMotionStyle = {
-    opacity: isRefreshing ? 0.96 : 1,
-    transform: `translateX(${weekStripOffset}px)`,
-    transition: isWeekStripDragging
-      ? "none"
-      : "transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 180ms ease",
-  } as const;
+  useLayoutEffect(() => {
+    if (authState !== "authenticated") {
+      return;
+    }
+
+    recenterWeekStripViewport();
+  }, [authState, rangeEndDate, rangeStartDate]);
+
+  useEffect(() => {
+    return () => {
+      clearWeekStripSettleTimer();
+    };
+  }, []);
+
   const plannerBodyMotionStyle = {
     opacity: isRefreshing ? 0.97 : 1,
     transform: "translateX(0px)",
     transition: "opacity 180ms ease",
-  } as const;
-  const previewTrackMotionStyle = {
-    opacity: isWeekStripDragging ? 1 : 0,
-    transform: buildPreviewTrackTransform(dragPreviewDirection, weekStripOffset),
-    transition: isWeekStripDragging
-      ? "none"
-      : "transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 180ms ease",
   } as const;
 
   if (authState === "checking") {
@@ -595,56 +472,40 @@ export function PlannerWeekScreen({
             aria-describedby="planner-week-strip-hint"
             aria-busy={isRefreshing}
             aria-label="주간 날짜 스트립"
-            className="touch-pan-y select-none"
+            className="scrollbar-hide overflow-x-auto overscroll-x-contain snap-x snap-mandatory touch-pan-x"
+            data-testid="planner-week-strip-viewport"
             onKeyDown={handleWeekStripKeyDown}
-            onPointerCancel={() => {
-              resetWeekStripGesture();
-            }}
-            onPointerDown={handleWeekStripPointerDown}
-            onPointerMove={handleWeekStripPointerMove}
-            onPointerUp={handleWeekStripPointerEnd}
-            onTouchCancel={resetWeekStripGesture}
-            onTouchEnd={handleWeekStripTouchEnd}
-            onTouchMove={handleWeekStripTouchMove}
-            onTouchStart={handleWeekStripTouchStart}
+            onScroll={handleWeekStripScroll}
+            onMouseDown={handleWeekStripInteractionStart}
+            onMouseUp={handleWeekStripInteractionEnd}
+            onMouseLeave={handleWeekStripInteractionEnd}
+            ref={weekStripViewportRef}
             tabIndex={0}
+            onTouchCancel={handleWeekStripInteractionEnd}
+            onTouchEnd={handleWeekStripInteractionEnd}
+            onTouchStart={handleWeekStripInteractionStart}
           >
-            <div className="relative overflow-hidden">
-              <ol
-                className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold text-[var(--muted)] sm:gap-2 sm:text-xs"
-                data-testid="planner-week-strip-current-track"
-                style={weekStripMotionStyle}
-              >
-                {dateKeys.map((dateKey) => (
-                  <li key={dateKey} className="list-none">
-                    <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-1 py-2 sm:px-1.5">
-                      <p>{formatWeekdayLabel(dateKey)}</p>
-                      <p className="mt-0.5 text-[clamp(0.9rem,3.2vw,0.98rem)] text-[var(--foreground)]">
-                        {dateKey.slice(8)}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-              {dragPreviewDirection !== 0 ? (
-                <ol
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold text-[var(--muted)] sm:gap-2 sm:text-xs"
-                  data-testid="planner-week-strip-preview-track"
-                  style={previewTrackMotionStyle}
+            <div className="flex">
+              {weekPages.map((page) => (
+                <section
+                  key={page.key}
+                  className="min-w-full snap-center snap-always"
+                  data-testid={`planner-week-strip-page-${page.key}`}
                 >
-                  {previewDateKeys.map((dateKey) => (
-                    <li key={dateKey} className="list-none">
-                      <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-1 py-2 sm:px-1.5">
-                        <p>{formatWeekdayLabel(dateKey)}</p>
-                        <p className="mt-0.5 text-[clamp(0.9rem,3.2vw,0.98rem)] text-[var(--foreground)]">
-                          {dateKey.slice(8)}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              ) : null}
+                  <ol className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold text-[var(--muted)] sm:gap-2 sm:text-xs">
+                    {page.dateKeys.map((dateKey) => (
+                      <li key={dateKey} className="list-none">
+                        <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-1 py-2 sm:px-1.5">
+                          <p>{formatWeekdayLabel(dateKey)}</p>
+                          <p className="mt-0.5 text-[clamp(0.9rem,3.2vw,0.98rem)] text-[var(--foreground)]">
+                            {dateKey.slice(8)}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              ))}
             </div>
           </div>
         </div>

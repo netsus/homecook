@@ -100,45 +100,24 @@ async function mockPlannerRoutes(page: Page) {
 }
 
 async function swipeWeekStrip(page: Page, direction: "next" | "prev") {
-  const strip = page.getByLabel("주간 날짜 스트립");
-  const box = await strip.boundingBox();
+  const strip = page.getByTestId("planner-week-strip-viewport");
 
-  if (!box) {
-    throw new Error("주간 날짜 스트립 bounds를 찾지 못했어요.");
-  }
+  await strip.evaluate((element, nextDirection) => {
+    const viewport = element as HTMLDivElement;
+    const pageWidth = viewport.clientWidth;
 
-  const startX = direction === "next" ? box.x + box.width - 12 : box.x + 12;
-  const middleX = box.x + box.width / 2;
-  const endX = direction === "next" ? box.x + 12 : box.x + box.width - 12;
-  const y = box.y + box.height / 2;
+    viewport.scrollLeft = nextDirection === "next" ? pageWidth * 2 : 0;
+    viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+  }, direction);
+  await page.waitForTimeout(140);
+}
 
-  await strip.evaluate((element, gesture) => {
-    const fireTouch = (type: "touchstart" | "touchmove" | "touchend", clientX: number) => {
-      const event = new Event(type, {
-        bubbles: true,
-        cancelable: true,
-      });
-      const touchList =
-        type === "touchend" ? [] : [{ clientX, clientY: gesture.y }];
-      Object.defineProperty(event, "touches", {
-        configurable: true,
-        value: touchList,
-      });
-      Object.defineProperty(event, "changedTouches", {
-        configurable: true,
-        value: [{ clientX, clientY: gesture.y }],
-      });
-      element.dispatchEvent(event);
-    };
+async function centerWeekStrip(page: Page) {
+  const strip = page.getByTestId("planner-week-strip-viewport");
 
-    fireTouch("touchstart", gesture.startX);
-    fireTouch("touchmove", gesture.middleX);
-    fireTouch("touchend", gesture.endX);
-  }, {
-    endX,
-    middleX,
-    startX,
-    y,
+  await strip.evaluate((element) => {
+    const viewport = element as HTMLDivElement;
+    viewport.scrollLeft = viewport.clientWidth;
   });
 }
 
@@ -150,14 +129,13 @@ test.describe("Slice 05 planner week core", () => {
     await page.goto("/planner");
 
     const firstDayCard = page.getByLabel(/식단 카드$/).first();
-    const dateStrip = page.getByLabel("주간 날짜 스트립");
 
     await expect(page.getByRole("heading", { name: "식단 플래너" })).toBeVisible();
     await expect(page.getByText("현재 범위")).toHaveCount(1);
     await expect(page.getByText("화면 상태")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "이전 주" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "다음 주" })).toHaveCount(0);
-    await expect(dateStrip.locator("li")).toHaveCount(7);
+    await expect(page.getByTestId("planner-week-strip-page-current").locator("li")).toHaveCount(7);
     await expect(firstDayCard.getByText("아침")).toBeVisible();
     await expect(firstDayCard.getByText("점심")).toBeVisible();
     await expect(firstDayCard.getByText("간식")).toBeVisible();
@@ -185,6 +163,7 @@ test.describe("Slice 05 planner week core", () => {
     const tracker = await mockPlannerRoutes(page);
 
     await page.goto("/planner");
+    await centerWeekStrip(page);
 
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(0);
     const initialRange = tracker.requestedRanges[0];

@@ -100,10 +100,26 @@ function createDeferred<T>() {
   };
 }
 
-function createTouchLikeEvent(clientX: number, clientY: number) {
+function primeWeekStripViewport(strip: HTMLElement) {
+  let scrollLeft = 320;
+
+  Object.defineProperty(strip, "clientWidth", {
+    configurable: true,
+    get: () => 320,
+  });
+  Object.defineProperty(strip, "scrollLeft", {
+    configurable: true,
+    get: () => scrollLeft,
+    set: (value: number) => {
+      scrollLeft = value;
+    },
+  });
+
   return {
-    changedTouches: [{ clientX, clientY }],
-    touches: [{ clientX, clientY }],
+    scrollToPage(pageIndex: number) {
+      scrollLeft = 320 * pageIndex;
+      fireEvent.scroll(strip);
+    },
   };
 }
 
@@ -224,7 +240,7 @@ describe("planner week screen", () => {
     expect(fetchPlanner).toHaveBeenCalledTimes(2);
   });
 
-  it("shifts planner range by touch swiping the weekday strip and keeps current-week reset as a secondary action", async () => {
+  it("shifts planner range when the native week strip scroll settles on the next page and keeps current-week reset as a secondary action", async () => {
     const user = userEvent.setup();
 
     readE2EAuthOverride.mockReturnValue(true);
@@ -235,11 +251,13 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    const strip = await screen.findByLabelText("주간 날짜 스트립");
+    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
 
-    fireEvent.touchStart(strip, createTouchLikeEvent(240, 18));
-    fireEvent.touchMove(strip, createTouchLikeEvent(140, 20));
-    fireEvent.touchEnd(strip, createTouchLikeEvent(32, 22));
+    const strip = await screen.findByTestId("planner-week-strip-viewport");
+    const viewport = primeWeekStripViewport(strip);
+
+    viewport.scrollToPage(2);
+    await new Promise((resolve) => window.setTimeout(resolve, 140));
 
     await waitFor(() => {
       expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
@@ -253,7 +271,7 @@ describe("planner week screen", () => {
     });
   });
 
-  it("keeps the weekly shell sticky and reveals the incoming week track during swipe preview", async () => {
+  it("renders the week strip as a sticky native horizontal scroller with hidden scrollbar", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(
       createPlannerData({
@@ -275,22 +293,18 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    const strip = await screen.findByLabelText("주간 날짜 스트립");
+    const strip = await screen.findByTestId("planner-week-strip-viewport");
     const stickyShell = screen.getByTestId("planner-week-shell");
-    const currentTrack = screen.getByTestId("planner-week-strip-current-track");
     const plannerBody = screen.getByTestId("planner-week-body");
 
-    fireEvent.touchStart(strip, createTouchLikeEvent(240, 18));
-    fireEvent.touchMove(strip, createTouchLikeEvent(140, 20));
-
-    expect(strip.className).toContain("touch-pan-y");
+    expect(strip.className).toContain("overflow-x-auto");
+    expect(strip.className).toContain("snap-x");
+    expect(strip.className).toContain("scrollbar-hide");
+    expect(strip.className).toContain("touch-pan-x");
     expect(stickyShell.className).toContain("sticky");
-    await waitFor(() => {
-      expect(currentTrack.getAttribute("style")).toContain("translateX(-36px)");
-    });
-    const previewTrack = screen.getByTestId("planner-week-strip-preview-track");
-    expect(previewTrack.getAttribute("style")).toContain("translateX(calc(100% - 36px))");
-    expect(previewTrack.textContent ?? "").toContain("31");
+    expect(screen.getByTestId("planner-week-strip-page-prev").textContent ?? "").toContain("17");
+    expect(screen.getByTestId("planner-week-strip-page-current").textContent ?? "").toContain("24");
+    expect(screen.getByTestId("planner-week-strip-page-next").textContent ?? "").toContain("31");
     expect(plannerBody.getAttribute("style")).toContain("translateX(0px)");
   });
 
@@ -324,11 +338,15 @@ describe("planner week screen", () => {
     );
 
     expect(await screen.findByText("김치찌개")).toBeTruthy();
+    await waitFor(() => {
+      expect(fetchPlanner).toHaveBeenCalledTimes(1);
+    });
 
-    const strip = screen.getByLabelText("주간 날짜 스트립");
-    fireEvent.touchStart(strip, createTouchLikeEvent(240, 18));
-    fireEvent.touchMove(strip, createTouchLikeEvent(140, 20));
-    fireEvent.touchEnd(strip, createTouchLikeEvent(32, 22));
+    const strip = screen.getByTestId("planner-week-strip-viewport");
+    const viewport = primeWeekStripViewport(strip);
+
+    viewport.scrollToPage(2);
+    await new Promise((resolve) => window.setTimeout(resolve, 140));
 
     await waitFor(() => {
       expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");

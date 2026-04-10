@@ -34,7 +34,7 @@ async function waitForPlannerRange(page: Page, {
   await expect(page.getByText(`${formatRangeLabel(startDate)} ~ ${formatRangeLabel(endDate)}`)).toBeVisible();
   await expect(page.getByText(`식사 ${mealCount}건`)).toBeVisible();
   await expect(page.getByText("화면 상태")).toHaveCount(0);
-  await expect(page.getByLabel("주간 날짜 스트립").locator("li")).toHaveCount(7);
+  await expect(page.getByTestId("planner-week-strip-page-current").locator("li")).toHaveCount(7);
 }
 
 async function measure(action: () => Promise<void>, assertion: () => Promise<void>) {
@@ -59,43 +59,24 @@ async function expectVisibleWithinViewport(page: Page, locator: Locator) {
 }
 
 async function swipeWeekStrip(page: Page, direction: "next" | "prev") {
-  const strip = page.getByLabel("주간 날짜 스트립");
-  const box = await strip.boundingBox();
+  const strip = page.getByTestId("planner-week-strip-viewport");
 
-  expect(box).not.toBeNull();
+  await strip.evaluate((element, nextDirection) => {
+    const viewport = element as HTMLDivElement;
+    const pageWidth = viewport.clientWidth;
 
-  const startX = direction === "next" ? box!.x + box!.width - 12 : box!.x + 12;
-  const middleX = box!.x + box!.width / 2;
-  const endX = direction === "next" ? box!.x + 12 : box!.x + box!.width - 12;
-  const y = box!.y + box!.height / 2;
+    viewport.scrollLeft = nextDirection === "next" ? pageWidth * 2 : 0;
+    viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+  }, direction);
+  await page.waitForTimeout(140);
+}
 
-  await strip.evaluate((element, gesture) => {
-    const fireTouch = (type: "touchstart" | "touchmove" | "touchend", clientX: number) => {
-      const event = new Event(type, {
-        bubbles: true,
-        cancelable: true,
-      });
-      const touchList =
-        type === "touchend" ? [] : [{ clientX, clientY: gesture.y }];
-      Object.defineProperty(event, "touches", {
-        configurable: true,
-        value: touchList,
-      });
-      Object.defineProperty(event, "changedTouches", {
-        configurable: true,
-        value: [{ clientX, clientY: gesture.y }],
-      });
-      element.dispatchEvent(event);
-    };
+async function centerWeekStrip(page: Page) {
+  const strip = page.getByTestId("planner-week-strip-viewport");
 
-    fireTouch("touchstart", gesture.startX);
-    fireTouch("touchmove", gesture.middleX);
-    fireTouch("touchend", gesture.endX);
-  }, {
-    endX,
-    middleX,
-    startX,
-    y,
+  await strip.evaluate((element) => {
+    const viewport = element as HTMLDivElement;
+    viewport.scrollLeft = viewport.clientWidth;
   });
 }
 
@@ -129,6 +110,7 @@ test.describe("Slice 05 local long-run performance smoke", () => {
       .getByRole("button", { name: dataset.scenario.loginButtonLabel })
       .click();
     await expect(page.getByRole("heading", { name: "식단 플래너" })).toBeVisible();
+    await centerWeekStrip(page);
     await waitForPlannerRange(page, {
       startDate: dataset.scenario.initialRangeStartDate,
       endDate: dataset.scenario.initialRangeEndDate,
@@ -171,7 +153,7 @@ test.describe("Slice 05 local long-run performance smoke", () => {
         / metrics.shiftDurationsMs.length,
     );
 
-    const lastDayChip = page.getByLabel("주간 날짜 스트립").locator("li").last();
+    const lastDayChip = page.getByTestId("planner-week-strip-page-current").locator("li").last();
 
     metrics.horizontalReachMs = await measure(
       async () => {

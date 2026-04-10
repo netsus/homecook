@@ -109,6 +109,15 @@ button {
   border: 0;
 }
 
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 @media (min-width: 768px) {
   .app-shell {
     padding: 28px 24px 108px;
