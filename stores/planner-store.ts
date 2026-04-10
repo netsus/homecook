@@ -23,10 +23,11 @@ interface PlannerStoreState {
   columns: PlannerColumnData[];
   meals: PlannerMealData[];
   screenState: PlannerScreenState;
+  isRefreshing: boolean;
   errorMessage: string | null;
-  loadPlanner: () => Promise<void>;
-  shiftRange: (dayDelta: number) => void;
-  resetRange: () => void;
+  loadPlanner: (rangeOverride?: { startDate: string; endDate: string }) => Promise<void>;
+  shiftRange: (dayDelta: number) => Promise<void>;
+  resetRange: () => Promise<void>;
 }
 
 function buildInitialState() {
@@ -38,6 +39,7 @@ function buildInitialState() {
     columns: [] as PlannerColumnData[],
     meals: [] as PlannerMealData[],
     screenState: "loading" as PlannerScreenState,
+    isRefreshing: false,
     errorMessage: null as string | null,
   };
 }
@@ -56,34 +58,52 @@ function resolveNextScreenState(meals: PlannerMealData[]): PlannerScreenState {
 
 export const usePlannerStore = create<PlannerStoreState>((set, get) => ({
   ...buildInitialState(),
-  loadPlanner: async () => {
-    const { rangeEndDate, rangeStartDate } = get();
+  loadPlanner: async (rangeOverride) => {
+    const {
+      columns,
+      meals,
+      rangeEndDate,
+      rangeStartDate,
+      screenState,
+    } = get();
+    const requestedRange = rangeOverride ?? {
+      endDate: rangeEndDate,
+      startDate: rangeStartDate,
+    };
+    const hasVisibleContent =
+      columns.length > 0 || meals.length > 0 || screenState === "empty";
 
     set({
       errorMessage: null,
-      screenState: "loading",
+      isRefreshing: hasVisibleContent,
+      screenState: hasVisibleContent ? screenState : "loading",
     });
 
     try {
-      const data = await fetchPlanner(rangeStartDate, rangeEndDate);
+      const data = await fetchPlanner(requestedRange.startDate, requestedRange.endDate);
       set({
         columns: data.columns,
         meals: data.meals,
+        rangeStartDate: requestedRange.startDate,
+        rangeEndDate: requestedRange.endDate,
         screenState: resolveNextScreenState(data.meals),
+        isRefreshing: false,
         errorMessage: null,
       });
     } catch (error) {
       if (isPlannerApiError(error) && error.status === 401) {
+        set({ isRefreshing: false });
         throw error;
       }
 
       set({
         errorMessage: resolveErrorMessage(error),
-        screenState: "error",
+        isRefreshing: false,
+        screenState: hasVisibleContent ? screenState : "error",
       });
     }
   },
-  shiftRange: (dayDelta) => {
+  shiftRange: async (dayDelta) => {
     const { rangeEndDate, rangeStartDate } = get();
     const nextRange = shiftPlannerRange(
       {
@@ -93,17 +113,19 @@ export const usePlannerStore = create<PlannerStoreState>((set, get) => ({
       dayDelta,
     );
 
-    set({
-      rangeStartDate: nextRange.startDate,
-      rangeEndDate: nextRange.endDate,
-    });
+    await get().loadPlanner(nextRange);
   },
-  resetRange: () => {
+  resetRange: async () => {
     const { endDate, startDate } = createDefaultPlannerRange();
+    const { rangeEndDate, rangeStartDate } = get();
 
-    set({
-      rangeStartDate: startDate,
-      rangeEndDate: endDate,
+    if (rangeStartDate === startDate && rangeEndDate === endDate) {
+      return;
+    }
+
+    await get().loadPlanner({
+      startDate,
+      endDate,
     });
   },
 }));

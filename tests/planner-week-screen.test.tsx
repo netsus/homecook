@@ -100,6 +100,13 @@ function createDeferred<T>() {
   };
 }
 
+function createTouchLikeEvent(clientX: number, clientY: number) {
+  return {
+    changedTouches: [{ clientX, clientY }],
+    touches: [{ clientX, clientY }],
+  };
+}
+
 describe("planner week screen", () => {
   beforeEach(() => {
     readE2EAuthOverride.mockReset();
@@ -217,7 +224,7 @@ describe("planner week screen", () => {
     expect(fetchPlanner).toHaveBeenCalledTimes(2);
   });
 
-  it("shifts planner range by swiping the weekday strip and keeps current-week reset as a secondary action", async () => {
+  it("shifts planner range by touch swiping the weekday strip and keeps current-week reset as a secondary action", async () => {
     const user = userEvent.setup();
 
     readE2EAuthOverride.mockReturnValue(true);
@@ -230,16 +237,9 @@ describe("planner week screen", () => {
 
     const strip = await screen.findByLabelText("주간 날짜 스트립");
 
-    fireEvent.pointerDown(strip, {
-      clientX: 240,
-      clientY: 18,
-      pointerType: "touch",
-    });
-    fireEvent.pointerUp(strip, {
-      clientX: 32,
-      clientY: 22,
-      pointerType: "touch",
-    });
+    fireEvent.touchStart(strip, createTouchLikeEvent(240, 18));
+    fireEvent.touchMove(strip, createTouchLikeEvent(140, 20));
+    fireEvent.touchEnd(strip, createTouchLikeEvent(32, 22));
 
     await waitFor(() => {
       expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
@@ -251,6 +251,70 @@ describe("planner week screen", () => {
     await waitFor(() => {
       expect(fetchPlanner).toHaveBeenNthCalledWith(3, "2026-03-24", "2026-03-30");
     });
+  });
+
+  it("keeps the previous planner content visible while the next week is refreshing", async () => {
+    const firstLoad = createDeferred<ReturnType<typeof createPlannerData>>();
+    const secondLoad = createDeferred<ReturnType<typeof createPlannerData>>();
+
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner
+      .mockImplementationOnce(() => firstLoad.promise)
+      .mockImplementationOnce(() => secondLoad.promise);
+
+    render(<PlannerWeekScreen />);
+
+    firstLoad.resolve(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_title: "김치찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    expect(await screen.findByText("김치찌개")).toBeTruthy();
+
+    const strip = screen.getByLabelText("주간 날짜 스트립");
+    fireEvent.touchStart(strip, createTouchLikeEvent(240, 18));
+    fireEvent.touchMove(strip, createTouchLikeEvent(140, 20));
+    fireEvent.touchEnd(strip, createTouchLikeEvent(32, 22));
+
+    await waitFor(() => {
+      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
+    });
+
+    expect(screen.getByText("김치찌개")).toBeTruthy();
+    expect(document.querySelectorAll(".animate-pulse").length).toBe(0);
+
+    secondLoad.resolve(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-2",
+            recipe_id: "recipe-2",
+            recipe_title: "오므라이스",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-31",
+            column_id: "column-breakfast",
+            planned_servings: 1,
+            status: "shopping_done",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    expect(await screen.findByText("오므라이스")).toBeTruthy();
   });
 
   it("keeps empty state within the fixed four-slot card instead of showing column management", async () => {

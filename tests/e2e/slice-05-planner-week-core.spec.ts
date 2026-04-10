@@ -108,6 +108,7 @@ async function swipeWeekStrip(page: Page, direction: "next" | "prev") {
   }
 
   const startX = direction === "next" ? box.x + box.width - 12 : box.x + 12;
+  const middleX = box.x + box.width / 2;
   const endX = direction === "next" ? box.x + 12 : box.x + box.width - 12;
   const y = box.y + box.height / 2;
 
@@ -116,6 +117,15 @@ async function swipeWeekStrip(page: Page, direction: "next" | "prev") {
     clientX: startX,
     clientY: y,
     isPrimary: true,
+    pointerId: 1,
+    pointerType: "touch",
+  });
+  await strip.dispatchEvent("pointermove", {
+    bubbles: true,
+    clientX: middleX,
+    clientY: y,
+    isPrimary: true,
+    pointerId: 1,
     pointerType: "touch",
   });
   await strip.dispatchEvent("pointerup", {
@@ -123,6 +133,7 @@ async function swipeWeekStrip(page: Page, direction: "next" | "prev") {
     clientX: endX,
     clientY: y,
     isPrimary: true,
+    pointerId: 1,
     pointerType: "touch",
   });
 }

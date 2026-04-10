@@ -22,7 +22,11 @@ export interface PlannerWeekScreenProps {
 
 const RANGE_SHIFT_DAYS = 7;
 const SWIPE_THRESHOLD_PX = 44;
+const SWIPE_PREVIEW_OFFSET_PX = 22;
+const SWIPE_MAX_DRAG_PX = 84;
+const CONTENT_DRAG_RATIO = 0.18;
 const CTA_BUTTONS = ["장보기", "요리하기", "남은요리"] as const;
+type SwipeDirection = -1 | 0 | 1;
 
 const STATUS_META: Record<
   MealStatus,
@@ -81,6 +85,10 @@ function formatRangeLabel(startDate: string, endDate: string) {
   return `${formatDateLabel(startDate)} ~ ${formatDateLabel(endDate)}`;
 }
 
+function clampSwipeOffset(deltaX: number) {
+  return Math.max(-SWIPE_MAX_DRAG_PX, Math.min(SWIPE_MAX_DRAG_PX, deltaX));
+}
+
 function getRangeContextLabel(startDate: string, defaultStartDate: string) {
   if (startDate === defaultStartDate) {
     return "이번 주";
@@ -109,6 +117,7 @@ export function PlannerWeekScreen({
   const columns = usePlannerStore((state) => state.columns);
   const meals = usePlannerStore((state) => state.meals);
   const screenState = usePlannerStore((state) => state.screenState);
+  const isRefreshing = usePlannerStore((state) => state.isRefreshing);
   const errorMessage = usePlannerStore((state) => state.errorMessage);
   const loadPlanner = usePlannerStore((state) => state.loadPlanner);
   const resetRange = usePlannerStore((state) => state.resetRange);
@@ -117,6 +126,9 @@ export function PlannerWeekScreen({
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
+  const [isWeekStripDragging, setIsWeekStripDragging] = useState(false);
+  const [weekStripOffset, setWeekStripOffset] = useState(0);
+  const [refreshDirection, setRefreshDirection] = useState<SwipeDirection>(0);
 
   const dateKeys = useMemo(
     () => buildDateKeys(rangeStartDate, rangeEndDate),
@@ -127,51 +139,211 @@ export function PlannerWeekScreen({
   const isCurrentRange =
     rangeStartDate === defaultRange.startDate && rangeEndDate === defaultRange.endDate;
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const gestureSourceRef = useRef<"pointer" | "touch" | null>(null);
+  const activePointerIdRef = useRef<number | null>(null);
   const rangeContextLabel = getRangeContextLabel(rangeStartDate, defaultRange.startDate);
 
-  function handleWeekStripPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+  function runPlannerAction(action: Promise<void>) {
+    void action.catch((error) => {
+      if (isPlannerApiError(error) && error.status === 401) {
+        setAuthState("unauthorized");
+      }
+    });
+  }
+
+  function resetWeekStripGesture() {
+    swipeStartRef.current = null;
+    gestureSourceRef.current = null;
+    activePointerIdRef.current = null;
+    setIsWeekStripDragging(false);
+    setWeekStripOffset(0);
+  }
+
+  function beginWeekStripGesture(
+    source: "pointer" | "touch",
+    clientX: number,
+    clientY: number,
+  ) {
+    if (gestureSourceRef.current && gestureSourceRef.current !== source) {
+      return;
+    }
+
+    if (isRefreshing || screenState === "loading") {
+      return;
+    }
+
+    gestureSourceRef.current = source;
     swipeStartRef.current = {
-      x: event.clientX,
-      y: event.clientY,
+      x: clientX,
+      y: clientY,
     };
+    setIsWeekStripDragging(true);
+    setWeekStripOffset(0);
+  }
+
+  function updateWeekStripGesture(
+    source: "pointer" | "touch",
+    clientX: number,
+    clientY: number,
+  ) {
+    if (gestureSourceRef.current !== source) {
+      return false;
+    }
+
+    const swipeStart = swipeStartRef.current;
+
+    if (!swipeStart) {
+      return false;
+    }
+
+    const deltaX = clientX - swipeStart.x;
+    const deltaY = clientY - swipeStart.y;
+    const isHorizontalSwipe = Math.abs(deltaX) > Math.abs(deltaY);
+
+    if (isHorizontalSwipe) {
+      setWeekStripOffset(clampSwipeOffset(deltaX));
+    }
+
+    return isHorizontalSwipe;
+  }
+
+  function completeWeekStripGesture(
+    source: "pointer" | "touch",
+    clientX: number,
+    clientY: number,
+  ) {
+    if (gestureSourceRef.current !== source) {
+      return;
+    }
+
+    const swipeStart = swipeStartRef.current;
+    gestureSourceRef.current = null;
+    swipeStartRef.current = null;
+    setIsWeekStripDragging(false);
+
+    if (!swipeStart) {
+      setWeekStripOffset(0);
+      return;
+    }
+
+    const deltaX = clientX - swipeStart.x;
+    const deltaY = clientY - swipeStart.y;
+
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX || Math.abs(deltaX) <= Math.abs(deltaY)) {
+      setWeekStripOffset(0);
+      return;
+    }
+
+    const nextDirection: SwipeDirection = deltaX < 0 ? 1 : -1;
+    setRefreshDirection(nextDirection);
+    setWeekStripOffset(nextDirection === 1 ? -SWIPE_PREVIEW_OFFSET_PX : SWIPE_PREVIEW_OFFSET_PX);
+    runPlannerAction(
+      shiftRange(nextDirection === 1 ? RANGE_SHIFT_DAYS : -RANGE_SHIFT_DAYS),
+    );
   }
 
   function handleWeekStripPointerEnd(event: React.PointerEvent<HTMLDivElement>) {
-    const swipeStart = swipeStartRef.current;
-    swipeStartRef.current = null;
-
-    if (!swipeStart) {
+    if (activePointerIdRef.current !== event.pointerId) {
       return;
     }
 
-    const deltaX = event.clientX - swipeStart.x;
-    const deltaY = event.clientY - swipeStart.y;
+    activePointerIdRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    completeWeekStripGesture("pointer", event.clientX, event.clientY);
+  }
 
-    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX || Math.abs(deltaX) <= Math.abs(deltaY)) {
+  function handleWeekStripPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0) {
       return;
     }
 
-    shiftRange(deltaX < 0 ? RANGE_SHIFT_DAYS : -RANGE_SHIFT_DAYS);
+    activePointerIdRef.current = event.pointerId;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    beginWeekStripGesture("pointer", event.clientX, event.clientY);
+  }
+
+  function handleWeekStripPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    if (activePointerIdRef.current !== event.pointerId) {
+      return;
+    }
+
+    updateWeekStripGesture("pointer", event.clientX, event.clientY);
   }
 
   function handleWeekStripKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
-      shiftRange(-RANGE_SHIFT_DAYS);
+      runPlannerAction(shiftRange(-RANGE_SHIFT_DAYS));
       return;
     }
 
     if (event.key === "ArrowRight") {
       event.preventDefault();
-      shiftRange(RANGE_SHIFT_DAYS);
+      runPlannerAction(shiftRange(RANGE_SHIFT_DAYS));
       return;
     }
 
     if (event.key === "Home" && !isCurrentRange) {
       event.preventDefault();
-      resetRange();
+      runPlannerAction(resetRange());
     }
   }
+
+  function handleWeekStripTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+    const touch = event.touches[0];
+
+    if (!touch) {
+      return;
+    }
+
+    beginWeekStripGesture("touch", touch.clientX, touch.clientY);
+  }
+
+  function handleWeekStripTouchMove(event: React.TouchEvent<HTMLDivElement>) {
+    const touch = event.touches[0];
+
+    if (!touch) {
+      return;
+    }
+
+    const isHorizontalSwipe = updateWeekStripGesture("touch", touch.clientX, touch.clientY);
+
+    if (isHorizontalSwipe) {
+      event.preventDefault();
+    }
+  }
+
+  function handleWeekStripTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
+    const touch = event.changedTouches[0];
+
+    if (!touch) {
+      resetWeekStripGesture();
+      return;
+    }
+
+    completeWeekStripGesture("touch", touch.clientX, touch.clientY);
+  }
+
+  useEffect(() => {
+    if (isRefreshing) {
+      return;
+    }
+
+    if (refreshDirection === 0 && weekStripOffset === 0) {
+      return;
+    }
+
+    const resetMotion = window.requestAnimationFrame(() => {
+      setWeekStripOffset(0);
+      setRefreshDirection(0);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(resetMotion);
+    };
+  }, [isRefreshing, refreshDirection, weekStripOffset]);
 
   useEffect(() => {
     const e2eAuthOverride = readE2EAuthOverride();
@@ -239,12 +411,30 @@ export function PlannerWeekScreen({
       return;
     }
 
-    void loadPlanner().catch((error) => {
-      if (isPlannerApiError(error) && error.status === 401) {
-        setAuthState("unauthorized");
-      }
-    });
-  }, [authState, loadPlanner, rangeEndDate, rangeStartDate]);
+    runPlannerAction(loadPlanner());
+  }, [authState, loadPlanner]);
+
+  const plannerBodyOffset = isWeekStripDragging
+    ? weekStripOffset * CONTENT_DRAG_RATIO
+    : refreshDirection === 0
+      ? 0
+      : refreshDirection === 1
+        ? -14
+        : 14;
+  const weekStripMotionStyle = {
+    opacity: isRefreshing ? 0.92 : 1,
+    transform: `translateX(${weekStripOffset}px)`,
+    transition: isWeekStripDragging
+      ? "none"
+      : "transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 180ms ease",
+  } as const;
+  const plannerBodyMotionStyle = {
+    opacity: isRefreshing ? 0.92 : 1,
+    transform: `translateX(${plannerBodyOffset}px)`,
+    transition: isWeekStripDragging
+      ? "none"
+      : "transform 240ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 200ms ease",
+  } as const;
 
   if (authState === "checking") {
     return (
@@ -332,7 +522,7 @@ export function PlannerWeekScreen({
                   {!isCurrentRange ? (
                     <button
                       className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-sm"
-                      onClick={() => resetRange()}
+                      onClick={() => runPlannerAction(resetRange())}
                       type="button"
                     >
                       이번주로 가기
@@ -346,17 +536,26 @@ export function PlannerWeekScreen({
               </p>
               <div
                 aria-describedby="planner-week-strip-hint"
+                aria-busy={isRefreshing}
                 aria-label="주간 날짜 스트립"
                 className="touch-pan-x select-none"
                 onKeyDown={handleWeekStripKeyDown}
                 onPointerCancel={() => {
-                  swipeStartRef.current = null;
+                  resetWeekStripGesture();
                 }}
                 onPointerDown={handleWeekStripPointerDown}
+                onPointerMove={handleWeekStripPointerMove}
                 onPointerUp={handleWeekStripPointerEnd}
+                onTouchCancel={resetWeekStripGesture}
+                onTouchEnd={handleWeekStripTouchEnd}
+                onTouchMove={handleWeekStripTouchMove}
+                onTouchStart={handleWeekStripTouchStart}
                 tabIndex={0}
               >
-                <ol className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold text-[var(--muted)] sm:gap-2 sm:text-xs">
+                <ol
+                  className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold text-[var(--muted)] sm:gap-2 sm:text-xs"
+                  style={weekStripMotionStyle}
+                >
                   {dateKeys.map((dateKey) => (
                     <li key={dateKey} className="list-none">
                       <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-1 py-2 sm:px-1.5">
@@ -390,18 +589,18 @@ export function PlannerWeekScreen({
           actionLabel="다시 시도"
           description={errorMessage ?? "잠시 후 다시 시도해주세요."}
           onAction={() => {
-            void loadPlanner().catch((error) => {
-              if (isPlannerApiError(error) && error.status === 401) {
-                setAuthState("unauthorized");
-              }
-            });
+            runPlannerAction(loadPlanner());
           }}
           title="플래너를 불러오지 못했어요"
         />
       ) : null}
 
       {screenState === "ready" || screenState === "empty" ? (
-        <section className="space-y-2.5 sm:space-y-3">
+        <section
+          aria-busy={isRefreshing}
+          className="space-y-2.5 sm:space-y-3"
+          style={plannerBodyMotionStyle}
+        >
           {screenState === "empty" ? (
             <div className="glass-panel rounded-[18px] px-4 py-3">
               <p className="text-sm text-[var(--muted)]">아직 등록된 식사가 없어요.</p>
