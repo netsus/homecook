@@ -547,38 +547,6 @@ export function RecipeDetailScreen({
     );
   }
 
-  const renderMetricActions = () => (
-    <>
-      <MetricActionButton
-        ariaLabel={
-          likeRequestState === "pending"
-            ? "좋아요 처리 중..."
-            : `좋아요 ${formatCount(recipe.like_count)}`
-        }
-        ariaPressed={recipe.user_status?.is_liked ?? false}
-        count={formatCount(recipe.like_count)}
-        disabled={likeRequestState === "pending"}
-        icon={
-          <HeartIcon
-            filled={recipe.user_status?.is_liked ?? false}
-          />
-        }
-        label={likeRequestState === "pending" ? "처리 중" : "좋아요"}
-        onClick={() => handleProtectedAction("like")}
-        tone={recipe.user_status?.is_liked ? "brand" : "neutral"}
-      />
-      <MetricActionButton
-        ariaLabel="저장"
-        ariaPressed={recipe.user_status?.is_saved ?? false}
-        count={formatCount(recipe.save_count)}
-        icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
-        label="저장"
-        onClick={() => handleProtectedAction("save")}
-        tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
-      />
-    </>
-  );
-
   return (
     <>
       <div className="space-y-[clamp(1.25rem,4vw,1.5rem)]">
@@ -596,7 +564,7 @@ export function RecipeDetailScreen({
             }
           />
 
-          <div className="flex flex-col gap-[clamp(1rem,4vw,1.5rem)] px-[clamp(1rem,4vw,1.25rem)] py-[clamp(1rem,4vw,1.25rem)] md:px-6 md:py-6">
+          <div className="flex flex-col gap-[clamp(0.875rem,3vw,1.25rem)] px-[clamp(0.875rem,4vw,1.25rem)] py-[clamp(0.875rem,4vw,1.25rem)] md:px-6 md:py-6">
             <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--olive)] md:text-xs md:tracking-[0.22em]">
               <Link href="/">Home</Link>
               <span>/</span>
@@ -604,13 +572,61 @@ export function RecipeDetailScreen({
             </div>
 
             <div className="flex flex-col gap-4">
-              <h2 className="text-[clamp(1.75rem,7vw,2.25rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
+              <h2 className="text-[clamp(1.5rem,6vw,2.125rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
                 {recipe.title}
               </h2>
             </div>
 
-            <div className="max-[360px]:order-3">
-              <p className="max-w-3xl text-[clamp(0.875rem,3.5vw,0.9375rem)] leading-5 text-[var(--muted)] md:text-sm md:leading-6">
+            <div className="rounded-[16px] border border-[var(--line)] bg-white/78 px-3 py-2.5 text-[13px] font-semibold text-[var(--muted)] md:text-sm">
+              <span className="text-[var(--foreground)]">{recipe.base_servings}인분</span>
+              <span className="px-2 text-[var(--line)]">·</span>
+              <span>재료 {recipe.ingredients.length}개</span>
+              <span className="px-2 text-[var(--line)]">·</span>
+              <span>조리 {recipe.steps.length}단계</span>
+            </div>
+
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2 max-[360px]:order-1">
+              <div className="truncate rounded-full border border-[var(--line)] bg-white/78 px-3 py-2 text-[12px] font-semibold text-[var(--muted)] md:text-[13px]">
+                플래너 등록 {formatCount(recipe.plan_count)}
+              </div>
+              <IconActionButton
+                ariaLabel="공유하기"
+                icon={<ShareIcon />}
+                onClick={handleShare}
+              />
+              <MetricActionButton
+                ariaLabel={
+                  likeRequestState === "pending"
+                    ? "좋아요 처리 중..."
+                    : `좋아요 ${formatCount(recipe.like_count)}`
+                }
+                ariaPressed={recipe.user_status?.is_liked ?? false}
+                count={formatCount(recipe.like_count)}
+                disabled={likeRequestState === "pending"}
+                hideLabel
+                icon={
+                  <HeartIcon
+                    filled={recipe.user_status?.is_liked ?? false}
+                  />
+                }
+                label={likeRequestState === "pending" ? "처리 중" : "좋아요"}
+                onClick={() => handleProtectedAction("like")}
+                tone={recipe.user_status?.is_liked ? "brand" : "neutral"}
+              />
+              <MetricActionButton
+                ariaLabel="저장"
+                ariaPressed={recipe.user_status?.is_saved ?? false}
+                count={formatCount(recipe.save_count)}
+                hideLabel
+                icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
+                label="저장"
+                onClick={() => handleProtectedAction("save")}
+                tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
+              />
+            </div>
+
+            <div className="max-[360px]:order-4">
+              <p className="max-w-3xl text-[clamp(0.8125rem,3.2vw,0.9rem)] leading-5 text-[var(--muted)] md:text-sm md:leading-6">
                 {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -625,65 +641,22 @@ export function RecipeDetailScreen({
               </div>
             </div>
 
-            <div className="grid gap-3 max-[360px]:order-4 sm:grid-cols-3">
-              <div className="rounded-[16px] border border-[var(--line)] bg-white/75 px-3.5 py-3.5 md:rounded-[18px] md:px-4 md:py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--olive)] md:text-xs md:tracking-[0.22em]">
-                  기본 인분
-                </p>
-                <p className="mt-1.5 text-[clamp(1rem,4.5vw,1.125rem)] font-extrabold text-[var(--foreground)] md:mt-2 md:text-lg">
-                  {recipe.base_servings}인분
-                </p>
-              </div>
-              <div className="rounded-[16px] border border-[var(--line)] bg-white/75 px-3.5 py-3.5 md:rounded-[18px] md:px-4 md:py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--olive)] md:text-xs md:tracking-[0.22em]">
-                  재료
-                </p>
-                <p className="mt-1.5 text-[clamp(1rem,4.5vw,1.125rem)] font-extrabold text-[var(--foreground)] md:mt-2 md:text-lg">
-                  {recipe.ingredients.length}개
-                </p>
-              </div>
-              <div className="rounded-[16px] border border-[var(--line)] bg-white/75 px-3.5 py-3.5 md:rounded-[18px] md:px-4 md:py-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--olive)] md:text-xs md:tracking-[0.22em]">
-                  조리 단계
-                </p>
-                <p className="mt-1.5 text-[clamp(1rem,4.5vw,1.125rem)] font-extrabold text-[var(--foreground)] md:mt-2 md:text-lg">
-                  {recipe.steps.length}단계
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 max-[360px]:order-2 lg:flex-row lg:items-center lg:justify-between">
-              <div className="grid gap-2.5 sm:grid-cols-2 md:gap-3">
-                <ActionButton
-                  label="요리하기"
-                  onClick={() =>
-                    setFeedback({
-                      message: "요리모드는 다음 슬라이스에서 이어서 구현합니다.",
-                      tone: "status",
-                    })
-                  }
-                  tone="brand"
-                />
-                <ActionButton
-                  label="플래너에 추가"
-                  onClick={() => handleProtectedAction("planner")}
-                  tone="olive"
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-2.5 md:gap-3">
-                <div className="rounded-full border border-[var(--line)] bg-white/78 px-3 py-2 text-[13px] font-semibold text-[var(--muted)] md:text-sm">
-                  플래너 등록 {formatCount(recipe.plan_count)}
-                </div>
-                <IconActionButton
-                  ariaLabel="공유하기"
-                  icon={<ShareIcon />}
-                  onClick={handleShare}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 max-[360px]:order-1">
-              {renderMetricActions()}
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2.5 max-[360px]:order-2 md:gap-3">
+              <ActionButton
+                label="플래너에 추가"
+                onClick={() => handleProtectedAction("planner")}
+                tone="olive"
+              />
+              <ActionButton
+                label="요리하기"
+                onClick={() =>
+                  setFeedback({
+                    message: "요리모드는 다음 슬라이스에서 이어서 구현합니다.",
+                    tone: "status",
+                  })
+                }
+                tone="brand"
+              />
             </div>
           </div>
         </section>
@@ -694,7 +667,7 @@ export function RecipeDetailScreen({
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
                 재료
               </p>
-              <h3 className="mt-2 text-2xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+              <h3 className="mt-2 text-[13px] font-semibold tracking-[-0.01em] text-[var(--olive)] md:text-sm">
                 인분에 따라 재료량이 바뀝니다
               </h3>
             </div>
@@ -983,6 +956,7 @@ function MetricActionButton({
   ariaPressed,
   count,
   disabled = false,
+  hideLabel = false,
   icon,
   label,
   onClick,
@@ -992,6 +966,7 @@ function MetricActionButton({
   ariaPressed?: boolean;
   count: string;
   disabled?: boolean;
+  hideLabel?: boolean;
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
@@ -1008,7 +983,7 @@ function MetricActionButton({
     <button
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
-      className={`flex min-h-11 items-center gap-1.5 rounded-full border px-3 py-2 text-[13px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:gap-2 md:px-4 md:py-2.5 md:text-sm ${className}`}
+      className={`flex min-h-11 items-center ${hideLabel ? "justify-center" : ""} gap-1.5 rounded-full border px-3 py-2 text-[12px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:gap-2 md:px-4 md:py-2.5 md:text-sm ${className}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -1016,12 +991,12 @@ function MetricActionButton({
       <span aria-hidden="true" className="shrink-0">
         {icon}
       </span>
-      <span>{label}</span>
+      {hideLabel ? null : <span>{label}</span>}
       <span
         aria-hidden={ariaLabel !== `좋아요 ${count}`}
         className="rounded-full bg-white/72 px-2 py-0.75 text-[11px] font-bold text-[var(--foreground)] md:px-2.5 md:py-1 md:text-xs"
       >
-          {count}
+        {count}
       </span>
     </button>
   );
