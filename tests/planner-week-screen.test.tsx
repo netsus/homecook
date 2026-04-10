@@ -123,11 +123,29 @@ function primeWeekStripViewport(strip: HTMLElement) {
   };
 }
 
+function setDesktopViewport(enabled: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: enabled && query === "(min-width: 768px)",
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe("planner week screen", () => {
   beforeEach(() => {
     readE2EAuthOverride.mockReset();
     fetchPlanner.mockReset();
     resetPlannerStore();
+    setDesktopViewport(false);
   });
 
   afterEach(() => {
@@ -374,6 +392,32 @@ describe("planner week screen", () => {
     );
 
     expect(await screen.findByText("오므라이스")).toBeTruthy();
+  });
+
+  it("shows desktop week navigation buttons and shifts range with the next-week action", async () => {
+    const user = userEvent.setup();
+
+    setDesktopViewport(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
+
+    const previousWeekButton = screen.getByRole("button", { name: "이전 주" });
+    const nextWeekButton = screen.getByRole("button", { name: "다음 주" });
+
+    expect(previousWeekButton).toBeTruthy();
+    expect(nextWeekButton).toBeTruthy();
+
+    await user.click(nextWeekButton);
+
+    await waitFor(() => {
+      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
+    });
   });
 
   it("keeps empty state within the fixed four-slot card instead of showing column management", async () => {

@@ -106,6 +106,14 @@ function buildMealMap(meals: PlannerMealData[]) {
   return mealMap;
 }
 
+function readDesktopViewportMatch() {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+
+  return window.matchMedia("(min-width: 768px)").matches;
+}
+
 export function PlannerWeekScreen({
   initialAuthenticated = false,
 }: PlannerWeekScreenProps) {
@@ -123,6 +131,7 @@ export function PlannerWeekScreen({
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
+  const [isDesktopViewport, setIsDesktopViewport] = useState(readDesktopViewportMatch);
 
   const dateKeys = useMemo(
     () => buildDateKeys(rangeStartDate, rangeEndDate),
@@ -277,6 +286,24 @@ export function PlannerWeekScreen({
       runPlannerAction(resetRange());
     }
   }
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+    const syncViewport = () => {
+      setIsDesktopViewport(mediaQuery.matches);
+    };
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncViewport);
+    };
+  }, []);
 
   useEffect(() => {
     const e2eAuthOverride = readE2EAuthOverride();
@@ -453,7 +480,33 @@ export function PlannerWeekScreen({
                   {formatRangeLabel(rangeStartDate, rangeEndDate)}
                 </h3>
               </div>
-              {!isCurrentRange ? (
+              {isDesktopViewport ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-sm"
+                    onClick={() => runPlannerAction(shiftRange(-RANGE_SHIFT_DAYS))}
+                    type="button"
+                  >
+                    이전 주
+                  </button>
+                  {!isCurrentRange ? (
+                    <button
+                      className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-sm"
+                      onClick={() => runPlannerAction(resetRange())}
+                      type="button"
+                    >
+                      이번주로 가기
+                    </button>
+                  ) : null}
+                  <button
+                    className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-sm"
+                    onClick={() => runPlannerAction(shiftRange(RANGE_SHIFT_DAYS))}
+                    type="button"
+                  >
+                    다음 주
+                  </button>
+                </div>
+              ) : !isCurrentRange ? (
                 <button
                   className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-sm"
                   onClick={() => runPlannerAction(resetRange())}

@@ -122,7 +122,9 @@ async function centerWeekStrip(page: Page) {
 }
 
 test.describe("Slice 05 planner week core", () => {
-  test("authenticated user sees fixed four-slot day cards and planner status badges", async ({ page }) => {
+  test("authenticated user sees fixed four-slot day cards and planner status badges", async ({ page }, testInfo) => {
+    const isDesktopProject = testInfo.project.name === "desktop-chrome";
+
     await setAuthOverride(page, "authenticated");
     await mockPlannerRoutes(page);
 
@@ -133,8 +135,13 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByRole("heading", { name: "식단 플래너" })).toBeVisible();
     await expect(page.getByText("현재 범위")).toHaveCount(1);
     await expect(page.getByText("화면 상태")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "이전 주" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "다음 주" })).toHaveCount(0);
+    if (isDesktopProject) {
+      await expect(page.getByRole("button", { name: "이전 주" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "다음 주" })).toBeVisible();
+    } else {
+      await expect(page.getByRole("button", { name: "이전 주" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "다음 주" })).toHaveCount(0);
+    }
     await expect(page.getByTestId("planner-week-strip-page-current").locator("li")).toHaveCount(7);
     await expect(firstDayCard.getByText("아침")).toBeVisible();
     await expect(firstDayCard.getByText("점심")).toBeVisible();
@@ -158,7 +165,9 @@ test.describe("Slice 05 planner week core", () => {
     expect(pageHasHorizontalOverflow).toBe(false);
   });
 
-  test("authenticated user can shift the planner range by swiping the weekday strip", async ({ page }) => {
+  test("authenticated user can shift the planner range by swiping the weekday strip", async ({ page }, testInfo) => {
+    const isDesktopProject = testInfo.project.name === "desktop-chrome";
+
     await setAuthOverride(page, "authenticated");
     const tracker = await mockPlannerRoutes(page);
 
@@ -168,7 +177,11 @@ test.describe("Slice 05 planner week core", () => {
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(0);
     const initialRange = tracker.requestedRanges[0];
 
-    await swipeWeekStrip(page, "next");
+    if (isDesktopProject) {
+      await page.getByRole("button", { name: "다음 주" }).click();
+    } else {
+      await swipeWeekStrip(page, "next");
+    }
 
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(1);
     await expect(page.getByRole("button", { name: "이번주로 가기" })).toBeVisible();
