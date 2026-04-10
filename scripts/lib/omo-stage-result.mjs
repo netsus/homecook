@@ -42,6 +42,26 @@ function ensureEnum(value, allowed, label) {
   return value;
 }
 
+function ensureOptionalEnum(value, allowed, label) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  return ensureEnum(value, allowed, label);
+}
+
+function ensureOptionalNonNegativeInteger(value, label) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`${label} must be a non-negative integer.`);
+  }
+
+  return value;
+}
+
 function validateFinding(finding, index) {
   const label = `stageResult.findings[${index}]`;
   const f = ensureObject(finding, label);
@@ -285,6 +305,75 @@ export function validateStageResult(stage, stageResult, options = {}) {
     };
   }
 
+  if (normalizedStage === 4 && subphase === "authority_precheck") {
+    const fallbackCommitSubject =
+      typeof result.commit?.subject === "string" && result.commit.subject.trim().length > 0
+        ? result.commit.subject
+        : result.pr?.title;
+
+    return {
+      result: ensureNonEmptyString(result.result, "stageResult.result"),
+      summary_markdown: ensureNonEmptyString(result.summary_markdown, "stageResult.summary_markdown"),
+      commit: {
+        subject: ensureNonEmptyString(fallbackCommitSubject, "stageResult.commit.subject"),
+        body_markdown:
+          typeof result.commit?.body_markdown === "string" && result.commit.body_markdown.trim().length > 0
+            ? result.commit.body_markdown.trim()
+            : null,
+      },
+      pr: {
+        title: ensureNonEmptyString(result.pr?.title, "stageResult.pr.title"),
+        body_markdown: ensureNonEmptyString(result.pr?.body_markdown, "stageResult.pr.body_markdown"),
+      },
+      checks_run: ensureStringArray(result.checks_run ?? [], "stageResult.checks_run"),
+      next_route: ensureNonEmptyString(result.next_route, "stageResult.next_route"),
+      claimed_scope: validateClaimedScope(result.claimed_scope, {
+        strict: true,
+      }),
+      changed_files: ensureStringArray(result.changed_files, "stageResult.changed_files"),
+      tests_touched: ensureOptionalStringArray(result.tests_touched ?? [], "stageResult.tests_touched"),
+      artifacts_written: ensureStringArray(result.artifacts_written ?? [], "stageResult.artifacts_written"),
+      checklist_updates: validateChecklistUpdates(result.checklist_updates, {
+        strict: strictExtendedContract,
+      }),
+      contested_fix_ids: strictExtendedContract
+        ? ensureStringArray(result.contested_fix_ids ?? [], "stageResult.contested_fix_ids")
+        : ensureOptionalStringArray(result.contested_fix_ids ?? [], "stageResult.contested_fix_ids"),
+      rebuttals: validateRebuttals(result.rebuttals, {
+        strict: strictExtendedContract,
+      }),
+      authority_verdict: ensureEnum(
+        result.authority_verdict,
+        ["pass", "conditional-pass", "hold"],
+        "stageResult.authority_verdict",
+      ),
+      reviewed_screen_ids: ensureStringArray(
+        result.reviewed_screen_ids ?? [],
+        "stageResult.reviewed_screen_ids",
+      ),
+      authority_report_paths: ensureStringArray(
+        result.authority_report_paths ?? [],
+        "stageResult.authority_report_paths",
+      ),
+      evidence_artifact_refs: ensureStringArray(
+        result.evidence_artifact_refs ?? [],
+        "stageResult.evidence_artifact_refs",
+      ),
+      blocker_count: ensureOptionalNonNegativeInteger(
+        result.blocker_count,
+        "stageResult.blocker_count",
+      ),
+      major_count: ensureOptionalNonNegativeInteger(
+        result.major_count,
+        "stageResult.major_count",
+      ),
+      minor_count: ensureOptionalNonNegativeInteger(
+        result.minor_count,
+        "stageResult.minor_count",
+      ),
+    };
+  }
+
   if ([1, 2, 4].includes(normalizedStage)) {
     const fallbackCommitSubject =
       typeof result.commit?.subject === "string" && result.commit.subject.trim().length > 0
@@ -417,5 +506,30 @@ export function validateStageResult(stage, stageResult, options = {}) {
     reviewed_checklist_ids: reviewedChecklistIds,
     required_fix_ids: requiredFixIds,
     waived_fix_ids: waivedFixIds,
+    authority_verdict: ensureOptionalEnum(
+      result.authority_verdict,
+      ["pass", "conditional-pass", "hold"],
+      "stageResult.authority_verdict",
+    ),
+    reviewed_screen_ids: ensureOptionalStringArray(
+      result.reviewed_screen_ids ?? [],
+      "stageResult.reviewed_screen_ids",
+    ),
+    authority_report_paths: ensureOptionalStringArray(
+      result.authority_report_paths ?? [],
+      "stageResult.authority_report_paths",
+    ),
+    blocker_count: ensureOptionalNonNegativeInteger(
+      result.blocker_count,
+      "stageResult.blocker_count",
+    ),
+    major_count: ensureOptionalNonNegativeInteger(
+      result.major_count,
+      "stageResult.major_count",
+    ),
+    minor_count: ensureOptionalNonNegativeInteger(
+      result.minor_count,
+      "stageResult.minor_count",
+    ),
   };
 }

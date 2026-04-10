@@ -138,6 +138,52 @@ const DESIGN_STATUS_MATCHERS = {
   "N/A": /\bN\/A\b/,
 };
 
+function readWorkpackSectionLines({
+  workpackPath,
+  sectionHeading,
+}) {
+  const contents = readFileSync(workpackPath, "utf8");
+  const lines = contents.split(/\r?\n/);
+  const startIndex = lines.findIndex((line) => line.trim() === sectionHeading);
+  if (startIndex === -1) {
+    return {
+      lines,
+      sectionLines: [],
+      missing: true,
+    };
+  }
+
+  const nextSectionIndex = lines.findIndex(
+    (line, index) => index > startIndex && /^##\s+/.test(line.trim()),
+  );
+  const endIndex = nextSectionIndex === -1 ? lines.length : nextSectionIndex;
+
+  return {
+    lines,
+    sectionLines: lines.slice(startIndex + 1, endIndex),
+    missing: false,
+  };
+}
+
+function extractValue(sectionLines, label) {
+  const prefix = `- ${label}:`;
+  const matchedLine = sectionLines.find((line) => line.trim().startsWith(prefix));
+  if (!matchedLine) {
+    return null;
+  }
+
+  const value = matchedLine.trim().slice(prefix.length).trim();
+  if (value.length === 0) {
+    return null;
+  }
+
+  if (value.startsWith("`") && value.endsWith("`")) {
+    return value.slice(1, -1).trim();
+  }
+
+  return value;
+}
+
 export function readWorkpackDesignStatus({
   rootDir = process.cwd(),
   worktreePath = null,
@@ -160,10 +206,11 @@ export function readWorkpackDesignStatus({
     };
   }
 
-  const contents = readFileSync(workpackPath, "utf8");
-  const lines = contents.split(/\r?\n/);
-  const startIndex = lines.findIndex((line) => line.trim() === "## Design Status");
-  if (startIndex === -1) {
+  const { sectionLines, missing } = readWorkpackSectionLines({
+    workpackPath,
+    sectionHeading: "## Design Status",
+  });
+  if (missing) {
     return {
       status: null,
       filePath: workpackPath,
@@ -171,15 +218,9 @@ export function readWorkpackDesignStatus({
       reason: "design_status_section_missing",
     };
   }
-
-  const nextSectionIndex = lines.findIndex(
-    (line, index) => index > startIndex && /^##\s+/.test(line.trim()),
-  );
-  const endIndex = nextSectionIndex === -1 ? lines.length : nextSectionIndex;
   const checkedStatuses = [];
 
-  for (let index = startIndex + 1; index < endIndex; index += 1) {
-    const line = lines[index];
+  for (const line of sectionLines) {
     if (!/^- \[[x ]\]/.test(line)) {
       continue;
     }
@@ -202,6 +243,61 @@ export function readWorkpackDesignStatus({
 
   return {
     status: checkedStatuses[0],
+    filePath: workpackPath,
+    missing: false,
+    reason: null,
+  };
+}
+
+export function readWorkpackDesignAuthority({
+  rootDir = process.cwd(),
+  worktreePath = null,
+  slice,
+}) {
+  const workpackPath = resolveWorkpackPath({ rootDir, worktreePath, slice });
+  if (!existsSync(workpackPath)) {
+    if (typeof worktreePath === "string" && worktreePath.trim().length > 0) {
+      return readWorkpackDesignAuthority({
+        rootDir,
+        slice,
+      });
+    }
+
+    return {
+      uiRisk: null,
+      anchorScreenDependency: null,
+      visualArtifact: null,
+      authorityStatus: null,
+      notes: null,
+      filePath: workpackPath,
+      missing: true,
+      reason: "workpack_missing",
+    };
+  }
+
+  const { sectionLines, missing } = readWorkpackSectionLines({
+    workpackPath,
+    sectionHeading: "## Design Authority",
+  });
+  if (missing) {
+    return {
+      uiRisk: null,
+      anchorScreenDependency: null,
+      visualArtifact: null,
+      authorityStatus: null,
+      notes: null,
+      filePath: workpackPath,
+      missing: true,
+      reason: "design_authority_section_missing",
+    };
+  }
+
+  return {
+    uiRisk: extractValue(sectionLines, "UI risk"),
+    anchorScreenDependency: extractValue(sectionLines, "Anchor screen dependency"),
+    visualArtifact: extractValue(sectionLines, "Visual artifact"),
+    authorityStatus: extractValue(sectionLines, "Authority status"),
+    notes: extractValue(sectionLines, "Notes"),
     filePath: workpackPath,
     missing: false,
     reason: null,
@@ -243,6 +339,51 @@ export function updateWorkpackDesignStatus({
         lines[index] = nextLine;
         changed = true;
       }
+    }
+  }
+
+  if (!changed) {
+    return {
+      changed: false,
+      filePath: workpackPath,
+    };
+  }
+
+  return {
+    changed: writeTextFileIfChanged(workpackPath, `${lines.join("\n")}\n`),
+    filePath: workpackPath,
+  };
+}
+
+export function updateWorkpackDesignAuthorityStatus({
+  worktreePath,
+  slice,
+  targetStatus,
+}) {
+  const workpackPath = resolveWorkpackPath({ worktreePath, slice });
+  const contents = readFileSync(workpackPath, "utf8");
+  const lines = contents.split(/\r?\n/);
+  const startIndex = lines.findIndex((line) => line.trim() === "## Design Authority");
+  if (startIndex === -1) {
+    throw new Error(`Design Authority section missing in ${workpackPath}`);
+  }
+
+  const nextSectionIndex = lines.findIndex(
+    (line, index) => index > startIndex && /^##\s+/.test(line.trim()),
+  );
+  const endIndex = nextSectionIndex === -1 ? lines.length : nextSectionIndex;
+  let changed = false;
+
+  for (let index = startIndex + 1; index < endIndex; index += 1) {
+    const line = lines[index];
+    if (!line.trim().startsWith("- Authority status:")) {
+      continue;
+    }
+
+    const nextLine = `- Authority status: \`${ensureNonEmptyString(targetStatus, "targetStatus")}\``;
+    if (line !== nextLine) {
+      lines[index] = nextLine;
+      changed = true;
     }
   }
 

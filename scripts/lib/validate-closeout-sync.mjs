@@ -3,7 +3,12 @@ import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { resolveBaseRef } from "./check-workpack-docs.mjs";
-import { readSliceRoadmapStatus, readWorkpackDesignStatus } from "./omo-bookkeeping.mjs";
+import {
+  readSliceRoadmapStatus,
+  readWorkpackDesignAuthority,
+  readWorkpackDesignStatus,
+} from "./omo-bookkeeping.mjs";
+import { readAutomationSpec } from "./omo-automation-spec.mjs";
 import {
   isChecklistContractActive,
   readWorkpackChecklistContract,
@@ -238,6 +243,80 @@ function buildScopedChecklistErrors({ items, reason }) {
   }));
 }
 
+function validateDesignAuthority({
+  rootDir,
+  slice,
+  strictMode,
+}) {
+  const { automationSpec } = readAutomationSpec({
+    rootDir,
+    slice,
+    required: false,
+  });
+  const designAuthorityConfig = automationSpec?.frontend?.design_authority ?? null;
+  if (!designAuthorityConfig?.authority_required) {
+    return [];
+  }
+
+  const authority = readWorkpackDesignAuthority({
+    rootDir,
+    slice,
+  });
+  const errors = [];
+
+  if (authority.missing) {
+    errors.push({
+      path: authority.filePath,
+      message: `Authority-required slice '${slice}' must define README Design Authority section.`,
+    });
+    return errors;
+  }
+
+  const reportPaths = Array.isArray(designAuthorityConfig.authority_report_paths)
+    ? designAuthorityConfig.authority_report_paths
+    : [];
+  if (reportPaths.length === 0) {
+    errors.push({
+      path: authority.filePath,
+      message: `Authority-required slice '${slice}' must declare authority_report_paths in automation-spec.json.`,
+    });
+  }
+
+  const missingReports = reportPaths.filter((reportPath) => !existsSync(resolve(rootDir, reportPath)));
+  if (missingReports.length > 0) {
+    errors.push({
+      path: authority.filePath,
+      message: `Authority-required slice '${slice}' is missing authority reports: ${missingReports.join(", ")}.`,
+    });
+  }
+
+  if (strictMode === "merged") {
+    if (authority.authorityStatus !== "reviewed") {
+      errors.push({
+        path: authority.filePath,
+        message: `Merged authority-required slice '${slice}' requires Design Authority status 'reviewed'.`,
+      });
+    }
+
+    const nonPassingReports = reportPaths.filter((reportPath) => {
+      const fullPath = resolve(rootDir, reportPath);
+      if (!existsSync(fullPath)) {
+        return true;
+      }
+
+      return !readFileSync(fullPath, "utf8").includes("verdict: pass");
+    });
+    if (nonPassingReports.length > 0) {
+      errors.push({
+        path: authority.filePath,
+        message: `Merged authority-required slice '${slice}' requires final authority verdict 'pass' in: ${nonPassingReports.join(", ")}.`,
+      });
+    }
+  }
+
+  return errors;
+}
+
 function validateChecklistContractSlice({
   rootDir,
   slice,
@@ -332,6 +411,14 @@ function validateChecklistContractSlice({
       );
     }
   }
+
+  errors.push(
+    ...validateDesignAuthority({
+      rootDir,
+      slice,
+      strictMode,
+    }),
+  );
 
   return errors;
 }

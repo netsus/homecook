@@ -10,6 +10,7 @@ import {
   applyBookkeepingRepairPlan,
   evaluateBookkeepingInvariant,
   readSliceRoadmapStatus,
+  updateWorkpackDesignAuthorityStatus,
   updateSliceRoadmapStatus,
   updateWorkpackDesignStatus,
 } from "./omo-bookkeeping.mjs";
@@ -32,6 +33,7 @@ import {
   setDocGateRebuttal,
   setDocGateReview,
   setDocGateState,
+  setDesignAuthorityState,
   setRecoveryState,
   setExecutionState,
   setLastRebuttal,
@@ -583,6 +585,165 @@ function resolveStage2Subphase(state) {
   return "doc_gate_check";
 }
 
+function resolveDesignAuthorityConfig({
+  rootDir,
+  slice,
+}) {
+  const { automationSpec } = readAutomationSpec({
+    rootDir,
+    slice,
+    required: false,
+  });
+
+  return automationSpec?.frontend?.design_authority ?? null;
+}
+
+function resolveStage4Subphase({
+  rootDir,
+  slice,
+  state,
+}) {
+  const activeSubphase = state.execution?.subphase ?? null;
+  if (
+    state.active_stage === 4 &&
+    isPendingFinalizePhase(resolveStatePhase(state)) &&
+    ["authority_precheck", "implementation"].includes(activeSubphase)
+  ) {
+    return activeSubphase;
+  }
+
+  const lastFrontendReview = state.last_review?.frontend;
+  if (
+    lastFrontendReview?.decision === "request_changes" &&
+    lastFrontendReview?.route_back_stage === 4
+  ) {
+    return "implementation";
+  }
+
+  const designAuthorityConfig = resolveDesignAuthorityConfig({
+    rootDir,
+    slice,
+  });
+  if (!designAuthorityConfig?.authority_required) {
+    return "implementation";
+  }
+
+  return state.design_authority?.status === "pending_precheck" ||
+    state.design_authority?.status === "prechecked"
+    ? "authority_precheck"
+    : "implementation";
+}
+
+function validateAuthorityPrecheckStageResult({
+  stageResult,
+  authorityConfig,
+}) {
+  const issues = [];
+  const requiredScreens = normalizeStringArray(authorityConfig?.required_screens);
+  const reviewedScreenIds = normalizeStringArray(stageResult?.reviewed_screen_ids);
+  const authorityReportPaths = normalizeStringArray(stageResult?.authority_report_paths);
+  const evidenceArtifactRefs = normalizeStringArray(stageResult?.evidence_artifact_refs);
+  const blockerCount = typeof stageResult?.blocker_count === "number" ? stageResult.blocker_count : null;
+  const majorCount = typeof stageResult?.major_count === "number" ? stageResult.major_count : null;
+  const minorCount = typeof stageResult?.minor_count === "number" ? stageResult.minor_count : null;
+  const verdict = stageResult?.authority_verdict ?? null;
+
+  const missingScreens = requiredScreens.filter((screenId) => !reviewedScreenIds.includes(screenId));
+  if (missingScreens.length > 0) {
+    issues.push(`Authority precheck must review required screens: ${missingScreens.join(", ")}.`);
+  }
+
+  if (authorityReportPaths.length === 0) {
+    issues.push("Authority precheck must record authority_report_paths.");
+  }
+
+  if (evidenceArtifactRefs.length === 0) {
+    issues.push("Authority precheck must record evidence_artifact_refs.");
+  }
+
+  if (blockerCount === null || majorCount === null || minorCount === null) {
+    issues.push("Authority precheck must record blocker_count, major_count, and minor_count.");
+  }
+
+  if (verdict === "pass" && (blockerCount ?? 0) > 0) {
+    issues.push("Authority precheck cannot return pass when blocker_count is greater than zero.");
+  }
+
+  if (verdict === "conditional-pass" && (blockerCount ?? 0) > 0) {
+    issues.push("Authority precheck conditional-pass requires blocker_count to be zero.");
+  }
+
+  if (verdict === "hold" && (blockerCount ?? 0) <= 0) {
+    issues.push("Authority precheck hold requires blocker_count to be greater than zero.");
+  }
+
+  return normalizeStringArray(issues);
+}
+
+function validateAuthorityReviewStageResult({
+  stageResult,
+  authorityConfig,
+  worktreePath,
+}) {
+  const issues = [];
+  const requiredScreens = normalizeStringArray(authorityConfig?.required_screens);
+  const reviewedScreenIds = normalizeStringArray(stageResult?.reviewed_screen_ids);
+  const authorityReportPaths = normalizeStringArray(stageResult?.authority_report_paths);
+  const blockerCount = typeof stageResult?.blocker_count === "number" ? stageResult.blocker_count : null;
+  const majorCount = typeof stageResult?.major_count === "number" ? stageResult.major_count : null;
+  const minorCount = typeof stageResult?.minor_count === "number" ? stageResult.minor_count : null;
+  const verdict = stageResult?.authority_verdict ?? null;
+
+  if (!verdict) {
+    issues.push("Stage 5 authority review must include authority_verdict.");
+  }
+
+  const missingScreens = requiredScreens.filter((screenId) => !reviewedScreenIds.includes(screenId));
+  if (missingScreens.length > 0) {
+    issues.push(`Stage 5 authority review must cover required screens: ${missingScreens.join(", ")}.`);
+  }
+
+  if (authorityReportPaths.length === 0) {
+    issues.push("Stage 5 authority review must include authority_report_paths.");
+  }
+
+  const missingReports = authorityReportPaths.filter((reportPath) => !existsSync(resolve(worktreePath, reportPath)));
+  if (missingReports.length > 0) {
+    issues.push(`Stage 5 authority review is missing authority reports: ${missingReports.join(", ")}.`);
+  }
+
+  if (blockerCount === null || majorCount === null || minorCount === null) {
+    issues.push("Stage 5 authority review must record blocker_count, major_count, and minor_count.");
+  }
+
+  if (stageResult?.decision === "approve" && verdict !== "pass") {
+    issues.push("Stage 5 approve reviews must use authority_verdict=pass.");
+  }
+
+  if (stageResult?.decision !== "approve" && Number(stageResult?.route_back_stage) !== 4) {
+    issues.push("Stage 5 authority review request_changes must route back to Stage 4.");
+  }
+
+  if (verdict === "pass" && (blockerCount ?? 0) > 0) {
+    issues.push("Stage 5 pass verdict requires blocker_count to be zero.");
+  }
+
+  if (verdict === "conditional-pass") {
+    if ((blockerCount ?? 0) > 0) {
+      issues.push("Stage 5 conditional-pass requires blocker_count to be zero.");
+    }
+    if ((majorCount ?? 0) <= 0) {
+      issues.push("Stage 5 conditional-pass requires at least one major finding.");
+    }
+  }
+
+  if (verdict === "hold" && (blockerCount ?? 0) <= 0) {
+    issues.push("Stage 5 hold requires blocker_count to be greater than zero.");
+  }
+
+  return normalizeStringArray(issues);
+}
+
 function validateDocGateRepairStageResult({
   slice,
   stageResult,
@@ -746,12 +907,28 @@ function applyCodeStageBookkeeping({
 function applyDesignReviewBookkeeping({
   worktreePath,
   slice,
+  updateAuthorityStatus = false,
 }) {
-  return updateWorkpackDesignStatus({
+  const designStatusResult = updateWorkpackDesignStatus({
     worktreePath,
     slice,
     targetStatus: "confirmed",
   });
+  const authorityResult = updateAuthorityStatus
+    ? updateWorkpackDesignAuthorityStatus({
+        worktreePath,
+        slice,
+        targetStatus: "reviewed",
+      })
+    : {
+        changed: false,
+        filePath: null,
+      };
+
+  return {
+    changed: designStatusResult.changed || authorityResult.changed,
+    filePath: designStatusResult.changed ? designStatusResult.filePath : authorityResult.filePath,
+  };
 }
 
 function applyFrontendMergeBookkeeping({
@@ -1501,6 +1678,7 @@ function runAutonomousEvaluationLoop({
   workItemId,
   slice,
   stage,
+  subphase = "implementation",
   state,
   stageRunner,
   worktree,
@@ -1617,6 +1795,7 @@ function runAutonomousEvaluationLoop({
       workItemId,
       slice,
       stage,
+      subphase,
       executionDir: nextState.workspace?.path,
       priorStageResultPath: nextState.execution?.stage_result_path ?? null,
       extraPromptSections: remediationPrompt ? [remediationPrompt] : [],
@@ -1671,6 +1850,7 @@ function runAutonomousEvaluationLoop({
             verify_bucket: null,
             commit_sha: null,
             pr_role: resolvePrRole(stage),
+            subphase,
           },
           clearRecovery: true,
         }),
@@ -2135,6 +2315,35 @@ function processWaitState({
     }
 
     if (prRole === "frontend" && state.wait.stage === 4) {
+      const designAuthorityConfig = resolveDesignAuthorityConfig({
+        rootDir,
+        slice: state.slice ?? workItemId,
+      });
+      if (designAuthorityConfig?.authority_required && state.design_authority?.status !== "prechecked") {
+        const nextState = saveRuntime({
+          rootDir,
+          workItemId,
+          state: setWaitState({
+            state: setDesignAuthorityState({
+              state,
+              status: "pending_precheck",
+              uiRisk: designAuthorityConfig.ui_risk,
+              anchorScreens: designAuthorityConfig.anchor_screens,
+              requiredScreens: designAuthorityConfig.required_screens,
+              authorityRequired: true,
+              updatedAt: now,
+            }),
+            kind: null,
+            updatedAt: now,
+          }),
+        });
+        return {
+          state: nextState,
+          action: "run-stage",
+          nextStage: 4,
+        };
+      }
+
       if (activePr.draft) {
         github.markReady({
           prRef: activePr.url,
@@ -2542,20 +2751,30 @@ function finalizeCodeStage({
 
   if (["stage_result_ready", "verify_pending"].includes(resolveStatePhase(nextState))) {
     if ([2, 4].includes(stage)) {
-      const evaluation = runAutonomousEvaluationLoop({
-        rootDir,
-        workItemId,
-        slice,
-        stage,
-        state: nextState,
-        stageRunner,
-        worktree,
-        now,
-      });
-      if (evaluation.wait?.kind === "human_escalation" || evaluation.merged || evaluation.transitioned) {
-        return evaluation;
+      const shouldRunEvaluation =
+        stage !== 4 ||
+        !resolveDesignAuthorityConfig({
+          rootDir,
+          slice,
+        })?.authority_required ||
+        nextState.execution?.subphase === "authority_precheck";
+      if (shouldRunEvaluation) {
+        const evaluation = runAutonomousEvaluationLoop({
+          rootDir,
+          workItemId,
+          slice,
+          stage,
+          subphase: nextState.execution?.subphase ?? "implementation",
+          state: nextState,
+          stageRunner,
+          worktree,
+          now,
+        });
+        if (evaluation.wait?.kind === "human_escalation" || evaluation.merged || evaluation.transitioned) {
+          return evaluation;
+        }
+        nextState = evaluation.state;
       }
-      nextState = evaluation.state;
     }
 
     nextState = saveRuntime({
@@ -3052,6 +3271,507 @@ function handleImplementationCodeStage({
     reviewEntry,
     now,
   });
+}
+
+function handleAuthorityPrecheckStage({
+  rootDir,
+  workItemId,
+  slice,
+  state,
+  stageRunner,
+  worktree,
+  github,
+  now,
+}) {
+  const stage = 4;
+  const branchRole = "frontend";
+  const branchName = resolveBranchName({ slice, stage });
+  const prRole = "frontend";
+  worktree.checkoutBranch({
+    branch: branchName,
+    startPoint: "origin/master",
+  });
+
+  let nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setWorkspaceBinding({
+      state,
+      path: state.workspace?.path,
+      branchRole,
+      updatedAt: now,
+    }),
+  });
+  const activePr = getActivePullRequest(nextState, prRole);
+  if (!activePr?.url) {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice,
+      state: nextState,
+      stage,
+      prRole,
+      reason: "Authority precheck requires an existing frontend PR.",
+      now,
+      worktree,
+    });
+  }
+
+  const authorityConfig = resolveDesignAuthorityConfig({
+    rootDir,
+    slice,
+  });
+  const {
+    checklistContract,
+    issues: checklistContractIssues,
+  } = resolveChecklistContractValidation({
+    rootDir,
+    worktreePath: nextState.workspace?.path,
+    slice,
+  });
+  if (checklistContractIssues.length > 0 && isChecklistContractActive(checklistContract)) {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice,
+      state: nextState,
+      stage,
+      prRole,
+      reason: summarizeChecklistIssues(checklistContractIssues),
+      now,
+      worktree,
+    });
+  }
+
+  const reviewEntry = nextState.last_review?.frontend ?? null;
+  const phase = resolveStatePhase(nextState);
+  if (
+    !isPendingFinalizePhase(phase) ||
+    nextState.active_stage !== stage ||
+    nextState.execution?.subphase !== "authority_precheck"
+  ) {
+    const runResult = stageRunner({
+      rootDir,
+      workItemId,
+      slice,
+      stage,
+      subphase: "authority_precheck",
+      executionDir: state.workspace?.path,
+    });
+    const deferredOutcome = handleDeferredStageExecution({
+      rootDir,
+      workItemId,
+      slice,
+      stage,
+      prRole,
+      prPath: activePr.url,
+      headSha: activePr.head_sha ?? null,
+      runResult,
+      worktree,
+      now,
+    });
+    if (deferredOutcome) {
+      return deferredOutcome;
+    }
+
+    nextState = resolveRunResultRuntimeState({
+      rootDir,
+      workItemId,
+      slice,
+      runResult,
+    });
+
+    if (!isPendingFinalizePhase(resolveStatePhase(nextState)) && runResult.stageResult) {
+      const stageResultPath = resolve(runResult.artifactDir, "stage-result.json");
+      mkdirSync(runResult.artifactDir, { recursive: true });
+      if (!existsSync(stageResultPath)) {
+        writeFileSync(stageResultPath, `${JSON.stringify(runResult.stageResult, null, 2)}\n`);
+      }
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setExecutionState({
+          state: nextState,
+          activeStage: stage,
+          phase: "stage_result_ready",
+          nextAction: "finalize_stage",
+          artifactDir: runResult.artifactDir,
+          execution: {
+            provider: runResult.execution?.provider ?? null,
+            session_role: runResult.dispatch?.sessionBinding?.role ?? "codex_primary",
+            session_id: runResult.execution?.sessionId ?? null,
+            artifact_dir: runResult.artifactDir,
+            stage_result_path: stageResultPath,
+            started_at: now,
+            finished_at: now,
+            verify_commands: [],
+            verify_bucket: null,
+            commit_sha: null,
+            pr_role: prRole,
+            subphase: "authority_precheck",
+          },
+          clearRecovery: true,
+        }),
+      });
+    }
+  }
+
+  const stageResult = loadExecutionStageResult(nextState, {
+    strictExtendedContract: isChecklistContractActive(checklistContract),
+    subphase: "authority_precheck",
+  });
+  const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
+  const checklistIssues = validateCodeStageChecklistContract({
+    checklistContract,
+    stage,
+    stageResult,
+    reviewEntry,
+  });
+  const authorityIssues = validateAuthorityPrecheckStageResult({
+    stageResult,
+    authorityConfig,
+  });
+  if (checklistIssues.length > 0 || authorityIssues.length > 0) {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice,
+      state: nextState,
+      stage,
+      prRole,
+      reason: summarizeChecklistIssues([...checklistIssues, ...authorityIssues]),
+      now,
+      worktree,
+    });
+  }
+
+  nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setLastRebuttal({
+      state: nextState,
+      role: "frontend",
+      sourceReviewStage: reviewEntry?.source_review_stage ?? null,
+      contestedFixIds: stageResult.contested_fix_ids ?? [],
+      rebuttals: stageResult.rebuttals ?? [],
+      updatedAt: now,
+    }),
+  });
+
+  const evaluation = runAutonomousEvaluationLoop({
+    rootDir,
+    workItemId,
+    slice,
+    stage,
+    subphase: "authority_precheck",
+    state: nextState,
+    stageRunner,
+    worktree,
+    now,
+  });
+  if (evaluation.wait?.kind === "human_escalation" || evaluation.merged || evaluation.transitioned) {
+    return evaluation;
+  }
+  nextState = evaluation.state;
+
+  if (["stage_result_ready", "verify_pending"].includes(resolveStatePhase(nextState))) {
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setExecutionState({
+        state: nextState,
+        activeStage: stage,
+        phase: "verify_pending",
+        nextAction: "finalize_stage",
+        artifactDir,
+        execution: {
+          ...nextState.execution,
+          subphase: "authority_precheck",
+        },
+      }),
+    });
+
+    const verify = runVerifyCommands({
+      worktreePath: nextState.workspace.path,
+      commands: [],
+      artifactDir,
+    });
+    if (verify.bucket === "fail") {
+      return blockWithRecovery({
+        rootDir,
+        workItemId,
+        slice,
+        state: nextState,
+        stage,
+        prRole,
+        reason: "Authority precheck verify commands failed.",
+        now,
+        worktree,
+      });
+    }
+
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setExecutionState({
+        state: nextState,
+        activeStage: stage,
+        phase: "commit_pending",
+        nextAction: "finalize_stage",
+        artifactDir,
+        execution: {
+          ...nextState.execution,
+          verify_bucket: "pass",
+          subphase: "authority_precheck",
+        },
+      }),
+    });
+  }
+
+  if (resolveStatePhase(nextState) === "commit_pending") {
+    const currentHeadSha = worktree.getHeadSha();
+
+    try {
+      worktree.assertClean();
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setExecutionState({
+          state: nextState,
+          activeStage: stage,
+          phase: "push_pending",
+          nextAction: "finalize_stage",
+          artifactDir,
+          execution: {
+            ...nextState.execution,
+            commit_sha: nextState.execution?.commit_sha ?? currentHeadSha,
+            subphase: "authority_precheck",
+          },
+        }),
+      });
+    } catch {
+      commitWorktreeChanges({
+        worktreePath: nextState.workspace.path,
+        subject: stageResult.commit.subject,
+        body: stageResult.commit.body_markdown,
+      });
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setExecutionState({
+          state: nextState,
+          activeStage: stage,
+          phase: "push_pending",
+          nextAction: "finalize_stage",
+          artifactDir,
+          execution: {
+            ...nextState.execution,
+            commit_sha: worktree.getHeadSha(),
+            subphase: "authority_precheck",
+          },
+        }),
+      });
+    }
+  }
+
+  if (resolveStatePhase(nextState) === "push_pending") {
+    worktree.pushBranch({
+      branch: branchName,
+    });
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setExecutionState({
+        state: nextState,
+        activeStage: stage,
+        phase: "pr_pending",
+        nextAction: "finalize_stage",
+        artifactDir,
+        execution: {
+          ...nextState.execution,
+          subphase: "authority_precheck",
+        },
+      }),
+    });
+  }
+
+  if (resolveStatePhase(nextState) === "pr_pending") {
+    github.editPullRequest?.({
+      prRef: activePr.url,
+      title: stageResult.pr.title,
+      body: stageResult.pr.body_markdown,
+      workItemId,
+    });
+    const headSha = nextState.execution?.commit_sha ?? worktree.getHeadSha();
+    nextState = upsertPullRequest({
+      rootDir,
+      workItemId,
+      state: nextState,
+      role: prRole,
+      pr: activePr,
+      branch: branchName,
+      headSha,
+      now,
+    });
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setDesignAuthorityState({
+        state: nextState,
+        status:
+          stageResult.authority_verdict === "hold" || (stageResult.blocker_count ?? 0) > 0
+            ? "needs_revision"
+            : "prechecked",
+        uiRisk: authorityConfig?.ui_risk ?? null,
+        anchorScreens: authorityConfig?.anchor_screens ?? [],
+        requiredScreens: authorityConfig?.required_screens ?? [],
+        authorityRequired: authorityConfig?.authority_required ?? false,
+        authorityReportPaths: stageResult.authority_report_paths ?? [],
+        evidenceArtifactRefs: stageResult.evidence_artifact_refs ?? [],
+        authorityVerdict: stageResult.authority_verdict ?? null,
+        blockerCount: stageResult.blocker_count ?? 0,
+        majorCount: stageResult.major_count ?? 0,
+        minorCount: stageResult.minor_count ?? 0,
+        reviewedScreenIds: stageResult.reviewed_screen_ids ?? [],
+        sourceStage: 4,
+        updatedAt: now,
+      }),
+    });
+
+    if (stageResult.authority_verdict === "hold" || (stageResult.blocker_count ?? 0) > 0) {
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state: markStageCompleted({
+            state: nextState,
+            stage,
+            artifactDir,
+          }),
+          kind: "ready_for_next_stage",
+          prRole,
+          stage: 4,
+          headSha,
+          updatedAt: now,
+        }),
+      });
+      updateRuntimeStatusForWait({
+        rootDir,
+        workItemId,
+        wait: nextState.wait,
+        prPath: activePr.url,
+        now,
+        approvalState: "needs_revision",
+        lifecycle: "in_progress",
+        verificationStatus: "pending",
+      });
+      return {
+        state: nextState,
+        wait: nextState.wait,
+        transitioned: true,
+      };
+    }
+
+    const checks = github.getRequiredChecks({
+      prRef: activePr.url,
+    });
+    if (checks.bucket === "fail") {
+      return blockWithRecovery({
+        rootDir,
+        workItemId,
+        slice,
+        state: nextState,
+        stage,
+        prRole,
+        reason: "Authority precheck PR checks failed.",
+        now,
+        worktree,
+      });
+    }
+
+    if (checks.bucket === "pending") {
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state: markStageCompleted({
+            state: nextState,
+            stage,
+            artifactDir,
+          }),
+          kind: "ci",
+          prRole,
+          stage: 4,
+          headSha,
+          updatedAt: now,
+        }),
+      });
+      return {
+        state: nextState,
+        wait: nextState.wait,
+        transitioned: false,
+      };
+    }
+
+    if (activePr.draft) {
+      github.markReady({
+        prRef: activePr.url,
+      });
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setPullRequestRef({
+          state: nextState,
+          role: "frontend",
+          number: activePr.number,
+          url: activePr.url,
+          draft: false,
+          branch: branchName,
+          headSha,
+          updatedAt: now,
+        }),
+      });
+    }
+
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setWaitState({
+        state: markStageCompleted({
+          state: nextState,
+          stage,
+          artifactDir,
+        }),
+        kind: "ready_for_next_stage",
+        prRole,
+        stage: 5,
+        headSha,
+        updatedAt: now,
+      }),
+    });
+    updateRuntimeStatusForWait({
+      rootDir,
+      workItemId,
+      wait: nextState.wait,
+      prPath: activePr.url,
+      now,
+      approvalState: "codex_approved",
+      lifecycle: "ready_for_review",
+      verificationStatus: "passed",
+      extraNotes: ["design_authority=prechecked"],
+    });
+    return {
+      state: nextState,
+      wait: nextState.wait,
+      transitioned: true,
+    };
+  }
+
+  return {
+    state: nextState,
+    wait: nextState.wait,
+    transitioned: false,
+  };
 }
 
 function handleDocGateRepairStage({
@@ -3871,6 +4591,26 @@ function handleCodeStage({
     }
   }
 
+  if (stage === 4) {
+    const stage4Subphase = resolveStage4Subphase({
+      rootDir,
+      slice,
+      state,
+    });
+    if (stage4Subphase === "authority_precheck") {
+      return handleAuthorityPrecheckStage({
+        rootDir,
+        workItemId,
+        slice,
+        state,
+        stageRunner,
+        worktree,
+        github,
+        now,
+      });
+    }
+  }
+
   return handleImplementationCodeStage({
     rootDir,
     workItemId,
@@ -4030,14 +4770,29 @@ function handleReviewStage({
   const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
   const reviewRole = prRole === "backend" ? "backend" : "frontend";
   const rebuttalEntry = nextState.last_rebuttal?.[reviewRole] ?? null;
+  const designAuthorityConfig =
+    stage === 5
+      ? resolveDesignAuthorityConfig({
+          rootDir,
+          slice: state.slice ?? workItemId,
+        })
+      : null;
   const reviewChecklistIssues = validateReviewStageChecklistContract({
     checklistContract,
     stage,
     stageResult,
     rebuttalEntry,
   });
+  const authorityReviewIssues =
+    stage === 5 && designAuthorityConfig?.authority_required
+      ? validateAuthorityReviewStageResult({
+          stageResult,
+          authorityConfig: designAuthorityConfig,
+          worktreePath: nextState.workspace.path,
+        })
+      : [];
 
-  if (reviewChecklistIssues.length > 0) {
+  if (reviewChecklistIssues.length > 0 || authorityReviewIssues.length > 0) {
     return blockWithRecovery({
       rootDir,
       workItemId,
@@ -4045,7 +4800,7 @@ function handleReviewStage({
       state: nextState,
       stage,
       prRole,
-      reason: summarizeChecklistIssues(reviewChecklistIssues),
+      reason: summarizeChecklistIssues([...reviewChecklistIssues, ...authorityReviewIssues]),
       now,
       worktree,
     });
@@ -4067,9 +4822,41 @@ function handleReviewStage({
         reviewedChecklistIds: stageResult.reviewed_checklist_ids ?? [],
         requiredFixIds: stageResult.required_fix_ids ?? [],
         waivedFixIds: stageResult.waived_fix_ids ?? [],
+        authorityVerdict: stageResult.authority_verdict ?? null,
+        reviewedScreenIds: stageResult.reviewed_screen_ids ?? [],
+        authorityReportPaths: stageResult.authority_report_paths ?? [],
+        blockerCount: stageResult.blocker_count ?? null,
+        majorCount: stageResult.major_count ?? null,
+        minorCount: stageResult.minor_count ?? null,
         updatedAt: now,
       }),
     });
+
+    if (stage === 5 && designAuthorityConfig?.authority_required) {
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setDesignAuthorityState({
+          state: nextState,
+          status:
+            stageResult.decision === "approve" && stageResult.authority_verdict === "pass"
+              ? "reviewed"
+              : "needs_revision",
+          uiRisk: designAuthorityConfig.ui_risk,
+          anchorScreens: designAuthorityConfig.anchor_screens,
+          requiredScreens: designAuthorityConfig.required_screens,
+          authorityRequired: true,
+          authorityReportPaths: stageResult.authority_report_paths ?? [],
+          authorityVerdict: stageResult.authority_verdict ?? null,
+          blockerCount: stageResult.blocker_count ?? null,
+          majorCount: stageResult.major_count ?? null,
+          minorCount: stageResult.minor_count ?? null,
+          reviewedScreenIds: stageResult.reviewed_screen_ids ?? [],
+          sourceStage: 5,
+          updatedAt: now,
+        }),
+      });
+    }
 
     github.commentPullRequest({
       prRef: activePr.url,
@@ -4108,6 +4895,7 @@ function handleReviewStage({
         const bookkeeping = applyDesignReviewBookkeeping({
           worktreePath: nextState.workspace.path,
           slice: state.slice ?? workItemId,
+          updateAuthorityStatus: Boolean(designAuthorityConfig?.authority_required),
         });
 
         if (bookkeeping.changed) {
@@ -4198,7 +4986,7 @@ function handleReviewStage({
       }
 
       if ([3, 6].includes(stage)) {
-        if (!autonomousContext?.policy.autonomous) {
+        if (!autonomousContext?.policy.autonomous || !autonomousContext?.policy.mergeEligible) {
           return blockWithRecovery({
             rootDir,
             workItemId,
@@ -4206,7 +4994,10 @@ function handleReviewStage({
             state: nextState,
             stage,
             prRole,
-            reason: `Slice is not eligible for autonomous Stage ${stage} merge.`,
+            reason:
+              autonomousContext?.policy.autonomous
+                ? `Slice requires manual merge handoff for Stage ${stage}.`
+                : `Slice is not eligible for autonomous Stage ${stage} merge.`,
             now,
             worktree,
           });
@@ -4339,6 +5130,29 @@ function handleReviewStage({
         extraNotes: ["merge_gate=external_smoke"],
       });
     } else {
+      if (stage === 5 && designAuthorityConfig?.authority_required) {
+        nextState = saveRuntime({
+          rootDir,
+          workItemId,
+          state: setDesignAuthorityState({
+            state: nextState,
+            status: "needs_revision",
+            uiRisk: designAuthorityConfig.ui_risk,
+            anchorScreens: designAuthorityConfig.anchor_screens,
+            requiredScreens: designAuthorityConfig.required_screens,
+            authorityRequired: true,
+            authorityReportPaths: stageResult.authority_report_paths ?? [],
+            authorityVerdict: stageResult.authority_verdict ?? null,
+            blockerCount: stageResult.blocker_count ?? null,
+            majorCount: stageResult.major_count ?? null,
+            minorCount: stageResult.minor_count ?? null,
+            reviewedScreenIds: stageResult.reviewed_screen_ids ?? [],
+            sourceStage: 5,
+            updatedAt: now,
+          }),
+        });
+      }
+
       const routeBackStage = stageResult.route_back_stage ?? defaultBackRoute(stage);
       const MAX_PING_PONG_ROUNDS = 3;
       // Read from the original state, not nextState: the first setLastReview in review_pending
@@ -5075,7 +5889,16 @@ export function superviseWorkItem(
       }
 
       try {
-        const stageSubphase = stage === 2 ? resolveStage2Subphase(state) : null;
+        const stageSubphase =
+          stage === 2
+            ? resolveStage2Subphase(state)
+            : stage === 4
+              ? resolveStage4Subphase({
+                  rootDir,
+                  slice: resolvedSlice,
+                  state,
+                })
+              : null;
         assertStageProviderReady({
           auth: dependencies.auth,
           rootDir,

@@ -126,6 +126,22 @@ describe("OMO-lite stage dispatch", () => {
     );
   });
 
+  it("includes mobile UX and authority docs in Stage 1 required reads", () => {
+    const dispatch = buildStageDispatch({
+      slice: "06-recipe-to-planner",
+      stage: 1,
+      claudeBudgetState: "available",
+    });
+
+    expect(dispatch.requiredReads).toEqual(
+      expect.arrayContaining([
+        "docs/design/mobile-ux-rules.md",
+        "docs/design/anchor-screens.md",
+        "docs/engineering/product-design-authority.md",
+      ]),
+    );
+  });
+
   it("builds a Stage 4 Codex dispatch with frontend SOP verification defaults", () => {
     const dispatch = buildStageDispatch({
       slice: "02-discovery-filter",
@@ -144,6 +160,31 @@ describe("OMO-lite stage dispatch", () => {
     );
     expect(dispatch.verifyCommands).toEqual(
       expect.arrayContaining(["pnpm install --frozen-lockfile", "pnpm verify:frontend"]),
+    );
+  });
+
+  it("builds a Stage 4 authority_precheck dispatch for Codex", () => {
+    const dispatch = buildStageDispatch({
+      slice: "06-recipe-to-planner",
+      stage: 4,
+      subphase: "authority_precheck",
+      claudeBudgetState: "available",
+    });
+
+    expect(dispatch.actor).toBe("codex");
+    expect(dispatch.goal).toContain("authority precheck");
+    expect(dispatch.requiredReads).toEqual(
+      expect.arrayContaining([
+        "docs/design/mobile-ux-rules.md",
+        "docs/design/anchor-screens.md",
+        "docs/engineering/product-design-authority.md",
+      ]),
+    );
+    expect(dispatch.deliverables).toEqual(
+      expect.arrayContaining([
+        "mobile evidence bundle",
+        "authority precheck report",
+      ]),
     );
   });
 
@@ -339,6 +380,10 @@ describe("OMO-lite stage dispatch", () => {
       expect.arrayContaining([
         "docs/workpacks/02-discovery-filter/README.md",
         "docs/workpacks/02-discovery-filter/acceptance.md",
+        "docs/design/mobile-ux-rules.md",
+        "docs/design/anchor-screens.md",
+        "docs/engineering/product-design-authority.md",
+        "authority report",
       ]),
     );
   });

@@ -18,13 +18,25 @@ function writeFixtureFile(rootDir: string, relativePath: string, contents: strin
 
 function buildReadme({
   designStatus = "temporary",
+  authorityStatus = "not-required",
+  visualArtifact = "not-required",
   deliveryItems,
 }: {
   designStatus?: "temporary" | "pending-review" | "confirmed" | "N/A";
+  authorityStatus?: string;
+  visualArtifact?: string;
   deliveryItems: Array<{ checked: boolean; text: string; meta?: string }>;
 }) {
   return [
     "# Slice: 05-planner-week-core",
+    "",
+    "## Design Authority",
+    "",
+    "- UI risk: `not-required`",
+    "- Anchor screen dependency: 없음",
+    `- Visual artifact: ${visualArtifact}`,
+    `- Authority status: \`${authorityStatus}\``,
+    "- Notes: none",
     "",
     "## Design Status",
     "",
@@ -63,17 +75,25 @@ function buildAcceptance({
 function createFixture({
   roadmapStatus,
   designStatus,
+  authorityStatus = "not-required",
+  visualArtifact = "not-required",
   deliveryItems,
   acceptanceItems,
   manualOnlyItems = [],
   withAutomationSpec = false,
+  authorityRequired = false,
+  authorityReportPaths = [] as string[],
 }: {
   roadmapStatus: string;
   designStatus: "temporary" | "pending-review" | "confirmed" | "N/A";
+  authorityStatus?: string;
+  visualArtifact?: string;
   deliveryItems: Array<{ checked: boolean; text: string; meta?: string }>;
   acceptanceItems: Array<{ checked: boolean; text: string; meta?: string }>;
   manualOnlyItems?: Array<{ checked: boolean; text: string }>;
   withAutomationSpec?: boolean;
+  authorityRequired?: boolean;
+  authorityReportPaths?: string[];
 }) {
   const rootDir = mkdtempSync(join(tmpdir(), "closeout-sync-"));
 
@@ -95,6 +115,8 @@ function createFixture({
     "docs/workpacks/05-planner-week-core/README.md",
     buildReadme({
       designStatus,
+      authorityStatus,
+      visualArtifact,
       deliveryItems,
     }),
   );
@@ -128,6 +150,16 @@ function createFixture({
             required_states: [],
             playwright_projects: [],
             artifact_assertions: [],
+            design_authority: {
+              ui_risk: authorityRequired ? "anchor-extension" : "not-required",
+              anchor_screens: authorityRequired ? ["RECIPE_DETAIL"] : [],
+              required_screens: authorityRequired ? ["RECIPE_DETAIL"] : [],
+              generator_required: authorityRequired,
+              critic_required: authorityRequired,
+              authority_required: authorityRequired,
+              stage4_evidence_requirements: authorityRequired ? ["mobile-default"] : [],
+              authority_report_paths: authorityReportPaths,
+            },
           },
           external_smokes: ["true"],
           blocked_conditions: [],
@@ -469,5 +501,77 @@ describe("closeout sync validator", () => {
     });
 
     expect(results).toEqual([]);
+  });
+
+  it("fails merged closeout when authority-required slices are not marked reviewed", () => {
+    const rootDir = createFixture({
+      roadmapStatus: "merged",
+      designStatus: "confirmed",
+      authorityStatus: "required",
+      visualArtifact: "ui/designs/evidence/05/PLANNER_WEEK-mobile.png",
+      withAutomationSpec: true,
+      authorityRequired: true,
+      authorityReportPaths: ["ui/designs/authority/PLANNER_WEEK-authority.md"],
+      deliveryItems: [{ checked: true, text: "UI 연결", meta: metadata("delivery-ui", 4, "frontend", "5,6") }],
+      acceptanceItems: [{ checked: true, text: "대표 사용자 흐름이 정상 동작한다", meta: metadata("accept-loading", 4, "frontend", "5,6") }],
+    });
+    writeFixtureFile(
+      rootDir,
+      "ui/designs/authority/PLANNER_WEEK-authority.md",
+      "# Authority\n- verdict: pass\n",
+    );
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "docs/cleanup-workpack-notes",
+      },
+      changedFiles: ["docs/workpacks/05-planner-week-core/README.md"],
+    });
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("Design Authority status 'reviewed'"),
+        }),
+      ]),
+    );
+  });
+
+  it("fails merged closeout when authority verdict is not pass", () => {
+    const rootDir = createFixture({
+      roadmapStatus: "merged",
+      designStatus: "confirmed",
+      authorityStatus: "reviewed",
+      visualArtifact: "ui/designs/evidence/05/PLANNER_WEEK-mobile.png",
+      withAutomationSpec: true,
+      authorityRequired: true,
+      authorityReportPaths: ["ui/designs/authority/PLANNER_WEEK-authority.md"],
+      deliveryItems: [{ checked: true, text: "UI 연결", meta: metadata("delivery-ui", 4, "frontend", "5,6") }],
+      acceptanceItems: [{ checked: true, text: "대표 사용자 흐름이 정상 동작한다", meta: metadata("accept-loading", 4, "frontend", "5,6") }],
+    });
+    writeFixtureFile(
+      rootDir,
+      "ui/designs/authority/PLANNER_WEEK-authority.md",
+      "# Authority\n- verdict: conditional-pass\n",
+    );
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "docs/cleanup-workpack-notes",
+      },
+      changedFiles: ["docs/workpacks/05-planner-week-core/README.md"],
+    });
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("final authority verdict 'pass'"),
+        }),
+      ]),
+    );
   });
 });

@@ -83,6 +83,37 @@ function ensureStage(value) {
 }
 
 function productStageSpec(stage, slice, subphase = null) {
+  if (stage === 4 && subphase === "authority_precheck") {
+    return {
+      actor: "codex",
+      branch: `feature/fe-${slice}`,
+      lifecycle: "in_progress",
+      approval_state: "not_started",
+      verification_status: "pending",
+      requiredReads: [
+        "AGENTS.md",
+        "docs/engineering/slice-workflow.md",
+        `docs/workpacks/${slice}/README.md`,
+        `docs/workpacks/${slice}/acceptance.md`,
+        `docs/workpacks/${slice}/automation-spec.json`,
+        "docs/design/mobile-ux-rules.md",
+        "docs/design/anchor-screens.md",
+        "docs/engineering/product-design-authority.md",
+      ],
+      deliverables: [
+        `branch feature/fe-${slice}`,
+        "mobile evidence bundle",
+        "authority precheck report",
+        "valid authority_precheck stage result",
+      ],
+      verifyCommands: [],
+      successCondition:
+        "Authority precheck evidence, authority report, and structured blocker/major/minor summary are ready for supervisor handoff.",
+      escalationIfBlocked:
+        "Escalate to human if mobile UX evidence or design authority requirements cannot be satisfied within Stage 4 scope.",
+    };
+  }
+
   if (stage === 2 && subphase === "doc_gate_repair") {
     return {
       actor: "codex",
@@ -147,11 +178,16 @@ function productStageSpec(stage, slice, subphase = null) {
         "docs/workpacks/README.md",
         "docs/engineering/slice-workflow.md",
         "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+        "docs/design/mobile-ux-rules.md",
+        "docs/design/anchor-screens.md",
+        "docs/engineering/product-design-authority.md",
       ],
       deliverables: [
         `docs/workpacks/${slice}/README.md`,
         `docs/workpacks/${slice}/acceptance.md`,
         `docs/workpacks/${slice}/automation-spec.json`,
+        "README Design Authority section when authority-required",
+        "design-generator / design-critic artifacts when authority-required",
         "valid stage result",
       ],
       verifyCommands: [],
@@ -218,11 +254,16 @@ function productStageSpec(stage, slice, subphase = null) {
         `docs/workpacks/${slice}/acceptance.md`,
         `docs/workpacks/${slice}/automation-spec.json`,
         "docs/design/design-tokens.md",
+        "docs/design/mobile-ux-rules.md",
+        "docs/design/anchor-screens.md",
+        "docs/engineering/product-design-authority.md",
       ],
       deliverables: [
         `branch feature/fe-${slice}`,
         "frontend tests",
         "frontend implementation",
+        "mobile UX evidence bundle when authority-required",
+        "authority report draft when authority-required",
         `docs/workpacks/${slice}/README.md design status temporary -> pending-review`,
         "valid stage result",
       ],
@@ -242,6 +283,10 @@ function productStageSpec(stage, slice, subphase = null) {
         `docs/workpacks/${slice}/acceptance.md`,
         "frontend PR diff",
         "docs/design/design-tokens.md",
+        "docs/design/mobile-ux-rules.md",
+        "docs/design/anchor-screens.md",
+        "docs/engineering/product-design-authority.md",
+        "authority report",
       ],
       deliverables: [
         "design review summary",
@@ -289,6 +334,10 @@ function buildGoal(stage, slice, subphase = null) {
     return `슬라이스 ${slice} internal 1.5 docs review`;
   }
 
+  if (stage === 4 && subphase === "authority_precheck") {
+    return `슬라이스 ${slice} authority precheck`;
+  }
+
   return `슬라이스 ${slice} ${stage}단계 진행`;
 }
 
@@ -296,6 +345,7 @@ function buildGoal(stage, slice, subphase = null) {
  * @param {{
  *   slice: string,
  *   stage: number|string,
+ *   subphase?: string|null,
  *   claudeBudgetState?: "available"|"constrained"|"unavailable",
  *   sessionId?: string|null,
  *   retryAt?: string|null,

@@ -211,6 +211,55 @@ function resolveEffectiveProviderSelection({
 }
 
 function buildCodeStageResultTemplate(stage, subphase = null) {
+  if (stage === 4 && subphase === "authority_precheck") {
+    return {
+      result: "done",
+      summary_markdown: "짧은 authority precheck 요약",
+      commit: {
+        subject: "feat: 제목",
+        body_markdown: "선택 사항",
+      },
+      pr: {
+        title: "feat: 제목",
+        body_markdown: "## Summary\n- 변경 요약",
+      },
+      checks_run: [],
+      next_route: "open_pr",
+      claimed_scope: {
+        files: ["app/example/page.tsx", "ui/designs/authority/EXAMPLE-authority.md"],
+        endpoints: [],
+        routes: ["/example"],
+        states: ["loading", "error"],
+        invariants: [],
+      },
+      changed_files: ["app/example/page.tsx", "ui/designs/authority/EXAMPLE-authority.md"],
+      tests_touched: ["tests/example.frontend.test.ts"],
+      artifacts_written: [
+        "ui/designs/authority/EXAMPLE-authority.md",
+        "ui/designs/evidence/example/EXAMPLE-mobile.png",
+      ],
+      checklist_updates: [
+        {
+          id: "accept-frontend-example",
+          status: "checked",
+          evidence_refs: ["pnpm verify:frontend", "tests/example.frontend.test.ts"],
+        },
+      ],
+      contested_fix_ids: [],
+      rebuttals: [],
+      authority_verdict: "pass",
+      reviewed_screen_ids: ["EXAMPLE"],
+      authority_report_paths: ["ui/designs/authority/EXAMPLE-authority.md"],
+      evidence_artifact_refs: [
+        "ui/designs/evidence/example/EXAMPLE-mobile.png",
+        "ui/designs/evidence/example/EXAMPLE-mobile-narrow.png",
+      ],
+      blocker_count: 0,
+      major_count: 0,
+      minor_count: 0,
+    };
+  }
+
   if (stage === 2 && subphase === "doc_gate_repair") {
     return {
       result: "done",
@@ -391,6 +440,12 @@ function buildPrompt({
           reviewed_checklist_ids: ["accept-example"],
           required_fix_ids: [],
           waived_fix_ids: [],
+          authority_verdict: "pass | conditional-pass | hold",
+          reviewed_screen_ids: ["EXAMPLE"],
+          authority_report_paths: ["ui/designs/authority/EXAMPLE-authority.md"],
+          blocker_count: 0,
+          major_count: 0,
+          minor_count: 0,
           findings: [
             {
               file: "path/to/file.ts",
@@ -490,9 +545,11 @@ function buildPrompt({
       ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route, claimed_scope, changed_files, artifacts_written, resolved_doc_finding_ids, contested_doc_fix_ids, rebuttals"
       : normalizedStage === 2 && subphase === "doc_gate_review"
         ? "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, review_scope.scope=doc_gate, reviewed_doc_finding_ids, required_doc_fix_ids, waived_doc_fix_ids, findings"
+        : normalizedStage === 4 && subphase === "authority_precheck"
+          ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route, claimed_scope, changed_files, tests_touched, artifacts_written, checklist_updates, contested_fix_ids, rebuttals, authority_verdict, reviewed_screen_ids, authority_report_paths, evidence_artifact_refs, blocker_count, major_count, minor_count"
         : [1, 2, 4].includes(normalizedStage)
           ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route, claimed_scope, changed_files, tests_touched, artifacts_written, checklist_updates, contested_fix_ids, rebuttals"
-          : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, review_scope, reviewed_checklist_ids, required_fix_ids, waived_fix_ids, findings (optional — 문제가 있으면 structured findings 배열을 반드시 포함하세요)",
+          : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, review_scope, reviewed_checklist_ids, required_fix_ids, waived_fix_ids, authority_verdict, reviewed_screen_ids, authority_report_paths, blocker_count, major_count, minor_count, findings (optional — 문제가 있으면 structured findings 배열을 반드시 포함하세요)",
     ...extraPromptSections,
   ]
     .filter(Boolean)

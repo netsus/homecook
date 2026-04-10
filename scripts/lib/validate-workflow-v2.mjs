@@ -253,6 +253,8 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "`pnpm omo:status`",
       "`pnpm validate:omo-bookkeeping`",
       "low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함",
+      "authority-required UI는 Codex `authority_precheck` 후 Claude final authority를 거친다.",
+      "manual merge handoff",
     ]),
   ];
 
@@ -273,6 +275,9 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "`pnpm omo:smoke:providers`",
       "GitHub formal approval을 merge gate로 사용하지 않는다",
       "current head 기준 전체 PR checks green + Claude approve artifact + external smoke pass 뒤 자동 merge한다",
+      "authority_precheck",
+      "Stage 5는 Claude final authority다.",
+      "manual merge handoff",
     ]),
   ];
 

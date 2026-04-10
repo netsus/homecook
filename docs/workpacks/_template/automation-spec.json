@@ -39,7 +39,17 @@
       "playwright-report",
       "trace.zip",
       "screenshot"
-    ]
+    ],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "critic_required": false,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
   },
   "external_smokes": [],
   "blocked_conditions": [
