@@ -112,29 +112,33 @@ async function swipeWeekStrip(page: Page, direction: "next" | "prev") {
   const endX = direction === "next" ? box.x + 12 : box.x + box.width - 12;
   const y = box.y + box.height / 2;
 
-  await strip.dispatchEvent("pointerdown", {
-    bubbles: true,
-    clientX: startX,
-    clientY: y,
-    isPrimary: true,
-    pointerId: 1,
-    pointerType: "touch",
-  });
-  await strip.dispatchEvent("pointermove", {
-    bubbles: true,
-    clientX: middleX,
-    clientY: y,
-    isPrimary: true,
-    pointerId: 1,
-    pointerType: "touch",
-  });
-  await strip.dispatchEvent("pointerup", {
-    bubbles: true,
-    clientX: endX,
-    clientY: y,
-    isPrimary: true,
-    pointerId: 1,
-    pointerType: "touch",
+  await strip.evaluate((element, gesture) => {
+    const fireTouch = (type: "touchstart" | "touchmove" | "touchend", clientX: number) => {
+      const event = new Event(type, {
+        bubbles: true,
+        cancelable: true,
+      });
+      const touchList =
+        type === "touchend" ? [] : [{ clientX, clientY: gesture.y }];
+      Object.defineProperty(event, "touches", {
+        configurable: true,
+        value: touchList,
+      });
+      Object.defineProperty(event, "changedTouches", {
+        configurable: true,
+        value: [{ clientX, clientY: gesture.y }],
+      });
+      element.dispatchEvent(event);
+    };
+
+    fireTouch("touchstart", gesture.startX);
+    fireTouch("touchmove", gesture.middleX);
+    fireTouch("touchend", gesture.endX);
+  }, {
+    endX,
+    middleX,
+    startX,
+    y,
   });
 }
 

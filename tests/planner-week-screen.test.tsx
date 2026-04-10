@@ -253,6 +253,42 @@ describe("planner week screen", () => {
     });
   });
 
+  it("keeps the weekly shell sticky and leaves planner body anchored during swipe preview", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_title: "김치찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    const strip = await screen.findByLabelText("주간 날짜 스트립");
+    const stickyShell = screen.getByTestId("planner-week-shell");
+    const stripTrack = screen.getByTestId("planner-week-strip-track");
+    const plannerBody = screen.getByTestId("planner-week-body");
+
+    fireEvent.touchStart(strip, createTouchLikeEvent(240, 18));
+    fireEvent.touchMove(strip, createTouchLikeEvent(140, 20));
+
+    expect(strip.className).toContain("touch-pan-y");
+    expect(stickyShell.className).toContain("sticky");
+    expect(stripTrack.getAttribute("style")).toContain("translateX(-36px)");
+    expect(plannerBody.getAttribute("style")).toContain("translateX(0px)");
+  });
+
   it("keeps the previous planner content visible while the next week is refreshing", async () => {
     const firstLoad = createDeferred<ReturnType<typeof createPlannerData>>();
     const secondLoad = createDeferred<ReturnType<typeof createPlannerData>>();

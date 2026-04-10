@@ -22,9 +22,8 @@ export interface PlannerWeekScreenProps {
 
 const RANGE_SHIFT_DAYS = 7;
 const SWIPE_THRESHOLD_PX = 44;
-const SWIPE_PREVIEW_OFFSET_PX = 22;
-const SWIPE_MAX_DRAG_PX = 84;
-const CONTENT_DRAG_RATIO = 0.18;
+const SWIPE_PREVIEW_OFFSET_PX = 16;
+const SWIPE_MAX_DRAG_PX = 36;
 const CTA_BUTTONS = ["장보기", "요리하기", "남은요리"] as const;
 type SwipeDirection = -1 | 0 | 1;
 
@@ -255,6 +254,10 @@ export function PlannerWeekScreen({
   }
 
   function handleWeekStripPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "touch") {
+      return;
+    }
+
     if (event.pointerType === "mouse" && event.button !== 0) {
       return;
     }
@@ -414,26 +417,17 @@ export function PlannerWeekScreen({
     runPlannerAction(loadPlanner());
   }, [authState, loadPlanner]);
 
-  const plannerBodyOffset = isWeekStripDragging
-    ? weekStripOffset * CONTENT_DRAG_RATIO
-    : refreshDirection === 0
-      ? 0
-      : refreshDirection === 1
-        ? -14
-        : 14;
   const weekStripMotionStyle = {
-    opacity: isRefreshing ? 0.92 : 1,
+    opacity: isRefreshing ? 0.96 : 1,
     transform: `translateX(${weekStripOffset}px)`,
     transition: isWeekStripDragging
       ? "none"
       : "transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 180ms ease",
   } as const;
   const plannerBodyMotionStyle = {
-    opacity: isRefreshing ? 0.92 : 1,
-    transform: `translateX(${plannerBodyOffset}px)`,
-    transition: isWeekStripDragging
-      ? "none"
-      : "transform 240ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 200ms ease",
+    opacity: isRefreshing ? 0.97 : 1,
+    transform: "translateX(0px)",
+    transition: "opacity 180ms ease",
   } as const;
 
   if (authState === "checking") {
@@ -474,101 +468,103 @@ export function PlannerWeekScreen({
   return (
     <div className="space-y-3 sm:space-y-4">
       <section className="glass-panel rounded-[clamp(22px,6vw,28px)] px-[clamp(14px,4vw,24px)] py-[clamp(14px,4vw,24px)]">
-        <div className="flex flex-col gap-[clamp(12px,3vw,18px)]">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-                Planner Week
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
+              Planner Week
+            </p>
+            <h2 className="mt-1.5 text-[clamp(1.9rem,8vw,2.7rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
+              식단 플래너
+            </h2>
+          </div>
+          <div className="flex flex-wrap gap-1.5 md:justify-end">
+            {CTA_BUTTONS.map((label) => (
+              <button
+                key={label}
+                aria-disabled="true"
+                className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-semibold text-[var(--muted)] opacity-60 sm:min-h-10 sm:px-4 sm:text-sm"
+                disabled
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section
+        className="glass-panel sticky top-2 z-20 rounded-[clamp(18px,5vw,24px)] border border-[var(--line)] bg-white/88 px-[clamp(12px,3.5vw,18px)] py-[clamp(12px,3.5vw,18px)] shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur"
+        data-testid="planner-week-shell"
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[12px] font-semibold text-[var(--olive)] sm:text-[13px]">
+                {rangeContextLabel}
               </p>
-              <h2 className="mt-1.5 text-[clamp(1.9rem,8vw,2.7rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
-                식단 플래너
-              </h2>
+              <div className="inline-flex w-fit items-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[11px] font-semibold text-[var(--muted)] sm:text-[12px]">
+                식사 {meals.length}건
+              </div>
             </div>
-            <div className="flex flex-wrap gap-1.5 md:justify-end">
-              {CTA_BUTTONS.map((label) => (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+                  현재 범위
+                </p>
+                <h3 className="mt-1 text-[clamp(1.35rem,5.6vw,1.85rem)] font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                  {formatRangeLabel(rangeStartDate, rangeEndDate)}
+                </h3>
+              </div>
+              {!isCurrentRange ? (
                 <button
-                  key={label}
-                  aria-disabled="true"
-                  className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-semibold text-[var(--muted)] opacity-60 sm:min-h-10 sm:px-4 sm:text-sm"
-                  disabled
+                  className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-sm"
+                  onClick={() => runPlannerAction(resetRange())}
                   type="button"
                 >
-                  {label}
+                  이번주로 가기
                 </button>
-              ))}
+              ) : null}
             </div>
           </div>
 
-          <div className="rounded-[clamp(18px,5vw,24px)] border border-[var(--line)] bg-white/78 px-[clamp(12px,3.5vw,18px)] py-[clamp(12px,3.5vw,18px)]">
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-[12px] font-semibold text-[var(--olive)] sm:text-[13px]">
-                    {rangeContextLabel}
-                  </p>
-                  <div className="inline-flex w-fit items-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[11px] font-semibold text-[var(--muted)] sm:text-[12px]">
-                    식사 {meals.length}건
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
-                      현재 범위
+          <p className="sr-only" id="planner-week-strip-hint">
+            주간 날짜 스트립을 좌우로 넘기면 이전 주 또는 다음 주로 이동할 수 있어요.
+          </p>
+          <div
+            aria-describedby="planner-week-strip-hint"
+            aria-busy={isRefreshing}
+            aria-label="주간 날짜 스트립"
+            className="touch-pan-y select-none"
+            onKeyDown={handleWeekStripKeyDown}
+            onPointerCancel={() => {
+              resetWeekStripGesture();
+            }}
+            onPointerDown={handleWeekStripPointerDown}
+            onPointerMove={handleWeekStripPointerMove}
+            onPointerUp={handleWeekStripPointerEnd}
+            onTouchCancel={resetWeekStripGesture}
+            onTouchEnd={handleWeekStripTouchEnd}
+            onTouchMove={handleWeekStripTouchMove}
+            onTouchStart={handleWeekStripTouchStart}
+            tabIndex={0}
+          >
+            <ol
+              className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold text-[var(--muted)] sm:gap-2 sm:text-xs"
+              data-testid="planner-week-strip-track"
+              style={weekStripMotionStyle}
+            >
+              {dateKeys.map((dateKey) => (
+                <li key={dateKey} className="list-none">
+                  <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-1 py-2 sm:px-1.5">
+                    <p>{formatWeekdayLabel(dateKey)}</p>
+                    <p className="mt-0.5 text-[clamp(0.9rem,3.2vw,0.98rem)] text-[var(--foreground)]">
+                      {dateKey.slice(8)}
                     </p>
-                    <h3 className="mt-1 text-[clamp(1.35rem,5.6vw,1.85rem)] font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-                      {formatRangeLabel(rangeStartDate, rangeEndDate)}
-                    </h3>
                   </div>
-                  {!isCurrentRange ? (
-                    <button
-                      className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-sm"
-                      onClick={() => runPlannerAction(resetRange())}
-                      type="button"
-                    >
-                      이번주로 가기
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-
-              <p className="sr-only" id="planner-week-strip-hint">
-                주간 날짜 스트립을 좌우로 넘기면 이전 주 또는 다음 주로 이동할 수 있어요.
-              </p>
-              <div
-                aria-describedby="planner-week-strip-hint"
-                aria-busy={isRefreshing}
-                aria-label="주간 날짜 스트립"
-                className="touch-pan-x select-none"
-                onKeyDown={handleWeekStripKeyDown}
-                onPointerCancel={() => {
-                  resetWeekStripGesture();
-                }}
-                onPointerDown={handleWeekStripPointerDown}
-                onPointerMove={handleWeekStripPointerMove}
-                onPointerUp={handleWeekStripPointerEnd}
-                onTouchCancel={resetWeekStripGesture}
-                onTouchEnd={handleWeekStripTouchEnd}
-                onTouchMove={handleWeekStripTouchMove}
-                onTouchStart={handleWeekStripTouchStart}
-                tabIndex={0}
-              >
-                <ol
-                  className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold text-[var(--muted)] sm:gap-2 sm:text-xs"
-                  style={weekStripMotionStyle}
-                >
-                  {dateKeys.map((dateKey) => (
-                    <li key={dateKey} className="list-none">
-                      <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-1 py-2 sm:px-1.5">
-                        <p>{formatWeekdayLabel(dateKey)}</p>
-                        <p className="mt-0.5 text-[clamp(0.9rem,3.2vw,0.98rem)] text-[var(--foreground)]">
-                          {dateKey.slice(8)}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
+                </li>
+              ))}
+            </ol>
           </div>
         </div>
       </section>
@@ -599,6 +595,7 @@ export function PlannerWeekScreen({
         <section
           aria-busy={isRefreshing}
           className="space-y-2.5 sm:space-y-3"
+          data-testid="planner-week-body"
           style={plannerBodyMotionStyle}
         >
           {screenState === "empty" ? (
