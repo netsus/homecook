@@ -253,7 +253,7 @@ describe("planner week screen", () => {
     });
   });
 
-  it("keeps the weekly shell sticky and leaves planner body anchored during swipe preview", async () => {
+  it("keeps the weekly shell sticky and reveals the incoming week track during swipe preview", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(
       createPlannerData({
@@ -277,7 +277,7 @@ describe("planner week screen", () => {
 
     const strip = await screen.findByLabelText("주간 날짜 스트립");
     const stickyShell = screen.getByTestId("planner-week-shell");
-    const stripTrack = screen.getByTestId("planner-week-strip-track");
+    const currentTrack = screen.getByTestId("planner-week-strip-current-track");
     const plannerBody = screen.getByTestId("planner-week-body");
 
     fireEvent.touchStart(strip, createTouchLikeEvent(240, 18));
@@ -285,7 +285,12 @@ describe("planner week screen", () => {
 
     expect(strip.className).toContain("touch-pan-y");
     expect(stickyShell.className).toContain("sticky");
-    expect(stripTrack.getAttribute("style")).toContain("translateX(-36px)");
+    await waitFor(() => {
+      expect(currentTrack.getAttribute("style")).toContain("translateX(-36px)");
+    });
+    const previewTrack = screen.getByTestId("planner-week-strip-preview-track");
+    expect(previewTrack.getAttribute("style")).toContain("translateX(calc(100% - 36px))");
+    expect(previewTrack.textContent ?? "").toContain("31");
     expect(plannerBody.getAttribute("style")).toContain("translateX(0px)");
   });
 

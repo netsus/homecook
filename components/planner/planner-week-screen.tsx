@@ -8,7 +8,11 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { ContentState } from "@/components/shared/content-state";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
-import { createDefaultPlannerRange, isPlannerApiError } from "@/lib/api/planner";
+import {
+  createDefaultPlannerRange,
+  isPlannerApiError,
+  shiftPlannerRange,
+} from "@/lib/api/planner";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { usePlannerStore } from "@/stores/planner-store";
@@ -108,6 +112,31 @@ function buildMealMap(meals: PlannerMealData[]) {
   return mealMap;
 }
 
+function getDragPreviewDirection(
+  isWeekStripDragging: boolean,
+  weekStripOffset: number,
+): SwipeDirection {
+  if (!isWeekStripDragging || weekStripOffset === 0) {
+    return 0;
+  }
+
+  return weekStripOffset < 0 ? 1 : -1;
+}
+
+function buildPreviewTrackTransform(direction: SwipeDirection, weekStripOffset: number) {
+  if (direction === 1) {
+    const offset = Math.abs(weekStripOffset);
+    return `translateX(calc(100% - ${offset}px))`;
+  }
+
+  if (direction === -1) {
+    const offset = Math.abs(weekStripOffset);
+    return `translateX(calc(-100% + ${offset}px))`;
+  }
+
+  return "translateX(0px)";
+}
+
 export function PlannerWeekScreen({
   initialAuthenticated = false,
 }: PlannerWeekScreenProps) {
@@ -137,6 +166,30 @@ export function PlannerWeekScreen({
   const defaultRange = createDefaultPlannerRange();
   const isCurrentRange =
     rangeStartDate === defaultRange.startDate && rangeEndDate === defaultRange.endDate;
+  const dragPreviewDirection = getDragPreviewDirection(
+    isWeekStripDragging,
+    weekStripOffset,
+  );
+  const previewRange = useMemo(() => {
+    if (dragPreviewDirection === 0) {
+      return null;
+    }
+
+    return shiftPlannerRange(
+      {
+        startDate: rangeStartDate,
+        endDate: rangeEndDate,
+      },
+      dragPreviewDirection === 1 ? RANGE_SHIFT_DAYS : -RANGE_SHIFT_DAYS,
+    );
+  }, [dragPreviewDirection, rangeEndDate, rangeStartDate]);
+  const previewDateKeys = useMemo(() => {
+    if (!previewRange) {
+      return [];
+    }
+
+    return buildDateKeys(previewRange.startDate, previewRange.endDate);
+  }, [previewRange]);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const gestureSourceRef = useRef<"pointer" | "touch" | null>(null);
   const activePointerIdRef = useRef<number | null>(null);
@@ -429,6 +482,13 @@ export function PlannerWeekScreen({
     transform: "translateX(0px)",
     transition: "opacity 180ms ease",
   } as const;
+  const previewTrackMotionStyle = {
+    opacity: isWeekStripDragging ? 1 : 0,
+    transform: buildPreviewTrackTransform(dragPreviewDirection, weekStripOffset),
+    transition: isWeekStripDragging
+      ? "none"
+      : "transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 180ms ease",
+  } as const;
 
   if (authState === "checking") {
     return (
@@ -549,22 +609,43 @@ export function PlannerWeekScreen({
             onTouchStart={handleWeekStripTouchStart}
             tabIndex={0}
           >
-            <ol
-              className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold text-[var(--muted)] sm:gap-2 sm:text-xs"
-              data-testid="planner-week-strip-track"
-              style={weekStripMotionStyle}
-            >
-              {dateKeys.map((dateKey) => (
-                <li key={dateKey} className="list-none">
-                  <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-1 py-2 sm:px-1.5">
-                    <p>{formatWeekdayLabel(dateKey)}</p>
-                    <p className="mt-0.5 text-[clamp(0.9rem,3.2vw,0.98rem)] text-[var(--foreground)]">
-                      {dateKey.slice(8)}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <div className="relative overflow-hidden">
+              <ol
+                className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold text-[var(--muted)] sm:gap-2 sm:text-xs"
+                data-testid="planner-week-strip-current-track"
+                style={weekStripMotionStyle}
+              >
+                {dateKeys.map((dateKey) => (
+                  <li key={dateKey} className="list-none">
+                    <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-1 py-2 sm:px-1.5">
+                      <p>{formatWeekdayLabel(dateKey)}</p>
+                      <p className="mt-0.5 text-[clamp(0.9rem,3.2vw,0.98rem)] text-[var(--foreground)]">
+                        {dateKey.slice(8)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              {dragPreviewDirection !== 0 ? (
+                <ol
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold text-[var(--muted)] sm:gap-2 sm:text-xs"
+                  data-testid="planner-week-strip-preview-track"
+                  style={previewTrackMotionStyle}
+                >
+                  {previewDateKeys.map((dateKey) => (
+                    <li key={dateKey} className="list-none">
+                      <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-1 py-2 sm:px-1.5">
+                        <p>{formatWeekdayLabel(dateKey)}</p>
+                        <p className="mt-0.5 text-[clamp(0.9rem,3.2vw,0.98rem)] text-[var(--foreground)]">
+                          {dateKey.slice(8)}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+            </div>
           </div>
         </div>
       </section>
