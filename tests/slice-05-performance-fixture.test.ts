@@ -18,22 +18,21 @@ describe("slice 05 performance fixture", () => {
     expect(dataset.columns.map((column) => column.name)).toEqual([
       "아침",
       "점심",
-      "저녁",
       "간식",
-      "야식",
+      "저녁",
     ]);
     expect(dataset.recipes).toHaveLength(24);
-    expect(dataset.meals).toHaveLength(343);
-    expect(dataset.scenario.initialRangeStartDate).toBe("2026-04-02");
-    expect(dataset.scenario.initialRangeEndDate).toBe("2026-04-16");
-    expect(dataset.scenario.initialMealCount).toBe(89);
+    expect(dataset.meals).toHaveLength(286);
+    expect(dataset.scenario.initialRangeStartDate).toBe("2026-04-09");
+    expect(dataset.scenario.initialRangeEndDate).toBe("2026-04-15");
+    expect(dataset.scenario.initialMealCount).toBe(36);
     expect(dataset.scenario.shifts).toHaveLength(
       SLICE_05_PERFORMANCE_DEFAULTS.shiftDirections.length,
     );
     expect(
       dataset.scenario.shifts.every((shift) => shift.expectedMealCount > 0),
     ).toBe(true);
-    expect(dataset.scenario.lastColumnName).toBe("야식");
+    expect(dataset.scenario.lastColumnName).toBe("저녁");
     expect(dataset.scenario.loginButtonLabel).toBe("다른 테스트 계정으로 시작");
     expect(
       [

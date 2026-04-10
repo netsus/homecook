@@ -180,3 +180,15 @@
 ### 상단 CTA 버튼
 - [장보기] [요리하기] [남은요리] 버튼은 UI에 노출되지만, 이번 슬라이스에서는 모두 disabled 상태다
 - 클릭/탭, 키보드 활성화, placeholder 라우팅을 제공하지 않는다
+
+## Delivery Checklist
+- [x] 백엔드 계약 고정
+- [x] API 또는 adapter 연결
+- [x] 타입 반영
+- [x] UI 연결
+- [x] 상태 전이 / 권한 / 멱등성 테스트
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분
+- [x] fixture와 real DB smoke 경로 구분
+- [x] seed / bootstrap / system row 준비 여부 점검
+- [x] `loading / empty / error / read-only / unauthorized` 상태 점검
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리

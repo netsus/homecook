@@ -547,7 +547,7 @@ export function RecipeDetailScreen({
     );
   }
 
-  const renderMetricActions = () => (
+  const renderPrimaryActions = () => (
     <>
       <MetricActionButton
         ariaLabel={
@@ -576,6 +576,14 @@ export function RecipeDetailScreen({
         onClick={() => handleProtectedAction("save")}
         tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
       />
+      <MetricActionButton
+        ariaLabel="플래너에 추가"
+        count={formatCount(recipe.plan_count)}
+        icon={<PlannerIcon />}
+        label="플래너"
+        onClick={() => handleProtectedAction("planner")}
+        tone="olive"
+      />
     </>
   );
 
@@ -584,11 +592,11 @@ export function RecipeDetailScreen({
       <div className="space-y-6">
         <section className="glass-panel flex flex-col overflow-hidden rounded-[24px]">
           <div
-            className="min-h-48 border-b border-[var(--line)] bg-[linear-gradient(135deg,rgba(255,108,60,0.22),rgba(255,249,242,0.78),rgba(46,166,122,0.18))] sm:min-h-64 md:min-h-80"
+            className="order-2 min-h-40 border-t border-[var(--line)] bg-[linear-gradient(135deg,rgba(255,108,60,0.22),rgba(255,249,242,0.78),rgba(46,166,122,0.18))] sm:order-1 sm:min-h-56 sm:border-t-0 sm:border-b md:min-h-72"
             style={
               recipe.thumbnail_url
                 ? {
-                    backgroundImage: `linear-gradient(rgba(26, 26, 46, 0.08), rgba(26, 26, 46, 0.32)), url(${recipe.thumbnail_url})`,
+                    backgroundImage: `linear-gradient(rgba(26, 26, 46, 0.08), rgba(26, 26, 46, 0.3)), url(${recipe.thumbnail_url})`,
                     backgroundPosition: "center",
                     backgroundSize: "cover",
                   }
@@ -596,7 +604,7 @@ export function RecipeDetailScreen({
             }
           />
 
-          <div className="flex flex-col gap-6 px-5 py-5 md:px-6 md:py-6">
+          <div className="order-1 flex flex-col gap-4 px-5 py-5 sm:order-2 sm:gap-5 md:px-6">
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
               <Link href="/">Home</Link>
               <span>/</span>
@@ -604,21 +612,26 @@ export function RecipeDetailScreen({
             </div>
 
             <div className="flex flex-col gap-4">
-              <h2 className="text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:text-[2.25rem]">
+              <h2 className="text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:text-[2rem]">
                 {recipe.title}
               </h2>
-              <p className="max-w-3xl text-sm leading-6 text-[var(--muted)]">
-                {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {recipe.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-[color:rgba(46,166,122,0.1)] px-3 py-1 text-xs font-semibold text-[var(--olive)]"
-                  >
-                    #{tag}
-                  </span>
-                ))}
+              <div className="order-2 flex flex-wrap gap-2 sm:order-3">
+                {renderPrimaryActions()}
+              </div>
+              <div className="order-3 sm:order-2">
+                <p className="max-w-3xl text-sm leading-6 text-[var(--muted)]">
+                  {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {recipe.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-[color:rgba(46,166,122,0.1)] px-3 py-1 text-xs font-semibold text-[var(--olive)]"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -649,38 +662,22 @@ export function RecipeDetailScreen({
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <ActionButton
-                  label="요리하기"
-                  onClick={() =>
-                    setFeedback({
-                      message: "요리모드는 다음 슬라이스에서 이어서 구현합니다.",
-                      tone: "status",
-                    })
-                  }
-                  tone="brand"
-                />
-                <ActionButton
-                  label="플래너에 추가"
-                  onClick={() => handleProtectedAction("planner")}
-                  tone="olive"
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="rounded-full border border-[var(--line)] bg-white/78 px-3 py-2 text-sm font-semibold text-[var(--muted)]">
-                  플래너 등록 {formatCount(recipe.plan_count)}
-                </div>
-                <IconActionButton
-                  ariaLabel="공유하기"
-                  icon={<ShareIcon />}
-                  onClick={handleShare}
-                />
-              </div>
-            </div>
-
             <div className="flex flex-wrap gap-2">
-              {renderMetricActions()}
+              <ActionButton
+                label="요리하기"
+                onClick={() =>
+                  setFeedback({
+                    message: "요리모드는 다음 슬라이스에서 이어서 구현합니다.",
+                    tone: "status",
+                  })
+                }
+                tone="brand"
+              />
+              <IconActionButton
+                ariaLabel="공유하기"
+                icon={<ShareIcon />}
+                onClick={handleShare}
+              />
             </div>
           </div>
         </section>
@@ -1052,6 +1049,22 @@ function BookmarkIcon({ filled = false }: { filled?: boolean }) {
       width="18"
     >
       <path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.7L6 20V5.5a1 1 0 0 1 1-1Z" />
+    </svg>
+  );
+}
+
+function PlannerIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M7 3.5v3M17 3.5v3M5.5 8.5h13M6.5 5.5h11a1 1 0 0 1 1 1v11a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-11a1 1 0 0 1 1-1Z" />
     </svg>
   );
 }
