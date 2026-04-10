@@ -58,6 +58,32 @@ async function expectVisibleWithinViewport(page: Page, locator: Locator) {
   expect(box!.y + box!.height).toBeLessThanOrEqual((viewport?.height ?? 0) - 4);
 }
 
+async function swipeWeekStrip(page: Page, direction: "next" | "prev") {
+  const strip = page.getByLabel("주간 날짜 스트립");
+  const box = await strip.boundingBox();
+
+  expect(box).not.toBeNull();
+
+  const startX = direction === "next" ? box!.x + box!.width - 12 : box!.x + 12;
+  const endX = direction === "next" ? box!.x + 12 : box!.x + box!.width - 12;
+  const y = box!.y + box!.height / 2;
+
+  await strip.dispatchEvent("pointerdown", {
+    bubbles: true,
+    clientX: startX,
+    clientY: y,
+    isPrimary: true,
+    pointerType: "touch",
+  });
+  await strip.dispatchEvent("pointerup", {
+    bubbles: true,
+    clientX: endX,
+    clientY: y,
+    isPrimary: true,
+    pointerType: "touch",
+  });
+}
+
 test.describe("Slice 05 local long-run performance smoke", () => {
   test.skip(
     process.env.HOMECOOK_RUN_LOCAL_PERF_QA !== "1",
@@ -110,7 +136,7 @@ test.describe("Slice 05 local long-run performance smoke", () => {
     for (const shift of dataset.scenario.shifts) {
       const duration = await measure(
         async () => {
-          await page.getByRole("button", { name: shift.buttonLabel }).click();
+          await swipeWeekStrip(page, shift.direction === "next" ? "next" : "prev");
         },
         async () => {
           await waitForPlannerRange(page, {

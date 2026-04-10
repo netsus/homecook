@@ -16,8 +16,8 @@
 - API:
   - `GET /planner` — 플래너 조회 (주간 범위, 고정 4끼 slots + meals)
 - 상태 전이:
-  - 식사 상태 뱃지 표시 (`registered` / `shopping_done` / `cook_done`)
-  - 주간 범위 이동 (`이전 주 / 다음 주 / 이번주로 가기`)
+  - 식사 상태 표시 (`registered` / `shopping_done` / `cook_done`)
+  - 요일 스트립 스와이프 기반 주간 범위 이동 + `이번주로 가기`
 - DB 영향:
   - `meal_plan_columns` — 조회, bootstrap/backfill로 canonical 4끼 보장
   - `meals` — 조회 (플래너 화면 표시용, CRUD는 06/07 슬라이스)
@@ -42,6 +42,8 @@
 - `POST /planner/columns`, `PATCH /planner/columns/{column_id}`, `DELETE /planner/columns/{column_id}`는 제거한다
 - 모바일 기본형은 가로 스크롤 표보다 `주간 범위 바 + 하루 카드 리스트`를 우선한다
 - 같은 날짜의 4끼는 같은 카드 안에서 함께 읽히도록 정리한다
+- 모바일에서는 요일 스트립을 좌우로 넘겨 이전 주 / 다음 주로 이동하고, `이번주로 가기`는 보조 복귀 액션으로만 남긴다
+- 카드 메타데이터는 한 번만 보여주고, 끼니 슬롯은 압축된 상태 표시로 세로 길이를 줄인다
 
 ## Dependencies
 
@@ -128,11 +130,11 @@
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 - `docs/workpacks/README.md`
-- `docs/요구사항기준선-v1.6.2.md` — 1-4. 식단 플래너(위클리) + 끼니 화면
-- `docs/화면정의서-v1.2.2.md` — 5) PLANNER_WEEK: 식단 플래너(위클리)
+- `docs/요구사항기준선-v1.6.3.md` — 1-4. 식단 플래너(위클리) + 끼니 화면
+- `docs/화면정의서-v1.2.3.md` — 5) PLANNER_WEEK: 식단 플래너(위클리)
 - `docs/api문서-v1.2.2.md` — 3. 식단 플래너 (PLANNER_WEEK)
 - `docs/db설계-v1.3.1.md` — 5. 식단 플래너 (Meal Plan)
-- `docs/유저flow맵-v1.2.2.md` — ③ 식단 계획 여정
+- `docs/유저flow맵-v1.2.3.md` — ③ 식단 계획 여정
 - `docs/design/design-tokens.md` — 확정 디자인 토큰 (색상·간격·컴포넌트 규칙)
 
 ## QA / Test Data Plan

@@ -106,6 +106,8 @@ authority 리뷰는 아래 evidence가 있어야 한다.
   사용자가 하루 식단을 한 번에 읽지 못하면 major 이상으로 본다.
 - `PLANNER_WEEK`에서 주간 이동 컨트롤이 planner 본문과 멀리 떨어져 있으면
   control proximity 문제로 본다.
+- `PLANNER_WEEK`에서 요일 스트립이 스와이프처럼 보이는데 실제로는 주 이동이 일어나지 않으면
+  familiar pattern mismatch로 major 이상으로 본다.
 - anchor screen에서 같은 범위/상태 메타데이터가 중복 노출되거나 `ready` 같은 개발용 문자열이 사용자 화면에 보이면
   content hygiene 문제로 major 이상으로 본다.
 - 작은 모바일 sentinel에서 큰 기기와 정보 구조는 같은데 폰트/여백/카드가 충분히 비례 축소되지 않아
@@ -117,6 +119,7 @@ authority 리뷰는 아래 evidence가 있어야 한다.
 
 - 모바일 첫 화면에서 며칠치 식단이 바로 보이는가
 - 주간 범위와 주간 이동 컨트롤이 planner 본문에 붙어 있는가
+- 요일 스트립이 있다면 좌우 스와이프 기대를 충족하는가
 - 같은 날짜의 끼니가 한 card 또는 한 block 안에서 함께 읽히는가
 - 설명/칩/여백이 실제 식단 카드보다 더 큰 비중을 차지하지 않는가
 - 4끼 고정 카드에서도 각 슬롯의 정보 밀도가 무너지지 않는가

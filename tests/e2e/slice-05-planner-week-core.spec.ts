@@ -99,6 +99,34 @@ async function mockPlannerRoutes(page: Page) {
   return { requestedRanges };
 }
 
+async function swipeWeekStrip(page: Page, direction: "next" | "prev") {
+  const strip = page.getByLabel("주간 날짜 스트립");
+  const box = await strip.boundingBox();
+
+  if (!box) {
+    throw new Error("주간 날짜 스트립 bounds를 찾지 못했어요.");
+  }
+
+  const startX = direction === "next" ? box.x + box.width - 12 : box.x + 12;
+  const endX = direction === "next" ? box.x + 12 : box.x + box.width - 12;
+  const y = box.y + box.height / 2;
+
+  await strip.dispatchEvent("pointerdown", {
+    bubbles: true,
+    clientX: startX,
+    clientY: y,
+    isPrimary: true,
+    pointerType: "touch",
+  });
+  await strip.dispatchEvent("pointerup", {
+    bubbles: true,
+    clientX: endX,
+    clientY: y,
+    isPrimary: true,
+    pointerType: "touch",
+  });
+}
+
 test.describe("Slice 05 planner week core", () => {
   test("authenticated user sees fixed four-slot day cards and planner status badges", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
@@ -112,6 +140,8 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByRole("heading", { name: "식단 플래너" })).toBeVisible();
     await expect(page.getByText("현재 범위")).toHaveCount(1);
     await expect(page.getByText("화면 상태")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "이전 주" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "다음 주" })).toHaveCount(0);
     await expect(dateStrip.locator("li")).toHaveCount(7);
     await expect(firstDayCard.getByText("아침")).toBeVisible();
     await expect(firstDayCard.getByText("점심")).toBeVisible();
@@ -120,9 +150,9 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByText("김치찌개")).toBeVisible();
     await expect(page.getByText("샐러드")).toBeVisible();
     await expect(page.getByText("과일볼")).toBeVisible();
-    await expect(page.getByText("식사 등록 완료")).toBeVisible();
-    await expect(page.getByText("장보기 완료")).toBeVisible();
-    await expect(page.getByText("요리 완료")).toBeVisible();
+    await expect(page.getByLabel("식사 등록 완료")).toBeVisible();
+    await expect(page.getByLabel("장보기 완료")).toBeVisible();
+    await expect(page.getByLabel("요리 완료")).toBeVisible();
     await expect(page.getByRole("button", { name: "장보기" })).toBeDisabled();
     await expect(page.getByRole("button", { name: "요리하기" })).toBeDisabled();
     await expect(page.getByRole("button", { name: "남은요리" })).toBeDisabled();
@@ -135,16 +165,21 @@ test.describe("Slice 05 planner week core", () => {
     expect(pageHasHorizontalOverflow).toBe(false);
   });
 
-  test("authenticated user can shift the planner range with explicit week controls", async ({ page }) => {
+  test("authenticated user can shift the planner range by swiping the weekday strip", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     const tracker = await mockPlannerRoutes(page);
 
     await page.goto("/planner");
 
-    await expect(page.getByRole("button", { name: "다음 주" })).toBeVisible();
-    await page.getByRole("button", { name: "다음 주" }).click();
+    await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(0);
+    const initialRange = tracker.requestedRanges[0];
+
+    await swipeWeekStrip(page, "next");
 
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(1);
+    await expect(page.getByRole("button", { name: "이번주로 가기" })).toBeVisible();
+    await page.getByRole("button", { name: "이번주로 가기" }).click();
+    await expect.poll(() => tracker.requestedRanges.at(-1)).toBe(initialRange);
   });
 
   test("planner CTA buttons keep a consistent disabled treatment", async ({ page }) => {

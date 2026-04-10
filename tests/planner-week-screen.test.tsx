@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -163,10 +163,12 @@ describe("planner week screen", () => {
     expect(screen.getAllByLabelText(/식단 카드$/)).toHaveLength(7);
     expect(screen.getAllByText("3월 24일 ~ 3월 30일")).toHaveLength(1);
     expect(screen.queryByText("화면 상태")).toBeNull();
+    expect(screen.queryByRole("button", { name: "이전 주" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "다음 주" })).toBeNull();
     expect(screen.getByText("김치찌개")).toBeTruthy();
     expect(screen.getByText("샐러드")).toBeTruthy();
-    expect(screen.getByText("식사 등록 완료")).toBeTruthy();
-    expect(screen.getByText("장보기 완료")).toBeTruthy();
+    expect(screen.getByLabelText("식사 등록 완료")).toBeTruthy();
+    expect(screen.getByLabelText("장보기 완료")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "컬럼 추가" })).toBeNull();
   });
 
@@ -215,22 +217,39 @@ describe("planner week screen", () => {
     expect(fetchPlanner).toHaveBeenCalledTimes(2);
   });
 
-  it("shifts planner range with week controls near the planner body", async () => {
+  it("shifts planner range by swiping the weekday strip and keeps current-week reset as a secondary action", async () => {
     const user = userEvent.setup();
 
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner
       .mockResolvedValueOnce(createPlannerData({ meals: [] }))
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
       .mockResolvedValueOnce(createPlannerData({ meals: [] }));
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByRole("button", { name: "다음 주" })).toBeTruthy();
+    const strip = await screen.findByLabelText("주간 날짜 스트립");
 
-    await user.click(screen.getByRole("button", { name: "다음 주" }));
+    fireEvent.pointerDown(strip, {
+      clientX: 240,
+      clientY: 18,
+      pointerType: "touch",
+    });
+    fireEvent.pointerUp(strip, {
+      clientX: 32,
+      clientY: 22,
+      pointerType: "touch",
+    });
 
     await waitFor(() => {
       expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
+    });
+
+    const resetButton = screen.getByRole("button", { name: "이번주로 가기" });
+    await user.click(resetButton);
+
+    await waitFor(() => {
+      expect(fetchPlanner).toHaveBeenNthCalledWith(3, "2026-03-24", "2026-03-30");
     });
   });
 
