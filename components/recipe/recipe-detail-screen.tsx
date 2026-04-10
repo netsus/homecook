@@ -547,7 +547,7 @@ export function RecipeDetailScreen({
     );
   }
 
-  const renderPrimaryActions = () => (
+  const renderMetricActions = () => (
     <>
       <MetricActionButton
         ariaLabel={
@@ -576,27 +576,19 @@ export function RecipeDetailScreen({
         onClick={() => handleProtectedAction("save")}
         tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
       />
-      <MetricActionButton
-        ariaLabel="플래너에 추가"
-        count={formatCount(recipe.plan_count)}
-        icon={<PlannerIcon />}
-        label="플래너"
-        onClick={() => handleProtectedAction("planner")}
-        tone="olive"
-      />
     </>
   );
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-[clamp(1.25rem,4vw,1.5rem)]">
         <section className="glass-panel flex flex-col overflow-hidden rounded-[24px]">
           <div
-            className="order-2 min-h-40 border-t border-[var(--line)] bg-[linear-gradient(135deg,rgba(255,108,60,0.22),rgba(255,249,242,0.78),rgba(46,166,122,0.18))] sm:order-1 sm:min-h-56 sm:border-t-0 sm:border-b md:min-h-72"
+            className="min-h-[clamp(6.5rem,32vw,12rem)] border-b border-[var(--line)] bg-[linear-gradient(135deg,rgba(255,108,60,0.22),rgba(255,249,242,0.78),rgba(46,166,122,0.18))] sm:min-h-64 md:min-h-80"
             style={
               recipe.thumbnail_url
                 ? {
-                    backgroundImage: `linear-gradient(rgba(26, 26, 46, 0.08), rgba(26, 26, 46, 0.3)), url(${recipe.thumbnail_url})`,
+                    backgroundImage: `linear-gradient(rgba(26, 26, 46, 0.08), rgba(26, 26, 46, 0.32)), url(${recipe.thumbnail_url})`,
                     backgroundPosition: "center",
                     backgroundSize: "cover",
                   }
@@ -604,80 +596,94 @@ export function RecipeDetailScreen({
             }
           />
 
-          <div className="order-1 flex flex-col gap-4 px-5 py-5 sm:order-2 sm:gap-5 md:px-6">
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+          <div className="flex flex-col gap-[clamp(1rem,4vw,1.5rem)] px-[clamp(1rem,4vw,1.25rem)] py-[clamp(1rem,4vw,1.25rem)] md:px-6 md:py-6">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--olive)] md:text-xs md:tracking-[0.22em]">
               <Link href="/">Home</Link>
               <span>/</span>
               <span>Recipe detail</span>
             </div>
 
             <div className="flex flex-col gap-4">
-              <h2 className="text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:text-[2rem]">
+              <h2 className="text-[clamp(1.75rem,7vw,2.25rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
                 {recipe.title}
               </h2>
-              <div className="order-2 flex flex-wrap gap-2 sm:order-3">
-                {renderPrimaryActions()}
-              </div>
-              <div className="order-3 sm:order-2">
-                <p className="max-w-3xl text-sm leading-6 text-[var(--muted)]">
-                  {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {recipe.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-[color:rgba(46,166,122,0.1)] px-3 py-1 text-xs font-semibold text-[var(--olive)]"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
+            </div>
+
+            <div className="max-[360px]:order-3">
+              <p className="max-w-3xl text-[clamp(0.875rem,3.5vw,0.9375rem)] leading-5 text-[var(--muted)] md:text-sm md:leading-6">
+                {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {recipe.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-[color:rgba(46,166,122,0.1)] px-2.5 py-1 text-[11px] font-semibold text-[var(--olive)] md:px-3 md:text-xs"
+                  >
+                    #{tag}
+                  </span>
+                ))}
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[18px] border border-[var(--line)] bg-white/75 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+            <div className="grid gap-3 max-[360px]:order-4 sm:grid-cols-3">
+              <div className="rounded-[16px] border border-[var(--line)] bg-white/75 px-3.5 py-3.5 md:rounded-[18px] md:px-4 md:py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--olive)] md:text-xs md:tracking-[0.22em]">
                   기본 인분
                 </p>
-                <p className="mt-2 text-lg font-extrabold text-[var(--foreground)]">
+                <p className="mt-1.5 text-[clamp(1rem,4.5vw,1.125rem)] font-extrabold text-[var(--foreground)] md:mt-2 md:text-lg">
                   {recipe.base_servings}인분
                 </p>
               </div>
-              <div className="rounded-[18px] border border-[var(--line)] bg-white/75 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+              <div className="rounded-[16px] border border-[var(--line)] bg-white/75 px-3.5 py-3.5 md:rounded-[18px] md:px-4 md:py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--olive)] md:text-xs md:tracking-[0.22em]">
                   재료
                 </p>
-                <p className="mt-2 text-lg font-extrabold text-[var(--foreground)]">
+                <p className="mt-1.5 text-[clamp(1rem,4.5vw,1.125rem)] font-extrabold text-[var(--foreground)] md:mt-2 md:text-lg">
                   {recipe.ingredients.length}개
                 </p>
               </div>
-              <div className="rounded-[18px] border border-[var(--line)] bg-white/75 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+              <div className="rounded-[16px] border border-[var(--line)] bg-white/75 px-3.5 py-3.5 md:rounded-[18px] md:px-4 md:py-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--olive)] md:text-xs md:tracking-[0.22em]">
                   조리 단계
                 </p>
-                <p className="mt-2 text-lg font-extrabold text-[var(--foreground)]">
+                <p className="mt-1.5 text-[clamp(1rem,4.5vw,1.125rem)] font-extrabold text-[var(--foreground)] md:mt-2 md:text-lg">
                   {recipe.steps.length}단계
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <ActionButton
-                label="요리하기"
-                onClick={() =>
-                  setFeedback({
-                    message: "요리모드는 다음 슬라이스에서 이어서 구현합니다.",
-                    tone: "status",
-                  })
-                }
-                tone="brand"
-              />
-              <IconActionButton
-                ariaLabel="공유하기"
-                icon={<ShareIcon />}
-                onClick={handleShare}
-              />
+            <div className="flex flex-col gap-3 max-[360px]:order-2 lg:flex-row lg:items-center lg:justify-between">
+              <div className="grid gap-2.5 sm:grid-cols-2 md:gap-3">
+                <ActionButton
+                  label="요리하기"
+                  onClick={() =>
+                    setFeedback({
+                      message: "요리모드는 다음 슬라이스에서 이어서 구현합니다.",
+                      tone: "status",
+                    })
+                  }
+                  tone="brand"
+                />
+                <ActionButton
+                  label="플래너에 추가"
+                  onClick={() => handleProtectedAction("planner")}
+                  tone="olive"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2.5 md:gap-3">
+                <div className="rounded-full border border-[var(--line)] bg-white/78 px-3 py-2 text-[13px] font-semibold text-[var(--muted)] md:text-sm">
+                  플래너 등록 {formatCount(recipe.plan_count)}
+                </div>
+                <IconActionButton
+                  ariaLabel="공유하기"
+                  icon={<ShareIcon />}
+                  onClick={handleShare}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 max-[360px]:order-1">
+              {renderMetricActions()}
             </div>
           </div>
         </section>
@@ -941,7 +947,7 @@ function ActionButton({
   return (
     <button
       aria-pressed={ariaPressed}
-      className={`min-h-11 rounded-[12px] border px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`min-h-11 rounded-[12px] border px-3.5 py-2.5 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:px-4 md:py-3 md:text-sm ${className}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -963,7 +969,7 @@ function IconActionButton({
   return (
     <button
       aria-label={ariaLabel}
-      className="flex h-12 w-12 items-center justify-center rounded-[14px] border border-[var(--line)] bg-white/85 text-[var(--foreground)] shadow-[var(--shadow)]"
+      className="flex h-11 w-11 items-center justify-center rounded-[12px] border border-[var(--line)] bg-white/85 text-[var(--foreground)] shadow-[var(--shadow)] md:h-12 md:w-12 md:rounded-[14px]"
       onClick={onClick}
       type="button"
     >
@@ -1002,7 +1008,7 @@ function MetricActionButton({
     <button
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
-      className={`flex min-h-11 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`flex min-h-11 items-center gap-1.5 rounded-full border px-3 py-2 text-[13px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:gap-2 md:px-4 md:py-2.5 md:text-sm ${className}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -1013,7 +1019,7 @@ function MetricActionButton({
       <span>{label}</span>
       <span
         aria-hidden={ariaLabel !== `좋아요 ${count}`}
-        className="rounded-full bg-white/72 px-2.5 py-1 text-xs font-bold text-[var(--foreground)]"
+        className="rounded-full bg-white/72 px-2 py-0.75 text-[11px] font-bold text-[var(--foreground)] md:px-2.5 md:py-1 md:text-xs"
       >
           {count}
       </span>
@@ -1049,22 +1055,6 @@ function BookmarkIcon({ filled = false }: { filled?: boolean }) {
       width="18"
     >
       <path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.7L6 20V5.5a1 1 0 0 1 1-1Z" />
-    </svg>
-  );
-}
-
-function PlannerIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="18"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      viewBox="0 0 24 24"
-      width="18"
-    >
-      <path d="M7 3.5v3M17 3.5v3M5.5 8.5h13M6.5 5.5h11a1 1 0 0 1 1 1v11a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-11a1 1 0 0 1 1-1Z" />
     </svg>
   );
 }
