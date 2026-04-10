@@ -547,6 +547,10 @@ export function RecipeDetailScreen({
     );
   }
 
+  const plannerCountLabel = formatCount(recipe.plan_count);
+  const likeCountLabel = formatCount(recipe.like_count);
+  const saveCountLabel = formatCount(recipe.save_count);
+
   return (
     <>
       <div className="space-y-[clamp(1.25rem,4vw,1.5rem)]">
@@ -571,37 +575,51 @@ export function RecipeDetailScreen({
               <span>Recipe detail</span>
             </div>
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap gap-2">
+                {recipe.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-[color:rgba(46,166,122,0.1)] px-2.5 py-1 text-[11px] font-semibold text-[var(--olive)] md:px-3 md:text-xs"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
               <h2 className="text-[clamp(1.5rem,6vw,2.125rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
                 {recipe.title}
               </h2>
+              <p className="text-[12px] font-medium text-[var(--muted)] md:text-[13px]">
+                <span>{recipe.base_servings}인분</span>
+                <span className="px-1.5 text-[var(--line)]">·</span>
+                <span>재료 {recipe.ingredients.length}개</span>
+                <span className="px-1.5 text-[var(--line)]">·</span>
+                <span>조리 {recipe.steps.length}단계</span>
+              </p>
             </div>
 
-            <div className="rounded-[16px] border border-[var(--line)] bg-white/78 px-3 py-2.5 text-[13px] font-semibold text-[var(--muted)] md:text-sm">
-              <span className="text-[var(--foreground)]">{recipe.base_servings}인분</span>
-              <span className="px-2 text-[var(--line)]">·</span>
-              <span>재료 {recipe.ingredients.length}개</span>
-              <span className="px-2 text-[var(--line)]">·</span>
-              <span>조리 {recipe.steps.length}단계</span>
-            </div>
-
-            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2 max-[360px]:order-1">
-              <div className="truncate rounded-full border border-[var(--line)] bg-white/78 px-3 py-2 text-[12px] font-semibold text-[var(--muted)] md:text-[13px]">
-                플래너 등록 {formatCount(recipe.plan_count)}
-              </div>
+            <div className="grid grid-cols-4 items-center gap-2 max-[360px]:order-1">
+              <UtilityStatButton
+                ariaLabel={`플래너 등록 ${plannerCountLabel}`}
+                count={plannerCountLabel}
+                icon={<PlannerIcon />}
+                label="플래너"
+                tone="neutral"
+              />
               <IconActionButton
                 ariaLabel="공유하기"
                 icon={<ShareIcon />}
                 onClick={handleShare}
+                tone="neutral"
               />
               <MetricActionButton
                 ariaLabel={
                   likeRequestState === "pending"
                     ? "좋아요 처리 중..."
-                    : `좋아요 ${formatCount(recipe.like_count)}`
+                    : `좋아요 ${likeCountLabel}`
                 }
                 ariaPressed={recipe.user_status?.is_liked ?? false}
-                count={formatCount(recipe.like_count)}
+                count={likeCountLabel}
                 disabled={likeRequestState === "pending"}
                 hideLabel
                 icon={
@@ -616,7 +634,7 @@ export function RecipeDetailScreen({
               <MetricActionButton
                 ariaLabel="저장"
                 ariaPressed={recipe.user_status?.is_saved ?? false}
-                count={formatCount(recipe.save_count)}
+                count={saveCountLabel}
                 hideLabel
                 icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
                 label="저장"
@@ -629,16 +647,6 @@ export function RecipeDetailScreen({
               <p className="max-w-3xl text-[clamp(0.8125rem,3.2vw,0.9rem)] leading-5 text-[var(--muted)] md:text-sm md:leading-6">
                 {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
               </p>
-              <div className="flex flex-wrap gap-2">
-                {recipe.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-[color:rgba(46,166,122,0.1)] px-2.5 py-1 text-[11px] font-semibold text-[var(--olive)] md:px-3 md:text-xs"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
             </div>
 
             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2.5 max-[360px]:order-2 md:gap-3">
@@ -661,105 +669,117 @@ export function RecipeDetailScreen({
           </div>
         </section>
 
-        <section className="glass-panel rounded-[20px] p-5 md:p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-                재료
-              </p>
-              <h3 className="mt-2 text-[13px] font-semibold tracking-[-0.01em] text-[var(--olive)] md:text-sm">
-                인분에 따라 재료량이 바뀝니다
-              </h3>
-            </div>
-            <div className="rounded-[16px] bg-white/70 px-4 py-3">
-              <label className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
-                인분
-              </label>
-              <div className="mt-2 flex items-center gap-3">
-                <button
-                  className="h-11 w-11 rounded-[12px] border border-[var(--line)] bg-white"
-                  onClick={() =>
-                    setSelectedServings((value) => Math.max(1, value - 1))
-                  }
-                  type="button"
-                >
-                  -
-                </button>
-                <span className="min-w-16 text-center text-lg font-semibold">
-                  {selectedServings}인분
-                </span>
-                <button
-                  className="h-11 w-11 rounded-[12px] border border-[var(--line)] bg-white"
-                  onClick={() => setSelectedServings((value) => value + 1)}
-                  type="button"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </div>
-          <ul className="mt-5 grid gap-3">
-            {scaledIngredients.map((ingredient) => (
-              <li
-                key={ingredient.id}
-                className="flex items-center justify-between gap-4 rounded-[16px] bg-white/70 px-4 py-3 text-sm text-[var(--foreground)]"
-              >
-                <span>{ingredient.standard_name}</span>
-                <span className="font-medium text-[var(--muted)]">
-                  {ingredient.scaledText}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="glass-panel rounded-[20px] p-5 md:p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-            조리 단계
-          </p>
-          <ol className="mt-4 space-y-3">
-            {recipe.steps.map((step) => (
-              <li
-                key={step.id}
-                className="rounded-[16px] bg-white/70 px-4 py-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--foreground)] text-sm font-bold text-white">
-                      {step.step_number}
-                    </span>
-                    <span
-                      className="rounded-full border px-3 py-1 text-xs font-semibold text-[var(--foreground)]"
-                      style={{
-                        backgroundColor: resolveCookingMethodTint(
-                          step.cooking_method?.color_key,
-                        ),
-                        borderColor: resolveCookingMethodColor(
-                          step.cooking_method?.color_key,
-                        ),
-                      }}
-                    >
-                      {step.cooking_method?.label ?? "기타"}
-                    </span>
-                  </div>
-                  {step.duration_text ? (
-                    <span className="text-xs font-medium text-[var(--muted)]">
-                      {step.duration_text}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-3 text-sm leading-6 text-[var(--foreground)]">
-                  {step.instruction}
-                </p>
-                {step.heat_level ? (
-                  <p className="mt-2 text-xs text-[var(--muted)]">
-                    불 세기 {step.heat_level}
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+          <section className="glass-panel rounded-[20px] p-5 md:p-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
+                    재료
                   </p>
-                ) : null}
-              </li>
-            ))}
-          </ol>
-        </section>
+                </div>
+                <div className="rounded-[16px] bg-white/70 px-4 py-3">
+                  <label className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+                    인분
+                  </label>
+                  <div className="mt-2 flex items-center gap-3">
+                    <button
+                      className="h-11 w-11 rounded-[12px] border border-[var(--line)] bg-white"
+                      onClick={() =>
+                        setSelectedServings((value) => Math.max(1, value - 1))
+                      }
+                      type="button"
+                    >
+                      -
+                    </button>
+                    <span className="min-w-16 text-center text-lg font-semibold">
+                      {selectedServings}인분
+                    </span>
+                    <button
+                      className="h-11 w-11 rounded-[12px] border border-[var(--line)] bg-white"
+                      onClick={() => setSelectedServings((value) => value + 1)}
+                      type="button"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <p className="mt-3 text-[13px] font-semibold tracking-[-0.01em] text-[var(--brand-deep)] md:text-sm">
+                    인분에 따라 재료량이 바뀝니다
+                  </p>
+                </div>
+              </div>
+              <ul className="grid gap-3">
+                {scaledIngredients.map((ingredient) => {
+                  const quantityText = ingredient.scaledText.startsWith(
+                    `${ingredient.standard_name} `,
+                  )
+                    ? ingredient.scaledText.slice(ingredient.standard_name.length + 1)
+                    : ingredient.scaledText;
+
+                  return (
+                    <li
+                      key={ingredient.id}
+                      className="flex items-center justify-between gap-4 rounded-[16px] bg-white/70 px-4 py-3 text-sm text-[var(--foreground)]"
+                    >
+                      <span>{ingredient.standard_name}</span>
+                      <span className="font-medium text-[var(--muted)]">
+                        {quantityText}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </section>
+
+          <section className="glass-panel rounded-[20px] p-5 md:p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
+              조리 단계
+            </p>
+            <ol className="mt-4 space-y-3">
+              {recipe.steps.map((step) => (
+                <li
+                  key={step.id}
+                  className="rounded-[16px] bg-white/70 px-4 py-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--foreground)] text-sm font-bold text-white">
+                        {step.step_number}
+                      </span>
+                      <span
+                        className="rounded-full border px-3 py-1 text-xs font-semibold text-[var(--foreground)]"
+                        style={{
+                          backgroundColor: resolveCookingMethodTint(
+                            step.cooking_method?.color_key,
+                          ),
+                          borderColor: resolveCookingMethodColor(
+                            step.cooking_method?.color_key,
+                          ),
+                        }}
+                      >
+                        {step.cooking_method?.label ?? "기타"}
+                      </span>
+                    </div>
+                    {step.duration_text ? (
+                      <span className="text-xs font-medium text-[var(--muted)]">
+                        {step.duration_text}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-[var(--foreground)]">
+                    {step.instruction}
+                  </p>
+                  {step.heat_level ? (
+                    <p className="mt-2 text-xs text-[var(--muted)]">
+                      불 세기 {step.heat_level}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          </section>
+        </div>
       </div>
       <SaveModal
         books={saveBooks}
@@ -934,20 +954,66 @@ function IconActionButton({
   ariaLabel,
   icon,
   onClick,
+  tone = "neutral",
 }: {
   ariaLabel: string;
   icon: React.ReactNode;
   onClick: () => void;
+  tone?: "brand" | "olive" | "neutral";
 }) {
+  const className =
+    tone === "brand"
+      ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.16)] text-[var(--foreground)]"
+      : tone === "olive"
+        ? "border-transparent bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
+        : "border-[var(--line)] bg-white text-[var(--foreground)]";
+
   return (
     <button
       aria-label={ariaLabel}
-      className="flex h-11 w-11 items-center justify-center rounded-[12px] border border-[var(--line)] bg-white/85 text-[var(--foreground)] shadow-[var(--shadow)] md:h-12 md:w-12 md:rounded-[14px]"
+      className={`flex min-h-11 w-full items-center justify-center rounded-[12px] border shadow-[var(--shadow)] md:min-h-12 md:rounded-[14px] ${className}`}
       onClick={onClick}
       type="button"
     >
       {icon}
     </button>
+  );
+}
+
+function UtilityStatButton({
+  ariaLabel,
+  count,
+  icon,
+  label,
+  tone,
+}: {
+  ariaLabel: string;
+  count: string;
+  icon: React.ReactNode;
+  label: string;
+  tone: "brand" | "olive" | "neutral";
+}) {
+  const className =
+    tone === "brand"
+      ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.16)] text-[var(--foreground)]"
+      : tone === "olive"
+        ? "border-transparent bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
+        : "border-[var(--line)] bg-white text-[var(--foreground)]";
+
+  return (
+    <div
+      aria-label={ariaLabel}
+      className={`flex min-h-11 w-full items-center justify-center gap-1 rounded-[12px] border px-2 py-2 text-[12px] font-semibold shadow-[var(--shadow)] md:min-h-12 md:rounded-[14px] md:text-sm ${className}`}
+      role="status"
+    >
+      <span aria-hidden="true" className="shrink-0">
+        {icon}
+      </span>
+      <span className="truncate">{label}</span>
+      <span className="rounded-full bg-white/72 px-1.5 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-2 md:text-[11px]">
+        {count}
+      </span>
+    </div>
   );
 }
 
@@ -983,7 +1049,7 @@ function MetricActionButton({
     <button
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
-      className={`flex min-h-11 items-center ${hideLabel ? "justify-center" : ""} gap-1.5 rounded-full border px-3 py-2 text-[12px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:gap-2 md:px-4 md:py-2.5 md:text-sm ${className}`}
+      className={`flex min-h-11 w-full items-center ${hideLabel ? "justify-center" : ""} gap-1 rounded-[12px] border px-2 py-2 text-[12px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:min-h-12 md:gap-2 md:rounded-[14px] md:px-4 md:py-2.5 md:text-sm ${className}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -994,7 +1060,7 @@ function MetricActionButton({
       {hideLabel ? null : <span>{label}</span>}
       <span
         aria-hidden={ariaLabel !== `좋아요 ${count}`}
-        className="rounded-full bg-white/72 px-2 py-0.75 text-[11px] font-bold text-[var(--foreground)] md:px-2.5 md:py-1 md:text-xs"
+        className="rounded-full bg-white/72 px-1.5 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-2 md:py-0.75 md:text-[11px]"
       >
         {count}
       </span>
@@ -1034,6 +1100,22 @@ function BookmarkIcon({ filled = false }: { filled?: boolean }) {
   );
 }
 
+function PlannerIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M7 3.5v3M17 3.5v3M5.5 8.5h13M6.5 5.5h11a1 1 0 0 1 1 1v11a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-11a1 1 0 0 1 1-1Z" />
+    </svg>
+  );
+}
+
 function ShareIcon() {
   return (
     <svg
@@ -1045,7 +1127,7 @@ function ShareIcon() {
       viewBox="0 0 24 24"
       width="18"
     >
-      <path d="M15.5 8.5 9 12l6.5 3.5M18.5 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM6 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12.5 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+      <path d="M12 15.5V5m0 0L8 9m4-4 4 4M6.5 12.5v5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-5" />
     </svg>
   );
 }

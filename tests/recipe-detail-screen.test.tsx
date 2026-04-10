@@ -147,9 +147,7 @@ describe("recipe detail screen", () => {
     expect(shareButtons).toHaveLength(1);
 
     const likeButton = screen.getByRole("button", { name: "좋아요 203" });
-    const ingredientHeading = screen.getByRole("heading", {
-      name: "인분에 따라 재료량이 바뀝니다",
-    });
+    const ingredientHeading = screen.getByText("인분에 따라 재료량이 바뀝니다");
 
     expect(
       likeButton.compareDocumentPosition(ingredientHeading) &
@@ -165,9 +163,7 @@ describe("recipe detail screen", () => {
     const plannerButton = await screen.findByRole("button", {
       name: "플래너에 추가",
     });
-    const ingredientHeading = screen.getByRole("heading", {
-      name: "인분에 따라 재료량이 바뀝니다",
-    });
+    const ingredientHeading = screen.getByText("인분에 따라 재료량이 바뀝니다");
 
     expect(
       plannerButton.compareDocumentPosition(ingredientHeading) &

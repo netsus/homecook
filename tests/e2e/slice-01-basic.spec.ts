@@ -62,7 +62,7 @@ test.describe("Slice 01 basic flow", () => {
     await expect(
       page.getByRole("heading", { name: "집밥 김치찌개" }),
     ).toBeVisible();
-    await expect(page.getByRole("heading", { name: "인분에 따라 재료량이 바뀝니다" })).toBeVisible();
+    await expect(page.getByText("인분에 따라 재료량이 바뀝니다")).toBeVisible();
     await expect(page.getByRole("button", { name: "플래너에 추가" })).toBeVisible();
     await expect(page.getByRole("button", { name: "공유하기" })).toHaveCount(1);
     await expect(page.getByRole("button", { name: "좋아요 203" })).toBeVisible();
@@ -71,7 +71,7 @@ test.describe("Slice 01 basic flow", () => {
       const likeButton = document.querySelector(
         'button[aria-label="좋아요 203"]',
       );
-      const ingredientHeading = Array.from(document.querySelectorAll("h2, h3")).find(
+      const ingredientHeading = Array.from(document.querySelectorAll("h2, h3, p, span")).find(
         (element) => element.textContent?.trim() === "인분에 따라 재료량이 바뀝니다",
       );
 
