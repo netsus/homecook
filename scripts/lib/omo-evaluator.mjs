@@ -370,6 +370,69 @@ function ensureStageResultMetadata({
         });
       }
     }
+
+    const designAuthority = stageConfig.design_authority ?? null;
+    if (designAuthority?.authority_required) {
+      const reviewedScreenIds = normalizeStringArray(stageResult.reviewed_screen_ids);
+      const authorityReportPaths = normalizeStringArray(stageResult.authority_report_paths);
+      const evidenceArtifactRefs = normalizeStringArray(stageResult.evidence_artifact_refs);
+
+      const missingScreens = (designAuthority.required_screens ?? []).filter(
+        (screenId) => !reviewedScreenIds.includes(screenId),
+      );
+      if (missingScreens.length > 0) {
+        addFinding(findings, {
+          id: `frontend-authority-screens-${missingScreens.join("-")}`,
+          category: "design-authority",
+          severity: "major",
+          message: `Authority-required screens are missing from reviewed_screen_ids: ${missingScreens.join(", ")}`,
+          evidence_paths: [stageResultPath],
+          remediation_hint: "Record every authority-required screen in reviewed_screen_ids.",
+          owner: "codex",
+          fixable: true,
+        });
+      }
+
+      if (authorityReportPaths.length === 0) {
+        addFinding(findings, {
+          id: "frontend-authority-report-missing",
+          category: "design-authority",
+          severity: "major",
+          message: "Authority-required frontend stage is missing authority_report_paths.",
+          evidence_paths: [stageResultPath],
+          remediation_hint: "Write authority report paths to stage-result.json.",
+          owner: "codex",
+          fixable: true,
+        });
+      }
+
+      const missingReports = authorityReportPaths.filter((reportPath) => !fileExistsFromWorktree(worktreePath, reportPath));
+      if (missingReports.length > 0) {
+        addFinding(findings, {
+          id: "frontend-authority-report-files-missing",
+          category: "design-authority",
+          severity: "major",
+          message: `Authority report files are missing: ${missingReports.join(", ")}`,
+          evidence_paths: [stageResultPath],
+          remediation_hint: "Generate the authority report files and list them in authority_report_paths.",
+          owner: "codex",
+          fixable: true,
+        });
+      }
+
+      if (evidenceArtifactRefs.length === 0) {
+        addFinding(findings, {
+          id: "frontend-authority-evidence-missing",
+          category: "design-authority",
+          severity: "major",
+          message: "Authority-required frontend stage is missing evidence_artifact_refs.",
+          evidence_paths: [stageResultPath],
+          remediation_hint: "List mobile UX evidence paths in evidence_artifact_refs.",
+          owner: "codex",
+          fixable: true,
+        });
+      }
+    }
   }
 
   if (isChecklistContractActive(checklistContract)) {
@@ -561,7 +624,7 @@ export function evaluateWorkItemStage({
     });
   }
 
-  if (policy.autonomous && (stageConfig.external_smokes ?? []).length === 0) {
+  if (policy.mergeEligible && (stageConfig.external_smokes ?? []).length === 0) {
     addFinding(findings, {
       id: `${stageLabel}-external-smokes-missing`,
       category: "policy",

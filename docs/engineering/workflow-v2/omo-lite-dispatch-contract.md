@@ -108,6 +108,13 @@ internal 1.5 subphase:
 - `doc_gate_repair`는 `docs/<slice>-repair` 브랜치에서 docs-only 변경만 허용한다.
 - `doc_gate_review approve` 뒤에만 docs PR merge와 Stage 2 implementation handoff가 가능하다.
 
+Stage 4 authority subphase:
+
+- `authority_precheck`는 `stage=4`, `subphase=authority_precheck`로 dispatch한다.
+- actor는 Codex다.
+- 이 subphase는 mobile UX evidence, authority report draft, blocker/major/minor 구조화를 담당한다.
+- `product-design-authority` final authority 판정은 여전히 Stage 5 Claude가 담당한다.
+
 ## Dispatch Matrix
 
 | Stage | Actor | Goal | Required Reads | Deliverables |
@@ -115,8 +122,8 @@ internal 1.5 subphase:
 | 1 | Claude | workpack 문서 작성 | AGENTS, current source, template, official docs | README, acceptance, automation-spec, valid stage result |
 | 2 | Codex | backend contract-first 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, API/DB docs, 이전 backend review feedback(있으면) | internal 1.5 `pass` 뒤 `$ralph`-driven backend impl, roadmap status `in-progress`, checklist updates/rebuttals, valid stage result |
 | 3 | Claude | backend PR review | workpack, acceptance, PR diff, CI | review summary, reviewed checklist ids, requested changes or approve |
-| 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, design refs, 이전 frontend review feedback(있으면) | `$ralph`-driven FE impl, Design Status `pending-review`, checklist updates/rebuttals, valid stage result |
-| 5 | Claude | design review | FE PR diff, workpack UI scope, acceptance FE checklist, design tokens | design findings or approve, reviewed checklist ids, Design Status `confirmed` 근거 |
+| 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, design refs, mobile UX / anchor / authority docs, 이전 frontend review feedback(있으면) | `$ralph`-driven FE impl, authority-required면 `authority_precheck`, Design Status `pending-review`, checklist updates/rebuttals, valid stage result |
+| 5 | Claude | design review + final authority | FE PR diff, workpack UI scope, acceptance FE checklist, design tokens, authority report, mobile UX / anchor docs | design findings or approve, reviewed checklist ids, authority-required면 final authority verdict, Design Status `confirmed` 근거 |
 | 6 | Claude | frontend PR review | FE PR diff, CI, acceptance, merged bookkeeping 포함 최종 PR diff | review summary, closeout checklist coverage, requested changes or approve, approve 뒤 merged bookkeeping CI -> manual merge handoff |
 
 ## Session Binding Contract
@@ -236,9 +243,13 @@ provider별 resume 규칙:
   - `docs/workpacks/<slice>/automation-spec.json`
   - merged backend contract
   - design token references
+  - `docs/design/mobile-ux-rules.md`
+  - `docs/design/anchor-screens.md`
+  - `docs/engineering/product-design-authority.md`
 - success:
   - FE implementation
   - state UI
+  - authority-required면 mobile UX evidence + authority report draft
   - strict slice에서는 `$ralph` skill loop로 실행
   - valid `stage-result.json`
   - `checklist_updates[]`에 Stage 4 소유 checklist id 기록
@@ -249,6 +260,22 @@ provider별 resume 규칙:
   - supervisor handoff용 commit subject/body 제안 작성
   - GitHub PR 생성/merge는 하지 않음
 
+### Stage 4 → Codex (`subphase=authority_precheck`)
+
+- goal: `슬라이스 <id> authority precheck`
+- must read:
+  - `docs/workpacks/<slice>/README.md`
+  - `docs/workpacks/<slice>/acceptance.md`
+  - `docs/workpacks/<slice>/automation-spec.json`
+  - `docs/design/mobile-ux-rules.md`
+  - `docs/design/anchor-screens.md`
+  - `docs/engineering/product-design-authority.md`
+- success:
+  - mobile UX evidence bundle
+  - authority report draft
+  - `authority_verdict`, `reviewed_screen_ids`, `authority_report_paths`, `evidence_artifact_refs`, `blocker_count`, `major_count`, `minor_count`가 포함된 valid stage-result
+  - blocker가 남으면 Stage 4로 route back
+
 ### Stage 5 → Claude
 
 - goal: `슬라이스 <id> 5단계 디자인 리뷰`
@@ -257,10 +284,15 @@ provider별 resume 규칙:
   - `docs/workpacks/<slice>/acceptance.md`
   - FE PR diff
   - design token docs
+  - `docs/design/mobile-ux-rules.md`
+  - `docs/design/anchor-screens.md`
+  - `docs/engineering/product-design-authority.md`
+  - authority report
   - relevant screen definition
 - success:
   - visual / interaction findings
   - `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`, `waived_fix_ids` 작성
+  - authority-required면 `authority_verdict`, `reviewed_screen_ids`, `authority_report_paths`, `blocker_count`, `major_count`, `minor_count` 작성
   - `confirmed` or fix request
   - 승인 시 Design Status `confirmed` 변경 근거 제시
 

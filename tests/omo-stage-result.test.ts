@@ -378,4 +378,101 @@ describe("OMO stage-result contract", () => {
     expect(result.reviewed_doc_finding_ids).toEqual(["doc-gate-missing-section-goal"]);
     expect(result.required_doc_fix_ids).toEqual(["doc-gate-missing-section-goal"]);
   });
+
+  it("validates authority_precheck stage results", () => {
+    const result = validateStageResult(
+      4,
+      {
+        result: "done",
+        summary_markdown: "authority precheck complete",
+        commit: { subject: "feat: frontend" },
+        pr: { title: "feat: frontend", body_markdown: "body" },
+        checks_run: [],
+        next_route: "open_pr",
+        claimed_scope: {
+          files: ["app/example/page.tsx"],
+          endpoints: [],
+          routes: ["/example"],
+          states: ["loading"],
+          invariants: [],
+        },
+        changed_files: ["app/example/page.tsx"],
+        tests_touched: ["tests/example.frontend.test.ts"],
+        artifacts_written: ["ui/designs/authority/EXAMPLE-authority.md"],
+        checklist_updates: [
+          {
+            id: "delivery-ui",
+            status: "checked",
+            evidence_refs: ["pnpm verify:frontend"],
+          },
+        ],
+        contested_fix_ids: [],
+        rebuttals: [],
+        authority_verdict: "conditional-pass",
+        reviewed_screen_ids: ["EXAMPLE"],
+        authority_report_paths: ["ui/designs/authority/EXAMPLE-authority.md"],
+        evidence_artifact_refs: ["ui/designs/evidence/example/EXAMPLE-mobile.png"],
+        blocker_count: 0,
+        major_count: 1,
+        minor_count: 0,
+      },
+      {
+        strictExtendedContract: true,
+        subphase: "authority_precheck",
+      },
+    ) as {
+      authority_verdict: string;
+      reviewed_screen_ids: string[];
+      authority_report_paths: string[];
+    };
+
+    expect(result.authority_verdict).toBe("conditional-pass");
+    expect(result.reviewed_screen_ids).toEqual(["EXAMPLE"]);
+    expect(result.authority_report_paths).toEqual(["ui/designs/authority/EXAMPLE-authority.md"]);
+  });
+
+  it("normalizes authority review metadata for Stage 5", () => {
+    const result = validateStageResult(
+      5,
+      {
+        decision: "request_changes",
+        body_markdown: "authority follow-up needed",
+        route_back_stage: 4,
+        approved_head_sha: null,
+        review_scope: {
+          scope: "frontend",
+          checklist_ids: ["delivery-ui"],
+        },
+        reviewed_checklist_ids: ["delivery-ui"],
+        required_fix_ids: ["delivery-ui"],
+        waived_fix_ids: [],
+        authority_verdict: "hold",
+        reviewed_screen_ids: ["RECIPE_DETAIL"],
+        authority_report_paths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        blocker_count: 1,
+        major_count: 0,
+        minor_count: 0,
+        findings: [
+          {
+            file: "app/example.tsx",
+            severity: "major",
+            category: "logic",
+            issue: "CTA hierarchy is weak",
+            suggestion: "Strengthen the primary action hierarchy",
+          },
+        ],
+      },
+      {
+        strictExtendedContract: true,
+      },
+    ) as {
+      authority_verdict: string;
+      blocker_count: number | null;
+      reviewed_screen_ids: string[];
+    };
+
+    expect(result.authority_verdict).toBe("hold");
+    expect(result.blocker_count).toBe(1);
+    expect(result.reviewed_screen_ids).toEqual(["RECIPE_DETAIL"]);
+  });
 });

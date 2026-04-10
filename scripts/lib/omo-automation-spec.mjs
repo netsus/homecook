@@ -4,6 +4,13 @@ import { resolve } from "node:path";
 const EXECUTION_MODES = new Set(["manual", "autonomous"]);
 const MERGE_POLICIES = new Set(["manual", "conditional-auto"]);
 const RISK_CLASSES = new Set(["low", "medium", "high", "critical"]);
+const DESIGN_AUTHORITY_UI_RISKS = new Set([
+  "not-required",
+  "low-risk",
+  "new-screen",
+  "high-risk",
+  "anchor-extension",
+]);
 
 function ensureObject(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -70,6 +77,67 @@ function normalizeMaxFixRounds(value) {
   };
 }
 
+function normalizeBoolean(value, label) {
+  if (typeof value !== "boolean") {
+    throw new Error(`${label} must be a boolean.`);
+  }
+
+  return value;
+}
+
+function normalizeDesignAuthority(value, label) {
+  if (!value || (typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0)) {
+    return {
+      ui_risk: "not-required",
+      anchor_screens: [],
+      required_screens: [],
+      generator_required: false,
+      critic_required: false,
+      authority_required: false,
+      stage4_evidence_requirements: [],
+      authority_report_paths: [],
+    };
+  }
+
+  const normalized = ensureObject(value, label);
+
+  return {
+    ui_risk: ensureEnum(
+      normalized.ui_risk,
+      DESIGN_AUTHORITY_UI_RISKS,
+      `${label}.ui_risk`,
+    ),
+    anchor_screens: normalizeStringArray(
+      normalized.anchor_screens ?? [],
+      `${label}.anchor_screens`,
+    ),
+    required_screens: normalizeStringArray(
+      normalized.required_screens ?? [],
+      `${label}.required_screens`,
+    ),
+    generator_required: normalizeBoolean(
+      normalized.generator_required,
+      `${label}.generator_required`,
+    ),
+    critic_required: normalizeBoolean(
+      normalized.critic_required,
+      `${label}.critic_required`,
+    ),
+    authority_required: normalizeBoolean(
+      normalized.authority_required,
+      `${label}.authority_required`,
+    ),
+    stage4_evidence_requirements: normalizeStringArray(
+      normalized.stage4_evidence_requirements ?? [],
+      `${label}.stage4_evidence_requirements`,
+    ),
+    authority_report_paths: normalizeStringArray(
+      normalized.authority_report_paths ?? [],
+      `${label}.authority_report_paths`,
+    ),
+  };
+}
+
 function readJson(filePath) {
   return JSON.parse(readFileSync(filePath, "utf8"));
 }
@@ -109,12 +177,18 @@ export function normalizeAutomationSpec(rawSpec) {
       "verify_commands",
       "required_test_targets",
     ]),
-    frontend: normalizeScope(spec.frontend, "automationSpec.frontend", [
-      "required_routes",
-      "required_states",
-      "playwright_projects",
-      "artifact_assertions",
-    ]),
+    frontend: {
+      ...normalizeScope(spec.frontend, "automationSpec.frontend", [
+        "required_routes",
+        "required_states",
+        "playwright_projects",
+        "artifact_assertions",
+      ]),
+      design_authority: normalizeDesignAuthority(
+        spec.frontend?.design_authority ?? {},
+        "automationSpec.frontend.design_authority",
+      ),
+    },
     external_smokes: normalizeStringArray(
       spec.external_smokes ?? [],
       "automationSpec.external_smokes",
@@ -171,23 +245,28 @@ export function resolveAutonomousSlicePolicy({
   const mergePolicy =
     workItem.workflow?.merge_policy ?? automationSpec.merge_policy;
   const riskClass = automationSpec.risk_class;
+  const uiRisk = automationSpec.frontend?.design_authority?.ui_risk ?? "not-required";
   const isProductPreset =
     workItem.change_type === "product" &&
     ["vertical-slice-strict", "vertical-slice-light"].includes(workItem.preset);
 
   const autonomous =
     executionMode === "autonomous" &&
+    isProductPreset;
+  const mergeEligible =
+    autonomous &&
     mergePolicy === "conditional-auto" &&
-    isProductPreset &&
-    ["low", "medium"].includes(riskClass);
+    ["low", "medium"].includes(riskClass) &&
+    !["high-risk", "anchor-extension"].includes(uiRisk);
 
   return {
     autonomous,
-    reason: autonomous ? "eligible" : "manual_or_high_risk",
-    mergeEligible: autonomous,
+    reason: !autonomous ? "missing_policy" : mergeEligible ? "eligible" : "manual_merge_required",
+    mergeEligible,
     executionMode,
     mergePolicy,
     riskClass,
+    uiRisk,
   };
 }
 

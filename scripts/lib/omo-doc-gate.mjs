@@ -9,6 +9,7 @@ import {
   resolveReviewChecklistItems,
 } from "./omo-checklist-contract.mjs";
 import { readAutomationSpec } from "./omo-automation-spec.mjs";
+import { readWorkpackDesignAuthority } from "./omo-bookkeeping.mjs";
 
 const REQUIRED_README_SECTIONS = [
   "## Goal",
@@ -18,6 +19,7 @@ const REQUIRED_README_SECTIONS = [
   "## Dependencies",
   "## Backend First Contract",
   "## Frontend Delivery Mode",
+  "## Design Authority",
   "## Design Status",
   "## Source Links",
   "## QA / Test Data Plan",
@@ -263,6 +265,132 @@ function checkAutomationSpec({ slice, automationSpecPath, automationSpec, contra
   }
 }
 
+function fileContains(filePath, patterns) {
+  if (!existsSync(filePath)) {
+    return false;
+  }
+
+  const contents = readFileSync(filePath, "utf8").toLowerCase();
+  return patterns.some((pattern) => contents.includes(pattern.toLowerCase()));
+}
+
+function checkDesignAuthority({
+  rootDir,
+  slice,
+  automationSpec,
+  findings,
+}) {
+  const designAuthorityConfig = automationSpec?.frontend?.design_authority ?? null;
+  if (!designAuthorityConfig?.authority_required) {
+    return;
+  }
+
+  const authority = readWorkpackDesignAuthority({
+    rootDir,
+    worktreePath: rootDir,
+    slice,
+  });
+
+  if (authority.missing) {
+    findings.push(createFinding({
+      id: "doc-gate-design-authority-missing",
+      category: "design_authority",
+      message: "README Design Authority section is missing.",
+      evidencePaths: [authority.filePath],
+      remediationHint: "README에 Design Authority 섹션을 추가하고 authority 계획을 잠그세요.",
+    }));
+    return;
+  }
+
+  if (!authority.uiRisk) {
+    findings.push(createFinding({
+      id: "doc-gate-design-authority-ui-risk-missing",
+      category: "design_authority",
+      message: "README Design Authority UI risk is missing.",
+      evidencePaths: [authority.filePath],
+      remediationHint: "Design Authority 섹션에 UI risk를 기입하세요.",
+    }));
+  }
+
+  if (!authority.visualArtifact) {
+    findings.push(createFinding({
+      id: "doc-gate-design-authority-artifact-missing",
+      category: "design_authority",
+      message: "README Design Authority visual artifact plan is missing.",
+      evidencePaths: [authority.filePath],
+      remediationHint: "Figma URL 또는 screenshot evidence 경로를 Design Authority 섹션에 남기세요.",
+    }));
+  }
+
+  for (const screenId of designAuthorityConfig.required_screens ?? []) {
+    const designDocPath = resolve(rootDir, "ui", "designs", `${screenId}.md`);
+    const critiquePath = resolve(rootDir, "ui", "designs", "critiques", `${screenId}-critique.md`);
+
+    if (!existsSync(designDocPath)) {
+      findings.push(createFinding({
+        id: `doc-gate-design-doc-missing-${screenId.toLowerCase()}`,
+        category: "design_authority",
+        message: `Required design-generator artifact is missing for ${screenId}.`,
+        evidencePaths: [designDocPath],
+        remediationHint: `${screenId} design doc를 생성하세요.`,
+      }));
+    }
+
+    if (!existsSync(critiquePath)) {
+      findings.push(createFinding({
+        id: `doc-gate-design-critique-missing-${screenId.toLowerCase()}`,
+        category: "design_authority",
+        message: `Required design-critic artifact is missing for ${screenId}.`,
+        evidencePaths: [critiquePath],
+        remediationHint: `${screenId} critique 문서를 생성하세요.`,
+      }));
+    }
+
+    const keywordChecks = [
+      {
+        id: "mobile-baseline",
+        patterns: ["375", "mobile baseline"],
+        message: "mobile baseline keyword is missing from design artifacts.",
+      },
+      {
+        id: "mobile-narrow",
+        patterns: ["320", "narrow"],
+        message: "narrow mobile keyword is missing from design artifacts.",
+      },
+      {
+        id: "primary-cta",
+        patterns: ["primary cta"],
+        message: "primary CTA keyword is missing from design artifacts.",
+      },
+      {
+        id: "scroll-containment",
+        patterns: ["scroll containment"],
+        message: "scroll containment keyword is missing from design artifacts.",
+      },
+      {
+        id: "anchor",
+        patterns: ["anchor", ...designAuthorityConfig.anchor_screens.map((screen) => screen.toLowerCase())],
+        message: "anchor screen keyword is missing from design artifacts.",
+      },
+    ];
+
+    for (const keywordCheck of keywordChecks) {
+      const hasKeyword =
+        fileContains(designDocPath, keywordCheck.patterns) ||
+        fileContains(critiquePath, keywordCheck.patterns);
+      if (!hasKeyword) {
+        findings.push(createFinding({
+          id: `doc-gate-design-keyword-${keywordCheck.id}-${screenId.toLowerCase()}`,
+          category: "design_authority",
+          message: `${screenId}: ${keywordCheck.message}`,
+          evidencePaths: [designDocPath, critiquePath],
+          remediationHint: `${screenId} design doc/critique에 ${keywordCheck.id} 기준을 명시하세요.`,
+        }));
+      }
+    }
+  }
+}
+
 function createSummary(outcome, findings) {
   if (outcome === "pass") {
     return "Doc gate passed.";
@@ -312,6 +440,12 @@ export function evaluateDocGate({
     automationSpecPath,
     automationSpec,
     contract: checklistContract,
+    findings,
+  });
+  checkDesignAuthority({
+    rootDir: docsRoot,
+    slice: normalizedSlice,
+    automationSpec,
     findings,
   });
 

@@ -14,6 +14,7 @@ const OMO_EXECUTION_SUBPHASES = new Set([
   "doc_gate_check",
   "doc_gate_repair",
   "doc_gate_review",
+  "authority_precheck",
   "implementation",
 ]);
 const OMO_RUNTIME_PHASES = new Set([
@@ -505,6 +506,32 @@ function normalizeReviewEntry(entry) {
           .filter((value) => typeof value === "string" && value.trim().length > 0)
           .map((value) => value.trim())
       : [],
+    authority_verdict:
+      typeof entry.authority_verdict === "string" && entry.authority_verdict.trim().length > 0
+        ? entry.authority_verdict.trim()
+        : null,
+    reviewed_screen_ids: Array.isArray(entry.reviewed_screen_ids)
+      ? entry.reviewed_screen_ids
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    authority_report_paths: Array.isArray(entry.authority_report_paths)
+      ? entry.authority_report_paths
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    blocker_count:
+      typeof entry.blocker_count === "number" && entry.blocker_count >= 0
+        ? entry.blocker_count
+        : null,
+    major_count:
+      typeof entry.major_count === "number" && entry.major_count >= 0
+        ? entry.major_count
+        : null,
+    minor_count:
+      typeof entry.minor_count === "number" && entry.minor_count >= 0
+        ? entry.minor_count
+        : null,
     source_review_stage: Number.isInteger(entry.source_review_stage) ? entry.source_review_stage : null,
     ping_pong_rounds:
       typeof entry.ping_pong_rounds === "number" && entry.ping_pong_rounds >= 0
@@ -762,6 +789,87 @@ function normalizeDocGate(docGate) {
   };
 }
 
+function normalizeDesignAuthority(designAuthority) {
+  if (!designAuthority || typeof designAuthority !== "object" || Array.isArray(designAuthority)) {
+    return {
+      status: null,
+      ui_risk: null,
+      anchor_screens: [],
+      required_screens: [],
+      authority_required: false,
+      authority_report_paths: [],
+      evidence_artifact_refs: [],
+      authority_verdict: null,
+      blocker_count: null,
+      major_count: null,
+      minor_count: null,
+      reviewed_screen_ids: [],
+      source_stage: null,
+      updated_at: null,
+    };
+  }
+
+  return {
+    status:
+      typeof designAuthority.status === "string" && designAuthority.status.trim().length > 0
+        ? designAuthority.status.trim()
+        : null,
+    ui_risk:
+      typeof designAuthority.ui_risk === "string" && designAuthority.ui_risk.trim().length > 0
+        ? designAuthority.ui_risk.trim()
+        : null,
+    anchor_screens: Array.isArray(designAuthority.anchor_screens)
+      ? designAuthority.anchor_screens
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    required_screens: Array.isArray(designAuthority.required_screens)
+      ? designAuthority.required_screens
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    authority_required: typeof designAuthority.authority_required === "boolean"
+      ? designAuthority.authority_required
+      : false,
+    authority_report_paths: Array.isArray(designAuthority.authority_report_paths)
+      ? designAuthority.authority_report_paths
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    evidence_artifact_refs: Array.isArray(designAuthority.evidence_artifact_refs)
+      ? designAuthority.evidence_artifact_refs
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    authority_verdict:
+      typeof designAuthority.authority_verdict === "string" && designAuthority.authority_verdict.trim().length > 0
+        ? designAuthority.authority_verdict.trim()
+        : null,
+    blocker_count:
+      typeof designAuthority.blocker_count === "number" && designAuthority.blocker_count >= 0
+        ? designAuthority.blocker_count
+        : null,
+    major_count:
+      typeof designAuthority.major_count === "number" && designAuthority.major_count >= 0
+        ? designAuthority.major_count
+        : null,
+    minor_count:
+      typeof designAuthority.minor_count === "number" && designAuthority.minor_count >= 0
+        ? designAuthority.minor_count
+        : null,
+    reviewed_screen_ids: Array.isArray(designAuthority.reviewed_screen_ids)
+      ? designAuthority.reviewed_screen_ids
+          .filter((value) => typeof value === "string" && value.trim().length > 0)
+          .map((value) => value.trim())
+      : [],
+    source_stage: Number.isInteger(designAuthority.source_stage) ? designAuthority.source_stage : null,
+    updated_at:
+      typeof designAuthority.updated_at === "string" && designAuthority.updated_at.trim().length > 0
+        ? designAuthority.updated_at.trim()
+        : null,
+  };
+}
+
 function normalizeRecoveryExistingPr(entry) {
   if (!entry || typeof entry !== "object") {
     return null;
@@ -867,6 +975,7 @@ function baseRuntimeState({ rootDir, workItemId, slice }) {
     last_review: normalizeLastReview(null),
     last_rebuttal: normalizeLastRebuttal(null),
     doc_gate: normalizeDocGate(null),
+    design_authority: normalizeDesignAuthority(null),
     recovery: null,
   };
 }
@@ -936,6 +1045,7 @@ function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
     last_review: normalizeLastReview(runtime.last_review),
     last_rebuttal: normalizeLastRebuttal(runtime.last_rebuttal),
     doc_gate: normalizeDocGate(runtime.doc_gate),
+    design_authority: normalizeDesignAuthority(runtime.design_authority),
     recovery,
   };
 
@@ -1514,6 +1624,12 @@ export function setLastReview({
   reviewedChecklistIds,
   requiredFixIds,
   waivedFixIds,
+  authorityVerdict,
+  reviewedScreenIds,
+  authorityReportPaths,
+  blockerCount,
+  majorCount,
+  minorCount,
   sourceReviewStage,
   pingPongRounds,
   updatedAt,
@@ -1573,6 +1689,26 @@ export function setLastReview({
               .filter((value) => typeof value === "string" && value.trim().length > 0)
               .map((value) => value.trim())
           : [],
+        authority_verdict:
+          typeof authorityVerdict === "string" && authorityVerdict.trim().length > 0
+            ? authorityVerdict.trim()
+            : null,
+        reviewed_screen_ids: Array.isArray(reviewedScreenIds)
+          ? reviewedScreenIds
+              .filter((value) => typeof value === "string" && value.trim().length > 0)
+              .map((value) => value.trim())
+          : [],
+        authority_report_paths: Array.isArray(authorityReportPaths)
+          ? authorityReportPaths
+              .filter((value) => typeof value === "string" && value.trim().length > 0)
+              .map((value) => value.trim())
+          : [],
+        blocker_count:
+          typeof blockerCount === "number" && blockerCount >= 0 ? blockerCount : null,
+        major_count:
+          typeof majorCount === "number" && majorCount >= 0 ? majorCount : null,
+        minor_count:
+          typeof minorCount === "number" && minorCount >= 0 ? minorCount : null,
         source_review_stage: Number.isInteger(Number(sourceReviewStage))
           ? Number(sourceReviewStage)
           : null,
@@ -1581,6 +1717,79 @@ export function setLastReview({
         updated_at: toIsoString(updatedAt),
       },
     },
+  };
+}
+
+export function setDesignAuthorityState({
+  state,
+  status,
+  uiRisk,
+  anchorScreens,
+  requiredScreens,
+  authorityRequired,
+  authorityReportPaths,
+  evidenceArtifactRefs,
+  authorityVerdict,
+  blockerCount,
+  majorCount,
+  minorCount,
+  reviewedScreenIds,
+  sourceStage,
+  updatedAt,
+}) {
+  return {
+    ...state,
+    design_authority: normalizeDesignAuthority({
+      ...(state.design_authority ?? {}),
+      status:
+        typeof status === "string" && status.trim().length > 0
+          ? status.trim()
+          : state.design_authority?.status ?? null,
+      ui_risk:
+        typeof uiRisk === "string" && uiRisk.trim().length > 0
+          ? uiRisk.trim()
+          : state.design_authority?.ui_risk ?? null,
+      anchor_screens: Array.isArray(anchorScreens)
+        ? anchorScreens
+        : state.design_authority?.anchor_screens ?? [],
+      required_screens: Array.isArray(requiredScreens)
+        ? requiredScreens
+        : state.design_authority?.required_screens ?? [],
+      authority_required:
+        typeof authorityRequired === "boolean"
+          ? authorityRequired
+          : state.design_authority?.authority_required ?? false,
+      authority_report_paths: Array.isArray(authorityReportPaths)
+        ? authorityReportPaths
+        : state.design_authority?.authority_report_paths ?? [],
+      evidence_artifact_refs: Array.isArray(evidenceArtifactRefs)
+        ? evidenceArtifactRefs
+        : state.design_authority?.evidence_artifact_refs ?? [],
+      authority_verdict:
+        typeof authorityVerdict === "string" && authorityVerdict.trim().length > 0
+          ? authorityVerdict.trim()
+          : state.design_authority?.authority_verdict ?? null,
+      blocker_count:
+        typeof blockerCount === "number" && blockerCount >= 0
+          ? blockerCount
+          : state.design_authority?.blocker_count ?? null,
+      major_count:
+        typeof majorCount === "number" && majorCount >= 0
+          ? majorCount
+          : state.design_authority?.major_count ?? null,
+      minor_count:
+        typeof minorCount === "number" && minorCount >= 0
+          ? minorCount
+          : state.design_authority?.minor_count ?? null,
+      reviewed_screen_ids: Array.isArray(reviewedScreenIds)
+        ? reviewedScreenIds
+        : state.design_authority?.reviewed_screen_ids ?? [],
+      source_stage:
+        Number.isInteger(Number(sourceStage))
+          ? Number(sourceStage)
+          : state.design_authority?.source_stage ?? null,
+      updated_at: toIsoString(updatedAt),
+    }),
   };
 }
 

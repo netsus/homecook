@@ -96,6 +96,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - repo-local OpenCode / OMO config bootstrap
 - minimal `omo:dispatch-stage` / `omo:sync-status` helper 도입
 - direct `omo:run-stage` execution binding + `.artifacts/omo-lite-dispatch/` artifact bundle
+- Stage 4 `authority_precheck` + Stage 5 Claude final authority 흐름
 - automatic Claude budget resolution + repo-local override
 - JSON schema와 예시 파일 추가
 - `validate:workflow-v2` 최소 validator 추가
@@ -127,6 +128,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - 현재 baseline의 해석:
   - `fullauto v1`은 low/medium autonomous slice의 무인 merge까지 자동화한다.
   - merge authority는 GitHub formal approval이 아니라 Claude review artifact + 전체 PR checks + external smoke다.
+  - authority-required UI는 Codex `authority_precheck` 후 Claude final authority를 거친다.
+  - `high-risk` / `anchor-extension` slice는 stage execution은 지원하지만 automatic merge는 금지하고 manual merge handoff로 끝낸다.
   - live smoke는 일반 PR CI 필수 단계가 아니라 sandbox/on-demand 운영 검증 경로다.
   - scheduler 운영 기준 플랫폼은 우선 macOS `launchd`다.
 
