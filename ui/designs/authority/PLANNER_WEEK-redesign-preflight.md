@@ -21,6 +21,7 @@
 | 1 | first viewport density | 첫 화면에 설명/칩/상단 구조 비중이 커서 실제 day overview가 늦게 나온다. | planner의 핵심 가치가 "한눈에 여러 날 보기"인데 첫 화면에서 그 경험이 약해진다. | hero를 압축하고 week bar와 첫 day card를 위로 끌어올린다. |
 | 2 | control proximity | 주간 범위 이동 컨트롤이 planner 본문과 시각적으로 떨어져 있다. | 사용자는 어떤 콘텐츠 집합을 움직이는 버튼인지 즉시 연결하기 어렵다. | week range + prev/next/current controls를 planner 바로 위 sticky block으로 재배치한다. |
 | 3 | day grouping | 같은 날짜 식단을 한 card 안에서 읽기보다 날짜 x 끼니 표를 계속 스캔해야 한다. | 모바일에서는 하루 단위 스캔이 더 자연스러운 경우가 많고, 현재 구조는 인지 부하가 크다. | `하루 1카드 + 카드 내부 4슬롯` 구조로 재설계한다. |
+| 4 | content hygiene | 범위 정보와 상태 정보가 중복되거나 개발용 문자열이 사용자에게 보이면 신뢰감이 떨어진다. | planner는 빠르게 읽히는 화면이어야 하고, 메타데이터 중복은 실제 식단보다 UI가 더 크게 느껴지게 만든다. | range summary를 1회로 줄이고 `ready` 같은 개발용 상태 노출을 제거한다. |
 
 ## Major Issues
 

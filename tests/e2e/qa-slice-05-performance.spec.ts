@@ -12,11 +12,14 @@ const PERFORMANCE_BUDGET_MS = {
   maxShift: 1_500,
 };
 
-function plannerStatusValue(page: Page, label: string, value: string) {
-  return page.locator("div").filter({
-    has: page.locator("dt").filter({ hasText: label }),
-    hasText: value,
-  }).first();
+function formatRangeLabel(dateKey: string) {
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(date);
 }
 
 async function waitForPlannerRange(page: Page, {
@@ -28,15 +31,10 @@ async function waitForPlannerRange(page: Page, {
   endDate: string;
   mealCount: number;
 }) {
-  await expect(
-    plannerStatusValue(page, "범위", `${startDate} ~ ${endDate}`),
-  ).toBeVisible();
-  await expect(
-    plannerStatusValue(page, "식사 수", `${mealCount}건`),
-  ).toBeVisible();
-  await expect(
-    plannerStatusValue(page, "화면 상태", "ready"),
-  ).toBeVisible();
+  await expect(page.getByText(`${formatRangeLabel(startDate)} ~ ${formatRangeLabel(endDate)}`)).toBeVisible();
+  await expect(page.getByText(`식사 ${mealCount}건`)).toBeVisible();
+  await expect(page.getByText("화면 상태")).toHaveCount(0);
+  await expect(page.getByLabel("주간 날짜 스트립").locator("li")).toHaveCount(7);
 }
 
 async function measure(action: () => Promise<void>, assertion: () => Promise<void>) {
@@ -132,18 +130,14 @@ test.describe("Slice 05 local long-run performance smoke", () => {
         / metrics.shiftDurationsMs.length,
     );
 
-    const scroller = page.locator("div.overflow-x-auto").first();
-    const targetInput = page.locator(`input[value="${dataset.scenario.lastColumnName}"]`).first();
+    const lastDayChip = page.getByLabel("주간 날짜 스트립").locator("li").last();
 
     metrics.horizontalReachMs = await measure(
       async () => {
-        await scroller.evaluate((element) => {
-          element.scrollLeft = element.scrollWidth;
-        });
-        await targetInput.scrollIntoViewIfNeeded();
+        await lastDayChip.scrollIntoViewIfNeeded();
       },
       async () => {
-        await expectVisibleWithinViewport(page, targetInput);
+        await expectVisibleWithinViewport(page, lastDayChip);
       },
     );
 

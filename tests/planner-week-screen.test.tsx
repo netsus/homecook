@@ -18,7 +18,7 @@ vi.mock("@/lib/auth/e2e-auth-override", () => ({
 vi.mock("@/lib/api/planner", () => ({
   createDefaultPlannerRange: () => ({
     startDate: "2026-03-24",
-    endDate: "2026-04-07",
+    endDate: "2026-03-30",
   }),
   shiftPlannerRange: (
     range: { startDate: string; endDate: string },
@@ -160,6 +160,9 @@ describe("planner week screen", () => {
     expect(screen.getAllByText("점심").length).toBeGreaterThan(0);
     expect(screen.getAllByText("간식").length).toBeGreaterThan(0);
     expect(screen.getAllByText("저녁").length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(/식단 카드$/)).toHaveLength(7);
+    expect(screen.getAllByText("3월 24일 ~ 3월 30일")).toHaveLength(1);
+    expect(screen.queryByText("화면 상태")).toBeNull();
     expect(screen.getByText("김치찌개")).toBeTruthy();
     expect(screen.getByText("샐러드")).toBeTruthy();
     expect(screen.getByText("식사 등록 완료")).toBeTruthy();
@@ -172,7 +175,7 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen initialAuthenticated />);
 
-    expect(await screen.findByText("아직 등록된 식사가 없어요")).toBeTruthy();
+    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
     expect(fetchPlanner).toHaveBeenCalledTimes(1);
   });
 
@@ -190,7 +193,7 @@ describe("planner week screen", () => {
 
     deferred.resolve(createPlannerData({ meals: [] }));
 
-    expect(await screen.findByText("아직 등록된 식사가 없어요")).toBeTruthy();
+    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
   });
 
   it("shows fetch error UI and retries planner loading", async () => {
@@ -208,7 +211,7 @@ describe("planner week screen", () => {
 
     await user.click(screen.getByRole("button", { name: "다시 시도" }));
 
-    expect(await screen.findByText("아직 등록된 식사가 없어요")).toBeTruthy();
+    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
     expect(fetchPlanner).toHaveBeenCalledTimes(2);
   });
 
@@ -227,7 +230,7 @@ describe("planner week screen", () => {
     await user.click(screen.getByRole("button", { name: "다음 주" }));
 
     await waitFor(() => {
-      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-14");
+      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
     });
   });
 
@@ -237,7 +240,7 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByText("아직 등록된 식사가 없어요")).toBeTruthy();
+    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
     expect(screen.getAllByText("비어 있음").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByPlaceholderText("새 끼니 컬럼 이름")).toBeNull();
   });

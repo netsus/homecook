@@ -107,8 +107,12 @@ test.describe("Slice 05 planner week core", () => {
     await page.goto("/planner");
 
     const firstDayCard = page.getByLabel(/식단 카드$/).first();
+    const dateStrip = page.getByLabel("주간 날짜 스트립");
 
     await expect(page.getByRole("heading", { name: "식단 플래너" })).toBeVisible();
+    await expect(page.getByText("현재 범위")).toHaveCount(1);
+    await expect(page.getByText("화면 상태")).toHaveCount(0);
+    await expect(dateStrip.locator("li")).toHaveCount(7);
     await expect(firstDayCard.getByText("아침")).toBeVisible();
     await expect(firstDayCard.getByText("점심")).toBeVisible();
     await expect(firstDayCard.getByText("간식")).toBeVisible();

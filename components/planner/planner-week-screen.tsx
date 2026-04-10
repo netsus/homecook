@@ -221,27 +221,24 @@ export function PlannerWeekScreen({
   }
 
   return (
-    <div className="space-y-4">
-      <section className="glass-panel rounded-[24px] px-5 py-5 md:px-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div>
+    <div className="space-y-3 sm:space-y-4">
+      <section className="glass-panel rounded-[clamp(22px,6vw,28px)] px-[clamp(14px,4vw,24px)] py-[clamp(14px,4vw,24px)]">
+        <div className="flex flex-col gap-[clamp(12px,3vw,18px)]">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
                 Planner Week
               </p>
-              <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
+              <h2 className="mt-1.5 text-[clamp(1.9rem,8vw,2.7rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
                 식단 플래너
               </h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                주간 범위와 하루 카드에서 집밥 흐름을 빠르게 살펴봐요.
-              </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 md:justify-end">
               {CTA_BUTTONS.map((label) => (
                 <button
                   key={label}
                   aria-disabled="true"
-                  className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)] opacity-60"
+                  className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-semibold text-[var(--muted)] opacity-60 sm:min-h-10 sm:px-4 sm:text-sm"
                   disabled
                   type="button"
                 >
@@ -251,26 +248,32 @@ export function PlannerWeekScreen({
             </div>
           </div>
 
-          <div className="rounded-[20px] border border-[var(--line)] bg-white/78 px-4 py-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
-                  현재 범위
-                </p>
-                <h3 className="mt-2 text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-                  {formatRangeLabel(rangeStartDate, rangeEndDate)}
-                </h3>
+          <div className="rounded-[clamp(18px,5vw,24px)] border border-[var(--line)] bg-white/78 px-[clamp(12px,3.5vw,18px)] py-[clamp(12px,3.5vw,18px)]">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+                    현재 범위
+                  </p>
+                  <h3 className="mt-1 text-[clamp(1.45rem,6vw,2rem)] font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                    {formatRangeLabel(rangeStartDate, rangeEndDate)}
+                  </h3>
+                </div>
+                <div className="inline-flex w-fit items-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-semibold text-[var(--muted)] sm:text-[13px]">
+                  식사 {meals.length}건
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+
+              <nav aria-label="주간 이동" className="flex flex-wrap items-center gap-2">
                 <button
-                  className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+                  className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-semibold text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-sm"
                   onClick={() => shiftRange(-RANGE_SHIFT_DAYS)}
                   type="button"
                 >
                   이전 주
                 </button>
                 <button
-                  className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+                  className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-semibold text-[var(--muted)] disabled:opacity-50 sm:min-h-10 sm:px-4 sm:text-sm"
                   disabled={isCurrentRange}
                   onClick={() => resetRange()}
                   type="button"
@@ -278,43 +281,30 @@ export function PlannerWeekScreen({
                   이번주로 가기
                 </button>
                 <button
-                  className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+                  className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-semibold text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-sm"
                   onClick={() => shiftRange(RANGE_SHIFT_DAYS)}
                   type="button"
                 >
                   다음 주
                 </button>
-              </div>
-            </div>
+              </nav>
 
-            <dl className="mt-4 grid gap-2 text-sm text-[var(--muted)] sm:grid-cols-3">
-              <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3">
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.18em]">범위</dt>
-                <dd className="mt-1 font-semibold text-[var(--foreground)]">
-                  {rangeStartDate} ~ {rangeEndDate}
-                </dd>
-              </div>
-              <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3">
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.18em]">식사 수</dt>
-                <dd className="mt-1 font-semibold text-[var(--foreground)]">{meals.length}건</dd>
-              </div>
-              <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-3 py-3">
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.18em]">화면 상태</dt>
-                <dd className="mt-1 font-semibold text-[var(--foreground)]">{screenState}</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-[var(--muted)]">
-            {dateKeys.slice(0, 7).map((dateKey) => (
-              <div
-                key={dateKey}
-                className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-2 py-2"
+              <ol
+                aria-label="주간 날짜 스트립"
+                className="grid grid-cols-7 gap-1.5 text-center text-[11px] font-semibold text-[var(--muted)] sm:gap-2 sm:text-xs"
               >
-                <p>{formatWeekdayLabel(dateKey)}</p>
-                <p className="mt-1 text-sm text-[var(--foreground)]">{dateKey.slice(8)}</p>
-              </div>
-            ))}
+                {dateKeys.map((dateKey) => (
+                  <li key={dateKey} className="list-none">
+                    <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-1.5 py-2 sm:px-2">
+                      <p>{formatWeekdayLabel(dateKey)}</p>
+                      <p className="mt-1 text-[clamp(0.95rem,3.4vw,1rem)] text-[var(--foreground)]">
+                        {dateKey.slice(8)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </div>
         </div>
       </section>
@@ -346,10 +336,10 @@ export function PlannerWeekScreen({
       ) : null}
 
       {screenState === "ready" || screenState === "empty" ? (
-        <section className="space-y-3">
+        <section className="space-y-2.5 sm:space-y-3">
           {screenState === "empty" ? (
-            <div className="glass-panel rounded-[20px] px-4 py-4">
-              <p className="text-sm text-[var(--muted)]">아직 등록된 식사가 없어요</p>
+            <div className="glass-panel rounded-[18px] px-4 py-3">
+              <p className="text-sm text-[var(--muted)]">아직 등록된 식사가 없어요.</p>
             </div>
           ) : null}
 
@@ -357,23 +347,22 @@ export function PlannerWeekScreen({
             <article
               key={dateKey}
               aria-label={`${formatDateLabel(dateKey)} 식단 카드`}
-              className="glass-panel rounded-[22px] px-4 py-4"
+              className="glass-panel rounded-[clamp(20px,5vw,24px)] px-[clamp(12px,3.5vw,18px)] py-[clamp(12px,3.5vw,18px)]"
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-[12px] bg-[var(--foreground)] px-3 text-sm font-bold text-white">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-[12px] bg-[var(--foreground)] px-3 text-sm font-bold text-white sm:min-h-11 sm:min-w-11">
                     {formatWeekdayLabel(dateKey)}
                   </span>
-                  <div>
-                    <p className="text-lg font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                  <div className="min-w-0">
+                    <p className="text-[clamp(1.2rem,5.2vw,1.6rem)] font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
                       {formatDateLabel(dateKey)}
                     </p>
-                    <p className="text-xs text-[var(--muted)]">{dateKey}</p>
                   </div>
                 </div>
                 <button
                   aria-disabled="true"
-                  className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full border border-[var(--line)] text-lg text-[var(--muted)] opacity-55"
+                  className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-full border border-[var(--line)] text-lg text-[var(--muted)] opacity-55 sm:min-h-10 sm:min-w-10"
                   disabled
                   type="button"
                 >
@@ -381,7 +370,7 @@ export function PlannerWeekScreen({
                 </button>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <div className="mt-3 grid grid-cols-2 gap-2.5 md:grid-cols-4">
                 {columns.map((column) => {
                   const slotKey = `${dateKey}:${column.id}`;
                   const slotMeals = mealsByDateAndColumn.get(slotKey) ?? [];
@@ -390,34 +379,38 @@ export function PlannerWeekScreen({
                   return (
                     <section
                       key={slotKey}
-                      className={`rounded-[18px] border px-3 py-3 ${
+                      className={`rounded-[16px] border px-[clamp(10px,3vw,14px)] py-[clamp(10px,3vw,14px)] ${
                         meal?.is_leftover
                           ? "border-[color:rgba(46,166,122,0.2)] bg-[color:rgba(46,166,122,0.08)]"
                           : "border-[var(--line)] bg-[var(--surface)]"
                       }`}
                     >
-                      <h4 className="text-sm font-bold text-[var(--foreground)]">{column.name}</h4>
+                      <h4 className="text-[13px] font-bold text-[var(--foreground)] sm:text-sm">
+                        {column.name}
+                      </h4>
                       {meal ? (
                         <>
-                          <p className="mt-2 line-clamp-2 text-sm font-semibold text-[var(--foreground)]">
+                          <p className="mt-1.5 line-clamp-2 text-[13px] font-semibold text-[var(--foreground)] sm:text-sm">
                             {meal.recipe_title}
                           </p>
-                          <p className="mt-1 text-xs text-[var(--muted)]">
+                          <p className="mt-1 text-[11px] text-[var(--muted)] sm:text-xs">
                             {meal.planned_servings}인분
                           </p>
                           <span
-                            className={`mt-2 inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${STATUS_META[meal.status].className}`}
+                            className={`mt-2 inline-flex rounded-full px-2 py-1 text-[10px] font-semibold sm:text-[11px] ${STATUS_META[meal.status].className}`}
                           >
                             {STATUS_META[meal.status].label}
                           </span>
                           {slotMeals.length > 1 ? (
-                            <p className="mt-2 text-[11px] text-[var(--muted)]">
+                            <p className="mt-1.5 text-[11px] text-[var(--muted)]">
                               +{slotMeals.length - 1}건 더 있음
                             </p>
                           ) : null}
                         </>
                       ) : (
-                        <p className="mt-2 text-sm text-[var(--muted)]">비어 있음</p>
+                        <p className="mt-1.5 text-[13px] text-[var(--muted)] sm:text-sm">
+                          비어 있음
+                        </p>
                       )}
                     </section>
                   );
