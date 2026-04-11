@@ -13,6 +13,7 @@ import {
   isLocalDevAuthEnabled,
   isLocalGoogleOAuthEnabled,
 } from "@/lib/auth/local-dev-auth";
+import { isQaFixtureClientModeEnabled } from "@/lib/mock/qa-fixture-client";
 import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
 import {
   type PendingRecipeAction,
@@ -37,6 +38,7 @@ export function SocialLoginButtons({
   const [isPending, startTransition] = useTransition();
   const localDevAuthEnabled = isLocalDevAuthEnabled();
   const localGoogleOAuthEnabled = isLocalGoogleOAuthEnabled();
+  const qaFixtureMode = isQaFixtureClientModeEnabled();
   const providers = localDevAuthEnabled && !localGoogleOAuthEnabled
     ? []
     : getEnabledAuthProviders();
@@ -110,7 +112,7 @@ export function SocialLoginButtons({
           </button>
         );
       })}
-      {providers.length > 0 ? (
+      {providers.length > 1 && !qaFixtureMode ? (
         <p className="text-xs leading-5 text-[var(--muted)]">
           현재 테스트 가능한 로그인:{" "}
           {providers
@@ -118,19 +120,21 @@ export function SocialLoginButtons({
             .join(", ")}
         </p>
       ) : null}
-      <LocalDevLoginPanel
-        nextPath={nextPath}
-        onStarted={onStarted}
-        pendingAction={pendingAction}
-      />
-      {localDevAuthEnabled && localGoogleOAuthEnabled ? (
+      {!qaFixtureMode ? (
+        <LocalDevLoginPanel
+          nextPath={nextPath}
+          onStarted={onStarted}
+          pendingAction={pendingAction}
+        />
+      ) : null}
+      {localDevAuthEnabled && localGoogleOAuthEnabled && !qaFixtureMode ? (
         <p className="text-xs leading-5 text-[var(--muted)]">
           local Supabase에서 Google OAuth와 로컬 테스트 계정을 함께 사용할 수 있어요.
           신규 유저 bootstrap/manual OAuth는 Google로, 데모 데이터와 소유권 확인은 로컬
           테스트 계정을 사용하세요.
         </p>
       ) : null}
-      {localDevAuthEnabled && !localGoogleOAuthEnabled ? (
+      {localDevAuthEnabled && !localGoogleOAuthEnabled && !qaFixtureMode ? (
         <p className="text-xs leading-5 text-[var(--muted)]">
           local Supabase에서 Google OAuth도 쓰려면
           `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID`와

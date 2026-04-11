@@ -703,7 +703,7 @@ export function RecipeDetailScreen({
                       +
                     </button>
                   </div>
-                  <p className="mt-3 text-[13px] font-semibold tracking-[-0.01em] text-[var(--brand-deep)] md:text-sm">
+                  <p className="mt-3 text-[13px] font-semibold tracking-[-0.01em] text-[#9a3f1d] md:text-sm">
                     인분에 따라 재료량이 바뀝니다
                   </p>
                 </div>

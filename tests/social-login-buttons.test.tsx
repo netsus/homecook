@@ -12,6 +12,7 @@ const signInWithOAuth = vi.fn();
 const hasSupabasePublicEnv = vi.fn();
 const isLocalDevAuthEnabled = vi.fn();
 const isLocalGoogleOAuthEnabled = vi.fn();
+const isQaFixtureClientModeEnabled = vi.fn();
 
 vi.mock("@/components/auth/local-dev-login-panel", () => ({
   LocalDevLoginPanel: () => <div>local-dev-panel</div>,
@@ -20,6 +21,10 @@ vi.mock("@/components/auth/local-dev-login-panel", () => ({
 vi.mock("@/lib/auth/local-dev-auth", () => ({
   isLocalDevAuthEnabled: () => isLocalDevAuthEnabled(),
   isLocalGoogleOAuthEnabled: () => isLocalGoogleOAuthEnabled(),
+}));
+
+vi.mock("@/lib/mock/qa-fixture-client", () => ({
+  isQaFixtureClientModeEnabled: () => isQaFixtureClientModeEnabled(),
 }));
 
 vi.mock("@/lib/supabase/env", () => ({
@@ -44,9 +49,11 @@ describe("social login buttons", () => {
     hasSupabasePublicEnv.mockReset();
     isLocalDevAuthEnabled.mockReset();
     isLocalGoogleOAuthEnabled.mockReset();
+    isQaFixtureClientModeEnabled.mockReset();
     window.localStorage.clear();
     isLocalDevAuthEnabled.mockReturnValue(false);
     isLocalGoogleOAuthEnabled.mockReturnValue(false);
+    isQaFixtureClientModeEnabled.mockReturnValue(false);
   });
 
   it("shows a consistent message when public env is missing", async () => {
@@ -112,5 +119,20 @@ describe("social login buttons", () => {
     expect(
       screen.getByText(/local Supabase에서 Google OAuth와 로컬 테스트 계정을 함께 사용할 수 있어요/),
     ).toBeTruthy();
+  });
+
+  it("hides dev-only login helpers during QA fixture runs", () => {
+    isLocalDevAuthEnabled.mockReturnValue(true);
+    isLocalGoogleOAuthEnabled.mockReturnValue(true);
+    isQaFixtureClientModeEnabled.mockReturnValue(true);
+
+    render(<SocialLoginButtons nextPath="/planner" />);
+
+    expect(screen.getByRole("button", { name: "Google로 시작하기" })).toBeTruthy();
+    expect(screen.queryByText("local-dev-panel")).toBeNull();
+    expect(screen.queryByText(/현재 테스트 가능한 로그인/)).toBeNull();
+    expect(
+      screen.queryByText(/local Supabase에서 Google OAuth와 로컬 테스트 계정을 함께 사용할 수 있어요/),
+    ).toBeNull();
   });
 });
