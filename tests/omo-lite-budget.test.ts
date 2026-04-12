@@ -271,7 +271,7 @@ describe("OMO-lite stage runner budget-aware fallback", () => {
       rootDir,
       homeDir,
       slice: "02-discovery-filter",
-      stage: 5,
+      stage: 4,
       workItemId: "02-discovery-filter",
       mode: "execute",
       now: "2026-03-26T22:20:00+09:00",
@@ -295,7 +295,7 @@ describe("OMO-lite stage runner budget-aware fallback", () => {
       reason: "claude_budget_unavailable",
     });
     expect(runtime).toMatchObject({
-      blocked_stage: 5,
+      blocked_stage: 4,
       retry: {
         reason: "claude_budget_unavailable",
         attempt_count: 1,
@@ -333,7 +333,7 @@ describe("OMO-lite stage runner budget-aware fallback", () => {
       rootDir,
       homeDir,
       slice: "02-discovery-filter",
-      stage: 6,
+      stage: 4,
       workItemId,
       syncStatus: true,
       mode: "artifact-only",

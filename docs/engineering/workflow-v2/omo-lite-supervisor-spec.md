@@ -130,16 +130,18 @@ Claude-owned stage가 budget 또는 session availability 문제로 pause 되면 
 | 1 | Claude | 선행 slice `merged/bootstrap`, slice status `planned` | workpack README, acceptance, docs PR, `claude_primary` session binding | docs merge + status `docs` |
 | 2 | Codex | Stage 1 merged, internal 1.5 pass, dependencies resolved | `doc_gate_check/pass`, branch `feature/be-<slice>`, tests, backend PR, `codex_primary` session binding | Draft PR + green CI + Ready |
 | 3 | Claude | PR not Draft, required CI green | review summary, requested changes or approval, reused `claude_primary` session | merge 또는 fix routing (merge 직전 current head all started PR checks green 재확인) |
-| 4 | Codex | backend merged, FE scope unlocked | branch `feature/fe-<slice>`, tests, frontend PR, authority-required면 `authority_precheck`, reused `codex_primary` session | Draft PR + green CI + authority precheck(해당 시) + Ready |
-| 5 | Claude | FE PR ready, design scope defined | design review note, authority-required면 final authority verdict, reused `claude_primary` session | proceed to Stage 6 or fix routing |
-| 6 | Claude | FE PR not Draft, required CI green | FE review summary, reused `claude_primary` session | merge 또는 fix routing (merge 직전 current head all started PR checks green 재확인, manual-handoff slice는 auto-merge 금지) |
+| 4 | Claude | backend merged, FE scope unlocked | branch `feature/fe-<slice>`, tests, frontend PR, authority-required면 Codex `authority_precheck`, reused `claude_primary` session | Draft PR + green CI + authority precheck(해당 시) + Ready |
+| 5 | Codex | FE PR ready, design scope defined | design review note, authority-required면 Claude `final_authority_gate`, reused `codex_primary` session | proceed to Stage 6 or fix routing |
+| 6 | Codex | FE PR not Draft, required CI green | FE review summary, reused `codex_primary` session | merge 또는 fix routing (merge 직전 current head all started PR checks green 재확인, manual-handoff slice는 auto-merge 금지) |
 
 ## Session Model
 
 세션은 work item 단위로 고정한다.
 
-- Stage `1 / 3 / 5 / 6` -> `claude_primary`
-- Stage `2 / 4` -> `codex_primary`
+- Stage `1 / 3 / 4` -> `claude_primary`
+- Stage `2 / 5 / 6` -> `codex_primary`
+- `authority_precheck` -> `codex_primary`
+- `final_authority_gate` -> `claude_primary`
 
 `internal 1.5`에서는 아래처럼 재사용한다.
 
@@ -227,24 +229,26 @@ runtime state는 repo-local non-tracked 상태로 둔다.
 
 - backend PR merged
 - frontend scope가 workpack에 잠겨 있음
+- Stage 4 public actor는 Claude다
 - authority-required slice면 mobile UX evidence와 authority report draft를 만들어야 함
 - authority-required slice는 `authority_precheck` subphase를 거친 뒤에만 Stage 5로 넘어감
 - 필요 시 plan delta check
-- `codex_primary` session 재사용
+- `claude_primary` session 재사용
 
 ### Stage 5
 
 - FE PR ready
 - design token / state UI / modal / interaction scope가 정의됨
-- authority-required slice면 `product-design-authority`의 final authority 판정이 필요함
-- `claude_primary` session 재사용
+- Stage 5 public actor는 Codex다
+- authority-required slice면 `product-design-authority`의 final authority 판정이 필요하며, 이는 Claude `final_authority_gate`가 맡는다
+- `codex_primary` session 재사용
 
 ### Stage 6
 
 - FE PR not Draft
 - required CI green
 - Stage 5 feedback 반영 상태 확인
-- `claude_primary` session 재사용
+- `codex_primary` session 재사용
 
 ## Loop Policy
 
@@ -288,7 +292,7 @@ product slice Stage 2/4 기본 경로에서는 사용하지 않는다.
 - Stage 3 request changes -> Stage 2
 - Stage 4 완료 -> frontend Draft PR 생성 -> checks green -> Ready -> Stage 5
 - authority-required slice는 Stage 4 구현 뒤 `authority_precheck` 통과가 선행된다
-- Stage 5 approve -> Stage 6
+- Stage 5 approve -> authority-required slice는 `final_authority_gate`, 그 외는 Stage 6
 - Stage 5 request changes -> Stage 4
 - Stage 6 approve -> current head started PR checks green 재확인 -> frontend merge -> slice merged
 - `high-risk` / `anchor-extension` slice는 Stage 6 approve 뒤 manual merge handoff로 종료한다

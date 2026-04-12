@@ -322,6 +322,107 @@ describe("OMO bookkeeping", () => {
     expect(invariant.reason).toBe("roadmap_row_missing");
   });
 
+  it("treats final_authority_pending as a valid pre-closeout state for authority-required slices", () => {
+    const workItemId = "03-recipe-like";
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-bookkeeping-final-authority-"));
+    seedTrackedFiles(rootDir, workItemId);
+
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", workItemId, "README.md"),
+      [
+        `# ${workItemId}`,
+        "",
+        "## Design Status",
+        "",
+        "- [ ] 임시 UI (temporary)",
+        "- [x] 리뷰 대기 (pending-review)",
+        "- [ ] 확정 (confirmed)",
+        "- [ ] N/A",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(rootDir, ".workflow-v2", "status.json"),
+      JSON.stringify(
+        {
+          version: 1,
+          project_profile: "homecook",
+          updated_at: "2026-04-11T00:00:00.000Z",
+          items: [
+            {
+              id: workItemId,
+              preset: "vertical-slice-strict",
+              lifecycle: "ready_for_review",
+              approval_state: "codex_approved",
+              verification_status: "passed",
+              required_checks: ["pnpm validate:workflow-v2"],
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+    writeFileSync(
+      join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`),
+      JSON.stringify(
+        {
+          ...JSON.parse(readFileSync(join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`), "utf8")),
+          status: {
+            lifecycle: "ready_for_review",
+            approval_state: "codex_approved",
+            verification_status: "passed",
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 5,
+        current_stage: 5,
+        last_completed_stage: 5,
+        phase: "wait",
+        next_action: "run_stage",
+        wait: {
+          kind: "ready_for_next_stage",
+          stage: 5,
+          pr_role: "frontend",
+        },
+        design_authority: {
+          status: "final_authority_pending",
+          authority_required: true,
+          authority_verdict: "pass",
+          required_screens: ["RECIPE_DETAIL"],
+          reviewed_screen_ids: ["RECIPE_DETAIL"],
+          authority_report_paths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        },
+      },
+    });
+
+    const invariant = evaluateBookkeepingInvariant({
+      rootDir,
+      workItemId,
+      slice: workItemId,
+      runtimeState: readRuntimeState({
+        rootDir,
+        workItemId,
+        slice: workItemId,
+      }).state,
+    });
+
+    expect(invariant.outcome).toBe("ok");
+    expect(invariant.issues).toEqual([]);
+  });
+
   it("validator fails when merged runtime/workflow state drifts from the roadmap", () => {
     const rootDir = createRuntimeFixture();
 

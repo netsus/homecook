@@ -545,7 +545,7 @@ describe("OMO-lite stage runner", () => {
     expect(prompt).toContain("delivery-ui-connection");
     expect(prompt).toContain("## Latest Rebuttal Bundle");
     expect(prompt).toContain("CTA mismatch is intentional in temporary mode.");
-    expect(prompt).toContain("$ralph strict-stage-4");
+    expect(prompt).not.toContain("$ralph strict-stage-4");
     expect(prompt).toContain("\"pnpm verify:frontend\"");
   });
 
@@ -669,7 +669,7 @@ describe("OMO-lite stage runner", () => {
     const result = runStageWithArtifacts({
       rootDir,
       slice: "02-discovery-filter",
-      stage: 4,
+      stage: 5,
       workItemId: "02-discovery-filter",
       mode: "execute",
       syncStatus: false,
@@ -718,6 +718,135 @@ describe("OMO-lite stage runner", () => {
       effort: null,
       source: "stored_session_binding",
       sessionId: "ses_codex_traceable",
+    });
+  });
+
+  it("executes Stage 4 through Claude and stores the session under claude_primary", () => {
+    const rootDir = createRunnerFixture();
+    const homeDir = createClaudeHomeDir();
+    seedStrictSlice(rootDir, "03-recipe-like");
+    const stage4 = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: "ses_claude_stage4",
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "03-recipe-like",
+      stage: 4,
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: stage4.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: stage4.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage4.stdinPath,
+      },
+      now: "2026-03-26T21:25:00+09:00",
+    });
+
+    const runtime = JSON.parse(
+      readFileSync(join(rootDir, ".opencode", "omo-runtime", "03-recipe-like.json"), "utf8"),
+    ) as {
+      sessions: {
+        claude_primary: {
+          session_id: string;
+        };
+      };
+    };
+
+    expect(result.execution).toMatchObject({
+      provider: "claude-cli",
+      sessionId: "ses_claude_stage4",
+    });
+    expect(runtime.sessions.claude_primary.session_id).toBe("ses_claude_stage4");
+  });
+
+  it("executes Stage 5 public review through Codex and final_authority_gate through Claude", () => {
+    const rootDir = createRunnerFixture();
+    const homeDir = createClaudeHomeDir();
+    seedStrictSlice(rootDir, "06-recipe-to-planner");
+    const stage5Public = createFakeOpencodeBin(rootDir, {
+      sessionId: "ses_codex_stage5",
+      stageResult: {
+        decision: "approve",
+        body_markdown: "public review approved",
+        route_back_stage: null,
+        approved_head_sha: "abc123",
+        review_scope: {
+          scope: "frontend",
+          checklist_ids: ["delivery-ui"],
+        },
+        reviewed_checklist_ids: ["delivery-ui"],
+        required_fix_ids: [],
+        waived_fix_ids: [],
+        authority_verdict: "pass",
+        reviewed_screen_ids: ["RECIPE_DETAIL"],
+        authority_report_paths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        blocker_count: 0,
+        major_count: 0,
+        minor_count: 0,
+      },
+    });
+    const stage5Authority = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: "ses_claude_stage5_authority",
+      stageResult: {
+        decision: "approve",
+        body_markdown: "final authority approved",
+        route_back_stage: null,
+        approved_head_sha: "abc123",
+        review_scope: {
+          scope: "frontend",
+          checklist_ids: ["delivery-ui"],
+        },
+        reviewed_checklist_ids: ["delivery-ui"],
+        required_fix_ids: [],
+        waived_fix_ids: [],
+        authority_verdict: "pass",
+        reviewed_screen_ids: ["RECIPE_DETAIL"],
+        authority_report_paths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        blocker_count: 0,
+        major_count: 0,
+        minor_count: 0,
+      },
+    });
+
+    const publicResult = runStageWithArtifacts({
+      rootDir,
+      slice: "06-recipe-to-planner",
+      stage: 5,
+      workItemId: "06-recipe-to-planner",
+      mode: "execute",
+      opencodeBin: stage5Public.binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: stage5Public.argsPath,
+      },
+      now: "2026-03-26T21:40:00+09:00",
+    });
+    const authorityResult = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "06-recipe-to-planner",
+      stage: 5,
+      subphase: "final_authority_gate",
+      workItemId: "06-recipe-to-planner",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: stage5Authority.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: stage5Authority.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage5Authority.stdinPath,
+      },
+      now: "2026-03-26T21:45:00+09:00",
+    });
+
+    expect(publicResult.execution).toMatchObject({
+      provider: "opencode",
+      sessionId: "ses_codex_stage5",
+    });
+    expect(authorityResult.execution).toMatchObject({
+      provider: "claude-cli",
+      sessionId: "ses_claude_stage5_authority",
     });
   });
 
@@ -966,21 +1095,27 @@ describe("OMO-lite stage runner", () => {
     });
   });
 
-  it("schedules a retry instead of executing when a Claude-owned stage is unavailable", () => {
+  it("schedules a retry instead of executing when Claude final_authority_gate is unavailable", () => {
     const rootDir = createRunnerFixture();
-    const { binPath, argsPath } = createFakeOpencodeBin(rootDir);
+    const homeDir = createClaudeHomeDir();
+    const finalAuthority = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: "ses_claude_final_authority",
+    });
 
     const result = runStageWithArtifacts({
       rootDir,
+      homeDir,
       slice: "03-recipe-like",
       stage: 5,
+      subphase: "final_authority_gate",
       workItemId: "03-recipe-like",
       claudeBudgetState: "unavailable",
       mode: "execute",
       syncStatus: false,
-      opencodeBin: binPath,
+      claudeBin: finalAuthority.binPath,
       environment: {
-        FAKE_OPENCODE_ARGS_PATH: argsPath,
+        FAKE_CLAUDE_ARGS_PATH: finalAuthority.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: finalAuthority.stdinPath,
       },
       now: "2026-03-26T22:20:00+09:00",
     });
@@ -1002,8 +1137,9 @@ describe("OMO-lite stage runner", () => {
       executed: false,
       executable: false,
       reason: "claude_budget_unavailable",
+      subphase: "final_authority_gate",
     });
-    expect(() => readFileSync(argsPath, "utf8")).toThrow();
+    expect(() => readFileSync(finalAuthority.argsPath, "utf8")).toThrow();
     expect(runtime).toMatchObject({
       blocked_stage: 5,
       retry: {
@@ -1015,41 +1151,49 @@ describe("OMO-lite stage runner", () => {
     expect(runtime.retry.at).toBe("2026-03-26T18:20:00.000Z");
   });
 
-  it("does not silently create a new session when a stored session cannot be continued", () => {
+  it("does not silently create a new session when a stored Claude session cannot be continued", () => {
     const rootDir = createRunnerFixture();
-    const firstRun = createFakeOpencodeBin(rootDir, {
-      sessionId: "ses_missing_after_stage2",
+    const homeDir = createClaudeHomeDir();
+    const firstRun = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: "ses_missing_after_stage1",
     });
-    const failedContinue = createFakeOpencodeBin(rootDir, {
+    const failedContinue = createFakeClaudeBin(rootDir, homeDir, {
       exitCode: 9,
       stderr: "session not found",
-      stdout: [],
+      stdoutJson: null,
+      transcriptSessionId: null,
       stageResult: null,
     });
 
     runStageWithArtifacts({
       rootDir,
+      homeDir,
       slice: "02-discovery-filter",
-      stage: 2,
+      stage: 1,
       workItemId: "02-discovery-filter",
+      claudeBudgetState: "available",
       mode: "execute",
-      opencodeBin: firstRun.binPath,
+      claudeBin: firstRun.binPath,
       environment: {
-        FAKE_OPENCODE_ARGS_PATH: firstRun.argsPath,
+        FAKE_CLAUDE_ARGS_PATH: firstRun.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: firstRun.stdinPath,
       },
       now: "2026-03-26T21:15:00+09:00",
     });
 
     const result = runStageWithArtifacts({
       rootDir,
+      homeDir,
       slice: "02-discovery-filter",
-      stage: 4,
+      stage: 3,
       workItemId: "02-discovery-filter",
+      claudeBudgetState: "available",
       mode: "execute",
       syncStatus: false,
-      opencodeBin: failedContinue.binPath,
+      claudeBin: failedContinue.binPath,
       environment: {
-        FAKE_OPENCODE_ARGS_PATH: failedContinue.argsPath,
+        FAKE_CLAUDE_ARGS_PATH: failedContinue.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: failedContinue.stdinPath,
       },
       now: "2026-03-26T21:30:00+09:00",
     });
@@ -1069,11 +1213,13 @@ describe("OMO-lite stage runner", () => {
       executable: false,
       reason: "stored session could not be continued",
     });
+    expect(readFileSync(failedContinue.argsPath, "utf8")).toContain("--resume");
+    expect(readFileSync(failedContinue.argsPath, "utf8")).toContain("ses_missing_after_stage1");
     expect(runtime).toMatchObject({
-      active_stage: 4,
-      current_stage: 4,
-      last_completed_stage: 2,
-      blocked_stage: 4,
+      active_stage: 3,
+      current_stage: 3,
+      last_completed_stage: 1,
+      blocked_stage: 3,
       retry: {
         reason: "session_unavailable",
       },

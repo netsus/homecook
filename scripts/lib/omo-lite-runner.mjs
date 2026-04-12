@@ -1335,6 +1335,7 @@ function resolveStatusPatch({ dispatch, execution }) {
  * @property {"artifact-only"|"execute"} [mode]
  * @property {string} [artifactDir]
  * @property {string} [executionDir]
+ * @property {string|null} [subphase]
  * @property {string} [opencodeBin]
  * @property {"opencode"|"claude-cli"} [claudeProvider]
  * @property {string} [claudeBin]
@@ -1531,13 +1532,13 @@ export function runStageWithArtifacts({
     ? reviewContext.required_fix_ids
     : [];
   const ralphGoalIds =
-    [2, 4].includes(normalizedStage) && strictChecklistContractActive
+    normalizedStage === 2 && strictChecklistContractActive
       ? requiredFixIds.length > 0
         ? requiredFixIds
         : ownedChecklistIds
       : [];
   const loopMode =
-    [2, 4].includes(normalizedStage) && strictChecklistContractActive ? "ralph" : "single_pass";
+    normalizedStage === 2 && strictChecklistContractActive ? "ralph" : "single_pass";
   const ralphOrigin =
     loopMode === "ralph"
       ? requiredFixIds.length > 0

@@ -80,6 +80,42 @@ describe("workflow v2 docs", () => {
     expect(results.every((result) => result.errors.length === 0)).toBe(true);
   });
 
+  it("keeps repo-local Claude agent descriptions aligned with current stage ownership", () => {
+    const opencodeConfig = readJson("opencode.json");
+    const ohMyOpencodeConfig = readJson(".opencode/oh-my-opencode.json");
+    const expectedDescription =
+      "Homecook Claude primary actor for Stage 1/3/4 and authority-required final authority gate session-orchestrated work.";
+
+    expect((opencodeConfig.agent as Record<string, Record<string, unknown>>).athena.description).toBe(
+      expectedDescription,
+    );
+    expect((ohMyOpencodeConfig.agents as Record<string, Record<string, unknown>>).athena.description).toBe(
+      expectedDescription,
+    );
+  });
+
+  it("keeps derived ownership docs aligned with slice-workflow stage ownership and status transitions", () => {
+    const sliceWorkflow = readFileSync(join(repoRoot, "docs/engineering/slice-workflow.md"), "utf8");
+    const overview = readFileSync(join(repoRoot, "docs/engineering/agent-workflow-overview.md"), "utf8");
+    const workflowReadme = readFileSync(join(repoRoot, "docs/engineering/workflow-v2/README.md"), "utf8");
+    const claudeEntry = readFileSync(join(repoRoot, "CLAUDE.md"), "utf8");
+    const roadmap = readFileSync(join(repoRoot, "docs/workpacks/README.md"), "utf8");
+    const template = readFileSync(join(repoRoot, "docs/workpacks/_template/README.md"), "utf8");
+    const designConsultant = readFileSync(join(repoRoot, "docs/engineering/design-consultant-sop.md"), "utf8");
+
+    expect(sliceWorkflow).toContain("**Codex**가 1·3·4단계를 요청받으면:");
+    expect(sliceWorkflow).toContain("Codex는 Stage 4 internal subphase인 authority_precheck만 담당합니다.");
+    expect(overview).toContain("## Claude public stage 흐름");
+    expect(overview).toContain("## Codex review / closeout 흐름");
+    expect(workflowReadme).toContain("public code stage 실행이 필요할 때 `--mode execute`를 사용한다.");
+    expect(workflowReadme).not.toContain("Codex stage에 한해 `--mode execute`를 사용한다.");
+    expect(claudeEntry).toContain("슬라이스 개발 1·3·4단계와 authority-required slice의 final authority gate 담당.");
+    expect(claudeEntry).toContain("2·5·6단계(Codex 담당)");
+    expect(roadmap).toContain("| `in-progress` → `merged` | Stage 6 frontend closeout이 merge까지 반영된 시점 |");
+    expect(template).toContain("Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과");
+    expect(designConsultant).toContain("authority-required slice는 final authority gate까지 통과 후");
+  });
+
   it("returns a combined validation bundle with no errors", () => {
     const results = validateWorkflowV2Bundle({ rootDir: repoRoot });
 

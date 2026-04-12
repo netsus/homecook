@@ -109,8 +109,8 @@ OMO-lite는 이 plane의 집행자일 뿐, 규칙 생성자가 아니다.
 
 - generic core가 work item별 session ID와 retry timer를 관리한다.
 - project adapter는 stage ownership과 prompt/verify semantics만 제공한다.
-- Claude primary session은 Stage `1 / 3 / 5 / 6`에서 재사용한다.
-- Codex primary session은 Stage `2 / 4`에서 재사용한다.
+- Claude primary session은 Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`에서 재사용한다.
+- Codex primary session은 Stage `2 / 5 / 6`와 Stage 4 `authority_precheck`에서 재사용한다.
 - runtime state는 tracked `.workflow-v2`가 아니라 repo-local `.opencode/omo-runtime/`에 둔다.
 
 이 분리로 project-specific stage 규칙을 보존하면서도, 세션 재사용과 자동 재개는 다른 저장소에 이식 가능한 core로 만들 수 있다.
@@ -136,15 +136,16 @@ OMO-lite의 중심이다.
 
 ### Claude
 
-희소한 high-value reviewer다.
+문서화, 프론트 delivery, final authority를 맡는 high-value lane이다.
 
 책임:
 
 - Stage 1 workpack 문서 작성
 - Stage 3 백엔드 리뷰
-- Stage 5 디자인 리뷰
-- Stage 6 프론트 리뷰
+- Stage 4 프론트 구현
+- Stage 5 authority-required slice의 final authority gate
 - blocker/stalled에서 중요한 방향 판단
+- authority-required slice의 최종 authority 확정
 
 ### Codex Workers
 
@@ -206,24 +207,27 @@ OMO-lite는 slice workflow의 각 stage를 상태 기계처럼 다룬다.
 
 1. 백엔드 merge 확인
 2. 필요 시 plan delta check
-3. Codex에 프론트 구현 요청
+3. Claude에 프론트 구현 요청
 4. UI state / contract consumption / tests 확인
-5. Draft PR / CI / Ready 상태 확인
+5. authority-required면 Codex `authority_precheck` 확인
+6. Draft PR / CI / Ready 상태 확인
 
 ### Stage 5
 
 1. 디자인 리뷰 전제 조건 확인
-2. Claude에 디자인 리뷰 요청
-3. spacing/token/state 문제면 Codex에 다시 routing
+2. Codex에 public 디자인 리뷰 요청
+3. authority-required면 Claude `final_authority_gate` 추가
+4. spacing/token/state 문제면 구현 stage로 다시 routing
 
 ### Stage 6
 
 1. FE PR not Draft + required CI green 확인
-2. Claude FE 코드 리뷰 요청
-3. 수정 요청이면 Codex fix routing
-4. 승인 후 current head 기준 시작된 PR checks 전체 green 재확인
-5. merge 감시
-6. 상태 `in-progress -> merged`
+2. Codex FE PR 리뷰 요청
+3. authority-required면 Claude final authority `pass` 상태 재확인
+4. 수정 요청이면 구현 stage로 fix routing
+5. 승인 후 current head 기준 시작된 PR checks 전체 green 재확인
+6. merge 감시
+7. 상태 `in-progress -> merged`
 
 ## Loop Placement
 

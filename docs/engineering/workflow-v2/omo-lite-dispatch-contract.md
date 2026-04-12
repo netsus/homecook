@@ -113,7 +113,13 @@ Stage 4 authority subphase:
 - `authority_precheck`는 `stage=4`, `subphase=authority_precheck`로 dispatch한다.
 - actor는 Codex다.
 - 이 subphase는 mobile UX evidence, authority report draft, blocker/major/minor 구조화를 담당한다.
-- `product-design-authority` final authority 판정은 여전히 Stage 5 Claude가 담당한다.
+- `product-design-authority` final authority 판정은 Stage 5 `final_authority_gate`의 Claude가 담당한다.
+
+Stage 5 authority subphase:
+
+- `final_authority_gate`는 `stage=5`, `subphase=final_authority_gate`로 dispatch한다.
+- actor는 Claude다.
+- public Stage 5 Codex review가 authority-required slice를 통과시킨 뒤에만 실행한다.
 
 ## Dispatch Matrix
 
@@ -122,9 +128,9 @@ Stage 4 authority subphase:
 | 1 | Claude | workpack 문서 작성 | AGENTS, current source, template, official docs | README, acceptance, automation-spec, valid stage result |
 | 2 | Codex | backend contract-first 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, API/DB docs, 이전 backend review feedback(있으면) | internal 1.5 `pass` 뒤 `$ralph`-driven backend impl, roadmap status `in-progress`, checklist updates/rebuttals, valid stage result |
 | 3 | Claude | backend PR review | workpack, acceptance, PR diff, CI | review summary, reviewed checklist ids, requested changes or approve |
-| 4 | Codex | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, design refs, mobile UX / anchor / authority docs, 이전 frontend review feedback(있으면) | `$ralph`-driven FE impl, authority-required면 `authority_precheck`, Design Status `pending-review`, checklist updates/rebuttals, valid stage result |
-| 5 | Claude | design review + final authority | FE PR diff, workpack UI scope, acceptance FE checklist, design tokens, authority report, mobile UX / anchor docs | design findings or approve, reviewed checklist ids, authority-required면 final authority verdict, Design Status `confirmed` 근거 |
-| 6 | Claude | frontend PR review | FE PR diff, CI, acceptance, merged bookkeeping 포함 최종 PR diff | review summary, closeout checklist coverage, requested changes or approve, approve 뒤 merged bookkeeping CI -> manual merge handoff |
+| 4 | Claude | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, design refs, mobile UX / anchor / authority docs, 이전 frontend review feedback(있으면) | FE implementation, authority-required면 Codex `authority_precheck`, Design Status `pending-review`, checklist updates/rebuttals, valid stage result |
+| 5 | Codex | design review | FE PR diff, workpack UI scope, acceptance FE checklist, design tokens, authority report, mobile UX / anchor docs | design findings or approve, reviewed checklist ids, authority-required면 Claude `final_authority_gate`로 handoff, non-authority slice의 Design Status `confirmed` 근거 |
+| 6 | Codex | frontend PR review | FE PR diff, CI, acceptance, merged bookkeeping 포함 최종 PR diff | review summary, closeout checklist coverage, requested changes or approve, approve 뒤 merge 또는 manual merge handoff |
 
 ## Session Binding Contract
 
@@ -132,8 +138,10 @@ session binding은 dispatch 전에 계산한다.
 
 기본 매핑:
 
-- Stage `1 / 3 / 5 / 6` -> `claude_primary`
-- Stage `2 / 4` -> `codex_primary`
+- Stage `1 / 3 / 4` -> `claude_primary`
+- Stage `2 / 5 / 6` -> `codex_primary`
+- Stage 4 `authority_precheck` -> `codex_primary`
+- Stage 5 `final_authority_gate` -> `claude_primary`
 
 규칙:
 
@@ -234,7 +242,7 @@ provider별 resume 규칙:
   - `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`, `waived_fix_ids` 작성
   - blocking / non-blocking 분리
 
-### Stage 4 → Codex
+### Stage 4 → Claude
 
 - goal: `슬라이스 <id> 4단계 진행`
 - must read:
@@ -250,7 +258,7 @@ provider별 resume 규칙:
   - FE implementation
   - state UI
   - authority-required면 mobile UX evidence + authority report draft
-  - strict slice에서는 `$ralph` skill loop로 실행
+  - strict slice여도 Stage 4는 현재 `single_pass`로 실행
   - valid `stage-result.json`
   - `checklist_updates[]`에 Stage 4 소유 checklist id 기록
   - 필요 시 `contested_fix_ids[]`, `rebuttals[]` 작성
@@ -276,7 +284,7 @@ provider별 resume 규칙:
   - `authority_verdict`, `reviewed_screen_ids`, `authority_report_paths`, `evidence_artifact_refs`, `blocker_count`, `major_count`, `minor_count`가 포함된 valid stage-result
   - blocker가 남으면 Stage 4로 route back
 
-### Stage 5 → Claude
+### Stage 5 → Codex
 
 - goal: `슬라이스 <id> 5단계 디자인 리뷰`
 - must read:
@@ -292,11 +300,24 @@ provider별 resume 규칙:
 - success:
   - visual / interaction findings
   - `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`, `waived_fix_ids` 작성
-  - authority-required면 `authority_verdict`, `reviewed_screen_ids`, `authority_report_paths`, `blocker_count`, `major_count`, `minor_count` 작성
-  - `confirmed` or fix request
-  - 승인 시 Design Status `confirmed` 변경 근거 제시
+  - authority-required면 Claude `final_authority_gate`로 handoff하거나 fix request
+  - non-authority slice는 `confirmed` or fix request
+  - 승인 시 Stage 6 또는 `final_authority_gate` 진행 근거 제시
 
-### Stage 6 → Claude
+### Stage 5 → Claude (`subphase=final_authority_gate`)
+
+- goal: `슬라이스 <id> final authority gate`
+- must read:
+  - `docs/workpacks/<slice>/README.md`
+  - `docs/workpacks/<slice>/acceptance.md`
+  - authority report
+  - FE PR diff
+  - mobile UX / anchor docs
+- success:
+  - `authority_verdict`, `reviewed_screen_ids`, `authority_report_paths`, `blocker_count`, `major_count`, `minor_count`
+  - `pass`면 `confirmed` 가능, 그 외는 Stage 4로 route back
+
+### Stage 6 → Codex
 
 - goal: `슬라이스 <id> 6단계 코드 리뷰`
 - must read:
@@ -339,8 +360,8 @@ Phase 5부터 Codex supervisor는 dispatch 결과를 repo-local OpenCode/OMO 실
 
 target 규칙:
 
-- `actor == codex`인 Stage 2/4는 `codex_primary` session으로 실행한다.
-- `actor == claude`인 Stage 1/3/5/6은 `claude_primary` session으로 실행한다.
+- `actor == codex`인 dispatch는 `codex_primary` session으로 실행한다.
+- `actor == claude`인 dispatch는 `claude_primary` session으로 실행한다.
 - 각 역할의 첫 실행만 새 세션 생성 대상이다.
 - 후속 stage는 반드시 저장된 session ID로 이어간다.
 - 모든 run은 `.artifacts/omo-lite-dispatch/<timestamp>-<slice>-stage-<n>/` 아래에 `dispatch.json`, `prompt.md`, `run-metadata.json`을 남긴다.
@@ -359,12 +380,12 @@ target 규칙:
 ### Claude Available
 
 - normal route 사용
-- stage approval은 Claude가 담당
+- public review/approval은 stage owner가 담당하고, authority-required 추가 gate는 Claude가 담당한다
 
 ### Claude Constrained
 
-- 가능한 한 Stage 1 / 3 / 5 / 6만 Claude에 배정
-- Stage 2 / 4 전후의 planning, verification, recovery는 Codex가 흡수
+- 가능한 한 Stage 1 / 3 / 4와 Stage 5 `final_authority_gate`만 Claude에 배정
+- Stage 2 / 5 / 6과 Stage 4 `authority_precheck` 전후의 planning, verification, recovery는 Codex가 흡수
 
 ### Claude Unavailable
 
@@ -390,7 +411,7 @@ dispatch가 끝나면 supervisor는 최소한 아래 patch를 계산한다.
 예:
 
 - Stage 2 시작: `lifecycle = in_progress`
-- verify green + PR ready: `lifecycle = ready_for_review`, `approval_state = codex_approved`
+- verify green + PR ready: public code stage owner에 따라 `approval_state = claude_approved` 또는 `codex_approved`
 - Claude unavailable: `lifecycle = blocked`, approval_state는 이전 값을 유지
 - merge: `lifecycle = merged`, `approval_state = dual_approved`
 
@@ -410,7 +431,8 @@ dispatch가 끝나면 supervisor는 최소한 아래 patch를 계산한다.
 - Claude provider 기본값은 `.opencode/omo-provider.json`의 `claude-cli` 설정을 따른다.
 - Codex 중심 supervisor 실행
 - `ralph-loop` command는 전역 허용
-- OMO actual execution은 Stage 2/4에서 `$ralph` skill-only
+- OMO actual execution은 Stage 2에서 `$ralph` skill-only
+- Stage 4 actual execution은 현재 `single_pass`
 - `ralph-loop` hook와 `ulw-loop`는 계속 비활성화
 - comment-checker 비활성화
 - Claude budget override file은 `.opencode/claude-budget-state.json`이며 Git에는 커밋하지 않는다.
