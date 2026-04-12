@@ -59,3 +59,11 @@ jobs:
           BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
           PR_IS_DRAFT: ${{ github.event.pull_request.draft }}
         run: node scripts/validate-closeout-sync.mjs
+
+      - name: Validate exploratory QA evidence
+        if: github.event_name == 'pull_request'
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+          PR_IS_DRAFT: ${{ github.event.pull_request.draft }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        run: node scripts/validate-exploratory-qa-evidence.mjs
