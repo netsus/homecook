@@ -245,6 +245,7 @@ public stage numbering은 계속 `1~6`을 유지하고, `internal 6.5`는 Stage 
 6. exploratory QA가 required인 slice에서 evidence가 비어 있으면 merge 대신 fail-closed 한다. low-risk slice는 skip rationale만 자동 보강할 수 있다.
 7. `closeout_reconcile_recheck`가 다시 `pass`가 나와야만 merge로 진행한다.
 8. 같은 closeout drift가 2회 이상 반복되면 자동 수정 대신 `human_escalation`으로 올린다.
+9. 현재 executable subset은 `pnpm omo:reconcile -- --work-item <id>`가 closeout PR 생성 전 같은 validator bundle을 preflight로 실행하는 경로다.
 
 ## Runtime State Machine
 
@@ -438,6 +439,8 @@ runtime state는 아래 대기 이유를 저장할 수 있어야 한다.
 3. closeout PR는 runtime `prs.closeout`에 기록한다.
 4. closeout PR 생성 후 workflow-v2 status는 `ready_for_review`를 유지하고 notes에 `closeout_pr=<url>`를 남긴다.
 5. closeout PR에 docs 외 파일이 섞이면 validator와 supervisor가 fail-closed 한다.
+6. closeout PR 생성 전 `internal 6.5` preflight subset으로 `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence`, PR body template 검사를 함께 실행한다.
+7. exploratory QA evidence가 required인 slice의 closeout PR은 merged frontend PR QA evidence를 본문에 다시 연결할 수 있어야 한다.
 
 ## Evidence Contract
 

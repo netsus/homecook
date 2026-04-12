@@ -13,6 +13,21 @@ import { validateOmoBookkeeping } from "../scripts/lib/validate-omo-bookkeeping.
 function seedTrackedFiles(rootDir: string, workItemId: string) {
   mkdirSync(join(rootDir, ".workflow-v2", "work-items"), { recursive: true });
   mkdirSync(join(rootDir, "docs", "workpacks", workItemId), { recursive: true });
+  mkdirSync(join(rootDir, "docs", "sync"), { recursive: true });
+
+  writeFileSync(
+    join(rootDir, "docs", "sync", "CURRENT_SOURCE_OF_TRUTH.md"),
+    [
+      "# Current Source of Truth",
+      "",
+      "## Official Files",
+      "- `docs/요구사항기준선-v1.6.3.md`",
+      "- `docs/화면정의서-v1.2.3.md`",
+      "- `docs/유저flow맵-v1.2.3.md`",
+      "- `docs/db설계-v1.3.1.md`",
+      "- `docs/api문서-v1.2.2.md`",
+    ].join("\n"),
+  );
 
   writeFileSync(
     join(rootDir, "docs", "workpacks", "README.md"),
@@ -37,6 +52,24 @@ function seedTrackedFiles(rootDir: string, workItemId: string) {
       "- [ ] 리뷰 대기 (pending-review)",
       "- [x] 확정 (confirmed)",
       "- [ ] N/A",
+      "",
+      "## Delivery Checklist",
+      "",
+      "- [x] merged bookkeeping closeout is aligned",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(rootDir, "docs", "workpacks", workItemId, "acceptance.md"),
+    [
+      "# Acceptance Checklist",
+      "",
+      "## Happy Path",
+      "- [x] merged slice acceptance remains closed",
+      "",
+      "## Automation Split",
+      "",
+      "### Manual Only",
+      "- [ ] none",
     ].join("\n"),
   );
   writeFileSync(
@@ -95,6 +128,50 @@ function seedTrackedFiles(rootDir: string, workItemId: string) {
           lifecycle: "merged",
           approval_state: "dual_approved",
           verification_status: "passed",
+        },
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+function writeAutomationSpec(rootDir: string, workItemId: string, uiRisk: string) {
+  writeFileSync(
+    join(rootDir, "docs", "workpacks", workItemId, "automation-spec.json"),
+    JSON.stringify(
+      {
+        slice_id: workItemId,
+        execution_mode: "autonomous",
+        risk_class: "medium",
+        merge_policy: "conditional-auto",
+        backend: {
+          required_endpoints: [],
+          invariants: [],
+          verify_commands: [],
+          required_test_targets: [],
+        },
+        frontend: {
+          required_routes: ["/planner"],
+          required_states: ["loading", "empty", "error"],
+          playwright_projects: ["desktop-chrome", "mobile-chrome", "mobile-ios-small"],
+          artifact_assertions: ["playwright-report"],
+          design_authority: {
+            ui_risk: uiRisk,
+            anchor_screens: uiRisk === "anchor-extension" ? ["PLANNER_WEEK"] : [],
+            required_screens: uiRisk === "anchor-extension" ? ["PLANNER_WEEK"] : [],
+            generator_required: false,
+            critic_required: false,
+            authority_required: uiRisk === "anchor-extension",
+            stage4_evidence_requirements: [],
+            authority_report_paths: [],
+          },
+        },
+        external_smokes: [],
+        blocked_conditions: [],
+        max_fix_rounds: {
+          backend: 2,
+          frontend: 2,
         },
       },
       null,
@@ -420,5 +497,66 @@ describe("OMO bookkeeping", () => {
     expect(ghLog).toContain("pr create");
     expect(ghLog).toContain("pr checks https://github.com/netsus/homecook/pull/321 --json");
     expect(ghLog).not.toContain("--required");
+  });
+
+  it("fails closeout reconcile when required exploratory evidence cannot be traced to a frontend PR", () => {
+    const workItemId = "05-planner-week-core";
+    const { rootDir } = createGitOriginFixture(workItemId);
+    const { ghBin } = createFakeGh(rootDir, 322);
+    writeAutomationSpec(rootDir, workItemId, "high-risk");
+
+    expect(() =>
+      reconcileWorkItemBookkeeping({
+        rootDir,
+        workItemId,
+        ghBin,
+        now: "2026-04-01T12:00:00.000Z",
+      }),
+    ).toThrow(/merged frontend PR reference/);
+  });
+
+  it("reuses merged frontend PR QA evidence when opening closeout PRs for required UI slices", () => {
+    const workItemId = "05-planner-week-core";
+    const { rootDir } = createGitOriginFixture(workItemId);
+    const { ghBin, ghLogPath } = createFakeGh(rootDir, 323);
+    writeAutomationSpec(rootDir, workItemId, "high-risk");
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        prs: {
+          docs: null,
+          backend: null,
+          frontend: {
+            number: 77,
+            url: "https://github.com/netsus/homecook/pull/77",
+            draft: false,
+            branch: "feature/fe-05-planner-week-core",
+            head_sha: "fe123",
+          },
+          closeout: null,
+        },
+      },
+    });
+
+    const result = reconcileWorkItemBookkeeping({
+      rootDir,
+      workItemId,
+      ghBin,
+      now: "2026-04-01T12:00:00.000Z",
+    });
+
+    expect(result.action).toBe("open_closeout_pr");
+
+    const ghLog = readFileSync(ghLogPath, "utf8");
+    expect(ghLog).toContain("exploratory-report.json");
+    expect(ghLog).toContain("eval-result.json");
+    expect(ghLog).toContain("https://github.com/netsus/homecook/pull/77");
   });
 });
