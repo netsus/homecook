@@ -136,6 +136,9 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 ## Next Locked Scope
 
+- `internal 6.5 closeout_reconcile` subphase
+- `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence` bundle
+- fixable slice-local closeout drift만 자동 repair하고 repo-wide governance drift는 별도 docs PR로 분리
 - sandbox live smoke의 운영 표준화와 주기적 rehearsal cadence
 - scheduler 운영 범위의 추가 승격 여부 판단
 - multi-project reusable promotion 기준과 profile extraction

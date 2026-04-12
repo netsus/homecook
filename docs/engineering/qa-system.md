@@ -179,6 +179,7 @@ PR에는 아래를 남긴다.
 - deterministic gate 실행 결과
 - exploratory QA 실행 여부와 보고서 경로
 - qa eval 결과 또는 `N/A` 근거
+- `new-screen`, `high-risk`, `anchor-extension`, `low-risk` UI 근거에 맞는 exploratory evidence 여부는 `pnpm validate:exploratory-qa-evidence`로 재검증할 수 있다.
 - Layer 3 변경이면 `pnpm qa:eval:suite` 결과와 artifact 경로
 - 실제 브라우저 확인 / local demo / local Supabase / live 외부 연동 여부는 PR `Actual Verification` 섹션에 verifier, environment, result 형태로 남긴다.
 - README `Delivery Checklist`, acceptance, `Design Status`와 PR evidence가 어긋나지 않았는지는 PR `Closeout Sync` 섹션에서 정리한다.
@@ -189,3 +190,4 @@ PR에는 아래를 남긴다.
 - Layer 2는 브라우저 탐색과 판단이 포함되므로 **명시적으로 실행**한다.
 - Layer 3 단건 평가는 exploratory QA 직후 명시적으로 실행할 수 있고, suite는 QA 시스템 변경에서 자동 + 명시 실행 둘 다 지원한다.
 - exploratory QA가 manual/agentic이라고 해서 optional evidence가 되지는 않는다. 실행했다면 보고서와 점수를 남긴다.
+- `pnpm validate:exploratory-qa-evidence`는 non-draft frontend PR과 OMO closeout PR에서 PR body 또는 local `.artifacts/qa/<slice>/` 번들을 기준으로 evidence presence를 fail-closed로 확인한다.

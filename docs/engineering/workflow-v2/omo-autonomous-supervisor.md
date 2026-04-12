@@ -224,6 +224,28 @@ public stage numbering은 계속 `1~6`을 유지한다.
 9. docs review ping-pong은 최대 3회까지만 허용한다. 초과 시 `human_escalation`으로 fail-closed 한다.
 10. `claude_primary`는 `Stage 1 -> doc_gate_review -> Stage 3/5/6`, `codex_primary`는 `doc_gate_repair -> Stage 2/4`로 계속 재사용한다.
 
+## Internal 6.5 (Next Locked Scope)
+
+아래 subphase는 아직 executable baseline에 포함되지 않았고, 다음 잠금 범위로만 정의한다.
+public stage numbering은 계속 `1~6`을 유지하고, `internal 6.5`는 Stage 6 approve 뒤 merge 직전에만 실행되는 supervisor-only closeout reconcile subphase로 둔다.
+
+순서:
+
+1. `closeout_reconcile_check`
+2. `closeout_reconcile_repair`
+3. `closeout_reconcile_recheck`
+
+원칙:
+
+1. `closeout_reconcile_check`는 `pnpm validate:closeout-sync`, `pnpm validate:source-of-truth-sync`, `pnpm validate:exploratory-qa-evidence`를 묶어 실행한다.
+2. 결과는 `pass | fixable | blocked`로 정규화한다.
+3. `fixable`은 slice-local closeout drift만 의미한다. 허용 범위는 해당 slice의 `README.md`, `acceptance.md`, `automation-spec.json`, PR body closeout/evidence metadata다.
+4. repo-wide governing doc drift, validator/tooling 코드 변경, 공식 문서 버전 전파 문제는 `blocked`로 올리고 별도 docs-governance PR로 분리한다.
+5. `closeout_reconcile_repair`는 product contract를 바꾸지 않고 closeout bookkeeping과 evidence references만 고친다.
+6. exploratory QA가 required인 slice에서 evidence가 비어 있으면 merge 대신 fail-closed 한다. low-risk slice는 skip rationale만 자동 보강할 수 있다.
+7. `closeout_reconcile_recheck`가 다시 `pass`가 나와야만 merge로 진행한다.
+8. 같은 closeout drift가 2회 이상 반복되면 자동 수정 대신 `human_escalation`으로 올린다.
+
 ## Runtime State Machine
 
 runtime state는 더 이상 “마지막 stage 번호 몇 번”만 저장하지 않고, 재시작 가능한 상태 머신을 가진다.
