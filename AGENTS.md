@@ -175,4 +175,5 @@
 - `pnpm validate:commits`
 - `pnpm validate:pr`
 - `pnpm validate:source-of-truth-sync`
+- `pnpm validate:exploratory-qa-evidence`
 - `pnpm validate:closeout-sync`

@@ -2,10 +2,19 @@ import { mkdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
+import {
+  findEmptyPrSections,
+  findInvalidWorkflowV2Refs,
+  findMissingPrSections,
+} from "./git-policy.mjs";
+import { readAutomationSpec } from "./omo-automation-spec.mjs";
 import { applyBookkeepingRepairPlan, evaluateBookkeepingInvariant } from "./omo-bookkeeping.mjs";
 import { createGithubAutomationClient } from "./omo-github.mjs";
 import { syncWorkflowV2Status } from "./omo-lite-supervisor.mjs";
 import { readRuntimeState, setPullRequestRef, setWaitState, writeRuntimeState } from "./omo-session-runtime.mjs";
+import { validateCloseoutSync } from "./validate-closeout-sync.mjs";
+import { validateExploratoryQaEvidence } from "./validate-exploratory-qa-evidence.mjs";
+import { validateSourceOfTruthSync } from "./validate-source-of-truth-sync.mjs";
 import { commitWorktreeChanges, getWorktreeHeadSha, pushWorktreeBranch } from "./omo-worktree.mjs";
 
 function ensureNonEmptyString(value, label) {
@@ -46,6 +55,53 @@ function bucketToVerification(bucket) {
   }
 
   return "pending";
+}
+
+function summarizeValidationErrors(results) {
+  const normalizedResults = Array.isArray(results) ? results : [];
+  return normalizedResults
+    .flatMap((result) =>
+      (Array.isArray(result?.errors) ? result.errors : []).map((error) => ({
+        name: result?.name ?? "validation",
+        path: error.path,
+        message: error.message,
+      })),
+    );
+}
+
+function buildExploratoryQaEvidence({
+  runtime,
+  uiRisk,
+}) {
+  const frontendPrUrl = runtime?.prs?.frontend?.url ?? null;
+
+  if (["new-screen", "high-risk", "anchor-extension"].includes(uiRisk)) {
+    if (typeof frontendPrUrl !== "string" || frontendPrUrl.trim().length === 0) {
+      throw new Error(
+        `Closeout reconcile requires a merged frontend PR reference for exploratory QA evidence on ui_risk '${uiRisk}'.`,
+      );
+    }
+
+    return {
+      exploratoryQa: `merged frontend PR ${frontendPrUrl}에서 이미 실행됨`,
+      qaEval: `merged frontend PR ${frontendPrUrl}에서 이미 기록됨`,
+      artifactPaths: `${frontendPrUrl} 의 QA Evidence 섹션에 기록된 exploratory-report.json, eval-result.json 참고`,
+    };
+  }
+
+  if (uiRisk === "low-risk") {
+    return {
+      exploratoryQa: "N/A (low-risk UI drift repair only; exploratory QA skip rationale inherited)",
+      qaEval: "N/A (exploratory QA skipped with same rationale)",
+      artifactPaths: "N/A (no new exploratory-report.json or eval-result.json is created for docs-only closeout repair)",
+    };
+  }
+
+  return {
+    exploratoryQa: "N/A (exploratory QA not required for this closeout repair)",
+    qaEval: "N/A (qa eval not required for this closeout repair)",
+    artifactPaths: "N/A (closeout repair does not create exploratory-report.json or eval-result.json)",
+  };
 }
 
 function resolveCloseoutBranch(slice) {
@@ -138,22 +194,180 @@ function cleanupCloseoutWorktree({ rootDir, worktreePath }) {
   }
 }
 
-function buildCloseoutPullRequestBody(workItemId, invariant) {
+function buildCloseoutPullRequestBody({
+  workItemId,
+  slice,
+  invariant,
+  runtime,
+  uiRisk,
+}) {
+  const normalizedWorkItemId = ensureNonEmptyString(workItemId, "workItemId");
+  const normalizedSlice = ensureNonEmptyString(slice, "slice");
   const summaryLines = [
     "- OMO bookkeeping drift를 복구하기 위한 closeout PR입니다.",
     ...invariant.issues.map((issue) => `- ${issue.kind}: \`${issue.actual ?? "missing"}\` -> \`${issue.expected}\``),
   ];
+  const qaEvidence = buildExploratoryQaEvidence({
+    runtime,
+    uiRisk,
+  });
+  const deterministicChecks = [
+    "`pnpm validate:omo-bookkeeping`",
+    "`pnpm validate:closeout-sync`",
+    "`pnpm validate:source-of-truth-sync`",
+    "`pnpm validate:exploratory-qa-evidence`",
+  ].join(", ");
 
   return [
     "## Summary",
     summaryLines.join("\n"),
     "",
+    "## Change Type",
+    "- [ ] `product-backend`",
+    "- [ ] `product-frontend`",
+    "- [ ] `docs-governance`",
+    "- [x] `low-risk docs/config`",
+    "- 선택 이유: merged slice closeout bookkeeping/evidence metadata만 정렬하는 docs-only repair입니다.",
+    "",
     "## Workpack / Slice",
-    `- workflow v2 work item: \`.workflow-v2/work-items/${workItemId}.json\``,
+    `- 관련 workpack: docs/workpacks/${normalizedSlice}/`,
+    `- workflow v2 work item: \`.workflow-v2/work-items/${normalizedWorkItemId}.json\``,
+    "- 변경 범위: `docs/workpacks/README.md`, target workpack README bookkeeping metadata",
+    `- 변경 유형 기준 required checks: ${deterministicChecks}`,
     "",
     "## Test Plan",
-    "- pnpm validate:omo-bookkeeping",
+    `- 실행한 검증: ${deterministicChecks}`,
+    "- 생략 또는 `N/A` 처리한 검증: `pnpm verify:backend`, `pnpm verify:frontend`, E2E, Lighthouse",
+    "- 생략 또는 `N/A` 근거: merged slice의 docs-only closeout repair라 targeted validator bundle만 재실행합니다.",
+    "- 추가 검증: closeout PR 생성 전 internal 6.5 preflight로 PR body, closeout sync, source-of-truth, exploratory evidence를 함께 재검증했습니다.",
+    "",
+    "## QA Evidence",
+    `- deterministic gates: ${deterministicChecks}`,
+    `- exploratory QA: ${qaEvidence.exploratoryQa}`,
+    `- qa eval: ${qaEvidence.qaEval}`,
+    `- 아티팩트 / 보고서 경로: ${qaEvidence.artifactPaths}`,
+    "",
+    "## Actual Verification",
+    "- verifier: OMO supervisor",
+    `- environment: closeout worktree for \`docs/omo-closeout-${normalizedSlice}\``,
+    "- scope: merged slice bookkeeping/evidence metadata reconcile",
+    "- result: closeout PR 생성 전 validator bundle을 통과한 docs-only repair만 제출합니다.",
+    "- 남은 manual/live 확인: 없음",
+    "",
+    "## Closeout Sync",
+    "- roadmap status: merged 기준으로 재정렬",
+    "- README Delivery Checklist: existing merged closeout state 유지 또는 공식 상태와 재정렬",
+    "- acceptance: existing merged closeout state 유지",
+    "- Design Status: merged closeout 기준으로 유지 또는 재정렬",
+    "- 남은 Manual Only / follow-up: 없음",
+    "",
+    "## Merge Gate",
+    "- current head SHA: closeout PR 생성 후 GitHub current head 기준으로 추적",
+    "- started PR checks: closeout PR에서 시작된 전체 checks를 기준으로 추적",
+    "- all checks completed green: 아니오 (PR 생성 직후 pending expected)",
+    "- pending / failed / rerun checks: supervisor가 `wait.kind=ci`에서 추적",
+    "",
+    "## Docs Impact",
+    "- [x] 공식 문서 영향 없음",
+    "- [ ] 공식 문서 업데이트 필요",
+    "- 영향 내용: merged slice bookkeeping/evidence metadata만 정렬합니다.",
+    "",
+    "## Security Review",
+    "- 인증/인가 영향: 없음",
+    "- 입력 검증 영향: 없음",
+    "- 비밀정보/권한 경계 영향: 없음",
+    "- `N/A` 또는 영향 없음 근거: docs-only closeout repair입니다.",
+    "",
+    "## Performance",
+    "- UI 또는 fetch 변경 여부: 없음",
+    "- Lighthouse 또는 수동 점검 근거: `N/A`",
+    "- `N/A` 또는 영향 없음 근거: runtime UI/fetch 변경이 없습니다.",
+    "",
+    "## Design / Accessibility",
+    "- 디자인 시스템 영향: 없음",
+    "- loading / empty / error / read-only 확인: `N/A`",
+    "- `N/A` 또는 영향 없음 근거: docs-only closeout repair이며, exploratory evidence는 merged frontend PR evidence를 참조합니다.",
+    "",
+    "## Breaking Changes",
+    "- [x] 없음",
+    "- [ ] 있음",
+    "- 설명: 없음",
   ].join("\n");
+}
+
+function assertCloseoutPullRequestBodyValid(prBody) {
+  const missing = findMissingPrSections(prBody);
+  const empty = findEmptyPrSections(prBody);
+  const invalidRefs = findInvalidWorkflowV2Refs(prBody);
+  const errors = [];
+
+  for (const section of missing) {
+    errors.push({
+      path: `PR_BODY:${section}`,
+      message: "Missing required PR section.",
+    });
+  }
+
+  for (const section of empty) {
+    errors.push({
+      path: `PR_BODY:${section}`,
+      message: "Required PR section is empty.",
+    });
+  }
+
+  for (const ref of invalidRefs) {
+    errors.push({
+      path: "PR_BODY:## Workpack / Slice",
+      message: `Invalid workflow v2 work item reference: ${ref}`,
+    });
+  }
+
+  return errors;
+}
+
+function assertInternalCloseoutPreflight({
+  worktreePath,
+  branch,
+  prBody,
+}) {
+  const env = {
+    ...process.env,
+    BRANCH_NAME: branch,
+    PR_IS_DRAFT: "false",
+    PR_BODY: prBody,
+  };
+
+  const errors = [
+    ...assertCloseoutPullRequestBodyValid(prBody),
+    ...summarizeValidationErrors(
+      validateCloseoutSync({
+        rootDir: worktreePath,
+        env,
+      }),
+    ),
+    ...summarizeValidationErrors(
+      validateSourceOfTruthSync({
+        rootDir: worktreePath,
+      }),
+    ),
+    ...summarizeValidationErrors(
+      validateExploratoryQaEvidence({
+        rootDir: worktreePath,
+        env,
+      }),
+    ),
+  ];
+
+  if (errors.length === 0) {
+    return;
+  }
+
+  throw new Error(
+    [
+      "internal 6.5 closeout_reconcile preflight failed:",
+      ...errors.map((error) => `- ${error.name ?? "validation"} ${error.path}: ${error.message}`),
+    ].join("\n"),
+  );
 }
 
 function assertDocsOnlyCloseoutChanges({ slice, changedFiles, worktreePath }) {
@@ -196,6 +410,12 @@ export function reconcileWorkItemBookkeeping({
     typeof slice === "string" && slice.trim().length > 0
       ? slice.trim()
       : runtime.slice ?? normalizedWorkItemId;
+  const { automationSpec } = readAutomationSpec({
+    rootDir,
+    slice: resolvedSlice,
+    required: false,
+  });
+  const uiRisk = automationSpec?.frontend?.design_authority?.ui_risk ?? "not-required";
   const invariant = evaluateBookkeepingInvariant({
     rootDir,
     workItemId: normalizedWorkItemId,
@@ -255,79 +475,93 @@ export function reconcileWorkItemBookkeeping({
     });
 
     if (repair.changed) {
+      const prBody = buildCloseoutPullRequestBody({
+        workItemId: normalizedWorkItemId,
+        slice: resolvedSlice,
+        invariant: worktreeInvariant,
+        runtime,
+        uiRisk,
+      });
+      assertInternalCloseoutPreflight({
+        worktreePath: closeoutWorktree.worktreePath,
+        branch: closeoutWorktree.branch,
+        prBody,
+      });
+
       commitWorktreeChanges({
         worktreePath: closeoutWorktree.worktreePath,
         subject: `docs(workpacks): reconcile ${resolvedSlice} bookkeeping drift`,
         body: "OMO closeout PR이 공식 roadmap/workpack 상태를 merged 결과와 정렬합니다.",
       });
-    }
+      const headSha = getWorktreeHeadSha({
+        worktreePath: closeoutWorktree.worktreePath,
+      });
+      pushWorktreeBranch({
+        worktreePath: closeoutWorktree.worktreePath,
+        branch: closeoutWorktree.branch,
+      });
 
-    const headSha = getWorktreeHeadSha({
-      worktreePath: closeoutWorktree.worktreePath,
-    });
-    pushWorktreeBranch({
-      worktreePath: closeoutWorktree.worktreePath,
-      branch: closeoutWorktree.branch,
-    });
+      const pr = github.createPullRequest({
+        base: "master",
+        head: closeoutWorktree.branch,
+        title: `docs(workpacks): reconcile ${resolvedSlice} bookkeeping drift`,
+        body: prBody,
+        draft: false,
+        workItemId: normalizedWorkItemId,
+      });
+      const checks = github.getRequiredChecks({
+        prRef: pr.url,
+      });
 
-    const pr = github.createPullRequest({
-      base: "master",
-      head: closeoutWorktree.branch,
-      title: `docs(workpacks): reconcile ${resolvedSlice} bookkeeping drift`,
-      body: buildCloseoutPullRequestBody(normalizedWorkItemId, worktreeInvariant),
-      draft: false,
-      workItemId: normalizedWorkItemId,
-    });
-    const checks = github.getRequiredChecks({
-      prRef: pr.url,
-    });
-
-    const nextRuntime = writeRuntimeState({
-      rootDir,
-      workItemId: normalizedWorkItemId,
-      state: setWaitState({
-        state: setPullRequestRef({
-          state: runtime,
-          role: "closeout",
-          number: pr.number,
-          url: pr.url,
-          draft: pr.draft,
-          branch: closeoutWorktree.branch,
+      const nextRuntime = writeRuntimeState({
+        rootDir,
+        workItemId: normalizedWorkItemId,
+        state: setWaitState({
+          state: setPullRequestRef({
+            state: runtime,
+            role: "closeout",
+            number: pr.number,
+            url: pr.url,
+            draft: pr.draft,
+            branch: closeoutWorktree.branch,
+            headSha,
+            updatedAt: now,
+          }),
+          kind: "ci",
+          prRole: "closeout",
+          stage: 6,
           headSha,
           updatedAt: now,
         }),
-        kind: "ci",
-        prRole: "closeout",
-        stage: 6,
-        headSha,
+      }).state;
+
+      syncWorkflowV2Status({
+        rootDir,
+        workItemId: normalizedWorkItemId,
+        patch: {
+          pr_path: pr.url,
+          lifecycle: "ready_for_review",
+          approval_state: "dual_approved",
+          verification_status: bucketToVerification(checks.bucket),
+          notes: `wait_kind=ci pr_role=closeout stage=6 closeout_pr=${pr.url} closeout_reconcile=pass`,
+        },
         updatedAt: now,
-      }),
-    }).state;
+      });
 
-    syncWorkflowV2Status({
-      rootDir,
-      workItemId: normalizedWorkItemId,
-      patch: {
-        pr_path: pr.url,
-        lifecycle: "ready_for_review",
-        approval_state: "dual_approved",
-        verification_status: bucketToVerification(checks.bucket),
-        notes: `wait_kind=ci pr_role=closeout stage=6 closeout_pr=${pr.url}`,
-      },
-      updatedAt: now,
-    });
+      return {
+        workItemId: normalizedWorkItemId,
+        slice: resolvedSlice,
+        action: "open_closeout_pr",
+        pr,
+        checks,
+        invariant: worktreeInvariant,
+        runtime: nextRuntime,
+        branch: closeoutWorktree.branch,
+        worktreePath: closeoutWorktree.worktreePath,
+      };
+    }
 
-    return {
-      workItemId: normalizedWorkItemId,
-      slice: resolvedSlice,
-      action: "open_closeout_pr",
-      pr,
-      checks,
-      invariant: worktreeInvariant,
-      runtime: nextRuntime,
-      branch: closeoutWorktree.branch,
-      worktreePath: closeoutWorktree.worktreePath,
-    };
+    throw new Error("Closeout reconcile produced no repairable docs changes.");
   } finally {
     cleanupCloseoutWorktree({
       rootDir,

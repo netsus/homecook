@@ -54,6 +54,9 @@
 - policy 자동화는 `pnpm validate:closeout-sync`로 closeout drift를 검사한다.
   - non-draft `feature/fe-<slice>` PR은 `Ready for Review` 전에 README `Delivery Checklist`, acceptance(`Manual Only` 제외), `Design Status`가 closeout-ready 상태인지 통과해야 한다.
   - roadmap status가 이미 `merged`인 changed slice와 `docs/omo-closeout-<slice>` 브랜치는 merged closeout 기준을 통과해야 한다.
+- exploratory QA evidence presence는 `pnpm validate:exploratory-qa-evidence`가 별도로 검사한다.
+  - non-draft `feature/fe-<slice>` PR은 `automation-spec.json`의 `frontend.design_authority.ui_risk` 기준으로 exploratory QA evidence 또는 low-risk skip rationale을 남겨야 한다.
+  - `docs/omo-closeout-<slice>` 브랜치는 PR body 또는 local `.artifacts/qa/<slice>/` 번들 기준으로 closeout evidence를 다시 확인할 수 있다.
 - Stage 6 merge 시점에는 아래가 동시에 만족해야 한다:
   - roadmap status가 실제 단계와 맞다
   - `Design Status`가 최종 리뷰 결과와 맞다
