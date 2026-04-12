@@ -83,7 +83,8 @@ describe("workflow v2 docs", () => {
   it("returns a combined validation bundle with no errors", () => {
     const results = validateWorkflowV2Bundle({ rootDir: repoRoot });
 
-    expect(results.length).toBeGreaterThanOrEqual(4);
+    expect(results.some((result) => result.name === "source-of-truth-sync")).toBe(true);
+    expect(results.length).toBeGreaterThanOrEqual(5);
     expect(results.every((result) => result.errors.length === 0)).toBe(true);
   });
 });
