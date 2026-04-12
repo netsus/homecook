@@ -527,6 +527,19 @@ export function createGithubAutomationClient({
     }) {
       return getPullRequestMergeSummary(ensureNonEmptyString(prRef, "prRef"));
     },
+    getPullRequestBody({
+      prRef,
+    }) {
+      const stdout = runGh([
+        "pr",
+        "view",
+        ensureNonEmptyString(prRef, "prRef"),
+        "--json",
+        "body",
+      ]);
+      const payload = stdout.length > 0 ? JSON.parse(stdout) : {};
+      return typeof payload?.body === "string" ? payload.body : "";
+    },
     getApprovalRequirement({
       prRef,
       baseBranch = "master",

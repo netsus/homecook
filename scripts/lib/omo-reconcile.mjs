@@ -70,7 +70,7 @@ function bucketToVerification(bucket) {
   return "pending";
 }
 
-function summarizeValidationErrors(results) {
+export function summarizeValidationErrors(results) {
   const normalizedResults = Array.isArray(results) ? results : [];
   return normalizedResults
     .flatMap((result) =>
@@ -151,7 +151,7 @@ function buildCloseoutRepairIssue(kind, filePath, actual, expected) {
   };
 }
 
-function evaluateCloseoutRepairPlan({
+export function evaluateCloseoutRepairPlan({
   worktreePath,
   slice,
   runtime,
@@ -282,7 +282,7 @@ function evaluateCloseoutRepairPlan({
   };
 }
 
-function applyCloseoutRepairPlan({
+export function applyCloseoutRepairPlan({
   worktreePath,
   slice,
   repairActions,
@@ -604,20 +604,34 @@ function assertCloseoutPullRequestBodyValid(prBody) {
   return errors;
 }
 
-function assertInternalCloseoutPreflight({
+export function collectInternalCloseoutValidationErrors({
   worktreePath,
-  branch,
-  prBody,
+  slice = undefined,
+  branch = undefined,
+  prBody = undefined,
+  includePrBodyValidation = false,
 }) {
+  const resolvedBranch =
+    typeof branch === "string" && branch.trim().length > 0
+      ? branch.trim()
+      : typeof slice === "string" && slice.trim().length > 0
+        ? `docs/omo-closeout-${slice.trim()}`
+        : "";
   const env = {
     ...process.env,
-    BRANCH_NAME: branch,
     PR_IS_DRAFT: "false",
-    PR_BODY: prBody,
   };
+  if (resolvedBranch.length > 0) {
+    env.BRANCH_NAME = resolvedBranch;
+  }
+  if (typeof prBody === "string" && prBody.trim().length > 0) {
+    env.PR_BODY = prBody;
+  }
 
-  const errors = [
-    ...assertCloseoutPullRequestBodyValid(prBody),
+  return [
+    ...(includePrBodyValidation && typeof prBody === "string"
+      ? assertCloseoutPullRequestBodyValid(prBody)
+      : []),
     ...summarizeValidationErrors(
       validateCloseoutSync({
         rootDir: worktreePath,
@@ -636,6 +650,19 @@ function assertInternalCloseoutPreflight({
       }),
     ),
   ];
+}
+
+function assertInternalCloseoutPreflight({
+  worktreePath,
+  branch,
+  prBody,
+}) {
+  const errors = collectInternalCloseoutValidationErrors({
+    worktreePath,
+    branch,
+    prBody,
+    includePrBodyValidation: true,
+  });
 
   if (errors.length === 0) {
     return;
@@ -649,7 +676,7 @@ function assertInternalCloseoutPreflight({
   );
 }
 
-function assertDocsOnlyCloseoutChanges({ slice, changedFiles, worktreePath }) {
+export function assertDocsOnlyCloseoutChanges({ slice, changedFiles, worktreePath }) {
   const allowed = new Set([
     resolve(worktreePath, "docs", "workpacks", "README.md"),
     resolve(worktreePath, "docs", "workpacks", slice, "README.md"),

@@ -10,6 +10,7 @@ import {
   applyBookkeepingRepairPlan,
   evaluateBookkeepingInvariant,
   readSliceRoadmapStatus,
+  readWorkpackDesignStatus,
   updateWorkpackDesignAuthorityStatus,
   updateSliceRoadmapStatus,
   updateWorkpackDesignStatus,
@@ -48,6 +49,12 @@ import { validateStageResult } from "./omo-stage-result.mjs";
 import { readAutomationSpec, resolveAutonomousSlicePolicy, resolveStageAutomationConfig } from "./omo-automation-spec.mjs";
 import { evaluateDocGate, writeDocGateResult } from "./omo-doc-gate.mjs";
 import { evaluateWorkItemStage } from "./omo-evaluator.mjs";
+import {
+  applyCloseoutRepairPlan,
+  assertDocsOnlyCloseoutChanges,
+  collectInternalCloseoutValidationErrors,
+  evaluateCloseoutRepairPlan,
+} from "./omo-reconcile.mjs";
 import {
   assertWorktreeClean,
   ensureSupervisorWorktree,
@@ -207,6 +214,56 @@ function resolveExpectedReviewScope(stage) {
   if (stage === 3) return "backend";
   if (stage === 5) return "frontend";
   return "closeout";
+}
+
+function isCloseoutReconcilePhase(phase) {
+  return [
+    "closeout_reconcile_check",
+    "closeout_reconcile_repair",
+    "closeout_reconcile_recheck",
+  ].includes(phase);
+}
+
+function resolveInternalCloseoutBranch(slice) {
+  return `docs/omo-closeout-${ensureNonEmptyString(slice, "slice")}`;
+}
+
+function summarizeCloseoutValidationErrors(errors) {
+  return (Array.isArray(errors) ? errors : [])
+    .map((error) => `${error.name ?? "validation"} ${error.path}: ${error.message}`)
+    .join("; ");
+}
+
+function summarizeCloseoutBlockedErrors(errors) {
+  return (Array.isArray(errors) ? errors : [])
+    .map((error) => `${error.path}: ${error.message}`)
+    .join("; ");
+}
+
+function buildCloseoutRepairCommit({ slice, repairedPaths }) {
+  const normalizedSlice = ensureNonEmptyString(slice, "slice");
+  const changedFiles = normalizeStringArray(repairedPaths);
+  const touchedAuthority = changedFiles.some((filePath) => filePath.endsWith("/automation-spec.json"));
+  const touchedAcceptance = changedFiles.some((filePath) => filePath.endsWith("/acceptance.md"));
+
+  if (touchedAuthority) {
+    return {
+      subject: `docs(workpacks): reconcile ${normalizedSlice} closeout evidence`,
+      body: "Stage 6.5 closeout reconcile이 authority/evidence metadata와 merged bookkeeping을 정렬합니다.",
+    };
+  }
+
+  if (touchedAcceptance) {
+    return {
+      subject: `docs(workpacks): reconcile ${normalizedSlice} closeout checklist`,
+      body: "Stage 6.5 closeout reconcile이 slice-local checklist drift를 정렬합니다.",
+    };
+  }
+
+  return {
+    subject: `docs(workpacks): reconcile ${normalizedSlice} closeout`,
+    body: "Stage 6.5 closeout reconcile이 merged bookkeeping과 closeout metadata를 정렬합니다.",
+  };
 }
 
 function resolveChecklistContractValidation({
@@ -931,17 +988,6 @@ function applyDesignReviewBookkeeping({
   };
 }
 
-function applyFrontendMergeBookkeeping({
-  worktreePath,
-  slice,
-}) {
-  return updateSliceRoadmapStatus({
-    worktreePath,
-    slice,
-    status: "merged",
-  });
-}
-
 function summarizeBookkeepingIssues(issues) {
   const normalizedIssues = Array.isArray(issues) ? issues : [];
   return normalizedIssues
@@ -1093,6 +1139,308 @@ function repairActiveBookkeepingDrift({
   return repairedState;
 }
 
+function runInternalCloseoutReconcile({
+  rootDir,
+  workItemId,
+  slice,
+  state,
+  stage,
+  prRole,
+  activePr,
+  approvedHeadSha,
+  artifactDir,
+  worktree,
+  github,
+  now,
+}) {
+  if (!state.workspace?.path) {
+    throw new Error("Worktree path is missing for internal closeout reconcile.");
+  }
+
+  const branchName = activePr.branch ?? resolveBranchName({ slice, stage });
+  const closeoutBranch = resolveInternalCloseoutBranch(slice);
+  const prBody =
+    typeof github.getPullRequestBody === "function" && activePr?.url
+      ? github.getPullRequestBody({
+          prRef: activePr.url,
+        })
+      : null;
+  let nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setExecutionState({
+      state,
+      activeStage: stage,
+      phase: "closeout_reconcile_check",
+      nextAction: "finalize_stage",
+      artifactDir,
+      execution: state.execution,
+    }),
+  });
+
+  const invariant = evaluateBookkeepingInvariant({
+    rootDir,
+    workItemId,
+    slice,
+    runtimeState: nextState,
+    worktreePath: nextState.workspace.path,
+  });
+  if (invariant.outcome === "ambiguous_drift") {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice,
+      state: nextState,
+      stage,
+      prRole,
+      reason: `internal 6.5 closeout_reconcile blocked: ${summarizeBookkeepingIssues(invariant.issues)}`,
+      now,
+      worktree,
+    });
+  }
+
+  const closeoutRoadmap = readSliceRoadmapStatus({
+    rootDir: nextState.workspace.path,
+    slice,
+  });
+  const closeoutDesign = readWorkpackDesignStatus({
+    rootDir: nextState.workspace.path,
+    slice,
+  });
+  const bookkeepingRepairActions = normalizeStringArray([
+    ...(Array.isArray(invariant.repairActions) ? invariant.repairActions.map((action) => action?.kind) : []),
+    ...(closeoutRoadmap.status !== "merged" ? ["roadmap_status"] : []),
+    ...(!["confirmed", "N/A"].includes(closeoutDesign.status ?? "") ? ["design_status"] : []),
+  ]).map((kind) =>
+    kind === "roadmap_status"
+      ? {
+          kind,
+          target_status: "merged",
+          file_path: closeoutRoadmap.filePath,
+        }
+      : {
+          kind,
+          target_status: "confirmed",
+          file_path: closeoutDesign.filePath,
+        },
+  );
+
+  const closeoutPlan = evaluateCloseoutRepairPlan({
+    worktreePath: nextState.workspace.path,
+    slice,
+    runtime: nextState,
+  });
+  if (closeoutPlan.blockedErrors.length > 0) {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice,
+      state: nextState,
+      stage,
+      prRole,
+      reason:
+        "internal 6.5 closeout_reconcile requires a separate docs-governance path: " +
+        summarizeCloseoutBlockedErrors(closeoutPlan.blockedErrors),
+      now,
+      worktree,
+    });
+  }
+
+  const validationErrors = collectInternalCloseoutValidationErrors({
+    worktreePath: nextState.workspace.path,
+    slice,
+    branch: closeoutBranch,
+    prBody,
+  });
+  const fixable =
+    bookkeepingRepairActions.length > 0 ||
+    closeoutPlan.repairActions.length > 0;
+  const nonCloseoutSyncErrors = validationErrors.filter(
+    (error) => !String(error?.name ?? "").startsWith("closeout-sync:"),
+  );
+
+  if (validationErrors.length > 0 && (!fixable || nonCloseoutSyncErrors.length > 0)) {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice,
+      state: nextState,
+      stage,
+      prRole,
+      reason:
+        "internal 6.5 closeout_reconcile blocked: " +
+        summarizeCloseoutValidationErrors(
+          nonCloseoutSyncErrors.length > 0 ? nonCloseoutSyncErrors : validationErrors,
+        ),
+      now,
+      worktree,
+    });
+  }
+
+  let repairedFiles = [];
+  let nextHeadSha = resolveApprovedHeadSha({
+    approvedHeadSha,
+    activeHeadSha: activePr.head_sha,
+  });
+
+  if (fixable) {
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setExecutionState({
+        state: nextState,
+        activeStage: stage,
+        phase: "closeout_reconcile_repair",
+        nextAction: "finalize_stage",
+        artifactDir,
+        execution: nextState.execution,
+      }),
+    });
+
+    const bookkeepingRepair = applyBookkeepingRepairPlan({
+      worktreePath: nextState.workspace.path,
+      slice,
+      repairActions: bookkeepingRepairActions,
+    });
+    const closeoutRepair = applyCloseoutRepairPlan({
+      worktreePath: nextState.workspace.path,
+      slice,
+      repairActions: closeoutPlan.repairActions,
+    });
+    repairedFiles = normalizeStringArray([
+      ...bookkeepingRepair.changedFiles,
+      ...closeoutRepair.changedFiles,
+    ]);
+
+    assertDocsOnlyCloseoutChanges({
+      slice,
+      changedFiles: repairedFiles,
+      worktreePath: nextState.workspace.path,
+    });
+
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setExecutionState({
+        state: nextState,
+        activeStage: stage,
+        phase: "closeout_reconcile_recheck",
+        nextAction: "finalize_stage",
+        artifactDir,
+        execution: nextState.execution,
+      }),
+    });
+
+    const recheckErrors = collectInternalCloseoutValidationErrors({
+      worktreePath: nextState.workspace.path,
+      slice,
+      branch: closeoutBranch,
+      prBody,
+    });
+    if (recheckErrors.length > 0) {
+      return blockWithRecovery({
+        rootDir,
+        workItemId,
+        slice,
+        state: nextState,
+        stage,
+        prRole,
+        reason:
+          "internal 6.5 closeout_reconcile recheck failed: " +
+          summarizeCloseoutValidationErrors(recheckErrors),
+        now,
+        worktree,
+      });
+    }
+
+    if (repairedFiles.length > 0) {
+      const commitMessage = buildCloseoutRepairCommit({
+        slice,
+        repairedPaths: repairedFiles,
+      });
+      commitWorktreeChanges({
+        worktreePath: nextState.workspace.path,
+        subject: commitMessage.subject,
+        body: commitMessage.body,
+      });
+      worktree.pushBranch({
+        branch: branchName,
+      });
+      nextHeadSha = worktree.getHeadSha();
+      nextState = upsertPullRequest({
+        rootDir,
+        workItemId,
+        state: nextState,
+        role: prRole,
+        pr: activePr,
+        branch: branchName,
+        headSha: nextHeadSha,
+        now,
+      });
+    }
+  } else {
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setExecutionState({
+        state: nextState,
+        activeStage: stage,
+        phase: "closeout_reconcile_recheck",
+        nextAction: "finalize_stage",
+        artifactDir,
+        execution: nextState.execution,
+      }),
+    });
+  }
+
+  nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setWaitState({
+      state: setExecutionState({
+        state: nextState,
+        activeStage: stage,
+        phase: "merge_pending",
+        nextAction: "poll_ci",
+        artifactDir,
+        execution: nextState.execution,
+      }),
+      kind: "ci",
+      prRole,
+      stage,
+      headSha: nextHeadSha,
+      phase: "merge_pending",
+      nextAction: "poll_ci",
+      updatedAt: now,
+    }),
+  });
+  updateRuntimeStatusForWait({
+    rootDir,
+    workItemId,
+    wait: nextState.wait,
+    prPath: activePr.url,
+    now,
+    approvalState: "dual_approved",
+    lifecycle: "ready_for_review",
+    verificationStatus: "pending",
+    extraNotes: [
+      "internal_6_5=pass",
+      ...(
+        repairedFiles.length > 0
+          ? [`closeout_repair=${repairedFiles.map((filePath) => filePath.split("/").slice(-2).join("/")).join(",")}`]
+          : ["closeout_repair=noop"]
+      ),
+      "merge_gate=external_smoke",
+    ],
+  });
+
+  return {
+    state: nextState,
+    wait: nextState.wait,
+    transitioned: false,
+  };
+}
+
 function finalizeCloseoutReconciliation({
   rootDir,
   workItemId,
@@ -1162,7 +1510,7 @@ function isPendingFinalizePhase(phase) {
 }
 
 function isPendingReviewPhase(phase) {
-  return ["review_pending", "merge_pending"].includes(phase);
+  return ["review_pending", "merge_pending"].includes(phase) || isCloseoutReconcilePhase(phase);
 }
 
 function shouldAllowDirtyWorktree(state) {
@@ -5030,68 +5378,20 @@ function handleReviewStage({
       }
 
       if (stage === 6) {
-        const bookkeeping = applyFrontendMergeBookkeeping({
-          worktreePath: nextState.workspace.path,
+        return runInternalCloseoutReconcile({
+          rootDir,
+          workItemId,
           slice: state.slice ?? workItemId,
+          state: nextState,
+          stage,
+          prRole,
+          activePr,
+          approvedHeadSha: stageResult.approved_head_sha,
+          artifactDir,
+          worktree,
+          github,
+          now,
         });
-
-        if (bookkeeping.changed) {
-          commitWorktreeChanges({
-            worktreePath: nextState.workspace.path,
-            subject: `docs(workpacks): mark ${state.slice ?? workItemId} merged`,
-            body: "Stage 6 최종 승인 뒤 frontend PR에 merged bookkeeping을 반영합니다.",
-          });
-          worktree.pushBranch({
-            branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
-          });
-          const headSha = worktree.getHeadSha();
-          nextState = upsertPullRequest({
-            rootDir,
-            workItemId,
-            state: nextState,
-            role: prRole,
-            pr: activePr,
-            branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
-            headSha,
-            now,
-          });
-          nextState = saveRuntime({
-            rootDir,
-            workItemId,
-            state: setWaitState({
-              state: setExecutionState({
-                state: nextState,
-                activeStage: stage,
-                nextAction: "poll_ci",
-                artifactDir,
-                execution: nextState.execution,
-              }),
-              kind: "ci",
-              prRole: "frontend",
-              stage: 6,
-              headSha,
-              phase: "merge_pending",
-              nextAction: "poll_ci",
-              updatedAt: now,
-            }),
-          });
-          updateRuntimeStatusForWait({
-            rootDir,
-            workItemId,
-            wait: nextState.wait,
-            prPath: activePr.url,
-            now,
-            approvalState: "dual_approved",
-            lifecycle: "ready_for_review",
-            verificationStatus: "pending",
-            extraNotes: ["bookkeeping=slice_status_merged", "merge_gate=external_smoke"],
-          });
-          return {
-            state: nextState,
-            wait: nextState.wait,
-            transitioned: false,
-          };
-        }
       }
 
       nextState = saveRuntime({
@@ -5227,6 +5527,23 @@ function handleReviewStage({
         transitioned: true,
       };
     }
+  }
+
+  if (stage === 6 && stageResult?.decision === "approve" && isCloseoutReconcilePhase(resolveStatePhase(nextState))) {
+    return runInternalCloseoutReconcile({
+      rootDir,
+      workItemId,
+      slice: state.slice ?? workItemId,
+      state: nextState,
+      stage,
+      prRole,
+      activePr,
+      approvedHeadSha: stageResult.approved_head_sha,
+      artifactDir,
+      worktree,
+      github,
+      now,
+    });
   }
 
   if (resolveStatePhase(nextState) === "merge_pending") {

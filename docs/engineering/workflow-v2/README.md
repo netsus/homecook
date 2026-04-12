@@ -104,6 +104,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - `validate:omo-bookkeeping` official docs drift validator 추가
 - `omo:reconcile` docs-only closeout PR repair path 추가
   - merged slice의 roadmap/workpack README bookkeeping뿐 아니라 safe slice-local closeout metadata(`acceptance.md`, `automation-spec.json`, closeout evidence refs)까지 repair 가능
+- `internal 6.5 closeout_reconcile` subphase를 supervisor state machine에 정식 승격
+  - Stage 6 approve 뒤 `closeout_reconcile_check -> repair -> recheck`를 거쳐 merged bookkeeping과 safe slice-local closeout drift를 정렬한 뒤에만 merge gate로 진입
 - executable supervisor baseline: `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:status`
 - live smoke entrypoints: `omo:smoke:control-plane`, `omo:smoke:providers`
 - `omo:smoke:control-plane -- --live-providers`는 backend Stage 2/3만 실제 Claude/Codex를 사용하고, 나머지 단계는 deterministic smoke로 유지한 채 최소 확인용 프롬프트로 review loop(`request_changes -> Codex 반영 -> 추가 review -> 추가 반영`)를 검증한다.
@@ -131,16 +133,13 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
   - `fullauto v1`은 low/medium autonomous slice의 무인 merge까지 자동화한다.
   - merge authority는 GitHub formal approval이 아니라 Claude review artifact + 전체 PR checks + external smoke다.
   - authority-required UI는 Codex `authority_precheck` 후 Claude final authority를 거친다.
+  - Stage 6 approve 뒤 supervisor는 `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence` bundle을 `internal 6.5`로 실행하고, fixable slice-local drift만 같은 frontend PR branch에서 auto-repair한다.
   - `high-risk` / `anchor-extension` slice는 stage execution은 지원하지만 automatic merge는 금지하고 manual merge handoff로 끝낸다.
   - live smoke는 일반 PR CI 필수 단계가 아니라 sandbox/on-demand 운영 검증 경로다.
   - scheduler 운영 기준 플랫폼은 우선 macOS `launchd`다.
 
 ## Next Locked Scope
 
-- `internal 6.5 closeout_reconcile` subphase의 supervisor state-machine 정식 승격
-- `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence` bundle
-- existing closeout reconcile executable subset을 supervisor lifecycle에 흡수
-- fixable slice-local closeout drift만 자동 repair하고 repo-wide governance drift는 별도 docs PR로 분리
 - sandbox live smoke의 운영 표준화와 주기적 rehearsal cadence
 - scheduler 운영 범위의 추가 승격 여부 판단
 - multi-project reusable promotion 기준과 profile extraction
