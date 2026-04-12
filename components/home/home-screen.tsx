@@ -483,9 +483,9 @@ function SortMenu({
         <span className="truncate">정렬 기준 · {currentLabel}</span>
         <span
           aria-hidden="true"
-          className={`shrink-0 text-base text-[var(--muted)] transition ${isOpen ? "rotate-180" : ""}`}
+          className={`shrink-0 text-[var(--muted)] transition ${isOpen ? "rotate-180" : ""}`}
         >
-          ˅
+          <ChevronIcon />
         </span>
       </button>
       {isOpen && !isDesktopView ? (
@@ -581,6 +581,22 @@ function SortMenu({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 16 16"
+    >
+      <path d="M4 6l4 4 4-4" />
+    </svg>
   );
 }
 
