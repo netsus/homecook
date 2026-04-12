@@ -10,6 +10,10 @@ import { reconcileWorkItemBookkeeping } from "../scripts/lib/omo-reconcile.mjs";
 import { readRuntimeState, writeRuntimeState } from "../scripts/lib/omo-session-runtime.mjs";
 import { validateOmoBookkeeping } from "../scripts/lib/validate-omo-bookkeeping.mjs";
 
+function metadata(id: string, stage: 2 | 4, scope: "backend" | "frontend" | "shared", review: string) {
+  return `<!-- omo:id=${id};stage=${stage};scope=${scope};review=${review} -->`;
+}
+
 function seedTrackedFiles(rootDir: string, workItemId: string) {
   mkdirSync(join(rootDir, ".workflow-v2", "work-items"), { recursive: true });
   mkdirSync(join(rootDir, "docs", "workpacks", workItemId), { recursive: true });
@@ -180,6 +184,75 @@ function writeAutomationSpec(rootDir: string, workItemId: string, uiRisk: string
   );
 }
 
+function setRoadmapStatus(rootDir: string, workItemId: string, status: string) {
+  writeFileSync(
+    join(rootDir, "docs", "workpacks", "README.md"),
+    [
+      "# Workpack Roadmap v2",
+      "",
+      "## Slice Order",
+      "",
+      "| Slice | Status | Goal |",
+      "| --- | --- | --- |",
+      `| \`${workItemId}\` | ${status} | test slice |`,
+    ].join("\n"),
+  );
+}
+
+function setWorkpackCloseoutState({
+  rootDir,
+  workItemId,
+  deliveryChecked,
+  acceptanceChecked,
+  authorityStatus = "not-required",
+}: {
+  rootDir: string;
+  workItemId: string;
+  deliveryChecked: boolean;
+  acceptanceChecked: boolean;
+  authorityStatus?: string;
+}) {
+  writeFileSync(
+    join(rootDir, "docs", "workpacks", workItemId, "README.md"),
+    [
+      `# ${workItemId}`,
+      "",
+      "## Design Authority",
+      "",
+      "- UI risk: `not-required`",
+      "- Anchor screen dependency: 없음",
+      "- Visual artifact: not-required",
+      `- Authority status: \`${authorityStatus}\``,
+      "- Notes: none",
+      "",
+      "## Design Status",
+      "",
+      "- [ ] 임시 UI (temporary)",
+      "- [ ] 리뷰 대기 (pending-review)",
+      "- [x] 확정 (confirmed)",
+      "- [ ] N/A",
+      "",
+      "## Delivery Checklist",
+      "",
+      `- [${deliveryChecked ? "x" : " "}] merged bookkeeping closeout is aligned`,
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(rootDir, "docs", "workpacks", workItemId, "acceptance.md"),
+    [
+      "# Acceptance Checklist",
+      "",
+      "## Happy Path",
+      `- [${acceptanceChecked ? "x" : " "}] merged slice acceptance remains closed`,
+      "",
+      "## Automation Split",
+      "",
+      "### Manual Only",
+      "- [ ] none",
+    ].join("\n"),
+  );
+}
+
 function createRuntimeFixture(workItemId = "05-planner-week-core") {
   const rootDir = mkdtempSync(join(tmpdir(), "omo-bookkeeping-"));
   seedTrackedFiles(rootDir, workItemId);
@@ -212,8 +285,12 @@ function createGitWorkspace(rootDir: string) {
   execFileSync("git", ["config", "user.email", "omo@example.com"], { cwd: rootDir });
 }
 
-function createGitOriginFixture(workItemId = "05-planner-week-core") {
+function createGitOriginFixture(
+  workItemId = "05-planner-week-core",
+  mutateFiles?: (rootDir: string) => void,
+) {
   const rootDir = createRuntimeFixture(workItemId);
+  mutateFiles?.(rootDir);
   createGitWorkspace(rootDir);
   execFileSync("git", ["add", "-A"], { cwd: rootDir });
   execFileSync("git", ["commit", "-m", "chore: seed bookkeeping drift fixture"], { cwd: rootDir });
@@ -600,6 +677,55 @@ describe("OMO bookkeeping", () => {
     expect(ghLog).not.toContain("--required");
   });
 
+  it("repairs merged checklist closeout drift even when roadmap and design bookkeeping are already aligned", () => {
+    const workItemId = "05-planner-week-core";
+    const { rootDir } = createGitOriginFixture(workItemId, (fixtureRoot) => {
+      setRoadmapStatus(fixtureRoot, workItemId, "merged");
+      setWorkpackCloseoutState({
+        rootDir: fixtureRoot,
+        workItemId,
+        deliveryChecked: false,
+        acceptanceChecked: false,
+      });
+    });
+    const { ghBin } = createFakeGh(rootDir, 324);
+
+    const result = reconcileWorkItemBookkeeping({
+      rootDir,
+      workItemId,
+      ghBin,
+      now: "2026-04-01T12:00:00.000Z",
+    });
+
+    expect(result.action).toBe("open_closeout_pr");
+
+    const readmeOnBranch = execFileSync(
+      "git",
+      [
+        "show",
+        "origin/docs/omo-closeout-05-planner-week-core:docs/workpacks/05-planner-week-core/README.md",
+      ],
+      {
+        cwd: rootDir,
+        encoding: "utf8",
+      },
+    );
+    const acceptanceOnBranch = execFileSync(
+      "git",
+      [
+        "show",
+        "origin/docs/omo-closeout-05-planner-week-core:docs/workpacks/05-planner-week-core/acceptance.md",
+      ],
+      {
+        cwd: rootDir,
+        encoding: "utf8",
+      },
+    );
+
+    expect(readmeOnBranch).toContain("- [x] merged bookkeeping closeout is aligned");
+    expect(acceptanceOnBranch).toContain("- [x] merged slice acceptance remains closed");
+  });
+
   it("fails closeout reconcile when required exploratory evidence cannot be traced to a frontend PR", () => {
     const workItemId = "05-planner-week-core";
     const { rootDir } = createGitOriginFixture(workItemId);
@@ -659,5 +785,143 @@ describe("OMO bookkeeping", () => {
     expect(ghLog).toContain("exploratory-report.json");
     expect(ghLog).toContain("eval-result.json");
     expect(ghLog).toContain("https://github.com/netsus/homecook/pull/77");
+  });
+
+  it("repairs authority closeout metadata from runtime evidence when the authority report already passes", () => {
+    const workItemId = "05-planner-week-core";
+    const authorityReportPath = "ui/designs/authority/PLANNER_WEEK-authority.md";
+    const { rootDir } = createGitOriginFixture(workItemId, (fixtureRoot) => {
+      setRoadmapStatus(fixtureRoot, workItemId, "merged");
+      writeFileSync(
+        join(fixtureRoot, "docs", "workpacks", workItemId, "README.md"),
+        [
+          `# ${workItemId}`,
+          "",
+          "## Design Authority",
+          "",
+          "- UI risk: `not-required`",
+          "- Anchor screen dependency: 없음",
+          "- Visual artifact: not-required",
+          "- Authority status: `required`",
+          "- Notes: none",
+          "",
+          "## Design Status",
+          "",
+          "- [ ] 임시 UI (temporary)",
+          "- [ ] 리뷰 대기 (pending-review)",
+          "- [x] 확정 (confirmed)",
+          "- [ ] N/A",
+          "",
+          "## Delivery Checklist",
+          "",
+          `- [x] merged bookkeeping closeout is aligned ${metadata("delivery-ui", 4, "frontend", "5,6")}`,
+        ].join("\n"),
+      );
+      writeFileSync(
+        join(fixtureRoot, "docs", "workpacks", workItemId, "acceptance.md"),
+        [
+          "# Acceptance Checklist",
+          "",
+          "## Happy Path",
+          `- [x] merged slice acceptance remains closed ${metadata("accept-ui", 4, "frontend", "5,6")}`,
+          "",
+          "## Automation Split",
+          "",
+          "### Manual Only",
+          "- [ ] none",
+        ].join("\n"),
+      );
+      writeAutomationSpec(fixtureRoot, workItemId, "anchor-extension");
+      mkdirSync(join(fixtureRoot, "ui", "designs", "authority"), { recursive: true });
+      writeFileSync(
+        join(fixtureRoot, authorityReportPath),
+        "# Authority\nverdict: pass\n",
+      );
+      writeRuntimeState({
+        rootDir: fixtureRoot,
+        workItemId,
+        state: {
+          ...readRuntimeState({
+            rootDir: fixtureRoot,
+            workItemId,
+            slice: workItemId,
+          }).state,
+          prs: {
+            docs: null,
+            backend: null,
+            frontend: {
+              number: 77,
+              url: "https://github.com/netsus/homecook/pull/77",
+              draft: false,
+              branch: "feature/fe-05-planner-week-core",
+              head_sha: "fe123",
+            },
+            closeout: null,
+          },
+          last_review: {
+            backend: null,
+            frontend: {
+              decision: "approve",
+              route_back_stage: null,
+              approved_head_sha: "fe123",
+              body_markdown: "approved",
+              findings: [],
+              review_scope: {
+                scope: "closeout",
+                checklist_ids: [],
+              },
+              reviewed_checklist_ids: [],
+              required_fix_ids: [],
+              waived_fix_ids: [],
+              authority_verdict: "pass",
+              reviewed_screen_ids: ["PLANNER_WEEK"],
+              authority_report_paths: [authorityReportPath],
+              blocker_count: 0,
+              major_count: 0,
+              minor_count: 0,
+              source_review_stage: 5,
+              ping_pong_rounds: 0,
+              updated_at: "2026-04-01T12:00:00.000Z",
+            },
+          },
+        },
+      });
+    });
+    const { ghBin } = createFakeGh(rootDir, 325);
+
+    const result = reconcileWorkItemBookkeeping({
+      rootDir,
+      workItemId,
+      ghBin,
+      now: "2026-04-01T12:00:00.000Z",
+    });
+
+    expect(result.action).toBe("open_closeout_pr");
+
+    const readmeOnBranch = execFileSync(
+      "git",
+      [
+        "show",
+        "origin/docs/omo-closeout-05-planner-week-core:docs/workpacks/05-planner-week-core/README.md",
+      ],
+      {
+        cwd: rootDir,
+        encoding: "utf8",
+      },
+    );
+    const automationSpecOnBranch = execFileSync(
+      "git",
+      [
+        "show",
+        "origin/docs/omo-closeout-05-planner-week-core:docs/workpacks/05-planner-week-core/automation-spec.json",
+      ],
+      {
+        cwd: rootDir,
+        encoding: "utf8",
+      },
+    );
+
+    expect(readmeOnBranch).toContain("- Authority status: `reviewed`");
+    expect(automationSpecOnBranch).toContain(authorityReportPath);
   });
 });

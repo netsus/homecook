@@ -225,9 +225,8 @@ public stage numbering은 계속 `1~6`을 유지한다.
 9. docs review ping-pong은 최대 3회까지만 허용한다. 초과 시 `human_escalation`으로 fail-closed 한다.
 10. `claude_primary`는 `Stage 1 -> doc_gate_review -> Stage 3 -> Stage 4 -> Stage 5/final_authority_gate`, `codex_primary`는 `doc_gate_repair -> Stage 2 -> Stage 4/authority_precheck -> Stage 5 -> Stage 6`으로 계속 재사용한다.
 
-## Internal 6.5 (Next Locked Scope)
+## Internal 6.5
 
-아래 subphase는 아직 executable baseline에 포함되지 않았고, 다음 잠금 범위로만 정의한다.
 public stage numbering은 계속 `1~6`을 유지하고, `internal 6.5`는 Stage 6 approve 뒤 merge 직전에만 실행되는 supervisor-only closeout reconcile subphase로 둔다.
 
 순서:
@@ -240,13 +239,14 @@ public stage numbering은 계속 `1~6`을 유지하고, `internal 6.5`는 Stage 
 
 1. `closeout_reconcile_check`는 `pnpm validate:closeout-sync`, `pnpm validate:source-of-truth-sync`, `pnpm validate:exploratory-qa-evidence`를 묶어 실행한다.
 2. 결과는 `pass | fixable | blocked`로 정규화한다.
-3. `fixable`은 slice-local closeout drift만 의미한다. 허용 범위는 해당 slice의 `README.md`, `acceptance.md`, `automation-spec.json`, PR body closeout/evidence metadata다.
+3. `fixable`은 slice-local closeout drift만 의미한다. 현재 executable baseline의 허용 범위는 해당 slice의 `README.md`, `acceptance.md`, `automation-spec.json`과 merged bookkeeping이다.
 4. repo-wide governing doc drift, validator/tooling 코드 변경, 공식 문서 버전 전파 문제는 `blocked`로 올리고 별도 docs-governance PR로 분리한다.
 5. `closeout_reconcile_repair`는 product contract를 바꾸지 않고 closeout bookkeeping과 evidence references만 고친다.
-6. exploratory QA가 required인 slice에서 evidence가 비어 있으면 merge 대신 fail-closed 한다. low-risk slice는 skip rationale만 자동 보강할 수 있다.
+6. exploratory QA가 required인 slice에서 evidence가 비어 있으면 merge 대신 fail-closed 한다. 현재 baseline은 existing frontend PR body 또는 local QA artifact bundle을 evidence source로 사용한다.
 7. `closeout_reconcile_recheck`가 다시 `pass`가 나와야만 merge로 진행한다.
-8. 같은 closeout drift가 2회 이상 반복되면 자동 수정 대신 `human_escalation`으로 올린다.
-9. 현재 executable subset은 `pnpm omo:reconcile -- --work-item <id>`가 closeout PR 생성 전 같은 validator bundle을 preflight로 실행하는 경로다.
+8. repair 후에도 같은 drift가 남아 recheck가 다시 fail하면 자동 merge 대신 `human_escalation`으로 fail-closed 한다.
+9. `pnpm omo:reconcile -- --work-item <id>`의 dedicated closeout PR 경로도 같은 validator bundle과 safe repair policy를 재사용한다.
+10. supervisor baseline은 Stage 6 approve 뒤 같은 frontend PR branch에서 `check -> repair -> recheck`를 수행하고, recheck 통과 후에만 `merge_pending` CI gate로 진입한다.
 
 ## Runtime State Machine
 
@@ -269,6 +269,9 @@ runtime state는 더 이상 “마지막 stage 번호 몇 번”만 저장하지
 - `pr_pending`
 - `wait`
 - `review_pending`
+- `closeout_reconcile_check`
+- `closeout_reconcile_repair`
+- `closeout_reconcile_recheck`
 - `merge_pending`
 - `escalated`
 - `done`
@@ -437,12 +440,14 @@ runtime state는 아래 대기 이유를 저장할 수 있어야 한다.
 원칙:
 
 1. closeout branch는 `docs/omo-closeout-<slice>`다.
-2. 허용 수정 범위는 `docs/workpacks/README.md`와 target workpack README bookkeeping뿐이다.
+2. 허용 수정 범위는 `docs/workpacks/README.md`와 target workpack의 `README.md`, `acceptance.md`, `automation-spec.json`, closeout/evidence metadata뿐이다.
 3. closeout PR는 runtime `prs.closeout`에 기록한다.
 4. closeout PR 생성 후 workflow-v2 status는 `ready_for_review`를 유지하고 notes에 `closeout_pr=<url>`를 남긴다.
 5. closeout PR에 docs 외 파일이 섞이면 validator와 supervisor가 fail-closed 한다.
 6. closeout PR 생성 전 `internal 6.5` preflight subset으로 `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence`, PR body template 검사를 함께 실행한다.
 7. exploratory QA evidence가 required인 slice의 closeout PR은 merged frontend PR QA evidence를 본문에 다시 연결할 수 있어야 한다.
+8. safe slice-local drift는 closeout branch 안에서 `README.md`, `acceptance.md`, `automation-spec.json`, PR closeout/evidence metadata만 수정한다.
+9. source-of-truth reference drift, validator/tooling 코드 변경 필요, missing authority report처럼 repo-wide 또는 non-deterministic drift는 fail-closed 하고 별도 `docs-governance` PR로 분리한다.
 
 ## Evidence Contract
 
