@@ -54,8 +54,8 @@ work-item: `.workflow-v2/work-items/03-recipe-like.json`
 **전제**: Phase 7 PR (#28)이 merge된 후에 유효.
 
 확인 사항:
-- `pnpm omo:claude-budget` 해석 결과가 Stage 1/3/5/6 routing에 반영되는가?
-- Claude가 `available` 상태일 때 Stage 3/5/6 reviewer로 정상 배정되는가?
+- `pnpm omo:claude-budget` 해석 결과가 Stage 1/3/4와 Stage 5 `final_authority_gate` routing에 반영되는가?
+- Claude가 `available` 상태일 때 Stage 3/4와 Stage 5 `final_authority_gate` actor로 정상 배정되는가?
 - Claude가 `constrained/unavailable` 상태로 강제 설정 후
   Stage 3 호출 시 blocked retry가 approval_state를 덮어쓰지 않는가?
 

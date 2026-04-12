@@ -15,6 +15,7 @@ const OMO_EXECUTION_SUBPHASES = new Set([
   "doc_gate_repair",
   "doc_gate_review",
   "authority_precheck",
+  "final_authority_gate",
   "implementation",
 ]);
 const OMO_RUNTIME_PHASES = new Set([
@@ -207,6 +208,22 @@ function inferActiveStage({
   }
 
   return null;
+}
+
+function resolveExpectedSessionRole(stage, subphase = "implementation") {
+  if (stage === 2 && subphase === "doc_gate_review") {
+    return "claude_primary";
+  }
+
+  if (stage === 5 && subphase === "final_authority_gate") {
+    return "claude_primary";
+  }
+
+  if ([1, 3, 4].includes(stage)) {
+    return "claude_primary";
+  }
+
+  return "codex_primary";
 }
 
 function getWorktreeDirtyState(worktreePath) {
@@ -1088,13 +1105,22 @@ function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
           stage_result_path: normalized.last_artifact_dir
             ? resolve(normalized.last_artifact_dir, "stage-result.json")
             : null,
-          session_role: [1, 3, 5, 6].includes(codeStage) ? "claude_primary" : "codex_primary",
+          session_role: resolveExpectedSessionRole(
+            codeStage,
+            normalized.execution?.subphase ?? "implementation",
+          ),
           session_id:
-            [1, 3, 5, 6].includes(codeStage)
+            resolveExpectedSessionRole(
+              codeStage,
+              normalized.execution?.subphase ?? "implementation",
+            ) === "claude_primary"
               ? normalized.sessions.claude_primary.session_id
               : normalized.sessions.codex_primary.session_id,
           provider:
-            [1, 3, 5, 6].includes(codeStage)
+            resolveExpectedSessionRole(
+              codeStage,
+              normalized.execution?.subphase ?? "implementation",
+            ) === "claude_primary"
               ? normalized.sessions.claude_primary.provider
               : normalized.sessions.codex_primary.provider,
           pr_role: prRole,

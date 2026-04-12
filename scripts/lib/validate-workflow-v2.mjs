@@ -130,6 +130,15 @@ function containsAll(text, fragments) {
     }));
 }
 
+function containsNone(text, fragments) {
+  return fragments
+    .filter((fragment) => text.includes(fragment))
+    .map((fragment) => ({
+      path: fragment,
+      message: `Unexpected stale fragment is still present: ${fragment}`,
+    }));
+}
+
 export function validateWorkflowV2TrackedState({ rootDir = process.cwd() } = {}) {
   const workflowDir = path.join(rootDir, ".workflow-v2");
   if (!existsSync(workflowDir)) {
@@ -231,17 +240,78 @@ export function validateWorkflowV2TrackedState({ rootDir = process.cwd() } = {})
 }
 
 export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) {
+  const sliceWorkflowPath = path.join(rootDir, "docs/engineering/slice-workflow.md");
+  const agentWorkflowOverviewPath = path.join(rootDir, "docs/engineering/agent-workflow-overview.md");
   const workflowReadmePath = path.join(rootDir, "docs/engineering/workflow-v2/README.md");
   const supervisorDocPath = path.join(
     rootDir,
     "docs/engineering/workflow-v2/omo-autonomous-supervisor.md",
   );
+  const sessionOrchestratorPath = path.join(
+    rootDir,
+    "docs/engineering/workflow-v2/omo-session-orchestrator.md",
+  );
+  const liteArchitecturePath = path.join(
+    rootDir,
+    "docs/engineering/workflow-v2/omo-lite-architecture.md",
+  );
+  const dispatchContractPath = path.join(
+    rootDir,
+    "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md",
+  );
+  const claudeProviderPath = path.join(
+    rootDir,
+    "docs/engineering/workflow-v2/omo-claude-cli-provider.md",
+  );
+  const claudeEntryPath = path.join(rootDir, "CLAUDE.md");
+  const workpacksRoadmapPath = path.join(rootDir, "docs/workpacks/README.md");
+  const workpackTemplatePath = path.join(rootDir, "docs/workpacks/_template/README.md");
+  const designConsultantPath = path.join(rootDir, "docs/engineering/design-consultant-sop.md");
   const opencodeReadmePath = path.join(rootDir, ".opencode/README.md");
 
+  const sliceWorkflow = readText(sliceWorkflowPath);
+  const agentWorkflowOverview = readText(agentWorkflowOverviewPath);
   const workflowReadme = readText(workflowReadmePath);
   const supervisorDoc = readText(supervisorDocPath);
+  const sessionOrchestrator = readText(sessionOrchestratorPath);
+  const liteArchitecture = readText(liteArchitecturePath);
+  const dispatchContract = readText(dispatchContractPath);
+  const claudeProviderDoc = readText(claudeProviderPath);
+  const claudeEntry = readText(claudeEntryPath);
+  const workpacksRoadmap = readText(workpacksRoadmapPath);
+  const workpackTemplate = readText(workpackTemplatePath);
+  const designConsultant = readText(designConsultantPath);
   const opencodeReadme = readText(opencodeReadmePath);
   const nextLockedScope = extractMarkdownSection(workflowReadme, "## Next Locked Scope");
+
+  const sliceWorkflowErrors = [
+    ...containsAll(sliceWorkflow, [
+      "| 4 | 프론트엔드 구현 | **Claude** |",
+      "| 5 | 디자인 리뷰 | **Codex** |",
+      "| 6 | 프론트엔드 PR 리뷰 | **Codex** |",
+      "**Codex**가 1·3·4단계를 요청받으면:",
+      "Codex는 Stage 4 internal subphase인 authority_precheck만 담당합니다.",
+    ]),
+    ...containsNone(sliceWorkflow, [
+      "**Codex**가 1·3단계를 요청받으면:",
+    ]),
+  ];
+
+  const agentWorkflowOverviewErrors = [
+    ...containsAll(agentWorkflowOverview, [
+      "## Claude public stage 흐름",
+      "Stage 1 문서 작성 / Stage 3 백엔드 리뷰 / Stage 4 프론트 구현 수행",
+      "authority-required slice면 Stage 5 final_authority_gate 수행",
+      "## Codex review / closeout 흐름",
+      "Stage 2 백엔드 구현 수행",
+      "Stage 5 public 디자인 리뷰와 Stage 6 FE PR 리뷰 / closeout 수행",
+    ]),
+    ...containsNone(agentWorkflowOverview, [
+      "## Claude 리뷰 흐름",
+      "→ PR 코드 리뷰 (AGENTS.md 기준)",
+      "→ 디자인 피드백 (Tailwind/레이아웃/공용 컴포넌트)",
+    ]),
+  ];
 
   const workflowReadmeErrors = [
     ...containsAll(workflowReadme, [
@@ -253,8 +323,14 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "`pnpm omo:status`",
       "`pnpm validate:omo-bookkeeping`",
       "low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함",
-      "authority-required UI는 Codex `authority_precheck` 후 Claude final authority를 거친다.",
+      "authority-required UI는 Claude Stage 4 구현 뒤 Codex `authority_precheck`, Codex Stage 5 public review, Claude `final_authority_gate`를 거친다.",
+      "stage owner review artifact + authority gate pass(해당 시) + 전체 PR checks + external smoke",
       "manual merge handoff",
+      "public code stage 실행이 필요할 때 `--mode execute`를 사용한다.",
+      "slice6 기준 public Stage 4는 Claude execute path를 사용할 수 있고, Stage 5 `final_authority_gate`는 review gate이므로 execute 대상이 아니라 review artifact 경로로 다룬다.",
+    ]),
+    ...containsNone(workflowReadme, [
+      "Codex stage에 한해 `--mode execute`를 사용한다.",
     ]),
   ];
 
@@ -274,10 +350,59 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "`pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`",
       "`pnpm omo:smoke:providers`",
       "GitHub formal approval을 merge gate로 사용하지 않는다",
-      "current head 기준 전체 PR checks green + Claude approve artifact + external smoke pass 뒤 자동 merge한다",
+      "current head 기준 전체 PR checks green + Stage 6 Codex approve artifact + authority gate pass(해당 시) + external smoke pass 뒤 자동 merge한다",
       "authority_precheck",
-      "Stage 5는 Claude final authority다.",
+      "Stage 5 public actor는 Codex다.",
+      "final_authority_gate",
+      "authority-required frontend PR은 `merge_pending` 직전과 `mergePullRequest` 직전에 모두 `design_authority.status === \"reviewed\"`와 final authority verdict `pass`를 재검증한다.",
+      "strict slice에서 Stage 2는 `$ralph` skill 기반 loop를 기본 실행 표면으로 사용하고, Stage 4는 현재 OMO-lite runner 기준으로 `single_pass`를 기본 실행 표면으로 유지한다.",
       "manual merge handoff",
+    ]),
+    ...containsNone(supervisorDoc, [
+      "Stage 2/4는 strict slice에서 `$ralph` skill 기반 loop를 기본 실행 표면으로 사용한다.",
+    ]),
+  ];
+
+  const sessionOrchestratorErrors = [
+    ...containsAll(sessionOrchestrator, [
+      "Stage `1 / 3 / 4` -> `claude_primary`",
+      "Stage `2 / 5 / 6` -> `codex_primary`",
+      "Stage 5 `final_authority_gate` -> `claude_primary`",
+      "Stage 1/3/4의 public actor는 Claude다.",
+      "Stage 2/5/6의 public actor는 Codex다.",
+    ]),
+  ];
+
+  const liteArchitectureErrors = [
+    ...containsAll(liteArchitecture, [
+      "Claude primary session은 Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`에서 재사용한다.",
+      "Codex primary session은 Stage `2 / 5 / 6`와 Stage 4 `authority_precheck`에서 재사용한다.",
+      "Stage 4 프론트 구현",
+      "Stage 5 authority-required slice의 final authority gate",
+    ]),
+  ];
+
+  const dispatchContractErrors = [
+    ...containsAll(dispatchContract, [
+      "### Stage 4 → Claude",
+      "### Stage 5 → Codex",
+      "### Stage 5 → Claude (`subphase=final_authority_gate`)",
+      "### Stage 6 → Codex",
+      "`actor == codex`인 dispatch는 `codex_primary` session으로 실행한다.",
+      "`actor == claude`인 dispatch는 `claude_primary` session으로 실행한다.",
+      "strict slice여도 Stage 4는 현재 `single_pass`로 실행",
+      "OMO actual execution은 Stage 2에서 `$ralph` skill-only",
+      "Stage 4 actual execution은 현재 `single_pass`",
+    ]),
+    ...containsNone(dispatchContract, [
+      "OMO actual execution은 Stage 2/4에서 `$ralph` skill-only",
+    ]),
+  ];
+
+  const claudeProviderErrors = [
+    ...containsAll(claudeProviderDoc, [
+      "Claude Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`의 기본 실행 표면은 `raw claude CLI`다.",
+      "Codex Stage `2 / 5 / 6`와 Stage 4 `authority_precheck`는 기존 `OpenCode` provider를 유지한다.",
     ]),
   ];
 
@@ -289,11 +414,71 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "`pnpm omo:smoke:providers`",
       "`pnpm omo:scheduler:install -- --work-item <id>`",
       "`pnpm omo:scheduler:verify -- --work-item <id>`",
+      "Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`의 기본 provider는 raw `claude` CLI다.",
+      "Stage `1 / 3 / 4`는 `claude_primary`, Stage `2 / 5 / 6`은 `codex_primary` 세션을 재사용한다.",
       "macOS에서는 `launchd` 예시를 우선 제공한다",
     ]),
   ];
 
+  const claudeEntryErrors = [
+    ...containsAll(claudeEntry, [
+      "슬라이스 개발 1·3·4단계와 authority-required slice의 final authority gate 담당.",
+      "2·5·6단계(Codex 담당)",
+    ]),
+    ...containsNone(claudeEntry, [
+      "슬라이스 개발 1·3·5·6단계 담당. 2·4단계(Codex 담당)",
+    ]),
+  ];
+
+  const workpacksRoadmapErrors = [
+    ...containsAll(workpacksRoadmap, [
+      "| `planned` → `docs` | Stage 1 docs PR 오픈 시 |",
+      "| `docs` → `in-progress` | Stage 1 merge + Stage 2 착수 시 |",
+      "| `in-progress` → `merged` | Stage 6 frontend closeout이 merge까지 반영된 시점 |",
+      "위 이벤트가 발생한 PR 또는 closeout bookkeeping update에 포함해 갱신한다.",
+    ]),
+    ...containsNone(workpacksRoadmap, [
+      "| `in-progress` → `merged` | Stage 6 FE PR merge 시 | Claude |",
+    ]),
+  ];
+
+  const workpackTemplateErrors = [
+    ...containsAll(workpackTemplate, [
+      "Stage 4 완료 후, public review 준비 상태",
+      "Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과",
+      "→ `pending-review` (Stage 4 완료 후)",
+      "→ `confirmed` (Stage 5 public review 통과 후, authority-required면 final authority gate 통과 후)",
+    ]),
+    ...containsNone(workpackTemplate, [
+      "Stage 4 완료, Claude Stage 5 디자인 리뷰 필요",
+      "→ `pending-review` (Stage 4 완료, Codex가 변경)",
+      "→ `confirmed` (Stage 5 리뷰 통과, Claude가 변경)",
+    ]),
+  ];
+
+  const designConsultantErrors = [
+    ...containsAll(designConsultant, [
+      "↓ Stage 4 완료 후",
+      "↓ Stage 5 public review 통과 후",
+      "authority-required slice는 final authority gate까지 통과 후",
+      "Stage 5 public review / final authority gate",
+    ]),
+    ...containsNone(designConsultant, [
+      "↓ Stage 4 완료, Codex가 변경",
+      "↓ Stage 5 리뷰 통과, Claude가 변경",
+      "Stage 5 (Claude 직접)",
+    ]),
+  ];
+
   return [
+    {
+      name: "workflow-v2-doc-contract:slice-workflow",
+      errors: sliceWorkflowErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:agent-workflow-overview",
+      errors: agentWorkflowOverviewErrors,
+    },
     {
       name: "workflow-v2-doc-contract:README",
       errors: workflowReadmeErrors,
@@ -303,8 +488,40 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       errors: supervisorDocErrors,
     },
     {
+      name: "workflow-v2-doc-contract:session-orchestrator",
+      errors: sessionOrchestratorErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:lite-architecture",
+      errors: liteArchitectureErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:dispatch-contract",
+      errors: dispatchContractErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:claude-provider",
+      errors: claudeProviderErrors,
+    },
+    {
       name: "workflow-v2-doc-contract:opencode",
       errors: opencodeReadmeErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:claude-entry",
+      errors: claudeEntryErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:workpacks-roadmap",
+      errors: workpacksRoadmapErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:workpack-template",
+      errors: workpackTemplateErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:design-consultant",
+      errors: designConsultantErrors,
     },
   ];
 }

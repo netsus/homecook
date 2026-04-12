@@ -54,8 +54,10 @@ Homecook 저장소에서는 repo script alias를 함께 둔다.
 
 기본 stage 매핑:
 
-- Stage `1 / 3 / 5 / 6` -> `claude_primary`
-- Stage `2 / 4` -> `codex_primary`
+- Stage `1 / 3 / 4` -> `claude_primary`
+- Stage `2 / 5 / 6` -> `codex_primary`
+- Stage 4 `authority_precheck` -> `codex_primary`
+- Stage 5 `final_authority_gate` -> `claude_primary`
 
 세션 규칙:
 
@@ -69,7 +71,7 @@ Homecook 저장소에서는 repo script alias를 함께 둔다.
 8. 저장된 session ID가 사라졌거나 재개가 불가능하면 조용히 새 세션을 만들지 않는다.
 9. session loss는 `blocked + human_escalation` 조건이다.
 
-이 규칙으로 Stage 1을 수행한 Claude 세션이 Stage 3/5/6에서도 같은 문맥을 유지하고, Stage 2를 수행한 Codex 세션이 Stage 4를 이어받는다.
+이 규칙으로 Stage 1을 수행한 Claude 세션이 Stage 3/4와 Stage 5 `final_authority_gate`에서도 같은 문맥을 유지하고, Stage 2를 수행한 Codex 세션이 Stage 4 `authority_precheck`, Stage 5 public review, Stage 6 closeout을 이어받는다.
 
 ## Runtime State Contract
 
@@ -123,7 +125,7 @@ runtime state는 tracked workflow 상태와 분리한다.
 
 기본 retry 정책:
 
-- 대상: Claude-owned stage (`1 / 3 / 5 / 6`)
+- 대상: Claude-owned public stage (`1 / 3 / 4`)와 Stage 5 `final_authority_gate`
 - 기본 retry delay: `5 hours`
 - 기본 sweeper cadence: `10 minutes`
 - 기본 max retry attempts: `3`
@@ -182,8 +184,9 @@ Homecook에서는 아래 원칙으로 adapter를 둔다.
 
 - authoritative policy는 계속 `AGENTS.md`와 `workflow-v2` docs가 가진다.
 - Homecook adapter는 기존 `omo-lite-supervisor`의 stage graph와 dispatch contract를 재사용한다.
-- Stage 1/3/5/6의 actor는 여전히 Claude다.
-- Stage 2/4의 actor는 여전히 Codex다.
+- Stage 1/3/4의 public actor는 Claude다.
+- Stage 2/5/6의 public actor는 Codex다.
+- authority-required slice의 Stage 5 `final_authority_gate` actor는 Claude다.
 - generic core는 actor ownership을 바꾸지 않고, 세션과 retry만 표준화한다.
 
 ## Non-Goals

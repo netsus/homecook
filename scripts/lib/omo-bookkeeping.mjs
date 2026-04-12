@@ -475,19 +475,32 @@ function shouldRequireConfirmedDesign({
   runtimeState,
   lifecycleStates,
   designStatus,
+  authorityRequired = false,
+  designAuthorityStatus = null,
 }) {
   if (designStatus === "N/A") {
     return false;
   }
 
-  return (
+  if (
     requireMergedRoadmap ||
     lifecycleStates.includes("merged") ||
-    (Number.isInteger(runtimeState?.last_completed_stage) && runtimeState.last_completed_stage >= 5) ||
     (Number.isInteger(runtimeState?.wait?.stage) && runtimeState.wait.stage >= 6) ||
     (Number.isInteger(runtimeState?.active_stage) && runtimeState.active_stage >= 6) ||
     runtimeState?.phase === "done"
-  );
+  ) {
+    return true;
+  }
+
+  if (!Number.isInteger(runtimeState?.last_completed_stage) || runtimeState.last_completed_stage < 5) {
+    return false;
+  }
+
+  if (!authorityRequired) {
+    return true;
+  }
+
+  return designAuthorityStatus === "reviewed";
 }
 
 function buildRepairAction(kind, targetStatus, filePath) {
@@ -548,6 +561,8 @@ export function evaluateBookkeepingInvariant({
     runtimeState,
     lifecycleStates,
     designStatus: design.status,
+    authorityRequired: Boolean(runtimeState?.design_authority?.authority_required),
+    designAuthorityStatus: runtimeState?.design_authority?.status ?? null,
   });
   const expectedRoadmapStatus = requireMergedRoadmap
     ? "merged"

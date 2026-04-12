@@ -14,18 +14,18 @@
 | 1 | Workpack README + acceptance.md 작성 | **Claude** |
 | 2 | 백엔드 구현 | **Codex** |
 | 3 | 백엔드 PR 리뷰 | **Claude** |
-| 4 | 프론트엔드 구현 | **Codex** |
-| 5 | 디자인 리뷰 | **Claude** |
-| 6 | 프론트엔드 PR 리뷰 | **Claude** |
+| 4 | 프론트엔드 구현 | **Claude** |
+| 5 | 디자인 리뷰 | **Codex** |
+| 6 | 프론트엔드 PR 리뷰 | **Codex** |
 
 **거부 규칙 (요청받은 즉시 확인, 담당이 아니면 중단)**
 
-- **Codex**가 1·3·5·6단계를 요청받으면:
-  > "이 단계(N단계)는 Claude 담당입니다. Claude에게 요청해주세요."
+- **Codex**가 1·3·4단계를 요청받으면:
+  > "이 단계(N단계)의 public stage owner는 Claude입니다. Claude에게 요청해주세요. Codex는 Stage 4 internal subphase인 authority_precheck만 담당합니다."
   → 이후 진행하지 않는다.
 
-- **Claude**가 2·4단계를 요청받으면:
-  > "이 단계(N단계)는 Codex 담당입니다. Codex에게 요청해주세요. Claude는 코드 구현을 하지 않습니다."
+- **Claude**가 2·5·6단계를 요청받으면:
+  > "이 단계(N단계)는 Codex 담당입니다. Codex에게 요청해주세요. Claude는 이 단계의 primary actor가 아닙니다."
   → 이후 진행하지 않는다.
 
 ---
@@ -49,8 +49,9 @@
 ## Closeout Sync Contract
 
 - workpack README의 `Delivery Checklist`, `Design Status`, roadmap status, acceptance 체크박스, PR 본문 evidence는 서로 따로 노는 참고 문서가 아니라 **같은 closeout 상태**를 표현해야 한다.
-- Stage 2/4 구현 담당인 Codex는 PR을 `Ready for Review`로 넘기기 전에 자신이 닫은 범위에 맞춰 `Delivery Checklist`, acceptance, PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`를 갱신한다.
-- Stage 3/5/6 리뷰 담당인 Claude는 승인 전에 위 문서들이 서로 일치하는지 확인하고, mismatch가 있으면 코드 이슈가 없어도 closeout drift로 수정 요청한다.
+- Stage 2 구현 담당인 Codex와 Stage 4 구현 담당인 Claude는 PR을 `Ready for Review`로 넘기기 전에 자신이 닫은 범위에 맞춰 `Delivery Checklist`, acceptance, PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`를 갱신한다.
+- Stage 3 리뷰 담당인 Claude와 Stage 5/6 리뷰 담당인 Codex는 승인 전에 위 문서들이 서로 일치하는지 확인하고, mismatch가 있으면 코드 이슈가 없어도 closeout drift로 수정 요청한다.
+- authority-required slice의 최종 authority는 Stage 5 public review와 별개로 Claude `final_authority_gate`가 잠그며, 이 gate를 통과하기 전에는 `confirmed`나 최종 merge closeout으로 넘기지 않는다.
 - policy 자동화는 `pnpm validate:closeout-sync`로 closeout drift를 검사한다.
   - non-draft `feature/fe-<slice>` PR은 `Ready for Review` 전에 README `Delivery Checklist`, acceptance(`Manual Only` 제외), `Design Status`가 closeout-ready 상태인지 통과해야 한다.
   - roadmap status가 이미 `merged`인 changed slice와 `docs/omo-closeout-<slice>` 브랜치는 merged closeout 기준을 통과해야 한다.
@@ -367,7 +368,7 @@
 - <항목>
 
 ### 다음 단계
-→ 4단계(Codex): feature/fe-<slice> 프론트엔드 구현
+→ 4단계(Claude): feature/fe-<slice> 프론트엔드 구현
 → 사전 조건: 이 PR merged
 
 ※ **BE-only 슬라이스** (workpack README에 FE 화면 없음 명시):
@@ -395,7 +396,7 @@
 
 ## Stage 4: 프론트엔드 구현
 
-**담당: Codex**
+**담당: Claude**
 
 ### 사전 조건
 
@@ -445,13 +446,14 @@
 - Design Status `temporary`: 기능 가능한 임시 UI, Tailwind 클래스 나중에 교체 가능한 구조 유지
 - 비로그인 보호 액션: 로그인 안내 모달 → return-to-action URL 보존
 - 신규 화면 또는 high-risk UI change인 경우 In Scope의 각 FE 화면마다 `ui/designs/<SCREEN_ID>.md` 와이어프레임을 참조하여 구현
-- 신규 화면, high-risk UI change, anchor extension인 경우 screenshot 또는 Figma evidence 기반 `product-design-authority` 리뷰를 거친다
+- 신규 화면, high-risk UI change, anchor extension인 경우 Codex `authority_precheck` internal subphase와 screenshot/Figma evidence 기반 authority 검토를 거친다
 - 신규 화면 또는 high-risk UI change인 경우 구현 완료 시 workpack README의 Design Status를 `temporary → pending-review`로 변경
 - 기존 confirmed 화면의 low-risk UI change는 Design Status를 유지할 수 있다. 이 경우 PR 본문에 low-risk 판단 근거를 남긴다.
 - Layer 1 deterministic gate(`pnpm verify:frontend`)를 먼저 green으로 만들고, exploratory QA는 그 다음에 실행
 - 시스템 row/bootstrap 의존 슬라이스면 fixture mode만이 아니라 real DB/local Supabase smoke 경로도 최소 1회 검증
 - Layer 2 exploratory QA를 실행했다면 Layer 3 단건 `pnpm qa:eval -- --checklist ... --report ...` 결과까지 PR에 남긴다
 - unresolved authority blocker가 있으면 `Ready for Review`로 넘기지 않는다
+- authority-required slice는 public Stage 4 완료 뒤 Codex `authority_precheck`를 먼저 통과해야 Stage 5로 넘어간다
 - README `Delivery Checklist`, acceptance, Design Status를 PR 준비 전에 최신화
 - stage-result에는 이번 run에서 닫은 checklist id(`checklist_updates[]`)와 evidence ref를 남긴다
 - PR 본문 `Actual Verification`에 실제 브라우저 확인 / local demo / local Supabase / `N/A` 근거 기록
@@ -509,12 +511,13 @@
 
 ## Stage 5: 디자인 리뷰
 
-**담당: Claude**
+**담당: Codex**
 
 ### 트리거 조건
 
 - **기본**: 신규 화면 또는 high-risk UI change에서 workpack README의 Design Status가 `pending-review` 상태
-- **기본 추가**: 신규 화면, high-risk UI change, anchor extension은 authority report가 있어야 `confirmed` 판정을 검토할 수 있다
+- **기본 추가**: 신규 화면, high-risk UI change, anchor extension은 authority report가 있어야 Stage 5 public review를 시작할 수 있다
+- **authority-required**: public Stage 5 approve 뒤에는 Claude `final_authority_gate`를 추가로 통과해야 `confirmed`를 줄 수 있다
 - **예외 1**: `temporary` 상태에서 명시적 요청이 있으면 기능 검토(5개 UI 상태·화면정의서 일치)만 수행, 스타일 리뷰 제외
 - **예외 2**: 기존 confirmed 화면의 low-risk UI change는 Stage 5를 생략하고 Stage 6에서 lightweight design check로 흡수할 수 있다
 - Figma URL은 트리거가 아닌 **추가 컨텍스트** — 제공되면 리뷰 시 참조
@@ -547,12 +550,13 @@
 
 - 디자인 피드백 (구체적 수정 위치·파일명·라인 포함)
 - Tailwind 클래스 교체 제안 (컴포넌트 구조 변경은 Codex와 협의)
-- workpack README Design Status 업데이트 (`confirmed`으로 변경 가능 시)
+- workpack README Design Status 업데이트 준비 (`confirmed` 가능 여부는 authority-required slice에서 Claude final authority gate가 결정)
 - authority blocker가 남으면 `confirmed` 보류와 재검토 조건 명시
 - stage-result에 `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`를 남긴다
-- Claude가 rebuttal을 받아들이면 `waived_fix_ids[]`로 남기고, supervisor가 README/acceptance metadata에 waiver comment를 반영한다
+- authority-required slice면 `authority_verdict`, `reviewed_screen_ids`, `authority_report_paths`, `blocker_count`, `major_count`, `minor_count`도 남긴다
+- Claude final authority gate가 rebuttal을 받아들이면 `waived_fix_ids[]`로 남기고, supervisor가 README/acceptance metadata에 waiver comment를 반영한다
 
-### 완료 요약 (리뷰 종료 시 Claude가 출력)
+### 완료 요약 (리뷰 종료 시 Codex가 출력)
 
 ```
 ## 5단계 완료: <slice-name> 디자인 리뷰
@@ -567,12 +571,14 @@
 - 공용 컴포넌트 일관성: ✅/❌ (confirmed 시만)
 - 접근성 기본 요소: ✅/❌ (confirmed 시만)
 - authority blocker 해소: ✅/❌ (해당 시)
+- final authority gate 필요 여부: 예 / 아니오
 
 ### 피드백 요약
 - <수정 제안 항목 (파일명·위치 포함)>
 
 ### 다음 단계
-→ 6단계(Claude): 프론트엔드 PR 리뷰
+→ authority-required slice: Claude `final_authority_gate`
+→ 그 외: 6단계(Codex): 프론트엔드 PR 리뷰
 → 사전 조건: required CI green + Draft 해제
 ```
 
@@ -580,7 +586,7 @@
 
 ## Stage 6: 프론트엔드 PR 리뷰
 
-**담당: Claude**
+**담당: Codex**
 
 ### 사전 조건 (3가지 모두 충족 시에만 시작)
 
@@ -612,7 +618,7 @@
 - [ ] acceptance에서 `Manual Only`를 제외한 In Scope 미체크 항목이 없는가
 - [ ] Layer 1 deterministic gate와 real DB/bootstrap smoke evidence가 PR에 남아 있는가
 - [ ] exploratory QA가 required인 변경이면 report와 qa eval 결과가 있고, 주요 finding이 처리되었거나 근거와 함께 남아 있는가
-- [ ] 신규 화면, high-risk UI change, anchor extension이면 authority report가 있고 unresolved blocker가 0개인가
+- [ ] 신규 화면, high-risk UI change, anchor extension이면 authority report가 있고 final authority verdict가 `pass`인가
 - [ ] 브랜치·커밋·PR 본문이 규칙을 만족하는가
 - [ ] 보안/성능/디자인 영향이 PR 템플릿에 기록되었는가
 - [ ] README `Delivery Checklist`, roadmap status, Design Status, acceptance가 서로 일치하는가
@@ -624,7 +630,7 @@
 수정 요청 없이 승인 + current head 기준 started PR checks 전체 green 확인 → merge.
 **merge 시 `docs/workpacks/README.md` Slice Order의 해당 슬라이스 Status를 `in-progress` → `merged`로 변경한다** (이 PR에 포함).
 
-### 완료 요약 (슬라이스 최종 완료 요약 포함, Claude가 출력)
+### 완료 요약 (슬라이스 최종 완료 요약 포함, Codex가 출력)
 
 ```
 ## 6단계 완료: <slice-name> 프론트엔드 PR 리뷰

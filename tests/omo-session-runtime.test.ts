@@ -63,4 +63,40 @@ describe("OMO session runtime", () => {
       reviewed_screen_ids: ["RECIPE_DETAIL"],
     });
   });
+
+  it("normalizes final_authority_gate as a valid execution subphase", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "06-recipe-to-planner",
+      state: {
+        slice: "06-recipe-to-planner",
+        active_stage: 5,
+        current_stage: 5,
+        workspace: {
+          path: "/tmp/worktree",
+          branch_role: "frontend",
+        },
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: "ses_claude_authority",
+          artifact_dir: "/tmp/artifacts",
+          stage_result_path: "/tmp/artifacts/stage-result.json",
+          pr_role: "frontend",
+          subphase: "final_authority_gate",
+        },
+      },
+    });
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId: "06-recipe-to-planner",
+      slice: "06-recipe-to-planner",
+    });
+
+    expect(state.execution?.subphase).toBe("final_authority_gate");
+    expect(state.execution?.session_role).toBe("claude_primary");
+  });
 });

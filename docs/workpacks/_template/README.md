@@ -48,13 +48,13 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review) — Stage 4 완료, Claude Stage 5 디자인 리뷰 필요
-- [ ] 확정 (confirmed) — Stage 5 리뷰 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 > Design Status 전이: `temporary` (Stage 1 기본값)
->   → `pending-review` (Stage 4 완료, Codex가 변경)
->   → `confirmed` (Stage 5 리뷰 통과, Claude가 변경)
+>   → `pending-review` (Stage 4 완료 후)
+>   → `confirmed` (Stage 5 public review 통과 후, authority-required면 final authority gate 통과 후)
 > BE-only 슬라이스: `N/A` 선택, Stage 4~6 스킵, Stage 3 merge 시 슬라이스 종료
 > 신규 화면 / high-risk / anchor-extension은 `confirmed` 전에 authority review 근거가 필요하다.
 

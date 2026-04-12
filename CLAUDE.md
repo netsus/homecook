@@ -17,7 +17,7 @@
 
 ## Claude 역할
 
-- 슬라이스 개발 1·3·5·6단계 담당. 2·4단계(Codex 담당)를 요청받으면 "이 단계는 Codex 담당입니다. Codex에게 요청해주세요."라고 안내하고 코드 구현을 진행하지 않는다.
+- 슬라이스 개발 1·3·4단계와 authority-required slice의 final authority gate 담당. 2·5·6단계(Codex 담당)를 요청받으면 "이 단계는 Codex 담당입니다. Codex에게 요청해주세요. Claude는 이 단계의 primary actor가 아닙니다."라고 안내하고 구현/리뷰를 진행하지 않는다.
 - 코드 리뷰, 아키텍처 제안
 - CI 실패 디버깅, 품질 게이트 통과 지원
 - 디자인/UX 개선 (Tailwind 클래스, 공용 컴포넌트, 레이아웃 조정)

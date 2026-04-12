@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
 import { runStageWithArtifacts } from "./omo-lite-runner.mjs";
-import { syncWorkflowV2Status } from "./omo-lite-supervisor.mjs";
+import { resolveStageSessionRole, syncWorkflowV2Status } from "./omo-lite-supervisor.mjs";
 import { createGithubAutomationClient } from "./omo-github.mjs";
 import { resolveClaudeProviderConfig, resolveCodexProviderConfig } from "./omo-provider-config.mjs";
 import {
@@ -634,6 +634,59 @@ function resolveStage4Subphase({
     : "implementation";
 }
 
+function resolveStage5Subphase({
+  rootDir,
+  slice,
+  state,
+}) {
+  const activeSubphase = state.execution?.subphase ?? null;
+  if (
+    state.active_stage === 5 &&
+    (isPendingReviewPhase(resolveStatePhase(state)) || resolveStatePhase(state) === "merge_pending") &&
+    ["final_authority_gate", "implementation"].includes(activeSubphase)
+  ) {
+    return activeSubphase;
+  }
+
+  const designAuthorityConfig = resolveDesignAuthorityConfig({
+    rootDir,
+    slice,
+  });
+  if (!designAuthorityConfig?.authority_required) {
+    return "implementation";
+  }
+
+  return state.design_authority?.status === "final_authority_pending"
+    ? "final_authority_gate"
+    : "implementation";
+}
+
+function resolvePublicStageApprovalState(stage) {
+  return resolveStageSessionRole(stage, "implementation") === "claude_primary"
+    ? "claude_approved"
+    : "codex_approved";
+}
+
+function validateFinalAuthorityGateReadiness({
+  designAuthorityConfig,
+  designAuthorityState,
+}) {
+  if (!designAuthorityConfig?.authority_required) {
+    return [];
+  }
+
+  const issues = [];
+  if (designAuthorityState?.status !== "reviewed") {
+    issues.push("Authority-required Stage 6 requires Claude final_authority_gate to finish with design_authority.status=reviewed.");
+  }
+
+  if (designAuthorityState?.authority_verdict !== "pass") {
+    issues.push("Authority-required Stage 6 requires final authority verdict pass before review or merge can continue.");
+  }
+
+  return normalizeStringArray(issues);
+}
+
 function validateAuthorityPrecheckStageResult({
   stageResult,
   authorityConfig,
@@ -1079,7 +1132,10 @@ function repairActiveBookkeepingDrift({
     wait: repairedState.wait,
     prPath: activePr?.url ?? null,
     now,
-    approvalState: repairStage >= 5 ? "claude_approved" : "codex_approved",
+    approvalState:
+      resolveStageSessionRole(repairStage, repairedState.execution?.subphase ?? "implementation") === "claude_primary"
+        ? "claude_approved"
+        : "codex_approved",
     lifecycle: resolveBookkeepingRepairLifecycle({
       stage: repairStage,
       prRole,
@@ -1199,7 +1255,10 @@ function resolveStageProvider({
   opencodeBin,
   environment,
 }) {
-  if (stage === 2 && subphase === "doc_gate_review") {
+  if (
+    (stage === 2 && subphase === "doc_gate_review") ||
+    (stage === 5 && subphase === "final_authority_gate")
+  ) {
     const claudeProviderConfig = resolveClaudeProviderConfig({
       rootDir,
       provider: claudeProvider,
@@ -1215,7 +1274,7 @@ function resolveStageProvider({
     };
   }
 
-  if ([2, 4].includes(stage)) {
+  if (stage === 2 || stage === 5 || stage === 6 || (stage === 4 && subphase === "authority_precheck")) {
     const codexProviderConfig = resolveCodexProviderConfig({
       rootDir,
       bin: opencodeBin,
@@ -1313,8 +1372,10 @@ function buildRecoverySnapshot({
 
   const sessionRole =
     state.execution?.session_role ??
-    ([1, 3, 5, 6].includes(stage) ? "claude_primary" : "codex_primary");
-  const session = state.sessions?.[sessionRole] ?? null;
+    (Number.isInteger(stage) && stage >= 1 && stage <= 6
+      ? resolveStageSessionRole(stage, state.execution?.subphase ?? "implementation")
+      : null);
+  const session = sessionRole ? state.sessions?.[sessionRole] ?? null : null;
   const existingPr = prRole ? state.prs?.[prRole] ?? null : null;
 
   return {
@@ -1337,8 +1398,8 @@ function buildRecoverySnapshot({
         : null,
     salvage_candidate: changedFiles.length > 0,
     session_role: sessionRole,
-    session_provider: session?.provider ?? null,
-    session_id: session?.session_id ?? null,
+    session_provider: session?.provider ?? state.execution?.provider ?? null,
+    session_id: session?.session_id ?? state.execution?.session_id ?? null,
     updated_at: now,
   };
 }
@@ -1476,7 +1537,7 @@ function updateRuntimeStatusForWait({
   wait,
   prPath,
   now,
-  approvalState = "not_started",
+  approvalState = null,
   lifecycle = "in_progress",
   verificationStatus = "pending",
   extraNotes = [],
@@ -1496,16 +1557,20 @@ function updateRuntimeStatusForWait({
   }
   notes.push(...extraNotes);
 
+  const statusPatch = {
+    pr_path: prPath ?? undefined,
+    lifecycle,
+    verification_status: verificationStatus,
+    notes: notes.join(" "),
+  };
+  if (typeof approvalState === "string" && approvalState.trim().length > 0) {
+    statusPatch.approval_state = approvalState;
+  }
+
   syncStatus({
     rootDir,
     workItemId,
-    patch: {
-      pr_path: prPath ?? undefined,
-      lifecycle,
-      approval_state: approvalState,
-      verification_status: verificationStatus,
-      notes: notes.join(" "),
-    },
+    patch: statusPatch,
     now,
   });
 }
@@ -1840,7 +1905,7 @@ function runAutonomousEvaluationLoop({
           artifactDir: rerun.artifactDir,
           execution: {
             provider: rerun.execution?.provider ?? null,
-            session_role: stage === 1 ? "claude_primary" : "codex_primary",
+            session_role: resolveStageSessionRole(stage, subphase),
             session_id: rerun.execution?.sessionId ?? null,
             artifact_dir: rerun.artifactDir,
             stage_result_path: stageResultPath,
@@ -2303,7 +2368,7 @@ function processWaitState({
         wait: nextState.wait,
         prPath: activePr.url,
         now,
-        approvalState: "codex_approved",
+        approvalState: resolvePublicStageApprovalState(2),
         lifecycle: "ready_for_review",
         verificationStatus: "passed",
       });
@@ -2376,7 +2441,7 @@ function processWaitState({
         wait: nextState.wait,
         prPath: activePr.url,
         now,
-        approvalState: "codex_approved",
+        approvalState: resolvePublicStageApprovalState(4),
         lifecycle: "ready_for_review",
         verificationStatus: "passed",
       });
@@ -2388,6 +2453,60 @@ function processWaitState({
     }
 
     if (prRole === "frontend" && state.wait.stage === 5) {
+      const designAuthorityConfig = resolveDesignAuthorityConfig({
+        rootDir,
+        slice: state.slice ?? workItemId,
+      });
+      const authorityStatus = state.design_authority?.status ?? null;
+
+      if (designAuthorityConfig?.authority_required) {
+        if (authorityStatus === "final_authority_pending") {
+          const nextState = saveRuntime({
+            rootDir,
+            workItemId,
+            state: setWaitState({
+              state: setPullRequestRef({
+                state,
+                role: "frontend",
+                number: activePr.number,
+                url: activePr.url,
+                draft: false,
+                branch: activePr.branch,
+                headSha: activePr.head_sha,
+                updatedAt: now,
+              }),
+              kind: "ready_for_next_stage",
+              prRole: "frontend",
+              stage: 5,
+              headSha: activePr.head_sha,
+              updatedAt: now,
+            }),
+          });
+          updateRuntimeStatusForWait({
+            rootDir,
+            workItemId,
+            wait: nextState.wait,
+            prPath: activePr.url,
+            now,
+            approvalState: "codex_approved",
+            lifecycle: "ready_for_review",
+            verificationStatus: "passed",
+            extraNotes: ["authority_final_gate=pending"],
+          });
+          return {
+            state: nextState,
+            action: "run-stage",
+            nextStage: 5,
+          };
+        }
+
+        if (authorityStatus !== "reviewed") {
+          throw new Error(
+            `Authority-required Stage 5 cannot advance with design_authority.status=${authorityStatus ?? "missing"}.`,
+          );
+        }
+      }
+
       const nextState = saveRuntime({
         rootDir,
         workItemId,
@@ -2415,7 +2534,10 @@ function processWaitState({
         wait: nextState.wait,
         prPath: activePr.url,
         now,
-        approvalState: "claude_approved",
+        approvalState:
+          designAuthorityConfig?.authority_required && state.design_authority?.status === "reviewed"
+            ? "claude_approved"
+            : "codex_approved",
         lifecycle: "ready_for_review",
         verificationStatus: "passed",
       });
@@ -2737,7 +2859,7 @@ function finalizeCodeStage({
       wait: nextState.wait,
       prPath: nextState.prs?.[prRole]?.url ?? null,
       now,
-      approvalState: "codex_approved",
+      approvalState: resolvePublicStageApprovalState(stage),
       lifecycle: "ready_for_review",
       verificationStatus: "pending",
       extraNotes: ["rebuttal_handoff=true"],
@@ -3103,7 +3225,7 @@ function finalizeCodeStage({
       wait: nextState.wait,
       prPath: pr.url,
       now,
-      approvalState: "codex_approved",
+      approvalState: resolvePublicStageApprovalState(stage),
       lifecycle: "ready_for_review",
       verificationStatus: "passed",
     });
@@ -3232,7 +3354,7 @@ function handleImplementationCodeStage({
           execution: {
             provider: runResult.execution?.provider ?? null,
             session_role:
-              runResult.dispatch?.sessionBinding?.role ?? (stage === 1 ? "claude_primary" : "codex_primary"),
+              runResult.dispatch?.sessionBinding?.role ?? resolveStageSessionRole(stage, subphase),
             session_id: runResult.execution?.sessionId ?? null,
             artifact_dir: runResult.artifactDir,
             stage_result_path: stageResultPath,
@@ -3755,7 +3877,7 @@ function handleAuthorityPrecheckStage({
       wait: nextState.wait,
       prPath: activePr.url,
       now,
-      approvalState: "codex_approved",
+      approvalState: resolvePublicStageApprovalState(4),
       lifecycle: "ready_for_review",
       verificationStatus: "passed",
       extraNotes: ["design_authority=prechecked"],
@@ -4630,6 +4752,7 @@ function handleReviewStage({
   workItemId,
   state,
   stage,
+  subphase = "implementation",
   stageRunner,
   worktree,
   github,
@@ -4688,6 +4811,32 @@ function handleReviewStage({
       worktree,
     });
   }
+  const designAuthorityConfig = [5, 6].includes(stage)
+    ? resolveDesignAuthorityConfig({
+        rootDir,
+        slice: state.slice ?? workItemId,
+      })
+    : null;
+  const finalAuthorityGateIssues =
+    stage === 6
+      ? validateFinalAuthorityGateReadiness({
+          designAuthorityConfig,
+          designAuthorityState: nextState.design_authority,
+        })
+      : [];
+  if (finalAuthorityGateIssues.length > 0) {
+    return blockWithRecovery({
+      rootDir,
+      workItemId,
+      slice: state.slice ?? workItemId,
+      state: nextState,
+      stage,
+      prRole,
+      reason: summarizeChecklistIssues(finalAuthorityGateIssues),
+      now,
+      worktree,
+    });
+  }
   const phase = resolveStatePhase(nextState);
 
   if ((!isPendingReviewPhase(phase) && phase !== "merge_pending") || nextState.active_stage !== stage) {
@@ -4704,6 +4853,7 @@ function handleReviewStage({
       workItemId,
       slice: state.slice ?? workItemId,
       stage,
+      subphase,
       executionDir: state.workspace?.path,
       priorStageResultPath,
     });
@@ -4746,7 +4896,9 @@ function handleReviewStage({
           artifactDir: runResult.artifactDir,
           execution: {
             provider: runResult.execution?.provider ?? null,
-            session_role: "claude_primary",
+            session_role:
+              runResult.dispatch?.sessionBinding?.role ??
+              resolveStageSessionRole(stage, subphase),
             session_id: runResult.execution?.sessionId ?? null,
             artifact_dir: runResult.artifactDir,
             stage_result_path: stageResultPath,
@@ -4756,6 +4908,7 @@ function handleReviewStage({
             verify_bucket: null,
             commit_sha: null,
             pr_role: prRole,
+            subphase,
           },
           clearRecovery: true,
         }),
@@ -4770,13 +4923,7 @@ function handleReviewStage({
   const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
   const reviewRole = prRole === "backend" ? "backend" : "frontend";
   const rebuttalEntry = nextState.last_rebuttal?.[reviewRole] ?? null;
-  const designAuthorityConfig =
-    stage === 5
-      ? resolveDesignAuthorityConfig({
-          rootDir,
-          slice: state.slice ?? workItemId,
-        })
-      : null;
+  const isFinalAuthorityGate = stage === 5 && subphase === "final_authority_gate";
   const reviewChecklistIssues = validateReviewStageChecklistContract({
     checklistContract,
     stage,
@@ -4839,8 +4986,10 @@ function handleReviewStage({
         state: setDesignAuthorityState({
           state: nextState,
           status:
-            stageResult.decision === "approve" && stageResult.authority_verdict === "pass"
+            stageResult.decision === "approve" && isFinalAuthorityGate && stageResult.authority_verdict === "pass"
               ? "reviewed"
+              : stageResult.decision === "approve"
+                ? "final_authority_pending"
               : "needs_revision",
           uiRisk: designAuthorityConfig.ui_risk,
           anchorScreens: designAuthorityConfig.anchor_screens,
@@ -4892,6 +5041,41 @@ function handleReviewStage({
 
     if (stageResult.decision === "approve") {
       if (stage === 5) {
+        if (designAuthorityConfig?.authority_required && !isFinalAuthorityGate) {
+          nextState = saveRuntime({
+            rootDir,
+            workItemId,
+            state: setWaitState({
+              state: markStageCompleted({
+                state: nextState,
+                stage,
+                artifactDir,
+              }),
+              kind: "ready_for_next_stage",
+              prRole: "frontend",
+              stage: 5,
+              headSha: activePr.head_sha,
+              updatedAt: now,
+            }),
+          });
+          updateRuntimeStatusForWait({
+            rootDir,
+            workItemId,
+            wait: nextState.wait,
+            prPath: activePr.url,
+            now,
+            approvalState: "codex_approved",
+            lifecycle: "ready_for_review",
+            verificationStatus: "passed",
+            extraNotes: ["authority_final_gate=pending"],
+          });
+          return {
+            state: nextState,
+            wait: nextState.wait,
+            transitioned: true,
+          };
+        }
+
         const bookkeeping = applyDesignReviewBookkeeping({
           worktreePath: nextState.workspace.path,
           slice: state.slice ?? workItemId,
@@ -4940,7 +5124,7 @@ function handleReviewStage({
             wait: nextState.wait,
             prPath: activePr.url,
             now,
-            approvalState: "claude_approved",
+            approvalState: isFinalAuthorityGate ? "claude_approved" : "codex_approved",
             lifecycle: "ready_for_review",
             verificationStatus: "pending",
             extraNotes: ["bookkeeping=design_status_confirmed"],
@@ -4974,7 +5158,7 @@ function handleReviewStage({
           wait: nextState.wait,
           prPath: activePr.url,
           now,
-          approvalState: "claude_approved",
+          approvalState: isFinalAuthorityGate ? "claude_approved" : "codex_approved",
           lifecycle: "ready_for_review",
           verificationStatus: "passed",
         });
@@ -5230,6 +5414,27 @@ function handleReviewStage({
   }
 
   if (resolveStatePhase(nextState) === "merge_pending") {
+    const mergeAuthorityGateIssues =
+      stage === 6
+        ? validateFinalAuthorityGateReadiness({
+            designAuthorityConfig,
+            designAuthorityState: nextState.design_authority,
+          })
+        : [];
+    if (mergeAuthorityGateIssues.length > 0) {
+      return blockWithRecovery({
+        rootDir,
+        workItemId,
+        slice: state.slice ?? workItemId,
+        state: nextState,
+        stage,
+        prRole,
+        reason: summarizeChecklistIssues(mergeAuthorityGateIssues),
+        now,
+        worktree,
+      });
+    }
+
     if (!stageResult || stageResult.decision !== "approve") {
       return blockWithRecovery({
         rootDir,
@@ -5888,17 +6093,24 @@ export function superviseWorkItem(
         };
       }
 
-      try {
-        const stageSubphase =
-          stage === 2
-            ? resolveStage2Subphase(state)
-            : stage === 4
-              ? resolveStage4Subphase({
+      const stageSubphase =
+        stage === 2
+          ? resolveStage2Subphase(state)
+          : stage === 4
+            ? resolveStage4Subphase({
+                rootDir,
+                slice: resolvedSlice,
+                state,
+              })
+            : stage === 5
+              ? resolveStage5Subphase({
                   rootDir,
                   slice: resolvedSlice,
                   state,
                 })
-              : null;
+            : null;
+
+      try {
         assertStageProviderReady({
           auth: dependencies.auth,
           rootDir,
@@ -5993,6 +6205,7 @@ export function superviseWorkItem(
         slice: resolvedSlice,
         state,
         stage,
+        subphase: stageSubphase ?? "implementation",
         stageRunner: dependencies.stageRunner,
         worktree: stageWorktree,
         github: dependencies.github,
@@ -6047,17 +6260,19 @@ export function superviseWorkItem(
       runtimeState: cappedState,
       worktree: dependencies.worktree,
     });
+    const cappedStatusPatch = {
+      lifecycle:
+        cappedState.wait?.kind === "human_escalation" ? "blocked" : "in_progress",
+      verification_status: "pending",
+      notes: `wait_kind=${cappedState.wait?.kind ?? "none"} reason=max transitions exceeded`,
+    };
+    if (cappedState.wait?.kind === "human_escalation") {
+      cappedStatusPatch.approval_state = "human_escalation";
+    }
     syncStatus({
       rootDir,
       workItemId: normalizedWorkItemId,
-      patch: {
-        lifecycle:
-          cappedState.wait?.kind === "human_escalation" ? "blocked" : "in_progress",
-        approval_state:
-          cappedState.wait?.kind === "human_escalation" ? "human_escalation" : "not_started",
-        verification_status: "pending",
-        notes: `wait_kind=${cappedState.wait?.kind ?? "none"} reason=max transitions exceeded`,
-      },
+      patch: cappedStatusPatch,
       now,
     });
 

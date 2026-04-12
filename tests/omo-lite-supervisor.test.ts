@@ -142,14 +142,14 @@ describe("OMO-lite stage dispatch", () => {
     );
   });
 
-  it("builds a Stage 4 Codex dispatch with frontend SOP verification defaults", () => {
+  it("builds a Stage 4 Claude dispatch with frontend SOP verification defaults", () => {
     const dispatch = buildStageDispatch({
       slice: "02-discovery-filter",
       stage: 4,
       claudeBudgetState: "available",
     });
 
-    expect(dispatch.actor).toBe("codex");
+    expect(dispatch.actor).toBe("claude");
     expect(dispatch.requiredReads).toEqual(
       expect.arrayContaining([
         "AGENTS.md",
@@ -188,10 +188,10 @@ describe("OMO-lite stage dispatch", () => {
     );
   });
 
-  it("keeps the previous approval state when Stage 6 is blocked for a Claude retry", () => {
+  it("keeps the previous approval state when Stage 4 is blocked for a Claude retry", () => {
     const dispatch = buildStageDispatch({
       slice: "02-discovery-filter",
-      stage: 6,
+      stage: 4,
       claudeBudgetState: "unavailable",
     });
 
@@ -213,10 +213,10 @@ describe("OMO-lite stage dispatch", () => {
     expect(dispatch.escalationIfBlocked).toContain("Claude");
   });
 
-  it("keeps Stage 4 assigned to Codex even when Claude is unavailable", () => {
+  it("keeps Stage 6 assigned to Codex even when Claude is unavailable", () => {
     const dispatch = buildStageDispatch({
       slice: "02-discovery-filter",
-      stage: 4,
+      stage: 6,
       claudeBudgetState: "unavailable",
     });
 
@@ -230,10 +230,30 @@ describe("OMO-lite stage dispatch", () => {
       action: "none",
     });
     expect(dispatch.statusPatch).toMatchObject({
-      branch: "feature/fe-02-discovery-filter",
-      lifecycle: "in_progress",
-      approval_state: "not_started",
+      branch: null,
+      lifecycle: "ready_for_review",
+      approval_state: "codex_approved",
     });
+  });
+
+  it("builds a Stage 5 Codex dispatch and a Claude final_authority_gate subphase", () => {
+    const publicDispatch = buildStageDispatch({
+      slice: "06-recipe-to-planner",
+      stage: 5,
+      claudeBudgetState: "available",
+    });
+    const authorityDispatch = buildStageDispatch({
+      slice: "06-recipe-to-planner",
+      stage: 5,
+      subphase: "final_authority_gate",
+      claudeBudgetState: "available",
+    });
+
+    expect(publicDispatch.actor).toBe("codex");
+    expect(publicDispatch.sessionBinding.role).toBe("codex_primary");
+    expect(authorityDispatch.actor).toBe("claude");
+    expect(authorityDispatch.sessionBinding.role).toBe("claude_primary");
+    expect(authorityDispatch.goal).toContain("final authority gate");
   });
 
   it("injects prior review feedback into Stage 2 reruns", () => {

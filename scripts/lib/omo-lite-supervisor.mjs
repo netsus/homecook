@@ -35,7 +35,11 @@ export function resolveStageSessionRole(stage, subphase = null) {
     return "claude_primary";
   }
 
-  if ([1, 3, 5, 6].includes(normalizedStage)) {
+  if (normalizedStage === 5 && subphase === "final_authority_gate") {
+    return "claude_primary";
+  }
+
+  if ([1, 3, 4].includes(normalizedStage)) {
     return "claude_primary";
   }
 
@@ -83,6 +87,35 @@ function ensureStage(value) {
 }
 
 function productStageSpec(stage, slice, subphase = null) {
+  if (stage === 5 && subphase === "final_authority_gate") {
+    return {
+      actor: "claude",
+      branch: null,
+      lifecycle: "ready_for_review",
+      approval_state: "claude_approved",
+      verification_status: "passed",
+      requiredReads: [
+        `docs/workpacks/${slice}/README.md`,
+        `docs/workpacks/${slice}/acceptance.md`,
+        "frontend PR diff",
+        "docs/design/design-tokens.md",
+        "docs/design/mobile-ux-rules.md",
+        "docs/design/anchor-screens.md",
+        "docs/engineering/product-design-authority.md",
+        "authority report",
+      ],
+      deliverables: [
+        "final authority review summary",
+        "requested changes or final authority approval",
+      ],
+      verifyCommands: [],
+      successCondition:
+        "Authority-required frontend slice receives Claude final authority verdict and can proceed to Stage 6 or route fixes back to Stage 4.",
+      escalationIfBlocked:
+        "Escalate to human if final authority cannot be determined from the available evidence.",
+    };
+  }
+
   if (stage === 4 && subphase === "authority_precheck") {
     return {
       actor: "codex",
@@ -242,7 +275,7 @@ function productStageSpec(stage, slice, subphase = null) {
         "Escalate to human if CI, autonomous merge policy, and review conclusions disagree or if scope exceeds the locked contract.",
     },
     4: {
-      actor: "codex",
+      actor: "claude",
       branch: `feature/fe-${slice}`,
       lifecycle: "in_progress",
       approval_state: "not_started",
@@ -273,10 +306,10 @@ function productStageSpec(stage, slice, subphase = null) {
       escalationIfBlocked: "Escalate to human if backend contract and UI scope are no longer aligned.",
     },
     5: {
-      actor: "claude",
+      actor: "codex",
       branch: null,
       lifecycle: "ready_for_review",
-      approval_state: "claude_approved",
+      approval_state: "codex_approved",
       verification_status: "passed",
       requiredReads: [
         `docs/workpacks/${slice}/README.md`,
@@ -290,18 +323,17 @@ function productStageSpec(stage, slice, subphase = null) {
       ],
       deliverables: [
         "design review summary",
-        `docs/workpacks/${slice}/README.md design status confirmed update when approved`,
-        "requested changes or confirmed status",
+        "requested changes or Stage 6 handoff",
       ],
       verifyCommands: [],
-      successCondition: "Design review feedback is recorded and the PR can proceed or route fixes back to Codex.",
+      successCondition: "Design review feedback is recorded and the PR can proceed to final authority gate or Stage 6, or route fixes back to implementation.",
       escalationIfBlocked: "Escalate to human if design intent conflicts with the workpack or official screen definitions.",
     },
     6: {
-      actor: "claude",
+      actor: "codex",
       branch: null,
       lifecycle: "ready_for_review",
-      approval_state: "claude_approved",
+      approval_state: "codex_approved",
       verification_status: "passed",
       requiredReads: [
         `docs/workpacks/${slice}/README.md`,
@@ -318,7 +350,7 @@ function productStageSpec(stage, slice, subphase = null) {
       successCondition:
         "Frontend PR receives final review feedback or approval and can proceed to external smoke validation and automatic merge.",
       escalationIfBlocked:
-        "Escalate to Claude or human if final review cannot run, autonomous merge policy is unavailable, or unresolved risks remain.",
+        "Escalate to human if final closeout cannot run, autonomous merge policy is unavailable, or unresolved risks remain.",
     },
   };
 
@@ -332,6 +364,10 @@ function buildGoal(stage, slice, subphase = null) {
 
   if (stage === 2 && subphase === "doc_gate_review") {
     return `슬라이스 ${slice} internal 1.5 docs review`;
+  }
+
+  if (stage === 5 && subphase === "final_authority_gate") {
+    return `슬라이스 ${slice} final authority gate`;
   }
 
   if (stage === 4 && subphase === "authority_precheck") {
