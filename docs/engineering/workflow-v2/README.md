@@ -96,7 +96,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - repo-local OpenCode / OMO config bootstrap
 - minimal `omo:dispatch-stage` / `omo:sync-status` helper 도입
 - direct `omo:run-stage` execution binding + `.artifacts/omo-lite-dispatch/` artifact bundle
-- Stage 4 `authority_precheck` + Stage 5 Claude final authority 흐름
+- Stage 4 Claude implementation + Codex `authority_precheck` + Stage 5 Codex public review + Claude `final_authority_gate` 흐름
 - automatic Claude budget resolution + repo-local override
 - JSON schema와 예시 파일 추가
 - `validate:workflow-v2` 최소 validator 추가
@@ -131,8 +131,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
   - `pnpm omo:scheduler:verify`
 - 현재 baseline의 해석:
   - `fullauto v1`은 low/medium autonomous slice의 무인 merge까지 자동화한다.
-  - merge authority는 GitHub formal approval이 아니라 Claude review artifact + 전체 PR checks + external smoke다.
-  - authority-required UI는 Codex `authority_precheck` 후 Claude final authority를 거친다.
+  - merge authority는 GitHub formal approval이 아니라 stage owner review artifact + authority gate pass(해당 시) + 전체 PR checks + external smoke다.
+  - authority-required UI는 Claude Stage 4 구현 뒤 Codex `authority_precheck`, Codex Stage 5 public review, Claude `final_authority_gate`를 거친다.
   - Stage 6 approve 뒤 supervisor는 `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence` bundle을 `internal 6.5`로 실행하고, fixable slice-local drift만 같은 frontend PR branch에서 auto-repair한다.
   - `high-risk` / `anchor-extension` slice는 stage execution은 지원하지만 automatic merge는 금지하고 manual merge handoff로 끝낸다.
   - live smoke는 일반 PR CI 필수 단계가 아니라 sandbox/on-demand 운영 검증 경로다.
@@ -155,7 +155,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 5. `pnpm validate:workflow-v2`를 통과시킨다.
 6. medium/high risk 작업이면 plan loop summary artifact를 남긴다.
 7. review loop summary artifact는 docs-governance, workflow/tooling 변경, 또는 exceptional recovery일 때만 남긴다.
-8. OMO-lite supervised execution이 필요하면 `pnpm omo:run-stage -- --slice <id> --stage <n>`으로 dispatch artifact를 만들고, Codex stage에 한해 `--mode execute`를 사용한다.
+8. OMO-lite supervised execution이 필요하면 `pnpm omo:run-stage -- --slice <id> --stage <n>`으로 dispatch artifact를 만들고, public code stage 실행이 필요할 때 `--mode execute`를 사용한다.
+   slice6 기준 public Stage 4는 Claude execute path를 사용할 수 있고, Stage 5 `final_authority_gate`는 review gate이므로 execute 대상이 아니라 review artifact 경로로 다룬다.
 9. Claude reviewer availability를 로컬에서 강제로 조정해야 하면 `pnpm omo:claude-budget -- --set unavailable --reason "<reason>"` 또는 `--clear`를 사용한다.
 10. reviewer fallback도 tracked state에 같이 남기려면 `pnpm omo:run-stage -- --slice <id> --stage <n> --sync-status`를 사용한다.
 11. sandbox GitHub repo에서 supervisor control plane을 점검할 때는 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`를 사용한다.

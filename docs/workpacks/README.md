@@ -27,13 +27,13 @@
 
 **Status 전이 규칙**
 
-| 전이 | 시점 | 담당 |
-|------|------|------|
-| `planned` → `docs` | Stage 1 PR 오픈 시 | Claude |
-| `docs` → `in-progress` | Stage 1 merge + Stage 2 착수 시 | Codex |
-| `in-progress` → `merged` | Stage 6 FE PR merge 시 | Claude |
+| 전이 | 시점 |
+|------|------|
+| `planned` → `docs` | Stage 1 docs PR 오픈 시 |
+| `docs` → `in-progress` | Stage 1 merge + Stage 2 착수 시 |
+| `in-progress` → `merged` | Stage 6 frontend closeout이 merge까지 반영된 시점 |
 
-Slice Order 표의 Status 값은 위 규칙에 따라 PR 오픈/merge 시점에 해당 PR에 포함해 갱신한다.
+Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout bookkeeping update에 포함해 갱신한다.
 
 ## Operating Rules
 

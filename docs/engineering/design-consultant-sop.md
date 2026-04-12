@@ -37,8 +37,8 @@ Stage 4 (FE 구현) 시작 전에 토큰 확정 완료.
 | 파일 | 내용 | 작성 주체 |
 |------|------|----------|
 | `docs/design/design-tokens.md` | 확정 색상·타이포·간격 토큰 | 사용자 또는 Codex가 에이전트 출력 내용 저장 |
-| `app/globals.css` `:root` 블록 | 토큰 변수 업데이트 | Codex Stage 4 전에 적용 |
-| `app/globals.css` `@theme inline` 블록 | Tailwind v4 매핑 추가 | Codex Stage 4 전에 적용 |
+| `app/globals.css` `:root` 블록 | 토큰 변수 업데이트 | Stage 4 public implementation 전에 적용 |
+| `app/globals.css` `@theme inline` 블록 | Tailwind v4 매핑 추가 | Stage 4 public implementation 전에 적용 |
 
 ---
 
@@ -56,16 +56,17 @@ Stage 4 (FE 구현) 시작 전에 토큰 확정 완료.
 
 ```
 temporary (Stage 1 기본값, FE 화면 있는 슬라이스)
-  ↓ Stage 4 완료, Codex가 변경
+  ↓ Stage 4 완료 후
 pending-review
-  ↓ Stage 5 리뷰 통과, Claude가 변경
+  ↓ Stage 5 public review 통과 후
+  ↓ authority-required slice는 final authority gate까지 통과 후
 confirmed
 
 N/A (BE-only 슬라이스, FE 화면 없음 → Stage 4~6 스킵)
 ```
 
-- design-consultant 확정 후: 모든 슬라이스 Stage 4·5에서 `docs/design/design-tokens.md` 기준 적용
-- 소급 적용: Slice 01 컴포넌트도 확정 토큰 기준으로 Stage 5 진입 시 리뷰
+- design-consultant 확정 후: 모든 슬라이스 Stage 4·5 public review에서 `docs/design/design-tokens.md` 기준 적용
+- 소급 적용: Slice 01 컴포넌트도 확정 토큰 기준으로 Stage 5 public review 진입 시 리뷰
 
 ---
 
@@ -77,7 +78,7 @@ N/A (BE-only 슬라이스, FE 화면 없음 → Stage 4~6 스킵)
 | `design-generator` | Stage 1 산출물 | 신규 화면·high-risk UI change용 화면별 와이어프레임 생성 |
 | `design-critic` | Stage 1 산출물 | 신규 화면·high-risk UI change용 **설계 문서** 리뷰 |
 | `product-design-authority` | Stage 1/4/5 연결 | screenshot/Figma 기반 모바일 UX · 시각 위계 · 익숙한 앱 패턴 authority 리뷰 |
-| Stage 5 (Claude 직접) | Stage 4 완료 후 | **구현 코드** 디자인 리뷰 → `confirmed` 판정 |
+| Stage 5 public review / final authority gate | Stage 4 완료 후 | **구현 코드** 디자인 리뷰와 authority-required slice의 최종 `confirmed` gate |
 
 ---
 

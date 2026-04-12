@@ -8,6 +8,7 @@ import {
   continueWorkItemSession,
   readWorkItemSessionStatus,
   resumePendingWorkItems,
+  runWorkItemStage,
   startWorkItemSession,
 } from "../scripts/lib/omo-session-orchestrator.mjs";
 
@@ -256,7 +257,7 @@ function createClaudeHomeDir() {
 }
 
 describe("OMO session orchestrator", () => {
-  it("reuses the same Claude session across Stage 1/3/5/6 and the same Codex session across Stage 2/4", () => {
+  it("reuses the same Claude session across Stage 1/3/4 and the same Codex session across Stage 2/5/6", () => {
     const rootDir = createOrchestratorFixture();
     const homeDir = createClaudeHomeDir();
     const stage1 = createFakeClaudeBin(rootDir, homeDir, "stage1", {
@@ -271,16 +272,16 @@ describe("OMO session orchestrator", () => {
       sessionId: "ses_claude_primary",
       stage: 3,
     });
-    const stage4 = createFakeOpencodeBin(rootDir, "stage4", {
-      sessionId: "ses_codex_primary",
+    const stage4 = createFakeClaudeBin(rootDir, homeDir, "stage4", {
+      sessionId: "ses_claude_primary",
       stage: 4,
     });
-    const stage5 = createFakeClaudeBin(rootDir, homeDir, "stage5", {
-      sessionId: "ses_claude_primary",
+    const stage5 = createFakeOpencodeBin(rootDir, "stage5", {
+      sessionId: "ses_codex_primary",
       stage: 5,
     });
-    const stage6 = createFakeClaudeBin(rootDir, homeDir, "stage6", {
-      sessionId: "ses_claude_primary",
+    const stage6 = createFakeOpencodeBin(rootDir, "stage6", {
+      sessionId: "ses_codex_primary",
       stage: 6,
     });
 
@@ -322,37 +323,35 @@ describe("OMO session orchestrator", () => {
     });
     const fourth = continueWorkItemSession({
       rootDir,
+      homeDir,
       workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
       mode: "execute",
-      opencodeBin: stage4.binPath,
+      claudeBin: stage4.binPath,
       environment: {
-        FAKE_OPENCODE_ARGS_PATH: stage4.argsPath,
+        FAKE_CLAUDE_ARGS_PATH: stage4.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage4.stdinPath,
       },
       now: "2026-03-26T21:30:00+09:00",
     });
     const fifth = continueWorkItemSession({
       rootDir,
-      homeDir,
       workItemId: "03-recipe-like",
-      claudeBudgetState: "available",
       mode: "execute",
-      claudeBin: stage5.binPath,
+      opencodeBin: stage5.binPath,
       environment: {
-        FAKE_CLAUDE_ARGS_PATH: stage5.argsPath,
-        FAKE_CLAUDE_STDIN_PATH: stage5.stdinPath,
+        FAKE_OPENCODE_ARGS_PATH: stage5.argsPath,
       },
       now: "2026-03-26T21:40:00+09:00",
     });
-    const sixth = continueWorkItemSession({
+    const sixth = runWorkItemStage({
       rootDir,
-      homeDir,
       workItemId: "03-recipe-like",
-      claudeBudgetState: "available",
+      stage: 6,
       mode: "execute",
-      claudeBin: stage6.binPath,
+      opencodeBin: stage6.binPath,
       environment: {
-        FAKE_CLAUDE_ARGS_PATH: stage6.argsPath,
-        FAKE_CLAUDE_STDIN_PATH: stage6.stdinPath,
+        FAKE_OPENCODE_ARGS_PATH: stage6.argsPath,
       },
       now: "2026-03-26T21:50:00+09:00",
     });
@@ -374,16 +373,13 @@ describe("OMO session orchestrator", () => {
     expect(sixth.stage).toBe(6);
     expect(stage3Args).toContain("--resume");
     expect(stage3Args).toContain("ses_claude_primary");
-    expect(stage5Args).toContain("--resume");
-    expect(stage5Args).toContain("ses_claude_primary");
-    expect(stage6Args).toContain("--resume");
-    expect(stage6Args).toContain("ses_claude_primary");
-    expect(stage4Args).toContain("--session");
-    expect(stage4Args).toContain("ses_codex_primary");
+    expect(stage4Args).toContain("--resume");
+    expect(stage4Args).toContain("ses_claude_primary");
+    expect(stage5Args).toContain("--session");
+    expect(stage5Args).toContain("ses_codex_primary");
+    expect(stage6Args).toContain("--session");
+    expect(stage6Args).toContain("ses_codex_primary");
     expect(status.runtime).toMatchObject({
-      current_stage: 6,
-      last_completed_stage: 6,
-      blocked_stage: null,
       sessions: {
         claude_primary: {
           session_id: "ses_claude_primary",

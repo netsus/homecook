@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSyn
 import { join, resolve } from "node:path";
 
 import { runClaudeCli, runOpencode } from "./omo-lite-runner.mjs";
+import { resolveStageSessionRole } from "./omo-lite-supervisor.mjs";
 import {
   resolveClaudeProviderConfig,
   resolveCodexProviderConfig,
@@ -23,6 +24,20 @@ const SMOKE_CHECKLIST_IDS = {
   frontendAcceptance: "accept-loading",
 };
 const LIVE_PROVIDER_STAGE_TIMEOUT_MS = 90_000;
+
+function resolveSmokeStageActor(stage) {
+  return resolveStageSessionRole(stage, "implementation") === "claude_primary" ? "claude" : "codex";
+}
+
+function resolveSmokeStageProvider(stage) {
+  return resolveStageSessionRole(stage, "implementation") === "claude_primary" ? "claude-cli" : "opencode";
+}
+
+function resolveSmokeStageSessionId(stage) {
+  return resolveStageSessionRole(stage, "implementation") === "claude_primary"
+    ? "ses_omo_claude_smoke"
+    : "ses_omo_codex_smoke";
+}
 
 /**
  * @typedef {object} SmokeReviewLoopState
@@ -1141,7 +1156,7 @@ export function createControlPlaneSmokeStageRunner({
       createSmokeEvent({
         stage,
         attempt,
-        actor: [1, 3, 5, 6].includes(stage) ? "claude" : "codex",
+        actor: resolveSmokeStageActor(stage),
         outcome,
         artifactDir,
         reviewFeedbackSeen,
@@ -1175,9 +1190,9 @@ export function createControlPlaneSmokeStageRunner({
             next_action: "finalize_stage",
             last_artifact_dir: artifactDir,
             execution: {
-              provider: stage === 2 ? "opencode" : "opencode",
-              session_role: "codex_primary",
-              session_id: "ses_omo_codex_smoke",
+              provider: resolveSmokeStageProvider(stage),
+              session_role: resolveStageSessionRole(stage, "implementation"),
+              session_id: resolveSmokeStageSessionId(stage),
               artifact_dir: artifactDir,
               stage_result_path: stageResultPath,
               started_at: now,
@@ -1195,14 +1210,14 @@ export function createControlPlaneSmokeStageRunner({
     return {
       artifactDir,
       dispatch: {
-        actor: [1, 3, 5, 6].includes(stage) ? "claude" : "codex",
+        actor: resolveSmokeStageActor(stage),
         stage,
       },
       execution: {
         mode: "execute",
         executed: true,
-        provider: [1, 3, 5, 6].includes(stage) ? "claude-cli" : "opencode",
-        sessionId: [1, 3, 5, 6].includes(stage) ? "ses_omo_claude_smoke" : "ses_omo_codex_smoke",
+        provider: resolveSmokeStageProvider(stage),
+        sessionId: resolveSmokeStageSessionId(stage),
       },
       runtimeSync,
       stageResult,
@@ -1534,7 +1549,7 @@ function recordSmokeEvent({
     createSmokeEvent({
       stage,
       attempt,
-      actor: [1, 3, 5, 6].includes(stage) ? "claude" : "codex",
+      actor: resolveSmokeStageActor(stage),
       outcome,
       artifactDir,
       reviewFeedbackSeen,

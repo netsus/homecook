@@ -79,7 +79,7 @@ runtime과 `.workflow-v2/*`는 orchestration state이며, official docs와 drift
 고정 invariant:
 
 1. Stage 2 finalize 이후 slice status는 최소 `in-progress`여야 한다.
-2. Stage 5 approve 이후 frontend slice의 Design Status는 `confirmed`여야 한다.
+2. non-authority frontend slice는 Stage 5 approve 이후, authority-required frontend slice는 `final_authority_gate` approve 이후 Design Status가 `confirmed`여야 한다.
 3. Stage 6 closeout 이후 slice status는 반드시 `merged`여야 한다.
 4. runtime `phase=done` 또는 workflow-v2 `lifecycle=merged`인데 roadmap이 `merged`가 아니면 post-merge drift다.
 5. active slice drift가 현재 branch에서 docs-only로 안전하게 반영 가능하면 supervisor가 먼저 bookkeeping commit/push를 수행하고 계속 진행한다.
@@ -171,7 +171,7 @@ Stage 4 `authority_precheck` subphase는 위 code-stage contract를 유지하되
 - Stage 2/4 재실행 시, `findings[]`가 있으면 prompt에 "## Structured Findings from Prior Review" 섹션으로 주입한다.
 - Stage 2/4 재실행 시, `required_fix_ids[]`가 있으면 prompt에 "## Required Checklist Fix IDs" 섹션으로 같이 주입한다.
 - Stage 3/5/6 재리뷰 시, latest rebuttal bundle이 있으면 prompt에 같이 주입한다.
-- Stage 3/5 실행 시, 이전 code stage의 `stage-result.json` 경로를 `required_reads`에 주입해 Claude가 Codex의 의도를 읽고 리뷰한다.
+- Stage 3/5 실행 시, 이전 code stage의 `stage-result.json` 경로를 `required_reads`에 주입해 stage reviewer가 구현 의도를 읽고 리뷰한다.
 
 원칙:
 
@@ -187,14 +187,15 @@ Stage 4 `authority_precheck` subphase는 위 code-stage contract를 유지하되
 9. strict mode에서는 Stage 2/4가 자신의 stage-owned checklist id만 `checklist_updates[]`로 기록할 수 있고, Stage 3/5/6은 자신의 review scope 전체를 `reviewed_checklist_ids[]`로 기록해야 한다.
 10. Codex는 `required_fix_ids[]`에 대해 `contested_fix_ids[]`와 `rebuttals[]`로 구조적 반박을 제출할 수 있다.
 11. Claude가 rebuttal을 수용하면 해당 checklist id를 `waived_fix_ids[]`에 넣고, supervisor가 markdown metadata waiver comment를 반영한다.
-12. Stage 2/4는 strict slice에서 `$ralph` skill 기반 loop를 기본 실행 표면으로 사용한다.
-13. authority-required frontend slice는 Stage 4 구현 뒤 Codex-owned `authority_precheck` subphase를 먼저 통과해야 한다.
+12. strict slice에서 Stage 2는 `$ralph` skill 기반 loop를 기본 실행 표면으로 사용하고, Stage 4는 현재 OMO-lite runner 기준으로 `single_pass`를 기본 실행 표면으로 유지한다.
+13. authority-required frontend slice는 Claude Stage 4 구현 뒤 Codex-owned `authority_precheck` subphase를 먼저 통과해야 한다.
 14. `authority_precheck`는 최종 authority가 아니라 mobile UX evidence와 blocker 구조화를 담당하는 preflight gate다.
-15. Stage 5는 Claude final authority다. `authority_verdict=pass`와 blocker 0개가 아니면 `confirmed`를 줄 수 없다.
-16. `high-risk` / `anchor-extension` slice는 stage execution은 허용하지만 automatic merge는 금지하고 manual merge handoff로 종료한다.
-17. Stage 5 approve 뒤에는 supervisor가 Design Status `confirmed` bookkeeping commit/push를 수행할 수 있다.
-18. Stage 6 approve 뒤에는 frontend PR에 slice status `merged` bookkeeping commit/push를 반영하고, 그 CI와 external smoke가 끝나면 자동 merge한다. 단 manual merge handoff slice는 auto-merge 대신 human escalation으로 끝낸다.
-19. legacy artifact에서 `commit.subject`가 없으면 migration 경로에서만 `pr.title`을 commit subject로 fallback 한다.
+15. Stage 5 public actor는 Codex다. authority-required slice는 Codex approve 뒤 Claude `final_authority_gate`를 추가로 거친다.
+16. `final_authority_gate`만이 authority-required slice의 `confirmed`를 잠글 수 있다. `authority_verdict=pass`와 blocker 0개가 아니면 `confirmed`를 줄 수 없다.
+17. `high-risk` / `anchor-extension` slice는 stage execution은 허용하지만 automatic merge는 금지하고 manual merge handoff로 종료한다.
+18. Stage 5 approve(또는 `final_authority_gate` approve) 뒤에는 supervisor가 Design Status `confirmed` bookkeeping commit/push를 수행할 수 있다.
+19. Stage 6 public actor는 Codex다. Stage 6 approve 뒤에는 frontend PR에 slice status `merged` bookkeeping commit/push를 반영하고, 그 CI와 external smoke가 끝나면 자동 merge한다. 단 manual merge handoff slice는 auto-merge 대신 human escalation으로 끝낸다.
+20. legacy artifact에서 `commit.subject`가 없으면 migration 경로에서만 `pr.title`을 commit subject로 fallback 한다.
 
 ## Internal 1.5
 
@@ -222,7 +223,7 @@ public stage numbering은 계속 `1~6`을 유지한다.
 7. docs repair PR은 `doc_gate_review approve` 전에는 merge하지 않는다.
 8. docs repair PR이 main에 merge되고 `doc_gate_recheck`가 다시 `pass`가 나와야만 Stage 2 implementation을 시작한다.
 9. docs review ping-pong은 최대 3회까지만 허용한다. 초과 시 `human_escalation`으로 fail-closed 한다.
-10. `claude_primary`는 `Stage 1 -> doc_gate_review -> Stage 3/5/6`, `codex_primary`는 `doc_gate_repair -> Stage 2/4`로 계속 재사용한다.
+10. `claude_primary`는 `Stage 1 -> doc_gate_review -> Stage 3 -> Stage 4 -> Stage 5/final_authority_gate`, `codex_primary`는 `doc_gate_repair -> Stage 2 -> Stage 4/authority_precheck -> Stage 5 -> Stage 6`으로 계속 재사용한다.
 
 ## Internal 6.5
 
@@ -339,9 +340,10 @@ GitHub 자동화는 `gh CLI`만 사용한다.
 7. base drift가 clean update 가능한 경우에만 `gh pr update-branch`를 한 번 시도한다.
 8. force-push, auto-rebase, silent branch recreation은 금지한다.
 9. 기존 PR을 재사용하는 경우에도 title/body는 supervisor가 `gh pr edit`로 최신 stage result에 맞춰 정렬할 수 있다.
-10. autonomous low/medium product backend/frontend PR은 GitHub formal approval을 merge gate로 사용하지 않는다. Claude의 structured review artifact를 공식 approval 신호로 사용한다.
-11. autonomous low/medium product backend/frontend PR은 current head 기준 전체 PR checks green + Claude approve artifact + external smoke pass 뒤 자동 merge한다.
-12. `merge_pending` 상태에서 `mergePullRequest` 실행 직전 supervisor는 반드시 `stageResult.decision === "approve"`를 코드 수준에서 단언한다. 이 조건이 충족되지 않으면 `blockWithRecovery`로 escalate하며 절대 merge를 실행하지 않는다.
+10. autonomous low/medium product backend/frontend PR은 GitHub formal approval을 merge gate로 사용하지 않는다. stage owner의 structured review artifact와 authority gate pass(해당 시)를 공식 approval 신호로 사용한다.
+11. autonomous low/medium product backend/frontend PR은 current head 기준 전체 PR checks green + Stage 6 Codex approve artifact + authority gate pass(해당 시) + external smoke pass 뒤 자동 merge한다.
+12. authority-required frontend PR은 `merge_pending` 직전과 `mergePullRequest` 직전에 모두 `design_authority.status === "reviewed"`와 final authority verdict `pass`를 재검증한다.
+13. `merge_pending` 상태에서 `mergePullRequest` 실행 직전 supervisor는 반드시 `stageResult.decision === "approve"`를 코드 수준에서 단언한다. 이 조건이 충족되지 않으면 `blockWithRecovery`로 escalate하며 절대 merge를 실행하지 않는다.
 
 ## Wait And Scheduler Contract
 

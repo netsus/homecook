@@ -475,4 +475,39 @@ describe("OMO stage-result contract", () => {
     expect(result.blocker_count).toBe(1);
     expect(result.reviewed_screen_ids).toEqual(["RECIPE_DETAIL"]);
   });
+
+  it("accepts final_authority_gate review results with authority fields", () => {
+    const result = validateStageResult(
+      5,
+      {
+        decision: "approve",
+        body_markdown: "final authority approved",
+        route_back_stage: null,
+        approved_head_sha: "abc123",
+        review_scope: {
+          scope: "frontend",
+          checklist_ids: ["delivery-ui"],
+        },
+        reviewed_checklist_ids: ["delivery-ui"],
+        required_fix_ids: [],
+        waived_fix_ids: [],
+        authority_verdict: "pass",
+        reviewed_screen_ids: ["RECIPE_DETAIL"],
+        authority_report_paths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        blocker_count: 0,
+        major_count: 0,
+        minor_count: 0,
+      },
+      {
+        strictExtendedContract: true,
+        subphase: "final_authority_gate",
+      },
+    ) as {
+      authority_verdict: string | null;
+      approved_head_sha: string | null;
+    };
+
+    expect(result.authority_verdict).toBe("pass");
+    expect(result.approved_head_sha).toBe("abc123");
+  });
 });

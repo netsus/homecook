@@ -16,9 +16,9 @@
 - 기본 실행 에이전트: `hephaestus`
 - 의도:
   - Codex 중심 supervisor / execution
-  - Claude는 sparse approval checkpoint에서만 사용
-- Stage `1 / 3 / 5 / 6`의 기본 provider는 raw `claude` CLI다.
-- Stage `1 / 3 / 5 / 6`용 OpenCode emergency fallback agent는 `athena`다.
+  - Claude는 Stage 1/3/4와 authority-required final authority gate에 집중한다
+- Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`의 기본 provider는 raw `claude` CLI다.
+- Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`용 OpenCode emergency fallback agent는 `athena`다.
 - 위 agent/default 값은 `opencode.json`에 직접 등록하고, `.opencode/oh-my-opencode.json`은 같은 값을 mirrored snapshot으로 유지한다.
 - `ralph-loop` command는 전역에서 사용할 수 있게 허용한다.
 - 다만 Homecook OMO supervisor의 실제 자동 실행 표면은 계속 `$ralph` skill이다.
@@ -97,7 +97,8 @@ pnpm omo:claude-budget -- --clear
   - `pnpm omo:resume-pending`
   - `pnpm omo:status -- --work-item <id>`
   - `pnpm omo:status:brief -- --work-item <id>`
-- Stage `1 / 3 / 5 / 6`은 `claude_primary`, Stage `2 / 4`는 `codex_primary` 세션을 재사용한다.
+- Stage `1 / 3 / 4`는 `claude_primary`, Stage `2 / 5 / 6`은 `codex_primary` 세션을 재사용한다.
+- Stage 4 `authority_precheck`는 `codex_primary`, Stage 5 `final_authority_gate`는 `claude_primary`를 사용한다.
 - Claude-owned stage의 canonical resume 경로는 `claude --resume <session_id>`다.
 - `--continue`는 deterministic하지 않으므로 자동화에서 사용하지 않는다.
 - Claude budget unavailable이면 기본 동작은 human handoff가 아니라 `pause + scheduled resume`다.
@@ -141,5 +142,5 @@ pnpm omo:claude-budget -- --clear
 - `pnpm validate:omo-bookkeeping`는 runtime / workflow-v2 / 공식 workpack docs 사이의 drift를 검사한다.
 - 특히 아래를 막는다.
   - runtime 또는 workflow-v2는 merged인데 `docs/workpacks/README.md`가 아직 `merged`가 아님
-  - Stage 5 이후인데 workpack README의 Design Status가 `confirmed`가 아님
+  - non-authority slice가 Stage 5 이후인데, 또는 authority-required slice가 final authority gate 이후인데 workpack README의 Design Status가 `confirmed`가 아님
   - closeout branch가 docs 외 파일을 수정함
