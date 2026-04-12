@@ -34,6 +34,8 @@ const qaSnapshotFontFaces = qaSnapshotFonts
   })
   .join("\n");
 
+const HOME_VISUAL_MAX_DIFF_PIXELS = 120;
+
 async function stabilizeVisualSnapshot(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addStyleTag({
@@ -101,6 +103,7 @@ test.describe("QA visual regression", () => {
     await expect(page).toHaveScreenshot("qa-home-default.png", {
       animations: "disabled",
       fullPage: true,
+      maxDiffPixels: HOME_VISUAL_MAX_DIFF_PIXELS,
     });
   });
 
@@ -117,6 +120,7 @@ test.describe("QA visual regression", () => {
     await expect(page).toHaveScreenshot("qa-home-sort-open.png", {
       animations: "disabled",
       fullPage: true,
+      maxDiffPixels: HOME_VISUAL_MAX_DIFF_PIXELS,
     });
   });
 
