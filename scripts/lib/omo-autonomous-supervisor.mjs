@@ -521,6 +521,10 @@ function resolveNextReviewStageForCodeStage(stage, state) {
     return 3;
   }
 
+  if (stage === 4 && state.design_authority?.authority_required) {
+    return 4;
+  }
+
   const lastFrontendReview = state.last_review?.frontend;
   return lastFrontendReview?.decision === "request_changes" &&
     lastFrontendReview?.source_review_stage === 6
@@ -1603,6 +1607,27 @@ function resolveApprovedHeadSha({
   }
 
   return normalizedApproved;
+}
+
+function syncStageResultApprovedHeadSha({
+  stageResultPath,
+  headSha,
+}) {
+  const normalizedStageResultPath =
+    typeof stageResultPath === "string" && stageResultPath.trim().length > 0 ? stageResultPath.trim() : null;
+  const normalizedHeadSha = typeof headSha === "string" && headSha.trim().length > 0 ? headSha.trim() : null;
+
+  if (!normalizedStageResultPath || !normalizedHeadSha || !existsSync(normalizedStageResultPath)) {
+    return;
+  }
+
+  const stageResult = JSON.parse(readFileSync(normalizedStageResultPath, "utf8"));
+  if (!stageResult || typeof stageResult !== "object") {
+    return;
+  }
+
+  stageResult.approved_head_sha = normalizedHeadSha;
+  writeFileSync(normalizedStageResultPath, `${JSON.stringify(stageResult, null, 2)}\n`);
 }
 function finalizeMergedReviewStage({
   rootDir,
@@ -5229,6 +5254,10 @@ function handleReviewStage({
             branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
           });
           const headSha = worktree.getHeadSha();
+          syncStageResultApprovedHeadSha({
+            stageResultPath: nextState.execution?.stage_result_path ?? resolve(artifactDir, "stage-result.json"),
+            headSha,
+          });
           nextState = upsertPullRequest({
             rootDir,
             workItemId,
