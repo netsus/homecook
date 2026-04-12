@@ -1427,6 +1427,10 @@ function runInternalCloseoutReconcile({
         branch: branchName,
       });
       nextHeadSha = worktree.getHeadSha();
+      syncStageResultApprovedHeadSha({
+        stageResultPath: nextState.execution?.stage_result_path ?? resolve(artifactDir, "stage-result.json"),
+        headSha: nextHeadSha,
+      });
       nextState = upsertPullRequest({
         rootDir,
         workItemId,

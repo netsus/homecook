@@ -5926,6 +5926,14 @@ describe("OMO autonomous supervisor", () => {
           path: workspacePath,
           branch_role: "frontend",
         },
+        design_authority: {
+          status: "reviewed",
+          authority_required: true,
+          authority_verdict: "pass",
+          authority_report_paths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+          reviewed_screen_ids: ["RECIPE_DETAIL"],
+          required_screens: ["RECIPE_DETAIL"],
+        },
         prs: {
           docs: null,
           backend: null,
@@ -6043,7 +6051,7 @@ describe("OMO autonomous supervisor", () => {
     expect(result.wait).toMatchObject({
       kind: "human_escalation",
     });
-    expect(result.runtime?.recovery?.reason ?? "").toContain("authority report paths");
+    expect(result.runtime?.recovery?.reason ?? "").toContain("missing authority reports");
   });
 
   it("finalizes merged closeout PRs while keeping slice state done", () => {
