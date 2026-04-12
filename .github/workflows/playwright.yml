@@ -127,6 +127,7 @@ jobs:
       - name: Upload accessibility report
         if: failure()
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: playwright-a11y-report
           path: |
@@ -162,6 +163,7 @@ jobs:
       - name: Upload visual report
         if: failure()
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: playwright-visual-report
           path: |
@@ -195,8 +197,9 @@ jobs:
         run: pnpm exec lhci autorun --config=./lighthouserc.js
 
       - name: Upload Lighthouse report
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: lighthouse-report
           path: .lighthouseci

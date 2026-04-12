@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 const PLANNER_STATUSES = ["registered", "shopping_done", "cook_done"];
 
 export const SLICE_05_PERFORMANCE_DEFAULTS = {
-  columnNames: ["아침", "점심", "저녁", "간식", "야식"],
+  columnNames: ["아침", "점심", "간식", "저녁"],
   daysAfter: 28,
   daysBefore: 28,
   loginButtonLabel: "다른 테스트 계정으로 시작",
@@ -196,8 +196,8 @@ export function buildSlice05PerformanceDataset({
     baseDateKey,
   });
 
-  const initialRangeStartDate = shiftDateKey(baseDateKey, -rangeShiftDays);
-  const initialRangeEndDate = shiftDateKey(baseDateKey, rangeShiftDays);
+  const initialRangeStartDate = baseDateKey;
+  const initialRangeEndDate = shiftDateKey(baseDateKey, rangeShiftDays - 1);
   let currentStartDate = initialRangeStartDate;
   let currentEndDate = initialRangeEndDate;
 
@@ -208,7 +208,7 @@ export function buildSlice05PerformanceDataset({
 
     return {
       direction,
-      buttonLabel: direction === "next" ? "다음 범위" : "이전 범위",
+      buttonLabel: direction === "next" ? "다음 주" : "이전 주",
       startDate: currentStartDate,
       endDate: currentEndDate,
       expectedMealCount: countMealsInRange(meals, currentStartDate, currentEndDate),

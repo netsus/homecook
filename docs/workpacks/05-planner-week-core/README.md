@@ -2,7 +2,7 @@
 
 ## Goal
 
-사용자가 위클리 플래너 화면에서 날짜×끼니 그리드를 통해 자신의 식단 계획을 한눈에 조회하고, 끼니 컬럼을 추가/수정/삭제하며 drag handle로 순서를 바꿔 자신의 생활 패턴에 맞게 관리할 수 있다. 플래너 상단의 [장보기] [요리하기] [남은요리] CTA 버튼은 후속 슬라이스 전까지 비활성화된 상태로 노출하여 다음 목적지를 예고하되, 실제 이동은 허용하지 않는다. 각 식사 셀에는 상태 뱃지(식사 등록 완료/장보기 완료/요리 완료)를 표시하여 현재 진행 상황을 시각적으로 전달한다.
+사용자가 위클리 플래너 화면에서 7일 주간 범위와 하루 카드 리스트를 통해 자신의 식단 계획을 한눈에 조회할 수 있다. 하루 카드 안에는 `아침 / 점심 / 간식 / 저녁` 4끼가 모두 고정 슬롯으로 보이며, 같은 날짜의 식단을 세로 스크롤 중심으로 빠르게 훑을 수 있다. 플래너 상단의 [장보기] [요리하기] [남은요리] CTA 버튼은 후속 슬라이스 전까지 비활성화된 상태로 노출하여 다음 목적지를 예고하되, 실제 이동은 허용하지 않는다. 각 식사 슬롯에는 상태 뱃지(식사 등록 완료/장보기 완료/요리 완료)를 표시하여 현재 진행 상황을 시각적으로 전달한다.
 
 ## Branches
 
@@ -12,18 +12,14 @@
 ## In Scope
 
 - 화면:
-  - `PLANNER_WEEK`: 위클리 플래너 메인 화면 (끼니 컬럼 그리드, 식사 셀, 상단 CTA)
+  - `PLANNER_WEEK`: 위클리 플래너 메인 화면 (주간 범위 바, 요일 스트립, 하루 카드, 상단 CTA)
 - API:
-  - `GET /planner` — 플래너 조회 (주간 범위, columns + meals)
-  - `POST /planner/columns` — 끼니 컬럼 추가 (최대 5개 제한)
-  - `PATCH /planner/columns/{column_id}` — 끼니 컬럼 수정 (name, sort_order)
-  - `DELETE /planner/columns/{column_id}` — 끼니 컬럼 삭제 (소속 meals 존재 시 409)
+  - `GET /planner` — 플래너 조회 (주간 범위, 고정 4끼 slots + meals)
 - 상태 전이:
-  - 끼니 컬럼 추가/수정/삭제 (최대 5개 제한, 소속 meals 존재 시 삭제 불가)
-  - drag handle 기반 끼니 컬럼 순서 변경 (`sort_order` 저장, 실패 시 원복)
-  - 식사 상태 뱃지 표시 (`registered` / `shopping_done` / `cook_done`)
+  - 식사 상태 표시 (`registered` / `shopping_done` / `cook_done`)
+  - 요일 스트립 스와이프 기반 주간 범위 이동 + `이번주로 가기`
 - DB 영향:
-  - `meal_plan_columns` — 조회, 생성, 수정, 삭제
+  - `meal_plan_columns` — 조회, bootstrap/backfill로 canonical 4끼 보장
   - `meals` — 조회 (플래너 화면 표시용, CRUD는 06/07 슬라이스)
 - Schema Change:
   - [x] 없음 (읽기 전용)
@@ -38,15 +34,16 @@
 - 요리하기 실제 flow (`COOK_READY_LIST`): 슬라이스 14에서 처리
 - 남은요리 화면 (`LEFTOVERS`): 슬라이스 16에서 처리
 - 상단 CTA의 실제 destination 진입 또는 "준비 중" placeholder 안내: 이번 슬라이스에서는 제공하지 않음
-- 플래너 날짜/끼니 그리드의 세부 UI 디자인 확정: Stage 5 디자인 리뷰에서 확정
+- 플래너 day card의 세부 시각 polish: Stage 5 디자인 리뷰에서 확정
 
 ## Contract Evolution Accepted
 
-- planner column reorder UX를 화살표 버튼에서 drag handle 기반 reorder로 확정
-- API/DB 계약은 변경하지 않고 기존 `PATCH /planner/columns/{column_id}` + `sort_order`를 그대로 사용
-- 긴 거리 drag는 drop target 컬럼과 직접 순서를 교환하며, 중간 컬럼은 유지
-- 드롭 직후 저장, 실패 시 직전 순서로 원복하고 오류 안내를 노출
-- 화살표 버튼 기반 순서 변경 UI는 제거
+- `PLANNER_WEEK`는 사용자 정의 끼니 컬럼 대신 `아침 / 점심 / 간식 / 저녁` 4끼 고정 슬롯으로 제공한다
+- `POST /planner/columns`, `PATCH /planner/columns/{column_id}`, `DELETE /planner/columns/{column_id}`는 제거한다
+- 모바일 기본형은 가로 스크롤 표보다 `주간 범위 바 + 하루 카드 리스트`를 우선한다
+- 같은 날짜의 4끼는 같은 카드 안에서 함께 읽히도록 정리한다
+- 모바일에서는 요일 스트립을 좌우로 넘겨 이전 주 / 다음 주로 이동하고, `이번주로 가기`는 보조 복귀 액션으로만 남긴다
+- 카드 메타데이터는 한 번만 보여주고, 끼니 슬롯은 압축된 상태 표시로 세로 길이를 줄인다
 
 ## Dependencies
 
@@ -75,7 +72,8 @@
     "columns": [
       { "id": "uuid", "name": "아침", "sort_order": 0 },
       { "id": "uuid", "name": "점심", "sort_order": 1 },
-      { "id": "uuid", "name": "저녁", "sort_order": 2 }
+      { "id": "uuid", "name": "간식", "sort_order": 2 },
+      { "id": "uuid", "name": "저녁", "sort_order": 3 }
     ],
     "meals": [
       {
@@ -99,81 +97,19 @@
 - 401: 비로그인
 - 422: 날짜 범위 유효성 검증 실패 (start_date > end_date 등)
 
-### POST /planner/columns
+### Planner Slot Policy
 
-**Request**
-- Body: `{ "name": "간식" }`
-- 권한: 로그인 필수
-
-**Response (201)**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "name": "간식",
-    "sort_order": 3
-  },
-  "error": null
-}
-```
-
-**Error Cases**
-- 401: 비로그인
-- 409 CONFLICT: 이미 5개 컬럼 존재 (최대 5개 제한)
-- 422: name 필드 누락 또는 빈 문자열
-
-### PATCH /planner/columns/{column_id}
-
-**Request**
-- Body: `{ "name": "브런치", "sort_order": 1 }` (둘 다 optional)
-- 권한: 로그인 필수, 소유자 일치 검증
-
-**Response (200)**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "name": "브런치",
-    "sort_order": 1
-  },
-  "error": null
-}
-```
-
-**Error Cases**
-- 401: 비로그인
-- 403 FORBIDDEN: 다른 사용자의 컬럼 수정 시도
-- 404: column_id 미존재
-- 422: name이 빈 문자열이거나 sort_order가 음수
-
-### DELETE /planner/columns/{column_id}
-
-**Request**
-- 권한: 로그인 필수, 소유자 일치 검증
-
-**Response (204)**: No Content
-
-**Error Cases**
-- 401: 비로그인
-- 403 FORBIDDEN: 다른 사용자의 컬럼 삭제 시도
-- 404: column_id 미존재
-- 409 CONFLICT: 소속 meals 1개 이상 존재 시 (식사 먼저 삭제/이동 필요)
-
-**멱등성**
-- `DELETE /planner/columns/{id}`: 이미 삭제된 컬럼 재삭제 시 404 반환 (멱등 처리 불필요, 명확한 오류 메시지 우선)
-
-**권한 검증**
-- 모든 엔드포인트에서 `user_id` 일치 검증
-- 타인의 컬럼 수정/삭제 시도 시 403 반환
+- 끼니 슬롯은 `아침 / 점심 / 간식 / 저녁` 4개 고정
+- 사용자 정의 컬럼 추가/수정/삭제 API 없음
+- 서버는 bootstrap/backfill 단계에서 canonical 4끼 row를 보장
+- legacy custom column 데이터가 있어도 GET 응답은 4끼 슬롯으로 정규화
 
 ## Frontend Delivery Mode
 
 - 디자인 확정 전: 기능 가능한 임시 UI
 - 필수 상태: `loading / empty / error / read-only / unauthorized`
   - **loading**: 플래너 조회 중 스켈레톤 또는 로딩 인디케이터
-  - **empty**: 주간 범위 내 식사 없음 안내 + 컬럼 관리 UI 유지, meal 추가 동작은 비활성
+  - **empty**: 주간 범위 내 식사 없음 안내 + 고정 4끼 day card 유지, meal 추가 동작은 비활성
   - **error**: 플래너 조회 실패 시 오류 안내 + [다시 시도]
   - **read-only**: 해당 없음 (플래너 조회는 항상 수정 가능)
   - **unauthorized**: 비로그인 시 플래너 탭 진입 차단 또는 로그인 안내 모달
@@ -194,11 +130,11 @@
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 - `docs/workpacks/README.md`
-- `docs/요구사항기준선-v1.6.1.md` — 1-4. 식단 플래너(위클리) + 끼니 화면
-- `docs/화면정의서-v1.2.1.md` — 5) PLANNER_WEEK: 식단 플래너(위클리)
-- `docs/api문서-v1.2.1.md` — 3. 식단 플래너 (PLANNER_WEEK)
-- `docs/db설계-v1.3.md` — 5. 식단 플래너 (Meal Plan)
-- `docs/유저flow맵-v1.2.1.md` — ③ 식단 계획 여정
+- `docs/요구사항기준선-v1.6.3.md` — 1-4. 식단 플래너(위클리) + 끼니 화면
+- `docs/화면정의서-v1.2.3.md` — 5) PLANNER_WEEK: 식단 플래너(위클리)
+- `docs/api문서-v1.2.2.md` — 3. 식단 플래너 (PLANNER_WEEK)
+- `docs/db설계-v1.3.1.md` — 5. 식단 플래너 (Meal Plan)
+- `docs/유저flow맵-v1.2.3.md` — ③ 식단 계획 여정
 - `docs/design/design-tokens.md` — 확정 디자인 토큰 (색상·간격·컴포넌트 규칙)
 
 ## QA / Test Data Plan
@@ -206,44 +142,30 @@
 - QA fixture mode:
   - `HOMECOOK_ENABLE_QA_FIXTURES=1 pnpm dev`
   - auth override 필요: guest / authenticated
-  - fixture baseline: 컬럼 `아침 / 점심 / 저녁 / 간식`, 식사 3건 (`registered / shopping_done / cook_done`)
+  - fixture baseline: 고정 슬롯 `아침 / 점심 / 간식 / 저녁`, 식사 3건 (`registered / shopping_done / cook_done`)
 - 실 DB smoke:
   - 가장 쉬운 시작: `pnpm dev:demo`
   - 깨끗한 local demo dataset으로 다시 시작: `pnpm dev:demo:reset`
   - 팀 공용 local demo dataset 재생성: `pnpm local:reset:demo`
   - 브라우저에서 real local DB 흐름 확인: `pnpm dev:local-supabase`
   - local-only 로그인 카드에서 메인/다른 테스트 계정으로 진입 가능
-  - 메인 계정 기준으로 기본 `아침 / 점심 / 저녁` 컬럼과 `간식` 컬럼, 데모 meals가 보여야 한다
+  - 메인 계정 기준으로 기본 `아침 / 점심 / 간식 / 저녁` 슬롯과 데모 meals가 보여야 한다
   - local 테스트 계정 seed: `pnpm qa:seed:01-05 -- --user-email local-tester@homecook.local`
   - `pnpm qa:seed:01-05 -- --user-id <supabase-user-uuid>`
   - seed window는 실행 시점 기준 현재 기본 플래너 범위 안으로 생성된다
   - clean QA 계정을 쓰면 가장 결정적인 planner smoke를 얻을 수 있다
-  - local 장시간 성능 smoke:
-    - `pnpm local:seed:05-performance`
-    - `pnpm qa:perf:05`
-    - 기준 계정: `local-other@homecook.local`
-    - 기본 bulk fixture: 컬럼 `5개`, 레시피 `72개`, meals `343개`, 초기 범위 meals `89건`, repeated shift meal counts `91 / 89 / 91 / 89 / 91 / 89`
 
 ## Key Rules
 
 ### 플래너 조회 규칙
 - `GET /planner`는 `start_date`와 `end_date` 범위 내의 식사를 조회한다.
-- 응답에는 사용자의 모든 끼니 컬럼 (`columns`)과 해당 범위 내 식사 (`meals`)를 포함한다.
+- 응답에는 고정 4끼 슬롯(`columns`)과 해당 범위 내 식사(`meals`)를 포함한다.
+- 슬롯 순서는 `아침 -> 점심 -> 간식 -> 저녁`으로 고정한다.
 - `meals` 배열은 `plan_date ASC, column_id ASC, created_at ASC` 순서로 정렬한다.
-
-### 끼니 컬럼 제한
-- 사용자당 최대 5개 컬럼 제한 (애플리케이션 레벨)
-- 6번째 컬럼 추가 시도 시 `409 CONFLICT` 반환
-- 에러 메시지: `{ "code": "MAX_COLUMNS_REACHED", "message": "최대 5개까지 추가할 수 있어요" }`
-
-### 컬럼 삭제 조건
-- 컬럼에 소속된 `meals`가 1개 이상 존재하면 `409 CONFLICT` 반환
-- 에러 메시지: `{ "code": "COLUMN_HAS_MEALS", "message": "식사가 등록된 컬럼은 삭제할 수 없어요. 식사를 먼저 삭제하거나 이동해주세요." }`
-- 식사 삭제/이동 기능은 07 슬라이스에서 구현
 
 ### 권한 정책
 - 모든 플래너 API는 로그인 필수 (401)
-- 다른 사용자의 컬럼 수정/삭제 시도 시 403 FORBIDDEN
+- 컬럼 CRUD API는 더 이상 제공하지 않는다
 
 ### 상태 뱃지 표시
 - `meals` 배열의 각 식사에는 `status` 필드가 포함됨
@@ -251,49 +173,22 @@
 - 프론트엔드는 상태별로 시각적 구분 (색상, 아이콘 등) 제공
 - 상태 전이 로직은 06, 09, 15a 슬라이스에서 구현
 
-### 회원가입 시 기본 컬럼
-- 신규 사용자 가입 시 `아침`, `점심`, `저녁` 3개 컬럼 자동 생성 (auth flow에서 처리)
-- 이 슬라이스에서는 이미 생성된 컬럼을 조회/수정/삭제만 담당
+### 회원가입 시 기본 슬롯
+- 신규 사용자 가입 시 `아침`, `점심`, `간식`, `저녁` 4개 슬롯을 서버가 자동 보장한다
+- 이 슬라이스에서는 고정 4끼 슬롯 조회만 담당한다
 
 ### 상단 CTA 버튼
 - [장보기] [요리하기] [남은요리] 버튼은 UI에 노출되지만, 이번 슬라이스에서는 모두 disabled 상태다
 - 클릭/탭, 키보드 활성화, placeholder 라우팅을 제공하지 않는다
-- 실제 destination 활성화는 각 후속 슬라이스(09, 14, 16)에서 담당한다
-
-## Contract Evolution Candidates (Optional)
-
-없음
-
-## Primary User Path
-
-1. 사용자가 하단 탭에서 [플래너] 탭 선택 → `PLANNER_WEEK` 진입
-2. 플래너 조회 API 호출 (`GET /planner?start_date=...&end_date=...`)
-   - 기본 범위: 오늘 기준 ±7일 (프론트엔드 결정)
-3. 끼니 컬럼 그리드와 식사 셀이 표시됨
-   - 각 셀에는 레시피명, 인분, 상태 뱃지가 표시됨
-4. [+] 버튼으로 끼니 컬럼 추가 (`POST /planner/columns`)
-   - 최대 5개 제한, 초과 시 409 안내
-5. 컬럼명 편집 또는 drag handle 순서 변경 (`PATCH /planner/columns/{id}`)
-6. 컬럼 삭제 버튼 클릭 (`DELETE /planner/columns/{id}`)
-   - 소속 meals 존재 시 409 안내
-7. 상단 CTA는 비활성화 상태로만 노출되어 후속 목적지를 예고하고, 위/아래 스크롤 시 새로운 범위로 플래너 재조회
 
 ## Delivery Checklist
-
-- [x] 백엔드 계약 고정 (`GET /planner`, `POST /planner/columns`, `PATCH /planner/columns/{id}`, `DELETE /planner/columns/{id}`)
-- [x] API Route Handlers 구현 (`app/api/v1/planner/...`)
-- [x] TypeScript 타입 정의 (request/response/error)
-- [x] 권한 검증 (로그인 필수, 소유자 일치)
-- [x] 끼니 컬럼 최대 5개 제한 로직
-- [x] 컬럼 삭제 시 소속 meals 검증 (409 CONFLICT)
-- [x] Vitest 단위 테스트 (권한, 상태 전이, 예외 케이스)
-- [x] 프론트엔드 `PLANNER_WEEK` 화면 구현
-- [x] Zustand 상태 관리 (플래너 데이터, 컬럼 CRUD)
-- [x] 5개 UI 상태 구현 (`loading / empty / error / read-only / unauthorized`)
-- [x] 상단 CTA 버튼 UI (장보기/요리하기/남은요리) — 동작은 추후 슬라이스
-- [x] 상태 뱃지 시각화 (registered / shopping_done / cook_done)
-- [x] 날짜 범위 스크롤 인터랙션
-- [x] `ui/designs/PLANNER_WEEK.md` + critique 산출물 유지
-- [x] Playwright E2E (플래너 조회, 컬럼 추가/수정/삭제 흐름, drag reorder 유지)
-- [x] 자동화 범위 구분 (Vitest vs Playwright)
-- [x] 수동 QA 시나리오 정리 (acceptance.md Manual Only 섹션)
+- [x] 백엔드 계약 고정
+- [x] API 또는 adapter 연결
+- [x] 타입 반영
+- [x] UI 연결
+- [x] 상태 전이 / 권한 / 멱등성 테스트
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분
+- [x] fixture와 real DB smoke 경로 구분
+- [x] seed / bootstrap / system row 준비 여부 점검
+- [x] `loading / empty / error / read-only / unauthorized` 상태 점검
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리

@@ -1,11 +1,6 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiError, ApiResponse } from "@/types/api";
-import type {
-  PlannerColumnCreateBody,
-  PlannerColumnData,
-  PlannerColumnUpdateBody,
-  PlannerData,
-} from "@/types/planner";
+import type { PlannerData } from "@/types/planner";
 
 interface PlannerApiError extends Error {
   status: number;
@@ -92,10 +87,9 @@ export function isPlannerApiError(error: unknown): error is PlannerApiError {
 
 export function createDefaultPlannerRange(baseDate = new Date()) {
   const startDate = new Date(baseDate);
-  startDate.setDate(startDate.getDate() - 7);
 
   const endDate = new Date(baseDate);
-  endDate.setDate(endDate.getDate() + 7);
+  endDate.setDate(endDate.getDate() + 6);
 
   return {
     startDate: formatDateKey(startDate),
@@ -120,33 +114,4 @@ export async function fetchPlanner(startDate: string, endDate: string) {
   });
 
   return requestPlanner<PlannerData>(`/api/v1/planner?${params.toString()}`);
-}
-
-export async function createPlannerColumn(body: PlannerColumnCreateBody) {
-  return requestPlanner<PlannerColumnData>("/api/v1/planner/columns", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-}
-
-export async function updatePlannerColumn(
-  columnId: string,
-  body: PlannerColumnUpdateBody,
-) {
-  return requestPlanner<PlannerColumnData>(`/api/v1/planner/columns/${columnId}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-}
-
-export async function deletePlannerColumn(columnId: string) {
-  await requestPlanner<null>(`/api/v1/planner/columns/${columnId}`, {
-    method: "DELETE",
-  });
 }

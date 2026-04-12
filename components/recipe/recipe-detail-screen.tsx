@@ -547,165 +547,192 @@ export function RecipeDetailScreen({
     );
   }
 
-  const renderPrimaryActions = () => (
-    <>
-      <MetricActionButton
-        ariaLabel={
-          likeRequestState === "pending"
-            ? "좋아요 처리 중..."
-            : `좋아요 ${formatCount(recipe.like_count)}`
-        }
-        ariaPressed={recipe.user_status?.is_liked ?? false}
-        count={formatCount(recipe.like_count)}
-        disabled={likeRequestState === "pending"}
-        icon={
-          <HeartIcon
-            filled={recipe.user_status?.is_liked ?? false}
-          />
-        }
-        label={likeRequestState === "pending" ? "처리 중" : "좋아요"}
-        onClick={() => handleProtectedAction("like")}
-        tone={recipe.user_status?.is_liked ? "brand" : "neutral"}
-      />
-      <MetricActionButton
-        ariaLabel="저장"
-        ariaPressed={recipe.user_status?.is_saved ?? false}
-        count={formatCount(recipe.save_count)}
-        icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
-        label="저장"
-        onClick={() => handleProtectedAction("save")}
-        tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
-      />
-      <MetricActionButton
-        ariaLabel="플래너에 추가"
-        count={formatCount(recipe.plan_count)}
-        icon={<PlannerIcon />}
-        label="플래너"
-        onClick={() => handleProtectedAction("planner")}
-        tone="olive"
-      />
-    </>
-  );
+  const plannerCountLabel = formatCount(recipe.plan_count);
+  const likeCountLabel = formatCount(recipe.like_count);
+  const saveCountLabel = formatCount(recipe.save_count);
 
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_360px]">
-        <section className="space-y-6">
-          <div className="glass-panel flex flex-col overflow-hidden rounded-[20px]">
-            <div
-              className="order-2 min-h-40 border-t border-[var(--line)] bg-[linear-gradient(135deg,rgba(255,108,60,0.22),rgba(255,249,242,0.78),rgba(46,166,122,0.18))] sm:order-1 sm:min-h-56 sm:border-t-0 sm:border-b md:min-h-72"
-              style={
-                recipe.thumbnail_url
-                  ? {
-                      backgroundImage: `linear-gradient(rgba(26, 26, 46, 0.08), rgba(26, 26, 46, 0.3)), url(${recipe.thumbnail_url})`,
-                      backgroundPosition: "center",
-                      backgroundSize: "cover",
-                    }
-                  : undefined
-              }
-            />
-            <div className="order-1 flex flex-col gap-4 px-5 py-5 sm:order-2 sm:gap-5 md:px-6">
-              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
-                <Link href="/">Home</Link>
-                <span>/</span>
-                <span>Recipe detail</span>
-              </div>
-              <div className="flex flex-col gap-4">
-                <h2 className="text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:text-[2rem]">
-                  {recipe.title}
-                </h2>
-                <div className="order-2 flex flex-wrap gap-2 sm:order-3">
-                  {renderPrimaryActions()}
-                </div>
-                <div className="order-3 sm:order-2">
-                  <p className="text-sm leading-6 text-[var(--muted)]">
-                    {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {recipe.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-[color:rgba(46,166,122,0.1)] px-3 py-1 text-xs font-semibold text-[var(--olive)]"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <ActionButton
-                  label="요리하기"
-                  onClick={() =>
-                    setFeedback({
-                      message: "요리모드는 다음 슬라이스에서 이어서 구현합니다.",
-                      tone: "status",
-                    })
+      <div className="space-y-[clamp(1.25rem,4vw,1.5rem)]">
+        <section className="glass-panel flex flex-col overflow-hidden rounded-[24px]">
+          <div
+            className="min-h-[clamp(6.5rem,32vw,12rem)] border-b border-[var(--line)] bg-[linear-gradient(135deg,rgba(255,108,60,0.22),rgba(255,249,242,0.78),rgba(46,166,122,0.18))] sm:min-h-64 md:min-h-80"
+            style={
+              recipe.thumbnail_url
+                ? {
+                    backgroundImage: `linear-gradient(rgba(26, 26, 46, 0.08), rgba(26, 26, 46, 0.32)), url(${recipe.thumbnail_url})`,
+                    backgroundPosition: "center",
+                    backgroundSize: "cover",
                   }
-                  tone="brand"
-                />
-                <IconActionButton
-                  ariaLabel="공유하기"
-                  icon={<ShareIcon />}
-                  onClick={handleShare}
-                />
+                : undefined
+            }
+          />
+
+          <div className="flex flex-col gap-[clamp(0.875rem,3vw,1.25rem)] px-[clamp(0.875rem,4vw,1.25rem)] py-[clamp(0.875rem,4vw,1.25rem)] md:px-6 md:py-6">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--olive)] md:text-xs md:tracking-[0.22em]">
+              <Link href="/">Home</Link>
+              <span>/</span>
+              <span>Recipe detail</span>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap gap-2">
+                {recipe.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-[color:rgba(46,166,122,0.1)] px-2.5 py-1 text-[11px] font-semibold text-[var(--olive)] md:px-3 md:text-xs"
+                  >
+                    #{tag}
+                  </span>
+                ))}
               </div>
+              <h2 className="text-[clamp(1.5rem,6vw,2.125rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
+                {recipe.title}
+              </h2>
+              <p className="text-[12px] font-medium text-[var(--muted)] md:text-[13px]">
+                <span>{recipe.base_servings}인분</span>
+                <span className="px-1.5 text-[var(--line)]">·</span>
+                <span>재료 {recipe.ingredients.length}개</span>
+                <span className="px-1.5 text-[var(--line)]">·</span>
+                <span>조리 {recipe.steps.length}단계</span>
+              </p>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-2 max-[360px]:order-1">
+              <UtilityStatButton
+                ariaLabel={`플래너 등록 ${plannerCountLabel}`}
+                count={plannerCountLabel}
+                icon={<PlannerIcon />}
+                label="플래너"
+                tone="neutral"
+              />
+              <IconActionButton
+                ariaLabel="공유하기"
+                icon={<ShareIcon />}
+                onClick={handleShare}
+                tone="neutral"
+              />
+              <MetricActionButton
+                ariaLabel={
+                  likeRequestState === "pending"
+                    ? "좋아요 처리 중..."
+                    : `좋아요 ${likeCountLabel}`
+                }
+                ariaPressed={recipe.user_status?.is_liked ?? false}
+                count={likeCountLabel}
+                disabled={likeRequestState === "pending"}
+                hideLabel
+                icon={
+                  <HeartIcon
+                    filled={recipe.user_status?.is_liked ?? false}
+                  />
+                }
+                label={likeRequestState === "pending" ? "처리 중" : "좋아요"}
+                onClick={() => handleProtectedAction("like")}
+                tone={recipe.user_status?.is_liked ? "brand" : "neutral"}
+              />
+              <MetricActionButton
+                ariaLabel="저장"
+                ariaPressed={recipe.user_status?.is_saved ?? false}
+                count={saveCountLabel}
+                hideLabel
+                icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
+                label="저장"
+                onClick={() => handleProtectedAction("save")}
+                tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
+              />
+            </div>
+
+            <div className="max-[360px]:order-4">
+              <p className="max-w-3xl text-[clamp(0.8125rem,3.2vw,0.9rem)] leading-5 text-[var(--muted)] md:text-sm md:leading-6">
+                {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2.5 max-[360px]:order-2 md:gap-3">
+              <ActionButton
+                label="플래너에 추가"
+                onClick={() => handleProtectedAction("planner")}
+                tone="olive"
+              />
+              <ActionButton
+                label="요리하기"
+                onClick={() =>
+                  setFeedback({
+                    message: "요리모드는 다음 슬라이스에서 이어서 구현합니다.",
+                    tone: "status",
+                  })
+                }
+                tone="brand"
+              />
             </div>
           </div>
+        </section>
 
-          <div className="glass-panel rounded-[20px] p-5 md:p-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-                  재료
-                </p>
-                <h3 className="mt-2 text-2xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-                  인분에 따라 재료량이 바뀝니다
-                </h3>
-              </div>
-              <div className="rounded-[16px] bg-white/70 px-4 py-3">
-                <label className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
-                  인분
-                </label>
-                <div className="mt-2 flex items-center gap-3">
-                  <button
-                    className="h-11 w-11 rounded-[12px] border border-[var(--line)] bg-white"
-                    onClick={() =>
-                      setSelectedServings((value) => Math.max(1, value - 1))
-                    }
-                    type="button"
-                  >
-                    -
-                  </button>
-                  <span className="min-w-16 text-center text-lg font-semibold">
-                    {selectedServings}인분
-                  </span>
-                  <button
-                    className="h-11 w-11 rounded-[12px] border border-[var(--line)] bg-white"
-                    onClick={() => setSelectedServings((value) => value + 1)}
-                    type="button"
-                  >
-                    +
-                  </button>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+          <section className="glass-panel rounded-[20px] p-5 md:p-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
+                    재료
+                  </p>
+                </div>
+                <div className="rounded-[16px] bg-white/70 px-4 py-3">
+                  <label className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+                    인분
+                  </label>
+                  <div className="mt-2 flex items-center gap-3">
+                    <button
+                      className="h-11 w-11 rounded-[12px] border border-[var(--line)] bg-white"
+                      onClick={() =>
+                        setSelectedServings((value) => Math.max(1, value - 1))
+                      }
+                      type="button"
+                    >
+                      -
+                    </button>
+                    <span className="min-w-16 text-center text-lg font-semibold">
+                      {selectedServings}인분
+                    </span>
+                    <button
+                      className="h-11 w-11 rounded-[12px] border border-[var(--line)] bg-white"
+                      onClick={() => setSelectedServings((value) => value + 1)}
+                      type="button"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <p className="mt-3 text-[13px] font-semibold tracking-[-0.01em] text-[#9a3f1d] md:text-sm">
+                    인분에 따라 재료량이 바뀝니다
+                  </p>
                 </div>
               </div>
-            </div>
-            <ul className="mt-5 grid gap-3">
-              {scaledIngredients.map((ingredient) => (
-                <li
-                  key={ingredient.id}
-                  className="flex items-center justify-between gap-4 rounded-[16px] bg-white/70 px-4 py-3 text-sm text-[var(--foreground)]"
-                >
-                  <span>{ingredient.standard_name}</span>
-                  <span className="font-medium text-[var(--muted)]">
-                    {ingredient.scaledText}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+              <ul className="grid gap-3">
+                {scaledIngredients.map((ingredient) => {
+                  const quantityText = ingredient.scaledText.startsWith(
+                    `${ingredient.standard_name} `,
+                  )
+                    ? ingredient.scaledText.slice(ingredient.standard_name.length + 1)
+                    : ingredient.scaledText;
 
-          <div className="glass-panel rounded-[20px] p-5 md:p-6">
+                  return (
+                    <li
+                      key={ingredient.id}
+                      className="flex items-center justify-between gap-4 rounded-[16px] bg-white/70 px-4 py-3 text-sm text-[var(--foreground)]"
+                    >
+                      <span>{ingredient.standard_name}</span>
+                      <span className="font-medium text-[var(--muted)]">
+                        {quantityText}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </section>
+
+          <section className="glass-panel rounded-[20px] p-5 md:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
               조리 단계
             </p>
@@ -751,63 +778,8 @@ export function RecipeDetailScreen({
                 </li>
               ))}
             </ol>
-          </div>
-        </section>
-
-        <aside className="space-y-4">
-          <div className="glass-panel rounded-[20px] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-              Recipe Snapshot
-            </p>
-            <dl className="mt-4 space-y-3 text-sm text-[var(--muted)]">
-              <div className="flex items-center justify-between gap-3">
-                <dt>기본 인분</dt>
-                <dd className="font-semibold text-[var(--foreground)]">
-                  {recipe.base_servings}인분
-                </dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt>재료 수</dt>
-                <dd className="font-semibold text-[var(--foreground)]">
-                  {recipe.ingredients.length}개
-                </dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt>단계 수</dt>
-                <dd className="font-semibold text-[var(--foreground)]">
-                  {recipe.steps.length}단계
-                </dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt>로그인 상태</dt>
-                <dd className="font-semibold text-[var(--foreground)]">
-                  {isAuthenticated ? "로그인됨" : "게스트"}
-                </dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="glass-panel rounded-[20px] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-              Slice Note
-            </p>
-            <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
-              저장은 레시피북 선택/생성 모달까지 연결됩니다. 플래너 추가는 로그인 게이트 복귀 패턴만 먼저 고정하고 다음 슬라이스에서 실제 등록을 닫습니다.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {["좋아요 토글", "저장 모달", "return-to-action"].map(
-                (item) => (
-                  <span
-                    key={item}
-                    className="rounded-full bg-white/75 px-3 py-1 text-xs font-semibold text-[var(--foreground)]"
-                  >
-                    {item}
-                  </span>
-                ),
-              )}
-            </div>
-          </div>
-        </aside>
+          </section>
+        </div>
       </div>
       <SaveModal
         books={saveBooks}
@@ -843,100 +815,88 @@ function RecipeDetailLoadingSkeleton() {
   return (
     <div
       aria-hidden="true"
-      className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_360px]"
+      className="space-y-6"
     >
-      <section className="space-y-6">
-          <div className="glass-panel flex flex-col overflow-hidden rounded-[20px]">
-          <div className="order-2 min-h-40 animate-pulse border-t border-[var(--line)] bg-white/60 sm:order-1 sm:min-h-56 sm:border-t-0 sm:border-b md:min-h-72" />
-          <div className="order-1 space-y-4 px-5 py-5 sm:order-2 sm:space-y-5 md:px-6">
-            <div className="h-4 w-28 animate-pulse rounded-full bg-white/70" />
-            <div className="space-y-3">
-              <div className="h-10 w-3/4 animate-pulse rounded-[16px] bg-white/70" />
-              <div className="h-4 w-full animate-pulse rounded-full bg-white/70" />
-              <div className="h-4 w-5/6 animate-pulse rounded-full bg-white/70" />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div
-                  className="h-7 w-20 animate-pulse rounded-full bg-white/70"
-                  key={`hero-tag-${index}`}
-                />
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div
-                  className="h-12 w-28 animate-pulse rounded-full bg-white/72"
-                  key={`hero-stat-${index}`}
-                />
-              ))}
-            </div>
-            <div className="flex gap-3">
-              <div className="h-12 w-28 animate-pulse rounded-[14px] bg-white/72" />
-              <div className="h-12 w-12 animate-pulse rounded-[14px] bg-white/72" />
-            </div>
+      <section className="glass-panel overflow-hidden rounded-[24px]">
+        <div className="min-h-48 animate-pulse border-b border-[var(--line)] bg-white/60 sm:min-h-64 md:min-h-80" />
+        <div className="space-y-5 px-5 py-5 md:px-6 md:py-6">
+          <div className="h-4 w-28 animate-pulse rounded-full bg-white/70" />
+          <div className="space-y-3">
+            <div className="h-10 w-3/4 animate-pulse rounded-[16px] bg-white/70" />
+            <div className="h-4 w-full animate-pulse rounded-full bg-white/70" />
+            <div className="h-4 w-5/6 animate-pulse rounded-full bg-white/70" />
           </div>
-        </div>
-
-        <div className="glass-panel rounded-[20px] p-5 md:p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-3">
-              <div className="h-4 w-16 animate-pulse rounded-full bg-white/70" />
-              <div className="h-8 w-64 animate-pulse rounded-[16px] bg-white/70" />
-            </div>
-            <div className="h-20 w-full animate-pulse rounded-[16px] bg-white/70 md:w-40" />
-          </div>
-          <div className="mt-5 grid gap-3">
-            {Array.from({ length: 6 }).map((_, index) => (
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 3 }).map((_, index) => (
               <div
-                className="h-14 animate-pulse rounded-[16px] bg-white/70"
-                key={`ingredient-${index}`}
+                className="h-7 w-20 animate-pulse rounded-full bg-white/70"
+                key={`hero-tag-${index}`}
               />
             ))}
           </div>
-        </div>
-
-        <div className="glass-panel rounded-[20px] p-5 md:p-6">
-          <div className="h-4 w-16 animate-pulse rounded-full bg-white/70" />
-          <div className="mt-4 space-y-3">
-            {Array.from({ length: 4 }).map((_, index) => (
+          <div className="grid gap-3 sm:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, index) => (
               <div
-                className="rounded-[16px] bg-white/70 px-4 py-4"
-                key={`step-${index}`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 animate-pulse rounded-full bg-white/80" />
-                    <div className="h-7 w-20 animate-pulse rounded-full bg-white/80" />
-                  </div>
-                  <div className="h-4 w-12 animate-pulse rounded-full bg-white/80" />
-                </div>
-                <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-white/80" />
-                <div className="mt-2 h-4 w-5/6 animate-pulse rounded-full bg-white/80" />
-              </div>
+                className="h-24 animate-pulse rounded-[18px] bg-white/72"
+                key={`hero-overview-${index}`}
+              />
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <div className="h-12 w-36 animate-pulse rounded-[14px] bg-white/72" />
+            <div className="h-12 w-36 animate-pulse rounded-[14px] bg-white/72" />
+            <div className="h-12 w-12 animate-pulse rounded-[14px] bg-white/72" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 2 }).map((_, index) => (
+              <div
+                className="h-12 w-28 animate-pulse rounded-full bg-white/72"
+                key={`hero-metric-${index}`}
+              />
             ))}
           </div>
         </div>
       </section>
 
-      <aside className="space-y-4">
-        {Array.from({ length: 2 }).map((_, index) => (
-          <div
-            className="glass-panel rounded-[20px] p-5"
-            key={`sidebar-${index}`}
-          >
-            <div className="h-4 w-24 animate-pulse rounded-full bg-white/70" />
-            <div className="mt-4 space-y-3">
-              {Array.from({ length: 4 }).map((__, rowIndex) => (
-                <div
-                  className="h-5 animate-pulse rounded-full bg-white/70"
-                  key={`sidebar-${index}-row-${rowIndex}`}
-                />
-              ))}
-            </div>
+      <section className="glass-panel rounded-[20px] p-5 md:p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-3">
+            <div className="h-4 w-16 animate-pulse rounded-full bg-white/70" />
+            <div className="h-8 w-64 animate-pulse rounded-[16px] bg-white/70" />
           </div>
-        ))}
-      </aside>
+          <div className="h-20 w-full animate-pulse rounded-[16px] bg-white/70 md:w-40" />
+        </div>
+        <div className="mt-5 grid gap-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div
+              className="h-14 animate-pulse rounded-[16px] bg-white/70"
+              key={`ingredient-${index}`}
+            />
+          ))}
+        </div>
+      </section>
+
+      <section className="glass-panel rounded-[20px] p-5 md:p-6">
+        <div className="h-4 w-16 animate-pulse rounded-full bg-white/70" />
+        <div className="mt-4 space-y-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              className="rounded-[16px] bg-white/70 px-4 py-4"
+              key={`step-${index}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 animate-pulse rounded-full bg-white/80" />
+                  <div className="h-7 w-20 animate-pulse rounded-full bg-white/80" />
+                </div>
+                <div className="h-4 w-12 animate-pulse rounded-full bg-white/80" />
+              </div>
+              <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-white/80" />
+              <div className="mt-2 h-4 w-5/6 animate-pulse rounded-full bg-white/80" />
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
@@ -980,7 +940,7 @@ function ActionButton({
   return (
     <button
       aria-pressed={ariaPressed}
-      className={`min-h-11 rounded-[12px] border px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`min-h-11 rounded-[12px] border px-3.5 py-2.5 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:px-4 md:py-3 md:text-sm ${className}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -994,15 +954,24 @@ function IconActionButton({
   ariaLabel,
   icon,
   onClick,
+  tone = "neutral",
 }: {
   ariaLabel: string;
   icon: React.ReactNode;
   onClick: () => void;
+  tone?: "brand" | "olive" | "neutral";
 }) {
+  const className =
+    tone === "brand"
+      ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.16)] text-[var(--foreground)]"
+      : tone === "olive"
+        ? "border-transparent bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
+        : "border-[var(--line)] bg-white text-[var(--foreground)]";
+
   return (
     <button
       aria-label={ariaLabel}
-      className="flex h-12 w-12 items-center justify-center rounded-[14px] border border-[var(--line)] bg-white/85 text-[var(--foreground)] shadow-[var(--shadow)]"
+      className={`flex min-h-11 w-full items-center justify-center rounded-[12px] border shadow-[var(--shadow)] md:min-h-12 md:rounded-[14px] ${className}`}
       onClick={onClick}
       type="button"
     >
@@ -1011,11 +980,49 @@ function IconActionButton({
   );
 }
 
+function UtilityStatButton({
+  ariaLabel,
+  count,
+  icon,
+  label,
+  tone,
+}: {
+  ariaLabel: string;
+  count: string;
+  icon: React.ReactNode;
+  label: string;
+  tone: "brand" | "olive" | "neutral";
+}) {
+  const className =
+    tone === "brand"
+      ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.16)] text-[var(--foreground)]"
+      : tone === "olive"
+        ? "border-transparent bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
+        : "border-[var(--line)] bg-white text-[var(--foreground)]";
+
+  return (
+    <div
+      aria-label={ariaLabel}
+      className={`flex min-h-11 w-full items-center justify-center gap-1 rounded-[12px] border px-2 py-2 text-[12px] font-semibold shadow-[var(--shadow)] md:min-h-12 md:rounded-[14px] md:text-sm ${className}`}
+      role="status"
+    >
+      <span aria-hidden="true" className="shrink-0">
+        {icon}
+      </span>
+      <span className="truncate">{label}</span>
+      <span className="rounded-full bg-white/72 px-1.5 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-2 md:text-[11px]">
+        {count}
+      </span>
+    </div>
+  );
+}
+
 function MetricActionButton({
   ariaLabel,
   ariaPressed,
   count,
   disabled = false,
+  hideLabel = false,
   icon,
   label,
   onClick,
@@ -1025,6 +1032,7 @@ function MetricActionButton({
   ariaPressed?: boolean;
   count: string;
   disabled?: boolean;
+  hideLabel?: boolean;
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
@@ -1041,7 +1049,7 @@ function MetricActionButton({
     <button
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
-      className={`flex min-h-11 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`flex min-h-11 w-full items-center ${hideLabel ? "justify-center" : ""} gap-1 rounded-[12px] border px-2 py-2 text-[12px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:min-h-12 md:gap-2 md:rounded-[14px] md:px-4 md:py-2.5 md:text-sm ${className}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -1049,12 +1057,12 @@ function MetricActionButton({
       <span aria-hidden="true" className="shrink-0">
         {icon}
       </span>
-      <span>{label}</span>
+      {hideLabel ? null : <span>{label}</span>}
       <span
         aria-hidden={ariaLabel !== `좋아요 ${count}`}
-        className="rounded-full bg-white/72 px-2.5 py-1 text-xs font-bold text-[var(--foreground)]"
+        className="rounded-full bg-white/72 px-1.5 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-2 md:py-0.75 md:text-[11px]"
       >
-          {count}
+        {count}
       </span>
     </button>
   );
@@ -1119,7 +1127,7 @@ function ShareIcon() {
       viewBox="0 0 24 24"
       width="18"
     >
-      <path d="M15.5 8.5 9 12l6.5 3.5M18.5 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM6 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12.5 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+      <path d="M12 15.5V5m0 0L8 9m4-4 4 4M6.5 12.5v5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-5" />
     </svg>
   );
 }

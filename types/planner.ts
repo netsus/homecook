@@ -1,6 +1,8 @@
 import type { ApiResponse } from "@/types/api";
 
 export type MealStatus = "registered" | "shopping_done" | "cook_done";
+export const PLANNER_FIXED_SLOT_NAMES = ["아침", "점심", "간식", "저녁"] as const;
+export type PlannerFixedSlotName = (typeof PLANNER_FIXED_SLOT_NAMES)[number];
 
 export interface PlannerColumnData {
   id: string;
@@ -25,14 +27,4 @@ export interface PlannerData {
   meals: PlannerMealData[];
 }
 
-export interface PlannerColumnCreateBody {
-  name: string;
-}
-
-export interface PlannerColumnUpdateBody {
-  name?: string;
-  sort_order?: number;
-}
-
 export type PlannerResponse = ApiResponse<PlannerData>;
-export type PlannerColumnResponse = ApiResponse<PlannerColumnData>;

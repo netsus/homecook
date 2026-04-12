@@ -58,8 +58,9 @@ jobs:
         run: pnpm qa:eval:suite
 
       - name: Upload Layer 3 eval artifacts
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: qa-eval-artifacts
           path: .artifacts/qa/evals

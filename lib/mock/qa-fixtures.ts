@@ -1,4 +1,5 @@
 import fixtureData from "@/qa/fixtures/slices-01-05.json";
+import { buildFixedPlannerColumns } from "@/lib/planner/fixed-slots";
 import type {
   IngredientItem,
   IngredientListData,
@@ -417,22 +418,17 @@ function resolveAnchoredDate(startDate: string, endDate: string, anchor: DateAnc
 
 export function getQaFixturePlannerData(startDate: string, endDate: string) {
   const state = getQaFixtureState();
+  const normalizedColumns = buildFixedPlannerColumns(state.plannerColumns);
 
   return {
-    columns: clone(state.plannerColumns).sort((left, right) => {
-      if (left.sort_order === right.sort_order) {
-        return left.id.localeCompare(right.id);
-      }
-
-      return left.sort_order - right.sort_order;
-    }),
+    columns: normalizedColumns.columns,
     meals: clone(state.plannerMealTemplates).map((meal) => ({
       id: meal.id,
       recipe_id: MOCK_RECIPE_ID,
       recipe_title: fixtureData.recipe.title,
       recipe_thumbnail_url: fixtureData.recipe.thumbnailUrl,
       plan_date: resolveAnchoredDate(startDate, endDate, meal.date_anchor),
-      column_id: meal.column_id,
+      column_id: normalizedColumns.getFixedColumnId(meal.column_id),
       planned_servings: meal.planned_servings,
       status: meal.status,
       is_leftover: meal.is_leftover,

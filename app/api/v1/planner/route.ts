@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
+import { buildFixedPlannerColumns } from "@/lib/planner/fixed-slots";
 import { fail, ok } from "@/lib/api/response";
 import { getQaFixturePlannerData, isQaFixtureModeEnabled } from "@/lib/mock/recipes";
 import {
@@ -10,7 +11,7 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
-import type { MealStatus, PlannerColumnData, PlannerData, PlannerMealData } from "@/types/planner";
+import type { MealStatus, PlannerData, PlannerMealData } from "@/types/planner";
 
 interface QueryError {
   message: string;
@@ -107,14 +108,6 @@ function normalizeMealStatus(status: string): MealStatus {
   }
 
   return "registered";
-}
-
-function toPlannerColumn(column: PlannerColumnRow): PlannerColumnData {
-  return {
-    id: column.id,
-    name: column.name,
-    sort_order: column.sort_order,
-  };
 }
 
 function toPlannerMeal(meal: PlannerMealRow, recipeMap: Map<string, RecipeRow>): PlannerMealData {
@@ -247,9 +240,17 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  const normalizedColumns = buildFixedPlannerColumns(columnsResult.data);
   const responseData: PlannerData = {
-    columns: columnsResult.data.map(toPlannerColumn),
-    meals: mealsResult.data.map((meal) => toPlannerMeal(meal, recipeMap)),
+    columns: normalizedColumns.columns,
+    meals: mealsResult.data.map((meal) =>
+      toPlannerMeal(
+        {
+          ...meal,
+          column_id: normalizedColumns.getFixedColumnId(meal.column_id),
+        },
+        recipeMap,
+      )),
   };
 
   return ok(responseData);

@@ -20,11 +20,11 @@
 ## Source of Truth
 
 - 공식 최신본:
-  - 요구사항 `docs/요구사항기준선-v1.6.md`
-  - 화면정의서 `docs/화면정의서-v1.2.md`
-  - 유저 Flow맵 `docs/유저flow맵-v1.2.md`
-  - DB 설계 `docs/db설계-v1.3.md`
-  - API 문서 `docs/api문서-v1.2.1.md`
+  - 요구사항 `docs/요구사항기준선-v1.6.3.md`
+  - 화면정의서 `docs/화면정의서-v1.2.3.md`
+  - 유저 Flow맵 `docs/유저flow맵-v1.2.3.md`
+  - DB 설계 `docs/db설계-v1.3.1.md`
+  - API 문서 `docs/api문서-v1.2.2.md`
 - `wireframes`는 보조 레퍼런스다.
 - wireframe과 공식 문서가 충돌하면 공식 문서가 우선이다.
 - 공식 문서는 현재 구현의 기본 기준이다. 더 나은 제품/API 계약이 필요해 보여도 사용자 승인 없이 공식 문서보다 구현을 앞세우지 않는다.

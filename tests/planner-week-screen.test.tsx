@@ -10,9 +10,6 @@ import { resetPlannerStore } from "@/stores/planner-store";
 
 const readE2EAuthOverride = vi.fn();
 const fetchPlanner = vi.fn();
-const createPlannerColumn = vi.fn();
-const updatePlannerColumn = vi.fn();
-const deletePlannerColumn = vi.fn();
 
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => readE2EAuthOverride(),
@@ -21,7 +18,7 @@ vi.mock("@/lib/auth/e2e-auth-override", () => ({
 vi.mock("@/lib/api/planner", () => ({
   createDefaultPlannerRange: () => ({
     startDate: "2026-03-24",
-    endDate: "2026-04-07",
+    endDate: "2026-03-30",
   }),
   shiftPlannerRange: (
     range: { startDate: string; endDate: string },
@@ -38,9 +35,6 @@ vi.mock("@/lib/api/planner", () => ({
     };
   },
   fetchPlanner: (...args: unknown[]) => fetchPlanner(...args),
-  createPlannerColumn: (...args: unknown[]) => createPlannerColumn(...args),
-  updatePlannerColumn: (...args: unknown[]) => updatePlannerColumn(...args),
-  deletePlannerColumn: (...args: unknown[]) => deletePlannerColumn(...args),
   isPlannerApiError: (error: unknown) =>
     Boolean(error) && typeof error === "object" && "status" in (error as Record<string, unknown>),
 }));
@@ -83,7 +77,8 @@ function createPlannerData({
     columns: [
       { id: "column-breakfast", name: "아침", sort_order: 0 },
       { id: "column-lunch", name: "점심", sort_order: 1 },
-      { id: "column-dinner", name: "저녁", sort_order: 2 },
+      { id: "column-snack", name: "간식", sort_order: 2 },
+      { id: "column-dinner", name: "저녁", sort_order: 3 },
     ],
     meals,
   };
@@ -105,14 +100,52 @@ function createDeferred<T>() {
   };
 }
 
+function primeWeekStripViewport(strip: HTMLElement) {
+  let scrollLeft = 320;
+
+  Object.defineProperty(strip, "clientWidth", {
+    configurable: true,
+    get: () => 320,
+  });
+  Object.defineProperty(strip, "scrollLeft", {
+    configurable: true,
+    get: () => scrollLeft,
+    set: (value: number) => {
+      scrollLeft = value;
+    },
+  });
+
+  return {
+    scrollToPage(pageIndex: number) {
+      scrollLeft = 320 * pageIndex;
+      fireEvent.scroll(strip);
+    },
+  };
+}
+
+function setDesktopViewport(enabled: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: enabled && query === "(min-width: 768px)",
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe("planner week screen", () => {
   beforeEach(() => {
     readE2EAuthOverride.mockReset();
     fetchPlanner.mockReset();
-    createPlannerColumn.mockReset();
-    updatePlannerColumn.mockReset();
-    deletePlannerColumn.mockReset();
     resetPlannerStore();
+    setDesktopViewport(false);
   });
 
   afterEach(() => {
@@ -130,7 +163,133 @@ describe("planner week screen", () => {
     ).toBeTruthy();
   });
 
-  it("loads planner data and renders meals with status badges", async () => {
+  it("loads planner data into four fixed slots inside the same day card", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_title: "김치찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+          },
+          {
+            id: "meal-2",
+            recipe_id: "recipe-2",
+            recipe_title: "샐러드",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-lunch",
+            planned_servings: 1,
+            status: "shopping_done",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    expect(await screen.findByRole("heading", { name: "식단 플래너" })).toBeTruthy();
+    expect(screen.getAllByText("아침").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("점심").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("간식").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("저녁").length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(/식단 카드$/)).toHaveLength(7);
+    expect(screen.getAllByText("3월 24일 ~ 3월 30일")).toHaveLength(1);
+    expect(screen.queryByText("화면 상태")).toBeNull();
+    expect(screen.queryByRole("button", { name: "이전 주" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "다음 주" })).toBeNull();
+    expect(screen.getByText("김치찌개")).toBeTruthy();
+    expect(screen.getByText("샐러드")).toBeTruthy();
+    expect(screen.getByLabelText("식사 등록 완료")).toBeTruthy();
+    expect(screen.getByLabelText("장보기 완료")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "컬럼 추가" })).toBeNull();
+  });
+
+  it("uses the server-authenticated flag when browser session is not hydrated yet", async () => {
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen initialAuthenticated />);
+
+    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
+    expect(fetchPlanner).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows loading placeholders while planner data is pending", async () => {
+    const deferred = createDeferred<ReturnType<typeof createPlannerData>>();
+
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockImplementation(() => deferred.promise);
+
+    const { container } = render(<PlannerWeekScreen />);
+
+    await waitFor(() => {
+      expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    });
+
+    deferred.resolve(createPlannerData({ meals: [] }));
+
+    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
+  });
+
+  it("shows fetch error UI and retries planner loading", async () => {
+    const user = userEvent.setup();
+
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner
+      .mockRejectedValueOnce(new Error("planner failed"))
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    expect(await screen.findByText("플래너를 불러오지 못했어요")).toBeTruthy();
+    expect(screen.getByText("planner failed")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
+    expect(fetchPlanner).toHaveBeenCalledTimes(2);
+  });
+
+  it("shifts planner range when the native week strip scroll settles on the next page and keeps current-week reset as a secondary action", async () => {
+    const user = userEvent.setup();
+
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
+
+    const strip = await screen.findByTestId("planner-week-strip-viewport");
+    const viewport = primeWeekStripViewport(strip);
+
+    viewport.scrollToPage(2);
+    await new Promise((resolve) => window.setTimeout(resolve, 140));
+
+    await waitFor(() => {
+      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
+    });
+
+    const resetButton = screen.getByRole("button", { name: "이번주로 가기" });
+    await user.click(resetButton);
+
+    await waitFor(() => {
+      expect(fetchPlanner).toHaveBeenNthCalledWith(3, "2026-03-24", "2026-03-30");
+    });
+  });
+
+  it("renders the week strip as a sticky native horizontal scroller with hidden scrollbar", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(
       createPlannerData({
@@ -152,264 +311,123 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByText("김치찌개")).toBeTruthy();
-    expect(screen.getByText("식사 등록 완료")).toBeTruthy();
-    expect(
-      (screen.getByRole("button", { name: "장보기" }) as HTMLButtonElement).disabled,
-    ).toBe(true);
+    const strip = await screen.findByTestId("planner-week-strip-viewport");
+    const stickyShell = screen.getByTestId("planner-week-shell");
+    const plannerBody = screen.getByTestId("planner-week-body");
+
+    expect(strip.className).toContain("overflow-x-auto");
+    expect(strip.className).toContain("snap-x");
+    expect(strip.className).toContain("scrollbar-hide");
+    expect(strip.className).toContain("touch-pan-x");
+    expect(stickyShell.className).toContain("sticky");
+    expect(screen.getByTestId("planner-week-strip-page-prev").textContent ?? "").toContain("17");
+    expect(screen.getByTestId("planner-week-strip-page-current").textContent ?? "").toContain("24");
+    expect(screen.getByTestId("planner-week-strip-page-next").textContent ?? "").toContain("31");
+    expect(plannerBody.getAttribute("style")).toContain("translateX(0px)");
   });
 
-  it("uses the server-authenticated flag when browser session is not hydrated yet", async () => {
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen initialAuthenticated />);
-
-    expect(
-      await screen.findByText("아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요."),
-    ).toBeTruthy();
-    expect(fetchPlanner).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows loading placeholders while planner data is pending", async () => {
-    const deferred = createDeferred<ReturnType<typeof createPlannerData>>();
-
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockImplementation(() => deferred.promise);
-
-    const { container } = render(<PlannerWeekScreen />);
-
-    await waitFor(() => {
-      expect(container.querySelectorAll(".animate-pulse")).toHaveLength(6);
-    });
-
-    deferred.resolve(createPlannerData({ meals: [] }));
-
-    expect(
-      await screen.findByText("아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요."),
-    ).toBeTruthy();
-  });
-
-  it("shows empty state while keeping column management visible", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-
-    render(<PlannerWeekScreen />);
-
-    expect(
-      await screen.findByText("아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요."),
-    ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "컬럼 추가" })).toBeTruthy();
-  });
-
-  it("shows fetch error UI and retries planner loading", async () => {
-    const user = userEvent.setup();
+  it("keeps the previous planner content visible while the next week is refreshing", async () => {
+    const firstLoad = createDeferred<ReturnType<typeof createPlannerData>>();
+    const secondLoad = createDeferred<ReturnType<typeof createPlannerData>>();
 
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner
-      .mockRejectedValueOnce(new Error("planner failed"))
+      .mockImplementationOnce(() => firstLoad.promise)
+      .mockImplementationOnce(() => secondLoad.promise);
+
+    render(<PlannerWeekScreen />);
+
+    firstLoad.resolve(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_title: "김치찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    expect(await screen.findByText("김치찌개")).toBeTruthy();
+    await waitFor(() => {
+      expect(fetchPlanner).toHaveBeenCalledTimes(1);
+    });
+
+    const strip = screen.getByTestId("planner-week-strip-viewport");
+    const viewport = primeWeekStripViewport(strip);
+
+    viewport.scrollToPage(2);
+    await new Promise((resolve) => window.setTimeout(resolve, 140));
+
+    await waitFor(() => {
+      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
+    });
+
+    expect(screen.getByText("김치찌개")).toBeTruthy();
+    expect(document.querySelectorAll(".animate-pulse").length).toBe(0);
+
+    secondLoad.resolve(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-2",
+            recipe_id: "recipe-2",
+            recipe_title: "오므라이스",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-31",
+            column_id: "column-breakfast",
+            planned_servings: 1,
+            status: "shopping_done",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    expect(await screen.findByText("오므라이스")).toBeTruthy();
+  });
+
+  it("shows desktop week navigation buttons and shifts range with the next-week action", async () => {
+    const user = userEvent.setup();
+
+    setDesktopViewport(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner
+      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
       .mockResolvedValueOnce(createPlannerData({ meals: [] }));
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByText("플래너를 불러오지 못했어요")).toBeTruthy();
-    expect(screen.getByText("planner failed")).toBeTruthy();
+    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+    const previousWeekButton = screen.getByRole("button", { name: "이전 주" });
+    const nextWeekButton = screen.getByRole("button", { name: "다음 주" });
 
-    expect(
-      await screen.findByText("아직 등록된 식사가 없어요. 끼니 컬럼을 정리하고 다음 슬라이스에서 식사를 추가할 수 있어요."),
-    ).toBeTruthy();
-    expect(fetchPlanner).toHaveBeenCalledTimes(2);
-  });
+    expect(previousWeekButton).toBeTruthy();
+    expect(nextWeekButton).toBeTruthy();
 
-  it("adds a column and refreshes planner data", async () => {
-    const user = userEvent.setup();
-
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner
-      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
-      .mockResolvedValueOnce({
-        columns: [
-          { id: "column-breakfast", name: "아침", sort_order: 0 },
-          { id: "column-lunch", name: "점심", sort_order: 1 },
-          { id: "column-dinner", name: "저녁", sort_order: 2 },
-          { id: "column-snack", name: "간식", sort_order: 3 },
-        ],
-        meals: [],
-      });
-    createPlannerColumn.mockResolvedValue({
-      id: "column-snack",
-      name: "간식",
-      sort_order: 3,
-    });
-
-    render(<PlannerWeekScreen />);
-
-    const input = await screen.findByPlaceholderText("새 끼니 컬럼 이름");
-    await user.type(input, "간식");
-    await user.click(screen.getByRole("button", { name: "컬럼 추가" }));
+    await user.click(nextWeekButton);
 
     await waitFor(() => {
-      expect(createPlannerColumn).toHaveBeenCalledWith({ name: "간식" });
+      expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
     });
-    expect(await screen.findByDisplayValue("간식")).toBeTruthy();
   });
 
-  it("shows conflict feedback when deleting a non-empty column", async () => {
-    const user = userEvent.setup();
-
+  it("keeps empty state within the fixed four-slot card instead of showing column management", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-    deletePlannerColumn.mockRejectedValue(new Error("식사가 등록된 컬럼은 삭제할 수 없어요."));
 
     render(<PlannerWeekScreen />);
 
-    const deleteButtons = await screen.findAllByRole("button", { name: "삭제" });
-    await user.click(deleteButtons[0]!);
-
-    expect(await screen.findByText("식사가 등록된 컬럼은 삭제할 수 없어요.")).toBeTruthy();
-  });
-
-  it("reorders columns with drag handles and removes arrow reorder buttons", async () => {
-    const user = userEvent.setup();
-
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner
-      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
-      .mockResolvedValueOnce({
-        columns: [
-          { id: "column-breakfast", name: "아침", sort_order: 0 },
-          { id: "column-dinner", name: "저녁", sort_order: 1 },
-          { id: "column-lunch", name: "점심", sort_order: 2 },
-        ],
-        meals: [],
-      });
-    updatePlannerColumn.mockResolvedValue({
-      id: "column-lunch",
-      name: "점심",
-      sort_order: 2,
-    });
-
-    render(<PlannerWeekScreen />);
-
-    const lunchHandle = await screen.findByRole("button", {
-      name: "점심 컬럼 순서 변경",
-    });
-
-    expect(screen.queryByRole("button", { name: "←" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "→" })).toBeNull();
-
-    lunchHandle.focus();
-    await user.keyboard("{ArrowRight}");
-
-    await waitFor(() => {
-      expect(updatePlannerColumn).toHaveBeenCalledWith("column-lunch", {
-        sort_order: 2,
-      });
-    });
-
-    const orderedColumns = screen
-      .getAllByRole("textbox")
-      .filter((element) => !element.getAttribute("placeholder"))
-      .map((element) => (element as HTMLInputElement).value);
-
-    expect(orderedColumns).toEqual(["아침", "저녁", "점심"]);
-  });
-
-  it("keeps the previous order and shows feedback when reorder save fails", async () => {
-    const user = userEvent.setup();
-
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
-    updatePlannerColumn.mockRejectedValue(new Error("순서를 저장하지 못했어요."));
-
-    render(<PlannerWeekScreen />);
-
-    const lunchHandle = await screen.findByRole("button", {
-      name: "점심 컬럼 순서 변경",
-    });
-
-    lunchHandle.focus();
-    await user.keyboard("{ArrowRight}");
-
-    expect(await screen.findByText("순서를 저장하지 못했어요.")).toBeTruthy();
-
-    const orderedColumns = screen
-      .getAllByRole("textbox")
-      .filter((element) => !element.getAttribute("placeholder"))
-      .map((element) => (element as HTMLInputElement).value);
-
-    expect(orderedColumns).toEqual(["아침", "점심", "저녁"]);
-  });
-
-  it("supports touch drag reorder with the handle", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchPlanner
-      .mockResolvedValueOnce(createPlannerData({ meals: [] }))
-      .mockResolvedValueOnce({
-        columns: [
-          { id: "column-breakfast", name: "아침", sort_order: 0 },
-          { id: "column-dinner", name: "저녁", sort_order: 1 },
-          { id: "column-lunch", name: "점심", sort_order: 2 },
-        ],
-        meals: [],
-      });
-    updatePlannerColumn.mockResolvedValue({
-      id: "column-lunch",
-      name: "점심",
-      sort_order: 2,
-    });
-
-    render(<PlannerWeekScreen />);
-
-    const lunchHandle = await screen.findByRole("button", {
-      name: "점심 컬럼 순서 변경",
-    });
-    const dinnerCard = document.querySelector('[data-column-id="column-dinner"]');
-
-    expect(dinnerCard).toBeTruthy();
-
-    const originalElementFromPoint = document.elementFromPoint;
-    const elementFromPointMock = vi.fn(() => dinnerCard as Element);
-    Object.defineProperty(document, "elementFromPoint", {
-      configurable: true,
-      value: elementFromPointMock,
-      writable: true,
-    });
-
-    fireEvent.pointerDown(lunchHandle, {
-      button: 0,
-      clientX: 40,
-      clientY: 40,
-      isPrimary: true,
-      pointerId: 1,
-      pointerType: "touch",
-    });
-    fireEvent.pointerMove(window, {
-      clientX: 220,
-      clientY: 40,
-      isPrimary: true,
-      pointerId: 1,
-      pointerType: "touch",
-    });
-    fireEvent.pointerUp(window, {
-      clientX: 220,
-      clientY: 40,
-      isPrimary: true,
-      pointerId: 1,
-      pointerType: "touch",
-    });
-
-    await waitFor(() => {
-      expect(updatePlannerColumn).toHaveBeenCalledWith("column-lunch", {
-        sort_order: 2,
-      });
-    });
-
-    Object.defineProperty(document, "elementFromPoint", {
-      configurable: true,
-      value: originalElementFromPoint,
-      writable: true,
-    });
+    expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
+    expect(screen.getAllByText("비어 있음").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByPlaceholderText("새 끼니 컬럼 이름")).toBeNull();
   });
 });
