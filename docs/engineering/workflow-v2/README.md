@@ -100,6 +100,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - automatic Claude budget resolution + repo-local override
 - JSON schema와 예시 파일 추가
 - `validate:workflow-v2` 최소 validator 추가
+- `validate:workflow-v2` bundle에 source-of-truth reference drift 검사 추가
 - `validate:omo-bookkeeping` official docs drift validator 추가
 - `omo:reconcile` docs-only closeout PR repair path 추가
 - executable supervisor baseline: `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:status`
@@ -157,7 +158,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 12. 실제 Claude 첫 리뷰가 반드시 `request_changes`를 내고 Codex가 그 피드백 토큰을 반영하는지까지 최소 프롬프트로 보려면 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name> --live-providers`를 사용한다. 이 모드는 backend Stage 2/3만 실제 provider를 사용한다.
 13. 실제 Claude/Codex provider 경로, session reuse, stage-result 생성을 분리 검증할 때는 `pnpm omo:smoke:providers`를 사용한다.
 14. macOS scheduler는 `pnpm omo:scheduler:install -- --work-item <id>`로 설치하고 `pnpm omo:scheduler:verify -- --work-item <id>`로 확인한다.
-15. `pnpm validate:workflow-v2`는 schema/example뿐 아니라 상위 workflow-v2 entry docs가 executable baseline과 drift 나는지도 함께 검사한다.
+15. `pnpm validate:workflow-v2`는 schema/example뿐 아니라 상위 workflow-v2 entry docs drift와 official source-of-truth reference drift도 함께 검사한다.
 
 ## Not Yet Included
 

@@ -1,6 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+import { validateSourceOfTruthSync } from "./validate-source-of-truth-sync.mjs";
+
 function readJson(filePath) {
   return JSON.parse(readFileSync(filePath, "utf8"));
 }
@@ -314,5 +316,6 @@ export function validateWorkflowV2Bundle({ rootDir = process.cwd() } = {}) {
     ...validateWorkflowV2Examples({ rootDir }),
     ...validateWorkflowV2TrackedState({ rootDir }),
     ...validateWorkflowV2DocContract({ rootDir }),
+    ...validateSourceOfTruthSync({ rootDir }),
   ];
 }
