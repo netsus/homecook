@@ -103,6 +103,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - `validate:workflow-v2` bundle에 source-of-truth reference drift 검사 추가
 - `validate:omo-bookkeeping` official docs drift validator 추가
 - `omo:reconcile` docs-only closeout PR repair path 추가
+  - merged slice의 roadmap/workpack README bookkeeping뿐 아니라 safe slice-local closeout metadata(`acceptance.md`, `automation-spec.json`, closeout evidence refs)까지 repair 가능
 - executable supervisor baseline: `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:status`
 - live smoke entrypoints: `omo:smoke:control-plane`, `omo:smoke:providers`
 - `omo:smoke:control-plane -- --live-providers`는 backend Stage 2/3만 실제 Claude/Codex를 사용하고, 나머지 단계는 deterministic smoke로 유지한 채 최소 확인용 프롬프트로 review loop(`request_changes -> Codex 반영 -> 추가 review -> 추가 반영`)를 검증한다.
@@ -136,8 +137,9 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 ## Next Locked Scope
 
-- `internal 6.5 closeout_reconcile` subphase
+- `internal 6.5 closeout_reconcile` subphase의 supervisor state-machine 정식 승격
 - `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence` bundle
+- existing closeout reconcile executable subset을 supervisor lifecycle에 흡수
 - fixable slice-local closeout drift만 자동 repair하고 repo-wide governance drift는 별도 docs PR로 분리
 - sandbox live smoke의 운영 표준화와 주기적 rehearsal cadence
 - scheduler 운영 범위의 추가 승격 여부 판단

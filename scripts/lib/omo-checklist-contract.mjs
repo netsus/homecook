@@ -621,3 +621,59 @@ export function applyChecklistWaiverMetadata({
 
   return changedFiles;
 }
+
+export function applyChecklistCheckedState({
+  items = [],
+  checked = true,
+}) {
+  const normalizedItems = (Array.isArray(items) ? items : []).filter(
+    (item) => item && typeof item.filePath === "string" && Number.isInteger(item.lineNumber),
+  );
+  if (normalizedItems.length === 0) {
+    return [];
+  }
+
+  const updatesByFile = new Map();
+  for (const item of normalizedItems) {
+    const currentFileUpdates = updatesByFile.get(item.filePath) ?? [];
+    currentFileUpdates.push({
+      lineNumber: item.lineNumber,
+      text: item.text,
+      metadata: item.metadata ?? null,
+    });
+    updatesByFile.set(item.filePath, currentFileUpdates);
+  }
+
+  const changedFiles = [];
+  for (const [filePath, entries] of updatesByFile.entries()) {
+    if (!existsSync(filePath)) {
+      continue;
+    }
+
+    const lines = readFileSync(filePath, "utf8").split(/\r?\n/);
+    let changedFile = false;
+    for (const entry of entries) {
+      const index = entry.lineNumber - 1;
+      const originalLine = lines[index] ?? "";
+      const checkboxMatch = originalLine.match(CHECKBOX_PATTERN);
+      if (!checkboxMatch) {
+        continue;
+      }
+
+      const prefix = originalLine.slice(0, originalLine.indexOf("- ["));
+      const metadataComment = entry.metadata ? ` ${buildMetadataComment(entry.metadata)}` : "";
+      const nextLine = `${prefix}- [${checked ? "x" : " "}] ${entry.text}${metadataComment}`;
+      if (lines[index] !== nextLine) {
+        lines[index] = nextLine;
+        changedFile = true;
+      }
+    }
+
+    if (changedFile) {
+      writeFileSync(filePath, `${lines.join("\n")}\n`);
+      changedFiles.push(filePath);
+    }
+  }
+
+  return changedFiles;
+}

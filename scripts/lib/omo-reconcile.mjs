@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -7,9 +7,22 @@ import {
   findInvalidWorkflowV2Refs,
   findMissingPrSections,
 } from "./git-policy.mjs";
-import { readAutomationSpec } from "./omo-automation-spec.mjs";
-import { applyBookkeepingRepairPlan, evaluateBookkeepingInvariant } from "./omo-bookkeeping.mjs";
+import {
+  readAutomationSpec,
+  updateAutomationSpecAuthorityReportPaths,
+} from "./omo-automation-spec.mjs";
+import {
+  applyBookkeepingRepairPlan,
+  evaluateBookkeepingInvariant,
+  readWorkpackDesignAuthority,
+  updateWorkpackDesignAuthorityStatus,
+} from "./omo-bookkeeping.mjs";
 import { createGithubAutomationClient } from "./omo-github.mjs";
+import {
+  applyChecklistCheckedState,
+  readWorkpackChecklistContract,
+  resolveUncheckedChecklistItems,
+} from "./omo-checklist-contract.mjs";
 import { syncWorkflowV2Status } from "./omo-lite-supervisor.mjs";
 import { readRuntimeState, setPullRequestRef, setWaitState, writeRuntimeState } from "./omo-session-runtime.mjs";
 import { validateCloseoutSync } from "./validate-closeout-sync.mjs";
@@ -67,6 +80,271 @@ function summarizeValidationErrors(results) {
         message: error.message,
       })),
     );
+}
+
+function uniqueStrings(values) {
+  return Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .filter((value) => typeof value === "string" && value.trim().length > 0)
+        .map((value) => value.trim()),
+    ),
+  );
+}
+
+function isPostMergeCloseoutCandidate({ runtime, invariant }) {
+  if (invariant?.outcome === "repairable_post_merge") {
+    return true;
+  }
+
+  if (invariant?.outcome !== "ok") {
+    return false;
+  }
+
+  return (
+    runtime?.phase === "done" ||
+    runtime?.phase === "merge_pending" ||
+    runtime?.status?.lifecycle === "merged" ||
+    Number(runtime?.last_completed_stage) >= 6 ||
+    Number(runtime?.active_stage) >= 6 ||
+    Boolean(runtime?.prs?.closeout?.url)
+  );
+}
+
+function collectAuthorityReportPaths({ runtime, automationSpec }) {
+  return uniqueStrings([
+    ...(automationSpec?.frontend?.design_authority?.authority_report_paths ?? []),
+    ...(runtime?.design_authority?.authority_report_paths ?? []),
+    ...(runtime?.last_review?.frontend?.authority_report_paths ?? []),
+  ]);
+}
+
+function validateAuthorityReportFiles({ worktreePath, reportPaths }) {
+  const normalizedPaths = uniqueStrings(reportPaths);
+  const missingPaths = [];
+  const nonPassingPaths = [];
+
+  for (const reportPath of normalizedPaths) {
+    const fullPath = resolve(worktreePath, reportPath);
+    if (!existsSync(fullPath)) {
+      missingPaths.push(reportPath);
+      continue;
+    }
+
+    if (!readFileSync(fullPath, "utf8").includes("verdict: pass")) {
+      nonPassingPaths.push(reportPath);
+    }
+  }
+
+  return {
+    missingPaths,
+    nonPassingPaths,
+  };
+}
+
+function buildCloseoutRepairIssue(kind, filePath, actual, expected) {
+  return {
+    kind,
+    file_path: filePath,
+    actual,
+    expected,
+  };
+}
+
+function evaluateCloseoutRepairPlan({
+  worktreePath,
+  slice,
+  runtime,
+}) {
+  const normalizedSlice = ensureNonEmptyString(slice, "slice");
+  const contract = readWorkpackChecklistContract({
+    worktreePath,
+    slice: normalizedSlice,
+  });
+  const { automationSpec, automationSpecPath } = readAutomationSpec({
+    rootDir: worktreePath,
+    slice: normalizedSlice,
+    required: false,
+  });
+  const authority = readWorkpackDesignAuthority({
+    worktreePath,
+    slice: normalizedSlice,
+  });
+  const repairActions = [];
+  const issues = [];
+  const blockedErrors = [];
+
+  if (contract.errors.length > 0) {
+    blockedErrors.push(
+      ...contract.errors.map((error) => ({
+        path: error.path,
+        message: error.message,
+      })),
+    );
+  } else {
+    const closeoutItems = resolveUncheckedChecklistItems(
+      (contract.items ?? []).filter((item) => item && item.manualOnly !== true),
+    );
+
+    if (closeoutItems.length > 0) {
+      repairActions.push({
+        kind: "checklist_closeout",
+        items: closeoutItems,
+      });
+      issues.push(
+        buildCloseoutRepairIssue(
+          "closeout_checklist",
+          `${normalizedSlice}/checklists`,
+          `${closeoutItems.length} open`,
+          "all non-manual items checked",
+        ),
+      );
+    }
+  }
+
+  const designAuthorityConfig = automationSpec?.frontend?.design_authority ?? null;
+  if (designAuthorityConfig?.authority_required) {
+    if (authority.missing) {
+      blockedErrors.push({
+        path: authority.filePath,
+        message: `Authority-required slice '${normalizedSlice}' must define README Design Authority section.`,
+      });
+    } else {
+      const reportPaths = collectAuthorityReportPaths({
+        runtime,
+        automationSpec,
+      });
+      if (reportPaths.length === 0) {
+        blockedErrors.push({
+          path: automationSpecPath,
+          message: `Authority-required slice '${normalizedSlice}' is missing authority report paths and cannot be auto-repaired safely.`,
+        });
+      } else {
+        const reportValidation = validateAuthorityReportFiles({
+          worktreePath,
+          reportPaths,
+        });
+        if (reportValidation.missingPaths.length > 0) {
+          blockedErrors.push({
+            path: authority.filePath,
+            message: `Authority-required slice '${normalizedSlice}' is missing authority reports: ${reportValidation.missingPaths.join(", ")}.`,
+          });
+        }
+        if (reportValidation.nonPassingPaths.length > 0) {
+          blockedErrors.push({
+            path: authority.filePath,
+            message: `Authority-required slice '${normalizedSlice}' requires final authority verdict 'pass' in: ${reportValidation.nonPassingPaths.join(", ")}.`,
+          });
+        }
+
+        if (blockedErrors.length === 0) {
+          const currentReportPaths = uniqueStrings(
+            automationSpec?.frontend?.design_authority?.authority_report_paths ?? [],
+          );
+          if (currentReportPaths.length === 0) {
+            repairActions.push({
+              kind: "automation_spec_authority_paths",
+              authorityReportPaths: reportPaths,
+            });
+            issues.push(
+              buildCloseoutRepairIssue(
+                "automation_spec_authority_paths",
+                automationSpecPath,
+                "missing",
+                reportPaths.join(", "),
+              ),
+            );
+          }
+
+          if (authority.authorityStatus !== "reviewed") {
+            repairActions.push({
+              kind: "design_authority_status",
+              targetStatus: "reviewed",
+            });
+            issues.push(
+              buildCloseoutRepairIssue(
+                "design_authority_status",
+                authority.filePath,
+                authority.authorityStatus ?? "missing",
+                "reviewed",
+              ),
+            );
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    blockedErrors,
+    issues,
+    repairActions,
+  };
+}
+
+function applyCloseoutRepairPlan({
+  worktreePath,
+  slice,
+  repairActions,
+}) {
+  const normalizedActions = Array.isArray(repairActions) ? repairActions : [];
+  const changedFiles = new Set();
+
+  for (const action of normalizedActions) {
+    if (action?.kind === "checklist_closeout") {
+      for (const filePath of applyChecklistCheckedState({
+        items: action.items,
+        checked: true,
+      })) {
+        changedFiles.add(filePath);
+      }
+      continue;
+    }
+
+    if (action?.kind === "design_authority_status") {
+      const result = updateWorkpackDesignAuthorityStatus({
+        worktreePath,
+        slice,
+        targetStatus: action.targetStatus,
+      });
+      if (result.changed && result.filePath) {
+        changedFiles.add(result.filePath);
+      }
+      continue;
+    }
+
+    if (action?.kind === "automation_spec_authority_paths") {
+      const result = updateAutomationSpecAuthorityReportPaths({
+        rootDir: worktreePath,
+        slice,
+        authorityReportPaths: action.authorityReportPaths,
+      });
+      if (result.changed && result.filePath) {
+        changedFiles.add(result.filePath);
+      }
+    }
+  }
+
+  return {
+    changed: changedFiles.size > 0,
+    changedFiles: [...changedFiles],
+  };
+}
+
+function formatCloseoutIssueSummary(issue) {
+  const kind = issue?.kind ?? "closeout";
+  const actual = issue?.actual ?? "missing";
+  const expected = issue?.expected ?? "aligned";
+
+  if (kind === "closeout_checklist") {
+    return `- checklist closeout: \`${actual}\` -> \`${expected}\``;
+  }
+
+  if (kind === "automation_spec_authority_paths") {
+    return `- authority report paths: \`${actual}\` -> \`${expected}\``;
+  }
+
+  return `- ${kind}: \`${actual}\` -> \`${expected}\``;
 }
 
 function buildExploratoryQaEvidence({
@@ -198,6 +476,7 @@ function buildCloseoutPullRequestBody({
   workItemId,
   slice,
   invariant,
+  closeoutIssues = [],
   runtime,
   uiRisk,
 }) {
@@ -205,7 +484,7 @@ function buildCloseoutPullRequestBody({
   const normalizedSlice = ensureNonEmptyString(slice, "slice");
   const summaryLines = [
     "- OMO bookkeeping drift를 복구하기 위한 closeout PR입니다.",
-    ...invariant.issues.map((issue) => `- ${issue.kind}: \`${issue.actual ?? "missing"}\` -> \`${issue.expected}\``),
+    ...[...(invariant?.issues ?? []), ...closeoutIssues].map((issue) => formatCloseoutIssueSummary(issue)),
   ];
   const qaEvidence = buildExploratoryQaEvidence({
     runtime,
@@ -232,7 +511,7 @@ function buildCloseoutPullRequestBody({
     "## Workpack / Slice",
     `- 관련 workpack: docs/workpacks/${normalizedSlice}/`,
     `- workflow v2 work item: \`.workflow-v2/work-items/${normalizedWorkItemId}.json\``,
-    "- 변경 범위: `docs/workpacks/README.md`, target workpack README bookkeeping metadata",
+    "- 변경 범위: `docs/workpacks/README.md`, target workpack README/acceptance/automation-spec closeout metadata",
     `- 변경 유형 기준 required checks: ${deterministicChecks}`,
     "",
     "## Test Plan",
@@ -374,6 +653,8 @@ function assertDocsOnlyCloseoutChanges({ slice, changedFiles, worktreePath }) {
   const allowed = new Set([
     resolve(worktreePath, "docs", "workpacks", "README.md"),
     resolve(worktreePath, "docs", "workpacks", slice, "README.md"),
+    resolve(worktreePath, "docs", "workpacks", slice, "acceptance.md"),
+    resolve(worktreePath, "docs", "workpacks", slice, "automation-spec.json"),
   ]);
 
   const invalid = changedFiles.filter((filePath) => !allowed.has(filePath));
@@ -423,19 +704,46 @@ export function reconcileWorkItemBookkeeping({
     runtimeState: runtime,
   });
 
-  if (invariant.outcome === "ok") {
-    return {
-      workItemId: normalizedWorkItemId,
-      slice: resolvedSlice,
-      action: "noop",
-      reason: "bookkeeping_aligned",
-      invariant,
-      runtime,
-    };
+  if (!isPostMergeCloseoutCandidate({ runtime, invariant })) {
+    if (invariant.outcome === "ok") {
+      return {
+        workItemId: normalizedWorkItemId,
+        slice: resolvedSlice,
+        action: "noop",
+        reason: "bookkeeping_aligned",
+        invariant,
+        runtime,
+      };
+    }
+
+    throw new Error(`Bookkeeping drift is not safely repairable: ${invariant.reason ?? invariant.outcome}`);
   }
 
-  if (invariant.outcome !== "repairable_post_merge") {
-    throw new Error(`Bookkeeping drift is not safely repairable: ${invariant.reason ?? invariant.outcome}`);
+  if (invariant.outcome === "ok") {
+    const closeoutPlan = evaluateCloseoutRepairPlan({
+      worktreePath: rootDir,
+      slice: resolvedSlice,
+      runtime,
+    });
+    if (closeoutPlan.blockedErrors.length > 0) {
+      throw new Error(
+        [
+          "Closeout drift is not safely repairable and requires a separate docs-governance path:",
+          ...closeoutPlan.blockedErrors.map((error) => `- ${error.path}: ${error.message}`),
+        ].join("\n"),
+      );
+    }
+
+    if (closeoutPlan.repairActions.length === 0) {
+      return {
+        workItemId: normalizedWorkItemId,
+        slice: resolvedSlice,
+        action: "noop",
+        reason: "bookkeeping_aligned",
+        invariant,
+        runtime,
+      };
+    }
   }
 
   const github = createGithubAutomationClient({
@@ -462,12 +770,37 @@ export function reconcileWorkItemBookkeeping({
     if (worktreeInvariant.outcome !== "repairable_post_merge" && worktreeInvariant.outcome !== "ok") {
       throw new Error(`Closeout worktree is not in a safe repair state: ${worktreeInvariant.reason ?? worktreeInvariant.outcome}`);
     }
+    const closeoutPlan = evaluateCloseoutRepairPlan({
+      worktreePath: closeoutWorktree.worktreePath,
+      slice: resolvedSlice,
+      runtime,
+    });
+    if (closeoutPlan.blockedErrors.length > 0) {
+      throw new Error(
+        [
+          "Closeout drift is not safely repairable and requires a separate docs-governance path:",
+          ...closeoutPlan.blockedErrors.map((error) => `- ${error.path}: ${error.message}`),
+        ].join("\n"),
+      );
+    }
 
-    const repair = applyBookkeepingRepairPlan({
+    const bookkeepingRepair = applyBookkeepingRepairPlan({
       worktreePath: closeoutWorktree.worktreePath,
       slice: resolvedSlice,
       repairActions: worktreeInvariant.repairActions,
     });
+    const closeoutRepair = applyCloseoutRepairPlan({
+      worktreePath: closeoutWorktree.worktreePath,
+      slice: resolvedSlice,
+      repairActions: closeoutPlan.repairActions,
+    });
+    const repair = {
+      changed: bookkeepingRepair.changed || closeoutRepair.changed,
+      changedFiles: uniqueStrings([
+        ...bookkeepingRepair.changedFiles,
+        ...closeoutRepair.changedFiles,
+      ]),
+    };
     assertDocsOnlyCloseoutChanges({
       slice: resolvedSlice,
       changedFiles: repair.changedFiles,
@@ -479,6 +812,7 @@ export function reconcileWorkItemBookkeeping({
         workItemId: normalizedWorkItemId,
         slice: resolvedSlice,
         invariant: worktreeInvariant,
+        closeoutIssues: closeoutPlan.issues,
         runtime,
         uiRisk,
       });

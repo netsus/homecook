@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const EXECUTION_MODES = new Set(["manual", "autonomous"]);
@@ -142,6 +142,16 @@ function readJson(filePath) {
   return JSON.parse(readFileSync(filePath, "utf8"));
 }
 
+function uniqueStringArray(values) {
+  return Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .filter((entry) => typeof entry === "string" && entry.trim().length > 0)
+        .map((entry) => entry.trim()),
+    ),
+  );
+}
+
 export function resolveAutomationSpecPath({
   rootDir = process.cwd(),
   slice,
@@ -225,6 +235,60 @@ export function readAutomationSpec({
   return {
     automationSpecPath,
     automationSpec: normalizeAutomationSpec(readJson(automationSpecPath)),
+  };
+}
+
+export function updateAutomationSpecAuthorityReportPaths({
+  rootDir = process.cwd(),
+  slice,
+  authorityReportPaths = [],
+} = {}) {
+  const automationSpecPath = resolveAutomationSpecPath({
+    rootDir,
+    slice,
+  });
+
+  if (!existsSync(automationSpecPath)) {
+    return {
+      changed: false,
+      missing: true,
+      filePath: automationSpecPath,
+    };
+  }
+
+  const rawSpec = readJson(automationSpecPath);
+  const nextReportPaths = uniqueStringArray(authorityReportPaths);
+  const currentReportPaths = uniqueStringArray(
+    rawSpec?.frontend?.design_authority?.authority_report_paths ?? [],
+  );
+
+  if (
+    nextReportPaths.length === currentReportPaths.length &&
+    nextReportPaths.every((entry, index) => entry === currentReportPaths[index])
+  ) {
+    return {
+      changed: false,
+      missing: false,
+      filePath: automationSpecPath,
+    };
+  }
+
+  const nextSpec = {
+    ...rawSpec,
+    frontend: {
+      ...(rawSpec?.frontend ?? {}),
+      design_authority: {
+        ...(rawSpec?.frontend?.design_authority ?? {}),
+        authority_report_paths: nextReportPaths,
+      },
+    },
+  };
+
+  writeFileSync(automationSpecPath, `${JSON.stringify(nextSpec, null, 2)}\n`);
+  return {
+    changed: true,
+    missing: false,
+    filePath: automationSpecPath,
   };
 }
 

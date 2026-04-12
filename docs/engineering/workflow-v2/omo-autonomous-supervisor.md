@@ -245,7 +245,8 @@ public stage numbering은 계속 `1~6`을 유지하고, `internal 6.5`는 Stage 
 6. exploratory QA가 required인 slice에서 evidence가 비어 있으면 merge 대신 fail-closed 한다. low-risk slice는 skip rationale만 자동 보강할 수 있다.
 7. `closeout_reconcile_recheck`가 다시 `pass`가 나와야만 merge로 진행한다.
 8. 같은 closeout drift가 2회 이상 반복되면 자동 수정 대신 `human_escalation`으로 올린다.
-9. 현재 executable subset은 `pnpm omo:reconcile -- --work-item <id>`가 closeout PR 생성 전 같은 validator bundle을 preflight로 실행하는 경로다.
+9. 현재 executable subset은 `pnpm omo:reconcile -- --work-item <id>`가 closeout PR 생성 전 같은 validator bundle을 preflight로 실행하고, safe slice-local drift에 한해 `README.md`, `acceptance.md`, `automation-spec.json`, closeout/evidence metadata를 repair한 뒤 recheck까지 수행하는 경로다.
+10. 다만 위 subset은 dedicated closeout command 경로에만 들어 있고, supervisor state machine의 정식 `internal 6.5` subphase 승격은 아직 baseline에 포함되지 않았다.
 
 ## Runtime State Machine
 
@@ -435,12 +436,14 @@ runtime state는 아래 대기 이유를 저장할 수 있어야 한다.
 원칙:
 
 1. closeout branch는 `docs/omo-closeout-<slice>`다.
-2. 허용 수정 범위는 `docs/workpacks/README.md`와 target workpack README bookkeeping뿐이다.
+2. 허용 수정 범위는 `docs/workpacks/README.md`와 target workpack의 `README.md`, `acceptance.md`, `automation-spec.json`, closeout/evidence metadata뿐이다.
 3. closeout PR는 runtime `prs.closeout`에 기록한다.
 4. closeout PR 생성 후 workflow-v2 status는 `ready_for_review`를 유지하고 notes에 `closeout_pr=<url>`를 남긴다.
 5. closeout PR에 docs 외 파일이 섞이면 validator와 supervisor가 fail-closed 한다.
 6. closeout PR 생성 전 `internal 6.5` preflight subset으로 `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence`, PR body template 검사를 함께 실행한다.
 7. exploratory QA evidence가 required인 slice의 closeout PR은 merged frontend PR QA evidence를 본문에 다시 연결할 수 있어야 한다.
+8. safe slice-local drift는 closeout branch 안에서 `README.md`, `acceptance.md`, `automation-spec.json`, PR closeout/evidence metadata만 수정한다.
+9. source-of-truth reference drift, validator/tooling 코드 변경 필요, missing authority report처럼 repo-wide 또는 non-deterministic drift는 fail-closed 하고 별도 `docs-governance` PR로 분리한다.
 
 ## Evidence Contract
 
