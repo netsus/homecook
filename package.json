@@ -65,6 +65,7 @@
     "validate:workpack": "BRANCH_NAME=$(git branch --show-current) node scripts/check-workpack-docs.mjs",
     "validate:workflow-v2": "node scripts/validate-workflow-v2.mjs",
     "validate:source-of-truth-sync": "node scripts/validate-source-of-truth-sync.mjs",
+    "validate:exploratory-qa-evidence": "node scripts/validate-exploratory-qa-evidence.mjs",
     "validate:omo-bookkeeping": "node scripts/validate-omo-bookkeeping.mjs",
     "validate:closeout-sync": "node scripts/validate-closeout-sync.mjs"
   },
