@@ -90,6 +90,17 @@ function readPrBody(rootDir, env) {
   if (typeof eventPath === "string" && eventPath.trim().length > 0 && existsSync(eventPath)) {
     try {
       const event = JSON.parse(readText(resolve(rootDir, eventPath.trim())));
+      const eventHeadRef = event?.pull_request?.head?.ref;
+      const requestedBranch = env.BRANCH_NAME ?? env.GITHUB_HEAD_REF;
+      if (
+        typeof requestedBranch === "string" &&
+        requestedBranch.trim().length > 0 &&
+        typeof eventHeadRef === "string" &&
+        eventHeadRef.trim().length > 0 &&
+        eventHeadRef.trim() !== requestedBranch.trim()
+      ) {
+        return null;
+      }
       const body = event?.pull_request?.body;
       if (typeof body === "string" && body.trim().length > 0) {
         return body;
