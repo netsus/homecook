@@ -1,0 +1,52 @@
+{
+  "required": ["version", "generated_at", "priorities"],
+  "properties": {
+    "version": {
+      "enum": [1]
+    },
+    "generated_at": {},
+    "priorities": {
+      "type": "array",
+      "items": {
+        "required": ["priority", "summary", "items"],
+        "properties": {
+          "priority": {
+            "enum": ["P0", "P1", "P2", "P3", "P4"]
+          },
+          "summary": {},
+          "items": {
+            "type": "array",
+            "items": {
+              "required": [
+                "finding_id",
+                "title",
+                "bucket",
+                "safe_to_autofix",
+                "approval_required",
+                "next_step"
+              ],
+              "properties": {
+                "finding_id": {},
+                "title": {},
+                "bucket": {
+                  "enum": [
+                    "docs-governance",
+                    "validator",
+                    "workflow",
+                    "CI",
+                    "shared-tooling",
+                    "slice-policy",
+                    "promotion-blocker"
+                  ]
+                },
+                "safe_to_autofix": {},
+                "approval_required": {},
+                "next_step": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "required": [
+    "version",
+    "generated_at",
+    "run_mode",
+    "sampled_slices",
+    "required_inputs_checked",
+    "optional_inputs_present"
+  ],
+  "properties": {
+    "version": {
+      "enum": [1]
+    },
+    "generated_at": {},
+    "run_mode": {
+      "enum": ["audit-only"]
+    },
+    "reason": {},
+    "checkpoint": {},
+    "in_flight_slice": {},
+    "sampled_slices": {
+      "type": "array"
+    },
+    "required_inputs_checked": {
+      "type": "array"
+    },
+    "optional_inputs_present": {
+      "type": "array"
+    }
+  }
+}

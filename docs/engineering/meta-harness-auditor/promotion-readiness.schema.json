@@ -1,0 +1,32 @@
+{
+  "required": [
+    "version",
+    "generated_at",
+    "target",
+    "verdict",
+    "summary",
+    "blockers",
+    "prerequisites",
+    "evidence_refs"
+  ],
+  "properties": {
+    "version": {
+      "enum": [1]
+    },
+    "generated_at": {},
+    "target": {},
+    "verdict": {
+      "enum": ["ready", "candidate", "not-ready"]
+    },
+    "summary": {},
+    "blockers": {
+      "type": "array"
+    },
+    "prerequisites": {
+      "type": "array"
+    },
+    "evidence_refs": {
+      "type": "array"
+    }
+  }
+}
