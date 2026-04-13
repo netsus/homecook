@@ -182,6 +182,7 @@
 - `pnpm validate:commits`
 - `pnpm validate:pr`
 - `pnpm validate:source-of-truth-sync`
+- `pnpm validate:authority-evidence-presence`
 - `pnpm validate:exploratory-qa-evidence`
 - `pnpm validate:real-smoke-presence`
 - `pnpm validate:closeout-sync`

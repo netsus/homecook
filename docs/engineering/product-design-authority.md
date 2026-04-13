@@ -146,6 +146,10 @@ authority 리뷰는 아래 evidence가 있어야 한다.
 authority report에는 아래를 반드시 포함한다.
 
 - verdict: `pass / conditional-pass / hold`
+- `> evidence:` block
+  - mobile default visual evidence 1개 이상
+  - mobile narrow visual evidence 1개 이상
+  - 필요한 경우 Figma frame URL 또는 구현 스크린샷 경로
 - scorecard
   - mobile UX
   - interaction clarity
@@ -158,6 +162,7 @@ authority report에는 아래를 반드시 포함한다.
   - 바로 진행 가능
   - Figma/wireframe 보강 후 재검토
   - 구현 수정 후 스크린샷 재검토
+- authority-required slice는 CI/policy에서 `pnpm validate:authority-evidence-presence`가 authority report의 `> evidence:` block과 required mobile variants를 재검증한다.
 
 ---
 

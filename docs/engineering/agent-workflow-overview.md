@@ -96,6 +96,7 @@
 - Layer 2 exploratory QA를 실행했다면 같은 Stage 4 안에서 `pnpm qa:eval -- --checklist <...> --report <...>`로 report 품질도 남긴다.
 - exploratory QA는 `new-screen`과 `high-risk-ui-change`에서 기본 수행이다. low-risk UI change는 생략 가능하지만 PR 본문에 근거를 남긴다.
 - non-draft frontend PR과 `docs/omo-closeout-<slice>` closeout PR은 `pnpm validate:exploratory-qa-evidence`로 exploratory QA evidence presence 또는 low-risk skip rationale을 재검증할 수 있다.
+- authority-required frontend PR과 `docs/omo-closeout-<slice>` closeout PR은 `pnpm validate:authority-evidence-presence`로 authority report의 visual evidence presence를 재검증할 수 있다.
 - authority review는 exploratory QA를 대체하지 않는다. exploratory QA가 "실사용 흐름과 회복 UX"를 본다면, authority review는 "모바일 앱 품질과 시각/구조 적합성"을 본다.
 - Layer 3 qa eval은 QA 시스템 자체를 변경할 때 명시적으로 `pnpm qa:eval:suite`를 실행하며, 같은 변경 범위에서는 `.github/workflows/qa-eval.yml`이 자동으로 재실행된다.
 

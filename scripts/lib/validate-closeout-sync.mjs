@@ -304,7 +304,7 @@ function validateDesignAuthority({
         return true;
       }
 
-      return !readFileSync(fullPath, "utf8").includes("verdict: pass");
+      return !/verdict:\s*`?pass`?/i.test(readFileSync(fullPath, "utf8"));
     });
     if (nonPassingReports.length > 0) {
       errors.push({
