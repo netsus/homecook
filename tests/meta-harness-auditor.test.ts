@@ -22,6 +22,10 @@ function readJson(rootDir: string, relativePath: string) {
   return JSON.parse(readFileSync(path.join(rootDir, relativePath), "utf8"));
 }
 
+function readJsonAbsolute(absolutePath: string) {
+  return JSON.parse(readFileSync(absolutePath, "utf8"));
+}
+
 function readProjectJson(relativePath: string) {
   return JSON.parse(readFileSync(path.join(process.cwd(), relativePath), "utf8"));
 }
@@ -190,15 +194,7 @@ describe("meta-harness-auditor", () => {
     const rootDir = createAuditFixture();
     tempDirs.push(rootDir);
 
-    const findings = detectPlaywrightWorkflowGap({
-      rootDir,
-      registry: new Map(
-        readJson(rootDir, "docs/engineering/meta-harness-auditor/finding-registry.json").findings.map((entry) => [
-          entry.id,
-          entry,
-        ]),
-      ),
-    });
+    const findings = detectPlaywrightWorkflowGap({ rootDir });
 
     expect(findings).toHaveLength(1);
     expect(findings[0]?.id).toBe("H-CI-001");
@@ -222,31 +218,15 @@ describe("meta-harness-auditor", () => {
       ].join("\n"),
     );
 
-    expect(
-      detectPlaywrightWorkflowGap({
-        rootDir,
-        registry: new Map(
-          readJson(rootDir, "docs/engineering/meta-harness-auditor/finding-registry.json").findings.map((entry) => [
-            entry.id,
-            entry,
-          ]),
-        ),
-      }),
-    ).toHaveLength(0);
+    expect(detectPlaywrightWorkflowGap({ rootDir })).toHaveLength(0);
   });
 
   it("detects bookkeeping overlap and OMO promotion risk", () => {
     const rootDir = createAuditFixture();
     tempDirs.push(rootDir);
 
-    const registry = new Map(
-      readJson(rootDir, "docs/engineering/meta-harness-auditor/finding-registry.json").findings.map((entry) => [
-        entry.id,
-        entry,
-      ]),
-    );
-    const governanceFindings = detectBookkeepingOverlap({ rootDir, registry });
-    const promotionFindings = detectOmoPromotionRisk({ rootDir, registry });
+    const governanceFindings = detectBookkeepingOverlap({ rootDir });
+    const promotionFindings = detectOmoPromotionRisk({ rootDir });
 
     expect(governanceFindings.map((finding) => finding.id)).toContain("H-GOV-001");
     expect(promotionFindings.map((finding) => finding.id)).toContain("H-OMO-001");
@@ -256,10 +236,8 @@ describe("meta-harness-auditor", () => {
     const rootDir = createAuditFixture();
     tempDirs.push(rootDir);
 
-    const outputDir = ".artifacts/meta-harness-auditor/test-bundle";
     const result = runMetaHarnessAudit({
       rootDir,
-      outputDir,
     });
 
     const findingsSchema = readProjectJson(
@@ -284,12 +262,12 @@ describe("meta-harness-auditor", () => {
       "docs/engineering/meta-harness-auditor/promotion-readiness.schema.json",
     );
 
-    const findings = readJson(rootDir, `${outputDir}/findings.json`);
-    const auditContext = readJson(rootDir, `${outputDir}/audit-context.json`);
-    const scorecard = readJson(rootDir, `${outputDir}/scorecard.json`);
-    const remediationPlan = readJson(rootDir, `${outputDir}/remediation-plan.json`);
-    const promotionReadiness = readJson(rootDir, `${outputDir}/promotion-readiness.json`);
-    const report = readFileSync(path.join(rootDir, outputDir, "report.md"), "utf8");
+    const findings = readJsonAbsolute(path.join(result.outputDir, "findings.json"));
+    const auditContext = readJsonAbsolute(path.join(result.outputDir, "audit-context.json"));
+    const scorecard = readJsonAbsolute(path.join(result.outputDir, "scorecard.json"));
+    const remediationPlan = readJsonAbsolute(path.join(result.outputDir, "remediation-plan.json"));
+    const promotionReadiness = readJsonAbsolute(path.join(result.outputDir, "promotion-readiness.json"));
+    const report = readFileSync(path.join(result.outputDir, "report.md"), "utf8");
     const cadenceConfig = readJson(rootDir, "docs/engineering/meta-harness-auditor/cadence.json");
     const findingRegistry = readJson(rootDir, "docs/engineering/meta-harness-auditor/finding-registry.json");
 

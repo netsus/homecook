@@ -2,6 +2,10 @@
 
 import { resolveAuditArgs, runMetaHarnessAudit } from "./lib/meta-harness-auditor.mjs";
 
+function writeLine(text) {
+  process.stdout.write(`${text}\n`);
+}
+
 async function main() {
   const args = resolveAuditArgs(process.argv.slice(2));
   const result = runMetaHarnessAudit({
@@ -14,17 +18,17 @@ async function main() {
     cadenceEvent: args.cadenceEvent,
   });
 
-  console.log(`Meta harness audit bundle: ${result.outputDir}`);
-  console.log(`Report: ${result.outputDir}/report.md`);
-  console.log(`Findings: ${result.findings.length}`);
-  console.log(`Overall score: ${result.scorecard.overall_score}/5`);
-  console.log(`Promotion readiness: ${result.promotionReadiness.verdict}`);
-  console.log(`Cadence event: ${result.auditContext.cadence_event}`);
+  writeLine(`Meta harness audit bundle: ${result.outputDir}`);
+  writeLine(`Report: ${result.outputDir}/report.md`);
+  writeLine(`Findings: ${result.findings.length}`);
+  writeLine(`Overall score: ${result.scorecard.overall_score}/5`);
+  writeLine(`Promotion readiness: ${result.promotionReadiness.verdict}`);
+  writeLine(`Cadence event: ${result.auditContext.cadence_event}`);
   if (result.auditContext.checkpoint) {
-    console.log(`Checkpoint: ${result.auditContext.checkpoint}`);
+    writeLine(`Checkpoint: ${result.auditContext.checkpoint}`);
   }
   if (result.auditContext.in_flight_slice) {
-    console.log(`In-flight slice: ${result.auditContext.in_flight_slice}`);
+    writeLine(`In-flight slice: ${result.auditContext.in_flight_slice}`);
   }
 }
 
