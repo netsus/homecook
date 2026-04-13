@@ -67,3 +67,11 @@ jobs:
           PR_IS_DRAFT: ${{ github.event.pull_request.draft }}
           GITHUB_EVENT_PATH: ${{ github.event_path }}
         run: node scripts/validate-exploratory-qa-evidence.mjs
+
+      - name: Validate real smoke presence
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'docs/omo-closeout-')
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+          PR_IS_DRAFT: ${{ github.event.pull_request.draft }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        run: node scripts/validate-real-smoke-presence.mjs

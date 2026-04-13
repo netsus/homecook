@@ -27,6 +27,7 @@ import { syncWorkflowV2Status } from "./omo-lite-supervisor.mjs";
 import { readRuntimeState, setPullRequestRef, setWaitState, writeRuntimeState } from "./omo-session-runtime.mjs";
 import { validateCloseoutSync } from "./validate-closeout-sync.mjs";
 import { validateExploratoryQaEvidence } from "./validate-exploratory-qa-evidence.mjs";
+import { validateRealSmokePresence } from "./validate-real-smoke-presence.mjs";
 import { validateSourceOfTruthSync } from "./validate-source-of-truth-sync.mjs";
 import { commitWorktreeChanges, getWorktreeHeadSha, pushWorktreeBranch } from "./omo-worktree.mjs";
 
@@ -479,6 +480,7 @@ function buildCloseoutPullRequestBody({
   closeoutIssues = [],
   runtime,
   uiRisk,
+  requiresRealSmoke = false,
 }) {
   const normalizedWorkItemId = ensureNonEmptyString(workItemId, "workItemId");
   const normalizedSlice = ensureNonEmptyString(slice, "slice");
@@ -518,7 +520,9 @@ function buildCloseoutPullRequestBody({
     `- 실행한 검증: ${deterministicChecks}`,
     "- 생략 또는 `N/A` 처리한 검증: `pnpm verify:backend`, `pnpm verify:frontend`, E2E, Lighthouse",
     "- 생략 또는 `N/A` 근거: merged slice의 docs-only closeout repair라 targeted validator bundle만 재실행합니다.",
-    "- 추가 검증: closeout PR 생성 전 internal 6.5 preflight로 PR body, closeout sync, source-of-truth, exploratory evidence를 함께 재검증했습니다.",
+    requiresRealSmoke
+      ? "- 추가 검증: closeout PR 생성 전 internal 6.5 preflight로 source PR `Actual Verification` smoke evidence, PR body template, closeout sync, source-of-truth, exploratory evidence를 함께 재검증했습니다."
+      : "- 추가 검증: closeout PR 생성 전 internal 6.5 preflight로 PR body template, closeout sync, source-of-truth, exploratory evidence를 함께 재검증했습니다.",
     "",
     "## QA Evidence",
     `- deterministic gates: ${deterministicChecks}`,
@@ -609,6 +613,7 @@ export function collectInternalCloseoutValidationErrors({
   slice = undefined,
   branch = undefined,
   prBody = undefined,
+  sourcePrBody = undefined,
   includePrBodyValidation = false,
 }) {
   const resolvedBranch =
@@ -626,6 +631,9 @@ export function collectInternalCloseoutValidationErrors({
   }
   if (typeof prBody === "string" && prBody.trim().length > 0) {
     env.PR_BODY = prBody;
+  }
+  if (typeof sourcePrBody === "string" && sourcePrBody.trim().length > 0) {
+    env.SOURCE_PR_BODY = sourcePrBody;
   }
 
   return [
@@ -649,6 +657,12 @@ export function collectInternalCloseoutValidationErrors({
         env,
       }),
     ),
+    ...summarizeValidationErrors(
+      validateRealSmokePresence({
+        rootDir: worktreePath,
+        env,
+      }),
+    ),
   ];
 }
 
@@ -656,11 +670,13 @@ function assertInternalCloseoutPreflight({
   worktreePath,
   branch,
   prBody,
+  sourcePrBody,
 }) {
   const errors = collectInternalCloseoutValidationErrors({
     worktreePath,
     branch,
     prBody,
+    sourcePrBody,
     includePrBodyValidation: true,
   });
 
@@ -724,6 +740,7 @@ export function reconcileWorkItemBookkeeping({
     required: false,
   });
   const uiRisk = automationSpec?.frontend?.design_authority?.ui_risk ?? "not-required";
+  const requiresRealSmoke = Array.isArray(automationSpec?.external_smokes) && automationSpec.external_smokes.length > 0;
   const invariant = evaluateBookkeepingInvariant({
     rootDir,
     workItemId: normalizedWorkItemId,
@@ -779,6 +796,18 @@ export function reconcileWorkItemBookkeeping({
     environment,
   });
   github.assertAuth();
+  const smokeEvidencePrUrl =
+    runtime?.prs?.frontend?.url ??
+    runtime?.prs?.backend?.url ??
+    null;
+  const sourcePrBody =
+    typeof github.getPullRequestBody === "function" &&
+    typeof smokeEvidencePrUrl === "string" &&
+    smokeEvidencePrUrl.trim().length > 0
+      ? github.getPullRequestBody({
+          prRef: smokeEvidencePrUrl,
+        })
+      : null;
 
   const closeoutWorktree = prepareCloseoutWorktree({
     rootDir,
@@ -842,11 +871,13 @@ export function reconcileWorkItemBookkeeping({
         closeoutIssues: closeoutPlan.issues,
         runtime,
         uiRisk,
+        requiresRealSmoke,
       });
       assertInternalCloseoutPreflight({
         worktreePath: closeoutWorktree.worktreePath,
         branch: closeoutWorktree.branch,
         prBody,
+        sourcePrBody,
       });
 
       commitWorktreeChanges({
