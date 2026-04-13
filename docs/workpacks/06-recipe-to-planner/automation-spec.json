@@ -1,0 +1,83 @@
+{
+  "slice_id": "06-recipe-to-planner",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "POST /meals"
+    ],
+    "invariants": [
+      "meal-created-as-registered",
+      "owner-authorization",
+      "canonical-slot-validation",
+      "leftover-fields-default-false-null"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/meal-create-route.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/recipes/[id]",
+      "/planner"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot",
+      "authority-report"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "RECIPE_DETAIL",
+        "PLANNER_WEEK"
+      ],
+      "required_screens": [
+        "RECIPE_DETAIL",
+        "PLANNER_WEEK"
+      ],
+      "generator_required": true,
+      "critic_required": true,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow",
+        "planner-5-column-mobile"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/RECIPE_DETAIL-authority.md",
+        "ui/designs/authority/PLANNER_WEEK-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "meal-plan-columns-missing",
+    "user-bootstrap-missing",
+    "authority-baseline-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

@@ -226,6 +226,15 @@
 - 성공: 팝업 닫기 → 토스트 "플래너에 추가됐어요"
 - 오류: 토스트 "추가에 실패했어요. 다시 시도해 주세요"
 
+#### Slice06 lock
+
+- 이 바텀시트는 `06-recipe-to-planner`의 기본 입력 surface로 잠근다.
+- 필수 입력은 `plan_date`, `column_id`, `planned_servings`이며 `leftover_dish_id`는 사용하지 않는다.
+- 비로그인 사용자가 `[플래너에 추가]`를 탭하면 로그인 게이트 후 동일 바텀시트로 return-to-action 복귀해야 한다.
+- Stage 4 authority supplement는 아래 증거를 추가로 남긴다.
+  - `ui/designs/evidence/06-recipe-to-planner/RECIPE_DETAIL-planner-add-mobile.png`
+  - `ui/designs/evidence/06-recipe-to-planner/RECIPE_DETAIL-planner-add-mobile-narrow.png`
+
 ### SavePopup (저장 바텀시트)
 
 ```
