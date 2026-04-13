@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { readAutomationSpec } from "./omo-automation-spec.mjs";
+import { readRuntimeState, resolveRuntimePath } from "./omo-session-runtime.mjs";
 import {
   parseDraftState,
   readText,
@@ -98,7 +99,21 @@ function resolveEvidenceRequirementMatcher(requirement) {
   };
 }
 
-function validateAuthorityReport({
+function normalizeStringArray(values) {
+  return Array.isArray(values)
+    ? values
+        .filter((value) => typeof value === "string" && value.trim().length > 0)
+        .map((value) => value.trim())
+    : [];
+}
+
+function areSameStringSets(left, right) {
+  const leftValues = [...new Set(normalizeStringArray(left))].sort();
+  const rightValues = [...new Set(normalizeStringArray(right))].sort();
+  return leftValues.length === rightValues.length && leftValues.every((value, index) => value === rightValues[index]);
+}
+
+function inspectAuthorityReport({
   rootDir,
   reportPath,
   stage4EvidenceRequirements,
@@ -111,7 +126,10 @@ function validateAuthorityReport({
       path: reportPath,
       message: `authority report file is missing: ${reportPath}`,
     });
-    return errors;
+    return {
+      errors,
+      visualRefs: [],
+    };
   }
 
   const reportText = readText(absoluteReportPath);
@@ -148,6 +166,57 @@ function validateAuthorityReport({
         message: `Authority report is missing required ${requirement} visual evidence.`,
       });
     }
+  }
+
+  return {
+    errors,
+    visualRefs,
+  };
+}
+
+function validateRuntimeAuthoritySync({
+  rootDir,
+  slice,
+  authorityReportPaths,
+  reportVisualRefs,
+}) {
+  const runtimePath = resolveRuntimePath({
+    rootDir,
+    workItemId: slice,
+  });
+
+  if (!existsSync(runtimePath)) {
+    return [];
+  }
+
+  const { state } = readRuntimeState({
+    rootDir,
+    workItemId: slice,
+    slice,
+  });
+  const runtimeDesignAuthority = state.design_authority ?? null;
+  if (!runtimeDesignAuthority?.authority_required) {
+    return [];
+  }
+
+  const errors = [];
+  const runtimeReportPaths = normalizeStringArray(runtimeDesignAuthority.authority_report_paths);
+  if (runtimeReportPaths.length > 0 && !areSameStringSets(runtimeReportPaths, authorityReportPaths)) {
+    errors.push({
+      path: runtimePath,
+      message:
+        "runtime design_authority.authority_report_paths must stay in sync with automation-spec authority_report_paths.",
+    });
+  }
+
+  const runtimeEvidenceArtifactRefs = normalizeStringArray(runtimeDesignAuthority.evidence_artifact_refs);
+  const missingReportRefs = runtimeEvidenceArtifactRefs.filter((ref) => !reportVisualRefs.includes(ref));
+  if (missingReportRefs.length > 0) {
+    errors.push({
+      path: runtimePath,
+      message:
+        `runtime design_authority.evidence_artifact_refs must be represented in the authority report > evidence block: ${missingReportRefs.join(", ")}`,
+    });
   }
 
   return errors;
@@ -200,15 +269,25 @@ export function validateAuthorityEvidencePresence({
     });
   }
 
+  const reportVisualRefs = [];
   for (const reportPath of authorityReportPaths) {
-    errors.push(
-      ...validateAuthorityReport({
-        rootDir,
-        reportPath,
-        stage4EvidenceRequirements,
-      }),
-    );
+    const reportInspection = inspectAuthorityReport({
+      rootDir,
+      reportPath,
+      stage4EvidenceRequirements,
+    });
+    errors.push(...reportInspection.errors);
+    reportVisualRefs.push(...reportInspection.visualRefs);
   }
+
+  errors.push(
+    ...validateRuntimeAuthoritySync({
+      rootDir,
+      slice: branchContext.slice,
+      authorityReportPaths,
+      reportVisualRefs: [...new Set(reportVisualRefs)],
+    }),
+  );
 
   if (errors.length === 0) {
     return [];
