@@ -169,6 +169,7 @@ generic core가 책임지는 것:
 - lock 획득/해제
 - artifact directory 연결
 - scheduler-friendly `resume-pending` 실행
+- runtime의 `wait` / `retry` / `recovery` 이유를 operator-facing status guidance로 정규화
 
 autonomous supervisor가 따로 책임지는 것:
 
@@ -177,6 +178,12 @@ autonomous supervisor가 따로 책임지는 것:
 - PR create / ready / review / merge
 - CI 상태 polling
 - stage 간 route 결정
+
+status guidance 출력 규칙:
+
+- `omo:status`는 runtime state를 직접 노출하는 대신 operator가 바로 행동할 수 있는 진단 정보로 요약한다.
+- 최소 출력 항목은 `reason code`, `remediation`, 마지막 실패 validator, `failure path`, `artifact path`, `next recommendation`이다.
+- `omo:status:brief`는 같은 guidance를 compact 형식으로 보여 주되, current stage와 active phase를 먼저 유지한다.
 
 ## Homecook Mapping
 
