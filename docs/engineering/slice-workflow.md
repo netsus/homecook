@@ -60,6 +60,7 @@
   - `docs/omo-closeout-<slice>` 브랜치는 PR body 또는 local `.artifacts/qa/<slice>/` 번들 기준으로 closeout evidence를 다시 확인할 수 있다.
 - authority-required slice의 screenshot/Figma visual evidence presence는 `pnpm validate:authority-evidence-presence`가 별도로 검사한다.
   - non-draft `feature/fe-<slice>` PR과 `docs/omo-closeout-<slice>` 브랜치는 authority report의 `> evidence:` block에 mobile default + narrow evidence가 실제로 있는지 확인한다.
+  - runtime authority snapshot이 존재하면 `design_authority.authority_report_paths`, `design_authority.evidence_artifact_refs`도 authority report / automation-spec과 서로 일치해야 한다.
 - real DB / bootstrap / local Supabase / live smoke evidence presence는 `pnpm validate:real-smoke-presence`가 별도로 검사한다.
   - `automation-spec.json`의 `external_smokes[]`가 비어 있지 않은 non-draft `feature/be-<slice>` / `feature/fe-<slice>` PR은 `Actual Verification`에 smoke evidence를 남겨야 한다.
   - `internal 6.5`와 `pnpm omo:reconcile` preflight는 closeout PR body가 아니라 source PR `Actual Verification`을 기준으로 smoke evidence를 다시 확인한다.
