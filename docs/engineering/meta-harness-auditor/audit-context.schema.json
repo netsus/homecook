@@ -3,6 +3,7 @@
     "version",
     "generated_at",
     "run_mode",
+    "cadence_event",
     "sampled_slices",
     "required_inputs_checked",
     "optional_inputs_present"
@@ -15,9 +16,13 @@
     "run_mode": {
       "enum": ["audit-only"]
     },
+    "cadence_event": {},
     "reason": {},
     "checkpoint": {},
     "in_flight_slice": {},
+    "config_refs": {
+      "type": "array"
+    },
     "sampled_slices": {
       "type": "array"
     },

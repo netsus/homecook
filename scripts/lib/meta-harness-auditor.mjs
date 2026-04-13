@@ -5,6 +5,10 @@ function readTextIfExists(filePath) {
   return existsSync(filePath) ? readFileSync(filePath, "utf8") : null;
 }
 
+function readJsonIfExists(filePath) {
+  return existsSync(filePath) ? JSON.parse(readFileSync(filePath, "utf8")) : null;
+}
+
 function relativePath(rootDir, absolutePath) {
   return path.relative(rootDir, absolutePath).replaceAll(path.sep, "/");
 }
@@ -78,6 +82,7 @@ export function resolveAuditArgs(argv = []) {
   let checkpoint;
   let inFlightSlice;
   let reason;
+  let cadenceEvent = "manual-ad-hoc";
 
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
@@ -108,17 +113,62 @@ export function resolveAuditArgs(argv = []) {
     if (value === "--reason") {
       reason = argv[index + 1];
       index += 1;
+      continue;
+    }
+
+    if (value === "--cadence-event") {
+      cadenceEvent = argv[index + 1];
+      index += 1;
     }
   }
 
-  return { outputDir, sampleSlices, checkpoint, inFlightSlice, reason };
+  return { outputDir, sampleSlices, checkpoint, inFlightSlice, reason, cadenceEvent };
+}
+
+function loadFindingRegistry(rootDir) {
+  const registry =
+    readJsonIfExists(path.join(rootDir, "docs/engineering/meta-harness-auditor/finding-registry.json")) ?? {
+      version: 1,
+      findings: [],
+    };
+
+  return new Map(Array.isArray(registry.findings) ? registry.findings.map((entry) => [entry.id, entry]) : []);
+}
+
+function loadCadenceConfig(rootDir) {
+  return (
+    readJsonIfExists(path.join(rootDir, "docs/engineering/meta-harness-auditor/cadence.json")) ?? {
+      version: 1,
+      events: [],
+    }
+  );
+}
+
+function createFindingFromRegistry(registry, id, overrides) {
+  const entry = registry.get(id);
+  if (!entry) {
+    throw new Error(`Missing finding registry entry for '${id}'.`);
+  }
+
+  return {
+    id: entry.id,
+    title: entry.title,
+    severity: entry.severity,
+    priority: entry.priority,
+    bucket: entry.bucket,
+    owner: entry.owner,
+    safe_to_autofix: entry.safe_to_autofix,
+    approval_required: entry.approval_required,
+    ...overrides,
+  };
 }
 
 export function findNestedLibFiles({ rootDir = process.cwd() } = {}) {
   return walkFiles(rootDir, path.join(rootDir, "lib")).filter((filePath) => filePath.startsWith("lib/"));
 }
 
-export function detectPlaywrightWorkflowGap({ rootDir = process.cwd() } = {}) {
+export function detectPlaywrightWorkflowGap({ rootDir = process.cwd(), registry } = {}) {
+  const resolvedRegistry = registry ?? loadFindingRegistry(rootDir);
   const workflowPath = path.join(rootDir, ".github/workflows/playwright.yml");
   const workflowText = readTextIfExists(workflowPath);
   if (!workflowText) {
@@ -133,15 +183,7 @@ export function detectPlaywrightWorkflowGap({ rootDir = process.cwd() } = {}) {
   }
 
   return [
-    {
-      id: "H-CI-001",
-      title: "Playwright workflow path coverage gap",
-      severity: "important",
-      priority: "P0",
-      bucket: "CI",
-      owner: "docs-governance",
-      safe_to_autofix: true,
-      approval_required: false,
+    createFindingFromRegistry(resolvedRegistry, "H-CI-001", {
       why_it_matters:
         "Nested lib changes can bypass frontend QA workflows when the Playwright path filter only watches shallow lib entries.",
       evidence_refs: [
@@ -154,11 +196,12 @@ export function detectPlaywrightWorkflowGap({ rootDir = process.cwd() } = {}) {
       ],
       suggested_next_step:
         "Expand the Playwright workflow path filters to cover lib/** and add a regression test for workflow path coverage.",
-    },
+    }),
   ];
 }
 
-export function detectBookkeepingOverlap({ rootDir = process.cwd() } = {}) {
+export function detectBookkeepingOverlap({ rootDir = process.cwd(), registry } = {}) {
+  const resolvedRegistry = registry ?? loadFindingRegistry(rootDir);
   const sliceWorkflowText = readTextIfExists(path.join(rootDir, "docs/engineering/slice-workflow.md")) ?? "";
   const workflowReadmeText =
     readTextIfExists(path.join(rootDir, "docs/engineering/workflow-v2/README.md")) ?? "";
@@ -178,15 +221,7 @@ export function detectBookkeepingOverlap({ rootDir = process.cwd() } = {}) {
   }
 
   return [
-    {
-      id: "H-GOV-001",
-      title: "Bookkeeping source-of-truth overlap between v1 and v2",
-      severity: "important",
-      priority: "P1",
-      bucket: "workflow",
-      owner: "docs-governance",
-      safe_to_autofix: false,
-      approval_required: true,
+    createFindingFromRegistry(resolvedRegistry, "H-GOV-001", {
       why_it_matters:
         "Closeout state currently spans workpack docs, PR evidence, and .workflow-v2 tracked state, which makes drift and reconcile work a first-class operational burden.",
       evidence_refs: [
@@ -200,11 +235,12 @@ export function detectBookkeepingOverlap({ rootDir = process.cwd() } = {}) {
       ],
       suggested_next_step:
         "Define an authoritative source matrix for closeout and tracked-state fields, then narrow reconcile automation to projection-only surfaces.",
-    },
+    }),
   ];
 }
 
-export function detectOmoPromotionRisk({ rootDir = process.cwd() } = {}) {
+export function detectOmoPromotionRisk({ rootDir = process.cwd(), registry } = {}) {
+  const resolvedRegistry = registry ?? loadFindingRegistry(rootDir);
   const workflowReadmeText =
     readTextIfExists(path.join(rootDir, "docs/engineering/workflow-v2/README.md")) ?? "";
   const omoBaseText = readTextIfExists(path.join(rootDir, "docs/engineering/workflow-v2/omo-base.md")) ?? "";
@@ -226,15 +262,7 @@ export function detectOmoPromotionRisk({ rootDir = process.cwd() } = {}) {
   }
 
   return [
-    {
-      id: "H-OMO-001",
-      title: "OMO v2 is not yet default promotion-ready",
-      severity: "important",
-      priority: "P2",
-      bucket: "promotion-blocker",
-      owner: "workflow-v2",
-      safe_to_autofix: false,
-      approval_required: true,
+    createFindingFromRegistry(resolvedRegistry, "H-OMO-001", {
       why_it_matters:
         "Current docs still describe OMO v2 as a pilot/runtime layer with manual handoff and on-demand operational checks, so promoting it to the default workflow now would be a premature cutover.",
       evidence_refs: [
@@ -247,15 +275,17 @@ export function detectOmoPromotionRisk({ rootDir = process.cwd() } = {}) {
       ],
       suggested_next_step:
         "Keep OMO v2 in promotion-candidate mode, collect slice06 and parallel pilot evidence, and only cut over after the promotion checklist passes.",
-    },
+    }),
   ];
 }
 
 export function collectMetaHarnessFindings({ rootDir = process.cwd() } = {}) {
+  const registry = loadFindingRegistry(rootDir);
+
   return [
-    ...detectPlaywrightWorkflowGap({ rootDir }),
-    ...detectBookkeepingOverlap({ rootDir }),
-    ...detectOmoPromotionRisk({ rootDir }),
+    ...detectPlaywrightWorkflowGap({ rootDir, registry }),
+    ...detectBookkeepingOverlap({ rootDir, registry }),
+    ...detectOmoPromotionRisk({ rootDir, registry }),
   ];
 }
 
@@ -390,6 +420,7 @@ export function renderMetaHarnessReport({
   lines.push(`- Findings: ${findings.length}`);
   lines.push(`- Promotion readiness: ${promotionReadiness.verdict}`);
   lines.push(`- Sampled slices: ${sampledSlices.length > 0 ? sampledSlices.join(", ") : "none"}`);
+  lines.push(`- Cadence event: ${auditContext?.cadence_event ?? "manual-ad-hoc"}`);
   lines.push(`- Checkpoint: ${auditContext?.checkpoint ?? "none"}`);
   lines.push(`- In-flight slice: ${auditContext?.in_flight_slice ?? "none"}`);
   lines.push("");
@@ -446,8 +477,10 @@ export function runMetaHarnessAudit({
   checkpoint,
   inFlightSlice,
   reason,
+  cadenceEvent = "manual-ad-hoc",
 } = {}) {
   const generatedAt = new Date().toISOString();
+  const cadenceConfig = loadCadenceConfig(rootDir);
   const explicitSlices = inFlightSlice
     ? [...new Set([...sampleSlices, inFlightSlice])]
     : sampleSlices;
@@ -460,9 +493,14 @@ export function runMetaHarnessAudit({
     version: 1,
     generated_at: generatedAt,
     run_mode: "audit-only",
+    cadence_event: cadenceEvent,
     reason: reason ?? null,
     checkpoint: checkpoint ?? null,
     in_flight_slice: inFlightSlice ?? null,
+    config_refs: [
+      "docs/engineering/meta-harness-auditor/finding-registry.json",
+      "docs/engineering/meta-harness-auditor/cadence.json",
+    ],
     sampled_slices: sampledSlices,
     required_inputs_checked: [
       "AGENTS.md",
@@ -480,6 +518,9 @@ export function runMetaHarnessAudit({
     optional_inputs_present: [
       ...(inFlightSlice ? [`in-flight-slice:${inFlightSlice}`] : []),
       ...(checkpoint ? [`checkpoint:${checkpoint}`] : []),
+      ...(Array.isArray(cadenceConfig.events) && cadenceConfig.events.some((event) => event.id === cadenceEvent)
+        ? [`cadence-event:${cadenceEvent}`]
+        : []),
       ...(existsSync(path.join(rootDir, ".workflow-v2/status.json")) ? [".workflow-v2/status.json"] : []),
       ...(existsSync(path.join(rootDir, ".opencode/README.md")) ? [".opencode/README.md"] : []),
     ],

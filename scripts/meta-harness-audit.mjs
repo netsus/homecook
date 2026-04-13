@@ -11,6 +11,7 @@ async function main() {
     checkpoint: args.checkpoint,
     inFlightSlice: args.inFlightSlice,
     reason: args.reason,
+    cadenceEvent: args.cadenceEvent,
   });
 
   console.log(`Meta harness audit bundle: ${result.outputDir}`);
@@ -18,6 +19,7 @@ async function main() {
   console.log(`Findings: ${result.findings.length}`);
   console.log(`Overall score: ${result.scorecard.overall_score}/5`);
   console.log(`Promotion readiness: ${result.promotionReadiness.verdict}`);
+  console.log(`Cadence event: ${result.auditContext.cadence_event}`);
   if (result.auditContext.checkpoint) {
     console.log(`Checkpoint: ${result.auditContext.checkpoint}`);
   }

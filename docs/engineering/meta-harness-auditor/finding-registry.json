@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "findings": [
+    {
+      "id": "H-CI-001",
+      "title": "Playwright workflow path coverage gap",
+      "severity": "important",
+      "priority": "P0",
+      "bucket": "CI",
+      "owner": "docs-governance",
+      "safe_to_autofix": true,
+      "approval_required": false,
+      "stability": "stable",
+      "introduced_in": "C2",
+      "notes": "Nested lib change coverage for frontend QA workflow."
+    },
+    {
+      "id": "H-GOV-001",
+      "title": "Bookkeeping source-of-truth overlap between v1 and v2",
+      "severity": "important",
+      "priority": "P1",
+      "bucket": "workflow",
+      "owner": "docs-governance",
+      "safe_to_autofix": false,
+      "approval_required": true,
+      "stability": "stable",
+      "introduced_in": "C2",
+      "notes": "Closeout and tracked-state drift between workpack docs, PR evidence, and .workflow-v2."
+    },
+    {
+      "id": "H-OMO-001",
+      "title": "OMO v2 is not yet default promotion-ready",
+      "severity": "important",
+      "priority": "P2",
+      "bucket": "promotion-blocker",
+      "owner": "workflow-v2",
+      "safe_to_autofix": false,
+      "approval_required": true,
+      "stability": "stable",
+      "introduced_in": "C2",
+      "notes": "Promotion blocker covering pilot/manual-handoff/live-smoke/scheduler standardization risk."
+    }
+  ]
+}

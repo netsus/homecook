@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "events": [
+    {
+      "id": "manual-ad-hoc",
+      "label": "Manual Ad Hoc Audit",
+      "trigger": "Used when a human explicitly requests a one-off harness audit.",
+      "default_run_mode": "audit-only",
+      "recommended_scope": "Current branch or local repository state",
+      "notes": "Default fallback when no cadence event is provided."
+    },
+    {
+      "id": "weekly-baseline",
+      "label": "Weekly Baseline Audit",
+      "trigger": "Run once per week for the default branch or active harness branch.",
+      "default_run_mode": "audit-only",
+      "recommended_scope": "Current canonical workflow stack plus representative workpack samples",
+      "notes": "Primary recurring governance scorecard."
+    },
+    {
+      "id": "slice-batch-review",
+      "label": "Slice Batch Review",
+      "trigger": "Run after every 3-5 merged slices or equivalent engineering milestones.",
+      "default_run_mode": "audit-only",
+      "recommended_scope": "Recent merged slices, current OMO tracked state, and closeout surfaces",
+      "notes": "Used to catch accumulated drift after a chunk of delivery work."
+    },
+    {
+      "id": "slice-checkpoint",
+      "label": "In-Flight Slice Checkpoint",
+      "trigger": "Run at Stage 2, Stage 4, and Stage 6 checkpoints for OMO pilot slices such as slice06.",
+      "default_run_mode": "audit-only",
+      "recommended_scope": "Checkpoint evidence, workpack docs, .workflow-v2 status, and OMO runtime artifacts",
+      "notes": "Audits harness/runtime evidence around an in-flight slice, not product correctness itself."
+    },
+    {
+      "id": "promotion-gate",
+      "label": "OMO Promotion Gate",
+      "trigger": "Run before any proposal to make OMO v2 the default workflow path.",
+      "default_run_mode": "audit-only",
+      "recommended_scope": "Full workflow stack including promotion blockers and representative pilot evidence",
+      "notes": "Required gate before v1/v2 cutover decisions."
+    }
+  ]
+}

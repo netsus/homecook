@@ -92,6 +92,84 @@ function createAuditFixture() {
   write(rootDir, "scripts/lib/omo-reconcile.mjs", "export function reconcile() {}\n");
   write(rootDir, "lib/api/planner.ts", "export const planner = true;\n");
   write(rootDir, "lib/server/user-bootstrap.ts", "export const bootstrap = true;\n");
+  write(
+    rootDir,
+    "docs/engineering/meta-harness-auditor/finding-registry.json",
+    JSON.stringify(
+      {
+        version: 1,
+        findings: [
+          {
+            id: "H-CI-001",
+            title: "Playwright workflow path coverage gap",
+            severity: "important",
+            priority: "P0",
+            bucket: "CI",
+            owner: "docs-governance",
+            safe_to_autofix: true,
+            approval_required: false,
+            stability: "stable",
+            introduced_in: "C2",
+          },
+          {
+            id: "H-GOV-001",
+            title: "Bookkeeping source-of-truth overlap between v1 and v2",
+            severity: "important",
+            priority: "P1",
+            bucket: "workflow",
+            owner: "docs-governance",
+            safe_to_autofix: false,
+            approval_required: true,
+            stability: "stable",
+            introduced_in: "C2",
+          },
+          {
+            id: "H-OMO-001",
+            title: "OMO v2 is not yet default promotion-ready",
+            severity: "important",
+            priority: "P2",
+            bucket: "promotion-blocker",
+            owner: "workflow-v2",
+            safe_to_autofix: false,
+            approval_required: true,
+            stability: "stable",
+            introduced_in: "C2",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+  write(
+    rootDir,
+    "docs/engineering/meta-harness-auditor/cadence.json",
+    JSON.stringify(
+      {
+        version: 1,
+        events: [
+          {
+            id: "manual-ad-hoc",
+            label: "Manual Ad Hoc Audit",
+            trigger: "Manual trigger",
+            default_run_mode: "audit-only",
+            recommended_scope: "Current repo",
+            notes: "fallback",
+          },
+          {
+            id: "slice-checkpoint",
+            label: "In-Flight Slice Checkpoint",
+            trigger: "Stage checkpoint",
+            default_run_mode: "audit-only",
+            recommended_scope: "Checkpoint evidence",
+            notes: "pilot",
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  );
 
   return rootDir;
 }
@@ -112,7 +190,15 @@ describe("meta-harness-auditor", () => {
     const rootDir = createAuditFixture();
     tempDirs.push(rootDir);
 
-    const findings = detectPlaywrightWorkflowGap({ rootDir });
+    const findings = detectPlaywrightWorkflowGap({
+      rootDir,
+      registry: new Map(
+        readJson(rootDir, "docs/engineering/meta-harness-auditor/finding-registry.json").findings.map((entry) => [
+          entry.id,
+          entry,
+        ]),
+      ),
+    });
 
     expect(findings).toHaveLength(1);
     expect(findings[0]?.id).toBe("H-CI-001");
@@ -136,15 +222,31 @@ describe("meta-harness-auditor", () => {
       ].join("\n"),
     );
 
-    expect(detectPlaywrightWorkflowGap({ rootDir })).toHaveLength(0);
+    expect(
+      detectPlaywrightWorkflowGap({
+        rootDir,
+        registry: new Map(
+          readJson(rootDir, "docs/engineering/meta-harness-auditor/finding-registry.json").findings.map((entry) => [
+            entry.id,
+            entry,
+          ]),
+        ),
+      }),
+    ).toHaveLength(0);
   });
 
   it("detects bookkeeping overlap and OMO promotion risk", () => {
     const rootDir = createAuditFixture();
     tempDirs.push(rootDir);
 
-    const governanceFindings = detectBookkeepingOverlap({ rootDir });
-    const promotionFindings = detectOmoPromotionRisk({ rootDir });
+    const registry = new Map(
+      readJson(rootDir, "docs/engineering/meta-harness-auditor/finding-registry.json").findings.map((entry) => [
+        entry.id,
+        entry,
+      ]),
+    );
+    const governanceFindings = detectBookkeepingOverlap({ rootDir, registry });
+    const promotionFindings = detectOmoPromotionRisk({ rootDir, registry });
 
     expect(governanceFindings.map((finding) => finding.id)).toContain("H-GOV-001");
     expect(promotionFindings.map((finding) => finding.id)).toContain("H-OMO-001");
@@ -169,6 +271,12 @@ describe("meta-harness-auditor", () => {
     const remediationSchema = readProjectJson(
       "docs/engineering/meta-harness-auditor/remediation-plan.schema.json",
     );
+    const cadenceSchema = readProjectJson(
+      "docs/engineering/meta-harness-auditor/cadence.schema.json",
+    );
+    const findingRegistrySchema = readProjectJson(
+      "docs/engineering/meta-harness-auditor/finding-registry.schema.json",
+    );
     const auditContextSchema = readProjectJson(
       "docs/engineering/meta-harness-auditor/audit-context.schema.json",
     );
@@ -182,7 +290,11 @@ describe("meta-harness-auditor", () => {
     const remediationPlan = readJson(rootDir, `${outputDir}/remediation-plan.json`);
     const promotionReadiness = readJson(rootDir, `${outputDir}/promotion-readiness.json`);
     const report = readFileSync(path.join(rootDir, outputDir, "report.md"), "utf8");
+    const cadenceConfig = readJson(rootDir, "docs/engineering/meta-harness-auditor/cadence.json");
+    const findingRegistry = readJson(rootDir, "docs/engineering/meta-harness-auditor/finding-registry.json");
 
+    expect(validateKnownShape(cadenceSchema, cadenceConfig)).toEqual([]);
+    expect(validateKnownShape(findingRegistrySchema, findingRegistry)).toEqual([]);
     expect(validateKnownShape(findingsSchema, findings)).toEqual([]);
     expect(validateKnownShape(auditContextSchema, auditContext)).toEqual([]);
     expect(validateKnownShape(scorecardSchema, scorecard)).toEqual([]);
@@ -190,6 +302,7 @@ describe("meta-harness-auditor", () => {
     expect(validateKnownShape(promotionSchema, promotionReadiness)).toEqual([]);
     expect(promotionReadiness.verdict).toBe("not-ready");
     expect(auditContext.run_mode).toBe("audit-only");
+    expect(auditContext.cadence_event).toBe("manual-ad-hoc");
     expect(report).toContain("Meta Harness Audit Report");
     expect(result.findings.length).toBeGreaterThan(0);
   });

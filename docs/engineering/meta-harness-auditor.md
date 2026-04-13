@@ -175,6 +175,8 @@
 - CLI: `pnpm harness:audit`
 - artifact schema:
   - `docs/engineering/meta-harness-auditor/audit-context.schema.json`
+  - `docs/engineering/meta-harness-auditor/cadence.schema.json`
+  - `docs/engineering/meta-harness-auditor/finding-registry.schema.json`
   - `docs/engineering/meta-harness-auditor/scorecard.schema.json`
   - `docs/engineering/meta-harness-auditor/findings.schema.json`
   - `docs/engineering/meta-harness-auditor/remediation-plan.schema.json`
@@ -245,17 +247,54 @@
 
 ```bash
 pnpm harness:audit
-pnpm harness:audit -- --sample-slices 06-planner-weekly-notes --checkpoint stage4-ready-for-review
-pnpm harness:audit -- --sample-slices 06-planner-weekly-notes --checkpoint stage6-closeout --reason "slice06 checkpoint audit"
+pnpm harness:audit -- --cadence-event weekly-baseline
+pnpm harness:audit -- --in-flight-slice 06-planner-weekly-notes --cadence-event slice-checkpoint --checkpoint stage4-ready-for-review
+pnpm harness:audit -- --in-flight-slice 06-planner-weekly-notes --cadence-event slice-checkpoint --checkpoint stage6-closeout --reason "slice06 checkpoint audit"
 ```
 
 artifact bundle에는 아래 컨텍스트를 같이 남긴다.
 
 - 어떤 모드로 실행했는지
+- 어떤 cadence event로 실행했는지
 - 어떤 slice를 샘플링했는지
 - checkpoint 이름이 있었는지
 - in-flight slice가 무엇인지
 - 어떤 required/optional input이 존재했는지
+
+## Finding ID Stability
+
+finding ID는 `docs/engineering/meta-harness-auditor/finding-registry.json`을 기준으로 관리한다.
+
+원칙:
+
+- 한번 배정된 stable ID는 다른 의미로 재사용하지 않는다.
+- 탐지 로직이 바뀌어도 같은 구조적 문제면 기존 ID를 유지한다.
+- 더 이상 쓰지 않는 ID는 삭제하지 않고 `deprecated`로 남긴다.
+- `fix-one-finding` 모드는 registry에 없는 ID를 받지 않는다.
+
+초기 stable set:
+
+- `H-CI-001`
+- `H-GOV-001`
+- `H-OMO-001`
+
+## Operating Cadence
+
+운영 cadence의 단일 기준은 `docs/engineering/meta-harness-auditor/cadence.json`이다.
+
+초기 이벤트는 아래 4개로 잠근다.
+
+- `weekly-baseline`
+- `slice-batch-review`
+- `slice-checkpoint`
+- `promotion-gate`
+
+실무 해석:
+
+- 매주 1회 baseline audit
+- slice 3~5개마다 1회 batch review
+- OMO pilot slice는 Stage 2 / 4 / 6 checkpoint마다 1회
+- OMO 기본 승격 전에는 반드시 promotion-gate 1회
 
 ## Slice Checkpoint Integration
 

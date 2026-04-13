@@ -32,6 +32,7 @@ description: Audit the Homecook workflow harness, OMO runtime, validators, CI ga
 - `fix-one-finding` 모드는 승인된 low-risk finding 1개에만 사용한다.
 - slice06 같은 in-flight pilot과 충돌할 수 있는 breaking workflow rename은 하지 않는다.
 - slice checkpoint 연동은 in-flight slice의 제품 동작 자체를 판정하는 것이 아니라, 해당 시점의 harness/closeout/runtime evidence를 감사하는 의미다.
+- finding ID는 `finding-registry.json`의 stable ID를 기준으로 다루고, cadence는 `cadence.json` 이벤트를 따른다.
 
 ## Output Bundle
 
