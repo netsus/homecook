@@ -162,7 +162,7 @@ authority report에는 아래를 반드시 포함한다.
   - 바로 진행 가능
   - Figma/wireframe 보강 후 재검토
   - 구현 수정 후 스크린샷 재검토
-- authority-required slice는 CI/policy에서 `pnpm validate:authority-evidence-presence`가 authority report의 `> evidence:` block과 required mobile variants를 재검증한다.
+- authority-required slice는 CI/policy에서 `pnpm validate:authority-evidence-presence`가 authority report의 `> evidence:` block, required mobile variants, 그리고 runtime `design_authority.evidence_artifact_refs` / `authority_report_paths` snapshot과의 sync를 재검증한다.
 
 ---
 

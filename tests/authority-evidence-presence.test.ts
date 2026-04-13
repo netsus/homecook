@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 
 import { validateAuthorityEvidencePresence } from "../scripts/lib/validate-authority-evidence-presence.mjs";
+import { writeRuntimeState } from "../scripts/lib/omo-session-runtime.mjs";
 
 function writeFixtureFile(rootDir: string, relativePath: string, contents: string) {
   const filePath = join(rootDir, relativePath);
@@ -54,6 +55,7 @@ function createFixture({
     "ui/designs/evidence/authority/RECIPE_DETAIL-mobile-narrow.png",
   ],
   createAuthorityReportFiles = true,
+  runtimeDesignAuthority = null,
 }: {
   authorityRequired?: boolean;
   authorityReportPaths?: string[];
@@ -61,6 +63,7 @@ function createFixture({
   authorityReportContents?: string;
   evidenceFiles?: string[];
   createAuthorityReportFiles?: boolean;
+  runtimeDesignAuthority?: Record<string, unknown> | null;
 } = {}) {
   const rootDir = mkdtempSync(join(tmpdir(), "authority-evidence-presence-"));
 
@@ -115,6 +118,19 @@ function createFixture({
 
   for (const evidenceFile of evidenceFiles) {
     writeFixtureFile(rootDir, evidenceFile, "evidence");
+  }
+
+  if (runtimeDesignAuthority) {
+    writeRuntimeState({
+      rootDir,
+      workItemId: "06-recipe-to-planner",
+      state: {
+        slice: "06-recipe-to-planner",
+        current_stage: 5,
+        active_stage: 5,
+        design_authority: runtimeDesignAuthority,
+      },
+    });
   }
 
   return rootDir;
@@ -249,6 +265,82 @@ describe("authority evidence presence validator", () => {
     });
 
     expect(results).toEqual([]);
+  });
+
+  it("fails when runtime authority report paths drift from automation-spec authority_report_paths", () => {
+    const rootDir = createFixture({
+      runtimeDesignAuthority: {
+        status: "reviewed",
+        ui_risk: "anchor-extension",
+        authority_required: true,
+        authority_report_paths: ["ui/designs/authority/OTHER-authority.md"],
+        evidence_artifact_refs: [
+          "ui/designs/evidence/authority/RECIPE_DETAIL-mobile.png",
+          "ui/designs/evidence/authority/RECIPE_DETAIL-mobile-narrow.png",
+        ],
+        reviewed_screen_ids: ["RECIPE_DETAIL"],
+        authority_verdict: "pass",
+        source_stage: 5,
+      },
+    });
+
+    const results = validateAuthorityEvidencePresence({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "feature/fe-06-recipe-to-planner",
+        PR_IS_DRAFT: "false",
+      },
+    });
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("runtime design_authority.authority_report_paths"),
+        }),
+      ]),
+    );
+  });
+
+  it("fails when runtime evidence refs are not represented in the authority report evidence block", () => {
+    const rootDir = createFixture({
+      runtimeDesignAuthority: {
+        status: "reviewed",
+        ui_risk: "anchor-extension",
+        authority_required: true,
+        authority_report_paths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        evidence_artifact_refs: [
+          "ui/designs/evidence/authority/RECIPE_DETAIL-mobile.png",
+          "ui/designs/evidence/authority/RECIPE_DETAIL-mobile-narrow.png",
+          "ui/designs/evidence/authority/RECIPE_DETAIL-mobile-alt.png",
+        ],
+        reviewed_screen_ids: ["RECIPE_DETAIL"],
+        authority_verdict: "pass",
+        source_stage: 5,
+      },
+      evidenceFiles: [
+        "ui/designs/evidence/authority/RECIPE_DETAIL-mobile.png",
+        "ui/designs/evidence/authority/RECIPE_DETAIL-mobile-narrow.png",
+        "ui/designs/evidence/authority/RECIPE_DETAIL-mobile-alt.png",
+      ],
+    });
+
+    const results = validateAuthorityEvidencePresence({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "feature/fe-06-recipe-to-planner",
+        PR_IS_DRAFT: "false",
+      },
+    });
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("runtime design_authority.evidence_artifact_refs"),
+        }),
+      ]),
+    );
   });
 
   it("reuses the same evidence checks for closeout branches", () => {
