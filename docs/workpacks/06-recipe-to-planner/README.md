@@ -131,7 +131,7 @@
 
 - UI risk: `anchor-extension`
 - Anchor screen dependency: `RECIPE_DETAIL`, `PLANNER_WEEK`
-- Visual artifact:
+- Visual artifact: `authority baseline + Stage 4 supplement screenshot plan (아래 경로 참조)`
   - baseline: `ui/designs/evidence/authority/RECIPE_DETAIL-mobile.png`
   - baseline: `ui/designs/evidence/authority/RECIPE_DETAIL-mobile-narrow.png`
   - baseline: `ui/designs/evidence/authority/PLANNER_WEEK-mobile.png`
