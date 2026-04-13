@@ -140,7 +140,12 @@ function seedTrackedFiles(rootDir: string, workItemId: string) {
   );
 }
 
-function writeAutomationSpec(rootDir: string, workItemId: string, uiRisk: string) {
+function writeAutomationSpec(
+  rootDir: string,
+  workItemId: string,
+  uiRisk: string,
+  externalSmokes: string[] = [],
+) {
   writeFileSync(
     join(rootDir, "docs", "workpacks", workItemId, "automation-spec.json"),
     JSON.stringify(
@@ -171,7 +176,7 @@ function writeAutomationSpec(rootDir: string, workItemId: string, uiRisk: string
             authority_report_paths: [],
           },
         },
-        external_smokes: [],
+        external_smokes: externalSmokes,
         blocked_conditions: [],
         max_fix_rounds: {
           backend: 2,
@@ -306,7 +311,26 @@ function createGitOriginFixture(
   };
 }
 
-function createFakeGh(rootDir: string, prNumber = 123) {
+function createFakeGh(
+  rootDir: string,
+  prNumber = 123,
+  {
+    prBody = [
+      "## Actual Verification",
+      "- verifier: Codex",
+      "- environment: local Supabase + seeded demo account",
+      "- scope: bootstrap smoke via `pnpm dev:local-supabase`",
+      "- result: pass (demo data loaded)",
+      "",
+      "## QA Evidence",
+      "- exploratory QA: `N/A`",
+      "- qa eval: `N/A`",
+      "- 아티팩트 / 보고서 경로: `N/A`",
+    ].join("\n"),
+  }: {
+    prBody?: string;
+  } = {},
+) {
   const ghBin = join(rootDir, "fake-gh.sh");
   const ghLogPath = join(rootDir, "fake-gh.log");
 
@@ -328,6 +352,10 @@ function createFakeGh(rootDir: string, prNumber = 123) {
       "  exit 0",
       "fi",
       "if [[ \"$1\" == \"pr\" && \"$2\" == \"view\" ]]; then",
+      "  if [[ \"$*\" == *\"--json body\"* ]]; then",
+      `    cat <<'JSON'\n{\"body\":${JSON.stringify(prBody)}}\nJSON`,
+      "    exit 0",
+      "  fi",
       "  echo '{\"statusCheckRollup\":[]}'",
       "  exit 0",
       "fi",
@@ -785,6 +813,49 @@ describe("OMO bookkeeping", () => {
     expect(ghLog).toContain("exploratory-report.json");
     expect(ghLog).toContain("eval-result.json");
     expect(ghLog).toContain("https://github.com/netsus/homecook/pull/77");
+  });
+
+  it("reuses source PR Actual Verification smoke evidence when closeout preflight requires external smokes", () => {
+    const workItemId = "05-planner-week-core";
+    const { rootDir } = createGitOriginFixture(workItemId);
+    const { ghBin, ghLogPath } = createFakeGh(rootDir, 326);
+    writeAutomationSpec(rootDir, workItemId, "not-required", ["pnpm dev:local-supabase"]);
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        prs: {
+          docs: null,
+          backend: null,
+          frontend: {
+            number: 77,
+            url: "https://github.com/netsus/homecook/pull/77",
+            draft: false,
+            branch: "feature/fe-05-planner-week-core",
+            head_sha: "fe123",
+          },
+          closeout: null,
+        },
+      },
+    });
+
+    const result = reconcileWorkItemBookkeeping({
+      rootDir,
+      workItemId,
+      ghBin,
+      now: "2026-04-01T12:00:00.000Z",
+    });
+
+    expect(result.action).toBe("open_closeout_pr");
+
+    const ghLog = readFileSync(ghLogPath, "utf8");
+    expect(ghLog).toContain("pr view https://github.com/netsus/homecook/pull/77 --json body");
   });
 
   it("repairs authority closeout metadata from runtime evidence when the authority report already passes", () => {

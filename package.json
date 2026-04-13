@@ -66,6 +66,7 @@
     "validate:workflow-v2": "node scripts/validate-workflow-v2.mjs",
     "validate:source-of-truth-sync": "node scripts/validate-source-of-truth-sync.mjs",
     "validate:exploratory-qa-evidence": "node scripts/validate-exploratory-qa-evidence.mjs",
+    "validate:real-smoke-presence": "node scripts/validate-real-smoke-presence.mjs",
     "validate:omo-bookkeeping": "node scripts/validate-omo-bookkeeping.mjs",
     "validate:closeout-sync": "node scripts/validate-closeout-sync.mjs"
   },

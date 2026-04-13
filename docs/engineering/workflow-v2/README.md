@@ -124,6 +124,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - 현재 구현된 validation/smoke/scheduler 명령:
   - `pnpm validate:workflow-v2`
   - `pnpm validate:omo-bookkeeping`
+  - `pnpm validate:real-smoke-presence`
   - `pnpm omo:smoke:control-plane`
   - `pnpm omo:smoke:providers`
   - `pnpm omo:scheduler:install`
@@ -133,7 +134,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
   - `fullauto v1`은 low/medium autonomous slice의 무인 merge까지 자동화한다.
   - merge authority는 GitHub formal approval이 아니라 stage owner review artifact + authority gate pass(해당 시) + 전체 PR checks + external smoke다.
   - authority-required UI는 Claude Stage 4 구현 뒤 Codex `authority_precheck`, Codex Stage 5 public review, Claude `final_authority_gate`를 거친다.
-  - Stage 6 approve 뒤 supervisor는 `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence` bundle을 `internal 6.5`로 실행하고, fixable slice-local drift만 같은 frontend PR branch에서 auto-repair한다.
+  - Stage 6 approve 뒤 supervisor는 `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence`, `validate:real-smoke-presence` bundle을 `internal 6.5`로 실행하고, fixable slice-local drift만 같은 frontend PR branch에서 auto-repair한다.
   - `high-risk` / `anchor-extension` slice는 stage execution은 지원하지만 automatic merge는 금지하고 manual merge handoff로 끝낸다.
   - live smoke는 일반 PR CI 필수 단계가 아니라 sandbox/on-demand 운영 검증 경로다.
   - scheduler 운영 기준 플랫폼은 우선 macOS `launchd`다.

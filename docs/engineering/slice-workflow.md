@@ -58,6 +58,9 @@
 - exploratory QA evidence presence는 `pnpm validate:exploratory-qa-evidence`가 별도로 검사한다.
   - non-draft `feature/fe-<slice>` PR은 `automation-spec.json`의 `frontend.design_authority.ui_risk` 기준으로 exploratory QA evidence 또는 low-risk skip rationale을 남겨야 한다.
   - `docs/omo-closeout-<slice>` 브랜치는 PR body 또는 local `.artifacts/qa/<slice>/` 번들 기준으로 closeout evidence를 다시 확인할 수 있다.
+- real DB / bootstrap / local Supabase / live smoke evidence presence는 `pnpm validate:real-smoke-presence`가 별도로 검사한다.
+  - `automation-spec.json`의 `external_smokes[]`가 비어 있지 않은 non-draft `feature/be-<slice>` / `feature/fe-<slice>` PR은 `Actual Verification`에 smoke evidence를 남겨야 한다.
+  - `internal 6.5`와 `pnpm omo:reconcile` preflight는 closeout PR body가 아니라 source PR `Actual Verification`을 기준으로 smoke evidence를 다시 확인한다.
 - Stage 6 merge 시점에는 아래가 동시에 만족해야 한다:
   - roadmap status가 실제 단계와 맞다
   - `Design Status`가 최종 리뷰 결과와 맞다

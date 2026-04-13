@@ -5405,6 +5405,20 @@ describe("OMO autonomous supervisor", () => {
             };
           },
           commentPullRequest() {},
+          getPullRequestBody() {
+            return [
+              "## Actual Verification",
+              "- verifier: Codex",
+              "- environment: local Supabase + seeded demo account",
+              "- scope: frontend bootstrap smoke via `pnpm dev:local-supabase`",
+              "- result: pass (planner bootstrap data loaded)",
+              "",
+              "## QA Evidence",
+              "- exploratory QA: `N/A`",
+              "- qa eval: `N/A`",
+              "- 아티팩트 / 보고서 경로: `N/A`",
+            ].join("\n");
+          },
           mergePullRequest() {
             throw new Error("not expected");
           },
@@ -5847,7 +5861,18 @@ describe("OMO autonomous supervisor", () => {
           },
           commentPullRequest() {},
           getPullRequestBody() {
-            return "## QA Evidence\n- exploratory QA: `N/A`\n- qa eval: `N/A`\n- 아티팩트 / 보고서 경로: `N/A`\n";
+            return [
+              "## Actual Verification",
+              "- verifier: Codex",
+              "- environment: local Supabase + seeded demo account",
+              "- scope: frontend bootstrap smoke via `pnpm dev:local-supabase`",
+              "- result: pass (planner bootstrap data loaded)",
+              "",
+              "## QA Evidence",
+              "- exploratory QA: `N/A`",
+              "- qa eval: `N/A`",
+              "- 아티팩트 / 보고서 경로: `N/A`",
+            ].join("\n");
           },
           mergePullRequest() {
             throw new Error("not expected");
@@ -5974,9 +5999,7 @@ describe("OMO autonomous supervisor", () => {
           checkoutBranch() {
             return { branch: "feature/fe-03-recipe-like" };
           },
-          pushBranch() {
-            throw new Error("not expected");
-          },
+          pushBranch() {},
           syncBaseBranch() {},
           getHeadSha() {
             return execFileSync("git", ["rev-parse", "HEAD"], {
@@ -6030,7 +6053,18 @@ describe("OMO autonomous supervisor", () => {
           },
           commentPullRequest() {},
           getPullRequestBody() {
-            return "## QA Evidence\n- exploratory QA: `N/A`\n- qa eval: `N/A`\n- 아티팩트 / 보고서 경로: `N/A`\n";
+            return [
+              "## Actual Verification",
+              "- verifier: Codex",
+              "- environment: local Supabase + seeded demo account",
+              "- scope: frontend bootstrap smoke via `pnpm dev:local-supabase`",
+              "- result: pass (planner bootstrap data loaded)",
+              "",
+              "## QA Evidence",
+              "- exploratory QA: `N/A`",
+              "- qa eval: `N/A`",
+              "- 아티팩트 / 보고서 경로: `N/A`",
+            ].join("\n");
           },
           mergePullRequest() {
             throw new Error("not expected");
