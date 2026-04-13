@@ -24,6 +24,7 @@ import {
   resolveUncheckedChecklistItems,
 } from "./omo-checklist-contract.mjs";
 import { syncWorkflowV2Status } from "./omo-lite-supervisor.mjs";
+import { resolveAllowedCloseoutAbsolutePaths } from "./omo-closeout-policy.mjs";
 import { readRuntimeState, setPullRequestRef, setWaitState, writeRuntimeState } from "./omo-session-runtime.mjs";
 import { validateAuthorityEvidencePresence } from "./validate-authority-evidence-presence.mjs";
 import { validateCloseoutSync } from "./validate-closeout-sync.mjs";
@@ -709,12 +710,10 @@ function assertInternalCloseoutPreflight({
 }
 
 export function assertDocsOnlyCloseoutChanges({ slice, changedFiles, worktreePath }) {
-  const allowed = new Set([
-    resolve(worktreePath, "docs", "workpacks", "README.md"),
-    resolve(worktreePath, "docs", "workpacks", slice, "README.md"),
-    resolve(worktreePath, "docs", "workpacks", slice, "acceptance.md"),
-    resolve(worktreePath, "docs", "workpacks", slice, "automation-spec.json"),
-  ]);
+  const allowed = resolveAllowedCloseoutAbsolutePaths({
+    worktreePath,
+    slice,
+  });
 
   const invalid = changedFiles.filter((filePath) => !allowed.has(filePath));
   if (invalid.length > 0) {
