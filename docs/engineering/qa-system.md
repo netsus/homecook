@@ -184,7 +184,7 @@ PR에는 아래를 남긴다.
 - Layer 3 변경이면 `pnpm qa:eval:suite` 결과와 artifact 경로
 - 실제 브라우저 확인 / local demo / local Supabase / live 외부 연동 여부는 PR `Actual Verification` 섹션에 verifier, environment, result 형태로 남긴다.
 - README `Delivery Checklist`, acceptance, `Design Status`와 PR evidence가 어긋나지 않았는지는 PR `Closeout Sync` 섹션에서 정리한다.
-- `automation-spec.json`의 `external_smokes[]`가 비어 있지 않은 slice에서 `Actual Verification` smoke evidence가 빠졌는지는 `pnpm validate:real-smoke-presence`로 재검증할 수 있다.
+- `automation-spec.json`의 `external_smokes[]`가 비어 있지 않은 slice에서 `Actual Verification` smoke evidence가 빠졌는지, 그리고 선언한 smoke 항목이 실제 verification 기록에서 식별 가능한지는 `pnpm validate:real-smoke-presence`로 재검증할 수 있다.
 
 ## 운영 원칙
 
@@ -194,4 +194,4 @@ PR에는 아래를 남긴다.
 - exploratory QA가 manual/agentic이라고 해서 optional evidence가 되지는 않는다. 실행했다면 보고서와 점수를 남긴다.
 - `pnpm validate:exploratory-qa-evidence`는 non-draft frontend PR과 OMO closeout PR에서 PR body 또는 local `.artifacts/qa/<slice>/` 번들을 기준으로 evidence presence를 fail-closed로 확인한다.
 - `pnpm validate:authority-evidence-presence`는 authority-required non-draft frontend PR과 OMO closeout PR에서 authority report의 `> evidence:` block, visual evidence file existence, `stage4_evidence_requirements` variant 충족 여부를 fail-closed로 확인한다.
-- `pnpm validate:real-smoke-presence`는 `external_smokes[]`가 선언된 non-draft backend/frontend PR의 `Actual Verification`을 fail-closed로 확인하고, closeout preflight에서는 source PR body를 기준으로 같은 검사를 재사용한다.
+- `pnpm validate:real-smoke-presence`는 `external_smokes[]`가 선언된 non-draft backend/frontend PR의 `Actual Verification`을 fail-closed로 확인하고, closeout preflight에서는 source PR body를 기준으로 같은 검사를 재사용한다. generic smoke/pass 문구만으로는 충분하지 않으며, 선언한 smoke command 또는 식별 가능한 smoke reference가 verification evidence에 드러나야 한다.

@@ -63,6 +63,7 @@
   - runtime authority snapshot이 존재하면 `design_authority.authority_report_paths`, `design_authority.evidence_artifact_refs`도 authority report / automation-spec과 서로 일치해야 한다.
 - real DB / bootstrap / local Supabase / live smoke evidence presence는 `pnpm validate:real-smoke-presence`가 별도로 검사한다.
   - `automation-spec.json`의 `external_smokes[]`가 비어 있지 않은 non-draft `feature/be-<slice>` / `feature/fe-<slice>` PR은 `Actual Verification`에 smoke evidence를 남겨야 한다.
+  - smoke evidence는 generic 서술만으로 끝나면 안 되고, 선언한 `external_smokes[]` 항목이 `Actual Verification`에서 식별 가능해야 한다.
   - `internal 6.5`와 `pnpm omo:reconcile` preflight는 closeout PR body가 아니라 source PR `Actual Verification`을 기준으로 smoke evidence를 다시 확인한다.
 - Stage 6 merge 시점에는 아래가 동시에 만족해야 한다:
   - roadmap status가 실제 단계와 맞다

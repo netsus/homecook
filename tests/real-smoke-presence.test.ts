@@ -173,6 +173,35 @@ describe("real smoke presence validator", () => {
     expect(results).toEqual([]);
   });
 
+  it("fails when Actual Verification does not reference the declared external_smokes entries", () => {
+    const rootDir = createFixture({
+      externalSmokes: ["pnpm dev:local-supabase", "pnpm test:e2e:oauth"],
+    });
+
+    const results = validateRealSmokePresence({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "feature/fe-06-recipe-to-planner",
+        PR_IS_DRAFT: "false",
+        PR_BODY: buildActualVerificationSection({
+          verifier: "Claude",
+          environment: "local Supabase + seeded demo account",
+          scope: "frontend bootstrap smoke",
+          result: "pass (planner bootstrap data loaded)",
+        }),
+      },
+    });
+
+    expect(results[0]?.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("external_smokes"),
+        }),
+      ]),
+    );
+  });
+
   it("uses SOURCE_PR_BODY for closeout branches when present", () => {
     const rootDir = createFixture({
       externalSmokes: ["pnpm dev:local-supabase"],

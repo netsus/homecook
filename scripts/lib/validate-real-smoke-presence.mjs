@@ -35,6 +35,90 @@ const SMOKE_TOKENS = [
   "dev:demo",
 ];
 
+const SMOKE_REFERENCE_SKIP_TOKENS = new Set([
+  "true",
+  "false",
+  ...SKIP_TOKENS,
+]);
+
+const GENERIC_REFERENCE_TOKENS = new Set([
+  "pnpm",
+  "npm",
+  "yarn",
+  "bun",
+  "npx",
+  "node",
+  "run",
+  "smoke",
+  "real",
+  "live",
+  "pass",
+  "test",
+]);
+
+function normalizeForSearch(value) {
+  return normalizeInlineCode(value ?? "").toLowerCase();
+}
+
+function uniq(values) {
+  return [...new Set(values)];
+}
+
+function extractSmokeReferenceTokens(reference) {
+  const normalized = normalizeForSearch(reference);
+  if (normalized.length === 0 || SMOKE_REFERENCE_SKIP_TOKENS.has(normalized)) {
+    return [];
+  }
+
+  const candidates = new Set([normalized]);
+  const commandMatch = /^(pnpm|npm|yarn|bun|npx)\s+(.+)$/.exec(normalized);
+  if (commandMatch?.[2]) {
+    candidates.add(commandMatch[2].trim());
+  }
+
+  for (const token of normalized.match(/[a-z0-9][a-z0-9:/._-]*/g) ?? []) {
+    candidates.add(token);
+    for (const fragment of token.split(/[:/._-]+/)) {
+      if (fragment.length > 0) {
+        candidates.add(fragment);
+      }
+    }
+  }
+
+  return uniq([...candidates]).filter((token) => {
+    if (token.length < 4) {
+      return false;
+    }
+
+    return !GENERIC_REFERENCE_TOKENS.has(token);
+  });
+}
+
+function findMissingSmokeReferences({
+  sectionText,
+  externalSmokes,
+}) {
+  const normalizedSection = normalizeForSearch(sectionText);
+
+  return (Array.isArray(externalSmokes) ? externalSmokes : []).filter((reference) => {
+    const normalizedReference = normalizeForSearch(reference);
+    if (normalizedReference.length === 0 || SMOKE_REFERENCE_SKIP_TOKENS.has(normalizedReference)) {
+      return false;
+    }
+
+    if (normalizedSection.includes(normalizedReference)) {
+      return false;
+    }
+
+    const tokens = extractSmokeReferenceTokens(reference);
+    if (tokens.length === 0) {
+      return false;
+    }
+
+    return !tokens.some((token) => normalizedSection.includes(token));
+  });
+}
+
 function analyzeEvidenceValue(value) {
   const trimmed = normalizeInlineCode(value ?? "");
   if (trimmed.length === 0) {
@@ -138,6 +222,18 @@ function validateActualVerificationSection({
       path: "PR_BODY:## Actual Verification",
       message:
         "Actual Verification must describe real smoke evidence (for example real DB, local Supabase, bootstrap, seed, or live smoke).",
+    });
+  }
+
+  const missingSmokeReferences = findMissingSmokeReferences({
+    sectionText,
+    externalSmokes,
+  });
+  if (missingSmokeReferences.length > 0) {
+    errors.push({
+      path: "PR_BODY:## Actual Verification",
+      message:
+        `Actual Verification must reference the declared external_smokes entries: ${missingSmokeReferences.join(", ")}`,
     });
   }
 
