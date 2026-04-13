@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { readWorkItemSessionStatus } from "./lib/omo-session-orchestrator.mjs";
+import { formatFullStatus } from "./lib/omo-status-summary.mjs";
 
 function printUsage() {
   process.stdout.write(
@@ -77,25 +78,7 @@ function main() {
     return;
   }
 
-  process.stdout.write(
-    [
-      `Work item: ${status.workItemId}`,
-      `Slice: ${status.slice}`,
-      `Active stage: ${status.runtime.active_stage ?? status.runtime.current_stage ?? "N/A"}`,
-      `Current stage: ${status.runtime.current_stage ?? "N/A"}`,
-      `Last completed stage: ${status.runtime.last_completed_stage ?? 0}`,
-      `Blocked stage: ${status.runtime.blocked_stage ?? "none"}`,
-      `Phase: ${status.runtime.phase ?? "none"}`,
-      `Next action: ${status.runtime.next_action ?? "noop"}`,
-      `Claude session: ${status.runtime.sessions.claude_primary.session_id ?? "missing"} (${status.runtime.sessions.claude_primary.provider ?? "pending"})`,
-      `Codex session: ${status.runtime.sessions.codex_primary.session_id ?? "missing"} (${status.runtime.sessions.codex_primary.provider ?? "pending"})`,
-      `Tracked lifecycle: ${status.trackedStatus?.lifecycle ?? status.trackedWorkItem.status.lifecycle}`,
-      `Tracked approval: ${status.trackedStatus?.approval_state ?? status.trackedWorkItem.status.approval_state}`,
-      status.runtime.recovery?.kind
-        ? `Recovery: ${status.runtime.recovery.kind} stage=${status.runtime.recovery.stage ?? "n/a"} branch=${status.runtime.recovery.branch ?? "n/a"} salvage=${status.runtime.recovery.salvage_candidate ? "yes" : "no"}`
-        : "Recovery: none",
-    ].join("\n") + "\n",
-  );
+  process.stdout.write(`${formatFullStatus(status)}\n`);
 }
 
 try {

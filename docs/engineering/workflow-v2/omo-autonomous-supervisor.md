@@ -301,6 +301,13 @@ runtime state는 더 이상 “마지막 stage 번호 몇 번”만 저장하지
 - `commit_sha`
 - `pr_role`
 
+operator-facing status 진단:
+
+- `pnpm omo:status -- --work-item <id>`는 `reason code`, `remediation`, 마지막 실패 validator, failure path, artifact path, 다음 추천 액션을 함께 출력한다.
+- `pnpm omo:status:brief -- --work-item <id>`는 같은 정보를 한 줄 요약에 가까운 compact 형식으로 출력한다.
+- `wait`, `retry`, `recovery`에 남은 이유 문자열이 있으면 supervisor는 이를 정규화해서 operator guidance를 계산한다.
+- `internal 6.5`에서 fail-closed 된 경우에는 validator 이름과 path를 우선 노출해 docs-governance 분리, evidence 보강, source PR verification 보정 같은 후속 조치를 빠르게 판단할 수 있어야 한다.
+
 원칙:
 
 1. `current_stage`는 호환성을 위해 남기되 `active_stage`의 mirror로 취급한다.
