@@ -1,64 +1,16 @@
-import { existsSync, readFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { readAutomationSpec } from "./omo-automation-spec.mjs";
+import {
+  parseDraftState,
+  readText,
+  resolveBranchName,
+  resolveSliceBranchContext,
+} from "./validator-shared.mjs";
 
 const IMAGE_REF_PATTERN = /\.(?:png|jpe?g|webp|gif|avif|svg)(?:[?#].*)?$/i;
 const FIGMA_URL_PATTERN = /^https?:\/\/(?:www\.)?figma\.com\//i;
-
-function resolveBranchName(rootDir, env) {
-  const branchName = env.BRANCH_NAME ?? env.GITHUB_HEAD_REF;
-  if (typeof branchName === "string" && branchName.trim().length > 0) {
-    return branchName.trim();
-  }
-
-  const result = spawnSync("git", ["branch", "--show-current"], {
-    cwd: rootDir,
-    encoding: "utf8",
-  });
-
-  return result.status === 0 ? (result.stdout ?? "").trim() : "";
-}
-
-function parseDraftState(value) {
-  if (value === true || value === "true") {
-    return true;
-  }
-
-  if (value === false || value === "false") {
-    return false;
-  }
-
-  return null;
-}
-
-function resolveBranchContext(branchName) {
-  const frontendMatch = /^feature\/fe-(.+)$/.exec(branchName);
-  if (frontendMatch) {
-    return {
-      kind: "feature-fe",
-      slice: frontendMatch[1],
-    };
-  }
-
-  const closeoutMatch = /^docs\/omo-closeout-(.+)$/.exec(branchName);
-  if (closeoutMatch) {
-    return {
-      kind: "omo-closeout",
-      slice: closeoutMatch[1],
-    };
-  }
-
-  return {
-    kind: null,
-    slice: null,
-  };
-}
-
-function readText(filePath) {
-  return readFileSync(filePath, "utf8");
-}
 
 function extractEvidenceLines(reportText) {
   if (typeof reportText !== "string" || reportText.trim().length === 0) {
@@ -211,8 +163,8 @@ export function validateAuthorityEvidencePresence({
   rootDir = process.cwd(),
   env = process.env,
 } = {}) {
-  const branchName = resolveBranchName(rootDir, env);
-  const branchContext = resolveBranchContext(branchName);
+  const branchName = resolveBranchName({ rootDir, env });
+  const branchContext = resolveSliceBranchContext(branchName);
   const prIsDraft = parseDraftState(env.PR_IS_DRAFT);
 
   if (

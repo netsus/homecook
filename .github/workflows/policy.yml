@@ -47,6 +47,9 @@ jobs:
       - name: Validate workflow v2 files
         run: node scripts/validate-workflow-v2.mjs
 
+      - name: Validate source of truth sync
+        run: node scripts/validate-source-of-truth-sync.mjs
+
       - name: Validate OMO bookkeeping invariants
         env:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}

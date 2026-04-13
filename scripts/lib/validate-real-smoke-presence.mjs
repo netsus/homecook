@@ -1,8 +1,13 @@
-import { existsSync, readFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
-import { resolve } from "node:path";
-
 import { readAutomationSpec } from "./omo-automation-spec.mjs";
+import {
+  extractMarkdownSection,
+  normalizeInlineCode,
+  parseDraftState,
+  readMarkdownLabelValue,
+  readPullRequestBody,
+  resolveBranchName,
+  resolveSliceBranchContext,
+} from "./validator-shared.mjs";
 
 const SKIP_TOKENS = [
   "n/a",
@@ -29,138 +34,6 @@ const SMOKE_TOKENS = [
   "dev:local-supabase",
   "dev:demo",
 ];
-
-function resolveBranchName(rootDir, env) {
-  const branchName = env.BRANCH_NAME ?? env.GITHUB_HEAD_REF;
-  if (typeof branchName === "string" && branchName.trim().length > 0) {
-    return branchName.trim();
-  }
-
-  const result = spawnSync("git", ["branch", "--show-current"], {
-    cwd: rootDir,
-    encoding: "utf8",
-  });
-
-  return result.status === 0 ? (result.stdout ?? "").trim() : "";
-}
-
-function parseDraftState(value) {
-  if (value === true || value === "true") {
-    return true;
-  }
-
-  if (value === false || value === "false") {
-    return false;
-  }
-
-  return null;
-}
-
-function resolveBranchContext(branchName) {
-  const backendMatch = /^feature\/be-(.+)$/.exec(branchName);
-  if (backendMatch) {
-    return {
-      kind: "feature-be",
-      slice: backendMatch[1],
-    };
-  }
-
-  const frontendMatch = /^feature\/fe-(.+)$/.exec(branchName);
-  if (frontendMatch) {
-    return {
-      kind: "feature-fe",
-      slice: frontendMatch[1],
-    };
-  }
-
-  const closeoutMatch = /^docs\/omo-closeout-(.+)$/.exec(branchName);
-  if (closeoutMatch) {
-    return {
-      kind: "omo-closeout",
-      slice: closeoutMatch[1],
-    };
-  }
-
-  return {
-    kind: null,
-    slice: null,
-  };
-}
-
-function readText(filePath) {
-  return readFileSync(filePath, "utf8");
-}
-
-function readPrBody(rootDir, env, preferredBody = null) {
-  if (typeof preferredBody === "string" && preferredBody.trim().length > 0) {
-    return preferredBody;
-  }
-
-  if (typeof env.PR_BODY === "string" && env.PR_BODY.trim().length > 0) {
-    return env.PR_BODY;
-  }
-
-  const bodyFilePath = env.PR_BODY_FILE;
-  if (typeof bodyFilePath === "string" && bodyFilePath.trim().length > 0 && existsSync(bodyFilePath)) {
-    return readText(bodyFilePath.trim());
-  }
-
-  const eventPath = env.GITHUB_EVENT_PATH;
-  if (typeof eventPath === "string" && eventPath.trim().length > 0 && existsSync(eventPath)) {
-    try {
-      const event = JSON.parse(readText(resolve(rootDir, eventPath.trim())));
-      const body = event?.pull_request?.body;
-      if (typeof body === "string" && body.trim().length > 0) {
-        return body;
-      }
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
-}
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function extractMarkdownSection(text, heading) {
-  if (typeof text !== "string" || text.trim().length === 0) {
-    return "";
-  }
-
-  const lines = text.split(/\r?\n/);
-  const startIndex = lines.findIndex((line) => line.trim() === heading);
-  if (startIndex === -1) {
-    return "";
-  }
-
-  const collected = [];
-  for (let index = startIndex + 1; index < lines.length; index += 1) {
-    const line = lines[index];
-    if (/^##\s+/.test(line.trim())) {
-      break;
-    }
-    collected.push(line);
-  }
-
-  return collected.join("\n");
-}
-
-function readLabelValue(sectionText, label) {
-  if (typeof sectionText !== "string" || sectionText.trim().length === 0) {
-    return "";
-  }
-
-  const pattern = new RegExp(`^-\\s+${escapeRegExp(label)}:\\s*(.*)$`, "im");
-  const match = sectionText.match(pattern);
-  return (match?.[1] ?? "").trim();
-}
-
-function normalizeInlineCode(value) {
-  return value.replace(/`/g, "").trim();
-}
 
 function analyzeEvidenceValue(value) {
   const trimmed = normalizeInlineCode(value ?? "");
@@ -226,9 +99,9 @@ function validateActualVerificationSection({
   externalSmokes,
 }) {
   const errors = [];
-  const environment = analyzeEvidenceValue(readLabelValue(sectionText, "environment"));
-  const scope = analyzeEvidenceValue(readLabelValue(sectionText, "scope"));
-  const result = analyzeEvidenceValue(readLabelValue(sectionText, "result"));
+  const environment = analyzeEvidenceValue(readMarkdownLabelValue(sectionText, "environment"));
+  const scope = analyzeEvidenceValue(readMarkdownLabelValue(sectionText, "scope"));
+  const result = analyzeEvidenceValue(readMarkdownLabelValue(sectionText, "result"));
 
   if (environment.kind !== "present") {
     errors.push({
@@ -281,8 +154,10 @@ export function validateRealSmokePresence({
   rootDir = process.cwd(),
   env = process.env,
 } = {}) {
-  const branchName = resolveBranchName(rootDir, env);
-  const branchContext = resolveBranchContext(branchName);
+  const branchName = resolveBranchName({ rootDir, env });
+  const branchContext = resolveSliceBranchContext(branchName, {
+    includeBackend: true,
+  });
   const prIsDraft = parseDraftState(env.PR_IS_DRAFT);
 
   if (
@@ -311,7 +186,11 @@ export function validateRealSmokePresence({
     env.SOURCE_PR_BODY.trim().length > 0
       ? env.SOURCE_PR_BODY
       : null;
-  const prBody = readPrBody(rootDir, env, preferredBody);
+  const prBody = readPullRequestBody({
+    rootDir,
+    env,
+    preferredBody,
+  });
   if (typeof prBody !== "string" || prBody.trim().length === 0) {
     return [
       {

@@ -622,6 +622,97 @@ describe("OMO bookkeeping", () => {
     ]);
   });
 
+  it("allows closeout branches to change acceptance and automation-spec alongside closeout docs", () => {
+    const rootDir = createRuntimeFixture("03-recipe-like");
+    createGitWorkspace(rootDir);
+    execFileSync("git", ["add", "-A"], { cwd: rootDir });
+    execFileSync("git", ["commit", "-m", "chore: seed valid closeout fixture"], { cwd: rootDir });
+    const baseHead = execFileSync("git", ["rev-parse", "HEAD"], { cwd: rootDir, encoding: "utf8" }).trim();
+    execFileSync("git", ["update-ref", "refs/remotes/origin/master", baseHead], { cwd: rootDir });
+    execFileSync("git", ["checkout", "-b", "docs/omo-closeout-03-recipe-like"], { cwd: rootDir });
+
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "README.md"),
+      [
+        "# Workpack Roadmap v2",
+        "",
+        "## Slice Order",
+        "",
+        "| Slice | Status | Goal |",
+        "| --- | --- | --- |",
+        "| `03-recipe-like` | merged | test slice |",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "03-recipe-like", "acceptance.md"),
+      [
+        "# Acceptance Checklist",
+        "",
+        "## Happy Path",
+        "- [x] merged slice acceptance remains closed",
+        "",
+        "## Automation Split",
+        "",
+        "### Manual Only",
+        "- [ ] none",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "03-recipe-like", "automation-spec.json"),
+      JSON.stringify(
+        {
+          slice_id: "03-recipe-like",
+          execution_mode: "autonomous",
+          risk_class: "medium",
+          merge_policy: "conditional-auto",
+          backend: {
+            required_endpoints: [],
+            invariants: [],
+            verify_commands: [],
+            required_test_targets: [],
+          },
+          frontend: {
+            required_routes: [],
+            required_states: [],
+            playwright_projects: [],
+            artifact_assertions: [],
+            design_authority: {
+              ui_risk: "not-required",
+              anchor_screens: [],
+              required_screens: [],
+              generator_required: false,
+              critic_required: false,
+              authority_required: false,
+              stage4_evidence_requirements: [],
+              authority_report_paths: [],
+            },
+          },
+          external_smokes: [],
+          blocked_conditions: [],
+          max_fix_rounds: {
+            backend: 2,
+            frontend: 2,
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    execFileSync("git", ["add", "-A"], { cwd: rootDir });
+    execFileSync("git", ["commit", "-m", "docs: valid closeout diff"], { cwd: rootDir });
+
+    const results = validateOmoBookkeeping({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "docs/omo-closeout-03-recipe-like",
+        BASE_REF: "master",
+      },
+    });
+
+    expect(results).toEqual([]);
+  });
+
   it("opens a docs-only closeout PR for repairable post-merge drift", () => {
     const workItemId = "05-planner-week-core";
     const { rootDir } = createGitOriginFixture(workItemId);

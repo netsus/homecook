@@ -1,8 +1,16 @@
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { resolve, join } from "node:path";
 
 import { readAutomationSpec } from "./omo-automation-spec.mjs";
+import {
+  extractMarkdownSection,
+  normalizeInlineCode,
+  parseDraftState,
+  readMarkdownLabelValue,
+  readPullRequestBody,
+  resolveBranchName,
+  resolveSliceBranchContext,
+} from "./validator-shared.mjs";
 
 const REQUIRED_UI_RISKS = new Set(["new-screen", "high-risk", "anchor-extension"]);
 const OPTIONAL_UI_RISKS = new Set(["low-risk"]);
@@ -22,137 +30,6 @@ const SKIP_TOKENS = [
   "not run",
   "not-run",
 ];
-
-function resolveBranchName(rootDir, env) {
-  const branchName = env.BRANCH_NAME ?? env.GITHUB_HEAD_REF;
-  if (typeof branchName === "string" && branchName.trim().length > 0) {
-    return branchName.trim();
-  }
-
-  const result = spawnSync("git", ["branch", "--show-current"], {
-    cwd: rootDir,
-    encoding: "utf8",
-  });
-
-  return result.status === 0 ? (result.stdout ?? "").trim() : "";
-}
-
-function parseDraftState(value) {
-  if (value === true || value === "true") {
-    return true;
-  }
-
-  if (value === false || value === "false") {
-    return false;
-  }
-
-  return null;
-}
-
-function resolveBranchContext(branchName) {
-  const frontendMatch = /^feature\/fe-(.+)$/.exec(branchName);
-  if (frontendMatch) {
-    return {
-      kind: "feature-fe",
-      slice: frontendMatch[1],
-    };
-  }
-
-  const closeoutMatch = /^docs\/omo-closeout-(.+)$/.exec(branchName);
-  if (closeoutMatch) {
-    return {
-      kind: "omo-closeout",
-      slice: closeoutMatch[1],
-    };
-  }
-
-  return {
-    kind: null,
-    slice: null,
-  };
-}
-
-function readText(filePath) {
-  return readFileSync(filePath, "utf8");
-}
-
-function readPrBody(rootDir, env) {
-  if (typeof env.PR_BODY === "string" && env.PR_BODY.trim().length > 0) {
-    return env.PR_BODY;
-  }
-
-  const bodyFilePath = env.PR_BODY_FILE;
-  if (typeof bodyFilePath === "string" && bodyFilePath.trim().length > 0 && existsSync(bodyFilePath)) {
-    return readText(bodyFilePath.trim());
-  }
-
-  const eventPath = env.GITHUB_EVENT_PATH;
-  if (typeof eventPath === "string" && eventPath.trim().length > 0 && existsSync(eventPath)) {
-    try {
-      const event = JSON.parse(readText(resolve(rootDir, eventPath.trim())));
-      const eventHeadRef = event?.pull_request?.head?.ref;
-      const requestedBranch = env.BRANCH_NAME ?? env.GITHUB_HEAD_REF;
-      if (
-        typeof requestedBranch === "string" &&
-        requestedBranch.trim().length > 0 &&
-        typeof eventHeadRef === "string" &&
-        eventHeadRef.trim().length > 0 &&
-        eventHeadRef.trim() !== requestedBranch.trim()
-      ) {
-        return null;
-      }
-      const body = event?.pull_request?.body;
-      if (typeof body === "string" && body.trim().length > 0) {
-        return body;
-      }
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
-}
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function extractMarkdownSection(text, heading) {
-  if (typeof text !== "string" || text.trim().length === 0) {
-    return "";
-  }
-
-  const lines = text.split(/\r?\n/);
-  const startIndex = lines.findIndex((line) => line.trim() === heading);
-  if (startIndex === -1) {
-    return "";
-  }
-
-  const collected = [];
-  for (let index = startIndex + 1; index < lines.length; index += 1) {
-    const line = lines[index];
-    if (/^##\s+/.test(line.trim())) {
-      break;
-    }
-    collected.push(line);
-  }
-
-  return collected.join("\n");
-}
-
-function readLabelValue(sectionText, label) {
-  if (typeof sectionText !== "string" || sectionText.trim().length === 0) {
-    return "";
-  }
-
-  const pattern = new RegExp(`^-\\s+${escapeRegExp(label)}:\\s*(.*)$`, "im");
-  const match = sectionText.match(pattern);
-  return (match?.[1] ?? "").trim();
-}
-
-function normalizeInlineCode(value) {
-  return value.replace(/`/g, "").trim();
-}
 
 function analyzeEvidenceValue(value) {
   const trimmed = normalizeInlineCode(value ?? "");
@@ -245,9 +122,9 @@ function buildBodyPath(label) {
 
 function validateRequiredBodyEvidence(sectionText) {
   const errors = [];
-  const exploratory = analyzeEvidenceValue(readLabelValue(sectionText, "exploratory QA"));
-  const qaEval = analyzeEvidenceValue(readLabelValue(sectionText, "qa eval"));
-  const artifactPaths = analyzeEvidenceValue(readLabelValue(sectionText, "아티팩트 / 보고서 경로"));
+  const exploratory = analyzeEvidenceValue(readMarkdownLabelValue(sectionText, "exploratory QA"));
+  const qaEval = analyzeEvidenceValue(readMarkdownLabelValue(sectionText, "qa eval"));
+  const artifactPaths = analyzeEvidenceValue(readMarkdownLabelValue(sectionText, "아티팩트 / 보고서 경로"));
 
   if (exploratory.kind !== "present") {
     errors.push({
@@ -285,9 +162,9 @@ function validateRequiredBodyEvidence(sectionText) {
 
 function validateOptionalBodyEvidence(sectionText) {
   const errors = [];
-  const exploratory = analyzeEvidenceValue(readLabelValue(sectionText, "exploratory QA"));
-  const qaEval = analyzeEvidenceValue(readLabelValue(sectionText, "qa eval"));
-  const artifactPaths = analyzeEvidenceValue(readLabelValue(sectionText, "아티팩트 / 보고서 경로"));
+  const exploratory = analyzeEvidenceValue(readMarkdownLabelValue(sectionText, "exploratory QA"));
+  const qaEval = analyzeEvidenceValue(readMarkdownLabelValue(sectionText, "qa eval"));
+  const artifactPaths = analyzeEvidenceValue(readMarkdownLabelValue(sectionText, "아티팩트 / 보고서 경로"));
 
   if (exploratory.kind === "missing") {
     errors.push({
@@ -380,8 +257,8 @@ export function validateExploratoryQaEvidence({
   rootDir = process.cwd(),
   env = process.env,
 } = {}) {
-  const branchName = resolveBranchName(rootDir, env);
-  const branchContext = resolveBranchContext(branchName);
+  const branchName = resolveBranchName({ rootDir, env });
+  const branchContext = resolveSliceBranchContext(branchName);
   const prIsDraft = parseDraftState(env.PR_IS_DRAFT);
   const strictMode =
     branchContext.kind === "feature-fe" && prIsDraft === false
@@ -411,7 +288,11 @@ export function validateExploratoryQaEvidence({
     return [];
   }
 
-  const prBody = readPrBody(rootDir, env);
+  const prBody = readPullRequestBody({
+    rootDir,
+    env,
+    verifyEventHeadRef: true,
+  });
   const qaEvidenceSection = extractMarkdownSection(prBody ?? "", "## QA Evidence");
   const artifactBundle = findLocalArtifactBundle({ rootDir, slice });
   const errors = [];

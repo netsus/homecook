@@ -4,7 +4,9 @@ import { spawnSync } from "node:child_process";
 
 import { evaluateBookkeepingInvariant } from "./omo-bookkeeping.mjs";
 import { resolveBaseRef } from "./check-workpack-docs.mjs";
+import { resolveAllowedCloseoutRelativePaths } from "./omo-closeout-policy.mjs";
 import { listRuntimeStates, readRuntimeState } from "./omo-session-runtime.mjs";
+import { resolveBranchName } from "./validator-shared.mjs";
 
 function listTrackedWorkItems(rootDir) {
   const workItemsDir = resolve(rootDir, ".workflow-v2", "work-items");
@@ -28,20 +30,6 @@ function listTrackedWorkItems(rootDir) {
     });
 }
 
-function resolveBranchName(rootDir, env) {
-  const branchName = env.BRANCH_NAME ?? env.GITHUB_HEAD_REF;
-  if (typeof branchName === "string" && branchName.trim().length > 0) {
-    return branchName.trim();
-  }
-
-  const result = spawnSync("git", ["branch", "--show-current"], {
-    cwd: rootDir,
-    encoding: "utf8",
-  });
-
-  return result.status === 0 ? (result.stdout ?? "").trim() : "";
-}
-
 function listChangedFilesAgainstBase({ rootDir, baseRef }) {
   const result = spawnSync("git", ["diff", "--name-only", `origin/${baseRef}...HEAD`], {
     cwd: rootDir,
@@ -60,7 +48,7 @@ function listChangedFilesAgainstBase({ rootDir, baseRef }) {
 }
 
 function validateCloseoutBranchDiff({ rootDir, env = process.env }) {
-  const branchName = resolveBranchName(rootDir, env);
+  const branchName = resolveBranchName({ rootDir, env });
   const match = /^docs\/omo-closeout-(.+)$/.exec(branchName);
   if (!match) {
     return [];
@@ -72,16 +60,14 @@ function validateCloseoutBranchDiff({ rootDir, env = process.env }) {
     rootDir,
     baseRef,
   });
-  const allowed = new Set([
-    "docs/workpacks/README.md",
-    `docs/workpacks/${slice}/README.md`,
-  ]);
+  const allowed = new Set(resolveAllowedCloseoutRelativePaths({ slice }));
 
   return changedFiles
     .filter((filePath) => !allowed.has(filePath))
     .map((filePath) => ({
       path: filePath,
-      message: "Closeout PR must only modify docs/workpacks/README.md and the target workpack README.",
+      message:
+        "Closeout PR must only modify docs/workpacks/README.md and the target workpack README/acceptance/automation-spec files.",
     }));
 }
 
