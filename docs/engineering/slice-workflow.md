@@ -58,6 +58,8 @@
 - exploratory QA evidence presence는 `pnpm validate:exploratory-qa-evidence`가 별도로 검사한다.
   - non-draft `feature/fe-<slice>` PR은 `automation-spec.json`의 `frontend.design_authority.ui_risk` 기준으로 exploratory QA evidence 또는 low-risk skip rationale을 남겨야 한다.
   - `docs/omo-closeout-<slice>` 브랜치는 PR body 또는 local `.artifacts/qa/<slice>/` 번들 기준으로 closeout evidence를 다시 확인할 수 있다.
+- authority-required slice의 screenshot/Figma visual evidence presence는 `pnpm validate:authority-evidence-presence`가 별도로 검사한다.
+  - non-draft `feature/fe-<slice>` PR과 `docs/omo-closeout-<slice>` 브랜치는 authority report의 `> evidence:` block에 mobile default + narrow evidence가 실제로 있는지 확인한다.
 - real DB / bootstrap / local Supabase / live smoke evidence presence는 `pnpm validate:real-smoke-presence`가 별도로 검사한다.
   - `automation-spec.json`의 `external_smokes[]`가 비어 있지 않은 non-draft `feature/be-<slice>` / `feature/fe-<slice>` PR은 `Actual Verification`에 smoke evidence를 남겨야 한다.
   - `internal 6.5`와 `pnpm omo:reconcile` preflight는 closeout PR body가 아니라 source PR `Actual Verification`을 기준으로 smoke evidence를 다시 확인한다.
@@ -523,6 +525,7 @@
 
 - **기본**: 신규 화면 또는 high-risk UI change에서 workpack README의 Design Status가 `pending-review` 상태
 - **기본 추가**: 신규 화면, high-risk UI change, anchor extension은 authority report가 있어야 Stage 5 public review를 시작할 수 있다
+- authority-required slice는 authority report의 `> evidence:` block에 mobile default + narrow screenshot/Figma evidence를 남기고, `automation-spec.json`의 `stage4_evidence_requirements`와 맞춰야 한다
 - **authority-required**: public Stage 5 approve 뒤에는 Claude `final_authority_gate`를 추가로 통과해야 `confirmed`를 줄 수 있다
 - **예외 1**: `temporary` 상태에서 명시적 요청이 있으면 기능 검토(5개 UI 상태·화면정의서 일치)만 수행, 스타일 리뷰 제외
 - **예외 2**: 기존 confirmed 화면의 low-risk UI change는 Stage 5를 생략하고 Stage 6에서 lightweight design check로 흡수할 수 있다

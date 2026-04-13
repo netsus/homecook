@@ -25,6 +25,7 @@ import {
 } from "./omo-checklist-contract.mjs";
 import { syncWorkflowV2Status } from "./omo-lite-supervisor.mjs";
 import { readRuntimeState, setPullRequestRef, setWaitState, writeRuntimeState } from "./omo-session-runtime.mjs";
+import { validateAuthorityEvidencePresence } from "./validate-authority-evidence-presence.mjs";
 import { validateCloseoutSync } from "./validate-closeout-sync.mjs";
 import { validateExploratoryQaEvidence } from "./validate-exploratory-qa-evidence.mjs";
 import { validateRealSmokePresence } from "./validate-real-smoke-presence.mjs";
@@ -132,7 +133,7 @@ function validateAuthorityReportFiles({ worktreePath, reportPaths }) {
       continue;
     }
 
-    if (!readFileSync(fullPath, "utf8").includes("verdict: pass")) {
+    if (!/verdict:\s*`?pass`?/i.test(readFileSync(fullPath, "utf8"))) {
       nonPassingPaths.push(reportPath);
     }
   }
@@ -480,6 +481,7 @@ function buildCloseoutPullRequestBody({
   closeoutIssues = [],
   runtime,
   uiRisk,
+  requiresAuthorityEvidence = false,
   requiresRealSmoke = false,
 }) {
   const normalizedWorkItemId = ensureNonEmptyString(workItemId, "workItemId");
@@ -497,6 +499,16 @@ function buildCloseoutPullRequestBody({
     "`pnpm validate:closeout-sync`",
     "`pnpm validate:source-of-truth-sync`",
     "`pnpm validate:exploratory-qa-evidence`",
+    ...(requiresAuthorityEvidence ? ["`pnpm validate:authority-evidence-presence`"] : []),
+    ...(requiresRealSmoke ? ["`pnpm validate:real-smoke-presence`"] : []),
+  ].join(", ");
+  const additionalValidationNotes = [
+    ...(requiresAuthorityEvidence ? ["authority evidence"] : []),
+    ...(requiresRealSmoke ? ["source PR `Actual Verification` smoke evidence"] : []),
+    "PR body template",
+    "closeout sync",
+    "source-of-truth",
+    "exploratory evidence",
   ].join(", ");
 
   return [
@@ -520,9 +532,7 @@ function buildCloseoutPullRequestBody({
     `- 실행한 검증: ${deterministicChecks}`,
     "- 생략 또는 `N/A` 처리한 검증: `pnpm verify:backend`, `pnpm verify:frontend`, E2E, Lighthouse",
     "- 생략 또는 `N/A` 근거: merged slice의 docs-only closeout repair라 targeted validator bundle만 재실행합니다.",
-    requiresRealSmoke
-      ? "- 추가 검증: closeout PR 생성 전 internal 6.5 preflight로 source PR `Actual Verification` smoke evidence, PR body template, closeout sync, source-of-truth, exploratory evidence를 함께 재검증했습니다."
-      : "- 추가 검증: closeout PR 생성 전 internal 6.5 preflight로 PR body template, closeout sync, source-of-truth, exploratory evidence를 함께 재검증했습니다.",
+    `- 추가 검증: closeout PR 생성 전 internal 6.5 preflight로 ${additionalValidationNotes}를 함께 재검증했습니다.`,
     "",
     "## QA Evidence",
     `- deterministic gates: ${deterministicChecks}`,
@@ -658,6 +668,12 @@ export function collectInternalCloseoutValidationErrors({
       }),
     ),
     ...summarizeValidationErrors(
+      validateAuthorityEvidencePresence({
+        rootDir: worktreePath,
+        env,
+      }),
+    ),
+    ...summarizeValidationErrors(
       validateRealSmokePresence({
         rootDir: worktreePath,
         env,
@@ -740,6 +756,7 @@ export function reconcileWorkItemBookkeeping({
     required: false,
   });
   const uiRisk = automationSpec?.frontend?.design_authority?.ui_risk ?? "not-required";
+  const requiresAuthorityEvidence = automationSpec?.frontend?.design_authority?.authority_required === true;
   const requiresRealSmoke = Array.isArray(automationSpec?.external_smokes) && automationSpec.external_smokes.length > 0;
   const invariant = evaluateBookkeepingInvariant({
     rootDir,
@@ -871,6 +888,7 @@ export function reconcileWorkItemBookkeeping({
         closeoutIssues: closeoutPlan.issues,
         runtime,
         uiRisk,
+        requiresAuthorityEvidence,
         requiresRealSmoke,
       });
       assertInternalCloseoutPreflight({

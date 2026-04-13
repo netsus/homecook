@@ -904,9 +904,28 @@ describe("OMO bookkeeping", () => {
       );
       writeAutomationSpec(fixtureRoot, workItemId, "anchor-extension");
       mkdirSync(join(fixtureRoot, "ui", "designs", "authority"), { recursive: true });
+      mkdirSync(join(fixtureRoot, "ui", "designs", "evidence", "authority"), { recursive: true });
       writeFileSync(
         join(fixtureRoot, authorityReportPath),
-        "# Authority\nverdict: pass\n",
+        [
+          "# PLANNER_WEEK Authority Review",
+          "",
+          "> evidence:",
+          "> - `ui/designs/evidence/authority/PLANNER_WEEK-mobile.png`",
+          "> - `ui/designs/evidence/authority/PLANNER_WEEK-mobile-narrow.png`",
+          "",
+          "## Verdict",
+          "",
+          "- verdict: `pass`",
+        ].join("\n"),
+      );
+      writeFileSync(
+        join(fixtureRoot, "ui", "designs", "evidence", "authority", "PLANNER_WEEK-mobile.png"),
+        "default evidence",
+      );
+      writeFileSync(
+        join(fixtureRoot, "ui", "designs", "evidence", "authority", "PLANNER_WEEK-mobile-narrow.png"),
+        "narrow evidence",
       );
       writeRuntimeState({
         rootDir: fixtureRoot,

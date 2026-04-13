@@ -518,7 +518,7 @@ describe("closeout sync validator", () => {
     writeFixtureFile(
       rootDir,
       "ui/designs/authority/PLANNER_WEEK-authority.md",
-      "# Authority\n- verdict: pass\n",
+      "# Authority\n- verdict: `pass`\n",
     );
 
     const results = validateCloseoutSync({
