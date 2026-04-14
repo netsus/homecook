@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-14T11:58:02.263Z",
+  "updated_at": "2026-04-14T12:11:18.947Z",
   "canonical_policy": "v1",
   "execution_mode": "promotion-candidate",
   "documentation_gates": [
@@ -46,10 +46,11 @@
     },
     {
       "id": "scheduler-standard",
-      "status": "partial",
-      "notes": "Scheduler tooling exists, but the operating standard is still macOS launchd-first.",
+      "status": "pass",
+      "notes": "Scheduler standard now locks macOS launchd as the team-shared default, non-macOS fallback commands, and verify/watch cadence.",
       "evidence_refs": [
         "docs/engineering/workflow-v2/README.md",
+        "docs/engineering/workflow-v2/promotion-readiness.md",
         ".opencode/README.md"
       ]
     }
@@ -94,10 +95,9 @@
     "blockers": [
       "authority-required-ui lane not yet passed",
       "external-smoke lane evidence missing",
-      "bugfix-patch lane evidence missing",
-      "scheduler standard is still partial"
+      "bugfix-patch lane evidence missing"
     ],
     "next_review_trigger": "After slice06 Stage 4 checkpoint and one external-smoke pilot.",
-    "notes": "Stay in promotion-candidate mode until the required pilot lanes and remaining scheduler standard pass."
+    "notes": "Stay in promotion-candidate mode until the required pilot lanes pass."
   }
 }

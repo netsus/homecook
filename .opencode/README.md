@@ -155,6 +155,13 @@ pnpm omo:claude-budget -- --clear
 - rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox repo rehearsal 중 더 이른 쪽을 따른다.
 - control-plane smoke는 sandbox GitHub repo에서만 실행하고, product repo에서는 promotion evidence 재검증에만 사용한다.
 
+## Scheduler Standard
+
+- team-shared default scheduler는 현재 `macOS launchd`다.
+- non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.
+- scheduler install 뒤와 scheduler config/provider path 변경 뒤에는 `pnpm omo:scheduler:verify -- --work-item <id>`를 실행한다.
+- 운영 확인은 `pnpm omo:tick:watch -- --work-item <id>`로 하고, 최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.
+
 ## Bookkeeping Validation
 
 - `pnpm validate:omo-bookkeeping`는 runtime / workflow-v2 / 공식 workpack docs 사이의 drift를 검사한다.

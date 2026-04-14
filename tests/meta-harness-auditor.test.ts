@@ -415,6 +415,8 @@ describe("meta-harness-auditor", () => {
         "provider wait와 budget issue는 기본적으로 `pause + scheduled resume`를 사용한다.",
         "live smoke는 일반 PR CI 전체 강제가 아니라 `external_smokes[]`가 선언된 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.",
         "live smoke evidence의 canonical source는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
+        "scheduler standard는 team-shared default를 `macOS launchd`로 고정하고, non-macOS 환경은 `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending` fallback으로 다룬다.",
+        "scheduler install/config 변경 뒤와 최소 `slice-batch-review`마다 1회 `pnpm omo:scheduler:verify -- --work-item <id>`와 `pnpm omo:tick:watch -- --work-item <id>`를 함께 확인한다.",
         "",
       ].join("\n"),
     );
@@ -433,6 +435,11 @@ describe("meta-harness-auditor", () => {
         "canonical evidence는 source PR의 `Actual Verification`이며, closeout preflight는 같은 evidence를 재사용한다.",
         "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox rehearsal 중 더 이른 쪽을 따른다.",
         "",
+        "#### `scheduler-standard`",
+        "team-shared default scheduler는 현재 `macOS launchd`로 고정한다.",
+        "non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.",
+        "최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.",
+        "",
       ].join("\n"),
     );
     write(
@@ -448,6 +455,11 @@ describe("meta-harness-auditor", () => {
         "## Live Smoke Standard",
         "canonical evidence는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
         "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox repo rehearsal 중 더 이른 쪽을 따른다.",
+        "",
+        "## Scheduler Standard",
+        "team-shared default scheduler는 현재 `macOS launchd`다.",
+        "non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.",
+        "최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.",
         "",
       ].join("\n"),
     );
@@ -496,7 +508,11 @@ describe("meta-harness-auditor", () => {
               id: "scheduler-standard",
               status: "pass",
               notes: "done",
-              evidence_refs: [".opencode/README.md"],
+              evidence_refs: [
+                "docs/engineering/workflow-v2/README.md",
+                "docs/engineering/workflow-v2/promotion-readiness.md",
+                ".opencode/README.md",
+              ],
             },
           ],
           pilot_lanes: [

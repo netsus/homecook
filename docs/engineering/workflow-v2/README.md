@@ -152,11 +152,12 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
   - `high-risk` / `anchor-extension` slice는 stage execution은 지원하지만 automatic merge는 금지하고 manual merge handoff bundle로 종료한다.
   - live smoke는 일반 PR CI 전체 강제가 아니라 `external_smokes[]`가 선언된 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.
   - live smoke evidence의 canonical source는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.
-  - scheduler 운영 기준 플랫폼은 우선 macOS `launchd`다.
+  - scheduler standard는 team-shared default를 `macOS launchd`로 고정하고, non-macOS 환경은 `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending` fallback으로 다룬다.
+  - scheduler install/config 변경 뒤와 최소 `slice-batch-review`마다 1회 `pnpm omo:scheduler:verify -- --work-item <id>`와 `pnpm omo:tick:watch -- --work-item <id>`를 함께 확인한다.
 
 ## Next Locked Scope
 
-- scheduler 운영 범위의 추가 승격 여부 판단
+- non-macOS scheduler automation의 추가 승격 여부 판단
 - multi-project reusable promotion 기준과 profile extraction
 - optional GitHub Actions 기반 smoke orchestration 여부 판단
 
