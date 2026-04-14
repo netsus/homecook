@@ -318,6 +318,87 @@ describe("meta-harness-auditor", () => {
     expect(promotionFindings.map((finding) => finding.id)).toContain("H-OMO-001");
   });
 
+  it("clears H-GOV-001 once the authority matrix and shared helper wiring exist", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    write(
+      rootDir,
+      "docs/engineering/bookkeeping-authority-matrix.md",
+      [
+        "# Bookkeeping Authority Matrix",
+        "",
+        "- `docs/workpacks/README.md`",
+        "- `.workflow-v2/status.json`",
+        "- `PR body closeout evidence`",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      "docs/engineering/slice-workflow.md",
+      [
+        "# Slice Workflow",
+        "",
+        "Delivery Checklist",
+        "roadmap status",
+        "acceptance",
+        "PR 본문",
+        "docs/engineering/bookkeeping-authority-matrix.md",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      "docs/engineering/agent-workflow-overview.md",
+      [
+        "# Agent Workflow Overview",
+        "",
+        "docs/engineering/bookkeeping-authority-matrix.md",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      "docs/engineering/workflow-v2/README.md",
+      [
+        "# Workflow v2",
+        "",
+        "tracked state는 .workflow-v2/ 아래에서 관리한다.",
+        "closeout drift 복구를 위해 omo:reconcile 경로를 제공한다.",
+        "docs/engineering/bookkeeping-authority-matrix.md",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      "scripts/lib/bookkeeping-authority.mjs",
+      "export const BOOKKEEPING_AUTHORITY_DOC_PATH = 'docs/engineering/bookkeeping-authority-matrix.md';\n",
+    );
+    write(
+      rootDir,
+      "scripts/lib/validate-closeout-sync.mjs",
+      "import { resolveSliceBookkeepingPaths } from './bookkeeping-authority.mjs';\n",
+    );
+    write(
+      rootDir,
+      "scripts/lib/validate-omo-bookkeeping.mjs",
+      "import { describeCloseoutWritableSurfaces } from './bookkeeping-authority.mjs';\n",
+    );
+    write(
+      rootDir,
+      "scripts/lib/omo-closeout-policy.mjs",
+      "export * from './bookkeeping-authority.mjs';\n",
+    );
+    write(
+      rootDir,
+      "scripts/lib/omo-reconcile.mjs",
+      "import { describeCloseoutWritableScopeForPr } from './bookkeeping-authority.mjs';\n",
+    );
+
+    expect(detectBookkeepingOverlap({ rootDir })).toEqual([]);
+  });
+
   it("clears H-OMO-001 once promotion evidence is ready and docs stop advertising pilot-only operation", () => {
     const rootDir = createAuditFixture();
     tempDirs.push(rootDir);

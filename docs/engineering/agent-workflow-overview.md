@@ -39,6 +39,7 @@
 - `docs/engineering/agent-workflow-overview.md`: 변경 유형별 게이트, optional review, loop 사용 기준
 - `docs/engineering/slice-workflow.md`: product slice Stage 1~6 절차
 - `docs/engineering/git-workflow.md`: 브랜치/커밋/PR 크기 규칙
+- `docs/engineering/bookkeeping-authority-matrix.md`: closeout docs / tracked state / PR evidence ownership matrix
 - `docs/engineering/workflow-v2/*`: next-generation reusable workflow 설계와 파일럿 규칙
 
 같은 규칙이 여러 문서에 보이면 먼저 아래 기준으로 판정한다.
@@ -52,6 +53,7 @@
 
 - 현재 product slice의 운영 기본값은 계속 이 문서와 `docs/engineering/slice-workflow.md`다.
 - `docs/engineering/workflow-v2/*`는 reusable workflow v2의 설계·파일럿 문서이며, 명시적 승격 전까지 v1을 자동 대체하지 않는다.
+- closeout docs, `.workflow-v2/status.json`, OMO runtime, PR evidence의 ownership 경계는 `docs/engineering/bookkeeping-authority-matrix.md`를 기준으로 해석한다.
 - `docs-governance` 또는 workflow tooling 개선 작업이 `workflow-v2`를 명시적으로 대상으로 삼을 때만 해당 문서를 직접 source of truth로 사용한다.
 
 ---
