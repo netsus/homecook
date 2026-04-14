@@ -278,6 +278,51 @@ describe("POST /api/v1/meals", () => {
     });
   });
 
+  it("returns 404 when column name is not a canonical planner slot", async () => {
+    const recipesTable = createRecipesTable({
+      selectResults: [{ data: { id: "recipe-1" }, error: null }],
+    });
+    const mealPlanColumnsTable = createMealPlanColumnsTable({
+      selectResults: [
+        {
+          data: { id: "column-1", user_id: "user-1", name: "개인메모" },
+          error: null,
+        },
+      ],
+    });
+    const mealsTable = createMealsTable({ insertResults: [] });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipesTable;
+        if (table === "meal_plan_columns") return mealPlanColumnsTable;
+        if (table === "meals") return mealsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/meals", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        recipe_id: "550e8400-e29b-41d4-a716-446655440025",
+        plan_date: "2026-03-02",
+        column_id: "550e8400-e29b-41d4-a716-446655440026",
+        planned_servings: 2,
+      }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "RESOURCE_NOT_FOUND" },
+    });
+  });
+
   it("creates a registered meal and returns 201", async () => {
     const recipesTable = createRecipesTable({
       selectResults: [{ data: { id: "recipe-1" }, error: null }],
