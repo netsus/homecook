@@ -23,7 +23,8 @@ description: Audit the Homecook workflow harness, OMO runtime, validators, CI ga
 1. `pnpm harness:audit`를 실행한다.
 2. `.artifacts/meta-harness-auditor/<timestamp>/`의 bundle을 확인한다.
 3. `scorecard.json`, `findings.json`, `promotion-readiness.json`, `remediation-plan.json`, `audit-context.json`을 기준으로 보고한다.
-4. 사용자가 명시적으로 승인한 경우에만 finding 하나를 골라 후속 보강을 진행한다.
+4. 사용자가 명시적으로 승인한 경우에만 `pnpm harness:fix -- --finding <id>`로 finding 하나를 고른다.
+5. `fix-result.json`과 후속 검증 결과를 함께 보고한다.
 
 ## Boundaries
 
@@ -42,3 +43,4 @@ description: Audit the Homecook workflow harness, OMO runtime, validators, CI ga
 - `remediation-plan.json`
 - `promotion-readiness.json`
 - `audit-context.json`
+- `fix-result.json` (`fix-one-finding` 실행 시)

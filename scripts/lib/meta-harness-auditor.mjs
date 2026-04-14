@@ -48,6 +48,10 @@ function writeTextFile(filePath, value) {
   writeFileSync(filePath, value, "utf8");
 }
 
+function timestampedFixDir(rootDir) {
+  return path.join(rootDir, ".artifacts/meta-harness-auditor/fixes", timestampSlug());
+}
+
 function parseExplicitSampleSlices(value) {
   if (!value) {
     return [];
@@ -123,6 +127,38 @@ export function resolveAuditArgs(argv = []) {
   }
 
   return { outputDir, sampleSlices, checkpoint, inFlightSlice, reason, cadenceEvent };
+}
+
+export function resolveFixArgs(argv = []) {
+  let outputDir;
+  let findingId;
+  let reason;
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const value = argv[index];
+    if (value === "--output-dir") {
+      outputDir = argv[index + 1];
+      index += 1;
+      continue;
+    }
+
+    if (value === "--finding") {
+      findingId = argv[index + 1];
+      index += 1;
+      continue;
+    }
+
+    if (value === "--reason") {
+      reason = argv[index + 1];
+      index += 1;
+    }
+  }
+
+  if (!findingId) {
+    throw new Error("Missing required --finding <id>.");
+  }
+
+  return { outputDir, findingId, reason };
 }
 
 function loadFindingRegistry(rootDir) {
@@ -288,6 +324,50 @@ export function collectMetaHarnessFindings({ rootDir = process.cwd() } = {}) {
     ...detectOmoPromotionRisk({ rootDir, registry }),
   ];
 }
+
+function ensureFixableFinding({ rootDir, findingId }) {
+  const registry = loadFindingRegistry(rootDir);
+  const entry = registry.get(findingId);
+
+  if (!entry) {
+    throw new Error(`Unknown finding ID '${findingId}'.`);
+  }
+
+  if (entry.stability !== "stable") {
+    throw new Error(`Finding '${findingId}' is not a stable fix target.`);
+  }
+
+  if (!entry.safe_to_autofix || entry.approval_required) {
+    throw new Error(`Finding '${findingId}' is not eligible for fix-one-finding mode.`);
+  }
+
+  return entry;
+}
+
+function replaceWorkflowCoveragePattern(text) {
+  return text.replace(/(["'])lib\/\*\.ts\1/g, '$1lib/**$1');
+}
+
+function applyPlaywrightWorkflowGapFix({ rootDir }) {
+  const workflowPath = path.join(rootDir, ".github/workflows/playwright.yml");
+  const workflowText = readTextIfExists(workflowPath);
+
+  if (!workflowText) {
+    throw new Error("Cannot autofix H-CI-001 because .github/workflows/playwright.yml is missing.");
+  }
+
+  const nextText = replaceWorkflowCoveragePattern(workflowText);
+  if (nextText === workflowText) {
+    return [];
+  }
+
+  writeTextFile(workflowPath, nextText);
+  return [".github/workflows/playwright.yml"];
+}
+
+const FIX_HANDLERS = {
+  "H-CI-001": applyPlaywrightWorkflowGapFix,
+};
 
 function createBaseAxis(id, label) {
   return {
@@ -470,6 +550,97 @@ export function renderMetaHarnessReport({
   return `${lines.join("\n")}\n`;
 }
 
+/**
+ * @param {{
+ *   rootDir?: string,
+ *   findingId: string,
+ *   outputDir?: string,
+ *   reason?: string,
+ * }} options
+ */
+export function runMetaHarnessFix({
+  rootDir = process.cwd(),
+  findingId,
+  outputDir,
+  reason,
+} = {}) {
+  if (!findingId) {
+    throw new Error("Missing findingId for fix-one-finding mode.");
+  }
+
+  const registryEntry = ensureFixableFinding({ rootDir, findingId });
+  const activeFindingsBefore = collectMetaHarnessFindings({ rootDir });
+  const activeFinding = activeFindingsBefore.find((finding) => finding.id === findingId) ?? null;
+  const generatedAt = new Date().toISOString();
+  const resolvedOutputDir = outputDir ? path.resolve(rootDir, outputDir) : timestampedFixDir(rootDir);
+  const handler = FIX_HANDLERS[findingId];
+
+  if (!handler) {
+    throw new Error(`No fix handler is registered for '${findingId}'.`);
+  }
+
+  mkdirSync(resolvedOutputDir, { recursive: true });
+
+  let changedFiles = [];
+  let status = "noop";
+  let summary = `Finding '${findingId}' is not currently active; no changes were needed.`;
+
+  if (activeFinding) {
+    changedFiles = handler({ rootDir, finding: activeFinding });
+    status = changedFiles.length > 0 ? "applied" : "noop";
+    summary =
+      status === "applied"
+        ? `Applied low-risk remediation for '${findingId}'.`
+        : `Finding '${findingId}' was active but no file changes were required.`;
+  }
+
+  const activeFindingsAfter = collectMetaHarnessFindings({ rootDir });
+  const postFixActive = activeFindingsAfter.some((finding) => finding.id === findingId);
+
+  if (status === "applied" && postFixActive) {
+    status = "blocked";
+    summary = `Applied attempted remediation for '${findingId}', but the finding is still active.`;
+  }
+
+  const result = {
+    version: 1,
+    generated_at: generatedAt,
+    mode: "fix-one-finding",
+    finding_id: findingId,
+    status,
+    safe_to_autofix: registryEntry.safe_to_autofix,
+    approval_required: registryEntry.approval_required,
+    pre_fix_active: Boolean(activeFinding),
+    post_fix_active: postFixActive,
+    reason: reason ?? null,
+    changed_files: changedFiles,
+    recommended_validation: activeFinding?.recommended_validation ?? [],
+    summary,
+  };
+
+  writeJsonFile(path.join(resolvedOutputDir, "fix-result.json"), result);
+
+  if (status === "blocked") {
+    throw new Error(summary);
+  }
+
+  return {
+    outputDir: resolvedOutputDir,
+    result,
+  };
+}
+
+/**
+ * @param {{
+ *   rootDir?: string,
+ *   outputDir?: string,
+ *   sampleSlices?: string[],
+ *   checkpoint?: string,
+ *   inFlightSlice?: string,
+ *   reason?: string,
+ *   cadenceEvent?: string,
+ * }} options
+ */
 export function runMetaHarnessAudit({
   rootDir = process.cwd(),
   outputDir,

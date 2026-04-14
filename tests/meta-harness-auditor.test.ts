@@ -9,7 +9,9 @@ import {
   detectBookkeepingOverlap,
   detectOmoPromotionRisk,
   detectPlaywrightWorkflowGap,
+  resolveFixArgs,
   runMetaHarnessAudit,
+  runMetaHarnessFix,
 } from "../scripts/lib/meta-harness-auditor.mjs";
 
 function write(rootDir: string, relativePath: string, content: string) {
@@ -283,5 +285,85 @@ describe("meta-harness-auditor", () => {
     expect(auditContext.cadence_event).toBe("manual-ad-hoc");
     expect(report).toContain("Meta Harness Audit Report");
     expect(result.findings.length).toBeGreaterThan(0);
+  });
+
+  it("parses fix-one-finding CLI args", () => {
+    expect(
+      resolveFixArgs(["--finding", "H-CI-001", "--output-dir", ".artifacts/fix", "--reason", "manual approval"]),
+    ).toEqual({
+      outputDir: ".artifacts/fix",
+      findingId: "H-CI-001",
+      reason: "manual approval",
+    });
+  });
+
+  it("rejects non-safe findings in fix-one-finding mode", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    expect(() => runMetaHarnessFix({ rootDir, findingId: "H-GOV-001" })).toThrow(
+      "not eligible for fix-one-finding mode",
+    );
+  });
+
+  it("rejects unknown finding IDs in fix-one-finding mode", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    expect(() => runMetaHarnessFix({ rootDir, findingId: "H-UNKNOWN-999" })).toThrow(
+      "Unknown finding ID",
+    );
+  });
+
+  it("applies the H-CI-001 autofix and clears the targeted finding", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    const result = runMetaHarnessFix({
+      rootDir,
+      findingId: "H-CI-001",
+    });
+    const fixResultSchema = readProjectJson(
+      "docs/engineering/meta-harness-auditor/fix-result.schema.json",
+    );
+    const fixResult = readJsonAbsolute(path.join(result.outputDir, "fix-result.json"));
+    const workflow = readFileSync(path.join(rootDir, ".github/workflows/playwright.yml"), "utf8");
+
+    expect(validateKnownShape(fixResultSchema, fixResult)).toEqual([]);
+    expect(fixResult.status).toBe("applied");
+    expect(fixResult.pre_fix_active).toBe(true);
+    expect(fixResult.post_fix_active).toBe(false);
+    expect(fixResult.changed_files).toContain(".github/workflows/playwright.yml");
+    expect(workflow).toContain("lib/**");
+    expect(detectPlaywrightWorkflowGap({ rootDir })).toHaveLength(0);
+  });
+
+  it("returns noop when a safe finding is already resolved", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    write(
+      rootDir,
+      ".github/workflows/playwright.yml",
+      [
+        "on:",
+        "  pull_request:",
+        "    paths:",
+        "      - 'app/**'",
+        "      - 'lib/**'",
+        "",
+      ].join("\n"),
+    );
+
+    const result = runMetaHarnessFix({
+      rootDir,
+      findingId: "H-CI-001",
+    });
+    const fixResult = readJsonAbsolute(path.join(result.outputDir, "fix-result.json"));
+
+    expect(fixResult.status).toBe("noop");
+    expect(fixResult.pre_fix_active).toBe(false);
+    expect(fixResult.post_fix_active).toBe(false);
+    expect(fixResult.changed_files).toEqual([]);
   });
 });
