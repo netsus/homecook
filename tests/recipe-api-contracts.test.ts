@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const createRouteHandlerClient = vi.fn();
 const createServiceRoleClient = vi.fn();
+const hasSupabasePublicEnv = vi.fn();
 const ensurePublicUserRow = vi.fn();
 const ensureUserBootstrapState = vi.fn();
 const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: string) => {
@@ -16,6 +17,10 @@ const formatBootstrapErrorMessage = vi.fn((error: unknown, fallbackMessage: stri
 vi.mock("@/lib/supabase/server", () => ({
   createRouteHandlerClient,
   createServiceRoleClient,
+}));
+
+vi.mock("@/lib/supabase/env", () => ({
+  hasSupabasePublicEnv: () => hasSupabasePublicEnv(),
 }));
 
 vi.mock("@/lib/server/user-bootstrap", () => ({
@@ -60,10 +65,12 @@ describe("recipe API contracts", () => {
     vi.resetModules();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
+    hasSupabasePublicEnv.mockReset();
     ensurePublicUserRow.mockReset();
     ensureUserBootstrapState.mockReset();
     formatBootstrapErrorMessage.mockClear();
     createServiceRoleClient.mockReturnValue(null);
+    hasSupabasePublicEnv.mockReturnValue(true);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
     delete process.env.HOMECOOK_ENABLE_DISCOVERY_FILTER_MOCK;

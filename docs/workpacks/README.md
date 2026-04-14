@@ -64,7 +64,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `03-recipe-like`               | merged      | RECIPE_DETAIL 좋아요 토글과 로그인 복귀                                                                        |
 | `04-recipe-save`               | merged      | 저장 모달, 저장 대상 책 조회/생성, `saved/custom` 제한                                                           |
 | `05-planner-week-core`         | merged      | 위클리 플래너 조회, 컬럼 CRUD, 상단 CTA와 상태 뱃지                                                              |
-| `06-recipe-to-planner`         | docs      | 상세에서 날짜/끼니/인분 선택 후 Meal 생성                                                                        |
+| `06-recipe-to-planner`         | in-progress | 상세에서 날짜/끼니/인분 선택 후 Meal 생성                                                                        |
 | `07-meal-manage`               | planned   | `MEAL_SCREEN` 조회/수정/삭제와 409 예외 상태                                                                     |
 | `08a-meal-add-search-core`     | planned   | `MENU_ADD` shell, `RECIPE_SEARCH_PICKER`, 검색 기반 일반 식사 추가                                               |
 | `08b-meal-add-books-pantry`    | planned   | 레시피북에서 추가, 팬트리 기반 추천에서 추가                                                                     |

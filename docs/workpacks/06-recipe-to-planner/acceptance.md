@@ -8,12 +8,12 @@
 ## Happy Path
 - [ ] 로그인한 사용자가 `RECIPE_DETAIL`에서 planner add 바텀시트를 열고 날짜/끼니/계획 인분을 선택해 Meal을 생성한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
 - [ ] 생성된 Meal이 `PLANNER_WEEK`의 목표 날짜/끼니 슬롯에 `registered` 상태로 보인다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
-- [ ] 새 Meal이 `status='registered'`, `is_leftover=false`, `leftover_dish_id=null`로 생성된다 <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스가 기존 `shopping_done` / `cook_done` / read-only 정책을 우회하지 않는다 <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
+- [x] 새 Meal이 `status='registered'`, `is_leftover=false`, `leftover_dish_id=null`로 생성된다 <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
+- [x] 이 슬라이스가 기존 `shopping_done` / `cook_done` / read-only 정책을 우회하지 않는다 <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
 - [ ] 제출 중 재탭 또는 중복 submit으로 사용자의 1회 액션이 중복 Meal 생성으로 이어지지 않는다 <!-- omo:id=accept-idempotency;stage=4;scope=frontend;review=5,6 -->
 
 ## Error / Permission
@@ -25,14 +25,14 @@
 - [ ] 로그인 게이트 후 return-to-action이 맞다 (planner add 바텀시트 재오픈) <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
-- [ ] 타인 리소스를 수정할 수 없다 (`column_id` 소유자 검증) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] invalid input을 적절히 거부한다 (`plan_date`, `planned_servings`, 필수 필드 검증) <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
-- [ ] 파생 필드와 비정규화 값이 맞다 (`status`, `is_leftover`, `leftover_dish_id`) <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
+- [x] 타인 리소스를 수정할 수 없다 (`column_id` 소유자 검증) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] invalid input을 적절히 거부한다 (`plan_date`, `planned_servings`, 필수 필드 검증) <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
+- [x] 파생 필드와 비정규화 값이 맞다 (`status`, `is_leftover`, `leftover_dish_id`) <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
-- [ ] fixture / mock에서 planner add baseline 데이터가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 `meal_plan_columns`, `meals`, seed, bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] 시스템 row 자동 생성 owning flow와 기대 결과(`meal_plan_columns ×4`, `recipe_books ×3`)가 명시되어 있다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
+- [x] fixture / mock에서 planner add baseline 데이터가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 `meal_plan_columns`, `meals`, seed, bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] 시스템 row 자동 생성 owning flow와 기대 결과(`meal_plan_columns ×4`, `recipe_books ×3`)가 명시되어 있다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 - verifier:
@@ -46,8 +46,8 @@
 ## Automation Split
 
 ### Vitest
-- [ ] `POST /meals` route validation / owner guard / canonical slot 검증 범위가 분리되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
-- [ ] Meal 생성 파생값과 상태 규칙 회귀가 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
+- [x] `POST /meals` route validation / owner guard / canonical slot 검증 범위가 분리되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
+- [x] Meal 생성 파생값과 상태 규칙 회귀가 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
 
 ### Playwright
 - [ ] `RECIPE_DETAIL` planner add → 성공 → `PLANNER_WEEK` 확인 흐름이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
