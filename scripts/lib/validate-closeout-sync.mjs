@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
+import { resolveSliceBookkeepingPaths } from "./bookkeeping-authority.mjs";
 import { resolveBaseRef } from "./check-workpack-docs.mjs";
 import {
   readSliceRoadmapStatus,
@@ -202,9 +203,14 @@ function parseAcceptanceChecklist(filePath) {
 }
 
 function resolveWorkpackPaths({ rootDir, slice }) {
+  const { readmePath, acceptancePath } = resolveSliceBookkeepingPaths({
+    rootDir,
+    slice,
+  });
+
   return {
-    readmePath: resolve(rootDir, "docs", "workpacks", slice, "README.md"),
-    acceptancePath: resolve(rootDir, "docs", "workpacks", slice, "acceptance.md"),
+    readmePath,
+    acceptancePath,
   };
 }
 

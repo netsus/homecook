@@ -620,6 +620,7 @@ describe("OMO bookkeeping", () => {
         ],
       }),
     ]);
+    expect(results[0]?.errors[0]?.message).toContain("bookkeeping-authority-matrix.md");
   });
 
   it("allows closeout branches to change acceptance and automation-spec alongside closeout docs", () => {

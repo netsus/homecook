@@ -49,6 +49,7 @@
 ## Closeout Sync Contract
 
 - workpack README의 `Delivery Checklist`, `Design Status`, roadmap status, acceptance 체크박스, PR 본문 evidence는 서로 따로 노는 참고 문서가 아니라 **같은 closeout 상태**를 표현해야 한다.
+- closeout / tracked-state surface의 authoritative ownership은 `docs/engineering/bookkeeping-authority-matrix.md`를 기준으로 해석한다.
 - Stage 2 구현 담당인 Codex와 Stage 4 구현 담당인 Claude는 PR을 `Ready for Review`로 넘기기 전에 자신이 닫은 범위에 맞춰 `Delivery Checklist`, acceptance, PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`를 갱신한다.
 - Stage 3 리뷰 담당인 Claude와 Stage 5/6 리뷰 담당인 Codex는 승인 전에 위 문서들이 서로 일치하는지 확인하고, mismatch가 있으면 코드 이슈가 없어도 closeout drift로 수정 요청한다.
 - authority-required slice의 최종 authority는 Stage 5 public review와 별개로 Claude `final_authority_gate`가 잠그며, 이 gate를 통과하기 전에는 `confirmed`나 최종 merge closeout으로 넘기지 않는다.

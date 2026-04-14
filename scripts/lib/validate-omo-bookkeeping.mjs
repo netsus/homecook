@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { evaluateBookkeepingInvariant } from "./omo-bookkeeping.mjs";
+import { describeCloseoutWritableSurfaces } from "./bookkeeping-authority.mjs";
 import { resolveBaseRef } from "./check-workpack-docs.mjs";
 import { resolveAllowedCloseoutRelativePaths } from "./omo-closeout-policy.mjs";
 import { listRuntimeStates, readRuntimeState } from "./omo-session-runtime.mjs";
@@ -66,8 +67,7 @@ function validateCloseoutBranchDiff({ rootDir, env = process.env }) {
     .filter((filePath) => !allowed.has(filePath))
     .map((filePath) => ({
       path: filePath,
-      message:
-        "Closeout PR must only modify docs/workpacks/README.md and the target workpack README/acceptance/automation-spec files.",
+      message: describeCloseoutWritableSurfaces({ slice }),
     }));
 }
 

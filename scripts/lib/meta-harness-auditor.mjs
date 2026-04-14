@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { BOOKKEEPING_AUTHORITY_DOC_PATH } from "./bookkeeping-authority.mjs";
+
 function readTextIfExists(filePath) {
   return existsSync(filePath) ? readFileSync(filePath, "utf8") : null;
 }
@@ -241,7 +243,19 @@ export function detectBookkeepingOverlap({ rootDir = process.cwd(), registry } =
   const sliceWorkflowText = readTextIfExists(path.join(rootDir, "docs/engineering/slice-workflow.md")) ?? "";
   const workflowReadmeText =
     readTextIfExists(path.join(rootDir, "docs/engineering/workflow-v2/README.md")) ?? "";
+  const workflowOverviewText =
+    readTextIfExists(path.join(rootDir, "docs/engineering/agent-workflow-overview.md")) ?? "";
+  const authorityMatrixText =
+    readTextIfExists(path.join(rootDir, BOOKKEEPING_AUTHORITY_DOC_PATH)) ?? "";
+  const closeoutValidatorText =
+    readTextIfExists(path.join(rootDir, "scripts/lib/validate-closeout-sync.mjs")) ?? "";
+  const bookkeepingValidatorText =
+    readTextIfExists(path.join(rootDir, "scripts/lib/validate-omo-bookkeeping.mjs")) ?? "";
+  const closeoutPolicyText =
+    readTextIfExists(path.join(rootDir, "scripts/lib/omo-closeout-policy.mjs")) ?? "";
+  const reconcileText = readTextIfExists(path.join(rootDir, "scripts/lib/omo-reconcile.mjs")) ?? "";
   const trackedStateExists = existsSync(path.join(rootDir, ".workflow-v2/status.json"));
+  const authorityHelperExists = existsSync(path.join(rootDir, "scripts/lib/bookkeeping-authority.mjs"));
 
   const sliceMentionsCloseoutSurfaces =
     sliceWorkflowText.includes("Delivery Checklist") &&
@@ -251,8 +265,25 @@ export function detectBookkeepingOverlap({ rootDir = process.cwd(), registry } =
   const workflowMentionsTrackedState =
     workflowReadmeText.includes(".workflow-v2/") &&
     workflowReadmeText.includes("omo:reconcile");
+  const docsReferenceAuthorityMatrix =
+    sliceWorkflowText.includes("bookkeeping-authority-matrix.md") &&
+    workflowReadmeText.includes("bookkeeping-authority-matrix.md") &&
+    workflowOverviewText.includes("bookkeeping-authority-matrix.md");
+  const matrixDeclaresCrossLayerOwnership =
+    authorityMatrixText.includes("docs/workpacks/README.md") &&
+    authorityMatrixText.includes(".workflow-v2/status.json") &&
+    authorityMatrixText.includes("PR body closeout evidence");
+  const validatorsUseSharedAuthority =
+    closeoutValidatorText.includes("resolveSliceBookkeepingPaths") &&
+    bookkeepingValidatorText.includes("describeCloseoutWritableSurfaces") &&
+    closeoutPolicyText.includes("bookkeeping-authority.mjs") &&
+    reconcileText.includes("describeCloseoutWritableScopeForPr");
 
   if (!trackedStateExists || !sliceMentionsCloseoutSurfaces || !workflowMentionsTrackedState) {
+    return [];
+  }
+
+  if (authorityHelperExists && docsReferenceAuthorityMatrix && matrixDeclaresCrossLayerOwnership && validatorsUseSharedAuthority) {
     return [];
   }
 
@@ -262,6 +293,7 @@ export function detectBookkeepingOverlap({ rootDir = process.cwd(), registry } =
         "Closeout state currently spans workpack docs, PR evidence, and .workflow-v2 tracked state, which makes drift and reconcile work a first-class operational burden.",
       evidence_refs: [
         "docs/engineering/slice-workflow.md",
+        BOOKKEEPING_AUTHORITY_DOC_PATH,
         "docs/engineering/workflow-v2/README.md",
         ".workflow-v2/status.json",
       ],
