@@ -52,6 +52,8 @@
 
 ## Slice06 Checkpoint Rule
 
+실행용 단계 체크리스트는 [slice06-pilot-checklist.md](./slice06-pilot-checklist.md)를 따른다.
+
 slice06과 같은 in-flight pilot은 제품 correctness 자체를 이 문서가 판정하지 않는다.
 여기서 보는 것은 아래다.
 
