@@ -5,6 +5,7 @@ import {
   formatBootstrapErrorMessage,
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
+import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 interface ProfileRequestBody {
@@ -32,6 +33,10 @@ export async function PATCH(request: Request) {
     return fail("INVALID_REQUEST", "닉네임은 2~30자여야 해요.", 400, [
       { field: "nickname", reason: "length" },
     ]);
+  }
+
+  if (!hasSupabasePublicEnv()) {
+    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
   const supabase = await createRouteHandlerClient();

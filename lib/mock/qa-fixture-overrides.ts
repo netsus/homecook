@@ -14,10 +14,21 @@ const RECIPE_SAVE_FAULTS = new Set([
   "duplicate_save",
   "internal_error",
 ]);
+const MEAL_CREATE_FAULTS = new Set([
+  "missing_recipe",
+  "missing_column",
+  "forbidden_column",
+  "internal_error",
+]);
 
 export interface QaFixtureFaultOverrides {
   recipe_books_list?: "internal_error";
   recipe_books_create?: "internal_error";
+  meal_create?:
+    | "missing_recipe"
+    | "missing_column"
+    | "forbidden_column"
+    | "internal_error";
   recipe_save?:
     | "missing_recipe"
     | "missing_book"
@@ -44,6 +55,10 @@ function normalizeQaFixtureFaultOverrides(value: unknown) {
 
   if (typeof value.recipe_books_create === "string" && RECIPE_BOOK_CREATE_FAULTS.has(value.recipe_books_create)) {
     normalized.recipe_books_create = value.recipe_books_create as QaFixtureFaultOverrides["recipe_books_create"];
+  }
+
+  if (typeof value.meal_create === "string" && MEAL_CREATE_FAULTS.has(value.meal_create)) {
+    normalized.meal_create = value.meal_create as QaFixtureFaultOverrides["meal_create"];
   }
 
   if (typeof value.recipe_save === "string" && RECIPE_SAVE_FAULTS.has(value.recipe_save)) {

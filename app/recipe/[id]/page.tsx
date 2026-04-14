@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { RecipeDetailScreen } from "@/components/recipe/recipe-detail-screen";
+import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getServerAuthUser } from "@/lib/supabase/server";
 
 interface RecipePageProps {
@@ -17,7 +18,7 @@ export default async function RecipePage({
 }: RecipePageProps) {
   const { id } = await params;
   const resolvedSearchParams = await searchParams;
-  const user = await getServerAuthUser();
+  const user = hasSupabasePublicEnv() ? await getServerAuthUser() : null;
 
   return (
     <AppShell currentTab="home">

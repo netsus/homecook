@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-14T12:11:18.947Z",
+  "updated_at": "2026-04-14T13:25:54.377Z",
   "canonical_policy": "v1",
   "execution_mode": "promotion-candidate",
   "documentation_gates": [
@@ -61,7 +61,7 @@
       "label": "Authority-required UI lane",
       "status": "in_progress",
       "required": true,
-      "notes": "Use slice06 (`06-recipe-to-planner`) as the authority-required canary and record Stage 2/4/6 checkpoint outcomes here.",
+      "notes": "slice06 Stage 2 complete; audit bundle: .artifacts/meta-harness-auditor/slice06-stage2/report.md; blocked retry: none",
       "workpack_refs": [
         "docs/workpacks/06-recipe-to-planner/README.md"
       ],
@@ -93,11 +93,11 @@
   "promotion_gate": {
     "status": "not-ready",
     "blockers": [
-      "authority-required-ui lane not yet passed",
+      "authority-required-ui lane still in progress",
       "external-smoke lane evidence missing",
       "bugfix-patch lane evidence missing"
     ],
-    "next_review_trigger": "After slice06 Stage 4 checkpoint and one external-smoke pilot.",
+    "next_review_trigger": "After slice06 Stage 4 checkpoint",
     "notes": "Stay in promotion-candidate mode until the required pilot lanes pass."
   }
 }

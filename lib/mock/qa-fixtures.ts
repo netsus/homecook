@@ -14,6 +14,7 @@ import type {
   RecipeSaveData,
   RecipeCardItem,
 } from "@/types/recipe";
+import type { MealCreateData } from "@/types/meal";
 import type {
   MealStatus,
   PlannerColumnData,
@@ -44,6 +45,7 @@ interface QaFixtureState {
   nextBookSortOrder: number;
   plannerColumns: PlannerColumnData[];
   plannerMealTemplates: PlannerMealTemplate[];
+  createdMeals: MealCreateData[];
 }
 
 const globalFixtureStoreKey = "__homecookQaFixtureState";
@@ -101,6 +103,7 @@ function buildInitialFixtureState(): QaFixtureState {
     nextBookSortOrder: fixtureData.fixture.books.length + 1,
     plannerColumns: fixtureData.planner.columns.map(toPlannerColumn),
     plannerMealTemplates: fixtureData.planner.meals.map(toPlannerMealTemplate),
+    createdMeals: [],
   };
 }
 
@@ -419,21 +422,72 @@ function resolveAnchoredDate(startDate: string, endDate: string, anchor: DateAnc
 export function getQaFixturePlannerData(startDate: string, endDate: string) {
   const state = getQaFixtureState();
   const normalizedColumns = buildFixedPlannerColumns(state.plannerColumns);
+  const createdMeals = state.createdMeals.filter((meal) => meal.plan_date >= startDate && meal.plan_date <= endDate);
 
   return {
     columns: normalizedColumns.columns,
-    meals: clone(state.plannerMealTemplates).map((meal) => ({
-      id: meal.id,
-      recipe_id: MOCK_RECIPE_ID,
-      recipe_title: fixtureData.recipe.title,
-      recipe_thumbnail_url: fixtureData.recipe.thumbnailUrl,
-      plan_date: resolveAnchoredDate(startDate, endDate, meal.date_anchor),
-      column_id: normalizedColumns.getFixedColumnId(meal.column_id),
-      planned_servings: meal.planned_servings,
-      status: meal.status,
-      is_leftover: meal.is_leftover,
-    })),
+    meals: [
+      ...clone(state.plannerMealTemplates).map((meal) => ({
+        id: meal.id,
+        recipe_id: MOCK_RECIPE_ID,
+        recipe_title: fixtureData.recipe.title,
+        recipe_thumbnail_url: fixtureData.recipe.thumbnailUrl,
+        plan_date: resolveAnchoredDate(startDate, endDate, meal.date_anchor),
+        column_id: normalizedColumns.getFixedColumnId(meal.column_id),
+        planned_servings: meal.planned_servings,
+        status: meal.status,
+        is_leftover: meal.is_leftover,
+      })),
+      ...createdMeals.map((meal) => ({
+        ...meal,
+        recipe_title: fixtureData.recipe.title,
+        recipe_thumbnail_url: fixtureData.recipe.thumbnailUrl,
+        column_id: normalizedColumns.getFixedColumnId(meal.column_id),
+      })),
+    ],
   } satisfies PlannerData;
+}
+
+export function createQaFixtureMeal({
+  planDate,
+  columnId,
+  plannedServings,
+  leftoverDishId,
+}: {
+  planDate: string;
+  columnId: string;
+  plannedServings: number;
+  leftoverDishId: string | null;
+}) {
+  const state = getQaFixtureState();
+  const selectedColumn = state.plannerColumns.find((column) => column.id === columnId);
+
+  if (!selectedColumn) {
+    return {
+      ok: false as const,
+      code: "RESOURCE_NOT_FOUND",
+      message: "끼니 컬럼을 찾을 수 없어요.",
+      status: 404,
+    };
+  }
+
+  const meal: MealCreateData = {
+    id: crypto.randomUUID(),
+    recipe_id: MOCK_RECIPE_ID,
+    plan_date: planDate,
+    column_id: columnId,
+    planned_servings: plannedServings,
+    status: "registered",
+    is_leftover: leftoverDishId !== null,
+    leftover_dish_id: leftoverDishId,
+  };
+
+  state.createdMeals = [...state.createdMeals, meal];
+
+  return {
+    ok: true as const,
+    data: meal,
+  };
 }
 
 export function createQaFixturePlannerColumn(name: string) {
