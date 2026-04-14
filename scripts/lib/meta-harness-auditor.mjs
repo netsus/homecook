@@ -11,6 +11,10 @@ function readJsonIfExists(filePath) {
   return existsSync(filePath) ? JSON.parse(readFileSync(filePath, "utf8")) : null;
 }
 
+function hasAllFragments(text, fragments) {
+  return fragments.every((fragment) => text.includes(fragment));
+}
+
 function relativePath(rootDir, absolutePath) {
   return path.relative(rootDir, absolutePath).replaceAll(path.sep, "/");
 }
@@ -86,16 +90,63 @@ function readPromotionEvidenceStatus(rootDir) {
   const workflowReadmePath = path.join(rootDir, "docs/engineering/workflow-v2/README.md");
   const omoBasePath = path.join(rootDir, "docs/engineering/workflow-v2/omo-base.md");
   const checklistPath = path.join(rootDir, "docs/engineering/workflow-v2/promotion-readiness.md");
+  const opencodeReadmePath = path.join(rootDir, ".opencode/README.md");
   const evidencePath = path.join(rootDir, ".workflow-v2/promotion-evidence.json");
   const workflowReadmeText = readTextIfExists(workflowReadmePath) ?? "";
   const omoBaseText = readTextIfExists(omoBasePath) ?? "";
   const checklistText = readTextIfExists(checklistPath) ?? "";
+  const opencodeReadmeText = readTextIfExists(opencodeReadmePath) ?? "";
   const evidence = readJsonIfExists(evidencePath);
 
   const requiredLaneIds = ["authority-required-ui", "external-smoke", "bugfix-patch"];
   const pilotLanes = Array.isArray(evidence?.pilot_lanes) ? evidence.pilot_lanes : [];
   const operationalGates = Array.isArray(evidence?.operational_gates) ? evidence.operational_gates : [];
   const documentationGates = Array.isArray(evidence?.documentation_gates) ? evidence.documentation_gates : [];
+  const manualHandoffStandardLocked =
+    hasAllFragments(workflowReadmeText, [
+      "manual handoff는 `high-risk` / `anchor-extension` / `exceptional recovery`에 한정된 예외 경로다.",
+      "provider wait와 budget issue는 기본적으로 `pause + scheduled resume`를 사용한다.",
+    ]) &&
+    hasAllFragments(checklistText, [
+      "manual handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서만 허용한다.",
+      "provider wait, Claude budget unavailable, 일반 CI polling 지연은 기본적으로 human handoff가 아니라 `pause + scheduled resume`를 사용한다.",
+    ]) &&
+    hasAllFragments(opencodeReadmeText, [
+      "## Manual Handoff Standard",
+      "provider wait, Claude budget unavailable, 일반 CI polling 지연은 기본적으로 human handoff가 아니라 `pause + scheduled resume`를 사용한다.",
+      "handoff bundle은 아래를 반드시 포함한다.",
+    ]);
+  const liveSmokeStandardLocked =
+    hasAllFragments(workflowReadmeText, [
+      "live smoke는 일반 PR CI 전체 강제가 아니라 `external_smokes[]`가 선언된 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.",
+      "live smoke evidence의 canonical source는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
+    ]) &&
+    hasAllFragments(checklistText, [
+      "live smoke는 `external_smokes[]`가 비어 있지 않은 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.",
+      "canonical evidence는 source PR의 `Actual Verification`이며, closeout preflight는 같은 evidence를 재사용한다.",
+      "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox rehearsal 중 더 이른 쪽을 따른다.",
+    ]) &&
+    hasAllFragments(opencodeReadmeText, [
+      "## Live Smoke Standard",
+      "canonical evidence는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
+      "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox repo rehearsal 중 더 이른 쪽을 따른다.",
+    ]);
+  const schedulerStandardLocked =
+    hasAllFragments(workflowReadmeText, [
+      "scheduler standard는 team-shared default를 `macOS launchd`로 고정하고, non-macOS 환경은 `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending` fallback으로 다룬다.",
+      "scheduler install/config 변경 뒤와 최소 `slice-batch-review`마다 1회 `pnpm omo:scheduler:verify -- --work-item <id>`와 `pnpm omo:tick:watch -- --work-item <id>`를 함께 확인한다.",
+    ]) &&
+    hasAllFragments(checklistText, [
+      "team-shared default scheduler는 현재 `macOS launchd`로 고정한다.",
+      "non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.",
+      "최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.",
+    ]) &&
+    hasAllFragments(opencodeReadmeText, [
+      "## Scheduler Standard",
+      "team-shared default scheduler는 현재 `macOS launchd`다.",
+      "non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.",
+      "최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.",
+    ]);
   const incompleteLaneIds = requiredLaneIds.filter((laneId) => {
     const lane = pilotLanes.find((entry) => entry?.id === laneId);
     return !lane || lane.status !== "pass";
@@ -104,6 +155,24 @@ function readPromotionEvidenceStatus(rootDir) {
     .filter((gate) => gate?.status !== "pass")
     .map((gate) => gate.id)
     .filter(Boolean);
+  if (
+    operationalGates.some((gate) => gate?.id === "manual-handoff-policy" && gate?.status === "pass") &&
+    !manualHandoffStandardLocked
+  ) {
+    incompleteOperationalGateIds.push("manual-handoff-policy");
+  }
+  if (
+    operationalGates.some((gate) => gate?.id === "live-smoke-standard" && gate?.status === "pass") &&
+    !liveSmokeStandardLocked
+  ) {
+    incompleteOperationalGateIds.push("live-smoke-standard");
+  }
+  if (
+    operationalGates.some((gate) => gate?.id === "scheduler-standard" && gate?.status === "pass") &&
+    !schedulerStandardLocked
+  ) {
+    incompleteOperationalGateIds.push("scheduler-standard");
+  }
   const incompleteDocumentationGateIds = documentationGates
     .filter((gate) => gate?.status !== "pass")
     .map((gate) => gate.id)
@@ -113,10 +182,12 @@ function readPromotionEvidenceStatus(rootDir) {
     workflowReadmePath,
     omoBasePath,
     checklistPath,
+    opencodeReadmePath,
     evidencePath,
     workflowReadmeText,
     omoBaseText,
     checklistText,
+    opencodeReadmeText,
     evidence,
     gateStatus: evidence?.promotion_gate?.status ?? "not-ready",
     blockers: Array.isArray(evidence?.promotion_gate?.blockers) ? evidence.promotion_gate.blockers : [],
@@ -127,17 +198,23 @@ function readPromotionEvidenceStatus(rootDir) {
     laneEvidenceRefs: pilotLanes.flatMap((lane) => lane?.workpack_refs ?? []).filter(Boolean),
     hasChecklistDoc: checklistText.length > 0,
     hasEvidenceLedger: Boolean(evidence),
+    manualHandoffStandardLocked,
+    liveSmokeStandardLocked,
+    schedulerStandardLocked,
     hasPilotSignal:
       workflowReadmeText.includes("v1 절차") ||
       workflowReadmeText.includes("pilot") ||
       workflowReadmeText.includes("파일럿") ||
       (typeof evidence?.execution_mode === "string" && evidence.execution_mode !== "default"),
     hasManualHandoffSignal:
-      workflowReadmeText.includes("manual") || workflowReadmeText.includes("handoff"),
+      !manualHandoffStandardLocked &&
+      (workflowReadmeText.includes("manual") || workflowReadmeText.includes("handoff")),
     hasSmokeSignal:
-      workflowReadmeText.includes("live smoke") || workflowReadmeText.includes("on-demand"),
+      !liveSmokeStandardLocked &&
+      (workflowReadmeText.includes("live smoke") || workflowReadmeText.includes("on-demand")),
     hasSchedulerSignal:
-      workflowReadmeText.includes("launchd") || workflowReadmeText.includes("macOS"),
+      !schedulerStandardLocked &&
+      (workflowReadmeText.includes("launchd") || workflowReadmeText.includes("macOS")),
     hasPolicyBoundarySignal: omoBaseText.includes("기준은 여전히 v1"),
   };
 }

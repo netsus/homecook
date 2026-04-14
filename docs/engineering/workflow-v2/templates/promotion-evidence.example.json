@@ -26,27 +26,31 @@
   "operational_gates": [
     {
       "id": "manual-handoff-policy",
-      "status": "partial",
-      "notes": "High-risk and anchor-extension slices still end with manual handoff by default.",
+      "status": "pass",
+      "notes": "Manual handoff is locked as an exception-only path; provider waits use pause + scheduled resume.",
       "evidence_refs": [
-        "docs/engineering/workflow-v2/README.md"
+        "docs/engineering/workflow-v2/README.md",
+        "docs/engineering/workflow-v2/promotion-readiness.md",
+        ".opencode/README.md"
       ]
     },
     {
       "id": "live-smoke-standard",
-      "status": "partial",
-      "notes": "Live smoke is defined but still treated as on-demand rather than a standardized recurring lane.",
+      "status": "pass",
+      "notes": "Live smoke has a required trigger matrix, Actual Verification evidence source, and recurring rehearsal cadence.",
       "evidence_refs": [
         "docs/engineering/workflow-v2/README.md",
+        "docs/engineering/workflow-v2/promotion-readiness.md",
         ".opencode/README.md"
       ]
     },
     {
       "id": "scheduler-standard",
-      "status": "partial",
-      "notes": "Scheduler tooling exists, but the current documented standard is still macOS launchd-first.",
+      "status": "pass",
+      "notes": "Scheduler standard locks macOS launchd as the team-shared default plus non-macOS fallback and verify/watch cadence.",
       "evidence_refs": [
         "docs/engineering/workflow-v2/README.md",
+        "docs/engineering/workflow-v2/promotion-readiness.md",
         ".opencode/README.md"
       ]
     }
@@ -91,10 +95,9 @@
     "blockers": [
       "authority-required-ui lane not yet passed",
       "external-smoke lane evidence missing",
-      "bugfix-patch lane evidence missing",
-      "live-smoke and scheduler standards are still partial"
+      "bugfix-patch lane evidence missing"
     ],
     "next_review_trigger": "After slice06 Stage 4 checkpoint and at least one external-smoke pilot.",
-    "notes": "Stay in promotion-candidate mode until the required lanes and operational standards pass."
+    "notes": "Stay in promotion-candidate mode until the required pilot lanes pass."
   }
 }

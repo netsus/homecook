@@ -30,6 +30,33 @@
 - manual handoff가 "예외 상황"으로만 남는지, 어떤 slice가 수동 handoff 대상인지 문서로 잠긴다.
 - scheduler 운영 기준이 최소한 현재 지원 플랫폼과 fallback policy를 설명한다.
 
+### Operational Gate Standards
+
+#### `manual-handoff-policy`
+
+`pass` 기준:
+
+- manual handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서만 허용한다.
+- provider wait, Claude budget unavailable, 일반 CI polling 지연은 기본적으로 human handoff가 아니라 `pause + scheduled resume`를 사용한다.
+- handoff가 발생하면 latest `stage-result.json`, authority/final gate artifact 경로(해당 시), 남은 blocker, 다음 권장 명령을 handoff bundle 또는 notes에 남긴다.
+
+#### `live-smoke-standard`
+
+`pass` 기준:
+
+- live smoke는 `external_smokes[]`가 비어 있지 않은 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.
+- canonical evidence는 source PR의 `Actual Verification`이며, closeout preflight는 같은 evidence를 재사용한다.
+- rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox rehearsal 중 더 이른 쪽을 따른다.
+
+#### `scheduler-standard`
+
+`pass` 기준:
+
+- team-shared default scheduler는 현재 `macOS launchd`로 고정한다.
+- non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.
+- scheduler install 뒤와 scheduler config/provider path 변경 뒤에는 `pnpm omo:scheduler:verify -- --work-item <id>`를 실행한다.
+- 운영 확인은 `pnpm omo:tick:watch -- --work-item <id>`로 하고, 최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.
+
 ### Pilot Gates
 
 아래 3개 lane은 승격 전 필수다.
@@ -51,6 +78,8 @@
 - 목적: low-friction pilot lane에서 lead time / blocked retry / human escalation 빈도 확인
 
 ## Slice06 Checkpoint Rule
+
+실행용 단계 체크리스트는 [slice06-pilot-checklist.md](./slice06-pilot-checklist.md)를 따른다.
 
 slice06과 같은 in-flight pilot은 제품 correctness 자체를 이 문서가 판정하지 않는다.
 여기서 보는 것은 아래다.
@@ -78,7 +107,7 @@ checkpoint 결과를 남길 때는 최소한 아래를 함께 기록한다.
 
 ```bash
 pnpm omo:promotion:update -- --section pilot-lane --id authority-required-ui --status in_progress --checkpoint-ref stage4-ready-for-review --workpack-ref docs/workpacks/06-recipe-to-planner/README.md --note "slice06 Stage 4 running"
-pnpm omo:promotion:update -- --section operational-gate --id live-smoke-standard --status partial --evidence-ref .opencode/README.md --note "still on-demand"
+pnpm omo:promotion:update -- --section operational-gate --id live-smoke-standard --status pass --evidence-ref .opencode/README.md --evidence-ref docs/engineering/workflow-v2/promotion-readiness.md --note "required trigger matrix and rehearsal cadence locked"
 pnpm omo:promotion:update -- --section promotion-gate --status not-ready --blocker "external-smoke lane evidence missing" --next-review-trigger "After slice06 Stage 6"
 ```
 

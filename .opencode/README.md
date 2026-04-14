@@ -137,6 +137,31 @@ pnpm omo:claude-budget -- --clear
 - active pilot 동안 루트 repo는 `ops/omo-<slice>-runtime-anchor` 같은 운영 브랜치에 두는 것을 기본값으로 권장한다.
 - 이 운영 브랜치는 hygiene 목적이다. supervisor worktree의 base sync correctness는 이제 local `master`가 아니라 `origin/master` detached 정책이 담당한다.
 
+## Manual Handoff Standard
+
+- manual handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서만 허용한다.
+- provider wait, Claude budget unavailable, 일반 CI polling 지연은 기본적으로 human handoff가 아니라 `pause + scheduled resume`를 사용한다.
+- handoff bundle은 아래를 반드시 포함한다.
+  - latest `stage-result.json` 경로
+  - authority/final gate artifact 경로(해당 시)
+  - 남은 blocker 요약
+  - 다음 권장 명령
+  - 대상 workpack / PR ref
+
+## Live Smoke Standard
+
+- live smoke는 `external_smokes[]`가 비어 있지 않은 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.
+- canonical evidence는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.
+- rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox repo rehearsal 중 더 이른 쪽을 따른다.
+- control-plane smoke는 sandbox GitHub repo에서만 실행하고, product repo에서는 promotion evidence 재검증에만 사용한다.
+
+## Scheduler Standard
+
+- team-shared default scheduler는 현재 `macOS launchd`다.
+- non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.
+- scheduler install 뒤와 scheduler config/provider path 변경 뒤에는 `pnpm omo:scheduler:verify -- --work-item <id>`를 실행한다.
+- 운영 확인은 `pnpm omo:tick:watch -- --work-item <id>`로 하고, 최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.
+
 ## Bookkeeping Validation
 
 - `pnpm validate:omo-bookkeeping`는 runtime / workflow-v2 / 공식 workpack docs 사이의 drift를 검사한다.
