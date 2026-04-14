@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-14T00:00:00.000Z",
+  "updated_at": "2026-04-14T11:58:02.263Z",
   "canonical_policy": "v1",
   "execution_mode": "promotion-candidate",
   "documentation_gates": [
@@ -26,18 +26,21 @@
   "operational_gates": [
     {
       "id": "manual-handoff-policy",
-      "status": "partial",
-      "notes": "High-risk and anchor-extension slices still end with manual merge handoff.",
+      "status": "pass",
+      "notes": "Manual handoff is now locked as an exception-only path for high-risk, anchor-extension, and exceptional recovery cases; provider waits use pause + scheduled resume.",
       "evidence_refs": [
-        "docs/engineering/workflow-v2/README.md"
+        "docs/engineering/workflow-v2/README.md",
+        "docs/engineering/workflow-v2/promotion-readiness.md",
+        ".opencode/README.md"
       ]
     },
     {
       "id": "live-smoke-standard",
-      "status": "partial",
-      "notes": "Live smoke entrypoints exist, but the standard is still on-demand rather than a locked recurring lane.",
+      "status": "pass",
+      "notes": "Live smoke now has a required trigger matrix, canonical Actual Verification evidence source, and a recurring rehearsal cadence.",
       "evidence_refs": [
         "docs/engineering/workflow-v2/README.md",
+        "docs/engineering/workflow-v2/promotion-readiness.md",
         ".opencode/README.md"
       ]
     },
@@ -92,9 +95,9 @@
       "authority-required-ui lane not yet passed",
       "external-smoke lane evidence missing",
       "bugfix-patch lane evidence missing",
-      "manual handoff, live smoke, and scheduler standards are still partial"
+      "scheduler standard is still partial"
     ],
     "next_review_trigger": "After slice06 Stage 4 checkpoint and one external-smoke pilot.",
-    "notes": "Stay in promotion-candidate mode until the required pilot lanes and operational standards pass."
+    "notes": "Stay in promotion-candidate mode until the required pilot lanes and remaining scheduler standard pass."
   }
 }
