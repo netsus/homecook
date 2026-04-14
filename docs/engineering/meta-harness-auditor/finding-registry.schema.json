@@ -1,0 +1,54 @@
+{
+  "required": ["version", "findings"],
+  "properties": {
+    "version": {
+      "enum": [1]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "required": [
+          "id",
+          "title",
+          "severity",
+          "priority",
+          "bucket",
+          "owner",
+          "safe_to_autofix",
+          "approval_required",
+          "stability",
+          "introduced_in"
+        ],
+        "properties": {
+          "id": {},
+          "title": {},
+          "severity": {
+            "enum": ["critical", "important", "suggestion"]
+          },
+          "priority": {
+            "enum": ["P0", "P1", "P2", "P3", "P4"]
+          },
+          "bucket": {
+            "enum": [
+              "docs-governance",
+              "validator",
+              "workflow",
+              "CI",
+              "shared-tooling",
+              "slice-policy",
+              "promotion-blocker"
+            ]
+          },
+          "owner": {},
+          "safe_to_autofix": {},
+          "approval_required": {},
+          "stability": {
+            "enum": ["stable", "reserved", "deprecated"]
+          },
+          "introduced_in": {},
+          "notes": {}
+        }
+      }
+    }
+  }
+}

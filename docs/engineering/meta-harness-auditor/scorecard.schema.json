@@ -1,0 +1,41 @@
+{
+  "required": ["version", "generated_at", "overall_score", "axes"],
+  "properties": {
+    "version": {
+      "enum": [1]
+    },
+    "generated_at": {},
+    "overall_score": {},
+    "axes": {
+      "type": "array",
+      "items": {
+        "required": [
+          "id",
+          "label",
+          "score",
+          "max_score",
+          "confidence",
+          "trend",
+          "rationale",
+          "evidence_refs"
+        ],
+        "properties": {
+          "id": {},
+          "label": {},
+          "score": {},
+          "max_score": {},
+          "confidence": {
+            "enum": ["low", "medium", "high"]
+          },
+          "trend": {
+            "enum": ["up", "flat", "down", "unknown"]
+          },
+          "rationale": {},
+          "evidence_refs": {
+            "type": "array"
+          }
+        }
+      }
+    }
+  }
+}

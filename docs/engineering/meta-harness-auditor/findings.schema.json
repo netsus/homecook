@@ -1,0 +1,60 @@
+{
+  "required": ["version", "generated_at", "findings"],
+  "properties": {
+    "version": {
+      "enum": [1]
+    },
+    "generated_at": {},
+    "findings": {
+      "type": "array",
+      "items": {
+        "required": [
+          "id",
+          "title",
+          "severity",
+          "priority",
+          "bucket",
+          "owner",
+          "safe_to_autofix",
+          "approval_required",
+          "why_it_matters",
+          "evidence_refs",
+          "recommended_validation",
+          "suggested_next_step"
+        ],
+        "properties": {
+          "id": {},
+          "title": {},
+          "severity": {
+            "enum": ["critical", "important", "suggestion"]
+          },
+          "priority": {
+            "enum": ["P0", "P1", "P2", "P3", "P4"]
+          },
+          "bucket": {
+            "enum": [
+              "docs-governance",
+              "validator",
+              "workflow",
+              "CI",
+              "shared-tooling",
+              "slice-policy",
+              "promotion-blocker"
+            ]
+          },
+          "owner": {},
+          "safe_to_autofix": {},
+          "approval_required": {},
+          "why_it_matters": {},
+          "evidence_refs": {
+            "type": "array"
+          },
+          "recommended_validation": {
+            "type": "array"
+          },
+          "suggested_next_step": {}
+        }
+      }
+    }
+  }
+}

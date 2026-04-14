@@ -47,6 +47,7 @@
     "qa:eval:suite": "node scripts/qa-eval-suite.mjs",
     "qa:perf:02": "node scripts/qa-slice-02-performance.mjs",
     "qa:perf:05": "node scripts/qa-slice-05-performance.mjs",
+    "harness:audit": "node scripts/meta-harness-audit.mjs",
     "qa:seed:01-05": "node scripts/qa-seed-slices-01-05.mjs",
     "local:seed:demo": "node scripts/local-seed-demo-data.mjs",
     "local:seed:02-performance": "node scripts/local-seed-slice-02-performance.mjs",
