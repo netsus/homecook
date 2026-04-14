@@ -26,6 +26,7 @@ describe("workflow v2 docs", () => {
       "docs/engineering/workflow-v2/presets.md",
       "docs/engineering/workflow-v2/approval-and-loops.md",
       "docs/engineering/workflow-v2/promotion-readiness.md",
+      "docs/engineering/workflow-v2/slice06-pilot-checklist.md",
       "docs/engineering/workflow-v2/omo-lite-architecture.md",
       "docs/engineering/workflow-v2/omo-session-orchestrator.md",
       "docs/engineering/workflow-v2/omo-claude-cli-provider.md",
@@ -103,6 +104,11 @@ describe("workflow v2 docs", () => {
     const sliceWorkflow = readFileSync(join(repoRoot, "docs/engineering/slice-workflow.md"), "utf8");
     const overview = readFileSync(join(repoRoot, "docs/engineering/agent-workflow-overview.md"), "utf8");
     const workflowReadme = readFileSync(join(repoRoot, "docs/engineering/workflow-v2/README.md"), "utf8");
+    const promotionReadiness = readFileSync(
+      join(repoRoot, "docs/engineering/workflow-v2/promotion-readiness.md"),
+      "utf8",
+    );
+    const opencodeReadme = readFileSync(join(repoRoot, ".opencode/README.md"), "utf8");
     const claudeEntry = readFileSync(join(repoRoot, "CLAUDE.md"), "utf8");
     const roadmap = readFileSync(join(repoRoot, "docs/workpacks/README.md"), "utf8");
     const template = readFileSync(join(repoRoot, "docs/workpacks/_template/README.md"), "utf8");
@@ -116,6 +122,23 @@ describe("workflow v2 docs", () => {
     expect(overview).toContain("## Codex review / closeout 흐름");
     expect(workflowReadme).toContain("public code stage 실행이 필요할 때 `--mode execute`를 사용한다.");
     expect(workflowReadme).not.toContain("Codex stage에 한해 `--mode execute`를 사용한다.");
+    expect(workflowReadme).toContain(
+      "manual handoff는 `high-risk` / `anchor-extension` / `exceptional recovery`에 한정된 예외 경로다.",
+    );
+    expect(workflowReadme).toContain("provider wait와 budget issue는 기본적으로 `pause + scheduled resume`를 사용한다.");
+    expect(workflowReadme).toContain(
+      "live smoke evidence의 canonical source는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
+    );
+    expect(promotionReadiness).toContain("#### `manual-handoff-policy`");
+    expect(promotionReadiness).toContain(
+      "manual handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서만 허용한다.",
+    );
+    expect(promotionReadiness).toContain("#### `live-smoke-standard`");
+    expect(opencodeReadme).toContain("## Manual Handoff Standard");
+    expect(opencodeReadme).toContain("## Live Smoke Standard");
+    expect(opencodeReadme).toContain(
+      "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox repo rehearsal 중 더 이른 쪽을 따른다.",
+    );
     expect(claudeEntry).toContain("슬라이스 개발 1·3·4단계와 authority-required slice의 final authority gate 담당.");
     expect(claudeEntry).toContain("2·5·6단계(Codex 담당)");
     expect(claudeEntry).toContain("사용자-facing 응답은 특별한 요청이 없는 한 한국어로 작성한다.");

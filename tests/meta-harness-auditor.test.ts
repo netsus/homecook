@@ -411,6 +411,43 @@ describe("meta-harness-auditor", () => {
         "",
         "Workflow v2 is the canonical default path.",
         "Promotion evidence is tracked in .workflow-v2/promotion-evidence.json.",
+        "manual handoff는 `high-risk` / `anchor-extension` / `exceptional recovery`에 한정된 예외 경로다.",
+        "provider wait와 budget issue는 기본적으로 `pause + scheduled resume`를 사용한다.",
+        "live smoke는 일반 PR CI 전체 강제가 아니라 `external_smokes[]`가 선언된 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.",
+        "live smoke evidence의 canonical source는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      "docs/engineering/workflow-v2/promotion-readiness.md",
+      [
+        "# OMO Promotion Readiness",
+        "",
+        "#### `manual-handoff-policy`",
+        "manual handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서만 허용한다.",
+        "provider wait, Claude budget unavailable, 일반 CI polling 지연은 기본적으로 human handoff가 아니라 `pause + scheduled resume`를 사용한다.",
+        "",
+        "#### `live-smoke-standard`",
+        "live smoke는 `external_smokes[]`가 비어 있지 않은 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.",
+        "canonical evidence는 source PR의 `Actual Verification`이며, closeout preflight는 같은 evidence를 재사용한다.",
+        "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox rehearsal 중 더 이른 쪽을 따른다.",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      ".opencode/README.md",
+      [
+        "# opencode",
+        "",
+        "## Manual Handoff Standard",
+        "provider wait, Claude budget unavailable, 일반 CI polling 지연은 기본적으로 human handoff가 아니라 `pause + scheduled resume`를 사용한다.",
+        "handoff bundle은 아래를 반드시 포함한다.",
+        "",
+        "## Live Smoke Standard",
+        "canonical evidence는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
+        "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox repo rehearsal 중 더 이른 쪽을 따른다.",
         "",
       ].join("\n"),
     );
