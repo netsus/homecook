@@ -38,15 +38,16 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 2. [core.md](./core.md)
 3. [presets.md](./presets.md)
 4. [approval-and-loops.md](./approval-and-loops.md)
-5. [omo-lite-architecture.md](./omo-lite-architecture.md)
-6. [omo-session-orchestrator.md](./omo-session-orchestrator.md)
-7. [omo-claude-cli-provider.md](./omo-claude-cli-provider.md)
-8. [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md)
-9. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
-10. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
-11. [TEMPLATE.md](./profiles/TEMPLATE.md)
-12. [homecook.md](./profiles/homecook.md)
-13. [migration.md](./migration.md)
+5. [../bookkeeping-authority-matrix.md](../bookkeeping-authority-matrix.md)
+6. [omo-lite-architecture.md](./omo-lite-architecture.md)
+7. [omo-session-orchestrator.md](./omo-session-orchestrator.md)
+8. [omo-claude-cli-provider.md](./omo-claude-cli-provider.md)
+9. [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md)
+10. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
+11. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
+12. [TEMPLATE.md](./profiles/TEMPLATE.md)
+13. [homecook.md](./profiles/homecook.md)
+14. [migration.md](./migration.md)
 
 ## Directory Map
 
@@ -55,6 +56,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [core.md](./core.md): 공통 개념, 책임, lifecycle
 - [presets.md](./presets.md): 작업 유형별 기본 경로
 - [approval-and-loops.md](./approval-and-loops.md): plan/review loop와 dual-approval 규칙
+- [../bookkeeping-authority-matrix.md](../bookkeeping-authority-matrix.md): closeout docs / tracked state / PR evidence ownership matrix
 - [omo-lite-architecture.md](./omo-lite-architecture.md): Codex supervisor 기반 Homecook OMO-lite 설계안
 - [omo-session-orchestrator.md](./omo-session-orchestrator.md): generic session reuse / runtime state / scheduled resume 규격
 - [omo-claude-cli-provider.md](./omo-claude-cli-provider.md): raw `claude` CLI provider, session extraction, deterministic resume 규격
@@ -78,6 +80,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - v2는 big bang 전환이 아니라 파일럿으로 도입한다.
 - `workflow-v2` 관련 첫 단계는 문서와 schema를 고정하는 것이다.
 - 실제 pilot 운영 상태는 저장소 루트의 `.workflow-v2/` 아래 JSON으로 기록한다.
+- closeout docs, `.workflow-v2/status.json`, OMO runtime, PR evidence의 authoritative ownership은 `docs/engineering/bookkeeping-authority-matrix.md`를 따른다.
 - machine-readable 파일이 들어와도 README 표를 즉시 제거하지 않는다.
 - v2 승격 전까지는 product slice merge gate를 v1 기준으로 계속 유지한다.
 - Phase 4부터는 최소 executable helper(`pnpm omo:dispatch-stage`, `pnpm omo:sync-status`)를 함께 관리한다.

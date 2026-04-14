@@ -7,6 +7,7 @@ import {
   findInvalidWorkflowV2Refs,
   findMissingPrSections,
 } from "./git-policy.mjs";
+import { describeCloseoutWritableScopeForPr, describeCloseoutWritableSurfaces } from "./bookkeeping-authority.mjs";
 import {
   readAutomationSpec,
   updateAutomationSpecAuthorityReportPaths,
@@ -526,7 +527,7 @@ function buildCloseoutPullRequestBody({
     "## Workpack / Slice",
     `- 관련 workpack: docs/workpacks/${normalizedSlice}/`,
     `- workflow v2 work item: \`.workflow-v2/work-items/${normalizedWorkItemId}.json\``,
-    "- 변경 범위: `docs/workpacks/README.md`, target workpack README/acceptance/automation-spec closeout metadata",
+    `- 변경 범위: ${describeCloseoutWritableScopeForPr({ slice: normalizedSlice })}`,
     `- 변경 유형 기준 required checks: ${deterministicChecks}`,
     "",
     "## Test Plan",
@@ -717,7 +718,9 @@ export function assertDocsOnlyCloseoutChanges({ slice, changedFiles, worktreePat
 
   const invalid = changedFiles.filter((filePath) => !allowed.has(filePath));
   if (invalid.length > 0) {
-    throw new Error(`Closeout repair must be docs-only. Invalid files: ${invalid.join(", ")}`);
+    throw new Error(
+      `${describeCloseoutWritableSurfaces({ slice })} Invalid files: ${invalid.join(", ")}`,
+    );
   }
 }
 
