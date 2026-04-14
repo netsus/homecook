@@ -126,6 +126,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
   - `pnpm omo:tick`
   - `pnpm omo:tick:watch`
   - `pnpm omo:reconcile`
+  - `pnpm omo:promotion:update`
   - `pnpm omo:status`
   - `pnpm omo:status:brief`
 - 현재 구현된 validation/smoke/scheduler 명령:
@@ -172,8 +173,9 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 12. sandbox GitHub repo에서 supervisor control plane을 점검할 때는 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`를 사용한다.
 13. 실제 Claude 첫 리뷰가 반드시 `request_changes`를 내고 Codex가 그 피드백 토큰을 반영하는지까지 최소 프롬프트로 보려면 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name> --live-providers`를 사용한다. 이 모드는 backend Stage 2/3만 실제 provider를 사용한다.
 14. 실제 Claude/Codex provider 경로, session reuse, stage-result 생성을 분리 검증할 때는 `pnpm omo:smoke:providers`를 사용한다.
-15. macOS scheduler는 `pnpm omo:scheduler:install -- --work-item <id>`로 설치하고 `pnpm omo:scheduler:verify -- --work-item <id>`로 확인한다.
-16. `pnpm validate:workflow-v2`는 schema/example뿐 아니라 상위 workflow-v2 entry docs drift와 official source-of-truth reference drift도 함께 검사한다.
+15. slice06 또는 parallel pilot checkpoint 결과를 ledger에 남길 때는 `pnpm omo:promotion:update -- --section pilot-lane --id <lane>`를 사용한다.
+16. macOS scheduler는 `pnpm omo:scheduler:install -- --work-item <id>`로 설치하고 `pnpm omo:scheduler:verify -- --work-item <id>`로 확인한다.
+17. `pnpm validate:workflow-v2`는 schema/example뿐 아니라 상위 workflow-v2 entry docs drift와 official source-of-truth reference drift도 함께 검사한다.
 
 ## Not Yet Included
 

@@ -63,9 +63,24 @@ slice06과 같은 in-flight pilot은 제품 correctness 자체를 이 문서가 
 즉 slice06 체크포인트는 `OMO 승격 증거`를 쌓는 용도지,
 slice06 기능 자체의 최종 제품 승인 문서가 아니다.
 
+checkpoint 결과를 남길 때는 최소한 아래를 함께 기록한다.
+
+- `pilot-lane=authority-required-ui`
+- `checkpoint-ref=stage2-complete | stage4-ready-for-review | stage6-closeout`
+- workpack ref: `docs/workpacks/06-recipe-to-planner/README.md`
+- 필요하면 audit artifact / authority evidence 경로를 notes 또는 관련 gate evidence에 반영
+
 ## Evidence Ledger
 
 실제 누적 상태는 `.workflow-v2/promotion-evidence.json`에 기록한다.
+
+기본 기록 명령:
+
+```bash
+pnpm omo:promotion:update -- --section pilot-lane --id authority-required-ui --status in_progress --checkpoint-ref stage4-ready-for-review --workpack-ref docs/workpacks/06-recipe-to-planner/README.md --note "slice06 Stage 4 running"
+pnpm omo:promotion:update -- --section operational-gate --id live-smoke-standard --status partial --evidence-ref .opencode/README.md --note "still on-demand"
+pnpm omo:promotion:update -- --section promotion-gate --status not-ready --blocker "external-smoke lane evidence missing" --next-review-trigger "After slice06 Stage 6"
+```
 
 해당 파일에는 최소한 아래가 들어가야 한다.
 

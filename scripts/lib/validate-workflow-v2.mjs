@@ -351,6 +351,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "`pnpm omo:tick`",
       "`pnpm omo:tick:watch`",
       "`pnpm omo:reconcile`",
+      "`pnpm omo:promotion:update`",
       "`pnpm omo:status`",
       "`pnpm validate:omo-bookkeeping`",
       "low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함",
@@ -447,6 +448,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "`pnpm omo:smoke:providers`",
       "`pnpm omo:scheduler:install -- --work-item <id>`",
       "`pnpm omo:scheduler:verify -- --work-item <id>`",
+      "`pnpm omo:promotion:update`",
       "Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`의 기본 provider는 raw `claude` CLI다.",
       "Stage `1 / 3 / 4`는 `claude_primary`, Stage `2 / 5 / 6`은 `codex_primary` 세션을 재사용한다.",
       "macOS에서는 `launchd` 예시를 우선 제공한다",
@@ -464,6 +466,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "bugfix-patch",
       ".workflow-v2/promotion-evidence.json",
       "slice06",
+      "pnpm omo:promotion:update",
     ]),
   ];
 
