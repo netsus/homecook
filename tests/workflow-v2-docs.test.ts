@@ -129,15 +129,24 @@ describe("workflow v2 docs", () => {
     expect(workflowReadme).toContain(
       "live smoke evidence의 canonical source는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
     );
+    expect(workflowReadme).toContain(
+      "scheduler standard는 team-shared default를 `macOS launchd`로 고정하고, non-macOS 환경은 `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending` fallback으로 다룬다.",
+    );
     expect(promotionReadiness).toContain("#### `manual-handoff-policy`");
     expect(promotionReadiness).toContain(
       "manual handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서만 허용한다.",
     );
     expect(promotionReadiness).toContain("#### `live-smoke-standard`");
+    expect(promotionReadiness).toContain("#### `scheduler-standard`");
+    expect(promotionReadiness).toContain("team-shared default scheduler는 현재 `macOS launchd`로 고정한다.");
     expect(opencodeReadme).toContain("## Manual Handoff Standard");
     expect(opencodeReadme).toContain("## Live Smoke Standard");
+    expect(opencodeReadme).toContain("## Scheduler Standard");
     expect(opencodeReadme).toContain(
       "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox repo rehearsal 중 더 이른 쪽을 따른다.",
+    );
+    expect(opencodeReadme).toContain(
+      "non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.",
     );
     expect(claudeEntry).toContain("슬라이스 개발 1·3·4단계와 authority-required slice의 final authority gate 담당.");
     expect(claudeEntry).toContain("2·5·6단계(Codex 담당)");

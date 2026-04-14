@@ -131,6 +131,22 @@ function readPromotionEvidenceStatus(rootDir) {
       "canonical evidence는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
       "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox repo rehearsal 중 더 이른 쪽을 따른다.",
     ]);
+  const schedulerStandardLocked =
+    hasAllFragments(workflowReadmeText, [
+      "scheduler standard는 team-shared default를 `macOS launchd`로 고정하고, non-macOS 환경은 `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending` fallback으로 다룬다.",
+      "scheduler install/config 변경 뒤와 최소 `slice-batch-review`마다 1회 `pnpm omo:scheduler:verify -- --work-item <id>`와 `pnpm omo:tick:watch -- --work-item <id>`를 함께 확인한다.",
+    ]) &&
+    hasAllFragments(checklistText, [
+      "team-shared default scheduler는 현재 `macOS launchd`로 고정한다.",
+      "non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.",
+      "최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.",
+    ]) &&
+    hasAllFragments(opencodeReadmeText, [
+      "## Scheduler Standard",
+      "team-shared default scheduler는 현재 `macOS launchd`다.",
+      "non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.",
+      "최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.",
+    ]);
   const incompleteLaneIds = requiredLaneIds.filter((laneId) => {
     const lane = pilotLanes.find((entry) => entry?.id === laneId);
     return !lane || lane.status !== "pass";
@@ -150,6 +166,12 @@ function readPromotionEvidenceStatus(rootDir) {
     !liveSmokeStandardLocked
   ) {
     incompleteOperationalGateIds.push("live-smoke-standard");
+  }
+  if (
+    operationalGates.some((gate) => gate?.id === "scheduler-standard" && gate?.status === "pass") &&
+    !schedulerStandardLocked
+  ) {
+    incompleteOperationalGateIds.push("scheduler-standard");
   }
   const incompleteDocumentationGateIds = documentationGates
     .filter((gate) => gate?.status !== "pass")
@@ -178,6 +200,7 @@ function readPromotionEvidenceStatus(rootDir) {
     hasEvidenceLedger: Boolean(evidence),
     manualHandoffStandardLocked,
     liveSmokeStandardLocked,
+    schedulerStandardLocked,
     hasPilotSignal:
       workflowReadmeText.includes("v1 절차") ||
       workflowReadmeText.includes("pilot") ||
@@ -190,7 +213,8 @@ function readPromotionEvidenceStatus(rootDir) {
       !liveSmokeStandardLocked &&
       (workflowReadmeText.includes("live smoke") || workflowReadmeText.includes("on-demand")),
     hasSchedulerSignal:
-      workflowReadmeText.includes("launchd") || workflowReadmeText.includes("macOS"),
+      !schedulerStandardLocked &&
+      (workflowReadmeText.includes("launchd") || workflowReadmeText.includes("macOS")),
     hasPolicyBoundarySignal: omoBaseText.includes("기준은 여전히 v1"),
   };
 }
