@@ -1,13 +1,15 @@
 # RECIPE_DETAIL Authority Review
 
-> 대상 slice: `03-recipe-like` + `04-recipe-save` baseline / `06-recipe-to-planner` preflight
+> 대상 slice: `03-recipe-like` + `04-recipe-save` baseline / `06-recipe-to-planner` Stage 4
 > evidence:
 > - `ui/designs/evidence/authority/RECIPE_DETAIL-mobile.png`
 > - `ui/designs/evidence/authority/RECIPE_DETAIL-mobile-narrow.png`
+> - `ui/designs/evidence/06-recipe-to-planner/RECIPE_DETAIL-planner-add-mobile.png`
+> - `ui/designs/evidence/06-recipe-to-planner/RECIPE_DETAIL-planner-add-mobile-narrow.png`
 > - design reference: `ui/designs/RECIPE_DETAIL.md`
 > - critique reference: `ui/designs/critiques/RECIPE_DETAIL-critique.md`
 > - implementation reference: `components/recipe/recipe-detail-screen.tsx`
-> 검토일: 2026-04-09
+> 검토일: 2026-04-15
 > 검토자: product-design-authority
 
 ## Verdict

@@ -1,14 +1,15 @@
 # PLANNER_WEEK Authority Review
 
-> 대상 slice: `05-planner-week-core` baseline / `06-recipe-to-planner` preflight
+> 대상 slice: `05-planner-week-core` baseline / `06-recipe-to-planner` Stage 4
 > evidence:
 > - `ui/designs/evidence/authority/PLANNER_WEEK-mobile.png`
 > - `ui/designs/evidence/authority/PLANNER_WEEK-mobile-narrow.png`
 > - `ui/designs/evidence/authority/PLANNER_WEEK-mobile-scrolled.png`
+> - `ui/designs/evidence/06-recipe-to-planner/PLANNER_WEEK-5-column-mobile.png`
 > - design reference: `ui/designs/PLANNER_WEEK.md`
 > - critique reference: `ui/designs/critiques/PLANNER_WEEK-critique.md`
 > - implementation reference: `components/planner/planner-week-screen.tsx`
-> 검토일: 2026-04-09
+> 검토일: 2026-04-15
 > 검토자: product-design-authority
 
 ## Verdict
