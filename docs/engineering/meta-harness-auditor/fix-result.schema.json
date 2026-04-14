@@ -1,0 +1,41 @@
+{
+  "required": [
+    "version",
+    "generated_at",
+    "mode",
+    "finding_id",
+    "status",
+    "safe_to_autofix",
+    "approval_required",
+    "pre_fix_active",
+    "post_fix_active",
+    "changed_files",
+    "recommended_validation",
+    "summary"
+  ],
+  "properties": {
+    "version": {
+      "enum": [1]
+    },
+    "generated_at": {},
+    "mode": {
+      "enum": ["fix-one-finding"]
+    },
+    "finding_id": {},
+    "status": {
+      "enum": ["applied", "noop", "blocked"]
+    },
+    "safe_to_autofix": {},
+    "approval_required": {},
+    "pre_fix_active": {},
+    "post_fix_active": {},
+    "reason": {},
+    "changed_files": {
+      "type": "array"
+    },
+    "recommended_validation": {
+      "type": "array"
+    },
+    "summary": {}
+  }
+}
