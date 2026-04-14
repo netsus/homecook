@@ -80,6 +80,66 @@ function resolveSampleSlices(rootDir, explicitSlices) {
     .slice(0, 3);
 }
 
+function readPromotionEvidenceStatus(rootDir) {
+  const workflowReadmePath = path.join(rootDir, "docs/engineering/workflow-v2/README.md");
+  const omoBasePath = path.join(rootDir, "docs/engineering/workflow-v2/omo-base.md");
+  const checklistPath = path.join(rootDir, "docs/engineering/workflow-v2/promotion-readiness.md");
+  const evidencePath = path.join(rootDir, ".workflow-v2/promotion-evidence.json");
+  const workflowReadmeText = readTextIfExists(workflowReadmePath) ?? "";
+  const omoBaseText = readTextIfExists(omoBasePath) ?? "";
+  const checklistText = readTextIfExists(checklistPath) ?? "";
+  const evidence = readJsonIfExists(evidencePath);
+
+  const requiredLaneIds = ["authority-required-ui", "external-smoke", "bugfix-patch"];
+  const pilotLanes = Array.isArray(evidence?.pilot_lanes) ? evidence.pilot_lanes : [];
+  const operationalGates = Array.isArray(evidence?.operational_gates) ? evidence.operational_gates : [];
+  const documentationGates = Array.isArray(evidence?.documentation_gates) ? evidence.documentation_gates : [];
+  const incompleteLaneIds = requiredLaneIds.filter((laneId) => {
+    const lane = pilotLanes.find((entry) => entry?.id === laneId);
+    return !lane || lane.status !== "pass";
+  });
+  const incompleteOperationalGateIds = operationalGates
+    .filter((gate) => gate?.status !== "pass")
+    .map((gate) => gate.id)
+    .filter(Boolean);
+  const incompleteDocumentationGateIds = documentationGates
+    .filter((gate) => gate?.status !== "pass")
+    .map((gate) => gate.id)
+    .filter(Boolean);
+
+  return {
+    workflowReadmePath,
+    omoBasePath,
+    checklistPath,
+    evidencePath,
+    workflowReadmeText,
+    omoBaseText,
+    checklistText,
+    evidence,
+    gateStatus: evidence?.promotion_gate?.status ?? "not-ready",
+    blockers: Array.isArray(evidence?.promotion_gate?.blockers) ? evidence.promotion_gate.blockers : [],
+    executionMode: evidence?.execution_mode ?? "pilot",
+    incompleteLaneIds,
+    incompleteOperationalGateIds,
+    incompleteDocumentationGateIds,
+    laneEvidenceRefs: pilotLanes.flatMap((lane) => lane?.workpack_refs ?? []).filter(Boolean),
+    hasChecklistDoc: checklistText.length > 0,
+    hasEvidenceLedger: Boolean(evidence),
+    hasPilotSignal:
+      workflowReadmeText.includes("v1 절차") ||
+      workflowReadmeText.includes("pilot") ||
+      workflowReadmeText.includes("파일럿") ||
+      (typeof evidence?.execution_mode === "string" && evidence.execution_mode !== "default"),
+    hasManualHandoffSignal:
+      workflowReadmeText.includes("manual") || workflowReadmeText.includes("handoff"),
+    hasSmokeSignal:
+      workflowReadmeText.includes("live smoke") || workflowReadmeText.includes("on-demand"),
+    hasSchedulerSignal:
+      workflowReadmeText.includes("launchd") || workflowReadmeText.includes("macOS"),
+    hasPolicyBoundarySignal: omoBaseText.includes("기준은 여전히 v1"),
+  };
+}
+
 export function resolveAuditArgs(argv = []) {
   let outputDir;
   let sampleSlices = [];
@@ -277,40 +337,54 @@ export function detectBookkeepingOverlap({ rootDir = process.cwd(), registry } =
 
 export function detectOmoPromotionRisk({ rootDir = process.cwd(), registry } = {}) {
   const resolvedRegistry = registry ?? loadFindingRegistry(rootDir);
-  const workflowReadmeText =
-    readTextIfExists(path.join(rootDir, "docs/engineering/workflow-v2/README.md")) ?? "";
-  const omoBaseText = readTextIfExists(path.join(rootDir, "docs/engineering/workflow-v2/omo-base.md")) ?? "";
+  const status = readPromotionEvidenceStatus(rootDir);
+  const hasOperationalRiskSignal =
+    status.hasManualHandoffSignal || status.hasSmokeSignal || status.hasSchedulerSignal;
+  const isReadyForDefaultCutover =
+    status.hasChecklistDoc &&
+    status.hasEvidenceLedger &&
+    status.executionMode === "default" &&
+    status.gateStatus === "ready" &&
+    status.incompleteLaneIds.length === 0 &&
+    status.incompleteOperationalGateIds.length === 0 &&
+    status.incompleteDocumentationGateIds.length === 0 &&
+    !status.hasPolicyBoundarySignal &&
+    !status.hasPilotSignal &&
+    !hasOperationalRiskSignal;
 
-  const hasPilotSignal =
-    workflowReadmeText.includes("v1 절차") ||
-    workflowReadmeText.includes("pilot") ||
-    workflowReadmeText.includes("파일럿");
-  const hasManualHandoffSignal =
-    workflowReadmeText.includes("manual") || workflowReadmeText.includes("handoff");
-  const hasSmokeSignal =
-    workflowReadmeText.includes("live smoke") || workflowReadmeText.includes("on-demand");
-  const hasSchedulerSignal =
-    workflowReadmeText.includes("launchd") || workflowReadmeText.includes("macOS");
-  const hasPolicyBoundarySignal = omoBaseText.includes("기준은 여전히 v1");
-
-  if (!hasPilotSignal || (!hasManualHandoffSignal && !hasSmokeSignal && !hasSchedulerSignal)) {
+  if (isReadyForDefaultCutover) {
     return [];
   }
+
+  const missingPieces = [
+    ...(!status.hasChecklistDoc ? ["promotion checklist doc missing"] : []),
+    ...(!status.hasEvidenceLedger ? ["promotion evidence ledger missing"] : []),
+    ...status.incompleteDocumentationGateIds.map((id) => `documentation gate '${id}' not passed`),
+    ...status.incompleteOperationalGateIds.map((id) => `operational gate '${id}' not passed`),
+    ...status.incompleteLaneIds.map((id) => `pilot lane '${id}' not passed`),
+  ];
+  const suggestedNextStep =
+    missingPieces.length > 0
+      ? `Keep OMO v2 in promotion-candidate mode and close the remaining promotion gate items: ${missingPieces.join(", ")}. Update .workflow-v2/promotion-evidence.json after each slice06 or parallel pilot checkpoint.`
+      : "Keep OMO v2 in promotion-candidate mode, collect slice06 and parallel pilot evidence, and only cut over after the promotion checklist passes.";
 
   return [
     createFindingFromRegistry(resolvedRegistry, "H-OMO-001", {
       why_it_matters:
-        "Current docs still describe OMO v2 as a pilot/runtime layer with manual handoff and on-demand operational checks, so promoting it to the default workflow now would be a premature cutover.",
+        "Current docs and promotion evidence still describe OMO v2 as a promotion-candidate runtime with manual handoff, partial operational standards, or incomplete pilot lanes, so promoting it to the default workflow now would be a premature cutover.",
       evidence_refs: [
         "docs/engineering/workflow-v2/README.md",
-        ...(hasPolicyBoundarySignal ? ["docs/engineering/workflow-v2/omo-base.md"] : []),
+        "docs/engineering/workflow-v2/promotion-readiness.md",
+        ".workflow-v2/promotion-evidence.json",
+        ...status.laneEvidenceRefs.slice(0, 3),
+        ...(status.hasPolicyBoundarySignal ? ["docs/engineering/workflow-v2/omo-base.md"] : []),
       ],
       recommended_validation: [
+        "Update .workflow-v2/promotion-evidence.json after each slice06 / parallel pilot checkpoint.",
         "Run the authority-required, external-smoke, and bugfix pilot set before changing the canonical workflow entrypoint.",
         "Re-run pnpm harness:audit after promotion-readiness evidence is updated.",
       ],
-      suggested_next_step:
-        "Keep OMO v2 in promotion-candidate mode, collect slice06 and parallel pilot evidence, and only cut over after the promotion checklist passes.",
+      suggested_next_step: suggestedNextStep,
     }),
   ];
 }
@@ -460,11 +534,12 @@ export function buildMetaHarnessRemediationPlan({ findings, generatedAt }) {
   };
 }
 
-export function buildMetaHarnessPromotionReadiness({ findings, generatedAt }) {
+export function buildMetaHarnessPromotionReadiness({ rootDir = process.cwd(), findings, generatedAt }) {
+  const status = readPromotionEvidenceStatus(rootDir);
   const blockers = findings
     .filter((finding) => finding.bucket === "promotion-blocker" || finding.id === "H-GOV-001")
     .map((finding) => finding.id);
-  const verdict = blockers.length > 0 ? "not-ready" : "candidate";
+  const verdict = blockers.length > 0 ? "not-ready" : status.gateStatus === "ready" ? "ready" : "candidate";
 
   return {
     version: 1,
@@ -474,14 +549,26 @@ export function buildMetaHarnessPromotionReadiness({ findings, generatedAt }) {
     summary:
       verdict === "not-ready"
         ? "OMO v2는 아직 기본 운영 경로 승격 전 단계이며, bookkeeping 경계와 promotion evidence를 더 잠가야 한다."
-        : "OMO v2는 승격 후보 상태이며, 마지막 pilot evidence 정리만 남아 있다.",
+        : verdict === "ready"
+          ? "OMO v2는 승격 gate를 통과한 상태다. 마지막 docs-governance cutover와 인간 승인이 남아 있다."
+          : "OMO v2는 승격 후보 상태이며, 마지막 pilot evidence 정리만 남아 있다.",
     blockers,
     prerequisites: [
       "authority-required, external-smoke, bugfix pilot evidence refresh",
       "bookkeeping authoritative source matrix",
       "meta-harness-auditor recurring baseline audit",
     ],
-    evidence_refs: findings.flatMap((finding) => finding.evidence_refs),
+    evidence_refs: [
+      ...new Set([
+        ...findings.flatMap((finding) => finding.evidence_refs),
+        relativePath(rootDir, status.checklistPath),
+        relativePath(rootDir, status.evidencePath),
+      ]),
+    ],
+    promotion_evidence_status: status.gateStatus,
+    missing_lane_ids: status.incompleteLaneIds,
+    missing_operational_gate_ids: status.incompleteOperationalGateIds,
+    missing_documentation_gate_ids: status.incompleteDocumentationGateIds,
   };
 }
 
@@ -659,7 +746,7 @@ export function runMetaHarnessAudit({
   const findings = collectMetaHarnessFindings({ rootDir });
   const scorecard = buildMetaHarnessScorecard({ findings, generatedAt });
   const remediationPlan = buildMetaHarnessRemediationPlan({ findings, generatedAt });
-  const promotionReadiness = buildMetaHarnessPromotionReadiness({ findings, generatedAt });
+  const promotionReadiness = buildMetaHarnessPromotionReadiness({ rootDir, findings, generatedAt });
   const auditContext = {
     version: 1,
     generated_at: generatedAt,

@@ -72,6 +72,24 @@ function createAuditFixture() {
   );
   write(
     rootDir,
+    "docs/engineering/workflow-v2/promotion-readiness.md",
+    [
+      "# OMO Promotion Readiness",
+      "",
+      "## Required Gates",
+      "",
+      "## Pilot Gates",
+      "",
+      "authority-required-ui",
+      "external-smoke",
+      "bugfix-patch",
+      ".workflow-v2/promotion-evidence.json",
+      "slice06",
+      "",
+    ].join("\n"),
+  );
+  write(
+    rootDir,
     "docs/engineering/workflow-v2/omo-base.md",
     [
       "# OMO base",
@@ -94,6 +112,72 @@ function createAuditFixture() {
     ].join("\n"),
   );
   write(rootDir, ".workflow-v2/status.json", '{"items":[]}\n');
+  write(
+    rootDir,
+    ".workflow-v2/promotion-evidence.json",
+    JSON.stringify(
+      {
+        version: 1,
+        target: "OMO v2",
+        updated_at: "2026-04-14T00:00:00.000Z",
+        canonical_policy: "v1",
+        execution_mode: "promotion-candidate",
+        documentation_gates: [
+          {
+            id: "promotion-checklist",
+            status: "pass",
+            notes: "exists",
+            evidence_refs: ["docs/engineering/workflow-v2/promotion-readiness.md"],
+          },
+        ],
+        operational_gates: [
+          {
+            id: "manual-handoff-policy",
+            status: "partial",
+            notes: "manual handoff remains",
+            evidence_refs: ["docs/engineering/workflow-v2/README.md"],
+          },
+        ],
+        pilot_lanes: [
+          {
+            id: "authority-required-ui",
+            label: "Authority lane",
+            status: "in_progress",
+            required: true,
+            notes: "slice06 running",
+            workpack_refs: ["docs/workpacks/06-recipe-to-planner/README.md"],
+            checkpoint_refs: ["stage4-ready-for-review"],
+          },
+          {
+            id: "external-smoke",
+            label: "External smoke lane",
+            status: "pending",
+            required: true,
+            notes: "waiting",
+            workpack_refs: [],
+            checkpoint_refs: [],
+          },
+          {
+            id: "bugfix-patch",
+            label: "Bugfix lane",
+            status: "pending",
+            required: true,
+            notes: "waiting",
+            workpack_refs: [],
+            checkpoint_refs: [],
+          },
+        ],
+        promotion_gate: {
+          status: "not-ready",
+          blockers: ["pilot lanes missing"],
+          next_review_trigger: "after slice06 stage4",
+          notes: "blocked",
+        },
+      },
+      null,
+      2,
+    ),
+  );
   write(rootDir, ".opencode/README.md", "# opencode\n");
   write(rootDir, "scripts/lib/omo-reconcile.mjs", "export function reconcile() {}\n");
   write(rootDir, "lib/api/planner.ts", "export const planner = true;\n");
@@ -232,6 +316,113 @@ describe("meta-harness-auditor", () => {
 
     expect(governanceFindings.map((finding) => finding.id)).toContain("H-GOV-001");
     expect(promotionFindings.map((finding) => finding.id)).toContain("H-OMO-001");
+  });
+
+  it("clears H-OMO-001 once promotion evidence is ready and docs stop advertising pilot-only operation", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    write(
+      rootDir,
+      "docs/engineering/workflow-v2/README.md",
+      [
+        "# Workflow v2",
+        "",
+        "Workflow v2 is the canonical default path.",
+        "Promotion evidence is tracked in .workflow-v2/promotion-evidence.json.",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      "docs/engineering/workflow-v2/omo-base.md",
+      [
+        "# OMO base",
+        "",
+        "OMO runs the default workflow stack.",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      ".workflow-v2/promotion-evidence.json",
+      JSON.stringify(
+        {
+          version: 1,
+          target: "OMO v2",
+          updated_at: "2026-04-14T00:00:00.000Z",
+          canonical_policy: "v2",
+          execution_mode: "default",
+          documentation_gates: [
+            {
+              id: "promotion-checklist",
+              status: "pass",
+              notes: "done",
+              evidence_refs: ["docs/engineering/workflow-v2/promotion-readiness.md"],
+            },
+          ],
+          operational_gates: [
+            {
+              id: "manual-handoff-policy",
+              status: "pass",
+              notes: "done",
+              evidence_refs: ["docs/engineering/workflow-v2/README.md"],
+            },
+            {
+              id: "live-smoke-standard",
+              status: "pass",
+              notes: "done",
+              evidence_refs: [".opencode/README.md"],
+            },
+            {
+              id: "scheduler-standard",
+              status: "pass",
+              notes: "done",
+              evidence_refs: [".opencode/README.md"],
+            },
+          ],
+          pilot_lanes: [
+            {
+              id: "authority-required-ui",
+              label: "Authority lane",
+              status: "pass",
+              required: true,
+              notes: "done",
+              workpack_refs: ["docs/workpacks/06-recipe-to-planner/README.md"],
+              checkpoint_refs: ["stage2-complete", "stage4-ready-for-review", "stage6-closeout"],
+            },
+            {
+              id: "external-smoke",
+              label: "External smoke lane",
+              status: "pass",
+              required: true,
+              notes: "done",
+              workpack_refs: [],
+              checkpoint_refs: [],
+            },
+            {
+              id: "bugfix-patch",
+              label: "Bugfix lane",
+              status: "pass",
+              required: true,
+              notes: "done",
+              workpack_refs: [],
+              checkpoint_refs: [],
+            },
+          ],
+          promotion_gate: {
+            status: "ready",
+            blockers: [],
+            next_review_trigger: "none",
+            notes: "ready",
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    expect(detectOmoPromotionRisk({ rootDir })).toEqual([]);
   });
 
   it("writes a valid audit bundle", () => {

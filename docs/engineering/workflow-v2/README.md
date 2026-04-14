@@ -38,23 +38,26 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 2. [core.md](./core.md)
 3. [presets.md](./presets.md)
 4. [approval-and-loops.md](./approval-and-loops.md)
-5. [omo-lite-architecture.md](./omo-lite-architecture.md)
-6. [omo-session-orchestrator.md](./omo-session-orchestrator.md)
-7. [omo-claude-cli-provider.md](./omo-claude-cli-provider.md)
-8. [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md)
-9. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
-10. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
-11. [TEMPLATE.md](./profiles/TEMPLATE.md)
-12. [homecook.md](./profiles/homecook.md)
-13. [migration.md](./migration.md)
+5. [promotion-readiness.md](./promotion-readiness.md)
+6. [omo-lite-architecture.md](./omo-lite-architecture.md)
+7. [omo-session-orchestrator.md](./omo-session-orchestrator.md)
+8. [omo-claude-cli-provider.md](./omo-claude-cli-provider.md)
+9. [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md)
+10. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
+11. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
+12. [TEMPLATE.md](./profiles/TEMPLATE.md)
+13. [homecook.md](./profiles/homecook.md)
+14. [migration.md](./migration.md)
 
 ## Directory Map
 
 - [.workflow-v2/README.md](../../../.workflow-v2/README.md): 실제 pilot 상태 저장 위치
+- [.workflow-v2/promotion-evidence.json](../../../.workflow-v2/promotion-evidence.json): current promotion checklist / pilot lane evidence ledger
 - [charter.md](./charter.md): v2가 해결할 문제, 유지할 원칙, 비범위
 - [core.md](./core.md): 공통 개념, 책임, lifecycle
 - [presets.md](./presets.md): 작업 유형별 기본 경로
 - [approval-and-loops.md](./approval-and-loops.md): plan/review loop와 dual-approval 규칙
+- [promotion-readiness.md](./promotion-readiness.md): OMO 기본 승격 checklist와 pilot evidence gate
 - [omo-lite-architecture.md](./omo-lite-architecture.md): Codex supervisor 기반 Homecook OMO-lite 설계안
 - [omo-session-orchestrator.md](./omo-session-orchestrator.md): generic session reuse / runtime state / scheduled resume 규격
 - [omo-claude-cli-provider.md](./omo-claude-cli-provider.md): raw `claude` CLI provider, session extraction, deterministic resume 규격
@@ -65,8 +68,10 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [profiles/homecook.md](./profiles/homecook.md): 현재 저장소에 적용되는 profile
 - [schemas/work-item.schema.json](./schemas/work-item.schema.json): work item 메타데이터 스키마
 - [schemas/workflow-status.schema.json](./schemas/workflow-status.schema.json): 상태 보드 스키마
+- [schemas/promotion-evidence.schema.json](./schemas/promotion-evidence.schema.json): 승격 evidence ledger 스키마
 - [templates/work-item.example.json](./templates/work-item.example.json): 예시 work item
 - [templates/workflow-status.example.json](./templates/workflow-status.example.json): 예시 상태 보드
+- [templates/promotion-evidence.example.json](./templates/promotion-evidence.example.json): 예시 승격 evidence ledger
 - [migration.md](./migration.md): v1 -> v2 점진 전환 경로
 - [opencode.json](../../../opencode.json): repo-local OpenCode instructions + direct agent/default bindings
 - [.opencode/README.md](../../../.opencode/README.md): repo-local OMO 운영 메모
@@ -78,6 +83,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - v2는 big bang 전환이 아니라 파일럿으로 도입한다.
 - `workflow-v2` 관련 첫 단계는 문서와 schema를 고정하는 것이다.
 - 실제 pilot 운영 상태는 저장소 루트의 `.workflow-v2/` 아래 JSON으로 기록한다.
+- OMO 기본 승격 판단은 `docs/engineering/workflow-v2/promotion-readiness.md`와 `.workflow-v2/promotion-evidence.json`을 함께 기준으로 삼는다.
 - machine-readable 파일이 들어와도 README 표를 즉시 제거하지 않는다.
 - v2 승격 전까지는 product slice merge gate를 v1 기준으로 계속 유지한다.
 - Phase 4부터는 최소 executable helper(`pnpm omo:dispatch-stage`, `pnpm omo:sync-status`)를 함께 관리한다.
@@ -99,6 +105,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - Stage 4 Claude implementation + Codex `authority_precheck` + Stage 5 Codex public review + Claude `final_authority_gate` 흐름
 - automatic Claude budget resolution + repo-local override
 - JSON schema와 예시 파일 추가
+- promotion checklist와 pilot evidence ledger 추가
 - `validate:workflow-v2` 최소 validator 추가
 - `validate:workflow-v2` bundle에 source-of-truth reference drift 검사 추가
 - `validate:omo-bookkeeping` official docs drift validator 추가
@@ -151,21 +158,22 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 1. `.workflow-v2/work-items/<id>.json`을 만든다.
 2. `.workflow-v2/status.json`에 같은 `id`의 status item을 추가한다.
-3. 작업 브랜치와 preset, required checks를 status에 기록한다.
+3. 승격 상태를 관리 중이면 `.workflow-v2/promotion-evidence.json`도 같이 갱신한다.
+4. 작업 브랜치와 preset, required checks를 status에 기록한다.
    merge gate는 required subset이 아니라 current head 기준 시작된 PR checks 전체 green 여부로 판단한다.
-4. PR 본문의 `## Workpack / Slice`에 `workflow v2 work item` 경로를 적는다.
-5. `pnpm validate:workflow-v2`를 통과시킨다.
-6. medium/high risk 작업이면 plan loop summary artifact를 남긴다.
-7. review loop summary artifact는 docs-governance, workflow/tooling 변경, 또는 exceptional recovery일 때만 남긴다.
-8. OMO-lite supervised execution이 필요하면 `pnpm omo:run-stage -- --slice <id> --stage <n>`으로 dispatch artifact를 만들고, public code stage 실행이 필요할 때 `--mode execute`를 사용한다.
+5. PR 본문의 `## Workpack / Slice`에 `workflow v2 work item` 경로를 적는다.
+6. `pnpm validate:workflow-v2`를 통과시킨다.
+7. medium/high risk 작업이면 plan loop summary artifact를 남긴다.
+8. review loop summary artifact는 docs-governance, workflow/tooling 변경, 또는 exceptional recovery일 때만 남긴다.
+9. OMO-lite supervised execution이 필요하면 `pnpm omo:run-stage -- --slice <id> --stage <n>`으로 dispatch artifact를 만들고, public code stage 실행이 필요할 때 `--mode execute`를 사용한다.
    slice6 기준 public Stage 4는 Claude execute path를 사용할 수 있고, Stage 5 `final_authority_gate`는 review gate이므로 execute 대상이 아니라 review artifact 경로로 다룬다.
-9. Claude reviewer availability를 로컬에서 강제로 조정해야 하면 `pnpm omo:claude-budget -- --set unavailable --reason "<reason>"` 또는 `--clear`를 사용한다.
-10. reviewer fallback도 tracked state에 같이 남기려면 `pnpm omo:run-stage -- --slice <id> --stage <n> --sync-status`를 사용한다.
-11. sandbox GitHub repo에서 supervisor control plane을 점검할 때는 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`를 사용한다.
-12. 실제 Claude 첫 리뷰가 반드시 `request_changes`를 내고 Codex가 그 피드백 토큰을 반영하는지까지 최소 프롬프트로 보려면 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name> --live-providers`를 사용한다. 이 모드는 backend Stage 2/3만 실제 provider를 사용한다.
-13. 실제 Claude/Codex provider 경로, session reuse, stage-result 생성을 분리 검증할 때는 `pnpm omo:smoke:providers`를 사용한다.
-14. macOS scheduler는 `pnpm omo:scheduler:install -- --work-item <id>`로 설치하고 `pnpm omo:scheduler:verify -- --work-item <id>`로 확인한다.
-15. `pnpm validate:workflow-v2`는 schema/example뿐 아니라 상위 workflow-v2 entry docs drift와 official source-of-truth reference drift도 함께 검사한다.
+10. Claude reviewer availability를 로컬에서 강제로 조정해야 하면 `pnpm omo:claude-budget -- --set unavailable --reason "<reason>"` 또는 `--clear`를 사용한다.
+11. reviewer fallback도 tracked state에 같이 남기려면 `pnpm omo:run-stage -- --slice <id> --stage <n> --sync-status`를 사용한다.
+12. sandbox GitHub repo에서 supervisor control plane을 점검할 때는 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`를 사용한다.
+13. 실제 Claude 첫 리뷰가 반드시 `request_changes`를 내고 Codex가 그 피드백 토큰을 반영하는지까지 최소 프롬프트로 보려면 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name> --live-providers`를 사용한다. 이 모드는 backend Stage 2/3만 실제 provider를 사용한다.
+14. 실제 Claude/Codex provider 경로, session reuse, stage-result 생성을 분리 검증할 때는 `pnpm omo:smoke:providers`를 사용한다.
+15. macOS scheduler는 `pnpm omo:scheduler:install -- --work-item <id>`로 설치하고 `pnpm omo:scheduler:verify -- --work-item <id>`로 확인한다.
+16. `pnpm validate:workflow-v2`는 schema/example뿐 아니라 상위 workflow-v2 entry docs drift와 official source-of-truth reference drift도 함께 검사한다.
 
 ## Not Yet Included
 

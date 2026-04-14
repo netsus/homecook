@@ -59,9 +59,12 @@ v1 문서를 즉시 덮어쓰지 않고, 작은 PR 여러 개로 옮긴다.
   - 필요 시 `slice-workflow.md`와 `agent-workflow-overview.md`를 v2 기준으로 재작성
 - 완료 기준:
   - 승격 공지 또는 파일럿 연장 결정
+  - `promotion-readiness.md`와 `.workflow-v2/promotion-evidence.json`이 같은 결론을 가리킴
 
 ## Promotion Exit Criteria
 
+- `docs/engineering/workflow-v2/promotion-readiness.md`의 documentation gate와 pilot gate가 모두 충족된다.
+- `.workflow-v2/promotion-evidence.json`의 `promotion_gate.status`가 최소 `candidate`다.
 - medium/high risk 작업에서 dual-approval artifact가 일관되게 남는다.
 - work item/status 파일과 PR 상태의 해석이 크게 어긋나지 않는다.
 - small bugfix의 리드타임이 v1보다 과도하게 늘지 않는다.

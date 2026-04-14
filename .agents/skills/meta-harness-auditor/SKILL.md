@@ -17,6 +17,8 @@ description: Audit the Homecook workflow harness, OMO runtime, validators, CI ga
 5. `docs/engineering/slice-workflow.md`
 6. `docs/engineering/workflow-v2/README.md`
 7. `.opencode/README.md`
+8. `docs/engineering/workflow-v2/promotion-readiness.md`
+9. `.workflow-v2/promotion-evidence.json` if present
 
 ## Default Workflow
 
