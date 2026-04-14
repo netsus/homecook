@@ -1,0 +1,122 @@
+# OMO Promotion Readiness
+
+## 목적
+
+이 문서는 `OMO v2`를 기본 운영 경로로 승격하기 전에
+어떤 checklist와 pilot evidence가 충족돼야 하는지 잠그는 기준이다.
+
+지금 단계의 목표는 "즉시 승격"이 아니라
+"언제 승격해도 되는지 판단 가능한 gate를 만드는 것"이다.
+
+## Current Mode
+
+- 현재 모드: `promotion-candidate`
+- canonical policy: 계속 `v1` (`AGENTS.md`, `docs/engineering/slice-workflow.md`, `docs/engineering/agent-workflow-overview.md`)
+- OMO 역할: pilot runtime / supervisor / control plane
+- 승격 전에는 high-risk 또는 anchor-extension slice의 automatic merge를 열지 않는다.
+
+## Required Gates
+
+승격 판단 전 아래 2개 축이 모두 필요하다.
+
+1. 문서 / 운영 기준이 잠겨 있어야 한다.
+2. representative pilot evidence가 누적돼 있어야 한다.
+
+### Documentation Gates
+
+- `bookkeeping-authority-matrix`가 closeout docs / tracked state / runtime / PR evidence ownership을 잠근다.
+- `promotion-readiness` 문서와 `.workflow-v2/promotion-evidence.json`이 같은 gate vocabulary를 사용한다.
+- live smoke required 조건이 문서와 validator에서 같은 의미로 해석된다.
+- manual handoff가 "예외 상황"으로만 남는지, 어떤 slice가 수동 handoff 대상인지 문서로 잠긴다.
+- scheduler 운영 기준이 최소한 현재 지원 플랫폼과 fallback policy를 설명한다.
+
+### Pilot Gates
+
+아래 3개 lane은 승격 전 필수다.
+
+1. `authority-required-ui`
+- 대표 예시: `06-recipe-to-planner`
+- 목적: anchor-extension / authority-required closeout, final authority gate, manual handoff quality 검증
+- 체크포인트:
+  - Stage 2 complete
+  - Stage 4 ready-for-review
+  - Stage 6 closeout
+
+2. `external-smoke`
+- 실제 smoke evidence가 필요한 slice를 1건 이상 수행한다.
+- 목적: live smoke required 조건, source PR `Actual Verification`, closeout preflight 재검증 경로 확인
+
+3. `bugfix-patch`
+- small bugfix 또는 post-merge patch를 1건 이상 수행한다.
+- 목적: low-friction pilot lane에서 lead time / blocked retry / human escalation 빈도 확인
+
+## Slice06 Checkpoint Rule
+
+slice06과 같은 in-flight pilot은 제품 correctness 자체를 이 문서가 판정하지 않는다.
+여기서 보는 것은 아래다.
+
+- checkpoint 시점의 closeout/bookkeeping drift
+- authority evidence 존재 여부
+- manual handoff artifact 품질
+- scheduler / resume / blocked retry의 운영 품질
+
+즉 slice06 체크포인트는 `OMO 승격 증거`를 쌓는 용도지,
+slice06 기능 자체의 최종 제품 승인 문서가 아니다.
+
+checkpoint 결과를 남길 때는 최소한 아래를 함께 기록한다.
+
+- `pilot-lane=authority-required-ui`
+- `checkpoint-ref=stage2-complete | stage4-ready-for-review | stage6-closeout`
+- workpack ref: `docs/workpacks/06-recipe-to-planner/README.md`
+- 필요하면 audit artifact / authority evidence 경로를 notes 또는 관련 gate evidence에 반영
+
+## Evidence Ledger
+
+실제 누적 상태는 `.workflow-v2/promotion-evidence.json`에 기록한다.
+
+기본 기록 명령:
+
+```bash
+pnpm omo:promotion:update -- --section pilot-lane --id authority-required-ui --status in_progress --checkpoint-ref stage4-ready-for-review --workpack-ref docs/workpacks/06-recipe-to-planner/README.md --note "slice06 Stage 4 running"
+pnpm omo:promotion:update -- --section operational-gate --id live-smoke-standard --status partial --evidence-ref .opencode/README.md --note "still on-demand"
+pnpm omo:promotion:update -- --section promotion-gate --status not-ready --blocker "external-smoke lane evidence missing" --next-review-trigger "After slice06 Stage 6"
+```
+
+해당 파일에는 최소한 아래가 들어가야 한다.
+
+- 문서/운영 gate 상태
+- pilot lane별 상태
+- slice06 checkpoint 상태
+- 다음 promotion-gate 실행 조건
+- 현재 blocker 목록
+
+## Ready Criteria
+
+아래가 모두 만족될 때만 `ready` 후보로 본다.
+
+- documentation gates가 모두 `pass`
+- operational gates가 모두 `pass`
+- `authority-required-ui`, `external-smoke`, `bugfix-patch` lane이 모두 `pass`
+- `.workflow-v2/promotion-evidence.json`의 `promotion_gate.status`가 `candidate` 또는 `ready`
+- workflow-v2 entry docs가 더 이상 OMO를 "pilot only"로만 설명하지 않는다.
+
+## Not Ready Triggers
+
+아래 중 하나라도 남아 있으면 `not-ready`다.
+
+- authority-required lane이 아직 in-progress 또는 blocked
+- external smoke lane evidence 부재
+- bugfix lane evidence 부재
+- live smoke required 정책이 on-demand 메모 수준에 머물고 validator binding이 약함
+- scheduler 운영 기준이 특정 환경 설명만 있고 team-shared 운영 기준으로 잠기지 않음
+- manual handoff가 예외가 아니라 사실상 기본 종료 경로로 남아 있음
+
+## Promotion Decision Rhythm
+
+- `slice-checkpoint`: in-flight authority-required pilot의 Stage 2 / 4 / 6 시점
+- `slice-batch-review`: slice 3~5개마다 1회
+- `promotion-gate`: 승격 검토용 종합 평가
+
+승격 결론은 auditor가 단독으로 내리지 않는다.
+auditor는 gate 상태와 blocker를 보고하고,
+최종 승격 결정은 별도 인간 승인과 docs-governance PR에서 잠근다.

@@ -1,0 +1,104 @@
+{
+  "required": [
+    "version",
+    "target",
+    "updated_at",
+    "canonical_policy",
+    "execution_mode",
+    "documentation_gates",
+    "operational_gates",
+    "pilot_lanes",
+    "promotion_gate"
+  ],
+  "properties": {
+    "version": {
+      "enum": [1]
+    },
+    "target": {},
+    "updated_at": {},
+    "canonical_policy": {
+      "enum": ["v1", "v2"]
+    },
+    "execution_mode": {
+      "enum": ["pilot", "promotion-candidate", "default"]
+    },
+    "documentation_gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "notes", "evidence_refs"],
+        "properties": {
+          "id": {},
+          "status": {
+            "enum": ["pending", "in_progress", "partial", "pass", "blocked"]
+          },
+          "notes": {},
+          "evidence_refs": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "operational_gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "notes", "evidence_refs"],
+        "properties": {
+          "id": {},
+          "status": {
+            "enum": ["pending", "in_progress", "partial", "pass", "blocked"]
+          },
+          "notes": {},
+          "evidence_refs": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "pilot_lanes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "status",
+          "required",
+          "notes",
+          "workpack_refs",
+          "checkpoint_refs"
+        ],
+        "properties": {
+          "id": {},
+          "label": {},
+          "status": {
+            "enum": ["pending", "in_progress", "partial", "pass", "blocked"]
+          },
+          "required": {},
+          "notes": {},
+          "workpack_refs": {
+            "type": "array"
+          },
+          "checkpoint_refs": {
+            "type": "array"
+          }
+        }
+      }
+    },
+    "promotion_gate": {
+      "type": "object",
+      "required": ["status", "blockers", "next_review_trigger", "notes"],
+      "properties": {
+        "status": {
+          "enum": ["not-ready", "candidate", "ready"]
+        },
+        "blockers": {
+          "type": "array"
+        },
+        "next_review_trigger": {},
+        "notes": {}
+      }
+    }
+  }
+}

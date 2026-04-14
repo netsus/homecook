@@ -140,6 +140,8 @@ pnpm omo:claude-budget -- --clear
 ## Bookkeeping Validation
 
 - `pnpm validate:omo-bookkeeping`는 runtime / workflow-v2 / 공식 workpack docs 사이의 drift를 검사한다.
+- OMO 기본 승격 여부는 `docs/engineering/workflow-v2/promotion-readiness.md`와 `.workflow-v2/promotion-evidence.json`을 기준으로 따로 관리한다.
+- slice06 같은 authority-required pilot checkpoint 결과는 `pnpm omo:promotion:update`로 `.workflow-v2/promotion-evidence.json`에 기록한다.
 - 특히 아래를 막는다.
   - runtime 또는 workflow-v2는 merged인데 `docs/workpacks/README.md`가 아직 `merged`가 아님
   - non-authority slice가 Stage 5 이후인데, 또는 authority-required slice가 final authority gate 이후인데 workpack README의 Design Status가 `confirmed`가 아님

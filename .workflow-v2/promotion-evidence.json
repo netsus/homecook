@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "target": "OMO v2",
+  "updated_at": "2026-04-14T00:00:00.000Z",
+  "canonical_policy": "v1",
+  "execution_mode": "promotion-candidate",
+  "documentation_gates": [
+    {
+      "id": "bookkeeping-authority-matrix",
+      "status": "pass",
+      "notes": "Closeout docs, tracked state, runtime, and PR evidence ownership are locked through the shared matrix.",
+      "evidence_refs": [
+        "docs/engineering/bookkeeping-authority-matrix.md"
+      ]
+    },
+    {
+      "id": "promotion-checklist",
+      "status": "pass",
+      "notes": "Promotion checklist and tracked evidence ledger are now part of the workflow-v2 docs bundle.",
+      "evidence_refs": [
+        "docs/engineering/workflow-v2/promotion-readiness.md",
+        ".workflow-v2/promotion-evidence.json"
+      ]
+    }
+  ],
+  "operational_gates": [
+    {
+      "id": "manual-handoff-policy",
+      "status": "partial",
+      "notes": "High-risk and anchor-extension slices still end with manual merge handoff.",
+      "evidence_refs": [
+        "docs/engineering/workflow-v2/README.md"
+      ]
+    },
+    {
+      "id": "live-smoke-standard",
+      "status": "partial",
+      "notes": "Live smoke entrypoints exist, but the standard is still on-demand rather than a locked recurring lane.",
+      "evidence_refs": [
+        "docs/engineering/workflow-v2/README.md",
+        ".opencode/README.md"
+      ]
+    },
+    {
+      "id": "scheduler-standard",
+      "status": "partial",
+      "notes": "Scheduler tooling exists, but the operating standard is still macOS launchd-first.",
+      "evidence_refs": [
+        "docs/engineering/workflow-v2/README.md",
+        ".opencode/README.md"
+      ]
+    }
+  ],
+  "pilot_lanes": [
+    {
+      "id": "authority-required-ui",
+      "label": "Authority-required UI lane",
+      "status": "in_progress",
+      "required": true,
+      "notes": "Use slice06 (`06-recipe-to-planner`) as the authority-required canary and record Stage 2/4/6 checkpoint outcomes here.",
+      "workpack_refs": [
+        "docs/workpacks/06-recipe-to-planner/README.md"
+      ],
+      "checkpoint_refs": [
+        "stage2-complete",
+        "stage4-ready-for-review",
+        "stage6-closeout"
+      ]
+    },
+    {
+      "id": "external-smoke",
+      "label": "External smoke lane",
+      "status": "pending",
+      "required": true,
+      "notes": "Need one pilot where source PR Actual Verification and closeout preflight reuse the same live smoke evidence.",
+      "workpack_refs": [],
+      "checkpoint_refs": []
+    },
+    {
+      "id": "bugfix-patch",
+      "label": "Bugfix patch lane",
+      "status": "pending",
+      "required": true,
+      "notes": "Need one small bugfix/post-merge patch lane to compare lead time and blocked retry behavior against v1.",
+      "workpack_refs": [],
+      "checkpoint_refs": []
+    }
+  ],
+  "promotion_gate": {
+    "status": "not-ready",
+    "blockers": [
+      "authority-required-ui lane not yet passed",
+      "external-smoke lane evidence missing",
+      "bugfix-patch lane evidence missing",
+      "manual handoff, live smoke, and scheduler standards are still partial"
+    ],
+    "next_review_trigger": "After slice06 Stage 4 checkpoint and one external-smoke pilot.",
+    "notes": "Stay in promotion-candidate mode until the required pilot lanes and operational standards pass."
+  }
+}

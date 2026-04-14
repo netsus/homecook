@@ -25,6 +25,7 @@ describe("workflow v2 docs", () => {
       "docs/engineering/workflow-v2/core.md",
       "docs/engineering/workflow-v2/presets.md",
       "docs/engineering/workflow-v2/approval-and-loops.md",
+      "docs/engineering/workflow-v2/promotion-readiness.md",
       "docs/engineering/workflow-v2/omo-lite-architecture.md",
       "docs/engineering/workflow-v2/omo-session-orchestrator.md",
       "docs/engineering/workflow-v2/omo-claude-cli-provider.md",
@@ -36,8 +37,11 @@ describe("workflow v2 docs", () => {
       "docs/engineering/workflow-v2/migration.md",
       "docs/engineering/workflow-v2/schemas/work-item.schema.json",
       "docs/engineering/workflow-v2/schemas/workflow-status.schema.json",
+      "docs/engineering/workflow-v2/schemas/promotion-evidence.schema.json",
       "docs/engineering/workflow-v2/templates/work-item.example.json",
       "docs/engineering/workflow-v2/templates/workflow-status.example.json",
+      "docs/engineering/workflow-v2/templates/promotion-evidence.example.json",
+      ".workflow-v2/promotion-evidence.json",
     ];
 
     for (const path of requiredDocs) {
@@ -62,7 +66,7 @@ describe("workflow v2 docs", () => {
   it("exposes a reusable validator command contract for workflow v2 examples", () => {
     const results = validateWorkflowV2Examples({ rootDir: repoRoot });
 
-    expect(results).toHaveLength(2);
+    expect(results).toHaveLength(3);
     expect(results.every((result) => result.errors.length === 0)).toBe(true);
   });
 

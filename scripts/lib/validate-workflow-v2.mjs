@@ -95,6 +95,11 @@ export function validateWorkflowV2Examples({ rootDir = process.cwd() } = {}) {
       schemaPath: path.join(baseDir, "schemas/workflow-status.schema.json"),
       examplePath: path.join(baseDir, "templates/workflow-status.example.json"),
     },
+    {
+      name: "promotion-evidence",
+      schemaPath: path.join(baseDir, "schemas/promotion-evidence.schema.json"),
+      examplePath: path.join(baseDir, "templates/promotion-evidence.example.json"),
+    },
   ];
 
   return targets.map((target) => {
@@ -153,8 +158,12 @@ export function validateWorkflowV2TrackedState({ rootDir = process.cwd() } = {})
   const statusSchema = readJson(
     path.join(rootDir, "docs/engineering/workflow-v2/schemas/workflow-status.schema.json"),
   );
+  const promotionEvidenceSchema = readJson(
+    path.join(rootDir, "docs/engineering/workflow-v2/schemas/promotion-evidence.schema.json"),
+  );
   const workItemsDir = path.join(workflowDir, "work-items");
   const statusPath = path.join(workflowDir, "status.json");
+  const promotionEvidencePath = path.join(workflowDir, "promotion-evidence.json");
   const results = [];
 
   const workItemFiles = existsSync(workItemsDir)
@@ -238,6 +247,24 @@ export function validateWorkflowV2TrackedState({ rootDir = process.cwd() } = {})
     errors: [...statusErrors, ...crossErrors],
   });
 
+  if (!existsSync(promotionEvidencePath)) {
+    results.push({
+      name: "tracked-promotion-evidence",
+      errors: [
+        {
+          path: ".workflow-v2/promotion-evidence.json",
+          message: "Missing .workflow-v2/promotion-evidence.json",
+        },
+      ],
+    });
+    return results;
+  }
+
+  results.push({
+    name: "tracked-promotion-evidence",
+    errors: validateKnownShape(promotionEvidenceSchema, readJson(promotionEvidencePath)),
+  });
+
   return results;
 }
 
@@ -270,6 +297,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const workpackTemplatePath = path.join(rootDir, "docs/workpacks/_template/README.md");
   const designConsultantPath = path.join(rootDir, "docs/engineering/design-consultant-sop.md");
   const opencodeReadmePath = path.join(rootDir, ".opencode/README.md");
+  const promotionReadinessPath = path.join(rootDir, "docs/engineering/workflow-v2/promotion-readiness.md");
 
   const sliceWorkflow = readText(sliceWorkflowPath);
   const agentWorkflowOverview = readText(agentWorkflowOverviewPath);
@@ -284,6 +312,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const workpackTemplate = readText(workpackTemplatePath);
   const designConsultant = readText(designConsultantPath);
   const opencodeReadme = readText(opencodeReadmePath);
+  const promotionReadiness = readText(promotionReadinessPath);
   const nextLockedScope = extractMarkdownSection(workflowReadme, "## Next Locked Scope");
 
   const sliceWorkflowErrors = [
@@ -322,6 +351,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "`pnpm omo:tick`",
       "`pnpm omo:tick:watch`",
       "`pnpm omo:reconcile`",
+      "`pnpm omo:promotion:update`",
       "`pnpm omo:status`",
       "`pnpm validate:omo-bookkeeping`",
       "low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함",
@@ -330,6 +360,8 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "manual merge handoff",
       "public code stage 실행이 필요할 때 `--mode execute`를 사용한다.",
       "slice6 기준 public Stage 4는 Claude execute path를 사용할 수 있고, Stage 5 `final_authority_gate`는 review gate이므로 execute 대상이 아니라 review artifact 경로로 다룬다.",
+      "promotion-readiness.md",
+      ".workflow-v2/promotion-evidence.json",
     ]),
     ...containsNone(workflowReadme, [
       "Codex stage에 한해 `--mode execute`를 사용한다.",
@@ -416,9 +448,25 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "`pnpm omo:smoke:providers`",
       "`pnpm omo:scheduler:install -- --work-item <id>`",
       "`pnpm omo:scheduler:verify -- --work-item <id>`",
+      "`pnpm omo:promotion:update`",
       "Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`의 기본 provider는 raw `claude` CLI다.",
       "Stage `1 / 3 / 4`는 `claude_primary`, Stage `2 / 5 / 6`은 `codex_primary` 세션을 재사용한다.",
       "macOS에서는 `launchd` 예시를 우선 제공한다",
+      "promotion-readiness.md",
+      ".workflow-v2/promotion-evidence.json",
+    ]),
+  ];
+
+  const promotionReadinessErrors = [
+    ...containsAll(promotionReadiness, [
+      "## Required Gates",
+      "## Pilot Gates",
+      "authority-required-ui",
+      "external-smoke",
+      "bugfix-patch",
+      ".workflow-v2/promotion-evidence.json",
+      "slice06",
+      "pnpm omo:promotion:update",
     ]),
   ];
 
@@ -508,6 +556,10 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     {
       name: "workflow-v2-doc-contract:opencode",
       errors: opencodeReadmeErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:promotion-readiness",
+      errors: promotionReadinessErrors,
     },
     {
       name: "workflow-v2-doc-contract:claude-entry",
