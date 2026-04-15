@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -98,5 +98,157 @@ describe("OMO session runtime", () => {
 
     expect(state.execution?.subphase).toBe("final_authority_gate");
     expect(state.execution?.session_role).toBe("claude_primary");
+  });
+
+  it("does not resurrect a prior stage artifact as the next stage execution", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
+    const artifactDir = join(
+      rootDir,
+      ".artifacts",
+      "omo-lite-dispatch",
+      "2026-04-13T14-45-44-561Z-06-recipe-to-planner-stage-1",
+    );
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      join(artifactDir, "stage-result.json"),
+      JSON.stringify(
+        {
+          result: "done",
+          summary_markdown: "stage1 done",
+          commit: { subject: "docs: stage1" },
+          pr: {
+            title: "docs: stage1",
+            body_markdown: "## Summary\n- docs",
+          },
+          checks_run: [],
+          next_route: "open_pr",
+          claimed_scope: {
+            files: ["docs/workpacks/06-recipe-to-planner/README.md"],
+            endpoints: [],
+            routes: [],
+            states: [],
+            invariants: [],
+          },
+          changed_files: ["docs/workpacks/06-recipe-to-planner/README.md"],
+          tests_touched: [],
+          artifacts_written: [],
+          checklist_updates: [],
+          contested_fix_ids: [],
+          rebuttals: [],
+        },
+        null,
+        2,
+      ),
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "06-recipe-to-planner",
+      state: {
+        slice: "06-recipe-to-planner",
+        active_stage: 2,
+        current_stage: 2,
+        last_completed_stage: 1,
+        last_artifact_dir: artifactDir,
+        workspace: {
+          path: "/tmp/worktree",
+          branch_role: "backend",
+        },
+        wait: {
+          kind: "ready_for_next_stage",
+          stage: 2,
+        },
+        execution: null,
+      },
+    });
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId: "06-recipe-to-planner",
+      slice: "06-recipe-to-planner",
+    });
+
+    expect(state.phase).toBe("wait");
+    expect(state.execution).toBeNull();
+  });
+
+  it("does not resurrect stage2 implementation artifacts while doc_gate_review is pending", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
+    const artifactDir = join(
+      rootDir,
+      ".artifacts",
+      "omo-lite-dispatch",
+      "2026-04-13T15-24-48-018Z-06-recipe-to-planner-stage-2",
+    );
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      join(artifactDir, "stage-result.json"),
+      JSON.stringify(
+        {
+          result: "done",
+          summary_markdown: "doc gate repair done",
+          commit: { subject: "docs: repair" },
+          pr: {
+            title: "docs: repair",
+            body_markdown: "## Summary\n- repair",
+          },
+          checks_run: [],
+          next_route: "open_pr",
+          claimed_scope: {
+            files: ["docs/workpacks/06-recipe-to-planner/README.md"],
+            endpoints: [],
+            routes: [],
+            states: [],
+            invariants: [],
+          },
+          changed_files: ["docs/workpacks/06-recipe-to-planner/README.md"],
+          tests_touched: [],
+          artifacts_written: [],
+          resolved_doc_finding_ids: ["doc1"],
+          contested_doc_fix_ids: ["doc2"],
+          rebuttals: [
+            {
+              fix_id: "doc2",
+              rationale_markdown: "docs-only scope",
+              evidence_refs: ["docs/workpacks/06-recipe-to-planner/README.md"],
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "06-recipe-to-planner",
+      state: {
+        slice: "06-recipe-to-planner",
+        active_stage: 2,
+        current_stage: 2,
+        last_completed_stage: 1,
+        last_artifact_dir: artifactDir,
+        workspace: {
+          path: "/tmp/worktree",
+          branch_role: "docs",
+        },
+        doc_gate: {
+          status: "awaiting_review",
+          repair_branch: "docs/06-recipe-to-planner-repair",
+        },
+        wait: null,
+        execution: null,
+      },
+    });
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId: "06-recipe-to-planner",
+      slice: "06-recipe-to-planner",
+    });
+
+    expect(state.phase).toBeNull();
+    expect(state.execution).toBeNull();
+    expect(state.doc_gate?.status).toBe("awaiting_review");
   });
 });

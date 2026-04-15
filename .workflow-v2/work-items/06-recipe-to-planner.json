@@ -1,0 +1,88 @@
+{
+  "id": "06-recipe-to-planner",
+  "title": "RECIPE_DETAIL에서 날짜/끼니/인분 선택 후 Meal 생성",
+  "summary": "사용자가 RECIPE_DETAIL에서 플래너 추가 플로우를 통해 날짜/끼니/인분을 선택해 meal을 생성하고, PLANNER_WEEK에서 결과를 확인할 수 있게 한다. OMO supervisor 기반 Stage 1~6 자동 진행 대상이다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "POST /meals와 GET /planner 계약을 기준으로 상세 화면의 planner add flow를 닫고, 상태/권한/멱등성 규칙을 유지한 채 slice06을 완료한다.",
+  "owners": {
+    "claude": "stage-1-workpack-and-review",
+    "codex": "stage-2-backend-and-stage-4-frontend",
+    "workers": [
+      "testing",
+      "design-system"
+    ]
+  },
+  "dependencies": [
+    "01-discovery-detail-auth",
+    "02-discovery-filter",
+    "03-recipe-like",
+    "04-recipe-save",
+    "05-planner-week-core"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "AGENTS.md",
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/workpacks/06-recipe-to-planner/README.md",
+      "docs/workpacks/06-recipe-to-planner/acceptance.md"
+    ],
+    "governing_docs": [
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/요구사항기준선-v1.6.3.md",
+      "docs/화면정의서-v1.2.3.md",
+      "docs/api문서-v1.2.2.md",
+      "docs/db설계-v1.3.1.md",
+      "docs/유저flow맵-v1.2.3.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/engineering/workflow-v2/omo-autonomous-supervisor.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "skipped",
+    "external_smokes": [
+      "실 DB 환경에서 POST /meals 생성 후 PLANNER_WEEK 반영 smoke",
+      "로그인 게이트 return-to-action 및 planner add 플로우 smoke"
+    ],
+    "execution_mode": "autonomous",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm install --frozen-lockfile && pnpm verify:backend",
+      "pnpm install --frozen-lockfile && pnpm verify:frontend"
+    ],
+    "verify_commands": [
+      "pnpm install --frozen-lockfile",
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ]
+  },
+  "status": {
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 2,
+    "last_evaluator_result": "/private/tmp/homecook-slice06-omo-run/.artifacts/omo-evaluator/2026-04-15T10-17-07-204Z-06-recipe-to-planner-frontend/result.json",
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "MEAL_SCREEN 조회/수정/삭제 전체",
+    "MENU_ADD 검색/레시피북/팬트리 기반 식사 추가",
+    "장보기/요리/남은요리 후속 플로우"
+  ],
+  "open_questions": []
+}

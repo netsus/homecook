@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -35,6 +35,7 @@ function createGitFixture() {
 describe("OMO worktree manager", () => {
   it("creates a dedicated detached worktree under .worktrees and checks out stage branches there", () => {
     const { rootDir } = createGitFixture();
+    writeFileSync(join(rootDir, ".env.local"), "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321\n");
 
     const first = ensureSupervisorWorktree({
       rootDir,
@@ -60,10 +61,14 @@ describe("OMO worktree manager", () => {
     expect(second.branch).toBe("docs/03-recipe-like");
     expect(rootBranch).toBe("master");
     expect(worktreeBranch).toBe("docs/03-recipe-like");
+    expect(readFileSync(join(first.path, ".env.local"), "utf8")).toBe(
+      "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321\n",
+    );
   });
 
   it("syncs a worktree from origin/master without requiring a local master checkout handoff", () => {
     const { rootDir, remoteDir } = createGitFixture();
+    writeFileSync(join(rootDir, ".env.local"), "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321\n");
     const ensured = ensureSupervisorWorktree({
       rootDir,
       workItemId: "05-planner-week-core",
@@ -109,6 +114,9 @@ describe("OMO worktree manager", () => {
     expect(syncedHead).toBe(remoteHead);
     expect(rootBranch).toBe("master");
     expect(worktreeBranch).toBe("");
+    expect(readFileSync(join(ensured.path, ".env.local"), "utf8")).toBe(
+      "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321\n",
+    );
   });
 
   it("fetches origin/master before creating a new worktree branch from origin/master", () => {
@@ -148,5 +156,28 @@ describe("OMO worktree manager", () => {
       created: true,
     });
     expect(branchHead).toBe(remoteHead);
+  });
+
+  it("re-syncs the root .env.local into an existing worktree when reusing it", () => {
+    const { rootDir } = createGitFixture();
+    writeFileSync(join(rootDir, ".env.local"), "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321\n");
+
+    const first = ensureSupervisorWorktree({
+      rootDir,
+      workItemId: "04-recipe-save",
+    });
+
+    writeFileSync(join(rootDir, ".env.local"), "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:65432\n");
+
+    const second = ensureSupervisorWorktree({
+      rootDir,
+      workItemId: "04-recipe-save",
+    });
+
+    expect(first.path).toBe(second.path);
+    expect(second.created).toBe(false);
+    expect(readFileSync(join(second.path, ".env.local"), "utf8")).toBe(
+      "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:65432\n",
+    );
   });
 });

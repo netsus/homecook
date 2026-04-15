@@ -257,8 +257,9 @@ function getWorktreeDirtyState(worktreePath) {
   return {
     dirty: lines.length > 0,
     changedFiles: lines
-      .map((line) => line.slice(3).trim())
-      .map((path) => {
+      .map((line) => {
+        const match = line.match(/^[^\s]{1,2}\s+(.*)$/);
+        const path = match?.[1]?.trim() ?? line;
         const renameMatch = path.match(/->\s+(.+)$/);
         return renameMatch ? renameMatch[1].trim() : path;
       })
@@ -268,6 +269,10 @@ function getWorktreeDirtyState(worktreePath) {
 
 function hasValidLegacyStageResult({ artifactDir, stage }) {
   if (typeof artifactDir !== "string" || artifactDir.trim().length === 0) {
+    return false;
+  }
+
+  if (!artifactDir.includes(`-stage-${stage}`)) {
     return false;
   }
 
@@ -1070,12 +1075,17 @@ function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
   };
 
   if (!normalized.phase) {
-    const codeStage =
-      Number.isInteger(normalized.active_stage) && [1, 2, 4].includes(normalized.active_stage)
-        ? normalized.active_stage
-        : null;
-    const dirtyState = getWorktreeDirtyState(normalized.workspace?.path);
-    const hasValidStageResult =
+  const codeStage =
+    Number.isInteger(normalized.active_stage) && [1, 2, 4].includes(normalized.active_stage)
+      ? normalized.active_stage
+      : null;
+  const docGateReviewPending =
+    normalized.active_stage === 2 &&
+    normalized.doc_gate?.status === "awaiting_review" &&
+    !normalized.execution;
+  const dirtyState = getWorktreeDirtyState(normalized.workspace?.path);
+  const hasValidStageResult =
+      !docGateReviewPending &&
       codeStage !== null &&
       hasValidLegacyStageResult({
         artifactDir: normalized.last_artifact_dir,

@@ -1,4 +1,4 @@
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -8,10 +8,17 @@ import {
   resolveCodexProviderConfig,
 } from "./omo-provider-config.mjs";
 import {
+  readAutomationSpec,
+  resolveAutomationSpecPath,
+  resolveStageAutomationConfig,
+} from "./omo-automation-spec.mjs";
+import {
   isChecklistContractActive,
   readWorkpackChecklistContract,
   resolveChecklistIds,
   resolveOwnedChecklistItems,
+  resolveReviewChecklistItems,
+  resolveUncheckedChecklistItems,
 } from "./omo-checklist-contract.mjs";
 import {
   buildStageDispatch,
@@ -39,6 +46,10 @@ import {
   setSessionBinding,
   writeRuntimeState,
 } from "./omo-session-runtime.mjs";
+import { listWorktreeChangedFiles } from "./omo-worktree.mjs";
+
+const DEFAULT_OPENCODE_CLAUDE_FALLBACK_MODEL = "openai/gpt-5.4";
+const DEFAULT_OPENCODE_CLAUDE_FALLBACK_VARIANT = "high";
 
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -50,6 +61,10 @@ function ensureNonEmptyString(value, label) {
 
 function optionalString(value) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function isReviewStage(stage, subphase = null) {
+  return (Number(stage) === 2 && subphase === "doc_gate_review") || [3, 5, 6].includes(Number(stage));
 }
 
 function formatTimestampSlug(value) {
@@ -391,6 +406,74 @@ function buildCodeStageResultTemplate(stage, subphase = null) {
   };
 }
 
+function buildReviewStageResultTemplate(stage, subphase = null) {
+  if (Number(stage) === 2 && subphase === "doc_gate_review") {
+    return {
+      decision: "approve | request_changes",
+      body_markdown: "## Review\n- 승인 또는 변경 요청 요약",
+      route_back_stage: 2,
+      approved_head_sha: "abc123",
+      review_scope: {
+        scope: "doc_gate",
+        checklist_ids: [],
+      },
+      reviewed_doc_finding_ids: ["doc-gate-finding-example"],
+      required_doc_fix_ids: [],
+      waived_doc_fix_ids: [],
+      findings: [
+        {
+          file: "docs/workpacks/example/README.md",
+          line_hint: 42,
+          severity: "critical | major | minor",
+          category: "contract | tests | scope | logic | style",
+          issue: "발견된 문제 설명",
+          suggestion: "구체적인 수정 제안",
+        },
+      ],
+    };
+  }
+
+  return {
+    decision: "approve | request_changes",
+    body_markdown: "## Review\n- 승인 또는 변경 요청 요약 (findings 항목도 여기 요약할 것)",
+    route_back_stage: null,
+    approved_head_sha: "abc123",
+    review_scope: {
+      scope: "backend | frontend | closeout",
+      checklist_ids: ["accept-example"],
+    },
+    reviewed_checklist_ids: ["accept-example"],
+    required_fix_ids: [],
+    waived_fix_ids: [],
+    authority_verdict: "pass | conditional-pass | hold",
+    reviewed_screen_ids: ["EXAMPLE"],
+    authority_report_paths: ["ui/designs/authority/EXAMPLE-authority.md"],
+    blocker_count: 0,
+    major_count: 0,
+    minor_count: 0,
+    findings: [
+      {
+        file: "path/to/file.ts",
+        line_hint: 42,
+        severity: "critical | major | minor",
+        category: "contract | tests | scope | logic | style",
+        issue: "발견된 문제 설명",
+        suggestion: "구체적인 수정 제안",
+      },
+    ],
+  };
+}
+
+function resolveStageResultTemplate(stage, subphase = null) {
+  const normalizedStage = Number(stage);
+
+  if (isReviewStage(normalizedStage, subphase)) {
+    return buildReviewStageResultTemplate(normalizedStage, subphase);
+  }
+
+  return buildCodeStageResultTemplate(normalizedStage, subphase);
+}
+
 function buildPrompt({
   slice,
   stage,
@@ -401,62 +484,7 @@ function buildPrompt({
   extraPromptSections = [],
 }) {
   const normalizedStage = Number(stage);
-  const stageResultTemplate =
-    normalizedStage === 2 && subphase === "doc_gate_review"
-      ? {
-          decision: "approve | request_changes",
-          body_markdown: "## Review\n- 승인 또는 변경 요청 요약",
-          route_back_stage: 2,
-          approved_head_sha: "abc123",
-          review_scope: {
-            scope: "doc_gate",
-            checklist_ids: [],
-          },
-          reviewed_doc_finding_ids: ["doc-gate-finding-example"],
-          required_doc_fix_ids: [],
-          waived_doc_fix_ids: [],
-          findings: [
-            {
-              file: "docs/workpacks/example/README.md",
-              line_hint: 42,
-              severity: "critical | major | minor",
-              category: "contract | tests | scope | logic | style",
-              issue: "발견된 문제 설명",
-              suggestion: "구체적인 수정 제안",
-            },
-          ],
-        }
-      : [1, 2, 4].includes(normalizedStage)
-        ? buildCodeStageResultTemplate(normalizedStage, subphase)
-      : {
-          decision: "approve | request_changes",
-          body_markdown: "## Review\n- 승인 또는 변경 요청 요약 (findings 항목도 여기 요약할 것)",
-          route_back_stage: null,
-          approved_head_sha: "abc123",
-          review_scope: {
-            scope: "backend | frontend | closeout",
-            checklist_ids: ["accept-example"],
-          },
-          reviewed_checklist_ids: ["accept-example"],
-          required_fix_ids: [],
-          waived_fix_ids: [],
-          authority_verdict: "pass | conditional-pass | hold",
-          reviewed_screen_ids: ["EXAMPLE"],
-          authority_report_paths: ["ui/designs/authority/EXAMPLE-authority.md"],
-          blocker_count: 0,
-          major_count: 0,
-          minor_count: 0,
-          findings: [
-            {
-              file: "path/to/file.ts",
-              line_hint: 42,
-              severity: "critical | major | minor",
-              category: "contract | tests | scope | logic | style",
-              issue: "발견된 문제 설명",
-              suggestion: "구체적인 수정 제안",
-            },
-          ],
-        };
+  const stageResultTemplate = resolveStageResultTemplate(normalizedStage, subphase);
 
   return [
     "# Homecook OMO-lite Stage Dispatch",
@@ -512,6 +540,9 @@ function buildPrompt({
     "- Do not invent undocumented API fields, status values, or endpoints.",
     "- Keep branch, verification, and review behavior aligned with slice workflow and workflow-v2 rules.",
     "- Limit changes to files directly required by the locked slice scope. Avoid unrelated refactors, opportunistic cleanup, or out-of-scope file edits.",
+    "- This is execute mode, not planning mode. Do not stop after reconnaissance, TODO updates, or interim status notes.",
+    "- Do not end the run until every required deliverable for this stage is written and the stage-result JSON exists at the required path.",
+    "- If files are still missing or stage-result has not been written yet, continue working in the same run instead of replying with progress only.",
     "- Your responsibility is scoped code/doc updates, local verification, and valid stage-result writing. Do not create, update, ready, review, or merge GitHub pull requests yourself; supervisor handles GitHub automation.",
     "- PR 제목/본문, summary_markdown, review body_markdown은 특별한 이유가 없으면 한국어로 작성하세요.",
     dispatch.reviewContext?.body_markdown ? "" : null,
@@ -550,10 +581,80 @@ function buildPrompt({
         : [1, 2, 4].includes(normalizedStage)
           ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route, claimed_scope, changed_files, tests_touched, artifacts_written, checklist_updates, contested_fix_ids, rebuttals"
           : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, review_scope, reviewed_checklist_ids, required_fix_ids, waived_fix_ids, authority_verdict, reviewed_screen_ids, authority_report_paths, blocker_count, major_count, minor_count, findings (optional — 문제가 있으면 structured findings 배열을 반드시 포함하세요)",
+    isReviewStage(normalizedStage, subphase) ? "" : null,
+    isReviewStage(normalizedStage, subphase) ? "## Review JSON Hard Rules" : null,
+    isReviewStage(normalizedStage, subphase)
+      ? "- 이 stage는 자유형 리뷰 메모가 아니라 strict review JSON contract다. `stage-result.json`에는 위 template에 나온 키만 사용하고, 다른 키는 넣지 마세요."
+      : null,
+    isReviewStage(normalizedStage, subphase)
+      ? "- `review_scope`는 반드시 object여야 하며 `{ scope, checklist_ids }` 형태를 유지하세요. string, array, null로 쓰지 마세요."
+      : null,
+    isReviewStage(normalizedStage, subphase)
+      ? "- `checklist_results`, `test_run`, `summary_markdown`, `commit`, `pr` 같은 review contract 밖의 키는 금지합니다."
+      : null,
+    isReviewStage(normalizedStage, subphase)
+      ? "- `request_changes`면 `required_fix_ids`를 비우지 말고, 문제가 있으면 `findings`도 structured array로 함께 기록하세요."
+      : null,
+    isReviewStage(normalizedStage, subphase)
+      ? "- 값이 없더라도 required key는 생략하지 말고 `[]` 또는 `null`로 채우세요. 특히 `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`, `waived_fix_ids`는 항상 포함하세요."
+      : null,
+    normalizedStage === 5
+      ? "- Stage 5 authority verdict semantics: `hold`는 `blocker_count > 0`일 때만 사용하세요. `blocker_count = 0`이고 `major_count > 0`이면 `conditional-pass`, `blocker_count = 0`이고 `major_count = 0`이면 `pass`를 사용하세요."
+      : null,
+    [2, 4].includes(normalizedStage) && dispatch.reviewContext?.required_fix_ids?.length > 0
+      ? ""
+      : null,
+    [2, 4].includes(normalizedStage) && dispatch.reviewContext?.required_fix_ids?.length > 0
+      ? "## Review-Fix Snapshot Rules"
+      : null,
+    [2, 4].includes(normalizedStage) && dispatch.reviewContext?.required_fix_ids?.length > 0
+      ? "- 이번 rerun은 리뷰 fix 하나만 수정하더라도 `stage-result.checklist_updates`는 current stage-owned checklist 전체 snapshot을 유지해야 합니다."
+      : null,
+    [2, 4].includes(normalizedStage) && dispatch.reviewContext?.required_fix_ids?.length > 0
+      ? "- 새로 고친 fix id만 단독으로 기록하지 말고, 이전에 이미 checked였던 stage-owned checklist ids도 함께 유지하세요."
+      : null,
+    [2, 4].includes(normalizedStage) && dispatch.reviewContext?.required_fix_ids?.length > 0
+      ? "- `changed_files`는 이번 수정 범위만 반영해도 되지만, `checklist_updates`는 delta가 아니라 full snapshot이어야 합니다."
+      : null,
     ...extraPromptSections,
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function buildStageResultRepairPrompt({
+  stage,
+  subphase = null,
+  stageResultPath,
+  validationMessage,
+  currentStageResult,
+}) {
+  const stageResultTemplate = resolveStageResultTemplate(stage, subphase);
+
+  return [
+    "# Stage Result Schema Repair",
+    "",
+    "- Previous stage execution already completed. Do not re-review code, rerun CI, or rewrite the review decision itself unless the existing JSON is missing that value.",
+    "- Only repair the JSON contract at the required stage-result path.",
+    `- Target file: \`${stageResultPath}\``,
+    `- Validation error: \`${validationMessage}\``,
+    "",
+    "## Repair Rules",
+    "- Preserve the existing review semantics: keep the same decision, body_markdown, and findings intent if those values are already present.",
+    "- Rewrite the JSON so it matches the exact contract below.",
+    "- Do not invent extra keys such as `checklist_results` or `test_run`.",
+    "- Output discipline: write valid JSON to the target file and finish. No extra commentary.",
+    "",
+    "## Current Invalid JSON",
+    "```json",
+    JSON.stringify(currentStageResult, null, 2),
+    "```",
+    "",
+    "## Required JSON Shape",
+    "```json",
+    JSON.stringify(stageResultTemplate, null, 2),
+    "```",
+  ].join("\n");
 }
 
 function buildRalphPrompt({
@@ -752,6 +853,521 @@ function buildStageResultContractViolationReason({ artifactDir, execution }) {
   return genericMessage;
 }
 
+function shouldAttemptStageResultAutoRepair({
+  stage,
+  subphase = null,
+  execution,
+  stageResult,
+}) {
+  return Boolean(
+    isReviewStage(stage, subphase) &&
+      execution?.mode === "execute" &&
+      execution?.executed &&
+      execution?.provider &&
+      (stageResult || execution?.sessionId),
+  );
+}
+
+function readStageResultFromPath(stageResultPath) {
+  const normalizedPath =
+    typeof stageResultPath === "string" && stageResultPath.trim().length > 0
+      ? stageResultPath.trim()
+      : null;
+
+  if (!normalizedPath || !existsSync(normalizedPath)) {
+    return null;
+  }
+
+  return JSON.parse(readFileSync(normalizedPath, "utf8"));
+}
+
+function readAutomationSpecForExecution({
+  rootDir,
+  worktreePath = null,
+  slice,
+  required = false,
+}) {
+  const normalizedWorktreePath =
+    typeof worktreePath === "string" && worktreePath.trim().length > 0
+      ? worktreePath.trim()
+      : null;
+
+  if (normalizedWorktreePath) {
+    const worktreeAutomationSpecPath = resolveAutomationSpecPath({
+      rootDir: normalizedWorktreePath,
+      slice,
+    });
+    if (existsSync(worktreeAutomationSpecPath)) {
+      try {
+        return readAutomationSpec({
+          rootDir: normalizedWorktreePath,
+          slice,
+          required,
+        });
+      } catch {
+        // Fall back to the tracked root copy when the worktree-local spec is malformed.
+      }
+    }
+  }
+
+  return readAutomationSpec({
+    rootDir,
+    slice,
+    required,
+  });
+}
+
+function uniqueStrings(values) {
+  return [...new Set(
+    (Array.isArray(values) ? values : [])
+      .filter((value) => typeof value === "string" && value.trim().length > 0)
+      .map((value) => value.trim()),
+  )];
+}
+
+function deriveChangedFilesForStageResult(worktreePath) {
+  try {
+    return uniqueStrings(listWorktreeChangedFiles({ worktreePath }));
+  } catch {
+    return [];
+  }
+}
+
+function deriveArtifactsWritten(changedFiles) {
+  return uniqueStrings(
+    changedFiles.filter((filePath) =>
+      filePath.startsWith("ui/designs/authority/") ||
+      filePath.startsWith("ui/designs/evidence/") ||
+      filePath.startsWith(".artifacts/") ||
+      filePath.endsWith(".png") ||
+      filePath.endsWith(".jpg") ||
+      filePath.endsWith(".md"),
+    ),
+  );
+}
+
+function deriveChecklistUpdatesFromContract({
+  checklistContract,
+  stage,
+  explicitSatisfiedIds = [],
+}) {
+  if (!isChecklistContractActive(checklistContract)) {
+    return [];
+  }
+
+  const ownedItems = resolveOwnedChecklistItems(checklistContract, Number(stage));
+  const explicitSatisfied = new Set(uniqueStrings(explicitSatisfiedIds));
+  return ownedItems.map((item) => ({
+    id: item.metadata.id,
+    status: item.checked || explicitSatisfied.has(item.metadata.id) ? "checked" : "unchecked",
+    evidence_refs: [],
+  }));
+}
+
+function normalizeCodeStageChecklistSnapshot({
+  stage,
+  subphase = null,
+  checklistContract,
+  stageResult,
+  stageResultPath,
+}) {
+  const normalizedStage = Number(stage);
+  const normalizedSubphase =
+    typeof subphase === "string" && subphase.trim().length > 0 ? subphase.trim() : "implementation";
+
+  if (
+    ![2, 4].includes(normalizedStage) ||
+    !["implementation", "authority_precheck"].includes(normalizedSubphase) ||
+    !isChecklistContractActive(checklistContract) ||
+    !stageResult ||
+    typeof stageResult !== "object" ||
+    Array.isArray(stageResult)
+  ) {
+    return stageResult;
+  }
+
+  const expectedUpdates = deriveChecklistUpdatesFromContract({
+    checklistContract,
+    stage: normalizedStage,
+  });
+  if (expectedUpdates.length === 0) {
+    return stageResult;
+  }
+
+  const currentUpdates = Array.isArray(stageResult.checklist_updates)
+    ? stageResult.checklist_updates.filter(
+        (entry) => entry && typeof entry === "object" && typeof entry.id === "string" && entry.id.trim().length > 0,
+      )
+    : [];
+  const currentMap = new Map(currentUpdates.map((entry) => [entry.id.trim(), entry]));
+
+  let changed = currentUpdates.length !== expectedUpdates.length;
+  const normalizedUpdates = expectedUpdates.map((entry) => {
+    const currentEntry = currentMap.get(entry.id);
+    if (!currentEntry) {
+      changed = true;
+      return entry;
+    }
+
+    return currentEntry;
+  });
+
+  if (currentUpdates.some((entry) => !expectedUpdates.some((expected) => expected.id === entry.id.trim()))) {
+    changed = true;
+  }
+
+  if (!changed) {
+    return stageResult;
+  }
+
+  const normalizedStageResult = {
+    ...stageResult,
+    checklist_updates: normalizedUpdates,
+  };
+  writeFileSync(stageResultPath, `${JSON.stringify(normalizedStageResult, null, 2)}\n`);
+  return normalizedStageResult;
+}
+
+function normalizeImplementationStageResultAliases({
+  rootDir,
+  executionDir,
+  slice,
+  stage,
+  subphase = null,
+  stageResult,
+  stageResultPath,
+  dispatch,
+  checklistContract,
+}) {
+  if (
+    ![1, 2, 4].includes(Number(stage)) ||
+    (typeof subphase === "string" &&
+      subphase.trim().length > 0 &&
+      !["implementation", "authority_precheck"].includes(subphase.trim())) ||
+    !stageResult ||
+    typeof stageResult !== "object" ||
+    Array.isArray(stageResult)
+  ) {
+    return stageResult;
+  }
+
+  const hasCanonicalShape =
+    typeof stageResult.summary_markdown === "string" &&
+    Array.isArray(stageResult.checklist_updates) &&
+    stageResult.claimed_scope &&
+    typeof stageResult.claimed_scope === "object" &&
+    !Array.isArray(stageResult.claimed_scope);
+
+  const hasAliasShape =
+    typeof stageResult.summary === "string" ||
+    Array.isArray(stageResult.checklist_satisfied) ||
+    Array.isArray(stageResult.notes);
+
+  if (!hasAliasShape || hasCanonicalShape) {
+    return stageResult;
+  }
+
+  const { automationSpec } = readAutomationSpecForExecution({
+    rootDir,
+    worktreePath: executionDir,
+    slice,
+    required: false,
+  });
+  const stageConfig = automationSpec
+    ? resolveStageAutomationConfig({
+        automationSpec,
+        stage: Number(stage),
+      })
+    : null;
+  const changedFiles = deriveChangedFilesForStageResult(executionDir);
+  const testsTouched = uniqueStrings(
+    changedFiles.filter((filePath) => filePath.startsWith("tests/") || filePath.includes(".spec.") || filePath.includes(".test.")),
+  );
+  const explicitSatisfiedIds = Array.isArray(stageResult.checklist_satisfied)
+    ? stageResult.checklist_satisfied
+    : [];
+  const checklistUpdates = deriveChecklistUpdatesFromContract({
+    checklistContract,
+    stage,
+    explicitSatisfiedIds,
+  });
+  const summaryMarkdown =
+    typeof stageResult.summary === "string" && stageResult.summary.trim().length > 0
+      ? stageResult.summary.trim()
+      : typeof stageResult.summary_markdown === "string" && stageResult.summary_markdown.trim().length > 0
+        ? stageResult.summary_markdown.trim()
+        : `Stage ${stage} implementation complete.`;
+  const noteLines = Array.isArray(stageResult.notes)
+    ? stageResult.notes.filter((entry) => typeof entry === "string" && entry.trim().length > 0).map((entry) => `- ${entry.trim()}`)
+    : [];
+  const normalized = {
+    result: typeof stageResult.result === "string" && stageResult.result.trim().length > 0 ? stageResult.result.trim() : "done",
+    summary_markdown: summaryMarkdown,
+    commit: {
+      subject:
+        typeof stageResult.commit?.subject === "string" && stageResult.commit.subject.trim().length > 0
+          ? stageResult.commit.subject.trim()
+          : `feat: update ${slice} stage ${stage} implementation`,
+      body_markdown:
+        typeof stageResult.commit?.body_markdown === "string" && stageResult.commit.body_markdown.trim().length > 0
+          ? stageResult.commit.body_markdown.trim()
+          : noteLines.length > 0
+            ? noteLines.join("\n")
+            : null,
+    },
+    pr: {
+      title:
+        typeof stageResult.pr?.title === "string" && stageResult.pr.title.trim().length > 0
+          ? stageResult.pr.title.trim()
+          : `feat: ${slice} stage ${stage} implementation`,
+      body_markdown:
+        typeof stageResult.pr?.body_markdown === "string" && stageResult.pr.body_markdown.trim().length > 0
+          ? stageResult.pr.body_markdown.trim()
+          : ["## Summary", `- ${summaryMarkdown}`, ...noteLines].join("\n"),
+    },
+    checks_run:
+      Array.isArray(stageResult.checks_run) && stageResult.checks_run.length > 0
+        ? uniqueStrings(stageResult.checks_run)
+        : uniqueStrings(dispatch.verifyCommands ?? []),
+    next_route:
+      typeof stageResult.next_route === "string" && stageResult.next_route.trim().length > 0
+        ? stageResult.next_route.trim()
+        : "open_pr",
+    claimed_scope: {
+      files:
+        Array.isArray(stageResult.claimed_scope?.files) && stageResult.claimed_scope.files.length > 0
+          ? uniqueStrings(stageResult.claimed_scope.files)
+          : changedFiles,
+      endpoints:
+        Array.isArray(stageResult.claimed_scope?.endpoints)
+          ? uniqueStrings(stageResult.claimed_scope.endpoints)
+          : uniqueStrings(stageConfig?.required_endpoints ?? []),
+      routes:
+        Array.isArray(stageResult.claimed_scope?.routes)
+          ? uniqueStrings(stageResult.claimed_scope.routes)
+          : uniqueStrings(stageConfig?.required_routes ?? []),
+      states:
+        Array.isArray(stageResult.claimed_scope?.states)
+          ? uniqueStrings(stageResult.claimed_scope.states)
+          : uniqueStrings(stageConfig?.required_states ?? []),
+      invariants:
+        Array.isArray(stageResult.claimed_scope?.invariants)
+          ? uniqueStrings(stageResult.claimed_scope.invariants)
+          : uniqueStrings(stageConfig?.invariants ?? []),
+    },
+    changed_files:
+      Array.isArray(stageResult.changed_files) && stageResult.changed_files.length > 0
+        ? uniqueStrings(stageResult.changed_files)
+        : changedFiles,
+    tests_touched:
+      Array.isArray(stageResult.tests_touched) && stageResult.tests_touched.length > 0
+        ? uniqueStrings(stageResult.tests_touched)
+        : uniqueStrings([...testsTouched, ...(stageConfig?.required_test_targets ?? [])]),
+    artifacts_written:
+      Array.isArray(stageResult.artifacts_written) && stageResult.artifacts_written.length > 0
+        ? uniqueStrings(stageResult.artifacts_written)
+        : deriveArtifactsWritten(changedFiles),
+    checklist_updates:
+      Array.isArray(stageResult.checklist_updates) && stageResult.checklist_updates.length > 0
+        ? stageResult.checklist_updates
+        : checklistUpdates,
+    contested_fix_ids: Array.isArray(stageResult.contested_fix_ids) ? uniqueStrings(stageResult.contested_fix_ids) : [],
+    rebuttals: Array.isArray(stageResult.rebuttals) ? stageResult.rebuttals : [],
+  };
+
+  writeFileSync(stageResultPath, `${JSON.stringify(normalized, null, 2)}\n`);
+  return normalized;
+}
+
+function mergeChecklistSnapshotForReviewFix({
+  stage,
+  subphase = null,
+  checklistContract,
+  reviewContext,
+  priorStageResultPath = null,
+  stageResult,
+  stageResultPath,
+}) {
+  if (
+    ![2, 4].includes(Number(stage)) ||
+    (typeof subphase === "string" && subphase.trim().length > 0 && subphase.trim() !== "implementation") ||
+    !isChecklistContractActive(checklistContract) ||
+    !Array.isArray(reviewContext?.required_fix_ids) ||
+    reviewContext.required_fix_ids.length === 0 ||
+    !stageResult ||
+    typeof stageResult !== "object" ||
+    Array.isArray(stageResult)
+  ) {
+    return stageResult;
+  }
+
+  const priorStageResult = readStageResultFromPath(priorStageResultPath);
+  if (!priorStageResult || typeof priorStageResult !== "object" || Array.isArray(priorStageResult)) {
+    return stageResult;
+  }
+
+  const ownedIds = resolveChecklistIds(resolveOwnedChecklistItems(checklistContract, Number(stage)));
+  if (ownedIds.length === 0) {
+    return stageResult;
+  }
+
+  const currentUpdates = Array.isArray(stageResult.checklist_updates) ? stageResult.checklist_updates : [];
+  const priorUpdates = Array.isArray(priorStageResult.checklist_updates) ? priorStageResult.checklist_updates : [];
+  const currentMap = new Map(
+    currentUpdates
+      .filter((entry) => entry && typeof entry === "object" && typeof entry.id === "string")
+      .map((entry) => [entry.id.trim(), entry]),
+  );
+  const priorMap = new Map(
+    priorUpdates
+      .filter((entry) => entry && typeof entry === "object" && typeof entry.id === "string")
+      .map((entry) => [entry.id.trim(), entry]),
+  );
+
+  let changed = false;
+  const mergedUpdates = [...currentUpdates];
+
+  for (const id of ownedIds) {
+    if (currentMap.has(id)) {
+      continue;
+    }
+
+    const priorEntry = priorMap.get(id);
+    if (!priorEntry) {
+      continue;
+    }
+
+    mergedUpdates.push(priorEntry);
+    changed = true;
+  }
+
+  if (!changed) {
+    return stageResult;
+  }
+
+  const mergedStageResult = {
+    ...stageResult,
+    checklist_updates: mergedUpdates,
+  };
+  writeFileSync(stageResultPath, `${JSON.stringify(mergedStageResult, null, 2)}\n`);
+  return mergedStageResult;
+}
+
+function resolveExpectedReviewScope(stage) {
+  const normalizedStage = Number(stage);
+  return normalizedStage === 3 ? "backend" : normalizedStage === 5 ? "frontend" : "closeout";
+}
+
+function normalizeReviewChecklistSnapshot({
+  stage,
+  checklistContract,
+  stageResult,
+  stageResultPath,
+}) {
+  if (
+    !isReviewStage(stage) ||
+    !isChecklistContractActive(checklistContract) ||
+    !stageResult ||
+    typeof stageResult !== "object" ||
+    Array.isArray(stageResult)
+  ) {
+    return stageResult;
+  }
+
+  const expectedIds = resolveChecklistIds(resolveReviewChecklistItems(checklistContract, Number(stage)));
+  if (expectedIds.length === 0) {
+    return stageResult;
+  }
+
+  const currentReviewScope =
+    stageResult.review_scope && typeof stageResult.review_scope === "object" && !Array.isArray(stageResult.review_scope)
+      ? stageResult.review_scope
+      : null;
+  const currentScopeIds = Array.isArray(currentReviewScope?.checklist_ids)
+    ? currentReviewScope.checklist_ids.filter((id) => typeof id === "string" && id.trim().length > 0).map((id) => id.trim())
+    : [];
+  const currentReviewedIds = Array.isArray(stageResult.reviewed_checklist_ids)
+    ? stageResult.reviewed_checklist_ids.filter((id) => typeof id === "string" && id.trim().length > 0).map((id) => id.trim())
+    : [];
+
+  const missingScopeIds = expectedIds.filter((id) => !currentScopeIds.includes(id));
+  const missingReviewedIds = expectedIds.filter((id) => !currentReviewedIds.includes(id));
+  const foreignScopeIds = currentScopeIds.filter((id) => !expectedIds.includes(id));
+  const foreignReviewedIds = currentReviewedIds.filter((id) => !expectedIds.includes(id));
+
+  if (
+    missingScopeIds.length === 0 &&
+    missingReviewedIds.length === 0 &&
+    foreignScopeIds.length === 0 &&
+    foreignReviewedIds.length === 0 &&
+    currentReviewScope?.scope === resolveExpectedReviewScope(stage)
+  ) {
+    return stageResult;
+  }
+
+  const normalizedStageResult = {
+    ...stageResult,
+    review_scope: {
+      scope: resolveExpectedReviewScope(stage),
+      checklist_ids: expectedIds,
+    },
+    reviewed_checklist_ids: expectedIds,
+  };
+  writeFileSync(stageResultPath, `${JSON.stringify(normalizedStageResult, null, 2)}\n`);
+  return normalizedStageResult;
+}
+
+function normalizeReviewAuthorityVerdict({
+  stage,
+  stageResult,
+  stageResultPath,
+}) {
+  const normalizedStage = Number(stage);
+
+  if (
+    normalizedStage !== 5 ||
+    !stageResult ||
+    typeof stageResult !== "object" ||
+    Array.isArray(stageResult) ||
+    typeof stageResult.authority_verdict !== "string"
+  ) {
+    return stageResult;
+  }
+
+  const blockerCount =
+    typeof stageResult.blocker_count === "number" && Number.isFinite(stageResult.blocker_count)
+      ? stageResult.blocker_count
+      : null;
+  const majorCount =
+    typeof stageResult.major_count === "number" && Number.isFinite(stageResult.major_count)
+      ? stageResult.major_count
+      : null;
+
+  if (blockerCount === null || majorCount === null) {
+    return stageResult;
+  }
+
+  const desiredVerdict =
+    stageResult.decision === "approve"
+      ? "pass"
+      : blockerCount > 0
+        ? "hold"
+        : majorCount > 0
+          ? "conditional-pass"
+          : "pass";
+
+  if (stageResult.authority_verdict.trim() === desiredVerdict) {
+    return stageResult;
+  }
+
+  const normalizedStageResult = {
+    ...stageResult,
+    authority_verdict: desiredVerdict,
+  };
+  writeFileSync(stageResultPath, `${JSON.stringify(normalizedStageResult, null, 2)}\n`);
+  return normalizedStageResult;
+}
+
 function extractClaudeTranscriptFileSessionId(filename) {
   if (typeof filename !== "string" || !filename.endsWith(".jsonl")) {
     return null;
@@ -882,6 +1498,18 @@ function isClaudeBudgetRuntimeFailure(error) {
     return false;
   }
 
+  const haystack = collectClaudeFailureFragments(error);
+
+  return /(credit balance is too low|insufficient credits|quota|billing|budget exhausted|rate limit|hit your limit|resets 12am)/i.test(
+    haystack,
+  );
+}
+
+function collectClaudeFailureFragments(error) {
+  if (!error || typeof error !== "object") {
+    return "";
+  }
+
   const fragments = [];
 
   if (typeof error.message === "string") {
@@ -904,11 +1532,155 @@ function isClaudeBudgetRuntimeFailure(error) {
     fragments.push(String(error.errorEvent.error.data.responseBody));
   }
 
-  const haystack = fragments.join("\n");
+  return fragments.join("\n");
+}
 
-  return /(credit balance is too low|insufficient credits|quota|billing|budget exhausted|rate limit)/i.test(
-    haystack,
+function getTimeZoneDateParts(date, timeZone) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  const parts = formatter.formatToParts(date);
+  const valueOf = (type) => parts.find((entry) => entry.type === type)?.value ?? "0";
+
+  return {
+    year: Number.parseInt(valueOf("year"), 10),
+    month: Number.parseInt(valueOf("month"), 10),
+    day: Number.parseInt(valueOf("day"), 10),
+    hour: Number.parseInt(valueOf("hour"), 10),
+    minute: Number.parseInt(valueOf("minute"), 10),
+    second: Number.parseInt(valueOf("second"), 10),
+  };
+}
+
+function zonedLocalTimeToUtc({
+  year,
+  month,
+  day,
+  hour,
+  minute,
+  second = 0,
+  timeZone,
+}) {
+  const desiredUtcEquivalent = Date.UTC(year, month - 1, day, hour, minute, second);
+  let guess = desiredUtcEquivalent;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const observed = getTimeZoneDateParts(new Date(guess), timeZone);
+    const observedUtcEquivalent = Date.UTC(
+      observed.year,
+      observed.month - 1,
+      observed.day,
+      observed.hour,
+      observed.minute,
+      observed.second,
+    );
+    const diff = desiredUtcEquivalent - observedUtcEquivalent;
+    if (diff === 0) {
+      break;
+    }
+    guess += diff;
+  }
+
+  return new Date(guess);
+}
+
+function parseClaudeRetryAtFromText({
+  text,
+  now,
+}) {
+  if (typeof text !== "string" || text.trim().length === 0) {
+    return null;
+  }
+
+  const base = new Date(typeof now === "string" && now.trim().length > 0 ? now : new Date().toISOString());
+  if (Number.isNaN(base.getTime())) {
+    return null;
+  }
+
+  const relativeMatch = text.match(
+    /(?:retry after|try again in|resets? in)\s+(\d+)\s*(minute|minutes|min|mins|hour|hours|hr|hrs)/i,
   );
+  if (relativeMatch) {
+    const amount = Number.parseInt(relativeMatch[1], 10);
+    const unit = relativeMatch[2].toLowerCase();
+    if (Number.isFinite(amount)) {
+      const minutes = unit.startsWith("hour") || unit.startsWith("hr") ? amount * 60 : amount;
+      return new Date(base.getTime() + minutes * 60 * 1000).toISOString();
+    }
+  }
+
+  const absoluteMatch = text.match(/resets?\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)(?:\s*\(([^)]+)\))?/i);
+  if (!absoluteMatch) {
+    return null;
+  }
+
+  const rawHour = Number.parseInt(absoluteMatch[1], 10);
+  const rawMinute = absoluteMatch[2] ? Number.parseInt(absoluteMatch[2], 10) : 0;
+  const meridiem = absoluteMatch[3].toLowerCase();
+  const timeZone =
+    typeof absoluteMatch[4] === "string" && absoluteMatch[4].trim().length > 0
+      ? absoluteMatch[4].trim()
+      : Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  if (!Number.isFinite(rawHour) || !Number.isFinite(rawMinute)) {
+    return null;
+  }
+
+  const hour12 = rawHour % 12;
+  const normalizedHour = meridiem === "pm" ? hour12 + 12 : hour12;
+  const baseParts = getTimeZoneDateParts(base, timeZone);
+  const desiredDateUtc = new Date(Date.UTC(baseParts.year, baseParts.month - 1, baseParts.day));
+  let target = zonedLocalTimeToUtc({
+    year: baseParts.year,
+    month: baseParts.month,
+    day: baseParts.day,
+    hour: normalizedHour,
+    minute: rawMinute,
+    second: 0,
+    timeZone,
+  });
+
+  if (target.getTime() <= base.getTime()) {
+    const nextDateUtc = new Date(desiredDateUtc.getTime() + 24 * 60 * 60 * 1000);
+    target = zonedLocalTimeToUtc({
+      year: nextDateUtc.getUTCFullYear(),
+      month: nextDateUtc.getUTCMonth() + 1,
+      day: nextDateUtc.getUTCDate(),
+      hour: normalizedHour,
+      minute: rawMinute,
+      second: 0,
+      timeZone,
+    });
+  }
+
+  return target.toISOString();
+}
+
+function resolveClaudeRetryAt({
+  error,
+  now,
+  retryDelayHours,
+}) {
+  const parsedRetryAt = parseClaudeRetryAtFromText({
+    text: collectClaudeFailureFragments(error),
+    now,
+  });
+
+  if (typeof parsedRetryAt === "string" && parsedRetryAt.trim().length > 0) {
+    return parsedRetryAt;
+  }
+
+  return resolveRetryAt({
+    now,
+    delayHours: retryDelayHours,
+  });
 }
 
 function runCommandToArtifactLogs({
@@ -939,6 +1711,29 @@ function runCommandToArtifactLogs({
   } finally {
     closeSync(stdoutFd);
     closeSync(stderrFd);
+  }
+}
+
+function cleanupGeneratedOpencodeArtifacts(executionDir) {
+  const opencodeDir = resolve(executionDir, ".opencode");
+  if (!existsSync(opencodeDir)) {
+    return;
+  }
+
+  const ohMyOpencodePath = resolve(opencodeDir, "oh-my-opencode.json");
+  const ohMyOpencodeBackupPath = resolve(opencodeDir, "oh-my-opencode.json.bak");
+  if (existsSync(ohMyOpencodeBackupPath)) {
+    writeFileSync(ohMyOpencodePath, readFileSync(ohMyOpencodeBackupPath, "utf8"));
+  }
+
+  for (const entry of readdirSync(opencodeDir)) {
+    if (
+      entry === "oh-my-opencode.json.bak" ||
+      entry === "oh-my-openagent.json" ||
+      entry.startsWith("oh-my-openagent.json.")
+    ) {
+      rmSync(resolve(opencodeDir, entry), { force: true });
+    }
   }
 }
 
@@ -987,6 +1782,7 @@ export function runOpencode({
     stderrPath,
     timeoutMs,
   });
+  cleanupGeneratedOpencodeArtifacts(executionDir);
   const stdout = existsSync(stdoutPath) ? readFileSync(stdoutPath, "utf8") : "";
 
   if (result.error) {
@@ -1043,6 +1839,14 @@ export function runOpencode({
     executable: true,
     provider: "opencode",
     agent,
+    model:
+      typeof model === "string" && model.trim().length > 0
+        ? model.trim()
+        : null,
+    variant:
+      typeof variant === "string" && variant.trim().length > 0
+        ? variant.trim()
+        : null,
     reason: null,
     exitCode: result.status ?? 0,
     sessionId: capturedSessionId,
@@ -1351,6 +2155,7 @@ function resolveStatusPatch({ dispatch, execution }) {
  * @property {number} [maxRetryAttempts]
  * @property {"standalone"|"supervisor"} [lifecycleMode]
  * @property {string[]} [extraPromptSections]
+ * @property {string|null} [priorStageResultPath]
  */
 
 /**
@@ -1431,6 +2236,14 @@ export function runStageWithArtifacts({
             provider: "opencode",
             bin: codexProviderConfig.bin,
             agent: OMO_SESSION_ROLE_TO_AGENT.claude_primary,
+            model:
+              typeof claudeModel === "string" && claudeModel.trim().includes("/")
+                ? claudeModel.trim()
+                : DEFAULT_OPENCODE_CLAUDE_FALLBACK_MODEL,
+            variant:
+              typeof codexProviderConfig.variant === "string" && codexProviderConfig.variant.trim().length > 0
+                ? codexProviderConfig.variant.trim()
+                : DEFAULT_OPENCODE_CLAUDE_FALLBACK_VARIANT,
           }
         : claudeProviderConfig
       : codexProviderConfig;
@@ -1449,6 +2262,14 @@ export function runStageWithArtifacts({
           agent:
             existingSessionProvider === "opencode"
               ? OMO_SESSION_ROLE_TO_AGENT.claude_primary
+              : null,
+          model:
+            existingSessionProvider === "opencode"
+              ? desiredProviderConfig.model ?? null
+              : claudeProviderConfig.model,
+          variant:
+            existingSessionProvider === "opencode"
+              ? desiredProviderConfig.variant ?? null
               : null,
         }
       : desiredProviderConfig;
@@ -1518,6 +2339,7 @@ export function runStageWithArtifacts({
   const checklistContract = normalizedStage > 1
     ? readWorkpackChecklistContract({
         rootDir,
+        worktreePath: resolvedExecutionDir,
         slice: normalizedSlice,
       })
     : null;
@@ -1527,6 +2349,9 @@ export function runStageWithArtifacts({
       : false;
   const ownedChecklistIds = strictChecklistContractActive
     ? resolveChecklistIds(resolveOwnedChecklistItems(checklistContract, normalizedStage))
+    : [];
+  const uncheckedOwnedChecklistIds = strictChecklistContractActive
+    ? resolveChecklistIds(resolveUncheckedChecklistItems(resolveOwnedChecklistItems(checklistContract, normalizedStage)))
     : [];
   const requiredFixIds = Array.isArray(reviewContext?.required_fix_ids)
     ? reviewContext.required_fix_ids
@@ -1579,6 +2404,35 @@ export function runStageWithArtifacts({
     claudeProviderConfig,
     sessionBinding: dispatch.sessionBinding,
   });
+  const claudeFallbackPromptSections =
+    dispatch.actor === "claude" && executionBinding.provider === "opencode"
+      ? [
+          [
+            "## Claude Fallback Execution Contract",
+            "- Supervisor가 이 실행을 `claude_primary` emergency fallback으로 명시적으로 할당했습니다.",
+            "- 이 턴에서는 OpenCode 실행 표면을 쓰더라도 Claude public stage owner를 대신 수행하는 것으로 간주합니다.",
+            "- `docs/engineering/slice-workflow.md`의 'Claude가 담당' 규칙은 이미 이 fallback assignment로 충족됐으므로, 그 이유만으로 거부하거나 사용자에게 다시 Claude를 찾으라고 돌려보내지 마세요.",
+            "- 같은 stage scope/제약/산출물 계약은 그대로 유지하고, 필요한 문서 수정과 valid stage-result 작성까지 완료하세요.",
+          ].join("\n"),
+        ]
+      : [];
+  const stageOwnedChecklistSection =
+    [2, 4].includes(normalizedStage) && strictChecklistContractActive
+      ? [
+          "## Current Stage-Owned Checklist IDs",
+          ownedChecklistIds.length > 0
+            ? `- all current stage-owned ids: \`${ownedChecklistIds.join(", ")}\``
+            : "- all current stage-owned ids: `none`",
+          uncheckedOwnedChecklistIds.length > 0
+            ? `- currently still unchecked in workpack docs: \`${uncheckedOwnedChecklistIds.join(", ")}\``
+            : "- currently still unchecked in workpack docs: `none`",
+          "- Before finishing, update the actual workpack docs and write `stage-result.checklist_updates` as the full current-stage snapshot, not just the ids you edited in this pass.",
+          "- If any unchecked stage-owned id is not truly satisfied yet, continue implementation instead of stopping with `result: done`.",
+          normalizedStage === 4 && normalizedSubphase === "authority_precheck"
+            ? "- `authority_precheck` 결과라도 `checklist_updates`를 비워두면 안 됩니다. Stage 4 owned checklist 전체 snapshot을 반드시 포함하세요."
+            : null,
+        ].join("\n")
+      : null;
   const basePrompt = buildPrompt({
     slice: normalizedSlice,
     stage: dispatch.stage,
@@ -1603,6 +2457,8 @@ export function runStageWithArtifacts({
             ].join("\n"),
           ]
         : []),
+      ...claudeFallbackPromptSections,
+      ...(stageOwnedChecklistSection ? [stageOwnedChecklistSection] : []),
       ...extraPromptSections,
     ],
   });
@@ -1875,9 +2731,10 @@ export function runStageWithArtifacts({
             subphase: normalizedSubphase,
             claudeBudgetState: "unavailable",
             sessionId: error.sessionId ?? existingSessionId,
-            retryAt: resolveRetryAt({
+            retryAt: resolveClaudeRetryAt({
+              error,
               now,
-              delayHours: retryDelayHours,
+              retryDelayHours,
             }),
             attemptCount: (retryState?.attempt_count ?? 0) + 1,
           }),
@@ -1935,20 +2792,140 @@ export function runStageWithArtifacts({
   let runtimeSync = runtimeStartSync;
   let stageResult = readStageResult(targetArtifactDir);
   let validStageResult = false;
+  let schemaRepairAttempted = false;
+  let schemaRepairArtifactDir = null;
 
   if (result.execution.mode === "execute" && result.execution.executed && !stageResult) {
+    const missingStageResultReason = buildStageResultContractViolationReason({
+      artifactDir: targetArtifactDir,
+      execution: result.execution,
+    });
     result = {
       ...result,
       execution: {
         ...result.execution,
         mode: "contract-violation",
-        reason: buildStageResultContractViolationReason({
-          artifactDir: targetArtifactDir,
-          execution: result.execution,
-        }),
+        reason: missingStageResultReason,
       },
     };
+
+    if (
+      shouldAttemptStageResultAutoRepair({
+        stage: normalizedStage,
+        subphase: normalizedSubphase,
+        execution: result.execution,
+        stageResult,
+      })
+    ) {
+      schemaRepairAttempted = true;
+      schemaRepairArtifactDir = resolve(targetArtifactDir, "schema-repair-pass-1");
+      mkdirSync(schemaRepairArtifactDir, { recursive: true });
+      const repairPrompt = buildStageResultRepairPrompt({
+        stage: normalizedStage,
+        subphase: normalizedSubphase,
+        stageResultPath,
+        validationMessage: missingStageResultReason,
+        currentStageResult: {},
+      });
+      writeFileSync(resolve(schemaRepairArtifactDir, "prompt.md"), `${repairPrompt}\n`);
+
+      const repairExecution =
+        result.execution.provider === "claude-cli"
+          ? runClaudeCli({
+              executionDir: resolvedExecutionDir,
+              artifactDir: schemaRepairArtifactDir,
+              prompt: repairPrompt,
+              sessionId: result.execution.sessionId ?? existingSessionId,
+              claudeBin: claudeProviderConfig.bin,
+              claudeModel: claudeProviderConfig.model,
+              claudeEffort: claudeProviderConfig.effort,
+              permissionMode: claudeProviderConfig.permissionMode,
+              environment,
+              homeDir,
+              stageResultPath,
+            })
+          : runOpencode({
+              executionDir: resolvedExecutionDir,
+              artifactDir: schemaRepairArtifactDir,
+              prompt: repairPrompt,
+              agent: executionBinding.agent,
+              model: executionBinding.model,
+              variant: executionBinding.variant,
+              sessionId: result.execution.sessionId ?? existingSessionId,
+              opencodeBin: resolvedOpencodeBin,
+              environment,
+              stageResultPath,
+            });
+
+      result = {
+        ...result,
+        execution: {
+          ...result.execution,
+          sessionId: repairExecution.sessionId ?? result.execution.sessionId ?? existingSessionId,
+          repairArtifactDir: schemaRepairArtifactDir,
+        },
+      };
+      stageResult = readStageResult(targetArtifactDir);
+      stageResult = mergeChecklistSnapshotForReviewFix({
+        stage: normalizedStage,
+        subphase: normalizedSubphase,
+        checklistContract,
+        reviewContext,
+        priorStageResultPath,
+        stageResult,
+        stageResultPath,
+      });
+      stageResult = normalizeReviewChecklistSnapshot({
+        stage: normalizedStage,
+        checklistContract,
+        stageResult,
+        stageResultPath,
+      });
+      stageResult = normalizeReviewAuthorityVerdict({
+        stage: normalizedStage,
+        stageResult,
+        stageResultPath,
+      });
+    }
   } else if (stageResult) {
+    stageResult = normalizeImplementationStageResultAliases({
+      rootDir,
+      executionDir: resolvedExecutionDir,
+      slice: normalizedSlice,
+      stage: normalizedStage,
+      subphase: normalizedSubphase,
+      stageResult,
+      stageResultPath,
+      dispatch,
+      checklistContract,
+    });
+    stageResult = normalizeCodeStageChecklistSnapshot({
+      stage: normalizedStage,
+      subphase: normalizedSubphase,
+      checklistContract,
+      stageResult,
+      stageResultPath,
+    });
+    stageResult = mergeChecklistSnapshotForReviewFix({
+      stage: normalizedStage,
+      subphase: normalizedSubphase,
+      checklistContract,
+      reviewContext,
+      priorStageResultPath,
+      stageResult,
+      stageResultPath,
+    });
+    stageResult = normalizeReviewChecklistSnapshot({
+      stage: normalizedStage,
+      checklistContract,
+      stageResult,
+      stageResultPath,
+    });
+    stageResult = normalizeReviewAuthorityVerdict({
+      stage: normalizedStage,
+      stageResult,
+      stageResultPath,
+    });
     try {
       validateStageResult(normalizedStage, stageResult, {
         strictExtendedContract: Boolean(checklistContract && isChecklistContractActive(checklistContract)),
@@ -1956,15 +2933,133 @@ export function runStageWithArtifacts({
       });
       validStageResult = true;
     } catch (error) {
-      result = {
-        ...result,
-        execution: {
-          ...result.execution,
-          mode: "contract-violation",
-          reason: error instanceof Error ? error.message : "stageResult contract violation",
-        },
-      };
+      const validationMessage =
+        error instanceof Error ? error.message : "stageResult contract violation";
+
+      if (
+        shouldAttemptStageResultAutoRepair({
+          stage: normalizedStage,
+          subphase: normalizedSubphase,
+          execution: result.execution,
+          stageResult,
+        })
+      ) {
+        schemaRepairAttempted = true;
+        schemaRepairArtifactDir = resolve(targetArtifactDir, "schema-repair-pass-1");
+        mkdirSync(schemaRepairArtifactDir, { recursive: true });
+        const repairPrompt = buildStageResultRepairPrompt({
+          stage: normalizedStage,
+          subphase: normalizedSubphase,
+          stageResultPath,
+          validationMessage,
+          currentStageResult: stageResult,
+        });
+        writeFileSync(resolve(schemaRepairArtifactDir, "prompt.md"), `${repairPrompt}\n`);
+
+        const repairExecution =
+          result.execution.provider === "claude-cli"
+            ? runClaudeCli({
+                executionDir: resolvedExecutionDir,
+                artifactDir: schemaRepairArtifactDir,
+                prompt: repairPrompt,
+                sessionId: result.execution.sessionId ?? existingSessionId,
+                claudeBin: claudeProviderConfig.bin,
+                claudeModel: claudeProviderConfig.model,
+                claudeEffort: claudeProviderConfig.effort,
+                permissionMode: claudeProviderConfig.permissionMode,
+                environment,
+                homeDir,
+                stageResultPath,
+              })
+            : runOpencode({
+                executionDir: resolvedExecutionDir,
+                artifactDir: schemaRepairArtifactDir,
+                prompt: repairPrompt,
+                agent: executionBinding.agent,
+                model: executionBinding.model,
+                variant: executionBinding.variant,
+                sessionId: result.execution.sessionId ?? existingSessionId,
+                opencodeBin: resolvedOpencodeBin,
+                environment,
+                stageResultPath,
+              });
+
+        stageResult = readStageResult(targetArtifactDir);
+        stageResult = mergeChecklistSnapshotForReviewFix({
+          stage: normalizedStage,
+          subphase: normalizedSubphase,
+          checklistContract,
+          reviewContext,
+          priorStageResultPath,
+          stageResult,
+          stageResultPath,
+        });
+        stageResult = normalizeReviewChecklistSnapshot({
+          stage: normalizedStage,
+          checklistContract,
+          stageResult,
+          stageResultPath,
+        });
+        stageResult = normalizeReviewAuthorityVerdict({
+          stage: normalizedStage,
+          stageResult,
+          stageResultPath,
+        });
+        try {
+          validateStageResult(normalizedStage, stageResult, {
+            strictExtendedContract: Boolean(checklistContract && isChecklistContractActive(checklistContract)),
+            subphase: normalizedSubphase,
+          });
+          validStageResult = true;
+          result = {
+            ...result,
+            execution: {
+              ...result.execution,
+              sessionId: repairExecution.sessionId ?? result.execution.sessionId ?? existingSessionId,
+              repairArtifactDir: schemaRepairArtifactDir,
+            },
+          };
+        } catch (repairError) {
+          result = {
+            ...result,
+            execution: {
+              ...result.execution,
+              mode: "contract-violation",
+              reason:
+                repairError instanceof Error
+                  ? `${validationMessage} Auto-repair failed: ${repairError.message}`
+                  : `${validationMessage} Auto-repair failed.`,
+              sessionId: repairExecution.sessionId ?? result.execution.sessionId ?? existingSessionId,
+              repairArtifactDir: schemaRepairArtifactDir,
+            },
+          };
+        }
+      } else {
+        result = {
+          ...result,
+          execution: {
+            ...result.execution,
+            mode: "contract-violation",
+            reason: validationMessage,
+          },
+        };
+      }
     }
+  }
+
+  if (
+    schemaRepairAttempted &&
+    validStageResult &&
+    result.execution.mode === "contract-violation"
+  ) {
+    result = {
+      ...result,
+      execution: {
+        ...result.execution,
+        mode: "execute",
+        reason: null,
+      },
+    };
   }
 
   if (persistRuntime && workItemId && runtimeSnapshot) {

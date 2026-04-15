@@ -39,6 +39,10 @@ export function resolveStageSessionRole(stage, subphase = null) {
     return "claude_primary";
   }
 
+  if (normalizedStage === 4 && subphase === "authority_precheck") {
+    return "codex_primary";
+  }
+
   if ([1, 3, 4].includes(normalizedStage)) {
     return "claude_primary";
   }
