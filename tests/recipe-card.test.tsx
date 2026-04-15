@@ -8,7 +8,7 @@ import { RecipeCard } from "@/components/home/recipe-card";
 import { MOCK_RECIPE_CARD } from "@/lib/mock/recipes";
 
 describe("recipe card", () => {
-  it("separates stats from tags so the compact card keeps a clear visual hierarchy", () => {
+  it("moves tags above the title and keeps servings beside the recipe name", () => {
     const { container } = render(<RecipeCard recipe={MOCK_RECIPE_CARD} />);
 
     const title = screen.getByRole("heading", { name: MOCK_RECIPE_CARD.title });
@@ -16,11 +16,21 @@ describe("recipe card", () => {
 
     expect(card).not.toBeNull();
 
-    const statsRow = container.querySelector(".recipe-card-stats-inline");
-    const tagRow = container.querySelector(".recipe-card-tags-secondary");
+    const titleRow = container.querySelector(".recipe-card-title-row");
+    const statsRow = container.querySelector(".recipe-card-stats-pills");
+    const tagRow = container.querySelector(".recipe-card-tags-heading");
 
+    expect(titleRow).not.toBeNull();
     expect(statsRow).not.toBeNull();
     expect(tagRow).not.toBeNull();
+
+    expect(
+      (tagRow as HTMLElement).compareDocumentPosition(titleRow as HTMLElement) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    const titleScope = within(titleRow as HTMLElement);
+    expect(titleScope.getByText(`기본 ${MOCK_RECIPE_CARD.base_servings}인분`)).toBeTruthy();
 
     const statsScope = within(statsRow as HTMLElement);
     expect(statsScope.getByText("조회")).toBeTruthy();
