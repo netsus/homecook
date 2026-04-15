@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const SECTION_PATTERN = /^##\s+(.+)$/;
 const SUBSECTION_PATTERN = /^###\s+(.+)$/;
 const CHECKBOX_PATTERN = /^- \[([ xX])\]\s+(.+)$/;
-const OMO_METADATA_PATTERN = /\s*<!--\s*omo:([^>]+?)\s*-->\s*$/;
+const OMO_METADATA_PATTERN = /\s*<!--\s*omo:([^>]+?)\s*-->/;
 const VALID_STAGES = new Set([2, 4]);
 const VALID_SCOPES = new Set(["backend", "frontend", "shared"]);
 const VALID_REVIEW_STAGES = new Set([3, 5, 6]);

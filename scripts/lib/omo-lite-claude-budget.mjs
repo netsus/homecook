@@ -182,8 +182,7 @@ export function resolveClaudeBudgetState({
   const providerConfigured = Boolean(
     auth &&
     typeof auth === "object" &&
-    auth.anthropic &&
-    typeof auth.anthropic === "object",
+    Object.values(auth).some((entry) => entry && typeof entry === "object" && !Array.isArray(entry)),
   );
 
   if (!providerConfigured) {
@@ -192,7 +191,7 @@ export function resolveClaudeBudgetState({
       source: "missing-auth",
       providerConfigured: false,
       provider,
-      reason: "Anthropic auth is not configured for this machine.",
+      reason: "OpenCode provider auth is not configured for this machine.",
       authPath,
       overridePath,
     };

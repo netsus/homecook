@@ -1,9 +1,10 @@
-import { existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const DEFAULT_BASE_BRANCH = "master";
 const DEFAULT_BASE_REF = "origin/master";
+const WORKTREE_ENV_FILES = [".env.local"];
 
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -25,6 +26,14 @@ function runGit({ cwd, args }) {
   }
 
   return (result.stdout ?? "").trim();
+}
+
+function parseGitStatusPath(line) {
+  const normalized = typeof line === "string" ? line.trimEnd() : "";
+  const match = normalized.match(/^[^\s]{1,2}\s+(.*)$/);
+  const path = match?.[1]?.trim() ?? normalized;
+  const renameMatch = path.match(/->\s+(.+)$/);
+  return renameMatch ? renameMatch[1].trim() : path;
 }
 
 export function resolveSupervisorWorktreePath({
@@ -51,6 +60,10 @@ export function ensureSupervisorWorktree({
   const gitMarkerPath = resolve(worktreePath, ".git");
 
   if (existsSync(gitMarkerPath)) {
+    syncWorktreeEnvFiles({
+      rootDir,
+      worktreePath,
+    });
     return {
       path: worktreePath,
       created: false,
@@ -65,6 +78,10 @@ export function ensureSupervisorWorktree({
   runGit({
     cwd: rootDir,
     args: ["worktree", "add", "--detach", worktreePath, ensureNonEmptyString(baseRef, "baseRef")],
+  });
+  syncWorktreeEnvFiles({
+    rootDir,
+    worktreePath,
   });
 
   return {
@@ -162,11 +179,7 @@ export function listWorktreeChangedFiles({
     .split(/\r?\n/)
     .map((line) => line.trimEnd())
     .filter(Boolean)
-    .map((line) => line.slice(3).trim())
-    .map((path) => {
-      const renameMatch = path.match(/->\s+(.+)$/);
-      return renameMatch ? renameMatch[1].trim() : path;
-    })
+    .map((line) => parseGitStatusPath(line))
     .filter(Boolean);
 }
 
@@ -227,6 +240,10 @@ export function syncWorktreeWithBaseBranch({
     cwd: ensureNonEmptyString(worktreePath, "worktreePath"),
     args: ["checkout", "--detach", `origin/${normalizedBaseBranch}`],
   });
+  syncWorktreeEnvFiles({
+    rootDir,
+    worktreePath,
+  });
 }
 
 export function getWorktreeHeadSha({
@@ -236,6 +253,68 @@ export function getWorktreeHeadSha({
     cwd: ensureNonEmptyString(worktreePath, "worktreePath"),
     args: ["rev-parse", "HEAD"],
   });
+}
+
+export function restoreWorktreePaths({
+  worktreePath,
+  paths,
+}) {
+  const normalizedWorktreePath = ensureNonEmptyString(worktreePath, "worktreePath");
+  const normalizedPaths = Array.isArray(paths)
+    ? [...new Set(
+        paths
+          .map((value) => (typeof value === "string" ? value.trim() : ""))
+          .filter((value) => value.length > 0),
+      )]
+    : [];
+
+  if (normalizedPaths.length === 0) {
+    return;
+  }
+
+  runGit({
+    cwd: normalizedWorktreePath,
+    args: ["restore", "--source=HEAD", "--staged", "--worktree", "--", ...normalizedPaths],
+  });
+}
+
+export function deleteWorktreePaths({
+  worktreePath,
+  paths,
+}) {
+  const normalizedWorktreePath = ensureNonEmptyString(worktreePath, "worktreePath");
+  const normalizedPaths = Array.isArray(paths)
+    ? [...new Set(
+        paths
+          .map((value) => (typeof value === "string" ? value.trim() : ""))
+          .filter((value) => value.length > 0),
+      )]
+    : [];
+
+  for (const relativePath of normalizedPaths) {
+    rmSync(resolve(normalizedWorktreePath, relativePath), {
+      force: true,
+      recursive: true,
+    });
+  }
+}
+
+function syncWorktreeEnvFiles({
+  rootDir,
+  worktreePath,
+}) {
+  const normalizedRootDir = ensureNonEmptyString(rootDir, "rootDir");
+  const normalizedWorktreePath = ensureNonEmptyString(worktreePath, "worktreePath");
+
+  for (const filename of WORKTREE_ENV_FILES) {
+    const sourcePath = resolve(normalizedRootDir, filename);
+    if (!existsSync(sourcePath)) {
+      continue;
+    }
+
+    const targetPath = resolve(normalizedWorktreePath, filename);
+    copyFileSync(sourcePath, targetPath);
+  }
 }
 
 export function getWorktreeBinaryDiff({

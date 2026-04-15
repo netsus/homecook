@@ -46,8 +46,8 @@ import {
   isRetryDue,
 } from "./omo-session-runtime.mjs";
 import { validateStageResult } from "./omo-stage-result.mjs";
-import { readAutomationSpec, resolveAutonomousSlicePolicy, resolveStageAutomationConfig } from "./omo-automation-spec.mjs";
-import { evaluateDocGate, writeDocGateResult } from "./omo-doc-gate.mjs";
+import { readAutomationSpec, resolveAutomationSpecPath, resolveAutonomousSlicePolicy, resolveStageAutomationConfig } from "./omo-automation-spec.mjs";
+import { applyDocGateWaivedFindings, evaluateDocGate, writeDocGateResult } from "./omo-doc-gate.mjs";
 import { evaluateWorkItemStage } from "./omo-evaluator.mjs";
 import {
   applyCloseoutRepairPlan,
@@ -57,12 +57,14 @@ import {
 } from "./omo-reconcile.mjs";
 import {
   assertWorktreeClean,
+  deleteWorktreePaths,
   ensureSupervisorWorktree,
   ensureWorktreeBranch,
   getWorktreeBinaryDiff,
   getWorktreeHeadSha,
   getWorktreeCurrentBranch,
   listWorktreeChangedFiles,
+  restoreWorktreePaths,
   commitWorktreeChanges,
   pushWorktreeBranch,
   syncWorktreeWithBaseBranch,
@@ -648,15 +650,53 @@ function resolveStage2Subphase(state) {
 
 function resolveDesignAuthorityConfig({
   rootDir,
+  worktreePath = null,
   slice,
 }) {
-  const { automationSpec } = readAutomationSpec({
+  const { automationSpec } = readAutomationSpecForExecution({
     rootDir,
+    worktreePath,
     slice,
     required: false,
   });
 
   return automationSpec?.frontend?.design_authority ?? null;
+}
+
+function readAutomationSpecForExecution({
+  rootDir,
+  worktreePath = null,
+  slice,
+  required = false,
+}) {
+  const normalizedWorktreePath =
+    typeof worktreePath === "string" && worktreePath.trim().length > 0
+      ? worktreePath.trim()
+      : null;
+
+  if (normalizedWorktreePath) {
+    const worktreeAutomationSpecPath = resolveAutomationSpecPath({
+      rootDir: normalizedWorktreePath,
+      slice,
+    });
+    if (existsSync(worktreeAutomationSpecPath)) {
+      try {
+        return readAutomationSpec({
+          rootDir: normalizedWorktreePath,
+          slice,
+          required,
+        });
+      } catch {
+        // Fall back to the root tracked copy when the worktree-local spec is missing or malformed.
+      }
+    }
+  }
+
+  return readAutomationSpec({
+    rootDir,
+    slice,
+    required,
+  });
 }
 
 function resolveStage4Subphase({
@@ -673,6 +713,22 @@ function resolveStage4Subphase({
     return activeSubphase;
   }
 
+  const designAuthorityConfig = resolveDesignAuthorityConfig({
+    rootDir,
+    worktreePath: state.workspace?.path ?? null,
+    slice,
+  });
+  if (!designAuthorityConfig?.authority_required) {
+    return "implementation";
+  }
+
+  if (
+    state.design_authority?.status === "pending_precheck" ||
+    state.design_authority?.status === "prechecked"
+  ) {
+    return "authority_precheck";
+  }
+
   const lastFrontendReview = state.last_review?.frontend;
   if (
     lastFrontendReview?.decision === "request_changes" &&
@@ -681,18 +737,7 @@ function resolveStage4Subphase({
     return "implementation";
   }
 
-  const designAuthorityConfig = resolveDesignAuthorityConfig({
-    rootDir,
-    slice,
-  });
-  if (!designAuthorityConfig?.authority_required) {
-    return "implementation";
-  }
-
-  return state.design_authority?.status === "pending_precheck" ||
-    state.design_authority?.status === "prechecked"
-    ? "authority_precheck"
-    : "implementation";
+  return "implementation";
 }
 
 function resolveStage5Subphase({
@@ -711,6 +756,7 @@ function resolveStage5Subphase({
 
   const designAuthorityConfig = resolveDesignAuthorityConfig({
     rootDir,
+    worktreePath: state.workspace?.path ?? null,
     slice,
   });
   if (!designAuthorityConfig?.authority_required) {
@@ -952,13 +998,15 @@ function resolveAutonomousStageContext({
   workItemId,
   slice,
   stage,
+  worktreePath = null,
 }) {
   const { workItemPath, workItem } = readTrackedWorkItem({
     rootDir,
     workItemId,
   });
-  const { automationSpecPath, automationSpec } = readAutomationSpec({
+  const { automationSpecPath, automationSpec } = readAutomationSpecForExecution({
     rootDir,
+    worktreePath,
     slice,
     required: false,
   });
@@ -1083,6 +1131,70 @@ function buildBookkeepingRepairCommit({
   };
 }
 
+const AUTO_SALVAGE_BOOKKEEPING_FILES = new Set([
+  ".workflow-v2/promotion-evidence.json",
+]);
+
+const AUTO_CLEAN_OPENCODE_MIGRATION_FILES = new Set([
+  ".opencode/oh-my-opencode.json",
+  ".opencode/oh-my-opencode.json.bak",
+  ".opencode/oh-my-openagent.json",
+  ".opencode/oh-my-openagent.json.migrations.json",
+]);
+
+function isAutoCleanableOpencodeMigrationFile(filePath) {
+  if (AUTO_CLEAN_OPENCODE_MIGRATION_FILES.has(filePath)) {
+    return true;
+  }
+
+  return (
+    typeof filePath === "string" &&
+    filePath.startsWith(".opencode/oh-my-openagent.json.bak.")
+  );
+}
+
+function isAutoSalvageableDirtyWorktreeRecovery(recovery) {
+  const changedFiles = normalizeStringArray(recovery?.changed_files);
+  if (changedFiles.length === 0) {
+    return false;
+  }
+
+  return changedFiles.every((filePath) => AUTO_SALVAGE_BOOKKEEPING_FILES.has(filePath));
+}
+
+function isAutoCleanableOpencodeMigrationRecovery(recovery) {
+  const changedFiles = normalizeStringArray(recovery?.changed_files);
+  if (changedFiles.length === 0) {
+    return false;
+  }
+
+  return changedFiles.every((filePath) => isAutoCleanableOpencodeMigrationFile(filePath));
+}
+
+function buildPilotEvidenceSalvageCommit({
+  slice,
+  stage,
+}) {
+  const normalizedSlice = ensureNonEmptyString(slice, "slice");
+  const normalizedStage = Number.isInteger(Number(stage)) ? Number(stage) : null;
+  const stageLabel = normalizedStage ? `Stage ${normalizedStage}` : "current stage";
+
+  return {
+    subject: `chore: record ${normalizedSlice} ${stageLabel.toLowerCase()} pilot evidence`,
+    body: [
+      `Keep the pilot ledger aligned with ${stageLabel} so OMO can continue without a bookkeeping-only dirty worktree blocker.`,
+      "",
+      "Constraint: Pilot evidence is currently recorded from the active slice worktree",
+      "Rejected: Leave .workflow-v2/promotion-evidence.json uncommitted until closeout | OMO blocks on dirty worktrees before CI wait can resume",
+      "Confidence: high",
+      "Scope-risk: narrow",
+      "Directive: If promotion evidence is updated mid-stage, auto-salvage bookkeeping-only changes instead of escalating to a human blocker",
+      `Tested: ${stageLabel} pilot checkpoint audit and promotion ledger update`,
+      "Not-tested: Stage 6 pilot lane pass transition after closeout",
+    ].join("\n"),
+  };
+}
+
 function resolveBookkeepingRepairLifecycle({
   stage,
   prRole,
@@ -1197,6 +1309,134 @@ function repairActiveBookkeepingDrift({
   });
 
   return repairedState;
+}
+
+function salvageDirtyPilotLedger({
+  rootDir,
+  workItemId,
+  slice,
+  state,
+  recovery,
+  worktree,
+  now,
+}) {
+  if (
+    !state.workspace?.path ||
+    !recovery ||
+    !isAutoSalvageableDirtyWorktreeRecovery(recovery) ||
+    !recovery.branch ||
+    !recovery.existing_pr?.url
+  ) {
+    return null;
+  }
+
+  const stage =
+    recovery.stage ??
+    state.wait?.stage ??
+    state.active_stage ??
+    state.current_stage ??
+    state.last_completed_stage;
+  if (!Number.isInteger(stage)) {
+    return null;
+  }
+
+  const prRole = recovery.existing_pr.role ?? state.wait?.pr_role ?? resolvePrRole(stage);
+  if (!prRole) {
+    return null;
+  }
+
+  const commitMessage = buildPilotEvidenceSalvageCommit({
+    slice,
+    stage,
+  });
+  worktree.commitChanges({
+    worktreePath: state.workspace.path,
+    subject: commitMessage.subject,
+    body: commitMessage.body,
+  });
+  worktree.pushBranch({
+    worktreePath: state.workspace.path,
+    branch: recovery.branch,
+  });
+
+  const headSha = worktree.getHeadSha({
+    worktreePath: state.workspace.path,
+  });
+  const updatedState = upsertPullRequest({
+    rootDir,
+    workItemId,
+    state,
+    role: prRole,
+    pr: recovery.existing_pr,
+    branch: recovery.branch,
+    headSha,
+    now,
+  });
+  const resumedState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setRecoveryState({
+      state: setWaitState({
+        state: updatedState,
+        kind: "ci",
+        prRole,
+        stage,
+        headSha,
+        phase: "wait",
+        nextAction: "poll_ci",
+        updatedAt: now,
+      }),
+      recovery: null,
+    }),
+  });
+
+  updateRuntimeStatusForWait({
+    rootDir,
+    workItemId,
+    wait: resumedState.wait,
+    prPath: recovery.existing_pr.url,
+    now,
+    approvalState: "not_started",
+    lifecycle: "in_progress",
+    verificationStatus: "pending",
+    extraNotes: ["auto_salvage=promotion_evidence"],
+  });
+
+  return resumedState;
+}
+
+function cleanupDirtyOpencodeMigration({
+  state,
+  recovery,
+  worktree,
+}) {
+  if (
+    !state.workspace?.path ||
+    !recovery ||
+    !isAutoCleanableOpencodeMigrationRecovery(recovery)
+  ) {
+    return null;
+  }
+
+  const changedFiles = normalizeStringArray(recovery.changed_files);
+  const restorePaths = changedFiles.filter((filePath) => filePath === ".opencode/oh-my-opencode.json");
+  const deletePaths = changedFiles.filter((filePath) => filePath !== ".opencode/oh-my-opencode.json");
+
+  if (restorePaths.length > 0) {
+    worktree.restorePaths({
+      worktreePath: state.workspace.path,
+      paths: restorePaths,
+    });
+  }
+
+  if (deletePaths.length > 0) {
+    worktree.deletePaths({
+      worktreePath: state.workspace.path,
+      paths: deletePaths,
+    });
+  }
+
+  return state;
 }
 
 function runInternalCloseoutReconcile({
@@ -2132,6 +2372,7 @@ function runAutonomousEvaluationLoop({
     workItemId,
     slice,
     stage,
+    worktreePath: state.workspace?.path,
   });
 
   if (!context.policy.autonomous || !context.stageConfig) {
@@ -2161,6 +2402,7 @@ function runAutonomousEvaluationLoop({
       slice,
       stage,
       artifactDir,
+      worktreePath: nextState.workspace?.path,
       now,
     });
     const evaluatorResultPath = resolve(evaluation.artifactDir, "result.json");
@@ -2759,6 +3001,7 @@ function processWaitState({
     if (prRole === "frontend" && state.wait.stage === 4) {
       const designAuthorityConfig = resolveDesignAuthorityConfig({
         rootDir,
+        worktreePath: state.workspace?.path ?? null,
         slice: state.slice ?? workItemId,
       });
       if (designAuthorityConfig?.authority_required && state.design_authority?.status !== "prechecked") {
@@ -2832,6 +3075,7 @@ function processWaitState({
     if (prRole === "frontend" && state.wait.stage === 5) {
       const designAuthorityConfig = resolveDesignAuthorityConfig({
         rootDir,
+        worktreePath: state.workspace?.path ?? null,
         slice: state.slice ?? workItemId,
       });
       const authorityStatus = state.design_authority?.status ?? null;
@@ -3254,6 +3498,7 @@ function finalizeCodeStage({
         stage !== 4 ||
         !resolveDesignAuthorityConfig({
           rootDir,
+          worktreePath: nextState.workspace?.path ?? null,
           slice,
         })?.authority_required ||
         nextState.execution?.subphase === "authority_precheck";
@@ -3580,18 +3825,44 @@ function finalizeCodeStage({
       headSha,
       now,
     });
+    const completedState = markStageCompleted({
+      state: nextState,
+      stage,
+      artifactDir,
+    });
+    const authorityReadyState =
+      stage === 4 && resolveDesignAuthorityConfig({
+        rootDir,
+        worktreePath: nextState.workspace?.path ?? null,
+        slice,
+      })?.authority_required
+        ? setDesignAuthorityState({
+            state: completedState,
+            status: "pending_precheck",
+            uiRisk: nextState.design_authority?.ui_risk ?? null,
+            anchorScreens: nextState.design_authority?.anchor_screens ?? [],
+            requiredScreens: nextState.design_authority?.required_screens ?? [],
+            authorityRequired: true,
+            authorityReportPaths: nextState.design_authority?.authority_report_paths ?? [],
+            evidenceArtifactRefs: nextState.design_authority?.evidence_artifact_refs ?? [],
+            authorityVerdict: nextState.design_authority?.authority_verdict ?? null,
+            blockerCount: nextState.design_authority?.blocker_count ?? null,
+            majorCount: nextState.design_authority?.major_count ?? null,
+            minorCount: nextState.design_authority?.minor_count ?? null,
+            reviewedScreenIds: nextState.design_authority?.reviewed_screen_ids ?? [],
+            sourceStage: nextState.design_authority?.source_stage ?? null,
+            updatedAt: now,
+          })
+        : completedState;
+
     nextState = saveRuntime({
       rootDir,
       workItemId,
       state: setWaitState({
-        state: markStageCompleted({
-          state: nextState,
-          stage,
-          artifactDir,
-        }),
+        state: authorityReadyState,
         kind: "ready_for_next_stage",
         prRole,
-        stage: resolveNextReviewStageForCodeStage(stage, nextState),
+        stage: resolveNextReviewStageForCodeStage(stage, authorityReadyState),
         headSha,
         updatedAt: now,
       }),
@@ -3650,38 +3921,58 @@ function handleImplementationCodeStage({
       updatedAt: now,
     }),
   });
+  const hasStaleExecution =
+    state.wait?.kind === "ready_for_next_stage" &&
+    Boolean(nextState.execution?.pr_role && nextState.execution.pr_role !== prRole);
+  if (hasStaleExecution) {
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: clearExecutionForSubphase({
+        state: nextState,
+        stage,
+        artifactDir: nextState.last_artifact_dir,
+      }),
+    });
+  }
+  const phase = resolveStatePhase(nextState);
+  const shouldResumeFinalize =
+    isPendingFinalizePhase(phase) &&
+    nextState.active_stage === stage &&
+    nextState.execution?.pr_role === prRole;
   const { workItem } = readTrackedWorkItem({
     rootDir,
     workItemId,
   });
-  const entryValidation = validateProductCodeStageEntry({
-    rootDir,
-    worktreePath: nextState.workspace?.path,
-    workItem,
-    slice,
-    stage,
-  });
-  if (entryValidation.issues.length > 0) {
-    return blockWithRecovery({
+  if (!shouldResumeFinalize) {
+    const entryValidation = validateProductCodeStageEntry({
       rootDir,
-      workItemId,
+      worktreePath: nextState.workspace?.path,
+      workItem,
       slice,
-      state: nextState,
       stage,
-      prRole,
-      reason: summarizeChecklistIssues(entryValidation.issues),
-      now,
-      worktree,
     });
+    if (entryValidation.issues.length > 0) {
+      return blockWithRecovery({
+        rootDir,
+        workItemId,
+        slice,
+        state: nextState,
+        stage,
+        prRole,
+        reason: summarizeChecklistIssues(entryValidation.issues),
+        now,
+        worktree,
+      });
+    }
   }
   const reviewEntry =
     prRole === "backend"
       ? nextState.last_review?.backend ?? null
       : nextState.last_review?.frontend ?? null;
   const existingPr = getActivePullRequest(nextState, prRole);
-  const phase = resolveStatePhase(nextState);
 
-  if (!isPendingFinalizePhase(phase) || nextState.active_stage !== stage) {
+  if (!shouldResumeFinalize) {
     const runResult = stageRunner({
       rootDir,
       workItemId,
@@ -3818,6 +4109,7 @@ function handleAuthorityPrecheckStage({
 
   const authorityConfig = resolveDesignAuthorityConfig({
     rootDir,
+    worktreePath: nextState.workspace?.path ?? null,
     slice,
   });
   const {
@@ -4990,11 +5282,20 @@ function handleCodeStage({
   if (stage === 2) {
     const initialSubphase = resolveStage2Subphase(state);
     if (initialSubphase === "doc_gate_check") {
-      const docGateResult = evaluateDocGate({
+      let docGateResult = evaluateDocGate({
         rootDir,
         worktreePath: state.workspace?.path,
         slice,
       });
+      if (
+        state.doc_gate?.status === "pending_recheck" &&
+        state.doc_gate?.last_review?.decision === "approve"
+      ) {
+        docGateResult = applyDocGateWaivedFindings({
+          result: docGateResult,
+          waivedFindingIds: state.doc_gate?.last_review?.waived_doc_fix_ids ?? [],
+        });
+      }
       const docGateArtifact = writeDocGateResult({
         rootDir,
         workItemId,
@@ -5149,6 +5450,7 @@ function handleReviewStage({
         workItemId,
         slice: state.slice ?? workItemId,
         stage: reviewPolicyStage,
+        worktreePath: state.workspace?.path ?? null,
       })
     : null;
 
@@ -5191,6 +5493,7 @@ function handleReviewStage({
   const designAuthorityConfig = [5, 6].includes(stage)
     ? resolveDesignAuthorityConfig({
         rootDir,
+        worktreePath: nextState.workspace?.path ?? null,
         slice: state.slice ?? workItemId,
       })
     : null;
@@ -5980,6 +6283,13 @@ function createDefaultDependencies({
           branch,
         });
       },
+      commitChanges({ worktreePath, subject, body }) {
+        return commitWorktreeChanges({
+          worktreePath,
+          subject,
+          body,
+        });
+      },
       syncBaseBranch({ worktreePath }) {
         return syncWorktreeWithBaseBranch({
           rootDir,
@@ -5999,6 +6309,18 @@ function createDefaultDependencies({
       listChangedFiles({ worktreePath }) {
         return listWorktreeChangedFiles({
           worktreePath,
+        });
+      },
+      restorePaths({ worktreePath, paths }) {
+        return restoreWorktreePaths({
+          worktreePath,
+          paths,
+        });
+      },
+      deletePaths({ worktreePath, paths }) {
+        return deleteWorktreePaths({
+          worktreePath,
+          paths,
         });
       },
       getBinaryDiff({ worktreePath }) {
@@ -6304,6 +6626,55 @@ export function superviseWorkItem(
             },
             now,
           });
+          const salvagedState = salvageDirtyPilotLedger({
+            rootDir,
+            workItemId: normalizedWorkItemId,
+            slice: resolvedSlice,
+            state,
+            recovery,
+            worktree: {
+              commitChanges: ({ worktreePath, subject, body }) =>
+                dependencies.worktree.commitChanges({
+                  worktreePath,
+                  subject,
+                  body,
+                }),
+              pushBranch: ({ worktreePath, branch }) =>
+                dependencies.worktree.pushBranch({
+                  worktreePath,
+                  branch,
+                }),
+              getHeadSha: ({ worktreePath }) =>
+                dependencies.worktree.getHeadSha({
+                  worktreePath,
+                }),
+            },
+            now,
+          });
+          if (salvagedState) {
+            state = salvagedState;
+            continue;
+          }
+          const cleanedState = cleanupDirtyOpencodeMigration({
+            state,
+            recovery,
+            worktree: {
+              restorePaths: ({ worktreePath, paths }) =>
+                dependencies.worktree.restorePaths({
+                  worktreePath,
+                  paths,
+                }),
+              deletePaths: ({ worktreePath, paths }) =>
+                dependencies.worktree.deletePaths({
+                  worktreePath,
+                  paths,
+                }),
+            },
+          });
+          if (cleanedState) {
+            state = cleanedState;
+            continue;
+          }
           const blocked = applyBlocker({
             rootDir,
             workItemId: normalizedWorkItemId,

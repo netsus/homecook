@@ -403,6 +403,71 @@ function createSummary(outcome, findings) {
   return findings.map((finding) => finding.message).join(" ");
 }
 
+function createOutcome(findings) {
+  const blocked = findings.some((entry) => entry?.fixable === false);
+  if (blocked) {
+    return "blocked";
+  }
+
+  return findings.length > 0 ? "fixable" : "pass";
+}
+
+function normalizeFindingIdList(ids) {
+  return Array.isArray(ids)
+    ? ids
+        .filter((value) => typeof value === "string" && value.trim().length > 0)
+        .map((value) => value.trim())
+    : [];
+}
+
+/**
+ * @param {{ result: { outcome?: string, summary?: string, findings?: Array<{id?: string, fixable?: boolean}> } & Record<string, unknown>, waivedFindingIds?: string[] }} args
+ * @returns {{ outcome: string, summary: string, findings: Array<{id?: string, fixable?: boolean}> } & Record<string, unknown>}
+ */
+export function applyDocGateWaivedFindings({
+  result,
+  waivedFindingIds = [],
+}) {
+  const normalizedResult = result && typeof result === "object" ? result : null;
+  if (!normalizedResult) {
+    throw new Error("result must be an object.");
+  }
+
+  const waivedSet = new Set(normalizeFindingIdList(waivedFindingIds));
+  if (waivedSet.size === 0) {
+    const normalizedFindings = Array.isArray(normalizedResult.findings) ? normalizedResult.findings : [];
+    const preservedOutcome =
+      typeof normalizedResult.outcome === "string" && normalizedResult.outcome.trim().length > 0
+        ? normalizedResult.outcome
+        : createOutcome(normalizedFindings);
+    return {
+      ...normalizedResult,
+      outcome: preservedOutcome,
+      summary:
+        typeof normalizedResult.summary === "string" && normalizedResult.summary.trim().length > 0
+          ? normalizedResult.summary
+          : createSummary(preservedOutcome, normalizedFindings),
+      findings: normalizedFindings,
+    };
+  }
+
+  const filteredFindings = (Array.isArray(normalizedResult.findings) ? normalizedResult.findings : []).filter(
+    (entry) => !waivedSet.has(entry?.id ?? ""),
+  );
+  const blocked = filteredFindings.some((entry) => entry?.fixable === false);
+  const outcome = blocked ? "blocked" : filteredFindings.length > 0 ? "fixable" : "pass";
+
+  return {
+    ...normalizedResult,
+    outcome,
+    summary: createSummary(outcome, filteredFindings),
+    findings: filteredFindings,
+  };
+}
+
+/**
+ * @param {{ rootDir?: string, worktreePath?: string | null, slice: string }} args
+ */
 export function evaluateDocGate({
   rootDir = process.cwd(),
   worktreePath = null,

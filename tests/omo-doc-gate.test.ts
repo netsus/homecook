@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 
 import { describe, expect, it } from "vitest";
 
-import { evaluateDocGate } from "../scripts/lib/omo-doc-gate.mjs";
+import { applyDocGateWaivedFindings, evaluateDocGate } from "../scripts/lib/omo-doc-gate.mjs";
 
 function writeFixture(rootDir: string, relativePath: string, contents: string) {
   const filePath = join(rootDir, relativePath);
@@ -234,5 +234,46 @@ describe("OMO doc gate", () => {
         }),
       ]),
     );
+  });
+
+  it("filters waived findings during pending_recheck recalculation", () => {
+    const fixture = createDocGateFixture({
+      includeKeywords: false,
+    });
+
+    const result = evaluateDocGate({
+      rootDir: fixture.rootDir,
+      slice: fixture.slice,
+    });
+    const waivedIds = result.findings.map((finding) => finding.id);
+
+    const filtered = applyDocGateWaivedFindings({
+      result,
+      waivedFindingIds: waivedIds,
+    });
+
+    expect(filtered.outcome).toBe("pass");
+    expect(filtered.findings).toEqual([]);
+  });
+
+  it("keeps unwaived findings actionable during pending_recheck recalculation", () => {
+    const fixture = createDocGateFixture({
+      includeKeywords: false,
+    });
+
+    const result = evaluateDocGate({
+      rootDir: fixture.rootDir,
+      slice: fixture.slice,
+    });
+    const waivedIds = result.findings.slice(0, result.findings.length - 1).map((finding) => finding.id);
+
+    const filtered = applyDocGateWaivedFindings({
+      result,
+      waivedFindingIds: waivedIds,
+    });
+
+    expect(filtered.outcome).toBe("fixable");
+    expect(filtered.findings).toHaveLength(1);
+    expect(filtered.findings[0]?.id).toBe(result.findings.at(-1)?.id);
   });
 });

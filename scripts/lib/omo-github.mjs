@@ -1,3 +1,5 @@
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import {
@@ -59,7 +61,7 @@ function extractSectionContent(body, section) {
   return sectionContent.length > 0 ? sectionContent : null;
 }
 
-function buildDefaultPrSectionContent(section, { body, workItemId }) {
+function buildDefaultPrSectionContent(section, { body, workItemId, rootDir = process.cwd() }) {
   const workflowRefPath =
     typeof workItemId === "string" && workItemId.trim().length > 0
       ? `.workflow-v2/work-items/${workItemId.trim()}.json`
@@ -74,6 +76,21 @@ function buildDefaultPrSectionContent(section, { body, workItemId }) {
       return `- workflow v2 work item: \`${workflowRefPath}\``;
     case "## Test Plan":
       return "- Supervisor 검증 명령과 필수 CI 체크를 기준으로 확인";
+    case "## QA Evidence": {
+      const qaEvidence = findLatestExploratoryQaBundle({
+        rootDir,
+        slice: workItemId,
+      });
+      if (!qaEvidence) {
+        return "- 해당 없음";
+      }
+
+      return [
+        `- exploratory QA: executed — \`${qaEvidence.reportPath}\``,
+        `- qa eval: pass — \`${qaEvidence.evalPath}\``,
+        `- 아티팩트 / 보고서 경로: \`${qaEvidence.checklistPath}\`, \`${qaEvidence.reportPath}\`, \`${qaEvidence.evalPath}\``,
+      ].join("\n");
+    }
     case "## Docs Impact":
       return "- 자동 보정: 문서 영향 분석이 stage result에 없어 수동 확인이 필요합니다.";
     case "## Merge Gate":
@@ -91,7 +108,88 @@ function buildDefaultPrSectionContent(section, { body, workItemId }) {
   }
 }
 
-function normalizePullRequestBody(body, workItemId) {
+function findLatestExploratoryQaBundle({
+  rootDir = process.cwd(),
+  slice,
+}) {
+  if (typeof slice !== "string" || slice.trim().length === 0) {
+    return null;
+  }
+
+  const qaRoot = resolve(rootDir, ".artifacts", "qa", slice.trim());
+  if (!existsSync(qaRoot)) {
+    return null;
+  }
+
+  const candidates = readdirSync(qaRoot)
+    .map((entry) => join(qaRoot, entry))
+    .filter((entryPath) => existsSync(entryPath) && statSync(entryPath).isDirectory())
+    .sort((left, right) => right.localeCompare(left));
+
+  for (const candidate of candidates) {
+    const checklistPath = join(candidate, "exploratory-checklist.json");
+    const reportPath = join(candidate, "exploratory-report.json");
+    const evalPath = join(candidate, "eval-result.json");
+    if (!existsSync(checklistPath) || !existsSync(reportPath) || !existsSync(evalPath)) {
+      continue;
+    }
+
+    return {
+      checklistPath: relative(rootDir, checklistPath),
+      reportPath: relative(rootDir, reportPath),
+      evalPath: relative(rootDir, evalPath),
+    };
+  }
+
+  return null;
+}
+
+const PRESERVE_EXISTING_BODY_SECTIONS = new Set(
+  REQUIRED_PR_SECTIONS.filter((section) => !["## Summary", "## Workpack / Slice"].includes(section)),
+);
+
+function buildPullRequestBodySections(body) {
+  return new Map(
+    REQUIRED_PR_SECTIONS.map((section) => [section, extractSectionContent(body, section)]),
+  );
+}
+
+function mergePullRequestBodyWithExisting(existingBody, body, workItemId, rootDir = process.cwd()) {
+  const normalizedCandidateBody = normalizePullRequestBody(body, workItemId, rootDir);
+
+  if (typeof existingBody !== "string" || existingBody.trim().length === 0) {
+    return normalizedCandidateBody;
+  }
+
+  const normalizedExistingBody = normalizePullRequestBody(existingBody, workItemId, rootDir);
+  const candidateSections = buildPullRequestBodySections(normalizedCandidateBody);
+  const existingSections = buildPullRequestBodySections(normalizedExistingBody);
+
+  return REQUIRED_PR_SECTIONS.map((section) => {
+    const candidateContent =
+      candidateSections.get(section)
+      ?? buildDefaultPrSectionContent(section, {
+        body: normalizedCandidateBody,
+        workItemId,
+        rootDir,
+      });
+    const existingContent = existingSections.get(section);
+    const defaultContent = buildDefaultPrSectionContent(section, {
+      body: normalizedCandidateBody,
+      workItemId,
+      rootDir,
+    });
+    const shouldPreserveExisting =
+      PRESERVE_EXISTING_BODY_SECTIONS.has(section)
+      && typeof existingContent === "string"
+      && existingContent.trim().length > 0
+      && candidateContent.trim() === defaultContent.trim();
+
+    return `${section}\n${shouldPreserveExisting ? existingContent : candidateContent}`;
+  }).join("\n\n");
+}
+
+function normalizePullRequestBody(body, workItemId, rootDir = process.cwd()) {
   const normalizedBody = ensureNonEmptyString(body, "body");
   const normalizedWorkItemId =
     typeof workItemId === "string" && workItemId.trim().length > 0 ? workItemId.trim() : null;
@@ -124,6 +222,7 @@ function normalizePullRequestBody(body, workItemId) {
       buildDefaultPrSectionContent(section, {
         body: refNormalizedBody,
         workItemId: normalizedWorkItemId,
+        rootDir,
       });
 
     return `${section}\n${content}`;
@@ -355,6 +454,18 @@ export function createGithubAutomationClient({
   ghBin = "gh",
   environment,
 } = {}) {
+  function readPullRequestBody(prRef) {
+    const stdout = runGh([
+      "pr",
+      "view",
+      ensureNonEmptyString(prRef, "prRef"),
+      "--json",
+      "body",
+    ]);
+    const payload = stdout.length > 0 ? JSON.parse(stdout) : {};
+    return typeof payload?.body === "string" ? payload.body : "";
+  }
+
   function runGh(args, { allowPendingExit = false } = {}) {
     const result = spawnSync(ghBin, args, {
       cwd: rootDir,
@@ -420,7 +531,7 @@ export function createGithubAutomationClient({
         "--title",
         ensureNonEmptyString(title, "title"),
         "--body",
-        normalizePullRequestBody(body, workItemId),
+        normalizePullRequestBody(body, workItemId, rootDir),
       ];
 
       if (draft) {
@@ -428,7 +539,7 @@ export function createGithubAutomationClient({
       }
 
       let parsed;
-      const normalizedBody = normalizePullRequestBody(body, workItemId);
+      const normalizedBody = normalizePullRequestBody(body, workItemId, rootDir);
 
       try {
         args[args.indexOf("--body") + 1] = normalizedBody;
@@ -459,6 +570,12 @@ export function createGithubAutomationClient({
                 draft: Boolean(existingPullRequest.isDraft),
               };
             })();
+          const mergedBody = mergePullRequestBodyWithExisting(
+            readPullRequestBody(parsed.url),
+            body,
+            workItemId,
+            rootDir,
+          );
           runGh([
             "pr",
             "edit",
@@ -466,7 +583,7 @@ export function createGithubAutomationClient({
             "--title",
             ensureNonEmptyString(title, "title"),
             "--body",
-            normalizedBody,
+            mergedBody,
           ]);
         } else {
           throw error;
@@ -484,30 +601,47 @@ export function createGithubAutomationClient({
       body,
       workItemId,
     } = {}) {
+      const normalizedPrRef = ensureNonEmptyString(prRef, "prRef");
       runGh([
         "pr",
         "edit",
-        ensureNonEmptyString(prRef, "prRef"),
+        normalizedPrRef,
         "--title",
         ensureNonEmptyString(title, "title"),
         "--body",
-        normalizePullRequestBody(body, workItemId),
+        mergePullRequestBodyWithExisting(
+          readPullRequestBody(normalizedPrRef),
+          body,
+          workItemId,
+          rootDir,
+        ),
       ]);
     },
     getRequiredChecks({
       prRef,
     }) {
       const normalizedPrRef = ensureNonEmptyString(prRef, "prRef");
-      const stdout = runGh(
-        [
-          "pr",
-          "checks",
-          normalizedPrRef,
-          "--json",
-          "bucket,name,state,workflow,link",
-        ],
-        { allowPendingExit: true },
-      );
+      let stdout = "";
+      try {
+        stdout = runGh(
+          [
+            "pr",
+            "checks",
+            normalizedPrRef,
+            "--json",
+            "bucket,name,state,workflow,link",
+          ],
+          { allowPendingExit: true },
+        );
+      } catch (error) {
+        if (error instanceof Error && /no checks reported/i.test(error.message)) {
+          return {
+            bucket: "pending",
+            checks: [],
+          };
+        }
+        throw error;
+      }
       const checks = stdout.length > 0 ? JSON.parse(stdout) : [];
       // Legacy method name: merge gate now waits for every check that started on the PR head,
       // not only GitHub-required checks.
@@ -530,15 +664,7 @@ export function createGithubAutomationClient({
     getPullRequestBody({
       prRef,
     }) {
-      const stdout = runGh([
-        "pr",
-        "view",
-        ensureNonEmptyString(prRef, "prRef"),
-        "--json",
-        "body",
-      ]);
-      const payload = stdout.length > 0 ? JSON.parse(stdout) : {};
-      return typeof payload?.body === "string" ? payload.body : "";
+      return readPullRequestBody(prRef);
     },
     getApprovalRequirement({
       prRef,

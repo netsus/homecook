@@ -1,4 +1,4 @@
-import { chmodSync, mkdtempSync, writeFileSync, readFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -148,6 +148,38 @@ describe("OMO GitHub automation client", () => {
 
     const checks = client.getRequiredChecks({
       prRef: "https://github.com/netsus/homecook/pull/47",
+    });
+
+    expect(checks).toEqual({
+      bucket: "pending",
+      checks: [],
+    });
+  });
+
+  it("treats 'no checks reported' stderr as pending instead of throwing", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-no-checks-reported-"));
+    const binPath = join(rootDir, "fake-gh-no-checks-reported.sh");
+
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "if [ \"$1 $2\" = 'pr checks' ]; then",
+        "  printf '%s\\n' 'no checks reported on the branch' >&2",
+        "  exit 1",
+        "fi",
+        "exit 0",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+    });
+
+    const checks = client.getRequiredChecks({
+      prRef: "https://github.com/netsus/homecook/pull/112",
     });
 
     expect(checks).toEqual({
@@ -408,6 +440,129 @@ describe("OMO GitHub automation client", () => {
     expect(argsLog).toContain("## Design / Accessibility");
     expect(argsLog).toContain("Supervisor 검증 명령과 필수 CI 체크를 기준으로 확인");
     expect(argsLog).toContain("자동 보정: 디자인/접근성 영향 분석이 stage result에 없어 수동 확인이 필요합니다.");
+  });
+
+  it("fills QA Evidence from the latest local exploratory QA bundle when present", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-qa-evidence-"));
+    const { binPath, argsPath } = createFakeGhBin(rootDir);
+    const qaDir = join(rootDir, ".artifacts", "qa", "06-recipe-to-planner", "stage4-ready-for-review");
+
+    mkdirSync(qaDir, { recursive: true });
+    writeFileSync(join(qaDir, "exploratory-checklist.json"), "{}\n");
+    writeFileSync(join(qaDir, "exploratory-report.json"), "{}\n");
+    writeFileSync(join(qaDir, "eval-result.json"), "{}\n");
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+      environment: {
+        FAKE_GH_ARGS_PATH: argsPath,
+      },
+    });
+
+    client.createPullRequest({
+      base: "master",
+      head: "feature/fe-06-recipe-to-planner",
+      title: "feat: slice06 frontend",
+      body: "## Summary\n- frontend",
+      draft: true,
+      workItemId: "06-recipe-to-planner",
+    });
+
+    const argsLog = readFileSync(argsPath, "utf8");
+    expect(argsLog).toContain("## QA Evidence");
+    expect(argsLog).toContain("exploratory QA: executed");
+    expect(argsLog).toContain(".artifacts/qa/06-recipe-to-planner/stage4-ready-for-review/exploratory-report.json");
+    expect(argsLog).toContain(".artifacts/qa/06-recipe-to-planner/stage4-ready-for-review/eval-result.json");
+  });
+
+  it("preserves existing Actual Verification evidence when editing a PR body with sparse stage-result content", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-preserve-evidence-"));
+    const binPath = join(rootDir, "fake-gh-preserve-evidence.sh");
+    const argsPath = join(rootDir, "fake-gh-preserve-evidence.args.log");
+    const existingBody = [
+      "## Summary",
+      "- previous summary",
+      "",
+      "## Workpack / Slice",
+      "- workflow v2 work item: `.workflow-v2/work-items/06-recipe-to-planner.json`",
+      "",
+      "## Test Plan",
+      "- previous test plan",
+      "",
+      "## QA Evidence",
+      "- none",
+      "",
+      "## Actual Verification",
+      "- environment: local Supabase + `pnpm dev:local-supabase`",
+      "- scope: `POST /meals` smoke",
+      "- result: pass",
+      "",
+      "## Closeout Sync",
+      "- none",
+      "",
+      "## Merge Gate",
+      "- all green",
+      "",
+      "## Docs Impact",
+      "- none",
+      "",
+      "## Security Review",
+      "- none",
+      "",
+      "## Performance",
+      "- none",
+      "",
+      "## Design / Accessibility",
+      "- none",
+      "",
+      "## Breaking Changes",
+      "- none",
+    ].join("\n");
+
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "printf '%s\\n' \"$@\" >> \"$FAKE_GH_ARGS_PATH\"",
+        "case \"$1 $2 $3\" in",
+        "  'pr view https://github.com/netsus/homecook/pull/41')",
+        "    printf '%s\\n' '{\"body\":'\"$(printf %s \"$FAKE_GH_EXISTING_BODY\" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')\"'}'",
+        "    ;;",
+        "  'pr edit https://github.com/netsus/homecook/pull/41')",
+        "    printf '%s\\n' '{\"ok\":true}'",
+        "    ;;",
+        "  *)",
+        "    printf '%s\\n' '{\"ok\":true}'",
+        "    ;;",
+        "esac",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+      environment: {
+        FAKE_GH_ARGS_PATH: argsPath,
+        FAKE_GH_EXISTING_BODY: existingBody,
+      },
+    });
+
+    client.editPullRequest({
+      prRef: "https://github.com/netsus/homecook/pull/41",
+      title: "feat: backend slice",
+      body: "## Summary\n- updated summary",
+      workItemId: "06-recipe-to-planner",
+    });
+
+    const argsLog = readFileSync(argsPath, "utf8");
+
+    expect(argsLog).toContain("- environment: local Supabase + `pnpm dev:local-supabase`");
+    expect(argsLog).toContain("- scope: `POST /meals` smoke");
+    expect(argsLog).toContain("- result: pass");
+    expect(argsLog).toContain("## Summary");
+    expect(argsLog).toContain("- updated summary");
   });
 
   it("fails closed when gh merge returns success but the pull request is still open", () => {

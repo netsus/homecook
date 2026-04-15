@@ -147,7 +147,7 @@ describe("OMO-lite Claude budget resolution", () => {
     });
   });
 
-  it("falls back to unavailable when Anthropic auth is missing", () => {
+  it("treats opencode fallback as available when any OpenCode auth is configured", () => {
     const { rootDir, homeDir, authPath } = createBudgetFixture();
 
     writeFileSync(
@@ -160,6 +160,21 @@ describe("OMO-lite Claude budget resolution", () => {
         2,
       ),
     );
+
+    const resolved = resolveClaudeBudgetState({
+      rootDir,
+      homeDir,
+    });
+
+    expect(resolved).toMatchObject({
+      state: "available",
+      source: "opencode-auth",
+      providerConfigured: true,
+    });
+  });
+
+  it("falls back to unavailable when no OpenCode auth is configured", () => {
+    const { rootDir, homeDir } = createBudgetFixture();
 
     const resolved = resolveClaudeBudgetState({
       rootDir,

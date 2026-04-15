@@ -172,6 +172,7 @@ describe("OMO-lite stage dispatch", () => {
     });
 
     expect(dispatch.actor).toBe("codex");
+    expect(dispatch.sessionBinding.role).toBe("codex_primary");
     expect(dispatch.goal).toContain("authority precheck");
     expect(dispatch.requiredReads).toEqual(
       expect.arrayContaining([

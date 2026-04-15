@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -277,6 +277,8 @@ function createEvaluatorFixture({
     workItemId,
     stageArtifactDir,
     worktreePath,
+    routeFile,
+    testFile,
   };
 }
 
@@ -367,6 +369,160 @@ describe("OMO evaluator", () => {
         }),
       ]),
     );
+  });
+
+  it("treats bootstrap external smokes as pass once the local app becomes ready", () => {
+    const fixture = createEvaluatorFixture({
+      externalSmokes: ["pnpm dev:local-supabase"],
+    });
+    const result = evaluateWorkItemStage({
+      rootDir: fixture.rootDir,
+      workItemId: fixture.workItemId,
+      stage: 2,
+      now: "2026-04-02T01:12:00.000Z",
+    });
+
+    expect(result.outcome).toBe("pass");
+    expect(result.mergeEligible).toBe(true);
+    expect(
+      readFileSync(join(result.artifactDir, "command-2.stdout.log"), "utf8"),
+    ).toContain("Deferred bootstrap smoke: pnpm dev:local-supabase");
+  });
+
+  it("prefers worktree automation-spec over a stale root copy", () => {
+    const fixture = createEvaluatorFixture({
+      externalSmokes: ["true"],
+    });
+
+    writeFileSync(
+      join(fixture.rootDir, "docs", "workpacks", fixture.workItemId, "automation-spec.json"),
+      JSON.stringify(
+        {
+          slice_id: fixture.workItemId,
+          execution_mode: "autonomous",
+          risk_class: "low",
+          merge_policy: "conditional-auto",
+          backend: {
+            required_endpoints: ["POST /api/v1/recipes/{id}/like"],
+            invariants: ["toggle-idempotency"],
+            verify_commands: ["test -f tests/recipe-like.backend.test.ts"],
+            required_test_targets: ["tests/recipe-like.backend.test.ts"],
+          },
+          frontend: {
+            required_routes: ["/recipes/[id]"],
+            required_states: ["loading"],
+            playwright_projects: ["desktop-chrome"],
+            artifact_assertions: ["playwright-report"],
+          },
+          external_smokes: [
+            {
+              id: "invalid-object",
+            },
+          ],
+          blocked_conditions: [],
+          max_fix_rounds: {
+            backend: 4,
+            frontend: 4,
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const result = evaluateWorkItemStage({
+      rootDir: fixture.rootDir,
+      workItemId: fixture.workItemId,
+      stage: 2,
+      artifactDir: fixture.stageArtifactDir,
+      worktreePath: fixture.worktreePath,
+      now: "2026-04-02T01:15:00.000Z",
+    });
+
+    expect(result.outcome).toBe("pass");
+    expect(result.requiredCommands).toContain("true");
+    expect(result.artifacts.automationSpecPath).toBe(
+      join(fixture.worktreePath, "docs", "workpacks", fixture.workItemId, "automation-spec.json"),
+    );
+  });
+
+  it("normalizes modified tracked files without porcelain prefixes", () => {
+    const fixture = createEvaluatorFixture({
+      externalSmokes: ["true"],
+    });
+    const stageResultPath = join(fixture.stageArtifactDir, "stage-result.json");
+    const stageResult = JSON.parse(readFileSync(stageResultPath, "utf8"));
+
+    execFileSync("git", ["add", "."], { cwd: fixture.worktreePath });
+    execFileSync("git", ["commit", "-m", "feat: fixture baseline"], {
+      cwd: fixture.worktreePath,
+    });
+
+    writeFileSync(
+      join(fixture.worktreePath, fixture.routeFile),
+      "export async function POST() { return Response.json({ success: false }); }\n",
+    );
+
+    stageResult.claimed_scope.files = [fixture.routeFile];
+    stageResult.changed_files = [fixture.routeFile];
+    writeFileSync(stageResultPath, `${JSON.stringify(stageResult, null, 2)}\n`);
+
+    const result = evaluateWorkItemStage({
+      rootDir: fixture.rootDir,
+      workItemId: fixture.workItemId,
+      stage: 2,
+      artifactDir: fixture.stageArtifactDir,
+      worktreePath: fixture.worktreePath,
+      now: "2026-04-02T01:16:00.000Z",
+    });
+
+    expect(result.outcome).toBe("pass");
+    expect(result.findings).toEqual([]);
+  });
+
+  it("cleans stale opencode migration artifacts before checking worktree drift", () => {
+    const fixture = createEvaluatorFixture({
+      externalSmokes: ["true"],
+    });
+    const opencodeDir = join(fixture.worktreePath, ".opencode");
+    const stageResultPath = join(fixture.stageArtifactDir, "stage-result.json");
+    const stageResult = JSON.parse(readFileSync(stageResultPath, "utf8"));
+
+    mkdirSync(opencodeDir, { recursive: true });
+    writeFileSync(join(opencodeDir, "oh-my-opencode.json"), "{\n  \"plugin\": true\n}\n");
+
+    execFileSync("git", ["add", "."], { cwd: fixture.worktreePath });
+    execFileSync("git", ["commit", "-m", "feat: fixture baseline"], {
+      cwd: fixture.worktreePath,
+    });
+
+    writeFileSync(
+      join(fixture.worktreePath, fixture.routeFile),
+      "export async function POST() { return Response.json({ success: false }); }\n",
+    );
+    writeFileSync(join(opencodeDir, "oh-my-opencode.json.bak"), "{\n  \"plugin\": true\n}\n");
+    rmSync(join(opencodeDir, "oh-my-opencode.json"), { force: true });
+    writeFileSync(join(opencodeDir, "oh-my-openagent.json"), "{\n  \"stale\": true\n}\n");
+    writeFileSync(join(opencodeDir, "oh-my-openagent.json.migrations.json"), "{\n  \"stale\": true\n}\n");
+
+    stageResult.claimed_scope.files = [fixture.routeFile];
+    stageResult.changed_files = [fixture.routeFile];
+    writeFileSync(stageResultPath, `${JSON.stringify(stageResult, null, 2)}\n`);
+
+    const result = evaluateWorkItemStage({
+      rootDir: fixture.rootDir,
+      workItemId: fixture.workItemId,
+      stage: 2,
+      artifactDir: fixture.stageArtifactDir,
+      worktreePath: fixture.worktreePath,
+      now: "2026-04-02T01:17:00.000Z",
+    });
+
+    expect(result.outcome).toBe("pass");
+    expect(existsSync(join(opencodeDir, "oh-my-opencode.json"))).toBe(true);
+    expect(existsSync(join(opencodeDir, "oh-my-opencode.json.bak"))).toBe(false);
+    expect(existsSync(join(opencodeDir, "oh-my-openagent.json"))).toBe(false);
+    expect(existsSync(join(opencodeDir, "oh-my-openagent.json.migrations.json"))).toBe(false);
   });
 
   it("includes severity_counts in every evaluator result", () => {

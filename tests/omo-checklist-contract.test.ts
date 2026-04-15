@@ -154,4 +154,71 @@ describe("OMO checklist contract parser", () => {
       ]),
     );
   });
+
+  it("parses checklist metadata even when rationale text follows the metadata comment", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-checklist-contract-rationale-"));
+    mkdirSync(join(rootDir, "docs", "workpacks", "06-test-slice"), { recursive: true });
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "06-test-slice", "README.md"),
+      [
+        "# 06-test-slice",
+        "",
+        "## Delivery Checklist",
+        "- [x] UI 연결 <!-- omo:id=delivery-ui;stage=4;scope=frontend;review=5,6 --> rationale follows here",
+        "",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "06-test-slice", "acceptance.md"),
+      [
+        "# Acceptance Checklist",
+        "",
+        "## Happy Path",
+        "- [x] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 --> N/A per baseline",
+        "",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "06-test-slice", "automation-spec.json"),
+      JSON.stringify(
+        {
+          slice_id: "06-test-slice",
+          execution_mode: "autonomous",
+          risk_class: "medium",
+          merge_policy: "conditional-auto",
+          backend: {
+            required_endpoints: [],
+            invariants: [],
+            verify_commands: [],
+            required_test_targets: [],
+          },
+          frontend: {
+            required_routes: [],
+            required_states: [],
+            playwright_projects: [],
+            artifact_assertions: [],
+          },
+          external_smokes: ["true"],
+          blocked_conditions: [],
+          max_fix_rounds: {
+            backend: 2,
+            frontend: 2,
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const contract = readWorkpackChecklistContract({
+      rootDir,
+      slice: "06-test-slice",
+    });
+
+    expect(contract.errors).toEqual([]);
+    expect(resolveChecklistIds(resolveOwnedChecklistItems(contract, 4))).toEqual([
+      "delivery-ui",
+      "accept-loading",
+    ]);
+  });
 });
