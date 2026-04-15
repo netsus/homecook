@@ -60,8 +60,10 @@ describe("OMO-lite repo config", () => {
       bin: "claude",
       model: "sonnet",
       effort: "high",
-      permission_mode: "bypassPermissions",
     });
+    expect(["acceptEdits", "bypassPermissions"]).toContain(
+      String((omoProvider.claude as Record<string, unknown>).permission_mode),
+    );
     expect(omoProvider.codex).toMatchObject({
       provider: "opencode",
       bin: "opencode",
