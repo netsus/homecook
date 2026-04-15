@@ -6,23 +6,23 @@
 > `Manual Only`에 남는 항목은 외부 서비스, live OAuth, 운영 승인처럼 자동화할 수 없는 것만 허용하며, PR의 `Actual Verification` / `Closeout Sync` 섹션에 현재 상태를 남긴다.
 
 ## Happy Path
-- [ ] 로그인한 사용자가 `RECIPE_DETAIL`에서 planner add 바텀시트를 열고 날짜/끼니/계획 인분을 선택해 Meal을 생성한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
-- [ ] 생성된 Meal이 `PLANNER_WEEK`의 목표 날짜/끼니 슬롯에 `registered` 상태로 보인다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
+- [x] 로그인한 사용자가 `RECIPE_DETAIL`에서 planner add 바텀시트를 열고 날짜/끼니/계획 인분을 선택해 Meal을 생성한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
+- [x] 생성된 Meal이 `PLANNER_WEEK`의 목표 날짜/끼니 슬롯에 `registered` 상태로 보인다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 - [x] 새 Meal이 `status='registered'`, `is_leftover=false`, `leftover_dish_id=null`로 생성된다 <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
 - [x] 이 슬라이스가 기존 `shopping_done` / `cook_done` / read-only 정책을 우회하지 않는다 <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
-- [ ] 제출 중 재탭 또는 중복 submit으로 사용자의 1회 액션이 중복 Meal 생성으로 이어지지 않는다 <!-- omo:id=accept-idempotency;stage=4;scope=frontend;review=5,6 -->
+- [x] 제출 중 재탭 또는 중복 submit으로 사용자의 1회 액션이 중복 Meal 생성으로 이어지지 않는다 <!-- omo:id=accept-idempotency;stage=4;scope=frontend;review=5,6 -->
 
 ## Error / Permission
-- [ ] loading 상태가 있다 (planner add submit pending, 필요 시 planner refetch pending) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 있다 (`PLANNER_WEEK`의 빈 주간/빈 슬롯 표현 재사용) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 (`POST /meals` 실패 시 안내 및 재시도) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 (비로그인 planner add → 로그인 게이트) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] conflict 처리 흐름 또는 명시적 N/A 근거가 있다 (`POST /meals`의 문서상 conflict 계약 범위 유지) <!-- omo:id=accept-conflict;stage=4;scope=shared;review=6 -->
-- [ ] 로그인 게이트 후 return-to-action이 맞다 (planner add 바텀시트 재오픈) <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 (planner add submit pending, 필요 시 planner refetch pending) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 있다 (`PLANNER_WEEK`의 빈 주간/빈 슬롯 표현 재사용) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 --> N/A for slice06: empty slot rendering is slice05 baseline behavior; slice06 adds no new empty state UI.
+- [x] error 상태가 있다 (`POST /meals` 실패 시 안내 및 재시도) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 (비로그인 planner add → 로그인 게이트) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] conflict 처리 흐름 또는 명시적 N/A 근거가 있다 (`POST /meals`의 문서상 conflict 계약 범위 유지) <!-- omo:id=accept-conflict;stage=4;scope=shared;review=6 --> N/A: README §Backend First Contract 명시: "이번 create path에는 별도 상태 충돌 계약이 없으므로 새로 도입하지 않는다."
+- [x] 로그인 게이트 후 return-to-action이 맞다 (planner add 바텀시트 재오픈) <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 - [x] 타인 리소스를 수정할 수 없다 (`column_id` 소유자 검증) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
@@ -50,8 +50,8 @@
 - [x] Meal 생성 파생값과 상태 규칙 회귀가 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
 
 ### Playwright
-- [ ] `RECIPE_DETAIL` planner add → 성공 → `PLANNER_WEEK` 확인 흐름이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] OAuth / local-supabase / authority evidence처럼 외부/선택 실행 경로와 기본 브라우저 게이트가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+- [x] `RECIPE_DETAIL` planner add → 성공 → `PLANNER_WEEK` 확인 흐름이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] OAuth / local-supabase / authority evidence처럼 외부/선택 실행 경로와 기본 브라우저 게이트가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 --> CI tests use mocked routes only; live OAuth path is manual-only (see Manual Only section).
 
 ### Manual Only
 - [ ] 실제 OAuth 로그인 후 planner add return-to-action 재오픈 동작
