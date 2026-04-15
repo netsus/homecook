@@ -94,19 +94,16 @@ describe("home screen", () => {
     expect(screen.getAllByRole("link", { name: /집밥 김치찌개/i }).length).toBe(2);
   });
 
-  it("keeps the hero copy compact so search controls stay near the first viewport", async () => {
+  it("removes redundant hero copy so search controls stay near the first viewport", async () => {
     render(<HomeScreen />);
 
+    expect(await screen.findByRole("heading", { level: 1, name: "Homecook" })).toBeTruthy();
+    expect(await screen.findByPlaceholderText("레시피 제목 검색")).toBeTruthy();
+    expect(screen.queryByText("Home / Discovery")).toBeNull();
+    expect(screen.queryByText("집밥을 바로 골라보세요")).toBeNull();
     expect(
-      await screen.findByRole("heading", {
-        level: 1,
-        name: "집밥을 바로 골라보세요",
-      }),
-    ).toBeTruthy();
-    expect(
-      screen.getByText("검색, 정렬, 재료 필터로 원하는 메뉴를 빠르게 좁혀보세요."),
-    ).toBeTruthy();
-    expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
+      screen.queryByText("검색, 정렬, 재료 필터로 원하는 메뉴를 빠르게 좁혀보세요."),
+    ).toBeNull();
   });
 
   it("uses a custom sort menu so the selected option stays readable on mobile", async () => {
