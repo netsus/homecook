@@ -267,6 +267,48 @@ describe("authority evidence presence validator", () => {
     expect(results).toEqual([]);
   });
 
+  it("accepts slice-level evidence requirements when they are satisfied across multiple authority reports", () => {
+    const rootDir = createFixture({
+      authorityReportPaths: [
+        "ui/designs/authority/RECIPE_DETAIL-authority.md",
+        "ui/designs/authority/PLANNER_WEEK-authority.md",
+      ],
+      stage4EvidenceRequirements: ["mobile-default", "mobile-narrow", "planner-5-column-mobile"],
+      authorityReportContents: buildAuthorityReport({
+        evidenceLines: [
+          "`ui/designs/evidence/authority/RECIPE_DETAIL-mobile.png`",
+          "`ui/designs/evidence/authority/RECIPE_DETAIL-mobile-narrow.png`",
+        ],
+      }),
+      evidenceFiles: [
+        "ui/designs/evidence/authority/RECIPE_DETAIL-mobile.png",
+        "ui/designs/evidence/authority/RECIPE_DETAIL-mobile-narrow.png",
+        "ui/designs/evidence/06-recipe-to-planner/PLANNER_WEEK-5-column-mobile.png",
+      ],
+    });
+
+    writeFixtureFile(
+      rootDir,
+      "ui/designs/authority/PLANNER_WEEK-authority.md",
+      buildAuthorityReport({
+        evidenceLines: [
+          "`ui/designs/evidence/06-recipe-to-planner/PLANNER_WEEK-5-column-mobile.png`",
+        ],
+      }),
+    );
+
+    const results = validateAuthorityEvidencePresence({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "feature/fe-06-recipe-to-planner",
+        PR_IS_DRAFT: "false",
+      },
+    });
+
+    expect(results).toEqual([]);
+  });
+
   it("fails when runtime authority report paths drift from automation-spec authority_report_paths", () => {
     const rootDir = createFixture({
       runtimeDesignAuthority: {
