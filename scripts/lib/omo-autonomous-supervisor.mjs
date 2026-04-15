@@ -2753,7 +2753,85 @@ function processWaitState({
     };
   }
 
+  const isManualMergeHandoffEscalation = () => {
+    const recovery = state.recovery ?? null;
+    const reasonText = [state.wait?.reason, recovery?.reason].filter(Boolean).join(" ");
+    const recoveryStage =
+      Number.isInteger(Number(recovery?.stage))
+        ? Number(recovery.stage)
+        : Number.isInteger(Number(state.active_stage))
+          ? Number(state.active_stage)
+          : null;
+
+    return (
+      state.wait?.kind === "human_escalation" &&
+      recovery?.kind === "partial_stage_failure" &&
+      /manual merge handoff/i.test(reasonText) &&
+      [3, 6].includes(recoveryStage ?? -1) &&
+      Boolean(recovery?.existing_pr?.url)
+    );
+  };
+
   if (state.wait.kind === "human_escalation") {
+    const recovery = state.recovery ?? null;
+    const recoveryStage =
+      Number.isInteger(Number(recovery?.stage))
+        ? Number(recovery.stage)
+        : Number.isInteger(Number(state.active_stage))
+          ? Number(state.active_stage)
+          : null;
+    const recoveryPr = recovery?.existing_pr?.url
+      ? {
+          role:
+            typeof recovery.existing_pr.role === "string" && recovery.existing_pr.role.trim().length > 0
+              ? recovery.existing_pr.role.trim()
+              : resolvePrRole(recoveryStage),
+          number: Number.isInteger(recovery.existing_pr.number) ? recovery.existing_pr.number : null,
+          url: recovery.existing_pr.url,
+          draft: typeof recovery.existing_pr.draft === "boolean" ? recovery.existing_pr.draft : false,
+          branch:
+            typeof recovery.existing_pr.branch === "string" && recovery.existing_pr.branch.trim().length > 0
+              ? recovery.existing_pr.branch.trim()
+              : null,
+          head_sha:
+            typeof recovery.existing_pr.head_sha === "string" && recovery.existing_pr.head_sha.trim().length > 0
+              ? recovery.existing_pr.head_sha.trim()
+              : null,
+        }
+      : null;
+
+    if (isManualMergeHandoffEscalation() && recoveryPr?.url && typeof github.getPullRequestSummary === "function") {
+      const summary = github.getPullRequestSummary({
+        prRef: recoveryPr.url,
+      });
+      if (summary?.mergedAt) {
+        const resolved = finalizeMergedReviewStage({
+          rootDir,
+          workItemId,
+          state,
+          stage: recoveryStage,
+          activePr: recoveryPr,
+          artifactDir: recovery?.artifact_dir ?? state.last_artifact_dir,
+          worktree,
+          now,
+        });
+
+        if (resolved.wait?.kind === "ready_for_next_stage" && Number.isInteger(resolved.wait.stage)) {
+          return {
+            state: resolved.state,
+            action: "run-stage",
+            nextStage: resolved.wait.stage,
+          };
+        }
+
+        return {
+          state: resolved.state,
+          action: "stop",
+          nextStage: null,
+        };
+      }
+    }
+
     return {
       state,
       action: "stop",
@@ -7053,6 +7131,19 @@ export function tickSupervisorWorkItems(
       return {
         resumable: false,
         reason: "no_wait_state",
+      };
+    }
+
+    if (
+      state.wait.kind === "human_escalation" &&
+      state.recovery?.kind === "partial_stage_failure" &&
+      /manual merge handoff/i.test([state.wait.reason, state.recovery?.reason].filter(Boolean).join(" ")) &&
+      [3, 6].includes(Number(state.recovery?.stage)) &&
+      Boolean(state.recovery?.existing_pr?.url)
+    ) {
+      return {
+        resumable: true,
+        reason: null,
       };
     }
 
