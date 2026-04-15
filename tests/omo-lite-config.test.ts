@@ -60,7 +60,7 @@ describe("OMO-lite repo config", () => {
       bin: "claude",
       model: "sonnet",
       effort: "high",
-      permission_mode: "acceptEdits",
+      permission_mode: "bypassPermissions",
     });
     expect(omoProvider.codex).toMatchObject({
       provider: "opencode",
