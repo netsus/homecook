@@ -83,7 +83,7 @@ export function PlannerAddSheet({
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-              Add to Planner
+              플래너에 추가
             </p>
             <h2
               className="mt-1 text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]"
@@ -94,7 +94,7 @@ export function PlannerAddSheet({
           </div>
           <button
             aria-label="닫기"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--muted)] hover:bg-white/60"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--muted)] hover:bg-white/60"
             disabled={isSubmitting}
             onClick={onClose}
             type="button"
@@ -213,7 +213,7 @@ export function PlannerAddSheet({
               <div className="flex items-center gap-3 rounded-[14px] bg-white/60 px-4 py-3">
                 <button
                   aria-label="인분 줄이기"
-                  className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-[var(--line)] bg-white text-lg font-medium disabled:opacity-40"
+                  className="flex h-11 w-11 items-center justify-center rounded-[10px] border border-[var(--line)] bg-white text-lg font-medium disabled:opacity-40"
                   disabled={isSubmitting || servings <= 1}
                   onClick={() => onChangeServings(Math.max(1, servings - 1))}
                   type="button"
@@ -229,7 +229,7 @@ export function PlannerAddSheet({
                 </span>
                 <button
                   aria-label="인분 늘리기"
-                  className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-[var(--line)] bg-white text-lg font-medium disabled:opacity-40"
+                  className="flex h-11 w-11 items-center justify-center rounded-[10px] border border-[var(--line)] bg-white text-lg font-medium disabled:opacity-40"
                   disabled={isSubmitting}
                   onClick={() => onChangeServings(servings + 1)}
                   type="button"

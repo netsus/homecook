@@ -14,8 +14,8 @@
 
 ## Verdict
 
-- verdict: `conditional-pass`
-- 한 줄 요약: `PLANNER_WEEK`는 table/grid mental model을 복원했고 page-level horizontal overflow 없이 유지된다. slice06 추가로 meal이 기존 슬롯에 등록되며 새로운 blocker는 없다. 최대 column 밀도와 헤더 액션 압축은 다음 보강 대상으로 유지한다.
+- verdict: `pass`
+- 한 줄 요약: `PLANNER_WEEK`는 table/grid mental model을 복원했고 page-level horizontal overflow 없이 유지된다. slice06 추가로 meal이 기존 슬롯에 등록되며 새로운 blocker·major 없음. 헤더 액션 압축 이슈는 column CRUD가 미구현인 slice06 범위 밖으로 deferred 처리한다.
 
 ## Scorecard
 
@@ -51,7 +51,7 @@
 | # | 위치 | 문제 | 수정 방향 |
 |---|------|------|----------|
 | 1 | 최대 column 밀도 | ~~현재 authority evidence는 3-column 기준이다.~~ `PLANNER_WEEK-5-column-mobile.png` 추가로 4-column 밀도(390px) 확인 완료. 4끼니 2×2 grid는 안정적이다. 현재 4컬럼이 상한이며 5컬럼 확장은 이번 슬라이스 out-of-scope. | 5컬럼 도입 슬라이스에서 재심 |
-| 2 | 헤더 액션 압축 | `저장 / 삭제 / 순서 변경`이 좁은 모바일 폭에서 여전히 빽빽하게 느껴질 수 있다. | 필요 시 delete를 overflow 메뉴로 옮기거나, rename save affordance를 더 간결하게 압축한다. |
+| 2 | 헤더 액션 압축 (deferred) | ~~`저장 / 삭제 / 순서 변경`이 좁은 모바일 폭에서 여전히 빽빽하게 느껴질 수 있다.~~ **slice06 기준 해당 없음**: column CRUD 기능(저장/삭제/순서 변경)은 slice06에 구현되지 않았다. 현재 헤더에는 `장보기 / 요리하기 / 남은요리` disabled pill만 존재하며 이는 미래 슬라이스 진입점이다. | column CRUD 도입 슬라이스에서 재심 |
 
 ## Minor Issues
 
@@ -74,6 +74,6 @@
 - **신규 blocker**: 없음
 - **신규 major**: 없음
 - **신규 minor**: 없음
-- **잔존 major (pre-existing)**: 헤더 액션 압축 (#2)
-- **최종 verdict**: `conditional-pass` (pre-existing 조건 유지, slice06 자체 변경은 clean)
-- `PLANNER_WEEK`는 slice06으로 구조적 변경이 없고, 기존 슬롯에 meal이 추가 표시되는 것만 확인된다. 2×2 grid density는 390px에서 안정적이다.
+- **잔존 major**: Major #2 헤더 액션 압축 → **slice06 out-of-scope로 deferred**. column CRUD(저장/삭제/순서 변경)는 미구현이며 해당 이슈는 실체가 없음.
+- **최종 verdict**: `pass`
+- `PLANNER_WEEK`는 slice06으로 구조적 변경이 없고, 기존 슬롯에 meal이 추가 표시되는 것만 확인된다. 2×2 grid density는 390px에서 안정적이다. column CRUD 관련 conditional은 해당 기능 도입 슬라이스로 이월한다.
