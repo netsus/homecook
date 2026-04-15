@@ -140,7 +140,7 @@
   - Stage 4 supplement plan: `ui/designs/evidence/06-recipe-to-planner/RECIPE_DETAIL-planner-add-mobile.png`
   - Stage 4 supplement plan: `ui/designs/evidence/06-recipe-to-planner/RECIPE_DETAIL-planner-add-mobile-narrow.png`
   - Stage 4 supplement plan: `ui/designs/evidence/06-recipe-to-planner/PLANNER_WEEK-5-column-mobile.png`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes:
   - `RECIPE_DETAIL`과 `PLANNER_WEEK` baseline authority report는 이미 존재한다.
   - slice06 Stage 4는 기존 baseline 위에 planner add interaction과 `5-column mobile density` evidence를 추가로 남겨야 한다.
@@ -149,8 +149,8 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 > `06-recipe-to-planner`는 FE 화면이 있는 anchor-extension이므로 `temporary`에서 시작한다.
@@ -235,3 +235,5 @@
 - [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 - [x] anchor-extension authority evidence 계획 고정 <!-- omo:id=delivery-authority-plan;stage=4;scope=frontend;review=5,6 -->
 - [x] Stage 4 authority report / screenshot 경로 동기화 <!-- omo:id=delivery-authority-evidence-plan;stage=4;scope=frontend;review=5,6 -->
+
+
