@@ -183,7 +183,8 @@ export function HomeScreen() {
     [sort],
   );
   const listTitle = hasActiveFilters ? "검색 결과" : "모든 레시피";
-  const showThemeSkeleton = !hasActiveFilters && themeState === "loading";
+  const showInitialDiscoverySkeleton =
+    !hasActiveFilters && themeState === "loading";
   const showGlobalEmpty = screenState === "empty" && visibleThemes.length === 0;
 
   const clearIngredientFilters = useCallback(() => {
@@ -275,9 +276,14 @@ export function HomeScreen() {
             />
           ) : null}
 
-          {showThemeSkeleton ? <ThemeSectionSkeleton /> : null}
+          {showInitialDiscoverySkeleton ? (
+            <div className="space-y-6">
+              <ThemeSectionSkeleton />
+              <RecipeListSkeleton />
+            </div>
+          ) : null}
 
-          {visibleThemes.length > 0 ? (
+          {!showInitialDiscoverySkeleton && visibleThemes.length > 0 ? (
             <div className="space-y-8">
               {visibleThemes.map((theme) => (
                 <ThemeSection key={theme.id} theme={theme} />
@@ -285,7 +291,7 @@ export function HomeScreen() {
             </div>
           ) : null}
 
-          {screenState !== "error" ? (
+          {screenState !== "error" && !showInitialDiscoverySkeleton ? (
             <div className="space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
