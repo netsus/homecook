@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { LoginGateModal } from "@/components/auth/login-gate-modal";
+import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
+import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
@@ -18,7 +20,9 @@ import {
   fetchSaveableRecipeBooks,
   saveRecipeToBook,
 } from "@/lib/api/recipe-save";
+import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { fetchJson } from "@/lib/api/fetch-json";
+import { fetchPlanner } from "@/lib/api/planner";
 import { formatCount, formatScaledIngredient } from "@/lib/recipe";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
@@ -30,6 +34,7 @@ import type {
   RecipeSaveData,
   RecipeUserStatus,
 } from "@/types/recipe";
+import type { PlannerColumnData } from "@/types/planner";
 
 type DetailState = "loading" | "ready" | "error";
 type LikeRequestState = "idle" | "pending";
@@ -83,6 +88,13 @@ export function RecipeDetailScreen({
   const [saveSubmitError, setSaveSubmitError] = useState<string | null>(null);
   const [isCreatingBook, setIsCreatingBook] = useState(false);
   const [isSavingRecipe, setIsSavingRecipe] = useState(false);
+  const [isPlannerAddSheetOpen, setIsPlannerAddSheetOpen] = useState(false);
+  const [plannerAddSheetState, setPlannerAddSheetState] = useState<PlannerAddSheetState>("loading-columns");
+  const [plannerColumns, setPlannerColumns] = useState<PlannerColumnData[]>([]);
+  const [plannerAddError, setPlannerAddError] = useState<string | null>(null);
+  const [selectedPlanDate, setSelectedPlanDate] = useState("");
+  const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
+  const [plannerServings, setPlannerServings] = useState(1);
   const openAuthGate = useAuthGateStore((state) => state.open);
 
   const loadRecipe = useCallback(async () => {
@@ -249,6 +261,129 @@ export function RecipeDetailScreen({
     setSaveModalState("idle");
     setNewSaveBookName("");
   }, [isSavingRecipe]);
+
+  const buildSelectableDates = useCallback((): string[] => {
+    const dates: string[] = [];
+    const base = new Date();
+
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(base);
+      d.setDate(d.getDate() + i);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      dates.push(`${y}-${m}-${day}`);
+    }
+
+    return dates;
+  }, []);
+
+  const selectableDates = useMemo(() => buildSelectableDates(), [buildSelectableDates]);
+
+  const loadPlannerColumns = useCallback(async () => {
+    setPlannerAddSheetState("loading-columns");
+    setPlannerAddError(null);
+
+    try {
+      const today = selectableDates[0] ?? "";
+      const data = await fetchPlanner(today, today);
+      setPlannerColumns(data.columns);
+      setSelectedPlanColumnId((current) => {
+        if (current && data.columns.some((col) => col.id === current)) {
+          return current;
+        }
+
+        return data.columns[0]?.id ?? "";
+      });
+      setPlannerAddSheetState("ready");
+    } catch {
+      setPlannerAddSheetState("error");
+      setPlannerAddError("플래너 슬롯을 불러오지 못했어요.");
+    }
+  }, [selectableDates]);
+
+  const openPlannerAddSheet = useCallback(
+    async ({ source }: { source: "manual" | "return-to-action" }) => {
+      if (!isAuthenticated) {
+        openAuthGate({ recipeId, type: "planner" });
+        return;
+      }
+
+      setIsPlannerAddSheetOpen(true);
+      setPlannerAddError(null);
+
+      if (source === "manual") {
+        setFeedback(null);
+      }
+
+      setSelectedPlanDate(selectableDates[0] ?? "");
+      setPlannerServings(recipe?.base_servings ?? 1);
+
+      await loadPlannerColumns();
+    },
+    [isAuthenticated, loadPlannerColumns, openAuthGate, recipe?.base_servings, recipeId, selectableDates],
+  );
+
+  const closePlannerAddSheet = useCallback(() => {
+    if (plannerAddSheetState === "submitting") {
+      return;
+    }
+
+    setIsPlannerAddSheetOpen(false);
+    setPlannerAddError(null);
+  }, [plannerAddSheetState]);
+
+  const handlePlannerAddSubmit = useCallback(async () => {
+    if (
+      !recipe ||
+      !selectedPlanColumnId ||
+      !selectedPlanDate ||
+      plannerAddSheetState !== "ready"
+    ) {
+      return;
+    }
+
+    setPlannerAddSheetState("submitting");
+    setPlannerAddError(null);
+
+    try {
+      await createMeal({
+        recipe_id: recipe.id,
+        plan_date: selectedPlanDate,
+        column_id: selectedPlanColumnId,
+        planned_servings: plannerServings,
+      });
+
+      setIsPlannerAddSheetOpen(false);
+      setRecipe((current) => {
+        if (!current) {
+          return current;
+        }
+
+        return { ...current, plan_count: current.plan_count + 1 };
+      });
+      setFeedback({
+        message: "플래너에 추가했어요.",
+        tone: "status",
+      });
+    } catch (error) {
+      const message =
+        isMealApiError(error) && error.status === 403
+          ? "내 플래너 슬롯에만 추가할 수 있어요."
+          : error instanceof Error
+            ? error.message
+            : "플래너 추가에 실패했어요. 다시 시도해주세요.";
+
+      setPlannerAddError(message);
+      setPlannerAddSheetState("ready");
+    }
+  }, [
+    plannerAddSheetState,
+    plannerServings,
+    recipe,
+    selectedPlanColumnId,
+    selectedPlanDate,
+  ]);
 
   const loadSaveBooks = useCallback(async () => {
     setSaveModalState("loading");
@@ -454,15 +589,7 @@ export function RecipeDetailScreen({
       return;
     }
 
-    if (!isAuthenticated) {
-      openAuthGate({ recipeId, type });
-      return;
-    }
-
-    setFeedback({
-      message: "이 액션의 실제 저장 연결은 다음 슬라이스에서 닫습니다.",
-      tone: "status",
-    });
+    void openPlannerAddSheet({ source: "manual" });
   };
 
   useEffect(() => {
@@ -492,15 +619,15 @@ export function RecipeDetailScreen({
       return;
     }
 
-    const labelMap = {
-      planner: "플래너 추가",
-    } as const;
-
-    setFeedback({
-      message: `로그인 완료. ${labelMap[pendingAction.type]} 액션 위치로 돌아왔어요.`,
-      tone: "status",
-    });
-  }, [handleLikeToggle, isAuthenticated, openSaveModal, recipe, recipeId]);
+    if (pendingAction.type === "planner") {
+      setFeedback({
+        message: "로그인 완료. 플래너에 추가할 날짜와 끼니를 선택해 주세요.",
+        tone: "status",
+      });
+      void openPlannerAddSheet({ source: "return-to-action" });
+      return;
+    }
+  }, [handleLikeToggle, isAuthenticated, openPlannerAddSheet, openSaveModal, recipe, recipeId]);
 
   const handleShare = async () => {
     if (!recipe) {
@@ -804,6 +931,26 @@ export function RecipeDetailScreen({
         saveErrorMessage={saveSubmitError}
         selectedBookId={selectedSaveBookId}
         viewState={saveModalState === "idle" ? "loading" : saveModalState}
+      />
+      <PlannerAddSheet
+        columns={plannerColumns}
+        errorMessage={plannerAddError}
+        isOpen={isPlannerAddSheetOpen}
+        onChangeServings={setPlannerServings}
+        onClose={closePlannerAddSheet}
+        onRetryLoad={() => {
+          void loadPlannerColumns();
+        }}
+        onSelectColumn={setSelectedPlanColumnId}
+        onSelectDate={setSelectedPlanDate}
+        onSubmit={() => {
+          void handlePlannerAddSubmit();
+        }}
+        selectableDates={selectableDates}
+        selectedColumnId={selectedPlanColumnId}
+        selectedDate={selectedPlanDate}
+        servings={plannerServings}
+        sheetState={plannerAddSheetState}
       />
       {feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
       <LoginGateModal />

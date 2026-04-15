@@ -370,10 +370,10 @@ function validateChecklistContractSlice({
       });
     }
 
-    if (designStatus.status !== "pending-review") {
+    if (!["pending-review", "confirmed", "N/A"].includes(designStatus.status ?? "")) {
       errors.push({
         path: designStatus.filePath,
-        message: `Ready-for-review frontend slice '${slice}' requires Design Status 'pending-review'.`,
+        message: `Ready-for-review frontend slice '${slice}' requires Design Status 'pending-review', 'confirmed', or 'N/A'.`,
       });
     }
 

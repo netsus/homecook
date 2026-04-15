@@ -400,13 +400,57 @@ describe("closeout sync validator", () => {
     expect(results[0]?.errors).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          message: expect.stringContaining("Design Status 'pending-review'"),
+          message: expect.stringContaining("Design Status 'pending-review', 'confirmed', or 'N/A'"),
         }),
         expect.objectContaining({
           message: expect.stringContaining("Stage 4-owned checklist item must be checked"),
         }),
       ]),
     );
+  });
+
+  it("accepts metadata-contract ready-for-review frontend PRs when design status is already confirmed", () => {
+    const rootDir = createFixture({
+      roadmapStatus: "in-progress",
+      designStatus: "confirmed",
+      withAutomationSpec: true,
+      deliveryItems: [
+        {
+          checked: true,
+          text: "백엔드 계약 고정",
+          meta: metadata("delivery-backend-contract", 2, "backend", "3,6"),
+        },
+        {
+          checked: true,
+          text: "UI 연결",
+          meta: metadata("delivery-ui", 4, "frontend", "5,6"),
+        },
+      ],
+      acceptanceItems: [
+        {
+          checked: true,
+          text: "API 응답 형식이 { success, data, error }를 따른다",
+          meta: metadata("accept-backend-api", 2, "backend", "3,6"),
+        },
+        {
+          checked: true,
+          text: "loading 상태가 있다",
+          meta: metadata("accept-loading", 4, "frontend", "5,6"),
+        },
+      ],
+    });
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "feature/fe-05-planner-week-core",
+        PR_IS_DRAFT: "false",
+      },
+      changedFiles: [],
+    });
+
+    expect(results).toEqual([]);
   });
 
   it("enforces all non-Manual checklist items at merge closeout for metadata-contract slices", () => {

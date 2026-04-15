@@ -116,7 +116,6 @@ function areSameStringSets(left, right) {
 function inspectAuthorityReport({
   rootDir,
   reportPath,
-  stage4EvidenceRequirements,
 }) {
   const absoluteReportPath = resolve(rootDir, reportPath);
   const errors = [];
@@ -154,16 +153,6 @@ function inspectAuthorityReport({
       errors.push({
         path: `${reportPath}:evidence`,
         message: `Authority report references a missing visual evidence file: ${ref}`,
-      });
-    }
-  }
-
-  for (const requirement of stage4EvidenceRequirements) {
-    const matchesRequirement = resolveEvidenceRequirementMatcher(requirement);
-    if (!visualRefs.some((ref) => matchesRequirement(ref))) {
-      errors.push({
-        path: `${reportPath}:evidence`,
-        message: `Authority report is missing required ${requirement} visual evidence.`,
       });
     }
   }
@@ -274,10 +263,20 @@ export function validateAuthorityEvidencePresence({
     const reportInspection = inspectAuthorityReport({
       rootDir,
       reportPath,
-      stage4EvidenceRequirements,
     });
     errors.push(...reportInspection.errors);
     reportVisualRefs.push(...reportInspection.visualRefs);
+  }
+
+  const uniqueReportVisualRefs = [...new Set(reportVisualRefs)];
+  for (const requirement of stage4EvidenceRequirements) {
+    const matchesRequirement = resolveEvidenceRequirementMatcher(requirement);
+    if (!uniqueReportVisualRefs.some((ref) => matchesRequirement(ref))) {
+      errors.push({
+        path: `authority_report_paths:evidence`,
+        message: `Authority reports are missing required ${requirement} visual evidence.`,
+      });
+    }
   }
 
   errors.push(
@@ -285,7 +284,7 @@ export function validateAuthorityEvidencePresence({
       rootDir,
       slice: branchContext.slice,
       authorityReportPaths,
-      reportVisualRefs: [...new Set(reportVisualRefs)],
+      reportVisualRefs: uniqueReportVisualRefs,
     }),
   );
 

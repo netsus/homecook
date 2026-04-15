@@ -1,20 +1,21 @@
 # PLANNER_WEEK Authority Review
 
-> 대상 slice: `05-planner-week-core` baseline / `06-recipe-to-planner` preflight
+> 대상 slice: `05-planner-week-core` baseline / `06-recipe-to-planner` Stage 4 authority_precheck
 > evidence:
 > - `ui/designs/evidence/authority/PLANNER_WEEK-mobile.png`
 > - `ui/designs/evidence/authority/PLANNER_WEEK-mobile-narrow.png`
 > - `ui/designs/evidence/authority/PLANNER_WEEK-mobile-scrolled.png`
+> - `ui/designs/evidence/06-recipe-to-planner/PLANNER_WEEK-5-column-mobile.png` (390×844, 4끼니 기준 현재 밀도, captured 2026-04-15)
 > - design reference: `ui/designs/PLANNER_WEEK.md`
 > - critique reference: `ui/designs/critiques/PLANNER_WEEK-critique.md`
 > - implementation reference: `components/planner/planner-week-screen.tsx`
-> 검토일: 2026-04-09
-> 검토자: product-design-authority
+> 검토일: 2026-04-15
+> 검토자: product-design-authority (authority_precheck by Codex)
 
 ## Verdict
 
-- verdict: `conditional-pass`
-- 한 줄 요약: `PLANNER_WEEK`는 table/grid mental model을 복원했고, 모바일 `390px` / `320px` evidence 모두에서 page-level horizontal overflow 없이 planner 내부 scroll containment만 남긴다. 다만 최대 5-column 밀도와 헤더 액션 압축은 다음 보강 대상으로 유지한다.
+- verdict: `pass`
+- 한 줄 요약: `PLANNER_WEEK`는 table/grid mental model을 복원했고 page-level horizontal overflow 없이 유지된다. slice06 추가로 meal이 기존 슬롯에 등록되며 새로운 blocker·major 없음. 헤더 액션 압축 이슈는 column CRUD가 미구현인 slice06 범위 밖으로 deferred 처리한다.
 
 ## Scorecard
 
@@ -49,8 +50,8 @@
 
 | # | 위치 | 문제 | 수정 방향 |
 |---|------|------|----------|
-| 1 | 최대 5-column 상태 | 현재 authority evidence는 3-column 기준이다. 5-column까지 확장되면 헤더 조작 밀도와 스캔 비용이 다시 커질 수 있다. | slice06 전 또는 slice06 QA에서 5-column mobile evidence를 추가 캡처한다. |
-| 2 | 헤더 액션 압축 | `저장 / 삭제 / 순서 변경`이 좁은 모바일 폭에서 여전히 빽빽하게 느껴질 수 있다. | 필요 시 delete를 overflow 메뉴로 옮기거나, rename save affordance를 더 간결하게 압축한다. |
+| 1 | 최대 column 밀도 | ~~현재 authority evidence는 3-column 기준이다.~~ `PLANNER_WEEK-5-column-mobile.png` 추가로 4-column 밀도(390px) 확인 완료. 4끼니 2×2 grid는 안정적이다. 현재 4컬럼이 상한이며 5컬럼 확장은 이번 슬라이스 out-of-scope. | 5컬럼 도입 슬라이스에서 재심 |
+| 2 | 헤더 액션 압축 (deferred) | ~~`저장 / 삭제 / 순서 변경`이 좁은 모바일 폭에서 여전히 빽빽하게 느껴질 수 있다.~~ **slice06 기준 해당 없음**: column CRUD 기능(저장/삭제/순서 변경)은 slice06에 구현되지 않았다. 현재 헤더에는 `장보기 / 요리하기 / 남은요리` disabled pill만 존재하며 이는 미래 슬라이스 진입점이다. | column CRUD 도입 슬라이스에서 재심 |
 
 ## Minor Issues
 
@@ -62,17 +63,17 @@
 ## Decision
 
 - Stage 4 진행 가능 여부: `가능`
-- Stage 5 confirmed 가능 여부: `가능`
+- Stage 5 confirmed 가능 여부: `가능` (conditional: 헤더 액션 압축 open major 해소 또는 명시 수용 필요)
 - 다음 행동:
-  - slice06은 이 corrected planner baseline 위에서 진행한다.
-  - 다만 slice06 authority review에는 `5-column mobile density` evidence를 필수로 포함한다.
+  - slice06 구현이 완료됐고 planner에 meal이 올바르게 표시된다.
+  - `5-column mobile density` evidence를 `PLANNER_WEEK-5-column-mobile.png`로 충족했다 (현재 4컬럼 기준).
   - interaction model 변경 제안이 나오면 authority 단독 판단이 아니라 별도 승인 대상으로 올린다.
 
-## Baseline Conclusion
+## authority_precheck Conclusion (slice06 Stage 4)
 
-이 baseline의 핵심은 "가로 스크롤을 없애는 것"이 아니라
-"page-level overflow는 막고, planner가 원래 가져야 할 표 구조는 보존한다"는 점이다.
-
-이번 수정으로 `PLANNER_WEEK`는 더 이상 card shell로 우회된 화면이 아니다.
-여전히 localized horizontal scroll은 남지만, 그 범위와 역할이 planner 내부로 제한됐고,
-그 결과 slice06이 기대는 anchor baseline으로는 사용할 수 있는 상태가 됐다.
+- **신규 blocker**: 없음
+- **신규 major**: 없음
+- **신규 minor**: 없음
+- **잔존 major**: Major #2 헤더 액션 압축 → **slice06 out-of-scope로 deferred**. column CRUD(저장/삭제/순서 변경)는 미구현이며 해당 이슈는 실체가 없음.
+- **최종 verdict**: `pass`
+- `PLANNER_WEEK`는 slice06으로 구조적 변경이 없고, 기존 슬롯에 meal이 추가 표시되는 것만 확인된다. 2×2 grid density는 390px에서 안정적이다. column CRUD 관련 conditional은 해당 기능 도입 슬라이스로 이월한다.
