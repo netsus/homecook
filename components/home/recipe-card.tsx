@@ -32,7 +32,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           {recipe.source_type}
         </div>
       </div>
-      <div className="flex flex-1 flex-col gap-3 px-4 py-4">
+      <div className="flex flex-1 flex-col gap-2.5 px-4 py-4">
         <div>
           <h3 className="line-clamp-2 text-base font-semibold text-[var(--foreground)]">
             {recipe.title}
@@ -56,22 +56,22 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
             </span>
           ) : null}
         </div>
-        <dl className="mt-auto grid grid-cols-3 gap-2 text-xs text-[var(--muted)]">
-          <div className="rounded-[12px] bg-[color:rgba(0,0,0,0.03)] px-3 py-2">
+        <dl className="recipe-card-meta-compact mt-auto flex flex-wrap items-center gap-2 text-[11px] text-[var(--muted)]">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-[color:rgba(0,0,0,0.03)] px-2.5 py-1.5">
             <dt>조회</dt>
-            <dd className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+            <dd className="font-semibold text-[var(--foreground)]">
               {formatCount(recipe.view_count)}
             </dd>
           </div>
-          <div className="rounded-[12px] bg-[color:rgba(0,0,0,0.03)] px-3 py-2">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-[color:rgba(0,0,0,0.03)] px-2.5 py-1.5">
             <dt>좋아요</dt>
-            <dd className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+            <dd className="font-semibold text-[var(--foreground)]">
               {formatCount(recipe.like_count)}
             </dd>
           </div>
-          <div className="rounded-[12px] bg-[color:rgba(0,0,0,0.03)] px-3 py-2">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-[color:rgba(0,0,0,0.03)] px-2.5 py-1.5">
             <dt>저장</dt>
-            <dd className="mt-1 text-sm font-semibold text-[var(--foreground)]">
+            <dd className="font-semibold text-[var(--foreground)]">
               {formatCount(recipe.save_count)}
             </dd>
           </div>
