@@ -17,6 +17,8 @@ export function AppShell({
 }: AppShellProps) {
   const showLocalDevSessionControls = isLocalDevAuthEnabled();
   const showSharedHeader = headerMode === "default";
+  const showHeaderLocalDevSessionControls =
+    showSharedHeader && showLocalDevSessionControls;
 
   return (
     <div className="app-shell bottom-safe">
@@ -33,16 +35,8 @@ export function AppShell({
                 MVP Slice 01
               </div>
             </div>
-            {showLocalDevSessionControls ? <LocalDevSessionControls /> : null}
+            {showHeaderLocalDevSessionControls ? <LocalDevSessionControls /> : null}
           </header>
-        ) : null}
-        {!showSharedHeader && showLocalDevSessionControls ? (
-          <aside
-            aria-label="로컬 세션 도구"
-            className="glass-panel overflow-hidden rounded-[20px] md:rounded-[24px]"
-          >
-            <LocalDevSessionControls />
-          </aside>
         ) : null}
         <main>{children}</main>
       </div>

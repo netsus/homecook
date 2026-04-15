@@ -6,8 +6,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AppShell } from "@/components/layout/app-shell";
 
+const authState = vi.hoisted(() => ({ enabled: false }));
+
 vi.mock("@/lib/auth/local-dev-auth", () => ({
-  isLocalDevAuthEnabled: () => false,
+  isLocalDevAuthEnabled: () => authState.enabled,
+}));
+
+vi.mock("@/components/auth/local-dev-session-controls", () => ({
+  LocalDevSessionControls: () => <div>local-dev-controls</div>,
 }));
 
 vi.mock("@/components/layout/bottom-tabs", () => ({
@@ -18,6 +24,7 @@ vi.mock("@/components/layout/bottom-tabs", () => ({
 
 afterEach(() => {
   cleanup();
+  authState.enabled = false;
 });
 
 describe("app shell", () => {
@@ -41,6 +48,19 @@ describe("app shell", () => {
     );
 
     expect(screen.queryByText("Homecook")).toBeNull();
+    expect(screen.getByText("content")).toBeTruthy();
+  });
+
+  it("does not surface local dev controls above integrated home content", () => {
+    authState.enabled = true;
+
+    render(
+      <AppShell currentTab="home" headerMode="integrated">
+        <div>content</div>
+      </AppShell>,
+    );
+
+    expect(screen.queryByText("local-dev-controls")).toBeNull();
     expect(screen.getByText("content")).toBeTruthy();
   });
 });

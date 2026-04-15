@@ -98,6 +98,7 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     expect(await screen.findByRole("heading", { level: 1, name: "Homecook" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Homecook" }).getAttribute("href")).toBe("/");
     expect(await screen.findByPlaceholderText("레시피 제목 검색")).toBeTruthy();
     expect(screen.queryByText("Slice Scope")).toBeNull();
     expect(screen.queryByText("Current Filters")).toBeNull();

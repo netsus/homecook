@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React from "react";
 import {
   useCallback,
@@ -209,21 +210,25 @@ export function HomeScreen() {
     setSortMenuOpen(false);
   }, []);
 
-  const toolbarControlClassName =
-    "flex min-h-11 w-full items-center justify-between gap-3 whitespace-nowrap rounded-full border border-[var(--line)] bg-white/88 px-4 py-2 text-left text-sm font-semibold text-[var(--foreground)] shadow-[0_8px_18px_rgba(34,24,14,0.06)]";
+  const sortControlClassName =
+    "flex min-h-11 w-full items-center justify-between gap-3 whitespace-nowrap rounded-full border border-[var(--line)] bg-white/92 px-4 py-2 text-left text-sm font-semibold text-[var(--foreground)] shadow-[0_10px_24px_rgba(34,24,14,0.08)] sm:w-auto sm:min-w-44";
 
   return (
     <>
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-7">
         <section className="space-y-6">
-          <div className="glass-panel overflow-hidden rounded-[22px]">
-            <div className="relative px-4 py-4 md:px-5 md:py-5">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top_left,rgba(255,108,60,0.15),transparent_58%),radial-gradient(circle_at_top_right,rgba(46,166,122,0.12),transparent_56%)]" />
-              <div className="relative space-y-3.5">
-                <h1 className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[var(--olive)]">
+          <div className="glass-panel rounded-[24px] border-white/55 bg-white/76 px-4 py-4 md:rounded-[28px] md:px-5 md:py-5">
+            <div className="space-y-4">
+              <h1>
+                <Link
+                  className="inline-flex text-[1.05rem] font-black uppercase tracking-[0.22em] text-[var(--foreground)] transition hover:text-[var(--brand-deep)] md:text-[1.2rem]"
+                  href="/"
+                >
                   Homecook
-                </h1>
-                <label className="flex min-h-14 items-center rounded-[14px] border border-[var(--line)] bg-white/92 px-4 shadow-[0_10px_24px_rgba(34,24,14,0.06)]">
+                </Link>
+              </h1>
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                <label className="flex min-h-14 items-center rounded-[16px] border border-[var(--line)] bg-white px-4 shadow-[0_12px_28px_rgba(34,24,14,0.06)]">
                   <span className="visually-hidden">레시피 제목 검색</span>
                   <input
                     className="w-full bg-transparent py-4 outline-none placeholder:text-[var(--muted)]"
@@ -232,32 +237,19 @@ export function HomeScreen() {
                     value={query}
                   />
                 </label>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <button
-                    className={`min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                      hasIngredientFilter
-                        ? "border-[var(--olive)] bg-[var(--olive)] text-white shadow-[0_8px_18px_rgba(31,107,82,0.18)]"
-                        : "border-[var(--line)] bg-white/88 text-[var(--foreground)] shadow-[0_8px_18px_rgba(34,24,14,0.06)] hover:bg-white"
-                    }`}
-                    onClick={() => setIngredientModalOpen(true)}
-                    type="button"
-                  >
-                    {hasIngredientFilter
-                      ? `재료로 검색 (${appliedIngredientIds.length})`
-                      : "재료로 검색"}
-                  </button>
-                  <SortMenu
-                    buttonClassName={toolbarControlClassName}
-                    currentLabel={selectedSortLabel}
-                    isOpen={isSortMenuOpen}
-                    onClose={() => setSortMenuOpen(false)}
-                    onSelect={selectSort}
-                    onToggle={() => setSortMenuOpen((current) => !current)}
-                    options={SORT_OPTIONS}
-                    selectedValue={sort}
-                    sortMenuRef={sortMenuRef}
-                  />
-                </div>
+                <button
+                  className={`min-h-14 rounded-[16px] border px-5 py-3 text-sm font-semibold transition md:min-w-44 ${
+                    hasIngredientFilter
+                      ? "border-[var(--olive)] bg-[var(--olive)] text-white shadow-[0_12px_24px_rgba(31,107,82,0.2)]"
+                      : "border-[color:rgba(224,80,32,0.16)] bg-white text-[color:#9f3614] shadow-[0_12px_24px_rgba(255,108,60,0.12)] hover:bg-[color:rgba(255,108,60,0.08)]"
+                  }`}
+                  onClick={() => setIngredientModalOpen(true)}
+                  type="button"
+                >
+                  {hasIngredientFilter
+                    ? `재료로 검색 (${appliedIngredientIds.length})`
+                    : "재료로 검색"}
+                </button>
               </div>
               {hasIngredientFilter ? (
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[color:rgba(46,166,122,0.14)] bg-[color:rgba(46,166,122,0.08)] px-4 py-3">
@@ -321,18 +313,30 @@ export function HomeScreen() {
 
           {screenState !== "loading" ? (
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--olive)]">
-                    Recipe List
-                  </p>
-                  <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                  <h2 className="text-[1.15rem] font-extrabold tracking-[-0.025em] text-[var(--foreground)] md:text-[1.35rem]">
                     {listTitle}
                   </h2>
                 </div>
-                <span className="rounded-full bg-white/75 px-3 py-1 text-xs font-semibold text-[var(--muted)]">
-                  {recipes?.items.length ?? 0}개
-                </span>
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <span className="rounded-full bg-white/82 px-3 py-1 text-xs font-semibold text-[var(--muted)] shadow-[0_8px_18px_rgba(34,24,14,0.05)]">
+                    {recipes?.items.length ?? 0}개
+                  </span>
+                  {recipes?.items.length ? (
+                    <SortMenu
+                      buttonClassName={sortControlClassName}
+                      currentLabel={selectedSortLabel}
+                      isOpen={isSortMenuOpen}
+                      onClose={() => setSortMenuOpen(false)}
+                      onSelect={selectSort}
+                      onToggle={() => setSortMenuOpen((current) => !current)}
+                      options={SORT_OPTIONS}
+                      selectedValue={sort}
+                      sortMenuRef={sortMenuRef}
+                    />
+                  ) : null}
+                </div>
               </div>
 
               {screenState === "ready" && recipes?.items.length ? (
@@ -360,15 +364,12 @@ function ThemeSection({ theme }: { theme: RecipeTheme }) {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--olive)]">
-            Theme
-          </p>
-          <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-            {theme.title}
-          </h2>
-        </div>
-        <span className="text-sm font-medium text-[var(--muted)]">더보기</span>
+        <h2 className="text-[1.15rem] font-extrabold tracking-[-0.025em] text-[var(--foreground)] md:text-[1.35rem]">
+          {theme.title}
+        </h2>
+        <span className="rounded-full bg-white/82 px-3 py-1 text-xs font-semibold text-[var(--muted)] shadow-[0_8px_18px_rgba(34,24,14,0.05)]">
+          {theme.recipes.length}개
+        </span>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {theme.recipes.map((recipe) => (
@@ -401,6 +402,9 @@ function SortMenu({
   sortMenuRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const [isDesktopView, setDesktopView] = useState(false);
+  const [openAbove, setOpenAbove] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const desktopMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const syncViewport = () => {
@@ -415,12 +419,42 @@ function SortMenu({
     };
   }, []);
 
+  useEffect(() => {
+    if (!isOpen || !isDesktopView) {
+      setOpenAbove(false);
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      const buttonRect = buttonRef.current?.getBoundingClientRect();
+      const menuRect = desktopMenuRef.current?.getBoundingClientRect();
+
+      if (!buttonRect || !menuRect) {
+        return;
+      }
+
+      const gap = 12;
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+      const shouldOpenAbove =
+        spaceBelow < menuRect.height + gap && spaceAbove > spaceBelow;
+
+      setOpenAbove(shouldOpenAbove);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [isDesktopView, isOpen]);
+
   return (
     <div className="relative" ref={sortMenuRef}>
       <button
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-label={`정렬 기준 ${currentLabel}`}
+        ref={buttonRef}
         className={
           buttonClassName ??
           "flex min-h-11 w-full items-center justify-between gap-3 whitespace-nowrap rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-left text-sm font-semibold text-[var(--foreground)] shadow-[var(--shadow)]"
@@ -498,34 +532,39 @@ function SortMenu({
         </>
       ) : null}
       {isOpen && isDesktopView ? (
-        <div className="absolute right-0 top-[calc(100%+8px)] z-20 w-full min-w-52 rounded-[16px] border border-[var(--line)] bg-[var(--panel)] p-2 shadow-[0_18px_44px_rgba(34,24,14,0.14)]">
-            <div aria-label="정렬 기준" className="space-y-1" role="listbox">
-              {options.map((option) => {
-                const isSelected = option.value === selectedValue;
+        <div
+          className={`absolute right-0 z-20 w-60 rounded-[18px] border border-[var(--line)] bg-[var(--panel)] p-2 shadow-[0_18px_44px_rgba(34,24,14,0.14)] ${
+            openAbove ? "bottom-[calc(100%+10px)]" : "top-[calc(100%+10px)]"
+          }`}
+          ref={desktopMenuRef}
+        >
+          <div aria-label="정렬 기준" className="space-y-1" role="listbox">
+            {options.map((option) => {
+              const isSelected = option.value === selectedValue;
 
-                return (
-                  <button
+              return (
+                <button
                   aria-selected={isSelected}
                   className={`flex min-h-12 w-full items-center justify-between rounded-[12px] px-3 py-3 text-sm font-semibold ${
                     isSelected
                       ? "bg-[var(--foreground)] text-white"
                       : "text-[var(--muted)] hover:bg-white/70"
                   }`}
-                    key={`desktop-${option.value}`}
-                    onClick={() => onSelect(option.value)}
-                    role="option"
-                    type="button"
-                  >
-                    <span>{option.label}</span>
-                    {isSelected ? (
-                      <span aria-hidden="true" className="text-white/88">
-                        현재
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
+                  key={`desktop-${option.value}`}
+                  onClick={() => onSelect(option.value)}
+                  role="option"
+                  type="button"
+                >
+                  <span>{option.label}</span>
+                  {isSelected ? (
+                    <span aria-hidden="true" className="text-white/88">
+                      현재
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
         </div>
       ) : null}
     </div>
