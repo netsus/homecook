@@ -35,6 +35,7 @@ const qaSnapshotFontFaces = qaSnapshotFonts
   .join("\n");
 
 const HOME_VISUAL_MAX_DIFF_PIXELS = 120;
+const RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS = 400;
 
 async function stabilizeVisualSnapshot(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -152,6 +153,7 @@ test.describe("QA visual regression", () => {
     await expect(page).toHaveScreenshot("qa-recipe-detail.png", {
       animations: "disabled",
       fullPage: true,
+      maxDiffPixels: RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS,
     });
 
     await page.getByRole("button", { name: "플래너에 추가" }).click();

@@ -30,6 +30,7 @@ const SORT_OPTIONS: Array<{ label: string; value: RecipeSortKey }> = [
 ];
 
 type ScreenState = "loading" | "ready" | "empty" | "error";
+type ThemeState = "loading" | "ready";
 
 export function HomeScreen() {
   const [query, setQuery] = useState("");
@@ -37,6 +38,7 @@ export function HomeScreen() {
   const [sort, setSort] = useState<RecipeSortKey>("view_count");
   const [isSortMenuOpen, setSortMenuOpen] = useState(false);
   const [screenState, setScreenState] = useState<ScreenState>("loading");
+  const [themeState, setThemeState] = useState<ThemeState>("loading");
   const [recipes, setRecipes] = useState<RecipeListData | null>(null);
   const [themes, setThemes] = useState<RecipeThemesData | null>(null);
   const [isIngredientModalOpen, setIngredientModalOpen] = useState(false);
@@ -111,6 +113,21 @@ export function HomeScreen() {
     };
   }, [isSortMenuOpen]);
 
+  const loadThemes = useCallback(async () => {
+    try {
+      const themeData = await fetchJson<RecipeThemesData>("/api/v1/recipes/themes");
+      setThemes(themeData);
+    } catch {
+      setThemes({ themes: [] });
+    } finally {
+      setThemeState("ready");
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadThemes();
+  }, [loadThemes]);
+
   const loadRecipes = useCallback(async () => {
     const currentRequestId = recipeRequestIdRef.current + 1;
     recipeRequestIdRef.current = currentRequestId;
@@ -130,43 +147,22 @@ export function HomeScreen() {
         params.set("ingredient_ids", appliedIngredientIds.join(","));
       }
 
-      const [recipeResult, themeResult] = await Promise.allSettled([
-        fetchJson<RecipeListData>(`/api/v1/recipes?${params}`),
-        fetchJson<RecipeThemesData>("/api/v1/recipes/themes"),
-      ]);
+      const recipeData = await fetchJson<RecipeListData>(`/api/v1/recipes?${params}`);
 
       if (currentRequestId !== recipeRequestIdRef.current) {
         return;
       }
 
-      if (recipeResult.status === "rejected") {
-        throw recipeResult.reason;
-      }
-
-      const recipeData = recipeResult.value;
-      const themeData =
-        themeResult.status === "fulfilled"
-          ? themeResult.value
-          : { themes: [] };
-
       setRecipes(recipeData);
-      setThemes(themeData);
-
-      const hasQuery = debouncedQuery.trim().length > 0;
-      const hasVisibleThemes =
-        !hasQuery &&
-        appliedIngredientIds.length === 0 &&
-        themeData.themes.length > 0;
       const hasRecipes = recipeData.items.length > 0;
 
-      setScreenState(hasRecipes || hasVisibleThemes ? "ready" : "empty");
+      setScreenState(hasRecipes ? "ready" : "empty");
     } catch {
       if (currentRequestId !== recipeRequestIdRef.current) {
         return;
       }
 
       setRecipes(null);
-      setThemes(null);
       setScreenState("error");
     }
   }, [appliedIngredientIds, debouncedQuery, sort]);
@@ -187,6 +183,8 @@ export function HomeScreen() {
     [sort],
   );
   const listTitle = hasActiveFilters ? "검색 결과" : "모든 레시피";
+  const showThemeSkeleton = !hasActiveFilters && themeState === "loading";
+  const showGlobalEmpty = screenState === "empty" && visibleThemes.length === 0;
 
   const clearIngredientFilters = useCallback(() => {
     resetAppliedIngredientIds();
@@ -268,23 +266,6 @@ export function HomeScreen() {
             </div>
           </div>
 
-          {screenState === "loading" ? (
-            <div className="space-y-6">
-              <ThemeSectionSkeleton />
-              <div className="space-y-4">
-                <div className="h-6 w-32 animate-pulse rounded-full bg-white/70" />
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <div
-                      key={index}
-                      className="glass-panel min-h-72 animate-pulse rounded-[16px] bg-white/60"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : null}
-
           {screenState === "error" ? (
             <ContentState
               actionLabel="다시 시도"
@@ -294,16 +275,9 @@ export function HomeScreen() {
             />
           ) : null}
 
-          {screenState === "empty" ? (
-            <ContentState
-              actionLabel={hasIngredientFilter ? "필터 초기화" : "검색 초기화"}
-              description="조건에 맞는 레시피가 없어요."
-              onAction={hasIngredientFilter ? clearIngredientFilters : clearSearch}
-              title="다른 조합을 찾아보세요"
-            />
-          ) : null}
+          {showThemeSkeleton ? <ThemeSectionSkeleton /> : null}
 
-          {screenState !== "loading" && visibleThemes.length > 0 ? (
+          {visibleThemes.length > 0 ? (
             <div className="space-y-8">
               {visibleThemes.map((theme) => (
                 <ThemeSection key={theme.id} theme={theme} />
@@ -311,7 +285,7 @@ export function HomeScreen() {
             </div>
           ) : null}
 
-          {screenState !== "loading" ? (
+          {screenState !== "error" ? (
             <div className="space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -339,12 +313,23 @@ export function HomeScreen() {
                 </div>
               </div>
 
+              {screenState === "loading" ? <RecipeListSkeleton /> : null}
+
               {screenState === "ready" && recipes?.items.length ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {recipes.items.map((recipe) => (
                     <RecipeCard key={recipe.id} recipe={recipe} />
                   ))}
                 </div>
+              ) : null}
+
+              {showGlobalEmpty ? (
+                <ContentState
+                  actionLabel={hasIngredientFilter ? "필터 초기화" : "검색 초기화"}
+                  description="조건에 맞는 레시피가 없어요."
+                  onAction={hasIngredientFilter ? clearIngredientFilters : clearSearch}
+                  title="다른 조합을 찾아보세요"
+                />
               ) : null}
             </div>
           ) : null}
@@ -593,6 +578,22 @@ function ThemeSectionSkeleton() {
       <div className="h-6 w-40 animate-pulse rounded-full bg-white/70" />
       <div className="grid gap-4 md:grid-cols-2">
         {Array.from({ length: 2 }).map((_, index) => (
+          <div
+            key={index}
+            className="glass-panel min-h-72 animate-pulse rounded-[16px] bg-white/60"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RecipeListSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="h-6 w-32 animate-pulse rounded-full bg-white/70" />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
             className="glass-panel min-h-72 animate-pulse rounded-[16px] bg-white/60"

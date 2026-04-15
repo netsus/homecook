@@ -35,7 +35,7 @@ describe("app shell", () => {
       </AppShell>,
     );
 
-    expect(screen.getByText("Homecook")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Homecook" }).getAttribute("href")).toBe("/");
     expect(screen.queryByText("오늘 집밥 메뉴를 찾는 주방")).toBeNull();
     expect(screen.getByText("content")).toBeTruthy();
   });

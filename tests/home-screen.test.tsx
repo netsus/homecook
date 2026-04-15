@@ -145,6 +145,44 @@ describe("home screen", () => {
     });
   });
 
+  it("keeps themed recipes mounted and does not refetch themes when only sort changes", async () => {
+    const user = userEvent.setup();
+
+    render(<HomeScreen />);
+
+    await screen.findByRole("heading", {
+      level: 2,
+      name: "이번 주 인기 레시피",
+    });
+
+    const initialThemeCalls = fetchJson.mock.calls.filter(([input]) => {
+      return typeof input === "string" && input.startsWith("/api/v1/recipes/themes");
+    }).length;
+
+    await user.click(await screen.findByRole("button", { name: /정렬 기준/i }));
+    await user.click(screen.getByRole("option", { name: "좋아요순" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 2, name: "이번 주 인기 레시피" })).toBeTruthy();
+      expect(
+        fetchJson.mock.calls.some(([input]) => {
+          if (typeof input !== "string" || !input.startsWith("/api/v1/recipes?")) {
+            return false;
+          }
+
+          const url = new URL(input, "http://localhost:3000");
+          return url.searchParams.get("sort") === "like_count";
+        }),
+      ).toBe(true);
+    });
+
+    const themeCallsAfterSort = fetchJson.mock.calls.filter(([input]) => {
+      return typeof input === "string" && input.startsWith("/api/v1/recipes/themes");
+    }).length;
+
+    expect(themeCallsAfterSort).toBe(initialThemeCalls);
+  });
+
   it("shows the empty state when both recipes and themes are empty", async () => {
     fetchJson.mockImplementation((input: string) => {
       if (input.startsWith("/api/v1/recipes/themes")) {
