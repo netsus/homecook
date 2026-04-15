@@ -14,6 +14,14 @@ async function expectNoAxeViolations(
   expect(results.violations).toEqual([]);
 }
 
+function getLoginActionButton(
+  page: import("@playwright/test").Page,
+) {
+  return page.getByRole("button", {
+    name: /Google로 시작하기|카카오로 시작하기|네이버로 시작하기|로컬 테스트 계정으로 시작|다른 테스트 계정으로 시작/,
+  }).first();
+}
+
 async function expectReadableTouchTarget(
   locator: import("@playwright/test").Locator,
   {
@@ -119,9 +127,7 @@ test.describe("QA accessibility smoke", () => {
     await installRecipeDetailRoutes(page);
 
     await page.goto("/");
-    await expect(
-      page.getByRole("heading", { name: "먹고 싶은 집밥을 골라보세요" }),
-    ).toBeVisible();
+    await expect(page.getByPlaceholder("레시피 제목 검색")).toBeVisible();
     await expectNoAxeViolations(page);
     await expectReadableTouchTarget(
       page.getByRole("button", { name: "재료로 검색" }),
@@ -189,8 +195,6 @@ test.describe("QA accessibility smoke", () => {
       page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" }),
     ).toBeVisible();
     await expectNoAxeViolations(page);
-    await expectReadableTouchTarget(
-      page.getByRole("button", { name: /시작하기/ }).first(),
-    );
+    await expectReadableTouchTarget(getLoginActionButton(page));
   });
 });

@@ -13,8 +13,12 @@ export function ContentState({
   actionLabel,
   onAction,
 }: ContentStateProps) {
+  const shellClassName = actionLabel && onAction ? "action-safe-bottom-panel" : "";
+
   return (
-    <div className="glass-panel rounded-[28px] px-5 py-8 text-center md:px-8">
+    <div
+      className={`glass-panel rounded-[28px] px-5 py-8 text-center md:px-8 ${shellClassName}`.trim()}
+    >
       <h2 className="text-2xl font-extrabold tracking-[-0.02em] text-[var(--brand-deep)]">
         {title}
       </h2>

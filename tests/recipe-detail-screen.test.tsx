@@ -157,6 +157,16 @@ describe("recipe detail screen", () => {
     expect(screen.queryByText("요리완료")).toBeNull();
   });
 
+  it("keeps the overview metrics row compact so hero actions stay closer to the first fold", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const shareButton = await screen.findByRole("button", { name: "공유하기" });
+    const metricsRow = shareButton.parentElement;
+
+    expect(metricsRow).not.toBeNull();
+    expect(metricsRow?.className).toContain("recipe-overview-metrics-compact");
+  });
+
   it("removes internal scaffolding cards and keeps primary actions above the recipe body", async () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
@@ -171,6 +181,23 @@ describe("recipe detail screen", () => {
     ).toBeTruthy();
     expect(screen.queryByText("Recipe Snapshot")).toBeNull();
     expect(screen.queryByText("Slice Note")).toBeNull();
+  });
+
+  it("uses level-one page headings and 44px touch targets for the hero actions", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: MOCK_RECIPE_DETAIL.title,
+      }),
+    ).toBeTruthy();
+
+    for (const name of ["좋아요 203", "저장", "플래너에 추가"]) {
+      expect((await screen.findByRole("button", { name })).className).toContain(
+        "min-h-11",
+      );
+    }
   });
 
   it("disables the like button while pending and updates the count from the API response", async () => {

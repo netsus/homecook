@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React from "react";
 import {
   useCallback,
@@ -29,6 +30,7 @@ const SORT_OPTIONS: Array<{ label: string; value: RecipeSortKey }> = [
 ];
 
 type ScreenState = "loading" | "ready" | "empty" | "error";
+type ThemeState = "loading" | "ready";
 
 export function HomeScreen() {
   const [query, setQuery] = useState("");
@@ -36,6 +38,7 @@ export function HomeScreen() {
   const [sort, setSort] = useState<RecipeSortKey>("view_count");
   const [isSortMenuOpen, setSortMenuOpen] = useState(false);
   const [screenState, setScreenState] = useState<ScreenState>("loading");
+  const [themeState, setThemeState] = useState<ThemeState>("loading");
   const [recipes, setRecipes] = useState<RecipeListData | null>(null);
   const [themes, setThemes] = useState<RecipeThemesData | null>(null);
   const [isIngredientModalOpen, setIngredientModalOpen] = useState(false);
@@ -110,6 +113,21 @@ export function HomeScreen() {
     };
   }, [isSortMenuOpen]);
 
+  const loadThemes = useCallback(async () => {
+    try {
+      const themeData = await fetchJson<RecipeThemesData>("/api/v1/recipes/themes");
+      setThemes(themeData);
+    } catch {
+      setThemes({ themes: [] });
+    } finally {
+      setThemeState("ready");
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadThemes();
+  }, [loadThemes]);
+
   const loadRecipes = useCallback(async () => {
     const currentRequestId = recipeRequestIdRef.current + 1;
     recipeRequestIdRef.current = currentRequestId;
@@ -129,43 +147,22 @@ export function HomeScreen() {
         params.set("ingredient_ids", appliedIngredientIds.join(","));
       }
 
-      const [recipeResult, themeResult] = await Promise.allSettled([
-        fetchJson<RecipeListData>(`/api/v1/recipes?${params}`),
-        fetchJson<RecipeThemesData>("/api/v1/recipes/themes"),
-      ]);
+      const recipeData = await fetchJson<RecipeListData>(`/api/v1/recipes?${params}`);
 
       if (currentRequestId !== recipeRequestIdRef.current) {
         return;
       }
 
-      if (recipeResult.status === "rejected") {
-        throw recipeResult.reason;
-      }
-
-      const recipeData = recipeResult.value;
-      const themeData =
-        themeResult.status === "fulfilled"
-          ? themeResult.value
-          : { themes: [] };
-
       setRecipes(recipeData);
-      setThemes(themeData);
-
-      const hasQuery = debouncedQuery.trim().length > 0;
-      const hasVisibleThemes =
-        !hasQuery &&
-        appliedIngredientIds.length === 0 &&
-        themeData.themes.length > 0;
       const hasRecipes = recipeData.items.length > 0;
 
-      setScreenState(hasRecipes || hasVisibleThemes ? "ready" : "empty");
+      setScreenState(hasRecipes ? "ready" : "empty");
     } catch {
       if (currentRequestId !== recipeRequestIdRef.current) {
         return;
       }
 
       setRecipes(null);
-      setThemes(null);
       setScreenState("error");
     }
   }, [appliedIngredientIds, debouncedQuery, sort]);
@@ -186,6 +183,9 @@ export function HomeScreen() {
     [sort],
   );
   const listTitle = hasActiveFilters ? "검색 결과" : "모든 레시피";
+  const showInitialDiscoverySkeleton =
+    !hasActiveFilters && themeState === "loading";
+  const showGlobalEmpty = screenState === "empty" && visibleThemes.length === 0;
 
   const clearIngredientFilters = useCallback(() => {
     resetAppliedIngredientIds();
@@ -209,27 +209,25 @@ export function HomeScreen() {
     setSortMenuOpen(false);
   }, []);
 
+  const sortControlClassName =
+    "flex min-h-11 w-full items-center justify-between gap-3 whitespace-nowrap rounded-full border border-[var(--line)] bg-white/92 px-4 py-2 text-left text-sm font-semibold text-[var(--foreground)] shadow-[0_10px_24px_rgba(34,24,14,0.08)] sm:w-auto sm:min-w-44";
+
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_320px]">
+      <div className="mx-auto max-w-5xl space-y-7">
         <section className="space-y-6">
-          <div className="glass-panel rounded-[20px]">
-            <div className="relative border-b border-[var(--line)] px-5 py-6 md:px-6">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top_left,rgba(255,108,60,0.18),transparent_60%),radial-gradient(circle_at_top_right,rgba(46,166,122,0.16),transparent_58%)]" />
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-                  Home / Discovery
-                </p>
-                <h2 className="mt-3 text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:text-[2rem]">
-                  먹고 싶은 집밥을 골라보세요
-                </h2>
-                <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
-                  제목 검색, 정렬, 테마, 재료 필터를 한 화면에 모아 오늘 메뉴를
-                  빠르게 좁혀볼 수 있어요.
-                </p>
-              </div>
-              <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_220px] md:items-center">
-                <label className="flex min-h-14 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow)]">
+          <div className="glass-panel rounded-[24px] border-white/55 bg-white/76 px-4 py-4 md:rounded-[28px] md:px-5 md:py-5">
+            <div className="space-y-4">
+              <h1>
+                <Link
+                  className="inline-flex text-[1.05rem] font-black uppercase tracking-[0.22em] text-[var(--foreground)] transition hover:text-[var(--brand-deep)] md:text-[1.2rem]"
+                  href="/"
+                >
+                  Homecook
+                </Link>
+              </h1>
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                <label className="flex min-h-14 items-center rounded-[16px] border border-[var(--line)] bg-white px-4 shadow-[0_12px_28px_rgba(34,24,14,0.06)]">
                   <span className="visually-hidden">레시피 제목 검색</span>
                   <input
                     className="w-full bg-transparent py-4 outline-none placeholder:text-[var(--muted)]"
@@ -238,65 +236,36 @@ export function HomeScreen() {
                     value={query}
                   />
                 </label>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    className={`min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                      hasIngredientFilter
-                        ? "border-[var(--olive)] bg-[var(--olive)] text-white"
-                        : "border-[var(--olive)] text-[var(--olive)] hover:bg-[color:rgba(46,166,122,0.08)]"
-                    }`}
-                    onClick={() => setIngredientModalOpen(true)}
-                    type="button"
-                  >
-                    {hasIngredientFilter
-                      ? `재료로 검색 (${appliedIngredientIds.length})`
-                      : "재료로 검색"}
-                  </button>
-                  {hasIngredientFilter ? (
-                    <button
-                      className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
-                      onClick={clearIngredientFilters}
-                      type="button"
-                    >
-                      필터 초기화
-                    </button>
-                  ) : null}
-                </div>
-                <SortMenu
-                  currentLabel={selectedSortLabel}
-                  isOpen={isSortMenuOpen}
-                  onClose={() => setSortMenuOpen(false)}
-                  onSelect={selectSort}
-                  onToggle={() => setSortMenuOpen((current) => !current)}
-                  options={SORT_OPTIONS}
-                  selectedValue={sort}
-                  sortMenuRef={sortMenuRef}
-                />
+                <button
+                  className={`min-h-14 rounded-[16px] border px-5 py-3 text-sm font-semibold transition md:min-w-44 ${
+                    hasIngredientFilter
+                      ? "border-[var(--olive)] bg-[var(--olive)] text-white shadow-[0_12px_24px_rgba(31,107,82,0.2)]"
+                      : "border-[color:rgba(224,80,32,0.16)] bg-white text-[color:#9f3614] shadow-[0_12px_24px_rgba(255,108,60,0.12)] hover:bg-[color:rgba(255,108,60,0.08)]"
+                  }`}
+                  onClick={() => setIngredientModalOpen(true)}
+                  type="button"
+                >
+                  {hasIngredientFilter
+                    ? `재료로 검색 (${appliedIngredientIds.length})`
+                    : "재료로 검색"}
+                </button>
               </div>
               {hasIngredientFilter ? (
-                <p className="mt-3 rounded-[12px] bg-[color:rgba(46,166,122,0.08)] px-4 py-3 text-sm text-[var(--olive)]">
-                  {appliedIngredientIds.length}개 재료로 레시피를 좁혀보고 있어요.
-                </p>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[color:rgba(46,166,122,0.14)] bg-[color:rgba(46,166,122,0.08)] px-4 py-3">
+                  <p className="text-sm text-[var(--olive)]">
+                    {appliedIngredientIds.length}개 재료로 레시피를 좁혀보고 있어요.
+                  </p>
+                  <button
+                    className="rounded-full border border-[color:rgba(46,166,122,0.18)] bg-white/88 px-3 py-1.5 text-sm font-semibold text-[var(--olive)]"
+                    onClick={clearIngredientFilters}
+                    type="button"
+                  >
+                    필터 초기화
+                  </button>
+                </div>
               ) : null}
             </div>
           </div>
-
-          {screenState === "loading" ? (
-            <div className="space-y-6">
-              <ThemeSectionSkeleton />
-              <div className="space-y-4">
-                <div className="h-6 w-32 animate-pulse rounded-full bg-white/70" />
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <div
-                      key={index}
-                      className="glass-panel min-h-72 animate-pulse rounded-[16px] bg-white/60"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : null}
 
           {screenState === "error" ? (
             <ContentState
@@ -307,16 +276,14 @@ export function HomeScreen() {
             />
           ) : null}
 
-          {screenState === "empty" ? (
-            <ContentState
-              actionLabel={hasIngredientFilter ? "필터 초기화" : "검색 초기화"}
-              description="조건에 맞는 레시피가 없어요."
-              onAction={hasIngredientFilter ? clearIngredientFilters : clearSearch}
-              title="다른 조합을 찾아보세요"
-            />
+          {showInitialDiscoverySkeleton ? (
+            <div className="space-y-6">
+              <ThemeSectionSkeleton />
+              <RecipeListSkeleton />
+            </div>
           ) : null}
 
-          {screenState !== "loading" && visibleThemes.length > 0 ? (
+          {!showInitialDiscoverySkeleton && visibleThemes.length > 0 ? (
             <div className="space-y-8">
               {visibleThemes.map((theme) => (
                 <ThemeSection key={theme.id} theme={theme} />
@@ -324,21 +291,35 @@ export function HomeScreen() {
             </div>
           ) : null}
 
-          {screenState !== "loading" ? (
+          {screenState !== "error" && !showInitialDiscoverySkeleton ? (
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--olive)]">
-                    Recipe List
-                  </p>
-                  <h3 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                  <h2 className="text-[1.15rem] font-extrabold tracking-[-0.025em] text-[var(--foreground)] md:text-[1.35rem]">
                     {listTitle}
-                  </h3>
+                  </h2>
                 </div>
-                <span className="rounded-full bg-white/75 px-3 py-1 text-xs font-semibold text-[var(--muted)]">
-                  {recipes?.items.length ?? 0}개
-                </span>
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <span className="rounded-full bg-white/82 px-3 py-1 text-xs font-semibold text-[var(--muted)] shadow-[0_8px_18px_rgba(34,24,14,0.05)]">
+                    {recipes?.items.length ?? 0}개
+                  </span>
+                  {recipes?.items.length ? (
+                    <SortMenu
+                      buttonClassName={sortControlClassName}
+                      currentLabel={selectedSortLabel}
+                      isOpen={isSortMenuOpen}
+                      onClose={() => setSortMenuOpen(false)}
+                      onSelect={selectSort}
+                      onToggle={() => setSortMenuOpen((current) => !current)}
+                      options={SORT_OPTIONS}
+                      selectedValue={sort}
+                      sortMenuRef={sortMenuRef}
+                    />
+                  ) : null}
+                </div>
               </div>
+
+              {screenState === "loading" ? <RecipeListSkeleton /> : null}
 
               {screenState === "ready" && recipes?.items.length ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -347,61 +328,18 @@ export function HomeScreen() {
                   ))}
                 </div>
               ) : null}
+
+              {showGlobalEmpty ? (
+                <ContentState
+                  actionLabel={hasIngredientFilter ? "필터 초기화" : "검색 초기화"}
+                  description="조건에 맞는 레시피가 없어요."
+                  onAction={hasIngredientFilter ? clearIngredientFilters : clearSearch}
+                  title="다른 조합을 찾아보세요"
+                />
+              ) : null}
             </div>
           ) : null}
         </section>
-
-        <aside className="space-y-4">
-          <div className="glass-panel rounded-[20px] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-              Slice Scope
-            </p>
-            <ul className="mt-4 space-y-3 text-sm leading-6 text-[var(--muted)]">
-              <li>HOME 목록 + 테마 조회</li>
-              <li>제목 검색</li>
-              <li>재료 필터 모달</li>
-              <li>정렬 변경</li>
-              <li>RECIPE_DETAIL 조회</li>
-            </ul>
-          </div>
-          <div className="glass-panel rounded-[20px] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-              Current Filters
-            </p>
-            <dl className="mt-4 space-y-3 text-sm text-[var(--muted)]">
-              <div className="flex justify-between gap-4">
-                <dt>검색어</dt>
-                <dd className="font-semibold text-[var(--foreground)]">
-                  {debouncedQuery.trim() || "없음"}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt>재료 필터</dt>
-                <dd className="font-semibold text-[var(--foreground)]">
-                  {hasIngredientFilter ? `${appliedIngredientIds.length}개 선택` : "없음"}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt>정렬</dt>
-                <dd className="font-semibold text-[var(--foreground)]">
-                  {selectedSortLabel}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt>목록 상태</dt>
-                <dd className="font-semibold text-[var(--foreground)]">
-                  {screenState}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt>테마 섹션</dt>
-                <dd className="font-semibold text-[var(--foreground)]">
-                  {visibleThemes.length ? `${visibleThemes.length}개` : "숨김"}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </aside>
       </div>
       <IngredientFilterModal
         appliedIngredientIds={appliedIngredientIds}
@@ -417,15 +355,12 @@ function ThemeSection({ theme }: { theme: RecipeTheme }) {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--olive)]">
-            Theme
-          </p>
-          <h3 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-            {theme.title}
-          </h3>
-        </div>
-        <span className="text-sm font-medium text-[var(--muted)]">더보기</span>
+        <h2 className="text-[1.15rem] font-extrabold tracking-[-0.025em] text-[var(--foreground)] md:text-[1.35rem]">
+          {theme.title}
+        </h2>
+        <span className="rounded-full bg-white/82 px-3 py-1 text-xs font-semibold text-[var(--muted)] shadow-[0_8px_18px_rgba(34,24,14,0.05)]">
+          {theme.recipes.length}개
+        </span>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {theme.recipes.map((recipe) => (
@@ -437,6 +372,7 @@ function ThemeSection({ theme }: { theme: RecipeTheme }) {
 }
 
 function SortMenu({
+  buttonClassName,
   currentLabel,
   isOpen,
   onClose,
@@ -446,6 +382,7 @@ function SortMenu({
   selectedValue,
   sortMenuRef,
 }: {
+  buttonClassName?: string;
   currentLabel: string;
   isOpen: boolean;
   onClose: () => void;
@@ -456,6 +393,9 @@ function SortMenu({
   sortMenuRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const [isDesktopView, setDesktopView] = useState(false);
+  const [openAbove, setOpenAbove] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const desktopMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const syncViewport = () => {
@@ -470,17 +410,50 @@ function SortMenu({
     };
   }, []);
 
+  useEffect(() => {
+    if (!isOpen || !isDesktopView) {
+      setOpenAbove(false);
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      const buttonRect = buttonRef.current?.getBoundingClientRect();
+      const menuRect = desktopMenuRef.current?.getBoundingClientRect();
+
+      if (!buttonRect || !menuRect) {
+        return;
+      }
+
+      const gap = 12;
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+      const shouldOpenAbove =
+        spaceBelow < menuRect.height + gap && spaceAbove > spaceBelow;
+
+      setOpenAbove(shouldOpenAbove);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [isDesktopView, isOpen]);
+
   return (
     <div className="relative" ref={sortMenuRef}>
       <button
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-label={`정렬 기준 ${currentLabel}`}
-        className="flex min-h-11 w-full items-center justify-between gap-3 whitespace-nowrap rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-left text-sm font-semibold text-[var(--foreground)] shadow-[var(--shadow)]"
+        ref={buttonRef}
+        className={
+          buttonClassName ??
+          "flex min-h-11 w-full items-center justify-between gap-3 whitespace-nowrap rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-left text-sm font-semibold text-[var(--foreground)] shadow-[var(--shadow)]"
+        }
         onClick={onToggle}
         type="button"
       >
-        <span className="truncate">정렬 기준 · {currentLabel}</span>
+        <span className="truncate">정렬 · {currentLabel}</span>
         <span
           aria-hidden="true"
           className={`shrink-0 text-[var(--muted)] transition ${isOpen ? "rotate-180" : ""}`}
@@ -503,9 +476,9 @@ function SortMenu({
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
                   Sort
                 </p>
-                <h3 className="mt-1 text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                <h2 className="mt-1 text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
                   정렬 기준
-                </h3>
+                </h2>
               </div>
               <button
                 className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
@@ -550,34 +523,39 @@ function SortMenu({
         </>
       ) : null}
       {isOpen && isDesktopView ? (
-        <div className="absolute right-0 top-[calc(100%+8px)] z-20 w-full min-w-52 rounded-[16px] border border-[var(--line)] bg-[var(--panel)] p-2 shadow-[0_18px_44px_rgba(34,24,14,0.14)]">
-            <div aria-label="정렬 기준" className="space-y-1" role="listbox">
-              {options.map((option) => {
-                const isSelected = option.value === selectedValue;
+        <div
+          className={`absolute right-0 z-20 w-60 rounded-[18px] border border-[var(--line)] bg-[var(--panel)] p-2 shadow-[0_18px_44px_rgba(34,24,14,0.14)] ${
+            openAbove ? "bottom-[calc(100%+10px)]" : "top-[calc(100%+10px)]"
+          }`}
+          ref={desktopMenuRef}
+        >
+          <div aria-label="정렬 기준" className="space-y-1" role="listbox">
+            {options.map((option) => {
+              const isSelected = option.value === selectedValue;
 
-                return (
-                  <button
+              return (
+                <button
                   aria-selected={isSelected}
                   className={`flex min-h-12 w-full items-center justify-between rounded-[12px] px-3 py-3 text-sm font-semibold ${
                     isSelected
                       ? "bg-[var(--foreground)] text-white"
                       : "text-[var(--muted)] hover:bg-white/70"
                   }`}
-                    key={`desktop-${option.value}`}
-                    onClick={() => onSelect(option.value)}
-                    role="option"
-                    type="button"
-                  >
-                    <span>{option.label}</span>
-                    {isSelected ? (
-                      <span aria-hidden="true" className="text-white/88">
-                        현재
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
+                  key={`desktop-${option.value}`}
+                  onClick={() => onSelect(option.value)}
+                  role="option"
+                  type="button"
+                >
+                  <span>{option.label}</span>
+                  {isSelected ? (
+                    <span aria-hidden="true" className="text-white/88">
+                      현재
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
         </div>
       ) : null}
     </div>
@@ -606,6 +584,22 @@ function ThemeSectionSkeleton() {
       <div className="h-6 w-40 animate-pulse rounded-full bg-white/70" />
       <div className="grid gap-4 md:grid-cols-2">
         {Array.from({ length: 2 }).map((_, index) => (
+          <div
+            key={index}
+            className="glass-panel min-h-72 animate-pulse rounded-[16px] bg-white/60"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RecipeListSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="h-6 w-32 animate-pulse rounded-full bg-white/70" />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
             className="glass-panel min-h-72 animate-pulse rounded-[16px] bg-white/60"

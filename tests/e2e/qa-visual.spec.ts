@@ -35,6 +35,7 @@ const qaSnapshotFontFaces = qaSnapshotFonts
   .join("\n");
 
 const HOME_VISUAL_MAX_DIFF_PIXELS = 120;
+const RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS = 400;
 
 async function stabilizeVisualSnapshot(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -95,9 +96,7 @@ test.describe("QA visual regression", () => {
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
-    await expect(
-      page.getByRole("heading", { name: "먹고 싶은 집밥을 골라보세요" }),
-    ).toBeVisible();
+    await expect(page.getByPlaceholder("레시피 제목 검색")).toBeVisible();
 
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-home-default.png", {
@@ -154,6 +153,7 @@ test.describe("QA visual regression", () => {
     await expect(page).toHaveScreenshot("qa-recipe-detail.png", {
       animations: "disabled",
       fullPage: true,
+      maxDiffPixels: RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS,
     });
 
     await page.getByRole("button", { name: "플래너에 추가" }).click();

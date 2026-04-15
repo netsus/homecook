@@ -308,22 +308,23 @@ test.describe("Slice 04 recipe save flow", () => {
 
     await mockRecipeSaveRoutes(page);
     await page.goto(RECIPE_PATH);
-    await expect(
-      page.getByRole("heading", { name: "집밥 김치찌개" }),
-    ).toBeVisible();
+    const title = page.getByRole("heading", { name: "집밥 김치찌개" });
+    const saveButton = page.locator('button[aria-label="저장"][aria-pressed]');
 
-    const metrics = await page.evaluate(() => {
-      const title = document.querySelector("section h2");
-      const saveButton = document.querySelector('button[aria-label="저장"][aria-pressed]');
-      const titleRect = title?.getBoundingClientRect();
-      const saveRect = saveButton?.getBoundingClientRect();
+    await expect(title).toBeVisible();
+    await expect(saveButton).toBeVisible();
 
-      return {
-        viewportHeight: window.innerHeight,
-        titleTop: titleRect?.top ?? null,
-        saveButtonTop: saveRect?.top ?? null,
-      };
-    });
+    const [titleRect, saveRect, viewportSize] = await Promise.all([
+      title.boundingBox(),
+      saveButton.boundingBox(),
+      page.viewportSize(),
+    ]);
+
+    const metrics = {
+      viewportHeight: viewportSize?.height ?? 0,
+      titleTop: titleRect?.y ?? null,
+      saveButtonTop: saveRect?.y ?? null,
+    };
 
     expect(metrics.titleTop).not.toBeNull();
     expect(metrics.saveButtonTop).not.toBeNull();

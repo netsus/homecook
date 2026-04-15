@@ -83,16 +83,36 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     expect(
-      await screen.findByRole("heading", { name: "이번 주 인기 레시피" }),
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "이번 주 인기 레시피",
+      }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "모든 레시피" }),
+      screen.getByRole("heading", { level: 2, name: "모든 레시피" }),
     ).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /집밥 김치찌개/i }).length).toBe(2);
   });
 
+  it("removes redundant hero copy so search controls stay near the first viewport", async () => {
+    render(<HomeScreen />);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Homecook" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Homecook" }).getAttribute("href")).toBe("/");
+    expect(await screen.findByPlaceholderText("레시피 제목 검색")).toBeTruthy();
+    expect(screen.queryByText("Slice Scope")).toBeNull();
+    expect(screen.queryByText("Current Filters")).toBeNull();
+    expect(screen.queryByText("Home / Discovery")).toBeNull();
+    expect(screen.queryByText("집밥을 바로 골라보세요")).toBeNull();
+    expect(
+      screen.queryByText("검색, 정렬, 재료 필터로 원하는 메뉴를 빠르게 좁혀보세요."),
+    ).toBeNull();
+  });
+
   it("uses a custom sort menu so the selected option stays readable on mobile", async () => {
     const user = userEvent.setup();
+    window.innerWidth = 390;
+    window.dispatchEvent(new Event("resize"));
 
     render(<HomeScreen />);
 
@@ -100,6 +120,10 @@ describe("home screen", () => {
     expect(sortButton.textContent).toContain("조회수순");
 
     await user.click(sortButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 2, name: "정렬 기준" })).toBeTruthy();
+    });
 
     const listbox = screen.getByRole("listbox", { name: "정렬 기준" });
     expect(listbox).toBeTruthy();
@@ -119,6 +143,44 @@ describe("home screen", () => {
         }),
       ).toBe(true);
     });
+  });
+
+  it("keeps themed recipes mounted and does not refetch themes when only sort changes", async () => {
+    const user = userEvent.setup();
+
+    render(<HomeScreen />);
+
+    await screen.findByRole("heading", {
+      level: 2,
+      name: "이번 주 인기 레시피",
+    });
+
+    const initialThemeCalls = fetchJson.mock.calls.filter(([input]) => {
+      return typeof input === "string" && input.startsWith("/api/v1/recipes/themes");
+    }).length;
+
+    await user.click(await screen.findByRole("button", { name: /정렬 기준/i }));
+    await user.click(screen.getByRole("option", { name: "좋아요순" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 2, name: "이번 주 인기 레시피" })).toBeTruthy();
+      expect(
+        fetchJson.mock.calls.some(([input]) => {
+          if (typeof input !== "string" || !input.startsWith("/api/v1/recipes?")) {
+            return false;
+          }
+
+          const url = new URL(input, "http://localhost:3000");
+          return url.searchParams.get("sort") === "like_count";
+        }),
+      ).toBe(true);
+    });
+
+    const themeCallsAfterSort = fetchJson.mock.calls.filter(([input]) => {
+      return typeof input === "string" && input.startsWith("/api/v1/recipes/themes");
+    }).length;
+
+    expect(themeCallsAfterSort).toBe(initialThemeCalls);
   });
 
   it("shows the empty state when both recipes and themes are empty", async () => {
