@@ -404,7 +404,7 @@ export function PlannerWeekScreen({
 
   if (authState === "unauthorized") {
     return (
-      <div className="-mt-5 glass-panel rounded-[20px] p-4 md:mt-0 md:p-8">
+      <div className="-mt-5 action-safe-bottom-panel glass-panel rounded-[20px] p-4 md:mt-0 md:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
           Planner Access
         </p>

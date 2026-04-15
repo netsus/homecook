@@ -157,6 +157,16 @@ describe("recipe detail screen", () => {
     expect(screen.queryByText("요리완료")).toBeNull();
   });
 
+  it("keeps the overview metrics row compact so hero actions stay closer to the first fold", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const shareButton = await screen.findByRole("button", { name: "공유하기" });
+    const metricsRow = shareButton.parentElement;
+
+    expect(metricsRow).not.toBeNull();
+    expect(metricsRow?.className).toContain("recipe-overview-metrics-compact");
+  });
+
   it("removes internal scaffolding cards and keeps primary actions above the recipe body", async () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 

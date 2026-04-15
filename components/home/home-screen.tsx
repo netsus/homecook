@@ -214,21 +214,20 @@ export function HomeScreen() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_320px]">
         <section className="space-y-6">
           <div className="glass-panel rounded-[20px]">
-            <div className="relative border-b border-[var(--line)] px-5 py-6 md:px-6">
+            <div className="relative border-b border-[var(--line)] px-5 py-5 md:px-6 md:py-6">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top_left,rgba(255,108,60,0.18),transparent_60%),radial-gradient(circle_at_top_right,rgba(46,166,122,0.16),transparent_58%)]" />
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
                   Home / Discovery
                 </p>
-                <h2 className="mt-3 text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:text-[2rem]">
-                  먹고 싶은 집밥을 골라보세요
+                <h2 className="mt-2 text-[1.75rem] font-extrabold leading-tight tracking-[-0.03em] text-[var(--foreground)] md:text-[2rem]">
+                  집밥을 바로 골라보세요
                 </h2>
-                <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
-                  제목 검색, 정렬, 테마, 재료 필터를 한 화면에 모아 오늘 메뉴를
-                  빠르게 좁혀볼 수 있어요.
+                <p className="mt-2 max-w-lg text-[13px] leading-5 text-[var(--muted)]">
+                  검색, 정렬, 재료 필터로 원하는 메뉴를 빠르게 좁혀보세요.
                 </p>
               </div>
-              <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_220px] md:items-center">
+              <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_220px] md:items-center">
                 <label className="flex min-h-14 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow)]">
                   <span className="visually-hidden">레시피 제목 검색</span>
                   <input

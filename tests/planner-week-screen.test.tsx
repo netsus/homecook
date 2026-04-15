@@ -163,6 +163,20 @@ describe("planner week screen", () => {
     ).toBeTruthy();
   });
 
+  it("reserves bottom-tab safe area for guest actions on small screens", async () => {
+    readE2EAuthOverride.mockReturnValue(false);
+
+    render(<PlannerWeekScreen />);
+
+    const heading = await screen.findByRole("heading", {
+      name: "이 화면은 로그인이 필요해요",
+    });
+    const authGate = heading.closest("div");
+
+    expect(authGate).not.toBeNull();
+    expect(authGate?.className).toContain("action-safe-bottom-panel");
+  });
+
   it("loads planner data into four fixed slots inside the same day card", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(

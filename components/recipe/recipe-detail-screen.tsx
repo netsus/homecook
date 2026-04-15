@@ -568,7 +568,7 @@ export function RecipeDetailScreen({
             }
           />
 
-          <div className="flex flex-col gap-[clamp(0.875rem,3vw,1.25rem)] px-[clamp(0.875rem,4vw,1.25rem)] py-[clamp(0.875rem,4vw,1.25rem)] md:px-6 md:py-6">
+          <div className="recipe-overview-compact flex flex-col px-[clamp(0.875rem,4vw,1.25rem)] py-[clamp(0.875rem,4vw,1.25rem)] md:px-6 md:py-6">
             <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--olive)] md:text-xs md:tracking-[0.22em]">
               <Link href="/">Home</Link>
               <span>/</span>
@@ -598,7 +598,7 @@ export function RecipeDetailScreen({
               </p>
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-2 max-[360px]:order-1">
+            <div className="recipe-overview-metrics-compact grid grid-cols-4 items-center max-[360px]:order-1">
               <UtilityStatButton
                 ariaLabel={`플래너 등록 ${plannerCountLabel}`}
                 count={plannerCountLabel}
@@ -649,7 +649,7 @@ export function RecipeDetailScreen({
               </p>
             </div>
 
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2.5 max-[360px]:order-2 md:gap-3">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 max-[360px]:order-2 md:gap-2.5">
               <ActionButton
                 label="플래너에 추가"
                 onClick={() => handleProtectedAction("planner")}
@@ -940,7 +940,7 @@ function ActionButton({
   return (
     <button
       aria-pressed={ariaPressed}
-      className={`min-h-11 rounded-[12px] border px-3.5 py-2.5 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:px-4 md:py-3 md:text-sm ${className}`}
+      className={`min-h-10 rounded-[11px] border px-3 py-2 text-[12px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:min-h-11 md:px-4 md:py-2.5 md:text-sm ${className}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -971,7 +971,7 @@ function IconActionButton({
   return (
     <button
       aria-label={ariaLabel}
-      className={`flex min-h-11 w-full items-center justify-center rounded-[12px] border shadow-[var(--shadow)] md:min-h-12 md:rounded-[14px] ${className}`}
+      className={`flex min-h-10 w-full items-center justify-center rounded-[11px] border shadow-[var(--shadow)] md:min-h-11 md:rounded-[13px] ${className}`}
       onClick={onClick}
       type="button"
     >
@@ -1003,14 +1003,14 @@ function UtilityStatButton({
   return (
     <div
       aria-label={ariaLabel}
-      className={`flex min-h-11 w-full items-center justify-center gap-1 rounded-[12px] border px-2 py-2 text-[12px] font-semibold shadow-[var(--shadow)] md:min-h-12 md:rounded-[14px] md:text-sm ${className}`}
+      className={`flex min-h-10 w-full items-center justify-center gap-1 rounded-[11px] border px-1.5 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] md:min-h-11 md:rounded-[13px] md:px-2 md:py-2 md:text-[13px] ${className}`}
       role="status"
     >
       <span aria-hidden="true" className="shrink-0">
         {icon}
       </span>
       <span className="truncate">{label}</span>
-      <span className="rounded-full bg-white/72 px-1.5 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-2 md:text-[11px]">
+      <span className="rounded-full bg-white/72 px-1.25 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-1.75 md:text-[11px]">
         {count}
       </span>
     </div>
@@ -1049,7 +1049,7 @@ function MetricActionButton({
     <button
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
-      className={`flex min-h-11 w-full items-center ${hideLabel ? "justify-center" : ""} gap-1 rounded-[12px] border px-2 py-2 text-[12px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:min-h-12 md:gap-2 md:rounded-[14px] md:px-4 md:py-2.5 md:text-sm ${className}`}
+      className={`flex min-h-10 w-full items-center ${hideLabel ? "justify-center" : ""} gap-1 rounded-[11px] border px-1.5 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:min-h-11 md:gap-1.5 md:rounded-[13px] md:px-3 md:py-2 md:text-[13px] ${className}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -1060,7 +1060,7 @@ function MetricActionButton({
       {hideLabel ? null : <span>{label}</span>}
       <span
         aria-hidden={ariaLabel !== `좋아요 ${count}`}
-        className="rounded-full bg-white/72 px-1.5 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-2 md:py-0.75 md:text-[11px]"
+        className="rounded-full bg-white/72 px-1.25 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-1.75 md:text-[11px]"
       >
         {count}
       </span>
