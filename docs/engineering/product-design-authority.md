@@ -209,14 +209,3 @@ authority report에는 아래를 반드시 포함한다.
 anchor screen extension으로 본다.
 
 ---
-
-## 운영 권고
-
-현 시점의 즉시 권고는 아래와 같다.
-
-1. slice06 제품 구현은 잠시 멈춘다.
-2. `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK`에 authority baseline을 만든다.
-3. blocker를 한 번 정리한 뒤 slice06 Stage 1/4를 시작한다.
-
-즉, 지금 필요한 것은 "슬라이스를 더 빨리 추가하는 것"보다
-"앵커 화면의 모바일 UX 기준을 먼저 잠그는 것"이다.
