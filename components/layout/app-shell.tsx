@@ -37,9 +37,12 @@ export function AppShell({
           </header>
         ) : null}
         {!showSharedHeader && showLocalDevSessionControls ? (
-          <div className="glass-panel overflow-hidden rounded-[20px] md:rounded-[24px]">
+          <aside
+            aria-label="로컬 세션 도구"
+            className="glass-panel overflow-hidden rounded-[20px] md:rounded-[24px]"
+          >
             <LocalDevSessionControls />
-          </div>
+          </aside>
         ) : null}
         <main>{children}</main>
       </div>

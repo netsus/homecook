@@ -99,6 +99,8 @@ describe("home screen", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Homecook" })).toBeTruthy();
     expect(await screen.findByPlaceholderText("레시피 제목 검색")).toBeTruthy();
+    expect(screen.queryByText("Slice Scope")).toBeNull();
+    expect(screen.queryByText("Current Filters")).toBeNull();
     expect(screen.queryByText("Home / Discovery")).toBeNull();
     expect(screen.queryByText("집밥을 바로 골라보세요")).toBeNull();
     expect(
