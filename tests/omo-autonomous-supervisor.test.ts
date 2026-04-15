@@ -6210,6 +6210,176 @@ describe("OMO autonomous supervisor", () => {
     expect(result.wait?.reason ?? "").toContain("manual merge handoff");
   });
 
+  it("resolves stale Stage 6 manual merge handoff after the frontend PR is merged", () => {
+    const rootDir = createFixture();
+    seedAutonomousPolicy(rootDir, "03-recipe-like", {
+      authorityRequired: true,
+      uiRisk: "anchor-extension",
+      requiredScreens: ["RECIPE_DETAIL"],
+      authorityReportPaths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+      anchorScreens: ["RECIPE_DETAIL", "PLANNER_WEEK"],
+    });
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    const artifactDir = join(rootDir, ".artifacts", "stage6-manual-handoff-merged");
+
+    createGitWorkspace(workspacePath, "feature/fe-03-recipe-like");
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "in-progress",
+      designStatus: "confirmed",
+      authorityStatus: "reviewed",
+      uiRisk: "anchor-extension",
+      visualArtifact: "ui/designs/evidence/06/RECIPE_DETAIL-mobile.png",
+    });
+    mkdirSync(join(workspacePath, "ui", "designs", "authority"), { recursive: true });
+    writeFileSync(join(workspacePath, "ui", "designs", "authority", "RECIPE_DETAIL-authority.md"), "# Authority\n- verdict: pass\n");
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "feat: seed merged manual handoff"], { cwd: workspacePath });
+    const headSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: workspacePath, encoding: "utf8" }).trim();
+
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      join(artifactDir, "stage-result.json"),
+      `${JSON.stringify(buildReviewStageResult({
+        decision: "approve",
+        stage: 6,
+        reviewedChecklistIds: [
+          CHECKLIST_IDS.backendDelivery,
+          CHECKLIST_IDS.backendAcceptance,
+          CHECKLIST_IDS.frontendDelivery,
+          CHECKLIST_IDS.frontendAcceptance,
+        ],
+        bodyMarkdown: "Approved with manual merge handoff.",
+      }), null, 2)}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({ rootDir, workItemId: "03-recipe-like", slice: "03-recipe-like" }).state,
+        slice: "03-recipe-like",
+        active_stage: 6,
+        current_stage: 6,
+        last_completed_stage: 5,
+        workspace: { path: workspacePath, branch_role: "frontend" },
+        phase: "wait",
+        next_action: "noop",
+        last_artifact_dir: artifactDir,
+        wait: {
+          kind: "human_escalation",
+          pr_role: null,
+          stage: null,
+          head_sha: null,
+          reason: "Slice requires manual merge handoff for Stage 6.",
+          until: null,
+          updated_at: "2026-04-10T00:00:00+09:00",
+        },
+        execution: {
+          provider: "opencode",
+          session_role: "codex_primary",
+          session_id: "ses_codex_stage6",
+          artifact_dir: artifactDir,
+          stage_result_path: join(artifactDir, "stage-result.json"),
+          started_at: "2026-04-09T23:15:00+09:00",
+          finished_at: "2026-04-09T23:15:00+09:00",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "frontend",
+        },
+        design_authority: {
+          status: "reviewed",
+          ui_risk: "anchor-extension",
+          anchor_screens: ["RECIPE_DETAIL", "PLANNER_WEEK"],
+          required_screens: ["RECIPE_DETAIL"],
+          authority_required: true,
+          authority_verdict: "pass",
+          authority_report_paths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+          reviewed_screen_ids: ["RECIPE_DETAIL"],
+        },
+        prs: {
+          docs: null,
+          backend: null,
+          frontend: {
+            number: 36,
+            url: "https://github.com/netsus/homecook/pull/36",
+            draft: false,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: headSha,
+          },
+        },
+        recovery: {
+          kind: "partial_stage_failure",
+          stage: 6,
+          branch: "feature/fe-03-recipe-like",
+          reason: "Slice requires manual merge handoff for Stage 6.",
+          artifact_dir: artifactDir,
+          changed_files: [],
+          existing_pr: {
+            role: "frontend",
+            number: 36,
+            url: "https://github.com/netsus/homecook/pull/36",
+            draft: false,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: headSha,
+          },
+          salvage_candidate: false,
+          session_role: "codex_primary",
+          session_provider: "opencode",
+          session_id: "ses_codex_stage6",
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      { rootDir, workItemId: "03-recipe-like", now: "2026-04-10T00:10:00+09:00", maxTransitions: 1 },
+      {
+        auth: { assertGhAuth() {}, assertOpencodeAuth() {}, assertClaudeAuth() {} },
+        worktree: {
+          ensureWorktree() { return { path: workspacePath, created: false }; },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) { return { branch }; },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() { return headSha; },
+          getCurrentBranch() { return "feature/fe-03-recipe-like"; },
+          listChangedFiles() { return []; },
+          getBinaryDiff() { return ""; },
+        },
+        stageRunner() { throw new Error("not expected"); },
+        github: {
+          createPullRequest() { throw new Error("not expected"); },
+          getRequiredChecks() { throw new Error("not expected"); },
+          markReady() {},
+          commentPullRequest() {},
+          mergePullRequest() { throw new Error("not expected"); },
+          getPullRequestSummary() {
+            return { state: "MERGED", mergedAt: "2026-04-10T00:05:00Z", mergeStateStatus: "UNKNOWN", reviewDecision: null };
+          },
+          updateBranch() {},
+          getApprovalRequirement() { return { required: false, requiredApprovingReviewCount: 0, source: "test" }; },
+        },
+      },
+    );
+
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      slice: "03-recipe-like",
+    }).state as {
+      phase: string | null;
+      wait: unknown;
+      last_completed_stage: number | null;
+      recovery: unknown;
+    };
+
+    expect(result.wait).toBeNull();
+    expect(runtime.phase).toBe("done");
+    expect(runtime.last_completed_stage).toBe(6);
+    expect(runtime.wait).toBeNull();
+    expect(runtime.recovery).toBeNull();
+  });
+
   it("escalates to human_escalation when review ping-pong exceeds max rounds", () => {
     const rootDir = createFixture();
     seedAutonomousPolicy(rootDir, "03-recipe-like");
@@ -7339,6 +7509,170 @@ describe("OMO autonomous supervisor", () => {
     expect(result.wait).toBeNull();
     expect(runtime.phase).toBe("done");
     expect(runtime.wait).toBeNull();
+  });
+
+  it("tick resumes stale Stage 6 manual merge handoff escalations after the PR is merged", () => {
+    const rootDir = createFixture();
+    seedAutonomousPolicy(rootDir, "03-recipe-like", {
+      authorityRequired: true,
+      uiRisk: "anchor-extension",
+      requiredScreens: ["RECIPE_DETAIL"],
+      authorityReportPaths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+      anchorScreens: ["RECIPE_DETAIL", "PLANNER_WEEK"],
+    });
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    const artifactDir = join(rootDir, ".artifacts", "stage6-manual-handoff-tick");
+
+    createGitWorkspace(workspacePath, "feature/fe-03-recipe-like");
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "in-progress",
+      designStatus: "confirmed",
+      authorityStatus: "reviewed",
+      uiRisk: "anchor-extension",
+      visualArtifact: "ui/designs/evidence/06/RECIPE_DETAIL-mobile.png",
+    });
+    mkdirSync(join(workspacePath, "ui", "designs", "authority"), { recursive: true });
+    writeFileSync(join(workspacePath, "ui", "designs", "authority", "RECIPE_DETAIL-authority.md"), "# Authority\n- verdict: pass\n");
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "feat: seed merged handoff tick"], { cwd: workspacePath });
+    const headSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: workspacePath, encoding: "utf8" }).trim();
+
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      join(artifactDir, "stage-result.json"),
+      `${JSON.stringify(buildReviewStageResult({
+        decision: "approve",
+        stage: 6,
+        reviewedChecklistIds: [
+          CHECKLIST_IDS.backendDelivery,
+          CHECKLIST_IDS.backendAcceptance,
+          CHECKLIST_IDS.frontendDelivery,
+          CHECKLIST_IDS.frontendAcceptance,
+        ],
+        bodyMarkdown: "Approved with manual merge handoff.",
+      }), null, 2)}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({ rootDir, workItemId: "03-recipe-like", slice: "03-recipe-like" }).state,
+        slice: "03-recipe-like",
+        active_stage: 6,
+        current_stage: 6,
+        last_completed_stage: 5,
+        workspace: { path: workspacePath, branch_role: "frontend" },
+        phase: "wait",
+        next_action: "noop",
+        last_artifact_dir: artifactDir,
+        wait: {
+          kind: "human_escalation",
+          pr_role: null,
+          stage: null,
+          head_sha: null,
+          reason: "Slice requires manual merge handoff for Stage 6.",
+          until: null,
+          updated_at: "2026-04-10T00:00:00+09:00",
+        },
+        execution: {
+          provider: "opencode",
+          session_role: "codex_primary",
+          session_id: "ses_codex_stage6",
+          artifact_dir: artifactDir,
+          stage_result_path: join(artifactDir, "stage-result.json"),
+          started_at: "2026-04-09T23:15:00+09:00",
+          finished_at: "2026-04-09T23:15:00+09:00",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "frontend",
+        },
+        design_authority: {
+          status: "reviewed",
+          ui_risk: "anchor-extension",
+          anchor_screens: ["RECIPE_DETAIL", "PLANNER_WEEK"],
+          required_screens: ["RECIPE_DETAIL"],
+          authority_required: true,
+          authority_verdict: "pass",
+          authority_report_paths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+          reviewed_screen_ids: ["RECIPE_DETAIL"],
+        },
+        prs: {
+          docs: null,
+          backend: null,
+          frontend: {
+            number: 36,
+            url: "https://github.com/netsus/homecook/pull/36",
+            draft: false,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: headSha,
+          },
+        },
+        recovery: {
+          kind: "partial_stage_failure",
+          stage: 6,
+          branch: "feature/fe-03-recipe-like",
+          reason: "Slice requires manual merge handoff for Stage 6.",
+          artifact_dir: artifactDir,
+          changed_files: [],
+          existing_pr: {
+            role: "frontend",
+            number: 36,
+            url: "https://github.com/netsus/homecook/pull/36",
+            draft: false,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: headSha,
+          },
+          salvage_candidate: false,
+          session_role: "codex_primary",
+          session_provider: "opencode",
+          session_id: "ses_codex_stage6",
+        },
+      },
+    });
+
+    const tickDependencies = {
+      auth: { assertGhAuth() {}, assertOpencodeAuth() {}, assertClaudeAuth() {} },
+      worktree: {
+        ensureWorktree() { return { path: workspacePath, created: false }; },
+        assertClean() {},
+        checkoutBranch({ branch }: { branch: string }) { return { branch }; },
+        pushBranch() {},
+        syncBaseBranch() {},
+        getHeadSha() { return headSha; },
+        getCurrentBranch() { return "feature/fe-03-recipe-like"; },
+        listChangedFiles() { return []; },
+        getBinaryDiff() { return ""; },
+      },
+      stageRunner() { throw new Error("not expected"); },
+      github: {
+        createPullRequest() { throw new Error("not expected"); },
+        getRequiredChecks() { throw new Error("not expected"); },
+        markReady() {},
+        commentPullRequest() {},
+        mergePullRequest() { throw new Error("not expected"); },
+        getPullRequestSummary() {
+          return { state: "MERGED", mergedAt: "2026-04-10T00:05:00Z", mergeStateStatus: "UNKNOWN", reviewDecision: null };
+        },
+        updateBranch() {},
+        getApprovalRequirement() { return { required: false, requiredApprovingReviewCount: 0, source: "test" }; },
+      },
+    };
+
+    const [result] = tickSupervisorWorkItems(
+      { rootDir, workItemId: "03-recipe-like", now: "2026-04-10T00:10:00+09:00" },
+      {
+        ...tickDependencies,
+        supervise(options: { rootDir?: string; workItemId: string; now?: string; maxTransitions?: number }) {
+          return superviseWorkItem(options, tickDependencies);
+        },
+      },
+    );
+
+    expect(result.wait).toBeNull();
+    expect(result.runtime?.phase).toBe("done");
+    expect(result.runtime?.last_completed_stage).toBe(6);
   });
 
   it("tick resumes due work items, skips future retries, and reports locked items without failing", () => {
