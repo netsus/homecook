@@ -83,10 +83,13 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     expect(
-      await screen.findByRole("heading", { name: "이번 주 인기 레시피" }),
+      await screen.findByRole("heading", {
+        level: 2,
+        name: "이번 주 인기 레시피",
+      }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "모든 레시피" }),
+      screen.getByRole("heading", { level: 2, name: "모든 레시피" }),
     ).toBeTruthy();
     expect(screen.getAllByRole("link", { name: /집밥 김치찌개/i }).length).toBe(2);
   });
@@ -95,7 +98,10 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     expect(
-      await screen.findByRole("heading", { name: "집밥을 바로 골라보세요" }),
+      await screen.findByRole("heading", {
+        level: 1,
+        name: "집밥을 바로 골라보세요",
+      }),
     ).toBeTruthy();
     expect(
       screen.getByText("검색, 정렬, 재료 필터로 원하는 메뉴를 빠르게 좁혀보세요."),
@@ -105,6 +111,8 @@ describe("home screen", () => {
 
   it("uses a custom sort menu so the selected option stays readable on mobile", async () => {
     const user = userEvent.setup();
+    window.innerWidth = 390;
+    window.dispatchEvent(new Event("resize"));
 
     render(<HomeScreen />);
 
@@ -112,6 +120,10 @@ describe("home screen", () => {
     expect(sortButton.textContent).toContain("조회수순");
 
     await user.click(sortButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 2, name: "정렬 기준" })).toBeTruthy();
+    });
 
     const listbox = screen.getByRole("listbox", { name: "정렬 기준" });
     expect(listbox).toBeTruthy();

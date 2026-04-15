@@ -586,9 +586,9 @@ export function RecipeDetailScreen({
                   </span>
                 ))}
               </div>
-              <h2 className="text-[clamp(1.5rem,6vw,2.125rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
+              <h1 className="text-[clamp(1.5rem,6vw,2.125rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
                 {recipe.title}
-              </h2>
+              </h1>
               <p className="text-[12px] font-medium text-[var(--muted)] md:text-[13px]">
                 <span>{recipe.base_servings}인분</span>
                 <span className="px-1.5 text-[var(--line)]">·</span>
@@ -940,7 +940,7 @@ function ActionButton({
   return (
     <button
       aria-pressed={ariaPressed}
-      className={`min-h-10 rounded-[11px] border px-3 py-2 text-[12px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:min-h-11 md:px-4 md:py-2.5 md:text-sm ${className}`}
+      className={`min-h-11 rounded-[11px] border px-3 py-2 text-[12px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:px-4 md:py-2.5 md:text-sm ${className}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -971,7 +971,7 @@ function IconActionButton({
   return (
     <button
       aria-label={ariaLabel}
-      className={`flex min-h-10 w-full items-center justify-center rounded-[11px] border shadow-[var(--shadow)] md:min-h-11 md:rounded-[13px] ${className}`}
+      className={`flex min-h-11 w-full items-center justify-center rounded-[11px] border shadow-[var(--shadow)] md:rounded-[13px] ${className}`}
       onClick={onClick}
       type="button"
     >
@@ -1003,7 +1003,7 @@ function UtilityStatButton({
   return (
     <div
       aria-label={ariaLabel}
-      className={`flex min-h-10 w-full items-center justify-center gap-1 rounded-[11px] border px-1.5 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] md:min-h-11 md:rounded-[13px] md:px-2 md:py-2 md:text-[13px] ${className}`}
+      className={`flex min-h-11 w-full items-center justify-center gap-1 rounded-[11px] border px-1.5 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] md:rounded-[13px] md:px-2 md:py-2 md:text-[13px] ${className}`}
       role="status"
     >
       <span aria-hidden="true" className="shrink-0">
@@ -1049,7 +1049,7 @@ function MetricActionButton({
     <button
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
-      className={`flex min-h-10 w-full items-center ${hideLabel ? "justify-center" : ""} gap-1 rounded-[11px] border px-1.5 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:min-h-11 md:gap-1.5 md:rounded-[13px] md:px-3 md:py-2 md:text-[13px] ${className}`}
+      className={`flex min-h-11 w-full items-center ${hideLabel ? "justify-center" : ""} gap-1 rounded-[11px] border px-1.5 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:gap-1.5 md:rounded-[13px] md:px-3 md:py-2 md:text-[13px] ${className}`}
       disabled={disabled}
       onClick={onClick}
       type="button"

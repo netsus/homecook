@@ -30,7 +30,13 @@ describe("recipe card", () => {
     ).toBeTruthy();
 
     const titleScope = within(titleRow as HTMLElement);
-    expect(titleScope.getByText(`기본 ${MOCK_RECIPE_CARD.base_servings}인분`)).toBeTruthy();
+    const servingsBadge = titleScope.getByText(
+      `기본 ${MOCK_RECIPE_CARD.base_servings}인분`,
+    );
+
+    expect(servingsBadge).toBeTruthy();
+    expect(servingsBadge.className).toContain("bg-[#7a2810]");
+    expect(servingsBadge.className).toContain("text-white");
 
     const statsScope = within(statsRow as HTMLElement);
     expect(statsScope.getByText("조회")).toBeTruthy();

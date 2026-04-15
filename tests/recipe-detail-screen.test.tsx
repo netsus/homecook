@@ -183,6 +183,23 @@ describe("recipe detail screen", () => {
     expect(screen.queryByText("Slice Note")).toBeNull();
   });
 
+  it("uses level-one page headings and 44px touch targets for the hero actions", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    expect(
+      await screen.findByRole("heading", {
+        level: 1,
+        name: MOCK_RECIPE_DETAIL.title,
+      }),
+    ).toBeTruthy();
+
+    for (const name of ["좋아요 203", "저장", "플래너에 추가"]) {
+      expect((await screen.findByRole("button", { name })).className).toContain(
+        "min-h-11",
+      );
+    }
+  });
+
   it("disables the like button while pending and updates the count from the API response", async () => {
     const detail = buildRecipeDetail();
     const deferred = createDeferred<RecipeLikeData>();

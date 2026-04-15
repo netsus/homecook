@@ -20,7 +20,7 @@ test.describe("Slice 01 basic flow", () => {
     await page.goto("/");
 
     await expect(
-      page.getByRole("heading", { name: "먹고 싶은 집밥을 골라보세요" }),
+      page.getByRole("heading", { name: "집밥을 바로 골라보세요" }),
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "이번 주 인기 레시피" }),

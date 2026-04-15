@@ -220,9 +220,9 @@ export function HomeScreen() {
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
                   Home / Discovery
                 </p>
-                <h2 className="mt-2 text-[1.75rem] font-extrabold leading-tight tracking-[-0.03em] text-[var(--foreground)] md:text-[2rem]">
+                <h1 className="mt-2 text-[1.75rem] font-extrabold leading-tight tracking-[-0.03em] text-[var(--foreground)] md:text-[2rem]">
                   집밥을 바로 골라보세요
-                </h2>
+                </h1>
                 <p className="mt-2 max-w-lg text-[13px] leading-5 text-[var(--muted)]">
                   검색, 정렬, 재료 필터로 원하는 메뉴를 빠르게 좁혀보세요.
                 </p>
@@ -330,9 +330,9 @@ export function HomeScreen() {
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--olive)]">
                     Recipe List
                   </p>
-                  <h3 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                  <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
                     {listTitle}
-                  </h3>
+                  </h2>
                 </div>
                 <span className="rounded-full bg-white/75 px-3 py-1 text-xs font-semibold text-[var(--muted)]">
                   {recipes?.items.length ?? 0}개
@@ -420,9 +420,9 @@ function ThemeSection({ theme }: { theme: RecipeTheme }) {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--olive)]">
             Theme
           </p>
-          <h3 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+          <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
             {theme.title}
-          </h3>
+          </h2>
         </div>
         <span className="text-sm font-medium text-[var(--muted)]">더보기</span>
       </div>
@@ -502,9 +502,9 @@ function SortMenu({
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
                   Sort
                 </p>
-                <h3 className="mt-1 text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                <h2 className="mt-1 text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
                   정렬 기준
-                </h3>
+                </h2>
               </div>
               <button
                 className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"

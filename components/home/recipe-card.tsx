@@ -52,7 +52,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           <h3 className="line-clamp-2 flex-1 text-base font-semibold text-[var(--foreground)]">
             {recipe.title}
           </h3>
-          <span className="shrink-0 rounded-full bg-[color:rgba(255,108,60,0.1)] px-2.5 py-1 text-[10px] font-semibold text-[var(--brand-deep)]">
+          <span className="shrink-0 rounded-full bg-[#7a2810] px-2.5 py-1 text-[11px] font-semibold text-white">
             기본 {recipe.base_servings}인분
           </span>
         </div>
