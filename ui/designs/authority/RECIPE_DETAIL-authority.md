@@ -41,6 +41,7 @@
 |---|------|----------|----------|
 | 1 | internal scaffolding | `Recipe Snapshot`, `Slice Note`가 product body 안에 노출됐다. | 해소. 사용자에게 필요한 hero / actions / ingredients / steps만 남았다. |
 | 2 | action hierarchy | metric pill과 primary row가 분리돼 planner add의 우선순위가 흐렸다. | 해소. `요리하기`와 `플래너에 추가`가 명확한 primary block을 이루고, like/save는 secondary engagement row로 내려갔다. |
+| 3 | planner-add-sheet polish | close/stepper touch target이 44px 미만이었고 eyebrow가 영어 카피였다. | 해소. 닫기/stepper 버튼을 `h-11 w-11`로 맞추고 eyebrow를 `플래너에 추가`로 교체했다. |
 
 ## Major Follow-Ups
 
@@ -56,7 +57,6 @@
 |---|------|------|------|
 | 1 | copy tone | hero 아래 helper copy는 안정적이지만 브랜드 캐릭터는 아직 절제된 편이다. | 기능 안정 후 tone refinement를 검토한다. |
 | 2 | overview cards | `기본 인분 / 재료 / 조리 단계` 카드는 유용하지만, 더 compact하게 묶을 여지도 있다. | slice06 이후 실제 사용 흐름에 맞춰 density를 다시 본다. |
-| 3 | planner-add-sheet eyebrow | "Add to Planner" eyebrow가 영어다. `planner-add-sheet.tsx:86`에서 하드코딩. | "플래너에 추가" 또는 "PLANNER" 등 한국어·약어 정리 후 결정. 기능 미치는 영향 없음. |
 
 ## Decision
 
@@ -64,12 +64,12 @@
 - Stage 5 confirmed 가능 여부: `가능`
 - 다음 행동:
   - planner add CTA 추가 후 hero hierarchy 재확인 완료. 무너지지 않았다.
-  - 영어 eyebrow "Add to Planner"는 별도 polish round에서 처리한다.
+- touch target / copy polish까지 반영돼 추가 후속조치 없이 Stage 5로 넘길 수 있다.
 
 ## authority_precheck Conclusion (slice06 Stage 4)
 
 - **신규 blocker**: 없음
 - **신규 major**: 없음
-- **신규 minor**: 1건 (영어 eyebrow copy, `planner-add-sheet.tsx:86`)
+- **신규 minor**: 없음
 - **최종 verdict**: `pass`
 - `RECIPE_DETAIL` anchor screen은 slice06 planner add sheet 추가 후에도 layout containment, CTA hierarchy, mobile UX 기준을 모두 유지한다.
