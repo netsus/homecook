@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-15T03:38:15.158Z",
+  "updated_at": "2026-04-15T13:19:31.090Z",
   "canonical_policy": "v1",
   "execution_mode": "promotion-candidate",
   "documentation_gates": [
@@ -59,9 +59,9 @@
     {
       "id": "authority-required-ui",
       "label": "Authority-required UI lane",
-      "status": "in_progress",
+      "status": "pass",
       "required": true,
-      "notes": "slice06 Stage 4 ready; audit bundle: .artifacts/meta-harness-auditor/slice06-stage4/report.md; authority evidence: ui/designs/authority/README.md; ci wait: PR #120 checks pending; blocked retry: none",
+      "notes": "slice06 authority-required pilot passed; audit bundle: .artifacts/meta-harness-auditor/slice06-stage6/report.md; authority evidence: ui/designs/authority/authority-report-06-recipe-to-planner.md; manual handoff: Stage 6 PR #120 merged",
       "workpack_refs": [
         "docs/workpacks/06-recipe-to-planner/README.md"
       ],
@@ -93,11 +93,10 @@
   "promotion_gate": {
     "status": "not-ready",
     "blockers": [
-      "authority-required-ui lane still in progress",
       "external-smoke lane evidence missing",
       "bugfix-patch lane evidence missing"
     ],
-    "next_review_trigger": "After slice06 Stage 6 closeout",
+    "next_review_trigger": "After one external-smoke pilot and one bugfix-patch pilot",
     "notes": "Stay in promotion-candidate mode until the required pilot lanes pass."
   }
 }
