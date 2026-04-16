@@ -98,7 +98,7 @@
 2. `docs/workpacks/_template/acceptance.md` — 모든 섹션 확인
 3. `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` — 공식 문서 버전 확인
 4. `docs/요구사항기준선-v1.6.3.md` — 해당 슬라이스 요구사항 범위
-5. `docs/화면정의서-v1.2.3.md` — 해당 화면 정의
+5. `docs/화면정의서-v1.3.0.md` — 해당 화면 정의
 6. `docs/api문서-v1.2.2.md` — 해당 API 섹션
 7. `docs/db설계-v1.3.1.md` — 영향받는 테이블
 8. `docs/engineering/qa-system.md` — QA 3-Layer와 real DB / fixture 운영 기준
@@ -424,7 +424,7 @@
 3. `docs/workpacks/<slice>/README.md` — Frontend Delivery Mode, Design Status, Key Rules
 4. `docs/workpacks/<slice>/acceptance.md` — 자동화 대상·Manual Only 분리 확인
 5. `docs/workpacks/<slice>/automation-spec.json` — stage ownership / required states / artifact contract 확인
-6. `docs/화면정의서-v1.2.3.md` — 해당 화면 정의
+6. `docs/화면정의서-v1.3.0.md` — 해당 화면 정의
 7. `docs/design/design-tokens.md` — 확정 색상·간격·컴포넌트 토큰 (Tailwind 클래스 작성 전 확인)
 8. `docs/design/mobile-ux-rules.md`
 9. `docs/design/anchor-screens.md`
@@ -548,7 +548,7 @@
 
 1. `docs/workpacks/<slice>/README.md` — Design Status 확인
 2. `docs/workpacks/<slice>/acceptance.md` — FE 관련 checklist와 `review=5` 대상 확인
-3. `docs/화면정의서-v1.2.3.md` — 해당 화면 정의
+3. `docs/화면정의서-v1.3.0.md` — 해당 화면 정의
 4. `docs/design/design-tokens.md` — 확정 토큰 기준 (색상·간격·컴포넌트 규칙)
 5. `docs/design/mobile-ux-rules.md`
 6. `docs/design/anchor-screens.md`
