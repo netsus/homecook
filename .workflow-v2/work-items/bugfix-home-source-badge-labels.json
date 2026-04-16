@@ -1,0 +1,62 @@
+{
+  "id": "bugfix-home-source-badge-labels",
+  "title": "HOME 레시피 카드 source badge 로컬라이즈",
+  "summary": "HOME 레시피 카드가 raw source_type enum(system/youtube/manual)을 그대로 노출하는 문제를 작은 post-merge bugfix로 수정한다.",
+  "project_profile": "homecook",
+  "change_type": "bugfix",
+  "surface": "frontend",
+  "risk": "low",
+  "preset": "bugfix-patch",
+  "goal": "HOME 카드 source badge를 한국어 사용자-facing 라벨로 치환해 raw enum이 그대로 보이지 않게 한다.",
+  "owners": {
+    "claude": "review-and-approval",
+    "codex": "implementation-and-verification",
+    "workers": []
+  },
+  "dependencies": [
+    "01-discovery-detail-auth"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "AGENTS.md",
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/화면정의서-v1.2.3.md",
+      "ui/designs/HOME.md"
+    ],
+    "governing_docs": [
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/git-workflow.md",
+      "docs/engineering/workflow-v2/README.md",
+      "docs/engineering/workflow-v2/presets.md",
+      "docs/engineering/workflow-v2/promotion-readiness.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "optional",
+    "review_loop": "recommended",
+    "external_smokes": []
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm exec vitest run tests/recipe-card.test.tsx tests/home-screen.test.tsx",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/recipe-card.test.tsx tests/home-screen.test.tsx",
+      "pnpm lint",
+      "pnpm typecheck"
+    ]
+  },
+  "status": {
+    "lifecycle": "ready_for_review",
+    "approval_state": "codex_approved",
+    "verification_status": "passed"
+  },
+  "out_of_scope": [
+    "레시피 카드 레이아웃 재설계",
+    "RECIPE_DETAIL / 저장 / 플래너 흐름 수정",
+    "source_type API 계약 변경"
+  ],
+  "open_questions": []
+}

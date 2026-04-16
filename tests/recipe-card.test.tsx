@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { RecipeCard } from "@/components/home/recipe-card";
 import { MOCK_RECIPE_CARD } from "@/lib/mock/recipes";
+import type { RecipeCardItem } from "@/types/recipe";
 
 describe("recipe card", () => {
   it("moves tags above the title and keeps servings beside the recipe name", () => {
@@ -46,5 +47,40 @@ describe("recipe card", () => {
 
     const tagScope = within(tagRow as HTMLElement);
     expect(tagScope.getByText(`#${MOCK_RECIPE_CARD.tags[0]}`)).toBeTruthy();
+  });
+
+  it("renders source badges with localized Korean labels instead of raw enums", () => {
+    const variants: RecipeCardItem[] = [
+      {
+        ...MOCK_RECIPE_CARD,
+        id: "recipe-system",
+        source_type: "system",
+      },
+      {
+        ...MOCK_RECIPE_CARD,
+        id: "recipe-youtube",
+        source_type: "youtube",
+      },
+      {
+        ...MOCK_RECIPE_CARD,
+        id: "recipe-manual",
+        source_type: "manual",
+      },
+    ];
+
+    const { container, rerender } = render(<RecipeCard recipe={variants[0]} />);
+    let cardScope = within(container.firstElementChild as HTMLElement);
+    expect(cardScope.getByText("집밥 추천")).toBeTruthy();
+    expect(cardScope.queryByText(/^system$/i)).toBeNull();
+
+    rerender(<RecipeCard recipe={variants[1]} />);
+    cardScope = within(container.firstElementChild as HTMLElement);
+    expect(cardScope.getByText("유튜브")).toBeTruthy();
+    expect(cardScope.queryByText(/^youtube$/i)).toBeNull();
+
+    rerender(<RecipeCard recipe={variants[2]} />);
+    cardScope = within(container.firstElementChild as HTMLElement);
+    expect(cardScope.getByText("직접 등록")).toBeTruthy();
+    expect(cardScope.queryByText(/^manual$/i)).toBeNull();
   });
 });

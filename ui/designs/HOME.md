@@ -133,6 +133,7 @@
 ```
 
 - **기본 상태**: 썸네일 + source badge + 태그 + 제목 + 기본 인분 pill + 통계 pill row
+- **source badge 라벨**: `system → 집밥 추천`, `youtube → 유튜브`, `manual → 직접 등록`
 - **Loading**: 스켈레톤 카드 (썸네일 영역 회색 블록, 텍스트 영역 줄 스켈레톤 2줄)
 - **썸네일 없음**: --background 배경 + 음식 아이콘 중앙 배치
 - **태그 배치**: 제목 위 보조 row, 배경 없는 text tag로 유지
