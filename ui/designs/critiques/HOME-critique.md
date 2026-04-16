@@ -35,7 +35,7 @@
 ### A. 요구사항 정합성
 
 - [x] 화면정의서 §1의 모든 컴포넌트(검색바, [재료로 검색] 버튼, 정렬 드롭다운, 테마 섹션, 레시피 그리드, 카드)가 와이어프레임에 포함됐는가
-- [x] 문서에 없는 컴포넌트/필드/기능이 추가됐는가 — 없음. [재료로 검색] Out of Scope 처리 및 "준비 중" 토스트는 설계 결정 사항으로 적절히 문서화됨
+- [x] 문서에 없는 컴포넌트/필드/기능이 추가됐는가 — 없음. `INGREDIENT_FILTER_MODAL`과 `모든 레시피` 정렬 sheet가 공식 화면정의서와 일치한다.
 - [x] 로그인 게이트 대상 액션(플래너/팬트리/마이페이지 탭 이동)이 모두 처리됐는가 — 하단 탭바 비로그인 LoginRequiredModal 처리 명시됨
 - [x] read-only 상태(완료 장보기 등)가 올바르게 반영됐는가 — HOME은 read-only 해당 없는 탐색 전용 화면, 별도 처리 불필요
 - [x] 삭제된 엔드포인트 `DELETE /recipes/{id}/save`가 UI에 등장하지 않는가 — HOME 설계 범위 내 저장 액션 없음, 해당 없음
@@ -43,15 +43,15 @@
 ### B. 공통 상태 커버리지
 
 - [x] Loading 상태 (스켈레톤/인디케이터) 포함 — 스켈레톤 카드 6개(2×3) + pulse 애니메이션 + 섹션 헤더 스켈레톤 명시
-- [x] Empty 상태 (안내 + CTA) 포함 — "조건에 맞는 레시피가 없어요" + [필터 초기화] --brand CTA 명시
-- [x] Error 상태 (안내 + [다시 시도]) 포함 — "레시피를 불러오지 못했어요" + [다시 시도] --brand CTA 명시
+- [x] Empty 상태 (안내 + CTA) 포함 — shared `ContentState` shell 기준, eyebrow + headline + CTA 구조 명시
+- [x] Error 상태 (안내 + [다시 시도]) 포함 — shared `ContentState` shell 기준, eyebrow + headline + CTA 구조 명시
 - [x] read-only 상태가 필요한 화면에서 수정 UI 비노출 — 해당 없음 (HOME은 탐색 전용)
 - [x] unauthorized 상태 명시 — HOME은 비로그인 허용 화면이므로 unauthorized 상태가 발생하지 않음을 interaction note로 명시 가능
 
 ### C. 내비게이션 & 플로우
 
 - [x] 하단 탭 4개 (홈/플래너/팬트리/마이페이지) 구조 일관성 — --panel 배경, 4탭 배치, 활성/비활성 토큰 모두 명시
-- [x] 유저 Flow맵과 진입/이탈 경로 일치 — 앱 실행 → HOME, 카드 탭 → RECIPE_DETAIL, [재료로 검색] → INGREDIENT_FILTER_MODAL(현재 Out of Scope 토스트) 모두 일치
+- [x] 유저 Flow맵과 진입/이탈 경로 일치 — 앱 실행 → HOME, 카드 탭 → RECIPE_DETAIL, [재료로 검색] → `INGREDIENT_FILTER_MODAL` 모두 일치
 - [x] 뒤로가기 동작 명시 여부 — HOME은 앱 진입점이라 별도 뒤로가기 불필요. 공통 브랜드 헤더는 홈 링크만 제공하고, RECIPE_DETAIL → HOME 복귀 시 동작은 RECIPE_DETAIL 설계 범위
 - [x] 플로우 단절 지점 없는가 — LoginRequiredModal [취소] → 이전 화면 유지, [로그인하기] → LOGIN 이동 명시. 단, return-to-action 명시가 미흡 (마이너 이슈 #1)
 
@@ -111,5 +111,5 @@ design-generator가 `§ design-critic 검토 필요 항목`으로 위임한 6개
 | 공통 브랜드 헤더 top spacing | 구현/문서 모두 small-mobile 기준 반영 완료 | HOME / PLANNER 공통 shell 재사용성에 직접 영향 |
 | 정렬 드롭다운 z-index 충돌 | 구현/문서 모두 레이어 정책 반영 완료 | 구현 시 테스트 항목 |
 | 테마 섹션 0개 시 전체 Empty 처리 | 현행 설계("섹션이 0개면 전체 Empty 상태")로 충분 — 추가 수정 불필요 | 레시피 그리드 공통 상태와 일관성 있음 |
-| [재료로 검색] 활성 시각 강조 | Out of Scope 해소 후 적용 — 현재 불필요 | 설계 결정 사항으로 적절히 문서화됨 |
+| [재료로 검색] 활성 시각 강조 | 현재 구현 수준은 적절하나 선택 수 badge와 footer summary가 과도해지지 않게 유지 필요 | `--olive` 계열 안에서만 강조를 유지하고, 추가 배지는 선택 수 1개만 노출 |
 | 스켈레톤 카드 수(6개) 적절성 | 구현 단계 조정 가능 — 설계 단계에서 "최소 6개, 뷰포트 크기에 따라 가변" 정도로 기술하면 충분 | 크리티컬 이슈 아님 |

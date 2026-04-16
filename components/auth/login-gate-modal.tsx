@@ -50,26 +50,23 @@ export function LoginGateModal() {
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-black/50 p-4 md:items-center md:justify-center"
+      className="fixed inset-0 z-40 flex items-end bg-black/42 p-4 backdrop-blur-[1px] md:items-center md:justify-center"
       onClick={close}
     >
       <div
         aria-labelledby="login-gate-title"
         aria-modal="true"
-        className="glass-panel w-full max-w-md rounded-[20px] px-5 py-6 md:px-6"
+        className="glass-panel w-full max-w-md rounded-[24px] px-5 py-6 md:px-6"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-[color:rgba(224,80,32,0.16)] bg-[color:rgba(255,108,60,0.14)] text-xl text-[var(--foreground)]">
-              잠금
+            <div className="inline-flex rounded-full border border-[color:rgba(30,30,30,0.08)] bg-[color:rgba(30,30,30,0.06)] px-3 py-1 text-[11px] font-semibold tracking-[0.06em] text-[var(--foreground)]">
+              보호된 작업
             </div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-              Login Gate
-            </p>
             <h2
-              className="mt-2 text-2xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]"
+              className="mt-3 text-[1.55rem] font-extrabold tracking-[-0.03em] text-[var(--foreground)]"
               id="login-gate-title"
             >
               로그인이 필요한 작업이에요
@@ -85,14 +82,14 @@ export function LoginGateModal() {
             닫기
           </button>
         </div>
-        <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
+        <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
           {description}
         </p>
-        <div className="mt-5 rounded-[16px] border border-[var(--line)] bg-white/70 p-4">
+        <div className="mt-5 rounded-[18px] border border-[var(--line)] bg-white/78 p-4">
           <p className="text-sm font-semibold text-[var(--foreground)]">
             로그인하면 원래 레시피로 바로 돌아옵니다.
           </p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
+          <p className="mt-1.5 text-sm text-[var(--muted)]">
             보호 액션 위치를 저장해 두었다가 로그인 완료 후 한 번만 복구합니다.
           </p>
         </div>

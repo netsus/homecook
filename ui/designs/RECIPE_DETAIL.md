@@ -77,8 +77,9 @@
 
 - **기본 상태**: breadcrumb → 태그 → 제목 → overview meta → utility metrics row → helper copy → primary CTA row
 - **overview meta**: `기본 인분 / 재료 수 / 조리 단계 수`를 한 줄 메타로 압축
-- **utility metrics row**: `플래너 등록수 / 공유 / 좋아요 / 저장`을 compact icon+count row로 배치
-- **primary CTA row**: `[플래너에 추가]`, `[요리하기]` 두 개를 가장 명확한 row로 분리
+- **utility metrics row**: `플래너 등록수 / 공유 / 좋아요 / 저장`을 full-width 4등분 박스가 아니라 compact wrap row로 배치
+- **tone 분리**: 좋아요 활성 상태는 `요리하기` CTA와 같은 brand tone을 피하고 별도 signal tone으로 구분
+- **primary CTA row**: `[플래너에 추가]`, `[요리하기]` 두 개를 균형 있는 2열 row로 분리
 - **Loading**: 제목 스켈레톤 2줄, 태그 칩 스켈레톤 3개, utility row 스켈레톤, CTA row 스켈레톤
 - **태그 없음**: 태그 행 비노출 (여백 유지 없이 제거)
 - **지표**: compact row 기준 `플래너등록수 / 공유 / 좋아요수 / 저장수`
@@ -102,7 +103,7 @@
 ### 6. 재료 리스트
 
 - **기본 상태**: 재료명 + 수량+단위 좌우 배치, --line 구분선
-- **TO_TASTE (적당히)**: 재료명 --muted italic, 수량 표기 없음 (또는 "적당히" --muted)
+- **TO_TASTE (적당히)**: 재료명 옆에 `취향껏` helper badge를 함께 두고, 수량 영역에는 `적당히`를 일반 muted보다 한 단계 또렷하게 표시
 - **옵션 재료**: [옵션] 배지 — text-xs, --muted 배경, --muted 텍스트, border-radius 9999px
 - **인분 연동**: 인분 조절 시 QUANT 타입 수량 즉시 업데이트, TO_TASTE는 변경 없음
 - **Loading**: 재료 행 스켈레톤 5줄
@@ -159,6 +160,7 @@
 - 닫기: [취소] 버튼, ESC 키, 배경(dim) 클릭
 - [로그인] → LOGIN 화면으로 이동, `returnToAction` 파라미터 전달 (예: `planner_add`, `like`, `save`)
 - 로그인 성공 후 `returnToAction` 에 따라 해당 액션 자동 실행 (1회 소비 후 제거)
+- modal 헤더는 shared state shell 기준에 맞춰 eyebrow pill("보호된 작업") + title + 복귀 안내 카드 구조를 유지한다.
 
 ### PlannerAddPopup (플래너 추가 바텀시트)
 
@@ -297,6 +299,9 @@
 ```
 
 ### Error 상태
+
+- `RECIPE_DETAIL` fetch error는 shared `ContentState` shell을 사용한다.
+- eyebrow pill + headline + 설명 + [다시 시도] CTA 구조를 HOME / PLANNER와 맞춘다.
 
 ```
 ┌─────────────────────────────────────┐

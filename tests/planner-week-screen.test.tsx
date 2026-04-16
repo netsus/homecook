@@ -171,10 +171,9 @@ describe("planner week screen", () => {
     const heading = await screen.findByRole("heading", {
       name: "이 화면은 로그인이 필요해요",
     });
-    const authGate = heading.closest("div");
+    const authGate = heading.closest(".action-safe-bottom-panel");
 
     expect(authGate).not.toBeNull();
-    expect(authGate?.className).toContain("action-safe-bottom-panel");
   });
 
   it("loads planner data into four fixed slots inside the same day card", async () => {

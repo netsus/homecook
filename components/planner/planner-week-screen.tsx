@@ -396,36 +396,44 @@ export function PlannerWeekScreen({
 
   if (authState === "checking") {
     return (
-      <div className="glass-panel rounded-[20px] p-6">
-        <p className="text-sm text-[var(--muted)]">로그인 상태를 확인하고 있어요...</p>
-      </div>
+      <ContentState
+        className="md:px-7"
+        description="플래너 접근 권한과 현재 세션을 확인하고 있어요."
+        eyebrow="세션 확인"
+        tone="loading"
+        title="로그인 상태를 확인하고 있어요"
+      />
     );
   }
 
   if (authState === "unauthorized") {
     return (
-      <div className="-mt-5 action-safe-bottom-panel glass-panel rounded-[20px] p-4 md:mt-0 md:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-          Planner Access
-        </p>
-        <h2 className="mt-2 text-xl font-extrabold tracking-[-0.03em] text-[var(--foreground)] md:mt-3 md:text-2xl">
-          이 화면은 로그인이 필요해요
-        </h2>
-        <p className="mt-1.5 text-sm leading-6 text-[var(--muted)] md:mt-3">
-          플래너를 사용하려면 로그인해주세요. 로그인 후에는 다시 플래너 화면으로 돌아옵니다.
-        </p>
-        <div className="mt-2 md:mt-6">
+      <ContentState
+        className="-mt-5 md:mt-0"
+        description="플래너를 사용하려면 로그인해주세요. 로그인 후에는 다시 플래너 화면으로 돌아옵니다."
+        eyebrow="플래너 접근"
+        safeBottomPadding
+        tone="gate"
+        title="이 화면은 로그인이 필요해요"
+      >
+        <div className="space-y-3">
+          <div className="rounded-[18px] border border-[var(--line)] bg-white/78 p-4">
+            <p className="text-sm font-semibold text-[var(--foreground)]">
+              로그인하면 원래 보던 주간 범위로 바로 복귀해요.
+            </p>
+            <p className="mt-1.5 text-xs leading-5 text-[var(--muted)]">
+              데스크톱과 모바일 모두 같은 헤더와 상태 셸 톤으로 접근을 안내합니다.
+            </p>
+          </div>
           <SocialLoginButtons nextPath="/planner" />
-        </div>
-        <div className="mt-2 md:mt-4">
           <Link
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
             href="/"
           >
             홈으로 돌아가기
           </Link>
         </div>
-      </div>
+      </ContentState>
     );
   }
 

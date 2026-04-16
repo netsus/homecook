@@ -40,6 +40,7 @@
 - [x] planner add 이후에도 기존 planner mental model을 유지한다
 - [x] 로그인 게이트가 planner 탭 진입 기준으로 명시된다
 - [x] loading / empty / error / unauthorized 상태가 포함된다
+- [x] unauthorized / loading 상태가 shared state shell 기준과 충돌하지 않는다
 - [x] small mobile / authority evidence 보강 계획이 문서에 있다
 
 ---

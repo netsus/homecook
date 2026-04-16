@@ -76,10 +76,18 @@
 #### [재료로 검색] 칩 버튼
 - **기본 상태**: --olive 테두리 + 텍스트, 배경 투명 (ghost 스타일)
 - **활성 상태 (재료 선택 후)**: --olive 배경 + 흰색 텍스트, 선택 재료 수 배지 표시 (--brand 배지)
-- **탭**: INGREDIENT_FILTER_MODAL 진입 (Out of Scope — 현재 미구현, 탭 시 "준비 중" 토스트 표시)
+- **탭**: `INGREDIENT_FILTER_MODAL` 진입
 - **터치 타겟**: 44px 이상
 - **배치**: 제목 검색 입력 바로 아래, discovery panel 안의 단일 보조 액션
 - **토큰**: `--olive`, border-radius: 9999px, `--space-2` 내부 패딩
+
+#### `INGREDIENT_FILTER_MODAL`
+- **mobile**: bottom sheet 패턴. handle + compact title row + 검색 입력 + 카테고리 chip rail + 체크리스트 + sticky footer 액션
+- **desktop**: centered modal 패턴. 동일한 header hierarchy를 유지하되 넓은 폭에서는 카테고리 chip wrap 허용
+- **선택 요약**: 헤더 badge와 footer summary 모두 현재 선택 개수를 반영
+- **primary action**: `n개 적용` 형태로 선택 규모를 즉시 알 수 있게 표시
+- **카테고리 선택**: mobile에서는 localized horizontal scroll rail, desktop에서는 wrap
+- **토큰**: `--panel`, `--surface`, `--line`, `--olive`, `--brand`
 
 #### 정렬 드롭다운
 - **기본값**: 조회수순
@@ -137,6 +145,10 @@
 
 ### 레시피 그리드 공통 상태
 
+- `HOME`의 Empty / Error는 shared `ContentState` shell을 사용한다.
+- eyebrow pill + headline + 설명 + CTA 위계를 유지해 `RECIPE_DETAIL`, `PLANNER_WEEK`, 로그인 게이트와 상태 톤을 맞춘다.
+- CTA가 있는 상태 셸은 하단 탭바 safe-area 위에서 읽히도록 `action-safe-bottom-panel` 여백 규칙을 공유한다.
+
 - **Loading**
   ```
   ┌─────────────┐  ┌─────────────┐
@@ -151,8 +163,9 @@
   ```
   ┌─────────────────────────────────┐
   │                                 │
-  │         🍳                      │
-  │   조건에 맞는 레시피가 없어요    │  ← --foreground, text-base
+  │     [다른 조합]                 │  ← eyebrow pill
+  │   다른 조합을 찾아보세요         │  ← --foreground, text-base
+  │   조건에 맞는 레시피가 없어요    │  ← --muted, text-sm
   │                                 │
   │   ┌───────────────────────┐     │
   │   │     필터 초기화        │     │  ← --brand CTA 버튼
@@ -165,8 +178,9 @@
   ```
   ┌─────────────────────────────────┐
   │                                 │
-  │         ⚠️                      │
+  │   [목록 동기화 오류]             │  ← eyebrow pill
   │   레시피를 불러오지 못했어요     │  ← --foreground, text-base
+  │   연결/API 확인 후 다시 시도      │  ← --muted, text-sm
   │                                 │
   │   ┌───────────────────────┐     │
   │   │       다시 시도        │     │  ← --brand CTA 버튼
@@ -227,7 +241,7 @@ HOME 화면 자체에서는 카드 탭(RECIPE_DETAIL 이동)만 발생하므로 
 |------|--------|------|------------|
 | 레시피 탐색 | 앱 실행/홈 탭 탭 | HOME 화면 진입, 기본 레시피 목록 로드 | N |
 | 제목 검색 | 검색바 입력 (debounce 300ms) | 레시피 그리드 즉시 갱신 | N |
-| 재료로 검색 | [재료로 검색] 칩 탭 | INGREDIENT_FILTER_MODAL 진입 (Out of Scope: 현재 "준비 중" 토스트) | N |
+| 재료로 검색 | [재료로 검색] 칩 탭 | `INGREDIENT_FILTER_MODAL` 진입 | N |
 | 정렬 변경 | 정렬 드롭다운 선택 | 즉시 재정렬 | N |
 | 레시피 카드 탭 | 카드 전체 영역 탭 | RECIPE_DETAIL 진입 | N |
 | 필터 초기화 | Empty 상태 [필터 초기화] 탭 | 검색어 + 재료 필터 + 정렬 초기화 → 기본 목록 로드 | N |
@@ -254,7 +268,7 @@ HOME 화면 자체에서는 카드 탭(RECIPE_DETAIL 이동)만 발생하므로 
 | 정의서 항목 | 구현 여부 | 비고 |
 |------------|----------|------|
 | 상단 검색바 (placeholder: "레시피 제목 검색") | ✅ | 공통 브랜드 헤더 아래 discovery panel에 배치 |
-| [재료로 검색] 버튼 → INGREDIENT_FILTER_MODAL | ⚠️ | Out of Scope 명시. 버튼 노출하되 탭 시 "준비 중" 토스트 |
+| [재료로 검색] 버튼 → INGREDIENT_FILTER_MODAL | ✅ | mobile sheet / desktop modal 패턴으로 구현 |
 | 정렬 드롭다운 (기본: 조회수순) | ✅ | `모든 레시피` 섹션 헤더 우측에 배치 |
 | 테마 섹션 (인기/간단 한끼/홈파티 등) | ✅ | 서버 동적 구성, 섹션 헤더 + 그리드 |
 | 레시피 카드: 썸네일 | ✅ | 110px 고정 높이, fallback 아이콘 포함 |
@@ -277,7 +291,7 @@ HOME 화면 자체에서는 카드 탭(RECIPE_DETAIL 이동)만 발생하므로 
 
 1. **공통 브랜드 헤더 사용**: `HOMECOOK` 로고는 공통 `AppHeader`를 사용해 HOME / PLANNER_WEEK / DETAIL의 상단 좌상단 구조를 맞춘다. 로고는 항상 `/` 링크로 동작한다.
 
-2. **INGREDIENT_FILTER_MODAL Out of Scope 처리**: 화면정의서 §1에 [재료로 검색] 버튼이 명시되어 있으나, 요청 컨텍스트에서 "Out of Scope for now"로 지정됨. 버튼을 UI에 노출하되 탭 시 "준비 중" 토스트로 처리한다. 이후 INGREDIENT_FILTER_MODAL 구현 시 동일 버튼에서 모달 진입으로 전환.
+2. **재료 필터와 정렬 패턴 통일**: `INGREDIENT_FILTER_MODAL`과 mobile 정렬 선택은 모두 bottom sheet 계열의 선택 패턴을 사용한다. 헤더 위계, 닫기 버튼, 선택 요약, 하단 액션 배치를 맞춰 같은 계열의 인터랙션으로 느껴지게 한다.
 
 3. **2열 그리드 선택**: 화면정의서에 "레시피 그리드(카드)"로만 명시되어 있고 열 수 미지정. 모바일 375px 기준에서 썸네일 가독성과 정보 밀도를 고려하여 2열 고정 그리드를 채택한다. 썸네일 높이 110px는 카드 너비(약 165px) 대비 약 0.67 비율로 음식 사진 노출에 적합하다.
 
@@ -295,5 +309,5 @@ HOME 화면 자체에서는 카드 탭(RECIPE_DETAIL 이동)만 발생하므로 
 - [x] 공통 브랜드 헤더 + discovery panel 조합에서 작은 모바일 세로 높이와 safe-area 여유 확인
 - [x] 정렬 드롭다운 열림 시 z-index 레이어 충돌 (테마 섹션 카드와의 겹침) 검토
 - [ ] 테마 섹션이 0개일 때의 전체 Empty 처리 vs 섹션별 Empty 처리 기준 명확화
-- [ ] [재료로 검색] 칩이 활성 상태(재료 선택 적용 중)일 때 시각적 강조 방식 (Out of Scope 해소 후 적용)
+- [x] [재료로 검색] 활성 상태(재료 선택 적용 중)에서 선택 수와 요약 문구가 과하지 않게 유지되는지 확인
 - [ ] 스켈레톤 카드 수(현재 6개)가 뷰포트에서 적절한지 — 더 많이 보이는 기기에서 빈 공간 발생 가능성

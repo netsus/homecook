@@ -235,7 +235,7 @@
 
 ### 로그인 게이트 모달 (`LoginRequiredModal`)
 
-- **기본 상태**: 하단에서 올라오는 바텀시트. dim overlay bg-black/50. 모달 시트 `--panel` bg, border-radius 20px (상단만).
+- **기본 상태**: dim overlay + centered/modal-bottom hybrid sheet. shared state shell 톤에 맞춘 eyebrow pill("보호된 작업") + headline + 복귀 설명 + 소셜 버튼 구조를 사용한다.
 - **Loading**: 해당 없음 (모달 표시 자체는 즉시).
 - **Empty**: 해당 없음.
 - **Error**: 해당 없음.
