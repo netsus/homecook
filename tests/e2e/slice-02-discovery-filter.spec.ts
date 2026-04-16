@@ -139,7 +139,7 @@ test.describe("Slice 02 discovery filter flow", () => {
       .getByRole("dialog", { name: "재료로 검색" })
       .getByText("양파", { exact: true })
       .click();
-    await page.getByRole("button", { name: "적용" }).click();
+    await page.getByRole("button", { name: /적용/ }).click();
 
     await expect(page).toHaveURL(new RegExp(`ingredient_ids=${ONION_ID}`));
     await expect(
@@ -172,7 +172,7 @@ test.describe("Slice 02 discovery filter flow", () => {
       .getByRole("dialog", { name: "재료로 검색" })
       .getByText("소고기", { exact: true })
       .click();
-    await page.getByRole("button", { name: "적용" }).click();
+    await page.getByRole("button", { name: /적용/ }).click();
 
     await expect(
       page.getByRole("heading", { name: "다른 조합을 찾아보세요" }),
@@ -204,7 +204,7 @@ test.describe("Slice 02 discovery filter flow", () => {
       page.getByRole("heading", { name: "검색 결과가 없어요" }),
     ).toBeVisible();
 
-    await expect(page.getByRole("button", { name: "적용" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: /적용/ })).toBeDisabled();
   });
 
   test("keeps footer actions readable on small mobile viewports", async ({
@@ -214,7 +214,7 @@ test.describe("Slice 02 discovery filter flow", () => {
 
     await page.getByRole("button", { name: "재료로 검색" }).click();
     const resetButton = page.getByRole("button", { name: "초기화" });
-    const applyButton = page.getByRole("button", { name: "적용" });
+    const applyButton = page.getByRole("button", { name: /적용/ });
 
     await expect(resetButton).toBeVisible();
     await expect(applyButton).toBeVisible();

@@ -455,20 +455,25 @@ function SortMenu({
         <>
           <button
             aria-label="정렬 메뉴 닫기"
-            className="fixed inset-0 z-30 bg-black/45 md:hidden"
+            className="fixed inset-0 z-30 bg-black/42 backdrop-blur-[1px] md:hidden"
             onClick={onClose}
             type="button"
           />
           <div className="fixed inset-x-0 bottom-0 z-40 rounded-t-[24px] border-t border-[var(--line)] bg-[var(--panel)] px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 shadow-[0_-18px_44px_rgba(34,24,14,0.2)] md:hidden">
             <div className="mx-auto h-1.5 w-14 rounded-full bg-black/10" />
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
-                  Sort
+            <div className="mt-4 flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+                  리스트 정렬
                 </p>
-                <h2 className="mt-1 text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-                  정렬 기준
-                </h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                    정렬 기준
+                  </h2>
+                  <span className="rounded-full border border-[color:rgba(46,166,122,0.16)] bg-[color:rgba(46,166,122,0.1)] px-2.5 py-1 text-[11px] font-semibold text-[var(--olive)]">
+                    현재 {currentLabel}
+                  </span>
+                </div>
               </div>
               <button
                 className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
@@ -488,12 +493,12 @@ function SortMenu({
 
                 return (
                   <button
-                  aria-selected={isSelected}
-                  className={`flex min-h-14 w-full items-center justify-between rounded-[16px] px-4 py-3 text-left text-sm font-semibold ${
-                    isSelected
-                      ? "bg-[var(--foreground)] text-white"
-                      : "border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]"
-                  }`}
+                    aria-selected={isSelected}
+                    className={`flex min-h-14 w-full items-center justify-between rounded-[16px] px-4 py-3 text-left text-sm font-semibold ${
+                      isSelected
+                        ? "bg-[var(--foreground)] text-white"
+                        : "border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]"
+                    }`}
                     key={`mobile-${option.value}`}
                     onClick={() => onSelect(option.value)}
                     role="option"

@@ -194,11 +194,13 @@ export function IngredientFilterModal({
 
   const selectionMessage = useMemo(() => {
     if (draftIngredientIds.length === 0) {
-      return "재료를 선택하면 레시피를 필터링해요";
+      return "재료를 선택해 레시피를 좁혀보세요";
     }
 
     return `${draftIngredientIds.length}개 선택됨`;
   }, [draftIngredientIds.length]);
+  const applyButtonLabel =
+    draftIngredientIds.length > 0 ? `${draftIngredientIds.length}개 적용` : "적용";
   const isApplyDisabled =
     screenState === "loading" ||
     screenState === "error" ||
@@ -218,13 +220,13 @@ export function IngredientFilterModal({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-black/50 p-0 md:items-center md:justify-center md:p-4"
+      className="fixed inset-0 z-40 flex items-end bg-black/42 p-0 backdrop-blur-[1px] md:items-center md:justify-center md:p-4"
       onClick={handleClose}
     >
       <div
         aria-labelledby="ingredient-filter-title"
         aria-modal="true"
-        className="glass-panel flex max-h-screen w-full flex-col rounded-t-[20px] bg-[var(--panel)] md:max-h-[85vh] md:max-w-2xl md:rounded-[20px]"
+        className="glass-panel flex max-h-[min(88vh,42rem)] w-full flex-col rounded-t-[24px] bg-[var(--panel)] md:max-h-[85vh] md:max-w-2xl md:rounded-[20px]"
         onClick={(event) => event.stopPropagation()}
         ref={dialogRef}
         role="dialog"
@@ -232,16 +234,23 @@ export function IngredientFilterModal({
         <div className="border-b border-[var(--line)] px-5 pb-5 pt-4 md:px-6">
           <div className="mx-auto h-1.5 w-14 rounded-full bg-black/10 md:hidden" />
           <div className="mt-4 flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-                Ingredient Filter
+            <div className="min-w-0 space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+                재료 필터
               </p>
-              <h2
-                className="mt-2 text-2xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]"
-                id="ingredient-filter-title"
-              >
-                재료로 검색
-              </h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2
+                  className="text-[1.4rem] font-extrabold tracking-[-0.02em] text-[var(--foreground)] md:text-2xl"
+                  id="ingredient-filter-title"
+                >
+                  재료로 검색
+                </h2>
+                {draftIngredientIds.length > 0 ? (
+                  <span className="rounded-full border border-[color:rgba(46,166,122,0.16)] bg-[color:rgba(46,166,122,0.1)] px-2.5 py-1 text-[11px] font-semibold text-[var(--olive)]">
+                    {draftIngredientIds.length}개 선택
+                  </span>
+                ) : null}
+              </div>
             </div>
             <button
               aria-label="닫기"
@@ -253,7 +262,7 @@ export function IngredientFilterModal({
               닫기
             </button>
           </div>
-          <label className="mt-4 flex min-h-11 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow)]">
+          <label className="mt-3 flex min-h-11 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow)] md:mt-4">
             <span className="visually-hidden">재료명으로 검색</span>
             <input
               className="w-full bg-transparent py-3 outline-none placeholder:text-[var(--muted)]"
@@ -262,14 +271,14 @@ export function IngredientFilterModal({
               value={query}
             />
           </label>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 md:mt-4 md:flex-wrap md:overflow-visible md:pb-0">
             {CATEGORY_OPTIONS.map((category) => {
               const isActive = activeCategory === category;
 
               return (
                 <button
                   aria-pressed={isActive}
-                  className={`min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                  className={`min-h-11 shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${
                     isActive
                       ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--foreground)]"
                       : "border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--olive)] hover:text-[var(--olive)]"
@@ -357,7 +366,14 @@ export function IngredientFilterModal({
 
         <div className="border-t border-[var(--line)] px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:px-6 md:pb-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-[var(--muted)]">{selectionMessage}</p>
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                {selectionMessage}
+              </p>
+              <p className="text-xs text-[var(--muted)]">
+                선택 재료가 모두 포함된 레시피만 보여줘요.
+              </p>
+            </div>
             <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
               <button
                 className="flex min-h-11 items-center justify-center whitespace-nowrap rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-center text-sm font-semibold text-[var(--muted)] disabled:cursor-not-allowed disabled:opacity-50"
@@ -373,7 +389,7 @@ export function IngredientFilterModal({
                 onClick={() => onApply(draftIngredientIds)}
                 type="button"
               >
-                적용
+                {applyButtonLabel}
               </button>
             </div>
           </div>

@@ -255,7 +255,9 @@ describe("home screen", () => {
     });
 
     await user.click(screen.getByRole("checkbox", { name: "양파" }));
-    await user.click(screen.getByRole("button", { name: "적용" }));
+    expect(screen.getByText("1개 선택")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /1개 적용/ })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /적용/ }));
 
     await waitFor(() => {
       expect(
@@ -366,7 +368,7 @@ describe("home screen", () => {
     await user.click(screen.getByRole("button", { name: "재료로 검색" }));
     await screen.findByRole("dialog", { name: "재료로 검색" });
     await user.click(await screen.findByRole("checkbox", { name: "양파" }));
-    await user.click(screen.getByRole("button", { name: "적용" }));
+    await user.click(screen.getByRole("button", { name: /적용/ }));
 
     await waitFor(() => {
       expect(screen.getAllByRole("button", { name: "필터 초기화" })).toHaveLength(2);
@@ -441,7 +443,7 @@ describe("home screen", () => {
     await screen.findByRole("dialog", { name: "재료로 검색" });
 
     const closeButton = screen.getByRole("button", { name: "닫기" });
-    const applyButton = screen.getByRole("button", { name: "적용" });
+    const applyButton = screen.getByRole("button", { name: /적용/ });
 
     expect(document.activeElement).toBe(closeButton);
 
@@ -468,7 +470,7 @@ describe("home screen", () => {
     await user.click(screen.getByRole("button", { name: "육류" }));
     await user.type(searchInput, "소");
     await user.click(await screen.findByRole("checkbox", { name: "소고기" }));
-    await user.click(screen.getByRole("button", { name: "적용" }));
+    await user.click(screen.getByRole("button", { name: /적용/ }));
 
     await user.click(screen.getByRole("button", { name: "재료로 검색 (2)" }));
 
@@ -532,7 +534,7 @@ describe("home screen", () => {
         name: "재료 목록을 불러오지 못했어요",
       }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "적용" })).toHaveProperty(
+    expect(screen.getByRole("button", { name: /적용/ })).toHaveProperty(
       "disabled",
       true,
     );

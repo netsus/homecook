@@ -177,13 +177,13 @@ test.describe("QA accessibility smoke", () => {
     ).toBeVisible();
     await expectNoAxeViolations(page);
     await expectReadableTouchTarget(
-      page.getByRole("button", { name: "적용" }),
+      page.getByRole("button", { name: /적용/ }),
     );
     await expectSingleLineControlLabel(
       page.getByRole("button", { name: "초기화" }),
     );
     await expectSingleLineControlLabel(
-      page.getByRole("button", { name: "적용" }),
+      page.getByRole("button", { name: /적용/ }),
     );
     await expectReadableTouchTarget(
       page.getByRole("button", { name: "닫기" }),
