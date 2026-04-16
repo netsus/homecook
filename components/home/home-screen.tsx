@@ -1,6 +1,4 @@
 "use client";
-
-import Link from "next/link";
 import React from "react";
 import {
   useCallback,
@@ -218,14 +216,6 @@ export function HomeScreen() {
         <section className="space-y-6">
           <div className="glass-panel rounded-[24px] border-white/55 bg-white/76 px-4 py-4 md:rounded-[28px] md:px-5 md:py-5">
             <div className="space-y-4">
-              <h1>
-                <Link
-                  className="inline-flex text-[1.05rem] font-black uppercase tracking-[0.22em] text-[var(--foreground)] transition hover:text-[var(--brand-deep)] md:text-[1.2rem]"
-                  href="/"
-                >
-                  Homecook
-                </Link>
-              </h1>
               <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
                 <label className="flex min-h-14 items-center rounded-[16px] border border-[var(--line)] bg-white px-4 shadow-[0_12px_28px_rgba(34,24,14,0.06)]">
                   <span className="visually-hidden">레시피 제목 검색</span>
