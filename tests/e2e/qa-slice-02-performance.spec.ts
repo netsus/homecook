@@ -91,7 +91,7 @@ test.describe("Slice 02 local performance smoke", () => {
 
     metrics.applyReadyMs = await measure(
       async () => {
-        await page.getByRole("button", { name: "적용" }).click();
+        await page.getByRole("button", { name: /적용/ }).click();
       },
       async () => {
         await expect(page).toHaveURL(
