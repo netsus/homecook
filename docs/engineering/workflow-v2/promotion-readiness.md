@@ -2,18 +2,18 @@
 
 ## 목적
 
-이 문서는 `OMO v2`를 기본 운영 경로로 승격하기 전에
-어떤 checklist와 pilot evidence가 충족돼야 하는지 잠그는 기준이다.
+이 문서는 `OMO v2`의 기본 운영 경로 승격 이후에도
+어떤 checklist와 lane evidence가 유지돼야 하는지 잠그는 기준이다.
 
-지금 단계의 목표는 "즉시 승격"이 아니라
-"언제 승격해도 되는지 판단 가능한 gate를 만드는 것"이다.
+지금 단계의 목표는 "추가 승격 준비"가 아니라
+"기본 운영 경로를 유지할 수 있는지 판단 가능한 gate를 계속 유지하는 것"이다.
 
 ## Current Mode
 
-- 현재 모드: `promotion-candidate`
-- canonical policy: 계속 `v1` (`AGENTS.md`, `docs/engineering/slice-workflow.md`, `docs/engineering/agent-workflow-overview.md`)
-- OMO 역할: pilot runtime / supervisor / control plane
-- 승격 전에는 high-risk 또는 anchor-extension slice의 automatic merge를 열지 않는다.
+- 현재 모드: `default`
+- canonical policy: workflow-v2 entry docs + `AGENTS.md` + `docs/engineering/slice-workflow.md` + `docs/engineering/agent-workflow-overview.md`
+- OMO 역할: default runtime / supervisor / control plane
+- high-risk 또는 anchor-extension slice의 automatic merge를 열지 않는다.
 
 ## Required Gates
 

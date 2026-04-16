@@ -49,12 +49,12 @@
 
 `중복`으로 판정된 규칙만 단일 소스화 대상으로 본다. `계층적 위임`은 삭제보다 링크와 책임 경계를 정리한다.
 
-## V2 Pilot Note
+## V2 Default Note
 
-- 현재 product slice의 운영 기본값은 계속 이 문서와 `docs/engineering/slice-workflow.md`다.
-- `docs/engineering/workflow-v2/*`는 reusable workflow v2의 설계·파일럿 문서이며, 명시적 승격 전까지 v1을 자동 대체하지 않는다.
+- workflow-v2는 현재 OMO 기본 운영 경로의 entry layer다.
+- product slice의 stage-by-stage mechanics는 계속 이 문서와 `docs/engineering/slice-workflow.md`가 담당한다.
 - closeout docs, `.workflow-v2/status.json`, OMO runtime, PR evidence의 ownership 경계는 `docs/engineering/bookkeeping-authority-matrix.md`를 기준으로 해석한다.
-- `docs-governance` 또는 workflow tooling 개선 작업이 `workflow-v2`를 명시적으로 대상으로 삼을 때만 해당 문서를 직접 source of truth로 사용한다.
+- `docs-governance` 또는 workflow tooling 개선 작업은 `workflow-v2` 문서를 직접 source of truth로 사용하고, product slice는 그 위임 구조 안에서 이 문서와 `slice-workflow.md`를 따른다.
 
 ---
 

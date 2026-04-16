@@ -346,7 +346,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
 
   const workflowReadmeErrors = [
     ...containsAll(workflowReadme, [
-      "## Executable Pilot Baseline",
+      "## Executable Baseline",
       "`pnpm omo:supervise`",
       "`pnpm omo:tick`",
       "`pnpm omo:tick:watch`",

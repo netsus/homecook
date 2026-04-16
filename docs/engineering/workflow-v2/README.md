@@ -3,21 +3,22 @@
 ## Status
 
 - 현재 기본 운영 경로:
-  - product slice: `docs/engineering/slice-workflow.md`
+  - workflow-v2 / OMO entry docs: 이 디렉터리
+  - product slice stage contract: `docs/engineering/slice-workflow.md`
   - change-type gate: `docs/engineering/agent-workflow-overview.md`
 - 이 디렉터리의 역할:
-  - reusable workflow v2 설계와 파일럿
-  - 현재 v1을 즉시 대체하지 않는 next-generation path
-- 현재 executable pilot baseline:
+  - reusable workflow v2 설계와 기본 운영 기준
+  - Homecook OMO default path의 entry docs
+- 현재 executable baseline:
   - `pnpm omo:supervise`, `pnpm omo:tick`, `pnpm omo:tick:watch`, `pnpm omo:reconcile`, `pnpm omo:status`
   - `pnpm validate:workflow-v2`, `pnpm validate:omo-bookkeeping`
 - 새로 잠그는 범위:
   - `generic OMO session-orchestrated runner` 설계
   - per-work-item session reuse
   - repo-local runtime state + scheduled resume policy
-- 승격 전 규칙:
-  - v2 문서는 `workflow-v2`를 명시적으로 대상으로 한 engineering 작업에서만 직접적인 source of truth다.
-  - 일반 product slice 구현은 계속 v1 절차를 따른다.
+- 현재 운영 규칙:
+  - workflow-v2 entry docs가 OMO 기본 운영 경로를 설명한다.
+  - product slice 구현의 stage-by-stage mechanics는 계속 `slice-workflow.md`와 `agent-workflow-overview.md`가 담당한다.
 
 ## Why
 
@@ -52,13 +53,13 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 ## Directory Map
 
-- [.workflow-v2/README.md](../../../.workflow-v2/README.md): 실제 pilot 상태 저장 위치
-- [.workflow-v2/promotion-evidence.json](../../../.workflow-v2/promotion-evidence.json): current promotion checklist / pilot lane evidence ledger
+- [.workflow-v2/README.md](../../../.workflow-v2/README.md): 실제 tracked workflow 상태 저장 위치
+- [.workflow-v2/promotion-evidence.json](../../../.workflow-v2/promotion-evidence.json): current promotion / lane evidence ledger
 - [charter.md](./charter.md): v2가 해결할 문제, 유지할 원칙, 비범위
 - [core.md](./core.md): 공통 개념, 책임, lifecycle
 - [presets.md](./presets.md): 작업 유형별 기본 경로
 - [approval-and-loops.md](./approval-and-loops.md): plan/review loop와 dual-approval 규칙
-- [promotion-readiness.md](./promotion-readiness.md): OMO 기본 승격 checklist와 pilot evidence gate
+- [promotion-readiness.md](./promotion-readiness.md): OMO 기본 운영 readiness / lane evidence gate
 - [../bookkeeping-authority-matrix.md](../bookkeeping-authority-matrix.md): closeout docs / tracked state / PR evidence ownership matrix
 - [omo-lite-architecture.md](./omo-lite-architecture.md): Codex supervisor 기반 Homecook OMO-lite 설계안
 - [omo-session-orchestrator.md](./omo-session-orchestrator.md): generic session reuse / runtime state / scheduled resume 규격
@@ -82,17 +83,17 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 ## Adoption Rules
 
-- v2는 big bang 전환이 아니라 파일럿으로 도입한다.
+- workflow-v2는 현재 Homecook의 OMO 기본 운영 경로다.
 - `workflow-v2` 관련 첫 단계는 문서와 schema를 고정하는 것이다.
-- 실제 pilot 운영 상태는 저장소 루트의 `.workflow-v2/` 아래 JSON으로 기록한다.
-- OMO 기본 승격 판단은 `docs/engineering/workflow-v2/promotion-readiness.md`와 `.workflow-v2/promotion-evidence.json`을 함께 기준으로 삼는다.
+- 실제 tracked 운영 상태는 저장소 루트의 `.workflow-v2/` 아래 JSON으로 기록한다.
+- OMO 기본 운영 건강성 판단은 `docs/engineering/workflow-v2/promotion-readiness.md`와 `.workflow-v2/promotion-evidence.json`을 함께 기준으로 삼는다.
 - closeout docs, `.workflow-v2/status.json`, OMO runtime, PR evidence의 authoritative ownership은 `docs/engineering/bookkeeping-authority-matrix.md`를 따른다.
 - machine-readable 파일이 들어와도 README 표를 즉시 제거하지 않는다.
-- v2 승격 전까지는 product slice merge gate를 v1 기준으로 계속 유지한다.
+- product slice merge gate는 `slice-workflow.md`와 `agent-workflow-overview.md`가 정한 current-head 기준을 계속 따른다.
 - Phase 4부터는 최소 executable helper(`pnpm omo:dispatch-stage`, `pnpm omo:sync-status`)를 함께 관리한다.
 - Phase 5부터는 `pnpm omo:run-stage`로 Codex/Claude stage를 repo-local OpenCode/OMO 실행과 artifact bundle에 직접 연결한다.
 - Phase 7부터는 `pnpm omo:claude-budget`과 repo-local override를 통해 Claude reviewer availability를 자동 해석하고, 필요 시 blocked retry를 기록한다.
-- Phase 8 pilot baseline은 `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:reconcile`, `validate:omo-bookkeeping`까지 포함한다.
+- 현재 executable baseline은 `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:reconcile`, `validate:omo-bookkeeping`까지 포함한다.
 - fullauto v1의 의미는 low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함한다.
 - session-orchestrated runner 규격은 구현보다 먼저 문서로 잠근다.
 - 구현 baseline과 상위 문서가 다시 어긋나면 `pnpm validate:workflow-v2`가 fail한다.
@@ -108,7 +109,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - Stage 4 Claude implementation + Codex `authority_precheck` + Stage 5 Codex public review + Claude `final_authority_gate` 흐름
 - automatic Claude budget resolution + repo-local override
 - JSON schema와 예시 파일 추가
-- promotion checklist와 pilot evidence ledger 추가
+- promotion checklist와 lane evidence ledger 추가
 - `validate:workflow-v2` 최소 validator 추가
 - `validate:workflow-v2` bundle에 source-of-truth reference drift 검사 추가
 - `validate:omo-bookkeeping` official docs drift validator 추가
@@ -120,9 +121,9 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - live smoke entrypoints: `omo:smoke:control-plane`, `omo:smoke:providers`
 - `omo:smoke:control-plane -- --live-providers`는 backend Stage 2/3만 실제 Claude/Codex를 사용하고, 나머지 단계는 deterministic smoke로 유지한 채 최소 확인용 프롬프트로 review loop(`request_changes -> Codex 반영 -> 추가 review -> 추가 반영`)를 검증한다.
 - macOS repo-managed scheduler entrypoints: `omo:scheduler:install`, `omo:scheduler:uninstall`, `omo:scheduler:verify`
-- 현재 entry-point 문서에서 v2 pilot 경로를 발견 가능하게 연결
+- 현재 entry-point 문서에서 workflow-v2 default 경로를 발견 가능하게 연결
 
-## Executable Pilot Baseline
+## Executable Baseline
 
 - 현재 구현된 supervisor/control-plane 명령:
   - `pnpm omo:supervise`
@@ -161,7 +162,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - multi-project reusable promotion 기준과 profile extraction
 - optional GitHub Actions 기반 smoke orchestration 여부 판단
 
-## Pilot Usage
+## Workflow Usage
 
 1. `.workflow-v2/work-items/<id>.json`을 만든다.
 2. `.workflow-v2/status.json`에 같은 `id`의 status item을 추가한다.
@@ -179,7 +180,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 12. sandbox GitHub repo에서 supervisor control plane을 점검할 때는 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`를 사용한다.
 13. 실제 Claude 첫 리뷰가 반드시 `request_changes`를 내고 Codex가 그 피드백 토큰을 반영하는지까지 최소 프롬프트로 보려면 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name> --live-providers`를 사용한다. 이 모드는 backend Stage 2/3만 실제 provider를 사용한다.
 14. 실제 Claude/Codex provider 경로, session reuse, stage-result 생성을 분리 검증할 때는 `pnpm omo:smoke:providers`를 사용한다.
-15. slice06 또는 parallel pilot checkpoint 결과를 ledger에 남길 때는 `pnpm omo:promotion:update -- --section pilot-lane --id <lane>`를 사용한다.
+15. slice06 또는 parallel checkpoint 결과를 lane ledger에 남길 때는 `pnpm omo:promotion:update`를 사용한다. 상세 section/id 조합은 `promotion-readiness.md`를 따른다.
 16. macOS scheduler는 `pnpm omo:scheduler:install -- --work-item <id>`로 설치하고 `pnpm omo:scheduler:verify -- --work-item <id>`로 확인한다.
 17. `pnpm validate:workflow-v2`는 schema/example뿐 아니라 상위 workflow-v2 entry docs drift와 official source-of-truth reference drift도 함께 검사한다.
 
