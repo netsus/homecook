@@ -191,6 +191,8 @@ authority report에는 아래를 반드시 포함한다.
   - 최소 기준: 관련 `ui/designs/<SCREEN_ID>.md`
   - 필요 시: `ui/designs/critiques/*`, workpack README의 design closeout 메모
 - 즉, authority evidence와 비공식 설계 문서가 서로 다른 화면을 설명하는 상태로 PR을 닫지 않는다.
+- 사용자 승인으로 anchor screen의 헤더 구조, 섹션 배치, action hierarchy 같은 공식 화면 계약이 바뀌었다면 같은 PR에서 공식 화면정의서도 함께 동기화한다.
+  - 버전 파일이 바뀌면 `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`도 같은 PR에서 갱신한다.
 - unresolved blocker가 있으면 Stage 4 closeout을 닫지 않는다.
 - interaction model 자체를 바꾸는 제안이면 authority 단독으로 `pass`를 주지 않고,
   사용자 승인 또는 별도 design artifact 보강 전까지 `hold`를 기본값으로 둔다.

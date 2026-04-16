@@ -1,6 +1,6 @@
 # HOME — 홈(레시피 탐색)
 
-> 기준 문서: 화면정의서 v1.2 §1 / 요구사항 v1.6 §1-1 / 유저Flow맵 v1.2 §① / 디자인 토큰 C2 명랑한 주방
+> 기준 문서: 화면정의서 v1.2.3 §1 / 요구사항 v1.6.3 §1-1 / 유저Flow맵 v1.2.3 §① / 디자인 토큰 C2 명랑한 주방
 > 생성일: 2026-03-21
 
 ---
@@ -26,12 +26,12 @@
 │  │             │  │             │       │  ← 카드 너비: (375 - 16×2 - 12) / 2 = 165px
 │  │  [썸네일]   │  │  [썸네일]   │       │  ← 썸네일 높이: 110px
 │  │             │  │             │       │  ← --surface 카드 배경
+│  │ #태그  #태그 │  │ #태그  #태그 │       │  ← tag row, 배경 없는 text tag
 │  │ 제목 텍스트  │  │ 제목 텍스트  │       │  ← border-radius: 16px
-│  │ 최대 2줄    │  │ 최대 2줄    │       │  ← box-shadow: 0 2px 10px rgba(0,0,0,0.08)
-│  │             │  │             │       │
-│  │ #태그  #태그 │  │ #태그  #태그 │       │  ← --olive 태그 칩 (text-xs, border-radius: 9999px)
-│  │             │  │             │       │
-│  │ 👁 1.2k  ❤ 84  🔖 32        │       │  ← --muted 통계 (text-xs, 11px)
+│  │ 최대 2줄   [기본 2인분]      │       │  ← title + serving pill
+│  │             │  │             │       │  ← box-shadow: 0 2px 10px rgba(0,0,0,0.08)
+│  │ [조회 1.2k] [좋아요 84]      │       │  ← compact stat pills
+│  │ [저장 32]    │  │ [저장 32]   │       │
 │  └─────────────┘  └─────────────┘       │
 │                                         │
 │  ┌─────────────┐  ┌─────────────┐       │  ← 두 번째 행
@@ -87,6 +87,9 @@
 - **배치**: 상단 검색 패널이 아니라 `모든 레시피` 섹션 헤더 우측에 배치
 - **변경 시**: 즉시 재정렬, `모든 레시피` 리스트만 다시 요청하며 테마 섹션은 유지
 - **스타일**: --surface 배경, --line 보더, border-radius: 9999px, --foreground 텍스트
+- **레이어 정책**:
+  - mobile: bottom sheet (`scrim z-30`, sheet `z-40`)
+  - desktop: button 아래 또는 위로 여는 pop menu (`z-20`), viewport 남은 공간이 부족하면 위쪽으로 열린다
 - **터치 타겟**: 44px 이상
 - **토큰**: `--surface`, `--line`, `--foreground`, `--muted`
 
@@ -108,21 +111,25 @@
 │      [썸네일 이미지]   │  ← border-radius 16px 16px 0 0
 │                       │
 ├───────────────────────┤
+│  [SOURCE TYPE]         │  ← source badge, panel bg, text-xs
+│  #태그1  #태그2  +1    │  ← text tag row, text-xs (10~11px)
 │  레시피 제목           │  ← text-base (16px), --foreground, 최대 2줄 말줄임
-│  최대 2줄까지 표시     │  ← font-weight: 600
+│  최대 2줄   [기본 N인분]│  ← font-weight: 600 + serving pill
 │                       │
-│  #태그1  #태그2        │  ← --olive 태그 칩, text-xs (11px)
-│                       │  ← 최대 3개 표시, 초과 시 +N
-│  👁 1.2k  ❤ 84  🔖 32 │  ← --muted, text-xs (11px), icon 12px
+│  [조회 1.2k] [좋아요 84]│  ← compact muted stat pills
+│  [저장 32]             │
 └───────────────────────┘
   ← --surface 배경, border-radius: 16px
   ← box-shadow: 0 2px 10px rgba(0,0,0,0.08)
   ← --line 보더 (선택적)
 ```
 
-- **기본 상태**: 썸네일 + 제목 + 태그 + 통계 지표
+- **기본 상태**: 썸네일 + source badge + 태그 + 제목 + 기본 인분 pill + 통계 pill row
 - **Loading**: 스켈레톤 카드 (썸네일 영역 회색 블록, 텍스트 영역 줄 스켈레톤 2줄)
 - **썸네일 없음**: --background 배경 + 음식 아이콘 중앙 배치
+- **태그 배치**: 제목 위 보조 row, 배경 없는 text tag로 유지
+- **인분 배치**: 제목 row 우측에 `기본 N인분` pill
+- **통계 배치**: 카드 하단 muted pill row (`조회 / 좋아요 / 저장`)
 - **탭 동작**: 카드 전체 영역 탭 → RECIPE_DETAIL 진입
 - **Pressed 상태**: opacity 0.85, scale 0.98 (100ms transition)
 - **터치 타겟**: 카드 전체 (최소 높이 충분히 초과)
@@ -237,6 +244,7 @@ HOME 화면 자체에서는 카드 탭(RECIPE_DETAIL 이동)만 발생하므로 
 - **전체 구조**: 공통 브랜드 헤더 / discovery panel / 테마 섹션 / `모든 레시피` 리스트 / `position: fixed` 하단 탭바
 - **콘텐츠 영역**: 일반 세로 스크롤. discovery panel은 첫 화면 안에 남기되, 별도 fixed app bar처럼 분리하지 않는다.
 - **브랜드 헤더**: `HOMECOOK` 로고는 공통 `AppHeader`를 사용하며, `PLANNER_WEEK`와 동일한 top shell을 공유한다.
+- **small-mobile 기준**: `HOMECOOK` 헤더 + discovery panel 조합에서도 작은 모바일 sentinel에서 제목 검색 입력과 `재료로 검색` 버튼이 first viewport 안에 함께 보여야 한다.
 - **정렬 위치**: 정렬 컨트롤은 검색 패널이 아니라 `모든 레시피` 섹션에 속한다. 테마 섹션은 별도 정렬 대상이 아니다.
 
 ---
@@ -284,8 +292,8 @@ HOME 화면 자체에서는 카드 탭(RECIPE_DETAIL 이동)만 발생하므로 
 ## design-critic 검토 필요 항목
 
 - [ ] 2열 그리드에서 카드 제목 2줄 말줄임 시 카드 높이 균등화 처리 방식 (CSS grid auto-rows vs 개별 고정 높이)
-- [ ] 공통 브랜드 헤더 + discovery panel 조합에서 작은 모바일 세로 높이와 safe-area 여유 확인
-- [ ] 정렬 드롭다운 열림 시 z-index 레이어 충돌 (테마 섹션 카드와의 겹침) 검토
+- [x] 공통 브랜드 헤더 + discovery panel 조합에서 작은 모바일 세로 높이와 safe-area 여유 확인
+- [x] 정렬 드롭다운 열림 시 z-index 레이어 충돌 (테마 섹션 카드와의 겹침) 검토
 - [ ] 테마 섹션이 0개일 때의 전체 Empty 처리 vs 섹션별 Empty 처리 기준 명확화
 - [ ] [재료로 검색] 칩이 활성 상태(재료 선택 적용 중)일 때 시각적 강조 방식 (Out of Scope 해소 후 적용)
 - [ ] 스켈레톤 카드 수(현재 6개)가 뷰포트에서 적절한지 — 더 많이 보이는 기기에서 빈 공간 발생 가능성
