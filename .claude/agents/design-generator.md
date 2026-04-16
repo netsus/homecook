@@ -26,9 +26,9 @@ tools:
 
 1. **소스 문서 읽기 (필수)**
    - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md` — 현재 공식 버전 확인
-   - `docs/화면정의서-v1.2.3.md` — 해당 화면의 화면 정의 찾기
+   - `docs/화면정의서-v1.3.0.md` — 해당 화면의 화면 정의 찾기
    - `docs/요구사항기준선-v1.6.3.md` — 관련 요구사항 확인
-   - `docs/유저flow맵-v1.2.3.md` — 진입/이탈 플로우 확인
+   - `docs/유저flow맵-v1.3.0.md` — 진입/이탈 플로우 확인
    - `docs/design/design-tokens.md` — 확정 색상·간격·컴포넌트 토큰 (반드시 읽기)
    - `docs/design/mobile-ux-rules.md` — 모바일 UX blocker 규칙
    - `docs/design/anchor-screens.md` — anchor screen / anchor extension 판정

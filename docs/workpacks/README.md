@@ -85,6 +85,31 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `18-manual-recipe-create`      | planned   | 직접 레시피 등록, 조리방법 선택, 상세/플래너 연계, `my_added` 반영                                               |
 | `19-youtube-import`            | planned   | 유튜브 검증/추출/등록, 신규 조리방법 반영, 플래너 연계, `my_added` 반영                                          |
 
+## Design Decision Gates
+
+High-Risk Redesign 항목은 구현 슬라이스 전에 **Design Decision Gate**를 통과해야 한다.
+Gate는 Stage 1 전용 workpack으로 관리되며, 사용자 승인이 완료되어야 후속 구현 슬라이스를 시작할 수 있다.
+
+| Gate ID | 대상 | 결정 내용 | 승인 상태 | 후속 슬라이스 |
+|---------|------|-----------|-----------|--------------|
+| `H4-planner-week-v2-direction` | `PLANNER_WEEK` | table/grid vs day-card interaction model | ✅ 승인 (2026-04-16) | `H2-planner-week-v2-redesign` |
+
+## High-Risk Redesign Slices
+
+Design Decision Gate 승인 이후 진행하는 anchor screen 리디자인 슬라이스다.
+일반 Slice Order 표와 별도로 관리하며, contract-evolution PR이 merge된 후 FE 구현을 시작한다.
+
+| Slice | Status | Gate | Goal |
+|-------|--------|------|------|
+| `H2-planner-week-v2-redesign` | `docs` | H4 ✅ | PLANNER_WEEK day-card 리디자인, 가로 스크롤 제거, 2일 이상 mobile overview |
+
+**Gate workpack 규칙**:
+- `execution_mode: "design-decision"` — 구현 없음
+- Stage 1 산출물(비교 문서 + wireframe draft + authority 계획)만 생성한다
+- 사용자 승인 이후에만 후속 구현 slice를 시작할 수 있다
+- 공식 계약(화면정의서/유저플로우) 변경은 후속 slice의 contract-evolution PR에서 실행한다
+- `docs/engineering/` 아래 tooling 작업과 달리, Design Decision Gate는 제품 UX 계약을 확정하므로 이 Roadmap에 등록한다
+
 ## Slice Notes
 
 - `02`부터는 한 슬라이스를 더 작은 기능 단위 하나로 제한한다.

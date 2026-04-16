@@ -1,0 +1,28 @@
+{
+  "slice_id": "H4-planner-week-v2-direction",
+  "execution_mode": "design-decision",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": null,
+  "frontend": null,
+  "design_decision": {
+    "target_screen": "PLANNER_WEEK",
+    "decision_type": "interaction-model",
+    "anchor_screen": true,
+    "options_evaluated": ["table-grid", "day-card"],
+    "decision": "day-card",
+    "approval_status": "approved",
+    "approved_date": "2026-04-16",
+    "unlocks": ["H2-planner-week-v2-redesign"],
+    "contract_evolution_required": true,
+    "contract_evolution_scope": ["화면정의서", "유저플로우"],
+    "api_db_change": false
+  },
+  "external_smokes": [],
+  "blocked_conditions": [],
+  "stage1_artifacts": [
+    "docs/workpacks/H4-planner-week-v2-direction/README.md",
+    "docs/workpacks/H4-planner-week-v2-direction/acceptance.md",
+    "ui/designs/PLANNER_WEEK-v2-decision.md"
+  ]
+}
