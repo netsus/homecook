@@ -3,7 +3,7 @@
 ## Purpose
 
 이 문서는 홈쿡 저장소에서 workflow v2를 사용할 때 project-specific rule pack으로 사용한다.
-정식 승격 전까지는 v1 문서를 대체하지 않고, v2 pilot과 migration 작업의 기준으로만 사용한다.
+현재는 workflow-v2 기본 운영 경로의 project-specific rule pack이며, migration 및 후속 확장 작업의 기준으로도 사용한다.
 
 ## 1. Project Summary
 
@@ -110,7 +110,7 @@
   - local machine + `gh` CLI + dedicated worktree 기본값
 - required approval 의미:
   - v1 운영에서는 문서상 stage 통과 + 리뷰 기록
-  - v2 pilot에서는 dual-approval artifact + verification
+  - workflow-v2 기본 운영에서는 dual-approval artifact + verification
 
 ## 9. Preset Mapping
 
