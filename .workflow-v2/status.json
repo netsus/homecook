@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-15T13:35:38.493Z",
+  "updated_at": "2026-04-16T15:09:30Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -122,8 +122,8 @@
       "id": "omo-session-orchestrator-spec",
       "preset": "infra-governance",
       "branch": "docs/omo-session-orchestrator-spec",
-      "pr_path": "pending",
-      "lifecycle": "in_progress",
+      "pr_path": "https://github.com/netsus/homecook/pull/129",
+      "lifecycle": "ready_for_review",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -194,6 +194,21 @@
       "auto_merge_eligible": false,
       "blocked_reason_code": null,
       "pr_path": "https://github.com/netsus/homecook/pull/120"
+    },
+    {
+      "id": "bugfix-home-source-badge-labels",
+      "preset": "bugfix-patch",
+      "branch": "fix/home-source-badge-labels",
+      "pr_path": "pending",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm exec vitest run tests/recipe-card.test.tsx tests/home-screen.test.tsx",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Bugfix-patch pilot: HOME recipe card source badge now localizes raw source_type enums; PR #129 opened after local verification passed (recipe-card/home-screen vitest, targeted eslint, typecheck)."
     }
   ]
 }

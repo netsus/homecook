@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 
-import { formatCount } from "@/lib/recipe";
+import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
 import type { RecipeCardItem } from "@/types/recipe";
 
 interface RecipeCardProps {
@@ -29,7 +29,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         }
       >
         <div className="absolute left-3 top-3 rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-deep)]">
-          {recipe.source_type}
+          {formatRecipeSourceLabel(recipe.source_type)}
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-3 px-4 py-4">
