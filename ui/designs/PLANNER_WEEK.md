@@ -51,10 +51,13 @@
 
 ```text
 ┌─────────────────────────────────────┐
+│ [플래너 접근]                       │  ← shared state shell eyebrow
 │ 이 화면은 로그인이 필요해요           │
 │ 플래너를 사용하려면 로그인해주세요     │
+│ 로그인하면 원래 주간 범위로 복귀       │
 │                                     │
-│         [로그인] [취소]             │
+│          [로그인 버튼들]             │
+│        [홈으로 돌아가기]             │
 └─────────────────────────────────────┘
 ```
 
@@ -66,6 +69,12 @@
 
 - `HOMECOOK` 로고는 HOME과 동일한 `AppHeader`를 사용한다.
 - 로고는 `/` 링크로 동작하고, 제품 화면마다 별도 브랜드 블록을 다시 만들지 않는다.
+
+### 상태 셸 규칙
+
+- `unauthorized`, `loading`, fetch `error`는 shared `ContentState` shell 톤을 따른다.
+- eyebrow pill + restrained headline + 설명 + CTA 구조를 유지해 HOME / RECIPE_DETAIL과 시각 위계를 맞춘다.
+- 게스트 CTA가 있는 상태 셸은 하단 탭바 safe-area 위에서 읽히도록 `action-safe-bottom-panel` 여백 규칙을 공유한다.
 
 ### 1. 상단 CTA 그룹
 

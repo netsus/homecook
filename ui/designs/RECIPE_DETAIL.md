@@ -159,6 +159,7 @@
 - 닫기: [취소] 버튼, ESC 키, 배경(dim) 클릭
 - [로그인] → LOGIN 화면으로 이동, `returnToAction` 파라미터 전달 (예: `planner_add`, `like`, `save`)
 - 로그인 성공 후 `returnToAction` 에 따라 해당 액션 자동 실행 (1회 소비 후 제거)
+- modal 헤더는 shared state shell 기준에 맞춰 eyebrow pill("보호된 작업") + title + 복귀 안내 카드 구조를 유지한다.
 
 ### PlannerAddPopup (플래너 추가 바텀시트)
 
@@ -297,6 +298,9 @@
 ```
 
 ### Error 상태
+
+- `RECIPE_DETAIL` fetch error는 shared `ContentState` shell을 사용한다.
+- eyebrow pill + headline + 설명 + [다시 시도] CTA 구조를 HOME / PLANNER와 맞춘다.
 
 ```
 ┌─────────────────────────────────────┐

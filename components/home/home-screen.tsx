@@ -261,7 +261,9 @@ export function HomeScreen() {
             <ContentState
               actionLabel="다시 시도"
               description="Supabase 연결이나 API 설정을 확인한 뒤 다시 불러올 수 있어요."
+              eyebrow="목록 동기화 오류"
               onAction={() => void loadRecipes()}
+              tone="error"
               title="레시피를 불러오지 못했어요"
             />
           ) : null}
@@ -323,6 +325,8 @@ export function HomeScreen() {
                 <ContentState
                   actionLabel={hasIngredientFilter ? "필터 초기화" : "검색 초기화"}
                   description="조건에 맞는 레시피가 없어요."
+                  eyebrow="다른 조합"
+                  tone="empty"
                   onAction={hasIngredientFilter ? clearIngredientFilters : clearSearch}
                   title="다른 조합을 찾아보세요"
                 />

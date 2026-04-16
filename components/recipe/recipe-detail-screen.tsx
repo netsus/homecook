@@ -668,7 +668,9 @@ export function RecipeDetailScreen({
       <ContentState
         actionLabel="다시 시도"
         description="레시피 상세 API나 Supabase 연결을 확인한 뒤 다시 열 수 있어요."
+        eyebrow="상세 동기화 오류"
         onAction={() => void loadRecipe()}
+        tone="error"
         title="레시피 상세를 불러오지 못했어요"
       />
     );

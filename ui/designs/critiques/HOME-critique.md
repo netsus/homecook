@@ -43,8 +43,8 @@
 ### B. 공통 상태 커버리지
 
 - [x] Loading 상태 (스켈레톤/인디케이터) 포함 — 스켈레톤 카드 6개(2×3) + pulse 애니메이션 + 섹션 헤더 스켈레톤 명시
-- [x] Empty 상태 (안내 + CTA) 포함 — "조건에 맞는 레시피가 없어요" + [필터 초기화] --brand CTA 명시
-- [x] Error 상태 (안내 + [다시 시도]) 포함 — "레시피를 불러오지 못했어요" + [다시 시도] --brand CTA 명시
+- [x] Empty 상태 (안내 + CTA) 포함 — shared `ContentState` shell 기준, eyebrow + headline + CTA 구조 명시
+- [x] Error 상태 (안내 + [다시 시도]) 포함 — shared `ContentState` shell 기준, eyebrow + headline + CTA 구조 명시
 - [x] read-only 상태가 필요한 화면에서 수정 UI 비노출 — 해당 없음 (HOME은 탐색 전용)
 - [x] unauthorized 상태 명시 — HOME은 비로그인 허용 화면이므로 unauthorized 상태가 발생하지 않음을 interaction note로 명시 가능
 
