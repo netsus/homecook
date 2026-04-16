@@ -430,27 +430,27 @@ export function PlannerWeekScreen({
   }
 
   return (
-    <div className="space-y-3 sm:space-y-4">
-      <section className="glass-panel rounded-[clamp(22px,6vw,28px)] px-[clamp(14px,4vw,24px)] py-[clamp(13px,3.8vw,20px)]">
-        <div className="flex flex-col gap-2.5 md:flex-row md:items-end md:justify-between">
+    <div className="space-y-2.5 sm:space-y-3">
+      <section className="glass-panel rounded-[clamp(22px,6vw,28px)] px-[clamp(14px,3.6vw,22px)] py-[clamp(12px,3vw,16px)]">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--olive)]">
               Planner Week
             </p>
-            <h2 className="mt-1 text-[clamp(1.75rem,7vw,2.35rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
+            <h2 className="mt-1 text-[clamp(1.45rem,5vw,1.9rem)] font-bold tracking-[-0.025em] text-[var(--foreground)]">
               식단 플래너
             </h2>
           </div>
           <div
             aria-label="플래너 보조 작업"
-            className="grid w-full grid-cols-3 gap-1 rounded-[18px] border border-[var(--line)] bg-white/76 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)] md:ml-6 md:w-auto md:min-w-[18rem]"
+            className="grid w-full grid-cols-3 gap-1 rounded-[16px] border border-[var(--line)] bg-white/76 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)] md:ml-6 md:w-auto md:min-w-[17rem]"
             role="group"
           >
             {CTA_BUTTONS.map((label) => (
               <button
                 key={label}
                 aria-disabled="true"
-                className="min-h-[44px] rounded-[14px] border border-transparent bg-[var(--surface)] px-2 py-2 text-[12px] font-semibold leading-none tracking-[-0.01em] text-[var(--muted)] opacity-70 sm:px-3 sm:text-[13px]"
+                className="min-h-[40px] rounded-[12px] border border-transparent bg-[var(--surface)] px-2 py-2 text-[11px] font-medium leading-none tracking-[-0.01em] text-[var(--muted)] opacity-72 sm:px-3 sm:text-[12px]"
                 disabled
                 type="button"
               >
@@ -462,32 +462,32 @@ export function PlannerWeekScreen({
       </section>
 
       <section
-        className="glass-panel sticky top-2 z-20 rounded-[clamp(18px,5vw,24px)] border border-[var(--line)] bg-white/88 px-[clamp(12px,3.5vw,18px)] py-[clamp(12px,3.5vw,18px)] shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur"
+        className="glass-panel sticky top-2 z-20 rounded-[clamp(18px,5vw,24px)] border border-[var(--line)] bg-white/88 px-[clamp(12px,3vw,16px)] py-[clamp(11px,3vw,16px)] shadow-[0_14px_30px_rgba(15,23,42,0.07)] backdrop-blur"
         data-testid="planner-week-shell"
       >
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[12px] font-semibold text-[var(--olive)] sm:text-[13px]">
+              <p className="text-[11px] font-semibold text-[var(--olive)] sm:text-[12px]">
                 {rangeContextLabel}
               </p>
-              <div className="inline-flex w-fit items-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[11px] font-semibold text-[var(--muted)] sm:text-[12px]">
+              <div className="inline-flex w-fit items-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[10px] font-medium text-[var(--muted)] sm:text-[11px]">
                 식사 {meals.length}건
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--olive)]">
                   현재 범위
                 </p>
-                <h3 className="mt-1 text-[clamp(1.35rem,5.6vw,1.85rem)] font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                <h3 className="mt-1 text-[clamp(1.15rem,4vw,1.45rem)] font-bold tracking-[-0.02em] text-[var(--foreground)]">
                   {formatRangeLabel(rangeStartDate, rangeEndDate)}
                 </h3>
               </div>
               {isDesktopViewport ? (
                 <div className="flex items-center gap-2">
                   <button
-                    className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-sm"
+                    className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-[12px]"
                     onClick={() => runPlannerAction(shiftRange(-RANGE_SHIFT_DAYS))}
                     type="button"
                   >
@@ -495,7 +495,7 @@ export function PlannerWeekScreen({
                   </button>
                   {!isCurrentRange ? (
                     <button
-                      className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-sm"
+                      className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-[12px]"
                       onClick={() => runPlannerAction(resetRange())}
                       type="button"
                     >
@@ -503,7 +503,7 @@ export function PlannerWeekScreen({
                     </button>
                   ) : null}
                   <button
-                    className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-sm"
+                    className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-[12px]"
                     onClick={() => runPlannerAction(shiftRange(RANGE_SHIFT_DAYS))}
                     type="button"
                   >
@@ -512,7 +512,7 @@ export function PlannerWeekScreen({
                 </div>
               ) : !isCurrentRange ? (
                 <button
-                  className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-semibold text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-sm"
+                  className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-[12px]"
                   onClick={() => runPlannerAction(resetRange())}
                   type="button"
                 >
@@ -549,12 +549,12 @@ export function PlannerWeekScreen({
                   className="min-w-full snap-center snap-always"
                   data-testid={`planner-week-strip-page-${page.key}`}
                 >
-                  <ol className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-semibold text-[var(--muted)] sm:gap-2 sm:text-xs">
+                  <ol className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-medium text-[var(--muted)] sm:gap-2 sm:text-[11px]">
                     {page.dateKeys.map((dateKey) => (
                       <li key={dateKey} className="list-none">
-                        <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-1 py-2 sm:px-1.5">
+                        <div className="rounded-[13px] border border-[var(--line)] bg-[var(--surface)] px-1 py-1.5 sm:px-1.5 sm:py-2">
                           <p>{formatWeekdayLabel(dateKey)}</p>
-                          <p className="mt-0.5 text-[clamp(0.9rem,3.2vw,0.98rem)] text-[var(--foreground)]">
+                          <p className="mt-0.5 text-[clamp(0.84rem,3vw,0.94rem)] font-semibold text-[var(--foreground)]">
                             {dateKey.slice(8)}
                           </p>
                         </div>
@@ -593,7 +593,7 @@ export function PlannerWeekScreen({
       {screenState === "ready" || screenState === "empty" ? (
         <section
           aria-busy={isRefreshing}
-          className="space-y-2.5 sm:space-y-3"
+          className="space-y-2 sm:space-y-2.5"
           data-testid="planner-week-body"
           style={plannerBodyMotionStyle}
         >
@@ -607,22 +607,22 @@ export function PlannerWeekScreen({
             <article
               key={dateKey}
               aria-label={`${formatDateLabel(dateKey)} 식단 카드`}
-              className="glass-panel rounded-[clamp(20px,5vw,24px)] px-[clamp(12px,3.5vw,18px)] py-[clamp(12px,3.5vw,18px)]"
+              className="glass-panel rounded-[clamp(20px,5vw,24px)] px-[clamp(11px,3vw,16px)] py-[clamp(11px,3vw,16px)]"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-[12px] bg-[var(--foreground)] px-2.5 text-[13px] font-bold text-white sm:min-h-10 sm:min-w-10 sm:text-sm">
+                  <span className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-[11px] bg-[var(--foreground)] px-2 text-[12px] font-semibold text-white sm:min-h-9 sm:min-w-9 sm:text-[13px]">
                     {formatWeekdayLabel(dateKey)}
                   </span>
                   <div className="min-w-0">
-                    <p className="text-[clamp(1.1rem,4.8vw,1.45rem)] font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+                    <p className="text-[clamp(1rem,3.7vw,1.18rem)] font-bold tracking-[-0.02em] text-[var(--foreground)]">
                       {formatDateLabel(dateKey)}
                     </p>
                   </div>
                 </div>
                 <button
                   aria-disabled="true"
-                  className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-full border border-[var(--line)] text-lg text-[var(--muted)] opacity-55 sm:min-h-10 sm:min-w-10"
+                  className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-full border border-[var(--line)] text-base text-[var(--muted)] opacity-50 sm:min-h-9 sm:min-w-9"
                   disabled
                   type="button"
                 >
@@ -630,7 +630,7 @@ export function PlannerWeekScreen({
                 </button>
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+              <div className="mt-2.5 grid grid-cols-2 gap-1.5 md:grid-cols-4 md:gap-2">
                 {columns.map((column) => {
                   const slotKey = `${dateKey}:${column.id}`;
                   const slotMeals = mealsByDateAndColumn.get(slotKey) ?? [];
@@ -639,44 +639,44 @@ export function PlannerWeekScreen({
                   return (
                     <section
                       key={slotKey}
-                      className={`flex min-h-[96px] flex-col justify-between rounded-[16px] border px-[clamp(9px,2.4vw,12px)] py-[clamp(9px,2.4vw,12px)] ${
+                      className={`flex min-h-[84px] flex-col justify-between rounded-[15px] border px-[clamp(8px,2.2vw,11px)] py-[clamp(8px,2.2vw,11px)] sm:min-h-[88px] ${
                         meal?.is_leftover
                           ? "border-[color:rgba(46,166,122,0.2)] bg-[color:rgba(46,166,122,0.08)]"
                           : "border-[var(--line)] bg-[var(--surface)]"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--muted)] sm:text-[12px]">
+                        <h4 className="text-[10px] font-semibold text-[var(--muted)] sm:text-[11px]">
                           {column.name}
                         </h4>
                         {meal ? (
                           <span
                             aria-label={STATUS_META[meal.status].label}
-                            className={`inline-flex shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${STATUS_META[meal.status].className}`}
+                            className={`inline-flex shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold sm:text-[10px] ${STATUS_META[meal.status].className}`}
                           >
                             {STATUS_META[meal.status].shortLabel}
                           </span>
                         ) : null}
                       </div>
                       {meal ? (
-                        <div className="mt-2 space-y-2">
-                          <p className="line-clamp-2 text-[12px] font-semibold leading-4 text-[var(--foreground)] sm:text-[13px]">
+                        <div className="mt-1.5 space-y-1.5">
+                          <p className="line-clamp-2 text-[11px] font-semibold leading-[1.25rem] text-[var(--foreground)] sm:text-[12px]">
                             {meal.recipe_title}
                           </p>
-                          <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-[var(--muted)] sm:text-[11px]">
-                            <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-white px-2 py-0.5 font-medium">
+                          <div className="flex flex-wrap items-center gap-1 text-[9px] text-[var(--muted)] sm:text-[10px]">
+                            <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-white px-1.5 py-0.5 font-medium">
                               {meal.planned_servings}인분
                             </span>
                             {slotMeals.length > 1 ? (
-                              <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-white px-2 py-0.5 font-medium text-[var(--muted)]">
+                              <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-white px-1.5 py-0.5 font-medium text-[var(--muted)]">
                                 +{slotMeals.length - 1}
                               </span>
                             ) : null}
                           </div>
                         </div>
                       ) : (
-                        <div className="mt-2 flex flex-1 items-end">
-                          <span className="inline-flex items-center rounded-full border border-dashed border-[var(--line)] bg-white/72 px-2 py-0.5 text-[10px] font-medium text-[var(--muted)] sm:text-[11px]">
+                        <div className="mt-1.5 flex flex-1 items-end">
+                          <span className="inline-flex items-center rounded-full border border-dashed border-[var(--line)] bg-white/72 px-1.5 py-0.5 text-[9px] font-medium text-[var(--muted)] sm:text-[10px]">
                             비어 있음
                           </span>
                         </div>

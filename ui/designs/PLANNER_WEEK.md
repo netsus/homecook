@@ -71,6 +71,7 @@
 
 - `[장보기] [요리하기] [남은요리]` 3개 버튼을 항상 노출한다.
 - CTA는 독립 hero button 3개가 아니라 compact secondary toolbar처럼 묶여 보이게 정리한다.
+- HOME 대비 상단 타이포가 갑자기 커 보이지 않도록, 화면 제목과 range title은 restrained scale을 유지한다.
 - `05-planner-week-core` 이후 실제 이동은 후속 슬라이스에서 닫히며, slice06은 이 CTA 구조를 바꾸지 않는다.
 
 ### 2. Week Context Bar + Weekday Strip
@@ -89,6 +90,7 @@
 - 슬롯에는 끼니명, 식사명 또는 빈 상태, 인분/상태 메타를 압축해 표시한다.
 - 인분은 작은 serving chip, 상태는 짧은 status chip으로 나눠 한 줄 메타에 유지한다.
 - 빈 슬롯은 긴 문장 대신 작은 `비어 있음` pill로 처리해 반복 피로를 줄인다.
+- 날짜/요일 타이포와 슬롯 타이포는 HOME보다 과도하게 무겁거나 크게 튀지 않도록 한 단계 절제한다.
 - `status`는 `registered / shopping_done / cook_done` 세 가지다.
 - `is_leftover=true` meal은 별도 시각 강조 가능하지만 구조 자체를 바꾸지는 않는다.
 

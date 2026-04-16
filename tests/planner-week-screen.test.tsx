@@ -241,7 +241,7 @@ describe("planner week screen", () => {
     const leftoverButton = within(toolbar).getByRole("button", { name: "남은요리" }) as HTMLButtonElement;
 
     expect(toolbar.className).toContain("grid-cols-3");
-    expect(toolbar.className).toContain("rounded-[18px]");
+    expect(toolbar.className).toContain("rounded-[16px]");
     expect(shoppingButton.disabled).toBe(true);
     expect(cookButton.disabled).toBe(true);
     expect(leftoverButton.disabled).toBe(true);
@@ -275,7 +275,7 @@ describe("planner week screen", () => {
 
     expect(breakfastSlot).not.toBeNull();
     expect(dinnerSlot).not.toBeNull();
-    expect(breakfastSlot?.className).toContain("min-h-[96px]");
+    expect(breakfastSlot?.className).toContain("min-h-[84px]");
     expect(breakfastSlot?.className).toContain("justify-between");
     expect(within(breakfastSlot as HTMLElement).getByText("2인분")).toBeTruthy();
     expect(within(breakfastSlot as HTMLElement).getByText("등록")).toBeTruthy();
