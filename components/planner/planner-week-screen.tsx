@@ -431,22 +431,26 @@ export function PlannerWeekScreen({
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      <section className="glass-panel rounded-[clamp(22px,6vw,28px)] px-[clamp(14px,4vw,24px)] py-[clamp(14px,4vw,24px)]">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <section className="glass-panel rounded-[clamp(22px,6vw,28px)] px-[clamp(14px,4vw,24px)] py-[clamp(13px,3.8vw,20px)]">
+        <div className="flex flex-col gap-2.5 md:flex-row md:items-end md:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
               Planner Week
             </p>
-            <h2 className="mt-1.5 text-[clamp(1.9rem,8vw,2.7rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
+            <h2 className="mt-1 text-[clamp(1.75rem,7vw,2.35rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
               식단 플래너
             </h2>
           </div>
-          <div className="flex flex-wrap gap-1.5 md:justify-end">
+          <div
+            aria-label="플래너 보조 작업"
+            className="grid w-full grid-cols-3 gap-1 rounded-[18px] border border-[var(--line)] bg-white/76 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)] md:ml-6 md:w-auto md:min-w-[18rem]"
+            role="group"
+          >
             {CTA_BUTTONS.map((label) => (
               <button
                 key={label}
                 aria-disabled="true"
-                className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-semibold text-[var(--muted)] opacity-60 sm:min-h-10 sm:px-4 sm:text-sm"
+                className="min-h-[44px] rounded-[14px] border border-transparent bg-[var(--surface)] px-2 py-2 text-[12px] font-semibold leading-none tracking-[-0.01em] text-[var(--muted)] opacity-70 sm:px-3 sm:text-[13px]"
                 disabled
                 type="button"
               >

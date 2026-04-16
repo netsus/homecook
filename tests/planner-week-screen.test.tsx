@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -225,6 +225,26 @@ describe("planner week screen", () => {
     expect(screen.getByLabelText("식사 등록 완료")).toBeTruthy();
     expect(screen.getByLabelText("장보기 완료")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "컬럼 추가" })).toBeNull();
+  });
+
+  it("keeps planner CTA buttons exposed inside a compact secondary toolbar", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    expect(await screen.findByRole("heading", { name: "식단 플래너" })).toBeTruthy();
+
+    const toolbar = screen.getByRole("group", { name: "플래너 보조 작업" });
+    const shoppingButton = within(toolbar).getByRole("button", { name: "장보기" }) as HTMLButtonElement;
+    const cookButton = within(toolbar).getByRole("button", { name: "요리하기" }) as HTMLButtonElement;
+    const leftoverButton = within(toolbar).getByRole("button", { name: "남은요리" }) as HTMLButtonElement;
+
+    expect(toolbar.className).toContain("grid-cols-3");
+    expect(toolbar.className).toContain("rounded-[18px]");
+    expect(shoppingButton.disabled).toBe(true);
+    expect(cookButton.disabled).toBe(true);
+    expect(leftoverButton.disabled).toBe(true);
   });
 
   it("uses the server-authenticated flag when browser session is not hydrated yet", async () => {
