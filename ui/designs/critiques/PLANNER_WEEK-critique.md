@@ -27,7 +27,7 @@
 | --- | --- | --- | --- |
 | 1 | 5-column 밀도 | slice06 이후 5-column 상태에서 slot 텍스트와 상태 메타가 급격히 빽빽해질 수 있다. | Stage 4 authority evidence에 5-column mobile/default+narrow 캡처를 포함한다. |
 | 2 | range bar proximity | 주간 범위 바와 첫 day card 사이가 벌어지면 planner add 결과 확인 UX가 느려진다. | first viewport에서 range bar 바로 아래 첫 day card가 읽히도록 spacing을 유지한다. |
-| 3 | 상태 뱃지 | `registered` / `shopping_done` / `cook_done`의 의미가 처음 보는 사용자에게는 낯설 수 있다. | badge 텍스트를 유지하고 색상만으로 구분하지 않는다. |
+| 3 | 상태 뱃지 | `registered` / `shopping_done` / `cook_done`의 의미가 처음 보는 사용자에게는 낯설 수 있다. | badge 텍스트를 유지하고 색상만으로 구분하지 않는다. serving/status chip 분리 시에도 텍스트 의미를 유지한다. |
 
 ---
 

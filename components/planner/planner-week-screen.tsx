@@ -639,39 +639,47 @@ export function PlannerWeekScreen({
                   return (
                     <section
                       key={slotKey}
-                      className={`rounded-[15px] border px-[clamp(9px,2.6vw,12px)] py-[clamp(9px,2.6vw,12px)] ${
+                      className={`flex min-h-[96px] flex-col justify-between rounded-[16px] border px-[clamp(9px,2.4vw,12px)] py-[clamp(9px,2.4vw,12px)] ${
                         meal?.is_leftover
                           ? "border-[color:rgba(46,166,122,0.2)] bg-[color:rgba(46,166,122,0.08)]"
                           : "border-[var(--line)] bg-[var(--surface)]"
                       }`}
                     >
-                      <h4 className="text-[12px] font-bold text-[var(--foreground)] sm:text-[13px]">
-                        {column.name}
-                      </h4>
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--muted)] sm:text-[12px]">
+                          {column.name}
+                        </h4>
+                        {meal ? (
+                          <span
+                            aria-label={STATUS_META[meal.status].label}
+                            className={`inline-flex shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${STATUS_META[meal.status].className}`}
+                          >
+                            {STATUS_META[meal.status].shortLabel}
+                          </span>
+                        ) : null}
+                      </div>
                       {meal ? (
-                        <>
-                          <p className="mt-1 line-clamp-2 text-[12px] font-semibold leading-4 text-[var(--foreground)] sm:text-[13px]">
+                        <div className="mt-2 space-y-2">
+                          <p className="line-clamp-2 text-[12px] font-semibold leading-4 text-[var(--foreground)] sm:text-[13px]">
                             {meal.recipe_title}
                           </p>
-                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] text-[var(--muted)] sm:text-[11px]">
-                            <span>{meal.planned_servings}인분</span>
-                            <span
-                              aria-label={STATUS_META[meal.status].label}
-                              className={`inline-flex rounded-full px-1.5 py-0.5 font-semibold ${STATUS_META[meal.status].className}`}
-                            >
-                              {STATUS_META[meal.status].shortLabel}
+                          <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-[var(--muted)] sm:text-[11px]">
+                            <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-white px-2 py-0.5 font-medium">
+                              {meal.planned_servings}인분
                             </span>
                             {slotMeals.length > 1 ? (
-                              <span className="font-medium text-[var(--muted)]">
+                              <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-white px-2 py-0.5 font-medium text-[var(--muted)]">
                                 +{slotMeals.length - 1}
                               </span>
                             ) : null}
                           </div>
-                        </>
+                        </div>
                       ) : (
-                        <p className="mt-1.5 text-[12px] text-[var(--muted)] sm:text-[13px]">
-                          비어 있음
-                        </p>
+                        <div className="mt-2 flex flex-1 items-end">
+                          <span className="inline-flex items-center rounded-full border border-dashed border-[var(--line)] bg-white/72 px-2 py-0.5 text-[10px] font-medium text-[var(--muted)] sm:text-[11px]">
+                            비어 있음
+                          </span>
+                        </div>
                       )}
                     </section>
                   );

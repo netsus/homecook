@@ -247,6 +247,41 @@ describe("planner week screen", () => {
     expect(leftoverButton.disabled).toBe(true);
   });
 
+  it("compresses meal slot metadata into compact chips while keeping empty slots lightweight", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_title: "김치찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
+    const breakfastSlot = within(firstDayCard).getByText("김치찌개").closest("section");
+    const dinnerSlot = within(firstDayCard).getByText("저녁").closest("section");
+
+    expect(breakfastSlot).not.toBeNull();
+    expect(dinnerSlot).not.toBeNull();
+    expect(breakfastSlot?.className).toContain("min-h-[96px]");
+    expect(breakfastSlot?.className).toContain("justify-between");
+    expect(within(breakfastSlot as HTMLElement).getByText("2인분")).toBeTruthy();
+    expect(within(breakfastSlot as HTMLElement).getByText("등록")).toBeTruthy();
+    expect(within(dinnerSlot as HTMLElement).getByText("비어 있음").tagName).toBe("SPAN");
+  });
+
   it("uses the server-authenticated flag when browser session is not hydrated yet", async () => {
     fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
 
