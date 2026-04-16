@@ -8,6 +8,7 @@ import React, {
   useState,
 } from "react";
 
+import { ContentState } from "@/components/shared/content-state";
 import { fetchJson } from "@/lib/api/fetch-json";
 import type { IngredientItem, IngredientListData } from "@/types/recipe";
 
@@ -307,32 +308,27 @@ export function IngredientFilterModal({
           ) : null}
 
           {screenState === "error" ? (
-            <div className="flex h-full min-h-[240px] flex-col items-center justify-center rounded-[20px] border border-[var(--line)] bg-white/70 px-5 text-center">
-              <h3 className="text-lg font-bold text-[var(--foreground)]">
-                재료 목록을 불러오지 못했어요
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                잠시 후 다시 시도하면 현재 검색 조건으로 재료를 불러와요.
-              </p>
-              <button
-                className="mt-5 min-h-11 rounded-full bg-[var(--brand)] px-5 py-3 text-sm font-semibold text-[var(--foreground)]"
-                onClick={() => setReloadKey((current) => current + 1)}
-                type="button"
-              >
-                다시 시도
-              </button>
-            </div>
+            <ContentState
+              actionLabel="다시 시도"
+              className="min-h-[240px] flex items-center justify-center"
+              description="잠시 후 다시 시도하면 현재 검색 조건으로 재료를 불러와요."
+              eyebrow="재료 동기화 오류"
+              onAction={() => setReloadKey((current) => current + 1)}
+              tone="error"
+              title="재료 목록을 불러오지 못했어요"
+              variant="subtle"
+            />
           ) : null}
 
           {screenState === "empty" ? (
-            <div className="flex h-full min-h-[240px] flex-col items-center justify-center rounded-[20px] border border-[var(--line)] bg-white/70 px-5 text-center">
-              <h3 className="text-lg font-bold text-[var(--foreground)]">
-                검색 결과가 없어요
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-                다른 재료명으로 검색해보세요
-              </p>
-            </div>
+            <ContentState
+              className="min-h-[240px] flex items-center justify-center"
+              description="다른 재료명으로 검색하거나 카테고리를 바꿔보세요."
+              eyebrow="검색 결과 없음"
+              tone="empty"
+              title="검색 결과가 없어요"
+              variant="subtle"
+            />
           ) : null}
 
           {screenState === "ready" ? (

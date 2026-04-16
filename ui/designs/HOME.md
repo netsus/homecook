@@ -145,6 +145,10 @@
 
 ### 레시피 그리드 공통 상태
 
+- `HOME`의 Empty / Error는 shared `ContentState` shell을 사용한다.
+- eyebrow pill + headline + 설명 + CTA 위계를 유지해 `RECIPE_DETAIL`, `PLANNER_WEEK`, 로그인 게이트와 상태 톤을 맞춘다.
+- CTA가 있는 상태 셸은 하단 탭바 safe-area 위에서 읽히도록 `action-safe-bottom-panel` 여백 규칙을 공유한다.
+
 - **Loading**
   ```
   ┌─────────────┐  ┌─────────────┐
@@ -159,8 +163,9 @@
   ```
   ┌─────────────────────────────────┐
   │                                 │
-  │         🍳                      │
-  │   조건에 맞는 레시피가 없어요    │  ← --foreground, text-base
+  │     [다른 조합]                 │  ← eyebrow pill
+  │   다른 조합을 찾아보세요         │  ← --foreground, text-base
+  │   조건에 맞는 레시피가 없어요    │  ← --muted, text-sm
   │                                 │
   │   ┌───────────────────────┐     │
   │   │     필터 초기화        │     │  ← --brand CTA 버튼
@@ -173,8 +178,9 @@
   ```
   ┌─────────────────────────────────┐
   │                                 │
-  │         ⚠️                      │
+  │   [목록 동기화 오류]             │  ← eyebrow pill
   │   레시피를 불러오지 못했어요     │  ← --foreground, text-base
+  │   연결/API 확인 후 다시 시도      │  ← --muted, text-sm
   │                                 │
   │   ┌───────────────────────┐     │
   │   │       다시 시도        │     │  ← --brand CTA 버튼
