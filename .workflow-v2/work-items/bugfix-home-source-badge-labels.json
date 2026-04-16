@@ -49,7 +49,7 @@
     ]
   },
   "status": {
-    "lifecycle": "ready_for_review",
+    "lifecycle": "merged",
     "approval_state": "codex_approved",
     "verification_status": "passed"
   },

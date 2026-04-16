@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-16T15:09:30Z",
+  "updated_at": "2026-04-16T15:22:53Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -199,8 +199,8 @@
       "id": "bugfix-home-source-badge-labels",
       "preset": "bugfix-patch",
       "branch": "fix/home-source-badge-labels",
-      "pr_path": "pending",
-      "lifecycle": "in_progress",
+      "pr_path": "https://github.com/netsus/homecook/pull/129",
+      "lifecycle": "merged",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -208,7 +208,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Bugfix-patch pilot: HOME recipe card source badge now localizes raw source_type enums; PR #129 opened after local verification passed (recipe-card/home-screen vitest, targeted eslint, typecheck)."
+      "notes": "Bugfix-patch pilot merged via PR #129; HOME recipe card source badge now localizes raw source_type enums and refreshed HOME visual baselines stayed green."
     }
   ]
 }

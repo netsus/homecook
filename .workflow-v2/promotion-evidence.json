@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-16T14:12:32.890961Z",
+  "updated_at": "2026-04-16T15:22:53Z",
   "canonical_policy": "v1",
   "execution_mode": "promotion-candidate",
   "documentation_gates": [
@@ -88,19 +88,23 @@
     {
       "id": "bugfix-patch",
       "label": "Bugfix patch lane",
-      "status": "pending",
+      "status": "pass",
       "required": true,
-      "notes": "Need one small bugfix/post-merge patch lane to compare lead time and blocked retry behavior against v1.",
-      "workpack_refs": [],
-      "checkpoint_refs": []
+      "notes": "PR #129 fix/home-source-badge-labels merged; HOME source badge raw enum exposure fixed with targeted regression tests, refreshed HOME visual baselines, and promotion-gate audit bundle .artifacts/meta-harness-auditor/bugfix-patch-pr129/report.md.",
+      "workpack_refs": [
+        "docs/workpacks/01-discovery-detail-auth/README.md"
+      ],
+      "checkpoint_refs": [
+        "pr-129-merged",
+        "fix-home-source-badge-labels",
+        "audit-bugfix-patch-pr129"
+      ]
     }
   ],
   "promotion_gate": {
-    "status": "not-ready",
-    "blockers": [
-      "bugfix-patch lane evidence missing"
-    ],
-    "next_review_trigger": "After one bugfix-patch pilot",
-    "notes": "Stay in promotion-candidate mode until the required pilot lanes pass."
+    "status": "candidate",
+    "blockers": [],
+    "next_review_trigger": "Run promotion-gate audit and final readiness review",
+    "notes": "All required pilot lanes are now passing; workflow-v2 remains promotion-candidate until the promotion-gate audit and human approval complete."
   }
 }
