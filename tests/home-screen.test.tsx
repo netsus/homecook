@@ -94,12 +94,12 @@ describe("home screen", () => {
     expect(screen.getAllByRole("link", { name: /집밥 김치찌개/i }).length).toBe(2);
   });
 
-  it("removes redundant hero copy so search controls stay near the first viewport", async () => {
+  it("keeps the discovery panel focused on search controls without an extra in-panel brand block", async () => {
     render(<HomeScreen />);
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Homecook" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Homecook" }).getAttribute("href")).toBe("/");
     expect(await screen.findByPlaceholderText("레시피 제목 검색")).toBeTruthy();
+    expect(screen.queryByRole("heading", { level: 1, name: "Homecook" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Homecook" })).toBeNull();
     expect(screen.queryByText("Slice Scope")).toBeNull();
     expect(screen.queryByText("Current Filters")).toBeNull();
     expect(screen.queryByText("Home / Discovery")).toBeNull();

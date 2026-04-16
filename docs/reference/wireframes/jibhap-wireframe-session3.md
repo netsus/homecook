@@ -3,6 +3,9 @@
 > 세션 1~2의 공통 컴포넌트(BottomTabBar, Toast, ConfirmModal, RecipeCard,
 > ServingStepper, LoginRequiredModal)를 그대로 재사용한다.
 > 모바일 기준: width 375px / Tailwind CSS 클래스명 기준
+> status: archive reference only
+> current UI source of truth: `docs/화면정의서-v1.2.3.md`, `ui/designs/HOME.md`, `ui/designs/RECIPE_DETAIL.md`
+> 이 문서의 AppBar / SortTabBar / 5-button detail layout는 historical snapshot이며 current UI source of truth가 아니다.
 
 ---
 

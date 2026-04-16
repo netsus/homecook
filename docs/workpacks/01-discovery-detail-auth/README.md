@@ -135,13 +135,13 @@
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 - `docs/workpacks/README.md`
-- `docs/요구사항기준선-v1.6.md`
-- `docs/화면정의서-v1.2.md` — §1 HOME, §3 RECIPE_DETAIL, §4 LOGIN
-- `docs/유저flow맵-v1.2.md`
-- `docs/db설계-v1.3.md`
+- `docs/요구사항기준선-v1.6.3.md`
+- `docs/화면정의서-v1.2.3.md` — §1 HOME, §3 RECIPE_DETAIL, §4 LOGIN
+- `docs/유저flow맵-v1.2.3.md`
+- `docs/db설계-v1.3.1.md`
 - `docs/api문서-v1.2.1.md` — §0 인증, §1 홈, §2 레시피 상세
 - `docs/design/design-tokens.md`
-- `docs/reference/wireframes/jibhap-wireframe-session3.md`
+- `docs/reference/wireframes/jibhap-wireframe-session3.md` — archive reference only, current UI baseline 아님
 
 ## QA / Test Data Plan
 
@@ -159,8 +159,10 @@
 ## Key Rules
 
 - `HOME`은 제목 검색(`q`)과 정렬(`sort`)을 지원한다. 재료 필터(`ingredient_ids`)는 Slice 02.
+- `HOME`의 정렬 컨트롤은 검색 패널이 아니라 `모든 레시피` 섹션 헤더에 둔다.
 - `HOME`에 테마 섹션(`GET /recipes/themes`)이 있어야 한다. — **bootstrap 미구현, Retrofit Stage 2에서 추가**
 - `RECIPE_DETAIL`은 비로그인 조회가 가능하다.
+- `RECIPE_DETAIL`은 shared AppHeader + compact utility row + primary CTA row baseline을 유지한다.
 - 보호 액션(좋아요/저장/플래너 추가) 시 즉시 로그인 이동이 아니라 안내 모달을 먼저 보여준다.
 - 로그인 성공 후 원래 보던 레시피 화면으로 복귀한다 (return-to-action).
 - 요리모드·저장·좋아요·플래너 추가의 실제 쓰기 완료는 이번 슬라이스 밖이다.

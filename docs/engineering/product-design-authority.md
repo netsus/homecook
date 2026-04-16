@@ -69,6 +69,9 @@
 
 authority 리뷰는 아래 evidence가 있어야 한다.
 
+- UI 변경 작업은 **수정 전에 current-state screenshot을 먼저 캡처**하고,
+  그 캡처를 기준으로 변경 계획을 세운다.
+- before/after 비교가 필요한 작업은 before artifact를 먼저 저장한 뒤 구현을 시작한다.
 - 모바일 기본 폭 1장 이상
 - 작은 모바일 sentinel 폭 1장 이상
   - 권장 기준: `320px` 또는 그에 준하는 좁은 폭
@@ -81,6 +84,8 @@ authority 리뷰는 아래 evidence가 있어야 한다.
 
 - `ui/designs/evidence/<slice>/<SCREEN_ID>-mobile.png`
 - `ui/designs/evidence/<slice>/<SCREEN_ID>-mobile-narrow.png`
+- `ui/designs/evidence/<slice>/<SCREEN_ID>-before-mobile.png`
+- `ui/designs/evidence/<slice>/<SCREEN_ID>-after-mobile.png`
 - Figma frame URL 1개 + narrow variant 1개
 
 ---
@@ -182,6 +187,12 @@ authority report에는 아래를 반드시 포함한다.
 - Claude가 public Stage 4 구현을 마치면, Codex가 `authority_precheck`로 evidence와 blocker 구조화를 먼저 수행한다.
 - 신규 화면, high-risk UI change, anchor screen 확장은
   `Ready for Review` 전에 Codex `authority_precheck`를 거친다.
+- UI가 실제로 바뀌었으면 구현 후 관련 비공식 설계 문서도 현재 화면 기준으로 갱신한다.
+  - 최소 기준: 관련 `ui/designs/<SCREEN_ID>.md`
+  - 필요 시: `ui/designs/critiques/*`, workpack README의 design closeout 메모
+- 즉, authority evidence와 비공식 설계 문서가 서로 다른 화면을 설명하는 상태로 PR을 닫지 않는다.
+- 사용자 승인으로 anchor screen의 헤더 구조, 섹션 배치, action hierarchy 같은 공식 화면 계약이 바뀌었다면 같은 PR에서 공식 화면정의서도 함께 동기화한다.
+  - 버전 파일이 바뀌면 `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`도 같은 PR에서 갱신한다.
 - unresolved blocker가 있으면 Stage 4 closeout을 닫지 않는다.
 - interaction model 자체를 바꾸는 제안이면 authority 단독으로 `pass`를 주지 않고,
   사용자 승인 또는 별도 design artifact 보강 전까지 `hold`를 기본값으로 둔다.

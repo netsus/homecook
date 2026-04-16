@@ -205,6 +205,8 @@
 - `leftover_dish_id`를 임의 추가하지 않는다. 남은요리 기반 등록은 `16-leftovers` 이후에만 닫는다.
 - 비로그인 planner add는 로그인 게이트 + return-to-action으로만 처리한다.
 - `RECIPE_DETAIL` action hierarchy와 `PLANNER_WEEK` scroll containment를 약화시키는 구조 변경은 허용하지 않는다.
+- `RECIPE_DETAIL`은 shared AppHeader + compact utility row + primary CTA row baseline을 유지한다.
+- `PLANNER_WEEK`는 shared AppHeader + compact secondary toolbar + 날짜별 day card baseline을 유지한다.
 
 ## Contract Evolution Candidates (Optional)
 
@@ -235,5 +237,4 @@
 - [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 - [x] anchor-extension authority evidence 계획 고정 <!-- omo:id=delivery-authority-plan;stage=4;scope=frontend;review=5,6 -->
 - [x] Stage 4 authority report / screenshot 경로 동기화 <!-- omo:id=delivery-authority-evidence-plan;stage=4;scope=frontend;review=5,6 -->
-
 
