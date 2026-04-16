@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-15T13:19:31.090Z",
+  "updated_at": "2026-04-16T14:12:32.890961Z",
   "canonical_policy": "v1",
   "execution_mode": "promotion-candidate",
   "documentation_gates": [
@@ -74,11 +74,16 @@
     {
       "id": "external-smoke",
       "label": "External smoke lane",
-      "status": "pending",
+      "status": "pass",
       "required": true,
-      "notes": "Need one pilot where source PR Actual Verification and closeout preflight reuse the same live smoke evidence.",
-      "workpack_refs": [],
-      "checkpoint_refs": []
+      "notes": "slice06 source PR #120 Actual Verification reused by closeout preflight; closeout rehearsal PR #126 merged; declared external_smokes pnpm dev:local-supabase verified",
+      "workpack_refs": [
+        "docs/workpacks/06-recipe-to-planner/README.md"
+      ],
+      "checkpoint_refs": [
+        "source-pr-120-actual-verification",
+        "closeout-pr-126-rehearsal"
+      ]
     },
     {
       "id": "bugfix-patch",
@@ -93,10 +98,9 @@
   "promotion_gate": {
     "status": "not-ready",
     "blockers": [
-      "external-smoke lane evidence missing",
       "bugfix-patch lane evidence missing"
     ],
-    "next_review_trigger": "After one external-smoke pilot and one bugfix-patch pilot",
+    "next_review_trigger": "After one bugfix-patch pilot",
     "notes": "Stay in promotion-candidate mode until the required pilot lanes pass."
   }
 }
