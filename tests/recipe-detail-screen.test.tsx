@@ -161,10 +161,11 @@ describe("recipe detail screen", () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
     const shareButton = await screen.findByRole("button", { name: "공유하기" });
-    const metricsRow = shareButton.parentElement;
+    const metricsRow = shareButton.closest(".recipe-overview-metrics-compact");
 
     expect(metricsRow).not.toBeNull();
     expect(metricsRow?.className).toContain("recipe-overview-metrics-compact");
+    expect(metricsRow?.className).toContain("flex-wrap");
   });
 
   it("removes internal scaffolding cards and keeps primary actions above the recipe body", async () => {
@@ -198,6 +199,31 @@ describe("recipe detail screen", () => {
         "min-h-11",
       );
     }
+  });
+
+  it("marks TO_TASTE ingredients with a readable helper badge", async () => {
+    fetchJson.mockResolvedValue(
+      buildRecipeDetail({
+        ingredients: [
+          {
+            id: "taste-1",
+            ingredient_id: "ingredient-salt",
+            standard_name: "소금",
+            amount: null,
+            unit: null,
+            ingredient_type: "TO_TASTE",
+            display_text: "소금 적당히",
+            scalable: false,
+            sort_order: 1,
+          },
+        ],
+      }),
+    );
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    expect(await screen.findByText("취향껏")).toBeTruthy();
+    expect(screen.getByText(/적당히/)).toBeTruthy();
   });
 
   it("disables the like button while pending and updates the count from the API response", async () => {

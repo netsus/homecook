@@ -11,7 +11,7 @@
 
 **등급**: 🟢 통과
 
-**한 줄 요약**: 현재 구현 기준의 `RECIPE_DETAIL` baseline은 공통 브랜드 헤더, compact utility row, primary CTA row, planner add / save / login gate 복귀 흐름까지 설계와 구현이 일치한다. 남은 확인 포인트는 좋아요 tone 구분, TO_TASTE 가독성, 다중 조리방법 배지 정도다.
+**한 줄 요약**: 현재 구현 기준의 `RECIPE_DETAIL` baseline은 공통 브랜드 헤더, compact wrap utility row, balanced primary CTA row, planner add / save / login gate 복귀 흐름까지 설계와 구현이 일치한다. 남은 확인 포인트는 다중 조리방법 배지 규칙 정도다.
 
 ---
 
@@ -25,9 +25,7 @@
 
 | # | 위치 | 문제 | 제안 |
 |---|------|------|------|
-| 1 | 좋아요 활성 tone | 좋아요 활성 상태가 `brand` 계열을 쓰기 때문에 `요리하기` CTA와 같은 계열로 읽힐 여지가 있다. 현재 구조상 큰 blocker는 아니지만, 브랜드 tone 리밸런싱 시 우선 검토하면 좋다. | filled icon + tone 대비를 함께 유지하고, CTA와 engagement action의 색 무게가 다시 가까워지지 않도록 follow-up polish에서 점검한다. |
-| 2 | TO_TASTE 재료 가독성 | `적당히`류 재료 표현이 italic / muted로 계속 유지되면 작은 화면이나 저시력 환경에서 읽기 어려워질 수 있다. | italic만으로 의미를 전달하기보다 보조 레이블 또는 tone 차이와 병행하는지 구현 단계에서 재확인한다. |
-| 3 | 다중 조리방법 배지 | 한 step에 조리방법이 여러 개인 경우 badge 우선순위 규칙이 설계에 아직 한 줄로 잠겨 있지는 않다. | 첫 번째 조리방법 우선 노출 또는 최대 2개 badge까지만 허용하는 규칙을 후속 문서화한다. |
+| 1 | 다중 조리방법 배지 | 한 step에 조리방법이 여러 개인 경우 badge 우선순위 규칙이 설계에 아직 한 줄로 잠겨 있지는 않다. | 첫 번째 조리방법 우선 노출 또는 최대 2개 badge까지만 허용하는 규칙을 후속 문서화한다. |
 
 ---
 
@@ -81,8 +79,8 @@
 - [x] 5등분 액션 버튼 strip 제거, utility row + primary CTA row 구조 확정
 - [x] 공유 버튼 중복 제거
 - [x] planner add / login gate 닫기 affordance 현재 구현 기준 반영
-- [ ] 좋아요 활성 tone follow-up polish
-- [ ] TO_TASTE 가독성 follow-up 검토
+- [x] 좋아요 활성 tone follow-up polish
+- [x] TO_TASTE 가독성 follow-up 검토
 - [ ] 다중 조리방법 배지 규칙 한 줄 잠금
 
 ---
