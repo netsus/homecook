@@ -37,8 +37,8 @@
 - [x] 시스템 row 자동 생성 owning flow와 기대 결과(`meal_plan_columns ×4`, `recipe_books ×3`)가 명시되어 있다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
-- verifier:
-- environment:
+- verifier: Codex (`PR #120` Actual Verification, 2026-04-15)
+- environment: local Supabase + `pnpm dev:local-supabase` (127.0.0.1:3100) + local dev auth main account (`local-tester@homecook.local`) after `pnpm qa:seed:01-05 -- --user-email local-tester@homecook.local`
 - scenarios:
   1. 게스트 상태에서 `RECIPE_DETAIL` → `[플래너에 추가]` → 로그인 게이트 → 로그인 → planner add 바텀시트 재오픈 확인
   2. 로그인 상태에서 날짜/끼니/인분 선택 후 추가 → 토스트 확인 → `PLANNER_WEEK` 목표 슬롯 반영 확인
