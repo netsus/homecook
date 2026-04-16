@@ -727,58 +727,66 @@ export function RecipeDetailScreen({
               </p>
             </div>
 
-            <div className="recipe-overview-metrics-compact grid grid-cols-4 items-center max-[360px]:order-1">
-              <UtilityStatButton
-                ariaLabel={`플래너 등록 ${plannerCountLabel}`}
-                count={plannerCountLabel}
-                icon={<PlannerIcon />}
-                label="플래너"
-                tone="neutral"
-              />
-              <IconActionButton
-                ariaLabel="공유하기"
-                icon={<ShareIcon />}
-                onClick={handleShare}
-                tone="neutral"
-              />
-              <MetricActionButton
-                ariaLabel={
-                  likeRequestState === "pending"
-                    ? "좋아요 처리 중..."
-                    : `좋아요 ${likeCountLabel}`
-                }
-                ariaPressed={recipe.user_status?.is_liked ?? false}
-                count={likeCountLabel}
-                disabled={likeRequestState === "pending"}
-                hideLabel
-                icon={
-                  <HeartIcon
-                    filled={recipe.user_status?.is_liked ?? false}
-                  />
-                }
-                label={likeRequestState === "pending" ? "처리 중" : "좋아요"}
-                onClick={() => handleProtectedAction("like")}
-                tone={recipe.user_status?.is_liked ? "brand" : "neutral"}
-              />
-              <MetricActionButton
-                ariaLabel="저장"
-                ariaPressed={recipe.user_status?.is_saved ?? false}
-                count={saveCountLabel}
-                hideLabel
-                icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
-                label="저장"
-                onClick={() => handleProtectedAction("save")}
-                tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
-              />
+            <div className="recipe-overview-metrics-compact flex flex-wrap items-center gap-2 max-[360px]:order-1">
+              <div className="min-w-[8.5rem] flex-1 md:min-w-[9rem] md:flex-none">
+                <UtilityStatButton
+                  ariaLabel={`플래너 등록 ${plannerCountLabel}`}
+                  count={plannerCountLabel}
+                  icon={<PlannerIcon />}
+                  label="플래너"
+                  tone="neutral"
+                />
+              </div>
+              <div className="w-11 shrink-0 md:w-[3rem]">
+                <IconActionButton
+                  ariaLabel="공유하기"
+                  icon={<ShareIcon />}
+                  onClick={handleShare}
+                  tone="neutral"
+                />
+              </div>
+              <div className="min-w-[5.5rem] flex-1 md:min-w-[6.25rem] md:flex-none">
+                <MetricActionButton
+                  ariaLabel={
+                    likeRequestState === "pending"
+                      ? "좋아요 처리 중..."
+                      : `좋아요 ${likeCountLabel}`
+                  }
+                  ariaPressed={recipe.user_status?.is_liked ?? false}
+                  count={likeCountLabel}
+                  disabled={likeRequestState === "pending"}
+                  hideLabel
+                  icon={
+                    <HeartIcon
+                      filled={recipe.user_status?.is_liked ?? false}
+                    />
+                  }
+                  label={likeRequestState === "pending" ? "처리 중" : "좋아요"}
+                  onClick={() => handleProtectedAction("like")}
+                  tone={recipe.user_status?.is_liked ? "signal" : "neutral"}
+                />
+              </div>
+              <div className="min-w-[5.5rem] flex-1 md:min-w-[6.25rem] md:flex-none">
+                <MetricActionButton
+                  ariaLabel="저장"
+                  ariaPressed={recipe.user_status?.is_saved ?? false}
+                  count={saveCountLabel}
+                  hideLabel
+                  icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
+                  label="저장"
+                  onClick={() => handleProtectedAction("save")}
+                  tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
+                />
+              </div>
             </div>
 
             <div className="max-[360px]:order-4">
-              <p className="max-w-3xl text-[clamp(0.8125rem,3.2vw,0.9rem)] leading-5 text-[var(--muted)] md:text-sm md:leading-6">
+              <p className="max-w-3xl text-[12px] leading-5 text-[color:rgba(74,74,74,0.78)] md:text-[13px] md:leading-5">
                 {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
               </p>
             </div>
 
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 max-[360px]:order-2 md:gap-2.5">
+            <div className="grid grid-cols-2 gap-2 max-[360px]:order-2 md:gap-2.5">
               <ActionButton
                 label="플래너에 추가"
                 onClick={() => handleProtectedAction("planner")}
@@ -850,8 +858,21 @@ export function RecipeDetailScreen({
                       key={ingredient.id}
                       className="flex items-center justify-between gap-4 rounded-[16px] bg-white/70 px-4 py-3 text-sm text-[var(--foreground)]"
                     >
-                      <span>{ingredient.standard_name}</span>
-                      <span className="font-medium text-[var(--muted)]">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span>{ingredient.standard_name}</span>
+                        {ingredient.ingredient_type === "TO_TASTE" ? (
+                          <span className="rounded-full border border-[color:rgba(224,80,32,0.16)] bg-[color:rgba(255,108,60,0.08)] px-2 py-0.5 text-[10px] font-semibold text-[#a14b27]">
+                            취향껏
+                          </span>
+                        ) : null}
+                      </span>
+                      <span
+                        className={
+                          ingredient.ingredient_type === "TO_TASTE"
+                            ? "font-semibold text-[#7c4a32]"
+                            : "font-medium text-[var(--muted)]"
+                        }
+                      >
                         {quantityText}
                       </span>
                     </li>
@@ -1079,17 +1100,14 @@ function ActionButton({
   onClick: () => void;
   tone: "brand" | "olive" | "neutral";
 }) {
-  const className =
-    tone === "brand"
-      ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.16)] text-[var(--foreground)]"
-      : tone === "olive"
-        ? "border-transparent bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
-        : "border-[var(--line)] bg-white text-[var(--foreground)]";
-
   return (
     <button
       aria-pressed={ariaPressed}
-      className={`min-h-11 rounded-[11px] border px-3 py-2 text-[12px] font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:px-4 md:py-2.5 md:text-sm ${className}`}
+      className={`min-h-11 rounded-[11px] border px-3 py-2 text-[12px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:px-4 md:py-2.5 md:text-sm ${
+        tone === "olive"
+          ? "border-[color:rgba(46,166,122,0.22)] bg-[var(--olive)] text-white"
+          : getRecipeActionToneClass(tone)
+      }`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -1108,19 +1126,12 @@ function IconActionButton({
   ariaLabel: string;
   icon: React.ReactNode;
   onClick: () => void;
-  tone?: "brand" | "olive" | "neutral";
+  tone?: "brand" | "olive" | "neutral" | "signal";
 }) {
-  const className =
-    tone === "brand"
-      ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.16)] text-[var(--foreground)]"
-      : tone === "olive"
-        ? "border-transparent bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
-        : "border-[var(--line)] bg-white text-[var(--foreground)]";
-
   return (
     <button
       aria-label={ariaLabel}
-      className={`flex min-h-11 w-full items-center justify-center rounded-[11px] border shadow-[var(--shadow)] md:rounded-[13px] ${className}`}
+      className={`flex min-h-11 w-full items-center justify-center rounded-[11px] border shadow-[var(--shadow)] md:rounded-[13px] ${getRecipeActionToneClass(tone)}`}
       onClick={onClick}
       type="button"
     >
@@ -1140,19 +1151,12 @@ function UtilityStatButton({
   count: string;
   icon: React.ReactNode;
   label: string;
-  tone: "brand" | "olive" | "neutral";
+  tone: "brand" | "olive" | "neutral" | "signal";
 }) {
-  const className =
-    tone === "brand"
-      ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.16)] text-[var(--foreground)]"
-      : tone === "olive"
-        ? "border-transparent bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
-        : "border-[var(--line)] bg-white text-[var(--foreground)]";
-
   return (
     <div
       aria-label={ariaLabel}
-      className={`flex min-h-11 w-full items-center justify-center gap-1 rounded-[11px] border px-1.5 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] md:rounded-[13px] md:px-2 md:py-2 md:text-[13px] ${className}`}
+      className={`flex min-h-11 w-full items-center justify-center gap-1 rounded-[11px] border px-2 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] md:rounded-[13px] md:px-2.5 md:py-2 md:text-[13px] ${getRecipeActionToneClass(tone)}`}
       role="status"
     >
       <span aria-hidden="true" className="shrink-0">
@@ -1185,20 +1189,13 @@ function MetricActionButton({
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
-  tone: "brand" | "olive" | "neutral";
+  tone: "brand" | "olive" | "neutral" | "signal";
 }) {
-  const className =
-    tone === "brand"
-      ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.16)] text-[var(--foreground)]"
-      : tone === "olive"
-        ? "border-transparent bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
-        : "border-[var(--line)] bg-white text-[var(--foreground)]";
-
   return (
     <button
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
-      className={`flex min-h-11 w-full items-center ${hideLabel ? "justify-center" : ""} gap-1 rounded-[11px] border px-1.5 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:gap-1.5 md:rounded-[13px] md:px-3 md:py-2 md:text-[13px] ${className}`}
+      className={`flex min-h-11 w-full items-center ${hideLabel ? "justify-center" : ""} gap-1 rounded-[11px] border px-2 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:gap-1.5 md:rounded-[13px] md:px-2.5 md:py-2 md:text-[13px] ${getRecipeActionToneClass(tone)}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -1215,6 +1212,24 @@ function MetricActionButton({
       </span>
     </button>
   );
+}
+
+function getRecipeActionToneClass(
+  tone: "brand" | "olive" | "neutral" | "signal",
+) {
+  if (tone === "brand") {
+    return "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.12)] text-[var(--foreground)]";
+  }
+
+  if (tone === "olive") {
+    return "border-[color:rgba(46,166,122,0.2)] bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]";
+  }
+
+  if (tone === "signal") {
+    return "border-[color:rgba(210,78,78,0.18)] bg-[color:rgba(210,78,78,0.1)] text-[#b44949]";
+  }
+
+  return "border-[var(--line)] bg-white text-[var(--foreground)]";
 }
 
 function HeartIcon({ filled = false }: { filled?: boolean }) {
