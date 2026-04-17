@@ -362,12 +362,9 @@ export function RecipeDetailScreen({
 
         return { ...current, plan_count: current.plan_count + 1 };
       });
-      const addedDate = new Date(`${selectedPlanDate}T00:00:00.000Z`);
-      const dateLabel = new Intl.DateTimeFormat("ko-KR", {
-        month: "numeric",
-        day: "numeric",
-        timeZone: "UTC",
-      }).format(addedDate);
+      // `N월 D일 끼니에 추가됐어요` — locale-independent format (D3)
+      const [, planM, planD] = selectedPlanDate.split("-").map(Number);
+      const dateLabel = `${planM}월 ${planD}일`;
       const columnName =
         plannerColumns.find((c) => c.id === selectedPlanColumnId)?.name ?? "선택한 끼니";
       setFeedback({

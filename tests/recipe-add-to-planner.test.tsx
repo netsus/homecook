@@ -177,10 +177,10 @@ describe("planner add flow", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "플래너에 추가" })).toBeNull();
     });
-    // Toast includes date and meal slot name (D3: "N월 D일 끼니에 추가됐어요")
+    // Toast: "N월 D일 아침에 추가됐어요." — exact contract format (D3)
     const statusElements = screen.getAllByRole("status");
     const toast = statusElements.find((el) =>
-      /아침에 추가됐어요/.test(el.textContent ?? ""),
+      /\d+월 \d+일 아침에 추가됐어요/.test(el.textContent ?? ""),
     );
     expect(toast).toBeTruthy();
 

@@ -1,6 +1,6 @@
 {
   "slice_id": "h3-planner-add-sync",
-  "execution_mode": "product-slice",
+  "execution_mode": "manual",
   "risk_class": "high",
   "anchor_extension": true,
   "anchor_screens": ["RECIPE_DETAIL", "PLANNER_WEEK"],

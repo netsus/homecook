@@ -736,12 +736,11 @@ describe("recipe detail screen", () => {
     });
     await userEvent.click(submitButton);
 
-    // Toast should include a date reference and the meal slot name (D2/D3 acceptance)
-    // Note: Intl.DateTimeFormat locale output varies by environment; match on slot name presence
+    // Toast: "N월 D일 아침에 추가됐어요." — exact contract format (D3, locale-independent)
     await waitFor(() => {
       const statusElements = screen.getAllByRole("status");
       const toast = statusElements.find((el) =>
-        /아침에 추가됐어요/.test(el.textContent ?? ""),
+        /\d+월 \d+일 아침에 추가됐어요/.test(el.textContent ?? ""),
       );
       expect(toast).toBeTruthy();
     });
