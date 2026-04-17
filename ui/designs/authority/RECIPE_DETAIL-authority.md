@@ -9,7 +9,6 @@
 > - `ui/designs/evidence/h3-planner-add-sync/RECIPE_DETAIL-baseline.png` (390×844, captured 2026-04-17)
 > - `ui/designs/evidence/h3-planner-add-sync/planner-add-sheet-mobile.png` (390×844, captured 2026-04-17)
 > - `ui/designs/evidence/h3-planner-add-sync/planner-add-sheet-narrow.png` (320×568, captured 2026-04-17)
-> - `ui/designs/evidence/h3-planner-add-sync/planner-add-sheet-date-label.png` (captured 2026-04-17)
 > - `ui/designs/evidence/h3-planner-add-sync/planner-add-toast-mobile.png` (390×844, captured 2026-04-17)
 > - `ui/designs/evidence/h3-planner-add-sync/recipe-detail-cta-hierarchy.png` (captured 2026-04-17)
 > - design reference: `ui/designs/RECIPE_DETAIL.md`
@@ -22,24 +21,23 @@
 ## Verdict
 
 - verdict: `pass`
-- 한 줄 요약: H3의 날짜 확인 라벨과 성공 토스트 sync까지 반영한 현재 `RECIPE_DETAIL` planner-add 흐름은 390px·320px 모두에서 안정적이며, anchor CTA 위계에도 새로운 blocker를 만들지 않는다.
+- 한 줄 요약: H3 planner-add 흐름은 390px·320px 모두에서 안정적이며, 날짜 선택은 활성 칩만으로 충분히 확인되고 anchor CTA 위계에도 새로운 blocker를 만들지 않는다.
 
 ## Scorecard
 
 | 항목 | 점수 | 메모 |
 |------|------|------|
 | Mobile UX | 4/5 | 좁은 폭(320px)에서도 날짜 스트립·끼니 4버튼·인분 스텝퍼·CTA row가 한 화면에 들어온다. |
-| Interaction Clarity | 4/5 | sheet 구조가 명확하고, 선택된 날짜 확인 라벨과 성공 토스트가 결과를 더 즉시 이해하게 만든다. |
+| Interaction Clarity | 4/5 | sheet 구조가 명확하고, 활성 날짜 칩과 성공 토스트만으로도 결과를 이해하기 충분하다. |
 | Visual Hierarchy | 4/5 | 날짜 선택 → 끼니 선택 → 인분 → CTA 순서가 자연스럽고 CTA row 우선순위도 유지된다. |
 | Color / Material Fit | 4/5 | glass-panel 배경과 olive 토큰 적용이 RECIPE_DETAIL 기조와 일치한다. |
-| Familiar App Pattern Fit | 4/5 | bottom sheet + horizontal date strip + compact confirmation label 조합이 식단 앱의 익숙한 패턴에 맞다. |
+| Familiar App Pattern Fit | 4/5 | bottom sheet + horizontal date strip 조합이 식단 앱의 익숙한 패턴에 맞고, 중복 확인 라벨 제거로 더 간결해졌다. |
 
 ## Evidence Notes
 
 - `RECIPE_DETAIL-planner-add-mobile.png` / `RECIPE_DETAIL-planner-add-mobile-narrow.png`는 slice06 authority_precheck 기준선으로 유지된다.
 - `planner-add-sheet-mobile.png` (390×844): planner add sheet가 열린 상태. backdrop 위에 sheet가 명확히 위치하고, 날짜 스트립·끼니 grid·인분 스텝퍼·CTA row가 모두 보인다.
 - `planner-add-sheet-narrow.png` (320×568): 좁은 뷰포트에서도 sheet 레이아웃이 무너지지 않는다. 끼니 4버튼은 한 줄로 유지되고, "취소"와 "플래너에 추가" CTA가 모두 화면 안에 들어온다.
-- `planner-add-sheet-date-label.png`: 선택된 날짜 확인 라벨이 계약대로 `요일 M월 D일` 포맷으로 보이며, 달력 도구와 day-card 표현 사이 bridge 역할을 한다.
 - `planner-add-toast-mobile.png`: 성공 토스트가 `N월 D일 끼니에 추가됐어요` 포맷으로 노출되고, CTA row를 가리지 않는다.
 - `recipe-detail-cta-hierarchy.png`: `[플래너에 추가]`, `[요리하기]` primary CTA row 위계가 여전히 명확하다.
 - 모든 viewport에서 page-level horizontal overflow 없이 안정적이다.
@@ -51,8 +49,8 @@
 |---|------|----------|----------|
 | 1 | internal scaffolding | `Recipe Snapshot`, `Slice Note`가 product body 안에 노출됐다. | 해소. 사용자에게 필요한 hero / actions / ingredients / steps만 남았다. |
 | 2 | action hierarchy | metric pill과 primary row가 분리돼 planner add의 우선순위가 흐렸다. | 해소. `요리하기`와 `플래너에 추가`가 명확한 primary block을 이루고, like/save는 secondary engagement row로 내려갔다. |
-| 3 | planner-add-sheet polish | close/stepper touch target이 44px 미만이었고 eyebrow가 영어 카피였다. | 해소. 닫기/stepper 버튼을 `h-11 w-11`로 맞추고 eyebrow를 `플래너에 추가`로 교체했다. |
-| 4 | planner-add feedback sync | 날짜 확인 라벨과 성공 토스트가 day-card baseline / 화면정의서 v1.3.1과 맞지 않았다. | 해소. `요일 M월 D일` 라벨과 `N월 D일 끼니에 추가됐어요` 토스트를 현재 계약대로 맞췄다. |
+| 3 | planner-add-sheet polish | close/stepper touch target이 44px 미만이었고 eyebrow가 영어 카피였다. | 해소. 닫기/stepper 버튼을 `h-11 w-11`로 맞추고 eyebrow를 한국어 보조 카피로 교체했다. |
+| 4 | planner-add feedback sync | 성공 토스트와 날짜 확인 방식이 day-card baseline과 덜 정돈돼 있었다. | 해소. 성공 토스트는 계약대로 유지하고, 선택 날짜는 활성 칩만으로 확인하도록 단순화했다. |
 
 ## Major Follow-Ups
 

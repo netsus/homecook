@@ -84,6 +84,11 @@ function buildMealCreateData(): MealCreateData {
   };
 }
 
+function buildSelectedDateLabel(date: Date) {
+  const weekday = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
+  return `${weekday} ${date.getMonth() + 1}월 ${date.getDate()}일`;
+}
+
 describe("planner add flow", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -198,6 +203,28 @@ describe("planner add flow", () => {
         planned_servings: expect.any(Number),
       }),
     );
+  });
+
+  it("uses a lighter sheet heading and keeps the selected date as chip state only", async () => {
+    fetchPlanner.mockResolvedValue(buildPlannerData());
+
+    render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "플래너에 추가" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "플래너에 추가" });
+    expect(within(dialog).getByText("식단 계획")).toBeTruthy();
+
+    const todayLabel = buildSelectedDateLabel(new Date());
+    expect(within(dialog).queryByText(todayLabel)).toBeNull();
+    expect(within(dialog).getAllByText("플래너에 추가")).toHaveLength(2);
   });
 
   it("auto-dismisses the planner add success toast after a short delay", async () => {

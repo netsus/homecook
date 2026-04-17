@@ -28,7 +28,7 @@
 |---|------|------|
 | F1 | 로그인 게이트 return-to-action 유지 — 비로그인 사용자가 [플래너에 추가]를 탭하면 로그인 후 바텀시트로 복귀한다 | 수동 확인 (기존 slice-06 e2e 커버, 이번 변경 영향 없음) |
 | F2 | planner-add 성공 토스트가 target date + 끼니명을 포함한다 (예: "4월 17일 아침에 추가됐어요") | ✅ vitest exact string 검증 |
-| F3 | 바텀시트 내 선택된 날짜 표시가 `요일 M월 D일` 포맷을 사용한다 | ✅ E4 `planner-add-sheet-date-label.png` |
+| F3 | 바텀시트 내 선택된 날짜는 활성 날짜 칩 상태만으로 명확히 확인된다 | ✅ `planner-add-sheet-mobile.png` |
 | F4 | POST /meals 계약 변경 없음 — request body 구조 그대로 | ✅ API spec 대조 (변경 없음) |
 | F5 | D1 결정(성공 후 동작)에 따라 구현됨 | ✅ 토스트만 표시, PLANNER_WEEK 이동 없음 |
 
@@ -55,9 +55,8 @@
 | E1 | `RECIPE_DETAIL-baseline.png` (구현 전 현행) | 필수 |
 | E2 | `planner-add-sheet-mobile.png` (390px) | 필수 |
 | E3 | `planner-add-sheet-narrow.png` (320px) | 필수 |
-| E4 | `planner-add-sheet-date-label.png` (날짜 포맷 확인) | 필수 |
-| E5 | `planner-add-toast-mobile.png` (성공 토스트) | 필수 |
-| E6 | `recipe-detail-cta-hierarchy.png` (CTA 위계) | 필수 |
+| E4 | `planner-add-toast-mobile.png` (성공 토스트) | 필수 |
+| E5 | `recipe-detail-cta-hierarchy.png` (CTA 위계) | 필수 |
 
 ---
 
@@ -65,7 +64,7 @@
 
 | # | 조건 |
 |---|------|
-| C1 | authority evidence 필수 항목 E1~E6 누락 |
+| C1 | authority evidence 필수 항목 E1~E5 누락 |
 | C2 | 성공 토스트에 target date/끼니 미포함 |
 | C3 | 320px에서 바텀시트 CTA 가림 또는 레이아웃 붕괴 |
 | C4 | POST /meals 계약 변경 발생 |
