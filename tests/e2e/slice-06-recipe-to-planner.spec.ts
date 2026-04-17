@@ -191,9 +191,9 @@ test.describe("Slice 06 recipe-to-planner", () => {
     // Submit
     await dialog.getByRole("button", { name: "플래너에 추가" }).click();
 
-    // Sheet closes, success toast appears
+    // Sheet closes, success toast appears with date + meal slot name (D3)
     await expect(dialog).not.toBeVisible();
-    await expect(page.getByText("플래너에 추가했어요.")).toBeVisible();
+    await expect(page.getByText(/\d+월 \d+일 아침에 추가됐어요/)).toBeVisible();
 
     // accept-screen-contract: navigate to PLANNER_WEEK, verify meal is visible
     // Re-install planner routes with the created meal so planner shows it

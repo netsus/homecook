@@ -362,8 +362,13 @@ export function RecipeDetailScreen({
 
         return { ...current, plan_count: current.plan_count + 1 };
       });
+      // `N월 D일 끼니에 추가됐어요` — locale-independent format (D3)
+      const [, planM, planD] = selectedPlanDate.split("-").map(Number);
+      const dateLabel = `${planM}월 ${planD}일`;
+      const columnName =
+        plannerColumns.find((c) => c.id === selectedPlanColumnId)?.name ?? "선택한 끼니";
       setFeedback({
-        message: "플래너에 추가했어요.",
+        message: `${dateLabel} ${columnName}에 추가됐어요`,
         tone: "status",
       });
     } catch (error) {

@@ -177,7 +177,17 @@ describe("planner add flow", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "플래너에 추가" })).toBeNull();
     });
-    expect(screen.getByText("플래너에 추가했어요.")).toBeTruthy();
+    // Toast: exact contract format "N월 D일 아침에 추가됐어요" (D3, no trailing period)
+    // Date is today's selectableDates[0], built locale-independently the same way the component does
+    const today = new Date();
+    const m = today.getMonth() + 1;
+    const d = today.getDate();
+    const expectedToast = `${m}월 ${d}일 아침에 추가됐어요`;
+    await waitFor(() => {
+      const statusElements = screen.getAllByRole("status");
+      const toast = statusElements.find((el) => el.textContent === expectedToast);
+      expect(toast).toBeTruthy();
+    });
 
     // Verify createMeal was called with correct args
     expect(createMeal).toHaveBeenCalledWith(

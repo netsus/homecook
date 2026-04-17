@@ -23,23 +23,24 @@ interface PlannerAddSheetProps {
   onRetryLoad: () => void;
 }
 
-function formatDateLabel(dateKey: string) {
-  const date = new Date(`${dateKey}T00:00:00.000Z`);
+const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "numeric",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+/** `YYYY-MM-DD` → `M월 D일` (locale-independent) */
+function formatDateLabel(dateKey: string) {
+  const [, m, d] = dateKey.split("-").map(Number);
+  return `${m}월 ${d}일`;
 }
 
+/** `YYYY-MM-DD` → `요일` 2자 (locale-independent, UTC 기준) */
 function formatWeekdayLabel(dateKey: string) {
   const date = new Date(`${dateKey}T00:00:00.000Z`);
+  return WEEKDAY_KO[date.getUTCDay()];
+}
 
-  return new Intl.DateTimeFormat("ko-KR", {
-    weekday: "short",
-    timeZone: "UTC",
-  }).format(date);
+/** 선택된 날짜 확인 텍스트: `요일 M월 D일` (예: `목 4월 17일`) */
+function formatSelectedDateLabel(dateKey: string) {
+  if (!dateKey) return "";
+  return `${formatWeekdayLabel(dateKey)} ${formatDateLabel(dateKey)}`;
 }
 
 export function PlannerAddSheet({
@@ -170,6 +171,16 @@ export function PlannerAddSheet({
                 })}
               </div>
             </div>
+
+            {/* Selected date confirmation label */}
+            {selectedDate ? (
+              <p
+                aria-live="polite"
+                className="mt-[-8px] text-xs font-medium text-[var(--olive)]"
+              >
+                {formatSelectedDateLabel(selectedDate)}
+              </p>
+            ) : null}
 
             {/* Column (meal slot) selector */}
             <div>

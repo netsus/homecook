@@ -20,9 +20,20 @@ const fetchJson = vi.fn();
 const getSession = vi.fn();
 const onAuthStateChange = vi.fn();
 const hasSupabasePublicEnv = vi.fn();
+const fetchPlanner = vi.fn();
+const createMeal = vi.fn();
 
 vi.mock("@/lib/api/fetch-json", () => ({
   fetchJson: (...args: unknown[]) => fetchJson(...args),
+}));
+
+vi.mock("@/lib/api/planner", () => ({
+  fetchPlanner: (...args: unknown[]) => fetchPlanner(...args),
+}));
+
+vi.mock("@/lib/api/meal", () => ({
+  createMeal: (...args: unknown[]) => createMeal(...args),
+  isMealApiError: () => false,
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
@@ -116,6 +127,8 @@ describe("recipe detail screen", () => {
     getSession.mockReset();
     onAuthStateChange.mockReset();
     hasSupabasePublicEnv.mockReset();
+    fetchPlanner.mockReset();
+    createMeal.mockReset();
     useAuthGateStore.setState({ isOpen: false, action: null });
     window.localStorage.clear();
 
@@ -692,6 +705,50 @@ describe("recipe detail screen", () => {
       expect(
         screen.getByText("로그인을 완료하지 못했어요. 다시 시도해주세요."),
       ).toBeTruthy();
+    });
+  });
+
+  it("shows a toast with target date and meal slot name after a successful planner add", async () => {
+    const COLUMN_ID = "col-breakfast";
+    const COLUMN_NAME = "아침";
+
+    // Build the expected toast string the same way the component does (locale-independent)
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const [, m, d] = todayKey.split("-").map(Number);
+    const expectedToast = `${m}월 ${d}일 ${COLUMN_NAME}에 추가됐어요`;
+
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+    fetchJson.mockResolvedValue(buildRecipeDetail());
+    fetchPlanner.mockResolvedValue({
+      columns: [{ id: COLUMN_ID, name: COLUMN_NAME, sort_order: 0 }],
+      days: [],
+    });
+    createMeal.mockResolvedValue({});
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "플래너에 추가" }),
+    );
+
+    // Sheet opens and loads columns
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toBeTruthy();
+
+    // Submit the sheet (scoped to dialog to avoid CTA button ambiguity)
+    const submitButton = await within(dialog).findByRole("button", {
+      name: "플래너에 추가",
+    });
+    await userEvent.click(submitButton);
+
+    // Toast: exact contract format "N월 D일 끼니에 추가됐어요" (D3, no trailing period)
+    await waitFor(() => {
+      const statusElements = screen.getAllByRole("status");
+      const toast = statusElements.find(
+        (el) => el.textContent === expectedToast,
+      );
+      expect(toast).toBeTruthy();
     });
   });
 });
