@@ -1,0 +1,33 @@
+{
+  "slice_id": "h1-home-first-impression",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "anchor_extension": true,
+  "anchor_screens": ["HOME"],
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "branch": "feature/fe-h1-home-first-impression",
+    "stage": 4,
+    "blocked_until": "contract-evolution-pr-merged"
+  },
+  "contract_evolution": {
+    "required": true,
+    "target_version": "화면정의서-v1.4.0",
+    "sections_affected": ["§1 HOME"],
+    "api_db_change": false
+  },
+  "decisions_pending": ["D1", "D2", "D3", "D4"],
+  "dependencies": [],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  },
+  "policy_slug": "h1-home-first-impression",
+  "policy_note": "workpack 폴더명 = branch slug = lowercase. anchor screen high-risk redesign gate."
+}

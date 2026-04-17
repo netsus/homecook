@@ -50,7 +50,7 @@ Phase 1을 시작합니다.
 
 ### 읽는 파일 순서
 1. `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-2. `docs/화면정의서-v1.3.1.md` — HOME · RECIPE_DETAIL · COOK_MODE 중심으로 읽기
+2. `docs/화면정의서-v1.4.0.md` — HOME · RECIPE_DETAIL · COOK_MODE 중심으로 읽기
 3. `docs/요구사항기준선-v1.6.3.md` — 사용자·도메인 특성 파악
 4. `app/globals.css` — 기존 토큰 확인 (변경·확장 기준점)
 5. `components/home/` 하위 컴포넌트 1–2개 (실제 UI 패턴 파악)

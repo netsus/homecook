@@ -2,14 +2,14 @@
 
 ## Official Versions
 - Requirements: `v1.6.3`
-- Screens: `v1.3.1`
+- Screens: `v1.4.0`
 - Flow: `v1.3.0`
 - DB: `v1.3.1`
 - API: `v1.2.2`
 
 ## Official Files
 - `docs/요구사항기준선-v1.6.3.md`
-- `docs/화면정의서-v1.3.1.md`
+- `docs/화면정의서-v1.4.0.md`
 - `docs/유저flow맵-v1.3.0.md`
 - `docs/db설계-v1.3.1.md`
 - `docs/api문서-v1.2.2.md`
@@ -43,3 +43,16 @@
 
 > 이 변경은 H3 planner-add-sync Stage 1 사용자 승인(2026-04-17)을 기반으로 한 contract-evolution이다.
 > H3 FE 구현(`feature/fe-h3-planner-add-sync`)은 이 문서 갱신 이후에 시작할 수 있다.
+
+## v1.3.1 → v1.4.0 변경 이력 (2026-04-17)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 화면정의서 v1.4.0 | HOME §1: 테마 섹션을 2열 카드 그리드에서 compact horizontal carousel strip(1.5장 peek, ~130px)으로 변경 |
+| 유저플로우 v1.3.0 | 변경 없음 |
+| API (v1.2.2 유지) | 변경 없음 — `GET /recipes`, `GET /themes` 계약 동일 |
+| DB (v1.3.1 유지) | 변경 없음 |
+
+> 이 변경은 H1 home-first-impression Stage 1 사용자 승인(2026-04-17, D1/D2/D3/D4)을 기반으로 한 contract-evolution이다.
+> 정렬 컨트롤 위치·재료 필터 위치는 현행 유지. 테마 섹션 형태만 변경.
+> H1 FE 구현(`feature/fe-h1-home-first-impression`)은 이 문서 갱신 이후에 시작할 수 있다.
