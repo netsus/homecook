@@ -1,0 +1,28 @@
+{
+  "slice_id": "h3-planner-add-sync",
+  "execution_mode": "product-slice",
+  "risk_class": "high",
+  "anchor_extension": true,
+  "anchor_screens": ["RECIPE_DETAIL", "PLANNER_WEEK"],
+  "merge_policy": "manual",
+  "backend": null,
+  "frontend": {
+    "branch": "feature/fe-h3-planner-add-sync",
+    "stage": 4,
+    "blocked_until": "contract-evolution-pr-merged"
+  },
+  "contract_evolution": {
+    "required": true,
+    "target_version": "화면정의서-v1.3.1",
+    "sections_affected": ["§3 RECIPE_DETAIL PlannerAddPopup"],
+    "api_db_change": false
+  },
+  "decisions_pending": ["D1", "D2", "D3"],
+  "dependencies": [
+    "06-recipe-to-planner",
+    "H2-planner-week-v2-redesign",
+    "H4-planner-week-v2-direction"
+  ],
+  "policy_slug": "h3-planner-add-sync",
+  "policy_note": "workpack 폴더명 = branch slug = lowercase. H2 대문자 slug 불일치 재발 방지."
+}
