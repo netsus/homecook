@@ -37,12 +37,6 @@ function formatWeekdayLabel(dateKey: string) {
   return WEEKDAY_KO[date.getUTCDay()];
 }
 
-/** 선택된 날짜 확인 텍스트: `요일 M월 D일` (예: `목 4월 17일`) */
-function formatSelectedDateLabel(dateKey: string) {
-  if (!dateKey) return "";
-  return `${formatWeekdayLabel(dateKey)} ${formatDateLabel(dateKey)}`;
-}
-
 export function PlannerAddSheet({
   isOpen,
   sheetState,
@@ -84,7 +78,7 @@ export function PlannerAddSheet({
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-              플래너에 추가
+              식단 계획
             </p>
             <h2
               className="mt-1 text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]"
@@ -160,10 +154,10 @@ export function PlannerAddSheet({
                       onClick={() => onSelectDate(dateKey)}
                       type="button"
                     >
-                      <span className="text-[10px] font-semibold leading-tight">
+                      <span className="text-[10px] font-medium leading-tight">
                         {formatWeekdayLabel(dateKey)}
                       </span>
-                      <span className="mt-0.5 text-xs font-bold leading-tight">
+                      <span className="mt-0.5 text-xs font-semibold leading-tight">
                         {formatDateLabel(dateKey)}
                       </span>
                     </button>
@@ -171,16 +165,6 @@ export function PlannerAddSheet({
                 })}
               </div>
             </div>
-
-            {/* Selected date confirmation label */}
-            {selectedDate ? (
-              <p
-                aria-live="polite"
-                className="mt-[-8px] text-xs font-medium text-[var(--olive)]"
-              >
-                {formatSelectedDateLabel(selectedDate)}
-              </p>
-            ) : null}
 
             {/* Column (meal slot) selector */}
             <div>

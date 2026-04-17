@@ -102,15 +102,15 @@ H2 day-card는 요일 배지 + `M월 D일` 포맷을 사용한다.
 
 | 항목 | 현재 (slice06) | H2 baseline |
 |------|---------------|-------------|
-| 날짜 표현 | 달력 캘린더 UI | 요일 배지 + M월 D일 |
-| 요일 표현 | 캘린더 헤더(일~토) | 2자 요일 배지 |
+| 날짜 표현 | 달력 캘린더 UI + 활성 날짜 칩 | 요일 배지 + M월 D일 |
+| 요일 표현 | 캘린더 헤더(일~토) + 날짜 칩 내 요일 | 2자 요일 배지 |
 | 주간 단위 | 월간 캘린더 | 7일 week context bar |
 
 정합성 검토 결론: **바텀시트 캘린더를 day-card 형식으로 바꿀 필요 없다.**  
 캘린더 UI는 날짜 선택 도구이고, day-card는 날짜 표시 방식이다. 역할이 다르다.  
-단, 바텀시트 내 선택된 날짜 확인 텍스트(확인 버튼 위)에 day-card와 동일한 `요일 + M월 D일` 포맷을 사용하면 전환 충격이 없다.
+후속 polish 기준에서는 선택된 날짜를 별도 문장으로 한 번 더 반복하지 않고, 활성 날짜 칩의 상태만으로 확인하게 단순화한다.
 
-**방향**: 바텀시트 캘린더 UI 유지 + 선택된 날짜 표시 포맷을 `요일 M월 D일`로 통일 (예: `목 4월 17일`).
+**방향**: 바텀시트 캘린더 UI 유지 + 선택된 날짜는 활성 칩으로만 확인.
 
 > **결정 전 사용자 승인 필요** — D2는 Stage 1에서 잠근다.
 
@@ -135,7 +135,7 @@ D1 Option A 선택 시, 토스트 텍스트 포맷:
 | 항목 | 현재 (slice06 기준) | 변경 방향 |
 |------|-------------------|----------|
 | 성공 후 동작 | 토스트 "플래너에 추가됐어요" | 토스트 텍스트에 날짜/끼니 추가 (D1/D3 확정 후) |
-| 바텀시트 날짜 확인 텍스트 | 미명시 | `요일 M월 D일` 포맷 명시 (D2 확정 후) |
+| 바텀시트 날짜 확인 방식 | 별도 문구 미명시 | 활성 날짜 칩 상태만으로 확인 |
 
 → **contract-evolution 필요 여부**: 마이너 변경이므로 화면정의서 §3 업데이트(v1.3.0 → v1.3.1)가 필요하다.
 
@@ -161,7 +161,7 @@ Stage 1 문서 확정 (이 README)
   ↓ 사용자 승인 (D1/D2/D3)
 화면정의서 v1.3.1 §3 RECIPE_DETAIL PlannerAddPopup 갱신
   → 성공 후 토스트 텍스트 포맷 (`N월 D일 끼니에 추가됐어요`)
-  → 바텀시트 날짜 확인 텍스트 포맷 (`요일 M월 D일`) 명시
+  → 바텀시트 선택 날짜는 활성 날짜 칩으로만 확인하도록 명시
   ↓ contract-evolution PR (화면정의서 v1.3.1 + CURRENT_SOURCE_OF_TRUTH.md)
   ↓
 feature/fe-h3-planner-add-sync 구현 시작 허가
@@ -175,7 +175,7 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 - FE-only — API/DB 변경 없음
 - 브랜치: `feature/fe-h3-planner-add-sync`
 - 변경 대상 컴포넌트 (Stage 4 시):
-  - `PlannerAddPopup` (바텀시트) — 날짜 확인 텍스트 포맷
+  - `PlannerAddPopup` (바텀시트) — 중복 날짜 라벨 제거, 헤더/날짜 칩 타이포 정리
   - planner-add 성공 toast 텍스트 — date/끼니 포함 포맷
 
 ---
@@ -189,7 +189,7 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 - Notes:
   - `RECIPE_DETAIL`의 `[플래너에 추가]`는 anchor CTA row에 걸린 보조 액션이라 성공 피드백/바텀시트 변화가 primary CTA 위계를 깨지 않아야 한다.
   - D1을 Option A로 확정했으므로 `PLANNER_WEEK` 이동 자체는 없지만, day-card baseline과의 날짜 표현 sync는 authority evidence로 계속 확인한다.
-  - Stage 5 authority review (2026-04-17): evidence E1~E6 재확인 결과 신규 blocker 0개, verdict `pass`.
+  - Stage 5 authority review (2026-04-17): 핵심 evidence 재확인 결과 신규 blocker 0개, verdict `pass`.
 
 ### Stage 4 Evidence Plan
 
@@ -197,7 +197,6 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 |----------|------|------|
 | RECIPE_DETAIL 기준선 | `ui/designs/evidence/h3-planner-add-sync/RECIPE_DETAIL-baseline.png` | 구현 전 현행 상태 |
 | planner-add 바텀시트 (390px) | `ui/designs/evidence/h3-planner-add-sync/planner-add-sheet-mobile.png` | 날짜 선택 중 상태 |
-| 날짜 선택 확인 텍스트 | `ui/designs/evidence/h3-planner-add-sync/planner-add-sheet-date-label.png` | 요일+날짜 포맷 확인 |
 | 바텀시트 narrow (320px) | `ui/designs/evidence/h3-planner-add-sync/planner-add-sheet-narrow.png` | 잘림/가림 없음 확인 |
 | 성공 토스트 (390px) | `ui/designs/evidence/h3-planner-add-sync/planner-add-toast-mobile.png` | 날짜/끼니 포함 텍스트 |
 | RECIPE_DETAIL CTA 위계 유지 | `ui/designs/evidence/h3-planner-add-sync/recipe-detail-cta-hierarchy.png` | primary CTA 위계 확인 |
@@ -245,7 +244,7 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 - [x] contract-evolution 경로 정리
 - [x] authority 위험도 분류 + evidence plan 잠금
 - [x] Slice ID / Branch slug policy 명시
-- [x] 사용자 승인 (D1: A 토스트만, D2: `요일 M월 D일`, D3: `N월 D일 끼니에 추가됐어요`) — 2026-04-17
+- [x] 사용자 승인 (D1: A 토스트만, D2: 선택 날짜는 활성 칩으로만 확인, D3: `N월 D일 끼니에 추가됐어요`) — 2026-04-17
 - [x] contract-evolution PR (화면정의서 v1.3.1) — PR #136 merged 2026-04-17
 - [x] feature/fe-h3-planner-add-sync 구현 시작 허가 — PR #136 merge 완료
 - [x] Stage 5 authority review `pass` — `ui/designs/authority/RECIPE_DETAIL-authority.md` (2026-04-17)
@@ -262,9 +261,9 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 - [x] 상태 전이 / 권한 / 멱등성 테스트 (`POST /meals` 계약 불변, 로그인 게이트 return-to-action 유지) <!-- omo:id=h3-delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [x] fixture와 real DB smoke 경로 구분 (slice06 baseline + H3 추가 evidence 기준으로 수동 검증 경로 유지) <!-- omo:id=h3-delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 (기존 planner column / meal baseline 재사용) <!-- omo:id=h3-delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [x] UI 연결 (planner-add sheet 날짜 확인 라벨 + 성공 토스트 포맷 반영) <!-- omo:id=h3-delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 (planner-add sheet 중복 날짜 라벨 제거 + 성공 토스트 포맷 유지) <!-- omo:id=h3-delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 (unit 포맷 검증 + slice06 smoke expectation 갱신) <!-- omo:id=h3-delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] `loading / empty / error / read-only` 상태 점검 (sheet open/submit/loading, success toast, login-gate fallback 유지) <!-- omo:id=h3-delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 (320px/390px sheet, CTA hierarchy, return-to-action) <!-- omo:id=h3-delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
-- [x] anchor-extension authority evidence 계획 고정 (E1~E6 경로 잠금) <!-- omo:id=h3-delivery-authority-plan;stage=4;scope=frontend;review=5,6 -->
+- [x] anchor-extension authority evidence 계획 고정 (핵심 planner-add evidence 경로 잠금) <!-- omo:id=h3-delivery-authority-plan;stage=4;scope=frontend;review=5,6 -->
 - [x] Stage 4 authority report / screenshot 경로 동기화 (`ui/designs/evidence/h3-planner-add-sync/`) <!-- omo:id=h3-delivery-authority-evidence-plan;stage=4;scope=frontend;review=5,6 -->

@@ -36,7 +36,7 @@
 
 | 문서 | 변경 내용 |
 |------|----------|
-| 화면정의서 v1.3.1 | RECIPE_DETAIL §3: PlannerAddPopup UX 확정 — 성공 후 토스트만 표시(PLANNER_WEEK 이동 없음), 토스트 텍스트 `N월 D일 끼니에 추가됐어요`, 바텀시트 날짜 확인 텍스트 `요일 M월 D일` 포맷 |
+| 화면정의서 v1.3.1 | RECIPE_DETAIL §3: PlannerAddPopup UX 확정 — 성공 후 토스트만 표시(PLANNER_WEEK 이동 없음), 토스트 텍스트 `N월 D일 끼니에 추가됐어요`, 이후 follow-up에서 선택 날짜는 활성 칩으로만 확인하도록 단순화 |
 | 유저플로우 v1.3.0 | 변경 없음 |
 | API (v1.2.2 유지) | 변경 없음 — `POST /meals` 계약 동일 |
 | DB (v1.3.1 유지) | 변경 없음 |
@@ -56,6 +56,18 @@
 > 이 변경은 H1 home-first-impression Stage 1 사용자 승인(2026-04-17, D1/D2/D3/D4)을 기반으로 한 contract-evolution이다.
 > 정렬 컨트롤 위치·재료 필터 위치는 현행 유지. 테마 섹션 형태만 변경.
 > H1 FE 구현(`feature/fe-h1-home-first-impression`)은 이 문서 갱신 이후에 시작할 수 있다.
+
+## v1.4.0 follow-up note (2026-04-17)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 화면정의서 v1.4.0 | RECIPE_DETAIL PlannerAddPopup: 선택 날짜를 보여주는 별도 확인 라벨 제거. 날짜 선택 상태는 활성 날짜 칩으로만 확인. |
+| 유저플로우 v1.3.0 | 변경 없음 |
+| API (v1.2.2 유지) | 변경 없음 — `POST /meals` 계약 동일 |
+| DB (v1.3.1 유지) | 변경 없음 |
+
+> 이 변경은 사용자 승인 하의 H3 planner-add 후속 UI polish를 반영한 경미한 contract follow-up이다.
+> 성공 토스트 포맷과 이동 정책은 그대로 유지되며, 날짜 선택 확인 방식만 단순화됐다.
 
 ## v1.4.0 → v1.5.0 변경 이력 (2026-04-17)
 
