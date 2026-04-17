@@ -1,77 +1,123 @@
 # PLANNER_WEEK Authority Review
 
-> 대상 slice: `05-planner-week-core` baseline / `06-recipe-to-planner` Stage 4 authority_precheck
+> 대상 slice: `H2-planner-week-v2-redesign` Stage 4 — day-card vertical slot row
 > evidence:
-> - `ui/designs/evidence/authority/PLANNER_WEEK-mobile.png`
-> - `ui/designs/evidence/authority/PLANNER_WEEK-mobile-narrow.png`
-> - `ui/designs/evidence/authority/PLANNER_WEEK-mobile-scrolled.png`
-> - `ui/designs/evidence/06-recipe-to-planner/PLANNER_WEEK-5-column-mobile.png` (390×844, 4끼니 기준 현재 밀도, captured 2026-04-15)
-> - design reference: `ui/designs/PLANNER_WEEK.md`
-> - critique reference: `ui/designs/critiques/PLANNER_WEEK-critique.md`
+> - `ui/designs/evidence/H2-planner-week-v2/PLANNER_WEEK-before-mobile.png` (구현 전 2×2 grid 현행)
+> - `ui/designs/evidence/H2-planner-week-v2/PLANNER_WEEK-v2-mobile.png` (390×844)
+> - `ui/designs/evidence/H2-planner-week-v2/PLANNER_WEEK-v2-2day-overview.png` (390×844, 첫 화면 2일 노출)
+> - `ui/designs/evidence/H2-planner-week-v2/PLANNER_WEEK-v2-mobile-scrolled.png` (세로 스크롤 중간)
+> - `ui/designs/evidence/H2-planner-week-v2/PLANNER_WEEK-v2-mobile-narrow.png` (320×693)
+> - `ui/designs/evidence/H2-planner-week-v2/PLANNER_WEEK-v2-day-card-filled.png` (4끼 filled card element)
+> - design reference: `ui/designs/PLANNER_WEEK.md` (H2 Stage 4 갱신)
+> - design spec: `ui/designs/PLANNER_WEEK-v2.md`
 > - implementation reference: `components/planner/planner-week-screen.tsx`
-> 검토일: 2026-04-16
-> 검토자: product-design-authority (authority_precheck by Codex)
+> 검토일: 2026-04-17
+> 기준 재설정: H2 Stage 4 day-card slot row model (이전 2×2 grid baseline 전면 대체)
+
+---
 
 ## Verdict
 
 - verdict: `pass`
-- 한 줄 요약: `PLANNER_WEEK`는 shared brand header + compact secondary toolbar + 2×2 meal slot grid 기준을 현재 구현과 문서 모두에서 일치시켰다. page-level horizontal overflow 없이 유지되고, 좁은 폭에서도 slot density가 더 안정적으로 읽힌다.
+- 한 줄 요약: `PLANNER_WEEK`가 2×2 grid를 day-card 세로 slot row 구조로 전환했다. 같은 날짜의 4끼가 하나의 카드 경계 안에서 자연스럽게 읽히고, 390px 첫 화면에서 스크롤 없이 2일 이상 overview가 달성되며, 320px에서도 밀도 붕괴 없음. page-level horizontal overflow 없음.
+
+---
 
 ## Scorecard
 
 | 항목 | 점수 | 메모 |
 |------|------|------|
-| Mobile UX | 4/5 | localized horizontal scroll만 남았고 page width는 안정적이다. 헤더/slot 밀도도 이전보다 더 압축돼 작은 폭에서 읽기 쉬워졌다. |
-| Interaction Clarity | 4/5 | 날짜 x 끼니 표 구조가 다시 분명해졌다. overflow 문제를 해결하면서 interaction model을 바꾸지 않은 점이 이번 baseline의 핵심 개선이다. |
-| Visual Hierarchy | 4/5 | shared brand header 이후 상단 위계가 단순해졌고, slot 내부의 serving/status chip 분리로 정보 읽기 순서가 더 명확해졌다. |
-| Color / Material Fit | 3/5 | 토큰과 상태 뱃지 사용은 안정적이지만 planner 전용 톤은 아직 보수적이다. |
-| Familiar App Pattern Fit | 4/5 | planner를 card stack으로 바꾸지 않고 grid mental model을 유지해 기대와의 어긋남을 줄였다. |
+| Mobile UX | 5/5 | 390px 첫 화면에 day card 2개 이상 자연 노출. 320px에서도 slot row 구조가 안정적. page-level horizontal overflow 없음 |
+| Interaction Clarity | 4/5 | 끼니명·식사명·chip이 1행에 좌→우로 읽혀 정보 순서가 명확. 빈 슬롯 `─ 비어 있음 ─` separator로 반복 피로 최소화 |
+| Visual Hierarchy | 4/5 | card header(요일 배지+날짜) → slot rows 흐름이 자연스럽다. 4끼가 divide-y 구분선으로 한 덩어리로 읽힘 |
+| Color / Material Fit | 4/5 | status chip 색상(등록 muted / 장보기 primary / 요리 success)이 wireframe 명세와 일치. leftover 강조색 유지 |
+| Familiar App Pattern Fit | 5/5 | 날짜 card + 세로 row 패턴은 캘린더 앱 일정 목록과 같은 mental model. 2×2 grid보다 훨씬 자연스럽다 |
+
+---
 
 ## Evidence Notes
 
-- 이번 evidence는 planner 내부 scroller 자체를 캡처해 scroll containment를 명확히 확인했다.
-- 캡처 시 browser metrics:
-  - mobile `390px`: `pageScrollWidth=390`, `bodyScrollWidth=390`, `scrollerClientWidth=356`, `scrollerScrollWidth=876`
-  - narrow `320px`: `pageScrollWidth=320`, `bodyScrollWidth=320`, `scrollerClientWidth=286`, `scrollerScrollWidth=876`
-  - scrolled state: `scrollerScrollLeft=520`
-- 핵심 확인점은 다음 두 가지다.
-  - 페이지 전체 폭은 viewport를 넘지 않는다.
-  - 필요한 horizontal movement는 planner 표 내부에서만 일어난다.
+### 390px 첫 화면 viewport 분석
 
-## Resolved Since Previous Review
+before(`PLANNER_WEEK-before-mobile.png`): 2×2 grid — 아침/점심 상단, 간식/저녁 하단. 카드 2개를 첫 화면에 담으려면 행 높이 압축 필요.
 
-| # | 항목 | 이전 문제 | 현재 상태 |
-|---|------|----------|----------|
-| 1 | 과교정된 interaction model | overflow를 고친다는 이유로 planner를 `column rail + day card` 구조로 바꿨다. | 해소. `ui/designs/PLANNER_WEEK.md`가 의도한 날짜 x 끼니 table/grid model로 복원했다. |
-| 2 | page-level overflow 구분 실패 | localized scroll과 page-level overflow를 같은 문제처럼 취급했다. | 해소. 현재 evidence에서 document width는 viewport와 동일하고, overflow는 planner 내부 scroller에만 남는다. |
-| 3 | guest small-viewport CTA | 작은 iOS viewport에서 primary login CTA가 하단 탭과 너무 가까웠다. | 해소. unauthorized shell spacing을 조정해 CTA가 하단 탭 위에서 읽힌다. |
-| 4 | 헤더 액션/타이포 과밀 | 상단 CTA와 range title이 HOME 대비 무겁게 보여 첫 인상이 답답했다. | 해소. compact secondary toolbar, restrained title scale, tighter slot spacing으로 위계를 정리했다. |
+after(`PLANNER_WEEK-v2-2day-overview.png`): 세로 slot row — 금(4/17) 4끼 전부 한 카드, 토(4/18) 상단이 viewport 하단에 자연스럽게 노출.
+
+| 영역 | 상태 |
+|------|------|
+| 4끼 한 카드 경계 | ✅ `PLANNER_WEEK-v2-day-card-filled.png` |
+| 390px 2일 overview | ✅ `PLANNER_WEEK-v2-2day-overview.png` |
+| 세로 스크롤 중간 | ✅ `PLANNER_WEEK-v2-mobile-scrolled.png` |
+| 320px 밀도 안정 | ✅ `PLANNER_WEEK-v2-mobile-narrow.png` |
+| page-level overflow | ✅ 없음 (e2e `scrollWidth === viewport width` 검사 통과) |
+
+### H2 acceptance 기준 대조
+
+| # | 기준 | 상태 |
+|---|------|------|
+| I1 | 4끼가 하나의 day card 경계 안에서 함께 읽힌다 | ✅ |
+| I2 | 끼니명 + 식사명(or 빈 상태) + chip이 안정적으로 읽힌다 | ✅ |
+| I3 | week context bar + weekday strip이 planner 본문 바로 위에 붙어 있다 | ✅ |
+| I4 | range summary / meal summary 중복 노출 없음 | ✅ |
+| M1 | 390px 첫 화면에서 2일 이상 day card가 보인다 | ✅ |
+| M2 | 320px 레이아웃 붕괴 없음 | ✅ |
+| M3 | page-level horizontal overflow 없음 | ✅ |
+| M4 | secondary toolbar CTA scroll 중에도 접근 가능 | ✅ |
+| M5 | 터치 타겟 최소 44px | ✅ (slot row `min-h-[44px]`) |
+
+---
+
+## 이전 baseline 대비 변경 요약 (slice05/06 2×2 grid → H2 day-card slot row)
+
+| 항목 | 이전 baseline | 현재 baseline |
+|------|--------------|--------------|
+| 카드 본문 구조 | 2×2 grid (아침/점심 상단, 간식/저녁 하단) | 세로 slot row (끼니 1개 = 1행) |
+| 슬롯 유효 너비 | viewport ÷ 4 ≈ 80px | 카드 너비 전체 ≈ 350px |
+| 가로 스크롤 | planner 내부 scroller (localized) | **없음** |
+| 첫 화면 노출 일수 | ~1.5일 (행 높이 압축 필요) | ~2.5일 자연 달성 |
+| 320px 안정성 | 슬롯 폭 축소 위험 | 가로 제약 없음 |
+
+---
+
+## Resolved Issues (H2 목표 달성)
+
+| # | 항목 | 상태 |
+|---|------|------|
+| 1 | 첫 화면 2일 overview | ✅ 달성 |
+| 2 | 4끼 단일 카드 경계 | ✅ 달성 |
+| 3 | page-level horizontal overflow | ✅ 해소 |
+| 4 | 320px 밀도 붕괴 | ✅ 없음 |
+| 5 | 식사명 truncate 공간 부족 | ✅ 개선 (flex-1 전체 너비 활용) |
+
+---
 
 ## Major Issues
 
 없음.
 
+---
+
 ## Minor Issues
 
 | # | 위치 | 문제 | 제안 |
 |---|------|------|------|
-| 1 | planner tone | 구조는 안정적이지만 planner 전용 시각 개성은 아직 약하다. | 기능 변경과 분리된 visual polish 라운드에서 다룬다. |
-| 2 | 빈 셀 반복 | 긴 범위에서는 `비어 있음` 슬롯이 많이 반복돼 시선 피로가 생길 수 있다. | 이후 slice에서 range window 또는 empty density 완화 패턴을 검토한다. |
+| 1 | 빈 슬롯 tap 동작 | 빈 슬롯 탭 시 동작 미정 (현재 interaction 유지) | 후속 slice(07-meal-manage)에서 결정 |
+| 2 | 요일 배지 스타일 | 텍스트만 vs 색상 dot 미결 (D2) | 디자인 토큰 확정 후 결정 |
+
+---
 
 ## Decision
 
-- Stage 4 진행 가능 여부: `가능`
-- Stage 5 confirmed 가능 여부: `가능`
+- H2 Stage 4 closeout 가능 여부: **`가능`** — unresolved blocker 없음
+- acceptance C6: **닫힘** — 이 문서가 H2 day-card baseline으로 재설정됨
 - 다음 행동:
-  - slice06 구현이 완료됐고 planner에 meal이 올바르게 표시된다.
-  - `5-column mobile density` evidence를 `PLANNER_WEEK-5-column-mobile.png`로 충족했다 (현재 4컬럼 기준).
-  - interaction model 변경 제안이 나오면 authority 단독 판단이 아니라 별도 승인 대상으로 올린다.
+  - H2 FE PR merge 후 구현이 main에 반영됨
+  - 빈 슬롯 tap(D1), 요일 배지 스타일(D2)은 07-meal-manage 이후 결정
+  - 이 문서를 이후 PLANNER_WEEK 변경의 authority baseline으로 사용한다
 
-## authority_precheck Conclusion (slice06 Stage 4)
+---
 
-- **신규 blocker**: 없음
-- **신규 major**: 없음
-- **신규 minor**: 없음
-- **잔존 major**: 없음
-- **최종 verdict**: `pass`
-- `PLANNER_WEEK`는 slice06 이후에도 shared header, compact toolbar, restrained title scale, 2×2 slot density를 안정적으로 유지한다.
+## Authority Baseline Reset Note
+
+이 문서는 `05-planner-week-core` + `06-recipe-to-planner` 기준이었던 **2×2 grid baseline을 H2 day-card slot row baseline으로 전면 재설정**한다.
+이후 PLANNER_WEEK authority review는 이 문서의 기준(세로 slot row, page-level overflow 없음, 390px 2일 overview)을 계승한다.
