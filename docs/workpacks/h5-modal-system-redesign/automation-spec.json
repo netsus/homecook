@@ -1,0 +1,79 @@
+{
+  "slice_id": "h5-modal-system-redesign",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "anchor_extension": true,
+  "anchor_screens": ["RECIPE_DETAIL", "HOME"],
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "branch": "feature/fe-h5-modal-system-redesign",
+    "stage": 4,
+    "blocked_until": "contract-evolution-pr-merged",
+    "contract_evolution_pr": 143,
+    "pass_order": ["chrome-unification", "selection-language", "density-polish"],
+    "target_components": [
+      "components/recipe/planner-add-sheet.tsx",
+      "components/recipe/save-modal.tsx",
+      "components/home/ingredient-filter-modal.tsx",
+      "components/home/home-screen.tsx"
+    ],
+    "new_shared_components": [
+      "components/shared/modal-header.tsx",
+      "components/shared/modal-footer-actions.tsx",
+      "components/shared/option-row.tsx",
+      "components/shared/selection-chip-rail.tsx",
+      "components/shared/numeric-stepper-compact.tsx"
+    ],
+    "design_authority": {
+      "ui_risk": "required",
+      "anchor_screens": ["RECIPE_DETAIL", "HOME"],
+      "required_screens": ["PlannerAddSheet", "SaveModal", "IngredientFilterModal", "SortSheet"],
+      "generator_required": false,
+      "critic_required": false,
+      "authority_required": true,
+      "stage4_evidence_requirements": ["E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "E10"],
+      "authority_report_paths": [
+        "ui/designs/evidence/h5-modal-system-redesign/"
+      ]
+    }
+  },
+  "contract_evolution": {
+    "required": true,
+    "target_version": "화면정의서-v1.5.0",
+    "pr": 143,
+    "status": "merged",
+    "sections_affected": [
+      "PlannerAddPopup",
+      "SavePopup",
+      "INGREDIENT_FILTER_MODAL",
+      "Sort sheet"
+    ],
+    "api_db_change": false
+  },
+  "decisions_locked": [
+    "D1: olive base + thin orange highlight",
+    "D2: eyebrow 기본 제거",
+    "D3: icon-only 원형 close button (44×44)",
+    "D4: 날짜 chip = 요일 + 4/17",
+    "D5: Save 제목 = 레시피 저장",
+    "D6: 4개 modal을 하나의 modal family로 통일"
+  ],
+  "dependencies": ["h5-modal-system-direction"],
+  "external_smokes": [],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "authority-unresolved-blocker"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  },
+  "policy_slug": "h5-modal-system-redesign",
+  "policy_note": "workpack 폴더명 = branch slug = lowercase. High-Risk Redesign. FE-only. authority evidence E1-E10 필수."
+}
