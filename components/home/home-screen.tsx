@@ -12,8 +12,10 @@ import { IngredientFilterModal } from "@/components/home/ingredient-filter-modal
 import { RecipeCard } from "@/components/home/recipe-card";
 import { ContentState } from "@/components/shared/content-state";
 import { fetchJson } from "@/lib/api/fetch-json";
+import { formatRecipeSourceLabel } from "@/lib/recipe";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
 import type {
+  RecipeCardItem,
   RecipeListData,
   RecipeSortKey,
   RecipeTheme,
@@ -208,40 +210,44 @@ export function HomeScreen() {
   }, []);
 
   const sortControlClassName =
-    "flex min-h-11 w-full items-center justify-between gap-3 whitespace-nowrap rounded-full border border-[var(--line)] bg-white/92 px-4 py-2 text-left text-sm font-semibold text-[var(--foreground)] shadow-[0_10px_24px_rgba(34,24,14,0.08)] sm:w-auto sm:min-w-44";
+    "flex min-h-11 items-center justify-between gap-3 whitespace-nowrap rounded-full border border-[var(--line)] bg-white/92 px-4 py-2 text-left text-sm font-semibold text-[var(--foreground)] shadow-[0_10px_24px_rgba(34,24,14,0.08)]";
 
   return (
     <>
       <div className="mx-auto max-w-5xl space-y-7">
         <section className="space-y-6">
+          {/* ── Discovery panel ─────────────────────────────────── */}
           <div className="glass-panel rounded-[24px] border-white/55 bg-white/76 px-4 py-4 md:rounded-[28px] md:px-5 md:py-5">
-            <div className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-                <label className="flex min-h-14 items-center rounded-[16px] border border-[var(--line)] bg-white px-4 shadow-[0_12px_28px_rgba(34,24,14,0.06)]">
-                  <span className="visually-hidden">레시피 제목 검색</span>
-                  <input
-                    className="w-full bg-transparent py-4 outline-none placeholder:text-[var(--muted)]"
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="레시피 제목 검색"
-                    value={query}
-                  />
-                </label>
-                <button
-                  className={`min-h-14 rounded-[16px] border px-5 py-3 text-sm font-semibold transition md:min-w-44 ${
-                    hasIngredientFilter
-                      ? "border-[var(--olive)] bg-[var(--olive)] text-white shadow-[0_12px_24px_rgba(31,107,82,0.2)]"
-                      : "border-[color:rgba(224,80,32,0.16)] bg-white text-[color:#9f3614] shadow-[0_12px_24px_rgba(255,108,60,0.12)] hover:bg-[color:rgba(255,108,60,0.08)]"
-                  }`}
-                  onClick={() => setIngredientModalOpen(true)}
-                  type="button"
-                >
-                  {hasIngredientFilter
-                    ? `재료로 검색 (${appliedIngredientIds.length})`
-                    : "재료로 검색"}
-                </button>
-              </div>
+            <div className="space-y-3">
+              {/* Search bar */}
+              <label className="flex min-h-14 items-center rounded-[16px] border border-[var(--line)] bg-white px-4 shadow-[0_12px_28px_rgba(34,24,14,0.06)]">
+                <span className="visually-hidden">레시피 제목 검색</span>
+                <input
+                  className="w-full bg-transparent py-4 outline-none placeholder:text-[var(--muted)]"
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="레시피 제목 검색"
+                  value={query}
+                />
+              </label>
+
+              {/* Ingredient filter — standalone row below search */}
+              <button
+                className={`min-h-11 w-full rounded-[14px] border px-5 py-2.5 text-sm font-semibold transition sm:w-auto ${
+                  hasIngredientFilter
+                    ? "border-[var(--olive)] bg-[var(--olive)] text-white shadow-[0_12px_24px_rgba(31,107,82,0.2)]"
+                    : "border-[color:rgba(224,80,32,0.16)] bg-white text-[color:#9f3614] shadow-[0_12px_24px_rgba(255,108,60,0.12)] hover:bg-[color:rgba(255,108,60,0.08)]"
+                }`}
+                onClick={() => setIngredientModalOpen(true)}
+                type="button"
+              >
+                {hasIngredientFilter
+                  ? `재료로 검색 (${appliedIngredientIds.length})`
+                  : "재료로 검색"}
+              </button>
+
+              {/* Active filter summary bar */}
               {hasIngredientFilter ? (
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[color:rgba(46,166,122,0.14)] bg-[color:rgba(46,166,122,0.08)] px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[color:rgba(46,166,122,0.14)] bg-[color:rgba(46,166,122,0.08)] px-4 py-3">
                   <p className="text-sm text-[var(--olive)]">
                     {appliedIngredientIds.length}개 재료로 레시피를 좁혀보고 있어요.
                   </p>
@@ -257,6 +263,7 @@ export function HomeScreen() {
             </div>
           </div>
 
+          {/* ── Error state ─────────────────────────────────────── */}
           {screenState === "error" ? (
             <ContentState
               actionLabel="다시 시도"
@@ -268,30 +275,31 @@ export function HomeScreen() {
             />
           ) : null}
 
+          {/* ── Loading skeleton ────────────────────────────────── */}
           {showInitialDiscoverySkeleton ? (
             <div className="space-y-6">
-              <ThemeSectionSkeleton />
+              <ThemeCarouselSkeleton />
               <RecipeListSkeleton />
             </div>
           ) : null}
 
+          {/* ── Theme carousel strips ───────────────────────────── */}
           {!showInitialDiscoverySkeleton && visibleThemes.length > 0 ? (
-            <div className="space-y-8">
+            <div className="space-y-6">
               {visibleThemes.map((theme) => (
-                <ThemeSection key={theme.id} theme={theme} />
+                <ThemeCarouselStrip key={theme.id} theme={theme} />
               ))}
             </div>
           ) : null}
 
+          {/* ── 모든 레시피 section ─────────────────────────────── */}
           {screenState !== "error" && !showInitialDiscoverySkeleton ? (
             <div className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h2 className="text-[1.15rem] font-extrabold tracking-[-0.025em] text-[var(--foreground)] md:text-[1.35rem]">
-                    {listTitle}
-                  </h2>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-[1.15rem] font-extrabold tracking-[-0.025em] text-[var(--foreground)] md:text-[1.35rem]">
+                  {listTitle}
+                </h2>
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-white/82 px-3 py-1 text-xs font-semibold text-[var(--muted)] shadow-[0_8px_18px_rgba(34,24,14,0.05)]">
                     {recipes?.items.length ?? 0}개
                   </span>
@@ -345,25 +353,80 @@ export function HomeScreen() {
   );
 }
 
-function ThemeSection({ theme }: { theme: RecipeTheme }) {
+// ── Theme Carousel Strip ────────────────────────────────────────────────────
+
+function ThemeCarouselStrip({ theme }: { theme: RecipeTheme }) {
   return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[1.15rem] font-extrabold tracking-[-0.025em] text-[var(--foreground)] md:text-[1.35rem]">
+    <section aria-label={theme.title} data-testid="theme-carousel">
+      {/* Compact section header */}
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-base font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
           {theme.title}
         </h2>
-        <span className="rounded-full bg-white/82 px-3 py-1 text-xs font-semibold text-[var(--muted)] shadow-[0_8px_18px_rgba(34,24,14,0.05)]">
+        <span className="text-xs font-semibold text-[var(--muted)]">
           {theme.recipes.length}개
         </span>
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        {theme.recipes.map((recipe) => (
-          <RecipeCard key={`${theme.id}-${recipe.id}`} recipe={recipe} />
-        ))}
+
+      {/* Horizontal scroll strip with right-fade affordance */}
+      <div className="relative">
+        <div
+          className="scrollbar-hide flex gap-3 overflow-x-auto overscroll-x-contain pb-1"
+          style={{ scrollSnapType: "x mandatory" }}
+        >
+          {theme.recipes.map((recipe) => (
+            <ThemeCarouselCard
+              key={`${theme.id}-${recipe.id}`}
+              recipe={recipe}
+            />
+          ))}
+        </div>
+        {/* Right-side gradient hint — indicates more content beyond edge */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 w-10 rounded-r-[12px] bg-gradient-to-l from-[var(--background,#fff9f2)] to-transparent"
+        />
       </div>
     </section>
   );
 }
+
+function ThemeCarouselCard({ recipe }: { recipe: RecipeCardItem }) {
+  return (
+    <a
+      className="block shrink-0 overflow-hidden rounded-[12px] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow)] transition hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(34,24,14,0.12)]"
+      href={`/recipe/${recipe.id}`}
+      style={{ scrollSnapAlign: "start", width: "200px" }}
+    >
+      {/* Compact thumbnail */}
+      <div
+        className="relative border-b border-[var(--line)] bg-[linear-gradient(135deg,rgba(255,108,60,0.22),rgba(255,249,242,0.85),rgba(46,166,122,0.18))]"
+        style={
+          recipe.thumbnail_url
+            ? {
+                backgroundImage: `linear-gradient(rgba(26,26,46,0.06),rgba(26,26,46,0.22)),url(${recipe.thumbnail_url})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                height: "88px",
+              }
+            : { height: "88px" }
+        }
+      >
+        <span className="absolute left-2 top-2 rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-deep)]">
+          {formatRecipeSourceLabel(recipe.source_type)}
+        </span>
+      </div>
+      {/* Title */}
+      <div className="px-3 py-2.5">
+        <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-[var(--foreground)]">
+          {recipe.title}
+        </p>
+      </div>
+    </a>
+  );
+}
+
+// ── Sort Menu ───────────────────────────────────────────────────────────────
 
 function SortMenu({
   buttonClassName,
@@ -442,7 +505,7 @@ function SortMenu({
         ref={buttonRef}
         className={
           buttonClassName ??
-          "flex min-h-11 w-full items-center justify-between gap-3 whitespace-nowrap rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-left text-sm font-semibold text-[var(--foreground)] shadow-[var(--shadow)]"
+          "flex min-h-11 items-center justify-between gap-3 whitespace-nowrap rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-left text-sm font-semibold text-[var(--foreground)] shadow-[var(--shadow)]"
         }
         onClick={onToggle}
         type="button"
@@ -561,6 +624,8 @@ function SortMenu({
   );
 }
 
+// ── Icons ───────────────────────────────────────────────────────────────────
+
 function ChevronIcon() {
   return (
     <svg
@@ -577,15 +642,17 @@ function ChevronIcon() {
   );
 }
 
-function ThemeSectionSkeleton() {
+// ── Skeletons ───────────────────────────────────────────────────────────────
+
+function ThemeCarouselSkeleton() {
   return (
-    <div className="space-y-4">
-      <div className="h-6 w-40 animate-pulse rounded-full bg-white/70" />
-      <div className="grid gap-4 md:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, index) => (
+    <div className="space-y-3">
+      <div className="h-5 w-36 animate-pulse rounded-full bg-white/70" />
+      <div className="flex gap-3 overflow-hidden">
+        {Array.from({ length: 3 }).map((_, index) => (
           <div
             key={index}
-            className="glass-panel min-h-72 animate-pulse rounded-[16px] bg-white/60"
+            className="h-[128px] w-[200px] shrink-0 animate-pulse rounded-[12px] bg-white/60"
           />
         ))}
       </div>

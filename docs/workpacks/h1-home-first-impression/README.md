@@ -367,5 +367,19 @@ feature/fe-h1-home-first-impression 구현 시작 허가
 - [x] authority 위험도 분류 + evidence plan 잠금 (E1~E7)
 - [x] Slice ID / Branch slug policy 명시
 - [x] 사용자 승인 (D1/D2/D3/D4 결정 확인) — ✅ 2026-04-17 (D2/D4 승인, D1/D3 수정 확정)
-- [x] contract-evolution PR (화면정의서 v1.4.0) — PR #139 merge gate
+- [x] contract-evolution PR (화면정의서 v1.4.0) — ✅ PR #139 merged 2026-04-17
 - [x] feature/fe-h1-home-first-impression 구현 시작 허가 (PR #139 merge 후)
+
+## Stage 4 Delivery Checklist
+
+- [x] ThemeSection → ThemeCarouselStrip 교체 (compact horizontal carousel, 200px 카드, 88px 썸네일)
+- [x] 재료 필터 standalone row 확인 (mobile 기존 동작 유지, desktop도 단독 행)
+- [x] 정렬은 "모든 레시피" 섹션 헤더에 유지 (위치 변경 없음)
+- [x] `scrollbar-hide` + `overscroll-x-contain` + `scroll-snap-type: x mandatory` 적용
+- [x] 우측 gradient fade overlay (`pointer-events-none`) 구현
+- [x] E1~E7 evidence 캡처 완료
+- [x] vitest home-screen 14/14 pass
+- [x] TypeScript 타입 오류 0개
+- [x] ESLint 0 errors
+- [x] qa-visual (HOME baselines 갱신), qa-a11y 18/18 pass
+- [ ] authority review (PR 본문 포인트 참조)
