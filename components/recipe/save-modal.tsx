@@ -2,6 +2,7 @@
 
 import React from "react";
 
+import { ModalHeader } from "@/components/shared/modal-header";
 import type { RecipeBookSummary } from "@/types/recipe";
 
 type SaveModalViewState = "loading" | "ready" | "error";
@@ -55,12 +56,10 @@ export function SaveModal({
     return null;
   }
 
-  const disableCreate = isCreatingBook || isSavingRecipe || newBookName.trim().length === 0;
+  const disableCreate =
+    isCreatingBook || isSavingRecipe || newBookName.trim().length === 0;
   const disableSave =
-    isSavingRecipe
-    || isCreatingBook
-    || !selectedBookId
-    || isSelectedBookReadOnly;
+    isSavingRecipe || isCreatingBook || !selectedBookId || isSelectedBookReadOnly;
 
   return (
     <div
@@ -74,27 +73,12 @@ export function SaveModal({
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-              Save Recipe
-            </p>
-            <h2
-              className="mt-2 text-2xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]"
-              id="save-modal-title"
-            >
-              저장할 레시피북을 선택하세요
-            </h2>
-          </div>
-          <button
-            aria-label="저장 모달 닫기"
-            className="rounded-full border border-[var(--line)] px-3 py-1 text-sm text-[var(--muted)]"
-            onClick={onClose}
-            type="button"
-          >
-            닫기
-          </button>
-        </div>
+        {/* Header — D2: no eyebrow · D3: icon-only close · D5: title=레시피 저장 */}
+        <ModalHeader
+          onClose={onClose}
+          title="레시피 저장"
+          titleId="save-modal-title"
+        />
 
         {viewState === "loading" ? (
           <div className="mt-5 rounded-[16px] border border-[var(--line)] bg-white/75 px-4 py-5 text-sm text-[var(--muted)]">
@@ -108,7 +92,7 @@ export function SaveModal({
               {loadErrorMessage ?? "레시피북 목록을 불러오지 못했어요."}
             </p>
             <button
-              className="mt-3 rounded-[12px] bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white"
+              className="mt-3 rounded-[12px] bg-[var(--olive)] px-4 py-2 text-sm font-semibold text-white"
               onClick={onRetry}
               type="button"
             >
@@ -133,7 +117,7 @@ export function SaveModal({
                       aria-pressed={isSelected}
                       className={`flex min-h-11 w-full items-center justify-between rounded-[12px] border px-4 py-3 text-left text-sm ${
                         isSelected
-                          ? "border-transparent bg-[color:rgba(255,108,60,0.12)] text-[var(--brand-deep)]"
+                          ? "border-transparent bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
                           : "border-[var(--line)] bg-white text-[var(--foreground)]"
                       }`}
                       key={book.id}
@@ -185,8 +169,9 @@ export function SaveModal({
               </p>
             ) : null}
 
+            {/* D1: olive CTA */}
             <button
-              className="min-h-11 w-full rounded-[12px] bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="min-h-11 w-full rounded-[12px] bg-[var(--olive)] px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
               disabled={disableSave}
               onClick={onSaveRecipe}
               type="button"

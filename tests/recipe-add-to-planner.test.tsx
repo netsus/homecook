@@ -220,7 +220,6 @@ describe("planner add flow", () => {
     );
 
     const dialog = await screen.findByRole("dialog", { name: "플래너에 추가" });
-    expect(within(dialog).getByText("식단 계획")).toBeTruthy();
 
     const todayLabel = buildSelectedDateLabel(new Date());
     expect(within(dialog).queryByText(todayLabel)).toBeNull();

@@ -234,11 +234,9 @@ export function IngredientFilterModal({
       >
         <div className="border-b border-[var(--line)] px-5 pb-5 pt-4 md:px-6">
           <div className="mx-auto h-1.5 w-14 rounded-full bg-black/10 md:hidden" />
+          {/* D2: no eyebrow · D3: icon-only close (closeButtonRef for focus management) */}
           <div className="mt-4 flex items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-                재료 필터
-              </p>
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2
                   className="text-[1.4rem] font-extrabold tracking-[-0.02em] text-[var(--foreground)] md:text-2xl"
@@ -255,12 +253,14 @@ export function IngredientFilterModal({
             </div>
             <button
               aria-label="닫기"
-              className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--muted)] hover:bg-white/60"
               onClick={handleClose}
               ref={closeButtonRef}
               type="button"
             >
-              닫기
+              <svg fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 4L14 14M14 4L4 14" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+              </svg>
             </button>
           </div>
           <label className="mt-3 flex min-h-11 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow)] md:mt-4">
@@ -281,7 +281,7 @@ export function IngredientFilterModal({
                   aria-pressed={isActive}
                   className={`min-h-11 shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${
                     isActive
-                      ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--foreground)]"
+                      ? "border-[var(--olive)] bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
                       : "border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--olive)] hover:text-[var(--olive)]"
                   }`}
                   key={category}
@@ -380,7 +380,7 @@ export function IngredientFilterModal({
                 초기화
               </button>
               <button
-                className="flex min-h-11 items-center justify-center whitespace-nowrap rounded-full bg-[var(--brand)] px-5 py-2 text-center text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-11 items-center justify-center whitespace-nowrap rounded-full bg-[var(--olive)] px-5 py-2 text-center text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isApplyDisabled}
                 onClick={() => onApply(draftIngredientIds)}
                 type="button"
