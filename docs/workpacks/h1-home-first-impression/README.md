@@ -175,47 +175,47 @@
 
 ### 안 C — Compact-header + Carousel 하이브리드안 (권고안)
 
-> "탐색 컨트롤 첫 화면, 큐레이션은 compact strip"
+> "탐색 컨트롤 첫 화면, 큐레이션은 compact strip, 정렬은 대상 섹션에"
 
 ```
 ┌─────────────────────────────────┐
 │ HOMECOOK                        │  ← 공통 헤더 (현행 유지)
 ├─────────────────────────────────┤
 │ 🔍 레시피 제목 검색              │  ← 검색바 (현행 유지)
-│ [재료로 검색]    [정렬 기준▾]    │  ← 재료필터 + 정렬을 같은 행에
+│ [🥕 재료로 검색]                │  ← 재료 필터 단독 행 (discovery area)
 ├─────────────────────────────────┤
 │ 이번 주 인기 ──────────── >     │  ← compact 수평 strip (카드 1.5개 노출)
 │ [카드] [카드] [카드 ...]         │  ← 가로 스크롤, peek 패턴
 ├─────────────────────────────────┤
-│ 모든 레시피  [152개]             │  ← 섹션 헤더 (정렬 이미 위 행에)
+│ 모든 레시피  [152개]  [정렬▾]   │  ← 섹션 헤더 + 정렬 컨트롤 (현행 위치 유지)
 │ [카드][카드]                    │
-│ [카드][카드]                    │  ← first viewport에 카드 4장 도달
+│ [카드][카드]                    │  ← 카드 1행은 first viewport 하단 peek
 │  ...                            │
 └─────────────────────────────────┘
   390px first viewport:
-  헤더(50) + 검색바(52) + 필터행(44) + strip(140) + 섹션헤더(36) + 카드 2장(약 280) → 총 602px
-  → 390px 높이에서 카드 하단이 잘리며 스크롤 유도 (peek 패턴 성립)
+  헤더(50) + 검색바(52) + 재료필터행(44) + carousel헤더(28) + strip(130) + 섹션헤더(36) = 340px
+  → 390px에서 "모든 레시피 [정렬▾]"가 first viewport 안에 들어오고, 카드 상단이 peek됨
 ```
 
 **특성**
-- 재료 필터와 정렬을 같은 행에 배치 → control proximity 준수, 공간 압축
+- 검색과 재료 필터는 discovery area에 그룹화 (정렬과 분리)
+- 정렬은 "모든 레시피" 섹션 헤더에 위치 — **정렬이 모든 레시피를 정렬하는 것임을 명확히**
 - 테마 섹션을 compact horizontal carousel strip (1.5~2장 peek)으로 축소
-- "모든 레시피" 그리드가 first viewport 하단부터 시작
+- carousel strip이 130px 수준으로 작아져 "모든 레시피 [정렬▾]" 섹션 헤더가 first viewport 안에 진입
 
 **장점**
-- P1 부분 해결: 테마 strip이 140px 수준으로 줄어 레시피 그리드가 first viewport에 들어옴
-- P3 해결: 정렬이 discovery panel 바로 옆으로 이동
+- P1 해결: 테마 strip 축소로 레시피 섹션 헤더가 first viewport에 들어옴 (정렬 포함)
+- P3 해결: 정렬이 "모든 레시피"라는 정렬 대상과 같은 헤더에 위치 — control proximity 의미상 준수
+- 의미 일관성: 정렬=모든레시피 연결이 명확, 재료필터=검색 연결이 명확
 - 큐레이션 feel 유지: 테마 strip은 없애지 않고 compact 처리
 - 안 B보다 계약 변경 범위 작음: 테마 섹션 형태 변경이지 제거가 아님
 - Naver 레시피, 만개의레시피, Yummly 등 유사 레퍼런스 패턴
 
 **단점**
-- 정렬 컨트롤이 필터 행으로 이동하면 화면정의서 §1 변경 필요 (minor contract-evolution)
 - carousel strip은 가로 스크롤이므로 mobile-ux-rules §1 "localized horizontal scroll" 허용 구간
   — 단, 시각적 affordance(peek + hint)가 명확해야 함
-- 320px에서 필터+정렬 같은 행 배치가 빡빡할 수 있음 → 별도 검증 필요
 
-**Mobile UX 리스크**: 낮음~중간 — 가로 carousel affordance와 320px 필터행 처리가 핵심 검증 포인트
+**Mobile UX 리스크**: 낮음 — 320px에서 재료 필터가 단독 행이라 레이아웃 리스크 없음
 
 ---
 
@@ -241,10 +241,10 @@
 
 | ID | 결정 | 내용 |
 |----|------|------|
-| D1 | 정렬 컨트롤 위치 | discovery panel 행으로 올림 (`[재료로 검색] [정렬 기준▾]` 같은 행) |
+| D1 | 정렬 컨트롤 위치 | "모든 레시피" 섹션 헤더에 유지 (`모든 레시피 [N개] [정렬▾]`) — 정렬 대상과 같은 헤더에 두어 의미 명확 |
 | D2 | 테마 섹션 처리 | compact horizontal carousel strip (높이 ~130px, 카드 1.5개 peek) |
-| D3 | 모든 레시피 섹션 | 테마 strip 직후, 정렬 컨트롤은 D1에서 위로 이동했으므로 섹션 헤더는 카운트만 표시 |
-| D4 | 재료 필터 행 위치 | 검색바 아래 보조 행 유지, 정렬과 같은 행에 배치 |
+| D3 | 재료 필터 위치 | 검색바 아래 단독 행 — discovery area에 그룹화, 정렬과 분리 |
+| D4 | 전체 방향 | 안 C (compact carousel hybrid) |
 
 ---
 
@@ -252,13 +252,15 @@
 
 ### 화면정의서 §1 HOME 변경
 
-| 항목 | 현재 (v1.3.1) | 변경 방향 (안 C) |
-|------|--------------|-----------------|
-| UI 구성 순서 | 헤더 → discovery panel → 테마 섹션 → 모든 레시피(정렬) | 헤더 → discovery panel(검색+필터+정렬 행) → 테마 carousel strip → 모든 레시피 |
-| 정렬 컨트롤 위치 | 모든 레시피 섹션 헤더 | discovery panel 보조 행 (재료 필터와 같은 행) |
-| 테마 섹션 형태 | 2열 그리드 섹션 | compact horizontal carousel strip |
+| 항목 | 현재 (v1.3.1) | 변경 방향 (안 C 확정) |
+|------|--------------|---------------------|
+| UI 구성 순서 | 헤더 → discovery panel → 테마 섹션(2열 그리드) → 모든 레시피(정렬) | 헤더 → discovery panel(검색 + 재료 필터 단독 행) → 테마 carousel strip → 모든 레시피(정렬 유지) |
+| 정렬 컨트롤 위치 | 모든 레시피 섹션 헤더 | **변경 없음** — 모든 레시피 섹션 헤더에 유지 |
+| 테마 섹션 형태 | 2열 그리드 섹션 | compact horizontal carousel strip (1.5장 peek, ~130px) |
+| 재료 필터 위치 | 검색바 아래 단독 행 | **변경 없음** — 검색바 아래 단독 행 유지 |
 
-→ **contract-evolution 필요**: 화면정의서 §1 HOME 구성 변경 → v1.4.0 (major 구조 변경)
+→ **contract-evolution 필요**: 화면정의서 §1 HOME 테마 섹션 형태 변경 → v1.4.0
+→ **변경 최소화**: 정렬 위치·재료 필터 위치 모두 현행 유지, 테마 섹션 형태만 변경
 
 ### 유저플로우 §① 레시피 탐색 여정
 
@@ -302,10 +304,11 @@
 
 ```
 Stage 1 문서 확정 (이 README)
-  ↓ 사용자 승인 (D1/D2/D3/D4)
+  ↓ 사용자 승인 (D1/D2/D3/D4) — ✅ 2026-04-17 확정
 화면정의서 v1.4.0 §1 HOME 갱신
-  → 정렬 컨트롤 위치: discovery panel 보조 행으로 명시
-  → 테마 섹션: compact horizontal carousel strip으로 명시
+  → 테마 섹션: 2열 그리드 → compact horizontal carousel strip 으로 명시
+  → 정렬 컨트롤 위치: 현행 유지 (모든 레시피 섹션 헤더)
+  → 재료 필터 위치: 현행 유지 (검색바 아래 단독 행)
   ↓ contract-evolution PR (화면정의서 v1.4.0 + CURRENT_SOURCE_OF_TRUTH.md)
   ↓
 feature/fe-h1-home-first-impression 구현 시작 허가
@@ -320,9 +323,9 @@ feature/fe-h1-home-first-impression 구현 시작 허가
 - 브랜치: `feature/fe-h1-home-first-impression`
 - 변경 대상 컴포넌트 (Stage 4 시):
   - `HomeScreen` — 섹션 구조 재배치
-  - discovery panel 보조 행 — 재료 필터 + 정렬 같은 행 배치
-  - 테마 섹션 → compact horizontal carousel strip
-  - 정렬 bottom sheet — 위치 이동 (모든 레시피 헤더 → discovery 행)
+  - 테마 섹션 → compact horizontal carousel strip (주요 변경)
+  - 정렬 컨트롤 — 위치 변경 없음, "모든 레시피" 섹션 헤더 유지
+  - 재료 필터 — 위치 변경 없음, 검색바 아래 단독 행 유지
 
 ---
 
@@ -338,10 +341,10 @@ feature/fe-h1-home-first-impression 구현 시작 허가
 
 ### Blocker 판정 기준
 
-- 320px에서 discovery panel 보조 행(재료 필터 + 정렬 칩)이 잘리거나 중첩됨
 - carousel strip이 page-level 가로 스크롤처럼 느껴짐 (affordance 실패)
-- first viewport에서 실제 레시피 카드 0장 (개선 전과 동일)
-- 정렬/필터 컨트롤이 시각적으로 읽히지 않거나 터치 타겟 44px 미달
+- first viewport에서 실제 레시피 카드 0장이고 "모든 레시피 [정렬▾]" 헤더도 보이지 않음
+- 재료 필터 칩 / 정렬 칩 / carousel 카드 터치 타겟 44px 미달
+- 테마 섹션이 여전히 2열 full 그리드 형태 (D2 미이행)
 
 ---
 
@@ -363,6 +366,6 @@ feature/fe-h1-home-first-impression 구현 시작 허가
 - [x] contract-evolution 경로 정리
 - [x] authority 위험도 분류 + evidence plan 잠금 (E1~E7)
 - [x] Slice ID / Branch slug policy 명시
-- [ ] 사용자 승인 (D1/D2/D3/D4 결정 확인)
+- [x] 사용자 승인 (D1/D2/D3/D4 결정 확인) — ✅ 2026-04-17 (D2/D4 승인, D1/D3 수정 확정)
 - [ ] contract-evolution PR (화면정의서 v1.4.0) — 사용자 승인 후
 - [ ] feature/fe-h1-home-first-impression 구현 시작 허가 (contract-evolution PR merge 후)
