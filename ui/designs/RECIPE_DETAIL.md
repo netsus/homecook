@@ -199,7 +199,8 @@
 ```
 
 - 닫기: 배경(dim) 클릭, 드래그 다운 제스처
-- 성공: 팝업 닫기 → 토스트 "플래너에 추가됐어요"
+- 선택 날짜 확인: `요일 M월 D일` 포맷 (예: `금 4월 17일`)
+- 성공: 팝업 닫기 → 토스트 "`N월 D일 끼니에 추가됐어요`"
 - 오류: 토스트 "추가에 실패했어요. 다시 시도해 주세요"
 
 #### Slice06 lock
@@ -257,7 +258,7 @@
 | 좋아요 (비로그인) | [좋아요] 탭 | 로그인 게이트 모달 (returnToAction: 'like') | Y |
 | 저장 (로그인) | [저장] 탭 | `GET /recipe-books?type=saved,custom` → SavePopup 오픈 | Y |
 | 저장 (비로그인) | [저장] 탭 | 로그인 게이트 모달 (returnToAction: 'save') | Y |
-| 플래너 추가 확정 | PlannerAddPopup [플래너에 추가] | `POST /meals` → 팝업 닫기 → 토스트 | Y |
+| 플래너 추가 확정 | PlannerAddPopup [플래너에 추가] | `POST /meals` → 팝업 닫기 → `N월 D일 끼니에 추가됐어요` 토스트 | Y |
 | 저장 확정 | SavePopup [저장] | `POST /recipes/{id}/save` → 팝업 닫기 → 토스트 | Y |
 | 로그인 게이트 닫기 | [취소] / ESC / dim 클릭 | 모달 닫기, 현재 화면 유지 | — |
 

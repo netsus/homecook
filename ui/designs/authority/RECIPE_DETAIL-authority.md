@@ -1,38 +1,48 @@
 # RECIPE_DETAIL Authority Review
 
-> 대상 slice: `03-recipe-like` + `04-recipe-save` baseline / `06-recipe-to-planner` Stage 4 authority_precheck
+> 대상 slice: `03-recipe-like` + `04-recipe-save` baseline / `06-recipe-to-planner` Stage 4 authority_precheck / `h3-planner-add-sync` Stage 5 authority review
 > evidence:
 > - `ui/designs/evidence/authority/RECIPE_DETAIL-mobile.png`
 > - `ui/designs/evidence/authority/RECIPE_DETAIL-mobile-narrow.png`
 > - `ui/designs/evidence/06-recipe-to-planner/RECIPE_DETAIL-planner-add-mobile.png` (390×844, captured 2026-04-15)
 > - `ui/designs/evidence/06-recipe-to-planner/RECIPE_DETAIL-planner-add-mobile-narrow.png` (320×568, captured 2026-04-15)
+> - `ui/designs/evidence/h3-planner-add-sync/RECIPE_DETAIL-baseline.png` (390×844, captured 2026-04-17)
+> - `ui/designs/evidence/h3-planner-add-sync/planner-add-sheet-mobile.png` (390×844, captured 2026-04-17)
+> - `ui/designs/evidence/h3-planner-add-sync/planner-add-sheet-narrow.png` (320×568, captured 2026-04-17)
+> - `ui/designs/evidence/h3-planner-add-sync/planner-add-sheet-date-label.png` (captured 2026-04-17)
+> - `ui/designs/evidence/h3-planner-add-sync/planner-add-toast-mobile.png` (390×844, captured 2026-04-17)
+> - `ui/designs/evidence/h3-planner-add-sync/recipe-detail-cta-hierarchy.png` (captured 2026-04-17)
 > - design reference: `ui/designs/RECIPE_DETAIL.md`
 > - critique reference: `ui/designs/critiques/RECIPE_DETAIL-critique.md`
 > - implementation reference: `components/recipe/recipe-detail-screen.tsx`
 > - implementation reference: `components/recipe/planner-add-sheet.tsx`
-> 검토일: 2026-04-15
-> 검토자: product-design-authority (authority_precheck by Codex)
+> 검토일: 2026-04-17
+> 검토자: product-design-authority (Stage 5 review by Codex)
 
 ## Verdict
 
 - verdict: `pass`
-- 한 줄 요약: slice06 planner add sheet는 390px·320px 모두에서 날짜/끼니/인분/CTA 구조가 안정적으로 읽히고, anchor screen인 RECIPE_DETAIL에 새로운 blocker를 추가하지 않는다.
+- 한 줄 요약: H3의 날짜 확인 라벨과 성공 토스트 sync까지 반영한 현재 `RECIPE_DETAIL` planner-add 흐름은 390px·320px 모두에서 안정적이며, anchor CTA 위계에도 새로운 blocker를 만들지 않는다.
 
 ## Scorecard
 
 | 항목 | 점수 | 메모 |
 |------|------|------|
 | Mobile UX | 4/5 | 좁은 폭(320px)에서도 날짜 스트립·끼니 4버튼·인분 스텝퍼·CTA row가 한 화면에 들어온다. |
-| Interaction Clarity | 4/5 | sheet 구조가 명확하다. backdrop, X 버튼, 취소/추가 CTA row가 모두 올바른 계층에서 읽힌다. |
-| Visual Hierarchy | 4/5 | 날짜 선택 → 끼니 선택 → 인분 → CTA 순서가 자연스럽다. |
+| Interaction Clarity | 4/5 | sheet 구조가 명확하고, 선택된 날짜 확인 라벨과 성공 토스트가 결과를 더 즉시 이해하게 만든다. |
+| Visual Hierarchy | 4/5 | 날짜 선택 → 끼니 선택 → 인분 → CTA 순서가 자연스럽고 CTA row 우선순위도 유지된다. |
 | Color / Material Fit | 4/5 | glass-panel 배경과 olive 토큰 적용이 RECIPE_DETAIL 기조와 일치한다. |
-| Familiar App Pattern Fit | 4/5 | bottom sheet + horizontal date strip + grid 끼니 selector는 식단 앱의 익숙한 패턴이다. |
+| Familiar App Pattern Fit | 4/5 | bottom sheet + horizontal date strip + compact confirmation label 조합이 식단 앱의 익숙한 패턴에 맞다. |
 
-## Evidence Notes (slice06 authority_precheck)
+## Evidence Notes
 
-- `RECIPE_DETAIL-planner-add-mobile.png` (390×844): planner add sheet가 열린 상태. backdrop 위에 sheet가 명확히 위치하고, 날짜 스트립·끼니 grid·인분 스텝퍼·CTA row가 모두 보인다.
-- `RECIPE_DETAIL-planner-add-mobile-narrow.png` (320×568): 좁은 뷰포트에서도 sheet 레이아웃이 무너지지 않는다. 끼니 4버튼은 한 줄로 유지되고, "취소"와 "플래너에 추가" CTA가 모두 화면 안에 들어온다.
-- 두 viewport 모두 page-level horizontal overflow 없이 안정적이다.
+- `RECIPE_DETAIL-planner-add-mobile.png` / `RECIPE_DETAIL-planner-add-mobile-narrow.png`는 slice06 authority_precheck 기준선으로 유지된다.
+- `planner-add-sheet-mobile.png` (390×844): planner add sheet가 열린 상태. backdrop 위에 sheet가 명확히 위치하고, 날짜 스트립·끼니 grid·인분 스텝퍼·CTA row가 모두 보인다.
+- `planner-add-sheet-narrow.png` (320×568): 좁은 뷰포트에서도 sheet 레이아웃이 무너지지 않는다. 끼니 4버튼은 한 줄로 유지되고, "취소"와 "플래너에 추가" CTA가 모두 화면 안에 들어온다.
+- `planner-add-sheet-date-label.png`: 선택된 날짜 확인 라벨이 계약대로 `요일 M월 D일` 포맷으로 보이며, 달력 도구와 day-card 표현 사이 bridge 역할을 한다.
+- `planner-add-toast-mobile.png`: 성공 토스트가 `N월 D일 끼니에 추가됐어요` 포맷으로 노출되고, CTA row를 가리지 않는다.
+- `recipe-detail-cta-hierarchy.png`: `[플래너에 추가]`, `[요리하기]` primary CTA row 위계가 여전히 명확하다.
+- 모든 viewport에서 page-level horizontal overflow 없이 안정적이다.
 - 기존 `RECIPE_DETAIL-mobile.png`, `RECIPE_DETAIL-mobile-narrow.png`는 slice03/04 baseline으로 유지된다.
 
 ## Resolved Since Previous Review
@@ -42,6 +52,7 @@
 | 1 | internal scaffolding | `Recipe Snapshot`, `Slice Note`가 product body 안에 노출됐다. | 해소. 사용자에게 필요한 hero / actions / ingredients / steps만 남았다. |
 | 2 | action hierarchy | metric pill과 primary row가 분리돼 planner add의 우선순위가 흐렸다. | 해소. `요리하기`와 `플래너에 추가`가 명확한 primary block을 이루고, like/save는 secondary engagement row로 내려갔다. |
 | 3 | planner-add-sheet polish | close/stepper touch target이 44px 미만이었고 eyebrow가 영어 카피였다. | 해소. 닫기/stepper 버튼을 `h-11 w-11`로 맞추고 eyebrow를 `플래너에 추가`로 교체했다. |
+| 4 | planner-add feedback sync | 날짜 확인 라벨과 성공 토스트가 day-card baseline / 화면정의서 v1.3.1과 맞지 않았다. | 해소. `요일 M월 D일` 라벨과 `N월 D일 끼니에 추가됐어요` 토스트를 현재 계약대로 맞췄다. |
 
 ## Major Follow-Ups
 
@@ -63,13 +74,13 @@
 - Stage 4 진행 가능 여부: `가능`
 - Stage 5 confirmed 가능 여부: `가능`
 - 다음 행동:
-  - planner add CTA 추가 후 hero hierarchy 재확인 완료. 무너지지 않았다.
-- touch target / copy polish까지 반영돼 추가 후속조치 없이 Stage 5로 넘길 수 있다.
+  - H3 evidence 기준으로 planner-add feedback sync와 CTA hierarchy를 재확인했다.
+  - 신규 blocker가 없어 `h3-planner-add-sync`는 `confirmed`로 올려도 된다.
 
-## authority_precheck Conclusion (slice06 Stage 4)
+## Stage 5 Conclusion (h3-planner-add-sync)
 
 - **신규 blocker**: 없음
 - **신규 major**: 없음
 - **신규 minor**: 없음
 - **최종 verdict**: `pass`
-- `RECIPE_DETAIL` anchor screen은 slice06 planner add sheet 추가 후에도 layout containment, CTA hierarchy, mobile UX 기준을 모두 유지한다.
+- `RECIPE_DETAIL` anchor screen은 H3 planner-add feedback sync 이후에도 layout containment, CTA hierarchy, mobile UX 기준을 모두 유지한다.

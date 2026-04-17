@@ -4,7 +4,7 @@
 > **대상 화면**: `RECIPE_DETAIL` (anchor screen), `PLANNER_WEEK` (anchor screen)
 > **선행 workpack**: `06-recipe-to-planner` (merged), `H2-planner-week-v2-redesign` (merged)
 > **선행 gate**: `H4-planner-week-v2-direction` 승인 완료 (2026-04-16)
-> **단계**: Stage 4 — FE 구현 진행 중
+> **단계**: Stage 6 — FE closeout ready
 > **작성일**: 2026-04-17
 
 ---
@@ -185,10 +185,11 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 - UI risk: `anchor-extension`
 - Anchor screen dependency: `RECIPE_DETAIL`, `PLANNER_WEEK`
 - Visual artifact: `ui/designs/evidence/h3-planner-add-sync/*`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes:
   - `RECIPE_DETAIL`의 `[플래너에 추가]`는 anchor CTA row에 걸린 보조 액션이라 성공 피드백/바텀시트 변화가 primary CTA 위계를 깨지 않아야 한다.
   - D1을 Option A로 확정했으므로 `PLANNER_WEEK` 이동 자체는 없지만, day-card baseline과의 날짜 표현 sync는 authority evidence로 계속 확인한다.
+  - Stage 5 authority review (2026-04-17): evidence E1~E6 재확인 결과 신규 blocker 0개, verdict `pass`.
 
 ### Stage 4 Evidence Plan
 
@@ -206,11 +207,11 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [x] 리뷰 대기 (pending-review) — Stage 4 구현 완료, Stage 5 디자인/authority review 대기
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [ ] 리뷰 대기 (pending-review) — Stage 4 구현 완료, Stage 5 디자인/authority review 대기
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
-> `h3-planner-add-sync`는 FE 구현과 evidence가 준비된 anchor-extension follow-up이므로 현재 상태는 `pending-review`다.
+> `h3-planner-add-sync`는 2026-04-17 Stage 5 authority review에서 `pass`를 받아 현재 상태를 `confirmed`로 올린다.
 
 ---
 
@@ -246,7 +247,9 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 - [x] Slice ID / Branch slug policy 명시
 - [x] 사용자 승인 (D1: A 토스트만, D2: `요일 M월 D일`, D3: `N월 D일 끼니에 추가됐어요`) — 2026-04-17
 - [x] contract-evolution PR (화면정의서 v1.3.1) — PR #136 merged 2026-04-17
-- [x] feature/fe-h3-planner-add-sync 구현 시작 허가 — PR #136 merge 완료, PR #137 구현 진행 중
+- [x] feature/fe-h3-planner-add-sync 구현 시작 허가 — PR #136 merge 완료
+- [x] Stage 5 authority review `pass` — `ui/designs/authority/RECIPE_DETAIL-authority.md` (2026-04-17)
+- [x] PR #137 closeout review 준비 완료 — all current head checks green
 
 ## Delivery Checklist
 
