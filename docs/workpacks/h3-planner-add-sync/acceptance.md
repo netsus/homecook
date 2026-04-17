@@ -12,7 +12,7 @@
 | S4 | 계약 영향도 분석 완료 (API/DB 불변, 화면정의서 v1.3.1 필요) | ✅ |
 | S5 | contract-evolution 경로가 README에 명시됨 | ✅ |
 | S6 | Stage 4 authority evidence 목록이 경로와 함께 잠겨 있음 | ✅ |
-| **S7** | **사용자 승인: D1/D2/D3 결정 확인** | **⬜ 대기** |
+| **S7** | **사용자 승인: D1/D2/D3 결정 확인** | **✅ 2026-04-17** |
 | S8 | contract-evolution PR (화면정의서 v1.3.1) merge 확인 | ⬜ S7 이후 |
 
 **S7이 닫혀야 contract-evolution PR을 오픈할 수 있다.**

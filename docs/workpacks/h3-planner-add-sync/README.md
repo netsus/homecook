@@ -233,6 +233,6 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 - [x] contract-evolution 경로 정리
 - [x] authority 위험도 분류 + evidence plan 잠금
 - [x] Slice ID / Branch slug policy 명시
-- [ ] 사용자 승인 (D1/D2/D3)
+- [x] 사용자 승인 (D1: A 토스트만, D2: `요일 M월 D일`, D3: `N월 D일 끼니에 추가됐어요`) — 2026-04-17
 - [ ] contract-evolution PR (화면정의서 v1.3.1)
 - [ ] feature/fe-h3-planner-add-sync 구현 시작 허가
