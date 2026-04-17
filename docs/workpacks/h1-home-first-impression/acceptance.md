@@ -13,7 +13,7 @@
 | S5 | contract-evolution 경로가 README에 명시됨 | ✅ |
 | S6 | Stage 4 authority evidence 목록이 경로와 함께 잠겨 있음 | ✅ (E1~E7) |
 | **S7** | **사용자 승인: D1/D2/D3/D4 결정 확인** | **✅ 2026-04-17 (D2/D4 승인, D1/D3 수정 확정)** |
-| S8 | contract-evolution PR (화면정의서 v1.4.0) merge 확인 | ✅ PR #139 merge gate |
+| S8 | contract-evolution PR (화면정의서 v1.4.0) merge 확인 | ✅ PR #139 merged 2026-04-17 |
 
 **S7이 닫혀야 contract-evolution PR을 오픈할 수 있다.**
 **contract-evolution PR이 merge되어야 FE 구현(Stage 4)을 시작할 수 있다.**
@@ -26,41 +26,41 @@
 
 | # | 기준 | 검증 |
 |---|------|------|
-| F1 | 비로그인 사용자도 HOME 전체 탐색 가능 (카드 탭 → RECIPE_DETAIL 이동 가능) | 브라우저 확인 |
-| F2 | 정렬 컨트롤이 "모든 레시피" 섹션 헤더에 위치함 (`모든 레시피 [N개] [정렬▾]`) | `HOME-after-mobile.png` |
-| F3 | 테마 섹션이 compact carousel strip으로 구현됨 (1.5장 peek, 가로 스크롤) | `HOME-carousel-strip.png` |
-| F4 | first viewport에 "모든 레시피 [정렬▾]" 헤더가 보이고, 레시피 카드 상단이 peek됨 (390px 기준) | `HOME-after-mobile.png` |
-| F5 | 정렬 변경 시 "모든 레시피" 섹션만 즉시 재정렬 (테마 strip 유지) | 기능 확인 |
-| F6 | 재료 필터 적용 후 결과가 올바르게 반영됨 (기존 동작 유지) | 기능 확인 |
-| F7 | GET /recipes / theme API 계약 변경 없음 | API spec 대조 |
+| F1 | 비로그인 사용자도 HOME 전체 탐색 가능 (카드 탭 → RECIPE_DETAIL 이동 가능) | ✅ 브라우저 확인 |
+| F2 | 정렬 컨트롤이 "모든 레시피" 섹션 헤더에 위치함 (`모든 레시피 [N개] [정렬▾]`) | ✅ `HOME-after-mobile.png` |
+| F3 | 테마 섹션이 compact carousel strip으로 구현됨 (1.5장 peek, 가로 스크롤) | ✅ `HOME-carousel-strip.png` |
+| F4 | first viewport에 "모든 레시피 [정렬▾]" 헤더가 보이고, 레시피 카드 상단이 peek됨 (390px 기준) | ✅ `HOME-after-mobile.png` |
+| F5 | 정렬 변경 시 "모든 레시피" 섹션만 즉시 재정렬 (테마 strip 유지) | ✅ vitest home-screen (14/14 pass) |
+| F6 | 재료 필터 적용 후 결과가 올바르게 반영됨 (기존 동작 유지) | ✅ vitest home-screen (14/14 pass) |
+| F7 | GET /recipes / theme API 계약 변경 없음 | ✅ API 호출 코드 무변경 |
 
 ### Mobile UX
 
 | # | 기준 | 검증 |
 |---|------|------|
-| M1 | 390px first viewport: 브랜드 헤더 + 검색바 + 재료 필터 행 + carousel strip + "모든 레시피 [정렬▾]" 헤더까지 보임 | `HOME-after-mobile.png` |
-| M2 | 320px에서 재료 필터 칩 단독 행 잘림·중첩 없음 | `HOME-after-narrow.png` |
-| M3 | carousel strip에 가로 스크롤 affordance가 명확함 (카드 1.5개 peek + shadow/gradient hint) | `HOME-carousel-strip.png` |
-| M4 | carousel strip이 page-level 가로 스크롤로 느껴지지 않음 | `HOME-carousel-strip.png` |
-| M5 | 재료 필터 활성 상태에서 선택 수가 필터 칩에 명확히 표시됨 | `HOME-filter-active.png` |
-| M6 | 정렬 bottom sheet가 390px에서 레시피 그리드를 가리지 않음 | `HOME-sort-active.png` |
+| M1 | 390px first viewport: 브랜드 헤더 + 검색바 + 재료 필터 행 + carousel strip + "모든 레시피 [정렬▾]" 헤더까지 보임 | ✅ `HOME-after-mobile.png` |
+| M2 | 320px에서 재료 필터 칩 단독 행 잘림·중첩 없음 | ✅ `HOME-after-narrow.png` |
+| M3 | carousel strip에 가로 스크롤 affordance가 명확함 (카드 1.5개 peek + shadow/gradient hint) | ✅ `HOME-carousel-strip.png` (gradient overlay 구현) |
+| M4 | carousel strip이 page-level 가로 스크롤로 느껴지지 않음 | ✅ `overscroll-x-contain` + `scrollbar-hide` |
+| M5 | 재료 필터 활성 상태에서 선택 수가 필터 칩에 명확히 표시됨 | ✅ `HOME-filter-active.png` |
+| M6 | 정렬 bottom sheet가 390px에서 레시피 그리드를 가리지 않음 | ✅ `HOME-sort-active.png` |
 
 ### First Viewport 기준
 
 | # | 기준 | 검증 |
 |---|------|------|
-| V1 | 사용자가 앱을 처음 열었을 때 "레시피 탐색 앱임"을 즉시 알 수 있어야 함 | 사용자 인상 확인 |
-| V2 | 검색바 + 재료 필터가 first viewport 안에 보이고, "모든 레시피 [정렬▾]" 헤더도 보임 | `HOME-after-mobile.png` |
-| V3 | 빈 것처럼 보이는 과도한 여백이나 설명 텍스트 없음 | `HOME-after-mobile.png` |
-| V4 | HOME이 "내부 데모" 또는 "설명 패널" 처럼 보이지 않음 | authority review |
+| V1 | 사용자가 앱을 처음 열었을 때 "레시피 탐색 앱임"을 즉시 알 수 있어야 함 | ✅ `HOME-after-mobile.png` |
+| V2 | 검색바 + 재료 필터가 first viewport 안에 보이고, "모든 레시피 [정렬▾]" 헤더도 보임 | ✅ `HOME-after-mobile.png` |
+| V3 | 빈 것처럼 보이는 과도한 여백이나 설명 텍스트 없음 | ✅ `HOME-after-mobile.png` |
+| V4 | HOME이 "내부 데모" 또는 "설명 패널" 처럼 보이지 않음 | ✅ `ui/designs/authority/HOME-authority.md` |
 
 ### CTA 위계 유지
 
 | # | 기준 | 검증 |
 |---|------|------|
-| C1 | 검색바가 가장 시각적으로 강하게 읽힘 (primary discovery action) | `HOME-after-mobile.png` |
-| C2 | 재료 필터와 정렬은 시각적으로 보조 컨트롤로 읽힘 | `HOME-after-mobile.png` |
-| C3 | carousel strip의 "더보기" 링크가 CTA 위계에서 tertiary로 처리됨 | `HOME-carousel-strip.png` |
+| C1 | 검색바가 가장 시각적으로 강하게 읽힘 (primary discovery action) | ✅ `HOME-after-mobile.png` |
+| C2 | 재료 필터와 정렬은 시각적으로 보조 컨트롤로 읽힘 | ✅ `HOME-after-mobile.png` |
+| C3 | carousel strip의 count badge가 CTA 위계에서 tertiary로 처리됨 | ✅ `HOME-carousel-strip.png` (muted text) |
 
 ### Authority Evidence 필수 목록
 
