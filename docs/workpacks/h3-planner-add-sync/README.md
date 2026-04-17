@@ -4,7 +4,7 @@
 > **대상 화면**: `RECIPE_DETAIL` (anchor screen), `PLANNER_WEEK` (anchor screen)
 > **선행 workpack**: `06-recipe-to-planner` (merged), `H2-planner-week-v2-redesign` (merged)
 > **선행 gate**: `H4-planner-week-v2-direction` 승인 완료 (2026-04-16)
-> **단계**: Stage 1 — Design + Contract-Evolution Draft
+> **단계**: Stage 4 — FE 구현 진행 중
 > **작성일**: 2026-04-17
 
 ---
@@ -84,7 +84,7 @@
 
 | 옵션 | 동작 | 장점 | 단점 |
 |------|------|------|------|
-| A. 토스트만 | 팝업 닫힘 + 토스트 "플래너에 추가됐어요" (현재) | 화면 유지로 레시피 탐색 흐름 방해 없음 | 사용자가 결과를 즉시 확인할 수 없음 |
+| A. 토스트만 | 팝업 닫힘 + 토스트 `"N월 D일 끼니에 추가됐어요"` | 화면 유지로 레시피 탐색 흐름 방해 없음 | 사용자가 결과를 즉시 확인할 수 없음 |
 | B. PLANNER_WEEK 이동 | 팝업 닫힘 + PLANNER_WEEK로 push, target date day-card로 scroll anchor | 결과 즉시 확인 가능 | 탐색 흐름 끊김. back 시 상세로 복귀해야 함 |
 | C. 토스트 + 링크 | 토스트에 "플래너 보기" 버튼 포함 → 선택적 이동 | 양쪽 선택 가능 | 토스트 UI 복잡도 증가 |
 
@@ -160,7 +160,7 @@ D1 Option A 선택 시, 토스트 텍스트 포맷:
 Stage 1 문서 확정 (이 README)
   ↓ 사용자 승인 (D1/D2/D3)
 화면정의서 v1.3.1 §3 RECIPE_DETAIL PlannerAddPopup 갱신
-  → 성공 후 토스트 텍스트 포맷 (`요일 M월 D일 끼니에 추가됐어요`)
+  → 성공 후 토스트 텍스트 포맷 (`N월 D일 끼니에 추가됐어요`)
   → 바텀시트 날짜 확인 텍스트 포맷 (`요일 M월 D일`) 명시
   ↓ contract-evolution PR (화면정의서 v1.3.1 + CURRENT_SOURCE_OF_TRUTH.md)
   ↓
@@ -182,13 +182,13 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 
 ## Design Authority
 
-- UI risk: `anchor-extension` (RECIPE_DETAIL은 anchor screen)
-- **왜 high-risk인가**:
-  - RECIPE_DETAIL은 가장 트래픽이 많은 핵심 탐색 화면이다.
-  - `[플래너에 추가]` + `[요리하기]` primary CTA 위계는 slice05~06 authority에서 잠긴 계약이다. 바텀시트 UX 변경이 CTA 위계나 화면 scroll position을 건드리면 authority 재검토가 필요하다.
-  - planner-add 성공 후 PLANNER_WEEK 이동(Option B) 선택 시, PLANNER_WEEK도 anchor screen이므로 두 anchor screen이 동시에 영향을 받는다 — 이중 anchor 위험.
-- 이번 Stage 1에서 D1을 Option A로 확정하면 PLANNER_WEEK authority 재검토 불필요.
-- D1을 Option B/C로 선택하면 PLANNER_WEEK authority precheck가 추가로 필요하다.
+- UI risk: `anchor-extension`
+- Anchor screen dependency: `RECIPE_DETAIL`, `PLANNER_WEEK`
+- Visual artifact: `ui/designs/evidence/h3-planner-add-sync/*`
+- Authority status: `required`
+- Notes:
+  - `RECIPE_DETAIL`의 `[플래너에 추가]`는 anchor CTA row에 걸린 보조 액션이라 성공 피드백/바텀시트 변화가 primary CTA 위계를 깨지 않아야 한다.
+  - D1을 Option A로 확정했으므로 `PLANNER_WEEK` 이동 자체는 없지만, day-card baseline과의 날짜 표현 sync는 authority evidence로 계속 확인한다.
 
 ### Stage 4 Evidence Plan
 
@@ -200,6 +200,17 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 | 바텀시트 narrow (320px) | `ui/designs/evidence/h3-planner-add-sync/planner-add-sheet-narrow.png` | 잘림/가림 없음 확인 |
 | 성공 토스트 (390px) | `ui/designs/evidence/h3-planner-add-sync/planner-add-toast-mobile.png` | 날짜/끼니 포함 텍스트 |
 | RECIPE_DETAIL CTA 위계 유지 | `ui/designs/evidence/h3-planner-add-sync/recipe-detail-cta-hierarchy.png` | primary CTA 위계 확인 |
+
+---
+
+## Design Status
+
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [x] 리뷰 대기 (pending-review) — Stage 4 구현 완료, Stage 5 디자인/authority review 대기
+- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
+
+> `h3-planner-add-sync`는 FE 구현과 evidence가 준비된 anchor-extension follow-up이므로 현재 상태는 `pending-review`다.
 
 ---
 
@@ -220,7 +231,7 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 - `ui/designs/PLANNER_WEEK.md` — H2 day-card baseline
 - `ui/designs/authority/PLANNER_WEEK-authority.md` — H2 authority (day-card 기준)
 - `ui/designs/authority/RECIPE_DETAIL-authority.md` — RECIPE_DETAIL CTA 위계 기준
-- `docs/화면정의서-v1.3.0.md` §3 RECIPE_DETAIL, §5 PLANNER_WEEK
+- `docs/화면정의서-v1.3.1.md` §3 RECIPE_DETAIL PlannerAddPopup, §5 PLANNER_WEEK
 - `docs/workpacks/H4-planner-week-v2-direction/README.md` — 방향 결정 gate
 
 ---
@@ -236,3 +247,21 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 - [x] 사용자 승인 (D1: A 토스트만, D2: `요일 M월 D일`, D3: `N월 D일 끼니에 추가됐어요`) — 2026-04-17
 - [x] contract-evolution PR (화면정의서 v1.3.1) — PR #136 merged 2026-04-17
 - [x] feature/fe-h3-planner-add-sync 구현 시작 허가 — PR #136 merge 완료, PR #137 구현 진행 중
+
+## Delivery Checklist
+
+> 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
+> `automation-spec.json`이 있는 슬라이스이므로 각 항목의 `omo:id / stage / scope / review` metadata를 유지한다.
+
+- [x] 백엔드 계약 고정 (`POST /meals` 계약 불변, planner-add는 기존 API 재사용) <!-- omo:id=h3-delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 (기존 `createMeal`, `fetchPlanner` adapter 재사용) <!-- omo:id=h3-delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 (planner-add sheet / 성공 토스트 포맷 타입 경계 유지) <!-- omo:id=h3-delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 (`POST /meals` 계약 불변, 로그인 게이트 return-to-action 유지) <!-- omo:id=h3-delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 (slice06 baseline + H3 추가 evidence 기준으로 수동 검증 경로 유지) <!-- omo:id=h3-delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 (기존 planner column / meal baseline 재사용) <!-- omo:id=h3-delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] UI 연결 (planner-add sheet 날짜 확인 라벨 + 성공 토스트 포맷 반영) <!-- omo:id=h3-delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 (unit 포맷 검증 + slice06 smoke expectation 갱신) <!-- omo:id=h3-delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 (sheet open/submit/loading, success toast, login-gate fallback 유지) <!-- omo:id=h3-delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 (320px/390px sheet, CTA hierarchy, return-to-action) <!-- omo:id=h3-delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] anchor-extension authority evidence 계획 고정 (E1~E6 경로 잠금) <!-- omo:id=h3-delivery-authority-plan;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 4 authority report / screenshot 경로 동기화 (`ui/designs/evidence/h3-planner-add-sync/`) <!-- omo:id=h3-delivery-authority-evidence-plan;stage=4;scope=frontend;review=5,6 -->
