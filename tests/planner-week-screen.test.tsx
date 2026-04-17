@@ -269,16 +269,17 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
-    const breakfastSlot = within(firstDayCard).getByText("김치찌개").closest("section");
-    const dinnerSlot = within(firstDayCard).getByText("저녁").closest("section");
+    // slot rows are divs with min-h-[44px]; find the breakfast row via meal title
+    const breakfastRow = within(firstDayCard).getByText("김치찌개").closest("div");
+    // find the dinner row via its 끼니명 label
+    const dinnerRow = within(firstDayCard).getByText("저녁").closest("div");
 
-    expect(breakfastSlot).not.toBeNull();
-    expect(dinnerSlot).not.toBeNull();
-    expect(breakfastSlot?.className).toContain("min-h-[84px]");
-    expect(breakfastSlot?.className).toContain("justify-between");
-    expect(within(breakfastSlot as HTMLElement).getByText("2인분")).toBeTruthy();
-    expect(within(breakfastSlot as HTMLElement).getByText("등록")).toBeTruthy();
-    expect(within(dinnerSlot as HTMLElement).getByText("비어 있음").tagName).toBe("SPAN");
+    expect(breakfastRow).not.toBeNull();
+    expect(dinnerRow).not.toBeNull();
+    expect(breakfastRow?.className).toContain("min-h-[44px]");
+    expect(within(breakfastRow as HTMLElement).getByText("2인분")).toBeTruthy();
+    expect(within(breakfastRow as HTMLElement).getByText("등록")).toBeTruthy();
+    expect(within(dinnerRow as HTMLElement).getByText(/비어 있음/).tagName).toBe("SPAN");
   });
 
   it("uses the server-authenticated flag when browser session is not hydrated yet", async () => {
@@ -495,7 +496,7 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
-    expect(screen.getAllByText("비어 있음").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/비어 있음/).length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByPlaceholderText("새 끼니 컬럼 이름")).toBeNull();
   });
 });
