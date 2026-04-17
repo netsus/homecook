@@ -232,7 +232,7 @@ feature/fe-h3-planner-add-sync 구현 시작 허가
 - `ui/designs/PLANNER_WEEK.md` — H2 day-card baseline
 - `ui/designs/authority/PLANNER_WEEK-authority.md` — H2 authority (day-card 기준)
 - `ui/designs/authority/RECIPE_DETAIL-authority.md` — RECIPE_DETAIL CTA 위계 기준
-- `docs/화면정의서-v1.3.1.md` §3 RECIPE_DETAIL PlannerAddPopup, §5 PLANNER_WEEK
+- `docs/화면정의서-v1.4.0.md` §3 RECIPE_DETAIL PlannerAddPopup, §5 PLANNER_WEEK
 - `docs/workpacks/H4-planner-week-v2-direction/README.md` — 방향 결정 gate
 
 ---
