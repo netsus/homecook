@@ -52,7 +52,7 @@
 | V1 | 사용자가 앱을 처음 열었을 때 "레시피 탐색 앱임"을 즉시 알 수 있어야 함 | ✅ `HOME-after-mobile.png` |
 | V2 | 검색바 + 재료 필터가 first viewport 안에 보이고, "모든 레시피 [정렬▾]" 헤더도 보임 | ✅ `HOME-after-mobile.png` |
 | V3 | 빈 것처럼 보이는 과도한 여백이나 설명 텍스트 없음 | ✅ `HOME-after-mobile.png` |
-| V4 | HOME이 "내부 데모" 또는 "설명 패널" 처럼 보이지 않음 | ⬜ authority review |
+| V4 | HOME이 "내부 데모" 또는 "설명 패널" 처럼 보이지 않음 | ✅ `ui/designs/authority/HOME-authority.md` |
 
 ### CTA 위계 유지
 

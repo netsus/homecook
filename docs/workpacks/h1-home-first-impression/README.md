@@ -327,6 +327,15 @@ feature/fe-h1-home-first-impression 구현 시작 허가
   - 정렬 컨트롤 — 위치 변경 없음, "모든 레시피" 섹션 헤더 유지
   - 재료 필터 — 위치 변경 없음, 검색바 아래 단독 행 유지
 
+## Design Status
+
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 리뷰 대기 (pending-review) — Stage 4 구현 완료, Stage 5 디자인/authority review 대기
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과
+- [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
+
+> `h1-home-first-impression`은 2026-04-17 Stage 5 authority review에서 `pass`를 받아 현재 상태를 `confirmed`로 올린다.
+
 ---
 
 ## Design Authority
@@ -370,16 +379,16 @@ feature/fe-h1-home-first-impression 구현 시작 허가
 - [x] contract-evolution PR (화면정의서 v1.4.0) — ✅ PR #139 merged 2026-04-17
 - [x] feature/fe-h1-home-first-impression 구현 시작 허가 (PR #139 merge 후)
 
-## Stage 4 Delivery Checklist
+## Delivery Checklist
 
-- [x] ThemeSection → ThemeCarouselStrip 교체 (compact horizontal carousel, 200px 카드, 88px 썸네일)
-- [x] 재료 필터 standalone row 확인 (mobile 기존 동작 유지, desktop도 단독 행)
-- [x] 정렬은 "모든 레시피" 섹션 헤더에 유지 (위치 변경 없음)
-- [x] `scrollbar-hide` + `overscroll-x-contain` + `scroll-snap-type: x mandatory` 적용
-- [x] 우측 gradient fade overlay (`pointer-events-none`) 구현
-- [x] E1~E7 evidence 캡처 완료
-- [x] vitest home-screen 14/14 pass
-- [x] TypeScript 타입 오류 0개
-- [x] ESLint 0 errors
-- [x] qa-visual (HOME baselines 갱신), qa-a11y 18/18 pass
-- [ ] authority review (PR 본문 포인트 참조)
+- [x] ThemeSection → ThemeCarouselStrip 교체 (compact horizontal carousel, 200px 카드, 88px 썸네일) <!-- omo:id=h1-delivery-theme-carousel;stage=4;scope=frontend;review=5,6 -->
+- [x] 재료 필터 standalone row 확인 (mobile 기존 동작 유지, desktop도 단독 행) <!-- omo:id=h1-delivery-filter-row;stage=4;scope=frontend;review=5,6 -->
+- [x] 정렬은 "모든 레시피" 섹션 헤더에 유지 (위치 변경 없음) <!-- omo:id=h1-delivery-sort-placement;stage=4;scope=frontend;review=5,6 -->
+- [x] `scrollbar-hide` + `overscroll-x-contain` + `scroll-snap-type: x mandatory` 적용 <!-- omo:id=h1-delivery-carousel-scroll;stage=4;scope=frontend;review=5,6 -->
+- [x] 우측 gradient fade overlay (`pointer-events-none`) 구현 <!-- omo:id=h1-delivery-carousel-affordance;stage=4;scope=frontend;review=5,6 -->
+- [x] E1~E7 evidence 캡처 완료 <!-- omo:id=h1-delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] vitest home-screen 14/14 pass <!-- omo:id=h1-delivery-vitest;stage=4;scope=frontend;review=6 -->
+- [x] TypeScript 타입 오류 0개 <!-- omo:id=h1-delivery-typecheck;stage=4;scope=frontend;review=6 -->
+- [x] ESLint 0 errors <!-- omo:id=h1-delivery-lint;stage=4;scope=frontend;review=6 -->
+- [x] qa-visual (HOME baselines 갱신), qa-a11y 18/18 pass <!-- omo:id=h1-delivery-qa;stage=4;scope=frontend;review=5,6 -->
+- [x] authority review (`ui/designs/authority/HOME-authority.md`) <!-- omo:id=h1-delivery-authority-review;stage=4;scope=frontend;review=5,6 -->
