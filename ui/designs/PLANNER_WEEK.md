@@ -1,13 +1,14 @@
 # PLANNER_WEEK — 식단 플래너(위클리)
 
-> 기준 문서: 화면정의서 v1.2.3 §5 / 요구사항기준선 v1.6.3 §1-4 / API v1.2.2 §3 / `05-planner-week-core` accepted contract
-> 갱신일: 2026-04-13
+> 기준 문서: 화면정의서 v1.3.0 §5 / 요구사항기준선 v1.6.3 §1-4 / API v1.2.2 §3
+> 갱신일: 2026-04-17
+> **H2 Stage 4 적용**: 2×2 grid → 세로 slot row 전환 완료 (branch: `feature/fe-planner-week-v2`)
 
 ---
 
 ## 레이아웃 와이어프레임
 
-### 기본 화면
+### 기본 화면 (390px)
 
 ```text
 ┌─────────────────────────────────────┐
@@ -15,18 +16,20 @@
 ├─────────────────────────────────────┤
 │ [장보기] [요리하기] [남은요리]      │  ← compact secondary toolbar
 ├─────────────────────────────────────┤
-│ 4월 12일 ~ 4월 18일   [이번주로 가기]│
-│ 일 12  월 13  화 14  수 15  목 16   │
-│ 금 17  토 18   ← 좌우 스와이프로 주 이동 │
+│ 4월 14일 ~ 4월 20일  [이번주로 가기]│
+│ 화 14  수 15  목 16  금 17  토 18   │  ← 요일 스트립 (스와이프로 주 이동)
 ├─────────────────────────────────────┤
-│ [일] 4월 12일                       │
-│ 아침   점심   간식   저녁           │
-│ 김치찌개  샐러드  비어 있음  비어 있음 │
-│ 2인분·등록  1인분·장보기            │
+│ [금] 4월 17일                  ...  │  ← day card header
+│ 아침  김치찌개           2인분 등록  │  ← slot row
+│ 점심  샐러드             1인분 장보기│
+│ 간식  과일볼             1인분 요리  │
+│ 저녁  된장찌개           2인분 등록  │
 ├─────────────────────────────────────┤
-│ [월] 4월 13일                       │
-│ 아침   점심   간식   저녁           │
-│ ... 같은 day card 패턴 반복 ...     │
+│ [토] 4월 18일                  ...  │  ← 2번째 day card (첫 화면에서 상단 노출)
+│ 아침  순두부찌개         2인분 등록  │
+│ 점심  ─ 비어 있음 ─               │
+│ 간식  ─ 비어 있음 ─               │
+│ 저녁  ─ 비어 있음 ─               │
 └─────────────────────────────────────┘
 ```
 
@@ -34,16 +37,15 @@
 
 ```text
 ┌─────────────────────────────────────┐
-│ 이번 주 4월 12일 ~ 4월 18일         │
-│ 식사 0건                     [이번주]│
+│ 이번 주 4월 14일 ~ 4월 20일  식사 0건│
 ├─────────────────────────────────────┤
 │ 아직 등록된 식사가 없어요            │
-│ 오늘부터 채울 수 있게 planner add를   │
-│ 사용할 수 있어요                     │
 ├─────────────────────────────────────┤
-│ [일] 4월 12일                       │
-│ 아침   점심   간식   저녁           │
-│ 비어 있음 비어 있음 비어 있음 비어 있음 │
+│ [금] 4월 17일                       │
+│ 아침  ─ 비어 있음 ─               │
+│ 점심  ─ 비어 있음 ─               │
+│ 간식  ─ 비어 있음 ─               │
+│ 저녁  ─ 비어 있음 ─               │
 └─────────────────────────────────────┘
 ```
 
@@ -81,7 +83,6 @@
 - `[장보기] [요리하기] [남은요리]` 3개 버튼을 항상 노출한다.
 - CTA는 독립 hero button 3개가 아니라 compact secondary toolbar처럼 묶여 보이게 정리한다.
 - HOME 대비 상단 타이포가 갑자기 커 보이지 않도록, 화면 제목과 range title은 restrained scale을 유지한다.
-- `05-planner-week-core` 이후 실제 이동은 후속 슬라이스에서 닫히며, slice06은 이 CTA 구조를 바꾸지 않는다.
 
 ### 2. Week Context Bar + Weekday Strip
 
@@ -91,48 +92,81 @@
 ### 3. Day Card
 
 - 모바일 기본 단위는 날짜별 `day card`다.
-- 같은 날짜의 `아침 / 점심 / 간식 / 저녁` 4끼가 같은 카드 안에서 함께 읽힌다.
-- planner add 이후에도 이 day-card mental model은 유지된다.
+- 같은 날짜의 `아침 / 점심 / 간식 / 저녁` 4끼가 같은 카드 안에서 **세로 slot row**로 나열된다.
+- **가로 스크롤 없음** — 세로 스크롤만 사용한다.
+- 390px 첫 화면에서 스크롤 없이 2일 이상 overview가 자연스럽게 보인다.
+- 320px narrow에서도 레이아웃 붕괴 없이 slot row가 안정적으로 표시된다.
 
-### 4. Meal Slot
+### 4. Meal Slot Row
 
-- 슬롯에는 끼니명, 식사명 또는 빈 상태, 인분/상태 메타를 압축해 표시한다.
-- 인분은 작은 serving chip, 상태는 짧은 status chip으로 나눠 한 줄 메타에 유지한다.
-- 빈 슬롯은 긴 문장 대신 작은 `비어 있음` pill로 처리해 반복 피로를 줄인다.
-- 날짜/요일 타이포와 슬롯 타이포는 HOME보다 과도하게 무겁거나 크게 튀지 않도록 한 단계 절제한다.
-- `status`는 `registered / shopping_done / cook_done` 세 가지다.
+slot row 구조: `[끼니명 고정폭] [식사명 flex-1 truncate] [인분 chip] [상태 chip]`
+
+- **끼니명**: `아침 / 점심 / 간식 / 저녁` — 생략 금지, muted color
+- **식사명**: flex-1, 1행 truncate, 전체 row가 tap target
+- **빈 슬롯**: `─ 비어 있음 ─` — muted, separator 스타일
+- **인분 chip**: `N인분`, text-xs, secondary variant
+- **상태 chip**: 상태별 색상
+- **터치 타겟**: 각 slot row 최소 height 44px
+
+| status | label | 방향 |
+|--------|-------|------|
+| `registered` | 등록 | neutral / muted |
+| `shopping_done` | 장보기 | primary (브랜드 포인트) |
+| `cook_done` | 요리 | success / green |
+
 - `is_leftover=true` meal은 별도 시각 강조 가능하지만 구조 자체를 바꾸지는 않는다.
+- 5번째 끼니(예: 야식) 추가 시 slot row 1행을 추가 — 가로 밀도 영향 없음.
 
 ### 5. Slice06 연결 규칙
 
 - slice06은 `RECIPE_DETAIL`에서 생성한 새 Meal이 목표 날짜/끼니 슬롯에 정확히 보이게 하는 범위만 추가한다.
 - planner add 때문에 page-level overflow, 새로운 full-page add flow, 컬럼 CRUD 재도입이 생기면 안 된다.
-- Stage 4 authority evidence에는 `5-column mobile density` 보강 캡처를 반드시 추가한다.
 
 ---
 
 ## 상호작용 규칙
 
 - 세로 스크롤은 day card 목록 탐색용이다.
+- 가로 스크롤 없음 — page-level / planner-level 모두 제거.
 - 주 이동은 요일 스트립 스와이프를 우선한다.
-- slot 탭 → `MEAL_SCREEN` 진입은 `07-meal-manage`가 닫는다.
-- slice06은 planner add 성공 후 `PLANNER_WEEK`에서 결과를 읽는 범위만 담당하며, planner 구조 변경은 하지 않는다.
+- slot row 탭 (식사 있음) → `MEAL_SCREEN` 진입 (`07-meal-manage`가 닫는다).
+- slot row 탭 (빈 슬롯) → 현재 interaction 유지, 후속 slice에서 결정.
 
 ---
 
 ## 접근성 / 토큰 메모
 
-- 페이지 배경은 `--background`, 카드와 slot은 `--surface`를 사용한다.
-- 기본 수평 여백은 모바일 `--space-4`.
-- 터치 타겟 최소 크기 `44x44`.
+| 항목 | 값 |
+|------|----|
+| 페이지 배경 | `--background` |
+| 카드 배경 | `--surface` |
+| 카드 외부 수평 여백 | `--space-4` (16px) |
+| slot row 최소 height | 44px |
+| 끼니명 색상 | `--muted-foreground` |
+| empty pill 색상 | `--muted-foreground` |
+
+- 터치 타겟 최소 크기 `44×44px`.
 - 작은 모바일 sentinel에서도 CTA 잘림, range bar 밀림, slot 정보 붕괴가 없어야 한다.
 
 ---
 
-## Stage 4 evidence plan for slice06
+## H2 Stage 4 Authority Evidence
+
+경로: `ui/designs/evidence/H2-planner-week-v2/`
+
+| artifact | 파일 | 상태 |
+|----------|------|------|
+| before (현행 2×2 grid) | `PLANNER_WEEK-before-mobile.png` | ✅ |
+| mobile default 390px | `PLANNER_WEEK-v2-mobile.png` | ✅ |
+| 2일 이상 overview | `PLANNER_WEEK-v2-2day-overview.png` | ✅ |
+| 세로 스크롤 중간 | `PLANNER_WEEK-v2-mobile-scrolled.png` | ✅ |
+| narrow 320px | `PLANNER_WEEK-v2-mobile-narrow.png` | ✅ |
+| 4끼 filled day card | `PLANNER_WEEK-v2-day-card-filled.png` | ✅ |
+
+---
+
+## Slice06 Evidence Plan
 
 - `ui/designs/evidence/06-recipe-to-planner/PLANNER_WEEK-5-column-mobile.png`
 - `ui/designs/evidence/06-recipe-to-planner/PLANNER_WEEK-5-column-mobile-narrow.png`
 - `ui/designs/evidence/06-recipe-to-planner/PLANNER_WEEK-after-add-mobile.png`
-
-이 문서는 slice06이 기대는 planner baseline을 요약한다. 더 공격적인 모바일 리디자인은 `ui/designs/PLANNER_WEEK-v2.md`와 authority preflight 범위로 유지한다.

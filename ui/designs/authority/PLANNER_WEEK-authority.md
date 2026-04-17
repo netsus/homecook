@@ -1,51 +1,49 @@
 # PLANNER_WEEK Authority Review
 
-> 대상 slice: `05-planner-week-core` baseline / `06-recipe-to-planner` Stage 4 authority_precheck
+> 대상 slice: `H2-planner-week-v2-redesign` Stage 5 authority review
 > evidence:
-> - `ui/designs/evidence/authority/PLANNER_WEEK-mobile.png`
-> - `ui/designs/evidence/authority/PLANNER_WEEK-mobile-narrow.png`
-> - `ui/designs/evidence/authority/PLANNER_WEEK-mobile-scrolled.png`
-> - `ui/designs/evidence/06-recipe-to-planner/PLANNER_WEEK-5-column-mobile.png` (390×844, 4끼니 기준 현재 밀도, captured 2026-04-15)
-> - design reference: `ui/designs/PLANNER_WEEK.md`
-> - critique reference: `ui/designs/critiques/PLANNER_WEEK-critique.md`
+> - `ui/designs/evidence/H2-planner-week-v2/PLANNER_WEEK-before-mobile.png`
+> - `ui/designs/evidence/H2-planner-week-v2/PLANNER_WEEK-v2-mobile.png`
+> - `ui/designs/evidence/H2-planner-week-v2/PLANNER_WEEK-v2-mobile-narrow.png`
+> - `ui/designs/evidence/H2-planner-week-v2/PLANNER_WEEK-v2-mobile-scrolled.png`
+> - `ui/designs/evidence/H2-planner-week-v2/PLANNER_WEEK-v2-2day-overview.png`
+> - `ui/designs/evidence/H2-planner-week-v2/PLANNER_WEEK-v2-day-card-filled.png`
+> - design reference: `ui/designs/PLANNER_WEEK-v2.md`
 > - implementation reference: `components/planner/planner-week-screen.tsx`
-> 검토일: 2026-04-16
-> 검토자: product-design-authority (authority_precheck by Codex)
+> 검토일: 2026-04-17
+> 검토자: product-design-authority (Stage 5 review by Codex)
 
 ## Verdict
 
 - verdict: `pass`
-- 한 줄 요약: `PLANNER_WEEK`는 shared brand header + compact secondary toolbar + 2×2 meal slot grid 기준을 현재 구현과 문서 모두에서 일치시켰다. page-level horizontal overflow 없이 유지되고, 좁은 폭에서도 slot density가 더 안정적으로 읽힌다.
+- 한 줄 요약: `PLANNER_WEEK`는 승인된 H4/H2 방향대로 day-card 본문으로 전환됐고, 같은 날짜 4끼가 하나의 card 경계 안에서 읽히며 390px 첫 화면에서도 2일 이상 overview가 보인다.
 
 ## Scorecard
 
 | 항목 | 점수 | 메모 |
 |------|------|------|
-| Mobile UX | 4/5 | localized horizontal scroll만 남았고 page width는 안정적이다. 헤더/slot 밀도도 이전보다 더 압축돼 작은 폭에서 읽기 쉬워졌다. |
-| Interaction Clarity | 4/5 | 날짜 x 끼니 표 구조가 다시 분명해졌다. overflow 문제를 해결하면서 interaction model을 바꾸지 않은 점이 이번 baseline의 핵심 개선이다. |
-| Visual Hierarchy | 4/5 | shared brand header 이후 상단 위계가 단순해졌고, slot 내부의 serving/status chip 분리로 정보 읽기 순서가 더 명확해졌다. |
-| Color / Material Fit | 3/5 | 토큰과 상태 뱃지 사용은 안정적이지만 planner 전용 톤은 아직 보수적이다. |
-| Familiar App Pattern Fit | 4/5 | planner를 card stack으로 바꾸지 않고 grid mental model을 유지해 기대와의 어긋남을 줄였다. |
+| Mobile UX | 4/5 | 390px에서 2일 이상 overview가 보이고, 320px narrow에서도 CTA 가림·텍스트 잘림 없이 안정적이다. |
+| Interaction Clarity | 4/5 | 끼니명 → 식사명 → chip 순서가 일관되고, 같은 날짜의 4끼가 하나의 card 안에서 읽힌다. |
+| Visual Hierarchy | 4/5 | shared header 이후 week context bar, weekday strip, day card 본문 위계가 분명하다. |
+| Color / Material Fit | 3/5 | 브랜드 토큰과 상태 chip은 안정적이지만 planner만의 강한 개성은 아직 보수적이다. |
+| Familiar App Pattern Fit | 4/5 | 날짜 카드 중심 구조가 모바일 planner 탐색에 더 자연스럽고, 가로 스크롤 제거로 학습 비용이 줄었다. |
 
 ## Evidence Notes
 
-- 이번 evidence는 planner 내부 scroller 자체를 캡처해 scroll containment를 명확히 확인했다.
-- 캡처 시 browser metrics:
-  - mobile `390px`: `pageScrollWidth=390`, `bodyScrollWidth=390`, `scrollerClientWidth=356`, `scrollerScrollWidth=876`
-  - narrow `320px`: `pageScrollWidth=320`, `bodyScrollWidth=320`, `scrollerClientWidth=286`, `scrollerScrollWidth=876`
-  - scrolled state: `scrollerScrollLeft=520`
-- 핵심 확인점은 다음 두 가지다.
-  - 페이지 전체 폭은 viewport를 넘지 않는다.
-  - 필요한 horizontal movement는 planner 표 내부에서만 일어난다.
+- before 대비 가장 큰 차이는 `2×2 grid`에서 `세로 slot row`로의 전환이다.
+- `PLANNER_WEEK-v2-mobile.png`와 `PLANNER_WEEK-v2-2day-overview.png`에서 첫 화면 기준 day card 2개 이상이 동시에 읽힌다.
+- `PLANNER_WEEK-v2-mobile-narrow.png`에서 320px sentinel 폭에서도 끼니명, 식사명, 인분/상태 chip이 한 행 안에서 유지된다.
+- `PLANNER_WEEK-v2-mobile-scrolled.png`에서 secondary toolbar와 week context bar가 day card 스크롤과 충돌하지 않는다.
+- `PLANNER_WEEK-v2-day-card-filled.png`에서 같은 날짜의 4끼가 card 경계 안에 함께 배치된다.
 
 ## Resolved Since Previous Review
 
 | # | 항목 | 이전 문제 | 현재 상태 |
 |---|------|----------|----------|
-| 1 | 과교정된 interaction model | overflow를 고친다는 이유로 planner를 `column rail + day card` 구조로 바꿨다. | 해소. `ui/designs/PLANNER_WEEK.md`가 의도한 날짜 x 끼니 table/grid model로 복원했다. |
-| 2 | page-level overflow 구분 실패 | localized scroll과 page-level overflow를 같은 문제처럼 취급했다. | 해소. 현재 evidence에서 document width는 viewport와 동일하고, overflow는 planner 내부 scroller에만 남는다. |
-| 3 | guest small-viewport CTA | 작은 iOS viewport에서 primary login CTA가 하단 탭과 너무 가까웠다. | 해소. unauthorized shell spacing을 조정해 CTA가 하단 탭 위에서 읽힌다. |
-| 4 | 헤더 액션/타이포 과밀 | 상단 CTA와 range title이 HOME 대비 무겁게 보여 첫 인상이 답답했다. | 해소. compact secondary toolbar, restrained title scale, tighter slot spacing으로 위계를 정리했다. |
+| 1 | interaction model 승인 경로 | day-card 전환은 승인 없이 진행하면 안 되는 anchor extension이었다. | 해소. H4 gate 승인과 contract-evolution 후 H2 구현으로 전환됐다. |
+| 2 | 하루 단위 인지 약함 | 같은 날짜의 끼니가 grid에 흩어져 읽히는 부담이 있었다. | 해소. day card 경계 안에서 4끼가 한 덩어리로 읽힌다. |
+| 3 | 2일 이상 overview 부족 | 모바일 첫 화면에서 day overview가 충분히 보이지 않았다. | 해소. 390px evidence 기준 2일 이상이 자연스럽게 노출된다. |
+| 4 | horizontal scroll 의존 | planner 내부 horizontal movement 이해 비용이 있었다. | 해소. 현재 H2 baseline은 page-level / planner-level horizontal scroll이 없다. |
 
 ## Major Issues
 
@@ -55,23 +53,23 @@
 
 | # | 위치 | 문제 | 제안 |
 |---|------|------|------|
-| 1 | planner tone | 구조는 안정적이지만 planner 전용 시각 개성은 아직 약하다. | 기능 변경과 분리된 visual polish 라운드에서 다룬다. |
-| 2 | 빈 셀 반복 | 긴 범위에서는 `비어 있음` 슬롯이 많이 반복돼 시선 피로가 생길 수 있다. | 이후 slice에서 range window 또는 empty density 완화 패턴을 검토한다. |
+| 1 | planner tone | 구조는 명확해졌지만 planner 고유의 시각적 캐릭터는 여전히 절제된 편이다. | 기능 변경과 분리된 visual polish 라운드에서 다룬다. |
+| 2 | empty density | 긴 범위에서는 `비어 있음` row 반복이 누적되면 시선 피로가 생길 수 있다. | 후속 slice에서 range window 또는 empty density 완화 패턴을 검토한다. |
 
 ## Decision
 
-- Stage 4 진행 가능 여부: `가능`
+- Stage 4 진행 가능 여부: `완료`
 - Stage 5 confirmed 가능 여부: `가능`
 - 다음 행동:
-  - slice06 구현이 완료됐고 planner에 meal이 올바르게 표시된다.
-  - `5-column mobile density` evidence를 `PLANNER_WEEK-5-column-mobile.png`로 충족했다 (현재 4컬럼 기준).
-  - interaction model 변경 제안이 나오면 authority 단독 판단이 아니라 별도 승인 대상으로 올린다.
+  - H2 PR closeout에서 이 authority report와 evidence E1~E6를 함께 잠근다.
+  - H3에서 planner add 성공 후 특정 날짜 card focus/scroll anchoring 여부를 이 baseline에 맞춰 결정한다.
+  - 5-column 대응이 실제 제품 범위로 들어오면 row 추가 방식 기준으로 별도 authority 재확인한다.
 
-## authority_precheck Conclusion (slice06 Stage 4)
+## Stage 5 Conclusion (H2)
 
 - **신규 blocker**: 없음
 - **신규 major**: 없음
 - **신규 minor**: 없음
 - **잔존 major**: 없음
 - **최종 verdict**: `pass`
-- `PLANNER_WEEK`는 slice06 이후에도 shared header, compact toolbar, restrained title scale, 2×2 slot density를 안정적으로 유지한다.
+- `PLANNER_WEEK` H2 day-card baseline은 현재 evidence와 구현, 설계 문서가 서로 일치한다.

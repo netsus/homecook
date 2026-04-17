@@ -23,7 +23,7 @@
 ## Branches
 
 - 백엔드: 없음 (API/DB 변경 없음)
-- 프론트엔드: `feature/fe-H2-planner-week-v2`
+- 프론트엔드: `feature/fe-planner-week-v2`
 
 ---
 
@@ -84,7 +84,7 @@ contract-evolution PR 오픈
   → docs/sync/CURRENT_SOURCE_OF_TRUTH.md 갱신
   → PR merge
   ↓
-feature/fe-H2-planner-week-v2 구현 시작 허가
+feature/fe-planner-week-v2 구현 시작 허가
 ```
 
 ---
