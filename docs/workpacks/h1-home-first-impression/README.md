@@ -367,5 +367,5 @@ feature/fe-h1-home-first-impression 구현 시작 허가
 - [x] authority 위험도 분류 + evidence plan 잠금 (E1~E7)
 - [x] Slice ID / Branch slug policy 명시
 - [x] 사용자 승인 (D1/D2/D3/D4 결정 확인) — ✅ 2026-04-17 (D2/D4 승인, D1/D3 수정 확정)
-- [ ] contract-evolution PR (화면정의서 v1.4.0) — 사용자 승인 후
-- [ ] feature/fe-h1-home-first-impression 구현 시작 허가 (contract-evolution PR merge 후)
+- [x] contract-evolution PR (화면정의서 v1.4.0) — PR #139 merge gate
+- [x] feature/fe-h1-home-first-impression 구현 시작 허가 (PR #139 merge 후)
