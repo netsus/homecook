@@ -2,14 +2,14 @@
 
 ## Official Versions
 - Requirements: `v1.6.3`
-- Screens: `v1.3.0`
+- Screens: `v1.3.1`
 - Flow: `v1.3.0`
 - DB: `v1.3.1`
 - API: `v1.2.2`
 
 ## Official Files
 - `docs/요구사항기준선-v1.6.3.md`
-- `docs/화면정의서-v1.3.0.md`
+- `docs/화면정의서-v1.3.1.md`
 - `docs/유저flow맵-v1.3.0.md`
 - `docs/db설계-v1.3.1.md`
 - `docs/api문서-v1.2.2.md`
@@ -30,4 +30,16 @@
 | DB (v1.3.1 유지) | 변경 없음 — `meal_plan_columns`, `meals` 구조 동일 |
 
 > 이 변경은 H4 gate 승인(2026-04-16)을 기반으로 한 H2 Stage 1 contract-evolution이다.
-> H2 FE 구현(`feature/fe-H2-planner-week-v2`)은 이 문서 갱신 이후에 시작할 수 있다.
+> H2 FE 구현(`feature/fe-planner-week-v2`)은 이 문서 갱신 이후에 시작할 수 있다.
+
+## v1.3.0 → v1.3.1 변경 이력 (2026-04-17)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 화면정의서 v1.3.1 | RECIPE_DETAIL §3: PlannerAddPopup UX 확정 — 성공 후 토스트만 표시(PLANNER_WEEK 이동 없음), 토스트 텍스트 `N월 D일 끼니에 추가됐어요`, 바텀시트 날짜 확인 텍스트 `요일 M월 D일` 포맷 |
+| 유저플로우 v1.3.0 | 변경 없음 |
+| API (v1.2.2 유지) | 변경 없음 — `POST /meals` 계약 동일 |
+| DB (v1.3.1 유지) | 변경 없음 |
+
+> 이 변경은 H3 planner-add-sync Stage 1 사용자 승인(2026-04-17)을 기반으로 한 contract-evolution이다.
+> H3 FE 구현(`feature/fe-h3-planner-add-sync`)은 이 문서 갱신 이후에 시작할 수 있다.

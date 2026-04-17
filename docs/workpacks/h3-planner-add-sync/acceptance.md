@@ -13,7 +13,7 @@
 | S5 | contract-evolution 경로가 README에 명시됨 | ✅ |
 | S6 | Stage 4 authority evidence 목록이 경로와 함께 잠겨 있음 | ✅ |
 | **S7** | **사용자 승인: D1/D2/D3 결정 확인** | **✅ 2026-04-17** |
-| S8 | contract-evolution PR (화면정의서 v1.3.1) merge 확인 | ⬜ S7 이후 |
+| S8 | contract-evolution PR (화면정의서 v1.3.1) merge 확인 | ⬜ PR #136 merge 후 |
 
 **S7이 닫혀야 contract-evolution PR을 오픈할 수 있다.**
 **contract-evolution PR이 merge되어야 FE 구현(Stage 4)을 시작할 수 있다.**
