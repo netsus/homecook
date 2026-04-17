@@ -177,7 +177,12 @@ describe("planner add flow", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "플래너에 추가" })).toBeNull();
     });
-    expect(screen.getByText("플래너에 추가했어요.")).toBeTruthy();
+    // Toast includes date and meal slot name (D3: "N월 D일 끼니에 추가됐어요")
+    const statusElements = screen.getAllByRole("status");
+    const toast = statusElements.find((el) =>
+      /아침에 추가됐어요/.test(el.textContent ?? ""),
+    );
+    expect(toast).toBeTruthy();
 
     // Verify createMeal was called with correct args
     expect(createMeal).toHaveBeenCalledWith(

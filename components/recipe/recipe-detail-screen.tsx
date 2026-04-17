@@ -362,8 +362,16 @@ export function RecipeDetailScreen({
 
         return { ...current, plan_count: current.plan_count + 1 };
       });
+      const addedDate = new Date(`${selectedPlanDate}T00:00:00.000Z`);
+      const dateLabel = new Intl.DateTimeFormat("ko-KR", {
+        month: "numeric",
+        day: "numeric",
+        timeZone: "UTC",
+      }).format(addedDate);
+      const columnName =
+        plannerColumns.find((c) => c.id === selectedPlanColumnId)?.name ?? "선택한 끼니";
       setFeedback({
-        message: "플래너에 추가했어요.",
+        message: `${dateLabel} ${columnName}에 추가됐어요.`,
         tone: "status",
       });
     } catch (error) {

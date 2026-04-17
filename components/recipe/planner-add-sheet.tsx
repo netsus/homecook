@@ -42,6 +42,12 @@ function formatWeekdayLabel(dateKey: string) {
   }).format(date);
 }
 
+/** 선택된 날짜 확인 텍스트: `요일 M월 D일` (예: `목 4월 17일`) */
+function formatSelectedDateLabel(dateKey: string) {
+  if (!dateKey) return "";
+  return `${formatWeekdayLabel(dateKey)} ${formatDateLabel(dateKey)}`;
+}
+
 export function PlannerAddSheet({
   isOpen,
   sheetState,
@@ -170,6 +176,16 @@ export function PlannerAddSheet({
                 })}
               </div>
             </div>
+
+            {/* Selected date confirmation label */}
+            {selectedDate ? (
+              <p
+                aria-live="polite"
+                className="mt-[-8px] text-xs font-medium text-[var(--olive)]"
+              >
+                {formatSelectedDateLabel(selectedDate)}
+              </p>
+            ) : null}
 
             {/* Column (meal slot) selector */}
             <div>
