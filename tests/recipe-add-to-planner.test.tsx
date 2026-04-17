@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -86,6 +86,7 @@ function buildMealCreateData(): MealCreateData {
 
 describe("planner add flow", () => {
   afterEach(() => {
+    vi.useRealTimers();
     cleanup();
   });
 
@@ -198,6 +199,40 @@ describe("planner add flow", () => {
       }),
     );
   });
+
+  it("auto-dismisses the planner add success toast after a short delay", async () => {
+    fetchPlanner.mockResolvedValue(buildPlannerData());
+    createMeal.mockResolvedValue(buildMealCreateData());
+
+    render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "플래너에 추가" }),
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "플래너에 추가" });
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "플래너에 추가" }),
+    );
+
+    const today = new Date();
+    const expectedToast = `${today.getMonth() + 1}월 ${today.getDate()}일 아침에 추가됐어요`;
+
+    await waitFor(() => {
+      expect(screen.getByText(expectedToast)).toBeTruthy();
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 4100));
+    });
+
+    expect(screen.queryByText(expectedToast)).toBeNull();
+  }, 10000);
 
   // accept-idempotency: submit button is disabled while submitting (no double-submit)
   it("disables the submit button and shows pending label while submitting", async () => {

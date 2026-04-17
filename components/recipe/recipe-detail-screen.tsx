@@ -41,6 +41,8 @@ type LikeRequestState = "idle" | "pending";
 type FeedbackTone = "error" | "status";
 type SaveModalState = "idle" | "loading" | "ready" | "error";
 
+const FEEDBACK_AUTO_DISMISS_MS = 4000;
+
 interface RecipeDetailScreenProps {
   recipeId: string;
   authError?: string | null;
@@ -183,6 +185,20 @@ export function RecipeDetailScreen({
       });
     }
   }, [authError]);
+
+  useEffect(() => {
+    if (!feedback) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setFeedback(null);
+    }, FEEDBACK_AUTO_DISMISS_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [feedback]);
 
   const scaledIngredients = useMemo(() => {
     if (!recipe) {
