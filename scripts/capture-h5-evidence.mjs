@@ -32,6 +32,39 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
+async function mockRecipeDetailRoute(page) {
+  await page.route("**/api/v1/recipes/mock-kimchi-jjigae", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          id: "mock-kimchi-jjigae",
+          title: "집밥 김치찌개",
+          description: "신김치와 돼지고기만 있으면 금방 끓일 수 있는 가장 기본적인 집밥 김치찌개예요.",
+          thumbnail_url: null,
+          base_servings: 2,
+          tags: ["한식", "찌개"],
+          source_type: "system",
+          source: null,
+          view_count: 1285,
+          like_count: 203,
+          save_count: 89,
+          plan_count: 52,
+          cook_count: 34,
+          ingredients: [],
+          steps: [],
+          user_status: { is_liked: false, is_saved: false, saved_book_ids: [] },
+        },
+        error: null,
+      },
+    });
+  });
+}
+
 async function mockPlannerRoutes(page) {
   await page.route("**/api/v1/planner**", async (route) => {
     const today = todayKey();
@@ -90,6 +123,33 @@ async function mockIngredientsRoute(page) {
   });
 }
 
+async function mockRecipesRoute(page) {
+  await page.route("**/api/v1/recipes**", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          items: [
+            {
+              id: "mock-kimchi-jjigae",
+              title: "집밥 김치찌개",
+              thumbnail_url: null,
+              tags: ["한식"],
+              like_count: 203,
+              save_count: 89,
+              user_status: { is_liked: false, is_saved: false },
+            },
+          ],
+          themes: [],
+          total: 1,
+          cursor: null,
+        },
+        error: null,
+      },
+    });
+  });
+}
+
 async function capture(page, name, { width, height }) {
   await page.setViewportSize({ width, height });
   await page.waitForTimeout(400);
@@ -109,6 +169,7 @@ async function openRecipePage(browser, { width = 390, height = 844 } = {}) {
   await page.addInitScript(({ key }) => {
     window.localStorage.setItem(key, "authenticated");
   }, { key: AUTH_KEY });
+  await mockRecipeDetailRoute(page);
   await mockPlannerRoutes(page);
   await mockMealsRoute(page);
   await mockRecipeBooksRoute(page);
@@ -122,6 +183,7 @@ async function openHomePage(browser, { width = 390, height = 844 } = {}) {
   await page.addInitScript(({ key }) => {
     window.localStorage.setItem(key, "authenticated");
   }, { key: AUTH_KEY });
+  await mockRecipesRoute(page);
   await mockIngredientsRoute(page);
   await page.setViewportSize({ width, height });
   await page.goto(`${BASE_URL}/`, { waitUntil: "networkidle" });
@@ -172,8 +234,8 @@ async function main() {
     console.warn("\n[E3] save-modal (390px)");
     {
       const page = await openRecipePage(browser);
-      await page.waitForSelector('button:has-text("저장")', { timeout: 10000 });
-      await page.click('button[aria-label*="저장"], button:has-text("저장")');
+      await page.waitForSelector('button[aria-label="저장"]', { timeout: 10000 });
+      await page.click('button[aria-label="저장"]');
       await page.waitForSelector('role=dialog[name="레시피 저장"]', { timeout: 8000 });
       await page.waitForTimeout(600);
       await capture(page, "E3-save-modal-mobile", { width: 390, height: 844 });
@@ -184,8 +246,8 @@ async function main() {
     console.warn("\n[E4] save-modal-book-selected (D1 olive)");
     {
       const page = await openRecipePage(browser);
-      await page.waitForSelector('button:has-text("저장")', { timeout: 10000 });
-      await page.click('button[aria-label*="저장"], button:has-text("저장")');
+      await page.waitForSelector('button[aria-label="저장"]', { timeout: 10000 });
+      await page.click('button[aria-label="저장"]');
       await page.waitForSelector('role=dialog[name="레시피 저장"]', { timeout: 8000 });
       await page.waitForTimeout(600);
       // Click first book
@@ -201,7 +263,7 @@ async function main() {
     {
       const page = await openHomePage(browser);
       // Click ingredient filter button
-      const filterButton = page.locator('button[aria-label*="재료"]').first();
+      const filterButton = page.locator('button:has-text("재료로 검색")').first();
       await filterButton.waitFor({ timeout: 8000 });
       await filterButton.click();
       await page.waitForSelector('role=dialog', { timeout: 8000 });
@@ -214,7 +276,7 @@ async function main() {
     console.warn("\n[E6] ingredient-filter-category-selected");
     {
       const page = await openHomePage(browser);
-      const filterButton = page.locator('button[aria-label*="재료"]').first();
+      const filterButton = page.locator('button:has-text("재료로 검색")').first();
       await filterButton.waitFor({ timeout: 8000 });
       await filterButton.click();
       await page.waitForSelector('role=dialog', { timeout: 8000 });
@@ -275,8 +337,8 @@ async function main() {
       // Save
       {
         const page = await openRecipePage(browser, { width: 430, height: 932 });
-        await page.waitForSelector('button:has-text("저장")', { timeout: 10000 });
-        await page.click('button[aria-label*="저장"], button:has-text("저장")');
+        await page.waitForSelector('button[aria-label="저장"]', { timeout: 10000 });
+        await page.click('button[aria-label="저장"]');
         await page.waitForSelector('role=dialog[name="레시피 저장"]', { timeout: 8000 });
         await page.waitForTimeout(600);
         await capture(page, "E9b-save-chrome", { width: 430, height: 932 });
@@ -285,7 +347,7 @@ async function main() {
       // IngredientFilter
       {
         const page = await openHomePage(browser, { width: 430, height: 932 });
-        const filterButton = page.locator('button[aria-label*="재료"]').first();
+        const filterButton = page.locator('button:has-text("재료로 검색")').first();
         await filterButton.waitFor({ timeout: 8000 });
         await filterButton.click();
         await page.waitForSelector('role=dialog', { timeout: 8000 });
