@@ -28,6 +28,10 @@
     "H2-planner-week-v2-redesign",
     "H4-planner-week-v2-direction"
   ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  },
   "policy_slug": "h3-planner-add-sync",
   "policy_note": "workpack 폴더명 = branch slug = lowercase. H2 대문자 slug 불일치 재발 방지."
 }
