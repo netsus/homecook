@@ -21,7 +21,7 @@
 
 - 공식 최신본:
   - 요구사항 `docs/요구사항기준선-v1.6.3.md`
-  - 화면정의서 `docs/화면정의서-v1.4.0.md`
+  - 화면정의서 `docs/화면정의서-v1.5.0.md`
   - 유저 Flow맵 `docs/유저flow맵-v1.3.0.md`
   - DB 설계 `docs/db설계-v1.3.1.md`
   - API 문서 `docs/api문서-v1.2.2.md`

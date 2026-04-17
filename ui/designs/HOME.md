@@ -63,11 +63,14 @@ first viewport 390px:
 - **토큰**: `--olive`, border-radius: 9999px, `--space-2` 내부 패딩
 
 #### `INGREDIENT_FILTER_MODAL`
-- **mobile**: bottom sheet 패턴. handle + compact title row + 검색 입력 + 카테고리 chip rail + 체크리스트 + sticky footer 액션
+- **mobile**: bottom sheet 패턴. eyebrow 없는 `ModalHeader` + 검색 입력 + 카테고리 chip rail + 체크리스트 + sticky footer 액션
 - **desktop**: centered modal 패턴. 동일한 header hierarchy를 유지하되 넓은 폭에서는 카테고리 chip wrap 허용
-- **선택 요약**: 헤더 badge와 footer summary 모두 현재 선택 개수를 반영
+- **제목/도움말**: `재료로 검색` / `원하는 재료를 골라 레시피를 좁혀요`
+- **닫기 버튼**: icon-only 원형 버튼
+- **선택 요약**: 헤더 badge와 footer summary를 중복 사용하지 않고 한 군데만 강조
 - **primary action**: `n개 적용` 형태로 선택 규모를 즉시 알 수 있게 표시
 - **카테고리 선택**: mobile에서는 localized horizontal scroll rail, desktop에서는 wrap
+- **rail affordance**: 초기 시스템 scrollbar가 아니라 fade/peek로 스크롤 가능성 표시
 - **토큰**: `--panel`, `--surface`, `--line`, `--olive`, `--brand`
 
 #### 정렬 드롭다운
@@ -75,7 +78,10 @@ first viewport 390px:
 - **옵션**: 조회수순 / 저장순 / 좋아요순 / 플래너 등록순
 - **배치**: 상단 검색 패널이 아니라 `모든 레시피` 섹션 헤더 우측에 배치
 - **변경 시**: 즉시 재정렬, `모든 레시피` 리스트만 다시 요청하며 테마 섹션은 유지
+- **제목/도움말**: `정렬 기준` / `모든 레시피 순서를 바꿔요`
 - **스타일**: --surface 배경, --line 보더, border-radius: 9999px, --foreground 텍스트
+- **선택 상태**: dark fill 대신 olive tint + check/dot 계열
+- **불필요한 badge 제거**: `현재 {label}` badge는 사용하지 않음
 - **레이어 정책**:
   - mobile: bottom sheet (`scrim z-30`, sheet `z-40`)
   - desktop: button 아래 또는 위로 여는 pop menu (`z-20`), viewport 남은 공간이 부족하면 위쪽으로 열린다

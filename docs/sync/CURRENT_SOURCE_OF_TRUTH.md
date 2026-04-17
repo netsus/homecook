@@ -2,14 +2,14 @@
 
 ## Official Versions
 - Requirements: `v1.6.3`
-- Screens: `v1.4.0`
+- Screens: `v1.5.0`
 - Flow: `v1.3.0`
 - DB: `v1.3.1`
 - API: `v1.2.2`
 
 ## Official Files
 - `docs/요구사항기준선-v1.6.3.md`
-- `docs/화면정의서-v1.4.0.md`
+- `docs/화면정의서-v1.5.0.md`
 - `docs/유저flow맵-v1.3.0.md`
 - `docs/db설계-v1.3.1.md`
 - `docs/api문서-v1.2.2.md`
@@ -56,3 +56,15 @@
 > 이 변경은 H1 home-first-impression Stage 1 사용자 승인(2026-04-17, D1/D2/D3/D4)을 기반으로 한 contract-evolution이다.
 > 정렬 컨트롤 위치·재료 필터 위치는 현행 유지. 테마 섹션 형태만 변경.
 > H1 FE 구현(`feature/fe-h1-home-first-impression`)은 이 문서 갱신 이후에 시작할 수 있다.
+
+## v1.4.0 → v1.5.0 변경 이력 (2026-04-17)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 화면정의서 v1.5.0 | `PlannerAddPopup`, `SavePopup`, `INGREDIENT_FILTER_MODAL`, HOME 정렬 선택 UI를 Quiet Kitchen Sheets 기준으로 재정의. eyebrow 제거, icon-only close, `olive base + thin orange highlight`, PlannerAdd 날짜 chip `요일 + 4/17`, Save 제목 `레시피 저장` 확정 |
+| 유저플로우 v1.3.0 | 변경 없음 |
+| API (v1.2.2 유지) | 변경 없음 — `POST /meals`, `POST /recipes/{id}/save`, `GET /ingredients`, `GET /recipes` 계약 동일 |
+| DB (v1.3.1 유지) | 변경 없음 |
+
+> 이 변경은 H5 modal-system-direction Stage 1 사용자 승인(2026-04-17, D1~D6)을 기반으로 한 contract-evolution이다.
+> h5 modal system redesign FE 구현(`feature/fe-h5-modal-system-redesign`)은 이 문서 갱신 이후에 시작할 수 있다.
