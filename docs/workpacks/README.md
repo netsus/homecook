@@ -5,6 +5,7 @@
 - 앞으로의 구현은 `작은 세로 슬라이스` 단위로 진행한다.
 - 각 슬라이스는 공식 문서 기준의 사용자 가치 하나를 닫아야 한다.
 - 같은 슬라이스에서도 개발 브랜치는 `백엔드`와 `프론트엔드`로 분리한다.
+- 처음 합류한 개발자는 [docs/engineering/developer-onboarding.md](/Users/cwj/01_vibe_coding/homecook/docs/engineering/developer-onboarding.md)부터 읽고 들어오는 것을 권장한다.
 
 ## Revision Notes
 
