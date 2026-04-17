@@ -5,7 +5,12 @@
   "anchor_extension": true,
   "anchor_screens": ["RECIPE_DETAIL", "PLANNER_WEEK"],
   "merge_policy": "manual",
-  "backend": null,
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
   "frontend": {
     "branch": "feature/fe-h3-planner-add-sync",
     "stage": 4,

@@ -368,7 +368,7 @@ export function RecipeDetailScreen({
       const columnName =
         plannerColumns.find((c) => c.id === selectedPlanColumnId)?.name ?? "선택한 끼니";
       setFeedback({
-        message: `${dateLabel} ${columnName}에 추가됐어요.`,
+        message: `${dateLabel} ${columnName}에 추가됐어요`,
         tone: "status",
       });
     } catch (error) {

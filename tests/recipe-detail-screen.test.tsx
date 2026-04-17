@@ -712,6 +712,12 @@ describe("recipe detail screen", () => {
     const COLUMN_ID = "col-breakfast";
     const COLUMN_NAME = "아침";
 
+    // Build the expected toast string the same way the component does (locale-independent)
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const [, m, d] = todayKey.split("-").map(Number);
+    const expectedToast = `${m}월 ${d}일 ${COLUMN_NAME}에 추가됐어요`;
+
     getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
     fetchJson.mockResolvedValue(buildRecipeDetail());
     fetchPlanner.mockResolvedValue({
@@ -736,11 +742,11 @@ describe("recipe detail screen", () => {
     });
     await userEvent.click(submitButton);
 
-    // Toast: "N월 D일 아침에 추가됐어요." — exact contract format (D3, locale-independent)
+    // Toast: exact contract format "N월 D일 끼니에 추가됐어요" (D3, no trailing period)
     await waitFor(() => {
       const statusElements = screen.getAllByRole("status");
-      const toast = statusElements.find((el) =>
-        /\d+월 \d+일 아침에 추가됐어요/.test(el.textContent ?? ""),
+      const toast = statusElements.find(
+        (el) => el.textContent === expectedToast,
       );
       expect(toast).toBeTruthy();
     });
