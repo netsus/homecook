@@ -12,6 +12,8 @@
 - `ui/designs/authority/PLANNER_WEEK-authority.md`
 - `ui/designs/authority/PLANNER_WEEK-redesign-preflight.md`
 - `ui/designs/authority/RECIPE_DETAIL-authority.md`
+- `ui/designs/authority/HOME-authority.md`
+- `ui/designs/authority/MODAL_SYSTEM-authority.md`
 
 권장 포함 항목:
 

@@ -79,7 +79,7 @@
 
 ### Manual Only
 
-- [ ] authority evidence E1~E10 visual 판정 (A1~A5 기준) — 스크린샷 캡처 후 authority 검토
+- [x] authority evidence E1~E10 visual 판정 (A1~A5 기준) — 스크린샷 캡처 후 authority 검토 (`ui/designs/authority/MODAL_SYSTEM-authority.md`)
 
 ---
 
