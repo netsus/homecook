@@ -31,7 +31,7 @@
       "components/shared/numeric-stepper-compact.tsx"
     ],
     "design_authority": {
-      "ui_risk": "required",
+      "ui_risk": "anchor-extension",
       "anchor_screens": ["RECIPE_DETAIL", "HOME"],
       "required_screens": ["PlannerAddSheet", "SaveModal", "IngredientFilterModal", "SortSheet"],
       "generator_required": false,
@@ -39,7 +39,7 @@
       "authority_required": true,
       "stage4_evidence_requirements": ["E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "E9", "E10"],
       "authority_report_paths": [
-        "ui/designs/evidence/h5-modal-system-redesign/"
+        "ui/designs/authority/MODAL_SYSTEM-authority.md"
       ]
     }
   },

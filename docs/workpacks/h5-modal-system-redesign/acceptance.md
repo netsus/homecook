@@ -9,40 +9,40 @@
 
 ## Happy Path
 
-- [ ] PlannerAdd: 날짜/끼니/인분 선택 → `플래너에 추가` 탭 → 성공 toast → sheet 닫힘 <!-- omo:id=accept-happy-path-planner-add;stage=4;scope=frontend;review=5,6 -->
-- [ ] Save: 레시피북 선택 → `저장` 탭 → 성공 toast → modal 닫힘 <!-- omo:id=accept-happy-path-save;stage=4;scope=frontend;review=5,6 -->
-- [ ] IngredientFilter: 재료 선택 → `N개 적용` 탭 → 필터 반영 → sheet 닫힘 <!-- omo:id=accept-happy-path-ingredient;stage=4;scope=frontend;review=5,6 -->
-- [ ] Sort: 옵션 탭 → 즉시 정렬 반영 + sheet 닫힘 <!-- omo:id=accept-happy-path-sort;stage=4;scope=frontend;review=5,6 -->
-- [ ] 문서 기준 화면 상태와 액션이 맞다 (화면정의서 v1.5.0 기준) <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 (기존 계약 무변경 확인) <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] PlannerAdd: 날짜/끼니/인분 선택 → `플래너에 추가` 탭 → 성공 toast → sheet 닫힘 <!-- omo:id=accept-happy-path-planner-add;stage=4;scope=frontend;review=5,6 -->
+- [x] Save: 레시피북 선택 → `저장` 탭 → 성공 toast → modal 닫힘 <!-- omo:id=accept-happy-path-save;stage=4;scope=frontend;review=5,6 -->
+- [x] IngredientFilter: 재료 선택 → `N개 적용` 탭 → 필터 반영 → sheet 닫힘 <!-- omo:id=accept-happy-path-ingredient;stage=4;scope=frontend;review=5,6 -->
+- [x] Sort: 옵션 탭 → 즉시 정렬 반영 + sheet 닫힘 <!-- omo:id=accept-happy-path-sort;stage=4;scope=frontend;review=5,6 -->
+- [x] 문서 기준 화면 상태와 액션이 맞다 (화면정의서 v1.5.0 기준) <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 (기존 계약 무변경 확인) <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 
-- [ ] 정렬은 즉시 적용형 유지 (탭 → 반영 → sheet 닫힘, 별도 확인 CTA 없음) <!-- omo:id=accept-sort-immediate;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerAdd 성공 후 동작이 기존과 동일하다 (toast만 표시, 이동 없음) <!-- omo:id=accept-planner-add-success;stage=4;scope=frontend;review=5,6 -->
-- [ ] Save 성공 후 동작이 기존과 동일하다 <!-- omo:id=accept-save-success;stage=4;scope=frontend;review=5,6 -->
-- [ ] IngredientFilter 초기화 후 필터가 올바르게 리셋된다 <!-- omo:id=accept-filter-reset;stage=4;scope=frontend;review=5,6 -->
-- [ ] API/DB 계약 변경 없음 (`POST /meals`, `POST /recipes/{id}/save`, `GET /ingredients` 무변경) <!-- omo:id=accept-api-contract-immutable;stage=2;scope=backend;review=3,6 -->
+- [x] 정렬은 즉시 적용형 유지 (탭 → 반영 → sheet 닫힘, 별도 확인 CTA 없음) <!-- omo:id=accept-sort-immediate;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerAdd 성공 후 동작이 기존과 동일하다 (toast만 표시, 이동 없음) <!-- omo:id=accept-planner-add-success;stage=4;scope=frontend;review=5,6 -->
+- [x] Save 성공 후 동작이 기존과 동일하다 <!-- omo:id=accept-save-success;stage=4;scope=frontend;review=5,6 -->
+- [x] IngredientFilter 초기화 후 필터가 올바르게 리셋된다 <!-- omo:id=accept-filter-reset;stage=4;scope=frontend;review=5,6 -->
+- [x] API/DB 계약 변경 없음 (`POST /meals`, `POST /recipes/{id}/save`, `GET /ingredients` 무변경) <!-- omo:id=accept-api-contract-immutable;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 (4개 modal 각각) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 있다 (Save: 저장된 책 없음, IngredientFilter: 재료 없음) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 (API 실패 시 각 modal 에러 처리) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 (로그인 게이트 기존 동작 유지) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] 로그인 게이트 후 return-to-action이 맞다 (기존 동작 유지) <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 (4개 modal 각각) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 있다 (Save: 저장된 책 없음, IngredientFilter: 재료 없음) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 (API 실패 시 각 modal 에러 처리) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 (로그인 게이트 기존 동작 유지) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] 로그인 게이트 후 return-to-action이 맞다 (기존 동작 유지) <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
-- [ ] invalid input을 적절히 거부하거나 무시한다 (PlannerAdd: 날짜/끼니 미선택 시 CTA disable) <!-- omo:id=accept-invalid-input;stage=4;scope=frontend;review=5,6 -->
-- [ ] Save: 책 미선택 시 `저장` CTA disable <!-- omo:id=accept-save-disabled;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 데이터 무결성 불변 (UI chrome 변경이 저장 데이터에 영향 없음) <!-- omo:id=accept-data-integrity;stage=4;scope=shared;review=6 -->
+- [x] invalid input을 적절히 거부하거나 무시한다 (PlannerAdd: 날짜/끼니 미선택 시 CTA disable) <!-- omo:id=accept-invalid-input;stage=4;scope=frontend;review=5,6 -->
+- [x] Save: 책 미선택 시 `저장` CTA disable <!-- omo:id=accept-save-disabled;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 데이터 무결성 불변 (UI chrome 변경이 저장 데이터에 영향 없음) <!-- omo:id=accept-data-integrity;stage=4;scope=shared;review=6 -->
 
 ## Data Setup / Preconditions
 
-- [ ] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 (기존 fixture 재사용) <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 (기존 재사용) <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] before 캡처 (E1/E3/E5/E7)가 Pass 1 구현 전 현행 UI 상태에서 완료됐다 <!-- omo:id=accept-before-capture;stage=4;scope=frontend;review=5,6 -->
+- [x] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 (기존 fixture 재사용) <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 (기존 재사용) <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] before 캡처 (E1/E3/E5/E7)가 Pass 1 구현 전 현행 UI 상태에서 완료됐다 <!-- omo:id=accept-before-capture;stage=4;scope=frontend;review=5,6 -->
 
 ## Manual QA
 
@@ -62,20 +62,20 @@
 
 ### Vitest
 
-- [ ] `ModalHeader` props 렌더링 단위 테스트 (title, description, onClose) <!-- omo:id=accept-vitest-modal-header;stage=4;scope=frontend;review=5,6 -->
-- [ ] `OptionRow` selected/idle/disabled 상태 단위 테스트 <!-- omo:id=accept-vitest-option-row;stage=4;scope=frontend;review=5,6 -->
-- [ ] `SelectionChipRail` 선택 상태 단위 테스트 <!-- omo:id=accept-vitest-chip-rail;stage=4;scope=frontend;review=5,6 -->
-- [ ] `NumericStepperCompact` +/- 동작 + 경계값 단위 테스트 <!-- omo:id=accept-vitest-stepper;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerAdd: 날짜/끼니 미선택 시 CTA disable 로직 <!-- omo:id=accept-vitest-planner-add-disabled;stage=4;scope=frontend;review=5,6 -->
+- [x] `ModalHeader` props 렌더링 단위 테스트 (title, description, onClose) <!-- omo:id=accept-vitest-modal-header;stage=4;scope=frontend;review=5,6 -->
+- [x] `OptionRow` selected/idle/disabled 상태 단위 테스트 <!-- omo:id=accept-vitest-option-row;stage=4;scope=frontend;review=5,6 -->
+- [x] `SelectionChipRail` 선택 상태 단위 테스트 <!-- omo:id=accept-vitest-chip-rail;stage=4;scope=frontend;review=5,6 -->
+- [x] `NumericStepperCompact` +/- 동작 + 경계값 단위 테스트 <!-- omo:id=accept-vitest-stepper;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerAdd: 날짜/끼니 미선택 시 CTA disable 로직 <!-- omo:id=accept-vitest-planner-add-disabled;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright
 
-- [ ] PlannerAdd: 날짜 chip 렌더링 + 탭 선택 + CTA 활성 → 제출 흐름 <!-- omo:id=accept-playwright-planner-add;stage=4;scope=frontend;review=5,6 -->
-- [ ] Save: modal 열기 + 책 선택 + 저장 흐름 <!-- omo:id=accept-playwright-save;stage=4;scope=frontend;review=5,6 -->
-- [ ] IngredientFilter: modal 열기 + 카테고리 선택 + 재료 선택 + 적용 흐름 <!-- omo:id=accept-playwright-ingredient;stage=4;scope=frontend;review=5,6 -->
-- [ ] Sort: mobile sheet 열기 + 옵션 탭 → 즉시 적용 흐름 <!-- omo:id=accept-playwright-sort;stage=4;scope=frontend;review=5,6 -->
-- [ ] 4개 modal: icon close 탭 → 닫힘 흐름 <!-- omo:id=accept-playwright-close;stage=4;scope=frontend;review=5,6 -->
-- [ ] 외부 연동 없음 — live-only 분기 해당 없음 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+- [x] PlannerAdd: 날짜 chip 렌더링 + 탭 선택 + CTA 활성 → 제출 흐름 <!-- omo:id=accept-playwright-planner-add;stage=4;scope=frontend;review=5,6 -->
+- [x] Save: modal 열기 + 책 선택 + 저장 흐름 <!-- omo:id=accept-playwright-save;stage=4;scope=frontend;review=5,6 -->
+- [x] IngredientFilter: modal 열기 + 카테고리 선택 + 재료 선택 + 적용 흐름 <!-- omo:id=accept-playwright-ingredient;stage=4;scope=frontend;review=5,6 -->
+- [x] Sort: mobile sheet 열기 + 옵션 탭 → 즉시 적용 흐름 <!-- omo:id=accept-playwright-sort;stage=4;scope=frontend;review=5,6 -->
+- [x] 4개 modal: icon close 탭 → 닫힘 흐름 <!-- omo:id=accept-playwright-close;stage=4;scope=frontend;review=5,6 -->
+- [x] 외부 연동 없음 — live-only 분기 해당 없음 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only
 

@@ -155,10 +155,10 @@
 
 ## Design Authority
 
-- **UI risk**: `anchor-extension` (RECIPE_DETAIL + HOME 앵커 화면 수정)
-- **Anchor screen dependency**: `RECIPE_DETAIL`, `HOME`
-- **Visual artifact**: `ui/designs/evidence/h5-modal-system-redesign/` (E1~E10, Stage 4 캡처)
-- **Authority status**: `required`
+- UI risk: `anchor-extension` (RECIPE_DETAIL + HOME 앵커 화면 수정)
+- Anchor screen dependency: `RECIPE_DETAIL`, `HOME`
+- Visual artifact: `ui/designs/evidence/h5-modal-system-redesign/` (E1~E10, Stage 4 캡처)
+- Authority status: `reviewed`
 
 ### 화면별 Design 문서 linkage
 
