@@ -75,6 +75,7 @@ export function SaveModal({
       >
         {/* Header — D2: no eyebrow · D3: icon-only close · D5: title=레시피 저장 */}
         <ModalHeader
+          description="저장할 레시피북을 선택하세요"
           onClose={onClose}
           title="레시피 저장"
           titleId="save-modal-title"

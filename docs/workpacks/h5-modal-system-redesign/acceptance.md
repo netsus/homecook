@@ -56,7 +56,7 @@
   5. Sort: `현재 {label}` badge 없음, selected option olive tint 확인
   6. Sort: desktop dropdown — mobile sheet와 같은 option 언어 확인
   7. 4개 modal: close button 44px 이상, tap 동작 확인
-  8. authority before/after 비교: E1 vs E2, E3 vs E4, E5 vs E6, E7 vs E8
+  8. authority evidence 검토: E1(PlannerAdd 전체), E3(Save 전체), E5(IngredientFilter 전체), E7(Sort 전체) 기준으로 A1~A5 판정
 
 ## Automation Split
 
@@ -87,9 +87,9 @@
 
 | # | 기준 | 검증 |
 |---|------|------|
-| F1 | 4개 modal 전체에서 eyebrow 제거됨 | E1-E8 |
-| F2 | 4개 modal 전체의 close button이 icon-only 원형 (`44×44`) | E2/E4/E6/E8 |
-| F3 | 제목이 copy lock 표 기준으로 통일됨 | E2/E4/E6/E8 |
+| F1 | 4개 modal 전체에서 eyebrow 제거됨 | E1/E3/E5/E7 |
+| F2 | 4개 modal 전체의 close button이 icon-only 원형 (`44×44`) | E1/E3/E5/E7 |
+| F3 | 제목과 helper copy가 copy lock 표 기준으로 통일됨 | E1/E3/E5/E7 |
 | F4 | 모달 내부 accent가 `olive base + thin orange highlight` 원칙을 따름 | authority A3 |
 | F5 | 선택 상태 표현이 olive family로 통일됨 (dark fill, orange fill 잔류 없음) | authority A5 |
 | F6 | API/DB 계약 변경 없음 | 코드 확인 |
@@ -103,16 +103,16 @@
 |---|------|------|
 | P1 | 날짜 chip이 `요일 + 4/17` compact 표기로 보임 | E2 |
 | P2 | 날짜 아래 중복 확인 라벨 없음 | E2 |
-| P3 | 날짜/끼니/인분 섹션의 시각 밀도가 균형을 이룸 | E1 vs E2 |
-| P4 | 인분 표시가 `2` + 작은 `인분` hierarchy로 분리됨 | E2 |
+| P3 | 날짜/끼니/인분 섹션의 시각 밀도가 균형을 이룸 | E1 |
+| P4 | 인분 표시가 `2` + 작은 `인분` hierarchy로 분리됨 | E1/E2 |
 | P5 | `SelectionChipRail`을 사용함 (날짜 rail) | 코드 확인 |
 
 ### Save
 
 | # | 기준 | 검증 |
 |---|------|------|
-| S1 | 제목이 `레시피 저장`임 | E4 |
-| S2 | 영어 eyebrow `Save Recipe` 및 문장형 제목 없음 | E3 vs E4 |
+| S1 | 제목이 `레시피 저장`이고 helper copy가 표시됨 | E3 |
+| S2 | 영어 eyebrow `Save Recipe` 및 문장형 h2 제목 없음 | E3 |
 | S3 | `새 레시피북 만들기` 블록이 리스트보다 과도하게 무겁지 않음 | E4 |
 | S4 | 선택 row가 olive tint 표현을 사용함 | E4 |
 
@@ -120,9 +120,9 @@
 
 | # | 기준 | 검증 |
 |---|------|------|
-| I1 | 카테고리 rail 초기 scrollbar가 눈에 띄게 노출되지 않음 | E6 |
-| I2 | 카테고리 rail에 edge fade affordance가 있음 | E6 |
-| I3 | 검색 / 카테고리 / 결과 목록이 한 시스템처럼 읽힘 | E5 vs E6 |
+| I1 | 카테고리 rail 초기 scrollbar가 눈에 띄게 노출되지 않음 | E5 |
+| I2 | 카테고리 rail에 edge fade affordance가 있음 | E5 |
+| I3 | 검색 / 카테고리 / 결과 목록이 한 시스템처럼 읽힘 | E5/E6 |
 | I4 | 선택 수 badge가 title 옆 또는 footer CTA 한 군데에만 표시됨 | E6 |
 | I5 | `SelectionChipRail`을 사용함 (category rail) | 코드 확인 |
 
@@ -130,34 +130,39 @@
 
 | # | 기준 | 검증 |
 |---|------|------|
-| O1 | `현재 {label}` badge 없음 (또는 필수 최소화) | E7 vs E8 |
+| O1 | `현재 {label}` badge 없음 | E7 |
 | O2 | selected option이 olive tint 표현을 사용함 (dark fill 없음) | E8 |
-| O3 | mobile sheet와 desktop dropdown의 선택 언어가 일관됨 | E8/E10 |
+| O3 | mobile sheet와 desktop dropdown의 선택 언어가 일관됨 | E7/E8 |
 
 ## Mobile UX 체크
 
 | # | 기준 | 검증 |
 |---|------|------|
 | M1 | 390px에서 4개 modal header/body/footer hierarchy가 안정적임 | E2/E4/E6/E8 |
-| M2 | 320px에서 CTA 잘림, 옵션 잘림, close button 축소 없음 | E9 |
-| M3 | localized horizontal scroll이 page-level overflow처럼 느껴지지 않음 | E2/E6 |
-| M4 | scroll affordance가 fade/peek로 드러남 (초기 scrollbar 미의존) | E6 |
-| M5 | 터치 타겟 44px 이상 (close button, CTA, chip, option row) | E2/E4/E6/E8 |
+| M2 | 320px에서 CTA 잘림, 옵션 잘림, close button 축소 없음 | E10 |
+| M3 | localized horizontal scroll이 page-level overflow처럼 느껴지지 않음 | E2/E5 |
+| M4 | scroll affordance가 fade/peek로 드러남 (초기 scrollbar 미의존) | E5 |
+| M5 | 터치 타겟 44px 이상 (close button, CTA, chip, option row) | E1/E3/E5/E7 |
 
 ## Authority Evidence 필수 목록
 
-| ID | artifact | 경로 | 필수 여부 |
-|----|----------|------|----------|
-| E1 | planner-add before (390px) | `ui/designs/evidence/h5-modal-system-redesign/planner-add-before.png` | 필수 |
-| E2 | planner-add after (390px) | `ui/designs/evidence/h5-modal-system-redesign/planner-add-after.png` | 필수 |
-| E3 | save before (390px) | `ui/designs/evidence/h5-modal-system-redesign/save-before.png` | 필수 |
-| E4 | save after (390px) | `ui/designs/evidence/h5-modal-system-redesign/save-after.png` | 필수 |
-| E5 | ingredient-filter before (390px) | `ui/designs/evidence/h5-modal-system-redesign/ingredient-filter-before.png` | 필수 |
-| E6 | ingredient-filter after (390px) | `ui/designs/evidence/h5-modal-system-redesign/ingredient-filter-after.png` | 필수 |
-| E7 | sort before (390px) | `ui/designs/evidence/h5-modal-system-redesign/sort-before.png` | 필수 |
-| E8 | sort after (390px) | `ui/designs/evidence/h5-modal-system-redesign/sort-after.png` | 필수 |
-| E9 | narrow sentinel (planner-add, ingredient-filter, 320px) | `ui/designs/evidence/h5-modal-system-redesign/narrow-*.png` | 필수 |
-| E10 | desktop set (save, sort) | `ui/designs/evidence/h5-modal-system-redesign/desktop-*.png` | 필수 |
+모든 파일은 Stage 4 완료 후 현행 UI 기준으로 캡처. 경로 기준: `ui/designs/evidence/h5-modal-system-redesign/`
+
+| ID | artifact | 파일명 | 필수 여부 |
+|----|----------|--------|----------|
+| E1 | PlannerAdd sheet 전체 (390px) | `E1-planner-add-sheet-mobile.png` | 필수 |
+| E2 | PlannerAdd 날짜 chip 클로즈업 (D4: M/D) | `E2-planner-add-date-chip.png` | 필수 |
+| E3 | Save modal 전체 (390px) | `E3-save-modal-mobile.png` | 필수 |
+| E4 | Save 책 선택 상태 (D1: olive tint) | `E4-save-modal-book-selected.png` | 필수 |
+| E5 | IngredientFilter 전체 (390px) | `E5-ingredient-filter-modal.png` | 필수 |
+| E6 | IngredientFilter 카테고리 선택 (D1: olive) | `E6-ingredient-filter-category-selected.png` | 필수 |
+| E7 | Sort sheet 전체 (390px) | `E7-sort-sheet-mobile.png` | 필수 |
+| E8 | Sort 옵션 선택 상태 (D1: olive tint) | `E8-sort-sheet-selected.png` | 필수 |
+| E9a | PlannerAdd chrome (430px) | `E9a-planner-add-chrome.png` | 필수 |
+| E9b | Save chrome (430px) | `E9b-save-chrome.png` | 필수 |
+| E9c | IngredientFilter chrome (430px) | `E9c-ingredient-filter-chrome.png` | 필수 |
+| E9d | Sort chrome (430px) | `E9d-sort-chrome.png` | 필수 |
+| E10 | PlannerAdd narrow (320px) | `E10-planner-add-narrow-320.png` | 필수 |
 
 ## Closeout 금지 조건
 

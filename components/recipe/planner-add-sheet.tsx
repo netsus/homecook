@@ -92,6 +92,7 @@ export function PlannerAddSheet({
         <div className="mb-5">
           <ModalHeader
             closeDisabled={isSubmitting}
+            description="날짜와 끼니를 선택해 주세요"
             onClose={onClose}
             title="플래너에 추가"
             titleId="planner-add-sheet-title"

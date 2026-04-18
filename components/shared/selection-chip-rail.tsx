@@ -4,10 +4,12 @@ import React from "react";
 
 interface SelectionChip {
   value: string;
-  /** Small label on top (e.g. weekday) */
-  topLabel: string;
-  /** Larger label below (e.g. "4/17") */
-  bottomLabel: string;
+  /** Single-line pill mode (e.g. category names). Renders rounded-full pill. */
+  label?: string;
+  /** Two-line chip mode — small label on top (e.g. weekday). Requires bottomLabel. */
+  topLabel?: string;
+  /** Two-line chip mode — larger label below (e.g. "4/17"). Requires topLabel. */
+  bottomLabel?: string;
 }
 
 interface SelectionChipRailProps {
@@ -18,7 +20,13 @@ interface SelectionChipRailProps {
   ariaLabel?: string;
 }
 
-/** Horizontal scrollable two-line chip rail. D1: olive fill when selected. D4: M/D date format. */
+/**
+ * Horizontal scrollable chip rail with scrollbar-hide.
+ * D1: olive fill/tint when selected.
+ * Two render modes:
+ *  - pill (label only): rounded-full, single line — for category filters
+ *  - two-line (topLabel + bottomLabel): rounded-[14px] — for date chips (D4)
+ */
 export function SelectionChipRail({
   chips,
   selectedValue,
@@ -32,8 +40,32 @@ export function SelectionChipRail({
       className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide"
       role="group"
     >
-      {chips.map(({ value, topLabel, bottomLabel }) => {
+      {chips.map(({ value, label, topLabel, bottomLabel }) => {
         const isSelected = value === selectedValue;
+        const isPill = label !== undefined;
+
+        if (isPill) {
+          return (
+            <button
+              aria-pressed={isSelected}
+              className={[
+                "min-h-11 shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
+                isSelected
+                  ? "border-[var(--olive)] bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
+                  : "border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--olive)] hover:text-[var(--olive)]",
+                disabled ? "opacity-60" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              disabled={disabled}
+              key={value}
+              onClick={() => onSelect(value)}
+              type="button"
+            >
+              {label}
+            </button>
+          );
+        }
 
         return (
           <button

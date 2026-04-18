@@ -11,6 +11,8 @@ import {
 import { IngredientFilterModal } from "@/components/home/ingredient-filter-modal";
 import { RecipeCard } from "@/components/home/recipe-card";
 import { ContentState } from "@/components/shared/content-state";
+import { ModalHeader } from "@/components/shared/modal-header";
+import { OptionRow } from "@/components/shared/option-row";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { formatRecipeSourceLabel } from "@/lib/recipe";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
@@ -529,46 +531,22 @@ function SortMenu({
           <div className="fixed inset-x-0 bottom-0 z-40 rounded-t-[24px] border-t border-[var(--line)] bg-[var(--panel)] px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 shadow-[0_-18px_44px_rgba(34,24,14,0.2)] md:hidden">
             <div className="mx-auto h-1.5 w-14 rounded-full bg-black/10" />
             {/* D2: no eyebrow · D3: icon-only close */}
-            <div className="mt-4 flex items-start justify-between gap-3">
-              <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-                정렬 기준
-              </h2>
-              <button
-                aria-label="닫기"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--muted)] hover:bg-white/60"
-                onClick={onClose}
-                type="button"
-              >
-                <svg fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 4L14 14M14 4L4 14" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
-                </svg>
-              </button>
+            <div className="mt-4">
+              <ModalHeader
+                description="모든 레시피 순서를 바꿔요"
+                onClose={onClose}
+                title="정렬 기준"
+              />
             </div>
-            <div
-              aria-label="정렬 기준"
-              className="mt-4 space-y-2"
-              role="listbox"
-            >
-              {options.map((option) => {
-                const isSelected = option.value === selectedValue;
-
-                return (
-                  <button
-                    aria-selected={isSelected}
-                    className={`flex min-h-14 w-full items-center rounded-[16px] px-4 py-3 text-left text-sm font-semibold ${
-                      isSelected
-                        ? "bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
-                        : "border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]"
-                    }`}
-                    key={`mobile-${option.value}`}
-                    onClick={() => onSelect(option.value)}
-                    role="option"
-                    type="button"
-                  >
-                    <span>{option.label}</span>
-                  </button>
-                );
-              })}
+            <div aria-label="정렬 기준" className="mt-4 space-y-2" role="listbox">
+              {options.map((option) => (
+                <OptionRow
+                  isSelected={option.value === selectedValue}
+                  key={`mobile-${option.value}`}
+                  label={option.label}
+                  onClick={() => onSelect(option.value)}
+                />
+              ))}
             </div>
           </div>
         </>
@@ -581,26 +559,14 @@ function SortMenu({
           ref={desktopMenuRef}
         >
           <div aria-label="정렬 기준" className="space-y-1" role="listbox">
-            {options.map((option) => {
-              const isSelected = option.value === selectedValue;
-
-              return (
-                <button
-                  aria-selected={isSelected}
-                  className={`flex min-h-12 w-full items-center rounded-[12px] px-3 py-3 text-sm font-semibold ${
-                    isSelected
-                      ? "bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
-                      : "text-[var(--muted)] hover:bg-white/70"
-                  }`}
-                  key={`desktop-${option.value}`}
-                  onClick={() => onSelect(option.value)}
-                  role="option"
-                  type="button"
-                >
-                  <span>{option.label}</span>
-                </button>
-              );
-            })}
+            {options.map((option) => (
+              <OptionRow
+                isSelected={option.value === selectedValue}
+                key={`desktop-${option.value}`}
+                label={option.label}
+                onClick={() => onSelect(option.value)}
+              />
+            ))}
           </div>
         </div>
       ) : null}

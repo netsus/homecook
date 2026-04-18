@@ -5,6 +5,8 @@ import React from "react";
 interface ModalHeaderProps {
   title: string;
   titleId?: string;
+  /** Helper copy rendered below the title in muted text-sm */
+  description?: string;
   /** Optional badge node rendered inline after the title */
   badge?: React.ReactNode;
   onClose: () => void;
@@ -13,10 +15,11 @@ interface ModalHeaderProps {
   closeButtonRef?: React.Ref<HTMLButtonElement>;
 }
 
-/** D2: no eyebrow · D3: icon-only 44×44 circle close */
+/** D2: no eyebrow · D3: icon-only 44×44 circle close · description = copy-lock helper */
 export function ModalHeader({
   title,
   titleId,
+  description,
   badge,
   onClose,
   closeDisabled,
@@ -34,6 +37,9 @@ export function ModalHeader({
           </h2>
           {badge}
         </div>
+        {description ? (
+          <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>
+        ) : null}
       </div>
       <button
         aria-label="닫기"

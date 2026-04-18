@@ -252,14 +252,14 @@ H5에서 HOME / RECIPE_DETAIL 기존 design 문서를 새로 실행하지 않고
 ## QA / Test Data Plan
 
 - **fixture baseline**: 기존 `planner-add`, `save-modal`, `ingredient-filter`, `sort` 관련 fixture 그대로 사용
-- **real DB smoke**: `pnpm dev` → 각 modal을 직접 열어 before/after 비교
+- **real DB smoke**: `pnpm dev` → 각 modal을 직접 열어 E1~E10 evidence 기준으로 확인
 - **seed / reset**: 기존 seed 사용 (신규 seed 불필요)
 - **bootstrap**: 기존 시스템 row 사용 (신규 불필요)
 - **blocker 조건**: 없음 (기존 API/DB 계약 유지, 신규 테이블/row 없음)
 
-### Before 캡처 타이밍
+### Evidence 캡처 기준
 
-E1/E3/E5/E7 (before) 캡처는 **Pass 1 구현 전**, 현행 UI 상태에서 수행한다.
+E1~E10은 Stage 4 완료 후 현행(after) UI 기준으로 캡처한다. `scripts/capture-h5-evidence.mjs` 실행.
 
 ---
 
@@ -307,16 +307,16 @@ E1/E3/E5/E7 (before) 캡처는 **Pass 1 구현 전**, 현행 UI 상태에서 수
 > Stage 4~6 동안 계속 갱신하는 living closeout 문서다.  
 > Stage 6 merge 시점에는 In Scope인데도 남아 있는 unchecked 항목이 없어야 한다.
 
-- [ ] 백엔드 계약 고정 (기존 API 계약 무변경 확인) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 (기존 연결 변경 없음 확인) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 (shared component props 타입 정의) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 (4개 modal + 5개 shared 컴포넌트 구현) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 (기존 재사용 확인) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
-- [ ] authority evidence E1~E10 캡처 완료 <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] `ui/designs/RECIPE_DETAIL.md` planner add / save modal wireframe 갱신 <!-- omo:id=delivery-recipe-detail-wireframe;stage=4;scope=frontend;review=6 -->
-- [ ] `ui/designs/HOME.md` ingredient filter / sort sheet wireframe 갱신 <!-- omo:id=delivery-home-wireframe;stage=4;scope=frontend;review=6 -->
+- [x] 백엔드 계약 고정 (기존 API 계약 무변경 확인) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 (기존 연결 변경 없음 확인) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 (shared component props 타입 정의) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] UI 연결 (4개 modal + 5개 shared 컴포넌트 구현, helper copy 전체 반영) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 (기존 재사용 확인) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] authority evidence E1~E10 캡처 완료 <!-- omo:id=delivery-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] `ui/designs/RECIPE_DETAIL.md` planner add / save modal 섹션 갱신 (v1.5.0 기준 확인) <!-- omo:id=delivery-recipe-detail-wireframe;stage=4;scope=frontend;review=6 -->
+- [x] `ui/designs/HOME.md` ingredient filter / sort sheet 섹션 갱신 (v1.5.0 기준 확인) <!-- omo:id=delivery-home-wireframe;stage=4;scope=frontend;review=6 -->
