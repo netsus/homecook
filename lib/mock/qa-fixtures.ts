@@ -14,7 +14,7 @@ import type {
   RecipeSaveData,
   RecipeCardItem,
 } from "@/types/recipe";
-import type { MealCreateData } from "@/types/meal";
+import type { MealCreateData, MealListData, MealMutationData } from "@/types/meal";
 import type {
   MealStatus,
   PlannerColumnData,
@@ -487,6 +487,140 @@ export function createQaFixtureMeal({
   return {
     ok: true as const,
     data: meal,
+  };
+}
+
+export function getQaFixtureMealsBySlot(planDate: string, columnId: string) {
+  const plannerData = getQaFixturePlannerData(planDate, planDate);
+
+  return {
+    items: plannerData.meals
+      .filter((meal) => meal.plan_date === planDate && meal.column_id === columnId)
+      .map((meal) => ({
+        id: meal.id,
+        recipe_id: meal.recipe_id,
+        recipe_title: meal.recipe_title,
+        recipe_thumbnail_url: meal.recipe_thumbnail_url,
+        planned_servings: meal.planned_servings,
+        status: meal.status,
+        is_leftover: meal.is_leftover,
+      })),
+  } satisfies MealListData;
+}
+
+function updatePlannerMealTemplate(
+  mealId: string,
+  updater: (meal: PlannerMealTemplate) => PlannerMealTemplate | null,
+) {
+  const state = getQaFixtureState();
+  const index = state.plannerMealTemplates.findIndex((meal) => meal.id === mealId);
+  if (index < 0) {
+    return null;
+  }
+
+  const current = state.plannerMealTemplates[index]!;
+  const updated = updater(current);
+  if (!updated) {
+    state.plannerMealTemplates = state.plannerMealTemplates.filter((meal) => meal.id !== mealId);
+    return current;
+  }
+
+  state.plannerMealTemplates = state.plannerMealTemplates.map((meal, entryIndex) =>
+    entryIndex === index ? updated : meal,
+  );
+  return updated;
+}
+
+function updateCreatedMeal(
+  mealId: string,
+  updater: (meal: MealCreateData) => MealCreateData | null,
+) {
+  const state = getQaFixtureState();
+  const index = state.createdMeals.findIndex((meal) => meal.id === mealId);
+  if (index < 0) {
+    return null;
+  }
+
+  const current = state.createdMeals[index]!;
+  const updated = updater(current);
+  if (!updated) {
+    state.createdMeals = state.createdMeals.filter((meal) => meal.id !== mealId);
+    return current;
+  }
+
+  state.createdMeals = state.createdMeals.map((meal, entryIndex) =>
+    entryIndex === index ? updated : meal,
+  );
+  return updated;
+}
+
+export function updateQaFixtureMealServings({
+  mealId,
+  plannedServings,
+}: {
+  mealId: string;
+  plannedServings: number;
+}) {
+  const templateUpdate = updatePlannerMealTemplate(mealId, (meal) => ({
+    ...meal,
+    planned_servings: plannedServings,
+  }));
+
+  if (templateUpdate) {
+    return {
+      ok: true as const,
+      data: {
+        id: mealId,
+        planned_servings: plannedServings,
+        status: templateUpdate.status,
+      } satisfies MealMutationData,
+    };
+  }
+
+  const createdMealUpdate = updateCreatedMeal(mealId, (meal) => ({
+    ...meal,
+    planned_servings: plannedServings,
+  }));
+
+  if (createdMealUpdate) {
+    return {
+      ok: true as const,
+      data: {
+        id: mealId,
+        planned_servings: plannedServings,
+        status: createdMealUpdate.status,
+      } satisfies MealMutationData,
+    };
+  }
+
+  return {
+    ok: false as const,
+    code: "RESOURCE_NOT_FOUND",
+    message: "식사를 찾을 수 없어요.",
+    status: 404,
+  };
+}
+
+export function deleteQaFixtureMeal(mealId: string) {
+  const deletedTemplate = updatePlannerMealTemplate(mealId, () => null);
+  if (deletedTemplate) {
+    return {
+      ok: true as const,
+    };
+  }
+
+  const deletedCreatedMeal = updateCreatedMeal(mealId, () => null);
+  if (deletedCreatedMeal) {
+    return {
+      ok: true as const,
+    };
+  }
+
+  return {
+    ok: false as const,
+    code: "RESOURCE_NOT_FOUND",
+    message: "식사를 찾을 수 없어요.",
+    status: 404,
   };
 }
 
