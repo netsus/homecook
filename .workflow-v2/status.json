@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-16T15:22:53Z",
+  "updated_at": "2026-04-18T10:44:52.275Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -209,6 +209,22 @@
         "pnpm typecheck"
       ],
       "notes": "Bugfix-patch pilot merged via PR #129; HOME recipe card source badge now localizes raw source_type enums and refreshed HOME visual baselines stayed green."
+    },
+    {
+      "id": "07-meal-manage",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/07-meal-manage",
+      "pr_path": "https://github.com/netsus/homecook/pull/150",
+      "lifecycle": "blocked",
+      "approval_state": "human_escalation",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm install --frozen-lockfile && pnpm verify:backend",
+        "pnpm install --frozen-lockfile && pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "wait_kind=blocked_retry pr_role=docs stage=2 reason=claude_budget_unavailable head_sha=fecc65bd9902ae5f4965634e0e6766cf4ac99900 resume_dirty_stage_outputs=true"
     }
   ]
 }

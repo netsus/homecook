@@ -1,0 +1,90 @@
+{
+  "id": "07-meal-manage",
+  "title": "MEAL_SCREEN 식사 목록 조회/인분 변경/삭제 및 409 예외 상태",
+  "summary": "플래너 끼니 슬롯에서 진입하는 MEAL_SCREEN을 구현한다. GET/PATCH/DELETE /meals 계약을 닫고, 상태가 진행된 식사의 인분 변경 확인 모달, 삭제 확인 모달, 409 예외 처리를 포함한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 플래너 끼니 슬롯(MEAL_SCREEN)에서 등록된 식사 목록을 조회하고, 계획 인분을 조절하거나 식사를 삭제할 수 있다.",
+  "owners": {
+    "claude": "stage-1-docs-stage-3-backend-review-stage-4-frontend",
+    "codex": "stage-2-backend-stage-5-design-review-stage-6-frontend-review",
+    "workers": [
+      "design-generator",
+      "design-critic",
+      "product-design-authority"
+    ]
+  },
+  "dependencies": [
+    "01-discovery-detail-auth",
+    "05-planner-week-core",
+    "06-recipe-to-planner"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/요구사항기준선-v1.6.3.md",
+      "docs/화면정의서-v1.5.0.md",
+      "docs/api문서-v1.2.2.md",
+      "docs/db설계-v1.3.1.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/07-meal-manage/README.md",
+      "docs/workpacks/07-meal-manage/acceptance.md",
+      "docs/workpacks/07-meal-manage/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/engineering/product-design-authority.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "pnpm dev:local-supabase"
+    ],
+    "execution_mode": "autonomous",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 3,
+      "frontend": 3
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm install --frozen-lockfile && pnpm verify:backend",
+      "pnpm install --frozen-lockfile && pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "docs/workpacks/07-meal-manage/README.md",
+      "docs/workpacks/07-meal-manage/acceptance.md",
+      "docs/workpacks/07-meal-manage/automation-spec.json",
+      "ui/designs/MEAL_SCREEN.md",
+      "ui/designs/critiques/MEAL_SCREEN-critique.md"
+    ]
+  },
+  "status": {
+    "lifecycle": "blocked",
+    "approval_state": "human_escalation",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "MENU_ADD / RECIPE_SEARCH_PICKER 식사 추가 흐름 (08a)",
+    "meals.status 전이 (장보기/요리 슬라이스)",
+    "개별 식사 요리하기 버튼",
+    "PLANNER_WEEK 구조 변경"
+  ]
+}
