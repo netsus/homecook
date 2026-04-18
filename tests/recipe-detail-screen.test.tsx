@@ -420,7 +420,7 @@ describe("recipe detail screen", () => {
     const modalScope = within(modal);
 
     expect(
-      modalScope.getByRole("heading", { name: "저장할 레시피북을 선택하세요" }),
+      modalScope.getByRole("heading", { name: "레시피 저장" }),
     ).toBeTruthy();
     expect(modalScope.getByRole("button", { name: /저장한 레시피/ })).toBeTruthy();
     expect(modalScope.getByRole("button", { name: /주말 파티/ })).toBeTruthy();
@@ -646,7 +646,7 @@ describe("recipe detail screen", () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
     expect(
-      await screen.findByRole("heading", { name: "저장할 레시피북을 선택하세요" }),
+      await screen.findByRole("heading", { name: "레시피 저장" }),
     ).toBeTruthy();
     expect(
       screen.getByText("로그인 완료. 저장할 레시피북을 선택해 주세요."),
@@ -688,7 +688,7 @@ describe("recipe detail screen", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: "저장할 레시피북을 선택하세요" }),
+      await screen.findByRole("heading", { name: "레시피 저장" }),
     ).toBeTruthy();
     expect(window.localStorage.getItem(PENDING_ACTION_KEY)).toBeNull();
   });

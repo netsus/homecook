@@ -209,8 +209,8 @@ H5에서 HOME / RECIPE_DETAIL 기존 design 문서를 새로 실행하지 않고
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 기본값
-- [x] 리뷰 대기 (pending-review) — Stage 4 완료 ✅ (2026-04-17)
-- [ ] 확정 (confirmed) — authority evidence E1~E10 + A1~A5 통과 후
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 ✅ (2026-04-17)
+- [x] 확정 (confirmed) — authority evidence E1~E10 + A1~A5 통과 ✅ (2026-04-18)
 
 > Design Status 전이: `temporary` → `pending-review` (Stage 4 완료) → `confirmed` (authority gate 통과)  
 > High-Risk Redesign이므로 `confirmed` 전에 authority evidence 필수.

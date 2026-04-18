@@ -213,9 +213,8 @@ test.describe("Slice 04 recipe save flow", () => {
 
     const modal = page.getByRole("dialog");
     await expect(modal).toBeVisible();
-    await expect(
-      modal.getByRole("heading", { name: "저장할 레시피북을 선택하세요" }),
-    ).toBeVisible();
+    await expect(modal.getByRole("heading", { name: "레시피 저장" })).toBeVisible();
+    await expect(modal.getByText("저장할 레시피북을 선택하세요")).toBeVisible();
 
     await modal.getByRole("button", { name: /저장한 레시피/ }).click();
     await modal.getByRole("button", { name: /^저장$/ }).click();
@@ -287,9 +286,8 @@ test.describe("Slice 04 recipe save flow", () => {
     await page.goto(RECIPE_PATH);
 
     const modal = page.getByRole("dialog");
-    await expect(
-      modal.getByRole("heading", { name: "저장할 레시피북을 선택하세요" }),
-    ).toBeVisible();
+    await expect(modal.getByRole("heading", { name: "레시피 저장" })).toBeVisible();
+    await expect(modal.getByText("저장할 레시피북을 선택하세요")).toBeVisible();
 
     await expect
       .poll(() =>

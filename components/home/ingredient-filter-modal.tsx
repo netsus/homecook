@@ -9,6 +9,8 @@ import React, {
 } from "react";
 
 import { ContentState } from "@/components/shared/content-state";
+import { ModalHeader } from "@/components/shared/modal-header";
+import { SelectionChipRail } from "@/components/shared/selection-chip-rail";
 import { fetchJson } from "@/lib/api/fetch-json";
 import type { IngredientItem, IngredientListData } from "@/types/recipe";
 
@@ -234,34 +236,22 @@ export function IngredientFilterModal({
       >
         <div className="border-b border-[var(--line)] px-5 pb-5 pt-4 md:px-6">
           <div className="mx-auto h-1.5 w-14 rounded-full bg-black/10 md:hidden" />
-          <div className="mt-4 flex items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-                재료 필터
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <h2
-                  className="text-[1.4rem] font-extrabold tracking-[-0.02em] text-[var(--foreground)] md:text-2xl"
-                  id="ingredient-filter-title"
-                >
-                  재료로 검색
-                </h2>
-                {draftIngredientIds.length > 0 ? (
+          {/* D2: no eyebrow · D3: icon-only close · closeButtonRef for focus management */}
+          <div className="mt-4">
+            <ModalHeader
+              badge={
+                draftIngredientIds.length > 0 ? (
                   <span className="rounded-full border border-[color:rgba(46,166,122,0.16)] bg-[color:rgba(46,166,122,0.1)] px-2.5 py-1 text-[11px] font-semibold text-[var(--olive)]">
                     {draftIngredientIds.length}개 선택
                   </span>
-                ) : null}
-              </div>
-            </div>
-            <button
-              aria-label="닫기"
-              className="min-h-11 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--muted)]"
-              onClick={handleClose}
-              ref={closeButtonRef}
-              type="button"
-            >
-              닫기
-            </button>
+                ) : undefined
+              }
+              closeButtonRef={closeButtonRef}
+              description="원하는 재료를 골라 레시피를 좁혀요"
+              onClose={handleClose}
+              title="재료로 검색"
+              titleId="ingredient-filter-title"
+            />
           </div>
           <label className="mt-3 flex min-h-11 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow)] md:mt-4">
             <span className="visually-hidden">재료명으로 검색</span>
@@ -272,26 +262,14 @@ export function IngredientFilterModal({
               value={query}
             />
           </label>
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 md:mt-4 md:flex-wrap md:overflow-visible md:pb-0">
-            {CATEGORY_OPTIONS.map((category) => {
-              const isActive = activeCategory === category;
-
-              return (
-                <button
-                  aria-pressed={isActive}
-                  className={`min-h-11 shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                    isActive
-                      ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--foreground)]"
-                      : "border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--olive)] hover:text-[var(--olive)]"
-                  }`}
-                  key={category}
-                  onClick={() => setActiveCategory(category)}
-                  type="button"
-                >
-                  {category}
-                </button>
-              );
-            })}
+          {/* Category rail — SelectionChipRail pill mode */}
+          <div className="mt-3 md:mt-4 md:flex-wrap md:overflow-visible md:pb-0">
+            <SelectionChipRail
+              ariaLabel="카테고리 선택"
+              chips={CATEGORY_OPTIONS.map((cat) => ({ value: cat, label: cat }))}
+              onSelect={setActiveCategory}
+              selectedValue={activeCategory}
+            />
           </div>
         </div>
 
@@ -380,7 +358,7 @@ export function IngredientFilterModal({
                 초기화
               </button>
               <button
-                className="flex min-h-11 items-center justify-center whitespace-nowrap rounded-full bg-[var(--brand)] px-5 py-2 text-center text-sm font-semibold text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-11 items-center justify-center whitespace-nowrap rounded-full bg-[var(--olive)] px-5 py-2 text-center text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isApplyDisabled}
                 onClick={() => onApply(draftIngredientIds)}
                 type="button"
