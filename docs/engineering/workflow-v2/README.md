@@ -95,6 +95,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - Phase 7부터는 `pnpm omo:claude-budget`과 repo-local override를 통해 Claude reviewer availability를 자동 해석하고, 필요 시 blocked retry를 기록한다.
 - 현재 executable baseline은 `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:reconcile`, `validate:omo-bookkeeping`까지 포함한다.
 - fullauto v1의 의미는 low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함한다.
+- product slice 기본 경로에서 `pnpm omo:supervise -- --work-item <slice>`는 Stage 1 bootstrap부터 시작한다.
+- Stage 1 docs PR은 즉시 merge하지 않고, 같은 run 안에서 `internal 1.5 docs gate`를 mandatory로 거친다.
 - session-orchestrated runner 규격은 구현보다 먼저 문서로 잠근다.
 - 구현 baseline과 상위 문서가 다시 어긋나면 `pnpm validate:workflow-v2`가 fail한다.
 
@@ -106,6 +108,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - repo-local OpenCode / OMO config bootstrap
 - minimal `omo:dispatch-stage` / `omo:sync-status` helper 도입
 - direct `omo:run-stage` execution binding + `.artifacts/omo-lite-dispatch/` artifact bundle
+- Stage 1 Claude author + internal 1.5 Codex review / Claude repair docs gate를 기본 product slice 경로에 내장
 - Stage 4 Claude implementation + Codex `authority_precheck` + Stage 5 Codex public review + Claude `final_authority_gate` 흐름
 - automatic Claude budget resolution + repo-local override
 - JSON schema와 예시 파일 추가
@@ -164,15 +167,15 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 ## Workflow Usage
 
-1. `.workflow-v2/work-items/<id>.json`을 만든다.
-2. `.workflow-v2/status.json`에 같은 `id`의 status item을 추가한다.
+1. product slice에서 `pnpm omo:supervise -- --work-item <slice>`를 사용하면 Stage 1 Claude author가 work item / status item까지 bootstrap한다.
+2. 이미 tracked item이 있는 작업은 `.workflow-v2/work-items/<id>.json`과 `.workflow-v2/status.json`을 기존처럼 source of truth로 사용한다.
 3. 승격 상태를 관리 중이면 `.workflow-v2/promotion-evidence.json`도 같이 갱신한다.
 4. 작업 브랜치와 preset, required checks를 status에 기록한다.
    merge gate는 required subset이 아니라 current head 기준 시작된 PR checks 전체 green 여부로 판단한다.
 5. PR 본문의 `## Workpack / Slice`에 `workflow v2 work item` 경로를 적는다.
 6. `pnpm validate:workflow-v2`를 통과시킨다.
 7. medium/high risk 작업이면 plan loop summary artifact를 남긴다.
-8. review loop summary artifact는 docs-governance, workflow/tooling 변경, 또는 exceptional recovery일 때만 남긴다.
+8. generic review loop summary artifact는 docs-governance, workflow/tooling 변경, 또는 exceptional recovery일 때만 남긴다. product slice의 Stage 1 docs gate는 supervisor runtime/artifact를 canonical source로 사용한다.
 9. OMO-lite supervised execution이 필요하면 `pnpm omo:run-stage -- --slice <id> --stage <n>`으로 dispatch artifact를 만들고, public code stage 실행이 필요할 때 `--mode execute`를 사용한다.
    slice6 기준 public Stage 4는 Claude execute path를 사용할 수 있고, Stage 5 `final_authority_gate`는 review gate이므로 execute 대상이 아니라 review artifact 경로로 다룬다.
 10. Claude reviewer availability를 로컬에서 강제로 조정해야 하면 `pnpm omo:claude-budget -- --set unavailable --reason "<reason>"` 또는 `--clear`를 사용한다.

@@ -113,6 +113,8 @@
 - `docs/workpacks/<slice>/README.md` — 모든 섹션 채움
 - `docs/workpacks/<slice>/acceptance.md` — Happy Path·State·Error·DataIntegrity·ManualQA·AutomationSplit 채움
 - `docs/workpacks/<slice>/automation-spec.json` — autonomous/closeout validator가 읽는 machine-checkable stage contract
+- `.workflow-v2/work-items/<slice>.json` — Stage 1부터 사용하는 tracked work item
+- `.workflow-v2/status.json` matching item — Stage 1 docs gate가 읽는 tracked status entry
 - (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스만) In Scope의 **각 FE 화면마다**:
   - `ui/designs/<SCREEN_ID>.md` — design-generator 실행
   - `ui/designs/critiques/<SCREEN_ID>-critique.md` — design-critic 실행 (🟢/🟡 통과 필수)
@@ -188,13 +190,24 @@
 
 ### 완료 기준
 
-브랜치 `docs/<slice>`에서 PR을 열고, 다음이 같은 PR에 포함되어 main에 merge됨:
+브랜치 `docs/<slice>`에서 PR을 열고, 다음을 먼저 작성한다:
 - `docs/workpacks/<slice>/README.md` + `acceptance.md`
 - `docs/workpacks/<slice>/automation-spec.json`
+- `.workflow-v2/work-items/<slice>.json`
+- `.workflow-v2/status.json` matching item
 - (신규 화면 또는 high-risk UI change가 있는 FE 슬라이스) In Scope 각 FE 화면의 `ui/designs/<SCREEN_ID>.md` + `ui/designs/critiques/<SCREEN_ID>-critique.md`
 - (신규 화면, high-risk UI change, anchor extension이 있는 FE 슬라이스) workpack README `Design Authority` 섹션 + Figma frame URL 또는 screenshot evidence 계획
 
 **이 PR에 `docs/workpacks/README.md` Slice Order의 해당 슬라이스 Status를 `planned` → `docs`로 변경하는 커밋을 포함한다.**
+
+그 다음 Stage 1 완료 게이트로 supervisor 기본 경로의 `internal 1.5 docs gate`를 통과해야 한다.
+
+- `doc_gate_check`: supervisor deterministic validation
+- `doc_gate_review`: Codex structured review
+- `doc_gate_repair`: Claude final owner fix / rebuttal
+- 최대 3회(`Codex review -> Claude repair`) 안에 approve + unresolved required finding 0이어야 한다
+- approve 후 docs PR merge와 pending_recheck가 끝나야 Stage 1 완료로 본다
+- 3회 초과 unresolved required finding은 `human_escalation`이다
 
 공식 source-of-truth 문서 변경이 필요한 사용자 승인 계약 후보가 있다면:
 - Stage 1 결과를 바로 Stage 2 시작 신호로 쓰지 않는다.
@@ -224,7 +237,7 @@
 
 ### 다음 단계
 → 2단계(Codex): feature/be-<slice> 백엔드 구현
-→ 사전 조건: 이 README main merge 완료
+→ 사전 조건: Stage 1 docs PR merge + `internal 1.5 docs gate` pass
 → 단, 사용자 승인된 Contract Evolution 후보가 있으면 해당 docs PR merge 후 시작
 ```
 
@@ -238,6 +251,8 @@
 
 - 1단계 README.md + acceptance.md가 main에 merge됨
 - `docs/workpacks/<slice>/automation-spec.json`이 main에 merge됨
+- `.workflow-v2/work-items/<slice>.json`과 `.workflow-v2/status.json` matching item이 Stage 1에서 잠김
+- supervisor `internal 1.5 docs gate`가 `pass` 상태임
 - `docs/workpacks/<slice>/README.md`의 Dependencies 선행 슬라이스 전부 merged
 - 이 슬라이스에 영향 있는 `Contract Evolution Candidates`가 있다면, 승인된 항목은 별도 `contract-evolution` PR로 official docs와 `CURRENT_SOURCE_OF_TRUTH`가 먼저 merge됨
 - **`docs/workpacks/README.md` Slice Order에서 해당 슬라이스 Status를 `docs` → `in-progress`로 변경한다** (2단계 첫 커밋에 포함)

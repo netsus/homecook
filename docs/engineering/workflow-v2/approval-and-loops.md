@@ -50,7 +50,8 @@ Claude budget 문제로 Claude-owned stage가 pause 되면 상태는 blocked ret
 ## Review Loop
 
 기존 [agent-review-loop.md](../agent-review-loop.md)는 v2에서 `non-slice governance / tooling / exceptional recovery`용 review engine으로 사용한다.
-product slice의 기본 Stage 경로에는 넣지 않는다. 이유는 slice workflow에 이미 Stage 3, 5, 6의 정식 리뷰 단계가 있기 때문이다.
+product slice의 기본 Stage 경로에는 generic review-loop CLI를 넣지 않는다.
+대신 Stage 1은 supervisor 기본 경로 안에 `internal 1.5 docs gate`를 mandatory로 포함한다.
 
 기본 순서:
 
@@ -60,6 +61,14 @@ product slice의 기본 Stage 경로에는 넣지 않는다. 이유는 slice wor
 4. Claude 재리뷰
 5. Codex final sanity review
 6. dual-approval이면 종료
+
+Stage 1 docs gate는 위 generic review loop와 별도로 아래 고정 역할을 사용한다.
+
+1. Claude Stage 1 author
+2. supervisor `doc_gate_check`
+3. Codex `doc_gate_review`
+4. Claude `doc_gate_repair`
+5. approve 또는 `human_escalation`
 
 필수 조건:
 

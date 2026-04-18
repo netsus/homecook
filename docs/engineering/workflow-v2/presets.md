@@ -23,7 +23,8 @@ preset은 작업마다 같은 절차를 강제하지 않기 위한 기본 경로
 - 현재 v1 slice workflow와 가장 가깝다.
 - workpack 문서와 acceptance가 있어야 한다.
 - plan loop를 실행한다.
-- review loop는 기본 Stage 경로에 넣지 않는다. 정식 리뷰는 Stage 3, 5, 6이 담당한다.
+- Stage 1은 Claude author 뒤에 supervisor 기본 `internal 1.5 docs gate`를 mandatory로 실행한다.
+- generic review loop는 기본 Stage 경로에 넣지 않는다. 정식 리뷰는 Stage 3, 5, 6이 담당한다.
 - backend/fe 분리를 기본값으로 둔다.
 - external integration이 있으면 smoke checklist를 필수로 붙인다.
 

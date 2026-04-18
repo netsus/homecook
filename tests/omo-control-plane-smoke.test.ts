@@ -68,9 +68,6 @@ describe("OMO control-plane smoke", () => {
     });
 
     const runResult = stageRunner({
-      rootDir: executionDir,
-      workItemId: "99-omo-control-plane-smoke",
-      slice: "99-omo-control-plane-smoke",
       stage: 2,
       executionDir,
     });
@@ -120,7 +117,7 @@ describe("OMO control-plane smoke", () => {
       },
     });
 
-    expect(runResult.stageResult.summary_markdown).toContain("smoke");
+    expect("summary_markdown" in runResult.stageResult && runResult.stageResult.summary_markdown).toContain("smoke");
     expect(runResult.artifactDir).toContain(".artifacts/omo-control-plane-smoke");
     expect(checkpoints.docsPrCreated).toBe(true);
     expect(checkpoints.backendPrCreated).toBe(true);
@@ -405,6 +402,15 @@ describe("OMO control-plane smoke", () => {
       join(workspacePath, "docs", "workpacks", "99-omo-control-plane-smoke", "automation-spec.json"),
       readFileSync(join(rootDir, "docs", "workpacks", "99-omo-control-plane-smoke", "automation-spec.json"), "utf8"),
     );
+    mkdirSync(join(workspacePath, ".workflow-v2", "work-items"), { recursive: true });
+    writeFileSync(
+      join(workspacePath, ".workflow-v2", "status.json"),
+      readFileSync(join(rootDir, ".workflow-v2", "status.json"), "utf8"),
+    );
+    writeFileSync(
+      join(workspacePath, ".workflow-v2", "work-items", "99-omo-control-plane-smoke.json"),
+      readFileSync(join(rootDir, ".workflow-v2", "work-items", "99-omo-control-plane-smoke.json"), "utf8"),
+    );
     execFileSync("git", ["add", "-A"], { cwd: workspacePath });
     execFileSync("git", ["commit", "-m", "docs: seed smoke workspace"], { cwd: workspacePath });
 
@@ -449,6 +455,7 @@ describe("OMO control-plane smoke", () => {
               .filter((line) => !line.includes(".opencode/"))
               .filter((line) => !line.includes(".workflow-v2/"))
               .filter((line) => !line.includes(".artifacts/"))
+              .filter((line) => line.trim() !== "?? smoke/")
               .filter((line) => !line.includes("smoke/omo-control-plane/") || !line.includes("/state.json"))
               .join("\n");
             if (output.length > 0) {
@@ -604,6 +611,7 @@ describe("OMO control-plane smoke", () => {
               .filter((line) => !line.includes(".opencode/"))
               .filter((line) => !line.includes(".workflow-v2/"))
               .filter((line) => !line.includes(".artifacts/"))
+              .filter((line) => line.trim() !== "?? smoke/")
               .filter((line) => !line.includes("smoke/omo-control-plane/") || !line.includes("/state.json"))
               .join("\n");
             if (output.length > 0) {
@@ -708,7 +716,7 @@ describe("OMO control-plane smoke", () => {
       kind: "ci",
       stage: 5,
     });
-    expect(smokeState.attempts["2"]).toBe(3);
+    expect(smokeState.attempts["2"]).toBe(4);
     expect(smokeState.attempts["3"]).toBe(3);
     expect(smokeState.review_loops.backend.requested_changes).toBe(2);
     expect(smokeState.review_loops.backend.code_retries).toBe(2);

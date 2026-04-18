@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -341,6 +341,9 @@ function buildDocGateReviewStageResult({
 function seedProductWorkItem(rootDir: string, workItemId: string) {
   mkdirSync(join(rootDir, ".artifacts"), { recursive: true });
   mkdirSync(join(rootDir, ".workflow-v2", "work-items"), { recursive: true });
+  mkdirSync(join(rootDir, ".worktrees", workItemId, ".workflow-v2", "work-items"), {
+    recursive: true,
+  });
   mkdirSync(join(rootDir, "docs", "sync"), { recursive: true });
   mkdirSync(join(rootDir, ".worktrees", workItemId, "docs", "sync"), { recursive: true });
   mkdirSync(join(rootDir, "docs", "workpacks", workItemId), { recursive: true });
@@ -408,6 +411,10 @@ function seedProductWorkItem(rootDir: string, workItemId: string) {
     ),
   );
   writeFileSync(
+    join(rootDir, ".worktrees", workItemId, ".workflow-v2", "status.json"),
+    readFileSync(join(rootDir, ".workflow-v2", "status.json"), "utf8"),
+  );
+  writeFileSync(
     join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`),
     JSON.stringify(
       {
@@ -447,12 +454,55 @@ function seedProductWorkItem(rootDir: string, workItemId: string) {
       2,
     ),
   );
+  writeFileSync(
+    join(rootDir, ".worktrees", workItemId, ".workflow-v2", "work-items", `${workItemId}.json`),
+    readFileSync(join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`), "utf8"),
+  );
 }
 
 function createFixture() {
   const rootDir = mkdtempSync(join(tmpdir(), "omo-autonomous-supervisor-"));
   seedProductWorkItem(rootDir, "03-recipe-like");
   return rootDir;
+}
+
+function upsertWorktreeStatusItem(
+  workspacePath: string,
+  workItemId: string,
+  overrides: Record<string, unknown> = {},
+) {
+  const statusPath = join(workspacePath, ".workflow-v2", "status.json");
+  const status = JSON.parse(readFileSync(statusPath, "utf8")) as {
+    version: number;
+    project_profile: string;
+    updated_at: string;
+    items: Array<Record<string, unknown>>;
+  };
+  const nextItem = {
+    id: workItemId,
+    preset: "vertical-slice-strict",
+    lifecycle: "planned",
+    approval_state: "not_started",
+    verification_status: "pending",
+    required_checks: ["pnpm validate:workflow-v2"],
+    ...(status.items.find((item) => item.id === workItemId) ?? {}),
+    ...overrides,
+  };
+  const nextItems = status.items.some((item) => item.id === workItemId)
+    ? status.items.map((item) => (item.id === workItemId ? nextItem : item))
+    : [...status.items, nextItem];
+
+  writeFileSync(
+    statusPath,
+    `${JSON.stringify(
+      {
+        ...status,
+        items: nextItems,
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }
 
 function readTrackedStatusItem(rootDir: string, workItemId: string) {
@@ -691,6 +741,152 @@ function seedAuthorityDocGateFixture(workspacePath: string, workItemId: string) 
   );
 }
 
+function seedPassingDocGateFixture(workspacePath: string, workItemId: string) {
+  mkdirSync(join(workspacePath, "docs", "workpacks", workItemId), { recursive: true });
+  writeFileSync(
+    join(workspacePath, "docs", "workpacks", "README.md"),
+    [
+      "# Workpack Roadmap v2",
+      "",
+      "## Slice Order",
+      "",
+      "| Slice | Status | Goal |",
+      "| --- | --- | --- |",
+      `| \`${workItemId}\` | docs | test slice |`,
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(workspacePath, "docs", "workpacks", workItemId, "README.md"),
+    [
+      `# ${workItemId}`,
+      "",
+      "## Goal",
+      "- goal",
+      "",
+      "## Branches",
+      "- docs",
+      "- backend",
+      "- frontend",
+      "",
+      "## In Scope",
+      "- scope",
+      "",
+      "## Out of Scope",
+      "- out",
+      "",
+      "## Dependencies",
+      "- dep",
+      "",
+      "## Backend First Contract",
+      "- contract",
+      "",
+      "## Frontend Delivery Mode",
+      "- loading / empty / error / read-only / unauthorized",
+      "",
+      "## Design Authority",
+      "- UI risk: `low-risk`",
+      "- Anchor screen dependency: 없음",
+      "- Visual artifact: not-required",
+      "- Authority status: `not-required`",
+      "- Notes: none",
+      "",
+      "## Design Status",
+      "- [x] 임시 UI (temporary)",
+      "- [ ] 리뷰 대기 (pending-review)",
+      "- [ ] 확정 (confirmed)",
+      "- [ ] N/A",
+      "",
+      "## Source Links",
+      "- source",
+      "",
+      "## QA / Test Data Plan",
+      "- qa",
+      "",
+      "## Key Rules",
+      "- rule",
+      "",
+      "## Primary User Path",
+      "1. step",
+      "2. step",
+      "3. step",
+      "",
+      "## Delivery Checklist",
+      `- [ ] 백엔드 계약 고정 <!-- omo:id=${CHECKLIST_IDS.backendDelivery};stage=2;scope=backend;review=3,6 -->`,
+      `- [ ] UI 연결 <!-- omo:id=${CHECKLIST_IDS.frontendDelivery};stage=4;scope=frontend;review=5,6 -->`,
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(workspacePath, "docs", "workpacks", workItemId, "acceptance.md"),
+    [
+      `# ${workItemId} acceptance`,
+      "",
+      "## Happy Path",
+      `- [ ] API 응답 형식이 { success, data, error }를 따른다 <!-- omo:id=${CHECKLIST_IDS.backendAcceptance};stage=2;scope=backend;review=3,6 -->`,
+      `- [ ] loading 상태가 있다 <!-- omo:id=${CHECKLIST_IDS.frontendAcceptance};stage=4;scope=frontend;review=5,6 -->`,
+      "",
+      "## State / Policy",
+      "- state",
+      "",
+      "## Error / Permission",
+      "- error",
+      "",
+      "## Data Integrity",
+      "- integrity",
+      "",
+      "## Data Setup / Preconditions",
+      "- setup",
+      "",
+      "## Manual QA",
+      "- manual",
+      "",
+      "## Automation Split",
+      "### Manual Only",
+      "- [ ] live smoke",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(workspacePath, "docs", "workpacks", workItemId, "automation-spec.json"),
+    JSON.stringify(
+      {
+        slice_id: workItemId,
+        execution_mode: "autonomous",
+        risk_class: "medium",
+        merge_policy: "conditional-auto",
+        backend: {
+          required_endpoints: ["POST /api/v1/example"],
+          invariants: [],
+          verify_commands: [],
+          required_test_targets: ["tests/example.backend.test.ts"],
+        },
+        frontend: {
+          required_routes: ["/example"],
+          required_states: ["loading"],
+          playwright_projects: [],
+          artifact_assertions: ["playwright-report"],
+          design_authority: {
+            ui_risk: "low-risk",
+            anchor_screens: [],
+            required_screens: [],
+            generator_required: false,
+            critic_required: false,
+            authority_required: false,
+            stage4_evidence_requirements: [],
+            authority_report_paths: [],
+          },
+        },
+        external_smokes: [],
+        blocked_conditions: [],
+        max_fix_rounds: {
+          backend: 2,
+          frontend: 2,
+        },
+      },
+      null,
+      2,
+    ),
+  );
+}
+
 describe("OMO autonomous supervisor", () => {
   it("tick on a specific work item is a no-op when runtime is missing", () => {
     const rootDir = createFixture();
@@ -833,6 +1029,11 @@ describe("OMO autonomous supervisor", () => {
               2,
             ),
           );
+          upsertWorktreeStatusItem(workspacePath, "03-recipe-like", {
+            lifecycle: "ready_for_review",
+            approval_state: "claude_approved",
+            verification_status: "passed",
+          });
           return {
             artifactDir: join(rootDir, ".artifacts", "stage1"),
             dispatch: { actor: "claude", stage: 1 },
@@ -1094,17 +1295,331 @@ describe("OMO autonomous supervisor", () => {
     expect(gitLog).toEqual([
       "checkout:docs/03-recipe-like",
       "push:docs/03-recipe-like",
-      "sync:master",
       "checkout:feature/be-03-recipe-like",
       "push:feature/be-03-recipe-like",
     ]);
     expect(ghLog).toEqual([
       "create:docs/03-recipe-like:ready",
       "checks:https://github.com/netsus/homecook/pull/34",
-      "merge:https://github.com/netsus/homecook/pull/34",
       "create:feature/be-03-recipe-like:draft",
       "checks:https://github.com/netsus/homecook/pull/35",
     ]);
+  });
+
+  it("enters Stage 1 bootstrap when tracked work item and workpack docs are missing", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    let stage1Ran = false;
+
+    rmSync(join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`), { force: true });
+    rmSync(join(workspacePath, ".workflow-v2", "work-items", `${workItemId}.json`), { force: true });
+    rmSync(join(rootDir, "docs", "workpacks", workItemId), { recursive: true, force: true });
+    rmSync(join(workspacePath, "docs", "workpacks", workItemId), { recursive: true, force: true });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-18T16:20:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            mkdirSync(join(workspacePath, "docs", "workpacks"), { recursive: true });
+            writeFileSync(
+              join(workspacePath, "docs", "workpacks", "README.md"),
+              [
+                "# Workpack Roadmap v2",
+                "",
+                "## Slice Order",
+                "",
+                "| Slice | Status | Goal |",
+                "| --- | --- | --- |",
+                `| \`${workItemId}\` | planned | test slice |`,
+              ].join("\n"),
+            );
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            return { branch: `docs/${workItemId}` };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "docsbootstrap123";
+          },
+          getCurrentBranch() {
+            return `docs/${workItemId}`;
+          },
+          listChangedFiles() {
+            return [];
+          },
+        },
+        stageRunner() {
+          stage1Ran = true;
+          mkdirSync(join(workspacePath, ".workflow-v2", "work-items"), { recursive: true });
+          mkdirSync(join(workspacePath, "docs", "workpacks", workItemId), { recursive: true });
+          writeFileSync(
+            join(workspacePath, "docs", "workpacks", "README.md"),
+            [
+              "# Workpack Roadmap v2",
+              "",
+              "## Slice Order",
+              "",
+              "| Slice | Status | Goal |",
+              "| --- | --- | --- |",
+              `| \`${workItemId}\` | docs | test slice |`,
+            ].join("\n"),
+          );
+          writeFileSync(
+            join(workspacePath, "docs", "workpacks", workItemId, "README.md"),
+            buildWorkpackReadme({
+              workItemId,
+            }),
+          );
+          writeFileSync(
+            join(workspacePath, "docs", "workpacks", workItemId, "acceptance.md"),
+            buildAcceptance({
+              workItemId,
+            }),
+          );
+          writeFileSync(
+            join(workspacePath, "docs", "workpacks", workItemId, "automation-spec.json"),
+            JSON.stringify(
+              {
+                slice_id: workItemId,
+                execution_mode: "autonomous",
+              },
+              null,
+              2,
+            ),
+          );
+          writeFileSync(
+            join(workspacePath, ".workflow-v2", "work-items", `${workItemId}.json`),
+            JSON.stringify(
+              {
+                id: workItemId,
+                title: "Bootstrap slice",
+                project_profile: "homecook",
+                change_type: "product",
+                surface: "fullstack",
+                risk: "medium",
+                preset: "vertical-slice-strict",
+                goal: "Bootstrap Stage 1 docs through OMO supervise.",
+                owners: {
+                  claude: "stage-1-author-and-doc-gate-repair",
+                  codex: "doc-gate-review-and-implementation",
+                  workers: [],
+                },
+                docs_refs: {
+                  source_of_truth: ["AGENTS.md", "docs/sync/CURRENT_SOURCE_OF_TRUTH.md"],
+                  governing_docs: ["docs/engineering/workflow-v2/omo-autonomous-supervisor.md"],
+                },
+                workflow: {
+                  plan_loop: "required",
+                  review_loop: "skipped",
+                  external_smokes: [],
+                  execution_mode: "autonomous",
+                  merge_policy: "conditional-auto",
+                },
+                verification: {
+                  required_checks: ["pnpm validate:workflow-v2"],
+                  verify_commands: ["pnpm validate:workflow-v2"],
+                },
+                status: {
+                  lifecycle: "planned",
+                  approval_state: "not_started",
+                  verification_status: "pending",
+                },
+              },
+              null,
+              2,
+            ),
+          );
+          upsertWorktreeStatusItem(workspacePath, workItemId, {
+            lifecycle: "ready_for_review",
+            approval_state: "claude_approved",
+            verification_status: "passed",
+          });
+          return {
+            artifactDir: join(rootDir, ".artifacts", "stage1-bootstrap"),
+            dispatch: { actor: "claude", stage: 1 },
+            execution: { mode: "execute", executed: true, sessionId: "ses_claude_bootstrap" },
+            stageResult: {
+              result: "done",
+              summary_markdown: "Stage 1 bootstrap complete",
+              commit: {
+                subject: "docs: bootstrap slice docs",
+              },
+              pr: {
+                title: "docs: bootstrap slice docs",
+                body_markdown: "## Summary\n- docs bootstrap",
+              },
+              checks_run: [],
+              next_route: "open_pr",
+            },
+          };
+        },
+        github: {
+          createPullRequest() {
+            return { number: 134, url: "https://github.com/netsus/homecook/pull/134", draft: false };
+          },
+          getRequiredChecks() {
+            return { bucket: "pass", checks: [] };
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            return { merged: true };
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(stage1Ran).toBe(true);
+    expect(result.wait).toMatchObject({
+      kind: "ready_for_next_stage",
+      stage: 2,
+    });
+    expect(result.runtime?.doc_gate?.status).toBe("pending_check");
+    expect(existsSync(join(workspacePath, ".workflow-v2", "work-items", `${workItemId}.json`))).toBe(true);
+    expect(
+      JSON.parse(readFileSync(join(workspacePath, ".workflow-v2", "status.json"), "utf8")).items.some(
+        (item: { id: string }) => item.id === workItemId,
+      ),
+    ).toBe(true);
+  });
+
+  it("does not enter Stage 2 implementation before docs PR merge and doc_gate pass", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    let stageRunnerCalled = false;
+
+    createGitWorkspace(workspacePath, `docs/${workItemId}`);
+    seedPassingDocGateFixture(workspacePath, workItemId);
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        last_completed_stage: 1,
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        phase: "wait",
+        next_action: "run_stage",
+        wait: {
+          kind: "ready_for_next_stage",
+          pr_role: "docs",
+          stage: 2,
+          head_sha: "docs123",
+        },
+        prs: {
+          docs: {
+            number: 55,
+            url: "https://github.com/netsus/homecook/pull/55",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+            updated_at: "2026-04-18T16:30:00+09:00",
+          },
+          backend: null,
+          frontend: null,
+          closeout: null,
+        },
+        execution: null,
+        doc_gate: {
+          status: "pending_check",
+          round: 0,
+          repair_branch: `docs/${workItemId}`,
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-18T16:31:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "docs123";
+          },
+          getCurrentBranch() {
+            return `docs/${workItemId}`;
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          stageRunnerCalled = true;
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            return { bucket: "pass", checks: [] };
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(stageRunnerCalled).toBe(false);
+    expect(result.wait).toMatchObject({
+      kind: "ready_for_next_stage",
+      pr_role: "docs",
+      stage: 2,
+    });
+    expect(result.runtime?.doc_gate?.status).toBe("awaiting_review");
+    expect(result.runtime?.prs?.backend).toBeNull();
   });
 
   it("resumes Stage 1 finalize from pr_pending without rerunning Stage 1 entry validation", () => {
@@ -1153,6 +1668,11 @@ describe("OMO autonomous supervisor", () => {
         2,
       ),
     );
+    upsertWorktreeStatusItem(workspacePath, workItemId, {
+      lifecycle: "ready_for_review",
+      approval_state: "claude_approved",
+      verification_status: "passed",
+    });
     mkdirSync(artifactDir, { recursive: true });
     writeFileSync(
       stageResultPath,
@@ -1296,7 +1816,7 @@ describe("OMO autonomous supervisor", () => {
     const docFindingId = "doc-gate-missing-goal";
     let observedSubphase: string | null = null;
 
-    createGitWorkspace(workspacePath, "docs/03-recipe-like-repair");
+    createGitWorkspace(workspacePath, "docs/03-recipe-like");
     seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
       roadmapStatus: "docs",
     });
@@ -1327,7 +1847,7 @@ describe("OMO autonomous supervisor", () => {
         doc_gate: {
           status: "fixable",
           round: 0,
-          repair_branch: "docs/03-recipe-like-repair",
+          repair_branch: "docs/03-recipe-like",
           findings: [buildDocGateFinding(docFindingId)],
         },
       },
@@ -1466,7 +1986,7 @@ describe("OMO autonomous supervisor", () => {
       stage: 2,
     });
     expect(runtime.prs.docs).toMatchObject({
-      branch: "docs/03-recipe-like-repair",
+      branch: "docs/03-recipe-like",
       url: "https://github.com/netsus/homecook/pull/77",
     });
     expect(runtime.doc_gate.status).toBe("awaiting_review");
@@ -1534,7 +2054,7 @@ describe("OMO autonomous supervisor", () => {
         doc_gate: {
           status: "fixable",
           round: 0,
-          repair_branch: "docs/03-recipe-like-repair",
+          repair_branch: "docs/03-recipe-like",
           findings: [buildDocGateFinding(docFindingId)],
         },
       },
@@ -1566,7 +2086,7 @@ describe("OMO autonomous supervisor", () => {
             return "docgate123";
           },
           getCurrentBranch() {
-            return "docs/03-recipe-like-repair";
+            return "docs/03-recipe-like";
           },
           listChangedFiles() {
             return [];
@@ -1599,7 +2119,7 @@ describe("OMO autonomous supervisor", () => {
     expect(result.wait).toMatchObject({
       kind: "human_escalation",
     });
-    expect(result.wait?.reason ?? "").toContain("Doc gate repair may only change workpack docs");
+    expect(result.wait?.reason ?? "").toContain("Doc gate repair may only change Stage 1 docs artifacts");
   });
 
   it("routes doc_gate_review request_changes back to Stage 2 doc repair", () => {
@@ -1665,7 +2185,7 @@ describe("OMO autonomous supervisor", () => {
             number: 77,
             url: "https://github.com/netsus/homecook/pull/77",
             draft: false,
-            branch: "docs/03-recipe-like-repair",
+            branch: "docs/03-recipe-like",
             head_sha: "docs123",
           },
           backend: null,
@@ -1674,7 +2194,7 @@ describe("OMO autonomous supervisor", () => {
         doc_gate: {
           status: "awaiting_review",
           round: 1,
-          repair_branch: "docs/03-recipe-like-repair",
+          repair_branch: "docs/03-recipe-like",
           findings: [buildDocGateFinding(docFindingId)],
         },
       },
@@ -1707,7 +2227,7 @@ describe("OMO autonomous supervisor", () => {
             return "docs123";
           },
           getCurrentBranch() {
-            return "docs/03-recipe-like-repair";
+            return "docs/03-recipe-like";
           },
           listChangedFiles() {
             return [];
@@ -1772,7 +2292,7 @@ describe("OMO autonomous supervisor", () => {
     const workspacePath = join(rootDir, ".worktrees", workItemId);
     let observedSubphase: string | null = null;
 
-    createGitWorkspace(workspacePath, "docs/03-recipe-like-repair");
+    createGitWorkspace(workspacePath, "docs/03-recipe-like");
     seedAuthorityDocGateFixture(workspacePath, workItemId);
     execFileSync("git", ["add", "-A"], { cwd: workspacePath });
     execFileSync("git", ["commit", "-m", "docs: seed authority doc gate"], { cwd: workspacePath });
@@ -1813,7 +2333,7 @@ describe("OMO autonomous supervisor", () => {
         doc_gate: {
           status: "pending_recheck",
           round: 0,
-          repair_branch: "docs/03-recipe-like-repair",
+          repair_branch: "docs/03-recipe-like",
           last_review: {
             decision: "approve",
             reviewed_doc_finding_ids: waivedIds,
@@ -1911,13 +2431,11 @@ describe("OMO autonomous supervisor", () => {
     expect(result.wait?.kind).not.toBe("ready_for_next_stage");
   });
 
-  it("keeps unwaived doc gate findings fixable on pending_recheck", () => {
+  it("escalates when merged Stage 1 docs fail pending_recheck", () => {
     const rootDir = createFixture();
     const workItemId = "03-recipe-like";
     const workspacePath = join(rootDir, ".worktrees", workItemId);
-    let observedSubphase: string | null = null;
-
-    createGitWorkspace(workspacePath, "docs/03-recipe-like-repair");
+    createGitWorkspace(workspacePath, "docs/03-recipe-like");
     seedAuthorityDocGateFixture(workspacePath, workItemId);
     execFileSync("git", ["add", "-A"], { cwd: workspacePath });
     execFileSync("git", ["commit", "-m", "docs: seed authority doc gate"], { cwd: workspacePath });
@@ -1929,7 +2447,6 @@ describe("OMO autonomous supervisor", () => {
     });
     const allFindingIds = pendingRecheckResult.findings.map((finding) => finding.id);
     const waivedIds = allFindingIds.slice(0, allFindingIds.length - 1);
-    const remainingIds = allFindingIds.filter((id) => !waivedIds.includes(id));
 
     writeRuntimeState({
       rootDir,
@@ -1960,7 +2477,7 @@ describe("OMO autonomous supervisor", () => {
         doc_gate: {
           status: "pending_recheck",
           round: 0,
-          repair_branch: "docs/03-recipe-like-repair",
+          repair_branch: "docs/03-recipe-like",
           last_review: {
             decision: "approve",
             reviewed_doc_finding_ids: [
@@ -1969,7 +2486,7 @@ describe("OMO autonomous supervisor", () => {
             ],
             required_doc_fix_ids: [],
             waived_doc_fix_ids: waivedIds,
-            source_review_stage: 2,
+            source_review_stage: 1,
           },
         },
       },
@@ -2001,7 +2518,7 @@ describe("OMO autonomous supervisor", () => {
             return "docgate123";
           },
           getCurrentBranch() {
-            return "docs/03-recipe-like-repair";
+            return "docs/03-recipe-like";
           },
           listChangedFiles() {
             return [];
@@ -2010,31 +2527,8 @@ describe("OMO autonomous supervisor", () => {
             return "";
           },
         },
-        stageRunner({ subphase }: { subphase?: string | null }) {
-          observedSubphase = subphase ?? null;
-          const readmePath = join(workspacePath, "docs", "workpacks", workItemId, "README.md");
-          writeFileSync(
-            readmePath,
-            `${readFileSync(readmePath, "utf8")}\n## Goal\n- repaired remaining pending_recheck finding\n`,
-          );
-          return {
-            artifactDir: join(rootDir, ".artifacts", "doc-gate-repair-recheck"),
-            dispatch: {
-              actor: "codex",
-              stage: 2,
-              subphase: "doc_gate_repair",
-              sessionBinding: {
-                role: "codex_primary",
-              },
-            },
-            execution: { mode: "execute", executed: true, sessionId: "ses_doc_gate_repair" },
-            stageResult: buildDocGateRepairStageResult({
-              summary: "Doc gate repaired remaining finding.",
-              subject: "docs: repair remaining finding",
-              title: "docs: repair remaining finding",
-              resolvedDocFindingIds: remainingIds,
-            }),
-          };
+        stageRunner() {
+          throw new Error("not expected");
         },
         github: {
           createPullRequest({ head, draft }: { head: string; draft: boolean }) {
@@ -2062,8 +2556,10 @@ describe("OMO autonomous supervisor", () => {
       },
     );
 
-    expect(observedSubphase).toBe("doc_gate_repair");
-    expect(result.wait?.kind).not.toBe("ready_for_next_stage");
+    expect(result.wait).toMatchObject({
+      kind: "human_escalation",
+    });
+    expect(result.wait?.reason ?? "").toContain("Merged Stage 1 docs failed doc gate recheck");
   });
 
   it("escalates when doc_gate_review exceeds max ping-pong rounds", () => {
@@ -2129,7 +2625,7 @@ describe("OMO autonomous supervisor", () => {
             number: 77,
             url: "https://github.com/netsus/homecook/pull/77",
             draft: false,
-            branch: "docs/03-recipe-like-repair",
+            branch: "docs/03-recipe-like",
             head_sha: "docs123",
           },
           backend: null,
@@ -2138,7 +2634,7 @@ describe("OMO autonomous supervisor", () => {
         doc_gate: {
           status: "awaiting_review",
           round: 3,
-          repair_branch: "docs/03-recipe-like-repair",
+          repair_branch: "docs/03-recipe-like",
           findings: [buildDocGateFinding(docFindingId)],
         },
       },
@@ -2170,7 +2666,7 @@ describe("OMO autonomous supervisor", () => {
             return "docs123";
           },
           getCurrentBranch() {
-            return "docs/03-recipe-like-repair";
+            return "docs/03-recipe-like";
           },
           listChangedFiles() {
             return [];
@@ -8086,6 +8582,11 @@ describe("OMO autonomous supervisor", () => {
               2,
             ),
           );
+          upsertWorktreeStatusItem(workspacePath, "03-recipe-like", {
+            lifecycle: "ready_for_review",
+            approval_state: "claude_approved",
+            verification_status: "pending",
+          });
           return {
             artifactDir: join(rootDir, ".artifacts", "stage1"),
             dispatch: { actor: "claude", stage: 1 },

@@ -214,8 +214,12 @@ function inferActiveStage({
 }
 
 function resolveExpectedSessionRole(stage, subphase = "implementation") {
-  if (stage === 2 && subphase === "doc_gate_review") {
+  if (stage === 2 && subphase === "doc_gate_repair") {
     return "claude_primary";
+  }
+
+  if (stage === 2 && subphase === "doc_gate_review") {
+    return "codex_primary";
   }
 
   if (stage === 5 && subphase === "final_authority_gate") {
