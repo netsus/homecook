@@ -331,9 +331,12 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const agentWorkflowOverviewErrors = [
     ...containsAll(agentWorkflowOverview, [
       "## Claude public stage 흐름",
-      "Stage 1 문서 작성 / Stage 3 백엔드 리뷰 / Stage 4 프론트 구현 수행",
+      "Stage 1 문서 작성",
+      "internal 1.5 docs gate repair / final owner 수행",
+      "Stage 3 백엔드 리뷰 / Stage 4 프론트 구현 수행",
       "authority-required slice면 Stage 5 final_authority_gate 수행",
       "## Codex review / closeout 흐름",
+      "internal 1.5 docs gate review 수행",
       "Stage 2 백엔드 구현 수행",
       "Stage 5 public 디자인 리뷰와 Stage 6 FE PR 리뷰 / closeout 수행",
     ]),
@@ -368,6 +371,8 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "slice6 기준 public Stage 4는 Claude execute path를 사용할 수 있고, Stage 5 `final_authority_gate`는 review gate이므로 execute 대상이 아니라 review artifact 경로로 다룬다.",
       "promotion-readiness.md",
       ".workflow-v2/promotion-evidence.json",
+      "Stage 1 bootstrap부터 시작한다.",
+      "internal 1.5 docs gate",
     ]),
     ...containsNone(workflowReadme, [
       "Codex stage에 한해 `--mode execute`를 사용한다.",
@@ -397,6 +402,10 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "authority-required frontend PR은 `merge_pending` 직전과 `mergePullRequest` 직전에 모두 `design_authority.status === \"reviewed\"`와 final authority verdict `pass`를 재검증한다.",
       "strict slice에서 Stage 2는 `$ralph` skill 기반 loop를 기본 실행 표면으로 사용하고, Stage 4는 현재 OMO-lite runner 기준으로 `single_pass`를 기본 실행 표면으로 유지한다.",
       "manual merge handoff",
+      "product slice에서 tracked work item/workpack이 없어도 Stage 1 Claude author로 bootstrap 시작한다.",
+      "Stage 1 docs PR은 즉시 merge하지 않고",
+      "`doc_gate_review`는 Codex",
+      "`doc_gate_repair`는 Claude",
     ]),
     ...containsNone(supervisorDoc, [
       "Stage 2/4는 strict slice에서 `$ralph` skill 기반 loop를 기본 실행 표면으로 사용한다.",
@@ -428,6 +437,8 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "### Stage 5 → Codex",
       "### Stage 5 → Claude (`subphase=final_authority_gate`)",
       "### Stage 6 → Codex",
+      "### Internal 1.5 → Claude (`stage=2`, `subphase=doc_gate_repair`)",
+      "### Internal 1.5 → Codex (`stage=2`, `subphase=doc_gate_review`)",
       "`actor == codex`인 dispatch는 `codex_primary` session으로 실행한다.",
       "`actor == claude`인 dispatch는 `claude_primary` session으로 실행한다.",
       "strict slice여도 Stage 4는 현재 `single_pass`로 실행",

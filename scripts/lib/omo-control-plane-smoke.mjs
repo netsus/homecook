@@ -25,16 +25,16 @@ const SMOKE_CHECKLIST_IDS = {
 };
 const LIVE_PROVIDER_STAGE_TIMEOUT_MS = 90_000;
 
-function resolveSmokeStageActor(stage) {
-  return resolveStageSessionRole(stage, "implementation") === "claude_primary" ? "claude" : "codex";
+function resolveSmokeStageActor(stage, subphase = "implementation") {
+  return resolveStageSessionRole(stage, subphase) === "claude_primary" ? "claude" : "codex";
 }
 
-function resolveSmokeStageProvider(stage) {
-  return resolveStageSessionRole(stage, "implementation") === "claude_primary" ? "claude-cli" : "opencode";
+function resolveSmokeStageProvider(stage, subphase = "implementation") {
+  return resolveStageSessionRole(stage, subphase) === "claude_primary" ? "claude-cli" : "opencode";
 }
 
-function resolveSmokeStageSessionId(stage) {
-  return resolveStageSessionRole(stage, "implementation") === "claude_primary"
+function resolveSmokeStageSessionId(stage, subphase = "implementation") {
+  return resolveStageSessionRole(stage, subphase) === "claude_primary"
     ? "ses_omo_claude_smoke"
     : "ses_omo_codex_smoke";
 }
@@ -1004,13 +1004,47 @@ function buildReviewStageResult({ stage, attempt }) {
  * @param {CreateControlPlaneSmokeStageRunnerOptions} [options]
  * @returns {(args: ControlPlaneStageRunnerArgs) => ControlPlaneStageRunResult}
  */
+function buildDocGateReviewStageResult({ attempt }) {
+  if (attempt === 1) {
+    return {
+      decision: "approve",
+      body_markdown: "## Review\n- Stage 1 docs gate approve",
+      route_back_stage: null,
+      approved_head_sha: null,
+      review_scope: {
+        scope: "doc_gate",
+        checklist_ids: [],
+      },
+      reviewed_doc_finding_ids: [],
+      required_doc_fix_ids: [],
+      waived_doc_fix_ids: [],
+      findings: [],
+    };
+  }
+
+  return {
+    decision: "approve",
+    body_markdown: "## Review\n- Stage 1 docs gate approve",
+    route_back_stage: null,
+    approved_head_sha: null,
+    review_scope: {
+      scope: "doc_gate",
+      checklist_ids: [],
+    },
+    reviewed_doc_finding_ids: [],
+    required_doc_fix_ids: [],
+    waived_doc_fix_ids: [],
+    findings: [],
+  };
+}
+
 export function createControlPlaneSmokeStageRunner({
   rootDir = process.cwd(),
   artifactBaseDir = resolve(rootDir, ".artifacts", "omo-control-plane-smoke"),
   workItemId = "99-omo-control-plane-smoke",
   now = new Date().toISOString(),
 } = {}) {
-  return ({ stage, executionDir }) => {
+  return ({ stage, subphase = null, executionDir }) => {
     const smokeState = readControlPlaneSmokeState({
       rootDir,
       workItemId,
@@ -1148,15 +1182,17 @@ export function createControlPlaneSmokeStageRunner({
     }
 
     const stageResult =
-      [1, 2, 4].includes(stage)
-        ? buildCodeStageResult({ stage, workItemId, attempt })
-        : buildReviewStageResult({ stage, attempt });
+      stage === 2 && subphase === "doc_gate_review"
+        ? buildDocGateReviewStageResult({ attempt })
+        : [1, 2, 4].includes(stage)
+          ? buildCodeStageResult({ stage, workItemId, attempt })
+          : buildReviewStageResult({ stage, attempt });
 
     smokeState.events.push(
       createSmokeEvent({
         stage,
         attempt,
-        actor: resolveSmokeStageActor(stage),
+        actor: resolveSmokeStageActor(stage, subphase ?? "implementation"),
         outcome,
         artifactDir,
         reviewFeedbackSeen,
@@ -1184,15 +1220,15 @@ export function createControlPlaneSmokeStageRunner({
               slice: workItemId,
             }).state,
             slice: workItemId,
-            current_stage: stage,
-            active_stage: stage,
-            phase: "stage_result_ready",
-            next_action: "finalize_stage",
-            last_artifact_dir: artifactDir,
-            execution: {
-              provider: resolveSmokeStageProvider(stage),
-              session_role: resolveStageSessionRole(stage, "implementation"),
-              session_id: resolveSmokeStageSessionId(stage),
+              current_stage: stage,
+              active_stage: stage,
+              phase: "stage_result_ready",
+              next_action: "finalize_stage",
+              last_artifact_dir: artifactDir,
+              execution: {
+              provider: resolveSmokeStageProvider(stage, subphase ?? "implementation"),
+              session_role: resolveStageSessionRole(stage, subphase ?? "implementation"),
+              session_id: resolveSmokeStageSessionId(stage, subphase ?? "implementation"),
               artifact_dir: artifactDir,
               stage_result_path: stageResultPath,
               started_at: now,
@@ -1201,6 +1237,7 @@ export function createControlPlaneSmokeStageRunner({
               verify_bucket: null,
               commit_sha: null,
               pr_role: stage === 2 ? "backend" : "frontend",
+              subphase: subphase ?? "implementation",
             },
           },
         }).state,
@@ -1210,14 +1247,15 @@ export function createControlPlaneSmokeStageRunner({
     return {
       artifactDir,
       dispatch: {
-        actor: resolveSmokeStageActor(stage),
+        actor: resolveSmokeStageActor(stage, subphase ?? "implementation"),
         stage,
+        subphase: subphase ?? undefined,
       },
       execution: {
         mode: "execute",
         executed: true,
-        provider: resolveSmokeStageProvider(stage),
-        sessionId: resolveSmokeStageSessionId(stage),
+        provider: resolveSmokeStageProvider(stage, subphase ?? "implementation"),
+        sessionId: resolveSmokeStageSessionId(stage, subphase ?? "implementation"),
       },
       runtimeSync,
       stageResult,

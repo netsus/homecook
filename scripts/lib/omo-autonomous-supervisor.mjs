@@ -173,26 +173,162 @@ function resolvePrRole(stage) {
 }
 
 function resolveDocGateRepairBranch(slice) {
-  return `docs/${slice}-repair`;
+  return resolveBranchName({
+    slice,
+    stage: 1,
+  });
 }
 
-function resolveDocGateAllowedFiles(slice) {
-  return [
+function resolveTrackedWorkItemPath({ rootDir, workItemId }) {
+  return resolve(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`);
+}
+
+function resolveTrackedStatusPath({ rootDir }) {
+  return resolve(rootDir, ".workflow-v2", "status.json");
+}
+
+function buildBootstrapWorkItem({ workItemId }) {
+  const normalizedWorkItemId = ensureNonEmptyString(workItemId, "workItemId");
+
+  return {
+    id: normalizedWorkItemId,
+    title: `${normalizedWorkItemId} Stage 1 bootstrap`,
+    summary: "OMO supervisor bootstrap context for a product slice before Stage 1 writes the tracked work item.",
+    project_profile: "homecook",
+    change_type: "product",
+    surface: "fullstack",
+    risk: "medium",
+    preset: "vertical-slice-strict",
+    goal: `Bootstrap Stage 1 workpack docs for ${normalizedWorkItemId}.`,
+    owners: {
+      claude: "stage-1-author-and-doc-gate-repair",
+      codex: "doc-gate-review-and-implementation",
+      workers: [],
+    },
+    dependencies: [],
+    docs_refs: {
+      source_of_truth: [
+        "AGENTS.md",
+        "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      ],
+      governing_docs: [
+        "docs/engineering/slice-workflow.md",
+        "docs/engineering/agent-workflow-overview.md",
+        "docs/engineering/workflow-v2/README.md",
+        "docs/engineering/workflow-v2/omo-autonomous-supervisor.md",
+      ],
+    },
+    workflow: {
+      plan_loop: "required",
+      review_loop: "skipped",
+      external_smokes: [],
+      execution_mode: "autonomous",
+      merge_policy: "conditional-auto",
+      max_fix_rounds: {
+        backend: 3,
+        frontend: 3,
+      },
+    },
+    verification: {
+      required_checks: ["pnpm validate:workflow-v2"],
+      verify_commands: ["pnpm validate:workflow-v2"],
+    },
+    status: {
+      lifecycle: "planned",
+      approval_state: "not_started",
+      verification_status: "pending",
+    },
+    out_of_scope: [],
+    open_questions: [],
+  };
+}
+
+function resolveDocGateAllowedFiles({
+  rootDir,
+  worktreePath = null,
+  slice,
+  workItemId,
+}) {
+  const allowedFiles = [
+    "docs/workpacks/README.md",
     `docs/workpacks/${slice}/README.md`,
     `docs/workpacks/${slice}/acceptance.md`,
     `docs/workpacks/${slice}/automation-spec.json`,
+    `.workflow-v2/work-items/${workItemId}.json`,
+    ".workflow-v2/status.json",
   ];
+
+  const { automationSpec } = readAutomationSpecForExecution({
+    rootDir,
+    worktreePath,
+    slice,
+    required: false,
+  });
+  const requiredScreens = normalizeStringArray(
+    automationSpec?.frontend?.design_authority?.required_screens ?? [],
+  );
+  for (const screenId of requiredScreens) {
+    allowedFiles.push(`ui/designs/${screenId}.md`);
+    allowedFiles.push(`ui/designs/critiques/${screenId}-critique.md`);
+  }
+
+  return normalizeStringArray(allowedFiles);
 }
 
-function readTrackedWorkItem({ rootDir, workItemId }) {
-  const workItemPath = resolve(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`);
+function readTrackedWorkItem({
+  rootDir,
+  workItemId,
+  allowBootstrap = false,
+}) {
+  const workItemPath = resolveTrackedWorkItemPath({
+    rootDir,
+    workItemId,
+  });
   if (!existsSync(workItemPath)) {
-    throw new Error(`Tracked workflow-v2 work item not found: ${workItemPath}`);
+    if (!allowBootstrap) {
+      throw new Error(`Tracked workflow-v2 work item not found: ${workItemPath}`);
+    }
+
+    return {
+      workItemPath,
+      workItem: buildBootstrapWorkItem({
+        workItemId,
+      }),
+      tracked: false,
+    };
   }
 
   return {
     workItemPath,
     workItem: JSON.parse(readFileSync(workItemPath, "utf8")),
+    tracked: true,
+  };
+}
+
+function readTrackedStatusItem({
+  rootDir,
+  workItemId,
+}) {
+  const statusPath = resolveTrackedStatusPath({
+    rootDir,
+  });
+  if (!existsSync(statusPath)) {
+    return {
+      statusPath,
+      statusItem: null,
+      tracked: false,
+    };
+  }
+
+  const statusBoard = JSON.parse(readFileSync(statusPath, "utf8"));
+  const statusItem = Array.isArray(statusBoard?.items)
+    ? statusBoard.items.find((item) => item?.id === workItemId) ?? null
+    : null;
+
+  return {
+    statusPath,
+    statusItem,
+    tracked: Boolean(statusItem),
   };
 }
 
@@ -376,6 +512,7 @@ function validateProductCodeStageEntry({
 
 function validateStage1Outputs({
   worktreePath,
+  workItemId,
   slice,
 }) {
   const issues = [];
@@ -383,6 +520,7 @@ function validateStage1Outputs({
     resolve(worktreePath, "docs", "workpacks", slice, "README.md"),
     resolve(worktreePath, "docs", "workpacks", slice, "acceptance.md"),
     resolve(worktreePath, "docs", "workpacks", slice, "automation-spec.json"),
+    resolve(worktreePath, ".workflow-v2", "work-items", `${workItemId}.json`),
   ];
 
   for (const filePath of requiredPaths) {
@@ -397,6 +535,23 @@ function validateStage1Outputs({
   });
   if (roadmap.status !== "docs") {
     issues.push(`Stage 1 outputs require roadmap status docs but found ${roadmap.status ?? "missing"}.`);
+  }
+
+  const trackedWorkItem = readTrackedWorkItem({
+    rootDir: worktreePath,
+    workItemId,
+    allowBootstrap: false,
+  });
+  if (trackedWorkItem.workItem?.id !== workItemId) {
+    issues.push(`Stage 1 work item output must set id=${workItemId}.`);
+  }
+
+  const trackedStatus = readTrackedStatusItem({
+    rootDir: worktreePath,
+    workItemId,
+  });
+  if (!trackedStatus.tracked) {
+    issues.push(`Stage 1 output is missing: ${trackedStatus.statusPath} item '${workItemId}'.`);
   }
 
   return normalizeStringArray(issues);
@@ -905,12 +1060,20 @@ function validateAuthorityReviewStageResult({
 }
 
 function validateDocGateRepairStageResult({
+  rootDir,
+  worktreePath = null,
+  workItemId,
   slice,
   stageResult,
   reviewEntry,
   docGateState,
 }) {
-  const allowedFiles = resolveDocGateAllowedFiles(slice);
+  const allowedFiles = resolveDocGateAllowedFiles({
+    rootDir,
+    worktreePath,
+    slice,
+    workItemId,
+  });
   const actualFiles = normalizeStringArray(stageResult?.changed_files);
   const claimedFiles = normalizeStringArray(stageResult?.claimed_scope?.files);
   const resolvedDocFindingIds = normalizeStringArray(stageResult?.resolved_doc_finding_ids);
@@ -922,12 +1085,12 @@ function validateDocGateRepairStageResult({
 
   const unexpectedChangedFiles = actualFiles.filter((filePath) => !allowedFiles.includes(filePath));
   if (unexpectedChangedFiles.length > 0) {
-    issues.push(`Doc gate repair may only change workpack docs: ${unexpectedChangedFiles.join(", ")}.`);
+    issues.push(`Doc gate repair may only change Stage 1 docs artifacts: ${unexpectedChangedFiles.join(", ")}.`);
   }
 
   const unexpectedClaimedFiles = claimedFiles.filter((filePath) => !allowedFiles.includes(filePath));
   if (unexpectedClaimedFiles.length > 0) {
-    issues.push(`Doc gate repair claimed_scope.files contains out-of-scope paths: ${unexpectedClaimedFiles.join(", ")}.`);
+    issues.push(`Doc gate repair claimed_scope.files contains out-of-scope Stage 1 artifact paths: ${unexpectedClaimedFiles.join(", ")}.`);
   }
 
   const overlap = resolvedDocFindingIds.filter((id) => contestedDocFixIds.includes(id));
@@ -963,7 +1126,7 @@ function validateDocGateReviewStageResult({
   const contestedIds = normalizeStringArray(rebuttalEntry?.contested_doc_fix_ids);
   const issues = [];
 
-  if (reviewedIds.length === 0) {
+  if (currentDocFindingIds.length > 0 && reviewedIds.length === 0) {
     issues.push("Doc gate review must include reviewed_doc_finding_ids.");
   }
 
@@ -1852,7 +2015,7 @@ function resolveStageProvider({
   environment,
 }) {
   if (
-    (stage === 2 && subphase === "doc_gate_review") ||
+    (stage === 2 && subphase === "doc_gate_repair") ||
     (stage === 5 && subphase === "final_authority_gate")
   ) {
     const claudeProviderConfig = resolveClaudeProviderConfig({
@@ -1870,7 +2033,13 @@ function resolveStageProvider({
     };
   }
 
-  if (stage === 2 || stage === 5 || stage === 6 || (stage === 4 && subphase === "authority_precheck")) {
+  if (
+    stage === 2 ||
+    stage === 5 ||
+    stage === 6 ||
+    (stage === 2 && subphase === "doc_gate_review") ||
+    (stage === 4 && subphase === "authority_precheck")
+  ) {
     const codexProviderConfig = resolveCodexProviderConfig({
       rootDir,
       bin: opencodeBin,
@@ -2068,8 +2237,31 @@ function syncStatus({
   patch,
   now,
 }) {
-  return syncWorkflowV2Status({
+  const runtimeState = readRuntimeState({
     rootDir,
+    workItemId,
+    slice: workItemId,
+  }).state;
+  const candidateRoots = normalizeStringArray([
+    rootDir,
+    runtimeState.workspace?.path ?? null,
+  ]);
+  const syncRoot = candidateRoots.find((candidateRoot) => {
+    const workItemPath = resolveTrackedWorkItemPath({
+      rootDir: candidateRoot,
+      workItemId,
+    });
+    const statusPath = resolveTrackedStatusPath({
+      rootDir: candidateRoot,
+    });
+    return existsSync(workItemPath) && existsSync(statusPath);
+  });
+  if (!syncRoot) {
+    return null;
+  }
+
+  return syncWorkflowV2Status({
+    rootDir: syncRoot,
     workItemId,
     patch,
     updatedAt: now,
@@ -2957,6 +3149,59 @@ function processWaitState({
     }
 
     if (prRole === "docs") {
+      if (state.wait.stage === 1) {
+        const nextStateWithDocGate = saveRuntime({
+          rootDir,
+          workItemId,
+          state: setDocGateState({
+            state: markStageCompleted({
+              state,
+              stage: 1,
+              artifactDir: state.last_artifact_dir,
+            }),
+            status: "pending_check",
+            round: state.doc_gate?.round ?? 0,
+            repairBranch: activePr.branch ?? resolveDocGateRepairBranch(state.slice ?? workItemId),
+            repairPr: {
+              number: activePr.number ?? null,
+              url: activePr.url,
+              draft: activePr.draft ?? false,
+              branch: activePr.branch ?? resolveDocGateRepairBranch(state.slice ?? workItemId),
+              head_sha: activePr.head_sha ?? state.wait.head_sha ?? null,
+            },
+            updatedAt: now,
+          }),
+        });
+        const nextState = saveRuntime({
+          rootDir,
+          workItemId,
+          state: setWaitState({
+            state: nextStateWithDocGate,
+            kind: "ready_for_next_stage",
+            prRole: "docs",
+            stage: 2,
+            headSha: activePr.head_sha ?? state.wait.head_sha ?? null,
+            updatedAt: now,
+          }),
+        });
+        updateRuntimeStatusForWait({
+          rootDir,
+          workItemId,
+          wait: nextState.wait,
+          prPath: activePr.url,
+          now,
+          approvalState: "claude_approved",
+          lifecycle: "ready_for_review",
+          verificationStatus: "passed",
+          extraNotes: ["stage1=author_complete", "doc_gate=pending_check"],
+        });
+        return {
+          state: nextState,
+          action: "run-stage",
+          nextStage: 2,
+        };
+      }
+
       if (state.wait.stage === 2 && state.doc_gate?.status === "awaiting_review") {
         const nextState = saveRuntime({
           rootDir,
@@ -2976,6 +3221,10 @@ function processWaitState({
           wait: nextState.wait,
           prPath: activePr.url,
           now,
+          approvalState:
+            state.doc_gate?.last_review?.decision === "request_changes" ? "needs_revision" : "claude_approved",
+          lifecycle:
+            state.doc_gate?.last_review?.decision === "request_changes" ? "in_progress" : "ready_for_review",
           verificationStatus: "passed",
         });
         return {
@@ -3002,34 +3251,7 @@ function processWaitState({
         };
       }
 
-      github.mergePullRequest({
-        prRef: activePr.url,
-        headSha: activePr.head_sha ?? state.wait.head_sha ?? "HEAD",
-      });
-      worktree.syncBaseBranch();
-      const nextState = saveRuntime({
-        rootDir,
-        workItemId,
-        state: setWaitState({
-          state,
-          kind: "ready_for_next_stage",
-          stage: 2,
-          updatedAt: now,
-        }),
-      });
-      updateRuntimeStatusForWait({
-        rootDir,
-        workItemId,
-        wait: nextState.wait,
-        prPath: activePr.url,
-        now,
-        verificationStatus: "passed",
-      });
-      return {
-        state: nextState,
-        action: "run-stage",
-        nextStage: 2,
-      };
+      throw new Error("Docs PR reached an unsupported wait state before doc gate completion.");
     }
 
     if (prRole === "backend" && state.wait.stage === 2) {
@@ -3490,6 +3712,7 @@ function finalizeCodeStage({
     stage === 1
       ? validateStage1Outputs({
           worktreePath: nextState.workspace.path,
+          workItemId,
           slice,
         })
       : [];
@@ -3821,22 +4044,37 @@ function finalizeCodeStage({
         };
       }
 
-      github.mergePullRequest({
-        prRef: pr.url,
-        headSha,
-      });
-      worktree.syncBaseBranch();
       nextState = saveRuntime({
         rootDir,
         workItemId,
-        state: setWaitState({
+        state: setDocGateState({
           state: markStageCompleted({
             state: nextState,
             stage,
             artifactDir,
           }),
+          status: "pending_check",
+          round: nextState.doc_gate?.round ?? 0,
+          repairBranch: branchName,
+          repairPr: {
+            number: pr.number,
+            url: pr.url,
+            draft: false,
+            branch: branchName,
+            head_sha: headSha,
+          },
+          updatedAt: now,
+        }),
+      });
+      nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state: nextState,
           kind: "ready_for_next_stage",
+          prRole: "docs",
           stage: 2,
+          headSha,
           updatedAt: now,
         }),
       });
@@ -3846,7 +4084,10 @@ function finalizeCodeStage({
         wait: nextState.wait,
         prPath: pr.url,
         now,
+        approvalState: "claude_approved",
+        lifecycle: "ready_for_review",
         verificationStatus: "passed",
+        extraNotes: ["stage1=author_complete", "doc_gate=pending_check"],
       });
       return {
         state: nextState,
@@ -4021,6 +4262,7 @@ function handleImplementationCodeStage({
   const { workItem } = readTrackedWorkItem({
     rootDir,
     workItemId,
+    allowBootstrap: stage === 1,
   });
   if (!shouldResumeFinalize) {
     const entryValidation = validateProductCodeStageEntry({
@@ -4655,8 +4897,9 @@ function handleDocGateRepairStage({
 }) {
   const stage = 2;
   const branchRole = "docs";
-  const branchName = resolveDocGateRepairBranch(slice);
   const prRole = "docs";
+  const existingPrRef = getActivePullRequest(state, prRole);
+  const branchName = existingPrRef?.branch ?? resolveDocGateRepairBranch(slice);
   worktree.checkoutBranch({
     branch: branchName,
     startPoint: "origin/master",
@@ -4729,7 +4972,7 @@ function handleDocGateRepairStage({
           artifactDir: runResult.artifactDir,
           execution: {
             provider: runResult.execution?.provider ?? null,
-            session_role: runResult.dispatch?.sessionBinding?.role ?? "codex_primary",
+            session_role: runResult.dispatch?.sessionBinding?.role ?? "claude_primary",
             session_id: runResult.execution?.sessionId ?? null,
             artifact_dir: runResult.artifactDir,
             stage_result_path: stageResultPath,
@@ -4753,6 +4996,9 @@ function handleDocGateRepairStage({
   });
   const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
   const repairIssues = validateDocGateRepairStageResult({
+    rootDir,
+    worktreePath: nextState.workspace?.path ?? null,
+    workItemId,
     slice,
     stageResult,
     reviewEntry,
@@ -4777,7 +5023,7 @@ function handleDocGateRepairStage({
     workItemId,
     state: setDocGateRebuttal({
       state: nextState,
-      sourceReviewStage: reviewEntry?.source_review_stage ?? 2,
+      sourceReviewStage: reviewEntry?.source_review_stage ?? 1,
       contestedDocFixIds: stageResult.contested_doc_fix_ids ?? [],
       rebuttals: stageResult.rebuttals ?? [],
       updatedAt: now,
@@ -4917,8 +5163,14 @@ function handleDocGateRepairStage({
       const actualChangedFiles = worktree.listChangedFiles({
         worktreePath: nextState.workspace.path,
       });
+      const allowedFiles = resolveDocGateAllowedFiles({
+        rootDir,
+        worktreePath: nextState.workspace?.path ?? null,
+        slice,
+        workItemId,
+      });
       const unexpectedActualFiles = actualChangedFiles.filter(
-        (filePath) => !resolveDocGateAllowedFiles(slice).includes(filePath),
+        (filePath) => !allowedFiles.includes(filePath),
       );
       if (unexpectedActualFiles.length > 0) {
         return blockWithRecovery({
@@ -4928,7 +5180,7 @@ function handleDocGateRepairStage({
           state: nextState,
           stage,
           prRole,
-          reason: `Doc gate repair may only modify workpack docs: ${unexpectedActualFiles.join(", ")}.`,
+          reason: `Doc gate repair may only modify Stage 1 docs artifacts: ${unexpectedActualFiles.join(", ")}.`,
           now,
           worktree,
         });
@@ -5122,7 +5374,7 @@ function handleDocGateReviewStage({
   let nextState = state;
   let activePr = getActivePullRequest(nextState, prRole);
   if (!activePr?.url) {
-    throw new Error("No active docs repair pull request found.");
+    throw new Error("No active Stage 1 docs pull request found.");
   }
 
   worktree.checkoutBranch({
@@ -5194,7 +5446,7 @@ function handleDocGateReviewStage({
           artifactDir: runResult.artifactDir,
           execution: {
             provider: runResult.execution?.provider ?? null,
-            session_role: runResult.dispatch?.sessionBinding?.role ?? "claude_primary",
+            session_role: runResult.dispatch?.sessionBinding?.role ?? "codex_primary",
             session_id: runResult.execution?.sessionId ?? null,
             artifact_dir: runResult.artifactDir,
             stage_result_path: stageResultPath,
@@ -5249,7 +5501,7 @@ function handleDocGateReviewStage({
       reviewedDocFindingIds: stageResult.reviewed_doc_finding_ids ?? [],
       requiredDocFixIds: stageResult.required_doc_fix_ids ?? [],
       waivedDocFixIds: stageResult.waived_doc_fix_ids ?? [],
-      sourceReviewStage: stage,
+      sourceReviewStage: 1,
       pingPongRounds: nextState.doc_gate?.round ?? 0,
       updatedAt: now,
     }),
@@ -5290,6 +5542,17 @@ function handleDocGateReviewStage({
         headSha: activePr.head_sha ?? null,
         updatedAt: now,
       }),
+    });
+    updateRuntimeStatusForWait({
+      rootDir,
+      workItemId,
+      wait: nextState.wait,
+      prPath: activePr.url,
+      now,
+      approvalState: "dual_approved",
+      lifecycle: "in_progress",
+      verificationStatus: "passed",
+      extraNotes: ["doc_gate=approved_merged", "stage1_docs_gate=passed_review"],
     });
     return {
       state: nextState,
@@ -5339,6 +5602,17 @@ function handleDocGateReviewStage({
       updatedAt: now,
     }),
   });
+  updateRuntimeStatusForWait({
+    rootDir,
+    workItemId,
+    wait: nextState.wait,
+    prPath: activePr.url,
+    now,
+    approvalState: "needs_revision",
+    lifecycle: "in_progress",
+    verificationStatus: "pending",
+    extraNotes: ["doc_gate=request_changes"],
+  });
   return {
     state: nextState,
     wait: nextState.wait,
@@ -5360,6 +5634,7 @@ function handleCodeStage({
   if (stage === 2) {
     const initialSubphase = resolveStage2Subphase(state);
     if (initialSubphase === "doc_gate_check") {
+      const activeDocsPr = getActivePullRequest(state, "docs");
       let docGateResult = evaluateDocGate({
         rootDir,
         worktreePath: state.workspace?.path,
@@ -5387,15 +5662,25 @@ function handleCodeStage({
         state: setDocGateState({
           state,
           status:
-            docGateResult.outcome === "pass"
-              ? "passed"
-              : docGateResult.outcome === "fixable"
-                ? "fixable"
-                : "blocked",
+            docGateResult.outcome === "blocked"
+              ? "blocked"
+              : state.doc_gate?.status === "pending_recheck"
+                ? "pending_recheck"
+                : "awaiting_review",
           sourceMasterSha,
           artifactDir: docGateArtifact.artifactDir,
           resultPath: docGateArtifact.resultPath,
           repairBranch: resolveDocGateRepairBranch(slice),
+          repairPr:
+            activeDocsPr?.url
+              ? {
+                  number: activeDocsPr.number ?? null,
+                  url: activeDocsPr.url,
+                  draft: activeDocsPr.draft ?? false,
+                  branch: activeDocsPr.branch ?? resolveDocGateRepairBranch(slice),
+                  head_sha: activeDocsPr.head_sha ?? null,
+                }
+              : state.doc_gate?.repair_pr ?? null,
           findings: docGateResult.findings,
           updatedAt: now,
         }),
@@ -5415,31 +5700,91 @@ function handleCodeStage({
         });
       }
 
-      if (docGateResult.outcome === "fixable") {
-        return handleDocGateRepairStage({
+      if (state.doc_gate?.status !== "pending_recheck" && !activeDocsPr?.url) {
+        return blockWithRecovery({
           rootDir,
           workItemId,
           slice,
           state: nextState,
+          stage,
+          prRole: "docs",
+          reason: "Doc gate review requires an open Stage 1 docs pull request.",
+          now,
+          worktree,
+        });
+      }
+
+      if (state.doc_gate?.status === "pending_recheck") {
+        if (docGateResult.outcome !== "pass") {
+          return blockWithRecovery({
+            rootDir,
+            workItemId,
+            slice,
+            state: nextState,
+            stage,
+            prRole: "docs",
+            reason: `Merged Stage 1 docs failed doc gate recheck: ${docGateResult.summary}`,
+            now,
+            worktree,
+          });
+        }
+
+        nextState = saveRuntime({
+          rootDir,
+          workItemId,
+          state: setDocGateState({
+            state: nextState,
+            status: "passed",
+            updatedAt: now,
+          }),
+        });
+
+        return handleImplementationCodeStage({
+          rootDir,
+          workItemId,
+          slice,
+          state: nextState,
+          stage,
           stageRunner,
           worktree,
           github,
+          subphase: "implementation",
           now,
         });
       }
 
-      return handleImplementationCodeStage({
+      nextState = saveRuntime({
         rootDir,
         workItemId,
-        slice,
-        state: nextState,
-        stage,
-        stageRunner,
-        worktree,
-        github,
-        subphase: "implementation",
-        now,
+        state: setWaitState({
+          state: clearExecutionForSubphase({
+            state: nextState,
+            stage,
+            artifactDir: docGateArtifact.artifactDir,
+          }),
+          kind: "ready_for_next_stage",
+          prRole: "docs",
+          stage,
+          headSha: activeDocsPr?.head_sha ?? state.wait?.head_sha ?? null,
+          updatedAt: now,
+        }),
       });
+      updateRuntimeStatusForWait({
+        rootDir,
+        workItemId,
+        wait: nextState.wait,
+        prPath: activeDocsPr?.url ?? state.prs?.docs?.url ?? null,
+        now,
+        approvalState: "claude_approved",
+        lifecycle: "ready_for_review",
+        verificationStatus: "passed",
+        extraNotes: ["doc_gate=status_awaiting_review"],
+      });
+      return {
+        state: nextState,
+        wait: nextState.wait,
+        transitioned: true,
+      };
     }
 
     if (initialSubphase === "doc_gate_repair") {
@@ -6552,13 +6897,29 @@ export function superviseWorkItem(
       }),
     });
 
-    const invariant = evaluateBookkeepingInvariant({
+    const trackedWorkItemState = readTrackedWorkItem({
       rootDir,
       workItemId: normalizedWorkItemId,
-      slice: resolvedSlice,
-      runtimeState: state,
-      worktreePath: state.workspace?.path,
+      allowBootstrap: true,
     });
+    const bootstrapStage1Start =
+      trackedWorkItemState.tracked === false &&
+      (state.last_completed_stage ?? 0) < 1 &&
+      !state.wait?.kind;
+    const invariant = bootstrapStage1Start
+      ? {
+          outcome: "pass",
+          issues: [],
+          repairActions: [],
+          reason: null,
+        }
+      : evaluateBookkeepingInvariant({
+          rootDir,
+          workItemId: normalizedWorkItemId,
+          slice: resolvedSlice,
+          runtimeState: state,
+          worktreePath: state.workspace?.path,
+        });
 
     if (invariant.outcome === "ambiguous_drift") {
       const blocked = applyBlocker({

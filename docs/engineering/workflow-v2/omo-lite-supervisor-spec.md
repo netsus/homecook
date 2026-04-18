@@ -127,7 +127,7 @@ Claude-owned stage가 budget 또는 session availability 문제로 pause 되면 
 
 | Stage | Primary Actor | Entry Checks | Required Evidence | Exit Condition |
 |------|---------------|--------------|-------------------|----------------|
-| 1 | Claude | 선행 slice `merged/bootstrap`, slice status `planned` | workpack README, acceptance, docs PR, `claude_primary` session binding | docs merge + status `docs` |
+| 1 | Claude | 선행 slice `merged/bootstrap`, slice status `planned` 또는 bootstrap context | workpack README, acceptance, automation-spec, workflow-v2 work item/status item, docs PR, `claude_primary` session binding | internal 1.5 진입 + docs PR merge + status `docs` |
 | 2 | Codex | Stage 1 merged, internal 1.5 pass, dependencies resolved | `doc_gate_check/pass`, branch `feature/be-<slice>`, tests, backend PR, `codex_primary` session binding | Draft PR + green CI + Ready |
 | 3 | Claude | PR not Draft, required CI green | review summary, requested changes or approval, reused `claude_primary` session | merge 또는 fix routing (merge 직전 current head all started PR checks green 재확인) |
 | 4 | Claude | backend merged, FE scope unlocked | branch `feature/fe-<slice>`, tests, frontend PR, authority-required면 Codex `authority_precheck`, reused `claude_primary` session | Draft PR + green CI + authority precheck(해당 시) + Ready |
@@ -145,8 +145,8 @@ Claude-owned stage가 budget 또는 session availability 문제로 pause 되면 
 
 `internal 1.5`에서는 아래처럼 재사용한다.
 
-- `doc_gate_review` -> `claude_primary`
-- `doc_gate_repair` -> `codex_primary`
+- `doc_gate_review` -> `codex_primary`
+- `doc_gate_repair` -> `claude_primary`
 
 규칙:
 
@@ -201,6 +201,7 @@ runtime state는 repo-local non-tracked 상태로 둔다.
 - `docs/workpacks/README.md`에서 선행 slice 상태 확인
 - 관련 official docs version 확인
 - product slice면 design scope 존재 여부 확인
+- tracked work item이 없으면 bootstrap context로 시작하되, Stage 1 산출물에 `.workflow-v2/work-items/<id>.json`과 `.workflow-v2/status.json` item을 포함해야 한다
 
 ### Stage 2
 
@@ -213,8 +214,9 @@ runtime state는 repo-local non-tracked 상태로 둔다.
 ### Internal 1.5
 
 - supervisor-only subphase이며 public stage numbering에는 포함하지 않는다
-- `doc_gate_check` -> `doc_gate_repair` -> `doc_gate_review` -> `doc_gate_recheck`
-- `doc_gate_repair`는 `docs/<slice>-repair` 브랜치에서 docs-only 변경만 허용한다
+- `doc_gate_check` -> `doc_gate_review` -> `doc_gate_repair` -> `doc_gate_recheck`
+- `doc_gate_review`는 Codex reviewer, `doc_gate_repair`는 Claude final owner다
+- `doc_gate_repair`는 `docs/<slice>` 단일 브랜치에서 Stage 1 artifact 범위만 수정한다
 - `doc_gate_review` approve 뒤에는 docs PR merge -> `origin/master` sync -> `doc_gate_recheck`가 필수다
 - `doc_gate_recheck pass` 뒤에만 Stage 2 implementation 진입이 가능하다
 
@@ -286,7 +288,7 @@ product slice Stage 2/4 기본 경로에서는 사용하지 않는다.
 
 기본 stage 경로:
 
-- Stage 1 완료 -> docs PR 생성 -> checks green -> current head started PR checks green -> merge -> Stage 2
+- Stage 1 완료 -> docs PR 생성 -> checks green -> internal 1.5 docs gate -> docs merge -> `doc_gate_recheck pass` -> Stage 2
 - Stage 2 완료 -> backend Draft PR 생성 -> checks green -> Ready -> Stage 3
 - Stage 3 approve -> backend merge -> Stage 4
 - Stage 3 request changes -> Stage 2

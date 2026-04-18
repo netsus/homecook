@@ -31,8 +31,12 @@ const EVALUATION_STATES = new Set([
 export function resolveStageSessionRole(stage, subphase = null) {
   const normalizedStage = ensureStage(stage);
 
-  if (normalizedStage === 2 && subphase === "doc_gate_review") {
+  if (normalizedStage === 2 && subphase === "doc_gate_repair") {
     return "claude_primary";
+  }
+
+  if (normalizedStage === 2 && subphase === "doc_gate_review") {
+    return "codex_primary";
   }
 
   if (normalizedStage === 5 && subphase === "final_authority_gate") {
@@ -153,10 +157,10 @@ function productStageSpec(stage, slice, subphase = null) {
 
   if (stage === 2 && subphase === "doc_gate_repair") {
     return {
-      actor: "codex",
-      branch: `docs/${slice}-repair`,
-      lifecycle: "planned",
-      approval_state: "not_started",
+      actor: "claude",
+      branch: `docs/${slice}`,
+      lifecycle: "in_progress",
+      approval_state: "needs_revision",
       verification_status: "pending",
       requiredReads: [
         "AGENTS.md",
@@ -164,42 +168,48 @@ function productStageSpec(stage, slice, subphase = null) {
         `docs/workpacks/${slice}/README.md`,
         `docs/workpacks/${slice}/acceptance.md`,
         `docs/workpacks/${slice}/automation-spec.json`,
-        "doc gate findings bundle",
+        `.workflow-v2/work-items/${slice}.json`,
+        ".workflow-v2/status.json",
+        "current unresolved doc gate findings",
+        "latest doc gate rebuttal bundle",
       ],
       deliverables: [
-        `branch docs/${slice}-repair`,
-        "docs-only remediation",
+        `branch docs/${slice}`,
+        "stage-1 docs remediation or rebuttal",
         "valid doc gate repair stage result",
       ],
       verifyCommands: [],
       successCondition:
-        "Doc gate findings are resolved or contested with docs-only changes and a valid repair stage result is ready for supervisor handoff.",
-      escalationIfBlocked: "Escalate to human if the workpack cannot be safely locked by docs-only changes.",
+        "Claude final owner resolves or contests every required doc finding on the Stage 1 docs branch and writes a valid repair stage result.",
+      escalationIfBlocked: "Escalate to human if the Stage 1 docs branch cannot be safely converged within the locked Stage 1 artifact scope.",
     };
   }
 
   if (stage === 2 && subphase === "doc_gate_review") {
     return {
-      actor: "claude",
+      actor: "codex",
       branch: null,
       lifecycle: "ready_for_review",
-      approval_state: "claude_approved",
+      approval_state: "codex_approved",
       verification_status: "passed",
       requiredReads: [
         `docs/workpacks/${slice}/README.md`,
         `docs/workpacks/${slice}/acceptance.md`,
         `docs/workpacks/${slice}/automation-spec.json`,
-        "docs repair PR diff",
-        "doc gate findings / rebuttals",
+        `.workflow-v2/work-items/${slice}.json`,
+        ".workflow-v2/status.json",
+        "Stage 1 docs PR diff",
+        "current unresolved doc gate findings",
+        "latest doc gate rebuttal bundle",
       ],
       deliverables: [
-        "doc gate review summary",
+        "structured doc gate review summary",
         "requested changes or approval",
       ],
       verifyCommands: [],
       successCondition:
-        "Docs repair PR receives review feedback or approval and can proceed to merge + recheck or fix routing.",
-      escalationIfBlocked: "Escalate to human if docs lock ambiguity remains after review.",
+        "Codex reviewer records approve/request_changes over the Stage 1 docs PR and leaves a valid doc gate review stage result for supervisor routing.",
+      escalationIfBlocked: "Escalate to human if Stage 1 docs ambiguity remains after the structured docs gate review loop.",
     };
   }
 
@@ -215,6 +225,10 @@ function productStageSpec(stage, slice, subphase = null) {
         "docs/workpacks/README.md",
         "docs/engineering/slice-workflow.md",
         "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+        ".workflow-v2/README.md",
+        "docs/engineering/workflow-v2/schemas/work-item.schema.json",
+        "docs/engineering/workflow-v2/templates/work-item.example.json",
+        ".workflow-v2/status.json",
         "docs/design/mobile-ux-rules.md",
         "docs/design/anchor-screens.md",
         "docs/engineering/product-design-authority.md",
@@ -223,6 +237,8 @@ function productStageSpec(stage, slice, subphase = null) {
         `docs/workpacks/${slice}/README.md`,
         `docs/workpacks/${slice}/acceptance.md`,
         `docs/workpacks/${slice}/automation-spec.json`,
+        `.workflow-v2/work-items/${slice}.json`,
+        `.workflow-v2/status.json matching item for ${slice}`,
         "README Design Authority section when authority-required",
         "design-generator / design-critic artifacts when authority-required",
         "valid stage result",
@@ -465,6 +481,18 @@ export function buildStageDispatch({
           required_fix_ids: Array.isArray(reviewContext.required_fix_ids)
             ? reviewContext.required_fix_ids
             : [],
+          waived_fix_ids: Array.isArray(reviewContext.waived_fix_ids)
+            ? reviewContext.waived_fix_ids
+            : [],
+          reviewed_doc_finding_ids: Array.isArray(reviewContext.reviewed_doc_finding_ids)
+            ? reviewContext.reviewed_doc_finding_ids
+            : [],
+          required_doc_fix_ids: Array.isArray(reviewContext.required_doc_fix_ids)
+            ? reviewContext.required_doc_fix_ids
+            : [],
+          waived_doc_fix_ids: Array.isArray(reviewContext.waived_doc_fix_ids)
+            ? reviewContext.waived_doc_fix_ids
+            : [],
         }
       : null;
   const normalizedPriorStageResultPath =
@@ -481,7 +509,9 @@ export function buildStageDispatch({
   const reviewFeedbackRead =
     normalizedReviewContext?.body_markdown && [2, 4].includes(normalizedStage)
       ? [
-          normalizedStage === 2
+          normalizedStage === 2 && normalizedSubphase === "doc_gate_repair"
+            ? "previous Stage 1 doc gate review feedback (runtime.doc_gate.last_review)"
+            : normalizedStage === 2
             ? "previous backend review feedback (runtime.last_review.backend)"
             : "previous frontend review feedback (runtime.last_review.frontend)",
           normalizedReviewContext.pr_url ? `active PR context: ${normalizedReviewContext.pr_url}` : null,
@@ -510,6 +540,16 @@ export function buildStageDispatch({
           "## Required Checklist Fix IDs",
           "아래 checklist id를 반영한 뒤 stage-result에 다시 기록하세요.",
           ...normalizedReviewContext.required_fix_ids.map((id) => `- \`${id}\``),
+        ].join("\n")
+      : null;
+  const requiredDocFixIdsSection =
+    normalizedStage === 2 &&
+    normalizedSubphase === "doc_gate_repair" &&
+    normalizedReviewContext?.required_doc_fix_ids?.length > 0
+      ? [
+          "## Required Doc Gate Fix IDs",
+          "아래 doc finding id를 각각 resolve 또는 contest 상태로 처리한 뒤 stage-result에 다시 기록하세요.",
+          ...normalizedReviewContext.required_doc_fix_ids.map((id) => `- \`${id}\``),
         ].join("\n")
       : null;
 
@@ -543,7 +583,7 @@ export function buildStageDispatch({
     },
     reviewContext: normalizedReviewContext,
     subphase: normalizedSubphase,
-    extraPromptSections: [findingsSection, requiredFixIdsSection].filter(Boolean),
+    extraPromptSections: [findingsSection, requiredFixIdsSection, requiredDocFixIdsSection].filter(Boolean),
     successCondition: spec.successCondition,
     escalationIfBlocked: spec.escalationIfBlocked,
     claudeBudgetState: normalizedBudgetState,

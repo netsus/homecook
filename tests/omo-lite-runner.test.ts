@@ -1245,6 +1245,189 @@ describe("OMO-lite stage runner", () => {
     });
   });
 
+  it("reuses the Stage 1 Claude session for internal 1.5 doc_gate_repair", () => {
+    const rootDir = createRunnerFixture();
+    const homeDir = createClaudeHomeDir();
+    seedStrictSlice(rootDir, "03-recipe-like");
+
+    const stage1 = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: "ses_claude_stage1",
+      stageResult: {
+        result: "done",
+        summary_markdown: "Stage 1 complete",
+        commit: {
+          subject: "docs: stage1",
+        },
+        pr: {
+          title: "docs: stage1",
+          body_markdown: "## Summary\n- docs",
+        },
+        checks_run: [],
+        next_route: "open_pr",
+      },
+    });
+    const docGateRepair = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: "ses_claude_stage1",
+      stageResult: {
+        result: "done",
+        summary_markdown: "doc gate repaired",
+        commit: {
+          subject: "docs: repair",
+        },
+        pr: {
+          title: "docs: repair",
+          body_markdown: "## Summary\n- repair",
+        },
+        checks_run: [],
+        next_route: "open_pr",
+        claimed_scope: {
+          files: ["docs/workpacks/03-recipe-like/README.md"],
+          endpoints: [],
+          routes: [],
+          states: [],
+          invariants: [],
+        },
+        changed_files: ["docs/workpacks/03-recipe-like/README.md"],
+        tests_touched: [],
+        artifacts_written: [".artifacts/doc-gate.log"],
+        resolved_doc_finding_ids: ["doc-gate-finding-example"],
+        contested_doc_fix_ids: [],
+        rebuttals: [],
+      },
+    });
+
+    runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "03-recipe-like",
+      stage: 1,
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: stage1.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: stage1.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage1.stdinPath,
+      },
+      now: "2026-04-18T15:00:00+09:00",
+    });
+
+    runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "03-recipe-like",
+      stage: 2,
+      subphase: "doc_gate_repair",
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: docGateRepair.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: docGateRepair.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: docGateRepair.stdinPath,
+      },
+      now: "2026-04-18T15:05:00+09:00",
+    });
+
+    const args = readFileSync(docGateRepair.argsPath, "utf8");
+    expect(args).toContain("--resume");
+    expect(args).toContain("ses_claude_stage1");
+  });
+
+  it("reuses the internal 1.5 Codex session for Stage 2 implementation after doc_gate_review", () => {
+    const rootDir = createRunnerFixture();
+    seedStrictSlice(rootDir, "03-recipe-like");
+
+    const docGateReview = createFakeOpencodeBin(rootDir, {
+      sessionId: "ses_codex_doc_gate",
+      stageResult: {
+        decision: "approve",
+        body_markdown: "## Review\n- approved",
+        route_back_stage: null,
+        approved_head_sha: "abc123",
+        review_scope: {
+          scope: "doc_gate",
+          checklist_ids: [],
+        },
+        reviewed_doc_finding_ids: [],
+        required_doc_fix_ids: [],
+        waived_doc_fix_ids: [],
+        findings: [],
+      },
+    });
+    const stage2 = createFakeOpencodeBin(rootDir, {
+      sessionId: "ses_codex_doc_gate",
+      stageResult: {
+        result: "done",
+        summary_markdown: "backend complete",
+        commit: {
+          subject: "feat: backend",
+        },
+        pr: {
+          title: "feat: backend",
+          body_markdown: "## Summary\n- backend",
+        },
+        checks_run: ["pnpm verify:backend"],
+        next_route: "open_pr",
+        claimed_scope: {
+          files: ["app/api/v1/example/route.ts"],
+          endpoints: ["POST /api/v1/example"],
+          routes: [],
+          states: [],
+          invariants: [],
+        },
+        changed_files: ["app/api/v1/example/route.ts"],
+        tests_touched: ["tests/example.backend.test.ts"],
+        artifacts_written: [".artifacts/example.log"],
+        checklist_updates: [
+          {
+            id: "delivery-backend-contract",
+            status: "checked",
+            evidence_refs: ["pnpm verify:backend"],
+          },
+          {
+            id: "accept-api-envelope",
+            status: "checked",
+            evidence_refs: ["tests/example.backend.test.ts"],
+          },
+        ],
+        contested_fix_ids: [],
+        rebuttals: [],
+      },
+    });
+
+    runStageWithArtifacts({
+      rootDir,
+      slice: "03-recipe-like",
+      stage: 2,
+      subphase: "doc_gate_review",
+      workItemId: "03-recipe-like",
+      mode: "execute",
+      opencodeBin: docGateReview.binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: docGateReview.argsPath,
+      },
+      now: "2026-04-18T15:10:00+09:00",
+    });
+
+    runStageWithArtifacts({
+      rootDir,
+      slice: "03-recipe-like",
+      stage: 2,
+      workItemId: "03-recipe-like",
+      mode: "execute",
+      opencodeBin: stage2.binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: stage2.argsPath,
+      },
+      now: "2026-04-18T15:15:00+09:00",
+    });
+
+    const args = readFileSync(stage2.argsPath, "utf8");
+    expect(args).toContain("--session");
+    expect(args).toContain("ses_codex_doc_gate");
+  });
+
   it("fails closed when Claude returns success but does not write stage-result.json", () => {
     const rootDir = createRunnerFixture();
     const homeDir = createClaudeHomeDir();

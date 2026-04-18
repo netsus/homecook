@@ -563,6 +563,15 @@ function buildPrompt({
     dispatch.reviewContext?.waived_fix_ids?.length
       ? `- waived fix ids: \`${dispatch.reviewContext.waived_fix_ids.join(", ")}\``
       : null,
+    dispatch.reviewContext?.reviewed_doc_finding_ids?.length
+      ? `- previously reviewed doc finding ids: \`${dispatch.reviewContext.reviewed_doc_finding_ids.join(", ")}\``
+      : null,
+    dispatch.reviewContext?.required_doc_fix_ids?.length
+      ? `- required doc fix ids: \`${dispatch.reviewContext.required_doc_fix_ids.join(", ")}\``
+      : null,
+    dispatch.reviewContext?.waived_doc_fix_ids?.length
+      ? `- waived doc fix ids: \`${dispatch.reviewContext.waived_doc_fix_ids.join(", ")}\``
+      : null,
     dispatch.reviewContext?.body_markdown ?? null,
     "",
     "## Stage Result Output",
@@ -593,19 +602,31 @@ function buildPrompt({
       ? "- `checklist_results`, `test_run`, `summary_markdown`, `commit`, `pr` 같은 review contract 밖의 키는 금지합니다."
       : null,
     isReviewStage(normalizedStage, subphase)
-      ? "- `request_changes`면 `required_fix_ids`를 비우지 말고, 문제가 있으면 `findings`도 structured array로 함께 기록하세요."
+      ? normalizedStage === 2 && subphase === "doc_gate_review"
+        ? "- `request_changes`면 `required_doc_fix_ids`를 비우지 말고, 문제가 있으면 `findings`도 structured array로 함께 기록하세요."
+        : "- `request_changes`면 `required_fix_ids`를 비우지 말고, 문제가 있으면 `findings`도 structured array로 함께 기록하세요."
       : null,
     isReviewStage(normalizedStage, subphase)
-      ? "- 값이 없더라도 required key는 생략하지 말고 `[]` 또는 `null`로 채우세요. 특히 `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`, `waived_fix_ids`는 항상 포함하세요."
+      ? normalizedStage === 2 && subphase === "doc_gate_review"
+        ? "- 값이 없더라도 required key는 생략하지 말고 `[]` 또는 `null`로 채우세요. 특히 `review_scope`, `reviewed_doc_finding_ids`, `required_doc_fix_ids`, `waived_doc_fix_ids`는 항상 포함하세요."
+        : "- 값이 없더라도 required key는 생략하지 말고 `[]` 또는 `null`로 채우세요. 특히 `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`, `waived_fix_ids`는 항상 포함하세요."
       : null,
     normalizedStage === 5
       ? "- Stage 5 authority verdict semantics: `hold`는 `blocker_count > 0`일 때만 사용하세요. `blocker_count = 0`이고 `major_count > 0`이면 `conditional-pass`, `blocker_count = 0`이고 `major_count = 0`이면 `pass`를 사용하세요."
       : null,
-    [2, 4].includes(normalizedStage) && dispatch.reviewContext?.required_fix_ids?.length > 0
+    ((normalizedStage === 2 && subphase === "doc_gate_repair" && dispatch.reviewContext?.required_doc_fix_ids?.length > 0) ||
+      ([2, 4].includes(normalizedStage) && dispatch.reviewContext?.required_fix_ids?.length > 0))
       ? ""
       : null,
-    [2, 4].includes(normalizedStage) && dispatch.reviewContext?.required_fix_ids?.length > 0
+    ((normalizedStage === 2 && subphase === "doc_gate_repair" && dispatch.reviewContext?.required_doc_fix_ids?.length > 0) ||
+      ([2, 4].includes(normalizedStage) && dispatch.reviewContext?.required_fix_ids?.length > 0))
       ? "## Review-Fix Snapshot Rules"
+      : null,
+    normalizedStage === 2 && subphase === "doc_gate_repair" && dispatch.reviewContext?.required_doc_fix_ids?.length > 0
+      ? "- 이번 rerun은 required doc finding마다 `resolved_doc_finding_ids` 또는 `contested_doc_fix_ids` 중 하나로 반드시 처리 상태를 남겨야 합니다."
+      : null,
+    normalizedStage === 2 && subphase === "doc_gate_repair" && dispatch.reviewContext?.required_doc_fix_ids?.length > 0
+      ? "- false positive라고 판단한 finding은 문서 수정 없이 넘기지 말고 `contested_doc_fix_ids`와 `rebuttals[]`로 명시적으로 반박하세요."
       : null,
     [2, 4].includes(normalizedStage) && dispatch.reviewContext?.required_fix_ids?.length > 0
       ? "- 이번 rerun은 리뷰 fix 하나만 수정하더라도 `stage-result.checklist_updates`는 current stage-owned checklist 전체 snapshot을 유지해야 합니다."
@@ -2289,13 +2310,15 @@ export function runStageWithArtifacts({
   const retryState =
     runtimeSnapshot?.state?.blocked_stage === normalizedStage ? runtimeSnapshot.state.retry : null;
   const reviewRole =
-    normalizedStage === 2 && normalizedSubphase === "doc_gate_review"
+    normalizedStage === 2 &&
+    ["doc_gate_review", "doc_gate_repair"].includes(normalizedSubphase ?? "")
       ? "doc_gate"
       : normalizedStage === 2 || normalizedStage === 3
         ? "backend"
         : normalizedStage === 4 || normalizedStage === 5 || normalizedStage === 6
           ? "frontend"
           : null;
+  const reviewPrRole = reviewRole === "doc_gate" ? "docs" : reviewRole;
   const reviewEntry =
     reviewRole === "doc_gate"
       ? runtimeSnapshot?.state?.doc_gate?.last_review ?? null
@@ -2307,7 +2330,7 @@ export function runStageWithArtifacts({
       ? {
           decision: reviewEntry.decision,
           body_markdown: reviewEntry.body_markdown,
-          pr_url: runtimeSnapshot?.state?.prs?.[reviewRole]?.url ?? null,
+          pr_url: reviewPrRole ? runtimeSnapshot?.state?.prs?.[reviewPrRole]?.url ?? null : null,
           updated_at: reviewEntry.updated_at ?? null,
           findings: Array.isArray(reviewEntry.findings) ? reviewEntry.findings : [],
           reviewed_checklist_ids: Array.isArray(reviewEntry.reviewed_checklist_ids)
@@ -2433,6 +2456,18 @@ export function runStageWithArtifacts({
             : null,
         ].join("\n")
       : null;
+  const docGateFindingsSection =
+    normalizedStage === 2 && normalizedSubphase === "doc_gate_review"
+      ? [
+          "## Current Unresolved Doc Gate Findings",
+          ...(Array.isArray(runtimeSnapshot?.state?.doc_gate?.findings) && runtimeSnapshot.state.doc_gate.findings.length > 0
+            ? runtimeSnapshot.state.doc_gate.findings.map(
+                (entry, index) =>
+                  `${index + 1}. \`${entry.id ?? "unknown"}\` [${entry.severity ?? "major"}] ${entry.message ?? "message missing"}${entry.remediation_hint ? `\n- remediation: ${entry.remediation_hint}` : ""}${Array.isArray(entry.evidence_paths) && entry.evidence_paths.length > 0 ? `\n- evidence: ${entry.evidence_paths.join(", ")}` : ""}`,
+              )
+            : ["- none"]),
+        ].join("\n")
+      : null;
   const basePrompt = buildPrompt({
     slice: normalizedSlice,
     stage: dispatch.stage,
@@ -2442,6 +2477,7 @@ export function runStageWithArtifacts({
     stageResultPath,
     extraPromptSections: [
       ...(dispatch.extraPromptSections ?? []),
+      ...(docGateFindingsSection ? [docGateFindingsSection] : []),
       ...(rebuttalEntry?.rebuttals?.length
         ? [
             [
