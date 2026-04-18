@@ -68,9 +68,6 @@ describe("OMO control-plane smoke", () => {
     });
 
     const runResult = stageRunner({
-      rootDir: executionDir,
-      workItemId: "99-omo-control-plane-smoke",
-      slice: "99-omo-control-plane-smoke",
       stage: 2,
       executionDir,
     });
@@ -120,7 +117,7 @@ describe("OMO control-plane smoke", () => {
       },
     });
 
-    expect(runResult.stageResult.summary_markdown).toContain("smoke");
+    expect("summary_markdown" in runResult.stageResult && runResult.stageResult.summary_markdown).toContain("smoke");
     expect(runResult.artifactDir).toContain(".artifacts/omo-control-plane-smoke");
     expect(checkpoints.docsPrCreated).toBe(true);
     expect(checkpoints.backendPrCreated).toBe(true);
