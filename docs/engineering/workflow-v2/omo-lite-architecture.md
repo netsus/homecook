@@ -180,14 +180,16 @@ OMO-lite는 slice workflow의 각 stage를 상태 기계처럼 다룬다.
 
 1. slice 상태가 `planned`인지 확인
 2. 선행 슬라이스가 `merged/bootstrap`인지 확인
-3. Claude에 Stage 1 요청
-4. `README.md`, `acceptance.md` 존재 확인
-5. PR open / merge 확인
-6. 상태 `planned -> docs`
+3. tracked work item/workpack이 없으면 bootstrap context로 시작
+4. Claude에 Stage 1 요청
+5. `README.md`, `acceptance.md`, `automation-spec.json`, workflow-v2 work item/status item 존재 확인
+6. docs PR open 확인
+7. `internal 1.5 docs gate` 진입
+8. docs gate approve + merge 후 상태 `planned -> docs`
 
 ### Stage 2
 
-1. Stage 1 merge 확인
+1. Stage 1 docs PR merge + docs gate `pass` 확인
 2. 필요 시 plan loop 실행
 3. Codex에 백엔드 구현 요청
 4. TDD / contract / tests 확인
@@ -276,6 +278,11 @@ supervisor 동작:
 3. verification 결과 확인
 4. `approved`면 recovery 종료
 5. `needs_revision/stalled/blocked`면 Codex fix 또는 escalation
+
+주의:
+
+- product slice 기본 경로의 Stage 1 docs gate는 generic `agent-review-loop`가 아니라 supervisor-owned `internal 1.5`로 실행한다.
+- 이 경로의 역할은 `Codex review -> Claude repair/rebuttal`이며, 같은 Stage 1 docs PR에서 최대 3회 수렴한다.
 
 ## Claude Token Budget Model
 
