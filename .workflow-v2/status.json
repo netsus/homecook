@@ -209,6 +209,22 @@
         "pnpm typecheck"
       ],
       "notes": "Bugfix-patch pilot merged via PR #129; HOME recipe card source badge now localizes raw source_type enums and refreshed HOME visual baselines stayed green."
+    },
+    {
+      "id": "07-meal-manage",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/07-meal-manage",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm install --frozen-lockfile && pnpm verify:backend",
+        "pnpm install --frozen-lockfile && pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 docs in progress on docs/07-meal-manage. MEAL_SCREEN workpack, acceptance, automation-spec, design-generator, design-critic (🟡 conditional pass) complete."
     }
   ]
 }

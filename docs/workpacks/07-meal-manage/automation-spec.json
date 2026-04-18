@@ -1,0 +1,85 @@
+{
+  "slice_id": "07-meal-manage",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [
+      "GET /meals",
+      "PATCH /meals/{meal_id}",
+      "DELETE /meals/{meal_id}"
+    ],
+    "invariants": [
+      "owner-authorization",
+      "planned-servings-minimum-one",
+      "status-not-changed-by-patch",
+      "delete-requires-confirmation-modal",
+      "409-graceful-handling"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/meal-list-route.test.ts",
+      "tests/meal-update-route.test.ts",
+      "tests/meal-delete-route.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/planner/[date]/[columnId]"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot",
+      "authority-report"
+    ],
+    "design_authority": {
+      "ui_risk": "new-screen",
+      "anchor_screens": [],
+      "required_screens": [
+        "MEAL_SCREEN"
+      ],
+      "generator_required": true,
+      "critic_required": true,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/MEAL_SCREEN-authority.md"
+      ],
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/07-meal-manage/MEAL_SCREEN-mobile.png",
+        "ui/designs/evidence/07-meal-manage/MEAL_SCREEN-mobile-narrow.png"
+      ]
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "meal-plan-columns-missing",
+    "user-bootstrap-missing",
+    "meals-table-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 3,
+    "frontend": 3
+  }
+}
