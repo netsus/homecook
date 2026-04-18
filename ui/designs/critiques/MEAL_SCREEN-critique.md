@@ -78,6 +78,8 @@
 - [x] 터치 타겟 최소 44px — stepper 버튼 44×44px, 삭제 버튼 44×44px, 뒤로가기 버튼 44×44px 모두 명시
 - [x] 모바일 퍼스트 (375px 기준) 레이아웃 — 기본 와이어프레임 375px 기준
 - [x] 320px narrow sentinel 별도 와이어프레임 포함, 주요 요소 잘림 없음 명시
+- [x] **primary CTA 지정**: `[+ 식사 추가]`가 이 화면의 primary CTA로 명시됨 — `--brand` 색상으로 가장 강한 시각 위계, sticky 하단 고정으로 항상 접근 가능 (mobile-ux-rules.md Rule 3 준수)
+- [x] **primary CTA vs secondary action 위계 분리**: 카드 내 stepper(+/-) 및 [삭제]는 secondary action으로 primary CTA보다 시각 무게가 낮게 설계됨 — 위계 혼동 없음
 - [x] 핵심 액션(식사 추가) 하단 sticky 고정, 시각적으로 명확
 - [x] Whole-page horizontal scroll 없음 — overflow-x: hidden 명시
 - [x] Scroll containment 명확 — 앱바/하단 CTA sticky, 목록만 스크롤

@@ -11,7 +11,11 @@
   "owners": {
     "claude": "stage-1-docs-stage-3-backend-review-stage-4-frontend",
     "codex": "stage-2-backend-stage-5-design-review-stage-6-frontend-review",
-    "workers": ["design-generator", "design-critic", "product-design-authority"]
+    "workers": [
+      "design-generator",
+      "design-critic",
+      "product-design-authority"
+    ]
   },
   "dependencies": [
     "01-discovery-detail-auth",
@@ -37,7 +41,9 @@
   "workflow": {
     "plan_loop": "skipped",
     "review_loop": "required",
-    "external_smokes": ["pnpm dev:local-supabase"],
+    "external_smokes": [
+      "pnpm dev:local-supabase"
+    ],
     "execution_mode": "autonomous",
     "merge_policy": "manual",
     "max_fix_rounds": {
@@ -66,8 +72,8 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
+    "lifecycle": "blocked",
+    "approval_state": "human_escalation",
     "verification_status": "pending",
     "evaluation_status": "not_started",
     "evaluation_round": 0,

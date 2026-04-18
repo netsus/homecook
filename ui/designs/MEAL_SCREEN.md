@@ -224,7 +224,9 @@
 - **border-radius**: `20px`
 - **배경**: `--panel`
 
-### 하단 고정 CTA — 식사 추가 버튼
+### Primary CTA — 하단 고정 식사 추가 버튼
+
+> **[+ 식사 추가]는 이 화면의 primary CTA다.** 인분 조절 stepper와 삭제 버튼은 카드 내 secondary action이며, primary CTA보다 시각 위계가 낮아야 한다. primary CTA는 `--brand` 색상으로 가장 강한 시각 무게를 가지고, 화면 하단에 sticky 고정되어 항상 접근 가능해야 한다(mobile-ux-rules.md Rule 3 준수).
 
 - **텍스트**: `+ 식사 추가`
 - **배경**: `--brand` / `border-radius: 12px` / 높이 52px
@@ -232,7 +234,8 @@
 - **위치**: sticky bottom, `--panel` 배경 영역 내 / 탭바 위
 - **좌우 여백**: `--space-4` (16px) — 전체 너비 stretch (컨테이너 너비 - 32px)
 - **탭 시**: MENU_ADD 화면으로 이동
-- **Empty 상태**: 하단 고정 CTA 유지 + 본문 내 강조 CTA 추가
+- **Empty 상태**: 하단 고정 primary CTA 유지 + 본문 내 강조 CTA 추가
+- **시각 위계 원칙**: 식사 카드 내 stepper(+/-) 및 [삭제] 버튼은 `--muted` 또는 `--brand` 소형 요소로 처리하여 primary CTA인 [+ 식사 추가]와 시각적 혼동이 없도록 한다.
 
 ### 409 오류 인라인 표시
 
