@@ -9,29 +9,29 @@
 
 ## Happy Path
 
-- [ ] `GET /meals?plan_date=&column_id=`가 해당 슬롯의 식사 목록을 반환한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
-- [ ] 식사 카드에 레시피명, 계획 인분, 상태 뱃지가 표시된다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
+- [x] `GET /meals?plan_date=&column_id=`가 해당 슬롯의 식사 목록을 반환한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
+- [x] 식사 카드에 레시피명, 계획 인분, 상태 뱃지가 표시된다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
-- [ ] `PATCH /meals/{id}` 호출 후 목록이 갱신된 인분으로 표시된다 <!-- omo:id=accept-patch-servings;stage=4;scope=frontend;review=5,6 -->
-- [ ] `DELETE /meals/{id}` 호출 후 해당 식사가 목록에서 제거된다 <!-- omo:id=accept-delete-removes;stage=4;scope=frontend;review=5,6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] `PATCH /meals/{id}` 호출 후 목록이 갱신된 인분으로 표시된다 <!-- omo:id=accept-patch-servings;stage=4;scope=frontend;review=5,6 -->
+- [x] `DELETE /meals/{id}` 호출 후 해당 식사가 목록에서 제거된다 <!-- omo:id=accept-delete-removes;stage=4;scope=frontend;review=5,6 -->
 
 ## State / Policy
 
 - [x] `planned_servings` 변경 시 `status`가 변경되지 않는다 <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
-- [ ] `status='shopping_done'` 또는 `'cook_done'`인 식사의 인분 변경 시 FE 확인 모달이 표시된다 <!-- omo:id=accept-serving-change-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] 삭제 전 확인 모달이 항상 표시된다 <!-- omo:id=accept-delete-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] `status='shopping_done'` 또는 `'cook_done'`인 식사의 인분 변경 시 FE 확인 모달이 표시된다 <!-- omo:id=accept-serving-change-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] 삭제 전 확인 모달이 항상 표시된다 <!-- omo:id=accept-delete-modal;stage=4;scope=frontend;review=5,6 -->
 - [x] 이번 슬라이스에서 `meals.status` 전이는 발생하지 않는다 (read-only 정책은 후속 슬라이스에서) <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
 - [x] DELETE는 멱등 처리 없이 404를 반환하며 FE에서 graceful 처리한다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 — GET /meals 조회 중 스켈레톤 또는 스피너 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 있다 — 슬롯에 식사가 없는 경우 빈 상태 메시지 표시 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 — GET /meals 실패 시 안내 + 재시도 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 — 비로그인 접근 시 로그인 게이트 + return-to-action <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] conflict 처리 흐름이 있다 — 서버 409 반환 시 인라인 오류 메시지 표시 <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
-- [ ] 로그인 게이트 후 return-to-action이 맞다 — 로그인 성공 후 원래 MEAL_SCREEN URL로 복귀 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 — GET /meals 조회 중 스켈레톤 또는 스피너 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 있다 — 슬롯에 식사가 없는 경우 빈 상태 메시지 표시 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 — GET /meals 실패 시 안내 + 재시도 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 — 비로그인 접근 시 로그인 게이트 + return-to-action <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] conflict 처리 흐름이 있다 — 서버 409 반환 시 인라인 오류 메시지 표시 <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
+- [x] 로그인 게이트 후 return-to-action이 맞다 — 로그인 성공 후 원래 MEAL_SCREEN URL로 복귀 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -70,8 +70,8 @@
 
 ### Playwright
 
-- [ ] `MEAL_SCREEN` 로드, 인분 변경, 삭제, 빈 상태가 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] 비로그인 접근 시 로그인 게이트 및 return-to-action이 브라우저 테스트로 확인된다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+- [x] `MEAL_SCREEN` 로드, 인분 변경, 삭제, 빈 상태가 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 비로그인 접근 시 로그인 게이트 및 return-to-action이 브라우저 테스트로 확인된다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only
 

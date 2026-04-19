@@ -269,10 +269,10 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
-    // slot rows are divs with min-h-[44px]; find the breakfast row via meal title
-    const breakfastRow = within(firstDayCard).getByText("김치찌개").closest("div");
+    // slot rows are links with min-h-[44px]; find the breakfast row via meal title
+    const breakfastRow = within(firstDayCard).getByText("김치찌개").closest("a");
     // find the dinner row via its 끼니명 label
-    const dinnerRow = within(firstDayCard).getByText("저녁").closest("div");
+    const dinnerRow = within(firstDayCard).getByText("저녁").closest("a");
 
     expect(breakfastRow).not.toBeNull();
     expect(dinnerRow).not.toBeNull();

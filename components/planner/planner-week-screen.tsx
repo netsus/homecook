@@ -645,9 +645,10 @@ export function PlannerWeekScreen({
                   const meal = slotMeals[0] ?? null;
 
                   return (
-                    <div
+                    <Link
                       key={slotKey}
                       className="flex min-h-[44px] items-center gap-3 py-2"
+                      href={`/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`}
                     >
                       {/* 끼니명 — fixed width, muted */}
                       <span className="w-[2.75rem] shrink-0 text-[11px] font-semibold text-[var(--muted)]">
@@ -686,7 +687,7 @@ export function PlannerWeekScreen({
                           </span>
                         </div>
                       ) : null}
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
