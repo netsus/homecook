@@ -25,7 +25,7 @@ Claude provider의 표준 fresh-session 실행:
 claude -p \
   --output-format json \
   --input-format text \
-  --permission-mode acceptEdits \
+  --permission-mode bypassPermissions \
   --effort high \
   --model <repo-default-or-cli-override>
 ```
@@ -36,7 +36,7 @@ Claude provider의 표준 resumed-session 실행:
 claude -p \
   --output-format json \
   --input-format text \
-  --permission-mode acceptEdits \
+  --permission-mode bypassPermissions \
   --effort high \
   --model <repo-default-or-cli-override> \
   --resume <session_id>
@@ -46,7 +46,7 @@ claude -p \
 
 1. prompt는 항상 stdin으로 전달한다.
 2. JSON stdout은 artifact로 그대로 저장한다.
-3. 기본 permission mode는 `acceptEdits`다.
+3. 기본 permission mode는 `bypassPermissions`다.
 4. 기본 effort는 `high`다.
 5. `--continue`는 directory-local recent conversation에 의존하므로 자동화에서 금지한다.
 6. `--fork-session`은 기본 경로가 아니라 명시적 operator recovery에서만 허용한다.
@@ -122,14 +122,14 @@ Claude/Codex provider 기본값은 tracked repo-local config에 둔다.
 - `claude.bin = "claude"`
 - `claude.model = "sonnet"`
 - `claude.effort = "high"`
-- `claude.permission_mode = "acceptEdits"`
+- `claude.permission_mode = "bypassPermissions"`
 - `codex.provider = "opencode"`
 - `codex.bin = "opencode"`
 - `codex.agent = "hephaestus"`
 
 CLI override 허용 범위:
 
-- `--claude-provider opencode|claude-cli`
+- `--claude-provider claude-cli`
 - `--claude-bin <path>`
 - `--claude-model <model>`
 - `--claude-effort low|medium|high`
@@ -137,7 +137,8 @@ CLI override 허용 범위:
 원칙:
 
 - 기본 supervisor 경로는 `claude-cli`를 사용한다.
-- `opencode` Claude provider는 emergency fallback이다.
+- Homecook OMO는 Claude-owned stage provider로 `opencode`를 지원하지 않는다.
+- top-level OMO 명령에서 `--claude-provider opencode`를 주면 fail-fast로 막는다.
 - CLI override가 repo-local default보다 우선한다.
 
 ## Non-Goals

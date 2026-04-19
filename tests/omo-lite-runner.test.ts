@@ -294,6 +294,81 @@ function createSchemaRepairingFakeClaudeBin(
   };
 }
 
+function createSchemaRepairingFakeOpencodeBin(
+  rootDir: string,
+  options?: {
+    sessionId?: string;
+  },
+) {
+  fakeOpencodeCounter += 1;
+  const suffix = String(fakeOpencodeCounter);
+  const binPath = join(rootDir, `fake-opencode-repair-${suffix}.sh`);
+  const argsPath = join(rootDir, `fake-opencode-repair-${suffix}.args.log`);
+  const countPath = join(rootDir, `fake-opencode-repair-${suffix}.count`);
+  const sessionId = options?.sessionId ?? `ses_fake_opencode_repair_${suffix}`;
+  const validStageResult = {
+    result: "done",
+    summary_markdown: "Stage 1 repaired and completed",
+    commit: {
+      subject: "docs: repair stage1 bootstrap",
+      body_markdown: "repair pass",
+    },
+    pr: {
+      title: "docs: repair stage1 bootstrap",
+      body_markdown: "## Summary\n- repair pass",
+    },
+    checks_run: [],
+    next_route: "open_pr",
+    claimed_scope: {
+      files: ["docs/workpacks/07-meal-manage/README.md"],
+      endpoints: [],
+      routes: [],
+      states: [],
+      invariants: [],
+    },
+    changed_files: ["docs/workpacks/07-meal-manage/README.md"],
+    tests_touched: [],
+    artifacts_written: [".artifacts/example.log"],
+    checklist_updates: [],
+    contested_fix_ids: [],
+    rebuttals: [],
+  };
+
+  writeFileSync(
+    binPath,
+    [
+      "#!/bin/sh",
+      "count=0",
+      "[ -f \"$FAKE_OPENCODE_COUNT_PATH\" ] && count=$(cat \"$FAKE_OPENCODE_COUNT_PATH\")",
+      "count=$((count + 1))",
+      "printf '%s' \"$count\" > \"$FAKE_OPENCODE_COUNT_PATH\"",
+      "printf '%s\\n' \"$@\" >> \"$FAKE_OPENCODE_ARGS_PATH\"",
+      "if [ \"$count\" -eq 1 ]; then",
+      "  cat <<'EOF'",
+      `{\"type\":\"step_start\",\"sessionID\":\"${sessionId}\",\"part\":{\"type\":\"step-start\"}}`,
+      `{\"type\":\"step_finish\",\"sessionID\":\"${sessionId}\",\"part\":{\"type\":\"step-finish\",\"reason\":\"stop\"}}`,
+      "EOF",
+      "else",
+      "  cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
+      JSON.stringify(validStageResult, null, 2),
+      "EOF",
+      "  cat <<'EOF'",
+      `{\"type\":\"step_start\",\"sessionID\":\"${sessionId}\",\"part\":{\"type\":\"step-start\"}}`,
+      `{\"type\":\"step_finish\",\"sessionID\":\"${sessionId}\",\"part\":{\"type\":\"step-finish\",\"reason\":\"stop\"}}`,
+      "EOF",
+      "fi",
+      "exit 0",
+    ].join("\n"),
+  );
+  chmodSync(binPath, 0o755);
+
+  return {
+    binPath,
+    argsPath,
+    countPath,
+  };
+}
+
 function createRunnerFixture() {
   const rootDir = mkdtempSync(join(tmpdir(), "omo-lite-runner-"));
 
@@ -1522,6 +1597,63 @@ describe("OMO-lite stage runner", () => {
     expect(runtime.sessions.claude_primary).toMatchObject({
       session_id: "ses_claude_missing_stage_result",
       provider: "claude-cli",
+    });
+  });
+
+  it("auto-repairs a missing Stage 1 stage-result when opencode fallback can satisfy the repair prompt", () => {
+    const rootDir = createRunnerFixture();
+    seedStrictSlice(rootDir, "07-meal-manage");
+    const { binPath, argsPath, countPath } = createSchemaRepairingFakeOpencodeBin(rootDir, {
+      sessionId: "ses_stage1_opencode_repair",
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "07-meal-manage",
+      stage: 1,
+      workItemId: "07-meal-manage",
+      mode: "execute",
+      claudeProvider: "opencode",
+      opencodeBin: binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: argsPath,
+        FAKE_OPENCODE_COUNT_PATH: countPath,
+      },
+      now: "2026-04-18T17:10:00+09:00",
+    });
+
+    const stageResult = result.stageResult as { result: string; summary_markdown: string } | null;
+    const runtime = JSON.parse(
+      readFileSync(join(rootDir, ".opencode", "omo-runtime", "07-meal-manage.json"), "utf8"),
+    ) as {
+      current_stage: number;
+      last_completed_stage: number;
+      blocked_stage: number | null;
+      sessions: {
+        claude_primary: {
+          session_id: string;
+          provider: string;
+        };
+      };
+    };
+    expect(result.execution.mode).toBe("execute");
+    expect(result.execution.provider).toBe("opencode");
+    expect(result.execution.sessionId).toBe("ses_stage1_opencode_repair");
+    expect(existsSync(join(result.artifactDir, "schema-repair-pass-1", "prompt.md"))).toBe(true);
+    expect(stageResult).toMatchObject({
+      result: "done",
+    });
+    expect(stageResult?.summary_markdown).toContain("Stage 1 repaired");
+    expect(runtime).toMatchObject({
+      current_stage: 1,
+      last_completed_stage: 1,
+      blocked_stage: null,
+      sessions: {
+        claude_primary: {
+          session_id: "ses_stage1_opencode_repair",
+          provider: "opencode",
+        },
+      },
     });
   });
 

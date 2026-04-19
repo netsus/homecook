@@ -30,8 +30,9 @@ function runGit({ cwd, args }) {
 
 function parseGitStatusPath(line) {
   const normalized = typeof line === "string" ? line.trimEnd() : "";
-  const match = normalized.match(/^[^\s]{1,2}\s+(.*)$/);
-  const path = match?.[1]?.trim() ?? normalized;
+  const porcelain = normalized.replace(/^\s+/, "");
+  const match = porcelain.match(/^[^\s]{1,2}\s+(.*)$/);
+  const path = match?.[1]?.trim() ?? porcelain;
   const renameMatch = path.match(/->\s+(.+)$/);
   return renameMatch ? renameMatch[1].trim() : path;
 }

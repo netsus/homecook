@@ -379,6 +379,96 @@ describe("OMO stage-result contract", () => {
     expect(result.required_doc_fix_ids).toEqual(["doc-gate-missing-section-goal"]);
   });
 
+  it("normalizes doc gate repair rebuttal alias fields into the canonical schema", () => {
+    const result = validateStageResult(
+      2,
+      {
+        result: "done",
+        summary_markdown: "doc gate repaired",
+        commit: { subject: "docs: repair workpack" },
+        pr: { title: "docs: repair workpack", body_markdown: "body" },
+        checks_run: [],
+        next_route: "open_pr",
+        claimed_scope: {
+          files: ["docs/workpacks/06-foo/README.md"],
+          endpoints: [],
+          routes: [],
+          states: [],
+          invariants: [],
+        },
+        changed_files: ["docs/workpacks/06-foo/README.md"],
+        tests_touched: [],
+        artifacts_written: [".artifacts/doc-gate.log"],
+        resolved_doc_finding_ids: [],
+        contested_doc_fix_ids: ["doc-gate-missing-section-goal"],
+        rebuttals: [
+          {
+            fixId: "doc-gate-missing-section-goal",
+            rationale: "Already satisfied.",
+            evidenceRefs: ["docs/workpacks/06-foo/README.md"],
+          },
+        ],
+      },
+      {
+        subphase: "doc_gate_repair",
+      },
+    ) as {
+      rebuttals: Array<{ fix_id: string; rationale_markdown: string; evidence_refs: string[] }>;
+    };
+
+    expect(result.rebuttals).toEqual([
+      {
+        fix_id: "doc-gate-missing-section-goal",
+        rationale_markdown: "Already satisfied.",
+        evidence_refs: ["docs/workpacks/06-foo/README.md"],
+      },
+    ]);
+  });
+
+  it("accepts doc gate review findings written with doc-gate alias fields", () => {
+    const result = validateStageResult(
+      2,
+      {
+        decision: "request_changes",
+        body_markdown: "Fix the workpack wording.",
+        route_back_stage: 2,
+        approved_head_sha: null,
+        review_scope: {
+          scope: "doc_gate",
+          checklist_ids: [],
+        },
+        reviewed_doc_finding_ids: ["doc-gate-missing-section-goal"],
+        required_doc_fix_ids: ["doc-gate-missing-section-goal"],
+        waived_doc_fix_ids: [],
+        findings: [
+          {
+            evidence_paths: ["docs/workpacks/06-foo/README.md"],
+            severity: "major",
+            category: "contract",
+            message: "Goal section is incomplete.",
+            remediation_hint: "Lock the user-facing goal in the README.",
+          },
+        ],
+      },
+      {
+        subphase: "doc_gate_review",
+      },
+    ) as {
+      findings: Array<{ file: string; issue: string; suggestion: string }>;
+    };
+
+    expect(result.findings).toEqual([
+      {
+        file: "docs/workpacks/06-foo/README.md",
+        line_hint: null,
+        severity: "major",
+        category: "contract",
+        issue: "Goal section is incomplete.",
+        suggestion: "Lock the user-facing goal in the README.",
+      },
+    ]);
+  });
+
   it("validates authority_precheck stage results", () => {
     const result = validateStageResult(
       4,

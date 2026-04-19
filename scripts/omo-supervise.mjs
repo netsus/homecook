@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import { superviseWorkItem } from "./lib/omo-autonomous-supervisor.mjs";
+import { assertSupportedClaudeProvider } from "./lib/omo-provider-config.mjs";
+import { ensureLaunchAgentInstalled } from "./lib/omo-scheduler.mjs";
 
 function printUsage() {
   process.stdout.write(
@@ -13,7 +15,7 @@ function printUsage() {
       "  --claude-budget-state <state>    Optional override: available | constrained | unavailable",
       "  --mode <artifact-only|execute>   Default: execute",
       "  --gh-bin <path>                  Override gh binary path",
-      "  --claude-provider <name>         Override Claude provider: opencode | claude-cli",
+      "  --claude-provider <name>         Override Claude provider: claude-cli",
       "  --claude-bin <path>              Override claude binary path",
       "  --claude-model <model>           Override Claude model alias/name",
       "  --claude-effort <level>          Override Claude effort: low | medium | high",
@@ -91,13 +93,23 @@ function main() {
     process.exit(0);
   }
 
+  if (options.mode !== "artifact-only" && options.workItem) {
+    ensureLaunchAgentInstalled({
+      rootDir: process.cwd(),
+      workItemId: options.workItem,
+      ghBin: options.ghBin,
+      claudeBin: options.claudeBin,
+      opencodeBin: options.opencodeBin,
+    });
+  }
+
   const result = superviseWorkItem({
     workItemId: options.workItem,
     slice: options.slice,
     claudeBudgetState: options.claudeBudgetState,
     mode: options.mode,
     ghBin: options.ghBin,
-    claudeProvider: options.claudeProvider,
+    claudeProvider: assertSupportedClaudeProvider(options.claudeProvider),
     claudeBin: options.claudeBin,
     claudeModel: options.claudeModel,
     claudeEffort: options.claudeEffort,

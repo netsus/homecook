@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 
 import { describe, expect, it } from "vitest";
 
-import { evaluateBookkeepingInvariant } from "../scripts/lib/omo-bookkeeping.mjs";
+import { evaluateBookkeepingInvariant, readWorkpackDesignAuthority } from "../scripts/lib/omo-bookkeeping.mjs";
 import { reconcileWorkItemBookkeeping } from "../scripts/lib/omo-reconcile.mjs";
 import { readRuntimeState, writeRuntimeState } from "../scripts/lib/omo-session-runtime.mjs";
 import { validateOmoBookkeeping } from "../scripts/lib/validate-omo-bookkeeping.mjs";
@@ -373,6 +373,46 @@ function createFakeGh(
 }
 
 describe("OMO bookkeeping", () => {
+  it("reads Stage 4 evidence plan aliases as the Design Authority visual artifact", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-bookkeeping-"));
+    const workItemId = "07-meal-manage";
+
+    seedTrackedFiles(rootDir, workItemId);
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", workItemId, "README.md"),
+      [
+        `# ${workItemId}`,
+        "",
+        "## Design Authority",
+        "- UI risk: `new-screen`",
+        "- Anchor screen dependency: 없음",
+        "- Stage 4 evidence plan: `ui/designs/evidence/07-meal-manage/MEAL_SCREEN-mobile.png`",
+        "- Authority status: `required`",
+        "- Notes: screenshot review 예정",
+        "",
+        "## Design Status",
+        "- [x] 임시 UI (temporary)",
+        "- [ ] 리뷰 대기 (pending-review)",
+        "- [ ] 확정 (confirmed)",
+        "- [ ] N/A",
+        "",
+        "## Delivery Checklist",
+        "- [ ] merged bookkeeping closeout is aligned",
+      ].join("\n"),
+    );
+
+    expect(
+      readWorkpackDesignAuthority({
+        rootDir,
+        slice: workItemId,
+      }),
+    ).toMatchObject({
+      visualArtifact: "ui/designs/evidence/07-meal-manage/MEAL_SCREEN-mobile.png",
+      authorityStatus: "required",
+      missing: false,
+    });
+  });
+
   it("classifies done runtime plus stale roadmap as repairable_post_merge", () => {
     const rootDir = createRuntimeFixture();
 

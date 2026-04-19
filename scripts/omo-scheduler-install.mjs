@@ -1,16 +1,9 @@
 #!/usr/bin/env node
 
-import { mkdirSync, writeFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
-
 import {
   DEFAULT_TICK_INTERVAL_SECONDS,
+  ensureLaunchAgentInstalled,
   formatLaunchAgentSnapshot,
-  readLaunchAgentSnapshot,
-  renderLaunchAgentPlist,
-  resolveLaunchAgentLabel,
-  resolveLaunchAgentPlistPath,
-  resolveSchedulerBins,
 } from "./lib/omo-scheduler.mjs";
 
 function printUsage() {
@@ -88,17 +81,6 @@ function parseArgs(argv) {
   return options;
 }
 
-function runLaunchctl(args) {
-  const result = spawnSync("launchctl", args, {
-    encoding: "utf8",
-  });
-
-  if (result.status !== 0) {
-    const stderr = typeof result.stderr === "string" ? result.stderr.trim() : "";
-    throw new Error(stderr.length > 0 ? stderr : `launchctl ${args.join(" ")} failed.`);
-  }
-}
-
 function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
@@ -110,51 +92,16 @@ function main() {
     throw new Error("--work-item is required.");
   }
 
-  const homeDir = options.homeDir ?? process.env.HOME;
-  const plistPath = resolveLaunchAgentPlistPath(options.workItem, homeDir);
-  const bins = resolveSchedulerBins({
+  const result = ensureLaunchAgentInstalled({
     rootDir: process.cwd(),
+    workItemId: options.workItem,
+    intervalSeconds: options.intervalSeconds,
     pnpmBin: options.pnpmBin,
     ghBin: options.ghBin,
     claudeBin: options.claudeBin,
     opencodeBin: options.opencodeBin,
-    homeDir,
+    homeDir: options.homeDir ?? process.env.HOME,
   });
-  const plist = renderLaunchAgentPlist({
-    rootDir: process.cwd(),
-    workItemId: options.workItem,
-    homeDir,
-    intervalSeconds: options.intervalSeconds,
-    bins,
-  });
-  const uid = typeof process.getuid === "function" ? process.getuid() : null;
-  if (!Number.isInteger(uid)) {
-    throw new Error("Current platform does not support launchctl gui user installation.");
-  }
-
-  mkdirSync(plistPath.replace(/\/[^/]+$/, ""), { recursive: true });
-  mkdirSync(`${homeDir}/Library/Logs/homecook`, { recursive: true });
-  writeFileSync(plistPath, plist);
-
-  const label = resolveLaunchAgentLabel(options.workItem);
-  spawnSync("launchctl", ["bootout", `gui/${uid}`, plistPath], {
-    encoding: "utf8",
-  });
-  runLaunchctl(["bootstrap", `gui/${uid}`, plistPath]);
-  runLaunchctl(["kickstart", "-k", `gui/${uid}/${label}`]);
-
-  const snapshot = readLaunchAgentSnapshot({
-    workItemId: options.workItem,
-    homeDir,
-  });
-  const result = {
-    installed: true,
-    label,
-    plistPath,
-    intervalSeconds: options.intervalSeconds,
-    bins,
-    snapshot,
-  };
 
   if (options.json) {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
@@ -162,7 +109,7 @@ function main() {
   }
 
   process.stdout.write(
-    [`Installed ${label}`, `plist: ${plistPath}`, "", formatLaunchAgentSnapshot(snapshot)].join("\n") + "\n",
+    [`Installed ${result.label}`, `plist: ${result.plistPath}`, "", formatLaunchAgentSnapshot(result.snapshot)].join("\n") + "\n",
   );
 }
 

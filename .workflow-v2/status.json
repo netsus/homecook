@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-18T12:19:27.492Z",
+  "updated_at": "2026-04-19T03:05:04.783Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -213,17 +213,23 @@
     {
       "id": "07-meal-manage",
       "preset": "vertical-slice-strict",
-      "branch": "docs/07-meal-manage",
-      "lifecycle": "blocked",
-      "approval_state": "human_escalation",
-      "verification_status": "pending",
+      "branch": "feature/be-07-meal-manage",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm install --frozen-lockfile && pnpm verify:backend",
         "pnpm install --frozen-lockfile && pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "wait_kind=human_escalation reason=Stage 2 checklist_updates must mark items as checked: delivery-backend-contract, delivery-api-adapter, delivery-types, delivery-state-policy-tests, delivery-fixture-smoke-split, delivery-bootstrap-readiness, accept-api-envelope, accept-state-transition, accept-read-only, accept-idempotency, accept-owner-guard, accept-owner-guard-mutation, accept-invalid-input, accept-derived-fields, accept-fixture-baseline, accept-real-db-ready, accept-bootstrap-owning-flow, accept-vitest-split, accept-vitest-regression. recovery_kind=partial_stage_failure artifact_dir=/Users/cwj/01_vibe_coding/homecook/.artifacts/omo-lite-dispatch/2026-04-18T12-15-04-045Z-07-meal-manage-stage-2"
+      "notes": "wait_kind=none merged_after_autonomous_review",
+      "evaluation_status": "passed",
+      "evaluation_round": 2,
+      "last_evaluator_result": "/Users/cwj/01_vibe_coding/homecook/.artifacts/omo-evaluator/2026-04-19T02-18-10-325Z-07-meal-manage-frontend/result.json",
+      "auto_merge_eligible": false,
+      "blocked_reason_code": null,
+      "pr_path": "https://github.com/netsus/homecook/pull/152"
     }
   ]
 }

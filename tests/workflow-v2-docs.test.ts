@@ -132,6 +132,9 @@ describe("workflow v2 docs", () => {
     expect(workflowReadme).toContain(
       "scheduler standard는 team-shared default를 `macOS launchd`로 고정하고, non-macOS 환경은 `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending` fallback으로 다룬다.",
     );
+    expect(workflowReadme).toContain(
+      "macOS에서는 `omo:supervise`, `omo:start`, `omo:continue`가 execute mode에서 work item launchd scheduler를 자동 bootstrap/refresh한다.",
+    );
     expect(promotionReadiness).toContain("#### `manual-handoff-policy`");
     expect(promotionReadiness).toContain(
       "manual handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서만 허용한다.",
@@ -142,6 +145,9 @@ describe("workflow v2 docs", () => {
     expect(opencodeReadme).toContain("## Manual Handoff Standard");
     expect(opencodeReadme).toContain("## Live Smoke Standard");
     expect(opencodeReadme).toContain("## Scheduler Standard");
+    expect(opencodeReadme).toContain(
+      "execute mode kickoff 명령은 macOS에서 work item별 launchd scheduler를 자동 보장하고, `omo:scheduler:install`은 repair/custom cadence 용도로 남긴다.",
+    );
     expect(opencodeReadme).toContain(
       "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox repo rehearsal 중 더 이른 쪽을 따른다.",
     );

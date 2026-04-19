@@ -8366,6 +8366,311 @@ describe("OMO autonomous supervisor", () => {
     ]);
   });
 
+  it("tick converts a stale Claude stage_running lock with aborted streaming logs into a retry", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const artifactDir = join(rootDir, ".artifacts", "stage3-stale-abort");
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      join(artifactDir, "claude.stdout.log"),
+      `${JSON.stringify({
+        type: "result",
+        subtype: "error_during_execution",
+        terminal_reason: "aborted_streaming",
+        errors: [
+          "Error: Request was aborted.",
+          "Error: Compaction interrupted · This may be due to network issues — please try again.",
+        ],
+      })}\n`,
+    );
+    writeFileSync(join(artifactDir, "claude.stderr.log"), "");
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 3,
+        current_stage: 3,
+        workspace: {
+          path: join(rootDir, ".worktrees", workItemId),
+          branch_role: "backend",
+        },
+        phase: "stage_running",
+        next_action: "run_stage",
+        lock: {
+          owner: "omo-supervisor-1012",
+          acquired_at: "2026-04-18T13:55:16.228Z",
+        },
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: "ses_claude_stage3",
+          artifact_dir: artifactDir,
+          stage_result_path: join(artifactDir, "stage-result.json"),
+          started_at: "2026-04-18T13:55:17.010Z",
+          finished_at: null,
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "backend",
+          subphase: "implementation",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-19T00:10:00.000Z",
+      },
+      {
+        supervise(args: { workItemId: string }) {
+          const runtime = readRuntimeState({ rootDir, workItemId, slice: workItemId }).state;
+          return {
+            workItemId: args.workItemId,
+            slice: workItemId,
+            wait: runtime.wait,
+            runtime,
+            artifactDir,
+            transitions: [],
+          };
+        },
+      },
+    );
+
+    expect(results[0]).toEqual(
+      expect.objectContaining({
+        workItemId,
+      }),
+    );
+    const runtime = readRuntimeState({ rootDir, workItemId, slice: workItemId }).state as {
+      lock: null;
+      wait: { kind: string; stage: number };
+      retry: { reason: string; at: string | null };
+      recovery: { kind: string; reason: string } | null;
+    };
+    expect(runtime.lock).toBeNull();
+    expect(runtime.wait).toMatchObject({
+      kind: "blocked_retry",
+      stage: 3,
+    });
+    expect(runtime.retry?.reason).toBe("claude_budget_unavailable");
+    expect(runtime.recovery?.kind).toBe("partial_stage_failure");
+  });
+
+  it("tick resumes a github auth escalation after auth is restored", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    let resumed = false;
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 3,
+        current_stage: 3,
+        last_completed_stage: 2,
+        wait: {
+          kind: "human_escalation",
+          reason:
+            "github.com\n  X Failed to log in to github.com account netsus (default)\n  - Active account: true\n  - The token in default is invalid.\n  - To re-authenticate, run: gh auth login -h github.com",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-19T01:20:00.000Z",
+      },
+      {
+        supervise(args: { workItemId: string }) {
+          resumed = true;
+          return {
+            workItemId: args.workItemId,
+            slice: workItemId,
+            wait: { kind: "blocked_retry", stage: 3, pr_role: "backend" },
+            runtime: readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+            artifactDir: join(rootDir, ".artifacts", "tick-gh-auth-resume"),
+            transitions: [],
+          };
+        },
+      },
+    );
+
+    expect(resumed).toBe(true);
+    expect(results[0]).toEqual(
+      expect.objectContaining({
+        workItemId,
+      }),
+    );
+  });
+
+  it("tick resumes a pending_recheck doc gate escalation after parser-compatible docs changes", () => {
+    const rootDir = createFixture();
+    let resumed = false;
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "07-meal-manage",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "07-meal-manage",
+          slice: "07-meal-manage",
+        }).state,
+        slice: "07-meal-manage",
+        active_stage: 2,
+        current_stage: 2,
+        workspace: {
+          path: join(rootDir, ".worktrees", "07-meal-manage"),
+          branch_role: "docs",
+        },
+        wait: {
+          kind: "human_escalation",
+          reason: "Merged Stage 1 docs failed doc gate recheck: README Design Authority visual artifact plan is missing.",
+        },
+        recovery: {
+          kind: "partial_stage_failure",
+          stage: 2,
+          reason: "Merged Stage 1 docs failed doc gate recheck: README Design Authority visual artifact plan is missing.",
+          existing_pr: {
+            role: "docs",
+            url: "https://github.com/netsus/homecook/pull/150",
+            branch: "docs/07-meal-manage",
+            head_sha: "docs123",
+          },
+        },
+        prs: {
+          docs: {
+            number: 150,
+            url: "https://github.com/netsus/homecook/pull/150",
+            draft: false,
+            branch: "docs/07-meal-manage",
+            head_sha: "docs123",
+          },
+          backend: null,
+          frontend: null,
+          closeout: null,
+        },
+        doc_gate: {
+          status: "pending_recheck",
+          round: 1,
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId: "07-meal-manage",
+        now: "2026-04-18T11:10:00.000Z",
+      },
+      {
+        supervise() {
+          resumed = true;
+          return {
+            workItemId: "07-meal-manage",
+            slice: "07-meal-manage",
+            wait: { kind: "ready_for_next_stage", stage: 2, pr_role: "docs" },
+            runtime: readRuntimeState({ rootDir, workItemId: "07-meal-manage", slice: "07-meal-manage" }).state,
+            artifactDir: join(rootDir, ".artifacts", "tick-recheck-resume"),
+            transitions: [],
+          };
+        },
+      },
+    );
+
+    expect(resumed).toBe(true);
+    expect(results[0]).toEqual(
+      expect.objectContaining({
+        workItemId: "07-meal-manage",
+      }),
+    );
+  });
+
+  it("tick resumes an escalated post-doc-gate bookkeeping residue without an explicit wait kind", () => {
+    const rootDir = createFixture();
+    let resumed = false;
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "07-meal-manage",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "07-meal-manage",
+          slice: "07-meal-manage",
+        }).state,
+        slice: "07-meal-manage",
+        active_stage: 2,
+        current_stage: 2,
+        blocked_stage: 2,
+        phase: "escalated",
+        next_action: "noop",
+        wait: null,
+        recovery: {
+          kind: "dirty_worktree",
+          stage: 2,
+          reason: "Docs gate bookkeeping drift is limited to tracked workflow-v2 files. Resume continues on the existing docs PR.",
+          changed_files: [".workflow-v2/status.json"],
+          existing_pr: {
+            role: "docs",
+            url: "https://github.com/netsus/homecook/pull/150",
+            branch: "docs/07-meal-manage",
+            head_sha: "docs123",
+          },
+        },
+        doc_gate: {
+          status: "passed",
+          round: 1,
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId: "07-meal-manage",
+        now: "2026-04-18T12:00:00.000Z",
+      },
+      {
+        supervise() {
+          resumed = true;
+          return {
+            workItemId: "07-meal-manage",
+            slice: "07-meal-manage",
+            wait: { kind: "blocked_retry", stage: 2, pr_role: "backend" },
+            runtime: readRuntimeState({ rootDir, workItemId: "07-meal-manage", slice: "07-meal-manage" }).state,
+            artifactDir: join(rootDir, ".artifacts", "tick-escalated-doc-gate-residue"),
+            transitions: [],
+          };
+        },
+      },
+    );
+
+    expect(resumed).toBe(true);
+    expect(results[0]).toEqual(
+      expect.objectContaining({
+        workItemId: "07-meal-manage",
+      }),
+    );
+  });
+
   it("records blocked_retry when Stage 1 schedules a Claude retry", () => {
     const rootDir = createFixture();
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
@@ -9309,6 +9614,997 @@ describe("OMO autonomous supervisor", () => {
       kind: "dirty_worktree",
       changed_files: ["components/recipe/save-modal.tsx"],
       salvage_candidate: true,
+    });
+  });
+
+  it("resumes a Claude Stage 1 retry when dirty files are stage-owned docs outputs", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    let stageRunnerCalled = false;
+
+    createGitWorkspace(workspacePath, `docs/${workItemId}`);
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "planned",
+    });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+        slice: workItemId,
+        active_stage: 1,
+        current_stage: 1,
+        blocked_stage: 1,
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        retry: {
+          at: "2026-04-18T00:00:00.000Z",
+          reason: "claude_budget_unavailable",
+          attempt_count: 1,
+          max_attempts: 3,
+        },
+        wait: {
+          kind: "blocked_retry",
+          pr_role: "docs",
+          stage: 1,
+          reason: "claude_budget_unavailable",
+          until: "2026-04-18T00:00:00.000Z",
+        },
+        sessions: {
+          claude_primary: {
+            session_id: "ses_claude_docs",
+            provider: "claude-cli",
+            agent: "athena",
+            updated_at: "2026-04-18T00:00:00.000Z",
+          },
+          codex_primary: {
+            session_id: null,
+            provider: null,
+            agent: "hephaestus",
+            updated_at: null,
+          },
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-18T00:10:00.000Z",
+        maxTransitions: 2,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {
+            throw new Error("Worktree is dirty.");
+          },
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "docs123";
+          },
+          getCurrentBranch() {
+            return `docs/${workItemId}`;
+          },
+          listChangedFiles() {
+            return [
+              "docs/workpacks/README.md",
+              `docs/workpacks/${workItemId}/README.md`,
+              `docs/workpacks/${workItemId}/acceptance.md`,
+              `docs/workpacks/${workItemId}/automation-spec.json`,
+            ];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          stageRunnerCalled = true;
+          const runtimeSync = writeRuntimeState({
+            rootDir,
+            workItemId,
+            state: {
+              ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+              slice: workItemId,
+              current_stage: 1,
+              blocked_stage: 1,
+              retry: {
+                at: "2026-04-18T01:10:00.000Z",
+                reason: "claude_budget_unavailable",
+                attempt_count: 2,
+                max_attempts: 3,
+              },
+            },
+          });
+          return {
+            artifactDir: join(rootDir, ".artifacts", "stage1-retry-dirty"),
+            dispatch: { actor: "claude", stage: 1 },
+            execution: {
+              mode: "scheduled-retry",
+              executed: false,
+              sessionId: "ses_claude_docs",
+              reason: "claude_budget_unavailable",
+            },
+            runtimeSync,
+            stageResult: null,
+          };
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            throw new Error("not expected");
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(stageRunnerCalled).toBe(true);
+    expect(result.wait?.kind).toBe("blocked_retry");
+  });
+
+  it("tick resumes a Claude dirty-worktree escalation when the retry is due", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    let resumed = false;
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+        slice: workItemId,
+        active_stage: 1,
+        current_stage: 1,
+        blocked_stage: 1,
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        retry: {
+          at: "2026-04-18T00:00:00.000Z",
+          reason: "claude_budget_unavailable",
+          attempt_count: 1,
+          max_attempts: 3,
+        },
+        wait: {
+          kind: "human_escalation",
+          stage: 1,
+          pr_role: "docs",
+          reason: "Worktree is dirty.",
+        },
+        recovery: {
+          kind: "dirty_worktree",
+          stage: 1,
+          branch: `docs/${workItemId}`,
+          reason: "Worktree is dirty.",
+          artifact_dir: join(rootDir, ".artifacts", "stage1-dirty"),
+          changed_files: [
+            "docs/workpacks/README.md",
+            `docs/workpacks/${workItemId}/README.md`,
+            `docs/workpacks/${workItemId}/acceptance.md`,
+            `docs/workpacks/${workItemId}/automation-spec.json`,
+          ],
+          existing_pr: null,
+          salvage_candidate: true,
+          session_role: "claude_primary",
+          session_provider: "claude-cli",
+          session_id: "ses_claude_docs",
+        },
+        sessions: {
+          claude_primary: {
+            session_id: "ses_claude_docs",
+            provider: "claude-cli",
+            agent: "athena",
+            updated_at: "2026-04-18T00:00:00.000Z",
+          },
+          codex_primary: {
+            session_id: null,
+            provider: null,
+            agent: "hephaestus",
+            updated_at: null,
+          },
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-18T00:10:00.000Z",
+      },
+      {
+        supervise() {
+          resumed = true;
+          return {
+            workItemId,
+            slice: workItemId,
+            wait: { kind: "blocked_retry" },
+            runtime: readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+            artifactDir: join(rootDir, ".artifacts", "tick-resume"),
+            transitions: [],
+          };
+        },
+      },
+    );
+
+    expect(resumed).toBe(true);
+    expect(results[0]?.workItemId).toBe(workItemId);
+  });
+
+  it("resumes Stage 2 docs gate when only workflow bookkeeping files are dirty", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    const docFindingId = "doc-gate-missing-goal";
+    const artifactDir = join(rootDir, ".artifacts", "doc-gate-dirty-resume");
+    let observedSubphase: string | null = null;
+
+    createGitWorkspace(workspacePath, `docs/${workItemId}`);
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "docs",
+    });
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        blocked_stage: 2,
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        wait: {
+          kind: "human_escalation",
+          stage: 2,
+          pr_role: "docs",
+          reason: "Worktree is dirty.",
+        },
+        recovery: {
+          kind: "dirty_worktree",
+          stage: 2,
+          branch: `docs/${workItemId}`,
+          reason: "Worktree is dirty.",
+          artifact_dir: artifactDir,
+          changed_files: [
+            ".workflow-v2/status.json",
+            `.workflow-v2/work-items/${workItemId}.json`,
+          ],
+          existing_pr: {
+            role: "docs",
+            number: 77,
+            url: "https://github.com/netsus/homecook/pull/77",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+          },
+          salvage_candidate: true,
+          session_role: "codex_primary",
+          session_provider: null,
+          session_id: null,
+        },
+        prs: {
+          docs: {
+            number: 77,
+            url: "https://github.com/netsus/homecook/pull/77",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+          },
+          backend: null,
+          frontend: null,
+          closeout: null,
+        },
+        doc_gate: {
+          status: "awaiting_review",
+          round: 0,
+          repair_branch: `docs/${workItemId}`,
+          findings: [buildDocGateFinding(docFindingId)],
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-18T10:00:00.000Z",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {
+            throw new Error("assertClean should be skipped for docs-gate bookkeeping drift");
+          },
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "docs123";
+          },
+          getCurrentBranch() {
+            return `docs/${workItemId}`;
+          },
+          listChangedFiles() {
+            return [
+              ".workflow-v2/status.json",
+              `.workflow-v2/work-items/${workItemId}.json`,
+            ];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner({ subphase }: { subphase?: string | null }) {
+          observedSubphase = subphase ?? null;
+          mkdirSync(artifactDir, { recursive: true });
+          writeFileSync(
+            join(artifactDir, "stage-result.json"),
+            `${JSON.stringify(
+              buildDocGateReviewStageResult({
+                decision: "request_changes",
+                reviewedDocFindingIds: [docFindingId],
+                requiredDocFixIds: [docFindingId],
+                bodyMarkdown: "Tighten the Stage 1 docs before approval.",
+              }),
+              null,
+              2,
+            )}\n`,
+          );
+          const runtimeSync = writeRuntimeState({
+            rootDir,
+            workItemId,
+            state: {
+              ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+              slice: workItemId,
+              active_stage: 2,
+              current_stage: 2,
+              blocked_stage: 2,
+              workspace: {
+                path: workspacePath,
+                branch_role: "docs",
+              },
+              phase: "review_pending",
+              next_action: "run_review",
+              last_artifact_dir: artifactDir,
+              sessions: {
+                claude_primary: {
+                  session_id: "ses_claude_docs",
+                  provider: "claude-cli",
+                  agent: "athena",
+                  updated_at: "2026-04-18T09:55:00.000Z",
+                },
+                codex_primary: {
+                  session_id: "ses_codex_docs",
+                  provider: "opencode",
+                  agent: "hephaestus",
+                  updated_at: "2026-04-18T10:00:00.000Z",
+                },
+              },
+              execution: {
+                provider: "opencode",
+                session_role: "codex_primary",
+                session_id: "ses_codex_docs",
+                artifact_dir: artifactDir,
+                stage_result_path: join(artifactDir, "stage-result.json"),
+                started_at: "2026-04-18T10:00:00.000Z",
+                finished_at: "2026-04-18T10:00:00.000Z",
+                verify_commands: [],
+                verify_bucket: null,
+                commit_sha: null,
+                pr_role: "docs",
+                subphase: "doc_gate_review",
+              },
+              prs: {
+                docs: {
+                  number: 77,
+                  url: "https://github.com/netsus/homecook/pull/77",
+                  draft: false,
+                  branch: `docs/${workItemId}`,
+                  head_sha: "docs123",
+                },
+                backend: null,
+                frontend: null,
+                closeout: null,
+              },
+              doc_gate: {
+                status: "awaiting_review",
+                round: 0,
+                repair_branch: `docs/${workItemId}`,
+                findings: [buildDocGateFinding(docFindingId)],
+              },
+            },
+          });
+
+          return {
+            artifactDir,
+            dispatch: { actor: "codex", stage: 2, subphase: "doc_gate_review" },
+            execution: {
+              mode: "execute",
+              executed: true,
+              sessionId: "ses_codex_docs",
+            },
+            runtimeSync,
+            stageResult: buildDocGateReviewStageResult({
+              decision: "request_changes",
+              reviewedDocFindingIds: [docFindingId],
+              requiredDocFixIds: [docFindingId],
+              bodyMarkdown: "Tighten the Stage 1 docs before approval.",
+            }),
+          };
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            throw new Error("not expected");
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(observedSubphase).toBe("doc_gate_review");
+    expect(result.wait).toMatchObject({
+      kind: "ready_for_next_stage",
+      stage: 2,
+      pr_role: "docs",
+    });
+    expect(result.runtime?.doc_gate?.status).toBe("fixable");
+  });
+
+  it("uses the worktree-local tracked work item when Stage 2 implementation resumes without a root copy", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    let stageRunnerCalled = false;
+
+    createGitWorkspace(workspacePath, `feature/be-${workItemId}`);
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "docs",
+    });
+    rmSync(join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`), { force: true });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        blocked_stage: 2,
+        workspace: {
+          path: workspacePath,
+          branch_role: "backend",
+        },
+        doc_gate: {
+          status: "passed",
+          round: 1,
+        },
+        wait: {
+          kind: "ready_for_next_stage",
+          stage: 2,
+          pr_role: "backend",
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-18T11:20:00.000Z",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "backend123";
+          },
+          getCurrentBranch() {
+            return `feature/be-${workItemId}`;
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          stageRunnerCalled = true;
+          const runtimeSync = writeRuntimeState({
+            rootDir,
+            workItemId,
+            state: {
+              ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+              slice: workItemId,
+              current_stage: 2,
+              blocked_stage: 2,
+              retry: {
+                at: "2026-04-18T12:20:00.000Z",
+                reason: "claude_budget_unavailable",
+                attempt_count: 1,
+                max_attempts: 3,
+              },
+            },
+          });
+          return {
+            artifactDir: join(rootDir, ".artifacts", "stage2-worktree-local-item"),
+            dispatch: { actor: "codex", stage: 2, subphase: "implementation" },
+            execution: {
+              mode: "scheduled-retry",
+              executed: false,
+              sessionId: "ses_codex_stage2",
+              reason: "claude_budget_unavailable",
+            },
+            runtimeSync,
+            stageResult: null,
+          };
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            throw new Error("not expected");
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(stageRunnerCalled).toBe(true);
+    expect(result.wait).toMatchObject({
+      kind: "blocked_retry",
+      stage: 2,
+    });
+  });
+
+  it("keeps Stage 2 as the next stage when doc_gate is already passed but no explicit wait remains", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    let observedStage: number | null = null;
+
+    createGitWorkspace(workspacePath, `feature/be-${workItemId}`);
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "docs",
+    });
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        last_completed_stage: 0,
+        blocked_stage: 2,
+        phase: "escalated",
+        next_action: "noop",
+        workspace: {
+          path: workspacePath,
+          branch_role: "backend",
+        },
+        wait: null,
+        recovery: {
+          kind: "dirty_worktree",
+          stage: 2,
+          reason: "Docs gate bookkeeping drift is limited to tracked workflow-v2 files. Resume continues on the existing docs PR.",
+          changed_files: [".workflow-v2/status.json"],
+          existing_pr: {
+            role: "docs",
+            url: "https://github.com/netsus/homecook/pull/77",
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+          },
+        },
+        doc_gate: {
+          status: "passed",
+          round: 1,
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-18T11:30:00.000Z",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "backend123";
+          },
+          getCurrentBranch() {
+            return `feature/be-${workItemId}`;
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner({ stage }: { stage: number }) {
+          observedStage = stage;
+          const runtimeSync = writeRuntimeState({
+            rootDir,
+            workItemId,
+            state: {
+              ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+              slice: workItemId,
+              current_stage: 2,
+              blocked_stage: 2,
+              retry: {
+                at: "2026-04-18T12:30:00.000Z",
+                reason: "claude_budget_unavailable",
+                attempt_count: 1,
+                max_attempts: 3,
+              },
+            },
+          });
+          return {
+            artifactDir: join(rootDir, ".artifacts", "stage2-post-doc-gate"),
+            dispatch: { actor: "codex", stage: 2, subphase: "implementation" },
+            execution: {
+              mode: "scheduled-retry",
+              executed: false,
+              sessionId: "ses_codex_stage2",
+              reason: "claude_budget_unavailable",
+            },
+            runtimeSync,
+            stageResult: null,
+          };
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            throw new Error("not expected");
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(observedStage).toBe(2);
+    expect(result.wait).toMatchObject({
+      kind: "blocked_retry",
+      stage: 2,
+    });
+  });
+
+  it("resumes a Stage 2 doc gate repair after rebuttal aliases are normalized", () => {
+    const rootDir = createFixture();
+    const workItemId = "07-meal-manage";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    const artifactDir = join(rootDir, ".artifacts", "doc-gate-repair-contract-resume");
+    const stageResultPath = join(artifactDir, "stage-result.json");
+
+    createGitWorkspace(workspacePath, `docs/${workItemId}`);
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "docs",
+    });
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      stageResultPath,
+      `${JSON.stringify(
+        {
+          result: "done",
+          summary_markdown: "primary CTA finding is a false positive",
+          commit: {
+            subject: "docs: preserve existing CTA wording",
+          },
+          pr: {
+            title: "docs: preserve existing CTA wording",
+            body_markdown: "## Summary\n- rebuttal only",
+          },
+          checks_run: [],
+          next_route: "open_pr",
+          claimed_scope: {
+            files: [],
+            endpoints: [],
+            routes: [],
+            states: [],
+            invariants: [],
+          },
+          changed_files: [],
+          tests_touched: [],
+          artifacts_written: [stageResultPath],
+          resolved_doc_finding_ids: [],
+          contested_doc_fix_ids: ["doc-gate-primary-cta"],
+          rebuttals: [
+            {
+              fix_id: "doc-gate-primary-cta",
+              rationale: "The current MEAL_SCREEN copy already establishes the primary CTA.",
+              evidenceRefs: ["ui/designs/MEAL_SCREEN.md"],
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        blocked_stage: 2,
+        retry: {
+          at: null,
+          reason: "contract_violation",
+          attempt_count: 1,
+          max_attempts: 3,
+        },
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        wait: {
+          kind: "human_escalation",
+          stage: 2,
+          pr_role: "docs",
+          reason: "stageResult.rebuttals[0].rationale_markdown must be a non-empty string.",
+        },
+        recovery: {
+          kind: "partial_stage_failure",
+          stage: 2,
+          branch: `docs/${workItemId}`,
+          reason: "stageResult.rebuttals[0].rationale_markdown must be a non-empty string.",
+          artifact_dir: artifactDir,
+          changed_files: ["ui/designs/MEAL_SCREEN.md"],
+          existing_pr: {
+            role: "docs",
+            number: 150,
+            url: "https://github.com/netsus/homecook/pull/150",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+          },
+          salvage_candidate: true,
+          session_role: "claude_primary",
+          session_provider: "claude-cli",
+          session_id: "ses_claude_docs",
+        },
+        sessions: {
+          claude_primary: {
+            session_id: "ses_claude_docs",
+            provider: "claude-cli",
+            agent: "athena",
+            updated_at: "2026-04-18T10:00:00.000Z",
+          },
+          codex_primary: {
+            session_id: "ses_codex_docs",
+            provider: "opencode",
+            agent: "hephaestus",
+            updated_at: "2026-04-18T09:59:00.000Z",
+          },
+        },
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: "ses_claude_docs",
+          artifact_dir: artifactDir,
+          stage_result_path: stageResultPath,
+          started_at: "2026-04-18T10:00:00.000Z",
+          finished_at: "2026-04-18T10:00:00.000Z",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "docs",
+          subphase: "doc_gate_repair",
+        },
+        prs: {
+          docs: {
+            number: 150,
+            url: "https://github.com/netsus/homecook/pull/150",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+          },
+          backend: null,
+          frontend: null,
+          closeout: null,
+        },
+        doc_gate: {
+          status: "fixable",
+          round: 1,
+          repair_branch: `docs/${workItemId}`,
+          findings: [
+            {
+              id: "doc-gate-primary-cta",
+              category: "design_authority",
+              severity: "major",
+              message: "Primary CTA keyword is missing.",
+              evidence_paths: ["ui/designs/MEAL_SCREEN.md"],
+              remediation_hint: "Name the primary CTA explicitly.",
+              fixable: true,
+            },
+          ],
+          last_review: {
+            decision: "request_changes",
+            route_back_stage: 2,
+            approved_head_sha: null,
+            body_markdown: "## Review\n- add CTA wording",
+            reviewed_doc_finding_ids: ["doc-gate-primary-cta"],
+            required_doc_fix_ids: ["doc-gate-primary-cta"],
+            waived_doc_fix_ids: [],
+            findings: [],
+            source_review_stage: 1,
+            ping_pong_rounds: 1,
+            updated_at: "2026-04-18T09:59:00.000Z",
+          },
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-18T10:10:00.000Z",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "docs123";
+          },
+          getCurrentBranch() {
+            return `docs/${workItemId}`;
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            throw new Error("not expected");
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+        stageRunner() {
+          throw new Error("not expected");
+        },
+      },
+    );
+
+    expect(result.wait).toMatchObject({
+      kind: "ready_for_next_stage",
+      stage: 2,
+      pr_role: "docs",
+    });
+    expect(result.runtime?.doc_gate?.status).toBe("awaiting_review");
+    expect(result.runtime?.doc_gate?.last_rebuttal).toMatchObject({
+      contested_doc_fix_ids: ["doc-gate-primary-cta"],
+      rebuttals: [
+        {
+          fix_id: "doc-gate-primary-cta",
+          rationale_markdown: "The current MEAL_SCREEN copy already establishes the primary CTA.",
+          evidence_refs: ["ui/designs/MEAL_SCREEN.md"],
+        },
+      ],
     });
   });
 

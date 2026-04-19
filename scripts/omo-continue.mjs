@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import { continueWorkItemSession } from "./lib/omo-session-orchestrator.mjs";
+import { assertSupportedClaudeProvider } from "./lib/omo-provider-config.mjs";
+import { ensureLaunchAgentInstalled } from "./lib/omo-scheduler.mjs";
 
 function printUsage() {
   process.stdout.write(
@@ -12,7 +14,7 @@ function printUsage() {
       "  --slice <id>                     Optional slice override for non-product work items",
       "  --claude-budget-state <state>    Optional override: available | constrained | unavailable",
       "  --mode <artifact-only|execute>   Default: execute",
-      "  --claude-provider <name>         Override Claude provider: opencode | claude-cli",
+      "  --claude-provider <name>         Override Claude provider: claude-cli",
       "  --claude-bin <path>              Override claude binary path",
       "  --claude-model <model>           Override Claude model alias/name",
       "  --claude-effort <level>          Override Claude effort: low | medium | high",
@@ -87,12 +89,21 @@ function main() {
     process.exit(0);
   }
 
+  if (options.mode !== "artifact-only" && options.workItem) {
+    ensureLaunchAgentInstalled({
+      rootDir: process.cwd(),
+      workItemId: options.workItem,
+      claudeBin: options.claudeBin,
+      opencodeBin: options.opencodeBin,
+    });
+  }
+
   const result = continueWorkItemSession({
     workItemId: options.workItem,
     slice: options.slice,
     claudeBudgetState: options.claudeBudgetState,
     mode: options.mode,
-    claudeProvider: options.claudeProvider,
+    claudeProvider: assertSupportedClaudeProvider(options.claudeProvider),
     claudeBin: options.claudeBin,
     claudeModel: options.claudeModel,
     claudeEffort: options.claudeEffort,

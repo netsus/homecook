@@ -18,7 +18,7 @@
   - Codex 중심 supervisor / execution
   - Claude는 Stage 1/3/4와 authority-required final authority gate에 집중한다
 - Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`의 기본 provider는 raw `claude` CLI다.
-- Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`용 OpenCode emergency fallback agent는 `athena`다.
+- Stage `1 / 3 / 4`와 Stage 5 `final_authority_gate`는 Homecook OMO에서 `claude-cli`만 지원한다.
 - 위 agent/default 값은 `opencode.json`에 직접 등록하고, `.opencode/oh-my-opencode.json`은 같은 값을 mirrored snapshot으로 유지한다.
 - `ralph-loop` command는 전역에서 사용할 수 있게 허용한다.
 - 다만 Homecook OMO supervisor의 실제 자동 실행 표면은 계속 `$ralph` skill이다.
@@ -44,11 +44,11 @@ opencode auth login
 
 - 이 인증 상태는 Git에 커밋하지 않는다.
 - `claude-cli` provider는 로컬 `claude login` 상태를 사용한다.
-- `opencode` fallback provider는 `opencode auth login` 상태를 사용한다.
+- `opencode auth login`은 Codex/OpenCode 경로에만 적용된다. Claude-owned stage provider로는 사용하지 않는다.
 
 ## Claude Budget Override
 
-- reviewer stage에서 Claude 사용 가능 여부는 기본적으로 OpenCode auth 상태를 보고 해석한다.
+- reviewer stage에서 Claude 사용 가능 여부는 기본적으로 `claude-cli` 로컬 auth/health 상태를 보고 해석한다.
 - 강제로 상태를 바꿔야 하면 아래 명령을 사용한다.
 
 ```bash
@@ -67,12 +67,12 @@ pnpm omo:claude-budget -- --clear
   - `bin = claude`
   - `model = sonnet`
   - `effort = high`
-  - `permission_mode = acceptEdits`
+  - `permission_mode = bypassPermissions`
 - Codex defaults:
   - `provider = opencode`
   - `bin = opencode`
   - `agent = hephaestus`
-- CLI override가 repo-local default보다 우선한다.
+- Claude provider override는 `claude-cli`만 허용한다. `opencode`는 Homecook OMO의 Claude provider로 지원하지 않는다.
 
 ## Runtime State
 
@@ -127,6 +127,7 @@ pnpm omo:claude-budget -- --clear
 - supervisor는 기본적으로 `.worktrees/<work-item-id>` 전용 worktree에서만 실행한다.
 - GitHub 자동화는 `gh` CLI만 사용한다.
 - 기본 scheduler cadence는 10분이며, macOS에서는 `launchd` 예시를 우선 제공한다.
+- macOS에서는 `pnpm omo:supervise -- --work-item <id>`, `pnpm omo:start -- --work-item <id>`, `pnpm omo:continue -- --work-item <id>`가 execute mode일 때 해당 work item LaunchAgent를 자동 bootstrap/refresh한다.
 - `omo:scheduler:install`은 절대경로 `pnpm`, `gh`, `claude`, `opencode`와 `~/Library/Logs/homecook/` 로그 경로를 렌더링한다.
 - `omo:scheduler:verify`는 `launchctl print`와 `omo:tick:watch --json`을 비교해 label/interval/log path drift를 막는다.
 - `omo:smoke:control-plane`은 반드시 별도 sandbox GitHub repo에서만 실행하고, `homecook` 본 repo를 대상으로는 거부한다.
@@ -158,6 +159,7 @@ pnpm omo:claude-budget -- --clear
 ## Scheduler Standard
 
 - team-shared default scheduler는 현재 `macOS launchd`다.
+- execute mode kickoff 명령은 macOS에서 work item별 launchd scheduler를 자동 보장하고, `omo:scheduler:install`은 repair/custom cadence 용도로 남긴다.
 - non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.
 - scheduler install 뒤와 scheduler config/provider path 변경 뒤에는 `pnpm omo:scheduler:verify -- --work-item <id>`를 실행한다.
 - 운영 확인은 `pnpm omo:tick:watch -- --work-item <id>`로 하고, 최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.

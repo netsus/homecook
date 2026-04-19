@@ -21,15 +21,68 @@ function readJson(filePath) {
   return JSON.parse(readFileSync(filePath, "utf8"));
 }
 
-function readTrackedWorkItem(rootDir, workItemId) {
+function buildBootstrapWorkItem(workItemId) {
+  const normalizedWorkItemId = ensureNonEmptyString(workItemId, "workItemId");
+
+  return {
+    id: normalizedWorkItemId,
+    title: `${normalizedWorkItemId} bootstrap`,
+    project_profile: "homecook",
+    change_type: "product",
+    surface: "fullstack",
+    risk: "medium",
+    preset: "vertical-slice-strict",
+    goal: `Bootstrap Stage 1 docs for ${normalizedWorkItemId}.`,
+    owners: {
+      claude: "stage-1-author-and-doc-gate-repair",
+      codex: "doc-gate-review-and-implementation",
+      workers: [],
+    },
+    docs_refs: {
+      source_of_truth: ["AGENTS.md", "docs/sync/CURRENT_SOURCE_OF_TRUTH.md"],
+      governing_docs: [
+        "docs/engineering/slice-workflow.md",
+        "docs/engineering/agent-workflow-overview.md",
+        "docs/engineering/workflow-v2/README.md",
+      ],
+    },
+    workflow: {
+      plan_loop: "required",
+      review_loop: "skipped",
+      external_smokes: [],
+      execution_mode: "autonomous",
+      merge_policy: "conditional-auto",
+    },
+    verification: {
+      required_checks: ["pnpm validate:workflow-v2"],
+      verify_commands: ["pnpm validate:workflow-v2"],
+    },
+    status: {
+      lifecycle: "planned",
+      approval_state: "not_started",
+      verification_status: "pending",
+    },
+  };
+}
+
+function readTrackedWorkItem(rootDir, workItemId, { allowBootstrap = false } = {}) {
   const workItemPath = resolve(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`);
   if (!existsSync(workItemPath)) {
-    throw new Error(`Tracked workflow-v2 work item not found: ${workItemPath}`);
+    if (!allowBootstrap) {
+      throw new Error(`Tracked workflow-v2 work item not found: ${workItemPath}`);
+    }
+
+    return {
+      workItemPath,
+      workItem: buildBootstrapWorkItem(workItemId),
+      tracked: false,
+    };
   }
 
   return {
     workItemPath,
     workItem: readJson(workItemPath),
+    tracked: true,
   };
 }
 
@@ -53,7 +106,9 @@ function resolveSliceForWorkItem({ rootDir, workItemId, slice }) {
     return slice.trim();
   }
 
-  const { workItem } = readTrackedWorkItem(rootDir, workItemId);
+  const { workItem } = readTrackedWorkItem(rootDir, workItemId, {
+    allowBootstrap: true,
+  });
   if (
     workItem?.preset === "vertical-slice-strict" ||
     workItem?.preset === "vertical-slice-light" ||
@@ -302,7 +357,9 @@ export function readWorkItemSessionStatus({
     workItemId: normalizedWorkItemId,
     slice: resolvedSlice,
   });
-  const { workItem } = readTrackedWorkItem(rootDir, normalizedWorkItemId);
+  const { workItem, tracked } = readTrackedWorkItem(rootDir, normalizedWorkItemId, {
+    allowBootstrap: true,
+  });
   const { statusBoard } = readTrackedStatus(rootDir);
   const statusItem = Array.isArray(statusBoard?.items)
     ? statusBoard.items.find((item) => item.id === normalizedWorkItemId) ?? null
@@ -311,7 +368,7 @@ export function readWorkItemSessionStatus({
   return {
     workItemId: normalizedWorkItemId,
     slice: resolvedSlice,
-    trackedWorkItem: workItem,
+    trackedWorkItem: tracked ? workItem : null,
     trackedStatus: statusItem,
     runtime: runtime.state,
     operatorGuidance: buildOperatorGuidance(runtime.state),

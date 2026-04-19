@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   DEFAULT_TICK_INTERVAL_SECONDS,
@@ -74,9 +76,10 @@ function parseArgs(argv) {
 }
 
 function runTickWatch(workItemId) {
+  const tickWatchScriptPath = resolve(dirname(fileURLToPath(import.meta.url)), "omo-tick-watch.mjs");
   const result = spawnSync(
-    "pnpm",
-    ["omo:tick:watch", "--", "--work-item", workItemId, "--json"],
+    process.execPath,
+    [tickWatchScriptPath, "--work-item", workItemId, "--json"],
     {
       cwd: process.cwd(),
       encoding: "utf8",

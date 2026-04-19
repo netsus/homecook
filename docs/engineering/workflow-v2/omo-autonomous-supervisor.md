@@ -42,6 +42,7 @@ autonomous supervisor는 `그 stage 결과를 다음 GitHub 상태와 다음 sta
 - `pnpm omo:scheduler:install -- --work-item <id>`
 - `pnpm omo:scheduler:uninstall -- --work-item <id>`
 - `pnpm omo:scheduler:verify -- --work-item <id>`
+- macOS execute kickoff인 `omo:supervise`, `omo:start`, `omo:continue`는 해당 work item launchd scheduler를 자동 bootstrap/refresh한다.
 
 기존 low-level 명령:
 
@@ -388,6 +389,7 @@ runtime state는 아래 대기 이유를 저장할 수 있어야 한다.
 15. closeout PR는 `wait.kind=ci`, `pr_role=closeout`으로 추적한다.
 16. closeout PR의 current head 기준 started PR checks가 모두 green이면 상태는 `ready_for_review`를 유지하고, merge 후 다음 `omo:tick`이 closeout finalize를 수행한다.
 17. macOS launchd install/uninstall/verify는 저장소가 관리하는 템플릿과 CLI로 제공한다.
+18. macOS execute kickoff는 scheduler를 자동 보장하고, 수동 install/uninstall은 repair 또는 custom cadence override용이다.
 
 ## Fail-Closed Rules
 
