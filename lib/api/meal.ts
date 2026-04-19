@@ -1,6 +1,6 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiResponse } from "@/types/api";
-import type { MealCreateBody, MealCreateData } from "@/types/meal";
+import type { MealCreateBody, MealCreateData, MealListData, MealMutationData } from "@/types/meal";
 
 interface MealApiError extends Error {
   status: number;
@@ -61,4 +61,96 @@ export async function createMeal(body: MealCreateBody): Promise<MealCreateData> 
   }
 
   return payload.data;
+}
+
+export async function fetchMeals(planDate: string, columnId: string): Promise<MealListData> {
+  const params = new URLSearchParams({ plan_date: planDate, column_id: columnId });
+  const response = await fetch(
+    `/api/v1/meals?${params.toString()}`,
+    withE2EAuthOverrideHeaders(),
+  );
+
+  let payload: ApiResponse<MealListData> | null = null;
+
+  try {
+    payload = (await response.json()) as ApiResponse<MealListData>;
+  } catch {
+    throw createMealApiError({
+      status: response.status,
+      code: "INVALID_RESPONSE",
+      message: "서버 응답을 해석하지 못했어요.",
+    });
+  }
+
+  if (!response.ok || !payload.success || !payload.data) {
+    throw createMealApiError({
+      status: response.status,
+      code: payload?.error?.code ?? "UNKNOWN_ERROR",
+      message: payload?.error?.message ?? "요청을 처리하지 못했어요.",
+    });
+  }
+
+  return payload.data;
+}
+
+export async function updateMealServings(mealId: string, plannedServings: number): Promise<MealMutationData> {
+  const response = await fetch(
+    `/api/v1/meals/${mealId}`,
+    withE2EAuthOverrideHeaders({
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ planned_servings: plannedServings }),
+    }),
+  );
+
+  let payload: ApiResponse<MealMutationData> | null = null;
+
+  try {
+    payload = (await response.json()) as ApiResponse<MealMutationData>;
+  } catch {
+    throw createMealApiError({
+      status: response.status,
+      code: "INVALID_RESPONSE",
+      message: "서버 응답을 해석하지 못했어요.",
+    });
+  }
+
+  if (!response.ok || !payload.success || !payload.data) {
+    throw createMealApiError({
+      status: response.status,
+      code: payload?.error?.code ?? "UNKNOWN_ERROR",
+      message: payload?.error?.message ?? "요청을 처리하지 못했어요.",
+    });
+  }
+
+  return payload.data;
+}
+
+export async function deleteMeal(mealId: string): Promise<void> {
+  const response = await fetch(
+    `/api/v1/meals/${mealId}`,
+    withE2EAuthOverrideHeaders({ method: "DELETE" }),
+  );
+
+  if (response.status === 204) {
+    return;
+  }
+
+  let payload: ApiResponse<null> | null = null;
+
+  try {
+    payload = (await response.json()) as ApiResponse<null>;
+  } catch {
+    throw createMealApiError({
+      status: response.status,
+      code: "INVALID_RESPONSE",
+      message: "서버 응답을 해석하지 못했어요.",
+    });
+  }
+
+  throw createMealApiError({
+    status: response.status,
+    code: payload?.error?.code ?? "UNKNOWN_ERROR",
+    message: payload?.error?.message ?? "요청을 처리하지 못했어요.",
+  });
 }

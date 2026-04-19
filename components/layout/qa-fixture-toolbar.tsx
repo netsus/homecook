@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import {
   E2E_AUTH_OVERRIDE_KEY,
   type E2EAuthOverrideState,
+  persistE2EAuthOverrideState,
 } from "@/lib/auth/e2e-auth-override";
 import { isQaFixtureClientModeEnabled } from "@/lib/mock/qa-fixture-client";
 import { QA_FIXTURE_FAULTS_KEY } from "@/lib/mock/qa-fixture-overrides";
@@ -164,7 +165,7 @@ export function QaFixtureToolbar() {
             className="mt-1 min-h-11 w-full rounded-[12px] border border-[var(--line)] bg-white px-3 text-sm text-[var(--foreground)]"
             onChange={(event) => {
               const nextValue = event.target.value as E2EAuthOverrideState;
-              window.localStorage.setItem(E2E_AUTH_OVERRIDE_KEY, nextValue);
+              persistE2EAuthOverrideState(nextValue);
               setAuthState(nextValue);
             }}
             value={authState}
@@ -204,7 +205,7 @@ export function QaFixtureToolbar() {
       <button
         className="mt-3 min-h-11 w-full rounded-[12px] border border-[var(--line)] bg-white px-4 text-sm font-semibold text-[var(--foreground)]"
         onClick={() => {
-          window.localStorage.removeItem(E2E_AUTH_OVERRIDE_KEY);
+          persistE2EAuthOverrideState(null);
           window.localStorage.removeItem(QA_FIXTURE_FAULTS_KEY);
           setAuthState("guest");
           setFaultState("none");

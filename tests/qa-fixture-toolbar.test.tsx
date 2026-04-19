@@ -6,7 +6,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { QaFixtureToolbar } from "@/components/layout/qa-fixture-toolbar";
-import { E2E_AUTH_OVERRIDE_KEY } from "@/lib/auth/e2e-auth-override";
+import {
+  E2E_AUTH_OVERRIDE_COOKIE,
+  E2E_AUTH_OVERRIDE_KEY,
+} from "@/lib/auth/e2e-auth-override";
 import { QA_FIXTURE_FAULTS_KEY } from "@/lib/mock/qa-fixture-overrides";
 
 describe("qa fixture toolbar", () => {
@@ -60,6 +63,7 @@ describe("qa fixture toolbar", () => {
     await user.selectOptions(screen.getByLabelText("QA 로그인 상태"), "authenticated");
 
     expect(window.localStorage.getItem(E2E_AUTH_OVERRIDE_KEY)).toBe("authenticated");
+    expect(document.cookie).toContain(`${E2E_AUTH_OVERRIDE_COOKIE}=authenticated`);
   });
 
   it("clears QA overrides and reloads the page on reset", async () => {
@@ -77,6 +81,7 @@ describe("qa fixture toolbar", () => {
 
     expect(window.localStorage.getItem(E2E_AUTH_OVERRIDE_KEY)).toBeNull();
     expect(window.localStorage.getItem(QA_FIXTURE_FAULTS_KEY)).toBeNull();
+    expect(document.cookie).not.toContain(E2E_AUTH_OVERRIDE_COOKIE);
     expect(reload).toHaveBeenCalledTimes(1);
   });
 });

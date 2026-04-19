@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -7,9 +9,12 @@ import {
   withQaFixtureOverrideHeaders,
 } from "@/lib/mock/qa-fixture-overrides";
 import {
+  E2E_AUTH_OVERRIDE_COOKIE,
   E2E_AUTH_OVERRIDE_HEADER,
   E2E_AUTH_OVERRIDE_KEY,
+  persistE2EAuthOverrideState,
   readE2EAuthOverride,
+  readE2EAuthOverrideCookie,
 } from "@/lib/auth/e2e-auth-override";
 
 function createMemoryStorage() {
@@ -98,6 +103,27 @@ describe("qa fixture override headers", () => {
     );
   });
 
+  it("persists auth override to both localStorage and cookie", () => {
+    persistE2EAuthOverrideState("authenticated");
+
+    expect(window.localStorage.getItem(E2E_AUTH_OVERRIDE_KEY)).toBe("authenticated");
+    expect(document.cookie).toContain(`${E2E_AUTH_OVERRIDE_COOKIE}=authenticated`);
+  });
+
+  it("reads server-side auth override from cookies when QA fixture mode is enabled", () => {
+    expect(
+      readE2EAuthOverrideCookie({
+        get(name: string) {
+          if (name !== E2E_AUTH_OVERRIDE_COOKIE) {
+            return undefined;
+          }
+
+          return { value: "authenticated" };
+        },
+      }),
+    ).toBe("authenticated");
+  });
+
   it("ignores local QA overrides when client fixture mode is disabled", () => {
     delete process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_QA_FIXTURES;
     window.localStorage.setItem(E2E_AUTH_OVERRIDE_KEY, "authenticated");
@@ -109,6 +135,13 @@ describe("qa fixture override headers", () => {
     const headers = new Headers(init.headers);
 
     expect(readE2EAuthOverride()).toBeNull();
+    expect(
+      readE2EAuthOverrideCookie({
+        get() {
+          return { value: "authenticated" };
+        },
+      }),
+    ).toBeNull();
     expect(headers.get(E2E_AUTH_OVERRIDE_HEADER)).toBeNull();
     expect(headers.get(QA_FIXTURE_FAULTS_HEADER)).toBeNull();
   });

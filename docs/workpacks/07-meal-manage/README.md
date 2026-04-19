@@ -167,7 +167,7 @@
 - UI risk: `new-screen`
 - Anchor screen dependency: 없음 (MEAL_SCREEN은 PLANNER_WEEK에서 진입하나, PLANNER_WEEK 자체를 수정하지 않는다)
 - Visual artifact: Stage 1 design-generator wireframe `ui/designs/MEAL_SCREEN.md`; Stage 4 evidence plan `ui/designs/evidence/07-meal-manage/MEAL_SCREEN-mobile.png`, `ui/designs/evidence/07-meal-manage/MEAL_SCREEN-mobile-narrow.png`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes:
   - MEAL_SCREEN은 신규 화면이므로 Stage 4에서 screenshot evidence 기반 authority review를 거친다.
   - 모바일 기본 폭 + narrow sentinel 각 1장 이상 필요.
@@ -175,9 +175,9 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority review 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority review 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스
 
 > `07-meal-manage`는 신규 FE 화면이 있으므로 `temporary`에서 시작한다. Stage 4 완료 후 `pending-review`로 전환한다.
@@ -255,11 +255,13 @@
 - [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
-- [ ] Stage 4 authority report / screenshot 경로 동기화 <!-- omo:id=delivery-authority-evidence-plan;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] Stage 4 authority report / screenshot 경로 동기화 <!-- omo:id=delivery-authority-evidence-plan;stage=4;scope=frontend;review=5,6 -->
+
+
