@@ -166,9 +166,7 @@
 
 - UI risk: `new-screen`
 - Anchor screen dependency: 없음 (MEAL_SCREEN은 PLANNER_WEEK에서 진입하나, PLANNER_WEEK 자체를 수정하지 않는다)
-- Visual artifact:
-  - Stage 1: design-generator wireframe `ui/designs/MEAL_SCREEN.md`
-  - Stage 4 evidence plan: `ui/designs/evidence/07-meal-manage/MEAL_SCREEN-mobile.png`, `ui/designs/evidence/07-meal-manage/MEAL_SCREEN-mobile-narrow.png`
+- Visual artifact: Stage 1 design-generator wireframe `ui/designs/MEAL_SCREEN.md`; Stage 4 evidence plan `ui/designs/evidence/07-meal-manage/MEAL_SCREEN-mobile.png`, `ui/designs/evidence/07-meal-manage/MEAL_SCREEN-mobile-narrow.png`
 - Authority status: `required`
 - Notes:
   - MEAL_SCREEN은 신규 화면이므로 Stage 4에서 screenshot evidence 기반 authority review를 거친다.
@@ -254,14 +252,14 @@
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
 > Claude가 Codex rebuttal을 받아들인 checklist는 checkbox를 바꾸지 않고 `waived=true;waived_by=claude;waived_stage=<3|5|6>;waived_reason=<slug>` metadata를 추가해 닫는다.
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 - [ ] Stage 4 authority report / screenshot 경로 동기화 <!-- omo:id=delivery-authority-evidence-plan;stage=4;scope=frontend;review=5,6 -->

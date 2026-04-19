@@ -11,18 +11,18 @@
 
 - [ ] `GET /meals?plan_date=&column_id=`가 해당 슬롯의 식사 목록을 반환한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
 - [ ] 식사 카드에 레시피명, 계획 인분, 상태 뱃지가 표시된다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 - [ ] `PATCH /meals/{id}` 호출 후 목록이 갱신된 인분으로 표시된다 <!-- omo:id=accept-patch-servings;stage=4;scope=frontend;review=5,6 -->
 - [ ] `DELETE /meals/{id}` 호출 후 해당 식사가 목록에서 제거된다 <!-- omo:id=accept-delete-removes;stage=4;scope=frontend;review=5,6 -->
 
 ## State / Policy
 
-- [ ] `planned_servings` 변경 시 `status`가 변경되지 않는다 <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
+- [x] `planned_servings` 변경 시 `status`가 변경되지 않는다 <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
 - [ ] `status='shopping_done'` 또는 `'cook_done'`인 식사의 인분 변경 시 FE 확인 모달이 표시된다 <!-- omo:id=accept-serving-change-modal;stage=4;scope=frontend;review=5,6 -->
 - [ ] 삭제 전 확인 모달이 항상 표시된다 <!-- omo:id=accept-delete-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] 이번 슬라이스에서 `meals.status` 전이는 발생하지 않는다 (read-only 정책은 후속 슬라이스에서) <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
-- [ ] DELETE는 멱등 처리 없이 404를 반환하며 FE에서 graceful 처리한다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] 이번 슬라이스에서 `meals.status` 전이는 발생하지 않는다 (read-only 정책은 후속 슬라이스에서) <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
+- [x] DELETE는 멱등 처리 없이 404를 반환하며 FE에서 graceful 처리한다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 
@@ -35,16 +35,16 @@
 
 ## Data Integrity
 
-- [ ] 타인의 `column_id`로 조회 시 403을 반환한다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] 타인의 `meal_id`를 PATCH/DELETE 시 403을 반환한다 <!-- omo:id=accept-owner-guard-mutation;stage=2;scope=backend;review=3,6 -->
-- [ ] `planned_servings < 1` 요청 시 422를 반환한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
-- [ ] 존재하지 않는 `meal_id`로 PATCH/DELETE 시 404를 반환한다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
+- [x] 타인의 `column_id`로 조회 시 403을 반환한다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] 타인의 `meal_id`를 PATCH/DELETE 시 403을 반환한다 <!-- omo:id=accept-owner-guard-mutation;stage=2;scope=backend;review=3,6 -->
+- [x] `planned_servings < 1` 요청 시 422를 반환한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
+- [x] 존재하지 않는 `meal_id`로 PATCH/DELETE 시 404를 반환한다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
 
-- [ ] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 — `meal_plan_columns ×4`, `meals` (registered/shopping_done/cook_done) 각 최소 1개 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 — `meals` 테이블 + `pnpm qa:seed:01-05` 결과 확인 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] 시스템 row 자동 생성이 필요한 슬라이스면 owning flow와 기대 결과가 명시되어 있다 — `meal_plan_columns ×4`는 회원가입 시 자동 생성 (`0-2 PATCH /auth/profile` 완료 후), 이 슬라이스는 해당 컬럼을 읽기만 한다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
+- [x] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 — `meal_plan_columns ×4`, `meals` (registered/shopping_done/cook_done) 각 최소 1개 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 — `meals` 테이블 + `pnpm qa:seed:01-05` 결과 확인 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] 시스템 row 자동 생성이 필요한 슬라이스면 owning flow와 기대 결과가 명시되어 있다 — `meal_plan_columns ×4`는 회원가입 시 자동 생성 (`0-2 PATCH /auth/profile` 완료 후), 이 슬라이스는 해당 컬럼을 읽기만 한다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
@@ -65,8 +65,8 @@
 
 ### Vitest
 
-- [ ] `GET /meals` 쿼리 파라미터 검증, 소유자 확인 로직이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
-- [ ] `PATCH /meals/{id}` 권한·422·409 경계 조건이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
+- [x] `GET /meals` 쿼리 파라미터 검증, 소유자 확인 로직이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
+- [x] `PATCH /meals/{id}` 권한·422·409 경계 조건이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
 
 ### Playwright
 

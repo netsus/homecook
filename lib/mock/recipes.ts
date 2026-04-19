@@ -1,5 +1,7 @@
 export {
+  deleteQaFixtureMeal,
   createQaFixtureMeal,
+  getQaFixtureMealsBySlot,
   DB_SMOKE_RECIPE_ID,
   MOCK_DISCOVERY_FILTER_BEEF_ID,
   MOCK_DISCOVERY_FILTER_GREEN_ONION_ID,
@@ -21,6 +23,7 @@ export {
   isQaFixtureModeEnabled,
   resetQaFixtureState,
   toggleQaFixtureRecipeLike,
+  updateQaFixtureMealServings,
   createQaFixturePlannerColumn,
   createQaFixtureRecipeBook,
   deleteQaFixturePlannerColumn,
