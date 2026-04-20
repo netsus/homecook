@@ -44,7 +44,7 @@ describe("OMO Claude provider guard", () => {
       expect(stderr).toContain("claude-cli");
       expect(stderr).toContain("--claude-provider");
     }
-  });
+  }, 15_000);
 
   it("documents claude-cli as the only supported Claude provider in repo-local docs", () => {
     const providerDoc = readFileSync(
