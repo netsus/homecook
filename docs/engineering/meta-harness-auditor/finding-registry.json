@@ -39,6 +39,71 @@
       "stability": "stable",
       "introduced_in": "C2",
       "notes": "Promotion blocker covering pilot/manual-handoff/live-smoke/scheduler standardization risk."
+    },
+    {
+      "id": "H-OMO-002",
+      "title": "Audit sample coverage omits recent or in-flight OMO evidence",
+      "severity": "important",
+      "priority": "P1",
+      "bucket": "workflow",
+      "owner": "workflow-v2",
+      "safe_to_autofix": false,
+      "approval_required": true,
+      "stability": "stable",
+      "introduced_in": "reset-phase6",
+      "notes": "Audit default sample or audit context ignores recent merged slices, in-flight slices, or incident-linked lanes."
+    },
+    {
+      "id": "H-OMO-003",
+      "title": "Runtime anomaly signals are missing from OMO audit findings",
+      "severity": "important",
+      "priority": "P1",
+      "bucket": "shared-tooling",
+      "owner": "workflow-v2",
+      "safe_to_autofix": false,
+      "approval_required": true,
+      "stability": "stable",
+      "introduced_in": "reset-phase6",
+      "notes": "Stale lock, blocked retry, skip_locked dead-end, or stage_running residue are present but not surfaced as findings."
+    },
+    {
+      "id": "H-OMO-004",
+      "title": "Canonical OMO evidence depends on ephemeral or missing artifacts",
+      "severity": "important",
+      "priority": "P2",
+      "bucket": "shared-tooling",
+      "owner": "workflow-v2",
+      "safe_to_autofix": false,
+      "approval_required": true,
+      "stability": "stable",
+      "introduced_in": "reset-phase6",
+      "notes": "Promotion or audit evidence points at tmp/off-repo paths or missing bundles instead of retained repo-local artifacts."
+    },
+    {
+      "id": "H-OMO-005",
+      "title": "PR or CI reality drift is not reflected in audit outputs",
+      "severity": "important",
+      "priority": "P2",
+      "bucket": "workflow",
+      "owner": "workflow-v2",
+      "safe_to_autofix": false,
+      "approval_required": true,
+      "stability": "stable",
+      "introduced_in": "reset-phase6",
+      "notes": "Current head check state, PR body projection drift, or no-op rerun recovery need exists but audit output does not surface it."
+    },
+    {
+      "id": "H-OMO-006",
+      "title": "Promotion verdict ignores unresolved incident or replay gaps",
+      "severity": "important",
+      "priority": "P1",
+      "bucket": "promotion-blocker",
+      "owner": "workflow-v2",
+      "safe_to_autofix": false,
+      "approval_required": true,
+      "stability": "stable",
+      "introduced_in": "reset-phase6",
+      "notes": "Auditor can return candidate or ready even when open incident families or missing replay evidence remain."
     }
   ]
 }

@@ -242,7 +242,7 @@ reset 이후 audit bundle에는 아래가 추가되어야 한다.
 
 ## Immediate Follow-Up
 
-1. `finding-registry.json` 확장 초안 작성
-2. auditor bundle/schema 확장 초안 작성
-3. detector를 `sample coverage -> incident coverage -> runtime anomaly -> promotion drift` 순으로 추가
+1. auditor bundle/schema 확장 초안 작성
+2. detector를 `sample coverage -> incident coverage -> runtime anomaly -> promotion drift` 순으로 추가
+3. promotion verdict builder를 incident-aware / replay-aware 정책으로 교체
 4. replay acceptance 이후에만 `ready` verdict 복구
