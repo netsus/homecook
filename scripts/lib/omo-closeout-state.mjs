@@ -18,6 +18,47 @@ const STATUS_APPROVAL_VALUES = new Set([
 
 const STATUS_VERIFICATION_VALUES = new Set(["pending", "passed", "failed", "skipped"]);
 
+/**
+ * @typedef {{
+ *   phase?: string | null;
+ *   docs_projection?: {
+ *     roadmap_lifecycle?: string | null;
+ *   } | null;
+ *   verification_projection?: {
+ *     required_checks?: string | null;
+ *   } | null;
+ *   merge_gate_projection?: {
+ *     approval_state?: string | null;
+ *   } | null;
+ *   recovery_summary?: {
+ *     manual_patch_count?: number | null;
+ *     manual_handoff?: boolean | null;
+ *     stale_lock_count?: number | null;
+ *     ci_resync_count?: number | null;
+ *     artifact_missing?: boolean | null;
+ *     last_recovery_at?: string | null;
+ *   } | null;
+ * }} CanonicalCloseoutSnapshot
+ */
+
+/**
+ * @typedef {{
+ *   id?: string | null;
+ *   lifecycle?: string | null;
+ *   approval_state?: string | null;
+ *   verification_status?: string | null;
+ *   notes?: string | null;
+ * }} CanonicalCloseoutStatusItem
+ */
+
+/**
+ * @typedef {{
+ *   statusItem?: CanonicalCloseoutStatusItem | null;
+ *   closeout?: CanonicalCloseoutSnapshot | null;
+ *   pathPrefix?: string;
+ * }} ValidateStatusItemAgainstCanonicalCloseoutOptions
+ */
+
 function normalizeEnum(value, allowedValues) {
   if (typeof value !== "string") {
     return null;
@@ -112,6 +153,9 @@ export function projectCanonicalCloseoutToStatusFields(closeout) {
   };
 }
 
+/**
+ * @param {ValidateStatusItemAgainstCanonicalCloseoutOptions} [options]
+ */
 export function validateStatusItemAgainstCanonicalCloseout({
   statusItem,
   closeout,
