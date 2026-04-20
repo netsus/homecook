@@ -108,8 +108,13 @@ function extractSliceRefsFromText(rootDir, text) {
 }
 
 function readBulletField(body, field) {
-  const match = body.match(new RegExp(`^- ${field}:\\s+\`?([^\\n\`]+)\`?`, "m"));
-  return match?.[1]?.trim() ?? null;
+  const match = body.match(new RegExp(`^- ${field}:\\s+(.+)$`, "m"));
+  const rawValue = match?.[1]?.trim();
+  if (!rawValue) {
+    return null;
+  }
+
+  return rawValue.startsWith("`") && rawValue.endsWith("`") ? rawValue.slice(1, -1) : rawValue;
 }
 
 function readIncidentRegistryStatus(rootDir) {
@@ -137,11 +142,20 @@ function readIncidentRegistryStatus(rootDir) {
     const body = match[2] ?? "";
     const status = readBulletField(body, "status");
     const boundary = readBulletField(body, "boundary");
+    const bucket = readBulletField(body, "bucket");
+    const stageScope = readBulletField(body, "stage_scope");
+    const symptom = readBulletField(body, "symptom");
+    const currentRecovery = readBulletField(body, "current_recovery");
 
     incidents.push({
       id,
       status,
       boundary,
+      bucket,
+      stageScope,
+      symptom,
+      currentRecovery,
+      body,
       sliceRefs: extractSliceRefsFromText(rootDir, body),
     });
   }
@@ -231,6 +245,136 @@ function buildAuditCoverageStatus({ rootDir, sampledSlices, inFlightSlice = null
     confidenceDowngradeReasons: [...missingEvidenceSummary, ...coverageGapReasons],
     coverageGapReasons,
     incidentStatus,
+    uncoveredIncidentSlices,
+    explicitSlices: uniqueStrings(explicitSlices),
+  };
+}
+
+function incidentMentionsAny(incident, fragments) {
+  const haystack = [
+    incident.id,
+    incident.bucket,
+    incident.stageScope,
+    incident.symptom,
+    incident.currentRecovery,
+    incident.body,
+  ]
+    .filter((value) => typeof value === "string" && value.length > 0)
+    .join("\n")
+    .toLowerCase();
+
+  return fragments.some((fragment) => haystack.includes(fragment.toLowerCase()));
+}
+
+function summarizeIncidentFamily({ incidents, familyId, label, keywords }) {
+  const matchedIncidents = incidents.filter((incident) => incidentMentionsAny(incident, keywords));
+
+  return {
+    id: familyId,
+    label,
+    incident_ids: matchedIncidents.map((incident) => incident.id),
+    count: matchedIncidents.length,
+  };
+}
+
+export function buildRuntimeAnomalySummary({ rootDir = process.cwd() } = {}) {
+  const incidentStatus = readIncidentRegistryStatus(rootDir);
+  const runtimeIncidents = incidentStatus.incidents.filter(
+    (incident) =>
+      (incident.status === "open" || incident.status === "backfill-required") &&
+      incident.boundary !== "product-local" &&
+      incident.boundary !== "separated-product-bug" &&
+      (incident.bucket?.includes("D. Runtime / Observability Reset") ||
+        incidentMentionsAny(incident, [
+          "stale lock",
+          "skip_locked",
+          "stage_running",
+          "blocked_retry",
+          "human_escalation",
+          "manual handoff",
+          "retry_not_due",
+        ])),
+  );
+
+  const familyBreakdown = [
+    summarizeIncidentFamily({
+      incidents: runtimeIncidents,
+      familyId: "stale-lock",
+      label: "stale lock / skip_locked / stage_running residue",
+      keywords: ["stale lock", "skip_locked", "stage_running", "retry_not_due"],
+    }),
+    summarizeIncidentFamily({
+      incidents: runtimeIncidents,
+      familyId: "manual-recovery",
+      label: "manual handoff / human escalation / manual recovery",
+      keywords: ["manual handoff", "human_escalation", "manual", "recovery"],
+    }),
+    summarizeIncidentFamily({
+      incidents: runtimeIncidents,
+      familyId: "visibility",
+      label: "operator visibility / heartbeat / transcript freshness gaps",
+      keywords: ["operator", "visibility", "transcript", "stdout", "stderr", "heartbeat"],
+    }),
+  ].filter((family) => family.count > 0);
+
+  return {
+    version: 1,
+    incident_ids: runtimeIncidents.map((incident) => incident.id),
+    incident_count: runtimeIncidents.length,
+    slice_refs: uniqueStrings(runtimeIncidents.flatMap((incident) => incident.sliceRefs)),
+    family_breakdown: familyBreakdown,
+    representative_symptoms: runtimeIncidents
+      .map((incident) => incident.symptom)
+      .filter((symptom) => typeof symptom === "string" && symptom.length > 0)
+      .slice(0, 5),
+  };
+}
+
+export function buildPrCiRealityDriftSummary({ rootDir = process.cwd() } = {}) {
+  const incidentStatus = readIncidentRegistryStatus(rootDir);
+  const driftIncidents = incidentStatus.incidents.filter(
+    (incident) =>
+      (incident.status === "open" || incident.status === "backfill-required") &&
+      incident.boundary !== "product-local" &&
+      incident.boundary !== "separated-product-bug" &&
+      (incident.bucket?.includes("E. PR / CI Integration Reset") ||
+        incidentMentionsAny(incident, [
+          "pr body",
+          "policy ci",
+          "policy fail",
+          "no-op commit",
+          "gh pr checks",
+          "pr_checks_failed",
+          "stale wait",
+          "ci wait",
+        ])),
+  );
+
+  const familyBreakdown = [
+    summarizeIncidentFamily({
+      incidents: driftIncidents,
+      familyId: "pr-body-projection",
+      label: "PR body evidence / policy rerun drift",
+      keywords: ["pr body", "policy fail", "no-op commit", "body edit"],
+    }),
+    summarizeIncidentFamily({
+      incidents: driftIncidents,
+      familyId: "ci-snapshot",
+      label: "current-head / CI snapshot drift",
+      keywords: ["gh pr checks", "pr_checks_failed", "stale wait", "ci wait", "current head"],
+    }),
+  ].filter((family) => family.count > 0);
+
+  return {
+    version: 1,
+    incident_ids: driftIncidents.map((incident) => incident.id),
+    incident_count: driftIncidents.length,
+    slice_refs: uniqueStrings(driftIncidents.flatMap((incident) => incident.sliceRefs)),
+    family_breakdown: familyBreakdown,
+    representative_symptoms: driftIncidents
+      .map((incident) => incident.symptom)
+      .filter((symptom) => typeof symptom === "string" && symptom.length > 0)
+      .slice(0, 5),
   };
 }
 
@@ -733,6 +877,68 @@ export function detectOmoPromotionDrift({ rootDir = process.cwd(), registry } = 
   ];
 }
 
+export function detectOmoRuntimeAnomalyGap({ rootDir = process.cwd(), registry } = {}) {
+  const resolvedRegistry = registry ?? loadFindingRegistry(rootDir);
+  const runtimeSummary = buildRuntimeAnomalySummary({ rootDir });
+
+  if (runtimeSummary.incident_count === 0) {
+    return [];
+  }
+
+  const familySummary =
+    runtimeSummary.family_breakdown.length > 0
+      ? runtimeSummary.family_breakdown.map((family) => `${family.label}=${family.count}`).join(", ")
+      : `${runtimeSummary.incident_count} unresolved runtime incident(s)`;
+
+  return [
+    createFindingFromRegistry(resolvedRegistry, "H-OMO-003", {
+      why_it_matters:
+        "Runtime anomalies such as stale locks, blocked retry loops, and manual handoff residue remain in the incident corpus, so auditor output must keep them visible instead of treating them as historical noise.",
+      evidence_refs: [
+        "docs/engineering/workflow-v2/omo-incident-registry.md",
+        ".workflow-v2/status.json",
+        ".opencode/README.md",
+      ],
+      recommended_validation: [
+        "Re-run pnpm harness:audit after runtime anomaly detectors and summaries are updated.",
+        "Confirm runtime findings remain active until replay or explicit disposition closes the incident family.",
+      ],
+      suggested_next_step: `Keep runtime anomaly findings active while these families remain unresolved: ${familySummary}.`,
+    }),
+  ];
+}
+
+export function detectOmoPrCiRealityDrift({ rootDir = process.cwd(), registry } = {}) {
+  const resolvedRegistry = registry ?? loadFindingRegistry(rootDir);
+  const driftSummary = buildPrCiRealityDriftSummary({ rootDir });
+
+  if (driftSummary.incident_count === 0) {
+    return [];
+  }
+
+  const familySummary =
+    driftSummary.family_breakdown.length > 0
+      ? driftSummary.family_breakdown.map((family) => `${family.label}=${family.count}`).join(", ")
+      : `${driftSummary.incident_count} unresolved PR/CI drift incident(s)`;
+
+  return [
+    createFindingFromRegistry(resolvedRegistry, "H-OMO-005", {
+      why_it_matters:
+        "PR body evidence drift and stale CI snapshots create false merge-state narratives unless auditor output keeps those mismatches visible.",
+      evidence_refs: [
+        "docs/engineering/workflow-v2/omo-incident-registry.md",
+        ".workflow-v2/promotion-evidence.json",
+        "docs/engineering/workflow-v2/promotion-readiness.md",
+      ],
+      recommended_validation: [
+        "Re-run pnpm harness:audit after PR body projection and CI snapshot checks are updated.",
+        "Confirm PR/CI drift remains active until current-head reality and projection state converge.",
+      ],
+      suggested_next_step: `Keep PR/CI drift findings active while these families remain unresolved: ${familySummary}.`,
+    }),
+  ];
+}
+
 export function collectMetaHarnessFindings({
   rootDir = process.cwd(),
   sampledSlices = [],
@@ -745,6 +951,8 @@ export function collectMetaHarnessFindings({
     ...detectPlaywrightWorkflowGap({ rootDir, registry }),
     ...detectBookkeepingOverlap({ rootDir, registry }),
     ...detectOmoAuditCoverageGap({ rootDir, sampledSlices, inFlightSlice, explicitSlices, registry }),
+    ...detectOmoRuntimeAnomalyGap({ rootDir, registry }),
+    ...detectOmoPrCiRealityDrift({ rootDir, registry }),
     ...detectOmoPromotionRisk({ rootDir, registry }),
     ...detectOmoPromotionDrift({ rootDir, registry }),
   ];
@@ -853,6 +1061,18 @@ export function buildMetaHarnessScorecard({ findings, generatedAt }) {
       continue;
     }
 
+    if (finding.id === "H-OMO-003") {
+      applyPenalty(axes.automation_omo_runtime, finding);
+      applyPenalty(axes.review_closeout, finding);
+      continue;
+    }
+
+    if (finding.id === "H-OMO-005") {
+      applyPenalty(axes.review_closeout, finding);
+      applyPenalty(axes.automation_omo_runtime, finding);
+      continue;
+    }
+
     if (finding.id === "H-OMO-006") {
       applyPenalty(axes.automation_omo_runtime, finding);
       applyPenalty(axes.governance, finding);
@@ -939,6 +1159,52 @@ export function buildMetaHarnessPromotionReadiness({ rootDir = process.cwd(), fi
   };
 }
 
+function buildIncidentCoverageBundle({ sampledSlices, coverageStatus, inFlightSlice = null, cadenceEvent, checkpoint }) {
+  return {
+    version: 1,
+    sampled_slices: sampledSlices,
+    sample_selection_reason: coverageStatus.selectionReason,
+    incident_ids_consulted: coverageStatus.incidentIdsConsulted,
+    unresolved_incident_ids: coverageStatus.incidentStatus.unresolvedIncidentIds,
+    uncovered_incident_slices: coverageStatus.uncoveredIncidentSlices,
+    missing_evidence_summary: coverageStatus.missingEvidenceSummary,
+    confidence_downgrade_reasons: coverageStatus.confidenceDowngradeReasons,
+    cadence_event: cadenceEvent,
+    checkpoint: checkpoint ?? null,
+    in_flight_slice: inFlightSlice ?? null,
+  };
+}
+
+function buildPromotionRationaleBundle({ promotionReadiness, runtimeAnomalySummary, prCiRealityDriftSummary }) {
+  const rationale = [];
+
+  if (promotionReadiness.blockers.length > 0) {
+    rationale.push(`blocking findings: ${promotionReadiness.blockers.join(", ")}`);
+  }
+  if (promotionReadiness.incident_blockers.length > 0) {
+    rationale.push(`unresolved incidents: ${promotionReadiness.incident_blockers.join(", ")}`);
+  }
+  if (!promotionReadiness.replay_evidence_present) {
+    rationale.push("replay acceptance evidence missing");
+  }
+  if (runtimeAnomalySummary.incident_count > 0) {
+    rationale.push(`runtime anomaly incidents: ${runtimeAnomalySummary.incident_ids.join(", ")}`);
+  }
+  if (prCiRealityDriftSummary.incident_count > 0) {
+    rationale.push(`pr/ci drift incidents: ${prCiRealityDriftSummary.incident_ids.join(", ")}`);
+  }
+
+  return {
+    version: 1,
+    verdict: promotionReadiness.verdict,
+    blockers: promotionReadiness.blockers,
+    promotion_evidence_status: promotionReadiness.promotion_evidence_status,
+    replay_evidence_present: promotionReadiness.replay_evidence_present,
+    incident_blockers: promotionReadiness.incident_blockers,
+    rationale,
+  };
+}
+
 export function renderMetaHarnessReport({
   sampledSlices,
   scorecard,
@@ -946,6 +1212,8 @@ export function renderMetaHarnessReport({
   remediationPlan,
   promotionReadiness,
   auditContext,
+  runtimeAnomalySummary,
+  prCiRealityDriftSummary,
 }) {
   const lines = [];
   lines.push("# Meta Harness Audit Report");
@@ -1006,6 +1274,20 @@ export function renderMetaHarnessReport({
       auditContext.confidence_downgrade_reasons.length > 0
     ) {
       lines.push(`- Confidence downgrade reasons: ${auditContext.confidence_downgrade_reasons.join(", ")}`);
+    }
+  }
+
+  if (runtimeAnomalySummary?.incident_count > 0 || prCiRealityDriftSummary?.incident_count > 0) {
+    lines.push("");
+    lines.push("## Runtime And CI Signals");
+    lines.push("");
+
+    if (runtimeAnomalySummary?.incident_count > 0) {
+      lines.push(`- Runtime anomaly incidents: ${runtimeAnomalySummary.incident_ids.join(", ")}`);
+    }
+
+    if (prCiRealityDriftSummary?.incident_count > 0) {
+      lines.push(`- PR/CI drift incidents: ${prCiRealityDriftSummary.incident_ids.join(", ")}`);
     }
   }
 
@@ -1148,15 +1430,29 @@ export function runMetaHarnessAudit({
     inFlightSlice,
     explicitSlices,
   });
+  const incidentCoverage = buildIncidentCoverageBundle({
+    sampledSlices,
+    coverageStatus,
+    inFlightSlice,
+    cadenceEvent,
+    checkpoint,
+  });
   const findings = collectMetaHarnessFindings({
     rootDir,
     sampledSlices,
     inFlightSlice,
     explicitSlices,
   });
+  const runtimeAnomalySummary = buildRuntimeAnomalySummary({ rootDir });
+  const prCiRealityDriftSummary = buildPrCiRealityDriftSummary({ rootDir });
   const scorecard = buildMetaHarnessScorecard({ findings, generatedAt });
   const remediationPlan = buildMetaHarnessRemediationPlan({ findings, generatedAt });
   const promotionReadiness = buildMetaHarnessPromotionReadiness({ rootDir, findings, generatedAt });
+  const promotionRationale = buildPromotionRationaleBundle({
+    promotionReadiness,
+    runtimeAnomalySummary,
+    prCiRealityDriftSummary,
+  });
   const auditContext = {
     version: 1,
     generated_at: generatedAt,
@@ -1204,6 +1500,8 @@ export function runMetaHarnessAudit({
     remediationPlan,
     promotionReadiness,
     auditContext,
+    runtimeAnomalySummary,
+    prCiRealityDriftSummary,
   });
 
   const resolvedOutputDir = outputDir
@@ -1220,16 +1518,23 @@ export function runMetaHarnessAudit({
     generated_at: generatedAt,
     findings,
   });
+  writeJsonFile(path.join(resolvedOutputDir, "incident-coverage.json"), incidentCoverage);
+  writeJsonFile(path.join(resolvedOutputDir, "runtime-anomaly-summary.json"), runtimeAnomalySummary);
   writeJsonFile(path.join(resolvedOutputDir, "remediation-plan.json"), remediationPlan);
   writeJsonFile(path.join(resolvedOutputDir, "promotion-readiness.json"), promotionReadiness);
+  writeJsonFile(path.join(resolvedOutputDir, "promotion-rationale.json"), promotionRationale);
 
   return {
     outputDir: resolvedOutputDir,
     sampledSlices,
     findings,
     scorecard,
+    incidentCoverage,
+    runtimeAnomalySummary,
+    prCiRealityDriftSummary,
     remediationPlan,
     promotionReadiness,
+    promotionRationale,
     auditContext,
   };
 }

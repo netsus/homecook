@@ -1,0 +1,39 @@
+{
+  "required": [
+    "version",
+    "incident_ids",
+    "incident_count",
+    "slice_refs",
+    "family_breakdown",
+    "representative_symptoms"
+  ],
+  "properties": {
+    "version": {
+      "enum": [1]
+    },
+    "incident_ids": {
+      "type": "array"
+    },
+    "incident_count": {},
+    "slice_refs": {
+      "type": "array"
+    },
+    "family_breakdown": {
+      "type": "array",
+      "items": {
+        "required": ["id", "label", "incident_ids", "count"],
+        "properties": {
+          "id": {},
+          "label": {},
+          "incident_ids": {
+            "type": "array"
+          },
+          "count": {}
+        }
+      }
+    },
+    "representative_symptoms": {
+      "type": "array"
+    }
+  }
+}

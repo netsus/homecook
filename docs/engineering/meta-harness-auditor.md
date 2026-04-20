@@ -180,10 +180,13 @@
   - `docs/engineering/meta-harness-auditor/cadence.schema.json`
   - `docs/engineering/meta-harness-auditor/fix-result.schema.json`
   - `docs/engineering/meta-harness-auditor/finding-registry.schema.json`
+  - `docs/engineering/meta-harness-auditor/incident-coverage.schema.json`
   - `docs/engineering/meta-harness-auditor/scorecard.schema.json`
   - `docs/engineering/meta-harness-auditor/findings.schema.json`
+  - `docs/engineering/meta-harness-auditor/runtime-anomaly-summary.schema.json`
   - `docs/engineering/meta-harness-auditor/remediation-plan.schema.json`
   - `docs/engineering/meta-harness-auditor/promotion-readiness.schema.json`
+  - `docs/engineering/meta-harness-auditor/promotion-rationale.schema.json`
 
 ## Inputs
 
@@ -232,13 +235,16 @@
 
 - `report.md`
 - `audit-context.json`
+- `incident-coverage.json`
 - `scorecard.json`
 - `findings.json`
+- `runtime-anomaly-summary.json`
 - `remediation-plan.json`
+- `promotion-readiness.json`
+- `promotion-rationale.json`
 
 선택 산출물:
 
-- `promotion-readiness.json`
 - `fix-result.json`
 - `diff-candidates.json`
 - `compatibility-note.md`

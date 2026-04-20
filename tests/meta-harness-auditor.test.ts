@@ -8,8 +8,10 @@ import { validateKnownShape } from "../scripts/lib/validate-workflow-v2.mjs";
 import {
   detectBookkeepingOverlap,
   detectOmoAuditCoverageGap,
+  detectOmoPrCiRealityDrift,
   detectOmoPromotionDrift,
   detectOmoPromotionRisk,
+  detectOmoRuntimeAnomalyGap,
   detectPlaywrightWorkflowGap,
   resolveFixArgs,
   runMetaHarnessAudit,
@@ -337,6 +339,30 @@ function createAuditFixture() {
       "- bucket: `D. Runtime / Observability Reset`",
       "- symptom: slice06 manual handoff remained the real completion path.",
       "",
+      "### OMO-07-003",
+      "- status: `open`",
+      "- boundary: `omo-system`",
+      "- bucket: `D. Runtime / Observability Reset`",
+      "- symptom: stale lock, `skip_locked -> none`, `stage_running` residue remained visible.",
+      "",
+      "### OMO-07-005",
+      "- status: `open`",
+      "- boundary: `omo-system`",
+      "- bucket: `E. PR / CI Integration Reset`",
+      "- symptom: PR body evidence drift required no-op commit recovery.",
+      "",
+      "### OMO-07-006",
+      "- status: `open`",
+      "- boundary: `omo-system`",
+      "- bucket: `E. PR / CI Integration Reset`",
+      "- symptom: `gh pr checks` was green but runtime kept `pr_checks_failed` / stale wait.",
+      "",
+      "### OMO-07-007",
+      "- status: `open`",
+      "- boundary: `omo-system`",
+      "- bucket: `D. Runtime / Observability Reset`",
+      "- symptom: operator visibility over stdout/stderr/transcript freshness remained poor.",
+      "",
       "### OMO-07-001",
       "- status: `open`",
       "- boundary: `omo-system`",
@@ -416,6 +442,26 @@ describe("meta-harness-auditor", () => {
 
     expect(findings.map((finding) => finding.id)).toContain("H-OMO-002");
     expect(findings[0]?.suggested_next_step).toContain("recent slices missing");
+  });
+
+  it("detects runtime anomaly gaps from unresolved runtime incidents", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    const findings = detectOmoRuntimeAnomalyGap({ rootDir });
+
+    expect(findings.map((finding) => finding.id)).toContain("H-OMO-003");
+    expect(findings[0]?.suggested_next_step).toContain("stale lock");
+  });
+
+  it("detects PR/CI reality drift from unresolved projection and CI incidents", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    const findings = detectOmoPrCiRealityDrift({ rootDir });
+
+    expect(findings.map((finding) => finding.id)).toContain("H-OMO-005");
+    expect(findings[0]?.suggested_next_step).toContain("PR body evidence / policy rerun drift");
   });
 
   it("detects promotion drift when ready/default ignores open incidents and replay gaps", () => {
@@ -851,6 +897,35 @@ describe("meta-harness-auditor", () => {
     expect(detectOmoPromotionDrift({ rootDir })).toEqual([]);
   });
 
+  it("clears H-OMO-003 and H-OMO-005 once runtime and PR/CI incidents close by replay", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    write(
+      rootDir,
+      "docs/engineering/workflow-v2/omo-incident-registry.md",
+      [
+        "# OMO Incident Registry",
+        "",
+        "### OMO-06-001",
+        "- status: `closed-by-replay`",
+        "- boundary: `omo-system`",
+        "- bucket: `D. Runtime / Observability Reset`",
+        "- symptom: runtime replay passed.",
+        "",
+        "### OMO-07-005",
+        "- status: `closed-by-replay`",
+        "- boundary: `omo-system`",
+        "- bucket: `E. PR / CI Integration Reset`",
+        "- symptom: projection replay passed.",
+        "",
+      ].join("\n"),
+    );
+
+    expect(detectOmoRuntimeAnomalyGap({ rootDir })).toEqual([]);
+    expect(detectOmoPrCiRealityDrift({ rootDir })).toEqual([]);
+  });
+
   it("writes a valid audit bundle", () => {
     const rootDir = createAuditFixture();
     tempDirs.push(rootDir);
@@ -877,15 +952,27 @@ describe("meta-harness-auditor", () => {
     const auditContextSchema = readProjectJson(
       "docs/engineering/meta-harness-auditor/audit-context.schema.json",
     );
+    const incidentCoverageSchema = readProjectJson(
+      "docs/engineering/meta-harness-auditor/incident-coverage.schema.json",
+    );
     const promotionSchema = readProjectJson(
       "docs/engineering/meta-harness-auditor/promotion-readiness.schema.json",
+    );
+    const runtimeAnomalySchema = readProjectJson(
+      "docs/engineering/meta-harness-auditor/runtime-anomaly-summary.schema.json",
+    );
+    const promotionRationaleSchema = readProjectJson(
+      "docs/engineering/meta-harness-auditor/promotion-rationale.schema.json",
     );
 
     const findings = readJsonAbsolute(path.join(result.outputDir, "findings.json"));
     const auditContext = readJsonAbsolute(path.join(result.outputDir, "audit-context.json"));
+    const incidentCoverage = readJsonAbsolute(path.join(result.outputDir, "incident-coverage.json"));
     const scorecard = readJsonAbsolute(path.join(result.outputDir, "scorecard.json"));
+    const runtimeAnomalySummary = readJsonAbsolute(path.join(result.outputDir, "runtime-anomaly-summary.json"));
     const remediationPlan = readJsonAbsolute(path.join(result.outputDir, "remediation-plan.json"));
     const promotionReadiness = readJsonAbsolute(path.join(result.outputDir, "promotion-readiness.json"));
+    const promotionRationale = readJsonAbsolute(path.join(result.outputDir, "promotion-rationale.json"));
     const report = readFileSync(path.join(result.outputDir, "report.md"), "utf8");
     const cadenceConfig = readJson(rootDir, "docs/engineering/meta-harness-auditor/cadence.json");
     const findingRegistry = readJson(rootDir, "docs/engineering/meta-harness-auditor/finding-registry.json");
@@ -894,14 +981,21 @@ describe("meta-harness-auditor", () => {
     expect(validateKnownShape(findingRegistrySchema, findingRegistry)).toEqual([]);
     expect(validateKnownShape(findingsSchema, findings)).toEqual([]);
     expect(validateKnownShape(auditContextSchema, auditContext)).toEqual([]);
+    expect(validateKnownShape(incidentCoverageSchema, incidentCoverage)).toEqual([]);
     expect(validateKnownShape(scorecardSchema, scorecard)).toEqual([]);
+    expect(validateKnownShape(runtimeAnomalySchema, runtimeAnomalySummary)).toEqual([]);
     expect(validateKnownShape(remediationSchema, remediationPlan)).toEqual([]);
     expect(validateKnownShape(promotionSchema, promotionReadiness)).toEqual([]);
+    expect(validateKnownShape(promotionRationaleSchema, promotionRationale)).toEqual([]);
     expect(promotionReadiness.verdict).toBe("not-ready");
     expect(auditContext.run_mode).toBe("audit-only");
     expect(auditContext.cadence_event).toBe("manual-ad-hoc");
     expect(auditContext.sample_selection_reason).toBeTruthy();
+    expect(incidentCoverage.sampled_slices.length).toBeGreaterThan(0);
+    expect(runtimeAnomalySummary.incident_count).toBeGreaterThan(0);
+    expect(promotionRationale.rationale.length).toBeGreaterThan(0);
     expect(report).toContain("Meta Harness Audit Report");
+    expect(report).toContain("Runtime And CI Signals");
     expect(result.findings.length).toBeGreaterThan(0);
   });
 
