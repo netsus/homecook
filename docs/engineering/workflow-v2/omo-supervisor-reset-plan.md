@@ -200,6 +200,7 @@ reset 이후 supervisor kernel은 아래만 확실하게 책임진다.
 산출물:
 
 - doc responsibility map
+- `omo-governance-surface-map.md`
 - slimmed reading order
 - duplicate-to-projection cleanup list
 
@@ -220,6 +221,10 @@ reset 이후 supervisor kernel은 아래만 확실하게 책임진다.
 - README / acceptance / PR body / `.workflow-v2/status.json` projection mapping 정의
 - supervisor writable scope 축소
 - recovery history schema 추가
+
+산출물:
+
+- `omo-canonical-closeout-state.md`
 
 완료 기준:
 
@@ -362,7 +367,7 @@ reset이 성공했다는 의미는 아래를 동시에 만족하는 것이다.
 
 1. slice03 residual artifact backfill + slice06 local evidence preservation rule 정리
 2. OMO/product incident boundary 표 정교화
-3. canonical closeout state 후보 설계
+3. canonical closeout state owner 선택(work item embed vs dedicated closeout file)
 4. auditor reset 요구사항 정의
 5. promotion `candidate/not-ready -> ready/default` cutover replay 기준 초안 작성
 

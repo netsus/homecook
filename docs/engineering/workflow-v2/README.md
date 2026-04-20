@@ -48,11 +48,12 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 11. [omo-supervisor-reset-plan.md](./omo-supervisor-reset-plan.md)
 12. [omo-incident-registry.md](./omo-incident-registry.md)
 13. [omo-governance-surface-map.md](./omo-governance-surface-map.md)
-14. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
-15. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
-16. [TEMPLATE.md](./profiles/TEMPLATE.md)
-17. [homecook.md](./profiles/homecook.md)
-18. [migration.md](./migration.md)
+14. [omo-canonical-closeout-state.md](./omo-canonical-closeout-state.md)
+15. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
+16. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
+17. [TEMPLATE.md](./profiles/TEMPLATE.md)
+18. [homecook.md](./profiles/homecook.md)
+19. [migration.md](./migration.md)
 
 ## Directory Map
 
@@ -71,6 +72,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [omo-supervisor-reset-plan.md](./omo-supervisor-reset-plan.md): slice07 이후 OMO를 patch accumulation이 아니라 supervisor reset 관점에서 다시 축소/재잠그기 위한 계획 문서
 - [omo-incident-registry.md](./omo-incident-registry.md): slice07 failure log와 prior pilot 흔적을 reset input corpus로 관리하는 incident registry
 - [omo-governance-surface-map.md](./omo-governance-surface-map.md): stage actor / operator / maintainer가 읽어야 할 문서 표면을 다시 자르기 위한 책임 경계 맵
+- [omo-canonical-closeout-state.md](./omo-canonical-closeout-state.md): closeout truth를 한 surface로 줄이고 README / acceptance / PR body / status를 projection으로 내리기 위한 Phase 2 후보 설계
 - [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md): supervisor 책임, 상태, stage state machine
 - [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md): stage별 actor dispatch 입출력 계약
 - [profiles/TEMPLATE.md](./profiles/TEMPLATE.md): 다른 프로젝트용 profile template
