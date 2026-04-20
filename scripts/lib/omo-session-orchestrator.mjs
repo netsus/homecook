@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { runStageWithArtifacts } from "./omo-lite-runner.mjs";
-import { buildOperatorGuidance } from "./omo-status-summary.mjs";
+import { buildOperatorGuidance, buildRuntimeObservability } from "./omo-status-summary.mjs";
 import {
   listDueRuntimeStates,
   readRuntimeState,
@@ -371,6 +371,7 @@ export function readWorkItemSessionStatus({
     trackedWorkItem: tracked ? workItem : null,
     trackedStatus: statusItem,
     runtime: runtime.state,
+    runtimeObservability: buildRuntimeObservability(runtime.state),
     operatorGuidance: buildOperatorGuidance(runtime.state),
   };
 }

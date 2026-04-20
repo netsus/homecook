@@ -2,6 +2,213 @@ function normalizeString(value) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
+const RUNNING_LONG_MS = 10 * 60 * 1000;
+const RUNNING_STALE_CANDIDATE_MS = 60 * 60 * 1000;
+const CI_STALE_CANDIDATE_MS = 30 * 60 * 1000;
+
+function parseTimestamp(value) {
+  const normalized = normalizeString(value);
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = new Date(normalized);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDuration(ms) {
+  if (!Number.isFinite(ms) || ms < 0) {
+    return null;
+  }
+
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 1) {
+    return "<1m";
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours < 1) {
+    return `${minutes}m`;
+  }
+
+  if (remainingMinutes === 0) {
+    return `${hours}h`;
+  }
+
+  return `${hours}h ${remainingMinutes}m`;
+}
+
+function resolveReferenceTime(now) {
+  return parseTimestamp(now) ?? new Date();
+}
+
+function describePhasePhase(runtime) {
+  return normalizeString(runtime?.phase) ?? "none";
+}
+
+export function buildRuntimeObservability(runtime, { now } = {}) {
+  const phase = describePhasePhase(runtime);
+  const waitKind = normalizeString(runtime?.wait?.kind);
+  const lockOwner = normalizeString(runtime?.lock?.owner);
+  const reference = resolveReferenceTime(now);
+  const lockTimestamp =
+    parseTimestamp(runtime?.lock?.acquired_at) ?? parseTimestamp(runtime?.execution?.started_at);
+  const waitTimestamp =
+    parseTimestamp(runtime?.wait?.updated_at) ??
+    parseTimestamp(runtime?.workspace?.updated_at) ??
+    parseTimestamp(runtime?.execution?.finished_at);
+  const retryAt = parseTimestamp(runtime?.retry?.at);
+  const lockAgeMs = lockTimestamp ? reference.getTime() - lockTimestamp.getTime() : null;
+  const waitAgeMs = waitTimestamp ? reference.getTime() - waitTimestamp.getTime() : null;
+
+  if (waitKind === "blocked_retry") {
+    const due = retryAt ? retryAt.getTime() <= reference.getTime() : false;
+    return {
+      status: due ? "retry_due" : "waiting_retry",
+      headline: due ? "retry due" : "waiting for retry",
+      detail: due
+        ? `blocked_retry is due${retryAt ? ` since ${retryAt.toISOString()}` : ""}`
+        : `blocked_retry scheduled${retryAt ? ` at ${retryAt.toISOString()}` : ""}`,
+      recommendation: due
+        ? "retry 시각이 지났습니다. `pnpm omo:tick -- --work-item <id>` 또는 `pnpm omo:resume-pending`으로 재개하세요."
+        : "retry 시각 전까지 기다리거나 `omo:status`로 due 여부를 다시 확인하세요.",
+      lockOwner,
+      lockAge: formatDuration(lockAgeMs),
+      waitAge: formatDuration(waitAgeMs),
+      retryAt: retryAt?.toISOString() ?? null,
+      staleCandidate: false,
+    };
+  }
+
+  if (waitKind === "ci") {
+    const staleCandidate = Number.isFinite(waitAgeMs) && waitAgeMs >= CI_STALE_CANDIDATE_MS;
+    return {
+      status: staleCandidate ? "waiting_ci_stale_candidate" : "waiting_ci",
+      headline: staleCandidate ? "waiting for ci (stale candidate)" : "waiting for ci",
+      detail: staleCandidate
+        ? `CI wait has been open for ${formatDuration(waitAgeMs)}`
+        : `CI wait is active${waitAgeMs !== null ? ` for ${formatDuration(waitAgeMs)}` : ""}`,
+      recommendation: staleCandidate
+        ? "PR head SHA와 현재 GitHub checks 상태를 다시 확인해 stale CI snapshot인지 점검하세요."
+        : "현재 head 기준 GitHub checks가 끝날 때까지 기다리세요.",
+      lockOwner,
+      lockAge: formatDuration(lockAgeMs),
+      waitAge: formatDuration(waitAgeMs),
+      retryAt: retryAt?.toISOString() ?? null,
+      staleCandidate,
+    };
+  }
+
+  if (waitKind === "human") {
+    return {
+      status: "blocked_human",
+      headline: "blocked by human intervention",
+      detail: `human wait${waitAgeMs !== null ? ` for ${formatDuration(waitAgeMs)}` : ""}`,
+      recommendation: "human-only blocker를 해소한 뒤 같은 work item을 다시 재개하세요.",
+      lockOwner,
+      lockAge: formatDuration(lockAgeMs),
+      waitAge: formatDuration(waitAgeMs),
+      retryAt: retryAt?.toISOString() ?? null,
+      staleCandidate: false,
+    };
+  }
+
+  if (waitKind === "ready_for_next_stage") {
+    return {
+      status: "ready_to_resume",
+      headline: "ready for next stage",
+      detail: `next stage can resume${waitAgeMs !== null ? ` after ${formatDuration(waitAgeMs)}` : ""}`,
+      recommendation: "`pnpm omo:tick -- --work-item <id>` 또는 supervisor resume 경로로 다음 stage를 진행하세요.",
+      lockOwner,
+      lockAge: formatDuration(lockAgeMs),
+      waitAge: formatDuration(waitAgeMs),
+      retryAt: retryAt?.toISOString() ?? null,
+      staleCandidate: false,
+    };
+  }
+
+  if (phase === "stage_running" && lockOwner) {
+    const staleCandidate = Number.isFinite(lockAgeMs) && lockAgeMs >= RUNNING_STALE_CANDIDATE_MS;
+    const longRunning =
+      !staleCandidate && Number.isFinite(lockAgeMs) && lockAgeMs >= RUNNING_LONG_MS;
+    return {
+      status: staleCandidate ? "running_stale_candidate" : longRunning ? "running_long" : "running_live",
+      headline: staleCandidate
+        ? "stage running (stale candidate)"
+        : longRunning
+          ? "stage running (long)"
+          : "stage running",
+      detail:
+        lockAgeMs !== null
+          ? `lock held by ${lockOwner} for ${formatDuration(lockAgeMs)}`
+          : `lock held by ${lockOwner}`,
+      recommendation: staleCandidate
+        ? "stage_running lock가 오래 유지되고 있습니다. artifact/log를 확인해 stale residue인지 점검하고 `pnpm omo:tick -- --work-item <id>`로 recovery를 시도하세요."
+        : "현재 stage 실행이 진행 중입니다. 새로운 patch보다 artifact/log 업데이트를 먼저 확인하세요.",
+      lockOwner,
+      lockAge: formatDuration(lockAgeMs),
+      waitAge: formatDuration(waitAgeMs),
+      retryAt: retryAt?.toISOString() ?? null,
+      staleCandidate,
+    };
+  }
+
+  if (lockOwner) {
+    return {
+      status: "lock_residue",
+      headline: "lock residue detected",
+      detail: `phase=${phase} but lock is still held by ${lockOwner}${lockAgeMs !== null ? ` for ${formatDuration(lockAgeMs)}` : ""}`,
+      recommendation: "phase와 lock이 어긋났습니다. stale residue인지 확인하고 runtime recovery 경로를 점검하세요.",
+      lockOwner,
+      lockAge: formatDuration(lockAgeMs),
+      waitAge: formatDuration(waitAgeMs),
+      retryAt: retryAt?.toISOString() ?? null,
+      staleCandidate: true,
+    };
+  }
+
+  if (phase === "escalated") {
+    return {
+      status: "escalated",
+      headline: "escalated",
+      detail: "runtime is escalated without an active lock",
+      recommendation: "reason code와 recovery artifact를 확인해 human escalation인지 자동 복구 가능한 상태인지 먼저 판단하세요.",
+      lockOwner,
+      lockAge: formatDuration(lockAgeMs),
+      waitAge: formatDuration(waitAgeMs),
+      retryAt: retryAt?.toISOString() ?? null,
+      staleCandidate: false,
+    };
+  }
+
+  if (phase === "done") {
+    return {
+      status: "done",
+      headline: "done",
+      detail: "runtime reached done state",
+      recommendation: null,
+      lockOwner,
+      lockAge: formatDuration(lockAgeMs),
+      waitAge: formatDuration(waitAgeMs),
+      retryAt: retryAt?.toISOString() ?? null,
+      staleCandidate: false,
+    };
+  }
+
+  return {
+    status: waitKind ? `waiting_${waitKind}` : "idle",
+    headline: waitKind ? `waiting (${waitKind})` : "idle",
+    detail: waitKind ? `wait.kind=${waitKind}` : `phase=${phase}`,
+    recommendation: null,
+    lockOwner,
+    lockAge: formatDuration(lockAgeMs),
+    waitAge: formatDuration(waitAgeMs),
+    retryAt: retryAt?.toISOString() ?? null,
+    staleCandidate: false,
+  };
+}
+
 function resolvePrimaryReason(runtime) {
   const waitReason = normalizeString(runtime?.wait?.reason);
   if (waitReason) {
@@ -225,6 +432,7 @@ export function buildOperatorGuidance(runtime) {
   const reasonCode = resolveReasonCode(reason);
   const failure = parseFirstFailureEntry(reason);
   const artifactPath = resolveArtifactPath(runtime);
+  const runtimeObservability = buildRuntimeObservability(runtime);
 
   return {
     source,
@@ -243,7 +451,7 @@ export function buildOperatorGuidance(runtime) {
       runtime,
       reasonCode,
       validatorName: failure.validatorName,
-    }),
+    }) ?? runtimeObservability.recommendation,
   };
 }
 
@@ -258,6 +466,8 @@ function resolveTrackedApproval(status) {
 export function formatFullStatus(status) {
   const runtime = status.runtime ?? {};
   const operatorGuidance = status.operatorGuidance ?? buildOperatorGuidance(runtime);
+  const runtimeObservability =
+    status.runtimeObservability ?? buildRuntimeObservability(runtime);
 
   return [
     `Work item: ${status.workItemId}`,
@@ -271,6 +481,12 @@ export function formatFullStatus(status) {
     `Wait kind: ${runtime.wait?.kind ?? "none"}`,
     `Reason code: ${operatorGuidance.reasonCode ?? "-"}`,
     `Remediation: ${operatorGuidance.remediationState ?? "-"}`,
+    `Runtime signal: ${runtimeObservability.status ?? "-"}`,
+    `Runtime detail: ${runtimeObservability.detail ?? "-"}`,
+    `Retry at: ${runtimeObservability.retryAt ?? "-"}`,
+    `Lock owner: ${runtimeObservability.lockOwner ?? "-"}`,
+    `Lock age: ${runtimeObservability.lockAge ?? "-"}`,
+    `Wait age: ${runtimeObservability.waitAge ?? "-"}`,
     `Last failed validator: ${operatorGuidance.validatorName ?? "-"}`,
     `Failure path: ${operatorGuidance.failurePath ?? "-"}`,
     `Artifact path: ${operatorGuidance.artifactPath ?? "-"}`,
@@ -329,6 +545,8 @@ export function formatBriefStatus(status) {
       : "-";
   const mode = wait?.kind ?? (phase === "done" ? "done" : runtime.lock?.owner ? "running" : "idle");
   const operatorGuidance = status.operatorGuidance ?? buildOperatorGuidance(runtime);
+  const runtimeObservability =
+    status.runtimeObservability ?? buildRuntimeObservability(runtime);
 
   return [
     `workItem        : ${status.workItemId}`,
@@ -337,6 +555,11 @@ export function formatBriefStatus(status) {
     `phase           : ${phase}`,
     `nextAction      : ${nextAction}`,
     `mode            : ${mode}`,
+    `runtimeSignal   : ${runtimeObservability.status ?? "-"}`,
+    `runtimeDetail   : ${runtimeObservability.detail ?? "-"}`,
+    `retryAt         : ${runtimeObservability.retryAt ?? "-"}`,
+    `lockAge         : ${runtimeObservability.lockAge ?? "-"}`,
+    `waitAge         : ${runtimeObservability.waitAge ?? "-"}`,
     `reasonCode      : ${operatorGuidance.reasonCode ?? "-"}`,
     `remediation     : ${operatorGuidance.remediationState ?? "-"}`,
     `blockedBy       : ${operatorGuidance.validatorName ?? "-"}`,
