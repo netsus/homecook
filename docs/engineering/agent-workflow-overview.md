@@ -9,55 +9,10 @@
 
 ---
 
-> **슬라이스 단계별 상세 절차** (읽을 것·산출물·자가 점검·완료 요약 형식)는
-> `docs/engineering/slice-workflow.md`를 참조한다.
-> 이 문서는 에이전트 간 고수준 협업 흐름과 자동화 루프 진입점을 기술한다.
-
-## 슬라이스 개발 흐름
-
-```
-1단계 (Claude) — Workpack README + acceptance.md + automation-spec + workflow-v2 work item/status 작성
-       ↓
-internal 1.5 — supervisor 기본 docs gate
-       Codex review → Claude fix/rebuttal → 최대 3회 수렴 → docs PR merge
-       ↓ (merge 완료 후)
-2단계 (Codex) — feature/be-<slice> 백엔드 구현 → CI green → PR
-       ↓
-3단계 (Claude) — 백엔드 PR 리뷰 → merge
-       ↓
-4단계 (Claude) — feature/fe-<slice> 프론트엔드 구현 → Layer 1 green → Layer 2 exploratory QA → Layer 3 qa:eval → PR
-       ↓
-5단계 (Codex) — 디자인 리뷰 (authority-required이면 Claude final authority gate 추가)
-       ↓
-6단계 (Codex) — 프론트엔드 PR 리뷰 / closeout → merge 또는 manual handoff
-```
-
-단계별 상세 절차(사전 조건·읽을 것·산출물·자가 점검·완료 요약)는 `docs/engineering/slice-workflow.md` 참조.
-
----
-
-## 문서 레이어
-
-- `AGENTS.md`: 원칙, 절대 유지 규칙, engineering 예외 규칙
-- `docs/engineering/agent-workflow-overview.md`: 변경 유형별 게이트, optional review, loop 사용 기준
-- `docs/engineering/slice-workflow.md`: product slice Stage 1~6 절차
-- `docs/engineering/git-workflow.md`: 브랜치/커밋/PR 크기 규칙
-- `docs/engineering/bookkeeping-authority-matrix.md`: closeout docs / tracked state / PR evidence ownership matrix
-- `docs/engineering/workflow-v2/*`: next-generation reusable workflow 설계와 파일럿 규칙
-
-같은 규칙이 여러 문서에 보이면 먼저 아래 기준으로 판정한다.
-
-- `중복`: actor, trigger, action, success condition, scope가 같고 새 실행 정보가 없다
-- `계층적 위임`: 상위 문서가 원칙을 선언하고 하위 문서가 단계, 예외, 산출물, 체크리스트를 구체화한다
-
-`중복`으로 판정된 규칙만 단일 소스화 대상으로 본다. `계층적 위임`은 삭제보다 링크와 책임 경계를 정리한다.
-
-## V2 Default Note
-
-- workflow-v2는 현재 OMO 기본 운영 경로의 entry layer다.
-- product slice의 stage-by-stage mechanics는 계속 이 문서와 `docs/engineering/slice-workflow.md`가 담당한다.
-- closeout docs, `.workflow-v2/status.json`, OMO runtime, PR evidence의 ownership 경계는 `docs/engineering/bookkeeping-authority-matrix.md`를 기준으로 해석한다.
-- `docs-governance` 또는 workflow tooling 개선 작업은 `workflow-v2` 문서를 직접 source of truth로 사용하고, product slice는 그 위임 구조 안에서 이 문서와 `slice-workflow.md`를 따른다.
+> 이 문서는 `change_type`별 gate, `required_checks`, optional review, loop 진입 조건만 다룬다.
+> product slice의 stage owner / 읽을 것 / 산출물 / handoff / 완료 요약은 `docs/engineering/slice-workflow.md`,
+> 공통 원칙과 문서 계층은 `AGENTS.md`,
+> workflow-v2 operator entry는 `docs/engineering/workflow-v2/README.md`를 따른다.
 
 ---
 
@@ -107,166 +62,30 @@ internal 1.5 — supervisor 기본 docs gate
 
 ---
 
-## Codex 작업 흐름 (2·5·6단계 + authority_precheck)
+## Loop Usage Rules
 
-### 시작 조건
-- 해당 슬라이스의 `docs/workpacks/<slice>/README.md`와 `acceptance.md`가 main에 merge된 상태
-- (1단계 Claude 문서가 없으면 Claude에 먼저 요청)
-
-### 1단계 — 문서 확인 (항상 이 순서)
-```
-AGENTS.md → CURRENT_SOURCE_OF_TRUTH.md → workpacks/<slice>/README.md + acceptance.md
-→ (필요 시) git-workflow.md, tdd-vitest.md
-```
-
-예외:
-- `docs/engineering/` 아래의 repo-engineering automation / workflow 작업은 제품 workpack 슬라이스가 아니다.
-- 이런 경우 `workpacks/<slice>/README.md` 대신 대상 `docs/engineering/*.md`와 관련 governing doc을 기준으로 진행한다.
-
-### 계획 단계 자동화
-
-문서 보완, 개발 계획, 문제점 탐색처럼 구현 전 합의가 중요한 작업은
-`docs/engineering/agent-plan-loop.md`의 `Codex-Claude plan loop`를 **권장**한다.
-
-기본 흐름:
-```
-Codex 초안 → Claude 구조화 리뷰 → Codex 수정 → 둘 다 approve 시 종료
-```
-단, 같은 필수 수정이 반복되거나 blocker가 발생하면 자동 루프를 멈추고 사람이 방향을 재확정한다.
-
-공식 문서에 없는 더 나은 계약이 보이면:
-
-- 에이전트는 그 계약을 plan에 기정사실로 넣지 않는다.
-- 대신 `user approval required` 성격의 unresolved question으로 남기고 `contract-evolution` 경로로 에스컬레이션한다.
-- 사용자 승인 후에는 별도 docs PR로 공식 문서와 `CURRENT_SOURCE_OF_TRUTH`를 먼저 갱신한 뒤 plan 또는 workpack을 다시 잠근다.
-
-권장 상황:
-
-- 새 슬라이스 시작 전 계획 합의가 필요한 경우
-- engineering governance 문서처럼 여러 governing doc이 얽힌 경우
-- open question이 남아 사람이 곧바로 구현하기 어려운 경우
-
-생략 가능한 상황:
-
-- low-risk docs/config 정리
-- 이미 합의된 작은 문서 보정
-- 구현보다 단순 기록 보강이 중심인 경우
-
-### 리뷰 단계 자동화
-
-`docs/engineering/agent-review-loop.md`의 generic `Codex-Claude review loop`는
-product slice의 기본 public stage 경로에서는 계속 기본 엔진이 아니다.
-단, Stage 1은 예외가 아니라 supervisor 기본 경로 안에 `internal 1.5 docs gate`를 mandatory로 포함한다.
-이 docs gate는 generic review-loop CLI가 아니라 OMO supervisor가 직접 집행하는 structured review gate다.
-
-기본 흐름:
-```
-Claude diff 리뷰 → Codex 수정 → optional verification → Claude 재리뷰 → 둘 다 approve 시 종료
-```
-단, blocker가 발생하거나 같은 필수 수정이 반복되면 자동 루프를 멈추고 사람이 정리한다.
-
-이 자동 local review loop는 `CLAUDE.md`의 일반 PR-ready 게이트에 대한 좁은 예외다.
-- 범위는 구조화된 diff 리뷰 자동화에 한정한다.
-- 사람이 수행하는 일반 PR 리뷰는 여전히 `CLAUDE.md`의 PR-ready 조건을 따른다.
-
-권장 상황:
-
-- docs-governance
-- infra-governance
-- product slice 바깥의 workflow/tooling 변경
-- 정식 Stage 리뷰를 대체하지 않는 예외적 recovery 작업
-
-생략 가능한 상황:
-
-- 일반 product slice public stage 경로
-- low-risk docs/config
-- reviewer가 즉시 읽고 판단 가능한 작은 문서 변경
-- 단일 파일의 명확한 수정으로 추가 loop 가치가 낮은 경우
-
-### 2단계 — 서브에이전트 호출 (작업 유형별)
-
-**기능 개발**
-```
-Orchestrator → TDD Driver → Git Workflow Reviewer → PR Governance Reviewer → Test Reviewer
-```
-
-**API/인증 변경**
-```
-Orchestrator → TDD Driver → Security Reviewer → Test Reviewer → PR Governance Reviewer
-```
-
-**UI 변경**
-```
-Orchestrator → TDD Driver → Design and System Reviewer → Performance Reviewer → PR Governance Reviewer
-```
-
-**신규 화면 / Anchor Extension**
-```
-Orchestrator → Product Design Authority → Design and System Reviewer → PR Governance Reviewer
-```
-
-**설정/CI 변경**
-```
-Orchestrator → Git Workflow Reviewer → Lint and Format Reviewer → PR Governance Reviewer
-```
-
-### 3단계 — 구현 순서
-```
-실패 테스트 작성 → 최소 구현 → 테스트 통과 → 리팩토링
-```
-
-### 4단계 — Push 전 로컬 CI 게이트
-```
-change type 기준 required checks 실행
-```
-product slice 구현에서는 기본값으로 backend는 `pnpm install --frozen-lockfile && pnpm verify:backend`, frontend는 `pnpm install --frozen-lockfile && pnpm verify:frontend`를 사용한다.
-docs-governance와 low-risk docs/config는 위 Change Type Matrix의 최소 검증 세트를 따른다.
-
----
-
-## Handoff Protocol
-
-Primary Actor → Next Stage Actor:
-1. change type별 `required_checks`를 통과한 뒤 PR을 연다.
-2. product 구현은 Draft로 시작하고 required CI가 green이면 `Ready for Review`로 전환한다.
-3. merge는 review 승인 여부와 별개로 current head 기준 전체 PR checks가 완료/green일 때만 진행한다. `gh pr checks --required`만 보고 merge 판단하지 않는다.
-4. docs-governance, contract-evolution, low-risk docs/config는 작은 변경이면 Draft를 생략할 수 있지만, PR 본문에 근거와 review path를 남긴다.
-5. product slice는 handoff 전에 `Actual Verification`, `Closeout Sync`, `Merge Gate`, 관련 workpack/acceptance를 최신 상태로 맞춘다.
-
-Claude 리뷰 시작 조건:
-→ `CLAUDE.md` 리뷰 시작 조건 참조
-
----
+- 계획 합의가 중요한 작업은 `docs/engineering/agent-plan-loop.md`의 `Codex-Claude plan loop`를 권장한다.
+  - 새 슬라이스 시작 전 계획 합의, 여러 governing doc이 얽힌 engineering 변경, open question이 남은 docs-governance에 특히 유효하다.
+  - low-risk docs/config 정리나 단순 기록 보강은 생략 가능하다.
+- 공식 문서에 없는 더 나은 계약이 보여도 plan에 기정사실로 넣지 않는다.
+  - `user approval required` unresolved question으로 남기고 `contract-evolution` 경로로 에스컬레이션한다.
+- `docs/engineering/agent-review-loop.md`의 generic `Codex-Claude review loop`는 product slice 기본 public stage 엔진이 아니다.
+  - Stage 1은 예외가 아니라 supervisor 기본 경로 안의 `internal 1.5 docs gate`를 mandatory로 사용한다.
+  - generic review loop는 docs-governance, infra-governance, workflow/tooling 변경, exceptional recovery에서 권장한다.
+  - low-risk docs/config, reviewer가 즉시 판단 가능한 작은 변경은 생략 가능하다.
+- product slice의 stage 시작 조건, handoff, closeout 의무는 이 문서가 아니라 `docs/engineering/slice-workflow.md`가 단일 소스다.
 
 ## Claude public stage 흐름
 
-```
-workpacks/<slice>/README.md 확인
-→ Stage 1 문서 작성
-→ internal 1.5 docs gate repair / final owner 수행
-→ Stage 3 백엔드 리뷰 / Stage 4 프론트 구현 수행
-→ authority-required slice면 Stage 5 final_authority_gate 수행
-→ CI 실패 시 디버깅 지원
-→ public stage 결과를 다음 stage actor에게 handoff
-```
+- `workpacks/<slice>/README.md`를 확인한 뒤 `Stage 1 문서 작성`, `internal 1.5 docs gate repair / final owner 수행`, `Stage 3 백엔드 리뷰 / Stage 4 프론트 구현 수행`을 맡는다.
+- authority-required slice면 `authority-required slice면 Stage 5 final_authority_gate 수행`까지 포함한다.
+- 상세 읽을 것, 산출물, handoff는 `docs/engineering/slice-workflow.md`를 따른다.
 
 ## Codex review / closeout 흐름
 
-```
-workpacks/<slice>/README.md + acceptance.md 확인
-→ internal 1.5 docs gate review 수행
-→ Stage 2 백엔드 구현 수행
-→ authority-required slice면 Stage 4 authority_precheck 수행
-→ Stage 5 public 디자인 리뷰와 Stage 6 FE PR 리뷰 / closeout 수행
-→ 구조 변경 필요 시 Claude authority/final gate와 충돌 없는지 확인
-```
-
-engineering 예외 작업에서는:
-```
-관련 docs/engineering/*.md 확인
-→ AGENTS.md / CLAUDE.md / workflow 문서와 충돌 없는지 검토
-→ 코드/문서 리뷰
-```
+- `workpacks/<slice>/README.md + acceptance.md`를 확인한 뒤 `internal 1.5 docs gate review 수행`, `Stage 2 백엔드 구현 수행`, 필요 시 authority precheck를 맡는다.
+- public path에서는 `Stage 5 public 디자인 리뷰와 Stage 6 FE PR 리뷰 / closeout 수행`을 담당한다.
+- 상세 읽을 것, 산출물, closeout 의무는 `docs/engineering/slice-workflow.md`를 따른다.
 
 ---
 

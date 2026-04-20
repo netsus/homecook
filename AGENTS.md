@@ -15,7 +15,7 @@
 11. 필요한 경우에만 `docs/reference/wireframes/`
 12. 운영 규칙 변경 또는 신규 작업 방식 도입 시 `docs/engineering/subagents.md`
 13. 필요 시 `docs/engineering/security-performance-design.md`
-14. workflow v2 / OMO 운영 기준 확인 시 `docs/engineering/workflow-v2/README.md`
+14. workflow v2 / OMO 운영 기준 확인 시 `docs/engineering/workflow-v2/README.md`부터 읽고, 필요한 문서만 링크를 따라간다
 
 ## Source of Truth
 
@@ -51,6 +51,8 @@
 - `docs/engineering/git-workflow.md`는 브랜치/커밋/PR 크기 규칙의 단일 소스다.
 - `docs/engineering/qa-system.md`는 deterministic QA, exploratory QA, qa eval 실행 기준의 단일 소스다.
 - `docs/engineering/workflow-v2/*`는 현재 OMO 기본 운영 경로의 entry docs다. product slice의 stage mechanics와 change-type gate는 계속 `slice-workflow.md`, `agent-workflow-overview.md`가 구체화한다.
+- `docs/engineering/bookkeeping-authority-matrix.md`는 canonical closeout state 전환 전까지 closeout / tracked-state ownership의 과도기 단일 소스다.
+- entry doc은 하위 절차를 장문으로 재서술하지 않고 링크와 책임 경계만 남긴다.
 - 같은 규칙이 여러 문서에 보이면 먼저 `중복`인지 `계층적 위임`인지 판정한다.
 - `중복`: 같은 actor, trigger, action, success condition, scope를 추가 정보 없이 반복할 때만 본다.
 - `계층적 위임`: 상위 문서가 원칙을 말하고 하위 문서가 단계, 예외, 산출물, 체크리스트를 구체화할 때 본다.
@@ -77,10 +79,9 @@
 
 - 브랜치, 커밋, worktree, PR 크기 규칙의 단일 기준은 `docs/engineering/git-workflow.md`다.
 - 변경 유형별 `required_checks`, `optional_reviews`, `N/A 허용 기준`, loop 사용 기준은 `docs/engineering/agent-workflow-overview.md`를 따른다.
-- protected base branch(`main`, `master`, `develop`)에서 직접 작업하지 않는다. 파일 수정 전 `pnpm branch:start -- --branch <name>` 또는 `pnpm branch:start -- --slice <slice> --role <docs|be|fe>`로 작업 브랜치를 선언한다.
+- protected base branch(`main`, `master`, `develop`)에서 직접 작업하지 않는다. 파일 수정 전 `pnpm branch:start -- --branch <name>` 또는 `pnpm branch:start -- --slice <slice> --role <docs|be|fe>`로 이번 턴의 work branch intent를 선언/재확인한다.
 - 일반 세션에서는 새 user prompt마다 branch intent reassert가 필요하다. 필요 시 `pnpm branch:status`, `pnpm branch:clear`로 현재 상태를 확인/초기화한다.
 - 브랜치 하나에는 가능한 한 하나의 작은 기능 단위 또는 명확한 하위 작업만 담는다.
-- product slice 구현은 슬라이스 순서를 유지한다. 1단계(Claude) 문서가 main에 머지된 뒤에만 2단계(Codex)를 시작한다.
 - product 구현 PR은 기본적으로 `Draft -> required checks green -> Ready for Review -> 실제 동작 확인 -> current head 기준 전체 PR checks green -> merge` 흐름을 따른다.
 - merge 판단은 GitHub branch protection의 required 여부가 아니라 현재 PR head SHA에 대해 시작된 check 전체를 기준으로 한다. pending, rerun 중, fail인 check가 하나라도 남아 있으면 merge하지 않는다.
 - docs/governance와 low-risk docs/config 변경은 `docs/engineering/agent-workflow-overview.md`의 축약 경로를 따른다.
