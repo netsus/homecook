@@ -1,3 +1,5 @@
+import { resolveSessionTelemetry } from "./omo-session-telemetry.mjs";
+
 function normalizeString(value) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
@@ -38,6 +40,14 @@ function formatDuration(ms) {
   }
 
   return `${hours}h ${remainingMinutes}m`;
+}
+
+function formatUsd(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return null;
+  }
+
+  return `$${value.toFixed(2)}`;
 }
 
 function resolveReferenceTime(now) {
@@ -141,9 +151,14 @@ function resolveSessionFreshness({
   sessionId,
   sessionUpdatedAt,
   sessionAgeMs,
+  rolloverRecommended,
 }) {
   if (!sessionId) {
     return "missing";
+  }
+
+  if (rolloverRecommended) {
+    return "rollover_recommended";
   }
 
   if (!sessionUpdatedAt) {
@@ -163,6 +178,7 @@ function buildRuntimeFreshness(runtime, reference) {
     : null;
   const observedSession = resolveObservedSession(runtime);
   const sessionEntry = observedSession.role ? runtime?.sessions?.[observedSession.role] ?? null : null;
+  const sessionTelemetry = resolveSessionTelemetry(sessionEntry);
   const sessionUpdatedAt = parseTimestamp(sessionEntry?.updated_at);
   const sessionAgeMs = sessionUpdatedAt ? reference.getTime() - sessionUpdatedAt.getTime() : null;
   const executionStartedAt = parseTimestamp(runtime?.execution?.started_at);
@@ -194,7 +210,18 @@ function buildRuntimeFreshness(runtime, reference) {
       sessionId: normalizeString(sessionEntry?.session_id),
       sessionUpdatedAt,
       sessionAgeMs,
+      rolloverRecommended: sessionTelemetry.rolloverRecommended,
     }),
+    sessionGeneration: sessionTelemetry.generation,
+    sessionRunCount: sessionTelemetry.runCount,
+    sessionLastUsage: sessionTelemetry.lastUsage,
+    sessionCumulativeUsage: sessionTelemetry.cumulativeUsage,
+    sessionLastCostUsd: sessionTelemetry.lastCostUsd,
+    sessionCumulativeCostUsd: sessionTelemetry.cumulativeCostUsd,
+    sessionLastCost: formatUsd(sessionTelemetry.lastCostUsd),
+    sessionCumulativeCost: formatUsd(sessionTelemetry.cumulativeCostUsd),
+    sessionRolloverRecommended: sessionTelemetry.rolloverRecommended,
+    sessionRolloverReason: sessionTelemetry.rolloverReason,
     executionFreshness,
     executionStartedAt: executionStartedAt?.toISOString() ?? null,
     executionFinishedAt: executionFinishedAt?.toISOString() ?? null,
@@ -656,6 +683,12 @@ export function formatFullStatus(status) {
     `Session freshness: ${runtimeObservability.sessionFreshness ?? "-"}`,
     `Session updated: ${runtimeObservability.sessionUpdatedAt ?? "-"}`,
     `Session age: ${runtimeObservability.sessionAge ?? "-"}`,
+    `Session generation: ${runtimeObservability.sessionGeneration ?? "-"}`,
+    `Session run count: ${runtimeObservability.sessionRunCount ?? "-"}`,
+    `Session cumulative tokens: ${runtimeObservability.sessionCumulativeUsage?.total_tokens ?? "-"}`,
+    `Session cumulative cost: ${runtimeObservability.sessionCumulativeCost ?? "-"}`,
+    `Session rollover: ${runtimeObservability.sessionRolloverRecommended ? "recommended" : "not-needed"}`,
+    `Session rollover reason: ${runtimeObservability.sessionRolloverReason ?? "-"}`,
     `Execution freshness: ${runtimeObservability.executionFreshness ?? "-"}`,
     `Execution age: ${runtimeObservability.executionAge ?? "-"}`,
     `Retry at: ${runtimeObservability.retryAt ?? "-"}`,
@@ -737,6 +770,10 @@ export function formatBriefStatus(status) {
     `activitySource  : ${runtimeObservability.lastActivitySource ?? "-"}`,
     `sessionFresh    : ${runtimeObservability.sessionFreshness ?? "-"}`,
     `sessionAge      : ${runtimeObservability.sessionAge ?? "-"}`,
+    `sessionRuns     : ${runtimeObservability.sessionRunCount ?? "-"}`,
+    `sessionTokens   : ${runtimeObservability.sessionCumulativeUsage?.total_tokens ?? "-"}`,
+    `sessionCost     : ${runtimeObservability.sessionCumulativeCost ?? "-"}`,
+    `sessionRollover : ${runtimeObservability.sessionRolloverRecommended ? "recommended" : "not-needed"}`,
     `executionFresh  : ${runtimeObservability.executionFreshness ?? "-"}`,
     `executionAge    : ${runtimeObservability.executionAge ?? "-"}`,
     `retryAt         : ${runtimeObservability.retryAt ?? "-"}`,
