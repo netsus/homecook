@@ -94,6 +94,58 @@ describe("OMO status summary", () => {
     expect(runtimeObservability.detail).toContain("phase=merge_pending");
   });
 
+  it("surfaces last activity and session freshness from runtime timestamps", () => {
+    const runtimeObservability = buildRuntimeObservability(
+      {
+        active_stage: 4,
+        current_stage: 4,
+        phase: "stage_running",
+        next_action: "run_stage",
+        lock: {
+          owner: "omo-supervisor-2026",
+          acquired_at: "2026-04-20T10:00:00.000Z",
+        },
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: "ses_claude_stage4",
+          started_at: "2026-04-20T10:05:00.000Z",
+          subphase: "implementation",
+        },
+        sessions: {
+          claude_primary: {
+            session_id: "ses_claude_stage4",
+            provider: "claude-cli",
+            updated_at: "2026-04-20T10:12:00.000Z",
+          },
+          codex_primary: {
+            session_id: "ses_codex_stage2",
+            provider: "opencode",
+            updated_at: "2026-04-20T09:15:00.000Z",
+          },
+        },
+        workspace: {
+          updated_at: "2026-04-20T10:08:00.000Z",
+        },
+      },
+      {
+        now: "2026-04-20T10:15:00.000Z",
+      },
+    );
+
+    expect(runtimeObservability).toMatchObject({
+      subphase: "implementation",
+      lastActivityAt: "2026-04-20T10:12:00.000Z",
+      lastActivityAge: "3m",
+      lastActivitySource: "sessions.claude_primary.updated_at",
+      sessionRole: "claude_primary",
+      sessionFreshness: "fresh",
+      sessionAge: "3m",
+      executionFreshness: "long_running",
+      executionAge: "10m",
+    });
+  });
+
   it("extracts validator and failure path details from closeout reconcile wait reasons", () => {
     const operatorGuidance = buildOperatorGuidance({
       active_stage: 6,
@@ -188,6 +240,16 @@ describe("OMO status summary", () => {
       runtimeObservability: {
         status: "blocked_human",
         detail: "human wait for 25m",
+        subphase: "implementation",
+        lastActivityAt: "2026-04-20T10:00:00.000Z",
+        lastActivityAge: "25m",
+        lastActivitySource: "wait.updated_at",
+        sessionRole: "codex_primary",
+        sessionFreshness: "fresh",
+        sessionUpdatedAt: "2026-04-20T09:58:00.000Z",
+        sessionAge: "27m",
+        executionFreshness: "finished",
+        executionAge: "30m",
         retryAt: null,
         lockAge: null,
         waitAge: "25m",
@@ -200,6 +262,10 @@ describe("OMO status summary", () => {
     expect(formatFullStatus(status)).toContain("Next recommendation: 별도 docs-governance PR로 분리하세요.");
     expect(formatFullStatus(status)).toContain("Runtime signal: blocked_human");
     expect(formatFullStatus(status)).toContain("Runtime detail: human wait for 25m");
+    expect(formatFullStatus(status)).toContain("Subphase: implementation");
+    expect(formatFullStatus(status)).toContain("Last activity: 2026-04-20T10:00:00.000Z");
+    expect(formatFullStatus(status)).toContain("Activity source: wait.updated_at");
+    expect(formatFullStatus(status)).toContain("Session freshness: fresh");
     expect(formatBriefStatus(status)).toContain(
       "reasonCode      : closeout_reconcile_docs_governance_required",
     );
@@ -208,5 +274,8 @@ describe("OMO status summary", () => {
     );
     expect(formatBriefStatus(status)).toContain("runtimeSignal   : blocked_human");
     expect(formatBriefStatus(status)).toContain("runtimeDetail   : human wait for 25m");
+    expect(formatBriefStatus(status)).toContain("subphase        : implementation");
+    expect(formatBriefStatus(status)).toContain("activitySource  : wait.updated_at");
+    expect(formatBriefStatus(status)).toContain("sessionFresh    : fresh");
   });
 });

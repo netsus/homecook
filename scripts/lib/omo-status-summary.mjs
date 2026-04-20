@@ -5,6 +5,7 @@ function normalizeString(value) {
 const RUNNING_LONG_MS = 10 * 60 * 1000;
 const RUNNING_STALE_CANDIDATE_MS = 60 * 60 * 1000;
 const CI_STALE_CANDIDATE_MS = 30 * 60 * 1000;
+const SESSION_STALE_CANDIDATE_MS = 60 * 60 * 1000;
 
 function parseTimestamp(value) {
   const normalized = normalizeString(value);
@@ -47,6 +48,160 @@ function describePhasePhase(runtime) {
   return normalizeString(runtime?.phase) ?? "none";
 }
 
+function pushTimestampCandidate(candidates, source, value) {
+  const timestamp = parseTimestamp(value);
+  if (!timestamp) {
+    return;
+  }
+
+  candidates.push({
+    source,
+    timestamp,
+  });
+}
+
+function collectActivityCandidates(runtime) {
+  const candidates = [];
+
+  pushTimestampCandidate(candidates, "wait.updated_at", runtime?.wait?.updated_at);
+  pushTimestampCandidate(candidates, "workspace.updated_at", runtime?.workspace?.updated_at);
+  pushTimestampCandidate(candidates, "execution.started_at", runtime?.execution?.started_at);
+  pushTimestampCandidate(candidates, "execution.finished_at", runtime?.execution?.finished_at);
+  pushTimestampCandidate(
+    candidates,
+    "sessions.claude_primary.updated_at",
+    runtime?.sessions?.claude_primary?.updated_at,
+  );
+  pushTimestampCandidate(
+    candidates,
+    "sessions.codex_primary.updated_at",
+    runtime?.sessions?.codex_primary?.updated_at,
+  );
+  pushTimestampCandidate(candidates, "doc_gate.updated_at", runtime?.doc_gate?.updated_at);
+  pushTimestampCandidate(
+    candidates,
+    "design_authority.updated_at",
+    runtime?.design_authority?.updated_at,
+  );
+  pushTimestampCandidate(candidates, "recovery.updated_at", runtime?.recovery?.updated_at);
+
+  for (const role of ["backend", "frontend"]) {
+    pushTimestampCandidate(
+      candidates,
+      `last_review.${role}.updated_at`,
+      runtime?.last_review?.[role]?.updated_at,
+    );
+    pushTimestampCandidate(
+      candidates,
+      `last_rebuttal.${role}.updated_at`,
+      runtime?.last_rebuttal?.[role]?.updated_at,
+    );
+  }
+
+  return candidates.sort((left, right) => right.timestamp.getTime() - left.timestamp.getTime());
+}
+
+function resolveObservedSession(runtime) {
+  const executionRole = normalizeString(runtime?.execution?.session_role);
+  if (executionRole) {
+    return {
+      role: executionRole,
+      source: "execution.session_role",
+    };
+  }
+
+  const sessionCandidates = ["claude_primary", "codex_primary"]
+    .map((role) => ({
+      role,
+      sessionId: normalizeString(runtime?.sessions?.[role]?.session_id),
+      updatedAt: parseTimestamp(runtime?.sessions?.[role]?.updated_at),
+    }))
+    .filter((entry) => entry.sessionId);
+
+  if (sessionCandidates.length === 0) {
+    return {
+      role: null,
+      source: null,
+    };
+  }
+
+  sessionCandidates.sort((left, right) => {
+    const leftTime = left.updatedAt?.getTime() ?? 0;
+    const rightTime = right.updatedAt?.getTime() ?? 0;
+    return rightTime - leftTime;
+  });
+
+  return {
+    role: sessionCandidates[0].role,
+    source: "latest_session_update",
+  };
+}
+
+function resolveSessionFreshness({
+  sessionId,
+  sessionUpdatedAt,
+  sessionAgeMs,
+}) {
+  if (!sessionId) {
+    return "missing";
+  }
+
+  if (!sessionUpdatedAt) {
+    return "unknown";
+  }
+
+  return Number.isFinite(sessionAgeMs) && sessionAgeMs >= SESSION_STALE_CANDIDATE_MS
+    ? "stale_candidate"
+    : "fresh";
+}
+
+function buildRuntimeFreshness(runtime, reference) {
+  const activityCandidates = collectActivityCandidates(runtime);
+  const latestActivity = activityCandidates[0] ?? null;
+  const latestActivityAgeMs = latestActivity
+    ? reference.getTime() - latestActivity.timestamp.getTime()
+    : null;
+  const observedSession = resolveObservedSession(runtime);
+  const sessionEntry = observedSession.role ? runtime?.sessions?.[observedSession.role] ?? null : null;
+  const sessionUpdatedAt = parseTimestamp(sessionEntry?.updated_at);
+  const sessionAgeMs = sessionUpdatedAt ? reference.getTime() - sessionUpdatedAt.getTime() : null;
+  const executionStartedAt = parseTimestamp(runtime?.execution?.started_at);
+  const executionFinishedAt = parseTimestamp(runtime?.execution?.finished_at);
+  const executionReference = executionFinishedAt ?? executionStartedAt;
+  const executionAgeMs = executionReference ? reference.getTime() - executionReference.getTime() : null;
+  let executionFreshness = "idle";
+  if (executionStartedAt && !executionFinishedAt) {
+    executionFreshness =
+      Number.isFinite(executionAgeMs) && executionAgeMs >= RUNNING_STALE_CANDIDATE_MS
+        ? "stale_candidate"
+        : Number.isFinite(executionAgeMs) && executionAgeMs >= RUNNING_LONG_MS
+          ? "long_running"
+          : "running";
+  } else if (executionFinishedAt) {
+    executionFreshness = "finished";
+  }
+
+  return {
+    subphase: normalizeString(runtime?.execution?.subphase),
+    lastActivityAt: latestActivity?.timestamp.toISOString() ?? null,
+    lastActivityAge: formatDuration(latestActivityAgeMs),
+    lastActivitySource: latestActivity?.source ?? null,
+    sessionRole: observedSession.role,
+    sessionRoleSource: observedSession.source,
+    sessionUpdatedAt: sessionUpdatedAt?.toISOString() ?? null,
+    sessionAge: formatDuration(sessionAgeMs),
+    sessionFreshness: resolveSessionFreshness({
+      sessionId: normalizeString(sessionEntry?.session_id),
+      sessionUpdatedAt,
+      sessionAgeMs,
+    }),
+    executionFreshness,
+    executionStartedAt: executionStartedAt?.toISOString() ?? null,
+    executionFinishedAt: executionFinishedAt?.toISOString() ?? null,
+    executionAge: formatDuration(executionAgeMs),
+  };
+}
+
 export function buildRuntimeObservability(runtime, { now } = {}) {
   const phase = describePhasePhase(runtime);
   const waitKind = normalizeString(runtime?.wait?.kind);
@@ -61,6 +216,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
   const retryAt = parseTimestamp(runtime?.retry?.at);
   const lockAgeMs = lockTimestamp ? reference.getTime() - lockTimestamp.getTime() : null;
   const waitAgeMs = waitTimestamp ? reference.getTime() - waitTimestamp.getTime() : null;
+  const freshness = buildRuntimeFreshness(runtime, reference);
 
   if (waitKind === "blocked_retry") {
     const due = retryAt ? retryAt.getTime() <= reference.getTime() : false;
@@ -78,6 +234,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate: false,
+      ...freshness,
     };
   }
 
@@ -97,6 +254,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate,
+      ...freshness,
     };
   }
 
@@ -111,6 +269,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate: false,
+      ...freshness,
     };
   }
 
@@ -125,6 +284,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate: false,
+      ...freshness,
     };
   }
 
@@ -151,6 +311,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate,
+      ...freshness,
     };
   }
 
@@ -165,6 +326,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate: true,
+      ...freshness,
     };
   }
 
@@ -179,6 +341,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate: false,
+      ...freshness,
     };
   }
 
@@ -193,6 +356,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate: false,
+      ...freshness,
     };
   }
 
@@ -206,6 +370,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
     waitAge: formatDuration(waitAgeMs),
     retryAt: retryAt?.toISOString() ?? null,
     staleCandidate: false,
+    ...freshness,
   };
 }
 
@@ -477,12 +642,22 @@ export function formatFullStatus(status) {
     `Last completed stage: ${runtime.last_completed_stage ?? 0}`,
     `Blocked stage: ${runtime.blocked_stage ?? "none"}`,
     `Phase: ${runtime.phase ?? "none"}`,
+    `Subphase: ${runtimeObservability.subphase ?? "-"}`,
     `Next action: ${runtime.next_action ?? "noop"}`,
     `Wait kind: ${runtime.wait?.kind ?? "none"}`,
     `Reason code: ${operatorGuidance.reasonCode ?? "-"}`,
     `Remediation: ${operatorGuidance.remediationState ?? "-"}`,
     `Runtime signal: ${runtimeObservability.status ?? "-"}`,
     `Runtime detail: ${runtimeObservability.detail ?? "-"}`,
+    `Last activity: ${runtimeObservability.lastActivityAt ?? "-"}`,
+    `Activity age: ${runtimeObservability.lastActivityAge ?? "-"}`,
+    `Activity source: ${runtimeObservability.lastActivitySource ?? "-"}`,
+    `Session role: ${runtimeObservability.sessionRole ?? "-"}`,
+    `Session freshness: ${runtimeObservability.sessionFreshness ?? "-"}`,
+    `Session updated: ${runtimeObservability.sessionUpdatedAt ?? "-"}`,
+    `Session age: ${runtimeObservability.sessionAge ?? "-"}`,
+    `Execution freshness: ${runtimeObservability.executionFreshness ?? "-"}`,
+    `Execution age: ${runtimeObservability.executionAge ?? "-"}`,
     `Retry at: ${runtimeObservability.retryAt ?? "-"}`,
     `Lock owner: ${runtimeObservability.lockOwner ?? "-"}`,
     `Lock age: ${runtimeObservability.lockAge ?? "-"}`,
@@ -553,10 +728,17 @@ export function formatBriefStatus(status) {
     `activeStage     : ${resolveActiveStage(runtime)}`,
     `lastCompleted   : ${runtime.last_completed_stage ?? "-"}`,
     `phase           : ${phase}`,
+    `subphase        : ${runtimeObservability.subphase ?? "-"}`,
     `nextAction      : ${nextAction}`,
     `mode            : ${mode}`,
     `runtimeSignal   : ${runtimeObservability.status ?? "-"}`,
     `runtimeDetail   : ${runtimeObservability.detail ?? "-"}`,
+    `lastActivity    : ${runtimeObservability.lastActivityAge ?? "-"}`,
+    `activitySource  : ${runtimeObservability.lastActivitySource ?? "-"}`,
+    `sessionFresh    : ${runtimeObservability.sessionFreshness ?? "-"}`,
+    `sessionAge      : ${runtimeObservability.sessionAge ?? "-"}`,
+    `executionFresh  : ${runtimeObservability.executionFreshness ?? "-"}`,
+    `executionAge    : ${runtimeObservability.executionAge ?? "-"}`,
     `retryAt         : ${runtimeObservability.retryAt ?? "-"}`,
     `lockAge         : ${runtimeObservability.lockAge ?? "-"}`,
     `waitAge         : ${runtimeObservability.waitAge ?? "-"}`,
