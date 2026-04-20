@@ -228,6 +228,174 @@
         }
       }
     },
+    "closeout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase",
+        "docs_projection",
+        "verification_projection",
+        "merge_gate_projection",
+        "recovery_summary",
+        "projection_state"
+      ],
+      "properties": {
+        "phase": {
+          "type": "string",
+          "enum": ["collecting", "projecting", "completed", "exception"]
+        },
+        "docs_projection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "roadmap_lifecycle",
+            "design_status",
+            "delivery_checklist",
+            "design_authority",
+            "acceptance",
+            "automation_spec_metadata"
+          ],
+          "properties": {
+            "roadmap_lifecycle": {
+              "type": "string",
+              "enum": ["planned", "in_progress", "ready_for_review", "blocked", "merged", "archived"]
+            },
+            "design_status": {
+              "type": "string",
+              "enum": ["temporary", "pending-review", "confirmed", "N/A"]
+            },
+            "delivery_checklist": {
+              "type": "string",
+              "enum": ["pending", "complete", "waived"]
+            },
+            "design_authority": {
+              "type": "string",
+              "enum": ["not_required", "pending", "passed", "failed", "waived"]
+            },
+            "acceptance": {
+              "type": "string",
+              "enum": ["pending", "complete", "waived"]
+            },
+            "automation_spec_metadata": {
+              "type": "string",
+              "enum": ["pending", "synced", "not_required"]
+            }
+          }
+        },
+        "verification_projection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required_checks",
+            "external_smokes",
+            "authority_reports",
+            "actual_verification_refs"
+          ],
+          "properties": {
+            "required_checks": {
+              "type": "string",
+              "enum": ["pending", "passed", "failed", "skipped"]
+            },
+            "external_smokes": {
+              "type": "string",
+              "enum": ["pending", "passed", "failed", "skipped"]
+            },
+            "authority_reports": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "actual_verification_refs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "merge_gate_projection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["current_head_sha", "approval_state", "all_checks_green"],
+          "properties": {
+            "current_head_sha": {
+              "type": "string",
+              "minLength": 1
+            },
+            "approval_state": {
+              "type": "string",
+              "enum": [
+                "not_started",
+                "needs_revision",
+                "claude_approved",
+                "codex_approved",
+                "dual_approved",
+                "human_escalation"
+              ]
+            },
+            "all_checks_green": {
+              "type": "boolean"
+            }
+          }
+        },
+        "recovery_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "manual_patch_count",
+            "manual_handoff",
+            "stale_lock_count",
+            "ci_resync_count",
+            "artifact_missing",
+            "last_recovery_at"
+          ],
+          "properties": {
+            "manual_patch_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "manual_handoff": {
+              "type": "boolean"
+            },
+            "stale_lock_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "ci_resync_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "artifact_missing": {
+              "type": "boolean"
+            },
+            "last_recovery_at": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "projection_state": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["docs_synced_at", "status_synced_at", "pr_body_synced_at"],
+          "properties": {
+            "docs_synced_at": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status_synced_at": {
+              "type": "string",
+              "minLength": 1
+            },
+            "pr_body_synced_at": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
     "out_of_scope": {
       "type": "array",
       "items": {

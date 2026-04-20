@@ -57,6 +57,18 @@ describe("workflow v2 docs", () => {
     expect(validateKnownShape(schema, example)).toEqual([]);
   });
 
+  it("locks the canonical closeout snapshot shape in the work item schema and example", () => {
+    const schema = readJson("docs/engineering/workflow-v2/schemas/work-item.schema.json");
+    const example = readJson("docs/engineering/workflow-v2/templates/work-item.example.json");
+
+    expect(schema.properties).toHaveProperty("closeout");
+    expect(example).toHaveProperty("closeout.phase", "collecting");
+    expect(example).toHaveProperty("closeout.docs_projection.roadmap_lifecycle", "planned");
+    expect(example).toHaveProperty("closeout.verification_projection.required_checks", "pending");
+    expect(example).toHaveProperty("closeout.merge_gate_projection.approval_state", "not_started");
+    expect(example).toHaveProperty("closeout.recovery_summary.manual_patch_count", 0);
+  });
+
   it("keeps workflow status example aligned with the schema enums and required fields", () => {
     const schema = readJson("docs/engineering/workflow-v2/schemas/workflow-status.schema.json");
     const example = readJson("docs/engineering/workflow-v2/templates/workflow-status.example.json");
