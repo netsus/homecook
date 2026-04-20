@@ -71,6 +71,52 @@ reset 기간의 기본 규칙은 아래와 같다.
   - `docs/engineering/workflow-v2/omo-supervisor-reset-plan.md`
   - `docs/engineering/workflow-v2/omo-evaluator.md`
 
+### OMO-03-001
+
+- status: `backfill-required`
+- boundary: `mixed`
+- bucket: `D. Runtime / Observability Reset`
+- stage_scope: `slice03 pilot retention / Stage 4~6`
+- symptom: 첫 product OMO-lite pilot slice03은 merged 상태지만, 현재 machine에는 canonical `omo-lite-dispatch` / supervisor artifact가 남아 있지 않고 runtime은 `.artifacts/tmp/claude-cli-provider-dogfood/...`를 마지막 artifact로 가리킨다. `codex_primary.session_id`도 비어 있어 product 결과는 남았지만 replayable 운영 흔적은 부분적으로만 보존됐다.
+- current_recovery: 당시에는 pilot note와 merged status를 surrogate evidence로 사용했고, 별도 incident corpus에는 승격되지 않았다.
+- root_cause_hypothesis: 초기 product pilot이 canonical repo-local artifact surface보다 dogfood / tmp execution surface에 더 의존했고, recovery history를 runtime/registry로 승격하는 규칙이 없었다.
+- evidence_refs:
+  - `.opencode/omo-runtime/03-recipe-like.json`
+  - `docs/workpacks/03-recipe-like/omo-lite-notes.md`
+  - `.workflow-v2/status.json`
+
+### OMO-04-001
+
+- status: `open`
+- boundary: `omo-system`
+- bucket: `C. Supervisor Contract Reset`
+- stage_scope: `Stage 4 implementation / salvage`
+- symptom: slice04는 frontend implementation에서 `stage-result.json` 미작성으로 `human_escalation`에 빠졌고, 이후에는 같은 lane에서 `Worktree is dirty.` escalation이 반복됐다. merged 결과는 남았지만 implementation 종료 조건과 salvage 경로가 deterministic하지 않았다.
+- current_recovery: operator가 Stage 4/6을 다시 실행하고 dirty worktree 상태를 수동으로 해소하면서 salvage artifact를 따라 merge까지 진행했다.
+- root_cause_hypothesis: implementation execute success가 stage-result emission과 clean worktree를 충분히 강제하지 못했고, dirty salvage는 supervisor의 정상 전이보다 operator 판단에 더 많이 의존했다.
+- evidence_refs:
+  - `.artifacts/omo-supervisor/2026-03-27T12-03-26-188Z-04-recipe-save/summary.json`
+  - `.artifacts/omo-supervisor/2026-03-27T13-25-35-515Z-04-recipe-save/summary.json`
+  - `/Users/cwj/Library/Logs/homecook/omo-tick-04-recipe-save.log`
+  - `/Users/cwj/Library/Logs/homecook/omo-tick-04-recipe-save.err.log`
+
+### OMO-05-001
+
+- status: `open`
+- boundary: `omo-system`
+- bucket: `D. Runtime / Observability Reset`
+- stage_scope: `Stage 2 bootstrap -> Stage 6 closeout`
+- symptom: slice05는 product logic와 무관한 supervisor-side escalation을 연속으로 밟았다. `gh auth status failed`, `master is already checked out`, `spawnSync opencode ENOENT`, 반복되는 `Required checks failed`, `Supervisor verify commands failed`, Stage 6 dirty worktree salvage, `claude CLI failed` partial stage failure가 모두 같은 slice 안에서 누적됐다.
+- current_recovery: operator가 Stage 2 reset snapshot을 남기고 recovery patch를 수동 적용한 뒤 여러 번 rerun했고, 최종적으로는 formal GitHub review + human verification 경로를 거쳐 merge했다.
+- root_cause_hypothesis: supervisor가 host auth/base branch/binary availability/verify environment를 지나치게 낙관적으로 가정했고, dirty salvage와 verify failure를 operator 수습에 맡겼다.
+- evidence_refs:
+  - `.artifacts/omo-supervisor/2026-03-31T15-37-48Z-05-planner-week-core-stage-2-reset-snapshot/runtime-before-reset.json`
+  - `.artifacts/omo-supervisor/2026-03-31T15-37-48Z-05-planner-week-core-stage-2-reset-snapshot/recovery.patch`
+  - `.artifacts/omo-supervisor/2026-03-31T17-34-44-530Z-05-planner-week-core/summary.json`
+  - `.artifacts/omo-supervisor/2026-03-31T18-09-39-989Z-05-planner-week-core/summary.json`
+  - `.artifacts/omo-supervisor/2026-03-31T19-05-25-606Z-05-planner-week-core/summary.json`
+  - `/Users/cwj/Library/Logs/homecook/omo-tick-05-planner-week-core.err.log`
+
 ### OMO-06-001
 
 - status: `monitoring`
@@ -213,21 +259,20 @@ reset 기간의 기본 규칙은 아래와 같다.
 - boundary: `mixed`
 - bucket: `A. Governance Simplification`
 - stage_scope: `slice03~slice05 retrospective`
-- symptom: prior slice들에서도 수동 patch와 exceptional recovery가 있었지만 formal incident corpus에는 거의 남지 않았다.
-- current_recovery: merged notes, work item status, PR memory에만 일부 흔적이 남아 있다.
-- root_cause_hypothesis: OMO가 recovery history를 공식 tracked state로 남기지 않았고, failure logging이 slice07에 이르러서야 시작됐다.
+- symptom: 이번 pass로 slice04/05의 supervisor-side recovery는 formal incident로 끌어올렸지만, slice03은 여전히 pilot note/runtime 잔재 위주여서 canonical artifact replay가 불가능하다.
+- current_recovery: slice04/05는 formal incident로 분리했고, slice03은 current machine 기준 missing-artifact 상태를 그대로 registry에 남긴다.
+- root_cause_hypothesis: OMO가 recovery history를 공식 tracked state로 남기지 않았고, 초반 pilot일수록 tmp/dogfood 경로 의존도가 높아 retrospective artifact가 약하다.
 - evidence_refs:
-  - `.workflow-v2/status.json`
-  - `docs/engineering/workflow-v2/omo-supervisor-reset-plan.md`
-  - `docs/workpacks/03-recipe-like/README.md`
-  - `docs/workpacks/04-recipe-save/README.md`
-  - `docs/workpacks/05-planner-week-core/README.md`
+  - `.opencode/omo-runtime/03-recipe-like.json`
+  - `docs/workpacks/03-recipe-like/omo-lite-notes.md`
+  - `.artifacts/omo-supervisor/2026-03-27T12-03-26-188Z-04-recipe-save/summary.json`
+  - `.artifacts/omo-supervisor/2026-03-31T15-37-48Z-05-planner-week-core-stage-2-reset-snapshot/recovery.patch`
 
 ## Backfill Queue
 
 아래는 다음 retrospective pass에서 우선 수집할 항목이다.
 
-1. slice03~slice05 구현 당시 수동 patch / rerun / recovery 이력
+1. slice03 canonical artifact bundle 부재를 `artifact-missing accepted`로 둘지, 별도 off-repo evidence 회수를 시도할지 결정
 2. slice06 Stage 4~6 manual handoff의 실제 blocker와 operator action sequence
 3. OMO promotion `candidate -> ready` cutover를 정당화한 docs-governance PR과 그 당시 반대 신호
 4. no-op commit, force-push, runtime JSON edit처럼 공식 상태 밖에서 수행된 복구 작업 목록
