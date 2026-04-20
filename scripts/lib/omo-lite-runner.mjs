@@ -28,6 +28,7 @@ import {
 import {
   readStageResult,
   resolveStageResultPath,
+  validateCodeStageChecklistCoverage,
   validateStageResult,
 } from "./omo-stage-result.mjs";
 import {
@@ -586,6 +587,9 @@ function buildPrompt({
         : [1, 2, 4].includes(normalizedStage)
           ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route, claimed_scope, changed_files, tests_touched, artifacts_written, checklist_updates, contested_fix_ids, rebuttals"
           : "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, review_scope, reviewed_checklist_ids, required_fix_ids, waived_fix_ids, authority_verdict, reviewed_screen_ids, authority_report_paths, blocker_count, major_count, minor_count, findings (optional — 문제가 있으면 structured findings 배열을 반드시 포함하세요)",
+    normalizedStage === 4 && subphase === "authority_precheck"
+      ? "- `authority_precheck`의 `checklist_updates`는 delta-only여도 되지만, supervisor가 직전 Stage 4 implementation snapshot과 deterministic merge하므로 stage-owned ids를 임의로 새로 합성하지 마세요."
+      : null,
     isReviewStage(normalizedStage, subphase) ? "" : null,
     isReviewStage(normalizedStage, subphase) ? "## Review JSON Hard Rules" : null,
     isReviewStage(normalizedStage, subphase)
@@ -624,14 +628,17 @@ function buildPrompt({
     normalizedStage === 2 && subphase === "doc_gate_repair" && dispatch.reviewContext?.required_doc_fix_ids?.length > 0
       ? "- false positive라고 판단한 finding은 문서 수정 없이 넘기지 말고 `contested_doc_fix_ids`와 `rebuttals[]`로 명시적으로 반박하세요."
       : null,
-    [2, 4].includes(normalizedStage) && dispatch.reviewContext?.required_fix_ids?.length > 0
+    [2, 4].includes(normalizedStage) && subphase !== "authority_precheck" && dispatch.reviewContext?.required_fix_ids?.length > 0
       ? "- 이번 rerun은 리뷰 fix 하나만 수정하더라도 `stage-result.checklist_updates`는 current stage-owned checklist 전체 snapshot을 유지해야 합니다."
       : null,
-    [2, 4].includes(normalizedStage) && dispatch.reviewContext?.required_fix_ids?.length > 0
+    [2, 4].includes(normalizedStage) && subphase !== "authority_precheck" && dispatch.reviewContext?.required_fix_ids?.length > 0
       ? "- 새로 고친 fix id만 단독으로 기록하지 말고, 이전에 이미 checked였던 stage-owned checklist ids도 함께 유지하세요."
       : null,
-    [2, 4].includes(normalizedStage) && dispatch.reviewContext?.required_fix_ids?.length > 0
+    [2, 4].includes(normalizedStage) && subphase !== "authority_precheck" && dispatch.reviewContext?.required_fix_ids?.length > 0
       ? "- `changed_files`는 이번 수정 범위만 반영해도 되지만, `checklist_updates`는 delta가 아니라 full snapshot이어야 합니다."
+      : null,
+    normalizedStage === 4 && subphase === "authority_precheck" && dispatch.reviewContext?.required_fix_ids?.length > 0
+      ? "- 이번 `authority_precheck` rerun의 `checklist_updates`는 이 subphase에서 실제로 바뀐 ids만 delta로 기록해도 됩니다. supervisor가 직전 Stage 4 implementation snapshot을 계승해 full snapshot으로 병합합니다."
       : null,
     ...extraPromptSections,
   ]
@@ -994,7 +1001,7 @@ function normalizeCodeStageChecklistSnapshot({
 
   if (
     ![2, 4].includes(normalizedStage) ||
-    !["implementation", "authority_precheck"].includes(normalizedSubphase) ||
+    normalizedSubphase !== "implementation" ||
     !isChecklistContractActive(checklistContract) ||
     !stageResult ||
     typeof stageResult !== "object" ||
@@ -1043,6 +1050,77 @@ function normalizeCodeStageChecklistSnapshot({
   };
   writeFileSync(stageResultPath, `${JSON.stringify(normalizedStageResult, null, 2)}\n`);
   return normalizedStageResult;
+}
+
+function mergeChecklistSnapshotForAuthorityPrecheck({
+  stage,
+  subphase = null,
+  checklistContract,
+  priorStageResultPath = null,
+  stageResult,
+  stageResultPath,
+}) {
+  if (
+    Number(stage) !== 4 ||
+    (typeof subphase === "string" && subphase.trim().length > 0 ? subphase.trim() : "implementation") !== "authority_precheck" ||
+    !isChecklistContractActive(checklistContract) ||
+    !stageResult ||
+    typeof stageResult !== "object" ||
+    Array.isArray(stageResult)
+  ) {
+    return stageResult;
+  }
+
+  const priorStageResult = readStageResultFromPath(priorStageResultPath);
+  if (!priorStageResult || typeof priorStageResult !== "object" || Array.isArray(priorStageResult)) {
+    return stageResult;
+  }
+
+  const ownedIds = resolveChecklistIds(resolveOwnedChecklistItems(checklistContract, Number(stage)));
+  if (ownedIds.length === 0) {
+    return stageResult;
+  }
+
+  const currentUpdates = Array.isArray(stageResult.checklist_updates) ? stageResult.checklist_updates : [];
+  const priorUpdates = Array.isArray(priorStageResult.checklist_updates) ? priorStageResult.checklist_updates : [];
+  const currentMap = new Map(
+    currentUpdates
+      .filter((entry) => entry && typeof entry === "object" && typeof entry.id === "string")
+      .map((entry) => [entry.id.trim(), entry]),
+  );
+  const priorMap = new Map(
+    priorUpdates
+      .filter((entry) => entry && typeof entry === "object" && typeof entry.id === "string")
+      .map((entry) => [entry.id.trim(), entry]),
+  );
+
+  let changed = false;
+  const mergedUpdates = [...currentUpdates];
+
+  for (const id of ownedIds) {
+    if (currentMap.has(id)) {
+      continue;
+    }
+
+    const priorEntry = priorMap.get(id);
+    if (!priorEntry) {
+      continue;
+    }
+
+    mergedUpdates.push(priorEntry);
+    changed = true;
+  }
+
+  if (!changed) {
+    return stageResult;
+  }
+
+  const mergedStageResult = {
+    ...stageResult,
+    checklist_updates: mergedUpdates,
+  };
+  writeFileSync(stageResultPath, `${JSON.stringify(mergedStageResult, null, 2)}\n`);
+  return mergedStageResult;
 }
 
 function normalizeImplementationStageResultAliases({
@@ -1268,6 +1346,33 @@ function mergeChecklistSnapshotForReviewFix({
   };
   writeFileSync(stageResultPath, `${JSON.stringify(mergedStageResult, null, 2)}\n`);
   return mergedStageResult;
+}
+
+function assertCodeStageChecklistCoverage({
+  checklistContract,
+  stage,
+  subphase = null,
+  stageResult,
+  reviewContext = null,
+}) {
+  if (![2, 4].includes(Number(stage))) {
+    return;
+  }
+
+  const issues = validateCodeStageChecklistCoverage({
+    checklistContract,
+    stage,
+    subphase,
+    stageResult,
+    reviewContext,
+  });
+  if (issues.length === 0) {
+    return;
+  }
+
+  const error = new Error(issues.join(" "));
+  error.code = "stage_checklist_contract";
+  throw error;
 }
 
 function resolveExpectedReviewScope(stage) {
@@ -2853,6 +2958,14 @@ export function runStageWithArtifacts({
         },
       };
       stageResult = readStageResult(targetArtifactDir);
+      stageResult = mergeChecklistSnapshotForAuthorityPrecheck({
+        stage: normalizedStage,
+        subphase: normalizedSubphase,
+        checklistContract,
+        priorStageResultPath,
+        stageResult,
+        stageResultPath,
+      });
       stageResult = mergeChecklistSnapshotForReviewFix({
         stage: normalizedStage,
         subphase: normalizedSubphase,
@@ -2877,6 +2990,13 @@ export function runStageWithArtifacts({
         validateStageResult(normalizedStage, stageResult, {
           strictExtendedContract: Boolean(checklistContract && isChecklistContractActive(checklistContract)),
           subphase: normalizedSubphase,
+        });
+        assertCodeStageChecklistCoverage({
+          checklistContract,
+          stage: normalizedStage,
+          subphase: normalizedSubphase,
+          stageResult,
+          reviewContext,
         });
         validStageResult = true;
       } catch (repairError) {
@@ -2913,6 +3033,14 @@ export function runStageWithArtifacts({
       stageResult,
       stageResultPath,
     });
+    stageResult = mergeChecklistSnapshotForAuthorityPrecheck({
+      stage: normalizedStage,
+      subphase: normalizedSubphase,
+      checklistContract,
+      priorStageResultPath,
+      stageResult,
+      stageResultPath,
+    });
     stageResult = mergeChecklistSnapshotForReviewFix({
       stage: normalizedStage,
       subphase: normalizedSubphase,
@@ -2938,12 +3066,29 @@ export function runStageWithArtifacts({
         strictExtendedContract: Boolean(checklistContract && isChecklistContractActive(checklistContract)),
         subphase: normalizedSubphase,
       });
+      assertCodeStageChecklistCoverage({
+        checklistContract,
+        stage: normalizedStage,
+        subphase: normalizedSubphase,
+        stageResult,
+        reviewContext,
+      });
       validStageResult = true;
     } catch (error) {
       const validationMessage =
         error instanceof Error ? error.message : "stageResult contract violation";
 
-      if (
+      if (error && typeof error === "object" && error.code === "stage_checklist_contract") {
+        result = {
+          ...result,
+          execution: {
+            ...result.execution,
+            mode: "contract-violation",
+            reason: validationMessage,
+          },
+        };
+      } else if (
+
         shouldAttemptStageResultAutoRepair({
           stage: normalizedStage,
           subphase: normalizedSubphase,
@@ -2992,6 +3137,14 @@ export function runStageWithArtifacts({
               });
 
         stageResult = readStageResult(targetArtifactDir);
+        stageResult = mergeChecklistSnapshotForAuthorityPrecheck({
+          stage: normalizedStage,
+          subphase: normalizedSubphase,
+          checklistContract,
+          priorStageResultPath,
+          stageResult,
+          stageResultPath,
+        });
         stageResult = mergeChecklistSnapshotForReviewFix({
           stage: normalizedStage,
           subphase: normalizedSubphase,
@@ -3016,6 +3169,13 @@ export function runStageWithArtifacts({
           validateStageResult(normalizedStage, stageResult, {
             strictExtendedContract: Boolean(checklistContract && isChecklistContractActive(checklistContract)),
             subphase: normalizedSubphase,
+          });
+          assertCodeStageChecklistCoverage({
+            checklistContract,
+            stage: normalizedStage,
+            subphase: normalizedSubphase,
+            stageResult,
+            reviewContext,
           });
           validStageResult = true;
           result = {

@@ -1,6 +1,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import {
+  isChecklistContractActive,
+  resolveChecklistIds,
+  resolveOwnedChecklistItems,
+  resolveUncheckedChecklistItems,
+} from "./omo-checklist-contract.mjs";
+
 function ensureObject(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`${label} must be an object.`);
@@ -202,6 +209,102 @@ function validateReviewScope(value, { strict = false } = {}) {
       "stageResult.review_scope.checklist_ids",
     ),
   };
+}
+
+function normalizeStringArray(values) {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  return [...new Set(values.filter((value) => typeof value === "string" && value.trim().length > 0).map((value) => value.trim()))];
+}
+
+export function validateCodeStageChecklistCoverage({
+  checklistContract,
+  stage,
+  subphase = null,
+  stageResult,
+  reviewContext = null,
+}) {
+  if (!isChecklistContractActive(checklistContract)) {
+    return [];
+  }
+
+  const normalizedStage = Number(stage);
+  if (normalizedStage === 1) {
+    return [];
+  }
+
+  const ownedItems = resolveOwnedChecklistItems(checklistContract, normalizedStage);
+  const ownedIds = resolveChecklistIds(ownedItems);
+  const uncheckedOwnedIds = resolveChecklistIds(resolveUncheckedChecklistItems(ownedItems));
+  const checklistUpdates = Array.isArray(stageResult?.checklist_updates)
+    ? stageResult.checklist_updates
+    : [];
+  const contestedFixIds = normalizeStringArray(stageResult?.contested_fix_ids);
+  const updatedIds = normalizeStringArray(checklistUpdates.map((entry) => entry.id));
+  const currentRequiredFixIds = normalizeStringArray(reviewContext?.required_fix_ids);
+  const normalizedSubphase =
+    typeof subphase === "string" && subphase.trim().length > 0 ? subphase.trim() : "implementation";
+  const issues = [];
+
+  if (ownedIds.length === 0) {
+    issues.push(`Checklist contract does not define any Stage ${normalizedStage} owned checklist items.`);
+  }
+
+  const unresolvedUncheckedIds =
+    currentRequiredFixIds.length > 0
+      ? uncheckedOwnedIds.filter((id) => !contestedFixIds.includes(id) && !updatedIds.includes(id))
+      : uncheckedOwnedIds.filter((id) => !updatedIds.includes(id));
+  if (unresolvedUncheckedIds.length > 0) {
+    issues.push(
+      `Stage ${normalizedStage} owned checklist items remain unchecked: ${unresolvedUncheckedIds.join(", ")}.`,
+    );
+  }
+
+  const invalidStatuses = checklistUpdates
+    .filter((entry) => entry?.status !== "checked")
+    .map((entry) => entry?.id)
+    .filter(Boolean);
+  if (invalidStatuses.length > 0) {
+    issues.push(`Stage ${normalizedStage} checklist_updates must mark items as checked: ${invalidStatuses.join(", ")}.`);
+  }
+
+  const foreignIds = updatedIds.filter((id) => !ownedIds.includes(id));
+  if (foreignIds.length > 0) {
+    issues.push(`Stage ${normalizedStage} cannot update checklist ids it does not own: ${foreignIds.join(", ")}.`);
+  }
+
+  const missingIds = ownedIds.filter(
+    (id) => !updatedIds.includes(id) && !contestedFixIds.includes(id),
+  );
+  if (missingIds.length > 0) {
+    if (normalizedStage === 4 && normalizedSubphase === "authority_precheck") {
+      issues.push(
+        `Stage 4 authority_precheck must inherit the Stage 4 implementation checklist snapshot for: ${missingIds.join(", ")}.`,
+      );
+    } else {
+      issues.push(`Stage ${normalizedStage} stage-result is missing checklist updates for: ${missingIds.join(", ")}.`);
+    }
+  }
+
+  const invalidContestedIds = contestedFixIds.filter((id) => !currentRequiredFixIds.includes(id));
+  if (invalidContestedIds.length > 0) {
+    issues.push(
+      `Stage ${normalizedStage} contested_fix_ids must be a subset of current review required_fix_ids: ${invalidContestedIds.join(", ")}.`,
+    );
+  }
+
+  const unresolvedReviewFixIds = currentRequiredFixIds.filter(
+    (id) => !updatedIds.includes(id) && !contestedFixIds.includes(id),
+  );
+  if (unresolvedReviewFixIds.length > 0) {
+    issues.push(
+      `Stage ${normalizedStage} must either fix or contest all required review fix ids: ${unresolvedReviewFixIds.join(", ")}.`,
+    );
+  }
+
+  return normalizeStringArray(issues);
 }
 
 export function resolveStageResultPath(artifactDir) {

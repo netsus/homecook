@@ -46,7 +46,7 @@ import {
   writeRuntimeState,
   isRetryDue,
 } from "./omo-session-runtime.mjs";
-import { validateStageResult } from "./omo-stage-result.mjs";
+import { validateCodeStageChecklistCoverage, validateStageResult } from "./omo-stage-result.mjs";
 import { readAutomationSpec, resolveAutomationSpecPath, resolveAutonomousSlicePolicy, resolveStageAutomationConfig } from "./omo-automation-spec.mjs";
 import { applyDocGateWaivedFindings, evaluateDocGate, writeDocGateResult } from "./omo-doc-gate.mjs";
 import { evaluateWorkItemStage } from "./omo-evaluator.mjs";
@@ -956,79 +956,17 @@ function validateStage1Outputs({
 function validateCodeStageChecklistContract({
   checklistContract,
   stage,
+  subphase = null,
   stageResult,
   reviewEntry = null,
 }) {
-  if (!isChecklistContractActive(checklistContract)) {
-    return [];
-  }
-
-  if (stage === 1) {
-    return [];
-  }
-
-  const ownedItems = resolveOwnedChecklistItems(checklistContract, stage);
-  const ownedIds = resolveChecklistIds(ownedItems);
-  const uncheckedOwnedIds = resolveChecklistIds(resolveUncheckedChecklistItems(ownedItems));
-  const checklistUpdates = Array.isArray(stageResult?.checklist_updates)
-    ? stageResult.checklist_updates
-    : [];
-  const contestedFixIds = normalizeStringArray(stageResult?.contested_fix_ids);
-  const updatedIds = normalizeStringArray(checklistUpdates.map((entry) => entry.id));
-  const currentRequiredFixIds = normalizeStringArray(reviewEntry?.required_fix_ids);
-  const issues = [];
-
-  if (ownedIds.length === 0) {
-    issues.push(`Checklist contract does not define any Stage ${stage} owned checklist items.`);
-  }
-
-  const unresolvedUncheckedIds =
-    currentRequiredFixIds.length > 0
-      ? uncheckedOwnedIds.filter((id) => !contestedFixIds.includes(id) && !updatedIds.includes(id))
-      : uncheckedOwnedIds.filter((id) => !updatedIds.includes(id));
-  if (unresolvedUncheckedIds.length > 0) {
-    issues.push(
-      `Stage ${stage} owned checklist items remain unchecked: ${unresolvedUncheckedIds.join(", ")}.`,
-    );
-  }
-
-  const invalidStatuses = checklistUpdates
-    .filter((entry) => entry?.status !== "checked")
-    .map((entry) => entry?.id)
-    .filter(Boolean);
-  if (invalidStatuses.length > 0) {
-    issues.push(`Stage ${stage} checklist_updates must mark items as checked: ${invalidStatuses.join(", ")}.`);
-  }
-
-  const foreignIds = updatedIds.filter((id) => !ownedIds.includes(id));
-  if (foreignIds.length > 0) {
-    issues.push(`Stage ${stage} cannot update checklist ids it does not own: ${foreignIds.join(", ")}.`);
-  }
-
-  const missingIds = ownedIds.filter(
-    (id) => !updatedIds.includes(id) && !contestedFixIds.includes(id),
-  );
-  if (missingIds.length > 0) {
-    issues.push(`Stage ${stage} stage-result is missing checklist updates for: ${missingIds.join(", ")}.`);
-  }
-
-  const invalidContestedIds = contestedFixIds.filter((id) => !currentRequiredFixIds.includes(id));
-  if (invalidContestedIds.length > 0) {
-    issues.push(
-      `Stage ${stage} contested_fix_ids must be a subset of current review required_fix_ids: ${invalidContestedIds.join(", ")}.`,
-    );
-  }
-
-  const unresolvedReviewFixIds = currentRequiredFixIds.filter(
-    (id) => !updatedIds.includes(id) && !contestedFixIds.includes(id),
-  );
-  if (unresolvedReviewFixIds.length > 0) {
-    issues.push(
-      `Stage ${stage} must either fix or contest all required review fix ids: ${unresolvedReviewFixIds.join(", ")}.`,
-    );
-  }
-
-  return normalizeStringArray(issues);
+  return validateCodeStageChecklistCoverage({
+    checklistContract,
+    stage,
+    subphase,
+    stageResult,
+    reviewContext: reviewEntry,
+  });
 }
 
 function validateReviewStageChecklistContract({
@@ -4542,6 +4480,7 @@ function finalizeCodeStage({
   const checklistIssues = validateCodeStageChecklistContract({
     checklistContract,
     stage,
+    subphase: nextState.execution?.subphase ?? null,
     stageResult,
     reviewEntry,
   });
@@ -5295,6 +5234,13 @@ function handleAuthorityPrecheckStage({
     nextState.active_stage !== stage ||
     nextState.execution?.subphase !== "authority_precheck"
   ) {
+    const priorStageResultPath =
+      typeof nextState.last_artifact_dir === "string" && nextState.last_artifact_dir.trim().length > 0
+        ? (() => {
+            const candidate = resolve(nextState.last_artifact_dir.trim(), "stage-result.json");
+            return existsSync(candidate) ? candidate : null;
+          })()
+        : null;
     const runResult = stageRunner({
       rootDir,
       workItemId,
@@ -5302,6 +5248,7 @@ function handleAuthorityPrecheckStage({
       stage,
       subphase: "authority_precheck",
       executionDir: state.workspace?.path,
+      priorStageResultPath,
     });
     const deferredOutcome = handleDeferredStageExecution({
       rootDir,
@@ -5369,6 +5316,7 @@ function handleAuthorityPrecheckStage({
   const checklistIssues = validateCodeStageChecklistContract({
     checklistContract,
     stage,
+    subphase: "authority_precheck",
     stageResult,
     reviewEntry,
   });
@@ -6787,7 +6735,7 @@ function handleReviewStage({
   const phase = resolveStatePhase(nextState);
 
   if ((!isPendingReviewPhase(phase) && phase !== "merge_pending") || nextState.active_stage !== stage) {
-    const priorStageResultPath = [3, 5].includes(stage)
+    const priorStageResultPath = [3, 5].includes(stage) || (stage === 4 && subphase === "authority_precheck")
       ? (() => {
           const dir = nextState.last_artifact_dir;
           if (typeof dir !== "string" || dir.trim().length === 0) return null;

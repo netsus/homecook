@@ -2258,10 +2258,12 @@ describe("OMO-lite stage runner", () => {
     expect(Array.isArray(stageResult.claimed_scope.states)).toBe(true);
   });
 
-  it("fills the Stage 4 authority_precheck checklist snapshot when canonical output leaves checklist_updates empty", () => {
+  it("merges the Stage 4 authority_precheck checklist snapshot from the prior implementation artifact", () => {
     const rootDir = createRunnerFixture();
     seedStrictSlice(rootDir, "06-recipe-to-planner");
     const workspacePath = join(rootDir, ".worktrees", "06-recipe-to-planner");
+    const priorArtifactDir = join(rootDir, ".artifacts", "prior-stage4-implementation");
+    const priorStageResultPath = join(priorArtifactDir, "stage-result.json");
     mkdirSync(join(workspacePath, "docs", "workpacks", "06-recipe-to-planner"), { recursive: true });
     writeFileSync(
       join(workspacePath, "docs", "workpacks", "06-recipe-to-planner", "README.md"),
@@ -2280,6 +2282,52 @@ describe("OMO-lite stage runner", () => {
     writeFileSync(join(workspacePath, "ui", "designs", "authority", "RECIPE_DETAIL-authority.md"), "authority\n");
     writeFileSync(join(workspacePath, "ui", "designs", "authority", "PLANNER_WEEK-authority.md"), "authority\n");
     writeFileSync(join(workspacePath, "ui", "designs", "evidence", "06-recipe-to-planner", "RECIPE_DETAIL-planner-add-mobile.png"), "png\n");
+    mkdirSync(priorArtifactDir, { recursive: true });
+    writeFileSync(
+      priorStageResultPath,
+      `${JSON.stringify(
+        {
+          result: "done",
+          summary_markdown: "frontend implementation complete",
+          commit: {
+            subject: "feat: frontend implementation",
+            body_markdown: "body",
+          },
+          pr: {
+            title: "feat: frontend implementation",
+            body_markdown: "## Summary\n- frontend",
+          },
+          checks_run: [],
+          next_route: "open_pr",
+          claimed_scope: {
+            files: ["components/recipe/planner-add-sheet.tsx"],
+            endpoints: [],
+            routes: ["/planner"],
+            states: ["loading"],
+            invariants: [],
+          },
+          changed_files: ["components/recipe/planner-add-sheet.tsx"],
+          tests_touched: ["tests/recipe-add-to-planner.test.tsx"],
+          artifacts_written: [],
+          checklist_updates: [
+            {
+              id: "delivery-ui-connection",
+              status: "checked",
+              evidence_refs: ["pnpm verify:frontend"],
+            },
+            {
+              id: "accept-loading",
+              status: "checked",
+              evidence_refs: ["tests/recipe-add-to-planner.test.tsx"],
+            },
+          ],
+          contested_fix_ids: [],
+          rebuttals: [],
+        },
+        null,
+        2,
+      )}\n`,
+    );
 
     const { binPath, argsPath } = createFakeOpencodeBin(rootDir, {
       sessionId: "ses_stage4_authority_precheck",
@@ -2337,6 +2385,7 @@ describe("OMO-lite stage runner", () => {
         FAKE_OPENCODE_ARGS_PATH: argsPath,
       },
       now: "2026-04-15T04:19:25+09:00",
+      priorStageResultPath,
     });
 
     const stageResult = JSON.parse(readFileSync(join(result.artifactDir, "stage-result.json"), "utf8")) as {
@@ -2348,6 +2397,94 @@ describe("OMO-lite stage runner", () => {
     expect(stageResult.checklist_updates.map((entry) => entry.id)).toContain("delivery-ui-connection");
     expect(stageResult.checklist_updates.map((entry) => entry.id)).toContain("accept-loading");
     expect(stageResult.checklist_updates.every((entry) => ["checked", "unchecked"].includes(entry.status))).toBe(true);
+  });
+
+  it("fails closed when authority_precheck cannot inherit a missing Stage 4 implementation snapshot", () => {
+    const rootDir = createRunnerFixture();
+    seedStrictSlice(rootDir, "06-recipe-to-planner");
+    const workspacePath = join(rootDir, ".worktrees", "06-recipe-to-planner");
+    mkdirSync(join(workspacePath, "docs", "workpacks", "06-recipe-to-planner"), { recursive: true });
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "06-recipe-to-planner", "README.md"),
+      readFileSync(join(rootDir, "docs", "workpacks", "06-recipe-to-planner", "README.md"), "utf8"),
+    );
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "06-recipe-to-planner", "acceptance.md"),
+      readFileSync(join(rootDir, "docs", "workpacks", "06-recipe-to-planner", "acceptance.md"), "utf8"),
+    );
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "06-recipe-to-planner", "automation-spec.json"),
+      readFileSync(join(rootDir, "docs", "workpacks", "06-recipe-to-planner", "automation-spec.json"), "utf8"),
+    );
+    mkdirSync(join(workspacePath, "ui", "designs", "authority"), { recursive: true });
+    mkdirSync(join(workspacePath, "ui", "designs", "evidence", "06-recipe-to-planner"), { recursive: true });
+    writeFileSync(join(workspacePath, "ui", "designs", "authority", "RECIPE_DETAIL-authority.md"), "authority\n");
+    writeFileSync(join(workspacePath, "ui", "designs", "authority", "PLANNER_WEEK-authority.md"), "authority\n");
+    writeFileSync(join(workspacePath, "ui", "designs", "evidence", "06-recipe-to-planner", "RECIPE_DETAIL-planner-add-mobile.png"), "png\n");
+
+    const { binPath, argsPath } = createFakeOpencodeBin(rootDir, {
+      sessionId: "ses_stage4_authority_precheck_missing_prior",
+      stageResult: {
+        result: "done",
+        summary_markdown: "authority precheck complete",
+        commit: {
+          subject: "chore(authority): capture evidence",
+          body_markdown: "authority body",
+        },
+        pr: {
+          title: "feat(slice06): authority precheck",
+          body_markdown: "## Summary\n- authority",
+        },
+        checks_run: [],
+        next_route: "open_pr",
+        claimed_scope: {
+          files: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+          endpoints: [],
+          routes: [],
+          states: [],
+          invariants: [],
+        },
+        changed_files: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        tests_touched: [],
+        artifacts_written: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        checklist_updates: [],
+        contested_fix_ids: [],
+        rebuttals: [],
+        authority_verdict: "pass",
+        reviewed_screen_ids: ["RECIPE_DETAIL", "PLANNER_WEEK"],
+        authority_report_paths: [
+          "ui/designs/authority/RECIPE_DETAIL-authority.md",
+          "ui/designs/authority/PLANNER_WEEK-authority.md",
+        ],
+        evidence_artifact_refs: [
+          "ui/designs/evidence/06-recipe-to-planner/RECIPE_DETAIL-planner-add-mobile.png",
+        ],
+        blocker_count: 0,
+        major_count: 0,
+        minor_count: 0,
+      },
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "06-recipe-to-planner",
+      stage: 4,
+      subphase: "authority_precheck",
+      workItemId: "06-recipe-to-planner",
+      executionDir: workspacePath,
+      mode: "execute",
+      opencodeBin: binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: argsPath,
+      },
+      now: "2026-04-15T04:19:25+09:00",
+    });
+
+    expect(result.execution).toMatchObject({
+      mode: "contract-violation",
+      sessionId: "ses_stage4_authority_precheck_missing_prior",
+    });
+    expect(result.execution.reason).toContain("authority_precheck must inherit the Stage 4 implementation checklist snapshot");
   });
 
   it("falls back to the standard opencode install path when PATH does not expose the binary", () => {
