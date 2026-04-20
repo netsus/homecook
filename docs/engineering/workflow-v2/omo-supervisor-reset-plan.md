@@ -298,6 +298,10 @@ reset 이후 supervisor kernel은 아래만 확실하게 책임진다.
 - runtime anomaly / manual patch / recovery count finding 추가
 - promotion readiness 판단 기준을 incident-aware로 수정
 
+산출물:
+
+- `omo-auditor-reset-requirements.md`
+
 완료 기준:
 
 - slice07 급의 failure family가 findings 0으로 묻히지 않는다.
