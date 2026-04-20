@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+import { validateStatusItemAgainstCanonicalCloseout } from "./omo-closeout-state.mjs";
 import { validateSourceOfTruthSync } from "./validate-source-of-truth-sync.mjs";
 
 function readJson(filePath) {
@@ -230,6 +231,14 @@ export function validateWorkflowV2TrackedState({ rootDir = process.cwd() } = {})
         message: `Required checks mismatch with work item '${statusItem.id}'.`,
       });
     }
+
+    crossErrors.push(
+      ...validateStatusItemAgainstCanonicalCloseout({
+        statusItem,
+        closeout: workItem.closeout,
+        pathPrefix: `.workflow-v2/status.json.items.${statusItem.id}`,
+      }),
+    );
   }
 
   for (const workItem of workItems) {
