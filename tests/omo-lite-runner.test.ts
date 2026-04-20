@@ -192,6 +192,88 @@ function createFakeClaudeBin(
   };
 }
 
+function createCompactionResumeClaudeBin(
+  rootDir: string,
+  homeDir: string,
+  options?: {
+    priorSessionId?: string;
+    resumedSessionId?: string;
+    stageResult?: Record<string, unknown> | null;
+  },
+) {
+  fakeClaudeCounter += 1;
+  const suffix = String(fakeClaudeCounter);
+  const binPath = join(rootDir, `fake-claude-compaction-${suffix}.sh`);
+  const argsPath = join(rootDir, `fake-claude-compaction-${suffix}.args.log`);
+  const stdinPath = join(rootDir, `fake-claude-compaction-${suffix}.stdin.log`);
+  const priorSessionId = options?.priorSessionId ?? "ses_prior_compaction";
+  const resumedSessionId = options?.resumedSessionId ?? `ses_compacted_${suffix}`;
+  const stageResult =
+    options?.stageResult === undefined
+      ? {
+          result: "done",
+          summary_markdown: "Compacted resume complete",
+          pr: {
+            title: "docs: compacted resume",
+            body_markdown: "## Summary\n- compacted",
+          },
+          checks_run: [],
+          next_route: "open_pr",
+          decision: "approve",
+          body_markdown: "## Review\n- approved",
+          route_back_stage: null,
+          approved_head_sha: "abc123",
+        }
+      : options.stageResult;
+
+  writeFileSync(
+    binPath,
+    [
+      "#!/bin/sh",
+      "printf '%s\\n' \"$@\" >> \"$FAKE_CLAUDE_ARGS_PATH\"",
+      "printf -- '---stdin---\\n' >> \"$FAKE_CLAUDE_STDIN_PATH\"",
+      "cat >> \"$FAKE_CLAUDE_STDIN_PATH\"",
+      `if printf '%s\\n' \"$@\" | grep -q -- '--resume'; then`,
+      `  if printf '%s\\n' \"$@\" | grep -q -- '${priorSessionId}'; then`,
+      "    printf '%s\\n' 'session not found' >&2",
+      "    exit 9",
+      "  fi",
+      "fi",
+      [
+        "cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
+        JSON.stringify(stageResult, null, 2),
+        "EOF",
+      ].join("\n"),
+      "cat <<'EOF'",
+      JSON.stringify({
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        session_id: resumedSessionId,
+        total_cost_usd: 0,
+        usage: {
+          input_tokens: 11,
+          output_tokens: 19,
+        },
+      }),
+      "EOF",
+      `mkdir -p "$HOME/.claude/projects/-Users-test-homecook"`,
+      `cat <<'EOF' > "$HOME/.claude/projects/-Users-test-homecook/${resumedSessionId}.jsonl"`,
+      "{\"type\":\"user\",\"content\":\"compacted\"}",
+      "EOF",
+      "exit 0",
+    ].join("\n"),
+  );
+  chmodSync(binPath, 0o755);
+  mkdirSync(join(homeDir, ".claude"), { recursive: true });
+
+  return {
+    binPath,
+    argsPath,
+    stdinPath,
+  };
+}
+
 function createSchemaRepairingFakeClaudeBin(
   rootDir: string,
   homeDir: string,
@@ -1544,6 +1626,146 @@ describe("OMO-lite stage runner", () => {
     expect(metadata.sessionBinding).toMatchObject({
       resumeMode: "continue",
       sessionId: "ses_claude_stage1",
+    });
+  });
+
+  it("falls back to a compacted fresh session when same-stage resume loses the stored Claude session", () => {
+    const rootDir = createRunnerFixture();
+    const homeDir = createClaudeHomeDir();
+    const resumedStage3 = createCompactionResumeClaudeBin(rootDir, homeDir, {
+      priorSessionId: "ses_stage3_missing",
+      resumedSessionId: "ses_stage3_compacted",
+    });
+    const priorArtifactDir = join(
+      rootDir,
+      ".artifacts",
+      "omo-lite-dispatch",
+      "2026-03-26T21-10-00+09-00-03-recipe-like-stage-3",
+    );
+    mkdirSync(priorArtifactDir, { recursive: true });
+    mkdirSync(join(rootDir, ".opencode", "omo-runtime"), { recursive: true });
+    writeFileSync(join(priorArtifactDir, "prompt.md"), "# previous prompt\nresume stage 3\n");
+    writeFileSync(join(priorArtifactDir, "claude.stdout.log"), "{\"type\":\"result\"}\n");
+    writeFileSync(join(priorArtifactDir, "claude.stderr.log"), "session not found\n");
+
+    writeFileSync(
+      join(rootDir, ".opencode", "omo-runtime", "03-recipe-like.json"),
+      JSON.stringify(
+        {
+          slice: "03-recipe-like",
+          active_stage: 3,
+          current_stage: 3,
+          last_completed_stage: 1,
+          blocked_stage: 3,
+          last_artifact_dir: priorArtifactDir,
+          phase: "escalated",
+          next_action: "noop",
+          retry: {
+            reason: "session_unavailable",
+            attempt_count: 1,
+          },
+          execution: {
+            provider: "claude-cli",
+            session_role: "claude_primary",
+            session_id: "ses_stage3_missing",
+            artifact_dir: priorArtifactDir,
+            stage_result_path: join(priorArtifactDir, "stage-result.json"),
+            started_at: "2026-03-26T12:10:00.000Z",
+            finished_at: "2026-03-26T12:15:00.000Z",
+            subphase: "implementation",
+          },
+          sessions: {
+            claude_primary: {
+              session_id: "ses_stage3_missing",
+              provider: "claude-cli",
+              model: "sonnet",
+              effort: "high",
+              generation: 1,
+              run_count: 2,
+              cumulative_usage: {
+                input_tokens: 20,
+                output_tokens: 40,
+                total_tokens: 60,
+              },
+              cumulative_cost_usd: 0,
+            },
+            codex_primary: {
+              session_id: null,
+              provider: null,
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "03-recipe-like",
+      stage: 3,
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      syncStatus: false,
+      claudeBin: resumedStage3.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: resumedStage3.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: resumedStage3.stdinPath,
+      },
+      now: "2026-03-26T21:18:00+09:00",
+    });
+
+    const args = readFileSync(resumedStage3.argsPath, "utf8");
+    const stdin = readFileSync(resumedStage3.stdinPath, "utf8");
+    const runtime = JSON.parse(
+      readFileSync(join(rootDir, ".opencode", "omo-runtime", "03-recipe-like.json"), "utf8"),
+    ) as {
+      sessions: {
+        claude_primary: {
+          session_id: string;
+          generation: number;
+          run_count: number;
+        };
+      };
+    };
+    const metadata = JSON.parse(
+      readFileSync(join(result.artifactDir, "run-metadata.json"), "utf8"),
+    ) as {
+      sessionBinding: { resumeMode: string; sessionId: string | null };
+      sessionCompactionResume: {
+        previousSessionId: string;
+        priorArtifactDir: string;
+        priorPromptPath: string | null;
+      } | null;
+    };
+
+    expect(result.execution).toMatchObject({
+      mode: "execute",
+      executed: true,
+      sessionId: "ses_stage3_compacted",
+    });
+    expect(args).toContain("--resume");
+    expect(args).toContain("ses_stage3_missing");
+    expect(args).not.toContain("--resume\nses_stage3_compacted");
+    expect(stdin).toContain("## Session Resume Compaction");
+    expect(stdin).toContain("ses_stage3_missing");
+    expect(stdin).toContain(priorArtifactDir);
+    expect(stdin).toContain(join(priorArtifactDir, "prompt.md"));
+    expect(metadata.sessionBinding).toMatchObject({
+      resumeMode: "compacted_resume",
+      sessionId: "ses_stage3_compacted",
+    });
+    expect(metadata.sessionCompactionResume).toMatchObject({
+      previousSessionId: "ses_stage3_missing",
+      priorArtifactDir,
+      priorPromptPath: join(priorArtifactDir, "prompt.md"),
+    });
+    expect(runtime.sessions.claude_primary).toMatchObject({
+      session_id: "ses_stage3_compacted",
+      generation: 2,
+      run_count: 1,
     });
   });
 
