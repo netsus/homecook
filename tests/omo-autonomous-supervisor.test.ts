@@ -679,6 +679,27 @@ function seedWorktreeBookkeeping(
   );
 }
 
+function seedQaArtifactBundle(
+  rootDir: string,
+  workItemId: string,
+  bundleName = "stage4-ready-for-review",
+) {
+  const bundleDir = join(rootDir, ".artifacts", "qa", workItemId, bundleName);
+  mkdirSync(bundleDir, { recursive: true });
+  writeFileSync(
+    join(bundleDir, "exploratory-checklist.json"),
+    `${JSON.stringify({ checklist: true }, null, 2)}\n`,
+  );
+  writeFileSync(
+    join(bundleDir, "exploratory-report.json"),
+    `${JSON.stringify({ verdict: "pass" }, null, 2)}\n`,
+  );
+  writeFileSync(
+    join(bundleDir, "eval-result.json"),
+    `${JSON.stringify({ verdict: "pass" }, null, 2)}\n`,
+  );
+}
+
 function seedAuthorityDocGateFixture(workspacePath: string, workItemId: string) {
   seedWorktreeBookkeeping(workspacePath, workItemId, {
     roadmapStatus: "docs",
@@ -11306,6 +11327,235 @@ describe("OMO autonomous supervisor", () => {
     });
     expect(runtime.recovery).toBeNull();
     expect(runtime.prs.docs?.head_sha).toBe("new-head");
+  });
+
+  it("replays PR body projection on failed checks and returns to ci wait without a no-op commit", () => {
+    const rootDir = createFixture();
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    const artifactDir = join(rootDir, ".artifacts", "stage4-policy-repair");
+    const stageResultPath = join(artifactDir, "stage-result.json");
+    const editedPullRequests: Array<{ prRef: string; title: string; body: string; workItemId?: string }> = [];
+
+    createGitWorkspace(workspacePath, "feature/fe-03-recipe-like");
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "in-progress",
+      designStatus: "pending-review",
+    });
+    seedQaArtifactBundle(rootDir, "03-recipe-like");
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      stageResultPath,
+      `${JSON.stringify(
+        buildCodeStageResult({
+          summary: "Frontend implementation completed.",
+          subject: "feat: frontend implementation",
+          title: "feat: frontend implementation",
+          checklistUpdates: [CHECKLIST_IDS.frontendDelivery, CHECKLIST_IDS.frontendAcceptance],
+          changedFiles: ["app/example/page.tsx"],
+        }),
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        active_stage: 4,
+        current_stage: 4,
+        phase: "escalated",
+        next_action: "noop",
+        workspace: {
+          path: workspacePath,
+          branch_role: "frontend",
+        },
+        last_artifact_dir: artifactDir,
+        execution: {
+          provider: "opencode",
+          session_role: "codex_primary",
+          session_id: "ses_frontend_recovery",
+          artifact_dir: artifactDir,
+          stage_result_path: stageResultPath,
+          started_at: "2026-04-20T15:00:00+09:00",
+          finished_at: "2026-04-20T15:02:00+09:00",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: "same-head",
+          pr_role: "frontend",
+        },
+        prs: {
+          docs: null,
+          backend: null,
+          frontend: {
+            number: 41,
+            url: "https://github.com/netsus/homecook/pull/41",
+            draft: true,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: "same-head",
+          },
+          closeout: null,
+        },
+        wait: {
+          kind: "human_escalation",
+          reason: "PR checks failed.",
+          pr_role: "frontend",
+          stage: 4,
+          head_sha: "same-head",
+          updated_at: "2026-04-20T15:03:00+09:00",
+        },
+        recovery: {
+          kind: "partial_stage_failure",
+          stage: 4,
+          reason: "PR checks failed.",
+          artifact_dir: artifactDir,
+          existing_pr: {
+            role: "frontend",
+            number: 41,
+            url: "https://github.com/netsus/homecook/pull/41",
+            draft: true,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: "same-head",
+          },
+          session_role: "codex_primary",
+          session_id: "ses_frontend_recovery",
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-04-20T15:05:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            return { branch: "feature/fe-03-recipe-like" };
+          },
+          pushBranch() {
+            throw new Error("not expected");
+          },
+          syncBaseBranch() {
+            throw new Error("not expected");
+          },
+          getHeadSha() {
+            return "same-head";
+          },
+          getCurrentBranch() {
+            return "feature/fe-03-recipe-like";
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          editPullRequest(args: { prRef: string; title: string; body: string; workItemId?: string }) {
+            editedPullRequests.push(args);
+          },
+          getRequiredChecks() {
+            return { bucket: "fail", checks: [{ name: "policy", bucket: "fail", state: "FAILURE" }] };
+          },
+          getPullRequestSummary() {
+            return {
+              state: "OPEN",
+              mergedAt: null,
+              mergeStateStatus: "CLEAN",
+              reviewDecision: null,
+              headRefOid: "same-head",
+              headRefName: "feature/fe-03-recipe-like",
+              isDraft: true,
+            };
+          },
+          getPullRequestBody() {
+            return [
+              "## Summary",
+              "- stale handwritten summary",
+              "",
+              "## Workpack / Slice",
+              "- workflow v2 work item: `.workflow-v2/work-items/03-recipe-like.json`",
+            ].join("\n");
+          },
+          markReady() {
+            throw new Error("not expected");
+          },
+          reviewPullRequest() {
+            throw new Error("not expected");
+          },
+          commentPullRequest() {
+            throw new Error("not expected");
+          },
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {
+            throw new Error("not expected");
+          },
+        },
+      },
+    );
+
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      slice: "03-recipe-like",
+    }).state as {
+      wait: { kind: string; stage: number | null; pr_role: string | null; head_sha: string | null };
+      recovery: unknown;
+    };
+    const trackedStatus = readTrackedStatusItem(rootDir, "03-recipe-like") as {
+      verification_status?: string;
+      notes?: string;
+    } | null;
+
+    expect(editedPullRequests).toHaveLength(1);
+    expect(editedPullRequests[0]).toMatchObject({
+      prRef: "https://github.com/netsus/homecook/pull/41",
+      title: "feat: frontend implementation",
+      body: "fixed",
+      workItemId: "03-recipe-like",
+    });
+    expect(result.wait).toMatchObject({
+      kind: "ci",
+      stage: 4,
+      pr_role: "frontend",
+      head_sha: "same-head",
+    });
+    expect(runtime.wait).toMatchObject({
+      kind: "ci",
+      stage: 4,
+      pr_role: "frontend",
+      head_sha: "same-head",
+    });
+    expect(runtime.recovery).toBeNull();
+    expect(trackedStatus?.verification_status).toBe("pending");
+    expect(trackedStatus?.notes ?? "").toContain("pr_body_projection=replayed");
+    expect(trackedStatus?.notes ?? "").toContain("policy_rerun=edited_event");
   });
 
   it("auto-cleans opencode migration dirtiness without human escalation", () => {
