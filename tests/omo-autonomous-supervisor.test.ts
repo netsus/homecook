@@ -8697,6 +8697,151 @@ describe("OMO autonomous supervisor", () => {
     );
   });
 
+  it("tick resumes a recoverable pr-check failure escalation when persisted stage results still exist", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    const artifactDir = join(rootDir, ".artifacts", "tick-pr-check-failure-resume");
+    const stageResultPath = join(artifactDir, "stage-result.json");
+    let resumed = false;
+
+    createGitWorkspace(workspacePath, `docs/${workItemId}`);
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "docs",
+      designStatus: "temporary",
+    });
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", workItemId, "automation-spec.json"),
+      JSON.stringify(
+        {
+          slice_id: workItemId,
+          execution_mode: "autonomous",
+        },
+        null,
+        2,
+      ),
+    );
+    upsertWorktreeStatusItem(workspacePath, workItemId, {
+      lifecycle: "ready_for_review",
+      approval_state: "claude_approved",
+      verification_status: "pending",
+    });
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      stageResultPath,
+      `${JSON.stringify(
+        buildCodeStageResult({
+          summary: "Stage 1 docs complete",
+          subject: "docs: complete stage1 workpack",
+          title: "docs: complete stage1 workpack",
+          checklistUpdates: [],
+          changedFiles: [
+            `docs/workpacks/${workItemId}/README.md`,
+            `docs/workpacks/${workItemId}/acceptance.md`,
+          ],
+        }),
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 1,
+        current_stage: 1,
+        phase: "escalated",
+        next_action: "noop",
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        last_artifact_dir: artifactDir,
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: "ses_docs_recovery",
+          artifact_dir: artifactDir,
+          stage_result_path: stageResultPath,
+          started_at: "2026-04-20T13:00:00+09:00",
+          finished_at: "2026-04-20T13:01:00+09:00",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: "docs123",
+          pr_role: "docs",
+        },
+        prs: {
+          docs: {
+            number: 41,
+            url: "https://github.com/netsus/homecook/pull/41",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+          },
+          backend: null,
+          frontend: null,
+          closeout: null,
+        },
+        wait: {
+          kind: "human_escalation",
+          reason: "PR checks failed.",
+          updated_at: "2026-04-20T13:02:00+09:00",
+        },
+        recovery: {
+          kind: "partial_stage_failure",
+          stage: 1,
+          reason: "PR checks failed.",
+          artifact_dir: artifactDir,
+          existing_pr: {
+            role: "docs",
+            number: 41,
+            url: "https://github.com/netsus/homecook/pull/41",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+          },
+          session_role: "claude_primary",
+          session_id: "ses_docs_recovery",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-20T13:05:00.000Z",
+      },
+      {
+        supervise(args: { workItemId: string }) {
+          resumed = true;
+          return {
+            workItemId: args.workItemId,
+            slice: workItemId,
+            wait: { kind: "ci", stage: 1, pr_role: "docs" },
+            runtime: readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+            artifactDir: join(rootDir, ".artifacts", "tick-pr-check-failure-supervise"),
+            transitions: [],
+          };
+        },
+      },
+    );
+
+    expect(resumed).toBe(true);
+    expect(results[0]).toEqual(
+      expect.objectContaining({
+        workItemId,
+      }),
+    );
+  });
+
   it("tick resumes a pending_recheck doc gate escalation after parser-compatible docs changes", () => {
     const rootDir = createFixture();
     let resumed = false;
@@ -10940,6 +11085,227 @@ describe("OMO autonomous supervisor", () => {
       lifecycle: "in_progress",
     });
     expect(statusItem?.notes).toContain("wait_kind=ci");
+  });
+
+  it("resumes a pr-check failure escalation into CI wait when current-head checks are no longer failing", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    const artifactDir = join(rootDir, ".artifacts", "stage1-pr-check-failure-recovery");
+    const stageResultPath = join(artifactDir, "stage-result.json");
+    createGitWorkspace(workspacePath, `docs/${workItemId}`);
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "docs",
+      designStatus: "temporary",
+    });
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", workItemId, "automation-spec.json"),
+      JSON.stringify(
+        {
+          slice_id: workItemId,
+          execution_mode: "autonomous",
+        },
+        null,
+        2,
+      ),
+    );
+    upsertWorktreeStatusItem(workspacePath, workItemId, {
+      lifecycle: "ready_for_review",
+      approval_state: "claude_approved",
+      verification_status: "pending",
+    });
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "docs: seed stale pr-check failure"], { cwd: workspacePath });
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      stageResultPath,
+      `${JSON.stringify(
+        buildCodeStageResult({
+          summary: "Stage 1 docs complete",
+          subject: "docs: complete stage1 workpack",
+          title: "docs: complete stage1 workpack",
+          checklistUpdates: [],
+          changedFiles: [
+            `docs/workpacks/${workItemId}/README.md`,
+            `docs/workpacks/${workItemId}/acceptance.md`,
+          ],
+        }),
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 1,
+        current_stage: 1,
+        phase: "escalated",
+        next_action: "noop",
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        last_artifact_dir: artifactDir,
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: "ses_docs_recovery",
+          artifact_dir: artifactDir,
+          stage_result_path: stageResultPath,
+          started_at: "2026-04-20T13:00:00+09:00",
+          finished_at: "2026-04-20T13:01:00+09:00",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: "old-head",
+          pr_role: "docs",
+        },
+        prs: {
+          docs: {
+            number: 41,
+            url: "https://github.com/netsus/homecook/pull/41",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "old-head",
+          },
+          backend: null,
+          frontend: null,
+          closeout: null,
+        },
+        wait: {
+          kind: "human_escalation",
+          reason: "PR checks failed.",
+          updated_at: "2026-04-20T13:02:00+09:00",
+        },
+        recovery: {
+          kind: "partial_stage_failure",
+          stage: 1,
+          reason: "PR checks failed.",
+          artifact_dir: artifactDir,
+          existing_pr: {
+            role: "docs",
+            number: 41,
+            url: "https://github.com/netsus/homecook/pull/41",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "old-head",
+          },
+          session_role: "claude_primary",
+          session_id: "ses_docs_recovery",
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-20T13:05:00+09:00",
+        maxTransitions: 2,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {
+            throw new Error("not expected");
+          },
+          getHeadSha() {
+            return "new-head";
+          },
+          getCurrentBranch() {
+            return `docs/${workItemId}`;
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          editPullRequest() {},
+          getRequiredChecks() {
+            return { bucket: "pending", checks: [{ name: "quality", bucket: "pending", state: "PENDING" }] };
+          },
+          getPullRequestSummary() {
+            return {
+              state: "OPEN",
+              mergedAt: null,
+              mergeStateStatus: "CLEAN",
+              reviewDecision: null,
+              headRefOid: "new-head",
+              headRefName: `docs/${workItemId}`,
+              isDraft: false,
+            };
+          },
+          markReady() {
+            throw new Error("not expected");
+          },
+          reviewPullRequest() {
+            throw new Error("not expected");
+          },
+          commentPullRequest() {
+            throw new Error("not expected");
+          },
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {
+            throw new Error("not expected");
+          },
+        },
+      },
+    );
+
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId,
+      slice: workItemId,
+    }).state as {
+      wait: { kind: string; stage: number | null; pr_role: string | null; head_sha: string | null };
+      recovery: unknown;
+      prs: { docs: { head_sha: string | null } | null };
+    };
+
+    expect(result.wait).toMatchObject({
+      kind: "ci",
+      stage: 1,
+      pr_role: "docs",
+      head_sha: "new-head",
+    });
+    expect(runtime.wait).toMatchObject({
+      kind: "ci",
+      stage: 1,
+      pr_role: "docs",
+      head_sha: "new-head",
+    });
+    expect(runtime.recovery).toBeNull();
+    expect(runtime.prs.docs?.head_sha).toBe("new-head");
   });
 
   it("auto-cleans opencode migration dirtiness without human escalation", () => {

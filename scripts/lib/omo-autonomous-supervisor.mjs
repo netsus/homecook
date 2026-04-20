@@ -519,6 +519,64 @@ function isResumableGithubAuthEscalation(state) {
   );
 }
 
+function resolveRecoverablePrCheckFailureContext(state) {
+  const recovery = state?.recovery ?? null;
+  const reasonText = [state?.wait?.reason, recovery?.reason].filter(Boolean).join(" ").trim();
+  if (
+    state?.wait?.kind !== "human_escalation" ||
+    recovery?.kind !== "partial_stage_failure" ||
+    !/(?:authority precheck pr checks failed\.|doc gate repair pr checks failed\.|pr checks failed\.)/i.test(
+      reasonText,
+    ) ||
+    !hasValidPersistedExecutionStageResult(state)
+  ) {
+    return null;
+  }
+
+  const stage =
+    Number.isInteger(Number(recovery?.stage))
+      ? Number(recovery.stage)
+      : state?.blocked_stage ?? state?.active_stage ?? state?.current_stage ?? null;
+  if (!Number.isInteger(stage)) {
+    return null;
+  }
+
+  const prRole =
+    typeof recovery?.existing_pr?.role === "string" && recovery.existing_pr.role.trim().length > 0
+      ? recovery.existing_pr.role.trim()
+      : typeof state?.wait?.pr_role === "string" && state.wait.pr_role.trim().length > 0
+        ? state.wait.pr_role.trim()
+        : resolvePrRole(stage);
+  const activePr = state?.prs?.[prRole]?.url
+    ? state.prs[prRole]
+    : recovery?.existing_pr?.url
+      ? {
+          number: Number.isInteger(recovery.existing_pr.number) ? recovery.existing_pr.number : null,
+          url: recovery.existing_pr.url,
+          draft: typeof recovery.existing_pr.draft === "boolean" ? recovery.existing_pr.draft : false,
+          branch:
+            typeof recovery.existing_pr.branch === "string" && recovery.existing_pr.branch.trim().length > 0
+              ? recovery.existing_pr.branch.trim()
+              : null,
+          head_sha:
+            typeof recovery.existing_pr.head_sha === "string" && recovery.existing_pr.head_sha.trim().length > 0
+              ? recovery.existing_pr.head_sha.trim()
+              : null,
+        }
+      : null;
+
+  if (!activePr?.url) {
+    return null;
+  }
+
+  return {
+    stage,
+    prRole,
+    activePr,
+    reason: reasonText,
+  };
+}
+
 function readExecutionLogFragments(state) {
   const artifactDir =
     typeof state?.execution?.artifact_dir === "string" && state.execution.artifact_dir.trim().length > 0
@@ -3611,6 +3669,87 @@ function processWaitState({
       };
     }
 
+    const resumablePrCheckFailure = resolveRecoverablePrCheckFailureContext(state);
+    if (resumablePrCheckFailure) {
+      const refreshedPrState = refreshLivePullRequestState({
+        rootDir,
+        workItemId,
+        state,
+        github,
+        prRole: resumablePrCheckFailure.prRole,
+        activePr: resumablePrCheckFailure.activePr,
+        now,
+      });
+      const checks = github.getRequiredChecks({
+        prRef: refreshedPrState.activePr.url,
+      });
+
+      if (checks.bucket === "fail") {
+        const notes = [
+          "wait_kind=human_escalation",
+          `reason=${resumablePrCheckFailure.reason}`,
+          `pr_role=${resumablePrCheckFailure.prRole}`,
+          `stage=${resumablePrCheckFailure.stage}`,
+        ];
+        if (refreshedPrState.activePr.head_sha) {
+          notes.push(`head_sha=${refreshedPrState.activePr.head_sha}`);
+        }
+
+        syncStatus({
+          rootDir,
+          workItemId,
+          patch: {
+            pr_path: refreshedPrState.activePr.url,
+            lifecycle: "blocked",
+            approval_state: "human_escalation",
+            verification_status: "failed",
+            notes: notes.join(" "),
+          },
+          now,
+        });
+
+        return {
+          state: refreshedPrState.state,
+          action: "stop",
+          nextStage: null,
+        };
+      }
+
+      const executionStateForResume =
+        refreshedPrState.activePr.head_sha &&
+        refreshedPrState.state.execution?.commit_sha !== refreshedPrState.activePr.head_sha
+          ? saveRuntime({
+              rootDir,
+              workItemId,
+              state: setExecutionState({
+                state: refreshedPrState.state,
+                activeStage: resumablePrCheckFailure.stage,
+                phase: resolveStatePhase(refreshedPrState.state) ?? "escalated",
+                nextAction: refreshedPrState.state.next_action ?? "noop",
+                artifactDir:
+                  refreshedPrState.state.execution?.artifact_dir ?? refreshedPrState.state.last_artifact_dir,
+                execution: {
+                  ...refreshedPrState.state.execution,
+                  commit_sha: refreshedPrState.activePr.head_sha,
+                },
+              }),
+            })
+          : refreshedPrState.state;
+
+      const nextState = resumePersistedExecutionStageResult({
+        rootDir,
+        workItemId,
+        state: executionStateForResume,
+        now,
+      });
+
+      return {
+        state: nextState ?? refreshedPrState.state,
+        action: "run-stage",
+        nextStage: resumablePrCheckFailure.stage,
+      };
+    }
+
     if (isResumableDocGatePendingRecheckFailure(state)) {
       const nextState = saveRuntime({
         rootDir,
@@ -3847,7 +3986,7 @@ function processWaitState({
       throw new Error("Active pull request is missing for CI wait.");
     }
 
-    const refreshedCiWait = refreshCiWaitPullRequestState({
+    const refreshedCiWait = refreshLivePullRequestState({
       rootDir,
       workItemId,
       state,
@@ -3856,6 +3995,7 @@ function processWaitState({
       activePr,
       now,
       requireSummary: prRole === "closeout",
+      syncWaitKind: "ci",
     });
     const ciState = refreshedCiWait.state;
     const ciActivePr = refreshedCiWait.activePr;
@@ -4371,7 +4511,7 @@ function upsertPullRequest({
   });
 }
 
-function refreshCiWaitPullRequestState({
+function refreshLivePullRequestState({
   rootDir,
   workItemId,
   state,
@@ -4380,6 +4520,7 @@ function refreshCiWaitPullRequestState({
   activePr,
   now,
   requireSummary = false,
+  syncWaitKind = null,
 }) {
   if (!activePr?.url || typeof github.getPullRequestSummary !== "function") {
     return {
@@ -4432,7 +4573,8 @@ function refreshCiWaitPullRequestState({
     nextDraft !== currentDraft
     || nextBranch !== currentBranch
     || nextHeadSha !== currentHeadSha;
-  const shouldUpdateWait = nextHeadSha !== currentWaitHeadSha;
+  const shouldUpdateWait =
+    typeof syncWaitKind === "string" && syncWaitKind.trim().length > 0 && nextHeadSha !== currentWaitHeadSha;
 
   if (!shouldUpdatePr && !shouldUpdateWait) {
     return {
@@ -4458,22 +4600,24 @@ function refreshCiWaitPullRequestState({
         now,
       })
     : state;
-  const updatedState = saveRuntime({
-    rootDir,
-    workItemId,
-    state: setWaitState({
-      state: syncedState,
-      kind: "ci",
-      prRole,
-      stage: state.wait?.stage ?? state.active_stage ?? null,
-      headSha: nextHeadSha,
-      reason: state.wait?.reason ?? null,
-      until: state.wait?.until ?? null,
-      phase: resolveStatePhase(syncedState) ?? undefined,
-      nextAction: state.next_action ?? "poll_ci",
-      updatedAt: now,
-    }),
-  });
+  const updatedState = shouldUpdateWait
+    ? saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state: syncedState,
+          kind: syncWaitKind,
+          prRole,
+          stage: state.wait?.stage ?? state.active_stage ?? null,
+          headSha: nextHeadSha,
+          reason: state.wait?.reason ?? null,
+          until: state.wait?.until ?? null,
+          phase: resolveStatePhase(syncedState) ?? undefined,
+          nextAction: state.next_action ?? "poll_ci",
+          updatedAt: now,
+        }),
+      })
+    : syncedState;
 
   return {
     state: updatedState,
@@ -8486,6 +8630,13 @@ export function tickSupervisorWorkItems(
     }
 
     if (state.wait.kind === "human_escalation" && isResumableGithubAuthEscalation(state)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (state.wait.kind === "human_escalation" && resolveRecoverablePrCheckFailureContext(state)) {
       return {
         resumable: true,
         reason: null,

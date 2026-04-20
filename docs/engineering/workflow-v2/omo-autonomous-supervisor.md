@@ -359,12 +359,13 @@ GitHub 자동화는 `gh CLI`만 사용한다.
 6. merge 직전 head SHA를 고정하고 drift가 있으면 다시 판단한다.
 7. `wait.kind=ci` polling은 `gh pr view`로 live PR head/draft metadata를 먼저 새로 읽고, 그 뒤 current head 기준 `gh pr checks`를 판정한다.
 8. base drift가 clean update 가능한 경우에만 `gh pr update-branch`를 한 번 시도한다.
-9. force-push, auto-rebase, silent branch recreation은 금지한다.
-10. 기존 PR을 재사용하는 경우에도 title/body는 supervisor가 `gh pr edit`로 최신 stage result에 맞춰 정렬할 수 있다.
-11. autonomous low/medium product backend/frontend PR은 GitHub formal approval을 merge gate로 사용하지 않는다. stage owner의 structured review artifact와 authority gate pass(해당 시)를 공식 approval 신호로 사용한다.
-12. autonomous low/medium product backend/frontend PR은 current head 기준 전체 PR checks green + Stage 6 Codex approve artifact + authority gate pass(해당 시) + external smoke pass 뒤 자동 merge한다.
-13. authority-required frontend PR은 `merge_pending` 직전과 `mergePullRequest` 직전에 모두 `design_authority.status === "reviewed"`와 final authority verdict `pass`를 재검증한다.
-14. `merge_pending` 상태에서 `mergePullRequest` 실행 직전 supervisor는 반드시 `stageResult.decision === "approve"`를 코드 수준에서 단언한다. 이 조건이 충족되지 않으면 `blockWithRecovery`로 escalate하며 절대 merge를 실행하지 않는다.
+9. persisted `stage-result`와 existing PR이 남아 있는 `PR checks failed` escalation은 current head 기준으로 재평가하고, checks가 더 이상 fail이 아니면 finalize path로 자동 복귀시킨다.
+10. force-push, auto-rebase, silent branch recreation은 금지한다.
+11. 기존 PR을 재사용하는 경우에도 title/body는 supervisor가 `gh pr edit`로 최신 stage result에 맞춰 정렬할 수 있다.
+12. autonomous low/medium product backend/frontend PR은 GitHub formal approval을 merge gate로 사용하지 않는다. stage owner의 structured review artifact와 authority gate pass(해당 시)를 공식 approval 신호로 사용한다.
+13. autonomous low/medium product backend/frontend PR은 current head 기준 전체 PR checks green + Stage 6 Codex approve artifact + authority gate pass(해당 시) + external smoke pass 뒤 자동 merge한다.
+14. authority-required frontend PR은 `merge_pending` 직전과 `mergePullRequest` 직전에 모두 `design_authority.status === "reviewed"`와 final authority verdict `pass`를 재검증한다.
+15. `merge_pending` 상태에서 `mergePullRequest` 실행 직전 supervisor는 반드시 `stageResult.decision === "approve"`를 코드 수준에서 단언한다. 이 조건이 충족되지 않으면 `blockWithRecovery`로 escalate하며 절대 merge를 실행하지 않는다.
 
 ## Wait And Scheduler Contract
 
