@@ -110,6 +110,15 @@ function buildCanonicalCloseoutSource(workItemId) {
   return normalizedWorkItemId ? `.workflow-v2/work-items/${normalizedWorkItemId}.json#closeout` : null;
 }
 
+function buildCanonicalCloseoutPathPrefix(canonicalSource) {
+  const normalizedCanonicalSource = normalizeOptionalString(canonicalSource);
+  if (!normalizedCanonicalSource) {
+    return ".workflow-v2/work-items.<unknown>.json.closeout";
+  }
+
+  return normalizedCanonicalSource.replace(/#closeout$/, ".closeout");
+}
+
 function buildRecoveryFragments(recoverySummary = {}) {
   const fragments = [];
   const manualPatchCount = normalizeNonNegativeInteger(recoverySummary.manual_patch_count);
@@ -272,9 +281,7 @@ export function validateHumanSurfaceProjectionContract({
   const errors = [];
   const resolvedPathPrefix =
     normalizeOptionalString(pathPrefix)
-    ?? (projection.canonical_source
-      ? projection.canonical_source.replace("#closeout", "")
-      : ".workflow-v2/work-items.<unknown>.json");
+    ?? buildCanonicalCloseoutPathPrefix(projection.canonical_source);
   const actualVerificationPath = `${resolvedPathPrefix}.verification_projection.actual_verification_refs`;
   const authorityReportsPath = `${resolvedPathPrefix}.verification_projection.authority_reports`;
   const allChecksGreenPath = `${resolvedPathPrefix}.merge_gate_projection.all_checks_green`;

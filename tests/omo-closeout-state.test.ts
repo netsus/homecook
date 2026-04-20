@@ -221,4 +221,31 @@ describe("omo canonical closeout state", () => {
       },
     ]);
   });
+
+  it("keeps the .closeout path segment when pathPrefix is omitted", () => {
+    const errors = validateHumanSurfaceProjectionContract({
+      workItemId: "06-recipe-to-planner",
+      closeout: {
+        ...closeoutSnapshot,
+        verification_projection: {
+          ...closeoutSnapshot.verification_projection,
+          authority_reports: [],
+          actual_verification_refs: [],
+        },
+      },
+    });
+
+    expect(errors).toEqual([
+      {
+        path: ".workflow-v2/work-items/06-recipe-to-planner.json.closeout.verification_projection.actual_verification_refs",
+        message:
+          "Canonical closeout human-surface projection requires actual_verification_refs once closeout phase reaches projecting/completed.",
+      },
+      {
+        path: ".workflow-v2/work-items/06-recipe-to-planner.json.closeout.verification_projection.authority_reports",
+        message:
+          "Canonical closeout human-surface projection requires authority_reports when design_authority is passed.",
+      },
+    ]);
+  });
 });
