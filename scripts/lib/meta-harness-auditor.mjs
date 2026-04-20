@@ -792,6 +792,19 @@ export function detectOmoPromotionRisk({ rootDir = process.cwd(), registry } = {
   ];
 }
 
+/**
+ * @typedef {{
+ *   rootDir?: string;
+ *   sampledSlices?: string[];
+ *   inFlightSlice?: string | null;
+ *   explicitSlices?: string[];
+ *   registry?: Map<string, any>;
+ * }} MetaHarnessCoverageOptions
+ */
+
+/**
+ * @param {MetaHarnessCoverageOptions} [options]
+ */
 export function detectOmoAuditCoverageGap({
   rootDir = process.cwd(),
   sampledSlices = [],
