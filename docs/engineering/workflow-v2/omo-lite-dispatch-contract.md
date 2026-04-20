@@ -291,6 +291,7 @@ provider별 resume 규칙:
   - mobile UX evidence bundle
   - authority report draft
   - `authority_verdict`, `reviewed_screen_ids`, `authority_report_paths`, `evidence_artifact_refs`, `blocker_count`, `major_count`, `minor_count`가 포함된 valid stage-result
+  - `checklist_updates[]`는 delta-only로 기록할 수 있다. supervisor는 직전 Stage 4 implementation `stage-result`의 checklist snapshot을 deterministic merge해서 full snapshot으로 finalize한다.
   - blocker가 남으면 Stage 4로 route back
 
 ### Stage 5 → Codex

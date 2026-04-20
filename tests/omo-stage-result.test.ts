@@ -211,6 +211,50 @@ describe("OMO stage-result contract", () => {
     expect(codeStageResult.contested_fix_ids).toEqual([]);
   });
 
+  it("allows strict authority_precheck stage results to submit delta checklist updates", () => {
+    const result = validateStageResult(
+      4,
+      {
+        result: "done",
+        summary_markdown: "authority precheck complete",
+        commit: { subject: "feat: authority precheck" },
+        pr: { title: "feat: authority precheck", body_markdown: "body" },
+        checks_run: [],
+        next_route: "open_pr",
+        claimed_scope: {
+          files: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+          endpoints: [],
+          routes: [],
+          states: [],
+          invariants: [],
+        },
+        changed_files: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        tests_touched: [],
+        artifacts_written: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        checklist_updates: [],
+        contested_fix_ids: [],
+        rebuttals: [],
+        authority_verdict: "pass",
+        reviewed_screen_ids: ["RECIPE_DETAIL"],
+        authority_report_paths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        evidence_artifact_refs: ["ui/designs/evidence/06/RECIPE_DETAIL-mobile.png"],
+        blocker_count: 0,
+        major_count: 0,
+        minor_count: 0,
+      },
+      {
+        strictExtendedContract: true,
+        subphase: "authority_precheck",
+      },
+    ) as {
+      checklist_updates: Array<{ id: string }>;
+      authority_verdict: string;
+    };
+
+    expect(result.authority_verdict).toBe("pass");
+    expect(result.checklist_updates).toEqual([]);
+  });
+
   it("requires rebuttals to match contested_fix_ids for strict code stages", () => {
     expect(() =>
       validateStageResult(

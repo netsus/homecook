@@ -5942,6 +5942,9 @@ describe("OMO autonomous supervisor", () => {
     });
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
     let observedSubphase: string | null = null;
+    let observedPriorStageResultPath: string | null = null;
+    const priorArtifactDir = join(rootDir, ".artifacts", "prior-stage4-implementation");
+    const priorStageResultPath = join(priorArtifactDir, "stage-result.json");
 
     createGitWorkspace(workspacePath, "feature/fe-03-recipe-like");
     seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
@@ -5957,6 +5960,21 @@ describe("OMO autonomous supervisor", () => {
       cwd: workspacePath,
       encoding: "utf8",
     }).trim();
+    mkdirSync(priorArtifactDir, { recursive: true });
+    writeFileSync(
+      priorStageResultPath,
+      `${JSON.stringify(
+        buildCodeStageResult({
+          summary: "frontend implementation complete",
+          subject: "feat: frontend implementation",
+          title: "feat: frontend implementation",
+          checklistUpdates: [CHECKLIST_IDS.frontendDelivery, CHECKLIST_IDS.frontendAcceptance],
+          changedFiles: ["app/example/page.tsx"],
+        }),
+        null,
+        2,
+      )}\n`,
+    );
 
     writeRuntimeState({
       rootDir,
@@ -5987,6 +6005,7 @@ describe("OMO autonomous supervisor", () => {
           stage: 4,
           head_sha: headSha,
         },
+        last_artifact_dir: priorArtifactDir,
       },
     });
 
@@ -6012,8 +6031,9 @@ describe("OMO autonomous supervisor", () => {
           },
           getBinaryDiff() { return ""; },
         },
-        stageRunner({ subphase }: { subphase?: string | null }) {
+        stageRunner({ subphase, priorStageResultPath }: { subphase?: string | null; priorStageResultPath?: string | null }) {
           observedSubphase = subphase ?? null;
+          observedPriorStageResultPath = priorStageResultPath ?? null;
           mkdirSync(join(workspacePath, "ui", "designs", "authority"), { recursive: true });
           mkdirSync(join(workspacePath, "ui", "designs", "evidence", "06"), { recursive: true });
           writeFileSync(join(workspacePath, "ui", "designs", "authority", "RECIPE_DETAIL-authority.md"), "# Authority\n- verdict: conditional-pass\n");
@@ -6047,6 +6067,7 @@ describe("OMO autonomous supervisor", () => {
     );
 
     expect(observedSubphase).toBe("authority_precheck");
+    expect(observedPriorStageResultPath).toBe(priorStageResultPath);
     expect(result.wait).toMatchObject({
       kind: "ready_for_next_stage",
       stage: 5,
