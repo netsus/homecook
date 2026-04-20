@@ -174,6 +174,35 @@ describe("workflow v2 docs", () => {
     expect(designConsultant).toContain("authority-required slice는 final authority gate까지 통과 후");
   });
 
+  it("documents the Phase 2 human-facing closeout projection baseline without claiming full markdown sync", () => {
+    const workflowReadme = readFileSync(join(repoRoot, "docs/engineering/workflow-v2/README.md"), "utf8");
+    const canonicalCloseout = readFileSync(
+      join(repoRoot, "docs/engineering/workflow-v2/omo-canonical-closeout-state.md"),
+      "utf8",
+    );
+    const authorityMatrix = readFileSync(
+      join(repoRoot, "docs/engineering/bookkeeping-authority-matrix.md"),
+      "utf8",
+    );
+
+    expect(workflowReadme).toContain(
+      "현재 baseline에서는 `.workflow-v2/status.json` summary projection consistency와 README / acceptance / PR body용 generated payload contract를 함께 검증한다.",
+    );
+    expect(workflowReadme).toContain(
+      "현재 baseline은 human-facing surface용 generated payload/validator contract까지만 포함하고, markdown 전체 rewrite/sync patcher는 아직 포함하지 않는다.",
+    );
+    expect(canonicalCloseout).toContain(
+      "현재 baseline: `work-item closeout schema + tracked status projection helper + human-facing projection payload helper + validator guard`까지 구현됐다.",
+    );
+    expect(canonicalCloseout).toContain(
+      "현재 baseline은 `status` projection helper뿐 아니라 README / acceptance / PR body용 generated payload와 projection readiness validator를 포함한다.",
+    );
+    expect(canonicalCloseout).toContain("markdown 전체 rewrite는 아직 남아 있다.");
+    expect(authorityMatrix).toContain(
+      "`validate:workflow-v2`는 canonical closeout snapshot이 README / acceptance / PR body generated payload baseline을 계산할 수 있는지, 그리고 projecting/completed snapshot의 evidence-bearing fields가 비어 있지 않은지 함께 본다.",
+    );
+  });
+
   it("returns a combined validation bundle with no errors", () => {
     const results = validateWorkflowV2Bundle({ rootDir: repoRoot });
 

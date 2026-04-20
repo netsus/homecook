@@ -1,7 +1,10 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { validateStatusItemAgainstCanonicalCloseout } from "./omo-closeout-state.mjs";
+import {
+  validateHumanSurfaceProjectionContract,
+  validateStatusItemAgainstCanonicalCloseout,
+} from "./omo-closeout-state.mjs";
 import { validateSourceOfTruthSync } from "./validate-source-of-truth-sync.mjs";
 
 function readJson(filePath) {
@@ -243,6 +246,14 @@ export function validateWorkflowV2TrackedState({ rootDir = process.cwd() } = {})
 
   for (const workItem of workItems) {
     const found = statusItems.some((statusItem) => statusItem.id === workItem.id);
+    crossErrors.push(
+      ...validateHumanSurfaceProjectionContract({
+        closeout: workItem.closeout,
+        workItemId: workItem.id,
+        pathPrefix: `.workflow-v2/work-items/${workItem.id}.json.closeout`,
+      }),
+    );
+
     if (!found) {
       crossErrors.push({
         path: `.workflow-v2/work-items/${workItem.id}.json`,
@@ -307,6 +318,14 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const designConsultantPath = path.join(rootDir, "docs/engineering/design-consultant-sop.md");
   const opencodeReadmePath = path.join(rootDir, ".opencode/README.md");
   const promotionReadinessPath = path.join(rootDir, "docs/engineering/workflow-v2/promotion-readiness.md");
+  const canonicalCloseoutPath = path.join(
+    rootDir,
+    "docs/engineering/workflow-v2/omo-canonical-closeout-state.md",
+  );
+  const bookkeepingAuthorityMatrixPath = path.join(
+    rootDir,
+    "docs/engineering/bookkeeping-authority-matrix.md",
+  );
 
   const sliceWorkflow = readText(sliceWorkflowPath);
   const agentWorkflowOverview = readText(agentWorkflowOverviewPath);
@@ -322,6 +341,8 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const designConsultant = readText(designConsultantPath);
   const opencodeReadme = readText(opencodeReadmePath);
   const promotionReadiness = readText(promotionReadinessPath);
+  const canonicalCloseout = readText(canonicalCloseoutPath);
+  const bookkeepingAuthorityMatrix = readText(bookkeepingAuthorityMatrixPath);
   const nextLockedScope = extractMarkdownSection(workflowReadme, "## Next Locked Scope");
 
   const sliceWorkflowErrors = [
@@ -384,6 +405,8 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       ".workflow-v2/promotion-evidence.json",
       "Stage 1 bootstrap부터 시작한다.",
       "internal 1.5 docs gate",
+      "현재 baseline에서는 `.workflow-v2/status.json` summary projection consistency와 README / acceptance / PR body용 generated payload contract를 함께 검증한다.",
+      "현재 baseline은 human-facing surface용 generated payload/validator contract까지만 포함하고, markdown 전체 rewrite/sync patcher는 아직 포함하지 않는다.",
     ]),
     ...containsNone(workflowReadme, [
       "Codex stage에 한해 `--mode execute`를 사용한다.",
@@ -516,6 +539,20 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     ]),
   ];
 
+  const canonicalCloseoutErrors = [
+    ...containsAll(canonicalCloseout, [
+      "현재 baseline: `work-item closeout schema + tracked status projection helper + human-facing projection payload helper + validator guard`까지 구현됐다.",
+      "현재 baseline은 `status` projection helper뿐 아니라 README / acceptance / PR body용 generated payload와 projection readiness validator를 포함한다.",
+      "markdown 전체 rewrite는 아직 남아 있다.",
+    ]),
+  ];
+
+  const bookkeepingAuthorityMatrixErrors = [
+    ...containsAll(bookkeepingAuthorityMatrix, [
+      "`validate:workflow-v2`는 canonical closeout snapshot이 README / acceptance / PR body generated payload baseline을 계산할 수 있는지, 그리고 projecting/completed snapshot의 evidence-bearing fields가 비어 있지 않은지 함께 본다.",
+    ]),
+  ];
+
   const claudeEntryErrors = [
     ...containsAll(claudeEntry, [
       "슬라이스 개발 1·3·4단계와 authority-required slice의 final authority gate 담당.",
@@ -606,6 +643,14 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     {
       name: "workflow-v2-doc-contract:promotion-readiness",
       errors: promotionReadinessErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:canonical-closeout",
+      errors: canonicalCloseoutErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:bookkeeping-authority-matrix",
+      errors: bookkeepingAuthorityMatrixErrors,
     },
     {
       name: "workflow-v2-doc-contract:claude-entry",

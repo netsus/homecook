@@ -55,6 +55,7 @@
 
 - `validate:closeout-sync`는 workpack closeout docs가 merged-ready 상태인지 본다.
 - `validate:omo-bookkeeping`는 tracked state / runtime state와 위 authoritative docs 사이 drift를 본다.
+- `validate:workflow-v2`는 canonical closeout snapshot이 README / acceptance / PR body generated payload baseline을 계산할 수 있는지, 그리고 projecting/completed snapshot의 evidence-bearing fields가 비어 있지 않은지 함께 본다.
 - `omo:reconcile`는 matrix에 선언된 closeout surface만 repair 후보로 삼는다.
 - auditor는 이 matrix와 helper import가 없으면 `H-GOV-001`을 계속 active finding으로 유지한다.
 
