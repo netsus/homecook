@@ -141,9 +141,68 @@ describe("OMO status summary", () => {
       sessionRole: "claude_primary",
       sessionFreshness: "fresh",
       sessionAge: "3m",
+      sessionGeneration: 1,
+      sessionRunCount: 0,
       executionFreshness: "long_running",
       executionAge: "10m",
     });
+  });
+
+  it("recommends session rollover when cumulative telemetry crosses the phase7 threshold", () => {
+    const runtimeObservability = buildRuntimeObservability(
+      {
+        active_stage: 5,
+        current_stage: 5,
+        phase: "wait",
+        next_action: "poll_ci",
+        wait: {
+          kind: "ci",
+          stage: 5,
+          updated_at: "2026-04-20T10:10:00.000Z",
+        },
+        sessions: {
+          codex_primary: {
+            session_id: "ses_codex_heavy",
+            provider: "opencode",
+            updated_at: "2026-04-20T10:09:00.000Z",
+            generation: 1,
+            run_count: 5,
+            last_usage: {
+              input_tokens: 12000,
+              output_tokens: 8000,
+              total_tokens: 20000,
+            },
+            cumulative_usage: {
+              input_tokens: 72000,
+              output_tokens: 38000,
+              total_tokens: 110000,
+            },
+            last_cost_usd: 0.6,
+            cumulative_cost_usd: 3.4,
+          },
+        },
+        execution: {
+          session_role: "codex_primary",
+          started_at: "2026-04-20T10:00:00.000Z",
+          finished_at: "2026-04-20T10:05:00.000Z",
+        },
+      },
+      {
+        now: "2026-04-20T10:15:00.000Z",
+      },
+    );
+
+    expect(runtimeObservability).toMatchObject({
+      sessionRole: "codex_primary",
+      sessionFreshness: "rollover_recommended",
+      sessionRunCount: 5,
+      sessionGeneration: 1,
+      sessionCumulativeCost: "$3.40",
+      sessionRolloverRecommended: true,
+      sessionRolloverReason: expect.stringContaining("run_count>=4"),
+    });
+    expect(runtimeObservability.sessionRolloverReason).toContain("total_tokens>=100000");
+    expect(runtimeObservability.sessionRolloverReason).toContain("cost_usd>=3");
   });
 
   it("extracts validator and failure path details from closeout reconcile wait reasons", () => {
@@ -266,6 +325,7 @@ describe("OMO status summary", () => {
     expect(formatFullStatus(status)).toContain("Last activity: 2026-04-20T10:00:00.000Z");
     expect(formatFullStatus(status)).toContain("Activity source: wait.updated_at");
     expect(formatFullStatus(status)).toContain("Session freshness: fresh");
+    expect(formatFullStatus(status)).toContain("Session rollover: not-needed");
     expect(formatBriefStatus(status)).toContain(
       "reasonCode      : closeout_reconcile_docs_governance_required",
     );
@@ -277,5 +337,6 @@ describe("OMO status summary", () => {
     expect(formatBriefStatus(status)).toContain("subphase        : implementation");
     expect(formatBriefStatus(status)).toContain("activitySource  : wait.updated_at");
     expect(formatBriefStatus(status)).toContain("sessionFresh    : fresh");
+    expect(formatBriefStatus(status)).toContain("sessionRollover : not-needed");
   });
 });

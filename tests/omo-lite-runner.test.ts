@@ -1284,6 +1284,12 @@ describe("OMO-lite stage runner", () => {
           provider: string;
           model: string | null;
           effort: string | null;
+          generation: number;
+          run_count: number;
+          last_usage: { input_tokens: number; output_tokens: number; total_tokens: number } | null;
+          cumulative_usage: { input_tokens: number; output_tokens: number; total_tokens: number } | null;
+          last_cost_usd: number | null;
+          cumulative_cost_usd: number | null;
         };
       };
     };
@@ -1324,6 +1330,20 @@ describe("OMO-lite stage runner", () => {
       provider: "claude-cli",
       model: "sonnet",
       effort: "high",
+      generation: 1,
+      run_count: 2,
+      last_usage: {
+        input_tokens: 10,
+        output_tokens: 20,
+        total_tokens: 30,
+      },
+      cumulative_usage: {
+        input_tokens: 20,
+        output_tokens: 40,
+        total_tokens: 60,
+      },
+      last_cost_usd: 0,
+      cumulative_cost_usd: 0,
     });
   });
 

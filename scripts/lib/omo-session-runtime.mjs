@@ -233,6 +233,56 @@ function resolveExpectedSessionRole(stage, subphase = "implementation") {
   return "codex_primary";
 }
 
+function normalizeNonNegativeInteger(value) {
+  return Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+function normalizeNonNegativeNumber(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function normalizeUsageSummary(usage) {
+  if (!usage || typeof usage !== "object") {
+    return null;
+  }
+
+  const inputTokens = normalizeNonNegativeInteger(usage.input_tokens);
+  const outputTokens = normalizeNonNegativeInteger(usage.output_tokens);
+  const explicitTotalTokens = normalizeNonNegativeInteger(usage.total_tokens);
+
+  if (inputTokens === null && outputTokens === null && explicitTotalTokens === null) {
+    return null;
+  }
+
+  const normalizedInputTokens = inputTokens ?? 0;
+  const normalizedOutputTokens = outputTokens ?? 0;
+
+  return {
+    input_tokens: normalizedInputTokens,
+    output_tokens: normalizedOutputTokens,
+    total_tokens: explicitTotalTokens ?? normalizedInputTokens + normalizedOutputTokens,
+  };
+}
+
+function addUsageSummaries(baseUsage, deltaUsage) {
+  const normalizedBase = normalizeUsageSummary(baseUsage);
+  const normalizedDelta = normalizeUsageSummary(deltaUsage);
+
+  if (!normalizedBase) {
+    return normalizedDelta;
+  }
+
+  if (!normalizedDelta) {
+    return normalizedBase;
+  }
+
+  return {
+    input_tokens: normalizedBase.input_tokens + normalizedDelta.input_tokens,
+    output_tokens: normalizedBase.output_tokens + normalizedDelta.output_tokens,
+    total_tokens: normalizedBase.total_tokens + normalizedDelta.total_tokens,
+  };
+}
+
 function getWorktreeDirtyState(worktreePath) {
   if (typeof worktreePath !== "string" || worktreePath.trim().length === 0 || !existsSync(worktreePath)) {
     return {
@@ -298,6 +348,22 @@ function normalizeSessionEntry(role, entry) {
     entry && typeof entry.session_id === "string" && entry.session_id.trim().length > 0
       ? entry.session_id.trim()
       : null;
+  const generation =
+    sessionId
+      ? Number.isInteger(entry?.generation) && entry.generation >= 1
+        ? entry.generation
+        : 1
+      : 0;
+  const lastUsage = normalizeUsageSummary(entry?.last_usage);
+  const cumulativeUsage = normalizeUsageSummary(entry?.cumulative_usage);
+  const lastCostUsd = normalizeNonNegativeNumber(entry?.last_cost_usd);
+  const cumulativeCostUsd = normalizeNonNegativeNumber(entry?.cumulative_cost_usd);
+  const runCount =
+    sessionId
+      ? Number.isInteger(entry?.run_count) && entry.run_count >= 0
+        ? entry.run_count
+        : 0
+      : 0;
 
   return {
     session_id: sessionId,
@@ -327,6 +393,12 @@ function normalizeSessionEntry(role, entry) {
       entry && typeof entry.updated_at === "string" && entry.updated_at.trim().length > 0
         ? entry.updated_at.trim()
         : null,
+    generation,
+    run_count: runCount,
+    last_usage: lastUsage,
+    cumulative_usage: cumulativeUsage,
+    last_cost_usd: lastCostUsd,
+    cumulative_cost_usd: cumulativeCostUsd,
   };
 }
 
@@ -1306,16 +1378,57 @@ export function setSessionBinding({
   variant,
   effort,
   updatedAt,
+  usage = null,
+  totalCostUsd = null,
+  recordRun = false,
 }) {
   const normalizedRole = ensureNonEmptyString(role, "role");
+  const normalizedSessionId = ensureNonEmptyString(sessionId, "sessionId");
   const normalizedProvider = ensureNonEmptyString(provider, "provider");
+  const previousEntry = normalizeSessionEntry(normalizedRole, state.sessions?.[normalizedRole] ?? null);
+  const normalizedUsage = normalizeUsageSummary(usage);
+  const normalizedTotalCostUsd = normalizeNonNegativeNumber(totalCostUsd);
+  const shouldRecordRun =
+    recordRun || normalizedUsage !== null || normalizedTotalCostUsd !== null;
+  const sessionChanged =
+    typeof previousEntry.session_id === "string" &&
+    previousEntry.session_id.length > 0 &&
+    previousEntry.session_id !== normalizedSessionId;
+  const baseGeneration = sessionChanged
+    ? previousEntry.generation + 1
+    : previousEntry.generation > 0
+      ? previousEntry.generation
+      : 1;
+  const nextRunCount =
+    shouldRecordRun
+      ? sessionChanged
+        ? 1
+        : previousEntry.run_count + 1
+      : sessionChanged
+        ? 0
+        : previousEntry.run_count;
+  const nextLastUsage = normalizedUsage ?? (sessionChanged ? null : previousEntry.last_usage);
+  const nextCumulativeUsage =
+    shouldRecordRun && normalizedUsage
+      ? addUsageSummaries(sessionChanged ? null : previousEntry.cumulative_usage, normalizedUsage)
+      : sessionChanged
+        ? null
+        : previousEntry.cumulative_usage;
+  const nextLastCostUsd =
+    normalizedTotalCostUsd ?? (sessionChanged ? null : previousEntry.last_cost_usd);
+  const nextCumulativeCostUsd =
+    shouldRecordRun && normalizedTotalCostUsd !== null
+      ? (sessionChanged ? 0 : previousEntry.cumulative_cost_usd ?? 0) + normalizedTotalCostUsd
+      : sessionChanged
+        ? null
+        : previousEntry.cumulative_cost_usd;
 
   return {
     ...state,
     sessions: {
       ...state.sessions,
       [normalizedRole]: {
-        session_id: ensureNonEmptyString(sessionId, "sessionId"),
+        session_id: normalizedSessionId,
         provider: normalizedProvider,
         agent:
           typeof agent === "string" && agent.trim().length > 0
@@ -1334,6 +1447,12 @@ export function setSessionBinding({
             ? effort.trim()
             : null,
         updated_at: toIsoString(updatedAt),
+        generation: baseGeneration,
+        run_count: nextRunCount,
+        last_usage: nextLastUsage,
+        cumulative_usage: nextCumulativeUsage,
+        last_cost_usd: nextLastCostUsd,
+        cumulative_cost_usd: nextCumulativeCostUsd,
       },
     },
   };

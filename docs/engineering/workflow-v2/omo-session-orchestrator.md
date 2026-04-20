@@ -96,8 +96,20 @@ runtime state는 tracked workflow 상태와 분리한다.
 - `blocked_stage`
 - `sessions.claude_primary.provider`
 - `sessions.claude_primary.session_id`
+- `sessions.claude_primary.generation`
+- `sessions.claude_primary.run_count`
+- `sessions.claude_primary.last_usage`
+- `sessions.claude_primary.cumulative_usage`
+- `sessions.claude_primary.last_cost_usd`
+- `sessions.claude_primary.cumulative_cost_usd`
 - `sessions.codex_primary.provider`
 - `sessions.codex_primary.session_id`
+- `sessions.codex_primary.generation`
+- `sessions.codex_primary.run_count`
+- `sessions.codex_primary.last_usage`
+- `sessions.codex_primary.cumulative_usage`
+- `sessions.codex_primary.last_cost_usd`
+- `sessions.codex_primary.cumulative_cost_usd`
 - `retry.at`
 - `retry.reason`
 - `retry.attempt_count`
@@ -186,6 +198,7 @@ status guidance 출력 규칙:
 - `omo:status:brief`는 같은 guidance를 compact 형식으로 보여 주되, current stage와 active phase를 먼저 유지한다.
 - `Phase 4` 이후에는 `runtime signal`도 함께 노출해 `running_live`, `running_stale_candidate`, `retry_due`, `waiting_ci`, `lock_residue`를 별도 해석 없이 바로 읽을 수 있어야 한다.
 - 같은 출력에서 `last activity`, `activity source`, `session freshness`, `execution freshness`를 같이 보여 heartbeat proxy 역할을 하도록 만든다.
+- `Phase 7`부터는 같은 출력에서 active session의 `generation`, `run_count`, `cumulative_usage.total_tokens`, `cumulative_cost_usd`, `rollover recommendation`도 같이 보여 cost spike와 context explosion을 바로 읽을 수 있어야 한다.
 - `omo:tail`은 위 status guidance에 scheduler snapshot과 최근 stdout/stderr tail을 덧붙인 operator surface다. status만으로 stale/live 판단이 애매할 때 같은 work item의 recent tick 흔적을 한 번에 묶어 본다.
 
 ## Homecook Mapping

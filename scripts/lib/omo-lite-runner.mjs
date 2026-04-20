@@ -3253,6 +3253,9 @@ export function runStageWithArtifacts({
           variant: effectiveProviderSelection.variant,
           effort: effectiveProviderSelection.effort,
           updatedAt: now,
+          usage: result.execution.usage ?? null,
+          totalCostUsd: result.execution.totalCostUsd ?? null,
+          recordRun: result.execution.executed === true,
         });
       }
     }

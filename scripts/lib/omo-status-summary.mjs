@@ -6,6 +6,9 @@ const RUNNING_LONG_MS = 10 * 60 * 1000;
 const RUNNING_STALE_CANDIDATE_MS = 60 * 60 * 1000;
 const CI_STALE_CANDIDATE_MS = 30 * 60 * 1000;
 const SESSION_STALE_CANDIDATE_MS = 60 * 60 * 1000;
+const SESSION_ROLLOVER_RUN_COUNT = 4;
+const SESSION_ROLLOVER_TOTAL_TOKENS = 100000;
+const SESSION_ROLLOVER_COST_USD = 3;
 
 function parseTimestamp(value) {
   const normalized = normalizeString(value);
@@ -38,6 +41,14 @@ function formatDuration(ms) {
   }
 
   return `${hours}h ${remainingMinutes}m`;
+}
+
+function formatUsd(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return null;
+  }
+
+  return `$${value.toFixed(2)}`;
 }
 
 function resolveReferenceTime(now) {
@@ -141,9 +152,14 @@ function resolveSessionFreshness({
   sessionId,
   sessionUpdatedAt,
   sessionAgeMs,
+  rolloverRecommended,
 }) {
   if (!sessionId) {
     return "missing";
+  }
+
+  if (rolloverRecommended) {
+    return "rollover_recommended";
   }
 
   if (!sessionUpdatedAt) {
@@ -155,6 +171,82 @@ function resolveSessionFreshness({
     : "fresh";
 }
 
+function normalizeUsage(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const inputTokens =
+    Number.isInteger(value.input_tokens) && value.input_tokens >= 0 ? value.input_tokens : null;
+  const outputTokens =
+    Number.isInteger(value.output_tokens) && value.output_tokens >= 0 ? value.output_tokens : null;
+  const totalTokens =
+    Number.isInteger(value.total_tokens) && value.total_tokens >= 0
+      ? value.total_tokens
+      : (inputTokens ?? 0) + (outputTokens ?? 0);
+
+  if (inputTokens === null && outputTokens === null && totalTokens === 0) {
+    return null;
+  }
+
+  return {
+    input_tokens: inputTokens ?? 0,
+    output_tokens: outputTokens ?? 0,
+    total_tokens: totalTokens,
+  };
+}
+
+function resolveSessionTelemetry(sessionEntry) {
+  const hasSessionId =
+    typeof sessionEntry?.session_id === "string" && sessionEntry.session_id.trim().length > 0;
+  const generation =
+    Number.isInteger(sessionEntry?.generation) && sessionEntry.generation >= 1
+      ? sessionEntry.generation
+      : hasSessionId
+        ? 1
+        : null;
+  const runCount =
+    Number.isInteger(sessionEntry?.run_count) && sessionEntry.run_count >= 0
+      ? sessionEntry.run_count
+      : 0;
+  const lastUsage = normalizeUsage(sessionEntry?.last_usage);
+  const cumulativeUsage = normalizeUsage(sessionEntry?.cumulative_usage);
+  const lastCostUsd =
+    typeof sessionEntry?.last_cost_usd === "number" &&
+    Number.isFinite(sessionEntry.last_cost_usd) &&
+    sessionEntry.last_cost_usd >= 0
+      ? sessionEntry.last_cost_usd
+      : null;
+  const cumulativeCostUsd =
+    typeof sessionEntry?.cumulative_cost_usd === "number" &&
+    Number.isFinite(sessionEntry.cumulative_cost_usd) &&
+    sessionEntry.cumulative_cost_usd >= 0
+      ? sessionEntry.cumulative_cost_usd
+      : null;
+  const rolloverReasons = [];
+
+  if (runCount >= SESSION_ROLLOVER_RUN_COUNT) {
+    rolloverReasons.push(`run_count>=${SESSION_ROLLOVER_RUN_COUNT}`);
+  }
+  if ((cumulativeUsage?.total_tokens ?? 0) >= SESSION_ROLLOVER_TOTAL_TOKENS) {
+    rolloverReasons.push(`total_tokens>=${SESSION_ROLLOVER_TOTAL_TOKENS}`);
+  }
+  if ((cumulativeCostUsd ?? 0) >= SESSION_ROLLOVER_COST_USD) {
+    rolloverReasons.push(`cost_usd>=${SESSION_ROLLOVER_COST_USD}`);
+  }
+
+  return {
+    generation,
+    runCount,
+    lastUsage,
+    cumulativeUsage,
+    lastCostUsd,
+    cumulativeCostUsd,
+    rolloverRecommended: rolloverReasons.length > 0,
+    rolloverReason: rolloverReasons.length > 0 ? rolloverReasons.join(", ") : null,
+  };
+}
+
 function buildRuntimeFreshness(runtime, reference) {
   const activityCandidates = collectActivityCandidates(runtime);
   const latestActivity = activityCandidates[0] ?? null;
@@ -163,6 +255,7 @@ function buildRuntimeFreshness(runtime, reference) {
     : null;
   const observedSession = resolveObservedSession(runtime);
   const sessionEntry = observedSession.role ? runtime?.sessions?.[observedSession.role] ?? null : null;
+  const sessionTelemetry = resolveSessionTelemetry(sessionEntry);
   const sessionUpdatedAt = parseTimestamp(sessionEntry?.updated_at);
   const sessionAgeMs = sessionUpdatedAt ? reference.getTime() - sessionUpdatedAt.getTime() : null;
   const executionStartedAt = parseTimestamp(runtime?.execution?.started_at);
@@ -194,7 +287,18 @@ function buildRuntimeFreshness(runtime, reference) {
       sessionId: normalizeString(sessionEntry?.session_id),
       sessionUpdatedAt,
       sessionAgeMs,
+      rolloverRecommended: sessionTelemetry.rolloverRecommended,
     }),
+    sessionGeneration: sessionTelemetry.generation,
+    sessionRunCount: sessionTelemetry.runCount,
+    sessionLastUsage: sessionTelemetry.lastUsage,
+    sessionCumulativeUsage: sessionTelemetry.cumulativeUsage,
+    sessionLastCostUsd: sessionTelemetry.lastCostUsd,
+    sessionCumulativeCostUsd: sessionTelemetry.cumulativeCostUsd,
+    sessionLastCost: formatUsd(sessionTelemetry.lastCostUsd),
+    sessionCumulativeCost: formatUsd(sessionTelemetry.cumulativeCostUsd),
+    sessionRolloverRecommended: sessionTelemetry.rolloverRecommended,
+    sessionRolloverReason: sessionTelemetry.rolloverReason,
     executionFreshness,
     executionStartedAt: executionStartedAt?.toISOString() ?? null,
     executionFinishedAt: executionFinishedAt?.toISOString() ?? null,
@@ -656,6 +760,12 @@ export function formatFullStatus(status) {
     `Session freshness: ${runtimeObservability.sessionFreshness ?? "-"}`,
     `Session updated: ${runtimeObservability.sessionUpdatedAt ?? "-"}`,
     `Session age: ${runtimeObservability.sessionAge ?? "-"}`,
+    `Session generation: ${runtimeObservability.sessionGeneration ?? "-"}`,
+    `Session run count: ${runtimeObservability.sessionRunCount ?? "-"}`,
+    `Session cumulative tokens: ${runtimeObservability.sessionCumulativeUsage?.total_tokens ?? "-"}`,
+    `Session cumulative cost: ${runtimeObservability.sessionCumulativeCost ?? "-"}`,
+    `Session rollover: ${runtimeObservability.sessionRolloverRecommended ? "recommended" : "not-needed"}`,
+    `Session rollover reason: ${runtimeObservability.sessionRolloverReason ?? "-"}`,
     `Execution freshness: ${runtimeObservability.executionFreshness ?? "-"}`,
     `Execution age: ${runtimeObservability.executionAge ?? "-"}`,
     `Retry at: ${runtimeObservability.retryAt ?? "-"}`,
@@ -737,6 +847,10 @@ export function formatBriefStatus(status) {
     `activitySource  : ${runtimeObservability.lastActivitySource ?? "-"}`,
     `sessionFresh    : ${runtimeObservability.sessionFreshness ?? "-"}`,
     `sessionAge      : ${runtimeObservability.sessionAge ?? "-"}`,
+    `sessionRuns     : ${runtimeObservability.sessionRunCount ?? "-"}`,
+    `sessionTokens   : ${runtimeObservability.sessionCumulativeUsage?.total_tokens ?? "-"}`,
+    `sessionCost     : ${runtimeObservability.sessionCumulativeCost ?? "-"}`,
+    `sessionRollover : ${runtimeObservability.sessionRolloverRecommended ? "recommended" : "not-needed"}`,
     `executionFresh  : ${runtimeObservability.executionFreshness ?? "-"}`,
     `executionAge    : ${runtimeObservability.executionAge ?? "-"}`,
     `retryAt         : ${runtimeObservability.retryAt ?? "-"}`,
