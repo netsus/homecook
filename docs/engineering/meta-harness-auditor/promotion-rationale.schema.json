@@ -1,0 +1,30 @@
+{
+  "required": [
+    "version",
+    "verdict",
+    "blockers",
+    "promotion_evidence_status",
+    "replay_evidence_present",
+    "incident_blockers",
+    "rationale"
+  ],
+  "properties": {
+    "version": {
+      "enum": [1]
+    },
+    "verdict": {
+      "enum": ["ready", "candidate", "not-ready"]
+    },
+    "blockers": {
+      "type": "array"
+    },
+    "promotion_evidence_status": {},
+    "replay_evidence_present": {},
+    "incident_blockers": {
+      "type": "array"
+    },
+    "rationale": {
+      "type": "array"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "required": [
+    "version",
+    "sampled_slices",
+    "sample_selection_reason",
+    "incident_ids_consulted",
+    "unresolved_incident_ids",
+    "uncovered_incident_slices",
+    "missing_evidence_summary",
+    "confidence_downgrade_reasons"
+  ],
+  "properties": {
+    "version": {
+      "enum": [1]
+    },
+    "sampled_slices": {
+      "type": "array"
+    },
+    "sample_selection_reason": {},
+    "incident_ids_consulted": {
+      "type": "array"
+    },
+    "unresolved_incident_ids": {
+      "type": "array"
+    },
+    "uncovered_incident_slices": {
+      "type": "array"
+    },
+    "missing_evidence_summary": {
+      "type": "array"
+    },
+    "confidence_downgrade_reasons": {
+      "type": "array"
+    },
+    "cadence_event": {},
+    "checkpoint": {},
+    "in_flight_slice": {}
+  }
+}

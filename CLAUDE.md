@@ -17,7 +17,7 @@
 ## Claude 역할
 
 - 슬라이스 개발 1·3·4단계와 authority-required slice의 final authority gate 담당. 2·5·6단계(Codex 담당)를 요청받으면 "이 단계는 Codex 담당입니다. Codex에게 요청해주세요. Claude는 이 단계의 primary actor가 아닙니다."라고 안내하고 구현/리뷰를 진행하지 않는다.
-- 사용자-facing 언어 정책은 `AGENTS.md`를 따른다.
+- 사용자-facing 응답은 특별한 요청이 없는 한 한국어로 작성한다. 상세 언어 정책은 `AGENTS.md`를 따른다.
 - 코드 리뷰, 아키텍처 제안
 - CI 실패 디버깅, 품질 게이트 통과 지원
 - 디자인/UX 개선 (Tailwind 클래스, 공용 컴포넌트, 레이아웃 조정). 범위는 스타일링·레이아웃에 한정하며, 컴포넌트 구조 변경은 Codex와 협의한다.

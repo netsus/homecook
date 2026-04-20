@@ -69,11 +69,11 @@ function parseExplicitSampleSlices(value) {
     .filter(Boolean);
 }
 
-function resolveSampleSlices(rootDir, explicitSlices) {
-  if (explicitSlices.length > 0) {
-    return explicitSlices;
-  }
+function uniqueStrings(values) {
+  return [...new Set(values.filter((value) => typeof value === "string" && value.trim().length > 0))];
+}
 
+function listWorkpackSlices(rootDir) {
   const workpacksDir = path.join(rootDir, "docs/workpacks");
   if (!existsSync(workpacksDir)) {
     return [];
@@ -82,8 +82,300 @@ function resolveSampleSlices(rootDir, explicitSlices) {
   return readdirSync(workpacksDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && /^\d{2}-/.test(entry.name))
     .map((entry) => entry.name)
-    .sort()
-    .slice(0, 3);
+    .sort();
+}
+
+function resolveSliceNumberRef(allSlices, sliceNumber) {
+  return allSlices.find((slice) => slice.startsWith(`${sliceNumber}-`)) ?? null;
+}
+
+function extractSliceRefsFromText(rootDir, text) {
+  if (typeof text !== "string" || text.trim().length === 0) {
+    return [];
+  }
+
+  const allSlices = listWorkpackSlices(rootDir);
+  const matches = new Set(allSlices.filter((slice) => text.includes(slice)));
+
+  for (const match of text.matchAll(/\bslice(\d{2})\b/gi)) {
+    const resolved = resolveSliceNumberRef(allSlices, match[1]);
+    if (resolved) {
+      matches.add(resolved);
+    }
+  }
+
+  return [...matches];
+}
+
+function readBulletField(body, field) {
+  const match = body.match(new RegExp(`^- ${field}:\\s+(.+)$`, "m"));
+  const rawValue = match?.[1]?.trim();
+  if (!rawValue) {
+    return null;
+  }
+
+  return rawValue.startsWith("`") && rawValue.endsWith("`") ? rawValue.slice(1, -1) : rawValue;
+}
+
+function readIncidentRegistryStatus(rootDir) {
+  const incidentRegistryPath = path.join(rootDir, "docs/engineering/workflow-v2/omo-incident-registry.md");
+  const incidentRegistryText = readTextIfExists(incidentRegistryPath) ?? "";
+
+  if (!incidentRegistryText) {
+    return {
+      incidentRegistryPath,
+      incidentRegistryText,
+      exists: false,
+      incidents: [],
+      incidentIds: [],
+      unresolvedIncidentIds: [],
+      unresolvedSliceRefs: [],
+      hasClosedByReplay: false,
+    };
+  }
+
+  const incidents = [];
+  const sectionPattern = /^### ([A-Z0-9-]+)\n([\s\S]*?)(?=^### |\Z)/gm;
+
+  for (const match of incidentRegistryText.matchAll(sectionPattern)) {
+    const id = match[1];
+    const body = match[2] ?? "";
+    const status = readBulletField(body, "status");
+    const boundary = readBulletField(body, "boundary");
+    const bucket = readBulletField(body, "bucket");
+    const stageScope = readBulletField(body, "stage_scope");
+    const symptom = readBulletField(body, "symptom");
+    const currentRecovery = readBulletField(body, "current_recovery");
+
+    incidents.push({
+      id,
+      status,
+      boundary,
+      bucket,
+      stageScope,
+      symptom,
+      currentRecovery,
+      body,
+      sliceRefs: extractSliceRefsFromText(rootDir, body),
+    });
+  }
+
+  const unresolvedIncidents = incidents.filter(
+    (incident) =>
+      (incident.status === "open" || incident.status === "backfill-required") &&
+      incident.boundary !== "product-local" &&
+      incident.boundary !== "separated-product-bug",
+  );
+
+  return {
+    incidentRegistryPath,
+    incidentRegistryText,
+    exists: true,
+    incidents,
+    incidentIds: incidents.map((incident) => incident.id),
+    unresolvedIncidentIds: unresolvedIncidents.map((incident) => incident.id),
+    unresolvedSliceRefs: uniqueStrings(unresolvedIncidents.flatMap((incident) => incident.sliceRefs)),
+    hasClosedByReplay: incidents.some((incident) => incident.status === "closed-by-replay"),
+  };
+}
+
+function sortSlicesByRecency(allSlices, slices) {
+  const order = new Map(allSlices.map((slice, index) => [slice, index]));
+  return uniqueStrings(slices).sort((left, right) => (order.get(right) ?? -1) - (order.get(left) ?? -1));
+}
+
+function resolveSampleSlices(rootDir, explicitSlices, inFlightSlice = null) {
+  if (explicitSlices.length > 0) {
+    return uniqueStrings(explicitSlices);
+  }
+
+  const allSlices = listWorkpackSlices(rootDir);
+  const incidentStatus = readIncidentRegistryStatus(rootDir);
+  const recentSlices = [...allSlices].slice(-2);
+  const prioritizedSlices = [
+    inFlightSlice,
+    ...sortSlicesByRecency(allSlices, incidentStatus.unresolvedSliceRefs),
+    ...sortSlicesByRecency(allSlices, recentSlices),
+    ...[...allSlices].reverse(),
+  ];
+
+  return uniqueStrings(prioritizedSlices).slice(0, 4);
+}
+
+function buildAuditCoverageStatus({ rootDir, sampledSlices, inFlightSlice = null, explicitSlices = [] }) {
+  const allSlices = listWorkpackSlices(rootDir);
+  const incidentStatus = readIncidentRegistryStatus(rootDir);
+  const sampleSet = new Set(sampledSlices);
+  const recentSlices = [...allSlices].slice(-2);
+  const missingRecentSlices = recentSlices.filter((slice) => !sampleSet.has(slice));
+  const inFlightMissing =
+    typeof inFlightSlice === "string" && inFlightSlice.trim().length > 0 && !sampleSet.has(inFlightSlice)
+      ? [inFlightSlice]
+      : [];
+  const uncoveredIncidentSlices = incidentStatus.unresolvedSliceRefs.filter((slice) => !sampleSet.has(slice));
+  const coverageGapReasons = [];
+
+  if (inFlightMissing.length > 0) {
+    coverageGapReasons.push(`in-flight slice missing from audit sample: ${inFlightMissing.join(", ")}`);
+  }
+
+  if (missingRecentSlices.length > 0) {
+    coverageGapReasons.push(`recent slices missing from audit sample: ${missingRecentSlices.join(", ")}`);
+  }
+
+  if (
+    incidentStatus.unresolvedSliceRefs.length > 0 &&
+    uncoveredIncidentSlices.length === incidentStatus.unresolvedSliceRefs.length
+  ) {
+    coverageGapReasons.push(
+      `no unresolved-incident slice is represented in audit sample: ${incidentStatus.unresolvedSliceRefs.join(", ")}`,
+    );
+  }
+
+  const missingEvidenceSummary = [];
+  if (!incidentStatus.exists) {
+    missingEvidenceSummary.push("incident registry missing");
+  }
+
+  return {
+    selectionReason:
+      explicitSlices.length > 0 ? "explicit sample slices provided" : "default recent/incident-aware sample",
+    incidentIdsConsulted: incidentStatus.incidentIds,
+    missingEvidenceSummary,
+    confidenceDowngradeReasons: [...missingEvidenceSummary, ...coverageGapReasons],
+    coverageGapReasons,
+    incidentStatus,
+    uncoveredIncidentSlices,
+    explicitSlices: uniqueStrings(explicitSlices),
+  };
+}
+
+function incidentMentionsAny(incident, fragments) {
+  const haystack = [
+    incident.id,
+    incident.bucket,
+    incident.stageScope,
+    incident.symptom,
+    incident.currentRecovery,
+    incident.body,
+  ]
+    .filter((value) => typeof value === "string" && value.length > 0)
+    .join("\n")
+    .toLowerCase();
+
+  return fragments.some((fragment) => haystack.includes(fragment.toLowerCase()));
+}
+
+function summarizeIncidentFamily({ incidents, familyId, label, keywords }) {
+  const matchedIncidents = incidents.filter((incident) => incidentMentionsAny(incident, keywords));
+
+  return {
+    id: familyId,
+    label,
+    incident_ids: matchedIncidents.map((incident) => incident.id),
+    count: matchedIncidents.length,
+  };
+}
+
+export function buildRuntimeAnomalySummary({ rootDir = process.cwd() } = {}) {
+  const incidentStatus = readIncidentRegistryStatus(rootDir);
+  const runtimeIncidents = incidentStatus.incidents.filter(
+    (incident) =>
+      (incident.status === "open" || incident.status === "backfill-required") &&
+      incident.boundary !== "product-local" &&
+      incident.boundary !== "separated-product-bug" &&
+      (incident.bucket?.includes("D. Runtime / Observability Reset") ||
+        incidentMentionsAny(incident, [
+          "stale lock",
+          "skip_locked",
+          "stage_running",
+          "blocked_retry",
+          "human_escalation",
+          "manual handoff",
+          "retry_not_due",
+        ])),
+  );
+
+  const familyBreakdown = [
+    summarizeIncidentFamily({
+      incidents: runtimeIncidents,
+      familyId: "stale-lock",
+      label: "stale lock / skip_locked / stage_running residue",
+      keywords: ["stale lock", "skip_locked", "stage_running", "retry_not_due"],
+    }),
+    summarizeIncidentFamily({
+      incidents: runtimeIncidents,
+      familyId: "manual-recovery",
+      label: "manual handoff / human escalation / manual recovery",
+      keywords: ["manual handoff", "human_escalation", "manual", "recovery"],
+    }),
+    summarizeIncidentFamily({
+      incidents: runtimeIncidents,
+      familyId: "visibility",
+      label: "operator visibility / heartbeat / transcript freshness gaps",
+      keywords: ["operator", "visibility", "transcript", "stdout", "stderr", "heartbeat"],
+    }),
+  ].filter((family) => family.count > 0);
+
+  return {
+    version: 1,
+    incident_ids: runtimeIncidents.map((incident) => incident.id),
+    incident_count: runtimeIncidents.length,
+    slice_refs: uniqueStrings(runtimeIncidents.flatMap((incident) => incident.sliceRefs)),
+    family_breakdown: familyBreakdown,
+    representative_symptoms: runtimeIncidents
+      .map((incident) => incident.symptom)
+      .filter((symptom) => typeof symptom === "string" && symptom.length > 0)
+      .slice(0, 5),
+  };
+}
+
+export function buildPrCiRealityDriftSummary({ rootDir = process.cwd() } = {}) {
+  const incidentStatus = readIncidentRegistryStatus(rootDir);
+  const driftIncidents = incidentStatus.incidents.filter(
+    (incident) =>
+      (incident.status === "open" || incident.status === "backfill-required") &&
+      incident.boundary !== "product-local" &&
+      incident.boundary !== "separated-product-bug" &&
+      (incident.bucket?.includes("E. PR / CI Integration Reset") ||
+        incidentMentionsAny(incident, [
+          "pr body",
+          "policy ci",
+          "policy fail",
+          "no-op commit",
+          "gh pr checks",
+          "pr_checks_failed",
+          "stale wait",
+          "ci wait",
+        ])),
+  );
+
+  const familyBreakdown = [
+    summarizeIncidentFamily({
+      incidents: driftIncidents,
+      familyId: "pr-body-projection",
+      label: "PR body evidence / policy rerun drift",
+      keywords: ["pr body", "policy fail", "no-op commit", "body edit"],
+    }),
+    summarizeIncidentFamily({
+      incidents: driftIncidents,
+      familyId: "ci-snapshot",
+      label: "current-head / CI snapshot drift",
+      keywords: ["gh pr checks", "pr_checks_failed", "stale wait", "ci wait", "current head"],
+    }),
+  ].filter((family) => family.count > 0);
+
+  return {
+    version: 1,
+    incident_ids: driftIncidents.map((incident) => incident.id),
+    incident_count: driftIncidents.length,
+    slice_refs: uniqueStrings(driftIncidents.flatMap((incident) => incident.sliceRefs)),
+    family_breakdown: familyBreakdown,
+    representative_symptoms: driftIncidents
+      .map((incident) => incident.symptom)
+      .filter((symptom) => typeof symptom === "string" && symptom.length > 0)
+      .slice(0, 5),
+  };
 }
 
 function readPromotionEvidenceStatus(rootDir) {
@@ -97,6 +389,7 @@ function readPromotionEvidenceStatus(rootDir) {
   const checklistText = readTextIfExists(checklistPath) ?? "";
   const opencodeReadmeText = readTextIfExists(opencodeReadmePath) ?? "";
   const evidence = readJsonIfExists(evidencePath);
+  const evidenceText = evidence ? JSON.stringify(evidence).toLowerCase() : "";
 
   const requiredLaneIds = ["authority-required-ui", "external-smoke", "bugfix-patch"];
   const pilotLanes = Array.isArray(evidence?.pilot_lanes) ? evidence.pilot_lanes : [];
@@ -216,6 +509,7 @@ function readPromotionEvidenceStatus(rootDir) {
       !schedulerStandardLocked &&
       (workflowReadmeText.includes("launchd") || workflowReadmeText.includes("macOS")),
     hasPolicyBoundarySignal: omoBaseText.includes("기준은 여전히 v1"),
+    hasReplaySignal: evidenceText.includes("replay"),
   };
 }
 
@@ -498,13 +792,182 @@ export function detectOmoPromotionRisk({ rootDir = process.cwd(), registry } = {
   ];
 }
 
-export function collectMetaHarnessFindings({ rootDir = process.cwd() } = {}) {
+/**
+ * @typedef {{
+ *   rootDir?: string;
+ *   sampledSlices?: string[];
+ *   inFlightSlice?: string | null;
+ *   explicitSlices?: string[];
+ *   registry?: Map<string, any>;
+ * }} MetaHarnessCoverageOptions
+ */
+
+/**
+ * @param {MetaHarnessCoverageOptions} [options]
+ */
+export function detectOmoAuditCoverageGap({
+  rootDir = process.cwd(),
+  sampledSlices = [],
+  inFlightSlice = null,
+  explicitSlices = [],
+  registry,
+} = {}) {
+  const resolvedRegistry = registry ?? loadFindingRegistry(rootDir);
+  const effectiveSampledSlices =
+    sampledSlices.length > 0 ? sampledSlices : resolveSampleSlices(rootDir, explicitSlices, inFlightSlice);
+  const coverageStatus = buildAuditCoverageStatus({
+    rootDir,
+    sampledSlices: effectiveSampledSlices,
+    inFlightSlice,
+    explicitSlices,
+  });
+
+  if (coverageStatus.coverageGapReasons.length === 0) {
+    return [];
+  }
+
+  return [
+    createFindingFromRegistry(resolvedRegistry, "H-OMO-002", {
+      why_it_matters:
+        "The audit sample omits recent, in-flight, or incident-linked slices, so a green report can reflect sample bias instead of real OMO health.",
+      evidence_refs: [
+        ...effectiveSampledSlices.map((slice) => `docs/workpacks/${slice}/README.md`).slice(0, 4),
+        relativePath(rootDir, coverageStatus.incidentStatus.incidentRegistryPath),
+        ".workflow-v2/status.json",
+      ],
+      recommended_validation: [
+        "Re-run pnpm harness:audit with the current in-flight slice and recent representative slices included.",
+        "Confirm the audit sample covers recent merged slices and at least one unresolved-incident slice family.",
+      ],
+      suggested_next_step: `Expand the audit sample before trusting the scorecard: ${coverageStatus.coverageGapReasons.join("; ")}.`,
+    }),
+  ];
+}
+
+export function detectOmoPromotionDrift({ rootDir = process.cwd(), registry } = {}) {
+  const resolvedRegistry = registry ?? loadFindingRegistry(rootDir);
+  const promotionStatus = readPromotionEvidenceStatus(rootDir);
+  const incidentStatus = readIncidentRegistryStatus(rootDir);
+  const promotionClaimActive =
+    promotionStatus.executionMode === "default" ||
+    promotionStatus.gateStatus === "ready" ||
+    promotionStatus.gateStatus === "candidate";
+
+  if (!promotionClaimActive) {
+    return [];
+  }
+
+  const missingPieces = [];
+  if (!incidentStatus.exists) {
+    missingPieces.push("incident registry missing");
+  }
+  if (incidentStatus.unresolvedIncidentIds.length > 0) {
+    missingPieces.push(`unresolved incidents remain: ${incidentStatus.unresolvedIncidentIds.join(", ")}`);
+  }
+  if (!(promotionStatus.hasReplaySignal || incidentStatus.hasClosedByReplay)) {
+    missingPieces.push("replay acceptance evidence missing");
+  }
+
+  if (missingPieces.length === 0) {
+    return [];
+  }
+
+  return [
+    createFindingFromRegistry(resolvedRegistry, "H-OMO-006", {
+      why_it_matters:
+        "Promotion verdicts can still drift to candidate/ready even when unresolved incident families or replay evidence gaps remain, which recreates false-green cutover risk.",
+      evidence_refs: [
+        "docs/engineering/workflow-v2/promotion-readiness.md",
+        ".workflow-v2/promotion-evidence.json",
+        relativePath(rootDir, incidentStatus.incidentRegistryPath),
+      ],
+      recommended_validation: [
+        "Re-run pnpm harness:audit after incident-aware promotion checks are updated.",
+        "Do not restore candidate/ready until replay evidence and unresolved incident dispositions are recorded.",
+      ],
+      suggested_next_step: `Keep promotion verdict below ready until these gaps are resolved: ${missingPieces.join("; ")}.`,
+    }),
+  ];
+}
+
+export function detectOmoRuntimeAnomalyGap({ rootDir = process.cwd(), registry } = {}) {
+  const resolvedRegistry = registry ?? loadFindingRegistry(rootDir);
+  const runtimeSummary = buildRuntimeAnomalySummary({ rootDir });
+
+  if (runtimeSummary.incident_count === 0) {
+    return [];
+  }
+
+  const familySummary =
+    runtimeSummary.family_breakdown.length > 0
+      ? runtimeSummary.family_breakdown.map((family) => `${family.label}=${family.count}`).join(", ")
+      : `${runtimeSummary.incident_count} unresolved runtime incident(s)`;
+
+  return [
+    createFindingFromRegistry(resolvedRegistry, "H-OMO-003", {
+      why_it_matters:
+        "Runtime anomalies such as stale locks, blocked retry loops, and manual handoff residue remain in the incident corpus, so auditor output must keep them visible instead of treating them as historical noise.",
+      evidence_refs: [
+        "docs/engineering/workflow-v2/omo-incident-registry.md",
+        ".workflow-v2/status.json",
+        ".opencode/README.md",
+      ],
+      recommended_validation: [
+        "Re-run pnpm harness:audit after runtime anomaly detectors and summaries are updated.",
+        "Confirm runtime findings remain active until replay or explicit disposition closes the incident family.",
+      ],
+      suggested_next_step: `Keep runtime anomaly findings active while these families remain unresolved: ${familySummary}.`,
+    }),
+  ];
+}
+
+export function detectOmoPrCiRealityDrift({ rootDir = process.cwd(), registry } = {}) {
+  const resolvedRegistry = registry ?? loadFindingRegistry(rootDir);
+  const driftSummary = buildPrCiRealityDriftSummary({ rootDir });
+
+  if (driftSummary.incident_count === 0) {
+    return [];
+  }
+
+  const familySummary =
+    driftSummary.family_breakdown.length > 0
+      ? driftSummary.family_breakdown.map((family) => `${family.label}=${family.count}`).join(", ")
+      : `${driftSummary.incident_count} unresolved PR/CI drift incident(s)`;
+
+  return [
+    createFindingFromRegistry(resolvedRegistry, "H-OMO-005", {
+      why_it_matters:
+        "PR body evidence drift and stale CI snapshots create false merge-state narratives unless auditor output keeps those mismatches visible.",
+      evidence_refs: [
+        "docs/engineering/workflow-v2/omo-incident-registry.md",
+        ".workflow-v2/promotion-evidence.json",
+        "docs/engineering/workflow-v2/promotion-readiness.md",
+      ],
+      recommended_validation: [
+        "Re-run pnpm harness:audit after PR body projection and CI snapshot checks are updated.",
+        "Confirm PR/CI drift remains active until current-head reality and projection state converge.",
+      ],
+      suggested_next_step: `Keep PR/CI drift findings active while these families remain unresolved: ${familySummary}.`,
+    }),
+  ];
+}
+
+export function collectMetaHarnessFindings({
+  rootDir = process.cwd(),
+  sampledSlices = [],
+  inFlightSlice = null,
+  explicitSlices = [],
+} = {}) {
   const registry = loadFindingRegistry(rootDir);
 
   return [
     ...detectPlaywrightWorkflowGap({ rootDir, registry }),
     ...detectBookkeepingOverlap({ rootDir, registry }),
+    ...detectOmoAuditCoverageGap({ rootDir, sampledSlices, inFlightSlice, explicitSlices, registry }),
+    ...detectOmoRuntimeAnomalyGap({ rootDir, registry }),
+    ...detectOmoPrCiRealityDrift({ rootDir, registry }),
     ...detectOmoPromotionRisk({ rootDir, registry }),
+    ...detectOmoPromotionDrift({ rootDir, registry }),
   ];
 }
 
@@ -602,6 +1065,30 @@ export function buildMetaHarnessScorecard({ findings, generatedAt }) {
     if (finding.id === "H-OMO-001") {
       applyPenalty(axes.automation_omo_runtime, finding);
       applyPenalty(axes.governance, finding);
+      continue;
+    }
+
+    if (finding.id === "H-OMO-002") {
+      applyPenalty(axes.governance, finding);
+      applyPenalty(axes.automation_omo_runtime, finding);
+      continue;
+    }
+
+    if (finding.id === "H-OMO-003") {
+      applyPenalty(axes.automation_omo_runtime, finding);
+      applyPenalty(axes.review_closeout, finding);
+      continue;
+    }
+
+    if (finding.id === "H-OMO-005") {
+      applyPenalty(axes.review_closeout, finding);
+      applyPenalty(axes.automation_omo_runtime, finding);
+      continue;
+    }
+
+    if (finding.id === "H-OMO-006") {
+      applyPenalty(axes.automation_omo_runtime, finding);
+      applyPenalty(axes.governance, finding);
     }
   }
 
@@ -645,6 +1132,7 @@ export function buildMetaHarnessRemediationPlan({ findings, generatedAt }) {
 
 export function buildMetaHarnessPromotionReadiness({ rootDir = process.cwd(), findings, generatedAt }) {
   const status = readPromotionEvidenceStatus(rootDir);
+  const incidentStatus = readIncidentRegistryStatus(rootDir);
   const blockers = findings
     .filter((finding) => finding.bucket === "promotion-blocker" || finding.id === "H-GOV-001")
     .map((finding) => finding.id);
@@ -670,6 +1158,7 @@ export function buildMetaHarnessPromotionReadiness({ rootDir = process.cwd(), fi
     evidence_refs: [
       ...new Set([
         ...findings.flatMap((finding) => finding.evidence_refs),
+        relativePath(rootDir, incidentStatus.incidentRegistryPath),
         relativePath(rootDir, status.checklistPath),
         relativePath(rootDir, status.evidencePath),
       ]),
@@ -678,6 +1167,54 @@ export function buildMetaHarnessPromotionReadiness({ rootDir = process.cwd(), fi
     missing_lane_ids: status.incompleteLaneIds,
     missing_operational_gate_ids: status.incompleteOperationalGateIds,
     missing_documentation_gate_ids: status.incompleteDocumentationGateIds,
+    incident_blockers: incidentStatus.unresolvedIncidentIds,
+    replay_evidence_present: status.hasReplaySignal || incidentStatus.hasClosedByReplay,
+  };
+}
+
+function buildIncidentCoverageBundle({ sampledSlices, coverageStatus, inFlightSlice = null, cadenceEvent, checkpoint }) {
+  return {
+    version: 1,
+    sampled_slices: sampledSlices,
+    sample_selection_reason: coverageStatus.selectionReason,
+    incident_ids_consulted: coverageStatus.incidentIdsConsulted,
+    unresolved_incident_ids: coverageStatus.incidentStatus.unresolvedIncidentIds,
+    uncovered_incident_slices: coverageStatus.uncoveredIncidentSlices,
+    missing_evidence_summary: coverageStatus.missingEvidenceSummary,
+    confidence_downgrade_reasons: coverageStatus.confidenceDowngradeReasons,
+    cadence_event: cadenceEvent,
+    checkpoint: checkpoint ?? null,
+    in_flight_slice: inFlightSlice ?? null,
+  };
+}
+
+function buildPromotionRationaleBundle({ promotionReadiness, runtimeAnomalySummary, prCiRealityDriftSummary }) {
+  const rationale = [];
+
+  if (promotionReadiness.blockers.length > 0) {
+    rationale.push(`blocking findings: ${promotionReadiness.blockers.join(", ")}`);
+  }
+  if (promotionReadiness.incident_blockers.length > 0) {
+    rationale.push(`unresolved incidents: ${promotionReadiness.incident_blockers.join(", ")}`);
+  }
+  if (!promotionReadiness.replay_evidence_present) {
+    rationale.push("replay acceptance evidence missing");
+  }
+  if (runtimeAnomalySummary.incident_count > 0) {
+    rationale.push(`runtime anomaly incidents: ${runtimeAnomalySummary.incident_ids.join(", ")}`);
+  }
+  if (prCiRealityDriftSummary.incident_count > 0) {
+    rationale.push(`pr/ci drift incidents: ${prCiRealityDriftSummary.incident_ids.join(", ")}`);
+  }
+
+  return {
+    version: 1,
+    verdict: promotionReadiness.verdict,
+    blockers: promotionReadiness.blockers,
+    promotion_evidence_status: promotionReadiness.promotion_evidence_status,
+    replay_evidence_present: promotionReadiness.replay_evidence_present,
+    incident_blockers: promotionReadiness.incident_blockers,
+    rationale,
   };
 }
 
@@ -688,6 +1225,8 @@ export function renderMetaHarnessReport({
   remediationPlan,
   promotionReadiness,
   auditContext,
+  runtimeAnomalySummary,
+  prCiRealityDriftSummary,
 }) {
   const lines = [];
   lines.push("# Meta Harness Audit Report");
@@ -696,6 +1235,12 @@ export function renderMetaHarnessReport({
   lines.push(`- Findings: ${findings.length}`);
   lines.push(`- Promotion readiness: ${promotionReadiness.verdict}`);
   lines.push(`- Sampled slices: ${sampledSlices.length > 0 ? sampledSlices.join(", ") : "none"}`);
+  if (auditContext?.sample_selection_reason) {
+    lines.push(`- Sample selection reason: ${auditContext.sample_selection_reason}`);
+  }
+  if (Array.isArray(auditContext?.incident_ids_consulted) && auditContext.incident_ids_consulted.length > 0) {
+    lines.push(`- Incident IDs consulted: ${auditContext.incident_ids_consulted.join(", ")}`);
+  }
   lines.push(`- Cadence event: ${auditContext?.cadence_event ?? "manual-ad-hoc"}`);
   lines.push(`- Checkpoint: ${auditContext?.checkpoint ?? "none"}`);
   lines.push(`- In-flight slice: ${auditContext?.in_flight_slice ?? "none"}`);
@@ -724,14 +1269,54 @@ export function renderMetaHarnessReport({
     lines.push(`  - next: ${finding.suggested_next_step}`);
   }
 
+  if (
+    (Array.isArray(auditContext?.missing_evidence_summary) && auditContext.missing_evidence_summary.length > 0) ||
+    (Array.isArray(auditContext?.confidence_downgrade_reasons) &&
+      auditContext.confidence_downgrade_reasons.length > 0)
+  ) {
+    lines.push("");
+    lines.push("## Coverage Notes");
+    lines.push("");
+
+    if (Array.isArray(auditContext?.missing_evidence_summary) && auditContext.missing_evidence_summary.length > 0) {
+      lines.push(`- Missing evidence: ${auditContext.missing_evidence_summary.join(", ")}`);
+    }
+
+    if (
+      Array.isArray(auditContext?.confidence_downgrade_reasons) &&
+      auditContext.confidence_downgrade_reasons.length > 0
+    ) {
+      lines.push(`- Confidence downgrade reasons: ${auditContext.confidence_downgrade_reasons.join(", ")}`);
+    }
+  }
+
+  if (runtimeAnomalySummary?.incident_count > 0 || prCiRealityDriftSummary?.incident_count > 0) {
+    lines.push("");
+    lines.push("## Runtime And CI Signals");
+    lines.push("");
+
+    if (runtimeAnomalySummary?.incident_count > 0) {
+      lines.push(`- Runtime anomaly incidents: ${runtimeAnomalySummary.incident_ids.join(", ")}`);
+    }
+
+    if (prCiRealityDriftSummary?.incident_count > 0) {
+      lines.push(`- PR/CI drift incidents: ${prCiRealityDriftSummary.incident_ids.join(", ")}`);
+    }
+  }
+
   lines.push("");
   lines.push("## Promotion Readiness");
   lines.push("");
   lines.push(`- Verdict: ${promotionReadiness.verdict}`);
   lines.push(`- Summary: ${promotionReadiness.summary}`);
+  lines.push(`- Replay evidence present: ${promotionReadiness.replay_evidence_present ? "yes" : "no"}`);
 
   if (promotionReadiness.blockers.length > 0) {
     lines.push(`- Blockers: ${promotionReadiness.blockers.join(", ")}`);
+  }
+
+  if (Array.isArray(promotionReadiness.incident_blockers) && promotionReadiness.incident_blockers.length > 0) {
+    lines.push(`- Incident blockers: ${promotionReadiness.incident_blockers.join(", ")}`);
   }
 
   lines.push("");
@@ -851,11 +1436,36 @@ export function runMetaHarnessAudit({
   const explicitSlices = inFlightSlice
     ? [...new Set([...sampleSlices, inFlightSlice])]
     : sampleSlices;
-  const sampledSlices = resolveSampleSlices(rootDir, explicitSlices);
-  const findings = collectMetaHarnessFindings({ rootDir });
+  const sampledSlices = resolveSampleSlices(rootDir, explicitSlices, inFlightSlice);
+  const coverageStatus = buildAuditCoverageStatus({
+    rootDir,
+    sampledSlices,
+    inFlightSlice,
+    explicitSlices,
+  });
+  const incidentCoverage = buildIncidentCoverageBundle({
+    sampledSlices,
+    coverageStatus,
+    inFlightSlice,
+    cadenceEvent,
+    checkpoint,
+  });
+  const findings = collectMetaHarnessFindings({
+    rootDir,
+    sampledSlices,
+    inFlightSlice,
+    explicitSlices,
+  });
+  const runtimeAnomalySummary = buildRuntimeAnomalySummary({ rootDir });
+  const prCiRealityDriftSummary = buildPrCiRealityDriftSummary({ rootDir });
   const scorecard = buildMetaHarnessScorecard({ findings, generatedAt });
   const remediationPlan = buildMetaHarnessRemediationPlan({ findings, generatedAt });
   const promotionReadiness = buildMetaHarnessPromotionReadiness({ rootDir, findings, generatedAt });
+  const promotionRationale = buildPromotionRationaleBundle({
+    promotionReadiness,
+    runtimeAnomalySummary,
+    prCiRealityDriftSummary,
+  });
   const auditContext = {
     version: 1,
     generated_at: generatedAt,
@@ -869,6 +1479,10 @@ export function runMetaHarnessAudit({
       "docs/engineering/meta-harness-auditor/cadence.json",
     ],
     sampled_slices: sampledSlices,
+    sample_selection_reason: coverageStatus.selectionReason,
+    incident_ids_consulted: coverageStatus.incidentIdsConsulted,
+    missing_evidence_summary: coverageStatus.missingEvidenceSummary,
+    confidence_downgrade_reasons: coverageStatus.confidenceDowngradeReasons,
     required_inputs_checked: [
       "AGENTS.md",
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
@@ -899,6 +1513,8 @@ export function runMetaHarnessAudit({
     remediationPlan,
     promotionReadiness,
     auditContext,
+    runtimeAnomalySummary,
+    prCiRealityDriftSummary,
   });
 
   const resolvedOutputDir = outputDir
@@ -915,16 +1531,23 @@ export function runMetaHarnessAudit({
     generated_at: generatedAt,
     findings,
   });
+  writeJsonFile(path.join(resolvedOutputDir, "incident-coverage.json"), incidentCoverage);
+  writeJsonFile(path.join(resolvedOutputDir, "runtime-anomaly-summary.json"), runtimeAnomalySummary);
   writeJsonFile(path.join(resolvedOutputDir, "remediation-plan.json"), remediationPlan);
   writeJsonFile(path.join(resolvedOutputDir, "promotion-readiness.json"), promotionReadiness);
+  writeJsonFile(path.join(resolvedOutputDir, "promotion-rationale.json"), promotionRationale);
 
   return {
     outputDir: resolvedOutputDir,
     sampledSlices,
     findings,
     scorecard,
+    incidentCoverage,
+    runtimeAnomalySummary,
+    prCiRealityDriftSummary,
     remediationPlan,
     promotionReadiness,
+    promotionRationale,
     auditContext,
   };
 }
