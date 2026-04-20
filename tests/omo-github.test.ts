@@ -46,6 +46,89 @@ function createFakeGhBin(rootDir: string) {
 }
 
 describe("OMO GitHub automation client", () => {
+  it("projects canonical closeout snapshot into default PR body Closeout Sync and Merge Gate sections", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-closeout-projection-"));
+    const { binPath, argsPath } = createFakeGhBin(rootDir);
+
+    mkdirSync(join(rootDir, ".workflow-v2", "work-items"), { recursive: true });
+    writeFileSync(
+      join(rootDir, ".workflow-v2", "work-items", "06-recipe-to-planner.json"),
+      `${JSON.stringify(
+        {
+          id: "06-recipe-to-planner",
+          closeout: {
+            phase: "completed",
+            docs_projection: {
+              roadmap_lifecycle: "merged",
+              design_status: "confirmed",
+              delivery_checklist: "complete",
+              design_authority: "passed",
+              acceptance: "complete",
+              automation_spec_metadata: "synced",
+            },
+            verification_projection: {
+              required_checks: "passed",
+              external_smokes: "passed",
+              authority_reports: [".artifacts/authority/report.md"],
+              actual_verification_refs: ["source PR Actual Verification"],
+            },
+            merge_gate_projection: {
+              current_head_sha: "abc1234",
+              approval_state: "dual_approved",
+              all_checks_green: true,
+            },
+            recovery_summary: {
+              manual_patch_count: 0,
+              manual_handoff: false,
+              stale_lock_count: 0,
+              ci_resync_count: 0,
+              artifact_missing: false,
+              last_recovery_at: "2026-04-21T00:00:00Z",
+            },
+            projection_state: {
+              docs_synced_at: "2026-04-21T00:01:00Z",
+              status_synced_at: "2026-04-21T00:02:00Z",
+              pr_body_synced_at: "2026-04-21T00:03:00Z",
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+      environment: {
+        FAKE_GH_ARGS_PATH: argsPath,
+      },
+    });
+
+    client.createPullRequest({
+      base: "master",
+      head: "feature/fe-06-recipe-to-planner",
+      title: "feat: slice06 frontend",
+      body: "## Summary\n- frontend",
+      draft: true,
+      workItemId: "06-recipe-to-planner",
+    });
+
+    const argsLog = readFileSync(argsPath, "utf8");
+
+    expect(argsLog).toContain(
+      "- canonical closeout source: `.workflow-v2/work-items/06-recipe-to-planner.json#closeout`",
+    );
+    expect(argsLog).toContain("- roadmap status: `merged`");
+    expect(argsLog).toContain("- README Delivery Checklist: `complete`");
+    expect(argsLog).toContain("- current head SHA: `abc1234`");
+    expect(argsLog).toContain("- approval state: `dual_approved`");
+    expect(argsLog).toContain("- all checks completed green: 예");
+    expect(argsLog).toContain(
+      "- started PR checks: canonical closeout snapshot does not own the check list; current head GitHub checks로 재확인 필요",
+    );
+  });
+
   it("uses gh CLI for create, checks, ready, review, comment, merge, and update-branch flows", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-"));
     const { binPath, argsPath } = createFakeGhBin(rootDir);

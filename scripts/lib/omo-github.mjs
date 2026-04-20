@@ -1,7 +1,8 @@
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
+import { projectCanonicalCloseoutToPrBodySections } from "./omo-closeout-state.mjs";
 import {
   REQUIRED_PR_SECTIONS,
   findEmptyPrSections,
@@ -61,11 +62,37 @@ function extractSectionContent(body, section) {
   return sectionContent.length > 0 ? sectionContent : null;
 }
 
+function loadCanonicalCloseoutPrBodySections({ rootDir = process.cwd(), workItemId }) {
+  const normalizedWorkItemId =
+    typeof workItemId === "string" && workItemId.trim().length > 0 ? workItemId.trim() : null;
+  if (!normalizedWorkItemId) {
+    return null;
+  }
+
+  const workItemPath = resolve(rootDir, ".workflow-v2", "work-items", `${normalizedWorkItemId}.json`);
+  if (!existsSync(workItemPath)) {
+    return null;
+  }
+
+  try {
+    const workItem = JSON.parse(readFileSync(workItemPath, "utf8"));
+    return projectCanonicalCloseoutToPrBodySections(workItem?.closeout, {
+      workItemId: normalizedWorkItemId,
+    });
+  } catch {
+    return null;
+  }
+}
+
 function buildDefaultPrSectionContent(section, { body, workItemId, rootDir = process.cwd() }) {
   const workflowRefPath =
     typeof workItemId === "string" && workItemId.trim().length > 0
       ? `.workflow-v2/work-items/${workItemId.trim()}.json`
       : "N/A";
+  const closeoutPrBodySections = loadCanonicalCloseoutPrBodySections({
+    rootDir,
+    workItemId,
+  });
 
   switch (section) {
     case "## Summary":
@@ -91,10 +118,15 @@ function buildDefaultPrSectionContent(section, { body, workItemId, rootDir = pro
         `- 아티팩트 / 보고서 경로: \`${qaEvidence.checklistPath}\`, \`${qaEvidence.reportPath}\`, \`${qaEvidence.evalPath}\``,
       ].join("\n");
     }
+    case "## Closeout Sync":
+      return closeoutPrBodySections?.closeout_sync ?? "- 해당 없음";
     case "## Docs Impact":
       return "- 자동 보정: 문서 영향 분석이 stage result에 없어 수동 확인이 필요합니다.";
     case "## Merge Gate":
-      return "- current head SHA: 수동 확인 필요\n- started PR checks: 수동 확인 필요\n- all checks completed green: 아니오 (확인 필요)\n- pending / failed / rerun checks: 수동 확인 필요";
+      return (
+        closeoutPrBodySections?.merge_gate
+        ?? "- current head SHA: 수동 확인 필요\n- started PR checks: 수동 확인 필요\n- all checks completed green: 아니오 (확인 필요)\n- pending / failed / rerun checks: 수동 확인 필요"
+      );
     case "## Security Review":
       return "- 자동 보정: 보안 영향 분석이 stage result에 없어 수동 확인이 필요합니다.";
     case "## Performance":

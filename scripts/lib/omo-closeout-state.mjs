@@ -119,6 +119,15 @@ function buildCanonicalCloseoutPathPrefix(canonicalSource) {
   return normalizedCanonicalSource.replace(/#closeout$/, ".closeout");
 }
 
+function formatProjectionValue(value) {
+  const normalized = normalizeOptionalString(value);
+  return normalized ? `\`${normalized}\`` : "`unknown`";
+}
+
+function formatProjectionBoolean(value) {
+  return value === true ? "예" : "아니오";
+}
+
 function buildRecoveryFragments(recoverySummary = {}) {
   const fragments = [];
   const manualPatchCount = normalizeNonNegativeInteger(recoverySummary.manual_patch_count);
@@ -226,6 +235,46 @@ export function projectCanonicalCloseoutToHumanSurfacePayload(closeout, { workIt
       artifact_missing: normalizeBoolean(closeout.recovery_summary?.artifact_missing),
       last_recovery_at: normalizeOptionalString(closeout.recovery_summary?.last_recovery_at),
     },
+  };
+}
+
+export function projectCanonicalCloseoutToPrBodySections(closeout, { workItemId } = {}) {
+  const projection = projectCanonicalCloseoutToHumanSurfacePayload(closeout, { workItemId });
+  if (!projection) {
+    return null;
+  }
+
+  const canonicalSource = projection.canonical_source ?? ".workflow-v2/work-items/<unknown>.json#closeout";
+  const docsSyncState = projection.sync_state.docs_synced_at ?? "unknown";
+  const prBodySyncState = projection.sync_state.pr_body_synced_at ?? "unknown";
+
+  return {
+    closeout_sync: [
+      `- canonical closeout source: \`${canonicalSource}\``,
+      `- roadmap status: ${formatProjectionValue(projection.pr_body.closeout_sync.roadmap_lifecycle)}`,
+      `- README Delivery Checklist: ${formatProjectionValue(
+        projection.pr_body.closeout_sync.delivery_checklist,
+      )}`,
+      `- acceptance: ${formatProjectionValue(projection.pr_body.closeout_sync.acceptance)}`,
+      `- Design Status: ${formatProjectionValue(projection.pr_body.closeout_sync.design_status)}`,
+      `- Design Authority: ${formatProjectionValue(projection.pr_body.closeout_sync.design_authority)}`,
+      `- automation-spec closeout metadata: ${formatProjectionValue(
+        projection.pr_body.closeout_sync.automation_spec_metadata,
+      )}`,
+      `- projection sync state: docs=\`${docsSyncState}\`, PR body=\`${prBodySyncState}\``,
+    ].join("\n"),
+    merge_gate: [
+      `- canonical closeout source: \`${canonicalSource}\``,
+      `- current head SHA: ${formatProjectionValue(projection.pr_body.merge_gate.current_head_sha)}`,
+      `- approval state: ${formatProjectionValue(projection.pr_body.merge_gate.approval_state)}`,
+      `- required checks projection: ${formatProjectionValue(
+        projection.pr_body.actual_verification.required_checks,
+      )}`,
+      `- all checks completed green: ${formatProjectionBoolean(
+        projection.pr_body.merge_gate.all_checks_green,
+      )}`,
+      "- started PR checks: canonical closeout snapshot does not own the check list; current head GitHub checks로 재확인 필요",
+    ].join("\n"),
   };
 }
 
