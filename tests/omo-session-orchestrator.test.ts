@@ -391,6 +391,11 @@ describe("OMO session orchestrator", () => {
         },
       },
     });
+    expect(status.runtimeObservability).toMatchObject({
+      sessionRole: "codex_primary",
+      sessionFreshness: "stale_candidate",
+      lastActivitySource: "execution.started_at",
+    });
   }, 15_000);
 
   it("resumes due blocked stages from the stored Claude session", () => {

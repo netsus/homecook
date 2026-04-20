@@ -185,6 +185,7 @@ status guidance 출력 규칙:
 - 최소 출력 항목은 `reason code`, `remediation`, 마지막 실패 validator, `failure path`, `artifact path`, `next recommendation`이다.
 - `omo:status:brief`는 같은 guidance를 compact 형식으로 보여 주되, current stage와 active phase를 먼저 유지한다.
 - `Phase 4` 이후에는 `runtime signal`도 함께 노출해 `running_live`, `running_stale_candidate`, `retry_due`, `waiting_ci`, `lock_residue`를 별도 해석 없이 바로 읽을 수 있어야 한다.
+- 같은 출력에서 `last activity`, `activity source`, `session freshness`, `execution freshness`를 같이 보여 heartbeat proxy 역할을 하도록 만든다.
 
 ## Homecook Mapping
 

@@ -28,7 +28,7 @@ pnpm omo:tick -- --all
 
 위 순서는 "작업 시작 -> 현재 위치 확인 -> 2단계 실행 -> 대기 중 작업 재개"를 뜻한다. 초보자는 `status:brief`로 위치를 읽고 `run-stage`로 필요한 단계만 돌려보면 구조를 빨리 이해할 수 있다.
 
-`pnpm omo:status -- --work-item <id>`는 operator-facing 진단도 함께 보여 준다. 대표적으로 `reason code`, 마지막 실패 validator, failure path, artifact path, 다음 추천 액션을 표준 형식으로 출력하므로 "왜 막혔는지"를 runtime JSON 없이도 바로 확인할 수 있다.
+`pnpm omo:status -- --work-item <id>`는 operator-facing 진단도 함께 보여 준다. 대표적으로 `reason code`, 마지막 실패 validator, failure path, artifact path, 다음 추천 액션과 함께 `runtime signal`, `last activity`, `session freshness`를 표준 형식으로 출력하므로 "왜 막혔는지"와 "지금도 살아 있는지"를 runtime JSON 없이도 바로 확인할 수 있다.
 
 ## 기억할 점
 
