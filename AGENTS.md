@@ -19,12 +19,8 @@
 
 ## Source of Truth
 
-- 공식 최신본:
-  - 요구사항 `docs/요구사항기준선-v1.6.3.md`
-  - 화면정의서 `docs/화면정의서-v1.5.0.md`
-  - 유저 Flow맵 `docs/유저flow맵-v1.3.0.md`
-  - DB 설계 `docs/db설계-v1.3.1.md`
-  - API 문서 `docs/api문서-v1.2.2.md`
+- 최신 공식 버전과 파일 경로는 `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`가 단일 소스다.
+- 공식 기준 문서는 요구사항, 화면정의서, 유저 Flow맵, DB 설계, API 문서 5종이다.
 - `wireframes`는 보조 레퍼런스다.
 - wireframe과 공식 문서가 충돌하면 공식 문서가 우선이다.
 - 공식 문서는 현재 구현의 기본 기준이다. 더 나은 제품/API 계약이 필요해 보여도 사용자 승인 없이 공식 문서보다 구현을 앞세우지 않는다.
@@ -81,15 +77,9 @@
 
 - 브랜치, 커밋, worktree, PR 크기 규칙의 단일 기준은 `docs/engineering/git-workflow.md`다.
 - 변경 유형별 `required_checks`, `optional_reviews`, `N/A 허용 기준`, loop 사용 기준은 `docs/engineering/agent-workflow-overview.md`를 따른다.
-- 기능 작업은 기본 브랜치에서 직접 하지 않고 작업 전용 브랜치에서 진행한다.
-- 파일 수정 전에는 먼저 작업 브랜치로 전환한다. 표준 명령은 `pnpm branch:start -- --branch <name>` 또는 slice 작업의 경우 `pnpm branch:start -- --slice <slice> --role <docs|be|fe>`다.
-- `pnpm branch:start`는 일반 세션의 active work branch intent도 함께 기록한다.
-- 일반 세션에서는 `.claude/settings.json`의 project hook가 새 user prompt마다 branch reassert를 요구한다.
-- 따라서 같은 세션이어도 새 user prompt 뒤에 파일을 수정하려면 먼저 `pnpm branch:start ...`를 다시 실행해 이번 턴의 work branch intent를 재확인한다.
-- reassert가 끝난 뒤 `Write/Edit` hook는 recorded intent와 현재 checkout을 비교한다. clean worktree면 recorded branch로 자동 전환하고, intent가 없거나 dirty mismatch면 수정이 차단된다.
-- 필요 시 `pnpm branch:status`, `pnpm branch:clear`로 현재 intent와 reassert 상태를 확인/초기화한다.
+- protected base branch(`main`, `master`, `develop`)에서 직접 작업하지 않는다. 파일 수정 전 `pnpm branch:start -- --branch <name>` 또는 `pnpm branch:start -- --slice <slice> --role <docs|be|fe>`로 작업 브랜치를 선언한다.
+- 일반 세션에서는 새 user prompt마다 branch intent reassert가 필요하다. 필요 시 `pnpm branch:status`, `pnpm branch:clear`로 현재 상태를 확인/초기화한다.
 - 브랜치 하나에는 가능한 한 하나의 작은 기능 단위 또는 명확한 하위 작업만 담는다.
-- 브랜치 접두어는 `feat/`가 아니라 `feature/`를 사용한다. (CI 검증 기준)
 - product slice 구현은 슬라이스 순서를 유지한다. 1단계(Claude) 문서가 main에 머지된 뒤에만 2단계(Codex)를 시작한다.
 - product 구현 PR은 기본적으로 `Draft -> required checks green -> Ready for Review -> 실제 동작 확인 -> current head 기준 전체 PR checks green -> merge` 흐름을 따른다.
 - merge 판단은 GitHub branch protection의 required 여부가 아니라 현재 PR head SHA에 대해 시작된 check 전체를 기준으로 한다. pending, rerun 중, fail인 check가 하나라도 남아 있으면 merge하지 않는다.
@@ -102,44 +92,31 @@
 
 ## Tech Stack
 
-- 패키지 매니저: `pnpm`
-- 프론트엔드: `Next.js 15` + `React 19` + `TypeScript`
-- 스타일링: `Tailwind CSS 4`
-- 상태관리: `Zustand`
-- 백엔드/BaaS: `Supabase`
-- API 구현: `Next.js Route Handlers`
-- 테스트: `Vitest`
-- Drag and Drop: `@dnd-kit/core`
+- 패키지 매니저는 `pnpm`이다.
+- 현재 기본 스택은 `Next.js 15`, `React 19`, `TypeScript`, `Tailwind CSS 4`, `Zustand`, `Supabase`, `Next.js Route Handlers`, `Vitest`, `@dnd-kit/core`다.
 
 ## Domain Rules
 
-- `meals.status`: `registered -> shopping_done -> cook_done`
-- 장보기 preview 대상: `status='registered' AND shopping_list_id IS NULL`
-- 장보기 생성 시 대상 `meals.shopping_list_id`를 먼저 세팅한다.
-- `SHOPPING_DETAIL`은 구매 섹션 / 팬트리 제외 섹션 2영역 구조다.
-- 장보기 완료 후 리스트는 read-only다. 수정 API는 `409`를 반환한다.
+- `meals.status` 전이는 `registered -> shopping_done -> cook_done`만 허용한다. 독립 요리는 `meals` 상태를 바꾸지 않는다.
+- 장보기 preview 대상은 `status='registered' AND shopping_list_id IS NULL`이다. 장보기 생성 시 대상 `meals.shopping_list_id`를 먼저 세팅한다.
+- `SHOPPING_DETAIL`은 구매 섹션 / 팬트리 제외 섹션의 2영역 구조다. 장보기 완료 후 리스트는 read-only이며 수정 API는 `409`를 반환한다.
 - `is_pantry_excluded=true`가 되면 `is_checked=false`로 자동 정리한다.
-- `add_to_pantry_item_ids`: `null`은 기본값, `[]`는 미반영, 선택값은 해당 항목만 반영이다.
-- 무효 항목(미체크/제외/중복)은 무시하고 진행한다.
-- `pantry_added`는 `pantry_added_item_ids` 길이와 일치해야 한다.
-- `shopping_list_items` 정렬은 `sort_order ASC`, 동일 시 `id ASC`다.
-- 팬트리는 수량이 아니라 보유 여부만 저장한다.
-- 독립 요리는 `meals` 상태를 바꾸지 않는다.
+- `add_to_pantry_item_ids`는 `null=기본값`, `[]=미반영`, `선택값=해당 항목만 반영`이다. 무효 항목(미체크/제외/중복)은 무시하고 `pantry_added`는 `pantry_added_item_ids` 길이와 일치해야 한다.
+- `shopping_list_items` 정렬은 `sort_order ASC`, 동일 시 `id ASC`다. 팬트리는 수량이 아니라 보유 여부만 저장한다.
 - 요리모드에서는 인분 조절 UI를 두지 않는다.
 - 저장 가능한 레시피북 타입은 `saved`, `custom`만이다.
 - 삭제된 엔드포인트 `DELETE /recipes/{id}/save`는 되살리지 않는다.
 
 ## Implementation Rules
 
-- 문서에 없는 필드, 상태, 엔드포인트를 임의 추가하지 않는다.
-- public contract 변경 시 문서 영향도를 먼저 적는다.
+- 문서에 없는 필드, 상태, 엔드포인트를 임의 추가하지 않는다. public contract 영향은 구현 전에 문서 기준으로 먼저 정리한다.
 - API 응답은 `{ success, data, error }` 래퍼를 유지한다.
 - error 객체는 `{ code, message, fields[] }` 구조를 따른다.
 - 백엔드 브랜치는 슬라이스 시작 시 request/response/error 계약과 타입 기준을 먼저 고정한다.
 - 프론트엔드는 백엔드 계약을 그대로 소비하고, 화면 컴포넌트보다 API 타입 / 상태 enum / 권한 상태 / read-only 여부를 우선 분리한다.
 - 상태 전이 로직은 테스트로 고정한다.
 - UI는 필요한 `loading / empty / error / read-only` 상태를 포함한다.
-- 디자인 확정 전 프론트는 기능 가능한 임시 UI를 우선 구현하고, 추후 `CSS 변수`, `Tailwind 클래스`, 공용 컴포넌트 중심으로 스타일을 교체할 수 있게 유지한다.
+- 디자인 확정 전 프론트는 기능 가능한 임시 UI를 우선 구현하고, 추후 `CSS 변수`, `Tailwind 클래스`, 공용 컴포넌트 중심으로 교체하기 쉽게 유지한다.
 - 비로그인 보호 액션은 로그인 안내 후 return-to-action을 지원한다.
 
 ## Review Checks
@@ -156,33 +133,5 @@
 
 ## Commands
 
-- `pnpm install`
-- `pnpm dev`
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm test`
-- `pnpm test:e2e`
-- `pnpm test:e2e:smoke`
-- `pnpm test:e2e:a11y`
-- `pnpm test:e2e:visual`
-- `pnpm test:e2e:visual:update`
-- `pnpm test:e2e:security`
-- `pnpm test:e2e:ui`
-- `pnpm test:e2e:oauth`
-- `pnpm test:lighthouse`
-- `pnpm test:all`
-- `pnpm verify:backend`
-- `pnpm verify:frontend`
-- `pnpm verify`
-- `pnpm qa:explore`
-- `pnpm qa:eval`
-- `pnpm build`
-- `pnpm branch:start -- --branch <name>`
-- `pnpm validate:branch`
-- `pnpm validate:commits`
-- `pnpm validate:pr`
-- `pnpm validate:source-of-truth-sync`
-- `pnpm validate:authority-evidence-presence`
-- `pnpm validate:exploratory-qa-evidence`
-- `pnpm validate:real-smoke-presence`
-- `pnpm validate:closeout-sync`
+- 실행 가능한 스크립트의 최신 목록은 `package.json`이 단일 소스다.
+- 자주 쓰는 범주는 `pnpm install`, `pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm verify:*`, `pnpm qa:*`, `pnpm branch:*`, `pnpm validate:*`다.
