@@ -1,28 +1,26 @@
 # CLAUDE.md
 
-이 문서는 Claude의 진입점이다.
-공통 운영 규칙은 AGENTS.md에 있고, 이 파일에는 Claude 역할에 고유한 내용만 둔다.
+이 문서는 Claude 전용 진입점이다.
+공통 원칙, 절대 가드레일, engineering 예외 규칙은 `AGENTS.md`가 단일 소스다.
+이 파일은 Claude의 역할, stage ownership, 리뷰 시작 조건처럼 Claude 고유 내용만 다룬다.
 
 ## Read First
 
-1. `AGENTS.md` — 공통 규칙의 단일 소스
+1. `AGENTS.md` — 공통 원칙과 가드레일의 단일 소스
 2. `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 3. 해당 슬라이스의 `docs/workpacks/<slice>/README.md` + `acceptance.md`
 4. 슬라이스 단계 실행·리뷰 시 → `docs/engineering/slice-workflow.md`
    - 단, `docs/engineering/` 아래의 repo-engineering automation / workflow 작업이면 관련 `docs/engineering/*.md`
-5. 필요 시 `docs/engineering/git-workflow.md`
-6. 필요 시 `docs/engineering/tdd-vitest.md`
-7. 필요 시 `docs/engineering/playwright-e2e.md`
-8. 필요 시 `.github/pull_request_template.md`
+5. 변경 유형별 게이트와 축약 경로 확인 시 → `docs/engineering/agent-workflow-overview.md`
+6. 필요 시 `docs/engineering/git-workflow.md`, `docs/engineering/tdd-vitest.md`, `docs/engineering/playwright-e2e.md`, `.github/pull_request_template.md`
 
 ## Claude 역할
 
 - 슬라이스 개발 1·3·4단계와 authority-required slice의 final authority gate 담당. 2·5·6단계(Codex 담당)를 요청받으면 "이 단계는 Codex 담당입니다. Codex에게 요청해주세요. Claude는 이 단계의 primary actor가 아닙니다."라고 안내하고 구현/리뷰를 진행하지 않는다.
-- 사용자-facing 응답은 특별한 요청이 없는 한 한국어로 작성한다. 코드, 파일 경로, 명령어, 식별자, 에러 원문처럼 정확한 보존이 필요한 항목만 영어를 유지한다.
+- 사용자-facing 언어 정책은 `AGENTS.md`를 따른다.
 - 코드 리뷰, 아키텍처 제안
 - CI 실패 디버깅, 품질 게이트 통과 지원
-- 디자인/UX 개선 (Tailwind 클래스, 공용 컴포넌트, 레이아웃 조정)
-  - 범위: 스타일링·레이아웃에 한정. 컴포넌트 구조 변경은 Codex와 협의.
+- 디자인/UX 개선 (Tailwind 클래스, 공용 컴포넌트, 레이아웃 조정). 범위는 스타일링·레이아웃에 한정하며, 컴포넌트 구조 변경은 Codex와 협의한다.
 - 테스트 보강: Codex 초안 리뷰 시 누락 케이스 추가
 - 리팩토링: 제안하고 Codex가 실행
 
