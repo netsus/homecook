@@ -17,6 +17,12 @@ const STATUS_APPROVAL_VALUES = new Set([
 ]);
 
 const STATUS_VERIFICATION_VALUES = new Set(["pending", "passed", "failed", "skipped"]);
+const CLOSEOUT_PHASE_VALUES = new Set(["collecting", "projecting", "completed", "exception"]);
+const DOCS_DESIGN_STATUS_VALUES = new Set(["temporary", "pending-review", "confirmed", "N/A"]);
+const DOCS_DELIVERY_CHECKLIST_VALUES = new Set(["pending", "complete", "waived"]);
+const DOCS_DESIGN_AUTHORITY_VALUES = new Set(["not_required", "pending", "passed", "failed", "waived"]);
+const DOCS_ACCEPTANCE_VALUES = new Set(["pending", "complete", "waived"]);
+const DOCS_AUTOMATION_SPEC_METADATA_VALUES = new Set(["pending", "synced", "not_required"]);
 
 /**
  * @typedef {{
@@ -85,6 +91,25 @@ function normalizeNonNegativeInteger(value) {
   return Number.isInteger(value) && value >= 0 ? value : 0;
 }
 
+function normalizeBoolean(value) {
+  return value === true;
+}
+
+function normalizeStringArray(values) {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  return values
+    .map((value) => normalizeOptionalString(value))
+    .filter((value) => value !== null);
+}
+
+function buildCanonicalCloseoutSource(workItemId) {
+  const normalizedWorkItemId = normalizeOptionalString(workItemId);
+  return normalizedWorkItemId ? `.workflow-v2/work-items/${normalizedWorkItemId}.json#closeout` : null;
+}
+
 function buildRecoveryFragments(recoverySummary = {}) {
   const fragments = [];
   const manualPatchCount = normalizeNonNegativeInteger(recoverySummary.manual_patch_count);
@@ -112,6 +137,87 @@ function buildRecoveryFragments(recoverySummary = {}) {
   }
 
   return fragments;
+}
+
+export function projectCanonicalCloseoutToHumanSurfacePayload(closeout, { workItemId } = {}) {
+  if (!closeout || typeof closeout !== "object" || Array.isArray(closeout)) {
+    return null;
+  }
+
+  return {
+    phase: normalizeEnum(closeout.phase, CLOSEOUT_PHASE_VALUES),
+    canonical_source: buildCanonicalCloseoutSource(workItemId),
+    readme: {
+      roadmap_lifecycle: normalizeEnum(closeout.docs_projection?.roadmap_lifecycle, STATUS_LIFECYCLE_VALUES),
+      design_status: normalizeEnum(closeout.docs_projection?.design_status, DOCS_DESIGN_STATUS_VALUES),
+      delivery_checklist: normalizeEnum(
+        closeout.docs_projection?.delivery_checklist,
+        DOCS_DELIVERY_CHECKLIST_VALUES,
+      ),
+      design_authority: normalizeEnum(
+        closeout.docs_projection?.design_authority,
+        DOCS_DESIGN_AUTHORITY_VALUES,
+      ),
+    },
+    acceptance: {
+      status: normalizeEnum(closeout.docs_projection?.acceptance, DOCS_ACCEPTANCE_VALUES),
+      docs_synced_at: normalizeOptionalString(closeout.projection_state?.docs_synced_at),
+    },
+    pr_body: {
+      actual_verification: {
+        required_checks: normalizeEnum(
+          closeout.verification_projection?.required_checks,
+          STATUS_VERIFICATION_VALUES,
+        ),
+        external_smokes: normalizeEnum(
+          closeout.verification_projection?.external_smokes,
+          STATUS_VERIFICATION_VALUES,
+        ),
+        authority_reports: normalizeStringArray(closeout.verification_projection?.authority_reports),
+        actual_verification_refs: normalizeStringArray(
+          closeout.verification_projection?.actual_verification_refs,
+        ),
+      },
+      closeout_sync: {
+        roadmap_lifecycle: normalizeEnum(closeout.docs_projection?.roadmap_lifecycle, STATUS_LIFECYCLE_VALUES),
+        design_status: normalizeEnum(closeout.docs_projection?.design_status, DOCS_DESIGN_STATUS_VALUES),
+        delivery_checklist: normalizeEnum(
+          closeout.docs_projection?.delivery_checklist,
+          DOCS_DELIVERY_CHECKLIST_VALUES,
+        ),
+        design_authority: normalizeEnum(
+          closeout.docs_projection?.design_authority,
+          DOCS_DESIGN_AUTHORITY_VALUES,
+        ),
+        acceptance: normalizeEnum(closeout.docs_projection?.acceptance, DOCS_ACCEPTANCE_VALUES),
+        automation_spec_metadata: normalizeEnum(
+          closeout.docs_projection?.automation_spec_metadata,
+          DOCS_AUTOMATION_SPEC_METADATA_VALUES,
+        ),
+      },
+      merge_gate: {
+        current_head_sha: normalizeOptionalString(closeout.merge_gate_projection?.current_head_sha),
+        approval_state: normalizeEnum(
+          closeout.merge_gate_projection?.approval_state,
+          STATUS_APPROVAL_VALUES,
+        ),
+        all_checks_green: normalizeBoolean(closeout.merge_gate_projection?.all_checks_green),
+      },
+    },
+    sync_state: {
+      docs_synced_at: normalizeOptionalString(closeout.projection_state?.docs_synced_at),
+      status_synced_at: normalizeOptionalString(closeout.projection_state?.status_synced_at),
+      pr_body_synced_at: normalizeOptionalString(closeout.projection_state?.pr_body_synced_at),
+    },
+    recovery_summary: {
+      manual_patch_count: normalizeNonNegativeInteger(closeout.recovery_summary?.manual_patch_count),
+      manual_handoff: normalizeBoolean(closeout.recovery_summary?.manual_handoff),
+      stale_lock_count: normalizeNonNegativeInteger(closeout.recovery_summary?.stale_lock_count),
+      ci_resync_count: normalizeNonNegativeInteger(closeout.recovery_summary?.ci_resync_count),
+      artifact_missing: normalizeBoolean(closeout.recovery_summary?.artifact_missing),
+      last_recovery_at: normalizeOptionalString(closeout.recovery_summary?.last_recovery_at),
+    },
+  };
 }
 
 export function projectCanonicalCloseoutToStatusFields(closeout) {
@@ -151,6 +257,81 @@ export function projectCanonicalCloseoutToStatusFields(closeout) {
     verification_status: verificationStatus,
     note_fragments: noteFragments,
   };
+}
+
+export function validateHumanSurfaceProjectionContract({
+  closeout,
+  workItemId,
+  pathPrefix,
+} = {}) {
+  const projection = projectCanonicalCloseoutToHumanSurfacePayload(closeout, { workItemId });
+  if (!projection) {
+    return [];
+  }
+
+  const errors = [];
+  const resolvedPathPrefix =
+    normalizeOptionalString(pathPrefix)
+    ?? (projection.canonical_source
+      ? projection.canonical_source.replace("#closeout", "")
+      : ".workflow-v2/work-items.<unknown>.json");
+  const actualVerificationPath = `${resolvedPathPrefix}.verification_projection.actual_verification_refs`;
+  const authorityReportsPath = `${resolvedPathPrefix}.verification_projection.authority_reports`;
+  const allChecksGreenPath = `${resolvedPathPrefix}.merge_gate_projection.all_checks_green`;
+  const deliveryChecklistPath = `${resolvedPathPrefix}.docs_projection.delivery_checklist`;
+  const acceptancePath = `${resolvedPathPrefix}.docs_projection.acceptance`;
+  const requiresProjectedEvidence =
+    projection.phase === "projecting" || projection.phase === "completed";
+
+  if (
+    requiresProjectedEvidence
+    && projection.pr_body.actual_verification.actual_verification_refs.length === 0
+  ) {
+    errors.push({
+      path: actualVerificationPath,
+      message:
+        "Canonical closeout human-surface projection requires actual_verification_refs once closeout phase reaches projecting/completed.",
+    });
+  }
+
+  if (
+    projection.readme.design_authority === "passed"
+    && projection.pr_body.actual_verification.authority_reports.length === 0
+  ) {
+    errors.push({
+      path: authorityReportsPath,
+      message:
+        "Canonical closeout human-surface projection requires authority_reports when design_authority is passed.",
+    });
+  }
+
+  if (
+    projection.pr_body.merge_gate.all_checks_green === true
+    && projection.pr_body.actual_verification.required_checks !== "passed"
+  ) {
+    errors.push({
+      path: allChecksGreenPath,
+      message:
+        "Canonical closeout merge gate projection cannot mark all_checks_green=true unless required_checks=passed.",
+    });
+  }
+
+  if (projection.phase === "completed" && projection.readme.delivery_checklist === "pending") {
+    errors.push({
+      path: deliveryChecklistPath,
+      message:
+        "Canonical closeout completed phase cannot keep README Delivery Checklist pending.",
+    });
+  }
+
+  if (projection.phase === "completed" && projection.acceptance.status === "pending") {
+    errors.push({
+      path: acceptancePath,
+      message: "Canonical closeout completed phase cannot keep acceptance pending.",
+    });
+  }
+
+  return errors;
 }
 
 /**

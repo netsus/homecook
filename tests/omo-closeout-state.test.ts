@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  projectCanonicalCloseoutToHumanSurfacePayload,
   projectCanonicalCloseoutToStatusFields,
+  validateHumanSurfaceProjectionContract,
   validateStatusItemAgainstCanonicalCloseout,
 } from "../scripts/lib/omo-closeout-state.mjs";
 
@@ -52,6 +54,61 @@ describe("omo canonical closeout state", () => {
         "closeout_recovery=manual_patch:1|stale_lock:2|ci_resync:1|manual_handoff|artifact_missing",
         "last_recovery_at=2026-04-21T00:00:00Z",
       ],
+    });
+  });
+
+  it("projects canonical closeout fields to the human-facing closeout surface payload", () => {
+    expect(
+      projectCanonicalCloseoutToHumanSurfacePayload(closeoutSnapshot, {
+        workItemId: "06-recipe-to-planner",
+      }),
+    ).toEqual({
+      phase: "completed",
+      canonical_source: ".workflow-v2/work-items/06-recipe-to-planner.json#closeout",
+      readme: {
+        roadmap_lifecycle: "merged",
+        design_status: "confirmed",
+        delivery_checklist: "complete",
+        design_authority: "passed",
+      },
+      acceptance: {
+        status: "complete",
+        docs_synced_at: "2026-04-21T00:01:00Z",
+      },
+      pr_body: {
+        actual_verification: {
+          required_checks: "passed",
+          external_smokes: "passed",
+          authority_reports: [".artifacts/authority/report.md"],
+          actual_verification_refs: ["PR Actual Verification"],
+        },
+        closeout_sync: {
+          roadmap_lifecycle: "merged",
+          design_status: "confirmed",
+          delivery_checklist: "complete",
+          design_authority: "passed",
+          acceptance: "complete",
+          automation_spec_metadata: "synced",
+        },
+        merge_gate: {
+          current_head_sha: "abc1234",
+          approval_state: "dual_approved",
+          all_checks_green: true,
+        },
+      },
+      sync_state: {
+        docs_synced_at: "2026-04-21T00:01:00Z",
+        status_synced_at: "2026-04-21T00:02:00Z",
+        pr_body_synced_at: "2026-04-21T00:03:00Z",
+      },
+      recovery_summary: {
+        manual_patch_count: 1,
+        manual_handoff: true,
+        stale_lock_count: 2,
+        ci_resync_count: 1,
+        artifact_missing: true,
+        last_recovery_at: "2026-04-21T00:00:00Z",
+      },
     });
   });
 
@@ -112,6 +169,55 @@ describe("omo canonical closeout state", () => {
         path: ".workflow-v2/status.json.items.06-recipe-to-planner.notes",
         message:
           "Canonical closeout note projection missing fragment: last_recovery_at=2026-04-21T00:00:00Z",
+      },
+    ]);
+  });
+
+  it("rejects incomplete human-surface projection snapshots once closeout reaches completed", () => {
+    const errors = validateHumanSurfaceProjectionContract({
+      workItemId: "06-recipe-to-planner",
+      closeout: {
+        ...closeoutSnapshot,
+        docs_projection: {
+          ...closeoutSnapshot.docs_projection,
+          delivery_checklist: "pending",
+          acceptance: "pending",
+        },
+        verification_projection: {
+          ...closeoutSnapshot.verification_projection,
+          required_checks: "pending",
+          authority_reports: [],
+          actual_verification_refs: [],
+        },
+      },
+      pathPrefix: ".workflow-v2/work-items/06-recipe-to-planner.json.closeout",
+    });
+
+    expect(errors).toEqual([
+      {
+        path: ".workflow-v2/work-items/06-recipe-to-planner.json.closeout.verification_projection.actual_verification_refs",
+        message:
+          "Canonical closeout human-surface projection requires actual_verification_refs once closeout phase reaches projecting/completed.",
+      },
+      {
+        path: ".workflow-v2/work-items/06-recipe-to-planner.json.closeout.verification_projection.authority_reports",
+        message:
+          "Canonical closeout human-surface projection requires authority_reports when design_authority is passed.",
+      },
+      {
+        path: ".workflow-v2/work-items/06-recipe-to-planner.json.closeout.merge_gate_projection.all_checks_green",
+        message:
+          "Canonical closeout merge gate projection cannot mark all_checks_green=true unless required_checks=passed.",
+      },
+      {
+        path: ".workflow-v2/work-items/06-recipe-to-planner.json.closeout.docs_projection.delivery_checklist",
+        message:
+          "Canonical closeout completed phase cannot keep README Delivery Checklist pending.",
+      },
+      {
+        path: ".workflow-v2/work-items/06-recipe-to-planner.json.closeout.docs_projection.acceptance",
+        message:
+          "Canonical closeout completed phase cannot keep acceptance pending.",
       },
     ]);
   });
