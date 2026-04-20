@@ -25,6 +25,7 @@ import {
   resolveStageSessionRole,
   syncWorkflowV2Status,
 } from "./omo-lite-supervisor.mjs";
+import { resolveSessionTelemetry } from "./omo-session-telemetry.mjs";
 import {
   readStageResult,
   resolveStageResultPath,
@@ -215,10 +216,106 @@ function resolveEffectiveProviderSelection({
     resumeMode: optionalString(sessionBinding?.resumeMode),
     source:
       existingSessionId
-        ? storedSelectionAvailable
+      ? storedSelectionAvailable
           ? "stored_session_binding"
           : "provider_config_fallback"
         : "provider_config",
+  };
+}
+
+function resolveSessionRolloverCarryForward({
+  runtimeSnapshot,
+  priorStageResultPath,
+}) {
+  const explicitStageResultPath = optionalString(priorStageResultPath);
+  if (explicitStageResultPath) {
+    const explicitStageResult = readStageResultFromPath(explicitStageResultPath);
+    if (explicitStageResult) {
+      return {
+        stageResultPath: explicitStageResultPath,
+        stageResult: explicitStageResult,
+      };
+    }
+  }
+
+  const lastArtifactDir = optionalString(runtimeSnapshot?.state?.last_artifact_dir);
+  if (!lastArtifactDir) {
+    return {
+      stageResultPath: explicitStageResultPath,
+      stageResult: null,
+    };
+  }
+
+  const artifactStageResultPath = resolveStageResultPath(lastArtifactDir);
+  return {
+    stageResultPath: artifactStageResultPath,
+    stageResult: readStageResult(lastArtifactDir),
+  };
+}
+
+function buildSessionRolloverPromptSection(rolloverDecision) {
+  if (!rolloverDecision?.applied) {
+    return null;
+  }
+
+  return [
+    "## Session Rollover Rebase",
+    `- prior session id: \`${rolloverDecision.previousSessionId}\``,
+    `- prior session generation: \`${rolloverDecision.previousGeneration ?? "unknown"}\``,
+    `- rollover reason: \`${rolloverDecision.rolloverReason ?? "policy_threshold"}\``,
+    rolloverDecision.stageResultPath
+      ? `- carry-forward stage-result: \`${rolloverDecision.stageResultPath}\``
+      : "- carry-forward stage-result: `missing`",
+    rolloverDecision.summaryMarkdown
+      ? `- carry-forward summary: ${rolloverDecision.summaryMarkdown}`
+      : "- carry-forward summary: unavailable",
+    "- Start a fresh provider session for this stage.",
+    "- Use the carry-forward artifact plus the required reads, status patch, and runtime patch above as the canonical context.",
+    "- Do not ask to restore the previous session or to keep accumulating the old conversation thread.",
+  ].join("\n");
+}
+
+function resolveSessionRolloverDecision({
+  stage,
+  runtimeSnapshot,
+  existingSessionEntry,
+  priorStageResultPath,
+}) {
+  const existingSessionId = optionalString(existingSessionEntry?.session_id);
+  const sessionTelemetry = resolveSessionTelemetry(existingSessionEntry);
+  const currentStage = Number(runtimeSnapshot?.state?.current_stage);
+  const blockedStage = Number(runtimeSnapshot?.state?.blocked_stage);
+  const sameStageResume =
+    (Number.isInteger(currentStage) && currentStage === Number(stage)) ||
+    (Number.isInteger(blockedStage) && blockedStage === Number(stage));
+
+  if (!existingSessionId || !sessionTelemetry.rolloverRecommended || sameStageResume) {
+    return {
+      applied: false,
+      executionSessionId: existingSessionId,
+      resumeMode: existingSessionId ? "continue" : null,
+      previousSessionId: existingSessionId,
+      previousGeneration: sessionTelemetry.generation,
+      rolloverReason: sessionTelemetry.rolloverReason,
+      stageResultPath: null,
+      summaryMarkdown: null,
+    };
+  }
+
+  const carryForward = resolveSessionRolloverCarryForward({
+    runtimeSnapshot,
+    priorStageResultPath,
+  });
+
+  return {
+    applied: true,
+    executionSessionId: null,
+    resumeMode: "rollover",
+    previousSessionId: existingSessionId,
+    previousGeneration: sessionTelemetry.generation,
+    rolloverReason: sessionTelemetry.rolloverReason,
+    stageResultPath: carryForward.stageResultPath,
+    summaryMarkdown: optionalString(carryForward.stageResult?.summary_markdown),
   };
 }
 
@@ -2466,7 +2563,7 @@ export function runStageWithArtifacts({
           delayHours: retryDelayHours,
         })
       : retryState?.at ?? null;
-  const dispatch = buildStageDispatch({
+  const baseDispatch = buildStageDispatch({
     slice: normalizedSlice,
     stage: normalizedStage,
     subphase: normalizedSubphase,
@@ -2480,13 +2577,34 @@ export function runStageWithArtifacts({
         ? priorStageResultPath.trim()
         : null,
   });
+  const sessionRolloverDecision = resolveSessionRolloverDecision({
+    stage: normalizedStage,
+    runtimeSnapshot,
+    existingSessionEntry,
+    priorStageResultPath,
+  });
+  const executionSessionId =
+    sessionRolloverDecision.resumeMode === "rollover"
+      ? null
+      : existingSessionId;
+  const dispatch =
+    sessionRolloverDecision.resumeMode === "rollover"
+      ? {
+          ...baseDispatch,
+          sessionBinding: {
+            ...baseDispatch.sessionBinding,
+            sessionId: null,
+            resumeMode: "rollover",
+          },
+        }
+      : baseDispatch;
   const executionBinding = resolveExecutionBinding(dispatch, {
     agent,
     providerConfig: activeProviderConfig,
   });
   const storedSessionSelection = resolveStoredSessionSelection(existingSessionEntry);
   const effectiveProviderSelection = resolveEffectiveProviderSelection({
-    existingSessionId,
+    existingSessionId: executionSessionId,
     storedSessionSelection,
     executionBinding,
     activeProviderConfig,
@@ -2548,6 +2666,9 @@ export function runStageWithArtifacts({
           ]
         : []),
       ...(stageOwnedChecklistSection ? [stageOwnedChecklistSection] : []),
+      ...(sessionRolloverDecision.applied
+        ? [buildSessionRolloverPromptSection(sessionRolloverDecision)]
+        : []),
       ...extraPromptSections,
     ],
   });
@@ -2576,6 +2697,16 @@ export function runStageWithArtifacts({
     workItemId: workItemId ?? null,
     claudeBudget: resolvedBudget,
     sessionBinding: dispatch.sessionBinding,
+    sessionRollover:
+      sessionRolloverDecision.applied
+        ? {
+            previousSessionId: sessionRolloverDecision.previousSessionId,
+            previousGeneration: sessionRolloverDecision.previousGeneration,
+            rolloverReason: sessionRolloverDecision.rolloverReason,
+            stageResultPath: sessionRolloverDecision.stageResultPath,
+            summaryMarkdown: sessionRolloverDecision.summaryMarkdown,
+          }
+        : null,
     storedSessionSelection,
     effectiveProviderSelection,
     retryDecision: dispatch.retryDecision,
@@ -2620,7 +2751,7 @@ export function runStageWithArtifacts({
         artifactDir: targetArtifactDir,
         provider: executionBinding.provider,
         sessionRole: dispatch.sessionBinding.role,
-        sessionId: existingSessionId,
+        sessionId: executionSessionId,
         stageResultPath,
         verifyCommands: dispatch.verifyCommands,
         prRole: [1, 2, 4].includes(dispatch.stage)
@@ -2656,7 +2787,7 @@ export function runStageWithArtifacts({
         agent: executionBinding.agent,
         reason: executionBinding.reason,
         exitCode: null,
-        sessionId: existingSessionId,
+        sessionId: executionSessionId,
         subphase: normalizedSubphase ?? "implementation",
         loop_mode: loopMode,
         ralph_goal_ids: ralphGoalIds,
@@ -2676,7 +2807,7 @@ export function runStageWithArtifacts({
         agent: executionBinding.agent,
         reason: "claude_budget_unavailable",
         exitCode: null,
-        sessionId: existingSessionId,
+        sessionId: executionSessionId,
         subphase: normalizedSubphase ?? "implementation",
         loop_mode: loopMode,
         ralph_goal_ids: ralphGoalIds,
@@ -2696,7 +2827,7 @@ export function runStageWithArtifacts({
         agent: null,
         reason: executionBinding.reason,
         exitCode: null,
-        sessionId: existingSessionId,
+        sessionId: executionSessionId,
         subphase: normalizedSubphase ?? "implementation",
         loop_mode: loopMode,
         ralph_goal_ids: ralphGoalIds,
@@ -2740,7 +2871,7 @@ export function runStageWithArtifacts({
               executionDir: resolvedExecutionDir,
               artifactDir: targetArtifactDir,
               prompt,
-              sessionId: existingSessionId,
+              sessionId: executionSessionId,
               claudeBin: claudeProviderConfig.bin,
               claudeModel: claudeProviderConfig.model,
               claudeEffort: claudeProviderConfig.effort,
@@ -2756,7 +2887,7 @@ export function runStageWithArtifacts({
               agent: executionBinding.agent,
               model: executionBinding.model,
               variant: executionBinding.variant,
-              sessionId: existingSessionId,
+              sessionId: executionSessionId,
               opencodeBin: resolvedOpencodeBin,
               environment,
               stageResultPath,
@@ -2775,7 +2906,7 @@ export function runStageWithArtifacts({
         },
       };
     } catch (error) {
-      if (existingSessionId && isSessionUnavailableFailure(error)) {
+      if (executionSessionId && isSessionUnavailableFailure(error)) {
         result = {
           artifactDir: targetArtifactDir,
           dispatch: buildStageDispatch({
@@ -2783,7 +2914,7 @@ export function runStageWithArtifacts({
             stage: normalizedStage,
             subphase: normalizedSubphase,
             claudeBudgetState: resolvedBudget.state,
-            sessionId: existingSessionId,
+            sessionId: executionSessionId,
             attemptCount: (retryState?.attempt_count ?? 0) + 1,
             forceHumanEscalation: true,
             humanEscalationReason: "session_unavailable",
@@ -2797,7 +2928,7 @@ export function runStageWithArtifacts({
             agent: executionBinding.agent,
             reason: "stored session could not be continued",
             exitCode: error.exitCode ?? null,
-            sessionId: existingSessionId,
+            sessionId: executionSessionId,
             stdoutPath: error.stdoutPath ?? null,
             stderrPath: error.stderrPath ?? null,
             subphase: normalizedSubphase ?? "implementation",
@@ -2817,7 +2948,7 @@ export function runStageWithArtifacts({
             stage: normalizedStage,
             subphase: normalizedSubphase,
             claudeBudgetState: "unavailable",
-            sessionId: error.sessionId ?? existingSessionId,
+            sessionId: error.sessionId ?? executionSessionId ?? existingSessionId,
             retryAt: resolveClaudeRetryAt({
               error,
               now,
@@ -2834,7 +2965,7 @@ export function runStageWithArtifacts({
             agent: executionBinding.agent,
             reason: "claude_budget_unavailable",
             exitCode: error.exitCode ?? null,
-            sessionId: error.sessionId ?? existingSessionId,
+            sessionId: error.sessionId ?? executionSessionId ?? existingSessionId,
             stdoutPath: error.stdoutPath ?? null,
             stderrPath: error.stderrPath ?? null,
             subphase: normalizedSubphase ?? "implementation",
@@ -2861,7 +2992,7 @@ export function runStageWithArtifacts({
             reason: error.message ?? "stage execution process failed",
             failureKind: resolveProcessFailureKind(error),
             exitCode: error.exitCode ?? null,
-            sessionId: error.sessionId ?? existingSessionId,
+            sessionId: error.sessionId ?? executionSessionId ?? existingSessionId,
             stdoutPath: error.stdoutPath ?? null,
             stderrPath: error.stderrPath ?? null,
             subphase: normalizedSubphase ?? "implementation",
