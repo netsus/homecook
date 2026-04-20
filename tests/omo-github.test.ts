@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 
 import { describe, expect, it } from "vitest";
 
-import { createGithubAutomationClient } from "../scripts/lib/omo-github.mjs";
+import { createGithubAutomationClient, mergePullRequestBodyWithExisting } from "../scripts/lib/omo-github.mjs";
 
 function createFakeGhBin(rootDir: string) {
   const binPath = join(rootDir, "fake-gh.sh");
@@ -669,6 +669,116 @@ describe("OMO GitHub automation client", () => {
     expect(argsLog).toContain("- result: pass");
     expect(argsLog).toContain("## Summary");
     expect(argsLog).toContain("- updated summary");
+  });
+
+  it("replaces stale Closeout Sync and Merge Gate sections while preserving existing Actual Verification evidence", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-refresh-closeout-"));
+
+    mkdirSync(join(rootDir, ".workflow-v2", "work-items"), { recursive: true });
+    writeFileSync(
+      join(rootDir, ".workflow-v2", "work-items", "06-recipe-to-planner.json"),
+      `${JSON.stringify(
+        {
+          id: "06-recipe-to-planner",
+          closeout: {
+            phase: "completed",
+            docs_projection: {
+              roadmap_lifecycle: "merged",
+              design_status: "confirmed",
+              delivery_checklist: "complete",
+              design_authority: "passed",
+              acceptance: "complete",
+              automation_spec_metadata: "synced",
+            },
+            verification_projection: {
+              required_checks: "passed",
+              external_smokes: "passed",
+              authority_reports: [".artifacts/authority/report.md"],
+              actual_verification_refs: ["source PR Actual Verification"],
+            },
+            merge_gate_projection: {
+              current_head_sha: "abc1234",
+              approval_state: "dual_approved",
+              all_checks_green: true,
+            },
+            recovery_summary: {
+              manual_patch_count: 0,
+              manual_handoff: false,
+              stale_lock_count: 0,
+              ci_resync_count: 0,
+              artifact_missing: false,
+              last_recovery_at: "2026-04-21T00:00:00Z",
+            },
+            projection_state: {
+              docs_synced_at: "2026-04-21T00:01:00Z",
+              status_synced_at: "2026-04-21T00:02:00Z",
+              pr_body_synced_at: "2026-04-21T00:03:00Z",
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const existingBody = [
+      "## Summary",
+      "- previous summary",
+      "",
+      "## Workpack / Slice",
+      "- workflow v2 work item: `.workflow-v2/work-items/06-recipe-to-planner.json`",
+      "",
+      "## Test Plan",
+      "- previous test plan",
+      "",
+      "## QA Evidence",
+      "- none",
+      "",
+      "## Actual Verification",
+      "- environment: local Supabase + `pnpm dev:local-supabase`",
+      "- scope: `POST /meals` smoke",
+      "- result: pass",
+      "",
+      "## Closeout Sync",
+      "- stale closeout",
+      "",
+      "## Merge Gate",
+      "- stale gate",
+      "",
+      "## Docs Impact",
+      "- none",
+      "",
+      "## Security Review",
+      "- none",
+      "",
+      "## Performance",
+      "- none",
+      "",
+      "## Design / Accessibility",
+      "- none",
+      "",
+      "## Breaking Changes",
+      "- none",
+    ].join("\n");
+
+    const mergedBody = mergePullRequestBodyWithExisting(
+      existingBody,
+      "## Summary\n- updated summary",
+      "06-recipe-to-planner",
+      rootDir,
+    );
+
+    expect(mergedBody).toContain("- environment: local Supabase + `pnpm dev:local-supabase`");
+    expect(mergedBody).toContain("- scope: `POST /meals` smoke");
+    expect(mergedBody).toContain("- result: pass");
+    expect(mergedBody).toContain(
+      "- canonical closeout source: `.workflow-v2/work-items/06-recipe-to-planner.json#closeout`",
+    );
+    expect(mergedBody).toContain("- roadmap status: `merged`");
+    expect(mergedBody).toContain("- current head SHA: `abc1234`");
+    expect(mergedBody).toContain("- approval state: `dual_approved`");
+    expect(mergedBody).not.toContain("- stale closeout");
+    expect(mergedBody).not.toContain("- stale gate");
   });
 
   it("fails closed when gh merge returns success but the pull request is still open", () => {

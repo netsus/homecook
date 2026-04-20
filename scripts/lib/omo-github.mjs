@@ -177,7 +177,9 @@ function findLatestExploratoryQaBundle({
 }
 
 const PRESERVE_EXISTING_BODY_SECTIONS = new Set(
-  REQUIRED_PR_SECTIONS.filter((section) => !["## Summary", "## Workpack / Slice"].includes(section)),
+  REQUIRED_PR_SECTIONS.filter(
+    (section) => !["## Summary", "## Workpack / Slice", "## Closeout Sync", "## Merge Gate"].includes(section),
+  ),
 );
 
 function buildPullRequestBodySections(body) {
