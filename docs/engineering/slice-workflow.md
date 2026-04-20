@@ -5,6 +5,8 @@
 에이전트가 `"<slice> N단계 진행해"` 요청을 받으면 이 문서를 읽고
 해당 Stage의 **담당 · 사전 조건 · 읽을 것 · 산출물 · 포함 필수 사항 · 자가 점검 · 완료 기준 · 완료 요약**을 그대로 따른다.
 
+change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agent-workflow-overview.md`를 따르며, 이 문서는 stage actor SOP에 집중한다.
+
 ---
 
 ## 담당 원칙 및 거부 규칙
@@ -41,37 +43,18 @@
   - `pnpm branch:start -- --slice <slice> --role fe`
 - 일반 세션에서는 위 명령이 해당 단계 브랜치를 active intent로 기록한다.
 - 새 user prompt 뒤에 다시 수정하려면 같은 명령으로 branch intent를 재확인해야 하며, project hook가 그 턴의 첫 `Write/Edit` 전에 recorded intent와 current checkout을 맞춘다.
-- product slice 구현 PR은 **Draft**로 열고 → backend는 `pnpm install --frozen-lockfile && pnpm verify:backend`, frontend는 `pnpm install --frozen-lockfile && pnpm verify:frontend` 통과 → required CI green → **Ready for Review** 전환
-- 머지 전 실제 동작 확인
-- merge 직전에는 현재 PR head SHA에 대해 시작된 check 전체가 완료/green인지 다시 확인한다. required가 아닌 check라도 pending, rerun, fail 상태면 merge하지 않는다.
-- 변경 유형별 축약 경로와 `N/A` 허용 기준은 `docs/engineering/agent-workflow-overview.md`의 Change Type Matrix를 따른다.
+- product slice 구현 PR은 기본적으로 **Draft**로 시작하고, 실제 동작 확인과 current head 기준 전체 PR checks green 이후에만 merge한다.
+- backend/frontend `required_checks`, Draft 생략 가능 조건, `N/A` 허용 기준은 `docs/engineering/agent-workflow-overview.md`의 Change Type Matrix를 따른다.
 
 ## Closeout Sync Contract
 
 - workpack README의 `Delivery Checklist`, `Design Status`, roadmap status, acceptance 체크박스, PR 본문 evidence는 서로 따로 노는 참고 문서가 아니라 **같은 closeout 상태**를 표현해야 한다.
-- closeout / tracked-state surface의 authoritative ownership은 `docs/engineering/bookkeeping-authority-matrix.md`를 기준으로 해석한다.
+- closeout / tracked-state surface의 현재 authoritative ownership은 `docs/engineering/bookkeeping-authority-matrix.md`를 따른다.
 - Stage 2 구현 담당인 Codex와 Stage 4 구현 담당인 Claude는 PR을 `Ready for Review`로 넘기기 전에 자신이 닫은 범위에 맞춰 `Delivery Checklist`, acceptance, PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`를 갱신한다.
-- Stage 3 리뷰 담당인 Claude와 Stage 5/6 리뷰 담당인 Codex는 승인 전에 위 문서들이 서로 일치하는지 확인하고, mismatch가 있으면 코드 이슈가 없어도 closeout drift로 수정 요청한다.
+- Stage 3 리뷰 담당인 Claude와 Stage 5/6 리뷰 담당인 Codex는 승인 전에 위 surface가 일치하는지 확인하고, mismatch가 있으면 코드 이슈가 없어도 closeout drift로 수정 요청한다.
 - authority-required slice의 최종 authority는 Stage 5 public review와 별개로 Claude `final_authority_gate`가 잠그며, 이 gate를 통과하기 전에는 `confirmed`나 최종 merge closeout으로 넘기지 않는다.
-- policy 자동화는 `pnpm validate:closeout-sync`로 closeout drift를 검사한다.
-  - non-draft `feature/fe-<slice>` PR은 `Ready for Review` 전에 README `Delivery Checklist`, acceptance(`Manual Only` 제외), `Design Status`가 closeout-ready 상태인지 통과해야 한다.
-  - roadmap status가 이미 `merged`인 changed slice와 `docs/omo-closeout-<slice>` 브랜치는 merged closeout 기준을 통과해야 한다.
-- exploratory QA evidence presence는 `pnpm validate:exploratory-qa-evidence`가 별도로 검사한다.
-  - non-draft `feature/fe-<slice>` PR은 `automation-spec.json`의 `frontend.design_authority.ui_risk` 기준으로 exploratory QA evidence 또는 low-risk skip rationale을 남겨야 한다.
-  - `docs/omo-closeout-<slice>` 브랜치는 PR body 또는 local `.artifacts/qa/<slice>/` 번들 기준으로 closeout evidence를 다시 확인할 수 있다.
-- authority-required slice의 screenshot/Figma visual evidence presence는 `pnpm validate:authority-evidence-presence`가 별도로 검사한다.
-  - non-draft `feature/fe-<slice>` PR과 `docs/omo-closeout-<slice>` 브랜치는 authority report의 `> evidence:` block에 mobile default + narrow evidence가 실제로 있는지 확인한다.
-  - runtime authority snapshot이 존재하면 `design_authority.authority_report_paths`, `design_authority.evidence_artifact_refs`도 authority report / automation-spec과 서로 일치해야 한다.
-- real DB / bootstrap / local Supabase / live smoke evidence presence는 `pnpm validate:real-smoke-presence`가 별도로 검사한다.
-  - `automation-spec.json`의 `external_smokes[]`가 비어 있지 않은 non-draft `feature/be-<slice>` / `feature/fe-<slice>` PR은 `Actual Verification`에 smoke evidence를 남겨야 한다.
-  - smoke evidence는 generic 서술만으로 끝나면 안 되고, 선언한 `external_smokes[]` 항목이 `Actual Verification`에서 식별 가능해야 한다.
-  - `internal 6.5`와 `pnpm omo:reconcile` preflight는 closeout PR body가 아니라 source PR `Actual Verification`을 기준으로 smoke evidence를 다시 확인한다.
-- Stage 6 merge 시점에는 아래가 동시에 만족해야 한다:
-  - roadmap status가 실제 단계와 맞다
-  - `Design Status`가 최종 리뷰 결과와 맞다
-  - README `Delivery Checklist`에 In Scope인데도 남은 unchecked 항목이 없다
-  - acceptance에서 `Manual Only`를 제외한 In Scope 미체크 항목이 없다
-  - PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`가 최신 evidence를 반영한다
+- `pnpm validate:closeout-sync`, `pnpm validate:exploratory-qa-evidence`, `pnpm validate:authority-evidence-presence`, `pnpm validate:real-smoke-presence`가 closeout drift와 evidence presence를 다시 검사한다. exact semantics는 각 validator와 automation contract를 따른다.
+- Stage 6 merge 시점에는 README `Delivery Checklist`, acceptance(`Manual Only` 제외), PR 본문 `Actual Verification`, `Closeout Sync`, `Merge Gate`가 최신 evidence를 반영해야 한다.
 - 남길 수 있는 미체크 항목은 `Manual Only` 또는 명시적 `N/A` / 후속 slice 이관뿐이며, 이 경우 README 또는 PR 본문에 근거가 있어야 한다.
 
 ## Slice Readiness Safeguards

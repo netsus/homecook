@@ -33,7 +33,15 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - machine-readable 상태 파일
 - external dependency smoke check의 명시화
 
+## Audience Split
+
+- product stage actor: workflow-v2 spec 전체를 기본 읽기 세트로 삼지 않는다. `AGENTS.md` → workpack → `slice-workflow.md` → `agent-workflow-overview.md`를 우선하고, 여기서는 operator 경로가 필요할 때만 들어온다.
+- OMO operator: 이 README를 entry로 읽고 `.opencode/README.md`, reset docs, 필요한 runtime note만 추가로 본다.
+- workflow maintainer: 이 README를 시작점으로 삼되, `omo-*spec.md`와 runtime/validator/test 코드를 필요한 범위만 읽는다.
+
 ## Reading Order
+
+### Operator Core
 
 1. [charter.md](./charter.md)
 2. [core.md](./core.md)
@@ -41,20 +49,29 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 4. [approval-and-loops.md](./approval-and-loops.md)
 5. [../bookkeeping-authority-matrix.md](../bookkeeping-authority-matrix.md)
 6. [promotion-readiness.md](./promotion-readiness.md)
-7. [omo-lite-architecture.md](./omo-lite-architecture.md)
-8. [omo-session-orchestrator.md](./omo-session-orchestrator.md)
-9. [omo-claude-cli-provider.md](./omo-claude-cli-provider.md)
-10. [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md)
-11. [omo-supervisor-reset-plan.md](./omo-supervisor-reset-plan.md)
-12. [omo-incident-registry.md](./omo-incident-registry.md)
-13. [omo-governance-surface-map.md](./omo-governance-surface-map.md)
-14. [omo-canonical-closeout-state.md](./omo-canonical-closeout-state.md)
-15. [omo-auditor-reset-requirements.md](./omo-auditor-reset-requirements.md)
-16. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
-17. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
-18. [TEMPLATE.md](./profiles/TEMPLATE.md)
-19. [homecook.md](./profiles/homecook.md)
-20. [migration.md](./migration.md)
+
+### Reset Track
+
+1. [omo-supervisor-reset-plan.md](./omo-supervisor-reset-plan.md)
+2. [omo-incident-registry.md](./omo-incident-registry.md)
+3. [omo-governance-surface-map.md](./omo-governance-surface-map.md)
+4. [omo-canonical-closeout-state.md](./omo-canonical-closeout-state.md)
+5. [omo-auditor-reset-requirements.md](./omo-auditor-reset-requirements.md)
+
+### Maintainer Specs
+
+1. [omo-lite-architecture.md](./omo-lite-architecture.md)
+2. [omo-session-orchestrator.md](./omo-session-orchestrator.md)
+3. [omo-claude-cli-provider.md](./omo-claude-cli-provider.md)
+4. [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md)
+5. [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md)
+6. [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md)
+
+### Profiles / Migration
+
+1. [TEMPLATE.md](./profiles/TEMPLATE.md)
+2. [homecook.md](./profiles/homecook.md)
+3. [migration.md](./migration.md)
 
 ## Directory Map
 
@@ -66,17 +83,17 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [approval-and-loops.md](./approval-and-loops.md): plan/review loop와 dual-approval 규칙
 - [promotion-readiness.md](./promotion-readiness.md): OMO 기본 운영 readiness / lane evidence gate
 - [../bookkeeping-authority-matrix.md](../bookkeeping-authority-matrix.md): closeout docs / tracked state / PR evidence ownership matrix
-- [omo-lite-architecture.md](./omo-lite-architecture.md): Codex supervisor 기반 Homecook OMO-lite 설계안
-- [omo-session-orchestrator.md](./omo-session-orchestrator.md): generic session reuse / runtime state / scheduled resume 규격
-- [omo-claude-cli-provider.md](./omo-claude-cli-provider.md): raw `claude` CLI provider, session extraction, deterministic resume 규격
-- [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md): local worktree / PR / CI / merge / scheduler supervisor 규격
+- [omo-lite-architecture.md](./omo-lite-architecture.md): maintainer spec. Codex supervisor 기반 Homecook OMO-lite 설계안
+- [omo-session-orchestrator.md](./omo-session-orchestrator.md): maintainer spec. generic session reuse / runtime state / scheduled resume 규격
+- [omo-claude-cli-provider.md](./omo-claude-cli-provider.md): maintainer spec. raw `claude` CLI provider, session extraction, deterministic resume 규격
+- [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md): maintainer spec. local worktree / PR / CI / merge / scheduler supervisor 규격
 - [omo-supervisor-reset-plan.md](./omo-supervisor-reset-plan.md): slice07 이후 OMO를 patch accumulation이 아니라 supervisor reset 관점에서 다시 축소/재잠그기 위한 계획 문서
 - [omo-incident-registry.md](./omo-incident-registry.md): slice07 failure log와 prior pilot 흔적을 reset input corpus로 관리하는 incident registry
 - [omo-governance-surface-map.md](./omo-governance-surface-map.md): stage actor / operator / maintainer가 읽어야 할 문서 표면을 다시 자르기 위한 책임 경계 맵
 - [omo-canonical-closeout-state.md](./omo-canonical-closeout-state.md): closeout truth를 한 surface로 줄이고 README / acceptance / PR body / status를 projection으로 내리기 위한 Phase 2 후보 설계
 - [omo-auditor-reset-requirements.md](./omo-auditor-reset-requirements.md): meta-harness-auditor가 incident corpus, runtime anomaly, promotion drift를 기본 입력으로 읽도록 다시 잠그는 Phase 6 요구사항
-- [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md): supervisor 책임, 상태, stage state machine
-- [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md): stage별 actor dispatch 입출력 계약
+- [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md): maintainer spec. supervisor 책임, 상태, stage state machine
+- [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md): maintainer spec. stage별 actor dispatch 입출력 계약
 - [profiles/TEMPLATE.md](./profiles/TEMPLATE.md): 다른 프로젝트용 profile template
 - [profiles/homecook.md](./profiles/homecook.md): 현재 저장소에 적용되는 profile
 - [schemas/work-item.schema.json](./schemas/work-item.schema.json): work item 메타데이터 스키마
@@ -94,6 +111,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 ## Adoption Rules
 
 - workflow-v2는 현재 Homecook의 OMO 기본 운영 경로다.
+- 이 README는 operator entry다. product stage actor는 workflow-v2 spec 전체를 기본 읽기 세트로 삼지 않고, `slice-workflow.md`와 `agent-workflow-overview.md`를 우선한다.
 - `workflow-v2` 관련 첫 단계는 문서와 schema를 고정하는 것이다.
 - 실제 tracked 운영 상태는 저장소 루트의 `.workflow-v2/` 아래 JSON으로 기록한다.
 - OMO 기본 운영 건강성 판단은 `docs/engineering/workflow-v2/promotion-readiness.md`와 `.workflow-v2/promotion-evidence.json`을 함께 기준으로 삼는다.
