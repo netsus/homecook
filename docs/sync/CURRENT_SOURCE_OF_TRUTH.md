@@ -1,12 +1,5 @@
 # Current Source of Truth
 
-## Official Versions
-- Requirements: `v1.6.3`
-- Screens: `v1.5.0`
-- Flow: `v1.3.0`
-- DB: `v1.3.1`
-- API: `v1.2.2`
-
 ## Official Files
 - `docs/요구사항기준선-v1.6.3.md`
 - `docs/화면정의서-v1.5.0.md`
