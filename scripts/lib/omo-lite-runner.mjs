@@ -319,6 +319,128 @@ function resolveSessionRolloverDecision({
   };
 }
 
+function resolveSessionCompactionResumeDecision({
+  stage,
+  runtimeSnapshot,
+  existingSessionEntry,
+  priorStageResultPath,
+}) {
+  const existingSessionId = optionalString(existingSessionEntry?.session_id);
+  const sessionTelemetry = resolveSessionTelemetry(existingSessionEntry);
+  const currentStage = Number(runtimeSnapshot?.state?.current_stage);
+  const blockedStage = Number(runtimeSnapshot?.state?.blocked_stage);
+  const sameStageResume =
+    (Number.isInteger(currentStage) && currentStage === Number(stage)) ||
+    (Number.isInteger(blockedStage) && blockedStage === Number(stage));
+  const priorArtifactDir =
+    optionalString(runtimeSnapshot?.state?.execution?.artifact_dir) ??
+    optionalString(runtimeSnapshot?.state?.last_artifact_dir);
+  const priorPromptPath =
+    priorArtifactDir && existsSync(resolve(priorArtifactDir, "prompt.md"))
+      ? resolve(priorArtifactDir, "prompt.md")
+      : null;
+  const priorStdoutPath =
+    priorArtifactDir && existsSync(resolve(priorArtifactDir, "claude.stdout.log"))
+      ? resolve(priorArtifactDir, "claude.stdout.log")
+      : priorArtifactDir && existsSync(resolve(priorArtifactDir, "opencode.stdout.log"))
+        ? resolve(priorArtifactDir, "opencode.stdout.log")
+        : null;
+  const priorStderrPath =
+    priorArtifactDir && existsSync(resolve(priorArtifactDir, "claude.stderr.log"))
+      ? resolve(priorArtifactDir, "claude.stderr.log")
+      : priorArtifactDir && existsSync(resolve(priorArtifactDir, "opencode.stderr.log"))
+        ? resolve(priorArtifactDir, "opencode.stderr.log")
+        : null;
+  const carryForward = resolveSessionRolloverCarryForward({
+    runtimeSnapshot,
+    priorStageResultPath,
+  });
+
+  if (!sameStageResume || !existingSessionId || (!priorArtifactDir && !carryForward.stageResultPath)) {
+    return {
+      applied: false,
+      previousSessionId: existingSessionId,
+      previousGeneration: sessionTelemetry.generation,
+      priorArtifactDir,
+      priorPromptPath,
+      priorStdoutPath,
+      priorStderrPath,
+      stageResultPath: carryForward.stageResultPath,
+      summaryMarkdown: optionalString(carryForward.stageResult?.summary_markdown),
+    };
+  }
+
+  return {
+    applied: true,
+    previousSessionId: existingSessionId,
+    previousGeneration: sessionTelemetry.generation,
+    priorArtifactDir,
+    priorPromptPath,
+    priorStdoutPath,
+    priorStderrPath,
+    stageResultPath: carryForward.stageResultPath,
+    summaryMarkdown: optionalString(carryForward.stageResult?.summary_markdown),
+  };
+}
+
+function buildSessionCompactionResumePromptSection(compactionDecision) {
+  if (!compactionDecision?.applied) {
+    return null;
+  }
+
+  return [
+    "## Session Resume Compaction",
+    `- previous session id: \`${compactionDecision.previousSessionId}\``,
+    `- previous session generation: \`${compactionDecision.previousGeneration ?? "unknown"}\``,
+    compactionDecision.priorArtifactDir
+      ? `- previous artifact dir: \`${compactionDecision.priorArtifactDir}\``
+      : "- previous artifact dir: `missing`",
+    compactionDecision.priorPromptPath
+      ? `- previous prompt path: \`${compactionDecision.priorPromptPath}\``
+      : "- previous prompt path: `missing`",
+    compactionDecision.priorStdoutPath
+      ? `- previous stdout log: \`${compactionDecision.priorStdoutPath}\``
+      : "- previous stdout log: `missing`",
+    compactionDecision.priorStderrPath
+      ? `- previous stderr log: \`${compactionDecision.priorStderrPath}\``
+      : "- previous stderr log: `missing`",
+    compactionDecision.stageResultPath
+      ? `- carry-forward stage-result: \`${compactionDecision.stageResultPath}\``
+      : "- carry-forward stage-result: `missing`",
+    compactionDecision.summaryMarkdown
+      ? `- carry-forward summary: ${compactionDecision.summaryMarkdown}`
+      : "- carry-forward summary: unavailable",
+    "- The previous deterministic resume failed because the stored session could not be continued.",
+    "- Start a fresh provider session for the same stage and continue from the artifact/log context above.",
+    "- Reconstruct the in-flight intent from the previous prompt and logs before making new edits.",
+  ].join("\n");
+}
+
+function snapshotResumeAttemptLogs({
+  artifactDir,
+  provider,
+}) {
+  const stdoutFilename = provider === "claude-cli" ? "claude.stdout.log" : "opencode.stdout.log";
+  const stderrFilename = provider === "claude-cli" ? "claude.stderr.log" : "opencode.stderr.log";
+  const stdoutPath = resolve(artifactDir, stdoutFilename);
+  const stderrPath = resolve(artifactDir, stderrFilename);
+  const preserved = {
+    stdoutPath: null,
+    stderrPath: null,
+  };
+
+  if (existsSync(stdoutPath)) {
+    preserved.stdoutPath = resolve(artifactDir, `resume-first-attempt.${stdoutFilename}`);
+    writeFileSync(preserved.stdoutPath, readFileSync(stdoutPath, "utf8"));
+  }
+  if (existsSync(stderrPath)) {
+    preserved.stderrPath = resolve(artifactDir, `resume-first-attempt.${stderrFilename}`);
+    writeFileSync(preserved.stderrPath, readFileSync(stderrPath, "utf8"));
+  }
+
+  return preserved;
+}
+
 function buildCodeStageResultTemplate(stage, subphase = null) {
   if (stage === 4 && subphase === "authority_precheck") {
     return {
@@ -2583,6 +2705,12 @@ export function runStageWithArtifacts({
     existingSessionEntry,
     priorStageResultPath,
   });
+  const sessionCompactionResumeDecision = resolveSessionCompactionResumeDecision({
+    stage: normalizedStage,
+    runtimeSnapshot,
+    existingSessionEntry,
+    priorStageResultPath,
+  });
   const executionSessionId =
     sessionRolloverDecision.resumeMode === "rollover"
       ? null
@@ -2672,7 +2800,7 @@ export function runStageWithArtifacts({
       ...extraPromptSections,
     ],
   });
-  const prompt =
+  let prompt =
     loopMode === "ralph"
       ? buildRalphPrompt({
           stage: dispatch.stage,
@@ -2689,6 +2817,7 @@ export function runStageWithArtifacts({
       : codexProviderConfig.bin;
 
   mkdirSync(targetArtifactDir, { recursive: true });
+  let sessionCompactionResumeMetadata = null;
 
   const metadata = {
     slice: normalizedSlice,
@@ -2707,6 +2836,7 @@ export function runStageWithArtifacts({
             summaryMarkdown: sessionRolloverDecision.summaryMarkdown,
           }
         : null,
+    sessionCompactionResume: sessionCompactionResumeMetadata,
     storedSessionSelection,
     effectiveProviderSelection,
     retryDecision: dispatch.retryDecision,
@@ -2907,36 +3037,147 @@ export function runStageWithArtifacts({
       };
     } catch (error) {
       if (executionSessionId && isSessionUnavailableFailure(error)) {
-        result = {
-          artifactDir: targetArtifactDir,
-          dispatch: buildStageDispatch({
-            slice: normalizedSlice,
-            stage: normalizedStage,
-            subphase: normalizedSubphase,
-            claudeBudgetState: resolvedBudget.state,
-            sessionId: executionSessionId,
-            attemptCount: (retryState?.attempt_count ?? 0) + 1,
-            forceHumanEscalation: true,
-            humanEscalationReason: "session_unavailable",
-          }),
-          prompt,
-          execution: {
-            mode: "session-missing",
-            executed: false,
-            executable: false,
+        if (sessionCompactionResumeDecision.applied) {
+          const compactedPrompt = [
+            prompt,
+            buildSessionCompactionResumePromptSection(sessionCompactionResumeDecision),
+          ]
+            .filter(Boolean)
+            .join("\n\n");
+          const preservedAttemptLogs = snapshotResumeAttemptLogs({
+            artifactDir: targetArtifactDir,
             provider: executionBinding.provider,
-            agent: executionBinding.agent,
-            reason: "stored session could not be continued",
-            exitCode: error.exitCode ?? null,
-            sessionId: executionSessionId,
-            stdoutPath: error.stdoutPath ?? null,
-            stderrPath: error.stderrPath ?? null,
-            subphase: normalizedSubphase ?? "implementation",
-            loop_mode: loopMode,
-            ralph_goal_ids: ralphGoalIds,
-            ralph_origin: ralphOrigin,
-          },
-        };
+          });
+
+          try {
+            const compactedExecution =
+              executionBinding.provider === "claude-cli"
+                ? runClaudeCli({
+                    executionDir: resolvedExecutionDir,
+                    artifactDir: targetArtifactDir,
+                    prompt: compactedPrompt,
+                    sessionId: null,
+                    claudeBin: claudeProviderConfig.bin,
+                    claudeModel: claudeProviderConfig.model,
+                    claudeEffort: claudeProviderConfig.effort,
+                    permissionMode: claudeProviderConfig.permissionMode,
+                    environment,
+                    homeDir,
+                    stageResultPath,
+                  })
+                : runOpencode({
+                    executionDir: resolvedExecutionDir,
+                    artifactDir: targetArtifactDir,
+                    prompt: compactedPrompt,
+                    agent: executionBinding.agent,
+                    model: executionBinding.model,
+                    variant: executionBinding.variant,
+                    sessionId: null,
+                    opencodeBin: resolvedOpencodeBin,
+                    environment,
+                    stageResultPath,
+                  });
+
+            sessionCompactionResumeMetadata = {
+              previousSessionId: sessionCompactionResumeDecision.previousSessionId,
+              previousGeneration: sessionCompactionResumeDecision.previousGeneration,
+              priorArtifactDir: sessionCompactionResumeDecision.priorArtifactDir,
+              priorPromptPath: sessionCompactionResumeDecision.priorPromptPath,
+              priorStdoutPath: sessionCompactionResumeDecision.priorStdoutPath,
+              priorStderrPath: sessionCompactionResumeDecision.priorStderrPath,
+              stageResultPath: sessionCompactionResumeDecision.stageResultPath,
+              summaryMarkdown: sessionCompactionResumeDecision.summaryMarkdown,
+              firstAttemptStdoutPath: preservedAttemptLogs.stdoutPath,
+              firstAttemptStderrPath: preservedAttemptLogs.stderrPath,
+            };
+            prompt = compactedPrompt;
+            result = {
+              artifactDir: targetArtifactDir,
+              dispatch: {
+                ...dispatch,
+                sessionBinding: {
+                  ...dispatch.sessionBinding,
+                  sessionId: null,
+                  resumeMode: "compacted_resume",
+                },
+              },
+              prompt,
+              execution: {
+                ...compactedExecution,
+                subphase: normalizedSubphase ?? "implementation",
+                loop_mode: loopMode,
+                ralph_goal_ids: ralphGoalIds,
+                ralph_origin: ralphOrigin,
+              },
+            };
+          } catch (compactionError) {
+            result = {
+              artifactDir: targetArtifactDir,
+              dispatch: buildStageDispatch({
+                slice: normalizedSlice,
+                stage: normalizedStage,
+                subphase: normalizedSubphase,
+                claudeBudgetState: resolvedBudget.state,
+                sessionId: executionSessionId,
+                attemptCount: (retryState?.attempt_count ?? 0) + 1,
+                forceHumanEscalation: true,
+                humanEscalationReason: "session_unavailable",
+              }),
+              prompt,
+              execution: {
+                mode: "session-missing",
+                executed: false,
+                executable: false,
+                provider: executionBinding.provider,
+                agent: executionBinding.agent,
+                reason:
+                  compactionError instanceof Error
+                    ? `stored session could not be continued; compacted resume failed: ${compactionError.message}`
+                    : "stored session could not be continued; compacted resume failed",
+                exitCode: compactionError?.exitCode ?? error.exitCode ?? null,
+                sessionId:
+                  compactionError?.sessionId ?? executionSessionId,
+                stdoutPath: compactionError?.stdoutPath ?? error.stdoutPath ?? null,
+                stderrPath: compactionError?.stderrPath ?? error.stderrPath ?? null,
+                subphase: normalizedSubphase ?? "implementation",
+                loop_mode: loopMode,
+                ralph_goal_ids: ralphGoalIds,
+                ralph_origin: ralphOrigin,
+              },
+            };
+          }
+        } else {
+          result = {
+            artifactDir: targetArtifactDir,
+            dispatch: buildStageDispatch({
+              slice: normalizedSlice,
+              stage: normalizedStage,
+              subphase: normalizedSubphase,
+              claudeBudgetState: resolvedBudget.state,
+              sessionId: executionSessionId,
+              attemptCount: (retryState?.attempt_count ?? 0) + 1,
+              forceHumanEscalation: true,
+              humanEscalationReason: "session_unavailable",
+            }),
+            prompt,
+            execution: {
+              mode: "session-missing",
+              executed: false,
+              executable: false,
+              provider: executionBinding.provider,
+              agent: executionBinding.agent,
+              reason: "stored session could not be continued",
+              exitCode: error.exitCode ?? null,
+              sessionId: executionSessionId,
+              stdoutPath: error.stdoutPath ?? null,
+              stderrPath: error.stderrPath ?? null,
+              subphase: normalizedSubphase ?? "implementation",
+              loop_mode: loopMode,
+              ralph_goal_ids: ralphGoalIds,
+              ralph_origin: ralphOrigin,
+            },
+          };
+        }
       } else if (
         sessionRole === "claude_primary" &&
         (isClaudeBudgetRuntimeFailure(error) || isClaudeRetryableFailure(error))
@@ -3519,6 +3760,7 @@ export function runStageWithArtifacts({
     prompt,
     metadata: {
       ...metadata,
+      sessionCompactionResume: sessionCompactionResumeMetadata,
       sessionBinding: {
         ...result.dispatch.sessionBinding,
         sessionId: result.dispatch.sessionBinding.sessionId ?? result.execution.sessionId ?? null,

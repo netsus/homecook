@@ -66,13 +66,15 @@ Homecook 저장소에서는 repo script alias를 함께 둔다.
 3. 단, `Phase 7` rollover threshold를 넘겼고 `cross-stage` 전환이면 supervisor가 fresh session으로 전환한다.
 4. rollover 시에는 prompt에 `Session Rollover Rebase` 블록을 넣어 직전 stage-result summary와 carry-forward artifact를 명시한다.
 5. `same-stage` retry/review-fix/resume는 rollover 추천이 떠 있어도 deterministic resume를 유지한다.
-6. 기본 재개 방식은 provider-aware deterministic resume다.
-7. `claude-cli` provider는 `claude --resume <id>`를 사용한다.
-8. `opencode` provider는 `opencode run --session <id>`를 사용한다.
-9. `--continue`는 deterministic하지 않으므로 자동화에서 금지한다.
-10. `--fork`는 기본 경로가 아니라 명시적 operator recovery에서만 사용한다.
-11. 저장된 session ID가 사라졌거나 재개가 불가능하면 조용히 새 세션을 만들지 않는다.
-12. session loss는 `blocked + human_escalation` 조건이다.
+6. 단, `same-stage` deterministic resume가 `session unavailable`로 실패했고 prior artifact/log가 남아 있으면 supervisor는 한 번에 한해 `Session Resume Compaction` 블록을 붙인 fresh-session rerun을 시도할 수 있다.
+7. 이 compacted resume는 silent new session이 아니라, 이전 prompt/log/artifact 경로를 명시적으로 carry-forward하는 controlled fallback이다.
+8. 기본 재개 방식은 provider-aware deterministic resume다.
+9. `claude-cli` provider는 `claude --resume <id>`를 사용한다.
+10. `opencode` provider는 `opencode run --session <id>`를 사용한다.
+11. `--continue`는 deterministic하지 않으므로 자동화에서 금지한다.
+12. `--fork`는 기본 경로가 아니라 명시적 operator recovery에서만 사용한다.
+13. prior artifact/log 없이 저장된 session ID가 사라졌거나 재개가 불가능하면 조용히 새 세션을 만들지 않는다.
+14. 위 fallback도 불가능하면 session loss는 `blocked + human_escalation` 조건이다.
 
 이 규칙으로 Stage 1을 수행한 Claude 세션이 Stage 3/4와 Stage 5 `final_authority_gate`에서도 같은 문맥을 유지하고, Stage 2를 수행한 Codex 세션이 Stage 4 `authority_precheck`, Stage 5 public review, Stage 6 closeout을 이어받는다.
 
@@ -203,6 +205,7 @@ status guidance 출력 규칙:
 - 같은 출력에서 `last activity`, `activity source`, `session freshness`, `execution freshness`를 같이 보여 heartbeat proxy 역할을 하도록 만든다.
 - `Phase 7`부터는 같은 출력에서 active session의 `generation`, `run_count`, `cumulative_usage.total_tokens`, `cumulative_cost_usd`, `rollover recommendation`도 같이 보여 cost spike와 context explosion을 바로 읽을 수 있어야 한다.
 - rollover recommendation이 보이더라도 `same-stage` blocked resume면 status guidance는 계속 기존 session resume를 권장하고, `cross-stage` 전환일 때만 fresh session + rebase를 권장한다.
+- same-stage resume가 old session loss로 compacted rerun에 들어간 경우에는 최소한 current artifact의 `prompt.md`와 `run-metadata.json`에 prior artifact dir와 compaction fallback 사실이 남아야 한다.
 - `omo:tail`은 위 status guidance에 scheduler snapshot과 최근 stdout/stderr tail을 덧붙인 operator surface다. status만으로 stale/live 판단이 애매할 때 같은 work item의 recent tick 흔적을 한 번에 묶어 본다.
 
 ## Homecook Mapping
