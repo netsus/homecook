@@ -356,6 +356,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "`pnpm omo:reconcile`",
       "`pnpm omo:promotion:update`",
       "`pnpm omo:status`",
+      "`pnpm omo:tail`",
       "`pnpm validate:omo-bookkeeping`",
       "low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함",
       "authority-required UI는 Claude Stage 4 구현 뒤 Codex `authority_precheck`, Codex Stage 5 public review, Claude `final_authority_gate`를 거친다.",

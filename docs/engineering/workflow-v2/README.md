@@ -10,7 +10,7 @@
   - reusable workflow v2 설계와 기본 운영 기준
   - Homecook OMO default path의 entry docs
 - 현재 executable baseline:
-  - `pnpm omo:supervise`, `pnpm omo:tick`, `pnpm omo:tick:watch`, `pnpm omo:reconcile`, `pnpm omo:status`
+  - `pnpm omo:supervise`, `pnpm omo:tick`, `pnpm omo:tick:watch`, `pnpm omo:reconcile`, `pnpm omo:status`, `pnpm omo:tail`
   - `pnpm validate:workflow-v2`, `pnpm validate:omo-bookkeeping`
 - 새로 잠그는 범위:
   - `generic OMO session-orchestrated runner` 설계
@@ -103,7 +103,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - Phase 4부터는 최소 executable helper(`pnpm omo:dispatch-stage`, `pnpm omo:sync-status`)를 함께 관리한다.
 - Phase 5부터는 `pnpm omo:run-stage`로 Codex/Claude stage를 repo-local OpenCode/OMO 실행과 artifact bundle에 직접 연결한다.
 - Phase 7부터는 `pnpm omo:claude-budget`과 repo-local override를 통해 Claude reviewer availability를 자동 해석하고, 필요 시 blocked retry를 기록한다.
-- 현재 executable baseline은 `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:reconcile`, `validate:omo-bookkeeping`까지 포함한다.
+- 현재 executable baseline은 `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:reconcile`, `omo:tail`, `validate:omo-bookkeeping`까지 포함한다.
 - fullauto v1의 의미는 low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함한다.
 - product slice 기본 경로에서 `pnpm omo:supervise -- --work-item <slice>`는 Stage 1 bootstrap부터 시작한다.
 - Stage 1 docs PR은 즉시 merge하지 않고, 같은 run 안에서 `internal 1.5 docs gate`를 mandatory로 거친다.
@@ -130,7 +130,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
   - merged slice의 roadmap/workpack README bookkeeping뿐 아니라 safe slice-local closeout metadata(`acceptance.md`, `automation-spec.json`, closeout evidence refs)까지 repair 가능
 - `internal 6.5 closeout_reconcile` subphase를 supervisor state machine에 정식 승격
   - Stage 6 approve 뒤 `closeout_reconcile_check -> repair -> recheck`를 거쳐 merged bookkeeping과 safe slice-local closeout drift를 정렬한 뒤에만 merge gate로 진입
-- executable supervisor baseline: `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:status`
+- executable supervisor baseline: `omo:supervise`, `omo:tick`, `omo:tick:watch`, `omo:status`, `omo:tail`
 - live smoke entrypoints: `omo:smoke:control-plane`, `omo:smoke:providers`
 - `omo:smoke:control-plane -- --live-providers`는 backend Stage 2/3만 실제 Claude/Codex를 사용하고, 나머지 단계는 deterministic smoke로 유지한 채 최소 확인용 프롬프트로 review loop(`request_changes -> Codex 반영 -> 추가 review -> 추가 반영`)를 검증한다.
 - macOS repo-managed scheduler entrypoints: `omo:scheduler:install`, `omo:scheduler:uninstall`, `omo:scheduler:verify`
@@ -147,6 +147,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
   - `pnpm omo:promotion:update`
   - `pnpm omo:status`
   - `pnpm omo:status:brief`
+  - `pnpm omo:tail`
 - 현재 구현된 validation/smoke/scheduler 명령:
   - `pnpm validate:workflow-v2`
   - `pnpm validate:omo-bookkeeping`
