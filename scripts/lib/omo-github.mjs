@@ -154,7 +154,7 @@ function buildPullRequestBodySections(body) {
   );
 }
 
-function mergePullRequestBodyWithExisting(existingBody, body, workItemId, rootDir = process.cwd()) {
+export function mergePullRequestBodyWithExisting(existingBody, body, workItemId, rootDir = process.cwd()) {
   const normalizedCandidateBody = normalizePullRequestBody(body, workItemId, rootDir);
 
   if (typeof existingBody !== "string" || existingBody.trim().length === 0) {

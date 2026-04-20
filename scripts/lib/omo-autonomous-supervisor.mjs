@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 
 import { runStageWithArtifacts } from "./omo-lite-runner.mjs";
 import { resolveStageSessionRole, syncWorkflowV2Status } from "./omo-lite-supervisor.mjs";
-import { createGithubAutomationClient } from "./omo-github.mjs";
+import { createGithubAutomationClient, mergePullRequestBodyWithExisting } from "./omo-github.mjs";
 import { resolveClaudeProviderConfig, resolveCodexProviderConfig } from "./omo-provider-config.mjs";
 import {
   applyBookkeepingRepairPlan,
@@ -575,6 +575,114 @@ function resolveRecoverablePrCheckFailureContext(state) {
     activePr,
     reason: reasonText,
   };
+}
+
+function maybeResumePrChecksViaBodyProjection({
+  rootDir,
+  workItemId,
+  state,
+  stage,
+  prRole,
+  activePr,
+  github,
+  now,
+}) {
+  if (
+    !activePr?.url ||
+    typeof github.editPullRequest !== "function" ||
+    typeof github.getPullRequestBody !== "function"
+  ) {
+    return null;
+  }
+
+  let stageResult;
+  try {
+    stageResult = loadExecutionStageResult(state, {
+      strictExtendedContract: false,
+    });
+  } catch {
+    return null;
+  }
+
+  if (
+    typeof stageResult?.pr?.title !== "string" ||
+    stageResult.pr.title.trim().length === 0 ||
+    typeof stageResult?.pr?.body_markdown !== "string" ||
+    stageResult.pr.body_markdown.trim().length === 0
+  ) {
+    return null;
+  }
+
+  const existingBody = github.getPullRequestBody({
+    prRef: activePr.url,
+  });
+  const projectedBody = mergePullRequestBodyWithExisting(
+    existingBody,
+    stageResult.pr.body_markdown,
+    workItemId,
+    rootDir,
+  );
+  if (projectedBody.trim() === (typeof existingBody === "string" ? existingBody.trim() : "")) {
+    return null;
+  }
+
+  github.editPullRequest({
+    prRef: activePr.url,
+    title: stageResult.pr.title,
+    body: stageResult.pr.body_markdown,
+    workItemId,
+  });
+
+  const headSha =
+    activePr.head_sha ??
+    state.wait?.head_sha ??
+    state.execution?.commit_sha ??
+    null;
+  const updatedState = upsertPullRequest({
+    rootDir,
+    workItemId,
+    state,
+    role: prRole,
+    pr: activePr,
+    branch: activePr.branch ?? null,
+    headSha,
+    now,
+  });
+  const resumedState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setRecoveryState({
+      state: setWaitState({
+        state: setExecutionState({
+          state: updatedState,
+          activeStage: stage,
+          phase: stage === 6 ? "merge_pending" : "wait",
+          nextAction: "poll_ci",
+          artifactDir: updatedState.execution?.artifact_dir ?? updatedState.last_artifact_dir,
+          execution: updatedState.execution,
+        }),
+        kind: "ci",
+        prRole,
+        stage,
+        headSha,
+        phase: stage === 6 ? "merge_pending" : "wait",
+        nextAction: "poll_ci",
+        updatedAt: now,
+      }),
+      recovery: null,
+    }),
+  });
+  updateRuntimeStatusForWait({
+    rootDir,
+    workItemId,
+    wait: resumedState.wait,
+    prPath: activePr.url,
+    now,
+    verificationStatus: "pending",
+    extraNotes: ["pr_body_projection=replayed", "policy_rerun=edited_event"],
+  });
+
+  return resumedState;
 }
 
 function readExecutionLogFragments(state) {
@@ -3685,6 +3793,24 @@ function processWaitState({
       });
 
       if (checks.bucket === "fail") {
+        const replayedBodyProjectionState = maybeResumePrChecksViaBodyProjection({
+          rootDir,
+          workItemId,
+          state: refreshedPrState.state,
+          stage: resumablePrCheckFailure.stage,
+          prRole: resumablePrCheckFailure.prRole,
+          activePr: refreshedPrState.activePr,
+          github,
+          now,
+        });
+        if (replayedBodyProjectionState) {
+          return {
+            state: replayedBodyProjectionState,
+            action: "wait",
+            nextStage: null,
+          };
+        }
+
         const notes = [
           "wait_kind=human_escalation",
           `reason=${resumablePrCheckFailure.reason}`,

@@ -10,6 +10,12 @@ on:
       - master
       - develop
   pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+      - ready_for_review
 
 jobs:
   policy:
