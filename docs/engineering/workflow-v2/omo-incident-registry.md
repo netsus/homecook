@@ -286,13 +286,29 @@ reset 기간의 기본 규칙은 아래와 같다.
   - `.artifacts/omo-supervisor/2026-03-27T12-03-26-188Z-04-recipe-save/summary.json`
   - `.artifacts/omo-supervisor/2026-03-31T15-37-48Z-05-planner-week-core-stage-2-reset-snapshot/recovery.patch`
 
+### OMO-RETRO-003
+
+- status: `open`
+- boundary: `omo-system`
+- bucket: `F. Auditor / Promotion Reset`
+- stage_scope: `promotion default-cutover`
+- symptom: `promotion-gate-final-review`는 같은 날 `not-ready`와 `H-OMO-001`을 남겼지만, 이어진 `promotion-gate-default-cutover`는 sampled slices를 `01~03`으로 제한한 채 findings 0 / `ready`를 선언했다. 그 다음날 promotion ledger는 `ready` + `execution_mode=default`로 올라갔고, slice06 manual handoff와 runtime/recovery signal은 cutover 판단에서 사라졌다.
+- current_recovery: docs-governance cutover는 positive audit/ledger alignment를 사용했고, incident-aware replay나 slice06 local artifact retention proof는 요구하지 않았다.
+- root_cause_hypothesis: promotion audit sampling과 gate logic가 recent incident corpus, unsampled pilot lane, contradictory audit output을 함께 소화하지 못한 채 cutover를 허용했다.
+- evidence_refs:
+  - `.artifacts/meta-harness-auditor/promotion-gate-final-review/report.md`
+  - `.artifacts/meta-harness-auditor/promotion-gate-default-cutover/report.md`
+  - `.artifacts/meta-harness-auditor/promotion-gate-final-review/audit-context.json`
+  - `.artifacts/meta-harness-auditor/promotion-gate-default-cutover/audit-context.json`
+  - `.workflow-v2/promotion-evidence.json`
+
 ## Backfill Queue
 
 아래는 다음 retrospective pass에서 우선 수집할 항목이다.
 
 1. slice03 canonical artifact bundle 부재를 `artifact-missing accepted`로 둘지, 별도 off-repo evidence 회수를 시도할지 결정
 2. slice06 Stage 6 audit bundle / tmp worktree artifact를 durable repo-local evidence로 회수할 수 있는지 확인
-3. OMO promotion `candidate -> ready` cutover를 정당화한 docs-governance PR과 그 당시 반대 신호
+3. OMO promotion `candidate -> ready/default` cutover를 정당화한 docs-governance PR과 그 당시 반대 신호를 같이 묶은 chain 재구성
 4. no-op commit, force-push, runtime JSON edit처럼 공식 상태 밖에서 수행된 복구 작업 목록
 
 ## Exit Rule For Seed Incidents

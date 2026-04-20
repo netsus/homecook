@@ -360,11 +360,11 @@ reset이 성공했다는 의미는 아래를 동시에 만족하는 것이다.
 
 ## Immediate Next Actions
 
-1. slice03~slice05 retrospective backfill
+1. slice03 residual artifact backfill + slice06 local evidence preservation rule 정리
 2. OMO/product incident boundary 표 정교화
 3. canonical closeout state 후보 설계
 4. auditor reset 요구사항 정의
-5. promotion readiness 재평가 기준 초안 작성
+5. promotion `candidate/not-ready -> ready/default` cutover replay 기준 초안 작성
 
 ## Decision Rule
 
