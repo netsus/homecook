@@ -473,4 +473,56 @@ describe("OMO session orchestrator", () => {
       retry: null,
     });
   });
+
+  it("reads bootstrap runtime status even when the tracked work item is still missing", () => {
+    const rootDir = createOrchestratorFixture();
+    const workItemId = "07-meal-manage";
+    mkdirSync(join(rootDir, ".opencode", "omo-runtime"), { recursive: true });
+    writeFileSync(
+      join(rootDir, ".opencode", "omo-runtime", `${workItemId}.json`),
+      JSON.stringify(
+        {
+          version: 2,
+          work_item_id: workItemId,
+          slice: workItemId,
+          repo_root: rootDir,
+          current_stage: 1,
+          last_completed_stage: 0,
+          blocked_stage: 1,
+          sessions: {
+            claude_primary: {
+              session_id: "ses_bootstrap",
+              provider: "opencode",
+              agent: "athena",
+            },
+            codex_primary: {
+              session_id: null,
+              provider: null,
+              agent: "hephaestus",
+            },
+          },
+          wait: {
+            kind: "human_escalation",
+            stage: 1,
+            reason: "stage-result missing",
+          },
+          phase: "wait",
+          next_action: "noop",
+          execution: null,
+        },
+        null,
+        2,
+      ),
+    );
+
+    const status = readWorkItemSessionStatus({
+      rootDir,
+      workItemId,
+    });
+
+    expect(status.slice).toBe(workItemId);
+    expect(status.trackedWorkItem).toBeNull();
+    expect(status.runtime.current_stage).toBe(1);
+    expect(status.operatorGuidance.reason).toContain("stage-result missing");
+  });
 });

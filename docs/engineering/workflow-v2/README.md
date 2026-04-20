@@ -124,6 +124,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - live smoke entrypoints: `omo:smoke:control-plane`, `omo:smoke:providers`
 - `omo:smoke:control-plane -- --live-providers`는 backend Stage 2/3만 실제 Claude/Codex를 사용하고, 나머지 단계는 deterministic smoke로 유지한 채 최소 확인용 프롬프트로 review loop(`request_changes -> Codex 반영 -> 추가 review -> 추가 반영`)를 검증한다.
 - macOS repo-managed scheduler entrypoints: `omo:scheduler:install`, `omo:scheduler:uninstall`, `omo:scheduler:verify`
+- macOS에서는 `omo:supervise`, `omo:start`, `omo:continue`가 execute mode에서 work item launchd scheduler를 자동 bootstrap/refresh한다.
 - 현재 entry-point 문서에서 workflow-v2 default 경로를 발견 가능하게 연결
 
 ## Executable Baseline
@@ -185,6 +186,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 14. 실제 Claude/Codex provider 경로, session reuse, stage-result 생성을 분리 검증할 때는 `pnpm omo:smoke:providers`를 사용한다.
 15. slice06 또는 parallel checkpoint 결과를 lane ledger에 남길 때는 `pnpm omo:promotion:update`를 사용한다. 상세 section/id 조합은 `promotion-readiness.md`를 따른다.
 16. macOS scheduler는 `pnpm omo:scheduler:install -- --work-item <id>`로 설치하고 `pnpm omo:scheduler:verify -- --work-item <id>`로 확인한다.
+   기본 execute kickoff는 scheduler를 자동 보장하고, 수동 install은 repair/custom cadence override용이다.
 17. `pnpm validate:workflow-v2`는 schema/example뿐 아니라 상위 workflow-v2 entry docs drift와 official source-of-truth reference drift도 함께 검사한다.
 
 ## Not Yet Included

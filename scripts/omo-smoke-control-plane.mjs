@@ -18,6 +18,7 @@ import {
 import { superviseWorkItem, tickSupervisorWorkItems } from "./lib/omo-autonomous-supervisor.mjs";
 import { readRuntimeState } from "./lib/omo-session-runtime.mjs";
 import { reconcileWorkItemBookkeeping } from "./lib/omo-reconcile.mjs";
+import { assertSupportedClaudeProvider } from "./lib/omo-provider-config.mjs";
 
 function printUsage() {
   process.stdout.write(
@@ -31,7 +32,7 @@ function printUsage() {
       "  --artifact-base-dir <path>       Override artifact base directory",
       "  --live-providers                 Use real Claude/Codex providers instead of deterministic smoke actors",
       "  --gh-bin <path>                  Override gh binary path",
-      "  --claude-provider <name>         Override Claude provider: opencode | claude-cli",
+      "  --claude-provider <name>         Override Claude provider: claude-cli",
       "  --claude-bin <path>              Override claude binary path",
       "  --claude-model <model>           Override Claude model alias/name",
       "  --claude-effort <level>          Override Claude effort: low | medium | high",
@@ -394,7 +395,7 @@ function main() {
     artifactBaseDir,
     ghBin,
     liveProviders: options.liveProviders,
-    claudeProvider: options.claudeProvider,
+    claudeProvider: assertSupportedClaudeProvider(options.claudeProvider),
     claudeBin: options.claudeBin,
     claudeModel: options.claudeModel,
     claudeEffort: options.claudeEffort,

@@ -1,13 +1,29 @@
-import { describe, expect, it } from "vitest";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   DEFAULT_TICK_INTERVAL_SECONDS,
+  ensureLaunchAgentInstalled,
   formatLaunchAgentSnapshot,
   getDefaultTickLogPaths,
   parseLaunchAgentSnapshotOutput,
   renderLaunchAgentPlist,
   verifyLaunchAgentAlignment,
 } from "../scripts/lib/omo-scheduler.mjs";
+
+const tempDirs: string[] = [];
+
+afterEach(() => {
+  while (tempDirs.length > 0) {
+    const directory = tempDirs.pop();
+    if (directory) {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }
+});
 
 describe("OMO macOS scheduler", () => {
   it("renders a launchd plist with absolute binaries, logs, and cadence", () => {
@@ -91,5 +107,142 @@ describe("OMO macOS scheduler", () => {
 
     expect(verification.ok).toBe(true);
     expect(verification.errors).toEqual([]);
+  });
+
+  it("installs the launch agent when supervise needs automatic resume coverage", () => {
+    const homeDir = mkdtempSync(join(tmpdir(), "omo-scheduler-"));
+    tempDirs.push(homeDir);
+    const spawnCalls: string[] = [];
+    let printLoaded = false;
+    const spawn = ((command: string, argsOrOptions?: readonly string[] | object) => {
+      const args = Array.isArray(argsOrOptions) ? argsOrOptions : [];
+      spawnCalls.push(`${command} ${args.join(" ")}`);
+      if (command !== "launchctl") {
+        throw new Error(`unexpected command: ${command}`);
+      }
+
+      if (args[0] === "print") {
+        if (!printLoaded) {
+          return {
+            status: 1,
+            stdout: "",
+            stderr: "service not loaded",
+          };
+        }
+
+        return {
+          status: 0,
+          stdout: [
+            "gui/501/ai.homecook.omo.tick.07-meal-manage = {",
+            "  state = waiting",
+            "  runs = 1",
+            "  last exit code = 0",
+            "  run interval = 600 seconds",
+            `  stdout path = ${homeDir}/Library/Logs/homecook/omo-tick-07-meal-manage.log`,
+            `  stderr path = ${homeDir}/Library/Logs/homecook/omo-tick-07-meal-manage.err.log`,
+            "}",
+          ].join("\n"),
+          stderr: "",
+        };
+      }
+
+      if (args[0] === "bootout") {
+        return {
+          status: 1,
+          stdout: "",
+          stderr: "service not loaded",
+        };
+      }
+
+      if (args[0] === "bootstrap") {
+        printLoaded = true;
+      }
+
+      return {
+        status: 0,
+        stdout: "",
+        stderr: "",
+      };
+    }) as typeof import("node:child_process").spawnSync;
+
+    const result = ensureLaunchAgentInstalled({
+      rootDir: "/repo/homecook",
+      workItemId: "07-meal-manage",
+      homeDir,
+      platform: "darwin",
+      getuid: () => 501,
+      spawn,
+      pnpmBin: "/usr/bin/env",
+      ghBin: "/usr/bin/env",
+      claudeBin: "/usr/bin/env",
+      opencodeBin: "/usr/bin/env",
+    });
+
+    expect(result.changed).toBe(true);
+    expect(result.installed).toBe(true);
+    expect(existsSync(result.plistPath)).toBe(true);
+    expect(readFileSync(result.plistPath, "utf8")).toContain("07-meal-manage");
+    expect(spawnCalls).toContain(`launchctl bootstrap gui/501 ${result.plistPath}`);
+    expect(spawnCalls).toContain("launchctl kickstart -k gui/501/ai.homecook.omo.tick.07-meal-manage");
+  });
+
+  it("does not reinstall an already aligned launch agent", () => {
+    const homeDir = mkdtempSync(join(tmpdir(), "omo-scheduler-"));
+    tempDirs.push(homeDir);
+    const plistPath = join(homeDir, "Library", "LaunchAgents", "ai.homecook.omo.tick.07-meal-manage.plist");
+    const spawnCalls: string[] = [];
+    const uid = 501;
+    const rendered = renderLaunchAgentPlist({
+      rootDir: "/repo/homecook",
+      workItemId: "07-meal-manage",
+      homeDir,
+      bins: {
+        pnpm: "/usr/bin/env",
+        gh: "/usr/bin/env",
+        claude: "/usr/bin/env",
+        opencode: "/usr/bin/env",
+      },
+    });
+    mkdirSync(join(homeDir, "Library", "LaunchAgents"), { recursive: true });
+    writeFileSync(plistPath, rendered);
+
+    const spawn = ((command: string, argsOrOptions?: readonly string[] | object) => {
+      const args = Array.isArray(argsOrOptions) ? argsOrOptions : [];
+      spawnCalls.push(`${command} ${args.join(" ")}`);
+      if (command !== "launchctl" || args[0] !== "print") {
+        throw new Error(`unexpected command: ${command} ${args.join(" ")}`);
+      }
+
+      return {
+        status: 0,
+        stdout: [
+          `gui/${uid}/ai.homecook.omo.tick.07-meal-manage = {`,
+          "  state = waiting",
+          "  runs = 4",
+          "  last exit code = 0",
+          "  run interval = 600 seconds",
+          `  stdout path = ${homeDir}/Library/Logs/homecook/omo-tick-07-meal-manage.log`,
+          `  stderr path = ${homeDir}/Library/Logs/homecook/omo-tick-07-meal-manage.err.log`,
+          "}",
+        ].join("\n"),
+        stderr: "",
+      };
+    }) as typeof import("node:child_process").spawnSync;
+
+    const result = ensureLaunchAgentInstalled({
+      rootDir: "/repo/homecook",
+      workItemId: "07-meal-manage",
+      homeDir,
+      platform: "darwin",
+      getuid: () => uid,
+      spawn,
+      pnpmBin: "/usr/bin/env",
+      ghBin: "/usr/bin/env",
+      claudeBin: "/usr/bin/env",
+      opencodeBin: "/usr/bin/env",
+    });
+
+    expect(result.changed).toBe(false);
+    expect(spawnCalls).toEqual([`launchctl print gui/${uid}/ai.homecook.omo.tick.07-meal-manage`]);
   });
 });

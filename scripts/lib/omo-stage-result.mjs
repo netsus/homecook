@@ -17,6 +17,16 @@ function ensureNonEmptyString(value, label) {
   return value.trim();
 }
 
+function ensureFirstNonEmptyString(values, label) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  throw new Error(`${label} must be a non-empty string.`);
+}
+
 function ensureStringArray(value, label) {
   if (!Array.isArray(value)) {
     throw new Error(`${label} must be an array.`);
@@ -65,14 +75,20 @@ function ensureOptionalNonNegativeInteger(value, label) {
 function validateFinding(finding, index) {
   const label = `stageResult.findings[${index}]`;
   const f = ensureObject(finding, label);
+  const evidencePaths = Array.isArray(f.evidence_paths)
+    ? f.evidence_paths
+        .filter((value) => typeof value === "string" && value.trim().length > 0)
+        .map((value) => value.trim())
+    : [];
+
   return {
-    file: ensureNonEmptyString(f.file, `${label}.file`),
+    file: ensureFirstNonEmptyString([f.file, evidencePaths[0]], `${label}.file`),
     line_hint:
       typeof f.line_hint === "number" && Number.isInteger(f.line_hint) ? f.line_hint : null,
     severity: ensureEnum(f.severity, ["critical", "major", "minor"], `${label}.severity`),
     category: ensureNonEmptyString(f.category, `${label}.category`),
-    issue: ensureNonEmptyString(f.issue, `${label}.issue`),
-    suggestion: ensureNonEmptyString(f.suggestion, `${label}.suggestion`),
+    issue: ensureFirstNonEmptyString([f.issue, f.message], `${label}.issue`),
+    suggestion: ensureFirstNonEmptyString([f.suggestion, f.remediation_hint], `${label}.suggestion`),
   };
 }
 
@@ -140,13 +156,27 @@ function validateRebuttals(value, { strict = false } = {}) {
   return value.map((entry, index) => {
     const normalizedEntry = ensureObject(entry, `stageResult.rebuttals[${index}]`);
     return {
-      fix_id: ensureNonEmptyString(normalizedEntry.fix_id, `stageResult.rebuttals[${index}].fix_id`),
-      rationale_markdown: ensureNonEmptyString(
-        normalizedEntry.rationale_markdown,
+      fix_id: ensureFirstNonEmptyString(
+        [
+          normalizedEntry.fix_id,
+          normalizedEntry.fixId,
+          normalizedEntry.finding_id,
+          normalizedEntry.findingId,
+        ],
+        `stageResult.rebuttals[${index}].fix_id`,
+      ),
+      rationale_markdown: ensureFirstNonEmptyString(
+        [
+          normalizedEntry.rationale_markdown,
+          normalizedEntry.rationale,
+          normalizedEntry.rationale_md,
+          normalizedEntry.reason,
+          normalizedEntry.explanation,
+        ],
         `stageResult.rebuttals[${index}].rationale_markdown`,
       ),
       evidence_refs: ensureOptionalStringArray(
-        normalizedEntry.evidence_refs ?? [],
+        normalizedEntry.evidence_refs ?? normalizedEntry.evidenceRefs ?? [],
         `stageResult.rebuttals[${index}].evidence_refs`,
       ),
     };

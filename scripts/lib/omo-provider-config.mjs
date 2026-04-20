@@ -7,7 +7,7 @@ export const DEFAULT_OMO_PROVIDER_CONFIG = {
     bin: "claude",
     model: "sonnet",
     effort: "high",
-    permission_mode: "acceptEdits",
+    permission_mode: "bypassPermissions",
   },
   codex: {
     provider: "opencode",
@@ -24,6 +24,21 @@ function readJsonIfExists(filePath) {
   }
 
   return JSON.parse(readFileSync(filePath, "utf8"));
+}
+
+function normalizeClaudeProvider(value, label) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return null;
+  }
+
+  const normalized = value.trim();
+  if (normalized !== "claude-cli") {
+    throw new Error(
+      `${label} must be "claude-cli". Homecook OMO does not support Claude via OpenCode.`,
+    );
+  }
+
+  return normalized;
 }
 
 function mergeProviderSection(defaults, raw) {
@@ -76,6 +91,21 @@ export function readOmoProviderConfig(rootDir = process.cwd()) {
   };
 }
 
+export function assertSupportedClaudeProvider(provider, label = "--claude-provider") {
+  if (typeof provider !== "string" || provider.trim().length === 0) {
+    return undefined;
+  }
+
+  const normalizedProvider = provider.trim();
+  if (normalizedProvider !== "claude-cli") {
+    throw new Error(
+      `Homecook OMO only supports ${label} claude-cli for Claude-owned stages. Remove the flag or pass --claude-provider claude-cli.`,
+    );
+  }
+
+  return normalizedProvider;
+}
+
 export function resolveClaudeProviderConfig({
   rootDir = process.cwd(),
   provider,
@@ -84,12 +114,13 @@ export function resolveClaudeProviderConfig({
   effort,
 } = {}) {
   const { config, configPath } = readOmoProviderConfig(rootDir);
+  const configuredProvider =
+    normalizeClaudeProvider(config.claude.provider, `claude.provider in ${configPath}`) ??
+    DEFAULT_OMO_PROVIDER_CONFIG.claude.provider;
+  const overrideProvider = normalizeClaudeProvider(provider, "claudeProvider");
 
   return {
-    provider:
-      typeof provider === "string" && provider.trim().length > 0
-        ? provider.trim()
-        : config.claude.provider,
+    provider: overrideProvider ?? configuredProvider,
     bin:
       typeof bin === "string" && bin.trim().length > 0
         ? bin.trim()

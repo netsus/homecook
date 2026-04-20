@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { resumePendingWorkItems } from "./lib/omo-session-orchestrator.mjs";
+import { assertSupportedClaudeProvider } from "./lib/omo-provider-config.mjs";
 
 function printUsage() {
   process.stdout.write(
@@ -10,7 +11,7 @@ function printUsage() {
       "Options:",
       "  --claude-budget-state <state>    Optional override: available | constrained | unavailable",
       "  --mode <artifact-only|execute>   Default: execute",
-      "  --claude-provider <name>         Override Claude provider: opencode | claude-cli",
+      "  --claude-provider <name>         Override Claude provider: claude-cli",
       "  --claude-bin <path>              Override claude binary path",
       "  --claude-model <model>           Override Claude model alias/name",
       "  --claude-effort <level>          Override Claude effort: low | medium | high",
@@ -86,7 +87,7 @@ function main() {
   const results = resumePendingWorkItems({
     claudeBudgetState: options.claudeBudgetState,
     mode: options.mode,
-    claudeProvider: options.claudeProvider,
+    claudeProvider: assertSupportedClaudeProvider(options.claudeProvider),
     claudeBin: options.claudeBin,
     claudeModel: options.claudeModel,
     claudeEffort: options.claudeEffort,

@@ -47,10 +47,6 @@ import {
   writeRuntimeState,
 } from "./omo-session-runtime.mjs";
 import { listWorktreeChangedFiles } from "./omo-worktree.mjs";
-
-const DEFAULT_OPENCODE_CLAUDE_FALLBACK_MODEL = "openai/gpt-5.4";
-const DEFAULT_OPENCODE_CLAUDE_FALLBACK_VARIANT = "high";
-
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string.`);
@@ -881,9 +877,9 @@ function shouldAttemptStageResultAutoRepair({
   stageResult,
 }) {
   return Boolean(
-    isReviewStage(stage, subphase) &&
-      execution?.mode === "execute" &&
-      execution?.executed &&
+    ([1, 2, 4].includes(Number(stage)) || isReviewStage(stage, subphase)) &&
+      ["execute", "process-failure"].includes(execution?.mode ?? "") &&
+      (execution?.executed || execution?.mode === "process-failure") &&
       execution?.provider &&
       (stageResult || execution?.sessionId),
   );
@@ -1742,14 +1738,21 @@ function cleanupGeneratedOpencodeArtifacts(executionDir) {
   }
 
   const ohMyOpencodePath = resolve(opencodeDir, "oh-my-opencode.json");
-  const ohMyOpencodeBackupPath = resolve(opencodeDir, "oh-my-opencode.json.bak");
-  if (existsSync(ohMyOpencodeBackupPath)) {
-    writeFileSync(ohMyOpencodePath, readFileSync(ohMyOpencodeBackupPath, "utf8"));
+  const backupCandidates = readdirSync(opencodeDir)
+    .filter((entry) => entry === "oh-my-opencode.json.bak" || entry.startsWith("oh-my-opencode.json.bak."))
+    .sort();
+  const restoreCandidate =
+    backupCandidates.find((entry) => entry === "oh-my-opencode.json.bak") ??
+    backupCandidates[backupCandidates.length - 1] ??
+    null;
+  if (restoreCandidate) {
+    writeFileSync(ohMyOpencodePath, readFileSync(resolve(opencodeDir, restoreCandidate), "utf8"));
   }
 
   for (const entry of readdirSync(opencodeDir)) {
     if (
       entry === "oh-my-opencode.json.bak" ||
+      entry.startsWith("oh-my-opencode.json.bak.") ||
       entry === "oh-my-openagent.json" ||
       entry.startsWith("oh-my-openagent.json.")
     ) {
@@ -2162,7 +2165,7 @@ function resolveStatusPatch({ dispatch, execution }) {
  * @property {string} [executionDir]
  * @property {string|null} [subphase]
  * @property {string} [opencodeBin]
- * @property {"opencode"|"claude-cli"} [claudeProvider]
+ * @property {"claude-cli"} [claudeProvider]
  * @property {string} [claudeBin]
  * @property {string} [claudeModel]
  * @property {"low"|"medium"|"high"} [claudeEffort]
@@ -2250,50 +2253,8 @@ export function runStageWithArtifacts({
     environment,
     homeDir,
   });
-  const desiredProviderConfig =
-    sessionRole === "claude_primary"
-      ? claudeProviderConfig.provider === "opencode"
-        ? {
-            provider: "opencode",
-            bin: codexProviderConfig.bin,
-            agent: OMO_SESSION_ROLE_TO_AGENT.claude_primary,
-            model:
-              typeof claudeModel === "string" && claudeModel.trim().includes("/")
-                ? claudeModel.trim()
-                : DEFAULT_OPENCODE_CLAUDE_FALLBACK_MODEL,
-            variant:
-              typeof codexProviderConfig.variant === "string" && codexProviderConfig.variant.trim().length > 0
-                ? codexProviderConfig.variant.trim()
-                : DEFAULT_OPENCODE_CLAUDE_FALLBACK_VARIANT,
-          }
-        : claudeProviderConfig
-      : codexProviderConfig;
   const activeProviderConfig =
-    sessionRole === "claude_primary" &&
-    existingSessionId &&
-    existingSessionProvider &&
-    !explicitClaudeProvider
-      ? {
-          ...claudeProviderConfig,
-          provider: existingSessionProvider,
-          bin:
-            existingSessionProvider === "opencode"
-              ? codexProviderConfig.bin
-              : claudeProviderConfig.bin,
-          agent:
-            existingSessionProvider === "opencode"
-              ? OMO_SESSION_ROLE_TO_AGENT.claude_primary
-              : null,
-          model:
-            existingSessionProvider === "opencode"
-              ? desiredProviderConfig.model ?? null
-              : claudeProviderConfig.model,
-          variant:
-            existingSessionProvider === "opencode"
-              ? desiredProviderConfig.variant ?? null
-              : null,
-        }
-      : desiredProviderConfig;
+    sessionRole === "claude_primary" ? claudeProviderConfig : codexProviderConfig;
   const hasProviderMismatch =
     sessionRole === "claude_primary" &&
     Boolean(existingSessionId && existingSessionProvider) &&
@@ -2427,18 +2388,6 @@ export function runStageWithArtifacts({
     claudeProviderConfig,
     sessionBinding: dispatch.sessionBinding,
   });
-  const claudeFallbackPromptSections =
-    dispatch.actor === "claude" && executionBinding.provider === "opencode"
-      ? [
-          [
-            "## Claude Fallback Execution Contract",
-            "- Supervisor가 이 실행을 `claude_primary` emergency fallback으로 명시적으로 할당했습니다.",
-            "- 이 턴에서는 OpenCode 실행 표면을 쓰더라도 Claude public stage owner를 대신 수행하는 것으로 간주합니다.",
-            "- `docs/engineering/slice-workflow.md`의 'Claude가 담당' 규칙은 이미 이 fallback assignment로 충족됐으므로, 그 이유만으로 거부하거나 사용자에게 다시 Claude를 찾으라고 돌려보내지 마세요.",
-            "- 같은 stage scope/제약/산출물 계약은 그대로 유지하고, 필요한 문서 수정과 valid stage-result 작성까지 완료하세요.",
-          ].join("\n"),
-        ]
-      : [];
   const stageOwnedChecklistSection =
     [2, 4].includes(normalizedStage) && strictChecklistContractActive
       ? [
@@ -2493,7 +2442,6 @@ export function runStageWithArtifacts({
             ].join("\n"),
           ]
         : []),
-      ...claudeFallbackPromptSections,
       ...(stageOwnedChecklistSection ? [stageOwnedChecklistSection] : []),
       ...extraPromptSections,
     ],
@@ -2510,11 +2458,9 @@ export function runStageWithArtifacts({
         })
       : basePrompt;
   const resolvedOpencodeBin =
-    activeProviderConfig.provider === "opencode"
-      ? !activeProviderConfig.bin || activeProviderConfig.bin === "opencode"
-        ? resolveDefaultOpencodeBin(environment, homeDir)
-        : activeProviderConfig.bin
-      : resolveDefaultOpencodeBin(environment, homeDir);
+    !codexProviderConfig.bin || codexProviderConfig.bin === "opencode"
+      ? resolveDefaultOpencodeBin(environment, homeDir)
+      : codexProviderConfig.bin;
 
   mkdirSync(targetArtifactDir, { recursive: true });
 
@@ -2831,11 +2777,16 @@ export function runStageWithArtifacts({
   let schemaRepairAttempted = false;
   let schemaRepairArtifactDir = null;
 
-  if (result.execution.mode === "execute" && result.execution.executed && !stageResult) {
+  if (
+    ["execute", "process-failure"].includes(result.execution.mode) &&
+    (result.execution.executed || result.execution.mode === "process-failure") &&
+    !stageResult
+  ) {
     const missingStageResultReason = buildStageResultContractViolationReason({
       artifactDir: targetArtifactDir,
       execution: result.execution,
     });
+    const missingStageResultExecution = result.execution;
     result = {
       ...result,
       execution: {
@@ -2849,7 +2800,7 @@ export function runStageWithArtifacts({
       shouldAttemptStageResultAutoRepair({
         stage: normalizedStage,
         subphase: normalizedSubphase,
-        execution: result.execution,
+        execution: missingStageResultExecution,
         stageResult,
       })
     ) {
@@ -2922,6 +2873,26 @@ export function runStageWithArtifacts({
         stageResult,
         stageResultPath,
       });
+      try {
+        validateStageResult(normalizedStage, stageResult, {
+          strictExtendedContract: Boolean(checklistContract && isChecklistContractActive(checklistContract)),
+          subphase: normalizedSubphase,
+        });
+        validStageResult = true;
+      } catch (repairError) {
+        result = {
+          ...result,
+          execution: {
+            ...result.execution,
+            mode: "contract-violation",
+            reason:
+              repairError instanceof Error
+                ? `${missingStageResultReason} Auto-repair failed: ${repairError.message}`
+                : `${missingStageResultReason} Auto-repair failed.`,
+            repairArtifactDir: schemaRepairArtifactDir,
+          },
+        };
+      }
     }
   } else if (stageResult) {
     stageResult = normalizeImplementationStageResultAliases({

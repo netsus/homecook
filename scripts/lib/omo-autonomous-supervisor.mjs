@@ -29,6 +29,7 @@ import {
   resolveRuntimePath,
   listRuntimeStates,
   markStageCompleted,
+  resolveRetryAt,
   readRuntimeState,
   releaseRuntimeLock,
   setDocGateRebuttal,
@@ -275,8 +276,381 @@ function resolveDocGateAllowedFiles({
   return normalizeStringArray(allowedFiles);
 }
 
+function isAllowedClaudeDirtyStageFile({
+  filePath,
+  branchRole,
+  stage,
+  subphase = "implementation",
+  slice,
+  workItemId,
+}) {
+  const normalizedFilePath =
+    typeof filePath === "string" && filePath.trim().length > 0 ? filePath.trim() : null;
+  if (!normalizedFilePath) {
+    return false;
+  }
+
+  const normalizedBranchRole =
+    typeof branchRole === "string" && branchRole.trim().length > 0 ? branchRole.trim() : null;
+  const normalizedSubphase =
+    typeof subphase === "string" && subphase.trim().length > 0 ? subphase.trim() : "implementation";
+
+  if (
+    normalizedBranchRole === "docs" ||
+    stage === 1 ||
+    (stage === 2 && normalizedSubphase === "doc_gate_repair")
+  ) {
+    return (
+      normalizedFilePath === "docs/workpacks/README.md" ||
+      normalizedFilePath === ".workflow-v2/status.json" ||
+      normalizedFilePath === `.workflow-v2/work-items/${workItemId}.json` ||
+      normalizedFilePath.startsWith(`docs/workpacks/${slice}/`) ||
+      normalizedFilePath.startsWith("ui/designs/")
+    );
+  }
+
+  if (normalizedBranchRole === "frontend" && stage === 4) {
+    if (normalizedFilePath.startsWith("app/api/")) {
+      return false;
+    }
+
+    return (
+      normalizedFilePath.startsWith("app/") ||
+      normalizedFilePath.startsWith("components/") ||
+      normalizedFilePath.startsWith("hooks/") ||
+      normalizedFilePath.startsWith("lib/") ||
+      normalizedFilePath.startsWith("stores/") ||
+      normalizedFilePath.startsWith("tests/") ||
+      normalizedFilePath.startsWith("ui/") ||
+      normalizedFilePath.startsWith("public/") ||
+      normalizedFilePath.startsWith("styles/") ||
+      normalizedFilePath.startsWith(`docs/workpacks/${slice}/`)
+    );
+  }
+
+  return false;
+}
+
+function isAllowedDocsGateBookkeepingDirtyFile({
+  filePath,
+  workItemId,
+}) {
+  return (
+    filePath === ".workflow-v2/status.json" ||
+    filePath === `.workflow-v2/work-items/${workItemId}.json`
+  );
+}
+
+function isResumableClaudeDirtyRecoveryState(state) {
+  const recovery = state?.recovery ?? null;
+  if (!recovery || recovery.kind !== "dirty_worktree") {
+    return false;
+  }
+
+  const stage =
+    Number.isInteger(recovery.stage) ? recovery.stage : state?.blocked_stage ?? state?.active_stage ?? state?.current_stage ?? null;
+  const subphase = state?.execution?.subphase ?? "implementation";
+  if (!Number.isInteger(stage) || stage < 1 || stage > 6 || resolveStageSessionRole(stage, subphase) !== "claude_primary") {
+    return false;
+  }
+
+  const sessionId = state?.sessions?.claude_primary?.session_id ?? null;
+  if (
+    typeof sessionId !== "string" ||
+    sessionId.trim().length === 0 ||
+    recovery.session_role !== "claude_primary" ||
+    recovery.session_id !== sessionId
+  ) {
+    return false;
+  }
+
+  const changedFiles = normalizeStringArray(recovery.changed_files);
+  if (changedFiles.length === 0) {
+    return false;
+  }
+
+  const slice = state?.slice ?? state?.work_item_id ?? null;
+  const workItemId = state?.work_item_id ?? state?.slice ?? null;
+  if (!slice || !workItemId) {
+    return false;
+  }
+
+  const normalizedChangedFiles = changedFiles.map((filePath) => normalizeDirtyRecoveryFilePath(filePath));
+  const allowedDirtyFiles = normalizedChangedFiles.every((filePath) =>
+    isAllowedClaudeDirtyStageFile({
+      filePath,
+      branchRole: state?.workspace?.branch_role ?? recovery.branch ?? null,
+      stage,
+      subphase,
+      slice,
+      workItemId,
+    }),
+  );
+
+  if (!allowedDirtyFiles) {
+    return false;
+  }
+
+  return (
+    state?.retry?.reason === "claude_budget_unavailable" ||
+    Boolean(recovery.existing_pr?.url) ||
+    state?.wait?.kind === "blocked_retry" ||
+    state?.wait?.kind === "ci" ||
+    state?.wait?.kind === "human_escalation"
+  );
+}
+
+function isResumableDocsGateDirtyRecoveryState(state) {
+  const recovery = state?.recovery ?? null;
+  if (!recovery || recovery.kind !== "dirty_worktree") {
+    return false;
+  }
+
+  const stage =
+    Number.isInteger(recovery.stage) ? recovery.stage : state?.blocked_stage ?? state?.active_stage ?? state?.current_stage ?? null;
+  if (stage !== 2) {
+    return false;
+  }
+
+  const docGateStatus =
+    typeof state?.doc_gate?.status === "string" && state.doc_gate.status.trim().length > 0
+      ? state.doc_gate.status.trim()
+      : null;
+  if (!["pending_check", "awaiting_review", "fixable", "pending_recheck"].includes(docGateStatus ?? "")) {
+    return false;
+  }
+
+  const docsPr = state?.prs?.docs?.url ? state.prs.docs : recovery?.existing_pr ?? null;
+  const branchRole = recovery?.existing_pr?.role ?? state?.workspace?.branch_role ?? state?.wait?.pr_role ?? null;
+  const workItemId = state?.work_item_id ?? state?.slice ?? null;
+  if (!docsPr?.url || branchRole !== "docs" || !workItemId) {
+    return false;
+  }
+
+  const changedFiles = normalizeStringArray(recovery.changed_files).map((filePath) => normalizeDirtyRecoveryFilePath(filePath));
+  if (changedFiles.length === 0) {
+    return false;
+  }
+
+  return changedFiles.every((filePath) =>
+    isAllowedDocsGateBookkeepingDirtyFile({
+      filePath,
+      workItemId,
+    }),
+  );
+}
+
+function isResumablePostDocGateBookkeepingResidue(state) {
+  const recovery = state?.recovery ?? null;
+  if (!recovery || recovery.kind !== "dirty_worktree") {
+    return false;
+  }
+
+  if (state?.doc_gate?.status !== "passed" || Number(recovery?.stage) !== 2) {
+    return false;
+  }
+
+  const workItemId = state?.work_item_id ?? state?.slice ?? null;
+  if (!workItemId) {
+    return false;
+  }
+
+  const changedFiles = normalizeStringArray(recovery.changed_files).map((filePath) => normalizeDirtyRecoveryFilePath(filePath));
+  if (changedFiles.length === 0) {
+    return false;
+  }
+
+  return changedFiles.every((filePath) =>
+    isAllowedDocsGateBookkeepingDirtyFile({
+      filePath,
+      workItemId,
+    }),
+  );
+}
+
+function isResumableStage1DocsHandoffRecovery(state) {
+  const recovery = state?.recovery ?? null;
+  if (!recovery || recovery.kind !== "partial_stage_failure") {
+    return false;
+  }
+
+  if (Number(recovery.stage) !== 1) {
+    return false;
+  }
+
+  if (!state?.prs?.docs?.url || recovery?.existing_pr?.role !== "docs") {
+    return false;
+  }
+
+  const sessionId = state?.sessions?.claude_primary?.session_id ?? null;
+  if (
+    typeof sessionId !== "string" ||
+    sessionId.trim().length === 0 ||
+    recovery.session_role !== "claude_primary" ||
+    recovery.session_id !== sessionId
+  ) {
+    return false;
+  }
+
+  return /roadmap status planned but found docs/i.test(recovery.reason ?? "");
+}
+
+function isResumableDocGatePendingRecheckFailure(state) {
+  const recovery = state?.recovery ?? null;
+  const reasonText = [state?.wait?.reason, recovery?.reason].filter(Boolean).join(" ");
+
+  return (
+    state?.wait?.kind === "human_escalation" &&
+    recovery?.kind === "partial_stage_failure" &&
+    Number(recovery?.stage) === 2 &&
+    state?.doc_gate?.status === "pending_recheck" &&
+    Boolean(state?.prs?.docs?.url) &&
+    /failed doc gate recheck/i.test(reasonText)
+  );
+}
+
+function isResumableGithubAuthEscalation(state) {
+  const reasonText = [state?.wait?.reason, state?.recovery?.reason].filter(Boolean).join(" ");
+
+  return (
+    state?.wait?.kind === "human_escalation" &&
+    /Failed to log in to github\.com account|gh auth login -h github\.com|token in default is invalid/i.test(
+      reasonText,
+    ) &&
+    Number.isInteger(state?.last_completed_stage)
+  );
+}
+
+function readExecutionLogFragments(state) {
+  const artifactDir =
+    typeof state?.execution?.artifact_dir === "string" && state.execution.artifact_dir.trim().length > 0
+      ? state.execution.artifact_dir.trim()
+      : typeof state?.last_artifact_dir === "string" && state.last_artifact_dir.trim().length > 0
+        ? state.last_artifact_dir.trim()
+        : null;
+  if (!artifactDir) {
+    return "";
+  }
+
+  const fragments = [];
+  for (const filename of ["claude.stdout.log", "claude.stderr.log"]) {
+    const logPath = resolve(artifactDir, filename);
+    if (existsSync(logPath)) {
+      fragments.push(readFileSync(logPath, "utf8"));
+    }
+  }
+
+  return fragments.join("\n");
+}
+
+function isRecoverableStaleClaudeExecution(state, now) {
+  if (
+    state?.execution?.provider !== "claude-cli" ||
+    state?.execution?.session_role !== "claude_primary" ||
+    !state?.lock?.owner ||
+    resolveStatePhase(state) !== "stage_running"
+  ) {
+    return false;
+  }
+
+  const acquiredAt = new Date(state.lock.acquired_at ?? state.execution?.started_at ?? "");
+  const reference = new Date(typeof now === "string" && now.trim().length > 0 ? now : new Date().toISOString());
+  if (Number.isNaN(acquiredAt.getTime()) || Number.isNaN(reference.getTime())) {
+    return false;
+  }
+
+  const ageMs = reference.getTime() - acquiredAt.getTime();
+  if (ageMs < 2 * 60 * 1000) {
+    return false;
+  }
+
+  const fragments = readExecutionLogFragments(state);
+  return /(aborted_streaming|Request was aborted|Compaction interrupted|network issues|error_during_execution)/i.test(
+    fragments,
+  );
+}
+
+function convertStaleClaudeExecutionToRetry({
+  rootDir,
+  workItemId,
+  state,
+  now,
+}) {
+  if (!isRecoverableStaleClaudeExecution(state, now)) {
+    return null;
+  }
+
+  const stage = state.active_stage ?? state.current_stage ?? state.blocked_stage ?? null;
+  if (!Number.isInteger(Number(stage))) {
+    return null;
+  }
+
+  return writeRuntimeState({
+    rootDir,
+    workItemId,
+    state: setRecoveryState({
+      state: setWaitState({
+        state: {
+          ...state,
+          lock: null,
+          blocked_stage: Number(stage),
+          retry: {
+            at: resolveRetryAt({
+              now,
+              delayHours: 1 / 12,
+            }),
+            reason: "claude_budget_unavailable",
+            attempt_count:
+              Number.isInteger(Number(state.retry?.attempt_count)) ? Number(state.retry.attempt_count) + 1 : 1,
+            max_attempts:
+              Number.isInteger(Number(state.retry?.max_attempts)) ? Number(state.retry.max_attempts) : 3,
+          },
+          phase: "wait",
+          next_action: "run_stage",
+        },
+        kind: "blocked_retry",
+        prRole: state.execution?.pr_role ?? state.wait?.pr_role ?? resolvePrRole(Number(stage)),
+        stage: Number(stage),
+        headSha: state.prs?.backend?.head_sha ?? state.prs?.frontend?.head_sha ?? state.wait?.head_sha ?? null,
+        reason: "claude_budget_unavailable",
+        until: resolveRetryAt({
+          now,
+          delayHours: 1 / 12,
+        }),
+        updatedAt: now,
+      }),
+      recovery: {
+        kind: "partial_stage_failure",
+        stage: Number(stage),
+        branch:
+          state.prs?.backend?.branch ??
+          state.prs?.frontend?.branch ??
+          state.prs?.docs?.branch ??
+          state.workspace?.branch_role ??
+          null,
+        reason: "Claude execution aborted mid-stage; resume with the same session after a short retry delay.",
+        artifact_dir: state.execution?.artifact_dir ?? state.last_artifact_dir ?? null,
+        changed_files: [],
+        existing_pr:
+          state.prs?.backend?.url
+            ? { ...state.prs.backend }
+            : state.prs?.frontend?.url
+              ? { ...state.prs.frontend }
+              : state.prs?.docs?.url
+                ? { ...state.prs.docs }
+                : null,
+        salvage_candidate: true,
+        session_role: "claude_primary",
+        session_provider: "claude-cli",
+        session_id: state.execution?.session_id ?? state.sessions?.claude_primary?.session_id ?? null,
+      },
+    }),
+  }).state;
+}
+
 function readTrackedWorkItem({
   rootDir,
+  worktreePath = null,
   workItemId,
   allowBootstrap = false,
 }) {
@@ -285,6 +659,22 @@ function readTrackedWorkItem({
     workItemId,
   });
   if (!existsSync(workItemPath)) {
+    const normalizedWorktreePath =
+      typeof worktreePath === "string" && worktreePath.trim().length > 0 ? worktreePath.trim() : null;
+    if (normalizedWorktreePath && normalizedWorktreePath !== rootDir) {
+      const worktreeWorkItemPath = resolveTrackedWorkItemPath({
+        rootDir: normalizedWorktreePath,
+        workItemId,
+      });
+      if (existsSync(worktreeWorkItemPath)) {
+        return {
+          workItemPath: worktreeWorkItemPath,
+          workItem: JSON.parse(readFileSync(worktreeWorkItemPath, "utf8")),
+          tracked: true,
+        };
+      }
+    }
+
     if (!allowBootstrap) {
       throw new Error(`Tracked workflow-v2 work item not found: ${workItemPath}`);
     }
@@ -338,6 +728,12 @@ function normalizeStringArray(values) {
       .filter((value) => typeof value === "string" && value.trim().length > 0)
       .map((value) => value.trim()),
   )];
+}
+
+function normalizeDirtyRecoveryFilePath(filePath) {
+  const normalized =
+    typeof filePath === "string" && filePath.trim().length > 0 ? filePath.trim() : "";
+  return normalized.replace(/^[ MADRCU?!]{1,3}\s+/, "").trim();
 }
 
 function summarizeChecklistIssues(issues) {
@@ -1114,6 +1510,59 @@ function validateDocGateRepairStageResult({
   return normalizeStringArray(issues);
 }
 
+function normalizeDocGateRepairStageResultForCurrentReview({
+  stageResult,
+  reviewEntry,
+  docGateState,
+  stageResultPath = null,
+}) {
+  if (!stageResult || typeof stageResult !== "object" || Array.isArray(stageResult)) {
+    return stageResult;
+  }
+
+  const currentRequiredDocFixIds = normalizeStringArray(reviewEntry?.required_doc_fix_ids);
+  const currentDocFindingIds = normalizeStringArray((docGateState?.findings ?? []).map((entry) => entry?.id));
+  const validContestedIds = currentRequiredDocFixIds.length > 0 ? currentRequiredDocFixIds : currentDocFindingIds;
+  if (validContestedIds.length === 0) {
+    return stageResult;
+  }
+
+  const normalizedContestedDocFixIds = normalizeStringArray(stageResult.contested_doc_fix_ids).filter((id) =>
+    validContestedIds.includes(id),
+  );
+  const normalizedRebuttals = Array.isArray(stageResult.rebuttals)
+    ? stageResult.rebuttals.filter((entry) => normalizedContestedDocFixIds.includes(entry?.fix_id))
+    : [];
+
+  const originalContestedDocFixIds = normalizeStringArray(stageResult.contested_doc_fix_ids);
+  const originalRebuttalIds = Array.isArray(stageResult.rebuttals)
+    ? stageResult.rebuttals.map((entry) => entry?.fix_id).filter(Boolean)
+    : [];
+  const contestedUnchanged =
+    normalizedContestedDocFixIds.length === originalContestedDocFixIds.length &&
+    normalizedContestedDocFixIds.every((id, index) => id === originalContestedDocFixIds[index]);
+  const rebuttalsUnchanged =
+    normalizedRebuttals.length === (Array.isArray(stageResult.rebuttals) ? stageResult.rebuttals.length : 0) &&
+    normalizedRebuttals.length === originalRebuttalIds.length &&
+    normalizedRebuttals.every((entry, index) => entry?.fix_id === originalRebuttalIds[index]);
+
+  if (contestedUnchanged && rebuttalsUnchanged) {
+    return stageResult;
+  }
+
+  const normalizedStageResult = {
+    ...stageResult,
+    contested_doc_fix_ids: normalizedContestedDocFixIds,
+    rebuttals: normalizedRebuttals,
+  };
+
+  if (typeof stageResultPath === "string" && stageResultPath.trim().length > 0) {
+    writeFileSync(stageResultPath, `${JSON.stringify(normalizedStageResult, null, 2)}\n`);
+  }
+
+  return normalizedStageResult;
+}
+
 function validateDocGateReviewStageResult({
   docGateState,
   stageResult,
@@ -1165,6 +1614,7 @@ function resolveAutonomousStageContext({
 }) {
   const { workItemPath, workItem } = readTrackedWorkItem({
     rootDir,
+    worktreePath,
     workItemId,
   });
   const { automationSpecPath, automationSpec } = readAutomationSpecForExecution({
@@ -1602,6 +2052,228 @@ function cleanupDirtyOpencodeMigration({
   return state;
 }
 
+function resumeClaudeDirtyStageOutputs({
+  rootDir,
+  workItemId,
+  state,
+  recovery,
+  now,
+}) {
+  if (!isResumableClaudeDirtyRecoveryState({
+    ...state,
+    recovery,
+  })) {
+    return null;
+  }
+
+  const stage =
+    recovery.stage ??
+    state.wait?.stage ??
+    state.active_stage ??
+    state.current_stage ??
+    state.blocked_stage ??
+    state.last_completed_stage;
+  if (!Number.isInteger(stage)) {
+    return null;
+  }
+
+  const isStage1DocsHandoff =
+    stage === 1 &&
+    recovery?.existing_pr?.role === "docs" &&
+    Boolean(state.prs?.docs?.url);
+
+  if (hasValidPersistedExecutionStageResult(state)) {
+    return resumePersistedExecutionStageResult({
+      rootDir,
+      workItemId,
+      state,
+      now,
+    });
+  }
+
+  const resumedState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setRecoveryState({
+      state: setWaitState({
+        state: {
+          ...state,
+          blocked_stage: isStage1DocsHandoff ? 2 : stage,
+        },
+        kind: isStage1DocsHandoff ? "ready_for_next_stage" : "blocked_retry",
+        prRole: isStage1DocsHandoff ? "docs" : state.wait?.pr_role ?? state.workspace?.branch_role ?? "docs",
+        stage: isStage1DocsHandoff ? 2 : stage,
+        headSha: state.prs?.docs?.head_sha ?? state.wait?.head_sha ?? null,
+        reason: isStage1DocsHandoff ? "resume_stage1_docs_handoff" : "claude_budget_unavailable",
+        until: isStage1DocsHandoff ? null : state.retry?.at ?? null,
+        updatedAt: now,
+      }),
+      recovery: {
+        ...recovery,
+        reason: isStage1DocsHandoff
+          ? "Claude-owned Stage 1 finished writing allowed files and docs PR exists. Resume continues at internal 1.5."
+          : "Claude-owned stage interrupted after writing allowed stage files. Resume is permitted when retry is due.",
+        updated_at: now,
+      },
+    }),
+  });
+
+  updateRuntimeStatusForWait({
+    rootDir,
+    workItemId,
+    wait: resumedState.wait,
+    prPath: state.prs?.[resumedState.wait?.pr_role ?? ""]?.url ?? null,
+    now,
+    lifecycle: isStage1DocsHandoff ? "ready_for_review" : "blocked",
+    verificationStatus: "pending",
+    extraNotes: ["resume_dirty_stage_outputs=true"],
+  });
+
+  return resumedState;
+}
+
+function resumeDocsGateDirtyRecovery({
+  rootDir,
+  workItemId,
+  state,
+  recovery,
+  now,
+}) {
+  if (!isResumableDocsGateDirtyRecoveryState({
+    ...state,
+    recovery,
+  })) {
+    return null;
+  }
+
+  const docsPr = state?.prs?.docs?.url ? state.prs.docs : recovery?.existing_pr ?? null;
+  const reviewDecision = state.doc_gate?.last_review?.decision ?? null;
+  const resumedState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setRecoveryState({
+      state: setWaitState({
+        state: {
+          ...state,
+          blocked_stage: 2,
+        },
+        kind: "ready_for_next_stage",
+        prRole: "docs",
+        stage: 2,
+        headSha: docsPr?.head_sha ?? state.wait?.head_sha ?? null,
+        reason: "resume_docs_gate_bookkeeping",
+        until: null,
+        updatedAt: now,
+      }),
+      recovery: {
+        ...recovery,
+        reason: "Docs gate bookkeeping drift is limited to tracked workflow-v2 files. Resume continues on the existing docs PR.",
+        updated_at: now,
+      },
+    }),
+  });
+
+  updateRuntimeStatusForWait({
+    rootDir,
+    workItemId,
+    wait: resumedState.wait,
+    prPath: docsPr?.url ?? null,
+    now,
+    approvalState: reviewDecision === "request_changes" ? "needs_revision" : "claude_approved",
+    lifecycle: reviewDecision === "request_changes" ? "in_progress" : "ready_for_review",
+    verificationStatus: "passed",
+    extraNotes: ["auto_resume=docs_gate_bookkeeping"],
+  });
+
+  return resumedState;
+}
+
+function hasValidPersistedExecutionStageResult(state) {
+  const stage =
+    state?.blocked_stage ??
+    state?.active_stage ??
+    state?.current_stage ??
+    Number(state?.recovery?.stage);
+  const subphase =
+    typeof state?.execution?.subphase === "string" && state.execution.subphase.trim().length > 0
+      ? state.execution.subphase.trim()
+      : "implementation";
+  const stageResultPath =
+    typeof state?.execution?.stage_result_path === "string" && state.execution.stage_result_path.trim().length > 0
+      ? state.execution.stage_result_path.trim()
+      : null;
+  if (!Number.isInteger(Number(stage)) || !stageResultPath || !existsSync(stageResultPath)) {
+    return false;
+  }
+
+  try {
+    const stageResult = JSON.parse(readFileSync(stageResultPath, "utf8"));
+    validateStageResult(Number(stage), stageResult, {
+      strictExtendedContract: false,
+      subphase,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isResumableValidatedStageResultContractViolationState({
+  state,
+}) {
+  if (state?.wait?.kind !== "human_escalation" || state?.recovery?.kind !== "partial_stage_failure") {
+    return false;
+  }
+
+  const reasonText = [state.wait?.reason, state.recovery?.reason, state.retry?.reason]
+    .filter((value) => typeof value === "string" && value.trim().length > 0)
+    .join(" ");
+  if (!/stageResult|stage-result|contract_violation/i.test(reasonText)) {
+    return false;
+  }
+
+  return hasValidPersistedExecutionStageResult(state);
+}
+
+function resumePersistedExecutionStageResult({
+  rootDir,
+  workItemId,
+  state,
+  now,
+}) {
+  if (!hasValidPersistedExecutionStageResult(state)) {
+    return null;
+  }
+
+  const stage =
+    state.blocked_stage ??
+    state.active_stage ??
+    state.current_stage ??
+    Number(state.recovery?.stage);
+  const artifactDir = state.execution?.artifact_dir ?? state.last_artifact_dir ?? null;
+
+  return saveRuntime({
+    rootDir,
+    workItemId,
+    state: setRecoveryState({
+      state: setWaitState({
+        state: setExecutionState({
+          state,
+          activeStage: stage,
+          phase: "stage_result_ready",
+          nextAction: "finalize_stage",
+          artifactDir,
+          execution: state.execution,
+          clearRecovery: true,
+        }),
+        kind: null,
+        updatedAt: now,
+      }),
+      recovery: null,
+    }),
+  });
+}
+
 function runInternalCloseoutReconcile({
   rootDir,
   workItemId,
@@ -1982,7 +2654,12 @@ function isPendingReviewPhase(phase) {
 
 function shouldAllowDirtyWorktree(state) {
   const phase = resolveStatePhase(state);
-  return ["stage_result_ready", "verify_pending", "commit_pending"].includes(phase);
+  return (
+    ["stage_result_ready", "verify_pending", "commit_pending"].includes(phase) ||
+    isResumableClaudeDirtyRecoveryState(state) ||
+    isResumableDocsGateDirtyRecoveryState(state) ||
+    isResumablePostDocGateBookkeepingResidue(state)
+  );
 }
 
 function createTickResult({
@@ -2029,7 +2706,7 @@ function resolveStageProvider({
     return {
       provider: claudeProviderConfig.provider,
       bin: claudeProviderConfig.bin,
-      label: claudeProviderConfig.provider === "opencode" ? "Claude OpenCode" : "Claude CLI",
+      label: "Claude CLI",
     };
   }
 
@@ -2064,7 +2741,7 @@ function resolveStageProvider({
   return {
     provider: claudeProviderConfig.provider,
     bin: claudeProviderConfig.bin,
-    label: claudeProviderConfig.provider === "opencode" ? "Claude OpenCode" : "Claude CLI",
+    label: "Claude CLI",
   };
 }
 
@@ -2905,6 +3582,14 @@ function determineInitialStage(state) {
     return state.active_stage;
   }
 
+  if (
+    state.doc_gate?.status === "passed" &&
+    (state.last_completed_stage ?? 0) < 2 &&
+    [state.active_stage, state.current_stage, state.blocked_stage].some((value) => Number(value) === 2)
+  ) {
+    return 2;
+  }
+
   if (state.wait?.kind === "ready_for_next_stage" && Number.isInteger(state.wait.stage)) {
     return state.wait.stage;
   }
@@ -2965,6 +3650,129 @@ function processWaitState({
   };
 
   if (state.wait.kind === "human_escalation") {
+    if (isResumableGithubAuthEscalation(state)) {
+      github.assertAuth();
+      const nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state: setRecoveryState({
+            state,
+            recovery: null,
+          }),
+          kind: null,
+          updatedAt: now,
+        }),
+      });
+
+      return {
+        state: nextState,
+        action: "run-stage",
+        nextStage:
+          state.active_stage ??
+          state.current_stage ??
+          (Number.isInteger(Number(state.last_completed_stage)) ? Number(state.last_completed_stage) + 1 : null),
+      };
+    }
+
+    if (isResumableDocGatePendingRecheckFailure(state)) {
+      const nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state,
+          kind: null,
+          updatedAt: now,
+        }),
+      });
+
+      return {
+        state: nextState,
+        action: "run-stage",
+        nextStage: 2,
+      };
+    }
+
+    if (isResumableValidatedStageResultContractViolationState({ state })) {
+      const nextState = resumePersistedExecutionStageResult({
+        rootDir,
+        workItemId,
+        state,
+        now,
+      });
+
+      return {
+        state: nextState ?? state,
+        action: "run-stage",
+        nextStage: state.blocked_stage ?? state.active_stage ?? state.current_stage,
+      };
+    }
+
+    if (isResumableClaudeDirtyRecoveryState(state)) {
+      if (state.retry?.at && !isRetryDue(state.retry, now)) {
+        return {
+          state,
+          action: "wait",
+          nextStage: null,
+        };
+      }
+
+      const nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state,
+          kind: null,
+          updatedAt: now,
+        }),
+      });
+
+      return {
+        state: nextState,
+        action: "run-stage",
+        nextStage:
+          recovery?.existing_pr?.role === "docs" &&
+          Number(recovery?.stage) === 1 &&
+          Boolean(state.prs?.docs?.url)
+            ? 2
+            : state.blocked_stage ?? state.active_stage ?? state.current_stage,
+      };
+    }
+
+    if (isResumableDocsGateDirtyRecoveryState(state)) {
+      const nextState = resumeDocsGateDirtyRecovery({
+        rootDir,
+        workItemId,
+        state,
+        recovery: state.recovery,
+        now,
+      });
+
+      return {
+        state: nextState ?? state,
+        action: "run-stage",
+        nextStage: 2,
+      };
+    }
+
+    if (isResumableStage1DocsHandoffRecovery(state)) {
+      const nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state,
+          kind: null,
+          updatedAt: now,
+        }),
+      });
+
+      return {
+        state: nextState,
+        action: "run-stage",
+        nextStage: 2,
+      };
+    }
+
     const recovery = state.recovery ?? null;
     const recoveryStage =
       Number.isInteger(Number(recovery?.stage))
@@ -3038,6 +3846,21 @@ function processWaitState({
   }
 
   if (state.wait.kind === "blocked_retry") {
+    if (!state.retry?.at && hasValidPersistedExecutionStageResult(state)) {
+      const nextState = resumePersistedExecutionStageResult({
+        rootDir,
+        workItemId,
+        state,
+        now,
+      });
+
+      return {
+        state: nextState ?? state,
+        action: "run-stage",
+        nextStage: state.blocked_stage ?? state.active_stage ?? state.current_stage,
+      };
+    }
+
     if (!isRetryDue(state.retry, now)) {
       return {
         state,
@@ -4240,6 +5063,16 @@ function handleImplementationCodeStage({
       updatedAt: now,
     }),
   });
+  if (stage === 2 && nextState.doc_gate?.status === "passed" && nextState.recovery?.kind) {
+    nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setRecoveryState({
+        state: nextState,
+        recovery: null,
+      }),
+    });
+  }
   const hasStaleExecution =
     state.wait?.kind === "ready_for_next_stage" &&
     Boolean(nextState.execution?.pr_role && nextState.execution.pr_role !== prRole);
@@ -4261,6 +5094,7 @@ function handleImplementationCodeStage({
     nextState.execution?.pr_role === prRole;
   const { workItem } = readTrackedWorkItem({
     rootDir,
+    worktreePath: nextState.workspace?.path,
     workItemId,
     allowBootstrap: stage === 1,
   });
@@ -4990,9 +5824,19 @@ function handleDocGateRepairStage({
     }
   }
 
-  const stageResult = loadExecutionStageResult(nextState, {
+  const stageResultPath =
+    typeof nextState.execution?.stage_result_path === "string" && nextState.execution.stage_result_path.trim().length > 0
+      ? nextState.execution.stage_result_path.trim()
+      : null;
+  let stageResult = loadExecutionStageResult(nextState, {
     strictExtendedContract: false,
     subphase: "doc_gate_repair",
+  });
+  stageResult = normalizeDocGateRepairStageResultForCurrentReview({
+    stageResult,
+    reviewEntry,
+    docGateState: nextState.doc_gate,
+    stageResultPath,
   });
   const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
   const repairIssues = validateDocGateRepairStageResult({
@@ -6778,7 +7622,7 @@ function createDefaultDependencies({
  *   maxTransitions?: number,
  *   ghBin?: string,
  *   opencodeBin?: string,
- *   claudeProvider?: "opencode"|"claude-cli",
+ *   claudeProvider?: "claude-cli",
  *   claudeBin?: string,
  *   claudeModel?: string,
  *   claudeEffort?: "low"|"medium"|"high",
@@ -7112,6 +7956,28 @@ export function superviseWorkItem(
           });
           if (cleanedState) {
             state = cleanedState;
+            continue;
+          }
+          const resumableClaudeDirtyState = resumeClaudeDirtyStageOutputs({
+            rootDir,
+            workItemId: normalizedWorkItemId,
+            state,
+            recovery,
+            now,
+          });
+          if (resumableClaudeDirtyState) {
+            state = resumableClaudeDirtyState;
+            continue;
+          }
+          const resumableDocsGateDirtyState = resumeDocsGateDirtyRecovery({
+            rootDir,
+            workItemId: normalizedWorkItemId,
+            state,
+            recovery,
+            now,
+          });
+          if (resumableDocsGateDirtyState) {
+            state = resumableDocsGateDirtyState;
             continue;
           }
           const blocked = applyBlocker({
@@ -7458,7 +8324,7 @@ export function superviseWorkItem(
  *   now?: string,
  *   ghBin?: string,
  *   opencodeBin?: string,
- *   claudeProvider?: "opencode"|"claude-cli",
+ *   claudeProvider?: "claude-cli",
  *   claudeBin?: string,
  *   claudeModel?: string,
  *   claudeEffort?: "low"|"medium"|"high",
@@ -7481,6 +8347,13 @@ export function tickSupervisorWorkItems(
 ) {
   const isResumableState = (state) => {
     const phase = resolveStatePhase(state);
+    if (isRecoverableStaleClaudeExecution(state, now)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
     if (isPendingFinalizePhase(phase) || isPendingReviewPhase(phase)) {
       return {
         resumable: true,
@@ -7489,6 +8362,13 @@ export function tickSupervisorWorkItems(
     }
 
     if (!state.wait?.kind) {
+      if (phase === "escalated" && isResumablePostDocGateBookkeepingResidue(state)) {
+        return {
+          resumable: true,
+          reason: null,
+        };
+      }
+
       return {
         resumable: false,
         reason: "no_wait_state",
@@ -7502,6 +8382,62 @@ export function tickSupervisorWorkItems(
       [3, 6].includes(Number(state.recovery?.stage)) &&
       Boolean(state.recovery?.existing_pr?.url)
     ) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (state.wait.kind === "human_escalation" && isResumableClaudeDirtyRecoveryState(state)) {
+      if (state.retry?.at && !isRetryDue(state.retry, now)) {
+        return {
+          resumable: false,
+          reason: "retry_not_due",
+        };
+      }
+
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (state.wait.kind === "human_escalation" && isResumableValidatedStageResultContractViolationState({ state })) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (state.wait.kind === "human_escalation" && isResumableGithubAuthEscalation(state)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (state.wait.kind === "human_escalation" && isResumableDocGatePendingRecheckFailure(state)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (state.wait.kind === "blocked_retry" && !state.retry?.at && hasValidPersistedExecutionStageResult(state)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (state.wait.kind === "human_escalation" && isResumableDocsGateDirtyRecoveryState(state)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (state.wait.kind === "human_escalation" && isResumableStage1DocsHandoffRecovery(state)) {
       return {
         resumable: true,
         reason: null,
@@ -7549,29 +8485,39 @@ export function tickSupervisorWorkItems(
       workItemId: normalizedWorkItemId,
     });
 
-    if (state.lock?.owner) {
+    const recoveredLockedState = state.lock?.owner
+      ? convertStaleClaudeExecutionToRetry({
+          rootDir,
+          workItemId: normalizedWorkItemId,
+          state,
+          now,
+        })
+      : null;
+    const effectiveState = recoveredLockedState ?? state;
+
+    if (effectiveState.lock?.owner) {
       return [
         createTickResult({
           workItemId: normalizedWorkItemId,
-          slice: state.slice,
+          slice: effectiveState.slice,
           action: "skip_locked",
-          reason: `locked_by=${state.lock.owner}`,
-          wait: state.wait,
-          runtime: state,
+          reason: `locked_by=${effectiveState.lock.owner}`,
+          wait: effectiveState.wait,
+          runtime: effectiveState,
         }),
       ];
     }
 
-    const resumable = isResumableState(state);
+    const resumable = isResumableState(effectiveState);
     if (!resumable.resumable) {
       return [
         createTickResult({
           workItemId: normalizedWorkItemId,
-          slice: state.slice,
+          slice: effectiveState.slice,
           action: "noop",
           reason: resumable.reason,
-          wait: state.wait ?? null,
-          runtime: state,
+          wait: effectiveState.wait ?? null,
+          runtime: effectiveState,
         }),
       ];
     }
@@ -7595,32 +8541,42 @@ export function tickSupervisorWorkItems(
 
   return listRuntimeStates(rootDir)
     .flatMap(({ state }) => {
-      if (state.lock?.owner) {
+      const recoveredLockedState = state.lock?.owner
+        ? convertStaleClaudeExecutionToRetry({
+            rootDir,
+            workItemId: state.work_item_id,
+            state,
+            now,
+          })
+        : null;
+      const effectiveState = recoveredLockedState ?? state;
+
+      if (effectiveState.lock?.owner) {
         return [
           createTickResult({
-            workItemId: state.work_item_id,
-            slice: state.slice,
+            workItemId: effectiveState.work_item_id,
+            slice: effectiveState.slice,
             action: "skip_locked",
-            reason: `locked_by=${state.lock.owner}`,
-            wait: state.wait,
-            runtime: state,
+            reason: `locked_by=${effectiveState.lock.owner}`,
+            wait: effectiveState.wait,
+            runtime: effectiveState,
           }),
         ];
       }
 
-      const resumable = isResumableState(state);
+      const resumable = isResumableState(effectiveState);
       if (!resumable.resumable) {
         if (resumable.reason === "no_wait_state" || resumable.reason?.startsWith("unsupported_wait_kind=")) {
           return [];
         }
         return [
           createTickResult({
-            workItemId: state.work_item_id,
-            slice: state.slice,
+            workItemId: effectiveState.work_item_id,
+            slice: effectiveState.slice,
             action: "noop",
             reason: resumable.reason,
-            wait: state.wait ?? null,
-            runtime: state,
+            wait: effectiveState.wait ?? null,
+            runtime: effectiveState,
           }),
         ];
       }
@@ -7628,7 +8584,7 @@ export function tickSupervisorWorkItems(
       return [
         supervise({
           rootDir,
-          workItemId: state.work_item_id,
+          workItemId: effectiveState.work_item_id,
           now,
           ...options,
         }),

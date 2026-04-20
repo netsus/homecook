@@ -367,6 +367,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "live smoke evidence의 canonical source는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
       "scheduler standard는 team-shared default를 `macOS launchd`로 고정하고, non-macOS 환경은 `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending` fallback으로 다룬다.",
       "scheduler install/config 변경 뒤와 최소 `slice-batch-review`마다 1회 `pnpm omo:scheduler:verify -- --work-item <id>`와 `pnpm omo:tick:watch -- --work-item <id>`를 함께 확인한다.",
+      "macOS에서는 `omo:supervise`, `omo:start`, `omo:continue`가 execute mode에서 work item launchd scheduler를 자동 bootstrap/refresh한다.",
       "public code stage 실행이 필요할 때 `--mode execute`를 사용한다.",
       "slice6 기준 public Stage 4는 Claude execute path를 사용할 수 있고, Stage 5 `final_authority_gate`는 review gate이므로 execute 대상이 아니라 review artifact 경로로 다룬다.",
       "promotion-readiness.md",
@@ -406,6 +407,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "Stage 1 docs PR은 즉시 merge하지 않고",
       "`doc_gate_review`는 Codex",
       "`doc_gate_repair`는 Claude",
+      "execute kickoff인 `omo:supervise`, `omo:start`, `omo:continue`는 해당 work item launchd scheduler를 자동 bootstrap/refresh한다.",
     ]),
     ...containsNone(supervisorDoc, [
       "Stage 2/4는 strict slice에서 `$ralph` skill 기반 loop를 기본 실행 표면으로 사용한다.",
@@ -475,6 +477,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox repo rehearsal 중 더 이른 쪽을 따른다.",
       "## Scheduler Standard",
       "team-shared default scheduler는 현재 `macOS launchd`다.",
+      "execute mode kickoff 명령은 macOS에서 work item별 launchd scheduler를 자동 보장하고, `omo:scheduler:install`은 repair/custom cadence 용도로 남긴다.",
       "non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.",
       "최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.",
       "macOS에서는 `launchd` 예시를 우선 제공한다",

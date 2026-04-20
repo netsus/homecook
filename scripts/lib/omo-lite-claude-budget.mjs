@@ -33,10 +33,6 @@ export function getClaudeBudgetOverridePath(rootDir = process.cwd()) {
   return resolve(rootDir, ".opencode", "claude-budget-state.json");
 }
 
-export function getOpencodeAuthPath(homeDir = process.env.HOME) {
-  return resolve(homeDir ?? "", ".local", "share", "opencode", "auth.json");
-}
-
 export function getClaudeCliStatePath(homeDir = process.env.HOME) {
   return resolve(homeDir ?? "", ".claude");
 }
@@ -86,7 +82,7 @@ export function clearClaudeBudgetOverride({
  * @typedef {object} ResolveClaudeBudgetStateOptions
  * @property {string} [rootDir]
  * @property {string} [homeDir]
- * @property {"opencode"|"claude-cli"} [provider]
+ * @property {"claude-cli"} [provider]
  * @property {"available"|"constrained"|"unavailable"} [explicitState]
  * @property {string} [claudeBin]
  * @property {NodeJS.ProcessEnv} [environment]
@@ -98,7 +94,7 @@ export function clearClaudeBudgetOverride({
 export function resolveClaudeBudgetState({
   rootDir = process.cwd(),
   homeDir = process.env.HOME,
-  provider = "opencode",
+  provider = "claude-cli",
   explicitState,
   claudeBin,
   environment = process.env,
@@ -110,7 +106,8 @@ export function resolveClaudeBudgetState({
       providerConfigured: true,
       provider,
       reason: null,
-      authPath: getOpencodeAuthPath(homeDir),
+      authPath: null,
+      providerHintPath: getClaudeCliStatePath(homeDir),
       overridePath: getClaudeBudgetOverridePath(rootDir),
     };
   }
@@ -122,7 +119,8 @@ export function resolveClaudeBudgetState({
       providerConfigured: true,
       provider,
       reason: null,
-      authPath: getOpencodeAuthPath(homeDir),
+      authPath: null,
+      providerHintPath: getClaudeCliStatePath(homeDir),
       overridePath: getClaudeBudgetOverridePath(rootDir),
     };
   }
@@ -137,53 +135,18 @@ export function resolveClaudeBudgetState({
       provider,
       reason: typeof override.reason === "string" ? override.reason : null,
       updatedAt: typeof override.updated_at === "string" ? override.updated_at : null,
-      authPath: getOpencodeAuthPath(homeDir),
-      overridePath,
-    };
-  }
-
-  if (provider === "claude-cli") {
-    const claudePath = getClaudeCliStatePath(homeDir);
-    const providerConfigured =
-      existsSync(claudePath) &&
-      (existsSync(resolve(claudePath, "settings.json")) ||
-        existsSync(resolve(claudePath, "transcripts")) ||
-        existsSync(resolve(claudePath, "stats-cache.json")));
-
-    if (!providerConfigured) {
-      return {
-        state: "unavailable",
-        source: "missing-auth",
-        providerConfigured: false,
-        provider,
-        reason: "Claude CLI local state is not configured for this machine.",
-        authPath: null,
-        providerHintPath: claudePath,
-        claudeBin: claudeBin ?? "claude",
-        overridePath,
-      };
-    }
-
-    return {
-      state: "available",
-      source: "claude-cli-local",
-      providerConfigured: true,
-      provider,
-      reason: null,
       authPath: null,
-      providerHintPath: claudePath,
-      claudeBin: claudeBin ?? "claude",
+      providerHintPath: getClaudeCliStatePath(homeDir),
       overridePath,
     };
   }
 
-  const authPath = getOpencodeAuthPath(homeDir);
-  const auth = readJsonIfExists(authPath);
-  const providerConfigured = Boolean(
-    auth &&
-    typeof auth === "object" &&
-    Object.values(auth).some((entry) => entry && typeof entry === "object" && !Array.isArray(entry)),
-  );
+  const claudePath = getClaudeCliStatePath(homeDir);
+  const providerConfigured =
+    existsSync(claudePath) &&
+    (existsSync(resolve(claudePath, "settings.json")) ||
+      existsSync(resolve(claudePath, "transcripts")) ||
+      existsSync(resolve(claudePath, "stats-cache.json")));
 
   if (!providerConfigured) {
     return {
@@ -191,19 +154,23 @@ export function resolveClaudeBudgetState({
       source: "missing-auth",
       providerConfigured: false,
       provider,
-      reason: "OpenCode provider auth is not configured for this machine.",
-      authPath,
+      reason: "Claude CLI local state is not configured for this machine.",
+      authPath: null,
+      providerHintPath: claudePath,
+      claudeBin: claudeBin ?? "claude",
       overridePath,
     };
   }
 
   return {
     state: "available",
-    source: "opencode-auth",
+    source: "claude-cli-local",
     providerConfigured: true,
     provider,
     reason: null,
-    authPath,
+    authPath: null,
+    providerHintPath: claudePath,
+    claudeBin: claudeBin ?? "claude",
     overridePath,
   };
 }

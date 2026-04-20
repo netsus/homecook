@@ -640,16 +640,27 @@ function normalizeLastRebuttal(lastRebuttal) {
   };
 }
 
-function normalizeDocGateFinding(entry) {
+function normalizeDocGateFinding(entry, { fallbackId = null } = {}) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     return null;
   }
 
-  return {
+  const evidencePaths = Array.isArray(entry.evidence_paths)
+    ? entry.evidence_paths
+        .filter((value) => typeof value === "string" && value.trim().length > 0)
+        .map((value) => value.trim())
+    : typeof entry.file === "string" && entry.file.trim().length > 0
+      ? [entry.file.trim()]
+      : [];
+  const normalizedFinding = {
     id:
       typeof entry.id === "string" && entry.id.trim().length > 0
         ? entry.id.trim()
-        : null,
+        : typeof entry.fix_id === "string" && entry.fix_id.trim().length > 0
+          ? entry.fix_id.trim()
+          : typeof fallbackId === "string" && fallbackId.trim().length > 0
+            ? fallbackId.trim()
+            : null,
     category:
       typeof entry.category === "string" && entry.category.trim().length > 0
         ? entry.category.trim()
@@ -661,24 +672,52 @@ function normalizeDocGateFinding(entry) {
     message:
       typeof entry.message === "string" && entry.message.trim().length > 0
         ? entry.message.trim()
-        : null,
-    evidence_paths: Array.isArray(entry.evidence_paths)
-      ? entry.evidence_paths
-          .filter((value) => typeof value === "string" && value.trim().length > 0)
-          .map((value) => value.trim())
-      : [],
+        : typeof entry.issue === "string" && entry.issue.trim().length > 0
+          ? entry.issue.trim()
+          : null,
+    evidence_paths: evidencePaths,
     remediation_hint:
       typeof entry.remediation_hint === "string" && entry.remediation_hint.trim().length > 0
         ? entry.remediation_hint.trim()
-        : null,
+        : typeof entry.suggestion === "string" && entry.suggestion.trim().length > 0
+          ? entry.suggestion.trim()
+          : null,
     fixable: typeof entry.fixable === "boolean" ? entry.fixable : true,
   };
+
+  if (
+    normalizedFinding.id === null &&
+    normalizedFinding.message === null &&
+    normalizedFinding.evidence_paths.length === 0 &&
+    normalizedFinding.remediation_hint === null
+  ) {
+    return null;
+  }
+
+  return normalizedFinding;
 }
 
 function normalizeDocGateReviewEntry(entry) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     return null;
   }
+
+  const reviewedDocFindingIds = Array.isArray(entry.reviewed_doc_finding_ids)
+    ? entry.reviewed_doc_finding_ids
+        .filter((value) => typeof value === "string" && value.trim().length > 0)
+        .map((value) => value.trim())
+    : [];
+  const requiredDocFixIds = Array.isArray(entry.required_doc_fix_ids)
+    ? entry.required_doc_fix_ids
+        .filter((value) => typeof value === "string" && value.trim().length > 0)
+        .map((value) => value.trim())
+    : [];
+  const waivedDocFixIds = Array.isArray(entry.waived_doc_fix_ids)
+    ? entry.waived_doc_fix_ids
+        .filter((value) => typeof value === "string" && value.trim().length > 0)
+        .map((value) => value.trim())
+    : [];
+  const findingFallbackIds = requiredDocFixIds.length > 0 ? requiredDocFixIds : reviewedDocFindingIds;
 
   return {
     decision:
@@ -695,23 +734,19 @@ function normalizeDocGateReviewEntry(entry) {
         ? entry.body_markdown.trim()
         : null,
     findings: Array.isArray(entry.findings)
-      ? entry.findings.map((value) => normalizeDocGateFinding(value)).filter(Boolean)
+      ? entry.findings
+          .map((value, index) =>
+            normalizeDocGateFinding(value, {
+              fallbackId:
+                findingFallbackIds[index] ??
+                (findingFallbackIds.length === 1 ? findingFallbackIds[0] : null),
+            }),
+          )
+          .filter(Boolean)
       : [],
-    reviewed_doc_finding_ids: Array.isArray(entry.reviewed_doc_finding_ids)
-      ? entry.reviewed_doc_finding_ids
-          .filter((value) => typeof value === "string" && value.trim().length > 0)
-          .map((value) => value.trim())
-      : [],
-    required_doc_fix_ids: Array.isArray(entry.required_doc_fix_ids)
-      ? entry.required_doc_fix_ids
-          .filter((value) => typeof value === "string" && value.trim().length > 0)
-          .map((value) => value.trim())
-      : [],
-    waived_doc_fix_ids: Array.isArray(entry.waived_doc_fix_ids)
-      ? entry.waived_doc_fix_ids
-          .filter((value) => typeof value === "string" && value.trim().length > 0)
-          .map((value) => value.trim())
-      : [],
+    reviewed_doc_finding_ids: reviewedDocFindingIds,
+    required_doc_fix_ids: requiredDocFixIds,
+    waived_doc_fix_ids: waivedDocFixIds,
     source_review_stage: Number.isInteger(entry.source_review_stage) ? entry.source_review_stage : null,
     ping_pong_rounds:
       typeof entry.ping_pong_rounds === "number" && entry.ping_pong_rounds >= 0

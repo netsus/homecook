@@ -184,6 +184,17 @@ function extractValue(sectionLines, label) {
   return value;
 }
 
+function extractFirstValue(sectionLines, labels) {
+  for (const label of Array.isArray(labels) ? labels : []) {
+    const value = extractValue(sectionLines, label);
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return null;
+}
+
 export function readWorkpackDesignStatus({
   rootDir = process.cwd(),
   worktreePath = null,
@@ -295,7 +306,12 @@ export function readWorkpackDesignAuthority({
   return {
     uiRisk: extractValue(sectionLines, "UI risk"),
     anchorScreenDependency: extractValue(sectionLines, "Anchor screen dependency"),
-    visualArtifact: extractValue(sectionLines, "Visual artifact"),
+    visualArtifact: extractFirstValue(sectionLines, [
+      "Visual artifact",
+      "Stage 4 evidence plan",
+      "Evidence plan",
+      "Screenshot evidence plan",
+    ]),
     authorityStatus: extractValue(sectionLines, "Authority status"),
     notes: extractValue(sectionLines, "Notes"),
     filePath: workpackPath,

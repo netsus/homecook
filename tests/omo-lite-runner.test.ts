@@ -294,6 +294,88 @@ function createSchemaRepairingFakeClaudeBin(
   };
 }
 
+function createMissingStageResultRepairingFakeClaudeBin(
+  rootDir: string,
+  homeDir: string,
+  options?: {
+    sessionId?: string;
+  },
+) {
+  fakeClaudeCounter += 1;
+  const suffix = String(fakeClaudeCounter);
+  const binPath = join(rootDir, `fake-claude-missing-stage-result-${suffix}.sh`);
+  const argsPath = join(rootDir, `fake-claude-missing-stage-result-${suffix}.args.log`);
+  const stdinPath = join(rootDir, `fake-claude-missing-stage-result-${suffix}.stdin.log`);
+  const countPath = join(rootDir, `fake-claude-missing-stage-result-${suffix}.count`);
+  const sessionId = options?.sessionId ?? `ses_fake_claude_missing_stage_result_${suffix}`;
+  const validStageResult = {
+    result: "done",
+    summary_markdown: "Stage 1 repaired and completed",
+    commit: {
+      subject: "docs: repair stage1 bootstrap",
+      body_markdown: "repair pass",
+    },
+    pr: {
+      title: "docs: repair stage1 bootstrap",
+      body_markdown: "## Summary\n- repair pass",
+    },
+    checks_run: [],
+    next_route: "open_pr",
+    claimed_scope: {
+      files: ["docs/workpacks/07-meal-manage/README.md"],
+      endpoints: [],
+      routes: [],
+      states: [],
+      invariants: [],
+    },
+    changed_files: ["docs/workpacks/07-meal-manage/README.md"],
+    tests_touched: [],
+    artifacts_written: [".artifacts/example.log"],
+    checklist_updates: [],
+    contested_fix_ids: [],
+    rebuttals: [],
+  };
+
+  writeFileSync(
+    binPath,
+    [
+      "#!/bin/sh",
+      "count=0",
+      "[ -f \"$FAKE_CLAUDE_COUNT_PATH\" ] && count=$(cat \"$FAKE_CLAUDE_COUNT_PATH\")",
+      "count=$((count + 1))",
+      "printf '%s' \"$count\" > \"$FAKE_CLAUDE_COUNT_PATH\"",
+      "printf '%s\\n' \"$@\" >> \"$FAKE_CLAUDE_ARGS_PATH\"",
+      "cat >> \"$FAKE_CLAUDE_STDIN_PATH\"",
+      "printf '\\n---INVOCATION---\\n' >> \"$FAKE_CLAUDE_STDIN_PATH\"",
+      "if [ \"$count\" -eq 1 ]; then",
+      "  :",
+      "else",
+      "  cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
+      JSON.stringify(validStageResult, null, 2),
+      "EOF",
+      "fi",
+      "cat <<'EOF'",
+      JSON.stringify({
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        session_id: sessionId,
+      }),
+      "EOF",
+      "exit 0",
+    ].join("\n"),
+  );
+  chmodSync(binPath, 0o755);
+  mkdirSync(join(homeDir, ".claude"), { recursive: true });
+
+  return {
+    binPath,
+    argsPath,
+    stdinPath,
+    countPath,
+  };
+}
+
 function createRunnerFixture() {
   const rootDir = mkdtempSync(join(tmpdir(), "omo-lite-runner-"));
 
@@ -1525,6 +1607,66 @@ describe("OMO-lite stage runner", () => {
     });
   });
 
+  it("auto-repairs a missing Stage 1 stage-result through claude-cli", () => {
+    const rootDir = createRunnerFixture();
+    const homeDir = createClaudeHomeDir();
+    seedStrictSlice(rootDir, "07-meal-manage");
+    const { binPath, argsPath, stdinPath, countPath } = createMissingStageResultRepairingFakeClaudeBin(rootDir, homeDir, {
+      sessionId: "ses_stage1_opencode_repair",
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "07-meal-manage",
+      stage: 1,
+      workItemId: "07-meal-manage",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stdinPath,
+        FAKE_CLAUDE_COUNT_PATH: countPath,
+      },
+      now: "2026-04-18T17:10:00+09:00",
+    });
+
+    const stageResult = result.stageResult as { result: string; summary_markdown: string } | null;
+    const runtime = JSON.parse(
+      readFileSync(join(rootDir, ".opencode", "omo-runtime", "07-meal-manage.json"), "utf8"),
+    ) as {
+      current_stage: number;
+      last_completed_stage: number;
+      blocked_stage: number | null;
+      sessions: {
+        claude_primary: {
+          session_id: string;
+          provider: string;
+        };
+      };
+    };
+    expect(result.execution.mode).toBe("execute");
+    expect(result.execution.provider).toBe("claude-cli");
+    expect(result.execution.sessionId).toBe("ses_stage1_opencode_repair");
+    expect(existsSync(join(result.artifactDir, "schema-repair-pass-1", "prompt.md"))).toBe(true);
+    expect(stageResult).toMatchObject({
+      result: "done",
+    });
+    expect(stageResult?.summary_markdown).toContain("Stage 1 repaired");
+    expect(runtime).toMatchObject({
+      current_stage: 1,
+      last_completed_stage: 1,
+      blocked_stage: null,
+      sessions: {
+        claude_primary: {
+          session_id: "ses_stage1_opencode_repair",
+          provider: "claude-cli",
+        },
+      },
+    });
+  });
+
   it("fails closed when Claude writes an invalid stage-result shape", () => {
     const rootDir = createRunnerFixture();
     const homeDir = createClaudeHomeDir();
@@ -2382,62 +2524,20 @@ describe("OMO-lite stage runner", () => {
     });
   });
 
-  it("allows an explicit opencode fallback for Claude-owned stages", () => {
+  it("rejects an explicit opencode provider override for Claude-owned stages", () => {
     const rootDir = createRunnerFixture();
-    const { binPath, argsPath } = createFakeOpencodeBin(rootDir, {
-      sessionId: "ses_claude_opencode",
-    });
-
-    const result = runStageWithArtifacts({
-      rootDir,
-      slice: "03-recipe-like",
-      stage: 1,
-      workItemId: "03-recipe-like",
-      claudeBudgetState: "available",
-      mode: "execute",
-      claudeProvider: "opencode",
-      opencodeBin: binPath,
-      environment: {
-        FAKE_OPENCODE_ARGS_PATH: argsPath,
-      },
-      now: "2026-03-26T22:15:00+09:00",
-    });
-
-    const runtime = JSON.parse(
-      readFileSync(join(rootDir, ".opencode", "omo-runtime", "03-recipe-like.json"), "utf8"),
-    ) as {
-      sessions: {
-        claude_primary: {
-          session_id: string;
-          provider: string;
-          agent: string;
-        };
-      };
-    };
-    const prompt = readFileSync(join(result.artifactDir, "prompt.md"), "utf8");
-
-    expect(result.execution).toMatchObject({
-      mode: "execute",
-      provider: "opencode",
-      agent: null,
-      model: "openai/gpt-5.4",
-      variant: "high",
-      sessionId: "ses_claude_opencode",
-    });
-    const args = readFileSync(argsPath, "utf8");
-    expect(args).toContain("--model");
-    expect(args).toContain("openai/gpt-5.4");
-    expect(args).toContain("--variant");
-    expect(args).not.toContain("--agent");
-    expect(prompt).toContain("## Claude Fallback Execution Contract");
-    expect(prompt).toContain("그 이유만으로 거부하거나 사용자에게 다시 Claude를 찾으라고 돌려보내지 마세요.");
-    expect(runtime.sessions.claude_primary).toMatchObject({
-      session_id: "ses_claude_opencode",
-      provider: "opencode",
-      agent: "athena",
-      model: "openai/gpt-5.4",
-      variant: "high",
-    });
+    expect(() =>
+      runStageWithArtifacts({
+        rootDir,
+        slice: "03-recipe-like",
+        stage: 1,
+        workItemId: "03-recipe-like",
+        claudeBudgetState: "available",
+        mode: "execute",
+        claudeProvider: "opencode" as "claude-cli",
+        now: "2026-03-26T22:15:00+09:00",
+      }),
+    ).toThrow('claudeProvider must be "claude-cli"');
   });
 
   it("cleans oh-my-opencode migration artifacts after an opencode run", () => {

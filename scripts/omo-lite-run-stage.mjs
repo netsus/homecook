@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { runStageWithArtifacts } from "./lib/omo-lite-runner.mjs";
+import { assertSupportedClaudeProvider } from "./lib/omo-provider-config.mjs";
 
 function printUsage() {
   process.stdout.write(
@@ -14,7 +15,7 @@ function printUsage() {
       "  --claude-budget-state <state>    Optional override: available | constrained | unavailable",
       "  --mode <artifact-only|execute>   Artifact bundle only or run opencode for Codex stages",
       "  --artifact-dir <path>            Override artifact output directory",
-      "  --claude-provider <name>         Override Claude provider: opencode | claude-cli",
+      "  --claude-provider <name>         Override Claude provider: claude-cli",
       "  --claude-bin <path>              Override claude binary path",
       "  --claude-model <model>           Override Claude model alias/name",
       "  --claude-effort <level>          Override Claude effort: low | medium | high",
@@ -103,7 +104,7 @@ function main() {
     claudeBudgetState: options.claudeBudgetState,
     mode: options.mode,
     artifactDir: options.artifactDir,
-    claudeProvider: options.claudeProvider,
+    claudeProvider: assertSupportedClaudeProvider(options.claudeProvider),
     claudeBin: options.claudeBin,
     claudeModel: options.claudeModel,
     claudeEffort: options.claudeEffort,

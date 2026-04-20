@@ -251,4 +251,62 @@ describe("OMO session runtime", () => {
     expect(state.execution).toBeNull();
     expect(state.doc_gate?.status).toBe("awaiting_review");
   });
+
+  it("normalizes doc gate review findings into the canonical finding shape", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "07-meal-manage",
+      state: {
+        slice: "07-meal-manage",
+        active_stage: 2,
+        current_stage: 2,
+        workspace: {
+          path: "/tmp/worktree",
+          branch_role: "docs",
+        },
+        doc_gate: {
+          status: "fixable",
+          findings: [],
+          last_review: {
+            decision: "request_changes",
+            route_back_stage: 2,
+            approved_head_sha: null,
+            body_markdown: "## Review\n- docs",
+            reviewed_doc_finding_ids: ["doc-gate-primary-cta"],
+            required_doc_fix_ids: ["doc-gate-primary-cta"],
+            waived_doc_fix_ids: [],
+            findings: [
+              {
+                file: "ui/designs/MEAL_SCREEN.md",
+                severity: "major",
+                category: "contract",
+                issue: "Primary CTA keyword is missing.",
+                suggestion: "Name the bottom CTA as the primary CTA.",
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId: "07-meal-manage",
+      slice: "07-meal-manage",
+    });
+
+    expect(state.doc_gate?.last_review?.findings).toEqual([
+      {
+        id: "doc-gate-primary-cta",
+        category: "contract",
+        severity: "major",
+        message: "Primary CTA keyword is missing.",
+        evidence_paths: ["ui/designs/MEAL_SCREEN.md"],
+        remediation_hint: "Name the bottom CTA as the primary CTA.",
+        fixable: true,
+      },
+    ]);
+  });
 });

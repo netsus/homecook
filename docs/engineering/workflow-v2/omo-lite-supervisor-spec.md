@@ -313,7 +313,7 @@ product slice Stage 2/4 기본 경로에서는 사용하지 않는다.
 
 - Claude는 sparse high-value checkpoint에만 배정한다.
 - Codex는 always-on execution / recovery engine으로 동작한다.
-- reviewer stage의 budget state는 `explicit CLI override -> env -> .opencode/claude-budget-state.json -> OpenCode auth presence` 순서로 해석한다.
+- reviewer stage의 budget state는 `explicit CLI override -> env -> .opencode/claude-budget-state.json -> Claude CLI local state` 순서로 해석한다.
 - 기본 retry delay는 `5 hours`, 기본 sweeper cadence는 `10 minutes`, 기본 max retry attempts는 `3`이다.
 
 ### Fallback

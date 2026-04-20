@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path, { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -83,6 +83,22 @@ const SCHEDULER_TEMPLATE_PATH = resolve(
  * @property {LaunchAgentSnapshot} tickWatchSnapshot
  */
 
+/**
+ * @typedef {object} EnsureLaunchAgentInstalledOptions
+ * @property {string} [rootDir]
+ * @property {string} workItemId
+ * @property {number} [intervalSeconds]
+ * @property {string} [homeDir]
+ * @property {string} [pnpmBin]
+ * @property {string} [ghBin]
+ * @property {string} [claudeBin]
+ * @property {string} [opencodeBin]
+ * @property {Record<string, string>} [environment]
+ * @property {typeof spawnSync} [spawn]
+ * @property {NodeJS.Platform} [platform]
+ * @property {(() => number) | undefined} [getuid]
+ */
+
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string.`);
@@ -131,6 +147,19 @@ function buildFixedPath(...bins) {
 
 function readSchedulerTemplate() {
   return readFileSync(SCHEDULER_TEMPLATE_PATH, "utf8");
+}
+
+function runLaunchctl(args, spawn = spawnSync) {
+  const result = spawn("launchctl", args, {
+    encoding: "utf8",
+  });
+
+  if (result.status !== 0) {
+    const stderr = typeof result.stderr === "string" ? result.stderr.trim() : "";
+    throw new Error(stderr.length > 0 ? stderr : `launchctl ${args.join(" ")} failed.`);
+  }
+
+  return result;
 }
 
 function resolveBinaryPath(binary, spawn = spawnSync) {
@@ -322,8 +351,9 @@ export function readLaunchAgentSnapshot({
   workItemId,
   homeDir = process.env.HOME ?? "",
   spawn = spawnSync,
+  getuid = process.getuid?.bind(process),
 } = {}) {
-  const uid = typeof process.getuid === "function" ? process.getuid() : null;
+  const uid = typeof getuid === "function" ? getuid() : null;
   if (!Number.isInteger(uid)) {
     throw new Error("Current platform does not support launchctl gui user inspection.");
   }
@@ -359,6 +389,140 @@ export function toSerializableLaunchAgentSnapshot(snapshot) {
     stderrUpdatedAt: snapshot.stderrUpdatedAt?.toISOString() ?? null,
     lastActivityAt: snapshot.lastActivityAt?.toISOString() ?? null,
     error: snapshot.error,
+  };
+}
+
+function isLaunchAgentAligned({
+  workItemId,
+  intervalSeconds = DEFAULT_TICK_INTERVAL_SECONDS,
+  homeDir = process.env.HOME ?? "",
+  snapshot,
+}) {
+  const expectedLogs = getDefaultTickLogPaths(workItemId, homeDir);
+
+  return (
+    Boolean(snapshot?.loaded) &&
+    snapshot.intervalSeconds === intervalSeconds &&
+    snapshot.stdoutLog === expectedLogs.stdout &&
+    snapshot.stderrLog === expectedLogs.stderr
+  );
+}
+
+/**
+ * @param {EnsureLaunchAgentInstalledOptions} [options]
+ */
+export function ensureLaunchAgentInstalled({
+  rootDir = process.cwd(),
+  workItemId,
+  intervalSeconds = DEFAULT_TICK_INTERVAL_SECONDS,
+  homeDir = process.env.HOME ?? "",
+  pnpmBin,
+  ghBin,
+  claudeBin,
+  opencodeBin,
+  environment,
+  spawn = spawnSync,
+  platform = process.platform,
+  getuid = process.getuid?.bind(process),
+} = {}) {
+  const normalizedWorkItemId = ensureNonEmptyString(workItemId, "workItemId");
+  const normalizedHomeDir = ensureNonEmptyString(homeDir, "homeDir");
+
+  if (platform !== "darwin") {
+    return {
+      installed: false,
+      changed: false,
+      skipped: true,
+      reason: `unsupported_platform=${platform}`,
+      label: resolveLaunchAgentLabel(normalizedWorkItemId),
+      plistPath: resolveLaunchAgentPlistPath(normalizedWorkItemId, normalizedHomeDir),
+      intervalSeconds,
+      bins: null,
+      snapshot: null,
+    };
+  }
+
+  const uid = typeof getuid === "function" ? getuid() : null;
+  if (!Number.isInteger(uid)) {
+    throw new Error("Current platform does not support launchctl gui user installation.");
+  }
+
+  const plistPath = resolveLaunchAgentPlistPath(normalizedWorkItemId, normalizedHomeDir);
+  const label = resolveLaunchAgentLabel(normalizedWorkItemId);
+  const bins = resolveSchedulerBins({
+    rootDir,
+    pnpmBin,
+    ghBin,
+    claudeBin,
+    opencodeBin,
+    environment,
+    homeDir: normalizedHomeDir,
+    spawn,
+  });
+  const existingSnapshot = readLaunchAgentSnapshot({
+    workItemId: normalizedWorkItemId,
+    homeDir: normalizedHomeDir,
+    spawn,
+    getuid,
+  });
+
+  if (
+    existsSync(plistPath) &&
+    isLaunchAgentAligned({
+      workItemId: normalizedWorkItemId,
+      intervalSeconds,
+      homeDir: normalizedHomeDir,
+      snapshot: existingSnapshot,
+    })
+  ) {
+    return {
+      installed: true,
+      changed: false,
+      skipped: false,
+      reason: null,
+      label,
+      plistPath,
+      intervalSeconds,
+      bins,
+      snapshot: existingSnapshot,
+    };
+  }
+
+  const plist = renderLaunchAgentPlist({
+    rootDir,
+    workItemId: normalizedWorkItemId,
+    homeDir: normalizedHomeDir,
+    intervalSeconds,
+    bins,
+  });
+
+  mkdirSync(dirname(plistPath), { recursive: true });
+  mkdirSync(resolve(normalizedHomeDir, "Library", "Logs", "homecook"), { recursive: true });
+  writeFileSync(plistPath, plist);
+
+  spawn("launchctl", ["bootout", `gui/${uid}`, plistPath], {
+    encoding: "utf8",
+  });
+  runLaunchctl(["bootstrap", `gui/${uid}`, plistPath], spawn);
+  runLaunchctl(["kickstart", "-k", `gui/${uid}/${label}`], spawn);
+
+  const snapshot = readLaunchAgentSnapshot({
+    workItemId: normalizedWorkItemId,
+    homeDir: normalizedHomeDir,
+    spawn,
+    getuid,
+  });
+
+  return {
+    installed: true,
+    changed: true,
+    skipped: false,
+    reason: null,
+    label,
+    plistPath,
+    intervalSeconds,
+    bins,
+    snapshot,
   };
 }
 
