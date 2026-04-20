@@ -3,7 +3,7 @@
 ## Status
 
 - 이 문서는 `generic session-orchestrator` 위에 얹는 `local autonomous supervisor` 규격을 고정한다.
-- 현재 executable baseline은 `omo:supervise`, `omo:tick`, dedicated worktree manager, `gh` automation, `omo:status`, `omo:status:brief`까지 포함한다.
+- 현재 executable baseline은 `omo:supervise`, `omo:tick`, dedicated worktree manager, `gh` automation, `omo:status`, `omo:status:brief`, `omo:tail`까지 포함한다.
 - hardening baseline은 `omo:smoke:control-plane`, `omo:smoke:providers`, `omo:scheduler:install/uninstall/verify`까지 포함한다.
 - `omo:start`, `omo:continue`, `omo:resume-pending`은 low-level primitive로 남고, product slice full-autonomy는 supervisor state machine이 담당한다.
 - fullauto v1은 low/medium autonomous slice에 대해 Stage 1~6 무인 merge까지 포함하는 의미로 고정한다.
@@ -36,6 +36,7 @@ autonomous supervisor는 `그 stage 결과를 다음 GitHub 상태와 다음 sta
 - `pnpm omo:tick -- --work-item <id>`
 - `pnpm omo:reconcile -- --work-item <id>`
 - `pnpm omo:tick:watch -- --work-item <id>`
+- `pnpm omo:tail -- --work-item <id>`
 - `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`
 - `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name> --live-providers`
 - `pnpm omo:smoke:providers`
@@ -64,10 +65,11 @@ autonomous supervisor는 `그 stage 결과를 다음 GitHub 상태와 다음 sta
 8. runtime이 없으면 `omo:tick`은 `noop: missing_runtime`을 반환한다.
 9. runtime은 있지만 `wait`와 pending phase가 모두 없으면 `omo:tick`은 `noop: no_wait_state`를 반환한다.
 10. 운영자가 현재 단계와 대기 상태를 빠르게 읽을 때는 `omo:status:brief`를 사용한다.
-11. scheduler가 실제로 등록되어 있는지, 현재 running인지, 마지막 로그 갱신 시각이 언제인지는 `omo:tick:watch`로 읽는다.
-12. live smoke는 sandbox GitHub repo와 실제 provider/auth 상태를 사용하며, autonomous merge gate를 검증한다.
-13. `--live-providers` 모드의 backend smoke contract는 Stage 2/3만 실제 provider를 사용한다. Stage 3 첫 리뷰를 강제로 `request_changes`로 만들고, Codex Stage 2 재실행에는 최소 확인용 prompt만 주입해 같은 feedback token이 실제 marker file에 반영되는지까지 검증한다.
-14. `omo:scheduler:verify`는 `launchctl print`와 `omo:tick:watch --json`을 비교해 label, interval, log path를 함께 점검한다.
+11. status/freshness와 scheduler/log tail을 한 화면에서 같이 봐야 할 때는 `omo:tail`을 사용한다.
+12. scheduler가 실제로 등록되어 있는지, 현재 running인지, 마지막 로그 갱신 시각이 언제인지는 `omo:tick:watch`로 읽는다.
+13. live smoke는 sandbox GitHub repo와 실제 provider/auth 상태를 사용하며, autonomous merge gate를 검증한다.
+14. `--live-providers` 모드의 backend smoke contract는 Stage 2/3만 실제 provider를 사용한다. Stage 3 첫 리뷰를 강제로 `request_changes`로 만들고, Codex Stage 2 재실행에는 최소 확인용 prompt만 주입해 같은 feedback token이 실제 marker file에 반영되는지까지 검증한다.
+15. `omo:scheduler:verify`는 `launchctl print`와 `omo:tick:watch --json`을 비교해 label, interval, log path를 함께 점검한다.
 
 ## Bookkeeping Invariants
 
@@ -310,6 +312,7 @@ operator-facing status 진단:
 
 - `pnpm omo:status -- --work-item <id>`는 `reason code`, `remediation`, 마지막 실패 validator, failure path, artifact path, 다음 추천 액션을 함께 출력한다.
 - `pnpm omo:status:brief -- --work-item <id>`는 같은 정보를 한 줄 요약에 가까운 compact 형식으로 출력한다.
+- `pnpm omo:tail -- --work-item <id>`는 `status:brief` 출력에 scheduler snapshot과 최근 `omo:tick` stdout/stderr tail을 덧붙여 operator blind spot을 줄인다.
 - 둘 다 `runtime signal`을 함께 노출해 `running_live`, `running_stale_candidate`, `retry_due`, `waiting_ci`, `lock_residue` 같은 operator-facing 상태를 바로 읽을 수 있어야 한다.
 - 둘 다 `last activity`, `activity source`, `session freshness`, `execution freshness`도 같이 보여 줘서 "살아 있는 실행"과 "오래된 residue"를 구분할 근거를 남겨야 한다.
 - stale candidate 판정은 자동 recovery와 동일 의미가 아니라 operator triage 신호다. 즉시 patch보다 artifact/log, head SHA, wait age를 먼저 확인하는 용도로 사용한다.
