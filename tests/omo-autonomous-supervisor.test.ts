@@ -7506,6 +7506,162 @@ describe("OMO autonomous supervisor", () => {
     expect(updatedRoadmap).toContain("| `03-recipe-like` | merged");
   });
 
+  it("refreshes CI wait PR head metadata from the live GitHub summary before evaluating checks", () => {
+    const rootDir = createFixture();
+    seedAutonomousPolicy(rootDir, "03-recipe-like");
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+
+    createGitWorkspace(workspacePath, "feature/fe-03-recipe-like");
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "in-progress",
+      designStatus: "confirmed",
+    });
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "feat: seed stale ci wait"], { cwd: workspacePath });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        active_stage: 4,
+        current_stage: 4,
+        last_completed_stage: 4,
+        phase: "wait",
+        next_action: "poll_ci",
+        workspace: {
+          path: workspacePath,
+          branch_role: "frontend",
+        },
+        prs: {
+          docs: null,
+          backend: null,
+          frontend: {
+            number: 36,
+            url: "https://github.com/netsus/homecook/pull/36",
+            draft: true,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: "old-head",
+          },
+          closeout: null,
+        },
+        wait: {
+          kind: "ci",
+          pr_role: "frontend",
+          stage: 4,
+          head_sha: "old-head",
+          reason: null,
+          until: null,
+          updated_at: "2026-04-20T11:50:00+09:00",
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "03-recipe-like",
+        now: "2026-04-20T12:00:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            return { branch: "feature/fe-03-recipe-like" };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "worktree-head";
+          },
+          getCurrentBranch() {
+            return "feature/fe-03-recipe-like";
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            return { bucket: "pending", checks: [{ name: "quality", bucket: "pending", state: "PENDING" }] };
+          },
+          markReady() {
+            throw new Error("not expected");
+          },
+          commentPullRequest() {
+            throw new Error("not expected");
+          },
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          getPullRequestSummary() {
+            return {
+              state: "OPEN",
+              mergedAt: null,
+              mergeStateStatus: "CLEAN",
+              reviewDecision: null,
+              headRefOid: "new-head",
+              headRefName: "feature/fe-03-recipe-like",
+              isDraft: false,
+            };
+          },
+          updateBranch() {
+            throw new Error("not expected");
+          },
+        },
+      },
+    );
+
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      slice: "03-recipe-like",
+    }).state as {
+      wait: { kind: string; stage: number | null; pr_role: string | null; head_sha: string | null };
+      prs: { frontend: { head_sha: string | null; draft: boolean; branch: string | null } | null };
+    };
+
+    expect(result.wait).toMatchObject({
+      kind: "ci",
+      stage: 4,
+      pr_role: "frontend",
+      head_sha: "new-head",
+    });
+    expect(runtime.wait).toMatchObject({
+      kind: "ci",
+      stage: 4,
+      pr_role: "frontend",
+      head_sha: "new-head",
+    });
+    expect(runtime.prs.frontend).toMatchObject({
+      head_sha: "new-head",
+      draft: false,
+      branch: "feature/fe-03-recipe-like",
+    });
+  });
+
   it("repairs fixable slice-local closeout drift during internal 6.5 before merge", () => {
     const rootDir = createFixture();
     seedAutonomousPolicy(rootDir, "03-recipe-like");

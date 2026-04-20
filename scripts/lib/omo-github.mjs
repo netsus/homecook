@@ -422,6 +422,9 @@ function summarizeMergeState(summary) {
       mergedAt: null,
       mergeStateStatus: null,
       reviewDecision: null,
+      headRefOid: null,
+      headRefName: null,
+      isDraft: null,
     };
   }
 
@@ -433,6 +436,18 @@ function summarizeMergeState(summary) {
     reviewDecision:
       typeof summary.reviewDecision === "string" && summary.reviewDecision.trim().length > 0
         ? summary.reviewDecision
+        : null,
+    headRefOid:
+      typeof summary.headRefOid === "string" && summary.headRefOid.trim().length > 0
+        ? summary.headRefOid
+        : null,
+    headRefName:
+      typeof summary.headRefName === "string" && summary.headRefName.trim().length > 0
+        ? summary.headRefName
+        : null,
+    isDraft:
+      typeof summary.isDraft === "boolean"
+        ? summary.isDraft
         : null,
   };
 }
@@ -490,7 +505,7 @@ export function createGithubAutomationClient({
       "view",
       ensureNonEmptyString(prRef, "prRef"),
       "--json",
-      "state,mergedAt,mergeStateStatus,reviewDecision",
+      "state,mergedAt,mergeStateStatus,reviewDecision,headRefOid,headRefName,isDraft",
     ]);
 
     return summarizeMergeState(stdout.length > 0 ? JSON.parse(stdout) : null);
