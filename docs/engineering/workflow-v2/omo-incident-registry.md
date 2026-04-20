@@ -119,16 +119,34 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-06-001
 
-- status: `monitoring`
+- status: `open`
 - boundary: `omo-system`
 - bucket: `D. Runtime / Observability Reset`
 - stage_scope: `Stage 6 closeout`
-- symptom: authority-required pilot slice06은 merged 됐지만 tracked status notes에 `merged_after_manual_stage6_handoff`가 남아 있다. 즉 대표 pilot lane이 auto-closeout이 아니라 manual handoff를 포함한 상태로 통과했다.
-- current_recovery: Stage 6 manual handoff bundle 기반으로 merge했다.
-- root_cause_hypothesis: authority-required lane의 운영 품질이 default autonomous baseline보다 낮았는데, lane pass가 곧 autonomous maturity로 해석됐다.
+- symptom: authority-required pilot slice06은 merged 됐지만 tracked status notes에는 `merged_after_manual_stage6_handoff`가 남아 있고, local `omo-tick` 로그는 `blocked_retry (retry_not_due)` 반복, `run -> human_escalation`, `unsupported_wait_kind=human_escalation`, `skip_locked -> none`을 보여준다. 즉 대표 pilot lane이 autonomous closeout이 아니라 repeated recovery 후 manual handoff로 끝났다.
+- current_recovery: operator가 Stage 6 manual handoff bundle을 기준으로 PR #120을 merge했고, scheduler/tick은 더 이상 lane completion을 책임지지 못했다.
+- root_cause_hypothesis: authority-required lane이 human_escalation/locked 상태에 들어간 뒤 scheduler resume과 closeout recovery를 deterministic하게 이어가지 못했고, manual handoff가 실제 completion path가 됐다.
 - evidence_refs:
   - `.workflow-v2/status.json`
   - `.workflow-v2/promotion-evidence.json`
+  - `/Users/cwj/Library/Logs/homecook/omo-tick-06-recipe-to-planner.log`
+  - `/Users/cwj/Library/Logs/homecook/omo-tick-06-recipe-to-planner.err.log`
+  - `docs/engineering/workflow-v2/slice06-pilot-checklist.md`
+
+### OMO-06-002
+
+- status: `backfill-required`
+- boundary: `omo-system`
+- bucket: `D. Runtime / Observability Reset`
+- stage_scope: `slice06 local artifact retention / scheduler path`
+- symptom: promotion ledger는 `.artifacts/meta-harness-auditor/slice06-stage6/report.md`와 `/private/tmp/homecook-slice06-omo-run/.artifacts/omo-evaluator/...`를 canonical evidence처럼 참조하지만, 현재 machine에는 해당 bundle과 tmp worktree가 없다. 대신 남아 있는 것은 `Cannot find module '/private/tmp/homecook-slice06-omo-run/scripts/omo-tick.mjs'` 로그뿐이다.
+- current_recovery: slice06 pilot evidence는 repo-local canonical artifact가 아니라 notes/status/log로만 잔존했고, current machine retrospective는 missing-artifact 상태를 그대로 안고 진행해야 한다.
+- root_cause_hypothesis: slice06 checkpoint evidence가 ephemeral tmp worktree 경로에 묶였고, promotion/cutover 전에 repo-local canonical artifact storage로 승격되지 않았다.
+- evidence_refs:
+  - `.workflow-v2/work-items/06-recipe-to-planner.json`
+  - `.workflow-v2/promotion-evidence.json`
+  - `/Users/cwj/Library/Logs/homecook/omo-tick-06-recipe-to-planner.err.log`
+  - `docs/engineering/workflow-v2/slice06-pilot-checklist.md`
 
 ### OMO-07-001
 
@@ -273,7 +291,7 @@ reset 기간의 기본 규칙은 아래와 같다.
 아래는 다음 retrospective pass에서 우선 수집할 항목이다.
 
 1. slice03 canonical artifact bundle 부재를 `artifact-missing accepted`로 둘지, 별도 off-repo evidence 회수를 시도할지 결정
-2. slice06 Stage 4~6 manual handoff의 실제 blocker와 operator action sequence
+2. slice06 Stage 6 audit bundle / tmp worktree artifact를 durable repo-local evidence로 회수할 수 있는지 확인
 3. OMO promotion `candidate -> ready` cutover를 정당화한 docs-governance PR과 그 당시 반대 신호
 4. no-op commit, force-push, runtime JSON edit처럼 공식 상태 밖에서 수행된 복구 작업 목록
 
