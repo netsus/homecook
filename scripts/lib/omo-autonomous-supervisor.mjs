@@ -20,9 +20,7 @@ import {
   isChecklistContractActive,
   readWorkpackChecklistContract,
   resolveChecklistIds,
-  resolveOwnedChecklistItems,
   resolveReviewChecklistItems,
-  resolveUncheckedChecklistItems,
 } from "./omo-checklist-contract.mjs";
 import {
   acquireRuntimeLock,
@@ -3849,24 +3847,38 @@ function processWaitState({
       throw new Error("Active pull request is missing for CI wait.");
     }
 
-    if (prRole === "closeout") {
-      const summary = github.getPullRequestSummary({
-        prRef: activePr.url,
-      });
+    const refreshedCiWait = refreshCiWaitPullRequestState({
+      rootDir,
+      workItemId,
+      state,
+      github,
+      prRole,
+      activePr,
+      now,
+      requireSummary: prRole === "closeout",
+    });
+    const ciState = refreshedCiWait.state;
+    const ciActivePr = refreshedCiWait.activePr;
+    const liveSummary = refreshedCiWait.summary;
 
-      if (summary.mergedAt) {
+    if (!ciActivePr?.url) {
+      throw new Error("Active pull request is missing for CI wait.");
+    }
+
+    if (prRole === "closeout" && liveSummary?.mergedAt) {
+      if (liveSummary.mergedAt) {
         return finalizeCloseoutReconciliation({
           rootDir,
           workItemId,
-          state,
-          activePr,
+          state: ciState,
+          activePr: ciActivePr,
           now,
         });
       }
     }
 
     const checks = github.getRequiredChecks({
-      prRef: activePr.url,
+      prRef: ciActivePr.url,
     });
 
     if (checks.bucket === "fail") {
@@ -3877,14 +3889,14 @@ function processWaitState({
       updateRuntimeStatusForWait({
         rootDir,
         workItemId,
-        wait: state.wait,
-        prPath: activePr.url,
+        wait: ciState.wait,
+        prPath: ciActivePr.url,
         now,
         verificationStatus: bucketToVerification(checks.bucket),
-        extraNotes: prRole === "closeout" ? [`closeout_pr=${activePr.url}`] : [],
+        extraNotes: prRole === "closeout" ? [`closeout_pr=${ciActivePr.url}`] : [],
       });
       return {
-        state,
+        state: ciState,
         action: "wait",
         nextStage: null,
       };
@@ -3894,41 +3906,41 @@ function processWaitState({
       updateRuntimeStatusForWait({
         rootDir,
         workItemId,
-        wait: state.wait,
-        prPath: activePr.url,
+        wait: ciState.wait,
+        prPath: ciActivePr.url,
         now,
         approvalState: "dual_approved",
         lifecycle: "ready_for_review",
         verificationStatus: "passed",
-        extraNotes: [`closeout_pr=${activePr.url}`, "manual_action=merge_closeout_pr"],
+        extraNotes: [`closeout_pr=${ciActivePr.url}`, "manual_action=merge_closeout_pr"],
       });
       return {
-        state,
+        state: ciState,
         action: "wait",
         nextStage: null,
       };
     }
 
     if (prRole === "docs") {
-      if (state.wait.stage === 1) {
+      if (ciState.wait.stage === 1) {
         const nextStateWithDocGate = saveRuntime({
           rootDir,
           workItemId,
           state: setDocGateState({
             state: markStageCompleted({
-              state,
+              state: ciState,
               stage: 1,
-              artifactDir: state.last_artifact_dir,
+              artifactDir: ciState.last_artifact_dir,
             }),
             status: "pending_check",
-            round: state.doc_gate?.round ?? 0,
-            repairBranch: activePr.branch ?? resolveDocGateRepairBranch(state.slice ?? workItemId),
+            round: ciState.doc_gate?.round ?? 0,
+            repairBranch: ciActivePr.branch ?? resolveDocGateRepairBranch(ciState.slice ?? workItemId),
             repairPr: {
-              number: activePr.number ?? null,
-              url: activePr.url,
-              draft: activePr.draft ?? false,
-              branch: activePr.branch ?? resolveDocGateRepairBranch(state.slice ?? workItemId),
-              head_sha: activePr.head_sha ?? state.wait.head_sha ?? null,
+              number: ciActivePr.number ?? null,
+              url: ciActivePr.url,
+              draft: ciActivePr.draft ?? false,
+              branch: ciActivePr.branch ?? resolveDocGateRepairBranch(ciState.slice ?? workItemId),
+              head_sha: ciActivePr.head_sha ?? ciState.wait.head_sha ?? null,
             },
             updatedAt: now,
           }),
@@ -3941,7 +3953,7 @@ function processWaitState({
             kind: "ready_for_next_stage",
             prRole: "docs",
             stage: 2,
-            headSha: activePr.head_sha ?? state.wait.head_sha ?? null,
+            headSha: ciActivePr.head_sha ?? ciState.wait.head_sha ?? null,
             updatedAt: now,
           }),
         });
@@ -3949,7 +3961,7 @@ function processWaitState({
           rootDir,
           workItemId,
           wait: nextState.wait,
-          prPath: activePr.url,
+          prPath: ciActivePr.url,
           now,
           approvalState: "claude_approved",
           lifecycle: "ready_for_review",
@@ -3963,16 +3975,16 @@ function processWaitState({
         };
       }
 
-      if (state.wait.stage === 2 && state.doc_gate?.status === "awaiting_review") {
+      if (ciState.wait.stage === 2 && ciState.doc_gate?.status === "awaiting_review") {
         const nextState = saveRuntime({
           rootDir,
           workItemId,
           state: setWaitState({
-            state,
+            state: ciState,
             kind: "ready_for_next_stage",
             prRole: "docs",
             stage: 2,
-            headSha: activePr.head_sha ?? state.wait.head_sha ?? null,
+            headSha: ciActivePr.head_sha ?? ciState.wait.head_sha ?? null,
             updatedAt: now,
           }),
         });
@@ -3980,12 +3992,12 @@ function processWaitState({
           rootDir,
           workItemId,
           wait: nextState.wait,
-          prPath: activePr.url,
+          prPath: ciActivePr.url,
           now,
           approvalState:
-            state.doc_gate?.last_review?.decision === "request_changes" ? "needs_revision" : "claude_approved",
+            ciState.doc_gate?.last_review?.decision === "request_changes" ? "needs_revision" : "claude_approved",
           lifecycle:
-            state.doc_gate?.last_review?.decision === "request_changes" ? "in_progress" : "ready_for_review",
+            ciState.doc_gate?.last_review?.decision === "request_changes" ? "in_progress" : "ready_for_review",
           verificationStatus: "passed",
         });
         return {
@@ -4000,7 +4012,7 @@ function processWaitState({
           rootDir,
           workItemId,
           state: setWaitState({
-            state,
+            state: ciState,
             kind: null,
             updatedAt: now,
           }),
@@ -4015,10 +4027,10 @@ function processWaitState({
       throw new Error("Docs PR reached an unsupported wait state before doc gate completion.");
     }
 
-    if (prRole === "backend" && state.wait.stage === 2) {
-      if (activePr.draft) {
+    if (prRole === "backend" && ciState.wait.stage === 2) {
+      if (ciActivePr.draft) {
         github.markReady({
-          prRef: activePr.url,
+          prRef: ciActivePr.url,
         });
       }
       const nextState = saveRuntime({
@@ -4026,19 +4038,19 @@ function processWaitState({
         workItemId,
         state: setWaitState({
           state: setPullRequestRef({
-            state,
+            state: ciState,
             role: "backend",
-            number: activePr.number,
-            url: activePr.url,
+            number: ciActivePr.number,
+            url: ciActivePr.url,
             draft: false,
-            branch: activePr.branch,
-            headSha: activePr.head_sha,
+            branch: ciActivePr.branch,
+            headSha: ciActivePr.head_sha,
             updatedAt: now,
           }),
           kind: "ready_for_next_stage",
           prRole: "backend",
           stage: 3,
-          headSha: activePr.head_sha,
+          headSha: ciActivePr.head_sha,
           updatedAt: now,
         }),
       });
@@ -4046,7 +4058,7 @@ function processWaitState({
         rootDir,
         workItemId,
         wait: nextState.wait,
-        prPath: activePr.url,
+        prPath: ciActivePr.url,
         now,
         approvalState: resolvePublicStageApprovalState(2),
         lifecycle: "ready_for_review",
@@ -4059,19 +4071,19 @@ function processWaitState({
       };
     }
 
-    if (prRole === "frontend" && state.wait.stage === 4) {
+    if (prRole === "frontend" && ciState.wait.stage === 4) {
       const designAuthorityConfig = resolveDesignAuthorityConfig({
         rootDir,
-        worktreePath: state.workspace?.path ?? null,
-        slice: state.slice ?? workItemId,
+        worktreePath: ciState.workspace?.path ?? null,
+        slice: ciState.slice ?? workItemId,
       });
-      if (designAuthorityConfig?.authority_required && state.design_authority?.status !== "prechecked") {
+      if (designAuthorityConfig?.authority_required && ciState.design_authority?.status !== "prechecked") {
         const nextState = saveRuntime({
           rootDir,
           workItemId,
           state: setWaitState({
             state: setDesignAuthorityState({
-              state,
+              state: ciState,
               status: "pending_precheck",
               uiRisk: designAuthorityConfig.ui_risk,
               anchorScreens: designAuthorityConfig.anchor_screens,
@@ -4090,9 +4102,9 @@ function processWaitState({
         };
       }
 
-      if (activePr.draft) {
+      if (ciActivePr.draft) {
         github.markReady({
-          prRef: activePr.url,
+          prRef: ciActivePr.url,
         });
       }
       const nextState = saveRuntime({
@@ -4100,19 +4112,19 @@ function processWaitState({
         workItemId,
         state: setWaitState({
           state: setPullRequestRef({
-            state,
+            state: ciState,
             role: "frontend",
-            number: activePr.number,
-            url: activePr.url,
+            number: ciActivePr.number,
+            url: ciActivePr.url,
             draft: false,
-            branch: activePr.branch,
-            headSha: activePr.head_sha,
+            branch: ciActivePr.branch,
+            headSha: ciActivePr.head_sha,
             updatedAt: now,
           }),
           kind: "ready_for_next_stage",
           prRole: "frontend",
           stage: 5,
-          headSha: activePr.head_sha,
+          headSha: ciActivePr.head_sha,
           updatedAt: now,
         }),
       });
@@ -4120,7 +4132,7 @@ function processWaitState({
         rootDir,
         workItemId,
         wait: nextState.wait,
-        prPath: activePr.url,
+        prPath: ciActivePr.url,
         now,
         approvalState: resolvePublicStageApprovalState(4),
         lifecycle: "ready_for_review",
@@ -4133,13 +4145,13 @@ function processWaitState({
       };
     }
 
-    if (prRole === "frontend" && state.wait.stage === 5) {
+    if (prRole === "frontend" && ciState.wait.stage === 5) {
       const designAuthorityConfig = resolveDesignAuthorityConfig({
         rootDir,
-        worktreePath: state.workspace?.path ?? null,
-        slice: state.slice ?? workItemId,
+        worktreePath: ciState.workspace?.path ?? null,
+        slice: ciState.slice ?? workItemId,
       });
-      const authorityStatus = state.design_authority?.status ?? null;
+      const authorityStatus = ciState.design_authority?.status ?? null;
 
       if (designAuthorityConfig?.authority_required) {
         if (authorityStatus === "final_authority_pending") {
@@ -4148,19 +4160,19 @@ function processWaitState({
             workItemId,
             state: setWaitState({
               state: setPullRequestRef({
-                state,
+                state: ciState,
                 role: "frontend",
-                number: activePr.number,
-                url: activePr.url,
+                number: ciActivePr.number,
+                url: ciActivePr.url,
                 draft: false,
-                branch: activePr.branch,
-                headSha: activePr.head_sha,
+                branch: ciActivePr.branch,
+                headSha: ciActivePr.head_sha,
                 updatedAt: now,
               }),
               kind: "ready_for_next_stage",
               prRole: "frontend",
               stage: 5,
-              headSha: activePr.head_sha,
+              headSha: ciActivePr.head_sha,
               updatedAt: now,
             }),
           });
@@ -4168,7 +4180,7 @@ function processWaitState({
             rootDir,
             workItemId,
             wait: nextState.wait,
-            prPath: activePr.url,
+            prPath: ciActivePr.url,
             now,
             approvalState: "codex_approved",
             lifecycle: "ready_for_review",
@@ -4194,19 +4206,19 @@ function processWaitState({
         workItemId,
         state: setWaitState({
           state: setPullRequestRef({
-            state,
+            state: ciState,
             role: "frontend",
-            number: activePr.number,
-            url: activePr.url,
+            number: ciActivePr.number,
+            url: ciActivePr.url,
             draft: false,
-            branch: activePr.branch,
-            headSha: activePr.head_sha,
+            branch: ciActivePr.branch,
+            headSha: ciActivePr.head_sha,
             updatedAt: now,
           }),
           kind: "ready_for_next_stage",
           prRole: "frontend",
           stage: 6,
-          headSha: activePr.head_sha,
+          headSha: ciActivePr.head_sha,
           updatedAt: now,
         }),
       });
@@ -4214,10 +4226,10 @@ function processWaitState({
         rootDir,
         workItemId,
         wait: nextState.wait,
-        prPath: activePr.url,
+        prPath: ciActivePr.url,
         now,
         approvalState:
-          designAuthorityConfig?.authority_required && state.design_authority?.status === "reviewed"
+          designAuthorityConfig?.authority_required && ciState.design_authority?.status === "reviewed"
             ? "claude_approved"
             : "codex_approved",
         lifecycle: "ready_for_review",
@@ -4230,12 +4242,12 @@ function processWaitState({
       };
     }
 
-    if (prRole === "frontend" && state.wait.stage === 6) {
+    if (prRole === "frontend" && ciState.wait.stage === 6) {
       const nextState = saveRuntime({
         rootDir,
         workItemId,
         state: setWaitState({
-          state,
+          state: ciState,
           kind: null,
           updatedAt: now,
         }),
@@ -4252,7 +4264,7 @@ function processWaitState({
         rootDir,
         workItemId,
         state: setWaitState({
-          state,
+          state: ciState,
           kind: null,
           updatedAt: now,
         }),
@@ -4268,11 +4280,11 @@ function processWaitState({
       rootDir,
       workItemId,
       state: setWaitState({
-        state,
+        state: ciState,
         kind: "ready_for_next_stage",
         prRole,
-        stage: state.wait.stage,
-        headSha: activePr.head_sha,
+        stage: ciState.wait.stage,
+        headSha: ciActivePr.head_sha,
         updatedAt: now,
       }),
     });
@@ -4357,6 +4369,122 @@ function upsertPullRequest({
       updatedAt: now,
     }),
   });
+}
+
+function refreshCiWaitPullRequestState({
+  rootDir,
+  workItemId,
+  state,
+  github,
+  prRole,
+  activePr,
+  now,
+  requireSummary = false,
+}) {
+  if (!activePr?.url || typeof github.getPullRequestSummary !== "function") {
+    return {
+      state,
+      activePr,
+      summary: null,
+    };
+  }
+
+  let summary;
+  try {
+    summary = github.getPullRequestSummary({
+      prRef: activePr.url,
+    });
+  } catch (error) {
+    if (requireSummary) {
+      throw error;
+    }
+
+    return {
+      state,
+      activePr,
+      summary: null,
+    };
+  }
+
+  const nextDraft = typeof summary?.isDraft === "boolean" ? summary.isDraft : activePr.draft ?? null;
+  const nextBranch =
+    typeof summary?.headRefName === "string" && summary.headRefName.trim().length > 0
+      ? summary.headRefName.trim()
+      : activePr.branch ?? null;
+  const nextHeadSha =
+    typeof summary?.headRefOid === "string" && summary.headRefOid.trim().length > 0
+      ? summary.headRefOid.trim()
+      : activePr.head_sha ?? state.wait?.head_sha ?? null;
+  const currentDraft = typeof activePr.draft === "boolean" ? activePr.draft : null;
+  const currentBranch = typeof activePr.branch === "string" && activePr.branch.trim().length > 0
+    ? activePr.branch.trim()
+    : null;
+  const currentHeadSha =
+    typeof activePr.head_sha === "string" && activePr.head_sha.trim().length > 0
+      ? activePr.head_sha.trim()
+      : null;
+  const currentWaitHeadSha =
+    typeof state.wait?.head_sha === "string" && state.wait.head_sha.trim().length > 0
+      ? state.wait.head_sha.trim()
+      : null;
+
+  const shouldUpdatePr =
+    nextDraft !== currentDraft
+    || nextBranch !== currentBranch
+    || nextHeadSha !== currentHeadSha;
+  const shouldUpdateWait = nextHeadSha !== currentWaitHeadSha;
+
+  if (!shouldUpdatePr && !shouldUpdateWait) {
+    return {
+      state,
+      activePr,
+      summary,
+    };
+  }
+
+  const syncedState = shouldUpdatePr
+    ? upsertPullRequest({
+        rootDir,
+        workItemId,
+        state,
+        role: prRole,
+        pr: {
+          number: activePr.number,
+          url: activePr.url,
+          draft: nextDraft,
+        },
+        branch: nextBranch,
+        headSha: nextHeadSha,
+        now,
+      })
+    : state;
+  const updatedState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setWaitState({
+      state: syncedState,
+      kind: "ci",
+      prRole,
+      stage: state.wait?.stage ?? state.active_stage ?? null,
+      headSha: nextHeadSha,
+      reason: state.wait?.reason ?? null,
+      until: state.wait?.until ?? null,
+      phase: resolveStatePhase(syncedState) ?? undefined,
+      nextAction: state.next_action ?? "poll_ci",
+      updatedAt: now,
+    }),
+  });
+
+  return {
+    state: updatedState,
+    activePr: updatedState.prs?.[prRole] ?? {
+      ...activePr,
+      draft: nextDraft,
+      branch: nextBranch,
+      head_sha: nextHeadSha,
+    },
+    summary,
+  };
 }
 
 function getActivePullRequest(state, role) {

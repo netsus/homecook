@@ -29,7 +29,7 @@ function createFakeGhBin(rootDir: string) {
       "    printf '%s\\n' '{\"merged\":true}'",
       "    ;;",
       "  'pr view')",
-      "    printf '%s\\n' '{\"state\":\"MERGED\",\"mergedAt\":\"2026-03-27T11:54:00Z\",\"mergeStateStatus\":\"UNKNOWN\"}'",
+      "    printf '%s\\n' '{\"state\":\"MERGED\",\"mergedAt\":\"2026-03-27T11:54:00Z\",\"mergeStateStatus\":\"UNKNOWN\",\"reviewDecision\":null,\"headRefOid\":\"abc123def456\",\"headRefName\":\"feature/be-03-recipe-like\",\"isDraft\":false}'",
       "    ;;",
       "  *)",
       "    printf '%s\\n' '{\"ok\":true}'",
@@ -153,6 +153,29 @@ describe("OMO GitHub automation client", () => {
     expect(checks).toEqual({
       bucket: "pending",
       checks: [],
+    });
+  });
+
+  it("returns live PR head metadata in the pull request summary", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-summary-head-"));
+    const { binPath } = createFakeGhBin(rootDir);
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+    });
+
+    const summary = client.getPullRequestSummary({
+      prRef: "https://github.com/netsus/homecook/pull/41",
+    });
+
+    expect(summary).toEqual({
+      state: "MERGED",
+      mergedAt: "2026-03-27T11:54:00Z",
+      mergeStateStatus: "UNKNOWN",
+      reviewDecision: null,
+      headRefOid: "abc123def456",
+      headRefName: "feature/be-03-recipe-like",
+      isDraft: false,
     });
   });
 
