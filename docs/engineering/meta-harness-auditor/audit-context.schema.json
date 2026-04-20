@@ -26,6 +26,16 @@
     "sampled_slices": {
       "type": "array"
     },
+    "sample_selection_reason": {},
+    "incident_ids_consulted": {
+      "type": "array"
+    },
+    "missing_evidence_summary": {
+      "type": "array"
+    },
+    "confidence_downgrade_reasons": {
+      "type": "array"
+    },
     "required_inputs_checked": {
       "type": "array"
     },

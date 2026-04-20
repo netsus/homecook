@@ -7,6 +7,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { validateKnownShape } from "../scripts/lib/validate-workflow-v2.mjs";
 import {
   detectBookkeepingOverlap,
+  detectOmoAuditCoverageGap,
+  detectOmoPromotionDrift,
   detectOmoPromotionRisk,
   detectPlaywrightWorkflowGap,
   resolveFixArgs,
@@ -40,6 +42,9 @@ function createAuditFixture() {
   write(rootDir, "docs/workpacks/README.md", "# workpacks\n");
   write(rootDir, "docs/workpacks/03-recipe-like/README.md", "# slice 03\n");
   write(rootDir, "docs/workpacks/04-recipe-save/README.md", "# slice 04\n");
+  write(rootDir, "docs/workpacks/05-planner-week-core/README.md", "# slice 05\n");
+  write(rootDir, "docs/workpacks/06-recipe-to-planner/README.md", "# slice 06\n");
+  write(rootDir, "docs/workpacks/07-meal-manage/README.md", "# slice 07\n");
   write(
     rootDir,
     "docs/engineering/slice-workflow.md",
@@ -225,6 +230,66 @@ function createAuditFixture() {
             stability: "stable",
             introduced_in: "C2",
           },
+          {
+            id: "H-OMO-002",
+            title: "Audit sample coverage omits recent or in-flight OMO evidence",
+            severity: "important",
+            priority: "P1",
+            bucket: "workflow",
+            owner: "workflow-v2",
+            safe_to_autofix: false,
+            approval_required: true,
+            stability: "stable",
+            introduced_in: "reset-phase6",
+          },
+          {
+            id: "H-OMO-003",
+            title: "Runtime anomaly signals are missing from OMO audit findings",
+            severity: "important",
+            priority: "P1",
+            bucket: "shared-tooling",
+            owner: "workflow-v2",
+            safe_to_autofix: false,
+            approval_required: true,
+            stability: "stable",
+            introduced_in: "reset-phase6",
+          },
+          {
+            id: "H-OMO-004",
+            title: "Canonical OMO evidence depends on ephemeral or missing artifacts",
+            severity: "important",
+            priority: "P2",
+            bucket: "shared-tooling",
+            owner: "workflow-v2",
+            safe_to_autofix: false,
+            approval_required: true,
+            stability: "stable",
+            introduced_in: "reset-phase6",
+          },
+          {
+            id: "H-OMO-005",
+            title: "PR or CI reality drift is not reflected in audit outputs",
+            severity: "important",
+            priority: "P2",
+            bucket: "workflow",
+            owner: "workflow-v2",
+            safe_to_autofix: false,
+            approval_required: true,
+            stability: "stable",
+            introduced_in: "reset-phase6",
+          },
+          {
+            id: "H-OMO-006",
+            title: "Promotion verdict ignores unresolved incident or replay gaps",
+            severity: "important",
+            priority: "P1",
+            bucket: "promotion-blocker",
+            owner: "workflow-v2",
+            safe_to_autofix: false,
+            approval_required: true,
+            stability: "stable",
+            introduced_in: "reset-phase6",
+          },
         ],
       },
       null,
@@ -259,6 +324,26 @@ function createAuditFixture() {
       null,
       2,
     ),
+  );
+  write(
+    rootDir,
+    "docs/engineering/workflow-v2/omo-incident-registry.md",
+    [
+      "# OMO Incident Registry",
+      "",
+      "### OMO-06-001",
+      "- status: `open`",
+      "- boundary: `omo-system`",
+      "- bucket: `D. Runtime / Observability Reset`",
+      "- symptom: slice06 manual handoff remained the real completion path.",
+      "",
+      "### OMO-07-001",
+      "- status: `open`",
+      "- boundary: `omo-system`",
+      "- bucket: `C. Supervisor Contract Reset`",
+      "- symptom: slice07 contract drift remains unresolved.",
+      "",
+    ].join("\n"),
   );
 
   return rootDir;
@@ -316,6 +401,168 @@ describe("meta-harness-auditor", () => {
 
     expect(governanceFindings.map((finding) => finding.id)).toContain("H-GOV-001");
     expect(promotionFindings.map((finding) => finding.id)).toContain("H-OMO-001");
+  });
+
+  it("detects sample coverage gaps when recent or incident-linked slices are omitted", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    const findings = detectOmoAuditCoverageGap({
+      rootDir,
+      sampledSlices: ["03-recipe-like", "04-recipe-save"],
+      explicitSlices: ["03-recipe-like", "04-recipe-save"],
+      inFlightSlice: "07-meal-manage",
+    });
+
+    expect(findings.map((finding) => finding.id)).toContain("H-OMO-002");
+    expect(findings[0]?.suggested_next_step).toContain("recent slices missing");
+  });
+
+  it("detects promotion drift when ready/default ignores open incidents and replay gaps", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    write(
+      rootDir,
+      "docs/engineering/workflow-v2/README.md",
+      [
+        "# Workflow v2",
+        "",
+        "Workflow v2 is the canonical default path.",
+        "Promotion evidence is tracked in .workflow-v2/promotion-evidence.json.",
+        "manual handoff는 `high-risk` / `anchor-extension` / `exceptional recovery`에 한정된 예외 경로다.",
+        "provider wait와 budget issue는 기본적으로 `pause + scheduled resume`를 사용한다.",
+        "live smoke는 일반 PR CI 전체 강제가 아니라 `external_smokes[]`가 선언된 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.",
+        "live smoke evidence의 canonical source는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
+        "scheduler standard는 team-shared default를 `macOS launchd`로 고정하고, non-macOS 환경은 `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending` fallback으로 다룬다.",
+        "scheduler install/config 변경 뒤와 최소 `slice-batch-review`마다 1회 `pnpm omo:scheduler:verify -- --work-item <id>`와 `pnpm omo:tick:watch -- --work-item <id>`를 함께 확인한다.",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      "docs/engineering/workflow-v2/promotion-readiness.md",
+      [
+        "# OMO Promotion Readiness",
+        "",
+        "#### `manual-handoff-policy`",
+        "manual handoff는 `high-risk`, `anchor-extension`, `exceptional recovery`에서만 허용한다.",
+        "provider wait, Claude budget unavailable, 일반 CI polling 지연은 기본적으로 human handoff가 아니라 `pause + scheduled resume`를 사용한다.",
+        "",
+        "#### `live-smoke-standard`",
+        "live smoke는 `external_smokes[]`가 비어 있지 않은 slice, provider/scheduler control-plane 변경, `promotion-gate` 직전 rehearsal에서 required다.",
+        "canonical evidence는 source PR의 `Actual Verification`이며, closeout preflight는 같은 evidence를 재사용한다.",
+        "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox rehearsal 중 더 이른 쪽을 따른다.",
+        "",
+        "#### `scheduler-standard`",
+        "team-shared default scheduler는 현재 `macOS launchd`로 고정한다.",
+        "non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.",
+        "최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      ".opencode/README.md",
+      [
+        "# opencode",
+        "",
+        "## Manual Handoff Standard",
+        "provider wait, Claude budget unavailable, 일반 CI polling 지연은 기본적으로 human handoff가 아니라 `pause + scheduled resume`를 사용한다.",
+        "handoff bundle은 아래를 반드시 포함한다.",
+        "",
+        "## Live Smoke Standard",
+        "canonical evidence는 source PR `Actual Verification`이고, closeout preflight는 그 evidence를 재사용한다.",
+        "rehearsal cadence는 최소 `slice-batch-review`마다 1회 또는 주 1회 sandbox repo rehearsal 중 더 이른 쪽을 따른다.",
+        "",
+        "## Scheduler Standard",
+        "team-shared default scheduler는 현재 `macOS launchd`다.",
+        "non-macOS 환경은 persistent daemon parity를 요구하지 않고, `pnpm omo:tick -- --all` 또는 operator-driven `omo:resume-pending`을 fallback으로 사용한다.",
+        "최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      "docs/engineering/workflow-v2/omo-base.md",
+      [
+        "# OMO base",
+        "",
+        "OMO runs the default workflow stack.",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      ".workflow-v2/promotion-evidence.json",
+      JSON.stringify(
+        {
+          version: 1,
+          target: "OMO v2",
+          updated_at: "2026-04-14T00:00:00.000Z",
+          canonical_policy: "v2",
+          execution_mode: "default",
+          documentation_gates: [
+            { id: "promotion-checklist", status: "pass", notes: "done", evidence_refs: ["docs/engineering/workflow-v2/promotion-readiness.md"] },
+          ],
+          operational_gates: [
+            { id: "manual-handoff-policy", status: "pass", notes: "done", evidence_refs: ["docs/engineering/workflow-v2/README.md"] },
+            { id: "live-smoke-standard", status: "pass", notes: "done", evidence_refs: [".opencode/README.md"] },
+            {
+              id: "scheduler-standard",
+              status: "pass",
+              notes: "done",
+              evidence_refs: [
+                "docs/engineering/workflow-v2/README.md",
+                "docs/engineering/workflow-v2/promotion-readiness.md",
+                ".opencode/README.md",
+              ],
+            },
+          ],
+          pilot_lanes: [
+            {
+              id: "authority-required-ui",
+              label: "Authority lane",
+              status: "pass",
+              required: true,
+              notes: "done",
+              workpack_refs: ["docs/workpacks/06-recipe-to-planner/README.md"],
+              checkpoint_refs: ["stage2-complete", "stage4-ready-for-review", "stage6-closeout"],
+            },
+            {
+              id: "external-smoke",
+              label: "External smoke lane",
+              status: "pass",
+              required: true,
+              notes: "done",
+              workpack_refs: [],
+              checkpoint_refs: [],
+            },
+            {
+              id: "bugfix-patch",
+              label: "Bugfix lane",
+              status: "pass",
+              required: true,
+              notes: "done",
+              workpack_refs: [],
+              checkpoint_refs: [],
+            },
+          ],
+          promotion_gate: {
+            status: "ready",
+            blockers: [],
+            next_review_trigger: "none",
+            notes: "ready",
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const findings = detectOmoPromotionDrift({ rootDir });
+
+    expect(findings.map((finding) => finding.id)).toContain("H-OMO-006");
   });
 
   it("clears H-GOV-001 once the authority matrix and shared helper wiring exist", () => {
@@ -559,6 +806,51 @@ describe("meta-harness-auditor", () => {
     expect(detectOmoPromotionRisk({ rootDir })).toEqual([]);
   });
 
+  it("clears H-OMO-006 once replay evidence exists and open incidents are closed by replay", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    write(
+      rootDir,
+      "docs/engineering/workflow-v2/omo-incident-registry.md",
+      [
+        "# OMO Incident Registry",
+        "",
+        "### OMO-06-001",
+        "- status: `closed-by-replay`",
+        "- boundary: `omo-system`",
+        "- symptom: slice06 replay passed.",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      ".workflow-v2/promotion-evidence.json",
+      JSON.stringify(
+        {
+          version: 1,
+          target: "OMO v2",
+          updated_at: "2026-04-14T00:00:00.000Z",
+          canonical_policy: "v2",
+          execution_mode: "default",
+          documentation_gates: [],
+          operational_gates: [],
+          pilot_lanes: [],
+          promotion_gate: {
+            status: "ready",
+            blockers: [],
+            next_review_trigger: "none",
+            notes: "ready after replay acceptance",
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    expect(detectOmoPromotionDrift({ rootDir })).toEqual([]);
+  });
+
   it("writes a valid audit bundle", () => {
     const rootDir = createAuditFixture();
     tempDirs.push(rootDir);
@@ -608,6 +900,7 @@ describe("meta-harness-auditor", () => {
     expect(promotionReadiness.verdict).toBe("not-ready");
     expect(auditContext.run_mode).toBe("audit-only");
     expect(auditContext.cadence_event).toBe("manual-ad-hoc");
+    expect(auditContext.sample_selection_reason).toBeTruthy();
     expect(report).toContain("Meta Harness Audit Report");
     expect(result.findings.length).toBeGreaterThan(0);
   });

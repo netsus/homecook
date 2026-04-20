@@ -27,6 +27,20 @@
     },
     "evidence_refs": {
       "type": "array"
-    }
+    },
+    "promotion_evidence_status": {},
+    "missing_lane_ids": {
+      "type": "array"
+    },
+    "missing_operational_gate_ids": {
+      "type": "array"
+    },
+    "missing_documentation_gate_ids": {
+      "type": "array"
+    },
+    "incident_blockers": {
+      "type": "array"
+    },
+    "replay_evidence_present": {}
   }
 }
