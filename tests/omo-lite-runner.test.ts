@@ -2514,62 +2514,20 @@ describe("OMO-lite stage runner", () => {
     });
   });
 
-  it("allows an explicit opencode fallback for Claude-owned stages", () => {
+  it("rejects an explicit opencode provider override for Claude-owned stages", () => {
     const rootDir = createRunnerFixture();
-    const { binPath, argsPath } = createFakeOpencodeBin(rootDir, {
-      sessionId: "ses_claude_opencode",
-    });
-
-    const result = runStageWithArtifacts({
-      rootDir,
-      slice: "03-recipe-like",
-      stage: 1,
-      workItemId: "03-recipe-like",
-      claudeBudgetState: "available",
-      mode: "execute",
-      claudeProvider: "opencode",
-      opencodeBin: binPath,
-      environment: {
-        FAKE_OPENCODE_ARGS_PATH: argsPath,
-      },
-      now: "2026-03-26T22:15:00+09:00",
-    });
-
-    const runtime = JSON.parse(
-      readFileSync(join(rootDir, ".opencode", "omo-runtime", "03-recipe-like.json"), "utf8"),
-    ) as {
-      sessions: {
-        claude_primary: {
-          session_id: string;
-          provider: string;
-          agent: string;
-        };
-      };
-    };
-    const prompt = readFileSync(join(result.artifactDir, "prompt.md"), "utf8");
-
-    expect(result.execution).toMatchObject({
-      mode: "execute",
-      provider: "opencode",
-      agent: null,
-      model: "openai/gpt-5.4",
-      variant: "high",
-      sessionId: "ses_claude_opencode",
-    });
-    const args = readFileSync(argsPath, "utf8");
-    expect(args).toContain("--model");
-    expect(args).toContain("openai/gpt-5.4");
-    expect(args).toContain("--variant");
-    expect(args).not.toContain("--agent");
-    expect(prompt).toContain("## Claude Fallback Execution Contract");
-    expect(prompt).toContain("그 이유만으로 거부하거나 사용자에게 다시 Claude를 찾으라고 돌려보내지 마세요.");
-    expect(runtime.sessions.claude_primary).toMatchObject({
-      session_id: "ses_claude_opencode",
-      provider: "opencode",
-      agent: "athena",
-      model: "openai/gpt-5.4",
-      variant: "high",
-    });
+    expect(() =>
+      runStageWithArtifacts({
+        rootDir,
+        slice: "03-recipe-like",
+        stage: 1,
+        workItemId: "03-recipe-like",
+        claudeBudgetState: "available",
+        mode: "execute",
+        claudeProvider: "opencode" as "claude-cli",
+        now: "2026-03-26T22:15:00+09:00",
+      }),
+    ).toThrow('claudeProvider must be "claude-cli"');
   });
 
   it("cleans oh-my-opencode migration artifacts after an opencode run", () => {

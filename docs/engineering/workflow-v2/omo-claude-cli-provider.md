@@ -94,7 +94,7 @@ preflight 우선순위:
 
 1. repo-local override
 2. provider-aware local auth / health hint
-3. default `available`
+3. provider가 로컬에 구성되지 않았으면 `unavailable`
 
 runtime error classification:
 

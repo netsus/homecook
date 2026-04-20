@@ -2706,7 +2706,7 @@ function resolveStageProvider({
     return {
       provider: claudeProviderConfig.provider,
       bin: claudeProviderConfig.bin,
-      label: claudeProviderConfig.provider === "opencode" ? "Claude OpenCode" : "Claude CLI",
+      label: "Claude CLI",
     };
   }
 
@@ -2741,7 +2741,7 @@ function resolveStageProvider({
   return {
     provider: claudeProviderConfig.provider,
     bin: claudeProviderConfig.bin,
-    label: claudeProviderConfig.provider === "opencode" ? "Claude OpenCode" : "Claude CLI",
+    label: "Claude CLI",
   };
 }
 
@@ -7622,7 +7622,7 @@ function createDefaultDependencies({
  *   maxTransitions?: number,
  *   ghBin?: string,
  *   opencodeBin?: string,
- *   claudeProvider?: "opencode"|"claude-cli",
+ *   claudeProvider?: "claude-cli",
  *   claudeBin?: string,
  *   claudeModel?: string,
  *   claudeEffort?: "low"|"medium"|"high",
@@ -8324,7 +8324,7 @@ export function superviseWorkItem(
  *   now?: string,
  *   ghBin?: string,
  *   opencodeBin?: string,
- *   claudeProvider?: "opencode"|"claude-cli",
+ *   claudeProvider?: "claude-cli",
  *   claudeBin?: string,
  *   claudeModel?: string,
  *   claudeEffort?: "low"|"medium"|"high",

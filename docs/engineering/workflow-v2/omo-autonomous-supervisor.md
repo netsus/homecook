@@ -58,7 +58,7 @@ autonomous supervisor는 `그 stage 결과를 다음 GitHub 상태와 다음 sta
 2. `omo:tick`은 scheduler resume entrypoint다.
 3. 사용자는 stage 번호, session ID, PR 번호, retry timer를 직접 맞춰 넣지 않는다.
 4. 기존 low-level 명령은 디버깅과 manual recovery용 primitive로 유지한다.
-5. Claude provider 기본값은 `claude-cli`이며, `opencode`는 emergency override다.
+5. Claude provider는 `claude-cli`만 허용한다.
 6. kickoff는 `omo:supervise`만 담당한다.
 7. `omo:tick -- --work-item <id>`는 kickoff를 하지 않고 existing runtime의 unfinished action만 재개한다.
 8. runtime이 없으면 `omo:tick`은 `noop: missing_runtime`을 반환한다.

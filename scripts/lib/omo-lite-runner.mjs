@@ -47,11 +47,6 @@ import {
   writeRuntimeState,
 } from "./omo-session-runtime.mjs";
 import { listWorktreeChangedFiles } from "./omo-worktree.mjs";
-
-const DEFAULT_OPENCODE_CLAUDE_FALLBACK_MODEL = "openai/gpt-5.4";
-const DEFAULT_OPENCODE_CLAUDE_FALLBACK_VARIANT = "high";
-const CLAUDE_FALLBACK_OPENCODE_TIMEOUT_MS = 60_000;
-
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string.`);
@@ -2170,7 +2165,7 @@ function resolveStatusPatch({ dispatch, execution }) {
  * @property {string} [executionDir]
  * @property {string|null} [subphase]
  * @property {string} [opencodeBin]
- * @property {"opencode"|"claude-cli"} [claudeProvider]
+ * @property {"claude-cli"} [claudeProvider]
  * @property {string} [claudeBin]
  * @property {string} [claudeModel]
  * @property {"low"|"medium"|"high"} [claudeEffort]
@@ -2258,50 +2253,8 @@ export function runStageWithArtifacts({
     environment,
     homeDir,
   });
-  const desiredProviderConfig =
-    sessionRole === "claude_primary"
-      ? claudeProviderConfig.provider === "opencode"
-        ? {
-            provider: "opencode",
-            bin: codexProviderConfig.bin,
-            agent: OMO_SESSION_ROLE_TO_AGENT.claude_primary,
-            model:
-              typeof claudeModel === "string" && claudeModel.trim().includes("/")
-                ? claudeModel.trim()
-                : DEFAULT_OPENCODE_CLAUDE_FALLBACK_MODEL,
-            variant:
-              typeof codexProviderConfig.variant === "string" && codexProviderConfig.variant.trim().length > 0
-                ? codexProviderConfig.variant.trim()
-                : DEFAULT_OPENCODE_CLAUDE_FALLBACK_VARIANT,
-          }
-        : claudeProviderConfig
-      : codexProviderConfig;
   const activeProviderConfig =
-    sessionRole === "claude_primary" &&
-    existingSessionId &&
-    existingSessionProvider &&
-    !explicitClaudeProvider
-      ? {
-          ...claudeProviderConfig,
-          provider: existingSessionProvider,
-          bin:
-            existingSessionProvider === "opencode"
-              ? codexProviderConfig.bin
-              : claudeProviderConfig.bin,
-          agent:
-            existingSessionProvider === "opencode"
-              ? OMO_SESSION_ROLE_TO_AGENT.claude_primary
-              : null,
-          model:
-            existingSessionProvider === "opencode"
-              ? desiredProviderConfig.model ?? null
-              : claudeProviderConfig.model,
-          variant:
-            existingSessionProvider === "opencode"
-              ? desiredProviderConfig.variant ?? null
-              : null,
-        }
-      : desiredProviderConfig;
+    sessionRole === "claude_primary" ? claudeProviderConfig : codexProviderConfig;
   const hasProviderMismatch =
     sessionRole === "claude_primary" &&
     Boolean(existingSessionId && existingSessionProvider) &&
@@ -2435,20 +2388,6 @@ export function runStageWithArtifacts({
     claudeProviderConfig,
     sessionBinding: dispatch.sessionBinding,
   });
-  const claudeFallbackPromptSections =
-    dispatch.actor === "claude" && executionBinding.provider === "opencode"
-      ? [
-          [
-            "## Claude Fallback Execution Contract",
-            "- Supervisor가 이 실행을 `claude_primary` emergency fallback으로 명시적으로 할당했습니다.",
-            "- 이 턴에서는 OpenCode 실행 표면을 쓰더라도 Claude public stage owner를 대신 수행하는 것으로 간주합니다.",
-            "- `docs/engineering/slice-workflow.md`의 'Claude가 담당' 규칙은 이미 이 fallback assignment로 충족됐으므로, 그 이유만으로 거부하거나 사용자에게 다시 Claude를 찾으라고 돌려보내지 마세요.",
-            "- 같은 stage scope/제약/산출물 계약은 그대로 유지하고, 필요한 문서 수정과 valid stage-result 작성까지 완료하세요.",
-            "- 이 fallback run에서는 background task, 병렬 subagent, 장시간 탐색-only 루프를 금지합니다. 필요한 읽기/수정/JSON 작성은 현재 run 안에서 직접 끝내세요.",
-            "- `stage-result.json` 미작성은 자동으로 contract failure가 되므로, 설명만 남기고 종료하지 말고 마지막에 반드시 stage-result를 먼저 쓰세요.",
-          ].join("\n"),
-        ]
-      : [];
   const stageOwnedChecklistSection =
     [2, 4].includes(normalizedStage) && strictChecklistContractActive
       ? [
@@ -2503,7 +2442,6 @@ export function runStageWithArtifacts({
             ].join("\n"),
           ]
         : []),
-      ...claudeFallbackPromptSections,
       ...(stageOwnedChecklistSection ? [stageOwnedChecklistSection] : []),
       ...extraPromptSections,
     ],
@@ -2520,15 +2458,9 @@ export function runStageWithArtifacts({
         })
       : basePrompt;
   const resolvedOpencodeBin =
-    activeProviderConfig.provider === "opencode"
-      ? !activeProviderConfig.bin || activeProviderConfig.bin === "opencode"
-        ? resolveDefaultOpencodeBin(environment, homeDir)
-        : activeProviderConfig.bin
-      : resolveDefaultOpencodeBin(environment, homeDir);
-  const executionTimeoutMs =
-    dispatch.actor === "claude" && executionBinding.provider === "opencode"
-      ? CLAUDE_FALLBACK_OPENCODE_TIMEOUT_MS
-      : undefined;
+    !codexProviderConfig.bin || codexProviderConfig.bin === "opencode"
+      ? resolveDefaultOpencodeBin(environment, homeDir)
+      : codexProviderConfig.bin;
 
   mkdirSync(targetArtifactDir, { recursive: true });
 
@@ -2723,7 +2655,6 @@ export function runStageWithArtifacts({
               opencodeBin: resolvedOpencodeBin,
               environment,
               stageResultPath,
-              timeoutMs: executionTimeoutMs,
             });
 
       result = {
@@ -2911,7 +2842,6 @@ export function runStageWithArtifacts({
               opencodeBin: resolvedOpencodeBin,
               environment,
               stageResultPath,
-              timeoutMs: executionTimeoutMs,
             });
 
       result = {
@@ -3059,7 +2989,6 @@ export function runStageWithArtifacts({
                 opencodeBin: resolvedOpencodeBin,
                 environment,
                 stageResultPath,
-                timeoutMs: executionTimeoutMs,
               });
 
         stageResult = readStageResult(targetArtifactDir);

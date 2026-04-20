@@ -114,7 +114,7 @@ function resolveSmokeStageSessionId(stage, subphase = "implementation") {
  * @property {string} artifactDir
  * @property {string} [provider]
  * @property {string} prompt
- * @property {"opencode"|"claude-cli"} [claudeProvider]
+ * @property {"claude-cli"} [claudeProvider]
  * @property {string} [claudeBin]
  * @property {string} [claudeModel]
  * @property {"low"|"medium"|"high"} [claudeEffort]
@@ -131,7 +131,7 @@ function resolveSmokeStageSessionId(stage, subphase = "implementation") {
  * @property {string} [artifactBaseDir]
  * @property {string} [workItemId]
  * @property {string} [now]
- * @property {"opencode"|"claude-cli"} [claudeProvider]
+ * @property {"claude-cli"} [claudeProvider]
  * @property {string} [claudeBin]
  * @property {string} [claudeModel]
  * @property {"low"|"medium"|"high"} [claudeEffort]

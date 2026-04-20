@@ -17,6 +17,7 @@ function createBudgetFixture() {
 
   mkdirSync(join(rootDir, ".opencode"), { recursive: true });
   mkdirSync(join(rootDir, ".artifacts"), { recursive: true });
+  mkdirSync(join(homeDir, ".claude"), { recursive: true });
   mkdirSync(join(homeDir, ".local", "share", "opencode"), { recursive: true });
 
   return {
@@ -27,30 +28,40 @@ function createBudgetFixture() {
   };
 }
 
-let fakeOpencodeCounter = 0;
+let fakeClaudeCounter = 0;
 
-function createFakeOpencodeBin(
+function createFakeClaudeBin(
   rootDir: string,
   options?: {
-    exitCode?: number;
-    stdout?: string[];
+    sessionId?: string;
+    stdoutJson?: Record<string, unknown>;
     stderr?: string;
   },
 ) {
-  fakeOpencodeCounter += 1;
-  const suffix = String(fakeOpencodeCounter);
-  const binPath = join(rootDir, `fake-opencode-budget-${suffix}.sh`);
-  const exitCode = options?.exitCode ?? 0;
-  const stdout = options?.stdout ?? [];
+  fakeClaudeCounter += 1;
+  const suffix = String(fakeClaudeCounter);
+  const binPath = join(rootDir, `fake-claude-budget-${suffix}.sh`);
+  const sessionId = options?.sessionId ?? `ses_fake_claude_budget_${suffix}`;
+  const stdoutJson =
+    options?.stdoutJson ??
+    {
+      type: "result",
+      subtype: "success",
+      is_error: false,
+      session_id: sessionId,
+    };
   const stderr = options?.stderr ?? "";
 
   writeFileSync(
     binPath,
     [
       "#!/bin/sh",
-      ...stdout.map((line) => `printf '%s\\n' '${line}'`),
+      "cat > /dev/null",
+      "cat <<'EOF'",
+      JSON.stringify(stdoutJson),
+      "EOF",
       stderr.length > 0 ? `printf '${stderr}\\n' >&2` : "",
-      `exit ${exitCode}`,
+      "exit 0",
     ].join("\n"),
   );
   chmodSync(binPath, 0o755);
@@ -120,20 +131,11 @@ function seedWorkflowState(rootDir: string, workItemId: string) {
 }
 
 describe("OMO-lite Claude budget resolution", () => {
-  it("detects available state when Anthropic auth is configured", () => {
-    const { rootDir, homeDir, authPath } = createBudgetFixture();
+  it("detects available state when Claude CLI local state is configured", () => {
+    const { rootDir, homeDir } = createBudgetFixture();
 
-    writeFileSync(
-      authPath,
-      JSON.stringify(
-        {
-          openai: { type: "oauth" },
-          anthropic: { type: "api", key: "test-key" },
-        },
-        null,
-        2,
-      ),
-    );
+    mkdirSync(join(homeDir, ".claude", "transcripts"), { recursive: true });
+    writeFileSync(join(homeDir, ".claude", "settings.json"), JSON.stringify({ model: "sonnet" }, null, 2));
 
     const resolved = resolveClaudeBudgetState({
       rootDir,
@@ -142,12 +144,12 @@ describe("OMO-lite Claude budget resolution", () => {
 
     expect(resolved).toMatchObject({
       state: "available",
-      source: "opencode-auth",
+      source: "claude-cli-local",
       providerConfigured: true,
     });
   });
 
-  it("treats opencode fallback as available when any OpenCode auth is configured", () => {
+  it("does not treat OpenCode auth alone as Claude availability", () => {
     const { rootDir, homeDir, authPath } = createBudgetFixture();
 
     writeFileSync(
@@ -167,13 +169,13 @@ describe("OMO-lite Claude budget resolution", () => {
     });
 
     expect(resolved).toMatchObject({
-      state: "available",
-      source: "opencode-auth",
-      providerConfigured: true,
+      state: "unavailable",
+      source: "missing-auth",
+      providerConfigured: false,
     });
   });
 
-  it("falls back to unavailable when no OpenCode auth is configured", () => {
+  it("falls back to unavailable when no Claude CLI local state is configured", () => {
     const { rootDir, homeDir } = createBudgetFixture();
 
     const resolved = resolveClaudeBudgetState({
@@ -379,28 +381,24 @@ describe("OMO-lite stage runner budget-aware fallback", () => {
     expect(statusBoard.items[0].notes).toContain("session_role=claude_primary");
   });
 
-  it("schedules a retry when Claude execution emits an Anthropic low-credit error event", () => {
-    const { rootDir, homeDir, authPath } = createBudgetFixture();
+  it("schedules a retry when Claude CLI emits an Anthropic low-credit error result", () => {
+    const { rootDir, homeDir } = createBudgetFixture();
     const workItemId = "stage1-runtime-budget";
 
     seedWorkflowState(rootDir, workItemId);
-    writeFileSync(
-      authPath,
-      JSON.stringify(
-        {
-          openai: { type: "oauth" },
-          anthropic: { type: "api", key: "test-key" },
-        },
-        null,
-        2,
-      ),
-    );
+    mkdirSync(join(homeDir, ".claude", "transcripts"), { recursive: true });
+    writeFileSync(join(homeDir, ".claude", "settings.json"), JSON.stringify({ model: "sonnet" }, null, 2));
 
-    const { binPath } = createFakeOpencodeBin(rootDir, {
-      stdout: [
-        "{\"type\":\"step_start\",\"sessionID\":\"ses_runtime_budget\",\"part\":{\"type\":\"step-start\"}}",
-        "{\"type\":\"error\",\"sessionID\":\"ses_runtime_budget\",\"error\":{\"name\":\"APIError\",\"data\":{\"message\":\"Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.\"}}}",
-      ],
+    const { binPath } = createFakeClaudeBin(rootDir, {
+      sessionId: "ses_runtime_budget",
+      stdoutJson: {
+        type: "result",
+        subtype: "error",
+        is_error: true,
+        session_id: "ses_runtime_budget",
+        result:
+          "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
+      },
     });
 
     const result = runStageWithArtifacts({
@@ -410,8 +408,7 @@ describe("OMO-lite stage runner budget-aware fallback", () => {
       stage: 1,
       workItemId,
       mode: "execute",
-      claudeProvider: "opencode",
-      opencodeBin: binPath,
+      claudeBin: binPath,
       now: "2026-03-27T01:50:00+09:00",
     });
 
