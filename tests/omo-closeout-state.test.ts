@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  projectCanonicalCloseoutToDocSurfaceSyncContract,
   projectCanonicalCloseoutToHumanSurfacePayload,
   projectCanonicalCloseoutToPrBodySections,
   projectCanonicalCloseoutToStatusFields,
@@ -137,6 +138,41 @@ describe("omo canonical closeout state", () => {
         "- all checks completed green: 예",
         "- started PR checks: canonical closeout snapshot does not own the check list; current head GitHub checks로 재확인 필요",
       ].join("\n"),
+    });
+  });
+
+  it("projects canonical closeout fields to the current README and acceptance sync contract", () => {
+    expect(
+      projectCanonicalCloseoutToDocSurfaceSyncContract(
+        {
+          ...closeoutSnapshot,
+          docs_projection: {
+            ...closeoutSnapshot.docs_projection,
+            roadmap_lifecycle: "ready_for_review",
+            design_status: "pending-review",
+            delivery_checklist: "waived",
+            design_authority: "pending",
+            acceptance: "waived",
+          },
+        },
+        {
+          workItemId: "06-recipe-to-planner",
+        },
+      ),
+    ).toEqual({
+      canonical_source: ".workflow-v2/work-items/06-recipe-to-planner.json#closeout",
+      readme: {
+        roadmap_status: "in-progress",
+        design_status: "pending-review",
+        delivery_checklist_status: "complete",
+        design_authority_status: "required",
+      },
+      acceptance: {
+        status: "complete",
+      },
+      sync_state: {
+        docs_synced_at: "2026-04-21T00:01:00Z",
+      },
     });
   });
 

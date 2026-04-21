@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 
 import { resolveSliceBookkeepingPaths } from "./bookkeeping-authority.mjs";
 import { resolveBaseRef } from "./check-workpack-docs.mjs";
+import { projectCanonicalCloseoutToDocSurfaceSyncContract } from "./omo-closeout-state.mjs";
 import {
   readSliceRoadmapStatus,
   readWorkpackDesignAuthority,
@@ -29,6 +30,10 @@ function resolveBranchName(rootDir, env) {
   });
 
   return result.status === 0 ? (result.stdout ?? "").trim() : "";
+}
+
+function readJson(filePath) {
+  return JSON.parse(readFileSync(filePath, "utf8"));
 }
 
 function listChangedFilesAgainstBase({ rootDir, baseRef }) {
@@ -214,6 +219,29 @@ function resolveWorkpackPaths({ rootDir, slice }) {
   };
 }
 
+function readTrackedWorkItemCloseout({
+  rootDir,
+  slice,
+}) {
+  const filePath = resolve(rootDir, ".workflow-v2", "work-items", `${slice}.json`);
+  if (!existsSync(filePath)) {
+    return {
+      closeout: null,
+      filePath,
+      missing: true,
+      workItemId: slice,
+    };
+  }
+
+  const workItem = readJson(filePath);
+  return {
+    closeout: workItem?.closeout ?? null,
+    filePath,
+    missing: false,
+    workItemId: typeof workItem?.id === "string" && workItem.id.trim().length > 0 ? workItem.id.trim() : slice,
+  };
+}
+
 function pushMissingSectionError(errors, parsedSection, label) {
   if (!parsedSection.missing) {
     return;
@@ -247,6 +275,111 @@ function buildScopedChecklistErrors({ items, reason }) {
     path: `${item.filePath}:${item.lineNumber}`,
     message: `${reason}: ${item.text}`,
   }));
+}
+
+function resolveChecklistSurfaceStatus(items) {
+  return resolveUncheckedChecklistItems(items).length > 0 ? "pending" : "complete";
+}
+
+function validateCanonicalCloseoutDocSurfaceSync({
+  rootDir,
+  slice,
+}) {
+  const trackedCloseout = readTrackedWorkItemCloseout({
+    rootDir,
+    slice,
+  });
+  if (trackedCloseout.missing || !trackedCloseout.closeout) {
+    return [];
+  }
+
+  const projection = projectCanonicalCloseoutToDocSurfaceSyncContract(trackedCloseout.closeout, {
+    workItemId: trackedCloseout.workItemId,
+  });
+  if (!projection) {
+    return [];
+  }
+
+  const canonicalSource = projection.canonical_source ?? `${trackedCloseout.filePath}#closeout`;
+  const roadmapStatus = readSliceRoadmapStatus({
+    rootDir,
+    slice,
+  });
+  const designStatus = readWorkpackDesignStatus({
+    rootDir,
+    slice,
+  });
+  const designAuthority = readWorkpackDesignAuthority({
+    rootDir,
+    slice,
+  });
+  const checklistContract = readWorkpackChecklistContract({
+    rootDir,
+    slice,
+  });
+  const errors = [];
+
+  if (
+    !roadmapStatus.missing
+    && projection.readme.roadmap_status
+    && roadmapStatus.status !== projection.readme.roadmap_status
+  ) {
+    errors.push({
+      path: roadmapStatus.filePath,
+      message:
+        `Roadmap status must match canonical closeout projection '${projection.readme.roadmap_status}' from \`${canonicalSource}\`.`,
+    });
+  }
+
+  if (
+    !designStatus.missing
+    && projection.readme.design_status
+    && designStatus.status !== projection.readme.design_status
+  ) {
+    errors.push({
+      path: designStatus.filePath,
+      message:
+        `Design Status must match canonical closeout projection '${projection.readme.design_status}' from \`${canonicalSource}\`.`,
+    });
+  }
+
+  if (
+    !designAuthority.missing
+    && projection.readme.design_authority_status
+    && designAuthority.authorityStatus !== projection.readme.design_authority_status
+  ) {
+    errors.push({
+      path: designAuthority.filePath,
+      message:
+        `Design Authority status must match canonical closeout projection '${projection.readme.design_authority_status}' from \`${canonicalSource}\`.`,
+    });
+  }
+
+  if (checklistContract.errors.length === 0 && projection.readme.delivery_checklist_status) {
+    const deliveryChecklistStatus = resolveChecklistSurfaceStatus(checklistContract.deliveryItems);
+    if (deliveryChecklistStatus !== projection.readme.delivery_checklist_status) {
+      errors.push({
+        path: checklistContract.readmePath,
+        message:
+          `Delivery Checklist closeout must match canonical closeout projection '${projection.readme.delivery_checklist_status}' from \`${canonicalSource}\`.`,
+      });
+    }
+  }
+
+  if (checklistContract.errors.length === 0 && projection.acceptance.status) {
+    const acceptanceStatus = resolveChecklistSurfaceStatus(
+      checklistContract.acceptanceItems.filter((item) => !item.manualOnly),
+    );
+    if (acceptanceStatus !== projection.acceptance.status) {
+      errors.push({
+        path: checklistContract.acceptancePath,
+        message:
+          `Acceptance closeout must match canonical closeout projection '${projection.acceptance.status}' from \`${canonicalSource}\`.`,
+      });
+    }
+  }
+
+  return errors;
 }
 
 function validateDesignAuthority({
@@ -583,6 +716,12 @@ export function validateCloseoutSync({
       roadmapStatus,
       strictMode,
     });
+    errors.push(
+      ...validateCanonicalCloseoutDocSurfaceSync({
+        rootDir,
+        slice,
+      }),
+    );
 
     if (errors.length > 0) {
       results.push({
