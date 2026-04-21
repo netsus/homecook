@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-17T00:22:53Z",
+  "updated_at": "2026-04-21T15:14:16.588Z",
   "canonical_policy": "v2",
   "execution_mode": "default",
   "documentation_gates": [
@@ -102,9 +102,13 @@
     }
   ],
   "promotion_gate": {
-    "status": "ready",
-    "blockers": [],
-    "next_review_trigger": "On future workflow-v2 standard changes or promotion regressions",
-    "notes": "Promotion-gate audit completed with all required lane evidence recorded. OMO v2 is now the default operating path, while future cutover changes still require docs-governance review."
+    "status": "not-ready",
+    "blockers": [
+      "H-GOV-001",
+      "H-OMO-001",
+      "H-OMO-006"
+    ],
+    "next_review_trigger": "After canonical closeout state ownership, incident disposition cleanup, and promotion/auditor policy alignment",
+    "notes": "Representative replay acceptance now passes, but promotion remains not-ready until unresolved incident blockers and bookkeeping/auditor gaps are reduced."
   }
 }
