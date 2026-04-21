@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   projectCanonicalCloseoutToHumanSurfacePayload,
+  projectCanonicalCloseoutToPrBodySections,
   projectCanonicalCloseoutToStatusFields,
   validateHumanSurfaceProjectionContract,
   validateStatusItemAgainstCanonicalCloseout,
@@ -109,6 +110,33 @@ describe("omo canonical closeout state", () => {
         artifact_missing: true,
         last_recovery_at: "2026-04-21T00:00:00Z",
       },
+    });
+  });
+
+  it("projects canonical closeout fields to PR body Closeout Sync and Merge Gate sections", () => {
+    expect(
+      projectCanonicalCloseoutToPrBodySections(closeoutSnapshot, {
+        workItemId: "06-recipe-to-planner",
+      }),
+    ).toEqual({
+      closeout_sync: [
+        "- canonical closeout source: `.workflow-v2/work-items/06-recipe-to-planner.json#closeout`",
+        "- roadmap status: `merged`",
+        "- README Delivery Checklist: `complete`",
+        "- acceptance: `complete`",
+        "- Design Status: `confirmed`",
+        "- Design Authority: `passed`",
+        "- automation-spec closeout metadata: `synced`",
+        "- projection sync state: docs=`2026-04-21T00:01:00Z`, PR body=`2026-04-21T00:03:00Z`",
+      ].join("\n"),
+      merge_gate: [
+        "- canonical closeout source: `.workflow-v2/work-items/06-recipe-to-planner.json#closeout`",
+        "- current head SHA: `abc1234`",
+        "- approval state: `dual_approved`",
+        "- required checks projection: `passed`",
+        "- all checks completed green: 예",
+        "- started PR checks: canonical closeout snapshot does not own the check list; current head GitHub checks로 재확인 필요",
+      ].join("\n"),
     });
   });
 
