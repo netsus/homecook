@@ -4,6 +4,7 @@
 
 이 문서는 canonical closeout ownership / projection semantics를 정의하는 문서가 아니다.
 그 기준은 `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`를 따른다.
+현재 canonical owner는 `.workflow-v2/work-items/<id>.json#closeout`이다.
 
 이 문서는 전환 기간 동안 `docs/omo-closeout-<slice>` branch가 만질 수 있는
 writable closeout surface만 기록하는 compatibility note다.

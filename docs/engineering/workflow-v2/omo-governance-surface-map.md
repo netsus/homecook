@@ -75,6 +75,7 @@
 - `.opencode/README.md`
 - `docs/engineering/workflow-v2/omo-supervisor-reset-plan.md`
 - `docs/engineering/workflow-v2/omo-incident-registry.md`
+- `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`
 - 필요 시 `docs/engineering/workflow-v2/promotion-readiness.md`
 
 원칙:
@@ -90,6 +91,7 @@
 
 필수 읽기 target:
 
+- `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`
 - `docs/engineering/workflow-v2/omo-autonomous-supervisor.md`
 - `docs/engineering/workflow-v2/omo-lite-supervisor-spec.md`
 - `docs/engineering/workflow-v2/omo-evaluator.md`
