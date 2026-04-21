@@ -157,15 +157,18 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-07-001
 
-- status: `open`
+- status: `closed-by-replay`
 - boundary: `omo-system`
 - bucket: `C. Supervisor Contract Reset`
 - stage_scope: `Stage 1 / internal 1.5 / Stage 2`
 - symptom: `stage-result.json` 미작성, rebuttal alias mismatch, semantic incomplete result 제출이 반복됐다.
-- current_recovery: rerun, manual repair, stricter prompt, 후행 validator 보강으로 그때그때 수습했다.
+- current_recovery: post-reset slice07 fullstack replay에서 slice-specific unit/E2E regression, targeted supervisor harness regression, closeout/bookkeeping validators를 다시 실행해 representative replay evidence를 repo-local surface에 남겼다. 이번 replay에서는 runtime JSON 수동 편집, stale lock 수동 해제, stale CI snapshot 수동 보정이 필요하지 않았고, replay ledger `.workflow-v2/replay-acceptance.json`에 lane `pass`를 기록했다.
 - root_cause_hypothesis: stage-result contract가 stage type별로 충분히 작고 명확하지 않으며 alias normalization과 semantic completeness 검사 시점이 늦다.
 - evidence_refs:
   - `.artifacts/omo-findings/slice07-omo-failure-log.md`
+  - `.artifacts/meta-harness-auditor/slice07-replay/report.md`
+  - `.workflow-v2/replay-acceptance.json`
+  - `docs/engineering/workflow-v2/replay-slice07-fullstack.md`
   - `docs/engineering/workflow-v2/omo-evaluator.md`
   - `scripts/lib/omo-stage-result.mjs`
 
