@@ -18,6 +18,8 @@ import {
   resolveUncheckedChecklistItems,
 } from "./omo-checklist-contract.mjs";
 
+const CLOSEOUT_SLICE_BRANCH_PATTERN = /^docs\/omo-closeout-([0-9]{2}[-a-z0-9]+)$/;
+
 function resolveBranchName(rootDir, env) {
   const branchName = env.BRANCH_NAME ?? env.GITHUB_HEAD_REF;
   if (typeof branchName === "string" && branchName.trim().length > 0) {
@@ -65,7 +67,7 @@ function resolveBranchContext(branchName) {
     };
   }
 
-  const closeoutMatch = /^docs\/omo-closeout-(.+)$/.exec(branchName);
+  const closeoutMatch = CLOSEOUT_SLICE_BRANCH_PATTERN.exec(branchName);
   if (closeoutMatch) {
     return {
       kind: "omo-closeout",

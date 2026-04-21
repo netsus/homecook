@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
+const CLOSEOUT_SLICE_BRANCH_PATTERN = /^docs\/omo-closeout-([0-9]{2}[-a-z0-9]+)$/;
+
 export function resolveBranchName({
   rootDir = process.cwd(),
   env = process.env,
@@ -60,7 +62,7 @@ export function resolveSliceBranchContext(
   }
 
   if (includeCloseout) {
-    const closeoutMatch = /^docs\/omo-closeout-(.+)$/.exec(branchName);
+    const closeoutMatch = CLOSEOUT_SLICE_BRANCH_PATTERN.exec(branchName);
     if (closeoutMatch) {
       return {
         kind: "omo-closeout",
