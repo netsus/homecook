@@ -8684,6 +8684,7 @@ export function superviseWorkItem(
  *   workItemId?: string,
  *   all?: boolean,
  *   now?: string,
+ *   maxTransitions?: number,
  *   ghBin?: string,
  *   opencodeBin?: string,
  *   claudeProvider?: "claude-cli",

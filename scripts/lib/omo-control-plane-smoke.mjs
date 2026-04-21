@@ -83,6 +83,7 @@ function resolveSmokeStageSessionId(stage, subphase = "implementation") {
  * @property {string} [rootDir]
  * @property {string} [workItemId]
  * @property {string} [slice]
+ * @property {string|null} [subphase]
  * @property {number} stage
  * @property {string} executionDir
  */
@@ -1141,7 +1142,7 @@ export function createControlPlaneSmokeStageRunner({
   workItemId = "99-omo-control-plane-smoke",
   now = new Date().toISOString(),
 } = {}) {
-  return ({ stage, subphase = null, executionDir }) => {
+  return ({ stage, subphase = "implementation", executionDir }) => {
     const smokeState = readControlPlaneSmokeState({
       rootDir,
       workItemId,
