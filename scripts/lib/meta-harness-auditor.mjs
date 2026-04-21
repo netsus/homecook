@@ -513,6 +513,31 @@ function readPromotionEvidenceStatus(rootDir) {
   };
 }
 
+function readReplayAcceptanceStatus(rootDir) {
+  const replayPath = path.join(rootDir, ".workflow-v2/replay-acceptance.json");
+  const replay = readJsonIfExists(replayPath);
+  const lanes = Array.isArray(replay?.lanes) ? replay.lanes : [];
+  const requiredLanes = lanes.filter((lane) => lane?.required === true);
+  const incompleteRequiredLaneIds = requiredLanes
+    .filter((lane) => lane?.status !== "pass")
+    .map((lane) => lane?.id)
+    .filter(Boolean);
+  const summaryStatus = replay?.summary?.status ?? "not-started";
+
+  return {
+    replayPath,
+    replay,
+    exists: Boolean(replay),
+    summaryStatus,
+    requiredLaneIds: requiredLanes.map((lane) => lane?.id).filter(Boolean),
+    incompleteRequiredLaneIds,
+    hasPassedReplay:
+      Boolean(replay) &&
+      summaryStatus === "pass" &&
+      incompleteRequiredLaneIds.length === 0,
+  };
+}
+
 export function resolveAuditArgs(argv = []) {
   let outputDir;
   let sampleSlices = [];
@@ -848,6 +873,7 @@ export function detectOmoPromotionDrift({ rootDir = process.cwd(), registry } = 
   const resolvedRegistry = registry ?? loadFindingRegistry(rootDir);
   const promotionStatus = readPromotionEvidenceStatus(rootDir);
   const incidentStatus = readIncidentRegistryStatus(rootDir);
+  const replayStatus = readReplayAcceptanceStatus(rootDir);
   const promotionClaimActive =
     promotionStatus.executionMode === "default" ||
     promotionStatus.gateStatus === "ready" ||
@@ -864,7 +890,10 @@ export function detectOmoPromotionDrift({ rootDir = process.cwd(), registry } = 
   if (incidentStatus.unresolvedIncidentIds.length > 0) {
     missingPieces.push(`unresolved incidents remain: ${incidentStatus.unresolvedIncidentIds.join(", ")}`);
   }
-  if (!(promotionStatus.hasReplaySignal || incidentStatus.hasClosedByReplay)) {
+  const replayEvidencePresent = replayStatus.exists
+    ? replayStatus.hasPassedReplay
+    : promotionStatus.hasReplaySignal || incidentStatus.hasClosedByReplay;
+  if (!replayEvidencePresent) {
     missingPieces.push("replay acceptance evidence missing");
   }
 
@@ -879,6 +908,7 @@ export function detectOmoPromotionDrift({ rootDir = process.cwd(), registry } = 
       evidence_refs: [
         "docs/engineering/workflow-v2/promotion-readiness.md",
         ".workflow-v2/promotion-evidence.json",
+        ".workflow-v2/replay-acceptance.json",
         relativePath(rootDir, incidentStatus.incidentRegistryPath),
       ],
       recommended_validation: [
@@ -1133,6 +1163,7 @@ export function buildMetaHarnessRemediationPlan({ findings, generatedAt }) {
 export function buildMetaHarnessPromotionReadiness({ rootDir = process.cwd(), findings, generatedAt }) {
   const status = readPromotionEvidenceStatus(rootDir);
   const incidentStatus = readIncidentRegistryStatus(rootDir);
+  const replayStatus = readReplayAcceptanceStatus(rootDir);
   const blockers = findings
     .filter((finding) => finding.bucket === "promotion-blocker" || finding.id === "H-GOV-001")
     .map((finding) => finding.id);
@@ -1161,6 +1192,7 @@ export function buildMetaHarnessPromotionReadiness({ rootDir = process.cwd(), fi
         relativePath(rootDir, incidentStatus.incidentRegistryPath),
         relativePath(rootDir, status.checklistPath),
         relativePath(rootDir, status.evidencePath),
+        relativePath(rootDir, replayStatus.replayPath),
       ]),
     ],
     promotion_evidence_status: status.gateStatus,
@@ -1168,7 +1200,9 @@ export function buildMetaHarnessPromotionReadiness({ rootDir = process.cwd(), fi
     missing_operational_gate_ids: status.incompleteOperationalGateIds,
     missing_documentation_gate_ids: status.incompleteDocumentationGateIds,
     incident_blockers: incidentStatus.unresolvedIncidentIds,
-    replay_evidence_present: status.hasReplaySignal || incidentStatus.hasClosedByReplay,
+    replay_evidence_present: replayStatus.exists
+      ? replayStatus.hasPassedReplay
+      : status.hasReplaySignal || incidentStatus.hasClosedByReplay,
   };
 }
 

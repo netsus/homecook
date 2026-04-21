@@ -183,6 +183,43 @@ function createAuditFixture() {
       },
       null,
       2,
+      ),
+  );
+  write(
+    rootDir,
+    ".workflow-v2/replay-acceptance.json",
+    JSON.stringify(
+      {
+        version: 1,
+        target: "OMO v2",
+        updated_at: "2026-04-21T00:00:00.000Z",
+        lanes: [
+          {
+            id: "slice06-authority-replay",
+            label: "Slice06 authority replay",
+            status: "pending",
+            required: true,
+            work_item_refs: ["docs/workpacks/06-recipe-to-planner/README.md"],
+            incident_ids: ["OMO-06-001"],
+            evidence_refs: [],
+            criteria: {
+              manual_runtime_json_edit_free: false,
+              stale_lock_manual_clear_free: false,
+              stale_ci_snapshot_manual_fix_free: false,
+              canonical_closeout_validated: false,
+              auditor_result_recorded: false,
+            },
+            notes: "pending",
+          },
+        ],
+        summary: {
+          status: "not-started",
+          blocking_lane_ids: ["slice06-authority-replay"],
+          notes: "pending",
+        },
+      },
+      null,
+      2,
     ),
   );
   write(rootDir, ".opencode/README.md", "# opencode\n");
@@ -893,8 +930,80 @@ describe("meta-harness-auditor", () => {
         2,
       ),
     );
+    write(
+      rootDir,
+      ".workflow-v2/replay-acceptance.json",
+      JSON.stringify(
+        {
+          version: 1,
+          target: "OMO v2",
+          updated_at: "2026-04-21T00:00:00.000Z",
+          lanes: [
+            {
+              id: "slice06-authority-replay",
+              label: "Slice06 authority replay",
+              status: "pass",
+              required: true,
+              work_item_refs: ["docs/workpacks/06-recipe-to-planner/README.md"],
+              incident_ids: ["OMO-06-001"],
+              evidence_refs: [".artifacts/meta-harness-auditor/slice06-replay/report.md"],
+              criteria: {
+                manual_runtime_json_edit_free: true,
+                stale_lock_manual_clear_free: true,
+                stale_ci_snapshot_manual_fix_free: true,
+                canonical_closeout_validated: true,
+                auditor_result_recorded: true,
+              },
+              notes: "slice06 replay passed",
+            },
+          ],
+          summary: {
+            status: "pass",
+            blocking_lane_ids: [],
+            notes: "representative replay passed",
+          },
+        },
+        null,
+        2,
+      ),
+    );
 
     expect(detectOmoPromotionDrift({ rootDir })).toEqual([]);
+  });
+
+  it("keeps H-OMO-006 active when replay ledger exists but required lanes are still pending", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    write(
+      rootDir,
+      ".workflow-v2/promotion-evidence.json",
+      JSON.stringify(
+        {
+          version: 1,
+          target: "OMO v2",
+          updated_at: "2026-04-14T00:00:00.000Z",
+          canonical_policy: "v2",
+          execution_mode: "default",
+          documentation_gates: [],
+          operational_gates: [],
+          pilot_lanes: [],
+          promotion_gate: {
+            status: "ready",
+            blockers: [],
+            next_review_trigger: "none",
+            notes: "ready after replay acceptance",
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const findings = detectOmoPromotionDrift({ rootDir });
+
+    expect(findings.map((finding) => finding.id)).toContain("H-OMO-006");
+    expect(findings[0]?.suggested_next_step).toContain("replay acceptance evidence missing");
   });
 
   it("clears H-OMO-003 and H-OMO-005 once runtime and PR/CI incidents close by replay", () => {

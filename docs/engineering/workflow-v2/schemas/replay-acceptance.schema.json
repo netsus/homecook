@@ -1,0 +1,81 @@
+{
+  "required": [
+    "version",
+    "target",
+    "updated_at",
+    "lanes",
+    "summary"
+  ],
+  "properties": {
+    "version": {
+      "enum": [1]
+    },
+    "target": {},
+    "updated_at": {},
+    "lanes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "status",
+          "required",
+          "work_item_refs",
+          "incident_ids",
+          "evidence_refs",
+          "criteria",
+          "notes"
+        ],
+        "properties": {
+          "id": {},
+          "label": {},
+          "status": {
+            "enum": ["pending", "in_progress", "pass", "blocked"]
+          },
+          "required": {},
+          "work_item_refs": {
+            "type": "array"
+          },
+          "incident_ids": {
+            "type": "array"
+          },
+          "evidence_refs": {
+            "type": "array"
+          },
+          "criteria": {
+            "type": "object",
+            "required": [
+              "manual_runtime_json_edit_free",
+              "stale_lock_manual_clear_free",
+              "stale_ci_snapshot_manual_fix_free",
+              "canonical_closeout_validated",
+              "auditor_result_recorded"
+            ],
+            "properties": {
+              "manual_runtime_json_edit_free": {},
+              "stale_lock_manual_clear_free": {},
+              "stale_ci_snapshot_manual_fix_free": {},
+              "canonical_closeout_validated": {},
+              "auditor_result_recorded": {}
+            }
+          },
+          "notes": {}
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["status", "blocking_lane_ids", "notes"],
+      "properties": {
+        "status": {
+          "enum": ["not-started", "in_progress", "pass", "blocked"]
+        },
+        "blocking_lane_ids": {
+          "type": "array"
+        },
+        "notes": {}
+      }
+    }
+  }
+}

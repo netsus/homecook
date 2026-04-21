@@ -99,6 +99,17 @@ checkpoint 결과를 남길 때는 최소한 아래를 함께 기록한다.
 - workpack ref: `docs/workpacks/06-recipe-to-planner/README.md`
 - 필요하면 audit artifact / authority evidence 경로를 notes 또는 관련 gate evidence에 반영
 
+## Replay Acceptance Ledger
+
+representative replay acceptance 상태는 `.workflow-v2/replay-acceptance.json`에 기록한다.
+
+이 파일은 아래 4개 required lane을 기본으로 둔다.
+
+- `slice06-authority-replay`
+- `slice07-fullstack-replay`
+- `bugfix-patch-replay`
+- `control-plane-smoke-replay`
+
 ## Evidence Ledger
 
 실제 누적 상태는 `.workflow-v2/promotion-evidence.json`에 기록한다.
@@ -118,6 +129,7 @@ pnpm omo:promotion:update -- --section promotion-gate --status not-ready --block
 - slice06 checkpoint 상태
 - 다음 promotion-gate 실행 조건
 - 현재 blocker 목록
+- replay acceptance 자체의 representative lane pass/fail은 `.workflow-v2/replay-acceptance.json`에 남긴다.
 
 ## Ready Criteria
 
@@ -126,6 +138,7 @@ pnpm omo:promotion:update -- --section promotion-gate --status not-ready --block
 - documentation gates가 모두 `pass`
 - operational gates가 모두 `pass`
 - `authority-required-ui`, `external-smoke`, `bugfix-patch` lane이 모두 `pass`
+- representative replay acceptance summary가 `pass`
 - `.workflow-v2/promotion-evidence.json`의 `promotion_gate.status`가 `candidate` 또는 `ready`
 - workflow-v2 entry docs가 더 이상 OMO를 "pilot only"로만 설명하지 않는다.
 
@@ -136,6 +149,7 @@ pnpm omo:promotion:update -- --section promotion-gate --status not-ready --block
 - authority-required lane이 아직 in-progress 또는 blocked
 - external smoke lane evidence 부재
 - bugfix lane evidence 부재
+- replay acceptance evidence 부재 또는 required replay lane 미통과
 - live smoke required 정책이 on-demand 메모 수준에 머물고 validator binding이 약함
 - scheduler 운영 기준이 특정 환경 설명만 있고 team-shared 운영 기준으로 잠기지 않음
 - manual handoff가 예외가 아니라 사실상 기본 종료 경로로 남아 있음
