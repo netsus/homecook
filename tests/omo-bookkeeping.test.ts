@@ -902,15 +902,15 @@ describe("OMO bookkeeping", () => {
     expect(acceptanceOnBranch).toContain("- [x] merged slice acceptance remains closed");
   });
 
-  it("repairs README doc-surface drift from the canonical closeout snapshot during closeout reconcile", () => {
+  it("repairs roadmap, README, and acceptance doc-surface drift from the canonical closeout snapshot during closeout reconcile", () => {
     const workItemId = "05-planner-week-core";
     const { rootDir } = createGitOriginFixture(workItemId, (fixtureRoot) => {
-      setRoadmapStatus(fixtureRoot, workItemId, "merged");
+      setRoadmapStatus(fixtureRoot, workItemId, "in-progress");
       setWorkpackCloseoutState({
         rootDir: fixtureRoot,
         workItemId,
         deliveryChecked: true,
-        acceptanceChecked: true,
+        acceptanceChecked: false,
         authorityStatus: "required",
       });
       setTrackedWorkItemCloseout(fixtureRoot, workItemId, {
@@ -950,6 +950,17 @@ describe("OMO bookkeeping", () => {
 
     expect(result.action).toBe("open_closeout_pr");
 
+    const roadmapOnBranch = execFileSync(
+      "git",
+      [
+        "show",
+        "origin/docs/omo-closeout-05-planner-week-core:docs/workpacks/README.md",
+      ],
+      {
+        cwd: rootDir,
+        encoding: "utf8",
+      },
+    );
     const readmeOnBranch = execFileSync(
       "git",
       [
@@ -961,10 +972,23 @@ describe("OMO bookkeeping", () => {
         encoding: "utf8",
       },
     );
+    const acceptanceOnBranch = execFileSync(
+      "git",
+      [
+        "show",
+        "origin/docs/omo-closeout-05-planner-week-core:docs/workpacks/05-planner-week-core/acceptance.md",
+      ],
+      {
+        cwd: rootDir,
+        encoding: "utf8",
+      },
+    );
 
+    expect(roadmapOnBranch).toMatch(/\|\s*`05-planner-week-core`\s*\|\s*merged\s*\|\s*test slice\s*\|/);
     expect(readmeOnBranch).toContain("- Authority status: `not-required`");
     expect(readmeOnBranch).toContain("- [x] N/A");
     expect(readmeOnBranch).toContain("- [ ] 확정 (confirmed)");
+    expect(acceptanceOnBranch).toContain("- [x] merged slice acceptance remains closed");
   });
 
   it("fails closeout reconcile when required exploratory evidence cannot be traced to a frontend PR", () => {
