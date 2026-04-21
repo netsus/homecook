@@ -119,32 +119,39 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-06-001
 
-- status: `open`
+- status: `closed-by-replay`
 - boundary: `omo-system`
 - bucket: `D. Runtime / Observability Reset`
 - stage_scope: `Stage 6 closeout`
 - symptom: authority-required pilot slice06은 merged 됐지만 tracked status notes에는 `merged_after_manual_stage6_handoff`가 남아 있고, local `omo-tick` 로그는 `blocked_retry (retry_not_due)` 반복, `run -> human_escalation`, `unsupported_wait_kind=human_escalation`, `skip_locked -> none`을 보여준다. 즉 대표 pilot lane이 autonomous closeout이 아니라 repeated recovery 후 manual handoff로 끝났다.
-- current_recovery: operator가 Stage 6 manual handoff bundle을 기준으로 PR #120을 merge했고, scheduler/tick은 더 이상 lane completion을 책임지지 못했다.
+- current_recovery: post-reset slice06 authority replay에서 closeout/bookkeeping/authority validators가 green으로 통과했고, repo-local audit bundle `.artifacts/meta-harness-auditor/slice06-replay/report.md`와 replay ledger `.workflow-v2/replay-acceptance.json`에 lane `pass`를 남겼다. 이번 replay에서는 runtime JSON 수동 편집, stale lock 수동 해제, stale CI snapshot 수동 보정이 필요하지 않았다.
 - root_cause_hypothesis: authority-required lane이 human_escalation/locked 상태에 들어간 뒤 scheduler resume과 closeout recovery를 deterministic하게 이어가지 못했고, manual handoff가 실제 completion path가 됐다.
 - evidence_refs:
   - `.workflow-v2/status.json`
   - `.workflow-v2/promotion-evidence.json`
+  - `.workflow-v2/replay-acceptance.json`
+  - `.artifacts/meta-harness-auditor/slice06-replay/report.md`
+  - `docs/engineering/workflow-v2/replay-slice06-authority.md`
+  - `ui/designs/authority/authority-report-06-recipe-to-planner.md`
   - `/Users/cwj/Library/Logs/homecook/omo-tick-06-recipe-to-planner.log`
   - `/Users/cwj/Library/Logs/homecook/omo-tick-06-recipe-to-planner.err.log`
   - `docs/engineering/workflow-v2/slice06-pilot-checklist.md`
 
 ### OMO-06-002
 
-- status: `backfill-required`
+- status: `closed-by-replay`
 - boundary: `omo-system`
 - bucket: `D. Runtime / Observability Reset`
 - stage_scope: `slice06 local artifact retention / scheduler path`
 - symptom: promotion ledger는 `.artifacts/meta-harness-auditor/slice06-stage6/report.md`와 `/private/tmp/homecook-slice06-omo-run/.artifacts/omo-evaluator/...`를 canonical evidence처럼 참조하지만, 현재 machine에는 해당 bundle과 tmp worktree가 없다. 대신 남아 있는 것은 `Cannot find module '/private/tmp/homecook-slice06-omo-run/scripts/omo-tick.mjs'` 로그뿐이다.
-- current_recovery: slice06 pilot evidence는 repo-local canonical artifact가 아니라 notes/status/log로만 잔존했고, current machine retrospective는 missing-artifact 상태를 그대로 안고 진행해야 한다.
+- current_recovery: representative replay를 repo-local artifact 기준으로 다시 수행해 `.artifacts/meta-harness-auditor/slice06-replay/` bundle과 `.workflow-v2/replay-acceptance.json` lane evidence를 남겼다. 과거 tmp worktree artifact는 여전히 historical gap이지만, 현재 Phase 8 replay acceptance는 ephemeral tmp path 없이 repo-local canonical evidence로 재생 가능해졌다.
 - root_cause_hypothesis: slice06 checkpoint evidence가 ephemeral tmp worktree 경로에 묶였고, promotion/cutover 전에 repo-local canonical artifact storage로 승격되지 않았다.
 - evidence_refs:
   - `.workflow-v2/work-items/06-recipe-to-planner.json`
   - `.workflow-v2/promotion-evidence.json`
+  - `.workflow-v2/replay-acceptance.json`
+  - `.artifacts/meta-harness-auditor/slice06-replay/report.md`
+  - `docs/engineering/workflow-v2/replay-slice06-authority.md`
   - `/Users/cwj/Library/Logs/homecook/omo-tick-06-recipe-to-planner.err.log`
   - `docs/engineering/workflow-v2/slice06-pilot-checklist.md`
 

@@ -62,8 +62,7 @@
         "planner-5-column-mobile"
       ],
       "authority_report_paths": [
-        "ui/designs/authority/RECIPE_DETAIL-authority.md",
-        "ui/designs/authority/PLANNER_WEEK-authority.md"
+        "ui/designs/authority/authority-report-06-recipe-to-planner.md"
       ]
     }
   },

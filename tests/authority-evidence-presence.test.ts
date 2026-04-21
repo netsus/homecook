@@ -398,4 +398,16 @@ describe("authority evidence presence validator", () => {
 
     expect(results).toEqual([]);
   });
+
+  it("keeps the repo slice06 authority evidence baseline valid for closeout replay", () => {
+    const results = validateAuthorityEvidencePresence({
+      rootDir: process.cwd(),
+      env: {
+        ...process.env,
+        BRANCH_NAME: "docs/omo-closeout-06-recipe-to-planner",
+      },
+    });
+
+    expect(results).toEqual([]);
+  });
 });
