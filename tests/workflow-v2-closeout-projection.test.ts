@@ -25,6 +25,7 @@ function createWorkflowFixture() {
     "docs/engineering/workflow-v2/schemas/work-item.schema.json",
     "docs/engineering/workflow-v2/schemas/workflow-status.schema.json",
     "docs/engineering/workflow-v2/schemas/promotion-evidence.schema.json",
+    "docs/engineering/workflow-v2/schemas/replay-acceptance.schema.json",
   ]) {
     writeFileSync(join(rootDir, relativePath), readRepoFile(relativePath));
   }
@@ -32,6 +33,10 @@ function createWorkflowFixture() {
   writeFileSync(
     join(rootDir, ".workflow-v2/promotion-evidence.json"),
     readRepoFile("docs/engineering/workflow-v2/templates/promotion-evidence.example.json"),
+  );
+  writeFileSync(
+    join(rootDir, ".workflow-v2/replay-acceptance.json"),
+    readRepoFile("docs/engineering/workflow-v2/templates/replay-acceptance.example.json"),
   );
 
   return rootDir;

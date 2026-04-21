@@ -57,6 +57,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 3. [omo-governance-surface-map.md](./omo-governance-surface-map.md)
 4. [omo-canonical-closeout-state.md](./omo-canonical-closeout-state.md)
 5. [omo-auditor-reset-requirements.md](./omo-auditor-reset-requirements.md)
+6. [omo-replay-acceptance.md](./omo-replay-acceptance.md)
 
 ### Maintainer Specs
 
@@ -77,6 +78,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 - [.workflow-v2/README.md](../../../.workflow-v2/README.md): 실제 tracked workflow 상태 저장 위치
 - [.workflow-v2/promotion-evidence.json](../../../.workflow-v2/promotion-evidence.json): current promotion / lane evidence ledger
+- [.workflow-v2/replay-acceptance.json](../../../.workflow-v2/replay-acceptance.json): representative replay acceptance ledger
 - [charter.md](./charter.md): v2가 해결할 문제, 유지할 원칙, 비범위
 - [core.md](./core.md): 공통 개념, 책임, lifecycle
 - [presets.md](./presets.md): 작업 유형별 기본 경로
@@ -92,6 +94,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [omo-governance-surface-map.md](./omo-governance-surface-map.md): stage actor / operator / maintainer가 읽어야 할 문서 표면을 다시 자르기 위한 책임 경계 맵
 - [omo-canonical-closeout-state.md](./omo-canonical-closeout-state.md): closeout truth를 한 surface로 줄이고 README / acceptance / PR body / status를 projection으로 내리기 위한 Phase 2 후보 설계
 - [omo-auditor-reset-requirements.md](./omo-auditor-reset-requirements.md): meta-harness-auditor가 incident corpus, runtime anomaly, promotion drift를 기본 입력으로 읽도록 다시 잠그는 Phase 6 요구사항
+- [omo-replay-acceptance.md](./omo-replay-acceptance.md): Phase 8 representative replay lane과 replay evidence ledger 기준
 - [omo-lite-supervisor-spec.md](./omo-lite-supervisor-spec.md): maintainer spec. supervisor 책임, 상태, stage state machine
 - [omo-lite-dispatch-contract.md](./omo-lite-dispatch-contract.md): maintainer spec. stage별 actor dispatch 입출력 계약
 - [profiles/TEMPLATE.md](./profiles/TEMPLATE.md): 다른 프로젝트용 profile template
@@ -115,6 +118,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - `workflow-v2` 관련 첫 단계는 문서와 schema를 고정하는 것이다.
 - 실제 tracked 운영 상태는 저장소 루트의 `.workflow-v2/` 아래 JSON으로 기록한다.
 - OMO 기본 운영 건강성 판단은 `docs/engineering/workflow-v2/promotion-readiness.md`와 `.workflow-v2/promotion-evidence.json`을 함께 기준으로 삼는다.
+- replay acceptance tracked evidence는 `.workflow-v2/replay-acceptance.json`을 기준으로 삼는다.
 - canonical closeout projection / repair semantics의 기준은 `omo-canonical-closeout-state.md`를 따른다. `bookkeeping-authority-matrix.md`는 전환이 끝날 때까지 writable closeout surface compatibility note로 유지한다.
 - `work-item`은 optional `closeout` snapshot을 가질 수 있고, 현재 baseline에서는 `.workflow-v2/status.json`의 `lifecycle / approval_state / verification_status / recovery note`가 그 projection과 모순되지 않아야 한다.
 - 현재 executable baseline은 `.workflow-v2/status.json` summary projection consistency, `validate:closeout-sync`의 doc-surface drift check, PR body `Closeout Sync` / `Merge Gate` generated section, `omo:reconcile` current-vocabulary repair consumer를 포함한다.

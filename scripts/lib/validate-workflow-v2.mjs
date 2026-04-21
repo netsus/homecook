@@ -104,6 +104,11 @@ export function validateWorkflowV2Examples({ rootDir = process.cwd() } = {}) {
       schemaPath: path.join(baseDir, "schemas/promotion-evidence.schema.json"),
       examplePath: path.join(baseDir, "templates/promotion-evidence.example.json"),
     },
+    {
+      name: "replay-acceptance",
+      schemaPath: path.join(baseDir, "schemas/replay-acceptance.schema.json"),
+      examplePath: path.join(baseDir, "templates/replay-acceptance.example.json"),
+    },
   ];
 
   return targets.map((target) => {
@@ -165,9 +170,13 @@ export function validateWorkflowV2TrackedState({ rootDir = process.cwd() } = {})
   const promotionEvidenceSchema = readJson(
     path.join(rootDir, "docs/engineering/workflow-v2/schemas/promotion-evidence.schema.json"),
   );
+  const replayAcceptanceSchema = readJson(
+    path.join(rootDir, "docs/engineering/workflow-v2/schemas/replay-acceptance.schema.json"),
+  );
   const workItemsDir = path.join(workflowDir, "work-items");
   const statusPath = path.join(workflowDir, "status.json");
   const promotionEvidencePath = path.join(workflowDir, "promotion-evidence.json");
+  const replayAcceptancePath = path.join(workflowDir, "replay-acceptance.json");
   const results = [];
 
   const workItemFiles = existsSync(workItemsDir)
@@ -285,6 +294,24 @@ export function validateWorkflowV2TrackedState({ rootDir = process.cwd() } = {})
     errors: validateKnownShape(promotionEvidenceSchema, readJson(promotionEvidencePath)),
   });
 
+  if (!existsSync(replayAcceptancePath)) {
+    results.push({
+      name: "tracked-replay-acceptance",
+      errors: [
+        {
+          path: ".workflow-v2/replay-acceptance.json",
+          message: "Missing .workflow-v2/replay-acceptance.json",
+        },
+      ],
+    });
+    return results;
+  }
+
+  results.push({
+    name: "tracked-replay-acceptance",
+    errors: validateKnownShape(replayAcceptanceSchema, readJson(replayAcceptancePath)),
+  });
+
   return results;
 }
 
@@ -318,6 +345,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const designConsultantPath = path.join(rootDir, "docs/engineering/design-consultant-sop.md");
   const opencodeReadmePath = path.join(rootDir, ".opencode/README.md");
   const promotionReadinessPath = path.join(rootDir, "docs/engineering/workflow-v2/promotion-readiness.md");
+  const replayAcceptancePath = path.join(rootDir, "docs/engineering/workflow-v2/omo-replay-acceptance.md");
   const canonicalCloseoutPath = path.join(
     rootDir,
     "docs/engineering/workflow-v2/omo-canonical-closeout-state.md",
@@ -341,6 +369,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const designConsultant = readText(designConsultantPath);
   const opencodeReadme = readText(opencodeReadmePath);
   const promotionReadiness = readText(promotionReadinessPath);
+  const replayAcceptance = readText(replayAcceptancePath);
   const canonicalCloseout = readText(canonicalCloseoutPath);
   const bookkeepingAuthorityMatrix = readText(bookkeepingAuthorityMatrixPath);
   const nextLockedScope = extractMarkdownSection(workflowReadme, "## Next Locked Scope");
@@ -402,7 +431,9 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "public code stage 실행이 필요할 때 `--mode execute`를 사용한다.",
       "slice6 기준 public Stage 4는 Claude execute path를 사용할 수 있고, Stage 5 `final_authority_gate`는 review gate이므로 execute 대상이 아니라 review artifact 경로로 다룬다.",
       "promotion-readiness.md",
+      "omo-replay-acceptance.md",
       ".workflow-v2/promotion-evidence.json",
+      ".workflow-v2/replay-acceptance.json",
       "Stage 1 bootstrap부터 시작한다.",
       "internal 1.5 docs gate",
       "canonical closeout projection / repair semantics의 기준은 `omo-canonical-closeout-state.md`를 따른다. `bookkeeping-authority-matrix.md`는 전환이 끝날 때까지 writable closeout surface compatibility note로 유지한다.",
@@ -525,6 +556,8 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "## Required Gates",
       "## Pilot Gates",
       "`omo-canonical-closeout-state`가 closeout ownership / projection semantics를 잠그고, `bookkeeping-authority-matrix`는 transition-period writable closeout surface만 기록한다.",
+      "`.workflow-v2/replay-acceptance.json`에 기록한다.",
+      "representative replay acceptance summary가 `pass`",
       "authority-required-ui",
       "external-smoke",
       "bugfix-patch",
@@ -538,6 +571,19 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "#### `scheduler-standard`",
       "team-shared default scheduler는 현재 `macOS launchd`로 고정한다.",
       "최소 `slice-batch-review`마다 1회 verify/watch 상태를 재점검한다.",
+    ]),
+  ];
+
+  const replayAcceptanceErrors = [
+    ...containsAll(replayAcceptance, [
+      "`.workflow-v2/replay-acceptance.json`",
+      "`slice06-authority-replay`",
+      "`slice07-fullstack-replay`",
+      "`bugfix-patch-replay`",
+      "`control-plane-smoke-replay`",
+      "`manual_runtime_json_edit_free`",
+      "`canonical_closeout_validated`",
+      "`auditor_result_recorded`",
     ]),
   ];
 
@@ -654,6 +700,10 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     {
       name: "workflow-v2-doc-contract:promotion-readiness",
       errors: promotionReadinessErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:replay-acceptance",
+      errors: replayAcceptanceErrors,
     },
     {
       name: "workflow-v2-doc-contract:canonical-closeout",
