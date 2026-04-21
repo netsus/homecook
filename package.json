@@ -14,6 +14,7 @@
     "omo:status": "node scripts/omo-status.mjs",
     "omo:status:brief": "node scripts/omo-status-brief.mjs",
     "omo:tail": "node scripts/omo-tail.mjs",
+    "omo:replay:update": "node scripts/omo-replay-update.mjs",
     "omo:supervise": "node scripts/omo-supervise.mjs",
     "omo:tick": "node scripts/omo-tick.mjs",
     "omo:tick:watch": "node scripts/omo-tick-watch.mjs",

@@ -137,6 +137,7 @@ describe("workflow v2 docs", () => {
     expect(overview).toContain("## Claude public stage 흐름");
     expect(overview).toContain("## Codex review / closeout 흐름");
     expect(workflowReadme).toContain("public code stage 실행이 필요할 때 `--mode execute`를 사용한다.");
+    expect(workflowReadme).toContain("`pnpm omo:replay:update`");
     expect(workflowReadme).not.toContain("Codex stage에 한해 `--mode execute`를 사용한다.");
     expect(workflowReadme).toContain(
       "manual handoff는 `high-risk` / `anchor-extension` / `exceptional recovery`에 한정된 예외 경로다.",
@@ -196,6 +197,9 @@ describe("workflow v2 docs", () => {
       "현재 executable baseline은 `.workflow-v2/status.json` summary projection consistency, `validate:closeout-sync`의 doc-surface drift check, PR body `Closeout Sync` / `Merge Gate` generated section, `omo:reconcile` current-vocabulary repair consumer를 포함한다.",
     );
     expect(workflowReadme).toContain(
+      "representative replay lane 결과를 replay ledger에 남길 때는 `pnpm omo:replay:update`를 사용한다.",
+    );
+    expect(workflowReadme).toContain(
       "`Actual Verification` evidence는 source PR/manual surface를 계속 우선하고, markdown 전체 rewrite/sync patcher는 아직 포함하지 않는다.",
     );
     expect(canonicalCloseout).toContain(
@@ -232,6 +236,7 @@ describe("workflow v2 docs", () => {
     expect(authorityMatrix).toContain(
       "`validate:workflow-v2`와 `omo-github` PR body baseline은 canonical closeout snapshot 기준 generated payload를 다루며, 이 note는 body semantics를 정의하지 않는다.",
     );
+    expect(canonicalCloseout).toContain("markdown 전체 rewrite는 아직 남아 있다.");
   });
 
   it("returns a combined validation bundle with no errors", () => {

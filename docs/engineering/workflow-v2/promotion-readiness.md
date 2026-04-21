@@ -110,6 +110,13 @@ representative replay acceptance 상태는 `.workflow-v2/replay-acceptance.json`
 - `bugfix-patch-replay`
 - `control-plane-smoke-replay`
 
+기본 갱신 명령:
+
+```bash
+pnpm omo:replay:update -- --section lane --id slice06-authority-replay --status in_progress --note "slice06 replay running"
+pnpm omo:replay:update -- --section summary --status in_progress --blocking-lane-id slice07-fullstack-replay --note "representative replay in progress"
+```
+
 ## Evidence Ledger
 
 실제 누적 상태는 `.workflow-v2/promotion-evidence.json`에 기록한다.
