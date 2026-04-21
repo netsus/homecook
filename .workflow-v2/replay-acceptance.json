@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-21T07:40:59.965Z",
+  "updated_at": "2026-04-21T08:02:15.799Z",
   "lanes": [
     {
       "id": "slice06-authority-replay",
@@ -33,7 +33,7 @@
     {
       "id": "slice07-fullstack-replay",
       "label": "Slice07 fullstack replay",
-      "status": "pending",
+      "status": "pass",
       "required": true,
       "work_item_refs": [
         "docs/workpacks/07-meal-manage/README.md"
@@ -41,15 +41,19 @@
       "incident_ids": [
         "OMO-07-001"
       ],
-      "evidence_refs": [],
+      "evidence_refs": [
+        ".artifacts/meta-harness-auditor/slice07-replay/report.md",
+        ".artifacts/meta-harness-auditor/slice07-replay/promotion-rationale.json",
+        "docs/engineering/workflow-v2/replay-slice07-fullstack.md"
+      ],
       "criteria": {
-        "manual_runtime_json_edit_free": false,
-        "stale_lock_manual_clear_free": false,
-        "stale_ci_snapshot_manual_fix_free": false,
-        "canonical_closeout_validated": false,
-        "auditor_result_recorded": false
+        "manual_runtime_json_edit_free": true,
+        "stale_lock_manual_clear_free": true,
+        "stale_ci_snapshot_manual_fix_free": true,
+        "canonical_closeout_validated": true,
+        "auditor_result_recorded": true
       },
-      "notes": "Pending Phase 8 representative replay."
+      "notes": "post-reset slice07 fullstack replay passed; unit/E2E/supervisor regression and canonical closeout validators are green with repo-local audit evidence"
     },
     {
       "id": "bugfix-patch-replay",
@@ -91,10 +95,9 @@
   "summary": {
     "status": "in_progress",
     "blocking_lane_ids": [
-      "slice07-fullstack-replay",
       "bugfix-patch-replay",
       "control-plane-smoke-replay"
     ],
-    "notes": "slice06 authority replay passed; remaining representative replay lanes pending"
+    "notes": "slice06 authority replay and slice07 fullstack replay passed; remaining representative replay lanes pending"
   }
 }
