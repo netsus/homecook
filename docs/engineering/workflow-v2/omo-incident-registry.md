@@ -41,16 +41,75 @@ reset 기간의 기본 규칙은 아래와 같다.
 - `root_cause_hypothesis`: 현재 시점 가설
 - `evidence_refs`: 확인 가능한 문서 / tracked state / artifact
 
+## Boundary And Status Decision Rule
+
+이번 정리 pass에서는 incident를 "무조건 open으로 유지"하지 않고,
+현재 reset 의사결정에 어떤 역할을 하는지 기준으로 다시 나눈다.
+
+### Boundary Rule
+
+- `omo-system`
+  - fix owner가 supervisor / runtime / closeout projection / auditor / promotion policy에 있다.
+- `mixed`
+  - 현재 남은 문제의 핵심이 evidence retention, retrospective reconstruction, historical gap처럼 OMO와 product 실행 흔적이 함께 얽혀 있다.
+- `product-local`
+  - 제품 버그 자체가 본질이고 OMO는 발견 경로일 뿐이다.
+
+### Status Rule
+
+- `open`
+  - 지금도 reset blocker로 직접 작동하는 활성 family다.
+  - policy, projection, runtime, contract, promotion 판단을 바꾸는 실제 변경이 아직 남아 있다.
+- `monitoring`
+  - 역사적으로 중요한 seed incident지만, 현재는 더 구체적인 active incident가 같은 family를 대표하거나 recent replay/cleanup 이후 "관찰 대상"으로 내려간 상태다.
+  - promotion 설명에는 참고할 수 있지만 primary unresolved blocker set에는 기본으로 넣지 않는다.
+- `backfill-required`
+  - 현재 문제의 핵심이 기능 오작동보다 evidence/disposition 공백이다.
+  - replay나 정책 변경보다 먼저 "무슨 증거를 canonical로 인정할지"를 정해야 한다.
+- `closed-by-replay`
+  - representative replay에서 같은 family가 manual patch 없이 재현되지 않았고, replay ledger/evidence가 repo-local surface에 남아 있다.
+- `separated-product-bug`
+  - OMO failure family에서 분리된 제품 결함이다.
+
+### Blocker Interpretation Rule
+
+- 현재 `not-ready`의 직접 blocker는 기본적으로 `boundary=omo-system`이면서 `status=open`인 incident다.
+- `mixed + backfill-required` incident는 evidence/disposition 정리가 끝날 때까지 secondary blocker로 취급한다.
+- `monitoring` incident는 historical context로 유지하되, active blocker를 설명할 때는 해당 family를 대표하는 더 구체적인 open incident를 우선 사용한다.
+
+## Artifact Preservation Rule
+
+### Canonical Rule
+
+- current canonical evidence는 repo-local retained surface에 있어야 한다.
+- 허용되는 기본 surface는 `.artifacts/**`, `.workflow-v2/**`, `docs/**`, `ui/designs/**`다.
+- `/private/tmp/**`, 다른 machine 절대경로, 현재 열 수 없는 off-repo path는 historical breadcrumb일 수는 있어도 단독 canonical evidence는 아니다.
+
+### Disposition Rule
+
+- 원래 artifact를 다시 회수할 수 없고 repo-local substitute evidence만 남아 있으면 `artifact-missing accepted` disposition을 명시한다.
+- dedicated disposition field가 아직 없으므로, 현재 pass에서는 `current_recovery` 또는 backfill note에 그 문구를 그대로 남긴다.
+- `artifact-missing accepted`는 "문제가 사라졌다"는 뜻이 아니라 "원본 artifact 공백을 인정하고 현재 retained evidence로 운영 판단을 이어간다"는 뜻이다.
+
+### Slice-Specific Preservation Direction
+
+- slice06:
+  - historical stage6 bundle / tmp evaluator path는 breadcrumb로 유지할 수 있다.
+  - current retained evidence는 `.artifacts/meta-harness-auditor/slice06-replay/**`와 `.workflow-v2/replay-acceptance.json`을 우선 사용한다.
+- slice03:
+  - 현재는 `backfill-required`를 유지한다.
+  - retrospective에서 off-repo evidence를 회수하지 못하면 `artifact-missing accepted` disposition과 repo-local surrogate refs를 남기는 쪽으로 정리한다.
+
 ## Seed Incidents
 
 ### OMO-RETRO-001
 
-- status: `open`
+- status: `monitoring`
 - boundary: `omo-system`
 - bucket: `F. Auditor / Promotion Reset`
 - stage_scope: `promotion gate / recurring audit`
 - symptom: 과거 audit는 `not-ready`였는데 이후 promotion ledger와 auditor가 `ready`/`findings 0`로 전환되었고, 같은 시점에 slice07 failure corpus는 심각한 runtime/recovery 문제를 보여줬다.
-- current_recovery: docs/ledger cutover로 readiness를 상향했고 incident-aware replay gate는 없었다.
+- current_recovery: 현재는 더 구체적인 cutover drift incident `OMO-RETRO-003`이 active blocker를 대표하고, 이 incident는 "왜 auditor reset이 필요해졌는지"를 보여주는 umbrella seed로 남긴다.
 - root_cause_hypothesis: auditor와 promotion readiness가 recent incident corpus, runtime anomaly, recovery cost를 입력으로 사용하지 않고 docs/ledger alignment를 과신한다.
 - evidence_refs:
   - `.artifacts/meta-harness-auditor/h-omo-001-check/report.md`
@@ -59,12 +118,12 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-RETRO-002
 
-- status: `open`
+- status: `monitoring`
 - boundary: `omo-system`
 - bucket: `B. Canonical State Reduction`
 - stage_scope: `closeout / bookkeeping / reconcile`
 - symptom: closeout truth가 README, acceptance, PR body, `.workflow-v2/status.json`에 분산되어 drift가 운영 부담이 됐다.
-- current_recovery: reconcile, validator, manual markdown patch를 조합해 slice별로 봉합했다.
+- current_recovery: 현재 active closeout blocker는 `OMO-07-002`가 더 직접적으로 대표하고 있어, 이 incident는 canonical state reduction의 historical umbrella로 유지한다.
 - root_cause_hypothesis: authoritative closeout owner가 하나가 아니고 여러 surface가 동시에 writable 하다.
 - evidence_refs:
   - `.artifacts/meta-harness-auditor/h-omo-001-check/report.md`
@@ -78,7 +137,7 @@ reset 기간의 기본 규칙은 아래와 같다.
 - bucket: `D. Runtime / Observability Reset`
 - stage_scope: `slice03 pilot retention / Stage 4~6`
 - symptom: 첫 product OMO-lite pilot slice03은 merged 상태지만, 현재 machine에는 canonical `omo-lite-dispatch` / supervisor artifact가 남아 있지 않고 runtime은 `.artifacts/tmp/claude-cli-provider-dogfood/...`를 마지막 artifact로 가리킨다. `codex_primary.session_id`도 비어 있어 product 결과는 남았지만 replayable 운영 흔적은 부분적으로만 보존됐다.
-- current_recovery: 당시에는 pilot note와 merged status를 surrogate evidence로 사용했고, 별도 incident corpus에는 승격되지 않았다.
+- current_recovery: 당시에는 pilot note와 merged status를 surrogate evidence로 사용했고, 별도 incident corpus에는 승격되지 않았다. 현재는 retrospective backfill 전까지 `backfill-required`를 유지하고, off-repo artifact를 회수하지 못하면 `artifact-missing accepted` disposition과 repo-local surrogate refs로 정리한다.
 - root_cause_hypothesis: 초기 product pilot이 canonical repo-local artifact surface보다 dogfood / tmp execution surface에 더 의존했고, recovery history를 runtime/registry로 승격하는 규칙이 없었다.
 - evidence_refs:
   - `.opencode/omo-runtime/03-recipe-like.json`
@@ -87,12 +146,12 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-04-001
 
-- status: `open`
+- status: `monitoring`
 - boundary: `omo-system`
 - bucket: `C. Supervisor Contract Reset`
 - stage_scope: `Stage 4 implementation / salvage`
 - symptom: slice04는 frontend implementation에서 `stage-result.json` 미작성으로 `human_escalation`에 빠졌고, 이후에는 같은 lane에서 `Worktree is dirty.` escalation이 반복됐다. merged 결과는 남았지만 implementation 종료 조건과 salvage 경로가 deterministic하지 않았다.
-- current_recovery: operator가 Stage 4/6을 다시 실행하고 dirty worktree 상태를 수동으로 해소하면서 salvage artifact를 따라 merge까지 진행했다.
+- current_recovery: 현재 contract reset의 active surface는 `OMO-07-004`와 replayed `OMO-07-001`이 더 직접적으로 대표한다. 이 incident는 pre-reset contract failure seed로 유지한다.
 - root_cause_hypothesis: implementation execute success가 stage-result emission과 clean worktree를 충분히 강제하지 못했고, dirty salvage는 supervisor의 정상 전이보다 operator 판단에 더 많이 의존했다.
 - evidence_refs:
   - `.artifacts/omo-supervisor/2026-03-27T12-03-26-188Z-04-recipe-save/summary.json`
@@ -102,12 +161,12 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-05-001
 
-- status: `open`
+- status: `monitoring`
 - boundary: `omo-system`
 - bucket: `D. Runtime / Observability Reset`
 - stage_scope: `Stage 2 bootstrap -> Stage 6 closeout`
 - symptom: slice05는 product logic와 무관한 supervisor-side escalation을 연속으로 밟았다. `gh auth status failed`, `master is already checked out`, `spawnSync opencode ENOENT`, 반복되는 `Required checks failed`, `Supervisor verify commands failed`, Stage 6 dirty worktree salvage, `claude CLI failed` partial stage failure가 모두 같은 slice 안에서 누적됐다.
-- current_recovery: operator가 Stage 2 reset snapshot을 남기고 recovery patch를 수동 적용한 뒤 여러 번 rerun했고, 최종적으로는 formal GitHub review + human verification 경로를 거쳐 merge했다.
+- current_recovery: control-plane smoke replay와 newer runtime incidents(`OMO-07-003`, `OMO-07-007`)가 현재 active surface를 더 직접적으로 대표한다. 이 incident는 broad supervisor fragility의 seed evidence로 유지한다.
 - root_cause_hypothesis: supervisor가 host auth/base branch/binary availability/verify environment를 지나치게 낙관적으로 가정했고, dirty salvage와 verify failure를 operator 수습에 맡겼다.
 - evidence_refs:
   - `.artifacts/omo-supervisor/2026-03-31T15-37-48Z-05-planner-week-core-stage-2-reset-snapshot/runtime-before-reset.json`
@@ -144,7 +203,7 @@ reset 기간의 기본 규칙은 아래와 같다.
 - bucket: `D. Runtime / Observability Reset`
 - stage_scope: `slice06 local artifact retention / scheduler path`
 - symptom: promotion ledger는 `.artifacts/meta-harness-auditor/slice06-stage6/report.md`와 `/private/tmp/homecook-slice06-omo-run/.artifacts/omo-evaluator/...`를 canonical evidence처럼 참조하지만, 현재 machine에는 해당 bundle과 tmp worktree가 없다. 대신 남아 있는 것은 `Cannot find module '/private/tmp/homecook-slice06-omo-run/scripts/omo-tick.mjs'` 로그뿐이다.
-- current_recovery: representative replay를 repo-local artifact 기준으로 다시 수행해 `.artifacts/meta-harness-auditor/slice06-replay/` bundle과 `.workflow-v2/replay-acceptance.json` lane evidence를 남겼다. 과거 tmp worktree artifact는 여전히 historical gap이지만, 현재 Phase 8 replay acceptance는 ephemeral tmp path 없이 repo-local canonical evidence로 재생 가능해졌다.
+- current_recovery: representative replay를 repo-local artifact 기준으로 다시 수행해 `.artifacts/meta-harness-auditor/slice06-replay/` bundle과 `.workflow-v2/replay-acceptance.json` lane evidence를 남겼다. 과거 tmp worktree artifact는 여전히 historical gap이지만, 현재 Phase 8 replay acceptance는 ephemeral tmp path 없이 repo-local canonical evidence로 재생 가능해졌다. 따라서 historical tmp/stage6 ref는 breadcrumb로만 남기고 current retained proof는 replay bundle 쪽으로 읽는다.
 - root_cause_hypothesis: slice06 checkpoint evidence가 ephemeral tmp worktree 경로에 묶였고, promotion/cutover 전에 repo-local canonical artifact storage로 승격되지 않았다.
 - evidence_refs:
   - `.workflow-v2/work-items/06-recipe-to-planner.json`
@@ -311,6 +370,31 @@ reset 기간의 기본 규칙은 아래와 같다.
   - `.artifacts/meta-harness-auditor/promotion-gate-final-review/audit-context.json`
   - `.artifacts/meta-harness-auditor/promotion-gate-default-cutover/audit-context.json`
   - `.workflow-v2/promotion-evidence.json`
+
+## Current Active Blocker Set
+
+현재 `not-ready`를 직접 설명하는 incident set은 아래처럼 읽는다.
+
+- promotion / auditor drift
+  - `OMO-RETRO-003`
+- canonical closeout / projection
+  - `OMO-07-002`
+- runtime / observability
+  - `OMO-07-003`
+  - `OMO-07-007`
+- supervisor contract
+  - `OMO-07-004`
+- PR / CI reality drift
+  - `OMO-07-005`
+  - `OMO-07-006`
+- session / cost
+  - `OMO-07-008`
+- evidence backfill / retention
+  - `OMO-03-001`
+  - `OMO-BACKFILL-03-05-001`
+
+`OMO-RETRO-001`, `OMO-RETRO-002`, `OMO-04-001`, `OMO-05-001`은 여전히 중요한 seed evidence지만,
+이번 pass에서는 active blocker를 중복 설명하지 않도록 `monitoring`으로 낮춰 historical context 역할에 집중시킨다.
 
 ## Backfill Queue
 

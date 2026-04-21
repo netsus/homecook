@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-21T15:14:16.588Z",
+  "updated_at": "2026-04-21T15:59:39Z",
   "canonical_policy": "v2",
   "execution_mode": "default",
   "documentation_gates": [
@@ -61,7 +61,7 @@
       "label": "Authority-required UI lane",
       "status": "pass",
       "required": true,
-      "notes": "slice06 authority-required pilot passed; audit bundle: .artifacts/meta-harness-auditor/slice06-stage6/report.md; authority evidence: ui/designs/authority/authority-report-06-recipe-to-planner.md; manual handoff: Stage 6 PR #120 merged",
+      "notes": "slice06 authority-required pilot passed; retained audit bundle: .artifacts/meta-harness-auditor/slice06-replay/report.md; authority evidence: ui/designs/authority/authority-report-06-recipe-to-planner.md; historical Stage 6 bundle may be missing; manual handoff: Stage 6 PR #120 merged",
       "workpack_refs": [
         "docs/workpacks/06-recipe-to-planner/README.md"
       ],

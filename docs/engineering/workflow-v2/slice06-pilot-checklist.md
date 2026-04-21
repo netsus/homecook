@@ -127,6 +127,10 @@ pnpm omo:promotion:update -- --section pilot-lane --id authority-required-ui --s
 pnpm omo:promotion:update -- --section promotion-gate --status not-ready --clear-blockers --blocker "external-smoke lane evidence missing" --blocker "bugfix-patch lane evidence missing" --next-review-trigger "After one external-smoke pilot and one bugfix-patch pilot"
 ```
 
+post-reset retained evidence를 다시 적을 때는 historical `slice06-stage6` bundle이나 tmp path보다
+repo-local replay bundle `.artifacts/meta-harness-auditor/slice06-replay/`와
+`.workflow-v2/replay-acceptance.json`을 current canonical evidence로 우선 사용한다.
+
 ### lane를 `pass`로 올리기 전에 확인할 것
 
 - Stage 2 / 4 / 6 checkpoint가 모두 ledger에 남았는지

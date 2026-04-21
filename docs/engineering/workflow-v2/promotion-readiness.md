@@ -27,6 +27,7 @@
 - `omo-canonical-closeout-state`가 closeout ownership / projection semantics를 잠그고, `bookkeeping-authority-matrix`는 transition-period writable closeout surface만 기록한다.
 - 현재 canonical owner는 `.workflow-v2/work-items/<id>.json#closeout`이다.
 - `promotion-readiness` 문서와 `.workflow-v2/promotion-evidence.json`이 같은 gate vocabulary를 사용한다.
+- promotion / pilot lane evidence는 repo-local retained artifact를 current canonical evidence로 사용해야 하며, tmp/off-repo path는 historical breadcrumb로만 남긴다.
 - live smoke required 조건이 문서와 validator에서 같은 의미로 해석된다.
 - manual handoff가 "예외 상황"으로만 남는지, 어떤 slice가 수동 handoff 대상인지 문서로 잠긴다.
 - scheduler 운영 기준이 최소한 현재 지원 플랫폼과 fallback policy를 설명한다.
@@ -99,6 +100,7 @@ checkpoint 결과를 남길 때는 최소한 아래를 함께 기록한다.
 - `checkpoint-ref=stage2-complete | stage4-ready-for-review | stage6-closeout`
 - workpack ref: `docs/workpacks/06-recipe-to-planner/README.md`
 - 필요하면 audit artifact / authority evidence 경로를 notes 또는 관련 gate evidence에 반영
+- historical stage6/tmp artifact가 현재 machine에 없으면, retained repo-local evidence는 replay bundle과 replay ledger를 우선 사용하고 missing original artifact는 incident/backfill disposition으로 설명한다.
 
 ## Replay Acceptance Ledger
 
@@ -138,6 +140,7 @@ pnpm omo:promotion:update -- --section promotion-gate --status not-ready --block
 - 다음 promotion-gate 실행 조건
 - 현재 blocker 목록
 - replay acceptance 자체의 representative lane pass/fail은 `.workflow-v2/replay-acceptance.json`에 남긴다.
+- tmp/off-repo ref가 historical breadcrumb로만 남는 경우, current note는 repo-local retained evidence를 우선 적고 필요하면 `artifact-missing accepted` 같은 disposition을 함께 남긴다.
 
 ## Ready Criteria
 
