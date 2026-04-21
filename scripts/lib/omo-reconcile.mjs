@@ -15,9 +15,14 @@ import {
 import {
   applyBookkeepingRepairPlan,
   evaluateBookkeepingInvariant,
+  readSliceRoadmapStatus,
   readWorkpackDesignAuthority,
+  readWorkpackDesignStatus,
+  updateSliceRoadmapStatus,
   updateWorkpackDesignAuthorityStatus,
+  updateWorkpackDesignStatus,
 } from "./omo-bookkeeping.mjs";
+import { planCanonicalCloseoutDocSurfaceRepair } from "./omo-closeout-state.mjs";
 import { createGithubAutomationClient } from "./omo-github.mjs";
 import {
   applyChecklistCheckedState,
@@ -60,6 +65,32 @@ function runGit({ cwd, args }) {
   }
 
   return (result.stdout ?? "").trim();
+}
+
+function readJson(filePath) {
+  return JSON.parse(readFileSync(filePath, "utf8"));
+}
+
+function resolveChecklistSurfaceStatus(items) {
+  return resolveUncheckedChecklistItems(items).length > 0 ? "pending" : "complete";
+}
+
+function readTrackedWorkItemCloseout({
+  worktreePath,
+  workItemId,
+}) {
+  const filePath = resolve(
+    ensureNonEmptyString(worktreePath, "worktreePath"),
+    ".workflow-v2",
+    "work-items",
+    `${ensureNonEmptyString(workItemId, "workItemId")}.json`,
+  );
+  if (!existsSync(filePath)) {
+    return null;
+  }
+
+  const workItem = readJson(filePath);
+  return workItem?.closeout ?? null;
 }
 
 function bucketToVerification(bucket) {
@@ -157,10 +188,15 @@ function buildCloseoutRepairIssue(kind, filePath, actual, expected) {
 
 export function evaluateCloseoutRepairPlan({
   worktreePath,
+  workItemId = undefined,
   slice,
   runtime,
 }) {
   const normalizedSlice = ensureNonEmptyString(slice, "slice");
+  const normalizedWorkItemId =
+    typeof workItemId === "string" && workItemId.trim().length > 0
+      ? workItemId.trim()
+      : normalizedSlice;
   const contract = readWorkpackChecklistContract({
     worktreePath,
     slice: normalizedSlice,
@@ -174,9 +210,46 @@ export function evaluateCloseoutRepairPlan({
     worktreePath,
     slice: normalizedSlice,
   });
+  const roadmap = readSliceRoadmapStatus({
+    rootDir: worktreePath,
+    slice: normalizedSlice,
+  });
+  const design = readWorkpackDesignStatus({
+    rootDir: worktreePath,
+    slice: normalizedSlice,
+  });
+  const trackedCloseout = readTrackedWorkItemCloseout({
+    worktreePath,
+    workItemId: normalizedWorkItemId,
+  });
   const repairActions = [];
   const issues = [];
   const blockedErrors = [];
+  const pushRepairAction = (action) => {
+    const normalizedKind = action?.kind ?? "";
+    const normalizedTarget = action?.targetStatus ?? "";
+    const alreadyExists = repairActions.some(
+      (candidate) =>
+        candidate?.kind === normalizedKind && (candidate?.targetStatus ?? "") === normalizedTarget,
+    );
+    if (!alreadyExists) {
+      repairActions.push(action);
+    }
+  };
+  const pushIssue = (issue) => {
+    const normalizedKind = issue?.kind ?? "";
+    const normalizedExpected = issue?.expected ?? "";
+    const normalizedPath = issue?.file_path ?? "";
+    const alreadyExists = issues.some(
+      (candidate) =>
+        candidate?.kind === normalizedKind
+        && (candidate?.expected ?? "") === normalizedExpected
+        && (candidate?.file_path ?? "") === normalizedPath,
+    );
+    if (!alreadyExists) {
+      issues.push(issue);
+    }
+  };
 
   if (contract.errors.length > 0) {
     blockedErrors.push(
@@ -186,23 +259,123 @@ export function evaluateCloseoutRepairPlan({
       })),
     );
   } else {
-    const closeoutItems = resolveUncheckedChecklistItems(
-      (contract.items ?? []).filter((item) => item && item.manualOnly !== true),
-    );
+    const canonicalRepairPlan = planCanonicalCloseoutDocSurfaceRepair({
+      closeout: trackedCloseout,
+      workItemId: normalizedWorkItemId,
+      currentSurface: {
+        readme: {
+          roadmap_status: roadmap.missing ? null : roadmap.status,
+          design_status: design.missing ? null : design.status,
+          delivery_checklist_status: resolveChecklistSurfaceStatus(contract.deliveryItems),
+          design_authority_status: authority.missing ? null : authority.authorityStatus,
+        },
+        acceptance: {
+          status: resolveChecklistSurfaceStatus(
+            (contract.acceptanceItems ?? []).filter((item) => item && item.manualOnly !== true),
+          ),
+        },
+      },
+    });
 
-    if (closeoutItems.length > 0) {
-      repairActions.push({
-        kind: "checklist_closeout",
-        items: closeoutItems,
-      });
-      issues.push(
-        buildCloseoutRepairIssue(
-          "closeout_checklist",
-          `${normalizedSlice}/checklists`,
-          `${closeoutItems.length} open`,
-          "all non-manual items checked",
-        ),
+    if (canonicalRepairPlan) {
+      for (const action of canonicalRepairPlan.repair_actions) {
+        if (action?.kind === "roadmap_status") {
+          pushRepairAction(action);
+          pushIssue(
+            buildCloseoutRepairIssue(
+              "roadmap_status",
+              roadmap.filePath,
+              roadmap.status ?? "missing",
+              action.targetStatus,
+            ),
+          );
+          continue;
+        }
+
+        if (action?.kind === "design_status") {
+          pushRepairAction(action);
+          pushIssue(
+            buildCloseoutRepairIssue(
+              "design_status",
+              design.filePath,
+              design.status ?? "missing",
+              action.targetStatus,
+            ),
+          );
+          continue;
+        }
+
+        if (action?.kind === "design_authority_status") {
+          pushRepairAction(action);
+          pushIssue(
+            buildCloseoutRepairIssue(
+              "design_authority_status",
+              authority.filePath,
+              authority.authorityStatus ?? "missing",
+              action.targetStatus,
+            ),
+          );
+          continue;
+        }
+
+        if (action?.kind === "delivery_checklist_closeout") {
+          const deliveryItems = resolveUncheckedChecklistItems(contract.deliveryItems);
+          if (deliveryItems.length > 0) {
+            pushRepairAction({
+              ...action,
+              items: deliveryItems,
+            });
+            pushIssue(
+              buildCloseoutRepairIssue(
+                "delivery_checklist_closeout",
+                contract.readmePath,
+                "pending",
+                action.targetStatus,
+              ),
+            );
+          }
+          continue;
+        }
+
+        if (action?.kind === "acceptance_closeout") {
+          const acceptanceItems = resolveUncheckedChecklistItems(
+            (contract.acceptanceItems ?? []).filter((item) => item && item.manualOnly !== true),
+          );
+          if (acceptanceItems.length > 0) {
+            pushRepairAction({
+              ...action,
+              items: acceptanceItems,
+            });
+            pushIssue(
+              buildCloseoutRepairIssue(
+                "acceptance_closeout",
+                contract.acceptancePath,
+                "pending",
+                action.targetStatus,
+              ),
+            );
+          }
+        }
+      }
+    } else {
+      const closeoutItems = resolveUncheckedChecklistItems(
+        (contract.items ?? []).filter((item) => item && item.manualOnly !== true),
       );
+
+      if (closeoutItems.length > 0) {
+        pushRepairAction({
+          kind: "checklist_closeout",
+          items: closeoutItems,
+        });
+        pushIssue(
+          buildCloseoutRepairIssue(
+            "closeout_checklist",
+            `${normalizedSlice}/checklists`,
+            `${closeoutItems.length} open`,
+            "all non-manual items checked",
+          ),
+        );
+      }
     }
   }
 
@@ -246,11 +419,11 @@ export function evaluateCloseoutRepairPlan({
             automationSpec?.frontend?.design_authority?.authority_report_paths ?? [],
           );
           if (currentReportPaths.length === 0) {
-            repairActions.push({
+            pushRepairAction({
               kind: "automation_spec_authority_paths",
               authorityReportPaths: reportPaths,
             });
-            issues.push(
+            pushIssue(
               buildCloseoutRepairIssue(
                 "automation_spec_authority_paths",
                 automationSpecPath,
@@ -261,11 +434,11 @@ export function evaluateCloseoutRepairPlan({
           }
 
           if (authority.authorityStatus !== "reviewed") {
-            repairActions.push({
+            pushRepairAction({
               kind: "design_authority_status",
               targetStatus: "reviewed",
             });
-            issues.push(
+            pushIssue(
               buildCloseoutRepairIssue(
                 "design_authority_status",
                 authority.filePath,
@@ -295,7 +468,41 @@ export function applyCloseoutRepairPlan({
   const changedFiles = new Set();
 
   for (const action of normalizedActions) {
+    if (action?.kind === "roadmap_status") {
+      const result = updateSliceRoadmapStatus({
+        worktreePath,
+        slice,
+        status: action.targetStatus,
+      });
+      if (result.changed && result.filePath) {
+        changedFiles.add(result.filePath);
+      }
+      continue;
+    }
+
+    if (action?.kind === "design_status") {
+      const result = updateWorkpackDesignStatus({
+        worktreePath,
+        slice,
+        targetStatus: action.targetStatus,
+      });
+      if (result.changed && result.filePath) {
+        changedFiles.add(result.filePath);
+      }
+      continue;
+    }
+
     if (action?.kind === "checklist_closeout") {
+      for (const filePath of applyChecklistCheckedState({
+        items: action.items,
+        checked: true,
+      })) {
+        changedFiles.add(filePath);
+      }
+      continue;
+    }
+
+    if (action?.kind === "delivery_checklist_closeout" || action?.kind === "acceptance_closeout") {
       for (const filePath of applyChecklistCheckedState({
         items: action.items,
         checked: true,
@@ -342,6 +549,14 @@ function formatCloseoutIssueSummary(issue) {
 
   if (kind === "closeout_checklist") {
     return `- checklist closeout: \`${actual}\` -> \`${expected}\``;
+  }
+
+  if (kind === "delivery_checklist_closeout") {
+    return `- README Delivery Checklist: \`${actual}\` -> \`${expected}\``;
+  }
+
+  if (kind === "acceptance_closeout") {
+    return `- acceptance closeout: \`${actual}\` -> \`${expected}\``;
   }
 
   if (kind === "automation_spec_authority_paths") {
@@ -785,6 +1000,7 @@ export function reconcileWorkItemBookkeeping({
   if (invariant.outcome === "ok") {
     const closeoutPlan = evaluateCloseoutRepairPlan({
       worktreePath: rootDir,
+      workItemId: normalizedWorkItemId,
       slice: resolvedSlice,
       runtime,
     });
@@ -847,6 +1063,7 @@ export function reconcileWorkItemBookkeeping({
     }
     const closeoutPlan = evaluateCloseoutRepairPlan({
       worktreePath: closeoutWorktree.worktreePath,
+      workItemId: normalizedWorkItemId,
       slice: resolvedSlice,
       runtime,
     });

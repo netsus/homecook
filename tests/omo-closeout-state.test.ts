@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  planCanonicalCloseoutDocSurfaceRepair,
   projectCanonicalCloseoutToDocSurfaceSyncContract,
   projectCanonicalCloseoutToHumanSurfacePayload,
   projectCanonicalCloseoutToPrBodySections,
@@ -173,6 +174,43 @@ describe("omo canonical closeout state", () => {
       sync_state: {
         docs_synced_at: "2026-04-21T00:01:00Z",
       },
+    });
+  });
+
+  it("plans current-vocabulary doc-surface repair actions from the canonical closeout snapshot", () => {
+    expect(
+      planCanonicalCloseoutDocSurfaceRepair({
+        closeout: {
+          ...closeoutSnapshot,
+          docs_projection: {
+            ...closeoutSnapshot.docs_projection,
+            roadmap_lifecycle: "ready_for_review",
+            design_status: "N/A",
+            design_authority: "not_required",
+          },
+        },
+        workItemId: "06-recipe-to-planner",
+        currentSurface: {
+          readme: {
+            roadmap_status: "planned",
+            design_status: "confirmed",
+            delivery_checklist_status: "pending",
+            design_authority_status: "required",
+          },
+          acceptance: {
+            status: "pending",
+          },
+        },
+      }),
+    ).toEqual({
+      canonical_source: ".workflow-v2/work-items/06-recipe-to-planner.json#closeout",
+      repair_actions: [
+        { kind: "roadmap_status", targetStatus: "in-progress" },
+        { kind: "design_status", targetStatus: "N/A" },
+        { kind: "delivery_checklist_closeout", targetStatus: "complete" },
+        { kind: "design_authority_status", targetStatus: "not-required" },
+        { kind: "acceptance_closeout", targetStatus: "complete" },
+      ],
     });
   });
 

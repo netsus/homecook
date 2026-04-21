@@ -2464,6 +2464,7 @@ function runInternalCloseoutReconcile({
 
   const closeoutPlan = evaluateCloseoutRepairPlan({
     worktreePath: nextState.workspace.path,
+    workItemId,
     slice,
     runtime: nextState,
   });

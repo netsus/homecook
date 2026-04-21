@@ -120,7 +120,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - 현재 baseline에서는 `.workflow-v2/status.json` summary projection consistency와 README / acceptance / PR body용 generated payload contract를 함께 검증한다.
 - `validate:closeout-sync`는 work item `closeout` snapshot이 있으면 현재 roadmap / README / acceptance closeout surface가 canonical closeout generated doc-surface contract와 모순되지 않는지도 함께 본다.
 - 현재 PR body baseline은 canonical closeout snapshot에서 `Closeout Sync` / `Merge Gate` 기본 섹션을 생성하고, `Actual Verification` evidence는 source PR/manual surface를 계속 우선한다.
-- 현재 baseline은 human-facing surface용 generated payload/validator contract까지만 포함하고, markdown 전체 rewrite/sync patcher는 아직 포함하지 않는다.
+- `omo:reconcile`와 internal `6.5 closeout_reconcile`은 current markdown vocabulary 범위에서 canonical closeout doc-surface repair action을 소비할 수 있다.
+- 현재 baseline은 human-facing surface용 generated payload/validator contract와 current-vocabulary repair consumer까지만 포함하고, markdown 전체 rewrite/sync patcher는 아직 포함하지 않는다.
 - machine-readable 파일이 들어와도 README 표를 즉시 제거하지 않는다.
 - product slice merge gate는 `slice-workflow.md`와 `agent-workflow-overview.md`가 정한 current-head 기준을 계속 따른다.
 - Phase 4부터는 최소 executable helper(`pnpm omo:dispatch-stage`, `pnpm omo:sync-status`)를 함께 관리한다.
