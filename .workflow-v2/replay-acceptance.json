@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-21T08:02:15.799Z",
+  "updated_at": "2026-04-21T12:50:38.080Z",
   "lanes": [
     {
       "id": "slice06-authority-replay",
@@ -58,21 +58,25 @@
     {
       "id": "bugfix-patch-replay",
       "label": "Bugfix patch replay",
-      "status": "pending",
+      "status": "pass",
       "required": true,
       "work_item_refs": [
         "docs/workpacks/01-discovery-detail-auth/README.md"
       ],
       "incident_ids": [],
-      "evidence_refs": [],
+      "evidence_refs": [
+        ".artifacts/meta-harness-auditor/bugfix-patch-replay/report.md",
+        ".artifacts/meta-harness-auditor/bugfix-patch-replay/promotion-rationale.json",
+        "docs/engineering/workflow-v2/replay-bugfix-patch.md"
+      ],
       "criteria": {
-        "manual_runtime_json_edit_free": false,
-        "stale_lock_manual_clear_free": false,
-        "stale_ci_snapshot_manual_fix_free": false,
-        "canonical_closeout_validated": false,
-        "auditor_result_recorded": false
+        "manual_runtime_json_edit_free": true,
+        "stale_lock_manual_clear_free": true,
+        "stale_ci_snapshot_manual_fix_free": true,
+        "canonical_closeout_validated": true,
+        "auditor_result_recorded": true
       },
-      "notes": "Pending Phase 8 representative replay."
+      "notes": "post-reset bugfix patch replay passed; targeted regression, workflow validators, and repo-local audit evidence are all green"
     },
     {
       "id": "control-plane-smoke-replay",
@@ -95,9 +99,8 @@
   "summary": {
     "status": "in_progress",
     "blocking_lane_ids": [
-      "bugfix-patch-replay",
       "control-plane-smoke-replay"
     ],
-    "notes": "slice06 authority replay and slice07 fullstack replay passed; remaining representative replay lanes pending"
+    "notes": "slice06 authority replay, slice07 fullstack replay, and bugfix patch replay passed; control-plane smoke replay pending"
   }
 }
