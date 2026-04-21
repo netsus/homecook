@@ -347,6 +347,64 @@ describe("closeout sync validator", () => {
     ]);
   });
 
+  it("fails merged closeout when only the roadmap file changes but the canonical projection drifts", () => {
+    const rootDir = createFixture({
+      roadmapStatus: "merged",
+      designStatus: "confirmed",
+      authorityStatus: "reviewed",
+      deliveryItems: [{ checked: true, text: "UI 연결" }],
+      acceptanceItems: [{ checked: true, text: "대표 사용자 흐름이 정상 동작한다" }],
+      closeout: {
+        phase: "completed",
+        docs_projection: {
+          roadmap_lifecycle: "ready_for_review",
+          design_status: "pending-review",
+          delivery_checklist: "pending",
+          design_authority: "pending",
+          acceptance: "pending",
+          automation_spec_metadata: "synced",
+        },
+        verification_projection: {
+          required_checks: "passed",
+          external_smokes: "passed",
+          authority_reports: [],
+          actual_verification_refs: ["PR Actual Verification"],
+        },
+        merge_gate_projection: {
+          current_head_sha: "abc1234",
+          approval_state: "dual_approved",
+          all_checks_green: true,
+        },
+        projection_state: {
+          docs_synced_at: "2026-04-21T00:01:00Z",
+        },
+      },
+    });
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "docs/cleanup-workpack-notes",
+      },
+      changedFiles: ["docs/workpacks/README.md"],
+    });
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        name: "closeout-sync:05-planner-week-core",
+        errors: expect.arrayContaining([
+          expect.objectContaining({
+            message: expect.stringContaining("Roadmap status must match canonical closeout projection"),
+          }),
+          expect.objectContaining({
+            message: expect.stringContaining("Design Status must match canonical closeout projection"),
+          }),
+        ]),
+      }),
+    ]);
+  });
+
   it("ignores unchecked Manual Only items when merged slice closeout is otherwise complete", () => {
     const rootDir = createFixture({
       roadmapStatus: "merged",

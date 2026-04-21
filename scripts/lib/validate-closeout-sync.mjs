@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -79,21 +79,101 @@ function resolveBranchContext(branchName) {
   };
 }
 
-function resolveChangedSlices(changedFiles) {
+function extractSliceFromWorkpackDocPath(filePath) {
+  const match = /^docs\/workpacks\/([^/]+)\/(?:README|acceptance)\.md$/.exec(filePath);
+  if (!match) {
+    return null;
+  }
+
+  return match[1] === "_template" ? null : match[1];
+}
+
+function extractSlicesFromRoadmapDiff(diffText) {
+  if (typeof diffText !== "string" || diffText.trim().length === 0) {
+    return [];
+  }
+
   return Array.from(
     new Set(
-      changedFiles
-        .map((filePath) => {
-          const match = /^docs\/workpacks\/([^/]+)\/(?:README|acceptance)\.md$/.exec(filePath);
-          if (!match) {
+      diffText
+        .split(/\r?\n/)
+        .map((line) => {
+          const match = /^[+-]\|\s*`([^`]+)`\s*\|/.exec(line.trim());
+          return match?.[1] ?? null;
+        })
+        .filter((slice) => typeof slice === "string" && slice !== "_template"),
+    ),
+  );
+}
+
+function listRoadmapChangedSlicesFromDiff({ rootDir, baseRef }) {
+  if (typeof baseRef !== "string" || baseRef.trim().length === 0) {
+    return [];
+  }
+
+  const result = spawnSync(
+    "git",
+    ["diff", "--unified=0", `origin/${baseRef}...HEAD`, "--", "docs/workpacks/README.md"],
+    {
+      cwd: rootDir,
+      encoding: "utf8",
+    },
+  );
+
+  if (result.status !== 0) {
+    return [];
+  }
+
+  return extractSlicesFromRoadmapDiff(result.stdout ?? "");
+}
+
+function listTrackedCloseoutSlices({ rootDir }) {
+  const workItemsDir = resolve(rootDir, ".workflow-v2", "work-items");
+  if (!existsSync(workItemsDir)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      readdirSync(workItemsDir)
+        .filter((fileName) => fileName.endsWith(".json"))
+        .map((fileName) => {
+          const filePath = resolve(workItemsDir, fileName);
+          const workItem = readJson(filePath);
+          if (!workItem?.closeout || typeof workItem.closeout !== "object" || Array.isArray(workItem.closeout)) {
             return null;
           }
 
-          return match[1] === "_template" ? null : match[1];
+          if (typeof workItem.id === "string" && workItem.id.trim().length > 0) {
+            return workItem.id.trim();
+          }
+
+          return fileName.replace(/\.json$/, "");
         })
         .filter(Boolean),
     ),
   );
+}
+
+function resolveChangedSlices({
+  rootDir,
+  baseRef,
+  changedFiles,
+}) {
+  const slices = new Set(
+    changedFiles.map((filePath) => extractSliceFromWorkpackDocPath(filePath)).filter(Boolean),
+  );
+
+  if (changedFiles.includes("docs/workpacks/README.md")) {
+    const roadmapSlices = listRoadmapChangedSlicesFromDiff({ rootDir, baseRef });
+    const fallbackSlices = roadmapSlices.length > 0 ? roadmapSlices : listTrackedCloseoutSlices({ rootDir });
+
+    for (const slice of fallbackSlices) {
+      slices.add(slice);
+    }
+  }
+
+  return Array.from(slices);
 }
 
 function parseDraftState(value) {
@@ -671,7 +751,11 @@ export function validateCloseoutSync({
     Array.isArray(changedFiles) && changedFiles.length >= 0
       ? changedFiles
       : listChangedFilesAgainstBase({ rootDir, baseRef });
-  const changedSlices = resolveChangedSlices(resolvedChangedFiles);
+  const changedSlices = resolveChangedSlices({
+    rootDir,
+    baseRef,
+    changedFiles: resolvedChangedFiles,
+  });
   const slices = new Set(changedSlices);
   const prIsDraft = parseDraftState(env.PR_IS_DRAFT);
 
