@@ -341,6 +341,76 @@ export function projectCanonicalCloseoutToDocSurfaceSyncContract(closeout, { wor
   };
 }
 
+export function planCanonicalCloseoutDocSurfaceRepair({
+  closeout,
+  workItemId,
+  currentSurface,
+} = {}) {
+  const projection = projectCanonicalCloseoutToDocSurfaceSyncContract(closeout, { workItemId });
+  if (!projection) {
+    return null;
+  }
+
+  const currentReadme = currentSurface?.readme ?? {};
+  const currentAcceptance = currentSurface?.acceptance ?? {};
+  const repairActions = [];
+
+  if (
+    projection.readme.roadmap_status
+    && normalizeOptionalString(currentReadme.roadmap_status) !== projection.readme.roadmap_status
+  ) {
+    repairActions.push({
+      kind: "roadmap_status",
+      targetStatus: projection.readme.roadmap_status,
+    });
+  }
+
+  if (
+    projection.readme.design_status
+    && normalizeOptionalString(currentReadme.design_status) !== projection.readme.design_status
+  ) {
+    repairActions.push({
+      kind: "design_status",
+      targetStatus: projection.readme.design_status,
+    });
+  }
+
+  if (
+    projection.readme.delivery_checklist_status === "complete"
+    && normalizeOptionalString(currentReadme.delivery_checklist_status) !== "complete"
+  ) {
+    repairActions.push({
+      kind: "delivery_checklist_closeout",
+      targetStatus: "complete",
+    });
+  }
+
+  if (
+    projection.readme.design_authority_status
+    && normalizeOptionalString(currentReadme.design_authority_status) !== projection.readme.design_authority_status
+  ) {
+    repairActions.push({
+      kind: "design_authority_status",
+      targetStatus: projection.readme.design_authority_status,
+    });
+  }
+
+  if (
+    projection.acceptance.status === "complete"
+    && normalizeOptionalString(currentAcceptance.status) !== "complete"
+  ) {
+    repairActions.push({
+      kind: "acceptance_closeout",
+      targetStatus: "complete",
+    });
+  }
+
+  return {
+    canonical_source: projection.canonical_source,
+    repair_actions: repairActions,
+  };
+}
+
 export function projectCanonicalCloseoutToStatusFields(closeout) {
   if (!closeout || typeof closeout !== "object" || Array.isArray(closeout)) {
     return null;

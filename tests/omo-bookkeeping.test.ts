@@ -258,6 +258,22 @@ function setWorkpackCloseoutState({
   );
 }
 
+function setTrackedWorkItemCloseout(rootDir: string, workItemId: string, closeout: Record<string, unknown>) {
+  const filePath = join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`);
+  const workItem = JSON.parse(readFileSync(filePath, "utf8"));
+  writeFileSync(
+    filePath,
+    JSON.stringify(
+      {
+        ...workItem,
+        closeout,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
 function createRuntimeFixture(workItemId = "05-planner-week-core") {
   const rootDir = mkdtempSync(join(tmpdir(), "omo-bookkeeping-"));
   seedTrackedFiles(rootDir, workItemId);
@@ -884,6 +900,71 @@ describe("OMO bookkeeping", () => {
 
     expect(readmeOnBranch).toContain("- [x] merged bookkeeping closeout is aligned");
     expect(acceptanceOnBranch).toContain("- [x] merged slice acceptance remains closed");
+  });
+
+  it("repairs README doc-surface drift from the canonical closeout snapshot during closeout reconcile", () => {
+    const workItemId = "05-planner-week-core";
+    const { rootDir } = createGitOriginFixture(workItemId, (fixtureRoot) => {
+      setRoadmapStatus(fixtureRoot, workItemId, "merged");
+      setWorkpackCloseoutState({
+        rootDir: fixtureRoot,
+        workItemId,
+        deliveryChecked: true,
+        acceptanceChecked: true,
+        authorityStatus: "required",
+      });
+      setTrackedWorkItemCloseout(fixtureRoot, workItemId, {
+        phase: "completed",
+        docs_projection: {
+          roadmap_lifecycle: "merged",
+          design_status: "N/A",
+          delivery_checklist: "complete",
+          design_authority: "not_required",
+          acceptance: "complete",
+          automation_spec_metadata: "not_required",
+        },
+        verification_projection: {
+          required_checks: "passed",
+          external_smokes: "skipped",
+          authority_reports: [],
+          actual_verification_refs: ["PR Actual Verification"],
+        },
+        merge_gate_projection: {
+          current_head_sha: "abc1234",
+          approval_state: "dual_approved",
+          all_checks_green: true,
+        },
+        projection_state: {
+          docs_synced_at: "2026-04-21T00:01:00Z",
+        },
+      });
+    });
+    const { ghBin } = createFakeGh(rootDir, 327);
+
+    const result = reconcileWorkItemBookkeeping({
+      rootDir,
+      workItemId,
+      ghBin,
+      now: "2026-04-01T12:00:00.000Z",
+    });
+
+    expect(result.action).toBe("open_closeout_pr");
+
+    const readmeOnBranch = execFileSync(
+      "git",
+      [
+        "show",
+        "origin/docs/omo-closeout-05-planner-week-core:docs/workpacks/05-planner-week-core/README.md",
+      ],
+      {
+        cwd: rootDir,
+        encoding: "utf8",
+      },
+    );
+
+    expect(readmeOnBranch).toContain("- Authority status: `not-required`");
+    expect(readmeOnBranch).toContain("- [x] N/A");
+    expect(readmeOnBranch).toContain("- [ ] 확정 (confirmed)");
   });
 
   it("fails closeout reconcile when required exploratory evidence cannot be traced to a frontend PR", () => {
