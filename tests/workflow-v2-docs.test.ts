@@ -209,18 +209,24 @@ describe("workflow v2 docs", () => {
     expect(canonicalCloseout).toContain(
       "현재 README / acceptance baseline은 current markdown surface vocabulary에 맞춘 deterministic sync contract와 repair consumer까지만 포함하고, unsupported state 전체를 rewrite하는 patcher는 아직 아니다.",
     );
+    expect(canonicalCloseout).toContain(
+      "현재 baseline은 compatibility note downgrade까지 반영됐고, 이후에는 appendix화 또는 제거 여부만 남는다.",
+    );
     expect(canonicalCloseout).toContain("markdown 전체 rewrite는 아직 남아 있다.");
     expect(authorityMatrix).toContain(
-      "`validate:closeout-sync`는 workpack closeout docs가 merged-ready 상태인지 보고, work item `closeout` snapshot이 있으면 roadmap / README / acceptance surface가 canonical generated doc-surface contract와 모순되지 않는지도 함께 본다.",
+      "이 문서는 canonical closeout ownership / projection semantics를 정의하는 문서가 아니다.",
     );
     expect(authorityMatrix).toContain(
-      "`omo:reconcile`는 matrix에 선언된 closeout surface만 repair 후보로 삼고, current markdown vocabulary로 표현 가능한 roadmap / README / acceptance drift는 canonical closeout repair action으로 정렬할 수 있다.",
+      "이 문서는 전환 기간 동안 `docs/omo-closeout-<slice>` branch가 만질 수 있는",
     );
     expect(authorityMatrix).toContain(
-      "`validate:workflow-v2`는 canonical closeout snapshot이 README / acceptance / PR body generated payload baseline을 계산할 수 있는지, 그리고 projecting/completed snapshot의 evidence-bearing fields가 비어 있지 않은지 함께 본다.",
+      "closeout repair는 아래 4개 surface 안에서만 docs-side sync를 수행한다.",
     );
     expect(authorityMatrix).toContain(
-      "`omo-github` PR body baseline은 canonical closeout snapshot으로 `Closeout Sync` / `Merge Gate` 기본 section을 생성하지만, `Actual Verification` evidence는 source PR/manual surface를 계속 우선한다.",
+      "`validate:closeout-sync`와 `omo:reconcile`는 canonical closeout snapshot을 기준으로 이 note의 writable surface 범위 안에서만 doc-side drift를 검사/수리한다.",
+    );
+    expect(authorityMatrix).toContain(
+      "`validate:workflow-v2`와 `omo-github` PR body baseline은 canonical closeout snapshot 기준 generated payload를 다루며, 이 note는 body semantics를 정의하지 않는다.",
     );
   });
 
