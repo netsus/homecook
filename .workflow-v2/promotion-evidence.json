@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-21T15:59:39Z",
+  "updated_at": "2026-04-21T16:07:30Z",
   "canonical_policy": "v2",
   "execution_mode": "default",
   "documentation_gates": [
@@ -108,7 +108,7 @@
       "H-OMO-001",
       "H-OMO-006"
     ],
-    "next_review_trigger": "After canonical closeout state ownership, incident disposition cleanup, and promotion/auditor policy alignment",
-    "notes": "Representative replay acceptance now passes, but promotion remains not-ready until unresolved incident blockers and bookkeeping/auditor gaps are reduced."
+    "next_review_trigger": "After active open incident blockers narrow, backfill-required dispositions are recorded, and promotion/auditor policy language stays aligned",
+    "notes": "Representative replay acceptance passes, but promotion remains not-ready because active system blocker families still remain: promotion drift (OMO-RETRO-003), closeout projection (OMO-07-002), runtime/observability (OMO-07-003, OMO-07-007), contract drift (OMO-07-004), PR/CI drift (OMO-07-005, OMO-07-006), session/cost (OMO-07-008). Mixed backfill incidents OMO-03-001 and OMO-BACKFILL-03-05-001 remain secondary blockers until disposition is recorded."
   }
 }
