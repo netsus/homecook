@@ -132,12 +132,12 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-03-001
 
-- status: `backfill-required`
+- status: `monitoring`
 - boundary: `mixed`
 - bucket: `D. Runtime / Observability Reset`
 - stage_scope: `slice03 pilot retention / Stage 4~6`
 - symptom: 첫 product OMO-lite pilot slice03은 merged 상태지만, 현재 machine에는 canonical `omo-lite-dispatch` / supervisor artifact가 남아 있지 않고 runtime은 `.artifacts/tmp/claude-cli-provider-dogfood/...`를 마지막 artifact로 가리킨다. `codex_primary.session_id`도 비어 있어 product 결과는 남았지만 replayable 운영 흔적은 부분적으로만 보존됐다.
-- current_recovery: 당시에는 pilot note와 merged status를 surrogate evidence로 사용했고, 별도 incident corpus에는 승격되지 않았다. 현재는 retrospective backfill 전까지 `backfill-required`를 유지하고, off-repo artifact를 회수하지 못하면 `artifact-missing accepted` disposition과 repo-local surrogate refs로 정리한다.
+- current_recovery: off-repo artifact 회수 대신 `artifact-missing accepted` disposition을 기록했다. 현재 retained surrogate evidence는 `docs/workpacks/03-recipe-like/omo-lite-notes.md`, `.opencode/omo-runtime/03-recipe-like.json`, `.workflow-v2/status.json`이다. 즉 original artifact gap은 historical limitation으로 남기고, 현재 promotion/retrospective 판단은 repo-local surrogate evidence 기준으로 이어간다.
 - root_cause_hypothesis: 초기 product pilot이 canonical repo-local artifact surface보다 dogfood / tmp execution surface에 더 의존했고, recovery history를 runtime/registry로 승격하는 규칙이 없었다.
 - evidence_refs:
   - `.opencode/omo-runtime/03-recipe-like.json`
@@ -342,12 +342,12 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-BACKFILL-03-05-001
 
-- status: `backfill-required`
+- status: `monitoring`
 - boundary: `mixed`
 - bucket: `A. Governance Simplification`
 - stage_scope: `slice03~slice05 retrospective`
 - symptom: 이번 pass로 slice04/05의 supervisor-side recovery는 formal incident로 끌어올렸지만, slice03은 여전히 pilot note/runtime 잔재 위주여서 canonical artifact replay가 불가능하다.
-- current_recovery: slice04/05는 formal incident로 분리했고, slice03은 current machine 기준 missing-artifact 상태를 그대로 registry에 남긴다.
+- current_recovery: slice04/05는 formal incident로 분리했고, slice03은 `artifact-missing accepted` disposition과 repo-local surrogate evidence로 정리했다. 이 incident는 retrospective classification pass가 왜 필요했는지 설명하는 umbrella note로 유지한다.
 - root_cause_hypothesis: OMO가 recovery history를 공식 tracked state로 남기지 않았고, 초반 pilot일수록 tmp/dogfood 경로 의존도가 높아 retrospective artifact가 약하다.
 - evidence_refs:
   - `.opencode/omo-runtime/03-recipe-like.json`
@@ -389,21 +389,20 @@ reset 기간의 기본 규칙은 아래와 같다.
   - `OMO-07-006`
 - session / cost
   - `OMO-07-008`
-- evidence backfill / retention
-  - `OMO-03-001`
-  - `OMO-BACKFILL-03-05-001`
 
 `OMO-RETRO-001`, `OMO-RETRO-002`, `OMO-04-001`, `OMO-05-001`은 여전히 중요한 seed evidence지만,
 이번 pass에서는 active blocker를 중복 설명하지 않도록 `monitoring`으로 낮춰 historical context 역할에 집중시킨다.
+
+`OMO-03-001`, `OMO-BACKFILL-03-05-001`도 이번 pass에서 `artifact-missing accepted` disposition을 기록했으므로,
+더 이상 primary/secondary blocker가 아니라 historical limitation + retrospective context로 본다.
 
 ## Backfill Queue
 
 아래는 다음 retrospective pass에서 우선 수집할 항목이다.
 
-1. slice03 canonical artifact bundle 부재를 `artifact-missing accepted`로 둘지, 별도 off-repo evidence 회수를 시도할지 결정
-2. slice06 Stage 6 audit bundle / tmp worktree artifact를 durable repo-local evidence로 회수할 수 있는지 확인
-3. OMO promotion `candidate -> ready/default` cutover를 정당화한 docs-governance PR과 그 당시 반대 신호를 같이 묶은 chain 재구성
-4. no-op commit, force-push, runtime JSON edit처럼 공식 상태 밖에서 수행된 복구 작업 목록
+1. slice06 Stage 6 audit bundle / tmp worktree artifact를 durable repo-local evidence로 회수할 수 있는지 확인
+2. OMO promotion `candidate -> ready/default` cutover를 정당화한 docs-governance PR과 그 당시 반대 신호를 같이 묶은 chain 재구성
+3. no-op commit, force-push, runtime JSON edit처럼 공식 상태 밖에서 수행된 복구 작업 목록
 
 ## Exit Rule For Seed Incidents
 
