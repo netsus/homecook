@@ -25,6 +25,7 @@
 ### Documentation Gates
 
 - `omo-canonical-closeout-state`가 closeout ownership / projection semantics를 잠그고, `bookkeeping-authority-matrix`는 transition-period writable closeout surface만 기록한다.
+- 현재 canonical owner는 `.workflow-v2/work-items/<id>.json#closeout`이다.
 - `promotion-readiness` 문서와 `.workflow-v2/promotion-evidence.json`이 같은 gate vocabulary를 사용한다.
 - live smoke required 조건이 문서와 validator에서 같은 의미로 해석된다.
 - manual handoff가 "예외 상황"으로만 남는지, 어떤 slice가 수동 handoff 대상인지 문서로 잠긴다.
