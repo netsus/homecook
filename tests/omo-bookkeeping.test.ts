@@ -679,6 +679,45 @@ describe("OMO bookkeeping", () => {
     expect(results[0]?.errors[0]?.message).toContain("bookkeeping-authority-matrix.md");
   });
 
+  it("does not classify closeout-like docs branches without a slice id as closeout branches", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-closeout-like-branch-"));
+    createGitWorkspace(rootDir);
+    mkdirSync(join(rootDir, "docs", "workpacks", "03-recipe-like"), { recursive: true });
+    writeFileSync(join(rootDir, "README.md"), "# Repo\n");
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "README.md"),
+      [
+        "# Workpack Roadmap v2",
+        "",
+        "## Slice Order",
+        "",
+        "| Slice | Status | Goal |",
+        "| --- | --- | --- |",
+        "| `03-recipe-like` | in-progress | test slice |",
+      ].join("\n"),
+    );
+    execFileSync("git", ["add", "-A"], { cwd: rootDir });
+    execFileSync("git", ["commit", "-m", "chore: seed closeout-like branch fixture"], { cwd: rootDir });
+    const baseHead = execFileSync("git", ["rev-parse", "HEAD"], { cwd: rootDir, encoding: "utf8" }).trim();
+    execFileSync("git", ["update-ref", "refs/remotes/origin/master", baseHead], { cwd: rootDir });
+    execFileSync("git", ["checkout", "-b", "docs/omo-closeout-projection-modes"], { cwd: rootDir });
+
+    writeFileSync(join(rootDir, "README.md"), "# Repo\n\nunexpected\n");
+    execFileSync("git", ["add", "-A"], { cwd: rootDir });
+    execFileSync("git", ["commit", "-m", "docs: simulate non-slice docs branch diff"], { cwd: rootDir });
+
+    const results = validateOmoBookkeeping({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "docs/omo-closeout-projection-modes",
+        BASE_REF: "master",
+      },
+    });
+
+    expect(results).toEqual([]);
+  });
+
   it("allows closeout branches to change acceptance and automation-spec alongside closeout docs", () => {
     const rootDir = createRuntimeFixture("03-recipe-like");
     createGitWorkspace(rootDir);

@@ -106,6 +106,23 @@ describe("real smoke presence validator", () => {
     expect(results).toEqual([]);
   });
 
+  it("does not treat closeout-like docs branches without a slice id as closeout branches", () => {
+    const rootDir = createFixture({
+      externalSmokes: ["pnpm dev:local-supabase"],
+    });
+
+    const results = validateRealSmokePresence({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "docs/omo-closeout-projection-modes",
+        PR_IS_DRAFT: "false",
+      },
+    });
+
+    expect(results).toEqual([]);
+  });
+
   it("skips slices that do not declare external_smokes", () => {
     const rootDir = createFixture();
 

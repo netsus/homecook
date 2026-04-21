@@ -9,6 +9,8 @@ import { resolveAllowedCloseoutRelativePaths } from "./omo-closeout-policy.mjs";
 import { listRuntimeStates, readRuntimeState } from "./omo-session-runtime.mjs";
 import { resolveBranchName } from "./validator-shared.mjs";
 
+const CLOSEOUT_SLICE_BRANCH_PATTERN = /^docs\/omo-closeout-([0-9]{2}[-a-z0-9]+)$/;
+
 function listTrackedWorkItems(rootDir) {
   const workItemsDir = resolve(rootDir, ".workflow-v2", "work-items");
   if (!existsSync(workItemsDir)) {
@@ -50,7 +52,7 @@ function listChangedFilesAgainstBase({ rootDir, baseRef }) {
 
 function validateCloseoutBranchDiff({ rootDir, env = process.env }) {
   const branchName = resolveBranchName({ rootDir, env });
-  const match = /^docs\/omo-closeout-(.+)$/.exec(branchName);
+  const match = CLOSEOUT_SLICE_BRANCH_PATTERN.exec(branchName);
   if (!match) {
     return [];
   }

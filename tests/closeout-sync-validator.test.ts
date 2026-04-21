@@ -216,6 +216,27 @@ describe("closeout sync validator", () => {
     expect(results).toEqual([]);
   });
 
+  it("does not treat closeout-like docs branches without a slice id as closeout branches", () => {
+    const rootDir = createFixture({
+      roadmapStatus: "merged",
+      designStatus: "confirmed",
+      deliveryItems: [{ checked: true, text: "UI 연결" }],
+      acceptanceItems: [{ checked: true, text: "대표 사용자 흐름이 정상 동작한다" }],
+    });
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "docs/omo-closeout-projection-modes",
+        PR_IS_DRAFT: "false",
+      },
+      changedFiles: [],
+    });
+
+    expect(results).toEqual([]);
+  });
+
   it("fails non-draft frontend PRs with temporary design status and open closeout items", () => {
     const rootDir = createFixture({
       roadmapStatus: "in-progress",
