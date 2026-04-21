@@ -186,19 +186,13 @@ describe("workflow v2 docs", () => {
     );
 
     expect(workflowReadme).toContain(
-      "현재 baseline에서는 `.workflow-v2/status.json` summary projection consistency와 README / acceptance / PR body용 generated payload contract를 함께 검증한다.",
+      "canonical closeout projection / repair semantics의 기준은 `omo-canonical-closeout-state.md`를 따른다. `bookkeeping-authority-matrix.md`는 전환이 끝날 때까지 writable closeout surface compatibility note로 유지한다.",
     );
     expect(workflowReadme).toContain(
-      "`validate:closeout-sync`는 work item `closeout` snapshot이 있으면 현재 roadmap / README / acceptance closeout surface가 canonical closeout generated doc-surface contract와 모순되지 않는지도 함께 본다.",
+      "현재 executable baseline은 `.workflow-v2/status.json` summary projection consistency, `validate:closeout-sync`의 doc-surface drift check, PR body `Closeout Sync` / `Merge Gate` generated section, `omo:reconcile` current-vocabulary repair consumer를 포함한다.",
     );
     expect(workflowReadme).toContain(
-      "`omo:reconcile`와 internal `6.5 closeout_reconcile`은 current markdown vocabulary 범위에서 canonical closeout doc-surface repair action을 소비할 수 있다.",
-    );
-    expect(workflowReadme).toContain(
-      "현재 PR body baseline은 canonical closeout snapshot에서 `Closeout Sync` / `Merge Gate` 기본 섹션을 생성하고, `Actual Verification` evidence는 source PR/manual surface를 계속 우선한다.",
-    );
-    expect(workflowReadme).toContain(
-      "현재 baseline은 human-facing surface용 generated payload/validator contract와 current-vocabulary repair consumer까지만 포함하고, markdown 전체 rewrite/sync patcher는 아직 포함하지 않는다.",
+      "`Actual Verification` evidence는 source PR/manual surface를 계속 우선하고, markdown 전체 rewrite/sync patcher는 아직 포함하지 않는다.",
     );
     expect(canonicalCloseout).toContain(
       "현재 baseline: `work-item closeout schema + tracked status projection helper + human-facing projection payload helper + validator guard`까지 구현됐다.",

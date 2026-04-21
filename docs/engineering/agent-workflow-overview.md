@@ -44,8 +44,7 @@
 - `N/A`를 쓸 때는 `영향 없음` 또는 `해당 없음`의 근거를 한 줄로 남긴다.
 - `docs-governance`, `contract-evolution`, `low-risk docs/config`는 E2E, Lighthouse, Design 항목을 무조건 체크하지 않는다.
 - `Actual Verification`은 “누가 / 어디서 / 무엇을 / 어떤 결과로” 확인했는지 남기는 섹션이다.
-- `Closeout Sync`는 roadmap status, README `Delivery Checklist`, acceptance, `Design Status`가 현재 PR 상태와 맞는지 남기는 섹션이다.
-- `Merge Gate`는 current head SHA, 시작된 PR checks 목록, 전체 green 여부, 남은 pending/fail/rerun check를 기록하는 섹션이다.
+- `Closeout Sync`, `Merge Gate`의 exact ownership / projection semantics는 `docs/engineering/slice-workflow.md`와 `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`를 따른다.
 - product slice는 `Ready for Review` 전에 `Actual Verification`, `Closeout Sync`, `Merge Gate` 세 섹션을 비워두지 않는다.
 
 ### QA Execution Rules

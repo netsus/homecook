@@ -82,7 +82,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [presets.md](./presets.md): 작업 유형별 기본 경로
 - [approval-and-loops.md](./approval-and-loops.md): plan/review loop와 dual-approval 규칙
 - [promotion-readiness.md](./promotion-readiness.md): OMO 기본 운영 readiness / lane evidence gate
-- [../bookkeeping-authority-matrix.md](../bookkeeping-authority-matrix.md): closeout docs / tracked state / PR evidence ownership matrix
+- [../bookkeeping-authority-matrix.md](../bookkeeping-authority-matrix.md): transition-period writable closeout surface compatibility note
 - [omo-lite-architecture.md](./omo-lite-architecture.md): maintainer spec. Codex supervisor 기반 Homecook OMO-lite 설계안
 - [omo-session-orchestrator.md](./omo-session-orchestrator.md): maintainer spec. generic session reuse / runtime state / scheduled resume 규격
 - [omo-claude-cli-provider.md](./omo-claude-cli-provider.md): maintainer spec. raw `claude` CLI provider, session extraction, deterministic resume 규격
@@ -115,13 +115,10 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - `workflow-v2` 관련 첫 단계는 문서와 schema를 고정하는 것이다.
 - 실제 tracked 운영 상태는 저장소 루트의 `.workflow-v2/` 아래 JSON으로 기록한다.
 - OMO 기본 운영 건강성 판단은 `docs/engineering/workflow-v2/promotion-readiness.md`와 `.workflow-v2/promotion-evidence.json`을 함께 기준으로 삼는다.
-- closeout docs, `.workflow-v2/status.json`, OMO runtime, PR evidence의 authoritative ownership은 `docs/engineering/bookkeeping-authority-matrix.md`를 따른다.
+- canonical closeout projection / repair semantics의 기준은 `omo-canonical-closeout-state.md`를 따른다. `bookkeeping-authority-matrix.md`는 전환이 끝날 때까지 writable closeout surface compatibility note로 유지한다.
 - `work-item`은 optional `closeout` snapshot을 가질 수 있고, 현재 baseline에서는 `.workflow-v2/status.json`의 `lifecycle / approval_state / verification_status / recovery note`가 그 projection과 모순되지 않아야 한다.
-- 현재 baseline에서는 `.workflow-v2/status.json` summary projection consistency와 README / acceptance / PR body용 generated payload contract를 함께 검증한다.
-- `validate:closeout-sync`는 work item `closeout` snapshot이 있으면 현재 roadmap / README / acceptance closeout surface가 canonical closeout generated doc-surface contract와 모순되지 않는지도 함께 본다.
-- 현재 PR body baseline은 canonical closeout snapshot에서 `Closeout Sync` / `Merge Gate` 기본 섹션을 생성하고, `Actual Verification` evidence는 source PR/manual surface를 계속 우선한다.
-- `omo:reconcile`와 internal `6.5 closeout_reconcile`은 current markdown vocabulary 범위에서 canonical closeout doc-surface repair action을 소비할 수 있다.
-- 현재 baseline은 human-facing surface용 generated payload/validator contract와 current-vocabulary repair consumer까지만 포함하고, markdown 전체 rewrite/sync patcher는 아직 포함하지 않는다.
+- 현재 executable baseline은 `.workflow-v2/status.json` summary projection consistency, `validate:closeout-sync`의 doc-surface drift check, PR body `Closeout Sync` / `Merge Gate` generated section, `omo:reconcile` current-vocabulary repair consumer를 포함한다.
+- `Actual Verification` evidence는 source PR/manual surface를 계속 우선하고, markdown 전체 rewrite/sync patcher는 아직 포함하지 않는다.
 - machine-readable 파일이 들어와도 README 표를 즉시 제거하지 않는다.
 - product slice merge gate는 `slice-workflow.md`와 `agent-workflow-overview.md`가 정한 current-head 기준을 계속 따른다.
 - Phase 4부터는 최소 executable helper(`pnpm omo:dispatch-stage`, `pnpm omo:sync-status`)를 함께 관리한다.
