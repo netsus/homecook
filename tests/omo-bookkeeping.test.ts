@@ -483,6 +483,172 @@ describe("OMO bookkeeping", () => {
     expect(invariant.reason).toBe("roadmap_row_missing");
   });
 
+  it("treats ambiguous design status after Stage 4 as repairable_pre_merge drift", () => {
+    const workItemId = "03-recipe-like";
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-bookkeeping-design-ambiguous-pre-"));
+    seedTrackedFiles(rootDir, workItemId);
+
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", workItemId, "README.md"),
+      [
+        `# ${workItemId}`,
+        "",
+        "## Design Status",
+        "",
+        "- [x] 임시 UI (temporary)",
+        "- [x] 리뷰 대기 (pending-review)",
+        "- [ ] 확정 (confirmed)",
+        "- [ ] N/A",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(rootDir, ".workflow-v2", "status.json"),
+      JSON.stringify(
+        {
+          version: 1,
+          project_profile: "homecook",
+          updated_at: "2026-04-11T00:00:00.000Z",
+          items: [
+            {
+              id: workItemId,
+              preset: "vertical-slice-strict",
+              lifecycle: "ready_for_review",
+              approval_state: "codex_approved",
+              verification_status: "passed",
+              required_checks: ["pnpm validate:workflow-v2"],
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+    writeFileSync(
+      join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`),
+      JSON.stringify(
+        {
+          ...JSON.parse(readFileSync(join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`), "utf8")),
+          status: {
+            lifecycle: "ready_for_review",
+            approval_state: "codex_approved",
+            verification_status: "passed",
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 5,
+        current_stage: 5,
+        last_completed_stage: 4,
+        phase: "wait",
+        next_action: "run_stage",
+        wait: {
+          kind: "ready_for_next_stage",
+          stage: 5,
+          pr_role: "frontend",
+        },
+      },
+    });
+
+    const invariant = evaluateBookkeepingInvariant({
+      rootDir,
+      workItemId,
+      slice: workItemId,
+      runtimeState: readRuntimeState({
+        rootDir,
+        workItemId,
+        slice: workItemId,
+      }).state,
+    });
+
+    expect(invariant.outcome).toBe("repairable_pre_merge");
+    expect(invariant.issues).toEqual([
+      expect.objectContaining({
+        kind: "design_status",
+        actual: null,
+        expected: "pending-review",
+        reason: "design_status_ambiguous",
+      }),
+    ]);
+    expect(invariant.repairActions).toEqual([
+      expect.objectContaining({
+        kind: "design_status",
+        target_status: "pending-review",
+      }),
+    ]);
+  });
+
+  it("treats ambiguous design status after merge as repairable_post_merge drift", () => {
+    const rootDir = createRuntimeFixture();
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "README.md"),
+      [
+        "# Workpack Roadmap v2",
+        "",
+        "## Slice Order",
+        "",
+        "| Slice | Status | Goal |",
+        "| --- | --- | --- |",
+        "| `05-planner-week-core` | merged | test slice |",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "05-planner-week-core", "README.md"),
+      [
+        "# 05-planner-week-core",
+        "",
+        "## Design Status",
+        "",
+        "- [ ] 임시 UI (temporary)",
+        "- [x] 리뷰 대기 (pending-review)",
+        "- [x] 확정 (confirmed)",
+        "- [ ] N/A",
+        "",
+        "## Delivery Checklist",
+        "",
+        "- [x] merged bookkeeping closeout is aligned",
+      ].join("\n"),
+    );
+
+    const invariant = evaluateBookkeepingInvariant({
+      rootDir,
+      workItemId: "05-planner-week-core",
+      slice: "05-planner-week-core",
+      runtimeState: readRuntimeState({
+        rootDir,
+        workItemId: "05-planner-week-core",
+        slice: "05-planner-week-core",
+      }).state,
+    });
+
+    expect(invariant.outcome).toBe("repairable_post_merge");
+    expect(invariant.issues).toEqual([
+      expect.objectContaining({
+        kind: "design_status",
+        actual: null,
+        expected: "confirmed",
+        reason: "design_status_ambiguous",
+      }),
+    ]);
+    expect(invariant.repairActions).toEqual([
+      expect.objectContaining({
+        kind: "design_status",
+        target_status: "confirmed",
+      }),
+    ]);
+  });
+
   it("treats final_authority_pending as a valid pre-closeout state for authority-required slices", () => {
     const workItemId = "03-recipe-like";
     const rootDir = mkdtempSync(join(tmpdir(), "omo-bookkeeping-final-authority-"));

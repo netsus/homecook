@@ -519,6 +519,28 @@ function shouldRequireConfirmedDesign({
   return designAuthorityStatus === "reviewed";
 }
 
+function shouldRequirePendingReviewDesign({
+  requireConfirmedDesign,
+  runtimeState,
+  lifecycleStates,
+  designStatus,
+}) {
+  if (requireConfirmedDesign || designStatus === "N/A") {
+    return false;
+  }
+
+  if (
+    lifecycleStates.includes("ready_for_review") ||
+    lifecycleStates.includes("blocked") ||
+    (Number.isInteger(runtimeState?.wait?.stage) && runtimeState.wait.stage >= 5) ||
+    (Number.isInteger(runtimeState?.active_stage) && runtimeState.active_stage >= 5)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function buildRepairAction(kind, targetStatus, filePath) {
   return {
     kind,
@@ -580,15 +602,31 @@ export function evaluateBookkeepingInvariant({
     authorityRequired: Boolean(runtimeState?.design_authority?.authority_required),
     designAuthorityStatus: runtimeState?.design_authority?.status ?? null,
   });
+  const requirePendingReviewDesign = shouldRequirePendingReviewDesign({
+    requireConfirmedDesign,
+    runtimeState,
+    lifecycleStates,
+    designStatus: design.status,
+  });
   const expectedRoadmapStatus = requireMergedRoadmap
     ? "merged"
     : requireInProgressRoadmap
       ? "in-progress"
       : null;
+  const expectedDesignStatus = requireConfirmedDesign
+    ? "confirmed"
+    : requirePendingReviewDesign
+      ? "pending-review"
+      : null;
   const issues = [];
   const repairActions = [];
 
-  if (roadmap.missing || design.missing) {
+  const repairableDesignAmbiguity =
+    design.missing &&
+    design.reason === "design_status_ambiguous" &&
+    typeof expectedDesignStatus === "string";
+
+  if (roadmap.missing || (design.missing && !repairableDesignAmbiguity)) {
     return {
       outcome: "ambiguous_drift",
       reason: roadmap.reason ?? design.reason ?? "bookkeeping_source_missing",
@@ -606,7 +644,7 @@ export function evaluateBookkeepingInvariant({
         ...(roadmap.missing
           ? [{ kind: "roadmap_status", actual: null, expected: expectedRoadmapStatus, reason: roadmap.reason }]
           : []),
-        ...(design.missing
+        ...(design.missing && !repairableDesignAmbiguity
           ? [{ kind: "design_status", actual: null, expected: requireConfirmedDesign ? "confirmed" : null, reason: design.reason }]
           : []),
       ],
@@ -624,14 +662,15 @@ export function evaluateBookkeepingInvariant({
     repairActions.push(buildRepairAction("roadmap_status", expectedRoadmapStatus, roadmap.filePath));
   }
 
-  if (requireConfirmedDesign && design.status !== "confirmed") {
+  if (expectedDesignStatus && design.status !== expectedDesignStatus) {
     issues.push({
       kind: "design_status",
       actual: design.status,
-      expected: "confirmed",
+      expected: expectedDesignStatus,
       file_path: design.filePath,
+      ...(design.reason ? { reason: design.reason } : {}),
     });
-    repairActions.push(buildRepairAction("design_status", "confirmed", design.filePath));
+    repairActions.push(buildRepairAction("design_status", expectedDesignStatus, design.filePath));
   }
 
   if (issues.length === 0) {
