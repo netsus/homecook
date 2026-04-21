@@ -72,6 +72,20 @@ required lane이 `status=pass`가 되려면 위 criteria가 모두 `true`여야 
 
 `summary.status=pass`가 되려면 required lane이 모두 `pass`여야 한다.
 
+## Update Command
+
+tracked replay ledger 갱신은 `pnpm omo:replay:update`를 사용한다.
+
+예시:
+
+```bash
+pnpm omo:replay:update -- --section lane --id slice06-authority-replay --status in_progress --note "slice06 replay running" --evidence-ref .artifacts/meta-harness-auditor/slice06-replay/report.md
+
+pnpm omo:replay:update -- --section lane --id slice06-authority-replay --status pass --criteria manual_runtime_json_edit_free=true --criteria stale_lock_manual_clear_free=true --criteria stale_ci_snapshot_manual_fix_free=true --criteria canonical_closeout_validated=true --criteria auditor_result_recorded=true --note "slice06 replay passed"
+
+pnpm omo:replay:update -- --section summary --status in_progress --blocking-lane-id slice07-fullstack-replay --note "slice06 passed, remaining replay lanes pending"
+```
+
 ## Relationship To Other Docs
 
 - `omo-supervisor-reset-plan.md`는 왜 replay acceptance가 필요한지 설명한다.

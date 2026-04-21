@@ -97,6 +97,7 @@ describe("OMO-lite repo config", () => {
     expect(scripts["omo:status"]).toBe("node scripts/omo-status.mjs");
     expect(scripts["omo:supervise"]).toBe("node scripts/omo-supervise.mjs");
     expect(scripts["omo:tick"]).toBe("node scripts/omo-tick.mjs");
+    expect(scripts["omo:replay:update"]).toBe("node scripts/omo-replay-update.mjs");
   });
 
   it("ignores the repo-local Claude budget override file", () => {

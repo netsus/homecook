@@ -15,4 +15,5 @@
 - 문서 요약은 `docs/engineering/workflow-v2/*`에 둔다.
 - status board의 각 item은 대응되는 work item JSON을 가져야 한다.
 - replay acceptance와 promotion gate는 별도 ledger로 기록한다.
+- replay acceptance ledger 갱신은 `pnpm omo:replay:update -- ...`를 사용한다.
 - v2 pilot이 아닌 작업은 이 디렉터리를 수정할 필요가 없다.
