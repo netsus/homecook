@@ -524,6 +524,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     ...containsAll(promotionReadiness, [
       "## Required Gates",
       "## Pilot Gates",
+      "`omo-canonical-closeout-state`가 closeout ownership / projection semantics를 잠그고, `bookkeeping-authority-matrix`는 transition-period writable closeout surface만 기록한다.",
       "authority-required-ui",
       "external-smoke",
       "bugfix-patch",
@@ -547,16 +548,19 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "현재 baseline은 `status` projection helper뿐 아니라 README / acceptance / PR body용 generated payload와 projection readiness validator를 포함한다.",
       "현재 baseline의 consumer는 PR body `Closeout Sync` / `Merge Gate` 기본 section generation, `validate:closeout-sync`의 README / acceptance drift check, `omo:reconcile`의 current-vocabulary closeout repair까지 연결됐다.",
       "현재 README / acceptance baseline은 current markdown surface vocabulary에 맞춘 deterministic sync contract와 repair consumer까지만 포함하고, unsupported state 전체를 rewrite하는 patcher는 아직 아니다.",
+      "현재 baseline은 compatibility note downgrade까지 반영됐고, 이후에는 appendix화 또는 제거 여부만 남는다.",
       "markdown 전체 rewrite는 아직 남아 있다.",
     ]),
   ];
 
   const bookkeepingAuthorityMatrixErrors = [
     ...containsAll(bookkeepingAuthorityMatrix, [
-      "`validate:closeout-sync`는 workpack closeout docs가 merged-ready 상태인지 보고, work item `closeout` snapshot이 있으면 roadmap / README / acceptance surface가 canonical generated doc-surface contract와 모순되지 않는지도 함께 본다.",
-      "`omo:reconcile`는 matrix에 선언된 closeout surface만 repair 후보로 삼고, current markdown vocabulary로 표현 가능한 roadmap / README / acceptance drift는 canonical closeout repair action으로 정렬할 수 있다.",
-      "`validate:workflow-v2`는 canonical closeout snapshot이 README / acceptance / PR body generated payload baseline을 계산할 수 있는지, 그리고 projecting/completed snapshot의 evidence-bearing fields가 비어 있지 않은지 함께 본다.",
-      "`omo-github` PR body baseline은 canonical closeout snapshot으로 `Closeout Sync` / `Merge Gate` 기본 section을 생성하지만, `Actual Verification` evidence는 source PR/manual surface를 계속 우선한다.",
+      "이 문서는 canonical closeout ownership / projection semantics를 정의하는 문서가 아니다.",
+      "이 문서는 전환 기간 동안 `docs/omo-closeout-<slice>` branch가 만질 수 있는",
+      "closeout repair는 아래 4개 surface 안에서만 docs-side sync를 수행한다.",
+      "`.workflow-v2/status.json`",
+      "`validate:closeout-sync`와 `omo:reconcile`는 canonical closeout snapshot을 기준으로 이 note의 writable surface 범위 안에서만 doc-side drift를 검사/수리한다.",
+      "`validate:workflow-v2`와 `omo-github` PR body baseline은 canonical closeout snapshot 기준 generated payload를 다루며, 이 note는 body semantics를 정의하지 않는다.",
     ]),
   ];
 
