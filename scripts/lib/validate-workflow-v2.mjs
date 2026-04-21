@@ -406,6 +406,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
       "Stage 1 bootstrap부터 시작한다.",
       "internal 1.5 docs gate",
       "현재 baseline에서는 `.workflow-v2/status.json` summary projection consistency와 README / acceptance / PR body용 generated payload contract를 함께 검증한다.",
+      "`validate:closeout-sync`는 work item `closeout` snapshot이 있으면 현재 roadmap / README / acceptance closeout surface가 canonical closeout generated doc-surface contract와 모순되지 않는지도 함께 본다.",
       "현재 PR body baseline은 canonical closeout snapshot에서 `Closeout Sync` / `Merge Gate` 기본 섹션을 생성하고, `Actual Verification` evidence는 source PR/manual surface를 계속 우선한다.",
       "현재 baseline은 human-facing surface용 generated payload/validator contract까지만 포함하고, markdown 전체 rewrite/sync patcher는 아직 포함하지 않는다.",
     ]),
@@ -543,15 +544,17 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const canonicalCloseoutErrors = [
     ...containsAll(canonicalCloseout, [
       "현재 baseline: `work-item closeout schema + tracked status projection helper + human-facing projection payload helper + validator guard`까지 구현됐다.",
-      "PR body의 `Closeout Sync` / `Merge Gate` 기본 section generation은 연결됐고, README / acceptance markdown rewrite와 `Actual Verification` full projection은 아직 후속 단계다.",
+      "PR body의 `Closeout Sync` / `Merge Gate` 기본 section generation과 README / acceptance doc-surface drift check는 연결됐고, README / acceptance markdown rewrite와 `Actual Verification` full projection은 아직 후속 단계다.",
       "현재 baseline은 `status` projection helper뿐 아니라 README / acceptance / PR body용 generated payload와 projection readiness validator를 포함한다.",
-      "현재 baseline의 consumer는 PR body `Closeout Sync` / `Merge Gate` 기본 section generation까지 연결됐다.",
+      "현재 baseline의 consumer는 PR body `Closeout Sync` / `Merge Gate` 기본 section generation과 `validate:closeout-sync`의 README / acceptance drift check까지 연결됐다.",
+      "현재 README / acceptance baseline은 current markdown surface vocabulary에 맞춘 deterministic sync contract까지만 포함하고, unsupported state 전체를 rewrite하는 patcher는 아직 아니다.",
       "markdown 전체 rewrite는 아직 남아 있다.",
     ]),
   ];
 
   const bookkeepingAuthorityMatrixErrors = [
     ...containsAll(bookkeepingAuthorityMatrix, [
+      "`validate:closeout-sync`는 workpack closeout docs가 merged-ready 상태인지 보고, work item `closeout` snapshot이 있으면 roadmap / README / acceptance surface가 canonical generated doc-surface contract와 모순되지 않는지도 함께 본다.",
       "`validate:workflow-v2`는 canonical closeout snapshot이 README / acceptance / PR body generated payload baseline을 계산할 수 있는지, 그리고 projecting/completed snapshot의 evidence-bearing fields가 비어 있지 않은지 함께 본다.",
       "`omo-github` PR body baseline은 canonical closeout snapshot으로 `Closeout Sync` / `Merge Gate` 기본 section을 생성하지만, `Actual Verification` evidence는 source PR/manual surface를 계속 우선한다.",
     ]),

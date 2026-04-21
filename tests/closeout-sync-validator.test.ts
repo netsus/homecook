@@ -83,6 +83,7 @@ function createFixture({
   withAutomationSpec = false,
   authorityRequired = false,
   authorityReportPaths = [] as string[],
+  closeout = null as Record<string, unknown> | null,
 }: {
   roadmapStatus: string;
   designStatus: "temporary" | "pending-review" | "confirmed" | "N/A";
@@ -94,6 +95,7 @@ function createFixture({
   withAutomationSpec?: boolean;
   authorityRequired?: boolean;
   authorityReportPaths?: string[];
+  closeout?: Record<string, unknown> | null;
 }) {
   const rootDir = mkdtempSync(join(tmpdir(), "closeout-sync-"));
 
@@ -167,6 +169,21 @@ function createFixture({
             backend: 2,
             frontend: 2,
           },
+        },
+        null,
+        2,
+      ),
+    );
+  }
+
+  if (closeout) {
+    writeFixtureFile(
+      rootDir,
+      " .workflow-v2/work-items/05-planner-week-core.json".trimStart(),
+      JSON.stringify(
+        {
+          id: "05-planner-week-core",
+          closeout,
         },
         null,
         2,
@@ -259,6 +276,131 @@ describe("closeout sync validator", () => {
             message: expect.stringContaining("Acceptance item outside Manual Only"),
           }),
         ],
+      }),
+    ]);
+  });
+
+  it("fails merged closeout when README and acceptance surfaces drift from canonical closeout projection", () => {
+    const rootDir = createFixture({
+      roadmapStatus: "merged",
+      designStatus: "confirmed",
+      authorityStatus: "reviewed",
+      deliveryItems: [{ checked: true, text: "UI 연결" }],
+      acceptanceItems: [{ checked: true, text: "대표 사용자 흐름이 정상 동작한다" }],
+      closeout: {
+        phase: "completed",
+        docs_projection: {
+          roadmap_lifecycle: "ready_for_review",
+          design_status: "pending-review",
+          delivery_checklist: "pending",
+          design_authority: "pending",
+          acceptance: "pending",
+          automation_spec_metadata: "synced",
+        },
+        verification_projection: {
+          required_checks: "passed",
+          external_smokes: "passed",
+          authority_reports: [],
+          actual_verification_refs: ["PR Actual Verification"],
+        },
+        merge_gate_projection: {
+          current_head_sha: "abc1234",
+          approval_state: "dual_approved",
+          all_checks_green: true,
+        },
+        projection_state: {
+          docs_synced_at: "2026-04-21T00:01:00Z",
+        },
+      },
+    });
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "docs/cleanup-workpack-notes",
+      },
+      changedFiles: ["docs/workpacks/05-planner-week-core/README.md"],
+    });
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        name: "closeout-sync:05-planner-week-core",
+        errors: expect.arrayContaining([
+          expect.objectContaining({
+            message: expect.stringContaining("Roadmap status must match canonical closeout projection"),
+          }),
+          expect.objectContaining({
+            message: expect.stringContaining("Design Status must match canonical closeout projection"),
+          }),
+          expect.objectContaining({
+            message: expect.stringContaining("Delivery Checklist closeout must match canonical closeout projection"),
+          }),
+          expect.objectContaining({
+            message: expect.stringContaining("Design Authority status must match canonical closeout projection"),
+          }),
+          expect.objectContaining({
+            message: expect.stringContaining("Acceptance closeout must match canonical closeout projection"),
+          }),
+        ]),
+      }),
+    ]);
+  });
+
+  it("fails merged closeout when only the roadmap file changes but the canonical projection drifts", () => {
+    const rootDir = createFixture({
+      roadmapStatus: "merged",
+      designStatus: "confirmed",
+      authorityStatus: "reviewed",
+      deliveryItems: [{ checked: true, text: "UI 연결" }],
+      acceptanceItems: [{ checked: true, text: "대표 사용자 흐름이 정상 동작한다" }],
+      closeout: {
+        phase: "completed",
+        docs_projection: {
+          roadmap_lifecycle: "ready_for_review",
+          design_status: "pending-review",
+          delivery_checklist: "pending",
+          design_authority: "pending",
+          acceptance: "pending",
+          automation_spec_metadata: "synced",
+        },
+        verification_projection: {
+          required_checks: "passed",
+          external_smokes: "passed",
+          authority_reports: [],
+          actual_verification_refs: ["PR Actual Verification"],
+        },
+        merge_gate_projection: {
+          current_head_sha: "abc1234",
+          approval_state: "dual_approved",
+          all_checks_green: true,
+        },
+        projection_state: {
+          docs_synced_at: "2026-04-21T00:01:00Z",
+        },
+      },
+    });
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "docs/cleanup-workpack-notes",
+      },
+      changedFiles: ["docs/workpacks/README.md"],
+    });
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        name: "closeout-sync:05-planner-week-core",
+        errors: expect.arrayContaining([
+          expect.objectContaining({
+            message: expect.stringContaining("Roadmap status must match canonical closeout projection"),
+          }),
+          expect.objectContaining({
+            message: expect.stringContaining("Design Status must match canonical closeout projection"),
+          }),
+        ]),
       }),
     ]);
   });

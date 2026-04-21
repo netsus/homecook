@@ -128,6 +128,46 @@ function formatProjectionBoolean(value) {
   return value === true ? "예" : "아니오";
 }
 
+function projectRoadmapStatusForReadme(lifecycle) {
+  switch (lifecycle) {
+    case "planned":
+      return "planned";
+    case "in_progress":
+    case "ready_for_review":
+    case "blocked":
+      return "in-progress";
+    case "merged":
+      return "merged";
+    default:
+      return null;
+  }
+}
+
+function projectChecklistStatusForDocs(status) {
+  switch (status) {
+    case "pending":
+      return "pending";
+    case "complete":
+    case "waived":
+      return "complete";
+    default:
+      return null;
+  }
+}
+
+function projectDesignAuthorityStatusForReadme(status) {
+  switch (status) {
+    case "not_required":
+      return "not-required";
+    case "pending":
+      return "required";
+    case "passed":
+      return "reviewed";
+    default:
+      return null;
+  }
+}
+
 function buildRecoveryFragments(recoverySummary = {}) {
   const fragments = [];
   const manualPatchCount = normalizeNonNegativeInteger(recoverySummary.manual_patch_count);
@@ -275,6 +315,29 @@ export function projectCanonicalCloseoutToPrBodySections(closeout, { workItemId 
       )}`,
       "- started PR checks: canonical closeout snapshot does not own the check list; current head GitHub checks로 재확인 필요",
     ].join("\n"),
+  };
+}
+
+export function projectCanonicalCloseoutToDocSurfaceSyncContract(closeout, { workItemId } = {}) {
+  const projection = projectCanonicalCloseoutToHumanSurfacePayload(closeout, { workItemId });
+  if (!projection) {
+    return null;
+  }
+
+  return {
+    canonical_source: projection.canonical_source,
+    readme: {
+      roadmap_status: projectRoadmapStatusForReadme(projection.readme.roadmap_lifecycle),
+      design_status: projection.readme.design_status,
+      delivery_checklist_status: projectChecklistStatusForDocs(projection.readme.delivery_checklist),
+      design_authority_status: projectDesignAuthorityStatusForReadme(projection.readme.design_authority),
+    },
+    acceptance: {
+      status: projectChecklistStatusForDocs(projection.acceptance.status),
+    },
+    sync_state: {
+      docs_synced_at: projection.sync_state.docs_synced_at,
+    },
   };
 }
 
