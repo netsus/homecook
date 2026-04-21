@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
@@ -133,6 +133,170 @@ function runGh({ ghBin, cwd, args }) {
   return result.stdout?.trim() ?? "";
 }
 
+function isIgnoredSmokeStatusLine(line, workItemId) {
+  const normalizedLine = typeof line === "string" ? line.trim() : "";
+  if (!normalizedLine) {
+    return true;
+  }
+
+  if (
+    normalizedLine.includes(".opencode/") ||
+    normalizedLine.includes(".workflow-v2/") ||
+    normalizedLine.includes(".artifacts/")
+  ) {
+    return true;
+  }
+
+  return normalizedLine.includes(`smoke/omo-control-plane/${workItemId}/state.json`);
+}
+
+function listGitStatusLines(worktreePath) {
+  const result = spawnSync("git", ["status", "--porcelain"], {
+    cwd: worktreePath,
+    encoding: "utf8",
+  });
+
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || "git status --porcelain failed.");
+  }
+
+  const status = typeof result.stdout === "string" ? result.stdout : "";
+
+  if (!status) {
+    return [];
+  }
+
+  return status
+    .split("\n")
+    .filter((line) => line.trim().length > 0);
+}
+
+function resolveStatusPath(line) {
+  if (typeof line !== "string" || line.trim().length < 4) {
+    return null;
+  }
+
+  const normalized = line;
+  const renameMatch = normalized.match(/^[A-Z?]{1,2}\s+.+ -> (.+)$/);
+  if (renameMatch?.[1]) {
+    return renameMatch[1].trim();
+  }
+
+  return normalized.slice(3).trim();
+}
+
+function isResettableSmokeCheckoutPath(path, workItemId) {
+  return (
+    path === "docs/workpacks/README.md" ||
+    path.startsWith(`smoke/omo-control-plane/${workItemId}/`)
+  );
+}
+
+function createSmokeWorktreeAdapter({ workspace, workItemId }) {
+  const worktreePath = join(workspace, ".worktrees", workItemId);
+
+  return {
+    ensureWorktree() {
+      if (existsSync(join(worktreePath, ".git"))) {
+        return { path: worktreePath, created: false };
+      }
+
+      mkdirSync(resolve(worktreePath, ".."), { recursive: true });
+      runGit({
+        cwd: workspace,
+        args: ["worktree", "add", "-B", `ops/omo-${workItemId}-runtime-anchor`, worktreePath, "master"],
+      });
+      return { path: worktreePath, created: true };
+    },
+    assertClean({ worktreePath: targetPath }) {
+      const dirtyLines = listGitStatusLines(targetPath).filter(
+        (line) => !isIgnoredSmokeStatusLine(line, workItemId),
+      );
+
+      if (dirtyLines.length > 0) {
+        throw new Error(`dirty_worktree\n${dirtyLines.join("\n")}`);
+      }
+    },
+    checkoutBranch({ branch, startPoint = "origin/master", worktreePath: targetPath }) {
+      const currentBranch = runGit({
+        cwd: targetPath,
+        args: ["branch", "--show-current"],
+      });
+
+      if (currentBranch === branch) {
+        return { branch };
+      }
+
+      const dirtyPaths = listGitStatusLines(targetPath)
+        .map(resolveStatusPath)
+        .filter(Boolean);
+      const resettableDirtyPaths = dirtyPaths.filter((path) => isResettableSmokeCheckoutPath(path, workItemId));
+
+      if (dirtyPaths.length > 0 && resettableDirtyPaths.length === dirtyPaths.length) {
+        if (resettableDirtyPaths.includes("docs/workpacks/README.md")) {
+          runGit({
+            cwd: targetPath,
+            args: ["restore", "--", "docs/workpacks/README.md"],
+          });
+        }
+
+        if (resettableDirtyPaths.some((path) => path.startsWith(`smoke/omo-control-plane/${workItemId}/`))) {
+          rmSync(join(targetPath, "smoke", "omo-control-plane", workItemId), {
+            recursive: true,
+            force: true,
+          });
+        }
+      }
+
+      runGit({
+        cwd: targetPath,
+        args: ["checkout", "-B", branch, startPoint],
+      });
+      return { branch };
+    },
+    pushBranch({ branch, worktreePath: targetPath }) {
+      runGit({
+        cwd: targetPath,
+        args: ["push", "-u", "--force-with-lease", "origin", branch],
+      });
+    },
+    syncBaseBranch({ worktreePath: targetPath }) {
+      runGit({
+        cwd: targetPath,
+        args: ["fetch", "origin"],
+      });
+      runGit({
+        cwd: targetPath,
+        args: ["checkout", "--detach", "origin/master"],
+      });
+    },
+    getHeadSha({ worktreePath: targetPath }) {
+      return runGit({
+        cwd: targetPath,
+        args: ["rev-parse", "HEAD"],
+      });
+    },
+    getCurrentBranch({ worktreePath: targetPath }) {
+      return runGit({
+        cwd: targetPath,
+        args: ["branch", "--show-current"],
+      });
+    },
+    listChangedFiles({ worktreePath: targetPath }) {
+      return listGitStatusLines(targetPath)
+        .filter((line) => !isIgnoredSmokeStatusLine(line, workItemId))
+        .map(resolveStatusPath)
+        .filter(Boolean);
+    },
+    getBinaryDiff({ worktreePath: targetPath }) {
+      return runGit({
+        cwd: targetPath,
+        args: ["diff", "--binary"],
+      });
+    },
+  };
+}
+
 function ensureSandboxWorkspace({ sandboxRepo, workspace, ghBin }) {
   if (existsSync(join(workspace, ".git"))) {
     return {
@@ -241,10 +405,19 @@ function readRuntime(workspace, workItemId) {
 }
 
 function inducePostMergeDrift({ workspace, workItemId }) {
+  runGit({
+    cwd: workspace,
+    args: ["fetch", "origin"],
+  });
+  runGit({
+    cwd: workspace,
+    args: ["checkout", "-B", "master", "origin/master"],
+  });
+
   const roadmapPath = join(workspace, "docs", "workpacks", "README.md");
   const workpackPath = join(workspace, "docs", "workpacks", workItemId, "README.md");
   const roadmap = readFileSync(roadmapPath, "utf8").replace(
-    `| \`${workItemId}\` | merged |`,
+    new RegExp(`\\| \`${workItemId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\` \\| [^|]+ \\|`, "g"),
     `| \`${workItemId}\` | in-progress |`,
   );
   const workpack = readFileSync(workpackPath, "utf8")
@@ -299,6 +472,10 @@ function runSupervisorCycle({
         artifactBaseDir,
         workItemId,
       });
+  const worktree = createSmokeWorktreeAdapter({
+    workspace,
+    workItemId,
+  });
 
   if (!runtimeExists(workspace, workItemId)) {
     return superviseWorkItem(
@@ -311,6 +488,7 @@ function runSupervisorCycle({
       },
       {
         stageRunner,
+        worktree,
       },
     );
   }
@@ -325,6 +503,7 @@ function runSupervisorCycle({
     },
     {
       stageRunner,
+      worktree,
     },
   )[0];
 }
@@ -383,12 +562,17 @@ function main() {
     ghBin,
   });
   ensureGitIdentity(workspaceInfo.workspace);
-  const seed = ensureSeedOnMaster({
-    workspace: workspaceInfo.workspace,
-    sandboxRepo,
-    workItemId: options.workItem,
-    ghBin,
-  });
+  const hasExistingRuntime = runtimeExists(workspaceInfo.workspace, options.workItem);
+  const seed = hasExistingRuntime
+    ? {
+        seeded: false,
+      }
+    : ensureSeedOnMaster({
+        workspace: workspaceInfo.workspace,
+        sandboxRepo,
+        workItemId: options.workItem,
+        ghBin,
+      });
   const cycle = runSupervisorCycle({
     workspace: workspaceInfo.workspace,
     workItemId: options.workItem,

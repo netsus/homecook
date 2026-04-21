@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-21T12:50:38.080Z",
+  "updated_at": "2026-04-21T14:46:19.855Z",
   "lanes": [
     {
       "id": "slice06-authority-replay",
@@ -81,26 +81,27 @@
     {
       "id": "control-plane-smoke-replay",
       "label": "Control-plane smoke replay",
-      "status": "pending",
+      "status": "pass",
       "required": true,
       "work_item_refs": [],
       "incident_ids": [],
-      "evidence_refs": [],
+      "evidence_refs": [
+        ".artifacts/omo-control-plane-smoke-replay-r7stable/final-report.json",
+        "docs/engineering/workflow-v2/replay-control-plane-smoke.md"
+      ],
       "criteria": {
-        "manual_runtime_json_edit_free": false,
-        "stale_lock_manual_clear_free": false,
-        "stale_ci_snapshot_manual_fix_free": false,
-        "canonical_closeout_validated": false,
-        "auditor_result_recorded": false
+        "manual_runtime_json_edit_free": true,
+        "stale_lock_manual_clear_free": true,
+        "stale_ci_snapshot_manual_fix_free": true,
+        "canonical_closeout_validated": true,
+        "auditor_result_recorded": true
       },
-      "notes": "Pending Phase 8 representative replay."
+      "notes": "post-reset control-plane smoke replay passed; deterministic smoke loop and closeout finalize completed in sandbox repo guswn2521/homecook-omo-sandbox-public-r7"
     }
   ],
   "summary": {
-    "status": "in_progress",
-    "blocking_lane_ids": [
-      "control-plane-smoke-replay"
-    ],
-    "notes": "slice06 authority replay, slice07 fullstack replay, and bugfix patch replay passed; control-plane smoke replay pending"
+    "status": "pass",
+    "blocking_lane_ids": [],
+    "notes": "slice06 authority replay, slice07 fullstack replay, bugfix patch replay, and control-plane smoke replay all passed"
   }
 }

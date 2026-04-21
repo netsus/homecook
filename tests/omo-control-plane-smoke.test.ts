@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -13,7 +13,7 @@ import {
   readControlPlaneSmokeState,
   seedControlPlaneSmokeWorkspace,
 } from "../scripts/lib/omo-control-plane-smoke.mjs";
-import { superviseWorkItem } from "../scripts/lib/omo-autonomous-supervisor.mjs";
+import { superviseWorkItem, tickSupervisorWorkItems } from "../scripts/lib/omo-autonomous-supervisor.mjs";
 import { readRuntimeState, writeRuntimeState } from "../scripts/lib/omo-session-runtime.mjs";
 
 function createGitWorkspace(workspacePath: string) {
@@ -51,6 +51,61 @@ describe("OMO control-plane smoke", () => {
     ).toContain("\"id\": \"99-omo-control-plane-smoke\"");
   });
 
+  it("resets an existing roadmap row back to planned when reseeding the smoke workspace", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-control-plane-smoke-reset-"));
+    mkdirSync(join(rootDir, "docs", "workpacks"), { recursive: true });
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "README.md"),
+      [
+        "# Workpack Roadmap v2",
+        "",
+        "## Slice Order",
+        "",
+        "| Slice | Status | Goal |",
+        "| --- | --- | --- |",
+        "| `99-omo-control-plane-smoke` | docs | OMO control-plane smoke |",
+        "",
+      ].join("\n"),
+    );
+
+    seedControlPlaneSmokeWorkspace({
+      rootDir,
+      workItemId: "99-omo-control-plane-smoke",
+      sandboxRepo: "example/homecook-sandbox",
+    });
+
+    expect(readFileSync(join(rootDir, "docs", "workpacks", "README.md"), "utf8")).toContain(
+      "| `99-omo-control-plane-smoke` | planned | OMO control-plane smoke |",
+    );
+  });
+
+  it("deduplicates repeated roadmap rows for the smoke work item during reseed", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-control-plane-smoke-dedupe-"));
+    mkdirSync(join(rootDir, "docs", "workpacks"), { recursive: true });
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "README.md"),
+      [
+        "# Workpack Roadmap v2",
+        "",
+        "| Slice | Status | Goal |",
+        "| --- | --- | --- |",
+        "| `99-omo-control-plane-smoke` | planned | OMO control-plane smoke |",
+        "| `99-omo-control-plane-smoke` | docs | OMO control-plane smoke |",
+        "",
+      ].join("\n"),
+    );
+
+    seedControlPlaneSmokeWorkspace({
+      rootDir,
+      workItemId: "99-omo-control-plane-smoke",
+      sandboxRepo: "example/homecook-sandbox",
+    });
+
+    const roadmap = readFileSync(join(rootDir, "docs", "workpacks", "README.md"), "utf8");
+    expect(roadmap.match(/\| `99-omo-control-plane-smoke` \|/g)?.length).toBe(1);
+    expect(roadmap).toContain("| `99-omo-control-plane-smoke` | planned | OMO control-plane smoke |");
+  });
+
   it("creates deterministic stage artifacts and reports progress checkpoints", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "omo-control-plane-smoke-"));
     const executionDir = join(rootDir, "repo");
@@ -71,6 +126,9 @@ describe("OMO control-plane smoke", () => {
       stage: 2,
       executionDir,
     });
+    expect(readFileSync(join(executionDir, "docs", "workpacks", "README.md"), "utf8")).toContain(
+      "| `99-omo-control-plane-smoke` | in-progress | OMO control-plane smoke |",
+    );
     const checkpoints = collectControlPlaneSmokeCheckpoints({
       runtime: {
         prs: {
@@ -129,6 +187,38 @@ describe("OMO control-plane smoke", () => {
     expect(checkpoints.finalAutonomousMergeReached).toBe(true);
     expect(checkpoints.closeoutPrCreated).toBe(true);
     expect(checkpoints.closeoutFinalized).toBe(true);
+  });
+
+  it("does not write backend smoke artifacts during stage 2 doc gate review", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-control-plane-smoke-doc-gate-"));
+    const executionDir = join(rootDir, "repo");
+    const workItemId = "99-omo-control-plane-smoke";
+
+    seedControlPlaneSmokeWorkspace({
+      rootDir: executionDir,
+      workItemId,
+      sandboxRepo: "example/homecook-sandbox",
+    });
+
+    const stageRunner = createControlPlaneSmokeStageRunner({
+      rootDir: executionDir,
+      artifactBaseDir: join(rootDir, ".artifacts", "omo-control-plane-smoke"),
+      workItemId,
+      now: "2026-04-02T10:00:00.000Z",
+    });
+
+    stageRunner({
+      stage: 2,
+      subphase: "doc_gate_review",
+      executionDir,
+    });
+
+    expect(readFileSync(join(executionDir, "docs", "workpacks", "README.md"), "utf8")).toContain(
+      "| `99-omo-control-plane-smoke` | planned | OMO control-plane smoke |",
+    );
+    expect(
+      existsSync(join(executionDir, "smoke", "omo-control-plane", workItemId, "backend.txt")),
+    ).toBe(false);
   });
 
   it("enforces a live-provider backend review loop where Claude requests changes twice and Codex applies both tokens", () => {
@@ -725,5 +815,349 @@ describe("OMO control-plane smoke", () => {
     expect(smokeState.review_loops.backend.last_feedback).toContain("request 2");
     expect(checkpoints.backendIterativeReviewLoopValidated).toBe(true);
     expect(checkpoints.backendReviewLoopValidated).toBe(true);
+  });
+
+  it("forwards deterministic stageRunner dependencies through tick resume cycles", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "omo-control-plane-smoke-tick-"));
+    const rootDir = join(tempDir, "repo");
+    const workspacePath = join(rootDir, ".worktrees", "99-omo-control-plane-smoke");
+    seedControlPlaneSmokeWorkspace({
+      rootDir,
+      workItemId: "99-omo-control-plane-smoke",
+      sandboxRepo: "example/homecook-sandbox",
+    });
+    createGitWorkspace(workspacePath);
+    mkdirSync(join(workspacePath, "docs", "workpacks"), { recursive: true });
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "README.md"),
+      readFileSync(join(rootDir, "docs", "workpacks", "README.md"), "utf8"),
+    );
+    mkdirSync(join(workspacePath, "docs", "workpacks", "99-omo-control-plane-smoke"), {
+      recursive: true,
+    });
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "99-omo-control-plane-smoke", "README.md"),
+      readFileSync(join(rootDir, "docs", "workpacks", "99-omo-control-plane-smoke", "README.md"), "utf8"),
+    );
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "99-omo-control-plane-smoke", "acceptance.md"),
+      readFileSync(join(rootDir, "docs", "workpacks", "99-omo-control-plane-smoke", "acceptance.md"), "utf8"),
+    );
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "99-omo-control-plane-smoke", "automation-spec.json"),
+      readFileSync(join(rootDir, "docs", "workpacks", "99-omo-control-plane-smoke", "automation-spec.json"), "utf8"),
+    );
+    mkdirSync(join(workspacePath, ".workflow-v2", "work-items"), { recursive: true });
+    writeFileSync(
+      join(workspacePath, ".workflow-v2", "status.json"),
+      readFileSync(join(rootDir, ".workflow-v2", "status.json"), "utf8"),
+    );
+    writeFileSync(
+      join(workspacePath, ".workflow-v2", "work-items", "99-omo-control-plane-smoke.json"),
+      readFileSync(join(rootDir, ".workflow-v2", "work-items", "99-omo-control-plane-smoke.json"), "utf8"),
+    );
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "docs: seed smoke workspace"], { cwd: workspacePath });
+
+    const stageRunner = createControlPlaneSmokeStageRunner({
+      rootDir,
+      artifactBaseDir: join(tempDir, ".artifacts", "omo-control-plane-smoke"),
+      workItemId: "99-omo-control-plane-smoke",
+      now: "2026-04-02T10:00:00.000Z",
+    });
+
+    let prCounter = 0;
+    const pullRequests = new Map<
+      string,
+      { number: number; url: string; draft: boolean; branch: string; headSha: string | null }
+    >();
+
+    const dependencies = {
+      auth: {
+        assertGhAuth() {},
+        assertOpencodeAuth() {},
+        assertClaudeAuth() {},
+      },
+      worktree: {
+        ensureWorktree() {
+          return { path: workspacePath, created: false };
+        },
+        assertClean({ worktreePath }: { worktreePath: string }) {
+          const output = execFileSync("git", ["status", "--porcelain"], {
+            cwd: worktreePath,
+            encoding: "utf8",
+          })
+            .trim()
+            .split("\n")
+            .filter(Boolean)
+            .filter((line) => !line.includes(".opencode/"))
+            .filter((line) => !line.includes(".workflow-v2/"))
+            .filter((line) => !line.includes(".artifacts/"))
+            .filter((line) => line.trim() !== "?? smoke/")
+            .filter((line) => !line.includes("smoke/omo-control-plane/") || !line.includes("/state.json"))
+            .join("\n");
+          if (output.length > 0) {
+            throw new Error(`dirty_worktree\n${output}`);
+          }
+        },
+        checkoutBranch({ branch }: { branch: string }) {
+          execFileSync("git", ["checkout", "-B", branch], {
+            cwd: workspacePath,
+            stdio: "ignore",
+          });
+          return { branch };
+        },
+        pushBranch() {},
+        syncBaseBranch() {},
+        getHeadSha() {
+          return execFileSync("git", ["rev-parse", "HEAD"], {
+            cwd: workspacePath,
+            encoding: "utf8",
+          }).trim();
+        },
+        getCurrentBranch({ worktreePath }: { worktreePath: string }) {
+          return execFileSync("git", ["branch", "--show-current"], {
+            cwd: worktreePath,
+            encoding: "utf8",
+          }).trim();
+        },
+        listChangedFiles({ worktreePath }: { worktreePath: string }) {
+          return execFileSync("git", ["diff", "--name-only"], {
+            cwd: worktreePath,
+            encoding: "utf8",
+          })
+            .trim()
+            .split("\n")
+            .filter(Boolean)
+            .map((relativePath) => join(worktreePath, relativePath));
+        },
+        getBinaryDiff() {
+          return "";
+        },
+      },
+      stageRunner,
+      github: {
+        createPullRequest({
+          head,
+          draft,
+        }: {
+          head: string;
+          draft: boolean;
+        }) {
+          prCounter += 1;
+          const pr = {
+            number: prCounter,
+            url: `https://github.com/example/homecook-sandbox/pull/${prCounter}`,
+            draft,
+            branch: head,
+            headSha: null,
+          };
+          pullRequests.set(pr.url, pr);
+          return pr;
+        },
+        editPullRequest({ prRef }: { prRef: string }) {
+          return pullRequests.get(prRef) ?? null;
+        },
+        getRequiredChecks() {
+          return { bucket: "pass", checks: [] };
+        },
+        markReady({ prRef }: { prRef: string }) {
+          const existing = pullRequests.get(prRef);
+          if (existing) {
+            existing.draft = false;
+          }
+        },
+        reviewPullRequest() {},
+        commentPullRequest() {},
+        mergePullRequest() {
+          return { merged: true };
+        },
+        getPullRequestSummary() {
+          return {
+            state: "OPEN",
+            mergedAt: null,
+            mergeStateStatus: "CLEAN",
+            reviewDecision: "REVIEW_REQUIRED",
+          };
+        },
+        updateBranch() {},
+      },
+    };
+
+    superviseWorkItem(
+      {
+        rootDir,
+        workItemId: "99-omo-control-plane-smoke",
+        now: "2026-04-02T10:00:00.000Z",
+        maxTransitions: 1,
+      },
+      dependencies,
+    );
+
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "README.md"),
+      readFileSync(join(rootDir, "docs", "workpacks", "README.md"), "utf8").replace(
+        "| `99-omo-control-plane-smoke` | planned",
+        "| `99-omo-control-plane-smoke` | docs",
+      ),
+    );
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "README.md"),
+      readFileSync(join(workspacePath, "docs", "workpacks", "README.md"), "utf8").replace(
+        "| `99-omo-control-plane-smoke` | planned",
+        "| `99-omo-control-plane-smoke` | docs",
+      ),
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "99-omo-control-plane-smoke",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "99-omo-control-plane-smoke",
+          slice: "99-omo-control-plane-smoke",
+        }).state,
+        slice: "99-omo-control-plane-smoke",
+        active_stage: 1,
+        current_stage: 1,
+        last_completed_stage: 1,
+        wait: {
+          kind: "ready_for_next_stage",
+          stage: 2,
+          pr_role: "docs",
+          head_sha: readRuntimeState({
+            rootDir,
+            workItemId: "99-omo-control-plane-smoke",
+            slice: "99-omo-control-plane-smoke",
+          }).state.prs?.docs?.head_sha ?? null,
+        },
+        phase: "wait",
+        next_action: "run_stage",
+        execution: null,
+        recovery: null,
+      },
+    });
+
+    const result = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId: "99-omo-control-plane-smoke",
+        now: "2026-04-02T10:00:00.000Z",
+        maxTransitions: 16,
+      },
+      dependencies,
+    );
+
+    const smokeState = readControlPlaneSmokeState({
+      rootDir,
+      workItemId: "99-omo-control-plane-smoke",
+    });
+
+    expect(result[0]?.wait).toMatchObject({
+      kind: "ci",
+      stage: 5,
+    });
+    expect(smokeState.attempts["2"]).toBe(4);
+    expect(smokeState.attempts["3"]).toBe(3);
+    expect(smokeState.review_loops.backend.feedback_seen_by_codex).toBe(true);
+  });
+
+  it("treats control-plane smoke files as resumable docs-gate dirty recovery during tick", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-control-plane-smoke-dirty-"));
+    const workItemId = "99-omo-control-plane-smoke";
+
+    seedControlPlaneSmokeWorkspace({
+      rootDir,
+      workItemId,
+      sandboxRepo: "example/homecook-sandbox",
+    });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        wait: {
+          kind: "human_escalation",
+          reason: "Worktree is dirty.",
+        },
+        workspace: {
+          path: join(rootDir, ".worktrees", workItemId),
+          branch_role: "docs",
+        },
+        doc_gate: {
+          status: "pending_recheck",
+          round: 0,
+          source_master_sha: "docs123",
+          artifact_dir: null,
+          result_path: null,
+          repair_branch: `docs/${workItemId}`,
+          repair_pr: {
+            number: 1,
+            url: "https://github.com/example/homecook-sandbox/pull/1",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+            updated_at: "2026-04-02T10:00:00.000Z",
+          },
+          findings: [],
+          last_review: null,
+          last_rebuttal: null,
+          updated_at: "2026-04-02T10:00:00.000Z",
+        },
+        recovery: {
+          kind: "dirty_worktree",
+          stage: 2,
+          branch: null,
+          reason: "Worktree is dirty.",
+          artifact_dir: join(rootDir, ".artifacts", "stage-2"),
+          changed_files: [`smoke/omo-control-plane/${workItemId}/backend.txt`],
+          existing_pr: {
+            role: "docs",
+            number: 1,
+            url: "https://github.com/example/homecook-sandbox/pull/1",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+          },
+          salvage_candidate: true,
+          session_role: "codex_primary",
+          session_provider: null,
+          session_id: null,
+        },
+      },
+    });
+
+    let resumed = false;
+    const result = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-02T10:10:00.000Z",
+      },
+      {
+        supervise(args: { workItemId: string }) {
+          resumed = true;
+          return {
+            workItemId: args.workItemId,
+            slice: workItemId,
+            wait: { kind: "ci" },
+          };
+        },
+      },
+    );
+
+    expect(resumed).toBe(true);
+    expect(result[0]?.wait).toMatchObject({
+      kind: "ci",
+    });
   });
 });

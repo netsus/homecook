@@ -83,6 +83,7 @@ function resolveSmokeStageSessionId(stage, subphase = "implementation") {
  * @property {string} [rootDir]
  * @property {string} [workItemId]
  * @property {string} [slice]
+ * @property {string|null} [subphase]
  * @property {number} stage
  * @property {string} executionDir
  */
@@ -319,7 +320,30 @@ function ensureRoadmapContents(rootDir, workItemId) {
     ].join("\n");
   }
 
-  return appendUniqueLine(readFileSync(roadmapPath, "utf8"), row);
+  const existing = readFileSync(roadmapPath, "utf8");
+  const escapedWorkItemId = workItemId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const workItemRowPattern = new RegExp("^\\| `" + escapedWorkItemId + "` \\| .*?$");
+  const lines = existing.split("\n");
+  const nextLines = [];
+  let rowInserted = false;
+
+  for (const line of lines) {
+    if (workItemRowPattern.test(line)) {
+      if (!rowInserted) {
+        nextLines.push(row);
+        rowInserted = true;
+      }
+      continue;
+    }
+    nextLines.push(line);
+  }
+
+  const normalized = nextLines.join("\n");
+  if (rowInserted) {
+    return normalized;
+  }
+
+  return appendUniqueLine(normalized, row);
 }
 
 function ensureWorkpackReadme(workItemId) {
@@ -540,9 +564,11 @@ export function seedControlPlaneSmokeWorkspace({
   const workItemPath = join(workItemsDir, `${normalizedWorkItemId}.json`);
   const statusPath = join(normalizedRootDir, ".workflow-v2", "status.json");
   const workpackDir = join(normalizedRootDir, "docs", "workpacks", normalizedWorkItemId);
+  const syncDir = join(normalizedRootDir, "docs", "sync");
   const acceptancePath = join(workpackDir, "acceptance.md");
   const workpackReadmePath = join(workpackDir, "README.md");
   const automationSpecPath = join(workpackDir, "automation-spec.json");
+  const sourceOfTruthPath = join(syncDir, "CURRENT_SOURCE_OF_TRUTH.md");
   const roadmapPath = join(normalizedRootDir, "docs", "workpacks", "README.md");
   const smokeNotesPath = join(normalizedRootDir, "smoke", "omo-control-plane", normalizedWorkItemId, "README.md");
   const backendLoopPath = resolveBackendReviewLoopPath({
@@ -556,6 +582,7 @@ export function seedControlPlaneSmokeWorkspace({
 
   mkdirSync(workItemsDir, { recursive: true });
   mkdirSync(workpackDir, { recursive: true });
+  mkdirSync(syncDir, { recursive: true });
   mkdirSync(join(normalizedRootDir, "smoke", "omo-control-plane", normalizedWorkItemId), { recursive: true });
 
   const workItem = {
@@ -640,6 +667,7 @@ export function seedControlPlaneSmokeWorkspace({
   const previousRoadmap = existsSync(roadmapPath) ? readFileSync(roadmapPath, "utf8") : null;
   const previousWorkpack = existsSync(workpackReadmePath) ? readFileSync(workpackReadmePath, "utf8") : null;
   const previousAcceptance = existsSync(acceptancePath) ? readFileSync(acceptancePath, "utf8") : null;
+  const previousSourceOfTruth = existsSync(sourceOfTruthPath) ? readFileSync(sourceOfTruthPath, "utf8") : null;
   const previousSmokeNotes = existsSync(smokeNotesPath) ? readFileSync(smokeNotesPath, "utf8") : null;
   const previousBackendLoop = existsSync(backendLoopPath) ? readFileSync(backendLoopPath, "utf8") : null;
   const previousSmokeState = readJsonIfExists(smokeStatePath);
@@ -651,6 +679,23 @@ export function seedControlPlaneSmokeWorkspace({
   writeFileSync(statusPath, `${JSON.stringify(statusData, null, 2)}\n`);
   writeFileSync(roadmapPath, ensureRoadmapContents(normalizedRootDir, normalizedWorkItemId));
   writeFileSync(workpackReadmePath, ensureWorkpackReadme(normalizedWorkItemId));
+  writeFileSync(
+    sourceOfTruthPath,
+    [
+      "# Current Source of Truth",
+      "",
+      "## Official Files",
+      "- `docs/요구사항기준선-v1.6.3.md`",
+      "- `docs/화면정의서-v1.5.0.md`",
+      "- `docs/유저flow맵-v1.3.0.md`",
+      "- `docs/db설계-v1.3.1.md`",
+      "- `docs/api문서-v1.2.2.md`",
+      "",
+      "## Notes",
+      "- control-plane smoke sandbox source-of-truth mirror",
+      "",
+    ].join("\n"),
+  );
   writeFileSync(
     automationSpecPath,
     `${JSON.stringify(
@@ -743,6 +788,7 @@ export function seedControlPlaneSmokeWorkspace({
     JSON.stringify(previousStatus) !== JSON.stringify(statusData) ||
     previousRoadmap !== ensureRoadmapContents(normalizedRootDir, normalizedWorkItemId) ||
     previousWorkpack !== ensureWorkpackReadme(normalizedWorkItemId) ||
+    previousSourceOfTruth === null ||
     previousAutomationSpec === null ||
     previousAcceptance === null ||
     previousSmokeNotes === null ||
@@ -839,6 +885,58 @@ function buildCodeStageResult({ stage, workItemId, attempt }) {
         ? `smoke/omo-control-plane/${workItemId}/frontend.txt`
         : `docs/workpacks/${workItemId}/README.md`;
 
+  const prBody = [
+    "## Summary",
+    "- OMO control-plane smoke",
+    "",
+    "## Workpack / Slice",
+    `- workflow v2 work item: \`.workflow-v2/work-items/${workItemId}.json\``,
+    "",
+    "## Test Plan",
+    "- 실행한 검증: `pnpm validate:workflow-v2`",
+    "",
+    "## QA Evidence",
+    "- deterministic gates: `pnpm validate:workflow-v2`",
+    "- exploratory QA: `N/A`",
+    "- qa eval: `N/A`",
+    "- 아티팩트 / 보고서 경로: `smoke/omo-control-plane`",
+    "",
+    "## Actual Verification",
+    "- verifier: smoke harness",
+    "- environment: sandbox repo",
+    `- scope: \`pnpm omo:smoke:control-plane\` stage ${stage} attempt ${attempt}`,
+    "- result: sandbox smoke evidence recorded",
+    "- 남은 manual/live 확인: 없음",
+    "",
+    "## Closeout Sync",
+    "- roadmap status: smoke-controlled",
+    "- README Delivery Checklist: smoke-controlled",
+    "- acceptance: smoke-controlled",
+    "- Design Status: `N/A`",
+    "- 남은 Manual Only / follow-up: 없음",
+    "",
+    "## Merge Gate",
+    "- current head SHA: smoke-controlled",
+    "- started PR checks: sandbox-smoke-check",
+    "- all checks completed green: rerun 시점 기준 확인",
+    "- pending / failed / rerun checks: rerun 시점 기준 확인",
+    "",
+    "## Docs Impact",
+    "- 공식 문서 영향 없음",
+    "",
+    "## Security Review",
+    "- 영향 없음",
+    "",
+    "## Performance",
+    "- 영향 없음",
+    "",
+    "## Design / Accessibility",
+    "- 영향 없음",
+    "",
+    "## Breaking Changes",
+    "- 없음",
+  ].join("\n");
+
   return {
     result: "done",
     summary_markdown: `${summary} complete (attempt ${attempt})`,
@@ -848,7 +946,7 @@ function buildCodeStageResult({ stage, workItemId, attempt }) {
     },
     pr: {
       title: `${prefix}: ${workItemId} smoke stage ${stage} attempt ${attempt}`,
-      body_markdown: "## Summary\n- OMO control-plane smoke",
+      body_markdown: prBody,
     },
     checks_run: ["pnpm validate:workflow-v2"],
     next_route: stage === 1 ? "open_pr" : "wait_for_ci",
@@ -1044,7 +1142,7 @@ export function createControlPlaneSmokeStageRunner({
   workItemId = "99-omo-control-plane-smoke",
   now = new Date().toISOString(),
 } = {}) {
-  return ({ stage, subphase = null, executionDir }) => {
+  return ({ stage, subphase = "implementation", executionDir }) => {
     const smokeState = readControlPlaneSmokeState({
       rootDir,
       workItemId,
@@ -1056,6 +1154,8 @@ export function createControlPlaneSmokeStageRunner({
     let outcome = "approve";
 
     smokeState.attempts[String(stage)] = attempt;
+    const normalizedSubphase =
+      typeof subphase === "string" && subphase.trim().length > 0 ? subphase.trim() : "implementation";
 
     if (stage === 1) {
       const roadmapPath = resolve(normalizedExecutionDir, "docs", "workpacks", "README.md");
@@ -1080,7 +1180,18 @@ export function createControlPlaneSmokeStageRunner({
       }
     }
 
-    if (stage === 2) {
+    if (stage === 2 && normalizedSubphase === "implementation") {
+      const roadmapPath = resolve(normalizedExecutionDir, "docs", "workpacks", "README.md");
+      if (existsSync(roadmapPath)) {
+        writeFileSync(
+          roadmapPath,
+          readFileSync(roadmapPath, "utf8").replace(
+            `| \`${workItemId}\` | planned | OMO control-plane smoke |`,
+            `| \`${workItemId}\` | in-progress | OMO control-plane smoke |`,
+          ),
+        );
+      }
+
       if (attempt > 1) {
         const reviewContext = readRuntimeReviewContext({
           rootDir,
@@ -1106,7 +1217,7 @@ export function createControlPlaneSmokeStageRunner({
       );
     }
 
-    if (stage === 4) {
+    if (stage === 4 && normalizedSubphase === "implementation") {
       if (attempt > 1) {
         const reviewContext = readRuntimeReviewContext({
           rootDir,
