@@ -142,6 +142,46 @@ pnpm omo:promotion:update -- --section promotion-gate --status not-ready --block
 - replay acceptance 자체의 representative lane pass/fail은 `.workflow-v2/replay-acceptance.json`에 남긴다.
 - tmp/off-repo ref가 historical breadcrumb로만 남는 경우, current note는 repo-local retained evidence를 우선 적고 필요하면 `artifact-missing accepted` 같은 disposition을 함께 남긴다.
 
+## Current Not-Ready Baseline
+
+reset 현재 시점의 해석은 아래처럼 잠근다.
+
+- representative replay acceptance `pass`는 필요조건이지만, 그것만으로 `ready`가 되지 않는다.
+- promotion gate는 auditor finding family와 incident family를 같이 본다.
+- `not-ready` 설명에는 최소 아래 3층이 함께 보여야 한다.
+  - replay 상태
+  - active auditor blocker (`H-GOV-001`, `H-OMO-001`, `H-OMO-006`)
+  - active incident blocker family
+
+### Active Incident Blocker Family
+
+현재 promotion `not-ready`를 직접 설명하는 incident family는 아래다.
+
+- promotion / auditor drift
+  - `OMO-RETRO-003`
+- canonical closeout / projection
+  - `OMO-07-002`
+- runtime / observability
+  - `OMO-07-003`
+  - `OMO-07-007`
+- supervisor contract
+  - `OMO-07-004`
+- PR / CI reality drift
+  - `OMO-07-005`
+  - `OMO-07-006`
+- session / cost
+  - `OMO-07-008`
+
+아래는 secondary blocker로 본다.
+
+- evidence backfill / retention
+  - `OMO-03-001`
+  - `OMO-BACKFILL-03-05-001`
+
+즉 현재 baseline의 승격 판단은
+"replay는 통과했지만 unresolved system blocker와 backfill disposition이 남아 있어 `not-ready`"
+라는 문장으로 요약돼야 한다.
+
 ## Ready Criteria
 
 아래가 모두 만족될 때만 `ready` 후보로 본다.
@@ -157,6 +197,9 @@ pnpm omo:promotion:update -- --section promotion-gate --status not-ready --block
 
 아래 중 하나라도 남아 있으면 `not-ready`다.
 
+- auditor active blocker가 `H-GOV-001`, `H-OMO-001`, `H-OMO-006` 중 하나라도 남아 있음
+- active incident blocker family가 아직 `open` 상태로 남아 있음
+- `backfill-required` incident에 `artifact-missing accepted` 같은 명시적 disposition이 아직 없음
 - authority-required lane이 아직 in-progress 또는 blocked
 - external smoke lane evidence 부재
 - bugfix lane evidence 부재
