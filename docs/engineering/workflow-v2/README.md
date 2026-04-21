@@ -118,6 +118,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - closeout docs, `.workflow-v2/status.json`, OMO runtime, PR evidence의 authoritative ownership은 `docs/engineering/bookkeeping-authority-matrix.md`를 따른다.
 - `work-item`은 optional `closeout` snapshot을 가질 수 있고, 현재 baseline에서는 `.workflow-v2/status.json`의 `lifecycle / approval_state / verification_status / recovery note`가 그 projection과 모순되지 않아야 한다.
 - 현재 baseline에서는 `.workflow-v2/status.json` summary projection consistency와 README / acceptance / PR body용 generated payload contract를 함께 검증한다.
+- `validate:closeout-sync`는 work item `closeout` snapshot이 있으면 현재 roadmap / README / acceptance closeout surface가 canonical closeout generated doc-surface contract와 모순되지 않는지도 함께 본다.
 - 현재 PR body baseline은 canonical closeout snapshot에서 `Closeout Sync` / `Merge Gate` 기본 섹션을 생성하고, `Actual Verification` evidence는 source PR/manual surface를 계속 우선한다.
 - 현재 baseline은 human-facing surface용 generated payload/validator contract까지만 포함하고, markdown 전체 rewrite/sync patcher는 아직 포함하지 않는다.
 - machine-readable 파일이 들어와도 README 표를 즉시 제거하지 않는다.

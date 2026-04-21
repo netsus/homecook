@@ -53,7 +53,7 @@
 
 ## Operational Consequences
 
-- `validate:closeout-sync`는 workpack closeout docs가 merged-ready 상태인지 본다.
+- `validate:closeout-sync`는 workpack closeout docs가 merged-ready 상태인지 보고, work item `closeout` snapshot이 있으면 roadmap / README / acceptance surface가 canonical generated doc-surface contract와 모순되지 않는지도 함께 본다.
 - `validate:omo-bookkeeping`는 tracked state / runtime state와 위 authoritative docs 사이 drift를 본다.
 - `validate:workflow-v2`는 canonical closeout snapshot이 README / acceptance / PR body generated payload baseline을 계산할 수 있는지, 그리고 projecting/completed snapshot의 evidence-bearing fields가 비어 있지 않은지 함께 본다.
 - `omo-github` PR body baseline은 canonical closeout snapshot으로 `Closeout Sync` / `Merge Gate` 기본 section을 생성하지만, `Actual Verification` evidence는 source PR/manual surface를 계속 우선한다.
