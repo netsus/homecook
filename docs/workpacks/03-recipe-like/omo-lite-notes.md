@@ -160,3 +160,15 @@ Stage 2 (BE) / Stage 4 (FE) 완료 시 외부 smoke가 필요한가?
 - Stage 4에서 `pnpm omo:run-stage -- --mode execute`는 dispatch artifact와 status sync는 남겼지만 실제 프론트 구현 diff까지 만들지는 못했다. 현재 execute success contract에는 "코드 변경/테스트 생성이 실제로 일어났는지" 확인하는 post-run check가 부족하다.
 - 후속 OMO 업데이트에서는 plan checkpoint artifact가 acceptance의 data integrity / race condition 항목을 자동 체크리스트로 끌어오는지 확인이 필요하다.
 - 후속 OMO 업데이트에서는 Stage 2/4 `execute` 후 diff 존재 여부, verify command 실행 여부, Draft PR 준비 여부를 success condition으로 강제하는 runner contract 보강이 필요하다.
+
+## Artifact Disposition Note
+
+- disposition: `artifact-missing accepted`
+- 이유: 현재 machine 기준으로 초기 OMO-lite pilot의 canonical supervisor / dispatch artifact bundle은 회수되지 않는다.
+- retained repo-local surrogate evidence:
+  - `.opencode/omo-runtime/03-recipe-like.json`
+  - `.workflow-v2/status.json`
+  - 이 파일(`docs/workpacks/03-recipe-like/omo-lite-notes.md`)
+- 해석:
+  - 원래 artifact 공백은 historical gap으로 남기되,
+    현재 promotion / retrospective 판단은 위 repo-local surrogate evidence를 기준으로 이어간다.
