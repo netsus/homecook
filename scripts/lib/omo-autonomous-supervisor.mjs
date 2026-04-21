@@ -335,7 +335,8 @@ function isAllowedDocsGateBookkeepingDirtyFile({
 }) {
   return (
     filePath === ".workflow-v2/status.json" ||
-    filePath === `.workflow-v2/work-items/${workItemId}.json`
+    filePath === `.workflow-v2/work-items/${workItemId}.json` ||
+    filePath.startsWith(`smoke/omo-control-plane/${workItemId}/`)
   );
 }
 
@@ -8151,9 +8152,23 @@ export function superviseWorkItem(
         state.current_stage ??
         state.last_completed_stage ??
         null;
+      const repairSubphase =
+        typeof state.execution?.subphase === "string" && state.execution.subphase.trim().length > 0
+          ? state.execution.subphase.trim()
+          : null;
       const repairPrRole =
         state.wait?.pr_role ??
-        (Number.isInteger(repairStage) ? resolvePrRole(repairStage) : null);
+        (Number.isInteger(repairStage)
+          ? repairStage === 2 &&
+              (
+                ["doc_gate_review", "doc_gate_repair"].includes(repairSubphase ?? "") ||
+                (["passed", "pending_recheck", "awaiting_review"].includes(state.doc_gate?.status ?? "") &&
+                  Boolean(state.prs?.docs?.url) &&
+                  !state.prs?.backend?.url)
+              )
+            ? "docs"
+            : resolvePrRole(repairStage)
+          : null);
       const activeRepairPr = repairPrRole ? state.prs?.[repairPrRole] ?? null : null;
       const repairBranch =
         activeRepairPr?.branch ??
@@ -8735,6 +8750,19 @@ export function tickSupervisorWorkItems(
       };
     }
 
+    if (
+      state.wait.kind === "human_escalation" &&
+      state.recovery?.kind === "partial_stage_failure" &&
+      Number(state.recovery?.stage) === 6 &&
+      /closeout_reconcile blocked/i.test([state.wait.reason, state.recovery?.reason].filter(Boolean).join(" ")) &&
+      Boolean(state.recovery?.existing_pr?.url)
+    ) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
     if (state.wait.kind === "human_escalation" && isResumableClaudeDirtyRecoveryState(state)) {
       if (state.retry?.at && !isRetryDue(state.retry, now)) {
         return {
@@ -8785,6 +8813,17 @@ export function tickSupervisorWorkItems(
     }
 
     if (state.wait.kind === "human_escalation" && isResumableDocsGateDirtyRecoveryState(state)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (
+      state.wait.kind === "human_escalation" &&
+      /Bookkeeping drift requires manual recovery:/i.test(state.wait.reason ?? "") &&
+      Number.isInteger(state.active_stage ?? state.current_stage ?? null)
+    ) {
       return {
         resumable: true,
         reason: null,
@@ -8876,22 +8915,33 @@ export function tickSupervisorWorkItems(
       ];
     }
 
-    const supervise = dependencies.supervise ?? superviseWorkItem;
+    if (typeof dependencies.supervise === "function") {
+      return [
+        dependencies.supervise({
+          rootDir,
+          workItemId: normalizedWorkItemId,
+          now,
+          ...options,
+        }),
+      ];
+    }
+
     return [
-      supervise({
-        rootDir,
-        workItemId: normalizedWorkItemId,
-        now,
-        ...options,
-      }),
+      superviseWorkItem(
+        {
+          rootDir,
+          workItemId: normalizedWorkItemId,
+          now,
+          ...options,
+        },
+        dependencies,
+      ),
     ];
   }
 
   if (!all) {
     throw new Error("tick requires --all or --work-item.");
   }
-
-  const supervise = dependencies.supervise ?? superviseWorkItem;
 
   return listRuntimeStates(rootDir)
     .flatMap(({ state }) => {
@@ -8935,13 +8985,27 @@ export function tickSupervisorWorkItems(
         ];
       }
 
+      if (typeof dependencies.supervise === "function") {
+        return [
+          dependencies.supervise({
+            rootDir,
+            workItemId: effectiveState.work_item_id,
+            now,
+            ...options,
+          }),
+        ];
+      }
+
       return [
-        supervise({
-          rootDir,
-          workItemId: effectiveState.work_item_id,
-          now,
-          ...options,
-        }),
+        superviseWorkItem(
+          {
+            rootDir,
+            workItemId: effectiveState.work_item_id,
+            now,
+            ...options,
+          },
+          dependencies,
+        ),
       ];
     })
     .filter(Boolean);
