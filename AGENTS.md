@@ -51,7 +51,8 @@
 - `docs/engineering/git-workflow.md`는 브랜치/커밋/PR 크기 규칙의 단일 소스다.
 - `docs/engineering/qa-system.md`는 deterministic QA, exploratory QA, qa eval 실행 기준의 단일 소스다.
 - `docs/engineering/workflow-v2/*`는 현재 OMO 기본 운영 경로의 entry docs다. product slice의 stage mechanics와 change-type gate는 계속 `slice-workflow.md`, `agent-workflow-overview.md`가 구체화한다.
-- `docs/engineering/bookkeeping-authority-matrix.md`는 canonical closeout state 전환 전까지 closeout / tracked-state ownership의 과도기 단일 소스다.
+- canonical closeout projection / repair semantics의 기준은 `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`를 따른다.
+- `docs/engineering/bookkeeping-authority-matrix.md`는 전환이 끝날 때까지 writable closeout surface를 기록하는 compatibility note다.
 - entry doc은 하위 절차를 장문으로 재서술하지 않고 링크와 책임 경계만 남긴다.
 - 같은 규칙이 여러 문서에 보이면 먼저 `중복`인지 `계층적 위임`인지 판정한다.
 - `중복`: 같은 actor, trigger, action, success condition, scope를 추가 정보 없이 반복할 때만 본다.
