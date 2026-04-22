@@ -8564,6 +8564,78 @@ describe("OMO autonomous supervisor", () => {
     ]);
   });
 
+  it("tick --all surfaces unsupported wait kinds instead of silently skipping them", () => {
+    const rootDir = createFixture();
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        wait: {
+          kind: "human_review",
+          stage: 3,
+          pr_role: "backend",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems({
+      rootDir,
+      all: true,
+      now: "2026-03-27T01:00:00.000Z",
+    });
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        workItemId: "03-recipe-like",
+        action: "noop",
+        reason: "unsupported_wait_kind=human_review",
+      }),
+    ]);
+  });
+
+  it("tick --all surfaces stage_running residue even when no wait kind is present", () => {
+    const rootDir = createFixture();
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        active_stage: 4,
+        current_stage: 4,
+        phase: "stage_running",
+        next_action: "run_stage",
+        wait: null,
+      },
+    });
+
+    const results = tickSupervisorWorkItems({
+      rootDir,
+      all: true,
+      now: "2026-03-27T01:00:00.000Z",
+    });
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        workItemId: "03-recipe-like",
+        action: "noop",
+        reason: "no_wait_state",
+      }),
+    ]);
+  });
+
   it("tick converts a stale Claude stage_running lock with aborted streaming logs into a retry", () => {
     const rootDir = createFixture();
     const workItemId = "03-recipe-like";
