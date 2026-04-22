@@ -233,12 +233,12 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-07-002
 
-- status: `open`
+- status: `monitoring`
 - boundary: `omo-system`
 - bucket: `B. Canonical State Reduction`
 - stage_scope: `internal 1.5 / closeout bookkeeping`
 - symptom: stage-owned bookkeeping 파일인데 dirty blocker로 잘못 escalate되거나, `Design Status` ambiguity처럼 multi-surface drift가 invariant failure로 이어졌다.
-- current_recovery: manual bookkeeping correction과 recheck로 복구했다.
+- current_recovery: closeout projection mode 정리와 `design_status_ambiguous -> repairable drift` classifier 보강이 merge됐다. 현재는 같은 family가 replay 없이 다시 열리는지 관찰하는 단계라 `monitoring`으로 내린다.
 - root_cause_hypothesis: stage-owned writable scope와 canonical closeout projection이 분리돼 있지 않다.
 - evidence_refs:
   - `.artifacts/omo-findings/slice07-omo-failure-log.md`
@@ -261,12 +261,12 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-07-004
 
-- status: `open`
+- status: `monitoring`
 - boundary: `omo-system`
 - bucket: `C. Supervisor Contract Reset`
 - stage_scope: `Stage 4 implementation / authority_precheck`
 - symptom: authority precheck 산출물이 Stage 4 implementation checklist snapshot을 계승하지 않아 다시 `human_escalation`이 발생했다.
-- current_recovery: 이전 Stage 4 implementation `stage-result`의 checklist snapshot을 authority precheck result에 수동 병합했다.
+- current_recovery: authority_precheck가 prior Stage 4 implementation snapshot을 runtime/artifact 양쪽에서 deterministic하게 계승하도록 contract와 테스트를 보강했다. 현재는 replay 전 단계이므로 `monitoring`으로 유지한다.
 - root_cause_hypothesis: authority precheck가 delta evidence를 내는 subphase인지, full closeout snapshot을 내는 stage인지 contract가 불명확하다.
 - evidence_refs:
   - `.artifacts/omo-findings/slice07-omo-failure-log.md`
@@ -275,12 +275,12 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-07-005
 
-- status: `open`
+- status: `monitoring`
 - boundary: `omo-system`
 - bucket: `E. PR / CI Integration Reset`
 - stage_scope: `Stage 4 PR preparation / Policy CI`
 - symptom: PR body evidence가 canonical closeout state에서 자동 투영되지 않아 policy fail이 발생했고, body edit만으로는 policy가 재실행되지 않아 no-op commit recovery가 필요했다.
-- current_recovery: QA/eval artifact를 수동 보정해 PR body를 수정하고, no-op commit과 commit message repair로 policy rerun을 유도했다.
+- current_recovery: current-head recovery 경로에서 PR body projection replay를 no-op commit 없이 유지하도록 보강했고, 관련 supervisor 회귀 테스트를 추가했다. 추가 audit/replay 전까지는 `monitoring`으로 유지한다.
 - root_cause_hypothesis: PR body가 canonical projection이 아니라 fragile handwritten artifact로 남아 있고, policy rerun semantics도 body-only recovery 경로를 충분히 지원하지 않는다.
 - evidence_refs:
   - `.artifacts/omo-findings/slice07-omo-failure-log.md`
@@ -289,12 +289,12 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-07-006
 
-- status: `open`
+- status: `monitoring`
 - boundary: `omo-system`
 - bucket: `E. PR / CI Integration Reset`
 - stage_scope: `Stage 6 / CI wait`
 - symptom: 실제 `gh pr checks`는 all green인데 runtime은 계속 `pr_checks_failed` / stale wait 상태를 유지했다.
-- current_recovery: current PR head와 runtime의 CI wait snapshot을 수동으로 다시 맞췄다.
+- current_recovery: live PR summary에서 current head를 다시 읽을 때 wait/pr metadata도 함께 최신 head로 맞추도록 보강했다. stale current-head drift는 줄었지만, auditor rerun 전까지는 `monitoring`으로 본다.
 - root_cause_hypothesis: runtime이 current head SHA와 CI snapshot invalidation을 자동 재평가하지 못한다.
 - evidence_refs:
   - `.artifacts/omo-findings/slice07-omo-failure-log.md`
@@ -315,12 +315,12 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-07-008
 
-- status: `open`
+- status: `monitoring`
 - boundary: `omo-system`
 - bucket: `G. Session / Cost Reset`
 - stage_scope: `Stage 4 long-running session`
 - symptom: Stage 4 Claude session에서 cache read input이 급증하며 비용이 크게 뛰었다.
-- current_recovery: 즉시 구조 수정 없이 run을 끝내고 사후 분석으로만 남겼다.
+- current_recovery: 누적 threshold뿐 아니라 single-run cost spike 기준으로도 session rollover를 권고하도록 telemetry와 runner 정책을 보강했다. 실제 운영 재측정 전까지는 `monitoring`으로 유지한다.
 - root_cause_hypothesis: 장수 session reuse와 누적 transcript/subagent context가 Stage 4/5의 문서/테스트/authority workload와 결합해 비용을 폭증시킨다.
 - evidence_refs:
   - `.artifacts/omo-findings/slice07-omo-failure-log.md`
@@ -377,24 +377,18 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 - promotion / auditor drift
   - `OMO-RETRO-003`
-- canonical closeout / projection
-  - `OMO-07-002`
 - runtime / observability
   - `OMO-07-003`
   - `OMO-07-007`
-- supervisor contract
-  - `OMO-07-004`
-- PR / CI reality drift
-  - `OMO-07-005`
-  - `OMO-07-006`
-- session / cost
-  - `OMO-07-008`
 
 `OMO-RETRO-001`, `OMO-RETRO-002`, `OMO-04-001`, `OMO-05-001`은 여전히 중요한 seed evidence지만,
 이번 pass에서는 active blocker를 중복 설명하지 않도록 `monitoring`으로 낮춰 historical context 역할에 집중시킨다.
 
 `OMO-03-001`, `OMO-BACKFILL-03-05-001`도 이번 pass에서 `artifact-missing accepted` disposition을 기록했으므로,
 더 이상 primary/secondary blocker가 아니라 historical limitation + retrospective context로 본다.
+
+`OMO-07-002`, `OMO-07-004`, `OMO-07-005`, `OMO-07-006`, `OMO-07-008`도 구현/테스트 기준으로는 완화 경로가 merge됐으므로,
+현 시점에는 active blocker가 아니라 `monitoring` 대상으로 본다.
 
 ## Backfill Queue
 

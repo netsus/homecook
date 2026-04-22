@@ -159,11 +159,20 @@ reset 현재 시점의 해석은 아래처럼 잠근다.
 
 - promotion / auditor drift
   - `OMO-RETRO-003`
-- canonical closeout / projection
-  - `OMO-07-002`
 - runtime / observability
   - `OMO-07-003`
   - `OMO-07-007`
+
+아래는 secondary blocker로 본다.
+
+- evidence backfill / retention
+  - `OMO-03-001`
+  - `OMO-BACKFILL-03-05-001`
+
+아래는 구현/테스트 보강이 merge돼 현재는 `monitoring`으로 보는 family다.
+
+- canonical closeout / projection
+  - `OMO-07-002`
 - supervisor contract
   - `OMO-07-004`
 - PR / CI reality drift
@@ -172,14 +181,8 @@ reset 현재 시점의 해석은 아래처럼 잠근다.
 - session / cost
   - `OMO-07-008`
 
-아래는 secondary blocker로 본다.
-
-- evidence backfill / retention
-  - `OMO-03-001`
-  - `OMO-BACKFILL-03-05-001`
-
 즉 현재 baseline의 승격 판단은
-"replay는 통과했지만 unresolved system blocker와 backfill disposition이 남아 있어 `not-ready`"
+"replay는 통과했고 일부 system blocker는 monitoring으로 내려갔지만, promotion drift와 runtime/observability family가 아직 open이라 `not-ready`"
 라는 문장으로 요약돼야 한다.
 
 ## Ready Criteria
