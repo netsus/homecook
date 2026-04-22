@@ -8971,7 +8971,14 @@ export function tickSupervisorWorkItems(
 
       const resumable = isResumableState(effectiveState);
       if (!resumable.resumable) {
-        if (resumable.reason === "no_wait_state" || resumable.reason?.startsWith("unsupported_wait_kind=")) {
+        const phase = resolveStatePhase(effectiveState);
+        const shouldSurfaceNoWaitState =
+          resumable.reason === "no_wait_state" &&
+          ["stage_running", "escalated"].includes(phase ?? "");
+        if (
+          resumable.reason === "no_wait_state" &&
+          !shouldSurfaceNoWaitState
+        ) {
           return [];
         }
         return [
