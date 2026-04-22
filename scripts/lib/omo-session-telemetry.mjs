@@ -1,6 +1,8 @@
 export const SESSION_ROLLOVER_RUN_COUNT = 4;
 export const SESSION_ROLLOVER_TOTAL_TOKENS = 100000;
 export const SESSION_ROLLOVER_COST_USD = 3;
+export const SESSION_ROLLOVER_LAST_RUN_TOKENS = 30000;
+export const SESSION_ROLLOVER_LAST_RUN_COST_USD = 1;
 
 function normalizeUsage(value) {
   if (!value || typeof value !== "object") {
@@ -64,6 +66,12 @@ export function resolveSessionTelemetry(sessionEntry) {
   }
   if ((cumulativeCostUsd ?? 0) >= SESSION_ROLLOVER_COST_USD) {
     rolloverReasons.push(`cost_usd>=${SESSION_ROLLOVER_COST_USD}`);
+  }
+  if ((lastUsage?.total_tokens ?? 0) >= SESSION_ROLLOVER_LAST_RUN_TOKENS) {
+    rolloverReasons.push(`last_run_tokens>=${SESSION_ROLLOVER_LAST_RUN_TOKENS}`);
+  }
+  if ((lastCostUsd ?? 0) >= SESSION_ROLLOVER_LAST_RUN_COST_USD) {
+    rolloverReasons.push(`last_run_cost_usd>=${SESSION_ROLLOVER_LAST_RUN_COST_USD}`);
   }
 
   return {

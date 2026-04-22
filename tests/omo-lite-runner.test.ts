@@ -1536,6 +1536,112 @@ describe("OMO-lite stage runner", () => {
     expect(runtimeAfterRollover.sessions.claude_primary.cumulative_cost_usd).toBe(0);
   });
 
+  it("starts a fresh Claude session after a single expensive run trips the cost-spike rollover guardrail", () => {
+    const rootDir = createRunnerFixture();
+    const homeDir = createClaudeHomeDir();
+    const stage1 = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: "ses_claude_stage1",
+    });
+    const stage3 = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: "ses_claude_stage3_spike_rollover",
+    });
+
+    const firstResult = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "03-recipe-like",
+      stage: 1,
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: stage1.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: stage1.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage1.stdinPath,
+      },
+      now: "2026-03-26T21:12:00+09:00",
+    });
+
+    const runtimePath = join(rootDir, ".opencode", "omo-runtime", "03-recipe-like.json");
+    const runtimeBeforeRollover = JSON.parse(readFileSync(runtimePath, "utf8")) as {
+      sessions: {
+        claude_primary: {
+          run_count: number;
+          last_usage: { input_tokens: number; output_tokens: number; total_tokens: number } | null;
+          cumulative_usage: { input_tokens: number; output_tokens: number; total_tokens: number } | null;
+          last_cost_usd: number | null;
+          cumulative_cost_usd: number | null;
+        };
+      };
+    };
+    runtimeBeforeRollover.sessions.claude_primary.run_count = 1;
+    runtimeBeforeRollover.sessions.claude_primary.last_usage = {
+      input_tokens: 22000,
+      output_tokens: 13000,
+      total_tokens: 35000,
+    };
+    runtimeBeforeRollover.sessions.claude_primary.cumulative_usage = {
+      input_tokens: 22000,
+      output_tokens: 13000,
+      total_tokens: 35000,
+    };
+    runtimeBeforeRollover.sessions.claude_primary.last_cost_usd = 1.2;
+    runtimeBeforeRollover.sessions.claude_primary.cumulative_cost_usd = 1.2;
+    writeFileSync(runtimePath, `${JSON.stringify(runtimeBeforeRollover, null, 2)}\n`);
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "03-recipe-like",
+      stage: 3,
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: stage3.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: stage3.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage3.stdinPath,
+      },
+      now: "2026-03-26T21:18:00+09:00",
+    });
+
+    const args = readFileSync(stage3.argsPath, "utf8");
+    const stdin = readFileSync(stage3.stdinPath, "utf8");
+    const metadata = JSON.parse(
+      readFileSync(join(result.artifactDir, "run-metadata.json"), "utf8"),
+    ) as {
+      sessionBinding: { resumeMode: string; sessionId: string | null };
+    };
+    const runtimeAfterRollover = JSON.parse(readFileSync(runtimePath, "utf8")) as {
+      sessions: {
+        claude_primary: {
+          session_id: string;
+          generation: number;
+          run_count: number;
+          cumulative_usage: { total_tokens: number } | null;
+          cumulative_cost_usd: number | null;
+        };
+      };
+    };
+
+    expect(args).not.toContain("--resume");
+    expect(stdin).toContain("## Session Rollover Rebase");
+    expect(stdin).toContain("ses_claude_stage1");
+    expect(stdin).toContain("last_run_tokens>=30000");
+    expect(stdin).toContain(firstResult.artifactDir);
+    expect(metadata.sessionBinding).toMatchObject({
+      resumeMode: "rollover",
+      sessionId: "ses_claude_stage3_spike_rollover",
+    });
+    expect(runtimeAfterRollover.sessions.claude_primary).toMatchObject({
+      session_id: "ses_claude_stage3_spike_rollover",
+      generation: 2,
+      run_count: 1,
+    });
+    expect(runtimeAfterRollover.sessions.claude_primary.cumulative_usage?.total_tokens).toBe(30);
+    expect(runtimeAfterRollover.sessions.claude_primary.cumulative_cost_usd).toBe(0);
+  });
+
   it("keeps resuming the blocked stage session even when rollover is otherwise recommended", () => {
     const rootDir = createRunnerFixture();
     const homeDir = createClaudeHomeDir();
