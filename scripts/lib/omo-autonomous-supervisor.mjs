@@ -3063,6 +3063,20 @@ function applyBlocker({
   prPath = null,
   now,
 }) {
+  const fallbackPrRole =
+    state.wait?.pr_role ??
+    recovery?.existing_pr?.role ??
+    (state.active_stage ? resolvePrRole(state.active_stage) : null);
+  const fallbackStage =
+    state.wait?.stage ??
+    recovery?.stage ??
+    state.active_stage ??
+    state.current_stage ??
+    null;
+  const fallbackHeadSha =
+    state.wait?.head_sha ??
+    recovery?.existing_pr?.head_sha ??
+    (fallbackPrRole ? state.prs?.[fallbackPrRole]?.head_sha ?? null : null);
   const nextState = saveRuntime({
     rootDir,
     workItemId,
@@ -3070,6 +3084,9 @@ function applyBlocker({
       state: setWaitState({
         state,
         kind: "human_escalation",
+        prRole: fallbackPrRole,
+        stage: fallbackStage,
+        headSha: fallbackHeadSha,
         reason,
         updatedAt: now,
       }),
@@ -3819,6 +3836,7 @@ function processWaitState({
         prRole: resumablePrCheckFailure.prRole,
         activePr: resumablePrCheckFailure.activePr,
         now,
+        syncWaitKind: state.wait?.kind ?? "human_escalation",
       });
       const checks = github.getRequiredChecks({
         prRef: refreshedPrState.activePr.url,
