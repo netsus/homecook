@@ -94,6 +94,40 @@ describe("OMO status summary", () => {
     expect(runtimeObservability.detail).toContain("phase=merge_pending");
   });
 
+  it("classifies stage_running without a lock as stale runtime residue", () => {
+    const runtimeObservability = buildRuntimeObservability(
+      {
+        active_stage: 4,
+        current_stage: 4,
+        phase: "stage_running",
+        next_action: "run_stage",
+        execution: {
+          started_at: "2026-04-20T10:00:00.000Z",
+          provider: "claude-cli",
+          session_role: "claude_primary",
+        },
+        sessions: {
+          claude_primary: {
+            session_id: "ses_claude_stage4",
+            provider: "claude-cli",
+            updated_at: "2026-04-20T10:12:00.000Z",
+          },
+        },
+      },
+      {
+        now: "2026-04-20T10:15:00.000Z",
+      },
+    );
+
+    expect(runtimeObservability).toMatchObject({
+      status: "running_without_lock",
+      staleCandidate: true,
+      heartbeatFreshness: "fresh",
+    });
+    expect(runtimeObservability.detail).toContain("phase=stage_running");
+    expect(runtimeObservability.recommendation).toContain("lock owner");
+  });
+
   it("surfaces last activity and session freshness from runtime timestamps", () => {
     const runtimeObservability = buildRuntimeObservability(
       {
@@ -138,9 +172,16 @@ describe("OMO status summary", () => {
       lastActivityAt: "2026-04-20T10:12:00.000Z",
       lastActivityAge: "3m",
       lastActivitySource: "sessions.claude_primary.updated_at",
+      heartbeatAt: "2026-04-20T10:12:00.000Z",
+      heartbeatAge: "3m",
+      heartbeatSource: "sessions.claude_primary.updated_at",
+      heartbeatFreshness: "fresh",
       sessionRole: "claude_primary",
       sessionFreshness: "fresh",
       sessionAge: "3m",
+      transcriptUpdatedAt: "2026-04-20T10:12:00.000Z",
+      transcriptAge: "3m",
+      transcriptFreshness: "fresh",
       sessionGeneration: 1,
       sessionRunCount: 0,
       executionFreshness: "long_running",
@@ -300,17 +341,26 @@ describe("OMO status summary", () => {
         status: "blocked_human",
         detail: "human wait for 25m",
         subphase: "implementation",
+        heartbeatAt: "2026-04-20T10:00:00.000Z",
+        heartbeatAge: "25m",
+        heartbeatSource: "wait.updated_at",
+        heartbeatFreshness: "fresh",
         lastActivityAt: "2026-04-20T10:00:00.000Z",
         lastActivityAge: "25m",
         lastActivitySource: "wait.updated_at",
         sessionRole: "codex_primary",
         sessionFreshness: "fresh",
+        transcriptFreshness: "fresh",
+        transcriptUpdatedAt: "2026-04-20T09:58:00.000Z",
+        transcriptAge: "27m",
         sessionUpdatedAt: "2026-04-20T09:58:00.000Z",
         sessionAge: "27m",
         executionFreshness: "finished",
         executionAge: "30m",
         retryAt: null,
+        lockAcquiredAt: null,
         lockAge: null,
+        waitUpdatedAt: "2026-04-20T10:00:00.000Z",
         waitAge: "25m",
       },
     };
@@ -321,10 +371,15 @@ describe("OMO status summary", () => {
     expect(formatFullStatus(status)).toContain("Next recommendation: 별도 docs-governance PR로 분리하세요.");
     expect(formatFullStatus(status)).toContain("Runtime signal: blocked_human");
     expect(formatFullStatus(status)).toContain("Runtime detail: human wait for 25m");
+    expect(formatFullStatus(status)).toContain("Heartbeat: 2026-04-20T10:00:00.000Z");
+    expect(formatFullStatus(status)).toContain("Heartbeat freshness: fresh");
     expect(formatFullStatus(status)).toContain("Subphase: implementation");
     expect(formatFullStatus(status)).toContain("Last activity: 2026-04-20T10:00:00.000Z");
     expect(formatFullStatus(status)).toContain("Activity source: wait.updated_at");
     expect(formatFullStatus(status)).toContain("Session freshness: fresh");
+    expect(formatFullStatus(status)).toContain("Transcript freshness: fresh");
+    expect(formatFullStatus(status)).toContain("Transcript updated: 2026-04-20T09:58:00.000Z");
+    expect(formatFullStatus(status)).toContain("Wait updated: 2026-04-20T10:00:00.000Z");
     expect(formatFullStatus(status)).toContain("Session rollover: not-needed");
     expect(formatBriefStatus(status)).toContain(
       "reasonCode      : closeout_reconcile_docs_governance_required",
@@ -334,9 +389,15 @@ describe("OMO status summary", () => {
     );
     expect(formatBriefStatus(status)).toContain("runtimeSignal   : blocked_human");
     expect(formatBriefStatus(status)).toContain("runtimeDetail   : human wait for 25m");
+    expect(formatBriefStatus(status)).toContain("heartbeatAge    : 25m");
+    expect(formatBriefStatus(status)).toContain("heartbeatSource : wait.updated_at");
+    expect(formatBriefStatus(status)).toContain("heartbeatFresh  : fresh");
     expect(formatBriefStatus(status)).toContain("subphase        : implementation");
     expect(formatBriefStatus(status)).toContain("activitySource  : wait.updated_at");
     expect(formatBriefStatus(status)).toContain("sessionFresh    : fresh");
+    expect(formatBriefStatus(status)).toContain("transcriptFresh : fresh");
+    expect(formatBriefStatus(status)).toContain("transcriptAge   : 27m");
     expect(formatBriefStatus(status)).toContain("sessionRollover : not-needed");
+    expect(formatBriefStatus(status)).toContain("waitUpdated     : 2026-04-20T10:00:00.000Z");
   });
 });
