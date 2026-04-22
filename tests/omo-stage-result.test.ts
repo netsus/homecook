@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { validateStageResult } from "../scripts/lib/omo-stage-result.mjs";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+
+import { inheritAuthorityPrecheckChecklistSnapshot, validateStageResult } from "../scripts/lib/omo-stage-result.mjs";
 
 describe("OMO stage-result contract", () => {
   it("requires extended code-stage fields when strictExtendedContract is enabled", () => {
@@ -253,6 +257,91 @@ describe("OMO stage-result contract", () => {
 
     expect(result.authority_verdict).toBe("pass");
     expect(result.checklist_updates).toEqual([]);
+  });
+
+  it("inherits implementation checklist snapshot for authority_precheck delta results", () => {
+    const implementation = validateStageResult(
+      4,
+      {
+        result: "done",
+        summary_markdown: "frontend updated",
+        commit: { subject: "feat: frontend" },
+        pr: { title: "feat: frontend", body_markdown: "body" },
+        checks_run: [],
+        next_route: "open_pr",
+        claimed_scope: {
+          files: ["app/example.tsx"],
+          endpoints: [],
+          routes: ["/example"],
+          states: ["loading"],
+          invariants: [],
+        },
+        changed_files: ["app/example.tsx"],
+        tests_touched: ["tests/example.test.ts"],
+        artifacts_written: [],
+        checklist_updates: [
+          { id: "delivery-ui", status: "checked", evidence_refs: ["pnpm verify:frontend"] },
+          { id: "accept-ui", status: "checked", evidence_refs: ["pnpm test"] },
+        ],
+        contested_fix_ids: [],
+        rebuttals: [],
+      },
+      {
+        strictExtendedContract: true,
+      },
+    ) as {
+      checklist_updates: Array<{ id: string; status: string; evidence_refs: string[] }>;
+    };
+
+    const authorityPrecheck = validateStageResult(
+      4,
+      {
+        result: "done",
+        summary_markdown: "authority precheck complete",
+        commit: { subject: "feat: authority precheck" },
+        pr: { title: "feat: authority precheck", body_markdown: "body" },
+        checks_run: [],
+        next_route: "open_pr",
+        claimed_scope: {
+          files: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+          endpoints: [],
+          routes: [],
+          states: [],
+          invariants: [],
+        },
+        changed_files: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        tests_touched: [],
+        artifacts_written: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        checklist_updates: [],
+        contested_fix_ids: [],
+        rebuttals: [],
+        authority_verdict: "pass",
+        reviewed_screen_ids: ["RECIPE_DETAIL"],
+        authority_report_paths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+        evidence_artifact_refs: ["ui/designs/evidence/06/RECIPE_DETAIL-mobile.png"],
+        blocker_count: 0,
+        major_count: 0,
+        minor_count: 0,
+      },
+      {
+        strictExtendedContract: true,
+        subphase: "authority_precheck",
+      },
+    ) as {
+      checklist_updates: Array<{ id: string; status: string; evidence_refs: string[] }>;
+    };
+
+    const merged = inheritAuthorityPrecheckChecklistSnapshot({
+      stageResult: authorityPrecheck,
+      priorStageResult: implementation,
+    }) as {
+      checklist_updates: Array<{ id: string; status: string; evidence_refs: string[] }>;
+    };
+
+    expect(merged.checklist_updates).toEqual([
+      { id: "delivery-ui", status: "checked", evidence_refs: ["pnpm verify:frontend"] },
+      { id: "accept-ui", status: "checked", evidence_refs: ["pnpm test"] },
+    ]);
   });
 
   it("requires rebuttals to match contested_fix_ids for strict code stages", () => {

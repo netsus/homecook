@@ -44,7 +44,11 @@ import {
   writeRuntimeState,
   isRetryDue,
 } from "./omo-session-runtime.mjs";
-import { validateCodeStageChecklistCoverage, validateStageResult } from "./omo-stage-result.mjs";
+import {
+  inheritAuthorityPrecheckChecklistSnapshot,
+  validateCodeStageChecklistCoverage,
+  validateStageResult,
+} from "./omo-stage-result.mjs";
 import { readAutomationSpec, resolveAutomationSpecPath, resolveAutonomousSlicePolicy, resolveStageAutomationConfig } from "./omo-automation-spec.mjs";
 import { applyDocGateWaivedFindings, evaluateDocGate, writeDocGateResult } from "./omo-doc-gate.mjs";
 import { evaluateWorkItemStage } from "./omo-evaluator.mjs";
@@ -3298,10 +3302,36 @@ function loadExecutionStageResult(state, options = {}) {
     throw new Error("stage-result.json is missing for execution finalization.");
   }
 
-  return validateStageResult(stage, JSON.parse(readFileSync(stageResultPath, "utf8")), {
+  const subphase = options?.subphase ?? state.execution?.subphase ?? "implementation";
+  const validatedStageResult = validateStageResult(stage, JSON.parse(readFileSync(stageResultPath, "utf8")), {
     ...options,
-    subphase: options?.subphase ?? state.execution?.subphase ?? "implementation",
+    subphase,
   });
+
+  if (stage === 4 && subphase === "authority_precheck") {
+    const priorStageResultPath = state.execution?.prior_stage_result_path ?? null;
+    if (
+      typeof priorStageResultPath === "string" &&
+      priorStageResultPath.trim().length > 0 &&
+      existsSync(priorStageResultPath)
+    ) {
+      const priorStageResult = validateStageResult(
+        4,
+        JSON.parse(readFileSync(priorStageResultPath, "utf8")),
+        {
+          strictExtendedContract: false,
+          subphase: "implementation",
+        },
+      );
+
+      return inheritAuthorityPrecheckChecklistSnapshot({
+        stageResult: validatedStageResult,
+        priorStageResult,
+      });
+    }
+  }
+
+  return validatedStageResult;
 }
 
 function syncEvaluationStatus({
@@ -5629,18 +5659,18 @@ function handleAuthorityPrecheckStage({
 
   const reviewEntry = nextState.last_review?.frontend ?? null;
   const phase = resolveStatePhase(nextState);
+  const priorStageResultPath =
+    typeof nextState.last_artifact_dir === "string" && nextState.last_artifact_dir.trim().length > 0
+      ? (() => {
+          const candidate = resolve(nextState.last_artifact_dir.trim(), "stage-result.json");
+          return existsSync(candidate) ? candidate : null;
+        })()
+      : null;
   if (
     !isPendingFinalizePhase(phase) ||
     nextState.active_stage !== stage ||
     nextState.execution?.subphase !== "authority_precheck"
   ) {
-    const priorStageResultPath =
-      typeof nextState.last_artifact_dir === "string" && nextState.last_artifact_dir.trim().length > 0
-        ? (() => {
-            const candidate = resolve(nextState.last_artifact_dir.trim(), "stage-result.json");
-            return existsSync(candidate) ? candidate : null;
-          })()
-        : null;
     const runResult = stageRunner({
       rootDir,
       workItemId,
@@ -5694,6 +5724,7 @@ function handleAuthorityPrecheckStage({
             session_id: runResult.execution?.sessionId ?? null,
             artifact_dir: runResult.artifactDir,
             stage_result_path: stageResultPath,
+            prior_stage_result_path: priorStageResultPath,
             started_at: now,
             finished_at: now,
             verify_commands: [],
@@ -5712,6 +5743,12 @@ function handleAuthorityPrecheckStage({
     strictExtendedContract: isChecklistContractActive(checklistContract),
     subphase: "authority_precheck",
   });
+  if (
+    typeof nextState.execution?.stage_result_path === "string" &&
+    nextState.execution.stage_result_path.trim().length > 0
+  ) {
+    writeFileSync(nextState.execution.stage_result_path.trim(), `${JSON.stringify(stageResult, null, 2)}\n`);
+  }
   const artifactDir = nextState.execution?.artifact_dir ?? nextState.last_artifact_dir;
   const checklistIssues = validateCodeStageChecklistContract({
     checklistContract,
@@ -5780,6 +5817,8 @@ function handleAuthorityPrecheckStage({
         execution: {
           ...nextState.execution,
           subphase: "authority_precheck",
+          prior_stage_result_path:
+            nextState.execution?.prior_stage_result_path ?? priorStageResultPath ?? null,
         },
       }),
     });
