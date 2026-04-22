@@ -19,6 +19,8 @@ const eslintConfig = [
       "**/.worktrees/**",
       ".agents/**",
       "**/.agents/**",
+      ".artifacts/**",
+      "**/.artifacts/**",
       "out/**",
       "build/**",
       "coverage/**",
