@@ -110,6 +110,6 @@
       "H-OMO-006"
     ],
     "next_review_trigger": "After incident-aware audit rerun confirms that only promotion drift and runtime/observability families remain open",
-    "notes": "Representative replay acceptance passes. Recent fixes reduced several families to monitoring: closeout authority overlap (H-GOV-001), closeout projection (OMO-07-002), authority_precheck contract (OMO-07-004), PR/CI drift (OMO-07-005, OMO-07-006), and session/cost (OMO-07-008). Promotion remains not-ready because active open blocker families still remain: promotion drift (OMO-RETRO-003) and runtime/observability (OMO-07-003, OMO-07-007). Slice03 historical artifact gap and retrospective 03-05 umbrella are recorded with artifact-missing accepted disposition and are no longer treated as active blockers."
+    "notes": "Representative replay acceptance passes. Recent fixes resolved the closeout authority overlap blocker (H-GOV-001) and reduced several incident families to monitoring: closeout projection (OMO-07-002), authority_precheck contract (OMO-07-004), PR/CI drift (OMO-07-005, OMO-07-006), and session/cost (OMO-07-008). Promotion remains not-ready because active open blocker families still remain: promotion drift (OMO-RETRO-003) and runtime/observability (OMO-07-003, OMO-07-007). Slice03 historical artifact gap and retrospective 03-05 umbrella are recorded with artifact-missing accepted disposition and are no longer treated as active blockers."
   }
 }

@@ -20,7 +20,7 @@
   - `Sampled slices: 01-discovery-detail-auth, 02-discovery-filter, 03-recipe-like`
 - 같은 시점에 `omo-incident-registry.md`에는 slice04~07과 promotion cutover drift가 `open` 또는 `backfill-required`로 남아 있다.
 - `scripts/lib/meta-harness-auditor.mjs`는 기본 sample slice를 workpack directory 정렬 후 앞의 3개만 사용한다.
-- 현재 finding registry는 `H-CI-001`, `H-GOV-001`, `H-OMO-001` 세 개만 가진다.
+- 현재 finding registry stable set은 `H-CI-001`, `H-GOV-001`, `H-OMO-001`~`H-OMO-006`까지 넓어졌다.
 
 즉 현 상태의 auditor는 "실패가 없다"가 아니라
 "현실 incident corpus를 거의 읽지 않는다"에 가깝다.
@@ -205,8 +205,10 @@ reset 현재 baseline에서는 최소 아래가 같이 맞아야 한다.
 
 예:
 
-- auditor가 `H-GOV-001`, `H-OMO-001`, `H-OMO-006`를 blocker로 보고 있으면
+- current baseline에서 auditor가 `H-OMO-001`, `H-OMO-006`를 blocker로 보고 있으면
   promotion ledger도 `not-ready`와 equivalent blocker 설명을 유지해야 한다.
+- resolved governance overlap `H-GOV-001`이 current baseline에서 active blocker가 아니라면
+  promotion ledger와 audit summary도 bookkeeping overlap을 현재 blocker처럼 다시 올리지 않는다.
 - incident registry가 `monitoring`으로 내린 umbrella incident는
   active blocker 설명에서 primary incident처럼 다시 올리지 않는다.
 - `backfill-required` incident는 primary open blocker와 별도로

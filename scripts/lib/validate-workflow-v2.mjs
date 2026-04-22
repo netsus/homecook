@@ -345,6 +345,10 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const designConsultantPath = path.join(rootDir, "docs/engineering/design-consultant-sop.md");
   const opencodeReadmePath = path.join(rootDir, ".opencode/README.md");
   const promotionReadinessPath = path.join(rootDir, "docs/engineering/workflow-v2/promotion-readiness.md");
+  const auditorResetRequirementsPath = path.join(
+    rootDir,
+    "docs/engineering/workflow-v2/omo-auditor-reset-requirements.md",
+  );
   const replayAcceptancePath = path.join(rootDir, "docs/engineering/workflow-v2/omo-replay-acceptance.md");
   const canonicalCloseoutPath = path.join(
     rootDir,
@@ -369,6 +373,7 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
   const designConsultant = readText(designConsultantPath);
   const opencodeReadme = readText(opencodeReadmePath);
   const promotionReadiness = readText(promotionReadinessPath);
+  const auditorResetRequirements = readText(auditorResetRequirementsPath);
   const replayAcceptance = readText(replayAcceptancePath);
   const canonicalCloseout = readText(canonicalCloseoutPath);
   const bookkeepingAuthorityMatrix = readText(bookkeepingAuthorityMatrixPath);
@@ -590,6 +595,18 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     ]),
   ];
 
+  const auditorResetRequirementsErrors = [
+    ...containsAll(auditorResetRequirements, [
+      "현재 finding registry stable set은 `H-CI-001`, `H-GOV-001`, `H-OMO-001`~`H-OMO-006`까지 넓어졌다.",
+      "current baseline에서 auditor가 `H-OMO-001`, `H-OMO-006`를 blocker로 보고 있으면",
+      "resolved governance overlap `H-GOV-001`이 current baseline에서 active blocker가 아니라면",
+    ]),
+    ...containsNone(auditorResetRequirements, [
+      "현재 finding registry는 `H-CI-001`, `H-GOV-001`, `H-OMO-001` 세 개만 가진다.",
+      "auditor가 `H-GOV-001`, `H-OMO-001`, `H-OMO-006`를 blocker로 보고 있으면",
+    ]),
+  ];
+
   const canonicalCloseoutErrors = [
     ...containsAll(canonicalCloseout, [
       "현재 baseline: `work-item closeout schema + tracked status projection helper + human-facing projection payload helper + validator guard`까지 구현됐다.",
@@ -703,6 +720,10 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
     {
       name: "workflow-v2-doc-contract:promotion-readiness",
       errors: promotionReadinessErrors,
+    },
+    {
+      name: "workflow-v2-doc-contract:auditor-reset-requirements",
+      errors: auditorResetRequirementsErrors,
     },
     {
       name: "workflow-v2-doc-contract:replay-acceptance",

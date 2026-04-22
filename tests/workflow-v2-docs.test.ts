@@ -124,6 +124,10 @@ describe("workflow v2 docs", () => {
       join(repoRoot, "docs/engineering/workflow-v2/promotion-readiness.md"),
       "utf8",
     );
+    const auditorResetRequirements = readFileSync(
+      join(repoRoot, "docs/engineering/workflow-v2/omo-auditor-reset-requirements.md"),
+      "utf8",
+    );
     const opencodeReadme = readFileSync(join(repoRoot, ".opencode/README.md"), "utf8");
     const claudeEntry = readFileSync(join(repoRoot, "CLAUDE.md"), "utf8");
     const roadmap = readFileSync(join(repoRoot, "docs/workpacks/README.md"), "utf8");
@@ -159,6 +163,22 @@ describe("workflow v2 docs", () => {
     expect(promotionReadiness).toContain("#### `live-smoke-standard`");
     expect(promotionReadiness).toContain("#### `scheduler-standard`");
     expect(promotionReadiness).toContain("team-shared default scheduler는 현재 `macOS launchd`로 고정한다.");
+    expect(promotionReadiness).toContain("active auditor blocker (`H-OMO-001`, `H-OMO-006`)");
+    expect(promotionReadiness).toContain(
+      "closeout authority overlap blocker `H-GOV-001`은 canonical owner, compatibility note, shared helper wiring 정렬로 해소됐고 더 이상 active auditor blocker로 보지 않는다.",
+    );
+    expect(auditorResetRequirements).toContain(
+      "현재 finding registry stable set은 `H-CI-001`, `H-GOV-001`, `H-OMO-001`~`H-OMO-006`까지 넓어졌다.",
+    );
+    expect(auditorResetRequirements).toContain(
+      "current baseline에서 auditor가 `H-OMO-001`, `H-OMO-006`를 blocker로 보고 있으면",
+    );
+    expect(auditorResetRequirements).toContain(
+      "resolved governance overlap `H-GOV-001`이 current baseline에서 active blocker가 아니라면",
+    );
+    expect(auditorResetRequirements).not.toContain(
+      "현재 finding registry는 `H-CI-001`, `H-GOV-001`, `H-OMO-001` 세 개만 가진다.",
+    );
     expect(opencodeReadme).toContain("## Manual Handoff Standard");
     expect(opencodeReadme).toContain("## Live Smoke Standard");
     expect(opencodeReadme).toContain("## Scheduler Standard");
