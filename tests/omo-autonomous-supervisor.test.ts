@@ -5922,6 +5922,7 @@ describe("OMO autonomous supervisor", () => {
           writeFileSync(join(workspacePath, "ui", "designs", "authority", "RECIPE_DETAIL-authority.md"), "# Authority\n- verdict: conditional-pass\n");
           writeFileSync(join(workspacePath, "ui", "designs", "evidence", "06", "RECIPE_DETAIL-mobile.png"), "evidence\n");
           writeFileSync(join(workspacePath, "ui", "designs", "evidence", "06", "RECIPE_DETAIL-mobile-narrow.png"), "evidence\n");
+          writeFileSync(join(workspacePath, "ui", "designs", "evidence", "06", "RECIPE_DETAIL-mobile-narrow.png"), "evidence\n");
           return {
             artifactDir: join(rootDir, ".artifacts", "authority-rerun-precheck"),
             dispatch: { actor: "codex", stage: 4, subphase: "authority_precheck", sessionBinding: { role: "codex_primary" } },
@@ -6102,6 +6103,141 @@ describe("OMO autonomous supervisor", () => {
     });
     expect(readTrackedStatusItem(rootDir, "03-recipe-like")).toMatchObject({
       approval_state: "claude_approved",
+    });
+  });
+
+  it("inherits the prior Stage 4 checklist snapshot when authority_precheck returns delta-only checklist updates", () => {
+    const rootDir = createFixture();
+    seedAutonomousPolicy(rootDir, "03-recipe-like", {
+      authorityRequired: true,
+      uiRisk: "new-screen",
+      requiredScreens: ["RECIPE_DETAIL"],
+      authorityReportPaths: ["ui/designs/authority/RECIPE_DETAIL-authority.md"],
+      anchorScreens: ["RECIPE_DETAIL"],
+    });
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    const priorArtifactDir = join(rootDir, ".artifacts", "prior-stage4-implementation-delta");
+    const priorStageResultPath = join(priorArtifactDir, "stage-result.json");
+
+    createGitWorkspace(workspacePath, "feature/fe-03-recipe-like");
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "in-progress",
+      designStatus: "pending-review",
+      authorityStatus: "required",
+      uiRisk: "new-screen",
+      visualArtifact: "figma://recipe-detail",
+    });
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "feat: seed authority precheck delta"], { cwd: workspacePath });
+    const headSha = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: workspacePath,
+      encoding: "utf8",
+    }).trim();
+    mkdirSync(priorArtifactDir, { recursive: true });
+    writeFileSync(
+      priorStageResultPath,
+      `${JSON.stringify(
+        buildCodeStageResult({
+          summary: "frontend implementation complete",
+          subject: "feat: frontend implementation",
+          title: "feat: frontend implementation",
+          checklistUpdates: [CHECKLIST_IDS.frontendDelivery, CHECKLIST_IDS.frontendAcceptance],
+          changedFiles: ["app/example/page.tsx"],
+        }),
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({ rootDir, workItemId: "03-recipe-like", slice: "03-recipe-like" }).state,
+        slice: "03-recipe-like",
+        current_stage: 4,
+        last_completed_stage: 4,
+        workspace: {
+          path: workspacePath,
+          branch_role: "frontend",
+        },
+        prs: {
+          docs: null,
+          backend: null,
+          frontend: {
+            number: 36,
+            url: "https://github.com/netsus/homecook/pull/36",
+            draft: true,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: headSha,
+          },
+        },
+        wait: {
+          kind: "ci",
+          pr_role: "frontend",
+          stage: 4,
+          head_sha: headSha,
+        },
+        last_artifact_dir: priorArtifactDir,
+      },
+    });
+
+    const result = superviseWorkItem(
+      { rootDir, workItemId: "03-recipe-like", now: "2026-04-09T23:20:00+09:00", maxTransitions: 1 },
+      {
+        auth: { assertGhAuth() {}, assertOpencodeAuth() {} },
+        worktree: {
+          ensureWorktree() { return { path: workspacePath, created: false }; },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) { return { branch }; },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return execFileSync("git", ["rev-parse", "HEAD"], { cwd: workspacePath, encoding: "utf8" }).trim();
+          },
+          getCurrentBranch() { return "feature/fe-03-recipe-like"; },
+          listChangedFiles() { return []; },
+          getBinaryDiff() { return ""; },
+        },
+        stageRunner() {
+          mkdirSync(join(workspacePath, "ui", "designs", "authority"), { recursive: true });
+          mkdirSync(join(workspacePath, "ui", "designs", "evidence", "06"), { recursive: true });
+          writeFileSync(join(workspacePath, "ui", "designs", "authority", "RECIPE_DETAIL-authority.md"), "# Authority\n- verdict: pass\n");
+          writeFileSync(join(workspacePath, "ui", "designs", "evidence", "06", "RECIPE_DETAIL-mobile.png"), "evidence\n");
+          return {
+            artifactDir: join(rootDir, ".artifacts", "authority-precheck-delta"),
+            dispatch: { actor: "codex", stage: 4, subphase: "authority_precheck", sessionBinding: { role: "codex_primary" } },
+            execution: { mode: "execute", executed: true, sessionId: "ses_codex_authority_delta" },
+            stageResult: {
+              ...buildAuthorityPrecheckStageResult({
+                verdict: "pass",
+                blockerCount: 0,
+                majorCount: 0,
+                minorCount: 0,
+              }),
+              checklist_updates: [],
+            },
+          };
+        },
+        github: {
+          createPullRequest() { throw new Error("not expected"); },
+          editPullRequest() {},
+          getRequiredChecks() { return { bucket: "pass", checks: [] }; },
+          markReady() {},
+          commentPullRequest() {},
+          mergePullRequest() { throw new Error("not expected"); },
+          getPullRequestSummary() {
+            return { state: "OPEN", mergedAt: null, mergeStateStatus: "CLEAN", reviewDecision: null };
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(result.wait).toMatchObject({
+      kind: "ready_for_next_stage",
+      stage: 5,
+      pr_role: "frontend",
     });
   });
 

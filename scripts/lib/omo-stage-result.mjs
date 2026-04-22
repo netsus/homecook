@@ -307,6 +307,44 @@ export function validateCodeStageChecklistCoverage({
   return normalizeStringArray(issues);
 }
 
+export function inheritAuthorityPrecheckChecklistSnapshot({
+  stageResult,
+  priorStageResult,
+}) {
+  const currentResult = ensureObject(stageResult, "stageResult");
+  if (!priorStageResult || typeof priorStageResult !== "object" || Array.isArray(priorStageResult)) {
+    return currentResult;
+  }
+
+  const priorChecklistUpdates = Array.isArray(priorStageResult.checklist_updates)
+    ? priorStageResult.checklist_updates
+    : [];
+  const currentChecklistUpdates = Array.isArray(currentResult.checklist_updates)
+    ? currentResult.checklist_updates
+    : [];
+
+  if (priorChecklistUpdates.length === 0) {
+    return currentResult;
+  }
+
+  const mergedChecklistUpdates = new Map();
+  for (const entry of priorChecklistUpdates) {
+    if (entry?.id) {
+      mergedChecklistUpdates.set(entry.id, entry);
+    }
+  }
+  for (const entry of currentChecklistUpdates) {
+    if (entry?.id) {
+      mergedChecklistUpdates.set(entry.id, entry);
+    }
+  }
+
+  return {
+    ...currentResult,
+    checklist_updates: [...mergedChecklistUpdates.values()],
+  };
+}
+
 export function resolveStageResultPath(artifactDir) {
   return resolve(ensureNonEmptyString(artifactDir, "artifactDir"), "stage-result.json");
 }

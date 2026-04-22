@@ -118,6 +118,10 @@ function normalizeExecution(execution) {
       typeof execution.stage_result_path === "string" && execution.stage_result_path.trim().length > 0
         ? execution.stage_result_path.trim()
         : null,
+    prior_stage_result_path:
+      typeof execution.prior_stage_result_path === "string" && execution.prior_stage_result_path.trim().length > 0
+        ? execution.prior_stage_result_path.trim()
+        : null,
     started_at:
       typeof execution.started_at === "string" && execution.started_at.trim().length > 0
         ? execution.started_at.trim()
