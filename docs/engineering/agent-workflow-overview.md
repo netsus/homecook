@@ -45,6 +45,7 @@
 - `docs-governance`, `contract-evolution`, `low-risk docs/config`는 E2E, Lighthouse, Design 항목을 무조건 체크하지 않는다.
 - `Actual Verification`은 “누가 / 어디서 / 무엇을 / 어떤 결과로” 확인했는지 남기는 섹션이다.
 - `Closeout Sync`, `Merge Gate`의 exact ownership / projection semantics는 `docs/engineering/slice-workflow.md`와 `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`를 따른다.
+- `docs/engineering/bookkeeping-authority-matrix.md`는 ownership 정의 문서가 아니라 transition-period writable closeout surface compatibility note다.
 - product slice는 `Ready for Review` 전에 `Actual Verification`, `Closeout Sync`, `Merge Gate` 세 섹션을 비워두지 않는다.
 
 ### QA Execution Rules

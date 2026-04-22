@@ -43,6 +43,7 @@ surface mode 해석은 `omo-canonical-closeout-state.md`를 따른다.
 
 PR body의 `Actual Verification`, `Closeout Sync`, `Merge Gate`는 reviewer-facing evidence surface이며,
 body 자체가 authoritative owner는 아니다.
+즉 `PR body closeout evidence`는 generated projection / preserved evidence carrier로만 다룬다.
 
 추가 해석:
 

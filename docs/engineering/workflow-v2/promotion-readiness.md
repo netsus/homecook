@@ -148,9 +148,10 @@ reset 현재 시점의 해석은 아래처럼 잠근다.
 
 - representative replay acceptance `pass`는 필요조건이지만, 그것만으로 `ready`가 되지 않는다.
 - promotion gate는 auditor finding family와 incident family를 같이 본다.
+- closeout authority overlap blocker `H-GOV-001`은 canonical owner, compatibility note, shared helper wiring 정렬로 해소됐고 더 이상 active auditor blocker로 보지 않는다.
 - `not-ready` 설명에는 최소 아래 3층이 함께 보여야 한다.
   - replay 상태
-  - active auditor blocker (`H-GOV-001`, `H-OMO-001`, `H-OMO-006`)
+  - active auditor blocker (`H-OMO-001`, `H-OMO-006`)
   - active incident blocker family
 
 ### Active Incident Blocker Family
@@ -200,7 +201,7 @@ reset 현재 시점의 해석은 아래처럼 잠근다.
 
 아래 중 하나라도 남아 있으면 `not-ready`다.
 
-- auditor active blocker가 `H-GOV-001`, `H-OMO-001`, `H-OMO-006` 중 하나라도 남아 있음
+- auditor active blocker가 `H-OMO-001`, `H-OMO-006` 중 하나라도 남아 있음
 - active incident blocker family가 아직 `open` 상태로 남아 있음
 - `backfill-required` incident에 `artifact-missing accepted` 같은 명시적 disposition이 아직 없음
 - authority-required lane이 아직 in-progress 또는 blocked
