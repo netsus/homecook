@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-21T16:15:30Z",
+  "updated_at": "2026-04-23T01:10:00Z",
   "canonical_policy": "v2",
   "execution_mode": "default",
   "documentation_gates": [
@@ -108,7 +108,7 @@
       "H-OMO-001",
       "H-OMO-006"
     ],
-    "next_review_trigger": "After active open incident blockers narrow and promotion/auditor policy language stays aligned",
-    "notes": "Representative replay acceptance passes, but promotion remains not-ready because active system blocker families still remain: promotion drift (OMO-RETRO-003), closeout projection (OMO-07-002), runtime/observability (OMO-07-003, OMO-07-007), contract drift (OMO-07-004), PR/CI drift (OMO-07-005, OMO-07-006), session/cost (OMO-07-008). Slice03 historical artifact gap and retrospective 03-05 umbrella are now recorded with artifact-missing accepted disposition and no longer treated as active blockers."
+    "next_review_trigger": "After incident-aware audit rerun confirms that only promotion drift and runtime/observability families remain open",
+    "notes": "Representative replay acceptance passes. Recent fixes reduced several families to monitoring: closeout projection (OMO-07-002), authority_precheck contract (OMO-07-004), PR/CI drift (OMO-07-005, OMO-07-006), and session/cost (OMO-07-008). Promotion remains not-ready because active open blocker families still remain: promotion drift (OMO-RETRO-003) and runtime/observability (OMO-07-003, OMO-07-007). Slice03 historical artifact gap and retrospective 03-05 umbrella are recorded with artifact-missing accepted disposition and are no longer treated as active blockers."
   }
 }
