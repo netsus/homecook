@@ -246,6 +246,61 @@ describe("OMO status summary", () => {
     expect(runtimeObservability.sessionRolloverReason).toContain("cost_usd>=3");
   });
 
+  it("recommends session rollover after a single expensive run even before cumulative thresholds are crossed", () => {
+    const runtimeObservability = buildRuntimeObservability(
+      {
+        active_stage: 4,
+        current_stage: 4,
+        phase: "wait",
+        next_action: "poll_ci",
+        wait: {
+          kind: "ci",
+          stage: 4,
+          updated_at: "2026-04-20T10:10:00.000Z",
+        },
+        sessions: {
+          claude_primary: {
+            session_id: "ses_claude_spike",
+            provider: "claude-cli",
+            updated_at: "2026-04-20T10:09:00.000Z",
+            generation: 1,
+            run_count: 1,
+            last_usage: {
+              input_tokens: 22000,
+              output_tokens: 13000,
+              total_tokens: 35000,
+            },
+            cumulative_usage: {
+              input_tokens: 22000,
+              output_tokens: 13000,
+              total_tokens: 35000,
+            },
+            last_cost_usd: 1.2,
+            cumulative_cost_usd: 1.2,
+          },
+        },
+        execution: {
+          session_role: "claude_primary",
+          started_at: "2026-04-20T10:00:00.000Z",
+          finished_at: "2026-04-20T10:05:00.000Z",
+        },
+      },
+      {
+        now: "2026-04-20T10:15:00.000Z",
+      },
+    );
+
+    expect(runtimeObservability).toMatchObject({
+      sessionRole: "claude_primary",
+      sessionFreshness: "rollover_recommended",
+      sessionRunCount: 1,
+      sessionCumulativeCost: "$1.20",
+      sessionRolloverRecommended: true,
+      sessionRolloverReason: expect.stringContaining("last_run_tokens>=30000"),
+    });
+    expect(runtimeObservability.sessionRolloverReason).toContain("last_run_cost_usd>=1");
+  });
+
   it("extracts validator and failure path details from closeout reconcile wait reasons", () => {
     const operatorGuidance = buildOperatorGuidance({
       active_stage: 6,
