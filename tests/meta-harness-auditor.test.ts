@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { validateKnownShape } from "../scripts/lib/validate-workflow-v2.mjs";
 import {
+  buildMetaHarnessPromotionReadiness,
   detectBookkeepingOverlap,
   detectOmoAuditCoverageGap,
   detectOmoPrCiRealityDrift,
@@ -1004,6 +1005,108 @@ describe("meta-harness-auditor", () => {
 
     expect(findings.map((finding) => finding.id)).toContain("H-OMO-006");
     expect(findings[0]?.suggested_next_step).toContain("replay acceptance evidence missing");
+  });
+
+  it("drops bookkeeping-specific promotion summary text once H-GOV-001 is no longer an active blocker", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    write(
+      rootDir,
+      "docs/engineering/workflow-v2/omo-incident-registry.md",
+      [
+        "# OMO Incident Registry",
+        "",
+        "### OMO-07-003",
+        "- status: `open`",
+        "- boundary: `omo-system`",
+        "- symptom: stale lock remains open.",
+        "",
+      ].join("\n"),
+    );
+    write(
+      rootDir,
+      ".workflow-v2/promotion-evidence.json",
+      JSON.stringify(
+        {
+          version: 1,
+          target: "OMO v2",
+          updated_at: "2026-04-23T00:00:00.000Z",
+          canonical_policy: "v2",
+          execution_mode: "default",
+          documentation_gates: [],
+          operational_gates: [],
+          pilot_lanes: [],
+          promotion_gate: {
+            status: "not-ready",
+            blockers: ["H-OMO-001", "H-OMO-006"],
+            next_review_trigger: "after rerun",
+            notes: "runtime alignment still pending",
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    write(
+      rootDir,
+      ".workflow-v2/replay-acceptance.json",
+      JSON.stringify(
+        {
+          version: 1,
+          target: "OMO v2",
+          updated_at: "2026-04-23T00:00:00.000Z",
+          lanes: [
+            {
+              id: "slice06-authority-replay",
+              label: "Slice06 authority replay",
+              status: "pass",
+              required: true,
+              work_item_refs: [],
+              incident_ids: [],
+              evidence_refs: [],
+              criteria: {
+                manual_runtime_json_edit_free: true,
+                stale_lock_manual_clear_free: true,
+                stale_ci_snapshot_manual_fix_free: true,
+                canonical_closeout_validated: true,
+                auditor_result_recorded: true,
+              },
+              notes: "pass",
+            },
+          ],
+          summary: {
+            status: "pass",
+            blocking_lane_ids: [],
+            notes: "representative replay passed",
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const promotionReadiness = buildMetaHarnessPromotionReadiness({
+      rootDir,
+      findings: [
+        {
+          id: "H-OMO-001",
+          bucket: "promotion-blocker",
+          evidence_refs: ["docs/engineering/workflow-v2/promotion-readiness.md"],
+        },
+        {
+          id: "H-OMO-006",
+          bucket: "promotion-blocker",
+          evidence_refs: [".workflow-v2/promotion-evidence.json"],
+        },
+      ],
+      generatedAt: "2026-04-23T00:00:00.000Z",
+    });
+
+    expect(promotionReadiness.summary).toContain("promotion evidence와 runtime/incident alignment");
+    expect(promotionReadiness.summary).not.toContain("bookkeeping 경계");
+    expect(promotionReadiness.prerequisites).toContain("promotion evidence / runtime incident alignment");
+    expect(promotionReadiness.prerequisites).not.toContain("bookkeeping authoritative source matrix");
   });
 
   it("clears H-OMO-003 and H-OMO-005 once runtime and PR/CI incidents close by replay", () => {

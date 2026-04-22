@@ -1168,24 +1168,32 @@ export function buildMetaHarnessPromotionReadiness({ rootDir = process.cwd(), fi
     .filter((finding) => finding.bucket === "promotion-blocker" || finding.id === "H-GOV-001")
     .map((finding) => finding.id);
   const verdict = blockers.length > 0 ? "not-ready" : status.gateStatus === "ready" ? "ready" : "candidate";
+  const hasBookkeepingOverlapBlocker = blockers.includes("H-GOV-001");
+  const summary =
+    verdict === "not-ready"
+      ? hasBookkeepingOverlapBlocker
+        ? "OMO v2는 아직 기본 운영 경로 승격 전 단계이며, bookkeeping 경계와 promotion evidence를 더 잠가야 한다."
+        : "OMO v2는 아직 기본 운영 경로 승격 전 단계이며, promotion evidence와 runtime/incident alignment를 더 잠가야 한다."
+      : verdict === "ready"
+        ? "OMO v2는 승격 gate를 통과한 상태다. 마지막 docs-governance cutover와 인간 승인이 남아 있다."
+        : "OMO v2는 승격 후보 상태이며, 마지막 pilot evidence 정리만 남아 있다.";
+  const prerequisites = [
+    "authority-required, external-smoke, bugfix pilot evidence refresh",
+    ...(hasBookkeepingOverlapBlocker ? ["bookkeeping authoritative source matrix"] : []),
+    ...(blockers.some((id) => id === "H-OMO-001" || id === "H-OMO-006")
+      ? ["promotion evidence / runtime incident alignment"]
+      : []),
+    "meta-harness-auditor recurring baseline audit",
+  ];
 
   return {
     version: 1,
     generated_at: generatedAt,
     target: "OMO v2",
     verdict,
-    summary:
-      verdict === "not-ready"
-        ? "OMO v2는 아직 기본 운영 경로 승격 전 단계이며, bookkeeping 경계와 promotion evidence를 더 잠가야 한다."
-        : verdict === "ready"
-          ? "OMO v2는 승격 gate를 통과한 상태다. 마지막 docs-governance cutover와 인간 승인이 남아 있다."
-          : "OMO v2는 승격 후보 상태이며, 마지막 pilot evidence 정리만 남아 있다.",
+    summary,
     blockers,
-    prerequisites: [
-      "authority-required, external-smoke, bugfix pilot evidence refresh",
-      "bookkeeping authoritative source matrix",
-      "meta-harness-auditor recurring baseline audit",
-    ],
+    prerequisites,
     evidence_refs: [
       ...new Set([
         ...findings.flatMap((finding) => finding.evidence_refs),
