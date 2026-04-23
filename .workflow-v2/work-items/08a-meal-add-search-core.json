@@ -1,0 +1,87 @@
+{
+  "id": "08a-meal-add-search-core",
+  "title": "MENU_ADD shell + RECIPE_SEARCH_PICKER 검색 기반 식사 추가",
+  "summary": "플래너에서 식사를 추가할 때 검색 기반 경로를 제공한다. MENU_ADD 화면 shell과 RECIPE_SEARCH_PICKER 컴포넌트를 구현하여 레시피 검색 후 계획 인분 입력으로 Meal을 생성한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "플래너에서 식사를 추가할 때 검색 기반 경로를 제공한다. MENU_ADD 화면 shell과 RECIPE_SEARCH_PICKER 컴포넌트를 구현하여 사용자가 레시피를 검색하고 선택한 뒤 계획 인분을 입력하여 Meal을 생성할 수 있다. 이번 슬라이스는 레시피북/팬트리/남은요리/유튜브/직접등록 경로를 제외하고 검색 path만 닫는다.",
+  "owners": {
+    "claude": "stage-1-3-4",
+    "codex": "stage-2-5-6",
+    "workers": []
+  },
+  "dependencies": [
+    "01-discovery-detail-auth",
+    "02-discovery-filter",
+    "03-recipe-like",
+    "04-recipe-save",
+    "05-planner-week-core",
+    "06-recipe-to-planner",
+    "07-meal-manage"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.6.3.md",
+      "docs/화면정의서-v1.5.0.md",
+      "docs/api문서-v1.2.2.md",
+      "docs/유저flow맵-v1.3.0.md",
+      "docs/db설계-v1.3.1.md"
+    ],
+    "governing_docs": [
+      "AGENTS.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/design/design-tokens.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/engineering/product-design-authority.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "product-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ]
+  },
+  "status": {
+    "lifecycle": "ready_for_review",
+    "approval_state": "claude_approved",
+    "verification_status": "passed"
+  },
+  "out_of_scope": [
+    "레시피북에서 추가 (08b)",
+    "팬트리만 이용 (08b)",
+    "남은요리에서 추가 (16)",
+    "직접 레시피 등록 (18)",
+    "유튜브 링크로 추가 (19)",
+    "MENU_ADD 내부 Out of Scope 버튼은 비활성 placeholder"
+  ],
+  "open_questions": []
+}
