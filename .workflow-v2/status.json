@@ -230,6 +230,22 @@
       "auto_merge_eligible": false,
       "blocked_reason_code": null,
       "pr_path": "https://github.com/netsus/homecook/pull/152"
+    },
+    {
+      "id": "08a-meal-add-search-core",
+      "preset": "vertical-slice-strict",
+      "branch": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm install --frozen-lockfile && pnpm verify:backend",
+        "pnpm install --frozen-lockfile && pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 docs in progress",
+      "pr_path": null
     }
   ]
 }
