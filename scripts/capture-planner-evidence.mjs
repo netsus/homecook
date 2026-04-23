@@ -22,6 +22,10 @@ const COLUMNS = [
   { id: "column-dinner", name: "저녁", sort_order: 3 },
 ];
 
+function log(message) {
+  process.stdout.write(`${message}\n`);
+}
+
 function shiftDate(dateStr, days) {
   const d = new Date(dateStr);
   d.setDate(d.getDate() + days);
@@ -58,7 +62,7 @@ async function capture(page, name, { width, height }) {
   await page.waitForTimeout(500);
   const path = join(OUT_DIR, `${name}.png`);
   await page.screenshot({ path, fullPage: false });
-  console.log(`  saved: ${path}`);
+  log(`  saved: ${path}`);
 }
 
 async function openPlannerPage(browser) {
@@ -69,14 +73,14 @@ async function openPlannerPage(browser) {
   await mockRoutes(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/planner`, { waitUntil: "networkidle" });
-  console.log("  navigated to:", page.url());
+  log(`  navigated to: ${page.url()}`);
 
   // Wait for planner body or log what's visible
   try {
     await page.waitForSelector('[data-testid="planner-week-body"]', { timeout: 12000 });
   } catch {
     const bodyText = await page.locator("body").innerText();
-    console.log("  body snippet:", bodyText.slice(0, 200));
+    log(`  body snippet: ${bodyText.slice(0, 200)}`);
     throw new Error("planner-week-body not found");
   }
   return page;
@@ -117,12 +121,12 @@ async function run() {
         const page = await openPlannerPage(browser);
         const firstCard = page.locator('[aria-label*="식단 카드"]').first();
         await firstCard.screenshot({ path: join(OUT_DIR, "PLANNER_WEEK-v2-day-card-filled.png") });
-        console.log(`  saved: ${join(OUT_DIR, "PLANNER_WEEK-v2-day-card-filled.png")}`);
+        log(`  saved: ${join(OUT_DIR, "PLANNER_WEEK-v2-day-card-filled.png")}`);
         await page.close();
       }
     }
 
-    console.log(`\nDone — tag: ${TAG}`);
+    log(`\nDone — tag: ${TAG}`);
   } finally {
     await browser.close();
   }

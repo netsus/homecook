@@ -24,6 +24,10 @@ const BASE_URL = "http://localhost:3000";
 
 const isBefore = process.argv.includes("--before");
 
+function log(message) {
+  process.stdout.write(`${message}\n`);
+}
+
 async function waitForHomeReady(page) {
   // wait for at least recipe list or empty state
   await page.waitForFunction(() => {
@@ -45,29 +49,29 @@ async function main() {
   try {
     if (isBefore) {
       await captureBeforeMobile(browser);
-      console.log("✅ E1 before mobile saved");
+      log("✅ E1 before mobile saved");
       return;
     }
 
     await captureAfterMobile(browser);
-    console.log("✅ E2 after mobile 390px saved");
+    log("✅ E2 after mobile 390px saved");
 
     await captureAfterNarrow(browser);
-    console.log("✅ E3 after narrow 320px saved");
+    log("✅ E3 after narrow 320px saved");
 
     await captureAfterScrolled(browser);
-    console.log("✅ E4 after scrolled saved");
+    log("✅ E4 after scrolled saved");
 
     await captureFilterActive(browser);
-    console.log("✅ E5 filter active saved");
+    log("✅ E5 filter active saved");
 
     await captureSortActive(browser);
-    console.log("✅ E6 sort active saved");
+    log("✅ E6 sort active saved");
 
     await captureCarouselStrip(browser);
-    console.log("✅ E7 carousel strip saved");
+    log("✅ E7 carousel strip saved");
 
-    console.log("\nAll evidence captured at:", EVIDENCE_DIR);
+    log(`\nAll evidence captured at: ${EVIDENCE_DIR}`);
   } finally {
     await browser.close();
   }

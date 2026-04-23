@@ -26,10 +26,8 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function shiftDate(dateStr, days) {
-  const d = new Date(`${dateStr}T00:00:00.000Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
+function log(message) {
+  process.stdout.write(`${message}\n`);
 }
 
 async function mockPlannerRoutes(page) {
@@ -77,7 +75,7 @@ async function capture(page, name, { width, height }) {
   await page.waitForTimeout(400);
   const path = join(OUT_DIR, `${name}.png`);
   await page.screenshot({ path, fullPage: false });
-  console.log(`  saved: ${path}`);
+  log(`  saved: ${path}`);
 }
 
 async function openRecipeDetailPage(browser, { width = 390, height = 844 } = {}) {
@@ -93,7 +91,7 @@ async function openRecipeDetailPage(browser, { width = 390, height = 844 } = {})
   await page.goto(`${BASE_URL}/recipe/mock-kimchi-jjigae`, {
     waitUntil: "networkidle",
   });
-  console.log("  navigated to:", page.url());
+  log(`  navigated to: ${page.url()}`);
 
   return page;
 }
@@ -108,7 +106,7 @@ async function main() {
 
   try {
     // ── E1: RECIPE_DETAIL-baseline (full page at 390px) ─────────────────────
-    console.log("\n[E1] RECIPE_DETAIL-baseline (390px)");
+    log("\n[E1] RECIPE_DETAIL-baseline (390px)");
     {
       const page = await openRecipeDetailPage(browser);
       await waitForCTA(page);
@@ -117,7 +115,7 @@ async function main() {
     }
 
     // ── E6: recipe-detail-cta-hierarchy (CTA row close-up) ──────────────────
-    console.log("\n[E6] recipe-detail-cta-hierarchy");
+    log("\n[E6] recipe-detail-cta-hierarchy");
     {
       const page = await openRecipeDetailPage(browser);
       await waitForCTA(page);
@@ -130,7 +128,7 @@ async function main() {
           path: join(OUT_DIR, "recipe-detail-cta-hierarchy.png"),
           clip: { x: 0, y: Math.max(0, box.y - 24), width: 390, height: box.height + 80 },
         });
-        console.log(`  saved: ${join(OUT_DIR, "recipe-detail-cta-hierarchy.png")}`);
+        log(`  saved: ${join(OUT_DIR, "recipe-detail-cta-hierarchy.png")}`);
       } else {
         await capture(page, "recipe-detail-cta-hierarchy", { width: 390, height: 844 });
       }
@@ -138,7 +136,7 @@ async function main() {
     }
 
     // ── E2: planner-add-sheet-mobile (390px, sheet open, date selected) ─────
-    console.log("\n[E2] planner-add-sheet-mobile (390px)");
+    log("\n[E2] planner-add-sheet-mobile (390px)");
     {
       const page = await openRecipeDetailPage(browser);
       await waitForCTA(page);
@@ -150,7 +148,7 @@ async function main() {
     }
 
     // ── E4: planner-add-sheet-date-label (date format close-up) ─────────────
-    console.log("\n[E4] planner-add-sheet-date-label");
+    log("\n[E4] planner-add-sheet-date-label");
     {
       const page = await openRecipeDetailPage(browser);
       await waitForCTA(page);
@@ -165,7 +163,7 @@ async function main() {
           path: join(OUT_DIR, "planner-add-sheet-date-label.png"),
           clip: { x: 0, y: Math.max(0, box.y - 40), width: 390, height: box.height + 120 },
         });
-        console.log(`  saved: ${join(OUT_DIR, "planner-add-sheet-date-label.png")}`);
+        log(`  saved: ${join(OUT_DIR, "planner-add-sheet-date-label.png")}`);
       } else {
         await capture(page, "planner-add-sheet-date-label", { width: 390, height: 844 });
       }
@@ -173,7 +171,7 @@ async function main() {
     }
 
     // ── E3: planner-add-sheet-narrow (320px) ────────────────────────────────
-    console.log("\n[E3] planner-add-sheet-narrow (320px)");
+    log("\n[E3] planner-add-sheet-narrow (320px)");
     {
       const page = await openRecipeDetailPage(browser, { width: 320, height: 568 });
       await waitForCTA(page);
@@ -185,7 +183,7 @@ async function main() {
     }
 
     // ── E5: planner-add-toast-mobile (success toast, 390px) ─────────────────
-    console.log("\n[E5] planner-add-toast-mobile (390px)");
+    log("\n[E5] planner-add-toast-mobile (390px)");
     {
       const page = await openRecipeDetailPage(browser);
       await waitForCTA(page);
@@ -201,7 +199,7 @@ async function main() {
       await page.close();
     }
 
-    console.log(`\nAll evidence screenshots saved to ${OUT_DIR}`);
+    log(`\nAll evidence screenshots saved to ${OUT_DIR}`);
   } finally {
     await browser.close();
   }

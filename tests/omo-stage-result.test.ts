@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
-
 import { inheritAuthorityPrecheckChecklistSnapshot, validateStageResult } from "../scripts/lib/omo-stage-result.mjs";
 
 describe("OMO stage-result contract", () => {

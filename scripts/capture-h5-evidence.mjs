@@ -28,10 +28,6 @@ const RECIPE_BOOKS = [
   { id: "book-2", name: "주말 요리", book_type: "custom", recipe_count: 3 },
 ];
 
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 async function mockRecipeDetailRoute(page) {
   await page.route("**/api/v1/recipes/mock-kimchi-jjigae", async (route) => {
     if (route.request().method() !== "GET") {
@@ -67,7 +63,6 @@ async function mockRecipeDetailRoute(page) {
 
 async function mockPlannerRoutes(page) {
   await page.route("**/api/v1/planner**", async (route) => {
-    const today = todayKey();
     await route.fulfill({
       json: {
         success: true,
