@@ -6435,18 +6435,60 @@ describe("OMO autonomous supervisor", () => {
         },
         stageRunner({ subphase }: { subphase?: string | null }) {
           observedSubphase = subphase ?? null;
+          const authorityChangedFiles = [
+            ".workflow-v2/status.json",
+            ".workflow-v2/work-items/03-recipe-like.json",
+            "docs/workpacks/03-recipe-like/README.md",
+            "docs/workpacks/03-recipe-like/acceptance.md",
+            "ui/designs/authority/RECIPE_DETAIL-authority.md",
+            "ui/designs/evidence/06/RECIPE_DETAIL-mobile.png",
+            "ui/designs/evidence/06/RECIPE_DETAIL-mobile-narrow.png",
+          ];
           mkdirSync(join(workspacePath, "ui", "designs", "authority"), { recursive: true });
+          mkdirSync(join(workspacePath, "ui", "designs", "evidence", "06"), { recursive: true });
+          writeFileSync(
+            join(workspacePath, "docs", "workpacks", "03-recipe-like", "README.md"),
+            buildWorkpackReadme({
+              workItemId: "03-recipe-like",
+              designStatus: "pending-review",
+              backendChecked: false,
+              frontendChecked: true,
+              authorityStatus: "required",
+              uiRisk: "new-screen",
+              visualArtifact: "figma://recipe-detail",
+            }),
+          );
+          writeFileSync(
+            join(workspacePath, "docs", "workpacks", "03-recipe-like", "acceptance.md"),
+            buildAcceptance({
+              workItemId: "03-recipe-like",
+              backendChecked: false,
+              frontendChecked: true,
+            }),
+          );
           writeFileSync(join(workspacePath, "ui", "designs", "authority", "RECIPE_DETAIL-authority.md"), "# Authority\n- verdict: conditional-pass\n");
+          writeFileSync(join(workspacePath, "ui", "designs", "evidence", "06", "RECIPE_DETAIL-mobile.png"), "evidence\n");
+          writeFileSync(join(workspacePath, "ui", "designs", "evidence", "06", "RECIPE_DETAIL-mobile-narrow.png"), "evidence\n");
           return {
             artifactDir: join(rootDir, ".artifacts", "stage4-review-fix-authority-precheck"),
             dispatch: { actor: "codex", stage: 4, subphase: "authority_precheck", sessionBinding: { role: "codex_primary" } },
             execution: { mode: "execute", executed: true, sessionId: "ses_codex_authority_after_fix" },
-            stageResult: buildAuthorityPrecheckStageResult({
-              verdict: "conditional-pass",
-              blockerCount: 0,
-              majorCount: 1,
-              minorCount: 0,
-            }),
+            stageResult: {
+              ...buildAuthorityPrecheckStageResult({
+                verdict: "conditional-pass",
+                blockerCount: 0,
+                majorCount: 1,
+                minorCount: 0,
+              }),
+              claimed_scope: {
+                files: authorityChangedFiles,
+                endpoints: [],
+                routes: ["/example"],
+                states: ["loading"],
+                invariants: [],
+              },
+              changed_files: authorityChangedFiles,
+            },
           };
         },
         github: {
