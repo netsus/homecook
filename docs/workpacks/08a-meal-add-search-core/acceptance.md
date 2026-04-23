@@ -11,14 +11,14 @@
 - [ ] 검색창에 키워드 입력 → 레시피 검색 결과 표시 <!-- omo:id=accept-search-flow;stage=4;scope=frontend;review=5,6 -->
 - [ ] 검색 결과에서 레시피 선택 → 계획 인분 입력 모달 표시 <!-- omo:id=accept-recipe-select;stage=4;scope=frontend;review=5,6 -->
 - [ ] 인분 입력 후 [추가] → Meal 생성 → MEAL_SCREEN 복귀 <!-- omo:id=accept-meal-create;stage=4;scope=frontend;review=5,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] GET /recipes 검색 파라미터가 올바르게 전달된다 <!-- omo:id=accept-search-params;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /meals request body가 Backend First Contract와 일치한다 <!-- omo:id=accept-post-meals-contract;stage=2;scope=shared;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] GET /recipes 검색 파라미터가 올바르게 전달된다 <!-- omo:id=accept-search-params;stage=2;scope=backend;review=3,6 -->
+- [x] POST /meals request body가 Backend First Contract와 일치한다 <!-- omo:id=accept-post-meals-contract;stage=2;scope=shared;review=3,6 -->
 
 ## State / Policy
-- [ ] Meal 생성 시 status='registered'로 고정된다 <!-- omo:id=accept-meal-status;stage=2;scope=backend;review=3,6 -->
-- [ ] planned_servings는 양수만 허용된다 (0 이하 → 422) <!-- omo:id=accept-servings-positive;stage=2;scope=backend;review=3,6 -->
-- [ ] column_id 소유자 검증이 정상 작동한다 <!-- omo:id=accept-column-owner;stage=2;scope=backend;review=3,6 -->
+- [x] Meal 생성 시 status='registered'로 고정된다 <!-- omo:id=accept-meal-status;stage=2;scope=backend;review=3,6 -->
+- [x] planned_servings는 양수만 허용된다 (0 이하 → 422) <!-- omo:id=accept-servings-positive;stage=2;scope=backend;review=3,6 -->
+- [x] column_id 소유자 검증이 정상 작동한다 <!-- omo:id=accept-column-owner;stage=2;scope=backend;review=3,6 -->
 - [ ] 검색 결과 없음은 empty 상태로 처리된다 (error 아님) <!-- omo:id=accept-empty-not-error;stage=4;scope=frontend;review=5,6 -->
 
 ## Error / Permission
@@ -26,23 +26,23 @@
 - [ ] empty 상태가 있다 (검색 결과 없음) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
 - [ ] error 상태가 있다 (네트워크 오류, 서버 오류) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
 - [ ] unauthorized 처리 흐름이 있다 (로그인 게이트 + return-to-action) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] 401: 비로그인 상태에서 POST /meals 호출 시 올바른 응답 <!-- omo:id=accept-401-response;stage=2;scope=backend;review=3,6 -->
-- [ ] 403: column_id 소유자 불일치 시 올바른 응답 <!-- omo:id=accept-403-response;stage=2;scope=backend;review=3,6 -->
-- [ ] 404: recipe_id 또는 column_id 미존재 시 올바른 응답 <!-- omo:id=accept-404-response;stage=2;scope=backend;review=3,6 -->
-- [ ] 422: planned_servings 음수/0 시 올바른 응답 <!-- omo:id=accept-422-response;stage=2;scope=backend;review=3,6 -->
+- [x] 401: 비로그인 상태에서 POST /meals 호출 시 올바른 응답 <!-- omo:id=accept-401-response;stage=2;scope=backend;review=3,6 -->
+- [x] 403: column_id 소유자 불일치 시 올바른 응답 <!-- omo:id=accept-403-response;stage=2;scope=backend;review=3,6 -->
+- [x] 404: recipe_id 또는 column_id 미존재 시 올바른 응답 <!-- omo:id=accept-404-response;stage=2;scope=backend;review=3,6 -->
+- [x] 422: planned_servings 음수/0 시 올바른 응답 <!-- omo:id=accept-422-response;stage=2;scope=backend;review=3,6 -->
 - [ ] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
-- [ ] 타인의 column_id에 Meal을 생성할 수 없다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] 미존재 recipe_id로 Meal 생성 시 404 응답 <!-- omo:id=accept-invalid-recipe;stage=2;scope=backend;review=3,6 -->
-- [ ] 미존재 column_id로 Meal 생성 시 404 응답 <!-- omo:id=accept-invalid-column;stage=2;scope=backend;review=3,6 -->
+- [x] 타인의 column_id에 Meal을 생성할 수 없다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] 미존재 recipe_id로 Meal 생성 시 404 응답 <!-- omo:id=accept-invalid-recipe;stage=2;scope=backend;review=3,6 -->
+- [x] 미존재 column_id로 Meal 생성 시 404 응답 <!-- omo:id=accept-invalid-column;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## Data Setup / Preconditions
-- [ ] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] meal_plan_columns 시스템 row 자동 생성이 확인되었다 (아침/점심/저녁) <!-- omo:id=accept-column-bootstrap;stage=2;scope=shared;review=3,6 -->
-- [ ] recipes 테이블에 검색 테스트용 샘플이 최소 5개 준비되었다 <!-- omo:id=accept-recipe-samples;stage=2;scope=shared;review=3,6 -->
+- [x] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] meal_plan_columns 시스템 row 자동 생성이 확인되었다 (아침/점심/저녁) <!-- omo:id=accept-column-bootstrap;stage=2;scope=shared;review=3,6 -->
+- [x] recipes 테이블에 검색 테스트용 샘플이 최소 5개 준비되었다 <!-- omo:id=accept-recipe-samples;stage=2;scope=shared;review=3,6 -->
 
 ## UI/UX Behavior
 - [ ] MENU_ADD 진입 시 검색창이 상단에 표시된다 <!-- omo:id=accept-search-top;stage=4;scope=frontend;review=5,6 -->
@@ -64,10 +64,10 @@
 ## Automation Split
 
 ### Vitest
-- [ ] GET /recipes 검색 파라미터 전달 로직 테스트 <!-- omo:id=accept-vitest-search-logic;stage=2;scope=shared;review=3,6 -->
-- [ ] POST /meals request body 생성 로직 테스트 <!-- omo:id=accept-vitest-post-logic;stage=2;scope=shared;review=3,6 -->
-- [ ] planned_servings 양수 검증 로직 테스트 <!-- omo:id=accept-vitest-servings-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] column_id 소유자 검증 로직 테스트 <!-- omo:id=accept-vitest-owner-validation;stage=2;scope=backend;review=3,6 -->
+- [x] GET /recipes 검색 파라미터 전달 로직 테스트 <!-- omo:id=accept-vitest-search-logic;stage=2;scope=shared;review=3,6 -->
+- [x] POST /meals request body 생성 로직 테스트 <!-- omo:id=accept-vitest-post-logic;stage=2;scope=shared;review=3,6 -->
+- [x] planned_servings 양수 검증 로직 테스트 <!-- omo:id=accept-vitest-servings-validation;stage=2;scope=backend;review=3,6 -->
+- [x] column_id 소유자 검증 로직 테스트 <!-- omo:id=accept-vitest-owner-validation;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright
 - [ ] MENU_ADD 진입 → 검색 → 레시피 선택 → 인분 입력 → Meal 생성 → MEAL_SCREEN 복귀 흐름 <!-- omo:id=accept-playwright-e2e;stage=4;scope=frontend;review=5,6 -->
