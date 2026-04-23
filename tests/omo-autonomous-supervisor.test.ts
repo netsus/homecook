@@ -10918,6 +10918,180 @@ describe("OMO autonomous supervisor", () => {
     });
   });
 
+  it("fast-forwards a stale Stage 2 backend branch to origin/master before implementation entry validation", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    let fastForwarded = false;
+    let stageRunnerCalled = false;
+
+    createGitWorkspace(workspacePath, `feature/be-${workItemId}`);
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "docs",
+      designStatus: "temporary",
+    });
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "docs: seed stale backend branch"], { cwd: workspacePath });
+    rmSync(join(workspacePath, "docs", "workpacks", workItemId), { recursive: true, force: true });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        last_completed_stage: 1,
+        phase: null,
+        next_action: "noop",
+        workspace: {
+          path: workspacePath,
+          branch_role: "backend",
+        },
+        prs: {
+          docs: {
+            number: 41,
+            url: "https://github.com/netsus/homecook/pull/41",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+          },
+          backend: null,
+          frontend: null,
+          closeout: null,
+        },
+        doc_gate: {
+          status: "passed",
+          round: 0,
+          findings: [],
+        },
+        wait: null,
+        execution: null,
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-24T00:30:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          fastForwardBaseBranch() {
+            fastForwarded = true;
+            mkdirSync(join(workspacePath, "docs", "workpacks", workItemId), { recursive: true });
+            writeFileSync(
+              join(workspacePath, "docs", "workpacks", workItemId, "README.md"),
+              buildWorkpackReadme({
+                workItemId,
+                designStatus: "temporary",
+              }),
+            );
+            writeFileSync(
+              join(workspacePath, "docs", "workpacks", workItemId, "acceptance.md"),
+              buildAcceptance({
+                workItemId,
+              }),
+            );
+            writeFileSync(
+              join(workspacePath, "docs", "workpacks", workItemId, "automation-spec.json"),
+              JSON.stringify(
+                {
+                  slice_id: workItemId,
+                  execution_mode: "autonomous",
+                },
+                null,
+                2,
+              ),
+            );
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "base-synced-head";
+          },
+          getCurrentBranch() {
+            return `feature/be-${workItemId}`;
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          stageRunnerCalled = true;
+          const runtimeSync = writeRuntimeState({
+            rootDir,
+            workItemId,
+            state: {
+              ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+              slice: workItemId,
+              current_stage: 2,
+              blocked_stage: 2,
+              retry: {
+                at: "2026-04-24T01:30:00.000Z",
+                reason: "claude_budget_unavailable",
+                attempt_count: 1,
+                max_attempts: 3,
+              },
+            },
+          });
+          return {
+            artifactDir: join(rootDir, ".artifacts", "stage2-base-sync"),
+            dispatch: { actor: "codex", stage: 2, subphase: "implementation" },
+            execution: {
+              mode: "scheduled-retry",
+              executed: false,
+              sessionId: "ses_codex_stage2",
+              reason: "claude_budget_unavailable",
+            },
+            runtimeSync,
+            stageResult: null,
+          };
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            throw new Error("not expected");
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(fastForwarded).toBe(true);
+    expect(stageRunnerCalled).toBe(true);
+    expect(result.wait).toMatchObject({
+      kind: "blocked_retry",
+      stage: 2,
+    });
+  });
+
   it("resumes a Stage 2 doc gate repair after rebuttal aliases are normalized", () => {
     const rootDir = createFixture();
     const workItemId = "07-meal-manage";
@@ -11538,6 +11712,251 @@ describe("OMO autonomous supervisor", () => {
     });
     expect(runtime.recovery).toBeNull();
     expect(runtime.prs.docs?.head_sha).toBe("new-head");
+  });
+
+  it("canonicalizes tracked status required checks before committing a Stage 1 docs branch", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    const artifactDir = join(rootDir, ".artifacts", "stage1-status-canonicalization");
+    const stageResultPath = join(artifactDir, "stage-result.json");
+    const expectedChecks = [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck",
+    ];
+    const staleChecks = [
+      "pnpm install --frozen-lockfile && pnpm verify:backend",
+      "pnpm install --frozen-lockfile && pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck",
+    ];
+
+    createGitWorkspace(workspacePath, `docs/${workItemId}`);
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "docs",
+      designStatus: "temporary",
+    });
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", workItemId, "automation-spec.json"),
+      JSON.stringify(
+        {
+          slice_id: workItemId,
+          execution_mode: "autonomous",
+        },
+        null,
+        2,
+      ),
+    );
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "docs: seed stage1 baseline"], { cwd: workspacePath });
+
+    const workItemPath = join(workspacePath, ".workflow-v2", "work-items", `${workItemId}.json`);
+    const workItem = JSON.parse(readFileSync(workItemPath, "utf8")) as {
+      verification: { required_checks: string[]; verify_commands: string[] };
+    };
+    writeFileSync(
+      workItemPath,
+      `${JSON.stringify(
+        {
+          ...workItem,
+          verification: {
+            ...workItem.verification,
+            required_checks: expectedChecks,
+            verify_commands: expectedChecks.slice(0, 2),
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    upsertWorktreeStatusItem(workspacePath, workItemId, {
+      lifecycle: "planned",
+      approval_state: "not_started",
+      verification_status: "pending",
+      required_checks: staleChecks,
+      notes: "Stage 1 docs in progress",
+    });
+
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      stageResultPath,
+      `${JSON.stringify(
+        buildCodeStageResult({
+          summary: "Stage 1 docs complete",
+          subject: "docs: complete stage1 workpack",
+          title: "docs: complete stage1 workpack",
+          checklistUpdates: [],
+          changedFiles: [
+            `docs/workpacks/${workItemId}/README.md`,
+            `docs/workpacks/${workItemId}/acceptance.md`,
+            ".workflow-v2/status.json",
+            `.workflow-v2/work-items/${workItemId}.json`,
+          ],
+        }),
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 1,
+        current_stage: 1,
+        phase: "stage_result_ready",
+        next_action: "finalize_stage",
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        last_artifact_dir: artifactDir,
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: "ses_docs_stage1",
+          artifact_dir: artifactDir,
+          stage_result_path: stageResultPath,
+          started_at: "2026-04-23T14:17:41.808Z",
+          finished_at: "2026-04-23T14:17:41.808Z",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "docs",
+        },
+        wait: null,
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-23T14:26:18.218Z",
+        maxTransitions: 4,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {
+            const status = execFileSync("git", ["status", "--porcelain"], {
+              cwd: workspacePath,
+              encoding: "utf8",
+            }).trim();
+            if (status.length > 0) {
+              throw new Error("Worktree is dirty.");
+            }
+          },
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          commitChanges({ subject, body }: { subject: string; body: string | null }) {
+            execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+            const message = body && body.trim().length > 0 ? `${subject}\n\n${body}` : subject;
+            execFileSync("git", ["commit", "-m", message], { cwd: workspacePath });
+          },
+          pushBranch() {},
+          syncBaseBranch() {
+            throw new Error("not expected");
+          },
+          getHeadSha() {
+            return execFileSync("git", ["rev-parse", "HEAD"], {
+              cwd: workspacePath,
+              encoding: "utf8",
+            }).trim();
+          },
+          getCurrentBranch() {
+            return execFileSync("git", ["branch", "--show-current"], {
+              cwd: workspacePath,
+              encoding: "utf8",
+            }).trim();
+          },
+          listChangedFiles() {
+            return execFileSync("git", ["status", "--porcelain"], {
+              cwd: workspacePath,
+              encoding: "utf8",
+            })
+              .split(/\r?\n/)
+              .map((line) => line.trim())
+              .filter(Boolean)
+              .map((line) => line.slice(3));
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            return {
+              number: 41,
+              url: `https://github.com/netsus/homecook/pull/41`,
+              draft: false,
+            };
+          },
+          getRequiredChecks() {
+            return { bucket: "pending", checks: [{ name: "policy", bucket: "pending", state: "PENDING" }] };
+          },
+          getPullRequestSummary() {
+            return {
+              state: "OPEN",
+              mergedAt: null,
+              mergeStateStatus: "CLEAN",
+              reviewDecision: null,
+            };
+          },
+          markReady() {
+            throw new Error("not expected");
+          },
+          reviewPullRequest() {
+            throw new Error("not expected");
+          },
+          commentPullRequest() {
+            throw new Error("not expected");
+          },
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {
+            throw new Error("not expected");
+          },
+        },
+      },
+    );
+
+    const committedStatus = JSON.parse(
+      execFileSync("git", ["show", "HEAD:.workflow-v2/status.json"], {
+        cwd: workspacePath,
+        encoding: "utf8",
+      }),
+    ) as {
+      items: Array<{ id: string; required_checks: string[] }>;
+    };
+    const committedStatusItem = committedStatus.items.find((item) => item.id === workItemId);
+
+    expect(result.wait).toMatchObject({
+      kind: "ci",
+      stage: 1,
+      pr_role: "docs",
+    });
+    expect(committedStatusItem?.required_checks).toEqual(expectedChecks);
   });
 
   it("replays PR body projection on failed checks and returns to ci wait without a no-op commit", () => {

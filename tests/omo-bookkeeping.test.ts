@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -481,6 +481,115 @@ describe("OMO bookkeeping", () => {
 
     expect(invariant.outcome).toBe("ambiguous_drift");
     expect(invariant.reason).toBe("roadmap_row_missing");
+  });
+
+  it("treats a Stage 2 workpack gap after docs gate pass as recoverable via base sync", () => {
+    const workItemId = "08a-meal-add-search-core";
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-bookkeeping-stage2-workpack-gap-"));
+    const worktreePath = join(rootDir, ".worktrees", workItemId);
+    seedTrackedFiles(rootDir, workItemId);
+    mkdirSync(join(worktreePath, ".workflow-v2", "work-items"), { recursive: true });
+    mkdirSync(join(worktreePath, "docs", "workpacks"), { recursive: true });
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "README.md"),
+      [
+        "# Workpack Roadmap v2",
+        "",
+        "## Slice Order",
+        "",
+        "| Slice | Status | Goal |",
+        "| --- | --- | --- |",
+        `| \`${workItemId}\` | docs | test slice |`,
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(rootDir, ".workflow-v2", "status.json"),
+      JSON.stringify(
+        {
+          version: 1,
+          project_profile: "homecook",
+          updated_at: "2026-04-01T00:00:00.000Z",
+          items: [
+            {
+              id: workItemId,
+              preset: "vertical-slice-strict",
+              lifecycle: "ready_for_review",
+              approval_state: "claude_approved",
+              verification_status: "passed",
+              required_checks: ["pnpm validate:workflow-v2"],
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+    rmSync(join(rootDir, "docs", "workpacks", workItemId), { recursive: true, force: true });
+
+    writeFileSync(
+      join(worktreePath, ".workflow-v2", "work-items", `${workItemId}.json`),
+      readFileSync(join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`), "utf8"),
+    );
+    writeFileSync(
+      join(worktreePath, ".workflow-v2", "status.json"),
+      readFileSync(join(rootDir, ".workflow-v2", "status.json"), "utf8"),
+    );
+    writeFileSync(
+      join(worktreePath, "docs", "workpacks", "README.md"),
+      [
+        "# Workpack Roadmap v2",
+        "",
+        "## Slice Order",
+        "",
+        "| Slice | Status | Goal |",
+        "| --- | --- | --- |",
+        `| \`${workItemId}\` | docs | test slice |`,
+      ].join("\n"),
+    );
+
+    const runtimeState = {
+      ...readRuntimeState({
+        rootDir,
+        workItemId,
+        slice: workItemId,
+      }).state,
+      slice: workItemId,
+      active_stage: 2,
+      current_stage: 2,
+      last_completed_stage: 1,
+      workspace: {
+        path: worktreePath,
+        branch_role: "backend",
+      },
+      prs: {
+        docs: {
+          number: 198,
+          url: "https://github.com/netsus/homecook/pull/198",
+          draft: false,
+          branch: `docs/${workItemId}`,
+          head_sha: "docs123",
+        },
+        backend: null,
+        frontend: null,
+        closeout: null,
+      },
+      doc_gate: {
+        status: "passed",
+        round: 0,
+        findings: [],
+      },
+    };
+
+    const invariant = evaluateBookkeepingInvariant({
+      rootDir,
+      workItemId,
+      slice: workItemId,
+      runtimeState,
+      worktreePath: worktreePath as never,
+    });
+
+    expect(invariant.outcome).toBe("ok");
+    expect(invariant.reason).toBe("stage2_workpack_gap_recoverable_via_base_sync");
   });
 
   it("treats ambiguous design status after Stage 4 as repairable_pre_merge drift", () => {
