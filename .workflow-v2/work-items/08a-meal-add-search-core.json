@@ -71,9 +71,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending"
+    "lifecycle": "ready_for_review",
+    "approval_state": "claude_approved",
+    "verification_status": "passed"
   },
   "out_of_scope": [
     "레시피북에서 추가 (08b)",

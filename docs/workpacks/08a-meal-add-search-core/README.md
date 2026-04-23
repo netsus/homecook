@@ -89,14 +89,9 @@
 ## Design Authority
 - UI risk: `new-screen` (MENU_ADD는 신규 화면, RECIPE_SEARCH_PICKER는 신규 컴포넌트)
 - Anchor screen dependency: 없음 (독립 화면)
-- Visual artifact:
-  - Stage 1: design-generator로 생성한 `ui/designs/MENU_ADD.md`, `ui/designs/RECIPE_SEARCH_PICKER.md` (placeholder button 포함)
-  - Stage 4: screenshot evidence 필요 (`ui/designs/evidence/08a/MENU_ADD-mobile.png`, `ui/designs/evidence/08a/RECIPE_SEARCH_PICKER-mobile.png`)
-- Authority status: `required` (신규 화면)
-- Notes:
-  - `MENU_ADD`는 검색창 상단 배치, 하단 4개 버튼(유튜브/레시피북/남은요리/팬트리) + 직접등록 링크 placeholder 구조
-  - 이번 슬라이스는 검색창만 활성화, 나머지는 비활성 또는 "준비 중" 표시
-  - `RECIPE_SEARCH_PICKER`는 검색 결과 리스트 + 선택 시 계획 인분 입력 모달
+- Visual artifact: Stage 1 design docs `ui/designs/MENU_ADD.md`, `ui/designs/RECIPE_SEARCH_PICKER.md`; Stage 4 screenshot evidence `ui/designs/evidence/08a/MENU_ADD-mobile.png`, `ui/designs/evidence/08a/MENU_ADD-mobile-narrow.png`, `ui/designs/evidence/08a/RECIPE_SEARCH_PICKER-mobile.png`, `ui/designs/evidence/08a/RECIPE_SEARCH_PICKER-mobile-narrow.png`
+- Authority status: `required`
+- Notes: `MENU_ADD`는 검색창 상단 배치, 하단 4개 버튼(유튜브/레시피북/남은요리/팬트리) + 직접등록 링크 placeholder 구조를 유지한다. 이번 슬라이스는 검색창만 활성화하고 나머지는 비활성 또는 "준비 중" 표시로 남긴다. `RECIPE_SEARCH_PICKER`는 검색 결과 리스트 + 선택 시 계획 인분 입력 모달로 설계한다.
 
 ## Design Status
 
