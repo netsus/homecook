@@ -399,6 +399,7 @@ export function RecipeDetailScreen({
       setPlannerAddSheetState("ready");
     }
   }, [
+    plannerColumns,
     plannerAddSheetState,
     plannerServings,
     recipe,
