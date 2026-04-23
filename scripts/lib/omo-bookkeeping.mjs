@@ -416,10 +416,23 @@ export function updateWorkpackDesignAuthorityStatus({
   };
 }
 
-function readTrackedStatusItem({ rootDir, workItemId }) {
+function readTrackedStatusItem({ rootDir, worktreePath = null, workItemId }) {
   const statusPath = resolve(rootDir, ".workflow-v2", "status.json");
   if (!existsSync(statusPath)) {
-    return null;
+    const normalizedWorktreePath =
+      typeof worktreePath === "string" && worktreePath.trim().length > 0 ? worktreePath.trim() : null;
+    if (!normalizedWorktreePath) {
+      return null;
+    }
+
+    const worktreeStatusPath = resolve(normalizedWorktreePath, ".workflow-v2", "status.json");
+    if (!existsSync(worktreeStatusPath)) {
+      return null;
+    }
+
+    const statusData = readJson(worktreeStatusPath);
+    const items = Array.isArray(statusData?.items) ? statusData.items : [];
+    return items.find((item) => item?.id === workItemId) ?? null;
   }
 
   const statusData = readJson(statusPath);
@@ -427,10 +440,26 @@ function readTrackedStatusItem({ rootDir, workItemId }) {
   return items.find((item) => item?.id === workItemId) ?? null;
 }
 
-function readTrackedWorkItem({ rootDir, workItemId }) {
+function readTrackedWorkItem({ rootDir, worktreePath = null, workItemId }) {
   const workItemPath = resolve(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`);
   if (!existsSync(workItemPath)) {
-    return null;
+    const normalizedWorktreePath =
+      typeof worktreePath === "string" && worktreePath.trim().length > 0 ? worktreePath.trim() : null;
+    if (!normalizedWorktreePath) {
+      return null;
+    }
+
+    const worktreeWorkItemPath = resolve(
+      normalizedWorktreePath,
+      ".workflow-v2",
+      "work-items",
+      `${workItemId}.json`,
+    );
+    if (!existsSync(worktreeWorkItemPath)) {
+      return null;
+    }
+
+    return readJson(worktreeWorkItemPath);
   }
 
   return readJson(workItemPath);
@@ -561,10 +590,12 @@ export function evaluateBookkeepingInvariant({
     typeof slice === "string" && slice.trim().length > 0 ? slice.trim() : normalizedWorkItemId;
   const trackedStatusItem = readTrackedStatusItem({
     rootDir,
+    worktreePath,
     workItemId: normalizedWorkItemId,
   });
   const trackedWorkItem = readTrackedWorkItem({
     rootDir,
+    worktreePath,
     workItemId: normalizedWorkItemId,
   });
   const roadmap = readSliceRoadmapStatus({
@@ -625,8 +656,15 @@ export function evaluateBookkeepingInvariant({
     design.missing &&
     design.reason === "design_status_ambiguous" &&
     typeof expectedDesignStatus === "string";
+  const recoverableStage2WorkpackGap =
+    design.missing &&
+    design.reason === "workpack_missing" &&
+    maxStage === 2 &&
+    ["passed", "pending_recheck"].includes(runtimeState?.doc_gate?.status ?? "") &&
+    Boolean(runtimeState?.prs?.docs?.url) &&
+    !runtimeState?.prs?.backend?.url;
 
-  if (roadmap.missing || (design.missing && !repairableDesignAmbiguity)) {
+  if (roadmap.missing || (design.missing && !repairableDesignAmbiguity && !recoverableStage2WorkpackGap)) {
     return {
       outcome: "ambiguous_drift",
       reason: roadmap.reason ?? design.reason ?? "bookkeeping_source_missing",
@@ -648,6 +686,25 @@ export function evaluateBookkeepingInvariant({
           ? [{ kind: "design_status", actual: null, expected: requireConfirmedDesign ? "confirmed" : null, reason: design.reason }]
           : []),
       ],
+      repairActions: [],
+    };
+  }
+
+  if (recoverableStage2WorkpackGap) {
+    return {
+      outcome: "ok",
+      reason: "stage2_workpack_gap_recoverable_via_base_sync",
+      slice: normalizedSlice,
+      workItemId: normalizedWorkItemId,
+      docs: {
+        roadmap,
+        design,
+      },
+      tracked: {
+        statusItem: trackedStatusItem,
+        workItem: trackedWorkItem,
+      },
+      issues: [],
       repairActions: [],
     };
   }

@@ -63,6 +63,7 @@ import {
   deleteWorktreePaths,
   ensureSupervisorWorktree,
   ensureWorktreeBranch,
+  fastForwardWorktreeBranchToBaseBranch,
   getWorktreeBinaryDiff,
   getWorktreeHeadSha,
   getWorktreeCurrentBranch,
@@ -4291,7 +4292,10 @@ function processWaitState({
         };
       }
 
-      if (ciState.wait.stage === 2 && ciState.doc_gate?.status === "awaiting_review") {
+      if (
+        ciState.wait.stage === 2 &&
+        ["awaiting_review", "passed", "pending_recheck"].includes(ciState.doc_gate?.status ?? "")
+      ) {
         const nextState = saveRuntime({
           rootDir,
           workItemId,
@@ -5101,6 +5105,12 @@ function finalizeCodeStage({
       slice,
       stage,
     });
+    syncWorkflowV2Status({
+      rootDir: nextState.workspace.path,
+      workItemId,
+      patch: {},
+      updatedAt: now,
+    });
     const currentHeadSha = worktree.getHeadSha();
 
     try {
@@ -5439,6 +5449,13 @@ function handleImplementationCodeStage({
     branch: branchName,
     startPoint: "origin/master",
   });
+  if (
+    stage === 2 &&
+    ["passed", "pending_recheck"].includes(state.doc_gate?.status ?? "") &&
+    !state.prs?.backend?.url
+  ) {
+    worktree.fastForwardBaseBranch?.();
+  }
 
   let nextState = saveRuntime({
     rootDir,
@@ -7968,6 +7985,12 @@ function createDefaultDependencies({
           worktreePath,
         });
       },
+      fastForwardBaseBranch({ worktreePath }) {
+        return fastForwardWorktreeBranchToBaseBranch({
+          rootDir,
+          worktreePath,
+        });
+      },
       getHeadSha({ worktreePath }) {
         return getWorktreeHeadSha({
           worktreePath,
@@ -8213,19 +8236,22 @@ export function superviseWorkItem(
         typeof state.execution?.subphase === "string" && state.execution.subphase.trim().length > 0
           ? state.execution.subphase.trim()
           : null;
+      const shouldPreferDocsRepairRole =
+        Number.isInteger(repairStage) &&
+        repairStage === 2 &&
+        (
+          ["doc_gate_review", "doc_gate_repair"].includes(repairSubphase ?? "") ||
+          (["passed", "pending_recheck", "awaiting_review"].includes(state.doc_gate?.status ?? "") &&
+            Boolean(state.prs?.docs?.url) &&
+            !state.prs?.backend?.url)
+        );
       const repairPrRole =
-        state.wait?.pr_role ??
-        (Number.isInteger(repairStage)
-          ? repairStage === 2 &&
-              (
-                ["doc_gate_review", "doc_gate_repair"].includes(repairSubphase ?? "") ||
-                (["passed", "pending_recheck", "awaiting_review"].includes(state.doc_gate?.status ?? "") &&
-                  Boolean(state.prs?.docs?.url) &&
-                  !state.prs?.backend?.url)
-              )
-            ? "docs"
-            : resolvePrRole(repairStage)
-          : null);
+        shouldPreferDocsRepairRole
+          ? "docs"
+          : state.wait?.pr_role ??
+            (Number.isInteger(repairStage)
+              ? resolvePrRole(repairStage)
+              : null);
       const activeRepairPr = repairPrRole ? state.prs?.[repairPrRole] ?? null : null;
       const repairBranch =
         activeRepairPr?.branch ??
@@ -8611,6 +8637,11 @@ export function superviseWorkItem(
           }),
         syncBaseBranch: () =>
           dependencies.worktree.syncBaseBranch({
+            rootDir,
+            worktreePath: state.workspace.path,
+          }),
+        fastForwardBaseBranch: () =>
+          dependencies.worktree.fastForwardBaseBranch?.({
             rootDir,
             worktreePath: state.workspace.path,
           }),

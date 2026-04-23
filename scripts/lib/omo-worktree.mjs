@@ -247,6 +247,22 @@ export function syncWorktreeWithBaseBranch({
   });
 }
 
+export function fastForwardWorktreeBranchToBaseBranch({
+  rootDir = process.cwd(),
+  worktreePath,
+  baseBranch = DEFAULT_BASE_BRANCH,
+}) {
+  const normalizedBaseBranch = ensureNonEmptyString(baseBranch, "baseBranch");
+  runGit({
+    cwd: rootDir,
+    args: ["fetch", "origin", normalizedBaseBranch],
+  });
+  runGit({
+    cwd: ensureNonEmptyString(worktreePath, "worktreePath"),
+    args: ["merge", "--ff-only", `origin/${normalizedBaseBranch}`],
+  });
+}
+
 export function getWorktreeHeadSha({
   worktreePath,
 }) {
