@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-24T06:24:19.760Z",
+  "updated_at": "2026-04-24T14:36:06.856Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -246,6 +246,22 @@
       ],
       "notes": "wait_kind=none merged_after_autonomous_review",
       "pr_path": "https://github.com/netsus/homecook/pull/202"
+    },
+    {
+      "id": "08b-meal-add-books-pantry",
+      "preset": "vertical-slice-strict",
+      "branch": null,
+      "lifecycle": "blocked",
+      "approval_state": "human_escalation",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "wait_kind=human_escalation pr_role=docs stage=2 reason=Stage 2 owned checklist items remain unchecked: delivery-backend-contract, delivery-api-adapter, delivery-types, delivery-state-policy-tests, delivery-fixture-smoke-split, delivery-bootstrap-readiness, accept-recipebook-list, accept-recipebook-recipes, accept-pantry-match, accept-api-envelope, accept-meal-status-registered, accept-recipebook-owner-guard, accept-column-owner-guard, accept-not-found, accept-validation-error, accept-recipebook-owner-isolation, accept-column-owner-isolation, accept-invalid-input, accept-fixture-system-books, accept-fixture-custom-books, accept-fixture-book-recipes, accept-fixture-pantry-items, accept-real-db-ready, accept-bootstrap-system-books, accept-vitest-recipebook-list, accept-vitest-recipebook-recipes, accept-vitest-pantry-match, accept-vitest-meal-creation, accept-vitest-owner-guard. Stage 2 stage-result is missing checklist updates for: delivery-backend-contract, delivery-api-adapter, delivery-types, delivery-state-policy-tests, delivery-fixture-smoke-split, delivery-bootstrap-readiness, accept-recipebook-list, accept-recipebook-recipes, accept-pantry-match, accept-api-envelope, accept-meal-status-registered, accept-recipebook-owner-guard, accept-column-owner-guard, accept-not-found, accept-validation-error, accept-recipebook-owner-isolation, accept-column-owner-isolation, accept-invalid-input, accept-fixture-system-books, accept-fixture-custom-books, accept-fixture-book-recipes, accept-fixture-pantry-items, accept-real-db-ready, accept-bootstrap-system-books, accept-vitest-recipebook-list, accept-vitest-recipebook-recipes, accept-vitest-pantry-match, accept-vitest-meal-creation, accept-vitest-owner-guard. head_sha=e6cd1023f24da36bebc1097fdd1ea97a1df37c31 artifact_dir=/Users/shj/2025/2026/homecook1/.artifacts/omo-lite-dispatch/2026-04-24T14-33-03-120Z-08b-meal-add-books-pantry-stage-2 recovery_kind=partial_stage_failure",
+      "pr_path": "https://github.com/netsus/homecook/pull/205"
     }
   ]
 }
