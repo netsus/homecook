@@ -1,0 +1,83 @@
+{
+  "id": "08b-meal-add-books-pantry",
+  "title": "Meal add from recipe books and pantry match",
+  "summary": "레시피북에서 추가, 팬트리 기반 추천에서 추가",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "플래너에서 식사를 추가할 때 레시피북 경로와 팬트리 기반 추천 경로를 제공한다. MENU_ADD 화면의 레시피북 버튼과 팬트리 버튼을 활성화하고, 레시피북 상세에서 레시피를 선택하거나 팬트리 기반 추천 목록에서 레시피를 선택한 뒤 계획 인분을 입력하여 Meal을 생성할 수 있다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "01-discovery-detail-auth",
+    "02-discovery-filter",
+    "03-recipe-like",
+    "04-recipe-save",
+    "05-planner-week-core",
+    "06-recipe-to-planner",
+    "07-meal-manage",
+    "08a-meal-add-search-core"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/요구사항기준선-v1.6.3.md",
+      "docs/화면정의서-v1.5.0.md",
+      "docs/api문서-v1.2.2.md",
+      "docs/db설계-v1.3.1.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/08b-meal-add-books-pantry/README.md",
+      "docs/workpacks/08b-meal-add-books-pantry/acceptance.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/playwright-e2e.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "남은요리에서 추가 (16)",
+    "직접 레시피 등록 (18)",
+    "유튜브 링크로 추가 (19)",
+    "레시피북 생성/수정/삭제",
+    "팬트리 항목 추가/삭제"
+  ],
+  "open_questions": []
+}

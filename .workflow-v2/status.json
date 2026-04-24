@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-24T06:24:19.760Z",
+  "updated_at": "2026-04-24T13:55:32.358Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -246,6 +246,21 @@
       ],
       "notes": "wait_kind=none merged_after_autonomous_review",
       "pr_path": "https://github.com/netsus/homecook/pull/202"
+    },
+    {
+      "id": "08b-meal-add-books-pantry",
+      "preset": "vertical-slice-strict",
+      "branch": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 docs in progress"
     }
   ]
 }
