@@ -6378,7 +6378,15 @@ describe("OMO autonomous supervisor", () => {
         auth: { assertGhAuth() {}, assertOpencodeAuth() {} },
         worktree: {
           ensureWorktree() { return { path: workspacePath, created: false }; },
-          assertClean() {},
+          assertClean() {
+            const status = execFileSync("git", ["status", "--porcelain"], {
+              cwd: workspacePath,
+              encoding: "utf8",
+            }).trim();
+            if (status.length > 0) {
+              throw new Error("Worktree is dirty.");
+            }
+          },
           checkoutBranch() { return { branch: "feature/fe-03-recipe-like" }; },
           pushBranch() {},
           syncBaseBranch() {},
@@ -6386,7 +6394,12 @@ describe("OMO autonomous supervisor", () => {
             return execFileSync("git", ["rev-parse", "HEAD"], { cwd: workspacePath, encoding: "utf8" }).trim();
           },
           getCurrentBranch() { return "feature/fe-03-recipe-like"; },
-          listChangedFiles() { return []; },
+          listChangedFiles() {
+            return execFileSync("git", ["diff", "--name-only"], { cwd: workspacePath, encoding: "utf8" })
+              .trim()
+              .split("\n")
+              .filter(Boolean);
+          },
           getBinaryDiff() { return ""; },
         },
         stageRunner() { throw new Error("not expected"); },
@@ -8741,6 +8754,76 @@ describe("OMO autonomous supervisor", () => {
         reason: "unsupported_wait_kind=human_verification",
       }),
     ]);
+  });
+
+  it("tick reclaims a stale wait-state lock residue before resuming", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const seen: string[] = [];
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 3,
+        current_stage: 3,
+        phase: "stage_running",
+        next_action: "run_stage",
+        wait: {
+          kind: "ready_for_next_stage",
+          stage: 3,
+          pr_role: "backend",
+          updated_at: "2026-04-23T17:22:25.467Z",
+        },
+        lock: {
+          owner: "omo-supervisor-1012",
+          acquired_at: "2026-04-23T17:22:22.441Z",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-24T05:00:00.000Z",
+      },
+      {
+        supervise(args: { workItemId: string }) {
+          seen.push(args.workItemId);
+          const runtime = readRuntimeState({ rootDir, workItemId, slice: workItemId }).state;
+          return {
+            workItemId: args.workItemId,
+            slice: workItemId,
+            wait: runtime.wait,
+            runtime,
+            transitions: [],
+          };
+        },
+      },
+    );
+
+    expect(seen).toEqual([workItemId]);
+    expect(results[0]).toEqual(
+      expect.objectContaining({
+        workItemId,
+        wait: expect.objectContaining({
+          kind: "ready_for_next_stage",
+        }),
+      }),
+    );
+    const runtime = readRuntimeState({ rootDir, workItemId, slice: workItemId }).state as {
+      lock: null | { owner: string };
+      phase: string | null;
+    };
+    expect(runtime.lock).toBeNull();
+    expect(runtime.phase).toBe("wait");
   });
 
   it("tick --all surfaces unsupported wait kinds instead of silently skipping them", () => {

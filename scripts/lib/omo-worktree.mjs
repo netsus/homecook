@@ -2,6 +2,8 @@ import { copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
+import { isValidCommitMessage } from "./git-policy.mjs";
+
 const DEFAULT_BASE_BRANCH = "master";
 const DEFAULT_BASE_REF = "origin/master";
 const WORKTREE_ENV_FILES = [".env.local"];
@@ -210,6 +212,11 @@ export function commitWorktreeChanges({
 }) {
   const normalizedWorktreePath = ensureNonEmptyString(worktreePath, "worktreePath");
   const normalizedSubject = ensureNonEmptyString(subject, "subject");
+  if (!isValidCommitMessage(normalizedSubject)) {
+    throw new Error(
+      `Invalid commit subject '${normalizedSubject}'. OMO commits must use Conventional Commits, e.g. feat: ..., fix(scope): ..., chore: ...`,
+    );
+  }
 
   runGit({
     cwd: normalizedWorktreePath,

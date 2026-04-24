@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 
 import { describe, expect, it } from "vitest";
 
-import { readRuntimeState, writeRuntimeState } from "../scripts/lib/omo-session-runtime.mjs";
+import { acquireRuntimeLock, readRuntimeState, writeRuntimeState } from "../scripts/lib/omo-session-runtime.mjs";
 
 describe("OMO session runtime", () => {
   it("normalizes design authority state and authority_precheck subphase", () => {
@@ -170,6 +170,92 @@ describe("OMO session runtime", () => {
 
     expect(state.phase).toBe("wait");
     expect(state.execution).toBeNull();
+  });
+
+  it("prefers wait state over stale stored phase residue", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "08a-meal-add-search-core",
+      state: {
+        slice: "08a-meal-add-search-core",
+        active_stage: 3,
+        current_stage: 3,
+        phase: "stage_running",
+        next_action: "run_stage",
+        wait: {
+          kind: "ready_for_next_stage",
+          stage: 3,
+          pr_role: "backend",
+          updated_at: "2026-04-23T17:22:25.467Z",
+        },
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: "ses_claude_stage3",
+          artifact_dir: "/tmp/artifacts",
+          stage_result_path: "/tmp/artifacts/stage-result.json",
+          pr_role: "backend",
+          started_at: "2026-04-23T17:22:25.820Z",
+        },
+      },
+    });
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId: "08a-meal-add-search-core",
+      slice: "08a-meal-add-search-core",
+    });
+
+    expect(state.phase).toBe("wait");
+    expect(state.next_action).toBe("run_stage");
+    expect(state.wait?.kind).toBe("ready_for_next_stage");
+  });
+
+  it("allows reclaiming a stale wait-state lock residue", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
+    const workItemId = "08a-meal-add-search-core";
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        slice: workItemId,
+        active_stage: 3,
+        current_stage: 3,
+        wait: {
+          kind: "ready_for_next_stage",
+          stage: 3,
+          pr_role: "backend",
+          updated_at: "2026-04-23T17:22:25.467Z",
+        },
+        phase: "stage_running",
+        next_action: "run_stage",
+        lock: {
+          owner: "omo-supervisor-old",
+          acquired_at: "2026-04-23T17:22:22.441Z",
+        },
+      },
+    });
+
+    const result = acquireRuntimeLock({
+      rootDir,
+      workItemId,
+      owner: "omo-supervisor-new",
+      now: "2026-04-24T05:00:00.000Z",
+      slice: workItemId,
+    });
+
+    expect(result.state.lock?.owner).toBe("omo-supervisor-new");
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId,
+      slice: workItemId,
+    });
+    expect(state.lock?.owner).toBe("omo-supervisor-new");
+    expect(state.phase).toBe("wait");
   });
 
   it("does not resurrect stage2 implementation artifacts while doc_gate_review is pending", () => {

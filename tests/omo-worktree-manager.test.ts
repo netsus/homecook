@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 
 import {
+  commitWorktreeChanges,
   ensureSupervisorWorktree,
   ensureWorktreeBranch,
   syncWorktreeWithBaseBranch,
@@ -179,5 +180,27 @@ describe("OMO worktree manager", () => {
     expect(readFileSync(join(second.path, ".env.local"), "utf8")).toBe(
       "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:65432\n",
     );
+  });
+
+  it("rejects non-conventional commit subjects for OMO-generated worktree commits", () => {
+    const { rootDir } = createGitFixture();
+    const ensured = ensureSupervisorWorktree({
+      rootDir,
+      workItemId: "08a-meal-add-search-core",
+    });
+    ensureWorktreeBranch({
+      rootDir,
+      worktreePath: ensured.path,
+      branch: "feature/be-08a-meal-add-search-core",
+    });
+
+    writeFileSync(join(ensured.path, "CHANGELOG.md"), "temp\n");
+
+    expect(() =>
+      commitWorktreeChanges({
+        worktreePath: ensured.path,
+        subject: "Prevent OMO backend review lanes from stalling",
+      }),
+    ).toThrow(/Conventional Commits/);
   });
 });
