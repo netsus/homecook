@@ -90,14 +90,14 @@
 - UI risk: `new-screen` (MENU_ADD는 신규 화면, RECIPE_SEARCH_PICKER는 신규 컴포넌트)
 - Anchor screen dependency: 없음 (독립 화면)
 - Visual artifact: Stage 1 design docs `ui/designs/MENU_ADD.md`, `ui/designs/RECIPE_SEARCH_PICKER.md`; Stage 4 screenshot evidence `ui/designs/evidence/08a/MENU_ADD-mobile.png`, `ui/designs/evidence/08a/MENU_ADD-mobile-narrow.png`, `ui/designs/evidence/08a/RECIPE_SEARCH_PICKER-mobile.png`, `ui/designs/evidence/08a/RECIPE_SEARCH_PICKER-mobile-narrow.png`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes: `MENU_ADD`는 검색창 상단 배치, 하단 4개 버튼(유튜브/레시피북/남은요리/팬트리) + 직접등록 링크 placeholder 구조를 유지한다. 이번 슬라이스는 검색창만 활성화하고 나머지는 비활성 또는 "준비 중" 표시로 남긴다. `RECIPE_SEARCH_PICKER`는 검색 결과 리스트 + 선택 시 계획 인분 입력 모달로 설계한다.
 
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 기본값, 기능 완성 우선
-- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후 전환
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 + authority gate 통과 후
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후 전환
+- [x] 확정 (confirmed) — Stage 5 public review 통과 + authority gate 통과 후
 - [ ] N/A — (이번 슬라이스는 FE 화면 있음)
 
 ## Source Links
@@ -154,11 +154,13 @@
 - [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+
+
 

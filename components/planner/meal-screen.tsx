@@ -596,9 +596,11 @@ export function MealScreen({
                   </p>
                   {/* Inline prominent CTA for empty state */}
                   <button
-                    aria-disabled="true"
-                    className="mt-6 flex h-[52px] w-full max-w-xs items-center justify-center rounded-[12px] bg-[var(--brand)] px-4 text-base font-semibold text-white disabled:opacity-60"
-                    disabled
+                    className="mt-6 flex h-[52px] w-full max-w-xs items-center justify-center rounded-[12px] bg-[var(--brand)] px-4 text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
+                    onClick={() => {
+                      const slotSuffix = slotName ? `&slot=${encodeURIComponent(slotName)}` : "";
+                      router.push(`/menu-add?date=${encodeURIComponent(planDate)}&columnId=${encodeURIComponent(columnId)}${slotSuffix}`);
+                    }}
                     type="button"
                   >
                     + 식사 추가
@@ -626,10 +628,12 @@ export function MealScreen({
           {/* Sticky bottom CTA */}
           <div className="shrink-0 border-t border-[var(--line)] bg-[var(--panel)] px-4 py-3">
             <button
-              aria-disabled="true"
-              className="flex h-[52px] w-full items-center justify-center rounded-[12px] bg-[var(--brand)] px-4 text-base font-semibold text-white disabled:opacity-60"
+              className="flex h-[52px] w-full items-center justify-center rounded-[12px] bg-[var(--brand)] px-4 text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
               data-testid="meal-screen-add-cta"
-              disabled
+              onClick={() => {
+                const slotSuffix = slotName ? `&slot=${encodeURIComponent(slotName)}` : "";
+                router.push(`/menu-add?date=${encodeURIComponent(planDate)}&columnId=${encodeURIComponent(columnId)}${slotSuffix}`);
+              }}
               type="button"
             >
               + 식사 추가
