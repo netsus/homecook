@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-24T14:21:24.788Z",
+  "updated_at": "2026-04-24T14:23:04.819Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -251,8 +251,8 @@
       "id": "08b-meal-add-books-pantry",
       "preset": "vertical-slice-strict",
       "branch": null,
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
+      "lifecycle": "blocked",
+      "approval_state": "human_escalation",
       "verification_status": "pending",
       "required_checks": [
         "pnpm verify:backend",
@@ -260,7 +260,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "wait_kind=ci pr_role=docs stage=1 head_sha=aa6a9d791daca86433f49c74e62ae993954c3470",
+      "notes": "wait_kind=human_escalation pr_role=docs stage=2 reason=stage-result missing: /Users/shj/2025/2026/homecook1/.artifacts/omo-lite-dispatch/2026-04-24T14-21-42-466Z-08b-meal-add-books-pantry-stage-2/stage-result.json was not written before the stage finished. Auto-repair failed: stageResult must be an object. head_sha=e55faacd7564406a0b55530f4913b0e14c840618 artifact_dir=/Users/shj/2025/2026/homecook1/.artifacts/omo-lite-dispatch/2026-04-24T14-21-42-466Z-08b-meal-add-books-pantry-stage-2 recovery_kind=partial_stage_failure",
       "pr_path": "https://github.com/netsus/homecook/pull/205"
     }
   ]

@@ -68,8 +68,8 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
+    "lifecycle": "blocked",
+    "approval_state": "human_escalation",
     "verification_status": "pending"
   },
   "out_of_scope": [
