@@ -95,7 +95,7 @@ function buildReviewStageResult({
   routeBackStage = null,
   approvedHeadSha = null,
 }: {
-  decision: "approve" | "request_changes";
+  decision: "approve" | "approved" | "request_changes";
   stage: 3 | 5 | 6;
   reviewedChecklistIds: string[];
   requiredFixIds?: string[];
@@ -3567,6 +3567,140 @@ describe("OMO autonomous supervisor", () => {
     expect(ghLog).toEqual([
       "comment:https://github.com/netsus/homecook/pull/35:Backend review approved.",
       "merge:https://github.com/netsus/homecook/pull/35:be1234567890abcdef1234567890abcdef123456",
+    ]);
+  });
+
+  it("treats approved Stage 3 review decisions as approve and advances to Stage 4", () => {
+    const rootDir = createFixture();
+    seedAutonomousPolicy(rootDir, "03-recipe-like");
+    const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
+    const activeHeadSha = "be1234567890abcdef1234567890abcdef123456";
+    const ghLog: string[] = [];
+    const gitLog: string[] = [];
+
+    seedWorktreeBookkeeping(workspacePath, "03-recipe-like", {
+      roadmapStatus: "in-progress",
+    });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "03-recipe-like",
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId: "03-recipe-like",
+          slice: "03-recipe-like",
+        }).state,
+        slice: "03-recipe-like",
+        current_stage: 3,
+        active_stage: 3,
+        workspace: { path: workspacePath, branch_role: "backend" },
+        prs: {
+          docs: null,
+          backend: {
+            number: 35,
+            url: "https://github.com/netsus/homecook/pull/35",
+            draft: false,
+            branch: "feature/be-03-recipe-like",
+            head_sha: activeHeadSha,
+          },
+        },
+        wait: {
+          kind: "ready_for_next_stage",
+          pr_role: "backend",
+          stage: 3,
+          head_sha: activeHeadSha,
+        },
+        last_review: {
+          backend: null,
+          frontend: null,
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      { rootDir, workItemId: "03-recipe-like", now: "2026-04-11T09:00:00+09:00", maxTransitions: 1 },
+      {
+        auth: { assertGhAuth() {}, assertClaudeAuth() {} },
+        worktree: {
+          ensureWorktree() {
+            mkdirSync(workspacePath, { recursive: true });
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            return { branch: "feature/be-03-recipe-like" };
+          },
+          pushBranch() {},
+          syncBaseBranch() {
+            gitLog.push("sync:master");
+          },
+          getHeadSha() {
+            return activeHeadSha;
+          },
+        },
+        stageRunner() {
+          return {
+            artifactDir: join(rootDir, ".artifacts", "stage3-approved-alias"),
+            dispatch: { actor: "claude", stage: 3 },
+            execution: { mode: "execute", executed: true, sessionId: "ses_claude" },
+            stageResult: buildReviewStageResult({
+              decision: "approved",
+              stage: 3,
+              reviewedChecklistIds: [
+                CHECKLIST_IDS.backendDelivery,
+                CHECKLIST_IDS.backendAcceptance,
+              ],
+              bodyMarkdown: "Backend review approved.",
+              approvedHeadSha: activeHeadSha,
+            }),
+          };
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            return { bucket: "pass", checks: [] };
+          },
+          markReady() {},
+          commentPullRequest({ prRef, body }: { prRef: string; body: string }) {
+            ghLog.push(`comment:${prRef}:${body}`);
+          },
+          mergePullRequest({ prRef, headSha }: { prRef: string; headSha?: string }) {
+            ghLog.push(`merge:${prRef}:${headSha}`);
+            return { merged: true };
+          },
+          getApprovalRequirement() {
+            return {
+              required: false,
+              requiredApprovingReviewCount: 0,
+              source: "branch-protection",
+            };
+          },
+          getPullRequestSummary() {
+            return {
+              state: "OPEN",
+              mergedAt: null,
+              mergeStateStatus: "CLEAN",
+              reviewDecision: null,
+            };
+          },
+          updateBranch() {
+            throw new Error("not expected");
+          },
+        },
+      },
+    );
+
+    expect(result.wait).toMatchObject({
+      kind: "ready_for_next_stage",
+      stage: 4,
+    });
+    expect(gitLog).toEqual(["sync:master"]);
+    expect(ghLog).toEqual([
+      "comment:https://github.com/netsus/homecook/pull/35:Backend review approved.",
+      `merge:https://github.com/netsus/homecook/pull/35:${activeHeadSha}`,
     ]);
   });
 

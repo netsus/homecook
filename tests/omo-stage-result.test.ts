@@ -130,6 +130,34 @@ describe("OMO stage-result contract", () => {
     expect(result.required_fix_ids).toEqual([]);
   });
 
+  it("normalizes approved review decisions to approve", () => {
+    const result = validateStageResult(
+      3,
+      {
+        decision: "approved",
+        body_markdown: "approved",
+        route_back_stage: null,
+        approved_head_sha: "abc123",
+        review_scope: {
+          scope: "backend",
+          checklist_ids: ["delivery-backend-contract"],
+        },
+        reviewed_checklist_ids: ["delivery-backend-contract"],
+        required_fix_ids: [],
+        waived_fix_ids: [],
+      },
+      {
+        strictExtendedContract: true,
+      },
+    ) as {
+      decision: string;
+      approved_head_sha: string | null;
+    };
+
+    expect(result.decision).toBe("approve");
+    expect(result.approved_head_sha).toBe("abc123");
+  });
+
   it("rejects strict approve reviews that still include required_fix_ids", () => {
     expect(() =>
       validateStageResult(
