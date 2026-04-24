@@ -12,8 +12,8 @@
 
 ## Verdict
 
-- verdict: `conditional-pass`
-- 한 줄 요약: RECIPE_SEARCH_PICKER는 검색 결과 리스트와 인분 입력 흐름이 모바일 기본 폭과 좁은 폭 모두에서 안정적이며, 로그인 return-to-action과 empty/error 상태도 구조적으로 맞지만 Stage 5에서 result density와 modal chrome의 최종 polish를 확인하는 편이 좋다.
+- verdict: `pass`
+- 한 줄 요약: RECIPE_SEARCH_PICKER는 검색 결과 리스트와 인분 입력 흐름이 모바일 기본 폭과 좁은 폭 모두에서 안정적이며, result density에 대한 후속 polish 포인트는 남지만 현재 authority blocker 없이 Stage 6 진행이 가능하다.
 
 ## Scorecard
 
@@ -31,11 +31,11 @@
 - `RECIPE_SEARCH_PICKER-mobile-narrow.png`는 320px 좁은 폭에서도 카드 제목, CTA, 결과 리스트 spacing이 유지되는 것을 보여준다.
 - empty/error/unauthorized 흐름은 e2e coverage와 구현 코드 기준으로 확보돼 있고, 시각 evidence는 결과 리스트 상태를 중심으로 충분하다.
 
-## Major Issues
+## Major Follow-Ups
 
 | # | 위치 | 문제 | 제안 |
 |---|------|------|------|
-| 1 | 결과 카드 밀도 | narrow sentinel에서도 기본 정보는 유지되지만, 긴 제목/태그가 늘어나는 실제 데이터셋에서는 density 재확인이 필요하다. | Stage 5에서 실제 fixture 다양화 또는 long-title state를 한 번 더 확인한다. |
+| 1 | 결과 카드 밀도 | narrow sentinel에서도 기본 정보는 유지되지만, 긴 제목/태그가 늘어나는 실제 데이터셋에서는 추가 확인이 유익하다. | final authority gate 이후 long-title fixture를 추가해 320px 결과 카드 density를 follow-up으로 재확인한다. |
 
 ## Minor Issues
 
@@ -47,4 +47,4 @@
 - Stage 5 confirmed 가능 여부: `가능`
 - 다음 행동:
   - 현재 evidence와 이 report를 authority precheck 산출물로 사용한다.
-  - Stage 5에서 결과 카드 밀도와 인분 입력 modal chrome polish를 최종 점검한다.
+  - 결과 카드 밀도와 modal chrome polish는 follow-up quality pass에서 재확인한다.
