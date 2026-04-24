@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-24T14:14:18.431Z",
+  "updated_at": "2026-04-24T14:15:24.422Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -260,7 +260,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "wait_kind=ci pr_role=docs stage=1 head_sha=5d7e8ba16c5cdd8e4390bfcf3eaf04734f1ecb9b",
+      "notes": "wait_kind=ci pr_role=docs stage=1 head_sha=5c998639439c84f13dc9fc843431bc3b92f6ca60",
       "pr_path": "https://github.com/netsus/homecook/pull/205"
     }
   ]
