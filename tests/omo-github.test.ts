@@ -582,6 +582,171 @@ describe("OMO GitHub automation client", () => {
     expect(argsLog).toContain(".artifacts/qa/06-recipe-to-planner/stage4-ready-for-review/eval-result.json");
   });
 
+  it("fills Actual Verification from declared external_smokes when the section is missing", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-actual-verification-"));
+    const { binPath, argsPath } = createFakeGhBin(rootDir);
+
+    mkdirSync(join(rootDir, "docs", "workpacks", "08a-meal-add-search-core"), { recursive: true });
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "08a-meal-add-search-core", "automation-spec.json"),
+      `${JSON.stringify(
+        {
+          slice_id: "08a-meal-add-search-core",
+          execution_mode: "autonomous",
+          risk_class: "medium",
+          merge_policy: "conditional-auto",
+          backend: { required_endpoints: [], invariants: [], verify_commands: [], required_test_targets: [] },
+          frontend: {
+            required_routes: ["/menu-add"],
+            required_states: ["loading"],
+            playwright_projects: [],
+            artifact_assertions: [],
+            design_authority: {
+              ui_risk: "new-screen",
+              anchor_screens: [],
+              required_screens: ["MENU_ADD"],
+              generator_required: true,
+              critic_required: true,
+              authority_required: true,
+              stage4_evidence_requirements: [],
+              authority_report_paths: [],
+            },
+          },
+          external_smokes: ["pnpm dev:local-supabase"],
+          blocked_conditions: [],
+          max_fix_rounds: { backend: 2, frontend: 2 },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+      environment: {
+        FAKE_GH_ARGS_PATH: argsPath,
+      },
+    });
+
+    client.createPullRequest({
+      base: "master",
+      head: "feature/fe-08a-meal-add-search-core",
+      title: "feat: slice08a frontend",
+      body: "## Summary\n- frontend",
+      draft: true,
+      workItemId: "08a-meal-add-search-core",
+    });
+
+    const argsLog = readFileSync(argsPath, "utf8");
+    expect(argsLog).toContain("## Actual Verification");
+    expect(argsLog).toContain("local Supabase + `pnpm dev:local-supabase`");
+    expect(argsLog).toContain("source PR smoke evidence via `pnpm dev:local-supabase`");
+  });
+
+  it("replaces placeholder QA Evidence and Actual Verification when stronger defaults exist", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-replace-placeholders-"));
+
+    mkdirSync(join(rootDir, "docs", "workpacks", "08a-meal-add-search-core"), { recursive: true });
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "08a-meal-add-search-core", "automation-spec.json"),
+      `${JSON.stringify(
+        {
+          slice_id: "08a-meal-add-search-core",
+          execution_mode: "autonomous",
+          risk_class: "medium",
+          merge_policy: "conditional-auto",
+          backend: { required_endpoints: [], invariants: [], verify_commands: [], required_test_targets: [] },
+          frontend: {
+            required_routes: ["/menu-add"],
+            required_states: ["loading"],
+            playwright_projects: [],
+            artifact_assertions: [],
+            design_authority: {
+              ui_risk: "new-screen",
+              anchor_screens: [],
+              required_screens: ["MENU_ADD"],
+              generator_required: true,
+              critic_required: true,
+              authority_required: true,
+              stage4_evidence_requirements: [],
+              authority_report_paths: [],
+            },
+          },
+          external_smokes: ["pnpm dev:local-supabase"],
+          blocked_conditions: [],
+          max_fix_rounds: { backend: 2, frontend: 2 },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const qaBundleDir = join(
+      rootDir,
+      ".artifacts",
+      "qa",
+      "08a-meal-add-search-core",
+      "2026-04-24-stage4-ready-for-review",
+    );
+    mkdirSync(qaBundleDir, { recursive: true });
+    writeFileSync(join(qaBundleDir, "exploratory-checklist.json"), "{}\n");
+    writeFileSync(join(qaBundleDir, "exploratory-report.json"), "{}\n");
+    writeFileSync(join(qaBundleDir, "eval-result.json"), "{}\n");
+
+    const existingBody = [
+      "## Summary",
+      "- previous summary",
+      "",
+      "## Workpack / Slice",
+      "- workflow v2 work item: `.workflow-v2/work-items/08a-meal-add-search-core.json`",
+      "",
+      "## Test Plan",
+      "- previous test plan",
+      "",
+      "## QA Evidence",
+      "- 해당 없음",
+      "",
+      "## Actual Verification",
+      "- 해당 없음",
+      "",
+      "## Closeout Sync",
+      "- none",
+      "",
+      "## Merge Gate",
+      "- none",
+      "",
+      "## Docs Impact",
+      "- none",
+      "",
+      "## Security Review",
+      "- none",
+      "",
+      "## Performance",
+      "- none",
+      "",
+      "## Design / Accessibility",
+      "- none",
+      "",
+      "## Breaking Changes",
+      "- none",
+    ].join("\n");
+
+    const mergedBody = mergePullRequestBodyWithExisting(
+      existingBody,
+      "## Summary\n- updated summary",
+      "08a-meal-add-search-core",
+      rootDir,
+    );
+
+    expect(mergedBody).toContain("exploratory QA: executed");
+    expect(mergedBody).toContain(".artifacts/qa/08a-meal-add-search-core/2026-04-24-stage4-ready-for-review/exploratory-report.json");
+    expect(mergedBody).toContain("local Supabase + `pnpm dev:local-supabase`");
+    expect(mergedBody).toContain("source PR smoke evidence via `pnpm dev:local-supabase`");
+    expect(mergedBody).not.toContain("## QA Evidence\n- 해당 없음");
+    expect(mergedBody).not.toContain("## Actual Verification\n- 해당 없음");
+  });
+
   it("preserves existing Actual Verification evidence when editing a PR body with sparse stage-result content", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-preserve-evidence-"));
     const binPath = join(rootDir, "fake-gh-preserve-evidence.sh");

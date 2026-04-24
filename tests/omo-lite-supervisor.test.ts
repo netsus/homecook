@@ -189,6 +189,26 @@ describe("OMO-lite stage dispatch", () => {
     );
   });
 
+  it("surfaces a repo-local authority evidence capture helper when one exists", () => {
+    const dispatch = buildStageDispatch({
+      slice: "08a-meal-add-search-core",
+      stage: 4,
+      subphase: "authority_precheck",
+      claudeBudgetState: "available",
+    });
+
+    expect(dispatch.requiredReads).toEqual(
+      expect.arrayContaining([
+        "scripts/capture-08a-evidence.mjs (when authority evidence is missing)",
+      ]),
+    );
+    expect(dispatch.deliverables).toEqual(
+      expect.arrayContaining([
+        "repo-local evidence capture via scripts/capture-08a-evidence.mjs",
+      ]),
+    );
+  });
+
   it("keeps the previous approval state when Stage 4 is blocked for a Claude retry", () => {
     const dispatch = buildStageDispatch({
       slice: "02-discovery-filter",
@@ -370,15 +390,34 @@ describe("OMO-lite stage dispatch", () => {
   });
 
   it("injects prior stage-result path into Stage 3 requiredReads", () => {
+    const rootDir = createWorkflowFixture();
+    const priorPath = join(rootDir, ".artifacts", "stage2", "stage-result.json");
+    mkdirSync(join(priorPath, ".."), { recursive: true });
+    writeFileSync(
+      priorPath,
+      JSON.stringify(
+        {
+          result: "done",
+          summary_markdown: "stage 2 complete",
+          changed_files: ["app/api/v1/example/route.ts"],
+          checklist_updates: [{ id: "accept-example", status: "checked", evidence_refs: ["pnpm verify:backend"] }],
+        },
+        null,
+        2,
+      ),
+    );
+
     const dispatch = buildStageDispatch({
       slice: "02-discovery-filter",
       stage: 3,
-      priorStageResultPath: "/tmp/fake/.artifacts/stage2/stage-result.json",
+      priorStageResultPath: priorPath,
     });
 
     expect(dispatch.requiredReads).toContain(
-      "prior stage result: /tmp/fake/.artifacts/stage2/stage-result.json",
+      "prior stage result snapshot (inlined below)",
     );
+    expect(dispatch.extraPromptSections.join("\n")).toContain("## Prior Stage Result Snapshot");
+    expect(dispatch.extraPromptSections.join("\n")).toContain("stage 2 complete");
   });
 
   it("does NOT inject prior stage-result path for code stages (stage 2)", () => {

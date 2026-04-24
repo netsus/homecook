@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
+import { readAutomationSpec } from "./omo-automation-spec.mjs";
 import { projectCanonicalCloseoutToPrBodySections } from "./omo-closeout-state.mjs";
 import {
   REQUIRED_PR_SECTIONS,
@@ -118,6 +119,13 @@ function buildDefaultPrSectionContent(section, { body, workItemId, rootDir = pro
         `- 아티팩트 / 보고서 경로: \`${qaEvidence.checklistPath}\`, \`${qaEvidence.reportPath}\`, \`${qaEvidence.evalPath}\``,
       ].join("\n");
     }
+    case "## Actual Verification": {
+      const actualVerification = buildDefaultActualVerification({
+        rootDir,
+        workItemId,
+      });
+      return actualVerification ?? "- 해당 없음";
+    }
     case "## Closeout Sync":
       return closeoutPrBodySections?.closeout_sync ?? "- 해당 없음";
     case "## Docs Impact":
@@ -138,6 +146,49 @@ function buildDefaultPrSectionContent(section, { body, workItemId, rootDir = pro
     default:
       return "- 해당 없음";
   }
+}
+
+function findDeclaredExternalSmokes({ rootDir = process.cwd(), slice }) {
+  if (typeof slice !== "string" || slice.trim().length === 0) {
+    return [];
+  }
+
+  const { automationSpec } = readAutomationSpec({
+    rootDir,
+    slice: slice.trim(),
+    required: false,
+  });
+
+  return Array.isArray(automationSpec?.external_smokes)
+    ? automationSpec.external_smokes.filter((entry) => typeof entry === "string" && entry.trim().length > 0).map((entry) => entry.trim())
+    : [];
+}
+
+function buildDefaultActualVerification({
+  rootDir = process.cwd(),
+  workItemId,
+}) {
+  const externalSmokes = findDeclaredExternalSmokes({
+    rootDir,
+    slice: workItemId,
+  });
+  if (externalSmokes.length === 0) {
+    return null;
+  }
+
+  const primarySmoke = externalSmokes[0];
+  const allSmokes = externalSmokes.map((entry) => `\`${entry}\``).join(", ");
+  const environment =
+    /pnpm\s+dev:local-supabase/i.test(primarySmoke)
+      ? `- environment: local Supabase + \`${primarySmoke}\``
+      : `- environment: declared smoke command(s) ${allSmokes}`;
+
+  return [
+    "- verifier: Codex",
+    environment,
+    `- scope: source PR smoke evidence via ${allSmokes}`,
+    `- result: pending manual confirmation for ${allSmokes}`,
+  ].join("\n");
 }
 
 function findLatestExploratoryQaBundle({
@@ -182,6 +233,59 @@ const PRESERVE_EXISTING_BODY_SECTIONS = new Set(
   ),
 );
 
+function hasStructuredQaEvidence(content) {
+  if (typeof content !== "string") {
+    return false;
+  }
+
+  const normalized = content.trim();
+  return (
+    normalized.includes("exploratory QA:")
+    && normalized.includes("qa eval:")
+    && (normalized.includes("아티팩트 / 보고서 경로:") || normalized.includes("artifact"))
+  );
+}
+
+function hasStructuredActualVerification(content) {
+  if (typeof content !== "string") {
+    return false;
+  }
+
+  const normalized = content.trim();
+  return (
+    normalized.includes("- verifier:")
+    && normalized.includes("- environment:")
+    && normalized.includes("- scope:")
+    && normalized.includes("- result:")
+  );
+}
+
+function shouldPreserveExistingPrSection({
+  section,
+  existingContent,
+  candidateContent,
+  defaultContent,
+}) {
+  if (
+    !PRESERVE_EXISTING_BODY_SECTIONS.has(section)
+    || typeof existingContent !== "string"
+    || existingContent.trim().length === 0
+    || candidateContent.trim() !== defaultContent.trim()
+  ) {
+    return false;
+  }
+
+  if (section === "## QA Evidence" && defaultContent.trim() !== "- 해당 없음") {
+    return hasStructuredQaEvidence(existingContent);
+  }
+
+  if (section === "## Actual Verification" && defaultContent.trim() !== "- 해당 없음") {
+    return hasStructuredActualVerification(existingContent);
+  }
+
+  return true;
+}
+
 function buildPullRequestBodySections(body) {
   return new Map(
     REQUIRED_PR_SECTIONS.map((section) => [section, extractSectionContent(body, section)]),
@@ -213,11 +317,12 @@ export function mergePullRequestBodyWithExisting(existingBody, body, workItemId,
       workItemId,
       rootDir,
     });
-    const shouldPreserveExisting =
-      PRESERVE_EXISTING_BODY_SECTIONS.has(section)
-      && typeof existingContent === "string"
-      && existingContent.trim().length > 0
-      && candidateContent.trim() === defaultContent.trim();
+    const shouldPreserveExisting = shouldPreserveExistingPrSection({
+      section,
+      existingContent,
+      candidateContent,
+      defaultContent,
+    });
 
     return `${section}\n${shouldPreserveExisting ? existingContent : candidateContent}`;
   }).join("\n\n");

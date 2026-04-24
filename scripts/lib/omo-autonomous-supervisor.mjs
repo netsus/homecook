@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 
@@ -530,12 +530,15 @@ function resolveRecoverablePrCheckFailureContext(state) {
   const reasonText = [state?.wait?.reason, recovery?.reason].filter(Boolean).join(" ").trim();
   if (
     state?.wait?.kind !== "human_escalation" ||
-    recovery?.kind !== "partial_stage_failure" ||
     !/(?:authority precheck pr checks failed\.|doc gate repair pr checks failed\.|pr checks failed\.)/i.test(
       reasonText,
     ) ||
     !hasValidPersistedExecutionStageResult(state)
   ) {
+    return null;
+  }
+
+  if (recovery && recovery.kind !== "partial_stage_failure") {
     return null;
   }
 
@@ -912,6 +915,51 @@ function summarizeChecklistIssues(issues) {
 
 function summarizeFixIds(values) {
   return normalizeStringArray(values).join(", ");
+}
+
+function findLatestExploratoryQaBundle({
+  rootDir,
+  slice,
+}) {
+  if (typeof slice !== "string" || slice.trim().length === 0) {
+    return null;
+  }
+
+  const qaRoot = resolve(rootDir, ".artifacts", "qa", slice.trim());
+  if (!existsSync(qaRoot)) {
+    return null;
+  }
+
+  const candidates = readdirSync(qaRoot)
+    .map((entry) => resolve(qaRoot, entry))
+    .filter((entryPath) => existsSync(entryPath) && statSync(entryPath).isDirectory())
+    .sort((left, right) => right.localeCompare(left));
+
+  for (const candidate of candidates) {
+    const checklistPath = resolve(candidate, "exploratory-checklist.json");
+    const reportPath = resolve(candidate, "exploratory-report.json");
+    const evalPath = resolve(candidate, "eval-result.json");
+    if (!existsSync(checklistPath) || !existsSync(reportPath) || !existsSync(evalPath)) {
+      continue;
+    }
+
+    return {
+      checklistPath,
+      reportPath,
+      evalPath,
+    };
+  }
+
+  return null;
+}
+
+function requiresExploratoryQaBundle(designAuthorityConfig) {
+  const uiRisk =
+    typeof designAuthorityConfig?.ui_risk === "string" && designAuthorityConfig.ui_risk.trim().length > 0
+      ? designAuthorityConfig.ui_risk.trim()
+      : null;
+
+  return ["new-screen", "high-risk", "anchor-extension"].includes(uiRisk ?? "");
 }
 
 function resolveExpectedReviewScope(stage) {
@@ -1814,6 +1862,41 @@ function applyDesignReviewBookkeeping({
   };
 }
 
+function applyAuthorityReportVerdictSync({
+  worktreePath,
+  authorityReportPaths,
+  targetVerdict = "pass",
+}) {
+  const normalizedTargetVerdict = ensureNonEmptyString(targetVerdict, "targetVerdict");
+  const normalizedPaths = normalizeStringArray(authorityReportPaths);
+  let changed = false;
+  let changedPath = null;
+
+  for (const reportPath of normalizedPaths) {
+    const absolutePath = resolve(worktreePath, reportPath);
+    if (!existsSync(absolutePath)) {
+      continue;
+    }
+
+    const contents = readFileSync(absolutePath, "utf8");
+    const nextContents = contents.replace(
+      /(^-\s+verdict:\s+`?)(pass|conditional-pass|hold)(`?\s*$)/m,
+      `$1${normalizedTargetVerdict}$3`,
+    );
+
+    if (nextContents !== contents) {
+      writeFileSync(absolutePath, nextContents);
+      changed = true;
+      changedPath ??= absolutePath;
+    }
+  }
+
+  return {
+    changed,
+    filePath: changedPath,
+  };
+}
+
 function summarizeBookkeepingIssues(issues) {
   const normalizedIssues = Array.isArray(issues) ? issues : [];
   return normalizedIssues
@@ -1961,6 +2044,13 @@ function repairActiveBookkeepingDrift({
     return state;
   }
 
+  const changedFiles = listWorktreeChangedFiles({
+    worktreePath: state.workspace.path,
+  });
+  if (changedFiles.length === 0) {
+    return state;
+  }
+
   const commitMessage = buildBookkeepingRepairCommit({
     slice,
     issues: invariant.issues,
@@ -1988,17 +2078,36 @@ function repairActiveBookkeepingDrift({
       })
     : state;
   const repairStage = Number.isInteger(stage) ? stage : state.wait?.stage ?? state.active_stage ?? null;
+  const syncedReviewState =
+    repairStage === 6 && prRole === "frontend"
+      ? syncRuntimeApprovedHeadSha({
+          rootDir,
+          workItemId,
+          state: updatedPr,
+          role: "frontend",
+          headSha,
+          updatedAt: now,
+        })
+      : updatedPr;
+  syncStageResultApprovedHeadSha({
+    stageResultPath:
+      syncedReviewState.execution?.stage_result_path ??
+      (syncedReviewState.execution?.artifact_dir
+        ? resolve(syncedReviewState.execution.artifact_dir, "stage-result.json")
+        : null),
+    headSha,
+  });
   const repairedState = saveRuntime({
     rootDir,
     workItemId,
     state: setWaitState({
       state: setExecutionState({
-        state: updatedPr,
+        state: syncedReviewState,
         activeStage: repairStage,
         phase: repairStage === 6 ? "merge_pending" : "wait",
         nextAction: "poll_ci",
-        artifactDir: updatedPr.execution?.artifact_dir ?? updatedPr.last_artifact_dir,
-        execution: updatedPr.execution,
+        artifactDir: syncedReviewState.execution?.artifact_dir ?? syncedReviewState.last_artifact_dir,
+        execution: syncedReviewState.execution,
       }),
       kind: "ci",
       prRole,
@@ -2597,7 +2706,13 @@ function runInternalCloseoutReconcile({
       });
     }
 
-    if (repairedFiles.length > 0) {
+    const dirtyFiles = repairedFiles.length > 0
+      ? listWorktreeChangedFiles({
+          worktreePath: nextState.workspace.path,
+        })
+      : [];
+
+    if (repairedFiles.length > 0 && dirtyFiles.length > 0) {
       const commitMessage = buildCloseoutRepairCommit({
         slice,
         repairedPaths: repairedFiles,
@@ -2624,6 +2739,14 @@ function runInternalCloseoutReconcile({
         branch: branchName,
         headSha: nextHeadSha,
         now,
+      });
+      nextState = syncRuntimeApprovedHeadSha({
+        rootDir,
+        workItemId,
+        state: nextState,
+        role: "frontend",
+        headSha: nextHeadSha,
+        updatedAt: now,
       });
     }
   } else {
@@ -3196,6 +3319,86 @@ function resolveApprovedHeadSha({
   return normalizedApproved;
 }
 
+function isApprovedHeadCurrent({
+  approvedHeadSha,
+  activeHeadSha,
+}) {
+  const normalizedApproved =
+    typeof approvedHeadSha === "string" && approvedHeadSha.trim().length > 0
+      ? approvedHeadSha.trim()
+      : null;
+  const normalizedActive =
+    typeof activeHeadSha === "string" && activeHeadSha.trim().length > 0 ? activeHeadSha.trim() : null;
+
+  if (!normalizedApproved || !normalizedActive) {
+    return false;
+  }
+
+  return (
+    normalizedApproved === normalizedActive ||
+    (normalizedApproved.length < normalizedActive.length && normalizedActive.startsWith(normalizedApproved))
+  );
+}
+
+function restoreMergePendingCiWait({
+  rootDir,
+  workItemId,
+  state,
+  github,
+  now,
+}) {
+  const stage = Number.isInteger(state.active_stage) ? state.active_stage : state.current_stage ?? null;
+  const prRole =
+    typeof state.execution?.pr_role === "string" && state.execution.pr_role.trim().length > 0
+      ? state.execution.pr_role.trim()
+      : (Number.isInteger(stage) ? resolvePrRole(stage) : null);
+  const activePr = prRole ? state.prs?.[prRole] ?? null : null;
+
+  if (!Number.isInteger(stage) || !prRole || !activePr?.url) {
+    return null;
+  }
+
+  const refreshedPrState = refreshLivePullRequestState({
+    rootDir,
+    workItemId,
+    state,
+    github,
+    prRole,
+    activePr,
+    now,
+    syncWaitKind: "ci",
+  });
+
+  const nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setWaitState({
+      state: refreshedPrState.state,
+      kind: "ci",
+      prRole,
+      stage,
+      headSha: refreshedPrState.activePr.head_sha ?? activePr.head_sha ?? null,
+      phase: resolveStatePhase(refreshedPrState.state) ?? "merge_pending",
+      nextAction: "poll_ci",
+      updatedAt: now,
+    }),
+  });
+
+  updateRuntimeStatusForWait({
+    rootDir,
+    workItemId,
+    wait: nextState.wait,
+    prPath: refreshedPrState.activePr.url,
+    now,
+    approvalState: "dual_approved",
+    lifecycle: "ready_for_review",
+    verificationStatus: "pending",
+    extraNotes: ["wait_recovered=merge_pending_ci"],
+  });
+
+  return nextState;
+}
+
 function syncStageResultApprovedHeadSha({
   stageResultPath,
   headSha,
@@ -3216,6 +3419,42 @@ function syncStageResultApprovedHeadSha({
   stageResult.approved_head_sha = normalizedHeadSha;
   writeFileSync(normalizedStageResultPath, `${JSON.stringify(stageResult, null, 2)}\n`);
 }
+
+function syncRuntimeApprovedHeadSha({
+  rootDir,
+  workItemId,
+  state,
+  role,
+  headSha,
+  updatedAt,
+}) {
+  const normalizedRole =
+    typeof role === "string" && role.trim().length > 0 ? role.trim() : null;
+  const normalizedHeadSha =
+    typeof headSha === "string" && headSha.trim().length > 0 ? headSha.trim() : null;
+  const reviewEntry = normalizedRole ? state?.last_review?.[normalizedRole] ?? null : null;
+
+  if (!normalizedRole || !normalizedHeadSha || !reviewEntry) {
+    return state;
+  }
+
+  return saveRuntime({
+    rootDir,
+    workItemId,
+    state: {
+      ...state,
+      last_review: {
+        ...state.last_review,
+        [normalizedRole]: {
+          ...reviewEntry,
+          approved_head_sha: normalizedHeadSha,
+          updated_at: updatedAt ?? reviewEntry.updated_at ?? null,
+        },
+      },
+    },
+  });
+}
+
 function finalizeMergedReviewStage({
   rootDir,
   workItemId,
@@ -3772,6 +4011,23 @@ function processWaitState({
   const phase = resolveStatePhase(state);
 
   if (!state.wait?.kind) {
+    if (phase === "merge_pending") {
+      const recoveredState = restoreMergePendingCiWait({
+        rootDir,
+        workItemId,
+        state,
+        github,
+        now,
+      });
+      if (recoveredState) {
+        return {
+          state: recoveredState,
+          action: "wait",
+          nextStage: null,
+        };
+      }
+    }
+
     return {
       state,
       action: "run-stage",
@@ -4139,11 +4395,24 @@ function processWaitState({
   }
 
   if (state.wait.kind === "ready_for_next_stage") {
+    const refreshedState =
+      state.wait.pr_role && state.prs?.[state.wait.pr_role]?.url
+        ? refreshLivePullRequestState({
+            rootDir,
+            workItemId,
+            state,
+            github,
+            prRole: state.wait.pr_role,
+            activePr: state.prs[state.wait.pr_role],
+            now,
+            syncWaitKind: "ready_for_next_stage",
+          }).state
+        : state;
     const nextState = saveRuntime({
       rootDir,
       workItemId,
       state: setWaitState({
-        state,
+        state: refreshedState,
         kind: null,
         updatedAt: now,
       }),
@@ -4563,6 +4832,59 @@ function processWaitState({
     }
 
     if (prRole === "frontend" && ciState.wait.stage === 6) {
+      const approvedHeadSha =
+        ciState.last_review?.frontend?.approved_head_sha ??
+        ciState.last_review?.closeout?.approved_head_sha ??
+        null;
+      const currentHeadSha = ciActivePr.head_sha ?? null;
+
+      if (
+        currentHeadSha &&
+        approvedHeadSha &&
+        !isApprovedHeadCurrent({
+          approvedHeadSha,
+          activeHeadSha: currentHeadSha,
+        })
+      ) {
+        const nextState = saveRuntime({
+          rootDir,
+          workItemId,
+          state: setWaitState({
+            state: setPullRequestRef({
+              state: ciState,
+              role: "frontend",
+              number: ciActivePr.number,
+              url: ciActivePr.url,
+              draft: false,
+              branch: ciActivePr.branch,
+              headSha: currentHeadSha,
+              updatedAt: now,
+            }),
+            kind: "ready_for_next_stage",
+            prRole: "frontend",
+            stage: 6,
+            headSha: currentHeadSha,
+            updatedAt: now,
+          }),
+        });
+        updateRuntimeStatusForWait({
+          rootDir,
+          workItemId,
+          wait: nextState.wait,
+          prPath: ciActivePr.url,
+          now,
+          approvalState: "codex_approved",
+          lifecycle: "ready_for_review",
+          verificationStatus: "passed",
+          extraNotes: ["stage6_review=rerun_required", `approved_head=${approvedHeadSha}`],
+        });
+        return {
+          state: nextState,
+          action: "wait",
+          nextStage: null,
+        };
+      }
+
       const nextState = saveRuntime({
         rootDir,
         workItemId,
@@ -5209,6 +5531,37 @@ function finalizeCodeStage({
       headSha,
       now,
     });
+
+    const executionAutomationSpec = readAutomationSpecForExecution({
+      rootDir,
+      worktreePath: nextState.workspace?.path ?? null,
+      slice,
+      required: false,
+    });
+    const designAuthorityConfig = executionAutomationSpec.automationSpec?.frontend?.design_authority ?? null;
+
+    if (
+      stage === 4 &&
+      prRole === "frontend" &&
+      requiresExploratoryQaBundle(designAuthorityConfig) &&
+      !findLatestExploratoryQaBundle({
+        rootDir,
+        slice,
+      })
+    ) {
+      return blockWithRecovery({
+        rootDir,
+        workItemId,
+        slice,
+        state: nextState,
+        stage,
+        prRole,
+        reason:
+          `Exploratory QA bundle is missing for ui_risk '${designAuthorityConfig?.ui_risk ?? "unknown"}'. Run pnpm qa:explore / pnpm qa:eval or provide a repo-local .artifacts/qa bundle before ready-for-review.`,
+        now,
+        worktree,
+      });
+    }
 
     const checks = github.getRequiredChecks({
       prRef: pr.url,
@@ -7275,7 +7628,7 @@ function handleReviewStage({
             finished_at: now,
             verify_commands: [],
             verify_bucket: null,
-            commit_sha: null,
+            commit_sha: activePr.head_sha ?? null,
             pr_role: prRole,
             subphase,
           },
@@ -7323,6 +7676,19 @@ function handleReviewStage({
   }
 
   if (resolveStatePhase(nextState) === "review_pending") {
+    const reviewedHeadSha =
+      nextState.execution?.commit_sha ??
+      activePr.head_sha ??
+      stageResult.approved_head_sha ??
+      null;
+
+    if (stageResult.decision === "approve" && reviewedHeadSha) {
+      syncStageResultApprovedHeadSha({
+        stageResultPath: nextState.execution?.stage_result_path ?? null,
+        headSha: reviewedHeadSha,
+      });
+    }
+
     nextState = saveRuntime({
       rootDir,
       workItemId,
@@ -7331,7 +7697,7 @@ function handleReviewStage({
         role: reviewRole,
         decision: stageResult.decision,
         routeBackStage: stageResult.route_back_stage,
-        approvedHeadSha: stageResult.approved_head_sha,
+        approvedHeadSha: stageResult.decision === "approve" ? reviewedHeadSha : stageResult.approved_head_sha,
         bodyMarkdown: stageResult.body_markdown,
         findings: stageResult.findings ?? [],
         reviewScope: stageResult.review_scope ?? null,
@@ -7410,6 +7776,18 @@ function handleReviewStage({
 
     if (stageResult.decision === "approve") {
       if (stage === 5) {
+        const authorityReportSync =
+          isFinalAuthorityGate && stageResult.authority_verdict === "pass"
+            ? applyAuthorityReportVerdictSync({
+                worktreePath: nextState.workspace.path,
+                authorityReportPaths: stageResult.authority_report_paths ?? [],
+                targetVerdict: "pass",
+              })
+            : {
+                changed: false,
+                filePath: null,
+              };
+
         if (designAuthorityConfig?.authority_required && !isFinalAuthorityGate) {
           nextState = saveRuntime({
             rootDir,
@@ -7451,16 +7829,26 @@ function handleReviewStage({
           updateAuthorityStatus: Boolean(designAuthorityConfig?.authority_required),
         });
 
-        if (bookkeeping.changed) {
+        if (bookkeeping.changed || authorityReportSync.changed) {
           commitWorktreeChanges({
             worktreePath: nextState.workspace.path,
-            subject: `docs(workpack): confirm ${state.slice ?? workItemId} design status`,
-            body: "Stage 5 디자인 리뷰 승인에 따라 Design Status를 confirmed로 정렬합니다.",
+            subject:
+              authorityReportSync.changed && isFinalAuthorityGate
+                ? `docs(authority): confirm ${state.slice ?? workItemId} final verdict`
+                : `docs(workpack): confirm ${state.slice ?? workItemId} design status`,
+            body:
+              authorityReportSync.changed && isFinalAuthorityGate
+                ? "Claude final_authority_gate 승인 결과에 맞춰 authority report verdict를 pass로 정렬합니다."
+                : "Stage 5 디자인 리뷰 승인에 따라 Design Status를 confirmed로 정렬합니다.",
           });
           worktree.pushBranch({
             branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
           });
           const headSha = worktree.getHeadSha();
+          syncStageResultApprovedHeadSha({
+            stageResultPath: nextState.execution?.stage_result_path ?? resolve(artifactDir, "stage-result.json"),
+            headSha,
+          });
           nextState = upsertPullRequest({
             rootDir,
             workItemId,
@@ -7470,6 +7858,14 @@ function handleReviewStage({
             branch: activePr.branch ?? resolveBranchName({ slice: state.slice ?? workItemId, stage }),
             headSha,
             now,
+          });
+          nextState = syncRuntimeApprovedHeadSha({
+            rootDir,
+            workItemId,
+            state: nextState,
+            role: "frontend",
+            headSha,
+            updatedAt: now,
           });
           nextState = saveRuntime({
             rootDir,
@@ -7496,7 +7892,10 @@ function handleReviewStage({
             approvalState: isFinalAuthorityGate ? "claude_approved" : "codex_approved",
             lifecycle: "ready_for_review",
             verificationStatus: "pending",
-            extraNotes: ["bookkeeping=design_status_confirmed"],
+            extraNotes: [
+              "bookkeeping=design_status_confirmed",
+              ...(authorityReportSync.changed ? ["authority_report_verdict=pass_synced"] : []),
+            ],
           });
           return {
             state: nextState,
@@ -8813,6 +9212,17 @@ export function tickSupervisorWorkItems(
     }
 
     if (!state.wait?.kind) {
+      if (
+        phase === "merge_pending" &&
+        Number(state.active_stage ?? state.current_stage ?? null) === 6 &&
+        hasValidPersistedExecutionStageResult(state)
+      ) {
+        return {
+          resumable: true,
+          reason: null,
+        };
+      }
+
       if (phase === "escalated" && isResumablePostDocGateBookkeepingResidue(state)) {
         return {
           resumable: true,

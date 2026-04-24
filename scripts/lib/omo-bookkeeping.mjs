@@ -485,9 +485,17 @@ function resolveMaxObservedStage(runtimeState) {
 }
 
 function shouldRequireMergedRoadmap({ runtimeState, lifecycleStates, maxStage }) {
+  const hasApprovedStage6Review =
+    maxStage >= 6 &&
+    (
+      runtimeState?.last_review?.frontend?.decision === "approve" ||
+      runtimeState?.last_review?.closeout?.decision === "approve"
+    );
+
   if (
     runtimeState?.phase === "done" ||
     runtimeState?.phase === "merge_pending" ||
+    hasApprovedStage6Review ||
     lifecycleStates.includes("merged") ||
     (Number.isInteger(runtimeState?.last_completed_stage) && runtimeState.last_completed_stage >= 6) ||
     runtimeState?.wait?.pr_role === "closeout" ||
@@ -578,6 +586,15 @@ function buildRepairAction(kind, targetStatus, filePath) {
   };
 }
 
+/**
+ * @param {{
+ *   rootDir?: string,
+ *   workItemId: string,
+ *   slice?: string | null,
+ *   runtimeState: Record<string, any>,
+ *   worktreePath?: string | null,
+ * }} options
+ */
 export function evaluateBookkeepingInvariant({
   rootDir = process.cwd(),
   workItemId,

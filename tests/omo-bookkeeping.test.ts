@@ -859,6 +859,128 @@ describe("OMO bookkeeping", () => {
     expect(invariant.issues).toEqual([]);
   });
 
+  it("keeps merged roadmap as the expected state after a Stage 6 approval even before done", () => {
+    const workItemId = "03-recipe-like";
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-bookkeeping-stage6-approved-"));
+    seedTrackedFiles(rootDir, workItemId);
+
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "README.md"),
+      [
+        "# Workpack Roadmap v2",
+        "",
+        "## Slice Order",
+        "",
+        "| Slice | Status | Goal |",
+        "| --- | --- | --- |",
+        `| \`${workItemId}\` | in-progress | test slice |`,
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(rootDir, ".workflow-v2", "status.json"),
+      JSON.stringify(
+        {
+          version: 1,
+          project_profile: "homecook",
+          updated_at: "2026-04-24T00:00:00.000Z",
+          items: [
+            {
+              id: workItemId,
+              preset: "vertical-slice-strict",
+              lifecycle: "ready_for_review",
+              approval_state: "codex_approved",
+              verification_status: "passed",
+              required_checks: ["pnpm validate:workflow-v2"],
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+    writeFileSync(
+      join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`),
+      JSON.stringify(
+        {
+          ...JSON.parse(readFileSync(join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`), "utf8")),
+          status: {
+            lifecycle: "ready_for_review",
+            approval_state: "codex_approved",
+            verification_status: "passed",
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 6,
+        current_stage: 6,
+        last_completed_stage: 5,
+        phase: "wait",
+        next_action: "run_stage",
+        wait: {
+          kind: "ready_for_next_stage",
+          stage: 6,
+          pr_role: "frontend",
+          head_sha: "new-head",
+          updated_at: "2026-04-24T19:30:00+09:00",
+        },
+        prs: {
+          docs: null,
+          backend: null,
+          frontend: {
+            number: 41,
+            url: "https://github.com/netsus/homecook/pull/41",
+            draft: false,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: "new-head",
+          },
+          closeout: null,
+        },
+        last_review: {
+          backend: null,
+          frontend: {
+            decision: "approve",
+            approved_head_sha: "old-head",
+            body_markdown: "Stage 6 approved on prior head",
+            findings: [],
+            updated_at: "2026-04-24T19:20:00+09:00",
+          },
+        },
+      },
+    });
+
+    const invariant = evaluateBookkeepingInvariant({
+      rootDir,
+      workItemId,
+      slice: workItemId,
+      runtimeState: readRuntimeState({
+        rootDir,
+        workItemId,
+        slice: workItemId,
+      }).state,
+    });
+
+    expect(invariant.outcome).toBe("repairable_pre_merge");
+    expect(invariant.issues).toEqual([
+      expect.objectContaining({
+        kind: "roadmap_status",
+        actual: "in-progress",
+        expected: "merged",
+      }),
+    ]);
+  });
+
   it("validator fails when merged runtime/workflow state drifts from the roadmap", () => {
     const rootDir = createRuntimeFixture();
 

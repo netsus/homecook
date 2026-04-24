@@ -94,6 +94,60 @@ function ensureStage(value) {
   return stage;
 }
 
+function resolveAuthorityEvidenceCaptureScript(slice) {
+  const normalizedSlice = ensureNonEmptyString(slice, "slice");
+  const candidates = [
+    `scripts/capture-${normalizedSlice}-evidence.mjs`,
+    `scripts/capture-${normalizedSlice.split("-")[0]}-evidence.mjs`,
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(resolve(process.cwd(), candidate))) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function buildPriorStageResultSection(priorStageResultPath) {
+  const normalizedPath =
+    typeof priorStageResultPath === "string" && priorStageResultPath.trim().length > 0
+      ? priorStageResultPath.trim()
+      : null;
+  if (!normalizedPath || !existsSync(normalizedPath)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(readFileSync(normalizedPath, "utf8"));
+    const compact = {
+      result: parsed?.result ?? null,
+      summary_markdown: parsed?.summary_markdown ?? null,
+      claimed_scope: parsed?.claimed_scope ?? null,
+      changed_files: Array.isArray(parsed?.changed_files) ? parsed.changed_files : [],
+      checklist_updates: Array.isArray(parsed?.checklist_updates) ? parsed.checklist_updates : [],
+      authority_verdict: parsed?.authority_verdict ?? null,
+      reviewed_screen_ids: Array.isArray(parsed?.reviewed_screen_ids) ? parsed.reviewed_screen_ids : [],
+      authority_report_paths: Array.isArray(parsed?.authority_report_paths) ? parsed.authority_report_paths : [],
+      evidence_artifact_refs: Array.isArray(parsed?.evidence_artifact_refs) ? parsed.evidence_artifact_refs : [],
+      blocker_count: parsed?.blocker_count ?? null,
+      major_count: parsed?.major_count ?? null,
+      minor_count: parsed?.minor_count ?? null,
+    };
+
+    return [
+      "## Prior Stage Result Snapshot",
+      "- 아래 JSON은 이전 stage result의 compact snapshot입니다. worktree 밖 artifact 경로를 다시 읽으려 하지 말고 이 내용을 기준으로 리뷰하세요.",
+      "```json",
+      JSON.stringify(compact, null, 2),
+      "```",
+    ].join("\n");
+  } catch {
+    return null;
+  }
+}
+
 function productStageSpec(stage, slice, subphase = null) {
   if (stage === 5 && subphase === "final_authority_gate") {
     return {
@@ -125,6 +179,7 @@ function productStageSpec(stage, slice, subphase = null) {
   }
 
   if (stage === 4 && subphase === "authority_precheck") {
+    const captureScript = resolveAuthorityEvidenceCaptureScript(slice);
     return {
       actor: "codex",
       branch: `feature/fe-${slice}`,
@@ -140,11 +195,13 @@ function productStageSpec(stage, slice, subphase = null) {
         "docs/design/mobile-ux-rules.md",
         "docs/design/anchor-screens.md",
         "docs/engineering/product-design-authority.md",
+        captureScript ? `${captureScript} (when authority evidence is missing)` : null,
       ],
       deliverables: [
         `branch feature/fe-${slice}`,
         "mobile evidence bundle",
         "authority precheck report",
+        captureScript ? `repo-local evidence capture via ${captureScript}` : null,
         "valid authority_precheck stage result",
       ],
       verifyCommands: [],
@@ -520,8 +577,12 @@ export function buildStageDispatch({
 
   const priorStageResultRead =
     normalizedPriorStageResultPath && [3, 5].includes(normalizedStage)
-      ? [`prior stage result: ${normalizedPriorStageResultPath}`]
+      ? ["prior stage result snapshot (inlined below)"]
       : [];
+  const priorStageResultSection =
+    normalizedPriorStageResultPath && [3, 5].includes(normalizedStage)
+      ? buildPriorStageResultSection(normalizedPriorStageResultPath)
+      : null;
 
   const findingsSection =
     normalizedReviewContext?.findings?.length > 0 && [2, 4].includes(normalizedStage)
@@ -557,8 +618,8 @@ export function buildStageDispatch({
     stage: normalizedStage,
     actor: spec.actor,
     goal: buildGoal(normalizedStage, normalizedSlice, normalizedSubphase),
-    requiredReads: [...spec.requiredReads, ...reviewFeedbackRead, ...priorStageResultRead],
-    deliverables: spec.deliverables,
+    requiredReads: [...spec.requiredReads, ...reviewFeedbackRead, ...priorStageResultRead].filter(Boolean),
+    deliverables: spec.deliverables.filter(Boolean),
     verifyCommands: spec.verifyCommands,
     statusPatch: {
       branch: spec.branch,
@@ -583,7 +644,21 @@ export function buildStageDispatch({
     },
     reviewContext: normalizedReviewContext,
     subphase: normalizedSubphase,
-    extraPromptSections: [findingsSection, requiredFixIdsSection, requiredDocFixIdsSection].filter(Boolean),
+    extraPromptSections: [
+      findingsSection,
+      requiredFixIdsSection,
+      requiredDocFixIdsSection,
+      normalizedStage === 4 && normalizedSubphase === "authority_precheck"
+        ? [
+            "## Authority Evidence Capture Preference",
+            "- authority evidence가 비어 있으면 repo-local `scripts/capture-<slice>-evidence.mjs`를 우선 사용하세요.",
+            "- shell one-liner로 스크린샷을 즉석 생성하지 말고, 가능하면 repo script를 실행해 evidence를 만드세요.",
+            "- 중간 로그와 산출물은 `/tmp` 대신 `.artifacts/` 또는 `ui/designs/evidence/` 아래 repo-local 경로만 사용하세요.",
+            "- dev server가 필요하면 readiness를 확인한 뒤 캡처하고, 끝나면 정리하세요.",
+          ].join("\n")
+        : null,
+      priorStageResultSection,
+    ].filter(Boolean),
     successCondition: spec.successCondition,
     escalationIfBlocked: spec.escalationIfBlocked,
     claudeBudgetState: normalizedBudgetState,
