@@ -79,6 +79,20 @@ function ensureOptionalNonNegativeInteger(value, label) {
   return value;
 }
 
+function normalizeReviewDecision(value, label) {
+  const normalized = ensureNonEmptyString(value, label).toLowerCase();
+
+  if (normalized === "approved") {
+    return "approve";
+  }
+
+  if (["approve", "request_changes"].includes(normalized)) {
+    return normalized;
+  }
+
+  throw new Error(`${label} must be one of: approve, approved, request_changes.`);
+}
+
 function validateFinding(finding, index) {
   const label = `stageResult.findings[${index}]`;
   const f = ensureObject(finding, label);
@@ -439,7 +453,7 @@ export function validateStageResult(stage, stageResult, options = {}) {
       result.waived_doc_fix_ids ?? [],
       "stageResult.waived_doc_fix_ids",
     );
-    const decision = ensureNonEmptyString(result.decision, "stageResult.decision");
+    const decision = normalizeReviewDecision(result.decision, "stageResult.decision");
 
     if (decision === "request_changes" && requiredDocFixIds.length === 0) {
       throw new Error("stageResult.required_doc_fix_ids must include at least one entry for request_changes reviews.");
@@ -618,7 +632,7 @@ export function validateStageResult(stage, stageResult, options = {}) {
     return normalizedCodeStageResult;
   }
 
-  const decision = ensureNonEmptyString(result.decision, "stageResult.decision");
+  const decision = normalizeReviewDecision(result.decision, "stageResult.decision");
   const findings = validateOptionalFindings(result.findings);
   const reviewScope = validateReviewScope(result.review_scope, {
     strict: strictExtendedContract,
