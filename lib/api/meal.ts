@@ -63,6 +63,26 @@ export async function createMeal(body: MealCreateBody): Promise<MealCreateData> 
   return payload.data;
 }
 
+export async function createMealSafe(body: MealCreateBody): Promise<ApiResponse<MealCreateData>> {
+  try {
+    const data = await createMeal(body);
+    return { success: true, data, error: null };
+  } catch (error) {
+    if (isMealApiError(error)) {
+      return {
+        success: false,
+        data: null,
+        error: { code: error.code, message: error.message, fields: [] },
+      };
+    }
+    return {
+      success: false,
+      data: null,
+      error: { code: "UNKNOWN_ERROR", message: "알 수 없는 오류가 발생했어요.", fields: [] },
+    };
+  }
+}
+
 export async function fetchMeals(planDate: string, columnId: string): Promise<MealListData> {
   const params = new URLSearchParams({ plan_date: planDate, column_id: columnId });
   const response = await fetch(
