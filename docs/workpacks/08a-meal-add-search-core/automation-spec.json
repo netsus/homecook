@@ -63,7 +63,9 @@
       ]
     }
   },
-  "external_smokes": [],
+  "external_smokes": [
+    "pnpm dev:local-supabase"
+  ],
   "blocked_conditions": [
     "meal_plan_columns-bootstrap-missing",
     "recipes-sample-data-missing",

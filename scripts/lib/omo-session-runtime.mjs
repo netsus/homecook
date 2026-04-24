@@ -1149,6 +1149,7 @@ function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
     lastCompletedStage,
   });
   const recovery = normalizeRecovery(runtime.recovery);
+  const storedPhase = normalizePhase(runtime.phase);
   let normalized = {
     ...base,
     version: Number.isInteger(runtime.version) ? runtime.version : base.version,
@@ -1179,7 +1180,7 @@ function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
     workspace: normalizeWorkspace(runtime.workspace),
     prs: normalizePullRequests(runtime.prs),
     wait,
-    phase: normalizePhase(runtime.phase) ?? inferPhaseFromWait(wait),
+    phase: storedPhase ?? inferPhaseFromWait(wait),
     next_action: normalizeNextAction(runtime.next_action ?? inferActionFromWait(wait)),
     execution: normalizeExecution(runtime.execution),
     last_review: normalizeLastReview(runtime.last_review),
@@ -1188,6 +1189,15 @@ function normalizeRuntimeState(rawState, { rootDir, workItemId, slice }) {
     design_authority: normalizeDesignAuthority(runtime.design_authority),
     recovery,
   };
+
+  if (storedPhase === "stage_running" && normalized.wait?.kind) {
+    normalized = {
+      ...normalized,
+      lock: null,
+      phase: "wait",
+      next_action: inferActionFromWait(normalized.wait),
+    };
+  }
 
   if (!normalized.phase) {
   const codeStage =

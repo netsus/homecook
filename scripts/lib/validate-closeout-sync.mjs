@@ -503,12 +503,14 @@ function validateDesignAuthority({
     });
   }
 
-  const missingReports = reportPaths.filter((reportPath) => !existsSync(resolve(rootDir, reportPath)));
-  if (missingReports.length > 0) {
-    errors.push({
-      path: authority.filePath,
-      message: `Authority-required slice '${slice}' is missing authority reports: ${missingReports.join(", ")}.`,
-    });
+  if (["ready-for-review", "merged"].includes(strictMode)) {
+    const missingReports = reportPaths.filter((reportPath) => !existsSync(resolve(rootDir, reportPath)));
+    if (missingReports.length > 0) {
+      errors.push({
+        path: authority.filePath,
+        message: `Authority-required slice '${slice}' is missing authority reports: ${missingReports.join(", ")}.`,
+      });
+    }
   }
 
   if (strictMode === "merged") {

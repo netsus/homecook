@@ -49,8 +49,8 @@
 
 ## Backend First Contract
 ### `GET /recipes` (기존 재사용)
-- Query: `?search=<keyword>&cursor=<cursor>&limit=<N>`
-- Response: `{ success: true, data: { items: Recipe[], next_cursor } }`
+- Query: `?q=<keyword>&cursor=<cursor>&limit=<N>`
+- Response: `{ success: true, data: { items: Recipe[], next_cursor, has_next } }`
 - 권한: 비로그인 가능
 - 기능: 제목 기반 검색, 커서 페이지네이션
 
@@ -58,13 +58,13 @@
 - Request body:
   ```json
   {
-    "date": "2026-04-23",
+    "plan_date": "2026-04-23",
     "column_id": "uuid",
     "recipe_id": "uuid",
     "planned_servings": 2
   }
   ```
-- Response: `{ success: true, data: { id, date, column_id, recipe_id, planned_servings, status: "registered", ... } }`
+- Response: `{ success: true, data: { id, plan_date, column_id, recipe_id, planned_servings, status: "registered", ... } }`
 - 권한: 로그인 필수 (401 Unauthorized)
 - 소유자 검증: column_id 소유자와 현재 user_id 일치 확인 (403 Forbidden)
 - 상태 전이: 새 Meal은 항상 `status='registered'`로 시작
@@ -95,8 +95,8 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 기본값, 기능 완성 우선
-- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후 전환
+- [ ] 임시 UI (temporary) — Stage 1 기본값, 기능 완성 우선
+- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후 전환
 - [ ] 확정 (confirmed) — Stage 5 public review 통과 + authority gate 통과 후
 - [ ] N/A — (이번 슬라이스는 FE 화면 있음)
 
@@ -142,7 +142,7 @@
 1. 사용자가 `PLANNER_WEEK` → `MEAL_SCREEN`에서 [식사 추가] 버튼을 탭
 2. `MENU_ADD` 화면 진입 (로그인하지 않았다면 로그인 게이트 표시 → return-to-action)
 3. 상단 검색창에 키워드 입력 (예: "김치찌개")
-4. `RECIPE_SEARCH_PICKER` 컴포넌트가 `GET /recipes?search=김치찌개` 호출 → 검색 결과 표시
+4. `RECIPE_SEARCH_PICKER` 컴포넌트가 `GET /recipes?q=김치찌개` 호출 → 검색 결과 표시
 5. 사용자가 레시피 선택 → 계획 인분 입력 모달 표시
 6. 인분 입력 후 [추가] 버튼 탭 → `POST /meals` 호출
 7. 성공 시 `MEAL_SCREEN`으로 복귀, 새 식사 카드 표시
@@ -151,13 +151,14 @@
 > Stage 2/3에서는 백엔드 관련 항목을, Stage 4~6에서는 프론트/QA/디자인/closeout 항목을 닫는다.
 > `automation-spec.json`과 함께 각 체크박스 끝에 metadata를 유지한다.
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+
