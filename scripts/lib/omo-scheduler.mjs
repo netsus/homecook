@@ -20,6 +20,7 @@ const SCHEDULER_TEMPLATE_PATH = resolve(
 /**
  * @typedef {object} SchedulerBins
  * @property {string} pnpm
+ * @property {string} node
  * @property {string} gh
  * @property {string} claude
  * @property {string} opencode
@@ -232,6 +233,7 @@ export function resolveSchedulerBins({
   });
   const resolved = {
     pnpm: resolveBinaryPath(pnpmBin ?? "pnpm", spawn),
+    node: resolveBinaryPath(process.execPath, spawn),
     gh: resolveBinaryPath(ghBin ?? "gh", spawn),
     claude: resolveBinaryPath(claudeConfig.bin, spawn),
     opencode: resolveBinaryPath(codexConfig.bin, spawn),
@@ -239,7 +241,7 @@ export function resolveSchedulerBins({
 
   return {
     ...resolved,
-    path: buildFixedPath(resolved.pnpm, resolved.gh, resolved.claude, resolved.opencode),
+    path: buildFixedPath(resolved.node, resolved.pnpm, resolved.gh, resolved.claude, resolved.opencode),
   };
 }
 
@@ -259,7 +261,13 @@ export function renderLaunchAgentPlist({
   const resolvedPath =
     typeof resolvedBins.path === "string" && resolvedBins.path.trim().length > 0
       ? resolvedBins.path.trim()
-      : buildFixedPath(resolvedBins.pnpm, resolvedBins.gh, resolvedBins.claude, resolvedBins.opencode);
+      : buildFixedPath(
+          resolvedBins.node ?? process.execPath,
+          resolvedBins.pnpm,
+          resolvedBins.gh,
+          resolvedBins.claude,
+          resolvedBins.opencode,
+        );
   const logPaths = getDefaultTickLogPaths(normalizedWorkItemId, normalizedHomeDir);
   const template = readSchedulerTemplate();
 
@@ -408,6 +416,17 @@ function isLaunchAgentAligned({
   );
 }
 
+function hasExpectedLaunchAgentContents({
+  plistPath,
+  expectedPlist,
+}) {
+  if (!existsSync(plistPath)) {
+    return false;
+  }
+
+  return readFileSync(plistPath, "utf8") === expectedPlist;
+}
+
 /**
  * @param {EnsureLaunchAgentInstalledOptions} [options]
  */
@@ -459,6 +478,13 @@ export function ensureLaunchAgentInstalled({
     homeDir: normalizedHomeDir,
     spawn,
   });
+  const plist = renderLaunchAgentPlist({
+    rootDir,
+    workItemId: normalizedWorkItemId,
+    homeDir: normalizedHomeDir,
+    intervalSeconds,
+    bins,
+  });
   const existingSnapshot = readLaunchAgentSnapshot({
     workItemId: normalizedWorkItemId,
     homeDir: normalizedHomeDir,
@@ -467,7 +493,10 @@ export function ensureLaunchAgentInstalled({
   });
 
   if (
-    existsSync(plistPath) &&
+    hasExpectedLaunchAgentContents({
+      plistPath,
+      expectedPlist: plist,
+    }) &&
     isLaunchAgentAligned({
       workItemId: normalizedWorkItemId,
       intervalSeconds,
@@ -487,14 +516,6 @@ export function ensureLaunchAgentInstalled({
       snapshot: existingSnapshot,
     };
   }
-
-  const plist = renderLaunchAgentPlist({
-    rootDir,
-    workItemId: normalizedWorkItemId,
-    homeDir: normalizedHomeDir,
-    intervalSeconds,
-    bins,
-  });
 
   mkdirSync(dirname(plistPath), { recursive: true });
   mkdirSync(resolve(normalizedHomeDir, "Library", "Logs", "homecook"), { recursive: true });
