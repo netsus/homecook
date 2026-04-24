@@ -235,8 +235,8 @@
       "id": "08a-meal-add-search-core",
       "preset": "vertical-slice-strict",
       "branch": null,
-      "lifecycle": "ready_for_review",
-      "approval_state": "claude_approved",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
@@ -244,8 +244,8 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "wait_kind=ready_for_next_stage pr_role=docs stage=2 reason=resume_docs_gate_bookkeeping head_sha=bc0f001151b9cb7aa0f8b415b1ad53ae377f0f68 auto_resume=docs_gate_bookkeeping",
-      "pr_path": "https://github.com/netsus/homecook/pull/198"
+      "notes": "wait_kind=none merged_after_autonomous_review",
+      "pr_path": "https://github.com/netsus/homecook/pull/202"
     }
   ]
 }
