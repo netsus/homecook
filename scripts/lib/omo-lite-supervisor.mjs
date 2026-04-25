@@ -459,6 +459,7 @@ function buildGoal(stage, slice, subphase = null) {
 
 /**
  * @param {{
+ *   rootDir?: string,
  *   slice: string,
  *   stage: number|string,
  *   subphase?: string|null,
