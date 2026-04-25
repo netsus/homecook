@@ -132,6 +132,39 @@ export interface RecipeBookCreateData {
   updated_at: string;
 }
 
+export interface RecipeBookRecipeItem {
+  recipe_id: string;
+  title: string;
+  thumbnail_url: string | null;
+  tags: string[];
+  added_at: string;
+}
+
+export interface RecipeBookRecipeListData {
+  items: RecipeBookRecipeItem[];
+  next_cursor: string | null;
+  has_next: boolean;
+}
+
+export interface PantryMatchMissingIngredient {
+  id: string;
+  standard_name: string;
+}
+
+export interface PantryMatchRecipeItem {
+  id: string;
+  title: string;
+  thumbnail_url: string | null;
+  match_score: number;
+  matched_ingredients: number;
+  total_ingredients: number;
+  missing_ingredients: PantryMatchMissingIngredient[];
+}
+
+export interface PantryMatchListData {
+  items: PantryMatchRecipeItem[];
+}
+
 export interface RecipeSaveBody {
   book_id: string;
 }

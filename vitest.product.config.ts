@@ -11,6 +11,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: [
+      "tests/08a-*.backend.test.ts",
+      "tests/08b-*.backend.test.ts",
       "tests/auth-*.test.ts",
       "tests/home-screen.test.tsx",
       "tests/local-dev-*.test.ts",
