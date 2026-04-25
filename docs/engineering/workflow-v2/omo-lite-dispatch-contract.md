@@ -88,6 +88,14 @@ code stage supervisor-owned bookkeeping:
 - Stage 2 finalize 시 `docs/workpacks/README.md` Slice Status `docs -> in-progress`
 - Stage 4 finalize 시 `docs/workpacks/<slice>/README.md` Design Status `temporary -> pending-review`
 
+final closeout supervisor-owned bookkeeping:
+
+- Stage 6 approve 뒤 `merge_pending`으로 들어가기 전 supervisor가 같은 frontend PR branch에 final closeout projection을 commit/push한다.
+- final closeout projection은 `docs/workpacks/README.md` Slice Status `merged`, `.workflow-v2/work-items/<slice>.json#status`의 `lifecycle=merged / approval_state=dual_approved / verification_status=passed`, `.workflow-v2/status.json` item의 같은 terminal status를 포함한다.
+- 위 projection을 deterministic하게 만들 수 있으면 supervisor가 직접 고친다.
+- deterministic projection을 넘어서 stage-owned evidence 판단이 필요하면 supervisor가 owner agent에게 bounded closeout repair를 dispatch한 뒤 recheck한다.
+- owner agent repair 뒤에도 모호하거나 권한 밖이면 merge하지 않고 `human_escalation`으로 fail-closed 한다.
+
 review stage 결과 schema는 아래 필드를 포함한다.
 
 - `decision`
@@ -107,6 +115,13 @@ internal 1.5 subphase:
 - 둘 다 public stage number를 바꾸지 않는다.
 - `doc_gate_repair`는 `docs/<slice>` 단일 브랜치에서 Stage 1 artifact 범위만 변경한다.
 - `doc_gate_review approve` 뒤에만 docs PR merge와 Stage 2 implementation handoff가 가능하다.
+
+internal 6.5 subphase:
+
+- `closeout_reconcile_repair`는 `stage=6`, `subphase=closeout_reconcile_repair`로 dispatch할 수 있다.
+- actor는 finding owner에 따라 `codex` 또는 `claude`다. Stage 6 review/closeout checklist drift는 Codex, Claude-owned authority/evidence drift는 Claude로 route back 한다.
+- deliverable은 bounded repair patch, repaired finding ids, verify command output, remaining blocker summary다.
+- success condition은 final closeout projection recheck pass이며, product contract 변경이나 authority verdict 변경이 필요하면 `human_escalation`으로 반환한다.
 
 Stage 4 authority subphase:
 
@@ -130,7 +145,7 @@ Stage 5 authority subphase:
 | 3 | Claude | backend PR review | workpack, acceptance, PR diff, CI | review summary, reviewed checklist ids, requested changes or approve |
 | 4 | Claude | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, design refs, mobile UX / anchor / authority docs, 이전 frontend review feedback(있으면) | FE implementation, authority-required면 Codex `authority_precheck`, Design Status `pending-review`, checklist updates/rebuttals, valid stage result |
 | 5 | Codex | design review | FE PR diff, workpack UI scope, acceptance FE checklist, design tokens, authority report, mobile UX / anchor docs | design findings or approve, reviewed checklist ids, authority-required면 Claude `final_authority_gate`로 handoff, non-authority slice의 Design Status `confirmed` 근거 |
-| 6 | Codex | frontend PR review | FE PR diff, CI, acceptance, merged bookkeeping 포함 최종 PR diff | review summary, closeout checklist coverage, requested changes or approve, approve 뒤 merge 또는 manual merge handoff |
+| 6 | Codex | frontend PR review | FE PR diff, CI, acceptance, merged bookkeeping 포함 최종 PR diff | review summary, closeout checklist coverage, requested changes or approve, approve 뒤 supervisor final projection commit과 merge 또는 manual merge handoff |
 
 ## Session Binding Contract
 
@@ -339,7 +354,10 @@ provider별 resume 규칙:
   - code-quality findings
   - `review_scope`, `reviewed_checklist_ids`, `required_fix_ids`, `waived_fix_ids` 작성
   - `approve | revise`
-  - supervisor가 Stage 6 approve 뒤 최종 PR에 slice status `merged` bookkeeping commit/push를 반영하고, 그 CI가 끝나면 human verification/merge handoff
+  - supervisor가 Stage 6 approve 뒤 최종 PR branch에 final closeout projection을 반영한다.
+  - final closeout projection에는 roadmap `merged`, `.workflow-v2/work-items/<slice>.json#status`의 `merged / dual_approved / passed`, `.workflow-v2/status.json` item의 `merged / dual_approved / passed`가 포함된다.
+  - projection drift가 deterministic하면 supervisor가 직접 repair한다. stage-owned evidence 판단이 필요하면 `closeout_reconcile_repair`로 owner agent에게 bounded repair를 맡긴다.
+  - internal 6.5 recheck와 해당 CI가 끝나면 auto-merge 또는 manual verification/merge handoff로 진행한다.
 
 ## Loop Dispatch Rules
 
@@ -424,7 +442,12 @@ dispatch가 끝나면 supervisor는 최소한 아래 patch를 계산한다.
 - Stage 2 시작: `lifecycle = in_progress`
 - verify green + PR ready: public code stage owner에 따라 `approval_state = claude_approved` 또는 `codex_approved`
 - Claude unavailable: `lifecycle = blocked`, approval_state는 이전 값을 유지
-- merge: `lifecycle = merged`, `approval_state = dual_approved`
+- merge projection: `lifecycle = merged`, `approval_state = dual_approved`, `verification_status = passed`
+
+merge projection 규칙:
+
+- `.workflow-v2/status.json` item과 `.workflow-v2/work-items/<id>.json#status`는 같은 terminal triplet(`merged / dual_approved / passed`)을 가져야 한다.
+- 이 status patch는 closeout truth 자체가 아니라 `.workflow-v2/work-items/<id>.json#closeout` canonical snapshot에서 나온 board/work-item projection이다.
 
 ## Repo-Local OMO Binding
 
