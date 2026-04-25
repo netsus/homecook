@@ -1,0 +1,77 @@
+{
+  "slice_id": "09-shopping-preview-create",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/shopping/preview",
+      "POST /api/v1/shopping/lists"
+    ],
+    "invariants": [
+      "documented-state-transition",
+      "owner-authorization",
+      "status-eligible-filter",
+      "shopping-list-id-null-filter"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/shopping-preview.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/shopping/flow"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "new-screen",
+      "anchor_screens": [
+        "PLANNER_WEEK"
+      ],
+      "required_screens": [
+        "SHOPPING_FLOW"
+      ],
+      "generator_required": true,
+      "critic_required": true,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/SHOPPING_FLOW-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "referenced-table-missing",
+    "bootstrap-incomplete"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

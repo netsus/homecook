@@ -1,0 +1,88 @@
+{
+  "id": "09-shopping-preview-create",
+  "title": "Shopping preview and list creation",
+  "summary": "장보기 preview, 대상 검증, 리스트 생성, 상세 이동",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "플래너에서 '장보기' 버튼을 클릭하면 '식사 등록 완료' 상태이면서 아직 다른 장보기 리스트에 묶이지 않은 식사들을 자동으로 선택하고, 사용자가 인분을 조정한 뒤 장보기 리스트를 생성하면 생성된 장보기 상세 화면으로 자동 이동한다. 이를 통해 사용자는 플래너에서 장보기 흐름을 시작하고 체크리스트를 바로 확인할 수 있다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "01-discovery-detail-auth",
+    "02-discovery-filter",
+    "03-recipe-like",
+    "04-recipe-save",
+    "05-planner-week-core",
+    "06-recipe-to-planner",
+    "07-meal-manage",
+    "08a-meal-add-search-core",
+    "08b-meal-add-books-pantry"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/요구사항기준선-v1.6.3.md",
+      "docs/화면정의서-v1.5.0.md",
+      "docs/api문서-v1.2.2.md",
+      "docs/db설계-v1.3.1.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/09-shopping-preview-create/README.md",
+      "docs/workpacks/09-shopping-preview-create/acceptance.md",
+      "docs/workpacks/09-shopping-preview-create/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/playwright-e2e.md",
+      "docs/engineering/product-design-authority.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "authority-report"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "장보기 상세 화면 조회 (slice 10a)",
+    "장보기 항목 체크/제외/순서 변경 (slice 10a, 11)",
+    "장보기 완료 처리 (slice 12a)",
+    "팬트리 반영 선택 (slice 12b)",
+    "장보기 공유 텍스트 (slice 10b)",
+    "장보기 기록 재열람 (slice 17a)"
+  ],
+  "open_questions": []
+}

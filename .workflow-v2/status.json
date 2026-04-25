@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-25T20:42:07+09:00",
+  "updated_at": "2026-04-26T00:00:00+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -262,6 +262,21 @@
       ],
       "notes": "wait_kind=none merged_after_autonomous_review docs_pr=#205 backend_pr=#206 frontend_pr=#207 runtime_phase=done stage6_closeout_approved low_risk_design_confirmed live_oauth_manual_only",
       "pr_path": "https://github.com/netsus/homecook/pull/207"
+    },
+    {
+      "id": "09-shopping-preview-create",
+      "preset": "vertical-slice-strict",
+      "branch": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 docs in progress"
     }
   ]
 }
