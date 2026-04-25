@@ -14,7 +14,7 @@
 - [ ] 레시피북에서 레시피 선택 → Meal 생성 흐름이 정상 동작한다 <!-- omo:id=accept-recipebook-to-meal;stage=4;scope=frontend;review=5,6 -->
 - [ ] 팬트리 추천에서 레시피 선택 → Meal 생성 흐름이 정상 동작한다 <!-- omo:id=accept-pantry-to-meal;stage=4;scope=frontend;review=5,6 -->
 - [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=5,6 -->
+- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 - [ ] Meal 생성 시 상태가 `registered`로 고정된다 <!-- omo:id=accept-meal-status-registered;stage=2;scope=backend;review=3,6 -->
