@@ -68,9 +68,9 @@
     ]
   },
   "status": {
-    "lifecycle": "blocked",
-    "approval_state": "human_escalation",
-    "verification_status": "pending"
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed"
   },
   "out_of_scope": [
     "남은요리에서 추가 (16)",

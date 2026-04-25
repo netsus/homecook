@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-25T02:54:19.563Z",
+  "updated_at": "2026-04-25T20:42:07+09:00",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -251,17 +251,17 @@
       "id": "08b-meal-add-books-pantry",
       "preset": "vertical-slice-strict",
       "branch": null,
-      "lifecycle": "blocked",
-      "approval_state": "human_escalation",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "wait_kind=human_escalation reason=Doc gate repair must resolve or contest all target doc findings: doc-gate-contract-1. recovery_kind=partial_stage_failure artifact_dir=/Users/shj/2025/2026/homecook1/.artifacts/omo-lite-dispatch/2026-04-24T14-33-03-120Z-08b-meal-add-books-pantry-stage-2",
-      "pr_path": "https://github.com/netsus/homecook/pull/205"
+      "notes": "wait_kind=none merged_after_autonomous_review docs_pr=#205 backend_pr=#206 frontend_pr=#207 runtime_phase=done stage6_closeout_approved low_risk_design_confirmed live_oauth_manual_only",
+      "pr_path": "https://github.com/netsus/homecook/pull/207"
     }
   ]
 }
