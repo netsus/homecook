@@ -152,8 +152,8 @@ export function MenuAddScreen({
   }, [router, planDate, columnId, slotName]);
 
   const handleBack = useCallback(() => {
-    navigateToMealScreen("replace");
-  }, [navigateToMealScreen]);
+    router.replace("/planner");
+  }, [router]);
 
   const handleRecipeSelect = useCallback((recipe: RecipeCardItem) => {
     setSelectedRecipe(recipe);

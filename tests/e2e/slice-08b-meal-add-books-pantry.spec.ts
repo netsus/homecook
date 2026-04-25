@@ -254,21 +254,22 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await expect(page.locator("text=레시피북이 없어요")).toBeVisible();
   });
 
-  test("leaves menu-add for meal screen without keeping menu-add in history", async ({ page }) => {
+  test("returns to planner from menu-add back without keeping menu-add in history", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMealListRoute(page);
 
     const mealScreenUrl = `/planner/${PLAN_DATE}/${COLUMN_ID}?slot=${encodeURIComponent(SLOT_NAME)}`;
+    await page.goto("/planner");
     await page.goto(mealScreenUrl);
     await page.goto(MENU_ADD_URL);
 
     await page.getByRole("button", { name: "뒤로 가기" }).click();
 
-    await page.waitForURL(new RegExp(`/planner/${PLAN_DATE}/${COLUMN_ID}`));
+    await expect(page).toHaveURL(/\/planner$/);
 
     await page.goBack();
 
-    await expect(page).toHaveURL(new RegExp(`/planner/${PLAN_DATE}/${COLUMN_ID}`));
+    await expect(page).not.toHaveURL(/\/menu-add/);
     expect(page.url()).not.toContain("/menu-add");
   });
 
