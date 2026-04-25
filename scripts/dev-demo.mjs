@@ -5,6 +5,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 
 import { ensureDockerRunning } from "./lib/local-docker.mjs";
+import { buildDevDemoPlan } from "./lib/dev-demo-runtime.mjs";
 import { withLocalGoogleOAuthEnv } from "./lib/local-google-oauth-env.mjs";
 import { readLocalSupabaseEnv } from "./lib/local-supabase-env.mjs";
 
@@ -106,7 +107,7 @@ async function isDemoDatasetReady() {
     return false;
   }
 
-  const [booksResult, columnsResult, recipeResult] = await Promise.all([
+  const [booksResult, columnsResult, recipeResult, pantryResult] = await Promise.all([
     supabase
       .from("recipe_books")
       .select("book_type")
@@ -121,15 +122,21 @@ async function isDemoDatasetReady() {
       .select("id")
       .eq("id", DEMO_DETAIL_RECIPE_ID)
       .maybeSingle(),
+    supabase
+      .from("pantry_items")
+      .select("id")
+      .eq("user_id", mainUser.id)
+      .limit(1),
   ]);
 
-  if (booksResult.error || columnsResult.error || recipeResult.error) {
+  if (booksResult.error || columnsResult.error || recipeResult.error || pantryResult.error) {
     return false;
   }
 
   return (booksResult.data?.length ?? 0) >= 2
     && (columnsResult.data?.length ?? 0) >= 3
-    && Boolean(recipeResult.data?.id);
+    && Boolean(recipeResult.data?.id)
+    && (pantryResult.data?.length ?? 0) >= 1;
 }
 
 function startNextDev(nextArgs) {
@@ -176,38 +183,32 @@ async function main() {
 
   await ensureDockerRunning();
 
-  if (args.reset) {
-    runStep(
-      "node",
-      ["scripts/local-reset-demo-data.mjs", ...args.seedArgs],
-      "1/2 local demo dataset reset",
-    );
-  } else {
-    runStep("pnpm", ["dlx", "supabase", "start"], "1/3 local Supabase 시작");
+  const isReady = args.reset || args.seed ? false : await isDemoDatasetReady();
+  const plan = buildDevDemoPlan({
+    isReady,
+    nextArgs: args.nextArgs,
+    reset: args.reset,
+    seed: args.seed,
+    seedArgs: args.seedArgs,
+  });
 
-    if (args.seed) {
-      runStep(
-        "node",
-        ["scripts/local-seed-demo-data.mjs", ...args.seedArgs],
-        "2/3 local demo dataset seed",
-      );
-    } else {
-      const isReady = await isDemoDatasetReady();
+  for (const step of plan) {
+    if (step.kind === "command") {
+      runStep(step.command, step.args, step.label);
+      continue;
+    }
 
-      if (isReady) {
-        process.stdout.write("2/3 local demo dataset already ready\n");
-      } else {
-        runStep(
-          "node",
-          ["scripts/local-seed-demo-data.mjs", ...args.seedArgs],
-          "2/3 local demo dataset seed",
-        );
-      }
+    if (step.kind === "message") {
+      process.stdout.write(`${step.label}\n`);
+      continue;
+    }
+
+    if (step.kind === "start-app") {
+      process.stdout.write(`${step.label}\n`);
+      startNextDev(step.args);
+      return;
     }
   }
-
-  process.stdout.write(args.reset ? "2/2 local app server start\n" : "3/3 local app server start\n");
-  startNextDev(args.nextArgs);
 }
 
 main().catch((error) => {

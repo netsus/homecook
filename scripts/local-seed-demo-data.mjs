@@ -5,6 +5,10 @@ import { spawnSync } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 
 import { readLocalSupabaseEnv } from "./lib/local-supabase-env.mjs";
+import {
+  buildDemoPantryItemRows,
+  DEMO_PANTRY_INGREDIENT_IDS,
+} from "./lib/local-demo-pantry-fixture.mjs";
 
 const LOCAL_DEMO_ACCOUNTS = [
   {
@@ -444,6 +448,24 @@ async function seedExtraPlannerMeals(supabase, {
   assertNoError(insertResult, "추가 demo meals 생성 실패");
 }
 
+async function seedDemoPantryItems(supabase, mainUserId) {
+  const deleteResult = await supabase
+    .from("pantry_items")
+    .delete()
+    .eq("user_id", mainUserId)
+    .in("ingredient_id", DEMO_PANTRY_INGREDIENT_IDS);
+
+  assertNoError(deleteResult, "demo pantry_items 초기화 실패");
+
+  const upsertResult = await supabase
+    .from("pantry_items")
+    .upsert(buildDemoPantryItemRows(mainUserId), {
+      onConflict: "user_id,ingredient_id",
+    });
+
+  assertNoError(upsertResult, "demo pantry_items 생성 실패");
+}
+
 async function refreshRecipeCounters(supabase, recipeId) {
   const recipeResult = await supabase
     .from("recipes")
@@ -545,6 +567,7 @@ async function main() {
     columnsByName,
     seedWindow,
   });
+  await seedDemoPantryItems(supabase, authUsers.main.id);
 
   for (const recipe of EXTRA_DEMO_RECIPES) {
     await refreshRecipeCounters(supabase, recipe.id);
@@ -552,10 +575,11 @@ async function main() {
 
   process.stdout.write(
     [
-      "Seeded local demo dataset for slices 01-05",
+      "Seeded local demo dataset for slices 01-08b",
       `- main account: ${LOCAL_DEMO_ACCOUNTS[0].email} / ${LOCAL_DEMO_ACCOUNTS[0].password}`,
       `- other account: ${LOCAL_DEMO_ACCOUNTS[1].email} / ${LOCAL_DEMO_ACCOUNTS[1].password}`,
       "- detail recipe: /recipe/550e8400-e29b-41d4-a716-446655440022",
+      "- pantry match: seeded pantry items for MENU_ADD recommendations",
       `- extra discovery recipes: ${EXTRA_DEMO_RECIPES.map((recipe) => recipe.title).join(", ")}`,
       `- planner window: ${seedWindow.startDate} ~ ${seedWindow.endDate}`,
     ].join("\n") + "\n",
