@@ -159,6 +159,46 @@ describe("OMO worktree manager", () => {
     expect(branchHead).toBe(remoteHead);
   });
 
+  it("preserves dirty docs changes when switching from detached HEAD back to an existing local branch", () => {
+    const { rootDir } = createGitFixture();
+    const ensured = ensureSupervisorWorktree({
+      rootDir,
+      workItemId: "08b-meal-add-books-pantry",
+    });
+
+    ensureWorktreeBranch({
+      rootDir,
+      worktreePath: ensured.path,
+      branch: "docs/08b-meal-add-books-pantry",
+    });
+
+    execFileSync("git", ["checkout", "--detach", "origin/master"], {
+      cwd: ensured.path,
+      stdio: "ignore",
+    });
+
+    writeFileSync(join(ensured.path, "README.md"), "# temp\nfixed metadata\n");
+
+    const result = ensureWorktreeBranch({
+      rootDir,
+      worktreePath: ensured.path,
+      branch: "docs/08b-meal-add-books-pantry",
+    });
+
+    const worktreeBranch = execFileSync("git", ["branch", "--show-current"], {
+      cwd: ensured.path,
+      encoding: "utf8",
+    }).trim();
+    const readme = readFileSync(join(ensured.path, "README.md"), "utf8");
+
+    expect(result).toMatchObject({
+      branch: "docs/08b-meal-add-books-pantry",
+      created: false,
+    });
+    expect(worktreeBranch).toBe("docs/08b-meal-add-books-pantry");
+    expect(readme).toContain("fixed metadata");
+  });
+
   it("re-syncs the root .env.local into an existing worktree when reusing it", () => {
     const { rootDir } = createGitFixture();
     writeFileSync(join(rootDir, ".env.local"), "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321\n");

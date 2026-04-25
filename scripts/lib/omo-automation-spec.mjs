@@ -155,14 +155,24 @@ function uniqueStringArray(values) {
 export function resolveAutomationSpecPath({
   rootDir = process.cwd(),
   slice,
+  worktreePath = null,
 }) {
-  return resolve(
-    rootDir,
-    "docs",
-    "workpacks",
-    ensureNonEmptyString(slice, "slice"),
-    "automation-spec.json",
+  const normalizedSlice = ensureNonEmptyString(slice, "slice");
+  const candidatePaths = [
+    resolve(rootDir, "docs", "workpacks", normalizedSlice, "automation-spec.json"),
+  ];
+
+  if (typeof worktreePath === "string" && worktreePath.trim().length > 0) {
+    candidatePaths.push(
+      resolve(worktreePath.trim(), "docs", "workpacks", normalizedSlice, "automation-spec.json"),
+    );
+  }
+
+  candidatePaths.push(
+    resolve(rootDir, ".worktrees", normalizedSlice, "docs", "workpacks", normalizedSlice, "automation-spec.json"),
   );
+
+  return candidatePaths.find((candidatePath) => existsSync(candidatePath)) ?? candidatePaths[0];
 }
 
 export function normalizeAutomationSpec(rawSpec) {
@@ -191,6 +201,7 @@ export function normalizeAutomationSpec(rawSpec) {
       ...normalizeScope(spec.frontend, "automationSpec.frontend", [
         "required_routes",
         "required_states",
+        "verify_commands",
         "playwright_projects",
         "artifact_assertions",
       ]),
@@ -214,11 +225,13 @@ export function normalizeAutomationSpec(rawSpec) {
 export function readAutomationSpec({
   rootDir = process.cwd(),
   slice,
+  worktreePath = null,
   required = false,
 } = {}) {
   const automationSpecPath = resolveAutomationSpecPath({
     rootDir,
     slice,
+    worktreePath,
   });
 
   if (!existsSync(automationSpecPath)) {

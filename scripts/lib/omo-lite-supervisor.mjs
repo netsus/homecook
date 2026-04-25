@@ -1,6 +1,9 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { readAutomationSpec, resolveStageAutomationConfig } from "./omo-automation-spec.mjs";
+import { readTrackedWorkItemWithRecovery } from "./omo-tracked-work-item.mjs";
+
 const CLAUDE_BUDGET_STATES = new Set(["available", "constrained", "unavailable"]);
 const LIFECYCLE_STATES = new Set([
   "planned",
@@ -478,6 +481,7 @@ function buildGoal(stage, slice, subphase = null) {
  * }} args
  */
 export function buildStageDispatch({
+  rootDir = process.cwd(),
   slice,
   stage,
   subphase = null,
@@ -500,6 +504,15 @@ export function buildStageDispatch({
     "claudeBudgetState",
   );
   const spec = productStageSpec(normalizedStage, normalizedSlice, normalizedSubphase);
+  const { automationSpec } = readAutomationSpec({
+    rootDir,
+    slice: normalizedSlice,
+    required: false,
+  });
+  const stageAutomationConfig = resolveStageAutomationConfig({
+    automationSpec,
+    stage: normalizedStage,
+  });
 
   if (!spec) {
     throw new Error(`Unsupported stage: ${normalizedStage}`);
@@ -620,7 +633,12 @@ export function buildStageDispatch({
     goal: buildGoal(normalizedStage, normalizedSlice, normalizedSubphase),
     requiredReads: [...spec.requiredReads, ...reviewFeedbackRead, ...priorStageResultRead].filter(Boolean),
     deliverables: spec.deliverables.filter(Boolean),
-    verifyCommands: spec.verifyCommands,
+    verifyCommands:
+      [2, 4].includes(normalizedStage) &&
+      Array.isArray(stageAutomationConfig?.verify_commands) &&
+      stageAutomationConfig.verify_commands.length > 0
+        ? ["pnpm install --frozen-lockfile", ...stageAutomationConfig.verify_commands]
+        : spec.verifyCommands,
     statusPatch: {
       branch: spec.branch,
       lifecycle: spec.lifecycle,
@@ -740,13 +758,15 @@ function resolveWorkflowPaths(rootDir, workItemId) {
 }
 
 function readTrackedWorkItem(rootDir, workItemId) {
-  const { workItemPath } = resolveWorkflowPaths(rootDir, workItemId);
-  const workItem = readJson(workItemPath);
+  const trackedWorkItemState = readTrackedWorkItemWithRecovery({
+    rootDir,
+    workItemId,
+  });
+  if (!trackedWorkItemState.tracked) {
+    throw new Error(`Tracked workflow-v2 work item not found: ${trackedWorkItemState.workItemPath}`);
+  }
 
-  return {
-    workItemPath,
-    workItem,
-  };
+  return trackedWorkItemState;
 }
 
 function readStatusBoard(rootDir, workItemId) {
@@ -907,6 +927,19 @@ export function syncWorkflowV2Status({
         : {}),
     },
   };
+
+  const statusItemChanged =
+    JSON.stringify(currentStatusItem) !== JSON.stringify(nextStatusItem);
+  const workItemChanged =
+    JSON.stringify(workItem) !== JSON.stringify(nextWorkItem);
+
+  if (!statusItemChanged && !workItemChanged) {
+    return {
+      workItem,
+      statusBoard,
+      statusItem: currentStatusItem,
+    };
+  }
 
   writeJson(workItemPath, nextWorkItem);
   writeJson(statusPath, nextStatusBoard);

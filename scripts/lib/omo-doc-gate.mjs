@@ -163,7 +163,8 @@ function checkChecklistCoverage(contract, findings) {
       category: "review_scope",
       message: "Stage 5 review scope is empty for frontend-owned checklist items.",
       evidencePaths: [contract.readmePath, contract.acceptancePath],
-      remediationHint: "frontend checklist 중 design review 대상에 review=5를 부여하세요.",
+      remediationHint:
+        "Stage 4-owned scope=frontend checklist 항목 중 design review 대상에만 review=5를 부여하세요. scope=shared/backend 항목에는 review=5를 부여하지 마세요.",
     }));
   }
 

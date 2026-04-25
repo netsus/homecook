@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 
 import { runStageWithArtifacts } from "./omo-lite-runner.mjs";
 import { buildOperatorGuidance, buildRuntimeObservability } from "./omo-status-summary.mjs";
+import { readTrackedWorkItemWithRecovery } from "./omo-tracked-work-item.mjs";
 import {
   listDueRuntimeStates,
   readRuntimeState,
@@ -66,24 +67,23 @@ function buildBootstrapWorkItem(workItemId) {
 }
 
 function readTrackedWorkItem(rootDir, workItemId, { allowBootstrap = false } = {}) {
-  const workItemPath = resolve(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`);
-  if (!existsSync(workItemPath)) {
+  const trackedWorkItemState = readTrackedWorkItemWithRecovery({
+    rootDir,
+    workItemId,
+  });
+  if (!trackedWorkItemState.tracked) {
     if (!allowBootstrap) {
-      throw new Error(`Tracked workflow-v2 work item not found: ${workItemPath}`);
+      throw new Error(`Tracked workflow-v2 work item not found: ${trackedWorkItemState.workItemPath}`);
     }
 
     return {
-      workItemPath,
+      workItemPath: trackedWorkItemState.workItemPath,
       workItem: buildBootstrapWorkItem(workItemId),
       tracked: false,
     };
   }
 
-  return {
-    workItemPath,
-    workItem: readJson(workItemPath),
-    tracked: true,
-  };
+  return trackedWorkItemState;
 }
 
 function readTrackedStatus(rootDir) {
