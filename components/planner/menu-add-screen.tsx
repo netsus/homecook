@@ -3,9 +3,17 @@
 import { useRouter } from "next/navigation";
 import React, { useCallback, useState } from "react";
 
+import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
+import { RecipeBookDetailPicker } from "@/components/planner/recipe-book-detail-picker";
+import { RecipeBookSelector } from "@/components/planner/recipe-book-selector";
 import { RecipeSearchPicker } from "@/components/planner/recipe-search-picker";
 import { createMealSafe } from "@/lib/api/meal";
-import type { RecipeCardItem } from "@/types/recipe";
+import type {
+  PantryMatchRecipeItem,
+  RecipeBookRecipeItem,
+  RecipeBookSummary,
+  RecipeCardItem,
+} from "@/types/recipe";
 
 export interface MenuAddScreenProps {
   planDate: string;
@@ -13,6 +21,8 @@ export interface MenuAddScreenProps {
   slotName: string;
   initialAuthenticated: boolean;
 }
+
+type PickerMode = "none" | "recipebook-selector" | "recipebook-detail" | "pantry";
 
 // ─── AppBar ──────────────────────────────────────────────────────────────────
 
@@ -56,14 +66,22 @@ function AppBar({ onBack }: AppBarProps) {
   );
 }
 
-// ─── Placeholder Actions ─────────────────────────────────────────────────────
+// ─── Action Buttons ──────────────────────────────────────────────────────────
 
-function PlaceholderActions() {
-  const actions = [
-    { id: "youtube", label: "유튜브", disabled: true },
-    { id: "recipebook", label: "레시피북", disabled: true },
-    { id: "leftover", label: "남은요리", disabled: true },
-    { id: "pantry", label: "팬트리", disabled: true },
+interface ActionButtonsProps {
+  onRecipeBookClick: () => void;
+  onPantryClick: () => void;
+}
+
+function ActionButtons({ onRecipeBookClick, onPantryClick }: ActionButtonsProps) {
+  const enabledActions = [
+    { id: "recipebook", label: "레시피북", onClick: onRecipeBookClick },
+    { id: "pantry", label: "팬트리", onClick: onPantryClick },
+  ];
+
+  const disabledActions = [
+    { id: "youtube", label: "유튜브" },
+    { id: "leftover", label: "남은요리" },
   ];
 
   return (
@@ -72,11 +90,21 @@ function PlaceholderActions() {
         다른 방법으로 추가
       </h2>
       <div className="grid grid-cols-2 gap-3">
-        {actions.map((action) => (
+        {enabledActions.map((action) => (
+          <button
+            key={action.id}
+            className="flex h-16 items-center justify-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--foreground)] hover:bg-[var(--line)]"
+            onClick={action.onClick}
+            type="button"
+          >
+            {action.label}
+          </button>
+        ))}
+        {disabledActions.map((action) => (
           <button
             key={action.id}
             className="flex h-16 items-center justify-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--muted)] opacity-50"
-            disabled={action.disabled}
+            disabled
             type="button"
           >
             {action.label}
@@ -102,6 +130,16 @@ export function MenuAddScreen({
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeCardItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [creationError, setCreationError] = useState<string | null>(null);
+
+  // Recipe book state
+  const [pickerMode, setPickerMode] = useState<PickerMode>("none");
+  const [selectedBook, setSelectedBook] = useState<RecipeBookSummary | null>(null);
+  const [selectedBookRecipe, setSelectedBookRecipe] = useState<RecipeBookRecipeItem | null>(null);
+
+  // Pantry match state
+  const [selectedPantryRecipe, setSelectedPantryRecipe] = useState<PantryMatchRecipeItem | null>(
+    null,
+  );
 
   const handleBack = useCallback(() => {
     if (!planDate || !columnId) {
@@ -148,6 +186,112 @@ export function MenuAddScreen({
     setCreationError(null);
   }, []);
 
+  // Recipe book handlers
+  const handleRecipeBookClick = useCallback(() => {
+    setPickerMode("recipebook-selector");
+  }, []);
+
+  const handleBookSelect = useCallback((book: RecipeBookSummary) => {
+    setSelectedBook(book);
+    setPickerMode("recipebook-detail");
+  }, []);
+
+  const handleBookRecipeSelect = useCallback((recipe: RecipeBookRecipeItem) => {
+    setSelectedBookRecipe(recipe);
+  }, []);
+
+  const handleBookServingsConfirm = useCallback(
+    async (servings: number) => {
+      if (!selectedBookRecipe) return;
+
+      setIsCreating(true);
+      setCreationError(null);
+
+      const response = await createMealSafe({
+        recipe_id: selectedBookRecipe.recipe_id,
+        plan_date: planDate,
+        column_id: columnId,
+        planned_servings: servings,
+      });
+
+      if (!response.success) {
+        setCreationError(response.error?.message ?? "식사를 추가하지 못했어요.");
+        setIsCreating(false);
+        return;
+      }
+
+      // Success: navigate back to MEAL_SCREEN
+      handleBack();
+    },
+    [selectedBookRecipe, planDate, columnId, handleBack],
+  );
+
+  const handleBookServingsCancel = useCallback(() => {
+    setSelectedBookRecipe(null);
+    setCreationError(null);
+  }, []);
+
+  const handleRecipeBookBack = useCallback(() => {
+    if (pickerMode === "recipebook-detail") {
+      setPickerMode("recipebook-selector");
+      setSelectedBook(null);
+      setSelectedBookRecipe(null);
+    } else {
+      setPickerMode("none");
+    }
+  }, [pickerMode]);
+
+  const handleRecipeBookClose = useCallback(() => {
+    setPickerMode("none");
+    setSelectedBook(null);
+    setSelectedBookRecipe(null);
+  }, []);
+
+  // Pantry match handlers
+  const handlePantryClick = useCallback(() => {
+    setPickerMode("pantry");
+  }, []);
+
+  const handlePantryRecipeSelect = useCallback((recipe: PantryMatchRecipeItem) => {
+    setSelectedPantryRecipe(recipe);
+  }, []);
+
+  const handlePantryServingsConfirm = useCallback(
+    async (servings: number) => {
+      if (!selectedPantryRecipe) return;
+
+      setIsCreating(true);
+      setCreationError(null);
+
+      const response = await createMealSafe({
+        recipe_id: selectedPantryRecipe.id,
+        plan_date: planDate,
+        column_id: columnId,
+        planned_servings: servings,
+      });
+
+      if (!response.success) {
+        setCreationError(response.error?.message ?? "식사를 추가하지 못했어요.");
+        setIsCreating(false);
+        return;
+      }
+
+      // Success: navigate back to MEAL_SCREEN
+      handleBack();
+    },
+    [selectedPantryRecipe, planDate, columnId, handleBack],
+  );
+
+  const handlePantryServingsCancel = useCallback(() => {
+    setSelectedPantryRecipe(null);
+    setCreationError(null);
+  }, []);
+
+  const handlePantryClose = useCallback(() => {
+    setPickerMode("none");
+    setSelectedPantryRecipe(null);
+  }, []);
+
   return (
     <div className="flex h-screen flex-col bg-[var(--background)]">
       <AppBar onBack={handleBack} />
@@ -173,9 +317,42 @@ export function MenuAddScreen({
               {creationError}
             </div>
           )}
-          <PlaceholderActions />
+          <ActionButtons
+            onPantryClick={handlePantryClick}
+            onRecipeBookClick={handleRecipeBookClick}
+          />
         </div>
       </div>
+
+      {/* Recipe Book Selector */}
+      {pickerMode === "recipebook-selector" && (
+        <RecipeBookSelector onBookSelect={handleBookSelect} onClose={handleRecipeBookClose} />
+      )}
+
+      {/* Recipe Book Detail Picker */}
+      {pickerMode === "recipebook-detail" && selectedBook && (
+        <RecipeBookDetailPicker
+          book={selectedBook}
+          isCreating={isCreating}
+          onBack={handleRecipeBookBack}
+          onRecipeSelect={handleBookRecipeSelect}
+          onServingsCancel={handleBookServingsCancel}
+          onServingsConfirm={handleBookServingsConfirm}
+          selectedRecipe={selectedBookRecipe}
+        />
+      )}
+
+      {/* Pantry Match Picker */}
+      {pickerMode === "pantry" && (
+        <PantryMatchPicker
+          isCreating={isCreating}
+          onClose={handlePantryClose}
+          onRecipeSelect={handlePantryRecipeSelect}
+          onServingsCancel={handlePantryServingsCancel}
+          onServingsConfirm={handlePantryServingsConfirm}
+          selectedRecipe={selectedPantryRecipe}
+        />
+      )}
     </div>
   );
 }

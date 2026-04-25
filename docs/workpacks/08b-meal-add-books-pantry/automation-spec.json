@@ -32,6 +32,12 @@
       "error",
       "unauthorized"
     ],
+    "verify_commands": [
+      "pnpm lint",
+      "pnpm typecheck",
+      "pnpm exec vitest run tests/recipe-add-to-planner.test.tsx",
+      "pnpm exec playwright test tests/e2e/slice-08b-meal-add-books-pantry.spec.ts"
+    ],
     "playwright_projects": [
       "desktop-chrome",
       "mobile-chrome",
