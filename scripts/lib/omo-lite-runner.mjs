@@ -690,6 +690,86 @@ function resolveStageResultTemplate(stage, subphase = null) {
   return buildCodeStageResultTemplate(normalizedStage, subphase);
 }
 
+function defaultReviewRouteBackStage(stage) {
+  return Number(stage);
+}
+
+function buildMissingReviewStageResultSeed({
+  stage,
+  subphase = null,
+  checklistContract = null,
+  reviewedHeadSha = null,
+  stageResultPath,
+}) {
+  const normalizedStage = Number(stage);
+  const stageResultFile = typeof stageResultPath === "string" && stageResultPath.trim().length > 0
+    ? stageResultPath.trim()
+    : "stage-result.json";
+
+  if (normalizedStage === 2 && subphase === "doc_gate_review") {
+    return {
+      decision: "request_changes",
+      body_markdown:
+        "## Review\n- 리뷰 stage-result가 작성되지 않아 자동 복구용 결과를 생성했습니다. doc gate review를 다시 실행해 실제 결론으로 교체하세요.",
+      route_back_stage: 2,
+      approved_head_sha: reviewedHeadSha,
+      review_scope: {
+        scope: "doc_gate",
+        checklist_ids: [],
+      },
+      reviewed_doc_finding_ids: [],
+      required_doc_fix_ids: ["auto-stage-result-recovery"],
+      waived_doc_fix_ids: [],
+      findings: [
+        {
+          file: stageResultFile,
+          line_hint: null,
+          severity: "major",
+          category: "contract",
+          issue: "리뷰 stage-result.json이 작성되지 않았습니다.",
+          suggestion: "doc gate review를 다시 실행해 실제 review JSON으로 교체하세요.",
+        },
+      ],
+    };
+  }
+
+  const expectedChecklistIds = isChecklistContractActive(checklistContract)
+    ? resolveChecklistIds(resolveReviewChecklistItems(checklistContract, normalizedStage))
+    : [];
+  const fallbackRequiredFixIds = expectedChecklistIds.length > 0 ? [expectedChecklistIds[0]] : [];
+
+  return {
+    decision: "request_changes",
+    body_markdown:
+      "## Review\n- 리뷰 stage-result가 작성되지 않아 자동 복구용 결과를 생성했습니다. 같은 stage를 다시 실행해 실제 리뷰 결론으로 교체하세요.",
+    route_back_stage: defaultReviewRouteBackStage(normalizedStage),
+    approved_head_sha: reviewedHeadSha,
+    review_scope: {
+      scope: resolveExpectedReviewScope(normalizedStage),
+      checklist_ids: expectedChecklistIds,
+    },
+    reviewed_checklist_ids: expectedChecklistIds,
+    required_fix_ids: fallbackRequiredFixIds,
+    waived_fix_ids: [],
+    authority_verdict: normalizedStage === 5 ? "conditional-pass" : null,
+    reviewed_screen_ids: [],
+    authority_report_paths: [],
+    blocker_count: 0,
+    major_count: 1,
+    minor_count: 0,
+    findings: [
+      {
+        file: stageResultFile,
+        line_hint: null,
+        severity: "major",
+        category: "contract",
+        issue: "리뷰 stage-result.json이 작성되지 않았습니다.",
+        suggestion: "같은 review stage를 다시 실행해 실제 review JSON으로 교체하세요.",
+      },
+    ],
+  };
+}
+
 function buildPrompt({
   slice,
   stage,
@@ -1574,7 +1654,15 @@ function assertCodeStageChecklistCoverage({
   stageResult,
   reviewContext = null,
 }) {
-  if (![2, 4].includes(Number(stage))) {
+  const normalizedStage = Number(stage);
+  if (![2, 4].includes(normalizedStage)) {
+    return;
+  }
+
+  if (
+    normalizedStage === 2 &&
+    ["doc_gate_review", "doc_gate_repair"].includes(subphase ?? "")
+  ) {
     return;
   }
 
@@ -3284,12 +3372,22 @@ export function runStageWithArtifacts({
       schemaRepairAttempted = true;
       schemaRepairArtifactDir = resolve(targetArtifactDir, "schema-repair-pass-1");
       mkdirSync(schemaRepairArtifactDir, { recursive: true });
+      if (isReviewStage(normalizedStage, normalizedSubphase)) {
+        stageResult = buildMissingReviewStageResultSeed({
+          stage: normalizedStage,
+          subphase: normalizedSubphase,
+          checklistContract,
+          reviewedHeadSha: null,
+          stageResultPath,
+        });
+        writeFileSync(stageResultPath, `${JSON.stringify(stageResult, null, 2)}\n`);
+      }
       const repairPrompt = buildStageResultRepairPrompt({
         stage: normalizedStage,
         subphase: normalizedSubphase,
         stageResultPath,
         validationMessage: missingStageResultReason,
-        currentStageResult: {},
+        currentStageResult: stageResult ?? {},
       });
       writeFileSync(resolve(schemaRepairArtifactDir, "prompt.md"), `${repairPrompt}\n`);
 

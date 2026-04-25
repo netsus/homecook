@@ -109,7 +109,24 @@ function buildDefaultPrSectionContent(section, { body, workItemId, rootDir = pro
         rootDir,
         slice: workItemId,
       });
+      const { automationSpec } =
+        typeof workItemId === "string" && workItemId.trim().length > 0
+          ? readAutomationSpec({
+              rootDir,
+              slice: workItemId,
+              required: false,
+            })
+          : { automationSpec: null };
+      const uiRisk = automationSpec?.frontend?.design_authority?.ui_risk ?? "not-required";
       if (!qaEvidence) {
+        if (uiRisk === "low-risk") {
+          return [
+            "- exploratory QA: `N/A (low-risk UI change; targeted Playwright verification recorded in slice E2E evidence)`",
+            "- qa eval: `N/A (exploratory QA skipped with same rationale)`",
+            "- 아티팩트 / 보고서 경로: `N/A (low-risk UI change; no exploratory QA bundle was required for this pass)`",
+          ].join("\n");
+        }
+
         return "- 해당 없음";
       }
 
