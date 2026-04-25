@@ -8,14 +8,14 @@
 > Claude가 rebuttal을 수용해 닫은 항목은 checkbox를 유지한 채 `waived=true;waived_by=claude;waived_stage=<3|5|6>;waived_reason=<slug>` metadata를 추가한다.
 
 ## Happy Path
-- [ ] 플래너 상단 "장보기" 버튼 클릭 → SHOPPING_FLOW 진입 <!-- omo:id=accept-happy-planner-to-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 플래너 상단 "장보기" 버튼 클릭 → SHOPPING_FLOW 진입 <!-- omo:id=accept-happy-planner-to-flow;stage=4;scope=frontend;review=5,6 -->
 - [x] GET /shopping/preview 호출 → eligible_meals 목록 표시 <!-- omo:id=accept-happy-preview;stage=2;scope=backend;review=3,6 -->
-- [ ] eligible_meals가 자동 선택되어 화면에 노출됨 <!-- omo:id=accept-happy-auto-select;stage=4;scope=frontend;review=5,6 -->
-- [ ] 레시피별 장보기 기준 인분 조정 (+, - 버튼) <!-- omo:id=accept-happy-servings-adjust;stage=4;scope=frontend;review=5,6 -->
+- [x] eligible_meals가 자동 선택되어 화면에 노출됨 <!-- omo:id=accept-happy-auto-select;stage=4;scope=frontend;review=5,6 -->
+- [x] 레시피별 장보기 기준 인분 조정 (+, - 버튼) <!-- omo:id=accept-happy-servings-adjust;stage=4;scope=frontend;review=5,6 -->
 - [x] [장보기 목록 만들기] 클릭 → POST /shopping/lists 호출 <!-- omo:id=accept-happy-create;stage=2;scope=backend;review=3,6 -->
-- [ ] 생성 성공 후 SHOPPING_DETAIL로 자동 이동 (응답 id 사용) <!-- omo:id=accept-happy-navigate;stage=4;scope=frontend;review=5,6 -->
+- [x] 생성 성공 후 SHOPPING_DETAIL로 자동 이동 (응답 id 사용) <!-- omo:id=accept-happy-navigate;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 - [x] eligible_meals는 status='registered' AND shopping_list_id IS NULL만 포함 <!-- omo:id=accept-state-eligible-filter;stage=2;scope=backend;review=3,6 -->
@@ -25,14 +25,14 @@
 - [x] 재료 합산 시 변환 가능 단위는 변환 후 합산 <!-- omo:id=accept-policy-unit-conversion;stage=2;scope=backend;review=3,6 -->
 - [x] 재료 합산 시 변환 불가 단위는 복합 표기 (예: "양파 2개 + 200g") <!-- omo:id=accept-policy-unit-mixed;stage=2;scope=backend;review=3,6 -->
 - [x] shopping_list_items INSERT 시 pantry_items와 매칭되는 재료는 is_pantry_excluded=true 초기값 <!-- omo:id=accept-policy-pantry-exclude;stage=2;scope=backend;review=3,6 -->
-- [ ] 생성 버튼 중복 클릭 방지 (loading 상태 또는 disabled 처리) <!-- omo:id=accept-policy-duplicate-click;stage=4;scope=frontend;review=5,6 -->
+- [x] 생성 버튼 중복 클릭 방지 (loading 상태 또는 disabled 처리) <!-- omo:id=accept-policy-duplicate-click;stage=4;scope=frontend;review=5,6 -->
 
 ## Error / Permission
-- [ ] loading 상태: preview 로딩 중, 리스트 생성 중 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태: eligible_meals 빈 배열 → "장보기 대상이 없어요" + [플래너로 돌아가기] <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태: API 호출 실패 → "장보기 목록을 불러오지 못했어요" + [다시 시도] <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리: 401 응답 시 로그인 안내 (플래너 진입 시점에서 이미 게이트 통과했으므로 드물지만 포함) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] conflict 처리: 409 응답 시 "이미 다른 장보기 리스트에 포함된 식사가 있어요" 안내 <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
+- [x] loading 상태: preview 로딩 중, 리스트 생성 중 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태: eligible_meals 빈 배열 → "장보기 대상이 없어요" + [플래너로 돌아가기] <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태: API 호출 실패 → "장보기 목록을 불러오지 못했어요" + [다시 시도] <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리: 401 응답 시 로그인 안내 (플래너 진입 시점에서 이미 게이트 통과했으므로 드물지만 포함) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] conflict 처리: 409 응답 시 "이미 다른 장보기 리스트에 포함된 식사가 있어요" 안내 <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
 - [x] validation error: meal_configs 빈 배열 시 422 → "선택된 식사가 없어요" <!-- omo:id=accept-validation-empty;stage=2;scope=backend;review=3,6 -->
 - [x] validation error: shopping_servings < 1 시 422 → "인분은 1 이상이어야 합니다" <!-- omo:id=accept-validation-servings;stage=2;scope=backend;review=3,6 -->
 
@@ -68,13 +68,13 @@
 - [x] eligible_meals 필터링 로직 테스트 (status, shopping_list_id 조건) <!-- omo:id=accept-vitest-filter;stage=2;scope=backend;review=3,6 -->
 - [x] 재료 합산 로직 단위 테스트 (변환 가능/불가 단위) <!-- omo:id=accept-vitest-merge;stage=2;scope=backend;review=3,6 -->
 - [x] pantry 자동 제외 로직 테스트 <!-- omo:id=accept-vitest-pantry-exclude;stage=2;scope=backend;review=3,6 -->
-- [ ] shopping_servings 조정 로직 테스트 <!-- omo:id=accept-vitest-servings;stage=4;scope=frontend;review=5,6 -->
+- [x] shopping_servings 조정 로직 테스트 <!-- omo:id=accept-vitest-servings;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright
-- [ ] 플래너 → 장보기 preview → 인분 조정 → 생성 → 상세 이동 E2E <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태 시나리오 (eligible_meals 빈 배열) <!-- omo:id=accept-playwright-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태 시나리오 (API 호출 실패 mock) <!-- omo:id=accept-playwright-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] 생성 버튼 중복 클릭 방지 확인 <!-- omo:id=accept-playwright-duplicate-click;stage=4;scope=frontend;review=5,6 -->
+- [x] 플래너 → 장보기 preview → 인분 조정 → 생성 → 상세 이동 E2E <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태 시나리오 (eligible_meals 빈 배열) <!-- omo:id=accept-playwright-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태 시나리오 (API 호출 실패 mock) <!-- omo:id=accept-playwright-error;stage=4;scope=frontend;review=5,6 -->
+- [x] 생성 버튼 중복 클릭 방지 확인 <!-- omo:id=accept-playwright-duplicate-click;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 - [ ] 실제 Supabase DB에서 seed → 플래너 → 장보기 생성 전체 흐름 수동 확인 (bootstrap, referenced table 검증)
