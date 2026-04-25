@@ -12,6 +12,7 @@ import {
 } from "./omo-checklist-contract.mjs";
 import { readRuntimeState } from "./omo-session-runtime.mjs";
 import { readStageResult, resolveStageResultPath, validateStageResult } from "./omo-stage-result.mjs";
+import { readTrackedWorkItemWithRecovery } from "./omo-tracked-work-item.mjs";
 
 const EVALUATOR_OUTCOMES = new Set(["pass", "fixable", "blocked"]);
 const DEFERRED_EXTERNAL_SMOKE_COMMANDS = [
@@ -43,10 +44,6 @@ function ensureStageLabel(stage) {
   }
 
   throw new Error("stage must be backend|frontend or 2|4.");
-}
-
-function readJson(filePath) {
-  return JSON.parse(readFileSync(filePath, "utf8"));
 }
 
 function createTimestampSlug(value = new Date().toISOString()) {
@@ -91,15 +88,15 @@ function resultArtifactDir({ rootDir, workItemId, stage, now }) {
 }
 
 function resolveWorkItem(rootDir, workItemId) {
-  const workItemPath = resolve(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`);
-  if (!existsSync(workItemPath)) {
-    throw new Error(`Tracked workflow-v2 work item not found: ${workItemPath}`);
+  const trackedWorkItemState = readTrackedWorkItemWithRecovery({
+    rootDir,
+    workItemId,
+  });
+  if (!trackedWorkItemState.tracked) {
+    throw new Error(`Tracked workflow-v2 work item not found: ${trackedWorkItemState.workItemPath}`);
   }
 
-  return {
-    workItemPath,
-    workItem: readJson(workItemPath),
-  };
+  return trackedWorkItemState;
 }
 
 function resolveSlice({ workItemId, slice }) {

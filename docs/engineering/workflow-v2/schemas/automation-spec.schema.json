@@ -66,6 +66,7 @@
       "required": [
         "required_routes",
         "required_states",
+        "verify_commands",
         "playwright_projects",
         "artifact_assertions"
       ],
@@ -75,6 +76,10 @@
           "items": { "type": "string" }
         },
         "required_states": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "verify_commands": {
           "type": "array",
           "items": { "type": "string" }
         },

@@ -2058,6 +2058,150 @@ describe("OMO-lite stage runner", () => {
     expect(args).toContain("ses_codex_doc_gate");
   });
 
+  it("does not require code-stage checklist updates for Stage 2 doc_gate_review results", () => {
+    const rootDir = createRunnerFixture();
+    seedStrictSlice(rootDir, "03-recipe-like");
+
+    const docGateReview = createFakeOpencodeBin(rootDir, {
+      sessionId: "ses_codex_doc_gate_review_only",
+      stageResult: {
+        decision: "request_changes",
+        body_markdown: "## Review\n- frontend-owned checklist metadata에 review=5가 필요합니다.",
+        route_back_stage: 2,
+        approved_head_sha: null,
+        review_scope: {
+          scope: "doc_gate",
+          checklist_ids: [],
+        },
+        reviewed_doc_finding_ids: ["doc-gate-missing-review5-scope"],
+        required_doc_fix_ids: ["doc-gate-missing-review5-scope"],
+        waived_doc_fix_ids: [],
+        findings: [
+          {
+            file: "docs/workpacks/03-recipe-like/README.md",
+            line_hint: 1,
+            severity: "major",
+            category: "scope",
+            issue: "Stage 5 review scope is empty for frontend-owned checklist items.",
+            suggestion: "frontend checklist metadata에 review=5를 추가하세요.",
+          },
+        ],
+      },
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "03-recipe-like",
+      stage: 2,
+      subphase: "doc_gate_review",
+      workItemId: "03-recipe-like",
+      mode: "execute",
+      opencodeBin: docGateReview.binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: docGateReview.argsPath,
+      },
+      now: "2026-04-24T15:00:00+09:00",
+    });
+
+    expect(result.execution.mode).toBe("execute");
+    expect(result.stageResult).toMatchObject({
+      decision: "request_changes",
+      reviewed_doc_finding_ids: ["doc-gate-missing-review5-scope"],
+      required_doc_fix_ids: ["doc-gate-missing-review5-scope"],
+    });
+  });
+
+  it("does not require code-stage checklist updates for Stage 2 doc_gate_repair results", () => {
+    const rootDir = createRunnerFixture();
+    const homeDir = createClaudeHomeDir();
+    seedStrictSlice(rootDir, "03-recipe-like");
+
+    const stage1 = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: "ses_claude_stage1",
+      stageResult: {
+        result: "done",
+        summary_markdown: "Stage 1 complete",
+        commit: {
+          subject: "docs: stage1",
+        },
+        pr: {
+          title: "docs: stage1",
+          body_markdown: "## Summary\n- docs",
+        },
+        checks_run: [],
+        next_route: "open_pr",
+      },
+    });
+    const docGateRepair = createFakeClaudeBin(rootDir, homeDir, {
+      sessionId: "ses_claude_stage1",
+      stageResult: {
+        result: "done",
+        summary_markdown: "doc gate repaired",
+        commit: {
+          subject: "docs: repair",
+        },
+        pr: {
+          title: "docs: repair",
+          body_markdown: "## Summary\n- repair",
+        },
+        checks_run: [],
+        next_route: "open_pr",
+        claimed_scope: {
+          files: ["docs/workpacks/03-recipe-like/README.md"],
+          endpoints: [],
+          routes: [],
+          states: [],
+          invariants: [],
+        },
+        changed_files: ["docs/workpacks/03-recipe-like/README.md"],
+        tests_touched: [],
+        artifacts_written: [".artifacts/doc-gate.log"],
+        resolved_doc_finding_ids: ["doc-gate-missing-review5-scope"],
+        contested_doc_fix_ids: [],
+        rebuttals: [],
+      },
+    });
+
+    runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "03-recipe-like",
+      stage: 1,
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: stage1.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: stage1.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stage1.stdinPath,
+      },
+      now: "2026-04-24T15:05:00+09:00",
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "03-recipe-like",
+      stage: 2,
+      subphase: "doc_gate_repair",
+      workItemId: "03-recipe-like",
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: docGateRepair.binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: docGateRepair.argsPath,
+        FAKE_CLAUDE_STDIN_PATH: docGateRepair.stdinPath,
+      },
+      now: "2026-04-24T15:10:00+09:00",
+    });
+
+    expect(result.execution.mode).toBe("execute");
+    expect(result.stageResult).toMatchObject({
+      result: "done",
+      resolved_doc_finding_ids: ["doc-gate-missing-review5-scope"],
+    });
+  });
+
   it("fails closed when Claude returns success but does not write stage-result.json", () => {
     const rootDir = createRunnerFixture();
     const homeDir = createClaudeHomeDir();
@@ -2213,6 +2357,248 @@ describe("OMO-lite stage runner", () => {
         },
       },
     });
+  });
+
+  it("seeds a recoverable fallback review result when Stage 5 writes no stage-result", () => {
+    const rootDir = createRunnerFixture();
+    seedStrictSlice(rootDir, "08b-meal-add-books-pantry");
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "08b-meal-add-books-pantry", "automation-spec.json"),
+      JSON.stringify(
+        {
+          slice_id: "08b-meal-add-books-pantry",
+          execution_mode: "autonomous",
+          risk_class: "low",
+          merge_policy: "conditional-auto",
+          backend: {
+            required_endpoints: ["POST /api/v1/meals"],
+            invariants: ["owner-authorization"],
+            verify_commands: ["pnpm verify:backend"],
+            required_test_targets: ["tests/08b.backend.test.ts"],
+          },
+          frontend: {
+            required_routes: ["/planner"],
+            required_states: ["loading", "empty", "error", "unauthorized"],
+            verify_commands: ["pnpm lint"],
+            playwright_projects: ["mobile-chrome"],
+            artifact_assertions: ["playwright-report"],
+          },
+          external_smokes: ["pnpm dev:local-supabase"],
+          blocked_conditions: [],
+          max_fix_rounds: {
+            backend: 2,
+            frontend: 2,
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    mkdirSync(join(rootDir, ".opencode", "omo-runtime"), { recursive: true });
+    writeFileSync(
+      join(rootDir, ".opencode", "omo-runtime", "08b-meal-add-books-pantry.json"),
+      JSON.stringify(
+        {
+          slice: "08b-meal-add-books-pantry",
+          current_stage: 5,
+          last_completed_stage: 4,
+          blocked_stage: null,
+          retry: null,
+          wait: null,
+          sessions: {
+            claude_primary: {
+              session_id: "ses_claude_frontend",
+              provider: "claude-cli",
+              agent: "athena",
+              updated_at: "2026-04-25T00:00:00.000Z",
+            },
+            codex_primary: {
+              session_id: "ses_codex_stage5",
+              provider: "opencode",
+              agent: "hephaestus",
+              updated_at: "2026-04-25T00:00:00.000Z",
+            },
+          },
+          prs: {
+            docs: null,
+            backend: {
+              number: 206,
+              url: "https://github.com/netsus/homecook/pull/206",
+              draft: false,
+              branch: "feature/be-08b-meal-add-books-pantry",
+              head_sha: "be123",
+              updated_at: "2026-04-25T00:00:00.000Z",
+            },
+            frontend: {
+              number: 207,
+              url: "https://github.com/netsus/homecook/pull/207",
+              draft: false,
+              branch: "feature/fe-08b-meal-add-books-pantry",
+              head_sha: "fe123",
+              updated_at: "2026-04-25T00:00:00.000Z",
+            },
+          },
+          last_review: {
+            backend: null,
+            frontend: null,
+          },
+          last_rebuttal: {
+            backend: null,
+            frontend: null,
+          },
+          workspace: {
+            path: rootDir,
+            branch_role: "frontend",
+            updated_at: "2026-04-25T00:00:00.000Z",
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const priorStageResultPath = join(rootDir, ".artifacts", "prior-stage4", "stage-result.json");
+    mkdirSync(join(rootDir, ".artifacts", "prior-stage4"), { recursive: true });
+    writeFileSync(
+      priorStageResultPath,
+      `${JSON.stringify(
+        {
+          result: "done",
+          summary_markdown: "prior stage 4",
+          commit: {
+            subject: "feat: prior frontend",
+            body_markdown: "prior",
+          },
+          pr: {
+            title: "feat: prior frontend",
+            body_markdown: "## Summary\n- prior",
+          },
+          checks_run: ["pnpm lint"],
+          next_route: "open_pr",
+          claimed_scope: {
+            files: ["components/planner/menu-add-screen.tsx"],
+            endpoints: [],
+            routes: ["/menu-add"],
+            states: ["loading", "empty", "error", "unauthorized"],
+            invariants: [],
+          },
+          changed_files: ["components/planner/menu-add-screen.tsx"],
+          tests_touched: ["tests/e2e/slice-08b-meal-add-books-pantry.spec.ts"],
+          artifacts_written: [".artifacts/example.log"],
+          checklist_updates: [
+            {
+              id: "delivery-ui-connection",
+              status: "checked",
+              evidence_refs: ["components/planner/menu-add-screen.tsx"],
+            },
+            {
+              id: "delivery-test-split",
+              status: "checked",
+              evidence_refs: ["tests/e2e/slice-08b-meal-add-books-pantry.spec.ts"],
+            },
+            {
+              id: "delivery-state-ui",
+              status: "checked",
+              evidence_refs: ["components/planner/recipe-book-selector.tsx"],
+            },
+            {
+              id: "delivery-manual-qa-handoff",
+              status: "checked",
+              evidence_refs: ["docs/workpacks/08b-meal-add-books-pantry/README.md"],
+            },
+            {
+              id: "accept-recipebook-to-meal",
+              status: "checked",
+              evidence_refs: ["tests/e2e/slice-08b-meal-add-books-pantry.spec.ts"],
+            },
+            {
+              id: "accept-pantry-to-meal",
+              status: "checked",
+              evidence_refs: ["tests/e2e/slice-08b-meal-add-books-pantry.spec.ts"],
+            },
+            {
+              id: "accept-loading",
+              status: "checked",
+              evidence_refs: ["components/planner/recipe-book-selector.tsx"],
+            },
+            {
+              id: "accept-empty",
+              status: "checked",
+              evidence_refs: ["components/planner/pantry-match-picker.tsx"],
+            },
+            {
+              id: "accept-error",
+              status: "checked",
+              evidence_refs: ["components/planner/pantry-match-picker.tsx"],
+            },
+            {
+              id: "accept-unauthorized",
+              status: "checked",
+              evidence_refs: ["app/menu-add/page.tsx"],
+            },
+            {
+              id: "accept-return-to-action",
+              status: "checked",
+              evidence_refs: ["app/menu-add/page.tsx"],
+            },
+            {
+              id: "accept-playwright-recipebook-flow",
+              status: "checked",
+              evidence_refs: ["tests/e2e/slice-08b-meal-add-books-pantry.spec.ts"],
+            },
+            {
+              id: "accept-playwright-pantry-flow",
+              status: "checked",
+              evidence_refs: ["tests/e2e/slice-08b-meal-add-books-pantry.spec.ts"],
+            },
+            {
+              id: "accept-playwright-login-gate",
+              status: "checked",
+              evidence_refs: ["tests/e2e/slice-08b-meal-add-books-pantry.spec.ts"],
+            },
+            {
+              id: "accept-playwright-empty",
+              status: "checked",
+              evidence_refs: ["tests/e2e/slice-08b-meal-add-books-pantry.spec.ts"],
+            },
+          ],
+          contested_fix_ids: [],
+          rebuttals: [],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const { binPath, argsPath } = createFakeOpencodeBin(rootDir, {
+      sessionId: "ses_codex_stage5",
+      stageResult: null,
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "08b-meal-add-books-pantry",
+      stage: 5,
+      workItemId: "08b-meal-add-books-pantry",
+      mode: "execute",
+      opencodeBin: binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: argsPath,
+      },
+      priorStageResultPath,
+      now: "2026-04-25T09:10:00+09:00",
+    });
+
+    expect(result.execution.mode).toBe("execute");
+    expect(result.stageResult).toMatchObject({
+      decision: "request_changes",
+      route_back_stage: 5,
+      required_fix_ids: ["delivery-ui-connection"],
+      authority_verdict: "conditional-pass",
+      major_count: 1,
+    });
+    expect(existsSync(join(result.artifactDir, "schema-repair-pass-1", "prompt.md"))).toBe(true);
   });
 
   it("fails closed when Claude writes an invalid stage-result shape", () => {

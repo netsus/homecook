@@ -2584,6 +2584,193 @@ describe("OMO autonomous supervisor", () => {
     expect(result.wait?.reason ?? "").toContain("Merged Stage 1 docs failed doc gate recheck");
   });
 
+  it("rechecks pending_recheck against the docs repair branch before evaluating the doc gate", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    let observedSubphase: string | null = null;
+    const checkoutCalls: string[] = [];
+
+    createGitWorkspace(workspacePath, "docs/03-recipe-like");
+    seedPassingDocGateFixture(workspacePath, workItemId);
+
+    const acceptancePath = join(workspacePath, "docs", "workpacks", workItemId, "acceptance.md");
+    writeFileSync(
+      acceptancePath,
+      readFileSync(acceptancePath, "utf8").replace("scope=frontend;review=5,6", "scope=shared;review=5,6"),
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        last_completed_stage: 1,
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        phase: "wait",
+        next_action: "run_stage",
+        wait: {
+          kind: "human_escalation",
+          pr_role: "docs",
+          stage: 2,
+          head_sha: "docs123",
+          reason: "Merged Stage 1 docs failed doc gate recheck: Review stage 5 can only be assigned to Stage 4-owned frontend checklist items.",
+        },
+        execution: null,
+        recovery: {
+          kind: "partial_stage_failure",
+          stage: 2,
+          reason: "Merged Stage 1 docs failed doc gate recheck: Review stage 5 can only be assigned to Stage 4-owned frontend checklist items.",
+          existing_pr: {
+            role: "docs",
+            url: "https://github.com/netsus/homecook/pull/89",
+            branch: "docs/03-recipe-like",
+            head_sha: "docs123",
+          },
+        },
+        prs: {
+          docs: {
+            number: 89,
+            url: "https://github.com/netsus/homecook/pull/89",
+            draft: false,
+            branch: "docs/03-recipe-like",
+            head_sha: "docs123",
+          },
+          backend: null,
+          frontend: null,
+          closeout: null,
+        },
+        doc_gate: {
+          status: "pending_recheck",
+          round: 1,
+          repair_branch: "docs/03-recipe-like",
+          last_review: {
+            decision: "approve",
+            reviewed_doc_finding_ids: ["doc-gate-contract-1"],
+            required_doc_fix_ids: [],
+            waived_doc_fix_ids: [],
+            source_review_stage: 1,
+          },
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T14:00:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) {
+            checkoutCalls.push(branch);
+            writeFileSync(
+              acceptancePath,
+              readFileSync(acceptancePath, "utf8").replace("scope=shared;review=5,6", "scope=frontend;review=5,6"),
+            );
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "docs-fixed-head";
+          },
+          getCurrentBranch() {
+            return "docs/03-recipe-like";
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner({ subphase }: { subphase?: string }) {
+          observedSubphase = subphase ?? null;
+          return {
+            artifactDir: join(rootDir, ".artifacts", "pending-recheck-repaired"),
+            execution: {
+              provider: "opencode",
+              sessionId: "ses_backend",
+            },
+            dispatch: {
+              subphase,
+            },
+            stageResult: {
+              summary_markdown: "backend implementation complete",
+              commit: {
+                subject: "feat: backend implementation",
+              },
+              pr: {
+                title: "feat: backend implementation",
+                body_markdown: "## Summary\n- backend implementation",
+              },
+              checks_run: [],
+              next_route: "open_pr",
+              checklist_updates: [
+                {
+                  id: CHECKLIST_IDS.backendDelivery,
+                  checked: true,
+                  note: "done",
+                },
+                {
+                  id: CHECKLIST_IDS.backendAcceptance,
+                  checked: true,
+                  note: "done",
+                },
+              ],
+            },
+          };
+        },
+        github: {
+          createPullRequest({ head, draft }: { head: string; draft: boolean }) {
+            return {
+              number: 90,
+              url: "https://github.com/netsus/homecook/pull/90",
+              draft,
+              branch: head,
+            };
+          },
+          editPullRequest() {},
+          getRequiredChecks() {
+            return { bucket: "pending", checks: [] };
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(checkoutCalls).toContain("docs/03-recipe-like");
+    expect(observedSubphase).toBe("implementation");
+    expect(result.wait?.reason ?? "").not.toContain("failed doc gate recheck");
+  });
+
   it("escalates when doc_gate_review exceeds max ping-pong rounds", () => {
     const rootDir = createFixture();
     const workspacePath = join(rootDir, ".worktrees", "03-recipe-like");
@@ -9490,6 +9677,200 @@ describe("OMO autonomous supervisor", () => {
     expect(runtime.prs.frontend?.head_sha).toBe("new-head");
   });
 
+  it("tick finalizes a merged Stage 6 frontend PR directly from CI wait", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    const artifactDir = join(rootDir, ".artifacts", "stage6-ci-merged");
+    const stageResultPath = join(artifactDir, "stage-result.json");
+
+    createGitWorkspace(workspacePath, "feature/fe-03-recipe-like");
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "merged",
+      designStatus: "confirmed",
+      authorityStatus: "not-required",
+      uiRisk: "not-required",
+      visualArtifact: "not-required",
+    });
+
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      stageResultPath,
+      `${JSON.stringify(
+        buildReviewStageResult({
+          decision: "approve",
+          stage: 6,
+          reviewedChecklistIds: [CHECKLIST_IDS.backendDelivery, CHECKLIST_IDS.backendAcceptance, CHECKLIST_IDS.frontendDelivery, CHECKLIST_IDS.frontendAcceptance],
+          bodyMarkdown: "Stage 6 approved",
+          approvedHeadSha: "head-1",
+        }),
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 6,
+        current_stage: 6,
+        last_completed_stage: 5,
+        phase: "wait",
+        next_action: "poll_ci",
+        workspace: {
+          path: workspacePath,
+          branch_role: "frontend",
+        },
+        execution: {
+          provider: "opencode",
+          session_role: "codex_primary",
+          session_id: "ses_stage6_ci_merged",
+          artifact_dir: artifactDir,
+          stage_result_path: stageResultPath,
+          started_at: "2026-04-25T09:00:00+09:00",
+          finished_at: "2026-04-25T09:01:00+09:00",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: "head-1",
+          pr_role: "frontend",
+          subphase: "implementation",
+        },
+        wait: {
+          kind: "ci",
+          pr_role: "frontend",
+          stage: 6,
+          head_sha: "head-1",
+          reason: null,
+          until: null,
+          updated_at: "2026-04-25T09:02:00+09:00",
+        },
+        prs: {
+          docs: null,
+          backend: null,
+          frontend: {
+            number: 41,
+            url: "https://github.com/netsus/homecook/pull/41",
+            draft: false,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: "head-1",
+          },
+          closeout: null,
+        },
+        last_review: {
+          frontend: {
+            decision: "approve",
+            approved_head_sha: "head-1",
+            body_markdown: "Stage 6 approved",
+            findings: [],
+            review_scope: {
+              scope: "closeout",
+              checklist_ids: [CHECKLIST_IDS.backendDelivery, CHECKLIST_IDS.backendAcceptance, CHECKLIST_IDS.frontendDelivery, CHECKLIST_IDS.frontendAcceptance],
+            },
+            reviewed_checklist_ids: [CHECKLIST_IDS.backendDelivery, CHECKLIST_IDS.backendAcceptance, CHECKLIST_IDS.frontendDelivery, CHECKLIST_IDS.frontendAcceptance],
+            required_fix_ids: [],
+            waived_fix_ids: [],
+            updated_at: "2026-04-25T09:01:00+09:00",
+          },
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        all: true,
+        now: "2026-04-25T09:03:00+09:00",
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            return { branch: "feature/fe-03-recipe-like", created: false };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "head-1";
+          },
+          getCurrentBranch() {
+            return "feature/fe-03-recipe-like";
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            throw new Error("not expected");
+          },
+          getPullRequestSummary() {
+            return {
+              state: "MERGED",
+              mergedAt: "2026-04-25T09:02:30Z",
+              mergeStateStatus: "UNKNOWN",
+              reviewDecision: null,
+              headRefOid: "head-1",
+              headRefName: "feature/fe-03-recipe-like",
+              isDraft: false,
+            };
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId,
+      slice: workItemId,
+    }).state as {
+      phase: string | null;
+      wait: unknown;
+      last_completed_stage: number | null;
+      recovery: unknown;
+    };
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      workItemId,
+      wait: null,
+    });
+    expect(runtime.phase).toBe("done");
+    expect(runtime.last_completed_stage).toBe(6);
+    expect(runtime.wait).toBeNull();
+    expect(runtime.recovery).toBeNull();
+  });
+
   it("tick converts a stale Claude stage_running lock with aborted streaming logs into a retry", () => {
     const rootDir = createFixture();
     const workItemId = "03-recipe-like";
@@ -11809,6 +12190,194 @@ describe("OMO autonomous supervisor", () => {
     });
   });
 
+  it("realigns an unpublished Stage 2 backend branch to the approved docs head before implementation entry validation", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    const checkoutCalls: Array<{ branch: string; startPoint?: string }> = [];
+    let fastForwarded = false;
+    let stageRunnerCalled = false;
+    let currentHeadSha = "docs-fixed-head";
+
+    createGitWorkspace(workspacePath, `feature/be-${workItemId}`);
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "docs",
+      designStatus: "temporary",
+    });
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "docs: seed stale backend branch"], { cwd: workspacePath });
+    rmSync(join(workspacePath, "docs", "workpacks", workItemId), { recursive: true, force: true });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        last_completed_stage: 1,
+        phase: null,
+        next_action: "noop",
+        workspace: {
+          path: workspacePath,
+          branch_role: "backend",
+        },
+        prs: {
+          docs: {
+            number: 41,
+            url: "https://github.com/netsus/homecook/pull/41",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+          },
+          backend: null,
+          frontend: null,
+          closeout: null,
+        },
+        doc_gate: {
+          status: "passed",
+          round: 1,
+          findings: [],
+          source_master_sha: "docs-fixed-head",
+        },
+        wait: null,
+        execution: null,
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T15:00:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch({ branch, startPoint }: { branch: string; startPoint?: string }) {
+            checkoutCalls.push({ branch, startPoint });
+            currentHeadSha = startPoint ?? currentHeadSha;
+            return { branch };
+          },
+          resetBranchToStartPoint({ startPoint }: { branch: string; startPoint: string }) {
+            currentHeadSha = startPoint;
+            mkdirSync(join(workspacePath, "docs", "workpacks", workItemId), { recursive: true });
+            writeFileSync(
+              join(workspacePath, "docs", "workpacks", workItemId, "README.md"),
+              buildWorkpackReadme({
+                workItemId,
+                designStatus: "temporary",
+              }),
+            );
+            writeFileSync(
+              join(workspacePath, "docs", "workpacks", workItemId, "acceptance.md"),
+              buildAcceptance({
+                workItemId,
+              }),
+            );
+            writeFileSync(
+              join(workspacePath, "docs", "workpacks", workItemId, "automation-spec.json"),
+              JSON.stringify(
+                {
+                  slice_id: workItemId,
+                  execution_mode: "autonomous",
+                },
+                null,
+                2,
+              ),
+            );
+          },
+          fastForwardBaseBranch() {
+            fastForwarded = true;
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return currentHeadSha;
+          },
+          getCurrentBranch() {
+            return `feature/be-${workItemId}`;
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          stageRunnerCalled = true;
+          const runtimeSync = writeRuntimeState({
+            rootDir,
+            workItemId,
+            state: {
+              ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+              slice: workItemId,
+              current_stage: 2,
+              blocked_stage: 2,
+              retry: {
+                at: "2026-04-25T16:00:00.000Z",
+                reason: "claude_budget_unavailable",
+                attempt_count: 1,
+                max_attempts: 3,
+              },
+            },
+          });
+          return {
+            artifactDir: join(rootDir, ".artifacts", "stage2-doc-head-realign"),
+            dispatch: { actor: "codex", stage: 2, subphase: "implementation" },
+            execution: {
+              mode: "scheduled-retry",
+              executed: false,
+              sessionId: "ses_codex_stage2",
+              reason: "claude_budget_unavailable",
+            },
+            runtimeSync,
+            stageResult: null,
+          };
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            throw new Error("not expected");
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(checkoutCalls).toEqual([
+      {
+        branch: `feature/be-${workItemId}`,
+        startPoint: "docs-fixed-head",
+      },
+    ]);
+    expect(fastForwarded).toBe(false);
+    expect(stageRunnerCalled).toBe(true);
+    expect(result.wait).toMatchObject({
+      kind: "blocked_retry",
+      stage: 2,
+    });
+  });
+
   it("resumes a Stage 2 doc gate repair after rebuttal aliases are normalized", () => {
     const rootDir = createFixture();
     const workItemId = "07-meal-manage";
@@ -12690,6 +13259,14 @@ describe("OMO autonomous supervisor", () => {
             required_checks: expectedChecks,
             verify_commands: expectedChecks.slice(0, 2),
           },
+          status: {
+            ...("status" in workItem && typeof workItem.status === "object" && workItem.status
+              ? workItem.status
+              : {}),
+            lifecycle: "docs",
+            approval_state: "not_started",
+            verification_status: "pending",
+          },
         },
         null,
         2,
@@ -13523,6 +14100,212 @@ describe("OMO autonomous supervisor", () => {
       head_sha: "new-head",
     });
     expect(runtime.prs.frontend?.head_sha).toBe("new-head");
+  });
+
+  it("retries Stage 6 merge once after a head-modified race and merges on the refreshed head", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    const artifactDir = join(rootDir, ".artifacts", "stage6-merge-head-race");
+    const stageResultPath = join(artifactDir, "stage-result.json");
+    let mergeAttempts = 0;
+
+    createGitWorkspace(workspacePath, "feature/fe-03-recipe-like");
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "merged",
+      designStatus: "confirmed",
+      authorityStatus: "not-required",
+      uiRisk: "not-required",
+      visualArtifact: "not-required",
+    });
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      stageResultPath,
+      `${JSON.stringify(
+        buildReviewStageResult({
+          decision: "approve",
+          stage: 6,
+          reviewedChecklistIds: [CHECKLIST_IDS.backendDelivery, CHECKLIST_IDS.backendAcceptance, CHECKLIST_IDS.frontendDelivery, CHECKLIST_IDS.frontendAcceptance],
+          bodyMarkdown: "Stage 6 approved",
+          approvedHeadSha: "head-1",
+        }),
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 6,
+        current_stage: 6,
+        last_completed_stage: 5,
+        phase: "merge_pending",
+        next_action: "poll_ci",
+        workspace: {
+          path: workspacePath,
+          branch_role: "frontend",
+        },
+        execution: {
+          provider: "opencode",
+          session_role: "codex_primary",
+          session_id: "ses_stage6_merge_race",
+          artifact_dir: artifactDir,
+          stage_result_path: stageResultPath,
+          started_at: "2026-04-25T09:00:00+09:00",
+          finished_at: "2026-04-25T09:01:00+09:00",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "frontend",
+          subphase: "implementation",
+        },
+        wait: {
+          kind: "ci",
+          pr_role: "frontend",
+          stage: 6,
+          head_sha: "head-1",
+          reason: null,
+          until: null,
+          updated_at: "2026-04-25T09:02:00+09:00",
+        },
+        prs: {
+          docs: null,
+          backend: null,
+          frontend: {
+            number: 41,
+            url: "https://github.com/netsus/homecook/pull/41",
+            draft: false,
+            branch: "feature/fe-03-recipe-like",
+            head_sha: "head-1",
+          },
+          closeout: null,
+        },
+        last_review: {
+          frontend: {
+            decision: "approve",
+            approved_head_sha: "head-1",
+            body_markdown: "Stage 6 approved",
+            findings: [],
+            review_scope: {
+              scope: "closeout",
+              checklist_ids: [CHECKLIST_IDS.backendDelivery, CHECKLIST_IDS.backendAcceptance, CHECKLIST_IDS.frontendDelivery, CHECKLIST_IDS.frontendAcceptance],
+            },
+            reviewed_checklist_ids: [CHECKLIST_IDS.backendDelivery, CHECKLIST_IDS.backendAcceptance, CHECKLIST_IDS.frontendDelivery, CHECKLIST_IDS.frontendAcceptance],
+            required_fix_ids: [],
+            waived_fix_ids: [],
+            updated_at: "2026-04-25T09:01:00+09:00",
+          },
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T09:03:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            return { branch: "feature/fe-03-recipe-like", created: false };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "head-1";
+          },
+          getCurrentBranch() {
+            return "feature/fe-03-recipe-like";
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            return { bucket: "pass", checks: [{ name: "quality", bucket: "pass", state: "SUCCESS" }] };
+          },
+          markReady() {
+            throw new Error("not expected");
+          },
+          reviewPullRequest() {
+            throw new Error("not expected");
+          },
+          commentPullRequest() {
+            throw new Error("not expected");
+          },
+          mergePullRequest({ headSha }: { headSha: string }) {
+            mergeAttempts += 1;
+            if (mergeAttempts === 1) {
+              throw new Error("GraphQL: Head branch was modified. Review and try the merge again. (mergePullRequest)");
+            }
+            expect(headSha).toBe("head-1");
+            return { merged: true };
+          },
+          getPullRequestSummary() {
+            return {
+              state: "OPEN",
+              mergedAt: mergeAttempts > 1 ? "2026-04-25T09:03:30Z" : null,
+              mergeStateStatus: "CLEAN",
+              reviewDecision: null,
+              headRefOid: "head-1",
+              headRefName: "feature/fe-03-recipe-like",
+              isDraft: false,
+            };
+          },
+          updateBranch() {
+            throw new Error("not expected");
+          },
+        },
+      },
+    );
+
+    expect(mergeAttempts).toBe(2);
+    expect(result.wait).toBeNull();
+
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId,
+      slice: workItemId,
+    }).state as {
+      phase: string | null;
+      wait: unknown;
+      last_completed_stage: number | null;
+      recovery: unknown;
+    };
+
+    expect(runtime.phase).toBe("done");
+    expect(runtime.last_completed_stage).toBe(6);
+    expect(runtime.wait).toBeNull();
+    expect(runtime.recovery).toBeNull();
   });
 
   it("refreshes the PR head before rerunning a Stage 6 ready_for_next_stage review", () => {

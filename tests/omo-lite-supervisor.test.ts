@@ -163,6 +163,59 @@ describe("OMO-lite stage dispatch", () => {
     );
   });
 
+  it("uses stage-specific frontend verify commands from automation spec when provided", () => {
+    const rootDir = createWorkflowFixture();
+    mkdirSync(join(rootDir, ".worktrees", "08b-meal-add-books-pantry", "docs", "workpacks", "08b-meal-add-books-pantry"), { recursive: true });
+    writeFileSync(
+      join(rootDir, ".worktrees", "08b-meal-add-books-pantry", "docs", "workpacks", "08b-meal-add-books-pantry", "automation-spec.json"),
+      JSON.stringify(
+        {
+          slice_id: "08b-meal-add-books-pantry",
+          execution_mode: "autonomous",
+          risk_class: "low",
+          merge_policy: "conditional-auto",
+          backend: {
+            required_endpoints: ["POST /api/v1/meals"],
+            invariants: ["owner-authorization"],
+            verify_commands: ["pnpm verify:backend"],
+            required_test_targets: ["tests/08b.backend.test.ts"],
+          },
+          frontend: {
+            required_routes: ["/planner"],
+            required_states: ["loading", "empty", "error", "unauthorized"],
+            verify_commands: [
+              "pnpm exec vitest run tests/recipe-add-to-planner.test.tsx",
+              "playwright test tests/e2e/slice-08b-meal-add-books-pantry.spec.ts",
+            ],
+            playwright_projects: ["mobile-chrome"],
+            artifact_assertions: ["playwright-report"],
+          },
+          external_smokes: ["pnpm dev:local-supabase"],
+          blocked_conditions: [],
+          max_fix_rounds: {
+            backend: 2,
+            frontend: 2,
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const dispatch = buildStageDispatch({
+      rootDir,
+      slice: "08b-meal-add-books-pantry",
+      stage: 4,
+      claudeBudgetState: "available",
+    });
+
+    expect(dispatch.verifyCommands).toEqual([
+      "pnpm install --frozen-lockfile",
+      "pnpm exec vitest run tests/recipe-add-to-planner.test.tsx",
+      "playwright test tests/e2e/slice-08b-meal-add-books-pantry.spec.ts",
+    ]);
+  });
+
   it("builds a Stage 4 authority_precheck dispatch for Codex", () => {
     const dispatch = buildStageDispatch({
       slice: "06-recipe-to-planner",
@@ -594,6 +647,47 @@ describe("OMO-lite workflow status sync", () => {
       verification_status: "pending",
       notes: "Only the notes field changed.",
     });
+  });
+
+  it("does not rewrite workflow-v2 status when the tracked status is already canonical", () => {
+    const rootDir = createWorkflowFixture();
+
+    const initial = syncWorkflowV2Status({
+      rootDir,
+      workItemId: "omo-lite-phase4-supervisor",
+      patch: {
+        branch: "feature/omo-lite-phase4-supervisor",
+        pr_path: "pending",
+        lifecycle: "in_progress",
+        approval_state: "not_started",
+        verification_status: "pending",
+        notes: "Phase 4 started.",
+      },
+      updatedAt: "2026-03-26T16:00:00+09:00",
+    });
+
+    const statusBefore = readFileSync(join(rootDir, ".workflow-v2", "status.json"), "utf8");
+    const workItemBefore = readFileSync(
+      join(rootDir, ".workflow-v2", "work-items", "omo-lite-phase4-supervisor.json"),
+      "utf8",
+    );
+
+    const result = syncWorkflowV2Status({
+      rootDir,
+      workItemId: "omo-lite-phase4-supervisor",
+      patch: {},
+      updatedAt: "2026-03-26T16:30:00+09:00",
+    });
+
+    const statusAfter = readFileSync(join(rootDir, ".workflow-v2", "status.json"), "utf8");
+    const workItemAfter = readFileSync(
+      join(rootDir, ".workflow-v2", "work-items", "omo-lite-phase4-supervisor.json"),
+      "utf8",
+    );
+
+    expect(result.statusItem).toEqual(initial.statusItem);
+    expect(statusAfter).toBe(statusBefore);
+    expect(workItemAfter).toBe(workItemBefore);
   });
 
   it("allows the sync CLI to update only provided fields", () => {

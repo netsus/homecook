@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -231,6 +231,48 @@ describe("OMO doc gate", () => {
       expect.arrayContaining([
         expect.objectContaining({
           message: expect.stringContaining("mobile baseline"),
+        }),
+      ]),
+    );
+  });
+
+  it("guides review=5 remediation only toward Stage 4 frontend-owned checklist items", () => {
+    const fixture = createDocGateFixture({});
+    const acceptancePath = join(
+      fixture.rootDir,
+      "docs",
+      "workpacks",
+      fixture.slice,
+      "acceptance.md",
+    );
+    const readmePath = join(
+      fixture.rootDir,
+      "docs",
+      "workpacks",
+      fixture.slice,
+      "README.md",
+    );
+
+    writeFileSync(
+      acceptancePath,
+      readFileSync(acceptancePath, "utf8").replaceAll("review=5,6", "review=6"),
+    );
+    writeFileSync(
+      readmePath,
+      readFileSync(readmePath, "utf8").replaceAll("review=5,6", "review=6"),
+    );
+
+    const result = evaluateDocGate({
+      rootDir: fixture.rootDir,
+      slice: fixture.slice,
+    });
+
+    expect(result.outcome).toBe("fixable");
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "doc-gate-missing-review5-scope",
+          remediation_hint: expect.stringContaining("scope=shared/backend"),
         }),
       ]),
     );

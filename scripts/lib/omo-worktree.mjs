@@ -125,10 +125,26 @@ export function ensureWorktreeBranch({
   ).status === 0;
 
   if (hasLocalBranch) {
-    runGit({
-      cwd: normalizedWorktreePath,
-      args: ["checkout", normalizedBranch],
-    });
+    try {
+      runGit({
+        cwd: normalizedWorktreePath,
+        args: ["checkout", normalizedBranch],
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isDetachedHead = currentBranch.length === 0;
+      const hasOverwriteConflict =
+        /local changes to the following files would be overwritten by checkout/i.test(message);
+
+      if (!isDetachedHead || !hasOverwriteConflict) {
+        throw error;
+      }
+
+      runGit({
+        cwd: normalizedWorktreePath,
+        args: ["checkout", "--merge", normalizedBranch],
+      });
+    }
     return {
       branch: normalizedBranch,
       created: false,
@@ -267,6 +283,22 @@ export function fastForwardWorktreeBranchToBaseBranch({
   runGit({
     cwd: ensureNonEmptyString(worktreePath, "worktreePath"),
     args: ["merge", "--ff-only", `origin/${normalizedBaseBranch}`],
+  });
+}
+
+export function resetWorktreeBranchToStartPoint({
+  worktreePath,
+  branch,
+  startPoint,
+}) {
+  runGit({
+    cwd: ensureNonEmptyString(worktreePath, "worktreePath"),
+    args: [
+      "checkout",
+      "-B",
+      ensureNonEmptyString(branch, "branch"),
+      ensureNonEmptyString(startPoint, "startPoint"),
+    ],
   });
 }
 

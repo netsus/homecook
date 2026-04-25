@@ -6,6 +6,7 @@ import { runStageWithArtifacts } from "./omo-lite-runner.mjs";
 import { resolveStageSessionRole, syncWorkflowV2Status } from "./omo-lite-supervisor.mjs";
 import { createGithubAutomationClient, mergePullRequestBodyWithExisting } from "./omo-github.mjs";
 import { resolveClaudeProviderConfig, resolveCodexProviderConfig } from "./omo-provider-config.mjs";
+import { readTrackedWorkItemWithRecovery } from "./omo-tracked-work-item.mjs";
 import {
   applyBookkeepingRepairPlan,
   evaluateBookkeepingInvariant,
@@ -68,6 +69,7 @@ import {
   getWorktreeHeadSha,
   getWorktreeCurrentBranch,
   listWorktreeChangedFiles,
+  resetWorktreeBranchToStartPoint,
   restoreWorktreePaths,
   commitWorktreeChanges,
   pushWorktreeBranch,
@@ -827,33 +829,18 @@ function readTrackedWorkItem({
   workItemId,
   allowBootstrap = false,
 }) {
-  const workItemPath = resolveTrackedWorkItemPath({
+  const trackedWorkItemState = readTrackedWorkItemWithRecovery({
     rootDir,
     workItemId,
+    worktreePath,
   });
-  if (!existsSync(workItemPath)) {
-    const normalizedWorktreePath =
-      typeof worktreePath === "string" && worktreePath.trim().length > 0 ? worktreePath.trim() : null;
-    if (normalizedWorktreePath && normalizedWorktreePath !== rootDir) {
-      const worktreeWorkItemPath = resolveTrackedWorkItemPath({
-        rootDir: normalizedWorktreePath,
-        workItemId,
-      });
-      if (existsSync(worktreeWorkItemPath)) {
-        return {
-          workItemPath: worktreeWorkItemPath,
-          workItem: JSON.parse(readFileSync(worktreeWorkItemPath, "utf8")),
-          tracked: true,
-        };
-      }
-    }
-
+  if (!trackedWorkItemState.tracked) {
     if (!allowBootstrap) {
-      throw new Error(`Tracked workflow-v2 work item not found: ${workItemPath}`);
+      throw new Error(`Tracked workflow-v2 work item not found: ${trackedWorkItemState.workItemPath}`);
     }
 
     return {
-      workItemPath,
+      workItemPath: trackedWorkItemState.workItemPath,
       workItem: buildBootstrapWorkItem({
         workItemId,
       }),
@@ -861,11 +848,7 @@ function readTrackedWorkItem({
     };
   }
 
-  return {
-    workItemPath,
-    workItem: JSON.parse(readFileSync(workItemPath, "utf8")),
-    tracked: true,
-  };
+  return trackedWorkItemState;
 }
 
 function readTrackedStatusItem({
@@ -1399,11 +1382,25 @@ function readAutomationSpecForExecution({
     }
   }
 
-  return readAutomationSpec({
-    rootDir,
-    slice,
-    required,
-  });
+  try {
+    return readAutomationSpec({
+      rootDir,
+      slice,
+      required,
+    });
+  } catch (error) {
+    if (!required) {
+      return {
+        automationSpecPath: resolveAutomationSpecPath({
+          rootDir,
+          slice,
+          worktreePath: normalizedWorktreePath,
+        }),
+        automationSpec: null,
+      };
+    }
+    throw error;
+  }
 }
 
 function resolveStage4Subphase({
@@ -3151,6 +3148,23 @@ function syncStatus({
     workItemId,
     slice: workItemId,
   }).state;
+  const recoveredTrackedWorkItem = readTrackedWorkItemWithRecovery({
+    rootDir,
+    workItemId,
+    worktreePath: runtimeState.workspace?.path ?? null,
+  });
+  const rootStatusPath = resolveTrackedStatusPath({
+    rootDir,
+  });
+  if (recoveredTrackedWorkItem.tracked && existsSync(rootStatusPath)) {
+    return syncWorkflowV2Status({
+      rootDir,
+      workItemId,
+      patch,
+      updatedAt: now,
+    });
+  }
+
   const candidateRoots = normalizeStringArray([
     rootDir,
     runtimeState.workspace?.path ?? null,
@@ -4461,6 +4475,19 @@ function processWaitState({
           now,
         });
       }
+    }
+
+    if (prRole === "frontend" && ciState.wait.stage === 6 && liveSummary?.mergedAt) {
+      return finalizeMergedReviewStage({
+        rootDir,
+        workItemId,
+        state: ciState,
+        stage: 6,
+        activePr: ciActivePr,
+        artifactDir: ciState.execution?.artifact_dir ?? ciState.last_artifact_dir,
+        worktree,
+        now,
+      });
     }
 
     const checks = github.getRequiredChecks({
@@ -5798,11 +5825,32 @@ function handleImplementationCodeStage({
   const branchRole = resolveBranchRole(stage);
   const branchName = resolveBranchName({ slice, stage });
   const prRole = resolvePrRole(stage);
+  const implementationStartPoint =
+    stage === 2 &&
+    ["passed", "pending_recheck"].includes(state.doc_gate?.status ?? "") &&
+    !state.prs?.backend?.url &&
+    typeof state.doc_gate?.source_master_sha === "string" &&
+    state.doc_gate.source_master_sha.trim().length > 0
+      ? state.doc_gate.source_master_sha.trim()
+      : "origin/master";
   worktree.checkoutBranch({
     branch: branchName,
-    startPoint: "origin/master",
+    startPoint: implementationStartPoint,
   });
   if (
+    stage === 2 &&
+    ["passed", "pending_recheck"].includes(state.doc_gate?.status ?? "") &&
+    !state.prs?.backend?.url &&
+    implementationStartPoint !== "origin/master"
+  ) {
+    const currentHeadSha = worktree.getHeadSha();
+    if (currentHeadSha !== implementationStartPoint) {
+      worktree.resetBranchToStartPoint?.({
+        branch: branchName,
+        startPoint: implementationStartPoint,
+      });
+    }
+  } else if (
     stage === 2 &&
     ["passed", "pending_recheck"].includes(state.doc_gate?.status ?? "") &&
     !state.prs?.backend?.url
@@ -7253,6 +7301,24 @@ function handleCodeStage({
   if (stage === 2) {
     const initialSubphase = resolveStage2Subphase(state);
     if (initialSubphase === "doc_gate_check") {
+      const docsBranch =
+        getActivePullRequest(state, "docs")?.branch ??
+        state.doc_gate?.repair_branch ??
+        resolveDocGateRepairBranch(slice);
+      worktree.checkoutBranch({
+        branch: docsBranch,
+        startPoint: "origin/master",
+      });
+      state = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWorkspaceBinding({
+          state,
+          path: state.workspace?.path,
+          branchRole: "docs",
+          updatedAt: now,
+        }),
+      });
       const activeDocsPr = getActivePullRequest(state, "docs");
       let docGateResult = evaluateDocGate({
         rootDir,
@@ -8196,6 +8262,85 @@ function handleReviewStage({
         headSha: approvedHeadSha,
       });
     } catch (error) {
+      if (/head branch was modified/i.test(error.message)) {
+        const refreshedMergeState = refreshLivePullRequestState({
+          rootDir,
+          workItemId,
+          state: nextState,
+          github,
+          prRole,
+          activePr,
+          now,
+          syncWaitKind: "ci",
+        });
+        const refreshedState = refreshedMergeState.state;
+        const refreshedActivePr = refreshedMergeState.activePr;
+        const refreshedApprovedHeadSha = resolveApprovedHeadSha({
+          approvedHeadSha: stageResult.approved_head_sha,
+          activeHeadSha: refreshedActivePr?.head_sha ?? activePr.head_sha,
+        });
+
+        try {
+          github.mergePullRequest({
+            prRef: refreshedActivePr.url,
+            headSha: refreshedApprovedHeadSha,
+          });
+
+          return finalizeMergedReviewStage({
+            rootDir,
+            workItemId,
+            state: refreshedState,
+            stage,
+            activePr: refreshedActivePr,
+            artifactDir,
+            worktree,
+            now,
+          });
+        } catch (retryError) {
+          if (/head branch was modified/i.test(retryError.message)) {
+            nextState = saveRuntime({
+              rootDir,
+              workItemId,
+              state: setWaitState({
+                state: setPullRequestRef({
+                  state: refreshedState,
+                  role: prRole,
+                  number: refreshedActivePr.number,
+                  url: refreshedActivePr.url,
+                  draft: refreshedActivePr.draft ?? false,
+                  branch: refreshedActivePr.branch ?? activePr.branch,
+                  headSha: refreshedActivePr.head_sha ?? activePr.head_sha,
+                  updatedAt: now,
+                }),
+                kind: "ci",
+                prRole,
+                stage,
+                headSha: refreshedActivePr.head_sha ?? activePr.head_sha,
+                updatedAt: now,
+              }),
+            });
+            updateRuntimeStatusForWait({
+              rootDir,
+              workItemId,
+              wait: nextState.wait,
+              prPath: refreshedActivePr.url,
+              now,
+              approvalState: "dual_approved",
+              lifecycle: "ready_for_review",
+              verificationStatus: "pending",
+              extraNotes: ["merge_retry=head_modified"],
+            });
+            return {
+              state: nextState,
+              wait: nextState.wait,
+              transitioned: false,
+            };
+          }
+
+          throw retryError;
+        }
+      }
+
       if (/up to date|update branch|behind/i.test(error.message)) {
         github.updateBranch({
           prRef: activePr.url,
@@ -8388,6 +8533,13 @@ function createDefaultDependencies({
         return fastForwardWorktreeBranchToBaseBranch({
           rootDir,
           worktreePath,
+        });
+      },
+      resetBranchToStartPoint({ worktreePath, branch, startPoint }) {
+        return resetWorktreeBranchToStartPoint({
+          worktreePath,
+          branch,
+          startPoint,
         });
       },
       getHeadSha({ worktreePath }) {

@@ -30,6 +30,9 @@
       "read-only",
       "unauthorized"
     ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
     "playwright_projects": [
       "desktop-chrome",
       "mobile-chrome",

@@ -12,6 +12,47 @@ const DESIGN_AUTHORITY_UI_RISKS = new Set([
   "anchor-extension",
 ]);
 
+/**
+ * @typedef {{
+ *   required_endpoints: string[],
+ *   invariants: string[],
+ *   verify_commands: string[],
+ *   required_test_targets: string[],
+ * }} AutomationBackendSpec
+ *
+ * @typedef {{
+ *   ui_risk: string,
+ *   anchor_screens: string[],
+ *   required_screens: string[],
+ *   generator_required: boolean,
+ *   critic_required: boolean,
+ *   authority_required: boolean,
+ *   stage4_evidence_requirements: string[],
+ *   authority_report_paths: string[],
+ * }} AutomationDesignAuthoritySpec
+ *
+ * @typedef {{
+ *   required_routes: string[],
+ *   required_states: string[],
+ *   verify_commands: string[],
+ *   playwright_projects: string[],
+ *   artifact_assertions: string[],
+ *   design_authority: AutomationDesignAuthoritySpec,
+ * }} AutomationFrontendSpec
+ *
+ * @typedef {{
+ *   slice_id: string,
+ *   execution_mode: string,
+ *   risk_class: string,
+ *   merge_policy: string,
+ *   backend: AutomationBackendSpec,
+ *   frontend: AutomationFrontendSpec,
+ *   external_smokes: string[],
+ *   blocked_conditions: string[],
+ *   max_fix_rounds: { backend: number, frontend: number },
+ * }} AutomationSpec
+ */
+
 function ensureObject(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`${label} must be an object.`);
@@ -152,19 +193,37 @@ function uniqueStringArray(values) {
   );
 }
 
+/**
+ * @param {{ rootDir?: string, slice?: string, worktreePath?: string|null }} options
+ * @returns {string}
+ */
 export function resolveAutomationSpecPath({
   rootDir = process.cwd(),
   slice,
+  worktreePath = null,
 }) {
-  return resolve(
-    rootDir,
-    "docs",
-    "workpacks",
-    ensureNonEmptyString(slice, "slice"),
-    "automation-spec.json",
+  const normalizedSlice = ensureNonEmptyString(slice, "slice");
+  const candidatePaths = [
+    resolve(rootDir, "docs", "workpacks", normalizedSlice, "automation-spec.json"),
+  ];
+
+  if (typeof worktreePath === "string" && worktreePath.trim().length > 0) {
+    candidatePaths.push(
+      resolve(worktreePath.trim(), "docs", "workpacks", normalizedSlice, "automation-spec.json"),
+    );
+  }
+
+  candidatePaths.push(
+    resolve(rootDir, ".worktrees", normalizedSlice, "docs", "workpacks", normalizedSlice, "automation-spec.json"),
   );
+
+  return candidatePaths.find((candidatePath) => existsSync(candidatePath)) ?? candidatePaths[0];
 }
 
+/**
+ * @param {unknown} rawSpec
+ * @returns {AutomationSpec}
+ */
 export function normalizeAutomationSpec(rawSpec) {
   const spec = ensureObject(rawSpec, "automationSpec");
 
@@ -191,6 +250,7 @@ export function normalizeAutomationSpec(rawSpec) {
       ...normalizeScope(spec.frontend, "automationSpec.frontend", [
         "required_routes",
         "required_states",
+        "verify_commands",
         "playwright_projects",
         "artifact_assertions",
       ]),
@@ -211,14 +271,20 @@ export function normalizeAutomationSpec(rawSpec) {
   };
 }
 
+/**
+ * @param {{ rootDir?: string, slice?: string, worktreePath?: string|null, required?: boolean }} [options]
+ * @returns {{ automationSpecPath: string, automationSpec: AutomationSpec|null }}
+ */
 export function readAutomationSpec({
   rootDir = process.cwd(),
   slice,
+  worktreePath = null,
   required = false,
 } = {}) {
   const automationSpecPath = resolveAutomationSpecPath({
     rootDir,
     slice,
+    worktreePath,
   });
 
   if (!existsSync(automationSpecPath)) {

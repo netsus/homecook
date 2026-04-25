@@ -582,6 +582,69 @@ describe("OMO GitHub automation client", () => {
     expect(argsLog).toContain(".artifacts/qa/06-recipe-to-planner/stage4-ready-for-review/eval-result.json");
   });
 
+  it("fills low-risk QA Evidence with a skip rationale when no exploratory bundle exists", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-low-risk-qa-"));
+    const { binPath, argsPath } = createFakeGhBin(rootDir);
+
+    mkdirSync(join(rootDir, "docs", "workpacks", "08b-meal-add-books-pantry"), { recursive: true });
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "08b-meal-add-books-pantry", "automation-spec.json"),
+      `${JSON.stringify(
+        {
+          slice_id: "08b-meal-add-books-pantry",
+          execution_mode: "autonomous",
+          risk_class: "low",
+          merge_policy: "conditional-auto",
+          backend: { required_endpoints: [], invariants: [], verify_commands: [], required_test_targets: [] },
+          frontend: {
+            required_routes: ["/planner"],
+            required_states: ["loading", "empty", "error", "unauthorized"],
+            verify_commands: ["pnpm lint"],
+            playwright_projects: [],
+            artifact_assertions: [],
+            design_authority: {
+              ui_risk: "low-risk",
+              anchor_screens: [],
+              required_screens: [],
+              generator_required: false,
+              critic_required: false,
+              authority_required: false,
+              stage4_evidence_requirements: [],
+              authority_report_paths: [],
+            },
+          },
+          external_smokes: ["pnpm dev:local-supabase"],
+          blocked_conditions: [],
+          max_fix_rounds: { backend: 2, frontend: 2 },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+      environment: {
+        FAKE_GH_ARGS_PATH: argsPath,
+      },
+    });
+
+    client.createPullRequest({
+      base: "master",
+      head: "feature/fe-08b-meal-add-books-pantry",
+      title: "feat: slice08b frontend",
+      body: "## Summary\n- frontend",
+      draft: true,
+      workItemId: "08b-meal-add-books-pantry",
+    });
+
+    const argsLog = readFileSync(argsPath, "utf8");
+    expect(argsLog).toContain("## QA Evidence");
+    expect(argsLog).toContain("low-risk UI change");
+    expect(argsLog).toContain("exploratory QA skipped");
+  });
+
   it("fills Actual Verification from declared external_smokes when the section is missing", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-actual-verification-"));
     const { binPath, argsPath } = createFakeGhBin(rootDir);
