@@ -28,7 +28,7 @@ type ViewState = "loading" | "empty" | "error" | "ready" | "creating";
 export function ShoppingFlowScreen({
   initialAuthenticated,
 }: ShoppingFlowScreenProps) {
-  const router = useRouter();
+  const { push } = useRouter();
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [mealConfigs, setMealConfigs] = useState<MealConfig[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -58,7 +58,7 @@ export function ShoppingFlowScreen({
     } catch (error) {
       if (isShoppingApiError(error)) {
         if (error.status === 401) {
-          router.push("/login?next=/shopping/flow");
+          push("/login?next=/shopping/flow");
           return;
         }
         setErrorMessage(error.message);
@@ -67,7 +67,7 @@ export function ShoppingFlowScreen({
       }
       setViewState("error");
     }
-  }, [router]);
+  }, [push]);
 
   useEffect(() => {
     if (initialAuthenticated) {
@@ -118,11 +118,11 @@ export function ShoppingFlowScreen({
       const result = await createShoppingList(body);
 
       // Navigate to shopping detail
-      router.push(`/shopping/${result.id}`);
+      push(`/shopping/${result.id}`);
     } catch (error) {
       if (isShoppingApiError(error)) {
         if (error.status === 401) {
-          router.push("/login?next=/shopping/flow");
+          push("/login?next=/shopping/flow");
           return;
         }
         if (error.status === 409) {
@@ -135,11 +135,11 @@ export function ShoppingFlowScreen({
       }
       setViewState("error");
     }
-  }, [mealConfigs, router]);
+  }, [mealConfigs, push]);
 
   const handleBack = useCallback(() => {
-    router.push("/planner");
-  }, [router]);
+    push("/planner");
+  }, [push]);
 
   const handleRetry = useCallback(() => {
     void loadPreview();
