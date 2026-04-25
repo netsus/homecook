@@ -512,6 +512,9 @@ export function MealScreen({
     ? `${formatDateShort(planDate)} · ${slotName}`
     : formatDateShort(planDate);
   const nextPath = buildNextPath(planDate, columnId, slotName);
+  const navigateToPlanner = useCallback(() => {
+    router.replace("/planner");
+  }, [router]);
 
   // ── Unauthorized gate ─────────────────────────────────────────────────────
   if (authState === "unauthorized") {
@@ -523,7 +526,7 @@ export function MealScreen({
         <AppBar
           titleFull={titleFull}
           titleShort={titleShort}
-          onBack={() => router.back()}
+          onBack={navigateToPlanner}
         />
         <div className="flex flex-1 flex-col items-center justify-center gap-5 overflow-y-auto p-6 text-center">
           <div className="rounded-[18px] border border-[var(--line)] bg-white/78 p-5">
@@ -551,7 +554,7 @@ export function MealScreen({
         <AppBar
           titleFull={titleFull}
           titleShort={titleShort}
-          onBack={() => router.back()}
+          onBack={navigateToPlanner}
         />
 
         {/* Scrollable content area */}

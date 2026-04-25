@@ -152,7 +152,7 @@ export function MenuAddScreen({
   }, [router, planDate, columnId, slotName]);
 
   const handleBack = useCallback(() => {
-    navigateToMealScreen("push");
+    navigateToMealScreen("replace");
   }, [navigateToMealScreen]);
 
   const handleRecipeSelect = useCallback((recipe: RecipeCardItem) => {
