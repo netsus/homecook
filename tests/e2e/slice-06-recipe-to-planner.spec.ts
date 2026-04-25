@@ -30,6 +30,14 @@ const PLANNER_COLUMNS: PlannerColumn[] = [
   { id: "column-dinner", name: "저녁", sort_order: 3 },
 ];
 
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   await page.addInitScript(
     ({ key, state }) => {
@@ -164,7 +172,7 @@ test.describe("Slice 06 recipe-to-planner", () => {
     await installPlannerRoutes(page);
 
     const today = new Date();
-    const planDate = today.toISOString().slice(0, 10);
+    const planDate = formatLocalDate(today);
 
     await installCreateMealRoute(page, {
       planDate,
