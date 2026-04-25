@@ -21,6 +21,7 @@ const isMealApiError = vi.fn(
 );
 const mockRouterBack = vi.fn();
 const mockRouterPush = vi.fn();
+const mockRouterReplace = vi.fn();
 
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => readE2EAuthOverride(),
@@ -52,6 +53,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({
     back: mockRouterBack,
     push: mockRouterPush,
+    replace: mockRouterReplace,
   }),
 }));
 
@@ -108,6 +110,7 @@ describe("MealScreen", () => {
     deleteMeal.mockReset();
     mockRouterBack.mockReset();
     mockRouterPush.mockReset();
+    mockRouterReplace.mockReset();
     isMealApiError.mockImplementation(
       (error: unknown): error is Error & { status: number; code: string } =>
         Boolean(error) &&
@@ -245,7 +248,7 @@ describe("MealScreen", () => {
     });
   });
 
-  it("calls router.back() on back button tap", async () => {
+  it("returns to planner on back button tap", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({ items: [buildMeal()] });
 
@@ -257,7 +260,8 @@ describe("MealScreen", () => {
     });
 
     await user.click(screen.getByRole("button", { name: "뒤로 가기" }));
-    expect(mockRouterBack).toHaveBeenCalledTimes(1);
+    expect(mockRouterReplace).toHaveBeenCalledWith("/planner");
+    expect(mockRouterBack).not.toHaveBeenCalled();
   });
 
   // ── Stepper — registered (no modal) ────────────────────────────────────
