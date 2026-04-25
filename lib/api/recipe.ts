@@ -1,6 +1,12 @@
 import { fetchJson } from "@/lib/api/fetch-json";
 import type { ApiResponse } from "@/types/api";
-import type { RecipeListData, RecipeListQuery } from "@/types/recipe";
+import type {
+  PantryMatchListData,
+  RecipeBookListData,
+  RecipeBookRecipeListData,
+  RecipeListData,
+  RecipeListQuery,
+} from "@/types/recipe";
 
 export async function fetchRecipes(query: RecipeListQuery): Promise<ApiResponse<RecipeListData>> {
   try {
@@ -22,6 +28,75 @@ export async function fetchRecipes(query: RecipeListQuery): Promise<ApiResponse<
       error: {
         code: "FETCH_ERROR",
         message: error instanceof Error ? error.message : "검색 중 오류가 발생했어요.",
+        fields: [],
+      },
+    };
+  }
+}
+
+export async function fetchRecipeBooks(): Promise<ApiResponse<RecipeBookListData>> {
+  try {
+    const data = await fetchJson<RecipeBookListData>("/api/v1/recipe-books");
+    return { success: true, data, error: null };
+  } catch (error) {
+    return {
+      success: false,
+      data: null,
+      error: {
+        code: "FETCH_ERROR",
+        message: error instanceof Error ? error.message : "레시피북 목록을 불러오지 못했어요.",
+        fields: [],
+      },
+    };
+  }
+}
+
+export async function fetchRecipeBookRecipes(
+  bookId: string,
+  options?: { cursor?: string | null; limit?: number },
+): Promise<ApiResponse<RecipeBookRecipeListData>> {
+  try {
+    const params = new URLSearchParams();
+    if (options?.cursor) params.append("cursor", options.cursor);
+    if (options?.limit !== undefined) params.append("limit", String(options.limit));
+
+    const queryString = params.toString();
+    const url = `/api/v1/recipe-books/${bookId}/recipes${queryString ? `?${queryString}` : ""}`;
+    const data = await fetchJson<RecipeBookRecipeListData>(url);
+    return { success: true, data, error: null };
+  } catch (error) {
+    return {
+      success: false,
+      data: null,
+      error: {
+        code: "FETCH_ERROR",
+        message: error instanceof Error ? error.message : "레시피북 레시피를 불러오지 못했어요.",
+        fields: [],
+      },
+    };
+  }
+}
+
+export async function fetchPantryMatchRecipes(options?: {
+  cursor?: string | null;
+  limit?: number;
+}): Promise<ApiResponse<PantryMatchListData>> {
+  try {
+    const params = new URLSearchParams();
+    if (options?.cursor) params.append("cursor", options.cursor);
+    if (options?.limit !== undefined) params.append("limit", String(options.limit));
+
+    const queryString = params.toString();
+    const url = `/api/v1/recipes/pantry-match${queryString ? `?${queryString}` : ""}`;
+    const data = await fetchJson<PantryMatchListData>(url);
+    return { success: true, data, error: null };
+  } catch (error) {
+    return {
+      success: false,
+      data: null,
+      error: {
+        code: "FETCH_ERROR",
+        message: error instanceof Error ? error.message : "팬트리 기반 추천을 불러오지 못했어요.",
         fields: [],
       },
     };
