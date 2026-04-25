@@ -118,8 +118,8 @@
 ## Design Status
 
 - [ ] 임시 UI (temporary) — Stage 1 기본값, 기능 완성 우선
-- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후 전환 (low-risk이므로 생략 가능)
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후 (low-risk이므로 Stage 6에서 lightweight check)
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후 전환 (low-risk이므로 생략 가능)
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후 (low-risk이므로 Stage 6에서 lightweight check)
 - [ ] N/A — BE-only 슬라이스
 
 > Design Status 전이: `temporary` (Stage 1 기본값)
@@ -178,3 +178,4 @@
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=5,6 -->
+
