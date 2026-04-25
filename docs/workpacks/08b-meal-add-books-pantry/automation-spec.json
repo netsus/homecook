@@ -53,7 +53,9 @@
       "authority_report_paths": []
     }
   },
-  "external_smokes": [],
+  "external_smokes": [
+    "pnpm dev:local-supabase"
+  ],
   "blocked_conditions": [
     "system-recipebook-missing",
     "pantry-table-missing",

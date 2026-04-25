@@ -8,18 +8,18 @@
 > Claude가 rebuttal을 수용해 닫은 항목은 checkbox를 유지한 채 `waived=true;waived_by=claude;waived_stage=<3|5|6>;waived_reason=<slug>` metadata를 추가한다.
 
 ## Happy Path
-- [ ] 레시피북 목록 조회가 정상 동작한다 <!-- omo:id=accept-recipebook-list;stage=2;scope=backend;review=3,6 -->
-- [ ] 레시피북 내 레시피 목록 조회가 정상 동작한다 <!-- omo:id=accept-recipebook-recipes;stage=2;scope=backend;review=3,6 -->
-- [ ] 팬트리 기반 추천 목록 조회가 정상 동작한다 <!-- omo:id=accept-pantry-match;stage=2;scope=backend;review=3,6 -->
+- [x] 레시피북 목록 조회가 정상 동작한다 <!-- omo:id=accept-recipebook-list;stage=2;scope=backend;review=3,6 -->
+- [x] 레시피북 내 레시피 목록 조회가 정상 동작한다 <!-- omo:id=accept-recipebook-recipes;stage=2;scope=backend;review=3,6 -->
+- [x] 팬트리 기반 추천 목록 조회가 정상 동작한다 <!-- omo:id=accept-pantry-match;stage=2;scope=backend;review=3,6 -->
 - [ ] 레시피북에서 레시피 선택 → Meal 생성 흐름이 정상 동작한다 <!-- omo:id=accept-recipebook-to-meal;stage=4;scope=frontend;review=5,6 -->
 - [ ] 팬트리 추천에서 레시피 선택 → Meal 생성 흐름이 정상 동작한다 <!-- omo:id=accept-pantry-to-meal;stage=4;scope=frontend;review=5,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=5,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
-- [ ] Meal 생성 시 상태가 `registered`로 고정된다 <!-- omo:id=accept-meal-status-registered;stage=2;scope=backend;review=3,6 -->
-- [ ] 레시피북 소유자 검증이 정상 동작한다 (타인 book_id 접근 시 403) <!-- omo:id=accept-recipebook-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] column_id 소유자 검증이 정상 동작한다 (타인 column_id 접근 시 403) <!-- omo:id=accept-column-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] Meal 생성 시 상태가 `registered`로 고정된다 <!-- omo:id=accept-meal-status-registered;stage=2;scope=backend;review=3,6 -->
+- [x] 레시피북 소유자 검증이 정상 동작한다 (타인 book_id 접근 시 403) <!-- omo:id=accept-recipebook-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] column_id 소유자 검증이 정상 동작한다 (타인 column_id 접근 시 403) <!-- omo:id=accept-column-owner-guard;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 - [ ] loading 상태가 있다 (레시피북 목록, 레시피북 내 레시피, 팬트리 추천, Meal 생성) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
@@ -27,21 +27,21 @@
 - [ ] error 상태가 있다 (네트워크 오류, 서버 오류, 권한 오류) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
 - [ ] unauthorized 처리 흐름이 있다 (비로그인 시 로그인 게이트) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
 - [ ] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
-- [ ] 404 처리 흐름이 있다 (recipe_id, column_id, book_id 미존재) <!-- omo:id=accept-not-found;stage=2;scope=backend;review=3,6 -->
-- [ ] 422 처리 흐름이 있다 (planned_servings 음수 또는 0) <!-- omo:id=accept-validation-error;stage=2;scope=backend;review=3,6 -->
+- [x] 404 처리 흐름이 있다 (recipe_id, column_id, book_id 미존재) <!-- omo:id=accept-not-found;stage=2;scope=backend;review=3,6 -->
+- [x] 422 처리 흐름이 있다 (planned_servings 음수 또는 0) <!-- omo:id=accept-validation-error;stage=2;scope=backend;review=3,6 -->
 
 ## Data Integrity
-- [ ] 타인 레시피북을 조회할 수 없다 (403) <!-- omo:id=accept-recipebook-owner-isolation;stage=2;scope=backend;review=3,6 -->
-- [ ] 타인 column에 Meal을 생성할 수 없다 (403) <!-- omo:id=accept-column-owner-isolation;stage=2;scope=backend;review=3,6 -->
-- [ ] invalid input을 적절히 거부한다 (planned_servings 음수/0) <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
+- [x] 타인 레시피북을 조회할 수 없다 (403) <!-- omo:id=accept-recipebook-owner-isolation;stage=2;scope=backend;review=3,6 -->
+- [x] 타인 column에 Meal을 생성할 수 없다 (403) <!-- omo:id=accept-column-owner-isolation;stage=2;scope=backend;review=3,6 -->
+- [x] invalid input을 적절히 거부한다 (planned_servings 음수/0) <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
-- [ ] fixture에서 시스템 레시피북 3개 (my_added, saved, liked)가 준비되어 있다 <!-- omo:id=accept-fixture-system-books;stage=2;scope=shared;review=3,6 -->
-- [ ] fixture에서 커스텀 레시피북 1~2개가 준비되어 있다 <!-- omo:id=accept-fixture-custom-books;stage=2;scope=shared;review=3,6 -->
-- [ ] fixture에서 각 레시피북에 레시피 2~5개가 준비되어 있다 <!-- omo:id=accept-fixture-book-recipes;stage=2;scope=shared;review=3,6 -->
-- [ ] fixture에서 팬트리 항목 5~10개가 준비되어 있다 <!-- omo:id=accept-fixture-pantry-items;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 테이블 (recipe_books, pantry_items, recipes, meals)이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] 회원가입 시 시스템 레시피북 3개가 자동 생성되는지 확인했다 <!-- omo:id=accept-bootstrap-system-books;stage=2;scope=shared;review=3,6 -->
+- [x] fixture에서 시스템 레시피북 3개 (my_added, saved, liked)가 준비되어 있다 <!-- omo:id=accept-fixture-system-books;stage=2;scope=shared;review=3,6 -->
+- [x] fixture에서 커스텀 레시피북 1~2개가 준비되어 있다 <!-- omo:id=accept-fixture-custom-books;stage=2;scope=shared;review=3,6 -->
+- [x] fixture에서 각 레시피북에 레시피 2~5개가 준비되어 있다 <!-- omo:id=accept-fixture-book-recipes;stage=2;scope=shared;review=3,6 -->
+- [x] fixture에서 팬트리 항목 5~10개가 준비되어 있다 <!-- omo:id=accept-fixture-pantry-items;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 테이블 (recipe_books, pantry_items, recipes, meals)이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] 회원가입 시 시스템 레시피북 3개가 자동 생성되는지 확인했다 <!-- omo:id=accept-bootstrap-system-books;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 - verifier:
@@ -51,11 +51,11 @@
 ## Automation Split
 
 ### Vitest
-- [ ] 레시피북 목록 조회 로직이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-recipebook-list;stage=2;scope=backend;review=3,6 -->
-- [ ] 레시피북 내 레시피 목록 조회 로직이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-recipebook-recipes;stage=2;scope=backend;review=3,6 -->
-- [ ] 팬트리 기반 추천 로직이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-pantry-match;stage=2;scope=backend;review=3,6 -->
-- [ ] Meal 생성 로직 (status='registered' 고정)이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-meal-creation;stage=2;scope=backend;review=3,6 -->
-- [ ] 권한 검증 (book_id, column_id 소유자 일치)이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] 레시피북 목록 조회 로직이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-recipebook-list;stage=2;scope=backend;review=3,6 -->
+- [x] 레시피북 내 레시피 목록 조회 로직이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-recipebook-recipes;stage=2;scope=backend;review=3,6 -->
+- [x] 팬트리 기반 추천 로직이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-pantry-match;stage=2;scope=backend;review=3,6 -->
+- [x] Meal 생성 로직 (status='registered' 고정)이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-meal-creation;stage=2;scope=backend;review=3,6 -->
+- [x] 권한 검증 (book_id, column_id 소유자 일치)이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-owner-guard;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright
 - [ ] 레시피북 버튼 → 레시피북 선택 → 레시피 선택 → Meal 생성 흐름이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-recipebook-flow;stage=4;scope=frontend;review=5,6 -->
