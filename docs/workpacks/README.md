@@ -68,7 +68,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `07-meal-manage`               | merged    | `MEAL_SCREEN` 조회/수정/삭제와 409 예외 상태                                                                     |
 | `08a-meal-add-search-core`     | merged           | `MENU_ADD` shell, `RECIPE_SEARCH_PICKER`, 검색 기반 일반 식사 추가                                               |
 | `08b-meal-add-books-pantry`    | merged     | 레시피북에서 추가, 팬트리 기반 추천에서 추가                                                                     |
-| `09-shopping-preview-create`   | planned   | 장보기 preview, 대상 검증, 리스트 생성, 상세 이동                                                                |
+| `09-shopping-preview-create`   | docs      | 장보기 preview, 대상 검증, 리스트 생성, 상세 이동                                                                |
 | `10a-shopping-detail-interact` | planned   | 장보기 상세 조회, 체크 토글, 제외/되살리기 (`exclude→uncheck` 규칙 포함)                                         |
 | `10b-shopping-share-text`      | planned   | 장보기 공유 텍스트 생성 (`is_pantry_excluded=false` 항목만 포함)                                                 |
 | `11-shopping-reorder`          | planned   | 장보기 순서 변경과 미완료 리스트 reorder persistence                                                             |
