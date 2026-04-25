@@ -169,6 +169,7 @@ surface별로 generated / semi-generated / preserved가 다르다는 점이다.
 - slice-local canonical closeout snapshot의 유일한 authoritative owner
 - supervisor writable scope는 `status`와 `closeout`으로 제한
 - stage actor는 free-form markdown patch 대신 structured artifact를 제출
+- sibling `status` object는 canonical closeout truth가 아니라 terminal projection이다. Stage 6 approve 뒤 internal 6.5에서 `lifecycle=merged`, `approval_state=dual_approved`, `verification_status=passed`로 `.workflow-v2/status.json` item과 함께 맞춘다.
 
 ### 2. `.workflow-v2/status.json`
 

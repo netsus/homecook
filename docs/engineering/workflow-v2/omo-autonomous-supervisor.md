@@ -89,6 +89,15 @@ runtime과 `.workflow-v2/*`는 orchestration state이며, official docs와 drift
 5. active slice drift가 현재 branch에서 docs-only로 안전하게 반영 가능하면 supervisor가 먼저 bookkeeping commit/push를 수행하고 계속 진행한다.
 6. drift source가 모호하거나 docs-only가 아니면 `human_escalation`으로 fail-closed 한다.
 7. 이미 merge된 뒤 발견된 safe docs-only drift는 `omo:reconcile`이 closeout PR로 복구한다.
+8. Stage 6 approve 뒤 merge 직전의 `merged bookkeeping`은 docs-only 상태가 아니라 final closeout projection이다. supervisor는 같은 frontend PR branch에서 아래 surface를 한 번에 맞춘 뒤 recheck해야 한다.
+   - `docs/workpacks/README.md` slice row: `merged`
+   - `.workflow-v2/work-items/<id>.json#status`: `lifecycle=merged`, `approval_state=dual_approved`, `verification_status=passed`
+   - `.workflow-v2/status.json` item: 같은 `lifecycle / approval_state / verification_status`와 final frontend PR summary
+9. 위 machine-readable projection이 맞지 않으면 merge 전 closeout drift다. supervisor는 먼저 drift를 분류한다.
+   - canonical closeout/status/stage artifact에서 값이 결정되는 projection drift면 supervisor가 직접 final PR branch에서 고치고 recheck한다.
+   - slice-local closeout evidence, stage-result, authority evidence reference처럼 담당 stage actor 판단이 필요한 fixable drift면 supervisor가 해당 owner agent에게 bounded repair를 dispatch하고 recheck한다.
+   - source가 모호하거나 product contract 변경, 권한/외부 시스템, manual handoff 판단이 필요하면 auto-merge 대신 `human_escalation`으로 fail-closed 한다.
+10. 이미 merge된 뒤 발견된 `.workflow-v2/status.json` 또는 `.workflow-v2/work-items/<id>.json#status` drift는 docs-only closeout PR로 고치지 않는다. `omo:reconcile`은 docs-side closeout drift만 고치며, machine-readable drift는 별도 workflow-state repair 또는 supervisor finalize 재실행으로 분리한다. 단 active closeout PR 추적 중 `status.json` lifecycle이 임시로 `ready_for_review`인 것은 closeout PR tracking state로 보며, closeout finalize 뒤 다시 terminal projection으로 돌아가야 한다.
 
 ## Dedicated Worktree Policy
 
@@ -198,7 +207,7 @@ Stage 4 `authority_precheck` subphase는 위 code-stage contract를 유지하되
 16. `final_authority_gate`만이 authority-required slice의 `confirmed`를 잠글 수 있다. `authority_verdict=pass`와 blocker 0개가 아니면 `confirmed`를 줄 수 없다.
 17. `high-risk` / `anchor-extension` slice는 stage execution은 허용하지만 automatic merge는 금지하고 manual merge handoff로 종료한다.
 18. Stage 5 approve(또는 `final_authority_gate` approve) 뒤에는 supervisor가 Design Status `confirmed` bookkeeping commit/push를 수행할 수 있다.
-19. Stage 6 public actor는 Codex다. Stage 6 approve 뒤에는 frontend PR에 slice status `merged` bookkeeping commit/push를 반영하고, 그 CI와 external smoke가 끝나면 자동 merge한다. 단 manual merge handoff slice는 auto-merge 대신 human escalation으로 끝낸다.
+19. Stage 6 public actor는 Codex다. Stage 6 approve 뒤에는 supervisor가 final closeout projection을 frontend PR branch에 commit/push한다. 이 projection은 roadmap `merged`뿐 아니라 `.workflow-v2/status.json`과 `.workflow-v2/work-items/<id>.json#status`의 `merged / dual_approved / passed` 상태까지 포함한다. 그 CI와 external smoke가 끝나면 자동 merge한다. 단 manual merge handoff slice는 auto-merge 대신 human escalation으로 끝낸다.
 20. legacy artifact에서 `commit.subject`가 없으면 migration 경로에서만 `pr.title`을 commit subject로 fallback 한다.
 
 ## Internal 1.5
@@ -244,18 +253,37 @@ public stage numbering은 계속 `1~6`을 유지하고, `internal 6.5`는 Stage 
 
 원칙:
 
-1. `closeout_reconcile_check`는 `pnpm validate:closeout-sync`, `pnpm validate:source-of-truth-sync`, `pnpm validate:exploratory-qa-evidence`, `pnpm validate:authority-evidence-presence`, `pnpm validate:real-smoke-presence`를 묶어 실행한다.
+1. `closeout_reconcile_check`는 `pnpm validate:closeout-sync`, `pnpm validate:source-of-truth-sync`, `pnpm validate:exploratory-qa-evidence`, `pnpm validate:authority-evidence-presence`, `pnpm validate:real-smoke-presence`, `pnpm validate:omo-bookkeeping`을 묶어 실행한다.
 2. 결과는 `pass | fixable | blocked`로 정규화한다.
-3. `fixable`은 slice-local closeout drift만 의미한다. 현재 executable baseline의 허용 범위는 해당 slice의 `README.md`, `acceptance.md`, `automation-spec.json`과 merged bookkeeping이다.
+3. `fixable`은 slice-local closeout drift만 의미한다. 현재 executable baseline의 허용 범위는 해당 slice의 `README.md`, `acceptance.md`, `automation-spec.json`과 merged bookkeeping이다. 여기서 merged bookkeeping은 Stage 6 final frontend PR branch에서만 docs roadmap plus `.workflow-v2/status.json` / `.workflow-v2/work-items/<id>.json#status` terminal projection을 포함한다.
 4. repo-wide governing doc drift, validator/tooling 코드 변경, 공식 문서 버전 전파 문제는 `blocked`로 올리고 별도 docs-governance PR로 분리한다.
 5. `closeout_reconcile_repair`는 product contract를 바꾸지 않고 closeout bookkeeping과 evidence references만 고친다.
 6. exploratory QA가 required인 slice에서 evidence가 비어 있으면 merge 대신 fail-closed 한다. 현재 baseline은 existing frontend PR body 또는 local QA artifact bundle을 evidence source로 사용한다.
 7. authority-required slice는 authority report의 `> evidence:` block에 mobile/Figma visual evidence가 실제로 존재해야 하며, `stage4_evidence_requirements`에 선언된 variant(`mobile-default`, `mobile-narrow` 등)를 만족해야 한다. runtime authority snapshot이 존재하면 `design_authority.authority_report_paths`, `design_authority.evidence_artifact_refs`도 authority report / automation-spec과 sync되어야 하며, 어긋나면 merge 대신 fail-closed 한다.
 8. `automation-spec.json`의 `external_smokes[]`가 비어 있지 않은 slice는 source PR `Actual Verification`에 real DB/bootstrap/local Supabase/live smoke evidence 또는 합당한 근거가 있어야 한다. generic smoke/pass 문구만으로는 충분하지 않고, 선언한 `external_smokes[]` 항목이 verification evidence에서 식별 가능해야 하며, closeout preflight는 closeout PR body가 아니라 source PR body를 기준으로 이를 재검증한다.
 9. `closeout_reconcile_recheck`가 다시 `pass`가 나와야만 merge로 진행한다.
-10. repair 후에도 같은 drift가 남아 recheck가 다시 fail하면 자동 merge 대신 `human_escalation`으로 fail-closed 한다.
-11. `pnpm omo:reconcile -- --work-item <id>`의 dedicated closeout PR 경로도 같은 validator bundle과 safe repair policy를 재사용한다.
-12. supervisor baseline은 Stage 6 approve 뒤 같은 frontend PR branch에서 `check -> repair -> recheck`를 수행하고, recheck 통과 후에만 `merge_pending` CI gate로 진입한다.
+10. repair 후에도 같은 drift가 남아 recheck가 다시 fail하면 supervisor는 한 번 더 분류한다. deterministic projection drift면 supervisor direct repair를 한 번 더 시도할 수 있고, owner judgment가 필요한 slice-local drift면 담당 stage actor에게 bounded repair를 한 번 맡길 수 있다. 같은 finding이 그 뒤에도 남으면 자동 merge 대신 `human_escalation`으로 fail-closed 한다.
+11. `pnpm omo:reconcile -- --work-item <id>`의 dedicated closeout PR 경로도 같은 validator bundle과 safe repair policy를 재사용하되, `.workflow-v2/*` machine-readable status repair는 closeout PR writable scope에 포함하지 않는다.
+12. supervisor baseline은 Stage 6 approve 뒤 같은 frontend PR branch에서 `check -> repair -> recheck`를 수행하고, final closeout projection recheck 통과 후에만 `merge_pending` CI gate로 진입한다.
+
+### Internal 6.5 Repair Routing
+
+`closeout_reconcile_repair`는 바로 사람에게 넘기는 단계가 아니라, 아래 순서로 복구 가능성을 소진한다.
+
+1. Supervisor direct repair
+   - canonical closeout snapshot, status patch, PR metadata, retained artifact path에서 값이 결정되는 projection drift
+   - 허용 예: roadmap `merged`, workflow-v2 status terminal triplet, generated closeout/merge-gate projection, stale wait cleanup
+2. Owner agent bounded repair
+   - stage actor가 제출한 artifact나 evidence reference를 해석해야 하는 slice-local drift
+   - Stage 6 review/closeout checklist 문제는 Codex, Stage 4/authority report 또는 `final_authority_gate` evidence 문제는 해당 Claude-owned stage로 route back 한다.
+   - repair prompt는 finding id, 허용 파일 범위, required validator, recheck 조건을 포함해야 하며 product contract 변경을 요청하면 안 된다.
+3. Human escalation
+   - 같은 finding이 repair budget 뒤에도 남는 경우
+   - source가 모호한 경우
+   - 공식 문서/API/DB/화면 계약 변경이 필요한 경우
+   - GitHub 권한, provider auth, branch protection, manual handoff slice, missing external smoke처럼 agent가 repo-local patch만으로 해결할 수 없는 경우
+
+agent repair는 `human_escalation`의 대체가 아니라 fail-closed 전에 실행하는 bounded recovery다.
 
 ## Runtime State Machine
 
@@ -326,6 +354,7 @@ operator-facing status 진단:
 3. code stage는 `verify -> commit -> push -> PR 생성 -> wait.kind=ci`까지 끝나야 완료로 본다.
 4. review stage는 review 기록과 route/human gate 후처리까지 끝나야 완료로 본다.
 5. `omo:tick`은 `wait.kind`뿐 아니라 `phase`를 보고 unfinished action을 재개한다.
+6. frontend PR merge 성공 뒤 supervisor는 runtime을 terminal state로 정리한다. terminal runtime은 `phase=done`, `next_action=noop`, `wait=null`이어야 하며 stale `human_escalation` 또는 `blocked_retry` wait를 남기지 않는다. recovery 요약은 canonical closeout state에 남기고, runtime wait는 더 이상 작업 요청처럼 보이면 안 된다.
 
 legacy migration 규칙:
 
@@ -466,12 +495,13 @@ runtime state는 아래 대기 이유를 저장할 수 있어야 한다.
 1. closeout branch는 `docs/omo-closeout-<slice>`다.
 2. 허용 수정 범위는 `docs/workpacks/README.md`와 target workpack의 `README.md`, `acceptance.md`, `automation-spec.json`, closeout/evidence metadata뿐이다.
 3. closeout PR는 runtime `prs.closeout`에 기록한다.
-4. closeout PR 생성 후 workflow-v2 status는 `ready_for_review`를 유지하고 notes에 `closeout_pr=<url>`를 남긴다.
+4. closeout PR 생성 후 workflow-v2 status는 closeout PR tracking state로 `ready_for_review`를 유지하고 notes에 `closeout_pr=<url>`를 남긴다. 이 임시 상태는 Stage 6 final projection을 대체하지 않으며, closeout PR merge 후 finalize는 terminal `merged / dual_approved / passed` projection으로 되돌려야 한다.
 5. closeout PR에 docs 외 파일이 섞이면 validator와 supervisor가 fail-closed 한다.
-6. closeout PR 생성 전 `internal 6.5` preflight subset으로 `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence`, `validate:authority-evidence-presence`, `validate:real-smoke-presence`, PR body template 검사를 함께 실행한다.
+6. closeout PR 생성 전 `internal 6.5` preflight subset으로 `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence`, `validate:authority-evidence-presence`, `validate:real-smoke-presence`, `validate:omo-bookkeeping`, PR body template 검사를 함께 실행한다.
 7. exploratory QA evidence가 required인 slice의 closeout PR은 merged frontend PR QA evidence를 본문에 다시 연결할 수 있어야 한다.
 8. safe slice-local drift는 closeout branch 안에서 `README.md`, `acceptance.md`, `automation-spec.json`, PR closeout/evidence metadata만 수정한다.
 9. source-of-truth reference drift, validator/tooling 코드 변경 필요, missing authority report처럼 repo-wide 또는 non-deterministic drift는 fail-closed 하고 별도 `docs-governance` PR로 분리한다.
+10. `.workflow-v2/status.json` 또는 `.workflow-v2/work-items/<id>.json#status` drift는 docs-only drift가 아니다. dedicated closeout branch에서는 이를 수정하지 않고 fail-closed 하며, 예방 책임은 Stage 6 approve 뒤 internal 6.5 final projection에 둔다.
 
 ## Evidence Contract
 
