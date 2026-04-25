@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const cookies = vi.fn();
@@ -7,6 +10,16 @@ const getSupabaseEnv = vi.fn();
 const getServiceRoleKey = vi.fn();
 const cookieGetAll = vi.fn();
 const cookieSet = vi.fn();
+
+function readAllMigrationSql() {
+  const migrationsDir = join(process.cwd(), "supabase", "migrations");
+
+  return readdirSync(migrationsDir)
+    .filter((fileName) => fileName.endsWith(".sql"))
+    .sort()
+    .map((fileName) => readFileSync(join(migrationsDir, fileName), "utf8"))
+    .join("\n\n");
+}
 
 vi.mock("next/headers", () => ({
   cookies,
@@ -82,5 +95,16 @@ describe("supabase server helpers", () => {
     await expect(getServerAuthUser()).resolves.toEqual({
       id: "user-1",
     });
+  });
+});
+
+describe("supabase schema migrations", () => {
+  it("defines the documented pantry_items table for pantry match recommendations", () => {
+    const sql = readAllMigrationSql();
+
+    expect(sql).toMatch(/create table if not exists public\.pantry_items\s*\(/i);
+    expect(sql).toMatch(/user_id uuid not null references public\.users\(id\)/i);
+    expect(sql).toMatch(/ingredient_id uuid not null references public\.ingredients\(id\)/i);
+    expect(sql).toMatch(/unique\s*\(\s*user_id\s*,\s*ingredient_id\s*\)/i);
   });
 });

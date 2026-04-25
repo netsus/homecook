@@ -141,15 +141,19 @@ export function MenuAddScreen({
     null,
   );
 
-  const handleBack = useCallback(() => {
+  const navigateToMealScreen = useCallback((mode: "push" | "replace" = "push") => {
     if (!planDate || !columnId) {
-      router.push("/planner");
+      router[mode]("/planner");
       return;
     }
 
     const slotSuffix = slotName ? `?slot=${encodeURIComponent(slotName)}` : "";
-    router.push(`/planner/${planDate}/${columnId}${slotSuffix}`);
+    router[mode](`/planner/${planDate}/${columnId}${slotSuffix}`);
   }, [router, planDate, columnId, slotName]);
+
+  const handleBack = useCallback(() => {
+    navigateToMealScreen("push");
+  }, [navigateToMealScreen]);
 
   const handleRecipeSelect = useCallback((recipe: RecipeCardItem) => {
     setSelectedRecipe(recipe);
@@ -175,10 +179,10 @@ export function MenuAddScreen({
         return;
       }
 
-      // Success: navigate back to MEAL_SCREEN
-      handleBack();
+      // Success: keep /menu-add out of browser back history.
+      navigateToMealScreen("replace");
     },
-    [selectedRecipe, planDate, columnId, handleBack],
+    [selectedRecipe, planDate, columnId, navigateToMealScreen],
   );
 
   const handleServingsCancel = useCallback(() => {
@@ -220,10 +224,10 @@ export function MenuAddScreen({
         return;
       }
 
-      // Success: navigate back to MEAL_SCREEN
-      handleBack();
+      // Success: keep /menu-add out of browser back history.
+      navigateToMealScreen("replace");
     },
-    [selectedBookRecipe, planDate, columnId, handleBack],
+    [selectedBookRecipe, planDate, columnId, navigateToMealScreen],
   );
 
   const handleBookServingsCancel = useCallback(() => {
@@ -276,10 +280,10 @@ export function MenuAddScreen({
         return;
       }
 
-      // Success: navigate back to MEAL_SCREEN
-      handleBack();
+      // Success: keep /menu-add out of browser back history.
+      navigateToMealScreen("replace");
     },
-    [selectedPantryRecipe, planDate, columnId, handleBack],
+    [selectedPantryRecipe, planDate, columnId, navigateToMealScreen],
   );
 
   const handlePantryServingsCancel = useCallback(() => {

@@ -326,6 +326,42 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await page.waitForURL(new RegExp(`/planner/${PLAN_DATE}/${COLUMN_ID}`));
   });
 
+  test("replaces menu-add history after recipe book meal creation", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    const books = [buildRecipeBook({ id: "b1", name: "저장한 레시피" })];
+    const recipes = [buildBookRecipe({ recipe_id: "r1", title: "김치찌개" })];
+    await installRecipeBooksRoute(page, books);
+    await installRecipeBookRecipesRoute(page, "b1", recipes);
+
+    const createdMeal: MealCreateData = {
+      id: "meal-123",
+      recipe_id: "r1",
+      plan_date: PLAN_DATE,
+      column_id: COLUMN_ID,
+      planned_servings: 2,
+      status: "registered",
+      is_leftover: false,
+      leftover_dish_id: null,
+    };
+    await installMealCreateRoute(page, createdMeal);
+
+    const mealScreenUrl = `/planner/${PLAN_DATE}/${COLUMN_ID}?slot=${encodeURIComponent(SLOT_NAME)}`;
+    await page.goto(mealScreenUrl);
+    await page.goto(MENU_ADD_URL);
+
+    await page.locator("button:has-text('레시피북')").click();
+    await page.locator("button:has-text('선택')").first().click();
+    await page.locator("button:has-text('선택')").first().click();
+    await page.locator("button:has-text('추가')").click();
+
+    await page.waitForURL(new RegExp(`/planner/${PLAN_DATE}/${COLUMN_ID}`));
+
+    await page.goBack();
+
+    await expect(page).toHaveURL(new RegExp(`/planner/${PLAN_DATE}/${COLUMN_ID}`));
+    expect(page.url()).not.toContain("/menu-add");
+  });
+
   // ── Pantry match picker ────────────────────────────────────────────────────
 
   test("opens pantry match picker and displays recommendations", async ({ page }) => {
