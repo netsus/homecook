@@ -32,6 +32,7 @@ This document is the first success checkpoint. It must be approved before value-
 - Do not change information architecture just because the prototype shows a different screen.
 - Do not ship prototype-only `PANTRY` or `MYPAGE` as production scope before their official slices.
 - Do not add new font dependencies or external assets without explicit approval.
+- Do not import Jua or any other prototype-only font into production; the prototype's Google Fonts usage does not constitute approval.
 - Do not treat prototype JSX as production implementation.
 
 ## Approval Boundaries

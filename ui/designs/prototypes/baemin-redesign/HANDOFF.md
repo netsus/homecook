@@ -1,5 +1,10 @@
 # homecook_ × 배민 리디자인 — 개발자 핸드오프
 
+> **REFERENCE ONLY — 이 파일은 production implementation 계약이 아닙니다.**
+> `app/globals.css`, 라우트 파일, 공용 컴포넌트를 직접 수정하는 근거로 사용하지 마세요.
+> 공식 구현 순서와 승인 기준은 `ui/designs/BAEMIN_STYLE_DIRECTION.md`와
+> `docs/workpacks/h6-baemin-style-direction/README.md`를 따릅니다.
+
 > Source: 단일 HTML 프로토타입 (`index.html` + `tokens.jsx`, `components.jsx`, `screens/*.jsx`)
 > Target: Next.js 15 + React 19 + Tailwind v4, `app/globals.css`(`@theme inline`) 기반
 > 화면정의서: v1.5.0 — 정보구조 변경 없이 **시각/상호작용 톤만 배민 스타일로 교체**가 원칙

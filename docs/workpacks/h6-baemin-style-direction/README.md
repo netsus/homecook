@@ -17,6 +17,8 @@ The first success checkpoint is documentation approval, not a UI patch. Follow-u
 | Future component work | `feature/fe-baemin-style-shared-components` |
 | Future anchor retrofits | one `feature/fe-baemin-style-<screen>-retrofit` branch per screen |
 
+Rollout Sequence entries below are slice candidates. Concrete implementation branches should be derived from those IDs with the repo branch convention, for example `feature/fe-<slice>`.
+
 ## User Decision
 
 | Decision | Result |
@@ -162,6 +164,7 @@ None of these candidates are implementation scope in this gate.
 - Fixture baseline: no fixture changes.
 - Real DB smoke: not required for this gate.
 - Browser smoke: not required for this gate.
+- `execution_mode: manual` — workflow-v2 has no dedicated design-decision mode, so this gate uses the schema-valid manual mode while recording the design-decision meaning in direction docs and `status.json` notes.
 - Required checks for this docs gate:
   - `git diff --check`
   - `pnpm validate:workflow-v2`
