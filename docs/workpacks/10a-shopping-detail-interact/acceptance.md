@@ -13,20 +13,20 @@
 - [ ] 문서 기준 화면 상태와 액션이 맞다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
   - 구매 섹션 / 팬트리 제외 섹션 분리 표시
   - 체크박스 토글, 제외/되살리기 버튼
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
   - `GET /shopping/lists/{id}` 응답 타입
   - `PATCH /shopping/lists/{id}/items/{id}` request/response 타입
 
 ## State / Policy
-- [ ] 상태 전이가 공식 문서와 일치한다 <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이가 공식 문서와 일치한다 <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
   - `is_checked`: `false ↔ true`
   - `is_pantry_excluded`: `false ↔ true`
   - `exclude→uncheck` 규칙: `is_pantry_excluded=true` 변경 시 `is_checked=false` 자동 정리
-- [ ] read-only 정책이 지켜진다 <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
+- [x] read-only 정책이 지켜진다 <!-- omo:id=accept-read-only;stage=2;scope=shared;review=3,6 -->
   - `shopping_lists.is_completed=true` 리스트는 수정 불가 (409 CONFLICT)
   - 프론트 read-only 모드에서 체크박스/토글 비활성화
-- [ ] 중복 호출에도 결과가 꼬이지 않는다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] 중복 호출에도 결과가 꼬이지 않는다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
   - 체크 토글 API는 멱등함 (동일 값 재호출 시 200 + 동일 결과)
 
 ## Error / Permission
@@ -44,25 +44,25 @@
   - 상위 플로우(장보기 생성)에서 이미 로그인 게이트 통과, N/A로 처리 가능
 
 ## Data Integrity
-- [ ] 타인 리소스를 수정할 수 없다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] 타인 리소스를 수정할 수 없다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
   - `shopping_lists.user_id = 요청 user_id` 검증 (403)
   - item 소속 확인: `shopping_list_items.shopping_list_id = list_id` (404)
-- [ ] invalid input을 적절히 거부하거나 무시한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
+- [x] invalid input을 적절히 거부하거나 무시한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
   - 빈 body → 422 VALIDATION_ERROR
   - 존재하지 않는 list_id/item_id → 404
-- [ ] 파생 필드와 비정규화 값이 맞다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
+- [x] 파생 필드와 비정규화 값이 맞다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
   - `exclude→uncheck` 규칙: `is_pantry_excluded=true` 변경 시 `is_checked=false` 자동 세팅
 
 ## Data Setup / Preconditions
-- [ ] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
   - 로그인 유저 1명
   - `shopping_lists` × 2개 (`is_completed=false` / `true`)
   - `shopping_list_items` × 다수 (구매/제외 섹션 혼합)
   - `shopping_list_recipes`, `ingredients`
-- [ ] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
   - `shopping_lists`, `shopping_list_items`, `shopping_list_recipes`, `ingredients` 테이블
   - seed script로 위 baseline 데이터 생성
-- [ ] 시스템 row 자동 생성이 필요한 슬라이스면 owning flow와 기대 결과가 명시되어 있다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
+- [x] 시스템 row 자동 생성이 필요한 슬라이스면 owning flow와 기대 결과가 명시되어 있다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
   - `meal_plan_columns` × 4, `recipe_books` × 3 (회원가입 시 자동 생성, slice 01 bootstrap)
 
 ## Manual QA
@@ -78,11 +78,11 @@
 ## Automation Split
 
 ### Vitest
-- [ ] 로직 / 유틸 / 상태 전이 / API helper 범위가 분리되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
+- [x] 로직 / 유틸 / 상태 전이 / API helper 범위가 분리되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
   - `exclude→uncheck` 규칙 단위 테스트
   - read-only 정책 단위 테스트
   - 멱등성 단위 테스트
-- [ ] 회귀 위험이 큰 계산과 정책이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
+- [x] 회귀 위험이 큰 계산과 정책이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
   - `is_pantry_excluded=true` 변경 시 `is_checked=false` 자동 세팅
   - 완료된 리스트 수정 시 409 반환
 
