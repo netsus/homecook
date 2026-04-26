@@ -338,11 +338,11 @@
     {
       "id": "baemin-style-token-values",
       "preset": "vertical-slice-strict",
-      "branch": "docs/baemin-style-token-values",
-      "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-baemin-style-token-values",
+      "pr_path": "https://github.com/netsus/homecook/pull/225",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "git diff --check",
         "pnpm validate:workflow-v2",
@@ -350,7 +350,7 @@
         "pnpm lint",
         "pnpm verify:frontend"
       ],
-      "notes": "Stage 1 docs gate. User-approved brand token value slice. Implementation branch will be feature/fe-baemin-style-token-values after docs merge. Changes --brand (#FF6C3C->#ED7470), --brand-deep (#E05020->#C84C48), --brand-soft (#E6F8F7->#FDEBEA) in app/globals.css. Stage 2/3 N/A (no backend). Stage 4 Claude, Stage 5/6 Codex."
+      "notes": "Internal 6.5 projection sync after Stage 6 Codex review. PR #225 current head checks green before projection sync; local required checks passed including pnpm verify:frontend. Stage artifacts: .omx/artifacts/claude-delegate-baemin-style-token-values-stage4-implementation-response-20260426T172944Z.md, .omx/artifacts/stage5-baemin-style-token-values-design-review-20260426T174300Z.md, .omx/artifacts/stage6-baemin-style-token-values-pr-review-20260426T175900Z.md. Manual Only remains user final visual-feel confirmation after merge."
     }
   ]
 }
