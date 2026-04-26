@@ -39,6 +39,47 @@ describe("OMO status summary", () => {
     expect(runtimeObservability.recommendation).toContain("stale residue");
   });
 
+  it("surfaces lock owner process liveness in full and brief status output", () => {
+    const runtime = {
+      active_stage: 2,
+      current_stage: 2,
+      phase: "stage_running",
+      next_action: "run_stage",
+      lock: {
+        owner: "omo-supervisor-12345",
+        acquired_at: "2026-04-20T10:00:00.000Z",
+      },
+      execution: {
+        started_at: "2026-04-20T10:00:05.000Z",
+        session_role: "codex_primary",
+      },
+    };
+    const runtimeObservability = buildRuntimeObservability(runtime, {
+      now: "2026-04-20T10:03:00.000Z",
+      processes: {
+        isAlive(pid: number) {
+          return pid === 12345;
+        },
+      },
+    });
+    const status = {
+      workItemId: "03-recipe-like",
+      slice: "03-recipe-like",
+      trackedWorkItem: null,
+      trackedStatus: null,
+      runtime,
+      runtimeObservability,
+    };
+
+    expect(runtimeObservability).toMatchObject({
+      liveProcessPid: 12345,
+      liveProcessStatus: "alive",
+      liveProcessSource: "lock.owner",
+    });
+    expect(formatFullStatus(status)).toContain("Live process: alive pid=12345");
+    expect(formatBriefStatus(status)).toContain("liveProcess    : alive pid=12345");
+  });
+
   it("classifies blocked retries that are already due", () => {
     const runtimeObservability = buildRuntimeObservability(
       {

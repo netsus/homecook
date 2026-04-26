@@ -482,6 +482,22 @@ describe("meta-harness-auditor", () => {
     expect(findings[0]?.suggested_next_step).toContain("recent slices missing");
   });
 
+  it("uses the default recent and incident-aware sample when only an in-flight slice is provided", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    const result = runMetaHarnessAudit({
+      rootDir,
+      inFlightSlice: "10a-shopping-detail-interact",
+      checkpoint: "pre-slice10",
+    });
+
+    expect(result.sampledSlices).toContain("10a-shopping-detail-interact");
+    expect(result.sampledSlices).toContain("07-meal-manage");
+    expect(result.sampledSlices).toContain("06-recipe-to-planner");
+    expect(result.auditContext.sample_selection_reason).toBe("default recent/incident-aware sample");
+  });
+
   it("detects runtime anomaly gaps from unresolved runtime incidents", () => {
     const rootDir = createAuditFixture();
     tempDirs.push(rootDir);
@@ -490,6 +506,33 @@ describe("meta-harness-auditor", () => {
 
     expect(findings.map((finding) => finding.id)).toContain("H-OMO-003");
     expect(findings[0]?.suggested_next_step).toContain("stale lock");
+  });
+
+  it("propagates runtime anomaly signal fields through the audit bundle and report", () => {
+    const rootDir = createAuditFixture();
+    tempDirs.push(rootDir);
+
+    const result = runMetaHarnessAudit({
+      rootDir,
+      inFlightSlice: "07-meal-manage",
+      checkpoint: "runtime-signal-contract",
+    });
+    const auditContext = readJsonAbsolute(path.join(result.outputDir, "audit-context.json"));
+    const runtimeAnomalySummary = readJsonAbsolute(path.join(result.outputDir, "runtime-anomaly-summary.json"));
+    const report = readFileSync(path.join(result.outputDir, "report.md"), "utf8");
+
+    expect(runtimeAnomalySummary.operator_signal_contract.required_fields).toEqual([
+      "runtimeSignal",
+      "reasonCode",
+      "retryAt",
+      "heartbeatFreshness",
+      "activityFreshness",
+      "liveProcessStatus",
+    ]);
+    expect(auditContext.runtime_anomaly_signal_contract.required_fields).toEqual(
+      runtimeAnomalySummary.operator_signal_contract.required_fields,
+    );
+    expect(report).toContain("Runtime signal fields: runtimeSignal, reasonCode, retryAt");
   });
 
   it("detects PR/CI reality drift from unresolved projection and CI incidents", () => {

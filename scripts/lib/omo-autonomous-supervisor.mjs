@@ -53,6 +53,7 @@ import {
 import { readAutomationSpec, resolveAutomationSpecPath, resolveAutonomousSlicePolicy, resolveStageAutomationConfig } from "./omo-automation-spec.mjs";
 import { applyDocGateWaivedFindings, evaluateDocGate, writeDocGateResult } from "./omo-doc-gate.mjs";
 import { evaluateWorkItemStage } from "./omo-evaluator.mjs";
+import { generateOmoSliceReportIfPossible } from "./omo-slice-report.mjs";
 import {
   applyCloseoutRepairPlan,
   assertDocsOnlyCloseoutChanges,
@@ -1463,6 +1464,7 @@ function resolveChecklistContractValidation({
 function validateProductCodeStageEntry({
   rootDir,
   worktreePath,
+  workItemId,
   workItem,
   slice,
   stage,
@@ -1526,6 +1528,16 @@ function validateProductCodeStageEntry({
 
   if (isChecklistContractActive(checklistContract) && !checklistContract.automationSpecExists) {
     normalizedIssues.push(`Stage ${stage} entry requires automation-spec.json for ${slice}.`);
+  }
+
+  const trackedStatus = readTrackedStatusItem({
+    rootDir: worktreePath ?? rootDir,
+    workItemId,
+  });
+  if (!trackedStatus.tracked) {
+    normalizedIssues.push(
+      `Stage ${stage} entry requires ${trackedStatus.statusPath} item '${workItemId}'.`,
+    );
   }
 
   const dependencies = normalizeStringArray(workItem?.dependencies);
@@ -3478,6 +3490,12 @@ function finalizeCloseoutReconciliation({
     },
     now,
   });
+  generateOmoSliceReportIfPossible({
+    rootDir,
+    workItemId,
+    runtime: nextState,
+    now,
+  });
 
   return {
     state: nextState,
@@ -4182,6 +4200,12 @@ function finalizeMergedReviewStage({
       verification_status: "passed",
       notes: "wait_kind=none merged_after_autonomous_review",
     },
+    now,
+  });
+  generateOmoSliceReportIfPossible({
+    rootDir,
+    workItemId,
+    runtime: nextState,
     now,
   });
   return {
@@ -6687,6 +6711,7 @@ function handleImplementationCodeStage({
     const entryValidation = validateProductCodeStageEntry({
       rootDir,
       worktreePath: nextState.workspace?.path,
+      workItemId,
       workItem,
       slice,
       stage,

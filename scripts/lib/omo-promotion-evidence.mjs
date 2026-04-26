@@ -20,6 +20,10 @@ export function resolvePromotionEvidencePath(rootDir = process.cwd()) {
   return resolve(rootDir, ".workflow-v2", "promotion-evidence.json");
 }
 
+function resolveReplayAcceptancePath(rootDir = process.cwd()) {
+  return resolve(rootDir, ".workflow-v2", "replay-acceptance.json");
+}
+
 export function readPromotionEvidence(rootDir = process.cwd()) {
   const filePath = resolvePromotionEvidencePath(rootDir);
   if (!existsSync(filePath)) {
@@ -34,6 +38,65 @@ export function readPromotionEvidence(rootDir = process.cwd()) {
 
 function writePromotionEvidence(filePath, data) {
   writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`);
+}
+
+export function syncPromotionGateWithReplayAcceptance({
+  rootDir = process.cwd(),
+  now,
+} = {}) {
+  const { filePath, data } = readPromotionEvidence(rootDir);
+  const replayPath = resolveReplayAcceptancePath(rootDir);
+  if (!existsSync(replayPath)) {
+    throw new Error(`Missing ${replayPath}`);
+  }
+
+  const replayAcceptance = JSON.parse(readFileSync(replayPath, "utf8"));
+  const timestamp = typeof now === "string" && now.trim().length > 0 ? now.trim() : new Date().toISOString();
+  const summaryStatus =
+    typeof replayAcceptance?.summary?.status === "string"
+      ? replayAcceptance.summary.status
+      : "missing";
+  const lanes = Array.isArray(replayAcceptance?.lanes) ? replayAcceptance.lanes : [];
+  const incompleteRequiredLaneIds = lanes
+    .filter((lane) => lane?.required === true && lane.status !== "pass")
+    .map((lane) => lane?.id)
+    .filter((laneId) => typeof laneId === "string" && laneId.trim().length > 0);
+  const summaryBlockingLaneIds = uniqueStrings(replayAcceptance?.summary?.blocking_lane_ids ?? []);
+  const isReplayAccepted = summaryStatus === "pass" && incompleteRequiredLaneIds.length === 0;
+
+  if (isReplayAccepted) {
+    return {
+      filePath,
+      replayPath,
+      updated: false,
+      replaySummaryStatus: summaryStatus,
+      incompleteRequiredLaneIds,
+      updatedEntry: data.promotion_gate,
+    };
+  }
+
+  const blockerRefs = uniqueStrings([
+    ...(summaryBlockingLaneIds.length > 0 ? summaryBlockingLaneIds : incompleteRequiredLaneIds),
+    ...(summaryBlockingLaneIds.length === 0 && incompleteRequiredLaneIds.length === 0
+      ? [`summary:${summaryStatus}`]
+      : []),
+  ]);
+  data.promotion_gate.status = "not-ready";
+  data.promotion_gate.blockers = [`replay acceptance incomplete: ${blockerRefs.join(", ")}`];
+  data.promotion_gate.notes =
+    "Promotion gate recalculated from .workflow-v2/replay-acceptance.json; stale ready/candidate signals cannot be reused while replay acceptance is incomplete.";
+  data.promotion_gate.next_review_trigger = "After replay acceptance passes";
+  data.updated_at = timestamp;
+  writePromotionEvidence(filePath, data);
+
+  return {
+    filePath,
+    replayPath,
+    updated: true,
+    replaySummaryStatus: summaryStatus,
+    incompleteRequiredLaneIds,
+    updatedEntry: data.promotion_gate,
+  };
 }
 
 function resolveSectionCollection(data, section) {

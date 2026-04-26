@@ -4,6 +4,7 @@
     "incident_ids",
     "incident_count",
     "slice_refs",
+    "operator_signal_contract",
     "family_breakdown",
     "representative_symptoms"
   ],
@@ -17,6 +18,21 @@
     "incident_count": {},
     "slice_refs": {
       "type": "array"
+    },
+    "operator_signal_contract": {
+      "type": "object",
+      "required": ["version", "required_fields", "surfaces"],
+      "properties": {
+        "version": {
+          "enum": [1]
+        },
+        "required_fields": {
+          "type": "array"
+        },
+        "surfaces": {
+          "type": "array"
+        }
+      }
     },
     "family_breakdown": {
       "type": "array",
