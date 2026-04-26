@@ -58,6 +58,14 @@ No backend changes. Existing contracts must be preserved:
 - No component file, route file, or layout file may reference the new tokens in this slice.
 - Candidate values are sourced from `ui/designs/prototypes/baemin-redesign/HANDOFF.md` (reference only — see guard in that file).
 - Value changes to existing tokens are blocked until `baemin-style-token-values` slice receives explicit user approval.
+- Closeout bookkeeping updates to `docs/workpacks/README.md`, this README, and `acceptance.md` are allowed only to satisfy workflow-v2 Ready-for-Review policy; they do not expand the runtime implementation scope.
+
+## Design Status
+
+- [ ] (temporary)
+- [ ] (pending-review)
+- [ ] (confirmed)
+- [x] N/A — additive token foundation only; no screen design state changes in this slice.
 
 ## Token Candidates
 
@@ -112,12 +120,12 @@ Prototype source reference: `ui/designs/prototypes/baemin-redesign/HANDOFF.md` (
 
 ## Delivery Checklist
 
-- [ ] New CSS variables added to `app/globals.css` without modifying existing C2 values <!-- omo:id=bsta-tokens-added;stage=4;scope=frontend;review=5,6 -->
-- [ ] `docs/design/design-tokens.md` updated to record all new additive tokens with values and roles <!-- omo:id=bsta-tokens-documented;stage=4;scope=frontend;review=5,6 -->
-- [ ] No component or page file in the diff references the new CSS variables <!-- omo:id=bsta-no-component-use;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm verify:frontend` passes with no visual diff <!-- omo:id=bsta-no-visual-diff;stage=4;scope=frontend;review=5,6 -->
-- [ ] `--brand`, `--background`, `--foreground`, and all existing C2 tokens remain unchanged <!-- omo:id=bsta-c2-unchanged;stage=4;scope=frontend;review=5,6 -->
-- [ ] No Jua or prototype-only font is imported <!-- omo:id=bsta-no-font-import;stage=4;scope=frontend;review=5,6 -->
+- [x] New CSS variables added to `app/globals.css` without modifying existing C2 values <!-- omo:id=bsta-tokens-added;stage=4;scope=frontend;review=5,6 -->
+- [x] `docs/design/design-tokens.md` updated to record all new additive tokens with values and roles <!-- omo:id=bsta-tokens-documented;stage=4;scope=frontend;review=5,6 -->
+- [x] No component or page file in the diff references the new CSS variables <!-- omo:id=bsta-no-component-use;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend` passes with no visual diff <!-- omo:id=bsta-no-visual-diff;stage=4;scope=frontend;review=5,6 -->
+- [x] `--brand`, `--background`, `--foreground`, and all existing C2 tokens remain unchanged <!-- omo:id=bsta-c2-unchanged;stage=4;scope=frontend;review=5,6 -->
+- [x] No Jua or prototype-only font is imported <!-- omo:id=bsta-no-font-import;stage=4;scope=frontend;review=5,6 -->
 
 ## Blockers
 
