@@ -82,10 +82,10 @@ Candidates for additive CSS variables. Final values are authored by Codex in Sta
 | `--shadow-1` | Subtle card elevation | prototype shadow scale natural |
 | `--shadow-2` | Moderate elevation (sheets, dropdowns) | prototype shadow scale medium |
 | `--shadow-3` | High elevation (overlays) | prototype shadow scale crisp |
-| `--radius-sm` | Chip, badge | prototype 6px |
-| `--radius-md` | Button, input | prototype 8–10px |
-| `--radius-lg` | Card | prototype 12–16px |
-| `--radius-xl` | Sheet top | prototype 20px |
+| `--radius-sm` | Button, small thumbnail, input | prototype 8px |
+| `--radius-md` | Card, inset panel | prototype 12px |
+| `--radius-lg` | Large card, sheet surface | prototype 16px |
+| `--radius-xl` | Sheet top, search-style surface | prototype 20px |
 | `--radius-full` | Pill / avatar | 9999px |
 
 Prototype source reference: `ui/designs/prototypes/baemin-redesign/HANDOFF.md` (REFERENCE ONLY).
