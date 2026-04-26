@@ -1,0 +1,78 @@
+{
+  "id": "baemin-style-token-values",
+  "title": "Brand token value change to user-approved colors",
+  "summary": "app/globals.css의 --brand, --brand-deep, --brand-soft 값을 사용자 승인 색상(#ED7470, #C84C48, #FDEBEA)으로 변경한다. 기존 gray/surface/radius/shadow additive 값은 유지. 컴포넌트/페이지/레이아웃 파일 수정 없음. 예상 결과: brand-colored UI states만 변경.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "Change --brand, --brand-deep, and --brand-soft token values in app/globals.css to user-approved Baemin-style colors (#ED7470, #C84C48, #FDEBEA), recording the decisions in docs/design/design-tokens.md. No other token values, component files, or layout files are modified.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "h6-baemin-style-direction",
+    "baemin-style-tokens-additive"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/baemin-style-token-values/README.md",
+      "docs/workpacks/baemin-style-token-values/acceptance.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md",
+      "ui/designs/authority/BAEMIN_STYLE_DIRECTION-preflight.md",
+      "docs/design/design-tokens.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/design/design-tokens.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 2
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm verify:frontend"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "brand-token-visual-diff-only"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "Changing --background, --foreground, --muted, --surface, --panel, --line, --olive values",
+    "Changing --cook-* token values",
+    "Importing Jua or prototype-only fonts",
+    "Component, page, or layout file edits",
+    "Shared component restyling",
+    "API, DB, or status-transition changes"
+  ],
+  "open_questions": []
+}

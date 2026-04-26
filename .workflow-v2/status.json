@@ -334,6 +334,23 @@
         "pnpm verify:frontend"
       ],
       "notes": "Final closeout projection prepared on PR #222 after Claude Stage 3/4 approval and Codex Stage 5/6 approval. Artifacts: .omx/artifacts/claude-delegate-baemin-style-tokens-additive-pr222-stage3-stage4-gate-response-20260426T162338Z.md; .omx/artifacts/stage5-baemin-style-tokens-additive-review-20260426T162926Z.md; .omx/artifacts/stage6-baemin-style-tokens-additive-pr-review-20260426T163503Z.md. Expected outcome remains no visual diff."
+    },
+    {
+      "id": "baemin-style-token-values",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/baemin-style-token-values",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "git diff --check",
+        "pnpm validate:workflow-v2",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm verify:frontend"
+      ],
+      "notes": "Stage 1 docs gate. User-approved brand token value slice. Implementation branch will be feature/fe-baemin-style-token-values after docs merge. Changes --brand (#FF6C3C->#ED7470), --brand-deep (#E05020->#C84C48), --brand-soft (#E6F8F7->#FDEBEA) in app/globals.css. Stage 2/3 N/A (no backend). Stage 4 Claude, Stage 5/6 Codex."
     }
   ]
 }
