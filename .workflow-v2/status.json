@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-26T14:32:14.000Z",
+  "updated_at": "2026-04-27T00:00:00.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -307,15 +307,32 @@
       "id": "h6-baemin-style-direction",
       "preset": "docs-only",
       "branch": "docs/h6-baemin-style-direction",
-      "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/220",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "git diff --check",
         "pnpm validate:workflow-v2"
       ],
       "notes": "Design decision gate for official Baemin-style visual direction adoption. Runtime app code is out of scope; workflow-v2 uses execution_mode=manual while the design-decision meaning is recorded in docs."
+    },
+    {
+      "id": "baemin-style-tokens-additive",
+      "preset": "vertical-slice-strict",
+      "branch": "feature/fe-baemin-style-tokens-additive",
+      "pr_path": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "git diff --check",
+        "pnpm validate:workflow-v2",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm verify:frontend"
+      ],
+      "notes": "Additive CSS token foundation for Baemin-style rollout. Only app/globals.css and docs/design/design-tokens.md change. No existing C2 value may be modified. Expected outcome: no visual diff."
     }
   ]
 }
