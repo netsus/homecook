@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from "@testing-library/react";
+import React from "react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ShoppingDetailScreen } from "@/components/shopping/shopping-detail-screen";
 import * as shoppingApi from "@/lib/api/shopping";
@@ -15,16 +16,24 @@ vi.mock("next/navigation", () => ({
 
 const mockPush = vi.fn();
 
-(useRouter as ReturnType<typeof vi.fn>).mockReturnValue({
-  push: mockPush,
-  replace: vi.fn(),
-  prefetch: vi.fn(),
-  back: vi.fn(),
-  forward: vi.fn(),
-  refresh: vi.fn(),
-});
-
 describe("ShoppingDetailScreen", () => {
+  beforeEach(() => {
+    (useRouter as ReturnType<typeof vi.fn>).mockReturnValue({
+      push: mockPush,
+      replace: vi.fn(),
+      prefetch: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      refresh: vi.fn(),
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+    mockPush.mockClear();
+  });
+
   const mockListDetail: ShoppingListDetail = {
     id: "list-1",
     title: "4월 12일 장보기",
@@ -127,7 +136,9 @@ describe("ShoppingDetailScreen", () => {
     render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/장보기 리스트를 불러올 수 없어요/)).toBeTruthy();
+      expect(
+        screen.getByRole("heading", { name: "장보기 리스트를 불러올 수 없어요" })
+      ).toBeTruthy();
     });
 
     expect(screen.getByText(/다시 시도/)).toBeTruthy();
