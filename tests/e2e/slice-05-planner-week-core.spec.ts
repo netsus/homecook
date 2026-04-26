@@ -153,7 +153,7 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByLabel("식사 등록 완료")).toBeVisible();
     await expect(page.getByLabel("장보기 완료")).toBeVisible();
     await expect(page.getByLabel("요리 완료")).toBeVisible();
-    await expect(page.getByRole("button", { name: "장보기" })).toBeDisabled();
+    await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveAttribute("href", "/shopping/flow");
     await expect(page.getByRole("button", { name: "요리하기" })).toBeDisabled();
     await expect(page.getByRole("button", { name: "남은요리" })).toBeDisabled();
     await expect(page.getByRole("button", { name: "컬럼 추가" })).toHaveCount(0);
@@ -189,31 +189,17 @@ test.describe("Slice 05 planner week core", () => {
     await expect.poll(() => tracker.requestedRanges.at(-1)).toBe(initialRange);
   });
 
-  test("planner CTA buttons keep a consistent disabled treatment", async ({ page }) => {
+  test("planner CTA buttons expose shopping as the available next flow", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockPlannerRoutes(page);
 
     await page.goto("/planner");
 
-    const styles = await Promise.all(
-      ["장보기", "요리하기", "남은요리"].map(async (name) => {
-        const button = page.getByRole("button", { name });
-        await expect(button).toBeDisabled();
+    await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveAttribute("href", "/shopping/flow");
 
-        return button.evaluate((element) => {
-          const style = window.getComputedStyle(element);
-          return {
-            backgroundColor: style.backgroundColor,
-            borderColor: style.borderColor,
-            color: style.color,
-            cursor: style.cursor,
-            opacity: style.opacity,
-          };
-        });
-      }),
-    );
-
-    expect(new Set(styles.map((style) => JSON.stringify(style))).size).toBe(1);
+    for (const name of ["요리하기", "남은요리"]) {
+      await expect(page.getByRole("button", { name })).toBeDisabled();
+    }
   });
 
   test("guest user sees unauthorized state on planner route", async ({ page }) => {

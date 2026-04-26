@@ -247,15 +247,15 @@ test.describe("slice 09: shopping preview and list creation", () => {
       // Increase servings
       const plusButton = page.getByLabel("인분 늘리기");
       await plusButton.click();
-      await expect(page.getByText("3")).toBeVisible();
+      await expect(page.getByLabel("3인분")).toBeVisible();
 
       await plusButton.click();
-      await expect(page.getByText("4")).toBeVisible();
+      await expect(page.getByLabel("4인분")).toBeVisible();
 
       // Decrease servings
       const minusButton = page.getByLabel("인분 줄이기");
       await minusButton.click();
-      await expect(page.getByText("3")).toBeVisible();
+      await expect(page.getByLabel("3인분")).toBeVisible();
     });
 
     test("should not allow servings below 1", async ({ page }) => {
