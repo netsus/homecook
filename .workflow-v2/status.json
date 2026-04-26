@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-26T13:25:00.000Z",
+  "updated_at": "2026-04-26T14:32:14.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -302,6 +302,20 @@
       "last_evaluator_result": null,
       "auto_merge_eligible": false,
       "blocked_reason_code": null
+    },
+    {
+      "id": "h6-baemin-style-direction",
+      "preset": "docs-only",
+      "branch": "docs/h6-baemin-style-direction",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "git diff --check",
+        "pnpm validate:workflow-v2"
+      ],
+      "notes": "Design decision gate for official Baemin-style visual direction adoption. Runtime app code is out of scope; workflow-v2 uses execution_mode=manual while the design-decision meaning is recorded in docs."
     }
   ]
 }

@@ -1,0 +1,83 @@
+{
+  "id": "h6-baemin-style-direction",
+  "title": "Baemin-style official design direction gate",
+  "summary": "배민 스타일 프로토타입을 homecook의 공식 시각 방향으로 채택하되, 구현 전 문서 게이트에서 비목표, 승인 경계, 단계별 적용 순서를 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "docs-only",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "docs-only",
+  "goal": "Baemin-style visual direction adoption, gradual rollout, visual-only scope, and authority evidence requirements are documented before any runtime UI change begins.",
+  "owners": {
+    "claude": "stage-1-final-owner-review",
+    "codex": "direction-gate-draft-and-doc-consistency-review",
+    "workers": []
+  },
+  "dependencies": [
+    "01-discovery-detail-auth",
+    "02-discovery-filter",
+    "03-recipe-like",
+    "04-recipe-save",
+    "05-planner-week-core",
+    "06-recipe-to-planner",
+    "07-meal-manage",
+    "08a-meal-add-search-core",
+    "08b-meal-add-books-pantry",
+    "h1-home-first-impression",
+    "H2-planner-week-v2-redesign",
+    "h5-modal-system-redesign"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/workpacks/h6-baemin-style-direction/README.md",
+      "docs/workpacks/h6-baemin-style-direction/acceptance.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md",
+      "ui/designs/authority/BAEMIN_STYLE_DIRECTION-preflight.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/design-tokens.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 1,
+      "frontend": 1
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "git diff --check",
+      "pnpm validate:workflow-v2"
+    ],
+    "verify_commands": [
+      "git diff --check",
+      "pnpm validate:workflow-v2"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": []
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "Runtime UI implementation",
+    "API, DB, status, or schema changes",
+    "Productionizing PANTRY or MYPAGE before their official slices",
+    "Changing H1/H2/H5 locked decisions without a new approved gate"
+  ],
+  "open_questions": []
+}

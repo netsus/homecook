@@ -1,0 +1,40 @@
+{
+  "slice_id": "h6-baemin-style-direction",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [],
+    "playwright_projects": [],
+    "artifact_assertions": []
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "runtime-app-code-changed",
+    "official-doc-conflict-unrecorded",
+    "brand-value-change-without-user-approval",
+    "prototype-treated-as-production-contract"
+  ],
+  "max_fix_rounds": {
+    "backend": 1,
+    "frontend": 1
+  }
+}
