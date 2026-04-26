@@ -1,0 +1,41 @@
+{
+  "slice_id": "baemin-style-tokens-additive",
+  "execution_mode": "manual",
+  "risk_class": "low",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "no-visual-diff"
+    ]
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "existing-c2-token-value-changed",
+    "new-token-referenced-by-component",
+    "jua-font-imported",
+    "visual-diff-produced",
+    "design-tokens-doc-not-updated"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 2
+  }
+}

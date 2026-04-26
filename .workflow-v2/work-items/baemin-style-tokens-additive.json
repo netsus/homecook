@@ -1,0 +1,79 @@
+{
+  "id": "baemin-style-tokens-additive",
+  "title": "Additive Baemin-style token foundation",
+  "summary": "app/globals.css에 non-conflicting CSS 변수를 추가하여 후속 배민 스타일 구현을 위한 토큰 기반을 마련한다. 기존 C2 토큰 값은 변경하지 않으며, 이 슬라이스에서 새 토큰을 컴포넌트에 적용하지 않는다. 예상 결과: no visual diff.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "Prepare the CSS token foundation for Baemin-style follow-up work by adding new non-conflicting CSS variables to app/globals.css without changing any existing C2 values and without applying the new tokens to any component in this slice.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "h6-baemin-style-direction"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/baemin-style-tokens-additive/README.md",
+      "docs/workpacks/baemin-style-tokens-additive/acceptance.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md",
+      "ui/designs/authority/BAEMIN_STYLE_DIRECTION-preflight.md",
+      "docs/design/design-tokens.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/design/design-tokens.md",
+      "ui/designs/prototypes/baemin-redesign/README.md",
+      "ui/designs/prototypes/baemin-redesign/HANDOFF.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 2
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm verify:frontend"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "no-visual-diff"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "Changing any existing C2 token value",
+    "Applying new tokens to components in this slice",
+    "Importing Jua or prototype-only fonts",
+    "HOME, RECIPE_DETAIL, or PLANNER_WEEK layout changes",
+    "Shared component restyling",
+    "API, DB, or status-transition changes"
+  ],
+  "open_questions": []
+}
