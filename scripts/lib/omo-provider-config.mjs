@@ -13,7 +13,7 @@ export const DEFAULT_OMO_PROVIDER_CONFIG = {
     provider: "opencode",
     bin: "opencode",
     agent: "hephaestus",
-    model: "openai/gpt-5.3-codex",
+    model: "openai/gpt-5.4",
     variant: "high",
   },
 };

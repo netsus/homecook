@@ -263,6 +263,102 @@ function groupEscalations(escalations, dispatchRuns, runtime) {
   }));
 }
 
+function getRunProvider(run) {
+  return (
+    run.runMetadata?.execution?.provider ??
+    run.runMetadata?.effectiveProviderSelection?.provider ??
+    null
+  );
+}
+
+function isResolvedStageResult(stageResult) {
+  return stageResult?.result === "done" || stageResult?.decision === "approve";
+}
+
+function getExecutionPrompt(run) {
+  const args = run.runMetadata?.execution?.commandArgs;
+  if (!Array.isArray(args)) {
+    return "";
+  }
+
+  return args.find((arg) => typeof arg === "string" && arg.includes("## Required fixes")) ?? "";
+}
+
+function extractRequiredFixReasons(prompt) {
+  if (typeof prompt !== "string" || !prompt.includes("## Required fixes")) {
+    return [];
+  }
+
+  const section = prompt.match(/## Required fixes\s*\n([\s\S]*?)(?:\n## |\n# |$)/)?.[1] ?? "";
+  return section
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- ["))
+    .map((line) =>
+      line
+        .replace(/^- \[[^\]]+\]\s*/, "")
+        .replace(/\s*->\s*/g, " -> ")
+        .trim(),
+    )
+    .filter(Boolean);
+}
+
+function groupCodexResolvedErrors(dispatchRuns, runtime) {
+  const grouped = new Map();
+  const add = ({ run, reason }) => {
+    if (typeof reason !== "string" || reason.trim().length === 0) {
+      return;
+    }
+
+    const normalizedReason = reason.trim();
+    const key = `${run.stage}|${normalizedReason}`;
+    const existing = grouped.get(key) ?? {
+      stage: run.stage,
+      reason: normalizedReason,
+      count: 0,
+      firstAt: run.startedAt,
+    };
+    existing.count += 1;
+    if (run.startedAt && (!existing.firstAt || run.startedAt.getTime() < existing.firstAt.getTime())) {
+      existing.firstAt = run.startedAt;
+    }
+    grouped.set(key, existing);
+  };
+
+  for (const run of dispatchRuns) {
+    if (getRunProvider(run) !== "opencode" || !isResolvedStageResult(run.stageResult)) {
+      continue;
+    }
+
+    for (const reason of extractRequiredFixReasons(getExecutionPrompt(run))) {
+      add({ run, reason });
+    }
+
+    const executionMode = run.runMetadata?.execution?.mode;
+    if (typeof executionMode === "string" && executionMode !== "execute") {
+      add({
+        run,
+        reason:
+          typeof run.runMetadata?.execution?.reason === "string" &&
+          run.runMetadata.execution.reason.trim().length > 0
+            ? run.runMetadata.execution.reason
+            : executionMode,
+      });
+    }
+  }
+
+  return [...grouped.values()]
+    .sort((left, right) => {
+      const leftTime = left.firstAt?.getTime() ?? 0;
+      const rightTime = right.firstAt?.getTime() ?? 0;
+      return leftTime - rightTime;
+    })
+    .map((group) => ({
+      ...group,
+      resolution: runtime?.phase === "done" ? "Codex 재실행 후 완료" : "후속 확인 필요",
+    }));
+}
+
 function summarizeStageRuns(dispatchRuns) {
   return Object.entries(STAGE_LABELS).map(([stageValue, label]) => {
     const stage = Number.parseInt(stageValue, 10);
@@ -313,6 +409,8 @@ function renderReport({
   const totalPureMinutes = dispatchRuns.reduce((sum, run) => sum + run.durationMinutes, 0);
   const range = resolveMeasurementRange({ dispatchRuns, escalations, now });
   const escalationGroups = groupEscalations(escalations, dispatchRuns, runtime);
+  const codexResolvedErrors = groupCodexResolvedErrors(dispatchRuns, runtime);
+  const codexResolvedErrorCount = codexResolvedErrors.reduce((sum, group) => sum + group.count, 0);
   const finalPr = resolveFinalPullRequest(runtime);
   const completionTime = parseIsoTimestamp(now);
   const postCloseoutEscalations = completionTime
@@ -332,6 +430,7 @@ function renderReport({
   lines.push(`| 벽시계 총 시간 | ${formatMinutes(range.wallClockMinutes)} |`);
   lines.push(`| 순수 진행 누적시간 | ${formatMinutes(totalPureMinutes)} |`);
   lines.push(`| human_escalation | ${escalations.length}회 |`);
+  lines.push(`| Codex 자동 수정 오류 | ${codexResolvedErrorCount}회 |`);
   lines.push(`| 최종 merge 이후 stale escalation | ${postCloseoutEscalations}회 |`);
   lines.push("");
   lines.push(
@@ -363,11 +462,26 @@ function renderReport({
     }
   }
   lines.push("");
+  lines.push("## Codex-Resolved Non-Human Errors");
+  lines.push("");
+  lines.push("| Stage | 발생 | 첫 발생 시점 | 원인 | 해결 |");
+  lines.push("| --- | ---: | --- | --- | --- |");
+  if (codexResolvedErrors.length === 0) {
+    lines.push("| - | 0회 | - | 없음 | - |");
+  } else {
+    for (const group of codexResolvedErrors) {
+      lines.push(
+        `| ${group.stage ?? "-"} | ${group.count}회 | ${formatKst(group.firstAt)} | ${escapeTableCell(group.reason)} | ${escapeTableCell(group.resolution)} |`,
+      );
+    }
+  }
+  lines.push("");
   lines.push("## Efficiency Notes");
   lines.push("");
   lines.push(`- 순수 진행시간은 ${formatMinutes(totalPureMinutes)}이다.`);
   lines.push(`- 가장 오래 걸린 stage는 ${stageRuns.slice().sort((left, right) => right.durationMinutes - left.durationMinutes)[0]?.label ?? "-"}이다.`);
   lines.push(`- human_escalation은 ${escalations.length}회 기록됐다.`);
+  lines.push(`- human_escalation 외 Codex가 자동 수정한 오류는 ${codexResolvedErrorCount}회 기록됐다.`);
   lines.push("");
 
   return `${lines.join("\n")}`;

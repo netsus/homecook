@@ -5,7 +5,7 @@
   "disabled_commands": ["ulw-loop"],
   "agents": {
     "hephaestus": {
-      "model": "openai/gpt-5.3-codex",
+      "model": "openai/gpt-5.4",
       "variant": "high",
       "mode": "primary",
       "description": "Homecook default Codex supervisor for stage dispatch, implementation, and recovery."

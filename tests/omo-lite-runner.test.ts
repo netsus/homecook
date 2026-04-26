@@ -1061,7 +1061,7 @@ describe("OMO-lite stage runner", () => {
     expect(stdout).toContain("\"sessionID\":\"ses_codex_stage2\"");
     expect(args).toContain("run");
     expect(args).toContain("--model");
-    expect(args).toContain("openai/gpt-5.3-codex");
+    expect(args).toContain("openai/gpt-5.4");
     expect(args).toContain("--variant");
     expect(args).toContain("high");
     expect(args).not.toContain("--agent");
@@ -1080,7 +1080,7 @@ describe("OMO-lite stage runner", () => {
     });
     expect(metadata.effectiveProviderSelection).toMatchObject({
       provider: "opencode",
-      model: "openai/gpt-5.3-codex",
+      model: "openai/gpt-5.4",
       variant: "high",
       effort: null,
       source: "provider_config",
@@ -1091,7 +1091,7 @@ describe("OMO-lite stage runner", () => {
     });
     expect(runtime.sessions.codex_primary.session_id).toBe("ses_codex_stage2");
     expect(runtime.sessions.codex_primary).toMatchObject({
-      model: "openai/gpt-5.3-codex",
+      model: "openai/gpt-5.4",
       variant: "high",
     });
   });
@@ -1160,12 +1160,12 @@ describe("OMO-lite stage runner", () => {
       sessionId: "ses_codex_traceable",
     });
     expect(metadata.storedSessionSelection).toMatchObject({
-      model: "openai/gpt-5.3-codex",
+      model: "openai/gpt-5.4",
       variant: "high",
     });
     expect(metadata.effectiveProviderSelection).toMatchObject({
       provider: "opencode",
-      model: "openai/gpt-5.3-codex",
+      model: "openai/gpt-5.4",
       variant: "high",
       effort: null,
       source: "stored_session_binding",
@@ -3698,7 +3698,7 @@ describe("OMO-lite stage runner", () => {
     });
     const args = readFileSync(argsPath, "utf8");
     expect(args).toContain("--model");
-    expect(args).toContain("openai/gpt-5.3-codex");
+    expect(args).toContain("openai/gpt-5.4");
     expect(args).toContain("--variant");
     expect(args).toContain("high");
     expect(args).not.toContain("--agent");

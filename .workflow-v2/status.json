@@ -287,21 +287,22 @@
       "id": "10a-shopping-detail-interact",
       "preset": "vertical-slice-strict",
       "branch": null,
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs creation in progress",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
-      "last_evaluator_result": null,
-      "auto_merge_eligible": false,
-      "blocked_reason_code": null
+      "notes": "wait_kind=none merged_after_autonomous_review",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "last_evaluator_result": "/Users/shj/2025/2026/homecook1/.artifacts/omo-evaluator/2026-04-26T15-50-10-000Z-10a-shopping-detail-interact-frontend/result.json",
+      "auto_merge_eligible": true,
+      "blocked_reason_code": null,
+      "pr_path": "https://github.com/netsus/homecook/pull/219"
     },
     {
       "id": "h6-baemin-style-direction",

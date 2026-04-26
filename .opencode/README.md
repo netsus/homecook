@@ -72,6 +72,8 @@ pnpm omo:claude-budget -- --clear
   - `provider = opencode`
   - `bin = opencode`
   - `agent = hephaestus`
+  - `model = openai/gpt-5.4`
+  - `variant = high`
 - Claude provider override는 `claude-cli`만 허용한다. `opencode`는 Homecook OMO의 Claude provider로 지원하지 않는다.
 
 ## Runtime State
