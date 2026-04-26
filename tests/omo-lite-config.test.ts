@@ -35,7 +35,7 @@ describe("OMO-lite repo config", () => {
 
     expect(plugin).toContain("oh-my-opencode@latest");
     expect(config.default_agent).toBe("hephaestus");
-    expect(agents.hephaestus?.model).toBe("openai/gpt-5.3-codex");
+    expect(agents.hephaestus?.model).toBe("openai/gpt-5.4");
     expect(agents.athena?.model).toBe("anthropic/claude-sonnet-4-0");
     expect(agents.sisyphus?.model).toBe("openai/gpt-5.3-codex");
     expect(agents.oracle?.model).toBe("openai/gpt-5.4");
@@ -68,7 +68,7 @@ describe("OMO-lite repo config", () => {
       provider: "opencode",
       bin: "opencode",
       agent: "hephaestus",
-      model: "openai/gpt-5.3-codex",
+      model: "openai/gpt-5.4",
       variant: "high",
     });
   });
@@ -87,7 +87,7 @@ describe("OMO-lite repo config", () => {
     expect(disabledHooks).toEqual(expect.arrayContaining(["comment-checker", "ralph-loop"]));
     expect(disabledCommands).toEqual(expect.arrayContaining(["ulw-loop"]));
     expect(disabledCommands).not.toEqual(expect.arrayContaining(["ralph-loop"]));
-    expect(agents.hephaestus?.model).toBe("openai/gpt-5.3-codex");
+    expect(agents.hephaestus?.model).toBe("openai/gpt-5.4");
     expect(agents.athena?.model).toBe("anthropic/claude-sonnet-4-0");
     expect(agents.sisyphus?.model).toBe("openai/gpt-5.3-codex");
     expect(agents.oracle?.model).toBe("openai/gpt-5.4");
