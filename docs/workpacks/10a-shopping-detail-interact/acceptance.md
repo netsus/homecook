@@ -8,13 +8,13 @@
 > Claude가 rebuttal을 수용해 닫은 항목은 checkbox를 유지한 채 `waived=true;waived_by=claude;waived_stage=<3|5|6>;waived_reason=<slug>` metadata를 추가한다.
 
 ## Happy Path
-- [ ] 대표 사용자 흐름이 정상 동작한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
+- [x] 대표 사용자 흐름이 정상 동작한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
   - 장보기 생성 후 SHOPPING_DETAIL 진입 → 구매 항목 체크 → 제외 섹션 이동 → 되살리기
-- [ ] 문서 기준 화면 상태와 액션이 맞다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
+- [x] 문서 기준 화면 상태와 액션이 맞다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
   - 구매 섹션 / 팬트리 제외 섹션 분리 표시
   - 체크박스 토글, 제외/되살리기 버튼
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
   - `GET /shopping/lists/{id}` 응답 타입
   - `PATCH /shopping/lists/{id}/items/{id}` request/response 타입
 
@@ -30,17 +30,17 @@
   - 체크 토글 API는 멱등함 (동일 값 재호출 시 200 + 동일 결과)
 
 ## Error / Permission
-- [ ] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
   - 리스트 조회 중, 항목 업데이트 중
-- [ ] empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
   - 구매 섹션 비었을 때: "팬트리에 이미 있어서 장볼 재료가 없어요"
-- [ ] error 상태가 있다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
   - API 호출 실패 시 에러 메시지 표시
-- [ ] unauthorized 처리 흐름이 있다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
   - 401 발생 시 로그인 안내 (실질적으로 드물지만 처리 포함)
-- [ ] conflict 처리 흐름이 있다 <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
+- [x] conflict 처리 흐름이 있다 <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
   - 완료된 리스트 수정 시도 시 409 → "완료된 장보기 기록은 수정할 수 없어요" 안내
-- [ ] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
   - 상위 플로우(장보기 생성)에서 이미 로그인 게이트 통과, N/A로 처리 가능
 
 ## Data Integrity
@@ -87,12 +87,12 @@
   - 완료된 리스트 수정 시 409 반환
 
 ### Playwright
-- [ ] 실제 사용자 흐름, 라우팅, 모달, 권한 게이트가 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 실제 사용자 흐름, 라우팅, 모달, 권한 게이트가 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
   - 장보기 생성 → SHOPPING_DETAIL 진입
   - 체크 토글 → UI 반영
   - 제외/되살리기 → 섹션 이동
   - read-only 모드 확인
-- [ ] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+- [x] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
   - N/A (외부 연동 없음)
 
 ### Manual Only
