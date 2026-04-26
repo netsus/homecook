@@ -321,10 +321,10 @@
       "id": "baemin-style-tokens-additive",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-baemin-style-tokens-additive",
-      "pr_path": null,
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/222",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "git diff --check",
         "pnpm validate:workflow-v2",
@@ -332,7 +332,7 @@
         "pnpm lint",
         "pnpm verify:frontend"
       ],
-      "notes": "Additive CSS token foundation for Baemin-style rollout. Only app/globals.css and docs/design/design-tokens.md change. No existing C2 value may be modified. Expected outcome: no visual diff."
+      "notes": "Final closeout projection prepared on PR #222 after Claude Stage 3/4 approval and Codex Stage 5/6 approval. Artifacts: .omx/artifacts/claude-delegate-baemin-style-tokens-additive-pr222-stage3-stage4-gate-response-20260426T162338Z.md; .omx/artifacts/stage5-baemin-style-tokens-additive-review-20260426T162926Z.md; .omx/artifacts/stage6-baemin-style-tokens-additive-pr-review-20260426T163503Z.md. Expected outcome remains no visual diff."
     }
   ]
 }
