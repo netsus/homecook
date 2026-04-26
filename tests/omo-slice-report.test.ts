@@ -19,6 +19,7 @@ function seedDispatchRun({
   stage,
   endedAt,
   stageResult,
+  runMetadata = {},
 }: {
   rootDir: string;
   slice: string;
@@ -26,6 +27,7 @@ function seedDispatchRun({
   stage: number;
   endedAt: string;
   stageResult: Record<string, unknown>;
+  runMetadata?: Record<string, unknown>;
 }) {
   const dir = join(rootDir, ".artifacts", "omo-lite-dispatch", `${startedSlug}-${slice}-stage-${stage}`);
   mkdirSync(dir, { recursive: true });
@@ -34,6 +36,7 @@ function seedDispatchRun({
     slice,
     stage,
     stageResultPath: join(dir, "stage-result.json"),
+    ...runMetadata,
   });
   writeJson(join(dir, "stage-result.json"), stageResult);
   const ended = new Date(endedAt);
@@ -81,6 +84,45 @@ describe("OMO slice report", () => {
         pr: { title: "feat: demo backend" },
       },
     });
+    seedDispatchRun({
+      rootDir,
+      slice,
+      startedSlug: "2026-04-26T00-25-00-000Z",
+      stage: 4,
+      endedAt: "2026-04-26T00:28:00.000Z",
+      stageResult: {
+        result: "done",
+        summary_markdown: "Codex rerun fixed evaluator findings.",
+      },
+      runMetadata: {
+        execution: {
+          provider: "opencode",
+          mode: "execute",
+          commandArgs: [
+            "# frontend evaluator remediation\n\n## Required fixes\n- [major] Required frontend route is missing from claimed_scope.routes: /demo -> Declare the route.\n- [major] Required frontend artifact assertion was not satisfied: trace.zip -> Write artifact evidence.\n## Done",
+          ],
+        },
+      },
+    });
+    seedDispatchRun({
+      rootDir,
+      slice,
+      startedSlug: "2026-04-26T00-30-00-000Z",
+      stage: 4,
+      endedAt: "2026-04-26T00:31:00.000Z",
+      stageResult: {
+        result: "done",
+        summary_markdown: "Codex recovered from a non-human runner failure.",
+      },
+      runMetadata: {
+        execution: {
+          provider: "opencode",
+          mode: "process-failure",
+          reason: "opencode run failed with exit code null.",
+          commandArgs: [],
+        },
+      },
+    });
     writeJson(join(rootDir, ".artifacts", "omo-supervisor", "2026-04-26T00-21-00-000Z-10-demo-slice", "summary.json"), {
       workItemId: slice,
       slice,
@@ -114,10 +156,15 @@ describe("OMO slice report", () => {
     expect(report).toContain("# OMO Efficiency Report: 10-demo-slice");
     expect(report).toContain("| 최종 상태 | merged / dual_approved / passed |");
     expect(report).toContain("| 최종 PR | #321 |");
-    expect(report).toContain("| 순수 진행 누적시간 | 15.0분 |");
+    expect(report).toContain("| 순수 진행 누적시간 | 19.0분 |");
     expect(report).toContain("| 1 docs | 5.0분 | 1 |");
     expect(report).toContain("| 2 backend | 10.0분 | 1 |");
+    expect(report).toContain("| 4 frontend | 4.0분 | 2 |");
     expect(report).toContain("| human_escalation | 1회 |");
+    expect(report).toContain("| Codex 자동 수정 오류 | 3회 |");
     expect(report).toContain("backend evaluator returned blocked");
+    expect(report).toContain("## Codex-Resolved Non-Human Errors");
+    expect(report).toContain("Required frontend route is missing");
+    expect(report).toContain("opencode run failed with exit code null.");
   });
 });
