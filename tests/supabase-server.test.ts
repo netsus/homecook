@@ -107,4 +107,16 @@ describe("supabase schema migrations", () => {
     expect(sql).toMatch(/ingredient_id uuid not null references public\.ingredients\(id\)/i);
     expect(sql).toMatch(/unique\s*\(\s*user_id\s*,\s*ingredient_id\s*\)/i);
   });
+
+  it("defines the documented shopping list tables for slice09 creation", () => {
+    const sql = readAllMigrationSql();
+
+    expect(sql).toMatch(/create table if not exists public\.shopping_lists\s*\(/i);
+    expect(sql).toMatch(/create table if not exists public\.shopping_list_recipes\s*\(/i);
+    expect(sql).toMatch(/create table if not exists public\.shopping_list_items\s*\(/i);
+    expect(sql).toMatch(/shopping_list_id uuid not null references public\.shopping_lists\(id\)/i);
+    expect(sql).toMatch(/added_to_pantry boolean not null default false/i);
+    expect(sql).toMatch(/unique\s*\(\s*shopping_list_id\s*,\s*ingredient_id\s*\)/i);
+    expect(sql).toMatch(/unique\s*\(\s*shopping_list_id\s*,\s*recipe_id\s*\)/i);
+  });
 });

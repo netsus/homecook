@@ -28,6 +28,8 @@ const RANGE_SHIFT_DAYS = 7;
 const WEEK_PAGE_INDEX_CURRENT = 1;
 const WEEK_SCROLL_SETTLE_MS = 96;
 const CTA_BUTTONS = ["장보기", "요리하기", "남은요리"] as const;
+const PLANNER_CTA_CLASS =
+  "min-h-[40px] rounded-[12px] border border-transparent px-2 py-2 text-[11px] font-medium leading-none tracking-[-0.01em] sm:px-3 sm:text-[12px]";
 
 const STATUS_META: Record<
   MealStatus,
@@ -455,15 +457,25 @@ export function PlannerWeekScreen({
             role="group"
           >
             {CTA_BUTTONS.map((label) => (
-              <button
-                key={label}
-                aria-disabled="true"
-                className="min-h-[40px] rounded-[12px] border border-transparent bg-[var(--surface)] px-2 py-2 text-[11px] font-medium leading-none tracking-[-0.01em] text-[var(--muted)] opacity-72 sm:px-3 sm:text-[12px]"
-                disabled
-                type="button"
-              >
-                {label}
-              </button>
+              label === "장보기" ? (
+                <Link
+                  className={`${PLANNER_CTA_CLASS} flex items-center justify-center bg-[var(--brand)] text-white shadow-[0_8px_18px_rgba(255,108,60,0.18)]`}
+                  href="/shopping/flow"
+                  key={label}
+                >
+                  {label}
+                </Link>
+              ) : (
+                <button
+                  key={label}
+                  aria-disabled="true"
+                  className={`${PLANNER_CTA_CLASS} bg-[var(--surface)] text-[var(--muted)] opacity-72`}
+                  disabled
+                  type="button"
+                >
+                  {label}
+                </button>
+              )
             ))}
           </div>
         </div>
