@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-25T17:55:29.198Z",
+  "updated_at": "2026-04-25T20:07:05.381Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -266,22 +266,22 @@
     {
       "id": "09-shopping-preview-create",
       "preset": "vertical-slice-strict",
-      "branch": null,
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs in progress",
-      "evaluation_status": "not_started",
-      "evaluation_round": 0,
-      "last_evaluator_result": null,
-      "auto_merge_eligible": false,
-      "blocked_reason_code": null
+      "notes": "wait_kind=none merged_after_autonomous_review",
+      "evaluation_status": "passed",
+      "evaluation_round": 2,
+      "last_evaluator_result": "/Users/shj/2025/2026/homecook1/.artifacts/omo-evaluator/2026-04-25T19-40-46-909Z-09-shopping-preview-create-frontend/result.json",
+      "auto_merge_eligible": true,
+      "blocked_reason_code": null,
+      "pr_path": "https://github.com/netsus/homecook/pull/212"
     }
   ]
 }

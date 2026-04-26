@@ -780,8 +780,45 @@ function readStatusBoard(rootDir, workItemId) {
   };
 }
 
-function createStatusEntryFromWorkItem(workItem) {
+function normalizeEvaluationStatus(value, label) {
+  if (value === undefined || value === null) {
+    return "not_started";
+  }
+
+  return ensureEnum(value, EVALUATION_STATES, label);
+}
+
+function normalizeEvaluationRound(value, label) {
+  if (value === undefined || value === null) {
+    return 0;
+  }
+
+  const round = Number(value);
+  if (!Number.isInteger(round) || round < 0) {
+    throw new Error(`${label} must be a non-negative integer.`);
+  }
+
+  return round;
+}
+
+function normalizeNullableString(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function normalizeStatusEntryEvaluationFields(statusItem) {
   return {
+    ...statusItem,
+    evaluation_status: normalizeEvaluationStatus(statusItem.evaluation_status, "status.evaluation_status"),
+    evaluation_round: normalizeEvaluationRound(statusItem.evaluation_round, "status.evaluation_round"),
+    last_evaluator_result: normalizeNullableString(statusItem.last_evaluator_result),
+    auto_merge_eligible:
+      typeof statusItem.auto_merge_eligible === "boolean" ? statusItem.auto_merge_eligible : false,
+    blocked_reason_code: normalizeNullableString(statusItem.blocked_reason_code),
+  };
+}
+
+function createStatusEntryFromWorkItem(workItem) {
+  return normalizeStatusEntryEvaluationFields({
     id: workItem.id,
     preset: workItem.preset,
     lifecycle: workItem.status.lifecycle,
@@ -793,7 +830,7 @@ function createStatusEntryFromWorkItem(workItem) {
     auto_merge_eligible: workItem.status.auto_merge_eligible,
     blocked_reason_code: workItem.status.blocked_reason_code,
     required_checks: [...workItem.verification.required_checks],
-  };
+  });
 }
 
 function applyStatusPatch(statusItem, patch) {
@@ -880,13 +917,15 @@ export function syncWorkflowV2Status({
   const currentStatusItem =
     statusBoard.items.find((item) => item.id === normalizedWorkItemId) ??
     createStatusEntryFromWorkItem(workItem);
-  const nextStatusItem = applyStatusPatch(
-    {
-      ...currentStatusItem,
-      preset: workItem.preset,
-      required_checks: [...workItem.verification.required_checks],
-    },
-    patch,
+  const nextStatusItem = normalizeStatusEntryEvaluationFields(
+    applyStatusPatch(
+      {
+        ...currentStatusItem,
+        preset: workItem.preset,
+        required_checks: [...workItem.verification.required_checks],
+      },
+      patch,
+    ),
   );
 
   const nextItems = statusBoard.items.some((item) => item.id === normalizedWorkItemId)
@@ -911,21 +950,11 @@ export function syncWorkflowV2Status({
       lifecycle: nextStatusItem.lifecycle,
       approval_state: nextStatusItem.approval_state,
       verification_status: nextStatusItem.verification_status,
-      ...(Object.prototype.hasOwnProperty.call(nextStatusItem, "evaluation_status")
-        ? { evaluation_status: nextStatusItem.evaluation_status ?? null }
-        : {}),
-      ...(Object.prototype.hasOwnProperty.call(nextStatusItem, "evaluation_round")
-        ? { evaluation_round: nextStatusItem.evaluation_round ?? null }
-        : {}),
-      ...(Object.prototype.hasOwnProperty.call(nextStatusItem, "last_evaluator_result")
-        ? { last_evaluator_result: nextStatusItem.last_evaluator_result ?? null }
-        : {}),
-      ...(Object.prototype.hasOwnProperty.call(nextStatusItem, "auto_merge_eligible")
-        ? { auto_merge_eligible: nextStatusItem.auto_merge_eligible ?? false }
-        : {}),
-      ...(Object.prototype.hasOwnProperty.call(nextStatusItem, "blocked_reason_code")
-        ? { blocked_reason_code: nextStatusItem.blocked_reason_code ?? null }
-        : {}),
+      evaluation_status: nextStatusItem.evaluation_status,
+      evaluation_round: nextStatusItem.evaluation_round,
+      last_evaluator_result: nextStatusItem.last_evaluator_result,
+      auto_merge_eligible: nextStatusItem.auto_merge_eligible,
+      blocked_reason_code: nextStatusItem.blocked_reason_code,
     },
   };
 

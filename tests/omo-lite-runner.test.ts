@@ -17,6 +17,7 @@ function createFakeOpencodeBin(
     stdout?: string[];
     stderr?: string;
     stageResult?: Record<string, unknown> | null;
+    sleepSeconds?: number;
   },
 ) {
   fakeOpencodeCounter += 1;
@@ -56,6 +57,7 @@ function createFakeOpencodeBin(
     [
       "#!/bin/sh",
       "printf '%s\\n' \"$@\" > \"$FAKE_OPENCODE_ARGS_PATH\"",
+      options?.sleepSeconds ? `sleep ${options.sleepSeconds}` : "",
       stageResult
         ? [
             "cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
@@ -2111,6 +2113,93 @@ describe("OMO-lite stage runner", () => {
     });
   });
 
+  it("writes OpenCode stage results through a worktree-local path and mirrors them to the artifact", () => {
+    const rootDir = createRunnerFixture();
+    seedStrictSlice(rootDir, "03-recipe-like");
+    const executionDir = join(rootDir, ".worktrees", "03-recipe-like");
+    const artifactDir = join(rootDir, ".artifacts", "external-opencode-stage");
+    const agentStageResultPath = join(
+      executionDir,
+      ".opencode",
+      "omo-stage-results",
+      "external-opencode-stage",
+      "stage-result.json",
+    );
+    const docGateReview = createFakeOpencodeBin(rootDir, {
+      sessionId: "ses_codex_artifact_mirror",
+      stageResult: {
+        decision: "approve",
+        body_markdown: "## Review\n- approved",
+        route_back_stage: null,
+        approved_head_sha: "docs123",
+        review_scope: {
+          scope: "doc_gate",
+          checklist_ids: [],
+        },
+        reviewed_doc_finding_ids: [],
+        required_doc_fix_ids: [],
+        waived_doc_fix_ids: [],
+        findings: [],
+      },
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "03-recipe-like",
+      stage: 2,
+      subphase: "doc_gate_review",
+      workItemId: "03-recipe-like",
+      mode: "execute",
+      artifactDir,
+      executionDir,
+      opencodeBin: docGateReview.binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: docGateReview.argsPath,
+      },
+      now: "2026-04-25T18:00:00+09:00",
+    });
+
+    const args = readFileSync(docGateReview.argsPath, "utf8");
+    expect(args).toContain(agentStageResultPath);
+    expect(args).not.toContain(join(artifactDir, "stage-result.json"));
+    expect(existsSync(agentStageResultPath)).toBe(false);
+    expect(existsSync(join(artifactDir, "stage-result.json"))).toBe(true);
+    expect(result.stageResult).toMatchObject({
+      decision: "approve",
+      approved_head_sha: "docs123",
+    });
+  });
+
+  it("keeps doc gate missing-review fallback ids internally consistent", () => {
+    const rootDir = createRunnerFixture();
+    seedStrictSlice(rootDir, "03-recipe-like");
+    const docGateReview = createFakeOpencodeBin(rootDir, {
+      sessionId: "ses_codex_missing_doc_gate_review",
+      stageResult: null,
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "03-recipe-like",
+      stage: 2,
+      subphase: "doc_gate_review",
+      workItemId: "03-recipe-like",
+      mode: "execute",
+      opencodeBin: docGateReview.binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: docGateReview.argsPath,
+      },
+      now: "2026-04-25T18:10:00+09:00",
+    });
+
+    expect(result.execution.mode).toBe("execute");
+    expect(result.stageResult).toMatchObject({
+      decision: "request_changes",
+      reviewed_doc_finding_ids: ["auto-stage-result-recovery"],
+      required_doc_fix_ids: ["auto-stage-result-recovery"],
+    });
+  });
+
   it("does not require code-stage checklist updates for Stage 2 doc_gate_repair results", () => {
     const rootDir = createRunnerFixture();
     const homeDir = createClaudeHomeDir();
@@ -3192,6 +3281,137 @@ describe("OMO-lite stage runner", () => {
     expect(Array.isArray(stageResult.claimed_scope.states)).toBe(true);
   });
 
+  it("normalizes unchecked Stage 4 checklist updates from docs changed during execution", () => {
+    const rootDir = createRunnerFixture();
+    seedStrictSlice(rootDir, "06-recipe-to-planner");
+    const workspacePath = join(rootDir, ".worktrees", "06-recipe-to-planner");
+    mkdirSync(join(workspacePath, "docs", "workpacks", "06-recipe-to-planner"), { recursive: true });
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "06-recipe-to-planner", "README.md"),
+      readFileSync(join(rootDir, "docs", "workpacks", "06-recipe-to-planner", "README.md"), "utf8"),
+    );
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "06-recipe-to-planner", "acceptance.md"),
+      readFileSync(join(rootDir, "docs", "workpacks", "06-recipe-to-planner", "acceptance.md"), "utf8"),
+    );
+    writeFileSync(
+      join(workspacePath, "docs", "workpacks", "06-recipe-to-planner", "automation-spec.json"),
+      readFileSync(join(rootDir, "docs", "workpacks", "06-recipe-to-planner", "automation-spec.json"), "utf8"),
+    );
+
+    const homeDir = createClaudeHomeDir();
+    const binPath = join(rootDir, "fake-claude-stage4-docs-check.sh");
+    const argsPath = join(rootDir, "fake-claude-stage4-docs-check.args.log");
+    const stdinPath = join(rootDir, "fake-claude-stage4-docs-check.stdin.log");
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "printf '%s\\n' \"$@\" > \"$FAKE_CLAUDE_ARGS_PATH\"",
+        "cat > \"$FAKE_CLAUDE_STDIN_PATH\"",
+        "perl -0pi -e 's/- \\[ \\] UI 연결/- [x] UI 연결/' docs/workpacks/06-recipe-to-planner/README.md",
+        "perl -0pi -e 's/- \\[ \\] loading 상태가 있다/- [x] loading 상태가 있다/' docs/workpacks/06-recipe-to-planner/acceptance.md",
+        "cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
+        JSON.stringify(
+          {
+            result: "done",
+            summary_markdown: "Stage 4 frontend implementation complete.",
+            commit: {
+              subject: "feat: implement shopping flow UI",
+            },
+            pr: {
+              title: "feat: implement shopping flow UI",
+              body_markdown: "## Summary\n- frontend",
+            },
+            checks_run: ["pnpm verify:frontend"],
+            next_route: "open_pr",
+            claimed_scope: {
+              files: [
+                "docs/workpacks/06-recipe-to-planner/README.md",
+                "docs/workpacks/06-recipe-to-planner/acceptance.md",
+              ],
+              endpoints: [],
+              routes: ["/shopping/flow"],
+              states: ["loading"],
+              invariants: [],
+            },
+            changed_files: [
+              "docs/workpacks/06-recipe-to-planner/README.md",
+              "docs/workpacks/06-recipe-to-planner/acceptance.md",
+            ],
+            tests_touched: [],
+            artifacts_written: [],
+            checklist_updates: [
+              {
+                id: "delivery-ui-connection",
+                status: "unchecked",
+                evidence_refs: [],
+              },
+              {
+                id: "accept-loading",
+                status: "unchecked",
+                evidence_refs: [],
+              },
+            ],
+            contested_fix_ids: [],
+            rebuttals: [],
+          },
+          null,
+          2,
+        ),
+        "EOF",
+        "cat <<'EOF'",
+        JSON.stringify({
+          type: "result",
+          subtype: "success",
+          is_error: false,
+          session_id: "ses_claude_stage4_docs_check",
+          total_cost_usd: 0,
+          usage: {
+            input_tokens: 10,
+            output_tokens: 20,
+          },
+        }),
+        "EOF",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      homeDir,
+      slice: "06-recipe-to-planner",
+      stage: 4,
+      workItemId: "06-recipe-to-planner",
+      executionDir: workspacePath,
+      claudeBudgetState: "available",
+      mode: "execute",
+      claudeBin: binPath,
+      environment: {
+        FAKE_CLAUDE_ARGS_PATH: argsPath,
+        FAKE_CLAUDE_STDIN_PATH: stdinPath,
+      },
+      now: "2026-04-25T18:41:15.000Z",
+    });
+
+    const stageResult = JSON.parse(readFileSync(join(result.artifactDir, "stage-result.json"), "utf8")) as {
+      checklist_updates: Array<{ id: string; status: string }>;
+    };
+
+    expect(stageResult.checklist_updates).toEqual([
+      {
+        id: "delivery-ui-connection",
+        status: "checked",
+        evidence_refs: [],
+      },
+      {
+        id: "accept-loading",
+        status: "checked",
+        evidence_refs: [],
+      },
+    ]);
+  });
+
   it("merges the Stage 4 authority_precheck checklist snapshot from the prior implementation artifact", () => {
     const rootDir = createRunnerFixture();
     seedStrictSlice(rootDir, "06-recipe-to-planner");
@@ -3880,5 +4100,33 @@ describe("OMO-lite stage runner", () => {
     expect(readFileSync(join(artifactDir, "opencode.stderr.log"), "utf8")).toContain(
       "simulated failure",
     );
+  });
+
+  it("times out opencode provider runs instead of waiting indefinitely", () => {
+    const rootDir = createRunnerFixture();
+    const artifactDir = join(rootDir, ".artifacts", "timeout-run");
+    const { binPath, argsPath } = createFakeOpencodeBin(rootDir, {
+      sleepSeconds: 1,
+      stageResult: null,
+    });
+
+    const result = runStageWithArtifacts({
+      rootDir,
+      slice: "02-discovery-filter",
+      stage: 2,
+      mode: "execute",
+      artifactDir,
+      opencodeBin: binPath,
+      environment: {
+        FAKE_OPENCODE_ARGS_PATH: argsPath,
+        OMO_PROVIDER_TIMEOUT_MS: "50",
+      },
+      now: "2026-03-26T21:35:00+09:00",
+    });
+
+    expect(result.execution).toMatchObject({
+      mode: "contract-violation",
+      failureKind: "timeout",
+    });
   });
 });

@@ -303,6 +303,26 @@ describe("OMO evaluator", () => {
     expect(existsSync(join(result.artifactDir, "result.json"))).toBe(true);
   });
 
+  it("does not require external smokes when the automation spec declares none", () => {
+    const fixture = createEvaluatorFixture({
+      externalSmokes: [],
+    });
+
+    const result = evaluateWorkItemStage({
+      rootDir: fixture.rootDir,
+      workItemId: fixture.workItemId,
+      stage: "backend",
+      now: "2026-04-02T01:02:00.000Z",
+    });
+
+    expect(result.outcome).toBe("pass");
+    expect(result.mergeEligible).toBe(true);
+    expect(result.findings).toEqual([]);
+    expect(result.requiredCommands).toEqual([
+      "test -f tests/recipe-like.backend.test.ts",
+    ]);
+  });
+
   it("returns fixable and writes remediation artifacts when the backend contract metadata is incomplete", () => {
     const fixture = createEvaluatorFixture({
       stageResultOverrides: {
