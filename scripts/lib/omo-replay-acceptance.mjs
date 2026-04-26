@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { syncPromotionGateWithReplayAcceptance } from "./omo-promotion-evidence.mjs";
+
 const REPLAY_LANE_STATUSES = new Set(["pending", "in_progress", "pass", "blocked"]);
 const REPLAY_SUMMARY_STATUSES = new Set(["not-started", "in_progress", "pass", "blocked"]);
 const REPLAY_CRITERIA_KEYS = [
@@ -89,6 +91,7 @@ function normalizeCriteria(criteria = {}) {
  *   incidentIds?: string[],
  *   blockingLaneIds?: string[],
  *   criteria?: Record<string, boolean>,
+ *   syncPromotionGate?: boolean,
  *   now?: string,
  * }} options
  */
@@ -103,6 +106,7 @@ export function updateReplayAcceptance({
   incidentIds = [],
   blockingLaneIds = [],
   criteria = {},
+  syncPromotionGate = false,
   now,
 } = {}) {
   const normalizedSection = ensureNonEmptyString(section, "section");
@@ -120,11 +124,15 @@ export function updateReplayAcceptance({
 
     data.updated_at = timestamp;
     writeReplayAcceptance(filePath, data);
+    const promotionSync = syncPromotionGate
+      ? syncPromotionGateWithReplayAcceptance({ rootDir, now: timestamp })
+      : null;
 
     return {
       filePath,
       section: normalizedSection,
       updatedEntry: data.summary,
+      promotionSync,
     };
   }
 
@@ -157,11 +165,15 @@ export function updateReplayAcceptance({
 
   data.updated_at = timestamp;
   writeReplayAcceptance(filePath, data);
+  const promotionSync = syncPromotionGate
+    ? syncPromotionGateWithReplayAcceptance({ rootDir, now: timestamp })
+    : null;
 
   return {
     filePath,
     section: normalizedSection,
     id: normalizedId,
     updatedEntry: entry,
+    promotionSync,
   };
 }

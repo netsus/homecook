@@ -73,6 +73,25 @@ function uniqueStrings(values) {
   return [...new Set(values.filter((value) => typeof value === "string" && value.trim().length > 0))];
 }
 
+const RUNTIME_ANOMALY_SIGNAL_CONTRACT = {
+  version: 1,
+  required_fields: [
+    "runtimeSignal",
+    "reasonCode",
+    "retryAt",
+    "heartbeatFreshness",
+    "activityFreshness",
+    "liveProcessStatus",
+  ],
+  surfaces: [
+    "omo:status",
+    "omo:status:brief",
+    "audit-context.json",
+    "runtime-anomaly-summary.json",
+    "report.md",
+  ],
+};
+
 function listWorkpackSlices(rootDir) {
   const workpacksDir = path.join(rootDir, "docs/workpacks");
   if (!existsSync(workpacksDir)) {
@@ -322,6 +341,7 @@ export function buildRuntimeAnomalySummary({ rootDir = process.cwd() } = {}) {
     incident_ids: runtimeIncidents.map((incident) => incident.id),
     incident_count: runtimeIncidents.length,
     slice_refs: uniqueStrings(runtimeIncidents.flatMap((incident) => incident.sliceRefs)),
+    operator_signal_contract: RUNTIME_ANOMALY_SIGNAL_CONTRACT,
     family_breakdown: familyBreakdown,
     representative_symptoms: runtimeIncidents
       .map((incident) => incident.symptom)
@@ -1339,6 +1359,11 @@ export function renderMetaHarnessReport({
 
     if (runtimeAnomalySummary?.incident_count > 0) {
       lines.push(`- Runtime anomaly incidents: ${runtimeAnomalySummary.incident_ids.join(", ")}`);
+      if (Array.isArray(runtimeAnomalySummary.operator_signal_contract?.required_fields)) {
+        lines.push(
+          `- Runtime signal fields: ${runtimeAnomalySummary.operator_signal_contract.required_fields.join(", ")}`,
+        );
+      }
     }
 
     if (prCiRealityDriftSummary?.incident_count > 0) {
@@ -1475,9 +1500,7 @@ export function runMetaHarnessAudit({
 } = {}) {
   const generatedAt = new Date().toISOString();
   const cadenceConfig = loadCadenceConfig(rootDir);
-  const explicitSlices = inFlightSlice
-    ? [...new Set([...sampleSlices, inFlightSlice])]
-    : sampleSlices;
+  const explicitSlices = sampleSlices;
   const sampledSlices = resolveSampleSlices(rootDir, explicitSlices, inFlightSlice);
   const coverageStatus = buildAuditCoverageStatus({
     rootDir,
@@ -1525,6 +1548,7 @@ export function runMetaHarnessAudit({
     incident_ids_consulted: coverageStatus.incidentIdsConsulted,
     missing_evidence_summary: coverageStatus.missingEvidenceSummary,
     confidence_downgrade_reasons: coverageStatus.confidenceDowngradeReasons,
+    runtime_anomaly_signal_contract: runtimeAnomalySummary.operator_signal_contract,
     required_inputs_checked: [
       "AGENTS.md",
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",

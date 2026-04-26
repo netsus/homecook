@@ -50,6 +50,68 @@ function formatUsd(value) {
   return `$${value.toFixed(2)}`;
 }
 
+function resolveLockOwnerPid(lockOwner) {
+  const normalized = normalizeString(lockOwner);
+  if (!normalized) {
+    return null;
+  }
+
+  const match = normalized.match(/(?:^|[^0-9])([1-9][0-9]*)$/);
+  if (!match) {
+    return null;
+  }
+
+  const pid = Number.parseInt(match[1], 10);
+  return Number.isInteger(pid) && pid > 0 ? pid : null;
+}
+
+function isLocalProcessAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === "EPERM";
+  }
+}
+
+function resolveLockOwnerProcess({ lockOwner, processes }) {
+  if (!lockOwner) {
+    return {
+      liveProcessPid: null,
+      liveProcessStatus: "none",
+      liveProcessSource: null,
+    };
+  }
+
+  const pid = resolveLockOwnerPid(lockOwner);
+  if (!pid) {
+    return {
+      liveProcessPid: null,
+      liveProcessStatus: "unknown",
+      liveProcessSource: "lock.owner",
+    };
+  }
+
+  const liveProcessStatus =
+    typeof processes?.isAlive === "function" ? processes.isAlive(pid) : isLocalProcessAlive(pid);
+
+  return {
+    liveProcessPid: pid,
+    liveProcessStatus: liveProcessStatus ? "alive" : "dead",
+    liveProcessSource: "lock.owner",
+  };
+}
+
+function formatLiveProcess(runtimeObservability) {
+  const status = normalizeString(runtimeObservability?.liveProcessStatus);
+  if (!status) {
+    return "-";
+  }
+
+  const pid = runtimeObservability?.liveProcessPid;
+  return Number.isInteger(pid) && pid > 0 ? `${status} pid=${pid}` : status;
+}
+
 function resolveReferenceTime(now) {
   return parseTimestamp(now) ?? new Date();
 }
@@ -248,7 +310,7 @@ function buildRuntimeFreshness(runtime, reference) {
   };
 }
 
-export function buildRuntimeObservability(runtime, { now } = {}) {
+export function buildRuntimeObservability(runtime, { now, processes } = {}) {
   const phase = describePhasePhase(runtime);
   const waitKind = normalizeString(runtime?.wait?.kind);
   const lockOwner = normalizeString(runtime?.lock?.owner);
@@ -263,6 +325,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
   const lockAgeMs = lockTimestamp ? reference.getTime() - lockTimestamp.getTime() : null;
   const waitAgeMs = waitTimestamp ? reference.getTime() - waitTimestamp.getTime() : null;
   const freshness = buildRuntimeFreshness(runtime, reference);
+  const liveProcess = resolveLockOwnerProcess({ lockOwner, processes });
 
   if (waitKind === "blocked_retry") {
     const due = retryAt ? retryAt.getTime() <= reference.getTime() : false;
@@ -282,6 +345,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate: false,
+      ...liveProcess,
       ...freshness,
     };
   }
@@ -304,6 +368,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate,
+      ...liveProcess,
       ...freshness,
     };
   }
@@ -321,6 +386,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate: false,
+      ...liveProcess,
       ...freshness,
     };
   }
@@ -338,6 +404,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate: false,
+      ...liveProcess,
       ...freshness,
     };
   }
@@ -367,6 +434,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate,
+      ...liveProcess,
       ...freshness,
     };
   }
@@ -385,6 +453,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate: true,
+      ...liveProcess,
       ...freshness,
     };
   }
@@ -402,6 +471,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate: true,
+      ...liveProcess,
       ...freshness,
     };
   }
@@ -419,6 +489,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate: false,
+      ...liveProcess,
       ...freshness,
     };
   }
@@ -436,6 +507,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
       waitAge: formatDuration(waitAgeMs),
       retryAt: retryAt?.toISOString() ?? null,
       staleCandidate: false,
+      ...liveProcess,
       ...freshness,
     };
   }
@@ -452,6 +524,7 @@ export function buildRuntimeObservability(runtime, { now } = {}) {
     waitAge: formatDuration(waitAgeMs),
     retryAt: retryAt?.toISOString() ?? null,
     staleCandidate: false,
+    ...liveProcess,
     ...freshness,
   };
 }
@@ -731,6 +804,7 @@ export function formatFullStatus(status) {
     `Remediation: ${operatorGuidance.remediationState ?? "-"}`,
     `Runtime signal: ${runtimeObservability.status ?? "-"}`,
     `Runtime detail: ${runtimeObservability.detail ?? "-"}`,
+    `Live process: ${formatLiveProcess(runtimeObservability)}`,
     `Heartbeat: ${runtimeObservability.heartbeatAt ?? "-"}`,
     `Heartbeat age: ${runtimeObservability.heartbeatAge ?? "-"}`,
     `Heartbeat source: ${runtimeObservability.heartbeatSource ?? "-"}`,
@@ -830,6 +904,7 @@ export function formatBriefStatus(status) {
     `mode            : ${mode}`,
     `runtimeSignal   : ${runtimeObservability.status ?? "-"}`,
     `runtimeDetail   : ${runtimeObservability.detail ?? "-"}`,
+    `liveProcess    : ${formatLiveProcess(runtimeObservability)}`,
     `heartbeatAge    : ${runtimeObservability.heartbeatAge ?? "-"}`,
     `heartbeatSource : ${runtimeObservability.heartbeatSource ?? "-"}`,
     `heartbeatFresh  : ${runtimeObservability.heartbeatFreshness ?? "-"}`,

@@ -44,6 +44,29 @@ function writeFixture(rootDir: string) {
       2,
     ),
   );
+  writeFileSync(
+    join(rootDir, ".workflow-v2", "promotion-evidence.json"),
+    JSON.stringify(
+      {
+        version: 1,
+        target: "OMO v2",
+        updated_at: "2026-04-21T00:00:00.000Z",
+        canonical_policy: "v2",
+        execution_mode: "default",
+        documentation_gates: [],
+        operational_gates: [],
+        pilot_lanes: [],
+        promotion_gate: {
+          status: "ready",
+          blockers: [],
+          next_review_trigger: "none",
+          notes: "stale ready before replay regression",
+        },
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 function readReplayAcceptance(rootDir: string) {
@@ -124,6 +147,30 @@ describe("OMO replay acceptance update", () => {
     expect(updated.summary.status).toBe("in_progress");
     expect(updated.summary.blocking_lane_ids).toEqual(["slice07-fullstack-replay"]);
     expect(updated.summary.notes).toBe("slice06 replay in progress");
+  });
+
+  it("can sync promotion gate to not-ready when replay acceptance is incomplete", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-replay-acceptance-"));
+    writeFixture(rootDir);
+
+    updateReplayAcceptance({
+      rootDir,
+      section: "summary",
+      status: "in_progress",
+      note: "representative replay in progress",
+      blockingLaneIds: ["slice06-authority-replay"],
+      syncPromotionGate: true,
+      now: "2026-04-22T11:00:00.000Z",
+    });
+
+    const promotion = JSON.parse(readFileSync(join(rootDir, ".workflow-v2", "promotion-evidence.json"), "utf8"));
+
+    expect(promotion.updated_at).toBe("2026-04-22T11:00:00.000Z");
+    expect(promotion.promotion_gate.status).toBe("not-ready");
+    expect(promotion.promotion_gate.blockers).toEqual([
+      "replay acceptance incomplete: slice06-authority-replay",
+    ]);
+    expect(promotion.promotion_gate.notes).toContain(".workflow-v2/replay-acceptance.json");
   });
 
   it("rejects unknown replay lane ids", () => {

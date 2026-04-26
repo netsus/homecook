@@ -20,6 +20,7 @@ function printUsage() {
       "  --incident-id <id>              Append incident id (lane only, repeatable)",
       "  --blocking-lane-id <id>         Replace summary blocking lanes when used with summary (repeatable)",
       "  --criteria <key>=<true|false>   Update lane criteria (repeatable)",
+      "  --sync-promotion-gate           Recalculate promotion gate from replay acceptance after update",
       "  --now <iso-timestamp>           Override timestamp for deterministic runs/tests",
       "  --json                          Print JSON result",
       "  --help                          Show this help text",
@@ -74,6 +75,10 @@ function parseArgs(argv) {
     }
     if (token === "--json") {
       options.json = true;
+      continue;
+    }
+    if (token === "--sync-promotion-gate") {
+      options.syncPromotionGate = true;
       continue;
     }
 
@@ -142,6 +147,7 @@ function main() {
     incidentIds: options.incidentIds,
     blockingLaneIds: options.blockingLaneIds,
     criteria: options.criteria,
+    syncPromotionGate: options.syncPromotionGate,
     now: options.now,
   });
 
@@ -156,6 +162,7 @@ function main() {
       `ID: ${result.id ?? "-"}`,
       `File: ${result.filePath}`,
       `Status: ${result.updatedEntry.status ?? "-"}`,
+      `Promotion sync: ${result.promotionSync?.updated ? "updated" : result.promotionSync ? "unchanged" : "skipped"}`,
     ].join("\n") + "\n",
   );
 }

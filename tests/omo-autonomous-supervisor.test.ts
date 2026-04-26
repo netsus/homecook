@@ -473,12 +473,20 @@ function upsertWorktreeStatusItem(
   overrides: Record<string, unknown> = {},
 ) {
   const statusPath = join(workspacePath, ".workflow-v2", "status.json");
-  const status = JSON.parse(readFileSync(statusPath, "utf8")) as {
-    version: number;
-    project_profile: string;
-    updated_at: string;
-    items: Array<Record<string, unknown>>;
-  };
+  mkdirSync(join(workspacePath, ".workflow-v2"), { recursive: true });
+  const status = existsSync(statusPath)
+    ? (JSON.parse(readFileSync(statusPath, "utf8")) as {
+        version: number;
+        project_profile: string;
+        updated_at: string;
+        items: Array<Record<string, unknown>>;
+      })
+    : {
+        version: 1,
+        project_profile: "homecook",
+        updated_at: "2026-03-27T00:00:00+09:00",
+        items: [],
+      };
   const nextItem = {
     id: workItemId,
     preset: "vertical-slice-strict",
@@ -678,6 +686,10 @@ function seedWorktreeBookkeeping(
       frontendChecked: ["pending-review", "confirmed", "N/A"].includes(designStatus),
       }),
   );
+  upsertWorktreeStatusItem(workspacePath, workItemId, {
+    lifecycle: roadmapStatus === "merged" ? "done" : roadmapStatus === "planned" ? "planned" : "in_progress",
+    approval_state: roadmapStatus === "planned" ? "not_started" : "codex_approved",
+  });
 }
 
 function seedQaArtifactBundle(
@@ -764,6 +776,10 @@ function seedAuthorityDocGateFixture(workspacePath: string, workItemId: string) 
 }
 
 function seedPassingDocGateFixture(workspacePath: string, workItemId: string) {
+  upsertWorktreeStatusItem(workspacePath, workItemId, {
+    lifecycle: "in_progress",
+    approval_state: "codex_approved",
+  });
   mkdirSync(join(workspacePath, "docs", "workpacks", workItemId), { recursive: true });
   writeFileSync(
     join(workspacePath, "docs", "workpacks", "README.md"),
@@ -1641,6 +1657,147 @@ describe("OMO autonomous supervisor", () => {
       stage: 2,
     });
     expect(result.runtime?.doc_gate?.status).toBe("awaiting_review");
+    expect(result.runtime?.prs?.backend).toBeNull();
+  });
+
+  it("blocks Stage 2 implementation when the workflow status item is missing after docs gate pass", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    let stageRunnerCalled = false;
+
+    createGitWorkspace(workspacePath, `feature/be-${workItemId}`);
+    seedPassingDocGateFixture(workspacePath, workItemId);
+    writeFileSync(
+      join(workspacePath, ".workflow-v2", "status.json"),
+      JSON.stringify(
+        {
+          version: 1,
+          project_profile: "homecook",
+          updated_at: "2026-04-18T16:40:00+09:00",
+          items: [],
+        },
+        null,
+        2,
+      ),
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        last_completed_stage: 1,
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+        },
+        phase: "wait",
+        next_action: "run_stage",
+        wait: {
+          kind: "ready_for_next_stage",
+          pr_role: "backend",
+          stage: 2,
+          head_sha: "docs456",
+        },
+        prs: {
+          docs: {
+            number: 55,
+            url: "https://github.com/netsus/homecook/pull/55",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs456",
+            updated_at: "2026-04-18T16:40:00+09:00",
+          },
+          backend: null,
+          frontend: null,
+          closeout: null,
+        },
+        execution: null,
+        doc_gate: {
+          status: "passed",
+          round: 1,
+          source_master_sha: "docs456",
+          repair_branch: `docs/${workItemId}`,
+          last_review: {
+            decision: "approve",
+          },
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-18T16:41:00+09:00",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          pushBranch() {},
+          syncBaseBranch() {},
+          fastForwardBaseBranch() {},
+          getHeadSha() {
+            return "docs456";
+          },
+          getCurrentBranch() {
+            return `feature/be-${workItemId}`;
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          stageRunnerCalled = true;
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            throw new Error("not expected");
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    expect(stageRunnerCalled).toBe(false);
+    expect(result.wait).toMatchObject({
+      kind: "human_escalation",
+      stage: 2,
+    });
+    expect(result.runtime?.wait?.reason ?? "").toContain(".workflow-v2/status.json");
+    expect(result.runtime?.wait?.reason ?? "").toContain("03-recipe-like");
     expect(result.runtime?.prs?.backend).toBeNull();
   });
 
@@ -8987,6 +9144,7 @@ describe("OMO autonomous supervisor", () => {
     expect(result.wait).toBeNull();
     expect(runtime.phase).toBe("done");
     expect(runtime.wait).toBeNull();
+    expect(existsSync(join(rootDir, "docs", "workpacks", "03-recipe-like", "omo-report.md"))).toBe(true);
   });
 
   it("tick resumes stale Stage 6 manual merge handoff escalations after the PR is merged", () => {

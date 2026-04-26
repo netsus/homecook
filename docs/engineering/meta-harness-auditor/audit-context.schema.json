@@ -5,6 +5,7 @@
     "run_mode",
     "cadence_event",
     "sampled_slices",
+    "runtime_anomaly_signal_contract",
     "required_inputs_checked",
     "optional_inputs_present"
   ],
@@ -35,6 +36,21 @@
     },
     "confidence_downgrade_reasons": {
       "type": "array"
+    },
+    "runtime_anomaly_signal_contract": {
+      "type": "object",
+      "required": ["version", "required_fields", "surfaces"],
+      "properties": {
+        "version": {
+          "enum": [1]
+        },
+        "required_fields": {
+          "type": "array"
+        },
+        "surfaces": {
+          "type": "array"
+        }
+      }
     },
     "required_inputs_checked": {
       "type": "array"
