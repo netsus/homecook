@@ -29,5 +29,44 @@ export interface ShoppingListSummary {
   created_at: string;
 }
 
+export interface ShoppingListRecipeSummary {
+  recipe_id: string;
+  recipe_name: string;
+  recipe_thumbnail: string | null;
+  shopping_servings: number;
+  planned_servings_total: number;
+}
+
+export interface ShoppingListItemSummary {
+  id: string;
+  ingredient_id: string;
+  display_text: string;
+  amounts_json: Array<{ amount: number; unit: string }>;
+  is_checked: boolean;
+  is_pantry_excluded: boolean;
+  added_to_pantry: boolean;
+  sort_order: number;
+}
+
+export interface ShoppingListDetail {
+  id: string;
+  title: string;
+  date_range_start: string;
+  date_range_end: string;
+  is_completed: boolean;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  recipes: ShoppingListRecipeSummary[];
+  items: ShoppingListItemSummary[];
+}
+
+export interface ShoppingListItemUpdateBody {
+  is_checked?: boolean;
+  is_pantry_excluded?: boolean;
+}
+
 export type ShoppingPreviewResponse = ApiResponse<ShoppingPreviewData>;
 export type ShoppingListCreateResponse = ApiResponse<ShoppingListSummary>;
+export type ShoppingListDetailResponse = ApiResponse<ShoppingListDetail>;
+export type ShoppingListItemUpdateResponse = ApiResponse<ShoppingListItemSummary>;

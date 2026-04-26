@@ -2,6 +2,9 @@ import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
   ShoppingListCreateBody,
+  ShoppingListDetail,
+  ShoppingListItemSummary,
+  ShoppingListItemUpdateBody,
   ShoppingListSummary,
   ShoppingPreviewData,
 } from "@/types/shopping";
@@ -74,6 +77,22 @@ export async function fetchShoppingPreview() {
 export async function createShoppingList(body: ShoppingListCreateBody) {
   return requestShopping<ShoppingListSummary>("/api/v1/shopping/lists", {
     method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function fetchShoppingListDetail(listId: string) {
+  return requestShopping<ShoppingListDetail>(`/api/v1/shopping/lists/${listId}`);
+}
+
+export async function updateShoppingListItem(
+  listId: string,
+  itemId: string,
+  body: ShoppingListItemUpdateBody,
+) {
+  return requestShopping<ShoppingListItemSummary>(`/api/v1/shopping/lists/${listId}/items/${itemId}`, {
+    method: "PATCH",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
