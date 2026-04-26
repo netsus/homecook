@@ -72,13 +72,13 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 2,
+    "last_evaluator_result": "/Users/shj/2025/2026/homecook1/.artifacts/omo-evaluator/2026-04-25T19-40-46-909Z-09-shopping-preview-create-frontend/result.json",
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
   "out_of_scope": [

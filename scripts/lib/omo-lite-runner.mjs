@@ -1,5 +1,5 @@
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { closeSync, copyFileSync, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { resolveClaudeBudgetState } from "./omo-lite-claude-budget.mjs";
@@ -49,6 +49,9 @@ import {
   writeRuntimeState,
 } from "./omo-session-runtime.mjs";
 import { listWorktreeChangedFiles } from "./omo-worktree.mjs";
+
+const DEFAULT_PROVIDER_TIMEOUT_MS = 20 * 60 * 1000;
+
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string.`);
@@ -59,6 +62,16 @@ function ensureNonEmptyString(value, label) {
 
 function optionalString(value) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function resolveProviderTimeoutMs(environment) {
+  const rawValue =
+    environment && typeof environment === "object" && "OMO_PROVIDER_TIMEOUT_MS" in environment
+      ? environment.OMO_PROVIDER_TIMEOUT_MS
+      : process.env.OMO_PROVIDER_TIMEOUT_MS;
+  const value = Number(rawValue);
+
+  return Number.isFinite(value) && value > 0 ? value : DEFAULT_PROVIDER_TIMEOUT_MS;
 }
 
 function isReviewStage(stage, subphase = null) {
@@ -694,6 +707,53 @@ function defaultReviewRouteBackStage(stage) {
   return Number(stage);
 }
 
+function resolveAgentStageResultPath({
+  provider,
+  executionDir,
+  artifactDir,
+  artifactStageResultPath,
+}) {
+  if (provider !== "opencode") {
+    return artifactStageResultPath;
+  }
+
+  const artifactName =
+    artifactDir
+      .split(/[\\/]/)
+      .filter(Boolean)
+      .pop() ?? "stage-result";
+
+  return resolve(executionDir, ".opencode", "omo-stage-results", artifactName, "stage-result.json");
+}
+
+function syncAgentStageResultToArtifact({
+  agentStageResultPath,
+  artifactStageResultPath,
+}) {
+  if (
+    typeof agentStageResultPath !== "string" ||
+    typeof artifactStageResultPath !== "string" ||
+    agentStageResultPath === artifactStageResultPath ||
+    !existsSync(agentStageResultPath)
+  ) {
+    return false;
+  }
+
+  mkdirSync(dirname(artifactStageResultPath), { recursive: true });
+  copyFileSync(agentStageResultPath, artifactStageResultPath);
+  rmSync(dirname(agentStageResultPath), { recursive: true, force: true });
+  return true;
+}
+
+function writeStageResultToArtifact({
+  stageResult,
+  artifactStageResultPath,
+}) {
+  const content = `${JSON.stringify(stageResult, null, 2)}\n`;
+  mkdirSync(dirname(artifactStageResultPath), { recursive: true });
+  writeFileSync(artifactStageResultPath, content);
+}
+
 function buildMissingReviewStageResultSeed({
   stage,
   subphase = null,
@@ -717,7 +777,7 @@ function buildMissingReviewStageResultSeed({
         scope: "doc_gate",
         checklist_ids: [],
       },
-      reviewed_doc_finding_ids: [],
+      reviewed_doc_finding_ids: ["auto-stage-result-recovery"],
       required_doc_fix_ids: ["auto-stage-result-recovery"],
       waived_doc_fix_ids: [],
       findings: [
@@ -1332,6 +1392,17 @@ function normalizeCodeStageChecklistSnapshot({
       return entry;
     }
 
+    if (entry.status === "checked" && currentEntry.status !== "checked") {
+      changed = true;
+      return {
+        ...currentEntry,
+        status: "checked",
+        evidence_refs: Array.isArray(currentEntry.evidence_refs)
+          ? currentEntry.evidence_refs
+          : entry.evidence_refs,
+      };
+    }
+
     return currentEntry;
   });
 
@@ -1902,6 +1973,10 @@ function resolveProcessFailureKind(error) {
     return "signal_terminated";
   }
 
+  if (directCode === "ETIMEDOUT") {
+    return "timeout";
+  }
+
   const fragments = [];
   if (typeof error.message === "string") {
     fragments.push(error.message);
@@ -1919,7 +1994,9 @@ function resolveProcessFailureKind(error) {
 
   return /ENOBUFS|maxBuffer/i.test(fragments.join("\n"))
     ? "buffer_overflow"
-    : "nonzero_exit";
+    : /timed out|timeout/i.test(fragments.join("\n"))
+      ? "timeout"
+      : "nonzero_exit";
 }
 
 function isClaudeBudgetRuntimeFailure(error) {
@@ -2184,6 +2261,7 @@ export function runOpencode({
   opencodeBin,
   environment,
   stageResultPath,
+  artifactStageResultPath = resolveStageResultPath(artifactDir),
   timeoutMs,
 }) {
   const commandArgs = ["run", "--dir", executionDir, "--format", "json"];
@@ -2203,6 +2281,7 @@ export function runOpencode({
     }
   }
 
+  mkdirSync(dirname(stageResultPath), { recursive: true });
   commandArgs.push(prompt);
 
   const result = runCommandToArtifactLogs({
@@ -2220,6 +2299,11 @@ export function runOpencode({
   });
   cleanupGeneratedOpencodeArtifacts(executionDir);
   const stdout = existsSync(stdoutPath) ? readFileSync(stdoutPath, "utf8") : "";
+
+  syncAgentStageResultToArtifact({
+    agentStageResultPath: stageResultPath,
+    artifactStageResultPath,
+  });
 
   if (result.error) {
     throw createProcessFailure(
@@ -2636,6 +2720,7 @@ export function runStageWithArtifacts({
       ? executionDir.trim()
       : rootDir;
   const stageResultPath = resolveStageResultPath(targetArtifactDir);
+  const artifactStageResultPath = stageResultPath;
   const runtimeSnapshot = workItemId
     ? readRuntimeState({
         rootDir,
@@ -2799,6 +2884,7 @@ export function runStageWithArtifacts({
     existingSessionEntry,
     priorStageResultPath,
   });
+  const providerTimeoutMs = resolveProviderTimeoutMs(environment);
   const executionSessionId =
     sessionRolloverDecision.resumeMode === "rollover"
       ? null
@@ -2817,6 +2903,12 @@ export function runStageWithArtifacts({
   const executionBinding = resolveExecutionBinding(dispatch, {
     agent,
     providerConfig: activeProviderConfig,
+  });
+  const agentStageResultPath = resolveAgentStageResultPath({
+    provider: executionBinding.provider,
+    executionDir: resolvedExecutionDir,
+    artifactDir: targetArtifactDir,
+    artifactStageResultPath,
   });
   const storedSessionSelection = resolveStoredSessionSelection(existingSessionEntry);
   const effectiveProviderSelection = resolveEffectiveProviderSelection({
@@ -2862,7 +2954,7 @@ export function runStageWithArtifacts({
     subphase: normalizedSubphase,
     workItemId,
     dispatch,
-    stageResultPath,
+    stageResultPath: agentStageResultPath,
     extraPromptSections: [
       ...(dispatch.extraPromptSections ?? []),
       ...(docGateFindingsSection ? [docGateFindingsSection] : []),
@@ -2948,6 +3040,7 @@ export function runStageWithArtifacts({
     },
     executionDir: resolvedExecutionDir,
     stageResultPath,
+    agentStageResultPath: agentStageResultPath === artifactStageResultPath ? null : agentStageResultPath,
   };
   let runtimeStartSync = null;
 
@@ -3096,7 +3189,8 @@ export function runStageWithArtifacts({
               permissionMode: claudeProviderConfig.permissionMode,
               environment,
               homeDir,
-              stageResultPath,
+              stageResultPath: artifactStageResultPath,
+              timeoutMs: providerTimeoutMs,
             })
           : runOpencode({
               executionDir: resolvedExecutionDir,
@@ -3108,7 +3202,9 @@ export function runStageWithArtifacts({
               sessionId: executionSessionId,
               opencodeBin: resolvedOpencodeBin,
               environment,
-              stageResultPath,
+              stageResultPath: agentStageResultPath,
+              artifactStageResultPath,
+              timeoutMs: providerTimeoutMs,
             });
 
       result = {
@@ -3151,7 +3247,8 @@ export function runStageWithArtifacts({
                     permissionMode: claudeProviderConfig.permissionMode,
                     environment,
                     homeDir,
-                    stageResultPath,
+                    stageResultPath: artifactStageResultPath,
+                    timeoutMs: providerTimeoutMs,
                   })
                 : runOpencode({
                     executionDir: resolvedExecutionDir,
@@ -3163,7 +3260,9 @@ export function runStageWithArtifacts({
                     sessionId: null,
                     opencodeBin: resolvedOpencodeBin,
                     environment,
-                    stageResultPath,
+                    stageResultPath: agentStageResultPath,
+                    artifactStageResultPath,
+                    timeoutMs: providerTimeoutMs,
                   });
 
             sessionCompactionResumeMetadata = {
@@ -3341,6 +3440,13 @@ export function runStageWithArtifacts({
   let validStageResult = false;
   let schemaRepairAttempted = false;
   let schemaRepairArtifactDir = null;
+  const stageResultChecklistContract = normalizedStage > 1
+    ? readWorkpackChecklistContract({
+        rootDir,
+        worktreePath: resolvedExecutionDir,
+        slice: normalizedSlice,
+      })
+    : checklistContract;
 
   if (
     ["execute", "process-failure"].includes(result.execution.mode) &&
@@ -3376,16 +3482,19 @@ export function runStageWithArtifacts({
         stageResult = buildMissingReviewStageResultSeed({
           stage: normalizedStage,
           subphase: normalizedSubphase,
-          checklistContract,
+          checklistContract: stageResultChecklistContract,
           reviewedHeadSha: null,
           stageResultPath,
         });
-        writeFileSync(stageResultPath, `${JSON.stringify(stageResult, null, 2)}\n`);
+        writeStageResultToArtifact({
+          stageResult,
+          artifactStageResultPath,
+        });
       }
       const repairPrompt = buildStageResultRepairPrompt({
         stage: normalizedStage,
         subphase: normalizedSubphase,
-        stageResultPath,
+        stageResultPath: agentStageResultPath,
         validationMessage: missingStageResultReason,
         currentStageResult: stageResult ?? {},
       });
@@ -3404,7 +3513,8 @@ export function runStageWithArtifacts({
               permissionMode: claudeProviderConfig.permissionMode,
               environment,
               homeDir,
-              stageResultPath,
+              stageResultPath: artifactStageResultPath,
+              timeoutMs: providerTimeoutMs,
             })
           : runOpencode({
               executionDir: resolvedExecutionDir,
@@ -3416,7 +3526,9 @@ export function runStageWithArtifacts({
               sessionId: result.execution.sessionId ?? existingSessionId,
               opencodeBin: resolvedOpencodeBin,
               environment,
-              stageResultPath,
+              stageResultPath: agentStageResultPath,
+              artifactStageResultPath,
+              timeoutMs: providerTimeoutMs,
             });
 
       result = {
@@ -3431,7 +3543,7 @@ export function runStageWithArtifacts({
       stageResult = mergeChecklistSnapshotForAuthorityPrecheck({
         stage: normalizedStage,
         subphase: normalizedSubphase,
-        checklistContract,
+        checklistContract: stageResultChecklistContract,
         priorStageResultPath,
         stageResult,
         stageResultPath,
@@ -3439,7 +3551,7 @@ export function runStageWithArtifacts({
       stageResult = mergeChecklistSnapshotForReviewFix({
         stage: normalizedStage,
         subphase: normalizedSubphase,
-        checklistContract,
+        checklistContract: stageResultChecklistContract,
         reviewContext,
         priorStageResultPath,
         stageResult,
@@ -3447,7 +3559,7 @@ export function runStageWithArtifacts({
       });
       stageResult = normalizeReviewChecklistSnapshot({
         stage: normalizedStage,
-        checklistContract,
+        checklistContract: stageResultChecklistContract,
         stageResult,
         stageResultPath,
       });
@@ -3458,11 +3570,11 @@ export function runStageWithArtifacts({
       });
       try {
         validateStageResult(normalizedStage, stageResult, {
-          strictExtendedContract: Boolean(checklistContract && isChecklistContractActive(checklistContract)),
+          strictExtendedContract: Boolean(stageResultChecklistContract && isChecklistContractActive(stageResultChecklistContract)),
           subphase: normalizedSubphase,
         });
         assertCodeStageChecklistCoverage({
-          checklistContract,
+          checklistContract: stageResultChecklistContract,
           stage: normalizedStage,
           subphase: normalizedSubphase,
           stageResult,
@@ -3494,19 +3606,19 @@ export function runStageWithArtifacts({
       stageResult,
       stageResultPath,
       dispatch,
-      checklistContract,
+      checklistContract: stageResultChecklistContract,
     });
     stageResult = normalizeCodeStageChecklistSnapshot({
       stage: normalizedStage,
       subphase: normalizedSubphase,
-      checklistContract,
+      checklistContract: stageResultChecklistContract,
       stageResult,
       stageResultPath,
     });
     stageResult = mergeChecklistSnapshotForAuthorityPrecheck({
       stage: normalizedStage,
       subphase: normalizedSubphase,
-      checklistContract,
+      checklistContract: stageResultChecklistContract,
       priorStageResultPath,
       stageResult,
       stageResultPath,
@@ -3514,7 +3626,7 @@ export function runStageWithArtifacts({
     stageResult = mergeChecklistSnapshotForReviewFix({
       stage: normalizedStage,
       subphase: normalizedSubphase,
-      checklistContract,
+      checklistContract: stageResultChecklistContract,
       reviewContext,
       priorStageResultPath,
       stageResult,
@@ -3522,7 +3634,7 @@ export function runStageWithArtifacts({
     });
     stageResult = normalizeReviewChecklistSnapshot({
       stage: normalizedStage,
-      checklistContract,
+      checklistContract: stageResultChecklistContract,
       stageResult,
       stageResultPath,
     });
@@ -3533,11 +3645,11 @@ export function runStageWithArtifacts({
     });
     try {
       validateStageResult(normalizedStage, stageResult, {
-        strictExtendedContract: Boolean(checklistContract && isChecklistContractActive(checklistContract)),
+        strictExtendedContract: Boolean(stageResultChecklistContract && isChecklistContractActive(stageResultChecklistContract)),
         subphase: normalizedSubphase,
       });
       assertCodeStageChecklistCoverage({
-        checklistContract,
+        checklistContract: stageResultChecklistContract,
         stage: normalizedStage,
         subphase: normalizedSubphase,
         stageResult,
@@ -3558,7 +3670,6 @@ export function runStageWithArtifacts({
           },
         };
       } else if (
-
         shouldAttemptStageResultAutoRepair({
           stage: normalizedStage,
           subphase: normalizedSubphase,
@@ -3572,7 +3683,7 @@ export function runStageWithArtifacts({
         const repairPrompt = buildStageResultRepairPrompt({
           stage: normalizedStage,
           subphase: normalizedSubphase,
-          stageResultPath,
+          stageResultPath: agentStageResultPath,
           validationMessage,
           currentStageResult: stageResult,
         });
@@ -3591,7 +3702,8 @@ export function runStageWithArtifacts({
                 permissionMode: claudeProviderConfig.permissionMode,
                 environment,
                 homeDir,
-                stageResultPath,
+                stageResultPath: artifactStageResultPath,
+                timeoutMs: providerTimeoutMs,
               })
             : runOpencode({
                 executionDir: resolvedExecutionDir,
@@ -3603,14 +3715,16 @@ export function runStageWithArtifacts({
                 sessionId: result.execution.sessionId ?? existingSessionId,
                 opencodeBin: resolvedOpencodeBin,
                 environment,
-                stageResultPath,
+                stageResultPath: agentStageResultPath,
+                artifactStageResultPath,
+                timeoutMs: providerTimeoutMs,
               });
 
         stageResult = readStageResult(targetArtifactDir);
         stageResult = mergeChecklistSnapshotForAuthorityPrecheck({
           stage: normalizedStage,
           subphase: normalizedSubphase,
-          checklistContract,
+          checklistContract: stageResultChecklistContract,
           priorStageResultPath,
           stageResult,
           stageResultPath,
@@ -3618,7 +3732,7 @@ export function runStageWithArtifacts({
         stageResult = mergeChecklistSnapshotForReviewFix({
           stage: normalizedStage,
           subphase: normalizedSubphase,
-          checklistContract,
+          checklistContract: stageResultChecklistContract,
           reviewContext,
           priorStageResultPath,
           stageResult,
@@ -3626,7 +3740,7 @@ export function runStageWithArtifacts({
         });
         stageResult = normalizeReviewChecklistSnapshot({
           stage: normalizedStage,
-          checklistContract,
+          checklistContract: stageResultChecklistContract,
           stageResult,
           stageResultPath,
         });
@@ -3637,11 +3751,11 @@ export function runStageWithArtifacts({
         });
         try {
           validateStageResult(normalizedStage, stageResult, {
-            strictExtendedContract: Boolean(checklistContract && isChecklistContractActive(checklistContract)),
+            strictExtendedContract: Boolean(stageResultChecklistContract && isChecklistContractActive(stageResultChecklistContract)),
             subphase: normalizedSubphase,
           });
           assertCodeStageChecklistCoverage({
-            checklistContract,
+            checklistContract: stageResultChecklistContract,
             stage: normalizedStage,
             subphase: normalizedSubphase,
             stageResult,
@@ -3885,6 +3999,7 @@ export function runStageWithArtifacts({
           }
         : null,
       stageResultPath,
+      agentStageResultPath: agentStageResultPath === artifactStageResultPath ? null : agentStageResultPath,
       stageResult,
     },
   });

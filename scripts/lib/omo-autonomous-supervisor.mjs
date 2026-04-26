@@ -329,6 +329,21 @@ function isAllowedClaudeDirtyStageFile({
       normalizedFilePath.startsWith("ui/") ||
       normalizedFilePath.startsWith("public/") ||
       normalizedFilePath.startsWith("styles/") ||
+      normalizedFilePath.startsWith("types/") ||
+      normalizedFilePath === "vitest.config.ts" ||
+      normalizedFilePath === "vitest.product.config.ts" ||
+      normalizedFilePath.startsWith(`docs/workpacks/${slice}/`)
+    );
+  }
+
+  if (normalizedBranchRole === "backend" && stage === 2 && normalizedSubphase === "implementation") {
+    return (
+      normalizedFilePath.startsWith("app/") ||
+      normalizedFilePath.startsWith("lib/") ||
+      normalizedFilePath.startsWith("tests/") ||
+      normalizedFilePath.startsWith("types/") ||
+      normalizedFilePath === "vitest.config.ts" ||
+      normalizedFilePath === "vitest.product.config.ts" ||
       normalizedFilePath.startsWith(`docs/workpacks/${slice}/`)
     );
   }
@@ -404,6 +419,70 @@ function isResumableClaudeDirtyRecoveryState(state) {
     state?.wait?.kind === "ci" ||
     state?.wait?.kind === "human_escalation"
   );
+}
+
+function isResumableDirtyPersistedStageResultRecoveryState(state) {
+  const recovery = state?.recovery ?? null;
+  if (!recovery || recovery.kind !== "dirty_worktree") {
+    return false;
+  }
+
+  if (state?.wait?.kind !== "human_escalation") {
+    return false;
+  }
+
+  const stage =
+    Number.isInteger(recovery.stage) ? recovery.stage : state?.blocked_stage ?? state?.active_stage ?? state?.current_stage ?? null;
+  const subphase = state?.execution?.subphase ?? "implementation";
+  if (![2, 4].includes(stage) || subphase !== "implementation") {
+    return false;
+  }
+
+  if (!hasValidPersistedExecutionStageResult(state)) {
+    return false;
+  }
+
+  const executionRole = state?.execution?.session_role ?? resolveStageSessionRole(stage, subphase);
+  const executionSessionId = state?.execution?.session_id ?? null;
+  const persistedSessionId = executionRole ? state?.sessions?.[executionRole]?.session_id ?? null : null;
+  if (recovery.session_role && executionRole && recovery.session_role !== executionRole) {
+    return false;
+  }
+  if (recovery.session_id && executionSessionId && recovery.session_id !== executionSessionId) {
+    return false;
+  }
+  if (recovery.session_id && persistedSessionId && recovery.session_id !== persistedSessionId) {
+    return false;
+  }
+
+  const changedFiles = normalizeStringArray(recovery.changed_files);
+  if (changedFiles.length === 0) {
+    return false;
+  }
+
+  const slice = state?.slice ?? state?.work_item_id ?? null;
+  const workItemId = state?.work_item_id ?? state?.slice ?? null;
+  if (!slice || !workItemId) {
+    return false;
+  }
+
+  const branchRole =
+    state?.workspace?.branch_role ??
+    state?.wait?.pr_role ??
+    state?.execution?.pr_role ??
+    resolveBranchRole(stage);
+  return changedFiles
+    .map((filePath) => normalizeDirtyRecoveryFilePath(filePath))
+    .every((filePath) =>
+      isAllowedClaudeDirtyStageFile({
+        filePath,
+        branchRole,
+        stage,
+        subphase,
+        slice,
+        workItemId,
+      }),
+    );
 }
 
 function isResumableDocsGateDirtyRecoveryState(state) {
@@ -501,6 +580,25 @@ function isResumableStage1DocsHandoffRecovery(state) {
   return /roadmap status planned but found docs/i.test(recovery.reason ?? "");
 }
 
+function isResumableStage1BootstrapWorkpackMissingEscalation(state) {
+  const stageCandidates = [
+    state?.wait?.stage,
+    state?.blocked_stage,
+    state?.active_stage,
+    state?.current_stage,
+  ].map((stage) => Number(stage));
+
+  return (
+    state?.wait?.kind === "human_escalation" &&
+    (state?.last_completed_stage ?? 0) < 1 &&
+    stageCandidates.some((stage) => stage === 1) &&
+    /Bookkeeping drift is ambiguous:\s*workpack_missing/i.test(state.wait.reason ?? "") &&
+    !state?.prs?.docs?.url &&
+    !state?.prs?.backend?.url &&
+    !state?.prs?.frontend?.url
+  );
+}
+
 function isResumableDocGatePendingRecheckFailure(state) {
   const recovery = state?.recovery ?? null;
   const reasonText = [state?.wait?.reason, recovery?.reason].filter(Boolean).join(" ");
@@ -512,6 +610,23 @@ function isResumableDocGatePendingRecheckFailure(state) {
     state?.doc_gate?.status === "pending_recheck" &&
     Boolean(state?.prs?.docs?.url) &&
     /failed doc gate recheck/i.test(reasonText)
+  );
+}
+
+function isResumableVerifyCommandsFailedEscalation(state) {
+  const recovery = state?.recovery ?? null;
+  const reasonText = [state?.wait?.reason, recovery?.reason].filter(Boolean).join(" ");
+  const verifyCommands = Array.isArray(state?.execution?.verify_commands)
+    ? state.execution.verify_commands
+    : [];
+
+  return (
+    state?.wait?.kind === "human_escalation" &&
+    recovery?.kind === "partial_stage_failure" &&
+    /verify commands failed/i.test(reasonText) &&
+    state?.execution?.verify_bucket === "fail" &&
+    verifyCommands.length > 0 &&
+    hasValidPersistedExecutionStageResult(state)
   );
 }
 
@@ -718,6 +833,29 @@ function readExecutionLogFragments(state) {
   return fragments.join("\n");
 }
 
+function parseSupervisorOwnerPid(owner) {
+  if (typeof owner !== "string") {
+    return null;
+  }
+
+  const match = owner.trim().match(/^omo-supervisor-(\d+)$/);
+  if (!match) {
+    return null;
+  }
+
+  const pid = Number(match[1]);
+  return Number.isSafeInteger(pid) && pid > 0 ? pid : null;
+}
+
+function isLocalProcessAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === "EPERM";
+  }
+}
+
 function isRecoverableStaleClaudeExecution(state, now) {
   if (
     state?.execution?.provider !== "claude-cli" ||
@@ -821,6 +959,292 @@ function convertStaleClaudeExecutionToRetry({
       },
     }),
   }).state;
+}
+
+function isRecoverableDeadSupervisorOwnerExecution(state, now, processes) {
+  if (!state?.lock?.owner || resolveStatePhase(state) !== "stage_running") {
+    return false;
+  }
+
+  const ownerPid = parseSupervisorOwnerPid(state.lock.owner);
+  if (!ownerPid) {
+    return false;
+  }
+
+  const acquiredAt = new Date(state.lock.acquired_at ?? state.execution?.started_at ?? "");
+  const reference = new Date(typeof now === "string" && now.trim().length > 0 ? now : new Date().toISOString());
+  if (Number.isNaN(acquiredAt.getTime()) || Number.isNaN(reference.getTime())) {
+    return false;
+  }
+
+  const ageMs = reference.getTime() - acquiredAt.getTime();
+  if (ageMs < 2 * 60 * 1000) {
+    return false;
+  }
+
+  const isAlive =
+    typeof processes?.isAlive === "function"
+      ? processes.isAlive
+      : isLocalProcessAlive;
+  return !isAlive(ownerPid);
+}
+
+function resolveExecutionStageResultPath(state) {
+  if (typeof state?.execution?.stage_result_path === "string" && state.execution.stage_result_path.trim().length > 0) {
+    return state.execution.stage_result_path.trim();
+  }
+
+  if (typeof state?.execution?.artifact_dir === "string" && state.execution.artifact_dir.trim().length > 0) {
+    return resolve(state.execution.artifact_dir.trim(), "stage-result.json");
+  }
+
+  if (typeof state?.last_artifact_dir === "string" && state.last_artifact_dir.trim().length > 0) {
+    return resolve(state.last_artifact_dir.trim(), "stage-result.json");
+  }
+
+  return null;
+}
+
+function hasExecutionStageResultArtifact(state) {
+  const stageResultPath = resolveExecutionStageResultPath(state);
+  return typeof stageResultPath === "string" && existsSync(stageResultPath);
+}
+
+function convertDeadSupervisorOwnerExecutionWithStageResultToReady({
+  rootDir,
+  workItemId,
+  state,
+  now,
+  processes,
+}) {
+  if (
+    !hasExecutionStageResultArtifact(state) ||
+    !isRecoverableDeadSupervisorOwnerExecution(state, now, processes)
+  ) {
+    return null;
+  }
+
+  return writeRuntimeState({
+    rootDir,
+    workItemId,
+    state: {
+      ...state,
+      lock: null,
+      retry: null,
+      blocked_stage: null,
+      last_artifact_dir: state.execution?.artifact_dir ?? state.last_artifact_dir ?? null,
+      phase: "stage_result_ready",
+      next_action: "finalize_stage",
+      execution: state.execution
+        ? {
+            ...state.execution,
+            finished_at: state.execution.finished_at ?? now,
+          }
+        : state.execution,
+    },
+  }).state;
+}
+
+function convertDeadSupervisorOwnerExecutionToRetry({
+  rootDir,
+  workItemId,
+  state,
+  now,
+  processes,
+}) {
+  if (!isRecoverableDeadSupervisorOwnerExecution(state, now, processes)) {
+    return null;
+  }
+
+  const stage = state.active_stage ?? state.current_stage ?? state.blocked_stage ?? null;
+  if (!Number.isInteger(Number(stage))) {
+    return null;
+  }
+
+  const retryAt = resolveRetryAt({
+    now,
+    delayHours: 1 / 12,
+  });
+  const retryReason = "stale_lock_owner_missing";
+
+  return writeRuntimeState({
+    rootDir,
+    workItemId,
+    state: setRecoveryState({
+      state: setWaitState({
+        state: {
+          ...state,
+          lock: null,
+          blocked_stage: Number(stage),
+          retry: {
+            at: retryAt,
+            reason: retryReason,
+            attempt_count:
+              Number.isInteger(Number(state.retry?.attempt_count)) ? Number(state.retry.attempt_count) + 1 : 1,
+            max_attempts:
+              Number.isInteger(Number(state.retry?.max_attempts)) ? Number(state.retry.max_attempts) : 3,
+          },
+          phase: "wait",
+          next_action: "run_stage",
+        },
+        kind: "blocked_retry",
+        prRole: state.execution?.pr_role ?? state.wait?.pr_role ?? resolvePrRole(Number(stage)),
+        stage: Number(stage),
+        headSha: state.prs?.backend?.head_sha ?? state.prs?.frontend?.head_sha ?? state.wait?.head_sha ?? null,
+        reason: retryReason,
+        until: retryAt,
+        updatedAt: now,
+      }),
+      recovery: {
+        kind: "partial_stage_failure",
+        stage: Number(stage),
+        branch:
+          state.prs?.backend?.branch ??
+          state.prs?.frontend?.branch ??
+          state.prs?.docs?.branch ??
+          resolveBranchName({ slice: state.slice ?? workItemId, stage: Number(stage) }),
+        reason: `Stage was marked running, but lock owner process is no longer running (${state.lock.owner}); retry after clearing stale lock.`,
+        artifact_dir: state.execution?.artifact_dir ?? state.last_artifact_dir ?? null,
+        changed_files: [],
+        existing_pr:
+          state.prs?.backend?.url
+            ? { ...state.prs.backend }
+            : state.prs?.frontend?.url
+              ? { ...state.prs.frontend }
+              : state.prs?.docs?.url
+                ? { ...state.prs.docs }
+                : null,
+        salvage_candidate: true,
+        session_role: state.execution?.session_role ?? null,
+        session_provider: state.execution?.provider ?? null,
+        session_id: state.execution?.session_id ?? null,
+      },
+    }),
+  }).state;
+}
+
+function isRecoverableDeadSupervisorWaitLockResidue(state, now, processes) {
+  if (!state?.lock?.owner || resolveStatePhase(state) !== "wait") {
+    return false;
+  }
+
+  if (!["ci", "blocked_retry", "ready_for_next_stage"].includes(state.wait?.kind ?? "")) {
+    return false;
+  }
+
+  const ownerPid = parseSupervisorOwnerPid(state.lock.owner);
+  if (!ownerPid) {
+    return false;
+  }
+
+  const acquiredAt = new Date(state.lock.acquired_at ?? state.wait?.updated_at ?? "");
+  const reference = new Date(typeof now === "string" && now.trim().length > 0 ? now : new Date().toISOString());
+  if (Number.isNaN(acquiredAt.getTime()) || Number.isNaN(reference.getTime())) {
+    return false;
+  }
+
+  const ageMs = reference.getTime() - acquiredAt.getTime();
+  if (ageMs < 2 * 60 * 1000) {
+    return false;
+  }
+
+  const isAlive =
+    typeof processes?.isAlive === "function"
+      ? processes.isAlive
+      : isLocalProcessAlive;
+  return !isAlive(ownerPid);
+}
+
+function clearDeadSupervisorWaitLockResidue({
+  rootDir,
+  workItemId,
+  state,
+  now,
+  processes,
+}) {
+  if (!isRecoverableDeadSupervisorWaitLockResidue(state, now, processes)) {
+    return null;
+  }
+
+  return writeRuntimeState({
+    rootDir,
+    workItemId,
+    state: {
+      ...state,
+      lock: null,
+      phase: "wait",
+      next_action:
+        state.next_action ??
+        (state.wait?.kind === "ci"
+          ? "poll_ci"
+          : "run_stage"),
+    },
+  }).state;
+}
+
+function isRecoverableDeadSupervisorFinalizationLockResidue(state, now, processes) {
+  const phase = resolveStatePhase(state);
+  if (
+    !state?.lock?.owner ||
+    !["stage_result_ready", "verify_pending", "commit_pending", "push_pending", "pr_pending"].includes(phase)
+  ) {
+    return false;
+  }
+
+  const ownerPid = parseSupervisorOwnerPid(state.lock.owner);
+  if (!ownerPid) {
+    return false;
+  }
+
+  const acquiredAt = new Date(state.lock.acquired_at ?? state.execution?.finished_at ?? "");
+  const reference = new Date(typeof now === "string" && now.trim().length > 0 ? now : new Date().toISOString());
+  if (Number.isNaN(acquiredAt.getTime()) || Number.isNaN(reference.getTime())) {
+    return false;
+  }
+
+  const ageMs = reference.getTime() - acquiredAt.getTime();
+  if (ageMs < 2 * 60 * 1000) {
+    return false;
+  }
+
+  const isAlive =
+    typeof processes?.isAlive === "function"
+      ? processes.isAlive
+      : isLocalProcessAlive;
+  return !isAlive(ownerPid);
+}
+
+function clearDeadSupervisorFinalizationLockResidue({
+  rootDir,
+  workItemId,
+  state,
+  now,
+  processes,
+}) {
+  if (!isRecoverableDeadSupervisorFinalizationLockResidue(state, now, processes)) {
+    return null;
+  }
+
+  return writeRuntimeState({
+    rootDir,
+    workItemId,
+    state: {
+      ...state,
+      lock: null,
+      phase: resolveStatePhase(state),
+      next_action: state.next_action ?? "finalize_stage",
+    },
+  }).state;
+}
+
+function recoverLockedState(args) {
+  return (
+    convertStaleClaudeExecutionToRetry(args) ??
+    convertDeadSupervisorOwnerExecutionWithStageResultToReady(args) ??
+    convertDeadSupervisorOwnerExecutionToRetry(args) ??
+    clearDeadSupervisorWaitLockResidue(args) ??
+    clearDeadSupervisorFinalizationLockResidue(args)
+  );
 }
 
 function readTrackedWorkItem({
@@ -943,6 +1367,22 @@ function requiresExploratoryQaBundle(designAuthorityConfig) {
       : null;
 
   return ["new-screen", "high-risk", "anchor-extension"].includes(uiRisk ?? "");
+}
+
+function isResumableExploratoryQaBundleEscalation({
+  rootDir,
+  state,
+}) {
+  const recovery = state?.recovery ?? null;
+  const reasonText = [state?.wait?.reason, recovery?.reason].filter(Boolean).join(" ");
+  const slice = state?.slice ?? state?.work_item_id ?? null;
+
+  return (
+    state?.wait?.kind === "human_escalation" &&
+    recovery?.kind === "partial_stage_failure" &&
+    /Exploratory QA bundle is missing/i.test(reasonText) &&
+    Boolean(findLatestExploratoryQaBundle({ rootDir, slice }))
+  );
 }
 
 function resolveExpectedReviewScope(stage) {
@@ -1950,7 +2390,9 @@ function isAutoCleanableOpencodeMigrationFile(filePath) {
 
   return (
     typeof filePath === "string" &&
-    filePath.startsWith(".opencode/oh-my-openagent.json.bak.")
+    (filePath.startsWith(".opencode/oh-my-openagent.json.bak.") ||
+      filePath === ".opencode/omo-stage-results/" ||
+      filePath.startsWith(".opencode/omo-stage-results/"))
   );
 }
 
@@ -1970,6 +2412,14 @@ function isAutoCleanableOpencodeMigrationRecovery(recovery) {
   }
 
   return changedFiles.every((filePath) => isAutoCleanableOpencodeMigrationFile(filePath));
+}
+
+function isResumableAutoCleanableDirtyRecoveryState(state) {
+  return (
+    state?.wait?.kind === "human_escalation" &&
+    state?.recovery?.kind === "dirty_worktree" &&
+    isAutoCleanableOpencodeMigrationRecovery(state.recovery)
+  );
 }
 
 function buildPilotEvidenceSalvageCommit({
@@ -2442,7 +2892,58 @@ function isResumableValidatedStageResultContractViolationState({
   const reasonText = [state.wait?.reason, state.recovery?.reason, state.retry?.reason]
     .filter((value) => typeof value === "string" && value.trim().length > 0)
     .join(" ");
-  if (!/stageResult|stage-result|contract_violation/i.test(reasonText)) {
+  if (!/stageResult|stage-result|contract_violation|checklist_updates|checklist updates|stage checklist/i.test(reasonText)) {
+    return false;
+  }
+
+  return hasValidPersistedExecutionStageResult(state);
+}
+
+function isResumableDocGateAutoStageResultRecoveryState(state) {
+  const reasonText = [state?.wait?.reason, state?.recovery?.reason, state?.retry?.reason]
+    .filter((value) => typeof value === "string" && value.trim().length > 0)
+    .join(" ");
+  const stageCandidates = [
+    state?.wait?.stage,
+    state?.blocked_stage,
+    state?.active_stage,
+    state?.current_stage,
+    state?.recovery?.stage,
+  ].map((stage) => Number(stage));
+
+  return (
+    state?.wait?.kind === "human_escalation" &&
+    state?.recovery?.kind === "partial_stage_failure" &&
+    stageCandidates.some((stage) => stage === 2) &&
+    state?.execution?.subphase === "doc_gate_review" &&
+    /auto-stage-result-recovery/i.test(reasonText) &&
+    /required_doc_fix_ids must be included in reviewed_doc_finding_ids|stage-result가 작성되지|stage-result\.json/i.test(
+      reasonText,
+    )
+  );
+}
+
+function isResumableExternalSmokesMissingEvaluatorState({
+  rootDir,
+  workItemId,
+  state,
+}) {
+  if (state?.wait?.kind !== "human_escalation" || state?.recovery?.kind !== "partial_stage_failure") {
+    return false;
+  }
+
+  const reasonText = [state.wait?.reason, state.recovery?.reason]
+    .filter((value) => typeof value === "string" && value.trim().length > 0)
+    .join(" ");
+  if (!/evaluator returned blocked/i.test(reasonText)) {
+    return false;
+  }
+
+  const trackedStatus = readTrackedStatusItem({
+    rootDir,
+    workItemId,
+  }).statusItem;
+  if (!/-external-smokes-missing$/.test(trackedStatus?.blocked_reason_code ?? "")) {
     return false;
   }
 
@@ -2486,6 +2987,144 @@ function resumePersistedExecutionStageResult({
       recovery: null,
     }),
   });
+}
+
+function syncVerifyFailureStageResultMetadataFromWorktree(state) {
+  const worktreePath =
+    typeof state?.workspace?.path === "string" && state.workspace.path.trim().length > 0
+      ? state.workspace.path.trim()
+      : null;
+  const stageResultPath =
+    typeof state?.execution?.stage_result_path === "string" && state.execution.stage_result_path.trim().length > 0
+      ? state.execution.stage_result_path.trim()
+      : null;
+  if (!worktreePath || !stageResultPath || !existsSync(stageResultPath)) {
+    return false;
+  }
+
+  let stageResult;
+  try {
+    stageResult = JSON.parse(readFileSync(stageResultPath, "utf8"));
+  } catch {
+    return false;
+  }
+  if (!stageResult || typeof stageResult !== "object" || Array.isArray(stageResult)) {
+    return false;
+  }
+
+  const actualFiles = normalizeStringArray(listWorktreeChangedFiles({ worktreePath }));
+  if (actualFiles.length === 0) {
+    return false;
+  }
+
+  const changedFiles = normalizeStringArray([
+    ...normalizeStringArray(stageResult.changed_files),
+    ...actualFiles,
+  ]);
+  const claimedScope =
+    stageResult.claimed_scope && typeof stageResult.claimed_scope === "object" && !Array.isArray(stageResult.claimed_scope)
+      ? stageResult.claimed_scope
+      : {};
+  const claimedFiles = normalizeStringArray([
+    ...normalizeStringArray(claimedScope.files),
+    ...actualFiles,
+  ]);
+  const testsTouched = normalizeStringArray([
+    ...normalizeStringArray(stageResult.tests_touched),
+    ...actualFiles.filter((filePath) => filePath.startsWith("tests/")),
+  ]);
+
+  const nextStageResult = {
+    ...stageResult,
+    claimed_scope: {
+      ...claimedScope,
+      files: claimedFiles,
+    },
+    changed_files: changedFiles,
+    tests_touched: testsTouched,
+  };
+
+  if (JSON.stringify(nextStageResult) === JSON.stringify(stageResult)) {
+    return false;
+  }
+
+  writeFileSync(stageResultPath, `${JSON.stringify(nextStageResult, null, 2)}\n`);
+  return true;
+}
+
+function resumeExploratoryQaBundleEscalation({
+  rootDir,
+  workItemId,
+  state,
+  now,
+}) {
+  const stage =
+    Number.isInteger(Number(state?.wait?.stage))
+      ? Number(state.wait.stage)
+      : Number.isInteger(Number(state?.recovery?.stage))
+        ? Number(state.recovery.stage)
+        : state?.active_stage ?? state?.current_stage ?? null;
+  if (!Number.isInteger(stage)) {
+    return null;
+  }
+
+  const prRole =
+    typeof state?.wait?.pr_role === "string" && state.wait.pr_role.trim().length > 0
+      ? state.wait.pr_role.trim()
+      : typeof state?.recovery?.existing_pr?.role === "string" && state.recovery.existing_pr.role.trim().length > 0
+        ? state.recovery.existing_pr.role.trim()
+        : resolvePrRole(stage);
+  const activePr = state?.prs?.[prRole]?.url
+    ? state.prs[prRole]
+    : state?.recovery?.existing_pr?.url
+      ? state.recovery.existing_pr
+      : null;
+  if (!activePr?.url) {
+    return null;
+  }
+
+  const headSha =
+    state?.wait?.head_sha ??
+    activePr.head_sha ??
+    state?.execution?.commit_sha ??
+    null;
+  const artifactDir = state?.execution?.artifact_dir ?? state?.last_artifact_dir ?? null;
+  const nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setRecoveryState({
+      state: setWaitState({
+        state: setExecutionState({
+          state,
+          activeStage: stage,
+          phase: "wait",
+          nextAction: "poll_ci",
+          artifactDir,
+          execution: state.execution,
+        }),
+        kind: "ci",
+        prRole,
+        stage,
+        headSha,
+        phase: "wait",
+        nextAction: "poll_ci",
+        updatedAt: now,
+      }),
+      recovery: null,
+    }),
+  });
+
+  updateRuntimeStatusForWait({
+    rootDir,
+    workItemId,
+    wait: nextState.wait,
+    prPath: activePr.url,
+    now,
+    verificationStatus: "pending",
+    extraNotes: ["exploratory_qa_bundle=present"],
+  });
+
+  return nextState;
 }
 
 function runInternalCloseoutReconcile({
@@ -2886,6 +3525,7 @@ function shouldAllowDirtyWorktree(state) {
   return (
     ["stage_result_ready", "verify_pending", "commit_pending"].includes(phase) ||
     isResumableClaudeDirtyRecoveryState(state) ||
+    isResumableDirtyPersistedStageResultRecoveryState(state) ||
     isResumableDocsGateDirtyRecoveryState(state) ||
     isResumablePostDocGateBookkeepingResidue(state)
   );
@@ -3291,8 +3931,14 @@ function updateRuntimeStatusForWait({
     verification_status: verificationStatus,
     notes: notes.join(" "),
   };
-  if (typeof approvalState === "string" && approvalState.trim().length > 0) {
-    statusPatch.approval_state = approvalState;
+  const normalizedApprovalState =
+    typeof approvalState === "string" && approvalState.trim().length > 0
+      ? approvalState.trim()
+      : wait.kind === "ci"
+        ? "not_started"
+        : null;
+  if (normalizedApprovalState) {
+    statusPatch.approval_state = normalizedApprovalState;
   }
 
   syncStatus({
@@ -4072,6 +4718,27 @@ function processWaitState({
   };
 
   if (state.wait.kind === "human_escalation") {
+    if (isResumableStage1BootstrapWorkpackMissingEscalation(state)) {
+      const nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state: setRecoveryState({
+            state,
+            recovery: null,
+          }),
+          kind: null,
+          updatedAt: now,
+        }),
+      });
+
+      return {
+        state: nextState,
+        action: "run-stage",
+        nextStage: 1,
+      };
+    }
+
     if (isResumableGithubAuthEscalation(state)) {
       github.assertAuth();
       const nextState = saveRuntime({
@@ -4094,6 +4761,31 @@ function processWaitState({
           state.active_stage ??
           state.current_stage ??
           (Number.isInteger(Number(state.last_completed_stage)) ? Number(state.last_completed_stage) + 1 : null),
+      };
+    }
+
+    if (isResumableAutoCleanableDirtyRecoveryState(state)) {
+      const nextStage =
+        Number.isInteger(Number(state.recovery?.stage))
+          ? Number(state.recovery.stage)
+          : state.active_stage ?? state.current_stage ?? null;
+      const nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state: setRecoveryState({
+            state,
+            recovery: null,
+          }),
+          kind: null,
+          updatedAt: now,
+        }),
+      });
+
+      return {
+        state: nextState,
+        action: "run-stage",
+        nextStage,
       };
     }
 
@@ -4212,6 +4904,94 @@ function processWaitState({
         state: nextState,
         action: "run-stage",
         nextStage: 2,
+      };
+    }
+
+    if (isResumableVerifyCommandsFailedEscalation(state)) {
+      syncVerifyFailureStageResultMetadataFromWorktree(state);
+      const nextState = resumePersistedExecutionStageResult({
+        rootDir,
+        workItemId,
+        state,
+        now,
+      });
+
+      return {
+        state: nextState ?? state,
+        action: "run-stage",
+        nextStage: state.blocked_stage ?? state.active_stage ?? state.current_stage ?? state.recovery?.stage ?? null,
+      };
+    }
+
+    if (isResumableExploratoryQaBundleEscalation({ rootDir, state })) {
+      const nextState = resumeExploratoryQaBundleEscalation({
+        rootDir,
+        workItemId,
+        state,
+        now,
+      });
+
+      return {
+        state: nextState ?? state,
+        action: nextState ? "wait" : "stop",
+        nextStage: null,
+      };
+    }
+
+    if (isResumableDocGateAutoStageResultRecoveryState(state)) {
+      const nextState = saveRuntime({
+        rootDir,
+        workItemId,
+        state: setWaitState({
+          state: clearExecutionForSubphase({
+            state,
+            stage: 2,
+            artifactDir: state.execution?.artifact_dir ?? state.last_artifact_dir ?? null,
+          }),
+          kind: null,
+          updatedAt: now,
+        }),
+      });
+
+      return {
+        state: nextState,
+        action: "run-stage",
+        nextStage: 2,
+      };
+    }
+
+    if (isResumableExternalSmokesMissingEvaluatorState({ rootDir, workItemId, state })) {
+      const nextState = resumePersistedExecutionStageResult({
+        rootDir,
+        workItemId,
+        state,
+        now,
+      });
+
+      return {
+        state: nextState ?? state,
+        action: "run-stage",
+        nextStage: state.blocked_stage ?? state.active_stage ?? state.current_stage,
+      };
+    }
+
+    if (isResumableDirtyPersistedStageResultRecoveryState(state)) {
+      const nextState = resumePersistedExecutionStageResult({
+        rootDir,
+        workItemId,
+        state,
+        now,
+      });
+
+      return {
+        state: nextState ?? state,
+        action: "run-stage",
+        nextStage:
+          state.blocked_stage ??
+          state.active_stage ??
+          state.current_stage ??
+          state.recovery?.stage ??
+          null,
       };
     }
 
@@ -8728,7 +9508,9 @@ export function superviseWorkItem(
     const bootstrapStage1Start =
       trackedWorkItemState.tracked === false &&
       (state.last_completed_stage ?? 0) < 1 &&
-      !state.wait?.kind;
+      (!state.wait?.kind ||
+        (state.wait.kind === "blocked_retry" && Number(state.wait.stage) === 1) ||
+        isResumableStage1BootstrapWorkpackMissingEscalation(state));
     const invariant = bootstrapStage1Start
       ? {
           outcome: "pass",
@@ -9428,7 +10210,42 @@ export function tickSupervisorWorkItems(
       };
     }
 
+    if (state.wait.kind === "human_escalation" && isResumableDirtyPersistedStageResultRecoveryState(state)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (isResumableAutoCleanableDirtyRecoveryState(state)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
     if (state.wait.kind === "human_escalation" && isResumableValidatedStageResultContractViolationState({ state })) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (state.wait.kind === "human_escalation" && isResumableDocGateAutoStageResultRecoveryState(state)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (
+      state.wait.kind === "human_escalation" &&
+      isResumableExternalSmokesMissingEvaluatorState({
+        rootDir,
+        workItemId: state.work_item_id,
+        state,
+      })
+    ) {
       return {
         resumable: true,
         reason: null,
@@ -9450,6 +10267,20 @@ export function tickSupervisorWorkItems(
     }
 
     if (state.wait.kind === "human_escalation" && isResumableDocGatePendingRecheckFailure(state)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (state.wait.kind === "human_escalation" && isResumableVerifyCommandsFailedEscalation(state)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (state.wait.kind === "human_escalation" && isResumableExploratoryQaBundleEscalation({ rootDir, state })) {
       return {
         resumable: true,
         reason: null,
@@ -9482,6 +10313,13 @@ export function tickSupervisorWorkItems(
     }
 
     if (state.wait.kind === "human_escalation" && isResumableStage1DocsHandoffRecovery(state)) {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (state.wait.kind === "human_escalation" && isResumableStage1BootstrapWorkpackMissingEscalation(state)) {
       return {
         resumable: true,
         reason: null,
@@ -9530,11 +10368,12 @@ export function tickSupervisorWorkItems(
     });
 
     const recoveredLockedState = state.lock?.owner
-      ? convertStaleClaudeExecutionToRetry({
+      ? recoverLockedState({
           rootDir,
           workItemId: normalizedWorkItemId,
           state,
           now,
+          processes: dependencies.processes,
         })
       : null;
     const effectiveState = recoveredLockedState ?? state;
@@ -9597,11 +10436,12 @@ export function tickSupervisorWorkItems(
   return listRuntimeStates(rootDir)
     .flatMap(({ state }) => {
       const recoveredLockedState = state.lock?.owner
-        ? convertStaleClaudeExecutionToRetry({
+        ? recoverLockedState({
             rootDir,
             workItemId: state.work_item_id,
             state,
             now,
+            processes: dependencies.processes,
           })
         : null;
       const effectiveState = recoveredLockedState ?? state;

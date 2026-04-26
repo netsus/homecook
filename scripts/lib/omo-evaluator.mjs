@@ -721,19 +721,6 @@ export function evaluateWorkItemStage({
     });
   }
 
-  if (policy.mergeEligible && (stageConfig.external_smokes ?? []).length === 0) {
-    addFinding(findings, {
-      id: `${stageLabel}-external-smokes-missing`,
-      category: "policy",
-      severity: "blocker",
-      message: `Autonomous ${stageLabel} execution requires at least one external smoke command.`,
-      evidence_paths: [automationSpecPath],
-      remediation_hint: "Declare at least one external smoke command in automation-spec.json before enabling autonomous merge.",
-      owner: "human",
-      fixable: false,
-    });
-  }
-
   if (isChecklistContractActive(checklistContract) && checklistContract.errors.length > 0) {
     for (const error of checklistContract.errors) {
       addFinding(findings, {

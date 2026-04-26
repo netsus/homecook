@@ -9418,6 +9418,275 @@ describe("OMO autonomous supervisor", () => {
     expect(runtime.phase).toBe("wait");
   });
 
+  it("tick reclaims a dead supervisor lock left on a CI wait before resuming", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const seen: string[] = [];
+    const checkedPids: number[] = [];
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        last_completed_stage: 2,
+        phase: "wait",
+        next_action: "poll_ci",
+        wait: {
+          kind: "ci",
+          stage: 2,
+          pr_role: "backend",
+          head_sha: "backend-head",
+          updated_at: "2026-04-25T17:55:33.218Z",
+        },
+        prs: {
+          docs: null,
+          backend: {
+            number: 91,
+            url: "https://github.com/netsus/homecook/pull/91",
+            draft: true,
+            branch: `feature/be-${workItemId}`,
+            head_sha: "backend-head",
+          },
+          frontend: null,
+          closeout: null,
+        },
+        lock: {
+          owner: "omo-supervisor-35814",
+          acquired_at: "2026-04-25T18:00:38.616Z",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T18:21:00.000Z",
+      },
+      {
+        processes: {
+          isAlive(pid: number) {
+            checkedPids.push(pid);
+            return false;
+          },
+        },
+        supervise(args: { workItemId: string }) {
+          seen.push(args.workItemId);
+          const runtime = readRuntimeState({ rootDir, workItemId, slice: workItemId }).state;
+          return {
+            workItemId: args.workItemId,
+            slice: workItemId,
+            wait: runtime.wait,
+            runtime,
+            transitions: [],
+          };
+        },
+      },
+    );
+
+    expect(checkedPids).toEqual([35814]);
+    expect(seen).toEqual([workItemId]);
+    expect(results[0]).toEqual(
+      expect.objectContaining({
+        workItemId,
+        wait: expect.objectContaining({
+          kind: "ci",
+          stage: 2,
+          pr_role: "backend",
+        }),
+      }),
+    );
+    const runtime = readRuntimeState({ rootDir, workItemId, slice: workItemId }).state as {
+      lock: null | { owner: string };
+      phase: string | null;
+      wait: { kind: string };
+    };
+    expect(runtime.lock).toBeNull();
+    expect(runtime.phase).toBe("wait");
+    expect(runtime.wait.kind).toBe("ci");
+  });
+
+  it("tick reclaims a dead supervisor lock left after stage result is ready", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const seen: string[] = [];
+    const checkedPids: number[] = [];
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        last_completed_stage: 1,
+        phase: "stage_result_ready",
+        next_action: "finalize_stage",
+        wait: null,
+        execution: {
+          provider: "opencode",
+          session_role: "codex_primary",
+          session_id: "ses_stage_result_ready",
+          artifact_dir: "/tmp/stage-result-ready",
+          stage_result_path: "/tmp/stage-result-ready/stage-result.json",
+          started_at: "2026-04-25T18:00:00.000Z",
+          finished_at: "2026-04-25T18:04:00.000Z",
+          verify_commands: ["pnpm verify:backend"],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "backend",
+          subphase: "implementation",
+        },
+        lock: {
+          owner: "omo-supervisor-56123",
+          acquired_at: "2026-04-25T18:00:00.000Z",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T18:10:00.000Z",
+      },
+      {
+        processes: {
+          isAlive(pid: number) {
+            checkedPids.push(pid);
+            return false;
+          },
+        },
+        supervise(args: { workItemId: string }) {
+          seen.push(args.workItemId);
+          const runtime = readRuntimeState({ rootDir, workItemId, slice: workItemId }).state;
+          return {
+            workItemId: args.workItemId,
+            slice: workItemId,
+            wait: runtime.wait,
+            runtime,
+            transitions: [],
+          };
+        },
+      },
+    );
+
+    expect(checkedPids).toEqual([56123]);
+    expect(seen).toEqual([workItemId]);
+    expect(results[0].runtime).toEqual(
+      expect.objectContaining({
+        phase: "stage_result_ready",
+        next_action: "finalize_stage",
+        lock: null,
+      }),
+    );
+  });
+
+  it("tick salvages a stage result written before a dead stage_running supervisor lock", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const artifactDir = join(rootDir, ".artifacts", "ready-before-exit");
+    const seen: string[] = [];
+    const checkedPids: number[] = [];
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      join(artifactDir, "stage-result.json"),
+      JSON.stringify({
+        result: "done",
+        summary_markdown: "ready before provider exit",
+        checks_run: [],
+        next_route: "open_pr",
+      }),
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 4,
+        current_stage: 4,
+        last_completed_stage: 3,
+        phase: "stage_running",
+        next_action: "run_stage",
+        wait: null,
+        execution: {
+          provider: "opencode",
+          session_role: "codex_primary",
+          session_id: "ses_stage_result_salvage",
+          artifact_dir: artifactDir,
+          stage_result_path: join(artifactDir, "stage-result.json"),
+          started_at: "2026-04-25T18:00:00.000Z",
+          finished_at: null,
+          verify_commands: ["pnpm verify:frontend"],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "frontend",
+          subphase: "authority_precheck",
+        },
+        lock: {
+          owner: "omo-supervisor-61234",
+          acquired_at: "2026-04-25T18:00:00.000Z",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T18:08:00.000Z",
+      },
+      {
+        processes: {
+          isAlive(pid: number) {
+            checkedPids.push(pid);
+            return false;
+          },
+        },
+        supervise(args: { workItemId: string }) {
+          seen.push(args.workItemId);
+          const runtime = readRuntimeState({ rootDir, workItemId, slice: workItemId }).state;
+          return {
+            workItemId: args.workItemId,
+            slice: workItemId,
+            wait: runtime.wait,
+            runtime,
+            transitions: [],
+          };
+        },
+      },
+    );
+
+    expect(checkedPids).toEqual([61234]);
+    expect(seen).toEqual([workItemId]);
+    expect(results[0].runtime).toEqual(
+      expect.objectContaining({
+        phase: "stage_result_ready",
+        next_action: "finalize_stage",
+        lock: null,
+      }),
+    );
+  });
+
   it("tick --all surfaces unsupported wait kinds instead of silently skipping them", () => {
     const rootDir = createFixture();
 
@@ -9517,6 +9786,49 @@ describe("OMO autonomous supervisor", () => {
           bodyMarkdown: "Stage 6 approved",
           approvedHeadSha: "old-head",
         }),
+        null,
+        2,
+      )}\n`,
+    );
+    writeFileSync(
+      join(rootDir, ".workflow-v2", "status.json"),
+      `${JSON.stringify(
+        {
+          version: 1,
+          project_profile: "homecook",
+          updated_at: "2026-04-25T17:48:33.113Z",
+          items: [
+            {
+              id: workItemId,
+              preset: "vertical-slice-strict",
+              lifecycle: "blocked",
+              approval_state: "human_escalation",
+              verification_status: "failed",
+              required_checks: ["pnpm validate:workflow-v2"],
+              notes: "wait_kind=human_escalation reason=Worktree is dirty.",
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const rootWorkItemPath = join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`);
+    const rootWorkItem = JSON.parse(readFileSync(rootWorkItemPath, "utf8")) as {
+      status: Record<string, unknown>;
+    };
+    writeFileSync(
+      rootWorkItemPath,
+      `${JSON.stringify(
+        {
+          ...rootWorkItem,
+          status: {
+            ...rootWorkItem.status,
+            lifecycle: "blocked",
+            approval_state: "human_escalation",
+            verification_status: "failed",
+          },
+        },
         null,
         2,
       )}\n`,
@@ -9970,6 +10282,99 @@ describe("OMO autonomous supervisor", () => {
     expect(runtime.recovery?.kind).toBe("partial_stage_failure");
   });
 
+  it("tick converts a dead supervisor owner stage_running lock with empty Claude logs into a retry", () => {
+    const rootDir = createFixture();
+    const workItemId = "09-shopping-preview-create";
+    const artifactDir = join(rootDir, ".artifacts", "stage1-dead-owner");
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(join(artifactDir, "claude.stdout.log"), "");
+    writeFileSync(join(artifactDir, "claude.stderr.log"), "");
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 1,
+        current_stage: 1,
+        last_completed_stage: 0,
+        workspace: {
+          path: join(rootDir, ".worktrees", workItemId),
+          branch_role: "docs",
+        },
+        phase: "stage_running",
+        next_action: "run_stage",
+        lock: {
+          owner: "omo-supervisor-56123",
+          acquired_at: "2026-04-25T15:43:56.676Z",
+        },
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: null,
+          artifact_dir: artifactDir,
+          stage_result_path: join(artifactDir, "stage-result.json"),
+          started_at: "2026-04-25T15:43:59.645Z",
+          finished_at: null,
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "docs",
+          subphase: "implementation",
+        },
+      },
+    });
+
+    const seen: number[] = [];
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T15:54:00.000Z",
+      },
+      {
+        processes: {
+          isAlive(pid: number) {
+            seen.push(pid);
+            return false;
+          },
+        },
+        supervise() {
+          throw new Error("not expected before retry delay");
+        },
+      },
+    );
+
+    expect(seen).toEqual([56123]);
+    expect(results[0]).toEqual(
+      expect.objectContaining({
+        workItemId,
+        action: "noop",
+        reason: "retry_not_due",
+      }),
+    );
+    const runtime = readRuntimeState({ rootDir, workItemId, slice: workItemId }).state as {
+      lock: null;
+      wait: { kind: string; stage: number; reason: string };
+      retry: { reason: string; at: string | null };
+      recovery: { kind: string; reason: string } | null;
+    };
+    expect(runtime.lock).toBeNull();
+    expect(runtime.wait).toMatchObject({
+      kind: "blocked_retry",
+      stage: 1,
+      reason: "stale_lock_owner_missing",
+    });
+    expect(runtime.retry?.reason).toBe("stale_lock_owner_missing");
+    expect(runtime.recovery?.kind).toBe("partial_stage_failure");
+    expect(runtime.recovery?.reason).toContain("owner process is no longer running");
+  });
+
   it("tick resumes a github auth escalation after auth is restored", () => {
     const rootDir = createFixture();
     const workItemId = "03-recipe-like";
@@ -10168,6 +10573,304 @@ describe("OMO autonomous supervisor", () => {
         workItemId,
       }),
     );
+  });
+
+  it("tick resumes a repaired checklist_updates contract escalation when the stage result is valid", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const artifactDir = join(rootDir, ".artifacts", "stage4-checklist-contract-recovery");
+    const stageResultPath = join(artifactDir, "stage-result.json");
+    let resumed = false;
+
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      stageResultPath,
+      `${JSON.stringify(
+        buildCodeStageResult({
+          summary: "Stage 4 frontend complete",
+          subject: "feat: complete shopping flow frontend",
+          title: "feat: complete shopping flow frontend",
+          checklistUpdates: [CHECKLIST_IDS.frontendDelivery, CHECKLIST_IDS.frontendAcceptance],
+          changedFiles: ["app/shopping/flow/page.tsx"],
+        }),
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+        slice: workItemId,
+        active_stage: 4,
+        current_stage: 4,
+        blocked_stage: 4,
+        phase: "wait",
+        next_action: "noop",
+        wait: {
+          kind: "human_escalation",
+          stage: 4,
+          pr_role: "frontend",
+          reason: "Stage 4 checklist_updates must mark items as checked: delivery-ui-connection.",
+          updated_at: "2026-04-25T18:41:15.671Z",
+        },
+        recovery: {
+          kind: "partial_stage_failure",
+          stage: 4,
+          branch: `feature/fe-${workItemId}`,
+          reason: "Stage 4 checklist_updates must mark items as checked: delivery-ui-connection.",
+          artifact_dir: artifactDir,
+          changed_files: ["app/shopping/flow/page.tsx"],
+          existing_pr: null,
+          salvage_candidate: true,
+          session_role: "claude_primary",
+          session_provider: "claude-cli",
+          session_id: "ses_claude_stage4",
+        },
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: "ses_claude_stage4",
+          artifact_dir: artifactDir,
+          stage_result_path: stageResultPath,
+          started_at: "2026-04-25T18:25:45.941Z",
+          finished_at: null,
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "frontend",
+          subphase: "implementation",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T18:45:00.000Z",
+      },
+      {
+        supervise() {
+          resumed = true;
+          return {
+            workItemId,
+            slice: workItemId,
+            wait: { kind: "ci", stage: 4, pr_role: "frontend" },
+            runtime: readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+            transitions: [],
+          };
+        },
+      },
+    );
+
+    expect(resumed).toBe(true);
+    expect(results[0]?.workItemId).toBe(workItemId);
+  });
+
+  it("tick resumes a verify_commands_failed escalation after worktree fixes pass locally", () => {
+    const rootDir = createFixture();
+    const workItemId = "09-shopping-preview-create";
+    const artifactDir = join(rootDir, ".artifacts", "stage4-verify-command-recovery");
+    const stageResultPath = join(artifactDir, "stage-result.json");
+    let resumed = false;
+
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      stageResultPath,
+      `${JSON.stringify(
+        buildCodeStageResult({
+          summary: "Stage 4 frontend complete",
+          subject: "feat: complete shopping flow frontend",
+          title: "feat: complete shopping flow frontend",
+          checklistUpdates: [CHECKLIST_IDS.frontendDelivery, CHECKLIST_IDS.frontendAcceptance],
+          changedFiles: [
+            "app/shopping/flow/page.tsx",
+            "components/shopping/shopping-flow-screen.tsx",
+            "tests/e2e/slice-09-shopping-preview-create.spec.ts",
+          ],
+        }),
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+        slice: workItemId,
+        active_stage: 4,
+        current_stage: 4,
+        last_completed_stage: 3,
+        phase: "wait",
+        next_action: "noop",
+        wait: {
+          kind: "human_escalation",
+          stage: 4,
+          pr_role: "frontend",
+          reason: "Supervisor verify commands failed.",
+          updated_at: "2026-04-25T18:47:02.286Z",
+        },
+        recovery: {
+          kind: "partial_stage_failure",
+          stage: 4,
+          branch: `feature/fe-${workItemId}`,
+          reason: "Supervisor verify commands failed.",
+          artifact_dir: artifactDir,
+          changed_files: [
+            "app/shopping/flow/page.tsx",
+            "components/shopping/shopping-flow-screen.tsx",
+            "tests/e2e/slice-09-shopping-preview-create.spec.ts",
+          ],
+          existing_pr: null,
+          salvage_candidate: true,
+          session_role: "claude_primary",
+          session_provider: "claude-cli",
+          session_id: "ses_claude_stage4",
+        },
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: "ses_claude_stage4",
+          artifact_dir: artifactDir,
+          stage_result_path: stageResultPath,
+          started_at: "2026-04-25T18:25:45.941Z",
+          finished_at: null,
+          verify_commands: ["pnpm verify:frontend"],
+          verify_bucket: "fail",
+          commit_sha: null,
+          pr_role: "frontend",
+          subphase: "implementation",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T19:10:00.000Z",
+      },
+      {
+        supervise() {
+          resumed = true;
+          return {
+            workItemId,
+            slice: workItemId,
+            wait: { kind: "ci", stage: 4, pr_role: "frontend" },
+            runtime: readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+            transitions: [],
+          };
+        },
+      },
+    );
+
+    expect(resumed).toBe(true);
+    expect(results[0]?.workItemId).toBe(workItemId);
+  });
+
+  it("tick resumes an exploratory QA bundle escalation after evidence exists", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const qaDir = join(rootDir, ".artifacts", "qa", workItemId, "2026-04-25T19-01-qa");
+    let resumed = false;
+
+    mkdirSync(qaDir, { recursive: true });
+    writeFileSync(join(qaDir, "exploratory-checklist.json"), "{}\n");
+    writeFileSync(join(qaDir, "exploratory-report.json"), "{}\n");
+    writeFileSync(join(qaDir, "eval-result.json"), "{}\n");
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+        slice: workItemId,
+        active_stage: 4,
+        current_stage: 4,
+        last_completed_stage: 3,
+        phase: "wait",
+        next_action: "noop",
+        prs: {
+          frontend: {
+            number: 212,
+            url: "https://github.com/example/homecook/pull/212",
+            draft: true,
+            branch: `feature/fe-${workItemId}`,
+            head_sha: "abc123",
+            updated_at: "2026-04-25T19:00:41.174Z",
+          },
+        },
+        wait: {
+          kind: "human_escalation",
+          stage: 4,
+          pr_role: "frontend",
+          head_sha: "abc123",
+          reason:
+            "Exploratory QA bundle is missing for ui_risk 'new-screen'. Run pnpm qa:explore / pnpm qa:eval or provide a repo-local .artifacts/qa bundle before ready-for-review.",
+          updated_at: "2026-04-25T19:00:41.230Z",
+        },
+        recovery: {
+          kind: "partial_stage_failure",
+          stage: 4,
+          branch: `feature/fe-${workItemId}`,
+          reason:
+            "Exploratory QA bundle is missing for ui_risk 'new-screen'. Run pnpm qa:explore / pnpm qa:eval or provide a repo-local .artifacts/qa bundle before ready-for-review.",
+          artifact_dir: join(rootDir, ".artifacts", "stage4-qa-bundle-recovery"),
+          changed_files: [],
+          existing_pr: {
+            role: "frontend",
+            number: 212,
+            url: "https://github.com/example/homecook/pull/212",
+            draft: true,
+            branch: `feature/fe-${workItemId}`,
+            head_sha: "abc123",
+          },
+          salvage_candidate: false,
+        },
+        execution: {
+          provider: "claude-cli",
+          session_role: "claude_primary",
+          session_id: "ses_claude_stage4",
+          artifact_dir: join(rootDir, ".artifacts", "stage4-qa-bundle-recovery"),
+          stage_result_path: join(rootDir, ".artifacts", "stage4-qa-bundle-recovery", "stage-result.json"),
+          started_at: "2026-04-25T18:25:45.941Z",
+          finished_at: null,
+          verify_commands: ["pnpm verify:frontend"],
+          verify_bucket: "pass",
+          commit_sha: "abc123",
+          pr_role: "frontend",
+          subphase: "implementation",
+        },
+      },
+    });
+
+    const results = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T19:10:00.000Z",
+      },
+      {
+        supervise() {
+          resumed = true;
+          return {
+            workItemId,
+            slice: workItemId,
+            wait: { kind: "ci", stage: 4, pr_role: "frontend" },
+            runtime: readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+            transitions: [],
+          };
+        },
+      },
+    );
+
+    expect(resumed).toBe(true);
+    expect(results[0]?.workItemId).toBe(workItemId);
   });
 
   it("tick resumes a pending_recheck doc gate escalation after parser-compatible docs changes", () => {
@@ -10458,6 +11161,614 @@ describe("OMO autonomous supervisor", () => {
       reason: "claude_budget_unavailable",
       until: "2026-03-27T01:10:00.000Z",
     });
+  });
+
+  it("resumes Stage 1 bootstrap after stale-lock retry when workpack docs are still missing", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    let stage1Ran = false;
+
+    rmSync(join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`), { force: true });
+    rmSync(join(workspacePath, ".workflow-v2", "work-items", `${workItemId}.json`), { force: true });
+    rmSync(join(rootDir, "docs", "workpacks", workItemId), { recursive: true, force: true });
+    rmSync(join(workspacePath, "docs", "workpacks", workItemId), { recursive: true, force: true });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 1,
+        current_stage: 1,
+        last_completed_stage: 0,
+        blocked_stage: 1,
+        retry: {
+          at: "2026-04-25T16:09:00.000Z",
+          reason: "stale_lock_owner_missing",
+          attempt_count: 1,
+          max_attempts: 3,
+        },
+        wait: {
+          kind: "blocked_retry",
+          pr_role: "docs",
+          stage: 1,
+          head_sha: null,
+          reason: "stale_lock_owner_missing",
+          until: "2026-04-25T16:09:00.000Z",
+          updated_at: "2026-04-25T16:04:00.000Z",
+        },
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+          updated_at: "2026-04-25T16:04:00.000Z",
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T16:14:00.000Z",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertClaudeAuth() {},
+          assertOpencodeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            mkdirSync(join(workspacePath, "docs", "workpacks"), { recursive: true });
+            writeFileSync(
+              join(workspacePath, "docs", "workpacks", "README.md"),
+              [
+                "# Workpack Roadmap v2",
+                "",
+                "## Slice Order",
+                "",
+                "| Slice | Status | Goal |",
+                "| --- | --- | --- |",
+                `| \`${workItemId}\` | planned | test slice |`,
+              ].join("\n"),
+            );
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {},
+          checkoutBranch() {
+            return { branch: `docs/${workItemId}` };
+          },
+          pushBranch() {
+            throw new Error("not expected");
+          },
+          syncBaseBranch() {},
+          getHeadSha() {
+            return "docs-retry-head";
+          },
+          getCurrentBranch() {
+            return `docs/${workItemId}`;
+          },
+          listChangedFiles() {
+            return [];
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          stage1Ran = true;
+          const runtimeSync = writeRuntimeState({
+            rootDir,
+            workItemId,
+            state: {
+              ...readRuntimeState({
+                rootDir,
+                workItemId,
+                slice: workItemId,
+              }).state,
+              slice: workItemId,
+              current_stage: 1,
+              last_completed_stage: 0,
+              blocked_stage: 1,
+              retry: {
+                at: "2026-04-25T16:34:00.000Z",
+                reason: "claude_budget_unavailable",
+                attempt_count: 2,
+                max_attempts: 3,
+              },
+              workspace: {
+                path: workspacePath,
+                branch_role: "docs",
+                updated_at: "2026-04-25T16:14:00.000Z",
+              },
+            },
+          });
+
+          return {
+            artifactDir: join(rootDir, ".artifacts", "stage1-bootstrap-retry"),
+            dispatch: { actor: "claude", stage: 1 },
+            execution: {
+              mode: "scheduled-retry",
+              executed: false,
+              sessionId: null,
+              reason: "claude_budget_unavailable",
+            },
+            runtimeSync,
+            stageResult: null,
+          };
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            throw new Error("not expected");
+          },
+          markReady() {
+            throw new Error("not expected");
+          },
+          reviewPullRequest() {
+            throw new Error("not expected");
+          },
+          commentPullRequest() {
+            throw new Error("not expected");
+          },
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {
+            throw new Error("not expected");
+          },
+        },
+      },
+    );
+
+    expect(stage1Ran).toBe(true);
+    expect(result.wait).toMatchObject({
+      kind: "blocked_retry",
+      stage: 1,
+      reason: "claude_budget_unavailable",
+    });
+  });
+
+  it("tick resumes Stage 1 bootstrap after workpack_missing human escalation", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    let stage1Ran = false;
+
+    rmSync(join(rootDir, ".workflow-v2", "work-items", `${workItemId}.json`), { force: true });
+    rmSync(join(workspacePath, ".workflow-v2", "work-items", `${workItemId}.json`), { force: true });
+    rmSync(join(rootDir, "docs", "workpacks", workItemId), { recursive: true, force: true });
+    rmSync(join(workspacePath, "docs", "workpacks", workItemId), { recursive: true, force: true });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 1,
+        current_stage: 1,
+        last_completed_stage: 0,
+        blocked_stage: 1,
+        wait: {
+          kind: "human_escalation",
+          pr_role: "docs",
+          stage: 1,
+          head_sha: null,
+          reason: "Bookkeeping drift is ambiguous: workpack_missing",
+          until: null,
+          updated_at: "2026-04-25T16:14:06.454Z",
+        },
+        phase: "wait",
+        next_action: "noop",
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+          updated_at: "2026-04-25T16:14:06.432Z",
+        },
+      },
+    });
+
+    const dependencies = {
+      auth: {
+        assertGhAuth() {},
+        assertClaudeAuth() {},
+        assertOpencodeAuth() {},
+      },
+      worktree: {
+        ensureWorktree() {
+          mkdirSync(join(workspacePath, "docs", "workpacks"), { recursive: true });
+          writeFileSync(
+            join(workspacePath, "docs", "workpacks", "README.md"),
+            [
+              "# Workpack Roadmap v2",
+              "",
+              "## Slice Order",
+              "",
+              "| Slice | Status | Goal |",
+              "| --- | --- | --- |",
+              `| \`${workItemId}\` | planned | test slice |`,
+            ].join("\n"),
+          );
+          return { path: workspacePath, created: false };
+        },
+        assertClean() {},
+        checkoutBranch() {
+          return { branch: `docs/${workItemId}` };
+        },
+        pushBranch() {
+          throw new Error("not expected");
+        },
+        syncBaseBranch() {},
+        getHeadSha() {
+          return "docs-escalation-retry-head";
+        },
+        getCurrentBranch() {
+          return `docs/${workItemId}`;
+        },
+        listChangedFiles() {
+          return [];
+        },
+        getBinaryDiff() {
+          return "";
+        },
+      },
+      stageRunner() {
+        stage1Ran = true;
+        const runtimeSync = writeRuntimeState({
+          rootDir,
+          workItemId,
+          state: {
+            ...readRuntimeState({
+              rootDir,
+              workItemId,
+              slice: workItemId,
+            }).state,
+            slice: workItemId,
+            current_stage: 1,
+            last_completed_stage: 0,
+            blocked_stage: 1,
+            retry: {
+              at: "2026-04-25T16:44:00.000Z",
+              reason: "claude_budget_unavailable",
+              attempt_count: 1,
+              max_attempts: 3,
+            },
+            workspace: {
+              path: workspacePath,
+              branch_role: "docs",
+              updated_at: "2026-04-25T16:34:00.000Z",
+            },
+          },
+        });
+
+        return {
+          artifactDir: join(rootDir, ".artifacts", "stage1-bootstrap-escalation-retry"),
+          dispatch: { actor: "claude", stage: 1 },
+          execution: {
+            mode: "scheduled-retry",
+            executed: false,
+            sessionId: null,
+            reason: "claude_budget_unavailable",
+          },
+          runtimeSync,
+          stageResult: null,
+        };
+      },
+      github: {
+        createPullRequest() {
+          throw new Error("not expected");
+        },
+        getRequiredChecks() {
+          throw new Error("not expected");
+        },
+        markReady() {
+          throw new Error("not expected");
+        },
+        reviewPullRequest() {
+          throw new Error("not expected");
+        },
+        commentPullRequest() {
+          throw new Error("not expected");
+        },
+        mergePullRequest() {
+          throw new Error("not expected");
+        },
+        updateBranch() {
+          throw new Error("not expected");
+        },
+      },
+    };
+
+    const [result] = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T16:34:00.000Z",
+      },
+      {
+        ...dependencies,
+        supervise(options: { rootDir?: string; workItemId: string; now?: string; maxTransitions?: number }) {
+          return superviseWorkItem(options, dependencies);
+        },
+      },
+    );
+
+    expect(stage1Ran).toBe(true);
+    expect(result.wait).toMatchObject({
+      kind: "blocked_retry",
+      stage: 1,
+      reason: "claude_budget_unavailable",
+    });
+  });
+
+  it("tick reruns doc_gate_review after auto-stage-result recovery human escalation", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    const staleArtifactDir = join(rootDir, ".artifacts", "stale-doc-gate-review");
+    const rerunArtifactDir = join(rootDir, ".artifacts", "rerun-doc-gate-review");
+    let stage2Ran = false;
+    let observedSubphase: string | null = null;
+
+    createGitWorkspace(workspacePath, `docs/${workItemId}`);
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "docs",
+    });
+    execFileSync("git", ["add", "."], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "seed docs"], { cwd: workspacePath });
+    mkdirSync(staleArtifactDir, { recursive: true });
+    writeFileSync(
+      join(staleArtifactDir, "stage-result.json"),
+      `${JSON.stringify(
+        {
+          decision: "request_changes",
+          body_markdown: "## Review\n- fallback",
+          route_back_stage: 2,
+          approved_head_sha: null,
+          review_scope: {
+            scope: "doc_gate",
+            checklist_ids: [],
+          },
+          reviewed_doc_finding_ids: [],
+          required_doc_fix_ids: ["auto-stage-result-recovery"],
+          waived_doc_fix_ids: [],
+          findings: [],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        last_completed_stage: 1,
+        blocked_stage: null,
+        phase: "wait",
+        next_action: "noop",
+        last_artifact_dir: staleArtifactDir,
+        wait: {
+          kind: "human_escalation",
+          pr_role: "docs",
+          stage: 2,
+          head_sha: "docs123",
+          reason:
+            "Doc gate required_doc_fix_ids must be included in reviewed_doc_finding_ids: auto-stage-result-recovery.",
+          until: null,
+          updated_at: "2026-04-25T17:01:45.213Z",
+        },
+        workspace: {
+          path: workspacePath,
+          branch_role: "docs",
+          updated_at: "2026-04-25T17:01:45.213Z",
+        },
+        prs: {
+          docs: {
+            number: 210,
+            url: "https://github.com/netsus/homecook/pull/210",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+          },
+          backend: null,
+          frontend: null,
+          closeout: null,
+        },
+        execution: {
+          provider: "opencode",
+          session_role: "codex_primary",
+          session_id: "ses_codex_docs",
+          artifact_dir: staleArtifactDir,
+          stage_result_path: join(staleArtifactDir, "stage-result.json"),
+          started_at: "2026-04-25T16:54:28.879Z",
+          finished_at: "2026-04-25T17:01:44.309Z",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "docs",
+          subphase: "doc_gate_review",
+        },
+        doc_gate: {
+          status: "awaiting_review",
+          round: 0,
+          repair_branch: `docs/${workItemId}`,
+          findings: [],
+        },
+        recovery: {
+          kind: "partial_stage_failure",
+          stage: 2,
+          branch: `docs/${workItemId}`,
+          reason:
+            "Doc gate required_doc_fix_ids must be included in reviewed_doc_finding_ids: auto-stage-result-recovery.",
+          artifact_dir: staleArtifactDir,
+          changed_files: [],
+          existing_pr: {
+            role: "docs",
+            number: 210,
+            url: "https://github.com/netsus/homecook/pull/210",
+            draft: false,
+            branch: `docs/${workItemId}`,
+            head_sha: "docs123",
+          },
+          salvage_candidate: false,
+          session_role: "codex_primary",
+          session_provider: "opencode",
+          session_id: "ses_codex_docs",
+        },
+      },
+    });
+
+    const dependencies = {
+      auth: {
+        assertGhAuth() {},
+        assertClaudeAuth() {},
+        assertOpencodeAuth() {},
+      },
+      worktree: {
+        ensureWorktree() {
+          return { path: workspacePath, created: false };
+        },
+        assertClean() {},
+        checkoutBranch() {
+          return { branch: `docs/${workItemId}` };
+        },
+        pushBranch() {},
+        syncBaseBranch() {},
+        getHeadSha() {
+          return "docs123";
+        },
+        getCurrentBranch() {
+          return `docs/${workItemId}`;
+        },
+        listChangedFiles() {
+          return [];
+        },
+        getBinaryDiff() {
+          return "";
+        },
+      },
+      stageRunner({ subphase }: { subphase?: string | null }) {
+        stage2Ran = true;
+        observedSubphase = subphase ?? null;
+        mkdirSync(rerunArtifactDir, { recursive: true });
+        writeFileSync(
+          join(rerunArtifactDir, "stage-result.json"),
+          `${JSON.stringify(
+            buildDocGateReviewStageResult({
+              decision: "request_changes",
+              reviewedDocFindingIds: ["auto-stage-result-recovery"],
+              requiredDocFixIds: ["auto-stage-result-recovery"],
+              bodyMarkdown: "Fallback review result must be rerun.",
+            }),
+            null,
+            2,
+          )}\n`,
+        );
+        const runtimeSync = writeRuntimeState({
+          rootDir,
+          workItemId,
+          state: {
+            ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+            slice: workItemId,
+            active_stage: 2,
+            current_stage: 2,
+            blocked_stage: 2,
+            last_artifact_dir: rerunArtifactDir,
+            phase: "review_pending",
+            next_action: "run_review",
+            execution: {
+              provider: "opencode",
+              session_role: "codex_primary",
+              session_id: "ses_codex_docs",
+              artifact_dir: rerunArtifactDir,
+              stage_result_path: join(rerunArtifactDir, "stage-result.json"),
+              started_at: "2026-04-25T17:10:00.000Z",
+              finished_at: "2026-04-25T17:10:00.000Z",
+              verify_commands: [],
+              verify_bucket: null,
+              commit_sha: null,
+              pr_role: "docs",
+              subphase: "doc_gate_review",
+            },
+          },
+        });
+
+        return {
+          artifactDir: rerunArtifactDir,
+          dispatch: { actor: "codex", stage: 2, subphase: "doc_gate_review" },
+          execution: {
+            mode: "execute",
+            executed: true,
+            sessionId: "ses_codex_docs",
+          },
+          runtimeSync,
+          stageResult: buildDocGateReviewStageResult({
+            decision: "request_changes",
+            reviewedDocFindingIds: ["auto-stage-result-recovery"],
+            requiredDocFixIds: ["auto-stage-result-recovery"],
+            bodyMarkdown: "Fallback review result must be rerun.",
+          }),
+        };
+      },
+      github: {
+        createPullRequest() {
+          throw new Error("not expected");
+        },
+        getRequiredChecks() {
+          return { bucket: "pass", checks: [] };
+        },
+        markReady() {},
+        reviewPullRequest() {},
+        commentPullRequest() {},
+        mergePullRequest() {
+          throw new Error("not expected");
+        },
+        updateBranch() {},
+      },
+    };
+
+    const [result] = tickSupervisorWorkItems(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T17:10:00.000Z",
+      },
+      {
+        ...dependencies,
+        supervise(options: { rootDir?: string; workItemId: string; now?: string; maxTransitions?: number }) {
+          return superviseWorkItem({ ...options, maxTransitions: 1 }, dependencies);
+        },
+      },
+    );
+
+    expect(stage2Ran).toBe(true);
+    expect(observedSubphase).toBe("doc_gate_review");
+    expect(result.wait?.kind).toBe("ready_for_next_stage");
+    expect(result.runtime?.doc_gate?.status).toBe("fixable");
+    expect(result.runtime?.recovery).toBeNull();
   });
 
   it("does not require OpenCode auth before a Claude Stage 1 run", () => {
@@ -11507,6 +12818,267 @@ describe("OMO autonomous supervisor", () => {
 
     expect(resumed).toBe(true);
     expect(results[0]?.workItemId).toBe(workItemId);
+  });
+
+  it("resumes dirty Stage 2 outputs when a valid persisted stage result exists", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    const artifactDir = join(rootDir, ".artifacts", "stage2-dirty-persisted-result");
+    const stageResultPath = join(artifactDir, "stage-result.json");
+    const changedFiles = [
+      `docs/workpacks/${workItemId}/README.md`,
+      `docs/workpacks/${workItemId}/acceptance.md`,
+      "vitest.product.config.ts",
+      "app/api/v1/shopping/route.ts",
+      "lib/server/shopping.ts",
+      "tests/shopping-preview.backend.test.ts",
+      "types/shopping.ts",
+    ];
+    const pushed: string[] = [];
+    let stageRunnerCalled = false;
+    let preflightAssertCleanCalls = 0;
+
+    createGitWorkspace(workspacePath, `feature/be-${workItemId}`);
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "in-progress",
+    });
+    execFileSync("git", ["add", "-A"], { cwd: workspacePath });
+    execFileSync("git", ["commit", "-m", "test: seed stage2 dirty baseline"], { cwd: workspacePath });
+    const sourceMasterSha = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: workspacePath,
+      encoding: "utf8",
+    }).trim();
+
+    mkdirSync(join(workspacePath, "app", "api", "v1", "shopping"), { recursive: true });
+    mkdirSync(join(workspacePath, "lib", "server"), { recursive: true });
+    mkdirSync(join(workspacePath, "tests"), { recursive: true });
+    mkdirSync(join(workspacePath, "types"), { recursive: true });
+    writeFileSync(join(workspacePath, "vitest.product.config.ts"), "export default {};\n");
+    writeFileSync(join(workspacePath, "app", "api", "v1", "shopping", "route.ts"), "export const GET = () => Response.json({});\n");
+    writeFileSync(join(workspacePath, "lib", "server", "shopping.ts"), "export function previewShopping() { return []; }\n");
+    writeFileSync(join(workspacePath, "tests", "shopping-preview.backend.test.ts"), "import { expect, it } from 'vitest';\nit('works', () => expect(true).toBe(true));\n");
+    writeFileSync(join(workspacePath, "types", "shopping.ts"), "export type ShoppingPreview = { id: string };\n");
+
+    mkdirSync(artifactDir, { recursive: true });
+    writeFileSync(
+      stageResultPath,
+      `${JSON.stringify(
+        buildCodeStageResult({
+          summary: "Stage 2 backend complete",
+          subject: "feat: implement shopping preview backend",
+          title: "feat: implement shopping preview backend",
+          checklistUpdates: [CHECKLIST_IDS.backendDelivery, CHECKLIST_IDS.backendAcceptance],
+          changedFiles,
+        }),
+        null,
+        2,
+      )}\n`,
+    );
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({ rootDir, workItemId, slice: workItemId }).state,
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        phase: "wait",
+        next_action: "noop",
+        workspace: {
+          path: workspacePath,
+          branch_role: "backend",
+        },
+        doc_gate: {
+          status: "passed",
+          round: 0,
+          source_master_sha: sourceMasterSha,
+          artifact_dir: null,
+          result_path: null,
+          repair_branch: `docs/${workItemId}`,
+          repair_pr: null,
+          findings: [],
+          last_review: null,
+          last_rebuttal: null,
+          updated_at: "2026-04-25T17:00:00.000Z",
+        },
+        wait: {
+          kind: "human_escalation",
+          stage: 2,
+          pr_role: "backend",
+          reason: "Worktree is dirty.",
+          head_sha: null,
+          until: null,
+          updated_at: "2026-04-25T17:48:33.113Z",
+        },
+        recovery: {
+          kind: "dirty_worktree",
+          stage: 2,
+          branch: `feature/be-${workItemId}`,
+          reason: "Worktree is dirty.",
+          artifact_dir: artifactDir,
+          changed_files: changedFiles,
+          existing_pr: null,
+          salvage_candidate: true,
+          session_role: "codex_primary",
+          session_provider: "opencode",
+          session_id: "ses_codex_stage2_dirty",
+          updated_at: null,
+        },
+        sessions: {
+          claude_primary: {
+            session_id: null,
+            provider: null,
+            agent: "athena",
+            updated_at: null,
+          },
+          codex_primary: {
+            session_id: "ses_codex_stage2_dirty",
+            provider: "opencode",
+            agent: "hephaestus",
+            updated_at: "2026-04-25T17:48:33.113Z",
+          },
+        },
+        execution: {
+          provider: "opencode",
+          session_role: "codex_primary",
+          session_id: "ses_codex_stage2_dirty",
+          artifact_dir: artifactDir,
+          stage_result_path: stageResultPath,
+          started_at: "2026-04-25T17:19:47.586Z",
+          finished_at: "2026-04-25T17:37:49.703Z",
+          verify_commands: [],
+          verify_bucket: null,
+          commit_sha: null,
+          pr_role: "backend",
+          subphase: "implementation",
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-25T17:50:00.000Z",
+        maxTransitions: 2,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {
+            preflightAssertCleanCalls += 1;
+            const status = execFileSync("git", ["status", "--porcelain"], {
+              cwd: workspacePath,
+              encoding: "utf8",
+            }).trim();
+            if (status.length > 0) {
+              throw new Error("Worktree is dirty.");
+            }
+          },
+          checkoutBranch({ branch }: { branch: string }) {
+            return { branch };
+          },
+          pushBranch({ branch }: { branch: string }) {
+            pushed.push(branch);
+          },
+          syncBaseBranch() {
+            throw new Error("not expected");
+          },
+          getHeadSha() {
+            return execFileSync("git", ["rev-parse", "HEAD"], {
+              cwd: workspacePath,
+              encoding: "utf8",
+            }).trim();
+          },
+          getCurrentBranch() {
+            return `feature/be-${workItemId}`;
+          },
+          listChangedFiles() {
+            return changedFiles;
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        stageRunner() {
+          stageRunnerCalled = true;
+          throw new Error("not expected");
+        },
+        github: {
+          createPullRequest() {
+            return {
+              number: 91,
+              url: "https://github.com/netsus/homecook/pull/91",
+              draft: true,
+            };
+          },
+          getRequiredChecks() {
+            return { bucket: "pending", checks: [{ name: "quality", bucket: "pending", state: "PENDING" }] };
+          },
+          getPullRequestSummary() {
+            return {
+              state: "OPEN",
+              mergedAt: null,
+              mergeStateStatus: "CLEAN",
+              reviewDecision: null,
+            };
+          },
+          markReady() {
+            throw new Error("not expected");
+          },
+          reviewPullRequest() {
+            throw new Error("not expected");
+          },
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+      },
+    );
+
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId,
+      slice: workItemId,
+    }).state as {
+      wait: { kind: string; stage: number | null; pr_role: string | null };
+      recovery: unknown;
+      prs: { backend: { url: string; head_sha: string | null } | null };
+    };
+    const statusItem = readTrackedStatusItem(rootDir, workItemId) as {
+      approval_state?: string;
+      notes?: string;
+    } | null;
+
+    expect(stageRunnerCalled).toBe(false);
+    expect(preflightAssertCleanCalls).toBe(1);
+    expect(pushed).toEqual([`feature/be-${workItemId}`]);
+    expect(result.wait).toMatchObject({
+      kind: "ci",
+      stage: 2,
+      pr_role: "backend",
+    });
+    expect(runtime.wait).toMatchObject({
+      kind: "ci",
+      stage: 2,
+      pr_role: "backend",
+    });
+    expect(runtime.recovery).toBeNull();
+    expect(runtime.prs.backend?.url).toBe("https://github.com/netsus/homecook/pull/91");
+    expect(runtime.prs.backend?.head_sha).toMatch(/^[0-9a-f]{40}$/);
+    expect(statusItem?.approval_state).toBe("not_started");
+    expect(statusItem?.notes).toContain("wait_kind=ci");
   });
 
   it("resumes Stage 2 docs gate when only workflow bookkeeping files are dirty", () => {
@@ -14570,6 +16142,7 @@ describe("OMO autonomous supervisor", () => {
                   ".opencode/oh-my-openagent.json.bak.2026-04-15T11-24-02-875Z",
                   ".opencode/oh-my-openagent.json.migrations.json",
                   ".opencode/oh-my-opencode.json.bak",
+                  ".opencode/omo-stage-results/",
                 ]
               : [];
           },
@@ -14623,6 +16196,7 @@ describe("OMO autonomous supervisor", () => {
       ".opencode/oh-my-openagent.json.bak.2026-04-15T11-24-02-875Z",
       ".opencode/oh-my-openagent.json.migrations.json",
       ".opencode/oh-my-opencode.json.bak",
+      ".opencode/omo-stage-results/",
     ]]);
     expect(result.wait?.kind).not.toBe("human_escalation");
     expect(runtime.wait?.kind).not.toBe("human_escalation");
