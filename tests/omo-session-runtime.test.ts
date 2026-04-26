@@ -4,7 +4,12 @@ import { tmpdir } from "node:os";
 
 import { describe, expect, it } from "vitest";
 
-import { acquireRuntimeLock, readRuntimeState, writeRuntimeState } from "../scripts/lib/omo-session-runtime.mjs";
+import {
+  acquireRuntimeLock,
+  markStageRunning,
+  readRuntimeState,
+  writeRuntimeState,
+} from "../scripts/lib/omo-session-runtime.mjs";
 
 describe("OMO session runtime", () => {
   it("normalizes design authority state and authority_precheck subphase", () => {
@@ -256,6 +261,110 @@ describe("OMO session runtime", () => {
     });
     expect(state.lock?.owner).toBe("omo-supervisor-new");
     expect(state.phase).toBe("wait");
+  });
+
+  it("preserves an active lock when a stage-running update omits the lock field", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
+    const workItemId = "10a-shopping-detail-interact";
+
+    acquireRuntimeLock({
+      rootDir,
+      workItemId,
+      owner: "omo-supervisor-live",
+      now: "2026-04-26T13:44:27.712Z",
+      slice: workItemId,
+    });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        slice: workItemId,
+        active_stage: 2,
+        current_stage: 2,
+        last_completed_stage: 1,
+        phase: "stage_running",
+        next_action: "run_stage",
+        execution: {
+          provider: "opencode",
+          session_role: "codex_primary",
+          session_id: "ses_codex",
+          artifact_dir: "/tmp/artifacts",
+          stage_result_path: "/tmp/artifacts/stage-result.json",
+          pr_role: "backend",
+          subphase: "implementation",
+        },
+      },
+    });
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId,
+      slice: workItemId,
+    });
+
+    expect(state.phase).toBe("stage_running");
+    expect(state.lock).toMatchObject({
+      owner: "omo-supervisor-live",
+      acquired_at: "2026-04-26T13:44:27.712Z",
+    });
+  });
+
+  it("clears stale wait state when marking a stage as running", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
+    const workItemId = "10a-shopping-detail-interact";
+
+    acquireRuntimeLock({
+      rootDir,
+      workItemId,
+      owner: "omo-supervisor-live",
+      now: "2026-04-26T14:02:58.454Z",
+      slice: workItemId,
+    });
+
+    const { state: lockedState } = readRuntimeState({
+      rootDir,
+      workItemId,
+      slice: workItemId,
+    });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: markStageRunning({
+        state: {
+          ...lockedState,
+          active_stage: 3,
+          current_stage: 3,
+          last_completed_stage: 2,
+          wait: {
+            kind: "ready_for_next_stage",
+            pr_role: "backend",
+            stage: 3,
+            head_sha: "backend-head",
+            updated_at: "2026-04-26T14:02:58.096Z",
+          },
+        },
+        stage: 3,
+        artifactDir: "/tmp/artifacts",
+        provider: "claude-cli",
+        sessionRole: "claude_primary",
+        sessionId: "ses_claude",
+        stageResultPath: "/tmp/artifacts/stage-result.json",
+        prRole: "backend",
+        startedAt: "2026-04-26T14:02:58.454Z",
+      }),
+    });
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId,
+      slice: workItemId,
+    });
+
+    expect(state.phase).toBe("stage_running");
+    expect(state.wait).toBeNull();
+    expect(state.lock?.owner).toBe("omo-supervisor-live");
   });
 
   it("does not resurrect stage2 implementation artifacts while doc_gate_review is pending", () => {

@@ -1346,6 +1346,7 @@ export function writeRuntimeState({
   rootDir = process.cwd(),
   workItemId,
   state,
+  preserveActiveLock = true,
 }) {
   const normalizedWorkItemId = ensureNonEmptyString(workItemId, "workItemId");
   const runtimeDir = resolveRuntimeDirectory(rootDir);
@@ -1355,10 +1356,17 @@ export function writeRuntimeState({
   });
 
   mkdirSync(runtimeDir, { recursive: true });
-  const normalizedState = normalizeRuntimeState(state, {
+  let normalizedState = normalizeRuntimeState(state, {
     rootDir,
     workItemId: normalizedWorkItemId,
   });
+  const currentLock = existsSync(runtimePath) ? normalizeLock(readJson(runtimePath).lock) : null;
+  if (preserveActiveLock && normalizedState.phase === "stage_running" && !normalizedState.lock && currentLock) {
+    normalizedState = {
+      ...normalizedState,
+      lock: currentLock,
+    };
+  }
 
   writeFileSync(runtimePath, `${JSON.stringify(normalizedState, null, 2)}\n`);
 
@@ -1493,6 +1501,7 @@ export function setExecutionState({
     current_stage: normalizedActiveStage ?? null,
     blocked_stage: null,
     retry: null,
+    wait: normalizedPhase === "wait" ? state.wait ?? null : null,
     last_artifact_dir: artifactDir ?? state.last_artifact_dir,
     phase: normalizedPhase,
     next_action: normalizeNextAction(nextAction),
@@ -2267,6 +2276,7 @@ export function releaseRuntimeLock({
     rootDir,
     workItemId,
     state: nextState,
+    preserveActiveLock: false,
   });
 
   return {
