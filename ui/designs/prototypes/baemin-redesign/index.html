@@ -1,0 +1,2134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>homecook_ — Baemin Redesign</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #E9ECEF; font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; }
+  ::-webkit-scrollbar { display: none; }
+  .tweaks-panel { position: fixed; top: 20px; right: 20px; z-index: 9999; background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.16); width: 240px; font-size: 13px; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<template id="__bundler_thumbnail" data-bg-color="#2AC1BC">
+<svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+<rect width="1200" height="800" fill="#2AC1BC"/>
+<g transform="translate(600 400)">
+<circle r="180" fill="#fff" opacity="0.15"/>
+<text x="0" y="20" text-anchor="middle" font-family="sans-serif" font-size="120" font-weight="700" fill="#fff">🍳</text>
+</g>
+<text x="600" y="640" text-anchor="middle" font-family="sans-serif" font-size="56" font-weight="700" fill="#fff">homecook_</text>
+</svg>
+</template>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+
+
+// ===== tokens.jsx =====
+// Baemin tokens applied to homecook_
+const T = {
+  mint: '#2AC1BC',
+  mintDeep: '#20A8A4',
+  mintSoft: '#E6F8F7',
+  teal: '#12B886',
+  tealLight: '#20C997',
+  red: '#FF6B6B',
+  redDeep: '#E03131',
+  orange: '#FFB347',
+  blue: '#74C0FC',
+  promo: '#FF0000',
+
+  ink: '#212529',
+  text2: '#495057',
+  text3: '#868E96',
+  text4: '#ADB5BD',
+  border: '#DEE2E6',
+  borderStrong: '#343A40',
+  surface: '#FFFFFF',
+  surfaceFill: '#F8F9FA',
+  surfaceSubtle: '#F1F3F5',
+
+  shadowNatural: '0px 1px 3px rgba(0,0,0,0.04)',
+  shadowDeep: '0px 2px 8px rgba(0,0,0,0.08)',
+  shadowSharp: '0px 4px 12px rgba(0,0,0,0.10)',
+  shadowOutlined: '0px 4px 16px rgba(0,0,0,0.12)',
+  shadowCrisp: '0px 8px 24px rgba(0,0,0,0.16)',
+
+  fontUI: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif',
+  fontBrand: '"Jua", -apple-system, sans-serif' // BMJua-ish substitute from Google Fonts
+};
+
+window.T = T;
+
+
+// ===== data.jsx =====
+// Mock data for the homecook_ prototype
+// All recipes use emoji placeholders to avoid hotlinking copyrighted food photos.
+
+const RECIPES = [
+{
+  id: 'r1',
+  name: '김치볶음밥',
+  emoji: '🍚',
+  bg: 'linear-gradient(135deg, #FFE8E0 0%, #FFD0BC 100%)',
+  tags: ['한식', '15분', '1인'],
+  minutes: 15,
+  servings: 1,
+  kcal: 540,
+  rating: 4.7,
+  saves: 1284,
+  theme: '자취생 간단식',
+  method: 'stirfry', // 볶기 = 주황
+  ingredients: [
+  { name: '묵은지', qty: '1컵', section: '메인' },
+  { name: '찬밥', qty: '1공기', section: '메인' },
+  { name: '대파', qty: '1/2대', section: '채소' },
+  { name: '계란', qty: '1개', section: '채소' },
+  { name: '참기름', qty: '1T', section: '양념' },
+  { name: '간장', qty: '1t', section: '양념' },
+  { name: '고춧가루', qty: '1/2t', section: '양념' }],
+
+  steps: [
+  { method: 'prep', title: '재료 준비', body: '묵은지는 송송 썰고 대파는 잘게 다져 준비해요.', minutes: 3 },
+  { method: 'stirfry', title: '김치 볶기', body: '팬에 참기름 두르고 묵은지를 2분간 센불에 볶아 신맛을 날려요.', minutes: 2 },
+  { method: 'stirfry', title: '밥 볶기', body: '찬밥을 넣고 간장, 고춧가루 넣어 3분간 볶아요.', minutes: 3 },
+  { method: 'fry', title: '계란 프라이', body: '다른 팬에 계란 프라이를 노른자 반숙으로 부쳐요.', minutes: 2 },
+  { method: 'mix', title: '플레이팅', body: '볶음밥 위에 계란 올리고 대파 뿌려 완성.', minutes: 1 }]
+
+},
+{
+  id: 'r2',
+  name: '된장찌개',
+  emoji: '🍲',
+  bg: 'linear-gradient(135deg, #FFE0E0 0%, #FFB8B8 100%)',
+  tags: ['한식', '국물', '25분'],
+  minutes: 25,
+  servings: 2,
+  kcal: 310,
+  rating: 4.8,
+  saves: 2102,
+  theme: '집밥 기본기',
+  method: 'boil',
+  ingredients: [
+  { name: '된장', qty: '2T', section: '양념' },
+  { name: '애호박', qty: '1/2개', section: '채소' },
+  { name: '감자', qty: '1개', section: '채소' },
+  { name: '두부', qty: '1/2모', section: '메인' },
+  { name: '청양고추', qty: '1개', section: '채소' },
+  { name: '멸치육수', qty: '500ml', section: '메인' }],
+
+  steps: [
+  { method: 'prep', title: '재료 손질', body: '감자, 애호박, 두부는 한입 크기로 썰어 준비.', minutes: 5 },
+  { method: 'boil', title: '육수 끓이기', body: '멸치육수에 된장을 풀고 팔팔 끓여요.', minutes: 8 },
+  { method: 'boil', title: '채소 투입', body: '감자부터 넣고 5분, 애호박/두부 넣고 5분 더 끓여요.', minutes: 10 },
+  { method: 'mix', title: '마무리', body: '청양고추 썰어 넣고 불 꺼 완성.', minutes: 2 }]
+
+},
+{
+  id: 'r3',
+  name: '닭가슴살 샐러드',
+  emoji: '🥗',
+  bg: 'linear-gradient(135deg, #E8F5E0 0%, #C8E6A0 100%)',
+  tags: ['샐러드', '다이어트', '10분'],
+  minutes: 10,
+  servings: 1,
+  kcal: 290,
+  rating: 4.5,
+  saves: 856,
+  theme: '다이어트 식단',
+  method: 'mix',
+  ingredients: [
+  { name: '닭가슴살', qty: '100g', section: '메인' },
+  { name: '로메인', qty: '2줌', section: '채소' },
+  { name: '방울토마토', qty: '5개', section: '채소' },
+  { name: '아보카도', qty: '1/2개', section: '채소' },
+  { name: '발사믹 드레싱', qty: '2T', section: '양념' }],
+
+  steps: [
+  { method: 'prep', title: '재료 손질', body: '닭가슴살 슬라이스, 로메인 뜯기, 토마토 반 갈라요.', minutes: 4 },
+  { method: 'mix', title: '버무리기', body: '볼에 모두 담고 드레싱 뿌려 가볍게 버무려요.', minutes: 2 }]
+
+},
+{
+  id: 'r4',
+  name: '제육볶음',
+  emoji: '🥩',
+  bg: 'linear-gradient(135deg, #FFD6C0 0%, #FFA07A 100%)',
+  tags: ['한식', '매콤', '20분'],
+  minutes: 20,
+  servings: 2,
+  kcal: 620,
+  rating: 4.9,
+  saves: 3201,
+  theme: '밥도둑',
+  method: 'stirfry',
+  ingredients: [
+  { name: '돼지고기 앞다리살', qty: '300g', section: '메인' },
+  { name: '양파', qty: '1/2개', section: '채소' },
+  { name: '대파', qty: '1대', section: '채소' },
+  { name: '고추장', qty: '2T', section: '양념' },
+  { name: '고춧가루', qty: '1T', section: '양념' },
+  { name: '설탕', qty: '1T', section: '양념' },
+  { name: '마늘', qty: '1T', section: '양념' }],
+
+  steps: [
+  { method: 'prep', title: '양념장 만들기', body: '고추장, 고춧가루, 설탕, 마늘 섞어 양념장을 만들어요.', minutes: 3 },
+  { method: 'prep', title: '고기 재우기', body: '돼지고기에 양념장 버무려 10분 재워요.', minutes: 10 },
+  { method: 'stirfry', title: '센불 볶기', body: '달군 팬에 재운 고기를 넣고 센불에 4분 볶아요.', minutes: 4 },
+  { method: 'stirfry', title: '채소 넣기', body: '양파와 대파를 넣고 3분 더 볶아 마무리.', minutes: 3 }]
+
+},
+{
+  id: 'r5',
+  name: '연어 스테이크',
+  emoji: '🐟',
+  bg: 'linear-gradient(135deg, #FFE0D0 0%, #FFAA88 100%)',
+  tags: ['양식', '오븐', '20분'],
+  minutes: 20,
+  servings: 2,
+  kcal: 480,
+  rating: 4.6,
+  saves: 921,
+  theme: '주말 특식',
+  method: 'roast',
+  ingredients: [
+  { name: '연어', qty: '2조각', section: '메인' },
+  { name: '아스파라거스', qty: '6대', section: '채소' },
+  { name: '레몬', qty: '1/2개', section: '채소' },
+  { name: '올리브오일', qty: '2T', section: '양념' },
+  { name: '소금·후추', qty: '약간', section: '양념' }],
+
+  steps: [
+  { method: 'prep', title: '밑간', body: '연어에 소금, 후추, 올리브오일 뿌려 10분 재워요.', minutes: 10 },
+  { method: 'roast', title: '오븐 굽기', body: '200°C 오븐에서 아스파라거스와 함께 10분 구워요.', minutes: 10 },
+  { method: 'mix', title: '플레이팅', body: '레몬 짜 뿌려 완성.', minutes: 1 }]
+
+},
+{
+  id: 'r6',
+  name: '감자 수제비',
+  emoji: '🥟',
+  bg: 'linear-gradient(135deg, #F0E8D8 0%, #D4C49C 100%)',
+  tags: ['한식', '국물', '30분'],
+  minutes: 30,
+  servings: 2,
+  kcal: 420,
+  rating: 4.4,
+  saves: 512,
+  theme: '비오는 날',
+  method: 'boil',
+  ingredients: [
+  { name: '밀가루', qty: '2컵', section: '메인' },
+  { name: '감자', qty: '2개', section: '채소' },
+  { name: '애호박', qty: '1/2개', section: '채소' },
+  { name: '멸치육수', qty: '1L', section: '메인' },
+  { name: '국간장', qty: '1T', section: '양념' }],
+
+  steps: [
+  { method: 'prep', title: '반죽', body: '밀가루에 물 넣어 반죽 후 30분 숙성.', minutes: 8 },
+  { method: 'boil', title: '육수', body: '멸치육수 끓이고 감자 넣어 5분.', minutes: 6 },
+  { method: 'boil', title: '수제비 넣기', body: '반죽을 얇게 떼어 넣고 10분 끓여요.', minutes: 10 },
+  { method: 'mix', title: '간 맞추기', body: '국간장으로 간하고 애호박 넣어 3분 더.', minutes: 3 }]
+
+}];
+
+
+// 조리방법 색상 (화면정의서 0-5)
+const METHOD_COLORS = {
+  stirfry: { bg: '#FFF4E8', border: '#FFB347', text: '#D97706', label: '볶기' },
+  boil: { bg: '#FFEBEB', border: '#FF6B6B', text: '#C92A2A', label: '끓이기' },
+  roast: { bg: '#F1E8DC', border: '#A0826D', text: '#7C5A3F', label: '굽기' },
+  steam: { bg: '#E0F0FF', border: '#74C0FC', text: '#1971C2', label: '찌기' },
+  fry: { bg: '#FFF9DB', border: '#FFD43B', text: '#B38B00', label: '튀기기' },
+  blanch: { bg: '#E8F5D8', border: '#A9E34B', text: '#5C940D', label: '데치기' },
+  mix: { bg: '#D3F9D8', border: '#51CF66', text: '#2B8A3E', label: '무치기' },
+  prep: { bg: '#F1F3F5', border: '#ADB5BD', text: '#495057', label: '준비' }
+};
+
+const THEMES = [
+{ id: 't1', name: '자취생 간단식', emoji: '🍳', bg: '#FFE8DC', accent: '#FF8C42' },
+{ id: 't2', name: '집밥 기본기', emoji: '🏠', bg: '#E8F5FF', accent: '#4DABF7' },
+{ id: 't3', name: '다이어트 식단', emoji: '🥗', bg: '#E8F8E0', accent: '#51CF66' },
+{ id: 't4', name: '밥도둑', emoji: '🍚', bg: '#FFEBEB', accent: '#FF6B6B' },
+{ id: 't5', name: '주말 특식', emoji: '🍷', bg: '#F3E8FF', accent: '#9775FA' },
+{ id: 't6', name: '비오는 날', emoji: '☔', bg: '#E3F4F4', accent: '#15AABF' }];
+
+
+const INGREDIENT_FILTERS = [
+{ id: 'rice', name: '밥·면', emoji: '🍚' },
+{ id: 'meat', name: '육류', emoji: '🥩' },
+{ id: 'fish', name: '해산물', emoji: '🐟' },
+{ id: 'veg', name: '채소', emoji: '🥬' },
+{ id: 'egg', name: '계란·두부', emoji: '🥚' },
+{ id: 'kimchi', name: '김치', emoji: '🥬' }];
+
+
+// Initial planner state — 7일 × (아침/점심/저녁)
+const todayIdx = 3; // 목요일
+const WEEK_START = new Date(2026, 3, 20); // 2026-04-20 월요일
+const weekDays = ['월', '화', '수', '목', '금', '토', '일'];
+
+function makeInitialPlanner() {
+  const plan = {};
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(WEEK_START);
+    d.setDate(d.getDate() + i);
+    const key = `${d.getMonth() + 1}/${d.getDate()}`;
+    plan[key] = { 아침: null, 점심: null, 저녁: null };
+  }
+  // Seed some meals
+  const keys = Object.keys(plan);
+  plan[keys[0]].저녁 = { recipeId: 'r2', status: 'cooked', servings: 2 };
+  plan[keys[1]].점심 = { recipeId: 'r1', status: 'cooked', servings: 1 };
+  plan[keys[1]].저녁 = { recipeId: 'r4', status: 'shopped', servings: 2 };
+  plan[keys[2]].저녁 = { recipeId: 'r6', status: 'registered', servings: 2 };
+  plan[keys[3]].점심 = { recipeId: 'r3', status: 'registered', servings: 1 };
+  plan[keys[3]].저녁 = { recipeId: 'r2', status: 'registered', servings: 2 };
+  plan[keys[5]].저녁 = { recipeId: 'r5', status: 'registered', servings: 2 };
+  return plan;
+}
+
+const INITIAL_PANTRY = {
+  rice: { name: '쌀', have: true, section: '주식' },
+  noodle: { name: '국수', have: false, section: '주식' },
+  onion: { name: '양파', have: true, section: '채소' },
+  potato: { name: '감자', have: true, section: '채소' },
+  carrot: { name: '당근', have: false, section: '채소' },
+  pepper: { name: '청양고추', have: true, section: '채소' },
+  zucchini: { name: '애호박', have: false, section: '채소' },
+  egg: { name: '계란', have: true, section: '단백질' },
+  tofu: { name: '두부', have: false, section: '단백질' },
+  chicken: { name: '닭가슴살', have: false, section: '단백질' },
+  kimchi: { name: '김치', have: true, section: '양념' },
+  soysauce: { name: '간장', have: true, section: '양념' },
+  gochujang: { name: '고추장', have: true, section: '양념' },
+  doenjang: { name: '된장', have: true, section: '양념' },
+  sesameoil: { name: '참기름', have: true, section: '양념' },
+  gochugaru: { name: '고춧가루', have: true, section: '양념' },
+  sugar: { name: '설탕', have: true, section: '양념' },
+  garlic: { name: '다진마늘', have: true, section: '양념' }
+};
+
+Object.assign(window, {
+  RECIPES, METHOD_COLORS, THEMES, INGREDIENT_FILTERS,
+  makeInitialPlanner, weekDays, WEEK_START, INITIAL_PANTRY, todayIdx
+});
+
+
+// ===== ios-frame.jsx =====
+
+// iOS.jsx — Simplified iOS 26 (Liquid Glass) device frame
+// Based on the iOS 26 UI Kit + Figma status bar spec. No assets, no deps.
+// Exports: IOSDevice, IOSStatusBar, IOSNavBar, IOSGlassPill, IOSList, IOSListRow, IOSKeyboard
+
+// ─────────────────────────────────────────────────────────────
+// Status bar
+// ─────────────────────────────────────────────────────────────
+function IOSStatusBar({ dark = false, time = '9:41' }) {
+  const c = dark ? '#fff' : '#000';
+  return (
+    <div style={{
+      display: 'flex', gap: 154, alignItems: 'center', justifyContent: 'center',
+      padding: '21px 24px 19px', boxSizing: 'border-box',
+      position: 'relative', zIndex: 20, width: '100%'
+    }}>
+      <div style={{ flex: 1, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 1.5 }}>
+        <span style={{
+          fontFamily: '-apple-system, "SF Pro", system-ui', fontWeight: 590,
+          fontSize: 17, lineHeight: '22px', color: c
+        }}>{time}</span>
+      </div>
+      <div style={{ flex: 1, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, paddingTop: 1, paddingRight: 1 }}>
+        <svg width="19" height="12" viewBox="0 0 19 12">
+          <rect x="0" y="7.5" width="3.2" height="4.5" rx="0.7" fill={c} />
+          <rect x="4.8" y="5" width="3.2" height="7" rx="0.7" fill={c} />
+          <rect x="9.6" y="2.5" width="3.2" height="9.5" rx="0.7" fill={c} />
+          <rect x="14.4" y="0" width="3.2" height="12" rx="0.7" fill={c} />
+        </svg>
+        <svg width="17" height="12" viewBox="0 0 17 12">
+          <path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z" fill={c} />
+          <path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z" fill={c} />
+          <circle cx="8.5" cy="10.5" r="1.5" fill={c} />
+        </svg>
+        <svg width="27" height="13" viewBox="0 0 27 13">
+          <rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke={c} strokeOpacity="0.35" fill="none" />
+          <rect x="2" y="2" width="20" height="9" rx="2" fill={c} />
+          <path d="M25 4.5V8.5C25.8 8.2 26.5 7.2 26.5 6.5C26.5 5.8 25.8 4.8 25 4.5Z" fill={c} fillOpacity="0.4" />
+        </svg>
+      </div>
+    </div>);
+
+}
+
+// ─────────────────────────────────────────────────────────────
+// Liquid glass pill — blur + tint + shine
+// ─────────────────────────────────────────────────────────────
+function IOSGlassPill({ children, dark = false, style = {} }) {
+  return (
+    <div style={{
+      height: 44, minWidth: 44, borderRadius: 9999,
+      position: 'relative', overflow: 'hidden',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: dark ?
+      '0 2px 6px rgba(0,0,0,0.35), 0 6px 16px rgba(0,0,0,0.2)' :
+      '0 1px 3px rgba(0,0,0,0.07), 0 3px 10px rgba(0,0,0,0.06)',
+      ...style
+    }}>
+      {/* blur + tint */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 9999,
+        backdropFilter: 'blur(12px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+        background: dark ? 'rgba(120,120,128,0.28)' : 'rgba(255,255,255,0.5)'
+      }} />
+      {/* shine */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 9999,
+        boxShadow: dark ?
+        'inset 1.5px 1.5px 1px rgba(255,255,255,0.15), inset -1px -1px 1px rgba(255,255,255,0.08)' :
+        'inset 1.5px 1.5px 1px rgba(255,255,255,0.7), inset -1px -1px 1px rgba(255,255,255,0.4)',
+        border: dark ? '0.5px solid rgba(255,255,255,0.15)' : '0.5px solid rgba(0,0,0,0.06)'
+      }} />
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', padding: '0 4px' }}>
+        {children}
+      </div>
+    </div>);
+
+}
+
+// ─────────────────────────────────────────────────────────────
+// Navigation bar — glass pills + large title
+// ─────────────────────────────────────────────────────────────
+function IOSNavBar({ title = 'Title', dark = false, trailingIcon = true }) {
+  const muted = dark ? 'rgba(255,255,255,0.6)' : '#404040';
+  const text = dark ? '#fff' : '#000';
+  const pillIcon = (content) =>
+  <IOSGlassPill dark={dark}>
+      <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {content}
+      </div>
+    </IOSGlassPill>;
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: 10,
+      paddingTop: 62, paddingBottom: 10, position: 'relative', zIndex: 5
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 16px'
+      }}>
+        {/* back chevron */}
+        {pillIcon(
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none" style={{ marginLeft: -1 }}>
+            <path d="M10 2L2 10l8 8" stroke={muted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+        {/* trailing ellipsis */}
+        {trailingIcon && pillIcon(
+          <svg width="22" height="6" viewBox="0 0 22 6">
+            <circle cx="3" cy="3" r="2.5" fill={muted} />
+            <circle cx="11" cy="3" r="2.5" fill={muted} />
+            <circle cx="19" cy="3" r="2.5" fill={muted} />
+          </svg>
+        )}
+      </div>
+      {/* large title */}
+      <div style={{
+        padding: '0 16px',
+        fontFamily: '-apple-system, system-ui',
+        fontSize: 34, fontWeight: 700, lineHeight: '41px',
+        color: text, letterSpacing: 0.4
+      }}>{title}</div>
+    </div>);
+
+}
+
+// ─────────────────────────────────────────────────────────────
+// Grouped list (inset card, r:26) + row (52px)
+// ─────────────────────────────────────────────────────────────
+function IOSListRow({ title, detail, icon, chevron = true, isLast = false, dark = false }) {
+  const text = dark ? '#fff' : '#000';
+  const sec = dark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
+  const ter = dark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)';
+  const sep = dark ? 'rgba(84,84,88,0.65)' : 'rgba(60,60,67,0.12)';
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', minHeight: 52,
+      padding: '0 16px', position: 'relative',
+      fontFamily: '-apple-system, system-ui', fontSize: 17,
+      letterSpacing: -0.43
+    }}>
+      {icon &&
+      <div style={{
+        width: 30, height: 30, borderRadius: 7, background: icon,
+        marginRight: 12, flexShrink: 0
+      }} />
+      }
+      <div style={{ flex: 1, color: text }}>{title}</div>
+      {detail && <span style={{ color: sec, marginRight: 6 }}>{detail}</span>}
+      {chevron &&
+      <svg width="8" height="14" viewBox="0 0 8 14" style={{ flexShrink: 0 }}>
+          <path d="M1 1l6 6-6 6" stroke={ter} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      }
+      {!isLast &&
+      <div style={{
+        position: 'absolute', bottom: 0, right: 0,
+        left: icon ? 58 : 16, height: 0.5, background: sep
+      }} />
+      }
+    </div>);
+
+}
+
+function IOSList({ header, children, dark = false }) {
+  const hc = dark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
+  const bg = dark ? '#1C1C1E' : '#fff';
+  return (
+    <div>
+      {header &&
+      <div style={{
+        fontFamily: '-apple-system, system-ui', fontSize: 13,
+        color: hc, textTransform: 'uppercase',
+        padding: '8px 36px 6px', letterSpacing: -0.08
+      }}>{header}</div>
+      }
+      <div style={{
+        background: bg, borderRadius: 26,
+        margin: '0 16px', overflow: 'hidden'
+      }}>{children}</div>
+    </div>);
+
+}
+
+// ─────────────────────────────────────────────────────────────
+// Device frame
+// ─────────────────────────────────────────────────────────────
+function IOSDevice({
+  children, width = 402, height = 874, dark = false,
+  title, keyboard = false
+}) {
+  return (
+    <div style={{
+      width, height, borderRadius: 48, overflow: 'hidden',
+      position: 'relative', background: dark ? '#000' : '#F2F2F7',
+      boxShadow: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)',
+      fontFamily: '-apple-system, system-ui, sans-serif',
+      WebkitFontSmoothing: 'antialiased'
+    }}>
+      {/* dynamic island */}
+      <div style={{
+        position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
+        width: 126, height: 37, borderRadius: 24, background: '#000', zIndex: 50
+      }} />
+      {/* status bar (absolute) */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
+        <IOSStatusBar dark={dark} />
+      </div>
+      {/* nav + content */}
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {title !== undefined && <IOSNavBar title={title} dark={dark} />}
+        <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
+        {keyboard && <IOSKeyboard dark={dark} />}
+      </div>
+      {/* home indicator — always on top */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 60,
+        height: 34, display: 'flex', justifyContent: 'center', alignItems: 'flex-end',
+        paddingBottom: 8, pointerEvents: 'none'
+      }}>
+        <div style={{
+          width: 139, height: 5, borderRadius: 100,
+          background: dark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)'
+        }} />
+      </div>
+    </div>);
+
+}
+
+// ─────────────────────────────────────────────────────────────
+// Keyboard — iOS 26 liquid glass
+// ─────────────────────────────────────────────────────────────
+function IOSKeyboard({ dark = false }) {
+  const glyph = dark ? 'rgba(255,255,255,0.7)' : '#595959';
+  const sugg = dark ? 'rgba(255,255,255,0.6)' : '#333';
+  const keyBg = dark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.85)';
+
+  // special-key icons
+  const icons = {
+    shift: <svg width="19" height="17" viewBox="0 0 19 17"><path d="M9.5 1L1 9.5h4.5V16h8V9.5H18L9.5 1z" fill={glyph} /></svg>,
+    del: <svg width="23" height="17" viewBox="0 0 23 17"><path d="M7 1h13a2 2 0 012 2v11a2 2 0 01-2 2H7l-6-7.5L7 1z" fill="none" stroke={glyph} strokeWidth="1.6" strokeLinejoin="round" /><path d="M10 5l7 7M17 5l-7 7" stroke={glyph} strokeWidth="1.6" strokeLinecap="round" /></svg>,
+    ret: <svg width="20" height="14" viewBox="0 0 20 14"><path d="M18 1v6H4m0 0l4-4M4 7l4 4" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  };
+
+  const key = (content, { w, flex, ret, fs = 25, k } = {}) =>
+  <div key={k} style={{
+    height: 42, borderRadius: 8.5,
+    flex: flex ? 1 : undefined, width: w, minWidth: 0,
+    background: ret ? '#08f' : keyBg,
+    boxShadow: '0 1px 0 rgba(0,0,0,0.075)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontFamily: '-apple-system, "SF Compact", system-ui',
+    fontSize: fs, fontWeight: 458, color: ret ? '#fff' : glyph
+  }}>{content}</div>;
+
+
+  const row = (keys, pad = 0) =>
+  <div style={{ display: 'flex', gap: 6.5, justifyContent: 'center', padding: `0 ${pad}px` }}>
+      {keys.map((l) => key(l, { flex: true, k: l }))}
+    </div>;
+
+
+  return (
+    <div style={{
+      position: 'relative', zIndex: 15, borderRadius: 27, overflow: 'hidden',
+      padding: '11px 0 2px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      boxShadow: dark ?
+      '0 -2px 20px rgba(0,0,0,0.09)' :
+      '0 -1px 6px rgba(0,0,0,0.018), 0 -3px 20px rgba(0,0,0,0.012)'
+    }}>
+      {/* liquid glass bg — same recipe as nav pills */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 27,
+        backdropFilter: 'blur(12px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+        background: dark ? 'rgba(120,120,128,0.14)' : 'rgba(255,255,255,0.25)'
+      }} />
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 27,
+        boxShadow: dark ?
+        'inset 1.5px 1.5px 1px rgba(255,255,255,0.15)' :
+        'inset 1.5px 1.5px 1px rgba(255,255,255,0.7), inset -1px -1px 1px rgba(255,255,255,0.4)',
+        border: dark ? '0.5px solid rgba(255,255,255,0.15)' : '0.5px solid rgba(0,0,0,0.06)',
+        pointerEvents: 'none'
+      }} />
+
+      {/* autocorrect bar */}
+      <div style={{
+        display: 'flex', gap: 20, alignItems: 'center',
+        padding: '8px 22px 13px', width: '100%', boxSizing: 'border-box',
+        position: 'relative'
+      }}>
+        {['"The"', 'the', 'to'].map((w, i) =>
+        <React.Fragment key={i}>
+            {i > 0 && <div style={{ width: 1, height: 25, background: '#ccc', opacity: 0.3 }} />}
+            <div style={{
+            flex: 1, textAlign: 'center',
+            fontFamily: '-apple-system, system-ui', fontSize: 17,
+            color: sugg, letterSpacing: -0.43, lineHeight: '22px'
+          }}>{w}</div>
+          </React.Fragment>
+        )}
+      </div>
+
+      {/* key layout */}
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: 13,
+        padding: '0 6.5px', width: '100%', boxSizing: 'border-box',
+        position: 'relative'
+      }}>
+        {row(['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'])}
+        {row(['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'], 20)}
+        <div style={{ display: 'flex', gap: 14.25, alignItems: 'center' }}>
+          {key(icons.shift, { w: 45, k: 'shift' })}
+          <div style={{ display: 'flex', gap: 6.5, flex: 1 }}>
+            {['z', 'x', 'c', 'v', 'b', 'n', 'm'].map((l) => key(l, { flex: true, k: l }))}
+          </div>
+          {key(icons.del, { w: 45, k: 'del' })}
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {key('ABC', { w: 92.25, fs: 18, k: 'abc' })}
+          {key('', { flex: true, k: 'space' })}
+          {key(icons.ret, { w: 92.25, ret: true, k: 'ret' })}
+        </div>
+      </div>
+
+      {/* bottom spacer (emoji+mic area, icons omitted) */}
+      <div style={{ height: 56, width: '100%', position: 'relative' }} />
+    </div>);
+
+}
+
+Object.assign(window, {
+  IOSDevice, IOSStatusBar, IOSNavBar, IOSGlassPill, IOSList, IOSListRow, IOSKeyboard
+});
+
+
+// ===== components.jsx =====
+// Shared components
+const { useState, useEffect, useRef, useMemo } = React;
+
+// Icons (simple SVG)
+const Icon = {
+  search: (c = T.text3) =>
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke={c} strokeWidth="2" /><path d="M14 14l3 3" stroke={c} strokeWidth="2" strokeLinecap="round" /></svg>,
+
+  heart: (filled, c = T.text2) => filled ?
+  <svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0112 6a5.5 5.5 0 019.5 6c-2.5 4.5-9.5 9-9.5 9z" fill={T.red} /></svg> :
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0112 6a5.5 5.5 0 019.5 6c-2.5 4.5-9.5 9-9.5 9z" stroke={c} strokeWidth="2" /></svg>,
+  bookmark: (filled, c = T.text2) => filled ?
+  <svg width="20" height="20" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4V3z" fill={T.mint} /></svg> :
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 3h12v18l-6-4-6 4V3z" stroke={c} strokeWidth="2" strokeLinejoin="round" /></svg>,
+  clock: (c = T.text3) =>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke={c} strokeWidth="2" /><path d="M12 7v5l3 2" stroke={c} strokeWidth="2" strokeLinecap="round" /></svg>,
+
+  star: (c = T.orange) =>
+  <svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.5 2 7-6.5-4-6.5 4 2-7L2 9.5 9 9z" fill={c} /></svg>,
+
+  users: (c = T.text3) =>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke={c} strokeWidth="2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke={c} strokeWidth="2" strokeLinecap="round" /><circle cx="17" cy="9" r="2.5" stroke={c} strokeWidth="2" /><path d="M15 14c3 0 6 1.5 6 4.5" stroke={c} strokeWidth="2" strokeLinecap="round" /></svg>,
+
+  plus: (c = '#fff') => <svg width="16" height="16" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16" stroke={c} strokeWidth="2.5" strokeLinecap="round" /></svg>,
+  close: (c = T.ink) => <svg width="20" height="20" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke={c} strokeWidth="2" strokeLinecap="round" /></svg>,
+  chevR: (c = T.text3) => <svg width="8" height="14" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" stroke={c} strokeWidth="2" fill="none" strokeLinecap="round" /></svg>,
+  chevL: (c = T.ink) => <svg width="10" height="16" viewBox="0 0 10 16"><path d="M8 1L2 8l6 7" stroke={c} strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>,
+  chevD: (c = T.ink) => <svg width="12" height="8" viewBox="0 0 12 8"><path d="M1 1l5 5 5-5" stroke={c} strokeWidth="2" fill="none" strokeLinecap="round" /></svg>,
+  check: (c = '#fff') => <svg width="14" height="14" viewBox="0 0 24 24"><path d="M5 12l5 5 9-11" stroke={c} strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>,
+  home: (a, c) => <svg width="24" height="24" viewBox="0 0 24 24" fill={a ? c : 'none'}><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1v-9z" stroke={c} strokeWidth="2" strokeLinejoin="round" /></svg>,
+  cal: (a, c) => <svg width="24" height="24" viewBox="0 0 24 24" fill={a ? c : 'none'}><rect x="3" y="5" width="18" height="16" rx="2" stroke={c} strokeWidth="2" /><path d="M3 9h18M8 3v4M16 3v4" stroke={c} strokeWidth="2" strokeLinecap="round" /></svg>,
+  fridge: (a, c) => <svg width="24" height="24" viewBox="0 0 24 24" fill={a ? c : 'none'}><rect x="5" y="3" width="14" height="18" rx="2" stroke={c} strokeWidth="2" /><path d="M5 11h14M8 7v1M8 14v2" stroke={c} strokeWidth="2" strokeLinecap="round" /></svg>,
+  user: (a, c) => <svg width="24" height="24" viewBox="0 0 24 24" fill={a ? c : 'none'}><circle cx="12" cy="8" r="4" stroke={c} strokeWidth="2" /><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke={c} strokeWidth="2" strokeLinecap="round" /></svg>,
+  bag: (c = T.ink) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 8h14l-1 13H6L5 8z" stroke={c} strokeWidth="2" strokeLinejoin="round" /><path d="M9 8V5a3 3 0 016 0v3" stroke={c} strokeWidth="2" /></svg>,
+  fire: (c = T.red) => <svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2s-4 4-4 8a4 4 0 004 4 4 4 0 004-4c0 4-4 8-4 8s-6-2-6-8c0-3 2-4 2-4s1 2 3 0c2-2 1-4 1-4z" fill={c} /></svg>,
+  chef: (c = T.mint) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 13v6h12v-6M6 13a4 4 0 01-2-7 4 4 0 018-2 4 4 0 018 2 4 4 0 01-2 7" stroke={c} strokeWidth="2" strokeLinejoin="round" /></svg>
+};
+
+function Chip({ children, active, onClick, style, compact }) {
+  return (
+    <button onClick={onClick} style={{
+      padding: compact ? '6px 10px' : '8px 14px',
+      borderRadius: 9999,
+      background: active ? T.ink : T.surfaceSubtle,
+      color: active ? '#fff' : T.text2,
+      border: 'none',
+      fontSize: compact ? 12 : 13,
+      fontWeight: active ? 700 : 500,
+      cursor: 'pointer',
+      whiteSpace: 'nowrap',
+      ...style
+    }}>{children}</button>);
+
+}
+
+function Button({ children, variant = 'primary', onClick, style, disabled, size = 'md', full }) {
+  const vs = {
+    primary: { bg: T.mint, color: '#fff', border: 'transparent' },
+    secondary: { bg: 'transparent', color: T.mint, border: T.mint },
+    neutral: { bg: T.surfaceFill, color: T.ink, border: 'transparent' },
+    destructive: { bg: T.red, color: '#fff', border: 'transparent' },
+    dark: { bg: T.ink, color: '#fff', border: 'transparent' }
+  }[variant];
+  const sizes = { sm: { h: 36, fs: 13, pad: '0 14px' }, md: { h: 48, fs: 16, pad: '0 24px' } }[size];
+  const ds = disabled ? { bg: T.border, color: T.text4, border: 'transparent' } : vs;
+  return (
+    <button onClick={disabled ? undefined : onClick} style={{
+      height: sizes.h, padding: sizes.pad, borderRadius: 8,
+      background: ds.bg, color: ds.color, border: `1px solid ${ds.border}`,
+      fontSize: sizes.fs, fontWeight: 700, cursor: disabled ? 'default' : 'pointer',
+      width: full ? '100%' : undefined, fontFamily: T.fontUI,
+      ...style
+    }}>{children}</button>);
+
+}
+
+function StatusPill({ status }) {
+  const map = {
+    registered: { label: '등록', bg: T.surfaceSubtle, fg: T.text2 },
+    shopped: { label: '장보기 완료', bg: '#FFF4E1', fg: '#B8860B' },
+    cooked: { label: '요리 완료', bg: T.mintSoft, fg: T.mintDeep }
+  };
+  const s = map[status] || map.registered;
+  return (
+    <span style={{
+      background: s.bg, color: s.fg, fontSize: 10, fontWeight: 700,
+      padding: '2px 6px', borderRadius: 4, letterSpacing: -0.2
+    }}>{s.label}</span>);
+
+}
+
+// Recipe card — large (used in Home feed)
+function RecipeCard({ recipe, onClick, compact }) {
+  if (compact) {
+    return (
+      <div onClick={onClick} style={{
+        width: 160, flexShrink: 0, cursor: 'pointer'
+      }}>
+        <div style={{
+          width: '100%', aspectRatio: '1/1', borderRadius: 12,
+          background: recipe.bg, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', fontSize: 68, marginBottom: 8,
+          boxShadow: T.shadowNatural
+        }}>{recipe.emoji}</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 2 }}>{recipe.name}</div>
+        <div style={{ fontSize: 12, color: T.text3, display: 'flex', alignItems: 'center', gap: 4 }}>
+          {Icon.clock()}{recipe.minutes}분
+          <span style={{ margin: '0 3px' }}>·</span>
+          {Icon.star()}{recipe.rating}
+        </div>
+      </div>);
+
+  }
+  return (
+    <div onClick={onClick} style={{
+      background: '#fff', borderRadius: 12, overflow: 'hidden',
+      boxShadow: T.shadowDeep, cursor: 'pointer', marginBottom: 16
+    }}>
+      <div style={{
+        width: '100%', aspectRatio: '16/9', background: recipe.bg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 96, position: 'relative'
+      }}>
+        {recipe.emoji}
+        <div style={{
+          position: 'absolute', top: 12, right: 12,
+          width: 36, height: 36, borderRadius: 18,
+          background: 'rgba(255,255,255,0.92)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>{Icon.bookmark(false)}</div>
+        {recipe.saves > 2000 &&
+        <div style={{
+          position: 'absolute', top: 12, left: 12,
+          background: T.red, color: '#fff', fontSize: 11, fontWeight: 700,
+          padding: '4px 8px', borderRadius: 4
+        }}>🔥 인기</div>
+        }
+      </div>
+      <div style={{ padding: 16 }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, marginBottom: 4 }}>{recipe.name}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: T.text3, fontSize: 13, marginBottom: 10 }}>
+          {Icon.star()} <span style={{ color: T.ink, fontWeight: 600 }}>{recipe.rating}</span>
+          <span>({recipe.saves.toLocaleString()})</span>
+          <span>·</span>
+          {Icon.clock()} {recipe.minutes}분
+          <span>·</span>
+          {Icon.users()} {recipe.servings}인
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {recipe.tags.map((t) =>
+          <span key={t} style={{
+            background: T.surfaceSubtle, color: T.text2, fontSize: 12, fontWeight: 500,
+            padding: '4px 10px', borderRadius: 9999
+          }}>{t}</span>
+          )}
+        </div>
+      </div>
+    </div>);
+
+}
+
+// Bottom tab bar
+function BottomTab({ tab, onTab }) {
+  const items = [
+  { id: 'home', label: '홈', icon: Icon.home },
+  { id: 'planner', label: '플래너', icon: Icon.cal },
+  { id: 'pantry', label: '팬트리', icon: Icon.fridge },
+  { id: 'mypage', label: '마이', icon: Icon.user }];
+
+  return (
+    <div style={{
+      position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 40,
+      background: '#fff', borderTop: `0.5px solid ${T.border}`,
+      paddingTop: 8, paddingBottom: 28,
+      display: 'flex', justifyContent: 'space-around'
+    }}>
+      {items.map((it) => {
+        const active = tab === it.id;
+        const c = active ? T.mint : T.text3;
+        return (
+          <button key={it.id} onClick={() => onTab(it.id)} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            padding: '4px 8px'
+          }}>
+            {it.icon(active, c)}
+            <span style={{ fontSize: 11, fontWeight: active ? 700 : 500, color: c }}>{it.label}</span>
+          </button>);
+
+      })}
+    </div>);
+
+}
+
+// App bar (top)
+function AppBar({ title, left, right, brand }) {
+  return (
+    <div style={{
+      position: 'sticky', top: 0, background: '#fff', zIndex: 30,
+      borderBottom: `0.5px solid ${T.border}`,
+      padding: '10px 16px', display: 'flex', alignItems: 'center',
+      minHeight: 52
+    }}>
+      <div style={{ width: 32 }}>{left}</div>
+      <div style={{
+        flex: 1, textAlign: 'center',
+        fontSize: brand ? 22 : 18, fontWeight: 700, color: T.ink,
+        fontFamily: brand ? T.fontBrand : T.fontUI,
+        letterSpacing: brand ? 0.5 : 0
+      }}>
+        {brand ? <span style={{ color: T.mint }}>homecook</span> : title}
+        {brand && <span style={{ color: T.ink }}>_</span>}
+      </div>
+      <div style={{ width: 32, textAlign: 'right' }}>{right}</div>
+    </div>);
+
+}
+
+Object.assign(window, { Icon, Chip, Button, StatusPill, RecipeCard, BottomTab, AppBar });
+
+
+// ===== screens/home.jsx =====
+// Home screen
+const { useState: useState_H, useMemo: useMemo_H } = React;
+
+function HomeScreen({ onOpenRecipe, sortBy, setSortBy, ingFilter, setIngFilter, showSortSheet, setShowSortSheet }) {
+  const [query, setQuery] = useState_H('');
+  const [activeTheme, setActiveTheme] = useState_H(null);
+
+  const sorted = useMemo_H(() => {
+    let list = [...RECIPES];
+    if (query) list = list.filter((r) => r.name.includes(query));
+    if (activeTheme) list = list.filter((r) => r.theme === activeTheme);
+    if (ingFilter.length > 0) {
+      // loose filter based on ingredient section
+      list = list.filter((r) => {
+        const names = r.ingredients.map((i) => i.name).join(' ');
+        return ingFilter.some((f) => {
+          if (f === 'rice') return /밥|국수|면|밀가루/.test(names);
+          if (f === 'meat') return /돼지|소고기|닭|앞다리/.test(names);
+          if (f === 'fish') return /연어|멸치|해산물/.test(names);
+          if (f === 'veg') return /양파|감자|당근|호박|로메인/.test(names);
+          if (f === 'egg') return /계란|두부/.test(names);
+          if (f === 'kimchi') return /김치|묵은지/.test(names);
+          return true;
+        });
+      });
+    }
+    if (sortBy === 'rating') list.sort((a, b) => b.rating - a.rating);
+    if (sortBy === 'saves') list.sort((a, b) => b.saves - a.saves);
+    if (sortBy === 'fast') list.sort((a, b) => a.minutes - b.minutes);
+    return list;
+  }, [query, activeTheme, ingFilter, sortBy]);
+
+  const sortLabel = { latest: '최신순', rating: '별점순', saves: '저장순', fast: '빠른 조리순' }[sortBy];
+
+  return (
+    <div style={{ background: '#fff', minHeight: '100%', paddingBottom: 100 }}>
+      <AppBar brand right={Icon.bag()} left={<div style={{
+        width: 32, height: 32, borderRadius: 16, background: T.mint, color: '#fff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 13, fontWeight: 700
+      }}>채</div>} />
+
+      {/* Hero greeting */}
+      <div style={{ padding: '16px 16px 12px', background: '#fff' }}>
+        <div style={{ fontSize: 14, color: T.text3, marginBottom: 2 }}>목요일 저녁,</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand }}>
+          오늘은 뭐 해먹지?
+        </div>
+      </div>
+
+      {/* Search */}
+      <div style={{ padding: '4px 16px 12px' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: T.surfaceFill, borderRadius: 20,
+          padding: '0 16px', height: 44
+        }}>
+          {Icon.search()}
+          <input
+            value={query} onChange={(e) => setQuery(e.target.value)}
+            placeholder="김치볶음밥, 된장찌개…"
+            style={{
+              flex: 1, border: 'none', background: 'transparent',
+              fontSize: 14, color: T.ink, outline: 'none', fontFamily: T.fontUI
+            }} />
+
+        </div>
+      </div>
+
+      {/* Ingredient filter row */}
+      <div style={{ padding: '4px 16px 16px', display: 'flex', gap: 8, overflowX: 'auto' }}>
+        {INGREDIENT_FILTERS.map((f) => {
+          const active = ingFilter.includes(f.id);
+          return (
+            <button key={f.id} onClick={() => {
+              setIngFilter(active ? ingFilter.filter((x) => x !== f.id) : [...ingFilter, f.id]);
+            }} style={{
+              flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 9999,
+              background: active ? T.mintSoft : T.surfaceFill,
+              border: active ? `1px solid ${T.mint}` : '1px solid transparent',
+              color: active ? T.mintDeep : T.text2,
+              fontSize: 13, fontWeight: active ? 700 : 500, cursor: 'pointer'
+            }}>
+              <span style={{ fontSize: 14 }}>{f.emoji}</span>{f.name}
+            </button>);
+
+        })}
+      </div>
+
+      {/* Theme carousel (H1 compact horizontal strip, 1.5장 peek) */}
+      <div style={{ padding: '12px 0 20px' }}>
+        <div style={{ padding: '0 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>테마별 레시피</div>
+          <div style={{ fontSize: 12, color: T.text3 }}>전체보기 ›</div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '0 16px 4px', scrollbarWidth: 'none' }}>
+          {THEMES.map((t) => {
+            const active = activeTheme === t.name;
+            return (
+              <div key={t.id} onClick={() => setActiveTheme(active ? null : t.name)} style={{
+                flexShrink: 0, width: 140, height: 92, borderRadius: 14,
+                background: t.bg, padding: 12, cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                border: active ? `2px solid ${T.mint}` : '2px solid transparent',
+                boxShadow: T.shadowNatural
+              }}>
+                <div style={{ fontSize: 30 }}>{t.emoji}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand }}>
+                  {t.name}
+                </div>
+              </div>);
+
+          })}
+        </div>
+      </div>
+
+      {/* Promo strip */}
+      <div style={{ padding: '0 16px 20px' }}>
+        <div style={{
+          background: `linear-gradient(135deg, ${T.mint} 0%, ${T.teal} 100%)`,
+          borderRadius: 12, padding: 16, display: 'flex', alignItems: 'center',
+          gap: 12, color: "rgb(255, 255, 255)"
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 2 }}>이번 주 식단 플래너</div>
+            <div style={{ fontSize: 16, fontWeight: 700, fontFamily: T.fontBrand }}>
+              오늘 저녁까지 2끼 남았어요
+            </div>
+          </div>
+          <div style={{ fontSize: 32 }}>🍳</div>
+        </div>
+      </div>
+
+      {/* All recipes with sort */}
+      <div style={{ padding: '0 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>
+          모든 레시피 <span style={{ color: T.text3, fontSize: 14, fontWeight: 500 }}>({sorted.length})</span>
+        </div>
+        <button onClick={() => setShowSortSheet(true)} style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 4, color: T.text2,
+          fontSize: 13, fontWeight: 600
+        }}>
+          {sortLabel} {Icon.chevD(T.text2)}
+        </button>
+      </div>
+
+      <div style={{ padding: '0 16px' }}>
+        {sorted.map((r) =>
+        <RecipeCard key={r.id} recipe={r} onClick={() => onOpenRecipe(r.id)} />
+        )}
+        {sorted.length === 0 &&
+        <div style={{ padding: '48px 16px', textAlign: 'center', color: T.text3 }}>
+            <div style={{ fontSize: 48, marginBottom: 8 }}>🍽️</div>
+            <div style={{ fontSize: 14 }}>조건에 맞는 레시피가 없어요</div>
+          </div>
+        }
+      </div>
+    </div>);
+
+}
+
+window.HomeScreen = HomeScreen;
+
+
+// ===== screens/detail.jsx =====
+// Recipe Detail screen
+const { useState: useState_RD } = React;
+
+function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, toggleSaved }) {
+  const recipe = RECIPES.find((r) => r.id === recipeId);
+  const [tab, setTab] = useState_RD('ingredients');
+  const [servings, setServings] = useState_RD(recipe.servings);
+  const [liked, setLiked] = useState_RD(false);
+
+  const scale = servings / recipe.servings;
+
+  // group ingredients by section
+  const grouped = {};
+  recipe.ingredients.forEach((i) => {
+    if (!grouped[i.section]) grouped[i.section] = [];
+    grouped[i.section].push(i);
+  });
+
+  return (
+    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 120 }}>
+      {/* Hero image */}
+      <div style={{
+        position: 'relative', width: '100%', aspectRatio: '4/3',
+        background: recipe.bg, display: 'flex',
+        alignItems: 'center', justifyContent: 'center', fontSize: 140
+      }}>
+        {recipe.emoji}
+        <button onClick={onBack} style={{
+          position: 'absolute', top: 52, left: 16,
+          width: 36, height: 36, borderRadius: 18, background: 'rgba(255,255,255,0.92)',
+          border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>{Icon.chevL()}</button>
+        <div style={{ position: 'absolute', top: 52, right: 16, display: 'flex', gap: 8 }}>
+          <button onClick={() => setLiked(!liked)} style={{
+            width: 36, height: 36, borderRadius: 18, background: 'rgba(255,255,255,0.92)',
+            border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>{Icon.heart(liked)}</button>
+          <button onClick={toggleSaved} style={{
+            width: 36, height: 36, borderRadius: 18, background: 'rgba(255,255,255,0.92)',
+            border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>{Icon.bookmark(saved)}</button>
+        </div>
+      </div>
+
+      {/* Title block */}
+      <div style={{ background: '#fff', padding: 20, borderBottom: `1px solid ${T.border}` }}>
+        <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 700, marginBottom: 6 }}>
+          {recipe.theme}
+        </div>
+        <div style={{ fontSize: 24, fontWeight: 700, color: T.ink, marginBottom: 10 }}>
+          {recipe.name}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: T.text2, fontSize: 13 }}>
+          {Icon.star()} <span style={{ color: T.ink, fontWeight: 600 }}>{recipe.rating}</span>
+          <span style={{ color: T.text3 }}>({recipe.saves.toLocaleString()})</span>
+          <span style={{ color: T.text4 }}>·</span>
+          {Icon.clock()} {recipe.minutes}분
+          <span style={{ color: T.text4 }}>·</span>
+          {Icon.fire()} {recipe.kcal}kcal
+        </div>
+      </div>
+
+      {/* Tab switcher */}
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 5, background: '#fff',
+        display: 'flex', borderBottom: `1px solid ${T.border}`
+      }}>
+        {[['ingredients', '재료'], ['steps', '조리법'], ['reviews', '리뷰']].map(([k, l]) => {
+          const active = tab === k;
+          return (
+            <button key={k} onClick={() => setTab(k)} style={{
+              flex: 1, padding: '14px 0', border: 'none', background: 'none',
+              cursor: 'pointer', fontSize: 14,
+              fontWeight: active ? 700 : 500,
+              color: active ? T.ink : T.text3,
+              borderBottom: active ? `2px solid ${T.mint}` : '2px solid transparent'
+            }}>{l}</button>);
+
+        })}
+      </div>
+
+      {tab === 'ingredients' &&
+      <div style={{ background: '#fff', padding: 20 }}>
+          {/* Servings stepper */}
+          <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 16px', background: T.surfaceFill, borderRadius: 12, marginBottom: 20
+        }}>
+            <div>
+              <div style={{ fontSize: 12, color: T.text3, marginBottom: 2 }}>몇 인분?</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>{servings}인분</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button onClick={() => setServings(Math.max(1, servings - 1))} style={{
+              width: 32, height: 32, borderRadius: 16, border: `1px solid ${T.border}`,
+              background: '#fff', cursor: 'pointer', fontSize: 18, color: T.ink
+            }}>−</button>
+              <div style={{ minWidth: 24, textAlign: 'center', fontWeight: 700, color: T.ink }}>{servings}</div>
+              <button onClick={() => setServings(servings + 1)} style={{
+              width: 32, height: 32, borderRadius: 16, border: 'none',
+              background: T.mint, color: '#fff', cursor: 'pointer', fontSize: 18, fontWeight: 700
+            }}>+</button>
+            </div>
+          </div>
+
+          {Object.entries(grouped).map(([section, items]) =>
+        <div key={section} style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, color: T.text3, fontWeight: 600, marginBottom: 8 }}>
+                {section}
+              </div>
+              {items.map((i, idx) =>
+          <div key={idx} style={{
+            display: 'flex', justifyContent: 'space-between', padding: '12px 0',
+            borderBottom: idx < items.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none'
+          }}>
+                  <span style={{ fontSize: 15, color: T.ink, fontWeight: 500 }}>{i.name}</span>
+                  <span style={{ fontSize: 14, color: T.text2 }}>
+                    {scaleQty(i.qty, scale)}
+                  </span>
+                </div>
+          )}
+            </div>
+        )}
+        </div>
+      }
+
+      {tab === 'steps' &&
+      <div style={{ padding: 16 }}>
+          {recipe.steps.map((s, i) => {
+          const c = METHOD_COLORS[s.method];
+          return (
+            <div key={i} style={{
+              background: '#fff', borderRadius: 12, padding: 16, marginBottom: 12,
+              borderLeft: `4px solid ${c.border}`,
+              boxShadow: T.shadowNatural
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{
+                  width: 28, height: 28, borderRadius: 14,
+                  background: c.bg, color: c.text,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13, fontWeight: 700
+                }}>{i + 1}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, flex: 1 }}>{s.title}</div>
+                  <span style={{
+                  background: c.bg, color: c.text, fontSize: 11, fontWeight: 700,
+                  padding: '3px 8px', borderRadius: 4
+                }}>{c.label}</span>
+                  <span style={{ color: T.text3, fontSize: 12 }}>{s.minutes}분</span>
+                </div>
+                <div style={{ fontSize: 14, color: T.text2, lineHeight: 1.57, paddingLeft: 36 }}>
+                  {s.body}
+                </div>
+              </div>);
+
+        })}
+          <button style={{
+          width: '100%', padding: 14, marginTop: 8, background: T.ink, color: '#fff',
+          border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+        }}>👨‍🍳 요리 모드 시작</button>
+        </div>
+      }
+
+      {tab === 'reviews' &&
+      <div style={{ padding: 20, background: '#fff' }}>
+          {[
+        { u: '미소맘', r: 5, t: '재료도 간단하고 애들이 너무 잘 먹어요!' },
+        { u: '홈쿡러', r: 4, t: '국물이 진하고 맛있어요. 다음엔 청양고추 빼고.' },
+        { u: '자취3년차', r: 5, t: '진짜 15분 컷. 평일 저녁에 완벽.' }].
+        map((rv, i) =>
+        <div key={i} style={{ padding: '16px 0', borderBottom: i < 2 ? `1px solid ${T.surfaceSubtle}` : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <div style={{
+              width: 28, height: 28, borderRadius: 14, background: T.mintSoft,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 700, color: T.mintDeep
+            }}>{rv.u[0]}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{rv.u}</div>
+                <div style={{ display: 'flex', gap: 1 }}>
+                  {Array.from({ length: rv.r }).map((_, k) => <span key={k}>{Icon.star()}</span>)}
+                </div>
+              </div>
+              <div style={{ fontSize: 14, color: T.text2, lineHeight: 1.5 }}>{rv.t}</div>
+            </div>
+        )}
+        </div>
+      }
+
+      {/* Bottom CTA bar */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
+        background: '#fff', padding: '12px 16px 32px',
+        borderTop: `0.5px solid ${T.border}`,
+        display: 'flex', gap: 8
+      }}>
+        <Button variant="secondary" size="md" onClick={onOpenSave} style={{ flex: 1 }}>
+          저장
+        </Button>
+        <Button variant="primary" size="md" onClick={onOpenPlannerAdd} style={{ flex: 2 }}>
+          플래너에 추가
+        </Button>
+      </div>
+    </div>);
+
+}
+
+function scaleQty(qty, scale) {
+  if (scale === 1) return qty;
+  // naive numeric scaling for display
+  const m = qty.match(/^([\d./]+)(.*)$/);
+  if (!m) return qty;
+  const val = eval(m[1]) * scale;
+  const suf = m[2];
+  const rounded = Math.round(val * 10) / 10;
+  return `${rounded}${suf}`;
+}
+
+window.RecipeDetail = RecipeDetail;
+
+
+// ===== screens/planner.jsx =====
+// Planner screen (week view with day cards, slot rows per 화면정의서 H4)
+const { useState: useState_P } = React;
+
+function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd }) {
+  const keys = Object.keys(planner);
+  const todayK = keys[todayIdx];
+
+  const stats = React.useMemo(() => {
+    let total = 0,cooked = 0,shopped = 0;
+    keys.forEach((k) => {
+      ['아침', '점심', '저녁'].forEach((slot) => {
+        const m = planner[k][slot];
+        if (m) {
+          total++;
+          if (m.status === 'cooked') cooked++;
+          if (m.status === 'shopped') shopped++;
+        }
+      });
+    });
+    return { total, cooked, shopped };
+  }, [planner]);
+
+  return (
+    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
+      <AppBar title="이번 주 플래너" left={Icon.chevL()} right={<span style={{ fontSize: 20 }}>⋯</span>} />
+
+      {/* Summary */}
+      <div style={{ background: '#fff', padding: '16px 20px', borderBottom: `1px solid ${T.border}` }}>
+        <div style={{ fontSize: 14, color: T.text3, marginBottom: 4 }}>4월 20일 — 26일</div>
+        <div style={{ fontSize: 20, fontWeight: 700, color: T.ink, marginBottom: 12, fontFamily: T.fontBrand }}>
+          이번 주 {stats.total}끼 계획 중
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{
+            flex: 1, background: T.mintSoft, borderRadius: 10, padding: 12
+          }}>
+            <div style={{ fontSize: 11, color: T.mintDeep, fontWeight: 600 }}>요리 완료</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: T.mintDeep }}>{stats.cooked}끼</div>
+          </div>
+          <div style={{
+            flex: 1, background: '#FFF4E1', borderRadius: 10, padding: 12
+          }}>
+            <div style={{ fontSize: 11, color: '#B8860B', fontWeight: 600 }}>장보기 완료</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#B8860B' }}>{stats.shopped}끼</div>
+          </div>
+          <div style={{
+            flex: 1, background: T.surfaceFill, borderRadius: 10, padding: 12
+          }}>
+            <div style={{ fontSize: 11, color: T.text2, fontWeight: 600 }}>등록</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: T.ink }}>
+              {stats.total - stats.cooked - stats.shopped}끼
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Day cards */}
+      <div style={{ padding: 16 }}>
+        {keys.map((k, i) => {
+          const isToday = k === todayK;
+          const day = planner[k];
+          const slots = [['아침', '🌅'], ['점심', '☀️'], ['저녁', '🌙']];
+          return (
+            <div key={k} style={{
+              background: '#fff', borderRadius: 12, marginBottom: 12,
+              border: isToday ? `2px solid ${T.mint}` : `1px solid ${T.border}`,
+              boxShadow: isToday ? T.shadowDeep : 'none',
+              overflow: 'hidden'
+            }}>
+              {/* Day header */}
+              <div style={{
+                display: 'flex', alignItems: 'center', padding: '12px 16px',
+                borderBottom: `1px solid ${T.surfaceSubtle}`,
+                background: isToday ? T.mintSoft : '#fff'
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 16,
+                  background: isToday ? T.mint : T.surfaceFill,
+                  color: isToday ? '#fff' : T.ink,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13, fontWeight: 700, marginRight: 10
+                }}>{weekDays[i]}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>
+                    {k} {isToday && <span style={{ color: T.mint, fontSize: 12, marginLeft: 4 }}>오늘</span>}
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: T.text3 }}>
+                  {['아침', '점심', '저녁'].filter((s) => day[s]).length}/3
+                </div>
+              </div>
+              {/* Slot rows */}
+              {slots.map(([slot, emoji]) => {
+                const meal = day[slot];
+                const recipe = meal ? RECIPES.find((r) => r.id === meal.recipeId) : null;
+                return (
+                  <div key={slot} style={{
+                    display: 'flex', alignItems: 'center', padding: '10px 16px',
+                    borderBottom: `1px solid ${T.surfaceSubtle}`,
+                    cursor: recipe ? 'pointer' : 'default'
+                  }} onClick={() => {
+                    if (recipe) onOpenRecipe(recipe.id);else
+                    onOpenPlannerAdd(k, slot);
+                  }}>
+                    <div style={{
+                      width: 48, textAlign: 'center', fontSize: 12, color: T.text3,
+                      fontWeight: 600
+                    }}>
+                      <div style={{ fontSize: 18 }}>{emoji}</div>
+                      {slot}
+                    </div>
+                    {recipe ?
+                    <>
+                        <div style={{
+                        width: 44, height: 44, borderRadius: 8, background: recipe.bg,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 24, marginRight: 10, marginLeft: 4
+                      }}>{recipe.emoji}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: T.ink, marginBottom: 2 }}>
+                            {recipe.name}
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <StatusPill status={meal.status} />
+                            <span style={{ fontSize: 11, color: T.text3 }}>{meal.servings}인분 · {recipe.minutes}분</span>
+                          </div>
+                        </div>
+                        {Icon.chevR()}
+                      </> :
+
+                    <button style={{
+                      flex: 1, marginLeft: 12, height: 44, border: `1px dashed ${T.border}`,
+                      background: 'transparent', borderRadius: 8, color: T.text3,
+                      fontSize: 13, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
+                    }}>+ 식사 추가</button>
+                    }
+                  </div>);
+
+              })}
+            </div>);
+
+        })}
+      </div>
+
+      {/* Floating shopping CTA */}
+      <div style={{
+        position: 'absolute', bottom: 92, right: 16, zIndex: 20
+      }}>
+        <button style={{
+          background: T.ink, color: '#fff', border: 'none',
+          padding: '12px 18px', borderRadius: 9999, fontWeight: 700, fontSize: 14,
+          boxShadow: T.shadowSharp, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 6
+        }}>🛒 장보기 목록 만들기</button>
+      </div>
+    </div>);
+
+}
+
+window.PlannerScreen = PlannerScreen;
+
+
+// ===== screens/pantry.jsx =====
+// Pantry screen
+const { useState: useState_PT } = React;
+
+function PantryScreen({ pantry, setPantry }) {
+  const [query, setQuery] = useState_PT('');
+  const sections = {};
+  Object.entries(pantry).forEach(([k, v]) => {
+    if (query && !v.name.includes(query)) return;
+    if (!sections[v.section]) sections[v.section] = [];
+    sections[v.section].push({ key: k, ...v });
+  });
+
+  const haveCount = Object.values(pantry).filter((v) => v.have).length;
+  const total = Object.keys(pantry).length;
+
+  return (
+    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
+      <AppBar title="팬트리" left={null} right={<span style={{ fontSize: 20, color: T.text2 }}>+</span>} />
+
+      {/* Hero */}
+      <div style={{ background: '#fff', padding: '16px 20px 20px', borderBottom: `1px solid ${T.border}` }}>
+        <div style={{ fontSize: 13, color: T.text3, marginBottom: 4 }}>냉장고에 있는 재료</div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 14 }}>
+          <div style={{ fontSize: 32, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand }}>
+            {haveCount}
+          </div>
+          <div style={{ fontSize: 16, color: T.text3 }}>/ {total}개</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8,
+          background: T.surfaceFill, borderRadius: 20, padding: '0 16px', height: 44 }}>
+          {Icon.search()}
+          <input value={query} onChange={(e) => setQuery(e.target.value)}
+          placeholder="재료 검색"
+          style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none',
+            fontSize: 14, color: T.ink, fontFamily: T.fontUI }} />
+        </div>
+      </div>
+
+      {/* Sections */}
+      <div style={{ padding: 16 }}>
+        {Object.entries(sections).map(([sec, items]) =>
+        <div key={sec} style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.text2, padding: '4px 4px 10px' }}>
+              {sec}
+            </div>
+            <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden',
+            border: `1px solid ${T.border}` }}>
+              {items.map((it, i) =>
+            <div key={it.key} style={{
+              display: 'flex', alignItems: 'center', padding: '14px 16px',
+              borderBottom: i < items.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none',
+              cursor: 'pointer'
+            }} onClick={() => {
+              setPantry({ ...pantry, [it.key]: { ...pantry[it.key], have: !it.have } });
+            }}>
+                  <div style={{
+                width: 24, height: 24, borderRadius: 12,
+                background: it.have ? T.mint : '#fff',
+                border: it.have ? 'none' : `2px solid ${T.border}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginRight: 12
+              }}>{it.have && Icon.check()}</div>
+                  <div style={{ flex: 1, fontSize: 15,
+                color: it.have ? T.ink : T.text3,
+                fontWeight: it.have ? 600 : 400,
+                textDecoration: 'none' }}>{it.name}</div>
+                  {it.have && <span style={{ fontSize: 11, color: T.mintDeep, fontWeight: 600 }}>보유</span>}
+                </div>
+            )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>);
+
+}
+
+window.PantryScreen = PantryScreen;
+
+
+// ===== screens/mypage.jsx =====
+// MyPage screen
+function MyPageScreen({ savedIds, onOpenRecipe }) {
+  const stats = [
+  { k: 'cooked', l: '요리 완료', v: 24, c: T.mint },
+  { k: 'saved', l: '저장', v: savedIds.length, c: T.orange },
+  { k: 'streak', l: '연속', v: 7, c: T.red }];
+
+  const savedRecipes = RECIPES.filter((r) => savedIds.includes(r.id));
+
+  return (
+    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
+      <AppBar title="마이페이지" left={null} right={<span style={{ fontSize: 18 }}>⚙️</span>} />
+
+      {/* Profile hero */}
+      <div style={{ background: '#fff', padding: 20, borderBottom: `1px solid ${T.border}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18 }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: 32,
+            background: `linear-gradient(135deg, ${T.mint} 0%, ${T.teal} 100%)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontSize: 24, fontWeight: 700, fontFamily: T.fontBrand
+          }}>채</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>채실장</div>
+            <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>
+              🍳 집밥 러너 · 레벨 5
+            </div>
+          </div>
+          <button style={{
+            padding: '8px 12px', background: T.surfaceFill, border: 'none',
+            borderRadius: 8, fontSize: 12, fontWeight: 600, color: T.text2, cursor: 'pointer'
+          }}>편집</button>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {stats.map((s) =>
+          <div key={s.k} style={{
+            flex: 1, background: T.surfaceFill, borderRadius: 10, padding: 12, textAlign: 'center'
+          }}>
+              <div style={{ fontSize: 22, fontWeight: 700, color: s.c, fontFamily: T.fontBrand }}>{s.v}</div>
+              <div style={{ fontSize: 12, color: T.text3, marginTop: 2 }}>{s.l}</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Saved recipes */}
+      <div style={{ padding: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>저장한 레시피</div>
+          <div style={{ fontSize: 12, color: T.text3 }}>{savedRecipes.length}개 ›</div>
+        </div>
+        {savedRecipes.length > 0 ?
+        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollbarWidth: 'none' }}>
+            {savedRecipes.map((r) =>
+          <RecipeCard key={r.id} recipe={r} compact onClick={() => onOpenRecipe(r.id)} />
+          )}
+          </div> :
+
+        <div style={{ background: '#fff', borderRadius: 12, padding: 32, textAlign: 'center',
+          border: `1px solid ${T.border}` }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>🔖</div>
+            <div style={{ fontSize: 14, color: T.text3 }}>아직 저장한 레시피가 없어요</div>
+          </div>
+        }
+      </div>
+
+      {/* Menu list */}
+      <div style={{ padding: '0 16px' }}>
+        <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden',
+          border: `1px solid ${T.border}` }}>
+          {[
+          ['🗓️', '나의 플래너 기록', '지난 4주'],
+          ['🛒', '장보기 기록', '12회'],
+          ['⭐', '작성한 리뷰', '8개'],
+          ['❤️', '좋아요', '34개'],
+          ['🔔', '알림 설정', null],
+          ['📝', '공지사항', null],
+          ['💬', '문의하기', null]].
+          map(([emoji, label, detail], i, arr) =>
+          <div key={label} style={{
+            display: 'flex', alignItems: 'center', padding: '14px 16px',
+            borderBottom: i < arr.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none',
+            cursor: 'pointer'
+          }}>
+              <div style={{ fontSize: 18, width: 28 }}>{emoji}</div>
+              <div style={{ flex: 1, fontSize: 15, color: T.ink }}>{label}</div>
+              {detail && <div style={{ fontSize: 13, color: T.text3, marginRight: 8 }}>{detail}</div>}
+              {Icon.chevR()}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>);
+
+}
+
+window.MyPageScreen = MyPageScreen;
+
+
+// ===== screens/modals.jsx =====
+// Modals / Sheets — Quiet Kitchen Sheet style (olive base + thin orange)
+function Sheet({ title, onClose, children, footer }) {
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100
+      }} />
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 101,
+        background: '#FAF8F2', // olive base
+        borderTopLeftRadius: 20, borderTopRightRadius: 20,
+        borderTop: `2px solid ${T.orange}`, // thin orange highlight
+        maxHeight: '85%', overflowY: 'auto',
+        boxShadow: T.shadowCrisp,
+        paddingBottom: 24
+      }}>
+        {/* Grabber */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 0' }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border }} />
+        </div>
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', padding: '12px 20px 8px'
+        }}>
+          <div style={{ flex: 1, fontSize: 18, fontWeight: 700, color: T.ink }}>{title}</div>
+          <button onClick={onClose} style={{
+            width: 32, height: 32, borderRadius: 16,
+            background: T.surfaceFill, border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>{Icon.close()}</button>
+        </div>
+        <div style={{ padding: '8px 20px 16px' }}>{children}</div>
+        {footer &&
+        <div style={{ padding: '12px 20px 8px', borderTop: `1px solid ${T.border}` }}>
+            {footer}
+          </div>
+        }
+      </div>
+    </>);
+
+}
+
+function PlannerAddPopup({ recipeId, onClose, onConfirm, planner }) {
+  const recipe = RECIPES.find((r) => r.id === recipeId);
+  const keys = Object.keys(planner);
+  const [selDate, setSelDate] = React.useState(keys[todayIdx]);
+  const [selSlot, setSelSlot] = React.useState('저녁');
+  const [qty, setQty] = React.useState(recipe?.servings || 1);
+
+  return (
+    <Sheet title="플래너에 추가" onClose={onClose} footer={
+    <Button variant="primary" full onClick={() => onConfirm(selDate, selSlot, qty)}>
+        {selDate} {selSlot}에 추가
+      </Button>
+    }>
+      {/* Recipe preview */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: 12,
+        background: '#fff', borderRadius: 12, marginBottom: 16,
+        border: `1px solid ${T.border}`
+      }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: 8, background: recipe.bg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26
+        }}>{recipe.emoji}</div>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>{recipe.name}</div>
+          <div style={{ fontSize: 12, color: T.text3 }}>{recipe.minutes}분 · {recipe.kcal}kcal</div>
+        </div>
+      </div>
+
+      {/* Date chips: 요일 + 4/17 */}
+      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>날짜</div>
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 16, paddingBottom: 4 }}>
+        {keys.map((k, i) => {
+          const active = selDate === k;
+          return (
+            <button key={k} onClick={() => setSelDate(k)} style={{
+              flexShrink: 0, padding: '8px 12px', borderRadius: 9999,
+              background: active ? T.ink : '#fff',
+              color: active ? '#fff' : T.text2,
+              border: `1px solid ${active ? T.ink : T.border}`,
+              fontSize: 13, fontWeight: active ? 700 : 500, cursor: 'pointer'
+            }}>
+              {weekDays[i]} {k}
+            </button>);
+
+        })}
+      </div>
+
+      {/* Slot */}
+      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>식사 시간</div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        {['아침', '점심', '저녁'].map((s) => {
+          const active = selSlot === s;
+          return (
+            <button key={s} onClick={() => setSelSlot(s)} style={{
+              flex: 1, padding: '10px 0', borderRadius: 10,
+              background: active ? T.mintSoft : '#fff',
+              color: active ? T.mintDeep : T.text2,
+              border: `1px solid ${active ? T.mint : T.border}`,
+              fontSize: 14, fontWeight: active ? 700 : 500, cursor: 'pointer'
+            }}>{s}</button>);
+
+        })}
+      </div>
+
+      {/* Compact stepper */}
+      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>인분</div>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: 10, background: '#fff', borderRadius: 10, border: `1px solid ${T.border}`
+      }}>
+        <div style={{ fontSize: 14, color: T.text2 }}>몇 인분 계획할까요?</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={() => setQty(Math.max(1, qty - 1))} style={{
+            width: 28, height: 28, borderRadius: 14, border: `1px solid ${T.border}`,
+            background: '#fff', cursor: 'pointer', fontSize: 14, color: T.ink
+          }}>−</button>
+          <div style={{ minWidth: 20, textAlign: 'center', fontWeight: 700, color: T.ink }}>{qty}</div>
+          <button onClick={() => setQty(qty + 1)} style={{
+            width: 28, height: 28, borderRadius: 14, border: 'none',
+            background: T.ink, color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700
+          }}>+</button>
+        </div>
+      </div>
+    </Sheet>);
+
+}
+
+function SavePopup({ recipeId, onClose, onConfirm, saved }) {
+  const recipe = RECIPES.find((r) => r.id === recipeId);
+  const [folder, setFolder] = React.useState('기본 폴더');
+  const folders = ['기본 폴더', '주말에 해먹기', '주중 간단식', '손님 오는 날'];
+
+  return (
+    <Sheet title="레시피 저장" onClose={onClose} footer={
+    <Button variant="primary" full onClick={() => onConfirm()}>
+        {saved ? '저장 취소' : `${folder}에 저장`}
+      </Button>
+    }>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: 12,
+        background: '#fff', borderRadius: 12, marginBottom: 16, border: `1px solid ${T.border}`
+      }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: 8, background: recipe.bg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26
+        }}>{recipe.emoji}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>{recipe.name}</div>
+          <div style={{ fontSize: 12, color: T.text3 }}>{recipe.theme}</div>
+        </div>
+      </div>
+      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>폴더 선택</div>
+      <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${T.border}` }}>
+        {folders.map((f, i) =>
+        <div key={f} onClick={() => setFolder(f)} style={{
+          display: 'flex', alignItems: 'center', padding: '12px 16px', cursor: 'pointer',
+          borderBottom: i < folders.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none'
+        }}>
+            <div style={{
+            width: 18, height: 18, borderRadius: 9,
+            border: `2px solid ${folder === f ? T.mint : T.border}`,
+            background: folder === f ? T.mint : '#fff',
+            marginRight: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>{folder === f && <div style={{ width: 6, height: 6, borderRadius: 3, background: '#fff' }} />}</div>
+            <div style={{ flex: 1, fontSize: 14, color: T.ink }}>{f}</div>
+          </div>
+        )}
+      </div>
+    </Sheet>);
+
+}
+
+function SortSheet({ value, onChange, onClose }) {
+  const opts = [
+  ['latest', '최신순'],
+  ['rating', '별점순'],
+  ['saves', '저장순'],
+  ['fast', '빠른 조리순']];
+
+  return (
+    <Sheet title="정렬" onClose={onClose}>
+      <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${T.border}` }}>
+        {opts.map(([k, l], i) =>
+        <div key={k} onClick={() => {onChange(k);onClose();}} style={{
+          display: 'flex', alignItems: 'center', padding: '14px 16px', cursor: 'pointer',
+          borderBottom: i < opts.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none'
+        }}>
+            <div style={{ flex: 1, fontSize: 15, fontWeight: value === k ? 700 : 500, color: T.ink }}>{l}</div>
+            {value === k && <div style={{ color: T.mint }}>{Icon.check(T.mint)}</div>}
+          </div>
+        )}
+      </div>
+    </Sheet>);
+
+}
+
+function LoginGate({ onClose, onLogin }) {
+  return (
+    <Sheet title="로그인이 필요해요" onClose={onClose} footer={
+    <div style={{ display: 'flex', gap: 8 }}>
+        <Button variant="neutral" style={{ flex: 1 }} onClick={onClose}>취소</Button>
+        <Button variant="primary" style={{ flex: 2 }} onClick={onLogin}>로그인</Button>
+      </div>
+    }>
+      <div style={{ padding: '8px 0 16px', fontSize: 14, color: T.text2, lineHeight: 1.57 }}>
+        이 기능은 로그인 후 이용할 수 있어요. 로그인하면 원래 하려던 작업으로 자동 이동합니다.
+      </div>
+    </Sheet>);
+
+}
+
+function Toast({ message }) {
+  if (!message) return null;
+  return (
+    <div style={{
+      position: 'absolute', bottom: 110, left: '50%', transform: 'translateX(-50%)',
+      zIndex: 200, background: 'rgba(33,37,41,0.95)', color: '#fff',
+      padding: '12px 20px', borderRadius: 9999, fontSize: 13, fontWeight: 600,
+      boxShadow: T.shadowSharp, whiteSpace: 'nowrap'
+    }}>{message}</div>);
+
+}
+
+Object.assign(window, { Sheet, PlannerAddPopup, SavePopup, SortSheet, LoginGate, Toast });
+
+
+// ===== app.jsx =====
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#FF6B6B",
+  "showBrandFont": true,
+  "density": "comfortable"
+}/*EDITMODE-END*/;
+
+function App() {
+  const { useState, useEffect } = React;
+  // persisted route
+  const [route, setRoute] = useState(() => {
+    try {return JSON.parse(localStorage.getItem('hc_route')) || { tab: 'home' };}
+    catch {return { tab: 'home' };}
+  });
+  useEffect(() => {localStorage.setItem('hc_route', JSON.stringify(route));}, [route]);
+
+  const [planner, setPlanner] = useState(makeInitialPlanner());
+  const [pantry, setPantry] = useState(INITIAL_PANTRY);
+  const [savedIds, setSavedIds] = useState(['r1', 'r2', 'r4']);
+  const [sortBy, setSortBy] = useState('rating');
+  const [ingFilter, setIngFilter] = useState([]);
+
+  // Modals
+  const [plannerAdd, setPlannerAdd] = useState(null); // { recipeId, presetDate?, presetSlot? }
+  const [saveModal, setSaveModal] = useState(null);
+  const [sortSheet, setSortSheet] = useState(false);
+  const [loginGate, setLoginGate] = useState(false);
+  const [toast, setToast] = useState('');
+
+  // Tweaks
+  const [tweaks, setTweaks] = useState(TWEAK_DEFAULTS);
+  const [tweaksOn, setTweaksOn] = useState(false);
+
+  useEffect(() => {
+    const onMsg = (e) => {
+      if (e.data?.type === '__activate_edit_mode') setTweaksOn(true);
+      if (e.data?.type === '__deactivate_edit_mode') setTweaksOn(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  // Apply accent color
+  useEffect(() => {
+    window.T.mint = tweaks.accentColor;
+  }, [tweaks.accentColor]);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2000);
+  };
+
+  const toggleSaved = (id) => {
+    setSavedIds((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
+  };
+
+  // Routing helpers
+  const goTab = (tab) => setRoute({ tab });
+  const openRecipe = (id) => setRoute({ ...route, detail: id });
+  const backFromDetail = () => setRoute({ ...route, detail: null });
+
+  // Content
+  let content;
+  if (route.detail) {
+    content =
+    <RecipeDetail
+      recipeId={route.detail}
+      onBack={backFromDetail}
+      onOpenPlannerAdd={() => setPlannerAdd({ recipeId: route.detail })}
+      onOpenSave={() => setSaveModal({ recipeId: route.detail })}
+      saved={savedIds.includes(route.detail)}
+      toggleSaved={() => toggleSaved(route.detail)} />;
+
+
+  } else if (route.tab === 'home') {
+    content =
+    <HomeScreen
+      onOpenRecipe={openRecipe}
+      sortBy={sortBy} setSortBy={setSortBy}
+      ingFilter={ingFilter} setIngFilter={setIngFilter}
+      showSortSheet={sortSheet} setShowSortSheet={setSortSheet} />;
+
+
+  } else if (route.tab === 'planner') {
+    content =
+    <PlannerScreen
+      planner={planner} setPlanner={setPlanner}
+      onOpenRecipe={openRecipe}
+      onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })} />;
+
+
+  } else if (route.tab === 'pantry') {
+    content = <PantryScreen pantry={pantry} setPantry={setPantry} />;
+  } else if (route.tab === 'mypage') {
+    content = <MyPageScreen savedIds={savedIds} onOpenRecipe={openRecipe} />;
+  }
+
+  const fontBase = tweaks.density === 'compact' ? 13 : 14;
+
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'flex-start',
+      justifyContent: 'center', padding: 40, gap: 40,
+      background: '#E9ECEF'
+    }}>
+      <div style={{ position: 'relative' }}>
+        <IOSDevice>
+          <div style={{ height: '100%', position: 'relative', overflow: 'hidden', background: '#fff' }}>
+            <div style={{ height: '100%', overflowY: 'auto' }}>
+              {content}
+            </div>
+            {!route.detail && <BottomTab tab={route.tab} onTab={goTab} />}
+            {plannerAdd &&
+            <PlannerAddPopup
+              recipeId={plannerAdd.recipeId}
+              planner={planner}
+              onClose={() => setPlannerAdd(null)}
+              onConfirm={(date, slot, qty) => {
+                setPlanner((p) => ({
+                  ...p,
+                  [date]: { ...p[date], [slot]: { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty } }
+                }));
+                setPlannerAdd(null);
+                showToast(`${date} ${slot}에 추가됐어요`);
+              }} />
+
+            }
+            {saveModal &&
+            <SavePopup
+              recipeId={saveModal.recipeId}
+              saved={savedIds.includes(saveModal.recipeId)}
+              onClose={() => setSaveModal(null)}
+              onConfirm={() => {
+                toggleSaved(saveModal.recipeId);
+                setSaveModal(null);
+                showToast(savedIds.includes(saveModal.recipeId) ? '저장이 해제됐어요' : '저장됐어요');
+              }} />
+
+            }
+            {sortSheet &&
+            <SortSheet value={sortBy} onChange={setSortBy} onClose={() => setSortSheet(false)} />
+            }
+            {loginGate &&
+            <LoginGate onClose={() => setLoginGate(false)} onLogin={() => {setLoginGate(false);showToast('로그인됨');}} />
+            }
+            <Toast message={toast} />
+          </div>
+        </IOSDevice>
+        <div style={{
+          position: 'absolute', bottom: -30, left: 0, right: 0, textAlign: 'center',
+          fontSize: 12, color: '#868E96'
+        }}>
+          {route.detail ? `${RECIPES.find((r) => r.id === route.detail)?.name}` : {
+            home: '홈', planner: '플래너', pantry: '팬트리', mypage: '마이페이지'
+          }[route.tab]}
+        </div>
+      </div>
+
+      {/* Side panel — quick jump */}
+      <div style={{
+        background: '#fff', borderRadius: 14, padding: 20, width: 260,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)', alignSelf: 'flex-start', marginTop: 20
+      }}>
+        <div style={{ fontSize: 11, color: '#868E96', fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>
+          HOMECOOK_ PROTOTYPE
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#212529', marginBottom: 4, fontFamily: '"Jua", sans-serif', letterSpacing: 0.4 }}>
+          배민 스타일 리디자인
+        </div>
+        <div style={{ fontSize: 12, color: '#868E96', lineHeight: 1.5, marginBottom: 16 }}>
+          화면정의서 v1.5.0 기반 · 5개 메인 화면 + 3개 모달
+        </div>
+        <div style={{ fontSize: 11, color: '#868E96', fontWeight: 700, marginBottom: 8 }}>화면 이동</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+          {[
+          ['home', '🏠 홈', '테마/검색/필터/정렬'],
+          ['planner', '📅 플래너', '주간 식단 카드'],
+          ['pantry', '🧊 팬트리', '재료 보유 체크'],
+          ['mypage', '👤 마이', '프로필/저장 레시피']].
+          map(([k, l, d]) =>
+          <button key={k} onClick={() => setRoute({ tab: k })} style={{
+            textAlign: 'left', padding: '10px 12px',
+            background: route.tab === k && !route.detail ? '#E6F8F7' : '#F8F9FA',
+            border: route.tab === k && !route.detail ? '1px solid #2AC1BC' : '1px solid transparent',
+            borderRadius: 8, cursor: 'pointer'
+          }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#212529' }}>{l}</div>
+              <div style={{ fontSize: 11, color: '#868E96', marginTop: 1 }}>{d}</div>
+            </button>
+          )}
+        </div>
+        <div style={{ fontSize: 11, color: '#868E96', fontWeight: 700, marginBottom: 8 }}>빠른 플로우</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button onClick={() => {setRoute({ tab: 'home', detail: 'r4' });}}
+          style={quickBtn}>🥩 제육볶음 레시피 보기</button>
+          <button onClick={() => {setRoute({ tab: 'home', detail: 'r4' });setTimeout(() => setPlannerAdd({ recipeId: 'r4' }), 300);}}
+          style={quickBtn}>📥 플래너 추가 시트</button>
+          <button onClick={() => {setRoute({ tab: 'home', detail: 'r4' });setTimeout(() => setSaveModal({ recipeId: 'r4' }), 300);}}
+          style={quickBtn}>🔖 저장 시트</button>
+          <button onClick={() => {setRoute({ tab: 'home' });setTimeout(() => setSortSheet(true), 200);}}
+          style={quickBtn}>⇅ 정렬 시트</button>
+          <button onClick={() => setLoginGate(true)}
+          style={quickBtn}>🔒 로그인 게이트</button>
+        </div>
+      </div>
+
+      {/* Tweaks */}
+      {tweaksOn &&
+      <div className="tweaks-panel">
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 10, color: '#212529' }}>Tweaks</div>
+
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: '#495057', fontWeight: 600, marginBottom: 6 }}>
+              포인트 컬러
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {[
+            ['#2AC1BC', '민트'],
+            ['#12B886', '틸'],
+            ['#FF6B6B', '토마토'],
+            ['#FFB347', '오렌지'],
+            ['#343A40', '먹색']].
+            map(([c, n]) =>
+            <button key={c} onClick={() => {
+              setTweaks((t) => ({ ...t, accentColor: c }));
+              window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { accentColor: c } }, '*');
+            }} style={{
+              width: 32, height: 32, borderRadius: 16, background: c,
+              border: tweaks.accentColor === c ? '2px solid #212529' : '2px solid transparent',
+              cursor: 'pointer'
+            }} title={n} />
+            )}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#495057', fontWeight: 600 }}>
+              <input type="checkbox" checked={tweaks.showBrandFont}
+            onChange={(e) => {
+              setTweaks((t) => ({ ...t, showBrandFont: e.target.checked }));
+              window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { showBrandFont: e.target.checked } }, '*');
+            }} />
+              브랜드 폰트 (Jua)
+            </label>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, color: '#495057', fontWeight: 600, marginBottom: 6 }}>밀도</div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {['compact', 'comfortable'].map((d) =>
+            <button key={d} onClick={() => {
+              setTweaks((t) => ({ ...t, density: d }));
+              window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { density: d } }, '*');
+            }} style={{
+              flex: 1, padding: '6px 10px', fontSize: 11, borderRadius: 6,
+              background: tweaks.density === d ? '#212529' : '#F8F9FA',
+              color: tweaks.density === d ? '#fff' : '#495057',
+              border: 'none', cursor: 'pointer', fontWeight: 600
+            }}>{d}</button>
+            )}
+            </div>
+          </div>
+        </div>
+      }
+    </div>);
+
+}
+
+const quickBtn = {
+  textAlign: 'left', padding: '8px 10px', fontSize: 12,
+  background: '#fff', border: '1px solid #DEE2E6', borderRadius: 6,
+  cursor: 'pointer', color: '#495057'
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
