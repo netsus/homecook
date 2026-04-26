@@ -33,6 +33,29 @@
 | 무치기 / 버무리기 | `#2ea67a` |
 | 섞기 / 준비 / 기타 | `#AAAAAA` |
 
+### 배민 스타일 Additive 토큰 (2026-04-27)
+
+> 기준: `baemin-style-tokens-additive` Stage 2.
+> 이 섹션은 후속 배민 스타일 전환 슬라이스에서 사용할 추가 토큰만 기록한다.
+> 기존 C2 토큰(`--brand`, `--background`, `--foreground`, `--muted`, `--surface`, `--panel`, `--line`, `--cook-*`)의 값 변경은 포함하지 않는다.
+
+| 변수명 | 값 | 역할 |
+|--------|---|------|
+| `--brand-soft` | `#E6F8F7` | 활성 칩 배경, 상태 pill 배경 같은 브랜드 tint |
+| `--surface-fill` | `#F8F9FA` | 입력 필드, 비활성 칩 배경 |
+| `--surface-subtle` | `#F1F3F5` | 섹션 배경, chip hover 배경 |
+| `--text-2` | `#495057` | 부제, 설명 텍스트 |
+| `--text-3` | `#868E96` | 보조 메타 정보 |
+| `--text-4` | `#ADB5BD` | disabled 텍스트 |
+| `--shadow-1` | `0 1px 3px rgba(0, 0, 0, 0.04)` | 작은 카드/썸네일의 약한 그림자 |
+| `--shadow-2` | `0 2px 8px rgba(0, 0, 0, 0.08)` | 카드, 시트, 드롭다운의 기본 그림자 |
+| `--shadow-3` | `0 8px 24px rgba(0, 0, 0, 0.16)` | 오버레이, 다이얼로그의 강한 그림자 |
+| `--radius-sm` | `8px` | 버튼, 작은 썸네일, 입력 필드 |
+| `--radius-md` | `12px` | 카드, 인셋 패널 |
+| `--radius-lg` | `16px` | 큰 카드, 시트 표면 |
+| `--radius-xl` | `20px` | 바텀시트 상단, 검색바형 surface |
+| `--radius-full` | `9999px` | pill, avatar, 원형 버튼 |
+
 ---
 
 ## 타이포그래피
