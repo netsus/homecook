@@ -56,6 +56,7 @@ test-results/
 .opencode/branch-prompt-state.json
 .opencode/claude-budget-state.json
 .opencode/omo-runtime/
+.opencode/omo-stage-results/
 
 # supabase local
 supabase/.temp/
