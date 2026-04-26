@@ -27,7 +27,7 @@ export function ShoppingDetailScreen({
   listId,
   initialAuthenticated,
 }: ShoppingDetailScreenProps) {
-  const { push } = useRouter();
+  const router = useRouter();
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [listDetail, setListDetail] = useState<ShoppingListDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -44,7 +44,7 @@ export function ShoppingDetailScreen({
     } catch (error) {
       if (isShoppingApiError(error)) {
         if (error.status === 401) {
-          push(`/login?next=/shopping/lists/${listId}`);
+          router.push(`/login?next=/shopping/lists/${listId}`);
           return;
         }
         setErrorMessage(error.message);
@@ -53,7 +53,7 @@ export function ShoppingDetailScreen({
       }
       setViewState("error");
     }
-  }, [listId, push]);
+  }, [listId, router]);
 
   useEffect(() => {
     if (initialAuthenticated) {
@@ -250,7 +250,13 @@ export function ShoppingDetailScreen({
       <header className="sticky top-0 z-10 bg-[var(--panel)] px-4 py-3 backdrop-blur-lg">
         <div className="flex items-center justify-between">
           <button
-            onClick={() => push("/")}
+            onClick={() => {
+              if (window.history.length > 1) {
+                router.back();
+              } else {
+                router.push("/");
+              }
+            }}
             className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-black/5"
             type="button"
             aria-label="뒤로 가기"
@@ -402,7 +408,7 @@ function ShoppingItemCard({
         <button
           onClick={() => onToggleExclude(item.id, item.is_pantry_excluded)}
           disabled={isUpdating}
-          className="shrink-0 rounded-full border border-[var(--olive)] px-3 py-1.5 text-xs font-semibold text-[var(--olive)] hover:bg-[var(--olive)] hover:text-white disabled:opacity-50"
+          className="flex min-h-11 shrink-0 items-center justify-center rounded-full border border-[var(--olive)] px-4 text-xs font-semibold text-[var(--olive)] hover:bg-[var(--olive)] hover:text-white disabled:opacity-50"
           type="button"
           aria-label={`${item.display_text} 팬트리 ${item.is_pantry_excluded ? "되살리기" : "제외"}`}
         >
