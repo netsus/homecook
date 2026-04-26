@@ -115,9 +115,9 @@ Evidence root: `ui/designs/evidence/baemin-style/token-values/`
 
 ## Design Status
 
-- [x] Temporary (temporary) -- Stage 1 default; CSS value changes have not been applied yet
-- [ ] Review pending (pending-review) -- Stage 4 complete, before/after screenshots captured
-- [ ] Confirmed (confirmed) -- Stage 5/6 review passed
+- [ ] Temporary (temporary) -- Stage 1 default; CSS value changes have not been applied yet
+- [ ] Review pending (pending-review) -- Stage 4 complete, screenshots pending capture before Stage 5
+- [x] Confirmed (confirmed) -- Stage 5/6 review passed
 - [ ] N/A
 
 > This is a low-risk token value swap. Design-generator / design-critic are skipped.
@@ -167,7 +167,7 @@ None. The brand token value change is user-approved and does not affect API, DB,
 ## Primary User Path
 
 1. Claude changes `--brand`, `--brand-deep`, `--brand-soft` values in `app/globals.css` and updates `docs/design/design-tokens.md` (Stage 4).
-2. Claude captures before/after screenshots for HOME, RECIPE_DETAIL, PLANNER_WEEK at mobile default and 320px.
+2. Codex captures before/after screenshots for HOME, RECIPE_DETAIL, PLANNER_WEEK at mobile default and 320px.
 3. Codex reviews visual diff: brand-colored states only, no layout regression, no horizontal overflow (Stage 5/6).
 4. User confirms brand-colored UI states look correct after merge.
 
@@ -176,15 +176,15 @@ None. The brand token value change is user-approved and does not affect API, DB,
 > Living closeout document. Stage 4 closes implementation items; Stage 5/6 reviews.
 > Design-generator / design-critic skipped (low-risk token swap; user-approved values).
 
-- [ ] `--brand` value changed from `#FF6C3C` to `#ED7470` in `app/globals.css` <!-- omo:id=bstv-brand-value;stage=4;scope=frontend;review=5,6 -->
-- [ ] `--brand-deep` value changed from `#E05020` to `#C84C48` in `app/globals.css` <!-- omo:id=bstv-brand-deep-value;stage=4;scope=frontend;review=5,6 -->
-- [ ] `--brand-soft` value changed from `#E6F8F7` to `#FDEBEA` in `app/globals.css` <!-- omo:id=bstv-brand-soft-value;stage=4;scope=frontend;review=5,6 -->
-- [ ] `docs/design/design-tokens.md` updated to record approved brand values and "keep current" decisions for additive tokens <!-- omo:id=bstv-tokens-documented;stage=4;scope=frontend;review=5,6 -->
-- [ ] No other CSS token values changed (`--background`, `--foreground`, `--muted`, `--surface`, `--panel`, `--line`, `--olive`, `--cook-*`) <!-- omo:id=bstv-other-tokens-unchanged;stage=4;scope=frontend;review=5,6 -->
-- [ ] No component, page, or layout file edited <!-- omo:id=bstv-no-component-edit;stage=4;scope=frontend;review=5,6 -->
-- [ ] No Jua or prototype-only font imported <!-- omo:id=bstv-no-font-import;stage=4;scope=frontend;review=5,6 -->
-- [ ] Before/after screenshots for HOME, RECIPE_DETAIL, PLANNER_WEEK at mobile default and 320px <!-- omo:id=bstv-visual-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm verify:frontend` passes <!-- omo:id=bstv-verify-frontend;stage=4;scope=frontend;review=5,6 -->
+- [x] `--brand` value changed from `#FF6C3C` to `#ED7470` in `app/globals.css` <!-- omo:id=bstv-brand-value;stage=4;scope=frontend;review=5,6 -->
+- [x] `--brand-deep` value changed from `#E05020` to `#C84C48` in `app/globals.css` <!-- omo:id=bstv-brand-deep-value;stage=4;scope=frontend;review=5,6 -->
+- [x] `--brand-soft` value changed from `#E6F8F7` to `#FDEBEA` in `app/globals.css` <!-- omo:id=bstv-brand-soft-value;stage=4;scope=frontend;review=5,6 -->
+- [x] `docs/design/design-tokens.md` updated to record approved brand values and "keep current" decisions for additive tokens <!-- omo:id=bstv-tokens-documented;stage=4;scope=frontend;review=5,6 -->
+- [x] No other CSS token values changed (`--background`, `--foreground`, `--muted`, `--surface`, `--panel`, `--line`, `--olive`, `--cook-*`) <!-- omo:id=bstv-other-tokens-unchanged;stage=4;scope=frontend;review=5,6 -->
+- [x] No component, page, or layout file edited <!-- omo:id=bstv-no-component-edit;stage=4;scope=frontend;review=5,6 -->
+- [x] No Jua or prototype-only font imported <!-- omo:id=bstv-no-font-import;stage=4;scope=frontend;review=5,6 -->
+- [x] Before/after screenshots for HOME, RECIPE_DETAIL, PLANNER_WEEK at mobile default and 320px <!-- omo:id=bstv-visual-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend` passes <!-- omo:id=bstv-verify-frontend;stage=4;scope=frontend;review=5,6 -->
 
 ## Blockers
 

@@ -12,8 +12,8 @@
 |--------|---|------|
 | `--background` | `#fff9f2` | 앱 전체 배경 (따뜻한 크림) |
 | `--foreground` | `#1a1a2e` | 기본 텍스트 (진한 네이비) |
-| `--brand` | `#FF6C3C` | 주요 CTA, 활성 탭, 배지 |
-| `--brand-deep` | `#E05020` | hover, active, pressed 상태 |
+| `--brand` | `#ED7470` | 주요 CTA, 활성 탭, 배지 (2026-04-27 사용자 승인, 이전 `#FF6C3C`) |
+| `--brand-deep` | `#C84C48` | hover, active, pressed 상태 (2026-04-27 사용자 승인, 이전 `#E05020`) |
 | `--olive` | `#1f6b52` | 태그, 재료 필터 칩, 서브 액션 |
 | `--surface` | `#ffffff` | 카드, 입력 필드 배경 |
 | `--panel` | `rgba(255,252,248,0.92)` | 바텀시트, 모달, 탭바 (반투명) |
@@ -35,13 +35,14 @@
 
 ### 배민 스타일 Additive 토큰 (2026-04-27)
 
-> 기준: `baemin-style-tokens-additive` Stage 2.
-> 이 섹션은 후속 배민 스타일 전환 슬라이스에서 사용할 추가 토큰만 기록한다.
-> 기존 C2 토큰(`--brand`, `--background`, `--foreground`, `--muted`, `--surface`, `--panel`, `--line`, `--cook-*`)의 값 변경은 포함하지 않는다.
+> 기준: `baemin-style-tokens-additive` Stage 2 + `baemin-style-token-values` Stage 4.
+> 이 섹션은 후속 배민 스타일 전환 슬라이스에서 사용할 추가 토큰을 기록한다.
+> `--brand-soft`는 `baemin-style-token-values`에서 사용자 승인 값(`#FDEBEA`)으로 변경되었다.
+> 나머지 additive 토큰(`--surface-fill/subtle`, `--text-2/3/4`, `--shadow-1/2/3`, `--radius-*`)은 현재 값을 유지한다 (사용자 승인 "keep current").
 
 | 변수명 | 값 | 역할 |
 |--------|---|------|
-| `--brand-soft` | `#E6F8F7` | 활성 칩 배경, 상태 pill 배경 같은 브랜드 tint |
+| `--brand-soft` | `#FDEBEA` | 활성 칩 배경, 상태 pill 배경 같은 브랜드 tint (2026-04-27 사용자 승인, 이전 `#E6F8F7`) |
 | `--surface-fill` | `#F8F9FA` | 입력 필드, 비활성 칩 배경 |
 | `--surface-subtle` | `#F1F3F5` | 섹션 배경, chip hover 배경 |
 | `--text-2` | `#495057` | 부제, 설명 텍스트 |
@@ -117,3 +118,4 @@
 |------|----------|------|
 | 2026-03-20 | 초기 확정 (C2 명랑한 주방) | design-consultant |
 | 2026-04-27 | 배민 스타일 후속 전환용 additive 토큰 14개 추가 | Codex |
+| 2026-04-27 | 사용자 승인 brand 토큰 값 변경: `--brand` #ED7470, `--brand-deep` #C84C48, `--brand-soft` #FDEBEA; additive gray/surface/radius/shadow 값 유지 확정 | Claude |

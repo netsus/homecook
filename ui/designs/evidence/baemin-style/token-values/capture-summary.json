@@ -1,0 +1,150 @@
+{
+  "capturedAt": "2026-04-26T17:42:27.519Z",
+  "baseUrl": "http://127.0.0.1:3100",
+  "results": [
+    {
+      "fileName": "HOME-before-mobile.png",
+      "screen": "HOME",
+      "viewportName": "mobile",
+      "oldTokens": true,
+      "tokenValues": {
+        "brand": "#FF6C3C",
+        "brandDeep": "#E05020",
+        "brandSoft": "#E6F8F7"
+      },
+      "layout": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "HOME-after-mobile.png",
+      "screen": "HOME",
+      "viewportName": "mobile",
+      "oldTokens": false,
+      "tokenValues": {
+        "brand": "#ED7470",
+        "brandDeep": "#C84C48",
+        "brandSoft": "#FDEBEA"
+      },
+      "layout": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "HOME-after-narrow-320.png",
+      "screen": "HOME",
+      "viewportName": "narrow",
+      "oldTokens": false,
+      "tokenValues": {
+        "brand": "#ED7470",
+        "brandDeep": "#C84C48",
+        "brandSoft": "#FDEBEA"
+      },
+      "layout": {
+        "innerWidth": 320,
+        "scrollWidth": 320,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "RECIPE_DETAIL-before-mobile.png",
+      "screen": "RECIPE_DETAIL",
+      "viewportName": "mobile",
+      "oldTokens": true,
+      "tokenValues": {
+        "brand": "#FF6C3C",
+        "brandDeep": "#E05020",
+        "brandSoft": "#E6F8F7"
+      },
+      "layout": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "RECIPE_DETAIL-after-mobile.png",
+      "screen": "RECIPE_DETAIL",
+      "viewportName": "mobile",
+      "oldTokens": false,
+      "tokenValues": {
+        "brand": "#ED7470",
+        "brandDeep": "#C84C48",
+        "brandSoft": "#FDEBEA"
+      },
+      "layout": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "RECIPE_DETAIL-after-narrow-320.png",
+      "screen": "RECIPE_DETAIL",
+      "viewportName": "narrow",
+      "oldTokens": false,
+      "tokenValues": {
+        "brand": "#ED7470",
+        "brandDeep": "#C84C48",
+        "brandSoft": "#FDEBEA"
+      },
+      "layout": {
+        "innerWidth": 320,
+        "scrollWidth": 320,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "PLANNER_WEEK-before-mobile.png",
+      "screen": "PLANNER_WEEK",
+      "viewportName": "mobile",
+      "oldTokens": true,
+      "tokenValues": {
+        "brand": "#FF6C3C",
+        "brandDeep": "#E05020",
+        "brandSoft": "#E6F8F7"
+      },
+      "layout": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "PLANNER_WEEK-after-mobile.png",
+      "screen": "PLANNER_WEEK",
+      "viewportName": "mobile",
+      "oldTokens": false,
+      "tokenValues": {
+        "brand": "#ED7470",
+        "brandDeep": "#C84C48",
+        "brandSoft": "#FDEBEA"
+      },
+      "layout": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "PLANNER_WEEK-after-narrow-320.png",
+      "screen": "PLANNER_WEEK",
+      "viewportName": "narrow",
+      "oldTokens": false,
+      "tokenValues": {
+        "brand": "#ED7470",
+        "brandDeep": "#C84C48",
+        "brandSoft": "#FDEBEA"
+      },
+      "layout": {
+        "innerWidth": 320,
+        "scrollWidth": 320,
+        "hasHorizontalOverflow": false
+      }
+    }
+  ]
+}
