@@ -381,6 +381,34 @@ export function validateStageResult(stage, stageResult, options = {}) {
   const normalizedStage = Number(stage);
   const result = ensureObject(stageResult, "stageResult");
 
+  if (subphase === "codex_repair") {
+    const normalizedRepairResult = {
+      result: ensureEnum(result.result, ["resolved", "unresolved", "blocked"], "stageResult.result"),
+      summary_markdown: ensureNonEmptyString(result.summary_markdown, "stageResult.summary_markdown"),
+      reason_code: ensureNonEmptyString(result.reason_code, "stageResult.reason_code"),
+      reason_detail_code: ensureNonEmptyString(result.reason_detail_code, "stageResult.reason_detail_code"),
+      changed_files: ensureStringArray(result.changed_files ?? [], "stageResult.changed_files"),
+      tests_run: ensureStringArray(result.tests_run ?? [], "stageResult.tests_run"),
+      verification_refs: ensureOptionalStringArray(result.verification_refs ?? [], "stageResult.verification_refs"),
+      reason_resolved:
+        typeof result.reason_resolved === "boolean"
+          ? result.reason_resolved
+          : (() => {
+              throw new Error("stageResult.reason_resolved must be a boolean.");
+            })(),
+      remaining_risk:
+        typeof result.remaining_risk === "string" && result.remaining_risk.trim().length > 0
+          ? result.remaining_risk.trim()
+          : null,
+    };
+
+    if (normalizedRepairResult.result === "resolved" && !normalizedRepairResult.reason_resolved) {
+      throw new Error("stageResult.reason_resolved must be true when stageResult.result is resolved.");
+    }
+
+    return normalizedRepairResult;
+  }
+
   if (normalizedStage === 2 && subphase === "doc_gate_repair") {
     const fallbackCommitSubject =
       typeof result.commit?.subject === "string" && result.commit.subject.trim().length > 0

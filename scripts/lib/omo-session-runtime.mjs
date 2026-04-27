@@ -12,6 +12,7 @@ export const OMO_SESSION_ROLE_TO_AGENT = {
   codex_primary: "hephaestus",
 };
 const OMO_EXECUTION_SUBPHASES = new Set([
+  "codex_repair",
   "doc_gate_check",
   "doc_gate_repair",
   "doc_gate_review",
@@ -39,6 +40,7 @@ const OMO_RUNTIME_ACTIONS = new Set([
   "run_stage",
   "finalize_stage",
   "poll_ci",
+  "repair_with_codex",
   "run_review",
   "merge_pr",
   "noop",
@@ -219,6 +221,10 @@ function inferActiveStage({
 }
 
 function resolveExpectedSessionRole(stage, subphase = "implementation") {
+  if (subphase === "codex_repair") {
+    return "codex_primary";
+  }
+
   if (stage === 2 && subphase === "doc_gate_repair") {
     return "claude_primary";
   }
@@ -577,6 +583,15 @@ function classifyReasonText(reason) {
     };
   }
 
+  if (/(?:slice-local\s+)?closeout\s+drift|closeout.*(?:checklist|evidence|artifact)/i.test(text)) {
+    return {
+      kind: "codex_repairable",
+      reason_code: "codex_repairable",
+      reason_detail_code: "closeout_drift",
+      reason_category: "codex_repairable",
+    };
+  }
+
   if (/(?:credential-gated|credential gated|requires credential|missing credential|secret required)/i.test(text)) {
     return {
       kind: "manual_decision_required",
@@ -724,6 +739,9 @@ function normalizeWait(wait) {
       : {}),
     ...(normalizeStringArray(wait.evidence_refs).length > 0
       ? { evidence_refs: normalizeStringArray(wait.evidence_refs) }
+      : {}),
+    ...(normalizeStringArray(wait.validator_commands).length > 0
+      ? { validator_commands: normalizeStringArray(wait.validator_commands) }
       : {}),
     until:
       typeof wait.until === "string" && wait.until.trim().length > 0
@@ -1245,6 +1263,16 @@ function normalizeRecovery(recovery) {
           .filter((entry) => typeof entry === "string" && entry.trim().length > 0)
           .map((entry) => entry.trim())
       : [],
+    tests_run: Array.isArray(recovery.tests_run)
+      ? recovery.tests_run
+          .filter((entry) => typeof entry === "string" && entry.trim().length > 0)
+          .map((entry) => entry.trim())
+      : [],
+    reason_resolved: typeof recovery.reason_resolved === "boolean" ? recovery.reason_resolved : null,
+    remaining_risk:
+      typeof recovery.remaining_risk === "string" && recovery.remaining_risk.trim().length > 0
+        ? recovery.remaining_risk.trim()
+        : null,
     existing_pr: normalizeRecoveryExistingPr(recovery.existing_pr),
     salvage_candidate: typeof recovery.salvage_candidate === "boolean" ? recovery.salvage_candidate : false,
     session_role:
@@ -1959,6 +1987,7 @@ export function setPullRequestRef({
  *   repairAttemptCount?: number | null,
  *   maxRepairAttempts?: number | null,
  *   evidenceRefs?: string[],
+ *   validatorCommands?: string[],
  *   until?: string | null,
  *   phase?: string | null,
  *   nextAction?: string | null,
@@ -1978,6 +2007,7 @@ export function setWaitState({
   repairAttemptCount = null,
   maxRepairAttempts = null,
   evidenceRefs = [],
+  validatorCommands = [],
   until = null,
   phase = null,
   nextAction = null,
@@ -2010,6 +2040,7 @@ export function setWaitState({
   });
   const normalizedStage = Number.isInteger(Number(stage)) ? Number(stage) : null;
   const normalizedEvidenceRefs = normalizeStringArray(evidenceRefs);
+  const normalizedValidatorCommands = normalizeStringArray(validatorCommands);
 
   return {
     ...state,
@@ -2039,6 +2070,7 @@ export function setWaitState({
         ? { max_repair_attempts: classification.max_repair_attempts }
         : {}),
       ...(normalizedEvidenceRefs.length > 0 ? { evidence_refs: normalizedEvidenceRefs } : {}),
+      ...(normalizedValidatorCommands.length > 0 ? { validator_commands: normalizedValidatorCommands } : {}),
       until:
         typeof until === "string" && until.trim().length > 0 ? until.trim() : null,
       updated_at: toIsoString(updatedAt),

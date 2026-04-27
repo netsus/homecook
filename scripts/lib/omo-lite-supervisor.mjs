@@ -34,6 +34,10 @@ const EVALUATION_STATES = new Set([
 export function resolveStageSessionRole(stage, subphase = null) {
   const normalizedStage = ensureStage(stage);
 
+  if (subphase === "codex_repair") {
+    return "codex_primary";
+  }
+
   if (normalizedStage === 2 && subphase === "doc_gate_repair") {
     return "claude_primary";
   }
