@@ -589,6 +589,47 @@ describe("OMO session runtime", () => {
     });
   });
 
+  it("classifies slice-local closeout drift as codex repairable", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
+    const baseState = readRuntimeState({
+      rootDir,
+      workItemId: "12a-shopping-complete",
+      slice: "12a-shopping-complete",
+    }).state;
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "12a-shopping-complete",
+      state: setWaitState({
+        state: baseState,
+        kind: "human_escalation",
+        prRole: "frontend",
+        stage: 6,
+        reason: "Slice-local closeout drift remains after Stage 6 reconcile.",
+        repairAttemptCount: 0,
+        maxRepairAttempts: 1,
+        evidenceRefs: ["docs/workpacks/12a-shopping-complete/README.md"],
+        updatedAt: "2026-04-27T20:08:00+09:00",
+      }),
+    });
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId: "12a-shopping-complete",
+      slice: "12a-shopping-complete",
+    });
+
+    expect(state.wait).toMatchObject({
+      kind: "codex_repairable",
+      reason_code: "codex_repairable",
+      reason_detail_code: "closeout_drift",
+      reason_category: "codex_repairable",
+      repair_attempt_count: 0,
+      max_repair_attempts: 1,
+      evidence_refs: ["docs/workpacks/12a-shopping-complete/README.md"],
+    });
+  });
+
   it("classifies manual decision reasons without overloading human escalation", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
     const baseState = readRuntimeState({

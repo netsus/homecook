@@ -34,6 +34,10 @@ const EVALUATION_STATES = new Set([
 export function resolveStageSessionRole(stage, subphase = null) {
   const normalizedStage = ensureStage(stage);
 
+  if (subphase === "codex_repair") {
+    return "codex_primary";
+  }
+
   if (normalizedStage === 2 && subphase === "doc_gate_repair") {
     return "claude_primary";
   }
@@ -224,7 +228,6 @@ function productStageSpec(stage, slice, subphase = null) {
       verification_status: "pending",
       requiredReads: [
         "AGENTS.md",
-        "docs/engineering/workflow-v2/omo-autonomous-supervisor.md",
         `docs/workpacks/${slice}/README.md`,
         `docs/workpacks/${slice}/acceptance.md`,
         `docs/workpacks/${slice}/automation-spec.json`,
@@ -285,9 +288,6 @@ function productStageSpec(stage, slice, subphase = null) {
         "docs/workpacks/README.md",
         "docs/engineering/slice-workflow.md",
         "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
-        ".workflow-v2/README.md",
-        "docs/engineering/workflow-v2/schemas/work-item.schema.json",
-        "docs/engineering/workflow-v2/templates/work-item.example.json",
         ".workflow-v2/status.json",
         "docs/design/mobile-ux-rules.md",
         "docs/design/anchor-screens.md",

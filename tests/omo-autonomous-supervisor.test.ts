@@ -16360,4 +16360,260 @@ describe("OMO autonomous supervisor", () => {
     expect(runtime.wait?.kind).not.toBe("human_escalation");
     expect(runtime.recovery).toBeNull();
   });
+
+  it("dispatches codex repairable waits through a bounded repair lane", () => {
+    const rootDir = createFixture();
+    const workItemId = "03-recipe-like";
+    const workspacePath = join(rootDir, ".worktrees", workItemId);
+    const repairCalls: Array<{
+      stage: number;
+      subphase: string | null;
+      executionDir: string | null;
+      extraPromptSections: string[];
+    }> = [];
+    const verifyRuns: string[] = [];
+    const commits: Array<{ subject: string; body: string }> = [];
+    const pushes: string[] = [];
+    let dirtyAfterRepair = false;
+
+    createGitWorkspace(workspacePath, `feature/fe-${workItemId}`);
+    seedWorktreeBookkeeping(workspacePath, workItemId, {
+      roadmapStatus: "in-progress",
+      designStatus: "confirmed",
+    });
+
+    writeRuntimeState({
+      rootDir,
+      workItemId,
+      state: {
+        ...readRuntimeState({
+          rootDir,
+          workItemId,
+          slice: workItemId,
+        }).state,
+        slice: workItemId,
+        active_stage: 4,
+        current_stage: 4,
+        last_completed_stage: 3,
+        phase: "wait",
+        next_action: "repair_with_codex",
+        workspace: {
+          path: workspacePath,
+          branch_role: "frontend",
+          updated_at: "2026-04-27T12:00:00.000Z",
+        },
+        wait: {
+          kind: "codex_repairable",
+          pr_role: "frontend",
+          stage: 4,
+          head_sha: "front-head-before-repair",
+          reason: "Checklist evidence drift requires Codex repair before CI can resume.",
+          reason_code: "codex_repairable",
+          reason_detail_code: "checklist_evidence_drift",
+          reason_category: "codex_repairable",
+          repair_attempt_count: 0,
+          max_repair_attempts: 1,
+          evidence_refs: ["docs/workpacks/03-recipe-like/README.md"],
+          validator_commands: ["node -e \"process.exit(0)\""],
+          updated_at: "2026-04-27T12:00:00.000Z",
+        },
+        prs: {
+          docs: null,
+          backend: null,
+          frontend: {
+            number: 144,
+            url: "https://github.com/netsus/homecook/pull/144",
+            draft: true,
+            branch: `feature/fe-${workItemId}`,
+            head_sha: "front-head-after-repair",
+          },
+          closeout: null,
+        },
+      },
+    });
+
+    const result = superviseWorkItem(
+      {
+        rootDir,
+        workItemId,
+        now: "2026-04-27T12:05:00.000Z",
+        maxTransitions: 1,
+      },
+      {
+        auth: {
+          assertGhAuth() {},
+          assertOpencodeAuth() {},
+          assertClaudeAuth() {},
+        },
+        worktree: {
+          ensureWorktree() {
+            return { path: workspacePath, created: false };
+          },
+          assertClean() {
+            if (dirtyAfterRepair) {
+              throw new Error("repair changed files");
+            }
+          },
+          checkoutBranch() {
+            throw new Error("not expected");
+          },
+          pushBranch({ branch }: { branch: string }) {
+            pushes.push(branch);
+          },
+          commitChanges({ subject, body }: { subject: string; body: string }) {
+            commits.push({ subject, body });
+            dirtyAfterRepair = false;
+          },
+          syncBaseBranch() {
+            throw new Error("not expected");
+          },
+          getHeadSha() {
+            return "front-head-after-repair";
+          },
+          getCurrentBranch() {
+            return `feature/fe-${workItemId}`;
+          },
+          listChangedFiles() {
+            return [
+              `docs/workpacks/${workItemId}/README.md`,
+              `docs/workpacks/${workItemId}/acceptance.md`,
+            ];
+          },
+          restorePaths() {
+            throw new Error("not expected");
+          },
+          deletePaths() {
+            throw new Error("not expected");
+          },
+          getBinaryDiff() {
+            return "";
+          },
+        },
+        github: {
+          createPullRequest() {
+            throw new Error("not expected");
+          },
+          getRequiredChecks() {
+            return { bucket: "pending", checks: [] };
+          },
+          getPullRequestSummary() {
+            return { mergedAt: null };
+          },
+          markReady() {},
+          reviewPullRequest() {},
+          commentPullRequest() {},
+          mergePullRequest() {
+            throw new Error("not expected");
+          },
+          updateBranch() {},
+        },
+        verifyCommands: {
+          run({ commands }: { commands: string[] }) {
+            verifyRuns.push(...commands);
+            return {
+              bucket: "pass",
+              logs: commands.map((command) => ({ command, status: 0 })),
+            };
+          },
+        },
+        stageRunner({
+          stage,
+          subphase,
+          executionDir,
+          extraPromptSections,
+        }: {
+          stage: number;
+          subphase: string | null;
+          executionDir: string | null;
+          extraPromptSections: string[];
+        }) {
+          dirtyAfterRepair = true;
+          repairCalls.push({
+            stage,
+            subphase,
+            executionDir,
+            extraPromptSections,
+          });
+
+          return {
+            artifactDir: join(rootDir, ".artifacts", "repair"),
+            execution: {
+              mode: "execute",
+              executed: true,
+              sessionId: "ses_codex_repair",
+            },
+            stageResult: {
+              result: "resolved",
+              summary_markdown: "Checklist evidence drift repaired.",
+              reason_code: "codex_repairable",
+              reason_detail_code: "checklist_evidence_drift",
+              changed_files: [
+                `docs/workpacks/${workItemId}/README.md`,
+                `docs/workpacks/${workItemId}/acceptance.md`,
+              ],
+              tests_run: ["node -e \"process.exit(0)\""],
+              reason_resolved: true,
+              remaining_risk: "none",
+            },
+          };
+        },
+      },
+    );
+
+    expect(repairCalls).toHaveLength(1);
+    expect(repairCalls[0]).toEqual(
+      expect.objectContaining({
+        stage: 4,
+        subphase: "codex_repair",
+        executionDir: workspacePath,
+      }),
+    );
+    expect(repairCalls[0].extraPromptSections.join("\n")).toContain("Codex Repair Dispatcher");
+    expect(repairCalls[0].extraPromptSections.join("\n")).toContain("reason_detail_code: checklist_evidence_drift");
+    expect(repairCalls[0].extraPromptSections.join("\n")).toContain(`docs/workpacks/${workItemId}/README.md`);
+    expect(verifyRuns).toEqual(["node -e \"process.exit(0)\""]);
+    expect(commits).toEqual([
+      {
+        subject: "chore(omo): repair 03-recipe-like checklist evidence drift",
+        body: "Resolved codex_repairable/checklist_evidence_drift via bounded Codex repair.",
+      },
+    ]);
+    expect(pushes).toEqual([`feature/fe-${workItemId}`]);
+    expect(result.wait).toEqual(
+      expect.objectContaining({
+        kind: "ci",
+        pr_role: "frontend",
+        stage: 4,
+        head_sha: "front-head-after-repair",
+      }),
+    );
+
+    const runtime = readRuntimeState({
+      rootDir,
+      workItemId,
+      slice: workItemId,
+    }).state as {
+      wait: { kind: string; repair_attempt_count?: number };
+      recovery: { kind?: string; changed_files?: string[] } | null;
+    };
+
+    expect(runtime.wait.kind).toBe("ci");
+    expect(runtime.wait.repair_attempt_count).toBeUndefined();
+    expect(runtime.recovery).toEqual(
+      expect.objectContaining({
+        kind: "codex_repair",
+        changed_files: [
+          `docs/workpacks/${workItemId}/README.md`,
+          `docs/workpacks/${workItemId}/acceptance.md`,
+        ],
+      }),
+    );
+    expect(readTrackedStatusItem(rootDir, workItemId)).toEqual(
+      expect.objectContaining({
+        lifecycle: "ready_for_review",
+        verification_status: "pending",
+        notes: expect.stringContaining("codex_repair=resolved"),
+      }),
+    );
+  });
 });
