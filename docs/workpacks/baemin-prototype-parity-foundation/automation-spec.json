@@ -1,0 +1,45 @@
+{
+  "slice_id": "baemin-prototype-parity-foundation",
+  "execution_mode": "manual",
+  "risk_class": "low",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack"
+    ],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "no-runtime-ui-diff",
+      "capture-recipe-doc",
+      "artifact-schema-doc",
+      "exclusion-inventory-doc",
+      "token-mapping-scope-doc"
+    ],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "critic_required": false,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 2
+  }
+}

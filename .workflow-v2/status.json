@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-27T14:48:23.902Z",
+  "updated_at": "2026-04-28T00:00:00.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -322,6 +322,21 @@
       "id": "h7-baemin-prototype-parity-direction",
       "preset": "docs-only",
       "branch": "docs/h7-baemin-prototype-parity-direction",
+      "pr_path": "https://github.com/netsus/homecook/pull/253",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "git diff --check",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack"
+      ],
+      "notes": "Design decision gate for near-100% Baemin prototype parity. Merged via PR #253 on 2026-04-27. Runtime app code is out of scope; workflow-v2 uses execution_mode=manual while the design-decision meaning is recorded in docs."
+    },
+    {
+      "id": "baemin-prototype-parity-foundation",
+      "preset": "docs-only",
+      "branch": "docs/baemin-prototype-parity-foundation",
       "pr_path": "pending",
       "lifecycle": "planned",
       "approval_state": "not_started",
@@ -331,7 +346,7 @@
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack"
       ],
-      "notes": "Design decision gate for near-100% Baemin prototype parity. Runtime app code is out of scope; workflow-v2 uses execution_mode=manual while the design-decision meaning is recorded in docs. Depends on planner prototype-priority contract from PR #249."
+      "notes": "Foundation for scored parity slices: 3-way capture recipe, fixture/route-entry rules, artifact schema, token mapping scope, exclusion inventory. No app-wide screen rewrite. Depends on h7 direction gate."
     },
     {
       "id": "baemin-style-tokens-additive",
