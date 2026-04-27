@@ -38,7 +38,7 @@
 - Text clipped inside buttons, chips, cards, tabs, or sheets.
 - Existing loading, empty, error, read-only, or unauthorized states disappear.
 - H1 HOME first-viewport decision is contradicted.
-- H2 PLANNER_WEEK day-card model is contradicted.
+- Current official PLANNER_WEEK prototype parity contract is contradicted (`docs/화면정의서-v1.5.1.md`).
 - H5 sheet/modal family decisions are contradicted.
 - Brand/background/font value changes ship without explicit user approval.
 - Authority report has unresolved blocker findings.

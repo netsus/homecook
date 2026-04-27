@@ -29,9 +29,9 @@ tools:
    - 없으면 `ui/designs/` 디렉토리 전체 목록 확인 후 사용자에게 보고
 
 2. **소스 문서 대조 (필수)**
-   - `docs/화면정의서-v1.5.0.md` — 해당 화면 정의와 대조
-   - `docs/요구사항기준선-v1.6.3.md` — 요구사항 누락/오류 확인
-   - `docs/유저flow맵-v1.3.0.md` — 진입/이탈 경로 정확성 확인
+   - `docs/화면정의서-v1.5.1.md` — 해당 화면 정의와 대조
+   - `docs/요구사항기준선-v1.6.4.md` — 요구사항 누락/오류 확인
+   - `docs/유저flow맵-v1.3.1.md` — 진입/이탈 경로 정확성 확인
    - `docs/design/design-tokens.md` — 확정 토큰 기준으로 색상·간격·반경 위반 여부 확인
    - `docs/design/mobile-ux-rules.md` — 모바일 UX blocker 규칙
    - `docs/design/anchor-screens.md` — anchor screen / anchor extension 판정
