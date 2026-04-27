@@ -1,0 +1,101 @@
+{
+  "id": "baemin-style-modal-system-fit",
+  "title": "Modal/sheet overlay family Baemin-style visual fit",
+  "summary": "Modal/sheet 오버레이 패밀리(LoginGateModal, PlannerAddSheet, SaveModal, IngredientFilterModal, SortMenu)의 배민 스타일 시각 정합. LoginGateModal을 ModalHeader 공유 컴포넌트로 합류시키고(H5 D2 eyebrow 제거, D3 icon-only close), 나머지 4개 interaction modal의 surface/shadow/radius/footer 토큰을 배민 스타일과 일관시킨다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "Align all modal/sheet overlays with the approved Baemin-style visual system. Join LoginGateModal to the ModalHeader shared component (H5 D2 eyebrow removal, D3 icon-only 44x44 close). Ensure surface/shadow/radius/footer tokens across PlannerAddSheet, SaveModal, IngredientFilterModal, and SortMenu are consistent with Baemin-style anchor screens. Visual-only — preserve all functional flows, props interfaces, and H5 D1-D6 decisions.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "h6-baemin-style-direction",
+    "baemin-style-tokens-additive",
+    "baemin-style-token-values",
+    "baemin-style-shared-components",
+    "baemin-style-home-retrofit",
+    "baemin-style-recipe-detail-retrofit",
+    "baemin-style-planner-week-retrofit",
+    "h5-modal-system-redesign"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/baemin-style-modal-system-fit/README.md",
+      "docs/workpacks/baemin-style-modal-system-fit/acceptance.md",
+      "ui/designs/authority/MODAL_SYSTEM-authority.md",
+      "ui/designs/INGREDIENT_FILTER_MODAL.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md",
+      "docs/workpacks/h5-modal-system-redesign/README.md",
+      "docs/design/design-tokens.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/design/design-tokens.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 3
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm verify:frontend"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "all-restyle-uses-css-variables-only",
+      "existing-props-interfaces-preserved",
+      "h5-d1-d6-decisions-preserved",
+      "modal-functional-flow-preserved",
+      "login-gate-return-to-action-preserved",
+      "olive-accent-policy-preserved",
+      "ui-primitives-consumed-not-modified",
+      "login-gate-modal-uses-modal-header"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "Anchor screen body restyling (HOME, RECIPE_DETAIL, PLANNER_WEEK — already completed)",
+    "ModalHeader/ModalFooterActions structure/API changes beyond visual token class adjustments",
+    "H5 D1-D6 decision reversals or modifications",
+    "New modal interactions or flows",
+    "API, DB, or status-transition changes",
+    "Importing Jua or prototype-only fonts",
+    "Changing CSS token values in globals.css",
+    "Adding new CSS tokens",
+    "Modifying components/ui/ primitives (consume only)",
+    "SocialLoginButtons restyling (shared auth component — visual only in LoginGateModal context)",
+    "BottomTabs or AppShell restyling",
+    "COOK_MODE screen (slices 14/15)",
+    "Prototype HANDOFF.md direct copy"
+  ],
+  "open_questions": []
+}
