@@ -342,7 +342,7 @@ test.describe("slice 09: shopping preview and list creation", () => {
         ],
       });
 
-      await expect(page).toHaveURL("/shopping/list-1");
+      await expect(page).toHaveURL("/shopping/lists/list-1");
     });
 
     test("should submit only selected meals", async ({ page }) => {

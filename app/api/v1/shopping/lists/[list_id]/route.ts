@@ -32,7 +32,7 @@ interface ShoppingListRow {
   is_completed: boolean;
   completed_at: string | null;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 interface ShoppingListRecipeRow {
@@ -189,7 +189,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const listResult = await dbClient
     .from("shopping_lists")
-    .select("id, user_id, title, date_range_start, date_range_end, is_completed, completed_at, created_at, updated_at")
+    .select("id, user_id, title, date_range_start, date_range_end, is_completed, completed_at, created_at")
     .eq("id", listId)
     .maybeSingle();
 
@@ -247,7 +247,7 @@ export async function GET(_request: Request, context: RouteContext) {
     is_completed: listResult.data.is_completed,
     completed_at: listResult.data.completed_at,
     created_at: listResult.data.created_at,
-    updated_at: listResult.data.updated_at,
+    updated_at: listResult.data.updated_at ?? listResult.data.created_at,
     recipes: recipesResult.data
       .map((recipe) => ({
         recipe_id: recipe.recipe_id,
