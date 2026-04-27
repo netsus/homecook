@@ -3,6 +3,7 @@
 ## Status
 
 - 이 문서는 `generic session-orchestrator` 위에 얹는 `local autonomous supervisor` 규격을 고정한다.
+- 이 문서는 product stage actor 기본 읽기가 아니라 OMO implementation maintainer spec이다.
 - 현재 executable baseline은 `omo:supervise`, `omo:tick`, dedicated worktree manager, `gh` automation, `omo:status`, `omo:status:brief`, `omo:tail`까지 포함한다.
 - hardening baseline은 `omo:smoke:control-plane`, `omo:smoke:providers`, `omo:scheduler:install/uninstall/verify`까지 포함한다.
 - `omo:start`, `omo:continue`, `omo:resume-pending`은 low-level primitive로 남고, product slice full-autonomy는 supervisor state machine이 담당한다.
@@ -30,6 +31,7 @@ autonomous supervisor는 `그 stage 결과를 다음 GitHub 상태와 다음 sta
 ## Codex-Orchestrated Rail Boundary
 
 현재 reset 방향에서는 supervisor를 더 똑똑한 semantic reviewer로 키우지 않는다.
+supervisor는 semantic reviewer가 아니라 rail executor다.
 Codex가 orchestration owner로서 blocker를 분류하고 repair route를 정하며, OMO supervisor는 그 결정을 검증 가능한 rail로 실행한다.
 
 기본 reason code:

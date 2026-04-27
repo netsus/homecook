@@ -259,6 +259,31 @@ describe("workflow v2 docs", () => {
     expect(canonicalCloseout).toContain("markdown 전체 rewrite는 아직 남아 있다.");
   });
 
+  it("documents the thin supervisor boundary for Codex-orchestrated OMO", () => {
+    const workflowReadme = readFileSync(join(repoRoot, "docs/engineering/workflow-v2/README.md"), "utf8");
+    const governanceMap = readFileSync(
+      join(repoRoot, "docs/engineering/workflow-v2/omo-governance-surface-map.md"),
+      "utf8",
+    );
+    const autonomousSupervisor = readFileSync(
+      join(repoRoot, "docs/engineering/workflow-v2/omo-autonomous-supervisor.md"),
+      "utf8",
+    );
+    const dispatchContract = readFileSync(
+      join(repoRoot, "docs/engineering/workflow-v2/omo-lite-dispatch-contract.md"),
+      "utf8",
+    );
+
+    expect(workflowReadme).toContain("Codex는 conductor, OMO는 rail");
+    expect(governanceMap).toContain("### 2. Codex Orchestrator");
+    expect(governanceMap).toContain("product stage actor 기본 읽기 경로에는 `workflow-v2` maintainer spec을 넣지 않는다.");
+    expect(autonomousSupervisor).toContain("이 문서는 product stage actor 기본 읽기가 아니라 OMO implementation maintainer spec이다.");
+    expect(autonomousSupervisor).toContain("supervisor는 semantic reviewer가 아니라 rail executor다.");
+    expect(dispatchContract).not.toContain("docs/engineering/workflow-v2/omo-autonomous-supervisor.md");
+    expect(dispatchContract).not.toContain("docs/engineering/workflow-v2/schemas/work-item.schema.json");
+    expect(dispatchContract).not.toContain("docs/engineering/workflow-v2/templates/work-item.example.json");
+  });
+
   it("returns a combined validation bundle with no errors", () => {
     const results = validateWorkflowV2Bundle({ rootDir: repoRoot });
 

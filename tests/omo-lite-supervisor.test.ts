@@ -500,6 +500,30 @@ describe("OMO-lite stage dispatch", () => {
       ]),
     );
   });
+
+  it("keeps workflow-v2 maintainer specs out of product stage required reads", () => {
+    const dispatches = [
+      buildStageDispatch({ slice: "02-discovery-filter", stage: 1 }),
+      buildStageDispatch({ slice: "02-discovery-filter", stage: 2 }),
+      buildStageDispatch({ slice: "02-discovery-filter", stage: 2, subphase: "doc_gate_repair" }),
+      buildStageDispatch({ slice: "02-discovery-filter", stage: 2, subphase: "doc_gate_review" }),
+      buildStageDispatch({ slice: "02-discovery-filter", stage: 3 }),
+      buildStageDispatch({ slice: "02-discovery-filter", stage: 4 }),
+      buildStageDispatch({ slice: "02-discovery-filter", stage: 4, subphase: "authority_precheck" }),
+      buildStageDispatch({ slice: "02-discovery-filter", stage: 5 }),
+      buildStageDispatch({ slice: "02-discovery-filter", stage: 5, subphase: "final_authority_gate" }),
+      buildStageDispatch({ slice: "02-discovery-filter", stage: 6 }),
+    ];
+
+    const allRequiredReads = dispatches.flatMap((dispatch) => dispatch.requiredReads);
+
+    expect(allRequiredReads).not.toContain("docs/engineering/workflow-v2/omo-autonomous-supervisor.md");
+    expect(allRequiredReads).not.toContain("docs/engineering/workflow-v2/omo-lite-supervisor-spec.md");
+    expect(allRequiredReads).not.toContain("docs/engineering/workflow-v2/omo-lite-dispatch-contract.md");
+    expect(allRequiredReads).not.toContain("docs/engineering/workflow-v2/schemas/work-item.schema.json");
+    expect(allRequiredReads).not.toContain("docs/engineering/workflow-v2/templates/work-item.example.json");
+    expect(allRequiredReads).not.toContain(".workflow-v2/README.md");
+  });
 });
 
 describe("OMO-lite workflow status sync", () => {
