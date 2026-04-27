@@ -71,9 +71,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending"
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed"
   },
   "out_of_scope": [
     "App-wide screen rewrites (HOME, RECIPE_DETAIL, PLANNER_WEEK, modal code changes)",
@@ -85,5 +85,45 @@
     "Actual visual-verdict score production (scored parity slice responsibility)",
     "Official source-of-truth document changes"
   ],
-  "open_questions": []
+  "open_questions": [],
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "node -e JSON.parse visual-verdict-schema.json",
+        "git diff --check",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-final-pr-head",
+      "approval_state": "dual_approved",
+      "all_checks_green": "pending_pr_checks"
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-04-27T15:45:00.000Z"
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-04-27T15:45:00.000Z",
+      "status_synced_at": "2026-04-27T15:45:00.000Z",
+      "pr_body_synced_at": "pending-pr-body-sync"
+    }
+  }
 }

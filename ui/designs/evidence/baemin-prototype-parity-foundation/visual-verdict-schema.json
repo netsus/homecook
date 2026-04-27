@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Visual Verdict Artifact",
+  "description": "Schema for parity slice visual-verdict results. One file per scored parity slice.",
+  "type": "object",
+  "required": ["slice_id", "surface", "captured_at", "viewports", "states", "scores", "verdict"],
+  "properties": {
+    "slice_id": {
+      "type": "string",
+      "description": "Parity slice ID (e.g., baemin-prototype-home-parity)"
+    },
+    "surface": {
+      "type": "string",
+      "enum": ["HOME", "RECIPE_DETAIL", "PLANNER_WEEK", "MODAL_FAMILY"]
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of capture session"
+    },
+    "viewports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["width", "height"],
+        "properties": {
+          "width": { "type": "integer", "enum": [390, 320] },
+          "height": { "type": "integer" }
+        }
+      },
+      "minItems": 2
+    },
+    "states": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["state_id", "viewports"],
+        "properties": {
+          "state_id": {
+            "type": "string",
+            "description": "State ID from fixture-route-matrix.md (kebab-case)"
+          },
+          "viewports": {
+            "type": "object",
+            "required": ["390", "320"],
+            "properties": {
+              "390": { "$ref": "#/$defs/viewport_entry" },
+              "320": { "$ref": "#/$defs/viewport_entry" }
+            },
+            "description": "Per-viewport captures and scores keyed by viewport width"
+          },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "scores": {
+      "type": "object",
+      "required": ["screen_score_390", "screen_score_320", "slice_score"],
+      "properties": {
+        "screen_score_390": {
+          "type": "number",
+          "description": "Average of state scores at 390px"
+        },
+        "screen_score_320": {
+          "type": "number",
+          "description": "Average of state scores at 320px"
+        },
+        "slice_score": {
+          "type": "number",
+          "description": "390px * 0.70 + 320px * 0.30"
+        }
+      }
+    },
+    "verdict": {
+      "type": "object",
+      "required": ["threshold", "pass", "blocker_count"],
+      "properties": {
+        "threshold": { "type": "number", "description": "Merge threshold from h7" },
+        "pass": { "type": "boolean" },
+        "blocker_count": { "type": "integer", "minimum": 0 },
+        "waiver": {
+          "type": ["object", "null"],
+          "properties": {
+            "applied": { "type": "boolean" },
+            "reason": { "type": "string" },
+            "miss_points": { "type": "number", "maximum": 2 }
+          }
+        }
+      }
+    },
+    "authority_blockers": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of authority blocker descriptions. Must be empty for pass."
+    }
+  },
+  "$defs": {
+    "viewport_entry": {
+      "type": "object",
+      "required": ["captures"],
+      "properties": {
+        "captures": {
+          "type": "object",
+          "required": ["current", "after"],
+          "properties": {
+            "current": { "type": "string", "description": "Path to current capture" },
+            "after": { "type": "string", "description": "Path to after capture" },
+            "prototype": { "type": ["string", "null"], "description": "Path to prototype capture, null if prototype N/A" }
+          }
+        },
+        "score": {
+          "type": "object",
+          "description": "Per-viewport, per-state score breakdown",
+          "properties": {
+            "skin": { "type": "number", "minimum": 0, "maximum": 25 },
+            "layout": { "type": "number", "minimum": 0, "maximum": 30 },
+            "interaction": { "type": "number", "minimum": 0, "maximum": 20 },
+            "assets_copy": { "type": "number", "minimum": 0, "maximum": 10 },
+            "state_fidelity": { "type": "number", "minimum": 0, "maximum": 15 },
+            "total": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        }
+      }
+    }
+  }
+}
