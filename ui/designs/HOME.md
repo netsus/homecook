@@ -439,3 +439,83 @@ Loading/Empty/Error 상태   →    보존 (ContentState 기반)
 - 리트로핏 설계 critique: `ui/designs/critiques/HOME-baemin-style-retrofit-critique.md`
 - Authority report (Stage 4/5 생성): `ui/designs/authority/BAEMIN_STYLE_HOME_RETROFIT-authority.md`
 - Evidence directory: `ui/designs/evidence/baemin-style/home-retrofit/`
+
+---
+
+## Baemin Prototype Parity Addendum
+
+> 추가일: 2026-04-28
+> 관련 슬라이스: `baemin-prototype-home-parity`
+> 선행 게이트: `h7-baemin-prototype-parity-direction` (merged), `baemin-prototype-parity-foundation` (merged)
+> 선행 리트로핏: `baemin-style-home-retrofit` (merged) — 현재 production baseline
+> 프로토타입 참조: `ui/designs/prototypes/homecook-baemin-prototype.html`, `ui/designs/prototypes/baemin-redesign/screens/home.jsx`
+
+### 목적
+
+h6 retrofit 결과물(현재 production baseline)을 Baemin prototype 기준 near-100% parity로 끌어올린다. h7 direction gate가 정의한 3-way capture, visual-verdict 5축 채점(skin 25, layout 30, interaction 20, assets/copy 10, state fidelity 15), required-state matrix를 따라 HOME body 점수 >= 95, authority blocker 0을 달성한다.
+
+### HOME Production 정보 구조 보존
+
+아래 정보 구조는 화면정의서 v1.5.1 §1 기준으로 **변경하지 않는다**:
+
+```
+공통 브랜드 헤더 (AppHeader)
+└─ Discovery panel
+   ├─ 제목 검색바
+   └─ [재료로 검색] 버튼 → INGREDIENT_FILTER_MODAL
+테마 carousel strip (compact 헤더 + horizontal scroll)
+"모든 레시피" 섹션
+├─ 섹션 헤더 + 정렬 드롭다운
+└─ 2열 레시피 카드 그리드
+하단 탭바 (BottomTabBar)
+```
+
+Prototype의 HOME (`home.jsx`)도 동일한 섹션을 동일한 순서로 가진다. 차이는 skin·layout·interaction affordance의 시각 처리에 한정된다.
+
+### Prototype-Only Exclusions (deficit 비채점)
+
+h7 direction gate의 `prototype-exclusion-inventory.md`에 따라 아래 항목은 prototype capture에 보이더라도 after layer에서 부재를 deficit으로 채점하지 않는다:
+
+| 제외 항목 | 이유 |
+| --- | --- |
+| Hero greeting ("오늘은 뭐 해먹지?") | Prototype demo copy, production에 해당 섹션 없음 |
+| Promo strip (플래너 안내 배너) | Prototype marketing asset |
+| Inline ingredient filter chips | Production은 모달 기반 `INGREDIENT_FILTER_MODAL` |
+| Jua 폰트 | h6-direction non-goals, 새 폰트 의존성 금지 |
+| Bottom tab bar styling, Pantry/MyPage 링크 | 앱 전체 retrofit slice로 분리 |
+
+### Required State Evidence Plan
+
+7개 required states × 2 viewports = 14 capture sets. 각 set은 3-way (current/after/prototype) × 3 layers를 포함한다.
+
+| State ID | 390px (70%) | 320px (30%) | 트리거 |
+| --- | --- | --- | --- |
+| `initial` | ✅ | ✅ | HOME (`/`) 초기 로드 |
+| `scrolled-to-recipes-entry` | ✅ | ✅ | "모든 레시피" 섹션 헤더가 viewport 상단에 닿을 때까지 스크롤 |
+| `sort-open` | ✅ | ✅ | 정렬 드롭다운 열기 (mobile: bottom sheet) |
+| `filter-active` | ✅ | ✅ | 재료 필터 1개 이상 적용 후 모달 닫기 |
+| `loading` | ✅ | ✅ | 스켈레톤 카드 표시 (API 응답 지연) |
+| `empty` | ✅ | ✅ | 검색/필터 결과 0건 |
+| `error` | ✅ | ✅ | 네트워크/API 오류 |
+
+Capture 파일 경로: `qa/visual/parity/baemin-prototype-home-parity/<viewport>-HOME-<state>-<layer>.png`
+
+### Authority Path
+
+- Authority report: `ui/designs/authority/HOME-parity-authority.md`
+- Authority status: `required` (anchor-extension classification)
+- Stage 4 완료 시 390px + 320px screenshot evidence 기반 authority review 수행
+- Blocker 0 + score >= 95 달성 후 `pending-review` 전환
+- Stage 5 + final authority gate 통과 후 `confirmed`
+
+### Contract Evolution
+
+**Not required.** Visual implementation only — 공식 문서(화면정의서, 요구사항기준선, 유저Flow맵, API 계약, DB 스키마) 변경 없음. 상세 분석은 workpack README의 Contract Evolution Decision 참조.
+
+### 관련 아티팩트
+
+- Parity critique: `ui/designs/critiques/HOME-critique.md` §Baemin Prototype Parity Critique
+- Workpack: `docs/workpacks/baemin-prototype-home-parity/README.md`
+- Foundation evidence: `ui/designs/evidence/baemin-prototype-parity-foundation/`
+- Visual-verdict artifact (Stage 4 생성): `ui/designs/evidence/baemin-prototype-home-parity/visual-verdict`
+- Authority report (Stage 4 생성): `ui/designs/authority/HOME-parity-authority.md`
