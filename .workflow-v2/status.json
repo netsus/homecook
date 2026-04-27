@@ -390,7 +390,7 @@
     {
       "id": "10b-shopping-share-text",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-10b-shopping-share-text",
+      "branch": "feature/fe-10b-shopping-share-text",
       "pr_path": "pending",
       "lifecycle": "ready_for_review",
       "approval_state": "codex_approved",
@@ -401,7 +401,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 2 backend implemented GET /api/v1/shopping/lists/{list_id}/share-text with owner guard, pantry-excluded filtering, completed-list sharing, and Vitest coverage. Local gate passed: pnpm verify:backend."
+      "notes": "Stage 5 lightweight design check approved by Codex after Claude Stage 4 implementation. Share button with Web Share API / clipboard fallback, loading/empty/error/read-only/unauthorized states, Vitest + Playwright E2E coverage, pnpm verify:frontend passed locally. Authority gate not required for this low-risk SHOPPING_DETAIL action connection."
     }
   ]
 }
