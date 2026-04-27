@@ -262,6 +262,56 @@ describe("10a shopping detail backend", () => {
     expect(itemsQuery.order).toHaveBeenCalledWith("id", { ascending: true });
   });
 
+  it("returns detail when shopping_lists does not expose updated_at", async () => {
+    const listQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: "550e8400-e29b-41d4-a716-446655440001",
+          user_id: "user-1",
+          title: "4/25 장보기",
+          date_range_start: "2026-04-25",
+          date_range_end: "2026-04-27",
+          is_completed: false,
+          completed_at: null,
+          created_at: "2026-04-25T09:00:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const listRecipesQuery = createArraySelectQuery([{ data: [], error: null }]);
+    const itemsQuery = createArraySelectQuery([{ data: [], error: null }]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "shopping_lists") {
+          return { select: vi.fn(() => listQuery) };
+        }
+        if (table === "shopping_list_recipes") {
+          return { select: vi.fn(() => listRecipesQuery) };
+        }
+        if (table === "shopping_list_items") {
+          return { select: vi.fn(() => itemsQuery) };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importListDetailRoute();
+    const response = await GET(new Request("http://localhost:3000/api/v1/shopping/lists/550e8400-e29b-41d4-a716-446655440001"), {
+      params: Promise.resolve({
+        list_id: "550e8400-e29b-41d4-a716-446655440001",
+      }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.updated_at).toBe("2026-04-25T09:00:00.000Z");
+  });
+
   it("returns 403 when shopping detail list owner mismatches", async () => {
     const listQuery = createMaybeSingleQuery([
       {

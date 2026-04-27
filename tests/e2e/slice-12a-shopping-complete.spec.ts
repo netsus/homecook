@@ -118,6 +118,50 @@ async function installShoppingDetailRoute(
   });
 }
 
+async function installPlannerRoute(
+  page: Page,
+  getStatus: () => "registered" | "shopping_done"
+) {
+  await page.route("**/api/v1/planner?*", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+
+    const requestUrl = new URL(route.request().url());
+    const planDate = requestUrl.searchParams.get("start_date") ?? "2026-04-12";
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          columns: [
+            {
+              id: "breakfast",
+              name: "아침",
+              sort_order: 0,
+            },
+          ],
+          meals: [
+            {
+              id: "meal-1",
+              recipe_id: "recipe-1",
+              recipe_title: "김치찌개",
+              recipe_thumbnail_url: null,
+              plan_date: planDate,
+              column_id: "breakfast",
+              planned_servings: 4,
+              status: getStatus(),
+              is_leftover: false,
+            },
+          ],
+        },
+        error: null,
+      },
+    });
+  });
+}
+
 test.describe("slice 12a: shopping complete", () => {
   test.describe("complete button visibility", () => {
     test("should show complete button for incomplete lists", async ({ page }) => {
@@ -194,6 +238,68 @@ test.describe("slice 12a: shopping complete", () => {
 
       // Should show completed badge
       await expect(page.getByText(/완료됨/)).toBeVisible();
+    });
+
+    test("should show shopping_done status in planner after completion", async ({ page }) => {
+      await setAuthOverride(page, "authenticated");
+
+      let listCompleted = false;
+      let plannerMealStatus: "registered" | "shopping_done" = "registered";
+
+      await page.route(`**/api/v1/shopping/lists/${SHOPPING_LIST_ID}`, async (route) => {
+        if (route.request().method() !== "GET") {
+          await route.continue();
+          return;
+        }
+
+        await route.fulfill({
+          json: {
+            success: true,
+            data: buildShoppingListDetail({
+              is_completed: listCompleted,
+              completed_at: listCompleted ? "2026-04-27T10:00:00.000Z" : null,
+            }),
+            error: null,
+          },
+        });
+      });
+
+      await page.route(
+        `**/api/v1/shopping/lists/${SHOPPING_LIST_ID}/complete`,
+        async (route) => {
+          if (route.request().method() !== "POST") {
+            await route.continue();
+            return;
+          }
+
+          listCompleted = true;
+          plannerMealStatus = "shopping_done";
+
+          await route.fulfill({
+            json: {
+              success: true,
+              data: {
+                completed: true,
+                meals_updated: 1,
+              },
+              error: null,
+            },
+          });
+        }
+      );
+      await installPlannerRoute(page, () => plannerMealStatus);
+
+      await page.goto(SHOPPING_DETAIL_URL);
+
+      await page.getByRole("button", { name: "장보기 완료" }).click();
+
+      await expect(page.getByText(/장보기를 완료했어요.*1개 식사/)).toBeVisible();
+      await expect(page.getByRole("button", { name: "장보기 완료" })).not.toBeVisible();
+
+      await page.goto("/planner");
+
+      await expect(page.getByText("김치찌개")).toBeVisible();
+      await expect(page.locator('[aria-label="장보기 완료"]')).toBeVisible();
     });
 
     test("should handle 401 error by redirecting to login", async ({ page }) => {

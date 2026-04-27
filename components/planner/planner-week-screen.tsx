@@ -108,14 +108,6 @@ function buildMealMap(meals: PlannerMealData[]) {
   return mealMap;
 }
 
-function readDesktopViewportMatch() {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-    return false;
-  }
-
-  return window.matchMedia("(min-width: 768px)").matches;
-}
-
 export function PlannerWeekScreen({
   initialAuthenticated = false,
 }: PlannerWeekScreenProps) {
@@ -133,7 +125,7 @@ export function PlannerWeekScreen({
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
-  const [isDesktopViewport, setIsDesktopViewport] = useState(readDesktopViewportMatch);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
 
   const dateKeys = useMemo(
     () => buildDateKeys(rangeStartDate, rangeEndDate),

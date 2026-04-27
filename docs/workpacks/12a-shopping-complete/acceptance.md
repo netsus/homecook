@@ -12,7 +12,7 @@
 - [x] [장보기 완료] 클릭 시 완료 API가 호출되고 성공 메시지가 표시된다 <!-- omo:id=accept-complete-success-message;stage=4;scope=frontend;review=5,6 -->
 - [x] 완료 API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [x] 백엔드 계약(`completed`, `meals_updated`)과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
-- [ ] 플래너 위클리에서 연결된 식사 상태가 `shopping_done`으로 전이된 것을 확인할 수 있다 <!-- omo:id=accept-meal-status-transition;stage=4;scope=frontend;review=6 -->
+- [x] 플래너 위클리에서 연결된 식사 상태가 `shopping_done`으로 전이된 것을 확인할 수 있다 <!-- omo:id=accept-meal-status-transition;stage=4;scope=frontend;review=6 -->
 
 ## State / Policy
 - [x] `shopping_lists.is_completed`가 `false → true`로 전이된다 <!-- omo:id=accept-list-completed-transition;stage=2;scope=backend;review=3,6 -->
@@ -62,8 +62,8 @@
 - [x] 완료 후 read-only 정책(409 CONFLICT)이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-read-only;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright
-- [ ] 실제 사용자 흐름 (장보기 완료 → 플래너 상태 전이 확인)이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 실제 사용자 흐름 (장보기 완료 → 플래너 상태 전이 확인)이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
 - [x] 완료 후 read-only UI (버튼 숨김, 컨트롤 비활성화)가 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-read-only-ui;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
-- [ ] 자동화하지 않은 외부 서비스 또는 운영 의존 시나리오가 별도로 적혀 있다 (이 슬라이스는 Manual Only 항목 없음)
+- [x] 자동화하지 않은 외부 서비스 또는 운영 의존 시나리오가 별도로 적혀 있다 (이 슬라이스는 Manual Only 항목 없음)

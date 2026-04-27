@@ -120,7 +120,7 @@ export function ShoppingFlowScreen({
       const result = await createShoppingList(body);
 
       // Navigate to shopping detail
-      push(`/shopping/${result.id}`);
+      push(`/shopping/lists/${result.id}`);
     } catch (error) {
       if (isShoppingApiError(error)) {
         if (error.status === 401) {

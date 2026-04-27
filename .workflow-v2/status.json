@@ -460,7 +460,7 @@
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-12a-shopping-complete",
       "pr_path": "https://github.com/netsus/homecook/pull/243",
-      "lifecycle": "ready_for_review",
+      "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -469,7 +469,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 4 frontend PR #243 is ready after Claude implementation, Codex Stage 5 review, and closeout evidence repair. Backend PR #241 is merged. Frontend adds SHOPPING_DETAIL completion UI, loading/success/error/read-only states, Vitest coverage, and fixture Playwright coverage; planner cross-screen status verification remains Stage 6 browser smoke. Pantry reflection remains slice 12b."
+      "notes": "Stage 6 closeout passed on PR #243 after Codex repair and verification. Backend PR #241 is merged. Frontend adds SHOPPING_DETAIL completion UI, loading/success/error/read-only states, Vitest coverage, fixture Playwright coverage, created-list route correction, shopping detail schema fallback for local DB, planner hydration fix, and real local Supabase browser smoke for planner cross-screen shopping_done transition. Pantry reflection remains slice 12b."
     }
   ]
 }

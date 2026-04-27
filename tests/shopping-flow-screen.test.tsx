@@ -400,7 +400,7 @@ describe("shopping flow screen", () => {
         });
       });
 
-      expect(mockPush).toHaveBeenCalledWith("/shopping/list-1");
+      expect(mockPush).toHaveBeenCalledWith("/shopping/lists/list-1");
     });
 
     it("should show creating state while creating list", async () => {

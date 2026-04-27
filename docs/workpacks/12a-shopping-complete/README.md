@@ -205,7 +205,25 @@
 - Review: Codex checked Stage 4 code, tests, design/accessibility scope, and closeout evidence.
 - Repair: closeout wording was corrected so planner cross-screen status verification remains Stage 6, and Playwright evidence reports 6 scenarios / 21 project runs.
 - Verification: `pnpm validate:workpack -- --slice 12a-shopping-complete`, `pnpm validate:workflow-v2`, `pnpm validate:branch`, `pnpm test:product tests/shopping-detail.frontend.test.tsx`, full slice smoke via `pnpm test:e2e tests/e2e/slice-12a-shopping-complete.spec.ts` (320 passed / 4 skipped due script semantics), and direct `pnpm exec playwright test tests/e2e/slice-12a-shopping-complete.spec.ts` (21 passed).
-- Remaining Stage 6 evidence: planner meal status transition and real browser local Supabase smoke.
+- Stage 6 follow-up: planner meal status transition and real browser local Supabase smoke were closed in the Stage 6 evidence below.
+
+## Stage 6 Closeout Evidence
+- Repairs from real smoke:
+  - `components/shopping/shopping-flow-screen.tsx` now routes created lists to `/shopping/lists/{id}`, matching the implemented detail route and API contract.
+  - `app/api/v1/shopping/lists/[list_id]/route.ts` no longer selects a non-existent `shopping_lists.updated_at` column from the local DB schema; the response preserves the existing `updated_at` field by falling back to `created_at`.
+  - `components/planner/planner-week-screen.tsx` initializes desktop-only controls consistently between SSR and client hydration, removing the planner hydration page error seen during the first smoke.
+- Added/updated automation:
+  - `tests/e2e/slice-12a-shopping-complete.spec.ts` now includes the cross-screen browser flow: complete shopping list, navigate to planner, and verify the linked meal shows `장보기 완료`.
+  - `tests/shopping-flow-screen.test.tsx` and `tests/e2e/slice-09-shopping-preview-create.spec.ts` now lock the created-list detail path to `/shopping/lists/{id}`.
+  - `tests/shopping-detail.backend.test.ts` now covers `shopping_lists` rows without `updated_at`.
+- Local verification:
+  - `pnpm test:product tests/planner-week-screen.test.tsx tests/shopping-flow-screen.test.tsx tests/shopping-detail.backend.test.ts tests/shopping-detail.frontend.test.tsx` passed (70 tests).
+  - `pnpm exec playwright test tests/e2e/slice-12a-shopping-complete.spec.ts` passed (24 runs across 8 scenarios, including planner status transition).
+  - `pnpm exec playwright test tests/e2e/slice-09-shopping-preview-create.spec.ts --project=desktop-chrome` passed (17 runs, including created-list detail route).
+  - `pnpm verify:backend` passed (lint, typecheck, product tests 305, build, security E2E 9).
+  - `pnpm verify:frontend` passed (lint, typecheck, product tests 305, build, smoke E2E 323 passed / 4 skipped, a11y 6, visual 12, security 9, Lighthouse).
+  - Real DB/browser smoke on local Supabase passed with `node scripts/local-seed-demo-data.mjs --start-date 2026-04-27` and `NEXT_PUBLIC_APP_URL=http://localhost:3105 pnpm exec node scripts/dev-local-supabase.mjs -H 127.0.0.1 -p 3105`.
+  - Smoke result: created list `3872acd5-0090-45cb-9f58-39f53d63769f`, completed it from `SHOPPING_DETAIL`, verified planner `장보기 완료` status, verified completed-list item PATCH returned 409, verified idempotent complete returned 200 with `meals_updated=0`, and observed `pageErrorCount=0` / `unexpectedConsoleErrorCount=0`.
 
 ## Delivery Checklist
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
