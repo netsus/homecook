@@ -59,6 +59,7 @@
 원칙:
 
 - stage actor는 `workflow-v2` implementation spec 전체를 기본 읽기로 요구받지 않는다.
+- product stage actor 기본 읽기 경로에는 `workflow-v2` maintainer spec을 넣지 않는다.
 - stage actor는 conditional doc만 trigger 기반으로 읽는다.
   - 예: authority-required면 `product-design-authority.md`
   - 예: QA 작업이면 `qa-system.md`

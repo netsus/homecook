@@ -20,6 +20,7 @@
   - workflow-v2 entry docs가 OMO 기본 운영 경로를 설명한다.
   - product slice 구현의 stage-by-stage mechanics는 계속 `slice-workflow.md`와 `agent-workflow-overview.md`가 담당한다.
 - 현재 전환 방향:
+  - Codex는 conductor, OMO는 rail이다.
   - Homecook OMO는 Codex가 orchestration owner이고 OMO가 deterministic rail인 `Codex-orchestrated OMO rail`로 전환한다.
   - Claude는 Stage 1/3/4, authority-required final gate, 독립 review가 필요한 specialized lane으로 남긴다.
 
@@ -124,6 +125,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - workflow-v2는 현재 Homecook의 OMO 기본 운영 경로다.
 - 현재 기본 운영 모델은 `Codex-orchestrated OMO rail`이다. Codex가 blocker 분류와 repair routing을 맡고, OMO는 state transition / validator / current-head gate / closeout-report projection을 맡는다.
 - 이 README는 operator entry다. product stage actor는 workflow-v2 spec 전체를 기본 읽기 세트로 삼지 않고, `slice-workflow.md`와 `agent-workflow-overview.md`를 우선한다.
+- product stage actor 기본 읽기에는 `workflow-v2` maintainer spec을 넣지 않는다. maintainer spec은 runtime/report/tooling 변경 때만 읽는다.
 - `workflow-v2` 관련 첫 단계는 문서와 schema를 고정하는 것이다.
 - 실제 tracked 운영 상태는 저장소 루트의 `.workflow-v2/` 아래 JSON으로 기록한다.
 - OMO 기본 운영 건강성 판단은 `docs/engineering/workflow-v2/promotion-readiness.md`와 `.workflow-v2/promotion-evidence.json`을 함께 기준으로 삼는다.
