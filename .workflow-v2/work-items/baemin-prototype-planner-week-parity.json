@@ -84,9 +84,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending"
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed"
   },
   "out_of_scope": [
     "PLANNER_WEEK information architecture changes (section hierarchy, navigation flow)",
@@ -101,5 +101,69 @@
     "Modal/sheet overlay parity (separate slice)",
     "New npm dependencies"
   ],
-  "open_questions": []
+  "open_questions": [],
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/PLANNER_WEEK-parity-authority.md",
+        "ui/designs/evidence/baemin-prototype-planner-week-parity/stage5-design-review.md",
+        ".omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-final-authority-gate-response-20260427T230127Z.md"
+      ],
+      "actual_verification_refs": [
+        "ui/designs/evidence/baemin-prototype-planner-week-parity/visual-verdict.json",
+        "ui/designs/evidence/baemin-prototype-planner-week-parity/visual-verdict.md",
+        "qa/visual/parity/baemin-prototype-planner-week-parity/",
+        ".artifacts/qa/baemin-prototype-planner-week-parity/2026-04-27T22-43-38-610Z/exploratory-report.json",
+        ".artifacts/qa/baemin-prototype-planner-week-parity/2026-04-27T22-43-38-610Z/eval-result.json"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-04-27T23:08:41.831Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 4,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage5_visual_evidence_and_cta_repair",
+      "evidence_sources": [
+        "ui/designs/authority/PLANNER_WEEK-parity-authority.md",
+        "ui/designs/evidence/baemin-prototype-planner-week-parity/stage5-design-review.md",
+        "ui/designs/evidence/baemin-prototype-planner-week-parity/visual-verdict.json",
+        ".artifacts/qa/baemin-prototype-planner-week-parity/2026-04-27T22-43-38-610Z/exploratory-report.json",
+        ".artifacts/qa/baemin-prototype-planner-week-parity/2026-04-27T22-43-38-610Z/eval-result.json",
+        ".omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-stage4-evidence-repair-response-20260427T223249Z.md",
+        ".omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-stage5-repair-response-20260427T224523Z.md",
+        ".omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-stage5-cta-text-repair-response-20260427T225245Z.md",
+        ".omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-final-authority-gate-response-20260427T230127Z.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-04-27T23:08:41.831Z",
+      "status_synced_at": "2026-04-27T23:08:41.831Z",
+      "pr_body_synced_at": "pending-pr-body"
+    }
+  }
 }

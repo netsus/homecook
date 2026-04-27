@@ -53,6 +53,21 @@ const STATUS_META: Record<
   },
 };
 
+const SLOT_EMOJI: Record<string, string> = {
+  아침: "🌅",
+  점심: "☀️",
+  간식: "🍪",
+  저녁: "🌙",
+};
+
+function getTodayDateKey() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = `${now.getMonth() + 1}`.padStart(2, "0");
+  const d = `${now.getDate()}`.padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function buildDateKeys(startDate: string, endDate: string) {
   const start = new Date(`${startDate}T00:00:00.000Z`);
   const end = new Date(`${endDate}T00:00:00.000Z`);
@@ -133,6 +148,21 @@ export function PlannerWeekScreen({
     [rangeEndDate, rangeStartDate],
   );
   const mealsByDateAndColumn = useMemo(() => buildMealMap(meals), [meals]);
+  const todayKey = getTodayDateKey();
+  const mealStats = useMemo(() => {
+    let cookDone = 0;
+    let shoppingDone = 0;
+    meals.forEach((m) => {
+      if (m.status === "cook_done") cookDone++;
+      else if (m.status === "shopping_done") shoppingDone++;
+    });
+    return {
+      total: meals.length,
+      cookDone,
+      shoppingDone,
+      registered: meals.length - cookDone - shoppingDone,
+    };
+  }, [meals]);
   const defaultRange = createDefaultPlannerRange();
   const isCurrentRange =
     rangeStartDate === defaultRange.startDate && rangeEndDate === defaultRange.endDate;
@@ -474,6 +504,28 @@ export function PlannerWeekScreen({
         </div>
       </section>
 
+      {screenState === "ready" || screenState === "empty" ? (
+        <section className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-5 py-4">
+          <p className="text-[clamp(1.1rem,4vw,1.25rem)] font-bold tracking-[-0.02em] text-[var(--foreground)]">
+            {isCurrentRange ? "이번 주 " : ""}{mealStats.total}끼 계획 중
+          </p>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="rounded-[10px] bg-[var(--brand-soft)] p-3">
+              <p className="text-[11px] font-semibold text-[var(--brand-deep)]">요리 완료</p>
+              <p className="text-[20px] font-bold text-[var(--brand-deep)]">{mealStats.cookDone}끼</p>
+            </div>
+            <div className="rounded-[10px] bg-[color-mix(in_srgb,var(--olive)_12%,transparent)] p-3">
+              <p className="text-[11px] font-semibold text-[var(--olive)]">장보기 완료</p>
+              <p className="text-[20px] font-bold text-[var(--olive)]">{mealStats.shoppingDone}끼</p>
+            </div>
+            <div className="rounded-[10px] bg-[var(--surface-fill)] p-3">
+              <p className="text-[11px] font-semibold text-[var(--muted)]">등록</p>
+              <p className="text-[20px] font-bold text-[var(--foreground)]">{mealStats.registered}끼</p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section
         className="sticky top-2 z-20 rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] px-[clamp(12px,3vw,16px)] py-[clamp(11px,3vw,16px)] shadow-[var(--shadow-2)] backdrop-blur"
         data-testid="planner-week-shell"
@@ -617,89 +669,159 @@ export function PlannerWeekScreen({
             </div>
           ) : null}
 
-          {dateKeys.map((dateKey) => (
-            <article
-              key={dateKey}
-              aria-label={`${formatDateLabel(dateKey)} 식단 카드`}
-              className="rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] px-[clamp(11px,3vw,16px)] py-[clamp(11px,3vw,16px)] shadow-[var(--shadow-2)]"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-[var(--radius-md)] bg-[var(--foreground)] px-2 text-[12px] font-semibold text-[var(--surface)] sm:min-h-9 sm:min-w-9 sm:text-[13px]">
+          {dateKeys.map((dateKey) => {
+            const isToday = dateKey === todayKey;
+            const dayMealCount = columns.filter((col) =>
+              mealsByDateAndColumn.has(`${dateKey}:${col.id}`),
+            ).length;
+
+            return (
+              <article
+                key={dateKey}
+                aria-label={`${formatDateLabel(dateKey)} 식단 카드`}
+                className={`overflow-hidden rounded-[var(--radius-md)] bg-[var(--surface)] ${
+                  isToday
+                    ? "border-2 border-[var(--brand)] shadow-[var(--shadow-2)]"
+                    : "border border-[var(--line)]"
+                }`}
+              >
+                {/* Day header */}
+                <div
+                  className={`flex items-center px-4 py-3 ${
+                    isToday
+                      ? "border-b border-[var(--surface-subtle)] bg-[var(--brand-soft)]"
+                      : "border-b border-[var(--surface-subtle)]"
+                  }`}
+                >
+                  <span
+                    className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold ${
+                      isToday
+                        ? "bg-[var(--brand)] text-[var(--surface)]"
+                        : "bg-[var(--surface-fill)] text-[var(--foreground)]"
+                    }`}
+                  >
                     {formatWeekdayLabel(dateKey)}
                   </span>
-                  <div className="min-w-0">
-                    <p className="text-[clamp(1rem,3.7vw,1.18rem)] font-bold tracking-[-0.02em] text-[var(--foreground)]">
+                  <div className="ml-2.5 min-w-0 flex-1">
+                    <p className="text-[15px] font-bold text-[var(--foreground)]">
                       {formatDateLabel(dateKey)}
+                      {isToday ? (
+                        <span className="ml-1 text-[12px] font-semibold text-[var(--brand)]">
+                          오늘
+                        </span>
+                      ) : null}
                     </p>
                   </div>
+                  <span className="text-[12px] text-[var(--text-3)]">
+                    {dayMealCount}/{columns.length}
+                  </span>
                 </div>
-                <button
-                  aria-disabled="true"
-                  className="inline-flex min-h-8 min-w-8 items-center justify-center rounded-full border border-[var(--line)] text-base text-[var(--muted)] opacity-50 sm:min-h-9 sm:min-w-9"
-                  disabled
-                  type="button"
-                >
-                  ⋯
-                </button>
-              </div>
 
-              <div className="mt-2 divide-y divide-[var(--line)]">
-                {columns.map((column) => {
-                  const slotKey = `${dateKey}:${column.id}`;
-                  const slotMeals = mealsByDateAndColumn.get(slotKey) ?? [];
-                  const meal = slotMeals[0] ?? null;
+                {/* Slot rows */}
+                <div className="divide-y divide-[var(--surface-subtle)]">
+                  {columns.map((column) => {
+                    const slotKey = `${dateKey}:${column.id}`;
+                    const slotMeals = mealsByDateAndColumn.get(slotKey) ?? [];
+                    const meal = slotMeals[0] ?? null;
 
-                  return (
-                    <Link
-                      key={slotKey}
-                      className="flex min-h-[44px] items-center gap-3 py-2"
-                      href={`/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`}
-                    >
-                      {/* 끼니명 — fixed width, muted */}
-                      <span className="w-[2.75rem] shrink-0 text-[11px] font-semibold text-[var(--muted)]">
-                        {column.name}
-                      </span>
-
-                      {/* 식사명 or 빈 슬롯 — flex-1 */}
-                      {meal ? (
-                        <span
-                          className={`flex-1 truncate text-[12px] font-semibold leading-tight ${meal.is_leftover ? "text-[var(--olive)]" : "text-[var(--foreground)]"}`}
-                        >
-                          {meal.recipe_title}
-                          {slotMeals.length > 1 ? (
-                            <span className="ml-1 text-[10px] font-normal text-[var(--muted)]">
-                              +{slotMeals.length - 1}
-                            </span>
-                          ) : null}
-                        </span>
-                      ) : (
-                        <span className="flex-1 text-[11px] text-[var(--muted)]">
-                          ─ 비어 있음 ─
-                        </span>
-                      )}
-
-                      {/* chips — 인분 + 상태, right-aligned */}
-                      {meal ? (
-                        <div className="flex shrink-0 items-center gap-1">
-                          <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[9px] font-medium text-[var(--muted)]">
-                            {meal.planned_servings}인분
+                    return (
+                      <Link
+                        key={slotKey}
+                        className="flex min-h-[44px] items-center px-4 py-2.5"
+                        href={`/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`}
+                      >
+                        {/* Emoji + slot name */}
+                        <div className="w-12 shrink-0 text-center">
+                          <span className="text-[18px] leading-none">
+                            {SLOT_EMOJI[column.name] ?? "🍽️"}
                           </span>
-                          <span
-                            aria-label={STATUS_META[meal.status].label}
-                            className={`inline-flex shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${STATUS_META[meal.status].className}`}
-                          >
-                            {STATUS_META[meal.status].shortLabel}
-                          </span>
+                          <p className="mt-0.5 text-[12px] font-semibold text-[var(--text-3)]">
+                            {column.name}
+                          </p>
                         </div>
-                      ) : null}
-                    </Link>
-                  );
-                })}
-              </div>
-            </article>
-          ))}
+
+                        {meal ? (
+                          <>
+                            {/* Thumbnail */}
+                            {meal.recipe_thumbnail_url ? (
+                              <img
+                                alt=""
+                                className="ml-1 mr-2.5 h-11 w-11 rounded-[var(--radius-sm)] object-cover"
+                                src={meal.recipe_thumbnail_url}
+                              />
+                            ) : (
+                              <div className="ml-1 mr-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface-fill)]">
+                                <span className="text-xl">
+                                  {SLOT_EMOJI[column.name] ?? "🍽️"}
+                                </span>
+                              </div>
+                            )}
+                            {/* Meal info */}
+                            <div className="min-w-0 flex-1">
+                              <p
+                                className={`truncate text-[14px] font-semibold leading-tight ${meal.is_leftover ? "text-[var(--olive)]" : "text-[var(--foreground)]"}`}
+                              >
+                                {meal.recipe_title}
+                                {slotMeals.length > 1 ? (
+                                  <span className="ml-1 text-[10px] font-normal text-[var(--muted)]">
+                                    +{slotMeals.length - 1}
+                                  </span>
+                                ) : null}
+                              </p>
+                              <div className="mt-0.5 flex items-center gap-1.5">
+                                <span
+                                  aria-label={STATUS_META[meal.status].label}
+                                  className={`inline-flex shrink-0 rounded-[4px] px-1.5 py-0.5 text-[10px] font-bold tracking-[-0.02em] ${STATUS_META[meal.status].className}`}
+                                >
+                                  {STATUS_META[meal.status].shortLabel}
+                                </span>
+                                <span className="text-[11px] text-[var(--text-3)]">
+                                  {meal.planned_servings}인분
+                                </span>
+                              </div>
+                            </div>
+                            {/* Chevron */}
+                            <svg
+                              className="ml-2 shrink-0 text-[var(--text-3)]"
+                              fill="none"
+                              height="14"
+                              viewBox="0 0 8 14"
+                              width="8"
+                            >
+                              <path
+                                d="M1 1l6 6-6 6"
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeWidth="2"
+                              />
+                            </svg>
+                          </>
+                        ) : (
+                          <span className="ml-3 flex h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-[var(--line)] text-[13px] text-[var(--text-3)]">
+                            + 식사 추가
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </article>
+            );
+          })}
         </section>
+      ) : null}
+
+      {/* Floating shopping CTA */}
+      {(screenState === "ready" || screenState === "empty") ? (
+        <div className="fixed bottom-[88px] right-4 z-40">
+          <Link
+            className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--foreground)] px-[18px] py-3 text-[14px] font-bold shadow-[0_4px_12px_rgba(0,0,0,0.10)]"
+            href="/shopping/flow"
+            style={{ color: "var(--surface)" }}
+          >
+            🛒 장보기 목록 만들기
+          </Link>
+        </div>
       ) : null}
     </div>
   );

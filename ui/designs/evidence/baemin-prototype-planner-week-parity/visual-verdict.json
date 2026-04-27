@@ -1,0 +1,281 @@
+{
+  "slice_id": "baemin-prototype-planner-week-parity",
+  "surface": "PLANNER_WEEK",
+  "captured_at": "2026-04-27T23:13:05.167Z",
+  "viewports": [
+    {
+      "width": 390,
+      "height": 844
+    },
+    {
+      "width": 320,
+      "height": 568
+    }
+  ],
+  "states": [
+    {
+      "state_id": "initial",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-initial-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-initial-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-initial-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 97
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-initial-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-initial-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-initial-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 98
+          }
+        }
+      },
+      "notes": "Full 3-way capture. Today card uses brand border + brand-soft header background + brand circle badge (today key computed from local date parts, not UTC). Emoji slot indicators, 44px thumbnail placeholders, dashed empty slot buttons, meal count badge per day card. Summary stats section (cook done / shopping done / registered) with stat cards. Floating shopping CTA positioned above bottom tabs (z-40, bottom-[88px]). Approved divergences: brand color (#ED7470 vs #2AC1BC), background (#fff9f2 vs #FFFFFF), foreground (#1a1a2e vs #212529), olive vs teal, font stack. Prototype-only exclusions (bottom tab bar, Pantry coupling) visible in prototype layer but not scored as deficits. Production keeps 4 fixed slots (아침/점심/간식/저녁) vs prototype 3 — approved structural contract. After-layer recaptured post-repair (today-key UTC fix, CTA z-index/position fix)."
+    },
+    {
+      "state_id": "prototype-overview",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-prototype-overview-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-prototype-overview-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-prototype-overview-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 97
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-prototype-overview-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-prototype-overview-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-prototype-overview-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 98
+          }
+        }
+      },
+      "notes": "Prototype overview: multiple day cards visible in first viewport. Summary stats visible at top. Day cards with circle weekday badges, today highlight, and prototype-parity slot rows. Production CTA toolbar and week context bar are retained as approved IA elements."
+    },
+    {
+      "state_id": "scrolled",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-scrolled-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-scrolled-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-scrolled-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 97
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-scrolled-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-scrolled-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-scrolled-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 98
+          }
+        }
+      },
+      "notes": "Scrolled to lower day cards. Sticky week context bar visible at top. Day card structure consistent during scroll. Floating CTA remains visible. Slot row emoji, thumbnail, and status chip layout intact."
+    },
+    {
+      "state_id": "loading",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-loading-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-loading-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 96
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-loading-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-loading-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 97
+          }
+        }
+      },
+      "notes": "Prototype does not support loading state — static demo renders instantly. Prototype layer N/A. Loading skeleton uses existing Skeleton component with --radius-xl cards. Summary stats section not shown during loading."
+    },
+    {
+      "state_id": "empty",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-empty-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-empty-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 96
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-empty-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-empty-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 97
+          }
+        }
+      },
+      "notes": "Prototype does not support empty state — prototype always has demo meals. Prototype layer N/A. Empty state shows summary stats (all 0), empty message, and day cards with all dashed empty slots. Summary stats section shows '0끼 계획 중'."
+    },
+    {
+      "state_id": "unauthorized",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-unauthorized-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-unauthorized-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 95
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-unauthorized-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-unauthorized-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 96
+          }
+        }
+      },
+      "notes": "Prototype does not have auth gate — all actions always available. Prototype layer N/A. Unauthorized state uses shared ContentState component with SocialLoginButtons. No visual changes to this state — it renders before the planner body."
+    },
+    {
+      "state_id": "error",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-error-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/320-PLANNER_WEEK-error-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 96
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-error-current.png",
+            "after": "qa/visual/parity/baemin-prototype-planner-week-parity/390-PLANNER_WEEK-error-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 97
+          }
+        }
+      },
+      "notes": "Prototype does not support error state — no fetch failure path. Prototype layer N/A. Error state uses shared ContentState component with retry CTA. No visual changes to this state."
+    }
+  ],
+  "scores": {
+    "screen_score_390": 97.29,
+    "screen_score_320": 96.29,
+    "slice_score": 96.99
+  },
+  "verdict": {
+    "threshold": 94,
+    "pass": true,
+    "blocker_count": 0,
+    "waiver": null
+  },
+  "authority_blockers": []
+}
