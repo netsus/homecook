@@ -299,3 +299,143 @@ HOME 화면 자체에서는 카드 탭(RECIPE_DETAIL 이동)만 발생하므로 
 - [ ] 테마 섹션이 0개일 때의 전체 Empty 처리 vs 섹션별 Empty 처리 기준 명확화
 - [x] [재료로 검색] 활성 상태(재료 선택 적용 중)에서 선택 수와 요약 문구가 과하지 않게 유지되는지 확인
 - [ ] 스켈레톤 카드 수(현재 6개)가 뷰포트에서 적절한지 — 더 많이 보이는 기기에서 빈 공간 발생 가능성
+
+---
+
+## Baemin-Style Visual Retrofit Addendum
+
+> 추가일: 2026-04-27
+> 관련 슬라이스: `baemin-style-home-retrofit`
+> 선행 슬라이스: `baemin-style-shared-components` (merged), `baemin-style-token-values` (merged), `h1-home-first-impression` (merged)
+> 프로토타입 참조: `ui/designs/prototypes/baemin-redesign/HANDOFF.md` §5.1 — **REFERENCE ONLY**. 공식 문서 및 workpack이 프로토타입과 충돌 시, 공식 문서/workpack이 우선한다.
+
+### 목적
+
+H1 정보 구조(D1-D4)를 **그대로 보존**하면서, 승인된 배민 스타일 토큰(`--brand` #ED7470, `--brand-deep` #C84C48, `--brand-soft` #FDEBEA)과 additive 토큰(`--text-2/3/4`, `--surface-fill/subtle`, `--shadow-1/2/3`, `--radius-*`)으로 HOME의 시각적 레이어를 교체한다. `components/ui/` 공유 프리미티브(Card, Badge, Chip, Skeleton, EmptyState, ErrorState)를 적합한 곳에서 소비한다.
+
+### 핵심 원칙: 구조 보존, 시각 교체
+
+```
+H1 정보 구조 (변경 없음)         배민 스타일 시각 레이어 (교체 대상)
+─────────────────────────       ─────────────────────────────────
+AppHeader (brand text)     →    토큰 기반 surface/shadow, brand hover
+Discovery panel layout     →    토큰 기반 glass-panel, border, shadow
+  - 검색바 위치/동작       →    토큰 기반 surface/border/shadow
+  - 재료필터 단독행 위치   →    토큰 기반 olive/brand, color-mix()
+Theme carousel strip       →    토큰 기반 card surface, shadow, gradient
+  - compact 헤더 형태      →    토큰 기반 text color
+  - horizontal scroll      →    토큰 기반 right-fade gradient
+모든 레시피 section        →    토큰 기반 section header text
+  - 정렬 = 섹션헤더 우측   →    토큰 기반 sort button/sheet
+  - 2열 카드 그리드        →    Card primitive + 토큰 기반 surface
+RecipeCard 구조            →    Card/Badge primitive, 토큰 기반 stats
+Skeleton 패턴              →    Skeleton primitive 또는 토큰 기반 bg
+Loading/Empty/Error 상태   →    보존 (ContentState 기반)
+```
+
+### 컴포넌트별 리트로핏 델타 테이블
+
+| 컴포넌트 | 현행 스타일 | 리트로핏 대상 | 비고 |
+| --- | --- | --- | --- |
+| **AppHeader** | `glass-panel`, hardcoded `hover:text-[var(--brand-deep)]` | Surface/shadow 토큰, brand hover 토큰 | Jua 폰트 import 금지 (prototype 참조일 뿐) |
+| **Discovery panel** | `glass-panel rounded-[24px] border-white/55 bg-white/76` | 토큰 기반 surface/border/radius/shadow | `glass-panel` inline override 또는 토큰 교체 |
+| **검색바** | `border-[var(--line)] bg-white shadow-[0_12px_28px_rgba(...)]` | 토큰 기반 surface/line/shadow | `--surface`, `--shadow-1` 사용 |
+| **재료필터 버튼 (비활성)** | `border-[color:rgba(224,80,32,0.16)] bg-white text-[color:#9f3614]` | `color-mix()` 기반 brand 파생 또는 `--brand-deep`/`--brand-soft` | Hardcoded hex/rgba 제거 |
+| **재료필터 버튼 (활성)** | `border-[var(--olive)] bg-[var(--olive)] text-white` | `text-[var(--surface)]` (white literal 제거) | `--olive` 보존 per H5 |
+| **필터 요약 바** | `border-[color:rgba(46,166,122,0.14)] bg-[color:rgba(46,166,122,0.08)]` | `color-mix(in srgb, var(--olive) 14%, transparent)` 등 | Hardcoded rgba 제거 |
+| **ThemeCarouselStrip 헤더** | `text-base font-extrabold text-[var(--foreground)]` | 토큰 기반 (이미 토큰 사용 — 확인 후 유지) | |
+| **ThemeCarouselCard** | `border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow)]` + hardcoded rgba gradient | Card primitive 또는 토큰 기반 card, gradient `color-mix()` | Right-fade `#fff9f2` → `var(--background)` fallback 이미 사용 |
+| **ThemeCarouselCard thumb** | `rgba(26,26,46,0.06)` / `rgba(26,26,46,0.22)` overlay | `color-mix(in srgb, var(--foreground) 6%, transparent)` 등 | Hardcoded rgba 제거 |
+| **ThemeCarouselCard source badge** | `bg-[var(--panel)] text-[var(--brand-deep)]` | Badge primitive 또는 토큰 유지 (이미 토큰) | |
+| **RecipeCard** | `border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow)]` | Card primitive 소비 또는 토큰 유지 | 구조 변경 없이 시각만 |
+| **RecipeCard source badge** | `bg-[var(--panel)] text-[var(--brand-deep)]` | 유지 또는 Badge primitive 소비 | |
+| **RecipeCard serving pill** | `border-[color:rgba(255,108,60,0.14)] bg-[color:rgba(255,108,60,0.08)] text-[#c84316]` | `color-mix()` 기반 brand 파생 | Hardcoded hex/rgba 제거 |
+| **RecipeCard stats pills** | `bg-[color:rgba(0,0,0,0.04)]` | `color-mix(in srgb, var(--foreground) 4%, transparent)` | |
+| **RecipeCard thumb gradient** | `rgba(255,108,60,0.22)` / `rgba(255,249,242,0.85)` / `rgba(46,166,122,0.18)` | `color-mix()` 기반 brand/olive 파생 | |
+| **SortMenu button** | `bg-white/92 shadow-[0_10px_24px_rgba(...)]` | 토큰 기반 surface/shadow | |
+| **SortMenu mobile sheet** | `bg-black/42 backdrop-blur` + `bg-[var(--panel)]` | 토큰 기반 overlay/panel | |
+| **SortMenu desktop dropdown** | `bg-[var(--panel)] shadow-[0_18px_44px_rgba(...)]` | 토큰 기반 shadow | |
+| **Section header (모든 레시피)** | `text-[1.15rem] font-extrabold text-[var(--foreground)]` | 이미 토큰 — 확인 후 유지 | |
+| **Count badge** | `bg-white/82 text-[var(--muted)] shadow-[0_8px_18px_rgba(...)]` | 토큰 기반 surface/text/shadow | |
+| **ThemeCarouselSkeleton** | `bg-white/70`, `bg-white/60` | `Skeleton` primitive 또는 `bg-[var(--surface-fill)]` | |
+| **RecipeListSkeleton** | `bg-white/70`, `bg-white/60` + `glass-panel` | `Skeleton` primitive 또는 토큰 기반 | |
+| **IngredientFilterModal** | 대부분 shared component 경유 (이미 리스타일됨); 잔여 inline rgba | `color-mix()` 교체 | shared component는 이미 리스타일 완료 |
+
+### 프로토타입 참조 범위
+
+`ui/designs/prototypes/baemin-redesign/HANDOFF.md` §5.1은 다음 포인트를 참조용으로 제공한다:
+
+- 브랜드 AppBar의 Jua 폰트 → **채택하지 않음** (Jua import 금지 per h6-direction non-goals)
+- 재료 필터 chip-rail + 정렬 시트 → **공유 컴포넌트 이미 리스타일 완료**, 잔여 inline 스타일만 교체
+- 테마 카루셀 1.5장 peek, gap 12, snap-x → **현행 구현 이미 유사**, 토큰 교체만
+- RecipeCard large card 오버레이 위치 → **현행 구조 유지**, 시각 토큰만 교체
+- 섹션 간 24px 간격, 헤더 18/700 → **참고**, 현행 Tailwind spacing이 이미 유사
+
+**주의**: 프로토타입은 REFERENCE ONLY다. 프로토타입과 공식 문서/workpack이 충돌하면 공식 문서/workpack이 우선한다. 특히:
+- Jua 폰트는 사용하지 않는다.
+- 프로토타입 JSX/HTML을 직접 복사하지 않는다.
+- `--cook-*` 토큰 값을 변경하지 않는다.
+- H1 정보 구조(D1-D4)를 변경하지 않는다.
+
+### 리트로핏 와이어프레임 (구조 보존 + 시각 교체)
+
+```
+┌─────────────────────────────────────────┐  ← 375px (모바일 기준)
+│  HOMECOOK                               │  ← AppHeader: --surface bg, --shadow-1
+│                                         │     brand text: --foreground, hover: --brand-deep
+│  ┌─────────────────────────────────┐    │  ← discovery panel: token surface/border/shadow
+│  │  🔍  레시피 제목 검색           │    │  ← --surface bg, --line border, --shadow-1
+│  │  [재료로 검색]                  │    │  ← color-mix(brand) inactive / --olive active
+│  └─────────────────────────────────┘    │
+│                                         │
+│  이번 주 인기 레시피          [N개]     │  ← 토큰 기반 text color (유지)
+│  ┌────────┐ ┌────────┐ ┌──────      │  ← Card primitive surface, --shadow-1
+│  │[thumb] │ │[thumb] │ │ peek       │  ← color-mix() thumbnail overlay
+│  │ 제목   │ │ 제목   │ │            │  ← Badge primitive source label
+│  └────────┘ └────────┘ └──────      │  ← right-fade: var(--background)
+│                                         │
+│  모든 레시피     [N개] [정렬 기준▾]  │  ← count badge: token surface/shadow
+│                                         │     sort button: token surface/line/shadow
+│  ┌─────────────┐  ┌─────────────┐       │  ← Card primitive, token shadow/border
+│  │  [SOURCE]   │  │  [SOURCE]   │       │  ← Badge primitive source
+│  │  #태그      │  │  #태그      │       │  ← --olive (유지)
+│  │  레시피 제목 │  │  레시피 제목 │       │  ← --foreground (유지)
+│  │  [N인분]    │  │  [N인분]    │       │  ← color-mix(brand) serving pill
+│  │  [조회][좋아요]│  │  [조회][좋아요]│  │  ← color-mix(foreground 4%) stats
+│  └─────────────┘  └─────────────┘       │
+│                                         │
+└─────────────────────────────────────────┘
+
+정렬 Sheet (mobile, 변경없는 구조 + 토큰 교체):
+┌─────────────────────────────────────────┐
+│  ░░░░░ scrim: token overlay ░░░░░░░░░  │
+│  ┌─────────────────────────────────┐    │  ← --panel bg, --radius-xl
+│  │  [drag indicator]               │    │  ← token surface-fill
+│  │  정렬 기준          [✕]        │    │  ← ModalHeader (이미 리스타일)
+│  │  모든 레시피 순서를 바꿔요      │    │
+│  │                                 │    │
+│  │  ○ 조회수순                     │    │  ← OptionRow (token 기반)
+│  │  ● 좋아요순   ✓                 │    │
+│  │  ○ 저장순                       │    │
+│  │  ○ 플래너 등록순                │    │
+│  └─────────────────────────────────┘    │
+└─────────────────────────────────────────┘
+```
+
+### 리트로핏 비적용 항목 (명시적 제외)
+
+| 항목 | 이유 |
+| --- | --- |
+| BottomTabs 리스타일 | 앱 전체 retrofit slice로 분리 |
+| AppShell 구조 변경 | 구조 보존 원칙 |
+| Jua 폰트 import | h6-direction non-goals |
+| 새 CSS 토큰 추가 | 기존 승인 토큰만 사용 |
+| `--cook-*` 토큰 값 변경 | 절대 가드레일 |
+| H1 D1-D4 구조 변경 | 잠긴 결정 |
+| `components/ui/*` 파일 수정 | 소비만 허용 |
+
+### 관련 리뷰 아티팩트
+
+- 리트로핏 설계 critique: `ui/designs/critiques/HOME-baemin-style-retrofit-critique.md`
+- Authority report (Stage 4/5 생성): `ui/designs/authority/BAEMIN_STYLE_HOME_RETROFIT-authority.md`
+- Evidence directory: `ui/designs/evidence/baemin-style/home-retrofit/`
