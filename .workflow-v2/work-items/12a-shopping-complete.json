@@ -74,9 +74,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "in_progress",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,

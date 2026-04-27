@@ -444,7 +444,7 @@
       "pr_path": "pending",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
-      "verification_status": "pending",
+      "verification_status": "passed",
       "required_checks": [
         "git diff --check",
         "pnpm validate:workflow-v2",
@@ -458,10 +458,10 @@
     {
       "id": "12a-shopping-complete",
       "preset": "vertical-slice-strict",
-      "branch": "docs/12a-shopping-complete",
-      "pr_path": null,
-      "lifecycle": "planned",
-      "approval_state": "not_started",
+      "branch": "feature/be-12a-shopping-complete",
+      "pr_path": "https://github.com/netsus/homecook/pull/241",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
       "verification_status": "pending",
       "required_checks": [
         "pnpm verify:backend",
@@ -469,7 +469,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs PR. Shopping completion core flow: POST /shopping/lists/{id}/complete (no pantry reflection yet), meals.status registered→shopping_done transition, is_completed=true, read-only lock, idempotency. Pantry reflection moved to slice 12b."
+      "notes": "Stage 2 backend implementation verified on feature/be-12a-shopping-complete with pnpm verify:backend. Adds POST /shopping/lists/{id}/complete core flow without pantry reflection, meals.status registered→shopping_done transition, is_completed=true, read-only lock coverage, and idempotency. Pantry reflection remains slice 12b."
     }
   ]
 }
