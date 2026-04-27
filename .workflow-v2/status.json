@@ -386,6 +386,22 @@
         "pnpm verify:frontend"
       ],
       "notes": "Stage 4 FE implementation complete by Claude. Codex Stage 5 design review passed and Claude final authority gate approved. Local required checks green including pnpm verify:frontend, authority evidence, exploratory QA evidence, real smoke presence, workflow-v2, and workpack validation. Awaiting Stage 6 PR closeout. Known risk: Badge primitive brand/muted variants have inherent contrast issues — HOME works around with inline style overrides. Linux visual baselines may need CI regeneration."
+    },
+    {
+      "id": "10b-shopping-share-text",
+      "preset": "vertical-slice-strict",
+      "branch": "feature/be-10b-shopping-share-text",
+      "pr_path": "pending",
+      "lifecycle": "ready_for_review",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 2 backend implemented GET /api/v1/shopping/lists/{list_id}/share-text with owner guard, pantry-excluded filtering, completed-list sharing, and Vitest coverage. Local gate passed: pnpm verify:backend."
     }
   ]
 }
