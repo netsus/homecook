@@ -673,7 +673,7 @@ describe("ShoppingDetailScreen", () => {
     });
   });
 
-  describe("Complete flow (slice 12a)", () => {
+  describe("Complete flow (slice 12a/12b)", () => {
     it("shows complete button for incomplete lists", async () => {
       vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
 
@@ -705,13 +705,37 @@ describe("ShoppingDetailScreen", () => {
       expect(screen.getByText(/완료됨/)).toBeTruthy();
     });
 
-    it("completes shopping list successfully", async () => {
+    it("shows pantry reflection popup when clicking complete button", async () => {
       vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
-      vi.spyOn(shoppingApi, "completeShoppingList").mockResolvedValue({
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const completeButton = screen.getByRole("button", { name: "장보기 완료" });
+      await user.click(completeButton);
+
+      // Should show pantry popup
+      await waitFor(() => {
+        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
+      });
+
+      expect(screen.getByText("모두 추가")).toBeTruthy();
+      expect(screen.getByText("선택 추가")).toBeTruthy();
+      expect(screen.getByText("추가 안 함")).toBeTruthy();
+    });
+
+    it("completes shopping list with 모두 추가 (undefined body)", async () => {
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+      const completeSpy = vi.spyOn(shoppingApi, "completeShoppingList").mockResolvedValue({
         completed: true,
         meals_updated: 3,
-        pantry_added: 0,
-        pantry_added_item_ids: [],
+        pantry_added: 1,
+        pantry_added_item_ids: ["item-1"],
       });
 
       const user = userEvent.setup();
@@ -725,9 +749,23 @@ describe("ShoppingDetailScreen", () => {
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
 
-      // Should show success message
+      // Popup should appear
       await waitFor(() => {
-        expect(screen.getByText(/장보기를 완료했어요.*3개 식사/)).toBeTruthy();
+        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
+      });
+
+      // "모두 추가" is selected by default, click confirm
+      const confirmButton = screen.getByRole("button", { name: "완료" });
+      await user.click(confirmButton);
+
+      // Should call API with undefined body (default policy)
+      await waitFor(() => {
+        expect(completeSpy).toHaveBeenCalledWith("list-1", undefined);
+      });
+
+      // Should show success message with pantry count
+      await waitFor(() => {
+        expect(screen.getByText(/장보기를 완료했어요.*3개 식사.*팬트리 1개 추가/)).toBeTruthy();
       });
 
       // Should hide complete button after success
@@ -739,11 +777,11 @@ describe("ShoppingDetailScreen", () => {
       expect(screen.getByText(/완료됨/)).toBeTruthy();
     });
 
-    it("shows singular meal count message for single meal", async () => {
+    it("completes shopping list with 추가 안 함 (empty array)", async () => {
       vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
-      vi.spyOn(shoppingApi, "completeShoppingList").mockResolvedValue({
+      const completeSpy = vi.spyOn(shoppingApi, "completeShoppingList").mockResolvedValue({
         completed: true,
-        meals_updated: 1,
+        meals_updated: 2,
         pantry_added: 0,
         pantry_added_item_ids: [],
       });
@@ -759,9 +797,237 @@ describe("ShoppingDetailScreen", () => {
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
 
+      // Popup should appear
       await waitFor(() => {
-        expect(screen.getByText(/장보기를 완료했어요.*1개 식사/)).toBeTruthy();
+        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
       });
+
+      // Click "추가 안 함"
+      const noneButton = screen.getByText("추가 안 함");
+      await user.click(noneButton);
+
+      // Click confirm
+      const confirmButton = screen.getByRole("button", { name: "완료" });
+      await user.click(confirmButton);
+
+      // Should call API with empty array
+      await waitFor(() => {
+        expect(completeSpy).toHaveBeenCalledWith("list-1", { add_to_pantry_item_ids: [] });
+      });
+
+      // Should show success message without pantry count
+      await waitFor(() => {
+        expect(screen.getByText(/장보기를 완료했어요.*2개 식사/)).toBeTruthy();
+      });
+    });
+
+    it("completes shopping list with 선택 추가 (selected items)", async () => {
+      const listWithMultipleChecked: ShoppingListDetail = {
+        ...mockListDetail,
+        items: [
+          {
+            id: "item-1",
+            ingredient_id: "ing-1",
+            display_text: "양파 2개",
+            amounts_json: [{ amount: 2, unit: "개" }],
+            is_checked: true,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 0,
+          },
+          {
+            id: "item-2",
+            ingredient_id: "ing-2",
+            display_text: "간장 2큰술",
+            amounts_json: [{ amount: 2, unit: "큰술" }],
+            is_checked: true,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 100,
+          },
+        ],
+      };
+
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithMultipleChecked);
+      const completeSpy = vi.spyOn(shoppingApi, "completeShoppingList").mockResolvedValue({
+        completed: true,
+        meals_updated: 1,
+        pantry_added: 1,
+        pantry_added_item_ids: ["item-1"],
+      });
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const completeButton = screen.getByRole("button", { name: "장보기 완료" });
+      await user.click(completeButton);
+
+      // Popup should appear
+      await waitFor(() => {
+        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
+      });
+
+      // Click "선택 추가"
+      const selectedButton = screen.getByText("선택 추가");
+      await user.click(selectedButton);
+
+      // Should show item list
+      await waitFor(() => {
+        expect(screen.getAllByText("양파").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("간장").length).toBeGreaterThan(0);
+      });
+
+      // Uncheck item-2 by clicking the button that contains both "간장" and the amounts
+      const itemButtons = screen.getAllByRole("button");
+      const item2Button = itemButtons.find((btn) => btn.textContent?.includes("간장") && btn.textContent?.includes("2큰술"));
+      expect(item2Button).toBeTruthy();
+      await user.click(item2Button!);
+
+      // Should show 1개 선택됨
+      await waitFor(() => {
+        expect(screen.getByText("1개 선택됨")).toBeTruthy();
+      });
+
+      // Click confirm
+      const confirmButton = screen.getByRole("button", { name: "완료" });
+      await user.click(confirmButton);
+
+      // Should call API with selected item only
+      await waitFor(() => {
+        expect(completeSpy).toHaveBeenCalledWith("list-1", {
+          add_to_pantry_item_ids: ["item-1"],
+        });
+      });
+
+      // Should show success message
+      await waitFor(() => {
+        expect(screen.getByText(/장보기를 완료했어요.*1개 식사.*팬트리 1개 추가/)).toBeTruthy();
+      });
+    });
+
+    it("cancels pantry popup without completing", async () => {
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+      const completeSpy = vi.spyOn(shoppingApi, "completeShoppingList");
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const completeButton = screen.getByRole("button", { name: "장보기 완료" });
+      await user.click(completeButton);
+
+      // Popup should appear
+      await waitFor(() => {
+        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
+      });
+
+      // Click cancel
+      const cancelButton = screen.getByRole("button", { name: "취소" });
+      await user.click(cancelButton);
+
+      // Popup should disappear
+      await waitFor(() => {
+        expect(screen.queryByText("팬트리에 추가할까요?")).toBeFalsy();
+      });
+
+      // API should not be called
+      expect(completeSpy).not.toHaveBeenCalled();
+
+      // Complete button should still be visible
+      expect(screen.getByRole("button", { name: "장보기 완료" })).toBeTruthy();
+    });
+
+    it("only shows checked and not-excluded items in pantry popup", async () => {
+      const mixedList: ShoppingListDetail = {
+        ...mockListDetail,
+        items: [
+          {
+            id: "item-1",
+            ingredient_id: "ing-1",
+            display_text: "양파 2개",
+            amounts_json: [{ amount: 2, unit: "개" }],
+            is_checked: true,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 0,
+          },
+          {
+            id: "item-2",
+            ingredient_id: "ing-2",
+            display_text: "대파 1단",
+            amounts_json: [{ amount: 1, unit: "단" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 100,
+          },
+          {
+            id: "item-3",
+            ingredient_id: "ing-3",
+            display_text: "간장 2큰술",
+            amounts_json: [{ amount: 2, unit: "큰술" }],
+            is_checked: true,
+            is_pantry_excluded: true,
+            added_to_pantry: false,
+            sort_order: 200,
+          },
+        ],
+      };
+
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mixedList);
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const completeButton = screen.getByRole("button", { name: "장보기 완료" });
+      await user.click(completeButton);
+
+      // Popup should appear
+      await waitFor(() => {
+        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
+      });
+
+      // Should show "(1개)" for eligible items
+      expect(screen.getByText(/체크한 모든 재료를 팬트리에 추가해요 \(1개\)/)).toBeTruthy();
+
+      // Click "선택 추가" to see item list
+      const selectedButton = screen.getByText("선택 추가");
+      await user.click(selectedButton);
+
+      // Only item-1 should be visible (checked and not excluded)
+      // The popup should show "양파" in the selection list
+      await waitFor(() => {
+        // Look for "양파" inside the popup item list (not in the main list)
+        const itemButtons = screen.getAllByRole("button");
+        const yangpaInPopup = itemButtons.some((btn) =>
+          btn.textContent?.includes("양파") &&
+          btn.textContent?.includes("2개") &&
+          !btn.getAttribute("aria-label") // main list buttons have aria-label
+        );
+        expect(yangpaInPopup).toBeTruthy();
+      });
+
+      // item-2 (unchecked) and item-3 (excluded) should not be in the popup
+      // Check by looking for buttons without aria-label (popup items)
+      const popupItemButtons = screen.getAllByRole("button").filter((btn) => !btn.getAttribute("aria-label"));
+      const hasDaepa = popupItemButtons.some((btn) => btn.textContent?.includes("대파"));
+      const hasGanjang = popupItemButtons.some((btn) => btn.textContent?.includes("간장"));
+      expect(hasDaepa).toBeFalsy();
+      expect(hasGanjang).toBeFalsy();
     });
 
     it("handles 401 error by redirecting to login", async () => {
@@ -784,6 +1050,15 @@ describe("ShoppingDetailScreen", () => {
 
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
+
+      // Popup should appear
+      await waitFor(() => {
+        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
+      });
+
+      // Confirm with default "모두 추가"
+      const confirmButton = screen.getByRole("button", { name: "완료" });
+      await user.click(confirmButton);
 
       await waitFor(() => {
         expect(mockPush).toHaveBeenCalledWith("/login?next=/shopping/lists/list-1");
@@ -811,6 +1086,15 @@ describe("ShoppingDetailScreen", () => {
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
 
+      // Popup should appear
+      await waitFor(() => {
+        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
+      });
+
+      // Confirm with default "모두 추가"
+      const confirmButton = screen.getByRole("button", { name: "완료" });
+      await user.click(confirmButton);
+
       await waitFor(() => {
         expect(screen.getByText("이미 완료된 장보기 기록이에요")).toBeTruthy();
       });
@@ -837,6 +1121,15 @@ describe("ShoppingDetailScreen", () => {
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
 
+      // Popup should appear
+      await waitFor(() => {
+        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
+      });
+
+      // Confirm with default "모두 추가"
+      const confirmButton = screen.getByRole("button", { name: "완료" });
+      await user.click(confirmButton);
+
       await waitFor(() => {
         expect(screen.getByText("서버 오류")).toBeTruthy();
       });
@@ -857,6 +1150,15 @@ describe("ShoppingDetailScreen", () => {
 
       const completeButton = screen.getByRole("button", { name: "장보기 완료" });
       await user.click(completeButton);
+
+      // Popup should appear
+      await waitFor(() => {
+        expect(screen.getByText("팬트리에 추가할까요?")).toBeTruthy();
+      });
+
+      // Confirm with default "모두 추가"
+      const confirmButton = screen.getByRole("button", { name: "완료" });
+      await user.click(confirmButton);
 
       await waitFor(() => {
         expect(screen.getByText("장보기를 완료하지 못했어요")).toBeTruthy();
