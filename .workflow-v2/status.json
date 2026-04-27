@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-28T00:00:00.000Z",
+  "updated_at": "2026-04-27T23:08:41.831Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -587,16 +587,16 @@
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-baemin-prototype-planner-week-parity",
       "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:frontend",
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack",
         "git diff --check"
       ],
-      "notes": "PLANNER_WEEK body prototype parity scored slice. No BE implementation. Stage 4 produces visual parity + evidence artifacts. Authority review required (anchor-extension). Target score >= 94, blocker 0. Exploratory QA required (high-risk). Predecessor contract slice baemin-prototype-planner-week-parity-contract is merged."
+      "notes": "PLANNER_WEEK body prototype parity scored slice. Stage 5 Codex design review and Claude final authority gate passed: visual-verdict score 96.99 >= 94, blocker 0, 34 retained capture files + prototype N/A slots. Stage 6/internal 6.5 closeout projected roadmap/design/status to merged/confirmed/reviewed. Repair loop resolved missing capture evidence, KST today highlight, floating CTA z-index, and CTA text visibility. closeout_phase=completed closeout_recovery=manual_patch:0|ci_resync:0 closeout_repair=codex:0|claude:4|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/PLANNER_WEEK-parity-authority.md,ui/designs/evidence/baemin-prototype-planner-week-parity/stage5-design-review.md,ui/designs/evidence/baemin-prototype-planner-week-parity/visual-verdict.json,.artifacts/qa/baemin-prototype-planner-week-parity/2026-04-27T22-43-38-610Z/exploratory-report.json,.artifacts/qa/baemin-prototype-planner-week-parity/2026-04-27T22-43-38-610Z/eval-result.json,.omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-stage4-evidence-repair-response-20260427T223249Z.md,.omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-stage5-repair-response-20260427T224523Z.md,.omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-stage5-cta-text-repair-response-20260427T225245Z.md,.omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-final-authority-gate-response-20260427T230127Z.md last_recovery_at=2026-04-27T23:08:41.831Z"
     }
   ]
 }

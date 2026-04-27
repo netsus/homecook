@@ -102,19 +102,19 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 - UI risk: `anchor-extension` (PLANNER_WEEK anchor screen의 시각 처리 전면 변경)
 - Anchor screen dependency: `PLANNER_WEEK`
 - Visual artifact: `ui/designs/authority/PLANNER_WEEK-parity-authority.md` (Stage 4에서 screenshot evidence 포함)
-- Authority status: `pending-review`
-- Notes: h7 parity program의 scored body slice. Stage 5 public review와 Claude final authority gate 완료 후 confirmed로 전환.
+- Authority status: `reviewed`
+- Notes: h7 parity program의 scored body slice. Stage 5 Codex review와 Claude final authority gate가 PASS했고, score 96.99 / blocker 0으로 confirmed 상태다.
 - Design addendum: `ui/designs/PLANNER_WEEK.md` (기존 문서에 prototype parity supersession 기록 있음)
 - Design critique: `ui/designs/critiques/PLANNER_WEEK-critique.md` (기존 critique 활용)
 
 ## Design Status
 
-- [x] 임시 UI (temporary)
+- [ ] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed)
 - [ ] N/A
 
-> Stage 1 시작 시 temporary. Stage 4 구현 + Stage 5/6 리뷰 통과 후 confirmed로 전환.
+> Stage 5 Codex 디자인 리뷰와 Claude final authority gate 통과. Stage 6 closeout 기준 confirmed.
 
 ## Source Links
 
@@ -193,16 +193,16 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > 이 슬라이스는 BE 구현 없음(Stage 2/3 스킵), Stage 4에서 PLANNER_WEEK body parity를 구현한다.
 
-- [ ] PLANNER_WEEK body skin parity (색상, typography, radius, shadow, spacing) <!-- omo:id=pw-parity-skin;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK body layout parity (toolbar, 주간 바, 요일 스트립, day card, slot row geometry) <!-- omo:id=pw-parity-layout;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK body interaction affordance parity (주간 이동, 셀 탭, CTA 버튼, empty slot 시각 표현) <!-- omo:id=pw-parity-interaction;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK body assets/copy parity (아이콘, 라벨, status chip, empty copy) <!-- omo:id=pw-parity-assets-copy;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK body state fidelity (7 required states 각각 prototype 시각 일치) <!-- omo:id=pw-parity-state-fidelity;stage=4;scope=frontend;review=5,6 -->
-- [ ] 3-way capture evidence 완성 (42 evidence slots) <!-- omo:id=pw-parity-capture-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Visual-verdict artifact 생성 (visual-verdict.md + .json) <!-- omo:id=pw-parity-verdict-artifact;stage=4;scope=frontend;review=5,6 -->
-- [ ] Authority report 생성 (screenshot evidence 기반) <!-- omo:id=pw-parity-authority-report;stage=4;scope=frontend;review=5,6 -->
-- [ ] Slice score >= 94, blocker count 0 <!-- omo:id=pw-parity-score-threshold;stage=4;scope=frontend;review=5,6 -->
-- [ ] Prototype-only exclusions가 deficit으로 채점되지 않음 확인 <!-- omo:id=pw-parity-exclusions-check;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 PLANNER_WEEK 기능 regression 없음 (주간 이동, 셀 탭, CTA 버튼, unauthorized gate, loading/empty/error) <!-- omo:id=pw-parity-no-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] Runtime app code에서 API/DB/status 변경 없음 확인 <!-- omo:id=pw-parity-no-contract-change;stage=4;scope=frontend;review=5,6 -->
-- [ ] `/planner/columns` CRUD가 재도입되지 않음 확인 <!-- omo:id=pw-parity-no-column-crud;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK body skin parity (색상, typography, radius, shadow, spacing) <!-- omo:id=pw-parity-skin;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK body layout parity (toolbar, 주간 바, 요일 스트립, day card, slot row geometry) <!-- omo:id=pw-parity-layout;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK body interaction affordance parity (주간 이동, 셀 탭, CTA 버튼, empty slot 시각 표현) <!-- omo:id=pw-parity-interaction;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK body assets/copy parity (아이콘, 라벨, status chip, empty copy) <!-- omo:id=pw-parity-assets-copy;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK body state fidelity (7 required states 각각 prototype 시각 일치) <!-- omo:id=pw-parity-state-fidelity;stage=4;scope=frontend;review=5,6 -->
+- [x] 3-way capture evidence 완성 (42 evidence slots) <!-- omo:id=pw-parity-capture-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Visual-verdict artifact 생성 (visual-verdict.md + .json) <!-- omo:id=pw-parity-verdict-artifact;stage=4;scope=frontend;review=5,6 -->
+- [x] Authority report 생성 (screenshot evidence 기반) <!-- omo:id=pw-parity-authority-report;stage=4;scope=frontend;review=5,6 -->
+- [x] Slice score >= 94, blocker count 0 <!-- omo:id=pw-parity-score-threshold;stage=4;scope=frontend;review=5,6 -->
+- [x] Prototype-only exclusions가 deficit으로 채점되지 않음 확인 <!-- omo:id=pw-parity-exclusions-check;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 PLANNER_WEEK 기능 regression 없음 (주간 이동, 셀 탭, CTA 버튼, unauthorized gate, loading/empty/error) <!-- omo:id=pw-parity-no-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] Runtime app code에서 API/DB/status 변경 없음 확인 <!-- omo:id=pw-parity-no-contract-change;stage=4;scope=frontend;review=5,6 -->
+- [x] `/planner/columns` CRUD가 재도입되지 않음 확인 <!-- omo:id=pw-parity-no-column-crud;stage=4;scope=frontend;review=5,6 -->

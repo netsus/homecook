@@ -279,7 +279,7 @@ describe("planner week screen", () => {
     expect(breakfastRow?.className).toContain("min-h-[44px]");
     expect(within(breakfastRow as HTMLElement).getByText("2인분")).toBeTruthy();
     expect(within(breakfastRow as HTMLElement).getByText("등록")).toBeTruthy();
-    expect(within(dinnerRow as HTMLElement).getByText(/비어 있음/).tagName).toBe("SPAN");
+    expect(within(dinnerRow as HTMLElement).getByText(/식사 추가/).tagName).toBe("SPAN");
   });
 
   it("uses the server-authenticated flag when browser session is not hydrated yet", async () => {
@@ -496,7 +496,7 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
-    expect(screen.getAllByText(/비어 있음/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/식사 추가/).length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByPlaceholderText("새 끼니 컬럼 이름")).toBeNull();
   });
 });
