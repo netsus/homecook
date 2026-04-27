@@ -672,4 +672,191 @@ describe("ShoppingDetailScreen", () => {
       });
     });
   });
+
+  describe("Complete flow (slice 12a)", () => {
+    it("shows complete button for incomplete lists", async () => {
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      expect(screen.getByRole("button", { name: "장보기 완료" })).toBeTruthy();
+    });
+
+    it("hides complete button for completed lists", async () => {
+      const completedList: ShoppingListDetail = {
+        ...mockListDetail,
+        is_completed: true,
+        completed_at: "2026-04-27T10:00:00.000Z",
+      };
+
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(completedList);
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      expect(screen.queryByRole("button", { name: "장보기 완료" })).toBeFalsy();
+      expect(screen.getByText(/완료됨/)).toBeTruthy();
+    });
+
+    it("completes shopping list successfully", async () => {
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+      vi.spyOn(shoppingApi, "completeShoppingList").mockResolvedValue({
+        completed: true,
+        meals_updated: 3,
+      });
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const completeButton = screen.getByRole("button", { name: "장보기 완료" });
+      await user.click(completeButton);
+
+      // Should show success message
+      await waitFor(() => {
+        expect(screen.getByText(/장보기를 완료했어요.*3개 식사/)).toBeTruthy();
+      });
+
+      // Should hide complete button after success
+      await waitFor(() => {
+        expect(screen.queryByRole("button", { name: "장보기 완료" })).toBeFalsy();
+      });
+
+      // Should show completed badge
+      expect(screen.getByText(/완료됨/)).toBeTruthy();
+    });
+
+    it("shows singular meal count message for single meal", async () => {
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+      vi.spyOn(shoppingApi, "completeShoppingList").mockResolvedValue({
+        completed: true,
+        meals_updated: 1,
+      });
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const completeButton = screen.getByRole("button", { name: "장보기 완료" });
+      await user.click(completeButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/장보기를 완료했어요.*1개 식사/)).toBeTruthy();
+      });
+    });
+
+    it("handles 401 error by redirecting to login", async () => {
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+
+      const authError = new Error("로그인이 필요해요") as shoppingApi.ShoppingApiError;
+      authError.status = 401;
+      authError.code = "UNAUTHORIZED";
+      authError.fields = [];
+      vi.spyOn(shoppingApi, "completeShoppingList").mockRejectedValue(authError);
+      vi.spyOn(shoppingApi, "isShoppingApiError").mockReturnValue(true);
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const completeButton = screen.getByRole("button", { name: "장보기 완료" });
+      await user.click(completeButton);
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith("/login?next=/shopping/lists/list-1");
+      });
+    });
+
+    it("handles 409 conflict error", async () => {
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+
+      const conflictError = new Error("이미 완료된 장보기 기록이에요") as shoppingApi.ShoppingApiError;
+      conflictError.status = 409;
+      conflictError.code = "CONFLICT";
+      conflictError.fields = [];
+      vi.spyOn(shoppingApi, "completeShoppingList").mockRejectedValue(conflictError);
+      vi.spyOn(shoppingApi, "isShoppingApiError").mockReturnValue(true);
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const completeButton = screen.getByRole("button", { name: "장보기 완료" });
+      await user.click(completeButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("이미 완료된 장보기 기록이에요")).toBeTruthy();
+      });
+    });
+
+    it("handles generic error", async () => {
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+
+      const serverError = new Error("서버 오류") as shoppingApi.ShoppingApiError;
+      serverError.status = 500;
+      serverError.code = "INTERNAL_ERROR";
+      serverError.fields = [];
+      vi.spyOn(shoppingApi, "completeShoppingList").mockRejectedValue(serverError);
+      vi.spyOn(shoppingApi, "isShoppingApiError").mockReturnValue(true);
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const completeButton = screen.getByRole("button", { name: "장보기 완료" });
+      await user.click(completeButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("서버 오류")).toBeTruthy();
+      });
+    });
+
+    it("handles non-API error", async () => {
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+      vi.spyOn(shoppingApi, "completeShoppingList").mockRejectedValue(new Error("Network failure"));
+      vi.spyOn(shoppingApi, "isShoppingApiError").mockReturnValue(false);
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const completeButton = screen.getByRole("button", { name: "장보기 완료" });
+      await user.click(completeButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("장보기를 완료하지 못했어요")).toBeTruthy();
+      });
+    });
+  });
 });

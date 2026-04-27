@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import { ContentState } from "@/components/shared/content-state";
 import {
+  completeShoppingList,
   fetchShoppingListDetail,
   fetchShoppingShareText,
   isShoppingApiError,
@@ -38,6 +39,8 @@ export function ShoppingDetailScreen({
   const [shareToast, setShareToast] = useState<{ type: "success" | "error" | "empty"; message: string } | null>(null);
   const [isReordering, setIsReordering] = useState(false);
   const [reorderError, setReorderError] = useState<string | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [completeToast, setCompleteToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const loadDetail = useCallback(async () => {
     setViewState("loading");
@@ -332,6 +335,64 @@ export function ShoppingDetailScreen({
     [listId, listDetail, router]
   );
 
+  const handleComplete = useCallback(async () => {
+    if (!listDetail || listDetail.is_completed) {
+      return;
+    }
+
+    setIsCompleting(true);
+    setCompleteToast(null);
+
+    try {
+      const { completed, meals_updated } = await completeShoppingList(listId);
+
+      if (completed) {
+        // Update local state to mark as completed
+        setListDetail((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            is_completed: true,
+            completed_at: new Date().toISOString(),
+          };
+        });
+
+        const mealsText = meals_updated === 1 ? "1개 식사" : `${meals_updated}개 식사`;
+        setCompleteToast({
+          type: "success",
+          message: `장보기를 완료했어요 (${mealsText} 상태 전이)`,
+        });
+        setTimeout(() => setCompleteToast(null), 3000);
+      }
+    } catch (error) {
+      if (isShoppingApiError(error)) {
+        if (error.status === 401) {
+          router.push(`/login?next=/shopping/lists/${listId}`);
+          return;
+        }
+        if (error.status === 409) {
+          setCompleteToast({
+            type: "error",
+            message: "이미 완료된 장보기 기록이에요",
+          });
+        } else {
+          setCompleteToast({
+            type: "error",
+            message: error.message,
+          });
+        }
+      } else {
+        setCompleteToast({
+          type: "error",
+          message: "장보기를 완료하지 못했어요",
+        });
+      }
+      setTimeout(() => setCompleteToast(null), 3000);
+    } finally {
+      setIsCompleting(false);
+    }
+  }, [listId, listDetail, router]);
+
   if (viewState === "loading") {
     return (
       <div className="flex min-h-screen flex-col">
@@ -475,6 +536,21 @@ export function ShoppingDetailScreen({
           </div>
         )}
 
+        {/* Complete toast */}
+        {completeToast && (
+          <div
+            className={`mb-4 rounded-xl px-4 py-3 text-sm font-semibold ${
+              completeToast.type === "error"
+                ? "bg-red-50 text-red-700"
+                : "bg-green-50 text-green-700"
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            {completeToast.message}
+          </div>
+        )}
+
         {/* Purchase section */}
         {!isEmpty && (
           <section className="mb-6">
@@ -520,6 +596,20 @@ export function ShoppingDetailScreen({
           </section>
         )}
       </div>
+
+      {/* Complete button */}
+      {!isReadOnly && (
+        <div className="sticky bottom-0 border-t border-[var(--line)] bg-[var(--panel)] px-4 py-4 backdrop-blur-lg">
+          <button
+            onClick={handleComplete}
+            disabled={isCompleting}
+            className="w-full rounded-full bg-[var(--olive)] py-4 text-base font-bold text-white hover:bg-[var(--olive)]/90 disabled:opacity-50"
+            type="button"
+          >
+            {isCompleting ? "완료 처리 중..." : "장보기 완료"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
