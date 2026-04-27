@@ -540,16 +540,16 @@
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-baemin-prototype-home-parity",
       "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:frontend",
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack",
         "git diff --check"
       ],
-      "notes": "HOME body prototype parity scored slice. Stage 1 docs created. No BE implementation (Stage 2/3 skip). Stage 4 produces visual parity + evidence artifacts. Authority review required (anchor-extension). Target score >= 95, blocker 0. closeout_phase=collecting"
+      "notes": "HOME body prototype parity scored slice. Stage 5 Codex design review and Claude final authority gate passed: visual-verdict score 96.99 >= 95, blocker 0, 36 retained capture files + 6 prototype N/A slots. Stage 6/internal 6.5 closeout projected roadmap/design/status to merged/confirmed/reviewed. closeout_phase=completed closeout_repair=codex:1|claude:2|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/HOME-parity-authority.md,ui/designs/evidence/baemin-prototype-home-parity/visual-verdict.json,.artifacts/qa/baemin-prototype-home-parity/stage5-20260428/exploratory-report.json last_recovery_at=2026-04-27T17:32:48.000Z Linux snapshots require CI follow-up if GitHub visual check requests platform baselines."
     }
   ]
 }

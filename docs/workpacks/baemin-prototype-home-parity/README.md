@@ -31,7 +31,7 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 
 ### Visual evidence 산출물
 
-- 3-way capture: foundation `capture-recipe.md` 규칙에 따라 7 states × 2 viewports × 3 layers = 42 captures
+- 3-way capture: foundation `capture-recipe.md` 규칙에 따라 42 evidence slots (7 states × 2 viewports × 3 layers): 36 capture files + 6 documented prototype N/A slots (loading/empty/error — static prototype cannot represent these states)
 - `ui/designs/evidence/baemin-prototype-home-parity/visual-verdict.md` + `.json`
 - Authority report: `ui/designs/authority/HOME-parity-authority.md`
 
@@ -87,16 +87,16 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 - UI risk: `anchor-extension` (HOME anchor screen의 시각 처리 전면 변경)
 - Anchor screen dependency: `HOME`
 - Visual artifact: `ui/designs/authority/HOME-parity-authority.md` (Stage 4에서 screenshot evidence 포함)
-- Authority status: `required`
-- Notes: h7 parity program의 scored body slice. Stage 4 완료 시 390px + 320px screenshot evidence 기반 authority review 필수. Blocker 0 + score >= 95 달성 후 confirmed 가능.
+- Authority status: `reviewed`
+- Notes: h7 parity program의 scored body slice. Stage 5 public review와 Claude final authority gate가 모두 통과했다. Blocker 0 + score 96.99로 confirmed.
 - Design addendum: `ui/designs/HOME.md` §Baemin Prototype Parity Addendum
 - Design critique: `ui/designs/critiques/HOME-critique.md` §Baemin Prototype Parity Critique (🟢 통과, blocker 0)
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 현재 h6 retrofit 결과물이 production baseline
+- [ ] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed) — Stage 5 review passed, Claude final authority gate approved (2026-04-28). Score 96.99 >= 95, blocker 0.
 - [ ] N/A
 
 > Stage 4 완료 후 `temporary → pending-review`. Stage 5 + final authority gate 통과 후 `confirmed`.
@@ -168,15 +168,15 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > 이 슬라이스는 BE 구현 없음(Stage 2/3 스킵), Stage 4에서 HOME body parity를 구현한다.
 
-- [ ] HOME body skin parity (색상, typography, radius, shadow, spacing) <!-- omo:id=home-parity-skin;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME body layout parity (섹션 geometry, card size, first viewport impression) <!-- omo:id=home-parity-layout;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME body interaction affordance parity (sort, filter, carousel, search 시각 표현) <!-- omo:id=home-parity-interaction;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME body assets/copy parity (아이콘, 라벨, placeholder, CTA copy) <!-- omo:id=home-parity-assets-copy;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME body state fidelity (7 required states 각각 prototype 시각 일치) <!-- omo:id=home-parity-state-fidelity;stage=4;scope=frontend;review=5,6 -->
-- [ ] 3-way capture evidence 완성 (7 states × 2 viewports × 3 layers) <!-- omo:id=home-parity-capture-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Visual-verdict artifact 생성 (visual-verdict.md + .json) <!-- omo:id=home-parity-verdict-artifact;stage=4;scope=frontend;review=5,6 -->
-- [ ] Authority report 생성 (screenshot evidence 기반) <!-- omo:id=home-parity-authority-report;stage=4;scope=frontend;review=5,6 -->
-- [ ] Slice score >= 95, blocker count 0 <!-- omo:id=home-parity-score-threshold;stage=4;scope=frontend;review=5,6 -->
-- [ ] Prototype-only exclusions가 deficit으로 채점되지 않음 확인 <!-- omo:id=home-parity-exclusions-check;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 HOME 기능 regression 없음 (검색, 필터, 정렬, 테마 carousel, 카드 탭) <!-- omo:id=home-parity-no-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] Runtime app code에서 API/DB/status 변경 없음 확인 <!-- omo:id=home-parity-no-contract-change;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME body skin parity (색상, typography, radius, shadow, spacing) <!-- omo:id=home-parity-skin;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME body layout parity (섹션 geometry, card size, first viewport impression) <!-- omo:id=home-parity-layout;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME body interaction affordance parity (sort, filter, carousel, search 시각 표현) <!-- omo:id=home-parity-interaction;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME body assets/copy parity (아이콘, 라벨, placeholder, CTA copy) <!-- omo:id=home-parity-assets-copy;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME body state fidelity (7 required states 각각 prototype 시각 일치) <!-- omo:id=home-parity-state-fidelity;stage=4;scope=frontend;review=5,6 -->
+- [x] 3-way capture evidence 완성 (42 slots: 36 files + 6 prototype N/A) <!-- omo:id=home-parity-capture-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Visual-verdict artifact 생성 (visual-verdict.md + .json) <!-- omo:id=home-parity-verdict-artifact;stage=4;scope=frontend;review=5,6 -->
+- [x] Authority report 생성 (screenshot evidence 기반) <!-- omo:id=home-parity-authority-report;stage=4;scope=frontend;review=5,6 -->
+- [x] Slice score >= 95, blocker count 0 <!-- omo:id=home-parity-score-threshold;stage=4;scope=frontend;review=5,6 -->
+- [x] Prototype-only exclusions가 deficit으로 채점되지 않음 확인 <!-- omo:id=home-parity-exclusions-check;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 HOME 기능 regression 없음 (검색, 필터, 정렬, 테마 carousel, 카드 탭) <!-- omo:id=home-parity-no-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] Runtime app code에서 API/DB/status 변경 없음 확인 <!-- omo:id=home-parity-no-contract-change;stage=4;scope=frontend;review=5,6 -->
