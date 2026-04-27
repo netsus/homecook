@@ -3,6 +3,7 @@
 > PLANNER_WEEK anchor screen visual retrofit to Baemin-style design language.
 > Dependencies: `h6-baemin-style-direction` (merged), `baemin-style-tokens-additive` (merged), `baemin-style-token-values` (merged), `baemin-style-shared-components` (merged), `baemin-style-home-retrofit` (merged), `baemin-style-recipe-detail-retrofit` (merged), `H2-planner-week-v2-redesign` (merged).
 > Stage 2/3 are N/A (no backend). Implementation is Stage 4 (Claude). Review is Stage 5/6 (Codex).
+> Superseded note: 2026-04-27 Baemin prototype parity contract removes the planner-level "가로 스크롤 없음" lock. This merged workpack remains historical evidence and must not block `docs/화면정의서-v1.5.1.md`.
 
 ## Goal
 

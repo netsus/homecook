@@ -12,6 +12,7 @@
 > - implementation reference: `components/planner/planner-week-screen.tsx`
 > 검토일: 2026-04-17
 > 검토자: product-design-authority (Stage 5 review by Codex)
+> 상태: superseded — 2026-04-27 Baemin prototype parity contract에서 planner-level "가로 스크롤 없음" 잠금은 제거됨. 이 문서는 H2 당시 authority 기록으로만 사용한다.
 
 ## Verdict
 

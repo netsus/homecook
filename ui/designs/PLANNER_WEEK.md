@@ -1,8 +1,9 @@
 # PLANNER_WEEK — 식단 플래너(위클리)
 
-> 기준 문서: 화면정의서 v1.3.0 §5 / 요구사항기준선 v1.6.3 §1-4 / API v1.2.2 §3
-> 갱신일: 2026-04-17
-> **H2 Stage 4 적용**: 2×2 grid → 세로 slot row 전환 완료 (branch: `feature/fe-planner-week-v2`)
+> 기준 문서: 화면정의서 v1.5.1 §5 / 요구사항기준선 v1.6.4 §1-4 / API v1.2.2 §3
+> 갱신일: 2026-04-27
+> **Prototype parity supersession**: H2/H4의 planner-level "가로 스크롤 없음", vertical-only day-card overview, 기존 slot-row layout lock은 Baemin prototype planner parity 범위에서 supersede됨.
+> **보존**: API/DB/상태 전이/auth/empty/error 계약과 의도치 않은 page-level horizontal overflow 금지는 유지.
 
 ---
 
@@ -92,9 +93,10 @@
 ### 3. Day Card
 
 - 모바일 기본 단위는 날짜별 `day card`다.
-- 같은 날짜의 `아침 / 점심 / 간식 / 저녁` 4끼가 같은 카드 안에서 **세로 slot row**로 나열된다.
-- **가로 스크롤 없음** — 세로 스크롤만 사용한다.
-- 390px 첫 화면에서 스크롤 없이 2일 이상 overview가 자연스럽게 보인다.
+- 같은 날짜의 `아침 / 점심 / 간식 / 저녁` 4끼가 같은 카드 안에서 읽힌다.
+- 카드 구조, 슬롯 구조, 스크롤 affordance는 Baemin prototype planner reference를 우선한다.
+- planner 내부 localized horizontal scroll, swipe, peek affordance는 prototype reference와 일치하는 경우 허용한다.
+- 390px 첫 화면의 overview 기준은 prototype reference와 동일한 첫인상을 우선한다.
 - 320px narrow에서도 레이아웃 붕괴 없이 slot row가 안정적으로 표시된다.
 
 ### 4. Meal Slot Row
@@ -115,7 +117,7 @@ slot row 구조: `[끼니명 고정폭] [식사명 flex-1 truncate] [인분 chip
 | `cook_done` | 요리 | success / green |
 
 - `is_leftover=true` meal은 별도 시각 강조 가능하지만 구조 자체를 바꾸지는 않는다.
-- 5번째 끼니(예: 야식) 추가 시 slot row 1행을 추가 — 가로 밀도 영향 없음.
+- 5번째 끼니(예: 야식) 추가 시 prototype reference와 동일한 밀도/스크롤 모델로 표시한다.
 
 ### 5. Slice06 연결 규칙
 
@@ -127,7 +129,9 @@ slot row 구조: `[끼니명 고정폭] [식사명 flex-1 truncate] [인분 chip
 ## 상호작용 규칙
 
 - 세로 스크롤은 day card 목록 탐색용이다.
-- 가로 스크롤 없음 — page-level / planner-level 모두 제거.
+- planner 내부 스크롤/탐색 모델은 Baemin prototype planner reference를 따른다.
+- planner-level localized horizontal scroll은 prototype reference와 일치하는 경우 허용한다.
+- 의도치 않은 page-level horizontal overflow는 계속 허용하지 않는다.
 - 주 이동은 요일 스트립 스와이프를 우선한다.
 - slot row 탭 (식사 있음) → `MEAL_SCREEN` 진입 (`07-meal-manage`가 닫는다).
 - slot row 탭 (빈 슬롯) → 현재 interaction 유지, 후속 slice에서 결정.
@@ -177,9 +181,9 @@ slot row 구조: `[끼니명 고정폭] [식사명 flex-1 truncate] [인분 chip
 
 > 추가일: 2026-04-27
 > 관련 workpack: `docs/workpacks/baemin-style-planner-week-retrofit/README.md`
-> 상태: Stage 1 문서화 완료, Stage 4 구현 대기
+> 상태: 기존 visual retrofit 기록. Baemin prototype parity contract(v1.5.1)가 이 보존 계약을 supersede함.
 
-이 섹션은 PLANNER_WEEK 화면에 배민 스타일 토큰을 적용하는 시각적 리트로핏 계획이다. H2/H4 day-card interaction contract와 기존 정보 구조를 보존하면서, 승인된 CSS 변수 토큰과 공유 UI 프리미티브로 교체한다.
+이 섹션은 PLANNER_WEEK 화면에 배민 스타일 토큰을 적용하는 시각적 리트로핏 기록이다. 당시에는 H2/H4 day-card interaction contract와 기존 정보 구조를 보존했지만, 2026-04-27 사용자 승인으로 Baemin prototype parity가 우선 기준이 됐다.
 
 ### 리트로핏 대상 파일
 
@@ -248,8 +252,8 @@ slot row 구조: `[끼니명 고정폭] [식사명 flex-1 truncate] [인분 chip
 
 ### 보존 계약
 
-- H2/H4 day-card interaction contract: 세로 스크롤 전용, 가로 스크롤 없음, 2일 이상 mobile overview
-- 정보 구조: hero → CTA toolbar → week context bar → weekday strip → day cards → slot rows
+- H2/H4 day-card interaction contract의 세로 스크롤 전용, 가로 스크롤 없음, 2일 이상 mobile overview 잠금은 v1.5.1에서 supersede됨
+- 정보 구조: Baemin prototype planner reference가 우선
 - Weekday strip swipe gesture 및 keyboard navigation
 - 모든 상태: checking / authenticated / unauthorized / loading / ready / empty / error
 - ContentState 컴포넌트 소비 패턴 (checking, unauthorized, error)
