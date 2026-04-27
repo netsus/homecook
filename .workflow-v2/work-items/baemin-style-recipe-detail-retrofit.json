@@ -78,9 +78,9 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending"
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed"
   },
   "out_of_scope": [
     "RECIPE_DETAIL information architecture changes (overview layout, utility metrics placement, CTA structure)",

@@ -142,7 +142,7 @@ RECIPE_DETAIL 화면의 기존 정보 구조(overview, 재료, 조리 단계, ut
 - UI risk: `high-risk` (anchor screen visual retrofit)
 - Anchor screen dependency: `RECIPE_DETAIL`
 - Visual artifact: RECIPE_DETAIL before/after screenshots at mobile default (390px), narrow (320px), desktop sanity; key active states (planner-add sheet open, save modal open, login gate modal, loading, error)
-- Authority status: required
+- Authority status: reviewed
 - Design wireframe: `ui/designs/RECIPE_DETAIL.md` — Baemin-Style Visual Retrofit Addendum 섹션
 - Design critique: `ui/designs/critiques/RECIPE_DETAIL-baemin-style-retrofit-critique.md`
 - Authority report (Stage 4/5): `ui/designs/authority/BAEMIN_STYLE_RECIPE_DETAIL_RETROFIT-authority.md`
