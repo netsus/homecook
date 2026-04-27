@@ -9,44 +9,27 @@ import { MOCK_RECIPE_CARD } from "@/lib/mock/recipes";
 import type { RecipeCardItem } from "@/types/recipe";
 
 describe("recipe card", () => {
-  it("moves tags above the title and keeps servings beside the recipe name", () => {
-    const { container } = render(<RecipeCard recipe={MOCK_RECIPE_CARD} />);
+  it("renders title, meta row, and tag pills in prototype parity layout", () => {
+    render(<RecipeCard recipe={MOCK_RECIPE_CARD} />);
 
     const title = screen.getByRole("heading", { name: MOCK_RECIPE_CARD.title });
     const card = title.closest("a");
 
     expect(card).not.toBeNull();
 
-    const titleRow = container.querySelector(".recipe-card-title-row");
-    const statsRow = container.querySelector(".recipe-card-stats-pills");
-    const tagRow = container.querySelector(".recipe-card-tags-heading");
+    // Title is rendered as h3
+    expect(title.tagName).toBe("H3");
 
-    expect(titleRow).not.toBeNull();
-    expect(statsRow).not.toBeNull();
-    expect(tagRow).not.toBeNull();
-
+    // Meta row contains servings info
+    const cardScope = within(card as HTMLElement);
     expect(
-      (tagRow as HTMLElement).compareDocumentPosition(titleRow as HTMLElement) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      cardScope.getByText(
+        new RegExp(`기본 ${MOCK_RECIPE_CARD.base_servings}인`),
+      ),
     ).toBeTruthy();
 
-    const titleScope = within(titleRow as HTMLElement);
-    const servingsBadge = titleScope.getByText(
-      `기본 ${MOCK_RECIPE_CARD.base_servings}인분`,
-    );
-
-    expect(servingsBadge).toBeTruthy();
-    expect(servingsBadge.className).toContain("bg-[color-mix(in_srgb,var(--brand)_8%,transparent)]");
-    expect(servingsBadge.style.color).toBe("color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))");
-    expect(servingsBadge.className).toContain("border-[color-mix(in_srgb,var(--brand)_14%,transparent)]");
-
-    const statsScope = within(statsRow as HTMLElement);
-    expect(statsScope.getByText("조회")).toBeTruthy();
-    expect(statsScope.getByText("좋아요")).toBeTruthy();
-    expect(statsScope.getByText("저장")).toBeTruthy();
-
-    const tagScope = within(tagRow as HTMLElement);
-    expect(tagScope.getByText(`#${MOCK_RECIPE_CARD.tags[0]}`)).toBeTruthy();
+    // Tags are rendered as pills
+    expect(cardScope.getByText(MOCK_RECIPE_CARD.tags[0])).toBeTruthy();
   });
 
   it("renders source badges with localized Korean labels instead of raw enums", () => {
@@ -55,16 +38,19 @@ describe("recipe card", () => {
         ...MOCK_RECIPE_CARD,
         id: "recipe-system",
         source_type: "system",
+        save_count: 50, // below threshold so source badge shows
       },
       {
         ...MOCK_RECIPE_CARD,
         id: "recipe-youtube",
         source_type: "youtube",
+        save_count: 50,
       },
       {
         ...MOCK_RECIPE_CARD,
         id: "recipe-manual",
         source_type: "manual",
+        save_count: 50,
       },
     ];
 

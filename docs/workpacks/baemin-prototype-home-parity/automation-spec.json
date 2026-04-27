@@ -2,23 +2,22 @@
   "slice_id": "baemin-prototype-home-parity",
   "execution_mode": "manual",
   "risk_class": "high",
-  "surface": "frontend",
-  "change_type": "product-frontend",
-  "backend_endpoints": [],
-  "backend_routes": [],
-  "frontend_screens": ["HOME"],
-  "required_states": [
-    "initial",
-    "scrolled-to-recipes-entry",
-    "sort-open",
-    "filter-active",
-    "loading",
-    "empty",
-    "error"
-  ],
-  "stage4_evidence_requirements": {
-    "viewports": ["390", "320"],
-    "capture_states": [
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/"
+    ],
+    "required_states": [
       "initial",
       "scrolled-to-recipes-entry",
       "sort-open",
@@ -27,36 +26,61 @@
       "empty",
       "error"
     ],
-    "capture_path_pattern": "qa/visual/parity/baemin-prototype-home-parity/<viewport>-HOME-<state>-<layer>.png",
-    "visual_verdict_path": "ui/designs/evidence/baemin-prototype-home-parity/visual-verdict",
-    "authority_report_path": "ui/designs/authority/HOME-parity-authority.md",
-    "score_threshold": 95,
-    "blocker_threshold": 0,
-    "score_weight": { "390": 0.70, "320": 0.30 }
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "visual-verdict-artifact",
+      "authority-report",
+      "capture-evidence-complete",
+      "score-threshold-met",
+      "no-api-db-status-change"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "HOME"
+      ],
+      "required_screens": [
+        "HOME"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/HOME.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/HOME-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "390-HOME-initial-after.png",
+        "320-HOME-initial-after.png",
+        "390-HOME-initial-prototype.png",
+        "320-HOME-initial-prototype.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/HOME-parity-authority.md"
+      ]
+    }
   },
-  "verify_commands": [
-    "pnpm verify:frontend",
-    "pnpm validate:workflow-v2",
-    "pnpm validate:workpack",
-    "git diff --check"
+  "external_smokes": [],
+  "blocked_conditions": [
+    "api-db-status-change",
+    "home-information-architecture-change",
+    "prototype-only-exclusion-scored-as-deficit",
+    "capture-evidence-missing",
+    "slice-score-below-threshold",
+    "unresolved-authority-blocker",
+    "exploratory-qa-not-run-no-skip-rationale"
   ],
-  "blocked_conditions": [],
-  "owners": {
-    "stage1": "claude",
-    "stage2": "skip",
-    "stage3": "skip",
-    "stage4": "claude",
-    "stage5": "codex",
-    "stage6": "codex"
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 3
   },
-  "dependencies": [
-    "h7-baemin-prototype-parity-direction",
-    "baemin-prototype-parity-foundation",
-    "baemin-style-tokens-additive",
-    "baemin-style-token-values",
-    "baemin-style-shared-components",
-    "baemin-style-home-retrofit"
-  ],
-  "contract_evolution": "not_required",
   "notes": "HOME body parity scored slice. No BE implementation. Stage 4 produces visual parity + evidence artifacts. Authority review required (anchor-extension)."
 }

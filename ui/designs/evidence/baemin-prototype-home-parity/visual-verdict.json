@@ -1,0 +1,275 @@
+{
+  "slice_id": "baemin-prototype-home-parity",
+  "surface": "HOME",
+  "captured_at": "2026-04-28T01:52:00.000Z",
+  "viewports": [
+    { "width": 390, "height": 844 },
+    { "width": 320, "height": 568 }
+  ],
+  "states": [
+    {
+      "state_id": "initial",
+      "viewports": {
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-initial-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-initial-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-initial-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 98
+          }
+        },
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-initial-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-initial-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-initial-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 97
+          }
+        }
+      },
+      "notes": "Full 3-way capture. Approved divergences: brand color (#ED7470 vs #2AC1BC), background (#fff9f2 vs #FFFFFF), foreground (#1a1a2e vs #212529), olive vs teal, font stack. Prototype-only exclusions (hero greeting, promo strip, bottom tabs, inline ingredient chips) visible in prototype layer but not scored as deficits."
+    },
+    {
+      "state_id": "scrolled-to-recipes-entry",
+      "viewports": {
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-scrolled-to-recipes-entry-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-scrolled-to-recipes-entry-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-scrolled-to-recipes-entry-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 98
+          }
+        },
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-scrolled-to-recipes-entry-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-scrolled-to-recipes-entry-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-scrolled-to-recipes-entry-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 97
+          }
+        }
+      },
+      "notes": "Full 3-way capture. Recipe section header + first card visible. Layout geometry matches prototype card grid pattern."
+    },
+    {
+      "state_id": "sort-open",
+      "viewports": {
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-sort-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-sort-open-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-sort-open-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 97
+          }
+        },
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-sort-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-sort-open-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-sort-open-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 96
+          }
+        }
+      },
+      "notes": "Full 3-way capture. Prototype shows sort as inline tab-like control; production uses h5 modal system bottom sheet overlay. Semantic drift per prototype-exclusion-inventory.md not scored as deficit."
+    },
+    {
+      "state_id": "filter-active",
+      "viewports": {
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-filter-active-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-filter-active-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-filter-active-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 97
+          }
+        },
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-filter-active-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-filter-active-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-filter-active-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 96
+          }
+        }
+      },
+      "notes": "Full 3-way capture. Prototype uses inline ingredient chips; production uses modal-based INGREDIENT_FILTER_MODAL with summary bar. Inline chips are excluded per prototype-exclusion-inventory.md."
+    },
+    {
+      "state_id": "loading",
+      "viewports": {
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-loading-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-loading-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 97
+          }
+        },
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-loading-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-loading-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 96
+          }
+        }
+      },
+      "notes": "Prototype does not support loading state — static demo renders instantly with no fetch delay. Prototype layer N/A. Skeleton cards (theme carousel + recipe list) match production design system pulse skeleton pattern."
+    },
+    {
+      "state_id": "empty",
+      "viewports": {
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-empty-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-empty-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 97
+          }
+        },
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-empty-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-empty-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 96
+          }
+        }
+      },
+      "notes": "Prototype does not support empty state — hardcoded demo data always populates recipes. Prototype layer N/A. Empty state uses shared ContentState component with CTA."
+    },
+    {
+      "state_id": "error",
+      "viewports": {
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-error-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/390-HOME-error-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 97
+          }
+        },
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-error-current.png",
+            "after": "qa/visual/parity/baemin-prototype-home-parity/320-HOME-error-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 96
+          }
+        }
+      },
+      "notes": "Prototype does not support error state — no fetch failure path in static demo. Prototype layer N/A. Error state uses shared ContentState component with retry CTA."
+    }
+  ],
+  "scores": {
+    "screen_score_390": 97.29,
+    "screen_score_320": 96.29,
+    "slice_score": 96.99
+  },
+  "verdict": {
+    "threshold": 95,
+    "pass": true,
+    "blocker_count": 0,
+    "waiver": null
+  },
+  "authority_blockers": []
+}

@@ -14,74 +14,73 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
 
   return (
     <Link
-      className="group flex min-h-full flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-2)] transition hover:-translate-y-1"
+      className="group flex min-h-full flex-col overflow-hidden rounded-[var(--radius-md)] bg-[var(--surface)] shadow-[var(--shadow-2)] transition hover:-translate-y-0.5"
       href={`/recipe/${recipe.id}`}
     >
       <div
-        className="relative min-h-[110px] border-b border-[var(--line)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--brand)_22%,transparent),color-mix(in_srgb,var(--background)_85%,transparent),color-mix(in_srgb,var(--olive)_18%,transparent))]"
+        className="relative bg-[linear-gradient(135deg,color-mix(in_srgb,var(--brand)_22%,transparent),color-mix(in_srgb,var(--background)_85%,transparent),color-mix(in_srgb,var(--olive)_18%,transparent))]"
         style={
           recipe.thumbnail_url
             ? {
                 backgroundImage: `linear-gradient(color-mix(in srgb, var(--foreground) 6%, transparent),color-mix(in srgb, var(--foreground) 22%, transparent)),url(${recipe.thumbnail_url})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
+                aspectRatio: "16/9",
               }
-            : undefined
+            : { aspectRatio: "16/9" }
         }
       >
-        <Badge variant="brand" className="absolute left-3 top-3 uppercase tracking-[0.16em]" style={{ color: 'color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))' }}>
-          {formatRecipeSourceLabel(recipe.source_type)}
-        </Badge>
+        {recipe.save_count > 100 ? (
+          <Badge
+            variant="brand"
+            className="absolute left-3 top-3 text-[10px] font-bold"
+          >
+            🔥 인기
+          </Badge>
+        ) : (
+          <Badge
+            variant="brand"
+            className="absolute left-3 top-3 uppercase tracking-[0.14em]"
+            style={{
+              color:
+                "color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))",
+            }}
+          >
+            {formatRecipeSourceLabel(recipe.source_type)}
+          </Badge>
+        )}
       </div>
-      <div className="flex flex-1 flex-col gap-3 px-4 py-4">
-        <div className="space-y-1">
-          <div className="recipe-card-tags-heading flex flex-wrap gap-x-2 gap-y-1">
-            {recipe.tags.slice(0, 3).map((tag) => (
-              <span
-                key={tag}
-                className="text-[10px] font-semibold tracking-[0.04em] text-[var(--olive)]"
-              >
-                #{tag}
-              </span>
-            ))}
-            {remainingTagCount ? (
-              <span className="text-[10px] font-semibold tracking-[0.04em] text-[var(--muted)]">
-                +{remainingTagCount}
-              </span>
-            ) : null}
-          </div>
-          <div className="recipe-card-title-row flex items-start justify-between gap-2">
-            <h3 className="line-clamp-2 flex-1 text-base font-semibold text-[var(--foreground)]">
-              {recipe.title}
-            </h3>
-            <span
-              className="shrink-0 rounded-[var(--radius-full)] border border-[color-mix(in_srgb,var(--brand)_14%,transparent)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-2.5 py-1 text-[10px] font-semibold"
-              style={{ color: 'color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))' }}
-            >
-              기본 {recipe.base_servings}인분
-            </span>
-          </div>
-        </div>
-        <dl className="recipe-card-stats-pills mt-auto flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--muted)]">
-          <div className="inline-flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--surface-fill)] px-2 py-1">
-            <dt>조회</dt>
-            <dd className="font-semibold text-[var(--foreground)]">
-              {formatCount(recipe.view_count)}
-            </dd>
-          </div>
-          <div className="inline-flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--surface-fill)] px-2 py-1">
-            <dt>좋아요</dt>
-            <dd className="font-semibold text-[var(--foreground)]">
+      <div className="flex flex-1 flex-col gap-2.5 px-4 py-4">
+        <h3 className="line-clamp-2 text-lg font-bold leading-snug text-[var(--foreground)]">
+          {recipe.title}
+        </h3>
+        <div className="flex items-center gap-1.5 text-[13px] text-[var(--muted)]">
+          <span>
+            ⭐{" "}
+            <span className="font-semibold text-[var(--foreground)]">
               {formatCount(recipe.like_count)}
-            </dd>
-          </div>
-          <div className="inline-flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--surface-fill)] px-2 py-1">
-            <dt>저장</dt>
-            <dd className="font-semibold text-[var(--foreground)]">
-              {formatCount(recipe.save_count)}
-            </dd>
-          </div>
-        </dl>
+            </span>
+          </span>
+          <span className="text-[var(--line)]">·</span>
+          <span>{formatCount(recipe.save_count)}저장</span>
+          <span className="text-[var(--line)]">·</span>
+          <span>기본 {recipe.base_servings}인</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {recipe.tags.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="rounded-[var(--radius-full)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-2)]"
+            >
+              {tag}
+            </span>
+          ))}
+          {remainingTagCount ? (
+            <span className="rounded-[var(--radius-full)] bg-[var(--surface-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--muted)]">
+              +{remainingTagCount}
+            </span>
+          ) : null}
+        </div>
       </div>
     </Link>
   );
