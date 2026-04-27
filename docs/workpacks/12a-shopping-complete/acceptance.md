@@ -25,7 +25,7 @@
 
 ## Error / Permission
 - [ ] loading 상태가 있다 (완료 API 호출 중) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태는 N/A (장보기 리스트 자체는 slice 09/10a에서 처리) <!-- omo:id=accept-empty-na;stage=4;scope=frontend;review=6;waived=true;waived_by=claude;waived_stage=1;waived_reason=na-empty-state -->
+- [ ] empty 상태는 N/A (장보기 리스트 자체는 slice 09/10a에서 처리, 완료 버튼 자체는 리스트 존재 전제) <!-- omo:id=accept-empty-na;stage=4;scope=frontend;review=6 -->
 - [ ] error 상태가 있다 (완료 API 호출 실패 시) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
 - [ ] unauthorized 처리 흐름이 있다 (401 시) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=6 -->
 - [ ] conflict 처리 흐름이 있다 (409 시, 완료 후 수정 시도) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
