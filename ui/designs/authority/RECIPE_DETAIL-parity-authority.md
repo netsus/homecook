@@ -177,4 +177,4 @@ None. Stage 5 found and repaired two small-mobile blockers before confirmation: 
 
 ## OS-Specific Snapshot Note
 
-Darwin-platform visual regression snapshots were updated locally. Linux-platform RECIPE_DETAIL snapshots were refreshed from PR #270 CI visual actuals after the first visual check exposed stale Linux baselines.
+Darwin-platform visual regression snapshots were updated locally. Linux-platform RECIPE_DETAIL and login-gate snapshots were refreshed from PR #270 CI visual actuals after GitHub visual checks exposed stale Linux baselines.
