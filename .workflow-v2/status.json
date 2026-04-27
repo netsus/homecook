@@ -422,11 +422,11 @@
     {
       "id": "baemin-style-recipe-detail-retrofit",
       "preset": "vertical-slice-strict",
-      "branch": "docs/baemin-style-recipe-detail-retrofit",
-      "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-baemin-style-recipe-detail-retrofit",
+      "pr_path": "https://github.com/netsus/homecook/pull/237",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "git diff --check",
         "pnpm validate:workflow-v2",
@@ -435,7 +435,7 @@
         "pnpm lint",
         "pnpm verify:frontend"
       ],
-      "notes": "Stage 1 workpack docs created on 2026-04-27. RECIPE_DETAIL anchor screen Baemin-style visual retrofit. Dependencies all merged. Stage 4 implementation pending."
+      "notes": "Internal 6.5 projection sync after Stage 6 Codex review. PR #237 current head checks green before projection sync; local required checks passed including pnpm verify:frontend. Claude final authority approved. CI visual failed once due stale Linux login-gate snapshots, then passed after Linux baseline refresh. Manual Only remains user final visual-feel confirmation after merge."
     }
   ]
 }
