@@ -386,6 +386,22 @@
         "pnpm verify:frontend"
       ],
       "notes": "Stage 1 workpack docs for HOME anchor screen Baemin-style visual retrofit. Dependencies: h6-direction, tokens-additive, token-values, shared-components, h1-home-first-impression (all merged). Implementation branch: feature/fe-baemin-style-home-retrofit."
+    },
+    {
+      "id": "10b-shopping-share-text",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/10b-shopping-share-text",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 workpack docs for shopping share text generation. Dependencies: 10a-shopping-detail-interact (merged). Low-risk UI extension of existing confirmed SHOPPING_DETAIL screen."
     }
   ]
 }
