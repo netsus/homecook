@@ -31,7 +31,7 @@
 
 - [x] Scored parity 슬라이스용 공통 fixture baseline 규칙이 정의되어 있다 <!-- omo:id=found-accept-fixture-baseline-defined;stage=4;scope=frontend;review=5,6 -->
 - [x] Route-entry point 규칙이 surface별로 정의되어 있다 <!-- omo:id=found-accept-route-entry-defined;stage=4;scope=frontend;review=5,6 -->
-- [x] 이 sliced에서 fixture 변경이나 real DB smoke가 필요하지 않다 <!-- omo:id=found-accept-no-fixture-change;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 slice에서 fixture 변경이나 real DB smoke가 필요하지 않다 <!-- omo:id=found-accept-no-fixture-change;stage=4;scope=frontend;review=5,6 -->
 
 ## Design Authority / Visual Evidence
 

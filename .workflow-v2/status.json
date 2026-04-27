@@ -336,17 +336,17 @@
     {
       "id": "baemin-prototype-parity-foundation",
       "preset": "docs-only",
-      "branch": "docs/baemin-prototype-parity-foundation",
+      "branch": "feature/fe-baemin-prototype-parity-foundation",
       "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "git diff --check",
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack"
       ],
-      "notes": "Foundation for scored parity slices: 3-way capture recipe, fixture/route-entry rules, artifact schema, token mapping scope, exclusion inventory. No app-wide screen rewrite. Depends on h7 direction gate."
+      "notes": "Final closeout projection prepared after Claude Stage 4 implementation and repair plus Codex Stage 5/6 review. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 last_recovery_at=2026-04-27T15:45:00.000Z Artifacts define 3-way capture recipe, fixture/route-entry rules, viewport-keyed visual-verdict schema, token mapping scope, and prototype exclusion inventory. Runtime app code unchanged."
     },
     {
       "id": "baemin-style-tokens-additive",
