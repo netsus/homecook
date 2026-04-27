@@ -38,29 +38,39 @@ jobs:
         run: pnpm audit --audit-level high
 
   snyk:
-    if: ${{ secrets.SNYK_TOKEN != '' }}
     runs-on: ubuntu-latest
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
     steps:
+      - name: Skip Snyk when token is absent
+        if: ${{ env.SNYK_TOKEN == '' }}
+        run: echo "SNYK_TOKEN is not configured; skipping Snyk."
+
       - name: Checkout
+        if: ${{ env.SNYK_TOKEN != '' }}
         uses: actions/checkout@v4
 
       - name: Setup pnpm
+        if: ${{ env.SNYK_TOKEN != '' }}
         uses: pnpm/action-setup@v4
         with:
           version: 10.32.1
 
       - name: Setup Node
+        if: ${{ env.SNYK_TOKEN != '' }}
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
 
       - name: Install dependencies
+        if: ${{ env.SNYK_TOKEN != '' }}
         run: pnpm install --frozen-lockfile
 
       - name: Run Snyk
+        if: ${{ env.SNYK_TOKEN != '' }}
         uses: snyk/actions/node@master
         env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          SNYK_TOKEN: ${{ env.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high
