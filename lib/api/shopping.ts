@@ -7,9 +7,10 @@ import type {
   ShoppingListItemUpdateBody,
   ShoppingListSummary,
   ShoppingPreviewData,
+  ShoppingShareTextData,
 } from "@/types/shopping";
 
-interface ShoppingApiError extends Error {
+export interface ShoppingApiError extends Error {
   status: number;
   code: string;
   fields: ApiError["fields"];
@@ -96,4 +97,8 @@ export async function updateShoppingListItem(
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+export async function fetchShoppingShareText(listId: string) {
+  return requestShopping<ShoppingShareTextData>(`/api/v1/shopping/lists/${listId}/share-text`);
 }

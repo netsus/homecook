@@ -8,13 +8,13 @@
 > Claude가 rebuttal을 수용해 닫은 항목은 checkbox를 유지한 채 `waived=true;waived_by=claude;waived_stage=<3|5|6>;waived_reason=<slug>` metadata를 추가한다.
 
 ## Happy Path
-- [ ] 대표 사용자 흐름이 정상 동작한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
+- [x] 대표 사용자 흐름이 정상 동작한다 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
   - SHOPPING_DETAIL 진입 → `[공유(텍스트)]` 버튼 탭 → 공유 텍스트 생성 → 클립보드 복사 또는 OS 공유 시트
-- [ ] 문서 기준 화면 상태와 액션이 맞다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
+- [x] 문서 기준 화면 상태와 액션이 맞다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
   - 상단 액션 영역에 `[공유(텍스트)]` 버튼 존재
   - 버튼 탭 시 공유 텍스트가 생성되어 공유/복사됨
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
   - `GET /shopping/lists/{id}/share-text` 응답 타입 `{ text: string }`
 
 ## State / Policy
@@ -26,15 +26,15 @@
   - 동일 리스트 반복 호출 시 항목 상태 불변이면 동일 텍스트 반환
 
 ## Error / Permission
-- [ ] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-  - 공유 텍스트 API 호출 중 버튼 disabled 또는 spinner
-- [ ] empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+  - 공유 텍스트 API 호출 중 버튼 disabled + "공유 중..." 텍스트
+- [x] empty 상태가 있다 <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
   - 구매 섹션 항목이 0개일 때 (모두 `is_pantry_excluded=true`) 프론트엔드가 empty-state UX를 결정적으로 표시하고, 팬트리 제외 항목을 공유 텍스트에 포함하지 않는다
-- [ ] error 상태가 있다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-  - API 호출 실패 시 에러 toast/snackbar
-- [ ] unauthorized 처리 흐름이 있다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-  - 401 발생 시 로그인 안내 (실질적으로 드물지만 처리 포함)
-- [ ] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+  - API 호출 실패 시 에러 toast (빨간 배경)
+- [x] unauthorized 처리 흐름이 있다 <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+  - 401 발생 시 `/login?next=...`로 리다이렉트
+- [x] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
   - 상위 플로우(장보기 생성)에서 이미 로그인 게이트 통과, N/A로 처리 가능
 
 ## Data Integrity
@@ -55,8 +55,8 @@
   - 10a에서 이미 확보된 shopping 관련 테이블/seed 활용
 
 ## Manual QA
-- verifier: (Stage 4에서 기입)
-- environment: (Stage 4에서 기입)
+- verifier: Claude (Stage 4 Vitest)
+- environment: jsdom (vitest), clipboard mock
 - scenarios:
   1. SHOPPING_DETAIL 진입 → `[공유(텍스트)]` 버튼 확인
   2. 구매 섹션 항목이 있는 리스트에서 공유 → 텍스트에 구매 항목만 포함 확인
@@ -76,10 +76,10 @@
   - 완료 리스트에서도 공유 텍스트 생성 가능
 
 ### Playwright
-- [ ] 실제 사용자 흐름, 라우팅, 모달, 권한 게이트가 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
-  - SHOPPING_DETAIL 진입 → `[공유(텍스트)]` 버튼 탭 → 클립보드 복사 확인
-- [ ] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
-  - N/A (외부 연동 없음)
+- [x] 실제 사용자 흐름, 라우팅, 모달, 권한 게이트가 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+  - SHOPPING_DETAIL 진입 → `[공유(텍스트)]` 버튼 탭 → 클립보드 복사 확인 (`tests/e2e/slice-10b-shopping-share-text.spec.ts`)
+- [x] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
+  - Web Share OS 시트 호출은 Manual Only (HTTPS + 실디바이스 전용). 클립보드 fallback은 deterministic Playwright 커버. 외부 연동 없음.
 
 ### Manual Only
 - [ ] 자동화하지 않은 외부 서비스 또는 운영 의존 시나리오가 별도로 적혀 있다

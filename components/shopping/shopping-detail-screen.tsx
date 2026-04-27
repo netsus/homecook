@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { ContentState } from "@/components/shared/content-state";
 import {
   fetchShoppingListDetail,
+  fetchShoppingShareText,
   isShoppingApiError,
   updateShoppingListItem,
 } from "@/lib/api/shopping";
@@ -32,6 +33,8 @@ export function ShoppingDetailScreen({
   const [listDetail, setListDetail] = useState<ShoppingListDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [updatingItem, setUpdatingItem] = useState<UpdateState | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareToast, setShareToast] = useState<{ type: "success" | "error" | "empty"; message: string } | null>(null);
 
   const loadDetail = useCallback(async () => {
     setViewState("loading");
@@ -197,6 +200,54 @@ export function ShoppingDetailScreen({
     [listId, listDetail]
   );
 
+  const handleShare = useCallback(async () => {
+    if (!listDetail) return;
+
+    const hasPurchaseItems = listDetail.items.some((item) => !item.is_pantry_excluded);
+    if (!hasPurchaseItems) {
+      setShareToast({ type: "empty", message: "공유할 구매 항목이 없어요" });
+      setTimeout(() => setShareToast(null), 3000);
+      return;
+    }
+
+    setIsSharing(true);
+    setShareToast(null);
+
+    try {
+      const { text } = await fetchShoppingShareText(listId);
+
+      if (typeof navigator !== "undefined" && navigator.share) {
+        try {
+          await navigator.share({ text });
+          setShareToast({ type: "success", message: "공유되었습니다" });
+        } catch (shareError) {
+          if (!(shareError instanceof Error && shareError.name === "AbortError")) {
+            await navigator.clipboard.writeText(text);
+            setShareToast({ type: "success", message: "복사되었습니다" });
+          }
+        }
+      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        setShareToast({ type: "success", message: "복사되었습니다" });
+      } else {
+        setShareToast({ type: "error", message: "이 환경에서는 공유할 수 없어요" });
+      }
+    } catch (error) {
+      if (isShoppingApiError(error)) {
+        if (error.status === 401) {
+          router.push(`/login?next=/shopping/lists/${listId}`);
+          return;
+        }
+        setShareToast({ type: "error", message: error.message });
+      } else {
+        setShareToast({ type: "error", message: "공유 텍스트를 만들지 못했어요" });
+      }
+    } finally {
+      setIsSharing(false);
+      setTimeout(() => setShareToast(null), 3000);
+    }
+  }, [listId, listDetail, router]);
+
   if (viewState === "loading") {
     return (
       <div className="flex min-h-screen flex-col">
@@ -265,13 +316,32 @@ export function ShoppingDetailScreen({
           </button>
           <h1 className="text-xl font-extrabold tracking-tight">장보기 상세</h1>
           <button
-            className="flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold text-[var(--olive)] hover:bg-black/5"
+            onClick={handleShare}
+            disabled={isSharing}
+            className="flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold text-[var(--olive)] hover:bg-black/5 disabled:opacity-50"
             type="button"
+            aria-label="공유(텍스트)"
           >
-            공유
+            {isSharing ? "공유 중..." : "공유"}
           </button>
         </div>
       </header>
+
+      {shareToast && (
+        <div
+          className={`mx-4 mt-2 rounded-xl px-4 py-3 text-sm font-semibold ${
+            shareToast.type === "error"
+              ? "bg-red-50 text-red-700"
+              : shareToast.type === "empty"
+                ? "bg-yellow-50 text-yellow-700"
+                : "bg-green-50 text-green-700"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          {shareToast.message}
+        </div>
+      )}
 
       {/* Title and date range */}
       <div className="border-b border-[var(--line)] px-4 py-4">

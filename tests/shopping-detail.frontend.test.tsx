@@ -293,12 +293,166 @@ describe("ShoppingDetailScreen", () => {
 
     consoleErrorSpy.mockRestore();
   });
-});
 
-declare module "@/lib/api/shopping" {
-  export interface ShoppingApiError extends Error {
-    status: number;
-    code: string;
-    fields: Array<{ field: string; message: string }>;
-  }
-}
+  describe("share text (10b)", () => {
+    let mockWriteText: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      mockWriteText = vi.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, "share", {
+        value: undefined,
+        writable: true,
+        configurable: true,
+      });
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText: mockWriteText },
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    it("calls share-text API and copies to clipboard on share button click", async () => {
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+      vi.spyOn(shoppingApi, "fetchShoppingShareText").mockResolvedValue({
+        text: "📋 4월 12일 장보기\n\n☐ 양파 2개",
+      });
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const shareButton = screen.getByRole("button", { name: /공유\(텍스트\)/ });
+      await user.click(shareButton);
+
+      await waitFor(() => {
+        expect(shoppingApi.fetchShoppingShareText).toHaveBeenCalledWith("list-1");
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("복사되었습니다")).toBeTruthy();
+      });
+    });
+
+    it("shows empty feedback when purchase section has no items", async () => {
+      const emptyList: ShoppingListDetail = {
+        ...mockListDetail,
+        items: [
+          {
+            id: "item-1",
+            ingredient_id: "ing-1",
+            display_text: "양파 2개",
+            amounts_json: [{ amount: 2, unit: "개" }],
+            is_checked: false,
+            is_pantry_excluded: true,
+            added_to_pantry: false,
+            sort_order: 0,
+          },
+        ],
+      };
+
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(emptyList);
+      const shareTextSpy = vi.spyOn(shoppingApi, "fetchShoppingShareText");
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/팬트리에 이미 있어서/)).toBeTruthy();
+      });
+
+      const shareButton = screen.getByRole("button", { name: /공유\(텍스트\)/ });
+      await user.click(shareButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("공유할 구매 항목이 없어요")).toBeTruthy();
+      });
+
+      expect(shareTextSpy).not.toHaveBeenCalled();
+    });
+
+    it("allows sharing for completed read-only lists", async () => {
+      const completedList: ShoppingListDetail = {
+        ...mockListDetail,
+        is_completed: true,
+        completed_at: "2026-04-13T00:00:00.000Z",
+      };
+
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(completedList);
+      vi.spyOn(shoppingApi, "fetchShoppingShareText").mockResolvedValue({
+        text: "📋 4월 12일 장보기\n\n☐ 양파 2개",
+      });
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/완료된 장보기 기록은 수정할 수 없어요/)).toBeTruthy();
+      });
+
+      const shareButton = screen.getByRole("button", { name: /공유\(텍스트\)/ });
+      await user.click(shareButton);
+
+      await waitFor(() => {
+        expect(shoppingApi.fetchShoppingShareText).toHaveBeenCalledWith("list-1");
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("복사되었습니다")).toBeTruthy();
+      });
+    });
+
+    it("shows error toast when share-text API fails", async () => {
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+
+      const apiError = new Error("서버 오류가 발생했어요.") as shoppingApi.ShoppingApiError;
+      apiError.status = 500;
+      apiError.code = "INTERNAL_ERROR";
+      apiError.fields = [];
+      vi.spyOn(shoppingApi, "fetchShoppingShareText").mockRejectedValue(apiError);
+      vi.spyOn(shoppingApi, "isShoppingApiError").mockReturnValue(true);
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const shareButton = screen.getByRole("button", { name: /공유\(텍스트\)/ });
+      await user.click(shareButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("서버 오류가 발생했어요.")).toBeTruthy();
+      });
+    });
+
+    it("disables share button while sharing is in progress", async () => {
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+      vi.spyOn(shoppingApi, "fetchShoppingShareText").mockImplementation(
+        () => new Promise(() => {}) // Never resolves
+      );
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const shareButton = screen.getByRole("button", { name: /공유\(텍스트\)/ });
+      await user.click(shareButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("공유 중...")).toBeTruthy();
+      });
+    });
+  });
+});
