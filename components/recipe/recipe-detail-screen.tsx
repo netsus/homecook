@@ -10,6 +10,7 @@ import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { SaveModal } from "@/components/recipe/save-modal";
 import { ContentState } from "@/components/shared/content-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
   clearPendingAction,
@@ -59,12 +60,12 @@ const COOKING_METHOD_COLORS: Record<string, string> = {
 };
 
 const COOKING_METHOD_TINTS: Record<string, string> = {
-  orange: "rgba(255, 140, 66, 0.16)",
-  red: "rgba(232, 69, 60, 0.14)",
-  brown: "rgba(139, 94, 60, 0.16)",
-  blue: "rgba(74, 144, 217, 0.16)",
-  yellow: "rgba(245, 197, 24, 0.18)",
-  green: "rgba(46, 166, 122, 0.16)",
+  orange: "color-mix(in srgb, var(--cook-stir) 16%, transparent)",
+  red: "color-mix(in srgb, var(--cook-boil) 14%, transparent)",
+  brown: "color-mix(in srgb, var(--cook-grill) 16%, transparent)",
+  blue: "color-mix(in srgb, var(--cook-steam) 16%, transparent)",
+  yellow: "color-mix(in srgb, var(--cook-fry) 18%, transparent)",
+  green: "color-mix(in srgb, var(--cook-mix) 16%, transparent)",
 };
 
 export function RecipeDetailScreen({
@@ -705,13 +706,13 @@ export function RecipeDetailScreen({
   return (
     <>
       <div className="space-y-[clamp(1.25rem,4vw,1.5rem)]">
-        <section className="glass-panel flex flex-col overflow-hidden rounded-[24px]">
+        <section className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow-2)]">
           <div
-            className="min-h-[clamp(6.5rem,32vw,12rem)] border-b border-[var(--line)] bg-[linear-gradient(135deg,rgba(255,108,60,0.22),rgba(255,249,242,0.78),rgba(46,166,122,0.18))] sm:min-h-64 md:min-h-80"
+            className="min-h-[clamp(6.5rem,32vw,12rem)] border-b border-[var(--line)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--brand)_22%,transparent),color-mix(in_srgb,var(--background)_85%,transparent),color-mix(in_srgb,var(--olive)_18%,transparent))] sm:min-h-64 md:min-h-80"
             style={
               recipe.thumbnail_url
                 ? {
-                    backgroundImage: `linear-gradient(rgba(26, 26, 46, 0.08), rgba(26, 26, 46, 0.32)), url(${recipe.thumbnail_url})`,
+                    backgroundImage: `linear-gradient(color-mix(in srgb, var(--foreground) 6%, transparent),color-mix(in srgb, var(--foreground) 22%, transparent)),url(${recipe.thumbnail_url})`,
                     backgroundPosition: "center",
                     backgroundSize: "cover",
                   }
@@ -731,7 +732,7 @@ export function RecipeDetailScreen({
                 {recipe.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full bg-[color:rgba(46,166,122,0.1)] px-2.5 py-1 text-[11px] font-semibold text-[var(--olive)] md:px-3 md:text-xs"
+                    className="rounded-[var(--radius-full)] bg-[color-mix(in_srgb,var(--olive)_10%,transparent)] px-2.5 py-1 text-[11px] font-semibold text-[var(--olive)] md:px-3 md:text-xs"
                   >
                     #{tag}
                   </span>
@@ -803,7 +804,7 @@ export function RecipeDetailScreen({
             </div>
 
             <div className="max-[360px]:order-4">
-              <p className="max-w-3xl text-[12px] leading-5 text-[color:rgba(74,74,74,0.78)] md:text-[13px] md:leading-5">
+              <p className="max-w-3xl text-[12px] leading-5 text-[var(--text-2)] md:text-[13px] md:leading-5">
                 {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
               </p>
             </div>
@@ -829,7 +830,7 @@ export function RecipeDetailScreen({
         </section>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-          <section className="glass-panel rounded-[20px] p-5 md:p-6">
+          <section className="rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow-2)] md:p-6">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
@@ -837,13 +838,13 @@ export function RecipeDetailScreen({
                     재료
                   </p>
                 </div>
-                <div className="rounded-[16px] bg-white/70 px-4 py-3">
+                <div className="rounded-[var(--radius-lg)] bg-[var(--surface-fill)] px-4 py-3">
                   <label className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
                     인분
                   </label>
                   <div className="mt-2 flex items-center gap-3">
                     <button
-                      className="h-11 w-11 rounded-[12px] border border-[var(--line)] bg-white"
+                      className="h-11 w-11 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]"
                       onClick={() =>
                         setSelectedServings((value) => Math.max(1, value - 1))
                       }
@@ -855,14 +856,14 @@ export function RecipeDetailScreen({
                       {selectedServings}인분
                     </span>
                     <button
-                      className="h-11 w-11 rounded-[12px] border border-[var(--line)] bg-white"
+                      className="h-11 w-11 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]"
                       onClick={() => setSelectedServings((value) => value + 1)}
                       type="button"
                     >
                       +
                     </button>
                   </div>
-                  <p className="mt-3 text-[13px] font-semibold tracking-[-0.01em] text-[#9a3f1d] md:text-sm">
+                  <p className="mt-3 text-[13px] font-semibold tracking-[-0.01em] md:text-sm" style={{ color: 'color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))' }}>
                     인분에 따라 재료량이 바뀝니다
                   </p>
                 </div>
@@ -878,12 +879,12 @@ export function RecipeDetailScreen({
                   return (
                     <li
                       key={ingredient.id}
-                      className="flex items-center justify-between gap-4 rounded-[16px] bg-white/70 px-4 py-3 text-sm text-[var(--foreground)]"
+                      className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] bg-[var(--surface-fill)] px-4 py-3 text-sm text-[var(--foreground)]"
                     >
                       <span className="flex min-w-0 items-center gap-2">
                         <span>{ingredient.standard_name}</span>
                         {ingredient.ingredient_type === "TO_TASTE" ? (
-                          <span className="rounded-full border border-[color:rgba(224,80,32,0.16)] bg-[color:rgba(255,108,60,0.08)] px-2 py-0.5 text-[10px] font-semibold text-[#a14b27]">
+                          <span className="rounded-[var(--radius-full)] border px-2 py-0.5 text-[10px] font-semibold" style={{ borderColor: 'color-mix(in srgb, var(--brand) 16%, transparent)', backgroundColor: 'color-mix(in srgb, var(--brand) 8%, transparent)', color: 'color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))' }}>
                             취향껏
                           </span>
                         ) : null}
@@ -891,7 +892,7 @@ export function RecipeDetailScreen({
                       <span
                         className={
                           ingredient.ingredient_type === "TO_TASTE"
-                            ? "font-semibold text-[#7c4a32]"
+                            ? "font-semibold text-[var(--text-2)]"
                             : "font-medium text-[var(--muted)]"
                         }
                       >
@@ -904,7 +905,7 @@ export function RecipeDetailScreen({
             </div>
           </section>
 
-          <section className="glass-panel rounded-[20px] p-5 md:p-6">
+          <section className="rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow-2)] md:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
               조리 단계
             </p>
@@ -912,15 +913,15 @@ export function RecipeDetailScreen({
               {recipe.steps.map((step) => (
                 <li
                   key={step.id}
-                  className="rounded-[16px] bg-white/70 px-4 py-4"
+                  className="rounded-[var(--radius-lg)] bg-[var(--surface-fill)] px-4 py-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--foreground)] text-sm font-bold text-white">
+                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-full)] bg-[var(--foreground)] text-sm font-bold text-[var(--surface)]">
                         {step.step_number}
                       </span>
                       <span
-                        className="rounded-full border px-3 py-1 text-xs font-semibold text-[var(--foreground)]"
+                        className="rounded-[var(--radius-full)] border px-3 py-1 text-xs font-semibold text-[var(--foreground)]"
                         style={{
                           backgroundColor: resolveCookingMethodTint(
                             step.cooking_method?.color_key,
@@ -1009,82 +1010,86 @@ function RecipeDetailLoadingSkeleton() {
       aria-hidden="true"
       className="space-y-6"
     >
-      <section className="glass-panel overflow-hidden rounded-[24px]">
-        <div className="min-h-48 animate-pulse border-b border-[var(--line)] bg-white/60 sm:min-h-64 md:min-h-80" />
+      <section className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow-2)]">
+        <Skeleton className="min-h-48 border-b border-[var(--line)] sm:min-h-64 md:min-h-80" rounded="lg" />
         <div className="space-y-5 px-5 py-5 md:px-6 md:py-6">
-          <div className="h-4 w-28 animate-pulse rounded-full bg-white/70" />
+          <Skeleton className="h-4 w-28" rounded="full" />
           <div className="space-y-3">
-            <div className="h-10 w-3/4 animate-pulse rounded-[16px] bg-white/70" />
-            <div className="h-4 w-full animate-pulse rounded-full bg-white/70" />
-            <div className="h-4 w-5/6 animate-pulse rounded-full bg-white/70" />
+            <Skeleton className="h-10 w-3/4" rounded="lg" />
+            <Skeleton className="h-4 w-full" rounded="full" />
+            <Skeleton className="h-4 w-5/6" rounded="full" />
           </div>
           <div className="flex flex-wrap gap-2">
             {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                className="h-7 w-20 animate-pulse rounded-full bg-white/70"
+              <Skeleton
+                className="h-7 w-20"
                 key={`hero-tag-${index}`}
+                rounded="full"
               />
             ))}
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                className="h-24 animate-pulse rounded-[18px] bg-white/72"
+              <Skeleton
+                className="h-24"
                 key={`hero-overview-${index}`}
+                rounded="lg"
               />
             ))}
           </div>
           <div className="flex flex-wrap gap-3">
-            <div className="h-12 w-36 animate-pulse rounded-[14px] bg-white/72" />
-            <div className="h-12 w-36 animate-pulse rounded-[14px] bg-white/72" />
-            <div className="h-12 w-12 animate-pulse rounded-[14px] bg-white/72" />
+            <Skeleton className="h-12 w-36" rounded="md" />
+            <Skeleton className="h-12 w-36" rounded="md" />
+            <Skeleton className="h-12 w-12" rounded="md" />
           </div>
           <div className="flex flex-wrap gap-2">
             {Array.from({ length: 2 }).map((_, index) => (
-              <div
-                className="h-12 w-28 animate-pulse rounded-full bg-white/72"
+              <Skeleton
+                className="h-12 w-28"
                 key={`hero-metric-${index}`}
+                rounded="full"
               />
             ))}
           </div>
         </div>
       </section>
 
-      <section className="glass-panel rounded-[20px] p-5 md:p-6">
+      <section className="rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow-2)] md:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-3">
-            <div className="h-4 w-16 animate-pulse rounded-full bg-white/70" />
-            <div className="h-8 w-64 animate-pulse rounded-[16px] bg-white/70" />
+            <Skeleton className="h-4 w-16" rounded="full" />
+            <Skeleton className="h-8 w-64" rounded="lg" />
           </div>
-          <div className="h-20 w-full animate-pulse rounded-[16px] bg-white/70 md:w-40" />
+          <Skeleton className="h-20 w-full md:w-40" rounded="lg" />
         </div>
         <div className="mt-5 grid gap-3">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div
-              className="h-14 animate-pulse rounded-[16px] bg-white/70"
+            <Skeleton
+              className="h-14"
               key={`ingredient-${index}`}
+              rounded="lg"
             />
           ))}
         </div>
       </section>
 
-      <section className="glass-panel rounded-[20px] p-5 md:p-6">
-        <div className="h-4 w-16 animate-pulse rounded-full bg-white/70" />
+      <section className="rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow-2)] md:p-6">
+        <Skeleton className="h-4 w-16" rounded="full" />
         <div className="mt-4 space-y-3">
           {Array.from({ length: 4 }).map((_, index) => (
             <div
-              className="rounded-[16px] bg-white/70 px-4 py-4"
+              className="rounded-[var(--radius-lg)] bg-[var(--surface-fill)] px-4 py-4"
               key={`step-${index}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 animate-pulse rounded-full bg-white/80" />
-                  <div className="h-7 w-20 animate-pulse rounded-full bg-white/80" />
+                  <Skeleton className="h-10 w-10" rounded="full" />
+                  <Skeleton className="h-7 w-20" rounded="full" />
                 </div>
-                <div className="h-4 w-12 animate-pulse rounded-full bg-white/80" />
+                <Skeleton className="h-4 w-12" rounded="full" />
               </div>
-              <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-white/80" />
-              <div className="mt-2 h-4 w-5/6 animate-pulse rounded-full bg-white/80" />
+              <Skeleton className="mt-3 h-4 w-full" rounded="full" />
+              <Skeleton className="mt-2 h-4 w-5/6" rounded="full" />
             </div>
           ))}
         </div>
@@ -1103,10 +1108,10 @@ function resolveCookingMethodColor(colorKey?: string | null) {
 
 function resolveCookingMethodTint(colorKey?: string | null) {
   if (!colorKey) {
-    return "rgba(170, 170, 170, 0.16)";
+    return "color-mix(in srgb, var(--cook-etc) 16%, transparent)";
   }
 
-  return COOKING_METHOD_TINTS[colorKey] ?? "rgba(170, 170, 170, 0.16)";
+  return COOKING_METHOD_TINTS[colorKey] ?? "color-mix(in srgb, var(--cook-etc) 16%, transparent)";
 }
 
 function ActionButton({
@@ -1125,9 +1130,9 @@ function ActionButton({
   return (
     <button
       aria-pressed={ariaPressed}
-      className={`min-h-11 rounded-[11px] border px-3 py-2 text-[12px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:px-4 md:py-2.5 md:text-sm ${
+      className={`min-h-11 rounded-[var(--radius-md)] border px-3 py-2 text-[12px] font-semibold shadow-[var(--shadow-1)] disabled:cursor-not-allowed disabled:opacity-60 md:px-4 md:py-2.5 md:text-sm ${
         tone === "olive"
-          ? "border-[color:rgba(46,166,122,0.22)] bg-[var(--olive)] text-white"
+          ? "border-[color-mix(in_srgb,var(--olive)_22%,transparent)] bg-[var(--olive)] text-[var(--surface)]"
           : getRecipeActionToneClass(tone)
       }`}
       disabled={disabled}
@@ -1153,7 +1158,7 @@ function IconActionButton({
   return (
     <button
       aria-label={ariaLabel}
-      className={`flex min-h-11 w-full items-center justify-center rounded-[11px] border shadow-[var(--shadow)] md:rounded-[13px] ${getRecipeActionToneClass(tone)}`}
+      className={`flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] border shadow-[var(--shadow-1)] ${getRecipeActionToneClass(tone)}`}
       onClick={onClick}
       type="button"
     >
@@ -1178,14 +1183,14 @@ function UtilityStatButton({
   return (
     <div
       aria-label={ariaLabel}
-      className={`flex min-h-11 w-full items-center justify-center gap-1 rounded-[11px] border px-2 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] md:rounded-[13px] md:px-2.5 md:py-2 md:text-[13px] ${getRecipeActionToneClass(tone)}`}
+      className={`flex min-h-11 w-full items-center justify-center gap-1 rounded-[var(--radius-md)] border px-2 py-1.5 text-[11px] font-semibold shadow-[var(--shadow-1)] md:px-2.5 md:py-2 md:text-[13px] ${getRecipeActionToneClass(tone)}`}
       role="status"
     >
       <span aria-hidden="true" className="shrink-0">
         {icon}
       </span>
       <span className="truncate">{label}</span>
-      <span className="rounded-full bg-white/72 px-1.25 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-1.75 md:text-[11px]">
+      <span className="rounded-[var(--radius-full)] bg-[var(--surface-fill)] px-1.25 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-1.75 md:text-[11px]">
         {count}
       </span>
     </div>
@@ -1217,7 +1222,7 @@ function MetricActionButton({
     <button
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
-      className={`flex min-h-11 w-full items-center ${hideLabel ? "justify-center" : ""} gap-1 rounded-[11px] border px-2 py-1.5 text-[11px] font-semibold shadow-[var(--shadow)] disabled:cursor-not-allowed disabled:opacity-60 md:gap-1.5 md:rounded-[13px] md:px-2.5 md:py-2 md:text-[13px] ${getRecipeActionToneClass(tone)}`}
+      className={`flex min-h-11 w-full items-center ${hideLabel ? "justify-center" : ""} gap-1 rounded-[var(--radius-md)] border px-2 py-1.5 text-[11px] font-semibold shadow-[var(--shadow-1)] disabled:cursor-not-allowed disabled:opacity-60 md:gap-1.5 md:px-2.5 md:py-2 md:text-[13px] ${getRecipeActionToneClass(tone)}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -1228,7 +1233,7 @@ function MetricActionButton({
       {hideLabel ? null : <span>{label}</span>}
       <span
         aria-hidden={ariaLabel !== `좋아요 ${count}`}
-        className="rounded-full bg-white/72 px-1.25 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-1.75 md:text-[11px]"
+        className="rounded-[var(--radius-full)] bg-[var(--surface-fill)] px-1.25 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-1.75 md:text-[11px]"
       >
         {count}
       </span>
@@ -1240,18 +1245,18 @@ function getRecipeActionToneClass(
   tone: "brand" | "olive" | "neutral" | "signal",
 ) {
   if (tone === "brand") {
-    return "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.12)] text-[var(--foreground)]";
+    return "border-[color-mix(in_srgb,var(--brand)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--foreground)]";
   }
 
   if (tone === "olive") {
-    return "border-[color:rgba(46,166,122,0.2)] bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]";
+    return "border-[color-mix(in_srgb,var(--olive)_20%,transparent)] bg-[color-mix(in_srgb,var(--olive)_12%,transparent)] text-[var(--olive)]";
   }
 
   if (tone === "signal") {
-    return "border-[color:rgba(210,78,78,0.18)] bg-[color:rgba(210,78,78,0.1)] text-[#b44949]";
+    return "border-[color-mix(in_srgb,var(--brand-deep)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand-deep)_10%,transparent)] text-[var(--brand-deep)]";
   }
 
-  return "border-[var(--line)] bg-white text-[var(--foreground)]";
+  return "border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)]";
 }
 
 function HeartIcon({ filled = false }: { filled?: boolean }) {
@@ -1331,10 +1336,10 @@ function FeedbackToast({
     <div className="pointer-events-none fixed inset-x-4 top-4 z-50 flex justify-center md:inset-x-auto md:right-6">
       <div
         aria-live={isError ? "assertive" : "polite"}
-        className={`max-w-sm rounded-[16px] border px-4 py-3 text-sm font-medium shadow-[0_18px_44px_rgba(34,24,14,0.14)] ${
+        className={`max-w-sm rounded-[var(--radius-lg)] border px-4 py-3 text-sm font-medium shadow-[var(--shadow-3)] ${
           isError
-            ? "border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.96)] text-white"
-            : "border-[color:rgba(46,166,122,0.18)] bg-[color:rgba(250,255,252,0.96)] text-[var(--foreground)]"
+            ? "border-[color-mix(in_srgb,var(--brand)_18%,transparent)] bg-[color-mix(in_srgb,var(--brand)_96%,var(--surface))] text-[var(--surface)]"
+            : "border-[color-mix(in_srgb,var(--olive)_18%,transparent)] bg-[color-mix(in_srgb,var(--surface)_96%,var(--olive))] text-[var(--foreground)]"
         }`}
         role={isError ? "alert" : "status"}
       >

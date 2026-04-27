@@ -80,12 +80,12 @@ export function PlannerAddSheet({
     <div
       aria-labelledby="planner-add-sheet-title"
       aria-modal="true"
-      className="fixed inset-0 z-40 flex items-end bg-black/50 p-4 md:items-center md:justify-center"
+      className="fixed inset-0 z-40 flex items-end bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-4 md:items-center md:justify-center"
       onClick={onClose}
       role="dialog"
     >
       <div
-        className="glass-panel w-full max-w-lg rounded-[20px] px-5 py-6 md:px-6"
+        className="w-full max-w-lg rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] px-5 py-6 shadow-[var(--shadow-3)] md:px-6"
         onClick={(event) => event.stopPropagation()}
       >
         {/* Header — D2: no eyebrow · D3: icon-only close */}
@@ -106,7 +106,7 @@ export function PlannerAddSheet({
               {errorMessage ?? "플래너 정보를 불러오지 못했어요."}
             </p>
             <button
-              className="rounded-[12px] bg-[var(--olive)] px-5 py-2.5 text-sm font-semibold text-white"
+              className="rounded-[var(--radius-md)] bg-[var(--olive)] px-5 py-2.5 text-sm font-semibold text-[var(--surface)]"
               onClick={onRetryLoad}
               type="button"
             >
@@ -117,7 +117,7 @@ export function PlannerAddSheet({
           /* Loading state */
           <div aria-label="플래너 정보 불러오는 중" className="flex flex-col gap-4 py-8">
             {[1, 2, 3].map((i) => (
-              <div className="h-10 animate-pulse rounded-[12px] bg-white/60" key={i} />
+              <div className="h-10 animate-pulse rounded-[var(--radius-md)] bg-[var(--surface-fill)]" key={i} />
             ))}
           </div>
         ) : (
@@ -150,10 +150,10 @@ export function PlannerAddSheet({
                     <button
                       aria-pressed={isSelected}
                       className={[
-                        "rounded-[14px] px-2 py-3 text-sm font-semibold transition-colors",
+                        "rounded-[var(--radius-md)] px-2 py-3 text-sm font-semibold transition-colors",
                         isSelected
-                          ? "bg-[var(--olive)] text-white"
-                          : "bg-white/60 text-[var(--foreground)] hover:bg-white/80",
+                          ? "bg-[var(--olive)] text-[var(--surface)]"
+                          : "bg-[var(--surface-fill)] text-[var(--foreground)] hover:bg-[var(--surface-subtle)]",
                         isSubmitting ? "opacity-60" : "",
                       ]
                         .filter(Boolean)
@@ -186,7 +186,7 @@ export function PlannerAddSheet({
 
             {/* Submit error */}
             {errorMessage && sheetState === "ready" ? (
-              <p className="text-sm text-red-600">{errorMessage}</p>
+              <p className="text-sm text-[var(--brand-deep)]">{errorMessage}</p>
             ) : null}
 
             {/* Actions */}

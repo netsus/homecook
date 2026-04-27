@@ -150,9 +150,9 @@ RECIPE_DETAIL 화면의 기존 정보 구조(overview, 재료, 조리 단계, ut
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 기본값; RECIPE_DETAIL 리트로핏 미실행
+- [ ] 임시 UI (temporary) — Stage 1 기본값; RECIPE_DETAIL 리트로핏 미실행
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비
-- [ ] 확정 (confirmed) — Stage 5/6 review 통과, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5/6 review 통과, authority blocker 0개
 - [ ] N/A
 
 > 이 슬라이스는 high-risk anchor screen 변경이다. Authority review가 필수다.
@@ -230,33 +230,33 @@ RECIPE_DETAIL 화면의 기존 정보 구조(overview, 재료, 조리 단계, ut
 
 > Living closeout 문서. Stage 4에서 구현 항목 체크, Stage 5/6에서 리뷰.
 
-- [ ] RecipeDetailScreen hero gradient 리스타일 (hardcoded rgba → `color-mix()` with brand/olive tokens) <!-- omo:id=bsrdr-hero-gradient;stage=4;scope=frontend;review=5,6 -->
-- [ ] RecipeDetailScreen overview card 리스타일 (`glass-panel` → token surface/shadow/border) <!-- omo:id=bsrdr-overview-card;stage=4;scope=frontend;review=5,6 -->
-- [ ] RecipeDetailScreen tag chips 리스타일 (hardcoded rgba → `color-mix()` with olive) <!-- omo:id=bsrdr-tag-chips;stage=4;scope=frontend;review=5,6 -->
-- [ ] RecipeDetailScreen utility metrics row 리스타일 (hardcoded rgba tones → `color-mix()` with tokens) <!-- omo:id=bsrdr-utility-metrics;stage=4;scope=frontend;review=5,6 -->
-- [ ] RecipeDetailScreen action buttons 리스타일 (ActionButton/MetricActionButton/IconActionButton tone classes → token-based) <!-- omo:id=bsrdr-action-buttons;stage=4;scope=frontend;review=5,6 -->
-- [ ] RecipeDetailScreen serving stepper 리스타일 (`bg-white` → token surface, hardcoded hex → token-derived) <!-- omo:id=bsrdr-serving-stepper;stage=4;scope=frontend;review=5,6 -->
-- [ ] RecipeDetailScreen ingredient list 리스타일 (`bg-white/70`, hardcoded hex → token-based) <!-- omo:id=bsrdr-ingredient-list;stage=4;scope=frontend;review=5,6 -->
-- [ ] RecipeDetailScreen step cards 리스타일 (`bg-white/70`, `rounded-full` → token-based) <!-- omo:id=bsrdr-step-cards;stage=4;scope=frontend;review=5,6 -->
-- [ ] RecipeDetailScreen `COOKING_METHOD_TINTS` rgba → `color-mix()` 전환 <!-- omo:id=bsrdr-cook-tints;stage=4;scope=frontend;review=5,6 -->
-- [ ] RecipeDetailScreen feedback toasts 리스타일 (hardcoded rgba → `color-mix()`, hardcoded shadow → token shadow) <!-- omo:id=bsrdr-toasts;stage=4;scope=frontend;review=5,6 -->
-- [ ] RecipeDetailScreen loading skeleton 리스타일 (`glass-panel`, `bg-white/*` → token-based) <!-- omo:id=bsrdr-skeleton;stage=4;scope=frontend;review=5,6 -->
-- [ ] RecipeDetailScreen hardcoded `rounded-[Npx]` → `--radius-*` token mapping <!-- omo:id=bsrdr-radii;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerAddSheet 리스타일 (backdrop, `glass-panel`, `text-white`, `bg-white/*`, radii → tokens) <!-- omo:id=bsrdr-planner-sheet;stage=4;scope=frontend;review=5,6 -->
-- [ ] SaveModal 리스타일 (backdrop, `glass-panel`, hardcoded rgba, `bg-white/*`, radii → tokens) <!-- omo:id=bsrdr-save-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] LoginGateModal 리스타일 (backdrop, `glass-panel`, eyebrow rgba, `bg-white/78`, radii → tokens) <!-- omo:id=bsrdr-login-gate;stage=4;scope=frontend;review=5,6 -->
-- [ ] `components/ui/` 프리미티브 소비 적용 (Badge, Skeleton 소비) <!-- omo:id=bsrdr-ui-primitives-consumed;stage=4;scope=frontend;review=5,6 -->
-- [ ] 모든 리스타일이 CSS 변수만 사용 — hardcoded hex/rgba 없음 <!-- omo:id=bsrdr-token-usage;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 loading/ready/error 상태 보존 확인 <!-- omo:id=bsrdr-states-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL 정보 구조 보존 확인 <!-- omo:id=bsrdr-structure-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] H5 modal 결정 보존 확인 (PlannerAddSheet, SaveModal) <!-- omo:id=bsrdr-h5-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] `--cook-*` 토큰 값 미변경 확인 <!-- omo:id=bsrdr-cook-unchanged;stage=4;scope=frontend;review=5,6 -->
-- [ ] Cooking method 배지 tint 시각적 결과 보존 확인 <!-- omo:id=bsrdr-cook-tint-visual;stage=4;scope=frontend;review=5,6 -->
-- [ ] Jua 또는 prototype-only 폰트 미사용 확인 <!-- omo:id=bsrdr-no-font;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm verify:frontend` 통과 <!-- omo:id=bsrdr-verify-frontend;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL before/after screenshots 캡처 (mobile default, narrow 320px) <!-- omo:id=bsrdr-regression-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Key active state screenshots (planner-add sheet, save modal, login gate, loading, error) <!-- omo:id=bsrdr-active-state-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Exploratory QA bundle 또는 low-risk skip rationale 기록 <!-- omo:id=bsrdr-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeDetailScreen hero gradient 리스타일 (hardcoded rgba → `color-mix()` with brand/olive tokens) <!-- omo:id=bsrdr-hero-gradient;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeDetailScreen overview card 리스타일 (`glass-panel` → token surface/shadow/border) <!-- omo:id=bsrdr-overview-card;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeDetailScreen tag chips 리스타일 (hardcoded rgba → `color-mix()` with olive) <!-- omo:id=bsrdr-tag-chips;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeDetailScreen utility metrics row 리스타일 (hardcoded rgba tones → `color-mix()` with tokens) <!-- omo:id=bsrdr-utility-metrics;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeDetailScreen action buttons 리스타일 (ActionButton/MetricActionButton/IconActionButton tone classes → token-based) <!-- omo:id=bsrdr-action-buttons;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeDetailScreen serving stepper 리스타일 (`bg-white` → token surface, hardcoded hex → token-derived) <!-- omo:id=bsrdr-serving-stepper;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeDetailScreen ingredient list 리스타일 (`bg-white/70`, hardcoded hex → token-based) <!-- omo:id=bsrdr-ingredient-list;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeDetailScreen step cards 리스타일 (`bg-white/70`, `rounded-full` → token-based) <!-- omo:id=bsrdr-step-cards;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeDetailScreen `COOKING_METHOD_TINTS` rgba → `color-mix()` 전환 <!-- omo:id=bsrdr-cook-tints;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeDetailScreen feedback toasts 리스타일 (hardcoded rgba → `color-mix()`, hardcoded shadow → token shadow) <!-- omo:id=bsrdr-toasts;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeDetailScreen loading skeleton 리스타일 (`glass-panel`, `bg-white/*` → token-based) <!-- omo:id=bsrdr-skeleton;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeDetailScreen hardcoded `rounded-[Npx]` → `--radius-*` token mapping <!-- omo:id=bsrdr-radii;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerAddSheet 리스타일 (backdrop, `glass-panel`, `text-white`, `bg-white/*`, radii → tokens) <!-- omo:id=bsrdr-planner-sheet;stage=4;scope=frontend;review=5,6 -->
+- [x] SaveModal 리스타일 (backdrop, `glass-panel`, hardcoded rgba, `bg-white/*`, radii → tokens) <!-- omo:id=bsrdr-save-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] LoginGateModal 리스타일 (backdrop, `glass-panel`, eyebrow rgba, `bg-white/78`, radii → tokens) <!-- omo:id=bsrdr-login-gate;stage=4;scope=frontend;review=5,6 -->
+- [x] `components/ui/` 프리미티브 소비 적용 (Badge, Skeleton 소비) <!-- omo:id=bsrdr-ui-primitives-consumed;stage=4;scope=frontend;review=5,6 -->
+- [x] 모든 리스타일이 CSS 변수만 사용 — hardcoded hex/rgba 없음 <!-- omo:id=bsrdr-token-usage;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 loading/ready/error 상태 보존 확인 <!-- omo:id=bsrdr-states-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL 정보 구조 보존 확인 <!-- omo:id=bsrdr-structure-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] H5 modal 결정 보존 확인 (PlannerAddSheet, SaveModal) <!-- omo:id=bsrdr-h5-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] `--cook-*` 토큰 값 미변경 확인 <!-- omo:id=bsrdr-cook-unchanged;stage=4;scope=frontend;review=5,6 -->
+- [x] Cooking method 배지 tint 시각적 결과 보존 확인 <!-- omo:id=bsrdr-cook-tint-visual;stage=4;scope=frontend;review=5,6 -->
+- [x] Jua 또는 prototype-only 폰트 미사용 확인 <!-- omo:id=bsrdr-no-font;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend` 통과 <!-- omo:id=bsrdr-verify-frontend;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL before/after screenshots 캡처 (mobile default, narrow 320px) <!-- omo:id=bsrdr-regression-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Key active state screenshots (planner-add sheet, save modal, login gate, loading, error) <!-- omo:id=bsrdr-active-state-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Exploratory QA bundle 또는 low-risk skip rationale 기록 <!-- omo:id=bsrdr-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
 
 ## Blockers
 
