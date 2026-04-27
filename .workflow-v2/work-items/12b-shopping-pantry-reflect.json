@@ -63,16 +63,69 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
-    "evaluation_status": "not_started",
+    "evaluation_status": "passed",
     "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "last_evaluator_result": "PR #265 GitHub checks and local Stage 6 closeout validators",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 2 backend implementation in progress on feature/be-12b-shopping-pantry-reflect. Stage 1 internal 1.5 docs gate passed after Claude repair 2 and Codex validation on 2026-04-28.",
+  "notes": "Merged via PR #265 on 2026-04-27T17:56:41Z after Stage 1 docs repair, Stage 2 backend PR #264, Stage 4 frontend PR #265, Codex Stage 5/6 review, and internal 6.5 closeout validators. closeout_phase=completed closeout_repair=codex:4|claude:2|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,git history,PR #265 body last_recovery_at=2026-04-27T17:56:41Z",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "PR #265 Actual Verification",
+        "PR #265 GitHub current-head checks",
+        "docs/workpacks/12b-shopping-pantry-reflect/README.md Stage 4/6 Frontend Evidence"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "71534681a0aa1c9e6285eb7a95200a7eaa92bd6d",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-04-27T17:56:41Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 4,
+      "claude_repairable_count": 2,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "codex_repairable",
+      "evidence_sources": [
+        ".omx/artifacts",
+        "GitHub PR/CI",
+        "git history",
+        "PR #265 body"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-04-27T18:57:03Z",
+      "status_synced_at": "2026-04-27T18:57:03Z",
+      "pr_body_synced_at": "2026-04-27T17:56:41Z"
+    }
+  },
   "out_of_scope": [
     "팬트리 화면 UI 개선 — 기존 기능 활용",
     "추가 후 팬트리 아이템 수정/삭제 — 별도 슬라이스",

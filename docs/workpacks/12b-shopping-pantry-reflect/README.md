@@ -218,6 +218,12 @@ POST /shopping/lists/{list_id}/complete
 
 **Not Required** — 기존 `SHOPPING_DETAIL` 화면에 bottom sheet 팝업 추가는 **low-risk UI change**.
 
+- UI risk: `low-risk`
+- Anchor screen dependency: `SHOPPING_DETAIL`
+- Visual artifact: not-required
+- Authority status: `not-required`
+- Notes: existing bottom sheet pattern reuse; full product-design-authority review skipped.
+
 - 기존 confirmed `SHOPPING_DETAIL` 화면의 minor 확장
 - 바텀시트 레이아웃: 프로젝트의 기존 bottom sheet 패턴 재사용
 - 버튼 스타일: `--brand` 색상, `--radius-sm` radius
@@ -444,7 +450,7 @@ POST /shopping/lists/{list_id}/complete
 ### Stage 6 (Frontend Review) — Codex 담당
 - Done: Codex 프론트엔드 PR 리뷰 (코드 품질, 테스트 커버리지)
 - Done: Manual QA 체크리스트를 자동 검증 근거로 대체 정리
-- Pending: PR merge gate 및 final merge
+- Done: PR #265 merge gate 및 final merge
 
 ## Stage 4/6 Frontend Evidence
 - Implemented: `components/shopping/pantry-reflection-popup.tsx`, `components/shopping/shopping-detail-screen.tsx`

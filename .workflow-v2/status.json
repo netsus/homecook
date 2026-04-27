@@ -504,10 +504,10 @@
     {
       "id": "12b-shopping-pantry-reflect",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-12b-shopping-pantry-reflect",
-      "pr_path": null,
-      "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
+      "branch": "feature/fe-12b-shopping-pantry-reflect",
+      "pr_path": "https://github.com/netsus/homecook/pull/265",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
@@ -515,7 +515,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 2 backend implementation in progress on feature/be-12b-shopping-pantry-reflect. Goal: 팬트리 반영 선택 팝업, add_to_pantry_item_ids 3-way 의미론 (미전달/[]/선택값), 4단계 서버 검증/필터 (무효 항목 무시), 멱등성 (재완료 200). Backend First contract. Low-risk UI change (lightweight design check). Dependencies: 12a-shopping-complete (merged)."
+      "notes": "Merged via PR #265 on 2026-04-27T17:56:41Z after Stage 1 docs repair, Stage 2 backend PR #264, Stage 4 frontend PR #265, Codex Stage 5/6 review, and internal 6.5 closeout validators. closeout_phase=completed closeout_repair=codex:4|claude:2|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,git history,PR #265 body last_recovery_at=2026-04-27T17:56:41Z"
     },
     {
       "id": "baemin-style-modal-system-fit",

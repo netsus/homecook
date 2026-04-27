@@ -236,6 +236,60 @@ describe("OMO doc gate", () => {
     );
   });
 
+  it("flags Stage 1 contract drift that invents public API/schema behavior", () => {
+    const fixture = createDocGateFixture({});
+    const readmePath = join(
+      fixture.rootDir,
+      "docs",
+      "workpacks",
+      fixture.slice,
+      "README.md",
+    );
+    const acceptancePath = join(
+      fixture.rootDir,
+      "docs",
+      "workpacks",
+      fixture.slice,
+      "acceptance.md",
+    );
+
+    writeFileSync(
+      readmePath,
+      `${readFileSync(readmePath, "utf8")}\n\n## Drift\n- add_to_pantry_item_ids?: number[]\n- shopping_lists.pantry_added_item_ids JSONB\n- Stage 5 (Polish) owns final UI cleanup\n`,
+    );
+    writeFileSync(
+      acceptancePath,
+      `${readFileSync(acceptancePath, "utf8")}\n- [ ] Invalid selected ids return 400 INVALID_ITEM_IDS\n- [ ] Already completed lists return 409 ALREADY_COMPLETED\n`,
+    );
+
+    const result = evaluateDocGate({
+      rootDir: fixture.rootDir,
+      slice: fixture.slice,
+    });
+
+    expect(result.outcome).toBe("fixable");
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "doc-gate-contract-drift-add-to-pantry-number-array",
+          category: "official_contract_drift",
+        }),
+        expect.objectContaining({
+          id: "doc-gate-contract-drift-pantry-response-columns",
+          category: "official_contract_drift",
+        }),
+        expect.objectContaining({
+          id: "doc-gate-contract-drift-complete-error-codes",
+          category: "official_contract_drift",
+        }),
+        expect.objectContaining({
+          id: "doc-gate-contract-drift-stage-ownership",
+          category: "stage_ownership_drift",
+        }),
+      ]),
+    );
+  });
+
   it("guides review=5 remediation only toward Stage 4 frontend-owned checklist items", () => {
     const fixture = createDocGateFixture({});
     const acceptancePath = join(
