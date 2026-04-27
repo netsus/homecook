@@ -4,6 +4,7 @@ import React from "react";
 import { useEffect, useMemo, useRef } from "react";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import { ModalHeader } from "@/components/shared/modal-header";
 import { useAuthGateStore } from "@/stores/ui-store";
 
 const ACTION_LABELS = {
@@ -60,28 +61,13 @@ export function LoginGateModal() {
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1">
-            <div className="inline-flex rounded-[var(--radius-full)] border border-[color-mix(in_srgb,var(--foreground)_8%,transparent)] bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] px-3 py-1 text-[11px] font-semibold tracking-[0.06em] text-[var(--foreground)]">
-              보호된 작업
-            </div>
-            <h2
-              className="mt-3 text-[1.55rem] font-extrabold tracking-[-0.03em] text-[var(--foreground)]"
-              id="login-gate-title"
-            >
-              로그인이 필요한 작업이에요
-            </h2>
-          </div>
-          <button
-            aria-label="닫기"
-            className="rounded-[var(--radius-full)] border border-[var(--line)] px-3 py-1 text-sm text-[var(--muted)]"
-            onClick={close}
-            ref={closeButtonRef}
-            type="button"
-          >
-            닫기
-          </button>
-        </div>
+        {/* D2: no eyebrow · D3: icon-only 44×44 close · D6: modal family join */}
+        <ModalHeader
+          closeButtonRef={closeButtonRef}
+          onClose={close}
+          title="로그인이 필요한 작업이에요"
+          titleId="login-gate-title"
+        />
         <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
           {description}
         </p>

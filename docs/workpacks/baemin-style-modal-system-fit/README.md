@@ -145,7 +145,7 @@ LoginGateModal은 현재 H5 ModalHeader를 사용하지 않고 자체 header를 
 - UI risk: `high` (modal family = H5 anchor extension, LoginGateModal H5 합류 포함)
 - Anchor screen dependency: 간접 — modal은 `HOME`, `RECIPE_DETAIL` 위에 overlay
 - Visual artifact: modal before/after screenshots at mobile default (390px); key active states (LoginGateModal H5 전환 전후, 4개 interaction modal 정합 상태)
-- Authority status: not_started
+- Authority status: reviewed
 
 ### Design-Generator / Critic Skip Rationale
 
@@ -169,9 +169,9 @@ LoginGateModal은 현재 H5 ModalHeader를 사용하지 않고 자체 header를 
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 기본값; 배민 스타일 모달 시각 정합 미실행
+- [ ] 임시 UI (temporary) — Stage 1 기본값; 배민 스타일 모달 시각 정합 미실행
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비
-- [ ] 확정 (confirmed) — Stage 5/6 review 통과, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5/6 review 통과, authority blocker 0개
 - [ ] N/A
 
 > 이 슬라이스는 high-risk modal family 변경이다. Authority review가 필수다.
@@ -259,25 +259,25 @@ LoginGateModal은 현재 H5 ModalHeader를 사용하지 않고 자체 header를 
 
 > Living closeout 문서. Stage 4에서 구현 항목 체크, Stage 5/6에서 리뷰.
 
-- [ ] LoginGateModal에 ModalHeader 적용 (icon-only close, eyebrow 제거) <!-- omo:id=bsmsf-login-gate-modal-header;stage=4;scope=frontend;review=5,6 -->
-- [ ] LoginGateModal close button → icon-only 44x44 전환 <!-- omo:id=bsmsf-login-gate-close;stage=4;scope=frontend;review=5,6 -->
-- [ ] LoginGateModal "보호된 작업" eyebrow badge 제거 <!-- omo:id=bsmsf-login-gate-eyebrow;stage=4;scope=frontend;review=5,6 -->
-- [ ] LoginGateModal surface/shadow/radius 토큰 정합 <!-- omo:id=bsmsf-login-gate-tokens;stage=4;scope=frontend;review=5,6 -->
-- [ ] ModalHeader 토큰 일관성 검증/조정 <!-- omo:id=bsmsf-modal-header-tokens;stage=4;scope=frontend;review=5,6 -->
-- [ ] ModalFooterActions 토큰 일관성 검증/조정 <!-- omo:id=bsmsf-modal-footer-tokens;stage=4;scope=frontend;review=5,6 -->
-- [ ] IngredientFilterModal 토큰 정합 (skeleton, footer, surface) <!-- omo:id=bsmsf-ingredient-filter-tokens;stage=4;scope=frontend;review=5,6 -->
-- [ ] SortMenu mobile sheet 토큰 정합 <!-- omo:id=bsmsf-sort-sheet-tokens;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerAddSheet 토큰 정합 (loading, error, surface) <!-- omo:id=bsmsf-planner-add-tokens;stage=4;scope=frontend;review=5,6 -->
-- [ ] SaveModal 토큰 정합 (loading, error, book rows, surface) <!-- omo:id=bsmsf-save-modal-tokens;stage=4;scope=frontend;review=5,6 -->
-- [ ] 모든 리스타일이 CSS 변수만 사용 — hardcoded hex/rgba 없음 <!-- omo:id=bsmsf-token-usage;stage=4;scope=frontend;review=5,6 -->
-- [ ] H5 D1~D6 결정 보존 확인 <!-- omo:id=bsmsf-h5-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 모달 상태(loading/ready/error/empty/submitting) 보존 확인 <!-- omo:id=bsmsf-states-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] Olive accent + thin orange highlight 정책 보존 확인 <!-- omo:id=bsmsf-olive-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 TypeScript props 인터페이스 보존 확인 <!-- omo:id=bsmsf-props-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm verify:frontend` 통과 <!-- omo:id=bsmsf-verify-frontend;stage=4;scope=frontend;review=5,6 -->
-- [ ] 모달 before/after screenshots 캡처 (mobile default 390px) <!-- omo:id=bsmsf-regression-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] LoginGateModal H5 전환 before/after screenshots <!-- omo:id=bsmsf-login-gate-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Exploratory QA bundle 또는 low-risk skip rationale 기록 <!-- omo:id=bsmsf-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
+- [x] LoginGateModal에 ModalHeader 적용 (icon-only close, eyebrow 제거) <!-- omo:id=bsmsf-login-gate-modal-header;stage=4;scope=frontend;review=5,6 -->
+- [x] LoginGateModal close button → icon-only 44x44 전환 <!-- omo:id=bsmsf-login-gate-close;stage=4;scope=frontend;review=5,6 -->
+- [x] LoginGateModal "보호된 작업" eyebrow badge 제거 <!-- omo:id=bsmsf-login-gate-eyebrow;stage=4;scope=frontend;review=5,6 -->
+- [x] LoginGateModal surface/shadow/radius 토큰 정합 <!-- omo:id=bsmsf-login-gate-tokens;stage=4;scope=frontend;review=5,6 -->
+- [x] ModalHeader 토큰 일관성 검증/조정 <!-- omo:id=bsmsf-modal-header-tokens;stage=4;scope=frontend;review=5,6 -->
+- [x] ModalFooterActions 토큰 일관성 검증/조정 <!-- omo:id=bsmsf-modal-footer-tokens;stage=4;scope=frontend;review=5,6 -->
+- [x] IngredientFilterModal 토큰 정합 (skeleton, footer, surface) <!-- omo:id=bsmsf-ingredient-filter-tokens;stage=4;scope=frontend;review=5,6 -->
+- [x] SortMenu mobile sheet 토큰 정합 <!-- omo:id=bsmsf-sort-sheet-tokens;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerAddSheet 토큰 정합 (loading, error, surface) <!-- omo:id=bsmsf-planner-add-tokens;stage=4;scope=frontend;review=5,6 -->
+- [x] SaveModal 토큰 정합 (loading, error, book rows, surface) <!-- omo:id=bsmsf-save-modal-tokens;stage=4;scope=frontend;review=5,6 -->
+- [x] 모든 리스타일이 CSS 변수만 사용 — hardcoded hex/rgba 없음 <!-- omo:id=bsmsf-token-usage;stage=4;scope=frontend;review=5,6 -->
+- [x] H5 D1~D6 결정 보존 확인 <!-- omo:id=bsmsf-h5-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 모달 상태(loading/ready/error/empty/submitting) 보존 확인 <!-- omo:id=bsmsf-states-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] Olive accent + thin orange highlight 정책 보존 확인 <!-- omo:id=bsmsf-olive-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 TypeScript props 인터페이스 보존 확인 <!-- omo:id=bsmsf-props-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend` 통과 <!-- omo:id=bsmsf-verify-frontend;stage=4;scope=frontend;review=5,6 -->
+- [x] 모달 before/after screenshots 캡처 (mobile default 390px) <!-- omo:id=bsmsf-regression-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] LoginGateModal H5 전환 before/after screenshots <!-- omo:id=bsmsf-login-gate-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Exploratory QA bundle 또는 low-risk skip rationale 기록 <!-- omo:id=bsmsf-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
 
 ## Blockers
 

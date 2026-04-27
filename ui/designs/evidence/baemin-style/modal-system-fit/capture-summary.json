@@ -1,0 +1,98 @@
+{
+  "capturedAt": "2026-04-27T12:38:09.951Z",
+  "baseUrl": "http://127.0.0.1:3100",
+  "beforeReference": "/Users/cwj/01_vibe_coding/homecook/ui/designs/evidence/baemin-style/recipe-detail-retrofit/RECIPE_DETAIL-login-gate-modal.png",
+  "files": [
+    "login-gate-modal-before.png",
+    "login-gate-modal-after.png",
+    "login-gate-modal-after-320.png",
+    "planner-add-sheet-fit.png",
+    "save-modal-fit.png",
+    "ingredient-filter-fit.png",
+    "sort-sheet-fit.png"
+  ],
+  "layouts": [
+    {
+      "label": "login-gate-390",
+      "innerWidth": 390,
+      "documentScrollWidth": 390,
+      "hasDocumentOverflow": false,
+      "dialogs": [
+        {
+          "ariaLabelledBy": "login-gate-title",
+          "clientWidth": 356,
+          "scrollWidth": 356,
+          "width": 358,
+          "hasOverflow": false
+        }
+      ]
+    },
+    {
+      "label": "login-gate-320",
+      "innerWidth": 320,
+      "documentScrollWidth": 320,
+      "hasDocumentOverflow": false,
+      "dialogs": [
+        {
+          "ariaLabelledBy": "login-gate-title",
+          "clientWidth": 286,
+          "scrollWidth": 286,
+          "width": 288,
+          "hasOverflow": false
+        }
+      ]
+    },
+    {
+      "label": "planner-add-390",
+      "innerWidth": 390,
+      "documentScrollWidth": 390,
+      "hasDocumentOverflow": false,
+      "dialogs": [
+        {
+          "ariaLabelledBy": "planner-add-sheet-title",
+          "clientWidth": 390,
+          "scrollWidth": 390,
+          "width": 390,
+          "hasOverflow": false
+        }
+      ]
+    },
+    {
+      "label": "save-modal-390",
+      "innerWidth": 390,
+      "documentScrollWidth": 390,
+      "hasDocumentOverflow": false,
+      "dialogs": [
+        {
+          "ariaLabelledBy": "save-modal-title",
+          "clientWidth": 356,
+          "scrollWidth": 356,
+          "width": 358,
+          "hasOverflow": false
+        }
+      ]
+    },
+    {
+      "label": "ingredient-filter-390",
+      "innerWidth": 390,
+      "documentScrollWidth": 390,
+      "hasDocumentOverflow": false,
+      "dialogs": [
+        {
+          "ariaLabelledBy": "ingredient-filter-title",
+          "clientWidth": 388,
+          "scrollWidth": 388,
+          "width": 390,
+          "hasOverflow": false
+        }
+      ]
+    },
+    {
+      "label": "sort-sheet-390",
+      "innerWidth": 390,
+      "documentScrollWidth": 390,
+      "hasDocumentOverflow": false,
+      "dialogs": []
+    }
+  ]
+}
