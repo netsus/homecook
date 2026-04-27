@@ -47,6 +47,7 @@ import {
 } from "./omo-session-runtime.mjs";
 import {
   inheritAuthorityPrecheckChecklistSnapshot,
+  readStageResult,
   validateCodeStageChecklistCoverage,
   validateStageResult,
 } from "./omo-stage-result.mjs";
@@ -4549,6 +4550,431 @@ function runVerifyCommands({
   };
 }
 
+function resolveCodexRepairAllowedFiles({
+  slice,
+  workItemId,
+  reasonDetailCode,
+}) {
+  const workpackFiles = [
+    "docs/workpacks/README.md",
+    `docs/workpacks/${slice}/README.md`,
+    `docs/workpacks/${slice}/acceptance.md`,
+    `docs/workpacks/${slice}/automation-spec.json`,
+    `.workflow-v2/work-items/${workItemId}.json`,
+    ".workflow-v2/status.json",
+  ];
+
+  if (reasonDetailCode === "pr_body_section_drift") {
+    return [];
+  }
+
+  return normalizeStringArray(workpackFiles);
+}
+
+function buildCodexRepairPromptSection({
+  request,
+}) {
+  return [
+    "## Codex Repair Dispatcher",
+    "",
+    "OMO classified this wait as bounded Codex-repairable. Repair only the declared reason, stay inside allowed files, and write a repair stage-result JSON.",
+    "",
+    "### Repair Input Contract",
+    `- reason_code: ${request.reasonCode}`,
+    `- reason_detail_code: ${request.reasonDetailCode}`,
+    `- stage: ${request.stage}`,
+    `- pr_role: ${request.prRole}`,
+    `- attempt: ${request.attemptCount + 1}/${request.maxAttempts}`,
+    "- failing_validator:",
+    request.validatorCommands.length > 0
+      ? request.validatorCommands.map((command) => `  - ${command}`).join("\n")
+      : "  - none",
+    "- evidence_refs:",
+    request.evidenceRefs.length > 0
+      ? request.evidenceRefs.map((ref) => `  - ${ref}`).join("\n")
+      : "  - none",
+    "- allowed_files:",
+    request.allowedFiles.length > 0
+      ? request.allowedFiles.map((file) => `  - ${file}`).join("\n")
+      : "  - none (metadata-only repair; do not edit repository files)",
+    "",
+    "### Repair Output Contract",
+    "- `result`: `resolved`, `unresolved`, or `blocked`.",
+    "- `changed_files`: files you changed, all within `allowed_files`.",
+    "- `tests_run`: commands or checks you ran.",
+    "- `reason_resolved`: boolean answer to whether this reason code is fixed.",
+    "- `remaining_risk`: `none` or a short residual risk note.",
+    "",
+    "The supervisor decides success by rerunning the validator commands after your repair.",
+  ].join("\n");
+}
+
+function resolveCodexRepairRequest({
+  state,
+  workItemId,
+  slice,
+}) {
+  const wait = state.wait ?? {};
+  const stage =
+    Number.isInteger(Number(wait.stage))
+      ? Number(wait.stage)
+      : Number.isInteger(Number(state.active_stage))
+        ? Number(state.active_stage)
+        : Number.isInteger(Number(state.current_stage))
+          ? Number(state.current_stage)
+          : null;
+  if (!Number.isInteger(stage) || stage < 1 || stage > 6) {
+    throw new Error("Codex repair requires a valid wait.stage.");
+  }
+
+  const prRole =
+    typeof wait.pr_role === "string" && wait.pr_role.trim().length > 0
+      ? wait.pr_role.trim()
+      : resolvePrRole(stage);
+  const reasonCode =
+    typeof wait.reason_code === "string" && wait.reason_code.trim().length > 0
+      ? wait.reason_code.trim()
+      : "codex_repairable";
+  const reasonDetailCode =
+    typeof wait.reason_detail_code === "string" && wait.reason_detail_code.trim().length > 0
+      ? wait.reason_detail_code.trim()
+      : "unspecified_repair";
+  const attemptCount = Number.isInteger(wait.repair_attempt_count) ? wait.repair_attempt_count : 0;
+  const maxAttempts = Number.isInteger(wait.max_repair_attempts) ? wait.max_repair_attempts : 1;
+  const allowedFiles = resolveCodexRepairAllowedFiles({
+    slice,
+    workItemId,
+    reasonDetailCode,
+  });
+
+  return {
+    stage,
+    prRole,
+    reasonCode,
+    reasonDetailCode,
+    reason: wait.reason ?? `Codex repair required: ${reasonDetailCode}`,
+    headSha: wait.head_sha ?? state.prs?.[prRole]?.head_sha ?? null,
+    attemptCount,
+    maxAttempts,
+    evidenceRefs: normalizeStringArray(wait.evidence_refs),
+    validatorCommands: normalizeStringArray(wait.validator_commands),
+    allowedFiles,
+  };
+}
+
+function resolveCodexRepairStageResult({
+  stage,
+  runResult,
+}) {
+  const artifactDir =
+    typeof runResult.artifactDir === "string" && runResult.artifactDir.trim().length > 0
+      ? runResult.artifactDir.trim()
+      : null;
+  const rawStageResult =
+    runResult.stageResult ?? (artifactDir ? readStageResult(artifactDir) : null);
+  if (!rawStageResult) {
+    throw new Error("Codex repair finished without stage-result.json.");
+  }
+
+  return validateStageResult(stage, rawStageResult, {
+    subphase: "codex_repair",
+  });
+}
+
+function assertCodexRepairChangedFilesAllowed({
+  changedFiles,
+  allowedFiles,
+}) {
+  const normalizedChangedFiles = normalizeStringArray(changedFiles);
+  const allowed = new Set(normalizeStringArray(allowedFiles));
+  const forbiddenFiles = normalizedChangedFiles.filter((filePath) => !allowed.has(filePath));
+  if (forbiddenFiles.length > 0) {
+    throw new Error(`Codex repair changed files outside allowed_files: ${forbiddenFiles.join(", ")}`);
+  }
+}
+
+function runCodexRepairValidators({
+  verifyCommands,
+  worktreePath,
+  commands,
+  artifactDir,
+}) {
+  if (verifyCommands && typeof verifyCommands.run === "function") {
+    return verifyCommands.run({
+      worktreePath,
+      commands,
+      artifactDir,
+    });
+  }
+
+  return runVerifyCommands({
+    worktreePath,
+    commands,
+    artifactDir,
+  });
+}
+
+function resolveVerifyBucket(result) {
+  return typeof result?.bucket === "string" && result.bucket.trim().length > 0
+    ? result.bucket.trim()
+    : "fail";
+}
+
+function formatReasonDetailForCommit(reasonDetailCode) {
+  return typeof reasonDetailCode === "string" && reasonDetailCode.trim().length > 0
+    ? reasonDetailCode.trim().replace(/[_-]+/g, " ")
+    : "repair";
+}
+
+function dispatchCodexRepair({
+  rootDir,
+  workItemId,
+  slice,
+  state,
+  stageRunner,
+  verifyCommands,
+  worktree,
+  now,
+}) {
+  const request = resolveCodexRepairRequest({
+    state,
+    workItemId,
+    slice,
+  });
+  const activePr = getActivePullRequest(state, request.prRole);
+  if (!activePr?.url) {
+    throw new Error(`Codex repair requires an active ${request.prRole} pull request.`);
+  }
+
+  const runResult = stageRunner({
+    rootDir,
+    workItemId,
+    slice,
+    stage: request.stage,
+    subphase: "codex_repair",
+    executionDir: state.workspace?.path ?? null,
+    priorStageResultPath: state.execution?.stage_result_path ?? null,
+    extraPromptSections: [
+      buildCodexRepairPromptSection({
+        request,
+      }),
+    ],
+  });
+  const deferredOutcome = handleDeferredStageExecution({
+    rootDir,
+    workItemId,
+    slice,
+    stage: request.stage,
+    prRole: request.prRole,
+    prPath: activePr.url,
+    headSha: activePr.head_sha ?? request.headSha,
+    runResult,
+    worktree,
+    now,
+  });
+  if (deferredOutcome) {
+    return {
+      state: deferredOutcome.state,
+      action: "wait",
+      nextStage: null,
+    };
+  }
+
+  const artifactDir =
+    typeof runResult.artifactDir === "string" && runResult.artifactDir.trim().length > 0
+      ? runResult.artifactDir.trim()
+      : resolveSupervisorArtifactDir({
+          rootDir,
+          workItemId,
+          now,
+        });
+  mkdirSync(artifactDir, { recursive: true });
+  if (runResult.stageResult) {
+    const stageResultPath = resolve(artifactDir, "stage-result.json");
+    if (!existsSync(stageResultPath)) {
+      writeFileSync(stageResultPath, `${JSON.stringify(runResult.stageResult, null, 2)}\n`);
+    }
+  }
+
+  const stageResult = resolveCodexRepairStageResult({
+    stage: request.stage,
+    runResult: {
+      ...runResult,
+      artifactDir,
+    },
+  });
+  assertCodexRepairChangedFilesAllowed({
+    changedFiles: stageResult.changed_files,
+    allowedFiles: request.allowedFiles,
+  });
+
+  const verify = runCodexRepairValidators({
+    verifyCommands,
+    worktreePath: state.workspace?.path,
+    commands: request.validatorCommands,
+    artifactDir,
+  });
+  const verifyBucket = resolveVerifyBucket(verify);
+  const nextAttemptCount = request.attemptCount + 1;
+  const repairResolved =
+    stageResult.result === "resolved" &&
+    stageResult.reason_resolved &&
+    verifyBucket === "pass";
+
+  if (!repairResolved) {
+    const nextState = saveRuntime({
+      rootDir,
+      workItemId,
+      state: setWaitState({
+        state,
+        kind: "codex_repairable",
+        prRole: request.prRole,
+        stage: request.stage,
+        headSha: activePr.head_sha ?? request.headSha,
+        reason:
+          verifyBucket === "pass"
+            ? `Codex repair did not resolve ${request.reasonDetailCode}.`
+            : `Codex repair validator failed for ${request.reasonDetailCode}.`,
+        reasonCode: request.reasonCode,
+        reasonDetailCode: request.reasonDetailCode,
+        reasonCategory: "codex_repairable",
+        repairAttemptCount: nextAttemptCount,
+        maxRepairAttempts: request.maxAttempts,
+        evidenceRefs: request.evidenceRefs,
+        validatorCommands: request.validatorCommands,
+        updatedAt: now,
+      }),
+    });
+    updateRuntimeStatusForWait({
+      rootDir,
+      workItemId,
+      wait: nextState.wait,
+      prPath: activePr.url,
+      now,
+      approvalState: nextState.wait?.kind === "human_escalation" ? "human_escalation" : null,
+      lifecycle: nextState.wait?.kind === "human_escalation" ? "blocked" : "in_progress",
+      verificationStatus: "failed",
+      extraNotes: [
+        "codex_repair=failed",
+        `repair_attempt=${nextAttemptCount}/${request.maxAttempts}`,
+        `artifact_dir=${artifactDir}`,
+      ],
+    });
+
+    return {
+      state: nextState,
+      action: "wait",
+      nextStage: null,
+    };
+  }
+
+  if (typeof worktree?.assertClean === "function") {
+    try {
+      worktree.assertClean({
+        worktreePath: state.workspace?.path,
+      });
+    } catch {
+      if (typeof worktree.commitChanges !== "function") {
+        throw new Error("Codex repair produced local changes but commitChanges is unavailable.");
+      }
+      worktree.commitChanges({
+        worktreePath: state.workspace?.path,
+        subject: `chore(omo): repair ${slice} ${formatReasonDetailForCommit(request.reasonDetailCode)}`,
+        body: `Resolved ${request.reasonCode}/${request.reasonDetailCode} via bounded Codex repair.`,
+      });
+      if (typeof worktree.pushBranch === "function") {
+        worktree.pushBranch({
+          worktreePath: state.workspace?.path,
+          branch: activePr.branch ?? resolveBranchName({
+            slice,
+            stage: request.stage,
+          }),
+        });
+      }
+    }
+  }
+
+  const refreshedHeadSha =
+    typeof worktree?.getHeadSha === "function"
+      ? worktree.getHeadSha({
+          worktreePath: state.workspace?.path,
+        })
+      : activePr.head_sha ?? request.headSha;
+  const nextState = saveRuntime({
+    rootDir,
+    workItemId,
+    state: setRecoveryState({
+      state: setWaitState({
+        state: setPullRequestRef({
+          state: resolveRunResultRuntimeState({
+            rootDir,
+            workItemId,
+            slice,
+            runResult,
+          }),
+          role: request.prRole,
+          number: activePr.number,
+          url: activePr.url,
+          draft: activePr.draft ?? true,
+          branch: activePr.branch ?? null,
+          headSha: refreshedHeadSha ?? activePr.head_sha ?? request.headSha,
+          updatedAt: now,
+        }),
+        kind: "ci",
+        prRole: request.prRole,
+        stage: request.stage,
+        headSha: refreshedHeadSha ?? activePr.head_sha ?? request.headSha,
+        reason: "Codex repair resolved; waiting for CI.",
+        reasonCode: "ci_wait",
+        reasonDetailCode: "post_codex_repair",
+        updatedAt: now,
+      }),
+      recovery: {
+        kind: "codex_repair",
+        stage: request.stage,
+        reason: request.reason,
+        artifact_dir: artifactDir,
+        changed_files: stageResult.changed_files,
+        tests_run: stageResult.tests_run,
+        reason_resolved: stageResult.reason_resolved,
+        remaining_risk: stageResult.remaining_risk,
+        existing_pr: {
+          role: request.prRole,
+          number: activePr.number,
+          url: activePr.url,
+          draft: activePr.draft ?? true,
+          branch: activePr.branch ?? null,
+          head_sha: refreshedHeadSha ?? activePr.head_sha ?? request.headSha,
+        },
+        session_role: "codex_primary",
+        session_provider: runResult.execution?.provider ?? "opencode",
+        session_id: runResult.execution?.sessionId ?? null,
+        updated_at: now,
+      },
+    }),
+  });
+  updateRuntimeStatusForWait({
+    rootDir,
+    workItemId,
+    wait: nextState.wait,
+    prPath: activePr.url,
+    now,
+    lifecycle: "ready_for_review",
+    verificationStatus: "pending",
+    extraNotes: [
+      "codex_repair=resolved",
+      `repair_attempt=${nextAttemptCount}/${request.maxAttempts}`,
+      `artifact_dir=${artifactDir}`,
+    ],
+  });
+
+  return {
+    state: nextState,
+    action: "wait",
+    nextStage: null,
+  };
+}
+
 function handleDeferredStageExecution({
   rootDir,
   workItemId,
@@ -4705,6 +5131,8 @@ function processWaitState({
   workItemId,
   state,
   github,
+  stageRunner,
+  verifyCommands,
   worktree,
   now,
 }) {
@@ -5187,8 +5615,21 @@ function processWaitState({
     );
   }
 
+  if (state.wait.kind === "codex_repairable") {
+    return dispatchCodexRepair({
+      rootDir,
+      workItemId,
+      slice: state.slice ?? workItemId,
+      state,
+      stageRunner,
+      verifyCommands,
+      worktree,
+      now,
+    });
+  }
+
   if (
-    ["codex_repairable", "claude_repairable", "manual_decision_required", "blocked_on_external"].includes(
+    ["claude_repairable", "manual_decision_required", "blocked_on_external"].includes(
       state.wait.kind,
     )
   ) {
@@ -9851,11 +10292,36 @@ export function superviseWorkItem(
           workItemId: normalizedWorkItemId,
           state,
           github: dependencies.github,
+          stageRunner: dependencies.stageRunner,
+          verifyCommands: dependencies.verifyCommands,
           worktree: {
             syncBaseBranch() {
               return dependencies.worktree.syncBaseBranch({
                 rootDir,
                 worktreePath: state.workspace.path,
+              });
+            },
+            assertClean({ worktreePath }) {
+              return dependencies.worktree.assertClean({
+                worktreePath,
+              });
+            },
+            commitChanges({ worktreePath, subject, body }) {
+              return dependencies.worktree.commitChanges({
+                worktreePath,
+                subject,
+                body,
+              });
+            },
+            pushBranch({ worktreePath, branch }) {
+              return dependencies.worktree.pushBranch({
+                worktreePath,
+                branch,
+              });
+            },
+            getHeadSha({ worktreePath }) {
+              return dependencies.worktree.getHeadSha({
+                worktreePath,
               });
             },
           },
@@ -10379,11 +10845,14 @@ export function tickSupervisorWorkItems(
       };
     }
 
-    if (
-      ["codex_repairable", "claude_repairable", "manual_decision_required", "blocked_on_external"].includes(
-        state.wait.kind,
-      )
-    ) {
+    if (state.wait.kind === "codex_repairable") {
+      return {
+        resumable: true,
+        reason: null,
+      };
+    }
+
+    if (["claude_repairable", "manual_decision_required", "blocked_on_external"].includes(state.wait.kind)) {
       return {
         resumable: false,
         reason: `${state.wait.kind}_pending`,

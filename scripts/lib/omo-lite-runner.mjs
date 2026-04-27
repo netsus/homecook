@@ -696,6 +696,20 @@ function buildReviewStageResultTemplate(stage, subphase = null) {
 function resolveStageResultTemplate(stage, subphase = null) {
   const normalizedStage = Number(stage);
 
+  if (subphase === "codex_repair") {
+    return {
+      result: "resolved | unresolved | blocked",
+      summary_markdown: "수리 결과 요약",
+      reason_code: "codex_repairable",
+      reason_detail_code: "checklist_evidence_drift",
+      changed_files: ["docs/workpacks/example/README.md"],
+      tests_run: ["pnpm validate:workflow-v2"],
+      verification_refs: [".artifacts/omo-supervisor/example/verify-1.stdout.log"],
+      reason_resolved: true,
+      remaining_risk: "none",
+    };
+  }
+
   if (isReviewStage(normalizedStage, subphase)) {
     return buildReviewStageResultTemplate(normalizedStage, subphase);
   }
@@ -937,7 +951,9 @@ function buildPrompt({
     "```json",
     JSON.stringify(stageResultTemplate, null, 2),
     "```",
-    normalizedStage === 2 && subphase === "doc_gate_repair"
+    subphase === "codex_repair"
+      ? "- Required keys: result, summary_markdown, reason_code, reason_detail_code, changed_files, tests_run, verification_refs, reason_resolved, remaining_risk"
+      : normalizedStage === 2 && subphase === "doc_gate_repair"
       ? "- Required keys: result, summary_markdown, commit.subject, pr.title, pr.body_markdown, checks_run, next_route, claimed_scope, changed_files, artifacts_written, resolved_doc_finding_ids, contested_doc_fix_ids, rebuttals"
       : normalizedStage === 2 && subphase === "doc_gate_review"
         ? "- Required keys: decision, body_markdown, route_back_stage, approved_head_sha, review_scope.scope=doc_gate, reviewed_doc_finding_ids, required_doc_fix_ids, waived_doc_fix_ids, findings"
@@ -1731,6 +1747,7 @@ function assertCodeStageChecklistCoverage({
   }
 
   if (
+    subphase === "codex_repair" ||
     normalizedStage === 2 &&
     ["doc_gate_review", "doc_gate_repair"].includes(subphase ?? "")
   ) {
