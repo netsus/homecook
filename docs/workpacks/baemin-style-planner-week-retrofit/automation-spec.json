@@ -1,0 +1,97 @@
+{
+  "slice_id": "baemin-style-planner-week-retrofit",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/planner"
+    ],
+    "required_states": [
+      "checking",
+      "authenticated",
+      "unauthorized",
+      "loading",
+      "ready",
+      "empty",
+      "error"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "all-restyle-uses-css-variables-only",
+      "existing-props-interfaces-preserved",
+      "planner-week-information-architecture-preserved",
+      "h2-h4-day-card-contract-honored",
+      "ui-primitives-consumed-not-modified",
+      "status-meta-tint-visual-parity",
+      "weekday-strip-interaction-preserved",
+      "two-day-overview-preserved"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [
+        "PLANNER_WEEK"
+      ],
+      "required_screens": [
+        "PLANNER_WEEK"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/PLANNER_WEEK.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/PLANNER_WEEK-baemin-style-retrofit-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "PLANNER_WEEK-before-mobile.png",
+        "PLANNER_WEEK-after-mobile.png",
+        "PLANNER_WEEK-after-narrow-320.png",
+        "PLANNER_WEEK-loading-state.png",
+        "PLANNER_WEEK-empty-state.png",
+        "PLANNER_WEEK-unauthorized-state.png",
+        "PLANNER_WEEK-scrolled-day-cards.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/BAEMIN_STYLE_PLANNER_WEEK_RETROFIT-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "hardcoded-hex-rgba-in-restyled-components",
+    "component-outside-declared-scope-edited",
+    "jua-font-imported",
+    "planner-week-information-architecture-violated",
+    "h2-h4-day-card-contract-violated",
+    "horizontal-overflow-mobile-or-320",
+    "ui-state-disappeared",
+    "existing-props-interface-broken",
+    "ui-primitive-file-modified",
+    "weekday-strip-interaction-broken",
+    "status-meta-tint-visual-parity-broken",
+    "two-day-overview-broken",
+    "unresolved-authority-blocker",
+    "exploratory-qa-not-run-no-skip-rationale"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 3
+  }
+}
