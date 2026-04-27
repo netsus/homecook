@@ -78,9 +78,9 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending"
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed"
   },
   "out_of_scope": [
     "Anchor screen body restyling (HOME, RECIPE_DETAIL, PLANNER_WEEK — already completed)",
@@ -97,5 +97,49 @@
     "COOK_MODE screen (slices 14/15)",
     "Prototype HANDOFF.md direct copy"
   ],
-  "open_questions": []
+  "open_questions": [],
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/BAEMIN_STYLE_MODAL_SYSTEM_FIT-authority.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm verify:frontend",
+        "PLAYWRIGHT_REUSE_EXISTING_SERVER=1 pnpm test:e2e:visual",
+        "pnpm qa:eval -- --checklist .artifacts/qa/baemin-style-modal-system-fit/2026-04-27T12-39-46-389Z/exploratory-checklist.json --report .artifacts/qa/baemin-style-modal-system-fit/2026-04-27T12-39-46-389Z/exploratory-report.json --fail-under 85",
+        "PR_IS_DRAFT=false pnpm validate:authority-evidence-presence",
+        "PR_IS_DRAFT=false pnpm validate:exploratory-qa-evidence",
+        ".omx/artifacts/claude-delegate-baemin-style-modal-system-fit-final-authority-gate-response-20260427T124100Z.md"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "98cb793dd00a3236d12e37879b836ae0a3ccd2dd",
+      "approval_state": "dual_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-04-27T12:59:12.000Z"
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-04-27T12:59:12.000Z",
+      "status_synced_at": "2026-04-27T12:59:12.000Z",
+      "pr_body_synced_at": "2026-04-27T12:59:12.000Z"
+    }
+  }
 }

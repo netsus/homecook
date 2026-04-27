@@ -145,7 +145,7 @@ LoginGateModal은 현재 H5 ModalHeader를 사용하지 않고 자체 header를 
 - UI risk: `high` (modal family = H5 anchor extension, LoginGateModal H5 합류 포함)
 - Anchor screen dependency: 간접 — modal은 `HOME`, `RECIPE_DETAIL` 위에 overlay
 - Visual artifact: modal before/after screenshots at mobile default (390px); key active states (LoginGateModal H5 전환 전후, 4개 interaction modal 정합 상태)
-- Authority status: not_started
+- Authority status: reviewed
 
 ### Design-Generator / Critic Skip Rationale
 
