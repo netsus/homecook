@@ -151,7 +151,7 @@
       "id": "omo-claude-cli-provider-spec",
       "preset": "infra-governance",
       "branch": "docs/omo-claude-cli-provider-spec",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/271",
       "lifecycle": "ready_for_review",
       "approval_state": "dual_approved",
       "verification_status": "passed",
@@ -566,6 +566,21 @@
         "git diff --check"
       ],
       "notes": "RECIPE_DETAIL body prototype parity scored slice. Stage 5 Codex design review and Claude final authority gate passed: visual-verdict score 96.56 >= 95, blocker 0, 32 retained capture files + prototype N/A slots. Stage 6/internal 6.5 closeout projected roadmap/design/status to merged/confirmed/reviewed. CI visual exposed stale Linux RECIPE_DETAIL and login-gate baselines; snapshots were refreshed from PR #270 CI actuals. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:2 closeout_repair=codex:3|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:ui/designs/authority/RECIPE_DETAIL-parity-authority.md,ui/designs/evidence/baemin-prototype-recipe-detail-parity/stage5-design-review.md,ui/designs/evidence/baemin-prototype-recipe-detail-parity/visual-verdict.json,.artifacts/qa/baemin-prototype-recipe-detail-parity/2026-04-27T20-01-14-418Z/exploratory-report.json,tests/e2e/qa-visual.spec.ts-snapshots/qa-recipe-detail-desktop-chrome-linux.png,tests/e2e/qa-visual.spec.ts-snapshots/qa-recipe-detail-mobile-chrome-linux.png,tests/e2e/qa-visual.spec.ts-snapshots/qa-recipe-detail-mobile-ios-small-linux.png,tests/e2e/qa-visual.spec.ts-snapshots/qa-login-gate-modal-desktop-chrome-linux.png last_recovery_at=2026-04-27T21:05:36Z"
+    },
+    {
+      "id": "baemin-prototype-planner-week-parity-contract",
+      "preset": "docs-only",
+      "branch": "docs/baemin-prototype-planner-week-parity-contract",
+      "pr_path": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "git diff --check",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack"
+      ],
+      "notes": "Docs-only contract sync slice for PLANNER_WEEK prototype parity. Claude Stage 1 created/repair-closed workpack docs; Codex internal 1.5/Stage 6 review passed. Confirms official docs (v1.5.1/v1.6.4/v1.3.1) already contain prototype-priority contract. Records H2/H4 conflict resolution and evidence target (score >= 94, blocker 0, 7 required states) for follow-up implementation slice. No runtime code changes. closeout_phase=completed closeout_repair=codex:2|claude:2|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:docs/workpacks/baemin-prototype-planner-week-parity-contract/README.md,docs/workpacks/baemin-prototype-planner-week-parity-contract/acceptance.md,docs/workpacks/baemin-prototype-planner-week-parity-contract/automation-spec.json,.omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-contract-stage1-repair-response-20260427T213422Z.md,.omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-contract-closeout-repair-response-20260427T213836Z.md last_recovery_at=2026-04-27T21:41:23Z"
     }
   ]
 }

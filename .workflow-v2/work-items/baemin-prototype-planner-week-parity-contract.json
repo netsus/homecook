@@ -1,0 +1,145 @@
+{
+  "id": "baemin-prototype-planner-week-parity-contract",
+  "title": "PLANNER_WEEK prototype-priority contract and evidence target sync",
+  "summary": "PLANNER_WEEK prototype parity 구현 전에 H2/H4 supersession 확인, 공식 문서 정합 검증, evidence target 기록을 수행하는 docs-only contract sync 슬라이스다. 공식 문서(v1.5.1/v1.6.4/v1.3.1)에 이미 prototype-priority 계약이 반영되었음을 확인하고, follow-up implementation slice의 scoring 기준을 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "docs-only",
+  "surface": "frontend",
+  "risk": "low",
+  "preset": "docs-only",
+  "goal": "Verify that official docs already contain the PLANNER_WEEK prototype-priority contract, record H2/H4 conflict resolution, and lock the evidence target (score >= 94, blocker 0, 7 required states) for the follow-up implementation slice.",
+  "owners": {
+    "claude": "stage1",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "h7-baemin-prototype-parity-direction",
+    "baemin-prototype-parity-foundation",
+    "baemin-prototype-home-parity",
+    "baemin-prototype-recipe-detail-parity",
+    "05-planner-week-core",
+    "baemin-style-planner-week-retrofit"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/baemin-prototype-planner-week-parity-contract/README.md",
+      "docs/workpacks/baemin-prototype-planner-week-parity-contract/acceptance.md",
+      "docs/workpacks/baemin-prototype-planner-week-parity-contract/automation-spec.json"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/workpacks/h7-baemin-prototype-parity-direction/README.md",
+      "docs/workpacks/baemin-prototype-parity-foundation/README.md",
+      "ui/designs/evidence/baemin-prototype-parity-foundation/fixture-route-matrix.md",
+      "ui/designs/evidence/baemin-prototype-parity-foundation/visual-verdict-schema.json",
+      "ui/designs/evidence/baemin-prototype-parity-foundation/token-material-mapping.md",
+      "ui/designs/evidence/baemin-prototype-parity-foundation/prototype-exclusion-inventory.md",
+      "docs/화면정의서-v1.5.1.md",
+      "docs/요구사항기준선-v1.6.4.md",
+      "docs/유저flow맵-v1.3.1.md",
+      "docs/design/mobile-ux-rules.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack"
+    ],
+    "verify_commands": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "no-runtime-code-change"
+    ]
+  },
+  "status": {
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed"
+  },
+  "out_of_scope": [
+    "Runtime app code changes (components, routes, API, styles)",
+    "PLANNER_WEEK visual parity implementation",
+    "3-way capture evidence generation",
+    "Visual-verdict scoring execution",
+    "Authority report generation",
+    "Official source-of-truth document changes",
+    "HOME or RECIPE_DETAIL screen changes",
+    "API endpoint, field, table, or status value additions",
+    "New npm dependencies"
+  ],
+  "open_questions": [],
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "git diff --check",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack",
+        ".omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-contract-stage1-contract-response-20260427T212339Z.md",
+        ".omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-contract-stage1-repair-response-20260427T213422Z.md",
+        ".omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-contract-closeout-repair-response-20260427T213836Z.md"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-final-pr-head",
+      "approval_state": "dual_approved",
+      "all_checks_green": "pending_pr_checks"
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-04-27T21:41:23Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 2,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "automation_spec_ui_risk_enum_repair",
+      "evidence_sources": [
+        "docs/workpacks/baemin-prototype-planner-week-parity-contract/README.md",
+        "docs/workpacks/baemin-prototype-planner-week-parity-contract/acceptance.md",
+        "docs/workpacks/baemin-prototype-planner-week-parity-contract/automation-spec.json",
+        ".omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-contract-stage1-repair-response-20260427T213422Z.md",
+        ".omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-contract-closeout-repair-response-20260427T213836Z.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-04-27T21:41:23Z",
+      "status_synced_at": "2026-04-27T21:41:23Z",
+      "pr_body_synced_at": "pending-pr-body"
+    }
+  }
+}
