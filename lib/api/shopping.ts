@@ -5,6 +5,7 @@ import type {
   ShoppingListDetail,
   ShoppingListItemSummary,
   ShoppingListItemUpdateBody,
+  ShoppingListCompleteBody,
   ShoppingListCompleteData,
   ShoppingListReorderBody,
   ShoppingListReorderData,
@@ -110,10 +111,19 @@ export async function reorderShoppingListItems(listId: string, body: ShoppingLis
   });
 }
 
-export async function completeShoppingList(listId: string) {
-  return requestShopping<ShoppingListCompleteData>(`/api/v1/shopping/lists/${listId}/complete`, {
-    method: "POST",
-  });
+export async function completeShoppingList(listId: string, body?: ShoppingListCompleteBody) {
+  return requestShopping<ShoppingListCompleteData>(
+    `/api/v1/shopping/lists/${listId}/complete`,
+    body === undefined
+      ? {
+          method: "POST",
+        }
+      : {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        },
+  );
 }
 
 export async function fetchShoppingShareText(listId: string) {

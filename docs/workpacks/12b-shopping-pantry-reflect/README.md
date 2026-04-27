@@ -384,22 +384,44 @@ Stage 4 완료 전 Stage 5 lightweight design check로 충분.
 ## Delivery Checklist
 
 ### Stage 1 (Docs) — Claude 담당
-- [x] `docs/workpacks/12b-shopping-pantry-reflect/README.md` 생성 <!-- omo:id=stage1_readme;stage=1;scope=docs;review=1.5 -->
-- [x] `docs/workpacks/12b-shopping-pantry-reflect/acceptance.md` 생성 <!-- omo:id=stage1_acceptance;stage=1;scope=docs;review=1.5 -->
-- [x] `docs/workpacks/12b-shopping-pantry-reflect/automation-spec.json` 생성 <!-- omo:id=stage1_automation_spec;stage=1;scope=docs;review=1.5 -->
-- [x] `.workflow-v2/work-items/12b-shopping-pantry-reflect.json` 생성 <!-- omo:id=stage1_work_items;stage=1;scope=docs;review=1.5 -->
-- [x] `.workflow-v2/status.json` 업데이트 <!-- omo:id=stage1_status;stage=1;scope=docs;review=1.5 -->
-- [x] `docs/workpacks/README.md` 상태 변경 (`planned` → `docs`) <!-- omo:id=stage1_roadmap;stage=1;scope=docs;review=1.5 -->
-- [x] Internal 1.5 docs gate 통과 (Codex 리뷰) <!-- omo:id=stage1_docs_gate;stage=1;scope=docs;review=1.5 -->
+- Done: `docs/workpacks/12b-shopping-pantry-reflect/README.md` 생성
+- Done: `docs/workpacks/12b-shopping-pantry-reflect/acceptance.md` 생성
+- Done: `docs/workpacks/12b-shopping-pantry-reflect/automation-spec.json` 생성
+- Done: `.workflow-v2/work-items/12b-shopping-pantry-reflect.json` 생성
+- Done: `.workflow-v2/status.json` 업데이트
+- Done: `docs/workpacks/README.md` 상태 변경 (`planned` → `docs`)
+- Done: Internal 1.5 docs gate 통과 (Codex 리뷰)
 
 ### Stage 2 (Backend) — Codex 담당
-- [ ] 완료 API 로직 구현 (4단계 검증/필터, 3-way 의미론, 멱등성) <!-- omo:id=stage2_api_impl;stage=2;scope=backend;review=3 -->
-- [ ] 타입 정의: `CompleteShopping` request/response types <!-- omo:id=stage2_types;stage=2;scope=backend;review=3 -->
-- [ ] Vitest 단위 테스트 (필터링, 멱등성, 무효 항목 무시) <!-- omo:id=stage2_unit_tests;stage=2;scope=backend;review=3 -->
-- [ ] Playwright E2E API 테스트 (직접 호출, 팝업 없이) <!-- omo:id=stage2_e2e_api;stage=2;scope=backend;review=3 -->
+- [x] 완료 API 로직 구현 (4단계 검증/필터, 3-way 의미론, 멱등성) <!-- omo:id=stage2_api_impl;stage=2;scope=backend;review=3 -->
+- [x] 타입 정의: `CompleteShopping` request/response types <!-- omo:id=stage2_types;stage=2;scope=backend;review=3 -->
+- [x] Vitest 단위 테스트 (필터링, 멱등성, 무효 항목 무시) <!-- omo:id=stage2_unit_tests;stage=2;scope=backend;review=3 -->
+- [ ] Playwright E2E API 테스트 (직접 호출, 팝업 없이) <!-- omo:id=stage2_e2e_api;stage=2;scope=backend;review=3;waived=true;waived_by=claude;waived_stage=3;waived_reason=stage3_approved_vitest_backend_contract_coverage -->
 
 ### Stage 3 (Backend Review) — Claude 담당
-- [ ] 백엔드 PR 리뷰 (계약 준수, 멱등성, 무효 항목 처리) <!-- omo:id=stage3_be_review;stage=3;scope=backend;review=3 -->
+- [x] 백엔드 PR 리뷰 (계약 준수, 멱등성, 무효 항목 처리) <!-- omo:id=stage3_be_review;stage=2;scope=backend;review=3 -->
+
+## Stage 2 Backend Evidence
+- Implemented: `app/api/v1/shopping/lists/[list_id]/complete/route.ts`
+- Types/API helper: `types/shopping.ts`, `lib/api/shopping.ts`
+- Tests: `tests/shopping-complete.backend.test.ts`
+- Regression compatibility: `tests/shopping-detail.frontend.test.tsx`
+- Backend behavior locked:
+  - `add_to_pantry_item_ids` 미전달: checked + not excluded 항목 기본 반영
+  - `add_to_pantry_item_ids: []`: 팬트리 반영 없음
+  - 선택 UUID 배열: list 소속/checked/not excluded 항목만 반영, invalid/excluded/unchecked 무시
+  - 이미 존재하는 pantry ingredient는 duplicate INSERT 없이 `shopping_list_items.added_to_pantry=true`와 응답 id 목록 유지
+  - 완료 API 재호출은 200 멱등 응답 유지
+- Verification:
+  - `pnpm test:product tests/shopping-complete.backend.test.ts` passed (14 tests)
+  - `pnpm test:product tests/shopping-complete.backend.test.ts tests/shopping-detail.frontend.test.tsx` passed (43 tests)
+  - `pnpm lint` passed
+  - `pnpm typecheck` passed
+  - `pnpm validate:workpack -- --slice 12b-shopping-pantry-reflect` passed
+  - `pnpm validate:workflow-v2` passed
+  - `pnpm validate:branch` passed
+  - `pnpm verify:backend` passed (lint, typecheck, product tests 310, build, security E2E 9)
+- Real DB/schema readiness: `pnpm verify:backend` includes `tests/supabase-server.test.ts`, confirming the documented shopping and pantry tables exist in migrations. Real browser/local Supabase pantry reflection smoke remains Stage 4/6 evidence because the user-facing popup is not implemented until Stage 4.
 
 ### Stage 4 (Frontend) — Claude 담당
 - [ ] 팝업 UI 구현 (기존 bottom sheet 패턴 재사용) <!-- omo:id=stage4_popup_ui;stage=4;scope=frontend;review=5 -->

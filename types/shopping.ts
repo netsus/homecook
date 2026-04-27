@@ -82,6 +82,12 @@ export interface ShoppingListReorderData {
 export interface ShoppingListCompleteData {
   completed: true;
   meals_updated: number;
+  pantry_added: number;
+  pantry_added_item_ids: string[];
+}
+
+export interface ShoppingListCompleteBody {
+  add_to_pantry_item_ids?: string[] | null;
 }
 
 export interface ShoppingShareTextData {
