@@ -66,6 +66,19 @@ export interface ShoppingListItemUpdateBody {
   is_pantry_excluded?: boolean;
 }
 
+export interface ShoppingListReorderItem {
+  item_id: string;
+  sort_order: number;
+}
+
+export interface ShoppingListReorderBody {
+  orders: ShoppingListReorderItem[];
+}
+
+export interface ShoppingListReorderData {
+  updated: number;
+}
+
 export interface ShoppingShareTextData {
   text: string;
 }
@@ -74,4 +87,5 @@ export type ShoppingPreviewResponse = ApiResponse<ShoppingPreviewData>;
 export type ShoppingListCreateResponse = ApiResponse<ShoppingListSummary>;
 export type ShoppingListDetailResponse = ApiResponse<ShoppingListDetail>;
 export type ShoppingListItemUpdateResponse = ApiResponse<ShoppingListItemSummary>;
+export type ShoppingListReorderResponse = ApiResponse<ShoppingListReorderData>;
 export type ShoppingShareTextResponse = ApiResponse<ShoppingShareTextData>;
