@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-27T12:59:12.000Z",
+  "updated_at": "2026-04-27T13:10:51.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -487,7 +487,7 @@
         "pnpm lint",
         "pnpm verify:frontend"
       ],
-      "notes": "Internal 6.5 projection sync after Stage 6 Codex review. closeout_phase=completed closeout_recovery=manual_patch:1 last_recovery_at=2026-04-27T12:59:12.000Z PR #245 opened from recovered GitHub API branch after git push HTTP transport failure; local required checks passed including pnpm verify:frontend. Claude final authority approved. Exploratory QA score 97. Authority evidence and visual baseline updates are retained in repo. Manual Only remains user final visual-feel confirmation after merge."
+      "notes": "Internal 6.5 projection sync after Stage 6 Codex review. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:1 last_recovery_at=2026-04-27T13:10:51.000Z PR #245 opened from recovered GitHub API branch after git push HTTP transport failure; local required checks passed including pnpm verify:frontend. Claude final authority approved. Exploratory QA score 97. Authority evidence and visual baseline updates are retained in repo. Manual Only remains user final visual-feel confirmation after merge."
     }
   ]
 }
