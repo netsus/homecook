@@ -1,0 +1,91 @@
+{
+  "slice_id": "baemin-style-recipe-detail-retrofit",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/recipe/[id]"
+    ],
+    "required_states": [
+      "loading",
+      "ready",
+      "error"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "all-restyle-uses-css-variables-only",
+      "existing-props-interfaces-preserved",
+      "recipe-detail-information-architecture-preserved",
+      "h5-modal-decisions-honored",
+      "ui-primitives-consumed-not-modified",
+      "cooking-method-tint-visual-parity"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [
+        "RECIPE_DETAIL"
+      ],
+      "required_screens": [
+        "RECIPE_DETAIL"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/RECIPE_DETAIL.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/RECIPE_DETAIL-baemin-style-retrofit-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "RECIPE_DETAIL-before-mobile.png",
+        "RECIPE_DETAIL-after-mobile.png",
+        "RECIPE_DETAIL-after-narrow-320.png",
+        "RECIPE_DETAIL-planner-add-sheet.png",
+        "RECIPE_DETAIL-save-modal.png",
+        "RECIPE_DETAIL-login-gate-modal.png",
+        "RECIPE_DETAIL-loading-state.png",
+        "RECIPE_DETAIL-error-state.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/BAEMIN_STYLE_RECIPE_DETAIL_RETROFIT-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "hardcoded-hex-rgba-in-restyled-components",
+    "component-outside-declared-scope-edited",
+    "jua-font-imported",
+    "cook-token-value-changed",
+    "cooking-method-tint-visual-parity-broken",
+    "recipe-detail-information-architecture-violated",
+    "h5-modal-decisions-violated",
+    "horizontal-overflow-mobile-or-320",
+    "ui-state-disappeared",
+    "existing-props-interface-broken",
+    "ui-primitive-file-modified",
+    "unresolved-authority-blocker",
+    "exploratory-qa-not-run-no-skip-rationale"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 3
+  }
+}

@@ -367,3 +367,158 @@
 - [ ] 스텝 카드 조리방법 배지가 한 스텝에 여러 조리방법 존재할 경우 표현 방식
 - [x] 모바일 375px 기준 버튼 5개 가로 배치 시 레이블 잘림 여부 — compact utility row + 2-button CTA row 구조로 해결
 - [ ] 재료 리스트 TO_TASTE italic 처리가 접근성(읽기 어려움) 기준 충족하는지 확인
+
+---
+
+## Baemin-Style Visual Retrofit Addendum
+
+> 추가일: 2026-04-27
+> 관련 슬라이스: `baemin-style-recipe-detail-retrofit`
+> 선행 슬라이스: `baemin-style-shared-components` (merged), `baemin-style-token-values` (merged), `baemin-style-home-retrofit` (merged), `h5-modal-system-redesign` (merged)
+> 프로토타입 참조: `ui/designs/prototypes/baemin-redesign/HANDOFF.md` §RECIPE_DETAIL — **REFERENCE ONLY**. 공식 문서 및 workpack이 프로토타입과 충돌 시, 공식 문서/workpack이 우선한다.
+
+### 목적
+
+RECIPE_DETAIL의 기존 정보 구조(overview, utility metrics, primary CTA, 재료, 조리 단계)를 **그대로 보존**하면서, 승인된 배민 스타일 토큰(`--brand` #ED7470, `--brand-deep` #C84C48, `--brand-soft` #FDEBEA)과 additive 토큰(`--text-2/3/4`, `--surface-fill/subtle`, `--shadow-1/2/3`, `--radius-*`)으로 시각적 레이어를 교체한다. `COOKING_METHOD_TINTS`의 hardcoded rgba를 `--cook-*` 토큰에서 `color-mix()`로 파생한다. PlannerAddSheet, SaveModal, LoginGateModal의 H5 modal chrome 결정을 보존한다.
+
+### 핵심 원칙: 구조 보존, 시각 교체
+
+```
+RECIPE_DETAIL 정보 구조 (변경 없음)     배민 스타일 시각 레이어 (교체 대상)
+─────────────────────────────────     ─────────────────────────────────
+Hero gradient                    →    color-mix() brand/olive 파생
+Thumbnail overlay                →    color-mix() foreground 파생
+Overview card (glass-panel)      →    토큰 기반 panel/border/shadow
+Tag chips                        →    color-mix() olive 파생
+Utility metrics row              →    color-mix() tone 파생 (brand/olive/signal)
+Action buttons                   →    color-mix() tone 파생 + 토큰 shadow
+Description text                 →    토큰 기반 text color
+Primary CTA row                  →    토큰 기반 olive/brand tone
+Serving stepper                  →    토큰 기반 surface/border/shadow
+Ingredient list                  →    토큰 기반 surface, color-mix() 배지
+Step cards                       →    토큰 기반 surface, color-mix() cook tint
+  - 조리방법 배지                →    COOKING_METHOD_TINTS → color-mix()
+  - 스텝 번호 원                 →    토큰 유지 (--foreground bg)
+Loading skeleton                 →    Skeleton primitive / 토큰 기반
+Feedback toasts                  →    color-mix() tone + 토큰 shadow
+PlannerAddSheet                  →    토큰 기반 modal chrome (H5 보존)
+SaveModal                        →    토큰 기반 modal chrome (H5 보존)
+LoginGateModal                   →    토큰 기반 modal chrome
+```
+
+### 컴포넌트별 리트로핏 델타 테이블
+
+| 컴포넌트 | 현행 스타일 | 리트로핏 대상 | 비고 |
+| --- | --- | --- | --- |
+| **Hero gradient** | `rgba(255,108,60,0.22)`, `rgba(255,249,242,0.78)`, `rgba(46,166,122,0.18)` | `color-mix()` brand/background/olive 파생 | HOME RecipeCard 패턴 적용 |
+| **Thumbnail overlay** | `rgba(26,26,46,0.08)`, `rgba(26,26,46,0.32)` | `color-mix(in srgb, var(--foreground) 8%, transparent)` 등 | HOME RecipeCard 패턴 적용 |
+| **Overview card** | `glass-panel rounded-[24px]` | `bg-[var(--panel)] border-[var(--line)] shadow-[var(--shadow-2)] rounded-[var(--radius-xl)]` | `glass-panel` 제거 |
+| **Tag chips** | `bg-[color:rgba(46,166,122,0.1)]` | `bg-[color-mix(in_srgb,var(--olive)_10%,transparent)]` | olive 유지 |
+| **Utility metrics row** | `getRecipeActionToneClass()` — hardcoded rgba for brand/olive/signal/neutral | 각 tone을 `color-mix()` 기반으로 교체 | 4개 tone variant 전부 |
+| **ActionButton (brand)** | `border-[color:rgba(224,80,32,0.18)] bg-[color:rgba(255,108,60,0.12)]` | `color-mix()` brand 파생 | |
+| **ActionButton (olive)** | `border-[color:rgba(46,166,122,0.22)] bg-[var(--olive)] text-white` | `text-[var(--surface)]`, border `color-mix()` | |
+| **ActionButton (signal)** | `border-[color:rgba(210,78,78,0.18)] bg-[color:rgba(210,78,78,0.1)] text-[#b44949]` | `color-mix()` 파생 + 토큰 텍스트 | 좋아요 active tone |
+| **ActionButton (neutral)** | `border-[var(--line)] bg-white` | `bg-[var(--surface)]` | `bg-white` 제거 |
+| **Count pill** | `bg-white/72` | `bg-[var(--surface-fill)]` 또는 `color-mix()` surface | |
+| **Description text** | `text-[color:rgba(74,74,74,0.78)]` | `text-[var(--text-3)]` 또는 `color-mix()` 파생 | hardcoded rgba 제거 |
+| **Serving stepper area** | `bg-white/70 rounded-[16px]` | `bg-[var(--surface-fill)] rounded-[var(--radius-lg)]` | |
+| **Stepper buttons** | `bg-white rounded-[12px]` | `bg-[var(--surface)] rounded-[var(--radius-md)]` | |
+| **Stepper helper text** | `text-[#9a3f1d]` | `color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))` 또는 `--text-2` | hardcoded hex 제거 |
+| **Ingredient rows** | `bg-white/70 rounded-[16px]` | `bg-[var(--surface-fill)] rounded-[var(--radius-lg)]` | |
+| **"취향껏" badge** | `border-[color:rgba(224,80,32,0.16)] bg-[color:rgba(255,108,60,0.08)] text-[#a14b27]` | `color-mix()` brand 파생 | |
+| **TO_TASTE quantity** | `text-[#7c4a32]` | `color-mix()` brand-deep 파생 또는 `--text-2` | hardcoded hex 제거 |
+| **Step cards** | `bg-white/70 rounded-[16px]` | `bg-[var(--surface-fill)] rounded-[var(--radius-lg)]` | |
+| **Step number circle** | `bg-[var(--foreground)] text-white` | `text-[var(--surface)]` | `text-white` 제거 |
+| **COOKING_METHOD_TINTS** | hardcoded rgba per method | `color-mix(in srgb, var(--cook-*) N%, transparent)` | `--cook-*` 값 미변경 |
+| **Fallback tint** | `rgba(170,170,170,0.16)` | `color-mix(in srgb, var(--cook-etc) 16%, transparent)` | |
+| **Feedback toast (error)** | `bg-[color:rgba(255,108,60,0.96)] text-white border-[...]` | `color-mix()` brand 파생, `text-[var(--surface)]` | |
+| **Feedback toast (status)** | `bg-[color:rgba(250,255,252,0.96)] border-[...]` | `color-mix()` olive 파생 | |
+| **Toast shadow** | `shadow-[0_18px_44px_rgba(34,24,14,0.14)]` | `shadow-[var(--shadow-3)]` | |
+| **Sections** | `glass-panel rounded-[20px]` | `bg-[var(--panel)] border-[var(--line)] shadow-[var(--shadow-2)] rounded-[var(--radius-xl)]` | `glass-panel` 제거 |
+| **Loading skeleton** | `glass-panel`, `bg-white/60/70/72/80`, hardcoded radii | Skeleton primitive + 토큰 기반 surface/radius | HOME skeleton 패턴 적용 |
+| **PlannerAddSheet backdrop** | `bg-black/50` | `bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)]` | HOME modal 패턴 |
+| **PlannerAddSheet panel** | `glass-panel rounded-[20px]` | `bg-[var(--panel)] border-[var(--line)] shadow-[var(--shadow-3)] rounded-[var(--radius-xl)]` | H5 decisions 보존 |
+| **PlannerAddSheet column btns** | `bg-[var(--olive)] text-white` / `bg-white/60` | `text-[var(--surface)]` / `bg-[var(--surface-fill)]` | |
+| **PlannerAddSheet skeleton** | `bg-white/60 rounded-[12px]` | `bg-[var(--surface-fill)] rounded-[var(--radius-md)]` | |
+| **SaveModal backdrop** | `bg-black/50` | `bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)]` | HOME modal 패턴 |
+| **SaveModal panel** | `glass-panel rounded-[20px]` | `bg-[var(--panel)] border-[var(--line)] shadow-[var(--shadow-3)] rounded-[var(--radius-xl)]` | H5 decisions 보존 |
+| **SaveModal book rows** | `bg-white`, `bg-[color:rgba(46,166,122,0.12)]` | `bg-[var(--surface)]`, `color-mix()` olive | |
+| **SaveModal error card** | `border-[color:rgba(255,108,60,0.2)] bg-[color:rgba(255,108,60,0.08)]` | `color-mix()` brand 파생 | |
+| **SaveModal new-book section** | `bg-white/70 rounded-[16px]` | `bg-[var(--surface-fill)] rounded-[var(--radius-lg)]` | |
+| **SaveModal input** | `bg-white rounded-[12px]` | `bg-[var(--surface)] rounded-[var(--radius-md)]` | |
+| **LoginGateModal backdrop** | `bg-black/42` | `bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)]` | |
+| **LoginGateModal panel** | `glass-panel rounded-[24px]` | `bg-[var(--panel)] border-[var(--line)] shadow-[var(--shadow-3)] rounded-[var(--radius-xl)]` | |
+| **LoginGateModal eyebrow** | `border-[color:rgba(30,30,30,0.08)] bg-[color:rgba(30,30,30,0.06)]` | `color-mix(in srgb, var(--foreground) 8%, transparent)` 등 | |
+| **LoginGateModal info card** | `bg-white/78 rounded-[18px]` | `bg-[var(--surface-fill)] rounded-[var(--radius-lg)]` | |
+
+### 프로토타입 참조 범위
+
+`ui/designs/prototypes/baemin-redesign/HANDOFF.md` RECIPE_DETAIL 섹션은 다음 포인트를 참조용으로 제공한다:
+
+- Hero + transparent AppBar fade → **채택하지 않음** (현재 RECIPE_DETAIL.md에 없고, AppHeader는 home-retrofit에서 확정)
+- Tabs + Reviews 구조 → **채택하지 않음** (현재 구현 없음, 후속 기능 slice 대상)
+- Stepper와 재료 카드 스타일 → **참고**, 토큰 기반 교체에만 활용
+- 조리 단계 카드 스타일 → **참고**, cooking method badge 색상은 `--cook-*` 기반 `color-mix()` 파생
+
+**주의**: 프로토타입은 REFERENCE ONLY다. 프로토타입과 공식 문서/workpack이 충돌하면 공식 문서/workpack이 우선한다. 특히:
+- Hero + transparent AppBar fade는 구현하지 않는다.
+- Tabs/Reviews 구조는 구현하지 않는다.
+- 프로토타입 JSX/HTML을 직접 복사하지 않는다.
+- `--cook-*` 토큰 값을 변경하지 않는다 (파생 tint만 `color-mix()` 전환).
+- Jua 폰트는 사용하지 않는다.
+
+### 리트로핏 와이어프레임 (구조 보존 + 시각 교체)
+
+```
+┌─────────────────────────────────────┐  ← 375px (모바일 기준)
+│  HOMECOOK                           │  ← AppHeader (home-retrofit 확정)
+├─────────────────────────────────────┤
+│  ┌─────────────────────────────┐   │  ← --panel bg, --line border, --shadow-2
+│  │                             │   │
+│  │   썸네일 / color-mix() hero │   │  ← color-mix(brand/background/olive)
+│  │                             │   │
+│  └─────────────────────────────┘   │
+│                                     │
+│  Home / Recipe detail               │  ← breadcrumb: --olive 유지
+│  [#한식] [#국물]                    │  ← color-mix(olive 10%) bg
+│  된장찌개                           │  ← --foreground 유지
+│  2인분 · 재료 8개 · 조리 5단계      │  ← --muted 유지
+│                                     │
+│  [플래너 24] [공유] [좋아요] [저장]  │  ← color-mix() tone 파생
+│                                     │
+│  요리 설명 텍스트                    │  ← --text-3 (rgba 제거)
+│                                     │
+│  [플래너에 추가] [요리하기]          │  ← olive/brand tone + 토큰 shadow
+│                                     │
+│  ── 재료 ─────── [-] 2인분 [+] ──  │  ← --surface-fill bg, token radii
+│  두부          150g                 │  ← --surface-fill row, token text
+│  소금     [취향껏]  적당히           │  ← color-mix(brand) badge
+│                                     │
+│  ── 조리 단계 ─────────────────── │
+│  ┌─────────────────────────────┐   │  ← --surface-fill bg, --radius-lg
+│  │ ① [끓이기]        ⏱ 10분  │   │  ← color-mix(cook-boil 14%) tint
+│  │   된장과 물 넣고 끓이기     │   │
+│  └─────────────────────────────┘   │
+│                                     │
+└─────────────────────────────────────┘
+```
+
+### 리트로핏 비적용 항목 (명시적 제외)
+
+| 항목 | 이유 |
+| --- | --- |
+| Prototype hero + transparent AppBar fade | 현재 RECIPE_DETAIL.md에 없음 |
+| Prototype tabs/reviews 구조 | 현재 구현 없음 |
+| BottomTabs 리스타일 | 앱 전체 retrofit slice로 분리 |
+| AppShell / AppHeader 구조 변경 | home-retrofit에서 확정 |
+| Jua 폰트 import | h6-direction non-goals |
+| 새 CSS 토큰 추가 | 기존 승인 토큰만 사용 |
+| `--cook-*` 토큰 값 변경 | 절대 가드레일 — 파생 tint만 color-mix() 전환 |
+| `components/ui/*` 파일 수정 | 소비만 허용 |
+| COOK_MODE 화면 | 후속 slice 14/15 |
+
+### 관련 리뷰 아티팩트
+
+- 리트로핏 설계 critique: `ui/designs/critiques/RECIPE_DETAIL-baemin-style-retrofit-critique.md`
+- Authority report (Stage 4/5 생성): `ui/designs/authority/BAEMIN_STYLE_RECIPE_DETAIL_RETROFIT-authority.md`
+- Evidence directory: `ui/designs/evidence/baemin-style/recipe-detail-retrofit/`

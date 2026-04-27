@@ -418,6 +418,24 @@
         "pnpm typecheck"
       ],
       "notes": "Stage 1 workpack docs for shopping list item drag & drop reorder persistence. Low-risk UI change on existing SHOPPING_DETAIL confirmed screen."
+    },
+    {
+      "id": "baemin-style-recipe-detail-retrofit",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/baemin-style-recipe-detail-retrofit",
+      "pr_path": "pending",
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "git diff --check",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm verify:frontend"
+      ],
+      "notes": "Stage 1 workpack docs created on 2026-04-27. RECIPE_DETAIL anchor screen Baemin-style visual retrofit. Dependencies all merged. Stage 4 implementation pending."
     }
   ]
 }
