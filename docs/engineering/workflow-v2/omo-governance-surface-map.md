@@ -63,7 +63,30 @@
   - 예: authority-required면 `product-design-authority.md`
   - 예: QA 작업이면 `qa-system.md`
 
-### 2. OMO Operator
+### 2. Codex Orchestrator
+
+정의:
+
+- OMO run 전체에서 현재 blocker를 분류하고 repair/retry/escalation route를 결정하는 Codex
+- product stage actor와 OMO maintainer 사이에서 운영 판단을 맡지만, OMO internals를 직접 모두 유지보수하지는 않는다
+
+필수 읽기 target:
+
+- `docs/engineering/workflow-v2/README.md`
+- `docs/engineering/workflow-v2/omo-codex-orchestrated-rail.md`
+- `docs/engineering/workflow-v2/omo-supervisor-reset-plan.md`
+- `docs/engineering/workflow-v2/omo-incident-registry.md`
+- `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`
+- 필요 시 해당 maintainer spec 또는 runtime/test code
+
+원칙:
+
+- Codex orchestrator는 stage actor ownership과 orchestration ownership을 섞지 않는다.
+- `codex_repairable`, `claude_repairable`, `ci_wait`, `blocked_on_external`, `manual_decision_required`를 먼저 분류한 뒤 route를 고른다.
+- `human_escalation`은 실제 사람 결정이 필요할 때만 사용한다.
+- OMO maintainer spec은 runtime/report/tooling 변경이 필요할 때만 읽는다.
+
+### 3. OMO Operator
 
 정의:
 
@@ -83,7 +106,7 @@
 - operator는 product slice SOP 전체를 stage actor처럼 반복해서 읽지 않는다.
 - operator는 source-of-truth보다 runtime/recovery/promotion 경계를 우선 읽는다.
 
-### 3. OMO Implementation Maintainer
+### 4. OMO Implementation Maintainer
 
 정의:
 
@@ -112,10 +135,19 @@
 - `slice-workflow.md`의 현재 stage section
 - `agent-workflow-overview.md`의 current change type / gate section
 
+### Codex Orchestrator Core Set
+
+- `workflow-v2/README.md`
+- `omo-codex-orchestrated-rail.md`
+- `omo-supervisor-reset-plan.md`
+- `omo-incident-registry.md`
+- `omo-canonical-closeout-state.md`
+
 ### Operator Core Set
 
 - `workflow-v2/README.md`
 - `.opencode/README.md`
+- `omo-codex-orchestrated-rail.md`
 - `omo-supervisor-reset-plan.md`
 - `omo-incident-registry.md`
 
@@ -135,6 +167,7 @@
 | `agent-workflow-overview.md` | change type / gate / 일부 문서 레이어 | change type / required checks / loop gate만 유지 | `slim` |
 | `slice-workflow.md` | stage SOP + closeout contract + 공통 규칙 일부 재서술 | stage SOP 중심 유지 | `slim` |
 | `workflow-v2/README.md` | operator entry + spec index | operator entry 유지 | `keep` |
+| `omo-codex-orchestrated-rail.md` | 없음 | Codex orchestration owner / reason code / baseline decision | `keep (temporary)` |
 | `.opencode/README.md` | runtime/provider/operator note | operator runtime note 유지 | `keep` |
 | `omo-autonomous-supervisor.md` | operator도 읽는 듯한 spec | maintainer spec로 명확히 격리 | `project` |
 | `omo-lite-supervisor-spec.md` | operator도 읽는 듯한 spec | maintainer spec로 명확히 격리 | `project` |
@@ -198,9 +231,10 @@
 
 1. `workflow-v2/README.md`
 2. `.opencode/README.md`
-3. `omo-supervisor-reset-plan.md`
-4. `omo-incident-registry.md`
-5. relevant runtime/spec docs only when implementing
+3. `omo-codex-orchestrated-rail.md`
+4. `omo-supervisor-reset-plan.md`
+5. `omo-incident-registry.md`
+6. relevant runtime/spec docs only when implementing
 
 ## Success Criteria
 
