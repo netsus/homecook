@@ -1,0 +1,89 @@
+{
+  "id": "baemin-prototype-parity-foundation",
+  "title": "Prototype parity 3-way capture / fixture / material foundation",
+  "summary": "후속 scored parity 슬라이스가 공유하는 3-way capture recipe, fixture/route-entry 규칙, required viewport/state evidence 규약, visual-verdict artifact schema, token mapping scope, prototype-only exclusion inventory를 잠근다. 앱 화면 리라이트 없음.",
+  "project_profile": "homecook",
+  "change_type": "docs-only",
+  "surface": "frontend",
+  "risk": "low",
+  "preset": "docs-only",
+  "goal": "Lock the shared capture recipe, fixture rules, artifact schema, token-mapping scope, and exclusion inventory that all subsequent scored parity slices depend on, without rewriting any app screens.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "h7-baemin-prototype-parity-direction",
+    "baemin-style-tokens-additive",
+    "baemin-style-token-values",
+    "baemin-style-shared-components",
+    "baemin-style-home-retrofit",
+    "baemin-style-recipe-detail-retrofit",
+    "baemin-style-planner-week-retrofit",
+    "baemin-style-modal-system-fit"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/baemin-prototype-parity-foundation/README.md",
+      "docs/workpacks/baemin-prototype-parity-foundation/acceptance.md",
+      "docs/workpacks/baemin-prototype-parity-foundation/automation-spec.json"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/workpacks/h7-baemin-prototype-parity-direction/README.md",
+      "docs/workpacks/h7-baemin-prototype-parity-direction/acceptance.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "ui/designs/prototypes/baemin-redesign/HANDOFF.md",
+      "ui/designs/prototypes/homecook-baemin-prototype.html"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 2
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack"
+    ],
+    "verify_commands": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "no-runtime-ui-diff",
+      "capture-recipe-doc",
+      "artifact-schema-doc",
+      "exclusion-inventory-doc",
+      "token-mapping-scope-doc"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "App-wide screen rewrites (HOME, RECIPE_DETAIL, PLANNER_WEEK, modal code changes)",
+    "Runtime route, component, API handler, DB schema, or seed data changes",
+    "New npm dependencies",
+    "Importing Jua or prototype-only fonts",
+    "Adding RECIPE_DETAIL tabs/reviews as production functionality",
+    "PANTRY or MYPAGE production behavior",
+    "Actual visual-verdict score production (scored parity slice responsibility)",
+    "Official source-of-truth document changes"
+  ],
+  "open_questions": []
+}
