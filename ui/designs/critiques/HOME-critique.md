@@ -113,3 +113,53 @@ design-generator가 `§ design-critic 검토 필요 항목`으로 위임한 6개
 | 테마 섹션 0개 시 전체 Empty 처리 | 현행 설계("섹션이 0개면 전체 Empty 상태")로 충분 — 추가 수정 불필요 | 레시피 그리드 공통 상태와 일관성 있음 |
 | [재료로 검색] 활성 시각 강조 | 현재 구현 수준은 적절하나 선택 수 badge와 footer summary가 과도해지지 않게 유지 필요 | `--olive` 계열 안에서만 강조를 유지하고, 추가 배지는 선택 수 1개만 노출 |
 | 스켈레톤 카드 수(6개) 적절성 | 구현 단계 조정 가능 — 설계 단계에서 "최소 6개, 뷰포트 크기에 따라 가변" 정도로 기술하면 충분 | 크리티컬 이슈 아님 |
+
+---
+
+## Baemin Prototype Parity Critique
+
+> 검토 대상: `ui/designs/HOME.md` §Baemin Prototype Parity Addendum
+> 기준 문서: h7 direction gate, `baemin-prototype-parity-foundation`, workpack `baemin-prototype-home-parity`
+> 검토일: 2026-04-28
+> 검토자: design-critic
+
+### 종합 평가
+
+**등급**: 🟢 통과
+
+**한 줄 요약**: HOME body parity addendum은 prototype target, production IA 보존, exclusion 규칙, required state evidence plan, authority path를 모두 포함한다. Blocker 없음.
+
+### 크리티컬 이슈
+
+없음
+
+### 마이너 이슈
+
+| # | 위치 | 문제 | 제안 |
+|---|------|------|------|
+| 1 | required state evidence plan | `filter-active` 상태의 적용 재료 수(fixture 기반)를 캡처 precondition으로 명시하면 재현성이 높아진다 | fixture-route-matrix.md HOME 섹션과 교차 참조하여 재료 수 명시 |
+
+### Parity 체크리스트
+
+- [x] Prototype target source가 명시됐는가 — `homecook-baemin-prototype.html`, `home.jsx` 참조 명시
+- [x] HOME production 정보 구조 보존이 명시됐는가 — 공통 헤더, 검색, 재료 필터, 테마 carousel, 모든 레시피, 정렬, 그리드 전체 열거
+- [x] Prototype-only exclusions가 열거됐는가 — hero greeting, promo strip, inline ingredient chips, Jua, bottom tabs 5개 항목 명시
+- [x] Exclusions가 deficit 비채점으로 처리됐는가 — "after layer에서 부재를 deficit으로 채점하지 않는다" 명시
+- [x] h7 direction gate와 foundation 상속이 명시됐는가 — 선행 게이트/foundation merged 상태 확인
+- [x] 5축 scoring weight가 h7과 동일한가 — skin 25, layout 30, interaction 20, assets/copy 10, state fidelity 15 명시
+- [x] Required states 7개가 모두 열거됐는가 — initial, scrolled-to-recipes-entry, sort-open, filter-active, loading, empty, error
+- [x] Viewport pair (390px 70% + 320px 30%)가 명시됐는가 — evidence plan table에 양 viewport 모두 포함
+- [x] Capture path convention이 foundation 규칙을 따르는가 — `qa/visual/parity/baemin-prototype-home-parity/<viewport>-HOME-<state>-<layer>.png` 명시
+- [x] Authority path + classification이 명시됐는가 — `anchor-extension`, `ui/designs/authority/HOME-parity-authority.md`
+- [x] Contract evolution 불필요 판정이 근거와 함께 명시됐는가 — visual implementation only 명시, workpack README 교차 참조
+- [x] Token mapping approved divergences가 deficit 비채점으로 처리됐는가 — workpack Key Rules §6에 명시, addendum에서 workpack 참조
+
+### Blocker Count
+
+**0** — Stage 4 진행에 차단 항목 없음
+
+### 통과 조건
+
+- [x] 크리티컬 이슈 0개
+- [x] Parity 체크리스트 전체 통과
+- [x] Blocker 0

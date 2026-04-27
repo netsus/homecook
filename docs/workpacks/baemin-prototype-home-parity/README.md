@@ -89,6 +89,8 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 - Visual artifact: `ui/designs/authority/HOME-parity-authority.md` (Stage 4에서 screenshot evidence 포함)
 - Authority status: `required`
 - Notes: h7 parity program의 scored body slice. Stage 4 완료 시 390px + 320px screenshot evidence 기반 authority review 필수. Blocker 0 + score >= 95 달성 후 confirmed 가능.
+- Design addendum: `ui/designs/HOME.md` §Baemin Prototype Parity Addendum
+- Design critique: `ui/designs/critiques/HOME-critique.md` §Baemin Prototype Parity Critique (🟢 통과, blocker 0)
 
 ## Design Status
 
@@ -105,6 +107,8 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 - `docs/workpacks/README.md`
 - `docs/workpacks/h7-baemin-prototype-parity-direction/README.md`
 - `docs/workpacks/baemin-prototype-parity-foundation/README.md`
+- `ui/designs/HOME.md` §Baemin Prototype Parity Addendum
+- `ui/designs/critiques/HOME-critique.md` §Baemin Prototype Parity Critique
 - `ui/designs/evidence/baemin-prototype-parity-foundation/capture-recipe.md`
 - `ui/designs/evidence/baemin-prototype-parity-foundation/fixture-route-matrix.md`
 - `ui/designs/evidence/baemin-prototype-parity-foundation/visual-verdict-schema.json`
