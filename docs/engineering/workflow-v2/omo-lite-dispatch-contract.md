@@ -38,6 +38,7 @@ dispatch contract가 고정되면:
 - `resume_mode`: `fresh | continue | scheduled_retry`
 - `retry_at`
 - `attempt_count`
+- `reason_code`: `codex_repairable | claude_repairable | product_defect | omo_defect | ci_wait | blocked_on_external | manual_decision_required` 중 하나
 - `open_questions`
 - `external_smoke_needed`
 - `workspace_path`
@@ -65,6 +66,7 @@ dispatch 결과는 아래를 포함한다.
 - `runtime_patch`
 - `session_binding`
 - `retry_decision`
+- `repair_decision`
 - `success_condition`
 - `escalation_if_blocked`
 - `artifact_dir` (stage run 시)
@@ -95,6 +97,7 @@ final closeout supervisor-owned bookkeeping:
 - 위 projection을 deterministic하게 만들 수 있으면 supervisor가 직접 고친다.
 - deterministic projection을 넘어서 stage-owned evidence 판단이 필요하면 supervisor가 owner agent에게 bounded closeout repair를 dispatch한 뒤 recheck한다.
 - owner agent repair 뒤에도 모호하거나 권한 밖이면 merge하지 않고 `human_escalation`으로 fail-closed 한다.
+- `human_escalation`은 `manual_decision_required` 또는 repair budget 소진 뒤 같은 finding이 남은 경우에만 사용한다.
 
 review stage 결과 schema는 아래 필드를 포함한다.
 

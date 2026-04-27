@@ -6,6 +6,7 @@
 - 변경 유형: `docs-governance`
 - 범위: OMO supervisor reset Phase 0 incident corpus / freeze rule
 - 이 문서는 slice07 failure log를 seed로 삼아, 그 이전 slice와 OMO pilot에서 누적된 문제를 "수동 patch의 기억"이 아니라 reset input corpus로 관리하기 위한 registry다.
+- Codex-orchestrated OMO rail 전환 이후에는 `human_escalation`을 catch-all incident로 보지 않고, repairable failure와 manual decision을 분리해서 기록한다.
 
 ## Purpose
 
@@ -36,6 +37,7 @@ reset 기간의 기본 규칙은 아래와 같다.
 - `boundary`: `omo-system | mixed | product-local`
 - `bucket`: reset plan bucket (`A`~`G`)
 - `stage_scope`: 관련 stage / subphase
+- `reason_code`: `codex_repairable | claude_repairable | product_defect | omo_defect | ci_wait | blocked_on_external | manual_decision_required` 중 해당되는 운영 reason
 - `symptom`: 실제로 관찰된 실패
 - `current_recovery`: 당시 사용한 수동 복구 방식
 - `root_cause_hypothesis`: 현재 시점 가설
@@ -371,6 +373,23 @@ reset 기간의 기본 규칙은 아래와 같다.
   - `.artifacts/meta-harness-auditor/promotion-gate-default-cutover/audit-context.json`
   - `.workflow-v2/promotion-evidence.json`
 
+### OMO-10-12-001
+
+- status: `monitoring`
+- boundary: `omo-system`
+- bucket: `D. Runtime / Observability Reset`
+- stage_scope: `slice10b~12a report / repair loop`
+- reason_code: `codex_repairable`
+- symptom: 10b/11/12a 운영은 Codex/Claude repair loop로 사람 escalation 없이 닫혔지만, evidence의 주요 source가 `.omx/artifacts`와 PR timestamp backfill에 있어 기존 dispatch/supervisor artifact 중심 report path와 어긋났다.
+- current_recovery: `docs/workpacks/10b-shopping-share-text/omo-report.md`, `docs/workpacks/11-shopping-reorder/omo-report.md`, `docs/workpacks/12a-shopping-complete/omo-report.md`를 baseline report로 추가하고, [omo-codex-orchestrated-rail.md](./omo-codex-orchestrated-rail.md)에 reason code와 evidence source policy를 잠근다.
+- root_cause_hypothesis: OMO가 실제 Codex repair evidence를 first-class event source로 보지 못하면 `human_escalation=0` 운영 현실이 report/replay/promotion 기준에 남지 않는다.
+- evidence_refs:
+  - `docs/workpacks/10a-shopping-detail-interact/omo-report.md`
+  - `docs/workpacks/10b-shopping-share-text/omo-report.md`
+  - `docs/workpacks/11-shopping-reorder/omo-report.md`
+  - `docs/workpacks/12a-shopping-complete/omo-report.md`
+  - `docs/engineering/workflow-v2/omo-codex-orchestrated-rail.md`
+
 ## Current Active Blocker Set
 
 현재 `not-ready`를 직접 설명하는 incident set은 아래처럼 읽는다.
@@ -390,6 +409,9 @@ reset 기간의 기본 규칙은 아래와 같다.
 `OMO-07-002`, `OMO-07-004`, `OMO-07-005`, `OMO-07-006`, `OMO-07-008`도 구현/테스트 기준으로는 완화 경로가 merge됐으므로,
 현 시점에는 active blocker가 아니라 `monitoring` 대상으로 본다.
 
+`OMO-10-12-001`은 active blocker가 아니라 Codex-orchestrated rail 전환의 positive baseline이다.
+다만 report adapter와 replay corpus가 `.omx/artifacts` source를 읽을 때까지 `monitoring`으로 남긴다.
+
 ## Backfill Queue
 
 아래는 다음 retrospective pass에서 우선 수집할 항목이다.
@@ -397,6 +419,7 @@ reset 기간의 기본 규칙은 아래와 같다.
 1. slice06 Stage 6 audit bundle / tmp worktree artifact를 durable repo-local evidence로 회수할 수 있는지 확인
 2. OMO promotion `candidate -> ready/default` cutover를 정당화한 docs-governance PR과 그 당시 반대 신호를 같이 묶은 chain 재구성
 3. no-op commit, force-push, runtime JSON edit처럼 공식 상태 밖에서 수행된 복구 작업 목록
+4. 10a/10b/11/12a report를 replay corpus에 등록하고, 10a는 escalation-heavy baseline, 10b/11/12a는 Codex-repair baseline으로 분리
 
 ## Exit Rule For Seed Incidents
 
