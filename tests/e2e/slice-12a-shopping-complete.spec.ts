@@ -118,6 +118,12 @@ async function installShoppingDetailRoute(
   });
 }
 
+async function confirmDefaultPantryReflection(page: Page) {
+  const dialog = page.getByRole("dialog", { name: "팬트리에 추가할까요?" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "완료", exact: true }).click();
+}
+
 async function installPlannerRoute(
   page: Page,
   getStatus: () => "registered" | "shopping_done"
@@ -229,6 +235,7 @@ test.describe("slice 12a: shopping complete", () => {
       await expect(completeButton).toBeVisible();
 
       await completeButton.click();
+      await confirmDefaultPantryReflection(page);
 
       // Should show success message
       await expect(page.getByText(/장보기를 완료했어요.*3개 식사/)).toBeVisible();
@@ -292,6 +299,7 @@ test.describe("slice 12a: shopping complete", () => {
       await page.goto(SHOPPING_DETAIL_URL);
 
       await page.getByRole("button", { name: "장보기 완료" }).click();
+      await confirmDefaultPantryReflection(page);
 
       await expect(page.getByText(/장보기를 완료했어요.*1개 식사/)).toBeVisible();
       await expect(page.getByRole("button", { name: "장보기 완료" })).not.toBeVisible();
@@ -331,6 +339,7 @@ test.describe("slice 12a: shopping complete", () => {
 
       const completeButton = page.getByRole("button", { name: "장보기 완료" });
       await completeButton.click();
+      await confirmDefaultPantryReflection(page);
 
       // Should redirect to login with return URL
       await page.waitForURL(`**/login?next=/shopping/lists/${SHOPPING_LIST_ID}`);
@@ -365,6 +374,7 @@ test.describe("slice 12a: shopping complete", () => {
 
       const completeButton = page.getByRole("button", { name: "장보기 완료" });
       await completeButton.click();
+      await confirmDefaultPantryReflection(page);
 
       // Should show error message
       await expect(page.getByText("이미 완료된 장보기 기록이에요")).toBeVisible();
@@ -399,6 +409,7 @@ test.describe("slice 12a: shopping complete", () => {
 
       const completeButton = page.getByRole("button", { name: "장보기 완료" });
       await completeButton.click();
+      await confirmDefaultPantryReflection(page);
 
       // Should show error message
       await expect(page.getByText("서버 오류가 발생했어요")).toBeVisible();

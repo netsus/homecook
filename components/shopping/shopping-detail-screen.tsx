@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
 
 import { ContentState } from "@/components/shared/content-state";
+import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
 import {
   completeShoppingList,
   fetchShoppingListDetail,
@@ -41,6 +42,7 @@ export function ShoppingDetailScreen({
   const [reorderError, setReorderError] = useState<string | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
   const [completeToast, setCompleteToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [showPantryPopup, setShowPantryPopup] = useState(false);
 
   const loadDetail = useCallback(async () => {
     setViewState("loading");
@@ -335,63 +337,103 @@ export function ShoppingDetailScreen({
     [listId, listDetail, router]
   );
 
-  const handleComplete = useCallback(async () => {
+  const handleCompleteClick = useCallback(() => {
     if (!listDetail || listDetail.is_completed) {
       return;
     }
 
-    setIsCompleting(true);
-    setCompleteToast(null);
+    // Show pantry reflection popup
+    setShowPantryPopup(true);
+  }, [listDetail]);
 
-    try {
-      const { completed, meals_updated } = await completeShoppingList(listId);
-
-      if (completed) {
-        // Update local state to mark as completed
-        setListDetail((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            is_completed: true,
-            completed_at: new Date().toISOString(),
-          };
-        });
-
-        const mealsText = meals_updated === 1 ? "1개 식사" : `${meals_updated}개 식사`;
-        setCompleteToast({
-          type: "success",
-          message: `장보기를 완료했어요 (${mealsText} 상태 전이)`,
-        });
-        setTimeout(() => setCompleteToast(null), 3000);
+  const handlePantryConfirm = useCallback(
+    async (selectedItemIds: string[] | undefined) => {
+      if (!listDetail || listDetail.is_completed) {
+        return;
       }
-    } catch (error) {
-      if (isShoppingApiError(error)) {
-        if (error.status === 401) {
-          router.push(`/login?next=/shopping/lists/${listId}`);
-          return;
-        }
-        if (error.status === 409) {
-          setCompleteToast({
-            type: "error",
-            message: "이미 완료된 장보기 기록이에요",
+
+      setShowPantryPopup(false);
+      setIsCompleting(true);
+      setCompleteToast(null);
+
+      try {
+        const body =
+          selectedItemIds === undefined
+            ? undefined
+            : { add_to_pantry_item_ids: selectedItemIds };
+
+        const {
+          completed,
+          meals_updated,
+          pantry_added = 0,
+          pantry_added_item_ids = [],
+        } = await completeShoppingList(listId, body);
+
+        if (completed) {
+          // Update local state to mark as completed and reflect pantry additions
+          setListDetail((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              is_completed: true,
+              completed_at: new Date().toISOString(),
+              items: prev.items.map((item) =>
+                pantry_added_item_ids.includes(item.id)
+                  ? { ...item, added_to_pantry: true }
+                  : item
+              ),
+            };
           });
+
+          const mealsText =
+            meals_updated === 1 ? "1개 식사" : `${meals_updated}개 식사`;
+          const pantryText =
+            pantry_added === 0
+              ? ""
+              : pantry_added === 1
+                ? ", 팬트리 1개 추가"
+                : `, 팬트리 ${pantry_added}개 추가`;
+
+          setCompleteToast({
+            type: "success",
+            message: `장보기를 완료했어요 (${mealsText}${pantryText})`,
+          });
+          setTimeout(() => setCompleteToast(null), 3000);
+        }
+      } catch (error) {
+        if (isShoppingApiError(error)) {
+          if (error.status === 401) {
+            router.push(`/login?next=/shopping/lists/${listId}`);
+            return;
+          }
+          if (error.status === 409) {
+            setCompleteToast({
+              type: "error",
+              message: "이미 완료된 장보기 기록이에요",
+            });
+          } else {
+            setCompleteToast({
+              type: "error",
+              message: error.message,
+            });
+          }
         } else {
           setCompleteToast({
             type: "error",
-            message: error.message,
+            message: "장보기를 완료하지 못했어요",
           });
         }
-      } else {
-        setCompleteToast({
-          type: "error",
-          message: "장보기를 완료하지 못했어요",
-        });
+        setTimeout(() => setCompleteToast(null), 3000);
+      } finally {
+        setIsCompleting(false);
       }
-      setTimeout(() => setCompleteToast(null), 3000);
-    } finally {
-      setIsCompleting(false);
-    }
-  }, [listId, listDetail, router]);
+    },
+    [listId, listDetail, router]
+  );
+
+  const handlePantryCancel = useCallback(() => {
+    setShowPantryPopup(false);
+  }, []);
 
   if (viewState === "loading") {
     return (
@@ -601,7 +643,7 @@ export function ShoppingDetailScreen({
       {!isReadOnly && (
         <div className="sticky bottom-0 border-t border-[var(--line)] bg-[var(--panel)] px-4 py-4 backdrop-blur-lg">
           <button
-            onClick={handleComplete}
+            onClick={handleCompleteClick}
             disabled={isCompleting}
             className="w-full rounded-full bg-[var(--olive)] py-4 text-base font-bold text-white hover:bg-[var(--olive)]/90 disabled:opacity-50"
             type="button"
@@ -609,6 +651,15 @@ export function ShoppingDetailScreen({
             {isCompleting ? "완료 처리 중..." : "장보기 완료"}
           </button>
         </div>
+      )}
+
+      {/* Pantry reflection popup */}
+      {showPantryPopup && listDetail && (
+        <PantryReflectionPopup
+          items={listDetail.items}
+          onConfirm={handlePantryConfirm}
+          onCancel={handlePantryCancel}
+        />
       )}
     </div>
   );
