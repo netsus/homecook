@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 
+import { Badge } from "@/components/ui/badge";
 import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
 import type { RecipeCardItem } from "@/types/recipe";
 
@@ -13,24 +14,24 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
 
   return (
     <Link
-      className="group flex min-h-full flex-col overflow-hidden rounded-[16px] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow)] transition hover:-translate-y-1"
+      className="group flex min-h-full flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-2)] transition hover:-translate-y-1"
       href={`/recipe/${recipe.id}`}
     >
       <div
-        className="relative min-h-[110px] border-b border-[var(--line)] bg-[linear-gradient(135deg,rgba(255,108,60,0.22),rgba(255,249,242,0.85),rgba(46,166,122,0.18))]"
+        className="relative min-h-[110px] border-b border-[var(--line)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--brand)_22%,transparent),color-mix(in_srgb,var(--background)_85%,transparent),color-mix(in_srgb,var(--olive)_18%,transparent))]"
         style={
           recipe.thumbnail_url
             ? {
-                backgroundImage: `linear-gradient(rgba(26, 26, 46, 0.06), rgba(26, 26, 46, 0.22)), url(${recipe.thumbnail_url})`,
+                backgroundImage: `linear-gradient(color-mix(in srgb, var(--foreground) 6%, transparent),color-mix(in srgb, var(--foreground) 22%, transparent)),url(${recipe.thumbnail_url})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
               }
             : undefined
         }
       >
-        <div className="absolute left-3 top-3 rounded-full bg-[var(--panel)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-deep)]">
+        <Badge variant="brand" className="absolute left-3 top-3 uppercase tracking-[0.16em]" style={{ color: 'color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))' }}>
           {formatRecipeSourceLabel(recipe.source_type)}
-        </div>
+        </Badge>
       </div>
       <div className="flex flex-1 flex-col gap-3 px-4 py-4">
         <div className="space-y-1">
@@ -53,25 +54,28 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
             <h3 className="line-clamp-2 flex-1 text-base font-semibold text-[var(--foreground)]">
               {recipe.title}
             </h3>
-            <span className="shrink-0 rounded-full border border-[color:rgba(255,108,60,0.14)] bg-[color:rgba(255,108,60,0.08)] px-2.5 py-1 text-[10px] font-semibold text-[#c84316]">
+            <span
+              className="shrink-0 rounded-[var(--radius-full)] border border-[color-mix(in_srgb,var(--brand)_14%,transparent)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-2.5 py-1 text-[10px] font-semibold"
+              style={{ color: 'color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))' }}
+            >
               기본 {recipe.base_servings}인분
             </span>
           </div>
         </div>
         <dl className="recipe-card-stats-pills mt-auto flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--muted)]">
-          <div className="inline-flex items-center gap-1 rounded-full bg-[color:rgba(0,0,0,0.04)] px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--surface-fill)] px-2 py-1">
             <dt>조회</dt>
             <dd className="font-semibold text-[var(--foreground)]">
               {formatCount(recipe.view_count)}
             </dd>
           </div>
-          <div className="inline-flex items-center gap-1 rounded-full bg-[color:rgba(0,0,0,0.04)] px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--surface-fill)] px-2 py-1">
             <dt>좋아요</dt>
             <dd className="font-semibold text-[var(--foreground)]">
               {formatCount(recipe.like_count)}
             </dd>
           </div>
-          <div className="inline-flex items-center gap-1 rounded-full bg-[color:rgba(0,0,0,0.04)] px-2 py-1">
+          <div className="inline-flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--surface-fill)] px-2 py-1">
             <dt>저장</dt>
             <dd className="font-semibold text-[var(--foreground)]">
               {formatCount(recipe.save_count)}

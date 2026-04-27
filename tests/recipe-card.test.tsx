@@ -36,9 +36,9 @@ describe("recipe card", () => {
     );
 
     expect(servingsBadge).toBeTruthy();
-    expect(servingsBadge.className).toContain("bg-[color:rgba(255,108,60,0.08)]");
-    expect(servingsBadge.className).toContain("text-[#c84316]");
-    expect(servingsBadge.className).toContain("border-[color:rgba(255,108,60,0.14)]");
+    expect(servingsBadge.className).toContain("bg-[color-mix(in_srgb,var(--brand)_8%,transparent)]");
+    expect(servingsBadge.style.color).toBe("color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))");
+    expect(servingsBadge.className).toContain("border-[color-mix(in_srgb,var(--brand)_14%,transparent)]");
 
     const statsScope = within(statsRow as HTMLElement);
     expect(statsScope.getByText("조회")).toBeTruthy();

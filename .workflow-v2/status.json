@@ -372,11 +372,11 @@
     {
       "id": "baemin-style-home-retrofit",
       "preset": "vertical-slice-strict",
-      "branch": "docs/baemin-style-home-retrofit",
+      "branch": "feature/fe-baemin-style-home-retrofit",
       "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "ready_for_review",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "git diff --check",
         "pnpm validate:workflow-v2",
@@ -385,7 +385,7 @@
         "pnpm lint",
         "pnpm verify:frontend"
       ],
-      "notes": "Stage 1 workpack docs for HOME anchor screen Baemin-style visual retrofit. Dependencies: h6-direction, tokens-additive, token-values, shared-components, h1-home-first-impression (all merged). Implementation branch: feature/fe-baemin-style-home-retrofit."
+      "notes": "Stage 4 FE implementation complete by Claude. Codex Stage 5 design review passed and Claude final authority gate approved. Local required checks green including pnpm verify:frontend, authority evidence, exploratory QA evidence, real smoke presence, workflow-v2, and workpack validation. Awaiting Stage 6 PR closeout. Known risk: Badge primitive brand/muted variants have inherent contrast issues — HOME works around with inline style overrides. Linux visual baselines may need CI regeneration."
     }
   ]
 }

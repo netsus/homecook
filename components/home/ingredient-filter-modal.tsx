@@ -223,25 +223,25 @@ export function IngredientFilterModal({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-black/42 p-0 backdrop-blur-[1px] md:items-center md:justify-center md:p-4"
+      className="fixed inset-0 z-40 flex items-end bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-0 backdrop-blur-[1px] md:items-center md:justify-center md:p-4"
       onClick={handleClose}
     >
       <div
         aria-labelledby="ingredient-filter-title"
         aria-modal="true"
-        className="glass-panel flex max-h-[min(88vh,42rem)] w-full flex-col rounded-t-[24px] bg-[var(--panel)] md:max-h-[85vh] md:max-w-2xl md:rounded-[20px]"
+        className="flex max-h-[min(88vh,42rem)] w-full flex-col rounded-t-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow-3)] md:max-h-[85vh] md:max-w-2xl md:rounded-[var(--radius-xl)]"
         onClick={(event) => event.stopPropagation()}
         ref={dialogRef}
         role="dialog"
       >
         <div className="border-b border-[var(--line)] px-5 pb-5 pt-4 md:px-6">
-          <div className="mx-auto h-1.5 w-14 rounded-full bg-black/10 md:hidden" />
+          <div className="mx-auto h-1.5 w-14 rounded-[var(--radius-full)] bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)] md:hidden" />
           {/* D2: no eyebrow · D3: icon-only close · closeButtonRef for focus management */}
           <div className="mt-4">
             <ModalHeader
               badge={
                 draftIngredientIds.length > 0 ? (
-                  <span className="rounded-full border border-[color:rgba(46,166,122,0.16)] bg-[color:rgba(46,166,122,0.1)] px-2.5 py-1 text-[11px] font-semibold text-[var(--olive)]">
+                  <span className="rounded-[var(--radius-full)] border border-[color-mix(in_srgb,var(--olive)_16%,transparent)] bg-[color-mix(in_srgb,var(--olive)_10%,transparent)] px-2.5 py-1 text-[11px] font-semibold text-[var(--olive)]">
                     {draftIngredientIds.length}개 선택
                   </span>
                 ) : undefined
@@ -253,7 +253,7 @@ export function IngredientFilterModal({
               titleId="ingredient-filter-title"
             />
           </div>
-          <label className="mt-3 flex min-h-11 items-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow)] md:mt-4">
+          <label className="mt-3 flex min-h-11 items-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-4 shadow-[var(--shadow-1)] md:mt-4">
             <span className="visually-hidden">재료명으로 검색</span>
             <input
               className="w-full bg-transparent py-3 outline-none placeholder:text-[var(--muted)]"
@@ -278,7 +278,7 @@ export function IngredientFilterModal({
             <div className="grid gap-3 sm:grid-cols-2">
               {Array.from({ length: 6 }).map((_, index) => (
                 <div
-                  className="min-h-11 animate-pulse rounded-full border border-[var(--line)] bg-white/70"
+                  className="min-h-11 animate-pulse rounded-[var(--radius-full)] border border-[var(--line)] bg-[var(--surface-fill)]"
                   key={index}
                 />
               ))}
@@ -317,9 +317,9 @@ export function IngredientFilterModal({
                 return (
                   <li key={ingredient.id}>
                     <label
-                      className={`flex min-h-11 cursor-pointer items-center rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                      className={`flex min-h-11 cursor-pointer items-center rounded-[var(--radius-full)] border px-4 py-2 text-sm font-semibold transition ${
                         isChecked
-                          ? "border-[var(--olive)] bg-[var(--olive)] text-white"
+                          ? "border-[var(--olive)] bg-[var(--olive)] text-[var(--surface)]"
                           : "border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)]"
                       }`}
                     >
@@ -350,7 +350,7 @@ export function IngredientFilterModal({
             </div>
             <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
               <button
-                className="flex min-h-11 items-center justify-center whitespace-nowrap rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-center text-sm font-semibold text-[var(--muted)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-11 items-center justify-center whitespace-nowrap rounded-[var(--radius-full)] border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-center text-sm font-semibold text-[var(--muted)] disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={draftIngredientIds.length === 0}
                 onClick={() => setDraftIngredientIds([])}
                 type="button"
@@ -358,7 +358,7 @@ export function IngredientFilterModal({
                 초기화
               </button>
               <button
-                className="flex min-h-11 items-center justify-center whitespace-nowrap rounded-full bg-[var(--olive)] px-5 py-2 text-center text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-11 items-center justify-center whitespace-nowrap rounded-[var(--radius-full)] bg-[var(--olive)] px-5 py-2 text-center text-sm font-semibold text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isApplyDisabled}
                 onClick={() => onApply(draftIngredientIds)}
                 type="button"
