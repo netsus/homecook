@@ -1,0 +1,47 @@
+{
+  "slice_id": "baemin-prototype-planner-week-parity-contract",
+  "execution_mode": "manual",
+  "risk_class": "low",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack"
+    ],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "no-runtime-code-change"
+    ],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "critic_required": false,
+      "authority_required": false
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "runtime-app-code-changed",
+    "official-docs-changed-without-justification"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 0
+  },
+  "notes": "Docs-only contract sync slice. No runtime code changes. Confirms official docs already contain prototype-priority PLANNER_WEEK contract and records evidence target for follow-up implementation slice."
+}
