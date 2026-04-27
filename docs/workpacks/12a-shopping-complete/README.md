@@ -193,13 +193,19 @@
 
 ## Stage 4 Frontend Evidence
 - Implemented: `components/shopping/shopping-detail-screen.tsx` (complete button, handler, loading/success/error states)
-- Tests: `tests/shopping-detail.frontend.test.tsx` (8 new tests for complete flow), `tests/e2e/slice-12a-shopping-complete.spec.ts` (6 E2E tests)
+- Tests: `tests/shopping-detail.frontend.test.tsx` (8 new tests for complete flow), `tests/e2e/slice-12a-shopping-complete.spec.ts` (6 E2E scenarios / 21 Playwright project runs)
 - Frontend tests: `pnpm test:product tests/shopping-detail.frontend.test.tsx` passed (29 tests including 8 new complete flow tests)
-- E2E tests: `pnpm exec playwright test tests/e2e/slice-12a-shopping-complete.spec.ts` passed (6 tests: complete button visibility, success flow, 401/409/500 error handling, read-only UI controls)
+- E2E tests: `pnpm exec playwright test tests/e2e/slice-12a-shopping-complete.spec.ts` passed (21 runs across 6 scenarios: complete button visibility, success flow, 401/409/500 error handling, read-only UI controls)
 - E2E scope: Shopping detail completion UI and API integration only; planner meal status transition deferred to Stage 6 browser smoke
 - Config update: Added `tests/shopping-*.test.tsx` pattern to `vitest.product.config.ts` for frontend test inclusion
 - UI states: loading (disabled button with "완료 처리 중..."), success (toast with meal count), error (toast with error message), read-only (button hidden for completed lists)
 - Real browser smoke: Deferred to Stage 6 manual QA for planner meal status transition and full cross-screen flow verification
+
+## Stage 5 Codex Review Evidence
+- Review: Codex checked Stage 4 code, tests, design/accessibility scope, and closeout evidence.
+- Repair: closeout wording was corrected so planner cross-screen status verification remains Stage 6, and Playwright evidence reports 6 scenarios / 21 project runs.
+- Verification: `pnpm validate:workpack -- --slice 12a-shopping-complete`, `pnpm validate:workflow-v2`, `pnpm validate:branch`, `pnpm test:product tests/shopping-detail.frontend.test.tsx`, full slice smoke via `pnpm test:e2e tests/e2e/slice-12a-shopping-complete.spec.ts` (320 passed / 4 skipped due script semantics), and direct `pnpm exec playwright test tests/e2e/slice-12a-shopping-complete.spec.ts` (21 passed).
+- Remaining Stage 6 evidence: planner meal status transition and real browser local Supabase smoke.
 
 ## Delivery Checklist
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.

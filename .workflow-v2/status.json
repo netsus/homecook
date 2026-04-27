@@ -458,18 +458,18 @@
     {
       "id": "12a-shopping-complete",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-12a-shopping-complete",
-      "pr_path": "https://github.com/netsus/homecook/pull/241",
-      "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
-      "verification_status": "pending",
+      "branch": "feature/fe-12a-shopping-complete",
+      "pr_path": "https://github.com/netsus/homecook/pull/243",
+      "lifecycle": "ready_for_review",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 2 backend implementation verified on feature/be-12a-shopping-complete with pnpm verify:backend and Claude Stage 3 approval after partial-failure recovery repair. Adds POST /shopping/lists/{id}/complete core flow without pantry reflection, meals.status registered→shopping_done transition, is_completed=true, read-only lock coverage, and idempotency. Pantry reflection remains slice 12b."
+      "notes": "Stage 4 frontend PR #243 is ready after Claude implementation, Codex Stage 5 review, and closeout evidence repair. Backend PR #241 is merged. Frontend adds SHOPPING_DETAIL completion UI, loading/success/error/read-only states, Vitest coverage, and fixture Playwright coverage; planner cross-screen status verification remains Stage 6 browser smoke. Pantry reflection remains slice 12b."
     }
   ]
 }
