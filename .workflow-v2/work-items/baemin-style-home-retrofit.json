@@ -76,7 +76,7 @@
     ]
   },
   "status": {
-    "lifecycle": "ready_for_review",
+    "lifecycle": "merged",
     "approval_state": "dual_approved",
     "verification_status": "passed"
   },

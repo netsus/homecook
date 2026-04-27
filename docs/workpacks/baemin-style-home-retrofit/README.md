@@ -112,7 +112,7 @@ HOME 화면의 기존 정보 구조(H1 확정: D1 정렬=섹션헤더, D2 테마
 - UI risk: `high-risk` (anchor screen visual retrofit)
 - Anchor screen dependency: `HOME`
 - Visual artifact: HOME before/after screenshots at mobile default (390px), narrow (320px), desktop sanity; key active states (sort sheet open, ingredient filter active, loading, empty, error)
-- Authority status: required
+- Authority status: reviewed
 - Design wireframe: `ui/designs/HOME.md` — Baemin-Style Visual Retrofit Addendum 섹션
 - Design critique: `ui/designs/critiques/HOME-baemin-style-retrofit-critique.md`
 - Authority report (Stage 4/5): `ui/designs/authority/BAEMIN_STYLE_HOME_RETROFIT-authority.md`

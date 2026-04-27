@@ -373,8 +373,8 @@
       "id": "baemin-style-home-retrofit",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-baemin-style-home-retrofit",
-      "pr_path": "pending",
-      "lifecycle": "ready_for_review",
+      "pr_path": "https://github.com/netsus/homecook/pull/232",
+      "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -385,7 +385,7 @@
         "pnpm lint",
         "pnpm verify:frontend"
       ],
-      "notes": "Stage 4 FE implementation complete by Claude. Codex Stage 5 design review passed and Claude final authority gate approved. Local required checks green including pnpm verify:frontend, authority evidence, exploratory QA evidence, real smoke presence, workflow-v2, and workpack validation. Awaiting Stage 6 PR closeout. Known risk: Badge primitive brand/muted variants have inherent contrast issues — HOME works around with inline style overrides. Linux visual baselines may need CI regeneration."
+      "notes": "Stage 6 approved by Codex after Claude Stage 4 implementation, Codex Stage 5 design review, and Claude final authority gate approve. PR #232 local required checks passed, GitHub current-head checks passed after Linux visual baseline repair. Internal 6.5 closeout projection synced for final merge."
     },
     {
       "id": "10b-shopping-share-text",
