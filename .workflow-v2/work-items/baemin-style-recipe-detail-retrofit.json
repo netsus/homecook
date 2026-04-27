@@ -1,0 +1,103 @@
+{
+  "id": "baemin-style-recipe-detail-retrofit",
+  "title": "RECIPE_DETAIL anchor screen Baemin-style visual retrofit",
+  "summary": "RECIPE_DETAIL 화면의 기존 정보 구조(overview, 재료, 조리 단계, utility metrics, primary CTA, 모달 chrome)를 보존하면서 승인된 배민 스타일 토큰과 공유 UI 프리미티브를 적용해 시각적 리트로핏을 완성한다. RecipeDetailScreen, PlannerAddSheet, SaveModal, LoginGateModal을 토큰 기반으로 리스타일하고 components/ui/ 프리미티브를 소비한다. COOKING_METHOD_TINTS rgba를 color-mix()로 재파생한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "Apply approved Baemin-style tokens and shared UI primitives to the RECIPE_DETAIL anchor screen while preserving information architecture and H5 modal decisions. Token-swap hardcoded colors/shadows/radii to CSS variables, derive COOKING_METHOD_TINTS from --cook-* tokens via color-mix(), consume components/ui/ primitives, and maintain all existing loading/ready/error states.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "h6-baemin-style-direction",
+    "baemin-style-tokens-additive",
+    "baemin-style-token-values",
+    "baemin-style-shared-components",
+    "baemin-style-home-retrofit",
+    "h5-modal-system-redesign"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/baemin-style-recipe-detail-retrofit/README.md",
+      "docs/workpacks/baemin-style-recipe-detail-retrofit/acceptance.md",
+      "ui/designs/RECIPE_DETAIL.md",
+      "ui/designs/critiques/RECIPE_DETAIL-baemin-style-retrofit-critique.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md",
+      "ui/designs/authority/BAEMIN_STYLE_DIRECTION-preflight.md",
+      "docs/design/design-tokens.md",
+      "docs/workpacks/baemin-style-home-retrofit/README.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/design-tokens.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 3
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm verify:frontend"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "all-restyle-uses-css-variables-only",
+      "existing-props-interfaces-preserved",
+      "recipe-detail-information-architecture-preserved",
+      "h5-modal-decisions-honored",
+      "ui-primitives-consumed-not-modified",
+      "cooking-method-tint-visual-parity"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "RECIPE_DETAIL information architecture changes (overview layout, utility metrics placement, CTA structure)",
+    "Prototype HANDOFF hero+transparent AppBar fade (not in production RECIPE_DETAIL.md)",
+    "Prototype HANDOFF tabs/reviews structure (not implemented)",
+    "BottomTabs restyling (separate app-wide retrofit slice)",
+    "AppShell/AppHeader structural changes (completed in home-retrofit)",
+    "Other screen retrofits (HOME done, PLANNER_WEEK separate slice)",
+    "New features or interactions",
+    "API, DB, or status-transition changes",
+    "Importing Jua or prototype-only fonts",
+    "Changing --cook-* token values (only derive tints via color-mix)",
+    "Changing --background, --foreground, --muted, --surface, --panel, --line, --olive token values",
+    "Adding new CSS tokens",
+    "Modifying components/ui/ primitives (consume only)",
+    "COOK_MODE screen (slices 14/15)",
+    "SocialLoginButtons restyling beyond LoginGateModal scope"
+  ],
+  "open_questions": []
+}
