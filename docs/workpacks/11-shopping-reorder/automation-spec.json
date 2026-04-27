@@ -1,0 +1,69 @@
+{
+  "slice_id": "11-shopping-reorder",
+  "execution_mode": "autonomous",
+  "risk_class": "low",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "PATCH /api/v1/shopping/lists/{list_id}/items/reorder"
+    ],
+    "invariants": [
+      "documented-state-transition",
+      "owner-authorization",
+      "read-only-policy",
+      "idempotency"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/shopping-reorder.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/shopping/lists/[list_id]"
+    ],
+    "required_states": [
+      "loading",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "SHOPPING_DETAIL"
+      ],
+      "generator_required": false,
+      "critic_required": false,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "referenced-table-missing",
+    "bootstrap-incomplete"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

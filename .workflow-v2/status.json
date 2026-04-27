@@ -402,6 +402,22 @@
         "pnpm typecheck"
       ],
       "notes": "Internal 6.5 projection sync after Stage 6 Codex review. PR #231 current head checks green before projection sync; local required checks passed including pnpm verify:frontend. Stage artifacts: .omx/artifacts/claude-delegate-10b-shopping-share-text-stage4-frontend-response-20260427T165500KST.md, .omx/artifacts/claude-delegate-10b-shopping-share-text-stage4-repair-response-20260427T170600KST.md, .omx/artifacts/stage5-10b-shopping-share-text-design-review-20260427T170021KST.md, .omx/artifacts/stage6-10b-shopping-share-text-pr-review-20260427T171247KST.md. Manual Only remains Web Share OS sheet on HTTPS real device."
+    },
+    {
+      "id": "11-shopping-reorder",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/11-shopping-reorder",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 workpack docs for shopping list item drag & drop reorder persistence. Low-risk UI change on existing SHOPPING_DETAIL confirmed screen."
     }
   ]
 }
