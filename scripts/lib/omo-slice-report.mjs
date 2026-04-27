@@ -210,7 +210,7 @@ function collectDispatchRuns(rootDir, workItemId) {
     .sort((left, right) => left.startedAt.getTime() - right.startedAt.getTime());
 }
 
-function collectSupervisorEscalations(rootDir, workItemId) {
+function collectSupervisorWaitEvents(rootDir, workItemId) {
   const supervisorRoot = resolve(rootDir, ".artifacts", "omo-supervisor");
   if (!existsSync(supervisorRoot)) {
     return [];
@@ -218,7 +218,7 @@ function collectSupervisorEscalations(rootDir, workItemId) {
 
   const byKey = new Map();
   const maybeAdd = (wait) => {
-    if (wait?.kind !== "human_escalation") {
+    if (typeof wait?.kind !== "string" || wait.kind.trim().length === 0) {
       return;
     }
 
@@ -226,13 +226,25 @@ function collectSupervisorEscalations(rootDir, workItemId) {
     const stage = Number.isInteger(wait.stage) ? wait.stage : Number.parseInt(wait.stage, 10);
     const reason = typeof wait.reason === "string" && wait.reason.trim().length > 0
       ? wait.reason.trim()
-      : "human escalation";
-    const key = `${updatedAt?.toISOString() ?? "unknown"}|${stage || "-"}|${reason}`;
+      : wait.kind.trim();
+    const reasonCode =
+      typeof wait.reason_code === "string" && wait.reason_code.trim().length > 0
+        ? wait.reason_code.trim()
+        : null;
+    const reasonDetailCode =
+      typeof wait.reason_detail_code === "string" && wait.reason_detail_code.trim().length > 0
+        ? wait.reason_detail_code.trim()
+        : null;
+    const key = `${updatedAt?.toISOString() ?? "unknown"}|${stage || "-"}|${wait.kind}|${reason}`;
     if (!byKey.has(key)) {
       byKey.set(key, {
         stage: Number.isInteger(stage) ? stage : null,
+        kind: wait.kind.trim(),
+        reasonCode,
+        reasonDetailCode,
         updatedAt,
         reason,
+        source: "supervisor",
       });
     }
   };
@@ -396,6 +408,55 @@ function groupEscalations(escalations, dispatchRuns, runtime) {
   }));
 }
 
+function groupSupervisorWaitEvents(events) {
+  const grouped = new Map();
+  for (const event of events) {
+    const key = `${event.stage ?? "-"}|${event.kind}|${event.reason}`;
+    const existing = grouped.get(key) ?? {
+      stage: event.stage,
+      kind: event.kind,
+      reasonCode: event.reasonCode,
+      reasonDetailCode: event.reasonDetailCode,
+      reason: event.reason,
+      count: 0,
+      firstAt: event.updatedAt,
+    };
+    existing.count += 1;
+    if (event.updatedAt && (!existing.firstAt || event.updatedAt.getTime() < existing.firstAt.getTime())) {
+      existing.firstAt = event.updatedAt;
+    }
+    grouped.set(key, existing);
+  }
+
+  return [...grouped.values()].sort((left, right) => {
+    const leftTime = left.firstAt?.getTime() ?? 0;
+    const rightTime = right.firstAt?.getTime() ?? 0;
+    return leftTime - rightTime;
+  });
+}
+
+function getSupervisorEventSearchText(event) {
+  return [
+    event.kind,
+    event.reasonCode,
+    event.reasonDetailCode,
+    event.reason,
+  ]
+    .filter((value) => typeof value === "string")
+    .join("\n")
+    .toLowerCase();
+}
+
+function isManualDecisionEvent(event) {
+  const text = getSupervisorEventSearchText(event);
+  return event.kind === "manual_decision_required" || event.reasonCode === "manual_decision_required" || text.includes("manual decision");
+}
+
+function isPostMergeStaleEvent(event) {
+  const text = getSupervisorEventSearchText(event);
+  return /post[-_\s]?merge.*stale|stale.*post[-_\s]?merge|post_merge_stale/.test(text);
+}
+
 function getRunProvider(run) {
   return (
     run.runMetadata?.execution?.provider ??
@@ -532,7 +593,7 @@ function resolveMeasurementRange({ dispatchRuns, escalations, omxArtifactEvents,
   };
 }
 
-function summarizeEvidenceSources({ dispatchRuns, escalations, omxArtifactEvents }) {
+function summarizeEvidenceSources({ dispatchRuns, supervisorWaitEvents, omxArtifactEvents }) {
   const sources = [];
   const stageList = (values) =>
     [...new Set(values.map((value) => value.stage).filter((stage) => Number.isInteger(stage)))]
@@ -547,11 +608,11 @@ function summarizeEvidenceSources({ dispatchRuns, escalations, omxArtifactEvents
     });
   }
 
-  if (escalations.length > 0) {
+  if (supervisorWaitEvents.length > 0) {
     sources.push({
       source: "supervisor",
-      count: escalations.length,
-      stages: stageList(escalations),
+      count: supervisorWaitEvents.length,
+      stages: stageList(supervisorWaitEvents),
     });
   }
 
@@ -566,13 +627,71 @@ function summarizeEvidenceSources({ dispatchRuns, escalations, omxArtifactEvents
   return sources;
 }
 
+function countGroupedEvents(groups) {
+  return groups.reduce((sum, group) => sum + group.count, 0);
+}
+
+function resolveLatestReasonCode(events) {
+  const latest = events
+    .filter((event) => event.at instanceof Date && !Number.isNaN(event.at.getTime()))
+    .sort((left, right) => right.at.getTime() - left.at.getTime())[0];
+  return latest?.reasonCode ?? null;
+}
+
+function buildRepairSummaryProjection({
+  codexResolvedErrors,
+  omxRepairEvents,
+  manualDecisionEvents,
+  escalationEvents,
+  postMergeStaleEvents,
+  evidenceSources,
+}) {
+  const codexResolvedCount = countGroupedEvents(codexResolvedErrors);
+  const codexOmxRepairCount = omxRepairEvents.filter((event) => event.actor === "codex").length;
+  const claudeOmxRepairCount = omxRepairEvents.filter((event) => event.actor === "claude").length;
+  const latestReasonCode = resolveLatestReasonCode([
+    ...codexResolvedErrors.map((event) => ({
+      at: event.firstAt,
+      reasonCode: "codex_repairable",
+    })),
+    ...omxRepairEvents.map((event) => ({
+      at: event.startedAt,
+      reasonCode: event.kind,
+    })),
+    ...manualDecisionEvents.map((event) => ({
+      at: event.updatedAt,
+      reasonCode: event.reasonCode ?? event.kind,
+    })),
+    ...escalationEvents.map((event) => ({
+      at: event.updatedAt,
+      reasonCode: event.reasonCode ?? event.kind,
+    })),
+    ...postMergeStaleEvents.map((event) => ({
+      at: event.updatedAt,
+      reasonCode: event.reasonCode ?? event.kind,
+    })),
+  ]);
+
+  return {
+    codex_repairable_count: codexResolvedCount + codexOmxRepairCount,
+    claude_repairable_count: claudeOmxRepairCount,
+    manual_decision_required_count: manualDecisionEvents.length,
+    human_escalation_count: escalationEvents.length,
+    post_merge_stale_count: postMergeStaleEvents.length,
+    latest_reason_code: latestReasonCode,
+    evidence_sources: evidenceSources.map((source) => source.source),
+  };
+}
+
 function renderReport({
   rootDir,
   workItemId,
   runtime,
   now,
+  reportMode,
   dispatchRuns,
   escalations,
+  supervisorWaitEvents,
   omxArtifactEvents,
 }) {
   const stageRuns = summarizeStageRuns(dispatchRuns);
@@ -581,14 +700,22 @@ function renderReport({
   const escalationGroups = groupEscalations(escalations, dispatchRuns, runtime);
   const codexResolvedErrors = groupCodexResolvedErrors(dispatchRuns, runtime);
   const omxRepairEvents = omxArtifactEvents.filter((event) => event.kind === "repair_attempt");
+  const manualDecisionEvents = supervisorWaitEvents.filter(isManualDecisionEvent);
+  const manualDecisionGroups = groupSupervisorWaitEvents(manualDecisionEvents);
+  const postMergeStaleEvents = supervisorWaitEvents.filter(isPostMergeStaleEvent);
+  const postMergeStaleGroups = groupSupervisorWaitEvents(postMergeStaleEvents);
   const codexResolvedErrorCount =
     codexResolvedErrors.reduce((sum, group) => sum + group.count, 0) + omxRepairEvents.length;
-  const evidenceSources = summarizeEvidenceSources({ dispatchRuns, escalations, omxArtifactEvents });
+  const evidenceSources = summarizeEvidenceSources({ dispatchRuns, supervisorWaitEvents, omxArtifactEvents });
+  const repairSummaryProjection = buildRepairSummaryProjection({
+    codexResolvedErrors,
+    omxRepairEvents,
+    manualDecisionEvents,
+    escalationEvents: escalations,
+    postMergeStaleEvents,
+    evidenceSources,
+  });
   const finalPr = resolveFinalPullRequest(runtime);
-  const completionTime = parseIsoTimestamp(now);
-  const postCloseoutEscalations = completionTime
-    ? escalations.filter((escalation) => escalation.updatedAt && escalation.updatedAt > completionTime).length
-    : 0;
   const lines = [];
 
   lines.push(`# OMO Efficiency Report: ${workItemId}`);
@@ -597,14 +724,16 @@ function renderReport({
   lines.push("");
   lines.push("| 항목 | 값 |");
   lines.push("| --- | ---: |");
+  lines.push(`| report_mode | ${reportMode} |`);
   lines.push(`| 최종 상태 | ${describeFinalStatus({ rootDir, workItemId, runtime })} |`);
   lines.push(`| 최종 PR | ${extractPullRequestNumber(finalPr)} |`);
   lines.push(`| 측정 구간 | ${formatKst(range.startedAt)} ~ ${formatKst(range.endedAt)} KST |`);
   lines.push(`| 벽시계 총 시간 | ${formatMinutes(range.wallClockMinutes)} |`);
   lines.push(`| 순수 진행 누적시간 | ${formatMinutes(totalPureMinutes)} |`);
   lines.push(`| human_escalation | ${escalations.length}회 |`);
+  lines.push(`| manual_decision_required | ${manualDecisionEvents.length}회 |`);
   lines.push(`| Codex/Claude 자동 수정 오류 | ${codexResolvedErrorCount}회 |`);
-  lines.push(`| 최종 merge 이후 stale escalation | ${postCloseoutEscalations}회 |`);
+  lines.push(`| post-merge stale | ${postMergeStaleEvents.length}회 |`);
   lines.push(`| evidence_source | ${evidenceSources.map((source) => source.source).join(", ") || "-"} |`);
   lines.push("");
   lines.push(
@@ -648,6 +777,34 @@ function renderReport({
     }
   }
   lines.push("");
+  lines.push("## Manual Decision Required");
+  lines.push("");
+  lines.push("| Stage | 발생 | 첫 발생 시점 | reason_code | 원인 |");
+  lines.push("| --- | ---: | --- | --- | --- |");
+  if (manualDecisionGroups.length === 0) {
+    lines.push("| - | 0회 | - | - | 없음 |");
+  } else {
+    for (const group of manualDecisionGroups) {
+      lines.push(
+        `| ${group.stage ?? "-"} | ${group.count}회 | ${formatKst(group.firstAt)} | ${escapeTableCell(group.reasonCode ?? group.kind)} | ${escapeTableCell(group.reason)} |`,
+      );
+    }
+  }
+  lines.push("");
+  lines.push("## Post-Merge Stale Events");
+  lines.push("");
+  lines.push("| Stage | 발생 | 첫 발생 시점 | reason_code | 원인 |");
+  lines.push("| --- | ---: | --- | --- | --- |");
+  if (postMergeStaleGroups.length === 0) {
+    lines.push("| - | 0회 | - | - | 없음 |");
+  } else {
+    for (const group of postMergeStaleGroups) {
+      lines.push(
+        `| ${group.stage ?? "-"} | ${group.count}회 | ${formatKst(group.firstAt)} | ${escapeTableCell(group.reasonCode ?? group.kind)} | ${escapeTableCell(group.reason)} |`,
+      );
+    }
+  }
+  lines.push("");
   lines.push("## Codex/Claude-Resolved Non-Human Errors");
   lines.push("");
   lines.push("| Stage | 발생 | 첫 발생 시점 | 원인 | 해결 |");
@@ -672,10 +829,15 @@ function renderReport({
   lines.push(`- 순수 진행시간은 ${formatMinutes(totalPureMinutes)}이다.`);
   lines.push(`- 가장 오래 걸린 stage는 ${stageRuns.slice().sort((left, right) => right.durationMinutes - left.durationMinutes)[0]?.label ?? "-"}이다.`);
   lines.push(`- human_escalation은 ${escalations.length}회 기록됐다.`);
-  lines.push(`- human_escalation 외 Codex가 자동 수정한 오류는 ${codexResolvedErrorCount}회 기록됐다.`);
+  lines.push(`- manual_decision_required는 ${manualDecisionEvents.length}회 기록됐다.`);
+  lines.push(`- post-merge stale은 ${postMergeStaleEvents.length}회 기록됐다.`);
+  lines.push(`- human_escalation 외 Codex/Claude가 자동 수정한 오류는 ${codexResolvedErrorCount}회 기록됐다.`);
   lines.push("");
 
-  return `${lines.join("\n")}`;
+  return {
+    markdown: `${lines.join("\n")}`,
+    repairSummaryProjection,
+  };
 }
 
 /**
@@ -684,6 +846,7 @@ function renderReport({
  *   workItemId: string,
  *   runtime?: Record<string, any> | null,
  *   now?: string,
+ *   reportMode?: "generated" | "manual" | "backfilled",
  * }} options
  */
 export function generateOmoSliceReport({
@@ -691,6 +854,7 @@ export function generateOmoSliceReport({
   workItemId,
   runtime = null,
   now = new Date().toISOString(),
+  reportMode = "generated",
 } = {}) {
   if (typeof workItemId !== "string" || workItemId.trim().length === 0) {
     throw new Error("workItemId is required.");
@@ -698,27 +862,36 @@ export function generateOmoSliceReport({
 
   const normalizedWorkItemId = workItemId.trim();
   const dispatchRuns = collectDispatchRuns(rootDir, normalizedWorkItemId);
-  const escalations = collectSupervisorEscalations(rootDir, normalizedWorkItemId);
+  const supervisorWaitEvents = collectSupervisorWaitEvents(rootDir, normalizedWorkItemId);
+  const escalations = supervisorWaitEvents.filter((event) => event.kind === "human_escalation");
   const omxArtifactEvents = collectOmxArtifactEvents(rootDir, normalizedWorkItemId);
-  const reportMarkdown = renderReport({
+  const normalizedReportMode = ["generated", "manual", "backfilled"].includes(reportMode)
+    ? reportMode
+    : "generated";
+  const report = renderReport({
     rootDir,
     workItemId: normalizedWorkItemId,
     runtime,
     now,
+    reportMode: normalizedReportMode,
     dispatchRuns,
     escalations,
+    supervisorWaitEvents,
     omxArtifactEvents,
   });
   const reportPath = resolveReportPath(rootDir, normalizedWorkItemId);
   mkdirSync(dirname(reportPath), { recursive: true });
-  writeFileSync(reportPath, `${reportMarkdown}\n`, "utf8");
+  writeFileSync(reportPath, `${report.markdown}\n`, "utf8");
 
   return {
     reportPath,
-    reportMarkdown,
+    reportMarkdown: report.markdown,
+    reportMode: normalizedReportMode,
     dispatchRuns,
     escalations,
+    supervisorWaitEvents,
     omxArtifactEvents,
+    repairSummaryProjection: report.repairSummaryProjection,
   };
 }
 
@@ -731,7 +904,9 @@ export function generateOmoSliceReportIfPossible(options = {}) {
       reportMarkdown: null,
       dispatchRuns: [],
       escalations: [],
+      supervisorWaitEvents: [],
       omxArtifactEvents: [],
+      repairSummaryProjection: null,
       error: error instanceof Error ? error.message : String(error),
     };
   }

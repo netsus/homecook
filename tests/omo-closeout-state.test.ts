@@ -39,6 +39,15 @@ const closeoutSnapshot = {
     artifact_missing: true,
     last_recovery_at: "2026-04-21T00:00:00Z",
   },
+  repair_summary: {
+    codex_repairable_count: 3,
+    claude_repairable_count: 1,
+    manual_decision_required_count: 0,
+    human_escalation_count: 0,
+    post_merge_stale_count: 1,
+    latest_reason_code: "post_merge_stale",
+    evidence_sources: ["dispatch", ".omx/artifacts"],
+  },
   projection_state: {
     docs_synced_at: "2026-04-21T00:01:00Z",
     status_synced_at: "2026-04-21T00:02:00Z",
@@ -55,6 +64,7 @@ describe("omo canonical closeout state", () => {
       note_fragments: [
         "closeout_phase=completed",
         "closeout_recovery=manual_patch:1|stale_lock:2|ci_resync:1|manual_handoff|artifact_missing",
+        "closeout_repair=codex:3|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:dispatch,.omx/artifacts",
         "last_recovery_at=2026-04-21T00:00:00Z",
       ],
     });
@@ -112,6 +122,15 @@ describe("omo canonical closeout state", () => {
         artifact_missing: true,
         last_recovery_at: "2026-04-21T00:00:00Z",
       },
+      repair_summary: {
+        codex_repairable_count: 3,
+        claude_repairable_count: 1,
+        manual_decision_required_count: 0,
+        human_escalation_count: 0,
+        post_merge_stale_count: 1,
+        latest_reason_code: "post_merge_stale",
+        evidence_sources: ["dispatch", ".omx/artifacts"],
+      },
     });
   });
 
@@ -129,6 +148,8 @@ describe("omo canonical closeout state", () => {
         "- Design Status: `confirmed`",
         "- Design Authority: `passed`",
         "- automation-spec closeout metadata: `synced`",
+        "- repair summary: codex=`3`, claude=`1`, manual_decision=`0`, human_escalation=`0`, post_merge_stale=`1`",
+        "- repair evidence sources: `dispatch`, `.omx/artifacts`",
         "- projection sync state: docs=`2026-04-21T00:01:00Z`, PR body=`2026-04-21T00:03:00Z`",
       ].join("\n"),
       merge_gate: [
@@ -222,7 +243,7 @@ describe("omo canonical closeout state", () => {
         approval_state: "dual_approved",
         verification_status: "passed",
         notes:
-          "manual note; closeout_phase=completed; closeout_recovery=manual_patch:1|stale_lock:2|ci_resync:1|manual_handoff|artifact_missing; last_recovery_at=2026-04-21T00:00:00Z",
+          "manual note; closeout_phase=completed; closeout_recovery=manual_patch:1|stale_lock:2|ci_resync:1|manual_handoff|artifact_missing; closeout_repair=codex:3|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:dispatch,.omx/artifacts; last_recovery_at=2026-04-21T00:00:00Z",
       },
       closeout: closeoutSnapshot,
       pathPrefix: ".workflow-v2/status.json.items.06-recipe-to-planner",
@@ -266,6 +287,11 @@ describe("omo canonical closeout state", () => {
         path: ".workflow-v2/status.json.items.06-recipe-to-planner.notes",
         message:
           "Canonical closeout note projection missing fragment: closeout_recovery=manual_patch:1|stale_lock:2|ci_resync:1|manual_handoff|artifact_missing",
+      },
+      {
+        path: ".workflow-v2/status.json.items.06-recipe-to-planner.notes",
+        message:
+          "Canonical closeout note projection missing fragment: closeout_repair=codex:3|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:1|sources:dispatch,.omx/artifacts",
       },
       {
         path: ".workflow-v2/status.json.items.06-recipe-to-planner.notes",
@@ -347,6 +373,27 @@ describe("omo canonical closeout state", () => {
         path: ".workflow-v2/work-items/06-recipe-to-planner.json.closeout.verification_projection.authority_reports",
         message:
           "Canonical closeout human-surface projection requires authority_reports when design_authority is passed.",
+      },
+    ]);
+  });
+
+  it("requires retained repair evidence sources when a completed closeout records repair activity", () => {
+    const errors = validateHumanSurfaceProjectionContract({
+      workItemId: "10b-shopping-share-text",
+      closeout: {
+        ...closeoutSnapshot,
+        repair_summary: {
+          ...closeoutSnapshot.repair_summary,
+          evidence_sources: [],
+        },
+      },
+    });
+
+    expect(errors).toEqual([
+      {
+        path: ".workflow-v2/work-items/10b-shopping-share-text.json.closeout.repair_summary.evidence_sources",
+        message:
+          "Canonical closeout repair summary requires evidence_sources when repair/manual/stale counts are non-zero.",
       },
     ]);
   });

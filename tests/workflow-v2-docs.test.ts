@@ -64,13 +64,18 @@ describe("workflow v2 docs", () => {
   it("locks the canonical closeout snapshot shape in the work item schema and example", () => {
     const schema = readJson("docs/engineering/workflow-v2/schemas/work-item.schema.json");
     const example = readJson("docs/engineering/workflow-v2/templates/work-item.example.json");
+    const schemaProperties = schema.properties as Record<string, unknown>;
+    const closeoutSchema = schemaProperties.closeout as { properties: Record<string, unknown> };
 
-    expect(schema.properties).toHaveProperty("closeout");
+    expect(schemaProperties).toHaveProperty("closeout");
     expect(example).toHaveProperty("closeout.phase", "collecting");
     expect(example).toHaveProperty("closeout.docs_projection.roadmap_lifecycle", "planned");
     expect(example).toHaveProperty("closeout.verification_projection.required_checks", "pending");
     expect(example).toHaveProperty("closeout.merge_gate_projection.approval_state", "not_started");
     expect(example).toHaveProperty("closeout.recovery_summary.manual_patch_count", 0);
+    expect(closeoutSchema.properties).toHaveProperty("repair_summary");
+    expect(example).toHaveProperty("closeout.repair_summary.codex_repairable_count", 0);
+    expect(example).toHaveProperty("closeout.repair_summary.evidence_sources", []);
   });
 
   it("keeps workflow status example aligned with the schema enums and required fields", () => {
@@ -223,13 +228,13 @@ describe("workflow v2 docs", () => {
       "`Actual Verification` evidence는 source PR/manual surface를 계속 우선하고, markdown 전체 rewrite/sync patcher는 아직 포함하지 않는다.",
     );
     expect(canonicalCloseout).toContain(
-      "현재 baseline: `work-item closeout schema + tracked status projection helper + human-facing projection payload helper + validator guard`까지 구현됐다.",
+      "현재 baseline: `work-item closeout schema + repair_summary projection + tracked status projection helper + human-facing projection payload helper + validator guard`까지 구현됐다.",
     );
     expect(canonicalCloseout).toContain(
       "PR body의 `Closeout Sync` / `Merge Gate` 기본 section generation, README / acceptance doc-surface drift check, current-vocabulary closeout repair consumer는 연결됐고, README / acceptance markdown rewrite와 `Actual Verification` full projection은 아직 후속 단계다.",
     );
     expect(canonicalCloseout).toContain(
-      "현재 baseline은 `status` projection helper뿐 아니라 README / acceptance / PR body용 generated payload와 projection readiness validator를 포함한다.",
+      "현재 baseline은 `status` projection helper뿐 아니라 README / acceptance / PR body용 generated payload, repair summary projection, projection readiness validator를 포함한다.",
     );
     expect(canonicalCloseout).toContain(
       "현재 baseline의 consumer는 PR body `Closeout Sync` / `Merge Gate` 기본 section generation, `validate:closeout-sync`의 README / acceptance drift check, `omo:reconcile`의 current-vocabulary closeout repair까지 연결됐다.",

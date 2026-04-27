@@ -11,6 +11,7 @@ function printUsage() {
       "Options:",
       "  --work-item <id>       Workflow v2 work item / slice id",
       "  --now <iso>            Override report generation time",
+      "  --report-mode <mode>   generated | manual | backfilled (default: generated)",
       "  --json                 Print JSON result",
       "  --help                 Show this help text",
       "",
@@ -43,7 +44,7 @@ function parseArgs(argv) {
       options.json = true;
       continue;
     }
-    if (token === "--work-item" || token === "--now") {
+    if (token === "--work-item" || token === "--now" || token === "--report-mode") {
       const key = token
         .replace(/^--/, "")
         .replace(/-([a-z])/g, (_, character) => character.toUpperCase());
@@ -79,10 +80,21 @@ function main() {
     workItemId: options.workItem,
     runtime,
     now: options.now,
+    reportMode: options.reportMode,
   });
 
   if (options.json) {
-    process.stdout.write(`${JSON.stringify({ reportPath: result.reportPath }, null, 2)}\n`);
+    process.stdout.write(
+      `${JSON.stringify(
+        {
+          reportPath: result.reportPath,
+          reportMode: result.reportMode,
+          repairSummaryProjection: result.repairSummaryProjection,
+        },
+        null,
+        2,
+      )}\n`,
+    );
     return;
   }
 

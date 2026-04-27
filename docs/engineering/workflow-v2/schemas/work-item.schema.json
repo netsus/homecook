@@ -375,6 +375,50 @@
             }
           }
         },
+        "repair_summary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "codex_repairable_count",
+            "claude_repairable_count",
+            "manual_decision_required_count",
+            "human_escalation_count",
+            "post_merge_stale_count",
+            "latest_reason_code",
+            "evidence_sources"
+          ],
+          "properties": {
+            "codex_repairable_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "claude_repairable_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "manual_decision_required_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "human_escalation_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "post_merge_stale_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "latest_reason_code": {
+              "type": ["string", "null"]
+            },
+            "evidence_sources": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
         "projection_state": {
           "type": "object",
           "additionalProperties": false,
