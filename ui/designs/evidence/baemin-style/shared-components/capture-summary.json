@@ -1,0 +1,136 @@
+{
+  "capturedAt": "2026-04-27T05:16:45.093Z",
+  "beforeBaseUrl": "http://127.0.0.1:3101",
+  "afterBaseUrl": "http://127.0.0.1:3100",
+  "componentPreviews": [
+    {
+      "fileName": "component-state-previews-button.png",
+      "component": "button"
+    },
+    {
+      "fileName": "component-state-previews-chip.png",
+      "component": "chip"
+    },
+    {
+      "fileName": "component-state-previews-card.png",
+      "component": "card"
+    },
+    {
+      "fileName": "component-state-previews-badge.png",
+      "component": "badge"
+    },
+    {
+      "fileName": "component-state-previews-empty-state.png",
+      "component": "empty-state"
+    },
+    {
+      "fileName": "component-state-previews-error-state.png",
+      "component": "error-state"
+    },
+    {
+      "fileName": "component-state-previews-skeleton.png",
+      "component": "skeleton"
+    }
+  ],
+  "results": [
+    {
+      "fileName": "HOME-before-mobile.png",
+      "screen": "HOME",
+      "viewportName": "mobile",
+      "phase": "before",
+      "layout": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "HOME-after-mobile.png",
+      "screen": "HOME",
+      "viewportName": "mobile",
+      "phase": "after",
+      "layout": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "HOME-after-narrow-320.png",
+      "screen": "HOME",
+      "viewportName": "narrow",
+      "phase": "after",
+      "layout": {
+        "innerWidth": 320,
+        "scrollWidth": 320,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "RECIPE_DETAIL-before-mobile.png",
+      "screen": "RECIPE_DETAIL",
+      "viewportName": "mobile",
+      "phase": "before",
+      "layout": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "RECIPE_DETAIL-after-mobile.png",
+      "screen": "RECIPE_DETAIL",
+      "viewportName": "mobile",
+      "phase": "after",
+      "layout": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "RECIPE_DETAIL-after-narrow-320.png",
+      "screen": "RECIPE_DETAIL",
+      "viewportName": "narrow",
+      "phase": "after",
+      "layout": {
+        "innerWidth": 320,
+        "scrollWidth": 320,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "PLANNER_WEEK-before-mobile.png",
+      "screen": "PLANNER_WEEK",
+      "viewportName": "mobile",
+      "phase": "before",
+      "layout": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "PLANNER_WEEK-after-mobile.png",
+      "screen": "PLANNER_WEEK",
+      "viewportName": "mobile",
+      "phase": "after",
+      "layout": {
+        "innerWidth": 390,
+        "scrollWidth": 390,
+        "hasHorizontalOverflow": false
+      }
+    },
+    {
+      "fileName": "PLANNER_WEEK-after-narrow-320.png",
+      "screen": "PLANNER_WEEK",
+      "viewportName": "narrow",
+      "phase": "after",
+      "layout": {
+        "innerWidth": 320,
+        "scrollWidth": 320,
+        "hasHorizontalOverflow": false
+      }
+    }
+  ]
+}

@@ -23,7 +23,7 @@ export function ModalFooterActions({
   return (
     <div className="flex gap-2.5">
       <button
-        className="flex-1 rounded-[14px] border border-[var(--line)] bg-white/60 py-3.5 text-sm font-semibold text-[var(--foreground)] hover:bg-white/80 disabled:opacity-40"
+        className="flex-1 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] py-3.5 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-fill)] disabled:opacity-40"
         disabled={cancelDisabled}
         onClick={onCancel}
         type="button"
@@ -31,7 +31,7 @@ export function ModalFooterActions({
         {cancelLabel}
       </button>
       <button
-        className="flex-[2] rounded-[14px] bg-[var(--olive)] py-3.5 text-sm font-bold text-white disabled:opacity-50"
+        className="flex-[2] rounded-[var(--radius-md)] bg-[var(--olive)] py-3.5 text-sm font-bold text-[var(--surface)] shadow-[var(--shadow-1)] transition-colors hover:brightness-110 disabled:opacity-50"
         disabled={confirmDisabled}
         onClick={onConfirm}
         type="button"

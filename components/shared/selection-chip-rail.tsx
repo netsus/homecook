@@ -49,10 +49,10 @@ export function SelectionChipRail({
             <button
               aria-pressed={isSelected}
               className={[
-                "min-h-11 shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
+                "min-h-11 shrink-0 rounded-[var(--radius-full)] border px-4 py-2 text-sm font-semibold transition-colors",
                 isSelected
-                  ? "border-[var(--olive)] bg-[color:rgba(46,166,122,0.12)] text-[var(--olive)]"
-                  : "border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--olive)] hover:text-[var(--olive)]",
+                  ? "border-[var(--olive)] bg-[color-mix(in_srgb,var(--olive)_12%,transparent)] text-[var(--olive)]"
+                  : "border-[var(--line)] bg-[var(--surface)] text-[var(--text-2)] hover:border-[var(--olive)] hover:text-[var(--olive)]",
                 disabled ? "opacity-60" : "",
               ]
                 .filter(Boolean)
@@ -71,10 +71,10 @@ export function SelectionChipRail({
           <button
             aria-pressed={isSelected}
             className={[
-              "flex min-w-[52px] flex-col items-center rounded-[14px] px-2.5 py-2.5 text-center transition-colors",
+              "flex min-w-[52px] flex-col items-center rounded-[var(--radius-md)] px-2.5 py-2.5 text-center transition-colors",
               isSelected
-                ? "bg-[var(--olive)] text-white"
-                : "bg-white/60 text-[var(--foreground)] hover:bg-white/80",
+                ? "bg-[var(--olive)] text-[var(--surface)] shadow-[var(--shadow-1)]"
+                : "bg-[var(--surface-fill)] text-[var(--foreground)] hover:bg-[var(--surface-subtle)]",
               disabled ? "opacity-60" : "",
             ]
               .filter(Boolean)
