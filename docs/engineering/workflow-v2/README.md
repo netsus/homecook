@@ -19,6 +19,9 @@
 - 현재 운영 규칙:
   - workflow-v2 entry docs가 OMO 기본 운영 경로를 설명한다.
   - product slice 구현의 stage-by-stage mechanics는 계속 `slice-workflow.md`와 `agent-workflow-overview.md`가 담당한다.
+- 현재 전환 방향:
+  - Homecook OMO는 Codex가 orchestration owner이고 OMO가 deterministic rail인 `Codex-orchestrated OMO rail`로 전환한다.
+  - Claude는 Stage 1/3/4, authority-required final gate, 독립 review가 필요한 specialized lane으로 남긴다.
 
 ## Why
 
@@ -32,6 +35,9 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - Claude-Codex dual-approval loop의 공식화
 - machine-readable 상태 파일
 - external dependency smoke check의 명시화
+
+최근 10b/11/12a 운영에서는 Codex가 OMO supervise run 옆에서 blocker를 분류하고 바로 repair하면서 `human_escalation` 없이 slice를 닫는 패턴이 확인됐다.
+따라서 v2 reset의 다음 단계는 OMO를 제거하는 것이 아니라, OMO를 상태/검증/증거 projection rail로 줄이고 Codex를 orchestration owner로 명시하는 것이다.
 
 ## Audience Split
 
@@ -52,12 +58,13 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 ### Reset Track
 
-1. [omo-supervisor-reset-plan.md](./omo-supervisor-reset-plan.md)
-2. [omo-incident-registry.md](./omo-incident-registry.md)
-3. [omo-governance-surface-map.md](./omo-governance-surface-map.md)
-4. [omo-canonical-closeout-state.md](./omo-canonical-closeout-state.md)
-5. [omo-auditor-reset-requirements.md](./omo-auditor-reset-requirements.md)
-6. [omo-replay-acceptance.md](./omo-replay-acceptance.md)
+1. [omo-codex-orchestrated-rail.md](./omo-codex-orchestrated-rail.md)
+2. [omo-supervisor-reset-plan.md](./omo-supervisor-reset-plan.md)
+3. [omo-incident-registry.md](./omo-incident-registry.md)
+4. [omo-governance-surface-map.md](./omo-governance-surface-map.md)
+5. [omo-canonical-closeout-state.md](./omo-canonical-closeout-state.md)
+6. [omo-auditor-reset-requirements.md](./omo-auditor-reset-requirements.md)
+7. [omo-replay-acceptance.md](./omo-replay-acceptance.md)
 
 ### Maintainer Specs
 
@@ -90,6 +97,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [omo-claude-cli-provider.md](./omo-claude-cli-provider.md): maintainer spec. raw `claude` CLI provider, session extraction, deterministic resume 규격
 - [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md): maintainer spec. local worktree / PR / CI / merge / scheduler supervisor 규격
 - [omo-supervisor-reset-plan.md](./omo-supervisor-reset-plan.md): slice07 이후 OMO를 patch accumulation이 아니라 supervisor reset 관점에서 다시 축소/재잠그기 위한 계획 문서
+- [omo-codex-orchestrated-rail.md](./omo-codex-orchestrated-rail.md): Codex를 orchestration owner로 두고 OMO를 deterministic rail로 줄이는 전환 결정, reason code, baseline evidence
 - [omo-incident-registry.md](./omo-incident-registry.md): slice07 failure log와 prior pilot 흔적을 reset input corpus로 관리하는 incident registry
 - [omo-governance-surface-map.md](./omo-governance-surface-map.md): stage actor / operator / maintainer가 읽어야 할 문서 표면을 다시 자르기 위한 책임 경계 맵
 - [omo-canonical-closeout-state.md](./omo-canonical-closeout-state.md): closeout truth를 한 surface로 줄이고 README / acceptance / PR body / status를 projection으로 내리기 위한 Phase 2 후보 설계
@@ -114,6 +122,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 ## Adoption Rules
 
 - workflow-v2는 현재 Homecook의 OMO 기본 운영 경로다.
+- 현재 기본 운영 모델은 `Codex-orchestrated OMO rail`이다. Codex가 blocker 분류와 repair routing을 맡고, OMO는 state transition / validator / current-head gate / closeout-report projection을 맡는다.
 - 이 README는 operator entry다. product stage actor는 workflow-v2 spec 전체를 기본 읽기 세트로 삼지 않고, `slice-workflow.md`와 `agent-workflow-overview.md`를 우선한다.
 - `workflow-v2` 관련 첫 단계는 문서와 schema를 고정하는 것이다.
 - 실제 tracked 운영 상태는 저장소 루트의 `.workflow-v2/` 아래 JSON으로 기록한다.

@@ -7,6 +7,7 @@
 - 범위: Homecook OMO supervisor / workflow-v2 / meta-harness reset plan
 - 이 문서는 slice07과 그 이전 pilot 운영에서 누적된 OMO failure family를 "개별 패치 backlog"가 아니라 "시스템 축소와 재잠금" 관점에서 다시 정리하기 위한 계획 문서다.
 - 목표는 supervisor를 더 똑똑하게 덧대는 것이 아니라, 책임을 줄이고 규칙 표면을 축소해 반복 가능한 kernel만 남기는 것이다.
+- Codex-orchestrated 전환 기준은 [omo-codex-orchestrated-rail.md](./omo-codex-orchestrated-rail.md)를 따른다. 이 reset은 OMO 폐기가 아니라 Codex 판단 + OMO rail 축소로 실행한다.
 
 ## Why This Reset Exists
 
@@ -88,6 +89,13 @@ slice07 failure log는 단일 슬라이스의 특수 사고 기록이 아니다.
 - slice07 auth override/E2E route wiring 같은 제품 결함은 OMO runtime failure와 같은 backlog에 넣지 않는다.
 - OMO reset은 workflow/tooling/system 문제에 집중한다.
 
+### 7. Codex Orchestrates, OMO Records
+
+- Codex는 현재 blocker를 분류하고, repairable failure를 bounded repair lane으로 보낸다.
+- OMO는 semantic 판단을 새로 만들지 않고 state transition, validator 재실행, current-head gate, closeout/report projection을 맡는다.
+- Claude는 Stage 1/3/4, final authority gate, 독립 review가 필요한 specialized lane으로 남는다.
+- `human_escalation`은 실제 사람 결정이 필요한 `manual_decision_required` reason으로 좁힌다.
+
 ## What The Reset Will Stop Doing
 
 - supervisor를 "최종 semantic reviewer"처럼 확장하지 않는다.
@@ -107,6 +115,7 @@ reset 이후 supervisor kernel은 아래만 확실하게 책임진다.
 4. current-head PR / CI tracking
 5. deterministic gate execution
 6. canonical closeout snapshot projection
+7. Codex/Claude repair evidence ingestion and report projection
 
 아래는 kernel 밖으로 밀어낸다.
 
@@ -114,6 +123,20 @@ reset 이후 supervisor kernel은 아래만 확실하게 책임진다.
 - multi-surface markdown patching
 - promotion narrative self-certification
 - 비용이 큰 long-session persistence를 기본 전제로 한 운영
+
+## Codex-Orchestrated Reason Codes
+
+reset 기간에는 기존 `human_escalation` reason을 아래 코드 중 하나로 먼저 정규화한다.
+
+- `codex_repairable`: Codex가 repo-local reversible edit와 validator recheck로 복구할 수 있는 OMO/report/closeout/PR body drift
+- `claude_repairable`: Claude-owned stage artifact, authority evidence, reviewer judgment 누락처럼 해당 lane actor가 고쳐야 하는 drift
+- `product_defect`: 제품 구현/계약 결함. OMO incident로 섞지 않고 담당 stage로 route back
+- `omo_defect`: supervisor/runtime/report/validator 결함. registry와 tooling/docs-governance PR로 분리
+- `ci_wait`: current head check pending/rerun/stale snapshot
+- `blocked_on_external`: provider, GitHub, network, auth 같은 외부 조건
+- `manual_decision_required`: destructive, credential, external production, public contract change, scope-changing, ambiguous authority decision
+
+`human_escalation`은 `manual_decision_required` 또는 bounded repair budget 소진 후 같은 finding이 남은 경우에만 허용한다.
 
 ## Reset Scope Buckets
 
@@ -172,17 +195,21 @@ reset 이후 supervisor kernel은 아래만 확실하게 책임진다.
 - slice03~slice07 + OMO pilot PR retrospective
 - slice07 failure log를 incident registry의 seed corpus로 승격
 - promotion readiness를 `ready` 전제에서 다시 점검하는 별도 backlog 생성
+- 10a/10b/11/12a OMO report를 baseline evidence로 잠그고, 10a는 escalation-heavy baseline, 10b/11/12a는 Codex-repair baseline으로 분류
 
 산출물:
 
 - reset plan doc
+- Codex-orchestrated OMO rail decision doc
 - incident taxonomy / registry (`omo-incident-registry.md`)
+- 10a/10b/11/12a `omo-report.md` baseline
 - reset 동안의 freeze rule
 
 완료 기준:
 
 - "무엇이 OMO bug이고 무엇이 product bug인지" 분류 표가 생긴다.
 - failure corpus가 slice07 한 건에만 묶여 있지 않다.
+- `human_escalation`이 실제 사람 결정과 repairable failure를 섞지 않도록 reason code 기준이 생긴다.
 
 ### Phase 1. Rule Surface Reduction
 

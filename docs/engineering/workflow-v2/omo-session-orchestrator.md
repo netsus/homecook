@@ -214,10 +214,12 @@ Homecook에서는 아래 원칙으로 adapter를 둔다.
 
 - authoritative policy는 계속 `AGENTS.md`와 `workflow-v2` docs가 가진다.
 - Homecook adapter는 기존 `omo-lite-supervisor`의 stage graph와 dispatch contract를 재사용한다.
+- orchestration owner는 Codex다. 아래 stage actor mapping은 "누가 해당 stage artifact를 만든다"는 뜻이지, 전체 control plane owner가 Claude라는 뜻이 아니다.
 - Stage 1/3/4의 public actor는 Claude다.
 - Stage 2/5/6의 public actor는 Codex다.
 - authority-required slice의 Stage 5 `final_authority_gate` actor는 Claude다.
 - generic core는 actor ownership을 바꾸지 않고, 세션과 retry만 표준화한다.
+- retry/recovery reason은 `codex_repairable`, `claude_repairable`, `ci_wait`, `blocked_on_external`, `manual_decision_required`처럼 operator-facing code로 정규화하고, `human_escalation`은 manual decision 또는 repair budget exhaustion으로 좁힌다.
 
 ## Non-Goals
 
