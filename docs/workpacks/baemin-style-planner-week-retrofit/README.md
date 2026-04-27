@@ -149,7 +149,7 @@ STATUS_META의 text 색상(`text-[var(--brand-deep)]`, `text-[var(--olive)]`, `t
 - UI risk: `high-risk` (anchor screen visual retrofit)
 - Anchor screen dependency: `PLANNER_WEEK`
 - Visual artifact: PLANNER_WEEK before/after screenshots at mobile default (390px), narrow (320px); key active states (loading skeleton, empty state, unauthorized state, scrolled day cards, weekday strip)
-- Authority status: not_started
+- Authority status: reviewed
 - Design wireframe: `ui/designs/PLANNER_WEEK.md` — Baemin-Style Visual Retrofit Addendum 섹션
 - Design critique: `ui/designs/critiques/PLANNER_WEEK-baemin-style-retrofit-critique.md`
 - Authority report (Stage 4/5): `ui/designs/authority/BAEMIN_STYLE_PLANNER_WEEK_RETROFIT-authority.md`
@@ -157,9 +157,9 @@ STATUS_META의 text 색상(`text-[var(--brand-deep)]`, `text-[var(--olive)]`, `t
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 기본값; PLANNER_WEEK 리트로핏 미실행
+- [ ] 임시 UI (temporary) — Stage 1 기본값; PLANNER_WEEK 리트로핏 미실행
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비
-- [ ] 확정 (confirmed) — Stage 5/6 review 통과, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5/6 review 통과, authority blocker 0개
 - [ ] N/A
 
 > 이 슬라이스는 high-risk anchor screen 변경이다. Authority review가 필수다.
@@ -236,29 +236,29 @@ STATUS_META의 text 색상(`text-[var(--brand-deep)]`, `text-[var(--olive)]`, `t
 
 > Living closeout 문서. Stage 4에서 구현 항목 체크, Stage 5/6에서 리뷰.
 
-- [ ] PlannerWeekScreen hero section 리스타일 (`glass-panel` → token panel, hardcoded radii → `--radius-xl`) <!-- omo:id=bspwr-hero;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerWeekScreen secondary CTA toolbar 리스타일 (`bg-white/76` → token surface, hardcoded rgba shadows → token/color-mix, `text-white` → `--surface`, radii → tokens) <!-- omo:id=bspwr-cta-toolbar;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerWeekScreen week context bar 리스타일 (`glass-panel` + `bg-white/88` → token panel, hardcoded shadow → `--shadow-2`, radii → `--radius-xl`) <!-- omo:id=bspwr-week-context;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerWeekScreen weekday strip items 리스타일 (hardcoded radii → `--radius-md`) <!-- omo:id=bspwr-weekday-strip;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerWeekScreen day cards 리스타일 (`glass-panel` → token panel, radii → `--radius-xl`) <!-- omo:id=bspwr-day-cards;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerWeekScreen weekday badge 리스타일 (radii → `--radius-md`, `text-white` → `text-[var(--surface)]`) <!-- omo:id=bspwr-weekday-badge;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerWeekScreen slot rows 리스타일 (leftover `text-[color:rgb(...)]` → `text-[var(--olive)]`) <!-- omo:id=bspwr-slot-rows;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerWeekScreen serving chip 리스타일 (`bg-white` → `bg-[var(--surface)]`) <!-- omo:id=bspwr-serving-chip;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerWeekScreen `STATUS_META` rgba → `color-mix()` 전환 <!-- omo:id=bspwr-status-meta;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerWeekScreen loading skeleton 리스타일 (`glass-panel` + `bg-white/70` → token-based) <!-- omo:id=bspwr-skeleton;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerWeekScreen empty state 리스타일 (`glass-panel` → token panel, radii → `--radius-lg`) <!-- omo:id=bspwr-empty-state;stage=4;scope=frontend;review=5,6 -->
-- [ ] PlannerWeekScreen unauthorized state 리스타일 (`bg-white/78` → token surface, `rounded-[18px]` → `--radius-lg`) <!-- omo:id=bspwr-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] `PLANNER_CTA_CLASS` radii 토큰화 (`rounded-[12px]` → `--radius-md`) <!-- omo:id=bspwr-cta-class;stage=4;scope=frontend;review=5,6 -->
-- [ ] 모든 리스타일이 CSS 변수만 사용 — hardcoded hex/rgba 없음 <!-- omo:id=bspwr-token-usage;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 checking/authenticated/unauthorized + loading/ready/empty/error 상태 보존 확인 <!-- omo:id=bspwr-states-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK 정보 구조 보존 확인 <!-- omo:id=bspwr-structure-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] H2/H4 day-card interaction contract 보존 확인 (가로 스크롤 없음, 2일 이상 overview) <!-- omo:id=bspwr-h2h4-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] Weekday strip swipe/keyboard navigation 동작 보존 확인 <!-- omo:id=bspwr-strip-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] Jua 또는 prototype-only 폰트 미사용 확인 <!-- omo:id=bspwr-no-font;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm verify:frontend` 통과 <!-- omo:id=bspwr-verify-frontend;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK before/after screenshots 캡처 (mobile default 390px, narrow 320px) <!-- omo:id=bspwr-regression-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Key active state screenshots (loading skeleton, empty state, unauthorized, scrolled day cards) <!-- omo:id=bspwr-active-state-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Exploratory QA bundle 또는 low-risk skip rationale 기록 <!-- omo:id=bspwr-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerWeekScreen hero section 리스타일 (`glass-panel` → token panel, hardcoded radii → `--radius-xl`) <!-- omo:id=bspwr-hero;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerWeekScreen secondary CTA toolbar 리스타일 (`bg-white/76` → token surface, hardcoded rgba shadows → token/color-mix, `text-white` → `--surface`, radii → tokens) <!-- omo:id=bspwr-cta-toolbar;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerWeekScreen week context bar 리스타일 (`glass-panel` + `bg-white/88` → token panel, hardcoded shadow → `--shadow-2`, radii → `--radius-xl`) <!-- omo:id=bspwr-week-context;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerWeekScreen weekday strip items 리스타일 (hardcoded radii → `--radius-md`) <!-- omo:id=bspwr-weekday-strip;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerWeekScreen day cards 리스타일 (`glass-panel` → token panel, radii → `--radius-xl`) <!-- omo:id=bspwr-day-cards;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerWeekScreen weekday badge 리스타일 (radii → `--radius-md`, `text-white` → `text-[var(--surface)]`) <!-- omo:id=bspwr-weekday-badge;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerWeekScreen slot rows 리스타일 (leftover `text-[color:rgb(...)]` → `text-[var(--olive)]`) <!-- omo:id=bspwr-slot-rows;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerWeekScreen serving chip 리스타일 (`bg-white` → `bg-[var(--surface)]`) <!-- omo:id=bspwr-serving-chip;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerWeekScreen `STATUS_META` rgba → `color-mix()` 전환 <!-- omo:id=bspwr-status-meta;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerWeekScreen loading skeleton 리스타일 (`glass-panel` + `bg-white/70` → token-based) <!-- omo:id=bspwr-skeleton;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerWeekScreen empty state 리스타일 (`glass-panel` → token panel, radii → `--radius-lg`) <!-- omo:id=bspwr-empty-state;stage=4;scope=frontend;review=5,6 -->
+- [x] PlannerWeekScreen unauthorized state 리스타일 (`bg-white/78` → token surface, `rounded-[18px]` → `--radius-lg`) <!-- omo:id=bspwr-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] `PLANNER_CTA_CLASS` radii 토큰화 (`rounded-[12px]` → `--radius-md`) <!-- omo:id=bspwr-cta-class;stage=4;scope=frontend;review=5,6 -->
+- [x] 모든 리스타일이 CSS 변수만 사용 — hardcoded hex/rgba 없음 <!-- omo:id=bspwr-token-usage;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 checking/authenticated/unauthorized + loading/ready/empty/error 상태 보존 확인 <!-- omo:id=bspwr-states-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK 정보 구조 보존 확인 <!-- omo:id=bspwr-structure-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] H2/H4 day-card interaction contract 보존 확인 (가로 스크롤 없음, 2일 이상 overview) <!-- omo:id=bspwr-h2h4-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] Weekday strip swipe/keyboard navigation 동작 보존 확인 <!-- omo:id=bspwr-strip-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] Jua 또는 prototype-only 폰트 미사용 확인 <!-- omo:id=bspwr-no-font;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend` 통과 <!-- omo:id=bspwr-verify-frontend;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK before/after screenshots 캡처 (mobile default 390px, narrow 320px) <!-- omo:id=bspwr-regression-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Key active state screenshots (loading skeleton, empty state, unauthorized, scrolled day cards) <!-- omo:id=bspwr-active-state-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Exploratory QA bundle 또는 low-risk skip rationale 기록 <!-- omo:id=bspwr-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
 
 ## Blockers
 

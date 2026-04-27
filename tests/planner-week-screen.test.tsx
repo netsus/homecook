@@ -240,7 +240,7 @@ describe("planner week screen", () => {
     const leftoverButton = within(toolbar).getByRole("button", { name: "남은요리" }) as HTMLButtonElement;
 
     expect(toolbar.className).toContain("grid-cols-3");
-    expect(toolbar.className).toContain("rounded-[16px]");
+    expect(toolbar.className).toContain("rounded-[var(--radius-lg)]");
     expect(shoppingLink.getAttribute("href")).toBe("/shopping/flow");
     expect(cookButton.disabled).toBe(true);
     expect(leftoverButton.disabled).toBe(true);
