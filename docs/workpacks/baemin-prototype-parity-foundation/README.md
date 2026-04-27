@@ -138,11 +138,11 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > 이 슬라이스는 BE 구현 없음(Stage 2/3 스킵), Stage 4에서 docs/evidence foundation을 생성한다.
 
-- [ ] 3-way capture recipe 문서 확정 (viewport, fixture, route entry, scroll, state 조건) <!-- omo:id=found-capture-recipe;stage=4;scope=frontend;review=5,6 -->
-- [ ] Fixture 및 route-entry 규칙 확정 <!-- omo:id=found-fixture-route-rules;stage=4;scope=frontend;review=5,6 -->
-- [ ] Required viewport 및 state evidence 규약 확정 (surface별 required states 체크리스트) <!-- omo:id=found-viewport-state-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Artifact schema/location 규약 확정 (visual-verdict 파일 구조, 필드, 경로) <!-- omo:id=found-artifact-schema;stage=4;scope=frontend;review=5,6 -->
-- [ ] Token/material/reference mapping scope 문서 확정 <!-- omo:id=found-token-mapping-scope;stage=4;scope=frontend;review=5,6 -->
-- [ ] Prototype-only asset/font exclusion inventory 확정 <!-- omo:id=found-exclusion-inventory;stage=4;scope=frontend;review=5,6 -->
-- [ ] Evidence harness 또는 preview foundation 설계 완료 (필요 시) <!-- omo:id=found-evidence-harness;stage=4;scope=frontend;review=5,6 -->
-- [ ] Runtime app code 변경 없음 확인 <!-- omo:id=found-no-runtime-change;stage=4;scope=frontend;review=5,6 -->
+- [x] 3-way capture recipe 문서 확정 (viewport, fixture, route entry, scroll, state 조건) <!-- omo:id=found-capture-recipe;stage=4;scope=frontend;review=5,6 -->
+- [x] Fixture 및 route-entry 규칙 확정 <!-- omo:id=found-fixture-route-rules;stage=4;scope=frontend;review=5,6 -->
+- [x] Required viewport 및 state evidence 규약 확정 (surface별 required states 체크리스트) <!-- omo:id=found-viewport-state-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Artifact schema/location 규약 확정 (visual-verdict 파일 구조, 필드, 경로) <!-- omo:id=found-artifact-schema;stage=4;scope=frontend;review=5,6 -->
+- [x] Token/material/reference mapping scope 문서 확정 <!-- omo:id=found-token-mapping-scope;stage=4;scope=frontend;review=5,6 -->
+- [x] Prototype-only asset/font exclusion inventory 확정 <!-- omo:id=found-exclusion-inventory;stage=4;scope=frontend;review=5,6 -->
+- [x] Evidence harness 또는 preview foundation 설계 완료 (필요 시) <!-- omo:id=found-evidence-harness;stage=4;scope=frontend;review=5,6 -->
+- [x] Runtime app code 변경 없음 확인 <!-- omo:id=found-no-runtime-change;stage=4;scope=frontend;review=5,6 -->
