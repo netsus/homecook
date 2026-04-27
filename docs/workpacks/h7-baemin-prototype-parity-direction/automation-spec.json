@@ -1,0 +1,47 @@
+{
+  "slice_id": "h7-baemin-prototype-parity-direction",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change",
+      "no-auth-contract-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "unauthorized",
+      "open-overlay",
+      "active-filter",
+      "scrolled"
+    ],
+    "verify_commands": [],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "no-runtime-ui-diff"
+    ]
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "runtime-app-code-changed",
+    "prototype-only-exclusion-promoted-without-approval",
+    "planner-no-horizontal-lock-reintroduced",
+    "visual-score-used-without-required-state-evidence",
+    "body-and-overlay-score-mixed",
+    "api-db-status-permission-contract-changed"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 1
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "id": "h7-baemin-prototype-parity-direction",
+  "title": "Baemin prototype near-100% parity direction gate",
+  "summary": "배민 프로토타입을 단순 리트로핏 참고가 아니라 near-100% parity 목표로 공식화한다. 화면/오버레이별 supersession matrix, prototype-only exclusions, visual-verdict scoring method, 후속 parity slice 순서를 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "docs-only",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "docs-only",
+  "goal": "Document the official prototype parity direction before any follow-up runtime implementation begins, including what prior locks are superseded and how visual parity will be measured.",
+  "owners": {
+    "claude": "stage-1-final-owner-review",
+    "codex": "direction-gate-draft-doc-consistency-review-pr-closeout",
+    "workers": []
+  },
+  "dependencies": [
+    "h6-baemin-style-direction",
+    "baemin-style-tokens-additive",
+    "baemin-style-token-values",
+    "baemin-style-shared-components",
+    "baemin-style-home-retrofit",
+    "baemin-style-recipe-detail-retrofit",
+    "baemin-style-planner-week-retrofit",
+    "baemin-style-modal-system-fit"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/workpacks/h7-baemin-prototype-parity-direction/README.md",
+      "docs/workpacks/h7-baemin-prototype-parity-direction/acceptance.md",
+      "docs/workpacks/h7-baemin-prototype-parity-direction/automation-spec.json"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md",
+      "ui/designs/prototypes/baemin-redesign/README.md",
+      "ui/designs/prototypes/baemin-redesign/HANDOFF.md",
+      "ui/designs/prototypes/homecook-baemin-prototype.html"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "required",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 1
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack"
+    ],
+    "verify_commands": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "no-runtime-ui-diff"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "Runtime UI implementation",
+    "API, DB, status, permission, or schema changes",
+    "Productionizing PANTRY or MYPAGE before their official slices",
+    "Importing Jua or any prototype-only font dependency",
+    "Adding RECIPE_DETAIL tabs/reviews as production functionality without a later approved gate"
+  ],
+  "open_questions": []
+}

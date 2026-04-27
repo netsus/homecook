@@ -416,6 +416,8 @@ loading/error는 탭 자체에 없음(스크린 컨텐츠가 처리).
 
 ### 5.3 PLANNER_WEEK (`app/planner/page.tsx` + `components/planner/*`)
 
+> h7 update: `docs/화면정의서-v1.5.1.md` supersedes the older planner-level "가로 스크롤 없음" lock. For PLANNER_WEEK parity work, follow the h7 workpack and current source-of-truth docs rather than the older v1.5.0 note in this reference-only handoff.
+
 **유지해야 할 디자인 포인트**
 - 주간 day-card 가로 스크롤 + 오늘 강조
 - 세로 slot row: 아침 / 점심 / 저녁
