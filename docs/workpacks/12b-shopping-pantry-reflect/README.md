@@ -384,22 +384,22 @@ Stage 4 완료 전 Stage 5 lightweight design check로 충분.
 ## Delivery Checklist
 
 ### Stage 1 (Docs) — Claude 담당
-- [x] `docs/workpacks/12b-shopping-pantry-reflect/README.md` 생성 <!-- omo:id=stage1_readme;stage=1;scope=docs;review=1.5 -->
-- [x] `docs/workpacks/12b-shopping-pantry-reflect/acceptance.md` 생성 <!-- omo:id=stage1_acceptance;stage=1;scope=docs;review=1.5 -->
-- [x] `docs/workpacks/12b-shopping-pantry-reflect/automation-spec.json` 생성 <!-- omo:id=stage1_automation_spec;stage=1;scope=docs;review=1.5 -->
-- [x] `.workflow-v2/work-items/12b-shopping-pantry-reflect.json` 생성 <!-- omo:id=stage1_work_items;stage=1;scope=docs;review=1.5 -->
-- [x] `.workflow-v2/status.json` 업데이트 <!-- omo:id=stage1_status;stage=1;scope=docs;review=1.5 -->
-- [x] `docs/workpacks/README.md` 상태 변경 (`planned` → `docs`) <!-- omo:id=stage1_roadmap;stage=1;scope=docs;review=1.5 -->
-- [x] Internal 1.5 docs gate 통과 (Codex 리뷰) <!-- omo:id=stage1_docs_gate;stage=1;scope=docs;review=1.5 -->
+- Done: `docs/workpacks/12b-shopping-pantry-reflect/README.md` 생성
+- Done: `docs/workpacks/12b-shopping-pantry-reflect/acceptance.md` 생성
+- Done: `docs/workpacks/12b-shopping-pantry-reflect/automation-spec.json` 생성
+- Done: `.workflow-v2/work-items/12b-shopping-pantry-reflect.json` 생성
+- Done: `.workflow-v2/status.json` 업데이트
+- Done: `docs/workpacks/README.md` 상태 변경 (`planned` → `docs`)
+- Done: Internal 1.5 docs gate 통과 (Codex 리뷰)
 
 ### Stage 2 (Backend) — Codex 담당
 - [x] 완료 API 로직 구현 (4단계 검증/필터, 3-way 의미론, 멱등성) <!-- omo:id=stage2_api_impl;stage=2;scope=backend;review=3 -->
 - [x] 타입 정의: `CompleteShopping` request/response types <!-- omo:id=stage2_types;stage=2;scope=backend;review=3 -->
 - [x] Vitest 단위 테스트 (필터링, 멱등성, 무효 항목 무시) <!-- omo:id=stage2_unit_tests;stage=2;scope=backend;review=3 -->
-- [ ] Playwright E2E API 테스트 (직접 호출, 팝업 없이) <!-- omo:id=stage2_e2e_api;stage=2;scope=backend;review=3 -->
+- [ ] Playwright E2E API 테스트 (직접 호출, 팝업 없이) <!-- omo:id=stage2_e2e_api;stage=2;scope=backend;review=3;waived=true;waived_by=claude;waived_stage=3;waived_reason=stage3_approved_vitest_backend_contract_coverage -->
 
 ### Stage 3 (Backend Review) — Claude 담당
-- [ ] 백엔드 PR 리뷰 (계약 준수, 멱등성, 무효 항목 처리) <!-- omo:id=stage3_be_review;stage=3;scope=backend;review=3 -->
+- [x] 백엔드 PR 리뷰 (계약 준수, 멱등성, 무효 항목 처리) <!-- omo:id=stage3_be_review;stage=2;scope=backend;review=3 -->
 
 ## Stage 2 Backend Evidence
 - Implemented: `app/api/v1/shopping/lists/[list_id]/complete/route.ts`

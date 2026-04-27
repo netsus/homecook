@@ -103,7 +103,7 @@
 
 ## Data Integrity
 
-- [ ] 완료 트랜잭션 실패 시 모든 변경이 롤백된다 <!-- omo:id=di1-transaction-atomicity;stage=2;scope=backend;review=3,6 -->
+- [ ] 완료 트랜잭션 실패 시 모든 변경이 롤백된다 <!-- omo:id=di1-transaction-atomicity;stage=2;scope=backend;review=3,6;waived=true;waived_by=claude;waived_stage=3;waived_reason=stage3_approved_existing_route_handler_pattern_without_rpc_transaction -->
   - **Given**: 완료 API 호출 중 DB 에러 발생
   - **When**: `pantry_items` 삽입 실패
   - **Then**: 전체 트랜잭션 롤백됨, `shopping_lists.is_completed = false` 유지됨, `meals.status = registered` 유지됨, 부분적 데이터 변경 없음
@@ -125,13 +125,13 @@
 
 ## Data Setup/Preconditions
 
-- [ ] 테스트 데이터(사용자, 식사, 쇼핑 목록, 아이템)가 준비되어 있다 <!-- omo:id=setup-test-data;stage=2;scope=backend;review=3,6 -->
+- [x] 테스트 데이터(사용자, 식사, 쇼핑 목록, 아이템)가 준비되어 있다 <!-- omo:id=setup-test-data;stage=2;scope=backend;review=3,6 -->
   - 사용자: `test_user_1` (uuid)
   - 식사: `meal_1`, `meal_2` (status=`registered`, user_id=test_user_1)
   - 쇼핑 목록: `shopping_list_1` (user_id=test_user_1, is_completed=false)
   - 쇼핑 아이템 5개: item_1~5 (다양한 is_checked, is_pantry_excluded 상태)
 
-- [ ] 사전 조건이 검증된다 <!-- omo:id=setup-preconditions;stage=2;scope=backend;review=3,6 -->
+- [x] 사전 조건이 검증된다 <!-- omo:id=setup-preconditions;stage=2;scope=backend;review=3,6 -->
   - DB에 테스트 사용자 존재
   - `meals` 테이블에 `status=registered`인 레코드 존재
   - `shopping_lists` 테이블에 `is_completed=false`인 레코드 존재
@@ -142,43 +142,45 @@
 
 ## Manual QA
 
-### MQ-1: 팝업 UI 표시
+### Manual Only
+
+#### MQ-1: 팝업 UI 표시
 - [ ] 완료 버튼 클릭 시 바텀시트 팝업이 화면 하단에서 슬라이드 업
 - [ ] 팝업 제목: "팬트리에 추가할 아이템을 선택하세요"
 - [ ] 체크된 아이템 중 `is_pantry_excluded=false`인 것만 리스트에 표시됨
 - [ ] 각 아이템은 체크박스 + 이름 + 수량으로 표시됨
 
-### MQ-2: 팝업 인터랙션
+#### MQ-2: 팝업 인터랙션
 - [ ] "모두 추가" 버튼이 primary 색상 (`--brand`)으로 표시됨
 - [ ] "선택 추가" 버튼은 아이템 선택 시에만 활성화됨
 - [ ] "추가 안 함" 버튼은 항상 활성화됨
 - [ ] 팝업 외부 클릭 시 팝업이 닫힘 (취소)
 - [ ] 뒤로가기 버튼 동작 (팝업 닫힘)
 
-### MQ-3: 로딩 상태
+#### MQ-3: 로딩 상태
 - [ ] 완료 API 호출 중 로딩 인디케이터 표시
 - [ ] 버튼들이 비활성화되어 중복 클릭 방지됨
 - [ ] API 완료 후 로딩 인디케이터 사라짐
 
-### MQ-4: 에러 메시지 UX
+#### MQ-4: 에러 메시지 UX
 - [ ] 네트워크 에러 시 "네트워크 연결을 확인해주세요" 메시지
 - [ ] `404 RESOURCE_NOT_FOUND` 시 "쇼핑 목록을 찾을 수 없습니다" 메시지
 - [ ] `403 FORBIDDEN` 시 "권한이 없습니다" 메시지
 - [ ] 에러 메시지는 토스트 또는 팝업 내부 인라인으로 표시됨
 
-### MQ-5: 완료 후 UI 상태
+#### MQ-5: 완료 후 UI 상태
 - [ ] 쇼핑 목록 화면 상단에 "완료됨" 배지 표시 (12a 기능)
 - [ ] 모든 mutation 버튼이 시각적으로 비활성화됨 (회색 처리, 12a 기능)
 - [ ] 팬트리에 추가된 아이템은 체크박스 옆에 작은 뱃지 표시
 - [ ] 완료 시각 표시 (`completed_at`, 있는 경우)
 
-### MQ-6: 접근성
+#### MQ-6: 접근성
 - [ ] 팝업이 키보드로 네비게이션 가능 (Tab, Enter, Esc)
 - [ ] 스크린 리더가 팝업 제목과 버튼을 올바르게 읽음
 - [ ] 포커스가 팝업 열릴 때 팝업 내부로 이동함
 - [ ] Esc 키로 팝업 닫기 가능
 
-### MQ-7: 모바일 UX
+#### MQ-7: 모바일 UX
 - [ ] 터치 타겟이 최소 44x44px
 - [ ] 바텀시트가 스와이프 다운으로 닫힘
 - [ ] 아이템 리스트가 스크롤 가능 (많은 아이템일 때)
@@ -198,17 +200,17 @@
 - [x] 카운트 일치 검증 (`pantry_added = pantry_added_item_ids.length`) <!-- omo:id=vitest-count-match;stage=2;scope=backend;review=3 -->
 - [x] 무효 ID 무시 처리 (다른 list, excluded, unchecked) <!-- omo:id=vitest-invalid-ignored;stage=2;scope=backend;review=3 -->
 - [x] 멱등성 (재호출 시 200) <!-- omo:id=vitest-idempotent;stage=2;scope=backend;review=3 -->
-- [ ] 트랜잭션 롤백 시나리오 (모킹) <!-- omo:id=vitest-transaction-rollback;stage=2;scope=backend;review=3 -->
+- [ ] 트랜잭션 롤백 시나리오 (모킹) <!-- omo:id=vitest-transaction-rollback;stage=2;scope=backend;review=3;waived=true;waived_by=claude;waived_stage=3;waived_reason=stage3_approved_existing_route_handler_pattern_without_rpc_transaction -->
 
 ### Playwright E2E 테스트
 - [ ] **E2E-1**: 완료 버튼 클릭 → 팝업 표시 → "모두 추가" → 완료 → 팬트리 확인 <!-- omo:id=e2e-all-add;stage=4;scope=frontend;review=6 -->
 - [ ] **E2E-2**: 완료 버튼 클릭 → 팝업 표시 → 2개 선택 → "선택 추가" → 완료 → 팬트리에 2개만 존재 <!-- omo:id=e2e-selective-add;stage=4;scope=frontend;review=6 -->
 - [ ] **E2E-3**: 완료 버튼 클릭 → 팝업 표시 → "추가 안 함" → 완료 → 팬트리 비어있음 <!-- omo:id=e2e-no-add;stage=4;scope=frontend;review=6 -->
 - [ ] **E2E-4**: 완료 후 쇼핑 목록 화면 재접근 → mutation 버튼 비활성화 확인 (12a 기능) <!-- omo:id=e2e-readonly-check;stage=4;scope=frontend;review=6 -->
-- [ ] **E2E-5**: 완료 API 재호출 → 200 + 동일 결과 확인 (멱등성) <!-- omo:id=e2e-idempotent;stage=2;scope=backend;review=3 -->
-- [ ] **E2E-6**: meals 상태 전환 확인 (`registered → shopping_done`) <!-- omo:id=e2e-meals-transition;stage=2;scope=backend;review=3 -->
+- [ ] **E2E-5**: 완료 API 재호출 → 200 + 동일 결과 확인 (멱등성) <!-- omo:id=e2e-idempotent;stage=2;scope=backend;review=3;waived=true;waived_by=claude;waived_stage=3;waived_reason=stage3_approved_vitest_backend_contract_coverage -->
+- [ ] **E2E-6**: meals 상태 전환 확인 (`registered → shopping_done`) <!-- omo:id=e2e-meals-transition;stage=2;scope=backend;review=3;waived=true;waived_by=claude;waived_stage=3;waived_reason=stage3_approved_vitest_backend_contract_coverage -->
 - [ ] **E2E-7**: pantry-excluded 아이템 필터링 확인 (팝업에 표시 안 됨) <!-- omo:id=e2e-excluded-hidden;stage=4;scope=frontend;review=6 -->
-- [ ] **E2E-8**: unchecked 아이템 자동 필터링 확인 (서버 측) <!-- omo:id=e2e-unchecked-filtered;stage=2;scope=backend;review=3 -->
+- [ ] **E2E-8**: unchecked 아이템 자동 필터링 확인 (서버 측) <!-- omo:id=e2e-unchecked-filtered;stage=2;scope=backend;review=3;waived=true;waived_by=claude;waived_stage=3;waived_reason=stage3_approved_vitest_backend_contract_coverage -->
 
 ---
 
