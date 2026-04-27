@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 
 const STAGE_LABELS = {
   1: "1 docs",
@@ -39,6 +39,32 @@ function parseIsoTimestamp(value) {
   }
 
   const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parseOmxArtifactTimestamp(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const match = value.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(KST|Z)$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, year, month, day, hour, minute, second, zone] = match;
+  const offsetHours = zone === "KST" ? 9 : 0;
+  const parsed = new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour) - offsetHours,
+      Number(minute),
+      Number(second),
+    ),
+  );
+
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
@@ -234,6 +260,113 @@ function collectSupervisorEscalations(rootDir, workItemId) {
   });
 }
 
+function extractFirstMarkdownHeading(markdown) {
+  if (typeof markdown !== "string") {
+    return null;
+  }
+
+  return markdown.match(/^#{1,6}\s+(.+?)\s*$/m)?.[1]?.trim() ?? null;
+}
+
+function inferOmxActor(fileName, markdown) {
+  if (fileName.startsWith("claude-delegate-")) {
+    return "claude";
+  }
+
+  if (/\breviewer:\s*Codex\b/i.test(markdown) || /^stage(?:5|6)-/.test(fileName)) {
+    return "codex";
+  }
+
+  return "unknown";
+}
+
+function inferOmxEventKind(fileName, title) {
+  const text = `${fileName}\n${title ?? ""}`.toLowerCase();
+  if (text.includes("repair")) {
+    return "repair_attempt";
+  }
+  if (text.includes("review")) {
+    return "review_artifact";
+  }
+  if (text.includes("pr-body")) {
+    return "evidence_artifact";
+  }
+  return "stage_artifact";
+}
+
+function inferOmxOutcome(kind, markdown) {
+  const text = typeof markdown === "string" ? markdown.toLowerCase() : "";
+  if (text.includes("request_changes")) {
+    return "request_changes";
+  }
+  if (text.includes("result: approve") || text.includes("verdict: approve")) {
+    return "approve";
+  }
+  if (kind === "repair_attempt") {
+    return "resolved";
+  }
+  if (text.includes("passed") || text.includes("pass")) {
+    return "pass";
+  }
+  return "recorded";
+}
+
+function parseOmxArtifactFileName(fileName, workItemId) {
+  if (!fileName.endsWith(".md") || !fileName.includes(workItemId) || fileName.includes("-prompt-")) {
+    return null;
+  }
+
+  const stem = fileName.replace(/\.md$/, "");
+  const timestampMatch = stem.match(/-(\d{8}T\d{6}(?:KST|Z))$/);
+  const timestamp = timestampMatch ? parseOmxArtifactTimestamp(timestampMatch[1]) : null;
+  const stageMatch = stem.match(/(?:^|-)stage(\d)(?:-|$)/);
+  const stage = stageMatch ? Number.parseInt(stageMatch[1], 10) : null;
+
+  if (!timestamp || !Number.isInteger(stage) || stage < 1 || stage > 6) {
+    return null;
+  }
+
+  return {
+    stage,
+    timestamp,
+  };
+}
+
+function collectOmxArtifactEvents(rootDir, workItemId) {
+  const artifactsRoot = resolve(rootDir, ".omx", "artifacts");
+  if (!existsSync(artifactsRoot)) {
+    return [];
+  }
+
+  return readdirSync(artifactsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => {
+      const parsed = parseOmxArtifactFileName(entry.name, workItemId);
+      if (!parsed) {
+        return null;
+      }
+
+      const filePath = join(artifactsRoot, entry.name);
+      const markdown = readFileSync(filePath, "utf8");
+      const title = extractFirstMarkdownHeading(markdown) ?? entry.name;
+      const kind = inferOmxEventKind(entry.name, title);
+
+      return {
+        actor: inferOmxActor(entry.name, markdown),
+        artifactPath: filePath,
+        evidenceRef: relative(rootDir, filePath),
+        kind,
+        outcome: inferOmxOutcome(kind, markdown),
+        source: ".omx/artifacts",
+        stage: parsed.stage,
+        startedAt: parsed.timestamp,
+        title,
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => left.startedAt.getTime() - right.startedAt.getTime());
+}
+
 function groupEscalations(escalations, dispatchRuns, runtime) {
   const grouped = new Map();
   for (const escalation of escalations) {
@@ -376,13 +509,15 @@ function summarizeStageRuns(dispatchRuns) {
   });
 }
 
-function resolveMeasurementRange({ dispatchRuns, escalations, now }) {
+function resolveMeasurementRange({ dispatchRuns, escalations, omxArtifactEvents, now }) {
   const startedCandidates = [
     ...dispatchRuns.map((run) => run.startedAt),
     ...escalations.map((escalation) => escalation.updatedAt).filter(Boolean),
+    ...omxArtifactEvents.map((event) => event.startedAt),
   ];
   const endedCandidates = [
     ...dispatchRuns.map((run) => run.endedAt),
+    ...omxArtifactEvents.map((event) => event.startedAt),
     parseIsoTimestamp(now),
   ].filter(Boolean);
 
@@ -397,6 +532,40 @@ function resolveMeasurementRange({ dispatchRuns, escalations, now }) {
   };
 }
 
+function summarizeEvidenceSources({ dispatchRuns, escalations, omxArtifactEvents }) {
+  const sources = [];
+  const stageList = (values) =>
+    [...new Set(values.map((value) => value.stage).filter((stage) => Number.isInteger(stage)))]
+      .sort((left, right) => left - right)
+      .join(", ") || "-";
+
+  if (dispatchRuns.length > 0) {
+    sources.push({
+      source: "dispatch",
+      count: dispatchRuns.length,
+      stages: stageList(dispatchRuns),
+    });
+  }
+
+  if (escalations.length > 0) {
+    sources.push({
+      source: "supervisor",
+      count: escalations.length,
+      stages: stageList(escalations),
+    });
+  }
+
+  if (omxArtifactEvents.length > 0) {
+    sources.push({
+      source: ".omx/artifacts",
+      count: omxArtifactEvents.length,
+      stages: stageList(omxArtifactEvents),
+    });
+  }
+
+  return sources;
+}
+
 function renderReport({
   rootDir,
   workItemId,
@@ -404,13 +573,17 @@ function renderReport({
   now,
   dispatchRuns,
   escalations,
+  omxArtifactEvents,
 }) {
   const stageRuns = summarizeStageRuns(dispatchRuns);
   const totalPureMinutes = dispatchRuns.reduce((sum, run) => sum + run.durationMinutes, 0);
-  const range = resolveMeasurementRange({ dispatchRuns, escalations, now });
+  const range = resolveMeasurementRange({ dispatchRuns, escalations, omxArtifactEvents, now });
   const escalationGroups = groupEscalations(escalations, dispatchRuns, runtime);
   const codexResolvedErrors = groupCodexResolvedErrors(dispatchRuns, runtime);
-  const codexResolvedErrorCount = codexResolvedErrors.reduce((sum, group) => sum + group.count, 0);
+  const omxRepairEvents = omxArtifactEvents.filter((event) => event.kind === "repair_attempt");
+  const codexResolvedErrorCount =
+    codexResolvedErrors.reduce((sum, group) => sum + group.count, 0) + omxRepairEvents.length;
+  const evidenceSources = summarizeEvidenceSources({ dispatchRuns, escalations, omxArtifactEvents });
   const finalPr = resolveFinalPullRequest(runtime);
   const completionTime = parseIsoTimestamp(now);
   const postCloseoutEscalations = completionTime
@@ -430,12 +603,25 @@ function renderReport({
   lines.push(`| 벽시계 총 시간 | ${formatMinutes(range.wallClockMinutes)} |`);
   lines.push(`| 순수 진행 누적시간 | ${formatMinutes(totalPureMinutes)} |`);
   lines.push(`| human_escalation | ${escalations.length}회 |`);
-  lines.push(`| Codex 자동 수정 오류 | ${codexResolvedErrorCount}회 |`);
+  lines.push(`| Codex/Claude 자동 수정 오류 | ${codexResolvedErrorCount}회 |`);
   lines.push(`| 최종 merge 이후 stale escalation | ${postCloseoutEscalations}회 |`);
+  lines.push(`| evidence_source | ${evidenceSources.map((source) => source.source).join(", ") || "-"} |`);
   lines.push("");
   lines.push(
-    "> 자동 생성된 보고서다. 순수 진행 누적시간은 OMO dispatch 산출물 기준으로 계산했고 human_escalation/CI/대기 시간은 제외했다.",
+    "> 자동 생성된 보고서다. 순수 진행 누적시간은 OMO dispatch 산출물 기준으로 계산했고 human_escalation/CI/대기 시간은 제외했다. `.omx/artifacts`는 event/evidence source로 반영하되 markdown semantic parsing에는 의존하지 않는다.",
   );
+  lines.push("");
+  lines.push("## Evidence Sources");
+  lines.push("");
+  lines.push("| Source | Events | Stages |");
+  lines.push("| --- | ---: | --- |");
+  if (evidenceSources.length === 0) {
+    lines.push("| - | 0 | - |");
+  } else {
+    for (const source of evidenceSources) {
+      lines.push(`| ${source.source} | ${source.count} | ${source.stages} |`);
+    }
+  }
   lines.push("");
   lines.push("## Stage Time");
   lines.push("");
@@ -462,16 +648,21 @@ function renderReport({
     }
   }
   lines.push("");
-  lines.push("## Codex-Resolved Non-Human Errors");
+  lines.push("## Codex/Claude-Resolved Non-Human Errors");
   lines.push("");
   lines.push("| Stage | 발생 | 첫 발생 시점 | 원인 | 해결 |");
   lines.push("| --- | ---: | --- | --- | --- |");
-  if (codexResolvedErrors.length === 0) {
+  if (codexResolvedErrors.length === 0 && omxRepairEvents.length === 0) {
     lines.push("| - | 0회 | - | 없음 | - |");
   } else {
     for (const group of codexResolvedErrors) {
       lines.push(
         `| ${group.stage ?? "-"} | ${group.count}회 | ${formatKst(group.firstAt)} | ${escapeTableCell(group.reason)} | ${escapeTableCell(group.resolution)} |`,
+      );
+    }
+    for (const event of omxRepairEvents) {
+      lines.push(
+        `| ${event.stage ?? "-"} | 1회 | ${formatKst(event.startedAt)} | ${escapeTableCell(event.title)} | ${escapeTableCell(`${event.actor} repair evidence: ${event.evidenceRef}`)} |`,
       );
     }
   }
@@ -508,6 +699,7 @@ export function generateOmoSliceReport({
   const normalizedWorkItemId = workItemId.trim();
   const dispatchRuns = collectDispatchRuns(rootDir, normalizedWorkItemId);
   const escalations = collectSupervisorEscalations(rootDir, normalizedWorkItemId);
+  const omxArtifactEvents = collectOmxArtifactEvents(rootDir, normalizedWorkItemId);
   const reportMarkdown = renderReport({
     rootDir,
     workItemId: normalizedWorkItemId,
@@ -515,6 +707,7 @@ export function generateOmoSliceReport({
     now,
     dispatchRuns,
     escalations,
+    omxArtifactEvents,
   });
   const reportPath = resolveReportPath(rootDir, normalizedWorkItemId);
   mkdirSync(dirname(reportPath), { recursive: true });
@@ -525,6 +718,7 @@ export function generateOmoSliceReport({
     reportMarkdown,
     dispatchRuns,
     escalations,
+    omxArtifactEvents,
   };
 }
 
@@ -537,6 +731,7 @@ export function generateOmoSliceReportIfPossible(options = {}) {
       reportMarkdown: null,
       dispatchRuns: [],
       escalations: [],
+      omxArtifactEvents: [],
       error: error instanceof Error ? error.message : String(error),
     };
   }
