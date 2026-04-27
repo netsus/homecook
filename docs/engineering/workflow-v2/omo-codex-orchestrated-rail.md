@@ -102,6 +102,7 @@ Phase 1 report adapter와 Phase 2 runtime classification은 아래 최소 event 
   "source": ".omx/artifacts",
   "kind": "repair_attempt",
   "reason_code": "codex_repairable",
+  "reason_detail_code": "pr_body_section_drift",
   "started_at": "2026-04-27T08:06:00Z",
   "ended_at": "2026-04-27T08:12:00Z",
   "outcome": "resolved",
