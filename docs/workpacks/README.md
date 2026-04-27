@@ -70,7 +70,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `08b-meal-add-books-pantry`    | merged     | 레시피북에서 추가, 팬트리 기반 추천에서 추가                                                                     |
 | `09-shopping-preview-create`   | merged     | 장보기 preview, 대상 검증, 리스트 생성, 상세 이동                                                                |
 | `10a-shopping-detail-interact` | merged        | 장보기 상세 조회, 체크 토글, 제외/되살리기 (`exclude→uncheck` 규칙 포함)                                         |
-| `10b-shopping-share-text`      | docs      | 장보기 공유 텍스트 생성 (`is_pantry_excluded=false` 항목만 포함)                                                 |
+| `10b-shopping-share-text`      | in-progress | 장보기 공유 텍스트 생성 (`is_pantry_excluded=false` 항목만 포함)                                                 |
 | `11-shopping-reorder`          | planned   | 장보기 순서 변경과 미완료 리스트 reorder persistence                                                             |
 | `12a-shopping-complete`        | planned   | 장보기 완료 core, `shopping_done` 전이, `is_completed=true`, 완료 직후 read-only lock, 멱등성                   |
 | `12b-shopping-pantry-reflect`  | planned   | 팬트리 반영 선택 팝업, `null/[]/선택값` 3-way 처리, 4단계 서버 검증                                              |
