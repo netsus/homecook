@@ -149,6 +149,12 @@ describe("recipe detail screen", () => {
 
     expect(await screen.findByRole("dialog")).toBeTruthy();
     expect(screen.getByText("로그인이 필요한 작업이에요")).toBeTruthy();
+    expect(screen.queryByText("보호된 작업")).toBeNull();
+
+    const closeButton = screen.getByRole("button", { name: "닫기" });
+    expect(closeButton.classList.contains("h-11")).toBe(true);
+    expect(closeButton.classList.contains("w-11")).toBe(true);
+    expect(closeButton.textContent).toBe("");
   });
 
   it("keeps a single share action and places interactive chips above the ingredient section", async () => {
