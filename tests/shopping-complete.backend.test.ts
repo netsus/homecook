@@ -227,7 +227,7 @@ describe("12a shopping complete backend", () => {
     });
   });
 
-  it("returns 200 with no updates when the list is already completed", async () => {
+  it("returns 200 with no meal changes when the completed list has no registered meals", async () => {
     const listQuery = createMaybeSingleQuery([
       {
         data: {
@@ -239,8 +239,14 @@ describe("12a shopping complete backend", () => {
         error: null,
       },
     ]);
+    const mealsUpdateQuery = createArrayUpdateQuery([
+      {
+        data: [],
+        error: null,
+      },
+    ]);
     const updateList = vi.fn();
-    const updateMeals = vi.fn();
+    const updateMeals = vi.fn(() => mealsUpdateQuery);
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -268,11 +274,73 @@ describe("12a shopping complete backend", () => {
     const body = await response.json();
 
     expect(updateList).not.toHaveBeenCalled();
-    expect(updateMeals).not.toHaveBeenCalled();
+    expect(updateMeals).toHaveBeenCalledWith({ status: "shopping_done" });
+    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("shopping_list_id", listId);
+    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("status", "registered");
     expect(response.status).toBe(200);
     expect(body).toEqual({
       success: true,
       data: { completed: true, meals_updated: 0 },
+      error: null,
+    });
+  });
+
+  it("recovers registered meal transitions when the list was already marked complete", async () => {
+    const listQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: listId,
+          user_id: "user-1",
+          is_completed: true,
+          completed_at: "2026-04-27T10:20:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const mealsUpdateQuery = createArrayUpdateQuery([
+      {
+        data: [{ id: "meal-recovered" }],
+        error: null,
+      },
+    ]);
+    const updateList = vi.fn();
+    const updateMeals = vi.fn(() => mealsUpdateQuery);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "shopping_lists") {
+          return {
+            select: vi.fn(() => listQuery),
+            update: updateList,
+          };
+        }
+        if (table === "meals") {
+          return {
+            update: updateMeals,
+          };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importCompleteRoute();
+    const response = await POST(createCompleteRequest(), createContext());
+    const body = await response.json();
+
+    expect(updateList).not.toHaveBeenCalled();
+    expect(updateMeals).toHaveBeenCalledWith({ status: "shopping_done" });
+    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("shopping_list_id", listId);
+    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("status", "registered");
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: { completed: true, meals_updated: 1 },
       error: null,
     });
   });

@@ -186,8 +186,8 @@
 ## Stage 2 Backend Evidence
 - Implemented: `app/api/v1/shopping/lists/[list_id]/complete/route.ts`, `types/shopping.ts`, `lib/api/shopping.ts`
 - Tests: `tests/shopping-complete.backend.test.ts`
-- Regression evidence: `pnpm test:product tests/shopping-complete.backend.test.ts tests/shopping-detail.backend.test.ts tests/shopping-reorder.backend.test.ts tests/supabase-server.test.ts` passed (28 tests)
-- Backend gate: `pnpm verify:backend` passed (lint, typecheck, product tests 255, build, security E2E 9)
+- Regression evidence: `pnpm test:product tests/shopping-complete.backend.test.ts tests/shopping-detail.backend.test.ts tests/shopping-reorder.backend.test.ts tests/supabase-server.test.ts` passed (29 tests)
+- Backend gate: `pnpm verify:backend` passed (lint, typecheck, product tests 256, build, security E2E 9)
 - Real DB/schema readiness: `tests/supabase-server.test.ts` confirms shopping tables and relations exist in migrations; browser/local Supabase smoke remains part of Stage 4/6 manual QA evidence.
 
 ## Delivery Checklist

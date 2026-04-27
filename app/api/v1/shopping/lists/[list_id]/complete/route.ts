@@ -129,27 +129,22 @@ export async function POST(_request: Request, context: RouteContext) {
     return fail("FORBIDDEN", "내 장보기 리스트만 완료할 수 있어요.", 403);
   }
 
-  if (listResult.data.is_completed) {
-    return ok({
-      completed: true,
-      meals_updated: 0,
-    } satisfies ShoppingListCompleteData);
-  }
+  if (!listResult.data.is_completed) {
+    const completedAt = new Date().toISOString();
+    const listUpdateResult = await dbClient
+      .from("shopping_lists")
+      .update({
+        is_completed: true,
+        completed_at: completedAt,
+      })
+      .eq("id", listId)
+      .eq("user_id", user.id)
+      .select("id, is_completed, completed_at")
+      .maybeSingle();
 
-  const completedAt = new Date().toISOString();
-  const listUpdateResult = await dbClient
-    .from("shopping_lists")
-    .update({
-      is_completed: true,
-      completed_at: completedAt,
-    })
-    .eq("id", listId)
-    .eq("user_id", user.id)
-    .select("id, is_completed, completed_at")
-    .maybeSingle();
-
-  if (listUpdateResult.error || !listUpdateResult.data) {
-    return fail("INTERNAL_ERROR", "장보기를 완료하지 못했어요.", 500);
+    if (listUpdateResult.error || !listUpdateResult.data) {
+      return fail("INTERNAL_ERROR", "장보기를 완료하지 못했어요.", 500);
+    }
   }
 
   const mealsUpdateResult = await dbClient
