@@ -390,7 +390,7 @@ Stage 4 완료 전 Stage 5 lightweight design check로 충분.
 - [x] `.workflow-v2/work-items/12b-shopping-pantry-reflect.json` 생성 <!-- omo:id=stage1_work_items;stage=1;scope=docs;review=1.5 -->
 - [x] `.workflow-v2/status.json` 업데이트 <!-- omo:id=stage1_status;stage=1;scope=docs;review=1.5 -->
 - [x] `docs/workpacks/README.md` 상태 변경 (`planned` → `docs`) <!-- omo:id=stage1_roadmap;stage=1;scope=docs;review=1.5 -->
-- [ ] Internal 1.5 docs gate 통과 (Codex 리뷰) <!-- omo:id=stage1_docs_gate;stage=1;scope=docs;review=1.5 -->
+- [x] Internal 1.5 docs gate 통과 (Codex 리뷰) <!-- omo:id=stage1_docs_gate;stage=1;scope=docs;review=1.5 -->
 
 ### Stage 2 (Backend) — Codex 담당
 - [ ] 완료 API 로직 구현 (4단계 검증/필터, 3-way 의미론, 멱등성) <!-- omo:id=stage2_api_impl;stage=2;scope=backend;review=3 -->
@@ -422,4 +422,4 @@ Stage 4 완료 전 Stage 5 lightweight design check로 충분.
 
 **작성일**: 2026-04-28
 **작성자**: Claude (Stage 1)
-**리뷰 상태**: Pending Codex internal 1.5 docs gate approval after repair 2
+**리뷰 상태**: Codex internal 1.5 docs gate passed after Claude repair 2
