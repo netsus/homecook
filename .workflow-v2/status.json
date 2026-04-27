@@ -440,11 +440,11 @@
     {
       "id": "baemin-style-planner-week-retrofit",
       "preset": "vertical-slice-strict",
-      "branch": "docs/baemin-style-planner-week-retrofit",
-      "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-baemin-style-planner-week-retrofit",
+      "pr_path": "https://github.com/netsus/homecook/pull/242",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "git diff --check",
         "pnpm validate:workflow-v2",
@@ -453,7 +453,7 @@
         "pnpm lint",
         "pnpm verify:frontend"
       ],
-      "notes": "Stage 1 docs gate in progress on docs/baemin-style-planner-week-retrofit branch. PLANNER_WEEK anchor screen visual retrofit — single target file components/planner/planner-week-screen.tsx. High-risk authority review required."
+      "notes": "Internal 6.5 projection sync after Stage 6 Codex review. PR #242 current head checks green before projection sync; local required checks passed including pnpm verify:frontend and pnpm test:lighthouse. Claude final authority approved. Exploratory QA score 97. Manual Only remains user final visual-feel confirmation after merge."
     }
   ]
 }
