@@ -39,12 +39,22 @@
 
 ## Capture Evidence
 
-> List each capture triple. Paths follow `capture-recipe.md` naming.
+> List each capture triple per viewport. Paths follow `capture-recipe.md` naming.
+> In the JSON artifact, each state contains a `viewports` object keyed by `390` and `320`, each with `captures` and `score`.
 
-| State | 390 current | 390 after | 390 prototype | 320 current | 320 after | 320 prototype |
-| --- | --- | --- | --- | --- | --- | --- |
-| initial | path | path | path | path | path | path |
-| ... | | | | | | |
+### 390px captures
+
+| State | current | after | prototype |
+| --- | --- | --- | --- |
+| initial | path | path | path |
+| ... | | | |
+
+### 320px captures
+
+| State | current | after | prototype |
+| --- | --- | --- | --- |
+| initial | path | path | path |
+| ... | | | |
 
 ## Authority Blockers
 

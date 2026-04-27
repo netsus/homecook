@@ -34,32 +34,20 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["state_id", "captures"],
+        "required": ["state_id", "viewports"],
         "properties": {
           "state_id": {
             "type": "string",
-            "description": "State ID from fixture-route-matrix.md"
+            "description": "State ID from fixture-route-matrix.md (kebab-case)"
           },
-          "captures": {
+          "viewports": {
             "type": "object",
-            "required": ["current", "after"],
+            "required": ["390", "320"],
             "properties": {
-              "current": { "type": "string", "description": "Path to current capture" },
-              "after": { "type": "string", "description": "Path to after capture" },
-              "prototype": { "type": ["string", "null"], "description": "Path to prototype capture, null if prototype N/A" }
-            }
-          },
-          "score": {
-            "type": "object",
-            "description": "Per-state score breakdown",
-            "properties": {
-              "skin": { "type": "number", "minimum": 0, "maximum": 25 },
-              "layout": { "type": "number", "minimum": 0, "maximum": 30 },
-              "interaction": { "type": "number", "minimum": 0, "maximum": 20 },
-              "assets_copy": { "type": "number", "minimum": 0, "maximum": 10 },
-              "state_fidelity": { "type": "number", "minimum": 0, "maximum": 15 },
-              "total": { "type": "number", "minimum": 0, "maximum": 100 }
-            }
+              "390": { "$ref": "#/$defs/viewport_entry" },
+              "320": { "$ref": "#/$defs/viewport_entry" }
+            },
+            "description": "Per-viewport captures and scores keyed by viewport width"
           },
           "notes": { "type": "string" }
         }
@@ -104,6 +92,35 @@
       "type": "array",
       "items": { "type": "string" },
       "description": "List of authority blocker descriptions. Must be empty for pass."
+    }
+  },
+  "$defs": {
+    "viewport_entry": {
+      "type": "object",
+      "required": ["captures"],
+      "properties": {
+        "captures": {
+          "type": "object",
+          "required": ["current", "after"],
+          "properties": {
+            "current": { "type": "string", "description": "Path to current capture" },
+            "after": { "type": "string", "description": "Path to after capture" },
+            "prototype": { "type": ["string", "null"], "description": "Path to prototype capture, null if prototype N/A" }
+          }
+        },
+        "score": {
+          "type": "object",
+          "description": "Per-viewport, per-state score breakdown",
+          "properties": {
+            "skin": { "type": "number", "minimum": 0, "maximum": 25 },
+            "layout": { "type": "number", "minimum": 0, "maximum": 30 },
+            "interaction": { "type": "number", "minimum": 0, "maximum": 20 },
+            "assets_copy": { "type": "number", "minimum": 0, "maximum": 10 },
+            "state_fidelity": { "type": "number", "minimum": 0, "maximum": 15 },
+            "total": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        }
+      }
     }
   }
 }

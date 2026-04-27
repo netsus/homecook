@@ -85,8 +85,8 @@ Each modal is captured as an open overlay on its host screen.
 
 | State ID | Description | Notes |
 | --- | --- | --- |
-| `PlannerAdd-open` | PlannerAddSheet fully open | Date chips, meal type selector visible |
-| `Save-open` | SaveModal fully open | Book list, create-new option visible |
-| `IngredientFilter-open` | IngredientFilterModal fully open | Category chips, apply button visible |
-| `Sort-open` | SortSheet fully open | Sort options visible |
-| `LoginGate-open` | LoginGateModal fully open | Social login buttons, return-to-action text |
+| `planner-add-open` | PlannerAddSheet fully open | Date chips, meal type selector visible |
+| `save-open` | SaveModal fully open | Book list, create-new option visible |
+| `ingredient-filter-open` | IngredientFilterModal fully open | Category chips, apply button visible |
+| `sort-open` | SortSheet fully open | Sort options visible |
+| `login-gate-open` | LoginGateModal fully open | Social login buttons, return-to-action text |
