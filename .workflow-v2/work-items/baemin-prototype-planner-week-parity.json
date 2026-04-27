@@ -1,0 +1,105 @@
+{
+  "id": "baemin-prototype-planner-week-parity",
+  "title": "PLANNER_WEEK body prototype near-100% visual parity",
+  "summary": "PLANNER_WEEK 화면의 시각적 구현을 Baemin prototype 기준 near-100% parity로 끌어올린다. 기존 PLANNER_WEEK 정보 구조와 API/상태/권한 계약은 변경하지 않으며, skin·layout·interaction·assets/copy·state fidelity 5축의 시각 처리만 prototype에 맞춘다. Target score >= 94, authority blocker 0.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "Achieve near-100% visual parity between production PLANNER_WEEK and the Baemin prototype, scoring >= 94 on the 5-axis visual verdict with 0 authority blockers. No API/DB/status/IA changes. No /planner/columns CRUD reintroduction.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "h7-baemin-prototype-parity-direction",
+    "baemin-prototype-parity-foundation",
+    "baemin-prototype-home-parity",
+    "baemin-prototype-recipe-detail-parity",
+    "baemin-prototype-planner-week-parity-contract",
+    "05-planner-week-core",
+    "baemin-style-planner-week-retrofit"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/baemin-prototype-planner-week-parity/README.md",
+      "docs/workpacks/baemin-prototype-planner-week-parity/acceptance.md",
+      "docs/workpacks/baemin-prototype-planner-week-parity/automation-spec.json"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/workpacks/h7-baemin-prototype-parity-direction/README.md",
+      "docs/workpacks/baemin-prototype-parity-foundation/README.md",
+      "docs/workpacks/baemin-prototype-planner-week-parity-contract/README.md",
+      "ui/designs/evidence/baemin-prototype-parity-foundation/capture-recipe.md",
+      "ui/designs/evidence/baemin-prototype-parity-foundation/fixture-route-matrix.md",
+      "ui/designs/evidence/baemin-prototype-parity-foundation/visual-verdict-schema.json",
+      "ui/designs/evidence/baemin-prototype-parity-foundation/token-material-mapping.md",
+      "ui/designs/evidence/baemin-prototype-parity-foundation/prototype-exclusion-inventory.md",
+      "ui/designs/prototypes/homecook-baemin-prototype.html",
+      "ui/designs/PLANNER_WEEK.md",
+      "ui/designs/critiques/PLANNER_WEEK-critique.md",
+      "docs/화면정의서-v1.5.1.md",
+      "docs/요구사항기준선-v1.6.4.md",
+      "docs/api문서-v1.2.2.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 3
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "visual-verdict-artifact",
+      "authority-report",
+      "capture-evidence-complete",
+      "score-threshold-met",
+      "no-api-db-status-change"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "PLANNER_WEEK information architecture changes (section hierarchy, navigation flow)",
+    "API endpoint, field, table, or status value additions",
+    "/planner/columns CRUD reintroduction",
+    "Jua or new font dependencies",
+    "Prototype-only Pantry coupling",
+    "Prototype-only bottom tab behavior",
+    "Prototype-only illustration, image, emoji, or marketing asset",
+    "Official source-of-truth document changes",
+    "HOME or RECIPE_DETAIL screen changes",
+    "Modal/sheet overlay parity (separate slice)",
+    "New npm dependencies"
+  ],
+  "open_questions": []
+}
