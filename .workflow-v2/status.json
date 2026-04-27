@@ -337,7 +337,7 @@
       "id": "baemin-prototype-parity-foundation",
       "preset": "docs-only",
       "branch": "feature/fe-baemin-prototype-parity-foundation",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/272",
       "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
@@ -581,6 +581,22 @@
         "pnpm validate:workpack"
       ],
       "notes": "Docs-only contract sync slice for PLANNER_WEEK prototype parity. Claude Stage 1 created/repair-closed workpack docs; Codex internal 1.5/Stage 6 review passed. Confirms official docs (v1.5.1/v1.6.4/v1.3.1) already contain prototype-priority contract. Records H2/H4 conflict resolution and evidence target (score >= 94, blocker 0, 7 required states) for follow-up implementation slice. No runtime code changes. closeout_phase=completed closeout_repair=codex:2|claude:2|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:docs/workpacks/baemin-prototype-planner-week-parity-contract/README.md,docs/workpacks/baemin-prototype-planner-week-parity-contract/acceptance.md,docs/workpacks/baemin-prototype-planner-week-parity-contract/automation-spec.json,.omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-contract-stage1-repair-response-20260427T213422Z.md,.omx/artifacts/claude-delegate-baemin-prototype-planner-week-parity-contract-closeout-repair-response-20260427T213836Z.md last_recovery_at=2026-04-27T21:41:23Z"
+    },
+    {
+      "id": "baemin-prototype-planner-week-parity",
+      "preset": "vertical-slice-strict",
+      "branch": "feature/fe-baemin-prototype-planner-week-parity",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:frontend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack",
+        "git diff --check"
+      ],
+      "notes": "PLANNER_WEEK body prototype parity scored slice. No BE implementation. Stage 4 produces visual parity + evidence artifacts. Authority review required (anchor-extension). Target score >= 94, blocker 0. Exploratory QA required (high-risk). Predecessor contract slice baemin-prototype-planner-week-parity-contract is merged."
     }
   ]
 }

@@ -1,0 +1,87 @@
+{
+  "slice_id": "baemin-prototype-planner-week-parity",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/planner"
+    ],
+    "required_states": [
+      "initial",
+      "prototype-overview",
+      "scrolled",
+      "loading",
+      "empty",
+      "unauthorized",
+      "error"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "visual-verdict-artifact",
+      "authority-report",
+      "capture-evidence-complete",
+      "score-threshold-met",
+      "no-api-db-status-change"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "PLANNER_WEEK"
+      ],
+      "required_screens": [
+        "PLANNER_WEEK"
+      ],
+      "generator_required": false,
+      "generator_artifact": "ui/designs/PLANNER_WEEK.md",
+      "critic_required": false,
+      "critic_artifact": "ui/designs/critiques/PLANNER_WEEK-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "390-PLANNER_WEEK-initial-after.png",
+        "320-PLANNER_WEEK-initial-after.png",
+        "390-PLANNER_WEEK-initial-prototype.png",
+        "320-PLANNER_WEEK-initial-prototype.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/PLANNER_WEEK-parity-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "api-db-status-change",
+    "planner-information-architecture-change",
+    "planner-columns-crud-reintroduced",
+    "prototype-only-exclusion-scored-as-deficit",
+    "capture-evidence-missing",
+    "slice-score-below-threshold",
+    "unresolved-authority-blocker",
+    "exploratory-qa-not-run-no-skip-rationale"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 3
+  },
+  "notes": "PLANNER_WEEK body parity scored slice. No BE implementation. Stage 4 produces visual parity + evidence artifacts. Authority review required (anchor-extension). Exploratory QA required (high-risk)."
+}
