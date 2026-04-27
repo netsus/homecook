@@ -188,6 +188,7 @@
 - Tests: `tests/shopping-complete.backend.test.ts`
 - Regression evidence: `pnpm test:product tests/shopping-complete.backend.test.ts tests/shopping-detail.backend.test.ts tests/shopping-reorder.backend.test.ts tests/supabase-server.test.ts` passed (29 tests)
 - Backend gate: `pnpm verify:backend` passed (lint, typecheck, product tests 256, build, security E2E 9)
+- Stage 3 review: Claude requested a partial-failure recovery repair, then approved commit `5f5d1c5` with `ready_to_merge` recommendation.
 - Real DB/schema readiness: `tests/supabase-server.test.ts` confirms shopping tables and relations exist in migrations; browser/local Supabase smoke remains part of Stage 4/6 manual QA evidence.
 
 ## Delivery Checklist
