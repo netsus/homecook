@@ -609,9 +609,9 @@ export function validateWorkflowV2DocContract({ rootDir = process.cwd() } = {}) 
 
   const canonicalCloseoutErrors = [
     ...containsAll(canonicalCloseout, [
-      "현재 baseline: `work-item closeout schema + tracked status projection helper + human-facing projection payload helper + validator guard`까지 구현됐다.",
+      "현재 baseline: `work-item closeout schema + repair_summary projection + tracked status projection helper + human-facing projection payload helper + validator guard`까지 구현됐다.",
       "PR body의 `Closeout Sync` / `Merge Gate` 기본 section generation, README / acceptance doc-surface drift check, current-vocabulary closeout repair consumer는 연결됐고, README / acceptance markdown rewrite와 `Actual Verification` full projection은 아직 후속 단계다.",
-      "현재 baseline은 `status` projection helper뿐 아니라 README / acceptance / PR body용 generated payload와 projection readiness validator를 포함한다.",
+      "현재 baseline은 `status` projection helper뿐 아니라 README / acceptance / PR body용 generated payload, repair summary projection, projection readiness validator를 포함한다.",
       "현재 baseline의 consumer는 PR body `Closeout Sync` / `Merge Gate` 기본 section generation, `validate:closeout-sync`의 README / acceptance drift check, `omo:reconcile`의 current-vocabulary closeout repair까지 연결됐다.",
       "현재 README / acceptance baseline은 current markdown surface vocabulary에 맞춘 deterministic sync contract와 repair consumer까지만 포함하고, unsupported state 전체를 rewrite하는 patcher는 아직 아니다.",
       "현재 baseline은 compatibility note downgrade까지 반영됐고, 이후에는 appendix화 또는 제거 여부만 남는다.",

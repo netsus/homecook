@@ -134,6 +134,32 @@ describe("OMO slice report", () => {
         updated_at: "2026-04-26T00:21:00.000Z",
       },
     });
+    writeJson(join(rootDir, ".artifacts", "omo-supervisor", "2026-04-26T00-22-00-000Z-10-demo-slice", "summary.json"), {
+      workItemId: slice,
+      slice,
+      transitions: [],
+      wait: {
+        kind: "manual_decision_required",
+        stage: 5,
+        reason: "Credential-gated smoke requires a human decision.",
+        reason_code: "manual_decision_required",
+        reason_detail_code: "credential_gated",
+        updated_at: "2026-04-26T00:22:00.000Z",
+      },
+    });
+    writeJson(join(rootDir, ".artifacts", "omo-supervisor", "2026-04-26T00-39-00-000Z-10-demo-slice", "summary.json"), {
+      workItemId: slice,
+      slice,
+      transitions: [],
+      wait: {
+        kind: "ci_wait",
+        stage: 6,
+        reason: "Post-merge stale current-head snapshot was refreshed.",
+        reason_code: "post_merge_stale",
+        reason_detail_code: "post_merge_stale",
+        updated_at: "2026-04-26T00:39:00.000Z",
+      },
+    });
 
     const result = generateOmoSliceReport({
       rootDir,
@@ -152,8 +178,19 @@ describe("OMO slice report", () => {
 
     expect(result.reportPath).toBe(join(rootDir, "docs", "workpacks", slice, "omo-report.md"));
     expect(existsSync(result.reportPath)).toBe(true);
+    expect(result.supervisorWaitEvents).toHaveLength(3);
+    expect(result.repairSummaryProjection).toEqual({
+      codex_repairable_count: 3,
+      claude_repairable_count: 0,
+      manual_decision_required_count: 1,
+      human_escalation_count: 1,
+      post_merge_stale_count: 1,
+      latest_reason_code: "post_merge_stale",
+      evidence_sources: ["dispatch", "supervisor"],
+    });
     const report = readFileSync(result.reportPath, "utf8");
     expect(report).toContain("# OMO Efficiency Report: 10-demo-slice");
+    expect(report).toContain("| report_mode | generated |");
     expect(report).toContain("| 최종 상태 | merged / dual_approved / passed |");
     expect(report).toContain("| 최종 PR | #321 |");
     expect(report).toContain("| 순수 진행 누적시간 | 19.0분 |");
@@ -161,9 +198,15 @@ describe("OMO slice report", () => {
     expect(report).toContain("| 2 backend | 10.0분 | 1 |");
     expect(report).toContain("| 4 frontend | 4.0분 | 2 |");
     expect(report).toContain("| human_escalation | 1회 |");
+    expect(report).toContain("| manual_decision_required | 1회 |");
     expect(report).toContain("| Codex/Claude 자동 수정 오류 | 3회 |");
+    expect(report).toContain("| post-merge stale | 1회 |");
     expect(report).toContain("| evidence_source | dispatch, supervisor |");
     expect(report).toContain("backend evaluator returned blocked");
+    expect(report).toContain("## Manual Decision Required");
+    expect(report).toContain("Credential-gated smoke requires a human decision.");
+    expect(report).toContain("## Post-Merge Stale Events");
+    expect(report).toContain("Post-merge stale current-head snapshot was refreshed.");
     expect(report).toContain("## Codex/Claude-Resolved Non-Human Errors");
     expect(report).toContain("Required frontend route is missing");
     expect(report).toContain("opencode run failed with exit code null.");
@@ -229,8 +272,18 @@ describe("OMO slice report", () => {
 
     expect(result.dispatchRuns).toHaveLength(0);
     expect(result.omxArtifactEvents).toHaveLength(2);
+    expect(result.repairSummaryProjection).toMatchObject({
+      codex_repairable_count: 0,
+      claude_repairable_count: 1,
+      manual_decision_required_count: 0,
+      human_escalation_count: 0,
+      post_merge_stale_count: 0,
+      latest_reason_code: "repair_attempt",
+      evidence_sources: [".omx/artifacts"],
+    });
 
     const report = readFileSync(result.reportPath, "utf8");
+    expect(report).toContain("| report_mode | generated |");
     expect(report).toContain("| evidence_source | .omx/artifacts |");
     expect(report).toContain("| Codex/Claude 자동 수정 오류 | 1회 |");
     expect(report).toContain("## Evidence Sources");

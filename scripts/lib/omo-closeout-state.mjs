@@ -44,6 +44,15 @@ const DOCS_AUTOMATION_SPEC_METADATA_VALUES = new Set(["pending", "synced", "not_
  *     artifact_missing?: boolean | null;
  *     last_recovery_at?: string | null;
  *   } | null;
+ *   repair_summary?: {
+ *     codex_repairable_count?: number | null;
+ *     claude_repairable_count?: number | null;
+ *     manual_decision_required_count?: number | null;
+ *     human_escalation_count?: number | null;
+ *     post_merge_stale_count?: number | null;
+ *     latest_reason_code?: string | null;
+ *     evidence_sources?: string[];
+ *   } | null;
  * }} CanonicalCloseoutSnapshot
  */
 
@@ -197,6 +206,59 @@ function buildRecoveryFragments(recoverySummary = {}) {
   return fragments;
 }
 
+function normalizeRepairSummary(repairSummary = {}) {
+  return {
+    codex_repairable_count: normalizeNonNegativeInteger(repairSummary.codex_repairable_count),
+    claude_repairable_count: normalizeNonNegativeInteger(repairSummary.claude_repairable_count),
+    manual_decision_required_count: normalizeNonNegativeInteger(
+      repairSummary.manual_decision_required_count,
+    ),
+    human_escalation_count: normalizeNonNegativeInteger(repairSummary.human_escalation_count),
+    post_merge_stale_count: normalizeNonNegativeInteger(repairSummary.post_merge_stale_count),
+    latest_reason_code: normalizeOptionalString(repairSummary.latest_reason_code),
+    evidence_sources: normalizeStringArray(repairSummary.evidence_sources),
+  };
+}
+
+function countRepairSummaryActivity(repairSummary) {
+  const summary = normalizeRepairSummary(repairSummary);
+  return (
+    summary.codex_repairable_count +
+    summary.claude_repairable_count +
+    summary.manual_decision_required_count +
+    summary.human_escalation_count +
+    summary.post_merge_stale_count
+  );
+}
+
+function buildRepairFragments(repairSummary = {}) {
+  const summary = normalizeRepairSummary(repairSummary);
+  const activityCount = countRepairSummaryActivity(summary);
+
+  if (activityCount === 0 && summary.evidence_sources.length === 0) {
+    return [];
+  }
+
+  const fragments = [
+    `codex:${summary.codex_repairable_count}`,
+    `claude:${summary.claude_repairable_count}`,
+    `manual_decision:${summary.manual_decision_required_count}`,
+    `human_escalation:${summary.human_escalation_count}`,
+    `post_merge_stale:${summary.post_merge_stale_count}`,
+  ];
+
+  if (summary.evidence_sources.length > 0) {
+    fragments.push(`sources:${summary.evidence_sources.join(",")}`);
+  }
+
+  return fragments;
+}
+
+function formatRepairEvidenceSources(evidenceSources) {
+  const sources = normalizeStringArray(evidenceSources);
+  return sources.length > 0 ? sources.map((source) => `\`${source}\``).join(", ") : "`none`";
+}
+
 export function projectCanonicalCloseoutToHumanSurfacePayload(closeout, { workItemId } = {}) {
   if (!closeout || typeof closeout !== "object" || Array.isArray(closeout)) {
     return null;
@@ -275,6 +337,7 @@ export function projectCanonicalCloseoutToHumanSurfacePayload(closeout, { workIt
       artifact_missing: normalizeBoolean(closeout.recovery_summary?.artifact_missing),
       last_recovery_at: normalizeOptionalString(closeout.recovery_summary?.last_recovery_at),
     },
+    repair_summary: normalizeRepairSummary(closeout.repair_summary),
   };
 }
 
@@ -300,6 +363,10 @@ export function projectCanonicalCloseoutToPrBodySections(closeout, { workItemId 
       `- Design Authority: ${formatProjectionValue(projection.pr_body.closeout_sync.design_authority)}`,
       `- automation-spec closeout metadata: ${formatProjectionValue(
         projection.pr_body.closeout_sync.automation_spec_metadata,
+      )}`,
+      `- repair summary: codex=\`${projection.repair_summary.codex_repairable_count}\`, claude=\`${projection.repair_summary.claude_repairable_count}\`, manual_decision=\`${projection.repair_summary.manual_decision_required_count}\`, human_escalation=\`${projection.repair_summary.human_escalation_count}\`, post_merge_stale=\`${projection.repair_summary.post_merge_stale_count}\``,
+      `- repair evidence sources: ${formatRepairEvidenceSources(
+        projection.repair_summary.evidence_sources,
       )}`,
       `- projection sync state: docs=\`${docsSyncState}\`, PR body=\`${prBodySyncState}\``,
     ].join("\n"),
@@ -428,6 +495,7 @@ export function projectCanonicalCloseoutToStatusFields(closeout) {
   const noteFragments = [];
   const phase = normalizeOptionalString(closeout.phase);
   const recoveryFragments = buildRecoveryFragments(closeout.recovery_summary);
+  const repairFragments = buildRepairFragments(closeout.repair_summary);
   const lastRecoveryAt = normalizeOptionalString(closeout.recovery_summary?.last_recovery_at);
 
   if (phase) {
@@ -436,6 +504,10 @@ export function projectCanonicalCloseoutToStatusFields(closeout) {
 
   if (recoveryFragments.length > 0) {
     noteFragments.push(`closeout_recovery=${recoveryFragments.join("|")}`);
+  }
+
+  if (repairFragments.length > 0) {
+    noteFragments.push(`closeout_repair=${repairFragments.join("|")}`);
   }
 
   if (lastRecoveryAt) {
@@ -469,6 +541,7 @@ export function validateHumanSurfaceProjectionContract({
   const allChecksGreenPath = `${resolvedPathPrefix}.merge_gate_projection.all_checks_green`;
   const deliveryChecklistPath = `${resolvedPathPrefix}.docs_projection.delivery_checklist`;
   const acceptancePath = `${resolvedPathPrefix}.docs_projection.acceptance`;
+  const repairEvidenceSourcesPath = `${resolvedPathPrefix}.repair_summary.evidence_sources`;
   const requiresProjectedEvidence =
     projection.phase === "projecting" || projection.phase === "completed";
 
@@ -517,6 +590,18 @@ export function validateHumanSurfaceProjectionContract({
     errors.push({
       path: acceptancePath,
       message: "Canonical closeout completed phase cannot keep acceptance pending.",
+    });
+  }
+
+  if (
+    requiresProjectedEvidence
+    && countRepairSummaryActivity(projection.repair_summary) > 0
+    && projection.repair_summary.evidence_sources.length === 0
+  ) {
+    errors.push({
+      path: repairEvidenceSourcesPath,
+      message:
+        "Canonical closeout repair summary requires evidence_sources when repair/manual/stale counts are non-zero.",
     });
   }
 

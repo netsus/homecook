@@ -74,6 +74,15 @@
       "artifact_missing": false,
       "last_recovery_at": "2026-03-25T00:00:00+09:00"
     },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": null,
+      "evidence_sources": []
+    },
     "projection_state": {
       "docs_synced_at": "2026-03-25T00:00:00+09:00",
       "status_synced_at": "2026-03-25T00:00:00+09:00",
