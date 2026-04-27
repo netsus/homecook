@@ -63,15 +63,16 @@
     ]
   },
   "status": {
-    "lifecycle": "docs",
-    "approval_state": "pending_internal_1.5_docs_gate",
-    "verification_status": "not_started",
+    "lifecycle": "planned",
+    "approval_state": "needs_revision",
+    "verification_status": "pending",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
+  "notes": "Stage 1 docs gate repair 1 in progress. Awaiting internal 1.5 docs gate approval.",
   "out_of_scope": [
     "팬트리 화면 UI 개선 — 기존 기능 활용",
     "추가 후 팬트리 아이템 수정/삭제 — 별도 슬라이스",

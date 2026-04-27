@@ -506,16 +506,16 @@
       "preset": "vertical-slice-strict",
       "branch": "docs/12b-shopping-pantry-reflect",
       "pr_path": null,
-      "lifecycle": "docs",
-      "approval_state": "pending_internal_1.5_docs_gate",
-      "verification_status": "not_started",
+      "lifecycle": "planned",
+      "approval_state": "needs_revision",
+      "verification_status": "pending",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs created on 2026-04-28. Pending Codex internal 1.5 docs gate review. Goal: 팬트리 반영 선택 팝업, add_to_pantry_item_ids 3-way 의미론 (null/[]/선택값), 4단계 서버 검증. Backend First contract. Dependencies: 12a-shopping-complete (merged)."
+      "notes": "Stage 1 docs gate repair 1 in progress on 2026-04-28. Goal: 팬트리 반영 선택 팝업, add_to_pantry_item_ids 3-way 의미론 (미전달/[]/선택값), 4단계 서버 검증/필터 (무효 항목 무시), 멱등성 (재완료 200). Backend First contract. Low-risk UI change (lightweight design check). Dependencies: 12a-shopping-complete (merged)."
     },
     {
       "id": "baemin-style-modal-system-fit",

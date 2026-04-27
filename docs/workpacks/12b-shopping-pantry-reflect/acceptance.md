@@ -2,41 +2,42 @@
 
 ## Happy Path
 
-### HP-1: 모두 추가 (null) 시나리오
+### HP-1: 모두 추가 (미전달) 시나리오
+<!-- omo:id=hp1_all_add;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: 쇼핑 목록에 5개 아이템 존재 (3개 체크됨, `is_pantry_excluded=false`)
 - [ ] **When**: 사용자가 "장보기 완료" 클릭 → 팝업에서 "모두 추가" 선택
 - [ ] **Then**:
-  - `POST /shopping/lists/{id}/complete` 호출 시 `add_to_pantry_item_ids: null`
-  - 체크된 3개 아이템이 모두 `pantry_items`에 추가됨
-  - `shopping_lists.pantry_added = 3`
-  - `shopping_lists.pantry_added_item_ids = [1, 2, 5]` (체크된 아이템 ID들)
+  - `POST /shopping/lists/{id}/complete` 호출 시 `add_to_pantry_item_ids` **미전달**
+  - 체크된 3개 아이템이 모두 `pantry_items`에 추가됨 (아직 없는 ingredient만 INSERT)
+  - 응답 (공통 래퍼 `{ success: true, data: {...} }`): `pantry_added = 3`, `pantry_added_item_ids = [uuid1, uuid2, uuid5]`
   - `shopping_lists.is_completed = true`
   - `meals.status = shopping_done`
   - 성공 토스트 메시지 표시
 
 ### HP-2: 선택 추가 시나리오
+<!-- omo:id=hp2_selective_add;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: 쇼핑 목록에 5개 아이템 존재 (3개 체크됨, `is_pantry_excluded=false`)
 - [ ] **When**: 사용자가 팝업에서 2개 아이템만 선택 후 "선택 추가" 클릭
 - [ ] **Then**:
-  - `POST /shopping/lists/{id}/complete` 호출 시 `add_to_pantry_item_ids: [1, 2]`
+  - `POST /shopping/lists/{id}/complete` 호출 시 `add_to_pantry_item_ids: [uuid1, uuid2]`
   - 선택한 2개 아이템만 `pantry_items`에 추가됨
-  - `shopping_lists.pantry_added = 2`
-  - `shopping_lists.pantry_added_item_ids = [1, 2]`
+  - 응답: `pantry_added = 2`, `pantry_added_item_ids = [uuid1, uuid2]`
   - `shopping_lists.is_completed = true`
   - `meals.status = shopping_done`
 
 ### HP-3: 추가 안 함 ([]) 시나리오
+<!-- omo:id=hp3_no_add;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: 쇼핑 목록에 5개 아이템 존재 (3개 체크됨)
 - [ ] **When**: 사용자가 팝업에서 "추가 안 함" 클릭
 - [ ] **Then**:
   - `POST /shopping/lists/{id}/complete` 호출 시 `add_to_pantry_item_ids: []`
   - 팬트리에 아무것도 추가되지 않음
-  - `shopping_lists.pantry_added = 0`
-  - `shopping_lists.pantry_added_item_ids = []`
+  - 응답: `pantry_added = 0`, `pantry_added_item_ids = []`
   - `shopping_lists.is_completed = true`
   - `meals.status = shopping_done`
 
 ### HP-4: 완료 후 팬트리 확인
+<!-- omo:id=hp4_pantry_verification;stage=4;scope=frontend;review=6 -->
 - [ ] **Given**: 장보기 완료 후 2개 아이템이 팬트리에 추가됨
 - [ ] **When**: 사용자가 팬트리 화면으로 이동
 - [ ] **Then**:
@@ -44,57 +45,64 @@
   - 각 아이템의 이름, 수량이 올바르게 표시됨
 
 ### HP-5: 완료 후 쇼핑 목록 화면 Read-only
+<!-- omo:id=hp5_readonly_mode;stage=4;scope=frontend;review=6 -->
 - [ ] **Given**: 장보기 완료됨 (`is_completed=true`)
 - [ ] **When**: 사용자가 쇼핑 목록 화면에 재접근
 - [ ] **Then**:
-  - "아이템 추가" 버튼이 비활성화됨
-  - 각 아이템의 "삭제" 버튼이 비활성화됨
-  - 각 아이템의 "수정" 버튼이 비활성화됨
-  - 체크박스가 비활성화됨 (또는 숨겨짐)
-  - "이미 완료된 목록입니다" 안내 메시지 표시
+  - "아이템 추가" 버튼이 비활성화됨 (12a 기능)
+  - 각 아이템의 "삭제" 버튼이 비활성화됨 (12a 기능)
+  - 각 아이템의 "수정" 버튼이 비활성화됨 (12a 기능)
+  - 체크박스가 비활성화됨 (12a 기능)
 
 ---
 
 ## State/Policy
 
-### SP-1: 4단계 검증 — pantry-excluded 필터
+### SP-1: 4단계 필터 — pantry-excluded
+<!-- omo:id=sp1_filter_excluded;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: 쇼핑 아이템 중 `is_pantry_excluded=true`인 아이템 존재
-- [ ] **When**: "모두 추가" (`null`) 선택 후 완료
+- [ ] **When**: "모두 추가" (미전달) 선택 후 완료
 - [ ] **Then**:
-  - `is_pantry_excluded=true`인 아이템은 팬트리에 추가되지 않음
+  - `is_pantry_excluded=true`인 아이템은 팬트리에 추가되지 않음 (무시)
   - 나머지 유효 아이템만 추가됨
-  - `pantry_added` = 유효 아이템 개수
+  - 응답 `pantry_added` = 유효 아이템 개수
 
-### SP-2: 4단계 검증 — unchecked 필터
+### SP-2: 4단계 필터 — unchecked
+<!-- omo:id=sp2_filter_unchecked;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: 쇼핑 아이템 중 `is_checked=false`인 아이템 존재
-- [ ] **When**: "모두 추가" (`null`) 선택 후 완료
+- [ ] **When**: "모두 추가" (미전달) 선택 후 완료
 - [ ] **Then**:
-  - `is_checked=false`인 아이템은 팬트리에 추가되지 않음
+  - `is_checked=false`인 아이템은 팬트리에 추가되지 않음 (무시)
   - 체크된 아이템만 추가됨
-  - `pantry_added` = 체크된 유효 아이템 개수
+  - 응답 `pantry_added` = 체크된 유효 아이템 개수
 
-### SP-3: 4단계 검증 — 중복 제거 (이미 팬트리에 있는 재료)
-- [ ] **Given**: 쇼핑 아이템 중 일부가 이미 팬트리에 존재함
-- [ ] **When**: "모두 추가" 선택 후 완료
+### SP-3: 4단계 필터 — 중복 방지 (멱등성)
+<!-- omo:id=sp3_filter_duplicate;stage=2;scope=backend;review=3 -->
+- [ ] **Given**: 쇼핑 아이템 중 일부가 이미 `added_to_pantry=true`
+- [ ] **When**: 동일 아이템을 포함하여 완료 재호출
 - [ ] **Then**:
-  - 이미 팬트리에 있는 재료는 스킵됨 (중복 추가 안 함)
-  - 팬트리에 없는 재료만 추가됨
-  - `pantry_added` = 실제 추가된 개수 (중복 제외)
+  - 이미 `added_to_pantry=true`인 항목은 재처리하지 않음 (멱등)
+  - 새로운 항목만 추가됨
+  - 응답 `pantry_added` = 이번 요청에서 새로 처리된 개수
 
 ### SP-4: Meals 상태 전환
+<!-- omo:id=sp4_meals_transition;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: `meals.status = registered`
 - [ ] **When**: 쇼핑 목록 완료 API 호출
 - [ ] **Then**:
-  - `meals.status = shopping_done`으로 전환됨
+  - 연결된 meals의 `status = shopping_done`으로 전환됨
   - `meals.updated_at` 갱신됨
+  - 응답 `meals_updated` = 전환된 meals 개수
 
 ### SP-5: 카운트 일치 불변성
+<!-- omo:id=sp5_count_invariant;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: 장보기 완료 후
 - [ ] **Then**:
-  - `shopping_lists.pantry_added = shopping_lists.pantry_added_item_ids.length`
+  - 응답의 `pantry_added = pantry_added_item_ids.length`
   - 항상 카운트와 배열 길이가 일치함
 
 ### SP-6: added_to_pantry 플래그 업데이트
+<!-- omo:id=sp6_flag_update;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: 2개 아이템이 팬트리에 추가됨
 - [ ] **When**: 완료 API 응답 확인
 - [ ] **Then**:
@@ -105,84 +113,74 @@
 
 ## Error/Permission
 
-### EP-1: 이미 완료된 리스트 재완료 시도
+### EP-1: 멱등성 — 완료 후 재완료
+<!-- omo:id=ep1_idempotent_recomplete;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: `shopping_lists.is_completed = true`
 - [ ] **When**: 동일 리스트에 완료 API 재호출
 - [ ] **Then**:
-  - `409 Conflict` 응답
-  - `error: "ALREADY_COMPLETED"`
-  - `message: "Shopping list is already completed"`
-  - `completed_at` 필드 포함됨
+  - `200` 응답 (에러 아님)
+  - 응답 `completed = true`, `pantry_added = N`, `pantry_added_item_ids = [...]` (이번 요청 기준)
+  - 멱등하게 동작함
 
-### EP-2: 잘못된 아이템 ID 포함
-- [ ] **Given**: 쇼핑 목록에 존재하지 않는 아이템 ID
-- [ ] **When**: `add_to_pantry_item_ids: [1, 999]` 전달
+### EP-2: 무효 ID 무시 — 다른 list 소속
+<!-- omo:id=ep2_invalid_id_ignored;stage=2;scope=backend;review=3 -->
+- [ ] **Given**: 쇼핑 목록에 존재하지 않는 아이템 UUID
+- [ ] **When**: `add_to_pantry_item_ids: [valid_uuid, invalid_uuid]` 전달
 - [ ] **Then**:
-  - `400 Bad Request` 응답
-  - `error: "INVALID_ITEM_IDS"`
-  - `message: "One or more item IDs do not belong to this shopping list"`
-  - `invalid_ids: [999]` 포함됨
+  - 무효 ID 무시 (에러 아님)
+  - 유효 아이템만 처리
+  - `200` 응답
+  - 응답 `pantry_added` = 유효 항목 개수만
 
-### EP-3: 쇼핑 목록 미존재
+### EP-3: 무효 ID 무시 — excluded 항목
+<!-- omo:id=ep3_excluded_ignored;stage=2;scope=backend;review=3 -->
+- [ ] **Given**: 선택한 아이템 중 `is_pantry_excluded=true`인 항목 존재
+- [ ] **When**: `add_to_pantry_item_ids: [uuid1, excluded_uuid]` 전달
+- [ ] **Then**:
+  - excluded 항목 무시 (에러 아님)
+  - 유효 아이템만 처리
+  - `200` 응답
+
+### EP-4: 무효 ID 무시 — unchecked 항목
+<!-- omo:id=ep4_unchecked_ignored;stage=2;scope=backend;review=3 -->
+- [ ] **Given**: 선택한 아이템 중 `is_checked=false`인 항목 존재
+- [ ] **When**: `add_to_pantry_item_ids: [uuid1, unchecked_uuid]` 전달
+- [ ] **Then**:
+  - unchecked 항목 무시 (에러 아님)
+  - 유효 아이템만 처리
+  - `200` 응답
+
+### EP-5: 모든 ID 무효 시
+<!-- omo:id=ep5_all_invalid;stage=2;scope=backend;review=3 -->
+- [ ] **Given**: 모든 선택 아이템이 무효 (excluded/unchecked/다른 list)
+- [ ] **When**: `add_to_pantry_item_ids: [invalid1, invalid2]` 전달
+- [ ] **Then**:
+  - `200` 응답 (에러 아님)
+  - 응답 `pantry_added = 0`, `pantry_added_item_ids = []`
+  - `is_completed = true`로 변경됨
+
+### EP-6: 쇼핑 목록 미존재
+<!-- omo:id=ep6_list_not_found;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: 존재하지 않는 `list_id`
-- [ ] **When**: `POST /shopping/lists/99999/complete` 호출
+- [ ] **When**: `POST /shopping/lists/invalid-uuid/complete` 호출
 - [ ] **Then**:
-  - `404 Not Found` 응답
-  - `error: "SHOPPING_LIST_NOT_FOUND"`
-  - `message: "Shopping list not found"`
+  - `404` 응답
+  - 공통 래퍼 `{ success: false, data: null, error: { code: "RESOURCE_NOT_FOUND", message: "...", fields: [] } }`
 
-### EP-4: Meals 상태가 registered 아님
-- [ ] **Given**: `meals.status = shopping_done` (이미 완료됨)
-- [ ] **When**: 쇼핑 목록 완료 API 호출
+### EP-7: 권한 없음
+<!-- omo:id=ep7_forbidden;stage=2;scope=backend;review=3 -->
+- [ ] **Given**: `shopping_lists.user_id = uuid1`, 현재 사용자 = uuid2
+- [ ] **When**: 사용자 uuid2가 완료 API 호출
 - [ ] **Then**:
-  - `409 Conflict` 응답
-  - `error: "INVALID_MEAL_STATUS"`
-  - `message: "Meal status must be 'registered' to complete shopping"`
-  - `current_status: "shopping_done"` 포함됨
-
-### EP-5: 완료 후 아이템 추가 시도
-- [ ] **Given**: `shopping_lists.is_completed = true`
-- [ ] **When**: `POST /shopping/lists/{id}/items` 호출 (새 아이템 추가)
-- [ ] **Then**:
-  - `409 Conflict` 응답
-  - `error: "SHOPPING_LIST_COMPLETED"`
-  - `message: "Cannot modify a completed shopping list"`
-  - `completed_at` 포함됨
-
-### EP-6: 완료 후 아이템 수정 시도
-- [ ] **Given**: `shopping_lists.is_completed = true`
-- [ ] **When**: `PATCH /shopping/lists/{id}/items/{item_id}` 호출
-- [ ] **Then**:
-  - `409 Conflict` 응답
-  - `error: "SHOPPING_LIST_COMPLETED"`
-
-### EP-7: 완료 후 아이템 삭제 시도
-- [ ] **Given**: `shopping_lists.is_completed = true`
-- [ ] **When**: `DELETE /shopping/lists/{id}/items/{item_id}` 호출
-- [ ] **Then**:
-  - `409 Conflict` 응답
-  - `error: "SHOPPING_LIST_COMPLETED"`
-
-### EP-8: 완료 후 체크 토글 시도
-- [ ] **Given**: `shopping_lists.is_completed = true`
-- [ ] **When**: `PATCH /shopping/lists/{id}/items/{item_id}/check` 호출
-- [ ] **Then**:
-  - `409 Conflict` 응답
-  - `error: "SHOPPING_LIST_COMPLETED"`
-
-### EP-9: 권한 없는 사용자의 완료 시도
-- [ ] **Given**: `shopping_lists.user_id = 1`, 현재 사용자 ID = 2
-- [ ] **When**: 사용자 2가 완료 API 호출
-- [ ] **Then**:
-  - `403 Forbidden` 응답
-  - `error: "FORBIDDEN"`
-  - `message: "You do not have permission to complete this shopping list"`
+  - `403` 응답
+  - 공통 래퍼 `{ success: false, data: null, error: { code: "FORBIDDEN", message: "...", fields: [] } }`
 
 ---
 
 ## Data Integrity
 
 ### DI-1: 트랜잭션 원자성
+<!-- omo:id=di1_transaction_atomicity;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: 완료 API 호출 중 DB 에러 발생
 - [ ] **When**: `pantry_items` 삽입 실패
 - [ ] **Then**:
@@ -192,25 +190,28 @@
   - 부분적 데이터 변경 없음
 
 ### DI-2: CHECK 제약 검증
+<!-- omo:id=di2_check_constraint;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: `shopping_list_items.added_to_pantry = true` 설정 시도
 - [ ] **When**: 해당 아이템이 `is_checked=false` 또는 `is_pantry_excluded=true`
 - [ ] **Then**:
-  - DB CHECK 제약 위반으로 삽입/업데이트 실패
-  - 에러 메시지 반환
+  - DB CHECK 제약 위반으로 실패
+  - 서버는 이런 상황을 방지하는 로직 보유 (4단계 필터)
 
 ### DI-3: completed_at 타임스탬프
+<!-- omo:id=di3_completed_at_timestamp;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: 완료 API 호출 성공
 - [ ] **Then**:
   - `shopping_lists.completed_at`이 현재 시각으로 설정됨
-  - ISO 8601 형식으로 반환됨
+  - ISO 8601 형식으로 응답에 포함 가능 (응답 스키마에는 없지만 DB에는 기록)
   - 타임존이 정확히 기록됨
 
 ### DI-4: pantry_added_item_ids 배열 순서
+<!-- omo:id=di4_item_ids_order;stage=2;scope=backend;review=3 -->
 - [ ] **Given**: 여러 아이템이 팬트리에 추가됨
 - [ ] **Then**:
-  - `pantry_added_item_ids` 배열이 아이템 ID 순서대로 정렬됨 (또는 추가 순서)
-  - 중복 ID 없음
-  - 모든 ID가 유효한 `shopping_list_items.id`임
+  - 응답 `pantry_added_item_ids` 배열이 일관된 순서 (아이템 ID 순서 또는 추가 순서)
+  - 중복 UUID 없음
+  - 모든 UUID가 유효한 `shopping_list_items.id`임
 
 ---
 
@@ -219,29 +220,32 @@
 ### 테스트 데이터 시드
 ```sql
 -- 사용자
-INSERT INTO users (id, email, name) VALUES (1, 'test@example.com', 'Test User');
+INSERT INTO users (id, email, name) VALUES ('uuid-1', 'test@example.com', 'Test User');
 
 -- 식사
-INSERT INTO meals (id, user_id, status, title) VALUES (1, 1, 'registered', '저녁 식사');
+INSERT INTO meals (id, user_id, status, title, plan_date)
+VALUES
+  ('meal-uuid-1', 'uuid-1', 'registered', '저녁 식사 1', '2026-05-01'),
+  ('meal-uuid-2', 'uuid-1', 'registered', '저녁 식사 2', '2026-05-02');
 
 -- 쇼핑 목록
-INSERT INTO shopping_lists (id, meal_id, user_id, is_completed)
-VALUES (1, 1, 1, false);
+INSERT INTO shopping_lists (id, user_id, title, date_range_start, date_range_end, is_completed)
+VALUES ('list-uuid-1', 'uuid-1', '5/1 장보기', '2026-05-01', '2026-05-02', false);
 
 -- 쇼핑 아이템
-INSERT INTO shopping_list_items (id, shopping_list_id, name, is_checked, is_pantry_excluded) VALUES
-(1, 1, '양파', true, false),
-(2, 1, '당근', true, false),
-(3, 1, '소금', false, false),  -- 체크 안 됨
-(4, 1, '설탕', true, true),   -- pantry-excluded
-(5, 1, '간장', true, false);
+INSERT INTO shopping_list_items (id, shopping_list_id, ingredient_id, display_text, amounts_json, is_checked, is_pantry_excluded) VALUES
+('item-uuid-1', 'list-uuid-1', 'ing-uuid-1', '양파 2개', '[{"amount": 2, "unit": "개"}]', true, false),
+('item-uuid-2', 'list-uuid-1', 'ing-uuid-2', '당근 3개', '[{"amount": 3, "unit": "개"}]', true, false),
+('item-uuid-3', 'list-uuid-1', 'ing-uuid-3', '소금 1큰술', '[{"amount": 1, "unit": "큰술"}]', false, false),  -- 체크 안 됨
+('item-uuid-4', 'list-uuid-1', 'ing-uuid-4', '설탕 1큰술', '[{"amount": 1, "unit": "큰술"}]', true, true),   -- pantry-excluded
+('item-uuid-5', 'list-uuid-1', 'ing-uuid-5', '간장 1컵', '[{"amount": 1, "unit": "컵"}]', true, false);
 
--- 기존 팬트리 아이템 (중복 테스트용)
-INSERT INTO pantry_items (user_id, name, quantity) VALUES (1, '간장', 1);
+-- meals과 shopping_lists 연결
+UPDATE meals SET shopping_list_id = 'list-uuid-1' WHERE id IN ('meal-uuid-1', 'meal-uuid-2');
 ```
 
 ### 사전 조건 검증
-- [ ] DB에 테스트 사용자 존재 (`user_id=1`)
+- [ ] DB에 테스트 사용자 존재 (`uuid-1`)
 - [ ] `meals` 테이블에 `status=registered`인 레코드 존재
 - [ ] `shopping_lists` 테이블에 `is_completed=false`인 레코드 존재
 - [ ] `shopping_list_items`에 최소 5개 아이템 존재 (다양한 상태)
@@ -271,15 +275,15 @@ INSERT INTO pantry_items (user_id, name, quantity) VALUES (1, '간장', 1);
 
 ### MQ-4: 에러 메시지 UX
 - [ ] 네트워크 에러 시 "네트워크 연결을 확인해주세요" 메시지
-- [ ] `400 INVALID_ITEM_IDS` 시 "잘못된 아이템이 포함되어 있습니다" 메시지
-- [ ] `409 ALREADY_COMPLETED` 시 "이미 완료된 목록입니다" 메시지
+- [ ] `404 RESOURCE_NOT_FOUND` 시 "쇼핑 목록을 찾을 수 없습니다" 메시지
+- [ ] `403 FORBIDDEN` 시 "권한이 없습니다" 메시지
 - [ ] 에러 메시지는 토스트 또는 팝업 내부 인라인으로 표시됨
 
 ### MQ-5: 완료 후 UI 상태
-- [ ] 쇼핑 목록 화면 상단에 "완료됨" 배지 표시
-- [ ] 모든 mutation 버튼이 시각적으로 비활성화됨 (회색 처리)
+- [ ] 쇼핑 목록 화면 상단에 "완료됨" 배지 표시 (12a 기능)
+- [ ] 모든 mutation 버튼이 시각적으로 비활성화됨 (회색 처리, 12a 기능)
 - [ ] 팬트리에 추가된 아이템은 체크박스 옆에 작은 뱃지 표시
-- [ ] 완료 시각 표시 (`completed_at`)
+- [ ] 완료 시각 표시 (`completed_at`, 있는 경우)
 
 ### MQ-6: 접근성
 - [ ] 팝업이 키보드로 네비게이션 가능 (Tab, Enter, Esc)
@@ -298,32 +302,29 @@ INSERT INTO pantry_items (user_id, name, quantity) VALUES (1, '간장', 1);
 ## Automation Split
 
 ### Vitest 단위 테스트
-- [ ] `completeShoppingList` 서비스 함수 — `add_to_pantry_item_ids: null` 처리
-- [ ] `completeShoppingList` 서비스 함수 — `add_to_pantry_item_ids: []` 처리
-- [ ] `completeShoppingList` 서비스 함수 — `add_to_pantry_item_ids: [1, 2]` 처리
-- [ ] 4단계 검증 — pantry-excluded 필터링 로직
-- [ ] 4단계 검증 — unchecked 필터링 로직
-- [ ] 4단계 검증 — 중복 ID 제거 로직
-- [ ] 카운트 일치 검증 (`pantry_added = pantry_added_item_ids.length`)
-- [ ] `ALREADY_COMPLETED` 에러 핸들링
-- [ ] `INVALID_ITEM_IDS` 에러 핸들링
-- [ ] `INVALID_MEAL_STATUS` 에러 핸들링
-- [ ] Mutation API 보호 로직 (완료 후 409 반환)
-- [ ] 트랜잭션 롤백 시나리오 (모킹)
+- [ ] `completeShoppingList` 서비스 함수 — `add_to_pantry_item_ids` 미전달 처리 <!-- omo:id=vitest_undeclared;stage=2;scope=backend;review=3 -->
+- [ ] `completeShoppingList` 서비스 함수 — `add_to_pantry_item_ids: []` 처리 <!-- omo:id=vitest_empty_array;stage=2;scope=backend;review=3 -->
+- [ ] `completeShoppingList` 서비스 함수 — `add_to_pantry_item_ids: [uuid1, uuid2]` 처리 <!-- omo:id=vitest_selective;stage=2;scope=backend;review=3 -->
+- [ ] 4단계 필터 — pantry-excluded 필터링 로직 <!-- omo:id=vitest_filter_excluded;stage=2;scope=backend;review=3 -->
+- [ ] 4단계 필터 — unchecked 필터링 로직 <!-- omo:id=vitest_filter_unchecked;stage=2;scope=backend;review=3 -->
+- [ ] 4단계 필터 — 중복 방지 로직 (멱등성) <!-- omo:id=vitest_filter_duplicate;stage=2;scope=backend;review=3 -->
+- [ ] 카운트 일치 검증 (`pantry_added = pantry_added_item_ids.length`) <!-- omo:id=vitest_count_match;stage=2;scope=backend;review=3 -->
+- [ ] 무효 ID 무시 처리 (다른 list, excluded, unchecked) <!-- omo:id=vitest_invalid_ignored;stage=2;scope=backend;review=3 -->
+- [ ] 멱등성 (재호출 시 200) <!-- omo:id=vitest_idempotent;stage=2;scope=backend;review=3 -->
+- [ ] 트랜잭션 롤백 시나리오 (모킹) <!-- omo:id=vitest_transaction_rollback;stage=2;scope=backend;review=3 -->
 
 ### Playwright E2E 테스트
-- [ ] **E2E-1**: 완료 버튼 클릭 → 팝업 표시 → "모두 추가" → 완료 → 팬트리 확인
-- [ ] **E2E-2**: 완료 버튼 클릭 → 팝업 표시 → 2개 선택 → "선택 추가" → 완료 → 팬트리에 2개만 존재
-- [ ] **E2E-3**: 완료 버튼 클릭 → 팝업 표시 → "추가 안 함" → 완료 → 팬트리 비어있음
-- [ ] **E2E-4**: 완료 후 쇼핑 목록 화면 재접근 → mutation 버튼 비활성화 확인
-- [ ] **E2E-5**: 완료 후 아이템 추가 시도 → 409 에러 확인
-- [ ] **E2E-6**: 이미 완료된 리스트에 재완료 시도 → 409 에러 확인
-- [ ] **E2E-7**: meals 상태 전환 확인 (`registered → shopping_done`)
-- [ ] **E2E-8**: pantry-excluded 아이템 필터링 확인 (팝업에 표시 안 됨)
-- [ ] **E2E-9**: unchecked 아이템 자동 필터링 확인 (서버 측)
+- [ ] **E2E-1**: 완료 버튼 클릭 → 팝업 표시 → "모두 추가" → 완료 → 팬트리 확인 <!-- omo:id=e2e_all_add;stage=4;scope=frontend;review=6 -->
+- [ ] **E2E-2**: 완료 버튼 클릭 → 팝업 표시 → 2개 선택 → "선택 추가" → 완료 → 팬트리에 2개만 존재 <!-- omo:id=e2e_selective_add;stage=4;scope=frontend;review=6 -->
+- [ ] **E2E-3**: 완료 버튼 클릭 → 팝업 표시 → "추가 안 함" → 완료 → 팬트리 비어있음 <!-- omo:id=e2e_no_add;stage=4;scope=frontend;review=6 -->
+- [ ] **E2E-4**: 완료 후 쇼핑 목록 화면 재접근 → mutation 버튼 비활성화 확인 (12a 기능) <!-- omo:id=e2e_readonly_check;stage=4;scope=frontend;review=6 -->
+- [ ] **E2E-5**: 완료 API 재호출 → 200 + 동일 결과 확인 (멱등성) <!-- omo:id=e2e_idempotent;stage=2;scope=backend;review=3 -->
+- [ ] **E2E-6**: meals 상태 전환 확인 (`registered → shopping_done`) <!-- omo:id=e2e_meals_transition;stage=2;scope=backend;review=3 -->
+- [ ] **E2E-7**: pantry-excluded 아이템 필터링 확인 (팝업에 표시 안 됨) <!-- omo:id=e2e_excluded_hidden;stage=4;scope=frontend;review=6 -->
+- [ ] **E2E-8**: unchecked 아이템 자동 필터링 확인 (서버 측) <!-- omo:id=e2e_unchecked_filtered;stage=2;scope=backend;review=3 -->
 
 ---
 
 **작성일**: 2026-04-28
 **작성자**: Claude (Stage 1)
-**리뷰 상태**: Pending Codex internal 1.5 docs gate
+**리뷰 상태**: Repair 1 in progress
