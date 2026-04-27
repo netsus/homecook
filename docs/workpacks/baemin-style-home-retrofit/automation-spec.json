@@ -1,0 +1,89 @@
+{
+  "slice_id": "baemin-style-home-retrofit",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "all-restyle-uses-css-variables-only",
+      "existing-props-interfaces-preserved",
+      "h1-information-architecture-preserved",
+      "h5-modal-decisions-honored",
+      "ui-primitives-consumed-not-modified"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [
+        "HOME"
+      ],
+      "required_screens": [
+        "HOME"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/HOME.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/HOME-baemin-style-retrofit-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "HOME-before-mobile.png",
+        "HOME-after-mobile.png",
+        "HOME-after-narrow-320.png",
+        "HOME-sort-sheet-open.png",
+        "HOME-ingredient-filter-active.png",
+        "HOME-loading-state.png",
+        "HOME-empty-state.png",
+        "HOME-error-state.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/BAEMIN_STYLE_HOME_RETROFIT-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "hardcoded-hex-rgba-in-restyled-components",
+    "component-outside-declared-scope-edited",
+    "jua-font-imported",
+    "cook-token-changed",
+    "h1-information-architecture-violated",
+    "h5-modal-decisions-violated",
+    "horizontal-overflow-mobile-or-320",
+    "ui-state-disappeared",
+    "existing-props-interface-broken",
+    "ui-primitive-file-modified",
+    "unresolved-authority-blocker",
+    "exploratory-qa-not-run-no-skip-rationale"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 3
+  }
+}

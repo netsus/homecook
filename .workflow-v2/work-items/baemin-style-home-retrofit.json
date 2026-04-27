@@ -1,0 +1,97 @@
+{
+  "id": "baemin-style-home-retrofit",
+  "title": "HOME anchor screen Baemin-style visual retrofit",
+  "summary": "HOME 화면의 기존 H1 정보 구조(D1-D4)를 보존하면서 승인된 배민 스타일 토큰과 공유 UI 프리미티브를 적용해 시각적 리트로핏을 완성한다. Discovery panel, RecipeCard, ThemeCarouselStrip, SortMenu, AppHeader, Skeleton을 토큰 기반으로 리스타일하고 components/ui/ 프리미티브를 소비한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "Apply approved Baemin-style tokens and shared UI primitives to the HOME anchor screen while preserving H1 information architecture decisions (D1-D4). Token-swap hardcoded colors/shadows/radii to CSS variables, consume components/ui/ primitives, and maintain all existing loading/empty/error states.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "h6-baemin-style-direction",
+    "baemin-style-tokens-additive",
+    "baemin-style-token-values",
+    "baemin-style-shared-components",
+    "h1-home-first-impression"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/baemin-style-home-retrofit/README.md",
+      "docs/workpacks/baemin-style-home-retrofit/acceptance.md",
+      "ui/designs/HOME.md",
+      "ui/designs/critiques/HOME-baemin-style-retrofit-critique.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md",
+      "ui/designs/authority/BAEMIN_STYLE_DIRECTION-preflight.md",
+      "docs/design/design-tokens.md",
+      "docs/workpacks/h1-home-first-impression/README.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/design-tokens.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 3
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm verify:frontend"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "all-restyle-uses-css-variables-only",
+      "existing-props-interfaces-preserved",
+      "h1-information-architecture-preserved",
+      "h5-modal-decisions-honored",
+      "ui-primitives-consumed-not-modified"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "HOME information architecture changes (H1 D1-D4 locked)",
+    "BottomTabs restyling (separate app-wide retrofit slice)",
+    "AppShell structural changes",
+    "Other screen retrofits (RECIPE_DETAIL, PLANNER_WEEK)",
+    "New features or interactions",
+    "API, DB, or status-transition changes",
+    "Importing Jua or prototype-only fonts",
+    "Changing --cook-* token values",
+    "Changing --background, --foreground, --muted, --surface, --panel, --line, --olive token values",
+    "Adding new CSS tokens",
+    "Modifying components/ui/ primitives (consume only)"
+  ],
+  "open_questions": []
+}

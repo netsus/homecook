@@ -368,6 +368,24 @@
         "pnpm verify:frontend"
       ],
       "notes": "Internal 6.5 projection sync after Stage 6 Codex review. PR #227 current head checks green before projection sync; local required checks passed including pnpm verify:frontend. CI visual failed once due stale Linux snapshots, then passed after Linux baseline refresh. Stage artifacts: .omx/artifacts/claude-delegate-baemin-style-shared-components-stage4-implementation-response-20260427T044438Z.md, .omx/artifacts/stage5-baemin-style-shared-components-design-review-20260427T052335Z.md, .omx/artifacts/stage6-baemin-style-shared-components-pr-review-20260427T053643Z.md. Manual Only remains user final visual-feel confirmation after merge."
+    },
+    {
+      "id": "baemin-style-home-retrofit",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/baemin-style-home-retrofit",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "git diff --check",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm verify:frontend"
+      ],
+      "notes": "Stage 1 workpack docs for HOME anchor screen Baemin-style visual retrofit. Dependencies: h6-direction, tokens-additive, token-values, shared-components, h1-home-first-impression (all merged). Implementation branch: feature/fe-baemin-style-home-retrofit."
     }
   ]
 }
