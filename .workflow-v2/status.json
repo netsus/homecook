@@ -372,11 +372,11 @@
     {
       "id": "baemin-style-home-retrofit",
       "preset": "vertical-slice-strict",
-      "branch": "docs/baemin-style-home-retrofit",
-      "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-baemin-style-home-retrofit",
+      "pr_path": "https://github.com/netsus/homecook/pull/232",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "git diff --check",
         "pnpm validate:workflow-v2",
@@ -385,7 +385,7 @@
         "pnpm lint",
         "pnpm verify:frontend"
       ],
-      "notes": "Stage 1 workpack docs for HOME anchor screen Baemin-style visual retrofit. Dependencies: h6-direction, tokens-additive, token-values, shared-components, h1-home-first-impression (all merged). Implementation branch: feature/fe-baemin-style-home-retrofit."
+      "notes": "Stage 6 approved by Codex after Claude Stage 4 implementation, Codex Stage 5 design review, and Claude final authority gate approve. PR #232 local required checks passed, GitHub current-head checks passed after Linux visual baseline repair. Internal 6.5 closeout projection synced for final merge."
     },
     {
       "id": "10b-shopping-share-text",

@@ -112,7 +112,7 @@ HOME 화면의 기존 정보 구조(H1 확정: D1 정렬=섹션헤더, D2 테마
 - UI risk: `high-risk` (anchor screen visual retrofit)
 - Anchor screen dependency: `HOME`
 - Visual artifact: HOME before/after screenshots at mobile default (390px), narrow (320px), desktop sanity; key active states (sort sheet open, ingredient filter active, loading, empty, error)
-- Authority status: required
+- Authority status: reviewed
 - Design wireframe: `ui/designs/HOME.md` — Baemin-Style Visual Retrofit Addendum 섹션
 - Design critique: `ui/designs/critiques/HOME-baemin-style-retrofit-critique.md`
 - Authority report (Stage 4/5): `ui/designs/authority/BAEMIN_STYLE_HOME_RETROFIT-authority.md`
@@ -120,9 +120,9 @@ HOME 화면의 기존 정보 구조(H1 확정: D1 정렬=섹션헤더, D2 테마
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 기본값; HOME 리트로핏 미실행
+- [ ] 임시 UI (temporary) — Stage 1 기본값; HOME 리트로핏 미실행
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비
-- [ ] 확정 (confirmed) — Stage 5/6 review 통과, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5/6 review 통과, authority blocker 0개
 - [ ] N/A
 
 > 이 슬라이스는 high-risk anchor screen 변경이다. Authority review가 필수다.
@@ -195,25 +195,25 @@ HOME 화면의 기존 정보 구조(H1 확정: D1 정렬=섹션헤더, D2 테마
 
 > Living closeout 문서. Stage 4에서 구현 항목 체크, Stage 5/6에서 리뷰.
 
-- [ ] HomeScreen discovery panel 리스타일 (glass-panel, search bar, ingredient filter button → token variables) <!-- omo:id=bshr-discovery-panel;stage=4;scope=frontend;review=5,6 -->
-- [ ] HomeScreen active filter summary bar 리스타일 (hardcoded rgba → token variables) <!-- omo:id=bshr-filter-summary;stage=4;scope=frontend;review=5,6 -->
-- [ ] RecipeCard 리스타일 (surface, shadow, badge, stats pills, tags → tokens + `Card`/`Badge` primitives) <!-- omo:id=bshr-recipe-card;stage=4;scope=frontend;review=5,6 -->
-- [ ] ThemeCarouselStrip/Card 리스타일 (card surface, thumbnail overlay, right-fade gradient → tokens) <!-- omo:id=bshr-theme-carousel;stage=4;scope=frontend;review=5,6 -->
-- [ ] SortMenu 리스타일 (sort button, mobile sheet, desktop dropdown → token variables, H5 modal decisions) <!-- omo:id=bshr-sort-menu;stage=4;scope=frontend;review=5,6 -->
-- [ ] Skeleton 컴포넌트 리스타일 (hardcoded bg → `Skeleton` primitive or token-based) <!-- omo:id=bshr-skeleton;stage=4;scope=frontend;review=5,6 -->
-- [ ] AppHeader 리스타일 (glass-panel → token surface/shadow, brand text hover → token) <!-- omo:id=bshr-app-header;stage=4;scope=frontend;review=5,6 -->
-- [ ] IngredientFilterModal 잔여 inline 스타일 리스타일 <!-- omo:id=bshr-ingredient-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] `components/ui/` 프리미티브 소비 적용 (Card, Badge, Chip, Skeleton, EmptyState, ErrorState 등) <!-- omo:id=bshr-ui-primitives-consumed;stage=4;scope=frontend;review=5,6 -->
-- [ ] 모든 리스타일이 CSS 변수만 사용 — hardcoded hex/rgba 없음 <!-- omo:id=bshr-token-usage;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 loading/empty/error 상태 보존 확인 <!-- omo:id=bshr-states-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] H1 정보 구조(D1-D4) 보존 확인 <!-- omo:id=bshr-h1-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] H5 modal 결정 보존 확인 (SortMenu sheet) <!-- omo:id=bshr-h5-preserved;stage=4;scope=frontend;review=5,6 -->
-- [ ] `--cook-*` 토큰 값 미변경 확인 <!-- omo:id=bshr-cook-unchanged;stage=4;scope=frontend;review=5,6 -->
-- [ ] Jua 또는 prototype-only 폰트 미사용 확인 <!-- omo:id=bshr-no-font;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm verify:frontend` 통과 <!-- omo:id=bshr-verify-frontend;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME before/after screenshots 캡처 (mobile default, narrow 320px) <!-- omo:id=bshr-regression-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Key active state screenshots (sort sheet, ingredient filter active, loading, empty, error) <!-- omo:id=bshr-active-state-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Exploratory QA bundle 또는 low-risk skip rationale 기록 <!-- omo:id=bshr-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
+- [x] HomeScreen discovery panel 리스타일 (glass-panel, search bar, ingredient filter button → token variables) <!-- omo:id=bshr-discovery-panel;stage=4;scope=frontend;review=5,6 -->
+- [x] HomeScreen active filter summary bar 리스타일 (hardcoded rgba → token variables) <!-- omo:id=bshr-filter-summary;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeCard 리스타일 (surface, shadow, badge, stats pills, tags → tokens + `Card`/`Badge` primitives) <!-- omo:id=bshr-recipe-card;stage=4;scope=frontend;review=5,6 -->
+- [x] ThemeCarouselStrip/Card 리스타일 (card surface, thumbnail overlay, right-fade gradient → tokens) <!-- omo:id=bshr-theme-carousel;stage=4;scope=frontend;review=5,6 -->
+- [x] SortMenu 리스타일 (sort button, mobile sheet, desktop dropdown → token variables, H5 modal decisions) <!-- omo:id=bshr-sort-menu;stage=4;scope=frontend;review=5,6 -->
+- [x] Skeleton 컴포넌트 리스타일 (hardcoded bg → `Skeleton` primitive or token-based) <!-- omo:id=bshr-skeleton;stage=4;scope=frontend;review=5,6 -->
+- [x] AppHeader 리스타일 (glass-panel → token surface/shadow, brand text hover → token) <!-- omo:id=bshr-app-header;stage=4;scope=frontend;review=5,6 -->
+- [x] IngredientFilterModal 잔여 inline 스타일 리스타일 <!-- omo:id=bshr-ingredient-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] `components/ui/` 프리미티브 소비 적용 (Badge, Skeleton 소비 완료; Card는 Link wrapper 비호환으로 토큰 정렬만) <!-- omo:id=bshr-ui-primitives-consumed;stage=4;scope=frontend;review=5,6 -->
+- [x] 모든 리스타일이 CSS 변수만 사용 — hardcoded hex/rgba 없음 <!-- omo:id=bshr-token-usage;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 loading/empty/error 상태 보존 확인 <!-- omo:id=bshr-states-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] H1 정보 구조(D1-D4) 보존 확인 <!-- omo:id=bshr-h1-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] H5 modal 결정 보존 확인 (SortMenu sheet) <!-- omo:id=bshr-h5-preserved;stage=4;scope=frontend;review=5,6 -->
+- [x] `--cook-*` 토큰 값 미변경 확인 <!-- omo:id=bshr-cook-unchanged;stage=4;scope=frontend;review=5,6 -->
+- [x] Jua 또는 prototype-only 폰트 미사용 확인 <!-- omo:id=bshr-no-font;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend` 통과 <!-- omo:id=bshr-verify-frontend;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME before/after screenshots 캡처 (mobile default, narrow 320px) <!-- omo:id=bshr-regression-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Key active state screenshots (sort sheet, ingredient filter active, loading, empty, error) <!-- omo:id=bshr-active-state-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Exploratory QA bundle 또는 low-risk skip rationale 기록 <!-- omo:id=bshr-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
 
 ## Blockers
 

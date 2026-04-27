@@ -76,9 +76,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending"
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed"
   },
   "out_of_scope": [
     "HOME information architecture changes (H1 D1-D4 locked)",
