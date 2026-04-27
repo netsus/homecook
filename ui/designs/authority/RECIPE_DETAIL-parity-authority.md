@@ -177,4 +177,4 @@ None. Stage 5 found and repaired two small-mobile blockers before confirmation: 
 
 ## OS-Specific Snapshot Note
 
-Darwin-platform visual regression snapshots updated locally. Linux-platform snapshots (CI reference) require Codex/CI follow-up to regenerate.
+Darwin-platform visual regression snapshots were updated locally. Linux-platform RECIPE_DETAIL snapshots were refreshed from PR #270 CI visual actuals after the first visual check exposed stale Linux baselines.
