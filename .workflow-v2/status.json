@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-27T13:10:51.000Z",
+  "updated_at": "2026-04-27T14:48:23.902Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -317,6 +317,21 @@
         "pnpm validate:workflow-v2"
       ],
       "notes": "Design decision gate for official Baemin-style visual direction adoption. Runtime app code is out of scope; workflow-v2 uses execution_mode=manual while the design-decision meaning is recorded in docs."
+    },
+    {
+      "id": "h7-baemin-prototype-parity-direction",
+      "preset": "docs-only",
+      "branch": "docs/h7-baemin-prototype-parity-direction",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "git diff --check",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack"
+      ],
+      "notes": "Design decision gate for near-100% Baemin prototype parity. Runtime app code is out of scope; workflow-v2 uses execution_mode=manual while the design-decision meaning is recorded in docs. Depends on planner prototype-priority contract from PR #249."
     },
     {
       "id": "baemin-style-tokens-additive",
