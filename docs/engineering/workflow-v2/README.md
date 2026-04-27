@@ -23,6 +23,10 @@
   - Codex는 conductor, OMO는 rail이다.
   - Homecook OMO는 Codex가 orchestration owner이고 OMO가 deterministic rail인 `Codex-orchestrated OMO rail`로 전환한다.
   - Claude는 Stage 1/3/4, authority-required final gate, 독립 review가 필요한 specialized lane으로 남긴다.
+- 현재 readiness 경계:
+  - `OMO autonomous promotion`은 아직 `not-ready`다. `.workflow-v2/promotion-evidence.json`의 promotion gate와 active incident blocker를 해소하기 전에는 OMO 단독 승격 완료로 보지 않는다.
+  - `Codex-orchestrated OMO rail`은 product slice 진행에 사용할 수 있다. Codex가 blocker 분류와 repair routing을 맡고, OMO는 상태, validator, current-head gate, closeout/report projection을 담당한다.
+  - slice `12b-shopping-pantry-reflect` 시작 전에는 [omo-codex-orchestrated-rail.md](./omo-codex-orchestrated-rail.md)의 `Slice 12b Preflight Lock`을 먼저 확인한다.
 
 ## Why
 
@@ -124,6 +128,8 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 
 - workflow-v2는 현재 Homecook의 OMO 기본 운영 경로다.
 - 현재 기본 운영 모델은 `Codex-orchestrated OMO rail`이다. Codex가 blocker 분류와 repair routing을 맡고, OMO는 state transition / validator / current-head gate / closeout-report projection을 맡는다.
+- `Codex-orchestrated OMO rail`이 usable하다는 말은 promotion gate가 ready라는 뜻이 아니다. promotion readiness는 `.workflow-v2/promotion-evidence.json`과 `promotion-readiness.md`가 정한 별도 gate로 판단한다.
+- 12b 이후 product slice는 시작 전에 해당 slice의 report/evidence 체크리스트와 escalation 기준을 명시하고, `human_escalation`은 manual decision 또는 repair budget exhaustion으로만 남긴다.
 - 이 README는 operator entry다. product stage actor는 workflow-v2 spec 전체를 기본 읽기 세트로 삼지 않고, `slice-workflow.md`와 `agent-workflow-overview.md`를 우선한다.
 - product stage actor 기본 읽기에는 `workflow-v2` maintainer spec을 넣지 않는다. maintainer spec은 runtime/report/tooling 변경 때만 읽는다.
 - `workflow-v2` 관련 첫 단계는 문서와 schema를 고정하는 것이다.
