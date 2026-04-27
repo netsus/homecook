@@ -1,0 +1,88 @@
+{
+  "slice_id": "baemin-style-modal-system-fit",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/",
+      "/recipe/[id]"
+    ],
+    "required_states": [
+      "login-gate-open",
+      "planner-add-sheet-open",
+      "save-modal-open",
+      "ingredient-filter-open",
+      "sort-sheet-open"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "all-restyle-uses-css-variables-only",
+      "existing-props-interfaces-preserved",
+      "h5-d1-d6-decisions-preserved",
+      "modal-functional-flow-preserved",
+      "login-gate-return-to-action-preserved",
+      "olive-accent-policy-preserved",
+      "ui-primitives-consumed-not-modified",
+      "login-gate-modal-uses-modal-header"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "login-gate-modal-before.png",
+        "login-gate-modal-after.png",
+        "planner-add-sheet-fit.png",
+        "save-modal-fit.png",
+        "ingredient-filter-fit.png",
+        "sort-sheet-fit.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/BAEMIN_STYLE_MODAL_SYSTEM_FIT-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "h5-d1-d6-decisions-violated",
+    "modal-functional-flow-changed",
+    "hardcoded-hex-rgba-in-restyled-components",
+    "component-outside-declared-scope-edited",
+    "jua-font-imported",
+    "modal-horizontal-overflow",
+    "login-gate-return-to-action-broken",
+    "modal-state-disappeared",
+    "ui-primitive-file-modified",
+    "unresolved-authority-blocker",
+    "exploratory-qa-not-run-no-skip-rationale"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 3
+  }
+}
