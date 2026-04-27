@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-27T10:26:21.000Z",
+  "updated_at": "2026-04-27T12:22:14.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -440,10 +440,10 @@
     {
       "id": "baemin-style-planner-week-retrofit",
       "preset": "vertical-slice-strict",
-      "branch": "docs/baemin-style-planner-week-retrofit",
-      "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
+      "branch": "feature/fe-baemin-style-planner-week-retrofit",
+      "pr_path": "https://github.com/netsus/homecook/pull/242",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "git diff --check",
@@ -453,7 +453,7 @@
         "pnpm lint",
         "pnpm verify:frontend"
       ],
-      "notes": "Stage 1 docs gate in progress on docs/baemin-style-planner-week-retrofit branch. PLANNER_WEEK anchor screen visual retrofit — single target file components/planner/planner-week-screen.tsx. High-risk authority review required."
+      "notes": "Internal 6.5 projection sync after Stage 6 Codex review. PR #242 current head checks green before projection sync; local required checks passed including pnpm verify:frontend and pnpm test:lighthouse. Claude final authority approved. Exploratory QA score 97. Manual Only remains user final visual-feel confirmation after merge."
     },
     {
       "id": "12a-shopping-complete",
@@ -470,6 +470,24 @@
         "pnpm typecheck"
       ],
       "notes": "Stage 6 closeout passed on PR #243 after Codex repair and verification. Backend PR #241 is merged. Frontend adds SHOPPING_DETAIL completion UI, loading/success/error/read-only states, Vitest coverage, fixture Playwright coverage, created-list route correction, shopping detail schema fallback for local DB, planner hydration fix, and real local Supabase browser smoke for planner cross-screen shopping_done transition. Pantry reflection remains slice 12b."
+    },
+    {
+      "id": "baemin-style-modal-system-fit",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/baemin-style-modal-system-fit",
+      "pr_path": "pending",
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "git diff --check",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm verify:frontend"
+      ],
+      "notes": "Stage 1 docs created on docs/baemin-style-modal-system-fit. Modal/sheet overlay family Baemin-style visual fit: LoginGateModal H5 합류 (ModalHeader, eyebrow removal, icon-only close) + 4 interaction modal surface/shadow/radius/footer token alignment. Visual-only, no backend. authority_required=true."
     }
   ]
 }
