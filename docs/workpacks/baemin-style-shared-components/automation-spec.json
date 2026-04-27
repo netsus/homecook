@@ -1,0 +1,84 @@
+{
+  "slice_id": "baemin-style-shared-components",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "disabled"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "all-components-use-css-variables-only",
+      "existing-props-interfaces-preserved",
+      "h5-modal-decisions-honored"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [
+        "HOME",
+        "RECIPE_DETAIL",
+        "PLANNER_WEEK"
+      ],
+      "required_screens": [],
+      "generator_required": false,
+      "critic_required": false,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "component-state-previews-button",
+        "component-state-previews-chip",
+        "component-state-previews-card",
+        "component-state-previews-badge",
+        "component-state-previews-empty-state",
+        "component-state-previews-error-state",
+        "component-state-previews-skeleton",
+        "HOME-before-mobile.png",
+        "HOME-after-mobile.png",
+        "HOME-after-narrow-320.png",
+        "RECIPE_DETAIL-before-mobile.png",
+        "RECIPE_DETAIL-after-mobile.png",
+        "RECIPE_DETAIL-after-narrow-320.png",
+        "PLANNER_WEEK-before-mobile.png",
+        "PLANNER_WEEK-after-mobile.png",
+        "PLANNER_WEEK-after-narrow-320.png"
+      ],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "hardcoded-hex-in-components",
+    "component-outside-declared-scope-edited",
+    "jua-font-imported",
+    "cook-token-changed",
+    "h125-interaction-decisions-violated",
+    "horizontal-overflow-mobile-or-320",
+    "ui-state-disappeared",
+    "existing-props-interface-broken",
+    "unresolved-authority-blocker",
+    "exploratory-qa-not-run-no-skip-rationale"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 3
+  }
+}
