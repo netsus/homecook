@@ -454,6 +454,22 @@
         "pnpm verify:frontend"
       ],
       "notes": "Stage 1 docs gate in progress on docs/baemin-style-planner-week-retrofit branch. PLANNER_WEEK anchor screen visual retrofit — single target file components/planner/planner-week-screen.tsx. High-risk authority review required."
+    },
+    {
+      "id": "12a-shopping-complete",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/12a-shopping-complete",
+      "pr_path": null,
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 docs PR. Shopping completion core flow: POST /shopping/lists/{id}/complete (no pantry reflection yet), meals.status registered→shopping_done transition, is_completed=true, read-only lock, idempotency. Pantry reflection moved to slice 12b."
     }
   ]
 }
