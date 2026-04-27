@@ -170,3 +170,100 @@ slot row 구조: `[끼니명 고정폭] [식사명 flex-1 truncate] [인분 chip
 - `ui/designs/evidence/06-recipe-to-planner/PLANNER_WEEK-5-column-mobile.png`
 - `ui/designs/evidence/06-recipe-to-planner/PLANNER_WEEK-5-column-mobile-narrow.png`
 - `ui/designs/evidence/06-recipe-to-planner/PLANNER_WEEK-after-add-mobile.png`
+
+---
+
+## Baemin-Style Visual Retrofit Addendum
+
+> 추가일: 2026-04-27
+> 관련 workpack: `docs/workpacks/baemin-style-planner-week-retrofit/README.md`
+> 상태: Stage 1 문서화 완료, Stage 4 구현 대기
+
+이 섹션은 PLANNER_WEEK 화면에 배민 스타일 토큰을 적용하는 시각적 리트로핏 계획이다. H2/H4 day-card interaction contract와 기존 정보 구조를 보존하면서, 승인된 CSS 변수 토큰과 공유 UI 프리미티브로 교체한다.
+
+### 리트로핏 대상 파일
+
+| 파일 | 리트로핏 범위 |
+|------|-------------|
+| `components/planner/planner-week-screen.tsx` | Hero section, CTA toolbar, week context bar, weekday strip, day cards, slot rows, status chips, loading skeleton, empty state, unauthorized state — `glass-panel` 제거, hardcoded rgba/hex/bg-white → 토큰 기반, STATUS_META rgba → `color-mix()` 재파생 |
+
+### 토큰 교체 와이어프레임
+
+```text
+┌─────────────────────────────────────┐
+│ HOMECOOK                            │  ← AppHeader (변경 없음)
+├─────────────────────────────────────┤
+│ ┌─ Hero Section ──────────────────┐ │
+│ │ Planner Week / 식단 플래너      │ │  glass-panel → --panel + --line + --shadow-2
+│ │ [장보기] [요리하기] [남은요리]  │ │  bg-white/76 → --surface-fill
+│ │  장보기: --brand + --surface     │ │  text-white → --surface
+│ │  비활성: --surface + --muted     │ │  rgba shadows → color-mix() / --shadow-1
+│ └─────────────────────────────────┘ │  rounded-[clamp] → --radius-xl
+│                                     │
+│ ┌─ Week Context Bar (sticky) ─────┐ │
+│ │ 이번 주 · 식사 N건              │ │  glass-panel → --panel + --line + --shadow-2
+│ │ 현재 범위                        │ │  bg-white/88 → --panel (with backdrop-blur)
+│ │ 4월 14일 ~ 4월 20일             │ │  rgba shadow → --shadow-2
+│ │ [화] [수] [목] [금] [토] [일]   │ │  rounded-[13px] → --radius-md
+│ └─────────────────────────────────┘ │  rounded-[clamp] → --radius-xl
+│                                     │
+│ ┌─ Day Card ──────────────────────┐ │
+│ │ [금] 4월 17일              ⋯   │ │  glass-panel → --panel + --line + --shadow-2
+│ │─────────────────────────────────│ │  rounded-[clamp] → --radius-xl
+│ │ 아침  김치찌개    2인분  등록   │ │  bg-white → --surface (serving chip)
+│ │ 점심  샐러드      1인분  장보기 │ │  STATUS_META rgba → color-mix()
+│ │ 간식  ─ 비어 있음 ─            │ │  leftover rgb(46,166,122) → --olive
+│ │ 저녁  된장찌개    2인분  등록   │ │  rounded-[11px] weekday badge → --radius-md
+│ └─────────────────────────────────┘ │  text-white badge → --surface
+│                                     │
+│ ┌─ Loading Skeleton ──────────────┐ │
+│ │ ████████████████████████████████│ │  glass-panel → --panel + --line + --shadow-2
+│ │ ████████████████████████████████│ │  bg-white/70 → --surface-fill
+│ └─────────────────────────────────┘ │  rounded-[20px] → --radius-xl
+│                                     │
+│ ┌─ Empty State ───────────────────┐ │
+│ │ 아직 등록된 식사가 없어요.      │ │  glass-panel → --panel + --line + --shadow-2
+│ └─────────────────────────────────┘ │  rounded-[18px] → --radius-lg
+└─────────────────────────────────────┘
+```
+
+### STATUS_META `color-mix()` 전환
+
+| Status | 현재 배경 | 토큰 전환 | 텍스트 색상 (변경 없음) |
+|--------|-----------|-----------|----------------------|
+| `registered` | `rgba(255,108,60,0.12)` | `color-mix(in srgb, var(--brand) 12%, transparent)` | `var(--brand-deep)` |
+| `shopping_done` | `rgba(46,166,122,0.12)` | `color-mix(in srgb, var(--olive) 12%, transparent)` | `var(--olive)` |
+| `cook_done` | `rgba(30,30,30,0.08)` | `color-mix(in srgb, var(--foreground) 8%, transparent)` | `var(--foreground)` |
+
+### Radius 매핑 참조
+
+| 현재 | 토큰 | 사용처 |
+|------|------|--------|
+| `12px` | `--radius-md` | CTA class, weekday badge |
+| `13px` | `--radius-md` | weekday strip item |
+| `16px` | `--radius-lg` | CTA group |
+| `18px` | `--radius-lg` | unauthorized info, empty message |
+| `20px`+ / `clamp(...)` | `--radius-xl` | hero, week context, day cards, skeleton |
+| `full` | `--radius-full` | range navigation buttons, serving chip |
+
+### 보존 계약
+
+- H2/H4 day-card interaction contract: 세로 스크롤 전용, 가로 스크롤 없음, 2일 이상 mobile overview
+- 정보 구조: hero → CTA toolbar → week context bar → weekday strip → day cards → slot rows
+- Weekday strip swipe gesture 및 keyboard navigation
+- 모든 상태: checking / authenticated / unauthorized / loading / ready / empty / error
+- ContentState 컴포넌트 소비 패턴 (checking, unauthorized, error)
+
+### Evidence Plan
+
+경로: `ui/designs/evidence/baemin-style/planner-week-retrofit/`
+
+| artifact | 파일 |
+|----------|------|
+| before — mobile default (390px) | `PLANNER_WEEK-before-mobile.png` |
+| after — mobile default (390px) | `PLANNER_WEEK-after-mobile.png` |
+| after — narrow (320px) | `PLANNER_WEEK-after-narrow-320.png` |
+| loading state | `PLANNER_WEEK-loading-state.png` |
+| empty state | `PLANNER_WEEK-empty-state.png` |
+| unauthorized state | `PLANNER_WEEK-unauthorized-state.png` |
+| scrolled day cards | `PLANNER_WEEK-scrolled-day-cards.png` |

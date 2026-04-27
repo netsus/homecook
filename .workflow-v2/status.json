@@ -436,6 +436,24 @@
         "pnpm verify:frontend"
       ],
       "notes": "Internal 6.5 projection sync after Stage 6 Codex review. PR #237 current head checks green before projection sync; local required checks passed including pnpm verify:frontend. Claude final authority approved. CI visual failed once due stale Linux login-gate snapshots, then passed after Linux baseline refresh. Manual Only remains user final visual-feel confirmation after merge."
+    },
+    {
+      "id": "baemin-style-planner-week-retrofit",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/baemin-style-planner-week-retrofit",
+      "pr_path": "pending",
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "git diff --check",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm verify:frontend"
+      ],
+      "notes": "Stage 1 docs gate in progress on docs/baemin-style-planner-week-retrofit branch. PLANNER_WEEK anchor screen visual retrofit — single target file components/planner/planner-week-screen.tsx. High-risk authority review required."
     }
   ]
 }

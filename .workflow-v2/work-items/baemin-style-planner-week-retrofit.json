@@ -1,0 +1,103 @@
+{
+  "id": "baemin-style-planner-week-retrofit",
+  "title": "PLANNER_WEEK anchor screen Baemin-style visual retrofit",
+  "summary": "PLANNER_WEEK 화면의 기존 정보 구조(hero, CTA toolbar, week context bar, weekday strip, day cards, slot rows, status chips)와 H2/H4 day-card interaction contract를 보존하면서 승인된 배민 스타일 토큰과 공유 UI 프리미티브를 적용해 시각적 리트로핏을 완성한다. glass-panel 제거, STATUS_META rgba를 color-mix()로 재파생, bg-white/* → token surface, hardcoded radii → token radius.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "Apply approved Baemin-style tokens and shared UI primitives to the PLANNER_WEEK anchor screen while preserving information architecture and H2/H4 day-card interaction contract. Token-swap hardcoded colors/shadows/radii to CSS variables, derive STATUS_META tints from tokens via color-mix(), consume components/ui/ primitives, and maintain all existing auth/screen states.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "h6-baemin-style-direction",
+    "baemin-style-tokens-additive",
+    "baemin-style-token-values",
+    "baemin-style-shared-components",
+    "baemin-style-home-retrofit",
+    "baemin-style-recipe-detail-retrofit",
+    "H2-planner-week-v2-redesign"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/baemin-style-planner-week-retrofit/README.md",
+      "docs/workpacks/baemin-style-planner-week-retrofit/acceptance.md",
+      "ui/designs/PLANNER_WEEK.md",
+      "ui/designs/PLANNER_WEEK-v2.md",
+      "ui/designs/critiques/PLANNER_WEEK-baemin-style-retrofit-critique.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md",
+      "docs/design/design-tokens.md",
+      "docs/workpacks/baemin-style-recipe-detail-retrofit/README.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/design/design-tokens.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 3
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm verify:frontend"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "all-restyle-uses-css-variables-only",
+      "existing-props-interfaces-preserved",
+      "planner-week-information-architecture-preserved",
+      "h2-h4-day-card-contract-honored",
+      "ui-primitives-consumed-not-modified",
+      "status-meta-tint-visual-parity",
+      "weekday-strip-interaction-preserved",
+      "two-day-overview-preserved"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "PLANNER_WEEK information architecture changes (hero, CTA toolbar, week context bar, day card, slot row structure/order)",
+    "H2/H4 day-card interaction contract changes (no horizontal scroll reintroduction, no slot row model change)",
+    "Prototype HANDOFF PLANNER_WEEK spec direct copy (not production contract)",
+    "BottomTabs restyling (separate app-wide retrofit slice)",
+    "AppShell/AppHeader structural changes (completed in home-retrofit)",
+    "Other screen retrofits (HOME done, RECIPE_DETAIL done)",
+    "New features or interactions (empty slot tap action, meal status transitions)",
+    "API, DB, or status-transition changes",
+    "Importing Jua or prototype-only fonts",
+    "Changing --background, --foreground, --muted, --surface, --panel, --line, --olive token values",
+    "Adding new CSS tokens",
+    "Modifying components/ui/ primitives (consume only)",
+    "SocialLoginButtons restyling (shared auth component)",
+    "COOK_MODE screen (slices 14/15)",
+    "MEAL_SCREEN restyling (slice 07, separate retrofit target)"
+  ],
+  "open_questions": []
+}
