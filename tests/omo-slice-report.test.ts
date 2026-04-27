@@ -161,10 +161,84 @@ describe("OMO slice report", () => {
     expect(report).toContain("| 2 backend | 10.0분 | 1 |");
     expect(report).toContain("| 4 frontend | 4.0분 | 2 |");
     expect(report).toContain("| human_escalation | 1회 |");
-    expect(report).toContain("| Codex 자동 수정 오류 | 3회 |");
+    expect(report).toContain("| Codex/Claude 자동 수정 오류 | 3회 |");
+    expect(report).toContain("| evidence_source | dispatch, supervisor |");
     expect(report).toContain("backend evaluator returned blocked");
-    expect(report).toContain("## Codex-Resolved Non-Human Errors");
+    expect(report).toContain("## Codex/Claude-Resolved Non-Human Errors");
     expect(report).toContain("Required frontend route is missing");
     expect(report).toContain("opencode run failed with exit code null.");
+  });
+
+  it("uses .omx artifacts as report evidence when dispatch artifacts are absent", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-slice-report-omx-"));
+    const slice = "10b-shopping-share-text";
+
+    mkdirSync(join(rootDir, "docs", "workpacks", slice), { recursive: true });
+    writeJson(join(rootDir, ".workflow-v2", "status.json"), {
+      version: 1,
+      project_profile: "homecook",
+      updated_at: "2026-04-27T08:20:00.000Z",
+      items: [
+        {
+          id: slice,
+          lifecycle: "merged",
+          approval_state: "approved",
+          verification_status: "passed",
+        },
+      ],
+    });
+
+    const artifactsDir = join(rootDir, ".omx", "artifacts");
+    mkdirSync(artifactsDir, { recursive: true });
+    writeFileSync(
+      join(
+        artifactsDir,
+        "claude-delegate-10b-shopping-share-text-stage1-repair-response-20260427T164100KST.md",
+      ),
+      [
+        "## Stage 1 Repair Complete: 10b-shopping-share-text",
+        "",
+        "### Repaired Findings",
+        "- Frontend route path drift fixed.",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(artifactsDir, "stage6-10b-shopping-share-text-pr-review-20260427T171247KST.md"),
+      [
+        "# Stage 6 PR Review: 10b-shopping-share-text",
+        "",
+        "- reviewer: Codex",
+        "- result: approve",
+      ].join("\n"),
+    );
+
+    const result = generateOmoSliceReport({
+      rootDir,
+      workItemId: slice,
+      runtime: {
+        phase: "done",
+        prs: {
+          frontend: {
+            number: 231,
+            url: "https://github.com/netsus/homecook/pull/231",
+          },
+        },
+      },
+      now: "2026-04-27T08:20:00.000Z",
+    });
+
+    expect(result.dispatchRuns).toHaveLength(0);
+    expect(result.omxArtifactEvents).toHaveLength(2);
+
+    const report = readFileSync(result.reportPath, "utf8");
+    expect(report).toContain("| evidence_source | .omx/artifacts |");
+    expect(report).toContain("| Codex/Claude 자동 수정 오류 | 1회 |");
+    expect(report).toContain("## Evidence Sources");
+    expect(report).toContain("| .omx/artifacts | 2 | 1, 6 |");
+    expect(report).toContain("## Codex/Claude-Resolved Non-Human Errors");
+    expect(report).toContain("Stage 1 Repair Complete: 10b-shopping-share-text");
+    expect(report).toContain(
+      ".omx/artifacts/claude-delegate-10b-shopping-share-text-stage1-repair-response-20260427T164100KST.md",
+    );
   });
 });
