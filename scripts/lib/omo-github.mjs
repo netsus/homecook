@@ -85,6 +85,25 @@ function loadCanonicalCloseoutPrBodySections({ rootDir = process.cwd(), workItem
   }
 }
 
+function normalizeWorkItemId(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function inferWorkItemIdFromBranch(branchName) {
+  const normalizedBranch = normalizeWorkItemId(branchName);
+  if (!normalizedBranch) {
+    return null;
+  }
+
+  const featureSliceMatch = /^feature\/(?:be|fe)-(.+)$/.exec(normalizedBranch);
+  if (featureSliceMatch?.[1]) {
+    return featureSliceMatch[1].trim();
+  }
+
+  const docsSliceMatch = /^docs\/([0-9][0-9a-z]?-.+)$/.exec(normalizedBranch);
+  return docsSliceMatch?.[1]?.trim() ?? null;
+}
+
 function buildDefaultPrSectionContent(section, { body, workItemId, rootDir = process.cwd() }) {
   const workflowRefPath =
     typeof workItemId === "string" && workItemId.trim().length > 0
@@ -692,6 +711,7 @@ export function createGithubAutomationClient({
       workItemId,
     } = {}) {
       const normalizedHead = ensureNonEmptyString(head, "head");
+      const resolvedWorkItemId = normalizeWorkItemId(workItemId) ?? inferWorkItemIdFromBranch(normalizedHead);
       const args = [
         "pr",
         "create",
@@ -702,7 +722,7 @@ export function createGithubAutomationClient({
         "--title",
         ensureNonEmptyString(title, "title"),
         "--body",
-        normalizePullRequestBody(body, workItemId, rootDir),
+        normalizePullRequestBody(body, resolvedWorkItemId, rootDir),
       ];
 
       if (draft) {
@@ -710,7 +730,7 @@ export function createGithubAutomationClient({
       }
 
       let parsed;
-      const normalizedBody = normalizePullRequestBody(body, workItemId, rootDir);
+      const normalizedBody = normalizePullRequestBody(body, resolvedWorkItemId, rootDir);
 
       try {
         args[args.indexOf("--body") + 1] = normalizedBody;
@@ -744,7 +764,7 @@ export function createGithubAutomationClient({
           const mergedBody = mergePullRequestBodyWithExisting(
             readPullRequestBody(parsed.url),
             body,
-            workItemId,
+            resolvedWorkItemId,
             rootDir,
           );
           runGh([

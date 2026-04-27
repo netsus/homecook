@@ -83,6 +83,7 @@ function createFixture({
   withAutomationSpec = false,
   authorityRequired = false,
   authorityReportPaths = [] as string[],
+  withWorkItem = false,
   closeout = null as Record<string, unknown> | null,
 }: {
   roadmapStatus: string;
@@ -95,6 +96,7 @@ function createFixture({
   withAutomationSpec?: boolean;
   authorityRequired?: boolean;
   authorityReportPaths?: string[];
+  withWorkItem?: boolean;
   closeout?: Record<string, unknown> | null;
 }) {
   const rootDir = mkdtempSync(join(tmpdir(), "closeout-sync-"));
@@ -176,14 +178,14 @@ function createFixture({
     );
   }
 
-  if (closeout) {
+  if (withWorkItem || closeout) {
     writeFixtureFile(
       rootDir,
       " .workflow-v2/work-items/05-planner-week-core.json".trimStart(),
       JSON.stringify(
         {
           id: "05-planner-week-core",
-          closeout,
+          ...(closeout ? { closeout } : {}),
         },
         null,
         2,
@@ -286,7 +288,7 @@ describe("closeout sync validator", () => {
         ...process.env,
         BRANCH_NAME: "docs/cleanup-workpack-notes",
       },
-      changedFiles: ["docs/workpacks/05-planner-week-core/README.md"],
+      changedFiles: [".workflow-v2/work-items/05-planner-week-core.json"],
     });
 
     expect(results).toEqual([
@@ -341,7 +343,7 @@ describe("closeout sync validator", () => {
         ...process.env,
         BRANCH_NAME: "docs/cleanup-workpack-notes",
       },
-      changedFiles: ["docs/workpacks/05-planner-week-core/README.md"],
+      changedFiles: [".workflow-v2/work-items/05-planner-week-core.json"],
     });
 
     expect(results).toEqual([
@@ -362,6 +364,36 @@ describe("closeout sync validator", () => {
           }),
           expect.objectContaining({
             message: expect.stringContaining("Acceptance closeout must match canonical closeout projection"),
+          }),
+        ]),
+      }),
+    ]);
+  });
+
+  it("fails merged slices that have a tracked work item but no canonical closeout snapshot", () => {
+    const rootDir = createFixture({
+      roadmapStatus: "merged",
+      designStatus: "confirmed",
+      deliveryItems: [{ checked: true, text: "UI 연결" }],
+      acceptanceItems: [{ checked: true, text: "대표 사용자 흐름이 정상 동작한다" }],
+      withWorkItem: true,
+    });
+
+    const results = validateCloseoutSync({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "docs/cleanup-workpack-notes",
+      },
+      changedFiles: [".workflow-v2/work-items/05-planner-week-core.json"],
+    });
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        name: "closeout-sync:05-planner-week-core",
+        errors: expect.arrayContaining([
+          expect.objectContaining({
+            message: expect.stringContaining("requires canonical closeout snapshot"),
           }),
         ]),
       }),

@@ -90,6 +90,11 @@ function extractSliceFromWorkpackDocPath(filePath) {
   return match[1] === "_template" ? null : match[1];
 }
 
+function extractSliceFromWorkItemPath(filePath) {
+  const match = /^\.workflow-v2\/work-items\/([^/]+)\.json$/.exec(filePath);
+  return match?.[1] ?? null;
+}
+
 function extractSlicesFromRoadmapDiff(diffText) {
   if (typeof diffText !== "string" || diffText.trim().length === 0) {
     return [];
@@ -163,7 +168,9 @@ function resolveChangedSlices({
   changedFiles,
 }) {
   const slices = new Set(
-    changedFiles.map((filePath) => extractSliceFromWorkpackDocPath(filePath)).filter(Boolean),
+    changedFiles
+      .map((filePath) => extractSliceFromWorkpackDocPath(filePath) ?? extractSliceFromWorkItemPath(filePath))
+      .filter(Boolean),
   );
 
   if (changedFiles.includes("docs/workpacks/README.md")) {
@@ -366,13 +373,29 @@ function resolveChecklistSurfaceStatus(items) {
 function validateCanonicalCloseoutDocSurfaceSync({
   rootDir,
   slice,
+  strictMode,
+  changedFiles,
 }) {
   const trackedCloseout = readTrackedWorkItemCloseout({
     rootDir,
     slice,
   });
-  if (trackedCloseout.missing || !trackedCloseout.closeout) {
+  if (trackedCloseout.missing) {
     return [];
+  }
+
+  if (!trackedCloseout.closeout) {
+    const workItemRelativePath = `.workflow-v2/work-items/${slice}.json`;
+    const workItemChanged = Array.isArray(changedFiles) && changedFiles.includes(workItemRelativePath);
+    return strictMode === "merged" && workItemChanged
+      ? [
+          {
+            path: trackedCloseout.filePath,
+            message:
+              `Merged slice '${slice}' requires canonical closeout snapshot at \`${trackedCloseout.filePath}#closeout\`.`,
+          },
+        ]
+      : [];
   }
 
   const projection = projectCanonicalCloseoutToDocSurfaceSyncContract(trackedCloseout.closeout, {
@@ -808,6 +831,8 @@ export function validateCloseoutSync({
       ...validateCanonicalCloseoutDocSurfaceSync({
         rootDir,
         slice,
+        strictMode,
+        changedFiles: resolvedChangedFiles,
       }),
     );
 

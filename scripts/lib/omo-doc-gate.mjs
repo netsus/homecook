@@ -38,6 +38,48 @@ const REQUIRED_ACCEPTANCE_SECTIONS = [
   "## Automation Split",
 ];
 
+const STAGE1_CONTRACT_DRIFT_CHECKS = [
+  {
+    id: "doc-gate-contract-drift-add-to-pantry-number-array",
+    category: "official_contract_drift",
+    pattern: /add_to_pantry_item_ids\s*\??\s*:\s*number\[\]/i,
+    message:
+      "Stage 1 docs must not redefine add_to_pantry_item_ids as number[]. The official contract uses item UUID ids and the API response wrapper.",
+    remediationHint:
+      "공식 API 문서 기준으로 add_to_pantry_item_ids의 UUID/string id 계약과 `{ success, data, error }` 래퍼를 유지하세요.",
+  },
+  {
+    id: "doc-gate-contract-drift-pantry-response-columns",
+    category: "official_contract_drift",
+    pattern:
+      /shopping_lists\.(?:pantry_added|pantry_added_item_ids)|(?:pantry_added|pantry_added_item_ids)\s+(?:column|jsonb|컬럼)/i,
+    message:
+      "Stage 1 docs must not invent persisted shopping_lists pantry_added fields. These values are response-derived closeout data.",
+    remediationHint:
+      "`pantry_added`와 `pantry_added_item_ids`는 응답 payload 파생 값으로 적고 DB schema 변경으로 잠그지 마세요.",
+  },
+  {
+    id: "doc-gate-contract-drift-complete-error-codes",
+    category: "official_contract_drift",
+    contextPattern: /add_to_pantry_item_ids|POST\s+\/shopping\/lists\/\{?(?:list_)?id\}?\/complete/i,
+    pattern: /\b(?:INVALID_ITEM_IDS|ALREADY_COMPLETED|INVALID_MEAL_STATUS)\b/i,
+    message:
+      "Stage 1 docs must not invent shopping complete error codes that are not in the official contract.",
+    remediationHint:
+      "무효 item id와 이미 완료된 리스트는 12b 계약상 실패가 아니라 무시/멱등 200 처리입니다. 공식 error code만 남기세요.",
+  },
+  {
+    id: "doc-gate-contract-drift-stage-ownership",
+    category: "stage_ownership_drift",
+    pattern:
+      /Stage\s+(?:3\s*\((?:Backend|백엔드)\)|5\s*\((?:Polish|폴리시)\)|6\s*\((?:Claude|클로드)\))/i,
+    message:
+      "Stage ownership text drifts from the slice workflow actor split.",
+    remediationHint:
+      "Stage 2/5/6은 Codex, Stage 1/3/4는 Claude 기준으로 소유권 문구를 정리하세요.",
+  },
+];
+
 function ensureNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new Error(`${label} must be a non-empty string.`);
@@ -263,6 +305,45 @@ function checkAutomationSpec({ slice, automationSpecPath, automationSpec, contra
         remediationHint: "frontend artifact assertion을 automation-spec에 잠그세요.",
       }));
     }
+  }
+}
+
+function checkStage1ContractDrift({
+  readmePath,
+  acceptancePath,
+  automationSpecPath,
+  findings,
+}) {
+  const documents = [readmePath, acceptancePath, automationSpecPath]
+    .map((filePath) => ({
+      filePath,
+      contents: readFileIfExists(filePath),
+    }))
+    .filter((entry) => typeof entry.contents === "string");
+  const emittedFindingIds = new Set();
+  const combinedContents = documents.map((entry) => entry.contents).join("\n");
+
+  for (const check of STAGE1_CONTRACT_DRIFT_CHECKS) {
+    if (check.contextPattern && !check.contextPattern.test(combinedContents)) {
+      continue;
+    }
+
+    const evidencePaths = documents
+      .filter((entry) => check.pattern.test(entry.contents))
+      .map((entry) => entry.filePath);
+
+    if (evidencePaths.length === 0 || emittedFindingIds.has(check.id)) {
+      continue;
+    }
+
+    emittedFindingIds.add(check.id);
+    findings.push(createFinding({
+      id: check.id,
+      category: check.category,
+      message: check.message,
+      evidencePaths,
+      remediationHint: check.remediationHint,
+    }));
   }
 }
 
@@ -506,6 +587,12 @@ export function evaluateDocGate({
     automationSpecPath,
     automationSpec,
     contract: checklistContract,
+    findings,
+  });
+  checkStage1ContractDrift({
+    readmePath,
+    acceptancePath,
+    automationSpecPath,
     findings,
   });
   checkDesignAuthority({
