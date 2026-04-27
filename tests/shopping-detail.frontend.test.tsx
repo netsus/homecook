@@ -455,4 +455,221 @@ describe("ShoppingDetailScreen", () => {
       });
     });
   });
+
+  describe("reorder (11)", () => {
+    it("shows reorder buttons for incomplete list", async () => {
+      const listWithMultipleItems: ShoppingListDetail = {
+        ...mockListDetail,
+        items: [
+          {
+            id: "item-1",
+            ingredient_id: "ing-1",
+            display_text: "양파 2개",
+            amounts_json: [{ amount: 2, unit: "개" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 0,
+          },
+          {
+            id: "item-2",
+            ingredient_id: "ing-2",
+            display_text: "대파 1단",
+            amounts_json: [{ amount: 1, unit: "단" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 100,
+          },
+        ],
+      };
+
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithMultipleItems);
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const moveUpButton = screen.getByRole("button", { name: /대파.*위로 이동/ });
+      const moveDownButton = screen.getByRole("button", { name: /양파.*아래로 이동/ });
+      expect(moveUpButton).toBeTruthy();
+      expect(moveDownButton).toBeTruthy();
+    });
+
+    it("does not show reorder buttons for completed list", async () => {
+      const completedList: ShoppingListDetail = {
+        ...mockListDetail,
+        is_completed: true,
+        completed_at: "2026-04-13T00:00:00.000Z",
+      };
+
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(completedList);
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/완료된 장보기 기록은 수정할 수 없어요/)).toBeTruthy();
+      });
+
+      const moveButtons = screen.queryAllByRole("button", { name: /이동/ });
+      expect(moveButtons.length).toBe(0);
+    });
+
+    it("calls reorder API when moving item down", async () => {
+      const listWithMultipleItems: ShoppingListDetail = {
+        ...mockListDetail,
+        items: [
+          {
+            id: "item-1",
+            ingredient_id: "ing-1",
+            display_text: "양파 2개",
+            amounts_json: [{ amount: 2, unit: "개" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 0,
+          },
+          {
+            id: "item-2",
+            ingredient_id: "ing-2",
+            display_text: "대파 1단",
+            amounts_json: [{ amount: 1, unit: "단" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 100,
+          },
+        ],
+      };
+
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithMultipleItems);
+      const reorderSpy = vi.spyOn(shoppingApi, "reorderShoppingListItems").mockResolvedValue({ updated: 2 });
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const moveDownButton = screen.getByRole("button", { name: /양파.*아래로 이동/ });
+      await user.click(moveDownButton);
+
+      await waitFor(() => {
+        expect(reorderSpy).toHaveBeenCalledWith("list-1", {
+          orders: [
+            { item_id: "item-2", sort_order: 0 },
+            { item_id: "item-1", sort_order: 10 },
+          ],
+        });
+      });
+    });
+
+    it("rolls back and shows error toast when reorder fails", async () => {
+      const listWithMultipleItems: ShoppingListDetail = {
+        ...mockListDetail,
+        items: [
+          {
+            id: "item-1",
+            ingredient_id: "ing-1",
+            display_text: "양파 2개",
+            amounts_json: [{ amount: 2, unit: "개" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 0,
+          },
+          {
+            id: "item-2",
+            ingredient_id: "ing-2",
+            display_text: "대파 1단",
+            amounts_json: [{ amount: 1, unit: "단" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 100,
+          },
+        ],
+      };
+
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithMultipleItems);
+
+      const reorderError = new Error("서버 오류가 발생했어요.") as shoppingApi.ShoppingApiError;
+      reorderError.status = 500;
+      reorderError.code = "INTERNAL_ERROR";
+      reorderError.fields = [];
+      vi.spyOn(shoppingApi, "reorderShoppingListItems").mockRejectedValue(reorderError);
+      vi.spyOn(shoppingApi, "isShoppingApiError").mockReturnValue(true);
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const moveDownButton = screen.getByRole("button", { name: /양파.*아래로 이동/ });
+      await user.click(moveDownButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("서버 오류가 발생했어요.")).toBeTruthy();
+      });
+    });
+
+    it("shows conflict error when reordering completed list", async () => {
+      const listWithMultipleItems: ShoppingListDetail = {
+        ...mockListDetail,
+        items: [
+          {
+            id: "item-1",
+            ingredient_id: "ing-1",
+            display_text: "양파 2개",
+            amounts_json: [{ amount: 2, unit: "개" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 0,
+          },
+          {
+            id: "item-2",
+            ingredient_id: "ing-2",
+            display_text: "대파 1단",
+            amounts_json: [{ amount: 1, unit: "단" }],
+            is_checked: false,
+            is_pantry_excluded: false,
+            added_to_pantry: false,
+            sort_order: 100,
+          },
+        ],
+      };
+
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithMultipleItems);
+
+      const conflictError = new Error("완료된 장보기 기록은 수정할 수 없어요") as shoppingApi.ShoppingApiError;
+      conflictError.status = 409;
+      conflictError.code = "CONFLICT";
+      conflictError.fields = [];
+      vi.spyOn(shoppingApi, "reorderShoppingListItems").mockRejectedValue(conflictError);
+      vi.spyOn(shoppingApi, "isShoppingApiError").mockReturnValue(true);
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      const moveDownButton = screen.getByRole("button", { name: /양파.*아래로 이동/ });
+      await user.click(moveDownButton);
+
+      await waitFor(() => {
+        expect(screen.getByText("완료된 장보기 기록은 수정할 수 없어요")).toBeTruthy();
+      });
+    });
+  });
 });

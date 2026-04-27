@@ -8,6 +8,7 @@ import {
   fetchShoppingListDetail,
   fetchShoppingShareText,
   isShoppingApiError,
+  reorderShoppingListItems,
   updateShoppingListItem,
 } from "@/lib/api/shopping";
 import type { ShoppingListDetail, ShoppingListItemSummary } from "@/types/shopping";
@@ -35,6 +36,8 @@ export function ShoppingDetailScreen({
   const [updatingItem, setUpdatingItem] = useState<UpdateState | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [shareToast, setShareToast] = useState<{ type: "success" | "error" | "empty"; message: string } | null>(null);
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderError, setReorderError] = useState<string | null>(null);
 
   const loadDetail = useCallback(async () => {
     setViewState("loading");
@@ -248,6 +251,87 @@ export function ShoppingDetailScreen({
     }
   }, [listId, listDetail, router]);
 
+  const handleMoveItem = useCallback(
+    async (itemId: string, direction: "up" | "down") => {
+      if (!listDetail || listDetail.is_completed) {
+        return;
+      }
+
+      const purchaseItems = listDetail.items.filter((item) => !item.is_pantry_excluded);
+      const currentIndex = purchaseItems.findIndex((item) => item.id === itemId);
+
+      if (currentIndex === -1) {
+        return;
+      }
+
+      if (direction === "up" && currentIndex === 0) {
+        return;
+      }
+
+      if (direction === "down" && currentIndex === purchaseItems.length - 1) {
+        return;
+      }
+
+      const oldItems = [...listDetail.items];
+      const newPurchaseItems = [...purchaseItems];
+      const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+
+      // Swap items
+      [newPurchaseItems[currentIndex], newPurchaseItems[newIndex]] = [
+        newPurchaseItems[newIndex],
+        newPurchaseItems[currentIndex],
+      ];
+
+      // Reconstruct full items list with purchase items in new order
+      const excludedItems = listDetail.items.filter((item) => item.is_pantry_excluded);
+      const newItems = [...newPurchaseItems, ...excludedItems];
+
+      // Update local state immediately (optimistic)
+      setListDetail((prev) => {
+        if (!prev) return prev;
+        return { ...prev, items: newItems };
+      });
+
+      // Calculate new sort_order values for all items
+      const orders = newItems.map((item, index) => ({
+        item_id: item.id,
+        sort_order: index * 10,
+      }));
+
+      setIsReordering(true);
+      setReorderError(null);
+
+      try {
+        await reorderShoppingListItems(listId, { orders });
+        // Success: keep the new order
+      } catch (error) {
+        // Rollback on error
+        setListDetail((prev) => {
+          if (!prev) return prev;
+          return { ...prev, items: oldItems };
+        });
+
+        if (isShoppingApiError(error)) {
+          if (error.status === 409) {
+            setReorderError("완료된 장보기 기록은 수정할 수 없어요");
+          } else if (error.status === 401) {
+            router.push(`/login?next=/shopping/lists/${listId}`);
+            return;
+          } else {
+            setReorderError(error.message);
+          }
+        } else {
+          setReorderError("순서 변경에 실패했어요");
+        }
+
+        setTimeout(() => setReorderError(null), 3000);
+      } finally {
+        setIsReordering(false);
+      }
+    },
+    [listId, listDetail, router]
+  );
+
   if (viewState === "loading") {
     return (
       <div className="flex min-h-screen flex-col">
@@ -380,6 +464,17 @@ export function ShoppingDetailScreen({
           </div>
         )}
 
+        {/* Reorder error toast */}
+        {reorderError && (
+          <div
+            className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
+            role="alert"
+            aria-live="polite"
+          >
+            {reorderError}
+          </div>
+        )}
+
         {/* Purchase section */}
         {!isEmpty && (
           <section className="mb-6">
@@ -387,14 +482,17 @@ export function ShoppingDetailScreen({
               {isReadOnly ? "구매한 재료" : "구매할 재료"} ({purchaseItems.length}개)
             </h3>
             <div className="space-y-3">
-              {purchaseItems.map((item) => (
+              {purchaseItems.map((item, index) => (
                 <ShoppingItemCard
                   key={item.id}
                   item={item}
                   isReadOnly={isReadOnly}
                   isUpdating={updatingItem?.itemId === item.id}
+                  isReordering={isReordering}
                   onToggleCheck={handleToggleCheck}
                   onToggleExclude={handleToggleExclude}
+                  onMoveUp={index > 0 ? () => handleMoveItem(item.id, "up") : undefined}
+                  onMoveDown={index < purchaseItems.length - 1 ? () => handleMoveItem(item.id, "down") : undefined}
                 />
               ))}
             </div>
@@ -430,23 +528,58 @@ interface ShoppingItemCardProps {
   item: ShoppingListItemSummary;
   isReadOnly: boolean;
   isUpdating: boolean;
+  isReordering?: boolean;
   onToggleCheck: (itemId: string, currentChecked: boolean) => void;
   onToggleExclude: (itemId: string, currentExcluded: boolean) => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }
 
 function ShoppingItemCard({
   item,
   isReadOnly,
   isUpdating,
+  isReordering = false,
   onToggleCheck,
   onToggleExclude,
+  onMoveUp,
+  onMoveDown,
 }: ShoppingItemCardProps) {
   const amountText = item.amounts_json
     .map((a) => `${a.amount}${a.unit}`)
     .join(" + ");
 
+  const showReorderButtons = !isReadOnly && (onMoveUp || onMoveDown);
+
   return (
     <div className="flex items-center gap-3 rounded-2xl bg-[var(--surface)] px-4 py-3 shadow-sm">
+      {showReorderButtons && (
+        <div className="flex shrink-0 flex-col gap-0.5">
+          <button
+            onClick={onMoveUp}
+            disabled={!onMoveUp || isReordering}
+            className="flex h-11 w-11 items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-30"
+            type="button"
+            aria-label={`${item.display_text} 위로 이동`}
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M10 5L5 10H15L10 5Z" fill="currentColor" />
+            </svg>
+          </button>
+          <button
+            onClick={onMoveDown}
+            disabled={!onMoveDown || isReordering}
+            className="flex h-11 w-11 items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-30"
+            type="button"
+            aria-label={`${item.display_text} 아래로 이동`}
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M10 15L15 10H5L10 15Z" fill="currentColor" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <button
         onClick={() => onToggleCheck(item.id, item.is_checked)}
         disabled={isReadOnly || isUpdating}
