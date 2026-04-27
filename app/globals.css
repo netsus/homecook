@@ -119,6 +119,14 @@ button {
   gap: clamp(0.75rem, 2.5vw, 1rem);
 }
 
+@media (max-width: 360px) {
+  .recipe-overview-compact {
+    gap: 0.375rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+}
+
 .recipe-overview-metrics-compact {
   gap: 0.375rem;
 }

@@ -83,9 +83,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending"
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed"
   },
   "out_of_scope": [
     "RECIPE_DETAIL information architecture changes (section hierarchy, navigation flow)",
@@ -102,38 +102,62 @@
   ],
   "open_questions": [],
   "closeout": {
-    "phase": "collecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "planned",
-      "design_status": "temporary",
-      "delivery_checklist": "pending",
-      "design_authority": "pending",
-      "acceptance": "pending",
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "pending",
+      "required_checks": "passed",
       "external_smokes": "skipped",
-      "authority_reports": [],
-      "actual_verification_refs": []
+      "authority_reports": [
+        "ui/designs/authority/RECIPE_DETAIL-parity-authority.md",
+        "ui/designs/evidence/baemin-prototype-recipe-detail-parity/stage5-design-review.md",
+        ".omx/artifacts/claude-delegate-baemin-prototype-recipe-detail-parity-final-authority-gate-response-20260427T204036Z.md"
+      ],
+      "actual_verification_refs": [
+        "ui/designs/evidence/baemin-prototype-recipe-detail-parity/visual-verdict.json",
+        "ui/designs/evidence/baemin-prototype-recipe-detail-parity/visual-verdict.md",
+        "qa/visual/parity/baemin-prototype-recipe-detail-parity/",
+        ".artifacts/qa/baemin-prototype-recipe-detail-parity/2026-04-27T20-01-14-418Z/exploratory-report.json",
+        ".artifacts/qa/baemin-prototype-recipe-detail-parity/2026-04-27T20-01-14-418Z/eval-result.json"
+      ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending",
-      "approval_state": "not_started",
-      "all_checks_green": false
+      "current_head_sha": "pending-pr-head",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
     },
     "recovery_summary": {
-      "manual_patch_count": 0,
+      "manual_patch_count": 1,
       "manual_handoff": false,
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": false,
-      "last_recovery_at": null
+      "last_recovery_at": "2026-04-27T20:45:42.225Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 1,
+      "claude_repairable_count": 1,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage6_closeout_projection_sync",
+      "evidence_sources": [
+        "ui/designs/authority/RECIPE_DETAIL-parity-authority.md",
+        "ui/designs/evidence/baemin-prototype-recipe-detail-parity/stage5-design-review.md",
+        "ui/designs/evidence/baemin-prototype-recipe-detail-parity/visual-verdict.json",
+        ".artifacts/qa/baemin-prototype-recipe-detail-parity/2026-04-27T20-01-14-418Z/exploratory-report.json"
+      ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-04-28T00:00:00.000Z",
-      "status_synced_at": "2026-04-28T00:00:00.000Z",
-      "pr_body_synced_at": "pending"
+      "docs_synced_at": "2026-04-27T20:45:42.225Z",
+      "status_synced_at": "2026-04-27T20:45:42.225Z",
+      "pr_body_synced_at": "pending-pr-body"
     }
   }
 }

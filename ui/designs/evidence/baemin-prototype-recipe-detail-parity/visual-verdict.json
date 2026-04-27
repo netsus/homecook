@@ -1,0 +1,281 @@
+{
+  "slice_id": "baemin-prototype-recipe-detail-parity",
+  "surface": "RECIPE_DETAIL",
+  "captured_at": "2026-04-28T03:45:00.000Z",
+  "viewports": [
+    {
+      "width": 390,
+      "height": 844
+    },
+    {
+      "width": 320,
+      "height": 568
+    }
+  ],
+  "states": [
+    {
+      "state_id": "initial",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-initial-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-initial-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-initial-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 97
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-initial-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-initial-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-initial-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 98
+          }
+        }
+      },
+      "notes": "Full 3-way capture. Hero aspect-ratio is 4:3 at default mobile and 16:9 at the 320px sentinel so primary CTAs clear the fixed bottom tabs. Flat section layout replaces card wrappers. Approved divergences: brand color (#ED7470 vs #2AC1BC), background (#fff9f2 vs #FFFFFF), foreground (#1a1a2e vs #212529), olive vs teal, font stack. Prototype-only exclusions (tabs, reviews section/cards, review count badge, star rating) visible in prototype layer but not scored as deficits."
+    },
+    {
+      "state_id": "scrolled",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-scrolled-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-scrolled-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-scrolled-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 97
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-scrolled-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-scrolled-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-scrolled-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 98
+          }
+        }
+      },
+      "notes": "Scrolled to ingredients section. Compact horizontal servings stepper uses round 44px touch targets to satisfy the small-mobile sentinel while preserving the prototype pattern. Flat ingredient rows with subtle dividers replace card items. Prototype tabs excluded."
+    },
+    {
+      "state_id": "planner-add-open",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-planner-add-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-planner-add-open-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 95
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-planner-add-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-planner-add-open-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 96
+          }
+        }
+      },
+      "notes": "Prototype bottom bar has planner CTA but no sheet overlay in detail screen. Prototype layer N/A. PlannerAddSheet is a production-specific bottom sheet using shared modal system."
+    },
+    {
+      "state_id": "save-open",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-save-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-save-open-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 95
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-save-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-save-open-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 96
+          }
+        }
+      },
+      "notes": "Prototype has no save modal overlay in detail screen. Prototype layer N/A. SaveModal is a production-specific modal using shared modal system."
+    },
+    {
+      "state_id": "login-gate-open",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-login-gate-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-login-gate-open-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 95
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-login-gate-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-login-gate-open-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 96
+          }
+        }
+      },
+      "notes": "Prototype does not have login gate — all actions are always available. Prototype layer N/A. LoginGateModal uses shared auth gate component."
+    },
+    {
+      "state_id": "loading",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-loading-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-loading-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 96
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-loading-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-loading-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 97
+          }
+        }
+      },
+      "notes": "Prototype does not support loading state — static demo renders instantly. Prototype layer N/A. Skeleton matches new flat section layout with default 4:3 hero placeholder, 320px compact hero override, flat ingredient rows, and left-bordered step placeholders."
+    },
+    {
+      "state_id": "error",
+      "viewports": {
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-error-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/320-RECIPE_DETAIL-error-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 96
+          }
+        },
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-error-current.png",
+            "after": "qa/visual/parity/baemin-prototype-recipe-detail-parity/390-RECIPE_DETAIL-error-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 20,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 97
+          }
+        }
+      },
+      "notes": "Prototype does not support error state — no fetch failure path. Prototype layer N/A. Error state uses shared ContentState component with retry CTA."
+    }
+  ],
+  "scores": {
+    "screen_score_390": 96.86,
+    "screen_score_320": 95.86,
+    "slice_score": 96.56
+  },
+  "verdict": {
+    "threshold": 95,
+    "pass": true,
+    "blocker_count": 0,
+    "waiver": null
+  },
+  "authority_blockers": []
+}

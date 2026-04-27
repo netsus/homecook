@@ -92,19 +92,19 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 - UI risk: `anchor-extension` (RECIPE_DETAIL anchor screen의 시각 처리 전면 변경)
 - Anchor screen dependency: `RECIPE_DETAIL`
 - Visual artifact: `ui/designs/authority/RECIPE_DETAIL-parity-authority.md` (Stage 4에서 screenshot evidence 포함)
-- Authority status: `required`
-- Notes: h7 parity program의 scored body slice. Stage 5 public review와 Claude final authority gate가 모두 통과해야 confirmed.
+- Authority status: `reviewed`
+- Notes: h7 parity program의 scored body slice. Stage 5 public review와 Claude final authority gate 모두 통과. Design Status confirmed.
 - Design addendum: `ui/designs/RECIPE_DETAIL.md` §Baemin-Style Visual Retrofit Addendum (기존 addendum 활용, 필요 시 parity addendum 추가)
 - Design critique: `ui/designs/critiques/RECIPE_DETAIL-critique.md` (🟢 통과, blocker 0 — 기존 critique 활용)
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 기본값, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed) — Stage 5 Codex design review + Claude final authority gate 통과 (blocker 0, score 96.56)
 - [ ] N/A
 
-> Design Status 전이: `temporary` → `pending-review` (Stage 4 완료 후) → `confirmed` (Stage 5 + final authority gate 통과 후)
+> Design Status 전이 완료: `temporary` → `pending-review` → `confirmed`
 
 ## Source Links
 
@@ -181,15 +181,15 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > 이 슬라이스는 BE 구현 없음(Stage 2/3 스킵), Stage 4에서 RECIPE_DETAIL body parity를 구현한다.
 
-- [ ] RECIPE_DETAIL body skin parity (색상, typography, radius, shadow, spacing) <!-- omo:id=rd-parity-skin;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL body layout parity (hero geometry, title block, meta row, CTA bar, ingredients, steps) <!-- omo:id=rd-parity-layout;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL body interaction affordance parity (planner add, save, login gate, like, share, stepper, cook mode 시각 표현) <!-- omo:id=rd-parity-interaction;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL body assets/copy parity (아이콘, 라벨, CTA copy) <!-- omo:id=rd-parity-assets-copy;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL body state fidelity (7 required states 각각 prototype 시각 일치) <!-- omo:id=rd-parity-state-fidelity;stage=4;scope=frontend;review=5,6 -->
-- [ ] 3-way capture evidence 완성 (42 evidence slots) <!-- omo:id=rd-parity-capture-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Visual-verdict artifact 생성 (visual-verdict.md + .json) <!-- omo:id=rd-parity-verdict-artifact;stage=4;scope=frontend;review=5,6 -->
-- [ ] Authority report 생성 (screenshot evidence 기반) <!-- omo:id=rd-parity-authority-report;stage=4;scope=frontend;review=5,6 -->
-- [ ] Slice score >= 95, blocker count 0 <!-- omo:id=rd-parity-score-threshold;stage=4;scope=frontend;review=5,6 -->
-- [ ] Prototype-only exclusions가 deficit으로 채점되지 않음 확인 <!-- omo:id=rd-parity-exclusions-check;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 RECIPE_DETAIL 기능 regression 없음 (좋아요, 저장, 플래너 추가, 로그인 게이트, 인분 조절, 공유, 요리하기) <!-- omo:id=rd-parity-no-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] Runtime app code에서 API/DB/status 변경 없음 확인 <!-- omo:id=rd-parity-no-contract-change;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL body skin parity (색상, typography, radius, shadow, spacing) <!-- omo:id=rd-parity-skin;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL body layout parity (hero geometry, title block, meta row, CTA bar, ingredients, steps) <!-- omo:id=rd-parity-layout;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL body interaction affordance parity (planner add, save, login gate, like, share, stepper, cook mode 시각 표현) <!-- omo:id=rd-parity-interaction;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL body assets/copy parity (아이콘, 라벨, CTA copy) <!-- omo:id=rd-parity-assets-copy;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL body state fidelity (7 required states 각각 prototype 시각 일치) <!-- omo:id=rd-parity-state-fidelity;stage=4;scope=frontend;review=5,6 -->
+- [x] 3-way capture evidence 완성 (42 evidence slots) <!-- omo:id=rd-parity-capture-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Visual-verdict artifact 생성 (visual-verdict.md + .json) <!-- omo:id=rd-parity-verdict-artifact;stage=4;scope=frontend;review=5,6 -->
+- [x] Authority report 생성 (screenshot evidence 기반) <!-- omo:id=rd-parity-authority-report;stage=4;scope=frontend;review=5,6 -->
+- [x] Slice score >= 95, blocker count 0 <!-- omo:id=rd-parity-score-threshold;stage=4;scope=frontend;review=5,6 -->
+- [x] Prototype-only exclusions가 deficit으로 채점되지 않음 확인 <!-- omo:id=rd-parity-exclusions-check;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 RECIPE_DETAIL 기능 regression 없음 (좋아요, 저장, 플래너 추가, 로그인 게이트, 인분 조절, 공유, 요리하기) <!-- omo:id=rd-parity-no-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] Runtime app code에서 API/DB/status 변경 없음 확인 <!-- omo:id=rd-parity-no-contract-change;stage=4;scope=frontend;review=5,6 -->
