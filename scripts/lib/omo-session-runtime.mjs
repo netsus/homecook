@@ -6,6 +6,7 @@ import { readStageResult, validateStageResult } from "./omo-stage-result.mjs";
 
 export const DEFAULT_RETRY_DELAY_HOURS = 5;
 export const DEFAULT_MAX_RETRY_ATTEMPTS = 3;
+export const DEFAULT_CODEX_REPAIR_MAX_ATTEMPTS = 1;
 export const OMO_SESSION_ROLE_TO_AGENT = {
   claude_primary: "athena",
   codex_primary: "hephaestus",
@@ -522,19 +523,185 @@ function normalizePullRequests(prs) {
   };
 }
 
+function normalizeString(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function normalizeStringArray(value) {
+  return Array.isArray(value)
+    ? value
+        .filter((entry) => typeof entry === "string" && entry.trim().length > 0)
+        .map((entry) => entry.trim())
+    : [];
+}
+
+function normalizePositiveInteger(value) {
+  return Number.isInteger(value) && value >= 1 ? value : null;
+}
+
+const RUNTIME_WAIT_KIND_BY_REASON_CODE = {
+  codex_repairable: "codex_repairable",
+  claude_repairable: "claude_repairable",
+  ci_wait: "ci",
+  blocked_on_external: "blocked_on_external",
+  manual_decision_required: "manual_decision_required",
+};
+
+function classifyReasonText(reason) {
+  const text = typeof reason === "string" ? reason.trim() : "";
+
+  if (/(?:stale\s+(?:ci|check|status|snapshot)|current-head checks?)/i.test(text)) {
+    return {
+      kind: "ci",
+      reason_code: "ci_wait",
+      reason_detail_code: "stale_ci_snapshot",
+      reason_category: "ci_wait",
+    };
+  }
+
+  if (/(?:pr body|pull request body|required section|template-check|template check|pr template)/i.test(text)) {
+    return {
+      kind: "codex_repairable",
+      reason_code: "codex_repairable",
+      reason_detail_code: "pr_body_section_drift",
+      reason_category: "codex_repairable",
+    };
+  }
+
+  if (/(?:checklist).*(?:evidence|artifact)|(?:evidence|artifact).*(?:checklist)/i.test(text)) {
+    return {
+      kind: "codex_repairable",
+      reason_code: "codex_repairable",
+      reason_detail_code: "checklist_evidence_drift",
+      reason_category: "codex_repairable",
+    };
+  }
+
+  if (/(?:credential-gated|credential gated|requires credential|missing credential|secret required)/i.test(text)) {
+    return {
+      kind: "manual_decision_required",
+      reason_code: "manual_decision_required",
+      reason_detail_code: "credential_gated",
+      reason_category: "manual_decision_required",
+    };
+  }
+
+  if (/(?:external production|production system|live production)/i.test(text)) {
+    return {
+      kind: "manual_decision_required",
+      reason_code: "manual_decision_required",
+      reason_detail_code: "external_production",
+      reason_category: "manual_decision_required",
+    };
+  }
+
+  if (/(?:public contract change|contract evolution|official contract change)/i.test(text)) {
+    return {
+      kind: "manual_decision_required",
+      reason_code: "manual_decision_required",
+      reason_detail_code: "public_contract_change",
+      reason_category: "manual_decision_required",
+    };
+  }
+
+  if (/(?:destructive operation|irreversible|scope-changing|scope changing|ambiguous contract)/i.test(text)) {
+    return {
+      kind: "manual_decision_required",
+      reason_code: "manual_decision_required",
+      reason_detail_code: "unsafe_or_ambiguous_scope",
+      reason_category: "manual_decision_required",
+    };
+  }
+
+  if (/(?:external service unavailable|network outage|rate limited|rate limit)/i.test(text)) {
+    return {
+      kind: "blocked_on_external",
+      reason_code: "blocked_on_external",
+      reason_detail_code: "external_blocker",
+      reason_category: "blocked_on_external",
+    };
+  }
+
+  return {
+    kind: null,
+    reason_code: null,
+    reason_detail_code: null,
+    reason_category: null,
+  };
+}
+
+function classifyWait({
+  kind,
+  reason,
+  reasonCode,
+  reasonDetailCode,
+  reasonCategory,
+  repairAttemptCount,
+  maxRepairAttempts,
+}) {
+  const normalizedKind = normalizeString(kind);
+  const inferred = classifyReasonText(reason);
+  const normalizedReasonCode = normalizeString(reasonCode) ?? inferred.reason_code;
+  const inferredKind =
+    inferred.kind ?? (normalizedReasonCode ? RUNTIME_WAIT_KIND_BY_REASON_CODE[normalizedReasonCode] ?? null : null);
+  const normalizedReasonDetailCode = normalizeString(reasonDetailCode) ?? inferred.reason_detail_code;
+  let normalizedReasonCategory = normalizeString(reasonCategory) ?? inferred.reason_category ?? normalizedReasonCode;
+  const normalizedRepairAttemptCount = normalizeNonNegativeInteger(repairAttemptCount);
+  const normalizedMaxRepairAttempts =
+    normalizePositiveInteger(maxRepairAttempts) ??
+    (inferredKind === "codex_repairable" || normalizedKind === "codex_repairable"
+      ? DEFAULT_CODEX_REPAIR_MAX_ATTEMPTS
+      : null);
+  const repairAttemptCountForDecision = normalizedRepairAttemptCount ?? 0;
+  let nextKind = normalizedKind;
+
+  if (normalizedKind === "human_escalation" && inferredKind) {
+    nextKind = inferredKind;
+  }
+
+  if (nextKind === "codex_repairable" && normalizedMaxRepairAttempts !== null) {
+    if (repairAttemptCountForDecision >= normalizedMaxRepairAttempts) {
+      nextKind = "human_escalation";
+      normalizedReasonCategory = "codex_repairable_exhausted";
+    } else {
+      normalizedReasonCategory = "codex_repairable";
+    }
+  }
+
+  return {
+    kind: nextKind,
+    reason_code: normalizedReasonCode,
+    reason_detail_code: normalizedReasonDetailCode,
+    reason_category: normalizedReasonCategory,
+    repair_attempt_count:
+      normalizedRepairAttemptCount !== null || normalizedMaxRepairAttempts !== null
+        ? repairAttemptCountForDecision
+        : null,
+    max_repair_attempts: normalizedMaxRepairAttempts,
+  };
+}
+
 function normalizeWait(wait) {
   if (!wait || typeof wait !== "object") {
     return null;
   }
 
-  const kind =
-    typeof wait.kind === "string" && wait.kind.trim().length > 0 ? wait.kind.trim() : null;
-  if (!kind) {
+  const reason = normalizeString(wait.reason);
+  const classification = classifyWait({
+    kind: wait.kind,
+    reason,
+    reasonCode: wait.reason_code,
+    reasonDetailCode: wait.reason_detail_code,
+    reasonCategory: wait.reason_category,
+    repairAttemptCount: wait.repair_attempt_count,
+    maxRepairAttempts: wait.max_repair_attempts,
+  });
+  if (!classification.kind) {
     return null;
   }
 
   return {
-    kind,
+    kind: classification.kind,
     pr_role:
       typeof wait.pr_role === "string" && wait.pr_role.trim().length > 0
         ? wait.pr_role.trim()
@@ -545,9 +712,19 @@ function normalizeWait(wait) {
         ? wait.head_sha.trim()
         : null,
     reason:
-      typeof wait.reason === "string" && wait.reason.trim().length > 0
-        ? wait.reason.trim()
-        : null,
+      reason,
+    ...(classification.reason_code ? { reason_code: classification.reason_code } : {}),
+    ...(classification.reason_detail_code ? { reason_detail_code: classification.reason_detail_code } : {}),
+    ...(classification.reason_category ? { reason_category: classification.reason_category } : {}),
+    ...(classification.repair_attempt_count !== null
+      ? { repair_attempt_count: classification.repair_attempt_count }
+      : {}),
+    ...(classification.max_repair_attempts !== null
+      ? { max_repair_attempts: classification.max_repair_attempts }
+      : {}),
+    ...(normalizeStringArray(wait.evidence_refs).length > 0
+      ? { evidence_refs: normalizeStringArray(wait.evidence_refs) }
+      : {}),
     until:
       typeof wait.until === "string" && wait.until.trim().length > 0
         ? wait.until.trim()
@@ -1768,17 +1945,43 @@ export function setPullRequestRef({
   };
 }
 
+/**
+ * @param {{
+ *   state: Record<string, any>,
+ *   kind: string | null,
+ *   prRole?: string | null,
+ *   stage?: number | string | null,
+ *   headSha?: string | null,
+ *   reason?: string | null,
+ *   reasonCode?: string | null,
+ *   reasonDetailCode?: string | null,
+ *   reasonCategory?: string | null,
+ *   repairAttemptCount?: number | null,
+ *   maxRepairAttempts?: number | null,
+ *   evidenceRefs?: string[],
+ *   until?: string | null,
+ *   phase?: string | null,
+ *   nextAction?: string | null,
+ *   updatedAt?: string | Date | null,
+ * }} args
+ */
 export function setWaitState({
   state,
   kind,
-  prRole,
-  stage,
-  headSha,
-  reason,
-  until,
-  phase,
-  nextAction,
-  updatedAt,
+  prRole = null,
+  stage = null,
+  headSha = null,
+  reason = null,
+  reasonCode = null,
+  reasonDetailCode = null,
+  reasonCategory = null,
+  repairAttemptCount = null,
+  maxRepairAttempts = null,
+  evidenceRefs = [],
+  until = null,
+  phase = null,
+  nextAction = null,
+  updatedAt = null,
 }) {
   if (!kind) {
     return {
@@ -1795,25 +1998,47 @@ export function setWaitState({
     };
   }
 
+  const normalizedReason = normalizeString(reason);
+  const classification = classifyWait({
+    kind,
+    reason: normalizedReason,
+    reasonCode,
+    reasonDetailCode,
+    reasonCategory,
+    repairAttemptCount,
+    maxRepairAttempts,
+  });
+  const normalizedStage = Number.isInteger(Number(stage)) ? Number(stage) : null;
+  const normalizedEvidenceRefs = normalizeStringArray(evidenceRefs);
+
   return {
     ...state,
     active_stage:
-      Number.isInteger(Number(stage)) && Number(stage) >= 1 && Number(stage) <= 6
-        ? Number(stage)
+      normalizedStage !== null && normalizedStage >= 1 && normalizedStage <= 6
+        ? normalizedStage
         : state.active_stage,
     current_stage:
-      Number.isInteger(Number(stage)) && Number(stage) >= 1 && Number(stage) <= 6
-        ? Number(stage)
+      normalizedStage !== null && normalizedStage >= 1 && normalizedStage <= 6
+        ? normalizedStage
         : state.current_stage,
     wait: {
-      kind: ensureNonEmptyString(kind, "kind"),
+      kind: ensureNonEmptyString(classification.kind, "kind"),
       pr_role:
         typeof prRole === "string" && prRole.trim().length > 0 ? prRole.trim() : null,
-      stage: Number.isInteger(Number(stage)) ? Number(stage) : null,
+      stage: normalizedStage,
       head_sha:
         typeof headSha === "string" && headSha.trim().length > 0 ? headSha.trim() : null,
-      reason:
-        typeof reason === "string" && reason.trim().length > 0 ? reason.trim() : null,
+      reason: normalizedReason,
+      ...(classification.reason_code ? { reason_code: classification.reason_code } : {}),
+      ...(classification.reason_detail_code ? { reason_detail_code: classification.reason_detail_code } : {}),
+      ...(classification.reason_category ? { reason_category: classification.reason_category } : {}),
+      ...(classification.repair_attempt_count !== null
+        ? { repair_attempt_count: classification.repair_attempt_count }
+        : {}),
+      ...(classification.max_repair_attempts !== null
+        ? { max_repair_attempts: classification.max_repair_attempts }
+        : {}),
+      ...(normalizedEvidenceRefs.length > 0 ? { evidence_refs: normalizedEvidenceRefs } : {}),
       until:
         typeof until === "string" && until.trim().length > 0 ? until.trim() : null,
       updated_at: toIsoString(updatedAt),
@@ -1826,8 +2051,8 @@ export function setWaitState({
       typeof nextAction === "string" && nextAction.trim().length > 0
         ? nextAction.trim()
         : inferActionFromWait({
-            kind,
-            stage: Number.isInteger(Number(stage)) ? Number(stage) : null,
+            kind: classification.kind,
+            stage: normalizedStage,
           }),
   };
 }

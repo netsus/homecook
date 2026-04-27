@@ -3889,23 +3889,37 @@ function applyBlocker({
       recovery,
     }),
   });
-  const notes = [`wait_kind=human_escalation`, `reason=${reason}`];
+  const wait = nextState.wait;
+  const notes = [`wait_kind=${wait?.kind ?? "none"}`, `reason=${reason}`];
+  if (wait?.reason_code) {
+    notes.push(`reason_code=${wait.reason_code}`);
+  }
+  if (wait?.reason_detail_code) {
+    notes.push(`reason_detail_code=${wait.reason_detail_code}`);
+  }
+  if (wait?.reason_category) {
+    notes.push(`reason_category=${wait.reason_category}`);
+  }
   if (recovery?.kind) {
     notes.push(`recovery_kind=${recovery.kind}`);
   }
   if (recovery?.artifact_dir) {
     notes.push(`artifact_dir=${recovery.artifact_dir}`);
   }
+  const statusPatch = {
+    pr_path: prPath ?? undefined,
+    lifecycle: "blocked",
+    verification_status: "pending",
+    blocked_reason_code: wait?.reason_code ?? wait?.reason_category ?? undefined,
+    notes: notes.join(" "),
+  };
+  if (wait?.kind === "human_escalation") {
+    statusPatch.approval_state = "human_escalation";
+  }
   syncStatus({
     rootDir,
     workItemId,
-    patch: {
-      pr_path: prPath ?? undefined,
-      lifecycle: "blocked",
-      approval_state: "human_escalation",
-      verification_status: "pending",
-      notes: notes.join(" "),
-    },
+    patch: statusPatch,
     now,
   });
 
@@ -3951,7 +3965,9 @@ function updateRuntimeStatusForWait({
   };
   const normalizedApprovalState =
     typeof approvalState === "string" && approvalState.trim().length > 0
-      ? approvalState.trim()
+      ? approvalState.trim() === "human_escalation" && wait.kind !== "human_escalation"
+        ? null
+        : approvalState.trim()
       : wait.kind === "ci"
         ? "not_started"
         : null;
@@ -5169,6 +5185,18 @@ function processWaitState({
     throw new Error(
       `Legacy wait state '${state.wait.kind}' is no longer supported. Clear the runtime or migrate it to the autonomous merge flow.`,
     );
+  }
+
+  if (
+    ["codex_repairable", "claude_repairable", "manual_decision_required", "blocked_on_external"].includes(
+      state.wait.kind,
+    )
+  ) {
+    return {
+      state,
+      action: "wait",
+      nextStage: null,
+    };
   }
 
   if (state.wait.kind === "blocked_retry") {
@@ -10348,6 +10376,17 @@ export function tickSupervisorWorkItems(
       return {
         resumable: true,
         reason: null,
+      };
+    }
+
+    if (
+      ["codex_repairable", "claude_repairable", "manual_decision_required", "blocked_on_external"].includes(
+        state.wait.kind,
+      )
+    ) {
+      return {
+        resumable: false,
+        reason: `${state.wait.kind}_pending`,
       };
     }
 

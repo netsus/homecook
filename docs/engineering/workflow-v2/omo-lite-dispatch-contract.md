@@ -39,6 +39,7 @@ dispatch contract가 고정되면:
 - `retry_at`
 - `attempt_count`
 - `reason_code`: `codex_repairable | claude_repairable | product_defect | omo_defect | ci_wait | blocked_on_external | manual_decision_required` 중 하나
+- `reason_detail_code`: 선택 필드. 예: `pr_body_section_drift`, `checklist_evidence_drift`, `stale_ci_snapshot`, `public_contract_change`
 - `open_questions`
 - `external_smoke_needed`
 - `workspace_path`

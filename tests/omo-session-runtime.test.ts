@@ -8,6 +8,7 @@ import {
   acquireRuntimeLock,
   markStageRunning,
   readRuntimeState,
+  setWaitState,
   writeRuntimeState,
 } from "../scripts/lib/omo-session-runtime.mjs";
 
@@ -503,5 +504,162 @@ describe("OMO session runtime", () => {
         fixable: true,
       },
     ]);
+  });
+
+  it("classifies PR body drift as codex repairable before human escalation", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
+    const baseState = readRuntimeState({
+      rootDir,
+      workItemId: "10b-shopping-share-text",
+      slice: "10b-shopping-share-text",
+    }).state;
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "10b-shopping-share-text",
+      state: setWaitState({
+        state: baseState,
+        kind: "human_escalation",
+        prRole: "frontend",
+        stage: 6,
+        headSha: "abc123",
+        reason: "PR body required section missing: Merge Gate",
+        repairAttemptCount: 0,
+        maxRepairAttempts: 1,
+        evidenceRefs: ["pull-request-body"],
+        updatedAt: "2026-04-27T20:00:00+09:00",
+      }),
+    });
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId: "10b-shopping-share-text",
+      slice: "10b-shopping-share-text",
+    });
+
+    expect(state.wait).toMatchObject({
+      kind: "codex_repairable",
+      reason_code: "codex_repairable",
+      reason_detail_code: "pr_body_section_drift",
+      reason_category: "codex_repairable",
+      repair_attempt_count: 0,
+      max_repair_attempts: 1,
+      evidence_refs: ["pull-request-body"],
+    });
+    expect(state.phase).toBe("wait");
+    expect(state.next_action).toBe("noop");
+  });
+
+  it("allows human escalation after codex repair attempts are exhausted", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
+    const baseState = readRuntimeState({
+      rootDir,
+      workItemId: "11-shopping-reorder",
+      slice: "11-shopping-reorder",
+    }).state;
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "11-shopping-reorder",
+      state: setWaitState({
+        state: baseState,
+        kind: "human_escalation",
+        prRole: "frontend",
+        stage: 6,
+        reason: "Checklist evidence artifact is still missing after repair.",
+        repairAttemptCount: 1,
+        maxRepairAttempts: 1,
+        updatedAt: "2026-04-27T20:05:00+09:00",
+      }),
+    });
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId: "11-shopping-reorder",
+      slice: "11-shopping-reorder",
+    });
+
+    expect(state.wait).toMatchObject({
+      kind: "human_escalation",
+      reason_code: "codex_repairable",
+      reason_detail_code: "checklist_evidence_drift",
+      reason_category: "codex_repairable_exhausted",
+      repair_attempt_count: 1,
+      max_repair_attempts: 1,
+    });
+  });
+
+  it("classifies manual decision reasons without overloading human escalation", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
+    const baseState = readRuntimeState({
+      rootDir,
+      workItemId: "12a-shopping-complete",
+      slice: "12a-shopping-complete",
+    }).state;
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "12a-shopping-complete",
+      state: setWaitState({
+        state: baseState,
+        kind: "human_escalation",
+        stage: 2,
+        reason: "Public contract change requires explicit user approval.",
+        updatedAt: "2026-04-27T20:10:00+09:00",
+      }),
+    });
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId: "12a-shopping-complete",
+      slice: "12a-shopping-complete",
+    });
+
+    expect(state.wait).toMatchObject({
+      kind: "manual_decision_required",
+      reason_code: "manual_decision_required",
+      reason_detail_code: "public_contract_change",
+      reason_category: "manual_decision_required",
+    });
+  });
+
+  it("classifies stale CI snapshots as CI wait instead of human escalation", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-session-runtime-"));
+    const baseState = readRuntimeState({
+      rootDir,
+      workItemId: "10b-shopping-share-text",
+      slice: "10b-shopping-share-text",
+    }).state;
+
+    writeRuntimeState({
+      rootDir,
+      workItemId: "10b-shopping-share-text",
+      state: setWaitState({
+        state: baseState,
+        kind: "human_escalation",
+        prRole: "frontend",
+        stage: 6,
+        headSha: "def456",
+        reason: "Stale CI snapshot: current-head checks are still pending.",
+        updatedAt: "2026-04-27T20:15:00+09:00",
+      }),
+    });
+
+    const { state } = readRuntimeState({
+      rootDir,
+      workItemId: "10b-shopping-share-text",
+      slice: "10b-shopping-share-text",
+    });
+
+    expect(state.wait).toMatchObject({
+      kind: "ci",
+      reason_code: "ci_wait",
+      reason_detail_code: "stale_ci_snapshot",
+      reason_category: "ci_wait",
+      pr_role: "frontend",
+      stage: 6,
+      head_sha: "def456",
+    });
+    expect(state.next_action).toBe("poll_ci");
   });
 });
