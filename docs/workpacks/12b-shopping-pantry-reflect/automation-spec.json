@@ -1,0 +1,289 @@
+{
+  "slice": "12b-shopping-pantry-reflect",
+  "version": "1.0.0",
+  "stages": {
+    "stage1": {
+      "name": "Docs",
+      "owner": "claude",
+      "deliverables": [
+        "docs/workpacks/12b-shopping-pantry-reflect/README.md",
+        "docs/workpacks/12b-shopping-pantry-reflect/acceptance.md",
+        "docs/workpacks/12b-shopping-pantry-reflect/automation-spec.json"
+      ],
+      "exit_criteria": [
+        "All required sections in README.md completed",
+        "Acceptance checklist covers happy path, state/policy, error/permission, data integrity",
+        "Internal 1.5 docs gate passed (Codex review)"
+      ]
+    },
+    "stage2": {
+      "name": "Scaffold",
+      "owner": "codex",
+      "deliverables": [
+        "DB migration: shopping_lists.pantry_added_item_ids JSONB",
+        "Type definitions: CompleteShopping request/response",
+        "API route skeleton: POST /shopping/lists/:id/complete",
+        "Repository method signatures",
+        "Frontend component file: ShoppingPantryReflectPopup.tsx"
+      ],
+      "exit_criteria": [
+        "Migration file created and reviewed",
+        "Types match API contract in README.md",
+        "Route handler exists with TODO comments",
+        "All files compile without errors"
+      ]
+    },
+    "stage3": {
+      "name": "Backend",
+      "owner": "claude",
+      "deliverables": [
+        "Complete API implementation: POST /shopping/lists/:id/complete",
+        "4-step validation logic (ownership, pantry-excluded, unchecked, duplicate)",
+        "3-way semantics handling (null / [] / [ids])",
+        "Transaction atomicity (shopping_lists, meals, shopping_list_items, pantry_items)",
+        "Mutation API protection (409 on is_completed=true)",
+        "Vitest unit tests (filtering, count matching, error handling)",
+        "Playwright E2E API tests (without popup UI)"
+      ],
+      "exit_criteria": [
+        "All Vitest unit tests pass",
+        "E2E API tests pass (direct API calls, no UI)",
+        "4-step validation correctly filters invalid items",
+        "3-way semantics correctly interpreted",
+        "Transaction rollback on error",
+        "Mutation APIs return 409 after completion"
+      ]
+    },
+    "stage4": {
+      "name": "Frontend",
+      "owner": "claude",
+      "deliverables": [
+        "ShoppingPantryReflectPopup UI component",
+        "Complete button click → popup display logic",
+        "3 choice handlers (모두 추가 / 선택 추가 / 추가 안 함)",
+        "API integration with error handling",
+        "Read-only mode transition after completion",
+        "Mutation button disabling logic",
+        "Playwright E2E full scenarios (with popup UI)"
+      ],
+      "exit_criteria": [
+        "All E2E tests pass (HP-1, HP-2, HP-3, HP-4, HP-5)",
+        "Popup displays correctly on mobile and desktop",
+        "Error messages shown properly",
+        "Read-only mode enforced in UI",
+        "Accessibility requirements met (keyboard nav, screen reader)"
+      ]
+    },
+    "stage5": {
+      "name": "Polish",
+      "owner": "codex",
+      "deliverables": [
+        "Error message i18n (Korean)",
+        "Loading state UX improvements",
+        "Accessibility audit (keyboard, screen reader)",
+        "Performance optimization (unnecessary re-renders)"
+      ],
+      "exit_criteria": [
+        "All error messages in Korean",
+        "Loading indicators smooth and clear",
+        "Lighthouse accessibility score > 90",
+        "No console warnings or errors"
+      ]
+    },
+    "stage6": {
+      "name": "Review",
+      "owner": "codex",
+      "deliverables": [
+        "Codex self-review (code quality, test coverage)",
+        "Claude authority review (contract compliance, error handling)",
+        "Manual QA checklist completion",
+        "PR creation and merge"
+      ],
+      "exit_criteria": [
+        "All acceptance criteria met",
+        "Code review approved",
+        "Manual QA checklist 100% completed",
+        "PR merged to master"
+      ]
+    }
+  },
+  "test_strategy": {
+    "vitest": {
+      "scope": "Backend business logic, 4-step validation, 3-way semantics, error handling",
+      "files": [
+        "src/services/shopping/__tests__/complete-shopping-list.test.ts",
+        "src/repositories/__tests__/shopping-list-repository.test.ts"
+      ],
+      "coverage_target": ">= 90%"
+    },
+    "playwright": {
+      "scope": "E2E user flows, API integration, UI interactions",
+      "files": [
+        "e2e/shopping/complete-shopping-pantry-reflect.spec.ts"
+      ],
+      "scenarios": [
+        "HP-1: 모두 추가 (null)",
+        "HP-2: 선택 추가 ([1, 2])",
+        "HP-3: 추가 안 함 ([])",
+        "HP-4: 팬트리 확인",
+        "HP-5: Read-only 모드",
+        "EP-1: 재완료 시도 409",
+        "EP-5~8: Mutation API 409"
+      ]
+    }
+  },
+  "api_contracts": {
+    "POST /shopping/lists/:id/complete": {
+      "request": {
+        "body": {
+          "add_to_pantry_item_ids": {
+            "type": "null | [] | number[]",
+            "description": "null=모두, []=없음, [ids]=선택"
+          }
+        }
+      },
+      "response": {
+        "200": {
+          "list_id": "number",
+          "is_completed": "boolean",
+          "completed_at": "string (ISO 8601)",
+          "pantry_added": "number",
+          "pantry_added_item_ids": "number[]",
+          "meal": {
+            "id": "number",
+            "status": "string (shopping_done)"
+          }
+        },
+        "400": {
+          "error": "INVALID_ITEM_IDS",
+          "message": "string",
+          "invalid_ids": "number[]"
+        },
+        "404": {
+          "error": "SHOPPING_LIST_NOT_FOUND",
+          "message": "string"
+        },
+        "409_already_completed": {
+          "error": "ALREADY_COMPLETED",
+          "message": "string",
+          "completed_at": "string"
+        },
+        "409_invalid_meal_status": {
+          "error": "INVALID_MEAL_STATUS",
+          "message": "string",
+          "current_status": "string"
+        }
+      }
+    },
+    "mutation_apis": {
+      "endpoints": [
+        "POST /shopping/lists/:id/items",
+        "PATCH /shopping/lists/:id/items/:item_id",
+        "DELETE /shopping/lists/:id/items/:item_id",
+        "PATCH /shopping/lists/:id/items/:item_id/check"
+      ],
+      "protection": {
+        "condition": "shopping_lists.is_completed = true",
+        "response": {
+          "409": {
+            "error": "SHOPPING_LIST_COMPLETED",
+            "message": "Cannot modify a completed shopping list",
+            "completed_at": "string"
+          }
+        }
+      }
+    }
+  },
+  "db_schema_changes": {
+    "shopping_lists": {
+      "new_columns": [
+        {
+          "name": "pantry_added_item_ids",
+          "type": "JSONB",
+          "nullable": false,
+          "default": "'[]'::jsonb",
+          "description": "팬트리에 추가된 아이템 ID 배열"
+        }
+      ],
+      "existing_columns_used": [
+        {
+          "name": "pantry_added",
+          "type": "INTEGER",
+          "description": "팬트리 추가 개수 (pantry_added_item_ids.length와 일치)"
+        },
+        {
+          "name": "is_completed",
+          "type": "BOOLEAN",
+          "description": "완료 여부"
+        },
+        {
+          "name": "completed_at",
+          "type": "TIMESTAMPTZ",
+          "description": "완료 시각"
+        }
+      ]
+    },
+    "shopping_list_items": {
+      "existing_columns_used": [
+        {
+          "name": "added_to_pantry",
+          "type": "BOOLEAN",
+          "description": "팬트리 추가 여부 (완료 시 설정)"
+        },
+        {
+          "name": "is_checked",
+          "type": "BOOLEAN",
+          "description": "체크 여부 (팬트리 추가 조건)"
+        },
+        {
+          "name": "is_pantry_excluded",
+          "type": "BOOLEAN",
+          "description": "팬트리 제외 여부 (true면 추가 안 함)"
+        }
+      ],
+      "constraints": [
+        {
+          "type": "CHECK",
+          "name": "check_added_to_pantry_valid",
+          "condition": "added_to_pantry = false OR (is_checked = true AND is_pantry_excluded = false)",
+          "description": "added_to_pantry=true이면 반드시 체크되고 팬트리 제외 아니어야 함"
+        }
+      ]
+    },
+    "meals": {
+      "existing_columns_used": [
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "description": "registered → shopping_done 전환"
+        }
+      ]
+    },
+    "pantry_items": {
+      "new_records": {
+        "description": "완료 시 유효 아이템들이 pantry_items로 삽입됨",
+        "columns": [
+          "user_id",
+          "name",
+          "quantity",
+          "unit",
+          "created_at"
+        ]
+      }
+    }
+  },
+  "invariants": {
+    "I1": "pantry_added = pantry_added_item_ids.length (항상 일치)",
+    "I2": "is_completed=true 후 mutation API는 409 반환",
+    "I3": "added_to_pantry=true이면 is_checked=true AND is_pantry_excluded=false",
+    "I4": "완료 시 meals.status = shopping_done 전환 (registered에서만)",
+    "I5": "4단계 검증 통과한 아이템만 pantry_items에 추가"
+  },
+  "metadata": {
+    "created_at": "2026-04-28",
+    "created_by": "claude",
+    "review_status": "pending_internal_1.5_docs_gate",
+    "backend_first": true,
+    "design_authority_required": false
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "id": "12b-shopping-pantry-reflect",
+  "title": "Shopping pantry reflection selection popup",
+  "summary": "장보기 완료 시 팬트리 반영 선택 팝업, add_to_pantry_item_ids 3-way 의미론 (null/[]/선택값), 4단계 서버 검증",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "장보기 완료 시 팬트리 반영 선택 팝업을 제공하고, add_to_pantry_item_ids의 3-way 의미론 (null / [] / 선택값)을 프론트·백엔드 양쪽에서 정확히 구현한다. 서버는 4단계 검증 프로세스로 유효한 아이템만 팬트리에 추가하고, 완료 후 쇼핑 목록 read-only 상태를 유지한다. 핵심 목표: (1) 사용자가 장보기 완료 직전 팝업에서 팬트리 반영 대상을 선택할 수 있음, (2) null (기본 동작), [] (반영 안 함), 선택된 ID 배열 (해당 항목만 반영)의 3가지 시맨틱을 명확히 구분, (3) 서버 4단계 검증: 소유권 확인 → pantry-excluded 필터 → unchecked 필터 → 중복 제거, (4) pantry_added 카운트와 pantry_added_item_ids 길이가 일치, (5) 완료 후 mutation API는 409 Conflict 반환.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "12a-shopping-complete"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/요구사항기준선-v1.6.4.md",
+      "docs/화면정의서-v1.5.1.md",
+      "docs/api문서-v1.2.2.md",
+      "docs/db설계-v1.3.1.md",
+      "docs/유저flow맵-v1.3.1.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/12b-shopping-pantry-reflect/README.md",
+      "docs/workpacks/12b-shopping-pantry-reflect/acceptance.md",
+      "docs/workpacks/12b-shopping-pantry-reflect/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/playwright-e2e.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip"
+    ]
+  },
+  "status": {
+    "lifecycle": "docs",
+    "approval_state": "pending_internal_1.5_docs_gate",
+    "verification_status": "not_started",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "out_of_scope": [
+    "팬트리 화면 UI 개선 — 기존 기능 활용",
+    "추가 후 팬트리 아이템 수정/삭제 — 별도 슬라이스",
+    "재료 중복 병합 로직 — slice 12c",
+    "팬트리 아이템 카테고리 자동 분류 — 향후",
+    "팬트리 아이템 유효기간 관리 — 별도 기능",
+    "bulk 완료 (여러 쇼핑 목록 동시 처리) — 향후"
+  ],
+  "open_questions": []
+}
