@@ -193,12 +193,13 @@
 
 ## Stage 4 Frontend Evidence
 - Implemented: `components/shopping/shopping-detail-screen.tsx` (complete button, handler, loading/success/error states)
-- Tests: `tests/shopping-detail.frontend.test.tsx` (8 new tests for complete flow), `tests/e2e/slice-12a-shopping-complete.spec.ts` (E2E coverage)
-- Frontend tests: 29 tests passed (including 8 new complete flow tests)
-- E2E tests: fixture-based tests for complete button visibility, success flow, error handling, read-only UI
+- Tests: `tests/shopping-detail.frontend.test.tsx` (8 new tests for complete flow), `tests/e2e/slice-12a-shopping-complete.spec.ts` (6 E2E tests)
+- Frontend tests: `pnpm test:product tests/shopping-detail.frontend.test.tsx` passed (29 tests including 8 new complete flow tests)
+- E2E tests: `pnpm exec playwright test tests/e2e/slice-12a-shopping-complete.spec.ts` passed (6 tests: complete button visibility, success flow, 401/409/500 error handling, read-only UI controls)
+- E2E scope: Shopping detail completion UI and API integration only; planner meal status transition deferred to Stage 6 browser smoke
 - Config update: Added `tests/shopping-*.test.tsx` pattern to `vitest.product.config.ts` for frontend test inclusion
 - UI states: loading (disabled button with "완료 처리 중..."), success (toast with meal count), error (toast with error message), read-only (button hidden for completed lists)
-- Real browser smoke: Deferred to Stage 6 manual QA; fixture tests cover complete flow, error handling, and UI state transitions
+- Real browser smoke: Deferred to Stage 6 manual QA for planner meal status transition and full cross-screen flow verification
 
 ## Delivery Checklist
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.

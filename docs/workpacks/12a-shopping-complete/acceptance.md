@@ -62,7 +62,7 @@
 - [x] 완료 후 read-only 정책(409 CONFLICT)이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-read-only;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright
-- [x] 실제 사용자 흐름 (장보기 완료 → 플래너 상태 전이 확인)이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [ ] 실제 사용자 흐름 (장보기 완료 → 플래너 상태 전이 확인)이 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
 - [x] 완료 후 read-only UI (버튼 숨김, 컨트롤 비활성화)가 브라우저 테스트로 고정되어 있다 <!-- omo:id=accept-playwright-read-only-ui;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
