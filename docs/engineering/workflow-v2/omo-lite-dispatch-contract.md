@@ -144,7 +144,7 @@ Stage 5 authority subphase:
 
 | Stage | Actor | Goal | Required Reads | Deliverables |
 |------|-------|------|----------------|--------------|
-| 1 | Claude | workpack 문서 작성 | AGENTS, current source, template, official docs, workflow-v2 schema/template/status | README, acceptance, automation-spec, workflow-v2 work item, workflow-v2 status item, valid stage result |
+| 1 | Claude | workpack 문서 작성 | AGENTS, current source, workpack roadmap, slice workflow, official docs, workflow status | README, acceptance, automation-spec, workflow-v2 work item, workflow-v2 status item, valid stage result |
 | 2 | Codex | backend contract-first 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, API/DB docs, 이전 backend review feedback(있으면) | internal 1.5 `pass` 뒤 `$ralph`-driven backend impl, roadmap status `in-progress`, checklist updates/rebuttals, valid stage result |
 | 3 | Claude | backend PR review | workpack, acceptance, PR diff, CI | review summary, reviewed checklist ids, requested changes or approve |
 | 4 | Claude | frontend 구현 | AGENTS, slice workflow, workpack, acceptance, automation-spec, design refs, mobile UX / anchor / authority docs, 이전 frontend review feedback(있으면) | FE implementation, authority-required면 Codex `authority_precheck`, Design Status `pending-review`, checklist updates/rebuttals, valid stage result |
@@ -188,9 +188,6 @@ provider별 resume 규칙:
   - `AGENTS.md`
   - `docs/workpacks/README.md`
   - `docs/engineering/slice-workflow.md`
-  - `.workflow-v2/README.md`
-  - `docs/engineering/workflow-v2/schemas/work-item.schema.json`
-  - `docs/engineering/workflow-v2/templates/work-item.example.json`
   - `.workflow-v2/status.json`
   - 공식 문서 해당 섹션
 - success:
@@ -231,7 +228,6 @@ provider별 resume 규칙:
 - goal: `슬라이스 <id> internal 1.5 docs repair`
 - must read:
   - `AGENTS.md`
-  - `docs/engineering/workflow-v2/omo-autonomous-supervisor.md`
   - `docs/workpacks/<slice>/README.md`
   - `docs/workpacks/<slice>/acceptance.md`
   - `docs/workpacks/<slice>/automation-spec.json`
