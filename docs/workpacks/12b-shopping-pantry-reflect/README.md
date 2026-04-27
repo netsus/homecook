@@ -69,7 +69,7 @@
 
   - **멱등성**:
     - 이미 `is_completed=true`인 리스트 재호출 시 `200` 반환, 동일 결과 응답
-    - 응답의 `pantry_added` / `pantry_added_item_ids`는 **이번 요청에서 처리된** 항목 기준
+    - 응답의 `pantry_added` / `pantry_added_item_ids`는 리스트의 반영 상태를 기준으로 안정적으로 반환됨 (유효 선택 항목 기준)
 
   - **응답 (200)** 공통 래퍼 `{ success: true, data: {...}, error: null }`의 `data`:
     ```json
@@ -249,7 +249,7 @@ Stage 4 완료 전 Stage 5 lightweight design check로 충분.
 - **요구사항**: 요구사항기준선-v1.6.4.md § 1-6 장보기 > "장보기 완료 처리"
 - **API**: api문서-v1.2.2.md § 8-5 `POST /shopping/lists/{id}/complete`, P0-2 (미전달 vs 빈배열), P0-3 (서버 검증 규칙)
 - **DB**: db설계-v1.3.1.md § `shopping_lists`, `shopping_list_items`, `pantry_items`
-- **화면**: 화면정의서-v1.5.1.md § SHOPPING_COMPLETE 화면 (완료 버튼 및 팝업 레이아웃 참조)
+- **화면**: 화면정의서-v1.5.1.md § SHOPPING_DETAIL 화면 (완료 버튼 및 팝업 레이아웃 참조)
 - **Flow**: 유저flow맵-v1.3.1.md § "장보기 완료 → 팬트리 반영 선택 → 식사 진행"
 
 ---
@@ -390,7 +390,7 @@ Stage 4 완료 전 Stage 5 lightweight design check로 충분.
 - [x] `.workflow-v2/work-items/12b-shopping-pantry-reflect.json` 생성 <!-- omo:id=stage1_work_items;stage=1;scope=docs;review=1.5 -->
 - [x] `.workflow-v2/status.json` 업데이트 <!-- omo:id=stage1_status;stage=1;scope=docs;review=1.5 -->
 - [x] `docs/workpacks/README.md` 상태 변경 (`planned` → `docs`) <!-- omo:id=stage1_roadmap;stage=1;scope=docs;review=1.5 -->
-- [x] Internal 1.5 docs gate 통과 (Codex 리뷰) <!-- omo:id=stage1_docs_gate;stage=1;scope=docs;review=1.5 -->
+- [ ] Internal 1.5 docs gate 통과 (Codex 리뷰) <!-- omo:id=stage1_docs_gate;stage=1;scope=docs;review=1.5 -->
 
 ### Stage 2 (Backend) — Codex 담당
 - [ ] 완료 API 로직 구현 (4단계 검증/필터, 3-way 의미론, 멱등성) <!-- omo:id=stage2_api_impl;stage=2;scope=backend;review=3 -->
@@ -422,4 +422,4 @@ Stage 4 완료 전 Stage 5 lightweight design check로 충분.
 
 **작성일**: 2026-04-28
 **작성자**: Claude (Stage 1)
-**리뷰 상태**: Repair 1 in progress
+**리뷰 상태**: Pending Codex internal 1.5 docs gate approval after repair 2

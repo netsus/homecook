@@ -253,7 +253,7 @@
   "metadata": {
     "created_at": "2026-04-28",
     "created_by": "claude",
-    "review_status": "repair_1_in_progress",
+    "review_status": "pending_codex_internal_1.5_docs_gate",
     "backend_first": true,
     "design_authority_required": false
   }
