@@ -1,0 +1,85 @@
+{
+  "id": "baemin-style-shared-components",
+  "title": "Baemin-style shared UI component foundation",
+  "summary": "배민 스타일 공유 UI 프리미티브(Button, Chip, Card, Badge, EmptyState, ErrorState, Skeleton) 생성 및 기존 shared 컴포넌트(modal-header, modal-footer-actions, selection-chip-rail) 토큰 기반 리스타일. 후속 anchor screen retrofit 슬라이스가 소비할 수 있도록 공통 컴포넌트 기반을 확립한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "Establish reusable shared UI primitives styled with approved Baemin-style token foundation. Create new components/ui/ files (button, chip, card, badge, empty-state, error-state, skeleton) and restyle existing components/shared/ files (modal-header, modal-footer-actions, selection-chip-rail) so follow-up retrofit slices can consume them without re-inventing component styling.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "h6-baemin-style-direction",
+    "baemin-style-tokens-additive",
+    "baemin-style-token-values"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/baemin-style-shared-components/README.md",
+      "docs/workpacks/baemin-style-shared-components/acceptance.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md",
+      "ui/designs/authority/BAEMIN_STYLE_DIRECTION-preflight.md",
+      "docs/design/design-tokens.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/design/design-tokens.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 3
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm verify:frontend"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm typecheck",
+      "pnpm lint"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "all-components-use-css-variables-only",
+      "existing-props-interfaces-preserved",
+      "h5-modal-decisions-honored"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "Full HOME screen retrofit",
+    "Full RECIPE_DETAIL screen retrofit",
+    "Full PLANNER_WEEK screen retrofit",
+    "AppBar creation or restyling",
+    "BottomTab creation or restyling",
+    "PANTRY or MYPAGE production scope",
+    "Importing Jua or prototype-only fonts",
+    "API, DB, or status-transition changes",
+    "Changing --cook-* token values",
+    "Changing --background, --foreground, --muted, --surface, --panel, --line, --olive token values"
+  ],
+  "open_questions": []
+}

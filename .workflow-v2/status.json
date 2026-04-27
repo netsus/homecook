@@ -351,6 +351,23 @@
         "pnpm verify:frontend"
       ],
       "notes": "Internal 6.5 projection sync after Stage 6 Codex review. PR #225 current head checks green before projection sync; local required checks passed including pnpm verify:frontend. Stage artifacts: .omx/artifacts/claude-delegate-baemin-style-token-values-stage4-implementation-response-20260426T172944Z.md, .omx/artifacts/stage5-baemin-style-token-values-design-review-20260426T174300Z.md, .omx/artifacts/stage6-baemin-style-token-values-pr-review-20260426T175900Z.md. Manual Only remains user final visual-feel confirmation after merge."
+    },
+    {
+      "id": "baemin-style-shared-components",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/baemin-style-shared-components",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "git diff --check",
+        "pnpm validate:workflow-v2",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm verify:frontend"
+      ],
+      "notes": "Stage 1 docs gate for Baemin-style shared UI component foundation. High-risk UI change — authority review required at Stage 5. Implementation branch: feature/fe-baemin-style-shared-components."
     }
   ]
 }
