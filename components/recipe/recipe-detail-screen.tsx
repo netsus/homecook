@@ -705,53 +705,52 @@ export function RecipeDetailScreen({
 
   return (
     <>
-      <div className="space-y-[clamp(1.25rem,4vw,1.5rem)]">
-        <section className="flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow-2)]">
-          <div
-            className="min-h-[clamp(6.5rem,32vw,12rem)] border-b border-[var(--line)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--brand)_22%,transparent),color-mix(in_srgb,var(--background)_85%,transparent),color-mix(in_srgb,var(--olive)_18%,transparent))] sm:min-h-64 md:min-h-80"
-            style={
-              recipe.thumbnail_url
-                ? {
-                    backgroundImage: `linear-gradient(color-mix(in srgb, var(--foreground) 6%, transparent),color-mix(in srgb, var(--foreground) 22%, transparent)),url(${recipe.thumbnail_url})`,
-                    backgroundPosition: "center",
-                    backgroundSize: "cover",
-                  }
-                : undefined
-            }
-          />
+      <div className="bg-[var(--surface-fill)]">
+        <div
+          className="aspect-[4/3] max-[360px]:aspect-[16/9] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--brand)_22%,transparent),color-mix(in_srgb,var(--background)_85%,transparent),color-mix(in_srgb,var(--olive)_18%,transparent))]"
+          style={
+            recipe.thumbnail_url
+              ? {
+                  backgroundImage: `linear-gradient(color-mix(in srgb, var(--foreground) 6%, transparent),color-mix(in srgb, var(--foreground) 22%, transparent)),url(${recipe.thumbnail_url})`,
+                  backgroundPosition: "center",
+                  backgroundSize: "cover",
+                }
+              : undefined
+          }
+        />
 
-          <div className="recipe-overview-compact flex flex-col px-[clamp(0.875rem,4vw,1.25rem)] py-[clamp(0.875rem,4vw,1.25rem)] md:px-6 md:py-6">
+        <div className="recipe-overview-compact flex flex-col border-b border-[var(--line)] bg-[var(--panel)] px-5 py-5">
             <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--olive)] md:text-xs md:tracking-[0.22em]">
               <Link href="/">Home</Link>
               <span>/</span>
               <span>Recipe detail</span>
             </div>
 
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {recipe.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-[var(--radius-full)] bg-[color-mix(in_srgb,var(--olive)_10%,transparent)] px-2.5 py-1 text-[11px] font-semibold text-[var(--olive)] md:px-3 md:text-xs"
+                    className="rounded-[var(--radius-full)] bg-[color-mix(in_srgb,var(--olive)_10%,transparent)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--olive)]"
                   >
                     #{tag}
                   </span>
                 ))}
               </div>
-              <h1 className="text-[clamp(1.5rem,6vw,2.125rem)] font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
+              <h1 className="text-2xl font-bold tracking-[-0.02em] text-[var(--foreground)]">
                 {recipe.title}
               </h1>
-              <p className="text-[12px] font-medium text-[var(--muted)] md:text-[13px]">
+              <p className="flex items-center gap-2 text-[13px] text-[var(--text-2)]">
                 <span>{recipe.base_servings}인분</span>
-                <span className="px-1.5 text-[var(--line)]">·</span>
+                <span className="text-[var(--line)]">·</span>
                 <span>재료 {recipe.ingredients.length}개</span>
-                <span className="px-1.5 text-[var(--line)]">·</span>
+                <span className="text-[var(--line)]">·</span>
                 <span>조리 {recipe.steps.length}단계</span>
               </p>
             </div>
 
-            <div className="recipe-overview-metrics-compact flex flex-wrap items-center gap-2 max-[360px]:order-1">
-              <div className="min-w-[8.5rem] flex-1 md:min-w-[9rem] md:flex-none">
+            <div className="recipe-overview-metrics-compact flex flex-wrap items-center gap-2 max-[360px]:order-1 max-[360px]:grid max-[360px]:grid-cols-[minmax(0,1fr)_44px_64px_64px]">
+              <div className="min-w-[8.5rem] flex-1 max-[360px]:min-w-0 max-[360px]:flex-none md:min-w-[9rem] md:flex-none">
                 <UtilityStatButton
                   ariaLabel={`플래너 등록 ${plannerCountLabel}`}
                   count={plannerCountLabel}
@@ -760,7 +759,7 @@ export function RecipeDetailScreen({
                   tone="neutral"
                 />
               </div>
-              <div className="w-11 shrink-0 md:w-[3rem]">
+              <div className="w-11 shrink-0 max-[360px]:w-11 md:w-[3rem]">
                 <IconActionButton
                   ariaLabel="공유하기"
                   icon={<ShareIcon />}
@@ -768,7 +767,7 @@ export function RecipeDetailScreen({
                   tone="neutral"
                 />
               </div>
-              <div className="min-w-[5.5rem] flex-1 md:min-w-[6.25rem] md:flex-none">
+              <div className="min-w-[5.5rem] flex-1 max-[360px]:min-w-0 max-[360px]:flex-none md:min-w-[6.25rem] md:flex-none">
                 <MetricActionButton
                   ariaLabel={
                     likeRequestState === "pending"
@@ -789,7 +788,7 @@ export function RecipeDetailScreen({
                   tone={recipe.user_status?.is_liked ? "signal" : "neutral"}
                 />
               </div>
-              <div className="min-w-[5.5rem] flex-1 md:min-w-[6.25rem] md:flex-none">
+              <div className="min-w-[5.5rem] flex-1 max-[360px]:min-w-0 max-[360px]:flex-none md:min-w-[6.25rem] md:flex-none">
                 <MetricActionButton
                   ariaLabel="저장"
                   ariaPressed={recipe.user_status?.is_saved ?? false}
@@ -804,12 +803,12 @@ export function RecipeDetailScreen({
             </div>
 
             <div className="max-[360px]:order-4">
-              <p className="max-w-3xl text-[12px] leading-5 text-[var(--text-2)] md:text-[13px] md:leading-5">
+              <p className="max-w-3xl text-[13px] leading-5 text-[var(--text-2)]">
                 {recipe.description ?? "요리 설명이 아직 등록되지 않았어요."}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 max-[360px]:order-2 md:gap-2.5">
+            <div className="grid grid-cols-[1fr_2fr] gap-2 max-[360px]:order-2 max-[360px]:grid-cols-2">
               <ActionButton
                 label="플래너에 추가"
                 onClick={() => handleProtectedAction("planner")}
@@ -827,131 +826,140 @@ export function RecipeDetailScreen({
               />
             </div>
           </div>
-        </section>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-          <section className="rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow-2)] md:p-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-                    재료
-                  </p>
-                </div>
-                <div className="rounded-[var(--radius-lg)] bg-[var(--surface-fill)] px-4 py-3">
-                  <label className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
-                    인분
-                  </label>
-                  <div className="mt-2 flex items-center gap-3">
-                    <button
-                      className="h-11 w-11 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]"
-                      onClick={() =>
-                        setSelectedServings((value) => Math.max(1, value - 1))
-                      }
-                      type="button"
-                    >
-                      -
-                    </button>
-                    <span className="min-w-16 text-center text-lg font-semibold">
-                      {selectedServings}인분
-                    </span>
-                    <button
-                      className="h-11 w-11 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]"
-                      onClick={() => setSelectedServings((value) => value + 1)}
-                      type="button"
-                    >
-                      +
-                    </button>
-                  </div>
-                  <p className="mt-3 text-[13px] font-semibold tracking-[-0.01em] md:text-sm" style={{ color: 'color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))' }}>
-                    인분에 따라 재료량이 바뀝니다
-                  </p>
-                </div>
+        <div className="bg-[var(--panel)] px-5 py-5">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
+            재료
+          </p>
+
+          <div className="mb-5 rounded-xl bg-[var(--surface-fill)] px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-[var(--muted)]">몇 인분?</div>
+                <div className="text-base font-bold text-[var(--foreground)]">{selectedServings}인분</div>
               </div>
-              <ul className="grid gap-3">
-                {scaledIngredients.map((ingredient) => {
-                  const quantityText = ingredient.scaledText.startsWith(
-                    `${ingredient.standard_name} `,
-                  )
-                    ? ingredient.scaledText.slice(ingredient.standard_name.length + 1)
-                    : ingredient.scaledText;
-
-                  return (
-                    <li
-                      key={ingredient.id}
-                      className="flex items-center justify-between gap-4 rounded-[var(--radius-lg)] bg-[var(--surface-fill)] px-4 py-3 text-sm text-[var(--foreground)]"
-                    >
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span>{ingredient.standard_name}</span>
-                        {ingredient.ingredient_type === "TO_TASTE" ? (
-                          <span className="rounded-[var(--radius-full)] border px-2 py-0.5 text-[10px] font-semibold" style={{ borderColor: 'color-mix(in srgb, var(--brand) 16%, transparent)', backgroundColor: 'color-mix(in srgb, var(--brand) 8%, transparent)', color: 'color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))' }}>
-                            취향껏
-                          </span>
-                        ) : null}
-                      </span>
-                      <span
-                        className={
-                          ingredient.ingredient_type === "TO_TASTE"
-                            ? "font-semibold text-[var(--text-2)]"
-                            : "font-medium text-[var(--muted)]"
-                        }
-                      >
-                        {quantityText}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </section>
-
-          <section className="rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow-2)] md:p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
-              조리 단계
-            </p>
-            <ol className="mt-4 space-y-3">
-              {recipe.steps.map((step) => (
-                <li
-                  key={step.id}
-                  className="rounded-[var(--radius-lg)] bg-[var(--surface-fill)] px-4 py-4"
+              <div className="flex items-center gap-2">
+                <button
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--panel)] text-lg text-[var(--foreground)]"
+                  onClick={() =>
+                    setSelectedServings((value) => Math.max(1, value - 1))
+                  }
+                  type="button"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-full)] bg-[var(--foreground)] text-sm font-bold text-[var(--surface)]">
-                        {step.step_number}
-                      </span>
-                      <span
-                        className="rounded-[var(--radius-full)] border px-3 py-1 text-xs font-semibold text-[var(--foreground)]"
-                        style={{
-                          backgroundColor: resolveCookingMethodTint(
-                            step.cooking_method?.color_key,
-                          ),
-                          borderColor: resolveCookingMethodColor(
-                            step.cooking_method?.color_key,
-                          ),
-                        }}
-                      >
-                        {step.cooking_method?.label ?? "기타"}
-                      </span>
-                    </div>
-                    {step.duration_text ? (
-                      <span className="text-xs font-medium text-[var(--muted)]">
-                        {step.duration_text}
+                  −
+                </button>
+                <span className="min-w-6 text-center font-bold text-[var(--foreground)]">
+                  {selectedServings}
+                </span>
+                <button
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--olive)] text-lg font-bold text-white"
+                  onClick={() => setSelectedServings((value) => value + 1)}
+                  type="button"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <p className="mt-2 text-[12px] font-medium" style={{ color: 'color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))' }}>
+              인분에 따라 재료량이 바뀝니다
+            </p>
+          </div>
+
+          <ul>
+            {scaledIngredients.map((ingredient, idx) => {
+              const quantityText = ingredient.scaledText.startsWith(
+                `${ingredient.standard_name} `,
+              )
+                ? ingredient.scaledText.slice(ingredient.standard_name.length + 1)
+                : ingredient.scaledText;
+
+              return (
+                <li
+                  key={ingredient.id}
+                  className="flex items-center justify-between py-3 text-[15px]"
+                  style={{
+                    borderBottom:
+                      idx < scaledIngredients.length - 1
+                        ? "1px solid var(--surface-subtle)"
+                        : "none",
+                  }}
+                >
+                  <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--foreground)]">
+                    <span>{ingredient.standard_name}</span>
+                    {ingredient.ingredient_type === "TO_TASTE" ? (
+                      <span className="rounded-[var(--radius-full)] border px-2 py-0.5 text-[10px] font-semibold" style={{ borderColor: 'color-mix(in srgb, var(--brand) 16%, transparent)', backgroundColor: 'color-mix(in srgb, var(--brand) 8%, transparent)', color: 'color-mix(in srgb, var(--brand-deep) 80%, var(--foreground))' }}>
+                        취향껏
                       </span>
                     ) : null}
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-[var(--foreground)]">
-                    {step.instruction}
-                  </p>
-                  {step.heat_level ? (
-                    <p className="mt-2 text-xs text-[var(--muted)]">
-                      불 세기 {step.heat_level}
-                    </p>
-                  ) : null}
+                  </span>
+                  <span className="text-sm text-[var(--text-2)]">
+                    {quantityText}
+                  </span>
                 </li>
-              ))}
-            </ol>
-          </section>
+              );
+            })}
+          </ul>
+        </div>
+
+        <div className="px-4 py-5">
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
+            조리 단계
+          </p>
+          <ol className="space-y-3">
+            {recipe.steps.map((step) => (
+              <li
+                key={step.id}
+                className="rounded-xl bg-[var(--panel)] p-4 shadow-[var(--shadow-1)]"
+                style={{
+                  borderLeft: `4px solid ${resolveCookingMethodColor(step.cooking_method?.color_key)}`,
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-bold"
+                      style={{
+                        backgroundColor: resolveCookingMethodTint(
+                          step.cooking_method?.color_key,
+                        ),
+                        color: resolveCookingMethodDark(
+                          step.cooking_method?.color_key,
+                        ),
+                      }}
+                    >
+                      {step.step_number}
+                    </span>
+                    <span
+                      className="rounded px-2 py-0.5 text-[11px] font-bold"
+                      style={{
+                        backgroundColor: resolveCookingMethodTint(
+                          step.cooking_method?.color_key,
+                        ),
+                        color: resolveCookingMethodDark(
+                          step.cooking_method?.color_key,
+                        ),
+                      }}
+                    >
+                      {step.cooking_method?.label ?? "기타"}
+                    </span>
+                  </div>
+                  {step.duration_text ? (
+                    <span className="text-xs text-[var(--muted)]">
+                      {step.duration_text}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-2 pl-9 text-sm leading-6 text-[var(--text-2)]">
+                  {step.instruction}
+                </p>
+                {step.heat_level ? (
+                  <p className="mt-1.5 pl-9 text-xs text-[var(--muted)]">
+                    불 세기 {step.heat_level}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ol>
         </div>
       </div>
       <SaveModal
@@ -1008,92 +1016,85 @@ function RecipeDetailLoadingSkeleton() {
   return (
     <div
       aria-hidden="true"
-      className="space-y-6"
+      className="bg-[var(--surface-fill)]"
     >
-      <section className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow-2)]">
-        <Skeleton className="min-h-48 border-b border-[var(--line)] sm:min-h-64 md:min-h-80" rounded="lg" />
-        <div className="space-y-5 px-5 py-5 md:px-6 md:py-6">
-          <Skeleton className="h-4 w-28" rounded="full" />
-          <div className="space-y-3">
-            <Skeleton className="h-10 w-3/4" rounded="lg" />
-            <Skeleton className="h-4 w-full" rounded="full" />
-            <Skeleton className="h-4 w-5/6" rounded="full" />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton
-                className="h-7 w-20"
-                key={`hero-tag-${index}`}
-                rounded="full"
-              />
-            ))}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton
-                className="h-24"
-                key={`hero-overview-${index}`}
-                rounded="lg"
-              />
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Skeleton className="h-12 w-36" rounded="md" />
-            <Skeleton className="h-12 w-36" rounded="md" />
-            <Skeleton className="h-12 w-12" rounded="md" />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {Array.from({ length: 2 }).map((_, index) => (
-              <Skeleton
-                className="h-12 w-28"
-                key={`hero-metric-${index}`}
-                rounded="full"
-              />
-            ))}
-          </div>
-        </div>
-      </section>
+      <div className="aspect-[4/3] max-[360px]:aspect-[16/9] bg-[var(--surface-fill)]">
+        <div className="h-full w-full animate-pulse bg-[var(--surface-fill)]" />
+      </div>
 
-      <section className="rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow-2)] md:p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-3">
-            <Skeleton className="h-4 w-16" rounded="full" />
-            <Skeleton className="h-8 w-64" rounded="lg" />
-          </div>
-          <Skeleton className="h-20 w-full md:w-40" rounded="lg" />
-        </div>
-        <div className="mt-5 grid gap-3">
-          {Array.from({ length: 6 }).map((_, index) => (
+      <div className="space-y-4 border-b border-[var(--line)] bg-[var(--panel)] px-5 py-5">
+        <Skeleton className="h-4 w-28" rounded="full" />
+        <div className="flex flex-wrap gap-1.5">
+          {Array.from({ length: 3 }).map((_, index) => (
             <Skeleton
-              className="h-14"
-              key={`ingredient-${index}`}
-              rounded="lg"
+              className="h-6 w-16"
+              key={`hero-tag-${index}`}
+              rounded="full"
             />
           ))}
         </div>
-      </section>
-
-      <section className="rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow-2)] md:p-6">
-        <Skeleton className="h-4 w-16" rounded="full" />
-        <div className="mt-4 space-y-3">
+        <Skeleton className="h-8 w-3/4" rounded="lg" />
+        <Skeleton className="h-4 w-48" rounded="full" />
+        <div className="flex flex-wrap gap-2">
           {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton
+              className="h-11 w-24"
+              key={`hero-metric-${index}`}
+              rounded="md"
+            />
+          ))}
+        </div>
+        <Skeleton className="h-4 w-full" rounded="full" />
+        <Skeleton className="h-4 w-5/6" rounded="full" />
+        <div className="grid grid-cols-[1fr_2fr] gap-2 max-[360px]:grid-cols-2">
+          <Skeleton className="h-11" rounded="md" />
+          <Skeleton className="h-11" rounded="md" />
+        </div>
+      </div>
+
+      <div className="bg-[var(--panel)] px-5 py-5">
+        <Skeleton className="mb-4 h-4 w-12" rounded="full" />
+        <Skeleton className="mb-5 h-16 w-full" rounded="lg" />
+        <div className="space-y-0">
+          {Array.from({ length: 6 }).map((_, index) => (
             <div
-              className="rounded-[var(--radius-lg)] bg-[var(--surface-fill)] px-4 py-4"
-              key={`step-${index}`}
+              className="py-3"
+              key={`ingredient-${index}`}
+              style={{
+                borderBottom:
+                  index < 5 ? "1px solid var(--surface-subtle)" : "none",
+              }}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-10 w-10" rounded="full" />
-                  <Skeleton className="h-7 w-20" rounded="full" />
-                </div>
-                <Skeleton className="h-4 w-12" rounded="full" />
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-4 w-24" rounded="full" />
+                <Skeleton className="h-4 w-16" rounded="full" />
               </div>
-              <Skeleton className="mt-3 h-4 w-full" rounded="full" />
-              <Skeleton className="mt-2 h-4 w-5/6" rounded="full" />
             </div>
           ))}
         </div>
-      </section>
+      </div>
+
+      <div className="px-4 py-5">
+        <Skeleton className="mb-4 h-4 w-16" rounded="full" />
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              className="rounded-xl bg-[var(--panel)] p-4"
+              key={`step-${index}`}
+              style={{ borderLeft: "4px solid var(--line)" }}
+            >
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-7 w-7" rounded="full" />
+                <Skeleton className="h-5 w-16" rounded="md" />
+              </div>
+              <div className="mt-2 pl-9">
+                <Skeleton className="h-4 w-full" rounded="full" />
+                <Skeleton className="mt-2 h-4 w-5/6" rounded="full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1114,6 +1115,11 @@ function resolveCookingMethodTint(colorKey?: string | null) {
   return COOKING_METHOD_TINTS[colorKey] ?? "color-mix(in srgb, var(--cook-etc) 16%, transparent)";
 }
 
+function resolveCookingMethodDark(colorKey?: string | null) {
+  const base = resolveCookingMethodColor(colorKey);
+  return `color-mix(in srgb, ${base} 52%, var(--foreground))`;
+}
+
 function ActionButton({
   ariaPressed,
   disabled = false,
@@ -1130,7 +1136,7 @@ function ActionButton({
   return (
     <button
       aria-pressed={ariaPressed}
-      className={`min-h-11 rounded-[var(--radius-md)] border px-3 py-2 text-[12px] font-semibold shadow-[var(--shadow-1)] disabled:cursor-not-allowed disabled:opacity-60 md:px-4 md:py-2.5 md:text-sm ${
+      className={`min-h-11 whitespace-nowrap rounded-[var(--radius-md)] border px-3 py-2 text-[12px] font-semibold shadow-[var(--shadow-1)] disabled:cursor-not-allowed disabled:opacity-60 max-[360px]:px-2 md:px-4 md:py-2.5 md:text-sm ${
         tone === "olive"
           ? "border-[color-mix(in_srgb,var(--olive)_22%,transparent)] bg-[var(--olive)] text-[var(--surface)]"
           : getRecipeActionToneClass(tone)
