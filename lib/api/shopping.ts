@@ -5,6 +5,8 @@ import type {
   ShoppingListDetail,
   ShoppingListItemSummary,
   ShoppingListItemUpdateBody,
+  ShoppingListReorderBody,
+  ShoppingListReorderData,
   ShoppingListSummary,
   ShoppingPreviewData,
   ShoppingShareTextData,
@@ -93,6 +95,14 @@ export async function updateShoppingListItem(
   body: ShoppingListItemUpdateBody,
 ) {
   return requestShopping<ShoppingListItemSummary>(`/api/v1/shopping/lists/${listId}/items/${itemId}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function reorderShoppingListItems(listId: string, body: ShoppingListReorderBody) {
+  return requestShopping<ShoppingListReorderData>(`/api/v1/shopping/lists/${listId}/items/reorder`, {
     method: "PATCH",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
