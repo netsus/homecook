@@ -13,16 +13,16 @@
 - [ ] 문서 기준 화면 상태와 액션이 맞다 <!-- omo:id=accept-screen-contract;stage=4;scope=frontend;review=5,6 -->
   - 상단 액션 영역에 `[공유(텍스트)]` 버튼 존재
   - 버튼 탭 시 공유 텍스트가 생성되어 공유/복사됨
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
   - `GET /shopping/lists/{id}/share-text` 응답 타입 `{ text: string }`
 
 ## State / Policy
-- [ ] 공유 텍스트에 `is_pantry_excluded=false` 항목만 포함된다 <!-- omo:id=accept-share-filter;stage=2;scope=backend;review=3,6 -->
+- [x] 공유 텍스트에 `is_pantry_excluded=false` 항목만 포함된다 <!-- omo:id=accept-share-filter;stage=2;scope=backend;review=3,6 -->
   - `is_pantry_excluded=true` 항목은 공유 텍스트에서 제외
-- [ ] 완료 리스트(`is_completed=true`)에서도 공유 텍스트 생성이 가능하다 <!-- omo:id=accept-completed-list-share;stage=2;scope=backend;review=3,6 -->
+- [x] 완료 리스트(`is_completed=true`)에서도 공유 텍스트 생성이 가능하다 <!-- omo:id=accept-completed-list-share;stage=2;scope=backend;review=3,6 -->
   - read-only 정책은 수정 제한이며 조회/공유는 허용
-- [ ] 중복 호출에도 결과가 꼬이지 않는다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] 중복 호출에도 결과가 꼬이지 않는다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
   - 동일 리스트 반복 호출 시 항목 상태 불변이면 동일 텍스트 반환
 
 ## Error / Permission
@@ -38,20 +38,20 @@
   - 상위 플로우(장보기 생성)에서 이미 로그인 게이트 통과, N/A로 처리 가능
 
 ## Data Integrity
-- [ ] 타인 리소스의 공유 텍스트를 조회할 수 없다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] 타인 리소스의 공유 텍스트를 조회할 수 없다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
   - `shopping_lists.user_id = 요청 user_id` 검증 (403), 읽기 전용 API이므로 수정이 아닌 무단 조회/공유 차단
-- [ ] invalid input을 적절히 거부하거나 무시한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
+- [x] invalid input을 적절히 거부하거나 무시한다 <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
   - 존재하지 않는 list_id → 404
 
 ## Data Setup / Preconditions
-- [ ] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
   - 로그인 유저 1명
   - `shopping_lists` × 2개 (`is_completed=false` / `true`)
   - `shopping_list_items` × 다수 (구매/제외 섹션 혼합)
-- [ ] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
   - `shopping_lists`, `shopping_list_items` 테이블
   - seed script로 위 baseline 데이터 생성
-- [ ] 시스템 row 자동 생성이 필요한 슬라이스면 owning flow와 기대 결과가 명시되어 있다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
+- [x] 시스템 row 자동 생성이 필요한 슬라이스면 owning flow와 기대 결과가 명시되어 있다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
   - 10a에서 이미 확보된 shopping 관련 테이블/seed 활용
 
 ## Manual QA
@@ -68,10 +68,10 @@
 ## Automation Split
 
 ### Vitest
-- [ ] 로직 / 유틸 / API helper 범위가 분리되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
+- [x] 로직 / 유틸 / API helper 범위가 분리되어 있다 <!-- omo:id=accept-vitest-split;stage=2;scope=shared;review=3,6 -->
   - 공유 텍스트 필터링 로직 단위 테스트 (`is_pantry_excluded=false`만 포함)
   - 텍스트 포맷팅 로직 단위 테스트
-- [ ] 회귀 위험이 큰 계산과 정책이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
+- [x] 회귀 위험이 큰 계산과 정책이 단위 테스트로 고정되어 있다 <!-- omo:id=accept-vitest-regression;stage=2;scope=shared;review=3,6 -->
   - `is_pantry_excluded=true` 항목이 공유 텍스트에 포함되지 않음
   - 완료 리스트에서도 공유 텍스트 생성 가능
 
