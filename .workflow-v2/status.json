@@ -152,8 +152,8 @@
       "preset": "infra-governance",
       "branch": "docs/omo-claude-cli-provider-spec",
       "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "codex_approved",
+      "lifecycle": "ready_for_review",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm validate:workflow-v2",
@@ -454,6 +454,22 @@
         "pnpm verify:frontend"
       ],
       "notes": "Internal 6.5 projection sync after Stage 6 Codex review. PR #242 current head checks green before projection sync; local required checks passed including pnpm verify:frontend and pnpm test:lighthouse. Claude final authority approved. Exploratory QA score 97. Manual Only remains user final visual-feel confirmation after merge."
+    },
+    {
+      "id": "12a-shopping-complete",
+      "preset": "vertical-slice-strict",
+      "branch": "feature/be-12a-shopping-complete",
+      "pr_path": "https://github.com/netsus/homecook/pull/241",
+      "lifecycle": "in_progress",
+      "approval_state": "codex_approved",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 2 backend implementation verified on feature/be-12a-shopping-complete with pnpm verify:backend and Claude Stage 3 approval after partial-failure recovery repair. Adds POST /shopping/lists/{id}/complete core flow without pantry reflection, meals.status registered→shopping_done transition, is_completed=true, read-only lock coverage, and idempotency. Pantry reflection remains slice 12b."
     }
   ]
 }

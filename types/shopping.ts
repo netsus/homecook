@@ -79,6 +79,11 @@ export interface ShoppingListReorderData {
   updated: number;
 }
 
+export interface ShoppingListCompleteData {
+  completed: true;
+  meals_updated: number;
+}
+
 export interface ShoppingShareTextData {
   text: string;
 }
@@ -88,4 +93,5 @@ export type ShoppingListCreateResponse = ApiResponse<ShoppingListSummary>;
 export type ShoppingListDetailResponse = ApiResponse<ShoppingListDetail>;
 export type ShoppingListItemUpdateResponse = ApiResponse<ShoppingListItemSummary>;
 export type ShoppingListReorderResponse = ApiResponse<ShoppingListReorderData>;
+export type ShoppingListCompleteResponse = ApiResponse<ShoppingListCompleteData>;
 export type ShoppingShareTextResponse = ApiResponse<ShoppingShareTextData>;

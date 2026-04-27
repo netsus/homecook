@@ -5,6 +5,7 @@ import type {
   ShoppingListDetail,
   ShoppingListItemSummary,
   ShoppingListItemUpdateBody,
+  ShoppingListCompleteData,
   ShoppingListReorderBody,
   ShoppingListReorderData,
   ShoppingListSummary,
@@ -106,6 +107,12 @@ export async function reorderShoppingListItems(listId: string, body: ShoppingLis
     method: "PATCH",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
+  });
+}
+
+export async function completeShoppingList(listId: string) {
+  return requestShopping<ShoppingListCompleteData>(`/api/v1/shopping/lists/${listId}/complete`, {
+    method: "POST",
   });
 }
 
