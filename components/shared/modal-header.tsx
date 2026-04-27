@@ -30,7 +30,7 @@ export function ModalHeader({
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <h2
-            className="text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]"
+            className="text-lg font-bold tracking-[-0.01em] text-[var(--foreground)]"
             id={titleId}
           >
             {title}
@@ -38,12 +38,12 @@ export function ModalHeader({
           {badge}
         </div>
         {description ? (
-          <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>
+          <p className="mt-1 text-sm text-[var(--text-2)]">{description}</p>
         ) : null}
       </div>
       <button
         aria-label="닫기"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--muted)] hover:bg-white/60 disabled:opacity-40"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-3)] transition-colors hover:bg-[var(--surface-fill)] disabled:opacity-40"
         disabled={closeDisabled}
         onClick={onClose}
         ref={closeButtonRef}

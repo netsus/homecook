@@ -130,8 +130,8 @@ If no existing screen is visually affected (e.g., new `components/ui/` files are
 
 ## Design Status
 
-- [x] Temporary (temporary) — Stage 1 default; shared components not yet created or restyled
-- [ ] Review pending (pending-review) — Stage 4 complete, component previews and regression evidence captured
+- [ ] Temporary (temporary) — Stage 1 default; shared components not yet created or restyled
+- [x] Review pending (pending-review) — Stage 4 implementation complete; Stage 5/Codex evidence and exploratory QA captured; Stage 6 PR closeout pending
 - [ ] Confirmed (confirmed) — Stage 5/6 review passed, authority review passed
 - [ ] N/A
 
@@ -196,23 +196,23 @@ None. This slice is visual-only within approved direction and token boundaries.
 > Living closeout document. Stage 4 closes implementation items; Stage 5/6 reviews.
 > Design-generator / design-critic skipped (atomic components; authority review covers regression).
 
-- [ ] New `components/ui/button.tsx` with all documented states <!-- omo:id=bssc-button;stage=4;scope=frontend;review=5,6 -->
-- [ ] New `components/ui/chip.tsx` with all documented states <!-- omo:id=bssc-chip;stage=4;scope=frontend;review=5,6 -->
-- [ ] New `components/ui/card.tsx` surface wrapper <!-- omo:id=bssc-card;stage=4;scope=frontend;review=5,6 -->
-- [ ] New `components/ui/badge.tsx` status pill variants <!-- omo:id=bssc-badge;stage=4;scope=frontend;review=5,6 -->
-- [ ] New `components/ui/empty-state.tsx` <!-- omo:id=bssc-empty-state;stage=4;scope=frontend;review=5,6 -->
-- [ ] New `components/ui/error-state.tsx` <!-- omo:id=bssc-error-state;stage=4;scope=frontend;review=5,6 -->
-- [ ] New `components/ui/skeleton.tsx` loading primitive <!-- omo:id=bssc-skeleton;stage=4;scope=frontend;review=5,6 -->
-- [ ] Existing `modal-header.tsx` restyled with approved tokens <!-- omo:id=bssc-modal-header;stage=4;scope=frontend;review=5,6 -->
-- [ ] Existing `modal-footer-actions.tsx` restyled with approved tokens <!-- omo:id=bssc-modal-footer;stage=4;scope=frontend;review=5,6 -->
-- [ ] Existing `selection-chip-rail.tsx` restyled with approved tokens <!-- omo:id=bssc-chip-rail;stage=4;scope=frontend;review=5,6 -->
-- [ ] All components use CSS variables only — no hardcoded hex <!-- omo:id=bssc-token-usage;stage=4;scope=frontend;review=5,6 -->
-- [ ] Component state previews captured <!-- omo:id=bssc-component-previews;stage=4;scope=frontend;review=5,6 -->
-- [ ] Anchor screen regression screenshots if existing screens affected <!-- omo:id=bssc-regression-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] No `--cook-*` token values changed <!-- omo:id=bssc-cook-unchanged;stage=4;scope=frontend;review=5,6 -->
-- [ ] No Jua or prototype-only font imported <!-- omo:id=bssc-no-font;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm verify:frontend` passes <!-- omo:id=bssc-verify-frontend;stage=4;scope=frontend;review=5,6 -->
-- [ ] Exploratory QA bundle or low-risk skip rationale recorded <!-- omo:id=bssc-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
+- [x] New `components/ui/button.tsx` with all documented states <!-- omo:id=bssc-button;stage=4;scope=frontend;review=5,6 -->
+- [x] New `components/ui/chip.tsx` with all documented states <!-- omo:id=bssc-chip;stage=4;scope=frontend;review=5,6 -->
+- [x] New `components/ui/card.tsx` surface wrapper <!-- omo:id=bssc-card;stage=4;scope=frontend;review=5,6 -->
+- [x] New `components/ui/badge.tsx` status pill variants <!-- omo:id=bssc-badge;stage=4;scope=frontend;review=5,6 -->
+- [x] New `components/ui/empty-state.tsx` <!-- omo:id=bssc-empty-state;stage=4;scope=frontend;review=5,6 -->
+- [x] New `components/ui/error-state.tsx` <!-- omo:id=bssc-error-state;stage=4;scope=frontend;review=5,6 -->
+- [x] New `components/ui/skeleton.tsx` loading primitive <!-- omo:id=bssc-skeleton;stage=4;scope=frontend;review=5,6 -->
+- [x] Existing `modal-header.tsx` restyled with approved tokens <!-- omo:id=bssc-modal-header;stage=4;scope=frontend;review=5,6 -->
+- [x] Existing `modal-footer-actions.tsx` restyled with approved tokens <!-- omo:id=bssc-modal-footer;stage=4;scope=frontend;review=5,6 -->
+- [x] Existing `selection-chip-rail.tsx` restyled with approved tokens <!-- omo:id=bssc-chip-rail;stage=4;scope=frontend;review=5,6 -->
+- [x] All components use CSS variables only — no hardcoded hex <!-- omo:id=bssc-token-usage;stage=4;scope=frontend;review=5,6 -->
+- [x] Component state previews captured <!-- omo:id=bssc-component-previews;stage=4;scope=frontend;review=5,6 -->
+- [x] Anchor screen regression screenshots if existing screens affected <!-- omo:id=bssc-regression-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] No `--cook-*` token values changed <!-- omo:id=bssc-cook-unchanged;stage=4;scope=frontend;review=5,6 -->
+- [x] No Jua or prototype-only font imported <!-- omo:id=bssc-no-font;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend` passes <!-- omo:id=bssc-verify-frontend;stage=4;scope=frontend;review=5,6 -->
+- [x] Exploratory QA bundle or low-risk skip rationale recorded <!-- omo:id=bssc-exploratory-qa;stage=4;scope=frontend;review=5,6 -->
 
 ## Blockers
 

@@ -355,9 +355,9 @@
     {
       "id": "baemin-style-shared-components",
       "preset": "vertical-slice-strict",
-      "branch": "docs/baemin-style-shared-components",
+      "branch": "feature/fe-baemin-style-shared-components",
       "pr_path": "pending",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -367,7 +367,7 @@
         "pnpm lint",
         "pnpm verify:frontend"
       ],
-      "notes": "Stage 1 docs gate for Baemin-style shared UI component foundation. High-risk UI change — authority review required at Stage 5. Implementation branch: feature/fe-baemin-style-shared-components."
+      "notes": "Stage 4 implementation in progress. 7 new components/ui/ primitives created + 3 existing components/shared/ restyled with approved Baemin tokens. High-risk UI change — authority review required at Stage 5."
     }
   ]
 }
