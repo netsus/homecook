@@ -502,6 +502,22 @@
       "notes": "Stage 6 closeout passed on PR #243 after Codex repair and verification. Backend PR #241 is merged. Frontend adds SHOPPING_DETAIL completion UI, loading/success/error/read-only states, Vitest coverage, fixture Playwright coverage, created-list route correction, shopping detail schema fallback for local DB, planner hydration fix, and real local Supabase browser smoke for planner cross-screen shopping_done transition. Pantry reflection remains slice 12b."
     },
     {
+      "id": "12b-shopping-pantry-reflect",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/12b-shopping-pantry-reflect",
+      "pr_path": null,
+      "lifecycle": "planned",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 internal 1.5 docs gate passed after Claude repair 2 and Codex validation on 2026-04-28. Goal: 팬트리 반영 선택 팝업, add_to_pantry_item_ids 3-way 의미론 (미전달/[]/선택값), 4단계 서버 검증/필터 (무효 항목 무시), 멱등성 (재완료 200). Backend First contract. Low-risk UI change (lightweight design check). Dependencies: 12a-shopping-complete (merged)."
+    },
+    {
       "id": "baemin-style-modal-system-fit",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-baemin-style-modal-system-fit",
