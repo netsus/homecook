@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import type { ShoppingListItemSummary } from "@/types/shopping";
 
 export interface PantryReflectionPopupProps {
   items: ShoppingListItemSummary[];
-  onConfirm: (selectedItemIds: string[] | undefined | null) => void;
+  onConfirm: (selectedItemIds: string[] | undefined) => void;
   onCancel: () => void;
 }
 
@@ -30,19 +30,28 @@ export function PantryReflectionPopup({
   onConfirm,
   onCancel,
 }: PantryReflectionPopupProps) {
-  const [mode, setMode] = useState<SelectionMode>("all");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
-    // Pre-select all eligible items
-    const eligibleItems = items.filter(
-      (item) => item.is_checked && !item.is_pantry_excluded
-    );
-    return new Set(eligibleItems.map((item) => item.id));
-  });
-
-  // Only checked items where is_pantry_excluded=false are eligible
   const eligibleItems = items.filter(
     (item) => item.is_checked && !item.is_pantry_excluded
   );
+  const [mode, setMode] = useState<SelectionMode>(() =>
+    eligibleItems.length > 0 ? "all" : "none"
+  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
+    // Pre-select all eligible items
+    return new Set(eligibleItems.map((item) => item.id));
+  });
+  const hasEligibleItems = eligibleItems.length > 0;
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onCancel();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onCancel]);
 
   const handleToggleItem = (itemId: string) => {
     setSelectedIds((prev) => {
@@ -123,19 +132,27 @@ export function PantryReflectionPopup({
         {/* Mode selection */}
         <div className="mb-6 space-y-3">
           <button
-            onClick={() => setMode("all")}
+            onClick={() => {
+              if (hasEligibleItems) {
+                setMode("all");
+              }
+            }}
+            disabled={!hasEligibleItems}
             className={`w-full rounded-xl border-2 px-4 py-4 text-left transition-colors ${
               mode === "all"
                 ? "border-[var(--olive)] bg-[color:rgba(46,166,122,0.08)]"
                 : "border-[var(--line)] bg-[var(--surface)]"
-            }`}
+            } ${!hasEligibleItems ? "opacity-50" : ""}`}
+            aria-disabled={!hasEligibleItems}
             type="button"
           >
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-base font-bold">모두 추가</p>
                 <p className="mt-1 text-sm text-[var(--muted)]">
-                  체크한 모든 재료를 팬트리에 추가해요 ({eligibleItems.length}개)
+                  {hasEligibleItems
+                    ? `체크한 모든 재료를 팬트리에 추가해요 (${eligibleItems.length}개)`
+                    : "추가할 수 있는 재료가 없어요"}
                 </p>
               </div>
               <div
@@ -160,12 +177,18 @@ export function PantryReflectionPopup({
           </button>
 
           <button
-            onClick={() => setMode("selected")}
+            onClick={() => {
+              if (hasEligibleItems) {
+                setMode("selected");
+              }
+            }}
+            disabled={!hasEligibleItems}
             className={`w-full rounded-xl border-2 px-4 py-4 text-left transition-colors ${
               mode === "selected"
                 ? "border-[var(--olive)] bg-[color:rgba(46,166,122,0.08)]"
                 : "border-[var(--line)] bg-[var(--surface)]"
-            }`}
+            } ${!hasEligibleItems ? "opacity-50" : ""}`}
+            aria-disabled={!hasEligibleItems}
             type="button"
           >
             <div className="flex items-center justify-between">

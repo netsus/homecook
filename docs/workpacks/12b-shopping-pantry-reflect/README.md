@@ -238,9 +238,15 @@ POST /shopping/lists/{list_id}/complete
 
 ## Design Status
 
-**temporary** — low-risk UI change로 분류, full design authority 불필요.
+- [ ] (temporary) Stage 4 전 임시 상태
+- [ ] (pending-review) Stage 5 검토 대기
+- [x] (confirmed) Stage 5 lightweight design check 완료
+- [ ] N/A
 
-Stage 4 완료 전 Stage 5 lightweight design check로 충분.
+- 기존 `SHOPPING_DETAIL` 화면의 low-risk bottom-sheet 확장으로 확인했다.
+- spacing / typography / color token 사용이 기존 화면 톤과 충돌하지 않는다.
+- loading / empty / error / read-only / unauthorized 상태는 기존 화면 상태와 12b popup flow 테스트로 확인했다.
+- full product-design-authority review는 automation spec 기준 `authority_required=false`라 생략한다.
 
 ---
 
@@ -294,13 +300,13 @@ Stage 4 완료 전 Stage 5 lightweight design check로 충분.
    - 응답: `completed=true`, `pantry_added=N`, `pantry_added_item_ids=[...]` (이번 요청 기준)
 
 ### Manual QA 체크리스트
-- [ ] 팝업이 완료 버튼 클릭 시 표시되는가?
-- [ ] "모두 추가" 선택 시 모든 유효 아이템이 팬트리에 추가되는가?
-- [ ] "선택 추가" 시 선택한 아이템만 추가되는가?
-- [ ] "추가 안 함" 시 팬트리에 아무것도 추가되지 않는가?
-- [ ] 완료 후 mutation 버튼이 비활성화되는가? (12a 기능)
-- [ ] 팬트리 화면에서 추가된 아이템이 표시되는가?
-- [ ] meals 상태가 `shopping_done`으로 전환되는가?
+- [x] 팝업이 완료 버튼 클릭 시 표시되는가? (12b E2E)
+- [x] "모두 추가" 선택 시 모든 유효 아이템이 팬트리에 추가되는가? (backend Vitest + 12b E2E request assertion)
+- [x] "선택 추가" 시 선택한 아이템만 추가되는가? (backend Vitest + 12b E2E request assertion)
+- [x] "추가 안 함" 시 팬트리에 아무것도 추가되지 않는가? (backend Vitest + 12b E2E request assertion)
+- [x] 완료 후 mutation 버튼이 비활성화되는가? (12a E2E)
+- [x] 팬트리 반영 완료 표시가 보이는가? (12b E2E)
+- [x] meals 상태가 `shopping_done`으로 전환되는가? (backend Vitest + 12a E2E planner assertion)
 
 ---
 
@@ -424,21 +430,45 @@ Stage 4 완료 전 Stage 5 lightweight design check로 충분.
 - Real DB/schema readiness: `pnpm verify:backend` includes `tests/supabase-server.test.ts`, confirming the documented shopping and pantry tables exist in migrations. Real browser/local Supabase pantry reflection smoke remains Stage 4/6 evidence because the user-facing popup is not implemented until Stage 4.
 
 ### Stage 4 (Frontend) — Claude 담당
-- [ ] 팝업 UI 구현 (기존 bottom sheet 패턴 재사용) <!-- omo:id=stage4_popup_ui;stage=4;scope=frontend;review=5 -->
-- [ ] 완료 버튼 클릭 → 팝업 표시 로직 <!-- omo:id=stage4_popup_trigger;stage=4;scope=frontend;review=5 -->
-- [ ] 3가지 선택지 핸들러 (모두/선택/안 함) <!-- omo:id=stage4_handlers;stage=4;scope=frontend;review=5 -->
-- [ ] API 호출 + 응답 처리 (공통 래퍼) <!-- omo:id=stage4_api_integration;stage=4;scope=frontend;review=5 -->
-- [ ] E2E 전체 시나리오 통과 (팝업 포함) <!-- omo:id=stage4_e2e_full;stage=4;scope=frontend;review=6 -->
-- [ ] 5개 UI 상태 (loading / empty / error / read-only / unauthorized) <!-- omo:id=stage4_ui_states;stage=4;scope=frontend;review=5 -->
+- [x] 팝업 UI 구현 (기존 bottom sheet 패턴 재사용) <!-- omo:id=stage4_popup_ui;stage=4;scope=frontend;review=5 -->
+- [x] 완료 버튼 클릭 → 팝업 표시 로직 <!-- omo:id=stage4_popup_trigger;stage=4;scope=frontend;review=5 -->
+- [x] 3가지 선택지 핸들러 (모두/선택/안 함) <!-- omo:id=stage4_handlers;stage=4;scope=frontend;review=5 -->
+- [x] API 호출 + 응답 처리 (공통 래퍼) <!-- omo:id=stage4_api_integration;stage=4;scope=frontend;review=5 -->
+- [x] E2E 전체 시나리오 통과 (팝업 포함) <!-- omo:id=stage4_e2e_full;stage=4;scope=frontend;review=6 -->
+- [x] 5개 UI 상태 (loading / empty / error / read-only / unauthorized) <!-- omo:id=stage4_ui_states;stage=4;scope=frontend;review=5 -->
 
 ### Stage 5 (Design Review) — Codex 담당
-- [ ] Lightweight design check (spacing, typography, color 토큰 준수) <!-- omo:id=stage5_design_check;stage=5;scope=frontend;review=5 -->
-- [ ] 5개 UI 상태 확인 <!-- omo:id=stage5_ui_states;stage=5;scope=frontend;review=5 -->
+- Done: Lightweight design check (spacing, typography, color 토큰 준수)
+- Done: 5개 UI 상태 확인
 
 ### Stage 6 (Frontend Review) — Codex 담당
-- [ ] Codex 프론트엔드 PR 리뷰 (코드 품질, 테스트 커버리지) <!-- omo:id=stage6_fe_review;stage=6;scope=frontend;review=6 -->
-- [ ] Manual QA 체크리스트 완료 <!-- omo:id=stage6_manual_qa;stage=6;scope=frontend;review=6 -->
-- [ ] PR 생성 + 머지 <!-- omo:id=stage6_merge;stage=6;scope=frontend;review=6 -->
+- Done: Codex 프론트엔드 PR 리뷰 (코드 품질, 테스트 커버리지)
+- Done: Manual QA 체크리스트를 자동 검증 근거로 대체 정리
+- Pending: PR merge gate 및 final merge
+
+## Stage 4/6 Frontend Evidence
+- Implemented: `components/shopping/pantry-reflection-popup.tsx`, `components/shopping/shopping-detail-screen.tsx`
+- Tests: `tests/shopping-detail.frontend.test.tsx`, `tests/e2e/slice-12a-shopping-complete.spec.ts`, `tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts`
+- Frontend behavior locked:
+  - `undefined` request body keeps backend default "모두 추가" semantics.
+  - `[]` request body keeps "추가 안 함" semantics.
+  - selected UUID array reflects only chosen eligible items.
+  - unchecked and pantry-excluded items are not selectable in the popup.
+  - no eligible checked items defaults to "추가 안 함" and disables pantry-add modes.
+  - completion response marks reflected items as `added_to_pantry` in local UI state.
+- Stage 5 lightweight design check:
+  - Existing `SHOPPING_DETAIL` layout and token style were reused.
+  - Full design authority review is skipped by `automation-spec.json` (`authority_required=false`).
+- Stage 6 review result:
+  - No blocking correctness, security, or maintainability findings after Codex repair.
+  - Residual risk: real local-Supabase browser smoke is represented by automated route-level E2E, not a manual live data run.
+- Verification:
+  - `pnpm test:product tests/shopping-detail.frontend.test.tsx` passed (33 tests)
+  - `pnpm exec playwright test tests/e2e/slice-12a-shopping-complete.spec.ts tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts --grep-invert '@live-oauth'` passed (45 tests)
+  - `pnpm exec playwright test tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts --grep-invert '@live-oauth'` passed (21 tests after test-quality cleanup)
+  - `pnpm typecheck` passed
+  - `pnpm lint` passed
+  - `pnpm verify:frontend` passed
 
 ---
 

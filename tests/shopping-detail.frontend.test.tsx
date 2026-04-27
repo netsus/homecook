@@ -730,7 +730,14 @@ describe("ShoppingDetailScreen", () => {
     });
 
     it("completes shopping list with 모두 추가 (undefined body)", async () => {
-      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+      const listWithCheckedItem: ShoppingListDetail = {
+        ...mockListDetail,
+        items: mockListDetail.items.map((item) =>
+          item.id === "item-1" ? { ...item, is_checked: true } : item
+        ),
+      };
+
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(listWithCheckedItem);
       const completeSpy = vi.spyOn(shoppingApi, "completeShoppingList").mockResolvedValue({
         completed: true,
         meals_updated: 3,

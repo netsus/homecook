@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Request } from "@playwright/test";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
@@ -118,6 +118,23 @@ async function installShoppingDetailRoute(
   });
 }
 
+function pantryDialog(page: Page) {
+  return page.getByRole("dialog", { name: "팬트리에 추가할까요?" });
+}
+
+function parseJsonRequestBody(request: Request): unknown {
+  const postData = request.postData();
+  return postData ? JSON.parse(postData) : undefined;
+}
+
+function waitForCompleteRequest(page: Page) {
+  return page.waitForRequest(
+    (request) =>
+      request.url().endsWith(`/api/v1/shopping/lists/${SHOPPING_LIST_ID}/complete`) &&
+      request.method() === "POST"
+  );
+}
+
 test.describe("slice 12b: shopping pantry reflect", () => {
   test.describe("pantry reflection popup", () => {
     test("should show popup when clicking complete button", async ({ page }) => {
@@ -146,8 +163,6 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       const listDetail = buildShoppingListDetail({ is_completed: false });
       await installShoppingDetailRoute(page, listDetail);
 
-      let completeRequestBody: unknown = null;
-
       // Mock complete API
       await page.route(
         `**/api/v1/shopping/lists/${SHOPPING_LIST_ID}/complete`,
@@ -156,9 +171,6 @@ test.describe("slice 12b: shopping pantry reflect", () => {
             await route.continue();
             return;
           }
-
-          const postData = route.request().postData();
-          completeRequestBody = postData ? JSON.parse(postData) : undefined;
 
           await route.fulfill({
             json: {
@@ -183,12 +195,16 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       await expect(page.getByText("팬트리에 추가할까요?")).toBeVisible();
 
       // "모두 추가" is selected by default, click confirm
-      const confirmButton = page.getByRole("button", { name: "완료" });
+      const confirmButton = pantryDialog(page).getByRole("button", {
+        name: "완료",
+        exact: true,
+      });
+      const completeRequestPromise = waitForCompleteRequest(page);
       await confirmButton.click();
+      const completeRequest = await completeRequestPromise;
 
       // Should call API with undefined body (no add_to_pantry_item_ids field)
-      await page.waitForTimeout(500);
-      expect(completeRequestBody).toBeUndefined();
+      expect(parseJsonRequestBody(completeRequest)).toBeUndefined();
 
       // Should show success message
       await expect(page.getByText(/장보기를 완료했어요.*2개 식사.*팬트리 2개 추가/)).toBeVisible();
@@ -200,8 +216,6 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       const listDetail = buildShoppingListDetail({ is_completed: false });
       await installShoppingDetailRoute(page, listDetail);
 
-      let completeRequestBody: unknown = null;
-
       // Mock complete API
       await page.route(
         `**/api/v1/shopping/lists/${SHOPPING_LIST_ID}/complete`,
@@ -210,9 +224,6 @@ test.describe("slice 12b: shopping pantry reflect", () => {
             await route.continue();
             return;
           }
-
-          const postData = route.request().postData();
-          completeRequestBody = postData ? JSON.parse(postData) : undefined;
 
           await route.fulfill({
             json: {
@@ -240,12 +251,16 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       await page.getByText("추가 안 함").click();
 
       // Click confirm
-      const confirmButton = page.getByRole("button", { name: "완료" });
+      const confirmButton = pantryDialog(page).getByRole("button", {
+        name: "완료",
+        exact: true,
+      });
+      const completeRequestPromise = waitForCompleteRequest(page);
       await confirmButton.click();
+      const completeRequest = await completeRequestPromise;
 
       // Should call API with empty array
-      await page.waitForTimeout(500);
-      expect(completeRequestBody).toEqual({ add_to_pantry_item_ids: [] });
+      expect(parseJsonRequestBody(completeRequest)).toEqual({ add_to_pantry_item_ids: [] });
 
       // Should show success message without pantry count
       await expect(page.getByText(/장보기를 완료했어요.*2개 식사/)).toBeVisible();
@@ -258,8 +273,6 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       const listDetail = buildShoppingListDetail({ is_completed: false });
       await installShoppingDetailRoute(page, listDetail);
 
-      let completeRequestBody: unknown = null;
-
       // Mock complete API
       await page.route(
         `**/api/v1/shopping/lists/${SHOPPING_LIST_ID}/complete`,
@@ -268,9 +281,6 @@ test.describe("slice 12b: shopping pantry reflect", () => {
             await route.continue();
             return;
           }
-
-          const postData = route.request().postData();
-          completeRequestBody = postData ? JSON.parse(postData) : undefined;
 
           await route.fulfill({
             json: {
@@ -298,23 +308,30 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       await page.getByText("선택 추가").click();
 
       // Should show item list
-      await expect(page.getByText("양파")).toBeVisible();
-      await expect(page.getByText("대파")).toBeVisible();
+      const dialog = pantryDialog(page);
+      await expect(dialog.getByRole("button", { name: /양파/ })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: /대파/ })).toBeVisible();
 
       // Uncheck item-2 (대파)
-      const dapaButton = page.getByRole("button").filter({ hasText: "대파" });
+      const dapaButton = dialog.getByRole("button", { name: /대파/ });
       await dapaButton.click();
 
       // Should show "1개 선택됨"
       await expect(page.getByText("1개 선택됨")).toBeVisible();
 
       // Click confirm
-      const confirmButton = page.getByRole("button", { name: "완료" });
+      const confirmButton = dialog.getByRole("button", {
+        name: "완료",
+        exact: true,
+      });
+      const completeRequestPromise = waitForCompleteRequest(page);
       await confirmButton.click();
+      const completeRequest = await completeRequestPromise;
 
       // Should call API with only item-1
-      await page.waitForTimeout(500);
-      expect(completeRequestBody).toEqual({ add_to_pantry_item_ids: ["item-1"] });
+      expect(parseJsonRequestBody(completeRequest)).toEqual({
+        add_to_pantry_item_ids: ["item-1"],
+      });
 
       // Should show success message
       await expect(page.getByText(/장보기를 완료했어요.*2개 식사.*팬트리 1개 추가/)).toBeVisible();
@@ -412,11 +429,12 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       await page.getByText("선택 추가").click();
 
       // Only item-1 should be visible
-      await expect(page.getByText("양파")).toBeVisible();
+      const dialog = pantryDialog(page);
+      await expect(dialog.getByRole("button", { name: /양파/ })).toBeVisible();
 
       // item-2 (unchecked) and item-3 (excluded) should not be visible
-      await expect(page.getByText("대파")).not.toBeVisible();
-      await expect(page.getByText("간장")).not.toBeVisible();
+      await expect(dialog.getByRole("button", { name: /대파/ })).toHaveCount(0);
+      await expect(dialog.getByRole("button", { name: /간장/ })).toHaveCount(0);
     });
   });
 
@@ -496,7 +514,10 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       await expect(page.getByText("팬트리에 추가할까요?")).toBeVisible();
 
       // Confirm with default "모두 추가"
-      const confirmButton = page.getByRole("button", { name: "완료" });
+      const confirmButton = pantryDialog(page).getByRole("button", {
+        name: "완료",
+        exact: true,
+      });
       await confirmButton.click();
 
       // Should show success message

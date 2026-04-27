@@ -347,7 +347,7 @@ export function ShoppingDetailScreen({
   }, [listDetail]);
 
   const handlePantryConfirm = useCallback(
-    async (selectedItemIds: string[] | undefined | null) => {
+    async (selectedItemIds: string[] | undefined) => {
       if (!listDetail || listDetail.is_completed) {
         return;
       }
@@ -362,8 +362,12 @@ export function ShoppingDetailScreen({
             ? undefined
             : { add_to_pantry_item_ids: selectedItemIds };
 
-        const { completed, meals_updated, pantry_added, pantry_added_item_ids } =
-          await completeShoppingList(listId, body);
+        const {
+          completed,
+          meals_updated,
+          pantry_added = 0,
+          pantry_added_item_ids = [],
+        } = await completeShoppingList(listId, body);
 
         if (completed) {
           // Update local state to mark as completed and reflect pantry additions
