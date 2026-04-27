@@ -391,9 +391,9 @@
       "id": "10b-shopping-share-text",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-10b-shopping-share-text",
-      "pr_path": "pending",
-      "lifecycle": "ready_for_review",
-      "approval_state": "codex_approved",
+      "pr_path": "https://github.com/netsus/homecook/pull/231",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
@@ -401,7 +401,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 5 lightweight design check approved by Codex after Claude Stage 4 implementation. Share button with Web Share API / clipboard fallback, loading/empty/error/read-only/unauthorized states, Vitest + Playwright E2E coverage, pnpm verify:frontend passed locally. Authority gate not required for this low-risk SHOPPING_DETAIL action connection."
+      "notes": "Internal 6.5 projection sync after Stage 6 Codex review. PR #231 current head checks green before projection sync; local required checks passed including pnpm verify:frontend. Stage artifacts: .omx/artifacts/claude-delegate-10b-shopping-share-text-stage4-frontend-response-20260427T165500KST.md, .omx/artifacts/claude-delegate-10b-shopping-share-text-stage4-repair-response-20260427T170600KST.md, .omx/artifacts/stage5-10b-shopping-share-text-design-review-20260427T170021KST.md, .omx/artifacts/stage6-10b-shopping-share-text-pr-review-20260427T171247KST.md. Manual Only remains Web Share OS sheet on HTTPS real device."
     }
   ]
 }
