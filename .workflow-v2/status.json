@@ -356,10 +356,10 @@
       "id": "baemin-style-shared-components",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-baemin-style-shared-components",
-      "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/227",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "git diff --check",
         "pnpm validate:workflow-v2",
@@ -367,7 +367,7 @@
         "pnpm lint",
         "pnpm verify:frontend"
       ],
-      "notes": "Stage 4 implementation in progress. 7 new components/ui/ primitives created + 3 existing components/shared/ restyled with approved Baemin tokens. High-risk UI change — authority review required at Stage 5."
+      "notes": "Internal 6.5 projection sync after Stage 6 Codex review. PR #227 current head checks green before projection sync; local required checks passed including pnpm verify:frontend. CI visual failed once due stale Linux snapshots, then passed after Linux baseline refresh. Stage artifacts: .omx/artifacts/claude-delegate-baemin-style-shared-components-stage4-implementation-response-20260427T044438Z.md, .omx/artifacts/stage5-baemin-style-shared-components-design-review-20260427T052335Z.md, .omx/artifacts/stage6-baemin-style-shared-components-pr-review-20260427T053643Z.md. Manual Only remains user final visual-feel confirmation after merge."
     }
   ]
 }

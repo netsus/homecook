@@ -107,7 +107,7 @@ No backend changes. Existing contracts must be preserved:
 - UI risk: `high-risk` (new shared UI components affect multiple future screens; restyled shared components may affect currently-rendered screens)
 - Anchor screen dependency: `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK` (through existing shared component imports like `selection-chip-rail.tsx`, `modal-header.tsx`, `modal-footer-actions.tsx`)
 - Visual artifact: component state previews + before/after screenshots of any screen affected by shared component restyling
-- Authority status: `required` (high-risk, touches existing shared components consumed by anchor screens)
+- Authority status: reviewed
 - Notes: design-generator and design-critic are not required for individual atomic components. Authority review focuses on token usage correctness, component state coverage, and visual regression in screens that import restyled shared components.
 
 ## Evidence Plan
@@ -131,8 +131,8 @@ If no existing screen is visually affected (e.g., new `components/ui/` files are
 ## Design Status
 
 - [ ] Temporary (temporary) — Stage 1 default; shared components not yet created or restyled
-- [x] Review pending (pending-review) — Stage 4 implementation complete; Stage 5/Codex evidence and exploratory QA captured; Stage 6 PR closeout pending
-- [ ] Confirmed (confirmed) — Stage 5/6 review passed, authority review passed
+- [ ] Review pending (pending-review) — Stage 4 implementation complete; Stage 5/Codex evidence and exploratory QA captured; Stage 6 PR closeout pending
+- [x] Confirmed (confirmed) — Stage 5/6 review passed, authority review passed
 - [ ] N/A
 
 > This is a high-risk UI change slice. Authority review is required.

@@ -65,9 +65,9 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending"
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed"
   },
   "out_of_scope": [
     "Full HOME screen retrofit",
