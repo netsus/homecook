@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-27T08:53:04.000Z",
+  "updated_at": "2026-04-27T10:26:21.000Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -136,7 +136,7 @@
       "id": "omo-session-orchestrator-implementation",
       "preset": "infra-governance",
       "branch": "feature/omo-session-orchestrator",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/236",
       "lifecycle": "ready_for_review",
       "approval_state": "codex_approved",
       "verification_status": "passed",
@@ -165,9 +165,9 @@
       "id": "omo-claude-cli-provider-implementation",
       "preset": "infra-governance",
       "branch": "feature/omo-claude-cli-provider",
-      "pr_path": "pending",
-      "lifecycle": "ready_for_review",
-      "approval_state": "codex_approved",
+      "pr_path": "https://github.com/netsus/homecook/pull/236",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm validate:workflow-v2",
@@ -406,9 +406,9 @@
     {
       "id": "11-shopping-reorder",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-11-shopping-reorder",
-      "pr_path": "https://github.com/netsus/homecook/pull/234",
-      "lifecycle": "in_progress",
+      "branch": "feature/fe-11-shopping-reorder",
+      "pr_path": "pending",
+      "lifecycle": "ready_for_review",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -417,7 +417,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 2 backend implementation complete on feature/be-11-shopping-reorder and Claude Stage 3 approved via PR #234. Added reorder route, shared types, API helper, and Vitest coverage for envelope, owner guard, completed-list 409, idempotency, invalid input, and ignoring non-list item IDs. Lifecycle remains in_progress until Stage 4 frontend moves Design Status to pending-review. Verification passed: pnpm verify:backend, pnpm lint, pnpm validate:workflow-v2, pnpm validate:workpack, git diff --check."
+      "notes": "Internal 6.5 projection sync after Stage 6 Codex review. Stage 2 backend merged via PR #234; frontend PR #236 passed local and GitHub current-head checks before projection sync. Reorder uses accessible up/down controls with no new dependencies, optimistic rollback, 409/500 feedback, completed-list hidden controls, and confirmed low-risk design. Local verification passed: pnpm verify:frontend, targeted Vitest/backend regression, targeted slice-11 Playwright, workflow/workpack/bookkeeping validation, git diff --check."
     },
     {
       "id": "baemin-style-recipe-detail-retrofit",
