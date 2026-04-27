@@ -710,6 +710,8 @@ describe("ShoppingDetailScreen", () => {
       vi.spyOn(shoppingApi, "completeShoppingList").mockResolvedValue({
         completed: true,
         meals_updated: 3,
+        pantry_added: 0,
+        pantry_added_item_ids: [],
       });
 
       const user = userEvent.setup();
@@ -742,6 +744,8 @@ describe("ShoppingDetailScreen", () => {
       vi.spyOn(shoppingApi, "completeShoppingList").mockResolvedValue({
         completed: true,
         meals_updated: 1,
+        pantry_added: 0,
+        pantry_added_item_ids: [],
       });
 
       const user = userEvent.setup();

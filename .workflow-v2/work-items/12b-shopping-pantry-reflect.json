@@ -63,7 +63,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "codex_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",
@@ -72,7 +72,7 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 internal 1.5 docs gate passed after Claude repair 2 and Codex validation on 2026-04-28. Validations: pnpm validate:workpack -- --slice 12b-shopping-pantry-reflect, pnpm validate:workflow-v2, pnpm validate:branch.",
+  "notes": "Stage 2 backend implementation in progress on feature/be-12b-shopping-pantry-reflect. Stage 1 internal 1.5 docs gate passed after Claude repair 2 and Codex validation on 2026-04-28.",
   "out_of_scope": [
     "팬트리 화면 UI 개선 — 기존 기능 활용",
     "추가 후 팬트리 아이템 수정/삭제 — 별도 슬라이스",
