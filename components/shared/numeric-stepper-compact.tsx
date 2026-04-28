@@ -20,35 +20,37 @@ export function NumericStepperCompact({
   unit,
 }: NumericStepperCompactProps) {
   return (
-    <div className="flex items-center gap-3 rounded-[14px] bg-white/60 px-4 py-3">
-      <button
-        aria-label={`${unit ?? "값"} 줄이기`}
-        className="flex h-11 w-11 items-center justify-center rounded-[10px] border border-[var(--line)] bg-white text-lg font-medium disabled:opacity-40"
-        disabled={disabled || value <= min}
-        onClick={() => onChange(Math.max(min, value - 1))}
-        type="button"
-      >
-        −
-      </button>
-      <span
-        aria-label={unit ? `${value}${unit}` : String(value)}
-        aria-live="polite"
-        className="min-w-16 text-center"
-      >
-        <span className="text-lg font-semibold">{value}</span>
-        {unit ? (
-          <span className="ml-0.5 text-sm text-[var(--muted)]">{unit}</span>
-        ) : null}
+    <div className="flex items-center justify-between rounded-[10px] border border-[var(--line)] bg-white px-3 py-2.5">
+      <span className="text-sm text-[var(--text-2)]">
+        {unit ? `몇 ${unit} 계획할까요?` : ""}
       </span>
-      <button
-        aria-label={`${unit ?? "값"} 늘리기`}
-        className="flex h-11 w-11 items-center justify-center rounded-[10px] border border-[var(--line)] bg-white text-lg font-medium disabled:opacity-40"
-        disabled={disabled}
-        onClick={() => onChange(value + 1)}
-        type="button"
-      >
-        +
-      </button>
+      <div className="flex items-center gap-2.5">
+        <button
+          aria-label={`${unit ?? "값"} 줄이기`}
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--line)] bg-white text-sm font-medium text-[var(--foreground)] disabled:opacity-40"
+          disabled={disabled || value <= min}
+          onClick={() => onChange(Math.max(min, value - 1))}
+          type="button"
+        >
+          −
+        </button>
+        <span
+          aria-label={unit ? `${value}${unit}` : String(value)}
+          aria-live="polite"
+          className="min-w-5 text-center font-bold text-[var(--foreground)]"
+        >
+          {value}
+        </span>
+        <button
+          aria-label={`${unit ?? "값"} 늘리기`}
+          className="flex h-7 w-7 items-center justify-center rounded-full border-none bg-[var(--foreground)] text-sm font-bold text-white disabled:opacity-40"
+          disabled={disabled}
+          onClick={() => onChange(value + 1)}
+          type="button"
+        >
+          +
+        </button>
+      </div>
     </div>
   );
 }

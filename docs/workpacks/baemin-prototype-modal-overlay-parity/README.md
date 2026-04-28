@@ -111,8 +111,8 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review)
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [x] 리뷰 대기 (pending-review)
 - [ ] 확정 (confirmed)
 - [ ] N/A
 
@@ -201,16 +201,16 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > 이 슬라이스는 BE 구현 없음(Stage 2/3 스킵), Stage 4에서 modal overlay parity를 구현한다.
 
-- [ ] Modal overlay family skin parity (surface, shadow, radius, typography, color token 정합) <!-- omo:id=mo-parity-skin;stage=4;scope=frontend;review=5,6 -->
-- [ ] Modal overlay family layout parity (sheet geometry, header, content, footer, grabber, chip rail, option list) <!-- omo:id=mo-parity-layout;stage=4;scope=frontend;review=5,6 -->
-- [ ] Modal overlay family interaction affordance parity (chip/option/radio 선택, stepper, search, backdrop, close 시각 표현) <!-- omo:id=mo-parity-interaction;stage=4;scope=frontend;review=5,6 -->
-- [ ] Modal overlay family assets/copy parity (아이콘, 라벨, CTA copy) <!-- omo:id=mo-parity-assets-copy;stage=4;scope=frontend;review=5,6 -->
-- [ ] Modal overlay family state fidelity (5 required states 각각 prototype 시각 일치) <!-- omo:id=mo-parity-state-fidelity;stage=4;scope=frontend;review=5,6 -->
-- [ ] 3-way capture evidence 완성 (30 evidence slots) <!-- omo:id=mo-parity-capture-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Visual-verdict artifact 생성 (visual-verdict.md + .json) <!-- omo:id=mo-parity-verdict-artifact;stage=4;scope=frontend;review=5,6 -->
-- [ ] Authority report 생성 (screenshot evidence 기반) <!-- omo:id=mo-parity-authority-report;stage=4;scope=frontend;review=5,6 -->
-- [ ] Slice score >= 93, blocker count 0 <!-- omo:id=mo-parity-score-threshold;stage=4;scope=frontend;review=5,6 -->
-- [ ] Prototype-only exclusions가 deficit으로 채점되지 않음 확인 <!-- omo:id=mo-parity-exclusions-check;stage=4;scope=frontend;review=5,6 -->
+- [x] Modal overlay family skin parity (surface, shadow, radius, typography, color token 정합) <!-- omo:id=mo-parity-skin;stage=4;scope=frontend;review=5,6 -->
+- [x] Modal overlay family layout parity (sheet geometry, header, content, footer, grabber, chip rail, option list) <!-- omo:id=mo-parity-layout;stage=4;scope=frontend;review=5,6 -->
+- [x] Modal overlay family interaction affordance parity (chip/option/radio 선택, stepper, search, backdrop, close 시각 표현) <!-- omo:id=mo-parity-interaction;stage=4;scope=frontend;review=5,6 -->
+- [x] Modal overlay family assets/copy parity (아이콘, 라벨, CTA copy) <!-- omo:id=mo-parity-assets-copy;stage=4;scope=frontend;review=5,6 -->
+- [x] Modal overlay family state fidelity (5 required states 각각 prototype 시각 일치) <!-- omo:id=mo-parity-state-fidelity;stage=4;scope=frontend;review=5,6 -->
+- [x] 3-way capture evidence 완성 (30 evidence slots) <!-- omo:id=mo-parity-capture-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Visual-verdict artifact 생성 (visual-verdict.md + .json) <!-- omo:id=mo-parity-verdict-artifact;stage=4;scope=frontend;review=5,6 -->
+- [x] Authority report 생성 (screenshot evidence 기반) <!-- omo:id=mo-parity-authority-report;stage=4;scope=frontend;review=5,6 -->
+- [x] Slice score >= 93, blocker count 0 <!-- omo:id=mo-parity-score-threshold;stage=4;scope=frontend;review=5,6 -->
+- [x] Prototype-only exclusions가 deficit으로 채점되지 않음 확인 <!-- omo:id=mo-parity-exclusions-check;stage=4;scope=frontend;review=5,6 -->
 - [ ] 기존 modal 기능 regression 없음 (PlannerAdd 날짜/끼니/인분, Save 책 선택/생성, IngredientFilter 카테고리/검색/체크/적용, Sort 즉시 적용, LoginGate return-to-action) <!-- omo:id=mo-parity-no-regression;stage=4;scope=frontend;review=5,6 -->
-- [ ] Runtime app code에서 API/DB/status 변경 없음 확인 <!-- omo:id=mo-parity-no-contract-change;stage=4;scope=frontend;review=5,6 -->
-- [ ] H5 copy lock이 변경되지 않음 확인 <!-- omo:id=mo-parity-h5-copy-lock;stage=4;scope=frontend;review=5,6 -->
+- [x] Runtime app code에서 API/DB/status 변경 없음 확인 <!-- omo:id=mo-parity-no-contract-change;stage=4;scope=frontend;review=5,6 -->
+- [x] H5 copy lock이 변경되지 않음 확인 <!-- omo:id=mo-parity-h5-copy-lock;stage=4;scope=frontend;review=5,6 -->

@@ -69,26 +69,32 @@ export function SaveModal({
       <div
         aria-labelledby="save-modal-title"
         aria-modal="true"
-        className="w-full max-w-lg rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] px-5 py-6 shadow-[var(--shadow-3)] md:px-6"
+        className="w-full max-w-lg rounded-t-[var(--radius-xl)] border border-[var(--line)] border-t-2 border-t-[var(--brand)] bg-[var(--panel)] pb-6 shadow-[var(--shadow-3)] md:rounded-[var(--radius-xl)] md:border-t-2 md:border-t-[var(--brand)]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
+        {/* Grabber */}
+        <div className="flex justify-center pt-2 md:hidden">
+          <div className="h-1 w-9 rounded-sm bg-[var(--line)]" />
+        </div>
         {/* Header — D2: no eyebrow · D3: icon-only close · D5: title=레시피 저장 */}
-        <ModalHeader
-          description="저장할 레시피북을 선택하세요"
-          onClose={onClose}
-          title="레시피 저장"
-          titleId="save-modal-title"
-        />
+        <div className="px-5 pt-3 md:px-6 md:pt-5">
+          <ModalHeader
+            description="저장할 레시피북을 선택하세요"
+            onClose={onClose}
+            title="레시피 저장"
+            titleId="save-modal-title"
+          />
+        </div>
 
         {viewState === "loading" ? (
-          <div className="mt-5 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-5 text-sm text-[var(--muted)]">
+          <div className="mx-5 mt-4 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-5 text-sm text-[var(--muted)] md:mx-6">
             저장 가능한 레시피북을 불러오는 중이에요...
           </div>
         ) : null}
 
         {viewState === "error" ? (
-          <div className="mt-5 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--brand)_20%,transparent)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-4 py-5">
+          <div className="mx-5 mt-4 rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--brand)_20%,transparent)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-4 py-5 md:mx-6">
             <p className="text-sm font-semibold text-[var(--brand-deep)]">
               {loadErrorMessage ?? "레시피북 목록을 불러오지 못했어요."}
             </p>
@@ -103,32 +109,44 @@ export function SaveModal({
         ) : null}
 
         {viewState === "ready" ? (
-          <div className="mt-5 space-y-4">
+          <div className="space-y-4 px-5 pt-2 md:px-6">
+            {/* Section label — prototype: 폴더 선택 */}
+            <p className="text-[13px] font-semibold text-[var(--text-2)]">폴더 선택</p>
+
             {books.length === 0 ? (
-              <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-5 text-sm text-[var(--muted)]">
+              <div className="rounded-[10px] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-5 text-sm text-[var(--muted)]">
                 저장 가능한 레시피북이 아직 없어요. 아래에서 새 레시피북을 만들어 저장할 수 있어요.
               </div>
             ) : (
-              <div className="space-y-2">
-                {books.map((book) => {
+              <div className="overflow-hidden rounded-[10px] border border-[var(--line)] bg-white">
+                {books.map((book, index) => {
                   const isSelected = selectedBookId === book.id;
 
                   return (
                     <button
                       aria-pressed={isSelected}
-                      className={`flex min-h-11 w-full items-center justify-between rounded-[var(--radius-md)] border px-4 py-3 text-left text-sm ${
-                        isSelected
-                          ? "border-transparent bg-[color-mix(in_srgb,var(--olive)_12%,transparent)] text-[var(--olive)]"
-                          : "border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)]"
+                      className={`flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm text-[var(--foreground)] ${
+                        index < books.length - 1
+                          ? "border-b border-[var(--surface-subtle)]"
+                          : ""
                       }`}
                       key={book.id}
                       onClick={() => onSelectBook(book.id)}
                       type="button"
                     >
-                      <span className="font-semibold">{book.name}</span>
-                      <span className="text-xs text-[var(--muted)]">
-                        {getBookTypeLabel(book.book_type)} · {book.recipe_count}개
+                      {/* Radio circle indicator */}
+                      <span
+                        className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 ${
+                          isSelected
+                            ? "border-[var(--olive)] bg-[var(--olive)]"
+                            : "border-[var(--line)] bg-white"
+                        }`}
+                      >
+                        {isSelected ? (
+                          <span className="block h-1.5 w-1.5 rounded-full bg-white" />
+                        ) : null}
                       </span>
+                      <span className="flex-1 text-sm text-[var(--foreground)]">{book.name}</span>
                     </button>
                   );
                 })}
@@ -170,15 +188,17 @@ export function SaveModal({
               </p>
             ) : null}
 
-            {/* D1: olive CTA */}
-            <button
-              className="min-h-11 w-full rounded-[var(--radius-md)] bg-[var(--olive)] px-4 py-3 text-sm font-semibold text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={disableSave}
-              onClick={onSaveRecipe}
-              type="button"
-            >
-              {isSavingRecipe ? "저장 중..." : "저장"}
-            </button>
+            {/* Footer CTA — separated by border-top like prototype */}
+            <div className="border-t border-[var(--line)] pt-3">
+              <button
+                className="min-h-11 w-full rounded-[var(--radius-md)] bg-[var(--olive)] px-4 py-3 text-sm font-semibold text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={disableSave}
+                onClick={onSaveRecipe}
+                type="button"
+              >
+                {isSavingRecipe ? "저장 중..." : "저장"}
+              </button>
+            </div>
           </div>
         ) : null}
       </div>

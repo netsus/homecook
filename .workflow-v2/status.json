@@ -601,9 +601,9 @@
     {
       "id": "baemin-prototype-modal-overlay-parity",
       "preset": "vertical-slice-strict",
-      "branch": "docs/baemin-prototype-modal-overlay-parity",
+      "branch": "feature/fe-baemin-prototype-modal-overlay-parity",
       "pr_path": "pending",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -612,7 +612,7 @@
         "pnpm validate:workpack",
         "git diff --check"
       ],
-      "notes": "Modal/sheet overlay family prototype parity scored slice (h7 rollout order 7). Stage 1 docs workpack created by Claude. No BE implementation (Stage 2/3 skip). Stage 4 will produce visual parity for PlannerAddSheet, SaveModal, IngredientFilterModal, SortSheet, LoginGateModal. Target score >= 93, blocker 0. Authority required (anchor-extension on HOME and RECIPE_DETAIL). closeout_phase=collecting"
+      "notes": "Modal/sheet overlay family prototype parity scored slice (h7 rollout order 7). Stage 4 FE implementation in progress. Visual parity applied to PlannerAddSheet, SaveModal, IngredientFilterModal, SortSheet, LoginGateModal. Score 95.2 >= threshold 93, blocker 0. Authority report created. closeout_phase=projecting"
     }
   ]
 }

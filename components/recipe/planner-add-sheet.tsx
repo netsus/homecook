@@ -85,11 +85,15 @@ export function PlannerAddSheet({
       role="dialog"
     >
       <div
-        className="w-full max-w-lg rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] px-5 py-6 shadow-[var(--shadow-3)] md:px-6"
+        className="w-full max-w-lg rounded-t-[var(--radius-xl)] border border-[var(--line)] border-t-2 border-t-[var(--brand)] bg-[var(--panel)] pb-6 shadow-[var(--shadow-3)] md:rounded-[var(--radius-xl)] md:border-t-2 md:border-t-[var(--brand)]"
         onClick={(event) => event.stopPropagation()}
       >
+        {/* Grabber */}
+        <div className="flex justify-center pt-2 md:hidden">
+          <div className="h-1 w-9 rounded-sm bg-[var(--line)]" />
+        </div>
         {/* Header — D2: no eyebrow · D3: icon-only close */}
-        <div className="mb-5">
+        <div className="mb-4 px-5 pt-3 md:px-6 md:pt-5">
           <ModalHeader
             closeDisabled={isSubmitting}
             description="날짜와 끼니를 선택해 주세요"
@@ -101,7 +105,7 @@ export function PlannerAddSheet({
 
         {/* Error state */}
         {isError ? (
-          <div className="flex flex-col items-center gap-4 py-8 text-center">
+          <div className="flex flex-col items-center gap-4 px-5 py-8 text-center md:px-6">
             <p className="text-sm text-[var(--muted)]">
               {errorMessage ?? "플래너 정보를 불러오지 못했어요."}
             </p>
@@ -115,17 +119,17 @@ export function PlannerAddSheet({
           </div>
         ) : isLoading ? (
           /* Loading state */
-          <div aria-label="플래너 정보 불러오는 중" className="flex flex-col gap-4 py-8">
+          <div aria-label="플래너 정보 불러오는 중" className="flex flex-col gap-4 px-5 py-8 md:px-6">
             {[1, 2, 3].map((i) => (
               <div className="h-10 animate-pulse rounded-[var(--radius-md)] bg-[var(--surface-fill)]" key={i} />
             ))}
           </div>
         ) : (
           /* Ready / Submitting state */
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4 px-5 md:px-6">
             {/* Date selector — D4: chip = 요일 + M/D */}
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+              <p className="mb-2 text-[13px] font-semibold text-[var(--text-2)]">
                 날짜
               </p>
               <SelectionChipRail
@@ -139,7 +143,7 @@ export function PlannerAddSheet({
 
             {/* Column (meal slot) selector */}
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+              <p className="mb-2 text-[13px] font-semibold text-[var(--text-2)]">
                 끼니
               </p>
               <div aria-label="끼니 선택" className="grid grid-cols-4 gap-2" role="group">
@@ -150,10 +154,10 @@ export function PlannerAddSheet({
                     <button
                       aria-pressed={isSelected}
                       className={[
-                        "rounded-[var(--radius-md)] px-2 py-3 text-sm font-semibold transition-colors",
+                        "rounded-[10px] border px-2 py-2.5 text-sm transition-colors",
                         isSelected
-                          ? "bg-[var(--olive)] text-[var(--surface)]"
-                          : "bg-[var(--surface-fill)] text-[var(--foreground)] hover:bg-[var(--surface-subtle)]",
+                          ? "border-[var(--brand)] bg-[var(--brand-soft)] font-bold text-[var(--brand-deep)]"
+                          : "border-[var(--line)] bg-white font-medium text-[var(--text-2)]",
                         isSubmitting ? "opacity-60" : "",
                       ]
                         .filter(Boolean)
@@ -172,7 +176,7 @@ export function PlannerAddSheet({
 
             {/* Servings stepper */}
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+              <p className="mb-2 text-[13px] font-semibold text-[var(--text-2)]">
                 계획 인분
               </p>
               <NumericStepperCompact
@@ -189,14 +193,16 @@ export function PlannerAddSheet({
               <p className="text-sm text-[var(--brand-deep)]">{errorMessage}</p>
             ) : null}
 
-            {/* Actions */}
-            <ModalFooterActions
-              cancelDisabled={isSubmitting}
-              confirmDisabled={!canSubmit || isSubmitting}
-              confirmLabel={isSubmitting ? "추가 중…" : "플래너에 추가"}
-              onCancel={onClose}
-              onConfirm={onSubmit}
-            />
+            {/* Actions — separated by border-top like prototype footer */}
+            <div className="border-t border-[var(--line)] pt-3">
+              <ModalFooterActions
+                cancelDisabled={isSubmitting}
+                confirmDisabled={!canSubmit || isSubmitting}
+                confirmLabel={isSubmitting ? "추가 중…" : "플래너에 추가"}
+                onCancel={onClose}
+                onConfirm={onSubmit}
+              />
+            </div>
           </div>
         )}
       </div>

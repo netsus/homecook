@@ -122,7 +122,7 @@ Design Decision Gate 승인 이후 진행하는 anchor screen 리디자인 슬�
 | `baemin-prototype-recipe-detail-parity` | merged | h7 | RECIPE_DETAIL body prototype parity — score `96.56`, blocker 0, Stage 5 + final authority gate passed |
 | `baemin-prototype-planner-week-parity-contract` | merged | h7 | PLANNER_WEEK prototype-priority contract/evidence target sync |
 | `baemin-prototype-planner-week-parity` | merged | h7 | PLANNER_WEEK body prototype parity — score `96.99`, blocker 0, Stage 5 + final authority gate passed |
-| `baemin-prototype-modal-overlay-parity` | docs | h7 | Modal/sheet overlay prototype parity — target score `>=93`, blocker 0 |
+| `baemin-prototype-modal-overlay-parity` | in-progress | h7 | Modal/sheet overlay prototype parity — target score `>=93`, blocker 0 |
 | `baemin-prototype-parity-polish-closeout` | future | h7 | Cross-screen drift cleanup and final parity closeout |
 
 **Gate workpack 규칙**:

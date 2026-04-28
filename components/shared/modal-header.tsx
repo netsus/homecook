@@ -43,7 +43,7 @@ export function ModalHeader({
       </div>
       <button
         aria-label="닫기"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-3)] transition-colors hover:bg-[var(--surface-fill)] disabled:opacity-40"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[var(--text-3)] transition-colors hover:brightness-95 disabled:opacity-40"
         disabled={closeDisabled}
         onClick={onClose}
         ref={closeButtonRef}

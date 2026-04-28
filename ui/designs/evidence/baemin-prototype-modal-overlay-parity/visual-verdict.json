@@ -1,0 +1,203 @@
+{
+  "slice_id": "baemin-prototype-modal-overlay-parity",
+  "surface": "MODAL_FAMILY",
+  "captured_at": "2026-04-28T12:00:00.000Z",
+  "viewports": [
+    { "width": 390, "height": 844 },
+    { "width": 320, "height": 568 }
+  ],
+  "states": [
+    {
+      "state_id": "planner-add-open",
+      "viewports": {
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-PlannerAddSheet-planner-add-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-PlannerAddSheet-planner-add-open-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-PlannerAddSheet-planner-add-open-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 97
+          }
+        },
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-PlannerAddSheet-planner-add-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-PlannerAddSheet-planner-add-open-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-PlannerAddSheet-planner-add-open-prototype.png"
+          },
+          "score": {
+            "skin": 23,
+            "layout": 28,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 95
+          }
+        }
+      },
+      "notes": "Full 3-way capture. Grabber bar (36x4), border-top accent (2px brand), section labels (13px/600), date chips (foreground pill), column buttons (brand-soft/brand-deep), compact stepper (28px buttons, dark plus). Approved divergences: brand color, olive vs teal, background tone, font stack."
+    },
+    {
+      "state_id": "save-open",
+      "viewports": {
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-SaveModal-save-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-SaveModal-save-open-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-SaveModal-save-open-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 96
+          }
+        },
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-SaveModal-save-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-SaveModal-save-open-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-SaveModal-save-open-prototype.png"
+          },
+          "score": {
+            "skin": 23,
+            "layout": 27,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 94
+          }
+        }
+      },
+      "notes": "Full 3-way capture. Radio circle indicators (18x18, olive fill, white dot), section label '폴더 선택' (13px/600), book list container (rounded-10, border, dividers). Footer separator (border-top). Approved divergences: brand/olive color, background tone."
+    },
+    {
+      "state_id": "ingredient-filter-open",
+      "viewports": {
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-IngredientFilterModal-ingredient-filter-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-IngredientFilterModal-ingredient-filter-open-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 95
+          }
+        },
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-IngredientFilterModal-ingredient-filter-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-IngredientFilterModal-ingredient-filter-open-after.png",
+            "prototype": null
+          },
+          "score": {
+            "skin": 23,
+            "layout": 27,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 14,
+            "total": 93
+          }
+        }
+      },
+      "notes": "Prototype layer N/A for IngredientFilterModal (no specific prototype screen in modals.jsx — uses general Sheet chrome). Grabber adjusted (36x4), border-top accent added (2px brand). Content layout from h5 modal system retained. State fidelity 14 due to missing prototype reference for loading/empty/error states."
+    },
+    {
+      "state_id": "sort-open",
+      "viewports": {
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-SortSheet-sort-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-SortSheet-sort-open-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-SortSheet-sort-open-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 29,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 97
+          }
+        },
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-SortSheet-sort-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-SortSheet-sort-open-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-SortSheet-sort-open-prototype.png"
+          },
+          "score": {
+            "skin": 23,
+            "layout": 28,
+            "interaction": 19,
+            "assets_copy": 10,
+            "state_fidelity": 15,
+            "total": 95
+          }
+        }
+      },
+      "notes": "Full 3-way capture. OptionRow updated to show olive checkmark for selected state (prototype shows mint checkmark). Border-top accent, grabber adjusted. Prototype-only tab-like semantic excluded per prototype-exclusion-inventory.md."
+    },
+    {
+      "state_id": "login-gate-open",
+      "viewports": {
+        "390": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-LoginGateModal-login-gate-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-LoginGateModal-login-gate-open-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-modal-overlay-parity/390-LoginGateModal-login-gate-open-prototype.png"
+          },
+          "score": {
+            "skin": 24,
+            "layout": 28,
+            "interaction": 18,
+            "assets_copy": 9,
+            "state_fidelity": 15,
+            "total": 94
+          }
+        },
+        "320": {
+          "captures": {
+            "current": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-LoginGateModal-login-gate-open-current.png",
+            "after": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-LoginGateModal-login-gate-open-after.png",
+            "prototype": "qa/visual/parity/baemin-prototype-modal-overlay-parity/320-LoginGateModal-login-gate-open-prototype.png"
+          },
+          "score": {
+            "skin": 23,
+            "layout": 27,
+            "interaction": 18,
+            "assets_copy": 9,
+            "state_fidelity": 15,
+            "total": 92
+          }
+        }
+      },
+      "notes": "Full 3-way capture. Grabber added, border-top accent, padding adjusted. Prototype-only social button asset excluded per prototype-exclusion-inventory.md. Production uses SocialLoginButtons (OAuth providers) instead of prototype simple 'login' CTA — approved structural divergence. Interaction -2 and assets/copy -1 due to social button visual difference."
+    }
+  ],
+  "scores": {
+    "screen_score_390": 95.8,
+    "screen_score_320": 93.8,
+    "slice_score": 95.2
+  },
+  "verdict": {
+    "threshold": 93,
+    "pass": true,
+    "blocker_count": 0,
+    "waiver": null
+  },
+  "authority_blockers": []
+}

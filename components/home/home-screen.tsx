@@ -525,8 +525,8 @@ function SortMenu({
             onClick={onClose}
             type="button"
           />
-          <div className="fixed inset-x-0 bottom-0 z-40 rounded-t-[var(--radius-xl)] border-t border-[var(--line)] bg-[var(--panel)] px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 shadow-[var(--shadow-3)] md:hidden">
-            <div className="mx-auto h-1.5 w-14 rounded-[var(--radius-full)] bg-[color-mix(in_srgb,var(--foreground)_10%,transparent)]" />
+          <div className="fixed inset-x-0 bottom-0 z-40 rounded-t-[var(--radius-xl)] border-t-2 border-t-[var(--brand)] bg-[var(--panel)] px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-2 shadow-[var(--shadow-3)] md:hidden">
+            <div className="mx-auto h-1 w-9 rounded-sm bg-[var(--line)]" />
             {/* D2: no eyebrow · D3: icon-only close */}
             <div className="mt-4">
               <ModalHeader
