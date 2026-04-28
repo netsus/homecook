@@ -612,7 +612,7 @@
         "pnpm validate:workpack",
         "git diff --check"
       ],
-      "notes": "Modal/sheet overlay family prototype parity scored slice (h7 rollout order 7). Stage 4 FE implementation in progress. Visual parity applied to PlannerAddSheet, SaveModal, IngredientFilterModal, SortSheet, LoginGateModal. Score 95.2 >= threshold 93, blocker 0. Authority report created. closeout_phase=projecting"
+      "notes": "Modal/sheet overlay family prototype parity scored slice (h7 rollout order 7). Stage 4 FE implementation complete, Stage 5 design review passed after repair (S5-R1/R2/R3 closed), Claude final authority gate passed. Visual parity applied to PlannerAddSheet, SaveModal, IngredientFilterModal, SortSheet, LoginGateModal. Score 95.2 >= threshold 93, blocker 0. Design Status confirmed. closeout_phase=projecting authority_gate=passed"
     }
   ]
 }

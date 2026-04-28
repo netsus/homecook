@@ -3,9 +3,10 @@
 > Slice: `baemin-prototype-modal-overlay-parity`
 > Classification: `anchor-extension`
 > Anchor screens: HOME, RECIPE_DETAIL
-> Stage: 4 (Frontend Implementation)
+> Stage: Final Authority Gate (post Stage 5 approval)
 > Date: 2026-04-28
-> Reviewer: Claude (Stage 4 implementer)
+> Reviewer: Claude (Final Authority Gate)
+> Stage 5 reviewer: Codex (Stage 5 design review — approved after repair)
 > Branch: `feature/fe-baemin-prototype-modal-overlay-parity`
 > Visual verdict: `ui/designs/evidence/baemin-prototype-modal-overlay-parity/visual-verdict.json`
 > Capture evidence: `qa/visual/parity/baemin-prototype-modal-overlay-parity/`
@@ -119,14 +120,24 @@ The 5-modal overlay family (PlannerAddSheet, SaveModal, IngredientFilterModal, S
 
 ## Invariants Verified
 
-- [ ] No API endpoint, field, table, or status value added
-- [ ] No DB schema changes
-- [ ] No modal behavior changes (open/close/dismiss, focus trap, ESC, backdrop)
-- [ ] H5 copy lock preserved (all titles, descriptions, CTA text unchanged)
-- [ ] No new npm dependencies
-- [ ] No source-of-truth document changes
-- [ ] Prototype-only exclusions not scored as deficits
+- [x] No API endpoint, field, table, or status value added
+- [x] No DB schema changes
+- [x] No modal behavior changes (open/close/dismiss, focus trap, ESC, backdrop)
+- [x] H5 copy lock preserved (all titles, descriptions, CTA text unchanged)
+- [x] No new npm dependencies
+- [x] No source-of-truth document changes
+- [x] Prototype-only exclusions not scored as deficits
 
 ## Authority Blockers
 
 None.
+
+## Final Authority Gate
+
+- **Gate result**: PASS
+- **Gate reviewer**: Claude (Final Authority Gate)
+- **Gate date**: 2026-04-28
+- **Score**: 95.2 >= 93, blocker 0
+- **Stage 5 pass artifact**: `.omx/artifacts/baemin-prototype-modal-overlay-parity-stage5-review-pass-20260428T071500Z.md`
+- **All 7 invariants verified**: checked
+- **Design Status transition**: `pending-review` → `confirmed`

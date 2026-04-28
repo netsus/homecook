@@ -110,9 +110,9 @@
     "phase": "projecting",
     "docs_projection": {
       "roadmap_lifecycle": "in_progress",
-      "design_status": "pending-review",
-      "delivery_checklist": "pending",
-      "design_authority": "pending",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
       "acceptance": "pending",
       "automation_spec_metadata": "synced"
     },
@@ -149,9 +149,9 @@
       "evidence_sources": []
     },
     "projection_state": {
-      "docs_synced_at": null,
-      "status_synced_at": null,
-      "pr_body_synced_at": null
+      "docs_synced_at": "2026-04-28T08:00:00.000Z",
+      "status_synced_at": "2026-04-28T08:00:00.000Z",
+      "pr_body_synced_at": "2026-04-28T07:15:00.000Z"
     }
   }
 }

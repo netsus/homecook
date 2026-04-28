@@ -112,11 +112,12 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [x] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed)
 - [ ] N/A
 
 > Design Status 전이: `temporary` → `pending-review` (Stage 4 완료 후) → `confirmed` (Stage 5 + final authority gate 통과 후)
+> Final authority gate passed: 2026-04-28. Score 95.2 >= 93, blocker 0, all invariants verified.
 
 ## Source Links
 
@@ -211,6 +212,6 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 - [x] Authority report 생성 (screenshot evidence 기반) <!-- omo:id=mo-parity-authority-report;stage=4;scope=frontend;review=5,6 -->
 - [x] Slice score >= 93, blocker count 0 <!-- omo:id=mo-parity-score-threshold;stage=4;scope=frontend;review=5,6 -->
 - [x] Prototype-only exclusions가 deficit으로 채점되지 않음 확인 <!-- omo:id=mo-parity-exclusions-check;stage=4;scope=frontend;review=5,6 -->
-- [ ] 기존 modal 기능 regression 없음 (PlannerAdd 날짜/끼니/인분, Save 책 선택/생성, IngredientFilter 카테고리/검색/체크/적용, Sort 즉시 적용, LoginGate return-to-action) <!-- omo:id=mo-parity-no-regression;stage=4;scope=frontend;review=5,6 -->
+- [x] 기존 modal 기능 regression 없음 (PlannerAdd 날짜/끼니/인분, Save 책 선택/생성, IngredientFilter 카테고리/검색/체크/적용, Sort 즉시 적용, LoginGate return-to-action) <!-- omo:id=mo-parity-no-regression;stage=4;scope=frontend;review=5,6 -->
 - [x] Runtime app code에서 API/DB/status 변경 없음 확인 <!-- omo:id=mo-parity-no-contract-change;stage=4;scope=frontend;review=5,6 -->
 - [x] H5 copy lock이 변경되지 않음 확인 <!-- omo:id=mo-parity-h5-copy-lock;stage=4;scope=frontend;review=5,6 -->
