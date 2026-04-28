@@ -104,7 +104,7 @@ h7 direction gate가 정의한 3-way capture, visual-verdict scoring, required-s
 - UI risk: `anchor-extension` (anchor screen HOME, RECIPE_DETAIL 위의 overlay 시각 처리 전면 변경)
 - Anchor screen dependency: `HOME`, `RECIPE_DETAIL`
 - Visual artifact: `ui/designs/authority/MODAL_OVERLAY-parity-authority.md` (Stage 4에서 screenshot evidence 포함)
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes: h7 parity program의 scored overlay slice. Stage 5 public review와 Claude final authority gate 통과 필요. 기존 H5 modal family design docs, baemin-style-modal-system-fit authority 결과를 base로 활용.
 - Design addendum: 기존 `ui/designs/INGREDIENT_FILTER_MODAL.md`, `ui/designs/LOGIN.md`, `ui/designs/RECIPE_DETAIL.md` (PlannerAdd/Save 섹션), `ui/designs/HOME.md` (Sort 섹션) 활용
 - Design critique: 기존 critique 활용. 이 슬라이스는 이미 confirmed된 modal family의 시각 parity이므로 design-generator/design-critic 신규 실행 불필요. 근거: H5 + baemin-style-modal-system-fit에서 modal chrome이 확정됨. 이 슬라이스는 확정된 chrome 위에 prototype skin/layout 미세 정합만 수행.
