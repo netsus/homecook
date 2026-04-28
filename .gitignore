@@ -20,6 +20,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# python
+__pycache__/
+*.py[cod]
+
 # env files
 .env
 .env.local
@@ -50,6 +54,7 @@ test-results/
 
 # local agent artifacts
 .artifacts/
+.signals/
 .worktrees/
 .omx/
 .opencode/branch-session.json
