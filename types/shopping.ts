@@ -9,8 +9,19 @@ export interface ShoppingPreviewMeal {
   created_at: string;
 }
 
+export interface ShoppingPreviewRecipe {
+  recipe_id: string;
+  recipe_name: string;
+  recipe_thumbnail: string | null;
+  meal_ids: string[];
+  planned_servings_total: number;
+  shopping_servings: number;
+  is_selected: boolean;
+}
+
 export interface ShoppingPreviewData {
   eligible_meals: ShoppingPreviewMeal[];
+  recipes?: ShoppingPreviewRecipe[];
 }
 
 export interface ShoppingMealConfigInput {
@@ -18,8 +29,15 @@ export interface ShoppingMealConfigInput {
   shopping_servings?: number;
 }
 
+export interface ShoppingRecipeConfigInput {
+  recipe_id?: string;
+  meal_ids?: string[];
+  shopping_servings?: number;
+}
+
 export interface ShoppingListCreateBody {
   meal_configs?: ShoppingMealConfigInput[];
+  recipes?: ShoppingRecipeConfigInput[];
 }
 
 export interface ShoppingListSummary {

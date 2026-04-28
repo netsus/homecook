@@ -20,6 +20,8 @@ export interface PlannerMealData {
   planned_servings: number;
   status: MealStatus;
   is_leftover: boolean;
+  shopping_list_id?: string | null;
+  shopping_list_title?: string | null;
 }
 
 export interface PlannerData {

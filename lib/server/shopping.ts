@@ -11,8 +11,19 @@ export interface ParsedShoppingMealConfig {
   shopping_servings: number;
 }
 
+export interface ParsedShoppingRecipeConfig {
+  recipe_id: string;
+  meal_ids: string[];
+  shopping_servings: number;
+}
+
 export interface ParseShoppingMealConfigsResult {
   valid_configs: ParsedShoppingMealConfig[];
+  fields: Array<{ field: string; reason: string }>;
+}
+
+export interface ParseShoppingRecipeConfigsResult {
+  valid_configs: ParsedShoppingRecipeConfig[];
   fields: Array<{ field: string; reason: string }>;
 }
 
@@ -131,6 +142,60 @@ export function parseShoppingMealConfigs(body: ShoppingListCreateBody): ParseSho
 
     deduped.set(mealId, {
       meal_id: mealId,
+      shopping_servings: servings,
+    });
+  });
+
+  return {
+    valid_configs: [...deduped.values()],
+    fields,
+  };
+}
+
+export function parseShoppingRecipeConfigs(body: ShoppingListCreateBody): ParseShoppingRecipeConfigsResult {
+  const fields: Array<{ field: string; reason: string }> = [];
+  const rawConfigs = body.recipes;
+
+  if (!Array.isArray(rawConfigs) || rawConfigs.length === 0) {
+    return {
+      valid_configs: [],
+      fields: [{ field: "recipes", reason: "required_non_empty" }],
+    };
+  }
+
+  const deduped = new Map<string, ParsedShoppingRecipeConfig>();
+
+  rawConfigs.forEach((config, index) => {
+    const recipeId = typeof config?.recipe_id === "string" ? config.recipe_id.trim() : "";
+    const servings = toPositiveNumber(config?.shopping_servings);
+    const rawMealIds = Array.isArray(config?.meal_ids) ? config.meal_ids : [];
+    const mealIds = [
+      ...new Set(
+        rawMealIds
+          .map((mealId) => (typeof mealId === "string" ? mealId.trim() : ""))
+          .filter((mealId) => mealId && isUuid(mealId)),
+      ),
+    ];
+
+    if (servings === null || !Number.isInteger(servings) || servings < 1) {
+      fields.push({ field: `recipes[${index}].shopping_servings`, reason: "min_value" });
+      return;
+    }
+
+    if (!recipeId || !isUuid(recipeId)) {
+      return;
+    }
+
+    if (mealIds.length === 0) {
+      fields.push({ field: `recipes[${index}].meal_ids`, reason: "required_non_empty" });
+      return;
+    }
+
+    const existing = deduped.get(recipeId);
+
+    deduped.set(recipeId, {
+      recipe_id: recipeId,
+      meal_ids: [...new Set([...(existing?.meal_ids ?? []), ...mealIds])],
       shopping_servings: servings,
     });
   });

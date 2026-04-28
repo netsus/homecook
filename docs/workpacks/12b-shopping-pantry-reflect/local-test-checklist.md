@@ -8,8 +8,8 @@
 - [ ] 의존성을 설치한다: `pnpm install`
 - [ ] 빠른 자동 회귀 테스트를 먼저 돌린다:
   ```bash
-  pnpm test:product tests/shopping-detail.backend.test.ts tests/shopping-share-text.backend.test.ts tests/shopping-reorder.backend.test.ts tests/shopping-complete.backend.test.ts tests/shopping-detail.frontend.test.tsx
-  pnpm exec playwright test tests/e2e/slice-10a-shopping-detail-interact.spec.ts tests/e2e/slice-10b-shopping-share-text.spec.ts tests/e2e/slice-11-shopping-reorder.spec.ts tests/e2e/slice-12a-shopping-complete.spec.ts tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts --grep-invert '@live-oauth'
+  pnpm test:product tests/shopping-detail.backend.test.ts tests/shopping-share-text.backend.test.ts tests/shopping-reorder.backend.test.ts tests/shopping-complete.backend.test.ts tests/shopping-detail.frontend.test.tsx tests/shopping-flow-screen.test.tsx
+  pnpm exec playwright test tests/e2e/slice-09-shopping-preview-create.spec.ts tests/e2e/slice-10a-shopping-detail-interact.spec.ts tests/e2e/slice-10b-shopping-share-text.spec.ts tests/e2e/slice-11-shopping-reorder.spec.ts tests/e2e/slice-12a-shopping-complete.spec.ts tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts --grep-invert '@live-oauth'
   ```
 - [ ] 실제 로컬 DB smoke를 할 경우 demo seed와 local Supabase 서버를 준비한다:
   ```bash
@@ -17,6 +17,15 @@
   NEXT_PUBLIC_APP_URL=http://localhost:3105 pnpm exec node scripts/dev-local-supabase.mjs -H 127.0.0.1 -p 3105
   ```
 - [ ] 브라우저에서 `http://localhost:3105`에 접속하고 로그인/테스트 유저 상태를 확인한다.
+
+## Slice 09-12 통합 생성 흐름
+
+- [ ] 플래너에서 같은 레시피가 여러 날짜에 등록되어 있으면 `SHOPPING_FLOW`에서 레시피별 1행으로 합산되어 보인다.
+- [ ] 예: 4/28 김치찌개 3인분 + 4/29 김치찌개 3인분은 `합산 계획 6인분`으로 보인다.
+- [ ] `장보기 기준 인분` 기본값은 합산 계획 인분과 같다.
+- [ ] `장보기 목록 만들기` 후 생성된 상세 화면 `/shopping/lists/{id}`로 이동한다.
+- [ ] 플래너로 돌아와도 연결된 장보기 목록을 다시 여는 임시 `장보기 보기` 링크가 보인다.
+  - 향후 마이페이지에 장보기목록 탭이 생기면 이 접근 경로는 그 탭으로 대체한다.
 
 ## Slice 10a: Shopping Detail Interact
 
@@ -33,6 +42,7 @@
 
 - [ ] `SHOPPING_DETAIL` 상단의 `공유(텍스트)` 버튼이 보인다.
 - [ ] 공유 버튼을 누르면 구매 섹션 항목만 공유 텍스트에 포함된다.
+- [ ] 체크된 항목은 `☑`, 체크되지 않은 항목은 `☐`로 공유된다.
 - [ ] `is_pantry_excluded=true` 항목은 공유 텍스트에 포함되지 않는다.
 - [ ] 공유 텍스트는 리스트 제목/날짜와 체크리스트 항목을 읽기 쉬운 줄바꿈으로 만든다.
 - [ ] Web Share API가 가능한 환경에서는 OS 공유 시트가 열린다.
@@ -57,6 +67,7 @@
 - [ ] 팝업에서 완료를 확정하면 성공 toast가 보이고 리스트가 read-only로 전환된다.
 - [ ] 완료 후 `장보기 완료` 버튼은 사라진다.
 - [ ] 완료 후 체크/제외/순서 변경 컨트롤은 비활성화된다.
+- [ ] 완료된 read-only 화면에서 `플래너로 돌아가기` 버튼으로 플래너에 복귀할 수 있다.
 - [ ] 플래너로 돌아가면 연결된 식사가 `장보기 완료` 또는 `shopping_done` 상태로 표시된다.
 - [ ] 같은 리스트에 완료 API를 다시 호출해도 `200` 멱등 응답이 유지된다.
 - [ ] 완료된 리스트의 체크/제외/순서 변경 API는 `409`를 반환한다.

@@ -492,7 +492,7 @@ export function ShoppingDetailScreen({
               if (window.history.length > 1) {
                 router.back();
               } else {
-                router.push("/");
+                router.push("/planner");
               }
             }}
             className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-black/5"
@@ -546,9 +546,18 @@ export function ShoppingDetailScreen({
       {/* Read-only notice */}
       {isReadOnly && (
         <div className="bg-[color:rgba(46,166,122,0.08)] px-4 py-3">
-          <p className="text-sm text-[var(--muted)]">
-            ℹ️ 완료된 장보기 기록은 수정할 수 없어요
-          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-[var(--muted)]">
+              ℹ️ 완료된 장보기 기록은 수정할 수 없어요
+            </p>
+            <button
+              className="inline-flex min-h-10 items-center justify-center rounded-full border border-[var(--olive)] bg-white px-4 py-2 text-sm font-bold text-[var(--olive)]"
+              onClick={() => router.push("/planner")}
+              type="button"
+            >
+              플래너로 돌아가기
+            </button>
+          </div>
         </div>
       )}
 

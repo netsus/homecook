@@ -10,21 +10,80 @@ import {
   fetchShoppingPreview,
   isShoppingApiError,
 } from "@/lib/api/shopping";
+import type { ShoppingPreviewData, ShoppingPreviewMeal } from "@/types/shopping";
 
 export interface ShoppingFlowScreenProps {
   initialAuthenticated: boolean;
 }
 
 interface MealConfig {
-  meal_id: string;
+  recipe_id: string;
+  meal_ids: string[];
   shopping_servings: number;
   isSelected: boolean;
   recipe_name: string;
-  planned_servings: number;
+  planned_servings_total: number;
+  meal_count: number;
   created_at: string;
 }
 
 type ViewState = "loading" | "empty" | "error" | "ready" | "creating";
+
+function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
+  const grouped = new Map<string, MealConfig>();
+
+  meals.forEach((meal) => {
+    const existing = grouped.get(meal.recipe_id);
+
+    if (existing) {
+      existing.meal_ids.push(meal.id);
+      existing.planned_servings_total += meal.planned_servings;
+      existing.shopping_servings += meal.planned_servings;
+      existing.meal_count += 1;
+      if (meal.created_at < existing.created_at) {
+        existing.created_at = meal.created_at;
+      }
+      return;
+    }
+
+    grouped.set(meal.recipe_id, {
+      recipe_id: meal.recipe_id,
+      meal_ids: [meal.id],
+      shopping_servings: meal.planned_servings,
+      isSelected: true,
+      recipe_name: meal.recipe_name,
+      planned_servings_total: meal.planned_servings,
+      meal_count: 1,
+      created_at: meal.created_at,
+    });
+  });
+
+  return [...grouped.values()].sort((left, right) => {
+    const byCreatedAt = left.created_at.localeCompare(right.created_at);
+    if (byCreatedAt !== 0) {
+      return byCreatedAt;
+    }
+
+    return left.recipe_id.localeCompare(right.recipe_id);
+  });
+}
+
+function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
+  if (Array.isArray(data.recipes) && data.recipes.length > 0) {
+    return data.recipes.map((recipe) => ({
+      recipe_id: recipe.recipe_id,
+      meal_ids: recipe.meal_ids,
+      shopping_servings: recipe.shopping_servings,
+      isSelected: recipe.is_selected,
+      recipe_name: recipe.recipe_name,
+      planned_servings_total: recipe.planned_servings_total,
+      meal_count: recipe.meal_ids.length,
+      created_at: "",
+    }));
+  }
+
+  return groupMealsByRecipe(data.eligible_meals);
+}
 
 export function ShoppingFlowScreen({
   initialAuthenticated,
@@ -46,16 +105,7 @@ export function ShoppingFlowScreen({
         return;
       }
 
-      const configs: MealConfig[] = data.eligible_meals.map((meal) => ({
-        meal_id: meal.id,
-        shopping_servings: meal.planned_servings,
-        isSelected: true,
-        recipe_name: meal.recipe_name,
-        planned_servings: meal.planned_servings,
-        created_at: meal.created_at,
-      }));
-
-      setMealConfigs(configs);
+      setMealConfigs(buildMealConfigs(data));
       setViewState("ready");
     } catch (error) {
       if (isShoppingApiError(error)) {
@@ -77,10 +127,10 @@ export function ShoppingFlowScreen({
     }
   }, [initialAuthenticated, loadPreview]);
 
-  const handleToggleSelection = useCallback((mealId: string) => {
+  const handleToggleSelection = useCallback((recipeId: string) => {
     setMealConfigs((prev) =>
       prev.map((config) =>
-        config.meal_id === mealId
+        config.recipe_id === recipeId
           ? { ...config, isSelected: !config.isSelected }
           : config
       )
@@ -88,10 +138,10 @@ export function ShoppingFlowScreen({
   }, []);
 
   const handleServingsChange = useCallback(
-    (mealId: string, newServings: number) => {
+    (recipeId: string, newServings: number) => {
       setMealConfigs((prev) =>
         prev.map((config) =>
-          config.meal_id === mealId
+          config.recipe_id === recipeId
             ? { ...config, shopping_servings: newServings }
             : config
         )
@@ -111,8 +161,9 @@ export function ShoppingFlowScreen({
 
     try {
       const body = {
-        meal_configs: selectedConfigs.map((config) => ({
-          meal_id: config.meal_id,
+        recipes: selectedConfigs.map((config) => ({
+          recipe_id: config.recipe_id,
+          meal_ids: config.meal_ids,
           shopping_servings: config.shopping_servings,
         })),
       };
@@ -229,17 +280,17 @@ export function ShoppingFlowScreen({
       >
         <div className="mb-4 rounded-[14px] border border-[var(--line)] bg-white/70 px-4 py-3">
           <p className="text-sm font-semibold text-[var(--foreground)]">
-            장보기 대상만 모았어요
+            장보기 대상을 레시피별로 합산했어요
           </p>
           <p className="mt-1 text-sm leading-5 text-[var(--muted)]">
-            식사 등록 완료이면서 아직 장보기 리스트에 없는 식사입니다. 장보기 완료, 요리 완료, 이미 장보기 리스트에 포함된 식사는 자동으로 제외돼요.
+            식사 등록 완료이면서 아직 장보기 리스트에 없는 식사입니다. 같은 레시피는 합산 계획 인분으로 묶이고, 장보기 완료·요리 완료·이미 연결된 식사는 자동으로 제외돼요.
           </p>
         </div>
 
         <div className="space-y-3">
           {mealConfigs.map((config) => (
             <RecipeCard
-              key={config.meal_id}
+              key={config.recipe_id}
               config={config}
               onToggle={handleToggleSelection}
               onServingsChange={handleServingsChange}
@@ -310,17 +361,8 @@ function AppBar({ onBack }: AppBarProps) {
 
 interface RecipeCardProps {
   config: MealConfig;
-  onToggle: (mealId: string) => void;
-  onServingsChange: (mealId: string, servings: number) => void;
-}
-
-function formatRegisteredDate(value: string) {
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(value));
+  onToggle: (recipeId: string) => void;
+  onServingsChange: (recipeId: string, servings: number) => void;
 }
 
 function RecipeCard({ config, onToggle, onServingsChange }: RecipeCardProps) {
@@ -338,7 +380,7 @@ function RecipeCard({ config, onToggle, onServingsChange }: RecipeCardProps) {
               : `${config.recipe_name} 선택`
           }
           className="flex h-11 w-11 shrink-0 items-center justify-center"
-          onClick={() => onToggle(config.meal_id)}
+          onClick={() => onToggle(config.recipe_id)}
           type="button"
         >
           <div
@@ -383,10 +425,10 @@ function RecipeCard({ config, onToggle, onServingsChange }: RecipeCardProps) {
               장보기 미연결
             </span>
             <span className="rounded-full border border-[var(--line)] bg-white/70 px-2.5 py-1">
-              등록일 {formatRegisteredDate(config.created_at)}
+              대상 식사 {config.meal_count}개
             </span>
             <span className="rounded-full border border-[var(--line)] bg-white/70 px-2.5 py-1">
-              플래너 등록 {config.planned_servings}인분
+              합산 계획 {config.planned_servings_total}인분
             </span>
           </div>
 
@@ -397,7 +439,7 @@ function RecipeCard({ config, onToggle, onServingsChange }: RecipeCardProps) {
             <NumericStepperCompact
               value={config.shopping_servings}
               min={1}
-              onChange={(value) => onServingsChange(config.meal_id, value)}
+              onChange={(value) => onServingsChange(config.recipe_id, value)}
               disabled={!config.isSelected}
               unit="인분"
             />

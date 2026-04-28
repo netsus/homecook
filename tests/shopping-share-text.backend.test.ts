@@ -149,12 +149,14 @@ describe("10b shopping share text backend", () => {
           {
             id: "550e8400-e29b-41d4-a716-446655440111",
             display_text: "양파 2개 + 200g",
+            is_checked: true,
             is_pantry_excluded: false,
             sort_order: 10,
           },
           {
             id: "550e8400-e29b-41d4-a716-446655440222",
             display_text: "김치 400g",
+            is_checked: false,
             is_pantry_excluded: false,
             sort_order: 20,
           },
@@ -197,7 +199,7 @@ describe("10b shopping share text backend", () => {
     expect(body).toEqual({
       success: true,
       data: {
-        text: "📋 4/25 장보기\n\n☐ 양파 2개 + 200g\n☐ 김치 400g",
+        text: "📋 4/25 장보기\n\n☑ 양파 2개 + 200g\n☐ 김치 400g",
       },
       error: null,
     });
@@ -232,6 +234,7 @@ describe("10b shopping share text backend", () => {
           {
             id: "550e8400-e29b-41d4-a716-446655440111",
             display_text: "양파 2개",
+            is_checked: false,
             is_pantry_excluded: false,
             sort_order: 10,
           },
@@ -243,6 +246,7 @@ describe("10b shopping share text backend", () => {
           {
             id: "550e8400-e29b-41d4-a716-446655440111",
             display_text: "양파 2개",
+            is_checked: false,
             is_pantry_excluded: false,
             sort_order: 10,
           },
@@ -352,6 +356,7 @@ describe("10b shopping share text backend", () => {
           {
             id: "550e8400-e29b-41d4-a716-446655440111",
             display_text: "두부 1모",
+            is_checked: true,
             is_pantry_excluded: false,
             sort_order: 10,
           },
@@ -388,6 +393,6 @@ describe("10b shopping share text backend", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.data.text).toContain("☐ 두부 1모");
+    expect(body.data.text).toContain("☑ 두부 1모");
   });
 });

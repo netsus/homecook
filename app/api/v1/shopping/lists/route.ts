@@ -3,6 +3,7 @@ import {
   aggregateShoppingIngredients,
   buildShoppingListTitle,
   parseShoppingMealConfigs,
+  parseShoppingRecipeConfigs,
 } from "@/lib/server/shopping";
 import {
   ensurePublicUserRow,
@@ -34,6 +35,11 @@ interface RecipeIngredientRow {
   unit: string | null;
   ingredient_type: "QUANT" | "TO_TASTE";
   display_text: string | null;
+}
+
+interface RecipeRow {
+  id: string;
+  base_servings: number;
 }
 
 interface IngredientRow {
@@ -83,6 +89,11 @@ interface RecipeIngredientsSelectQuery {
   then: ArrayQueryResult<RecipeIngredientRow>["then"];
 }
 
+interface RecipesSelectQuery {
+  in(column: string, values: string[]): RecipesSelectQuery;
+  then: ArrayQueryResult<RecipeRow>["then"];
+}
+
 interface IngredientsSelectQuery {
   in(column: string, values: string[]): IngredientsSelectQuery;
   then: ArrayQueryResult<IngredientRow>["then"];
@@ -130,6 +141,10 @@ interface RecipeIngredientsTable {
   select(columns: string): RecipeIngredientsSelectQuery;
 }
 
+interface RecipesTable {
+  select(columns: string): RecipesSelectQuery;
+}
+
 interface IngredientsTable {
   select(columns: string): IngredientsSelectQuery;
 }
@@ -155,6 +170,7 @@ interface ShoppingCreateDbClient {
   from(table: "meals"): MealsTable;
   from(table: "shopping_lists"): ShoppingListsTable;
   from(table: "shopping_list_recipes"): ShoppingListRecipesTable;
+  from(table: "recipes"): RecipesTable;
   from(table: "recipe_ingredients"): RecipeIngredientsTable;
   from(table: "ingredients"): IngredientsTable;
   from(table: "pantry_items"): PantryItemsTable;
@@ -175,9 +191,13 @@ export async function POST(request: Request) {
     return fail("VALIDATION_ERROR", "요청 본문을 확인해주세요.", 422, [{ field: "body", reason: "invalid_json" }]);
   }
 
-  const parsedMealConfigs = parseShoppingMealConfigs(body);
-  if (parsedMealConfigs.fields.length > 0) {
-    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, parsedMealConfigs.fields);
+  const usesRecipeConfigs = Array.isArray(body.recipes);
+  const parsedMealConfigs = usesRecipeConfigs ? null : parseShoppingMealConfigs(body);
+  const parsedRecipeConfigs = usesRecipeConfigs ? parseShoppingRecipeConfigs(body) : null;
+  const parseFields = parsedRecipeConfigs?.fields ?? parsedMealConfigs?.fields ?? [];
+
+  if (parseFields.length > 0) {
+    return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, parseFields);
   }
 
   const routeClient = await createRouteHandlerClient();
@@ -201,14 +221,24 @@ export async function POST(request: Request) {
     );
   }
 
-  if (parsedMealConfigs.valid_configs.length === 0) {
+  const validConfigCount =
+    parsedRecipeConfigs?.valid_configs.length ?? parsedMealConfigs?.valid_configs.length ?? 0;
+
+  if (validConfigCount === 0) {
     return fail("VALIDATION_ERROR", "선택된 식사가 없어요.", 422, [
-      { field: "meal_configs", reason: "no_valid_meal" },
+      { field: usesRecipeConfigs ? "recipes" : "meal_configs", reason: "no_valid_meal" },
     ]);
   }
 
-  const mealConfigMap = new Map(parsedMealConfigs.valid_configs.map((config) => [config.meal_id, config]));
-  const mealIds = [...mealConfigMap.keys()];
+  const mealConfigMap = new Map(
+    (parsedMealConfigs?.valid_configs ?? []).map((config) => [config.meal_id, config]),
+  );
+  const recipeConfigMap = new Map(
+    (parsedRecipeConfigs?.valid_configs ?? []).map((config) => [config.recipe_id, config]),
+  );
+  const mealIds = usesRecipeConfigs
+    ? [...new Set((parsedRecipeConfigs?.valid_configs ?? []).flatMap((config) => config.meal_ids))]
+    : [...mealConfigMap.keys()];
 
   const mealsResult = await dbClient
     .from("meals")
@@ -229,7 +259,18 @@ export async function POST(request: Request) {
     return fail("CONFLICT", "이미 다른 장보기 리스트에 포함된 식사가 있어요.", 409);
   }
 
-  const validMeals = mealsResult.data.filter((meal) => meal.status === "registered");
+  const validMeals = mealsResult.data.filter((meal) => {
+    if (meal.status !== "registered") {
+      return false;
+    }
+
+    if (!usesRecipeConfigs) {
+      return mealConfigMap.has(meal.id);
+    }
+
+    const recipeConfig = recipeConfigMap.get(meal.recipe_id);
+    return Boolean(recipeConfig?.meal_ids.includes(meal.id));
+  });
 
   if (validMeals.length === 0) {
     return fail("VALIDATION_ERROR", "선택된 식사가 없어요.", 422, [
@@ -260,23 +301,43 @@ export async function POST(request: Request) {
   const shoppingList = shoppingListInsertResult.data;
   const recipeAggregation = new Map<string, { planned_servings_total: number; shopping_servings: number }>();
 
-  validMeals.forEach((meal) => {
-    const mealConfig = mealConfigMap.get(meal.id);
+  if (usesRecipeConfigs) {
+    (parsedRecipeConfigs?.valid_configs ?? []).forEach((recipeConfig) => {
+      const mealsForRecipe = validMeals.filter(
+        (meal) => meal.recipe_id === recipeConfig.recipe_id && recipeConfig.meal_ids.includes(meal.id),
+      );
 
-    if (!mealConfig) {
-      return;
-    }
+      if (mealsForRecipe.length === 0) {
+        return;
+      }
 
-    const existing = recipeAggregation.get(meal.recipe_id) ?? {
-      planned_servings_total: 0,
-      shopping_servings: 0,
-    };
-
-    recipeAggregation.set(meal.recipe_id, {
-      planned_servings_total: existing.planned_servings_total + meal.planned_servings,
-      shopping_servings: existing.shopping_servings + mealConfig.shopping_servings,
+      recipeAggregation.set(recipeConfig.recipe_id, {
+        planned_servings_total: mealsForRecipe.reduce(
+          (total, meal) => total + meal.planned_servings,
+          0,
+        ),
+        shopping_servings: recipeConfig.shopping_servings,
+      });
     });
-  });
+  } else {
+    validMeals.forEach((meal) => {
+      const mealConfig = mealConfigMap.get(meal.id);
+
+      if (!mealConfig) {
+        return;
+      }
+
+      const existing = recipeAggregation.get(meal.recipe_id) ?? {
+        planned_servings_total: 0,
+        shopping_servings: 0,
+      };
+
+      recipeAggregation.set(meal.recipe_id, {
+        planned_servings_total: existing.planned_servings_total + meal.planned_servings,
+        shopping_servings: existing.shopping_servings + mealConfig.shopping_servings,
+      });
+    });
+  }
 
   const shoppingRecipeRows = [...recipeAggregation.entries()].map(([recipeId, totals]) => ({
     shopping_list_id: shoppingList.id,
@@ -296,6 +357,19 @@ export async function POST(request: Request) {
   }
 
   const recipeIds = [...recipeAggregation.keys()];
+  const recipeRowsResult = await dbClient
+    .from("recipes")
+    .select("id, base_servings")
+    .in("id", recipeIds);
+
+  if (recipeRowsResult.error || !recipeRowsResult.data) {
+    return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
+  }
+
+  const recipeBaseServingsMap = new Map(
+    recipeRowsResult.data.map((recipe) => [recipe.id, recipe.base_servings]),
+  );
+
   const recipeIngredientRowsResult = await dbClient
     .from("recipe_ingredients")
     .select("recipe_id, ingredient_id, amount, unit, ingredient_type, display_text")
@@ -340,38 +414,29 @@ export async function POST(request: Request) {
     });
   }
 
-  const mealsByRecipe = new Map<string, MealsRow[]>();
-  validMeals.forEach((meal) => {
-    const current = mealsByRecipe.get(meal.recipe_id) ?? [];
-    current.push(meal);
-    mealsByRecipe.set(meal.recipe_id, current);
-  });
-
   const aggregatedIngredients = aggregateShoppingIngredients(
-    recipeIngredientRowsResult.data.flatMap((ingredientRow) => {
-      const meals = mealsByRecipe.get(ingredientRow.recipe_id) ?? [];
+    recipeIngredientRowsResult.data
+      .map((ingredientRow) => {
+        const recipeTotals = recipeAggregation.get(ingredientRow.recipe_id);
 
-      return meals
-        .map((meal) => {
-          const config = mealConfigMap.get(meal.id);
+        if (!recipeTotals) {
+          return null;
+        }
 
-          if (!config) {
-            return null;
-          }
-
-          return {
-            ingredient_id: ingredientRow.ingredient_id,
-            standard_name: ingredientNameMap.get(ingredientRow.ingredient_id) ?? "",
-            ingredient_type: ingredientRow.ingredient_type,
-            amount: ingredientRow.amount,
-            unit: ingredientRow.unit,
-            display_text: ingredientRow.display_text,
-            planned_servings: meal.planned_servings,
-            shopping_servings: config.shopping_servings,
-          };
-        })
-        .filter((value): value is NonNullable<typeof value> => value !== null);
-    }),
+        return {
+          ingredient_id: ingredientRow.ingredient_id,
+          standard_name: ingredientNameMap.get(ingredientRow.ingredient_id) ?? "",
+          ingredient_type: ingredientRow.ingredient_type,
+          amount: ingredientRow.amount,
+          unit: ingredientRow.unit,
+          display_text: ingredientRow.display_text,
+          planned_servings:
+            recipeBaseServingsMap.get(ingredientRow.recipe_id) ??
+            recipeTotals.planned_servings_total,
+          shopping_servings: recipeTotals.shopping_servings,
+        };
+      })
+      .filter((value): value is NonNullable<typeof value> => value !== null),
   );
 
   if (aggregatedIngredients.length > 0) {
