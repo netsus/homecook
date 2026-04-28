@@ -602,7 +602,7 @@
       "id": "baemin-prototype-modal-overlay-parity",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-baemin-prototype-modal-overlay-parity",
-      "pr_path": "pending",
+      "pr_path": "netsus/homecook#275",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
