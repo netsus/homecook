@@ -311,14 +311,14 @@ public stage numbering은 계속 `1~6`을 유지하고, `internal 6.5`는 Stage 
 
 원칙:
 
-1. `closeout_reconcile_check`는 `pnpm validate:closeout-sync`, `pnpm validate:source-of-truth-sync`, `pnpm validate:exploratory-qa-evidence`, `pnpm validate:authority-evidence-presence`, `pnpm validate:real-smoke-presence`, `pnpm validate:omo-bookkeeping`을 묶어 실행한다.
+1. `closeout_reconcile_check`는 `pnpm validate:pr-ready -- --slice <slice> --pr-body <source-pr-body-file> --mode frontend`, `pnpm validate:closeout-sync`, `pnpm validate:source-of-truth-sync`, `pnpm validate:exploratory-qa-evidence`, `pnpm validate:authority-evidence-presence`, `pnpm validate:real-smoke-presence`, `pnpm validate:omo-bookkeeping`을 묶어 실행한다.
 2. 결과는 `pass | fixable | blocked`로 정규화한다.
 3. `fixable`은 slice-local closeout drift만 의미한다. 현재 executable baseline의 허용 범위는 해당 slice의 `README.md`, `acceptance.md`, `automation-spec.json`과 merged bookkeeping이다. 여기서 merged bookkeeping은 Stage 6 final frontend PR branch에서만 docs roadmap plus `.workflow-v2/status.json` / `.workflow-v2/work-items/<id>.json#status` terminal projection을 포함한다.
 4. repo-wide governing doc drift, validator/tooling 코드 변경, 공식 문서 버전 전파 문제는 `blocked`로 올리고 별도 docs-governance PR로 분리한다.
 5. `closeout_reconcile_repair`는 product contract를 바꾸지 않고 closeout bookkeeping과 evidence references만 고친다.
 6. exploratory QA가 required인 slice에서 evidence가 비어 있으면 merge 대신 fail-closed 한다. 현재 baseline은 existing frontend PR body 또는 local QA artifact bundle을 evidence source로 사용한다.
 7. authority-required slice는 authority report의 `> evidence:` block에 mobile/Figma visual evidence가 실제로 존재해야 하며, `stage4_evidence_requirements`에 선언된 variant(`mobile-default`, `mobile-narrow` 등)를 만족해야 한다. runtime authority snapshot이 존재하면 `design_authority.authority_report_paths`, `design_authority.evidence_artifact_refs`도 authority report / automation-spec과 sync되어야 하며, 어긋나면 merge 대신 fail-closed 한다.
-8. `automation-spec.json`의 `external_smokes[]`가 비어 있지 않은 slice는 source PR `Actual Verification`에 real DB/bootstrap/local Supabase/live smoke evidence 또는 합당한 근거가 있어야 한다. generic smoke/pass 문구만으로는 충분하지 않고, 선언한 `external_smokes[]` 항목이 verification evidence에서 식별 가능해야 하며, closeout preflight는 closeout PR body가 아니라 source PR body를 기준으로 이를 재검증한다.
+8. `automation-spec.json`의 `external_smokes[]`가 비어 있지 않은 slice는 source PR `Actual Verification`에 real DB/bootstrap/local Supabase/live smoke evidence 또는 합당한 근거가 있어야 한다. generic smoke/pass 문구만으로는 충분하지 않고, 선언한 `external_smokes[]` 항목이 verification evidence에서 식별 가능해야 하며, closeout preflight는 closeout PR body가 아니라 source PR body를 기준으로 이를 재검증한다. `pending manual confirmation`, `수동 확인 필요`, `not run`류 placeholder가 남아 있으면 Ready 전 또는 internal 6.5에서 fail-closed 한다.
 9. `closeout_reconcile_recheck`가 다시 `pass`가 나와야만 merge로 진행한다.
 10. repair 후에도 같은 drift가 남아 recheck가 다시 fail하면 supervisor는 한 번 더 분류한다. deterministic projection drift면 supervisor direct repair를 한 번 더 시도할 수 있고, owner judgment가 필요한 slice-local drift면 담당 stage actor에게 bounded repair를 한 번 맡길 수 있다. 같은 finding이 그 뒤에도 남으면 자동 merge 대신 `human_escalation`으로 fail-closed 한다.
 11. `pnpm omo:reconcile -- --work-item <id>`의 dedicated closeout PR 경로도 같은 validator bundle과 safe repair policy를 재사용하되, `.workflow-v2/*` machine-readable status repair는 closeout PR writable scope에 포함하지 않는다.

@@ -78,14 +78,19 @@ function isLocalRepoRef(ref) {
 
 function resolveEvidenceRequirementMatcher(requirement) {
   const normalized = requirement.trim().toLowerCase();
-  if (normalized === "mobile-default") {
+  const normalizedAlias = normalized
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .filter((token) => !["screenshot", "screenshots", "image", "images", "visual", "evidence"].includes(token))
+    .join("-");
+  if (normalizedAlias === "mobile-default") {
     return (ref) => {
       const lowered = ref.toLowerCase();
       return lowered.includes("mobile") && !lowered.includes("narrow");
     };
   }
 
-  if (normalized === "mobile-narrow") {
+  if (normalizedAlias === "mobile-narrow") {
     return (ref) => {
       const lowered = ref.toLowerCase();
       return lowered.includes("narrow") || lowered.includes("320");

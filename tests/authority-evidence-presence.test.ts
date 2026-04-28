@@ -267,6 +267,23 @@ describe("authority evidence presence validator", () => {
     expect(results).toEqual([]);
   });
 
+  it("treats screenshot-suffixed mobile evidence requirements as default and narrow aliases", () => {
+    const rootDir = createFixture({
+      stage4EvidenceRequirements: ["mobile-default-screenshot", "mobile-narrow-screenshot"],
+    });
+
+    const results = validateAuthorityEvidencePresence({
+      rootDir,
+      env: {
+        ...process.env,
+        BRANCH_NAME: "feature/fe-06-recipe-to-planner",
+        PR_IS_DRAFT: "false",
+      },
+    });
+
+    expect(results).toEqual([]);
+  });
+
   it("accepts slice-level evidence requirements when they are satisfied across multiple authority reports", () => {
     const rootDir = createFixture({
       authorityReportPaths: [
