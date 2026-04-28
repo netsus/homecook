@@ -1,0 +1,97 @@
+{
+  "slice_id": "baemin-prototype-modal-overlay-parity",
+  "execution_mode": "manual",
+  "risk_class": "high",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/",
+      "/recipe/[id]"
+    ],
+    "required_states": [
+      "planner-add-open",
+      "save-open",
+      "ingredient-filter-open",
+      "sort-open",
+      "login-gate-open"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "git diff --check"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "visual-verdict-artifact",
+      "authority-report",
+      "capture-evidence-complete",
+      "score-threshold-met",
+      "no-api-db-status-change",
+      "h5-copy-lock-preserved"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "HOME",
+        "RECIPE_DETAIL"
+      ],
+      "required_screens": [
+        "PlannerAddSheet",
+        "SaveModal",
+        "IngredientFilterModal",
+        "SortSheet",
+        "LoginGateModal"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "390-PlannerAddSheet-planner-add-open-after.png",
+        "320-PlannerAddSheet-planner-add-open-after.png",
+        "390-SaveModal-save-open-after.png",
+        "320-SaveModal-save-open-after.png",
+        "390-IngredientFilterModal-ingredient-filter-open-after.png",
+        "320-IngredientFilterModal-ingredient-filter-open-after.png",
+        "390-SortSheet-sort-open-after.png",
+        "320-SortSheet-sort-open-after.png",
+        "390-LoginGateModal-login-gate-open-after.png",
+        "320-LoginGateModal-login-gate-open-after.png"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/MODAL_OVERLAY-parity-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "api-db-status-change",
+    "modal-behavior-change",
+    "h5-copy-lock-change",
+    "prototype-only-exclusion-scored-as-deficit",
+    "capture-evidence-missing",
+    "slice-score-below-threshold",
+    "unresolved-authority-blocker"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 3
+  },
+  "notes": "Modal/sheet overlay family parity scored slice. No BE implementation. Stage 4 produces visual parity + evidence artifacts. Authority review required (anchor-extension on HOME and RECIPE_DETAIL). Existing H5 modal family design docs and baemin-style-modal-system-fit authority are reused. design-generator and design-critic are not required (confirmed modal chrome from H5 + baemin-style-modal-system-fit)."
+}
