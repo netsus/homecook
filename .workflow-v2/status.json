@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-28T13:45:00Z",
+  "updated_at": "2026-04-28T14:32:10Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -632,9 +632,9 @@
     {
       "id": "13-pantry-core",
       "preset": "vertical-slice-strict",
-      "branch": "docs/13-pantry-core",
+      "branch": "feature/be-13-pantry-core",
       "pr_path": "pending",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -643,7 +643,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs created by Claude. PANTRY is h8 prototype parity candidate, PANTRY_BUNDLE_PICKER is prototype-derived. All predecessors merged/bootstrap. h8 gate merged. Docs branch: docs/13-pantry-core."
+      "notes": "Stage 1 docs merged. Stage 2 backend implementation is in progress on feature/be-13-pantry-core; local Supabase migration/seed readiness restored for documented ingredient bundle tables."
     }
   ]
 }
