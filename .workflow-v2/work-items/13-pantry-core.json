@@ -69,7 +69,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -78,7 +78,7 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs created by Claude. h8 gate merged, all predecessors merged/bootstrap. PANTRY is prototype parity candidate per h8 matrix, PANTRY_BUNDLE_PICKER remains prototype-derived.",
+  "notes": "Stage 1 docs created by Claude. Stage 2 backend implementation is in progress on feature/be-13-pantry-core. Local schema readiness restored for documented ingredient bundle tables.",
   "out_of_scope": [
     "팬트리 수량 관리 — 정책상 보유 여부만",
     "팬트리 기반 레시피 추천 — 08b에서 소비 완료",

@@ -20,7 +20,9 @@
 - 상태 전이: 없음 (CRUD only, 별도 상태 머신 없음)
 - DB 영향: `pantry_items` (INSERT/DELETE), `ingredients` (READ), `ingredient_bundles` (READ), `ingredient_bundle_items` (READ)
 - Schema Change:
-  - [x] 없음 (마이그레이션 불필요) — `pantry_items` (INSERT/DELETE), `ingredients`, `ingredient_bundles`, `ingredient_bundle_items`는 이미 `db설계-v1.3.1.md`에 정의된 기존 테이블이며 이 슬라이스에서 read/write로 사용
+  - [x] 공식 DB 계약 변경 없음 — `ingredient_bundles`, `ingredient_bundle_items`는 이미 `db설계-v1.3.1.md`에 정의된 테이블
+  - [x] 로컬 스키마 보강 필요 — Stage 2에서 누락된 로컬 마이그레이션 `supabase/migrations/20260428143000_13_pantry_core_bundles.sql` 추가
+  - [x] 로컬 seed 보강 필요 — Stage 2에서 `supabase/seed.sql` 및 `scripts/local-seed-demo-data.mjs`에 ingredients/bundles baseline 추가
 
 ## Out of Scope
 
@@ -223,16 +225,23 @@
 
 ## Delivery Checklist
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 연결 (GET/POST/DELETE /pantry, GET /pantry/bundles) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 (PantryItem, PantryBundle, request/response 타입) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 연결 (GET/POST/DELETE /pantry, GET /pantry/bundles) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 (PantryItem, PantryBundle, request/response 타입) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] PANTRY UI 연결 <!-- omo:id=delivery-pantry-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] PANTRY_BUNDLE_PICKER UI 연결 <!-- omo:id=delivery-bundle-picker-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 (ingredients, ingredient_bundles seed) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 (ingredients, ingredient_bundles seed) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 - [ ] PANTRY design authority evidence 제출 <!-- omo:id=delivery-pantry-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 - [ ] PANTRY_BUNDLE_PICKER design authority evidence 제출 <!-- omo:id=delivery-bundle-picker-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+
+## Stage 2 Evidence
+
+- TDD red: `pnpm exec vitest run tests/pantry-core.backend.test.ts` initially failed on missing pantry route modules.
+- Targeted green: `pnpm exec vitest run tests/pantry-core.backend.test.ts tests/supabase-server.test.ts tests/local-demo-pantry-fixture.test.ts` → 13 tests passed.
+- Local Supabase smoke without reset: `pnpm dlx supabase start` → already running, `pnpm dlx supabase migration up` → applied `20260428143000_13_pantry_core_bundles.sql`, `node scripts/local-seed-demo-data.mjs` → seeded local demo dataset.
+- Seed/table smoke counts: `ingredients=6`, `ingredient_bundles=2`, `ingredient_bundle_items=5`, `pantry_items=8`.

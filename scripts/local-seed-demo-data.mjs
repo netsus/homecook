@@ -6,7 +6,10 @@ import { createClient } from "@supabase/supabase-js";
 
 import { readLocalSupabaseEnv } from "./lib/local-supabase-env.mjs";
 import {
+  buildDemoPantryBundleItemRows,
   buildDemoPantryItemRows,
+  DEMO_PANTRY_BUNDLES,
+  DEMO_PANTRY_INGREDIENTS,
   DEMO_PANTRY_INGREDIENT_IDS,
 } from "./lib/local-demo-pantry-fixture.mjs";
 
@@ -449,17 +452,64 @@ async function seedExtraPlannerMeals(supabase, {
 }
 
 async function seedDemoPantryItems(supabase, mainUserId) {
+  const ingredientIdByFixtureId = new Map();
+
+  for (const ingredient of DEMO_PANTRY_INGREDIENTS) {
+    const existingResult = await supabase
+      .from("ingredients")
+      .select("id")
+      .eq("standard_name", ingredient.standard_name)
+      .limit(1);
+
+    assertNoError(existingResult, `demo ingredients 조회 실패 (${ingredient.standard_name})`);
+
+    const existingId = existingResult.data?.[0]?.id;
+
+    if (existingId) {
+      ingredientIdByFixtureId.set(ingredient.id, existingId);
+      continue;
+    }
+
+    const insertResult = await supabase
+      .from("ingredients")
+      .insert(ingredient)
+      .select("id")
+      .single();
+
+    assertNoError(insertResult, `demo ingredients 생성 실패 (${ingredient.standard_name})`);
+    ingredientIdByFixtureId.set(ingredient.id, insertResult.data.id);
+  }
+
+  const bundlesResult = await supabase
+    .from("ingredient_bundles")
+    .upsert(DEMO_PANTRY_BUNDLES, { onConflict: "id" });
+
+  assertNoError(bundlesResult, "demo ingredient_bundles 생성 실패");
+
+  const bundleItemsResult = await supabase
+    .from("ingredient_bundle_items")
+    .upsert(buildDemoPantryBundleItemRows(ingredientIdByFixtureId), {
+      onConflict: "bundle_id,ingredient_id",
+    });
+
+  assertNoError(bundleItemsResult, "demo ingredient_bundle_items 생성 실패");
+
   const deleteResult = await supabase
     .from("pantry_items")
     .delete()
     .eq("user_id", mainUserId)
-    .in("ingredient_id", DEMO_PANTRY_INGREDIENT_IDS);
+    .in(
+      "ingredient_id",
+      DEMO_PANTRY_INGREDIENT_IDS.map(
+        (ingredientId) => ingredientIdByFixtureId.get(ingredientId) ?? ingredientId,
+      ),
+    );
 
   assertNoError(deleteResult, "demo pantry_items 초기화 실패");
 
   const upsertResult = await supabase
     .from("pantry_items")
-    .upsert(buildDemoPantryItemRows(mainUserId), {
+    .upsert(buildDemoPantryItemRows(mainUserId, ingredientIdByFixtureId), {
       onConflict: "user_id,ingredient_id",
     });
 
@@ -575,11 +625,11 @@ async function main() {
 
   process.stdout.write(
     [
-      "Seeded local demo dataset for slices 01-08b",
+      "Seeded local demo dataset for slices 01-13",
       `- main account: ${LOCAL_DEMO_ACCOUNTS[0].email} / ${LOCAL_DEMO_ACCOUNTS[0].password}`,
       `- other account: ${LOCAL_DEMO_ACCOUNTS[1].email} / ${LOCAL_DEMO_ACCOUNTS[1].password}`,
       "- detail recipe: /recipe/550e8400-e29b-41d4-a716-446655440022",
-      "- pantry match: seeded pantry items for MENU_ADD recommendations",
+      "- pantry: seeded pantry items and bundle picker baseline",
       `- extra discovery recipes: ${EXTRA_DEMO_RECIPES.map((recipe) => recipe.title).join(", ")}`,
       `- planner window: ${seedWindow.startDate} ~ ${seedWindow.endDate}`,
     ].join("\n") + "\n",

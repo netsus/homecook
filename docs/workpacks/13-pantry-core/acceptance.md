@@ -14,17 +14,17 @@
 - [ ] 묶음 추가가 정상 동작한다 (PANTRY_BUNDLE_PICKER → 체크 → POST /pantry → 복귀) <!-- omo:id=accept-bundle-add;stage=4;scope=frontend;review=5,6 -->
 - [ ] 재료 삭제가 정상 동작한다 (선택 → DELETE /pantry → 목록 갱신) <!-- omo:id=accept-delete;stage=4;scope=frontend;review=5,6 -->
 - [ ] 검색/카테고리 필터가 정상 동작한다 <!-- omo:id=accept-search-filter;stage=4;scope=frontend;review=5,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
-- [ ] GET /pantry/bundles에서 `is_in_pantry`가 현재 사용자 기준으로 정확하다 <!-- omo:id=accept-bundle-is-in-pantry;stage=2;scope=backend;review=3,6 -->
+- [x] GET /pantry/bundles에서 `is_in_pantry`가 현재 사용자 기준으로 정확하다 <!-- omo:id=accept-bundle-is-in-pantry;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
 
-- [ ] 팬트리는 보유 여부만 관리한다 (수량 필드 없음) <!-- omo:id=accept-no-quantity;stage=2;scope=backend;review=3,6 -->
-- [ ] 중복 재료 추가 시 silent skip (에러 아님, 멱등성) <!-- omo:id=accept-duplicate-idempotent;stage=2;scope=backend;review=3,6 -->
-- [ ] 존재하지 않는 ingredient_id 추가 시 silent skip <!-- omo:id=accept-invalid-ingredient-skip;stage=2;scope=backend;review=3,6 -->
-- [ ] 이미 없는 재료 삭제 시 silent skip (멱등성) <!-- omo:id=accept-delete-idempotent;stage=2;scope=backend;review=3,6 -->
-- [ ] `(user_id, ingredient_id)` UNIQUE 제약이 DB 레벨에서 보장됨 <!-- omo:id=accept-unique-constraint;stage=2;scope=backend;review=3,6 -->
+- [x] 팬트리는 보유 여부만 관리한다 (수량 필드 없음) <!-- omo:id=accept-no-quantity;stage=2;scope=backend;review=3,6 -->
+- [x] 중복 재료 추가 시 silent skip (에러 아님, 멱등성) <!-- omo:id=accept-duplicate-idempotent;stage=2;scope=backend;review=3,6 -->
+- [x] 존재하지 않는 ingredient_id 추가 시 silent skip <!-- omo:id=accept-invalid-ingredient-skip;stage=2;scope=backend;review=3,6 -->
+- [x] 이미 없는 재료 삭제 시 silent skip (멱등성) <!-- omo:id=accept-delete-idempotent;stage=2;scope=backend;review=3,6 -->
+- [x] `(user_id, ingredient_id)` UNIQUE 제약이 DB 레벨에서 보장됨 <!-- omo:id=accept-unique-constraint;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 
@@ -33,21 +33,21 @@
 - [ ] error 상태가 있다 (API 실패 시 재시도 안내) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
 - [ ] unauthorized 처리 흐름이 있다 (미로그인 → 로그인 게이트 모달) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
 - [ ] 로그인 게이트 후 return-to-action `/pantry`가 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
-- [ ] POST /pantry에 빈 배열 전송 시 422 응답 <!-- omo:id=accept-empty-array-422;stage=2;scope=backend;review=3,6 -->
-- [ ] DELETE /pantry에 빈 배열 전송 시 422 응답 <!-- omo:id=accept-delete-empty-422;stage=2;scope=backend;review=3,6 -->
+- [x] POST /pantry에 빈 배열 전송 시 422 응답 <!-- omo:id=accept-empty-array-422;stage=2;scope=backend;review=3,6 -->
+- [x] DELETE /pantry에 빈 배열 전송 시 422 응답 <!-- omo:id=accept-delete-empty-422;stage=2;scope=backend;review=3,6 -->
 
 ## Data Integrity
 
-- [ ] 타인 리소스를 수정할 수 없다 (다른 사용자의 pantry_items에 접근 불가) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] invalid ingredient_id를 적절히 무시한다 (에러가 아닌 skip) <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
-- [ ] `added` count는 실제 신규 추가된 수와 일치한다 <!-- omo:id=accept-added-count;stage=2;scope=backend;review=3,6 -->
-- [ ] `removed` count는 실제 삭제된 수와 일치한다 <!-- omo:id=accept-removed-count;stage=2;scope=backend;review=3,6 -->
+- [x] 타인 리소스를 수정할 수 없다 (다른 사용자의 pantry_items에 접근 불가) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] invalid ingredient_id를 적절히 무시한다 (에러가 아닌 skip) <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
+- [x] `added` count는 실제 신규 추가된 수와 일치한다 <!-- omo:id=accept-added-count;stage=2;scope=backend;review=3,6 -->
+- [x] `removed` count는 실제 삭제된 수와 일치한다 <!-- omo:id=accept-removed-count;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
 
-- [ ] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 (ingredients seed, bundles seed, 테스트용 pantry_items) <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 (pantry_items, ingredients, ingredient_bundles, ingredient_bundle_items 존재 확인) <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] ingredients, ingredient_bundles seed data가 로컬 Supabase에 실제로 존재한다 <!-- omo:id=accept-seed-present;stage=2;scope=shared;review=3,6 -->
+- [x] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 (ingredients seed, bundles seed, 테스트용 pantry_items) <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 (pantry_items, ingredients, ingredient_bundles, ingredient_bundle_items 존재 확인) <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] ingredients, ingredient_bundles seed data가 로컬 Supabase에 실제로 존재한다 <!-- omo:id=accept-seed-present;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
@@ -65,8 +65,8 @@
 
 ### Vitest
 
-- [ ] 팬트리 CRUD API 핸들러 단위 테스트 (happy path, 중복, 삭제, 소유자 가드, 빈 배열 422) <!-- omo:id=accept-vitest-pantry-api;stage=2;scope=backend;review=3,6 -->
-- [ ] 묶음 조회 API 단위 테스트 (is_in_pantry join 정확성) <!-- omo:id=accept-vitest-bundles-api;stage=2;scope=backend;review=3,6 -->
+- [x] 팬트리 CRUD API 핸들러 단위 테스트 (happy path, 중복, 삭제, 소유자 가드, 빈 배열 422) <!-- omo:id=accept-vitest-pantry-api;stage=2;scope=backend;review=3,6 -->
+- [x] 묶음 조회 API 단위 테스트 (is_in_pantry join 정확성) <!-- omo:id=accept-vitest-bundles-api;stage=2;scope=backend;review=3,6 -->
 - [ ] 프론트 상태 관리 / API helper 단위 테스트 <!-- omo:id=accept-vitest-frontend;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright

@@ -108,6 +108,18 @@ describe("supabase schema migrations", () => {
     expect(sql).toMatch(/unique\s*\(\s*user_id\s*,\s*ingredient_id\s*\)/i);
   });
 
+  it("defines the documented pantry bundle tables for pantry core", () => {
+    const sql = readAllMigrationSql();
+
+    expect(sql).toMatch(/create table if not exists public\.ingredient_bundles\s*\(/i);
+    expect(sql).toMatch(/name varchar\(50\) not null/i);
+    expect(sql).toMatch(/display_order integer not null default 0/i);
+    expect(sql).toMatch(/create table if not exists public\.ingredient_bundle_items\s*\(/i);
+    expect(sql).toMatch(/bundle_id uuid not null references public\.ingredient_bundles\(id\)/i);
+    expect(sql).toMatch(/ingredient_id uuid not null references public\.ingredients\(id\)/i);
+    expect(sql).toMatch(/unique\s*\(\s*bundle_id\s*,\s*ingredient_id\s*\)/i);
+  });
+
   it("defines the documented shopping list tables for slice09 creation", () => {
     const sql = readAllMigrationSql();
 
