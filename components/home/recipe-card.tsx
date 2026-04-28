@@ -16,6 +16,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     <Link
       className="group flex min-h-full flex-col overflow-hidden rounded-[var(--radius-md)] bg-[var(--surface)] shadow-[var(--shadow-2)] transition hover:-translate-y-0.5"
       href={`/recipe/${recipe.id}`}
+      prefetch={false}
     >
       <div
         className="relative bg-[linear-gradient(135deg,color-mix(in_srgb,var(--brand)_22%,transparent),color-mix(in_srgb,var(--background)_85%,transparent),color-mix(in_srgb,var(--olive)_18%,transparent))]"

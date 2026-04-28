@@ -118,3 +118,43 @@
 - manual_decision_required는 0회 기록됐다.
 - post-merge stale은 0회 기록됐다.
 - human_escalation 없이 Codex/Claude repair loop가 docs 계약, backend closeout, frontend regression, PR policy 문제를 모두 닫았다.
+
+## Post-Merge Local QA Follow-up (#277)
+
+| 항목 | 값 |
+| --- | --- |
+| follow_up_mode | local QA regression repair |
+| PR | #277 |
+| branch | `fix/shopping-local-checklist-findings` |
+| 추가된 순수 진행 추정 | 29.0분 |
+| human_escalation | 0회 |
+| manual_decision_required | 0회 |
+| post_merge_stale | 0회 |
+| temporary_access_note | 플래너의 `장보기 보기` 링크는 향후 마이페이지 장보기목록 탭으로 대체 |
+
+12b merge 이후 로컬 체크리스트 기반 수동 점검에서 장보기 생성/공유/완료 상세 재진입 문제가 발견됐다. 이 후속 작업은 12b 자체의 Stage 1~6 결과를 되돌리는 것이 아니라, slice 09~12 통합 경로에서 발견된 회귀를 12b closeout evidence에 연결하는 보강이다.
+
+| 발견 항목 | 처리 |
+| --- | --- |
+| 같은 레시피가 여러 날짜에 등록되면 장보기 재료량이 합산되지 않음 | preview/create API와 화면을 recipe-level `recipes[]` 계약으로 맞추고, `recipes.base_servings` 기준으로 수량을 scale |
+| 만든 장보기 목록을 다시 열 수 있는 현행 접근 경로 부재 | 마이페이지 장보기목록 탭 전까지 플래너에 임시 `장보기 보기` 링크 제공 |
+| 공유 텍스트가 체크 상태를 잃음 | `share-text` 응답에 `is_checked`를 반영해 `☑` / `☐` 표시 |
+| 완료된 read-only 상세에서 플래너 복귀가 불명확함 | `플래너로 돌아가기` 버튼과 `/planner` fallback 추가 |
+| 팬트리 반영 표시 위치가 불명확함 | 로컬 체크리스트에 완료 상세 카드의 `팬트리 반영 완료` 표시 위치 명시 |
+
+### Follow-up Verification
+
+| 검증 | 결과 |
+| --- | --- |
+| `pnpm test:product tests/shopping-preview.backend.test.ts tests/shopping-share-text.backend.test.ts tests/shopping-flow-screen.test.tsx tests/shopping-detail.frontend.test.tsx tests/planner-route.test.ts tests/planner-week-screen.test.tsx` | passed, 93 tests |
+| `pnpm exec playwright test tests/e2e/slice-09-shopping-preview-create.spec.ts --project=desktop-chrome` | passed, 17 tests |
+| `pnpm typecheck` | passed |
+| `pnpm lint` | passed with one existing `@next/next/no-img-element` warning |
+| `git diff --check` | passed |
+| PR #277 CI before perf repair | all checks passed except HOME Lighthouse budget |
+| `pnpm test:product tests/recipe-card.test.tsx tests/home-screen.test.tsx tests/app-shell.test.tsx` | passed, 16 tests |
+| `pnpm test:lighthouse` after perf repair | passed |
+
+### Follow-up CI Repair Note
+
+PR #277의 `lighthouse` check는 HOME `/`에서 performance `0.66 < 0.70`, total blocking time `1501ms > 900ms`로 실패했다. Lighthouse artifact에서 HOME 초기 로딩 중 `/planner?_rsc`와 `/recipe/mock-kimchi-jjigae?_rsc` background prefetch가 확인되어, 홈 첫 화면에 필수적이지 않은 `Link` prefetch를 끄는 방향으로 TBT repair를 진행했다. 로컬 `pnpm test:lighthouse`는 repair 후 통과했다.

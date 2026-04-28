@@ -28,6 +28,7 @@ export function BottomTabs({ currentTab }: BottomTabsProps) {
                   : "text-[var(--muted)] hover:bg-white/60"
               }`}
               href={tab.href}
+              prefetch={false}
             >
               <span className="text-xs uppercase tracking-[0.22em]">
                 {tab.label}
