@@ -1,0 +1,153 @@
+{
+  "id": "baemin-prototype-modal-overlay-parity",
+  "title": "Modal/sheet overlay family prototype near-100% visual parity",
+  "summary": "Modal/sheet overlay 패밀리(PlannerAddSheet, SaveModal, IngredientFilterModal, SortSheet, LoginGateModal)의 시각적 구현을 Baemin prototype 기준 near-100% parity로 끌어올린다. 기존 H5 modal chrome과 API/상태/권한 계약은 변경하지 않으며, skin·layout·interaction·assets/copy·state fidelity 5축의 시각 처리만 prototype에 맞춘다. Target score >= 93, authority blocker 0.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "Achieve near-100% visual parity between production modal/sheet overlays and the Baemin prototype, scoring >= 93 on the 5-axis visual verdict with 0 authority blockers. No API/DB/status/modal-behavior changes. H5 copy lock preserved.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "h7-baemin-prototype-parity-direction",
+    "baemin-prototype-parity-foundation",
+    "baemin-prototype-home-parity",
+    "baemin-prototype-recipe-detail-parity",
+    "baemin-prototype-planner-week-parity-contract",
+    "baemin-prototype-planner-week-parity",
+    "baemin-style-modal-system-fit",
+    "h5-modal-system-redesign",
+    "04-recipe-save",
+    "02-discovery-filter"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/baemin-prototype-modal-overlay-parity/README.md",
+      "docs/workpacks/baemin-prototype-modal-overlay-parity/acceptance.md",
+      "docs/workpacks/baemin-prototype-modal-overlay-parity/automation-spec.json"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/workpacks/h7-baemin-prototype-parity-direction/README.md",
+      "docs/workpacks/baemin-prototype-parity-foundation/README.md",
+      "docs/workpacks/baemin-style-modal-system-fit/README.md",
+      "docs/workpacks/h5-modal-system-redesign/README.md",
+      "ui/designs/evidence/baemin-prototype-parity-foundation/fixture-route-matrix.md",
+      "ui/designs/evidence/baemin-prototype-parity-foundation/visual-verdict-schema.json",
+      "ui/designs/evidence/baemin-prototype-parity-foundation/token-material-mapping.md",
+      "ui/designs/evidence/baemin-prototype-parity-foundation/prototype-exclusion-inventory.md",
+      "ui/designs/INGREDIENT_FILTER_MODAL.md",
+      "ui/designs/LOGIN.md",
+      "ui/designs/prototypes/homecook-baemin-prototype.html",
+      "ui/designs/prototypes/baemin-redesign/screens/modals.jsx",
+      "ui/designs/prototypes/baemin-redesign/HANDOFF.md",
+      "docs/화면정의서-v1.5.1.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 3
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "visual-verdict-artifact",
+      "authority-report",
+      "capture-evidence-complete",
+      "score-threshold-met",
+      "no-api-db-status-change",
+      "h5-copy-lock-preserved"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "out_of_scope": [
+    "Modal behavior changes (open/close/dismiss, focus trap, ESC, backdrop)",
+    "H5 copy lock changes (modal titles, descriptions, CTA text)",
+    "API endpoint, field, table, or status value additions",
+    "Jua or new font dependencies",
+    "Prototype-only SortSheet tab-like semantic",
+    "Prototype-only LoginGateModal social button asset",
+    "Prototype-only illustration, image, emoji, or marketing asset",
+    "Official source-of-truth document changes",
+    "HOME, RECIPE_DETAIL, PLANNER_WEEK body changes",
+    "PantryReflectionPopup or non-H5 family modals",
+    "New npm dependencies",
+    "DELETE /recipes/{id}/save restoration"
+  ],
+  "open_questions": [],
+  "closeout": {
+    "phase": "collecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "planned",
+      "design_status": "temporary",
+      "delivery_checklist": "pending",
+      "design_authority": "pending",
+      "acceptance": "pending",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "pending",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": []
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending",
+      "approval_state": "not_started",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": null
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": null,
+      "evidence_sources": []
+    },
+    "projection_state": {
+      "docs_synced_at": null,
+      "status_synced_at": null,
+      "pr_body_synced_at": null
+    }
+  }
+}
