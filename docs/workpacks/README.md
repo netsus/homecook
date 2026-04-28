@@ -123,7 +123,7 @@ Design Decision Gate 승인 이후 진행하는 anchor screen 리디자인 슬�
 | `baemin-prototype-planner-week-parity-contract` | merged | h7 | PLANNER_WEEK prototype-priority contract/evidence target sync |
 | `baemin-prototype-planner-week-parity` | merged | h7 | PLANNER_WEEK body prototype parity — score `96.99`, blocker 0, Stage 5 + final authority gate passed |
 | `baemin-prototype-modal-overlay-parity` | merged | h7 | Modal/sheet overlay prototype parity — target score `>=93`, blocker 0 |
-| `baemin-prototype-parity-polish-closeout` | future | h7 | Cross-screen drift cleanup and final parity closeout |
+| `baemin-prototype-parity-polish-closeout` | merged | h7 | Final docs/evidence closeout — body avg 96.85 >= 95, modal avg 95.2 >= 93, blocker 0, exclusion ledger aligned, 11 PRs merged |
 
 **Gate workpack 규칙**:
 - workflow-v2 JSON에서는 schema-valid 값인 `execution_mode: "manual"`을 사용하고, design-decision 의미는 workpack / roadmap / status notes에 기록한다

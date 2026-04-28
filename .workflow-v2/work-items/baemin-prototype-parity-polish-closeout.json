@@ -1,0 +1,166 @@
+{
+  "id": "baemin-prototype-parity-polish-closeout",
+  "title": "Final docs/evidence closeout for h7 Baemin prototype parity program",
+  "summary": "h7 Baemin prototype parity program의 전체 결과를 집계하고 최종 closeout evidence를 확정한다. body screen 3종과 modal overlay family의 visual-verdict score, authority report, exclusion ledger 정합성을 확인하여 Stage 6 final review 진입점을 제공한다. Runtime app code 변경 없음.",
+  "project_profile": "homecook",
+  "change_type": "docs-only",
+  "surface": "frontend",
+  "risk": "low",
+  "preset": "docs-only",
+  "goal": "Aggregate all h7 parity program results into a single closeout package: score summary (body avg 96.85 >= 95, modal avg 95.2 >= 93), exclusion ledger alignment (no drift), evidence index (4 authority reports, 4 visual-verdict JSONs, 11 merged PRs). No runtime code changes.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "h7-baemin-prototype-parity-direction",
+    "baemin-prototype-parity-foundation",
+    "baemin-prototype-home-parity",
+    "baemin-prototype-recipe-detail-parity",
+    "baemin-prototype-planner-week-parity-contract",
+    "baemin-prototype-planner-week-parity",
+    "baemin-prototype-modal-overlay-parity"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/baemin-prototype-parity-polish-closeout/README.md",
+      "docs/workpacks/baemin-prototype-parity-polish-closeout/acceptance.md",
+      "docs/workpacks/baemin-prototype-parity-polish-closeout/automation-spec.json"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      ".omx/plans/baemin-prototype-parity-ralplan-20260427.md",
+      "docs/workpacks/h7-baemin-prototype-parity-direction/README.md",
+      "docs/workpacks/baemin-prototype-parity-foundation/README.md",
+      "docs/workpacks/baemin-prototype-home-parity/README.md",
+      "docs/workpacks/baemin-prototype-recipe-detail-parity/README.md",
+      "docs/workpacks/baemin-prototype-planner-week-parity-contract/README.md",
+      "docs/workpacks/baemin-prototype-planner-week-parity/README.md",
+      "docs/workpacks/baemin-prototype-modal-overlay-parity/README.md",
+      "ui/designs/authority/HOME-parity-authority.md",
+      "ui/designs/authority/RECIPE_DETAIL-parity-authority.md",
+      "ui/designs/authority/PLANNER_WEEK-parity-authority.md",
+      "ui/designs/authority/MODAL_OVERLAY-parity-authority.md",
+      "ui/designs/evidence/baemin-prototype-home-parity/visual-verdict.json",
+      "ui/designs/evidence/baemin-prototype-recipe-detail-parity/visual-verdict.json",
+      "ui/designs/evidence/baemin-prototype-planner-week-parity/visual-verdict.json",
+      "ui/designs/evidence/baemin-prototype-modal-overlay-parity/visual-verdict.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/workflow-v2/omo-canonical-closeout-state.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 0
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "score-summary-table-complete",
+      "body-average-meets-threshold",
+      "modal-average-meets-threshold",
+      "zero-authority-blockers",
+      "exclusions-ledger-aligned",
+      "evidence-paths-verified",
+      "pr-links-complete",
+      "no-runtime-code-change"
+    ]
+  },
+  "status": {
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed"
+  },
+  "out_of_scope": [
+    "Runtime app code changes (components, routes, API, styles, tests)",
+    "New visual parity work or score re-measurement",
+    "Prototype-only exclusion promotion to production",
+    "Official source-of-truth document changes",
+    "Individual slice authority re-review",
+    "New npm dependencies",
+    "Jua or new font dependencies"
+  ],
+  "open_questions": [],
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "N/A",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/HOME-parity-authority.md",
+        "ui/designs/authority/RECIPE_DETAIL-parity-authority.md",
+        "ui/designs/authority/PLANNER_WEEK-parity-authority.md",
+        "ui/designs/authority/MODAL_OVERLAY-parity-authority.md"
+      ],
+      "actual_verification_refs": [
+        "docs/workpacks/baemin-prototype-parity-polish-closeout/README.md",
+        "docs/workpacks/baemin-prototype-parity-polish-closeout/acceptance.md",
+        "docs/workpacks/baemin-prototype-parity-polish-closeout/automation-spec.json",
+        "ui/designs/evidence/baemin-prototype-home-parity/visual-verdict.json",
+        "ui/designs/evidence/baemin-prototype-recipe-detail-parity/visual-verdict.json",
+        "ui/designs/evidence/baemin-prototype-planner-week-parity/visual-verdict.json",
+        "ui/designs/evidence/baemin-prototype-modal-overlay-parity/visual-verdict.json",
+        ".omx/artifacts/claude-delegate-baemin-prototype-parity-polish-closeout-stage1-final-authority-response-20260428T081755Z.md"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head",
+      "approval_state": "dual_approved",
+      "all_checks_green": "pending_pr_checks"
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-04-28T08:26:38Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 1,
+      "claude_repairable_count": 1,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage6_internal_6_5_projection_sync",
+      "evidence_sources": [
+        "docs/workpacks/baemin-prototype-parity-polish-closeout/README.md",
+        "ui/designs/authority/HOME-parity-authority.md",
+        "ui/designs/authority/RECIPE_DETAIL-parity-authority.md",
+        "ui/designs/authority/PLANNER_WEEK-parity-authority.md",
+        "ui/designs/authority/MODAL_OVERLAY-parity-authority.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-04-28T08:26:38Z",
+      "status_synced_at": "2026-04-28T08:26:38Z",
+      "pr_body_synced_at": "pending-pr-body"
+    }
+  }
+}

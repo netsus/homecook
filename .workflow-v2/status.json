@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-28T07:39:49.843Z",
+  "updated_at": "2026-04-28T08:26:38Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -613,6 +613,21 @@
         "git diff --check"
       ],
       "notes": "Modal/sheet overlay family prototype parity merged projection for PR #275. Stage 5 design review passed after repair (S5-R1/R2/R3 closed), Claude final authority gate passed, and Codex Stage 6/internal 6.5 closeout projected roadmap/status/work-item to merged/dual_approved/passed. Visual parity applied to PlannerAddSheet, SaveModal, IngredientFilterModal, SortSheet, LoginGateModal. Score 95.2 >= threshold 93, blocker 0. Design Status confirmed. CI visual Linux snapshot resync included after QA/visual reported stale Linux baselines. closeout_phase=completed closeout_recovery=ci_resync:1 closeout_repair=codex:1|claude:3|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts/baemin-prototype-modal-overlay-parity-stage5-review-20260428T063000Z.md,.omx/artifacts/claude-delegate-baemin-prototype-modal-overlay-parity-stage5-repair-response-20260428T063000Z.md,.omx/tmp/pr-275-visual-report last_recovery_at=2026-04-28T07:39:49.843Z"
+    },
+    {
+      "id": "baemin-prototype-parity-polish-closeout",
+      "preset": "docs-only",
+      "branch": "docs/baemin-prototype-parity-polish-closeout",
+      "pr_path": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack",
+        "git diff --check"
+      ],
+      "notes": "Final h7 Baemin prototype parity docs/evidence closeout passed Codex Stage 6 and internal 6.5. Body avg 96.85 >= 95, modal avg 95.2 >= 93, blocker 0, exclusion ledger aligned, 11 predecessor PRs merged, runtime code unchanged. Required validators passed: validate:workflow-v2, validate:workpack, validate:closeout-sync, validate:authority-evidence-presence, validate:exploratory-qa-evidence, validate:real-smoke-presence, git diff --check. closeout_phase=completed closeout_repair=codex:1|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:docs/workpacks/baemin-prototype-parity-polish-closeout/README.md,ui/designs/authority/HOME-parity-authority.md,ui/designs/authority/RECIPE_DETAIL-parity-authority.md,ui/designs/authority/PLANNER_WEEK-parity-authority.md,ui/designs/authority/MODAL_OVERLAY-parity-authority.md last_recovery_at=2026-04-28T08:26:38Z"
     }
   ]
 }
