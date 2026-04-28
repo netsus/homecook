@@ -71,7 +71,7 @@ export function SelectionChipRail({
           <button
             aria-pressed={isSelected}
             className={[
-              "shrink-0 rounded-[var(--radius-full)] border px-3 py-2 text-[13px] transition-colors",
+              "min-h-11 shrink-0 rounded-[var(--radius-full)] border px-3 py-2 text-[13px] transition-colors",
               isSelected
                 ? "border-[var(--foreground)] bg-[var(--foreground)] font-bold text-white"
                 : "border-[var(--line)] bg-white font-medium text-[var(--text-2)]",

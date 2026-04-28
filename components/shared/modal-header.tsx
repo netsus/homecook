@@ -43,26 +43,28 @@ export function ModalHeader({
       </div>
       <button
         aria-label="닫기"
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[var(--text-3)] transition-colors hover:brightness-95 disabled:opacity-40"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-3)] transition-colors disabled:opacity-40"
         disabled={closeDisabled}
         onClick={onClose}
         ref={closeButtonRef}
         type="button"
       >
-        <svg
-          fill="none"
-          height="18"
-          viewBox="0 0 18 18"
-          width="18"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M4 4L14 14M14 4L4 14"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeWidth="2"
-          />
-        </svg>
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-fill)] transition-colors hover:brightness-95">
+          <svg
+            fill="none"
+            height="18"
+            viewBox="0 0 18 18"
+            width="18"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M4 4L14 14M14 4L4 14"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeWidth="2"
+            />
+          </svg>
+        </span>
       </button>
     </div>
   );

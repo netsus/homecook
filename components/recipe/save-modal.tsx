@@ -26,14 +26,6 @@ interface SaveModalProps {
   onSaveRecipe: () => void;
 }
 
-function getBookTypeLabel(bookType: RecipeBookSummary["book_type"]) {
-  if (bookType === "saved") {
-    return "저장한 레시피";
-  }
-
-  return "커스텀";
-}
-
 export function SaveModal({
   isOpen,
   viewState,

@@ -152,8 +152,8 @@ describe("recipe detail screen", () => {
     expect(screen.queryByText("보호된 작업")).toBeNull();
 
     const closeButton = screen.getByRole("button", { name: "닫기" });
-    expect(closeButton.classList.contains("h-8")).toBe(true);
-    expect(closeButton.classList.contains("w-8")).toBe(true);
+    expect(closeButton.classList.contains("h-11")).toBe(true);
+    expect(closeButton.classList.contains("w-11")).toBe(true);
     expect(closeButton.textContent).toBe("");
   });
 

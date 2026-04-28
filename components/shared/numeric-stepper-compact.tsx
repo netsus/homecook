@@ -24,15 +24,17 @@ export function NumericStepperCompact({
       <span className="text-sm text-[var(--text-2)]">
         {unit ? `몇 ${unit} 계획할까요?` : ""}
       </span>
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-0.5">
         <button
           aria-label={`${unit ?? "값"} 줄이기`}
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--line)] bg-white text-sm font-medium text-[var(--foreground)] disabled:opacity-40"
+          className="flex h-11 w-11 items-center justify-center disabled:opacity-40"
           disabled={disabled || value <= min}
           onClick={() => onChange(Math.max(min, value - 1))}
           type="button"
         >
-          −
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--line)] bg-white text-sm font-medium text-[var(--foreground)]">
+            −
+          </span>
         </button>
         <span
           aria-label={unit ? `${value}${unit}` : String(value)}
@@ -43,12 +45,14 @@ export function NumericStepperCompact({
         </span>
         <button
           aria-label={`${unit ?? "값"} 늘리기`}
-          className="flex h-7 w-7 items-center justify-center rounded-full border-none bg-[var(--foreground)] text-sm font-bold text-white disabled:opacity-40"
+          className="flex h-11 w-11 items-center justify-center disabled:opacity-40"
           disabled={disabled}
           onClick={() => onChange(value + 1)}
           type="button"
         >
-          +
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border-none bg-[var(--foreground)] text-sm font-bold text-white">
+            +
+          </span>
         </button>
       </div>
     </div>
