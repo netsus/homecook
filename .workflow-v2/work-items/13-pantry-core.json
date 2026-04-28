@@ -69,16 +69,74 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
     "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "last_evaluator_result": "PR #281 GitHub current-head checks and local Stage 6 closeout validators",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs created by Claude. Stage 2 backend implementation is in progress on feature/be-13-pantry-core. Local schema readiness restored for documented ingredient bundle tables.",
+  "notes": "Final closeout projected on feature/fe-13-pantry-core for PR #281 after Stage 1 docs PR #279, Stage 2/3 backend PR #280, Claude Stage 4 frontend implementation, Codex Stage 5/6 review, Claude final authority gate, and internal 6.5 validators. closeout_phase=completed closeout_recovery=ci_resync:1 closeout_repair=codex:2|claude:3|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,git history,PR #281 body last_recovery_at=2026-04-28T16:25:23Z",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/PANTRY-authority.md",
+        "ui/designs/authority/PANTRY_BUNDLE_PICKER-authority.md",
+        ".omx/artifacts/claude-delegate-13-pantry-core-final-authority-gate-response-20260429T010617KST.md"
+      ],
+      "actual_verification_refs": [
+        "PR #281 Actual Verification",
+        "PR #281 GitHub current-head checks",
+        "docs/workpacks/13-pantry-core/README.md Stage 4 Evidence",
+        "ui/designs/evidence/13-pantry-core/stage5-design-review.md"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 1,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-04-28T16:25:23Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 3,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "codex_repairable",
+      "evidence_sources": [
+        ".omx/artifacts",
+        "GitHub PR/CI",
+        "git history",
+        "PR #281 body"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-04-28T16:25:23Z",
+      "status_synced_at": "2026-04-28T16:25:23Z",
+      "pr_body_synced_at": "2026-04-28T16:25:23Z"
+    }
+  },
   "out_of_scope": [
     "팬트리 수량 관리 — 정책상 보유 여부만",
     "팬트리 기반 레시피 추천 — 08b에서 소비 완료",

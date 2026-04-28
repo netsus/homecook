@@ -3,7 +3,7 @@ import Link from "next/link";
 const tabs = [
   { id: "home", label: "홈", href: "/" },
   { id: "planner", label: "플래너", href: "/planner" },
-  { id: "pantry", label: "팬트리", href: "#" },
+  { id: "pantry", label: "팬트리", href: "/pantry" },
   { id: "mypage", label: "마이", href: "#" },
 ] as const;
 

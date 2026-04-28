@@ -162,8 +162,8 @@
 
 - UI risk: `new-screen`
 - Anchor screen dependency: 없음
-- Visual artifact: Stage 4에서 screenshot evidence 제출 예정 (`ui/designs/evidence/13-pantry-core/PANTRY-mobile.png`, `ui/designs/evidence/13-pantry-core/PANTRY-mobile-narrow.png`)
-- Authority status: `required`
+- Visual artifact: `ui/designs/evidence/13-pantry-core/PANTRY-mobile.png`, `ui/designs/evidence/13-pantry-core/PANTRY-mobile-narrow.png`
+- Authority status: `reviewed`
 - h8 classification: `prototype parity` — Baemin prototype를 primary visual reference로 사용
 - Notes: h8 matrix에 따라 PANTRY는 screen-level prototype parity candidate. Stage 4에서 prototype reference를 기반으로 구현하되 공식 문서 계약을 우선함. Stage 4 완료 후 authority review 필요.
 
@@ -171,14 +171,16 @@
 
 - UI risk: `new-screen`
 - Anchor screen dependency: 없음
-- Visual artifact: Stage 4에서 screenshot evidence 제출 예정
-- Authority status: `required`
+- Visual artifact: `ui/designs/evidence/13-pantry-core/PANTRY_BUNDLE_PICKER-mobile.png`, `ui/designs/evidence/13-pantry-core/PANTRY_BUNDLE_PICKER-mobile-narrow.png`
+- Authority status: `reviewed`
 - h8 classification: `prototype-derived design` — Baemin vocabulary/material 사용, near-100% parity 대상 아님
 - Notes: h8 matrix에 따라 별도 증거 없이는 parity로 승격 불가. prototype vocabulary와 material만 사용.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선
+- [ ] 대기 리뷰 (pending-review) — Stage 4 완료, authority review 필요
+- [x] 확정 (confirmed) — Claude final_authority_gate 승인 (2026-04-29)
 
 ## Source Links
 
@@ -228,16 +230,16 @@
 - [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 연결 (GET/POST/DELETE /pantry, GET /pantry/bundles) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 (PantryItem, PantryBundle, request/response 타입) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] PANTRY UI 연결 <!-- omo:id=delivery-pantry-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] PANTRY_BUNDLE_PICKER UI 연결 <!-- omo:id=delivery-bundle-picker-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] PANTRY UI 연결 <!-- omo:id=delivery-pantry-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] PANTRY_BUNDLE_PICKER UI 연결 <!-- omo:id=delivery-bundle-picker-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 (ingredients, ingredient_bundles seed) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
-- [ ] PANTRY design authority evidence 제출 <!-- omo:id=delivery-pantry-authority-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] PANTRY_BUNDLE_PICKER design authority evidence 제출 <!-- omo:id=delivery-bundle-picker-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] PANTRY design authority evidence 제출 <!-- omo:id=delivery-pantry-authority-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] PANTRY_BUNDLE_PICKER design authority evidence 제출 <!-- omo:id=delivery-bundle-picker-authority-evidence;stage=4;scope=frontend;review=5,6 -->
 
 ## Stage 2 Evidence
 
@@ -245,3 +247,16 @@
 - Targeted green: `pnpm exec vitest run tests/pantry-core.backend.test.ts tests/supabase-server.test.ts tests/local-demo-pantry-fixture.test.ts` → 13 tests passed.
 - Local Supabase smoke without reset: `pnpm dlx supabase start` → already running, `pnpm dlx supabase migration up` → applied `20260428143000_13_pantry_core_bundles.sql`, `node scripts/local-seed-demo-data.mjs` → seeded local demo dataset.
 - Seed/table smoke counts: `ingredients=6`, `ingredient_bundles=2`, `ingredient_bundle_items=5`, `pantry_items=8`.
+
+## Stage 4 Evidence
+
+- TypeScript check: `npx tsc --noEmit` → clean (0 errors)
+- Vitest frontend: `pnpm exec vitest run tests/pantry-screen.test.tsx` → 12 tests passed
+- Vitest full: `pnpm exec vitest run tests/pantry-core.backend.test.ts tests/pantry-screen.test.tsx` → 19 tests passed
+- Playwright E2E: `tests/e2e/slice-13-pantry-core.spec.ts` → 7 test scenarios (login gate, list, empty state, select+delete, direct add POST+refresh, bundle add POST+refresh, category filter)
+- Targeted E2E green: `pnpm exec playwright test tests/e2e/slice-13-pantry-core.spec.ts --project=mobile-chrome` → 7 passed
+- New files: `app/pantry/page.tsx`, `lib/api/pantry.ts`, `components/pantry/pantry-screen.tsx`, `components/pantry/pantry-add-sheet.tsx`, `components/pantry/pantry-bundle-picker.tsx`
+- Modified files: `components/layout/bottom-tabs.tsx` (pantry tab href `#` → `/pantry`), `vitest.product.config.ts` (added pantry test glob)
+- UI states implemented: loading (skeleton), empty (CTA), error (retry), unauthorized (login gate + return-to-action `/pantry`), ready (item list + search + category filter + select mode + delete)
+- Design authority evidence: `ui/designs/evidence/13-pantry-core/PANTRY-mobile.png`, `ui/designs/evidence/13-pantry-core/PANTRY-mobile-narrow.png`, `ui/designs/evidence/13-pantry-core/PANTRY_BUNDLE_PICKER-mobile.png`, `ui/designs/evidence/13-pantry-core/PANTRY_BUNDLE_PICKER-mobile-narrow.png`
+- Authority precheck: `ui/designs/authority/PANTRY-authority.md`, `ui/designs/authority/PANTRY_BUNDLE_PICKER-authority.md`

@@ -15,7 +15,7 @@ module.exports = {
         `corepack pnpm start --hostname 127.0.0.1 --port ${LIGHTHOUSE_PORT}`,
       startServerReadyPattern: "Ready",
       startServerReadyTimeout: 120000,
-      numberOfRuns: 1,
+      numberOfRuns: 3,
       url: [
         `${LIGHTHOUSE_BASE_URL}/`,
         `${LIGHTHOUSE_BASE_URL}/recipe/mock-kimchi-jjigae`,
