@@ -1,0 +1,91 @@
+{
+  "slice_id": "13-pantry-core",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/pantry",
+      "POST /api/v1/pantry",
+      "DELETE /api/v1/pantry",
+      "GET /api/v1/pantry/bundles"
+    ],
+    "invariants": [
+      "owner-authorization",
+      "idempotency",
+      "duplicate-ingredient-silent-skip",
+      "invalid-ingredient-silent-skip",
+      "no-quantity-storage",
+      "unique-user-ingredient-constraint",
+      "added-count-accuracy",
+      "removed-count-accuracy",
+      "empty-array-422",
+      "api-envelope-format"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/pantry-core.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/pantry"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "new-screen",
+      "anchor_screens": [],
+      "required_screens": [
+        "PANTRY",
+        "PANTRY_BUNDLE_PICKER"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/PANTRY.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/PANTRY-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default-screenshot",
+        "mobile-narrow-screenshot"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/PANTRY-authority.md",
+        "ui/designs/authority/PANTRY_BUNDLE_PICKER-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "referenced-table-missing",
+    "seed-data-missing",
+    "public-contract-drift"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
