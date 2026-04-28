@@ -90,6 +90,61 @@
         "artifact_assertions": {
           "type": "array",
           "items": { "type": "string" }
+        },
+        "design_authority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ui_risk",
+            "anchor_screens",
+            "required_screens",
+            "generator_required",
+            "critic_required",
+            "authority_required"
+          ],
+          "properties": {
+            "ui_risk": {
+              "type": "string",
+              "enum": [
+                "not-required",
+                "low-risk",
+                "new-screen",
+                "high-risk",
+                "anchor-extension"
+              ]
+            },
+            "anchor_screens": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "required_screens": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "generator_required": {
+              "type": "boolean"
+            },
+            "generator_artifact": {
+              "type": ["string", "null"]
+            },
+            "critic_required": {
+              "type": "boolean"
+            },
+            "critic_artifact": {
+              "type": ["string", "null"]
+            },
+            "authority_required": {
+              "type": "boolean"
+            },
+            "stage4_evidence_requirements": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "authority_report_paths": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
         }
       }
     },
@@ -108,13 +163,16 @@
       "properties": {
         "backend": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 0
         },
         "frontend": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 0
         }
       }
+    },
+    "notes": {
+      "type": "string"
     }
   }
 }

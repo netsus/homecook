@@ -34,7 +34,9 @@ describe("OMO automation spec", () => {
           anchor_screens: ["RECIPE_DETAIL", "PLANNER_WEEK"],
           required_screens: ["RECIPE_DETAIL", "PLANNER_WEEK"],
           generator_required: true,
+          generator_artifact: "ui/designs/RECIPE_DETAIL.md",
           critic_required: true,
+          critic_artifact: "ui/designs/critiques/RECIPE_DETAIL-critique.md",
           authority_required: true,
           stage4_evidence_requirements: ["mobile-default", "mobile-narrow"],
           authority_report_paths: ["ui/designs/authority/PLANNER_WEEK-authority.md"],
@@ -52,7 +54,48 @@ describe("OMO automation spec", () => {
       ui_risk: "anchor-extension",
       authority_required: true,
       required_screens: ["RECIPE_DETAIL", "PLANNER_WEEK"],
+      generator_artifact: "ui/designs/RECIPE_DETAIL.md",
+      critic_artifact: "ui/designs/critiques/RECIPE_DETAIL-critique.md",
     });
+  });
+
+  it("normalizes missing nullable design authority artifact paths to null", () => {
+    const spec = normalizeAutomationSpec({
+      slice_id: "baemin-prototype-planner-week-parity-contract",
+      execution_mode: "manual",
+      risk_class: "low",
+      merge_policy: "manual",
+      backend: {
+        required_endpoints: [],
+        invariants: [],
+        verify_commands: [],
+        required_test_targets: [],
+      },
+      frontend: {
+        required_routes: [],
+        required_states: [],
+        verify_commands: [],
+        playwright_projects: [],
+        artifact_assertions: [],
+        design_authority: {
+          ui_risk: "not-required",
+          anchor_screens: [],
+          required_screens: [],
+          generator_required: false,
+          critic_required: false,
+          authority_required: false,
+        },
+      },
+      external_smokes: [],
+      blocked_conditions: [],
+      max_fix_rounds: {
+        backend: 0,
+        frontend: 0,
+      },
+    });
+
+    expect(spec.frontend.design_authority.generator_artifact).toBeNull();
+    expect(spec.frontend.design_authority.critic_artifact).toBeNull();
   });
 
   it("defaults missing design authority to not-required", () => {
@@ -86,7 +129,9 @@ describe("OMO automation spec", () => {
       anchor_screens: [],
       required_screens: [],
       generator_required: false,
+      generator_artifact: null,
       critic_required: false,
+      critic_artifact: null,
       authority_required: false,
       stage4_evidence_requirements: [],
       authority_report_paths: [],

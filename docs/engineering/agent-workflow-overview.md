@@ -30,6 +30,8 @@
 
 - `product-backend`와 `product-frontend`는 product slice 절차를 따른다.
 - `product-frontend`에서 신규 화면, high-risk UI change, anchor extension은 `docs/engineering/product-design-authority.md` 기준 authority review를 optional이 아니라 사실상 required review로 취급한다.
+- Baemin prototype 적용 product-frontend는 `ui/designs/BAEMIN_STYLE_DIRECTION.md`의 classification vocabulary를 따른다. slice 13-19 화면은 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`의 screen/surface-level matrix를 먼저 확인한다.
+- `frontend.design_authority.generator_artifact`와 `critic_artifact`는 generic nullable fields다. string path는 required/reused artifact, `null`은 intentionally not applicable을 뜻한다.
 - `docs-governance`는 product slice와 같은 `verify:*`를 자동으로 요구하지 않는다. 필요한 최소 검증은 변경 범위에 맞춰 선택한다.
 - `contract-evolution`은 사용자 승인으로 공식 source-of-truth 문서를 바꾸는 경로다. 같은 PR에서 공식 문서, `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`, 관련 workpack/acceptance를 함께 동기화한다.
 - `contract-evolution`이 필요한 슬라이스는 해당 docs PR이 main에 merge되기 전까지 Stage 2/4 product 구현을 시작하지 않는다.
@@ -95,6 +97,10 @@
   - Stage 1 `design-generator` / `design-critic` 권장
   - Stage 5 디자인 리뷰 기본 수행
   - `Design Status: temporary -> pending-review -> confirmed`
+- `prototype parity` candidate
+  - `BAEMIN_STYLE_DIRECTION.md` definition + h7/h8 gate scope 확인
+  - prototype-only exclusions는 결손점으로 채점하지 않음
+  - parity promotion은 screen/surface 단위이며 slice 전체나 bottom-tab adjacency로 전파되지 않음
 - `low-risk-ui-change`
   - 기존 화면의 문구, spacing, token swap, 경미한 polish는 Stage 1 설계 산출물을 생략할 수 있다
   - Stage 5는 선택 실행 가능하며, Stage 6에서 lightweight design check로 흡수할 수 있다

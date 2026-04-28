@@ -58,7 +58,9 @@
 5. `docs/design/anchor-screens.md`
 6. 관련 `docs/workpacks/<slice>/README.md`
 7. 관련 `ui/designs/<SCREEN_ID>.md`
-8. 아래 중 최소 1개
+8. Baemin prototype 기준이 적용되는 화면이면 `ui/designs/BAEMIN_STYLE_DIRECTION.md`
+9. slice 13-19 future screen이면 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`
+10. 아래 중 최소 1개
    - Figma frame URL
    - 구현 스크린샷 경로
    - 비교 가능한 화면 캡처 묶음
@@ -168,6 +170,7 @@ authority report에는 아래를 반드시 포함한다.
   - Figma/wireframe 보강 후 재검토
   - 구현 수정 후 스크린샷 재검토
 - authority-required slice는 CI/policy에서 `pnpm validate:authority-evidence-presence`가 authority report의 `> evidence:` block, required mobile variants, 그리고 runtime `design_authority.evidence_artifact_refs` / `authority_report_paths` snapshot과의 sync를 재검증한다.
+- `automation-spec.json`의 `frontend.design_authority.generator_artifact`와 `critic_artifact`는 generic nullable artifact fields다. 사용하거나 재사용할 문서가 있으면 string path를 쓰고, 의도적으로 해당 없으면 `null`을 쓴다.
 
 ---
 
@@ -177,6 +180,7 @@ authority report에는 아래를 반드시 포함한다.
 
 - 신규 화면, high-risk UI change, anchor screen 확장에서는
   `ui/designs/<SCREEN_ID>.md`만으로 충분하지 않다.
+- Baemin prototype 적용 화면은 분류 용어를 `BAEMIN_STYLE_DIRECTION.md`에서만 가져오고, slice 13-19 화면은 h8 matrix의 screen/surface-level classification을 확인한다.
 - Stage 1 문서에는 반드시 아래 중 하나를 넣는다.
   - Figma frame URL
   - 스크린샷 artifact 경로
