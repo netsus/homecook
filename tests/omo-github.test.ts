@@ -769,6 +769,79 @@ describe("OMO GitHub automation client", () => {
     expect(argsLog).toContain("source PR smoke evidence via `pnpm dev:local-supabase`");
   });
 
+  it("uses workpack smoke evidence in generated Actual Verification results when present", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-workpack-smoke-evidence-"));
+    const { binPath, argsPath } = createFakeGhBin(rootDir);
+
+    mkdirSync(join(rootDir, "docs", "workpacks", "13-pantry-core"), { recursive: true });
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "13-pantry-core", "automation-spec.json"),
+      `${JSON.stringify(
+        {
+          slice_id: "13-pantry-core",
+          execution_mode: "autonomous",
+          risk_class: "medium",
+          merge_policy: "conditional-auto",
+          backend: { required_endpoints: [], invariants: [], verify_commands: [], required_test_targets: [] },
+          frontend: {
+            required_routes: ["/pantry"],
+            required_states: ["loading"],
+            playwright_projects: [],
+            artifact_assertions: [],
+            design_authority: {
+              ui_risk: "new-screen",
+              anchor_screens: [],
+              required_screens: ["PANTRY"],
+              generator_required: true,
+              critic_required: true,
+              authority_required: true,
+              stage4_evidence_requirements: [],
+              authority_report_paths: [],
+            },
+          },
+          external_smokes: ["pnpm dev:local-supabase"],
+          blocked_conditions: [],
+          max_fix_rounds: { backend: 2, frontend: 2 },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    writeFileSync(
+      join(rootDir, "docs", "workpacks", "13-pantry-core", "README.md"),
+      [
+        "# 13-pantry-core",
+        "",
+        "## Stage 2 Evidence",
+        "",
+        "- Local Supabase smoke without reset: `pnpm dev:local-supabase` passed after migration and demo seed.",
+      ].join("\n"),
+    );
+
+    const client = createGithubAutomationClient({
+      rootDir,
+      ghBin: binPath,
+      environment: {
+        FAKE_GH_ARGS_PATH: argsPath,
+      },
+    });
+
+    client.createPullRequest({
+      base: "master",
+      head: "feature/fe-13-pantry-core",
+      title: "feat: slice13 frontend",
+      body: "## Summary\n- frontend",
+      draft: true,
+      workItemId: "13-pantry-core",
+    });
+
+    const argsLog = readFileSync(argsPath, "utf8");
+    expect(argsLog).toContain(
+      "- result: pass — Local Supabase smoke without reset: `pnpm dev:local-supabase` passed after migration and demo seed.",
+    );
+    expect(argsLog).not.toContain("pending manual confirmation");
+  });
+
   it("replaces placeholder QA Evidence and Actual Verification when stronger defaults exist", () => {
     const rootDir = mkdtempSync(join(tmpdir(), "omo-gh-replace-placeholders-"));
 

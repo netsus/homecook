@@ -77,6 +77,7 @@
     "validate:authority-evidence-presence": "node scripts/validate-authority-evidence-presence.mjs",
     "validate:exploratory-qa-evidence": "node scripts/validate-exploratory-qa-evidence.mjs",
     "validate:real-smoke-presence": "node scripts/validate-real-smoke-presence.mjs",
+    "validate:pr-ready": "node scripts/validate-pr-ready.mjs",
     "validate:omo-bookkeeping": "node scripts/validate-omo-bookkeeping.mjs",
     "validate:closeout-sync": "node scripts/validate-closeout-sync.mjs"
   },

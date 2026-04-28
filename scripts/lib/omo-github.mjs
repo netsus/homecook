@@ -200,6 +200,65 @@ function findDeclaredExternalSmokes({ rootDir = process.cwd(), slice }) {
     : [];
 }
 
+const SMOKE_EVIDENCE_PASS_PATTERN =
+  /\b(pass|passed|green|success|succeeded|ok|applied|seeded)\b|성공|완료|통과|적용/i;
+
+function buildSmokeEvidenceHints(externalSmokes) {
+  const hints = new Set();
+  for (const smoke of externalSmokes) {
+    const normalized = smoke.toLowerCase();
+    hints.add(normalized);
+
+    if (normalized.includes("local-supabase")) {
+      hints.add("local supabase");
+      hints.add("supabase");
+    }
+
+    if (normalized.includes("dev:demo")) {
+      hints.add("demo");
+    }
+  }
+
+  return [...hints].filter((hint) => hint.length > 0);
+}
+
+function cleanSmokeEvidenceLine(line) {
+  return line
+    .replace(/^\s*[-*]\s+/, "")
+    .replace(/^\s*>\s*/, "")
+    .trim();
+}
+
+function findRecordedSmokeEvidence({
+  rootDir = process.cwd(),
+  slice,
+  externalSmokes,
+}) {
+  if (typeof slice !== "string" || slice.trim().length === 0 || externalSmokes.length === 0) {
+    return null;
+  }
+
+  const readmePath = resolve(rootDir, "docs", "workpacks", slice.trim(), "README.md");
+  if (!existsSync(readmePath)) {
+    return null;
+  }
+
+  const smokeHints = buildSmokeEvidenceHints(externalSmokes);
+  const lines = readFileSync(readmePath, "utf8").split(/\r?\n/);
+  for (const line of lines) {
+    const cleanedLine = cleanSmokeEvidenceLine(line);
+    const lowered = cleanedLine.toLowerCase();
+    const hasSmokeReference = smokeHints.some((hint) => lowered.includes(hint));
+    if (!hasSmokeReference || !SMOKE_EVIDENCE_PASS_PATTERN.test(cleanedLine)) {
+      continue;
+    }
+
+    return cleanedLine;
+  }
+
+  return null;
+}
+
 function buildDefaultActualVerification({
   rootDir = process.cwd(),
   workItemId,
@@ -214,16 +273,24 @@ function buildDefaultActualVerification({
 
   const primarySmoke = externalSmokes[0];
   const allSmokes = externalSmokes.map((entry) => `\`${entry}\``).join(", ");
+  const recordedSmokeEvidence = findRecordedSmokeEvidence({
+    rootDir,
+    slice: workItemId,
+    externalSmokes,
+  });
   const environment =
     /pnpm\s+dev:local-supabase/i.test(primarySmoke)
       ? `- environment: local Supabase + \`${primarySmoke}\``
       : `- environment: declared smoke command(s) ${allSmokes}`;
+  const result = recordedSmokeEvidence
+    ? `- result: pass — ${recordedSmokeEvidence}`
+    : `- result: pending manual confirmation for ${allSmokes}`;
 
   return [
     "- verifier: Codex",
     environment,
     `- scope: source PR smoke evidence via ${allSmokes}`,
-    `- result: pending manual confirmation for ${allSmokes}`,
+    result,
   ].join("\n");
 }
 
