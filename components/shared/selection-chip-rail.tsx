@@ -71,10 +71,10 @@ export function SelectionChipRail({
           <button
             aria-pressed={isSelected}
             className={[
-              "flex min-w-[52px] flex-col items-center rounded-[var(--radius-md)] px-2.5 py-2.5 text-center transition-colors",
+              "min-h-11 shrink-0 rounded-[var(--radius-full)] border px-3 py-2 text-[13px] transition-colors",
               isSelected
-                ? "bg-[var(--olive)] text-[var(--surface)] shadow-[var(--shadow-1)]"
-                : "bg-[var(--surface-fill)] text-[var(--foreground)] hover:bg-[var(--surface-subtle)]",
+                ? "border-[var(--foreground)] bg-[var(--foreground)] font-bold text-white"
+                : "border-[var(--line)] bg-white font-medium text-[var(--text-2)]",
               disabled ? "opacity-60" : "",
             ]
               .filter(Boolean)
@@ -84,8 +84,7 @@ export function SelectionChipRail({
             onClick={() => onSelect(value)}
             type="button"
           >
-            <span className="text-[10px] font-medium leading-tight">{topLabel}</span>
-            <span className="mt-0.5 text-xs font-semibold leading-tight">{bottomLabel}</span>
+            {topLabel} {bottomLabel}
           </button>
         );
       })}

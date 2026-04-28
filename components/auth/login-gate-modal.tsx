@@ -57,34 +57,42 @@ export function LoginGateModal() {
       <div
         aria-labelledby="login-gate-title"
         aria-modal="true"
-        className="w-full max-w-md rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] px-5 py-6 shadow-[var(--shadow-3)] md:px-6"
+        className="w-full max-w-md rounded-t-[var(--radius-xl)] border border-[var(--line)] border-t-2 border-t-[var(--brand)] bg-[var(--panel)] pb-6 shadow-[var(--shadow-3)] md:rounded-[var(--radius-xl)] md:border-t-2 md:border-t-[var(--brand)]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        {/* D2: no eyebrow · D3: icon-only 44×44 close · D6: modal family join */}
-        <ModalHeader
-          closeButtonRef={closeButtonRef}
-          onClose={close}
-          title="로그인이 필요한 작업이에요"
-          titleId="login-gate-title"
-        />
-        <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-          {description}
-        </p>
-        <div className="mt-5 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
-          <p className="text-sm font-semibold text-[var(--foreground)]">
-            로그인하면 원래 레시피로 바로 돌아옵니다.
-          </p>
-          <p className="mt-1.5 text-sm text-[var(--muted)]">
-            보호 액션 위치를 저장해 두었다가 로그인 완료 후 한 번만 복구합니다.
-          </p>
+        {/* Grabber */}
+        <div className="flex justify-center pt-2 md:hidden">
+          <div className="h-1 w-9 rounded-sm bg-[var(--line)]" />
         </div>
-        <div className="mt-5">
-          <SocialLoginButtons
-            nextPath={action.redirectTo}
-            onStarted={close}
-            pendingAction={action}
+        {/* D2: no eyebrow · D3: icon-only close · D6: modal family join */}
+        <div className="px-5 pt-3 md:px-6 md:pt-5">
+          <ModalHeader
+            closeButtonRef={closeButtonRef}
+            onClose={close}
+            title="로그인이 필요한 작업이에요"
+            titleId="login-gate-title"
           />
+        </div>
+        <div className="px-5 pt-2 pb-0 md:px-6">
+          <p className="text-sm leading-6 text-[var(--muted)]">
+            {description}
+          </p>
+          <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
+            <p className="text-sm font-semibold text-[var(--foreground)]">
+              로그인하면 원래 레시피로 바로 돌아옵니다.
+            </p>
+            <p className="mt-1.5 text-sm text-[var(--muted)]">
+              보호 액션 위치를 저장해 두었다가 로그인 완료 후 한 번만 복구합니다.
+            </p>
+          </div>
+          <div className="mt-4">
+            <SocialLoginButtons
+              nextPath={action.redirectTo}
+              onStarted={close}
+              pendingAction={action}
+            />
+          </div>
         </div>
       </div>
     </div>
