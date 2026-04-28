@@ -20,6 +20,7 @@ interface QueryOrderOption {
 interface MealRow {
   id: string;
   recipe_id: string;
+  plan_date: string;
   planned_servings: number;
   status: string;
   shopping_list_id: string | null;
@@ -91,7 +92,7 @@ export async function GET() {
 
   const mealsResult = await dbClient
     .from("meals")
-    .select("id, recipe_id, planned_servings, status, shopping_list_id, created_at")
+    .select("id, recipe_id, plan_date, planned_servings, status, shopping_list_id, created_at")
     .eq("user_id", user.id)
     .eq("status", "registered")
     .is("shopping_list_id", null)
@@ -121,6 +122,36 @@ export async function GET() {
     });
   }
 
+  const recipeGroups = new Map<
+    string,
+    {
+      recipe_id: string;
+      meal_ids: string[];
+      planned_servings_total: number;
+      first_created_at: string;
+    }
+  >();
+
+  eligibleMeals.forEach((meal) => {
+    const existing = recipeGroups.get(meal.recipe_id);
+
+    if (existing) {
+      existing.meal_ids.push(meal.id);
+      existing.planned_servings_total += meal.planned_servings;
+      if (meal.created_at < existing.first_created_at) {
+        existing.first_created_at = meal.created_at;
+      }
+      return;
+    }
+
+    recipeGroups.set(meal.recipe_id, {
+      recipe_id: meal.recipe_id,
+      meal_ids: [meal.id],
+      planned_servings_total: meal.planned_servings,
+      first_created_at: meal.created_at,
+    });
+  });
+
   return ok({
     eligible_meals: eligibleMeals.map((meal) => ({
       id: meal.id,
@@ -130,5 +161,23 @@ export async function GET() {
       planned_servings: meal.planned_servings,
       created_at: meal.created_at,
     })),
+    recipes: [...recipeGroups.values()]
+      .sort((left, right) => {
+        const byCreatedAt = left.first_created_at.localeCompare(right.first_created_at);
+        if (byCreatedAt !== 0) {
+          return byCreatedAt;
+        }
+
+        return left.recipe_id.localeCompare(right.recipe_id);
+      })
+      .map((recipe) => ({
+        recipe_id: recipe.recipe_id,
+        recipe_name: recipeMap.get(recipe.recipe_id)?.title ?? "",
+        recipe_thumbnail: recipeMap.get(recipe.recipe_id)?.thumbnail_url ?? null,
+        meal_ids: recipe.meal_ids,
+        planned_servings_total: recipe.planned_servings_total,
+        shopping_servings: recipe.planned_servings_total,
+        is_selected: true,
+      })),
   } satisfies ShoppingPreviewData);
 }

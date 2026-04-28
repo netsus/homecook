@@ -200,7 +200,7 @@ test.describe("slice 09: shopping preview and list creation", () => {
       await setAuthOverride(page, "authenticated");
       await installShoppingPreviewRoute(page, [
         buildPreviewMeal({ id: "meal-1", recipe_name: "김치찌개" }),
-        buildPreviewMeal({ id: "meal-2", recipe_name: "된장찌개" }),
+        buildPreviewMeal({ id: "meal-2", recipe_id: "recipe-2", recipe_name: "된장찌개" }),
       ]);
 
       await page.goto(SHOPPING_FLOW_URL);
@@ -334,9 +334,10 @@ test.describe("slice 09: shopping preview and list creation", () => {
 
       // Verify request body
       expect(requestBody).toEqual({
-        meal_configs: [
+        recipes: [
           {
-            meal_id: "meal-1",
+            recipe_id: "recipe-1",
+            meal_ids: ["meal-1"],
             shopping_servings: 2,
           },
         ],
@@ -349,7 +350,7 @@ test.describe("slice 09: shopping preview and list creation", () => {
       await setAuthOverride(page, "authenticated");
       await installShoppingPreviewRoute(page, [
         buildPreviewMeal({ id: "meal-1", recipe_name: "김치찌개" }),
-        buildPreviewMeal({ id: "meal-2", recipe_name: "된장찌개" }),
+        buildPreviewMeal({ id: "meal-2", recipe_id: "recipe-2", recipe_name: "된장찌개" }),
       ]);
 
       const createdList: ShoppingListSummary = {
@@ -382,9 +383,10 @@ test.describe("slice 09: shopping preview and list creation", () => {
 
       // Should only submit meal-1
       expect(requestBody).toEqual({
-        meal_configs: [
+        recipes: [
           {
-            meal_id: "meal-1",
+            recipe_id: "recipe-1",
+            meal_ids: ["meal-1"],
             shopping_servings: 2,
           },
         ],
@@ -432,9 +434,10 @@ test.describe("slice 09: shopping preview and list creation", () => {
       await page.getByText("장보기 목록 만들기").click();
 
       expect(requestBody).toEqual({
-        meal_configs: [
+        recipes: [
           {
-            meal_id: "meal-1",
+            recipe_id: "recipe-1",
+            meal_ids: ["meal-1"],
             shopping_servings: 4,
           },
         ],

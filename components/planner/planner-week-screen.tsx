@@ -163,6 +163,55 @@ export function PlannerWeekScreen({
       registered: meals.length - cookDone - shoppingDone,
     };
   }, [meals]);
+  const shoppingListLinks = useMemo(() => {
+    const grouped = new Map<
+      string,
+      {
+        id: string;
+        title: string;
+        dates: string[];
+      }
+    >();
+
+    meals.forEach((meal) => {
+      if (!meal.shopping_list_id) {
+        return;
+      }
+
+      const existing = grouped.get(meal.shopping_list_id) ?? {
+        id: meal.shopping_list_id,
+        title: meal.shopping_list_title?.trim() || "",
+        dates: [],
+      };
+
+      if (!existing.dates.includes(meal.plan_date)) {
+        existing.dates.push(meal.plan_date);
+      }
+
+      if (!existing.title && meal.shopping_list_title?.trim()) {
+        existing.title = meal.shopping_list_title.trim();
+      }
+
+      grouped.set(meal.shopping_list_id, existing);
+    });
+
+    return [...grouped.values()].map((entry) => {
+      const sortedDates = [...entry.dates].sort();
+      const firstDate = sortedDates[0];
+      const lastDate = sortedDates.at(-1);
+      const fallbackTitle =
+        firstDate && lastDate && firstDate !== lastDate
+          ? `${formatDateLabel(firstDate)} ~ ${formatDateLabel(lastDate)} 장보기`
+          : firstDate
+            ? `${formatDateLabel(firstDate)} 장보기`
+            : "장보기 목록";
+
+      return {
+        id: entry.id,
+        title: entry.title || fallbackTitle,
+      };
+    });
+  }, [meals]);
   const defaultRange = createDefaultPlannerRange();
   const isCurrentRange =
     rangeStartDate === defaultRange.startDate && rangeEndDate === defaultRange.endDate;
@@ -523,6 +572,19 @@ export function PlannerWeekScreen({
               <p className="text-[20px] font-bold text-[var(--foreground)]">{mealStats.registered}끼</p>
             </div>
           </div>
+          {shoppingListLinks.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {shoppingListLinks.map((shoppingList) => (
+                <Link
+                  className="inline-flex min-h-10 items-center justify-center rounded-full border border-[var(--olive)] bg-[color-mix(in_srgb,var(--olive)_8%,transparent)] px-4 py-2 text-[12px] font-bold text-[var(--olive)]"
+                  href={`/shopping/lists/${shoppingList.id}`}
+                  key={shoppingList.id}
+                >
+                  {shoppingList.title} 보기
+                </Link>
+              ))}
+            </div>
+          ) : null}
         </section>
       ) : null}
 

@@ -71,6 +71,8 @@ function createPlannerData({
     planned_servings: number;
     status: "registered" | "shopping_done" | "cook_done";
     is_leftover: boolean;
+    shopping_list_id?: string | null;
+    shopping_list_title?: string | null;
   }>;
 }) {
   return {
@@ -244,6 +246,37 @@ describe("planner week screen", () => {
     expect(shoppingLink.getAttribute("href")).toBe("/shopping/flow");
     expect(cookButton.disabled).toBe(true);
     expect(leftoverButton.disabled).toBe(true);
+  });
+
+  it("shows a direct link back to an existing shopping list", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_title: "김치찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-04-28",
+            column_id: "column-breakfast",
+            planned_servings: 3,
+            status: "registered",
+            is_leftover: false,
+            shopping_list_id: "shopping-list-1",
+            shopping_list_title: "4/28 장보기",
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    const shoppingListLink = await screen.findByRole("link", {
+      name: "4/28 장보기 보기",
+    });
+
+    expect(shoppingListLink.getAttribute("href")).toBe("/shopping/lists/shopping-list-1");
   });
 
   it("compresses meal slot metadata into compact chips while keeping empty slots lightweight", async () => {

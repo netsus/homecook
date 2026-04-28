@@ -4,6 +4,7 @@ import {
   aggregateShoppingIngredients,
   isMealEligibleForShopping,
   parseShoppingMealConfigs,
+  parseShoppingRecipeConfigs,
 } from "@/lib/server/shopping";
 import { createShoppingList, fetchShoppingPreview, isShoppingApiError } from "@/lib/api/shopping";
 
@@ -176,6 +177,34 @@ describe("shopping stage2 backend", () => {
     ]);
   });
 
+  it("parses recipe configs for recipe-level shopping serving totals", () => {
+    const parsed = parseShoppingRecipeConfigs({
+      recipes: [
+        {
+          recipe_id: "550e8400-e29b-41d4-a716-446655440011",
+          meal_ids: [
+            "550e8400-e29b-41d4-a716-446655440001",
+            "550e8400-e29b-41d4-a716-446655440002",
+            "not-a-uuid",
+          ],
+          shopping_servings: 6,
+        },
+      ],
+    });
+
+    expect(parsed.fields).toEqual([]);
+    expect(parsed.valid_configs).toEqual([
+      {
+        recipe_id: "550e8400-e29b-41d4-a716-446655440011",
+        meal_ids: [
+          "550e8400-e29b-41d4-a716-446655440001",
+          "550e8400-e29b-41d4-a716-446655440002",
+        ],
+        shopping_servings: 6,
+      },
+    ]);
+  });
+
   it("merges convertable units and keeps mixed units in display text", () => {
     const merged = aggregateShoppingIngredients([
       {
@@ -249,6 +278,7 @@ describe("shopping stage2 backend", () => {
           {
             id: "550e8400-e29b-41d4-a716-446655440001",
             recipe_id: "recipe-1",
+            plan_date: "2026-04-25",
             planned_servings: 2,
             status: "registered",
             shopping_list_id: null,
@@ -303,6 +333,17 @@ describe("shopping stage2 backend", () => {
             recipe_thumbnail: "https://example.com/kimchi.jpg",
             planned_servings: 2,
             created_at: "2026-04-25T00:00:00.000Z",
+          },
+        ],
+        recipes: [
+          {
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            recipe_thumbnail: "https://example.com/kimchi.jpg",
+            meal_ids: ["550e8400-e29b-41d4-a716-446655440001"],
+            planned_servings_total: 2,
+            shopping_servings: 2,
+            is_selected: true,
           },
         ],
       },
@@ -549,6 +590,15 @@ describe("shopping stage2 backend", () => {
         },
       ]);
     });
+    const recipeRowsQuery = createArraySelectQuery([
+      {
+        data: [
+          { id: "recipe-1", base_servings: 2 },
+          { id: "recipe-2", base_servings: 2 },
+        ],
+        error: null,
+      },
+    ]);
     const recipeIngredientsQuery = createArraySelectQuery([
       {
         data: [
@@ -643,6 +693,9 @@ describe("shopping stage2 backend", () => {
         if (table === "shopping_list_recipes") {
           return { insert: shoppingListRecipesInsert };
         }
+        if (table === "recipes") {
+          return { select: vi.fn(() => recipeRowsQuery) };
+        }
         if (table === "recipe_ingredients") {
           return { select: vi.fn(() => recipeIngredientsQuery) };
         }
@@ -736,6 +789,176 @@ describe("shopping stage2 backend", () => {
       "550e8400-e29b-41d4-a716-446655440002",
     ]);
     expect(mealsUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+  });
+
+  it("creates one recipe-level shopping row and scales duplicate recipe meals from base servings", async () => {
+    const firstMealId = "550e8400-e29b-41d4-a716-446655440011";
+    const secondMealId = "550e8400-e29b-41d4-a716-446655440012";
+    const recipeId = "550e8400-e29b-41d4-a716-446655440101";
+
+    const mealsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: firstMealId,
+            user_id: "user-1",
+            recipe_id: recipeId,
+            plan_date: "2026-04-28",
+            planned_servings: 3,
+            status: "registered",
+            shopping_list_id: null,
+          },
+          {
+            id: secondMealId,
+            user_id: "user-1",
+            recipe_id: recipeId,
+            plan_date: "2026-04-29",
+            planned_servings: 3,
+            status: "registered",
+            shopping_list_id: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const shoppingListInsertQuery = createInsertMaybeSingleQuery([
+      {
+        data: {
+          id: "shopping-list-1",
+          title: "4/28 장보기",
+          is_completed: false,
+          created_at: "2026-04-28T09:00:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const shoppingListRecipesInsert = vi.fn(() =>
+      createAwaitInsertQuery([
+        {
+          data: [],
+          error: null,
+        },
+      ]),
+    );
+    const recipeRowsQuery = createArraySelectQuery([
+      {
+        data: [{ id: recipeId, base_servings: 2 }],
+        error: null,
+      },
+    ]);
+    const recipeIngredientsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            recipe_id: recipeId,
+            ingredient_id: "ing-kimchi",
+            amount: 300,
+            unit: "g",
+            ingredient_type: "QUANT",
+            display_text: "김치 300g",
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const ingredientsQuery = createArraySelectQuery([
+      {
+        data: [{ id: "ing-kimchi", standard_name: "김치" }],
+        error: null,
+      },
+    ]);
+    const pantryQuery = createArraySelectQuery([
+      {
+        data: [],
+        error: null,
+      },
+    ]);
+    const shoppingListItemsInsert = vi.fn(() =>
+      createAwaitInsertQuery([
+        {
+          data: [],
+          error: null,
+        },
+      ]),
+    );
+    const mealsUpdateQuery = createMealsUpdateQuery([
+      {
+        data: [],
+        error: null,
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "meals") {
+          return {
+            select: vi.fn(() => mealsQuery),
+            update: vi.fn(() => mealsUpdateQuery),
+          };
+        }
+        if (table === "shopping_lists") {
+          return { insert: vi.fn(() => shoppingListInsertQuery) };
+        }
+        if (table === "shopping_list_recipes") {
+          return { insert: shoppingListRecipesInsert };
+        }
+        if (table === "recipes") {
+          return { select: vi.fn(() => recipeRowsQuery) };
+        }
+        if (table === "recipe_ingredients") {
+          return { select: vi.fn(() => recipeIngredientsQuery) };
+        }
+        if (table === "ingredients") {
+          return { select: vi.fn(() => ingredientsQuery) };
+        }
+        if (table === "pantry_items") {
+          return { select: vi.fn(() => pantryQuery) };
+        }
+        if (table === "shopping_list_items") {
+          return { insert: shoppingListItemsInsert };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importListsRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/shopping/lists", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          recipes: [
+            {
+              recipe_id: recipeId,
+              meal_ids: [firstMealId, secondMealId],
+              shopping_servings: 6,
+            },
+          ],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(shoppingListRecipesInsert).toHaveBeenCalledWith([
+      {
+        shopping_list_id: "shopping-list-1",
+        recipe_id: recipeId,
+        shopping_servings: 6,
+        planned_servings_total: 6,
+      },
+    ]);
+    expect(shoppingListItemsInsert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        ingredient_id: "ing-kimchi",
+        display_text: "김치 900g",
+        amounts_json: [{ amount: 900, unit: "g" }],
+      }),
+    ]);
+    expect(mealsUpdateQuery.in).toHaveBeenCalledWith("id", [firstMealId, secondMealId]);
   });
 
   it("fetchShoppingPreview helper returns data when envelope is valid", async () => {

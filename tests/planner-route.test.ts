@@ -217,6 +217,82 @@ describe("GET /api/v1/planner", () => {
     expect(mealsQuery.order).toHaveBeenNthCalledWith(3, "created_at", { ascending: true });
   });
 
+  it("includes shopping list metadata so planner can reopen created lists", async () => {
+    const mealPlanColumnsQuery = createThenableQuery([
+      {
+        data: [
+          { id: "column-breakfast", name: "아침", sort_order: 0 },
+          { id: "column-lunch", name: "점심", sort_order: 1 },
+          { id: "column-snack", name: "간식", sort_order: 2 },
+          { id: "column-dinner", name: "저녁", sort_order: 3 },
+        ],
+        error: null,
+      },
+    ]);
+    const mealsQuery = createThenableQuery([
+      {
+        data: [
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            plan_date: "2026-04-28",
+            column_id: "column-breakfast",
+            planned_servings: 3,
+            status: "registered",
+            is_leftover: false,
+            shopping_list_id: "shopping-list-1",
+            created_at: "2026-04-28T08:00:00Z",
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const recipesQuery = createThenableQuery([
+      {
+        data: [
+          { id: "recipe-1", title: "김치찌개", thumbnail_url: null },
+        ],
+        error: null,
+      },
+    ]);
+    const shoppingListsQuery = createThenableQuery([
+      {
+        data: [
+          { id: "shopping-list-1", title: "4/28 장보기" },
+        ],
+        error: null,
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "meal_plan_columns") return { select: vi.fn(() => mealPlanColumnsQuery) };
+        if (table === "meals") return { select: vi.fn(() => mealsQuery) };
+        if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+        if (table === "shopping_lists") return { select: vi.fn(() => shoppingListsQuery) };
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importRoute();
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/planner?start_date=2026-04-28&end_date=2026-05-04"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.meals[0]).toMatchObject({
+      id: "meal-1",
+      shopping_list_id: "shopping-list-1",
+      shopping_list_title: "4/28 장보기",
+    });
+    expect(shoppingListsQuery.in).toHaveBeenCalledWith("id", ["shopping-list-1"]);
+  });
+
   it("normalizes legacy custom columns into the fixed four-slot response", async () => {
     const mealPlanColumnsQuery = createThenableQuery([
       {

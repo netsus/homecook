@@ -200,19 +200,28 @@ describe("shopping flow screen", () => {
       });
 
       expect(screen.getByText("된장찌개")).toBeTruthy();
-      expect(screen.getAllByText(/인분/)).toHaveLength(6); // 2 cards × 3 mentions each
+      expect(screen.getByText("합산 계획 2인분")).toBeTruthy();
+      expect(screen.getByText("합산 계획 4인분")).toBeTruthy();
+      expect(screen.getByLabelText("2인분")).toBeTruthy();
+      expect(screen.getByLabelText("4인분")).toBeTruthy();
       expect(screen.getByText("장보기 목록 만들기")).toBeTruthy();
       expect(screen.getByText("장보기 목록 만들기")).not.toBe(true);
     });
 
-    it("should explain why preview meals are eligible and what each serving value means", async () => {
+    it("should group duplicate recipe meals and explain what each serving value means", async () => {
       fetchShoppingPreview.mockResolvedValue(
         createPreviewData([
           {
             id: "meal-1",
             recipe_id: "recipe-1",
             recipe_name: "김치찌개",
-            planned_servings: 2,
+            planned_servings: 3,
+          },
+          {
+            id: "meal-2",
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            planned_servings: 3,
           },
         ])
       );
@@ -223,14 +232,13 @@ describe("shopping flow screen", () => {
         expect(screen.getByText("김치찌개")).toBeTruthy();
       });
 
+      expect(screen.getAllByText("김치찌개")).toHaveLength(1);
       expect(screen.getByText("식사 등록 완료")).toBeTruthy();
-      expect(screen.getByText("장보기 미연결")).toBeTruthy();
-      expect(screen.getByText("등록일 2026. 4. 26.")).toBeTruthy();
-      expect(screen.getByText("플래너 등록 2인분")).toBeTruthy();
+      expect(screen.getByText("대상 식사 2개")).toBeTruthy();
+      expect(screen.getByText("합산 계획 6인분")).toBeTruthy();
       expect(screen.getByText("장보기 기준 인분")).toBeTruthy();
-      expect(screen.queryByText(/합산 계획 인분/)).toBeNull();
       expect(
-        screen.getByText(/장보기 완료, 요리 완료, 이미 장보기 리스트에 포함된 식사는 자동으로 제외돼요/)
+        screen.getByText(/같은 레시피는 합산 계획 인분으로 묶이고/)
       ).toBeTruthy();
     });
 
@@ -391,9 +399,10 @@ describe("shopping flow screen", () => {
 
       await waitFor(() => {
         expect(createShoppingList).toHaveBeenCalledWith({
-          meal_configs: [
+          recipes: [
             {
-              meal_id: "meal-1",
+              recipe_id: "recipe-1",
+              meal_ids: ["meal-1"],
               shopping_servings: 2,
             },
           ],
@@ -517,9 +526,10 @@ describe("shopping flow screen", () => {
 
       await waitFor(() => {
         expect(createShoppingList).toHaveBeenCalledWith({
-          meal_configs: [
+          recipes: [
             {
-              meal_id: "meal-1",
+              recipe_id: "recipe-1",
+              meal_ids: ["meal-1"],
               shopping_servings: 2,
             },
           ],
@@ -566,9 +576,10 @@ describe("shopping flow screen", () => {
 
       await waitFor(() => {
         expect(createShoppingList).toHaveBeenCalledWith({
-          meal_configs: [
+          recipes: [
             {
-              meal_id: "meal-1",
+              recipe_id: "recipe-1",
+              meal_ids: ["meal-1"],
               shopping_servings: 4,
             },
           ],

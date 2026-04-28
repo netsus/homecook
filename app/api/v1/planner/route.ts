@@ -35,6 +35,7 @@ interface PlannerMealRow {
   planned_servings: number;
   status: string;
   is_leftover: boolean;
+  shopping_list_id: string | null;
   created_at: string;
 }
 
@@ -42,6 +43,11 @@ interface RecipeRow {
   id: string;
   title: string;
   thumbnail_url: string | null;
+}
+
+interface ShoppingListRow {
+  id: string;
+  title: string;
 }
 
 type ArrayQueryResult<T> = PromiseLike<{
@@ -68,6 +74,11 @@ interface RecipesSelectQuery {
   then: ArrayQueryResult<RecipeRow>["then"];
 }
 
+interface ShoppingListsSelectQuery {
+  in(column: string, values: string[]): ShoppingListsSelectQuery;
+  then: ArrayQueryResult<ShoppingListRow>["then"];
+}
+
 interface PlannerColumnsTable {
   select(columns: string): PlannerColumnsSelectQuery;
 }
@@ -80,10 +91,15 @@ interface RecipesTable {
   select(columns: string): RecipesSelectQuery;
 }
 
+interface ShoppingListsTable {
+  select(columns: string): ShoppingListsSelectQuery;
+}
+
 interface PlannerDbClient {
   from(table: "meal_plan_columns"): PlannerColumnsTable;
   from(table: "meals"): PlannerMealsTable;
   from(table: "recipes"): RecipesTable;
+  from(table: "shopping_lists"): ShoppingListsTable;
 }
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -110,8 +126,13 @@ function normalizeMealStatus(status: string): MealStatus {
   return "registered";
 }
 
-function toPlannerMeal(meal: PlannerMealRow, recipeMap: Map<string, RecipeRow>): PlannerMealData {
+function toPlannerMeal(
+  meal: PlannerMealRow,
+  recipeMap: Map<string, RecipeRow>,
+  shoppingListMap: Map<string, ShoppingListRow>,
+): PlannerMealData {
   const recipe = recipeMap.get(meal.recipe_id);
+  const shoppingList = meal.shopping_list_id ? shoppingListMap.get(meal.shopping_list_id) : null;
 
   return {
     id: meal.id,
@@ -123,6 +144,8 @@ function toPlannerMeal(meal: PlannerMealRow, recipeMap: Map<string, RecipeRow>):
     planned_servings: meal.planned_servings,
     status: normalizeMealStatus(meal.status),
     is_leftover: meal.is_leftover,
+    shopping_list_id: meal.shopping_list_id ?? null,
+    shopping_list_title: shoppingList?.title ?? null,
   };
 }
 
@@ -210,7 +233,7 @@ export async function GET(request: NextRequest) {
 
   const mealsResult = await dbClient
     .from("meals")
-    .select("id, recipe_id, plan_date, column_id, planned_servings, status, is_leftover, created_at")
+    .select("id, recipe_id, plan_date, column_id, planned_servings, status, is_leftover, shopping_list_id, created_at")
     .eq("user_id", user.id)
     .gte("plan_date", dateRange.startDate)
     .lte("plan_date", dateRange.endDate)
@@ -223,7 +246,15 @@ export async function GET(request: NextRequest) {
   }
 
   const recipeIds = [...new Set(mealsResult.data.map((meal) => meal.recipe_id))];
+  const shoppingListIds = [
+    ...new Set(
+      mealsResult.data
+        .map((meal) => meal.shopping_list_id)
+        .filter((listId): listId is string => typeof listId === "string" && listId.length > 0),
+    ),
+  ];
   const recipeMap = new Map<string, RecipeRow>();
+  const shoppingListMap = new Map<string, ShoppingListRow>();
 
   if (recipeIds.length > 0) {
     const recipesResult = await dbClient
@@ -240,6 +271,21 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  if (shoppingListIds.length > 0) {
+    const shoppingListsResult = await dbClient
+      .from("shopping_lists")
+      .select("id, title")
+      .in("id", shoppingListIds);
+
+    if (shoppingListsResult.error || !shoppingListsResult.data) {
+      return fail("INTERNAL_ERROR", "플래너를 불러오지 못했어요.", 500);
+    }
+
+    shoppingListsResult.data.forEach((shoppingList) => {
+      shoppingListMap.set(shoppingList.id, shoppingList);
+    });
+  }
+
   const normalizedColumns = buildFixedPlannerColumns(columnsResult.data);
   const responseData: PlannerData = {
     columns: normalizedColumns.columns,
@@ -247,9 +293,11 @@ export async function GET(request: NextRequest) {
       toPlannerMeal(
         {
           ...meal,
+          shopping_list_id: meal.shopping_list_id ?? null,
           column_id: normalizedColumns.getFixedColumnId(meal.column_id),
         },
         recipeMap,
+        shoppingListMap,
       )),
   };
 

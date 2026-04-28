@@ -703,6 +703,29 @@ describe("ShoppingDetailScreen", () => {
 
       expect(screen.queryByRole("button", { name: "장보기 완료" })).toBeFalsy();
       expect(screen.getByText(/완료됨/)).toBeTruthy();
+      expect(screen.getByRole("button", { name: "플래너로 돌아가기" })).toBeTruthy();
+    });
+
+    it("navigates directly to planner from completed read-only lists", async () => {
+      const completedList: ShoppingListDetail = {
+        ...mockListDetail,
+        is_completed: true,
+        completed_at: "2026-04-27T10:00:00.000Z",
+      };
+
+      vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(completedList);
+
+      const user = userEvent.setup();
+
+      render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+      });
+
+      await user.click(screen.getByRole("button", { name: "플래너로 돌아가기" }));
+
+      expect(mockPush).toHaveBeenCalledWith("/planner");
     });
 
     it("shows pantry reflection popup when clicking complete button", async () => {
