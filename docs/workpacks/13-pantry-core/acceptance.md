@@ -9,13 +9,13 @@
 
 ## Happy Path
 
-- [ ] 팬트리 목록 조회가 정상 동작한다 (보유 재료 리스트 표시) <!-- omo:id=accept-pantry-list;stage=4;scope=frontend;review=5,6 -->
-- [ ] 재료 직접 추가가 정상 동작한다 (검색/선택 → POST /pantry → 목록 갱신) <!-- omo:id=accept-direct-add;stage=4;scope=frontend;review=5,6 -->
-- [ ] 묶음 추가가 정상 동작한다 (PANTRY_BUNDLE_PICKER → 체크 → POST /pantry → 복귀) <!-- omo:id=accept-bundle-add;stage=4;scope=frontend;review=5,6 -->
-- [ ] 재료 삭제가 정상 동작한다 (선택 → DELETE /pantry → 목록 갱신) <!-- omo:id=accept-delete;stage=4;scope=frontend;review=5,6 -->
-- [ ] 검색/카테고리 필터가 정상 동작한다 <!-- omo:id=accept-search-filter;stage=4;scope=frontend;review=5,6 -->
+- [x] 팬트리 목록 조회가 정상 동작한다 (보유 재료 리스트 표시) <!-- omo:id=accept-pantry-list;stage=4;scope=frontend;review=5,6 -->
+- [x] 재료 직접 추가가 정상 동작한다 (검색/선택 → POST /pantry → 목록 갱신) <!-- omo:id=accept-direct-add;stage=4;scope=frontend;review=5,6 -->
+- [x] 묶음 추가가 정상 동작한다 (PANTRY_BUNDLE_PICKER → 체크 → POST /pantry → 복귀) <!-- omo:id=accept-bundle-add;stage=4;scope=frontend;review=5,6 -->
+- [x] 재료 삭제가 정상 동작한다 (선택 → DELETE /pantry → 목록 갱신) <!-- omo:id=accept-delete;stage=4;scope=frontend;review=5,6 -->
+- [x] 검색/카테고리 필터가 정상 동작한다 <!-- omo:id=accept-search-filter;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 - [x] GET /pantry/bundles에서 `is_in_pantry`가 현재 사용자 기준으로 정확하다 <!-- omo:id=accept-bundle-is-in-pantry;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
@@ -28,11 +28,11 @@
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 (팬트리 목록, 묶음 목록 로딩 스켈레톤) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] empty 상태가 있다 (팬트리 비어있을 때 안내 + 추가 CTA) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 (API 실패 시 재시도 안내) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 (미로그인 → 로그인 게이트 모달) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] 로그인 게이트 후 return-to-action `/pantry`가 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 (팬트리 목록, 묶음 목록 로딩 스켈레톤) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] empty 상태가 있다 (팬트리 비어있을 때 안내 + 추가 CTA) <!-- omo:id=accept-empty;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 (API 실패 시 재시도 안내) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 (미로그인 → 로그인 게이트 모달) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] 로그인 게이트 후 return-to-action `/pantry`가 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 - [x] POST /pantry에 빈 배열 전송 시 422 응답 <!-- omo:id=accept-empty-array-422;stage=2;scope=backend;review=3,6 -->
 - [x] DELETE /pantry에 빈 배열 전송 시 422 응답 <!-- omo:id=accept-delete-empty-422;stage=2;scope=backend;review=3,6 -->
 
@@ -67,14 +67,14 @@
 
 - [x] 팬트리 CRUD API 핸들러 단위 테스트 (happy path, 중복, 삭제, 소유자 가드, 빈 배열 422) <!-- omo:id=accept-vitest-pantry-api;stage=2;scope=backend;review=3,6 -->
 - [x] 묶음 조회 API 단위 테스트 (is_in_pantry join 정확성) <!-- omo:id=accept-vitest-bundles-api;stage=2;scope=backend;review=3,6 -->
-- [ ] 프론트 상태 관리 / API helper 단위 테스트 <!-- omo:id=accept-vitest-frontend;stage=4;scope=frontend;review=5,6 -->
+- [x] 프론트 상태 관리 / API helper 단위 테스트 <!-- omo:id=accept-vitest-frontend;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright
 
-- [ ] PANTRY 화면 진입 → 목록 조회 → 직접 추가 → 삭제 E2E 흐름 <!-- omo:id=accept-playwright-pantry-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] PANTRY_BUNDLE_PICKER 진입 → 묶음 선택 → 체크 → 추가 E2E 흐름 <!-- omo:id=accept-playwright-bundle-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] 미로그인 팬트리 접근 → 로그인 게이트 표시 E2E <!-- omo:id=accept-playwright-login-gate;stage=4;scope=frontend;review=5,6 -->
-- [ ] 빈 팬트리 상태 → empty state 표시 확인 <!-- omo:id=accept-playwright-empty-state;stage=4;scope=frontend;review=5,6 -->
+- [x] PANTRY 화면 진입 → 목록 조회 → 직접 추가 → 삭제 E2E 흐름 <!-- omo:id=accept-playwright-pantry-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] PANTRY_BUNDLE_PICKER 진입 → 묶음 선택 → 체크 → 추가 E2E 흐름 <!-- omo:id=accept-playwright-bundle-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 미로그인 팬트리 접근 → 로그인 게이트 표시 E2E <!-- omo:id=accept-playwright-login-gate;stage=4;scope=frontend;review=5,6 -->
+- [x] 빈 팬트리 상태 → empty state 표시 확인 <!-- omo:id=accept-playwright-empty-state;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 

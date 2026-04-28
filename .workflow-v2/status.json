@@ -632,18 +632,18 @@
     {
       "id": "13-pantry-core",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-13-pantry-core",
-      "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-13-pantry-core",
+      "pr_path": "https://github.com/netsus/homecook/pull/281",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs merged. Stage 2 backend implementation is in progress on feature/be-13-pantry-core; local Supabase migration/seed readiness restored for documented ingredient bundle tables."
+      "notes": "Final closeout projected for PR #281 after Stage 1 docs PR #279, Stage 2/3 backend PR #280, Stage 4 frontend PR #281, Codex Stage 5/6 review, Claude final authority gate, and internal 6.5 validators. closeout_phase=completed closeout_recovery=ci_resync:1 closeout_repair=codex:2|claude:3|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,git history,PR #281 body last_recovery_at=2026-04-28T16:25:23Z"
     }
   ]
 }
