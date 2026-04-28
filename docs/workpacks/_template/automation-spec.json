@@ -48,7 +48,9 @@
       "anchor_screens": [],
       "required_screens": [],
       "generator_required": false,
+      "generator_artifact": null,
       "critic_required": false,
+      "critic_artifact": null,
       "authority_required": false,
       "stage4_evidence_requirements": [],
       "authority_report_paths": []

@@ -147,6 +147,14 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
   - visual artifact(Figma frame URL 또는 screenshot evidence 경로)
   - authority status
 - `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK`를 직접 수정하거나 핵심 행동을 확장하는 슬라이스는 `anchor-extension`으로 본다
+- Baemin prototype 적용 화면은 classification vocabulary를 `ui/designs/BAEMIN_STYLE_DIRECTION.md`에서만 가져온다
+- slice 13-19 화면은 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`의 screen/surface-level matrix를 따른다. `PANTRY` parity가 `PANTRY_BUNDLE_PICKER`까지 자동 승격시키지 않는다
+- `docs/workpacks/<slice>/automation-spec.json`의 `frontend.design_authority`는 generic field set을 쓴다:
+  - `ui_risk`, `anchor_screens`, `required_screens`
+  - `generator_required`, `generator_artifact`
+  - `critic_required`, `critic_artifact`
+  - `authority_required`, `stage4_evidence_requirements`, `authority_report_paths`
+  - `generator_artifact` / `critic_artifact`는 `string | null`이며, 누락 시 parser가 `null`로 정규화한다
 
 ### 자가 점검 체크리스트
 
@@ -167,6 +175,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 - [ ] 신규 화면, high-risk UI change, anchor extension이라면 README `Design Authority` 섹션이 채워졌는가
 - [ ] 신규 화면, high-risk UI change, anchor extension이라면 각 화면의 Figma frame URL 또는 screenshot evidence 계획이 남았는가
 - [ ] anchor screen(`HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK`)을 직접 수정하거나 확장한다면 low-risk로 잘못 분류하지 않았는가
+- [ ] slice 13-19 화면이라면 h8 matrix의 initial class와 non-screen exclusions를 README / automation-spec 근거에 반영했는가
 
 ### 완료 기준
 
@@ -520,6 +529,7 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 - **기본**: 신규 화면 또는 high-risk UI change에서 workpack README의 Design Status가 `pending-review` 상태
 - **기본 추가**: 신규 화면, high-risk UI change, anchor extension은 authority report가 있어야 Stage 5 public review를 시작할 수 있다
 - authority-required slice는 authority report의 `> evidence:` block에 mobile default + narrow screenshot/Figma evidence를 남기고, `automation-spec.json`의 `stage4_evidence_requirements`와 맞춰야 한다
+- Baemin prototype parity candidate는 `BAEMIN_STYLE_DIRECTION.md` definition과 h8/h7 scope boundary를 확인한 뒤, absence of out-of-scope prototype-only elements를 deficit으로 채점하지 않는다
 - **authority-required**: public Stage 5 approve 뒤에는 Claude `final_authority_gate`를 추가로 통과해야 `confirmed`를 줄 수 있다
 - **예외 1**: `temporary` 상태에서 명시적 요청이 있으면 기능 검토(5개 UI 상태·화면정의서 일치)만 수행, 스타일 리뷰 제외
 - **예외 2**: 기존 confirmed 화면의 low-risk UI change는 Stage 5를 생략하고 Stage 6에서 lightweight design check로 흡수할 수 있다

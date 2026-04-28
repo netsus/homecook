@@ -25,7 +25,9 @@ const DESIGN_AUTHORITY_UI_RISKS = new Set([
  *   anchor_screens: string[],
  *   required_screens: string[],
  *   generator_required: boolean,
+ *   generator_artifact: string|null,
  *   critic_required: boolean,
+ *   critic_artifact: string|null,
  *   authority_required: boolean,
  *   stage4_evidence_requirements: string[],
  *   authority_report_paths: string[],
@@ -126,6 +128,18 @@ function normalizeBoolean(value, label) {
   return value;
 }
 
+function normalizeNullableString(value, label) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`${label} must be a non-empty string or null.`);
+  }
+
+  return value.trim();
+}
+
 function normalizeDesignAuthority(value, label) {
   if (!value || (typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0)) {
     return {
@@ -133,7 +147,9 @@ function normalizeDesignAuthority(value, label) {
       anchor_screens: [],
       required_screens: [],
       generator_required: false,
+      generator_artifact: null,
       critic_required: false,
+      critic_artifact: null,
       authority_required: false,
       stage4_evidence_requirements: [],
       authority_report_paths: [],
@@ -160,9 +176,17 @@ function normalizeDesignAuthority(value, label) {
       normalized.generator_required,
       `${label}.generator_required`,
     ),
+    generator_artifact: normalizeNullableString(
+      normalized.generator_artifact,
+      `${label}.generator_artifact`,
+    ),
     critic_required: normalizeBoolean(
       normalized.critic_required,
       `${label}.critic_required`,
+    ),
+    critic_artifact: normalizeNullableString(
+      normalized.critic_artifact,
+      `${label}.critic_artifact`,
     ),
     authority_required: normalizeBoolean(
       normalized.authority_required,

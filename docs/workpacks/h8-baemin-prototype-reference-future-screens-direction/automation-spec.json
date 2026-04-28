@@ -1,0 +1,58 @@
+{
+  "slice_id": "h8-baemin-prototype-reference-future-screens-direction",
+  "execution_mode": "manual",
+  "risk_class": "medium",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [
+      "git diff --check",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "pnpm test -- tests/omo-automation-spec.test.ts"
+    ],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "no-runtime-code-change",
+      "no-official-doc-change",
+      "h8-matrix-complete",
+      "design-authority-artifact-fields-generic"
+    ],
+    "design_authority": {
+      "ui_risk": "not-required",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "runtime-app-code-changed",
+    "official-docs-changed",
+    "h7-history-rewritten",
+    "slice-wide-promotion-inferred",
+    "prototype-only-exclusion-promoted"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 1
+  },
+  "notes": "Docs-governance future-screen gate. No runtime code changes. Locks slice 13-19 prototype authority classification and generic nullable design_authority artifact fields."
+}
