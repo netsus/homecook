@@ -52,7 +52,8 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 - exact closeout ownership / projection / repair semantics는 `docs/engineering/workflow-v2/omo-canonical-closeout-state.md`를 따른다. `docs/engineering/bookkeeping-authority-matrix.md`는 전환이 끝날 때까지 writable closeout surface를 기록하는 compatibility note다.
 - Stage 2/4 구현 actor는 자신이 닫은 범위의 checklist / acceptance / PR evidence를 최신화하고, Stage 3/5/6 review actor는 mismatch를 closeout drift로 본다.
 - authority-required slice는 Claude `final_authority_gate`를 통과하기 전 최종 closeout이나 merge-ready 상태로 넘기지 않는다.
-- exact validator semantics와 미체크 허용 범위는 `pnpm validate:closeout-sync`, `pnpm validate:exploratory-qa-evidence`, `pnpm validate:authority-evidence-presence`, `pnpm validate:real-smoke-presence`, canonical closeout doc를 따른다.
+- Stage 2/4 actor는 Draft PR을 Ready로 전환하기 전에 `pnpm validate:pr-ready -- --slice <slice> --pr-body <pr-body-file> --mode backend|frontend`로 PR body required sections, exploratory QA/eval evidence, authority evidence refs, real smoke evidence, pending Actual Verification placeholder를 한 번에 확인한다.
+- exact validator semantics와 미체크 허용 범위는 `pnpm validate:pr-ready`, `pnpm validate:closeout-sync`, `pnpm validate:exploratory-qa-evidence`, `pnpm validate:authority-evidence-presence`, `pnpm validate:real-smoke-presence`, canonical closeout doc를 따른다.
 
 ## Slice Readiness Safeguards
 
