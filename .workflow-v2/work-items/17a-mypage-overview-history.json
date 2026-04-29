@@ -1,0 +1,100 @@
+{
+  "id": "17a-mypage-overview-history",
+  "title": "MYPAGE shell, profile, recipe book CRUD, shopping history list",
+  "summary": "MYPAGE shell + 두 탭(레시피북/장보기 기록) 구현. GET /users/me 프로필, GET /recipe-books 시스템+커스텀 목록(recipe_count), POST/PATCH/DELETE 커스텀 레시피북 CRUD, GET /shopping/lists 장보기 기록 최신순 cursor pagination. prototype-parity shell, prototype-derived sub-tabs, authority-required new screen.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "로그인한 사용자가 마이페이지에서 프로필 정보를 확인하고, 레시피북(시스템 3개 + 커스텀)을 목록으로 관리(생성/이름 변경/삭제)하며, 장보기 기록을 최신순으로 재열람할 수 있도록 한다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "16-leftovers",
+    "15b-cook-standalone-complete",
+    "15a-cook-planner-complete",
+    "14-cook-session-start",
+    "13-pantry-core",
+    "12b-shopping-pantry-reflect",
+    "12a-shopping-complete",
+    "04-recipe-save",
+    "03-recipe-like",
+    "h8-baemin-prototype-reference-future-screens-direction"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/요구사항기준선-v1.6.4.md",
+      "docs/화면정의서-v1.5.1.md",
+      "docs/api문서-v1.2.2.md",
+      "docs/db설계-v1.3.1.md",
+      "docs/유저flow맵-v1.3.1.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/17a-mypage-overview-history/README.md",
+      "docs/workpacks/17a-mypage-overview-history/acceptance.md",
+      "docs/workpacks/17a-mypage-overview-history/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/playwright-e2e.md",
+      "docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "pnpm dev:local-supabase"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Stage 1 docs created by Claude. MYPAGE is h8 prototype parity candidate (screen-level only); sub-tabs MYPAGE_TAB_RECIPEBOOK/MYPAGE_TAB_SHOPPINGLISTS are prototype-derived design. Authority required for new-screen. System recipe books are actual rows (recipe_books ×3 bootstrap on signup). RECIPEBOOK_DETAIL → 17b; Settings/logout → 17c.",
+  "out_of_scope": [
+    "RECIPEBOOK_DETAIL 상세 조회 및 레시피 목록 — 17b-recipebook-detail-remove",
+    "레시피북에서 레시피 제거 (saved/custom/liked) — 17b-recipebook-detail-remove",
+    "SETTINGS, 로그아웃, 화면 꺼짐 방지, 닉네임 변경, 회원 탈퇴 — 17c-settings-account",
+    "직접 레시피 등록(manual) — 18-manual-recipe-create",
+    "유튜브 레시피 등록 — 19-youtube-import",
+    "레시피 저장/좋아요 액션 자체 — 03/04에서 구현 완료",
+    "장보기 상세 재열람 UI 개선 — 10a/12a에서 구현 완료"
+  ],
+  "open_questions": []
+}

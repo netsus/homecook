@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-29T16:00:00Z",
+  "updated_at": "2026-04-30T12:00:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -713,6 +713,22 @@
         "pnpm typecheck"
       ],
       "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs merged via PR #298; Stage 2/3 backend merged via PR #299; Stage 4 frontend was delegated to Claude resume session d21d2013-cc42-4b7f-9a8a-1af45f3f7363; Stage 5/6 and closeout were completed by Codex with Claude final_authority_gate approval. Local targeted frontend, authority, workpack, workflow-v2, bookkeeping, and diff checks passed. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:3|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:backend,pnpm verify:frontend,GitHub PR/CI,PR #300 body,ui/designs/authority/LEFTOVERS-authority.md,ui/designs/authority/ATE_LIST-authority.md,.omx/artifacts/claude-delegate-16-leftovers-final-authority-gate-response-20260429T144800Z.json last_recovery_at=2026-04-29T14:56:02Z"
+    },
+    {
+      "id": "17a-mypage-overview-history",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/17a-mypage-overview-history",
+      "pr_path": "pending",
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 docs created by Claude. MYPAGE shell + recipe book CRUD + shopping history list. h8 prototype parity candidate (screen-level), authority required for new-screen."
     }
   ]
 }
