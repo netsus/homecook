@@ -72,29 +72,43 @@
   "status": {
     "lifecycle": "in_progress",
     "approval_state": "not_started",
-    "verification_status": "pending",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs created by Claude and merged via PR #288. S1-R1 repair applied: leftover_dishes schema migration requirement added (table does not exist in repo, official DB §9-1 requires it). Stage 2 backend started on feature/be-15a-cook-planner-complete. 14에서 구현한 cook-mode route handler, cancel API를 소비하고, complete API를 신규 구현. Stage 2에서 leftover_dishes migration 생성 필요. COOK_MODE는 전체화면 좌우 스와이프 기반 몰입형 모드. 독립 요리(15b)와 같은 화면을 공유하지만 workpack/acceptance는 분리. closeout_phase=collecting",
+  "notes": "Stage 1 docs merged via PR #288. Stage 2/3 backend merged via PR #289. Stage 4 frontend implementation and Claude-owned repairs completed on feature/fe-15a-cook-planner-complete. Stage 5 Codex authority review and Claude final_authority_gate passed with blocker 0 / major 0; Design Status confirmed. Local required checks including pnpm verify:frontend passed. Stage 6 PR review, internal 6.5 closeout reconcile, final merge, and post-merge OMO report remain. closeout_phase=collecting",
   "closeout": {
     "phase": "collecting",
     "docs_projection": {
       "roadmap_lifecycle": "in_progress",
-      "design_status": "temporary",
-      "delivery_checklist": "pending",
-      "design_authority": "pending",
-      "acceptance": "pending",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "pending",
-      "external_smokes": "pending",
-      "authority_reports": [],
-      "actual_verification_refs": []
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/COOK_MODE-authority.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm exec vitest run tests/cook-mode-screen.test.tsx tests/cook-planner-complete.backend.test.ts",
+        "pnpm exec playwright test tests/e2e/slice-15a-cook-planner-complete.spec.ts",
+        "pnpm validate:workpack -- --slice 15a-cook-planner-complete",
+        "pnpm validate:workflow-v2",
+        "pnpm dlx supabase db reset",
+        "psql complete happy-path / empty-consumed / idempotency smokes",
+        ".artifacts/qa/15a-cook-planner-complete/2026-04-29T09-05-00Z/exploratory-report.json",
+        ".artifacts/qa/15a-cook-planner-complete/2026-04-29T09-05-00Z/eval-result.json",
+        "ui/designs/authority/COOK_MODE-authority.md"
+      ]
     },
     "merge_gate_projection": {
       "current_head_sha": null,
@@ -119,8 +133,8 @@
       "evidence_sources": []
     },
     "projection_state": {
-      "docs_synced_at": null,
-      "status_synced_at": null,
+      "docs_synced_at": "2026-04-29T09:03:19Z",
+      "status_synced_at": "2026-04-29T09:03:19Z",
       "pr_body_synced_at": null
     }
   },

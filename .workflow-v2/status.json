@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-29T04:45:00Z",
+  "updated_at": "2026-04-29T09:03:19Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -664,18 +664,18 @@
     {
       "id": "15a-cook-planner-complete",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-15a-cook-planner-complete",
+      "branch": "feature/fe-15a-cook-planner-complete",
       "pr_path": "pending",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
-      "verification_status": "pending",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs merged via PR #288 after Claude docs and Codex internal 1.5 docs gate. Stage 2 backend started on feature/be-15a-cook-planner-complete. Planner cook session complete with COOK_MODE, pantry deduction, cook_done transition. COOK_MODE is h8 prototype-derived design. closeout_phase=collecting"
+      "notes": "Stage 1 docs merged via PR #288. Stage 2/3 backend merged via PR #289. Stage 4 frontend implementation and repairs completed on feature/fe-15a-cook-planner-complete. Stage 5 Codex authority review + Claude final authority gate passed (blocker 0, major 0); Design Status confirmed. Local required checks including pnpm verify:frontend passed. closeout_phase=collecting"
     }
   ]
 }

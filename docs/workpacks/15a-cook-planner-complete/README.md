@@ -132,17 +132,20 @@
 ## Design Authority
 - UI risk: `new-screen`
 - Anchor screen dependency: 없음 (COOK_MODE는 anchor screen이 아니며, anchor screen을 직접 수정하지 않음)
-- Visual artifact: Stage 1에서 `ui/designs/COOK_MODE.md` 생성, Stage 4에서 screenshot evidence 예정
-- Authority status: `required`
+- Visual artifact: `ui/designs/authority/COOK_MODE-authority.md`
+- Authority status: `reviewed`
 - h8 matrix reference: `COOK_MODE` initial class = `prototype-derived design` (planner path does not auto-promote visual parity)
-- Notes: COOK_MODE는 전체화면 몰입형 모드로 좌우 스와이프 기반. 14에서 route handler만 구현한 COOK_MODE 화면을 이 슬라이스에서 실제 구현. 독립 요리 경로(15b)와 같은 COOK_MODE 화면을 공유하지만 workpack과 acceptance는 분리.
+- Notes: COOK_MODE는 전체화면 몰입형 모드로 좌우 스와이프 기반. 14에서 route handler만 구현한 COOK_MODE 화면을 이 슬라이스에서 실제 구현. 독립 요리 경로(15b)와 같은 COOK_MODE 화면을 공유하지만 workpack과 acceptance는 분리. Stage 5 Codex authority review와 Claude final authority gate 모두 blocker 0으로 통과했다.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5 public review + Claude final authority gate 통과 (blocker 0, major 0)
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
+
+> Design Status 전이: `temporary` → `pending-review` → `confirmed` (2026-04-29).
+> Authority evidence: `ui/designs/authority/COOK_MODE-authority.md`, `ui/designs/evidence/15a-cook-planner-complete/COOK_MODE-mobile-default-screenshot.png`, `ui/designs/evidence/15a-cook-planner-complete/COOK_MODE-mobile-narrow-screenshot.png`, `ui/designs/evidence/15a-cook-planner-complete/COOK_MODE-mobile-steps-screenshot.png`.
 
 ## Source Links
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
@@ -213,13 +216,13 @@
 - [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 
 ## Stage Evidence
 
@@ -236,6 +239,27 @@
 - `psql` complete happy-path smoke — session returns `completed`, meal becomes `cook_done`, `leftover_dishes` row count is 1, recipe ingredient pantry removal count is 1, unrelated pantry item remains, recipe `cook_count` becomes 1
 - `psql` empty-consumed smoke — `pantry_removed=0` and pantry item remains
 - `psql` idempotency smoke — second complete call keeps `cook_count=1` and single leftover row
+
+### Stage 4 Frontend Evidence
+
+- `pnpm typecheck` — pass
+- `pnpm lint` — pass (pre-existing `<img>` warnings only)
+- `pnpm exec vitest run tests/cook-mode-screen.test.tsx` — 17/17 pass (13 original + 3 swipe + 1 conflict-409)
+- `pnpm exec vitest run tests/cook-mode-screen.test.tsx tests/cook-planner-complete.backend.test.ts` — 26/26 pass
+- `pnpm validate:workpack -- --slice 15a-cook-planner-complete` — pass
+- `pnpm validate:workflow-v2` — pass
+- `pnpm exec playwright test tests/e2e/slice-15a-cook-planner-complete.spec.ts` — 30/30 pass (10 tests × 3 viewports)
+- `pnpm verify:frontend` — pass (lint/typecheck/product tests/build/E2E/a11y/visual/security/Lighthouse; existing `<img>` warnings only)
+- Exploratory QA: `.artifacts/qa/15a-cook-planner-complete/2026-04-29T09-05-00Z/exploratory-report.json` — desktop/mobile/small viewport coverage, findings 0.
+- QA eval: `.artifacts/qa/15a-cook-planner-complete/2026-04-29T09-05-00Z/eval-result.json` — score 100, pass.
+- Files: `lib/api/cooking.ts` (modified), `stores/cook-mode-store.ts` (new), `components/cooking/cook-mode-screen.tsx` (new), `components/cooking/consumed-ingredient-sheet.tsx` (new), `app/cooking/sessions/[session_id]/cook-mode/page.tsx` (modified), `tests/cook-mode-screen.test.tsx` (new), `tests/e2e/slice-15a-cook-planner-complete.spec.ts` (new)
+
+### Stage 5 Design Evidence
+
+- Codex authority review: `ui/designs/authority/COOK_MODE-authority.md` → verdict `pass`, blocker 0, major 0.
+- Visual evidence: `ui/designs/evidence/15a-cook-planner-complete/COOK_MODE-mobile-default-screenshot.png`, `ui/designs/evidence/15a-cook-planner-complete/COOK_MODE-mobile-narrow-screenshot.png`, `ui/designs/evidence/15a-cook-planner-complete/COOK_MODE-mobile-steps-screenshot.png`, `ui/designs/evidence/15a-cook-planner-complete/COOK_MODE-desktop-screenshot.png`.
+- Claude final authority gate: `.omx/artifacts/claude-delegate-15a-cook-planner-complete-stage5-final-authority-gate-response-20260429T090319Z.md` → decision `pass`, Design Status update allowed, blocker 0, major 0.
+- Design Status: `pending-review` → `confirmed`.
 
 ## Open Questions
 없음.
