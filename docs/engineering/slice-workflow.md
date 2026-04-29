@@ -644,6 +644,23 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 수정 요청 없이 승인 + current head 기준 started PR checks 전체 green 확인 → merge.
 **merge 시 `docs/workpacks/README.md` Slice Order의 해당 슬라이스 Status를 `in-progress` → `merged`로 변경한다** (이 PR에 포함).
 
+### Post-Merge OMO Report
+
+merge 완료 후 Codex는 `master`를 최신화한 뒤 OMO efficiency report를 남긴다.
+
+1. `git checkout master && git pull --ff-only origin master`
+2. `pnpm omo:report -- --work-item <slice>`
+3. 생성 파일: `docs/workpacks/<slice>/omo-report.md`
+4. report의 `순수 진행 누적시간`이 `0.0분`으로 떨어지고 실제 작업이 OMO dispatch runner가 아니라 Codex/Claude orchestration으로 진행된 경우, slice 13 방식의 backfilled estimate로 보정한다:
+   - `.omx/artifacts` Claude prompt/response mtime
+   - Stage PR timestamp / merge timestamp
+   - git commit history
+   - GitHub current-head check 결과
+   - source PR body closeout projection
+   - CI 대기와 단순 watch 시간은 제외, Codex/Claude가 직접 수행한 구현/리뷰/수리/검증 시간은 포함
+5. `pnpm validate:workpack`, `pnpm validate:workflow-v2`, `git diff --check`를 실행한다.
+6. report가 Stage 6 PR에 이미 포함되어 있지 않으면 `docs/omo-report-<slice>` 같은 docs-only branch/PR로 merge한다.
+
 ### 완료 요약 (슬라이스 최종 완료 요약 포함, Codex가 출력)
 
 ```
@@ -674,5 +691,5 @@ change type gate, optional review, `N/A` 허용 기준은 `docs/engineering/agen
 | 주요 결정 사항 | <내용> |
 
 ### 다음 슬라이스
-→ <next-slice> 1단계 시작 가능 (사전 조건: 이 PR merged)
+→ <next-slice> 1단계 시작 가능 (사전 조건: 이 PR merged + OMO report generated/merged)
 ```

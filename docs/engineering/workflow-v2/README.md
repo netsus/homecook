@@ -206,6 +206,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
   - merge authority는 GitHub formal approval이 아니라 stage owner review artifact + authority gate pass(해당 시) + 전체 PR checks + external smoke다.
   - authority-required UI는 Claude Stage 4 구현 뒤 Codex `authority_precheck`, Codex Stage 5 public review, Claude `final_authority_gate`를 거친다.
   - Stage 6 approve 뒤 supervisor는 `validate:closeout-sync`, `validate:source-of-truth-sync`, `validate:exploratory-qa-evidence`, `validate:authority-evidence-presence`, `validate:real-smoke-presence` bundle을 `internal 6.5`로 실행하고, fixable slice-local drift만 같은 frontend PR branch에서 auto-repair한다.
+  - Stage 6/current-head merge 완료 뒤에는 `pnpm omo:report -- --work-item <slice>`로 `docs/workpacks/<slice>/omo-report.md`를 생성한다. dispatch 산출물이 없어 순수 진행시간이 0.0분으로 떨어지는 Codex-orchestrated slice는 `.omx/artifacts`, PR timestamps, git history, GitHub checks, source PR body를 근거로 backfilled estimate를 남긴다.
   - manual handoff는 `high-risk` / `anchor-extension` / `exceptional recovery`에 한정된 예외 경로다.
   - provider wait와 budget issue는 기본적으로 `pause + scheduled resume`를 사용한다.
   - `high-risk` / `anchor-extension` slice는 stage execution은 지원하지만 automatic merge는 금지하고 manual merge handoff bundle로 종료한다.
