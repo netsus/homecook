@@ -40,6 +40,12 @@ interface PlannerColumnRow {
   name: string;
 }
 
+interface LeftoverDishLookupRow {
+  id: string;
+  user_id: string;
+  recipe_id: string;
+}
+
 interface MealListRow {
   id: string;
   recipe_id: string;
@@ -89,6 +95,11 @@ interface PlannerColumnsSelectQuery {
   maybeSingle(): MaybeSingleResult<PlannerColumnRow>;
 }
 
+interface LeftoverDishesSelectQuery {
+  eq(column: string, value: string): LeftoverDishesSelectQuery;
+  maybeSingle(): MaybeSingleResult<LeftoverDishLookupRow>;
+}
+
 interface MealsSelectQuery {
   eq(column: string, value: string): MealsSelectQuery;
   order(column: string, options: QueryOrderOption): MealsSelectQuery;
@@ -107,6 +118,10 @@ interface RecipesTable {
 
 interface PlannerColumnsTable {
   select(columns: string): PlannerColumnsSelectQuery;
+}
+
+interface LeftoverDishesTable {
+  select(columns: string): LeftoverDishesSelectQuery;
 }
 
 interface MealsTable {
@@ -128,6 +143,7 @@ interface MealsTable {
 interface MealsDbClient {
   from(table: "recipes"): RecipesTable;
   from(table: "meal_plan_columns"): PlannerColumnsTable;
+  from(table: "leftover_dishes"): LeftoverDishesTable;
   from(table: "meals"): MealsTable;
 }
 
@@ -483,6 +499,28 @@ export async function POST(request: Request) {
 
   if (!PLANNER_FIXED_SLOT_NAMES.includes(columnResult.data.name as (typeof PLANNER_FIXED_SLOT_NAMES)[number])) {
     return fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404);
+  }
+
+  if (parsed.leftoverDishId) {
+    const leftoverResult = await dbClient
+      .from("leftover_dishes")
+      .select("id, user_id, recipe_id")
+      .eq("id", parsed.leftoverDishId)
+      .maybeSingle();
+
+    if (leftoverResult.error || !leftoverResult.data) {
+      return fail("RESOURCE_NOT_FOUND", "남은요리를 찾을 수 없어요.", 404);
+    }
+
+    if (leftoverResult.data.user_id !== user.id) {
+      return fail("FORBIDDEN", "내 남은요리만 플래너에 추가할 수 있어요.", 403);
+    }
+
+    if (leftoverResult.data.recipe_id !== parsed.recipeId) {
+      return fail("VALIDATION_ERROR", "요청 값을 확인해주세요.", 422, [
+        { field: "leftover_dish_id", reason: "recipe_mismatch" },
+      ]);
+    }
   }
 
   const insertResult = await dbClient

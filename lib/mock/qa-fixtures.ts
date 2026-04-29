@@ -16,6 +16,11 @@ import type {
 } from "@/types/recipe";
 import type { MealCreateData, MealListData, MealMutationData } from "@/types/meal";
 import type {
+  LeftoverDishStatus,
+  LeftoverListData,
+  LeftoverMutationData,
+} from "@/types/leftover";
+import type {
   MealStatus,
   PlannerColumnData,
   PlannerData,
@@ -36,6 +41,16 @@ interface PlannerMealTemplate {
   date_anchor: DateAnchor;
 }
 
+interface FixtureLeftoverDish {
+  id: string;
+  user_id: string;
+  recipe_id: string;
+  status: LeftoverDishStatus;
+  cooked_at: string;
+  eaten_at: string | null;
+  auto_hide_at: string | null;
+}
+
 interface QaFixtureState {
   isLiked: boolean;
   likeCount: number;
@@ -46,6 +61,7 @@ interface QaFixtureState {
   plannerColumns: PlannerColumnData[];
   plannerMealTemplates: PlannerMealTemplate[];
   createdMeals: MealCreateData[];
+  leftoverDishes: FixtureLeftoverDish[];
 }
 
 const globalFixtureStoreKey = "__homecookQaFixtureState";
@@ -104,6 +120,53 @@ function buildInitialFixtureState(): QaFixtureState {
     plannerColumns: fixtureData.planner.columns.map(toPlannerColumn),
     plannerMealTemplates: fixtureData.planner.meals.map(toPlannerMealTemplate),
     createdMeals: [],
+    leftoverDishes: [
+      {
+        id: "550e8400-e29b-41d4-a716-446655440201",
+        user_id: fixtureData.ids.mainFixtureUserId,
+        recipe_id: MOCK_RECIPE_ID,
+        status: "leftover",
+        cooked_at: "2026-04-28T10:00:00.000Z",
+        eaten_at: null,
+        auto_hide_at: null,
+      },
+      {
+        id: "550e8400-e29b-41d4-a716-446655440204",
+        user_id: fixtureData.ids.mainFixtureUserId,
+        recipe_id: MOCK_RECIPE_ID,
+        status: "leftover",
+        cooked_at: "2026-04-27T10:00:00.000Z",
+        eaten_at: null,
+        auto_hide_at: null,
+      },
+      {
+        id: "550e8400-e29b-41d4-a716-446655440203",
+        user_id: fixtureData.ids.mainFixtureUserId,
+        recipe_id: MOCK_RECIPE_ID,
+        status: "eaten",
+        cooked_at: "2026-04-20T10:00:00.000Z",
+        eaten_at: "2026-04-28T12:00:00.000Z",
+        auto_hide_at: "2026-05-28T12:00:00.000Z",
+      },
+      {
+        id: "550e8400-e29b-41d4-a716-446655440205",
+        user_id: fixtureData.ids.mainFixtureUserId,
+        recipe_id: MOCK_RECIPE_ID,
+        status: "eaten",
+        cooked_at: "2026-02-28T10:00:00.000Z",
+        eaten_at: "2026-03-01T12:00:00.000Z",
+        auto_hide_at: "2026-03-31T12:00:00.000Z",
+      },
+      {
+        id: "550e8400-e29b-41d4-a716-446655440202",
+        user_id: fixtureData.ids.otherFixtureUserId,
+        recipe_id: MOCK_RECIPE_ID,
+        status: "leftover",
+        cooked_at: "2026-04-28T09:00:00.000Z",
+        eaten_at: null,
+        auto_hide_at: null,
+      },
+    ],
   };
 }
 
@@ -448,6 +511,150 @@ export function getQaFixturePlannerData(startDate: string, endDate: string) {
   } satisfies PlannerData;
 }
 
+function toLeftoverMutationData(row: FixtureLeftoverDish): LeftoverMutationData {
+  return {
+    id: row.id,
+    status: row.status,
+    eaten_at: row.eaten_at,
+    auto_hide_at: row.auto_hide_at,
+  };
+}
+
+function addDaysIso(value: string, days: number) {
+  const date = new Date(value);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString();
+}
+
+function updateQaFixtureLeftover(
+  leftoverDishId: string,
+  updater: (leftover: FixtureLeftoverDish) => FixtureLeftoverDish,
+) {
+  const state = getQaFixtureState();
+  const current = state.leftoverDishes.find((leftover) => leftover.id === leftoverDishId);
+
+  if (!current) {
+    return null;
+  }
+
+  const updated = updater(current);
+  state.leftoverDishes = state.leftoverDishes.map((leftover) =>
+    leftover.id === leftoverDishId ? updated : leftover,
+  );
+  return updated;
+}
+
+export function getQaFixtureLeftovers(status: LeftoverDishStatus) {
+  const state = getQaFixtureState();
+  const now = new Date().toISOString();
+
+  const items = state.leftoverDishes
+    .filter((leftover) => leftover.user_id === QA_FIXTURE_MAIN_USER_ID)
+    .filter((leftover) => leftover.status === status)
+    .filter((leftover) => status !== "eaten" || (leftover.auto_hide_at ?? "") > now)
+    .sort((a, b) => {
+      const left = status === "eaten" ? (a.eaten_at ?? "") : a.cooked_at;
+      const right = status === "eaten" ? (b.eaten_at ?? "") : b.cooked_at;
+      return right.localeCompare(left) || b.id.localeCompare(a.id);
+    })
+    .map((leftover) => ({
+      id: leftover.id,
+      recipe_id: leftover.recipe_id,
+      recipe_title: fixtureData.recipe.title,
+      recipe_thumbnail_url: fixtureData.recipe.thumbnailUrl,
+      status: leftover.status,
+      cooked_at: leftover.cooked_at,
+      eaten_at: leftover.eaten_at,
+    }));
+
+  return { items } satisfies LeftoverListData;
+}
+
+export function eatQaFixtureLeftover(leftoverDishId: string) {
+  const state = getQaFixtureState();
+  const current = state.leftoverDishes.find((leftover) => leftover.id === leftoverDishId);
+
+  if (!current) {
+    return {
+      ok: false as const,
+      code: "RESOURCE_NOT_FOUND",
+      message: "남은요리를 찾을 수 없어요.",
+      status: 404,
+    };
+  }
+
+  if (current.user_id !== QA_FIXTURE_MAIN_USER_ID) {
+    return {
+      ok: false as const,
+      code: "FORBIDDEN",
+      message: "내 남은요리만 수정할 수 있어요.",
+      status: 403,
+    };
+  }
+
+  if (current.status === "eaten") {
+    return {
+      ok: true as const,
+      data: toLeftoverMutationData(current),
+    };
+  }
+
+  const eatenAt = new Date().toISOString();
+  const updated = updateQaFixtureLeftover(leftoverDishId, (leftover) => ({
+    ...leftover,
+    status: "eaten",
+    eaten_at: eatenAt,
+    auto_hide_at: addDaysIso(eatenAt, 30),
+  }))!;
+
+  return {
+    ok: true as const,
+    data: toLeftoverMutationData(updated),
+  };
+}
+
+export function uneatQaFixtureLeftover(leftoverDishId: string) {
+  const state = getQaFixtureState();
+  const current = state.leftoverDishes.find((leftover) => leftover.id === leftoverDishId);
+
+  if (!current) {
+    return {
+      ok: false as const,
+      code: "RESOURCE_NOT_FOUND",
+      message: "남은요리를 찾을 수 없어요.",
+      status: 404,
+    };
+  }
+
+  if (current.user_id !== QA_FIXTURE_MAIN_USER_ID) {
+    return {
+      ok: false as const,
+      code: "FORBIDDEN",
+      message: "내 남은요리만 수정할 수 있어요.",
+      status: 403,
+    };
+  }
+
+  if (current.status === "leftover") {
+    return {
+      ok: true as const,
+      data: toLeftoverMutationData(current),
+    };
+  }
+
+  const updated = updateQaFixtureLeftover(leftoverDishId, (leftover) => ({
+    ...leftover,
+    status: "leftover",
+    eaten_at: null,
+    auto_hide_at: null,
+  }))!;
+
+  return {
+    ok: true as const,
+    data: toLeftoverMutationData(updated),
+  };
+}
+
 export function createQaFixtureMeal({
   planDate,
   columnId,
@@ -469,6 +676,30 @@ export function createQaFixtureMeal({
       message: "끼니 컬럼을 찾을 수 없어요.",
       status: 404,
     };
+  }
+
+  if (leftoverDishId) {
+    const selectedLeftover = state.leftoverDishes.find(
+      (leftover) => leftover.id === leftoverDishId,
+    );
+
+    if (!selectedLeftover) {
+      return {
+        ok: false as const,
+        code: "RESOURCE_NOT_FOUND",
+        message: "남은요리를 찾을 수 없어요.",
+        status: 404,
+      };
+    }
+
+    if (selectedLeftover.user_id !== QA_FIXTURE_MAIN_USER_ID) {
+      return {
+        ok: false as const,
+        code: "FORBIDDEN",
+        message: "내 남은요리만 플래너에 추가할 수 있어요.",
+        status: 403,
+      };
+    }
   }
 
   const meal: MealCreateData = {

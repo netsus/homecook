@@ -14,21 +14,21 @@
 - [ ] ATE_LIST 화면에서 다먹은 항목이 최신순으로 표시된다 (레시피명, 다먹은 날짜) <!-- omo:id=accept-happy-ate-list;stage=4;scope=frontend;review=5,6 -->
 - [ ] ATE_LIST에서 [덜먹음] 클릭 시 해당 항목이 leftover 상태로 복귀하고 LEFTOVERS 리스트에 다시 나타난다 <!-- omo:id=accept-happy-uneat;stage=4;scope=frontend;review=5,6 -->
 - [ ] [플래너에 추가] 클릭 시 날짜/끼니 선택 + 인분 입력 → Meal 생성 성공 (is_leftover=true, leftover_dish_id 포함) <!-- omo:id=accept-happy-planner-add;stage=4;scope=frontend;review=5,6 -->
-- [ ] GET /leftovers 응답이 공식 API §10-1 형식과 일치한다 <!-- omo:id=accept-happy-get-response;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /leftovers/{id}/eat 응답이 공식 API §10-2 형식과 일치한다 <!-- omo:id=accept-happy-eat-response;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /leftovers/{id}/uneat 응답이 공식 API §10-3 형식과 일치한다 <!-- omo:id=accept-happy-uneat-response;stage=2;scope=backend;review=3,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] GET /leftovers 응답이 공식 API §10-1 형식과 일치한다 <!-- omo:id=accept-happy-get-response;stage=2;scope=backend;review=3,6 -->
+- [x] POST /leftovers/{id}/eat 응답이 공식 API §10-2 형식과 일치한다 <!-- omo:id=accept-happy-eat-response;stage=2;scope=backend;review=3,6 -->
+- [x] POST /leftovers/{id}/uneat 응답이 공식 API §10-3 형식과 일치한다 <!-- omo:id=accept-happy-uneat-response;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
-- [ ] leftover_dishes.status 전이가 공식 문서와 일치한다 (leftover ↔ eaten) <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
-- [ ] eat 시 eaten_at=now(), auto_hide_at=eaten_at+30d가 설정된다 <!-- omo:id=accept-state-eat-fields;stage=2;scope=backend;review=3,6 -->
-- [ ] uneat 시 eaten_at=NULL, auto_hide_at=NULL이 설정된다 <!-- omo:id=accept-state-uneat-fields;stage=2;scope=backend;review=3,6 -->
-- [ ] DB CHECK 제약을 위반하는 상태 전이가 없다 <!-- omo:id=accept-state-check-constraint;stage=2;scope=backend;review=3,6 -->
-- [ ] eat은 이미 eaten이면 200 + 동일 결과 반환 (멱등) <!-- omo:id=accept-idempotency-eat;stage=2;scope=backend;review=3,6 -->
-- [ ] uneat은 이미 leftover이면 200 + 동일 결과 반환 (멱등) <!-- omo:id=accept-idempotency-uneat;stage=2;scope=backend;review=3,6 -->
-- [ ] 남은요리 → 플래너 추가 시 meals.is_leftover=true, meals.leftover_dish_id가 올바르게 설정된다 <!-- omo:id=accept-state-planner-add-fields;stage=2;scope=backend;review=3,6 -->
-- [ ] GET /leftovers?status=eaten에서 auto_hide_at 만료 항목이 제외된다 <!-- omo:id=accept-state-auto-hide;stage=2;scope=backend;review=3,6 -->
+- [x] leftover_dishes.status 전이가 공식 문서와 일치한다 (leftover ↔ eaten) <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
+- [x] eat 시 eaten_at=now(), auto_hide_at=eaten_at+30d가 설정된다 <!-- omo:id=accept-state-eat-fields;stage=2;scope=backend;review=3,6 -->
+- [x] uneat 시 eaten_at=NULL, auto_hide_at=NULL이 설정된다 <!-- omo:id=accept-state-uneat-fields;stage=2;scope=backend;review=3,6 -->
+- [x] DB CHECK 제약을 위반하는 상태 전이가 없다 <!-- omo:id=accept-state-check-constraint;stage=2;scope=backend;review=3,6 -->
+- [x] eat은 이미 eaten이면 200 + 동일 결과 반환 (멱등) <!-- omo:id=accept-idempotency-eat;stage=2;scope=backend;review=3,6 -->
+- [x] uneat은 이미 leftover이면 200 + 동일 결과 반환 (멱등) <!-- omo:id=accept-idempotency-uneat;stage=2;scope=backend;review=3,6 -->
+- [x] 남은요리 → 플래너 추가 시 meals.is_leftover=true, meals.leftover_dish_id가 올바르게 설정된다 <!-- omo:id=accept-state-planner-add-fields;stage=2;scope=backend;review=3,6 -->
+- [x] GET /leftovers?status=eaten에서 auto_hide_at 만료 항목이 제외된다 <!-- omo:id=accept-state-auto-hide;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 - [ ] loading 상태가 있다 (LEFTOVERS/ATE_LIST 데이터 로딩 중) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
@@ -36,19 +36,19 @@
 - [ ] error 상태가 있다 (API 오류 시 에러 메시지 + 재시도) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
 - [ ] unauthorized 처리 흐름이 있다 (비로그인 → 로그인 유도) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
 - [ ] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
-- [ ] 타인 소유 leftover에 eat/uneat 시 403 반환 <!-- omo:id=accept-error-403;stage=2;scope=backend;review=3,6 -->
-- [ ] 미존재 leftover_id에 eat/uneat 시 404 반환 <!-- omo:id=accept-error-404;stage=2;scope=backend;review=3,6 -->
+- [x] 타인 소유 leftover에 eat/uneat 시 403 반환 <!-- omo:id=accept-error-403;stage=2;scope=backend;review=3,6 -->
+- [x] 미존재 leftover_id에 eat/uneat 시 404 반환 <!-- omo:id=accept-error-404;stage=2;scope=backend;review=3,6 -->
 
 ## Data Integrity
-- [ ] eat/uneat에서 user_id = current_user.id만 처리된다 (소유자 검증) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] 타인 소유 leftover에 대한 상태 전이가 거부된다 <!-- omo:id=accept-owner-guard-reject;stage=2;scope=backend;review=3,6 -->
-- [ ] 남은요리 → 플래너 추가 시 leftover_dish_id 소유자 검증이 된다 <!-- omo:id=accept-planner-add-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] leftover_dishes.recipe_id가 recipes 테이블에 실재하는 레시피를 참조한다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
+- [x] eat/uneat에서 user_id = current_user.id만 처리된다 (소유자 검증) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] 타인 소유 leftover에 대한 상태 전이가 거부된다 <!-- omo:id=accept-owner-guard-reject;stage=2;scope=backend;review=3,6 -->
+- [x] 남은요리 → 플래너 추가 시 leftover_dish_id 소유자 검증이 된다 <!-- omo:id=accept-planner-add-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] leftover_dishes.recipe_id가 recipes 테이블에 실재하는 레시피를 참조한다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
-- [ ] fixture / mock에서 leftover_dishes (leftover, eaten, 만료 eaten) + recipes + meal_plan_columns가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에서 leftover_dishes, meals, recipes, meal_plan_columns 테이블이 존재한다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] leftover_dishes는 요리 완료(15a/15b) flow에서 생성되는 owning flow가 확인되었다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
+- [x] fixture / mock에서 leftover_dishes (leftover, eaten, 만료 eaten) + recipes + meal_plan_columns가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에서 leftover_dishes, meals, recipes, meal_plan_columns 테이블이 존재한다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] leftover_dishes는 요리 완료(15a/15b) flow에서 생성되는 owning flow가 확인되었다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 - verifier: agent or human
@@ -65,11 +65,11 @@
 ## Automation Split
 
 ### Vitest
-- [ ] GET /leftovers 핸들러: status=leftover 조회, status=eaten 조회, 30일 초과 eaten 필터링, 정렬 순서, 401 에러 <!-- omo:id=accept-vitest-get-leftovers;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /leftovers/{id}/eat 핸들러: 정상 전이, 멱등성, 소유자 검증(403), 미존재(404), 비로그인(401) <!-- omo:id=accept-vitest-eat;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /leftovers/{id}/uneat 핸들러: 정상 전이, 멱등성, 소유자 검증(403), 미존재(404), 비로그인(401) <!-- omo:id=accept-vitest-uneat;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /meals (leftover_dish_id): is_leftover=true 자동 세팅, leftover 소유자 검증 <!-- omo:id=accept-vitest-planner-add-leftover;stage=2;scope=backend;review=3,6 -->
-- [ ] DB CHECK 제약 일치 검증 (eaten → eaten_at+auto_hide_at 동시 세팅, leftover → eaten_at NULL) <!-- omo:id=accept-vitest-check-constraint;stage=2;scope=backend;review=3,6 -->
+- [x] GET /leftovers 핸들러: status=leftover 조회, status=eaten 조회, 30일 초과 eaten 필터링, 정렬 순서, 401 에러 <!-- omo:id=accept-vitest-get-leftovers;stage=2;scope=backend;review=3,6 -->
+- [x] POST /leftovers/{id}/eat 핸들러: 정상 전이, 멱등성, 소유자 검증(403), 미존재(404), 비로그인(401) <!-- omo:id=accept-vitest-eat;stage=2;scope=backend;review=3,6 -->
+- [x] POST /leftovers/{id}/uneat 핸들러: 정상 전이, 멱등성, 소유자 검증(403), 미존재(404), 비로그인(401) <!-- omo:id=accept-vitest-uneat;stage=2;scope=backend;review=3,6 -->
+- [x] POST /meals (leftover_dish_id): is_leftover=true 자동 세팅, leftover 소유자 검증 <!-- omo:id=accept-vitest-planner-add-leftover;stage=2;scope=backend;review=3,6 -->
+- [x] DB CHECK 제약 일치 검증 (eaten → eaten_at+auto_hide_at 동시 세팅, leftover → eaten_at NULL) <!-- omo:id=accept-vitest-check-constraint;stage=2;scope=backend;review=3,6 -->
 - [ ] 프론트 LEFTOVERS/ATE_LIST 상태 전이 로직 (목록 로딩, eat/uneat 후 리스트 갱신) <!-- omo:id=accept-vitest-frontend-state;stage=4;scope=frontend;review=5,6 -->
 - [ ] 프론트 empty state 렌더링 검증 <!-- omo:id=accept-vitest-frontend-empty;stage=4;scope=frontend;review=5,6 -->
 - [ ] 프론트 플래너 추가 flow 검증 (PlannerAddSheet 연동, leftover_dish_id 전달) <!-- omo:id=accept-vitest-frontend-planner-add;stage=4;scope=frontend;review=5,6 -->
