@@ -26,7 +26,12 @@ export function AppShell({
         {showSharedHeader ? <AppHeader brandAsPageTitle={brandAsPageTitle} /> : null}
         <main>{children}</main>
       </div>
-      {showSharedBottomTabs ? <BottomTabs currentTab={currentTab} /> : null}
+      {showSharedBottomTabs ? (
+        <BottomTabs
+          compactOnNarrow={currentTab === "mypage"}
+          currentTab={currentTab}
+        />
+      ) : null}
     </div>
   );
 }
