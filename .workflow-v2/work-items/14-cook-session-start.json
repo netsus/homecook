@@ -69,7 +69,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -78,7 +78,7 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs created on docs/14-cook-session-start branch. Awaiting internal 1.5 docs gate review before Stage 2.",
+  "notes": "Stage 2 backend implementation in progress on feature/be-14-cook-session-start. Targeted backend Vitest covers ready grouping, session creation, owner/status/recipe guards, cancel idempotency, completed cancel conflict, and cook-mode data read.",
   "out_of_scope": [
     "COOK_MODE 화면 구현 — 15a/15b에서 닫음",
     "요리 완료 처리 (POST /cooking/sessions/{id}/complete) — 15a",
