@@ -171,20 +171,23 @@
 ## Design Authority
 - UI risk: `new-screen` (LEFTOVERS와 ATE_LIST는 신규 화면)
 - Anchor screen dependency: `PLANNER_WEEK` (상단 [남은요리] CTA에서 LEFTOVERS로 진입)
-- Visual artifact: Stage 4 구현 후 screenshot evidence 제공 예정
-  - `ui/designs/evidence/16-leftovers/LEFTOVERS-mobile.png` (예정)
-  - `ui/designs/evidence/16-leftovers/LEFTOVERS-mobile-narrow.png` (예정)
-  - `ui/designs/evidence/16-leftovers/ATE_LIST-mobile.png` (예정)
-  - `ui/designs/evidence/16-leftovers/ATE_LIST-mobile-narrow.png` (예정)
-- Authority status: `required`
+- Visual artifact: Stage 4 authority_precheck screenshot evidence
+  - `ui/designs/evidence/16-leftovers/LEFTOVERS-mobile.png`
+  - `ui/designs/evidence/16-leftovers/LEFTOVERS-mobile-narrow.png`
+  - `ui/designs/evidence/16-leftovers/ATE_LIST-mobile.png`
+  - `ui/designs/evidence/16-leftovers/ATE_LIST-mobile-narrow.png`
+- Authority reports:
+  - `ui/designs/authority/LEFTOVERS-authority.md`
+  - `ui/designs/authority/ATE_LIST-authority.md`
+- Authority status: `reviewed`
 - h8 matrix reference: `LEFTOVERS`, `ATE_LIST` initial class = `prototype-derived design` (h8 §Future-Screen Classification Matrix: "no parity promotion in PR1")
 - Notes: LEFTOVERS와 ATE_LIST는 신규 화면이므로 Stage 4 후 authority review 필수. prototype-derived design이므로 Baemin vocabulary/material을 사용하되 parity score 대상은 아님. PLANNER_WEEK 상단 [남은요리] CTA 연결은 기존 toolbar의 라우트 변경이므로 anchor-extension에 해당하지 않음 (CTA 자체는 이미 화면정의서에 정의됨).
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 > Design Status 전이: `temporary` (Stage 1 기본값)
@@ -261,14 +264,14 @@
 - [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 (GET /leftovers, POST eat, POST uneat) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 (LEFTOVERS 화면, ATE_LIST 화면, PLANNER_WEEK [남은요리] CTA) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 남은요리 → 플래너 추가 UI (PlannerAddSheet 재사용, leftover_dish_id 전달) <!-- omo:id=delivery-planner-add-leftover;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 (LEFTOVERS 화면, ATE_LIST 화면, PLANNER_WEEK [남은요리] CTA) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] 남은요리 → 플래너 추가 UI (PlannerAddSheet 재사용, leftover_dish_id 전달) <!-- omo:id=delivery-planner-add-leftover;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 
 ## Stage 2 Backend Evidence
 
@@ -278,3 +281,63 @@
 - Backend gate: `pnpm verify:backend` passed on 2026-04-29T12:41:11Z (lint/typecheck/product Vitest 428 tests/build/security Playwright 9 tests).
 - Real smoke: `pnpm local:reset:demo` passed, `pnpm dev:local-supabase -p 3016` started successfully, `GET /api/v1/leftovers` returned 401 envelope, and local DB schema check confirmed `leftover_dishes`, `meals`, `recipes`, `meal_plan_columns`, plus `leftover_dishes_status_time_integrity`.
 - QA fixture baseline now includes leftover, eaten, expired eaten, and other-user leftover rows for Stage 4 Playwright fixture flows.
+
+## Stage 4 Frontend Evidence
+
+- 2026-04-29 Claude implemented LEFTOVERS and ATE_LIST screens on `feature/fe-16-leftovers`.
+- New files:
+  - `lib/api/leftovers.ts` — API client (fetchLeftovers, eatLeftover, uneatLeftover)
+  - `components/leftovers/leftovers-screen.tsx` — LEFTOVERS screen (list, eat, planner-add)
+  - `components/leftovers/ate-list-screen.tsx` — ATE_LIST screen (eaten list, uneat)
+  - `app/leftovers/page.tsx` — `/leftovers` route
+  - `app/leftovers/ate/page.tsx` — `/leftovers/ate` route
+- Modified files:
+  - `components/planner/planner-week-screen.tsx` — [남은요리] CTA: disabled button → Link to `/leftovers`
+  - `tests/planner-week-screen.test.tsx` — updated for Link assertion
+  - `tests/e2e/slice-05-planner-week-core.spec.ts` — updated for Link assertion
+- Frontend states: loading (skeleton), empty (안내 메시지), error (재시도), unauthorized (login gate + SocialLoginButtons + return-to-action)
+- PlannerAddSheet reuse: leftover_dish_id passed through createMeal()
+- Shared types: `types/leftover.ts` used by both backend routes and frontend API client
+- Vitest: `tests/leftovers.frontend.test.tsx` — 21 tests (12 LeftoversScreen + 9 AteListScreen)
+- Playwright: `tests/e2e/slice-16-leftovers.spec.ts` — 11 tests (6 LEFTOVERS + 5 ATE_LIST) × 3 devices
+- All gates passed: lint, typecheck, product Vitest, build, E2E smoke, E2E a11y, E2E security, lighthouse
+- Design Status at Stage 4 closeout: `pending-review` (prototype-derived, authority=required). Final Stage 5 + authority gate status is `confirmed`.
+
+## Stage 4 Authority Precheck Evidence
+
+- 2026-04-29 Codex captured mobile default and narrow screenshot evidence for LEFTOVERS and ATE_LIST using QA fixture route interception.
+- Evidence:
+  - `ui/designs/evidence/16-leftovers/LEFTOVERS-mobile.png`
+  - `ui/designs/evidence/16-leftovers/LEFTOVERS-mobile-narrow.png`
+  - `ui/designs/evidence/16-leftovers/ATE_LIST-mobile.png`
+  - `ui/designs/evidence/16-leftovers/ATE_LIST-mobile-narrow.png`
+- Authority reports:
+  - `ui/designs/authority/LEFTOVERS-authority.md` — verdict `pass`, blocker 0, major 0, minor 1
+  - `ui/designs/authority/ATE_LIST-authority.md` — verdict `pass`, blocker 0, major 0, minor 0
+
+## Stage 5 Design Review Evidence
+
+- 2026-04-29 Codex completed Stage 5 public design review after Claude repaired the LEFTOVERS CTA hierarchy in commit `2d5ce5d`.
+- Review artifact: `ui/designs/evidence/16-leftovers/stage5-design-review.md`
+- Result: `approve`, blocker 0, major 0, minor 1 accepted as non-blocking.
+- Claude `final_authority_gate` passed on 2026-04-29; Design Status is now `confirmed`.
+
+## Final Authority Gate Evidence
+
+- 2026-04-29 Claude reviewed the Stage 5 artifacts and evidence images in `final_authority_gate`.
+- Artifact: `.omx/artifacts/claude-delegate-16-leftovers-final-authority-gate-response-20260429T144800Z.json`
+- Verdict: `pass`
+- Blocker: 0
+- Major: 0
+- Decision: Design Status `confirmed` allowed.
+
+## Stage 6 Frontend PR Review Evidence
+
+- 2026-04-29 Codex completed Stage 6 frontend PR review for PR #300.
+- Reviewed scope: LEFTOVERS, ATE_LIST, PLANNER_WEEK [남은요리] CTA, frontend API client, shared leftover types, Vitest coverage, Playwright coverage, authority reports, workpack/acceptance closeout.
+- Result: approve. Blocker 0, major 0.
+- Confirmed: 5 required UI states, backend contract consumption, eat/uneat and planner-add state transitions, login gate return-to-action, Manual Only-only residual checklist, authority final verdict `pass`, Design Status `confirmed`.
+- Exploratory QA: `.artifacts/qa/16-leftovers/2026-04-29T14-58-stage6/exploratory-report.json` -> desktop/mobile/small viewport coverage, findings 0.
+- QA eval: `.artifacts/qa/16-leftovers/2026-04-29T14-58-stage6/eval-result.json` -> score 100, pass.
+- Local verification: `pnpm exec vitest run tests/leftovers.frontend.test.tsx`, `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3116 PLAYWRIGHT_REUSE_EXISTING_SERVER=1 pnpm exec playwright test tests/e2e/slice-16-leftovers.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small`, `pnpm qa:eval -- --checklist .artifacts/qa/16-leftovers/2026-04-29T14-58-stage6/exploratory-checklist.json --report .artifacts/qa/16-leftovers/2026-04-29T14-58-stage6/exploratory-report.json --fail-under 85`, `PR_IS_DRAFT=false pnpm validate:authority-evidence-presence`, `pnpm validate:workpack -- --slice 16-leftovers`, `pnpm validate:workflow-v2`, `BRANCH_NAME=feature/fe-16-leftovers BASE_REF=master node scripts/validate-omo-bookkeeping.mjs`, and `git diff --check` passed before internal 6.5 projection.
+- Internal 6.5 projection: roadmap, `.workflow-v2/status.json`, and `.workflow-v2/work-items/16-leftovers.json#closeout` aligned to `merged / dual_approved / passed`; final current-head GitHub checks remain the merge gate.

@@ -239,13 +239,13 @@ describe("planner week screen", () => {
     const toolbar = screen.getByRole("group", { name: "플래너 보조 작업" });
     const shoppingLink = within(toolbar).getByRole("link", { name: "장보기" }) as HTMLAnchorElement;
     const cookingLink = within(toolbar).getByRole("link", { name: "요리하기" }) as HTMLAnchorElement;
-    const leftoverButton = within(toolbar).getByRole("button", { name: "남은요리" }) as HTMLButtonElement;
+    const leftoverLink = within(toolbar).getByRole("link", { name: "남은요리" }) as HTMLAnchorElement;
 
     expect(toolbar.className).toContain("grid-cols-3");
     expect(toolbar.className).toContain("rounded-[var(--radius-lg)]");
     expect(shoppingLink.getAttribute("href")).toBe("/shopping/flow");
     expect(cookingLink.getAttribute("href")).toBe("/cooking/ready");
-    expect(leftoverButton.disabled).toBe(true);
+    expect(leftoverLink.getAttribute("href")).toBe("/leftovers");
   });
 
   it("shows a direct link back to an existing shopping list", async () => {

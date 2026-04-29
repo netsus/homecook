@@ -72,11 +72,86 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending"
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": "docs/workpacks/16-leftovers/README.md#stage-6-frontend-pr-review-evidence",
+    "auto_merge_eligible": true,
+    "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs merged via PR #298. Stage 2 backend implementation is in progress on feature/be-16-leftovers: leftovers API routes, POST /meals leftover owner guard, shared types, and QA fixture baseline added. Targeted backend tests, pnpm verify:backend, and local Supabase real smoke passed on 2026-04-29.",
+  "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs merged via PR #298; Stage 2/3 backend merged via PR #299; Stage 4 frontend was delegated to Claude resume session d21d2013-cc42-4b7f-9a8a-1af45f3f7363; Stage 5/6 and closeout were completed by Codex with Claude final_authority_gate approval. Local targeted frontend, authority, workpack, workflow-v2, bookkeeping, and diff checks passed. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:3|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:backend,pnpm verify:frontend,GitHub PR/CI,PR #300 body,ui/designs/authority/LEFTOVERS-authority.md,ui/designs/authority/ATE_LIST-authority.md last_recovery_at=2026-04-29T14:56:02Z",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/LEFTOVERS-authority.md",
+        "ui/designs/authority/ATE_LIST-authority.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm exec vitest run tests/leftovers.frontend.test.tsx",
+        "pnpm exec playwright test tests/e2e/slice-16-leftovers.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small",
+        "pnpm qa:eval -- --checklist .artifacts/qa/16-leftovers/2026-04-29T14-58-stage6/exploratory-checklist.json --report .artifacts/qa/16-leftovers/2026-04-29T14-58-stage6/exploratory-report.json --fail-under 85",
+        ".artifacts/qa/16-leftovers/2026-04-29T14-58-stage6/exploratory-report.json",
+        ".artifacts/qa/16-leftovers/2026-04-29T14-58-stage6/eval-result.json",
+        "PR_IS_DRAFT=false pnpm validate:exploratory-qa-evidence",
+        "PR_IS_DRAFT=false pnpm validate:authority-evidence-presence",
+        "pnpm validate:workpack -- --slice 16-leftovers",
+        "pnpm validate:workflow-v2",
+        "BRANCH_NAME=feature/fe-16-leftovers BASE_REF=master node scripts/validate-omo-bookkeeping.mjs",
+        "git diff --check",
+        ".omx/artifacts/claude-delegate-16-leftovers-final-authority-gate-response-20260429T144800Z.json"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "approval_state": "dual_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-04-29T14:56:02Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 3,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage5_cta_hierarchy_repair",
+      "evidence_sources": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "GitHub PR/CI",
+        "PR #300 body",
+        "ui/designs/authority/LEFTOVERS-authority.md",
+        "ui/designs/authority/ATE_LIST-authority.md",
+        ".omx/artifacts/claude-delegate-16-leftovers-final-authority-gate-response-20260429T144800Z.json"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-04-29T14:56:02Z",
+      "status_synced_at": "2026-04-29T14:56:02Z",
+      "pr_body_synced_at": "pending-pr-body-update"
+    }
+  },
   "out_of_scope": [
     "남은요리 자동 생성 (요리 완료 시) — 15a/15b에서 구현 완료",
     "COOK_MODE, COOK_READY_LIST — 14/15a/15b에서 구현 완료",

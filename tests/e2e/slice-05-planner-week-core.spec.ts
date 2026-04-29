@@ -155,7 +155,7 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByLabel("요리 완료")).toBeVisible();
     await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveAttribute("href", "/shopping/flow");
     await expect(page.getByRole("link", { name: "요리하기" })).toHaveAttribute("href", "/cooking/ready");
-    await expect(page.getByRole("button", { name: "남은요리" })).toBeDisabled();
+    await expect(page.getByRole("link", { name: "남은요리" })).toHaveAttribute("href", "/leftovers");
     await expect(page.getByRole("button", { name: "컬럼 추가" })).toHaveCount(0);
 
     const pageHasHorizontalOverflow = await page.evaluate(() => {
@@ -197,7 +197,7 @@ test.describe("Slice 05 planner week core", () => {
 
     await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveAttribute("href", "/shopping/flow");
     await expect(page.getByRole("link", { name: "요리하기" })).toHaveAttribute("href", "/cooking/ready");
-    await expect(page.getByRole("button", { name: "남은요리" })).toBeDisabled();
+    await expect(page.getByRole("link", { name: "남은요리" })).toHaveAttribute("href", "/leftovers");
   });
 
   test("guest user sees unauthorized state on planner route", async ({ page }) => {
