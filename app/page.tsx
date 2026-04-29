@@ -3,7 +3,11 @@ import { AppShell } from "@/components/layout/app-shell";
 
 export default function Home() {
   return (
-    <AppShell currentTab="home">
+    <AppShell
+      bottomTabsMode="hidden"
+      currentTab="home"
+      headerMode="hidden"
+    >
       <HomeScreen />
     </AppShell>
   );

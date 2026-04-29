@@ -19,21 +19,21 @@ test.describe("Slice 01 basic flow", () => {
   }) => {
     await page.goto("/");
 
-    await expect(page.getByPlaceholder("레시피 제목 검색")).toBeVisible();
+    const searchInput = page.getByPlaceholder("김치볶음밥, 된장찌개...");
+    await expect(searchInput).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "이번 주 인기 레시피" }),
+      page.getByRole("heading", { name: "테마별 레시피" }),
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: /집밥 김치찌개/i }).first(),
     ).toBeVisible();
 
-    await page.getByPlaceholder("레시피 제목 검색").fill("없는 레시피");
+    await searchInput.fill("없는 레시피");
     await expect(page.getByText("다른 조합을 찾아보세요")).toBeVisible();
 
     await page.getByRole("button", { name: "검색 초기화" }).click();
-    await expect(
-      page.getByRole("link", { name: /집밥 김치찌개/i }).first(),
-    ).toBeVisible();
+    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개...")).toHaveValue("");
+    await expect(page.getByRole("link", { name: /집밥 김치찌개/i }).first()).toBeVisible();
 
     const sortButton = page.getByRole("button", { name: /정렬 기준/i });
     await sortButton.click();

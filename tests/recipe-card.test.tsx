@@ -1,14 +1,18 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { RecipeCard } from "@/components/home/recipe-card";
 import { MOCK_RECIPE_CARD } from "@/lib/mock/recipes";
 import type { RecipeCardItem } from "@/types/recipe";
 
 describe("recipe card", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("renders title, meta row, and tag pills in prototype parity layout", () => {
     render(<RecipeCard recipe={MOCK_RECIPE_CARD} />);
 
@@ -22,6 +26,7 @@ describe("recipe card", () => {
 
     // Meta row contains servings info
     const cardScope = within(card as HTMLElement);
+    expect(cardScope.getByTestId("recipe-card-bookmark")).toBeTruthy();
     expect(
       cardScope.getByText(
         new RegExp(`기본 ${MOCK_RECIPE_CARD.base_servings}인`),
@@ -30,6 +35,21 @@ describe("recipe card", () => {
 
     // Tags are rendered as pills
     expect(cardScope.getByText(MOCK_RECIPE_CARD.tags[0])).toBeTruthy();
+  });
+
+  it("renders the popular badge when the fallback view model crosses the threshold", () => {
+    render(
+      <RecipeCard
+        recipe={{
+          ...MOCK_RECIPE_CARD,
+          save_count: 150,
+          thumbnail_url: null,
+        }}
+      />,
+    );
+
+    expect(screen.getByText("🔥 인기")).toBeTruthy();
+    expect(screen.getAllByTestId("recipe-card-bookmark")).toHaveLength(1);
   });
 
   it("renders source badges with localized Korean labels instead of raw enums", () => {

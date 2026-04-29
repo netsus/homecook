@@ -127,13 +127,13 @@ test.describe("QA accessibility smoke", () => {
     await installRecipeDetailRoutes(page);
 
     await page.goto("/");
-    await expect(page.getByPlaceholder("레시피 제목 검색")).toBeVisible();
+    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개...")).toBeVisible();
     await expectNoAxeViolations(page);
     await expectReadableTouchTarget(
-      page.getByRole("button", { name: "재료로 검색" }),
+      page.getByRole("button", { name: "재료 더보기" }),
     );
     await expectMatchingControlTypography(
-      page.getByRole("button", { name: "재료로 검색" }),
+      page.getByRole("button", { name: "재료 더보기" }),
       page.getByRole("button", { name: /정렬 기준/i }),
     );
     await expectCompactToolbarControl(
@@ -171,7 +171,7 @@ test.describe("QA accessibility smoke", () => {
     await installRecipeDetailRoutes(page);
 
     await page.goto("/");
-    await page.getByRole("button", { name: "재료로 검색" }).click();
+    await page.getByRole("button", { name: "재료 더보기" }).click();
     await expect(
       page.getByRole("dialog", { name: "재료로 검색" }),
     ).toBeVisible();
