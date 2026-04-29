@@ -70,7 +70,7 @@
 ### Playwright
 - [x] MYPAGE 진입 → 프로필 표시 → 탭 전환 → 레시피북/장보기 기록 확인 <!-- omo:id=accept-playwright-mypage-flow;stage=4;scope=frontend;review=5,6 -->
 - [x] 커스텀 레시피북 CRUD flow (생성 → 이름 변경 → 삭제) <!-- omo:id=accept-playwright-book-crud;stage=4;scope=frontend;review=5,6 -->
-- [ ] 장보기 기록 탭 → 항목 클릭 → SHOPPING_DETAIL 이동 <!-- omo:id=accept-playwright-shopping-nav;stage=4;scope=frontend;review=5,6 -->
+- [x] 장보기 기록 탭 → 항목 클릭 → SHOPPING_DETAIL 이동 <!-- omo:id=accept-playwright-shopping-nav;stage=4;scope=frontend;review=5,6 -->
 - [x] 비로그인 → 마이페이지 → 로그인 게이트 <!-- omo:id=accept-playwright-login-gate;stage=4;scope=frontend;review=5,6 -->
 - [x] empty 상태 (커스텀 레시피북 없음, 장보기 기록 없음) <!-- omo:id=accept-playwright-empty-states;stage=4;scope=frontend;review=5,6 -->
 

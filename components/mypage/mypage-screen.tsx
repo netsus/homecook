@@ -442,7 +442,11 @@ export function MypageScreen({
             src={profile.profile_image_url}
           />
         ) : (
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] text-base font-bold text-[var(--brand)]">
+          <div
+            aria-label="프로필 이니셜"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] text-base font-bold text-[var(--brand)]"
+            data-testid="profile-fallback-avatar"
+          >
             {profile?.nickname?.charAt(0) ?? "?"}
           </div>
         )}
@@ -1103,7 +1107,7 @@ function ShoppingHistoryCard({ item }: { item: ShoppingListHistoryItem }) {
     <Link
       className="block rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)] transition-colors hover:bg-[var(--surface-fill)]"
       data-testid={`shopping-card-${item.id}`}
-      href={`/shopping/${item.id}`}
+      href={`/shopping/lists/${item.id}`}
       role="listitem"
     >
       <p className="text-base font-semibold text-[var(--foreground)]">

@@ -200,6 +200,19 @@ test.describe("MYPAGE screen", () => {
     await expect(page.getByText("진행 중")).toBeVisible();
   });
 
+  test("navigates to shopping detail when clicking a shopping history item", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installMypageRoutes(page);
+    await page.goto("/mypage");
+
+    await expect(page.getByText("집밥러")).toBeVisible();
+    await page.getByRole("tab", { name: "장보기 기록" }).click();
+
+    const card = page.getByTestId("shopping-card-list-1");
+    await expect(card).toBeVisible();
+    await expect(card).toHaveAttribute("href", "/shopping/lists/list-1");
+  });
+
   test("shows empty shopping history state with planner link", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installMypageRoutes(page, { shoppingHistory: [] });
@@ -264,7 +277,9 @@ test.describe("MYPAGE screen", () => {
     await installMypageRoutes(page);
     await page.goto("/mypage");
 
-    await expect(page.getByText("집")).toBeVisible();
+    const avatar = page.getByTestId("profile-fallback-avatar");
+    await expect(avatar).toBeVisible();
+    await expect(avatar).toHaveText("집");
   });
 
   test("tab bar has correct ARIA roles", async ({ page }) => {

@@ -390,7 +390,8 @@ describe("MypageScreen", () => {
     await screen.findByText("집밥러");
 
     expect(screen.queryByRole("img")).toBeNull();
-    expect(screen.getByText("집")).toBeTruthy();
+    const avatar = screen.getByTestId("profile-fallback-avatar");
+    expect(avatar.textContent).toBe("집");
   });
 
   it("links system book cards to recipe-books detail page", async () => {
@@ -411,6 +412,6 @@ describe("MypageScreen", () => {
     await user.click(screen.getByRole("tab", { name: "장보기 기록" }));
 
     const card = await screen.findByTestId("shopping-card-list-1");
-    expect(card.getAttribute("href")).toBe("/shopping/list-1");
+    expect(card.getAttribute("href")).toBe("/shopping/lists/list-1");
   });
 });
