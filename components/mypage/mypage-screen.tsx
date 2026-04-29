@@ -429,7 +429,7 @@ export function MypageScreen({
   }
 
   return (
-    <div className="pb-24">
+    <div className="pb-32">
       {/* Profile Section */}
       <div
         className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-4"
@@ -597,7 +597,7 @@ export function MypageScreen({
 
 function MypageLoadingSkeleton() {
   return (
-    <div className="pb-24" data-testid="mypage-skeleton">
+    <div className="pb-32" data-testid="mypage-skeleton">
       {/* Profile skeleton */}
       <div className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-4">
         <Skeleton className="h-12 w-12 rounded-full" />
