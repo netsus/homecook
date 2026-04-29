@@ -16,10 +16,12 @@ RECIPE_DETAIL에서 직접 [요리하기]로 진입하는 독립 요리(standalo
 - 상태 전이:
   - `meals.status` 변경 없음 (독립 요리는 플래너 식사 상태를 건드리지 않음)
   - `cooking_sessions` 생성/변경 없음 (세션 없이 동작)
-- DB 영향: `leftover_dishes` (INSERT), `pantry_items` (DELETE), `recipes` (UPDATE cook_count), `recipes` (READ), `ingredients` (READ), `recipe_ingredients` (READ)
+- DB 영향: `leftover_dishes` (INSERT), `pantry_items` (DELETE), `recipes` (UPDATE cook_count), `recipes` (READ), `ingredients` (READ), `recipe_ingredients` (READ), `complete_standalone_cooking` RPC function (atomic mutation wrapper)
 - Schema Change:
-  - [x] 없음 (읽기 전용)
-  - [ ] 있음 → `supabase/migrations/<파일명>.sql` 생성 필요
+  - [ ] 없음
+  - [x] 있음 → `supabase/migrations/20260429103000_15b_cook_standalone_complete.sql` 생성 필요
+    - `public.complete_standalone_cooking(recipe_id, user_id, cooking_servings, consumed_ingredient_ids)` RPC function 추가
+    - table/enum/column 변경 없음. 15a migration의 `leftover_dishes` 테이블을 재사용.
 
 ## Out of Scope
 - 플래너 경유 요리 COOK_MODE — 15a에서 구현 완료
@@ -202,12 +204,14 @@ RECIPE_DETAIL에서 직접 [요리하기]로 진입하는 독립 요리(standalo
 - **seed / reset 명령**:
   - `pnpm local:reset:demo` — 전체 초기화
   - 기존 migration으로 모든 참조 테이블이 이미 생성됨 (15a migration 포함)
+  - Stage 2 migration으로 `complete_standalone_cooking` RPC function 추가
 - **bootstrap이 생성해야 하는 시스템 row**:
   - `cooking_methods` seed data (시스템 기본 조리방법, 이미 seed로 관리)
   - `ingredients` seed data (재료 마스터, 이미 seed로 관리)
   - `recipes` + `recipe_ingredients` + `recipe_steps` (demo seed에 이미 포함)
 - **blocker 조건**:
   - `leftover_dishes` 테이블 미존재 시 → 15a migration 먼저 적용 필요
+  - `complete_standalone_cooking` RPC function 미존재 시 → 15b migration 적용 필요
   - `pantry_items` 테이블 미존재 시 → 13 migration 확인 필요
   - `recipes`, `recipe_ingredients`, `ingredients`, `recipe_steps` 테이블 미존재 시 → 01 bootstrap 확인
 
@@ -244,13 +248,31 @@ RECIPE_DETAIL에서 직접 [요리하기]로 진입하는 독립 요리(standalo
 > Stage 6 merge 시점에는 In Scope인데도 남아 있는 unchecked 항목이 없어야 하며, `N/A` 또는 후속 분리는 README/PR 본문에 근거를 남긴다.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] standalone complete RPC function migration 적용 <!-- omo:id=delivery-standalone-rpc-migration;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 (독립 요리 경로 COOK_MODE + RECIPE_DETAIL CTA 연결) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+
+## Stage Evidence
+
+### Stage 2 Backend Evidence
+
+- RED first: `pnpm exec vitest run tests/cook-standalone-complete.backend.test.ts` failed on missing `GET /recipes/[id]/cook-mode`, missing `POST /cooking/standalone-complete`, and missing `20260429103000_15b_cook_standalone_complete.sql`.
+- `pnpm exec vitest run tests/cook-standalone-complete.backend.test.ts` — 10/10 pass.
+- `pnpm exec vitest run tests/cook-session-start.backend.test.ts tests/cook-planner-complete.backend.test.ts tests/cook-standalone-complete.backend.test.ts` — 28/28 pass.
+- `pnpm typecheck` — pass.
+- `pnpm lint` — pass with existing `<img>` warnings in `components/cooking/cook-ready-list-screen.tsx` and `components/planner/planner-week-screen.tsx`.
+- `pnpm validate:workpack -- --slice 15b-cook-standalone-complete` — pass.
+- `pnpm validate:workflow-v2` — pass.
+- `pnpm dlx supabase db reset` — pass, including migration `20260429103000_15b_cook_standalone_complete.sql`.
+- `psql` schema smoke — `complete_standalone_cooking(uuid, uuid, integer, uuid[])` function exists.
+- `psql` permission smoke — mismatched `auth.uid()` returns `FORBIDDEN`.
+- `psql` standalone happy-path smoke — inserts one `leftover_dishes` row, removes only the current user's recipe pantry item, keeps unrelated/current-other pantry rows, increments `recipes.cook_count` to 1, and leaves `meals` / `cooking_sessions` counts unchanged.
+- `pnpm verify:backend` — pass (lint warnings only: existing `<img>` warnings; typecheck; 46 product test files / 367 tests; build; security E2E 9 tests).

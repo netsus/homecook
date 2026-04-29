@@ -2,6 +2,7 @@ import type {
   CookingModeIngredient,
   CookingModeStep,
   CookingReadyRecipe,
+  CookingStandaloneCompleteBody,
   CookingSessionCompleteBody,
   CookingSessionCreateBody,
 } from "@/types/cooking";
@@ -74,6 +75,17 @@ export interface ParsedCookingSessionCompleteBody {
 
 export interface ParseCookingSessionCompleteBodyResult {
   data: ParsedCookingSessionCompleteBody | null;
+  fields: Array<{ field: string; reason: string }>;
+}
+
+export interface ParsedCookingStandaloneCompleteBody {
+  recipe_id: string;
+  cooking_servings: number;
+  consumed_ingredient_ids: string[];
+}
+
+export interface ParseCookingStandaloneCompleteBodyResult {
+  data: ParsedCookingStandaloneCompleteBody | null;
   fields: Array<{ field: string; reason: string }>;
 }
 
@@ -170,6 +182,63 @@ export function parseCookingSessionCompleteBody(
 
   return {
     data: {
+      consumed_ingredient_ids: consumedIngredientIds,
+    },
+    fields: [],
+  };
+}
+
+export function parseCookingStandaloneCompleteBody(
+  body: CookingStandaloneCompleteBody,
+): ParseCookingStandaloneCompleteBodyResult {
+  const fields: Array<{ field: string; reason: string }> = [];
+  const recipeId = typeof body.recipe_id === "string" ? body.recipe_id.trim() : "";
+  const cookingServings = body.cooking_servings;
+  const rawConsumedIngredientIds = body.consumed_ingredient_ids ?? [];
+
+  if (!recipeId) {
+    fields.push({ field: "recipe_id", reason: "required" });
+  } else if (!isUuid(recipeId)) {
+    fields.push({ field: "recipe_id", reason: "invalid_uuid" });
+  }
+
+  if (typeof cookingServings !== "number" || !Number.isInteger(cookingServings)) {
+    fields.push({ field: "cooking_servings", reason: "invalid_integer" });
+  } else if (cookingServings < 1) {
+    fields.push({ field: "cooking_servings", reason: "min_value" });
+  }
+
+  if (!Array.isArray(rawConsumedIngredientIds)) {
+    fields.push({ field: "consumed_ingredient_ids", reason: "invalid_array" });
+  }
+
+  const consumedIngredientIds = Array.isArray(rawConsumedIngredientIds)
+    ? [
+        ...new Set(
+          rawConsumedIngredientIds
+            .map((ingredientId) =>
+              typeof ingredientId === "string" ? ingredientId.trim() : "",
+            )
+            .filter((ingredientId) => ingredientId.length > 0),
+        ),
+      ]
+    : [];
+
+  if (consumedIngredientIds.some((ingredientId) => !isUuid(ingredientId))) {
+    fields.push({ field: "consumed_ingredient_ids", reason: "invalid_uuid" });
+  }
+
+  if (fields.length > 0 || typeof cookingServings !== "number") {
+    return {
+      data: null,
+      fields,
+    };
+  }
+
+  return {
+    data: {
+      recipe_id: recipeId,
+      cooking_servings: cookingServings,
       consumed_ingredient_ids: consumedIngredientIds,
     },
     fields: [],

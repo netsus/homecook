@@ -18,6 +18,7 @@
       "pantry-empty-consumed-no-delete",
       "recipes-cook-count-increment",
       "atomic-transaction",
+      "standalone-complete-rpc-function",
       "cook-mode-unauthenticated-access",
       "standalone-complete-authenticated-only",
       "recipe-not-found-404",
@@ -78,6 +79,7 @@
     "official-doc-conflict",
     "referenced-table-missing",
     "leftover-dishes-table-missing",
+    "standalone-complete-function-missing",
     "pantry-items-table-missing",
     "recipes-table-missing",
     "seed-data-missing"

@@ -9,24 +9,24 @@
 
 ## Happy Path
 - [ ] RECIPE_DETAIL에서 [요리하기] 클릭 시 독립 요리 COOK_MODE로 진입한다 <!-- omo:id=accept-happy-standalone-entry;stage=4;scope=frontend;review=5,6 -->
-- [ ] GET /recipes/{recipe_id}/cook-mode가 servings 기준 스케일링된 재료와 스텝을 반환한다 <!-- omo:id=accept-happy-cook-mode-data;stage=2;scope=backend;review=3,6 -->
+- [x] GET /recipes/{recipe_id}/cook-mode가 servings 기준 스케일링된 재료와 스텝을 반환한다 <!-- omo:id=accept-happy-cook-mode-data;stage=2;scope=backend;review=3,6 -->
 - [ ] 독립 COOK_MODE에서 좌측 재료 화면에 조리 인분(읽기 전용)과 재료 전체 목록이 표시된다 <!-- omo:id=accept-happy-ingredients-view;stage=4;scope=frontend;review=5,6 -->
 - [ ] 독립 COOK_MODE에서 우측 과정 화면에 스텝 카드 리스트가 조리방법 색상과 함께 표시된다 <!-- omo:id=accept-happy-steps-view;stage=4;scope=frontend;review=5,6 -->
 - [ ] 좌우 스와이프로 재료 화면 ↔ 과정 화면 전환이 된다 <!-- omo:id=accept-happy-swipe-navigation;stage=4;scope=frontend;review=5,6 -->
 - [ ] [요리 완료] 클릭 시 소진 재료 체크리스트 팝업이 표시된다 (기본 체크 해제) <!-- omo:id=accept-happy-consumed-popup;stage=4;scope=frontend;review=5,6 -->
 - [ ] 소진 재료 확인 후 독립 요리가 완료되고 RECIPE_DETAIL로 복귀한다 <!-- omo:id=accept-happy-complete-and-return;stage=4;scope=frontend;review=5,6 -->
-- [ ] POST /cooking/standalone-complete 응답에 leftover_dish_id, pantry_removed, cook_count가 포함된다 <!-- omo:id=accept-happy-complete-response;stage=2;scope=backend;review=3,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] POST /cooking/standalone-complete 응답에 leftover_dish_id, pantry_removed, cook_count가 포함된다 <!-- omo:id=accept-happy-complete-response;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
-- [ ] 독립 요리 완료 시 leftover_dishes가 INSERT된다 (status='leftover', cooked_at=now()) <!-- omo:id=accept-state-leftover-insert;stage=2;scope=backend;review=3,6 -->
-- [ ] 독립 요리 완료 시 consumed_ingredient_ids에 해당하는 pantry_items가 DELETE된다 <!-- omo:id=accept-state-pantry-delete;stage=2;scope=backend;review=3,6 -->
-- [ ] consumed_ingredient_ids가 빈 배열이면 pantry 소진이 없다 <!-- omo:id=accept-state-pantry-empty-consumed;stage=2;scope=backend;review=3,6 -->
-- [ ] 독립 요리 완료 시 recipes.cook_count가 1 증가한다 <!-- omo:id=accept-state-cook-count-increment;stage=2;scope=backend;review=3,6 -->
-- [ ] 독립 요리는 meals.status를 변경하지 않는다 <!-- omo:id=accept-state-no-meals-mutation;stage=2;scope=shared;review=3,6 -->
-- [ ] 독립 요리는 cooking_sessions를 생성하지 않는다 <!-- omo:id=accept-state-no-session-creation;stage=2;scope=shared;review=3,6 -->
-- [ ] 독립 요리와 플래너 요리의 상태 전이가 섞이지 않는다 <!-- omo:id=accept-state-planner-standalone-separation;stage=2;scope=shared;review=3,6 -->
+- [x] 독립 요리 완료 시 leftover_dishes가 INSERT된다 (status='leftover', cooked_at=now()) <!-- omo:id=accept-state-leftover-insert;stage=2;scope=backend;review=3,6 -->
+- [x] 독립 요리 완료 시 consumed_ingredient_ids에 해당하는 pantry_items가 DELETE된다 <!-- omo:id=accept-state-pantry-delete;stage=2;scope=backend;review=3,6 -->
+- [x] consumed_ingredient_ids가 빈 배열이면 pantry 소진이 없다 <!-- omo:id=accept-state-pantry-empty-consumed;stage=2;scope=backend;review=3,6 -->
+- [x] 독립 요리 완료 시 recipes.cook_count가 1 증가한다 <!-- omo:id=accept-state-cook-count-increment;stage=2;scope=backend;review=3,6 -->
+- [x] 독립 요리는 meals.status를 변경하지 않는다 <!-- omo:id=accept-state-no-meals-mutation;stage=2;scope=shared;review=3,6 -->
+- [x] 독립 요리는 cooking_sessions를 생성하지 않는다 <!-- omo:id=accept-state-no-session-creation;stage=2;scope=shared;review=3,6 -->
+- [x] 독립 요리와 플래너 요리의 상태 전이가 섞이지 않는다 <!-- omo:id=accept-state-planner-standalone-separation;stage=2;scope=shared;review=3,6 -->
 - [ ] COOK_MODE 독립 요리에서 인분 조절 UI가 없다 (읽기 전용) <!-- omo:id=accept-state-servings-readonly;stage=4;scope=frontend;review=5,6 -->
 - [ ] [취소] 클릭 시 상태 변경 없이 RECIPE_DETAIL로 복귀한다 (세션 없으므로 cancel API 호출 없음) <!-- omo:id=accept-state-cancel-no-api;stage=4;scope=frontend;review=5,6 -->
 
@@ -36,19 +36,20 @@
 - [ ] unauthorized 처리 흐름이 있다 (cook-mode 조회는 비로그인 가능, standalone-complete는 로그인 필수 → 로그인 유도) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
 - [ ] 로그인 게이트 후 return-to-action이 독립 COOK_MODE로 복귀한다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 - [ ] 레시피 미존재 시 404 대응 (에러 표시 또는 RECIPE_DETAIL 복귀) <!-- omo:id=accept-error-404;stage=4;scope=frontend;review=5,6 -->
-- [ ] servings <= 0 시 422 대응 <!-- omo:id=accept-error-422-servings;stage=2;scope=backend;review=3,6 -->
+- [x] servings <= 0 시 422 대응 <!-- omo:id=accept-error-422-servings;stage=2;scope=backend;review=3,6 -->
 
 ## Data Integrity
-- [ ] standalone-complete에서 pantry_items DELETE 시 user_id = current_user.id만 삭제된다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] consumed_ingredient_ids 중 해당 사용자의 pantry에 없는 ID는 무시된다 <!-- omo:id=accept-invalid-consumed-ignore;stage=2;scope=backend;review=3,6 -->
-- [ ] standalone-complete 트랜잭션이 원자적이다 (일부만 반영되지 않음) <!-- omo:id=accept-atomic-transaction;stage=2;scope=backend;review=3,6 -->
-- [ ] leftover_dishes.recipe_id가 요청의 recipe_id와 일치한다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
-- [ ] leftover_dishes.user_id가 현재 로그인 사용자와 일치한다 <!-- omo:id=accept-leftover-user-id;stage=2;scope=backend;review=3,6 -->
+- [x] standalone-complete에서 pantry_items DELETE 시 user_id = current_user.id만 삭제된다 <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] consumed_ingredient_ids 중 해당 사용자의 pantry에 없는 ID는 무시된다 <!-- omo:id=accept-invalid-consumed-ignore;stage=2;scope=backend;review=3,6 -->
+- [x] standalone-complete 트랜잭션이 원자적이다 (일부만 반영되지 않음) <!-- omo:id=accept-atomic-transaction;stage=2;scope=backend;review=3,6 -->
+- [x] leftover_dishes.recipe_id가 요청의 recipe_id와 일치한다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
+- [x] leftover_dishes.user_id가 현재 로그인 사용자와 일치한다 <!-- omo:id=accept-leftover-user-id;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
-- [ ] fixture / mock에서 레시피 + recipe_ingredients + ingredients + recipe_steps + pantry_items가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에서 recipes, recipe_ingredients, ingredients, recipe_steps, pantry_items, leftover_dishes 테이블이 존재한다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] cooking_methods, ingredients 시스템 row가 이미 준비된 owning flow가 확인되었다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
+- [x] fixture / mock에서 레시피 + recipe_ingredients + ingredients + recipe_steps + pantry_items가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에서 recipes, recipe_ingredients, ingredients, recipe_steps, pantry_items, leftover_dishes 테이블이 존재한다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에서 complete_standalone_cooking RPC function이 존재한다 <!-- omo:id=accept-real-db-rpc-ready;stage=2;scope=backend;review=3,6 -->
+- [x] cooking_methods, ingredients 시스템 row가 이미 준비된 owning flow가 확인되었다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 - verifier: agent or human
@@ -66,12 +67,13 @@
 ## Automation Split
 
 ### Vitest
-- [ ] GET /recipes/{recipe_id}/cook-mode 핸들러: 레시피 데이터 조회, servings 스케일링, 404/422 에러 <!-- omo:id=accept-vitest-cook-mode-handler;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /cooking/standalone-complete 핸들러: leftover INSERT, pantry DELETE, cook_count 증가, 401/404/422 에러 <!-- omo:id=accept-vitest-standalone-complete-handler;stage=2;scope=backend;review=3,6 -->
-- [ ] consumed_ingredient_ids 빈 배열 시 pantry 변동 없음 <!-- omo:id=accept-vitest-empty-consumed;stage=2;scope=backend;review=3,6 -->
-- [ ] 트랜잭션 원자성: 부분 실패 시 전체 롤백 <!-- omo:id=accept-vitest-transaction-atomicity;stage=2;scope=backend;review=3,6 -->
-- [ ] meals.status 변경 없음 검증 <!-- omo:id=accept-vitest-no-meals-mutation;stage=2;scope=backend;review=3,6 -->
-- [ ] cooking_sessions 생성 없음 검증 <!-- omo:id=accept-vitest-no-session-creation;stage=2;scope=backend;review=3,6 -->
+- [x] GET /recipes/{recipe_id}/cook-mode 핸들러: 레시피 데이터 조회, servings 스케일링, 404/422 에러 <!-- omo:id=accept-vitest-cook-mode-handler;stage=2;scope=backend;review=3,6 -->
+- [x] POST /cooking/standalone-complete 핸들러: leftover INSERT, pantry DELETE, cook_count 증가, 401/404/422 에러 <!-- omo:id=accept-vitest-standalone-complete-handler;stage=2;scope=backend;review=3,6 -->
+- [x] consumed_ingredient_ids 빈 배열 시 pantry 변동 없음 <!-- omo:id=accept-vitest-empty-consumed;stage=2;scope=backend;review=3,6 -->
+- [x] 트랜잭션 원자성: 부분 실패 시 전체 롤백 <!-- omo:id=accept-vitest-transaction-atomicity;stage=2;scope=backend;review=3,6 -->
+- [x] standalone complete RPC migration이 planner session/meals side effect 없이 추가된다 <!-- omo:id=accept-vitest-rpc-migration;stage=2;scope=backend;review=3,6 -->
+- [x] meals.status 변경 없음 검증 <!-- omo:id=accept-vitest-no-meals-mutation;stage=2;scope=backend;review=3,6 -->
+- [x] cooking_sessions 생성 없음 검증 <!-- omo:id=accept-vitest-no-session-creation;stage=2;scope=backend;review=3,6 -->
 - [ ] 프론트 독립 COOK_MODE 상태 전이 로직 (데이터 로딩 → 요리 중 → 완료 처리 → 복귀) <!-- omo:id=accept-vitest-frontend-state;stage=4;scope=frontend;review=5,6 -->
 - [ ] 소진 재료 체크리스트 팝업 동작 (15a 컴포넌트 재사용 검증) <!-- omo:id=accept-vitest-consumed-popup;stage=4;scope=frontend;review=5,6 -->
 - [ ] duplicate-submit guard 동작 확인 <!-- omo:id=accept-vitest-duplicate-submit-guard;stage=4;scope=frontend;review=5,6 -->
