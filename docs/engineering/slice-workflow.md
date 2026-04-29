@@ -651,15 +651,25 @@ merge 완료 후 Codex는 `master`를 최신화한 뒤 OMO efficiency report를 
 1. `git checkout master && git pull --ff-only origin master`
 2. `pnpm omo:report -- --work-item <slice>`
 3. 생성 파일: `docs/workpacks/<slice>/omo-report.md`
-4. report의 `순수 진행 누적시간`이 `0.0분`으로 떨어지고 실제 작업이 OMO dispatch runner가 아니라 Codex/Claude orchestration으로 진행된 경우, slice 13 방식의 backfilled estimate로 보정한다:
+4. report의 `순수 진행 누적시간`이 `0.0분`으로 떨어지고 실제 작업이 OMO dispatch runner가 아니라 Codex/Claude orchestration으로 진행된 경우, **slice 14 `docs/workpacks/14-cook-session-start/omo-report.md` 방식**의 backfilled estimate로 보정한다:
    - `.omx/artifacts` Claude prompt/response mtime
    - Stage PR timestamp / merge timestamp
    - git commit history
    - GitHub current-head check 결과
    - source PR body closeout projection
    - CI 대기와 단순 watch 시간은 제외, Codex/Claude가 직접 수행한 구현/리뷰/수리/검증 시간은 포함
-5. `pnpm validate:workpack`, `pnpm validate:workflow-v2`, `git diff --check`를 실행한다.
-6. report가 Stage 6 PR에 이미 포함되어 있지 않으면 `docs/omo-report-<slice>` 같은 docs-only branch/PR로 merge한다.
+5. backfilled report는 최소한 다음 section을 포함한다:
+   - `report_mode | backfilled`
+   - `Measurement Basis`
+   - `Evidence Sources`
+   - `Stage Time`
+   - `Timeline Reconstruction`
+   - `Merge Gate Evidence`
+   - `Verification Snapshot`
+   - `Efficiency Notes`
+6. 산정값은 초 단위 타임트래킹이 아니라 OMO 운영 효율 비교용 estimate임을 명시한다. Stage overlap은 허용하되, 총 시간 차이는 `CI/check 대기`, `PR watch`, `stage overlap` 같은 제외/보정 사유로 설명한다.
+7. `pnpm validate:workpack`, `pnpm validate:workflow-v2`, `git diff --check`를 실행한다.
+8. report가 Stage 6 PR에 이미 포함되어 있지 않으면 `docs/omo-report-<slice>` 같은 docs-only branch/PR로 merge한다.
 
 ### 완료 요약 (슬라이스 최종 완료 요약 포함, Codex가 출력)
 
