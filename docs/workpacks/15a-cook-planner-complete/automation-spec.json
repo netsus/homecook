@@ -1,0 +1,96 @@
+{
+  "slice_id": "15a-cook-planner-complete",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/cooking/sessions/{session_id}/complete"
+    ],
+    "invariants": [
+      "owner-authorization",
+      "complete-idempotency",
+      "cancelled-complete-conflict-409",
+      "meals-status-shopping-done-to-cook-done",
+      "meals-cooked-at-set",
+      "cooking-session-meals-is-cooked-true",
+      "cooking-session-meals-cooked-at-set",
+      "cooking-session-status-completed",
+      "cooking-session-completed-at-set",
+      "leftover-dishes-schema-migration-applied",
+      "leftover-dishes-insert",
+      "leftover-dishes-fk-from-meals",
+      "pantry-items-delete-consumed",
+      "pantry-empty-consumed-no-delete",
+      "recipes-cook-count-increment",
+      "atomic-transaction",
+      "planner-standalone-separation",
+      "api-envelope-format"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/cook-planner-complete.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/cooking/sessions/[session_id]/cook-mode"
+    ],
+    "required_states": [
+      "loading",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "new-screen",
+      "anchor_screens": [],
+      "required_screens": [
+        "COOK_MODE"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/COOK_MODE.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/COOK_MODE-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default-screenshot",
+        "mobile-narrow-screenshot"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/COOK_MODE-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "referenced-table-missing",
+    "cooking-sessions-table-missing",
+    "leftover-dishes-migration-missing",
+    "leftover-dishes-fk-missing",
+    "pantry-items-table-missing",
+    "seed-data-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
