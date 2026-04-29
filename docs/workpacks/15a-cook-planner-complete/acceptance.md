@@ -8,15 +8,15 @@
 > Claude가 rebuttal을 수용해 닫은 항목은 checkbox를 유지한 채 `waived=true;waived_by=claude;waived_stage=<3|5|6>;waived_reason=<slug>` metadata를 추가한다.
 
 ## Happy Path
-- [ ] COOK_MODE 진입 시 세션 기반 레시피 재료와 스텝이 표시된다 <!-- omo:id=accept-happy-cook-mode-render;stage=4;scope=frontend;review=5,6 -->
-- [ ] 좌측 재료 화면에 조리 인분(읽기 전용)과 재료 전체 목록이 표시된다 <!-- omo:id=accept-happy-ingredients-view;stage=4;scope=frontend;review=5,6 -->
-- [ ] 우측 과정 화면에 스텝 카드 리스트가 조리방법 색상과 함께 표시된다 <!-- omo:id=accept-happy-steps-view;stage=4;scope=frontend;review=5,6 -->
-- [ ] 좌우 스와이프로 재료 화면 ↔ 과정 화면 전환이 된다 <!-- omo:id=accept-happy-swipe-navigation;stage=4;scope=frontend;review=5,6 -->
-- [ ] [요리 완료] 클릭 시 소진 재료 체크리스트 팝업이 표시된다 (기본 체크 해제) <!-- omo:id=accept-happy-consumed-popup;stage=4;scope=frontend;review=5,6 -->
-- [ ] 소진 재료 확인 후 세션이 완료되고 COOK_READY_LIST로 복귀한다 <!-- omo:id=accept-happy-complete-and-return;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_MODE 진입 시 세션 기반 레시피 재료와 스텝이 표시된다 <!-- omo:id=accept-happy-cook-mode-render;stage=4;scope=frontend;review=5,6 -->
+- [x] 좌측 재료 화면에 조리 인분(읽기 전용)과 재료 전체 목록이 표시된다 <!-- omo:id=accept-happy-ingredients-view;stage=4;scope=frontend;review=5,6 -->
+- [x] 우측 과정 화면에 스텝 카드 리스트가 조리방법 색상과 함께 표시된다 <!-- omo:id=accept-happy-steps-view;stage=4;scope=frontend;review=5,6 -->
+- [x] 좌우 스와이프로 재료 화면 ↔ 과정 화면 전환이 된다 <!-- omo:id=accept-happy-swipe-navigation;stage=4;scope=frontend;review=5,6 -->
+- [x] [요리 완료] 클릭 시 소진 재료 체크리스트 팝업이 표시된다 (기본 체크 해제) <!-- omo:id=accept-happy-consumed-popup;stage=4;scope=frontend;review=5,6 -->
+- [x] 소진 재료 확인 후 세션이 완료되고 COOK_READY_LIST로 복귀한다 <!-- omo:id=accept-happy-complete-and-return;stage=4;scope=frontend;review=5,6 -->
 - [x] POST /cooking/sessions/{id}/complete 응답에 session_id, status='completed', meals_updated, leftover_dish_id, pantry_removed, cook_count가 포함된다 <!-- omo:id=accept-happy-complete-response;stage=2;scope=backend;review=3,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
 - [x] 요리 완료 시 cooking_sessions.status가 'completed'로 전이된다 <!-- omo:id=accept-state-session-completed;stage=2;scope=backend;review=3,6 -->
@@ -31,17 +31,17 @@
 - [x] 요리 완료 시 recipes.cook_count가 1 증가한다 <!-- omo:id=accept-state-cook-count-increment;stage=2;scope=backend;review=3,6 -->
 - [x] complete 멱등성: 이미 completed인 세션에 complete 시 200 + 동일 결과 <!-- omo:id=accept-state-complete-idempotent;stage=2;scope=backend;review=3,6 -->
 - [x] cancelled 세션에 complete 시 409 반환 <!-- omo:id=accept-state-complete-cancelled-conflict;stage=2;scope=backend;review=3,6 -->
-- [ ] cancel 멱등성: 이미 cancelled인 세션에 cancel 시 200 + 동일 결과 (14 BE 사용) <!-- omo:id=accept-state-cancel-idempotent;stage=4;scope=frontend;review=5,6 -->
-- [ ] COOK_MODE에서 인분 조절 UI가 없다 (읽기 전용) <!-- omo:id=accept-state-servings-readonly;stage=4;scope=frontend;review=5,6 -->
+- [x] cancel 멱등성: 이미 cancelled인 세션에 cancel 시 200 + 동일 결과 (14 BE 사용) <!-- omo:id=accept-state-cancel-idempotent;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_MODE에서 인분 조절 UI가 없다 (읽기 전용) <!-- omo:id=accept-state-servings-readonly;stage=4;scope=frontend;review=5,6 -->
 - [x] 독립 요리(meals.status 변경 없음)와 플래너 요리의 상태 전이가 섞이지 않는다 <!-- omo:id=accept-state-planner-standalone-separation;stage=2;scope=shared;review=3,6 -->
 
 ## Error / Permission
-- [ ] loading 상태가 있다 (COOK_MODE 데이터 로딩 중) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 (API 오류 시 에러 메시지 + 재시도/복귀) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 (플래너 경유 COOK_MODE는 데이터 조회/취소/완료 모두 로그인 필수, 비로그인 시 로그인 유도) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] conflict 처리 흐름이 있다 (cancelled 세션 complete 시 409 대응) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
-- [ ] 로그인 게이트 후 return-to-action이 COOK_MODE로 복귀한다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
-- [ ] 세션 미존재 시 404 대응 (이전 화면 복귀 또는 에러 표시) <!-- omo:id=accept-error-404;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 (COOK_MODE 데이터 로딩 중) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 (API 오류 시 에러 메시지 + 재시도/복귀) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 (플래너 경유 COOK_MODE는 데이터 조회/취소/완료 모두 로그인 필수, 비로그인 시 로그인 유도) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] conflict 처리 흐름이 있다 (cancelled 세션 complete 시 409 대응) <!-- omo:id=accept-conflict;stage=4;scope=frontend;review=6 -->
+- [x] 로그인 게이트 후 return-to-action이 COOK_MODE로 복귀한다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] 세션 미존재 시 404 대응 (이전 화면 복귀 또는 에러 표시) <!-- omo:id=accept-error-404;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 - [x] 타인 세션을 완료/취소할 수 없다 (403) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
@@ -76,14 +76,14 @@
 - [x] POST /cooking/sessions/{id}/complete 에러: cancelled 409, 타인 403, 미존재 404, 비로그인 401 <!-- omo:id=accept-vitest-complete-errors;stage=2;scope=backend;review=3,6 -->
 - [x] consumed_ingredient_ids 빈 배열 시 pantry 변동 없음 <!-- omo:id=accept-vitest-empty-consumed;stage=2;scope=backend;review=3,6 -->
 - [x] 트랜잭션 원자성: 부분 실패 시 전체 롤백 <!-- omo:id=accept-vitest-transaction-atomicity;stage=2;scope=backend;review=3,6 -->
-- [ ] 프론트 COOK_MODE 상태 전이 로직 (데이터 로딩 → 요리 중 → 완료 처리 → 복귀) <!-- omo:id=accept-vitest-frontend-state;stage=4;scope=frontend;review=5,6 -->
-- [ ] 소진 재료 체크리스트 팝업 동작 (기본 해제, 선택, 제출) <!-- omo:id=accept-vitest-consumed-popup;stage=4;scope=frontend;review=5,6 -->
+- [x] 프론트 COOK_MODE 상태 전이 로직 (데이터 로딩 → 요리 중 → 완료 처리 → 복귀) <!-- omo:id=accept-vitest-frontend-state;stage=4;scope=frontend;review=5,6 -->
+- [x] 소진 재료 체크리스트 팝업 동작 (기본 해제, 선택, 제출) <!-- omo:id=accept-vitest-consumed-popup;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright
-- [ ] COOK_MODE 진입 → 재료/스텝 표시 → [요리 완료] → 소진 팝업 → 완료 → COOK_READY_LIST 복귀 <!-- omo:id=accept-playwright-happy-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] COOK_MODE에서 [취소] → cancelled → COOK_READY_LIST 복귀 <!-- omo:id=accept-playwright-cancel;stage=4;scope=frontend;review=5,6 -->
-- [ ] 비로그인 시 [요리 완료] → 로그인 게이트 + return-to-action <!-- omo:id=accept-playwright-login-gate;stage=4;scope=frontend;review=5,6 -->
-- [ ] 좌우 스와이프 재료 ↔ 과정 전환 <!-- omo:id=accept-playwright-swipe;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_MODE 진입 → 재료/스텝 표시 → [요리 완료] → 소진 팝업 → 완료 → COOK_READY_LIST 복귀 <!-- omo:id=accept-playwright-happy-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_MODE에서 [취소] → cancelled → COOK_READY_LIST 복귀 <!-- omo:id=accept-playwright-cancel;stage=4;scope=frontend;review=5,6 -->
+- [x] 비로그인 시 [요리 완료] → 로그인 게이트 + return-to-action <!-- omo:id=accept-playwright-login-gate;stage=4;scope=frontend;review=5,6 -->
+- [x] 좌우 스와이프 재료 ↔ 과정 전환 <!-- omo:id=accept-playwright-swipe;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 - [ ] live OAuth 로그인 후 COOK_MODE 진입 및 요리 완료 (실제 소셜 로그인 환경)

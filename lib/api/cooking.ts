@@ -2,6 +2,9 @@ import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiError, ApiResponse } from "@/types/api";
 import type {
   CookingReadyData,
+  CookingSessionCancelData,
+  CookingSessionCompleteData,
+  CookingSessionCookModeData,
   CookingSessionCreateData,
 } from "@/types/cooking";
 
@@ -81,4 +84,39 @@ export async function createCookingSession(body: {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+export async function fetchCookMode(
+  sessionId: string,
+): Promise<CookingSessionCookModeData> {
+  return requestCooking<CookingSessionCookModeData>(
+    `/api/v1/cooking/sessions/${sessionId}/cook-mode`,
+  );
+}
+
+export async function completeCookingSession(
+  sessionId: string,
+  body: { consumed_ingredient_ids: string[] },
+): Promise<CookingSessionCompleteData> {
+  return requestCooking<CookingSessionCompleteData>(
+    `/api/v1/cooking/sessions/${sessionId}/complete`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+}
+
+export async function cancelCookingSession(
+  sessionId: string,
+): Promise<CookingSessionCancelData> {
+  return requestCooking<CookingSessionCancelData>(
+    `/api/v1/cooking/sessions/${sessionId}/cancel`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    },
+  );
 }
