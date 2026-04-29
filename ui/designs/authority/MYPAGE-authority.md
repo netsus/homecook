@@ -2,8 +2,8 @@
 
 > 대상 slice: `17a-mypage-overview-history` Stage 4 `authority_precheck`
 > evidence:
-> - mobile-default-screenshot: `ui/designs/evidence/17a-mypage-overview-history/MYPAGE-mobile.png`
-> - mobile-narrow-screenshot: `ui/designs/evidence/17a-mypage-overview-history/MYPAGE-mobile-narrow.png`
+> - mobile-default-screenshot: Stage 5 follow-up (dev 서버 기반 수집 예정)
+> - mobile-narrow-screenshot: Stage 5 follow-up (dev 서버 기반 수집 예정)
 > - design reference: `ui/designs/MYPAGE.md`
 > - implementation reference: `components/mypage/mypage-screen.tsx`
 > - page entry: `app/mypage/page.tsx`

@@ -234,7 +234,8 @@ test.describe("MYPAGE screen", () => {
     await page.getByLabel("주말 파티 옵션 메뉴").click();
     await page.getByRole("menuitem", { name: "이름 변경" }).click();
 
-    const input = page.getByDisplayValue("주말 파티");
+    const input = page.getByRole("textbox");
+    await expect(input).toHaveValue("주말 파티");
     await input.fill("저녁 모임");
     await page.getByRole("button", { name: "완료" }).click();
 
