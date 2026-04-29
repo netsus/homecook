@@ -2,6 +2,7 @@ import type {
   CookingModeIngredient,
   CookingModeStep,
   CookingReadyRecipe,
+  CookingSessionCompleteBody,
   CookingSessionCreateBody,
 } from "@/types/cooking";
 
@@ -67,6 +68,15 @@ export interface ParseCookingSessionBodyResult {
   fields: Array<{ field: string; reason: string }>;
 }
 
+export interface ParsedCookingSessionCompleteBody {
+  consumed_ingredient_ids: string[];
+}
+
+export interface ParseCookingSessionCompleteBodyResult {
+  data: ParsedCookingSessionCompleteBody | null;
+  fields: Array<{ field: string; reason: string }>;
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function isUuid(value: string) {
@@ -126,6 +136,41 @@ export function parseCookingSessionBody(
       recipe_id: recipeId,
       meal_ids: mealIds,
       cooking_servings: cookingServings,
+    },
+    fields: [],
+  };
+}
+
+export function parseCookingSessionCompleteBody(
+  body: CookingSessionCompleteBody,
+): ParseCookingSessionCompleteBodyResult {
+  const rawConsumedIngredientIds = body.consumed_ingredient_ids ?? [];
+
+  if (!Array.isArray(rawConsumedIngredientIds)) {
+    return {
+      data: null,
+      fields: [{ field: "consumed_ingredient_ids", reason: "invalid_array" }],
+    };
+  }
+
+  const consumedIngredientIds = [
+    ...new Set(
+      rawConsumedIngredientIds
+        .map((ingredientId) => (typeof ingredientId === "string" ? ingredientId.trim() : ""))
+        .filter((ingredientId) => ingredientId.length > 0),
+    ),
+  ];
+
+  if (consumedIngredientIds.some((ingredientId) => !isUuid(ingredientId))) {
+    return {
+      data: null,
+      fields: [{ field: "consumed_ingredient_ids", reason: "invalid_uuid" }],
+    };
+  }
+
+  return {
+    data: {
+      consumed_ingredient_ids: consumedIngredientIds,
     },
     fields: [],
   };

@@ -44,6 +44,19 @@ export interface CookingSessionCancelData {
   status: "cancelled";
 }
 
+export interface CookingSessionCompleteBody {
+  consumed_ingredient_ids?: string[];
+}
+
+export interface CookingSessionCompleteData {
+  session_id: string;
+  status: "completed";
+  meals_updated: number;
+  leftover_dish_id: string;
+  pantry_removed: number;
+  cook_count: number;
+}
+
 export interface CookingMethodSummary {
   code: string;
   label: string;
@@ -86,4 +99,5 @@ export interface CookingSessionCookModeData {
 export type CookingReadyResponse = ApiResponse<CookingReadyData>;
 export type CookingSessionCreateResponse = ApiResponse<CookingSessionCreateData>;
 export type CookingSessionCancelResponse = ApiResponse<CookingSessionCancelData>;
+export type CookingSessionCompleteResponse = ApiResponse<CookingSessionCompleteData>;
 export type CookingSessionCookModeResponse = ApiResponse<CookingSessionCookModeData>;
