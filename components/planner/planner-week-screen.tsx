@@ -528,16 +528,30 @@ export function PlannerWeekScreen({
             className="grid w-full grid-cols-3 gap-1 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-1 md:ml-6 md:w-auto md:min-w-[17rem]"
             role="group"
           >
-            {CTA_BUTTONS.map((label) => (
-              label === "장보기" ? (
-                <Link
-                  className={`${PLANNER_CTA_CLASS} flex items-center justify-center bg-[var(--brand)] text-[var(--surface)] shadow-[0_8px_18px_color-mix(in_srgb,var(--brand)_18%,transparent)]`}
-                  href="/shopping/flow"
-                  key={label}
-                >
-                  {label}
-                </Link>
-              ) : (
+            {CTA_BUTTONS.map((label) => {
+              if (label === "장보기") {
+                return (
+                  <Link
+                    className={`${PLANNER_CTA_CLASS} flex items-center justify-center bg-[var(--brand)] text-[var(--surface)] shadow-[0_8px_18px_color-mix(in_srgb,var(--brand)_18%,transparent)]`}
+                    href="/shopping/flow"
+                    key={label}
+                  >
+                    {label}
+                  </Link>
+                );
+              }
+              if (label === "요리하기") {
+                return (
+                  <Link
+                    className={`${PLANNER_CTA_CLASS} flex items-center justify-center bg-[var(--brand)] text-[var(--surface)] shadow-[0_8px_18px_color-mix(in_srgb,var(--brand)_18%,transparent)]`}
+                    href="/cooking/ready"
+                    key={label}
+                  >
+                    {label}
+                  </Link>
+                );
+              }
+              return (
                 <button
                   key={label}
                   aria-disabled="true"
@@ -547,8 +561,8 @@ export function PlannerWeekScreen({
                 >
                   {label}
                 </button>
-              )
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

@@ -648,18 +648,18 @@
     {
       "id": "14-cook-session-start",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-14-cook-session-start",
-      "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-14-cook-session-start",
+      "pr_path": "https://github.com/netsus/homecook/pull/286",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 2 backend implementation in progress on feature/be-14-cook-session-start. Targeted backend Vitest covers ready grouping, session creation, owner/status/recipe guards, cancel idempotency, completed cancel conflict, and cook-mode data read."
+      "notes": "Final closeout projected for PR #286 after Stage 1 docs PR #284, Stage 2/3 backend PR #285, Claude Stage 4 frontend implementation/repair, Codex Stage 5/6 review, Claude final authority gate, and internal 6.5 validators. Stage 6 repaired duplicate session-submit race with synchronous pending guard. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:4|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,git history,PR #286 body last_recovery_at=2026-04-29T06:24:06Z"
     }
   ]
 }

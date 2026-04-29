@@ -219,15 +219,15 @@
 - UI risk: `new-screen`
 - Anchor screen dependency: `PLANNER_WEEK` (상단 [요리하기] 버튼에서 진입, anchor extension은 아님 — 기존 [요리하기] CTA 동작만 연결)
 - Visual artifact: Stage 1에서 `ui/designs/COOK_READY_LIST.md` 생성, Stage 4에서 screenshot evidence 예정
-- Authority status: `required`
+- Authority status: `reviewed`
 - h8 matrix reference: `COOK_READY_LIST` initial class = `prototype-derived design` (screen-level parity 대상 아님, Baemin vocabulary/material만 사용)
 - Notes: PLANNER_WEEK의 기존 [요리하기] CTA를 연결하는 것이므로 anchor screen의 핵심 CTA 추가/변경에는 해당하지 않음. PLANNER_WEEK에 이미 [요리하기] 버튼이 존재하고 이 슬라이스는 그 버튼의 목적지 화면을 구현하는 것임.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 ## Source Links
@@ -289,13 +289,13 @@
 - [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 
 ## Stage 2 Evidence
 
@@ -305,3 +305,32 @@
 - Schema migration: `supabase/migrations/20260429050000_14_cook_session_tables.sql` creates `cooking_sessions`, `cooking_session_meals`, enum/checks/indexes/grants.
 - Local DB smoke: `pnpm dlx supabase migration up` applied the migration; `psql` table existence check returned `cooking_session_meals` and `cooking_sessions`.
 - Full backend gate: `pnpm verify:backend` -> pass (lint warning only: pre-existing `<img>` warning in `components/planner/planner-week-screen.tsx`).
+
+## Stage 4 Evidence
+
+- API client: `lib/api/cooking.ts` — follows pantry API pattern with `CookingApiError`, `isCookingApiError()`, `fetchCookingReady()`, `createCookingSession()`.
+- Zustand store: `stores/cooking-ready-store.ts` — screen states: `loading | ready | empty | error`, with `loadReady()` and `startSession()` actions.
+- Screen component: `components/cooking/cook-ready-list-screen.tsx` — auth checking/unauthorized gate, loading skeletons, empty state with planner redirect, error state with retry, recipe list with session creation CTA, 409 conflict toast + list refresh.
+- Page route: `app/cooking/ready/page.tsx` — server component with `AppShell currentTab="planner" headerMode="hidden"`, passes `initialAuthenticated` from `getServerAuthUser()`.
+- COOK_MODE placeholder: `app/cooking/sessions/[session_id]/cook-mode/page.tsx` — minimal placeholder (15a scope).
+- PLANNER_WEEK wiring: `components/planner/planner-week-screen.tsx` — [요리하기] CTA changed from disabled `<button>` to `<Link href="/cooking/ready">`.
+- Vitest: `tests/cook-ready-list-screen.test.tsx` — 16 tests covering auth gate, loading, ready, empty, error, retry, session creation, duplicate-submit guard, global pending lock, 409 conflict, 401 during session, thumbnail rendering.
+- Playwright: `tests/e2e/slice-14-cook-session-start.spec.ts` — 7 tests covering authenticated ready list, guest login gate, empty state, session creation + route handoff, 409 toast, back button, planner CTA link.
+- Design Status: `temporary` → `pending-review`.
+- Authority evidence: `ui/designs/authority/COOK_READY_LIST-authority.md` (Stage 5 screenshots captured).
+
+## Stage 5 Evidence
+
+- Codex authority review: `ui/designs/authority/COOK_READY_LIST-authority.md` → verdict `pass`, blocker 0.
+- Visual evidence: `ui/designs/evidence/14-cook-session-start/COOK_READY_LIST-mobile-default-screenshot.png`, `ui/designs/evidence/14-cook-session-start/COOK_READY_LIST-mobile-narrow-screenshot.png`.
+- Exploratory QA: `.artifacts/qa/14-cook-session-start/2026-04-29T05-50-05-895Z/exploratory-report.json` → desktop/mobile/small viewport coverage, findings 0.
+- QA eval: `.artifacts/qa/14-cook-session-start/2026-04-29T05-50-05-895Z/eval-result.json` → score 100, pass.
+- Claude final authority gate: `.omx/artifacts/claude-delegate-14-cook-session-start-stage5-final-authority-gate-response-20260429T055358Z.md` → decision `pass`, Design Status update allowed.
+- Design Status: `pending-review` → `confirmed`.
+
+## Stage 6 Evidence
+
+- Codex PR review repaired duplicate-submit risk: same-tick repeated CTA clicks are blocked with a synchronous ref guard, and all recipe CTAs are disabled while any session creation is pending.
+- Regression test: `pnpm exec vitest run tests/cook-ready-list-screen.test.tsx` → 16 passed.
+- Full frontend gate: `CI=true pnpm verify:frontend` → pass (lint/typecheck/product Vitest/build/smoke/a11y/visual/security/Lighthouse).
+- Internal 6.5 validators: `validate:workflow-v2`, `validate:workpack`, `validate:authority-evidence-presence`, `validate:exploratory-qa-evidence`, `validate:real-smoke-presence`, `validate:pr-ready`, `validate:closeout-sync`, `validate:omo-bookkeeping`, `git diff --check`.

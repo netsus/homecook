@@ -228,7 +228,7 @@ describe("planner week screen", () => {
     expect(screen.queryByRole("button", { name: "컬럼 추가" })).toBeNull();
   });
 
-  it("enables the shopping CTA while keeping later planner CTAs disabled", async () => {
+  it("enables the shopping and cooking CTAs while keeping later planner CTAs disabled", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
 
@@ -238,13 +238,13 @@ describe("planner week screen", () => {
 
     const toolbar = screen.getByRole("group", { name: "플래너 보조 작업" });
     const shoppingLink = within(toolbar).getByRole("link", { name: "장보기" }) as HTMLAnchorElement;
-    const cookButton = within(toolbar).getByRole("button", { name: "요리하기" }) as HTMLButtonElement;
+    const cookingLink = within(toolbar).getByRole("link", { name: "요리하기" }) as HTMLAnchorElement;
     const leftoverButton = within(toolbar).getByRole("button", { name: "남은요리" }) as HTMLButtonElement;
 
     expect(toolbar.className).toContain("grid-cols-3");
     expect(toolbar.className).toContain("rounded-[var(--radius-lg)]");
     expect(shoppingLink.getAttribute("href")).toBe("/shopping/flow");
-    expect(cookButton.disabled).toBe(true);
+    expect(cookingLink.getAttribute("href")).toBe("/cooking/ready");
     expect(leftoverButton.disabled).toBe(true);
   });
 

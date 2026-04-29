@@ -154,7 +154,7 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByLabel("장보기 완료")).toBeVisible();
     await expect(page.getByLabel("요리 완료")).toBeVisible();
     await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveAttribute("href", "/shopping/flow");
-    await expect(page.getByRole("button", { name: "요리하기" })).toBeDisabled();
+    await expect(page.getByRole("link", { name: "요리하기" })).toHaveAttribute("href", "/cooking/ready");
     await expect(page.getByRole("button", { name: "남은요리" })).toBeDisabled();
     await expect(page.getByRole("button", { name: "컬럼 추가" })).toHaveCount(0);
 
@@ -189,17 +189,15 @@ test.describe("Slice 05 planner week core", () => {
     await expect.poll(() => tracker.requestedRanges.at(-1)).toBe(initialRange);
   });
 
-  test("planner CTA buttons expose shopping as the available next flow", async ({ page }) => {
+  test("planner CTA buttons expose shopping and cooking as available links", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockPlannerRoutes(page);
 
     await page.goto("/planner");
 
     await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveAttribute("href", "/shopping/flow");
-
-    for (const name of ["요리하기", "남은요리"]) {
-      await expect(page.getByRole("button", { name })).toBeDisabled();
-    }
+    await expect(page.getByRole("link", { name: "요리하기" })).toHaveAttribute("href", "/cooking/ready");
+    await expect(page.getByRole("button", { name: "남은요리" })).toBeDisabled();
   });
 
   test("guest user sees unauthorized state on planner route", async ({ page }) => {
