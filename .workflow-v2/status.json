@@ -697,6 +697,21 @@
       "last_evaluator_result": ".omx/artifacts/stage6-fe-review-15b-cook-standalone-complete-20260429T114020Z.md",
       "auto_merge_eligible": true,
       "blocked_reason_code": null
+    },
+    {
+      "id": "16-leftovers",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/16-leftovers",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 docs created on docs/16-leftovers branch. New screens LEFTOVERS and ATE_LIST with prototype-derived design and authority-required review. No schema change — reuses 15a leftover_dishes table."
     }
   ]
 }
