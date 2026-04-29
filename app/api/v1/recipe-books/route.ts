@@ -203,6 +203,44 @@ function getRecipeBookCount({
   return countByBookId.get(book.id) ?? 0;
 }
 
+async function createAuthedRecipeBookDbClient(fallbackMessage: string) {
+  const routeClient = await createRouteHandlerClient();
+  const authResult = await routeClient.auth.getUser();
+  const user = authResult.data.user;
+
+  if (!user) {
+    return {
+      response: fail("UNAUTHORIZED", "로그인이 필요해요.", 401),
+      dbClient: null,
+      user: null,
+    };
+  }
+
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    RecipeBookDbClient & UserBootstrapDbClient;
+
+  try {
+    await ensurePublicUserRow(dbClient, user);
+    await ensureUserBootstrapState(dbClient, user.id);
+  } catch (bootstrapError) {
+    return {
+      response: fail(
+        "INTERNAL_ERROR",
+        formatBootstrapErrorMessage(bootstrapError, fallbackMessage),
+        500,
+      ),
+      dbClient: null,
+      user: null,
+    };
+  }
+
+  return {
+    response: null,
+    dbClient,
+    user,
+  };
+}
+
 export async function GET(request: Request) {
   if (isQaFixtureModeEnabled()) {
     const authOverride = readE2EAuthOverrideHeader(request.headers);
@@ -297,21 +335,20 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (isQaFixtureModeEnabled()) {
+  const qaFixtureMode = isQaFixtureModeEnabled();
+  let auth: Awaited<ReturnType<typeof createAuthedRecipeBookDbClient>> | null = null;
+
+  if (qaFixtureMode) {
     const authOverride = readE2EAuthOverrideHeader(request.headers);
 
     if (authOverride !== "authenticated") {
       return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
     }
-  }
+  } else {
+    auth = await createAuthedRecipeBookDbClient("레시피북을 만들지 못했어요.");
 
-  if (!isQaFixtureModeEnabled()) {
-    const routeClient = await createRouteHandlerClient();
-    const authResult = await routeClient.auth.getUser();
-    const user = authResult.data.user;
-
-    if (!user) {
-      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    if (auth.response || !auth.dbClient || !auth.user) {
+      return auth.response;
     }
   }
 
@@ -339,13 +376,8 @@ export async function POST(request: Request) {
     ]);
   }
 
-  if (isQaFixtureModeEnabled()) {
-    const authOverride = readE2EAuthOverrideHeader(request.headers);
+  if (qaFixtureMode) {
     const faultOverrides = readQaFixtureFaultsHeader(request.headers);
-
-    if (authOverride !== "authenticated") {
-      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
-    }
 
     if (faultOverrides?.recipe_books_create === "internal_error") {
       return fail("INTERNAL_ERROR", "레시피북을 만들지 못했어요.", 500);
@@ -354,33 +386,15 @@ export async function POST(request: Request) {
     return ok(createQaFixtureRecipeBook(normalizedName), { status: 201 });
   }
 
-  const routeClient = await createRouteHandlerClient();
-  const authResult = await routeClient.auth.getUser();
-  const user = authResult.data.user;
-
-  if (!user) {
+  if (!auth?.dbClient || !auth.user) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    RecipeBookDbClient & UserBootstrapDbClient;
-
-  try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
-  } catch (bootstrapError) {
-    return fail(
-      "INTERNAL_ERROR",
-      formatBootstrapErrorMessage(bootstrapError, "레시피북을 만들지 못했어요."),
-      500,
-    );
-  }
-
-  const latestSortQuery = dbClient
+  const latestSortQuery = auth.dbClient
     .from("recipe_books")
     .select("sort_order") as RecipeBookSortOrderSelectQuery;
   const latestSortResult = await latestSortQuery
-    .eq("user_id", user.id)
+    .eq("user_id", auth.user.id)
     .order("sort_order", { ascending: false })
     .limit(1);
 
@@ -389,10 +403,10 @@ export async function POST(request: Request) {
   }
 
   const nextSortOrder = getCurrentMaxSortOrder(latestSortResult.data) + 1;
-  const createResult = await dbClient
+  const createResult = await auth.dbClient
     .from("recipe_books")
     .insert({
-      user_id: user.id,
+      user_id: auth.user.id,
       name: normalizedName,
       book_type: "custom",
       sort_order: nextSortOrder,

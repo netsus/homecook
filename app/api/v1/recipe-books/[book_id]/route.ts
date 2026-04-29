@@ -29,7 +29,12 @@ interface RecipeBookUpdatedRow {
   name: string;
   book_type: "custom";
   sort_order: number;
+  created_at: string;
   updated_at: string;
+}
+
+interface RecipeBookItemRow {
+  book_id: string;
 }
 
 type MaybeSingleResult<T> = PromiseLike<{
@@ -63,6 +68,11 @@ interface RecipeBookItemsDeleteQuery {
   then: ArrayResult<unknown>["then"];
 }
 
+interface RecipeBookItemsSelectQuery {
+  eq(column: string, value: string): RecipeBookItemsSelectQuery;
+  then: ArrayResult<RecipeBookItemRow>["then"];
+}
+
 interface RecipeBooksTable {
   select(columns: string): RecipeBooksSelectQuery;
   update(values: { name: string; updated_at: string }): RecipeBooksUpdateQuery;
@@ -70,6 +80,7 @@ interface RecipeBooksTable {
 }
 
 interface RecipeBookItemsTable {
+  select(columns: string): RecipeBookItemsSelectQuery;
   delete(): RecipeBookItemsDeleteQuery;
 }
 
@@ -215,11 +226,20 @@ export async function PATCH(request: Request, context: RouteContext) {
     return customBook.response;
   }
 
+  const itemsResult = await auth.dbClient
+    .from("recipe_book_items")
+    .select("book_id")
+    .eq("book_id", bookId);
+
+  if (itemsResult.error || !itemsResult.data) {
+    return fail("INTERNAL_ERROR", "레시피북을 수정하지 못했어요.", 500);
+  }
+
   const updateResult = await auth.dbClient
     .from("recipe_books")
     .update({ name, updated_at: new Date().toISOString() })
     .eq("id", bookId)
-    .select("id, name, book_type, sort_order, updated_at")
+    .select("id, name, book_type, sort_order, created_at, updated_at")
     .maybeSingle();
 
   if (updateResult.error || !updateResult.data) {
@@ -230,9 +250,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     id: updateResult.data.id,
     name: updateResult.data.name,
     book_type: "custom",
-    recipe_count: 0,
+    recipe_count: itemsResult.data.length,
     sort_order: updateResult.data.sort_order,
-    created_at: updateResult.data.updated_at,
+    created_at: updateResult.data.created_at,
     updated_at: updateResult.data.updated_at,
   } satisfies RecipeBookUpdateData);
 }

@@ -235,9 +235,16 @@ describe("17a mypage backend", () => {
         error: null,
       },
     ]);
+    const recipeBookItemsTable = createTable([
+      {
+        data: [{ book_id: "book-custom" }, { book_id: "book-custom" }],
+        error: null,
+      },
+    ]);
     setupAuthedClient({
       from: vi.fn((table: string) => {
         if (table === "recipe_books") return recipeBooksTable;
+        if (table === "recipe_book_items") return recipeBookItemsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
     });
@@ -258,8 +265,9 @@ describe("17a mypage backend", () => {
       id: "book-custom",
       name: "저녁 모임",
       book_type: "custom",
-      recipe_count: 0,
+      recipe_count: 2,
     });
+    expect(recipeBookItemsTable.__query.eq).toHaveBeenCalledWith("book_id", "550e8400-e29b-41d4-a716-446655440001");
   });
 
   it("DELETE /recipe-books/{book_id} rejects system books and deletes custom books", async () => {
