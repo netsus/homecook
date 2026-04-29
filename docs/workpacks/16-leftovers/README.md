@@ -258,14 +258,23 @@
 > Stage 6 merge 시점에는 In Scope인데도 남아 있는 unchecked 항목이 없어야 하며, `N/A` 또는 후속 분리는 README/PR 본문에 근거를 남긴다.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 (GET /leftovers, POST eat, POST uneat) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 (GET /leftovers, POST eat, POST uneat) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 (LEFTOVERS 화면, ATE_LIST 화면, PLANNER_WEEK [남은요리] CTA) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [ ] 남은요리 → 플래너 추가 UI (PlannerAddSheet 재사용, leftover_dish_id 전달) <!-- omo:id=delivery-planner-add-leftover;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only / unauthorized` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+
+## Stage 2 Backend Evidence
+
+- 2026-04-29T12:38:40Z Codex implemented `GET /api/v1/leftovers`, `POST /api/v1/leftovers/{leftover_id}/eat`, `POST /api/v1/leftovers/{leftover_id}/uneat`, and `POST /api/v1/meals` leftover owner validation.
+- Regression tests: `pnpm exec vitest run tests/leftovers.backend.test.ts tests/meal-create-route.test.ts` passed (25 tests).
+- Type check: `pnpm typecheck` passed.
+- Backend gate: `pnpm verify:backend` passed on 2026-04-29T12:41:11Z (lint/typecheck/product Vitest 428 tests/build/security Playwright 9 tests).
+- Real smoke: `pnpm local:reset:demo` passed, `pnpm dev:local-supabase -p 3016` started successfully, `GET /api/v1/leftovers` returned 401 envelope, and local DB schema check confirmed `leftover_dishes`, `meals`, `recipes`, `meal_plan_columns`, plus `leftover_dishes_status_time_integrity`.
+- QA fixture baseline now includes leftover, eaten, expired eaten, and other-user leftover rows for Stage 4 Playwright fixture flows.

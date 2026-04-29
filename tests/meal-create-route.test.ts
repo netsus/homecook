@@ -91,6 +91,26 @@ function createMealPlanColumnsTable({
   };
 }
 
+function createLeftoverDishesTable({
+  selectResults,
+}: {
+  selectResults: Array<QueryResult<{ id: string; user_id: string; recipe_id: string } | null>>;
+}) {
+  const selectQuery = {
+    eq: vi.fn(() => selectQuery),
+    maybeSingle: vi.fn(() => createAwaitableQuery(
+      selectResults.shift() ?? {
+        data: null,
+        error: { message: "missing leftover_dishes select result" },
+      },
+    )),
+  };
+
+  return {
+    select: vi.fn(() => selectQuery),
+  };
+}
+
 function createMealsTable({
   insertResults,
 }: {
@@ -403,5 +423,139 @@ describe("POST /api/v1/meals", () => {
       shopping_list_id: null,
       cooked_at: null,
     });
+  });
+
+  it("creates a leftover meal only when the leftover dish belongs to the user", async () => {
+    const recipesTable = createRecipesTable({
+      selectResults: [{ data: { id: "recipe-1" }, error: null }],
+    });
+    const mealPlanColumnsTable = createMealPlanColumnsTable({
+      selectResults: [
+        {
+          data: { id: "column-1", user_id: "user-1", name: "저녁" },
+          error: null,
+        },
+      ],
+    });
+    const leftoverDishesTable = createLeftoverDishesTable({
+      selectResults: [
+        {
+          data: {
+            id: "leftover-1",
+            user_id: "user-1",
+            recipe_id: "550e8400-e29b-41d4-a716-446655440041",
+          },
+          error: null,
+        },
+      ],
+    });
+    const mealsTable = createMealsTable({
+      insertResults: [
+        {
+          data: {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            plan_date: "2026-03-03",
+            column_id: "column-1",
+            planned_servings: 1,
+            status: "registered",
+            is_leftover: true,
+            leftover_dish_id: "550e8400-e29b-41d4-a716-446655440042",
+          },
+          error: null,
+        },
+      ],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipesTable;
+        if (table === "meal_plan_columns") return mealPlanColumnsTable;
+        if (table === "leftover_dishes") return leftoverDishesTable;
+        if (table === "meals") return mealsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/meals", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        recipe_id: "550e8400-e29b-41d4-a716-446655440041",
+        plan_date: "2026-03-03",
+        column_id: "550e8400-e29b-41d4-a716-446655440043",
+        planned_servings: 1,
+        leftover_dish_id: "550e8400-e29b-41d4-a716-446655440042",
+      }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.data).toMatchObject({
+      is_leftover: true,
+      leftover_dish_id: "550e8400-e29b-41d4-a716-446655440042",
+    });
+    expect(mealsTable.insert).toHaveBeenCalledWith(expect.objectContaining({
+      is_leftover: true,
+      leftover_dish_id: "550e8400-e29b-41d4-a716-446655440042",
+    }));
+  });
+
+  it("returns 403 when leftover_dish_id belongs to another user", async () => {
+    const recipesTable = createRecipesTable({
+      selectResults: [{ data: { id: "recipe-1" }, error: null }],
+    });
+    const mealPlanColumnsTable = createMealPlanColumnsTable({
+      selectResults: [
+        {
+          data: { id: "column-1", user_id: "user-1", name: "저녁" },
+          error: null,
+        },
+      ],
+    });
+    const leftoverDishesTable = createLeftoverDishesTable({
+      selectResults: [
+        {
+          data: {
+            id: "leftover-1",
+            user_id: "other-user",
+            recipe_id: "550e8400-e29b-41d4-a716-446655440051",
+          },
+          error: null,
+        },
+      ],
+    });
+    const mealsTable = createMealsTable({ insertResults: [] });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipesTable;
+        if (table === "meal_plan_columns") return mealPlanColumnsTable;
+        if (table === "leftover_dishes") return leftoverDishesTable;
+        if (table === "meals") return mealsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/meals", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        recipe_id: "550e8400-e29b-41d4-a716-446655440051",
+        plan_date: "2026-03-03",
+        column_id: "550e8400-e29b-41d4-a716-446655440052",
+        planned_servings: 1,
+        leftover_dish_id: "550e8400-e29b-41d4-a716-446655440053",
+      }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body.error.code).toBe("FORBIDDEN");
+    expect(mealsTable.insert).not.toHaveBeenCalled();
   });
 });

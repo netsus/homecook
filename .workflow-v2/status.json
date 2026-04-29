@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-29T11:47:00Z",
+  "updated_at": "2026-04-29T12:38:40Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -701,8 +701,8 @@
     {
       "id": "16-leftovers",
       "preset": "vertical-slice-strict",
-      "branch": "docs/16-leftovers",
-      "lifecycle": "planned",
+      "branch": "feature/be-16-leftovers",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -711,7 +711,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs created on docs/16-leftovers branch. New screens LEFTOVERS and ATE_LIST with prototype-derived design and authority-required review. No schema change — reuses 15a leftover_dishes table."
+      "notes": "Stage 1 docs merged via PR #298. Stage 2 backend implementation is in progress on feature/be-16-leftovers: leftovers API routes, POST /meals leftover owner guard, shared types, and QA fixture baseline added. Targeted backend tests, pnpm verify:backend, and local Supabase real smoke passed on 2026-04-29."
     }
   ]
 }
