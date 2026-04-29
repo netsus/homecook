@@ -70,7 +70,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -79,11 +79,11 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs created by Claude. S1-R1 repair applied: leftover_dishes schema migration requirement added (table does not exist in repo, official DB §9-1 requires it). 14에서 구현한 cook-mode route handler, cancel API를 소비하고, complete API를 신규 구현. Stage 2에서 leftover_dishes migration 생성 필요. COOK_MODE는 전체화면 좌우 스와이프 기반 몰입형 모드. 독립 요리(15b)와 같은 화면을 공유하지만 workpack/acceptance는 분리. closeout_phase=collecting",
+  "notes": "Stage 1 docs created by Claude and merged via PR #288. S1-R1 repair applied: leftover_dishes schema migration requirement added (table does not exist in repo, official DB §9-1 requires it). Stage 2 backend started on feature/be-15a-cook-planner-complete. 14에서 구현한 cook-mode route handler, cancel API를 소비하고, complete API를 신규 구현. Stage 2에서 leftover_dishes migration 생성 필요. COOK_MODE는 전체화면 좌우 스와이프 기반 몰입형 모드. 독립 요리(15b)와 같은 화면을 공유하지만 workpack/acceptance는 분리. closeout_phase=collecting",
   "closeout": {
     "phase": "collecting",
     "docs_projection": {
-      "roadmap_lifecycle": "planned",
+      "roadmap_lifecycle": "in_progress",
       "design_status": "temporary",
       "delivery_checklist": "pending",
       "design_authority": "pending",

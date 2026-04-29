@@ -209,21 +209,33 @@
 ## Delivery Checklist
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 
-- [ ] `leftover_dishes` 스키마 migration 적용 (enum + 테이블 + 인덱스 + RLS + FK 검증) <!-- omo:id=delivery-schema-migration;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] `leftover_dishes` 스키마 migration 적용 (enum + 테이블 + 인덱스 + RLS + FK 검증) <!-- omo:id=delivery-schema-migration;stage=2;scope=backend;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 
 ## Stage Evidence
 
-_(Stage 2~6 완료 시 이 섹션에 evidence 기록)_
+### Stage 2 Backend Evidence
+
+- `pnpm exec vitest run tests/cook-planner-complete.backend.test.ts` — pass (RED first: route/migration missing, then GREEN)
+- `pnpm exec vitest run tests/cook-session-start.backend.test.ts tests/cook-planner-complete.backend.test.ts` — pass
+- `pnpm typecheck` — pass
+- `pnpm lint` — pass with existing `<img>` warnings in `components/cooking/cook-ready-list-screen.tsx` and `components/planner/planner-week-screen.tsx`
+- `pnpm verify:backend` — pass (lint warnings only, 45 product test files / 357 tests, build, security E2E 9 tests)
+- `pnpm dlx supabase db reset` — pass, including migration `20260429080000_15a_cook_planner_complete.sql`
+- `psql` schema smoke — `leftover_dishes` table, `complete_cooking_session` function, and `meals_leftover_dish_id_fkey` all exist
+- `psql` permission smoke — mismatched `auth.uid()` returns `FORBIDDEN`
+- `psql` complete happy-path smoke — session returns `completed`, meal becomes `cook_done`, `leftover_dishes` row count is 1, recipe ingredient pantry removal count is 1, unrelated pantry item remains, recipe `cook_count` becomes 1
+- `psql` empty-consumed smoke — `pantry_removed=0` and pantry item remains
+- `psql` idempotency smoke — second complete call keeps `cook_count=1` and single leftover row
 
 ## Open Questions
 없음.

@@ -664,9 +664,9 @@
     {
       "id": "15a-cook-planner-complete",
       "preset": "vertical-slice-strict",
-      "branch": "docs/15a-cook-planner-complete",
+      "branch": "feature/be-15a-cook-planner-complete",
       "pr_path": "pending",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -675,7 +675,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs created by Claude on docs/15a-cook-planner-complete branch. Pending internal 1.5 docs gate review by Codex. Planner cook session complete with COOK_MODE, pantry deduction, cook_done transition. COOK_MODE is h8 prototype-derived design. closeout_phase=collecting"
+      "notes": "Stage 1 docs merged via PR #288 after Claude docs and Codex internal 1.5 docs gate. Stage 2 backend started on feature/be-15a-cook-planner-complete. Planner cook session complete with COOK_MODE, pantry deduction, cook_done transition. COOK_MODE is h8 prototype-derived design. closeout_phase=collecting"
     }
   ]
 }
