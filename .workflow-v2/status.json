@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-29T11:40:20Z",
+  "updated_at": "2026-04-29T11:47:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -437,7 +437,7 @@
       "id": "11-shopping-reorder",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-11-shopping-reorder",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/295",
       "lifecycle": "ready_for_review",
       "approval_state": "codex_approved",
       "verification_status": "passed",

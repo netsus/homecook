@@ -109,7 +109,7 @@
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending_frontend_pr_creation",
+      "current_head_sha": "tracked-in-pr-body-after-pr-sync-commit",
       "approval_state": "dual_approved",
       "all_checks_green": false
     },
@@ -141,7 +141,7 @@
     "projection_state": {
       "docs_synced_at": "2026-04-29T11:40:20Z",
       "status_synced_at": "2026-04-29T11:40:20Z",
-      "pr_body_synced_at": null
+      "pr_body_synced_at": "2026-04-29T11:47:00Z"
     }
   },
   "out_of_scope": [
