@@ -432,19 +432,19 @@ export function MypageScreen({
     <div className="pb-32">
       {/* Profile Section */}
       <div
-        className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-4"
+        className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-4 max-[360px]:gap-2 max-[360px]:py-2.5"
         data-testid="mypage-profile"
       >
         {profile?.profile_image_url ? (
           <img
             alt={`${profile.nickname} 프로필`}
-            className="h-12 w-12 shrink-0 rounded-full border border-[var(--line)] object-cover"
+            className="h-12 w-12 shrink-0 rounded-full border border-[var(--line)] object-cover max-[360px]:h-10 max-[360px]:w-10"
             src={profile.profile_image_url}
           />
         ) : (
           <div
             aria-label="프로필 이니셜"
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] text-base font-bold text-[var(--brand)]"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] text-base font-bold text-[var(--brand)] max-[360px]:h-10 max-[360px]:w-10 max-[360px]:text-sm"
             data-testid="profile-fallback-avatar"
           >
             {profile?.nickname?.charAt(0) ?? "?"}
@@ -493,7 +493,7 @@ export function MypageScreen({
       >
         <button
           aria-selected={activeTab === "recipebook"}
-          className={`flex-1 py-3 text-center text-sm font-bold transition-colors ${
+          className={`flex-1 py-3 text-center text-sm font-bold transition-colors max-[360px]:py-2 ${
             activeTab === "recipebook"
               ? "border-b-2 border-[var(--brand)] text-[var(--brand)]"
               : "text-[var(--text-3)]"
@@ -506,7 +506,7 @@ export function MypageScreen({
         </button>
         <button
           aria-selected={activeTab === "shopping"}
-          className={`flex-1 py-3 text-center text-sm font-bold transition-colors ${
+          className={`flex-1 py-3 text-center text-sm font-bold transition-colors max-[360px]:py-2 ${
             activeTab === "shopping"
               ? "border-b-2 border-[var(--brand)] text-[var(--brand)]"
               : "text-[var(--text-3)]"
@@ -520,7 +520,7 @@ export function MypageScreen({
       </div>
 
       {/* Tab Content */}
-      <div className="px-4 pt-4" role="tabpanel">
+      <div className="px-4 pt-4 max-[360px]:pt-2" role="tabpanel">
         {activeTab === "recipebook" ? (
           <RecipeBookTabContent
             books={books}
@@ -599,8 +599,8 @@ function MypageLoadingSkeleton() {
   return (
     <div className="pb-32" data-testid="mypage-skeleton">
       {/* Profile skeleton */}
-      <div className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-4">
-        <Skeleton className="h-12 w-12 rounded-full" />
+      <div className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-4 max-[360px]:gap-2 max-[360px]:py-2.5">
+        <Skeleton className="h-12 w-12 rounded-full max-[360px]:h-10 max-[360px]:w-10" />
         <div className="flex-1 space-y-2">
           <Skeleton className="h-5 w-24" />
           <Skeleton className="h-4 w-20" />
@@ -608,19 +608,19 @@ function MypageLoadingSkeleton() {
       </div>
       {/* Tab bar skeleton */}
       <div className="flex border-b border-[var(--line)] bg-[var(--surface)]">
-        <div className="flex-1 py-3 text-center text-sm font-bold text-[var(--brand)]">
+        <div className="flex-1 py-3 text-center text-sm font-bold text-[var(--brand)] max-[360px]:py-2">
           레시피북
         </div>
-        <div className="flex-1 py-3 text-center text-sm font-bold text-[var(--text-3)]">
+        <div className="flex-1 py-3 text-center text-sm font-bold text-[var(--text-3)] max-[360px]:py-2">
           장보기 기록
         </div>
       </div>
       {/* Card skeletons */}
-      <div className="space-y-2 px-4 pt-4">
+      <div className="space-y-2 px-4 pt-4 max-[360px]:space-y-1 max-[360px]:pt-2">
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="flex items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]"
+            className="flex items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)] max-[360px]:gap-2 max-[360px]:p-3"
           >
             <Skeleton className="h-5 w-32" />
             <div className="flex-1" />
@@ -697,17 +697,17 @@ function RecipeBookTabContent({
   return (
     <div data-testid="recipebook-tab">
       {/* System books section */}
-      <p className="mb-2 text-sm font-semibold text-[var(--text-3)]">
+      <p className="mb-2 text-sm font-semibold text-[var(--text-3)] max-[360px]:mb-1">
         나의 레시피북
       </p>
-      <div className="space-y-2" role="list">
+      <div className="space-y-2 max-[360px]:space-y-1" role="list">
         {systemBooks.map((book) => (
           <SystemBookCard book={book} key={book.id} />
         ))}
       </div>
 
       {/* Custom books section */}
-      <p className="mb-2 mt-6 text-sm font-semibold text-[var(--text-3)]">
+      <p className="mb-2 mt-6 text-sm font-semibold text-[var(--text-3)] max-[360px]:mt-3 max-[360px]:mb-1">
         커스텀 레시피북
       </p>
 
@@ -716,7 +716,7 @@ function RecipeBookTabContent({
           아직 만든 레시피북이 없어요
         </p>
       ) : (
-        <div className="space-y-2" role="list">
+        <div className="space-y-2 max-[360px]:space-y-1" role="list">
           {customBooks.map((book) => (
             <CustomBookCard
               book={book}
@@ -777,7 +777,7 @@ function RecipeBookTabContent({
       {/* Create CTA */}
       <button
         aria-label="새 레시피북 만들기"
-        className="mt-2 flex w-full min-h-12 items-center justify-center rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--brand)] transition-colors hover:bg-[var(--brand-soft)] active:bg-[var(--brand-soft)]"
+        className="mt-2 flex w-full min-h-12 items-center justify-center rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--brand)] transition-colors hover:bg-[var(--brand-soft)] active:bg-[var(--brand-soft)] max-[360px]:mt-1 max-[360px]:min-h-11 max-[360px]:text-sm"
         onClick={onShowCreateInput}
         type="button"
       >
@@ -807,12 +807,12 @@ function SystemBookCard({ book }: { book: RecipeBookSummary }) {
 
   return (
     <Link
-      className="flex min-h-12 items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-1)] transition-colors hover:bg-[var(--surface-fill)]"
+      className="flex min-h-12 items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-1)] transition-colors hover:bg-[var(--surface-fill)] max-[360px]:min-h-10 max-[360px]:gap-2 max-[360px]:py-2"
       data-testid={`system-book-${book.book_type}`}
       href={`/recipe-books/${book.id}`}
       role="listitem"
     >
-      <span aria-hidden="true" className={`text-2xl ${iconMeta.colorClass}`}>
+      <span aria-hidden="true" className={`text-2xl max-[360px]:text-xl ${iconMeta.colorClass}`}>
         {iconMeta.icon}
       </span>
       <span className="min-w-0 flex-1 truncate text-base font-semibold text-[var(--foreground)]">
@@ -862,7 +862,7 @@ function CustomBookCard({
   if (isRenaming) {
     return (
       <div
-        className="flex items-center gap-2 rounded-[var(--radius-lg)] border-2 border-[var(--brand)] bg-[var(--surface)] p-3 shadow-[var(--shadow-1)]"
+        className="flex items-center gap-2 rounded-[var(--radius-lg)] border-2 border-[var(--brand)] bg-[var(--surface)] p-3 shadow-[var(--shadow-1)] max-[360px]:p-2.5"
         role="listitem"
       >
         <input
@@ -892,9 +892,9 @@ function CustomBookCard({
 
   return (
     <div className="relative" role="listitem">
-      <div className="flex min-h-12 items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-1)]">
+      <div className="flex min-h-12 items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-1)] max-[360px]:min-h-10 max-[360px]:gap-2 max-[360px]:py-1">
         <Link
-          className="min-w-0 flex-1 truncate text-base font-semibold text-[var(--foreground)]"
+          className="min-w-0 flex-1 truncate text-base font-semibold text-[var(--foreground)] max-[360px]:text-sm"
           href={`/recipe-books/${book.id}`}
         >
           {book.name}
@@ -905,7 +905,7 @@ function CustomBookCard({
         <button
           aria-haspopup="menu"
           aria-label={`${book.name} 옵션 메뉴`}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-3)]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-3)] max-[360px]:h-10 max-[360px]:w-10"
           onClick={(e) => {
             e.preventDefault();
             onMenuOpen();

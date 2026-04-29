@@ -2,8 +2,8 @@
 
 > 대상 slice: `17a-mypage-overview-history` Stage 4 `authority_precheck`
 > evidence:
-> - mobile-default-screenshot: Stage 5 follow-up (dev 서버 기반 수집 예정)
-> - mobile-narrow-screenshot: Stage 5 follow-up (dev 서버 기반 수집 예정)
+> - mobile-default-screenshot: `ui/designs/evidence/17a-mypage-overview-history/MYPAGE-mobile.png`
+> - mobile-narrow-screenshot: `ui/designs/evidence/17a-mypage-overview-history/MYPAGE-mobile-narrow.png`
 > - design reference: `ui/designs/MYPAGE.md`
 > - implementation reference: `components/mypage/mypage-screen.tsx`
 > - page entry: `app/mypage/page.tsx`
@@ -80,18 +80,40 @@
 
 | # | 위치 | 문제 | 제안 |
 |---|------|------|------|
-| 1 | 320px | 커스텀 레시피북 이름이 긴 경우 ⋯ 버튼과 겹칠 수 있다. 현재 truncate로 처리되어 blocker는 아니다. | Stage 5에서 20자 이상 이름의 320px 표시를 한 번 더 확인한다. |
+| 1 | 320px | 커스텀 레시피북 이름이 긴 경우 ⋯ 버튼과 겹칠 수 있다. 현재 truncate로 처리되어 blocker는 아니다. | Stage 5에서 20자 이상 이름의 320px 표시를 한 번 더 확인했다. `MYPAGE-mobile-narrow.png` 기준 겹침 없음. |
 | 2 | 프로필 이미지 | fallback 이니셜 아바타가 단색(brand-soft) 배경이다. 시각적으로 단조로울 수 있다. | Stage 5에서 gradient 또는 패턴 배경 검토를 권장한다. |
 
 ## Evidence Status
 
-- mobile-default (375px): Stage 4 구현 완료 후 dev 서버 스크린샷 수집 필요
-- mobile-narrow (320px): Stage 4 구현 완료 후 dev 서버 스크린샷 수집 필요
+- mobile-default (375px): `ui/designs/evidence/17a-mypage-overview-history/MYPAGE-mobile.png`
+- mobile-narrow (320px): `ui/designs/evidence/17a-mypage-overview-history/MYPAGE-mobile-narrow.png`
+- geometry check (320x568, `scrollY=0`): bottom nav `top=507.0625`, custom card `bottom=454`, create CTA `bottom=502`, horizontal overflow 없음 (`scrollWidth=320`, `clientWidth=320`)
 
-> Note: 스크린샷 evidence는 PR Draft open 후 dev 서버 기반으로 수집하여 `ui/designs/evidence/17a-mypage-overview-history/` 에 커밋한다.
+> Note: 스크린샷 evidence는 dev 서버 + E2E route mock + authenticated override로 수집했다.
 
 ## Decision
 
 - Stage 4 authority_precheck 결과: `통과`
 - Stage 5 public design review 시작 가능 여부: `가능`
 - 추가 보강 필요: Stage 5에서 320px 이름 길이와 fallback 아바타 디자인 lightweight 확인
+
+## Stage 5 Codex Authority Review
+
+- reviewer: Codex
+- review date: 2026-04-30
+- verdict: `pass`
+- blocker_count: 0
+- major_count: 0
+- minor_count: 1
+
+### Findings
+
+- 320px first viewport overlap: `resolved` — bottom nav and MYPAGE content no longer intersect at `scrollY=0`.
+- Long custom recipe book name: `pass` — text truncates before count/menu controls and keeps a visible gap from the fixed bottom tabs.
+- Fallback avatar: `accepted` — simple initial avatar matches the temporary-but-polished MYPAGE shell and remains accessible through `aria-label="프로필 이니셜"`.
+- System book emoji icons: `accepted` — no icon dependency exists in this repo, and the current app already uses small emoji accents in product UI. Kept as a low-risk visual cue rather than adding a dependency.
+
+### Stage 5 Decision
+
+- Design Status can move from `pending-review` to `confirmed` only after Claude `final_authority_gate` passes.
+- Codex public design review: `approved`.

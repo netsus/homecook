@@ -292,4 +292,38 @@ test.describe("MYPAGE screen", () => {
     await expect(page.getByRole("tab", { name: "레시피북" })).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tab", { name: "장보기 기록" })).toHaveAttribute("aria-selected", "false");
   });
+
+  test("no content overlaps bottom nav at scrollY=0", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 568 });
+    await setAuthOverride(page, "authenticated");
+    await installMypageRoutes(page);
+    await page.goto("/mypage");
+
+    await expect(page.getByText("집밥러")).toBeVisible();
+
+    const geometry = await page.evaluate(() => {
+      const nav = document.querySelector("nav.fixed");
+      if (!nav) return { navTop: 9999, lastContentBottom: 0 };
+      const navTop = nav.getBoundingClientRect().top;
+      const allListItems = document.querySelectorAll('[role="listitem"]');
+      const sectionHeaders = document.querySelectorAll('[data-testid="recipebook-tab"] > p');
+      let lastContentBottom = 0;
+      allListItems.forEach((el) => {
+        const r = el.getBoundingClientRect();
+        if (r.bottom > lastContentBottom) lastContentBottom = r.bottom;
+      });
+      sectionHeaders.forEach((el) => {
+        const r = el.getBoundingClientRect();
+        if (r.bottom > lastContentBottom) lastContentBottom = r.bottom;
+      });
+      const addBtn = document.querySelector('[aria-label="새 레시피북 만들기"]');
+      if (addBtn) {
+        const r = addBtn.getBoundingClientRect();
+        if (r.bottom > lastContentBottom) lastContentBottom = r.bottom;
+      }
+      return { navTop, lastContentBottom };
+    });
+
+    expect(geometry.lastContentBottom).toBeLessThanOrEqual(geometry.navTop);
+  });
 });
