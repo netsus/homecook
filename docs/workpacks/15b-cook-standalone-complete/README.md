@@ -170,12 +170,12 @@ RECIPE_DETAIL에서 직접 [요리하기]로 진입하는 독립 요리(standalo
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
-> Design Status 전이: `temporary` (Stage 1 기본값)
+> Design Status 전이: `temporary` → `pending-review` (Stage 4 완료) → `confirmed` (Stage 5 low-risk design review approve)
 > 15a COOK_MODE confirmed evidence 재사용. 독립 요리 경로는 동일 화면 컴포넌트를 데이터 소스만 달리하여 소비하므로 Stage 5에서 low-risk 판정 시 lightweight design check로 confirmed 유지 가능.
 
 ## Source Links
@@ -252,13 +252,13 @@ RECIPE_DETAIL에서 직접 [요리하기]로 진입하는 독립 요리(standalo
 - [x] standalone complete RPC function migration 적용 <!-- omo:id=delivery-standalone-rpc-migration;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 (독립 요리 경로 COOK_MODE + RECIPE_DETAIL CTA 연결) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 (독립 요리 경로 COOK_MODE + RECIPE_DETAIL CTA 연결) <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 
 ## Stage Evidence
 
@@ -276,3 +276,57 @@ RECIPE_DETAIL에서 직접 [요리하기]로 진입하는 독립 요리(standalo
 - `psql` permission smoke — mismatched `auth.uid()` returns `FORBIDDEN`.
 - `psql` standalone happy-path smoke — inserts one `leftover_dishes` row, removes only the current user's recipe pantry item, keeps unrelated/current-other pantry rows, increments `recipes.cook_count` to 1, and leaves `meals` / `cooking_sessions` counts unchanged.
 - `pnpm verify:backend` — pass (lint warnings only: existing `<img>` warnings; typecheck; 46 product test files / 367 tests; build; security E2E 9 tests).
+
+### Stage 4 Frontend Evidence
+
+- **Files created**:
+  - `stores/standalone-cook-mode-store.ts` — Zustand store for standalone cooking (loading → ready → completing → completed).
+  - `components/cooking/standalone-cook-mode-screen.tsx` — Standalone COOK_MODE screen reusing 15a visual patterns.
+  - `app/cooking/recipes/[recipe_id]/cook-mode/page.tsx` — Route page with async params/searchParams.
+  - `tests/standalone-cook-mode-screen.test.tsx` — 13 Vitest tests covering all acceptance scenarios.
+  - `tests/e2e/slice-15b-cook-standalone-complete.spec.ts` — 5 Playwright E2E tests (happy, cancel, login gate, swipe, empty consumed selection).
+- **Files modified**:
+  - `lib/api/cooking.ts` — Added `fetchStandaloneCookMode()` and `completeStandaloneCooking()`.
+  - `components/recipe/recipe-detail-screen.tsx` — [요리하기] CTA now navigates to `/cooking/recipes/${recipeId}/cook-mode?servings=${selectedServings}`.
+- **Verification**:
+  - `pnpm typecheck` — pass.
+  - `pnpm lint` — pass (only pre-existing `<img>` warnings).
+  - `pnpm exec vitest run tests/standalone-cook-mode-screen.test.tsx` — 13/13 pass.
+  - `pnpm exec vitest run tests/standalone-cook-mode-screen.test.tsx tests/cook-mode-screen.test.tsx tests/recipe-detail-screen.test.tsx` — 50/50 pass.
+  - `pnpm exec playwright test tests/e2e/slice-15b-cook-standalone-complete.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small` — 15/15 pass.
+  - `pnpm verify:frontend` — pass (lint warnings only: existing `<img>` warnings; product tests 49 files / 414 tests; build; smoke E2E 431 passed / 4 skipped; accessibility 6 passed; visual 12 passed; security 9 passed; Lighthouse assertions pass).
+  - `pnpm validate:workpack -- --slice 15b-cook-standalone-complete` — pass.
+  - `pnpm validate:workflow-v2` — pass.
+- **Key design decisions**:
+  - Separate `standalone-cook-mode-store.ts` (not extending session-based `cook-mode-store.ts`) to keep planner and standalone cooking paths isolated.
+  - Auth check does NOT block viewing (public GET endpoint); login gate shown only when unauthenticated user clicks [요리 완료].
+  - Cancel navigates directly to RECIPE_DETAIL without API call (no session to cancel).
+  - Duplicate-submit prevention via `useRef` guard.
+  - Servings read-only (no stepper UI in standalone COOK_MODE).
+  - Reuses `ConsumedIngredientSheet` from 15a for consumed ingredient selection.
+
+### Stage 5 Design Review Evidence
+
+- `Stage 5 Design Review: APPROVE` — `.omx/artifacts/stage5-design-review-15b-cook-standalone-complete-20260429T111600Z.md`
+- Design Status: `pending-review` → `confirmed`.
+- Review scope: low-risk extension of 15a confirmed `COOK_MODE` plus existing `RECIPE_DETAIL` CTA route update.
+- Authority required: no; authority blocker count 0.
+- Evidence considered: `pnpm verify:frontend` pass, 15b Playwright coverage across `desktop-chrome`, `mobile-chrome`, `mobile-ios-small`, and code review of the standalone screen's fixed bottom CTA, tab/content layout, token usage, and login gate state.
+
+### Stage 6 Frontend Review Evidence
+
+- `Stage 6 Frontend Review: APPROVE` — `.omx/artifacts/stage6-fe-review-15b-cook-standalone-complete-20260429T114020Z.md`
+- Review axes: correctness, readability/simplicity, architecture fit, security, performance, and verification story.
+- Repair applied during review: `tests/e2e/slice-15b-cook-standalone-complete.spec.ts` now sends actual touch events for the swipe acceptance path instead of only clicking tabs.
+- Merge-gate hardening applied during review: `tests/e2e/slice-13-pantry-core.spec.ts` mocks `/api/v1/pantry` with a pathname predicate so category-filter requests with query strings remain in the fixture instead of falling through to the real API.
+- `pnpm exec playwright test tests/e2e/slice-15b-cook-standalone-complete.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small` — 15/15 pass after swipe test repair.
+- `pnpm exec playwright test tests/e2e/slice-13-pantry-core.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small` — 21/21 pass after pantry fixture hardening.
+- `pnpm test:e2e:a11y` — 6/6 pass after stopping a concurrent local `dev-demo` server that was writing the same `.next` directory and causing a local-only Next dev manifest error.
+- `pnpm verify:frontend` — pass: lint (existing `<img>` warnings only), typecheck, product tests 49 files / 414 tests, build, smoke E2E 431 passed / 4 skipped, accessibility 6 passed, visual 12 passed, security 9 passed, Lighthouse assertions pass.
+
+### Internal 6.5 Closeout Evidence
+
+- Delivery checklist: all non-manual in-scope items checked.
+- Acceptance: all automated/backend/frontend acceptance items checked; Manual Only items remain live OAuth / real-device / full external environment checks.
+- Design Status: confirmed, low-risk reuse of 15a `COOK_MODE` authority evidence, authority blocker 0.
+- Closeout sync: roadmap projection set to `merged`; workflow-v2 projection set to completed/passed for final frontend merge.

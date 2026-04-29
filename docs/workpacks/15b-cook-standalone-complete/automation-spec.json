@@ -34,7 +34,7 @@
   },
   "frontend": {
     "required_routes": [
-      "/recipes/[recipe_id]/cook-mode"
+      "/cooking/recipes/[recipe_id]/cook-mode"
     ],
     "required_states": [
       "loading",

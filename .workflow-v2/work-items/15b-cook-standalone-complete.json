@@ -72,58 +72,76 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": ".omx/artifacts/stage6-fe-review-15b-cook-standalone-complete-20260429T114020Z.md",
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "notes": "Stage 2 backend branch feature/be-15b-cook-standalone-complete. Standalone cooking shares COOK_MODE confirmed screen from 15a (low-risk reuse, no new design artifacts needed). Backend implements two new endpoints: GET /recipes/{recipe_id}/cook-mode (unauthenticated) and POST /cooking/standalone-complete (authenticated). Stage 2 adds RPC function migration for atomic standalone completion; no table/enum/column change because leftover_dishes table was created in 15a migration. closeout_phase=collecting",
+  "notes": "Final frontend closeout projected after Stage 1 docs PR #293, Stage 2/3 backend PR #294, Claude Stage 4 frontend implementation, Codex Stage 5 design review, Codex Stage 6 review, and internal 6.5 validators. Standalone cooking remains isolated from planner sessions/meals status. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:backend,pnpm verify:frontend,pnpm exec playwright test tests/e2e/slice-15b-cook-standalone-complete.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small,pnpm exec playwright test tests/e2e/slice-13-pantry-core.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small,pnpm validate:workpack -- --slice 15b-cook-standalone-complete,pnpm validate:workflow-v2,git diff --check last_recovery_at=2026-04-29T11:40:20Z",
   "closeout": {
-    "phase": "collecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "in_progress",
-      "design_status": "temporary",
-      "delivery_checklist": "pending",
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
       "design_authority": "not_required",
-      "acceptance": "pending",
+      "acceptance": "complete",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "pending",
-      "external_smokes": "pending",
-      "authority_reports": [],
-      "actual_verification_refs": []
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/COOK_MODE-authority.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm exec playwright test tests/e2e/slice-15b-cook-standalone-complete.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small",
+        "pnpm exec playwright test tests/e2e/slice-13-pantry-core.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small",
+        "pnpm validate:workpack -- --slice 15b-cook-standalone-complete",
+        "pnpm validate:workflow-v2",
+        "git diff --check"
+      ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending",
-      "approval_state": "not_started",
+      "current_head_sha": "tracked-in-pr-body-after-pr-sync-commit",
+      "approval_state": "dual_approved",
       "all_checks_green": false
     },
     "recovery_summary": {
-      "manual_patch_count": 0,
+      "manual_patch_count": 1,
       "manual_handoff": false,
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": false,
-      "last_recovery_at": null
+      "last_recovery_at": "2026-04-29T11:40:20Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 0,
+      "codex_repairable_count": 2,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
       "latest_reason_code": null,
-      "evidence_sources": []
+      "evidence_sources": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm exec playwright test tests/e2e/slice-15b-cook-standalone-complete.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small",
+        "pnpm exec playwright test tests/e2e/slice-13-pantry-core.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small",
+        "pnpm validate:workpack -- --slice 15b-cook-standalone-complete",
+        "pnpm validate:workflow-v2",
+        "git diff --check"
+      ]
     },
     "projection_state": {
-      "docs_synced_at": null,
-      "status_synced_at": null,
-      "pr_body_synced_at": null
+      "docs_synced_at": "2026-04-29T11:40:20Z",
+      "status_synced_at": "2026-04-29T11:40:20Z",
+      "pr_body_synced_at": "2026-04-29T11:47:00Z"
     }
   },
   "out_of_scope": [

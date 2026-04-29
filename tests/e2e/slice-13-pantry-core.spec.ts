@@ -91,7 +91,7 @@ async function installPantryRoutes(page: Page) {
     });
   });
 
-  await page.route("**/api/v1/pantry", async (route) => {
+  await page.route((url) => url.pathname === "/api/v1/pantry", async (route) => {
     const method = route.request().method();
 
     if (method === "GET") {

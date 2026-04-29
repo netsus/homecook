@@ -6,6 +6,8 @@ import type {
   CookingSessionCompleteData,
   CookingSessionCookModeData,
   CookingSessionCreateData,
+  CookingStandaloneCompleteData,
+  CookingStandaloneCookModeData,
 } from "@/types/cooking";
 
 export interface CookingApiError extends Error {
@@ -117,6 +119,30 @@ export async function cancelCookingSession(
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({}),
+    },
+  );
+}
+
+export async function fetchStandaloneCookMode(
+  recipeId: string,
+  servings: number,
+): Promise<CookingStandaloneCookModeData> {
+  return requestCooking<CookingStandaloneCookModeData>(
+    `/api/v1/recipes/${recipeId}/cook-mode?servings=${servings}`,
+  );
+}
+
+export async function completeStandaloneCooking(body: {
+  recipe_id: string;
+  cooking_servings: number;
+  consumed_ingredient_ids: string[];
+}): Promise<CookingStandaloneCompleteData> {
+  return requestCooking<CookingStandaloneCompleteData>(
+    "/api/v1/cooking/standalone-complete",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
     },
   );
 }
