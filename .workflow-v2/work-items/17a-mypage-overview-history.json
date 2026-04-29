@@ -86,7 +86,7 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs created by Claude. MYPAGE is h8 prototype parity candidate (screen-level only); sub-tabs MYPAGE_TAB_RECIPEBOOK/MYPAGE_TAB_SHOPPINGLISTS are prototype-derived design. Authority required for new-screen. System recipe books are actual rows (recipe_books ×3 bootstrap on signup). RECIPEBOOK_DETAIL → 17b; Settings/logout → 17c.",
+  "notes": "Stage 1 docs merged via PR #302. Stage 2 backend implemented by Codex on feature/be-17a-mypage-overview-history: GET /users/me, full recipe_books listing/counts, custom book PATCH/DELETE, and GET /shopping/lists history. MYPAGE is h8 prototype parity candidate (screen-level only); sub-tabs MYPAGE_TAB_RECIPEBOOK/MYPAGE_TAB_SHOPPINGLISTS are prototype-derived design. Authority required for new-screen. System recipe books are actual rows (recipe_books ×3 bootstrap on signup). RECIPEBOOK_DETAIL → 17b; Settings/logout → 17c.",
   "out_of_scope": [
     "RECIPEBOOK_DETAIL 상세 조회 및 레시피 목록 — 17b-recipebook-detail-remove",
     "레시피북에서 레시피 제거 (saved/custom/liked) — 17b-recipebook-detail-remove",
