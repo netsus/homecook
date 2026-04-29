@@ -1,0 +1,95 @@
+{
+  "slice_id": "17a-mypage-overview-history",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/users/me",
+      "GET /api/v1/recipe-books",
+      "POST /api/v1/recipe-books",
+      "PATCH /api/v1/recipe-books/{book_id}",
+      "DELETE /api/v1/recipe-books/{book_id}",
+      "GET /api/v1/shopping/lists"
+    ],
+    "invariants": [
+      "owner-authorization",
+      "system-book-immutability",
+      "custom-only-rename-delete",
+      "recipe-count-source-of-truth",
+      "cascade-delete-book-items",
+      "api-envelope-format",
+      "authenticated-only",
+      "forbidden-other-user",
+      "not-found-missing-book",
+      "empty-name-validation",
+      "shopping-list-owner-filter",
+      "cursor-pagination-shopping"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/mypage.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/mypage"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "new-screen",
+      "anchor_screens": [],
+      "required_screens": [
+        "MYPAGE"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/MYPAGE.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/MYPAGE-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/MYPAGE-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "recipe-books-table-missing",
+    "recipe-book-items-table-missing",
+    "shopping-lists-table-missing",
+    "users-table-missing",
+    "signup-bootstrap-recipe-books-missing",
+    "seed-data-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
