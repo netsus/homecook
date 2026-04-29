@@ -1,0 +1,89 @@
+{
+  "slice_id": "14-cook-session-start",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/cooking/ready",
+      "POST /api/v1/cooking/sessions",
+      "POST /api/v1/cooking/sessions/{session_id}/cancel",
+      "GET /api/v1/cooking/sessions/{session_id}/cook-mode"
+    ],
+    "invariants": [
+      "owner-authorization",
+      "cancel-idempotency",
+      "completed-cancel-conflict-409",
+      "meal-status-shopping-done-check",
+      "meal-recipe-id-match-check",
+      "session-meal-snapshot-insert",
+      "meals-status-read-only",
+      "cooking-servings-positive",
+      "meal-ids-non-empty",
+      "api-envelope-format"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/cook-session-start.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/cooking/ready"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "new-screen",
+      "anchor_screens": [],
+      "required_screens": [
+        "COOK_READY_LIST"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/COOK_READY_LIST.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/COOK_READY_LIST-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default-screenshot",
+        "mobile-narrow-screenshot"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/COOK_READY_LIST-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "referenced-table-missing",
+    "cooking-sessions-migration-missing",
+    "seed-data-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
