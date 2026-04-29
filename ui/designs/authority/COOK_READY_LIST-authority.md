@@ -9,19 +9,19 @@
 > - page entry: `app/cooking/ready/page.tsx`
 > - e2e reference: `tests/e2e/slice-14-cook-session-start.spec.ts`
 > 검토일: 2026-04-29
-> 검토자: Claude (Stage 4 self-check, Stage 5 Codex review 대기)
-> note: Screenshot files are declared but not yet captured. Stage 5 Codex will capture them from a running build.
+> 검토자: Claude (Stage 4 self-check), Codex (Stage 5 authority review)
+> note: `pnpm build` passed. Screenshot evidence was captured from QA fixture dev mode because production `next start` intentionally disables the E2E auth override used for deterministic mock data.
 
 ## Verdict
 
-- verdict: `pending-review`
-- 한 줄 요약: COOK_READY_LIST 신규 화면은 prototype-derived design 기준으로 모든 필수 상태(loading/empty/error/unauthorized/ready)를 구현하고, 44px 터치 타겟, 카드 radius 16px, 버튼 radius 12px 등 디자인 토큰을 준수한다. Stage 5 Codex 리뷰 후 screenshot evidence 추가 예정.
+- verdict: `pass`
+- 한 줄 요약: COOK_READY_LIST 신규 화면은 prototype-derived design 기준으로 필수 상태(loading/empty/error/unauthorized/ready)를 구현했고, 390px 및 320px 모바일 캡처에서 카드, CTA, 하단 탭이 겹침 없이 유지된다.
 
 ## Scorecard
 
 | 항목 | 점수 | 메모 |
 |------|------|------|
-| Mobile UX | 5/5 | 세로 카드 리스트 단일 흐름, 수평 스크롤 없음 |
+| Mobile UX | 5/5 | 세로 카드 리스트 단일 흐름, 390px/320px 캡처에서 수평 스크롤 및 겹침 없음 |
 | Interaction Clarity | 4/5 | 레시피별 [요리하기] CTA 명확, 409 conflict 토스트로 상태 안내 |
 | Visual Hierarchy | 4/5 | 헤더(뒤로+제목) → helper(날짜) → 카드 리스트 → CTA 순서 명확 |
 | Color / Material Fit | 4/5 | `--brand`, `--brand-deep`, `--surface`, `--text-3` 등 기존 토큰 사용 |
@@ -34,7 +34,7 @@
 - Rule 3 (primary CTA): `pass` — 각 카드 내 [요리하기] 버튼 44px min-height
 - Rule 3a (control proximity): `pass` — CTA가 카드 오른쪽에 위치, 썸네일/텍스트와 인접
 - Rule 4/4a/4b (familiar pattern + information grouping): `pass`
-- Rule 5 (mobile sentinel): `pass` — 320px 이상 레이아웃 정상 (flex + truncate)
+- Rule 5 (mobile sentinel): `pass` — 320px 캡처에서 카드/CTA/하단 탭 겹침 없음
 
 ## Contract / Policy Check
 
@@ -59,8 +59,22 @@
 
 없음.
 
+## Non-blocking Notes
+
+- reference screenshot: 없음. `visual-verdict`는 screenshot-to-reference 비교용 워크플로라, 이번 검토는 `ui/designs/COOK_READY_LIST.md`와 mobile UX rules 기준의 structured authority review로 수행했다.
+- 320px narrow evidence에서 하단 AppShell label은 기존 bottom navigation의 letter spacing을 그대로 따른다. 신규 COOK_READY_LIST 영역의 카드/CTA에는 겹침이나 잘림이 없다.
+- `<img>` lint warning은 기존 planner 화면에도 같은 패턴이 있으며, Stage 5 blocker는 아니다. 추후 이미지 최적화 정리 때 `next/image` 전환을 함께 검토한다.
+
 ## Screenshot Evidence
 
-> Stage 5 Codex review 후 빌드 기반 스크린샷을 추가할 예정.
-> - mobile-default (390px): `ui/designs/evidence/14-cook-session-start/COOK_READY_LIST-mobile-default-screenshot.png` (pending capture)
-> - mobile-narrow (320px): `ui/designs/evidence/14-cook-session-start/COOK_READY_LIST-mobile-narrow-screenshot.png` (pending capture)
+- mobile-default (390px): `ui/designs/evidence/14-cook-session-start/COOK_READY_LIST-mobile-default-screenshot.png`
+- mobile-narrow (320px): `ui/designs/evidence/14-cook-session-start/COOK_READY_LIST-mobile-narrow-screenshot.png`
+- capture command: Playwright Chromium, QA fixture dev server at `http://127.0.0.1:3100`, mocked `GET /api/v1/cooking/ready`, auth override `authenticated`
+
+## Final Authority Gate
+
+- reviewer: Claude
+- artifact: `.omx/artifacts/claude-delegate-14-cook-session-start-stage5-final-authority-gate-response-20260429T055358Z.md`
+- decision: `pass`
+- design_status_update_allowed: `yes`
+- required_repairs: none

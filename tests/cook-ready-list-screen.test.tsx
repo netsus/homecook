@@ -3,6 +3,7 @@
 import React from "react";
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -279,6 +280,70 @@ describe("CookReadyListScreen", () => {
         "/cooking/sessions/session-abc/cook-mode",
       );
     });
+    expect(startButtons[0].textContent).toBe("준비 중...");
+    expect((startButtons[0] as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("disables all start buttons while any session creation is pending", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookingReady.mockResolvedValue(buildReadyData());
+
+    // createCookingSession stays pending forever
+    createCookingSession.mockImplementation(
+      () => new Promise(() => {}),
+    );
+
+    render(<CookReadyListScreen initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cook-ready-recipe-list")).toBeTruthy();
+    });
+
+    const startButtons = screen.getAllByTestId("start-session-button");
+    expect(startButtons).toHaveLength(2);
+
+    // Click the first recipe's button
+    await userEvent.click(startButtons[0]);
+
+    // Both buttons should now be disabled
+    await waitFor(() => {
+      const buttons = screen.getAllByTestId("start-session-button");
+      for (const btn of buttons) {
+        expect((btn as HTMLButtonElement).disabled).toBe(true);
+      }
+    });
+
+    // The clicked button shows "준비 중...", the other still shows "요리하기"
+    expect(startButtons[0].textContent).toBe("준비 중...");
+    expect(startButtons[1].textContent).toBe("요리하기");
+
+    // Only one createCookingSession call should have been made
+    expect(createCookingSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("synchronous ref guard prevents double-submit on rapid same-button clicks", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookingReady.mockResolvedValue(buildReadyData());
+
+    // createCookingSession stays pending forever
+    createCookingSession.mockImplementation(
+      () => new Promise(() => {}),
+    );
+
+    render(<CookReadyListScreen initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cook-ready-recipe-list")).toBeTruthy();
+    });
+
+    const startButtons = screen.getAllByTestId("start-session-button");
+
+    // Synchronous same-tick clicks should still be guarded before React rerenders.
+    fireEvent.click(startButtons[0]);
+    fireEvent.click(startButtons[0]);
+
+    // Despite two clicks, only one createCookingSession call
+    expect(createCookingSession).toHaveBeenCalledTimes(1);
   });
 
   it("shows error toast on 409 conflict and refreshes list", async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -38,10 +38,12 @@ function formatDateRange(start: string, end: string) {
 function RecipeReadyCard({
   recipe,
   isCreating,
+  anyCreating,
   onStartSession,
 }: {
   recipe: CookingReadyRecipe;
   isCreating: boolean;
+  anyCreating: boolean;
   onStartSession: (recipe: CookingReadyRecipe) => void;
 }) {
   return (
@@ -75,7 +77,7 @@ function RecipeReadyCard({
       <button
         className="shrink-0 rounded-[var(--radius-md)] bg-[var(--brand)] px-4 py-2.5 text-sm font-bold text-white active:bg-[var(--brand-deep)] disabled:opacity-60"
         data-testid="start-session-button"
-        disabled={isCreating}
+        disabled={anyCreating}
         onClick={() => onStartSession(recipe)}
         style={{ minHeight: 44 }}
         type="button"
@@ -102,6 +104,11 @@ export function CookReadyListScreen({
     initialAuthenticated ? "authenticated" : "checking",
   );
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [sessionPendingRecipeId, setSessionPendingRecipeId] = useState<
+    string | null
+  >(null);
+  const sessionPendingRef = useRef(false);
+  const activeCreatingRecipeId = sessionPendingRecipeId ?? creatingRecipeId;
 
   useEffect(() => {
     const e2eOverride = readE2EAuthOverride();
@@ -173,12 +180,19 @@ export function CookReadyListScreen({
 
   const handleStartSession = useCallback(
     async (recipe: CookingReadyRecipe) => {
+      if (sessionPendingRef.current) return;
+      sessionPendingRef.current = true;
+      setSessionPendingRecipeId(recipe.recipe_id);
       setSessionError(null);
 
       try {
         const sessionId = await startSession(recipe);
+        // Keep locked so buttons do not re-enable before navigation.
         router.push(`/cooking/sessions/${sessionId}/cook-mode`);
       } catch (error) {
+        sessionPendingRef.current = false;
+        setSessionPendingRecipeId(null);
+
         if (isCookingApiError(error) && error.status === 409) {
           setSessionError(
             "이미 다른 상태로 변경된 식사가 있어요. 새로고침해 주세요.",
@@ -325,7 +339,8 @@ export function CookReadyListScreen({
           {recipes.map((recipe) => (
             <RecipeReadyCard
               key={recipe.recipe_id}
-              isCreating={creatingRecipeId === recipe.recipe_id}
+              anyCreating={activeCreatingRecipeId !== null}
+              isCreating={activeCreatingRecipeId === recipe.recipe_id}
               onStartSession={handleStartSession}
               recipe={recipe}
             />

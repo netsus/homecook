@@ -69,16 +69,74 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
     "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "last_evaluator_result": "Stage 6 Codex review, Claude final authority gate, and CI-equivalent local verify:frontend",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 4 frontend implementation on feature/fe-14-cook-session-start. API client, Zustand store, COOK_READY_LIST screen with all 5 states, PLANNER_WEEK CTA wiring, COOK_MODE placeholder route. Vitest 14 tests, Playwright 7 tests. Design Status pending-review. Backend PR #285 approved (Stage 3).",
+  "notes": "Final closeout projected on feature/fe-14-cook-session-start for PR #286 after Stage 1 docs PR #284, Stage 2/3 backend PR #285, Claude Stage 4 frontend implementation/repair, Codex Stage 5/6 review, Claude final authority gate, and internal 6.5 validators. Stage 6 repaired duplicate session-submit race with synchronous pending guard. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:4|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,git history,PR #286 body last_recovery_at=2026-04-29T06:24:06Z",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/COOK_READY_LIST-authority.md",
+        ".omx/artifacts/claude-delegate-14-cook-session-start-stage5-final-authority-gate-response-20260429T055358Z.md"
+      ],
+      "actual_verification_refs": [
+        "PR #286 Actual Verification",
+        "PR #286 GitHub current-head checks",
+        "docs/workpacks/14-cook-session-start/README.md Stage 2/4/5/6 Evidence",
+        ".artifacts/qa/14-cook-session-start/2026-04-29T05-50-05-895Z/exploratory-report.json",
+        ".artifacts/qa/14-cook-session-start/2026-04-29T05-50-05-895Z/eval-result.json"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-04-29T06:24:06Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 4,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "codex_repairable",
+      "evidence_sources": [
+        ".omx/artifacts",
+        "GitHub PR/CI",
+        "git history",
+        "PR #286 body"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-04-29T06:24:06Z",
+      "status_synced_at": "2026-04-29T06:24:06Z",
+      "pr_body_synced_at": "2026-04-29T06:24:06Z"
+    }
+  },
   "out_of_scope": [
     "COOK_MODE 화면 구현 — 15a/15b에서 닫음",
     "요리 완료 처리 (POST /cooking/sessions/{id}/complete) — 15a",
