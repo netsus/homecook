@@ -64,10 +64,10 @@
 
 ## Merge Gate
 
-- current head SHA: closeout commit to be pushed to PR #286; GitHub current-head checks must be green before merge
-- started PR checks: will rerun after closeout commit push
-- all checks completed green: required before final merge
-- pending / failed / rerun checks: none locally; GitHub checks pending until push
+- current head SHA: PR #286 current head after closeout evidence commit push
+- started PR checks: GitHub checks run on the PR current head after Ready for Review
+- all checks completed green: required and verified before final merge
+- pending / failed / rerun checks: none locally; GitHub current-head checks gate final merge
 
 ## Docs Impact
 
