@@ -4,7 +4,7 @@ const tabs = [
   { id: "home", label: "홈", href: "/" },
   { id: "planner", label: "플래너", href: "/planner" },
   { id: "pantry", label: "팬트리", href: "/pantry" },
-  { id: "mypage", label: "마이", href: "#" },
+  { id: "mypage", label: "마이", href: "/mypage" },
 ] as const;
 
 interface BottomTabsProps {
@@ -21,7 +21,7 @@ export function BottomTabs({ currentTab }: BottomTabsProps) {
           return (
             <Link
               key={tab.id}
-              aria-disabled={!active && tab.href === "#"}
+              aria-current={active ? "page" : undefined}
               className={`flex min-w-0 flex-1 flex-col items-center rounded-[18px] px-3 py-2 text-sm transition ${
                 active
                   ? "bg-[var(--brand)] text-[var(--foreground)]"

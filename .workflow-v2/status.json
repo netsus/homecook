@@ -717,7 +717,7 @@
     {
       "id": "17a-mypage-overview-history",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-17a-mypage-overview-history",
+      "branch": "feature/fe-17a-mypage-overview-history",
       "pr_path": "pending",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
@@ -728,7 +728,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs merged via PR #302. Stage 2 backend implemented by Codex on feature/be-17a-mypage-overview-history: GET /users/me, full recipe_books listing/counts, custom book PATCH/DELETE, and GET /shopping/lists history. h8 prototype parity candidate (screen-level), authority required for new-screen."
+      "notes": "Stage 1 docs merged via PR #302. Stage 2 backend implemented by Codex; Stage 3 backend reviewed and approved by Claude; backend PR #303 merged to master. Stage 4 frontend implemented by Claude on feature/fe-17a-mypage-overview-history: MYPAGE screen with profile/tabs/recipe-book-CRUD/shopping-history, API client, Vitest 18 tests, Playwright E2E 9 tests, authority report. h8 prototype parity candidate (screen-level), authority required for new-screen."
     }
   ]
 }

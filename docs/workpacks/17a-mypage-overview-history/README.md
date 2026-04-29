@@ -246,13 +246,13 @@
 - [x] 백엔드 계약 고정 (`GET /users/me`, full `GET /recipe-books`, `POST/PATCH/DELETE /recipe-books`, `GET /shopping/lists`) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 (Route Handler 4개 추가/확장) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 (`RecipeBookSummary`, update/delete, shopping history types) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 (system-book 403, owner filters, 404/422, cursor history) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 (Stage 2 route tests + Stage 4 fixture follow-up retained) <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 (`ensureUserBootstrapState` before profile/books/history) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 
 ## Stage 2 Backend Evidence
 
@@ -262,3 +262,18 @@
 - Lint: `pnpm lint` passed with existing `<img>` warnings in unrelated prior UI files.
 - Backend gate: `pnpm verify:backend` passed (lint/typecheck/product Vitest 433 tests/build/security Playwright 9 tests).
 - Real smoke: `pnpm local:reset:demo` passed; local Supabase reset applied migrations and seed output confirmed system books (`내가 추가한 레시피`, `저장한 레시피`, `좋아요한 레시피`) plus main custom/saved book baseline.
+
+## Stage 4 Frontend Evidence
+
+- 2026-04-30 Claude implemented MYPAGE frontend on `feature/fe-17a-mypage-overview-history`:
+  - API client: `lib/api/mypage.ts` — 6 endpoint functions (`fetchUserProfile`, `fetchRecipeBooks`, `createRecipeBook`, `renameRecipeBook`, `deleteRecipeBook`, `fetchShoppingHistory`)
+  - Screen component: `components/mypage/mypage-screen.tsx` — auth state machine, view state machine, profile section, tab bar, recipe book tab with system/custom sections and CRUD, shopping history tab with cursor pagination, delete confirm dialog, toast notifications
+  - Route page: `app/mypage/page.tsx` — server component with `getServerAuthUser()` + `AppShell currentTab="mypage"`
+  - Bottom tabs: `components/layout/bottom-tabs.tsx` — updated mypage href from `"#"` to `"/mypage"`
+  - Product config: `vitest.product.config.ts` — added `tests/mypage-*.test.tsx` pattern
+  - Authority report: `ui/designs/authority/MYPAGE-authority.md`
+- 5 mandatory UI states: loading (skeleton), empty (custom books + shopping), error (retry), read-only (N/A), unauthorized (login gate with `SocialLoginButtons nextPath="/mypage"`)
+- Vitest: `pnpm exec vitest run tests/mypage-screen.test.tsx` — 18 tests passed
+- Playwright: `tests/e2e/slice-17a-mypage.spec.ts` — 9 E2E test scenarios
+- Type check: `npx tsc --noEmit` passed with 0 errors
+- Backend regression: `pnpm exec vitest run tests/mypage.backend.test.ts` — 5 tests passed
