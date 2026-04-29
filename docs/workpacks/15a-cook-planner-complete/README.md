@@ -261,5 +261,12 @@
 - Claude final authority gate: `.omx/artifacts/claude-delegate-15a-cook-planner-complete-stage5-final-authority-gate-response-20260429T090319Z.md` → decision `pass`, Design Status update allowed, blocker 0, major 0.
 - Design Status: `pending-review` → `confirmed`.
 
+### Stage 6 / Internal 6.5 Evidence
+
+- PR: `https://github.com/netsus/homecook/pull/290`
+- Codex Stage 6 review artifact/comment: `.omx/artifacts/stage6-15a-cook-planner-complete-pr-review-20260429T093600Z.md` / `https://github.com/netsus/homecook/pull/290#issuecomment-4342464747`
+- PR #290 current-head SHA `6618948bc7e9b183ff72a292e352e6cad0dfe169` checks: build, quality, smoke, accessibility, visual, lighthouse, security-smoke, policy, template-check, labeler, GitGuardian all pass.
+- Internal 6.5 closeout projection: roadmap/work-item/status projected to `merged`, Design Status `confirmed`, acceptance `complete`, required checks `passed`, merge gate `all_checks_green=true`.
+
 ## Open Questions
 없음.

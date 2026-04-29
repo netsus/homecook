@@ -70,20 +70,20 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs merged via PR #288. Stage 2/3 backend merged via PR #289. Stage 4 frontend implementation and Claude-owned repairs completed on feature/fe-15a-cook-planner-complete. Stage 5 Codex authority review and Claude final_authority_gate passed with blocker 0 / major 0; Design Status confirmed. Local required checks including pnpm verify:frontend passed. Stage 6 PR review, internal 6.5 closeout reconcile, final merge, and post-merge OMO report remain. closeout_phase=collecting",
+  "notes": "Final closeout projected for PR #290 after Stage 1 docs PR #288, Stage 2/3 backend PR #289, Claude Stage 4 frontend implementation/repair, Codex Stage 5/6 review, Claude final authority gate, and internal 6.5 validators. Stage 6 Codex review repaired dialog accessibility metadata before PR creation. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:1|claude:2|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,PR #290 body,ui/designs/authority/COOK_MODE-authority.md last_recovery_at=2026-04-29T09:35:20Z",
   "closeout": {
-    "phase": "collecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "in_progress",
+      "roadmap_lifecycle": "merged",
       "design_status": "confirmed",
       "delivery_checklist": "complete",
       "design_authority": "passed",
@@ -111,31 +111,36 @@
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": null,
-      "approval_state": "not_started",
-      "all_checks_green": false
+      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
     },
     "recovery_summary": {
-      "manual_patch_count": 0,
+      "manual_patch_count": 1,
       "manual_handoff": false,
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": false,
-      "last_recovery_at": null
+      "last_recovery_at": "2026-04-29T09:35:20Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 0,
-      "claude_repairable_count": 0,
+      "codex_repairable_count": 1,
+      "claude_repairable_count": 2,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": null,
-      "evidence_sources": []
+      "latest_reason_code": "stage6_accessibility_metadata",
+      "evidence_sources": [
+        ".omx/artifacts",
+        "GitHub PR/CI",
+        "PR #290 body",
+        "ui/designs/authority/COOK_MODE-authority.md"
+      ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-04-29T09:03:19Z",
-      "status_synced_at": "2026-04-29T09:03:19Z",
-      "pr_body_synced_at": null
+      "docs_synced_at": "2026-04-29T09:35:20Z",
+      "status_synced_at": "2026-04-29T09:35:20Z",
+      "pr_body_synced_at": "2026-04-29T09:35:20Z"
     }
   },
   "out_of_scope": [
