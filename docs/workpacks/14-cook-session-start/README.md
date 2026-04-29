@@ -226,7 +226,7 @@
 ## Design Status
 
 - [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
 - [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
@@ -289,13 +289,13 @@
 - [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 
 ## Stage 2 Evidence
 
@@ -305,3 +305,16 @@
 - Schema migration: `supabase/migrations/20260429050000_14_cook_session_tables.sql` creates `cooking_sessions`, `cooking_session_meals`, enum/checks/indexes/grants.
 - Local DB smoke: `pnpm dlx supabase migration up` applied the migration; `psql` table existence check returned `cooking_session_meals` and `cooking_sessions`.
 - Full backend gate: `pnpm verify:backend` -> pass (lint warning only: pre-existing `<img>` warning in `components/planner/planner-week-screen.tsx`).
+
+## Stage 4 Evidence
+
+- API client: `lib/api/cooking.ts` — follows pantry API pattern with `CookingApiError`, `isCookingApiError()`, `fetchCookingReady()`, `createCookingSession()`.
+- Zustand store: `stores/cooking-ready-store.ts` — screen states: `loading | ready | empty | error`, with `loadReady()` and `startSession()` actions.
+- Screen component: `components/cooking/cook-ready-list-screen.tsx` — auth checking/unauthorized gate, loading skeletons, empty state with planner redirect, error state with retry, recipe list with session creation CTA, 409 conflict toast + list refresh.
+- Page route: `app/cooking/ready/page.tsx` — server component with `AppShell currentTab="planner" headerMode="hidden"`, passes `initialAuthenticated` from `getServerAuthUser()`.
+- COOK_MODE placeholder: `app/cooking/sessions/[session_id]/cook-mode/page.tsx` — minimal placeholder (15a scope).
+- PLANNER_WEEK wiring: `components/planner/planner-week-screen.tsx` ��� [요리하기] CTA changed from disabled `<button>` to `<Link href="/cooking/ready">`.
+- Vitest: `tests/cook-ready-list-screen.test.tsx` — 14 tests covering auth gate, loading, ready, empty, error, retry, session creation, 409 conflict, 401 during session, thumbnail rendering.
+- Playwright: `tests/e2e/slice-14-cook-session-start.spec.ts` — 7 tests covering authenticated ready list, guest login gate, empty state, session creation + route handoff, 409 toast, back button, planner CTA link.
+- Design Status: `temporary` → `pending-review`.
+- Authority evidence: `ui/designs/authority/COOK_READY_LIST-authority.md` (screenshot placeholders for post-build capture).

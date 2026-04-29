@@ -648,7 +648,7 @@
     {
       "id": "14-cook-session-start",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-14-cook-session-start",
+      "branch": "feature/fe-14-cook-session-start",
       "pr_path": "pending",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
@@ -659,7 +659,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 2 backend implementation in progress on feature/be-14-cook-session-start. Targeted backend Vitest covers ready grouping, session creation, owner/status/recipe guards, cancel idempotency, completed cancel conflict, and cook-mode data read."
+      "notes": "Stage 4 frontend implementation on feature/fe-14-cook-session-start. API client, Zustand store, COOK_READY_LIST screen with all 5 states, PLANNER_WEEK CTA wiring, COOK_MODE placeholder route. Vitest 14 tests, Playwright 7 tests. Design Status pending-review. Backend PR #285 approved (Stage 3)."
     }
   ]
 }
