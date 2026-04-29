@@ -1,0 +1,89 @@
+{
+  "slice_id": "15b-cook-standalone-complete",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/recipes/{recipe_id}/cook-mode",
+      "POST /api/v1/cooking/standalone-complete"
+    ],
+    "invariants": [
+      "owner-authorization",
+      "no-meals-status-mutation",
+      "no-cooking-sessions-creation",
+      "planner-standalone-separation",
+      "leftover-dishes-insert",
+      "pantry-items-delete-consumed",
+      "pantry-empty-consumed-no-delete",
+      "recipes-cook-count-increment",
+      "atomic-transaction",
+      "cook-mode-unauthenticated-access",
+      "standalone-complete-authenticated-only",
+      "recipe-not-found-404",
+      "invalid-servings-422",
+      "api-envelope-format"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/cook-standalone-complete.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/recipes/[recipe_id]/cook-mode"
+    ],
+    "required_states": [
+      "loading",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [
+        "RECIPE_DETAIL"
+      ],
+      "required_screens": [
+        "COOK_MODE"
+      ],
+      "generator_required": false,
+      "generator_artifact": "ui/designs/COOK_MODE.md",
+      "critic_required": false,
+      "critic_artifact": "ui/designs/critiques/COOK_MODE-critique.md",
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "referenced-table-missing",
+    "leftover-dishes-table-missing",
+    "pantry-items-table-missing",
+    "recipes-table-missing",
+    "seed-data-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

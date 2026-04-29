@@ -1,0 +1,141 @@
+{
+  "id": "15b-cook-standalone-complete",
+  "title": "Standalone cook complete from RECIPE_DETAIL with pantry deduction and leftover insert",
+  "summary": "RECIPE_DETAIL 직행 독립 요리 COOK_MODE 경로 구현. GET /recipes/{recipe_id}/cook-mode 비로그인 조회 + POST /cooking/standalone-complete 로그인 완료. leftover_dishes INSERT, pantry_items DELETE, recipes.cook_count += 1. meals.status 변경 없음, cooking_sessions 생성 없음. COOK_MODE는 h8 prototype-derived design, 15a confirmed 화면 재사용.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "RECIPE_DETAIL에서 직접 [요리하기]로 진입하는 독립 요리(standalone) 경로를 구현하여, 사용자가 플래너를 거치지 않고도 레시피 상세에서 바로 COOK_MODE로 요리하고, 요리 완료 시 남은요리를 자동 등록하고 소진 재료를 팬트리에서 제거할 수 있도록 한다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "15a-cook-planner-complete",
+    "14-cook-session-start",
+    "h8-baemin-prototype-reference-future-screens-direction"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/요구사항기준선-v1.6.4.md",
+      "docs/화면정의서-v1.5.1.md",
+      "docs/api문서-v1.2.2.md",
+      "docs/db설계-v1.3.1.md",
+      "docs/유저flow맵-v1.3.1.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/15b-cook-standalone-complete/README.md",
+      "docs/workpacks/15b-cook-standalone-complete/acceptance.md",
+      "docs/workpacks/15b-cook-standalone-complete/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/playwright-e2e.md",
+      "docs/workpacks/15a-cook-planner-complete/README.md",
+      "docs/workpacks/14-cook-session-start/README.md",
+      "docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "pnpm dev:local-supabase"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ]
+  },
+  "status": {
+    "lifecycle": "ready_for_review",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Stage 1 docs PR on branch docs/15b-cook-standalone-complete. Standalone cooking shares COOK_MODE confirmed screen from 15a (low-risk reuse, no new design artifacts needed). Backend implements two new endpoints: GET /recipes/{recipe_id}/cook-mode (unauthenticated) and POST /cooking/standalone-complete (authenticated). No schema migration needed — leftover_dishes table created in 15a migration. closeout_phase=collecting",
+  "closeout": {
+    "phase": "collecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "ready_for_review",
+      "design_status": "temporary",
+      "delivery_checklist": "pending",
+      "design_authority": "not_required",
+      "acceptance": "pending",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "pending",
+      "external_smokes": "pending",
+      "authority_reports": [],
+      "actual_verification_refs": []
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending",
+      "approval_state": "not_started",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": null
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": null,
+      "evidence_sources": []
+    },
+    "projection_state": {
+      "docs_synced_at": null,
+      "status_synced_at": null,
+      "pr_body_synced_at": null
+    }
+  },
+  "out_of_scope": [
+    "플래너 경유 요리 COOK_MODE — 15a에서 구현 완료",
+    "cooking_sessions 기반 complete/cancel — 15a/14에서 구현 완료",
+    "meals.status → cook_done 전이 — 15a에서 구현 완료",
+    "남은요리 조회/관리 화면 (LEFTOVERS, ATE_LIST) — 16",
+    "leftover_dishes eaten 전이 — 16",
+    "인분 조절 UI — 요리모드에서 인분 조절 불가",
+    "화면 꺼짐 방지 — 17c(SETTINGS)",
+    "조리방법 마스터 조회 (GET /cooking-methods) — 18",
+    "RECIPE_DETAIL 화면 구조 변경 — 기존 CTA href 연결만"
+  ],
+  "open_questions": []
+}
