@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-29T09:03:19Z",
+  "updated_at": "2026-04-29T10:15:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -676,6 +676,22 @@
         "pnpm typecheck"
       ],
       "notes": "Final closeout projected for PR #290 after Stage 1 docs PR #288, Stage 2/3 backend PR #289, Claude Stage 4 frontend implementation/repair, Codex Stage 5/6 review, Claude final authority gate, and internal 6.5 validators. Stage 6 Codex review repaired dialog accessibility metadata before PR creation. PR #290 current-head checks green before projection sync. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:1|claude:2|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,PR #290 body,ui/designs/authority/COOK_MODE-authority.md last_recovery_at=2026-04-29T09:35:20Z"
+    },
+    {
+      "id": "15b-cook-standalone-complete",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/15b-cook-standalone-complete",
+      "pr_path": "pending",
+      "lifecycle": "ready_for_review",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 docs branch. Standalone cooking from RECIPE_DETAIL: GET /recipes/{recipe_id}/cook-mode (unauthenticated) and POST /cooking/standalone-complete (authenticated). Reuses 15a COOK_MODE confirmed screen. No schema migration. No meals.status mutation. No cooking_sessions creation. closeout_phase=collecting"
     }
   ]
 }
