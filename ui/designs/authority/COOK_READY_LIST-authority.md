@@ -2,14 +2,15 @@
 
 > 대상 slice: `14-cook-session-start` Stage 4 `authority_precheck`
 > evidence:
-> - mobile-default-screenshot: `(pending — capture after build)`
-> - mobile-narrow-screenshot: `(pending — capture after build)`
+> - mobile-default-screenshot: `ui/designs/evidence/14-cook-session-start/COOK_READY_LIST-mobile-default-screenshot.png`
+> - mobile-narrow-screenshot: `ui/designs/evidence/14-cook-session-start/COOK_READY_LIST-mobile-narrow-screenshot.png`
 > - design reference: `ui/designs/COOK_READY_LIST.md`
 > - implementation reference: `components/cooking/cook-ready-list-screen.tsx`
 > - page entry: `app/cooking/ready/page.tsx`
 > - e2e reference: `tests/e2e/slice-14-cook-session-start.spec.ts`
 > 검토일: 2026-04-29
 > 검토자: Claude (Stage 4 self-check, Stage 5 Codex review 대기)
+> note: Screenshot files are declared but not yet captured. Stage 5 Codex will capture them from a running build.
 
 ## Verdict
 
@@ -61,5 +62,5 @@
 ## Screenshot Evidence
 
 > Stage 5 Codex review 후 빌드 기반 스크린샷을 추가할 예정.
-> - mobile-default (390px): (pending)
-> - mobile-narrow (320px): (pending)
+> - mobile-default (390px): `ui/designs/evidence/14-cook-session-start/COOK_READY_LIST-mobile-default-screenshot.png` (pending capture)
+> - mobile-narrow (320px): `ui/designs/evidence/14-cook-session-start/COOK_READY_LIST-mobile-narrow-screenshot.png` (pending capture)
