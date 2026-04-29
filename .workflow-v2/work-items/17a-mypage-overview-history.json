@@ -77,16 +77,83 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": "docs/workpacks/17a-mypage-overview-history/README.md#stage-56-frontend-review-evidence",
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs merged via PR #302. Stage 2 backend implemented by Codex on feature/be-17a-mypage-overview-history: GET /users/me, full recipe_books listing/counts, custom book PATCH/DELETE, and GET /shopping/lists history. MYPAGE is h8 prototype parity candidate (screen-level only); sub-tabs MYPAGE_TAB_RECIPEBOOK/MYPAGE_TAB_SHOPPINGLISTS are prototype-derived design. Authority required for new-screen. System recipe books are actual rows (recipe_books ×3 bootstrap on signup). RECIPEBOOK_DETAIL → 17b; Settings/logout → 17c.",
+  "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs merged via PR #302. Stage 2 backend implemented by Codex on feature/be-17a-mypage-overview-history: GET /users/me, full recipe_books listing/counts, custom book PATCH/DELETE, and GET /shopping/lists history. Stage 3 backend reviewed and approved by Claude; backend PR #303 merged to master. Stage 4 frontend was delegated to Claude resume session c0192b82-7248-4e33-a4ac-c45223b37d67; Stage 5/6 and closeout were completed by Codex with Claude final_authority_gate approval. Codex Stage 5 repaired 320px bottom-tab overlap and scoped compact tabs to MYPAGE only. Local frontend, authority, real-smoke, workpack, workflow-v2, bookkeeping, and diff checks passed. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:3|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,GitHub PR/CI,PR #304 body,ui/designs/authority/MYPAGE-authority.md,.omx/artifacts/claude-delegate-17a-mypage-overview-history-final-authority-gate-retry-response-20260429T190406Z.md last_recovery_at=2026-04-29T19:06:47Z",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/MYPAGE-authority.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm verify:frontend",
+        "pnpm exec vitest run tests/mypage-screen.test.tsx",
+        "PLAYWRIGHT_REUSE_EXISTING_SERVER=1 pnpm exec playwright test tests/e2e/slice-17a-mypage.spec.ts",
+        "pnpm validate:authority-evidence-presence",
+        "PR_IS_DRAFT=false PR_BODY_FILE=/tmp/pr304-body-updated.md pnpm validate:real-smoke-presence",
+        "pnpm qa:eval -- --checklist .artifacts/qa/17a-mypage-overview-history/2026-04-29T19-08-50-499Z/exploratory-checklist.json --report .artifacts/qa/17a-mypage-overview-history/2026-04-29T19-08-50-499Z/exploratory-report.json --fail-under 85",
+        ".artifacts/qa/17a-mypage-overview-history/2026-04-29T19-08-50-499Z/exploratory-report.json",
+        ".artifacts/qa/17a-mypage-overview-history/2026-04-29T19-08-50-499Z/eval-result.json",
+        "pnpm dev:local-supabase --hostname 127.0.0.1 --port 3200",
+        "curl http://127.0.0.1:3200/mypage",
+        "ui/designs/evidence/17a-mypage-overview-history/MYPAGE-mobile.png",
+        "ui/designs/evidence/17a-mypage-overview-history/MYPAGE-mobile-narrow.png",
+        "PR #304 body",
+        ".omx/artifacts/claude-delegate-17a-mypage-overview-history-final-authority-gate-retry-response-20260429T190406Z.md"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "approval_state": "dual_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-04-29T19:06:47Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 3,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage5_mypage_bottom_tab_overlap_repair",
+      "evidence_sources": [
+        "pnpm verify:frontend",
+        "GitHub PR/CI",
+        "PR #304 body",
+        "ui/designs/authority/MYPAGE-authority.md",
+        ".omx/artifacts/claude-delegate-17a-mypage-overview-history-final-authority-gate-retry-response-20260429T190406Z.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-04-29T19:06:47Z",
+      "status_synced_at": "2026-04-29T19:06:47Z",
+      "pr_body_synced_at": "pending-pr-body-update"
+    }
+  },
   "out_of_scope": [
     "RECIPEBOOK_DETAIL 상세 조회 및 레시피 목록 — 17b-recipebook-detail-remove",
     "레시피북에서 레시피 제거 (saved/custom/liked) — 17b-recipebook-detail-remove",

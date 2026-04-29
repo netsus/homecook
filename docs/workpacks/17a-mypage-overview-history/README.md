@@ -173,25 +173,26 @@
 - UI risk: `new-screen`
 - Anchor screen dependency: 없음 (MYPAGE는 anchor screen이 아님)
 - Visual artifact: `ui/designs/MYPAGE.md` (Stage 1 생성 완료)
-- Authority status: `required`
+- Authority status: `reviewed`
 - Stage 4 evidence requirements: `mobile-default`, `mobile-narrow`
-- Authority report paths: `ui/designs/authority/MYPAGE-authority.md` (Stage 4에서 생성 예정)
+- Authority report paths: `ui/designs/authority/MYPAGE-authority.md` (Stage 4 생성, Stage 5 Codex review + Claude final authority gate 통과)
 - generator artifact: `ui/designs/MYPAGE.md` (Stage 1 생성 완료)
 - critic artifact: `ui/designs/critiques/MYPAGE-critique.md` (Stage 1 생성 완료, 등급: Green)
 - Notes:
   - MYPAGE가 신규 화면이므로 authority review 필수
   - shell은 prototype parity 후보이나 sub-tab은 별도 증거 없이 자동 승격 불가
   - Stage 1에서 설계 와이어프레임 + critic 리뷰 완료 (크리티컬 0건, 마이너 3건 — Stage 4 해결)
-  - Stage 4에서 Baemin prototype 참조하여 shell 구조 확정 후 screenshot evidence 제공 필요
+  - Stage 4에서 Baemin prototype 참조 shell 구조와 screenshot evidence 제공 완료
+  - Stage 5 Codex public design review 통과, Claude `final_authority_gate` 통과, authority blocker 0개
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5 Codex public review 통과, Claude `final_authority_gate` 통과, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
-> 신규 화면이므로 `confirmed` 전에 authority review 근거가 필요하다.
+> confirmed evidence: `ui/designs/authority/MYPAGE-authority.md`, `ui/designs/evidence/17a-mypage-overview-history/MYPAGE-mobile.png`, `ui/designs/evidence/17a-mypage-overview-history/MYPAGE-mobile-narrow.png`.
 
 ## Source Links
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
@@ -277,3 +278,19 @@
 - Playwright: `tests/e2e/slice-17a-mypage.spec.ts` — 9 E2E test scenarios
 - Type check: `npx tsc --noEmit` passed with 0 errors
 - Backend regression: `pnpm exec vitest run tests/mypage.backend.test.ts` — 5 tests passed
+
+## Stage 5/6 Frontend Review Evidence
+
+- 2026-04-30 Codex Stage 5 authority review repaired and approved the MYPAGE new-screen design:
+  - 320px first-viewport bottom tab overlap resolved by scoping narrow tab compaction to `currentTab === "mypage"` and tightening only the MYPAGE narrow layout.
+  - Screenshot evidence refreshed at `375x812` and `320x568`.
+  - Geometry check at `320x568`, `scrollY=0`: bottom nav top `507.0625`, custom card bottom `454`, create CTA bottom `502`, horizontal overflow 없음.
+- Claude `final_authority_gate` verdict: `pass`; authority status `confirmed`; blockers `0`; major issues `0`; minor issues `3`, all non-blocking.
+- Focused regression:
+  - `pnpm exec vitest run tests/mypage-screen.test.tsx` — 18/18 pass
+  - `PLAYWRIGHT_REUSE_EXISTING_SERVER=1 pnpm exec playwright test tests/e2e/slice-17a-mypage.spec.ts` — 33/33 pass
+  - `pnpm validate:authority-evidence-presence` — pass
+- Exploratory QA: `.artifacts/qa/17a-mypage-overview-history/2026-04-29T19-08-50-499Z/exploratory-report.json` — desktop/mobile/small viewport coverage, findings 0.
+- QA eval: `.artifacts/qa/17a-mypage-overview-history/2026-04-29T19-08-50-499Z/eval-result.json` — score 100, pass.
+- Full frontend gate: `pnpm verify:frontend` — pass (lint 0 errors with `<img>` warnings, typecheck pass, Vitest product 451/451, build pass, E2E smoke 497 pass / 4 skipped, a11y 6/6, visual 12/12, security 9/9, Lighthouse pass).
+- Real smoke: `pnpm dev:local-supabase --hostname 127.0.0.1 --port 3200`; `curl http://127.0.0.1:3200/mypage` returned HTTP 200.

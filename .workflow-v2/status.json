@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-30T12:00:00Z",
+  "updated_at": "2026-04-29T19:06:47Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -718,17 +718,17 @@
       "id": "17a-mypage-overview-history",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-17a-mypage-overview-history",
-      "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/304",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs merged via PR #302. Stage 2 backend implemented by Codex; Stage 3 backend reviewed and approved by Claude; backend PR #303 merged to master. Stage 4 frontend implemented by Claude on feature/fe-17a-mypage-overview-history: MYPAGE screen with profile/tabs/recipe-book-CRUD/shopping-history, API client, Vitest 18 tests, Playwright E2E 9 tests, authority report. h8 prototype parity candidate (screen-level), authority required for new-screen."
+      "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs merged via PR #302. Stage 2 backend implemented by Codex; Stage 3 backend reviewed and approved by Claude; backend PR #303 merged to master. Stage 4 frontend implemented by Claude on feature/fe-17a-mypage-overview-history. Stage 5 Codex authority repair resolved 320px bottom-tab overlap; Claude final_authority_gate passed with authority status confirmed. Local frontend, authority, real-smoke, workpack, workflow-v2, bookkeeping, and diff checks passed. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:3|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,GitHub PR/CI,PR #304 body,ui/designs/authority/MYPAGE-authority.md,.omx/artifacts/claude-delegate-17a-mypage-overview-history-final-authority-gate-retry-response-20260429T190406Z.md last_recovery_at=2026-04-29T19:06:47Z"
     }
   ]
 }

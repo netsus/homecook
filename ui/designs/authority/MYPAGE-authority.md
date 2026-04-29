@@ -115,5 +115,9 @@
 
 ### Stage 5 Decision
 
-- Design Status can move from `pending-review` to `confirmed` only after Claude `final_authority_gate` passes.
+- Claude `final_authority_gate`: `pass`.
+- Authority status: `confirmed`.
 - Codex public design review: `approved`.
+- Blockers: 0.
+- Major issues: 0.
+- Minor issues: 3, all non-blocking and accepted for this slice.
