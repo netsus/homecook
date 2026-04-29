@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-29T10:25:46Z",
+  "updated_at": "2026-04-29T11:40:20Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -680,18 +680,23 @@
     {
       "id": "15b-cook-standalone-complete",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-15b-cook-standalone-complete",
+      "branch": "feature/fe-15b-cook-standalone-complete",
       "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 2 backend branch. Standalone cooking from RECIPE_DETAIL: GET /recipes/{recipe_id}/cook-mode (unauthenticated) and POST /cooking/standalone-complete (authenticated). Reuses 15a COOK_MODE confirmed screen. Adds RPC function migration for atomic standalone completion; no table/enum/column change. No meals.status mutation. No cooking_sessions creation. closeout_phase=collecting"
+      "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs merged via PR #293; Stage 2/3 backend merged via PR #294; Stage 4 frontend was delegated to Claude resume session e4cedcdf-53ef-46c1-b8b5-492650eb2305; Stage 5/6 and closeout were completed by Codex. Local required checks passed including pnpm verify:frontend. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:backend,pnpm verify:frontend,pnpm exec playwright test tests/e2e/slice-15b-cook-standalone-complete.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small,pnpm exec playwright test tests/e2e/slice-13-pantry-core.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small,pnpm validate:workpack -- --slice 15b-cook-standalone-complete,pnpm validate:workflow-v2,git diff --check last_recovery_at=2026-04-29T11:40:20Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "last_evaluator_result": ".omx/artifacts/stage6-fe-review-15b-cook-standalone-complete-20260429T114020Z.md",
+      "auto_merge_eligible": true,
+      "blocked_reason_code": null
     }
   ]
 }

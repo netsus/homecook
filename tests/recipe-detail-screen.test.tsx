@@ -22,6 +22,7 @@ const onAuthStateChange = vi.fn();
 const hasSupabasePublicEnv = vi.fn();
 const fetchPlanner = vi.fn();
 const createMeal = vi.fn();
+const mockRouterPush = vi.fn();
 
 vi.mock("@/lib/api/fetch-json", () => ({
   fetchJson: (...args: unknown[]) => fetchJson(...args),
@@ -47,6 +48,10 @@ vi.mock("@/lib/supabase/browser", () => ({
 
 vi.mock("@/lib/supabase/env", () => ({
   hasSupabasePublicEnv: () => hasSupabasePublicEnv(),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockRouterPush }),
 }));
 
 vi.mock("@/components/auth/social-login-buttons-deferred", () => ({
@@ -129,6 +134,7 @@ describe("recipe detail screen", () => {
     hasSupabasePublicEnv.mockReset();
     fetchPlanner.mockReset();
     createMeal.mockReset();
+    mockRouterPush.mockReset();
     useAuthGateStore.setState({ isOpen: false, action: null });
     window.localStorage.clear();
 
@@ -201,6 +207,18 @@ describe("recipe detail screen", () => {
     ).toBeTruthy();
     expect(screen.queryByText("Recipe Snapshot")).toBeNull();
     expect(screen.queryByText("Slice Note")).toBeNull();
+  });
+
+  it("routes the recipe cook CTA to standalone cook mode with selected servings", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "요리하기" }),
+    );
+
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      `/cooking/recipes/${MOCK_RECIPE_DETAIL.id}/cook-mode?servings=${MOCK_RECIPE_DETAIL.base_servings}`,
+    );
   });
 
   it("uses level-one page headings and 44px touch targets for the hero actions", async () => {

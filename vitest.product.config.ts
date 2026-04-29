@@ -13,6 +13,7 @@ export default defineConfig({
     include: [
       "tests/*.backend.test.ts",
       "tests/auth-*.test.ts",
+      "tests/*cook*.test.tsx",
       "tests/home-screen.test.tsx",
       "tests/local-dev-*.test.ts",
       "tests/local-dev-*.test.tsx",

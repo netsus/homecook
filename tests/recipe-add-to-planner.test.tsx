@@ -18,6 +18,7 @@ const createMeal = vi.fn();
 const getSession = vi.fn();
 const onAuthStateChange = vi.fn();
 const hasSupabasePublicEnv = vi.fn();
+const mockRouterPush = vi.fn();
 
 vi.mock("@/lib/api/fetch-json", () => ({
   fetchJson: (...args: unknown[]) => fetchJson(...args),
@@ -51,6 +52,10 @@ vi.mock("@/lib/supabase/browser", () => ({
 
 vi.mock("@/lib/supabase/env", () => ({
   hasSupabasePublicEnv: () => hasSupabasePublicEnv(),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockRouterPush }),
 }));
 
 vi.mock("@/components/auth/social-login-buttons-deferred", () => ({
@@ -102,6 +107,7 @@ describe("planner add flow", () => {
     getSession.mockReset();
     onAuthStateChange.mockReset();
     hasSupabasePublicEnv.mockReset();
+    mockRouterPush.mockReset();
     useAuthGateStore.setState({ isOpen: false, action: null });
     window.localStorage.clear();
 

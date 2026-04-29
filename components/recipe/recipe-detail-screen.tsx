@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -98,6 +99,7 @@ export function RecipeDetailScreen({
   const [selectedPlanDate, setSelectedPlanDate] = useState("");
   const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
   const [plannerServings, setPlannerServings] = useState(1);
+  const router = useRouter();
   const openAuthGate = useAuthGateStore((state) => state.open);
 
   const loadRecipe = useCallback(async () => {
@@ -817,10 +819,9 @@ export function RecipeDetailScreen({
               <ActionButton
                 label="요리하기"
                 onClick={() =>
-                  setFeedback({
-                    message: "요리모드는 다음 슬라이스에서 이어서 구현합니다.",
-                    tone: "status",
-                  })
+                  router.push(
+                    `/cooking/recipes/${recipeId}/cook-mode?servings=${selectedServings}`,
+                  )
                 }
                 tone="brand"
               />
