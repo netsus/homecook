@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-29T12:38:40Z",
+  "updated_at": "2026-04-29T16:00:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -701,17 +701,18 @@
     {
       "id": "16-leftovers",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-16-leftovers",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-16-leftovers",
+      "pr_path": "https://github.com/netsus/homecook/pull/300",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs merged via PR #298. Stage 2 backend implementation is in progress on feature/be-16-leftovers: leftovers API routes, POST /meals leftover owner guard, shared types, and QA fixture baseline added. Targeted backend tests, pnpm verify:backend, and local Supabase real smoke passed on 2026-04-29."
+      "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs merged via PR #298; Stage 2/3 backend merged via PR #299; Stage 4 frontend was delegated to Claude resume session d21d2013-cc42-4b7f-9a8a-1af45f3f7363; Stage 5/6 and closeout were completed by Codex with Claude final_authority_gate approval. Local targeted frontend, authority, workpack, workflow-v2, bookkeeping, and diff checks passed. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:3|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:backend,pnpm verify:frontend,GitHub PR/CI,PR #300 body,ui/designs/authority/LEFTOVERS-authority.md,ui/designs/authority/ATE_LIST-authority.md,.omx/artifacts/claude-delegate-16-leftovers-final-authority-gate-response-20260429T144800Z.json last_recovery_at=2026-04-29T14:56:02Z"
     }
   ]
 }

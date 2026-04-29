@@ -551,6 +551,17 @@ export function PlannerWeekScreen({
                   </Link>
                 );
               }
+              if (label === "남은요리") {
+                return (
+                  <Link
+                    className={`${PLANNER_CTA_CLASS} flex items-center justify-center bg-[var(--brand)] text-[var(--surface)] shadow-[0_8px_18px_color-mix(in_srgb,var(--brand)_18%,transparent)]`}
+                    href="/leftovers"
+                    key={label}
+                  >
+                    {label}
+                  </Link>
+                );
+              }
               return (
                 <button
                   key={label}
