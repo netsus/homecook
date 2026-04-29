@@ -75,7 +75,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `12a-shopping-complete`        | merged   | 장보기 완료 core, `shopping_done` 전이, `is_completed=true`, 완료 직후 read-only lock, 멱등성                   |
 | `12b-shopping-pantry-reflect`  | merged        | 팬트리 반영 선택 팝업, `null/[]/선택값` 3-way 처리, 4단계 서버 검증                                              |
 | `13-pantry-core`               | merged | 팬트리 조회, 직접 추가, 묶음 추가, 삭제 (`h8` future-screen gate merge 후 착수)                                  |
-| `14-cook-session-start`        | docs      | `COOK_READY_LIST`, 요리 세션 시작/취소                                                                           |
+| `14-cook-session-start`        | in-progress      | `COOK_READY_LIST`, 요리 세션 시작/취소                                                                           |
 | `15a-cook-planner-complete`    | planned   | 플래너 경유 `COOK_MODE`, pantry 소진, `cook_done` 전이                                                           |
 | `15b-cook-standalone-complete` | planned   | 상세 직행 `COOK_MODE`, standalone complete, pantry 소진, leftover 저장                                            |
 | `16-leftovers`                 | planned   | 남은요리 저장, 재등록, 다먹은 목록                                                                               |

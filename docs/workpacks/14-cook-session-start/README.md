@@ -286,13 +286,22 @@
 ## Delivery Checklist
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+
+## Stage 2 Evidence
+
+- TDD red: `pnpm exec vitest run tests/cook-session-start.backend.test.ts` initially failed on missing cooking route modules.
+- Targeted green: `pnpm exec vitest run tests/cook-session-start.backend.test.ts` -> 9 tests passed.
+- Backend implementation: `GET /api/v1/cooking/ready`, `POST /api/v1/cooking/sessions`, `POST /api/v1/cooking/sessions/{session_id}/cancel`, `GET /api/v1/cooking/sessions/{session_id}/cook-mode`.
+- Schema migration: `supabase/migrations/20260429050000_14_cook_session_tables.sql` creates `cooking_sessions`, `cooking_session_meals`, enum/checks/indexes/grants.
+- Local DB smoke: `pnpm dlx supabase migration up` applied the migration; `psql` table existence check returned `cooking_session_meals` and `cooking_sessions`.
+- Full backend gate: `pnpm verify:backend` -> pass (lint warning only: pre-existing `<img>` warning in `components/planner/planner-week-screen.tsx`).

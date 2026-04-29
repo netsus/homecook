@@ -12,19 +12,19 @@
 - [ ] COOK_READY_LIST에 shopping_done 상태 식사가 레시피별로 묶여서 표시된다 <!-- omo:id=accept-happy-recipe-list;stage=4;scope=frontend;review=5,6 -->
 - [ ] 레시피 카드에 레시피명, 합산 인분, [요리하기] 버튼이 표시된다 <!-- omo:id=accept-happy-card-content;stage=4;scope=frontend;review=5,6 -->
 - [ ] [요리하기] 클릭 시 요리 세션이 생성되고 COOK_MODE route로 이동한다 <!-- omo:id=accept-happy-session-create;stage=4;scope=frontend;review=5,6 -->
-- [ ] GET /cooking/ready 응답에 date_range와 recipes 배열이 포함된다 <!-- omo:id=accept-happy-ready-response;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /cooking/sessions 응답에 session_id, status='in_progress', meals 배열이 포함된다 <!-- omo:id=accept-happy-session-response;stage=2;scope=backend;review=3,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] GET /cooking/ready 응답에 date_range와 recipes 배열이 포함된다 <!-- omo:id=accept-happy-ready-response;stage=2;scope=backend;review=3,6 -->
+- [x] POST /cooking/sessions 응답에 session_id, status='in_progress', meals 배열이 포함된다 <!-- omo:id=accept-happy-session-response;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
-- [ ] GET /cooking/ready가 오늘~마지막 등록일 범위의 shopping_done meals만 반환한다 <!-- omo:id=accept-state-date-range-filter;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /cooking/sessions가 meal_ids의 status='shopping_done'을 검증한다 (위반 시 409) <!-- omo:id=accept-state-session-create-status-check;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /cooking/sessions가 meal_ids의 recipe_id 일치를 검증한다 (위반 시 422) <!-- omo:id=accept-state-session-create-recipe-check;stage=2;scope=backend;review=3,6 -->
-- [ ] cooking_session_meals가 세션 생성 시점의 스냅샷으로 INSERT된다 <!-- omo:id=accept-state-snapshot-insert;stage=2;scope=backend;review=3,6 -->
-- [ ] meals.status는 이 슬라이스에서 변경되지 않는다 (read-only) <!-- omo:id=accept-state-meals-readonly;stage=2;scope=shared;review=3,6 -->
-- [ ] cancel 멱등성: 이미 cancelled인 세션에 cancel 시 200 + 동일 결과 <!-- omo:id=accept-state-cancel-idempotent;stage=2;scope=backend;review=3,6 -->
-- [ ] completed 세션에 cancel 시 409 반환 <!-- omo:id=accept-state-cancel-completed-conflict;stage=2;scope=backend;review=3,6 -->
+- [x] GET /cooking/ready가 오늘~마지막 등록일 범위의 shopping_done meals만 반환한다 <!-- omo:id=accept-state-date-range-filter;stage=2;scope=backend;review=3,6 -->
+- [x] POST /cooking/sessions가 meal_ids의 status='shopping_done'을 검증한다 (위반 시 409) <!-- omo:id=accept-state-session-create-status-check;stage=2;scope=backend;review=3,6 -->
+- [x] POST /cooking/sessions가 meal_ids의 recipe_id 일치를 검증한다 (위반 시 422) <!-- omo:id=accept-state-session-create-recipe-check;stage=2;scope=backend;review=3,6 -->
+- [x] cooking_session_meals가 세션 생성 시점의 스냅샷으로 INSERT된다 <!-- omo:id=accept-state-snapshot-insert;stage=2;scope=backend;review=3,6 -->
+- [x] meals.status는 이 슬라이스에서 변경되지 않는다 (read-only) <!-- omo:id=accept-state-meals-readonly;stage=2;scope=shared;review=3,6 -->
+- [x] cancel 멱등성: 이미 cancelled인 세션에 cancel 시 200 + 동일 결과 <!-- omo:id=accept-state-cancel-idempotent;stage=2;scope=backend;review=3,6 -->
+- [x] completed 세션에 cancel 시 409 반환 <!-- omo:id=accept-state-cancel-completed-conflict;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 - [ ] loading 상태가 있다 <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
@@ -35,14 +35,14 @@
 - [ ] 로그인 게이트 후 return-to-action이 COOK_READY_LIST로 복귀한다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
-- [ ] 타인 리소스를 수정할 수 없다 (meal 소유자 검증 403) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] invalid input을 적절히 거부한다 (빈 meal_ids 422, cooking_servings<=0 422) <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
-- [ ] cooking_session_meals의 recipe_id가 meal의 recipe_id와 일치한다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
+- [x] 타인 리소스를 수정할 수 없다 (meal 소유자 검증 403) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] invalid input을 적절히 거부한다 (빈 meal_ids 422, cooking_servings<=0 422) <!-- omo:id=accept-invalid-input;stage=2;scope=backend;review=3,6 -->
+- [x] cooking_session_meals의 recipe_id가 meal의 recipe_id와 일치한다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
-- [ ] fixture / mock에서 shopping_done meals + 다양 레시피 조합이 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에서 cooking_sessions, cooking_session_meals 테이블이 존재한다 (migration 적용) <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] meal_plan_columns 시스템 row가 회원가입 시 자동 생성되는 owning flow가 확인되었다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
+- [x] fixture / mock에서 shopping_done meals + 다양 레시피 조합이 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에서 cooking_sessions, cooking_session_meals 테이블이 존재한다 (migration 적용) <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] meal_plan_columns 시스템 row가 회원가입 시 자동 생성되는 owning flow가 확인되었다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 - verifier: agent or human
@@ -58,10 +58,10 @@
 ## Automation Split
 
 ### Vitest
-- [ ] GET /cooking/ready 핸들러: 날짜 범위 필터, 레시피별 합산, 소유자 검증 <!-- omo:id=accept-vitest-ready-handler;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /cooking/sessions 핸들러: 생성, 검증(소유자/상태/레시피 일치), 스냅샷 INSERT <!-- omo:id=accept-vitest-session-create;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /cooking/sessions/{id}/cancel 핸들러: 취소, 멱등성, completed 거부 <!-- omo:id=accept-vitest-session-cancel;stage=2;scope=backend;review=3,6 -->
-- [ ] GET /cooking/sessions/{id}/cook-mode 핸들러: 세션 기반 조회, 소유자 검증 <!-- omo:id=accept-vitest-cook-mode;stage=2;scope=backend;review=3,6 -->
+- [x] GET /cooking/ready 핸들러: 날짜 범위 필터, 레시피별 합산, 소유자 검증 <!-- omo:id=accept-vitest-ready-handler;stage=2;scope=backend;review=3,6 -->
+- [x] POST /cooking/sessions 핸들러: 생성, 검증(소유자/상태/레시피 일치), 스냅샷 INSERT <!-- omo:id=accept-vitest-session-create;stage=2;scope=backend;review=3,6 -->
+- [x] POST /cooking/sessions/{id}/cancel 핸들러: 취소, 멱등성, completed 거부 <!-- omo:id=accept-vitest-session-cancel;stage=2;scope=backend;review=3,6 -->
+- [x] GET /cooking/sessions/{id}/cook-mode 핸들러: 세션 기반 조회, 소유자 검증 <!-- omo:id=accept-vitest-cook-mode;stage=2;scope=backend;review=3,6 -->
 - [ ] 프론트 상태 전이 로직 (세션 생성 후 COOK_MODE route 이동, COOK_READY_LIST 리스트 갱신) <!-- omo:id=accept-vitest-frontend-state;stage=4;scope=frontend;review=5,6 -->
 
 ### Playwright

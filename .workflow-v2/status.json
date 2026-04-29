@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-29T04:10:00Z",
+  "updated_at": "2026-04-29T04:45:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -648,9 +648,9 @@
     {
       "id": "14-cook-session-start",
       "preset": "vertical-slice-strict",
-      "branch": "docs/14-cook-session-start",
+      "branch": "feature/be-14-cook-session-start",
       "pr_path": "pending",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -659,7 +659,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs created on docs/14-cook-session-start branch. COOK_READY_LIST new-screen, prototype-derived design per h8 matrix. Awaiting internal 1.5 docs gate review."
+      "notes": "Stage 2 backend implementation in progress on feature/be-14-cook-session-start. Targeted backend Vitest covers ready grouping, session creation, owner/status/recipe guards, cancel idempotency, completed cancel conflict, and cook-mode data read."
     }
   ]
 }
