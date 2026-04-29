@@ -1,5 +1,7 @@
 # HOME Prototype Parity — Authority Report
 
+> Superseded note (2026-04-28): HOME 실화면 포팅 기준은 `ui/designs/authority/HOME-prototype-porting-authority.md`가 우선한다. 이 문서는 `baemin-prototype-home-parity` 당시의 scored parity evidence로 보존하며, 당시 제외했던 hero greeting, promo strip, inline ingredient chips, HOME bottom tab은 `baemin-prototype-home-porting`에서 HOME 포팅 대상으로 승격되었다.
+
 > Slice: `baemin-prototype-home-parity`
 > Classification: `anchor-extension`
 > Stage: 4 (Frontend Implementation)

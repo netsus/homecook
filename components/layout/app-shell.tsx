@@ -7,14 +7,17 @@ interface AppShellProps {
   children: React.ReactNode;
   currentTab: "home" | "planner" | "pantry" | "mypage";
   headerMode?: "default" | "hidden";
+  bottomTabsMode?: "default" | "hidden";
 }
 
 export function AppShell({
   children,
   currentTab,
+  bottomTabsMode = "default",
   headerMode = "default",
 }: AppShellProps) {
   const showSharedHeader = headerMode === "default";
+  const showSharedBottomTabs = bottomTabsMode === "default";
   const brandAsPageTitle = currentTab === "home";
 
   return (
@@ -23,7 +26,7 @@ export function AppShell({
         {showSharedHeader ? <AppHeader brandAsPageTitle={brandAsPageTitle} /> : null}
         <main>{children}</main>
       </div>
-      <BottomTabs currentTab={currentTab} />
+      {showSharedBottomTabs ? <BottomTabs currentTab={currentTab} /> : null}
     </div>
   );
 }
