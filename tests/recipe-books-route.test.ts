@@ -152,16 +152,28 @@ describe("/api/v1/recipe-books", () => {
     });
   });
 
-  it("GET returns only saved/custom books with recipe_count", async () => {
+  it("GET returns system and custom books with recipe_count", async () => {
     const recipeBooksTable = createRecipeBooksTable({
       selectResults: [
         {
           data: [
             {
+              id: "book-my",
+              name: "내가 추가한 레시피",
+              book_type: "my_added",
+              sort_order: 0,
+            },
+            {
               id: "book-saved",
               name: "저장한 레시피",
               book_type: "saved",
               sort_order: 1,
+            },
+            {
+              id: "book-liked",
+              name: "좋아요한 레시피",
+              book_type: "liked",
+              sort_order: 2,
             },
             {
               id: "book-custom",
@@ -186,6 +198,22 @@ describe("/api/v1/recipe-books", () => {
         },
       ],
     });
+    const recipeLikesTable = createRecipeBooksTable({
+      selectResults: [
+        {
+          data: [{ recipe_id: "recipe-liked-1" }, { recipe_id: "recipe-liked-2" }],
+          error: null,
+        },
+      ],
+    });
+    const recipesTable = createRecipeBooksTable({
+      selectResults: [
+        {
+          data: [{ id: "recipe-my-1" }],
+          error: null,
+        },
+      ],
+    });
 
     createRouteHandlerClient.mockResolvedValue({
       auth: {
@@ -198,6 +226,8 @@ describe("/api/v1/recipe-books", () => {
       from: vi.fn((table: string) => {
         if (table === "recipe_books") return recipeBooksTable;
         if (table === "recipe_book_items") return recipeBookItemsTable;
+        if (table === "recipe_likes") return recipeLikesTable;
+        if (table === "recipes") return recipesTable;
 
         throw new Error(`unexpected table: ${table}`);
       }),
@@ -213,11 +243,25 @@ describe("/api/v1/recipe-books", () => {
       data: {
         books: [
           {
+            id: "book-my",
+            name: "내가 추가한 레시피",
+            book_type: "my_added",
+            recipe_count: 1,
+            sort_order: 0,
+          },
+          {
             id: "book-saved",
             name: "저장한 레시피",
             book_type: "saved",
             recipe_count: 2,
             sort_order: 1,
+          },
+          {
+            id: "book-liked",
+            name: "좋아요한 레시피",
+            book_type: "liked",
+            recipe_count: 2,
+            sort_order: 2,
           },
           {
             id: "book-custom",
@@ -232,7 +276,6 @@ describe("/api/v1/recipe-books", () => {
     });
     expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: "user-1" });
     expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
-    expect(recipeBooksTable.__selectQuery.in).toHaveBeenCalledWith("book_type", ["saved", "custom"]);
     expect(recipeBookItemsTable.__selectQuery.in).toHaveBeenCalledWith("book_id", ["book-saved", "book-custom"]);
   });
 

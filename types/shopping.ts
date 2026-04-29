@@ -43,8 +43,27 @@ export interface ShoppingListCreateBody {
 export interface ShoppingListSummary {
   id: string;
   title: string;
+  date_range_start?: string;
+  date_range_end?: string;
   is_completed: boolean;
+  item_count?: number;
   created_at: string;
+}
+
+export interface ShoppingListHistoryItem {
+  id: string;
+  title: string;
+  date_range_start: string;
+  date_range_end: string;
+  is_completed: boolean;
+  item_count: number;
+  created_at: string;
+}
+
+export interface ShoppingListHistoryData {
+  items: ShoppingListHistoryItem[];
+  next_cursor: string | null;
+  has_next: boolean;
 }
 
 export interface ShoppingListRecipeSummary {
@@ -114,6 +133,7 @@ export interface ShoppingShareTextData {
 
 export type ShoppingPreviewResponse = ApiResponse<ShoppingPreviewData>;
 export type ShoppingListCreateResponse = ApiResponse<ShoppingListSummary>;
+export type ShoppingListHistoryResponse = ApiResponse<ShoppingListHistoryData>;
 export type ShoppingListDetailResponse = ApiResponse<ShoppingListDetail>;
 export type ShoppingListItemUpdateResponse = ApiResponse<ShoppingListItemSummary>;
 export type ShoppingListReorderResponse = ApiResponse<ShoppingListReorderData>;

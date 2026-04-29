@@ -12,7 +12,7 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
-import type { ShoppingListCreateBody, ShoppingListSummary } from "@/types/shopping";
+import type { ShoppingListCreateBody, ShoppingListHistoryData, ShoppingListSummary } from "@/types/shopping";
 
 interface QueryError {
   message: string;
@@ -58,6 +58,19 @@ interface ShoppingListInsertRow {
   created_at: string;
 }
 
+interface ShoppingListHistoryRow {
+  id: string;
+  title: string;
+  date_range_start: string;
+  date_range_end: string;
+  is_completed: boolean;
+  created_at: string;
+}
+
+interface ShoppingListItemCountRow {
+  shopping_list_id: string;
+}
+
 type ArrayQueryResult<T> = PromiseLike<{
   data: T[] | null;
   error: QueryError | null;
@@ -82,6 +95,17 @@ interface MealsUpdateQuery {
 interface ShoppingListsInsertQuery {
   select(columns: string): ShoppingListsInsertQuery;
   maybeSingle(): MaybeSingleResult<ShoppingListInsertRow>;
+}
+
+interface ShoppingListsSelectQuery {
+  eq(column: string, value: string): ShoppingListsSelectQuery;
+  order(column: string, options: { ascending: boolean }): ShoppingListsSelectQuery;
+  then: ArrayQueryResult<ShoppingListHistoryRow>["then"];
+}
+
+interface ShoppingListItemsSelectForHistoryQuery {
+  in(column: string, values: string[]): ShoppingListItemsSelectForHistoryQuery;
+  then: ArrayQueryResult<ShoppingListItemCountRow>["then"];
 }
 
 interface RecipeIngredientsSelectQuery {
@@ -119,6 +143,7 @@ interface MealsTable {
 }
 
 interface ShoppingListsTable {
+  select(columns: string): ShoppingListsSelectQuery;
   insert(value: {
     user_id: string;
     title: string;
@@ -154,6 +179,7 @@ interface PantryItemsTable {
 }
 
 interface ShoppingListItemsTable {
+  select(columns: string): ShoppingListItemsSelectForHistoryQuery;
   insert(values: Array<{
     shopping_list_id: string;
     ingredient_id: string;
@@ -230,7 +256,7 @@ export async function POST(request: Request) {
     ]);
   }
 
-  const mealConfigMap = new Map(
+const mealConfigMap = new Map(
     (parsedMealConfigs?.valid_configs ?? []).map((config) => [config.meal_id, config]),
   );
   const recipeConfigMap = new Map(
@@ -476,4 +502,130 @@ export async function POST(request: Request) {
     is_completed: shoppingList.is_completed,
     created_at: shoppingList.created_at,
   } satisfies ShoppingListSummary, { status: 201 });
+}
+
+const DEFAULT_HISTORY_LIMIT = 20;
+const MAX_HISTORY_LIMIT = 50;
+
+function clampHistoryLimit(value: string | null) {
+  if (!value) {
+    return DEFAULT_HISTORY_LIMIT;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return DEFAULT_HISTORY_LIMIT;
+  }
+
+  return Math.min(parsed, MAX_HISTORY_LIMIT);
+}
+
+function encodeShoppingHistoryCursor(row: ShoppingListHistoryRow) {
+  return `${row.created_at}|${row.id}`;
+}
+
+function parseShoppingHistoryCursor(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const [createdAt, id] = value.split("|");
+
+  if (!createdAt || !id) {
+    return null;
+  }
+
+  return { createdAt, id };
+}
+
+function applyHistoryCursor(rows: ShoppingListHistoryRow[], cursor: ReturnType<typeof parseShoppingHistoryCursor>) {
+  if (!cursor) {
+    return rows;
+  }
+
+  const cursorIndex = rows.findIndex(
+    (row) => row.created_at === cursor.createdAt && row.id === cursor.id,
+  );
+
+  return cursorIndex >= 0 ? rows.slice(cursorIndex + 1) : rows;
+}
+
+export async function GET(request: Request) {
+  const routeClient = await createRouteHandlerClient();
+  const user = await requireUser(routeClient);
+
+  if (!user) {
+    return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+  }
+
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    ShoppingCreateDbClient & UserBootstrapDbClient;
+
+  try {
+    await ensurePublicUserRow(dbClient, user);
+    await ensureUserBootstrapState(dbClient, user.id);
+  } catch (bootstrapError) {
+    return fail(
+      "INTERNAL_ERROR",
+      formatBootstrapErrorMessage(bootstrapError, "장보기 기록을 불러오지 못했어요."),
+      500,
+    );
+  }
+
+  const url = new URL(request.url);
+  const limit = clampHistoryLimit(url.searchParams.get("limit"));
+  const cursor = parseShoppingHistoryCursor(url.searchParams.get("cursor"));
+  const listsResult = await dbClient
+    .from("shopping_lists")
+    .select("id, title, date_range_start, date_range_end, is_completed, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
+
+  if (listsResult.error || !listsResult.data) {
+    return fail("INTERNAL_ERROR", "장보기 기록을 불러오지 못했어요.", 500);
+  }
+
+  const rowsAfterCursor = applyHistoryCursor(listsResult.data, cursor);
+  const rowsWithExtra = rowsAfterCursor.slice(0, limit + 1);
+  const hasNext = rowsWithExtra.length > limit;
+  const rows = hasNext ? rowsWithExtra.slice(0, limit) : rowsWithExtra;
+
+  if (rows.length === 0) {
+    return ok({ items: [], next_cursor: null, has_next: false } satisfies ShoppingListHistoryData);
+  }
+
+  const listIds = rowsWithExtra.map((row) => row.id);
+  const itemsResult = await dbClient
+    .from("shopping_list_items")
+    .select("shopping_list_id")
+    .in("shopping_list_id", listIds);
+
+  if (itemsResult.error || !itemsResult.data) {
+    return fail("INTERNAL_ERROR", "장보기 기록을 불러오지 못했어요.", 500);
+  }
+
+  const itemCountByListId = new Map<string, number>();
+
+  itemsResult.data.forEach((item) => {
+    itemCountByListId.set(
+      item.shopping_list_id,
+      (itemCountByListId.get(item.shopping_list_id) ?? 0) + 1,
+    );
+  });
+
+  return ok({
+    items: rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      date_range_start: row.date_range_start,
+      date_range_end: row.date_range_end,
+      is_completed: row.is_completed,
+      item_count: itemCountByListId.get(row.id) ?? 0,
+      created_at: row.created_at,
+    })),
+    next_cursor: hasNext ? encodeShoppingHistoryCursor(rows[rows.length - 1]) : null,
+    has_next: hasNext,
+  } satisfies ShoppingListHistoryData);
 }

@@ -717,7 +717,7 @@
     {
       "id": "17a-mypage-overview-history",
       "preset": "vertical-slice-strict",
-      "branch": "docs/17a-mypage-overview-history",
+      "branch": "feature/be-17a-mypage-overview-history",
       "pr_path": "pending",
       "lifecycle": "in_progress",
       "approval_state": "not_started",
@@ -728,7 +728,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs created by Claude. MYPAGE shell + recipe book CRUD + shopping history list. h8 prototype parity candidate (screen-level), authority required for new-screen."
+      "notes": "Stage 1 docs merged via PR #302. Stage 2 backend implemented by Codex on feature/be-17a-mypage-overview-history: GET /users/me, full recipe_books listing/counts, custom book PATCH/DELETE, and GET /shopping/lists history. h8 prototype parity candidate (screen-level), authority required for new-screen."
     }
   ]
 }

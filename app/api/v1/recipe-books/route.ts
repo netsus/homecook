@@ -18,7 +18,6 @@ import type {
   RecipeBookCreateData,
   RecipeBookListData,
   RecipeBookType,
-  SaveableRecipeBookType,
 } from "@/types/recipe";
 
 interface QueryError {
@@ -38,6 +37,14 @@ interface RecipeBookRow {
 
 interface RecipeBookItemRow {
   book_id: string;
+}
+
+interface RecipeLikeRow {
+  recipe_id: string;
+}
+
+interface UserRecipeRow {
+  id: string;
 }
 
 interface RecipeBookSortOrderRow {
@@ -76,6 +83,17 @@ interface RecipeBookItemsSelectQuery {
   then: ArrayQueryResult<RecipeBookItemRow>["then"];
 }
 
+interface RecipeLikesSelectQuery {
+  eq(column: string, value: string): RecipeLikesSelectQuery;
+  then: ArrayQueryResult<RecipeLikeRow>["then"];
+}
+
+interface RecipesSelectQuery {
+  eq(column: string, value: string): RecipesSelectQuery;
+  in(column: string, values: string[]): RecipesSelectQuery;
+  then: ArrayQueryResult<UserRecipeRow>["then"];
+}
+
 interface RecipeBookSortOrderSelectQuery {
   eq(column: string, value: string): RecipeBookSortOrderSelectQuery;
   order(column: string, options: QueryOrderOption): RecipeBookSortOrderSelectQuery;
@@ -102,21 +120,19 @@ interface RecipeBookItemsTable {
   select(columns: string): RecipeBookItemsSelectQuery;
 }
 
+interface RecipeLikesTable {
+  select(columns: string): RecipeLikesSelectQuery;
+}
+
+interface RecipesTable {
+  select(columns: string): RecipesSelectQuery;
+}
+
 interface RecipeBookDbClient {
   from(table: "recipe_books"): RecipeBooksTable;
   from(table: "recipe_book_items"): RecipeBookItemsTable;
-}
-
-const SAVEABLE_BOOK_TYPES: SaveableRecipeBookType[] = ["saved", "custom"];
-
-function isSaveableRecipeBookType(value: RecipeBookType): value is SaveableRecipeBookType {
-  return value === "saved" || value === "custom";
-}
-
-function isSaveableRecipeBook(
-  book: RecipeBookRow,
-): book is RecipeBookRow & { book_type: SaveableRecipeBookType } {
-  return isSaveableRecipeBookType(book.book_type);
+  from(table: "recipe_likes"): RecipeLikesTable;
+  from(table: "recipes"): RecipesTable;
 }
 
 function normalizeBookName(name: unknown) {
@@ -131,10 +147,17 @@ function getCurrentMaxSortOrder(rows: RecipeBookSortOrderRow[] | null) {
   return rows.reduce((maxValue, row) => Math.max(maxValue, row.sort_order), -1);
 }
 
-function toRecipeBookListData(
-  books: RecipeBookRow[],
-  items: RecipeBookItemRow[],
-): RecipeBookListData {
+function toRecipeBookListData({
+  books,
+  items,
+  likes,
+  userRecipes,
+}: {
+  books: RecipeBookRow[];
+  items: RecipeBookItemRow[];
+  likes: RecipeLikeRow[];
+  userRecipes: UserRecipeRow[];
+}): RecipeBookListData {
   const countByBookId = new Map<string, number>();
 
   items.forEach((item) => {
@@ -143,14 +166,78 @@ function toRecipeBookListData(
 
   return {
     books: books
-      .filter(isSaveableRecipeBook)
       .map((book) => ({
         id: book.id,
         name: book.name,
         book_type: book.book_type,
-        recipe_count: countByBookId.get(book.id) ?? 0,
+        recipe_count: getRecipeBookCount({
+          book,
+          countByBookId,
+          likedCount: likes.length,
+          myAddedCount: userRecipes.length,
+        }),
         sort_order: book.sort_order,
       })),
+  };
+}
+
+function getRecipeBookCount({
+  book,
+  countByBookId,
+  likedCount,
+  myAddedCount,
+}: {
+  book: RecipeBookRow;
+  countByBookId: Map<string, number>;
+  likedCount: number;
+  myAddedCount: number;
+}) {
+  if (book.book_type === "my_added") {
+    return myAddedCount;
+  }
+
+  if (book.book_type === "liked") {
+    return likedCount;
+  }
+
+  return countByBookId.get(book.id) ?? 0;
+}
+
+async function createAuthedRecipeBookDbClient(fallbackMessage: string) {
+  const routeClient = await createRouteHandlerClient();
+  const authResult = await routeClient.auth.getUser();
+  const user = authResult.data.user;
+
+  if (!user) {
+    return {
+      response: fail("UNAUTHORIZED", "로그인이 필요해요.", 401),
+      dbClient: null,
+      user: null,
+    };
+  }
+
+  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
+    RecipeBookDbClient & UserBootstrapDbClient;
+
+  try {
+    await ensurePublicUserRow(dbClient, user);
+    await ensureUserBootstrapState(dbClient, user.id);
+  } catch (bootstrapError) {
+    return {
+      response: fail(
+        "INTERNAL_ERROR",
+        formatBootstrapErrorMessage(bootstrapError, fallbackMessage),
+        500,
+      ),
+      dbClient: null,
+      user: null,
+    };
+  }
+
+  return {
+    response: null,
+    dbClient,
+    user,
   };
 }
 
@@ -197,7 +284,6 @@ export async function GET(request: Request) {
     .select("id, name, book_type, sort_order") as RecipeBooksSelectQuery;
   const booksResult = await booksQuery
     .eq("user_id", user.id)
-    .in("book_type", SAVEABLE_BOOK_TYPES)
     .order("sort_order", { ascending: true })
     .order("id", { ascending: true });
 
@@ -209,35 +295,60 @@ export async function GET(request: Request) {
     return ok({ books: [] } satisfies RecipeBookListData);
   }
 
-  const bookIds = booksResult.data.map((book: RecipeBookRow) => book.id);
+  const countedBookIds = booksResult.data
+    .filter((book: RecipeBookRow) => book.book_type === "saved" || book.book_type === "custom")
+    .map((book: RecipeBookRow) => book.id);
   const itemsResult = await dbClient
     .from("recipe_book_items")
     .select("book_id")
-    .in("book_id", bookIds);
+    .in("book_id", countedBookIds);
 
   if (itemsResult.error || !itemsResult.data) {
     return fail("INTERNAL_ERROR", "레시피북 목록을 불러오지 못했어요.", 500);
   }
 
-  return ok(toRecipeBookListData(booksResult.data, itemsResult.data));
+  const likesResult = await dbClient
+    .from("recipe_likes")
+    .select("recipe_id")
+    .eq("user_id", user.id);
+
+  if (likesResult.error || !likesResult.data) {
+    return fail("INTERNAL_ERROR", "레시피북 목록을 불러오지 못했어요.", 500);
+  }
+
+  const userRecipesResult = await dbClient
+    .from("recipes")
+    .select("id")
+    .eq("created_by", user.id)
+    .in("source_type", ["youtube", "manual"]);
+
+  if (userRecipesResult.error || !userRecipesResult.data) {
+    return fail("INTERNAL_ERROR", "레시피북 목록을 불러오지 못했어요.", 500);
+  }
+
+  return ok(toRecipeBookListData({
+    books: booksResult.data,
+    items: itemsResult.data,
+    likes: likesResult.data,
+    userRecipes: userRecipesResult.data,
+  }));
 }
 
 export async function POST(request: Request) {
-  if (isQaFixtureModeEnabled()) {
+  const qaFixtureMode = isQaFixtureModeEnabled();
+  let auth: Awaited<ReturnType<typeof createAuthedRecipeBookDbClient>> | null = null;
+
+  if (qaFixtureMode) {
     const authOverride = readE2EAuthOverrideHeader(request.headers);
 
     if (authOverride !== "authenticated") {
       return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
     }
-  }
+  } else {
+    auth = await createAuthedRecipeBookDbClient("레시피북을 만들지 못했어요.");
 
-  if (!isQaFixtureModeEnabled()) {
-    const routeClient = await createRouteHandlerClient();
-    const authResult = await routeClient.auth.getUser();
-    const user = authResult.data.user;
-
-    if (!user) {
-      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
+    if (auth.response || !auth.dbClient || !auth.user) {
+      return auth.response;
     }
   }
 
@@ -265,13 +376,8 @@ export async function POST(request: Request) {
     ]);
   }
 
-  if (isQaFixtureModeEnabled()) {
-    const authOverride = readE2EAuthOverrideHeader(request.headers);
+  if (qaFixtureMode) {
     const faultOverrides = readQaFixtureFaultsHeader(request.headers);
-
-    if (authOverride !== "authenticated") {
-      return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
-    }
 
     if (faultOverrides?.recipe_books_create === "internal_error") {
       return fail("INTERNAL_ERROR", "레시피북을 만들지 못했어요.", 500);
@@ -280,33 +386,15 @@ export async function POST(request: Request) {
     return ok(createQaFixtureRecipeBook(normalizedName), { status: 201 });
   }
 
-  const routeClient = await createRouteHandlerClient();
-  const authResult = await routeClient.auth.getUser();
-  const user = authResult.data.user;
-
-  if (!user) {
+  if (!auth?.dbClient || !auth.user) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
-  const dbClient = (createServiceRoleClient() ?? routeClient) as unknown as
-    RecipeBookDbClient & UserBootstrapDbClient;
-
-  try {
-    await ensurePublicUserRow(dbClient, user);
-    await ensureUserBootstrapState(dbClient, user.id);
-  } catch (bootstrapError) {
-    return fail(
-      "INTERNAL_ERROR",
-      formatBootstrapErrorMessage(bootstrapError, "레시피북을 만들지 못했어요."),
-      500,
-    );
-  }
-
-  const latestSortQuery = dbClient
+  const latestSortQuery = auth.dbClient
     .from("recipe_books")
     .select("sort_order") as RecipeBookSortOrderSelectQuery;
   const latestSortResult = await latestSortQuery
-    .eq("user_id", user.id)
+    .eq("user_id", auth.user.id)
     .order("sort_order", { ascending: false })
     .limit(1);
 
@@ -315,10 +403,10 @@ export async function POST(request: Request) {
   }
 
   const nextSortOrder = getCurrentMaxSortOrder(latestSortResult.data) + 1;
-  const createResult = await dbClient
+  const createResult = await auth.dbClient
     .from("recipe_books")
     .insert({
-      user_id: user.id,
+      user_id: auth.user.id,
       name: normalizedName,
       book_type: "custom",
       sort_order: nextSortOrder,

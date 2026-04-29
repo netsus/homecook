@@ -109,7 +109,7 @@ export type SaveableRecipeBookType = Extract<RecipeBookType, "saved" | "custom">
 export interface RecipeBookSummary {
   id: string;
   name: string;
-  book_type: SaveableRecipeBookType;
+  book_type: RecipeBookType;
   recipe_count: number;
   sort_order: number;
 }
@@ -130,6 +130,16 @@ export interface RecipeBookCreateData {
   sort_order: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface RecipeBookUpdateBody {
+  name: string;
+}
+
+export type RecipeBookUpdateData = RecipeBookCreateData;
+
+export interface RecipeBookDeleteData {
+  deleted: true;
 }
 
 export interface RecipeBookRecipeItem {
@@ -177,6 +187,8 @@ export interface RecipeSaveData {
 
 export type RecipeBookListResponse = ApiResponse<RecipeBookListData>;
 export type RecipeBookCreateResponse = ApiResponse<RecipeBookCreateData>;
+export type RecipeBookUpdateResponse = ApiResponse<RecipeBookUpdateData>;
+export type RecipeBookDeleteResponse = ApiResponse<RecipeBookDeleteData>;
 export type RecipeSaveResponse = ApiResponse<RecipeSaveData>;
 
 export interface RecipeDetail {

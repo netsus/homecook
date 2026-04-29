@@ -106,7 +106,7 @@
 - 시스템 레시피북 삭제 불가 → 403
 - 다른 유저의 레시피북 → 403
 - 존재하지 않는 book_id → 404
-- 204: 성공
+- 200: 성공 `{ success, data: { deleted: true }, error }`
 - 401: 미인증
 - 멱등성: 이미 삭제된 book → 404
 
@@ -243,13 +243,22 @@
 ## Delivery Checklist
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 
-- [ ] 백엔드 계약 고정 <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 (`GET /users/me`, full `GET /recipe-books`, `POST/PATCH/DELETE /recipe-books`, `GET /shopping/lists`) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 (Route Handler 4개 추가/확장) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 (`RecipeBookSummary`, update/delete, shopping history types) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 (system-book 403, owner filters, 404/422, cursor history) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 (Stage 2 route tests + Stage 4 fixture follow-up retained) <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 (`ensureUserBootstrapState` before profile/books/history) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+
+## Stage 2 Backend Evidence
+
+- 2026-04-30 Codex implemented `GET /api/v1/users/me`, expanded `GET /api/v1/recipe-books` to return system + custom books with type-specific `recipe_count`, added `PATCH /api/v1/recipe-books/{book_id}`, `DELETE /api/v1/recipe-books/{book_id}`, and added `GET /api/v1/shopping/lists` history pagination.
+- Regression tests: `pnpm exec vitest run tests/mypage.backend.test.ts tests/recipe-books-route.test.ts tests/recipe-save-route.test.ts tests/08b-recipebook-picker.backend.test.ts` passed (34 tests).
+- Type check: `pnpm typecheck` passed.
+- Lint: `pnpm lint` passed with existing `<img>` warnings in unrelated prior UI files.
+- Backend gate: `pnpm verify:backend` passed (lint/typecheck/product Vitest 433 tests/build/security Playwright 9 tests).
+- Real smoke: `pnpm local:reset:demo` passed; local Supabase reset applied migrations and seed output confirmed system books (`내가 추가한 레시피`, `저장한 레시피`, `좋아요한 레시피`) plus main custom/saved book baseline.
