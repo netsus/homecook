@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-29T10:15:00Z",
+  "updated_at": "2026-04-29T10:25:46Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -680,9 +680,9 @@
     {
       "id": "15b-cook-standalone-complete",
       "preset": "vertical-slice-strict",
-      "branch": "docs/15b-cook-standalone-complete",
+      "branch": "feature/be-15b-cook-standalone-complete",
       "pr_path": "pending",
-      "lifecycle": "ready_for_review",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -691,7 +691,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs branch. Standalone cooking from RECIPE_DETAIL: GET /recipes/{recipe_id}/cook-mode (unauthenticated) and POST /cooking/standalone-complete (authenticated). Reuses 15a COOK_MODE confirmed screen. No schema migration. No meals.status mutation. No cooking_sessions creation. closeout_phase=collecting"
+      "notes": "Stage 2 backend branch. Standalone cooking from RECIPE_DETAIL: GET /recipes/{recipe_id}/cook-mode (unauthenticated) and POST /cooking/standalone-complete (authenticated). Reuses 15a COOK_MODE confirmed screen. Adds RPC function migration for atomic standalone completion; no table/enum/column change. No meals.status mutation. No cooking_sessions creation. closeout_phase=collecting"
     }
   ]
 }

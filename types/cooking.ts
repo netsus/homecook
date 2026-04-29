@@ -57,6 +57,18 @@ export interface CookingSessionCompleteData {
   cook_count: number;
 }
 
+export interface CookingStandaloneCompleteBody {
+  recipe_id?: string;
+  cooking_servings?: number;
+  consumed_ingredient_ids?: string[];
+}
+
+export interface CookingStandaloneCompleteData {
+  leftover_dish_id: string;
+  pantry_removed: number;
+  cook_count: number;
+}
+
 export interface CookingMethodSummary {
   code: string;
   label: string;
@@ -96,8 +108,16 @@ export interface CookingSessionCookModeData {
   recipe: CookingModeRecipe;
 }
 
+export interface CookingStandaloneCookModeData {
+  recipe: CookingModeRecipe;
+}
+
 export type CookingReadyResponse = ApiResponse<CookingReadyData>;
 export type CookingSessionCreateResponse = ApiResponse<CookingSessionCreateData>;
 export type CookingSessionCancelResponse = ApiResponse<CookingSessionCancelData>;
 export type CookingSessionCompleteResponse = ApiResponse<CookingSessionCompleteData>;
 export type CookingSessionCookModeResponse = ApiResponse<CookingSessionCookModeData>;
+export type CookingStandaloneCompleteResponse =
+  ApiResponse<CookingStandaloneCompleteData>;
+export type CookingStandaloneCookModeResponse =
+  ApiResponse<CookingStandaloneCookModeData>;

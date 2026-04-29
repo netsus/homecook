@@ -72,7 +72,7 @@
     ]
   },
   "status": {
-    "lifecycle": "ready_for_review",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -81,11 +81,11 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs PR on branch docs/15b-cook-standalone-complete. Standalone cooking shares COOK_MODE confirmed screen from 15a (low-risk reuse, no new design artifacts needed). Backend implements two new endpoints: GET /recipes/{recipe_id}/cook-mode (unauthenticated) and POST /cooking/standalone-complete (authenticated). No schema migration needed — leftover_dishes table created in 15a migration. closeout_phase=collecting",
+  "notes": "Stage 2 backend branch feature/be-15b-cook-standalone-complete. Standalone cooking shares COOK_MODE confirmed screen from 15a (low-risk reuse, no new design artifacts needed). Backend implements two new endpoints: GET /recipes/{recipe_id}/cook-mode (unauthenticated) and POST /cooking/standalone-complete (authenticated). Stage 2 adds RPC function migration for atomic standalone completion; no table/enum/column change because leftover_dishes table was created in 15a migration. closeout_phase=collecting",
   "closeout": {
     "phase": "collecting",
     "docs_projection": {
-      "roadmap_lifecycle": "ready_for_review",
+      "roadmap_lifecycle": "in_progress",
       "design_status": "temporary",
       "delivery_checklist": "pending",
       "design_authority": "not_required",
