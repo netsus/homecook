@@ -1,0 +1,94 @@
+{
+  "slice_id": "16-leftovers",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/leftovers",
+      "POST /api/v1/leftovers/{leftover_id}/eat",
+      "POST /api/v1/leftovers/{leftover_id}/uneat"
+    ],
+    "invariants": [
+      "owner-authorization",
+      "eat-idempotency",
+      "uneat-idempotency",
+      "leftover-eaten-check-constraint",
+      "auto-hide-at-30-day-filter",
+      "leftover-dish-id-planner-add-is-leftover-true",
+      "api-envelope-format",
+      "authenticated-only",
+      "forbidden-other-user",
+      "not-found-missing-leftover"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/leftovers.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/leftovers",
+      "/leftovers/ate"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "new-screen",
+      "anchor_screens": [
+        "PLANNER_WEEK"
+      ],
+      "required_screens": [
+        "LEFTOVERS",
+        "ATE_LIST"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/LEFTOVERS.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/LEFTOVERS-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/LEFTOVERS-authority.md",
+        "ui/designs/authority/ATE_LIST-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "referenced-table-missing",
+    "leftover-dishes-table-missing",
+    "meals-table-missing",
+    "recipes-table-missing",
+    "seed-data-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
