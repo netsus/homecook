@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-30T05:59:00Z",
+  "updated_at": "2026-04-30T12:00:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -750,6 +750,20 @@
       "last_evaluator_result": ".artifacts/qa/17b-recipebook-detail-remove/2026-04-30T05-52-21-936Z/eval-result.json",
       "auto_merge_eligible": true,
       "blocked_reason_code": null
+    },
+    {
+      "id": "17c-settings-account",
+      "preset": "vertical-slice-strict",
+      "lifecycle": "in_progress",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 docs authored by Claude on docs/17c-settings-account branch. Roadmap status: docs."
     }
   ]
 }

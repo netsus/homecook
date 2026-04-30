@@ -1,0 +1,85 @@
+{
+  "slice_id": "17c-settings-account",
+  "execution_mode": "autonomous",
+  "risk_class": "low",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "PATCH /api/v1/users/me/settings",
+      "PATCH /api/v1/users/me",
+      "DELETE /api/v1/users/me",
+      "POST /api/v1/auth/logout"
+    ],
+    "invariants": [
+      "api-envelope-format",
+      "authenticated-only",
+      "settings-json-merge-update",
+      "nickname-length-2-30",
+      "soft-delete-deleted-at",
+      "delete-idempotent",
+      "settings-patch-idempotent",
+      "logout-session-invalidate"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/settings-account.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/settings"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "new-screen",
+      "anchor_screens": [],
+      "required_screens": [
+        "SETTINGS"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/SETTINGS.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/SETTINGS-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/SETTINGS-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "users-table-missing",
+    "auth-session-mechanism-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
