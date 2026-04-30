@@ -1,0 +1,86 @@
+{
+  "slice_id": "17b-recipebook-detail-remove",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/recipe-books/{book_id}/recipes",
+      "DELETE /api/v1/recipe-books/{book_id}/recipes/{recipe_id}"
+    ],
+    "invariants": [
+      "owner-authorization",
+      "my-added-remove-forbidden",
+      "liked-unlike-policy",
+      "saved-custom-remove-policy",
+      "denormalized-count-sync",
+      "api-envelope-format",
+      "authenticated-only",
+      "forbidden-other-user",
+      "not-found-missing-book",
+      "not-found-missing-recipe",
+      "cursor-pagination",
+      "idempotent-delete-404"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/recipebook-detail.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/mypage/recipe-books/[book_id]"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "RECIPEBOOK_DETAIL"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "recipe-books-table-missing",
+    "recipe-book-items-table-missing",
+    "recipe-likes-table-missing",
+    "recipes-table-missing",
+    "signup-bootstrap-recipe-books-missing",
+    "seed-data-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

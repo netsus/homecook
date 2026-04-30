@@ -1,0 +1,92 @@
+{
+  "id": "17b-recipebook-detail-remove",
+  "title": "RECIPEBOOK_DETAIL view, saved/custom recipe remove, liked unlike",
+  "summary": "RECIPEBOOK_DETAIL 상세 화면 구현. GET /recipe-books/{book_id}/recipes cursor pagination 조회, DELETE /recipe-books/{book_id}/recipes/{recipe_id} book_type별 분기 제거(liked=좋아요 해제, saved/custom=항목 삭제, my_added=403). 비정규화 카운트 동기 갱신. prototype-derived low-risk design.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "로그인한 사용자가 RECIPEBOOK_DETAIL에서 레시피북 상세 레시피 목록을 조회하고, saved/custom 책에서 레시피를 제거하거나 liked 책에서 좋아요를 해제할 수 있도록 한다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "17a-mypage-overview-history",
+    "04-recipe-save",
+    "03-recipe-like",
+    "h8-baemin-prototype-reference-future-screens-direction"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/요구사항기준선-v1.6.4.md",
+      "docs/화면정의서-v1.5.1.md",
+      "docs/api문서-v1.2.2.md",
+      "docs/db설계-v1.3.1.md",
+      "docs/유저flow맵-v1.3.1.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/17b-recipebook-detail-remove/README.md",
+      "docs/workpacks/17b-recipebook-detail-remove/acceptance.md",
+      "docs/workpacks/17b-recipebook-detail-remove/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/playwright-e2e.md",
+      "docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "pnpm dev:local-supabase"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Stage 1 docs created by Claude on docs/17b-recipebook-detail-remove branch. RECIPEBOOK_DETAIL is prototype-derived design per h8 matrix, low-risk UI, authority review not required. Two API endpoints: GET /recipe-books/{book_id}/recipes (12-6) cursor pagination, DELETE /recipe-books/{book_id}/recipes/{recipe_id} (12-7) with book_type-specific remove policy.",
+  "out_of_scope": [
+    "레시피북 목록/CRUD (MYPAGE shell) — 17a에서 구현 완료",
+    "레시피북에 레시피 추가(저장/좋아요) — 03/04에서 구현 완료",
+    "레시피 상세 조회 — 01에서 구현 완료",
+    "SETTINGS, 로그아웃, 닉네임 변경, 회원 탈퇴 — 17c-settings-account",
+    "직접 레시피 등록(manual) — 18-manual-recipe-create",
+    "유튜브 레시피 등록 — 19-youtube-import"
+  ],
+  "open_questions": []
+}
