@@ -733,18 +733,18 @@
     {
       "id": "17b-recipebook-detail-remove",
       "preset": "vertical-slice-strict",
-      "branch": "docs/17b-recipebook-detail-remove",
+      "branch": "feature/be-17b-recipebook-detail-remove",
       "pr_path": "pending",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
-      "verification_status": "pending",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs created by Claude on docs/17b-recipebook-detail-remove branch. RECIPEBOOK_DETAIL prototype-derived design per h8 matrix, low-risk UI, authority review not required. Two endpoints: GET /recipe-books/{book_id}/recipes (12-6), DELETE /recipe-books/{book_id}/recipes/{recipe_id} (12-7)."
+      "notes": "Stage 1 docs merged via PR #306. Stage 2 backend implemented by Codex on feature/be-17b-recipebook-detail-remove: GET now supports saved/custom, liked, and my_added sources; DELETE route added at /recipe-books/{book_id}/recipes/{recipe_id} with saved/custom item removal, liked unlike, my_added 403, owner guard, and count sync. Local pnpm verify:backend passed, including lint, typecheck, full product tests, build, and Playwright security smoke. Real DB smoke remains for later closeout evidence."
     }
   ]
 }

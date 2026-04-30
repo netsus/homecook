@@ -14,7 +14,7 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
-import type { RecipeBookRecipeListData } from "@/types/recipe";
+import type { RecipeBookRecipeListData, RecipeBookType } from "@/types/recipe";
 
 interface RouteContext {
   params: Promise<{
@@ -33,9 +33,10 @@ interface QueryOrderOption {
 interface RecipeBookRow {
   id: string;
   user_id: string;
+  book_type: RecipeBookType;
 }
 
-interface RecipeBookItemRow {
+interface RecipeSourceRow {
   id: string;
   recipe_id: string;
   added_at: string;
@@ -46,6 +47,10 @@ interface RecipeRow {
   title: string;
   thumbnail_url: string | null;
   tags: string[] | null;
+}
+
+interface UserRecipeRow extends RecipeRow {
+  created_at: string;
 }
 
 type MaybeSingleResult<T> = PromiseLike<{
@@ -66,11 +71,19 @@ interface RecipeBooksSelectQuery {
 interface RecipeBookItemsSelectQuery {
   eq(column: string, value: string): RecipeBookItemsSelectQuery;
   order(column: string, options: QueryOrderOption): RecipeBookItemsSelectQuery;
-  then: ArrayResult<RecipeBookItemRow>["then"];
+  then: ArrayResult<RecipeSourceRow>["then"];
+}
+
+interface RecipeLikesSelectQuery {
+  eq(column: string, value: string): RecipeLikesSelectQuery;
+  order(column: string, options: QueryOrderOption): RecipeLikesSelectQuery;
+  then: ArrayResult<RecipeSourceRow>["then"];
 }
 
 interface RecipesSelectQuery {
+  eq(column: string, value: string): RecipesSelectQuery;
   in(column: string, values: string[]): RecipesSelectQuery;
+  order(column: string, options: QueryOrderOption): RecipesSelectQuery;
   then: ArrayResult<RecipeRow>["then"];
 }
 
@@ -82,6 +95,10 @@ interface RecipeBookItemsTable {
   select(columns: string): RecipeBookItemsSelectQuery;
 }
 
+interface RecipeLikesTable {
+  select(columns: string): RecipeLikesSelectQuery;
+}
+
 interface RecipesTable {
   select(columns: string): RecipesSelectQuery;
 }
@@ -89,6 +106,7 @@ interface RecipesTable {
 interface RecipeBookRecipesDbClient {
   from(table: "recipe_books"): RecipeBooksTable;
   from(table: "recipe_book_items"): RecipeBookItemsTable;
+  from(table: "recipe_likes"): RecipeLikesTable;
   from(table: "recipes"): RecipesTable;
 }
 
@@ -130,6 +148,107 @@ function createEmptyData(): RecipeBookRecipeListData {
     next_cursor: null,
     has_next: false,
   };
+}
+
+function normalizeSourceRows(rows: Array<{ id: string; recipe_id: string; added_at?: string; created_at?: string }>) {
+  return rows.map((row) => ({
+    id: row.id,
+    recipe_id: row.recipe_id,
+    added_at: row.added_at ?? row.created_at ?? "",
+  }));
+}
+
+function paginateRows(rows: RecipeSourceRow[], cursor: string | null, limit: number) {
+  const cursorIndex = cursor ? rows.findIndex((item) => item.id === cursor) : -1;
+  const startIndex = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+  const rowsWithExtra = rows.slice(startIndex, startIndex + limit + 1);
+  const hasNext = rowsWithExtra.length > limit;
+  const pageRows = hasNext ? rowsWithExtra.slice(0, limit) : rowsWithExtra;
+
+  return {
+    pageRows,
+    hasNext,
+    nextCursor: hasNext ? pageRows[pageRows.length - 1]?.id ?? null : null,
+  };
+}
+
+async function readRecipeBook(dbClient: RecipeBookRecipesDbClient, bookId: string) {
+  return dbClient
+    .from("recipe_books")
+    .select("id, user_id, book_type")
+    .eq("id", bookId)
+    .maybeSingle();
+}
+
+async function readBookSourceRows({
+  dbClient,
+  book,
+  userId,
+}: {
+  dbClient: RecipeBookRecipesDbClient;
+  book: RecipeBookRow;
+  userId: string;
+}) {
+  if (book.book_type === "liked") {
+    const likesResult = await dbClient
+      .from("recipe_likes")
+      .select("id, recipe_id, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false });
+
+    return {
+      data: likesResult.data ? normalizeSourceRows(likesResult.data) : null,
+      error: likesResult.error,
+    };
+  }
+
+  if (book.book_type === "my_added") {
+    const recipesResult = await dbClient
+      .from("recipes")
+      .select("id, title, thumbnail_url, tags, created_at")
+      .eq("created_by", userId)
+      .in("source_type", ["youtube", "manual"])
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false });
+
+    return recipesResult;
+  }
+
+  const itemsResult = await dbClient
+    .from("recipe_book_items")
+    .select("id, recipe_id, added_at")
+    .eq("book_id", book.id)
+    .order("added_at", { ascending: false })
+    .order("id", { ascending: false });
+
+  return itemsResult;
+}
+
+function mapUserRecipeRows(rows: UserRecipeRow[], cursor: string | null, limit: number) {
+  const sourceRows = rows.map((row) => ({
+    id: row.id,
+    recipe_id: row.id,
+    added_at: row.created_at,
+  }));
+  const { pageRows, hasNext, nextCursor } = paginateRows(sourceRows, cursor, limit);
+  const recipeMap = new Map(rows.map((row) => [row.id, row]));
+
+  return {
+    items: pageRows.map((row) => {
+      const recipe = recipeMap.get(row.recipe_id);
+
+      return {
+        recipe_id: row.recipe_id,
+        title: recipe?.title ?? "",
+        thumbnail_url: recipe?.thumbnail_url ?? null,
+        tags: recipe?.tags ?? [],
+        added_at: row.added_at,
+      };
+    }),
+    next_cursor: nextCursor,
+    has_next: hasNext,
+  } satisfies RecipeBookRecipeListData;
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {
@@ -201,11 +320,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     );
   }
 
-  const bookResult = await dbClient
-    .from("recipe_books")
-    .select("id, user_id")
-    .eq("id", bookId)
-    .maybeSingle();
+  const bookResult = await readRecipeBook(dbClient, bookId);
 
   if (bookResult.error || !bookResult.data) {
     return fail("RESOURCE_NOT_FOUND", "레시피북을 찾을 수 없어요.", 404);
@@ -215,12 +330,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return fail("FORBIDDEN", "내 레시피북만 조회할 수 있어요.", 403);
   }
 
-  const itemsResult = await dbClient
-    .from("recipe_book_items")
-    .select("id, recipe_id, added_at")
-    .eq("book_id", bookId)
-    .order("added_at", { ascending: false })
-    .order("id", { ascending: false });
+  const itemsResult = await readBookSourceRows({
+    dbClient,
+    book: bookResult.data,
+    userId: user.id,
+  });
 
   if (itemsResult.error || !itemsResult.data) {
     return fail("INTERNAL_ERROR", "레시피북 레시피를 불러오지 못했어요.", 500);
@@ -230,13 +344,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return ok(createEmptyData());
   }
 
-  const cursorIndex = cursor
-    ? itemsResult.data.findIndex((item) => item.id === cursor)
-    : -1;
-  const startIndex = cursorIndex >= 0 ? cursorIndex + 1 : 0;
-  const pagedRowsWithExtra = itemsResult.data.slice(startIndex, startIndex + limit + 1);
-  const hasNext = pagedRowsWithExtra.length > limit;
-  const pagedRows = hasNext ? pagedRowsWithExtra.slice(0, limit) : pagedRowsWithExtra;
+  if (bookResult.data.book_type === "my_added") {
+    return ok(mapUserRecipeRows(itemsResult.data as UserRecipeRow[], cursor, limit));
+  }
+
+  const { pageRows: pagedRows, hasNext, nextCursor } = paginateRows(
+    itemsResult.data as RecipeSourceRow[],
+    cursor,
+    limit,
+  );
 
   if (pagedRows.length === 0) {
     return ok(createEmptyData());
@@ -269,7 +385,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         added_at: row.added_at,
       };
     }),
-    next_cursor: hasNext ? pagedRows[pagedRows.length - 1]?.id ?? null : null,
+    next_cursor: nextCursor,
     has_next: hasNext,
   } satisfies RecipeBookRecipeListData);
 }
