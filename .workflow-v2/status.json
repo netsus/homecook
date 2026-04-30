@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-29T19:06:47Z",
+  "updated_at": "2026-04-30T12:00:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -729,6 +729,22 @@
         "pnpm typecheck"
       ],
       "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs merged via PR #302. Stage 2 backend implemented by Codex; Stage 3 backend reviewed and approved by Claude; backend PR #303 merged to master. Stage 4 frontend implemented by Claude on feature/fe-17a-mypage-overview-history. Stage 5 Codex authority repair resolved 320px bottom-tab overlap; Claude final_authority_gate passed with authority status confirmed. Local frontend, authority, real-smoke, workpack, workflow-v2, bookkeeping, and diff checks passed. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:3|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,GitHub PR/CI,PR #304 body,ui/designs/authority/MYPAGE-authority.md,.omx/artifacts/claude-delegate-17a-mypage-overview-history-final-authority-gate-retry-response-20260429T190406Z.md last_recovery_at=2026-04-29T19:06:47Z"
+    },
+    {
+      "id": "17b-recipebook-detail-remove",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/17b-recipebook-detail-remove",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 docs created by Claude on docs/17b-recipebook-detail-remove branch. RECIPEBOOK_DETAIL prototype-derived design per h8 matrix, low-risk UI, authority review not required. Two endpoints: GET /recipe-books/{book_id}/recipes (12-6), DELETE /recipe-books/{book_id}/recipes/{recipe_id} (12-7)."
     }
   ]
 }
