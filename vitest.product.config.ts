@@ -28,6 +28,7 @@ export default defineConfig({
       "tests/qa-fixture-*.test.tsx",
       "tests/recipe-*.test.ts",
       "tests/recipe-*.test.tsx",
+      "tests/settings-*.test.tsx",
       "tests/shopping-*.test.tsx",
       "tests/slice-*-performance-fixture.test.ts",
       "tests/social-login-buttons.test.tsx",

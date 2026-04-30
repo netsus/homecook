@@ -754,16 +754,16 @@
     {
       "id": "17c-settings-account",
       "preset": "vertical-slice-strict",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "ready_for_review",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs authored by Claude on docs/17c-settings-account branch. Roadmap status: docs."
+      "notes": "Stage 1 docs PR #310 and Stage 2 backend PR #311 merged. Stage 4 frontend implemented through Claude session b92a4c0f-3d20-4aff-9da3-c00cb40433dc, then Codex repaired touch target, narrow mobile copy, nickname sheet accessibility, and expired-session 401 fallback. Stage 5 Codex authority report passed with screenshot evidence; Claude final authority gate was requested with --resume but blocked by provider limit, so Codex fallback authority proceeded with blocker_count=0. Local lint, typecheck, product tests, build, slice Playwright, security E2E, authority evidence, workpack, workflow-v2, and diff checks passed."
     }
   ]
 }

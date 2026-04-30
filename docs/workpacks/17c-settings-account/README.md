@@ -127,7 +127,7 @@
 - Visual artifact: `ui/designs/SETTINGS.md` (Stage 1 생성)
 - Authority status: `required`
 - Stage 4 evidence requirements: `mobile-default`, `mobile-narrow`
-- Authority report paths: `ui/designs/authority/SETTINGS-authority.md` (Stage 4 생성 예정)
+- Authority report paths: `ui/designs/authority/SETTINGS-authority.md` (Stage 5 pass)
 - generator artifact: `ui/designs/SETTINGS.md`
 - critic artifact: `ui/designs/critiques/SETTINGS-critique.md`
 - h8 matrix classification: `prototype-derived design` (SETTINGS는 별도 증거 없이 parity 승격 불가)
@@ -139,8 +139,8 @@
 ## Design Status
 
 - [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [x] 확정 (confirmed) — Stage 5 public review 통과, Claude final authority gate 요청은 provider limit으로 차단되어 Codex fallback authority로 진행, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 ## Source Links
@@ -190,13 +190,13 @@
 - [x] 백엔드 계약 고정 (`PATCH /users/me/settings`, `PATCH /users/me`, `DELETE /users/me`, `POST /auth/logout`) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 (Route Handler 4개 추가) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 (settings update, nickname update, delete account, logout types) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 (settings PATCH 멱등, nickname 422, delete 소프트 삭제 멱등, logout 401) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 (`users` 테이블, settings_json 기본값) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
 
 ## Stage 2 Backend Evidence
 
@@ -216,3 +216,61 @@
   - `pnpm dev:local-supabase --hostname 127.0.0.1 --port 3117` booted successfully.
   - Unauthenticated HTTP smoke returned 401 API envelopes for all four Stage 2 routes.
 - Remaining Stage 2 caveat: authenticated mutation smoke is deferred to Stage 4/6 browser flow because local auth session UX is frontend-owned.
+
+## Stage 4 Frontend Evidence
+
+- Branch: `feature/fe-17c-settings-account`
+- Implemented files:
+  - `app/settings/page.tsx` — Server component page route (pattern: `getServerAuthUser()` + `SettingsScreen`)
+  - `components/settings/settings-screen.tsx` — Client component with auth state machine, AppBar with back button, settings UI, nickname edit sheet with error display, logout/delete confirmation dialogs with pending states and error handling, `SocialLoginButtons nextPath="/settings"` login gate
+  - `lib/api/mypage.ts` — Added 4 API helpers: `updateSettings`, `updateNickname`, `deleteAccount`, `logout`
+- TDD evidence:
+  - RED: `tests/settings-screen.test.tsx` created with frontend behavior cases, initially failing because the SETTINGS screen did not exist
+  - GREEN: `pnpm test:product tests/settings-screen.test.tsx` — 18/18 tests passed
+- Tests:
+  - Vitest: `tests/settings-screen.test.tsx` — 18 tests covering: deterministic back-to-MYPAGE button, loading skeleton, login gate with `SocialLoginButtons nextPath="/settings"` and `/login?next=/settings` fallback link, expired-session 401 fallback to login gate, settings display, wake lock toggle (success + error revert + stale error clearing on retry), nickname sheet (validation + accessible label/autofocus/backdrop close + save success + save failure with visible error), delete confirmation (show + cancel + success with logout cleanup + navigate home + delete failure + logout cleanup failure), logout (success navigates home + failure shows error and stays), error state
+  - Playwright E2E: `tests/e2e/slice-17c-settings.spec.ts` — 10 scenarios / 30 project runs covering: authenticated display with back button, login gate for guests with `/login?next=/settings` link, toggle, nickname edit + save, logout confirm triggers API and navigates home, delete confirm triggers API and navigates home, delete cancel, delete succeeds but logout cleanup fails and stays, back button navigates to `/mypage`, MYPAGE gear button opens `/settings`
+- Deterministic gates:
+  - `pnpm typecheck` passed (0 errors)
+  - `pnpm lint` passed (0 new errors, 6 pre-existing warnings in other files)
+  - `pnpm validate:workpack` passed
+- UI states implemented:
+  - `loading`: Skeleton shimmer for toggle card + nickname card
+  - `error`: "데이터를 불러오지 못했어요" + "다시 시도" button; inline error toast for toggle failures (clears on retry)
+  - `unauthorized`: `ContentState` + `SocialLoginButtons nextPath="/settings"` + `/login?next=/settings` fallback link + "홈으로 돌아가기" link
+  - `ready`: Full settings with toggle, nickname row, logout button, withdraw button
+- Behavioral repairs (Stage 4 repair pass):
+  - AppBar: Added 44x44 back button with left chevron, `router.push("/mypage")`, centered title with spacer balance
+  - Login gate: `SocialLoginButtons nextPath="/settings"` plus explicit `/login?next=/settings` fallback link for return-to-action after login
+  - Logout: Pending state (`isLoggingOut`), disabled buttons during API call, error display on failure, `router.replace("/")` on success only
+  - Delete account: Pending state (`isDeleting`), disabled buttons, calls `logout()` for session cleanup after successful delete, shows an error and stays if delete or logout cleanup fails, `router.replace("/")` on full success only
+  - Nickname sheet: Visible error message (`nicknameError`) displayed inside sheet on save failure, error cleared on input change and on sheet reopen
+  - Toggle error: Stale error cleared before each new toggle attempt
+- Design artifact: `ui/designs/SETTINGS.md` — wireframe followed for layout structure
+- Authority report: `ui/designs/authority/SETTINGS-authority.md` — Stage 5 `pass`, visual verdict 94/100
+- Screenshot evidence:
+  - `ui/designs/evidence/17c-settings-account/SETTINGS-mobile-default-375.png`
+  - `ui/designs/evidence/17c-settings-account/SETTINGS-mobile-narrow-320.png`
+- Stage 5 metrics:
+  - 375x667: page overflow X 0, body overflow X 0, small touch targets 0, offscreen interactive targets 0
+  - 320x568: page overflow X 0, body overflow X 0, small touch targets 0, offscreen interactive targets 0
+- Stage 5 copy repair:
+  - Wake-lock helper copy shortened to `요리 중 화면이 꺼지지 않아요` to avoid orphan wrapping at 320px while preserving meaning.
+
+## Stage 6 Frontend Review Evidence
+
+- Codex review result: approved, blockers 0, major issues 0.
+- Claude final authority gate attempt:
+  - Prompt: `.omx/artifacts/claude-delegate-17c-settings-account-stage6-final-authority-review-prompt-20260430T081827Z.md`
+  - Response: `.omx/artifacts/claude-delegate-17c-settings-account-stage6-final-authority-review-response-20260430T081827Z.md`
+  - Result: Claude CLI exited with provider limit (`You've hit your limit · resets 5pm (Asia/Seoul)`)
+  - Fallback: Codex proceeded because Stage 5 authority report passed, authority evidence validator passed, deterministic gates passed, and no blockers remained.
+- Stage 6 repair:
+  - Profile-load 401 now returns to the login gate instead of showing a generic error state.
+  - Nickname row/sheet accessibility tightened with accessible label, autofocus, `aria-describedby`, focus/error border, and backdrop close.
+- Stage 6 tests:
+  - `pnpm test:product tests/settings-screen.test.tsx` — 18/18 tests passed after Stage 6 repair.
+  - `pnpm test:product` — 56 files / 501 tests passed.
+  - `pnpm exec playwright test tests/e2e/slice-17c-settings.spec.ts` — 30/30 tests passed.
+  - `pnpm test:e2e:security` — 9/9 tests passed.
+  - `pnpm build` passed and listed `/settings`.
