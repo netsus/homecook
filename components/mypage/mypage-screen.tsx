@@ -799,6 +799,15 @@ function RecipeBookTabContent({
 
 // ─── System Book Card ────────────────────────────────────────────────────────
 
+function buildBookDetailHref(book: RecipeBookSummary) {
+  const params = new URLSearchParams({
+    type: book.book_type,
+    name: book.name,
+  });
+
+  return `/mypage/recipe-books/${book.id}?${params.toString()}`;
+}
+
 function SystemBookCard({ book }: { book: RecipeBookSummary }) {
   const iconMeta = SYSTEM_BOOK_ICON[book.book_type] ?? {
     icon: "📁",
@@ -809,7 +818,7 @@ function SystemBookCard({ book }: { book: RecipeBookSummary }) {
     <Link
       className="flex min-h-12 items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-1)] transition-colors hover:bg-[var(--surface-fill)] max-[360px]:min-h-10 max-[360px]:gap-2 max-[360px]:py-2"
       data-testid={`system-book-${book.book_type}`}
-      href={`/recipe-books/${book.id}`}
+      href={buildBookDetailHref(book)}
       role="listitem"
     >
       <span aria-hidden="true" className={`text-2xl max-[360px]:text-xl ${iconMeta.colorClass}`}>
@@ -895,7 +904,7 @@ function CustomBookCard({
       <div className="flex min-h-12 items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-1)] max-[360px]:min-h-10 max-[360px]:gap-2 max-[360px]:py-1">
         <Link
           className="min-w-0 flex-1 truncate text-base font-semibold text-[var(--foreground)] max-[360px]:text-sm"
-          href={`/recipe-books/${book.id}`}
+          href={buildBookDetailHref(book)}
         >
           {book.name}
         </Link>

@@ -400,7 +400,9 @@ describe("MypageScreen", () => {
     await screen.findByText("집밥러");
 
     const myAddedCard = screen.getByTestId("system-book-my_added");
-    expect(myAddedCard.getAttribute("href")).toBe("/recipe-books/book-my");
+    const href = myAddedCard.getAttribute("href") ?? "";
+    expect(href).toContain("/mypage/recipe-books/book-my");
+    expect(href).toContain("type=my_added");
   });
 
   it("links shopping history cards to shopping detail page", async () => {

@@ -306,6 +306,40 @@ describe("17b recipebook detail backend", () => {
     expect(recipesTable.update).toHaveBeenCalledWith({ like_count: 0 });
   });
 
+  it("DELETE /recipe-books/{book_id}/recipes/{recipe_id} returns 404 for an already removed saved item", async () => {
+    const recipeBooksTable = createTable([
+      { data: { id: BOOK_ID, user_id: "user-1", book_type: "saved" }, error: null },
+    ]);
+    const recipeBookItemsTable = createTable([
+      { data: null, error: null },
+    ]);
+    setupAuthedClient({
+      from: vi.fn((table: string) => {
+        if (table === "recipe_books") return recipeBooksTable;
+        if (table === "recipe_book_items") return recipeBookItemsTable;
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { DELETE } = await importRemoveRoute();
+    const response = await DELETE(
+      new Request(`http://localhost:3000/api/v1/recipe-books/${BOOK_ID}/recipes/${RECIPE_ID}`, {
+        method: "DELETE",
+      }),
+      {
+        params: Promise.resolve({ book_id: BOOK_ID, recipe_id: RECIPE_ID }),
+      },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "RESOURCE_NOT_FOUND" },
+    });
+  });
+
   it("DELETE /recipe-books/{book_id}/recipes/{recipe_id} rejects my_added books", async () => {
     const recipeBooksTable = createTable([
       { data: { id: BOOK_ID, user_id: "user-1", book_type: "my_added" }, error: null },

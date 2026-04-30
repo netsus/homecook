@@ -70,16 +70,79 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": ".artifacts/qa/17b-recipebook-detail-remove/2026-04-30T05-52-21-936Z/eval-result.json",
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs created by Claude on docs/17b-recipebook-detail-remove branch. RECIPEBOOK_DETAIL is prototype-derived design per h8 matrix, low-risk UI, authority review not required. Two API endpoints: GET /recipe-books/{book_id}/recipes (12-6) cursor pagination, DELETE /recipe-books/{book_id}/recipes/{recipe_id} (12-7) with book_type-specific remove policy.",
+  "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs merged via PR #306. Stage 2 backend merged via PR #307. Stage 4 frontend implemented through Claude session 9772af6b-4187-4e7b-ad2b-0cd7bb6bb03c with RECIPEBOOK_DETAIL route under /mypage/recipe-books/{book_id}, API client wiring, optimistic remove UI, and E2E/product coverage. Codex repaired route drift from /recipe-books to /mypage/recipe-books and closed Stage 5 design review with low-risk prototype-derived status confirmed. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:1|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,PR #308 body,.artifacts/qa/17b-recipebook-detail-remove/2026-04-30T05-52-21-936Z last_recovery_at=2026-04-30T06:03:08Z",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "docs/workpacks/17b-recipebook-detail-remove/README.md#stage-6--internal-65-evidence",
+        ".artifacts/qa/17b-recipebook-detail-remove/2026-04-30T05-52-21-936Z/screenshots/layout-check.json"
+      ],
+      "actual_verification_refs": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm exec playwright test tests/e2e/slice-17b-recipebook-detail.spec.ts",
+        "pnpm test:product tests/recipebook-detail.backend.test.ts tests/recipe-book-detail-screen.test.tsx tests/mypage-screen.test.tsx",
+        "pnpm validate:workpack -- --slice 17b-recipebook-detail-remove",
+        "pnpm validate:workflow-v2",
+        "pnpm dev:local-supabase --hostname 127.0.0.1 --port 3102; HEAD /mypage 200; HEAD /mypage/recipe-books/local-smoke-book?type=saved&name=... 200",
+        ".artifacts/qa/17b-recipebook-detail-remove/2026-04-30T05-52-21-936Z/exploratory-report.json",
+        ".artifacts/qa/17b-recipebook-detail-remove/2026-04-30T05-52-21-936Z/eval-result.json",
+        ".artifacts/qa/17b-recipebook-detail-remove/2026-04-30T05-52-21-936Z/screenshots/layout-check.json"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-04-30T06:03:08Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 1,
+      "claude_repairable_count": 1,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage4_route_drift_repair",
+      "evidence_sources": [
+        ".omx/artifacts",
+        "GitHub PR/CI",
+        "PR #308 body",
+        ".artifacts/qa/17b-recipebook-detail-remove/2026-04-30T05-52-21-936Z"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-04-30T06:03:08Z",
+      "status_synced_at": "2026-04-30T06:03:08Z",
+      "pr_body_synced_at": "2026-04-30T06:03:08Z"
+    }
+  },
   "out_of_scope": [
     "레시피북 목록/CRUD (MYPAGE shell) — 17a에서 구현 완료",
     "레시피북에 레시피 추가(저장/좋아요) — 03/04에서 구현 완료",

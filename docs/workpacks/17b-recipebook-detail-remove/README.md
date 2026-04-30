@@ -132,15 +132,19 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 > Design Status 전이: `temporary` (Stage 1 기본값)
 >   → `pending-review` (Stage 4 완료 후)
 >   → `confirmed` (Stage 5 public review 통과 후)
 > low-risk prototype-derived design이므로 authority review 불필요. Stage 5 Codex public review에서 시각 품질만 확인하면 된다.
+>
+> Stage 5 Codex public design review passed on 2026-04-30.
+> Evidence: `.artifacts/qa/17b-recipebook-detail-remove/2026-04-30T05-52-21-936Z/screenshots/` and `layout-check.json`.
+> Result: desktop/mobile/small-iOS screenshots show no horizontal overflow or incoherent overlap; authority blocker 0.
 
 ## Source Links
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
@@ -197,10 +201,24 @@
 - [x] 백엔드 계약 고정 (`GET /recipe-books/{book_id}/recipes`, `DELETE /recipe-books/{book_id}/recipes/{recipe_id}`) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 (Route Handler 2개 추가) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
 - [x] 타입 반영 (`RecipeBookDetailItem` with recipe_id/title/thumbnail_url/tags/added_at, delete response types) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
-- [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 (owner-guard, my_added 403, liked/saved/custom 분기, 404, count 갱신) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
-- [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+
+## Stage 6 / Internal 6.5 Evidence
+
+- PR: `https://github.com/netsus/homecook/pull/308`
+- Codex Stage 6 review: no remaining blocking findings after route drift repair (`/recipe-books` → `/mypage/recipe-books`) and backend 404 regression coverage.
+- Internal 6.5 closeout projection: roadmap/work-item/status projected to `merged`, Design Status `confirmed`, acceptance complete for all non-manual items, required local checks passed, merge gate `all_checks_green=true`.
+- Deterministic gates: `pnpm verify:frontend`, `pnpm exec playwright test tests/e2e/slice-17b-recipebook-detail.spec.ts`, `pnpm test:product tests/recipebook-detail.backend.test.ts tests/recipe-book-detail-screen.test.tsx tests/mypage-screen.test.tsx`, `pnpm validate:workpack -- --slice 17b-recipebook-detail-remove`, `pnpm validate:workflow-v2`, `git diff --check`.
+- Real smoke: `pnpm dev:local-supabase --hostname 127.0.0.1 --port 3102` booted Next.js with local Supabase/dev-auth env; `HEAD /mypage` and `HEAD /mypage/recipe-books/local-smoke-book?type=saved&name=...` returned 200.
+- Exploratory QA: `.artifacts/qa/17b-recipebook-detail-remove/2026-04-30T05-52-21-936Z/exploratory-report.json` and `eval-result.json` passed with score 100.
+- Remaining manual-only item: live OAuth on HTTPS real device.
+
+## Open Questions
+
+없음.
