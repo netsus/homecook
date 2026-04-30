@@ -2,6 +2,7 @@ import { fetchJson } from "@/lib/api/fetch-json";
 import type { ApiResponse } from "@/types/api";
 import type {
   PantryMatchListData,
+  RecipeBookDeleteData,
   RecipeBookListData,
   RecipeBookRecipeListData,
   RecipeListData,
@@ -71,6 +72,29 @@ export async function fetchRecipeBookRecipes(
       error: {
         code: "FETCH_ERROR",
         message: error instanceof Error ? error.message : "레시피북 레시피를 불러오지 못했어요.",
+        fields: [],
+      },
+    };
+  }
+}
+
+export async function removeRecipeBookRecipe(
+  bookId: string,
+  recipeId: string,
+): Promise<ApiResponse<RecipeBookDeleteData>> {
+  try {
+    const data = await fetchJson<RecipeBookDeleteData>(
+      `/api/v1/recipe-books/${bookId}/recipes/${recipeId}`,
+      { method: "DELETE" },
+    );
+    return { success: true, data, error: null };
+  } catch (error) {
+    return {
+      success: false,
+      data: null,
+      error: {
+        code: "FETCH_ERROR",
+        message: error instanceof Error ? error.message : "레시피를 제거하지 못했어요.",
         fields: [],
       },
     };

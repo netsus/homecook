@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-30T12:00:00Z",
+  "updated_at": "2026-04-30T05:59:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -733,10 +733,10 @@
     {
       "id": "17b-recipebook-detail-remove",
       "preset": "vertical-slice-strict",
-      "branch": "feature/be-17b-recipebook-detail-remove",
-      "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
+      "branch": "feature/fe-17b-recipebook-detail-remove",
+      "pr_path": "https://github.com/netsus/homecook/pull/308",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
@@ -744,7 +744,12 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs merged via PR #306. Stage 2 backend implemented by Codex on feature/be-17b-recipebook-detail-remove: GET now supports saved/custom, liked, and my_added sources; DELETE route added at /recipe-books/{book_id}/recipes/{recipe_id} with saved/custom item removal, liked unlike, my_added 403, owner guard, and count sync. Local pnpm verify:backend passed, including lint, typecheck, full product tests, build, and Playwright security smoke. Real DB smoke remains for later closeout evidence."
+      "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs PR #306 and Stage 2 backend PR #307 merged. Stage 4 frontend implemented through Claude session 9772af6b-4187-4e7b-ad2b-0cd7bb6bb03c then Codex repaired route drift to /mypage/recipe-books/{book_id}. Stage 5 Codex public design review approved, authority-required=false, Design Status confirmed. Local pnpm verify:frontend, targeted slice Playwright, targeted product/backend tests, exploratory QA/eval, workpack/workflow-v2, PR body, real-smoke evidence, and diff checks passed. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:1|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,PR #308 body,.artifacts/qa/17b-recipebook-detail-remove/2026-04-30T05-52-21-936Z last_recovery_at=2026-04-30T06:03:08Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "last_evaluator_result": ".artifacts/qa/17b-recipebook-detail-remove/2026-04-30T05-52-21-936Z/eval-result.json",
+      "auto_merge_eligible": true,
+      "blocked_reason_code": null
     }
   ]
 }
