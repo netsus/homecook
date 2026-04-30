@@ -1,0 +1,94 @@
+{
+  "id": "17c-settings-account",
+  "title": "SETTINGS screen, logout, wake lock toggle, nickname change, account deletion",
+  "summary": "SETTINGS 화면 구현. PATCH /users/me/settings 화면 꺼짐 방지 토글, PATCH /users/me 닉네임 변경(2~30자), DELETE /users/me 소프트 삭제 회원 탈퇴, POST /auth/logout 로그아웃. prototype-derived design, authority-required new screen.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "로그인한 사용자가 마이페이지 설정 화면(SETTINGS)에서 요리모드 화면 꺼짐 방지 토글을 켜고 끌 수 있고, 닉네임을 변경하며, 로그아웃하거나 회원 탈퇴를 할 수 있도록 한다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "17a-mypage-overview-history",
+    "17b-recipebook-detail-remove",
+    "h8-baemin-prototype-reference-future-screens-direction"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/요구사항기준선-v1.6.4.md",
+      "docs/화면정의서-v1.5.1.md",
+      "docs/api문서-v1.2.2.md",
+      "docs/db설계-v1.3.1.md",
+      "docs/유저flow맵-v1.3.1.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/17c-settings-account/README.md",
+      "docs/workpacks/17c-settings-account/acceptance.md",
+      "docs/workpacks/17c-settings-account/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/playwright-e2e.md",
+      "docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "pnpm dev:local-supabase"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ]
+  },
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Stage 1 docs authored by Claude on docs/17c-settings-account branch.",
+  "out_of_scope": [
+    "MYPAGE shell, 프로필 조회, 레시피북 CRUD, 장보기 기록 — 17a-mypage-overview-history (merged)",
+    "RECIPEBOOK_DETAIL 상세 조회 및 레시피 제거 — 17b-recipebook-detail-remove (merged)",
+    "직접 레시피 등록 — 18-manual-recipe-create",
+    "유튜브 레시피 등록 — 19-youtube-import",
+    "프로필 이미지 변경 (공식 문서에 엔드포인트 없음)",
+    "이메일 변경 (소셜 로그인에서 받아오는 값)",
+    "소셜 계정 연결/해제 (공식 문서 범위 밖)",
+    "회원 탈퇴 후 재가입 복구 흐름"
+  ],
+  "open_questions": []
+}
