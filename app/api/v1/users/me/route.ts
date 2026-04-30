@@ -89,6 +89,10 @@ function normalizeNickname(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function isRequestRecord(value: unknown): value is UserProfileRequestBody {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
 async function createAuthedUsersMeDbClient(fallbackMessage: string) {
   const routeClient = await createRouteHandlerClient();
   const authResult = await routeClient.auth.getUser();
@@ -160,6 +164,12 @@ export async function PATCH(request: Request) {
   } catch {
     return fail("INVALID_REQUEST", "요청 본문을 확인해주세요.", 400, [
       { field: "body", reason: "invalid_json" },
+    ]);
+  }
+
+  if (!isRequestRecord(body)) {
+    return fail("INVALID_REQUEST", "요청 본문을 확인해주세요.", 400, [
+      { field: "body", reason: "invalid_object" },
     ]);
   }
 

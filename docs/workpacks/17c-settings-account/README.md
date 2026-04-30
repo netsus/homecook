@@ -204,10 +204,11 @@
 - Implemented routes: `PATCH /api/v1/users/me/settings`, `PATCH /api/v1/users/me`, `DELETE /api/v1/users/me`, `POST /api/v1/auth/logout`
 - TDD evidence:
   - RED: `pnpm test:product tests/settings-account.backend.test.ts` failed with missing routes/methods before implementation.
-  - GREEN: `pnpm test:product tests/settings-account.backend.test.ts` passed after implementation.
+  - RED repair: non-object JSON bodies failed with uncaught PATCH route errors during Codex merge-gate review.
+  - GREEN: `pnpm test:product tests/settings-account.backend.test.ts` passed after implementation and repair (12 tests).
 - Deterministic gates:
   - `pnpm verify:backend` passed.
-  - `pnpm test:product` passed: 55 files / 479 tests.
+  - `pnpm test:product` passed: 55 files / 483 tests.
   - `pnpm build` passed and listed `/api/v1/auth/logout` plus `/api/v1/users/me/settings`.
 - Real smoke:
   - `psql postgresql://postgres:postgres@127.0.0.1:54322/postgres` confirmed `public.users` has `nickname`, `settings_json`, and `deleted_at`.

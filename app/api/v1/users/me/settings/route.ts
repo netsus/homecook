@@ -56,6 +56,10 @@ function readScreenWakeLock(settings: Record<string, unknown> | null) {
   return typeof settings?.screen_wake_lock === "boolean" ? settings.screen_wake_lock : false;
 }
 
+function isRequestRecord(value: unknown): value is UserSettingsRequestBody {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
 export async function PATCH(request: Request) {
   let body: UserSettingsRequestBody;
 
@@ -64,6 +68,12 @@ export async function PATCH(request: Request) {
   } catch {
     return fail("INVALID_REQUEST", "요청 본문을 확인해주세요.", 400, [
       { field: "body", reason: "invalid_json" },
+    ]);
+  }
+
+  if (!isRequestRecord(body)) {
+    return fail("INVALID_REQUEST", "요청 본문을 확인해주세요.", 400, [
+      { field: "body", reason: "invalid_object" },
     ]);
   }
 

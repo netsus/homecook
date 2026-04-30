@@ -180,6 +180,29 @@ describe("17c settings/account backend", () => {
     });
   });
 
+  it("PATCH /users/me/settings rejects non-object request bodies", async () => {
+    const { PATCH } = await importUserSettingsRoute();
+    const response = await PATCH(
+      new Request("http://localhost:3000/api/v1/users/me/settings", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(null),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "INVALID_REQUEST",
+        fields: [{ field: "body", reason: "invalid_object" }],
+      },
+    });
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
+  });
+
   it("PATCH /users/me updates nickname and returns the user profile envelope", async () => {
     const usersTable = createUsersTable([
       {
@@ -229,7 +252,11 @@ describe("17c settings/account backend", () => {
     );
   });
 
-  it("PATCH /users/me rejects nicknames outside the 2 to 30 character range", async () => {
+  it.each([
+    ["empty", ""],
+    ["one-character", "집"],
+    ["31-character", "가".repeat(31)],
+  ])("PATCH /users/me rejects %s nicknames", async (_label, nickname) => {
     setupAuthedClient({ from: vi.fn() });
 
     const { PATCH } = await importUsersMeRoute();
@@ -237,7 +264,7 @@ describe("17c settings/account backend", () => {
       new Request("http://localhost:3000/api/v1/users/me", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ nickname: "집" }),
+        body: JSON.stringify({ nickname }),
       }),
     );
     const body = await response.json();
@@ -251,6 +278,29 @@ describe("17c settings/account backend", () => {
         fields: [{ field: "nickname", reason: "length" }],
       },
     });
+  });
+
+  it("PATCH /users/me rejects non-object request bodies", async () => {
+    const { PATCH } = await importUsersMeRoute();
+    const response = await PATCH(
+      new Request("http://localhost:3000/api/v1/users/me", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(null),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: {
+        code: "INVALID_REQUEST",
+        fields: [{ field: "body", reason: "invalid_object" }],
+      },
+    });
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
   });
 
   it("DELETE /users/me soft deletes the current user idempotently", async () => {
