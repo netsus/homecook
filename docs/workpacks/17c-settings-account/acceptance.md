@@ -13,15 +13,15 @@
 - [ ] 닉네임 변경 시 새 닉네임(2~30자)이 서버에 저장된다 (PATCH /users/me) <!-- omo:id=accept-nickname-change;stage=4;scope=frontend;review=5,6 -->
 - [ ] 로그아웃 시 세션이 무효화되고 HOME으로 이동한다 (POST /auth/logout) <!-- omo:id=accept-logout;stage=4;scope=frontend;review=5,6 -->
 - [ ] 회원 탈퇴 확인 후 소프트 삭제되고 HOME으로 이동한다 (DELETE /users/me) <!-- omo:id=accept-account-delete;stage=4;scope=frontend;review=5,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
 ## State / Policy
-- [ ] settings_json merge 업데이트가 기존 키를 보존한다 (전달된 키만 덮어쓰기) <!-- omo:id=accept-settings-merge;stage=2;scope=backend;review=3,6 -->
-- [ ] 닉네임 길이 제약(2~30자)이 서버에서 검증된다 <!-- omo:id=accept-nickname-length-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] 회원 탈퇴가 소프트 삭제(deleted_at 세팅)로 동작한다 <!-- omo:id=accept-soft-delete;stage=2;scope=backend;review=3,6 -->
-- [ ] PATCH /users/me/settings 동일 값 재전송 시 멱등 응답 <!-- omo:id=accept-settings-idempotency;stage=2;scope=backend;review=3,6 -->
-- [ ] DELETE /users/me 이미 탈퇴 상태에서 재호출 시 멱등 응답 <!-- omo:id=accept-delete-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] settings_json merge 업데이트가 기존 키를 보존한다 (전달된 키만 덮어쓰기) <!-- omo:id=accept-settings-merge;stage=2;scope=backend;review=3,6 -->
+- [x] 닉네임 길이 제약(2~30자)이 서버에서 검증된다 <!-- omo:id=accept-nickname-length-validation;stage=2;scope=backend;review=3,6 -->
+- [x] 회원 탈퇴가 소프트 삭제(deleted_at 세팅)로 동작한다 <!-- omo:id=accept-soft-delete;stage=2;scope=backend;review=3,6 -->
+- [x] PATCH /users/me/settings 동일 값 재전송 시 멱등 응답 <!-- omo:id=accept-settings-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] DELETE /users/me 이미 탈퇴 상태에서 재호출 시 멱등 응답 <!-- omo:id=accept-delete-idempotency;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 - [ ] loading 상태가 있다 (설정 값 로딩 스켈레톤) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
@@ -29,19 +29,19 @@
 - [ ] error 상태가 있다 (설정 저장/닉네임 변경 실패 시 에러 표시) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
 - [ ] unauthorized 처리 흐름이 있다 (비로그인 시 로그인 게이트) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
 - [ ] 로그인 게이트 후 return-to-action이 SETTINGS로 복귀한다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
-- [ ] 닉네임 빈 문자열 / 2자 미만 / 30자 초과 시 422 반환 <!-- omo:id=accept-nickname-validation-422;stage=2;scope=backend;review=3,6 -->
-- [ ] screen_wake_lock이 boolean이 아닌 경우 422 반환 <!-- omo:id=accept-settings-validation-422;stage=2;scope=backend;review=3,6 -->
+- [x] 닉네임 빈 문자열 / 2자 미만 / 30자 초과 시 422 반환 <!-- omo:id=accept-nickname-validation-422;stage=2;scope=backend;review=3,6 -->
+- [x] screen_wake_lock이 boolean이 아닌 경우 422 반환 <!-- omo:id=accept-settings-validation-422;stage=2;scope=backend;review=3,6 -->
 - [ ] 회원 탈퇴 전 확인 다이얼로그가 표시된다 <!-- omo:id=accept-delete-confirmation;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
-- [ ] /users/me 경로는 항상 인증된 사용자 자신에 대해서만 동작한다 (타인 접근 구조적 불가) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] 소프트 삭제 후 부분 유니크 인덱스(users_social_unique_active, users_email_unique_active)가 정상 동작한다 <!-- omo:id=accept-soft-delete-index;stage=2;scope=backend;review=3,6 -->
-- [ ] settings_json 업데이트가 기존 데이터를 파괴하지 않는다 <!-- omo:id=accept-settings-no-data-loss;stage=2;scope=backend;review=3,6 -->
+- [x] /users/me 경로는 항상 인증된 사용자 자신에 대해서만 동작한다 (타인 접근 구조적 불가) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] 소프트 삭제 후 부분 유니크 인덱스(users_social_unique_active, users_email_unique_active)가 정상 동작한다 <!-- omo:id=accept-soft-delete-index;stage=2;scope=backend;review=3,6 -->
+- [x] settings_json 업데이트가 기존 데이터를 파괴하지 않는다 <!-- omo:id=accept-settings-no-data-loss;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
-- [ ] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 (인증된 사용자 1명, settings_json `{}`) <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] 시스템 row 자동 생성이 필요한 슬라이스면 owning flow와 기대 결과가 명시되어 있다 (회원가입 → users row) <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
+- [x] fixture / mock에서 필요한 baseline 데이터가 준비되어 있다 (인증된 사용자 1명, settings_json `{}`) <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 테이블 / seed / bootstrap이 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] 시스템 row 자동 생성이 필요한 슬라이스면 owning flow와 기대 결과가 명시되어 있다 (회원가입 → users row) <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 - verifier: 사용자 또는 QA 에이전트
@@ -57,11 +57,11 @@
 ## Automation Split
 
 ### Vitest
-- [ ] PATCH /users/me/settings 성공 응답, 422 응답 (비 boolean) <!-- omo:id=accept-vitest-settings-update;stage=2;scope=backend;review=3,6 -->
-- [ ] PATCH /users/me 닉네임 변경 성공, 422 (빈 문자열, 2자 미만, 30자 초과) <!-- omo:id=accept-vitest-nickname-update;stage=2;scope=backend;review=3,6 -->
-- [ ] DELETE /users/me 소프트 삭제 성공, 멱등 재호출 <!-- omo:id=accept-vitest-account-delete;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /auth/logout 성공, 401 (미인증) <!-- omo:id=accept-vitest-logout;stage=2;scope=backend;review=3,6 -->
-- [ ] 모든 엔드포인트 401 미인증 검증 <!-- omo:id=accept-vitest-auth-guard;stage=2;scope=backend;review=3,6 -->
+- [x] PATCH /users/me/settings 성공 응답, 422 응답 (비 boolean) <!-- omo:id=accept-vitest-settings-update;stage=2;scope=backend;review=3,6 -->
+- [x] PATCH /users/me 닉네임 변경 성공, 422 (빈 문자열, 2자 미만, 30자 초과) <!-- omo:id=accept-vitest-nickname-update;stage=2;scope=backend;review=3,6 -->
+- [x] DELETE /users/me 소프트 삭제 성공, 멱등 재호출 <!-- omo:id=accept-vitest-account-delete;stage=2;scope=backend;review=3,6 -->
+- [x] POST /auth/logout 성공, 401 (미인증) <!-- omo:id=accept-vitest-logout;stage=2;scope=backend;review=3,6 -->
+- [x] 모든 엔드포인트 401 미인증 검증 <!-- omo:id=accept-vitest-auth-guard;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright
 - [ ] SETTINGS 진입 → 토글 변경 → 닉네임 변경 flow <!-- omo:id=accept-playwright-settings-flow;stage=4;scope=frontend;review=5,6 -->

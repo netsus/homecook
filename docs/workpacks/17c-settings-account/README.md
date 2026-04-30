@@ -187,13 +187,31 @@
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
 
-- [ ] 백엔드 계약 고정 (`PATCH /users/me/settings`, `PATCH /users/me`, `DELETE /users/me`, `POST /auth/logout`) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 또는 adapter 연결 (Route Handler 4개 추가) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 타입 반영 (settings update, nickname update, delete account, logout types) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [x] 백엔드 계약 고정 (`PATCH /users/me/settings`, `PATCH /users/me`, `DELETE /users/me`, `POST /auth/logout`) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 또는 adapter 연결 (Route Handler 4개 추가) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
+- [x] 타입 반영 (settings update, nickname update, delete account, logout types) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
 - [ ] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] 상태 전이 / 권한 / 멱등성 테스트 (settings PATCH 멱등, nickname 422, delete 소프트 삭제 멱등, logout 401) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
+- [x] 상태 전이 / 권한 / 멱등성 테스트 (settings PATCH 멱등, nickname 422, delete 소프트 삭제 멱등, logout 401) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [ ] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 (`users` 테이블, settings_json 기본값) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=delivery-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 (`users` 테이블, settings_json 기본값) <!-- omo:id=delivery-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [ ] `loading / empty / error / read-only` 상태 점검 <!-- omo:id=delivery-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=delivery-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+
+## Stage 2 Backend Evidence
+
+- Branch: `feature/be-17c-settings-account`
+- Implemented routes: `PATCH /api/v1/users/me/settings`, `PATCH /api/v1/users/me`, `DELETE /api/v1/users/me`, `POST /api/v1/auth/logout`
+- TDD evidence:
+  - RED: `pnpm test:product tests/settings-account.backend.test.ts` failed with missing routes/methods before implementation.
+  - GREEN: `pnpm test:product tests/settings-account.backend.test.ts` passed after implementation.
+- Deterministic gates:
+  - `pnpm verify:backend` passed.
+  - `pnpm test:product` passed: 55 files / 479 tests.
+  - `pnpm build` passed and listed `/api/v1/auth/logout` plus `/api/v1/users/me/settings`.
+- Real smoke:
+  - `psql postgresql://postgres:postgres@127.0.0.1:54322/postgres` confirmed `public.users` has `nickname`, `settings_json`, and `deleted_at`.
+  - Same schema check confirmed `users_email_unique_active` and `users_social_unique_active` indexes.
+  - `pnpm dev:local-supabase --hostname 127.0.0.1 --port 3117` booted successfully.
+  - Unauthenticated HTTP smoke returned 401 API envelopes for all four Stage 2 routes.
+- Remaining Stage 2 caveat: authenticated mutation smoke is deferred to Stage 4/6 browser flow because local auth session UX is frontend-owned.
