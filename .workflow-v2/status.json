@@ -754,7 +754,7 @@
     {
       "id": "17c-settings-account",
       "preset": "vertical-slice-strict",
-      "lifecycle": "ready_for_review",
+      "lifecycle": "merged",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
@@ -763,7 +763,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs PR #310 and Stage 2 backend PR #311 merged. Stage 4 frontend implemented through Claude session b92a4c0f-3d20-4aff-9da3-c00cb40433dc, then Codex repaired touch target, narrow mobile copy, nickname sheet accessibility, and expired-session 401 fallback. Stage 5 Codex authority report passed with screenshot evidence; Claude final authority gate was requested with --resume but blocked by provider limit, so Codex fallback authority proceeded with blocker_count=0. Local lint, typecheck, product tests, build, slice Playwright, security E2E, authority evidence, workpack, workflow-v2, and diff checks passed."
+      "notes": "Stage 1 docs PR #310 and Stage 2 backend PR #311 merged. Stage 4 frontend implemented through Claude session b92a4c0f-3d20-4aff-9da3-c00cb40433dc, then Codex repaired touch target, narrow mobile copy, nickname sheet accessibility, and expired-session 401 fallback. Stage 5 Codex authority report passed with screenshot evidence; Claude final authority gate was requested with --resume but blocked by provider limit, so Codex fallback authority proceeded with blocker_count=0. Local lint, typecheck, product tests, build, slice Playwright, security E2E, authority evidence, workpack, workflow-v2, and diff checks passed. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:1 closeout_repair=codex:4|claude:3|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm lint,pnpm typecheck,pnpm test:product,pnpm build,Playwright settings E2E,security E2E,ui/designs/authority/SETTINGS-authority.md last_recovery_at=2026-04-30T08:27:33Z"
     }
   ]
 }

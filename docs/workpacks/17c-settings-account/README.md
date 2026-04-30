@@ -125,7 +125,7 @@
 - UI risk: `new-screen`
 - Anchor screen dependency: 없음 (SETTINGS는 anchor screen이 아님)
 - Visual artifact: `ui/designs/SETTINGS.md` (Stage 1 생성)
-- Authority status: `required`
+- Authority status: `reviewed`
 - Stage 4 evidence requirements: `mobile-default`, `mobile-narrow`
 - Authority report paths: `ui/designs/authority/SETTINGS-authority.md` (Stage 5 pass)
 - generator artifact: `ui/designs/SETTINGS.md`
@@ -138,8 +138,8 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
 - [x] 확정 (confirmed) — Stage 5 public review 통과, Claude final authority gate 요청은 provider limit으로 차단되어 Codex fallback authority로 진행, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 

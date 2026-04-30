@@ -70,16 +70,84 @@
     ]
   },
   "status": {
-    "lifecycle": "ready_for_review",
+    "lifecycle": "merged",
     "approval_state": "codex_approved",
     "verification_status": "passed",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": "ui/designs/authority/SETTINGS-authority.md",
     "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs PR #310 and Stage 2 backend PR #311 merged. Stage 4 frontend implemented through Claude session b92a4c0f-3d20-4aff-9da3-c00cb40433dc, then Codex repaired touch target, narrow mobile copy, nickname sheet accessibility, and expired-session 401 fallback. Stage 5 Codex authority report passed with screenshot evidence; Claude final authority gate was requested with --resume but blocked by provider limit, so Codex fallback authority proceeded with blocker_count=0. Local lint, typecheck, product tests, build, slice Playwright, security E2E, authority evidence, workpack, workflow-v2, and diff checks passed.",
+  "notes": "Stage 1 docs PR #310 and Stage 2 backend PR #311 merged. Stage 4 frontend implemented through Claude session b92a4c0f-3d20-4aff-9da3-c00cb40433dc, then Codex repaired touch target, narrow mobile copy, nickname sheet accessibility, and expired-session 401 fallback. Stage 5 Codex authority report passed with screenshot evidence; Claude final authority gate was requested with --resume but blocked by provider limit, so Codex fallback authority proceeded with blocker_count=0. Local lint, typecheck, product tests, build, slice Playwright, security E2E, authority evidence, workpack, workflow-v2, and diff checks passed. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:1 closeout_repair=codex:4|claude:3|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm lint,pnpm typecheck,pnpm test:product,pnpm build,Playwright settings E2E,security E2E,ui/designs/authority/SETTINGS-authority.md last_recovery_at=2026-04-30T08:27:33Z",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/SETTINGS-authority.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm test:product",
+        "pnpm build",
+        "pnpm exec playwright test tests/e2e/slice-17c-settings.spec.ts",
+        "pnpm test:e2e:security",
+        "pnpm validate:workpack -- --slice 17c-settings-account",
+        "pnpm validate:workflow-v2",
+        "PR_IS_DRAFT=false pnpm validate:authority-evidence-presence",
+        "ui/designs/evidence/17c-settings-account/SETTINGS-mobile-default-375.png",
+        "ui/designs/evidence/17c-settings-account/SETTINGS-mobile-narrow-320.png",
+        "ui/designs/authority/SETTINGS-authority.md",
+        ".omx/artifacts/claude-delegate-17c-settings-account-stage6-final-authority-review-response-20260430T081827Z.md"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "approval_state": "codex_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 1,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-04-30T08:27:33Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 4,
+      "claude_repairable_count": 3,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "closeout_sync_projection_repair",
+      "evidence_sources": [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm test:product",
+        "pnpm build",
+        "Playwright settings E2E",
+        "security E2E",
+        "ui/designs/authority/SETTINGS-authority.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-04-30T08:27:33Z",
+      "status_synced_at": "2026-04-30T08:27:33Z",
+      "pr_body_synced_at": "pending-pr-body-update"
+    }
+  },
   "out_of_scope": [
     "MYPAGE shell, 프로필 조회, 레시피북 CRUD, 장보기 기록 — 17a-mypage-overview-history (merged)",
     "RECIPEBOOK_DETAIL 상세 조회 및 레시피 제거 — 17b-recipebook-detail-remove (merged)",
