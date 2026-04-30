@@ -7,6 +7,11 @@ import type {
   RecipeBookUpdateData,
 } from "@/types/recipe";
 import type { ShoppingListHistoryData } from "@/types/shopping";
+import type {
+  UserDeleteData,
+  UserLogoutData,
+  UserSettingsData,
+} from "@/types/user";
 
 export interface UserProfileData {
   id: string;
@@ -126,4 +131,32 @@ export async function fetchShoppingHistory(params?: {
     : "/api/v1/shopping/lists";
 
   return requestMypage<ShoppingListHistoryData>(url);
+}
+
+export async function updateSettings(settings: { screen_wake_lock: boolean }) {
+  return requestMypage<UserSettingsData>("/api/v1/users/me/settings", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(settings),
+  });
+}
+
+export async function updateNickname(nickname: string) {
+  return requestMypage<UserProfileData>("/api/v1/users/me", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ nickname }),
+  });
+}
+
+export async function deleteAccount() {
+  return requestMypage<UserDeleteData>("/api/v1/users/me", {
+    method: "DELETE",
+  });
+}
+
+export async function logout() {
+  return requestMypage<UserLogoutData>("/api/v1/auth/logout", {
+    method: "POST",
+  });
 }
