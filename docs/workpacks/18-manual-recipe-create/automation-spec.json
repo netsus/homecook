@@ -1,0 +1,87 @@
+{
+  "slice_id": "18-manual-recipe-create",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/recipes",
+      "GET /api/v1/cooking-methods"
+    ],
+    "invariants": [
+      "api-envelope-format",
+      "authenticated-only",
+      "source-type-manual-auto-set",
+      "created-by-current-user",
+      "my-added-virtual-book-reflection",
+      "ingredient-type-quant-validation",
+      "ingredient-type-to-taste-validation",
+      "cooking-method-id-exists",
+      "step-number-unique",
+      "base-servings-min-1"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/manual-recipe-create.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/menu/add/manual"
+    ],
+    "required_states": [
+      "loading",
+      "error",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "new-screen",
+      "anchor_screens": [],
+      "required_screens": [
+        "MANUAL_RECIPE_CREATE"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/MANUAL_RECIPE_CREATE.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/MANUAL_RECIPE_CREATE-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/MANUAL_RECIPE_CREATE-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase",
+    "pnpm dev:demo"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "cooking-methods-seed-missing",
+    "my-added-recipebook-missing",
+    "meal-plan-columns-missing",
+    "ingredients-table-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
