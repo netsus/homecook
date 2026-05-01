@@ -430,20 +430,44 @@
 6. [레시피 등록] → `POST /recipes/youtube/register` → 레시피 생성 + `recipe_sources` INSERT + `my_added` 가상 책 반영
 7. 등록 완료 후 "이 끼니에 추가" → 계획 인분 입력 → `POST /meals` → `MEAL_SCREEN` 복귀
 
+## Stage 2 Backend Evidence
+
+- 구현 파일:
+  - `app/api/v1/recipes/youtube/validate/route.ts`
+  - `app/api/v1/recipes/youtube/extract/route.ts`
+  - `app/api/v1/recipes/youtube/register/route.ts`
+  - `lib/server/youtube-import.ts`
+  - `types/recipe.ts`
+- 테스트:
+  - `tests/youtube-import.backend.test.ts`
+  - `tests/manual-recipe-create.backend.test.ts` 회귀 확인
+- Local verification:
+  - `pnpm test tests/youtube-import.backend.test.ts` — pass (14 tests)
+  - `pnpm test tests/manual-recipe-create.backend.test.ts tests/youtube-import.backend.test.ts` — pass (25 tests)
+  - `pnpm typecheck` — pass
+  - `pnpm lint` — pass with pre-existing `<img>` warnings only
+  - `pnpm verify:backend` — pass (`lint`, `typecheck`, `test:product` 58 files / 526 tests, `build`, security E2E 9 tests)
+  - `pnpm local:reset:demo` — pass
+  - local Supabase smoke query — pass (`cooking_methods` codes include seed 8종 + existing custom `finish`; `recipe_sources` table query ok)
+- Scope note:
+  - 실제 YouTube Data API/OCR/ASR/estimation은 Stage 1 Out of Scope 그대로 유지했다.
+  - MVP 추출은 deterministic stub(`recipe12345`, `nonrecipe123`, `fail999999`)으로 고정했다.
+  - `recipe_sources`와 seed readiness는 core schema migration, fixture baseline, local Supabase smoke로 확인했다.
+
 ## Delivery Checklist
 
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > Stage 2/3에서는 백엔드 관련 항목을, Stage 4~6에서는 남은 프론트/QA/디자인/closeout 항목을 닫는다.
 > Stage 6 merge 시점에는 In Scope인데도 남아 있는 unchecked 항목이 없어야 하며, `N/A` 또는 후속 분리는 README/PR 본문에 근거를 남긴다.
 
-- [ ] 백엔드 계약 고정 (`POST /recipes/youtube/validate`, `POST /recipes/youtube/extract`, `POST /recipes/youtube/register`) <!-- omo:id=19-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 타입 반영 (request/response/error 타입) <!-- omo:id=19-api-types;stage=2;scope=shared;review=3,6 -->
-- [ ] URL 검증 구현 (`POST /recipes/youtube/validate`, 레시피/비레시피 분기) <!-- omo:id=19-url-validate;stage=2;scope=backend;review=3,6 -->
-- [ ] 추출 구현 (`POST /recipes/youtube/extract`, 설명란 파싱 + 미분류 조리방법 자동 생성) <!-- omo:id=19-extract;stage=2;scope=backend;review=3,6 -->
-- [ ] 등록 확정 구현 (`POST /recipes/youtube/register`, `source_type='youtube'`, `recipe_sources` INSERT) <!-- omo:id=19-register;stage=2;scope=backend;review=3,6 -->
-- [ ] my_added 가상 책 반영 구현 (`recipes.created_by + source_type='youtube'`, `recipe_book_items` INSERT 없음) <!-- omo:id=19-my-added-virtual-book-reflection;stage=2;scope=backend;review=3,6 -->
-- [ ] 미분류 조리방법 자동 생성 (`cooking_methods` INSERT, `is_system=false`, `color_key='unassigned'`) <!-- omo:id=19-new-cooking-method-insert;stage=2;scope=backend;review=3,6 -->
-- [ ] 상태 전이 / 권한 / validation 테스트 <!-- omo:id=19-state-policy-tests;stage=2;scope=backend;review=3,6 -->
+- [x] 백엔드 계약 고정 (`POST /recipes/youtube/validate`, `POST /recipes/youtube/extract`, `POST /recipes/youtube/register`) <!-- omo:id=19-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 타입 반영 (request/response/error 타입) <!-- omo:id=19-api-types;stage=2;scope=shared;review=3,6 -->
+- [x] URL 검증 구현 (`POST /recipes/youtube/validate`, 레시피/비레시피 분기) <!-- omo:id=19-url-validate;stage=2;scope=backend;review=3,6 -->
+- [x] 추출 구현 (`POST /recipes/youtube/extract`, 설명란 파싱 + 미분류 조리방법 자동 생성) <!-- omo:id=19-extract;stage=2;scope=backend;review=3,6 -->
+- [x] 등록 확정 구현 (`POST /recipes/youtube/register`, `source_type='youtube'`, `recipe_sources` INSERT) <!-- omo:id=19-register;stage=2;scope=backend;review=3,6 -->
+- [x] my_added 가상 책 반영 구현 (`recipes.created_by + source_type='youtube'`, `recipe_book_items` INSERT 없음) <!-- omo:id=19-my-added-virtual-book-reflection;stage=2;scope=backend;review=3,6 -->
+- [x] 미분류 조리방법 자동 생성 (`cooking_methods` INSERT, `is_system=false`, `color_key='unassigned'`) <!-- omo:id=19-new-cooking-method-insert;stage=2;scope=backend;review=3,6 -->
+- [x] 상태 전이 / 권한 / validation 테스트 <!-- omo:id=19-state-policy-tests;stage=2;scope=backend;review=3,6 -->
 - [ ] UI 연결 (`YT_IMPORT` 화면) <!-- omo:id=19-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [ ] URL 입력 + 검증 UI (Step 1 + Step 1.5, 비레시피 판정 분기 포함) <!-- omo:id=19-url-validate-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 추출 Progress UI (Step 2, extraction_methods 단계 표시) <!-- omo:id=19-extract-progress-ui;stage=4;scope=frontend;review=5,6 -->
@@ -451,9 +475,9 @@
 - [ ] 등록 + 끼니 추가 UI (Step 4, 계획 인분 입력 → `POST /meals`) <!-- omo:id=19-register-meal-add-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] `loading / empty / error / read-only / unauthorized` 상태 구현 <!-- omo:id=19-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 로그인 게이트 + return-to-action 구현 <!-- omo:id=19-login-gate;stage=4;scope=frontend;review=5,6 -->
-- [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=19-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
-- [ ] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=19-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
-- [ ] 조리방법 seed 8종 확인 <!-- omo:id=19-cooking-methods-seed;stage=2;scope=backend;review=3,6 -->
-- [ ] recipe_sources 테이블 존재 확인 <!-- omo:id=19-recipe-sources-table;stage=2;scope=backend;review=3,6 -->
+- [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=19-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
+- [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=19-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
+- [x] 조리방법 seed 8종 확인 <!-- omo:id=19-cooking-methods-seed;stage=2;scope=backend;review=3,6 -->
+- [x] recipe_sources 테이블 존재 확인 <!-- omo:id=19-recipe-sources-table;stage=2;scope=backend;review=3,6 -->
 - [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=19-test-split;stage=4;scope=frontend;review=6 -->
 - [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=19-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
