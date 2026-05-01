@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-04-30T12:00:00Z",
+  "updated_at": "2026-05-01T13:15:16Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -768,7 +768,7 @@
     {
       "id": "18-manual-recipe-create",
       "preset": "vertical-slice-strict",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -777,7 +777,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs prepared on docs/18-manual-recipe-create branch. Manual recipe creation with POST /recipes, GET /cooking-methods, cooking method selection, detail/planner link. my_added virtual book reflection (recipes.created_by + source_type='manual'), not recipe_book_items INSERT. prototype-derived design, new-screen UI risk, design authority required. roadmap_display_status=docs closeout_phase=collecting"
+      "notes": "Stage 1 docs PR #315 merged. Stage 2 backend implementation in progress on feature/be-18-manual-recipe-create: POST /recipes, GET /cooking-methods, manual source_type/created_by, validation, fixture seed, and my_added virtual-book guard are covered locally. prototype-derived design, new-screen UI risk, design authority required. roadmap_display_status=in-progress closeout_phase=collecting"
     }
   ]
 }

@@ -74,6 +74,30 @@
       "standardName": "소금",
       "category": "양념",
       "defaultUnit": null
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440016",
+      "standardName": "고춧가루",
+      "category": "양념",
+      "defaultUnit": "큰술"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440017",
+      "standardName": "두부",
+      "category": "기타",
+      "defaultUnit": "모"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440018",
+      "standardName": "마늘",
+      "category": "채소",
+      "defaultUnit": "쪽"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440019",
+      "standardName": "간장",
+      "category": "양념",
+      "defaultUnit": "큰술"
     }
   ],
   "ingredientSynonyms": [
@@ -107,6 +131,54 @@
       "colorKey": "green",
       "isSystem": false,
       "displayOrder": 3
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440213",
+      "code": "deep_fry",
+      "label": "튀기기",
+      "colorKey": "yellow",
+      "isSystem": true,
+      "displayOrder": 4
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440214",
+      "code": "steam",
+      "label": "찌기",
+      "colorKey": "blue",
+      "isSystem": true,
+      "displayOrder": 5
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440215",
+      "code": "grill",
+      "label": "굽기",
+      "colorKey": "brown",
+      "isSystem": true,
+      "displayOrder": 6
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440216",
+      "code": "blanch",
+      "label": "데치기",
+      "colorKey": "lime",
+      "isSystem": true,
+      "displayOrder": 7
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440217",
+      "code": "mix",
+      "label": "무치기",
+      "colorKey": "green",
+      "isSystem": true,
+      "displayOrder": 8
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440218",
+      "code": "prep",
+      "label": "손질",
+      "colorKey": "gray",
+      "isSystem": true,
+      "displayOrder": 9
     }
   ],
   "recipe": {

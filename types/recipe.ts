@@ -32,6 +32,18 @@ export interface RecipeListQuery {
   limit?: number;
 }
 
+export interface CookingMethodItem {
+  id: string;
+  code: string;
+  label: string;
+  color_key: string;
+  is_system: boolean;
+}
+
+export interface CookingMethodListData {
+  methods: CookingMethodItem[];
+}
+
 export interface IngredientItem {
   id: string;
   standard_name: string;
@@ -88,6 +100,49 @@ export interface RecipeStep {
   heat_level: string | null;
   duration_seconds: number | null;
   duration_text: string | null;
+}
+
+export interface ManualRecipeIngredientInput {
+  ingredient_id: string;
+  standard_name: string;
+  amount: number | null;
+  unit: string | null;
+  ingredient_type: "QUANT" | "TO_TASTE";
+  display_text: string | null;
+  sort_order: number;
+  scalable: boolean;
+}
+
+export interface ManualRecipeStepIngredientUsedInput {
+  ingredient_id: string;
+  amount: number | null;
+  unit: string | null;
+  cut_size?: string | null;
+}
+
+export interface ManualRecipeStepInput {
+  step_number: number;
+  instruction: string;
+  cooking_method_id: string;
+  ingredients_used: ManualRecipeStepIngredientUsedInput[];
+  heat_level: string | null;
+  duration_seconds: number | null;
+  duration_text: string | null;
+}
+
+export interface ManualRecipeCreateBody {
+  title: string;
+  base_servings: number;
+  ingredients: ManualRecipeIngredientInput[];
+  steps: ManualRecipeStepInput[];
+}
+
+export interface ManualRecipeCreateData {
+  id: string;
+  title: string;
+  source_type: "manual";
+  created_by: string;
+  base_servings: number;
 }
 
 export interface RecipeUserStatus {

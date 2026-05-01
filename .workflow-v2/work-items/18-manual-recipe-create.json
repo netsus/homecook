@@ -72,7 +72,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -81,11 +81,11 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs prepared on docs/18-manual-recipe-create branch. my_added virtual book reflection (recipes.created_by + source_type='manual'), not recipe_book_items INSERT. Design authority required for new screen. roadmap_display_status=docs closeout_phase=collecting",
+  "notes": "Stage 1 docs PR #315 merged. Stage 2 backend implementation is in progress on feature/be-18-manual-recipe-create: POST /recipes, GET /cooking-methods, manual source_type/created_by, validation, fixture seed, and my_added virtual-book guard are covered locally. roadmap_display_status=in-progress closeout_phase=collecting",
   "closeout": {
     "phase": "collecting",
     "docs_projection": {
-      "roadmap_lifecycle": "planned",
+      "roadmap_lifecycle": "in_progress",
       "design_status": "temporary",
       "delivery_checklist": "pending",
       "design_authority": "pending",
@@ -94,9 +94,22 @@
     },
     "verification_projection": {
       "required_checks": "pending",
-      "external_smokes": "pending",
+      "external_smokes": "passed",
       "authority_reports": [],
-      "actual_verification_refs": []
+      "actual_verification_refs": [
+        "pnpm verify:backend",
+        "pnpm exec vitest run tests/manual-recipe-create.backend.test.ts",
+        "pnpm exec vitest run tests/manual-recipe-create.backend.test.ts tests/recipe-api-contracts.test.ts tests/recipebook-detail.backend.test.ts",
+        "pnpm typecheck",
+        "pnpm lint",
+        "pnpm test:e2e:smoke",
+        "pnpm exec playwright test tests/e2e/qa-visual.spec.ts --project=desktop-chrome -g \"ingredient filter modal matches\" --update-snapshots",
+        "pnpm dev:local-supabase --hostname 127.0.0.1 --port 3128",
+        "curl -sS http://127.0.0.1:3128/api/v1/cooking-methods | jq -e '(.success == true) and ([\"stir_fry\",\"boil\",\"deep_fry\",\"steam\",\"grill\",\"blanch\",\"mix\",\"prep\"] - (.data.methods | map(.code)) | length == 0)'",
+        "pnpm dev:demo --hostname 127.0.0.1 --port 3130",
+        "curl -sS -o /tmp/homecook-devdemo-3130-home.html -w '%{http_code}\\n' http://127.0.0.1:3130/",
+        "curl -sS http://127.0.0.1:3130/api/v1/cooking-methods | jq '{success, count: (.data.methods // [] | length), codes: (.data.methods // [] | map(.code)), error}'"
+      ]
     },
     "merge_gate_projection": {
       "current_head_sha": null,

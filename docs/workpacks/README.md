@@ -82,7 +82,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `17a-mypage-overview-history`  | merged | `MYPAGE` shell, 내 정보, 레시피북 목록/생성/수정/삭제, 장보기 기록 목록                                          |
 | `17b-recipebook-detail-remove` | merged | `RECIPEBOOK_DETAIL` 조회, saved/custom 제거, liked 책에서 좋아요 해제                                            |
 | `17c-settings-account`         | merged | `SETTINGS`, 로그아웃, 화면 꺼짐 방지, 닉네임 변경, 회원 탈퇴                                                     |
-| `18-manual-recipe-create`      | docs   | 직접 레시피 등록, 조리방법 선택, 상세/플래너 연계, `my_added` 반영                                               |
+| `18-manual-recipe-create`      | in-progress   | 직접 레시피 등록, 조리방법 선택, 상세/플래너 연계, `my_added` 반영                                               |
 | `19-youtube-import`            | planned   | 유튜브 검증/추출/등록, 신규 조리방법 반영, 플래너 연계, `my_added` 반영                                          |
 
 ## Design Decision Gates
