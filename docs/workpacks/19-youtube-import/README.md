@@ -314,11 +314,14 @@
 - Visual classification: `prototype-derived design` (h8 matrix)
 - Anchor screen dependency: 없음
 - Visual artifact:
-  - Stage 4에서 생성 예정:
-  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-default.png`
-  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-narrow.png`
-  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-scrolled.png`
-- Authority status: `required`
+  - Stage 5 Codex authority_precheck evidence:
+  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-url-390x844.png`
+  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-review-top-390x844.png`
+  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-review-scroll-390x844.png`
+  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-review-top-narrow-320x568.png`
+  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-review-narrow-320x568.png`
+  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-complete-narrow-320x568.png`
+- Authority status: `passed` (Codex authority_precheck + Claude final authority gate, blocker 0 / major 0)
 - Authority planning: Stage 4에서 screenshot evidence 캡처 → Codex `authority_precheck` → Claude `final_authority_gate`
 - Authority report: `ui/designs/authority/YT_IMPORT-authority.md` (Stage 4/5에서 생성)
 - Notes:
@@ -329,9 +332,9 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 > Design Status 전이: `temporary` (Stage 1 기본값)
@@ -468,16 +471,16 @@
 - [x] my_added 가상 책 반영 구현 (`recipes.created_by + source_type='youtube'`, `recipe_book_items` INSERT 없음) <!-- omo:id=19-my-added-virtual-book-reflection;stage=2;scope=backend;review=3,6 -->
 - [x] 미분류 조리방법 자동 생성 (`cooking_methods` INSERT, `is_system=false`, `color_key='unassigned'`) <!-- omo:id=19-new-cooking-method-insert;stage=2;scope=backend;review=3,6 -->
 - [x] 상태 전이 / 권한 / validation 테스트 <!-- omo:id=19-state-policy-tests;stage=2;scope=backend;review=3,6 -->
-- [ ] UI 연결 (`YT_IMPORT` 화면) <!-- omo:id=19-ui-connection;stage=4;scope=frontend;review=5,6 -->
-- [ ] URL 입력 + 검증 UI (Step 1 + Step 1.5, 비레시피 판정 분기 포함) <!-- omo:id=19-url-validate-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 추출 Progress UI (Step 2, extraction_methods 단계 표시) <!-- omo:id=19-extract-progress-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 검수/수정 UI (Step 3, 재료/스텝 편집, 조리방법 변경) <!-- omo:id=19-review-edit-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 등록 + 끼니 추가 UI (Step 4, 계획 인분 입력 → `POST /meals`) <!-- omo:id=19-register-meal-add-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] `loading / empty / error / read-only / unauthorized` 상태 구현 <!-- omo:id=19-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 로그인 게이트 + return-to-action 구현 <!-- omo:id=19-login-gate;stage=4;scope=frontend;review=5,6 -->
+- [x] UI 연결 (`YT_IMPORT` 화면) <!-- omo:id=19-ui-connection;stage=4;scope=frontend;review=5,6 -->
+- [x] URL 입력 + 검증 UI (Step 1 + Step 1.5, 비레시피 판정 분기 포함) <!-- omo:id=19-url-validate-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 추출 Progress UI (Step 2, extraction_methods 단계 표시) <!-- omo:id=19-extract-progress-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 검수/수정 UI (Step 3, 재료/스텝 편집, 조리방법 변경) <!-- omo:id=19-review-edit-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 등록 + 끼니 추가 UI (Step 4, 계획 인분 입력 → `POST /meals`) <!-- omo:id=19-register-meal-add-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / read-only / unauthorized` 상태 구현 <!-- omo:id=19-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 로그인 게이트 + return-to-action 구현 <!-- omo:id=19-login-gate;stage=4;scope=frontend;review=5,6 -->
 - [x] fixture와 real DB smoke 경로 구분 <!-- omo:id=19-fixture-smoke-split;stage=2;scope=shared;review=3,6 -->
 - [x] seed / bootstrap / system row 준비 여부 점검 <!-- omo:id=19-bootstrap-readiness;stage=2;scope=shared;review=3,6 -->
 - [x] 조리방법 seed 8종 확인 <!-- omo:id=19-cooking-methods-seed;stage=2;scope=backend;review=3,6 -->
 - [x] recipe_sources 테이블 존재 확인 <!-- omo:id=19-recipe-sources-table;stage=2;scope=backend;review=3,6 -->
-- [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=19-test-split;stage=4;scope=frontend;review=6 -->
-- [ ] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=19-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
+- [x] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=19-test-split;stage=4;scope=frontend;review=6 -->
+- [x] 테스트 에이전트 전달용 수동 QA 시나리오 정리 <!-- omo:id=19-manual-qa-handoff;stage=4;scope=frontend;review=6 -->
