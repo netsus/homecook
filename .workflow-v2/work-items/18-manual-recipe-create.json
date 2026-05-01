@@ -72,20 +72,20 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": ".artifacts/qa/18-manual-recipe-create/2026-05-01T15-34-55-530Z/eval-result.json",
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs PR #315 and Stage 2 backend PR #316 merged. Stage 4 frontend implemented via Claude session 59a8e748-6d7b-4b29-a7d6-364167223d2c; Codex repaired the missing-planner-context meal-add error surface and locked it with slice E2E. Stage 5 authority passed with Codex report and Claude final authority gate. roadmap_display_status=in-progress closeout_phase=collecting",
+  "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs PR #315 and Stage 2/3 backend PR #316 merged. Stage 4 frontend was delegated to Claude resume session 59a8e748-6d7b-4b29-a7d6-364167223d2c; Codex repaired the missing-planner-context meal-add error surface and locked it with slice E2E. Stage 5 authority passed with Codex report and Claude final authority gate. PR #317 current-head checks were green before projection sync; CI policy/visual required one closeout status resync and one stale Linux visual baseline refresh. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:2 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,PR #317 body,.artifacts/qa/18-manual-recipe-create/2026-05-01T15-34-55-530Z,ui/designs/authority/MANUAL_RECIPE_CREATE-authority.md,tests/e2e/slice-18-manual-recipe-create.spec.ts,tests/e2e/qa-visual.spec.ts-snapshots/qa-ingredient-filter-modal-desktop-chrome-linux.png last_recovery_at=2026-05-01T16:21:18Z",
   "closeout": {
-    "phase": "collecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "in_progress",
+      "roadmap_lifecycle": "merged",
       "design_status": "confirmed",
       "delivery_checklist": "complete",
       "design_authority": "passed",
@@ -93,7 +93,7 @@
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "pending",
+      "required_checks": "passed",
       "external_smokes": "passed",
       "authority_reports": [
         "ui/designs/authority/MANUAL_RECIPE_CREATE-authority.md",
@@ -127,41 +127,47 @@
         "ui/designs/evidence/18-manual-recipe-create/MANUAL_RECIPE_CREATE-mobile-scrolled.png",
         "pnpm validate:workpack -- --slice 18-manual-recipe-create",
         "pnpm validate:workflow-v2",
-        "pnpm validate:authority-evidence-presence -- --slice 18-manual-recipe-create"
+        "pnpm validate:authority-evidence-presence -- --slice 18-manual-recipe-create",
+        "PR #317 current-head GitHub checks green at 7fbdac710c071b81ebc673fd0cbeac0e3ddf0db6 before internal 6.5 projection sync",
+        ".omx/artifacts/stage6-fe-review-18-manual-recipe-create-20260501T162118Z.md",
+        "PR_IS_DRAFT=false pnpm validate:closeout-sync",
+        "pnpm validate:pr-ready -- --slice 18-manual-recipe-create --pr-body .omx/tmp/pr-body-18-manual-recipe-create-fe.md --mode frontend"
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": null,
-      "approval_state": "not_started",
-      "all_checks_green": false
+      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
     },
     "recovery_summary": {
-      "manual_patch_count": 0,
+      "manual_patch_count": 1,
       "manual_handoff": false,
       "stale_lock_count": 0,
-      "ci_resync_count": 0,
+      "ci_resync_count": 2,
       "artifact_missing": false,
-      "last_recovery_at": null
+      "last_recovery_at": "2026-05-01T16:21:18Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 1,
+      "codex_repairable_count": 2,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": "missing_planner_context_error_not_visible",
+      "latest_reason_code": "ci_visual_linux_baseline_resync",
       "evidence_sources": [
+        ".omx/artifacts",
+        "GitHub PR/CI",
+        "PR #317 body",
+        ".artifacts/qa/18-manual-recipe-create/2026-05-01T15-34-55-530Z",
+        "ui/designs/authority/MANUAL_RECIPE_CREATE-authority.md",
         "tests/e2e/slice-18-manual-recipe-create.spec.ts",
-        "components/recipe/manual-recipe-create-screen.tsx",
-        "pnpm exec playwright test tests/e2e/slice-18-manual-recipe-create.spec.ts --project=desktop-chrome",
-        ".artifacts/qa/18-manual-recipe-create/2026-05-01T15-34-55-530Z/exploratory-report.json",
-        "ui/designs/authority/MANUAL_RECIPE_CREATE-authority.md"
+        "tests/e2e/qa-visual.spec.ts-snapshots/qa-ingredient-filter-modal-desktop-chrome-linux.png"
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-05-01T15:45:05Z",
-      "status_synced_at": null,
-      "pr_body_synced_at": null
+      "docs_synced_at": "2026-05-01T16:21:18Z",
+      "status_synced_at": "2026-05-01T16:21:18Z",
+      "pr_body_synced_at": "pending-pr-body-update"
     }
   },
   "out_of_scope": [
