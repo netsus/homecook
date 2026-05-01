@@ -1,0 +1,93 @@
+{
+  "id": "19-youtube-import",
+  "title": "YouTube recipe import with URL validation, extraction, review/edit, register, new cooking method creation, and meal-add linkage",
+  "summary": "유튜브 URL 검증 (POST /recipes/youtube/validate), 레시피 추출 (POST /recipes/youtube/extract), 검수/수정 후 등록 확정 (POST /recipes/youtube/register), 미분류 조리방법 자동 생성, recipe_sources INSERT, 끼니 추가 선택, my_added 가상 책 반영 (recipes.created_by + source_type='youtube'). prototype-derived design.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 유튜브 요리 영상 URL을 입력하면 레시피를 자동 추출하고, 추출 결과를 검수/수정한 뒤 레시피로 등록할 수 있도록 한다. 등록된 레시피는 recipes.created_by + source_type='youtube' 조건으로 가상 레시피북 my_added를 통해 조회할 수 있으며, 등록 직후 끼니에 추가하여 플래너에 반영할 수 있다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "18-manual-recipe-create",
+    "h8-baemin-prototype-reference-future-screens-direction"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/요구사항기준선-v1.6.4.md",
+      "docs/화면정의서-v1.5.1.md",
+      "docs/api문서-v1.2.2.md",
+      "docs/db설계-v1.3.1.md",
+      "docs/유저flow맵-v1.3.1.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/19-youtube-import/README.md",
+      "docs/workpacks/19-youtube-import/acceptance.md",
+      "docs/workpacks/19-youtube-import/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/playwright-e2e.md",
+      "docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "pnpm dev:local-supabase",
+      "pnpm dev:demo"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Stage 1 docs authored by Claude. risk=high due to external YouTube provider dependency (stubbed for MVP), 3 new endpoints, recipe_sources table INSERT, and new cooking method auto-creation. MVP extraction uses description/pinned-comment parsing plus manual correction; OCR/ASR/estimation are staged pipeline concepts out of scope for this slice.",
+  "out_of_scope": [
+    "전체 생산 수준 OCR/ASR/추정 레이어 통합",
+    "실제 YouTube Data API 연동 (MVP stub)",
+    "레시피 수정/삭제 — 후속 슬라이스",
+    "레시피 이미지 업로드 — 후속 슬라이스",
+    "직접 레시피 등록 — 18-manual-recipe-create에서 닫음",
+    "공식 문서 변경 또는 미문서화 public 필드/엔드포인트 추가",
+    "prototype parity promotion — h8 matrix에 따라 prototype-derived design"
+  ],
+  "open_questions": []
+}

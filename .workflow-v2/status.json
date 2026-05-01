@@ -778,6 +778,20 @@
         "pnpm typecheck"
       ],
       "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs PR #315 and Stage 2/3 backend PR #316 merged. Stage 4 frontend was delegated to Claude resume session 59a8e748-6d7b-4b29-a7d6-364167223d2c; Codex repaired the missing-planner-context meal-add error surface and locked it with slice E2E. Stage 5 authority passed with Codex report and Claude final authority gate. PR #317 current-head checks were green before projection sync; CI policy/visual required one closeout status resync and one stale Linux visual baseline refresh. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:2 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,PR #317 body,.artifacts/qa/18-manual-recipe-create/2026-05-01T15-34-55-530Z,ui/designs/authority/MANUAL_RECIPE_CREATE-authority.md,tests/e2e/slice-18-manual-recipe-create.spec.ts,tests/e2e/qa-visual.spec.ts-snapshots/qa-ingredient-filter-modal-desktop-chrome-linux.png last_recovery_at=2026-05-01T16:21:18Z"
+    },
+    {
+      "id": "19-youtube-import",
+      "preset": "vertical-slice-strict",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 docs authored by Claude. risk=high due to external YouTube provider dependency (stubbed for MVP), 3 new endpoints, recipe_sources table INSERT, and new cooking method auto-creation. MVP extraction uses description/pinned-comment parsing plus manual correction; OCR/ASR/estimation are staged pipeline concepts out of scope."
     }
   ]
 }

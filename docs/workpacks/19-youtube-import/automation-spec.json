@@ -1,0 +1,94 @@
+{
+  "slice_id": "19-youtube-import",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "POST /api/v1/recipes/youtube/validate",
+      "POST /api/v1/recipes/youtube/extract",
+      "POST /api/v1/recipes/youtube/register"
+    ],
+    "invariants": [
+      "api-envelope-format",
+      "authenticated-only",
+      "source-type-youtube-auto-set",
+      "created-by-current-user",
+      "recipe-sources-insert",
+      "my-added-virtual-book-reflection",
+      "ingredient-type-quant-validation",
+      "ingredient-type-to-taste-validation",
+      "cooking-method-id-exists",
+      "step-number-unique",
+      "base-servings-min-1",
+      "new-cooking-method-insert-is-system-false",
+      "youtube-video-id-parse",
+      "extraction-methods-array"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/youtube-import.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/menu/add/youtube"
+    ],
+    "required_states": [
+      "loading",
+      "error",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "new-screen",
+      "anchor_screens": [],
+      "required_screens": [
+        "YT_IMPORT"
+      ],
+      "generator_required": true,
+      "generator_artifact": "ui/designs/YT_IMPORT.md",
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/YT_IMPORT-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/YT_IMPORT-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase",
+    "pnpm dev:demo"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "recipe-sources-table-missing",
+    "cooking-methods-seed-missing",
+    "my-added-recipebook-missing",
+    "meal-plan-columns-missing",
+    "ingredients-table-missing",
+    "youtube-extraction-stub-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}
