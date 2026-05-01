@@ -782,7 +782,7 @@
     {
       "id": "19-youtube-import",
       "preset": "vertical-slice-strict",
-      "lifecycle": "planned",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [

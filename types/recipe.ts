@@ -145,6 +145,67 @@ export interface ManualRecipeCreateData {
   base_servings: number;
 }
 
+export interface YoutubeRecipeValidateBody {
+  youtube_url: string;
+}
+
+export interface YoutubeVideoInfo {
+  video_id: string;
+  title: string;
+  channel: string;
+  thumbnail_url: string;
+}
+
+export interface YoutubeRecipeValidateData {
+  is_valid_url: true;
+  is_recipe_video: boolean;
+  video_info: YoutubeVideoInfo;
+  message?: string;
+}
+
+export interface YoutubeExtractedIngredient extends ManualRecipeIngredientInput {
+  confidence: number;
+}
+
+export interface YoutubeExtractedCookingMethod {
+  id: string;
+  code: string;
+  label: string;
+  color_key: string;
+  is_new: boolean;
+}
+
+export interface YoutubeExtractedStep {
+  step_number: number;
+  instruction: string;
+  cooking_method: YoutubeExtractedCookingMethod;
+  duration_text: string | null;
+}
+
+export interface YoutubeRecipeExtractData {
+  extraction_id: string;
+  title: string;
+  base_servings: number;
+  extraction_methods: string[];
+  ingredients: YoutubeExtractedIngredient[];
+  steps: YoutubeExtractedStep[];
+  new_cooking_methods: YoutubeExtractedCookingMethod[];
+}
+
+export interface YoutubeRecipeRegisterBody {
+  extraction_id: string;
+  title: string;
+  base_servings: number;
+  youtube_url: string;
+  ingredients: ManualRecipeIngredientInput[];
+  steps: ManualRecipeStepInput[];
+}
+
+export interface YoutubeRecipeRegisterData {
+  recipe_id: string;
+  title: string;
+}
+
 export interface RecipeUserStatus {
   is_liked: boolean;
   is_saved: boolean;
