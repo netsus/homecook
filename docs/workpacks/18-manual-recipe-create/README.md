@@ -212,13 +212,14 @@
 - Visual classification: `prototype-derived design` (h8 matrix)
 - Anchor screen dependency: 없음
 - Visual artifact: Figma frame URL 또는 screenshot evidence 경로 (h8 matrix 참조)
-- Authority status: `required` (new screen requires authority evidence per workflow)
+- Authority status: `required`
 - Authority planning: `pending` (Stage 4 evidence generation, Claude final authority gate)
 - Notes:
   - h8 matrix에 따라 `MANUAL_RECIPE_CREATE`는 `prototype-derived design`으로 분류
   - Baemin vocabulary/material/tokens 사용, near-100% parity 타겟 아님
   - prototype-only 요소(bottom tab 동작, Jua 폰트, unsupported 기능) 불포함
   - 새 화면이므로 Stage 4 screenshot evidence + Claude final authority gate 필요
+  - new screen requires authority evidence per workflow
 
 ## Design Status
 
@@ -308,13 +309,13 @@
 > Stage 2/3에서는 백엔드 관련 항목을, Stage 4~6에서는 남은 프론트/QA/디자인/closeout 항목을 닫는다.
 > Stage 6 merge 시점에는 In Scope인데도 남아 있는 unchecked 항목이 없어야 하며, `N/A` 또는 후속 분리는 README/PR 본문에 근거를 남긴다.
 
-- [ ] 백엔드 계약 고정 (`POST /recipes`, `GET /cooking-methods`) <!-- omo:id=18-backend-contract;stage=2;scope=backend;review=3,6 -->
-- [ ] API 타입 반영 (request/response/error 타입) <!-- omo:id=18-api-types;stage=2;scope=shared;review=3,6 -->
-- [ ] 재료 타입별 validation 구현 (QUANT vs TO_TASTE) <!-- omo:id=18-ingredient-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] 조리방법 목록 조회 구현 (`GET /cooking-methods`) <!-- omo:id=18-cooking-methods-list;stage=2;scope=backend;review=3,6 -->
-- [ ] 직접 레시피 등록 구현 (`POST /recipes`, `source_type='manual'`) <!-- omo:id=18-manual-recipe-create;stage=2;scope=backend;review=3,6 -->
-- [ ] my_added 가상 책 반영 구현 (`recipes.created_by + source_type='manual'`, recipe_book_items INSERT 없음) <!-- omo:id=18-my-added-virtual-book-reflection;stage=2;scope=backend;review=3,6 -->
-- [ ] 상태 전이 / 권한 / validation 테스트 <!-- omo:id=18-state-policy-tests;stage=2;scope=backend;review=3,6 -->
+- [x] 백엔드 계약 고정 (`POST /recipes`, `GET /cooking-methods`) <!-- omo:id=18-backend-contract;stage=2;scope=backend;review=3,6 -->
+- [x] API 타입 반영 (request/response/error 타입) <!-- omo:id=18-api-types;stage=2;scope=shared;review=3,6 -->
+- [x] 재료 타입별 validation 구현 (QUANT vs TO_TASTE) <!-- omo:id=18-ingredient-validation;stage=2;scope=backend;review=3,6 -->
+- [x] 조리방법 목록 조회 구현 (`GET /cooking-methods`) <!-- omo:id=18-cooking-methods-list;stage=2;scope=backend;review=3,6 -->
+- [x] 직접 레시피 등록 구현 (`POST /recipes`, `source_type='manual'`) <!-- omo:id=18-manual-recipe-create;stage=2;scope=backend;review=3,6 -->
+- [x] my_added 가상 책 반영 구현 (`recipes.created_by + source_type='manual'`, recipe_book_items INSERT 없음) <!-- omo:id=18-my-added-virtual-book-reflection;stage=2;scope=backend;review=3,6 -->
+- [x] 상태 전이 / 권한 / validation 테스트 <!-- omo:id=18-state-policy-tests;stage=2;scope=backend;review=3,6 -->
 - [ ] UI 연결 (`MANUAL_RECIPE_CREATE` 화면) <!-- omo:id=18-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [ ] 조리방법 선택 UI (dropdown/modal, `GET /cooking-methods` 소비) <!-- omo:id=18-cooking-method-picker;stage=4;scope=frontend;review=5,6 -->
 - [ ] 재료 추가 UI (정량/비정량 구분, 재료 검색) <!-- omo:id=18-ingredient-input-ui;stage=4;scope=frontend;review=5,6 -->
@@ -324,6 +325,6 @@
 - [ ] `loading / empty / error / read-only / unauthorized` 상태 구현 <!-- omo:id=18-state-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 로그인 게이트 + return-to-action 구현 <!-- omo:id=18-login-gate;stage=4;scope=frontend;review=5,6 -->
 - [ ] fixture와 real DB smoke 경로 구분 <!-- omo:id=18-fixture-smoke-split;stage=4;scope=frontend;review=6 -->
-- [ ] 조리방법 seed 8종 확인 (stir_fry, boil, deep_fry, steam, grill, blanch, mix, prep) <!-- omo:id=18-cooking-methods-seed;stage=2;scope=backend;review=3,6 -->
-- [ ] my_added 시스템 책 row 자동 생성 확인 (회원가입 bootstrap — MYPAGE 레시피북 목록용, membership은 recipes.created_by로 결정) <!-- omo:id=18-my-added-system-book-row-bootstrap;stage=2;scope=backend;review=3,6 -->
+- [x] 조리방법 seed 8종 확인 (stir_fry, boil, deep_fry, steam, grill, blanch, mix, prep) <!-- omo:id=18-cooking-methods-seed;stage=2;scope=backend;review=3,6 -->
+- [x] my_added 시스템 책 row 자동 생성 확인 (회원가입 bootstrap — MYPAGE 레시피북 목록용, membership은 recipes.created_by로 결정) <!-- omo:id=18-my-added-system-book-row-bootstrap;stage=2;scope=backend;review=3,6 -->
 - [ ] Vitest / Playwright 자동화 범위 구분 <!-- omo:id=18-test-split;stage=4;scope=frontend;review=6 -->

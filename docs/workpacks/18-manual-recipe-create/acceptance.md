@@ -8,45 +8,45 @@
 ## Happy Path
 
 - [ ] 레시피명, 기본 인분 입력 → 재료 추가 (정량/비정량) → 스텝 추가 (조리방법 선택) → [저장] → 레시피 생성 성공 <!-- omo:id=18-accept-happy-create-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] `POST /recipes` 응답이 `{ success: true, data: { id, title, source_type: 'manual', ... }, error: null }` 형식 <!-- omo:id=18-accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] `POST /recipes` 응답이 `{ success: true, data: { id, title, source_type: 'manual', ... }, error: null }` 형식 <!-- omo:id=18-accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 타입과 프론트 타입 일치 (request/response/error 형식) <!-- omo:id=18-accept-types-match;stage=4;scope=shared;review=6 -->
 - [ ] 등록 완료 후 my_added 가상 책 반영 확인 (MYPAGE → my_added 진입 → 방금 등록한 레시피 존재, recipes.created_by + source_type='manual' 조건) <!-- omo:id=18-accept-my-added-virtual-book-reflection;stage=4;scope=frontend;review=6 -->
 
 ## State / Policy
 
-- [ ] `ingredient_type='QUANT'` 재료는 `amount > 0`, `unit` 필수 <!-- omo:id=18-accept-quant-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] `ingredient_type='TO_TASTE'` 재료는 `amount=null`, `unit=null`, `scalable=false` 고정 <!-- omo:id=18-accept-to-taste-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] 조리방법 ID는 존재하는 조리방법이어야 함 (부재 시 422) <!-- omo:id=18-accept-cooking-method-exists;stage=2;scope=backend;review=3,6 -->
-- [ ] step_number는 1부터 시작, 중복 불가 <!-- omo:id=18-accept-step-number-unique;stage=2;scope=backend;review=3,6 -->
-- [ ] 등록 시 `source_type='manual'`, `created_by=current_user.id` 자동 설정 <!-- omo:id=18-accept-source-type-owner;stage=2;scope=backend;review=3,6 -->
-- [ ] my_added 가상 책은 `recipes.created_by + source_type IN ('youtube','manual')` 조건으로 구현, `recipe_book_items` INSERT 없음 <!-- omo:id=18-accept-my-added-virtual-book;stage=2;scope=backend;review=3,6 -->
+- [x] `ingredient_type='QUANT'` 재료는 `amount > 0`, `unit` 필수 <!-- omo:id=18-accept-quant-validation;stage=2;scope=backend;review=3,6 -->
+- [x] `ingredient_type='TO_TASTE'` 재료는 `amount=null`, `unit=null`, `scalable=false` 고정 <!-- omo:id=18-accept-to-taste-validation;stage=2;scope=backend;review=3,6 -->
+- [x] 조리방법 ID는 존재하는 조리방법이어야 함 (부재 시 422) <!-- omo:id=18-accept-cooking-method-exists;stage=2;scope=backend;review=3,6 -->
+- [x] step_number는 1부터 시작, 중복 불가 <!-- omo:id=18-accept-step-number-unique;stage=2;scope=backend;review=3,6 -->
+- [x] 등록 시 `source_type='manual'`, `created_by=current_user.id` 자동 설정 <!-- omo:id=18-accept-source-type-owner;stage=2;scope=backend;review=3,6 -->
+- [x] my_added 가상 책은 `recipes.created_by + source_type IN ('youtube','manual')` 조건으로 구현, `recipe_book_items` INSERT 없음 <!-- omo:id=18-accept-my-added-virtual-book;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 
-- [ ] 비로그인 시 `POST /recipes` 호출 → `401 Unauthorized` <!-- omo:id=18-accept-unauthorized;stage=2;scope=backend;review=3,6 -->
-- [ ] 필수 필드 누락 시 `422 Validation Error` + fields 상세 반환 <!-- omo:id=18-accept-validation-error-fields;stage=2;scope=backend;review=3,6 -->
-- [ ] 조리방법 ID 부재 시 `422 Validation Error` + "조리방법을 선택해주세요" 메시지 <!-- omo:id=18-accept-cooking-method-missing;stage=2;scope=backend;review=3,6 -->
-- [ ] `base_servings < 1` 시 `422 Validation Error` <!-- omo:id=18-accept-base-servings-min;stage=2;scope=backend;review=3,6 -->
-- [ ] 재료 타입별 제약 위반 시 `422 Validation Error` (QUANT인데 amount 없음, TO_TASTE인데 amount 있음 등) <!-- omo:id=18-accept-ingredient-type-constraint;stage=2;scope=backend;review=3,6 -->
+- [x] 비로그인 시 `POST /recipes` 호출 → `401 Unauthorized` <!-- omo:id=18-accept-unauthorized;stage=2;scope=backend;review=3,6 -->
+- [x] 필수 필드 누락 시 `422 Validation Error` + fields 상세 반환 <!-- omo:id=18-accept-validation-error-fields;stage=2;scope=backend;review=3,6 -->
+- [x] 조리방법 ID 부재 시 `422 Validation Error` + "조리방법을 선택해주세요" 메시지 <!-- omo:id=18-accept-cooking-method-missing;stage=2;scope=backend;review=3,6 -->
+- [x] `base_servings < 1` 시 `422 Validation Error` <!-- omo:id=18-accept-base-servings-min;stage=2;scope=backend;review=3,6 -->
+- [x] 재료 타입별 제약 위반 시 `422 Validation Error` (QUANT인데 amount 없음, TO_TASTE인데 amount 있음 등) <!-- omo:id=18-accept-ingredient-type-constraint;stage=2;scope=backend;review=3,6 -->
 - [ ] UI에서 `loading` 상태 존재 (레시피 등록 중) <!-- omo:id=18-accept-loading-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] UI에서 `error` 상태 존재 (등록 실패 시 에러 안내 + [다시 시도]) <!-- omo:id=18-accept-error-ui;stage=4;scope=frontend;review=5,6 -->
 - [ ] 비로그인 시 로그인 게이트 → 로그인 후 등록 폼 자동 복귀 (return-to-action) <!-- omo:id=18-accept-login-gate-return;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
-- [ ] 재료명은 `ingredient_id` 필수이며 실제 존재하는 재료여야 함 <!-- omo:id=18-accept-ingredient-exists;stage=2;scope=backend;review=3,6 -->
-- [ ] 동일 레시피에서 재료 `sort_order` 중복 없음 <!-- omo:id=18-accept-ingredient-sort-unique;stage=2;scope=backend;review=3,6 -->
-- [ ] 동일 레시피에서 스텝 `step_number` 중복 없음 <!-- omo:id=18-accept-step-number-unique-db;stage=2;scope=backend;review=3,6 -->
-- [ ] `display_text`는 사용자 입력 원문 보존 (예: "김치 200g", "소금 약간") <!-- omo:id=18-accept-display-text-preserve;stage=2;scope=backend;review=3,6 -->
-- [ ] `ingredients_used` jsonb는 유효한 형식 (ingredient_id, amount, unit, cut_size 등) <!-- omo:id=18-accept-ingredients-used-format;stage=2;scope=backend;review=3,6 -->
+- [x] 재료명은 `ingredient_id` 필수이며 실제 존재하는 재료여야 함 <!-- omo:id=18-accept-ingredient-exists;stage=2;scope=backend;review=3,6 -->
+- [x] 동일 레시피에서 재료 `sort_order` 중복 없음 <!-- omo:id=18-accept-ingredient-sort-unique;stage=2;scope=backend;review=3,6 -->
+- [x] 동일 레시피에서 스텝 `step_number` 중복 없음 <!-- omo:id=18-accept-step-number-unique-db;stage=2;scope=backend;review=3,6 -->
+- [x] `display_text`는 사용자 입력 원문 보존 (예: "김치 200g", "소금 약간") <!-- omo:id=18-accept-display-text-preserve;stage=2;scope=backend;review=3,6 -->
+- [x] `ingredients_used` jsonb는 유효한 형식 (ingredient_id, amount, unit, cut_size 등) <!-- omo:id=18-accept-ingredients-used-format;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
 
-- [ ] fixture에 조리방법 seed 8종 존재 (stir_fry, boil, deep_fry, steam, grill, blanch, mix, prep) <!-- omo:id=18-accept-fixture-cooking-methods;stage=2;scope=backend;review=3,6 -->
-- [ ] real DB smoke에 조리방법 seed 투입 확인 (`GET /cooking-methods` 응답에 8종 존재) <!-- omo:id=18-accept-real-cooking-methods;stage=2;scope=backend;review=3,6 -->
-- [ ] 회원가입 시 my_added 시스템 책 row 자동 생성 확인 (bootstrap — MYPAGE 레시피북 목록용, membership은 recipes.created_by로 결정) <!-- omo:id=18-accept-bootstrap-my-added-row;stage=2;scope=backend;review=3,6 -->
-- [ ] fixture에 재료 마스터 최소 10종 이상 존재 <!-- omo:id=18-accept-fixture-ingredients;stage=2;scope=backend;review=3,6 -->
-- [ ] 회원가입 시 meal_plan_columns 4개 자동 생성 확인 (아침/점심/간식/저녁) <!-- omo:id=18-accept-bootstrap-columns;stage=2;scope=backend;review=3,6 -->
+- [x] fixture에 조리방법 seed 8종 존재 (stir_fry, boil, deep_fry, steam, grill, blanch, mix, prep) <!-- omo:id=18-accept-fixture-cooking-methods;stage=2;scope=backend;review=3,6 -->
+- [x] real DB smoke에 조리방법 seed 투입 확인 (`GET /cooking-methods` 응답에 8종 존재) <!-- omo:id=18-accept-real-cooking-methods;stage=2;scope=backend;review=3,6 -->
+- [x] 회원가입 시 my_added 시스템 책 row 자동 생성 확인 (bootstrap — MYPAGE 레시피북 목록용, membership은 recipes.created_by로 결정) <!-- omo:id=18-accept-bootstrap-my-added-row;stage=2;scope=backend;review=3,6 -->
+- [x] fixture에 재료 마스터 최소 10종 이상 존재 <!-- omo:id=18-accept-fixture-ingredients;stage=2;scope=backend;review=3,6 -->
+- [x] 회원가입 시 meal_plan_columns 4개 자동 생성 확인 (아침/점심/간식/저녁) <!-- omo:id=18-accept-bootstrap-columns;stage=2;scope=backend;review=3,6 -->
 
 ## Manual QA
 
@@ -62,10 +62,10 @@
 
 ### Vitest
 
-- [ ] 재료 타입별 validation 로직 (QUANT vs TO_TASTE) <!-- omo:id=18-vitest-ingredient-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] 스텝 번호 중복 검증 로직 <!-- omo:id=18-vitest-step-number-unique;stage=2;scope=backend;review=3,6 -->
-- [ ] base_servings 최소값 검증 로직 <!-- omo:id=18-vitest-base-servings-min;stage=2;scope=backend;review=3,6 -->
-- [ ] my_added 가상 책 반영 로직 (recipes.created_by 설정, recipe_book_items INSERT 없음) <!-- omo:id=18-vitest-my-added-virtual-book-reflection;stage=2;scope=backend;review=3,6 -->
+- [x] 재료 타입별 validation 로직 (QUANT vs TO_TASTE) <!-- omo:id=18-vitest-ingredient-validation;stage=2;scope=backend;review=3,6 -->
+- [x] 스텝 번호 중복 검증 로직 <!-- omo:id=18-vitest-step-number-unique;stage=2;scope=backend;review=3,6 -->
+- [x] base_servings 최소값 검증 로직 <!-- omo:id=18-vitest-base-servings-min;stage=2;scope=backend;review=3,6 -->
+- [x] my_added 가상 책 반영 로직 (recipes.created_by 설정, recipe_book_items INSERT 없음) <!-- omo:id=18-vitest-my-added-virtual-book-reflection;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright
 
