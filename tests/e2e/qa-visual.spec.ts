@@ -39,6 +39,7 @@ const RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS = 400;
 
 async function stabilizeVisualSnapshot(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.mouse.move(0, 0);
   await page.addStyleTag({
     content: `
       ${qaSnapshotFontFaces}

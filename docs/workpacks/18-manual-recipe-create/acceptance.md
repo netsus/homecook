@@ -7,10 +7,10 @@
 
 ## Happy Path
 
-- [ ] 레시피명, 기본 인분 입력 → 재료 추가 (정량/비정량) → 스텝 추가 (조리방법 선택) → [저장] → 레시피 생성 성공 <!-- omo:id=18-accept-happy-create-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] 레시피명, 기본 인분 입력 → 재료 추가 (정량/비정량) → 스텝 추가 (조리방법 선택) → [저장] → 레시피 생성 성공 <!-- omo:id=18-accept-happy-create-flow;stage=4;scope=frontend;review=5,6 -->
 - [x] `POST /recipes` 응답이 `{ success: true, data: { id, title, source_type: 'manual', ... }, error: null }` 형식 <!-- omo:id=18-accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 타입과 프론트 타입 일치 (request/response/error 형식) <!-- omo:id=18-accept-types-match;stage=4;scope=shared;review=6 -->
-- [ ] 등록 완료 후 my_added 가상 책 반영 확인 (MYPAGE → my_added 진입 → 방금 등록한 레시피 존재, recipes.created_by + source_type='manual' 조건) <!-- omo:id=18-accept-my-added-virtual-book-reflection;stage=4;scope=frontend;review=6 -->
+- [x] 백엔드 타입과 프론트 타입 일치 (request/response/error 형식) <!-- omo:id=18-accept-types-match;stage=4;scope=shared;review=6 -->
+- [x] 등록 완료 후 my_added 가상 책 반영 확인 (MYPAGE → my_added 진입 → 방금 등록한 레시피 존재, recipes.created_by + source_type='manual' 조건) <!-- omo:id=18-accept-my-added-virtual-book-reflection;stage=4;scope=frontend;review=6 -->
 
 ## State / Policy
 
@@ -28,9 +28,9 @@
 - [x] 조리방법 ID 부재 시 `422 Validation Error` + "조리방법을 선택해주세요" 메시지 <!-- omo:id=18-accept-cooking-method-missing;stage=2;scope=backend;review=3,6 -->
 - [x] `base_servings < 1` 시 `422 Validation Error` <!-- omo:id=18-accept-base-servings-min;stage=2;scope=backend;review=3,6 -->
 - [x] 재료 타입별 제약 위반 시 `422 Validation Error` (QUANT인데 amount 없음, TO_TASTE인데 amount 있음 등) <!-- omo:id=18-accept-ingredient-type-constraint;stage=2;scope=backend;review=3,6 -->
-- [ ] UI에서 `loading` 상태 존재 (레시피 등록 중) <!-- omo:id=18-accept-loading-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] UI에서 `error` 상태 존재 (등록 실패 시 에러 안내 + [다시 시도]) <!-- omo:id=18-accept-error-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 비로그인 시 로그인 게이트 → 로그인 후 등록 폼 자동 복귀 (return-to-action) <!-- omo:id=18-accept-login-gate-return;stage=4;scope=frontend;review=5,6 -->
+- [x] UI에서 `loading` 상태 존재 (레시피 등록 중) <!-- omo:id=18-accept-loading-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] UI에서 `error` 상태 존재 (등록 실패 시 에러 안내 + [다시 시도]) <!-- omo:id=18-accept-error-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 비로그인 시 로그인 게이트 → 로그인 후 등록 폼 자동 복귀 (return-to-action) <!-- omo:id=18-accept-login-gate-return;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -50,13 +50,22 @@
 
 ## Manual QA
 
-- verifier: (Stage 4 후 기록)
-- environment: (local / demo 등)
+- verifier: Codex Stage 4/5/6 closeout
+- environment: local Playwright fixtures (`http://127.0.0.1:3100`), local visual authority capture (`http://127.0.0.1:3140`), local Supabase smoke (`http://127.0.0.1:3128`), demo smoke (`http://127.0.0.1:3130`)
+- evidence:
+  - `pnpm verify:frontend`
+  - `pnpm exec playwright test tests/e2e/slice-18-manual-recipe-create.spec.ts --project=desktop-chrome`
+  - `.artifacts/qa/18-manual-recipe-create/2026-05-01T15-34-55-530Z/exploratory-report.json`
+  - `.artifacts/qa/18-manual-recipe-create/2026-05-01T15-34-55-530Z/eval-result.json`
+  - `ui/designs/authority/MANUAL_RECIPE_CREATE-authority.md`
+  - `.omx/artifacts/stage5-design-review-18-manual-recipe-create-20260501T150821Z.md`
+  - `.omx/artifacts/claude-delegate-18-manual-recipe-create-final-authority-gate-response-2026-05-01T15-08-41Z.md`
 - scenarios:
   - 레시피명 "직접 레시피" + 기본 인분 2 → 재료 3개 추가 (정량 2개, 비정량 1개) → 스텝 3개 추가 (조리방법 각각 다르게) → [저장] → my_added 확인
   - 등록 후 "끼니에 추가" → 계획 인분 입력 → MEAL_SCREEN 복귀 → 식사 존재 확인
   - 등록 후 "레시피 상세로 이동" → RECIPE_DETAIL 진입 → 플래너 추가 가능 확인
   - 비로그인 상태에서 [저장] → 로그인 게이트 → 로그인 후 등록 폼 자동 복귀 확인
+  - 플래너 문맥 없이 등록 후 "끼니에 추가" → 사용자 오류 안내 표시, `POST /api/v1/meals` 미호출 확인
 
 ## Automation Split
 
@@ -69,11 +78,12 @@
 
 ### Playwright
 
-- [ ] 레시피 등록 happy path (레시피명 입력 → 재료 추가 → 스텝 추가 → [저장] → 성공) <!-- omo:id=18-playwright-happy-create;stage=4;scope=frontend;review=5,6 -->
-- [ ] 등록 후 끼니 추가 flow (등록 → "끼니에 추가" → 계획 인분 입력 → MEAL_SCREEN 복귀) <!-- omo:id=18-playwright-post-create-meal;stage=4;scope=frontend;review=5,6 -->
-- [ ] 등록 후 상세 이동 flow (등록 → "레시피 상세로 이동" → RECIPE_DETAIL 진입) <!-- omo:id=18-playwright-post-create-detail;stage=4;scope=frontend;review=5,6 -->
-- [ ] 로그인 게이트 + return-to-action (비로그인 [저장] → 로그인 → 등록 폼 복귀) <!-- omo:id=18-playwright-login-gate;stage=4;scope=frontend;review=5,6 -->
-- [ ] my_added 가상 책 반영 확인 (MYPAGE → my_added → 방금 등록한 레시피 존재, recipes.created_by 조건) <!-- omo:id=18-playwright-my-added-virtual-book-check;stage=4;scope=frontend;review=5,6 -->
+- [x] 레시피 등록 happy path (레시피명 입력 → 재료 추가 → 스텝 추가 → [저장] → 성공) <!-- omo:id=18-playwright-happy-create;stage=4;scope=frontend;review=5,6 -->
+- [x] 등록 후 끼니 추가 flow (등록 → "끼니에 추가" → 계획 인분 입력 → MEAL_SCREEN 복귀) <!-- omo:id=18-playwright-post-create-meal;stage=4;scope=frontend;review=5,6 -->
+- [x] 등록 후 상세 이동 flow (등록 → "레시피 상세로 이동" → RECIPE_DETAIL 진입) <!-- omo:id=18-playwright-post-create-detail;stage=4;scope=frontend;review=5,6 -->
+- [x] 로그인 게이트 + return-to-action (비로그인 [저장] → 로그인 → 등록 폼 복귀) <!-- omo:id=18-playwright-login-gate;stage=4;scope=frontend;review=5,6 -->
+- [x] my_added 가상 책 반영 확인 (MYPAGE → my_added → 방금 등록한 레시피 존재, recipes.created_by 조건) <!-- omo:id=18-playwright-my-added-virtual-book-check;stage=4;scope=frontend;review=5,6 -->
+- [x] 플래너 문맥 누락 시 끼니 추가 차단과 오류 안내 표시 <!-- omo:id=18-playwright-missing-context-meal-guard;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only
 

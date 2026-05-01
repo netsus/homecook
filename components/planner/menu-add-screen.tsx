@@ -71,12 +71,14 @@ function AppBar({ onBack }: AppBarProps) {
 interface ActionButtonsProps {
   onRecipeBookClick: () => void;
   onPantryClick: () => void;
+  onManualRecipeClick: () => void;
 }
 
-function ActionButtons({ onRecipeBookClick, onPantryClick }: ActionButtonsProps) {
+function ActionButtons({ onRecipeBookClick, onPantryClick, onManualRecipeClick }: ActionButtonsProps) {
   const enabledActions = [
     { id: "recipebook", label: "레시피북", onClick: onRecipeBookClick },
     { id: "pantry", label: "팬트리", onClick: onPantryClick },
+    { id: "manual", label: "직접 등록", onClick: onManualRecipeClick },
   ];
 
   const disabledActions = [
@@ -112,9 +114,6 @@ function ActionButtons({ onRecipeBookClick, onPantryClick }: ActionButtonsProps)
           </button>
         ))}
       </div>
-      <p className="text-sm text-[var(--muted)]">
-        직접 등록은 18번 슬라이스에서 열림
-      </p>
     </div>
   );
 }
@@ -296,6 +295,15 @@ export function MenuAddScreen({
     setSelectedPantryRecipe(null);
   }, []);
 
+  const handleManualRecipeClick = useCallback(() => {
+    const queryParts: string[] = [];
+    if (planDate) queryParts.push(`date=${encodeURIComponent(planDate)}`);
+    if (columnId) queryParts.push(`columnId=${encodeURIComponent(columnId)}`);
+    if (slotName) queryParts.push(`slot=${encodeURIComponent(slotName)}`);
+    const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
+    router.push(`/menu/add/manual${queryString}`);
+  }, [router, planDate, columnId, slotName]);
+
   return (
     <div className="flex h-screen flex-col bg-[var(--background)]">
       <AppBar onBack={handleBack} />
@@ -322,6 +330,7 @@ export function MenuAddScreen({
             </div>
           )}
           <ActionButtons
+            onManualRecipeClick={handleManualRecipeClick}
             onPantryClick={handlePantryClick}
             onRecipeBookClick={handleRecipeBookClick}
           />

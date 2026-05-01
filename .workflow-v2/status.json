@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-01T13:15:16Z",
+  "updated_at": "2026-05-01T15:45:05Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -777,7 +777,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs PR #315 merged. Stage 2 backend implementation in progress on feature/be-18-manual-recipe-create: POST /recipes, GET /cooking-methods, manual source_type/created_by, validation, fixture seed, and my_added virtual-book guard are covered locally. prototype-derived design, new-screen UI risk, design authority required. roadmap_display_status=in-progress closeout_phase=collecting"
+      "notes": "Stage 1 docs PR #315 and Stage 2 backend PR #316 merged. Stage 4 frontend implemented via Claude session 59a8e748-6d7b-4b29-a7d6-364167223d2c; Codex repaired the missing-planner-context meal-add error surface and locked it with slice E2E. Stage 5 authority passed with Codex report and Claude final authority gate. roadmap_display_status=in-progress closeout_phase=collecting closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:tests/e2e/slice-18-manual-recipe-create.spec.ts,components/recipe/manual-recipe-create-screen.tsx,pnpm exec playwright test tests/e2e/slice-18-manual-recipe-create.spec.ts --project=desktop-chrome,.artifacts/qa/18-manual-recipe-create/2026-05-01T15-34-55-530Z/exploratory-report.json,ui/designs/authority/MANUAL_RECIPE_CREATE-authority.md"
     }
   ]
 }
