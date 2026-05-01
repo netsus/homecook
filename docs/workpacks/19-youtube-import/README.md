@@ -332,8 +332,8 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
 - [x] 확정 (confirmed) — Stage 5 public review 통과 후
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
