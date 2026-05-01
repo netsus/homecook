@@ -314,11 +314,14 @@
 - Visual classification: `prototype-derived design` (h8 matrix)
 - Anchor screen dependency: 없음
 - Visual artifact:
-  - Stage 4에서 생성 예정:
-  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-default.png`
-  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-narrow.png`
-  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-scrolled.png`
-- Authority status: `required`
+  - Stage 5 Codex authority_precheck evidence:
+  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-url-390x844.png`
+  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-review-top-390x844.png`
+  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-review-scroll-390x844.png`
+  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-review-top-narrow-320x568.png`
+  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-review-narrow-320x568.png`
+  - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-complete-narrow-320x568.png`
+- Authority status: `passed` (Codex authority_precheck + Claude final authority gate, blocker 0 / major 0)
 - Authority planning: Stage 4에서 screenshot evidence 캡처 → Codex `authority_precheck` → Claude `final_authority_gate`
 - Authority report: `ui/designs/authority/YT_IMPORT-authority.md` (Stage 4/5에서 생성)
 - Notes:
@@ -331,7 +334,7 @@
 
 - [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 > Design Status 전이: `temporary` (Stage 1 기본값)
