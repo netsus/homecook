@@ -961,6 +961,199 @@ describe("shopping stage2 backend", () => {
     expect(mealsUpdateQuery.in).toHaveBeenCalledWith("id", [firstMealId, secondMealId]);
   });
 
+  it("splits one oversized registered meal so only requested servings are attached to the shopping list", async () => {
+    const mealId = "550e8400-e29b-41d4-a716-446655440021";
+    const recipeId = "550e8400-e29b-41d4-a716-446655440102";
+    const columnId = "550e8400-e29b-41d4-a716-446655440202";
+
+    const mealsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            id: mealId,
+            user_id: "user-1",
+            recipe_id: recipeId,
+            plan_date: "2026-04-30",
+            column_id: columnId,
+            planned_servings: 13,
+            status: "registered",
+            is_leftover: false,
+            leftover_dish_id: null,
+            shopping_list_id: null,
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const shoppingListInsertQuery = createInsertMaybeSingleQuery([
+      {
+        data: {
+          id: "shopping-list-1",
+          title: "4/30 장보기",
+          is_completed: false,
+          created_at: "2026-04-30T09:00:00.000Z",
+        },
+        error: null,
+      },
+    ]);
+    const shoppingListRecipesInsert = vi.fn(() =>
+      createAwaitInsertQuery([
+        {
+          data: [],
+          error: null,
+        },
+      ]),
+    );
+    const recipeRowsQuery = createArraySelectQuery([
+      {
+        data: [{ id: recipeId, base_servings: 2 }],
+        error: null,
+      },
+    ]);
+    const recipeIngredientsQuery = createArraySelectQuery([
+      {
+        data: [
+          {
+            recipe_id: recipeId,
+            ingredient_id: "ing-kimchi",
+            amount: 300,
+            unit: "g",
+            ingredient_type: "QUANT",
+            display_text: "김치 300g",
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const ingredientsQuery = createArraySelectQuery([
+      {
+        data: [{ id: "ing-kimchi", standard_name: "김치" }],
+        error: null,
+      },
+    ]);
+    const pantryQuery = createArraySelectQuery([
+      {
+        data: [],
+        error: null,
+      },
+    ]);
+    const shoppingListItemsInsert = vi.fn(() =>
+      createAwaitInsertQuery([
+        {
+          data: [],
+          error: null,
+        },
+      ]),
+    );
+    const mealsInsert = vi.fn(() =>
+      createAwaitInsertQuery([
+        {
+          data: [],
+          error: null,
+        },
+      ]),
+    );
+    const splitUpdateQuery = createMealsUpdateQuery([
+      {
+        data: [],
+        error: null,
+      },
+    ]);
+    const listLinkUpdateQuery = createMealsUpdateQuery([
+      {
+        data: [],
+        error: null,
+      },
+    ]);
+    const mealsUpdate = vi.fn()
+      .mockReturnValueOnce(splitUpdateQuery)
+      .mockReturnValueOnce(listLinkUpdateQuery);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "meals") {
+          return {
+            select: vi.fn(() => mealsQuery),
+            insert: mealsInsert,
+            update: mealsUpdate,
+          };
+        }
+        if (table === "shopping_lists") {
+          return { insert: vi.fn(() => shoppingListInsertQuery) };
+        }
+        if (table === "shopping_list_recipes") {
+          return { insert: shoppingListRecipesInsert };
+        }
+        if (table === "recipes") {
+          return { select: vi.fn(() => recipeRowsQuery) };
+        }
+        if (table === "recipe_ingredients") {
+          return { select: vi.fn(() => recipeIngredientsQuery) };
+        }
+        if (table === "ingredients") {
+          return { select: vi.fn(() => ingredientsQuery) };
+        }
+        if (table === "pantry_items") {
+          return { select: vi.fn(() => pantryQuery) };
+        }
+        if (table === "shopping_list_items") {
+          return { insert: shoppingListItemsInsert };
+        }
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importListsRoute();
+    const response = await POST(
+      new Request("http://localhost:3000/api/v1/shopping/lists", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          recipes: [
+            {
+              recipe_id: recipeId,
+              meal_ids: [mealId],
+              shopping_servings: 5,
+            },
+          ],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(mealsInsert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        user_id: "user-1",
+        recipe_id: recipeId,
+        plan_date: "2026-04-30",
+        column_id: columnId,
+        planned_servings: 8,
+        status: "registered",
+        is_leftover: false,
+        leftover_dish_id: null,
+        shopping_list_id: null,
+        cooked_at: null,
+      }),
+    ]);
+    expect(mealsUpdate).toHaveBeenNthCalledWith(1, { planned_servings: 5 });
+    expect(splitUpdateQuery.eq).toHaveBeenCalledWith("id", mealId);
+    expect(splitUpdateQuery.eq).toHaveBeenCalledWith("user_id", "user-1");
+    expect(mealsUpdate).toHaveBeenNthCalledWith(2, { shopping_list_id: "shopping-list-1" });
+    expect(listLinkUpdateQuery.in).toHaveBeenCalledWith("id", [mealId]);
+    expect(shoppingListRecipesInsert).toHaveBeenCalledWith([
+      {
+        shopping_list_id: "shopping-list-1",
+        recipe_id: recipeId,
+        shopping_servings: 5,
+        planned_servings_total: 5,
+      },
+    ]);
+  });
+
   it("fetchShoppingPreview helper returns data when envelope is valid", async () => {
     const fetchMock = vi.fn(async () =>
       new Response(

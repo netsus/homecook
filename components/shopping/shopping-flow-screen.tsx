@@ -19,6 +19,11 @@ export interface ShoppingFlowScreenProps {
 interface MealConfig {
   recipe_id: string;
   meal_ids: string[];
+  meals: Array<{
+    id: string;
+    planned_servings: number;
+    created_at: string;
+  }>;
   shopping_servings: number;
   isSelected: boolean;
   recipe_name: string;
@@ -37,6 +42,11 @@ function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
 
     if (existing) {
       existing.meal_ids.push(meal.id);
+      existing.meals.push({
+        id: meal.id,
+        planned_servings: meal.planned_servings,
+        created_at: meal.created_at,
+      });
       existing.planned_servings_total += meal.planned_servings;
       existing.shopping_servings += meal.planned_servings;
       existing.meal_count += 1;
@@ -49,6 +59,13 @@ function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
     grouped.set(meal.recipe_id, {
       recipe_id: meal.recipe_id,
       meal_ids: [meal.id],
+      meals: [
+        {
+          id: meal.id,
+          planned_servings: meal.planned_servings,
+          created_at: meal.created_at,
+        },
+      ],
       shopping_servings: meal.planned_servings,
       isSelected: true,
       recipe_name: meal.recipe_name,
@@ -69,10 +86,24 @@ function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
 }
 
 function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
+  const eligibleMealMap = new Map(
+    data.eligible_meals.map((meal) => [
+      meal.id,
+      {
+        id: meal.id,
+        planned_servings: meal.planned_servings,
+        created_at: meal.created_at,
+      },
+    ]),
+  );
+
   if (Array.isArray(data.recipes) && data.recipes.length > 0) {
     return data.recipes.map((recipe) => ({
       recipe_id: recipe.recipe_id,
       meal_ids: recipe.meal_ids,
+      meals: recipe.meal_ids
+        .map((mealId) => eligibleMealMap.get(mealId))
+        .filter((meal): meal is NonNullable<typeof meal> => meal !== undefined),
       shopping_servings: recipe.shopping_servings,
       isSelected: recipe.is_selected,
       recipe_name: recipe.recipe_name,
@@ -83,6 +114,63 @@ function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
   }
 
   return groupMealsByRecipe(data.eligible_meals);
+}
+
+function selectMealIdsForShoppingServings(
+  meals: MealConfig["meals"],
+  fallbackMealIds: string[],
+  shoppingServings: number,
+) {
+  if (meals.length === 0) {
+    return fallbackMealIds;
+  }
+
+  const totalServings = meals.reduce(
+    (total, meal) => total + meal.planned_servings,
+    0,
+  );
+
+  if (shoppingServings >= totalServings) {
+    return meals.map((meal) => meal.id);
+  }
+
+  const sortedMeals = [...meals].sort((left, right) => {
+    const byCreatedAt = left.created_at.localeCompare(right.created_at);
+    if (byCreatedAt !== 0) {
+      return byCreatedAt;
+    }
+
+    return left.id.localeCompare(right.id);
+  });
+  const reachable = new Map<number, MealConfig["meals"]>([[0, []]]);
+
+  sortedMeals.forEach((meal) => {
+    const snapshots = [...reachable.entries()];
+
+    snapshots.forEach(([servings, selectedMeals]) => {
+      const nextServings = servings + meal.planned_servings;
+
+      if (nextServings > shoppingServings || reachable.has(nextServings)) {
+        return;
+      }
+
+      reachable.set(nextServings, [...selectedMeals, meal]);
+    });
+  });
+
+  const bestServings = [...reachable.keys()]
+    .filter((servings) => servings > 0)
+    .sort((left, right) => right - left)[0];
+
+  if (bestServings) {
+    return (reachable.get(bestServings) ?? []).map((meal) => meal.id);
+  }
+
+  const smallestMeal = sortedMeals.reduce((best, meal) =>
+    meal.planned_servings < best.planned_servings ? meal : best,
+  );
+
+  return [smallestMeal.id];
 }
 
 export function ShoppingFlowScreen({
@@ -163,7 +251,11 @@ export function ShoppingFlowScreen({
       const body = {
         recipes: selectedConfigs.map((config) => ({
           recipe_id: config.recipe_id,
-          meal_ids: config.meal_ids,
+          meal_ids: selectMealIdsForShoppingServings(
+            config.meals,
+            config.meal_ids,
+            config.shopping_servings,
+          ),
           shopping_servings: config.shopping_servings,
         })),
       };
@@ -367,6 +459,11 @@ interface RecipeCardProps {
 
 function RecipeCard({ config, onToggle, onServingsChange }: RecipeCardProps) {
   const cardOpacity = config.isSelected ? "opacity-100" : "opacity-60";
+  const selectedMealIds = selectMealIdsForShoppingServings(
+    config.meals,
+    config.meal_ids,
+    config.shopping_servings,
+  );
 
   return (
     <div
@@ -425,7 +522,7 @@ function RecipeCard({ config, onToggle, onServingsChange }: RecipeCardProps) {
               장보기 미연결
             </span>
             <span className="rounded-full border border-[var(--line)] bg-white/70 px-2.5 py-1">
-              대상 식사 {config.meal_count}개
+              대상 식사 {selectedMealIds.length}개
             </span>
             <span className="rounded-full border border-[var(--line)] bg-white/70 px-2.5 py-1">
               합산 계획 {config.planned_servings_total}인분
