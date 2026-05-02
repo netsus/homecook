@@ -10,6 +10,7 @@ import { ContentState } from "@/components/shared/content-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useCookModeStore } from "@/stores/cook-mode-store";
@@ -17,21 +18,6 @@ import type { CookingModeIngredient, CookingModeStep } from "@/types/cooking";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ActiveTab = "ingredients" | "steps";
-
-const COOKING_METHOD_COLORS: Record<string, string> = {
-  stir_fry: "#FF8C42",
-  boil: "#E8453C",
-  grill: "#8B5E3C",
-  steam: "#4A90D9",
-  deep_fry: "#F5C518",
-  blanch: "#7BC67E",
-  mix: "#2ea67a",
-  other: "#AAAAAA",
-};
-
-function getCookingMethodColor(colorKey: string): string {
-  return COOKING_METHOD_COLORS[colorKey] ?? "#AAAAAA";
-}
 
 function formatHeatLevel(heat: string | null): string | null {
   if (!heat) return null;
@@ -114,11 +100,16 @@ export function CookModeScreen({
   const cancelPendingRef = useRef(false);
 
   const screenState = useCookModeStore((s) => s.screenState);
+  const storeSessionId = useCookModeStore((s) => s.sessionId);
   const data = useCookModeStore((s) => s.data);
   const errorMessage = useCookModeStore((s) => s.errorMessage);
   const loadCookMode = useCookModeStore((s) => s.loadCookMode);
   const complete = useCookModeStore((s) => s.complete);
   const cancel = useCookModeStore((s) => s.cancel);
+  const isCurrentSessionState =
+    storeSessionId === null || storeSessionId === sessionId;
+  const visibleScreenState = isCurrentSessionState ? screenState : "loading";
+  const visibleData = isCurrentSessionState ? data : null;
 
   // Auth check
   useEffect(() => {
@@ -168,10 +159,13 @@ export function CookModeScreen({
 
   // Navigate on completed/cancelled
   useEffect(() => {
-    if (screenState === "completed" || screenState === "cancelled") {
+    if (
+      storeSessionId === sessionId &&
+      (screenState === "completed" || screenState === "cancelled")
+    ) {
       router.push("/cooking/ready");
     }
-  }, [screenState, router]);
+  }, [screenState, router, sessionId, storeSessionId]);
 
   const handleCompleteClick = useCallback(() => {
     if (authState !== "authenticated") return;
@@ -283,7 +277,7 @@ export function CookModeScreen({
   }
 
   // --- Loading ---
-  if (screenState === "loading") {
+  if (visibleScreenState === "loading") {
     return (
       <div
         className="flex min-h-dvh flex-col bg-[var(--background)]"
@@ -308,7 +302,7 @@ export function CookModeScreen({
   }
 
   // --- Not found ---
-  if (screenState === "not_found") {
+  if (visibleScreenState === "not_found") {
     return (
       <div
         className="flex min-h-dvh flex-col bg-[var(--background)]"
@@ -328,7 +322,7 @@ export function CookModeScreen({
   }
 
   // --- Error ---
-  if (screenState === "error") {
+  if (visibleScreenState === "error") {
     return (
       <div
         className="flex min-h-dvh flex-col bg-[var(--background)]"
@@ -350,7 +344,10 @@ export function CookModeScreen({
   }
 
   // --- Completing / Cancelling ---
-  if (screenState === "completing" || screenState === "cancelling") {
+  if (
+    visibleScreenState === "completing" ||
+    visibleScreenState === "cancelling"
+  ) {
     return (
       <div
         className="flex min-h-dvh flex-col bg-[var(--background)]"
@@ -359,12 +356,12 @@ export function CookModeScreen({
         <div className="flex flex-1 items-center justify-center p-4">
           <ContentState
             description={
-              screenState === "completing"
+              visibleScreenState === "completing"
                 ? "요리를 완료하고 있어요..."
                 : "요리를 취소하고 있어요..."
             }
             title={
-              screenState === "completing"
+              visibleScreenState === "completing"
                 ? "요리 완료 처리 중"
                 : "요리 취소 처리 중"
             }
@@ -376,9 +373,9 @@ export function CookModeScreen({
   }
 
   // --- Ready (main view) ---
-  if (!data) return null;
+  if (!visibleData) return null;
 
-  const { recipe } = data;
+  const { recipe } = visibleData;
 
   return (
     <div

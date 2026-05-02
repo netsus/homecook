@@ -16,6 +16,7 @@ import { useCookingReadyStore } from "@/stores/cooking-ready-store";
 import type { CookingReadyRecipe } from "@/types/cooking";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
+const COOK_MODE_NAVIGATION_FALLBACK_MS = 250;
 
 export interface CookReadyListScreenProps {
   initialAuthenticated?: boolean;
@@ -88,6 +89,21 @@ function RecipeReadyCard({
   );
 }
 
+function scheduleCookModeNavigationFallback(targetPath: string) {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.setTimeout(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname === "/cooking/ready"
+    ) {
+      window.location.assign(targetPath);
+    }
+  }, COOK_MODE_NAVIGATION_FALLBACK_MS);
+}
+
 export function CookReadyListScreen({
   initialAuthenticated = false,
 }: CookReadyListScreenProps) {
@@ -108,7 +124,21 @@ export function CookReadyListScreen({
     string | null
   >(null);
   const sessionPendingRef = useRef(false);
+  const navigationFallbackTimeoutRef = useRef<number | null>(null);
   const activeCreatingRecipeId = sessionPendingRecipeId ?? creatingRecipeId;
+
+  const clearNavigationFallback = useCallback(() => {
+    if (
+      navigationFallbackTimeoutRef.current !== null &&
+      typeof window !== "undefined"
+    ) {
+      window.clearTimeout(navigationFallbackTimeoutRef.current);
+    }
+
+    navigationFallbackTimeoutRef.current = null;
+  }, []);
+
+  useEffect(() => clearNavigationFallback, [clearNavigationFallback]);
 
   useEffect(() => {
     const e2eOverride = readE2EAuthOverride();
@@ -187,9 +217,14 @@ export function CookReadyListScreen({
 
       try {
         const sessionId = await startSession(recipe);
+        const targetPath = `/cooking/sessions/${sessionId}/cook-mode`;
         // Keep locked so buttons do not re-enable before navigation.
-        router.push(`/cooking/sessions/${sessionId}/cook-mode`);
+        router.push(targetPath);
+        clearNavigationFallback();
+        navigationFallbackTimeoutRef.current =
+          scheduleCookModeNavigationFallback(targetPath);
       } catch (error) {
+        clearNavigationFallback();
         sessionPendingRef.current = false;
         setSessionPendingRecipeId(null);
 
@@ -210,7 +245,7 @@ export function CookReadyListScreen({
         setSessionError("요리 세션을 만들지 못했어요. 다시 시도해 주세요.");
       }
     },
-    [loadReady, router, startSession],
+    [clearNavigationFallback, loadReady, router, startSession],
   );
 
   if (authState === "checking") {

@@ -10,6 +10,7 @@ import { ContentState } from "@/components/shared/content-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useStandaloneCookModeStore } from "@/stores/standalone-cook-mode-store";
@@ -17,21 +18,6 @@ import type { CookingModeIngredient, CookingModeStep } from "@/types/cooking";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ActiveTab = "ingredients" | "steps";
-
-const COOKING_METHOD_COLORS: Record<string, string> = {
-  stir_fry: "#FF8C42",
-  boil: "#E8453C",
-  grill: "#8B5E3C",
-  steam: "#4A90D9",
-  deep_fry: "#F5C518",
-  blanch: "#7BC67E",
-  mix: "#2ea67a",
-  other: "#AAAAAA",
-};
-
-function getCookingMethodColor(colorKey: string): string {
-  return COOKING_METHOD_COLORS[colorKey] ?? "#AAAAAA";
-}
 
 function formatHeatLevel(heat: string | null): string | null {
   if (!heat) return null;

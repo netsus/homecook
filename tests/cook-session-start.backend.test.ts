@@ -649,4 +649,47 @@ describe("14 cook session start backend", () => {
       error: null,
     });
   });
+
+  it("GET /cooking/sessions/{id}/cook-mode rejects completed sessions before loading snapshots", async () => {
+    const sessionQuery = createMaybeSingleQuery([
+      {
+        data: { id: sessionId, user_id: "user-1", status: "completed" },
+        error: null,
+      },
+    ]);
+    const sessionMealsSelect = vi.fn(() =>
+      createArraySelectQuery([
+        {
+          data: [{ meal_id: mealId1, recipe_id: recipeId, cooking_servings: 4 }],
+          error: null,
+        },
+      ]),
+    );
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "cooking_sessions") return { select: vi.fn(() => sessionQuery) };
+        if (table === "cooking_session_meals") return { select: sessionMealsSelect };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importCookModeRoute();
+    const response = await GET(
+      new NextRequest(`http://localhost:3000/api/v1/cooking/sessions/${sessionId}/cook-mode`),
+      createSessionContext(),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body).toMatchObject({
+      success: false,
+      data: null,
+      error: { code: "CONFLICT" },
+    });
+    expect(sessionMealsSelect).not.toHaveBeenCalled();
+  });
 });
