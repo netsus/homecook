@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import React, { useCallback, useState } from "react";
 
+import { LeftoverPicker } from "@/components/planner/leftover-picker";
 import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
 import { RecipeBookDetailPicker } from "@/components/planner/recipe-book-detail-picker";
 import { RecipeBookSelector } from "@/components/planner/recipe-book-selector";
 import { RecipeSearchPicker } from "@/components/planner/recipe-search-picker";
 import { createMealSafe } from "@/lib/api/meal";
+import type { LeftoverListItemData } from "@/types/leftover";
 import type {
   PantryMatchRecipeItem,
   RecipeBookRecipeItem,
@@ -22,7 +24,7 @@ export interface MenuAddScreenProps {
   initialAuthenticated: boolean;
 }
 
-type PickerMode = "none" | "recipebook-selector" | "recipebook-detail" | "pantry";
+type PickerMode = "none" | "recipebook-selector" | "recipebook-detail" | "pantry" | "leftover";
 
 // ─── AppBar ──────────────────────────────────────────────────────────────────
 
@@ -71,19 +73,25 @@ function AppBar({ onBack }: AppBarProps) {
 interface ActionButtonsProps {
   onRecipeBookClick: () => void;
   onPantryClick: () => void;
+  onLeftoverClick: () => void;
   onManualRecipeClick: () => void;
 }
 
-function ActionButtons({ onRecipeBookClick, onPantryClick, onManualRecipeClick }: ActionButtonsProps) {
+function ActionButtons({
+  onLeftoverClick,
+  onManualRecipeClick,
+  onPantryClick,
+  onRecipeBookClick,
+}: ActionButtonsProps) {
   const enabledActions = [
     { id: "recipebook", label: "레시피북", onClick: onRecipeBookClick },
     { id: "pantry", label: "팬트리", onClick: onPantryClick },
+    { id: "leftover", label: "남은요리", onClick: onLeftoverClick },
     { id: "manual", label: "직접 등록", onClick: onManualRecipeClick },
   ];
 
   const disabledActions = [
     { id: "youtube", label: "유튜브" },
-    { id: "leftover", label: "남은요리" },
   ];
 
   return (
@@ -139,6 +147,7 @@ export function MenuAddScreen({
   const [selectedPantryRecipe, setSelectedPantryRecipe] = useState<PantryMatchRecipeItem | null>(
     null,
   );
+  const [selectedLeftover, setSelectedLeftover] = useState<LeftoverListItemData | null>(null);
 
   const navigateToMealScreen = useCallback((mode: "push" | "replace" = "push") => {
     if (!planDate || !columnId) {
@@ -295,6 +304,50 @@ export function MenuAddScreen({
     setSelectedPantryRecipe(null);
   }, []);
 
+  const handleLeftoverClick = useCallback(() => {
+    setPickerMode("leftover");
+  }, []);
+
+  const handleLeftoverSelect = useCallback((leftover: LeftoverListItemData) => {
+    setSelectedLeftover(leftover);
+  }, []);
+
+  const handleLeftoverServingsConfirm = useCallback(
+    async (servings: number) => {
+      if (!selectedLeftover) return;
+
+      setIsCreating(true);
+      setCreationError(null);
+
+      const response = await createMealSafe({
+        recipe_id: selectedLeftover.recipe_id,
+        plan_date: planDate,
+        column_id: columnId,
+        planned_servings: servings,
+        leftover_dish_id: selectedLeftover.id,
+      });
+
+      if (!response.success) {
+        setCreationError(response.error?.message ?? "식사를 추가하지 못했어요.");
+        setIsCreating(false);
+        return;
+      }
+
+      navigateToMealScreen("replace");
+    },
+    [selectedLeftover, planDate, columnId, navigateToMealScreen],
+  );
+
+  const handleLeftoverServingsCancel = useCallback(() => {
+    setSelectedLeftover(null);
+    setCreationError(null);
+  }, []);
+
+  const handleLeftoverClose = useCallback(() => {
+    setPickerMode("none");
+    setSelectedLeftover(null);
+  }, []);
+
   const handleManualRecipeClick = useCallback(() => {
     const queryParts: string[] = [];
     if (planDate) queryParts.push(`date=${encodeURIComponent(planDate)}`);
@@ -330,6 +383,7 @@ export function MenuAddScreen({
             </div>
           )}
           <ActionButtons
+            onLeftoverClick={handleLeftoverClick}
             onManualRecipeClick={handleManualRecipeClick}
             onPantryClick={handlePantryClick}
             onRecipeBookClick={handleRecipeBookClick}
@@ -364,6 +418,17 @@ export function MenuAddScreen({
           onServingsCancel={handlePantryServingsCancel}
           onServingsConfirm={handlePantryServingsConfirm}
           selectedRecipe={selectedPantryRecipe}
+        />
+      )}
+
+      {pickerMode === "leftover" && (
+        <LeftoverPicker
+          isCreating={isCreating}
+          onClose={handleLeftoverClose}
+          onLeftoverSelect={handleLeftoverSelect}
+          onServingsCancel={handleLeftoverServingsCancel}
+          onServingsConfirm={handleLeftoverServingsConfirm}
+          selectedLeftover={selectedLeftover}
         />
       )}
     </div>

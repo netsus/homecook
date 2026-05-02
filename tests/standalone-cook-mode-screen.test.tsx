@@ -192,6 +192,45 @@ describe("StandaloneCookModeScreen", () => {
     expect(screen.getByTestId("consumed-ingredient-sheet")).toBeTruthy();
   });
 
+  it("uses cooking method color keys from recipe data on step cards", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchStandaloneCookMode.mockResolvedValue(
+      buildStandaloneCookModeData({
+        recipe: {
+          ...buildStandaloneCookModeData().recipe,
+          steps: [
+            buildStep({
+              cooking_method: {
+                code: "stir_fry",
+                label: "볶기",
+                color_key: "orange",
+              },
+            }),
+          ],
+        },
+      }),
+    );
+
+    const Screen = await importScreen();
+    render(<Screen recipeId="recipe-1" servings={2} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("tab-steps")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByTestId("tab-steps"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("step-list")).toBeTruthy();
+    });
+
+    const stepItemStyle = screen.getByTestId("step-item").getAttribute("style");
+    const methodBadgeStyle = screen.getByText("볶기").getAttribute("style");
+
+    expect(stepItemStyle).toContain("var(--cook-stir)");
+    expect(methodBadgeStyle).toContain("var(--cook-stir)");
+  });
+
   it("submits standalone complete with consumed ingredient ids", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchStandaloneCookMode.mockResolvedValue(buildStandaloneCookModeData());

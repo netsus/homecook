@@ -165,6 +165,14 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return fail("FORBIDDEN", "내 요리 세션만 볼 수 있어요.", 403);
   }
 
+  if (sessionResult.data.status !== "in_progress") {
+    return fail(
+      "CONFLICT",
+      "이미 종료된 요리 세션이에요. 요리 준비 리스트에서 다시 시작해 주세요.",
+      409,
+    );
+  }
+
   const sessionMealsResult = await dbClient
     .from("cooking_session_meals")
     .select("meal_id, recipe_id, cooking_servings")

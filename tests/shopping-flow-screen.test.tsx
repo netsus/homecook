@@ -586,6 +586,61 @@ describe("shopping flow screen", () => {
         });
       });
     });
+
+    it("should only bind whole meals that match reduced shopping servings for duplicate recipes", async () => {
+      fetchShoppingPreview.mockResolvedValue(
+        createPreviewData([
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            planned_servings: 5,
+          },
+          {
+            id: "meal-2",
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            planned_servings: 8,
+          },
+        ])
+      );
+
+      createShoppingList.mockResolvedValue({
+        id: "list-1",
+        title: "장보기 목록",
+        is_completed: false,
+        created_at: "2026-04-26T00:00:00.000Z",
+      });
+
+      render(<ShoppingFlowScreen initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("합산 계획 13인분")).toBeTruthy();
+      });
+
+      const minusButton = screen.getByLabelText("인분 줄이기");
+      for (let i = 0; i < 8; i += 1) {
+        await userEvent.click(minusButton);
+      }
+
+      await waitFor(() => {
+        expect(screen.getByText("5")).toBeTruthy();
+      });
+
+      await userEvent.click(screen.getByText("장보기 목록 만들기"));
+
+      await waitFor(() => {
+        expect(createShoppingList).toHaveBeenCalledWith({
+          recipes: [
+            {
+              recipe_id: "recipe-1",
+              meal_ids: ["meal-1"],
+              shopping_servings: 5,
+            },
+          ],
+        });
+      });
+    });
   });
 
   describe("navigation", () => {

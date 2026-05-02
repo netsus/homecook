@@ -470,6 +470,30 @@ describe("AteListScreen", () => {
     });
   });
 
+  it("retries ate-list loading on error action", async () => {
+    const fetchSpy = vi
+      .spyOn(leftoversApi, "fetchLeftovers")
+      .mockRejectedValueOnce(new Error("서버 오류"))
+      .mockResolvedValueOnce({ items: EATEN_ITEMS });
+
+    render(<AteListScreen initialAuthenticated={true} />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("다먹은 목록을 불러오지 못했어요"),
+      ).toBeTruthy();
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText("다시 시도"));
+
+    await waitFor(() => {
+      expect(screen.getByText("김치찌개")).toBeTruthy();
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
   it("removes item from list after uneat action", async () => {
     vi.spyOn(leftoversApi, "fetchLeftovers").mockResolvedValue({
       items: EATEN_ITEMS,

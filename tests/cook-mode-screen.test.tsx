@@ -128,6 +128,11 @@ async function importResetStore() {
   return mod.resetCookModeStore;
 }
 
+async function importCookModeStore() {
+  const mod = await import("@/stores/cook-mode-store");
+  return mod.useCookModeStore;
+}
+
 describe("CookModeScreen", () => {
   beforeEach(() => {
     readE2EAuthOverride.mockReset();
@@ -170,6 +175,34 @@ describe("CookModeScreen", () => {
     expect(screen.getByText("2인분")).toBeTruthy();
   });
 
+  it("does not bounce back to ready when a previous session left completed state behind", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(
+      buildCookModeData({ session_id: "session-new" }),
+    );
+
+    const useCookModeStore = await importCookModeStore();
+    useCookModeStore.setState({
+      screenState: "completed",
+      sessionId: "session-old",
+      data: null,
+      errorMessage: null,
+      errorCode: null,
+    });
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-new" initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(fetchCookMode).toHaveBeenCalledWith("session-new");
+    });
+    expect(mockRouterPush).not.toHaveBeenCalledWith("/cooking/ready");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cook-mode-title")).toBeTruthy();
+    });
+  });
+
   it("shows ingredients tab by default with ingredient items", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
@@ -208,6 +241,46 @@ describe("CookModeScreen", () => {
     expect(screen.getByText("김치를 넣고 볶아주세요.")).toBeTruthy();
     expect(screen.getByText("중불")).toBeTruthy();
     expect(screen.getByText("10분")).toBeTruthy();
+  });
+
+  it("uses cooking method color keys from recipe data on step cards", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(
+      buildCookModeData({
+        recipe: {
+          ...buildCookModeData().recipe,
+          steps: [
+            buildStep({
+              cooking_method: {
+                code: "stir_fry",
+                label: "볶기",
+                color_key: "orange",
+              },
+            }),
+          ],
+        },
+      }),
+    );
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("tab-steps")).toBeTruthy();
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("tab-steps"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("step-list")).toBeTruthy();
+    });
+
+    const stepItemStyle = screen.getByTestId("step-item").getAttribute("style");
+    const methodBadgeStyle = screen.getByText("볶기").getAttribute("style");
+
+    expect(stepItemStyle).toContain("var(--cook-stir)");
+    expect(methodBadgeStyle).toContain("var(--cook-stir)");
   });
 
   it("opens consumed ingredient sheet on complete button click", async () => {

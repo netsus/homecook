@@ -4,6 +4,8 @@ import {
   buildShoppingListTitle,
   parseShoppingMealConfigs,
   parseShoppingRecipeConfigs,
+  type ParsedShoppingMealConfig,
+  type ParsedShoppingRecipeConfig,
 } from "@/lib/server/shopping";
 import {
   ensurePublicUserRow,
@@ -23,8 +25,11 @@ interface MealsRow {
   user_id: string;
   recipe_id: string;
   plan_date: string;
+  column_id: string;
   planned_servings: number;
   status: string;
+  is_leftover: boolean;
+  leftover_dish_id: string | null;
   shopping_list_id: string | null;
 }
 
@@ -92,6 +97,10 @@ interface MealsUpdateQuery {
   then: ArrayQueryResult<MealsRow>["then"];
 }
 
+interface MealsInsertQuery {
+  then: ArrayQueryResult<unknown>["then"];
+}
+
 interface ShoppingListsInsertQuery {
   select(columns: string): ShoppingListsInsertQuery;
   maybeSingle(): MaybeSingleResult<ShoppingListInsertRow>;
@@ -139,7 +148,19 @@ interface ShoppingListItemsInsertQuery {
 
 interface MealsTable {
   select(columns: string): MealsSelectQuery;
-  update(values: { shopping_list_id: string }): MealsUpdateQuery;
+  insert(values: Array<{
+    user_id: string;
+    recipe_id: string;
+    plan_date: string;
+    column_id: string;
+    planned_servings: number;
+    status: "registered";
+    is_leftover: boolean;
+    leftover_dish_id: string | null;
+    shopping_list_id: null;
+    cooked_at: null;
+  }>): MealsInsertQuery;
+  update(values: { shopping_list_id: string } | { planned_servings: number }): MealsUpdateQuery;
 }
 
 interface ShoppingListsTable {
@@ -208,6 +229,97 @@ async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHan
   return authResult.data.user;
 }
 
+function sortMealsForShopping(left: MealsRow, right: MealsRow) {
+  const byDate = left.plan_date.localeCompare(right.plan_date);
+  if (byDate !== 0) {
+    return byDate;
+  }
+
+  return left.id.localeCompare(right.id);
+}
+
+function buildShoppingMealSelection({
+  mealConfigMap,
+  recipeConfigMap,
+  usesRecipeConfigs,
+  validMeals,
+}: {
+  mealConfigMap: Map<string, ParsedShoppingMealConfig>;
+  recipeConfigMap: Map<string, ParsedShoppingRecipeConfig>;
+  usesRecipeConfigs: boolean;
+  validMeals: MealsRow[];
+}) {
+  const shoppingMeals: MealsRow[] = [];
+  const splitMeals: Array<{
+    meal: MealsRow;
+    shoppingServings: number;
+    remainingServings: number;
+  }> = [];
+
+  if (!usesRecipeConfigs) {
+    validMeals.forEach((meal) => {
+      const mealConfig = mealConfigMap.get(meal.id);
+
+      if (!mealConfig) {
+        return;
+      }
+
+      if (mealConfig.shopping_servings >= meal.planned_servings) {
+        shoppingMeals.push(meal);
+        return;
+      }
+
+      shoppingMeals.push({
+        ...meal,
+        planned_servings: mealConfig.shopping_servings,
+      });
+      splitMeals.push({
+        meal,
+        shoppingServings: mealConfig.shopping_servings,
+        remainingServings: meal.planned_servings - mealConfig.shopping_servings,
+      });
+    });
+
+    return { shoppingMeals, splitMeals };
+  }
+
+  recipeConfigMap.forEach((recipeConfig) => {
+    let remainingServings = recipeConfig.shopping_servings;
+    const mealsForRecipe = validMeals
+      .filter(
+        (meal) =>
+          meal.recipe_id === recipeConfig.recipe_id &&
+          recipeConfig.meal_ids.includes(meal.id),
+      )
+      .sort(sortMealsForShopping);
+
+    mealsForRecipe.forEach((meal) => {
+      if (remainingServings <= 0) {
+        return;
+      }
+
+      if (remainingServings >= meal.planned_servings) {
+        shoppingMeals.push(meal);
+        remainingServings -= meal.planned_servings;
+        return;
+      }
+
+      shoppingMeals.push({
+        ...meal,
+        planned_servings: remainingServings,
+      });
+      splitMeals.push({
+        meal,
+        shoppingServings: remainingServings,
+        remainingServings: meal.planned_servings - remainingServings,
+      });
+      remainingServings = 0;
+    });
+  });
+
+  return { shoppingMeals, splitMeals };
+}
+
 export async function POST(request: Request) {
   let body: ShoppingListCreateBody;
 
@@ -248,7 +360,9 @@ export async function POST(request: Request) {
   }
 
   const validConfigCount =
-    parsedRecipeConfigs?.valid_configs.length ?? parsedMealConfigs?.valid_configs.length ?? 0;
+    parsedRecipeConfigs?.valid_configs.length ??
+    parsedMealConfigs?.valid_configs.length ??
+    0;
 
   if (validConfigCount === 0) {
     return fail("VALIDATION_ERROR", "선택된 식사가 없어요.", 422, [
@@ -256,19 +370,27 @@ export async function POST(request: Request) {
     ]);
   }
 
-const mealConfigMap = new Map(
+  const mealConfigMap = new Map(
     (parsedMealConfigs?.valid_configs ?? []).map((config) => [config.meal_id, config]),
   );
   const recipeConfigMap = new Map(
     (parsedRecipeConfigs?.valid_configs ?? []).map((config) => [config.recipe_id, config]),
   );
   const mealIds = usesRecipeConfigs
-    ? [...new Set((parsedRecipeConfigs?.valid_configs ?? []).flatMap((config) => config.meal_ids))]
+    ? [
+        ...new Set(
+          (parsedRecipeConfigs?.valid_configs ?? []).flatMap(
+            (config) => config.meal_ids,
+          ),
+        ),
+      ]
     : [...mealConfigMap.keys()];
 
   const mealsResult = await dbClient
     .from("meals")
-    .select("id, user_id, recipe_id, plan_date, planned_servings, status, shopping_list_id")
+    .select(
+      "id, user_id, recipe_id, plan_date, column_id, planned_servings, status, is_leftover, leftover_dish_id, shopping_list_id",
+    )
     .in("id", mealIds);
 
   if (mealsResult.error || !mealsResult.data) {
@@ -304,9 +426,22 @@ const mealConfigMap = new Map(
     ]);
   }
 
-  const dates = validMeals.map((meal) => meal.plan_date).sort();
-  const dateRangeStart = dates[0] ?? validMeals[0]!.plan_date;
-  const dateRangeEnd = dates.at(-1) ?? validMeals[0]!.plan_date;
+  const { shoppingMeals, splitMeals } = buildShoppingMealSelection({
+    mealConfigMap,
+    recipeConfigMap,
+    usesRecipeConfigs,
+    validMeals,
+  });
+
+  if (shoppingMeals.length === 0) {
+    return fail("VALIDATION_ERROR", "선택된 식사가 없어요.", 422, [
+      { field: usesRecipeConfigs ? "recipes" : "meal_configs", reason: "no_eligible_meal" },
+    ]);
+  }
+
+  const dates = shoppingMeals.map((meal) => meal.plan_date).sort();
+  const dateRangeStart = dates[0] ?? shoppingMeals[0]!.plan_date;
+  const dateRangeEnd = dates.at(-1) ?? shoppingMeals[0]!.plan_date;
 
   const shoppingListInsertResult = await dbClient
     .from("shopping_lists")
@@ -325,12 +460,53 @@ const mealConfigMap = new Map(
   }
 
   const shoppingList = shoppingListInsertResult.data;
-  const recipeAggregation = new Map<string, { planned_servings_total: number; shopping_servings: number }>();
+
+  if (splitMeals.length > 0) {
+    const splitRemainderInsertResult = await dbClient
+      .from("meals")
+      .insert(
+        splitMeals.map(({ meal, remainingServings }) => ({
+          user_id: meal.user_id,
+          recipe_id: meal.recipe_id,
+          plan_date: meal.plan_date,
+          column_id: meal.column_id,
+          planned_servings: remainingServings,
+          status: "registered",
+          is_leftover: meal.is_leftover,
+          leftover_dish_id: meal.leftover_dish_id,
+          shopping_list_id: null,
+          cooked_at: null,
+        })),
+      );
+
+    if (splitRemainderInsertResult.error) {
+      return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
+    }
+
+    for (const splitMeal of splitMeals) {
+      const splitOriginalUpdateResult = await dbClient
+        .from("meals")
+        .update({ planned_servings: splitMeal.shoppingServings })
+        .eq("id", splitMeal.meal.id)
+        .eq("user_id", user.id);
+
+      if (splitOriginalUpdateResult.error) {
+        return fail("INTERNAL_ERROR", "장보기 목록을 만들지 못했어요.", 500);
+      }
+    }
+  }
+
+  const recipeAggregation = new Map<
+    string,
+    { planned_servings_total: number; shopping_servings: number }
+  >();
 
   if (usesRecipeConfigs) {
     (parsedRecipeConfigs?.valid_configs ?? []).forEach((recipeConfig) => {
-      const mealsForRecipe = validMeals.filter(
-        (meal) => meal.recipe_id === recipeConfig.recipe_id && recipeConfig.meal_ids.includes(meal.id),
+      const mealsForRecipe = shoppingMeals.filter(
+        (meal) =>
+          meal.recipe_id === recipeConfig.recipe_id &&
+          recipeConfig.meal_ids.includes(meal.id),
       );
 
       if (mealsForRecipe.length === 0) {
@@ -346,7 +522,7 @@ const mealConfigMap = new Map(
       });
     });
   } else {
-    validMeals.forEach((meal) => {
+    shoppingMeals.forEach((meal) => {
       const mealConfig = mealConfigMap.get(meal.id);
 
       if (!mealConfig) {
@@ -489,7 +665,7 @@ const mealConfigMap = new Map(
   const mealUpdateResult = await dbClient
     .from("meals")
     .update({ shopping_list_id: shoppingList.id })
-    .in("id", validMeals.map((meal) => meal.id))
+    .in("id", shoppingMeals.map((meal) => meal.id))
     .eq("user_id", user.id);
 
   if (mealUpdateResult.error) {

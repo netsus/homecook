@@ -284,6 +284,35 @@ describe("CookReadyListScreen", () => {
     expect((startButtons[0] as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it("schedules a hard navigation fallback after creating a cook session", async () => {
+    const setTimeoutSpy = vi.spyOn(window, "setTimeout");
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookingReady.mockResolvedValue(buildReadyData());
+    createCookingSession.mockResolvedValue({
+      session_id: "session-abc",
+      recipe_id: "recipe-1",
+      status: "in_progress",
+      cooking_servings: 4,
+      meals: [],
+    });
+
+    render(<CookReadyListScreen initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cook-ready-recipe-list")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getAllByTestId("start-session-button")[0]);
+
+    await waitFor(() => {
+      expect(mockRouterPush).toHaveBeenCalledWith(
+        "/cooking/sessions/session-abc/cook-mode",
+      );
+    });
+
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 250);
+  });
+
   it("disables all start buttons while any session creation is pending", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookingReady.mockResolvedValue(buildReadyData());
