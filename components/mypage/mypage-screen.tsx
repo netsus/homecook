@@ -808,6 +808,10 @@ function buildBookDetailHref(book: RecipeBookSummary) {
   return `/mypage/recipe-books/${book.id}?${params.toString()}`;
 }
 
+function formatRecipeCount(count: number) {
+  return `${Number.isFinite(count) ? count : 0}개`;
+}
+
 function SystemBookCard({ book }: { book: RecipeBookSummary }) {
   const iconMeta = SYSTEM_BOOK_ICON[book.book_type] ?? {
     icon: "📁",
@@ -827,8 +831,11 @@ function SystemBookCard({ book }: { book: RecipeBookSummary }) {
       <span className="min-w-0 flex-1 truncate text-base font-semibold text-[var(--foreground)]">
         {book.name}
       </span>
-      <span className="shrink-0 text-sm text-[var(--text-3)]">
-        {book.recipe_count}
+      <span
+        aria-label={`레시피 ${formatRecipeCount(book.recipe_count)}`}
+        className="shrink-0 text-sm text-[var(--text-3)]"
+      >
+        {formatRecipeCount(book.recipe_count)}
       </span>
     </Link>
   );
@@ -908,8 +915,11 @@ function CustomBookCard({
         >
           {book.name}
         </Link>
-        <span className="shrink-0 text-sm text-[var(--text-3)]">
-          {book.recipe_count}
+        <span
+          aria-label={`레시피 ${formatRecipeCount(book.recipe_count)}`}
+          className="shrink-0 text-sm text-[var(--text-3)]"
+        >
+          {formatRecipeCount(book.recipe_count)}
         </span>
         <button
           aria-haspopup="menu"

@@ -66,6 +66,7 @@ export function RecipeBookDetailScreen({
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasNext, setHasNext] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("데이터를 불러오지 못했어요");
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{
     message: string;
@@ -85,6 +86,10 @@ export function RecipeBookDetailScreen({
   const loadRecipes = useCallback(
     async (nextCursor?: string) => {
       try {
+        if (!nextCursor) {
+          setErrorMessage("데이터를 불러오지 못했어요");
+        }
+
         const result = await fetchRecipeBookRecipes(bookId, {
           cursor: nextCursor,
           limit: PAGE_SIZE,
@@ -92,13 +97,14 @@ export function RecipeBookDetailScreen({
 
         if (!result.success || !result.data) {
           if (!nextCursor) {
+            setErrorMessage(result.error?.message ?? "데이터를 불러오지 못했어요");
             setViewState("error");
           }
           return;
         }
 
         if (nextCursor) {
-          setItems((prev) => [...prev, ...result.data!.items]);
+          setItems((prev) => mergeUniqueRecipeItems(prev, result.data!.items));
         } else {
           setItems(result.data.items);
         }
@@ -111,6 +117,7 @@ export function RecipeBookDetailScreen({
         }
       } catch {
         if (!nextCursor) {
+          setErrorMessage("데이터를 불러오지 못했어요");
           setViewState("error");
         }
       }
@@ -151,6 +158,7 @@ export function RecipeBookDetailScreen({
       } else {
         // Rollback on failure
         setItems(previousItems);
+        setViewState(previousItems.length === 0 ? "empty" : "ready");
         showToast(
           result.error?.message ?? "제거에 실패했어요",
           "error",
@@ -298,7 +306,7 @@ export function RecipeBookDetailScreen({
         <DetailHeader bookName={bookName} />
         <div className="flex flex-col items-center justify-center px-4 py-16">
           <h2 className="text-lg font-bold text-[var(--foreground)]">
-            데이터를 불러오지 못했어요
+            {errorMessage}
           </h2>
           <button
             className="mt-4 flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-6 py-3 text-sm font-semibold text-white"
@@ -414,6 +422,23 @@ function DetailHeader({ bookName }: { bookName: string }) {
       </h1>
     </div>
   );
+}
+
+function mergeUniqueRecipeItems(
+  currentItems: RecipeBookRecipeItem[],
+  nextItems: RecipeBookRecipeItem[],
+) {
+  const seen = new Set(currentItems.map((item) => item.recipe_id));
+  const uniqueNextItems = nextItems.filter((item) => {
+    if (seen.has(item.recipe_id)) {
+      return false;
+    }
+
+    seen.add(item.recipe_id);
+    return true;
+  });
+
+  return [...currentItems, ...uniqueNextItems];
 }
 
 function RecipeBookDetailSkeleton({ bookName }: { bookName: string }) {

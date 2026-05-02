@@ -89,6 +89,29 @@ function detailUrl(bookType: string, bookName: string) {
 }
 
 test.describe("RECIPEBOOK_DETAIL screen", () => {
+  test("shows error when recipebook does not exist", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await page.route("**/api/v1/recipe-books/*/recipes**", async (route) => {
+      await route.fulfill({
+        status: 404,
+        json: {
+          success: false,
+          data: null,
+          error: {
+            code: "RESOURCE_NOT_FOUND",
+            message: "레시피북을 찾을 수 없어요.",
+            fields: [],
+          },
+        },
+      });
+    });
+
+    await page.goto(detailUrl("saved", "없는 레시피북"));
+
+    await expect(page.getByText("레시피북을 찾을 수 없어요.")).toBeVisible();
+    await expect(page.getByText("아직 이 레시피북에 레시피가 없어요")).not.toBeVisible();
+  });
+
   test("shows recipe list for saved book with remove buttons", async ({
     page,
   }) => {
@@ -132,6 +155,60 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await expect(removeButtons).toHaveCount(0);
   });
 
+  test("loads next page without duplicate recipe cards", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await page.route("**/api/v1/recipe-books/*/recipes**", async (route) => {
+      const url = new URL(route.request().url());
+
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+
+      const hasCursor = url.searchParams.has("cursor");
+      await route.fulfill({
+        json: {
+          success: true,
+          data: hasCursor
+            ? {
+                items: [
+                  {
+                    recipe_id: "recipe-2",
+                    title: "김치볶음밥",
+                    thumbnail_url: null,
+                    tags: ["한식"],
+                    added_at: "2026-04-29T09:00:00.000Z",
+                  },
+                  {
+                    recipe_id: "recipe-3",
+                    title: "비빔국수",
+                    thumbnail_url: null,
+                    tags: ["면"],
+                    added_at: "2026-04-28T09:00:00.000Z",
+                  },
+                ],
+                next_cursor: null,
+                has_next: false,
+              }
+            : {
+                items: makeMockRecipeItems(),
+                next_cursor: "cursor-1",
+                has_next: true,
+              },
+          error: null,
+        },
+      });
+    });
+
+    await page.goto(detailUrl("saved", "저장한 레시피"));
+
+    await expect(page.getByText("된장찌개")).toBeVisible();
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+
+    await expect(page.getByText("비빔국수")).toBeVisible();
+    await expect(page.getByText("김치볶음밥")).toHaveCount(1);
+  });
+
   test("removes item from saved book with optimistic UI", async ({
     page,
   }) => {
@@ -148,6 +225,47 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await expect(page.getByText("레시피를 제거했어요")).toBeVisible();
     // Other item still there
     await expect(page.getByText("김치볶음밥")).toBeVisible();
+  });
+
+  test("restores optimistic UI and shows error when remove fails", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await page.route("**/api/v1/recipe-books/*/recipes**", async (route) => {
+      if (route.request().method() === "DELETE") {
+        await route.fulfill({
+          status: 500,
+          json: {
+            success: false,
+            data: null,
+            error: {
+              code: "INTERNAL_ERROR",
+              message: "제거에 실패했어요.",
+              fields: [],
+            },
+          },
+        });
+        return;
+      }
+
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            items: makeMockRecipeItems(),
+            next_cursor: null,
+            has_next: false,
+          },
+          error: null,
+        },
+      });
+    });
+
+    await page.goto(detailUrl("saved", "저장한 레시피"));
+
+    await expect(page.getByText("된장찌개")).toBeVisible();
+    await page.getByLabel("된장찌개 제거").click();
+
+    await expect(page.getByText("제거에 실패했어요.")).toBeVisible();
+    await expect(page.getByText("된장찌개")).toBeVisible();
   });
 
   test("shows empty state after removing all items", async ({ page }) => {

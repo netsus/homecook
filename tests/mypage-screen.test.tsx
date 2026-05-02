@@ -145,13 +145,16 @@ describe("MypageScreen", () => {
     await screen.findByText("집밥러");
 
     const myAddedCard = screen.getByTestId("system-book-my_added");
-    expect(myAddedCard.textContent).toContain("3");
+    expect(myAddedCard.textContent).toContain("3개");
+    expect(screen.getByLabelText("레시피 3개")).toBeTruthy();
 
     const savedCard = screen.getByTestId("system-book-saved");
-    expect(savedCard.textContent).toContain("5");
+    expect(savedCard.textContent).toContain("5개");
+    expect(screen.getByLabelText("레시피 5개")).toBeTruthy();
 
     const likedCard = screen.getByTestId("system-book-liked");
-    expect(likedCard.textContent).toContain("10");
+    expect(likedCard.textContent).toContain("10개");
+    expect(screen.getByLabelText("레시피 10개")).toBeTruthy();
   });
 
   it("shows the error state and retries on failure", async () => {
