@@ -865,6 +865,14 @@ export function PlannerWeekScreen({
                                 <span className="text-[11px] text-[var(--text-3)]">
                                   {meal.planned_servings}인분
                                 </span>
+                                {meal.is_leftover ? (
+                                  <span
+                                    aria-label="남은요리 식사"
+                                    className="inline-flex shrink-0 rounded-[4px] bg-[color-mix(in_srgb,var(--olive)_14%,transparent)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--olive)]"
+                                  >
+                                    남은요리
+                                  </span>
+                                ) : null}
                               </div>
                             </div>
                             {/* Chevron */}

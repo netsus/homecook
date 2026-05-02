@@ -315,6 +315,35 @@ describe("planner week screen", () => {
     expect(within(dinnerRow as HTMLElement).getByText(/식사 추가/).tagName).toBe("SPAN");
   });
 
+  it("marks leftover meals with an explicit leftover chip", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-leftover",
+            recipe_id: "recipe-1",
+            recipe_title: "김치찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 1,
+            status: "registered",
+            is_leftover: true,
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
+    const breakfastRow = within(firstDayCard).getByText("김치찌개").closest("a");
+
+    expect(breakfastRow).not.toBeNull();
+    expect(within(breakfastRow as HTMLElement).getByLabelText("남은요리 식사")).toBeTruthy();
+  });
+
   it("uses the server-authenticated flag when browser session is not hydrated yet", async () => {
     fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
 
