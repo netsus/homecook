@@ -175,6 +175,20 @@ test.describe("SETTINGS screen", () => {
     await expect(toggle).toHaveAttribute("aria-checked", "true");
   });
 
+  test("settings toggle failure reverts value and shows error", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page, { settingsError: true });
+    await page.goto("/settings");
+
+    const toggle = page.getByRole("switch");
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+
+    await toggle.click();
+
+    await expect(page.getByText("설정을 저장하지 못했어요.")).toBeVisible();
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+  });
+
   test("opens nickname edit sheet and saves", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page);
@@ -206,6 +220,23 @@ test.describe("SETTINGS screen", () => {
     await page.waitForURL("/");
   });
 
+  test("logout failure keeps dialog open and shows error", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page, { logoutError: true });
+    await page.goto("/settings");
+
+    await expect(page.getByText("로그아웃")).toBeVisible();
+    await page.getByText("로그아웃").click();
+
+    await expect(page.getByText("로그아웃할까요?")).toBeVisible();
+    await page.getByText("로그아웃하기").click();
+
+    await expect(page.getByTestId("dialog-error")).toBeVisible();
+    await expect(page.getByText("로그아웃에 실패했어요.")).toBeVisible();
+    await expect(page.getByText("로그아웃할까요?")).toBeVisible();
+    await expect(page).toHaveURL(/\/settings$/);
+  });
+
   test("delete confirm triggers API and navigates home", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page);
@@ -218,6 +249,23 @@ test.describe("SETTINGS screen", () => {
     await page.getByText("탈퇴하기").click();
 
     await page.waitForURL("/");
+  });
+
+  test("delete failure keeps dialog open and shows error", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page, { deleteError: true });
+    await page.goto("/settings");
+
+    await expect(page.getByText("회원탈퇴")).toBeVisible();
+    await page.getByText("회원탈퇴").click();
+
+    await expect(page.getByText("정말 탈퇴하시겠어요?")).toBeVisible();
+    await page.getByText("탈퇴하기").click();
+
+    await expect(page.getByTestId("dialog-error")).toBeVisible();
+    await expect(page.getByText("탈퇴에 실패했어요.")).toBeVisible();
+    await expect(page.getByText("정말 탈퇴하시겠어요?")).toBeVisible();
+    await expect(page).toHaveURL(/\/settings$/);
   });
 
   test("delete confirm dialog can be cancelled", async ({ page }) => {

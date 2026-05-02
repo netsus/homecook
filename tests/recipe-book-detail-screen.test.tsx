@@ -85,11 +85,17 @@ const MOCK_EMPTY = {
 };
 
 describe("RecipeBookDetailScreen", () => {
+  let originalIntersectionObserver: typeof globalThis.IntersectionObserver | undefined;
+  let triggerIntersection: (() => void) | null = null;
+
   afterEach(() => {
+    globalThis.IntersectionObserver = originalIntersectionObserver!;
+    triggerIntersection = null;
     cleanup();
   });
 
   beforeEach(() => {
+    originalIntersectionObserver = globalThis.IntersectionObserver;
     mockFetchRecipeBookRecipes.mockReset();
     mockRemoveRecipeBookRecipe.mockReset();
     mockFetchRecipeBookRecipes.mockResolvedValue(MOCK_ITEMS);
@@ -203,15 +209,129 @@ describe("RecipeBookDetailScreen", () => {
       />,
     );
 
-    expect(
-      await screen.findByText("데이터를 불러오지 못했어요"),
-    ).toBeTruthy();
+    expect(await screen.findByText("fail")).toBeTruthy();
 
     mockFetchRecipeBookRecipes.mockResolvedValue(MOCK_ITEMS);
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "다시 시도" }));
 
     expect(await screen.findByText("된장찌개")).toBeTruthy();
+  });
+
+  it("shows a not found error instead of the empty state for missing books", async () => {
+    mockFetchRecipeBookRecipes.mockResolvedValueOnce({
+      success: false,
+      data: null,
+      error: {
+        code: "RESOURCE_NOT_FOUND",
+        message: "레시피북을 찾을 수 없어요.",
+        fields: [],
+      },
+    });
+
+    render(
+      <RecipeBookDetailScreen
+        bookId="missing-book"
+        bookName="없는 레시피북"
+        bookType="saved"
+        initialAuthenticated
+      />,
+    );
+
+    expect(await screen.findByText("레시피북을 찾을 수 없어요.")).toBeTruthy();
+    expect(screen.queryByText("아직 이 레시피북에 레시피가 없어요")).toBeNull();
+  });
+
+  it("loads the next page without duplicating recipes", async () => {
+    mockFetchRecipeBookRecipes
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          items: [
+            {
+              recipe_id: "recipe-1",
+              title: "된장찌개",
+              thumbnail_url: null,
+              tags: ["한식"],
+              added_at: "2026-04-30T09:00:00.000Z",
+            },
+            {
+              recipe_id: "recipe-2",
+              title: "김치볶음밥",
+              thumbnail_url: null,
+              tags: ["한식"],
+              added_at: "2026-04-29T09:00:00.000Z",
+            },
+          ],
+          next_cursor: "cursor-1",
+          has_next: true,
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          items: [
+            {
+              recipe_id: "recipe-2",
+              title: "김치볶음밥",
+              thumbnail_url: null,
+              tags: ["한식"],
+              added_at: "2026-04-29T09:00:00.000Z",
+            },
+            {
+              recipe_id: "recipe-3",
+              title: "비빔국수",
+              thumbnail_url: null,
+              tags: ["면"],
+              added_at: "2026-04-28T09:00:00.000Z",
+            },
+          ],
+          next_cursor: null,
+          has_next: false,
+        },
+        error: null,
+      });
+
+    globalThis.IntersectionObserver = vi.fn((callback: IntersectionObserverCallback) => {
+      triggerIntersection = () => {
+        callback(
+          [{ isIntersecting: true } as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        );
+      };
+
+      return {
+        disconnect: vi.fn(),
+        observe: vi.fn(),
+        takeRecords: vi.fn(() => []),
+        unobserve: vi.fn(),
+        root: null,
+        rootMargin: "0px",
+        thresholds: [0],
+      } as IntersectionObserver;
+    }) as unknown as typeof IntersectionObserver;
+
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-1"
+        bookName="저장한 레시피"
+        bookType="saved"
+        initialAuthenticated
+      />,
+    );
+
+    expect(await screen.findByText("된장찌개")).toBeTruthy();
+    expect(triggerIntersection).toBeTruthy();
+
+    triggerIntersection?.();
+
+    expect(await screen.findByText("비빔국수")).toBeTruthy();
+    expect(screen.getAllByText("김치볶음밥")).toHaveLength(1);
+    expect(mockFetchRecipeBookRecipes).toHaveBeenLastCalledWith("book-1", {
+      cursor: "cursor-1",
+      limit: 20,
+    });
   });
 
   // ─── Remove button visibility ──────────────────────────────────────────────

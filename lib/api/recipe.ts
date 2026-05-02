@@ -1,4 +1,4 @@
-import { fetchJson } from "@/lib/api/fetch-json";
+import { fetchJson, isApiFetchError } from "@/lib/api/fetch-json";
 import type { ApiResponse } from "@/types/api";
 import type {
   PantryMatchListData,
@@ -8,6 +8,22 @@ import type {
   RecipeListData,
   RecipeListQuery,
 } from "@/types/recipe";
+
+function toFetchError(error: unknown, fallbackMessage: string) {
+  if (isApiFetchError(error)) {
+    return {
+      code: error.code,
+      message: error.message,
+      fields: error.fields,
+    };
+  }
+
+  return {
+    code: "FETCH_ERROR",
+    message: error instanceof Error ? error.message : fallbackMessage,
+    fields: [],
+  };
+}
 
 export async function fetchRecipes(query: RecipeListQuery): Promise<ApiResponse<RecipeListData>> {
   try {
@@ -26,11 +42,7 @@ export async function fetchRecipes(query: RecipeListQuery): Promise<ApiResponse<
     return {
       success: false,
       data: null,
-      error: {
-        code: "FETCH_ERROR",
-        message: error instanceof Error ? error.message : "검색 중 오류가 발생했어요.",
-        fields: [],
-      },
+      error: toFetchError(error, "검색 중 오류가 발생했어요."),
     };
   }
 }
@@ -43,11 +55,7 @@ export async function fetchRecipeBooks(): Promise<ApiResponse<RecipeBookListData
     return {
       success: false,
       data: null,
-      error: {
-        code: "FETCH_ERROR",
-        message: error instanceof Error ? error.message : "레시피북 목록을 불러오지 못했어요.",
-        fields: [],
-      },
+      error: toFetchError(error, "레시피북 목록을 불러오지 못했어요."),
     };
   }
 }
@@ -69,11 +77,7 @@ export async function fetchRecipeBookRecipes(
     return {
       success: false,
       data: null,
-      error: {
-        code: "FETCH_ERROR",
-        message: error instanceof Error ? error.message : "레시피북 레시피를 불러오지 못했어요.",
-        fields: [],
-      },
+      error: toFetchError(error, "레시피북 레시피를 불러오지 못했어요."),
     };
   }
 }
@@ -92,11 +96,7 @@ export async function removeRecipeBookRecipe(
     return {
       success: false,
       data: null,
-      error: {
-        code: "FETCH_ERROR",
-        message: error instanceof Error ? error.message : "레시피를 제거하지 못했어요.",
-        fields: [],
-      },
+      error: toFetchError(error, "레시피를 제거하지 못했어요."),
     };
   }
 }
@@ -118,11 +118,7 @@ export async function fetchPantryMatchRecipes(options?: {
     return {
       success: false,
       data: null,
-      error: {
-        code: "FETCH_ERROR",
-        message: error instanceof Error ? error.message : "팬트리 기반 추천을 불러오지 못했어요.",
-        fields: [],
-      },
+      error: toFetchError(error, "팬트리 기반 추천을 불러오지 못했어요."),
     };
   }
 }
