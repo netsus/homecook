@@ -214,14 +214,14 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
 
   // ── Source buttons enabled ─────────────────────────────────────────────────
 
-  test("displays enabled recipe book, pantry, and leftover buttons", async ({ page }) => {
+  test("displays enabled recipe book, pantry, YouTube, and leftover buttons", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await page.goto(MENU_ADD_URL);
 
     await expect(page.locator("h1:has-text('식사 추가')")).toBeVisible();
     await expect(page.locator("button:has-text('레시피북')")).toBeEnabled();
     await expect(page.locator("button:has-text('팬트리')")).toBeEnabled();
-    await expect(page.locator("button:has-text('유튜브')")).toBeDisabled();
+    await expect(page.locator("button:has-text('유튜브')")).toBeEnabled();
     await expect(page.locator("button:has-text('남은요리')")).toBeEnabled();
   });
 

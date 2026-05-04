@@ -75,6 +75,7 @@ interface ActionButtonsProps {
   onPantryClick: () => void;
   onLeftoverClick: () => void;
   onManualRecipeClick: () => void;
+  onYoutubeRecipeClick: () => void;
 }
 
 function ActionButtons({
@@ -82,16 +83,14 @@ function ActionButtons({
   onManualRecipeClick,
   onPantryClick,
   onRecipeBookClick,
+  onYoutubeRecipeClick,
 }: ActionButtonsProps) {
   const enabledActions = [
     { id: "recipebook", label: "레시피북", onClick: onRecipeBookClick },
     { id: "pantry", label: "팬트리", onClick: onPantryClick },
     { id: "leftover", label: "남은요리", onClick: onLeftoverClick },
     { id: "manual", label: "직접 등록", onClick: onManualRecipeClick },
-  ];
-
-  const disabledActions = [
-    { id: "youtube", label: "유튜브" },
+    { id: "youtube", label: "유튜브", onClick: onYoutubeRecipeClick },
   ];
 
   return (
@@ -108,17 +107,6 @@ function ActionButtons({
             type="button"
           >
             {action.label}
-          </button>
-        ))}
-        {disabledActions.map((action) => (
-          <button
-            key={action.id}
-            className="flex h-16 items-center justify-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--muted)] opacity-50"
-            disabled
-            type="button"
-          >
-            {action.label}
-            <span className="ml-2 text-xs">(준비 중)</span>
           </button>
         ))}
       </div>
@@ -357,6 +345,15 @@ export function MenuAddScreen({
     router.push(`/menu/add/manual${queryString}`);
   }, [router, planDate, columnId, slotName]);
 
+  const handleYoutubeRecipeClick = useCallback(() => {
+    const queryParts: string[] = [];
+    if (planDate) queryParts.push(`date=${encodeURIComponent(planDate)}`);
+    if (columnId) queryParts.push(`columnId=${encodeURIComponent(columnId)}`);
+    if (slotName) queryParts.push(`slot=${encodeURIComponent(slotName)}`);
+    const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
+    router.push(`/menu/add/youtube${queryString}`);
+  }, [router, planDate, columnId, slotName]);
+
   return (
     <div className="flex h-screen flex-col bg-[var(--background)]">
       <AppBar onBack={handleBack} />
@@ -387,6 +384,7 @@ export function MenuAddScreen({
             onManualRecipeClick={handleManualRecipeClick}
             onPantryClick={handlePantryClick}
             onRecipeBookClick={handleRecipeBookClick}
+            onYoutubeRecipeClick={handleYoutubeRecipeClick}
           />
         </div>
       </div>
