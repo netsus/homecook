@@ -89,9 +89,9 @@ describe("RecipeBookDetailScreen", () => {
   let triggerIntersection: (() => void) | null = null;
 
   afterEach(() => {
+    cleanup();
     globalThis.IntersectionObserver = originalIntersectionObserver!;
     triggerIntersection = null;
-    cleanup();
   });
 
   beforeEach(() => {
@@ -293,24 +293,24 @@ describe("RecipeBookDetailScreen", () => {
         error: null,
       });
 
-    globalThis.IntersectionObserver = vi.fn((callback: IntersectionObserverCallback) => {
-      triggerIntersection = () => {
-        callback(
-          [{ isIntersecting: true } as IntersectionObserverEntry],
-          {} as IntersectionObserver,
-        );
-      };
+    class MockIntersectionObserver implements IntersectionObserver {
+      readonly root = null;
+      readonly rootMargin = "0px";
+      readonly thresholds = [0];
 
-      return {
-        disconnect: vi.fn(),
-        observe: vi.fn(),
-        takeRecords: vi.fn(() => []),
-        unobserve: vi.fn(),
-        root: null,
-        rootMargin: "0px",
-        thresholds: [0],
-      } as IntersectionObserver;
-    }) as unknown as typeof IntersectionObserver;
+      constructor(callback: IntersectionObserverCallback) {
+        triggerIntersection = () => {
+          callback([{ isIntersecting: true } as IntersectionObserverEntry], this);
+        };
+      }
+
+      disconnect = vi.fn();
+      observe = vi.fn();
+      takeRecords = vi.fn(() => []);
+      unobserve = vi.fn();
+    }
+
+    globalThis.IntersectionObserver = MockIntersectionObserver;
 
     render(
       <RecipeBookDetailScreen
