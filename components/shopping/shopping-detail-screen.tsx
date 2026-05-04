@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { ContentState } from "@/components/shared/content-state";
 import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
@@ -43,6 +43,24 @@ export function ShoppingDetailScreen({
   const [isCompleting, setIsCompleting] = useState(false);
   const [completeToast, setCompleteToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [showPantryPopup, setShowPantryPopup] = useState(false);
+  const shareToastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearShareToastTimer = useCallback(() => {
+    if (shareToastTimeoutRef.current) {
+      clearTimeout(shareToastTimeoutRef.current);
+      shareToastTimeoutRef.current = null;
+    }
+  }, []);
+
+  const scheduleShareToastClear = useCallback(() => {
+    clearShareToastTimer();
+    shareToastTimeoutRef.current = setTimeout(() => {
+      setShareToast(null);
+      shareToastTimeoutRef.current = null;
+    }, 3000);
+  }, [clearShareToastTimer]);
+
+  useEffect(() => clearShareToastTimer, [clearShareToastTimer]);
 
   const loadDetail = useCallback(async () => {
     setViewState("loading");
@@ -214,11 +232,12 @@ export function ShoppingDetailScreen({
     const hasPurchaseItems = listDetail.items.some((item) => !item.is_pantry_excluded);
     if (!hasPurchaseItems) {
       setShareToast({ type: "empty", message: "공유할 구매 항목이 없어요" });
-      setTimeout(() => setShareToast(null), 3000);
+      scheduleShareToastClear();
       return;
     }
 
     setIsSharing(true);
+    clearShareToastTimer();
     setShareToast(null);
 
     try {
@@ -252,9 +271,9 @@ export function ShoppingDetailScreen({
       }
     } finally {
       setIsSharing(false);
-      setTimeout(() => setShareToast(null), 3000);
+      scheduleShareToastClear();
     }
-  }, [listId, listDetail, router]);
+  }, [clearShareToastTimer, listId, listDetail, router, scheduleShareToastClear]);
 
   const handleMoveItem = useCallback(
     async (itemId: string, direction: "up" | "down") => {
