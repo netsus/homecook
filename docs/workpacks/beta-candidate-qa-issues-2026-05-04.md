@@ -4,7 +4,7 @@
 
 ## Evidence Snapshot
 
-- Base: `master` after PR #328 merge (`1451b9b`)
+- Base: `master` after PR #329 merge (`e7cc446`)
 - Deterministic gate: `pnpm verify` passed on 2026-05-04
 - Product tests: 58 files / 539 tests passed in the latest follow-up run
 - Playwright: smoke 641 passed / 4 skipped, a11y 6 passed, visual 12 passed, security 9 passed
@@ -15,6 +15,7 @@
   - `pnpm test:e2e:oauth` ran but skipped 3 tests because live Google credentials are not present locally
   - `pnpm exec playwright test tests/e2e/slice-14-cook-session-start.spec.ts tests/e2e/slice-15a-cook-planner-complete.spec.ts tests/e2e/slice-15b-cook-standalone-complete.spec.ts tests/e2e/slice-16-leftovers.spec.ts tests/e2e/slice-17c-settings.spec.ts tests/e2e/slice-18-manual-recipe-create.spec.ts tests/e2e/slice-19-youtube-import.spec.ts --project=mobile-chrome --project=mobile-ios-small --grep-invert '@live-oauth'` passed, 138 tests
   - GitHub `Playwright Live OAuth` workflow on `master` run `25322608410` completed with 3 skipped tests because live OAuth secrets were not configured
+  - PR #329 passed GitGuardian, accessibility, build, labeler, lighthouse, policy, quality, security-smoke, smoke, template-check, and visual checks before merge
 
 ## Current Defect Triage
 
@@ -28,13 +29,13 @@
 | BETA-QA-006 | P2 | Manual checklist ready | Web Share OS sheet is manual-only on HTTPS real devices. | Clipboard fallback is tested, but OS share behavior depends on browser/device support. | Use `docs/workpacks/beta-release-manual-checklist-2026-05-04.md` before public launch, or before beta if shopping share is a key beta scenario. |
 | BETA-QA-007 | P2 | Manual checklist ready | 30-day `eaten` leftover auto-hide needs real time or controlled long-window verification. | Automated tests cover policy logic, but calendar/time behavior can drift in real environments. | Use `docs/workpacks/beta-release-manual-checklist-2026-05-04.md` before public launch; move earlier if leftovers becomes a beta success metric. |
 | BETA-QA-008 | P2 | Manual checklist ready | Wake-lock UX and cooking-mode screen behavior need real mobile browser confirmation. | Screen wake lock is browser/device specific and important while cooking. | Use `docs/workpacks/beta-release-manual-checklist-2026-05-04.md` before cooking-heavy beta sessions; otherwise before public launch. |
-| BETA-QA-009 | P3 | Fixed in cleanup PR | Existing Next.js `<img>` warnings in seven UI screens were removed by converting thumbnail/avatar renders to `next/image` with explicit dimensions and `unoptimized` external URL handling. | Not a functional failure, and Lighthouse is green, but image optimization debt can grow. | Closed once lint/build are green on the cleanup PR; keep Lighthouse as regression signal. |
+| BETA-QA-009 | P3 | Closed in PR #329 | Existing Next.js `<img>` warnings in seven UI screens were removed by converting thumbnail/avatar renders to `next/image` with explicit dimensions and `unoptimized` external URL handling. | Not a functional failure, and Lighthouse is green, but image optimization debt can grow. | Closed; keep Lighthouse as regression signal. |
 | BETA-QA-010 | P3 | Verified non-blocking | Local Lighthouse emits environment/tooling warnings such as missing GitHub token upload and Node `punycode` deprecation, but `pnpm test:lighthouse` still passes and the repo config writes LHCI output to filesystem. | These are not app defects, but can hide signal if logs become noisy. | Track with the manual checklist; clean up before public release or when CI noise starts slowing reviews. |
 
 ## P2/P3 Cleanup Update
 
 - `BETA-QA-006`, `BETA-QA-007`, `BETA-QA-008`: still require deploy, HTTPS, real devices, real browser behavior, or controlled long-window data. They are now captured as explicit manual gates in `docs/workpacks/beta-release-manual-checklist-2026-05-04.md`.
-- `BETA-QA-009`: code cleanup is complete in the P2/P3 cleanup branch. The fix keeps existing image dimensions and uses `unoptimized` because recipe thumbnails/profile images can come from external providers not listed in `next.config`.
+- `BETA-QA-009`: code cleanup is merged in PR #329. The fix keeps existing image dimensions and uses `unoptimized` because recipe thumbnails/profile images can come from external providers not listed in `next.config`.
 - `BETA-QA-010`: no app code change is required. `pnpm test:lighthouse` passed while reproducing `GitHub token not set` and Node `punycode` warnings; `lighthouserc.js` already uses `upload.target = "filesystem"`, so these are tracked as non-blocking tooling noise unless CI logs become hard to read.
 
 ## Manual-only Timing Rule
@@ -61,3 +62,4 @@ Manual-only 항목은 모두 같은 무게가 아니다. 기준은 아래처럼 
 3. `BETA-QA-003` real-device mobile smoke를 핵심 5개 흐름으로 닫는다: planner, shopping, cook, leftovers, manual recipe creation. YouTube import는 flag off 상태라면 실기기 베타 필수 흐름에서 제외한다.
 4. YouTube import는 기본 flag off로 둔다. 노출이 필요하면 `HOMECOOK_ENABLE_YOUTUBE_IMPORT=1`을 켜기 전에 live YouTube smoke를 먼저 통과시킨다.
 5. 베타 시작 후 발견 이슈를 이 문서의 표에 추가하고, P0/P1만 즉시 수정한다.
+6. 베타 운영 루프는 `docs/workpacks/beta-operations-handoff-2026-05-04.md` 기준으로 돌린다: 매일 feedback triage, P0/P1 stop rule, P2/P3 backlog, public-launch graduation review를 기록한다.
