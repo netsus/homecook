@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
@@ -53,10 +54,13 @@ function RecipeReadyCard({
       data-testid="recipe-ready-card"
     >
       {recipe.recipe_thumbnail_url ? (
-        <img
+        <Image
           alt=""
           className="h-16 w-16 shrink-0 rounded-[var(--radius-md)] object-cover"
+          height={64}
           src={recipe.recipe_thumbnail_url}
+          unoptimized
+          width={64}
         />
       ) : (
         <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-fill)]">

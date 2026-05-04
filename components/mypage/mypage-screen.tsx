@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import React from "react";
 import {
   useCallback,
@@ -436,10 +437,13 @@ export function MypageScreen({
         data-testid="mypage-profile"
       >
         {profile?.profile_image_url ? (
-          <img
+          <Image
             alt={`${profile.nickname} 프로필`}
             className="h-12 w-12 shrink-0 rounded-full border border-[var(--line)] object-cover max-[360px]:h-10 max-[360px]:w-10"
+            height={48}
             src={profile.profile_image_url}
+            unoptimized
+            width={48}
           />
         ) : (
           <div
