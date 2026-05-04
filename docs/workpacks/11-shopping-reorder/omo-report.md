@@ -5,8 +5,8 @@
 | 항목 | 값 |
 | --- | ---: |
 | report_mode | backfilled |
-| 최종 상태 | ready_for_review / codex_approved / passed |
-| 최종 PR | - |
+| 최종 상태 | merged / dual_approved / passed |
+| 최종 PR | #236 |
 | 측정 구간 | 2026-04-27 17:25 ~ 2026-04-27 22:55 KST |
 | 벽시계 총 시간 | 329.6분 |
 | 순수 진행 누적시간 | 0.0분 |
@@ -14,15 +14,18 @@
 | manual_decision_required | 0회 |
 | Codex/Claude 자동 수정 오류 | 3회 |
 | post-merge stale | 0회 |
-| evidence_source | .omx/artifacts |
+| evidence_source | .omx/artifacts, GitHub PR/CI, git history |
 
 > 자동 생성된 보고서다. 순수 진행 누적시간은 OMO dispatch 산출물 기준으로 계산했고 human_escalation/CI/대기 시간은 제외했다. `.omx/artifacts`는 event/evidence source로 반영하되 markdown semantic parsing에는 의존하지 않는다.
+> 2026-05-04 bookkeeping repair에서 stale 최종 상태와 PR 표기를 복구했다. PR #236은 2026-04-27T10:35:23Z에 merge됐고, 이 report의 0.0분 시간 측정 한계는 dispatch 산출물 부재 때문에 그대로 남긴다.
 
 ## Evidence Sources
 
 | Source | Events | Stages |
 | --- | ---: | --- |
 | .omx/artifacts | 8 | 1, 3, 4, 5, 6 |
+| GitHub PR/CI | PR #234 backend, PR #236 frontend | 2, 4, 6 |
+| git history | `dcb301e`, `accf8ef` merge commits | 2, 4 |
 
 ## Stage Time
 
@@ -70,4 +73,3 @@
 - manual_decision_required는 0회 기록됐다.
 - post-merge stale은 0회 기록됐다.
 - human_escalation 외 Codex/Claude가 자동 수정한 오류는 3회 기록됐다.
-

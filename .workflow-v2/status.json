@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-01T15:45:05Z",
+  "updated_at": "2026-05-04T12:21:06Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -437,9 +437,9 @@
       "id": "11-shopping-reorder",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-11-shopping-reorder",
-      "pr_path": "https://github.com/netsus/homecook/pull/295",
-      "lifecycle": "ready_for_review",
-      "approval_state": "codex_approved",
+      "pr_path": "https://github.com/netsus/homecook/pull/236",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
       "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
@@ -447,7 +447,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Internal 6.5 projection sync after Stage 6 Codex review. Stage 2 backend merged via PR #234; frontend PR #236 passed local and GitHub current-head checks before projection sync. Reorder uses accessible up/down controls with no new dependencies, optimistic rollback, 409/500 feedback, completed-list hidden controls, and confirmed low-risk design. Local verification passed: pnpm verify:frontend, targeted Vitest/backend regression, targeted slice-11 Playwright, workflow/workpack/bookkeeping validation, git diff --check."
+      "notes": "Merged via PR #236 on 2026-04-27T10:35:23Z after Stage 2 backend PR #234 and Stage 4 frontend closeout. Reorder uses accessible up/down controls with no new dependencies, optimistic rollback, 409/500 feedback, completed-list hidden controls, and confirmed low-risk design. Local verification passed: pnpm verify:frontend, targeted Vitest/backend regression, targeted slice-11 Playwright, workflow/workpack/bookkeeping validation, git diff --check. This entry was synced from stale ready_for_review bookkeeping on 2026-05-04."
     },
     {
       "id": "baemin-style-recipe-detail-retrofit",
@@ -782,16 +782,18 @@
     {
       "id": "19-youtube-import",
       "preset": "vertical-slice-strict",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "branch": "feature/fe-19-youtube-import",
+      "pr_path": "https://github.com/netsus/homecook/pull/321",
+      "lifecycle": "merged",
+      "approval_state": "dual_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:backend",
         "pnpm verify:frontend",
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs authored by Claude. risk=high due to external YouTube provider dependency (stubbed for MVP), 3 new endpoints, recipe_sources table INSERT, and new cooking method auto-creation. MVP extraction uses description/pinned-comment parsing plus manual correction; OCR/ASR/estimation are staged pipeline concepts out of scope."
+      "notes": "Merged via PR #321 on 2026-05-01T19:35:34Z after Stage 1 docs PR #319, Stage 2 backend PR #320, Claude Stage 3/4 work, Codex Stage 5/6 review, Claude final authority gate, full frontend verification, exploratory QA/eval, real smoke, and internal 6.5 closeout validators. closeout_phase=completed closeout_recovery=ci_resync:1 closeout_repair=codex:3|claude:2|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,git history,PR #321 body,docs/workpacks/19-youtube-import/omo-report.md last_recovery_at=2026-05-01T19:35:34Z"
     }
   ]
 }
