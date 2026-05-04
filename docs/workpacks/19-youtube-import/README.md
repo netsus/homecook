@@ -321,7 +321,7 @@
   - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-review-top-narrow-320x568.png`
   - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-review-narrow-320x568.png`
   - `ui/designs/evidence/19-youtube-import/YT_IMPORT-mobile-complete-narrow-320x568.png`
-- Authority status: `passed` (Codex authority_precheck + Claude final authority gate, blocker 0 / major 0)
+- Authority status: `reviewed`
 - Authority planning: Stage 4에서 screenshot evidence 캡처 → Codex `authority_precheck` → Claude `final_authority_gate`
 - Authority report: `ui/designs/authority/YT_IMPORT-authority.md` (Stage 4/5에서 생성)
 - Notes:
@@ -329,6 +329,7 @@
   - Baemin vocabulary/material/tokens 사용, near-100% parity 타겟 아님
   - prototype-only 요소(bottom tab 동작, Jua 폰트, unsupported 기능) 불포함
   - 새 화면이므로 Stage 4 screenshot evidence + Claude final authority gate 필요
+  - Codex authority_precheck + Claude final authority gate passed, blocker 0 / major 0
 
 ## Design Status
 
