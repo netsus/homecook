@@ -124,13 +124,13 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
 
   // ── Search flow ────────────────────────────────────────────────────────────
 
-  test("displays search input and placeholder buttons", async ({ page }) => {
+  test("displays search input and source buttons", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await page.goto(MENU_ADD_URL);
 
     await expect(page.locator("h1:has-text('식사 추가')")).toBeVisible();
     await expect(page.locator('input[aria-label="레시피 검색"]')).toBeVisible();
-    await expect(page.locator("button:has-text('유튜브')")).toBeDisabled();
+    await expect(page.locator("button:has-text('유튜브')")).toBeEnabled();
     await expect(page.locator("button:has-text('레시피북')")).toBeEnabled();
     await expect(page.locator("button:has-text('남은요리')")).toBeEnabled();
     await expect(page.locator("button:has-text('팬트리')")).toBeEnabled();

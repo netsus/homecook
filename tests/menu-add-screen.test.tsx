@@ -46,6 +46,21 @@ describe("MenuAddScreen", () => {
     cleanup();
   });
 
+  it("opens the YouTube import screen from the current planner slot context", async () => {
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    const youtubeButton = screen.getByRole("button", { name: "유튜브" });
+
+    expect((youtubeButton as HTMLButtonElement).disabled).toBe(false);
+
+    await user.click(youtubeButton);
+
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      `/menu/add/youtube?date=${DEFAULT_PROPS.planDate}&columnId=${DEFAULT_PROPS.columnId}&slot=${encodeURIComponent(DEFAULT_PROPS.slotName)}`,
+    );
+  });
+
   it("adds a leftover dish to the current planner slot", async () => {
     vi.mocked(leftoversApi.fetchLeftovers).mockResolvedValue({
       items: [
