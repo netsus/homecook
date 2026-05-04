@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import React from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -831,10 +832,13 @@ export function PlannerWeekScreen({
                           <>
                             {/* Thumbnail */}
                             {meal.recipe_thumbnail_url ? (
-                              <img
+                              <Image
                                 alt=""
                                 className="ml-1 mr-2.5 h-11 w-11 rounded-[var(--radius-sm)] object-cover"
+                                height={44}
                                 src={meal.recipe_thumbnail_url}
+                                unoptimized
+                                width={44}
                               />
                             ) : (
                               <div className="ml-1 mr-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface-fill)]">

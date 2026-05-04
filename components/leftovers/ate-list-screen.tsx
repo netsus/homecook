@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import React, { useCallback, useEffect, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
@@ -56,10 +57,13 @@ function AteListCard({
     >
       <div className="flex items-center gap-3">
         {item.recipe_thumbnail_url ? (
-          <img
+          <Image
             alt=""
             className="h-14 w-14 shrink-0 rounded-[var(--radius-md)] object-cover"
+            height={56}
             src={item.recipe_thumbnail_url}
+            unoptimized
+            width={56}
           />
         ) : (
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-fill)]">

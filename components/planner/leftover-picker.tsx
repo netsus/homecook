@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { fetchLeftovers } from "@/lib/api/leftovers";
@@ -38,10 +39,13 @@ function LeftoverCard({
     <article className="rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
       <div className="flex items-center gap-3">
         {leftover.recipe_thumbnail_url ? (
-          <img
+          <Image
             alt=""
             className="h-14 w-14 shrink-0 rounded-[12px] object-cover"
+            height={56}
             src={leftover.recipe_thumbnail_url}
+            unoptimized
+            width={56}
           />
         ) : (
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[12px] bg-[var(--surface-fill)]">

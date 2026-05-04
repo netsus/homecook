@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
@@ -489,10 +490,13 @@ function RecipeItemCard({
         href={`/recipe/${item.recipe_id}`}
       >
         {item.thumbnail_url ? (
-          <img
+          <Image
             alt={item.title}
             className="h-16 w-16 shrink-0 rounded-[var(--radius-md)] object-cover max-[360px]:h-14 max-[360px]:w-14"
+            height={64}
             src={item.thumbnail_url}
+            unoptimized
+            width={64}
           />
         ) : (
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-fill)] text-2xl max-[360px]:h-14 max-[360px]:w-14">
