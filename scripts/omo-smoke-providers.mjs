@@ -14,6 +14,7 @@ function printUsage() {
       "  --opencode-bin <path>           Override opencode binary path",
       "  --artifact-base-dir <path>      Override artifact base directory",
       "  --home-dir <path>               Override HOME for provider execution",
+      "  --timeout-ms <ms>                Provider execution timeout per run (default: 120000)",
       "  --allow-dirty                   Allow tracked git changes while running the smoke",
       "  --json                          Print JSON output",
       "  --help                          Show this help text",
@@ -37,6 +38,7 @@ function parseArgs(argv) {
     allowDirty: false,
     claudeOnly: false,
     codexOnly: false,
+    timeoutMs: 120000,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -63,7 +65,13 @@ function parseArgs(argv) {
       options.codexOnly = true;
       continue;
     }
-    if (token === "--claude-bin" || token === "--opencode-bin" || token === "--artifact-base-dir" || token === "--home-dir") {
+    if (
+      token === "--claude-bin" ||
+      token === "--opencode-bin" ||
+      token === "--artifact-base-dir" ||
+      token === "--home-dir" ||
+      token === "--timeout-ms"
+    ) {
       const key = token
         .replace(/^--/, "")
         .replace(/-([a-z])/g, (_, character) => character.toUpperCase());
@@ -73,6 +81,11 @@ function parseArgs(argv) {
     }
 
     throw new Error(`Unknown option: ${token}`);
+  }
+
+  options.timeoutMs = Number.parseInt(String(options.timeoutMs), 10);
+  if (!Number.isInteger(options.timeoutMs) || options.timeoutMs < 1000) {
+    throw new Error("--timeout-ms must be an integer >= 1000.");
   }
 
   return options;
@@ -95,6 +108,7 @@ function main() {
     claudeOnly: options.claudeOnly,
     codexOnly: options.codexOnly,
     assertClean: !options.allowDirty,
+    timeoutMs: options.timeoutMs,
   });
 
   if (options.json) {
@@ -106,6 +120,7 @@ function main() {
     [
       `Provider smoke: ${result.ok ? "pass" : "fail"}`,
       `Artifact base dir: ${result.artifactBaseDir}`,
+      `Timeout per provider run: ${options.timeoutMs}ms`,
       ...result.targets.map(
         (target) =>
           `- ${target.provider}: sessionReused=${target.sessionReused ? "yes" : "no"} preflight="${target.preflight.command}"`,

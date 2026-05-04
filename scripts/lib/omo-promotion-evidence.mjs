@@ -24,6 +24,10 @@ function resolveReplayAcceptancePath(rootDir = process.cwd()) {
   return resolve(rootDir, ".workflow-v2", "replay-acceptance.json");
 }
 
+function resolveIncidentRegistryPath(rootDir = process.cwd()) {
+  return resolve(rootDir, "docs", "engineering", "workflow-v2", "omo-incident-registry.md");
+}
+
 export function readPromotionEvidence(rootDir = process.cwd()) {
   const filePath = resolvePromotionEvidencePath(rootDir);
   if (!existsSync(filePath)) {
@@ -40,6 +44,52 @@ function writePromotionEvidence(filePath, data) {
   writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`);
 }
 
+function readBulletField(body, field) {
+  const match = body.match(new RegExp(`^- ${field}:\\s+(.+)$`, "m"));
+  const rawValue = match?.[1]?.trim();
+  if (!rawValue) {
+    return null;
+  }
+
+  return rawValue.startsWith("`") && rawValue.endsWith("`") ? rawValue.slice(1, -1) : rawValue;
+}
+
+export function readActiveIncidentBlockerIds(rootDir = process.cwd()) {
+  const registryPath = resolveIncidentRegistryPath(rootDir);
+  if (!existsSync(registryPath)) {
+    return ["incident-registry-missing"];
+  }
+
+  const registryText = readFileSync(registryPath, "utf8");
+  const incidents = [];
+  const sectionHeaders = [...registryText.matchAll(/^### ([A-Z0-9-]+)\s*$/gm)];
+
+  for (let index = 0; index < sectionHeaders.length; index += 1) {
+    const match = sectionHeaders[index];
+    const id = match[1];
+    const sectionStart = (match.index ?? 0) + match[0].length;
+    const sectionEnd = sectionHeaders[index + 1]?.index ?? registryText.length;
+    const body = registryText.slice(sectionStart, sectionEnd);
+    const status = readBulletField(body, "status");
+    const boundary = readBulletField(body, "boundary");
+    const hasAcceptedMissingArtifactDisposition = /artifact-missing accepted/i.test(body);
+
+    if (status === "open" && boundary === "omo-system") {
+      incidents.push(id);
+      continue;
+    }
+
+    if (status === "backfill-required" && boundary !== "product-local" && !hasAcceptedMissingArtifactDisposition) {
+      incidents.push(id);
+    }
+  }
+
+  return uniqueStrings(incidents);
+}
+
+/**
+ * @param {{ rootDir?: string, now?: string }} [options]
+ */
 export function syncPromotionGateWithReplayAcceptance({
   rootDir = process.cwd(),
   now,
@@ -63,29 +113,43 @@ export function syncPromotionGateWithReplayAcceptance({
     .filter((laneId) => typeof laneId === "string" && laneId.trim().length > 0);
   const summaryBlockingLaneIds = uniqueStrings(replayAcceptance?.summary?.blocking_lane_ids ?? []);
   const isReplayAccepted = summaryStatus === "pass" && incompleteRequiredLaneIds.length === 0;
+  const activeIncidentBlockerIds = isReplayAccepted ? readActiveIncidentBlockerIds(rootDir) : [];
 
-  if (isReplayAccepted) {
+  if (isReplayAccepted && activeIncidentBlockerIds.length === 0) {
     return {
       filePath,
       replayPath,
       updated: false,
       replaySummaryStatus: summaryStatus,
       incompleteRequiredLaneIds,
+      activeIncidentBlockerIds,
       updatedEntry: data.promotion_gate,
     };
   }
 
   const blockerRefs = uniqueStrings([
-    ...(summaryBlockingLaneIds.length > 0 ? summaryBlockingLaneIds : incompleteRequiredLaneIds),
-    ...(summaryBlockingLaneIds.length === 0 && incompleteRequiredLaneIds.length === 0
+    ...(!isReplayAccepted
+      ? summaryBlockingLaneIds.length > 0
+        ? summaryBlockingLaneIds
+        : incompleteRequiredLaneIds
+      : []),
+    ...activeIncidentBlockerIds,
+    ...(summaryBlockingLaneIds.length === 0 && incompleteRequiredLaneIds.length === 0 && activeIncidentBlockerIds.length === 0
       ? [`summary:${summaryStatus}`]
       : []),
   ]);
   data.promotion_gate.status = "not-ready";
-  data.promotion_gate.blockers = [`replay acceptance incomplete: ${blockerRefs.join(", ")}`];
-  data.promotion_gate.notes =
-    "Promotion gate recalculated from .workflow-v2/replay-acceptance.json; stale ready/candidate signals cannot be reused while replay acceptance is incomplete.";
-  data.promotion_gate.next_review_trigger = "After replay acceptance passes";
+  data.promotion_gate.blockers = [
+    isReplayAccepted
+      ? `active incident blockers: ${blockerRefs.join(", ")}`
+      : `replay acceptance incomplete: ${blockerRefs.join(", ")}`,
+  ];
+  data.promotion_gate.notes = isReplayAccepted
+    ? "Promotion gate recalculated from replay acceptance plus incident registry; stale ready/candidate signals cannot be reused while active OMO-system incidents remain open."
+    : "Promotion gate recalculated from .workflow-v2/replay-acceptance.json; stale ready/candidate signals cannot be reused while replay acceptance is incomplete.";
+  data.promotion_gate.next_review_trigger = isReplayAccepted
+    ? "After active OMO-system incident blockers are closed or dispositioned"
+    : "After replay acceptance passes";
   data.updated_at = timestamp;
   writePromotionEvidence(filePath, data);
 
@@ -95,6 +159,7 @@ export function syncPromotionGateWithReplayAcceptance({
     updated: true,
     replaySummaryStatus: summaryStatus,
     incompleteRequiredLaneIds,
+    activeIncidentBlockerIds,
     updatedEntry: data.promotion_gate,
   };
 }

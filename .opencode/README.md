@@ -124,20 +124,20 @@ pnpm omo:claude-budget -- --clear
 - `omo:tick`은 이제 `wait.kind`뿐 아니라 unfinished `phase`도 재개한다.
 - code stage에서 valid `stage-result.json`이 있고 supervisor verify가 통과하면, supervisor가 commit/push/PR 생성/CI wait까지 auto-finalize한다.
 - 이미 merge된 slice에서 공식 docs bookkeeping만 어긋나면 `omo:reconcile`이 docs-only closeout PR를 생성해 drift를 복구한다.
-- 빠른 운영 확인은 `pnpm omo:status:brief -- --work-item <id>`로 `activeStage`, `phase`, `nextAction`, `mode`를 함께 읽는다.
+- 빠른 운영 확인은 `pnpm omo:status:brief`로 전체 runtime을 보거나 `pnpm omo:status:brief -- --work-item <id>`로 특정 work item의 `activeStage`, `phase`, `nextAction`, `mode`를 읽는다.
 - scheduler 자체가 지금 도는지, 마지막으로 언제 로그를 남겼는지는 `pnpm omo:tick:watch -- --work-item <id>`로 본다.
 - supervisor는 기본적으로 `.worktrees/<work-item-id>` 전용 worktree에서만 실행한다.
 - GitHub 자동화는 `gh` CLI만 사용한다.
 - 기본 scheduler cadence는 10분이며, macOS에서는 `launchd` 예시를 우선 제공한다.
 - macOS에서는 `pnpm omo:supervise -- --work-item <id>`, `pnpm omo:start -- --work-item <id>`, `pnpm omo:continue -- --work-item <id>`가 execute mode일 때 해당 work item LaunchAgent를 자동 bootstrap/refresh한다.
 - `omo:scheduler:install`은 절대경로 `pnpm`, `gh`, `claude`, `opencode`와 `~/Library/Logs/homecook/` 로그 경로를 렌더링한다.
-- `omo:scheduler:verify`는 `launchctl print`와 `omo:tick:watch --json`을 비교해 label/interval/log path drift를 막는다.
+- `omo:scheduler:verify`는 `launchctl print`와 `omo:tick:watch --json`을 비교해 label/interval/log path drift를 막는다. 인자 없이 실행하면 provider/control-plane smoke runtime을 제외한 scheduler-managed runtime 전체를 확인한다.
 - `omo:smoke:control-plane`은 반드시 별도 sandbox GitHub repo에서만 실행하고, `homecook` 본 repo를 대상으로는 거부한다.
 - `omo:smoke:control-plane -- --live-providers`는 backend Stage 2/3만 실제 Claude/Codex를 사용하고, backend review 첫 시도에서 `request_changes` token contract를 강제한 뒤 Codex가 최소 확인용 prompt만으로 그 feedback을 marker file에 반영했는지까지 검증한다.
-- `omo:smoke:providers`는 실제 Claude/Codex auth 상태에서 session reuse와 stage-result 생성을 분리 검증한다.
+- `omo:smoke:providers`는 실제 Claude/Codex auth 상태에서 session reuse와 stage-result 생성을 분리 검증하며 기본 120초 timeout을 둔다.
 - fullauto v1은 수동 리뷰/실동작 확인 직전까지 자동화한다.
 - `launchd`에서는 login shell PATH를 가정하지 않는다. `pnpm`, `gh`, `claude`, `opencode`는 절대경로 또는 고정 PATH로 실행하는 것을 기본값으로 둔다.
-- active pilot 동안 루트 repo는 `ops/omo-<slice>-runtime-anchor` 같은 운영 브랜치에 두는 것을 기본값으로 권장한다.
+- active supervised run 동안 루트 repo는 `ops/omo-<slice>-runtime-anchor` 같은 운영 브랜치에 두는 것을 기본값으로 권장한다.
 - 이 운영 브랜치는 hygiene 목적이다. supervisor worktree의 base sync correctness는 이제 local `master`가 아니라 `origin/master` detached 정책이 담당한다.
 
 ## Manual Handoff Standard

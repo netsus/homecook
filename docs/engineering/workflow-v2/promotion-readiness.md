@@ -142,29 +142,28 @@ pnpm omo:promotion:update -- --section promotion-gate --status not-ready --block
 - replay acceptance 자체의 representative lane pass/fail은 `.workflow-v2/replay-acceptance.json`에 남긴다.
 - tmp/off-repo ref가 historical breadcrumb로만 남는 경우, current note는 repo-local retained evidence를 우선 적고 필요하면 `artifact-missing accepted` 같은 disposition을 함께 남긴다.
 
-## Current Not-Ready Baseline
+## Current Ready Baseline
 
 reset 현재 시점의 해석은 아래처럼 잠근다.
 
 - representative replay acceptance `pass`는 필요조건이지만, 그것만으로 `ready`가 되지 않는다.
 - promotion gate는 auditor finding family와 incident family를 같이 본다.
 - closeout authority overlap blocker `H-GOV-001`은 canonical owner, compatibility note, shared helper wiring 정렬로 해소됐고 더 이상 active auditor blocker로 보지 않는다.
-- `not-ready` 설명에는 최소 아래 3층이 함께 보여야 한다.
+- 승격 설명에는 최소 아래 3층이 함께 보여야 한다.
   - replay 상태
-  - active auditor blocker (`H-OMO-001`, `H-OMO-006`)
+  - active auditor blocker (`H-OMO-001`, `H-OMO-006`) 유무
   - active incident blocker family
 
 ### Active Incident Blocker Family
 
-현재 promotion `not-ready`를 직접 설명하는 incident family는 아래다.
+현재 promotion을 직접 막는 active incident family는 없다.
 
-- promotion / auditor drift
+- 아래 family는 replay acceptance와 운영 표면 보강 후 `closed-by-replay`로 내려갔다.
   - `OMO-RETRO-003`
-- runtime / observability
   - `OMO-07-003`
   - `OMO-07-007`
 
-아래는 secondary blocker로 본다.
+아래는 더 이상 blocker가 아닌 historical limitation + retrospective context로 본다.
 
 - evidence backfill / retention
   - `OMO-03-001`
@@ -183,7 +182,7 @@ reset 현재 시점의 해석은 아래처럼 잠근다.
   - `OMO-07-008`
 
 즉 현재 baseline의 승격 판단은
-"replay는 통과했고 일부 system blocker는 monitoring으로 내려갔지만, promotion drift와 runtime/observability family가 아직 open이라 `not-ready`"
+"representative replay가 통과했고 promotion drift와 runtime/observability blocker가 `closed-by-replay`로 내려가 promotion gate는 `ready`로 볼 수 있다. 최종 default 운영 정책 변경은 별도 인간 승인과 docs-governance PR에서 잠근다."
 라는 문장으로 요약돼야 한다.
 
 ## Ready Criteria

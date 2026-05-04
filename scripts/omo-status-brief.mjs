@@ -1,20 +1,25 @@
 #!/usr/bin/env node
 
-import { readWorkItemSessionStatus } from "./lib/omo-session-orchestrator.mjs";
-import { formatBriefStatus } from "./lib/omo-status-summary.mjs";
+import {
+  readAllWorkItemSessionStatuses,
+  readWorkItemSessionStatus,
+} from "./lib/omo-session-orchestrator.mjs";
+import { formatBriefStatus, formatBriefStatusList } from "./lib/omo-status-summary.mjs";
 
 function printUsage() {
   process.stdout.write(
     [
-      "Usage: node scripts/omo-status-brief.mjs --work-item <id> [options]",
+      "Usage: node scripts/omo-status-brief.mjs [--work-item <id>] [options]",
       "",
       "Options:",
       "  --work-item <id>                 Workflow-v2 work item id",
+      "  --all                            Show all repo-local OMO runtime states",
       "  --slice <id>                     Optional slice override for non-product work items",
       "  --help                           Show this help text",
       "",
       "Example:",
       "  pnpm omo:status:brief -- --work-item 05-planner-week-core",
+      "  pnpm omo:status:brief",
       "",
     ].join("\n"),
   );
@@ -40,6 +45,10 @@ function parseArgs(argv) {
       options.help = true;
       continue;
     }
+    if (token === "--all") {
+      options.all = true;
+      continue;
+    }
 
     if (token === "--work-item" || token === "--slice") {
       const key = token
@@ -62,6 +71,14 @@ function main() {
   if (options.help) {
     printUsage();
     process.exit(0);
+  }
+
+  if (options.all || !options.workItem) {
+    const statuses = readAllWorkItemSessionStatuses({
+      rootDir: process.cwd(),
+    });
+    process.stdout.write(`${formatBriefStatusList(statuses)}\n`);
+    return;
   }
 
   const status = readWorkItemSessionStatus({

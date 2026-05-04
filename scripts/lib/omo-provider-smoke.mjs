@@ -29,6 +29,7 @@ const DEFAULT_PROVIDER_TARGETS = [
  * @property {boolean} [claudeOnly]
  * @property {boolean} [codexOnly]
  * @property {boolean} [assertClean]
+ * @property {number} [timeoutMs]
  */
 
 function ensureNonEmptyString(value, label) {
@@ -133,6 +134,7 @@ function runSingleProviderSmoke({
   claudeBin,
   opencodeBin,
   assertClean,
+  timeoutMs,
 } = {}) {
   if (assertClean) {
     assertTrackedFilesClean(rootDir);
@@ -158,7 +160,12 @@ function runSingleProviderSmoke({
     claudeBin,
     opencodeBin,
     homeDir,
-    environment,
+    environment: {
+      ...(environment ?? {}),
+      ...(Number.isFinite(timeoutMs) && timeoutMs > 0
+        ? { OMO_PROVIDER_TIMEOUT_MS: String(timeoutMs) }
+        : {}),
+    },
   });
   const secondRun = runStageWithArtifacts({
     rootDir,
@@ -172,7 +179,12 @@ function runSingleProviderSmoke({
     claudeBin,
     opencodeBin,
     homeDir,
-    environment,
+    environment: {
+      ...(environment ?? {}),
+      ...(Number.isFinite(timeoutMs) && timeoutMs > 0
+        ? { OMO_PROVIDER_TIMEOUT_MS: String(timeoutMs) }
+        : {}),
+    },
   });
 
   if (assertClean) {
@@ -207,6 +219,7 @@ export function runProviderSmoke({
   claudeOnly = false,
   codexOnly = false,
   assertClean = true,
+  timeoutMs,
 } = {}) {
   const targets = buildProviderSmokeTargets({ claudeOnly, codexOnly }).map((target) =>
     runSingleProviderSmoke({
@@ -218,6 +231,7 @@ export function runProviderSmoke({
       claudeBin,
       opencodeBin,
       assertClean,
+      timeoutMs,
     }),
   );
   const errors = targets

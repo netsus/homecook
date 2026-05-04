@@ -1,7 +1,7 @@
 {
   "version": 1,
   "target": "OMO v2",
-  "updated_at": "2026-04-23T01:10:00Z",
+  "updated_at": "2026-05-04T16:13:20Z",
   "canonical_policy": "v2",
   "execution_mode": "default",
   "documentation_gates": [
@@ -104,12 +104,9 @@
     }
   ],
   "promotion_gate": {
-    "status": "not-ready",
-    "blockers": [
-      "H-OMO-001",
-      "H-OMO-006"
-    ],
-    "next_review_trigger": "After incident-aware audit rerun confirms that only promotion drift and runtime/observability families remain open",
-    "notes": "Representative replay acceptance passes. Recent fixes resolved the closeout authority overlap blocker (H-GOV-001) and reduced several incident families to monitoring: closeout projection (OMO-07-002), authority_precheck contract (OMO-07-004), PR/CI drift (OMO-07-005, OMO-07-006), and session/cost (OMO-07-008). Promotion remains not-ready because active open blocker families still remain: promotion drift (OMO-RETRO-003) and runtime/observability (OMO-07-003, OMO-07-007). Slice03 historical artifact gap and retrospective 03-05 umbrella are recorded with artifact-missing accepted disposition and are no longer treated as active blockers."
+    "status": "ready",
+    "blockers": [],
+    "next_review_trigger": "Before changing OMO default policy or extracting this rail for another project, rerun harness:audit, validate:workflow-v2, omo:status:brief, omo:scheduler:verify, and the required live smoke rehearsal.",
+    "notes": "Representative replay acceptance passes, documentation and operational gates pass, and active incident blockers are closed or dispositioned. OMO-RETRO-003, OMO-07-003, and OMO-07-007 moved to closed-by-replay after incident-aware promotion sync, runtime observability, no-arg status, bounded provider smoke timeout, and scheduler verification updates. Final default policy changes still require the normal docs-governance approval path."
   }
 }

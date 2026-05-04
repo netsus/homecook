@@ -249,17 +249,22 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-07-003
 
-- status: `open`
+- status: `closed-by-replay`
 - boundary: `omo-system`
 - bucket: `D. Runtime / Observability Reset`
 - stage_scope: `Stage 2 / Stage 4 authority_precheck`
 - symptom: background task 대기 중 run 종료, stale lock, `skip_locked -> none`, runtime `stage_running` residue가 발생했다.
-- current_recovery: runtime을 수동으로 `stage_result_ready`로 복구하거나 stale lock을 직접 풀었다.
+- current_recovery: stale lock / `stage_running` residue는 supervisor tick recovery와 runtime observability로 판별 가능해졌고, representative replay acceptance가 수동 runtime JSON edit, 수동 stale lock clear 없이 통과했다. `pnpm omo:status:brief`도 work item 인자 없이 전체 runtime signal을 보여 stale residue를 즉시 식별한다.
 - root_cause_hypothesis: runtime state machine이 실제 actor lifecycle과 맞지 않고, stale/live 판단에 필요한 heartbeat와 process visibility가 부족하다.
 - evidence_refs:
   - `.artifacts/omo-findings/slice07-omo-failure-log.md`
   - `scripts/lib/omo-session-runtime.mjs`
   - `scripts/lib/omo-autonomous-supervisor.mjs`
+  - `scripts/lib/omo-status-summary.mjs`
+  - `scripts/omo-status-brief.mjs`
+  - `tests/omo-autonomous-supervisor.test.ts`
+  - `tests/omo-status-summary.test.ts`
+  - `.workflow-v2/replay-acceptance.json`
 
 ### OMO-07-004
 
@@ -304,16 +309,20 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-07-007
 
-- status: `open`
+- status: `closed-by-replay`
 - boundary: `omo-system`
 - bucket: `D. Runtime / Observability Reset`
 - stage_scope: `in-flight operator visibility`
 - symptom: `running`, `stage_running`, stdout/stderr, transcript, stale lock, retry wait를 operator가 즉시 구분하기 어렵다.
-- current_recovery: artifact 디렉터리와 runtime JSON을 수동으로 대조했다.
+- current_recovery: `omo:status`와 `omo:status:brief`가 runtime signal, live process, heartbeat freshness, transcript freshness, retry/wait age, artifact path를 직접 노출한다. 인자 없는 `pnpm omo:status:brief`는 repo-local runtime 전체를 compact view로 보여 operator가 수동 JSON 대조 없이 상태를 분류할 수 있다.
 - root_cause_hypothesis: runtime summary가 heartbeat, transcript freshness, live process, recent tool activity를 직접 노출하지 않는다.
 - evidence_refs:
   - `.artifacts/omo-findings/slice07-omo-failure-log.md`
   - `.opencode/README.md`
+  - `scripts/lib/omo-status-summary.mjs`
+  - `scripts/omo-status.mjs`
+  - `scripts/omo-status-brief.mjs`
+  - `tests/omo-status-summary.test.ts`
 
 ### OMO-07-008
 
@@ -359,12 +368,12 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ### OMO-RETRO-003
 
-- status: `open`
+- status: `closed-by-replay`
 - boundary: `omo-system`
 - bucket: `F. Auditor / Promotion Reset`
 - stage_scope: `promotion default-cutover`
 - symptom: `promotion-gate-final-review`는 같은 날 `not-ready`와 `H-OMO-001`을 남겼지만, 이어진 `promotion-gate-default-cutover`는 sampled slices를 `01~03`으로 제한한 채 findings 0 / `ready`를 선언했다. 그 다음날 promotion ledger는 `ready` + `execution_mode=default`로 올라갔고, slice06 manual handoff와 runtime/recovery signal은 cutover 판단에서 사라졌다.
-- current_recovery: docs-governance cutover는 positive audit/ledger alignment를 사용했고, incident-aware replay나 slice06 local artifact retention proof는 요구하지 않았다.
+- current_recovery: meta-harness auditor가 recent/incident-aware sample, runtime anomaly summary, promotion drift detection, replay acceptance, active incident registry를 함께 읽는다. `syncPromotionGateWithReplayAcceptance`도 replay가 pass여도 active OMO-system incident가 남아 있으면 promotion gate를 `not-ready`로 되돌린다. 따라서 sample 축소나 stale ledger만으로 `ready`가 재선언되지 않는다.
 - root_cause_hypothesis: promotion audit sampling과 gate logic가 recent incident corpus, unsampled pilot lane, contradictory audit output을 함께 소화하지 못한 채 cutover를 허용했다.
 - evidence_refs:
   - `.artifacts/meta-harness-auditor/promotion-gate-final-review/report.md`
@@ -372,6 +381,11 @@ reset 기간의 기본 규칙은 아래와 같다.
   - `.artifacts/meta-harness-auditor/promotion-gate-final-review/audit-context.json`
   - `.artifacts/meta-harness-auditor/promotion-gate-default-cutover/audit-context.json`
   - `.workflow-v2/promotion-evidence.json`
+  - `.workflow-v2/replay-acceptance.json`
+  - `scripts/lib/meta-harness-auditor.mjs`
+  - `scripts/lib/omo-promotion-evidence.mjs`
+  - `tests/meta-harness-auditor.test.ts`
+  - `tests/omo-promotion-evidence.test.ts`
 
 ### OMO-10-12-001
 
@@ -392,7 +406,9 @@ reset 기간의 기본 규칙은 아래와 같다.
 
 ## Current Active Blocker Set
 
-현재 `not-ready`를 직접 설명하는 incident set은 아래처럼 읽는다.
+현재 promotion gate를 직접 막는 active incident blocker는 없다.
+
+이번 closeout에서 아래 blocker family는 `closed-by-replay`로 내려갔다.
 
 - promotion / auditor drift
   - `OMO-RETRO-003`

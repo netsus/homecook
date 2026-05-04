@@ -5,6 +5,7 @@ import { runStageWithArtifacts } from "./omo-lite-runner.mjs";
 import { buildOperatorGuidance, buildRuntimeObservability } from "./omo-status-summary.mjs";
 import { readTrackedWorkItemWithRecovery } from "./omo-tracked-work-item.mjs";
 import {
+  listRuntimeStates,
   listDueRuntimeStates,
   readRuntimeState,
   withRuntimeLock,
@@ -374,4 +375,32 @@ export function readWorkItemSessionStatus({
     runtimeObservability: buildRuntimeObservability(runtime.state),
     operatorGuidance: buildOperatorGuidance(runtime.state),
   };
+}
+
+export function readAllWorkItemSessionStatuses({
+  rootDir = process.cwd(),
+} = {}) {
+  return listRuntimeStates(rootDir)
+    .sort((left, right) =>
+      String(left.state.work_item_id).localeCompare(String(right.state.work_item_id)),
+    )
+    .map(({ state }) => {
+      try {
+        return readWorkItemSessionStatus({
+          rootDir,
+          workItemId: state.work_item_id,
+          slice: state.slice ?? undefined,
+        });
+      } catch {
+        return {
+          workItemId: state.work_item_id,
+          slice: state.slice ?? state.work_item_id,
+          trackedWorkItem: null,
+          trackedStatus: null,
+          runtime: state,
+          runtimeObservability: buildRuntimeObservability(state),
+          operatorGuidance: buildOperatorGuidance(state),
+        };
+      }
+    });
 }
