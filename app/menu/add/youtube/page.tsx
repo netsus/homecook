@@ -1,9 +1,10 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { YoutubeImportScreen } from "@/components/recipe/youtube-import-screen";
 import { resolveNextPath } from "@/lib/auth/callback";
 import { readE2EAuthOverrideCookie } from "@/lib/auth/e2e-auth-override";
+import { isYoutubeImportEnabled } from "@/lib/feature-flags";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { getServerAuthUser } from "@/lib/supabase/server";
 
@@ -11,11 +12,17 @@ export const metadata = {
   title: "유튜브 레시피 가져오기 · 집밥",
 };
 
+export const dynamic = "force-dynamic";
+
 interface YoutubeImportPageProps {
   searchParams: Promise<{ date?: string; columnId?: string; slot?: string }>;
 }
 
 export default async function YoutubeImportPage({ searchParams }: YoutubeImportPageProps) {
+  if (!isYoutubeImportEnabled()) {
+    notFound();
+  }
+
   const { date, columnId, slot } = await searchParams;
   const cookieStore = await cookies();
   const authOverride = readE2EAuthOverrideCookie(cookieStore);
