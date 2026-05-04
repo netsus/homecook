@@ -920,6 +920,8 @@ export function YoutubeImportScreen({
   slotName,
 }: YoutubeImportScreenProps) {
   const router = useRouter();
+  const internalHistoryDepthRef = useRef(0);
+  const bypassPopGuardRef = useRef(false);
 
   // Step state
   const [currentStep, setCurrentStep] = useState<Step>("url-input");
@@ -984,11 +986,16 @@ export function YoutubeImportScreen({
   // History state management for browser back
   useEffect(() => {
     function handlePopState() {
+      if (bypassPopGuardRef.current) {
+        return;
+      }
+
       setCurrentStep((prev) => {
         if (prev === "review") {
           setModalMode("confirm-back");
           // Push state again to keep the user on the page
           window.history.pushState({ step: "review" }, "");
+          internalHistoryDepthRef.current += 1;
           return prev;
         }
         if (prev === "non-recipe-warning") return "url-input";
@@ -1006,7 +1013,25 @@ export function YoutubeImportScreen({
   const pushStep = useCallback((step: Step) => {
     setCurrentStep(step);
     window.history.pushState({ step }, "");
+    internalHistoryDepthRef.current += 1;
   }, []);
+
+  const exitImportFlow = useCallback(() => {
+    const backSteps = internalHistoryDepthRef.current + 1;
+    bypassPopGuardRef.current = true;
+
+    if (backSteps > 0 && window.history.length > 1) {
+      window.history.go(-backSteps);
+      window.setTimeout(() => {
+        if (window.location.pathname === "/menu/add/youtube") {
+          router.replace("/");
+        }
+      }, 300);
+      return;
+    }
+
+    router.replace("/");
+  }, [router]);
 
   // ─── Step 1 handlers ───────────────────────────────────────────────
 
@@ -1247,8 +1272,8 @@ export function YoutubeImportScreen({
   }, [registeredRecipeId, router]);
 
   const handleClose = useCallback(() => {
-    router.back();
-  }, [router]);
+    exitImportFlow();
+  }, [exitImportFlow]);
 
   // ─── Back handling ─────────────────────────────────────────────────
 
@@ -1266,8 +1291,8 @@ export function YoutubeImportScreen({
 
   const handleConfirmBack = useCallback(() => {
     setModalMode("none");
-    router.back();
-  }, [router]);
+    exitImportFlow();
+  }, [exitImportFlow]);
 
   // ─── Reenter / retry ──────────────────────────────────────────────
 
