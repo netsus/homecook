@@ -33,8 +33,23 @@ function isLocalSupabaseUrl(value: string | undefined) {
 
   try {
     const url = new URL(value);
+    const hostname = url.hostname;
 
-    return url.hostname === "127.0.0.1" || url.hostname === "localhost";
+    if (hostname === "127.0.0.1" || hostname === "localhost") {
+      return true;
+    }
+
+    const octets = hostname.split(".").map((part) => Number(part));
+
+    if (octets.length !== 4 || octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
+      return false;
+    }
+
+    const [first, second] = octets;
+
+    return first === 10
+      || (first === 172 && second >= 16 && second <= 31)
+      || (first === 192 && second === 168);
   } catch {
     return false;
   }

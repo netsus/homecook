@@ -42,6 +42,15 @@ describe("local dev auth helpers", () => {
     expect(isLocalDevAuthEnabled()).toBe(true);
   });
 
+  it("enables local dev auth when local Supabase is exposed through a private LAN IP", async () => {
+    process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_LOCAL_DEV_AUTH = "1";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://192.168.0.11:54321";
+
+    const { isLocalDevAuthEnabled } = await importLocalDevAuthModule();
+
+    expect(isLocalDevAuthEnabled()).toBe(true);
+  });
+
   it("keeps local dev auth disabled for remote Supabase projects", async () => {
     process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_LOCAL_DEV_AUTH = "1";
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://geenkqiawwsvjrctvqhx.supabase.co";
