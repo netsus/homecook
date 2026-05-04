@@ -225,6 +225,100 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await expect(page).toHaveURL(/\/recipe\/recipe-manual-1/);
   });
 
+  test("create failure shows error and allows retry", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+
+    await installCookingMethodsRoute(page, [
+      {
+        id: "method-1",
+        code: "stir_fry",
+        label: "볶기",
+        color_key: "orange",
+        is_system: true,
+      },
+    ]);
+    await installIngredientsRoute(page, [
+      { id: "ing-1", standard_name: "양파", category: "야채" },
+    ]);
+
+    let createPostCount = 0;
+    await page.route("**/api/v1/recipes", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+
+      createPostCount += 1;
+      if (createPostCount === 1) {
+        await route.fulfill({
+          status: 500,
+          json: {
+            success: false,
+            data: null,
+            error: {
+              code: "INTERNAL_ERROR",
+              message: "테스트용 등록 실패",
+              fields: [],
+            },
+          },
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 201,
+        json: {
+          success: true,
+          data: {
+            id: "recipe-manual-retry",
+            title: "재시도 레시피",
+            source_type: "manual",
+            created_by: "user-1",
+            base_servings: 2,
+          },
+          error: null,
+        },
+      });
+    });
+
+    await page.goto(MANUAL_RECIPE_CREATE_URL);
+    await page.fill('input[placeholder="레시피명 (필수)"]', "재시도 레시피");
+
+    await page.click("text=+ 재료 추가");
+    await page.fill('input[placeholder="재료 검색"]', "양파");
+    await page.waitForTimeout(400);
+    await page.click("text=· 양파");
+    await page
+      .locator('div.fixed.inset-0.z-50')
+      .last()
+      .locator('button:has-text("추가")')
+      .click();
+
+    await page.click("text=+ 조리 과정 추가");
+    await page.click('button:has-text("볶기")');
+    await page.fill(
+      'textarea[placeholder="조리 설명을 입력하세요"]',
+      "양파를 볶아주세요"
+    );
+    await page
+      .locator('div.fixed.inset-0.z-50')
+      .last()
+      .locator('button:has-text("추가")')
+      .click();
+
+    const saveButton = page.locator('button:has-text("저장")');
+    await expect(saveButton).toBeEnabled();
+
+    await saveButton.click();
+    await expect(page.getByText("테스트용 등록 실패")).toBeVisible();
+    await expect(saveButton).toBeEnabled();
+
+    await saveButton.click();
+    await expect(page.locator("text=레시피 등록 완료")).toBeVisible({ timeout: 5000 });
+    await expect(page.locator("text=재시도 레시피")).toBeVisible();
+    expect(createPostCount).toBe(2);
+  });
+
   test("validation: cannot save without required fields", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
 
