@@ -4,8 +4,9 @@
 
 ## Current State
 
-- Latest merged baseline: `master` after PR #329 (`e7cc446`).
-- Automated PR checks on PR #329: GitGuardian, accessibility, build, labeler, lighthouse, policy, quality, security-smoke, smoke, template-check, visual all passed.
+- Latest merged baseline: `master` after PR #330 (`699ee9b`).
+- Current regression baseline: 2026-05-05 KST pre-design-unification local baseline. Product tests, build, smoke rerun, a11y, visual, security, Lighthouse, and harness passed.
+- Baseline limitation: this is a comparison point before the upcoming app-wide design unification. Rerun the same gate on the post-design release-candidate SHA before staging/beta invite.
 - Product slice roadmap: slices `01` through `19` are `merged`.
 - YouTube import beta exposure: keep off by default unless live YouTube smoke passes with the feature flag enabled.
 - Live OAuth: still blocked until real OAuth credentials are configured in staging or GitHub Actions secrets.
@@ -17,12 +18,25 @@ Do not invite beta users until all required items below are true.
 
 | Gate | Required? | Evidence |
 | --- | --- | --- |
+| Post-design regression baseline on release-candidate SHA | Yes | command list, counts, SHA, known flakes |
 | Latest `master` deployed to staging/beta | Yes | deploy SHA and URL |
 | Live OAuth smoke | Yes | GitHub workflow run or staging smoke evidence |
 | Real-device mobile smoke | Yes | device, OS, browser, screenshot or recording |
 | YouTube import flag off | Yes unless intentionally testing YouTube | env snapshot or deploy note |
 | Manual checklist for beta-visible flows | Yes | checklist notes linked from QA issue list |
 | P0/P1 open issues | Must be zero | beta issue table |
+
+## Regression Baseline Policy
+
+Use the regression baseline as a before/after comparison tool, not as a permanent release pass.
+
+1. Capture a baseline before high-blast-radius work such as app-wide design unification.
+2. After that work merges, rerun the same automated gate on the exact candidate SHA intended for staging.
+3. Compare failures to the saved baseline:
+   - New deterministic failures block staging until fixed or explicitly reclassified.
+   - A known one-off flake may be accepted only after the exact test and full suite rerun pass.
+   - Manual-only gaps cannot be closed by baseline automation.
+4. Record the command, result counts, SHA, and any accepted flake note in the beta issue list or a dated follow-up QA report.
 
 ## Daily Beta Loop
 
@@ -86,6 +100,7 @@ After the first beta cycle, run a go/no-go review before public launch hardening
 
 - P0/P1 count is zero.
 - Repeated P2 issues have owner and target timing.
+- Post-design regression baseline passed on the latest release-candidate SHA.
 - `BETA-QA-002`, `BETA-QA-003`, and beta-visible manual checklist items have evidence.
 - YouTube import is either still hidden or has live external smoke evidence.
 - Latest `master` has all PR checks green.
