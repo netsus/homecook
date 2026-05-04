@@ -406,6 +406,50 @@ test.describe("Slice 19: YouTube Import", () => {
     // Error modal should appear
     await expect(page.locator("text=레시피 등록 실패")).toBeVisible({ timeout: 5000 });
     await expect(page.locator("text=레시피를 등록하지 못했어요")).toBeVisible();
+    await expect(page.locator("text=레시피가 등록됐어요")).toHaveCount(0);
+  });
+
+  test("review back confirm: leave exits youtube import", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installCookingMethodsRoute(page);
+    await installIngredientsRoute(page);
+    await installValidateRoute(page, { is_recipe_video: true });
+    await installExtractRoute(page);
+
+    await page.goto("/");
+    await page.goto(YOUTUBE_IMPORT_URL);
+    await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=recipe12345");
+    await page.click('button:has-text("가져오기")');
+
+    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await page.locator('input[value="백종원 김치찌개"]').fill("수정한 김치찌개");
+
+    await page.getByLabel("뒤로 가기").click();
+    await expect(page.locator("text=수정 내용이 사라져요")).toBeVisible();
+
+    await page.click('button:has-text("나가기")');
+    await expect(page).toHaveURL(`${E2E_APP_ORIGIN}/`);
+  });
+
+  test("complete close: exits youtube import", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installCookingMethodsRoute(page);
+    await installIngredientsRoute(page);
+    await installValidateRoute(page, { is_recipe_video: true });
+    await installExtractRoute(page);
+    await installRegisterRoute(page);
+
+    await page.goto("/");
+    await page.goto(YOUTUBE_IMPORT_URL);
+    await page.locator('input[type="url"]').fill("https://www.youtube.com/watch?v=recipe12345");
+    await page.click('button:has-text("가져오기")');
+    await expect(page.locator("text=추출 결과를 확인해주세요")).toBeVisible({ timeout: 10000 });
+    await page.click('button:has-text("등록")');
+
+    await expect(page.locator("text=레시피가 등록됐어요")).toBeVisible({ timeout: 5000 });
+    await page.click('button:has-text("닫기")');
+
+    await expect(page).toHaveURL(`${E2E_APP_ORIGIN}/`);
   });
 
   test("guest: redirects to login with return-to-action", async ({ page }) => {
