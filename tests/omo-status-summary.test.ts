@@ -4,7 +4,9 @@ import {
   buildOperatorGuidance,
   buildRuntimeObservability,
   formatBriefStatus,
+  formatBriefStatusList,
   formatFullStatus,
+  formatFullStatusList,
 } from "../scripts/lib/omo-status-summary.mjs";
 
 describe("OMO status summary", () => {
@@ -495,5 +497,53 @@ describe("OMO status summary", () => {
     expect(formatBriefStatus(status)).toContain("transcriptAge   : 27m");
     expect(formatBriefStatus(status)).toContain("sessionRollover : not-needed");
     expect(formatBriefStatus(status)).toContain("waitUpdated     : 2026-04-20T10:00:00.000Z");
+  });
+
+  it("renders empty all-status summaries without requiring a work item id", () => {
+    expect(formatBriefStatusList([])).toContain("no runtime states found");
+    expect(formatFullStatusList([])).toContain("no runtime states found");
+  });
+
+  it("renders multiple brief statuses with runtime visibility fields", () => {
+    const output = formatBriefStatusList([
+      {
+        workItemId: "03-recipe-like",
+        slice: "03-recipe-like",
+        trackedWorkItem: null,
+        trackedStatus: null,
+        runtime: {
+          active_stage: 2,
+          phase: "wait",
+          wait: {
+            kind: "ready_for_next_stage",
+            updated_at: "2026-04-20T10:00:00.000Z",
+          },
+          sessions: {},
+          prs: {},
+        },
+        runtimeObservability: {
+          status: "ready_to_resume",
+          detail: "next stage can resume after 3m",
+          heartbeatAge: "3m",
+          heartbeatSource: "wait.updated_at",
+          heartbeatFreshness: "fresh",
+          transcriptFreshness: "missing",
+          sessionRolloverRecommended: false,
+        },
+        operatorGuidance: {
+          reasonCode: null,
+          remediationState: null,
+          validatorName: null,
+          failurePath: null,
+          artifactPath: null,
+          nextRecommendation: "resume",
+        },
+      },
+    ]);
+
+    expect(output).toContain("workItem        : 03-recipe-like");
+    expect(output).toContain("runtimeSignal   : ready_to_resume");
+    expect(output).toContain("heartbeatFresh  : fresh");
+    expect(output).toContain("transcriptFresh : missing");
   });
 });

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   continueWorkItemSession,
+  readAllWorkItemSessionStatuses,
   readWorkItemSessionStatus,
   resumePendingWorkItems,
   runWorkItemStage,
@@ -396,6 +397,9 @@ describe("OMO session orchestrator", () => {
       sessionFreshness: "stale_candidate",
       lastActivitySource: "execution.started_at",
     });
+    expect(readAllWorkItemSessionStatuses({ rootDir }).map((entry) => entry.workItemId)).toContain(
+      "03-recipe-like",
+    );
   }, 15_000);
 
   it("resumes due blocked stages from the stored Claude session", () => {

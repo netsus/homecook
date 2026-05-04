@@ -133,4 +133,56 @@ describe("OMO provider smoke", () => {
       readFileSync(result.targets[0].runs[0].stageResultPath, "utf8"),
     ).toContain("\"summary_markdown\": \"provider smoke\"");
   });
+
+  it("passes a bounded provider timeout into smoke executions", () => {
+    const rootDir = mkdtempSync(join(tmpdir(), "omo-provider-smoke-"));
+    const timeoutPath = join(rootDir, "provider-timeout.log");
+    const binPath = join(rootDir, "fake-opencode-timeout.sh");
+
+    writeFileSync(
+      binPath,
+      [
+        "#!/bin/sh",
+        "if [ \"$1\" = \"auth\" ] && [ \"$2\" = \"list\" ]; then",
+        "  printf '%s\\n' '1 credential configured'",
+        "  exit 0",
+        "fi",
+        `printf '%s\\n' "$OMO_PROVIDER_TIMEOUT_MS" >> "${timeoutPath}"`,
+        "if [ -n \"$OMO_STAGE_RESULT_PATH\" ]; then",
+        "cat <<'EOF' > \"$OMO_STAGE_RESULT_PATH\"",
+        JSON.stringify(
+          {
+            result: "done",
+            summary_markdown: "provider smoke",
+            commit: { subject: "feat: smoke" },
+            pr: {
+              title: "feat: smoke",
+              body_markdown: "## Summary\n- smoke",
+            },
+            checks_run: [],
+            next_route: "open_pr",
+          },
+          null,
+          2,
+        ),
+        "EOF",
+        "fi",
+        "printf '%s\\n' '{\"type\":\"step_start\",\"sessionID\":\"ses_timeout\",\"part\":{\"type\":\"step-start\"}}'",
+        "printf '%s\\n' '{\"type\":\"step_finish\",\"sessionID\":\"ses_timeout\",\"part\":{\"type\":\"step-finish\",\"reason\":\"stop\"}}'",
+      ].join("\n"),
+    );
+    chmodSync(binPath, 0o755);
+
+    const result = runProviderSmoke({
+      rootDir,
+      artifactBaseDir: join(rootDir, ".artifacts", "omo-provider-smoke"),
+      opencodeBin: binPath,
+      codexOnly: true,
+      assertClean: false,
+      timeoutMs: 12345,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(readFileSync(timeoutPath, "utf8").trim().split(/\r?\n/)).toEqual(["12345", "12345"]);
+  });
 });

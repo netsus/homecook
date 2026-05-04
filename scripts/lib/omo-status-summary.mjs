@@ -939,3 +939,29 @@ export function formatBriefStatus(status) {
     `lockOwner       : ${runtime.lock?.owner ?? "-"}`,
   ].join("\n");
 }
+
+export function formatBriefStatusList(statuses) {
+  if (!Array.isArray(statuses) || statuses.length === 0) {
+    return [
+      "OMO runtime status: no runtime states found.",
+      "Pass --work-item <id> after starting an OMO work item, or start one with pnpm omo:start.",
+    ].join("\n");
+  }
+
+  return statuses
+    .map((status) => formatBriefStatus(status))
+    .join("\n\n---\n\n");
+}
+
+export function formatFullStatusList(statuses) {
+  if (!Array.isArray(statuses) || statuses.length === 0) {
+    return [
+      "OMO runtime status: no runtime states found.",
+      "Pass --work-item <id> after starting an OMO work item, or start one with pnpm omo:start.",
+    ].join("\n");
+  }
+
+  return statuses
+    .map((status) => formatFullStatus(status))
+    .join("\n\n---\n\n");
+}

@@ -24,7 +24,7 @@
   - Homecook OMO는 Codex가 orchestration owner이고 OMO가 deterministic rail인 `Codex-orchestrated OMO rail`로 전환한다.
   - Claude는 Stage 1/3/4, authority-required final gate, 독립 review가 필요한 specialized lane으로 남긴다.
 - 현재 readiness 경계:
-  - `OMO autonomous promotion`은 아직 `not-ready`다. `.workflow-v2/promotion-evidence.json`의 promotion gate와 active incident blocker를 해소하기 전에는 OMO 단독 승격 완료로 보지 않는다.
+  - `OMO autonomous promotion`은 repo evidence 기준 `ready`다. `.workflow-v2/promotion-evidence.json`의 promotion gate가 ready이고 active incident blocker가 없을 때만 이 상태를 유지한다.
   - `Codex-orchestrated OMO rail`은 product slice 진행에 사용할 수 있다. Codex가 blocker 분류와 repair routing을 맡고, OMO는 상태, validator, current-head gate, closeout/report projection을 담당한다.
   - slice `12b-shopping-pantry-reflect` 시작 전에는 [omo-codex-orchestrated-rail.md](./omo-codex-orchestrated-rail.md)의 `Slice 12b Preflight Lock`을 먼저 확인한다.
 
@@ -103,7 +103,7 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 - [omo-autonomous-supervisor.md](./omo-autonomous-supervisor.md): maintainer spec. local worktree / PR / CI / merge / scheduler supervisor 규격
 - [omo-supervisor-reset-plan.md](./omo-supervisor-reset-plan.md): slice07 이후 OMO를 patch accumulation이 아니라 supervisor reset 관점에서 다시 축소/재잠그기 위한 계획 문서
 - [omo-codex-orchestrated-rail.md](./omo-codex-orchestrated-rail.md): Codex를 orchestration owner로 두고 OMO를 deterministic rail로 줄이는 전환 결정, reason code, baseline evidence
-- [omo-incident-registry.md](./omo-incident-registry.md): slice07 failure log와 prior pilot 흔적을 reset input corpus로 관리하는 incident registry
+- [omo-incident-registry.md](./omo-incident-registry.md): slice07 failure log와 early-run 흔적을 reset input corpus로 관리하는 incident registry
 - [omo-governance-surface-map.md](./omo-governance-surface-map.md): stage actor / operator / maintainer가 읽어야 할 문서 표면을 다시 자르기 위한 책임 경계 맵
 - [omo-canonical-closeout-state.md](./omo-canonical-closeout-state.md): closeout truth를 한 surface로 줄이고 README / acceptance / PR body / status를 projection으로 내리기 위한 Phase 2 후보 설계
 - [omo-auditor-reset-requirements.md](./omo-auditor-reset-requirements.md): meta-harness-auditor가 incident corpus, runtime anomaly, promotion drift를 기본 입력으로 읽도록 다시 잠그는 Phase 6 요구사항
@@ -238,10 +238,10 @@ v2는 이 문제를 풀기 위해 다음을 추가한다.
 11. reviewer fallback도 tracked state에 같이 남기려면 `pnpm omo:run-stage -- --slice <id> --stage <n> --sync-status`를 사용한다.
 12. sandbox GitHub repo에서 supervisor control plane을 점검할 때는 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name>`를 사용한다.
 13. 실제 Claude 첫 리뷰가 반드시 `request_changes`를 내고 Codex가 그 피드백 토큰을 반영하는지까지 최소 프롬프트로 보려면 `pnpm omo:smoke:control-plane -- --sandbox-repo <owner/name> --live-providers`를 사용한다. 이 모드는 backend Stage 2/3만 실제 provider를 사용한다.
-14. 실제 Claude/Codex provider 경로, session reuse, stage-result 생성을 분리 검증할 때는 `pnpm omo:smoke:providers`를 사용한다.
+14. 실제 Claude/Codex provider 경로, session reuse, stage-result 생성을 분리 검증할 때는 `pnpm omo:smoke:providers`를 사용한다. 이 smoke는 기본 120초 timeout을 적용하며, 필요 시 `--timeout-ms <ms>`로 조정한다.
 15. slice06 또는 parallel checkpoint 결과를 promotion lane ledger에 남길 때는 `pnpm omo:promotion:update`를 사용한다. 상세 section/id 조합은 `promotion-readiness.md`를 따른다.
 16. representative replay lane 결과를 replay ledger에 남길 때는 `pnpm omo:replay:update`를 사용한다. lane/id/criteria 조합은 `omo-replay-acceptance.md`를 따른다.
-17. macOS scheduler는 `pnpm omo:scheduler:install -- --work-item <id>`로 설치하고 `pnpm omo:scheduler:verify -- --work-item <id>`로 확인한다.
+17. macOS scheduler는 `pnpm omo:scheduler:install -- --work-item <id>`로 설치하고 `pnpm omo:scheduler:verify -- --work-item <id>`로 확인한다. 인자 없는 `pnpm omo:scheduler:verify`는 repo-local runtime 중 provider/control-plane smoke runtime을 제외한 scheduler-managed work item 전체를 점검한다.
    기본 execute kickoff는 scheduler를 자동 보장하고, 수동 install은 repair/custom cadence override용이다.
 18. `pnpm validate:workflow-v2`는 schema/example뿐 아니라 상위 workflow-v2 entry docs drift와 official source-of-truth reference drift도 함께 검사한다.
 
