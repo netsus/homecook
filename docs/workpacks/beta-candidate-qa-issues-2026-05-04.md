@@ -4,18 +4,30 @@
 
 ## Evidence Snapshot
 
-- Base: `master` after PR #329 merge (`e7cc446`)
-- Deterministic gate: `pnpm verify` passed on 2026-05-04
+- Base: `master` after PR #330 merge (`699ee9b`)
+- Regression baseline: pre-design-unification baseline captured on 2026-05-05 KST. Use this as the "known good before design work" comparison point, not as post-design release evidence.
+- Deterministic gate: equivalent local baseline passed on 2026-05-05 KST.
+  - `pnpm verify` ran through lint, typecheck, product tests, build, and full smoke. The first full smoke saw one non-reproducing `mobile-ios-small` timing failure in `slice-15a-cook-planner-complete`; the isolated retry passed, and a full `pnpm test:e2e:smoke` rerun passed.
 - Product tests: 58 files / 539 tests passed in the latest follow-up run
-- Playwright: smoke 641 passed / 4 skipped, a11y 6 passed, visual 12 passed, security 9 passed
+- Playwright: smoke 647 passed / 4 skipped on rerun, a11y 6 passed, visual 12 passed, security 9 passed
 - Lighthouse assertions: passed with empty `.lighthouseci/assertion-results.json`
-- Lighthouse performance: `/` 0.95, `/recipe/mock-kimchi-jjigae` 0.97-0.98 in the latest run
+- Lighthouse: `pnpm test:lighthouse` passed; local environment still emits known `GitHub token not set` and Node `punycode` warnings.
+- Harness: `pnpm verify:harness` passed, 47 files / 560 tests
 - Follow-up verification:
   - `pnpm test:product tests/youtube-import.backend.test.ts` passed after adding beta guard and URL-shape coverage
   - `pnpm test:e2e:oauth` ran but skipped 3 tests because live Google credentials are not present locally
   - `pnpm exec playwright test tests/e2e/slice-14-cook-session-start.spec.ts tests/e2e/slice-15a-cook-planner-complete.spec.ts tests/e2e/slice-15b-cook-standalone-complete.spec.ts tests/e2e/slice-16-leftovers.spec.ts tests/e2e/slice-17c-settings.spec.ts tests/e2e/slice-18-manual-recipe-create.spec.ts tests/e2e/slice-19-youtube-import.spec.ts --project=mobile-chrome --project=mobile-ios-small --grep-invert '@live-oauth'` passed, 138 tests
   - GitHub `Playwright Live OAuth` workflow on `master` run `25322608410` completed with 3 skipped tests because live OAuth secrets were not configured
-  - PR #329 passed GitGuardian, accessibility, build, labeler, lighthouse, policy, quality, security-smoke, smoke, template-check, and visual checks before merge
+
+## Regression Baseline Usage
+
+Use the 2026-05-05 baseline whenever a later change claims "nothing functional broke."
+
+1. Before merging the design-unification branch, rerun the same automated gate on that branch or on the post-merge release candidate.
+2. Compare failures against this baseline. A new failing file, route, viewport, visual snapshot, or Lighthouse assertion is a release-candidate regression until explained.
+3. If the same `slice-15a-cook-planner-complete` `mobile-ios-small` skip-consumed test fails once, rerun that exact test and then rerun `pnpm test:e2e:smoke`. Treat it as a known timing flake only if both reruns pass.
+4. Do not use this baseline to close live OAuth, real-device, Web Share, wake-lock, or live YouTube checks. Those remain staging/manual-only gates.
+5. Record the post-design baseline SHA and command results before beta invite. The pre-design baseline is only the comparison anchor.
 
 ## Current Defect Triage
 
@@ -57,9 +69,12 @@ Manual-only 항목은 모두 같은 무게가 아니다. 기준은 아래처럼 
 
 ## Recommended Next Order
 
-1. Staging에 최신 `master`를 배포한다.
-2. `BETA-QA-002` live OAuth smoke를 먼저 닫는다. 로컬에서는 credential 부재로 skipped였으므로 staging secret 또는 GitHub `Playwright Live OAuth` workflow가 필요하다.
-3. `BETA-QA-003` real-device mobile smoke를 핵심 5개 흐름으로 닫는다: planner, shopping, cook, leftovers, manual recipe creation. YouTube import는 flag off 상태라면 실기기 베타 필수 흐름에서 제외한다.
-4. YouTube import는 기본 flag off로 둔다. 노출이 필요하면 `HOMECOOK_ENABLE_YOUTUBE_IMPORT=1`을 켜기 전에 live YouTube smoke를 먼저 통과시킨다.
-5. 베타 시작 후 발견 이슈를 이 문서의 표에 추가하고, P0/P1만 즉시 수정한다.
-6. 베타 운영 루프는 `docs/workpacks/beta-operations-handoff-2026-05-04.md` 기준으로 돌린다: 매일 feedback triage, P0/P1 stop rule, P2/P3 backlog, public-launch graduation review를 기록한다.
+1. 디자인 통일 브랜치가 들어오기 전까지 이 문서의 2026-05-05 baseline을 "pre-design known good"으로 보존한다.
+2. 디자인 통일 작업이 merge되면 post-design release-candidate SHA에서 `pnpm verify` 또는 동등한 분해 실행, `pnpm verify:harness`를 다시 통과시킨다.
+3. 새 실패가 있으면 이 baseline과 비교해 디자인 회귀인지, 기존 known flake인지, 환경성 이슈인지 분류한다. 새 P0/P1 회귀는 staging 배포 전 수정한다.
+4. Post-design baseline이 green이면 staging에 최신 release-candidate SHA를 배포한다.
+5. `BETA-QA-002` live OAuth smoke를 닫는다. 로컬에서는 credential 부재로 skipped였으므로 staging secret 또는 GitHub `Playwright Live OAuth` workflow가 필요하다.
+6. `BETA-QA-003` real-device mobile smoke를 핵심 5개 흐름으로 닫는다: planner, shopping, cook, leftovers, manual recipe creation. YouTube import는 flag off 상태라면 실기기 베타 필수 흐름에서 제외한다.
+7. YouTube import는 기본 flag off로 둔다. 노출이 필요하면 `HOMECOOK_ENABLE_YOUTUBE_IMPORT=1`을 켜기 전에 live YouTube smoke를 먼저 통과시킨다.
+8. 베타 시작 후 발견 이슈를 이 문서의 표에 추가하고, P0/P1만 즉시 수정한다.
+9. 베타 운영 루프는 `docs/workpacks/beta-operations-handoff-2026-05-04.md` 기준으로 돌린다: 매일 feedback triage, P0/P1 stop rule, P2/P3 backlog, public-launch graduation review를 기록한다.

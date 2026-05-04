@@ -1,6 +1,6 @@
 # Beta Release Manual Checklist: 2026-05-04
 
-이 문서는 자동화만으로 닫을 수 없는 베타 후보 P2/P3 항목을 실제 배포 환경에서 확인하기 위한 체크리스트다.
+이 문서는 자동화만으로 닫을 수 없는 베타 후보 P1/P2/P3 항목을 실제 배포 환경에서 확인하기 위한 체크리스트다.
 
 ## Usage
 
@@ -8,6 +8,75 @@
 - 실행자: 배포 환경 접근 권한이 있는 사람.
 - 기록 위치: `docs/workpacks/beta-candidate-qa-issues-2026-05-04.md`의 해당 이슈 행 또는 별도 QA 리포트.
 - 공통 증거: 날짜, 배포 SHA, 기기, OS, 브라우저, 테스트 계정, 스크린샷 또는 짧은 화면 녹화.
+- 전제: 디자인 통일 이후 release-candidate SHA에서 regression baseline이 green이어야 한다. 이 체크리스트는 자동 회귀 검증을 대신하지 않고, 배포/실기기/외부 서비스 의존 항목만 닫는다.
+
+## BETA-QA-002: Live OAuth Smoke
+
+Prerequisites:
+- HTTPS staging/beta URL.
+- 실제 OAuth provider 설정이 staging/beta에 반영되어 있어야 한다.
+- 테스트용 Google 계정 또는 GitHub `Playwright Live OAuth` secrets.
+- 로그인 후 돌아갈 protected action URL 하나: 예를 들어 recipe detail 저장/좋아요 또는 planner 진입.
+
+Steps:
+1. 로그아웃 상태에서 protected action을 누른다.
+2. Google 로그인으로 이동하는지 확인한다.
+3. 테스트 계정으로 로그인한다.
+4. 앱으로 돌아온 뒤 원래 action 또는 return-to-action 흐름이 이어지는지 확인한다.
+5. 로그아웃 후 다시 로그인해 stale session 없이 정상 동작하는지 확인한다.
+6. 가능하면 GitHub `Playwright Live OAuth` workflow를 같은 deploy SHA에 대해 실행한다.
+
+Pass criteria:
+- OAuth redirect가 실제 provider에서 성공한다.
+- 앱 callback이 외부 URL로 새지 않고 안전한 내부 경로로 돌아온다.
+- protected action의 return flow가 유지된다.
+- 실패 시 사용자는 빈 화면이 아니라 로그인/오류 상태를 볼 수 있다.
+
+## BETA-QA-003: Real-device Mobile Smoke
+
+Prerequisites:
+- HTTPS staging/beta URL.
+- 최소 1개 실제 모바일 기기. 가능하면 iOS Safari와 Android Chrome을 각각 1회씩 확인한다.
+- 인증된 테스트 계정.
+- 테스트 계정에 planner, shopping, cook, leftovers, manual recipe creation을 실행할 수 있는 안전한 데이터.
+
+Steps:
+1. Planner: 주간 식단을 열고 날짜/끼니 이동, 식사 추가 진입, 돌아가기를 확인한다.
+2. Shopping: 장보기 preview 생성, 상세 진입, 체크/제외/read-only 노출을 확인한다.
+3. Cook: cooking ready에서 요리모드 진입, 재료/단계 탭 전환, 완료 전 취소를 확인한다.
+4. Leftovers: 남은요리 목록, 다먹음 처리, 다먹음 목록 진입을 확인한다.
+5. Manual recipe creation: 직접 레시피 등록 폼 입력, validation, 등록 후 상세 또는 meal add 흐름을 확인한다.
+6. 각 흐름에서 화면 하단 CTA, keyboard, modal/sheet, browser back이 겹치거나 막히지 않는지 확인한다.
+
+Pass criteria:
+- 핵심 5개 흐름이 실제 터치/키보드/브라우저 chrome 환경에서 막히지 않는다.
+- 화면 하단 CTA와 modal/sheet가 기기 safe area와 겹치지 않는다.
+- 실패가 있으면 기기/OS/브라우저와 화면 녹화 또는 스크린샷을 남긴다.
+
+## BETA-QA-004/BETA-QA-005: Live YouTube Smoke
+
+Run this only if YouTube import will be visible to beta users. If the feature remains hidden, record the feature-flag-off evidence instead.
+
+Prerequisites:
+- `HOMECOOK_ENABLE_YOUTUBE_IMPORT=1` or `NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT=1` is enabled on a staging/beta test deploy only.
+- Real YouTube integration credentials, quota, and error handling are configured if live extraction is intentionally tested.
+- Test URLs covering at least `watch`, `youtu.be`, `shorts`, and playlist watch URL shapes.
+- One non-recipe YouTube URL and one unavailable/private/error URL if safe to use.
+
+Steps:
+1. Confirm `/menu/add/youtube` is hidden when the flag is off.
+2. Turn the flag on in a staging/beta test deploy.
+3. Submit a valid recipe video URL and complete validate -> extract -> review -> register.
+4. Confirm the registered recipe appears in `my_added` and can enter planner add if context exists.
+5. Submit each URL shape and confirm video id parsing/extraction behavior.
+6. Submit non-recipe and unavailable/error URLs and confirm recoverable user-facing states.
+7. Turn the flag back off unless YouTube import is intentionally included in beta scope.
+
+Pass criteria:
+- Flag-off deploy hides YouTube import and closes the API.
+- Flag-on staging test proves live URL behavior for the planned beta scope.
+- External API failures do not create partial or wrong-owner recipes.
+- Quota/credential errors are visible as safe retry/error states, not silent success.
 
 ## BETA-QA-006: Web Share OS Sheet
 
