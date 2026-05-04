@@ -145,6 +145,24 @@ const newMethodId = "550e8400-e29b-41d4-a716-446655441101";
 const extractionId = "550e8400-e29b-41d4-a716-446655441201";
 const recipeUrl = "https://www.youtube.com/watch?v=recipe12345";
 const nonRecipeUrl = "https://youtu.be/nonrecipe123";
+const ORIGINAL_YOUTUBE_IMPORT_FLAG = process.env.HOMECOOK_ENABLE_YOUTUBE_IMPORT;
+const ORIGINAL_PUBLIC_YOUTUBE_IMPORT_FLAG = process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT;
+
+function restoreYoutubeImportEnv() {
+  vi.unstubAllEnvs();
+
+  if (ORIGINAL_YOUTUBE_IMPORT_FLAG === undefined) {
+    delete process.env.HOMECOOK_ENABLE_YOUTUBE_IMPORT;
+  } else {
+    process.env.HOMECOOK_ENABLE_YOUTUBE_IMPORT = ORIGINAL_YOUTUBE_IMPORT_FLAG;
+  }
+
+  if (ORIGINAL_PUBLIC_YOUTUBE_IMPORT_FLAG === undefined) {
+    delete process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT;
+  } else {
+    process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT = ORIGINAL_PUBLIC_YOUTUBE_IMPORT_FLAG;
+  }
+}
 
 function buildRegisterBody() {
   return {
@@ -216,6 +234,7 @@ async function importRegisterRoute() {
 describe("19 youtube import backend", () => {
   beforeEach(() => {
     vi.resetModules();
+    restoreYoutubeImportEnv();
     createRouteHandlerClient.mockReset();
     createServiceRoleClient.mockReset();
     ensurePublicUserRow.mockReset();
@@ -224,6 +243,33 @@ describe("19 youtube import backend", () => {
     createServiceRoleClient.mockReturnValue(null);
     ensurePublicUserRow.mockResolvedValue({});
     ensureUserBootstrapState.mockResolvedValue(undefined);
+  });
+
+  it("keeps YouTube import API closed in production unless explicitly enabled", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    delete process.env.HOMECOOK_ENABLE_YOUTUBE_IMPORT;
+    delete process.env.NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT;
+    mockAuth();
+
+    const { POST } = await importValidateRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/validate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ youtube_url: recipeUrl }),
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body).toEqual({
+      success: false,
+      data: null,
+      error: {
+        code: "FEATURE_DISABLED",
+        message: "유튜브 가져오기는 베타에서 준비 중이에요.",
+        fields: [],
+      },
+    });
+    expect(createRouteHandlerClient).not.toHaveBeenCalled();
   });
 
   it("fixture and schema baselines include YouTube import prerequisites", () => {
@@ -325,6 +371,40 @@ describe("19 youtube import backend", () => {
       },
       error: null,
     });
+  });
+
+  it("POST /api/v1/recipes/youtube/validate accepts common pasted YouTube URL shapes", async () => {
+    mockAuth();
+
+    const { POST } = await importValidateRoute();
+    const cases = [
+      ["watch URL", "https://www.youtube.com/watch?v=recipe12345", "recipe12345"],
+      ["short URL", "https://youtu.be/recipe12345", "recipe12345"],
+      ["shorts URL", "https://www.youtube.com/shorts/recipe12345?feature=share", "recipe12345"],
+      ["playlist watch URL", "https://www.youtube.com/watch?v=recipe12345&list=PL123456789", "recipe12345"],
+      ["mobile watch URL", "https://m.youtube.com/watch?v=nonrecipe123&feature=share", "nonrecipe123"],
+    ];
+
+    for (const [, url, videoId] of cases) {
+      const response = await POST(new Request("http://localhost:3000/api/v1/recipes/youtube/validate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ youtube_url: url }),
+      }));
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toMatchObject({
+        success: true,
+        data: {
+          is_valid_url: true,
+          video_info: {
+            video_id: videoId,
+          },
+        },
+        error: null,
+      });
+    }
   });
 
   it("POST /api/v1/recipes/youtube/extract creates a missing cooking method once and returns extracted recipe data", async () => {

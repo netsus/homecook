@@ -41,6 +41,12 @@
 - 공식 문서 변경 또는 미문서화 public 필드/엔드포인트 추가
 - prototype parity promotion — h8 matrix에 따라 `YT_IMPORT`는 `prototype-derived design`
 
+## Beta Exposure Guard
+
+- Production에서는 `HOMECOOK_ENABLE_YOUTUBE_IMPORT=1` 또는 `NEXT_PUBLIC_HOMECOOK_ENABLE_YOUTUBE_IMPORT=1`이 있을 때만 `/menu/add/youtube`와 YouTube import API를 연다.
+- Local dev, test, QA fixture 환경은 deterministic 회귀 테스트를 유지하기 위해 계속 열린다.
+- 실제 YouTube Data API/OCR/ASR/estimation은 여전히 Out of Scope다. 베타에서 기능을 사용자에게 노출하려면 flag를 켜기 전에 live YouTube smoke를 별도로 통과시킨다.
+
 ## Dependencies
 
 | 선행 슬라이스 | 상태 | 확인 |
@@ -446,6 +452,7 @@
   - `tests/youtube-import.backend.test.ts`
   - `tests/manual-recipe-create.backend.test.ts` 회귀 확인
 - Local verification:
+  - `pnpm test:product tests/youtube-import.backend.test.ts` — pass (16 tests, beta guard + URL-shape coverage)
   - `pnpm test tests/youtube-import.backend.test.ts` — pass (14 tests)
   - `pnpm test tests/manual-recipe-create.backend.test.ts tests/youtube-import.backend.test.ts` — pass (25 tests)
   - `pnpm typecheck` — pass

@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 
 import { fail, ok } from "@/lib/api/response";
+import { isYoutubeImportEnabled } from "@/lib/feature-flags";
 import {
   ensurePublicUserRow,
   ensureUserBootstrapState,
@@ -258,6 +259,10 @@ function buildInvalidUrlResponse() {
   ]);
 }
 
+function buildFeatureDisabledResponse() {
+  return fail("FEATURE_DISABLED", "유튜브 가져오기는 베타에서 준비 중이에요.", 404);
+}
+
 async function requireUser() {
   const routeClient = await createRouteHandlerClient();
   const authResult = await routeClient.auth.getUser();
@@ -295,6 +300,10 @@ function buildVideoInfo(videoId: string) {
 }
 
 export async function handleYoutubeValidate(request: Request) {
+  if (!isYoutubeImportEnabled()) {
+    return buildFeatureDisabledResponse();
+  }
+
   const { user } = await requireUser();
 
   if (!user) {
@@ -421,6 +430,10 @@ function buildExtractedIngredients(idsByName: Map<string, string>): YoutubeExtra
 }
 
 export async function handleYoutubeExtract(request: Request) {
+  if (!isYoutubeImportEnabled()) {
+    return buildFeatureDisabledResponse();
+  }
+
   const { routeClient, user } = await requireUser();
 
   if (!user) {
@@ -810,6 +823,10 @@ function buildRawExtractedText(parsed: ParsedYoutubeRegister) {
 }
 
 export async function handleYoutubeRegister(request: Request) {
+  if (!isYoutubeImportEnabled()) {
+    return buildFeatureDisabledResponse();
+  }
+
   const { routeClient, user } = await requireUser();
 
   if (!user) {
