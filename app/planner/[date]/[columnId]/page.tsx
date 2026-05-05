@@ -39,7 +39,7 @@ export default async function MealScreenPage({
   }
 
   return (
-    <>
+    <div className="relative min-h-screen">
       <div
         aria-hidden="true"
         className="fixed inset-0 -z-10 bg-[var(--background)]"
@@ -51,6 +51,6 @@ export default async function MealScreenPage({
         slotName={slot ?? ""}
       />
       <BottomTabs currentTab="planner" />
-    </>
+    </div>
   );
 }
