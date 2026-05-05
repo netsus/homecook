@@ -1388,3 +1388,5 @@ Object.assign(window, {
   SettingsScreen, NicknameEditSheet, MyPageRecipebookTab, MyPageShoppingTab,
   PantryAddSheet, PantryBundlePicker, ConsumedIngredientSheet,
 });
+
+

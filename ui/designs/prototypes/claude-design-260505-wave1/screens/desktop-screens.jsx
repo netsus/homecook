@@ -127,7 +127,7 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
   );
 }
 
-function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd }) {
+function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd }) {
   const days = Object.keys(planner);
   const slots = ['아침', '점심', '저녁'];
 
@@ -138,7 +138,7 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd }) {
           <div style={{ fontSize: 22, fontWeight: 700, color: T.ink }}>이번 주 식단</div>
           <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>2026년 4월 14일 ~ 4월 20일</div>
         </div>
-        <button onClick={() => onOpenPlannerAdd?.()} style={{
+        <button onClick={() => onMenuAdd?.()} style={{
           background: T.mint, color: '#fff', border: 'none', padding: '10px 16px',
           borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
         }}>+ 식단 추가</button>
@@ -197,7 +197,7 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd }) {
                       </div>
                     </div>
                   ) : (
-                    <button onClick={() => onOpenPlannerAdd?.(d, slot)} style={{
+                    <button onClick={() => onMenuAdd?.(d, slot)} style={{
                       width: '100%', height: '100%',
                       background: 'transparent', border: `1.5px dashed ${T.border}`, borderRadius: 8,
                       color: T.text3, fontSize: 18, cursor: 'pointer',
@@ -468,3 +468,5 @@ function DesktopMyPage({ savedIds, onOpenRecipe }) {
 }
 
 Object.assign(window, { DesktopHome, DesktopPlanner, DesktopRecipeDetail, DesktopPantry, DesktopMyPage });
+
+
