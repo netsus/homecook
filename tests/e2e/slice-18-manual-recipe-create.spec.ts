@@ -182,14 +182,12 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await page.click("text=+ 재료 추가");
     await page.fill('input[placeholder="재료 검색"]', "양파");
     await page.waitForTimeout(400); // Debounce
-    await page.click("text=· 양파");
-    await page.click("text=정량 (QUANT)");
+    await page.locator('div.fixed.inset-0.z-50').last().getByText("양파", { exact: true }).click();
     await page.fill('input[placeholder="수량"]', "200");
-    await page.fill('input[placeholder="단위"]', "g");
 
-    // Click the "추가" button within the modal footer
     const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.locator('button:has-text("추가")').click();
+    await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
+    await ingredientModal.locator('button:has-text("완료")').click();
 
     // Verify ingredient added
     await expect(page.locator("text=양파")).toBeVisible();
@@ -287,12 +285,10 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await page.click("text=+ 재료 추가");
     await page.fill('input[placeholder="재료 검색"]', "양파");
     await page.waitForTimeout(400);
-    await page.click("text=· 양파");
-    await page
-      .locator('div.fixed.inset-0.z-50')
-      .last()
-      .locator('button:has-text("추가")')
-      .click();
+    await page.locator('div.fixed.inset-0.z-50').last().getByText("양파", { exact: true }).click();
+    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
+    await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
+    await ingredientModal.locator('button:has-text("완료")').click();
 
     await page.click("text=+ 조리 과정 추가");
     await page.click('button:has-text("볶기")');
@@ -347,11 +343,11 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await page.click("text=+ 재료 추가");
     await page.fill('input[placeholder="재료 검색"]', "소금");
     await page.waitForTimeout(400);
-    await page.click("text=· 소금");
-    await page.click("text=가감형 (TO_TASTE)");
+    await page.locator('div.fixed.inset-0.z-50').last().getByText("소금", { exact: true }).click();
 
     const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.locator('button:has-text("추가")').click();
+    await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
+    await ingredientModal.locator('button:has-text("완료")').click();
 
     await expect(saveButton).toBeDisabled(); // Still disabled (no steps)
 
@@ -462,10 +458,10 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await page.click("text=+ 재료 추가");
     await page.fill('input[placeholder="재료 검색"]', "소금");
     await page.waitForTimeout(400);
-    await page.click("text=· 소금");
-    await page.click("text=가감형 (TO_TASTE)");
+    await page.locator('div.fixed.inset-0.z-50').last().getByText("소금", { exact: true }).click();
     const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.locator('button:has-text("추가")').click();
+    await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
+    await ingredientModal.locator('button:has-text("완료")').click();
 
     await page.click("text=+ 조리 과정 추가");
     await page.click('button:has-text("섞기/준비")');
@@ -556,10 +552,10 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await page.click("text=+ 재료 추가");
     await page.fill('input[placeholder="재료 검색"]', "소금");
     await page.waitForTimeout(400);
-    await page.click("text=· 소금");
-    await page.click("text=가감형 (TO_TASTE)");
+    await page.locator('div.fixed.inset-0.z-50').last().getByText("소금", { exact: true }).click();
     const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.locator('button:has-text("추가")').click();
+    await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
+    await ingredientModal.locator('button:has-text("완료")').click();
 
     await page.click("text=+ 조리 과정 추가");
     await page.click('button:has-text("섞기/준비")');
@@ -610,10 +606,10 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await page.click("text=+ 재료 추가");
     await page.fill('input[placeholder="재료 검색"]', "소금");
     await page.waitForTimeout(400);
-    await page.click("text=· 소금");
-    await page.click("text=가감형 (TO_TASTE)");
+    await page.locator('div.fixed.inset-0.z-50').last().getByText("소금", { exact: true }).click();
     const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
-    await ingredientModal.locator('button:has-text("추가")').click();
+    await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
+    await ingredientModal.locator('button:has-text("완료")').click();
 
     await page.click("text=+ 조리 과정 추가");
     await page.click('button:has-text("섞기/준비")');
@@ -664,5 +660,327 @@ test.describe("Slice 18: Manual Recipe Create", () => {
       name: /제거|좋아요 해제/,
     });
     await expect(removeButtons).toHaveCount(0);
+  });
+
+  test("ingredient modal defaults to g and has no type selector", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+
+    await installCookingMethodsRoute(page, [
+      { id: "method-1", code: "prep", label: "섞기/준비", color_key: "gray", is_system: true },
+    ]);
+    await installIngredientsRoute(page, [
+      { id: "ing-1", standard_name: "양파", category: "야채" },
+    ]);
+
+    await page.goto(MANUAL_RECIPE_CREATE_URL);
+    await page.click("text=+ 재료 추가");
+    await page.fill('input[placeholder="재료 검색"]', "양파");
+    await page.waitForTimeout(400);
+    await page.locator('div.fixed.inset-0.z-50').last().getByText("양파", { exact: true }).click();
+
+    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
+    await expect(ingredientModal.getByText("정량 (QUANT)")).toHaveCount(0);
+    await expect(ingredientModal.getByText("가감형 (TO_TASTE)")).toHaveCount(0);
+    await expect(ingredientModal.getByRole("button", { name: /^g$/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(ingredientModal.getByRole("button", { name: "ml" })).toBeVisible();
+    await expect(ingredientModal.getByRole("button", { name: "큰술" })).toHaveCount(0);
+    await expect(ingredientModal.getByRole("button", { name: "개" })).toHaveCount(0);
+  });
+
+  test("ingredient modal shows all ingredients before search and filters by category", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installCookingMethodsRoute(page, [
+      { id: "method-1", code: "prep", label: "섞기/준비", color_key: "gray", is_system: true },
+    ]);
+
+    const ingredients = [
+      { id: "ing-1", standard_name: "양파", category: "채소" },
+      { id: "ing-2", standard_name: "돼지고기", category: "육류" },
+      { id: "ing-3", standard_name: "두부", category: "기타" },
+    ];
+    const ingredientRequests: string[] = [];
+
+    await page.route("**/api/v1/ingredients*", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+
+      const requestUrl = new URL(route.request().url());
+      const query = requestUrl.searchParams.get("q")?.trim() ?? "";
+      const category = requestUrl.searchParams.get("category");
+      ingredientRequests.push(requestUrl.search);
+
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            items: ingredients.filter((ingredient) => {
+              const matchesQuery =
+                query.length === 0 || ingredient.standard_name.includes(query);
+              const matchesCategory =
+                !category || ingredient.category === category;
+
+              return matchesQuery && matchesCategory;
+            }),
+          },
+          error: null,
+        },
+      });
+    });
+
+    await page.goto(MANUAL_RECIPE_CREATE_URL);
+    await page.click("text=+ 재료 추가");
+
+    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
+    await expect(ingredientModal.locator("ul").getByText("양파", { exact: true })).toBeVisible();
+    await expect(ingredientModal.getByText("돼지고기", { exact: true })).toBeVisible();
+    expect(ingredientRequests[0]).toBe("");
+
+    await ingredientModal.getByRole("button", { name: "육류" }).click();
+    await expect(ingredientModal.getByText("돼지고기", { exact: true })).toBeVisible();
+    await expect(ingredientModal.getByText("양파", { exact: true })).toHaveCount(0);
+    expect(ingredientRequests).toContain("?category=%EC%9C%A1%EB%A5%98");
+
+    await page.fill('input[placeholder="재료 검색"]', "양파");
+    await page.waitForTimeout(400);
+    await expect(ingredientModal.getByText("검색 결과가 없어요")).toBeVisible();
+  });
+
+  test("ingredient unit can switch between g and ml", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+
+    await installCookingMethodsRoute(page, [
+      { id: "method-1", code: "prep", label: "섞기/준비", color_key: "gray", is_system: true },
+    ]);
+    await installIngredientsRoute(page, [
+      { id: "ing-1", standard_name: "양파", category: "야채" },
+    ]);
+
+    await page.goto(MANUAL_RECIPE_CREATE_URL);
+    await page.click("text=+ 재료 추가");
+    await page.fill('input[placeholder="재료 검색"]', "양파");
+    await page.waitForTimeout(400);
+    await page.locator('div.fixed.inset-0.z-50').last().getByText("양파", { exact: true }).click();
+
+    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
+    await page.fill('input[placeholder="수량"]', "1");
+    await ingredientModal.getByRole("button", { name: "ml" }).click();
+
+    await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
+    await ingredientModal.locator('button:has-text("완료")').click();
+
+    await expect(page.getByText("양파")).toBeVisible();
+    await expect(page.getByText("1ml")).toBeVisible();
+  });
+
+  test("ingredient selection keeps the list visible while editing amount and unit", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+
+    await installCookingMethodsRoute(page, [
+      { id: "method-1", code: "prep", label: "섞기/준비", color_key: "gray", is_system: true },
+    ]);
+    await installIngredientsRoute(page, [
+      { id: "ing-1", standard_name: "양파", category: "채소" },
+      { id: "ing-2", standard_name: "돼지고기", category: "육류" },
+    ]);
+
+    await page.goto(MANUAL_RECIPE_CREATE_URL);
+    await page.click("text=+ 재료 추가");
+
+    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
+    await ingredientModal.getByText("양파", { exact: true }).click();
+
+    await expect(
+      ingredientModal.locator("ul").getByText("양파", { exact: true }),
+    ).toBeVisible();
+    await expect(ingredientModal.getByText("돼지고기", { exact: true })).toBeVisible();
+    await expect(ingredientModal.getByRole("group", { name: "단위" })).toBeVisible();
+    await expect(ingredientModal.getByText("선택된 재료")).toHaveCount(0);
+  });
+
+  test("ingredient modal shows selected ingredient and added chips near quantity controls", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+
+    await installCookingMethodsRoute(page, [
+      { id: "method-1", code: "prep", label: "섞기/준비", color_key: "gray", is_system: true },
+    ]);
+    await installIngredientsRoute(page, [
+      { id: "ing-1", standard_name: "대파", category: "채소" },
+    ]);
+
+    await page.goto(MANUAL_RECIPE_CREATE_URL);
+    await page.click("text=+ 재료 추가");
+
+    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
+    await ingredientModal.getByText("대파", { exact: true }).click();
+
+    const editor = ingredientModal.getByTestId("ingredient-editor");
+    await expect(editor.getByText("대파", { exact: true })).toBeVisible();
+    await page.fill('input[placeholder="수량"]', "100");
+    await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
+
+    const addedChips = ingredientModal.getByTestId("added-ingredient-chips");
+    await expect(addedChips.getByText("대파 100g", { exact: true })).toBeVisible();
+  });
+
+  test("mobile unit options are large tappable chips", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setAuthOverride(page, "authenticated");
+
+    await installCookingMethodsRoute(page, [
+      { id: "method-1", code: "prep", label: "섞기/준비", color_key: "gray", is_system: true },
+    ]);
+    await installIngredientsRoute(page, [
+      { id: "ing-1", standard_name: "양파", category: "채소" },
+    ]);
+
+    await page.goto(MANUAL_RECIPE_CREATE_URL);
+    await page.click("text=+ 재료 추가");
+
+    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
+    await ingredientModal.getByText("양파", { exact: true }).click();
+
+    const unitButton = ingredientModal.getByRole("button", { name: /^g$/ });
+    await expect(unitButton).toBeVisible();
+
+    const box = await unitButton.boundingBox();
+    const fontSize = await unitButton.evaluate((element) =>
+      Number.parseFloat(window.getComputedStyle(element).fontSize),
+    );
+
+    expect(box?.height).toBeGreaterThanOrEqual(36);
+    expect(fontSize).toBeGreaterThanOrEqual(14);
+  });
+
+  test("ingredient modal can add multiple ingredients before closing", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+
+    await installCookingMethodsRoute(page, [
+      { id: "method-1", code: "prep", label: "섞기/준비", color_key: "gray", is_system: true },
+    ]);
+    await installIngredientsRoute(page, [
+      { id: "ing-1", standard_name: "양파", category: "채소" },
+      { id: "ing-2", standard_name: "돼지고기", category: "육류" },
+    ]);
+
+    await page.goto(MANUAL_RECIPE_CREATE_URL);
+    await page.click("text=+ 재료 추가");
+
+    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
+    await ingredientModal.getByText("양파", { exact: true }).click();
+    await page.fill('input[placeholder="수량"]', "1");
+    await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
+
+    await expect(ingredientModal.getByText("재료 추가")).toBeVisible();
+    await expect(ingredientModal.getByText("1개 추가됨")).toBeVisible();
+
+    await ingredientModal.getByText("돼지고기", { exact: true }).click();
+    await ingredientModal.getByRole("button", { name: "ml" }).click();
+    await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
+    await expect(ingredientModal.getByText("2개 추가됨")).toBeVisible();
+
+    await ingredientModal.locator('button:has-text("완료")').click();
+    await expect(page.locator('div.fixed.inset-0.z-50')).toHaveCount(0);
+    await expect(page.getByText("양파")).toBeVisible();
+    await expect(page.getByText("돼지고기")).toBeVisible();
+  });
+
+  test("ingredient modal keeps its height stable while category results load", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installCookingMethodsRoute(page, [
+      { id: "method-1", code: "prep", label: "섞기/준비", color_key: "gray", is_system: true },
+    ]);
+
+    const ingredients = [
+      { id: "ing-1", standard_name: "양파", category: "채소" },
+      { id: "ing-2", standard_name: "대파", category: "채소" },
+      { id: "ing-3", standard_name: "감자", category: "채소" },
+      { id: "ing-4", standard_name: "당근", category: "채소" },
+      { id: "ing-5", standard_name: "돼지고기", category: "육류" },
+    ];
+
+    await page.route("**/api/v1/ingredients*", async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+
+      const requestUrl = new URL(route.request().url());
+      const category = requestUrl.searchParams.get("category");
+      if (category) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            items: ingredients.filter(
+              (ingredient) => !category || ingredient.category === category,
+            ),
+          },
+          error: null,
+        },
+      });
+    });
+
+    await page.goto(MANUAL_RECIPE_CREATE_URL);
+    await page.click("text=+ 재료 추가");
+
+    const dialog = page.locator('div.fixed.inset-0.z-50').last().locator('[role="dialog"]');
+    await expect(dialog.getByText("양파", { exact: true })).toBeVisible();
+    const heightBefore = (await dialog.boundingBox())?.height;
+
+    await dialog.getByRole("button", { name: "육류" }).click();
+    await expect(dialog.getByText("돼지고기", { exact: true })).toBeVisible();
+    const heightAfter = (await dialog.boundingBox())?.height;
+
+    expect(heightBefore).toBeTruthy();
+    expect(heightAfter).toBeTruthy();
+    expect(Math.abs(heightAfter! - heightBefore!)).toBeLessThanOrEqual(4);
+  });
+
+  test("ingredient modal closes when clicking the backdrop", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+
+    await installCookingMethodsRoute(page, [
+      { id: "method-1", code: "prep", label: "섞기/준비", color_key: "gray", is_system: true },
+    ]);
+    await installIngredientsRoute(page, [
+      { id: "ing-1", standard_name: "양파", category: "야채" },
+    ]);
+
+    await page.goto(MANUAL_RECIPE_CREATE_URL);
+    await page.click("text=+ 재료 추가");
+
+    const ingredientModal = page.locator('div.fixed.inset-0.z-50').last();
+    await expect(ingredientModal.getByText("재료 추가")).toBeVisible();
+
+    await page.mouse.click(12, 12);
+    await expect(page.locator('div.fixed.inset-0.z-50')).toHaveCount(0);
+  });
+
+  test("step modal closes when clicking the backdrop", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+
+    await installCookingMethodsRoute(page, [
+      { id: "method-1", code: "prep", label: "섞기/준비", color_key: "gray", is_system: true },
+    ]);
+    await installIngredientsRoute(page, [
+      { id: "ing-1", standard_name: "양파", category: "야채" },
+    ]);
+
+    await page.goto(MANUAL_RECIPE_CREATE_URL);
+    await page.click("text=+ 조리 과정 추가");
+
+    const stepModal = page.locator('div.fixed.inset-0.z-50').last();
+    await expect(stepModal.getByText("조리 과정 추가")).toBeVisible();
+
+    await page.mouse.click(12, 12);
+    await expect(page.locator('div.fixed.inset-0.z-50')).toHaveCount(0);
   });
 });
