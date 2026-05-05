@@ -804,3 +804,79 @@ split source 재추출 명령(reference):
 sed -n '1281,1449p' index.html > screens/planner.jsx
 # 등등 — index.html의 `// ===== screens/X.jsx =====` 마커 행 번호 기준
 ```
+
+---
+
+## 부록 D — Wave 1.5 Pass Status (2026-05-06)
+
+전체 화면 커버리지 보강 작업. 진행 결과:
+
+### 새로 추가된 화면 (모바일)
+
+- **MyPageRecipebookDetailScreen** (RECIPEBOOK_DETAIL) — 레시피북 안의 레시피 목록, 열기/제거/책 삭제 confirm
+- **IngredientFilterModal** — HOME에서 진입하는 재료 다중선택 바텀시트
+- **PlanningServingsModal** — MENU_ADD에서 레시피 선택 후 계획 인분 입력
+- **servingChangeConfirm wiring** — MEAL_SCREEN 인분 변경 시 ConfirmDialog 표시 (App-level rendering 추가)
+
+### 새로 추가된 데스크톱 layout
+
+- **DesktopMenuAddScreen** — 4-tab 사이드바 + 메인 패널 (MENU_ADD 데스크톱 승격)
+- **DesktopShoppingCreateScreen** — 좌 섹션 그리드 + 우 sticky 요약 (SHOPPING_FLOW 승격)
+- **DesktopShoppingDetailScreen** — 진행률 + 2-col 섹션 (SHOPPING_DETAIL 승격)
+- **DesktopCookRunScreen** — 좌 큰 step + 우 step overview/차감 체크리스트 (COOK_MODE 승격)
+- **DesktopMyPageRecipebookDetail** — 사이드바 + 레시피 그리드 (RECIPEBOOK_DETAIL 데스크톱 변형)
+- **DesktopIngredientFilterDialog** — 720px centered dialog + 2-col 카테고리 그리드
+
+### App 변경
+
+- 신규 state: `ingredientFilterOpen`, `planningServings`, `ingredientNames`
+- HOME ingredient chip rail 끝에 ‘🔎 재료로 거르기’ 진입 버튼 추가 (모바일 + 데스크톱)
+- MENU_ADD `onPickRecipe`에서 slot 메타가 있으면 `PlanningServingsModal`로 우회 (직접 commit X)
+- `route.page === 'mypage-recipebook-detail'` 핸들러 추가
+- MyPageRecipebookTab `onOpenBook`이 `goPage('mypage-recipebook-detail', { bookId })` 호출
+- 데스크톱 shell에 `route.page` 분기 — 5개 desktop variant 사용, 나머지는 max-width 720 fallback
+- Quick flow panel에 ‘📒 레시피북 상세’, ‘🔎 재료 필터 모달’ 바로가기 2개 추가
+
+### 아직 남은 gap
+
+- **데스크톱 fallback 잔존 (11개)**: LOGIN, SETTINGS, MEAL_SCREEN, COOK_READY_LIST (P1.2 4개), LEFTOVERS, ATE_LIST, MANUAL_RECIPE_CREATE, YT_IMPORT, RECIPE_SEARCH_PICKER (단독), MYPAGE_TAB_RECIPEBOOK 목록, MYPAGE_TAB_SHOPPINGLISTS (P1.3 7개). 다음 Wave 우선 처리.
+- **데스크톱 picker/sheet/modal P2 (8개)**: PantryAddSheet, PantryBundlePicker, PantryReflectPicker, ConsumedIngredientSheet, NicknameEditSheet, RecipeBookSelector·DetailPicker(단독), PantryMatchPicker(단독). 다음 Wave에서 일관된 dialog/dropdown 패턴으로 정리.
+- **PlanningServingsModal**은 `MENU_ADD` 흐름에만 wired. RecipeSearchPicker / RecipeBookDetailPicker / PantryMatchPicker는 MENU_ADD 안에서 동일 onPickRecipe로 흐르므로 통과 — 단독 진입은 미연결.
+
+### 검증 결과
+
+- index.html script block: `@babel/parser` 통과 ✅
+- 14개 split source(`tokens.jsx`, `data.jsx`, `components.jsx`, `ios-frame.jsx`, `screens/*.jsx`, `app.jsx`): 모두 babel-parser 통과 ✅
+- `homecook-baemin-prototype.html` ↔ `index.html` byte-identical (`diff -q` 통과) ✅
+- 모든 `goPage(...)` 타겟이 `route.page === ...` 핸들러와 매칭 (15개) ✅
+- mobile/web-mobile/desktop 3개 shell 모두에서 P0 모달 3개 wiring 확인 ✅
+
+### 다음 사람을 위한 빠른 확인 명령
+
+```bash
+cd ui/designs/prototypes/claude-design-260505-wave1
+
+# 1. 브라우저로 확인 (Mac)
+open index.html
+
+# 2. JSX parse 회귀 검증
+node -e '
+  const fs = require("fs");
+  const parser = require("@babel/parser");
+  const html = fs.readFileSync("index.html", "utf8");
+  const m = html.match(/<script type="text\/babel"[^>]*>([\s\S]*?)<\/script>/);
+  parser.parse(m[1], { sourceType: "script", plugins: ["jsx"] });
+  console.log("OK");
+'
+
+# 3. split source ↔ index.html 동기화 확인
+sha=$(grep -n "^// ===== screens/" index.html)
+echo "$sha"  # 마커 라인 번호로 추출 범위 검증
+```
+
+### Source-of-truth Convention (재확인)
+
+- `index.html` = single source of truth.
+- `homecook-baemin-prototype.html` = byte-identical mirror.
+- `app.jsx` + `screens/*.jsx` = `index.html`의 `// ===== <file> =====` 마커 사이 구간에서 자동 추출.
+- 변경은 `index.html`에서 시작 → 검증(@babel/parser) → split 재추출 → mirror 동기화 → 문서 업데이트 순.
