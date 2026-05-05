@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ship PR Loop"
+  short_description: "Commit, push, PR, CI, and merge safely"
+  default_prompt: "Use $ship-pr-loop to split my local changes into commits, open a PR, wait for CI, and merge it."
