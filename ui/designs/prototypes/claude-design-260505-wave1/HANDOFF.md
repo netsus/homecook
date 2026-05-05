@@ -733,7 +733,7 @@ test.use({ viewport: { width: 390, height: 844 } });  // baseline
 | 3 | quick flow panel Wave 1 바로가기 | ✅ 완료 | 6개 추가: `MENU_ADD`, `SHOPPING_DETAIL`, `LEFTOVERS`, `SETTINGS`, `MYPAGE_TAB_RECIPEBOOK`, `MYPAGE_TAB_SHOPPINGLISTS` |
 | 4 | `INGREDIENT_FILTER_MODAL` | ⏸ 이번 Wave 제외 | 아래 "C.1 Deferred" 참조 |
 | 5 | 신규 route page의 desktop 처리 | ⚠️ Fallback only | 아래 "C.2 Desktop Fallback" 참조 |
-| 6 | `homecook-baemin-prototype.html` 동기화 | ⏸ 다음 세션 | `index.html`이 안정화됐고 두 파일은 다음 correction pass에서 동기화 예정. 현재 두 파일은 다르며 `index.html`이 정본입니다. |
+| 6 | `homecook-baemin-prototype.html` 동기화 | ✅ 완료 | `homecook-baemin-prototype.html`을 `index.html`과 byte-for-byte 동일하게 동기화했습니다. |
 
 ### C.1 `INGREDIENT_FILTER_MODAL` Deferred
 
@@ -794,8 +794,8 @@ Fallback 적용 화면:
 - `index.html` → 단일 진실(single source of truth) — 변경은 여기서 시작
 - `app.jsx` + `screens/*.jsx` → mirror — `index.html`의 `// ===== <file> =====` 마커
   사이 구간에서 추출
-- `homecook-baemin-prototype.html` → `index.html`과 동일해야 하지만 현재 미동기. 다음
-  correction pass의 단일 작업 항목입니다.
+- `homecook-baemin-prototype.html` → `index.html`과 동일한 runnable mirror. 수동 수정은
+  `index.html`에 먼저 반영한 뒤 다시 동기화합니다.
 
 split source 재추출 명령(reference):
 
@@ -804,4 +804,3 @@ split source 재추출 명령(reference):
 sed -n '1281,1449p' index.html > screens/planner.jsx
 # 등등 — index.html의 `// ===== screens/X.jsx =====` 마커 행 번호 기준
 ```
-

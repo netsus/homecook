@@ -11,7 +11,7 @@ Wave 1 correction pass가 반영되어, 최초 import 당시의 주요 동기화
 
 이번 correction pass의 source of truth는 `index.html`이었다. 최신 route/page/overlay 연결을 `index.html`에서 `app.jsx`와 `screens/*.jsx` split source로 옮겼고, planner의 `MENU_ADD` 진입과 quick flow panel 바로가기도 실제 브라우저 클릭으로 확인했다.
 
-아직 production frontend 포팅 기준으로 완전히 닫힌 상태는 아니다. `homecook-baemin-prototype.html` 동기화, `INGREDIENT_FILTER_MODAL`, 신규 route page의 desktop 전용 layout은 남은 gap이다.
+아직 production frontend 포팅 기준으로 완전히 닫힌 상태는 아니다. `INGREDIENT_FILTER_MODAL`, 신규 route page의 desktop 전용 layout, 상세 visual QA는 남은 gap이다.
 
 ## Confirmed
 
@@ -21,6 +21,7 @@ Wave 1 correction pass가 반영되어, 최초 import 당시의 주요 동기화
 - `screens/pantry.jsx`, `screens/mypage.jsx`, `screens/extras.jsx`, `screens/wave1.jsx`가 `index.html` 기준 내용으로 동기화됐다.
 - `HANDOFF.md`에 `부록 C — Wave 1 Correction Pass Status (2026-05-06)`가 추가됐다.
 - `HANDOFF.md`에는 `INGREDIENT_FILTER_MODAL` deferred 사유, desktop fallback 화면 목록, source-of-truth convention이 기록됐다.
+- `homecook-baemin-prototype.html`은 `index.html`과 byte-for-byte 동일하게 동기화됐다.
 
 ## Browser Verification
 
@@ -63,19 +64,15 @@ Wave 1 correction pass가 반영되어, 최초 import 당시의 주요 동기화
 
 ## Remaining Gaps
 
-1. `homecook-baemin-prototype.html` is still not synced
-   - `index.html` is the current canonical runnable file.
-   - `homecook-baemin-prototype.html` still differs and should be updated in the next correction pass.
-
-2. `INGREDIENT_FILTER_MODAL` is still missing
+1. `INGREDIENT_FILTER_MODAL` is still missing
    - Current HOME uses inline ingredient chips.
    - Official modal/sheet style ingredient filter remains a next-wave design task.
 
-3. New route pages do not have dedicated desktop layouts
+2. New route pages do not have dedicated desktop layouts
    - `LOGIN`, `MENU_ADD`, `SHOPPING_FLOW`, `SHOPPING_DETAIL`, `COOK_READY_LIST`, `COOK_MODE`, `LEFTOVERS`, `ATE_LIST`, `SETTINGS`, and Wave 1 pickers/tabs are desktop fallback only.
    - Before production porting, decide which fallback screens deserve full desktop treatment.
 
-4. Visual QA is still shallow
+3. Visual QA is still shallow
    - The browser check confirmed route entry and visible text.
    - It did not perform detailed screenshot comparison, responsive visual QA, or overlap inspection.
 
@@ -108,14 +105,12 @@ Do not treat as complete yet:
 
 - `INGREDIENT_FILTER_MODAL`
 - `RECIPEBOOK_DETAIL`
-- `homecook-baemin-prototype.html` as a runnable Wave 1 file
 
 ## Recommended Next Step
 
-Open a small PR for this correction pass after local verification.
+Open a small PR for this runnable HTML sync after local verification.
 
 Next Claude Design request should be a very small follow-up:
 
-- Sync `homecook-baemin-prototype.html` to `index.html`.
 - Either implement `INGREDIENT_FILTER_MODAL`, or keep it explicitly deferred with a final reason.
 - Pick the first desktop fallback family to upgrade, likely `SHOPPING_FLOW` + `SHOPPING_DETAIL` or `MENU_ADD`.
