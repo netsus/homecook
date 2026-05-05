@@ -1381,12 +1381,289 @@ function ConsumedIngredientSheet({ recipe, defaultSelection, onClose, onConfirm 
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// Wave 1.5 — P0 coverage additions (RECIPEBOOK_DETAIL,
+// INGREDIENT_FILTER_MODAL, PlanningServingsModal). Source of
+// truth for screens/wave1.jsx is `index.html`.
+// ─────────────────────────────────────────────────────────────
+
+// Sample recipebook data (window-scoped so MyPageRecipebookTab and
+// MyPageRecipebookDetailScreen share the same source).
+const RECIPEBOOK_SAMPLES = [
+  { id: 'b_saved',   kind: 'saved',  name: '저장한 레시피',     emoji: '🔖', recipeIds: ['r1','r2','r4'] },
+  { id: 'b_custom1', kind: 'custom', name: '평일 저녁 빠른요리', emoji: '🍳', recipeIds: ['r1','r3','r4'] },
+  { id: 'b_custom2', kind: 'custom', name: '주말 한 상 차림',    emoji: '🍽️', recipeIds: ['r2'] },
+];
+window.RECIPEBOOK_SAMPLES = RECIPEBOOK_SAMPLES;
+
+// ─────────────────────────────────────────────────────────────
+// RECIPEBOOK_DETAIL (mobile) — /mypage/recipe-books/[book_id]
+// ─────────────────────────────────────────────────────────────
+function MyPageRecipebookDetailScreen({ bookId, onBack, onOpenRecipe, onRemoveRecipe, onDeleteBook, showToast }) {
+  const [confirmDelete, setConfirmDelete] = useState_W(false);
+  const [removingId, setRemovingId] = useState_W(null);
+  const book = (window.RECIPEBOOK_SAMPLES || []).find(b => b.id === bookId);
+  if (!book) {
+    return (
+      <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
+        <AppBar title="레시피북" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>} />
+        <div style={{ padding: 40, textAlign: 'center', color: T.text3, fontSize: 13 }}>
+          레시피북을 찾을 수 없어요
+        </div>
+      </div>
+    );
+  }
+  const recipes = book.recipeIds.map(id => RECIPES.find(r => r.id === id)).filter(Boolean);
+  const isCustom = book.kind === 'custom';
+  return (
+    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
+      <AppBar title={book.name}
+        left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>}
+        right={isCustom ? (
+          <button onClick={() => setConfirmDelete(true)} style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: T.red, fontSize: 13, fontWeight: 700, padding: '6px 8px',
+          }}>삭제</button>
+        ) : null} />
+
+      {/* Header card */}
+      <div style={{ background: '#fff', padding: 20, borderBottom: `1px solid ${T.border}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 14, background: T.mintSoft,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 26,
+          }}>{book.emoji}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 17, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>{book.name}</span>
+              <span style={{
+                fontSize: 10, color: T.text3, background: T.surfaceFill,
+                padding: '2px 6px', borderRadius: 4, fontWeight: 700,
+              }}>{book.kind === 'saved' ? '저장' : '내 책'}</span>
+            </div>
+            <div style={{ fontSize: 12, color: T.text3, marginTop: 2 }}>{recipes.length}개 레시피</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recipe list */}
+      <div style={{ padding: 16 }}>
+        {recipes.length === 0 ? (
+          <div style={{ background: '#fff', borderRadius: 12, padding: 40, textAlign: 'center', border: `1px solid ${T.border}` }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>📭</div>
+            <div style={{ fontSize: 13, color: T.text3 }}>아직 레시피가 없어요</div>
+          </div>
+        ) : recipes.map((r) => (
+          <div key={r.id} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12,
+            padding: 12, marginBottom: 8,
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: 10, background: r.bg || T.surfaceFill,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
+              flexShrink: 0,
+            }}>{r.emoji || '🍽️'}</div>
+            <div onClick={() => onOpenRecipe(r.id)} style={{ flex: 1, cursor: 'pointer' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 2 }}>{r.name}</div>
+              <div style={{ fontSize: 11, color: T.text3 }}>
+                ⭐ {r.rating} · {r.minutes}분 · {r.servings}인분
+              </div>
+            </div>
+            {isCustom && (
+              <button onClick={() => setRemovingId(r.id)} style={{
+                background: 'transparent', border: `1px solid ${T.border}`, borderRadius: 8,
+                padding: '6px 10px', fontSize: 11, fontWeight: 700, color: T.text2, cursor: 'pointer',
+              }}>제거</button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {confirmDelete && (
+        <ConfirmDialog title="이 레시피북을 삭제할까요?"
+          body="레시피북 안의 레시피는 삭제되지 않아요."
+          destructive confirmLabel="삭제하기"
+          onClose={() => setConfirmDelete(false)}
+          onConfirm={() => { setConfirmDelete(false); onDeleteBook?.(book); }} />
+      )}
+      {removingId && (
+        <ConfirmDialog title="레시피북에서 제거할까요?"
+          body="레시피 자체는 삭제되지 않아요."
+          confirmLabel="제거하기"
+          onClose={() => setRemovingId(null)}
+          onConfirm={() => { onRemoveRecipe?.(book.id, removingId); setRemovingId(null); showToast?.('레시피북에서 제거됐어요'); }} />
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// INGREDIENT_FILTER_MODAL (mobile) — bottom sheet over HOME
+// ─────────────────────────────────────────────────────────────
+const INGREDIENT_FILTER_GROUPS = [
+  { cat: '채소',   ingredients: ['양파','대파','마늘','당근','파프리카','시금치','애호박','감자','고구마','버섯'] },
+  { cat: '육류',   ingredients: ['돼지고기','소고기','닭고기','베이컨'] },
+  { cat: '해산물', ingredients: ['새우','오징어','연어','고등어','참치캔'] },
+  { cat: '유제품', ingredients: ['우유','치즈','버터','요거트','계란'] },
+  { cat: '곡류',   ingredients: ['쌀','면','빵','떡'] },
+  { cat: '양념',   ingredients: ['간장','고추장','된장','설탕','소금','다진마늘','참기름','식초'] },
+];
+window.INGREDIENT_FILTER_GROUPS = INGREDIENT_FILTER_GROUPS;
+
+function IngredientFilterModal({ value = [], onApply, onClose }) {
+  const [selected, setSelected] = useState_W(new Set(value));
+  const [query, setQuery] = useState_W('');
+  const toggle = (name) => setSelected(s => {
+    const next = new Set(s);
+    if (next.has(name)) next.delete(name); else next.add(name);
+    return next;
+  });
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 110,
+      }} />
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 111,
+        background: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+        maxHeight: '88%', display: 'flex', flexDirection: 'column',
+        boxShadow: T.shadowCrisp,
+      }}>
+        {/* Grabber */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 0' }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border }} />
+        </div>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', padding: '12px 20px 8px' }}>
+          <div style={{ flex: 1, fontSize: 17, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
+            재료로 거르기
+          </div>
+          <button onClick={onClose} style={{
+            width: 32, height: 32, borderRadius: 16, background: T.surfaceFill,
+            border: 'none', cursor: 'pointer', fontSize: 18, color: T.text2,
+          }}>✕</button>
+        </div>
+        {/* Search */}
+        <div style={{ padding: '4px 20px 12px' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: T.surfaceFill, borderRadius: 12, padding: '0 14px', height: 40,
+          }}>
+            {Icon.search()}
+            <input value={query} onChange={(e) => setQuery(e.target.value)}
+              placeholder="재료 검색"
+              style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 14, color: T.ink }} />
+          </div>
+        </div>
+        {/* Selected summary */}
+        {selected.size > 0 && (
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: 6, padding: '0 20px 12px',
+          }}>
+            {[...selected].map(n => (
+              <span key={n} onClick={() => toggle(n)} style={{
+                background: T.mint, color: '#fff', fontSize: 12, fontWeight: 700,
+                padding: '6px 10px', borderRadius: 9999, cursor: 'pointer',
+              }}>{n} ✕</span>
+            ))}
+          </div>
+        )}
+        {/* Categories */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 16px' }}>
+          {INGREDIENT_FILTER_GROUPS.map(g => {
+            const filtered = query ? g.ingredients.filter(n => n.includes(query)) : g.ingredients;
+            if (filtered.length === 0) return null;
+            return (
+              <div key={g.cat} style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 8 }}>{g.cat}</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {filtered.map(n => {
+                    const on = selected.has(n);
+                    return (
+                      <button key={n} onClick={() => toggle(n)} style={{
+                        padding: '8px 12px', borderRadius: 9999,
+                        background: on ? T.mintSoft : T.surfaceFill,
+                        color: on ? T.mintDeep : T.text2,
+                        border: on ? `1px solid ${T.mint}` : '1px solid transparent',
+                        fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                      }}>{n}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Footer */}
+        <div style={{
+          display: 'flex', gap: 8, padding: '12px 20px 24px',
+          borderTop: `1px solid ${T.border}`, background: '#fff',
+        }}>
+          <button onClick={() => setSelected(new Set())} style={{
+            flex: 1, padding: '14px 0', borderRadius: 10, border: `1px solid ${T.border}`,
+            background: '#fff', color: T.text2, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+          }}>초기화</button>
+          <button onClick={() => onApply([...selected])} style={{
+            flex: 2, padding: '14px 0', borderRadius: 10, border: 'none',
+            background: T.mint, color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer',
+          }}>{selected.size > 0 ? `${selected.size}개 적용` : '필터 적용'}</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// PlanningServingsModal — 식사 추가 직전 계획 인분 입력
+// 진입: MENU_ADD onPickRecipe 흐름이 plan에 commit하기 전
+// ─────────────────────────────────────────────────────────────
+function PlanningServingsModal({ recipe, presetDate, presetSlot, onClose, onConfirm }) {
+  const [servings, setServings] = useState_W(recipe?.servings || 2);
+  const slotLabel = presetDate && presetSlot ? `${presetDate} ${presetSlot}` : '플래너에 추가';
+  return (
+    <ConfirmDialog
+      title="몇 인분으로 계획할까요?"
+      body={`${recipe?.name || '레시피'} · ${slotLabel}`}
+      confirmLabel="추가하기"
+      cancelLabel="취소"
+      onClose={onClose}
+      onConfirm={() => onConfirm(servings)}
+      extra={
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: T.surfaceFill, borderRadius: 12, padding: '12px 16px', marginTop: 4,
+        }}>
+          <div style={{ fontSize: 13, color: T.text2, fontWeight: 600 }}>계획 인분</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={() => setServings(s => Math.max(1, s - 1))} style={{
+              width: 32, height: 32, borderRadius: 16, border: 'none',
+              background: '#fff', color: T.text1, fontSize: 16, fontWeight: 800, cursor: 'pointer',
+              boxShadow: T.shadowNatural,
+            }}>−</button>
+            <div style={{ minWidth: 36, textAlign: 'center', fontSize: 18, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
+              {servings}인분
+            </div>
+            <button onClick={() => setServings(s => Math.min(12, s + 1))} style={{
+              width: 32, height: 32, borderRadius: 16, border: 'none',
+              background: T.mint, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer',
+            }}>+</button>
+          </div>
+        </div>
+      }
+    />
+  );
+}
+
 Object.assign(window, {
   ConfirmDialog, LoginScreen, MenuAddScreen, RecipeSearchPicker, RecipeBookSelector,
   RecipeBookDetailPicker, PantryMatchPicker, LeftoversScreen, AteListScreen,
   ManualRecipeCreateScreen, YtImportScreen, ShoppingDetailScreen, PantryReflectPicker,
   SettingsScreen, NicknameEditSheet, MyPageRecipebookTab, MyPageShoppingTab,
   PantryAddSheet, PantryBundlePicker, ConsumedIngredientSheet,
+  // Wave 1.5
+  MyPageRecipebookDetailScreen, IngredientFilterModal, PlanningServingsModal,
 });
 
 

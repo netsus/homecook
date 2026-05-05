@@ -1,8 +1,3 @@
-// ===== app.jsx =====
-// Wave 1 — synced from index.html (route.page routing, MENU_ADD wiring,
-// shell switcher, Wave 1 quick shortcuts).
-// Source of truth for Wave 1 changes: index.html. This split file mirrors it.
-
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "accentColor": "#2AC1BC",
   "showBrandFont": true,
@@ -23,6 +18,9 @@ function App() {
   const [savedIds, setSavedIds] = useState(['r1', 'r2', 'r4']);
   const [sortBy, setSortBy] = useState('rating');
   const [ingFilter, setIngFilter] = useState([]);
+  // Wave 1.5 — INGREDIENT_FILTER_MODAL 의 fine-grained 재료 이름 목록.
+  // 기존 ingFilter(category)와 별개로 운영. 둘 다 적용 시 AND.
+  const [ingredientNames, setIngredientNames] = useState([]);
   const [profile, setProfile] = useState({ nickname: '집밥러버', email: 'user@homecook.app', authed: true });
   // Sample shopping lists (one active, one completed) — for SHOPPING_DETAIL & MyPage history
   const [shoppingLists, setShoppingLists] = useState([
@@ -55,6 +53,9 @@ function App() {
   const [consumedSheet, setConsumedSheet] = useState(null); // { date, slot, recipe }
   const [mealDeleteConfirm, setMealDeleteConfirm] = useState(null); // { date, slot }
   const [servingChangeConfirm, setServingChangeConfirm] = useState(null); // { date, slot, next }
+  // Wave 1.5 — P0 modals
+  const [ingredientFilterOpen, setIngredientFilterOpen] = useState(false);
+  const [planningServings, setPlanningServings] = useState(null); // { recipeId, presetDate?, presetSlot? }
   const [toast, setToast] = useState('');
 
   // Tweaks
@@ -233,10 +234,10 @@ function App() {
     content = <MenuAddScreen presetDate={pa.date} presetSlot={pa.slot} planner={planner} pantry={pantry}
       onBack={backFromPage}
       onPickRecipe={(id) => {
+        // Wave 1.5: planner slot로 추가하는 흐름은 PlanningServingsModal을 거친다.
+        // slot 정보가 없으면 단순 레시피 열기로 폴백.
         if (pa.date && pa.slot) {
-          setPlanner(p => ({ ...p, [pa.date]: { ...p[pa.date], [pa.slot]: { recipeId: id, status: 'registered', servings: 2 } } }));
-          showToast(`${pa.date} ${pa.slot}에 추가됐어요`);
-          setRoute({ tab: 'planner', page: null });
+          setPlanningServings({ recipeId: id, presetDate: pa.date, presetSlot: pa.slot });
         } else {
           openRecipe(id); backFromPage();
         }
@@ -299,11 +300,19 @@ function App() {
       <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
         <AppBar title="레시피북" left={<button onClick={backFromPage} style={{ background:'transparent', border:'none', cursor:'pointer' }}>{Icon.chevL()}</button>} />
         <MyPageRecipebookTab
-          onOpenBook={(b) => showToast(b.name + ' 열기')}
-          onCreateBook={() => showToast('레시피북 만들기')}
-          onDeleteBook={(b) => showToast(b.name + ' 삭제됨')} />
+          onOpenBook={(bookId) => goPage('mypage-recipebook-detail', { bookId })}
+          onCreateBook={() => showToast('레시피북 만들기 (Wave 다음)')}
+          onDeleteBook={(id) => showToast('레시피북이 삭제됐어요')} />
       </div>
     );
+  } else if (route.page === 'mypage-recipebook-detail') {
+    content = <MyPageRecipebookDetailScreen
+      bookId={pa.bookId}
+      onBack={backFromPage}
+      onOpenRecipe={openRecipe}
+      onRemoveRecipe={(bookId, recipeId) => showToast('레시피북에서 제거됐어요')}
+      onDeleteBook={(book) => { backFromPage(); showToast(book.name + ' 삭제됐어요'); }}
+      showToast={showToast} />;
   } else if (route.page === 'mypage-shopping') {
     content = (
       <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
@@ -322,13 +331,19 @@ function App() {
       onOpenSave={() => setSaveModal({ recipeId: route.detail })}
       saved={savedIds.includes(route.detail)}
       toggleSaved={() => toggleSaved(route.detail)} />;
+
+
   } else if (route.tab === 'home') {
     content =
     <HomeScreen
       onOpenRecipe={openRecipe}
       sortBy={sortBy} setSortBy={setSortBy}
       ingFilter={ingFilter} setIngFilter={setIngFilter}
+      onOpenIngredientFilter={() => setIngredientFilterOpen(true)}
+      ingredientNames={ingredientNames}
       showSortSheet={sortSheet} setShowSortSheet={setSortSheet} />;
+
+
   } else if (route.tab === 'planner') {
     content =
     <PlannerScreen
@@ -339,6 +354,8 @@ function App() {
       onCookList={() => goPage('cook-list')}
       onMenuAdd={(date, slot) => goPage('menu-add', { date, slot })}
       onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })} />;
+
+
   } else if (route.tab === 'pantry') {
     content = <PantryScreen pantry={pantry} setPantry={setPantry} onOpenAdd={() => setPantryAddSheet(true)} />;
   } else if (route.tab === 'mypage') {
@@ -355,10 +372,6 @@ function App() {
   useEffect(() => { try { localStorage.setItem('hc_shell', shell); } catch (e) {} }, [shell]);
 
   // Desktop content
-  // NOTE (Wave 1, desktop fallback):
-  // route.page (menu-add / leftovers / shopping-detail / settings / mypage-* 등)는
-  // 별도 desktop layout을 갖지 않습니다. desktop shell 안에서 mobile-style content를
-  // max-width 720 컨테이너로 띄우는 fallback 으로 처리합니다. 자세한 사항은 HANDOFF.md 참조.
   let desktopContent;
   if (route.detail) {
     desktopContent = (
@@ -377,6 +390,8 @@ function App() {
         onOpenRecipe={openRecipe}
         sortBy={sortBy} setSortBy={setSortBy}
         ingFilter={ingFilter} setIngFilter={setIngFilter}
+        onOpenIngredientFilter={() => setIngredientFilterOpen(true)}
+        ingredientNames={ingredientNames}
         setShowSortSheet={setSortSheet}
       />
     );
@@ -393,6 +408,43 @@ function App() {
     desktopContent = <DesktopPantry pantry={pantry} setPantry={setPantry} />;
   } else if (route.tab === 'mypage') {
     desktopContent = <DesktopMyPage savedIds={savedIds} onOpenRecipe={openRecipe} />;
+  }
+
+  // Wave 1.5 — desktop variants for selected route.page values (P0 + P1.1)
+  let desktopPageContent = null;
+  if (route.page === 'menu-add') {
+    desktopPageContent = <DesktopMenuAddScreen
+      presetDate={pa.date} presetSlot={pa.slot} planner={planner} pantry={pantry}
+      onBack={backFromPage}
+      onPickRecipe={(id) => {
+        if (pa.date && pa.slot) setPlanningServings({ recipeId: id, presetDate: pa.date, presetSlot: pa.slot });
+        else { openRecipe(id); backFromPage(); }
+      }}
+      onGoManual={(d, s) => goPage('manual-create', { date: d, slot: s })}
+      onGoYtImport={(d, s) => goPage('yt-import', { date: d, slot: s })}
+      showToast={showToast} />;
+  } else if (route.page === 'shopping-create') {
+    desktopPageContent = <DesktopShoppingCreateScreen
+      planner={planner} pantry={pantry}
+      onBack={backFromPage} onAddToPantry={addItemsToPantry} showToast={showToast} />;
+  } else if (route.page === 'shopping-detail') {
+    const list = shoppingLists.find(l => l.id === pa.listId);
+    desktopPageContent = <DesktopShoppingDetailScreen
+      list={list} onBack={backFromPage}
+      onToggleItem={(name) => toggleShoppingItem(pa.listId, name)}
+      onComplete={completeShopping} onReopen={reopenShopping}
+      onReflect={(l) => setReflectPicker(l)} showToast={showToast} />;
+  } else if (route.page === 'cook-run') {
+    desktopPageContent = <DesktopCookRunScreen
+      date={pa.date} slot={pa.slot} planner={planner}
+      onBack={backFromPage} onComplete={markCooked} showToast={showToast} />;
+  } else if (route.page === 'mypage-recipebook-detail') {
+    desktopPageContent = <DesktopMyPageRecipebookDetail
+      bookId={pa.bookId} onBack={backFromPage}
+      onOpenRecipe={openRecipe}
+      onRemoveRecipe={(bookId, recipeId) => showToast('레시피북에서 제거됐어요')}
+      onDeleteBook={(book) => { backFromPage(); showToast(book.name + ' 삭제됐어요'); }}
+      showToast={showToast} />;
   }
 
   // ============ Top shell switcher ============
@@ -427,9 +479,13 @@ function App() {
         <div style={{ paddingTop: 56 }}>
           <DesktopShell tab={route.tab} onTab={goTab} showLogin={() => setLoginGate(true)}>
             {route.page ? (
-              <div style={{ maxWidth: 720, margin: '0 auto', background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                {content}
-              </div>
+              desktopPageContent ? desktopPageContent : (
+                /* Mobile-fallback for route.page values that don't yet have a desktop variant.
+                   See HANDOFF.md 부록 C.2 for the list of fallback pages. */
+                <div style={{ maxWidth: 720, margin: '0 auto', background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                  {content}
+                </div>
+              )
             ) : desktopContent}
           </DesktopShell>
         </div>
@@ -541,6 +597,45 @@ function App() {
               onConfirm={(names) => reflectToPantry(reflectPicker, names)} />
           </div>
         )}
+        {/* Wave 1.5 — P0 modals (desktop shell) */}
+        {ingredientFilterOpen && (
+          <DesktopIngredientFilterDialog value={ingredientNames}
+            onApply={(names) => { setIngredientNames(names); setIngredientFilterOpen(false); }}
+            onClose={() => setIngredientFilterOpen(false)} />
+        )}
+        {planningServings && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9550 }}>
+            <PlanningServingsModal
+              recipe={RECIPES.find(r => r.id === planningServings.recipeId)}
+              presetDate={planningServings.presetDate}
+              presetSlot={planningServings.presetSlot}
+              onClose={() => setPlanningServings(null)}
+              onConfirm={(servings) => {
+                const { recipeId, presetDate, presetSlot } = planningServings;
+                if (presetDate && presetSlot) {
+                  setPlanner(p => ({ ...p, [presetDate]: { ...p[presetDate], [presetSlot]: { recipeId, status: 'registered', servings } } }));
+                  showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
+                  setRoute({ tab: 'planner', page: null });
+                }
+                setPlanningServings(null);
+              }} />
+          </div>
+        )}
+        {servingChangeConfirm && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9550 }}>
+            <ConfirmDialog
+              title="인분을 변경할까요?"
+              body="이 식사는 장보기/요리 흐름에 들어가 있어요. 인분을 바꾸면 장보기 수량과 차감 분량이 함께 갱신돼요."
+              confirmLabel="변경하기"
+              onClose={() => setServingChangeConfirm(null)}
+              onConfirm={() => {
+                const { date, slot, next } = servingChangeConfirm;
+                setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], servings: next } } }));
+                setServingChangeConfirm(null);
+                showToast('인분이 변경됐어요');
+              }} />
+          </div>
+        )}
         {tweaksOn && <TweaksPanel tweaks={tweaks} setTweaks={setTweaks} />}
       </div>
     );
@@ -626,6 +721,41 @@ function App() {
                 <PantryReflectPicker list={reflectPicker} onClose={() => setReflectPicker(null)}
                   onConfirm={(names) => reflectToPantry(reflectPicker, names)} />
               )}
+              {/* Wave 1.5 — P0 modals (web-mobile shell) */}
+              {ingredientFilterOpen && (
+                <IngredientFilterModal value={ingredientNames}
+                  onApply={(names) => { setIngredientNames(names); setIngredientFilterOpen(false); }}
+                  onClose={() => setIngredientFilterOpen(false)} />
+              )}
+              {planningServings && (
+                <PlanningServingsModal
+                  recipe={RECIPES.find(r => r.id === planningServings.recipeId)}
+                  presetDate={planningServings.presetDate}
+                  presetSlot={planningServings.presetSlot}
+                  onClose={() => setPlanningServings(null)}
+                  onConfirm={(servings) => {
+                    const { recipeId, presetDate, presetSlot } = planningServings;
+                    if (presetDate && presetSlot) {
+                      setPlanner(p => ({ ...p, [presetDate]: { ...p[presetDate], [presetSlot]: { recipeId, status: 'registered', servings } } }));
+                      showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
+                      setRoute({ tab: 'planner', page: null });
+                    }
+                    setPlanningServings(null);
+                  }} />
+              )}
+              {servingChangeConfirm && (
+                <ConfirmDialog
+                  title="인분을 변경할까요?"
+                  body="이 식사는 장보기/요리 흐름에 들어가 있어요. 인분을 바꾸면 장보기 수량과 차감 분량이 함께 갱신돼요."
+                  confirmLabel="변경하기"
+                  onClose={() => setServingChangeConfirm(null)}
+                  onConfirm={() => {
+                    const { date, slot, next } = servingChangeConfirm;
+                    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], servings: next } } }));
+                    setServingChangeConfirm(null);
+                    showToast('인분이 변경됐어요');
+                  }} />
+              )}
               <Toast message={toast} />
             </div>
           </div>
@@ -682,6 +812,41 @@ function App() {
               {reflectPicker && (
                 <PantryReflectPicker list={reflectPicker} onClose={() => setReflectPicker(null)}
                   onConfirm={(names) => reflectToPantry(reflectPicker, names)} />
+              )}
+              {/* Wave 1.5 — P0 modals (webview shell) */}
+              {ingredientFilterOpen && (
+                <IngredientFilterModal value={ingredientNames}
+                  onApply={(names) => { setIngredientNames(names); setIngredientFilterOpen(false); }}
+                  onClose={() => setIngredientFilterOpen(false)} />
+              )}
+              {planningServings && (
+                <PlanningServingsModal
+                  recipe={RECIPES.find(r => r.id === planningServings.recipeId)}
+                  presetDate={planningServings.presetDate}
+                  presetSlot={planningServings.presetSlot}
+                  onClose={() => setPlanningServings(null)}
+                  onConfirm={(servings) => {
+                    const { recipeId, presetDate, presetSlot } = planningServings;
+                    if (presetDate && presetSlot) {
+                      setPlanner(p => ({ ...p, [presetDate]: { ...p[presetDate], [presetSlot]: { recipeId, status: 'registered', servings } } }));
+                      showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
+                      setRoute({ tab: 'planner', page: null });
+                    }
+                    setPlanningServings(null);
+                  }} />
+              )}
+              {servingChangeConfirm && (
+                <ConfirmDialog
+                  title="인분을 변경할까요?"
+                  body="이 식사는 장보기/요리 흐름에 들어가 있어요. 인분을 바꾸면 장보기 수량과 차감 분량이 함께 갱신돼요."
+                  confirmLabel="변경하기"
+                  onClose={() => setServingChangeConfirm(null)}
+                  onConfirm={() => {
+                    const { date, slot, next } = servingChangeConfirm;
+                    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], servings: next } } }));
+                    setServingChangeConfirm(null);
+                    showToast('인분이 변경됐어요');
+                  }} />
               )}
               <Toast message={toast} />
             </div>
@@ -759,6 +924,10 @@ function App() {
             style={quickBtn}>📖 레시피북 탭 (MYPAGE)</button>
           <button onClick={() => goPage('mypage-shopping')}
             style={quickBtn}>🧾 장보기 목록 탭 (MYPAGE)</button>
+          <button onClick={() => goPage('mypage-recipebook-detail', { bookId: 'b_custom1' })}
+            style={quickBtn}>📒 레시피북 상세 (DETAIL)</button>
+          <button onClick={() => { setRoute({ tab: 'home' }); setTimeout(() => setIngredientFilterOpen(true), 200); }}
+            style={quickBtn}>🔎 재료 필터 모달 (INGREDIENT_FILTER)</button>
         </div>
       </div>
 
@@ -826,7 +995,7 @@ function TweaksPanel({ tweaks, setTweaks }) {
 const quickBtn = {
   textAlign: 'left', padding: '8px 10px', fontSize: 12,
   background: '#fff', border: '1px solid #DEE2E6', borderRadius: 6,
-  cursor: 'pointer', color: '#495057',
+  cursor: 'pointer', color: '#495057'
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
