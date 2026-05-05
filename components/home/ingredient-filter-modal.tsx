@@ -12,19 +12,11 @@ import { ContentState } from "@/components/shared/content-state";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { SelectionChipRail } from "@/components/shared/selection-chip-rail";
 import { fetchJson } from "@/lib/api/fetch-json";
+import {
+  ALL_INGREDIENT_CATEGORY,
+  INGREDIENT_CATEGORY_OPTIONS,
+} from "@/lib/ingredient-categories";
 import type { IngredientItem, IngredientListData } from "@/types/recipe";
-
-const ALL_CATEGORY = "전체";
-const CATEGORY_OPTIONS = [
-  ALL_CATEGORY,
-  "채소",
-  "육류",
-  "해산물",
-  "양념",
-  "유제품",
-  "곡류",
-  "기타",
-] as const;
 
 type IngredientModalState = "loading" | "ready" | "empty" | "error";
 
@@ -42,7 +34,7 @@ function buildIngredientQueryString(query: string, category: string) {
     params.set("q", query.trim());
   }
 
-  if (category !== ALL_CATEGORY) {
+  if (category !== ALL_INGREDIENT_CATEGORY) {
     params.set("category", category);
   }
 
@@ -66,7 +58,9 @@ export function IngredientFilterModal({
 }: IngredientFilterModalProps) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORY);
+  const [activeCategory, setActiveCategory] = useState<string>(
+    ALL_INGREDIENT_CATEGORY,
+  );
   const [draftIngredientIds, setDraftIngredientIds] = useState<string[]>([]);
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
   const [screenState, setScreenState] = useState<IngredientModalState>("loading");
@@ -152,7 +146,7 @@ export function IngredientFilterModal({
 
     setQuery("");
     setDebouncedQuery("");
-    setActiveCategory(ALL_CATEGORY);
+    setActiveCategory(ALL_INGREDIENT_CATEGORY);
     setDraftIngredientIds(appliedIngredientIds);
   }, [appliedIngredientIds, isOpen]);
 
@@ -266,7 +260,10 @@ export function IngredientFilterModal({
           <div className="mt-3 md:mt-4 md:flex-wrap md:overflow-visible md:pb-0">
             <SelectionChipRail
               ariaLabel="카테고리 선택"
-              chips={CATEGORY_OPTIONS.map((cat) => ({ value: cat, label: cat }))}
+              chips={INGREDIENT_CATEGORY_OPTIONS.map((cat) => ({
+                value: cat,
+                label: cat,
+              }))}
               onSelect={setActiveCategory}
               selectedValue={activeCategory}
             />

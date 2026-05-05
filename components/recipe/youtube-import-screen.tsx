@@ -4,11 +4,11 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
+import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
 import { Button } from "@/components/ui/button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { fetchCookingMethods } from "@/lib/api/cooking-methods";
-import { fetchIngredients } from "@/lib/api/ingredients";
 import {
   validateYoutubeUrl,
   extractYoutubeRecipe,
@@ -17,7 +17,6 @@ import {
 import { createMealSafe } from "@/lib/api/meal";
 import type {
   CookingMethodItem,
-  IngredientItem,
   ManualRecipeIngredientInput,
   ManualRecipeStepInput,
   YoutubeVideoInfo,
@@ -609,145 +608,6 @@ function CompleteStep({ recipeTitle, hasPlanContext, onMealAdd, onViewDetail, on
   );
 }
 
-// ─── Ingredient Add Modal ───────────────────────────────────────────────────
-
-interface IngredientAddModalProps {
-  onClose: () => void;
-  onAdd: (ingredient: Omit<TempIngredient, "tempId">) => void;
-  availableIngredients: IngredientItem[];
-  isLoadingIngredients: boolean;
-  onSearchIngredients: (query: string) => void;
-}
-
-function IngredientAddModal({
-  onClose,
-  onAdd,
-  availableIngredients,
-  isLoadingIngredients,
-  onSearchIngredients,
-}: IngredientAddModalProps) {
-  const [selectedIngredient, setSelectedIngredient] = useState<IngredientItem | null>(null);
-  const [ingredientType, setIngredientType] = useState<"QUANT" | "TO_TASTE">("QUANT");
-  const [amount, setAmount] = useState<string>("100");
-  const [unit, setUnit] = useState<string>("g");
-  const [searchQuery, setSearchQuery] = useState("");
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onSearchIngredients(searchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery, onSearchIngredients]);
-
-  const handleAdd = () => {
-    if (!selectedIngredient) return;
-    onAdd({
-      ingredient_id: selectedIngredient.id,
-      standard_name: selectedIngredient.standard_name,
-      ingredient_type: ingredientType,
-      amount: ingredientType === "QUANT" ? parseFloat(amount) : null,
-      unit: ingredientType === "QUANT" ? unit : null,
-      scalable: ingredientType === "QUANT",
-      display_text:
-        ingredientType === "QUANT"
-          ? `${selectedIngredient.standard_name} ${amount}${unit}`
-          : `${selectedIngredient.standard_name} 약간`,
-      sort_order: 0,
-      confidence: 1,
-    });
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="w-full max-w-md rounded-t-[20px] bg-[var(--surface)] p-6 sm:rounded-[20px]">
-        <ModalHeader title="재료 추가" onClose={onClose} />
-        <div className="mt-6 space-y-4">
-          <input
-            type="text"
-            placeholder="재료 검색"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3 text-base"
-          />
-          {!selectedIngredient && (
-            <div className="relative">
-              <div className="max-h-[40vh] space-y-1 overflow-y-auto overscroll-contain">
-                {isLoadingIngredients ? (
-                  <p className="py-4 text-center text-sm text-[var(--muted)]">재료 검색 중...</p>
-                ) : availableIngredients.length === 0 ? (
-                  <p className="py-4 text-center text-sm text-[var(--muted)]">검색 결과가 없어요</p>
-                ) : (
-                  availableIngredients.slice(0, 20).map((ing) => (
-                    <button
-                      key={ing.id}
-                      className="w-full rounded-[var(--radius-sm)] px-3 py-2 text-left text-base hover:bg-[var(--surface-fill)]"
-                      onClick={() => setSelectedIngredient(ing)}
-                      type="button"
-                    >
-                      {ing.standard_name}
-                    </button>
-                  ))
-                )}
-              </div>
-              {/* Fade gradient affordance at scroll bottom */}
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-[var(--surface)] to-transparent" />
-            </div>
-          )}
-          {selectedIngredient && (
-            <>
-              <div className="rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-3">
-                <div className="text-sm text-[var(--text-2)]">선택된 재료</div>
-                <div className="flex items-center justify-between">
-                  <div className="text-base font-semibold text-[var(--foreground)]">
-                    {selectedIngredient.standard_name}
-                  </div>
-                  <button onClick={() => setSelectedIngredient(null)} className="text-sm text-[var(--brand)]" type="button">
-                    다시 선택
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <label className="flex items-center gap-2">
-                  <input type="radio" checked={ingredientType === "QUANT"} onChange={() => setIngredientType("QUANT")} />
-                  <span className="text-base">정량 (QUANT)</span>
-                </label>
-                {ingredientType === "QUANT" && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      placeholder="수량"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="rounded-[var(--radius-sm)] border border-[var(--line)] px-3 py-2 text-base"
-                    />
-                    <input
-                      type="text"
-                      placeholder="단위"
-                      value={unit}
-                      onChange={(e) => setUnit(e.target.value)}
-                      className="rounded-[var(--radius-sm)] border border-[var(--line)] px-3 py-2 text-base"
-                    />
-                  </div>
-                )}
-                <label className="flex items-center gap-2">
-                  <input type="radio" checked={ingredientType === "TO_TASTE"} onChange={() => setIngredientType("TO_TASTE")} />
-                  <span className="text-base">가감형 (TO_TASTE)</span>
-                </label>
-              </div>
-            </>
-          )}
-        </div>
-        <div className="mt-6">
-          <Button fullWidth onClick={handleAdd} disabled={!selectedIngredient}>
-            추가
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Step Add Modal ─────────────────────────────────────────────────────────
 
 interface StepAddModalProps {
@@ -775,8 +635,16 @@ function StepAddModal({ onClose, onAdd, cookingMethods, nextStepNumber }: StepAd
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center">
-      <div className="w-full max-w-md rounded-t-[20px] bg-[var(--surface)] p-6 sm:rounded-[20px]">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        aria-modal="true"
+        className="w-full max-w-md rounded-t-[20px] bg-[var(--surface)] p-6 sm:rounded-[20px]"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+      >
         <ModalHeader title="조리 과정 추가" onClose={onClose} />
         <div className="mt-6 space-y-4">
           <div className="text-sm font-semibold text-[var(--text-2)]">스텝 번호: {nextStepNumber}</div>
@@ -956,8 +824,6 @@ export function YoutubeImportScreen({
 
   // API data
   const [cookingMethods, setCookingMethods] = useState<CookingMethodItem[]>([]);
-  const [availableIngredients, setAvailableIngredients] = useState<IngredientItem[]>([]);
-  const [isLoadingIngredients, setIsLoadingIngredients] = useState(false);
 
   // Meal add flow
   const [isCreatingMeal, setIsCreatingMeal] = useState(false);
@@ -1141,15 +1007,6 @@ export function YoutubeImportScreen({
   }, [pushStep]);
 
   // ─── Step 3 handlers ───────────────────────────────────────────────
-
-  const handleSearchIngredients = useCallback(async (query: string) => {
-    setIsLoadingIngredients(true);
-    const response = await fetchIngredients({ q: query });
-    if (response.success && response.data?.items) {
-      setAvailableIngredients(response.data.items);
-    }
-    setIsLoadingIngredients(false);
-  }, []);
 
   const handleAddIngredient = useCallback((ingredient: Omit<TempIngredient, "tempId">) => {
     setIngredients((prev) => [
@@ -1388,12 +1245,11 @@ export function YoutubeImportScreen({
 
       {/* Modals */}
       {modalMode === "ingredient-add" && (
-        <IngredientAddModal
+        <RecipeIngredientAddModal
           onClose={() => setModalMode("none")}
-          onAdd={handleAddIngredient}
-          availableIngredients={availableIngredients}
-          isLoadingIngredients={isLoadingIngredients}
-          onSearchIngredients={handleSearchIngredients}
+          onAdd={(ingredient) =>
+            handleAddIngredient({ ...ingredient, confidence: 1 })
+          }
         />
       )}
       {modalMode === "step-add" && (
