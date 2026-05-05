@@ -587,12 +587,11 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.fill('input[placeholder="재료 검색"]', "두부");
     await page.waitForTimeout(400);
     await page.click("text=두부");
-    await page.click("text=정량 (QUANT)");
     await page.fill('input[placeholder="수량"]', "1");
-    await page.fill('input[placeholder="단위"]', "모");
 
     const ingredientModal = page.locator("div.fixed.inset-0.z-50").last();
-    await ingredientModal.locator('button:has-text("추가")').click();
+    await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
+    await ingredientModal.locator('button:has-text("완료")').click();
 
     await expect(page.locator("text=재료 (2개)")).toBeVisible();
     await expect(page.locator("text=두부")).toBeVisible();
