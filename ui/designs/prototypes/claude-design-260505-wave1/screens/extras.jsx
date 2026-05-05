@@ -407,8 +407,9 @@ function CookRunScreen({ date, slot, planner, onBack, onComplete, showToast }) {
 
   const next = () => {
     if (stepIdx < recipe.steps.length - 1) setStepIdx(stepIdx + 1);
-    else onComplete(date, slot);
+    else setShowConsumed(true);
   };
+  const [showConsumed, setShowConsumed] = useState_X(false);
 
   return (
     <div style={{ background: '#0E1014', minHeight: '100%', color: '#fff', display: 'flex', flexDirection: 'column' }}>
@@ -496,6 +497,11 @@ function CookRunScreen({ date, slot, planner, onBack, onComplete, showToast }) {
           fontFamily: T.fontBrand, letterSpacing: 0.5,
         }}>{stepIdx === recipe.steps.length - 1 ? '✓ 요리 완료' : '다음 스텝 →'}</button>
       </div>
+      {showConsumed && (
+        <ConsumedIngredientSheet recipe={recipe}
+          onClose={() => setShowConsumed(false)}
+          onConfirm={(picked) => { setShowConsumed(false); onComplete(date, slot, picked); }} />
+      )}
     </div>
   );
 }
@@ -503,9 +509,10 @@ function CookRunScreen({ date, slot, planner, onBack, onComplete, showToast }) {
 // ─────────────────────────────────────────────────────
 // 플래너 끼니 상세
 // ─────────────────────────────────────────────────────
-function MealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, onStartCook, onCreateShopping, onChangeStatus, onRemove }) {
+function MealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, onStartCook, onCreateShopping, onChangeStatus, onRemove, onChangeServings }) {
   const meal = planner[date]?.[slot];
   const recipe = meal && RECIPES.find(r => r.id === meal.recipeId);
+  const [askDelete, setAskDelete] = useState_X(false);
   if (!recipe) return <div style={{ padding: 40 }}>끼니를 찾을 수 없어요</div>;
   const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
 
@@ -593,9 +600,20 @@ function MealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, onStartCo
         padding: 16, background: '#fff', borderTop: `1px solid ${T.border}`,
         display: 'flex', gap: 8,
       }}>
+        <button onClick={() => setAskDelete(true)} style={{
+          padding: '12px 14px', borderRadius: 10, background: '#fff',
+          border: `1px solid ${T.border}`, color: T.red, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+        }}>삭제</button>
         <Button variant="neutral" onClick={() => onCreateShopping(date, slot)}>🛒 장보기</Button>
         <Button full onClick={() => onStartCook(date, slot)}>🍳 요리 시작</Button>
       </div>
+      {askDelete && (
+        <ConfirmDialog title="이 끼니를 삭제할까요?"
+          body={`${recipe.name} (${date} ${slot}) 가 식단에서 제거돼요.`}
+          destructive confirmLabel="삭제"
+          onClose={() => setAskDelete(false)}
+          onConfirm={() => { setAskDelete(false); onRemove(date, slot); }} />
+      )}
     </div>
   );
 }
@@ -807,3 +825,5 @@ Object.assign(window, {
   ShoppingCreateScreen, AddToPantryModal, CookListScreen, CookRunScreen,
   MealDetailScreen, MyPageSavedScreen, MyPageAccountScreen, MyPageNotifScreen, MyPageHelpScreen,
 });
+
+

@@ -718,3 +718,90 @@ test.use({ viewport: { width: 390, height: 844 } });  // baseline
 - [ ] 성능: Lighthouse 모바일 점수 회귀 -3점 이내
 - [ ] 워크팩 문서 동기화 여부
 ```
+
+---
+
+## 부록 C — Wave 1 Correction Pass Status (2026-05-06)
+
+`CLAUDE_CORRECTION_PROMPT.md`에 명시된 6개 항목의 처리 상태입니다. Source of truth는
+`index.html`이며, split source files(`app.jsx`, `screens/*.jsx`)는 이를 mirror 합니다.
+
+| # | 항목 | 상태 | 비고 |
+|---|------|------|------|
+| 1 | split source 동기화 | ✅ 완료 | `app.jsx`, `screens/{planner,pantry,mypage,extras,wave1,desktop-screens}.jsx` 모두 `index.html`에서 추출하여 동기화 |
+| 2 | `MENU_ADD` 진입 연결 | ✅ 완료 | mobile/desktop planner 빈 슬롯의 `+` 버튼이 `goPage('menu-add', { date, slot })` 호출. desktop 상단 `+ 식단 추가`는 슬롯 메타 없이 `goPage('menu-add')` |
+| 3 | quick flow panel Wave 1 바로가기 | ✅ 완료 | 6개 추가: `MENU_ADD`, `SHOPPING_DETAIL`, `LEFTOVERS`, `SETTINGS`, `MYPAGE_TAB_RECIPEBOOK`, `MYPAGE_TAB_SHOPPINGLISTS` |
+| 4 | `INGREDIENT_FILTER_MODAL` | ⏸ 이번 Wave 제외 | 아래 "C.1 Deferred" 참조 |
+| 5 | 신규 route page의 desktop 처리 | ⚠️ Fallback only | 아래 "C.2 Desktop Fallback" 참조 |
+| 6 | `homecook-baemin-prototype.html` 동기화 | ⏸ 다음 세션 | `index.html`이 안정화됐고 두 파일은 다음 correction pass에서 동기화 예정. 현재 두 파일은 다르며 `index.html`이 정본입니다. |
+
+### C.1 `INGREDIENT_FILTER_MODAL` Deferred
+
+이번 Wave에서는 별도 modal/sheet 컴포넌트로 추가하지 않았습니다. 현재 HOME에는 inline
+ingredient chip filter (`ChipRail`)만 있고, 화면정의서 v1.5.1의 `INGREDIENT_FILTER_MODAL`
+공식 명세는 다음 Wave에서 별도 컴포넌트로 분리합니다.
+
+이유:
+- 현재 chip rail이 동일 의도(보유 재료 빠른 토글)를 어느 정도 커버합니다.
+- 모달화는 화면정의서 v1.5.1의 modal/sheet 표준안과 동시에 검토되어야 하며 ad-hoc 추가
+  시 재작업 위험이 있습니다.
+- 이번 correction pass는 "더 만들지 말고 정리"가 목표였습니다.
+
+다음 Wave 도입 시 작업 항목:
+1. `IngredientFilterModal` (Sheet 컴포넌트) — chip rail의 multi-select 확장
+2. HOME 검색 영역에 "재료로 거르기" 진입 버튼 추가
+3. `ingFilter` 상태와 양방향 sync (열 때 현재값 반영, 닫을 때 변경 전파)
+4. 이번 correction pass에서 추가된 quick flow panel에 `INGREDIENT_FILTER_MODAL` shortcut도 같이 추가
+
+### C.2 Desktop Fallback for New Route Pages
+
+Wave 1에서 추가된 `route.page` 화면들(아래 목록)은 **별도 desktop layout이 없습니다**.
+Desktop shell에서 접근하면 `max-width: 720px` 컨테이너 안에 mobile-style content가
+그대로 렌더링됩니다 (`app.jsx`의 desktop shell 분기 참조).
+
+Fallback 적용 화면:
+- `login`
+- `menu-add`
+- `manual-create`
+- `yt-import`
+- `leftovers`
+- `ate-list`
+- `shopping-detail`
+- `shopping-create`
+- `cook-list`
+- `cook-run`
+- `meal-detail`
+- `settings`
+- `mypage-saved`, `mypage-account`, `mypage-notif`, `mypage-help`
+- `mypage-recipebook`, `mypage-shopping`
+
+이미 desktop 변형이 있는 화면(별도 desktop layout):
+- `home` → `DesktopHome`
+- `recipe-detail` → `DesktopRecipeDetail`
+- `planner` → `DesktopPlanner`
+- `pantry` → `DesktopPantry`
+- `mypage` → `DesktopMyPage`
+
+다음 Wave/포팅 시 결정 필요:
+- 어느 fallback 화면이 별도 desktop variant를 받을지 (예: `meal-detail`, `cook-run`은
+  desktop에서도 핵심 동선이라 우선순위 높음)
+- 시간이 부족하면 production port에서도 fallback 유지 (실제 사용자 비중에 따라 보류 가능)
+
+### C.3 Source-of-truth Convention
+
+이 Wave부터 다음 규칙을 따릅니다:
+
+- `index.html` → 단일 진실(single source of truth) — 변경은 여기서 시작
+- `app.jsx` + `screens/*.jsx` → mirror — `index.html`의 `// ===== <file> =====` 마커
+  사이 구간에서 추출
+- `homecook-baemin-prototype.html` → `index.html`과 동일해야 하지만 현재 미동기. 다음
+  correction pass의 단일 작업 항목입니다.
+
+split source 재추출 명령(reference):
+
+```bash
+# planner.jsx (1281부터 1450 직전까지)
+sed -n '1281,1449p' index.html > screens/planner.jsx
+# 등등 — index.html의 `// ===== screens/X.jsx =====` 마커 행 번호 기준
+```
+

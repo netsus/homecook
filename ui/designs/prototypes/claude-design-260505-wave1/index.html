@@ -1281,7 +1281,7 @@ window.RecipeDetail = RecipeDetail;
 // Planner screen (week view with day cards, slot rows per 화면정의서 H4)
 const { useState: useState_P } = React;
 
-function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, onOpenMeal, onCreateShopping, onCookList }) {
+function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, onOpenMeal, onCreateShopping, onCookList, onMenuAdd }) {
   const keys = Object.keys(planner);
   const todayK = keys[todayIdx];
 
@@ -1408,7 +1408,7 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
                         {Icon.chevR()}
                       </> :
 
-                    <button style={{
+                    <button onClick={() => onMenuAdd?.(k, slot)} style={{
                       flex: 1, marginLeft: 12, height: 44, border: `1px dashed ${T.border}`,
                       background: 'transparent', borderRadius: 8, color: T.text3,
                       fontSize: 13, cursor: 'pointer',
@@ -2107,7 +2107,7 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
   );
 }
 
-function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd }) {
+function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd }) {
   const days = Object.keys(planner);
   const slots = ['아침', '점심', '저녁'];
 
@@ -2118,7 +2118,7 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd }) {
           <div style={{ fontSize: 22, fontWeight: 700, color: T.ink }}>이번 주 식단</div>
           <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>2026년 4월 14일 ~ 4월 20일</div>
         </div>
-        <button onClick={() => onOpenPlannerAdd?.()} style={{
+        <button onClick={() => onMenuAdd?.()} style={{
           background: T.mint, color: '#fff', border: 'none', padding: '10px 16px',
           borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
         }}>+ 식단 추가</button>
@@ -2177,7 +2177,7 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd }) {
                       </div>
                     </div>
                   ) : (
-                    <button onClick={() => onOpenPlannerAdd?.(d, slot)} style={{
+                    <button onClick={() => onMenuAdd?.(d, slot)} style={{
                       width: '100%', height: '100%',
                       background: 'transparent', border: `1.5px dashed ${T.border}`, borderRadius: 8,
                       color: T.text3, fontSize: 18, cursor: 'pointer',
@@ -5013,6 +5013,7 @@ function App() {
       onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })}
       onCreateShopping={() => goPage('shopping-create')}
       onCookList={() => goPage('cook-list')}
+      onMenuAdd={(date, slot) => goPage('menu-add', { date, slot })}
       onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })} />;
 
 
@@ -5058,6 +5059,7 @@ function App() {
       <DesktopPlanner
         planner={planner}
         onOpenRecipe={openRecipe}
+        onMenuAdd={(date, slot) => goPage('menu-add', date && slot ? { date, slot } : {})}
         onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })}
       />
     );
@@ -5413,6 +5415,24 @@ function App() {
             style={quickBtn}>⇅ 정렬 시트</button>
           <button onClick={() => setLoginGate(true)}
             style={quickBtn}>🔒 로그인 게이트</button>
+        </div>
+
+        <div style={{ fontSize: 11, color: '#868E96', fontWeight: 700, marginTop: 16, marginBottom: 8 }}>Wave 1 바로가기</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button onClick={() => goPage('menu-add')}
+            style={quickBtn}>🍳 식사 추가 (MENU_ADD)</button>
+          <button onClick={() => {
+            const id = shoppingLists[0]?.id;
+            if (id) goPage('shopping-detail', { listId: id });
+          }} style={quickBtn}>🛒 장보기 상세 (SHOPPING_DETAIL)</button>
+          <button onClick={() => goPage('leftovers')}
+            style={quickBtn}>🍱 남은 재료 (LEFTOVERS)</button>
+          <button onClick={() => goPage('settings')}
+            style={quickBtn}>⚙️ 설정 (SETTINGS)</button>
+          <button onClick={() => goPage('mypage-recipebook')}
+            style={quickBtn}>📖 레시피북 탭 (MYPAGE)</button>
+          <button onClick={() => goPage('mypage-shopping')}
+            style={quickBtn}>🧾 장보기 목록 탭 (MYPAGE)</button>
         </div>
       </div>
 
