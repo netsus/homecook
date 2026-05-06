@@ -880,3 +880,56 @@ echo "$sha"  # 마커 라인 번호로 추출 범위 검증
 - `homecook-baemin-prototype.html` = byte-identical mirror.
 - `app.jsx` + `screens/*.jsx` = `index.html`의 `// ===== <file> =====` 마커 사이 구간에서 자동 추출.
 - 변경은 `index.html`에서 시작 → 검증(@babel/parser) → split 재추출 → mirror 동기화 → 문서 업데이트 순.
+
+---
+
+## 부록 E — Wave 1.6 Pass Status (2026-05-06)
+
+P1.2 4개 화면을 데스크톱 전용 layout으로 승격.
+
+### 추가된 데스크톱 layout
+
+- **DesktopLoginScreen** (`route.page === 'login'`)
+  - 좌: gradient hero panel (브랜드 로고 + 슬로건 + 핵심 기능 칩)
+  - 우: provider 4개(카카오/네이버/Google/Apple) + return-to-action 안내 카드 + 비로그인 둘러보기 옵션
+- **DesktopSettingsScreen** (`route.page === 'settings'`)
+  - 좌: 220px 사이드바 (계정 / 요리 모드 / 알림 / 데이터·백업 / 계정 삭제)
+  - 우: 패널별 setting row + ToggleRow + danger zone 카드
+  - 모달: NicknameEditSheet + LogoutConfirm + AccountDeleteConfirm 모두 fixed-overlay로 wired
+- **DesktopMealDetailScreen** (`route.page === 'meal-detail'`)
+  - 좌(1.4fr): hero card(16:8 thumb) + status timeline(3-step) + 재료 칩 그리드
+  - 우(1fr) sticky: 인분 스테퍼 카드 + 다음 단계 액션(요리 시작 / 장보기) + 삭제 카드
+  - 인분 변경 시 status가 cooked/shopped면 servingChangeConfirm 자동 발동
+- **DesktopCookListScreen** (`route.page === 'cook-list'`)
+  - 상단: gradient hero (총 cook-ready 끼니 수 + 안내)
+  - 본문: 오늘 / 내일 / 이번 주 남은 끼니 3-section, 각 section은 280px+ 카드 그리드
+  - 카드별: 상세 보기 + 요리 시작 액션, METHOD_COLORS 좌측 보더로 조리법 시각 구분
+
+### App 변경
+
+- `desktopPageContent` 분기에 4개 추가 (login / settings / meal-detail / cook-list)
+- desktop shell 안 fallback 컨테이너는 그대로 유지 (남은 P1.3/P2 화면은 여전히 fallback로 렌더)
+- quick flow panel에 ‘Wave 1.6 데스크톱’ 섹션 추가:
+  - 🔐 로그인 화면 (`goPage('login')`)
+  - 🥘 요리 준비 리스트 (`goPage('cook-list')`)
+  - 🍽️ 끼니 상세 (자동으로 등록된 식사 슬롯 찾아 `goPage('meal-detail', {...})`)
+
+### 아직 남은 gap
+
+- **P1.3 fallback (7개)**: LEFTOVERS, ATE_LIST, MANUAL_RECIPE_CREATE, YT_IMPORT, RECIPE_SEARCH_PICKER 단독, MYPAGE_TAB_RECIPEBOOK 목록, MYPAGE_TAB_SHOPPINGLISTS. 다음 Wave 추천 범위.
+- **P2 데스크톱 picker/sheet/modal (8개)**: PantryAddSheet, PantryBundlePicker, PantryReflectPicker, ConsumedIngredientSheet, RecipeBookSelector(단독), RecipeBookDetailPicker(단독), PantryMatchPicker(단독), 그리고 일부 ConsumedIngredientSheet 케이스. NicknameEditSheet는 이번 Wave에서 desktop fixed-overlay wrapper로 이미 wired.
+
+### 다음 Wave 추천 범위
+
+1. **P1.3 우선순위**: MEAL_SCREEN/COOK_MODE 다음으로 사용자가 자주 진입하는 LEFTOVERS, MANUAL_RECIPE_CREATE, YT_IMPORT를 먼저. 둘 다 form-heavy이므로 desktop 2-col layout(좌 입력/우 미리보기) 권장.
+2. **P2 picker 통합**: MENU_ADD desktop 사이드바가 search/book/pantry-match 단독 picker를 사실상 흡수했으므로, 단독 picker는 desktop에서 dialog-only로 가볍게 유지하는 안 검토.
+3. **데스크톱 NavBar 강화**: 현재 DesktopShell 4-tab은 plain. 사용자 프로필/검색바/장보기 빠른 진입 같은 항상 노출 elements 추가 검토.
+
+### 검증 결과 (Wave 1.6)
+
+- `index.html` script block: `@babel/parser` 통과 ✅ (338,806 chars)
+- 15개 split source: 모두 babel-parser 통과 ✅
+- `homecook-baemin-prototype.html` ↔ `index.html` byte-identical (`diff -q` 통과) ✅
+- 4개 신규 컴포넌트(`DesktopLoginScreen`, `DesktopSettingsScreen`, `DesktopMealDetailScreen`, `DesktopCookListScreen`) 모두 `screens/desktop-screens.jsx`에 존재 ✅
+- desktopPageContent 분기에 4개 wired (login/settings/meal-detail/cook-list) ✅
+- quick flow panel ‘Wave 1.6 데스크톱’ 섹션 3개 진입 버튼 추가 ✅

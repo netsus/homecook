@@ -1,9 +1,9 @@
 # Claude Design Coverage Review
 
-> Date: 2026-05-06 (Wave 1.5 완료 시점)
+> Date: 2026-05-06 (Wave 1.6 완료 시점)
 > Source: `ui/designs/prototypes/claude-design-260505-wave1/`
 > Source-of-truth: `index.html` (= `homecook-baemin-prototype.html`, byte-identical)
-> Wave: **1.5 (P0 + P1.1)**
+> Wave: **1.6 (P0 + P1.1 + P1.2)**
 
 ## 범례
 
@@ -36,14 +36,19 @@
 | RECIPEBOOK_DETAIL | ✅ MyPageRecipebookDetailScreen | ✅ DesktopMyPageRecipebookDetail | **신규 (P0)** · 320px 사이드바 + 레시피 그리드 |
 | INGREDIENT_FILTER_MODAL | ✅ IngredientFilterModal (sheet) | ✅ DesktopIngredientFilterDialog (dialog) | **신규 (P0)** · HOME 검색 영역에서 진입 |
 
-### Wave 1 routes — 데스크톱이 아직 fallback인 화면
+### Wave 1.6에서 추가 승격된 화면 (P1.2)
+
+| ID | 모바일 | 데스크톱 | 비고 |
+|----|--------|---------|------|
+| LOGIN | ✅ LoginScreen | ✅ DesktopLoginScreen | 좌 gradient hero + 우 provider 4개 + return-to-action 카드. **Wave 1.6 신규** |
+| SETTINGS | ✅ SettingsScreen | ✅ DesktopSettingsScreen | 220px 사이드바 + 패널별 row/toggle. NicknameEditSheet · LogoutConfirm · AccountDeleteConfirm 모두 wired. **Wave 1.6 신규** |
+| MEAL_SCREEN | ✅ MealDetailScreen | ✅ DesktopMealDetailScreen | 좌 hero/timeline/ingredients + 우 sticky 인분/액션/삭제 카드. servingChangeConfirm 자동 발동. **Wave 1.6 신규** |
+| COOK_READY_LIST | ✅ CookListScreen | ✅ DesktopCookListScreen | gradient hero + 오늘/내일/이번 주 3-section 카드 그리드. **Wave 1.6 신규** |
+
+### Wave 1 routes — 데스크톱이 아직 fallback인 화면 (P1.3)
 
 | ID | 모바일 | 데스크톱 | Fallback 사유 |
 |----|--------|---------|--------------|
-| LOGIN | ✅ LoginScreen | △ fallback | 사용자 흐름이 모바일과 동일하게 일관되도록 그대로 둔 결과. P1.2. |
-| SETTINGS | ✅ SettingsScreen | △ fallback | desktop 전용 layout 필요하나 우선순위 2. P1.2. |
-| MEAL_SCREEN | ✅ MealDetailScreen | △ fallback | desktop에서도 핵심 동선이라 다음 세션 우선. P1.2. |
-| COOK_READY_LIST | ✅ CookListScreen | △ fallback | COOK_MODE는 desktop 승격됐지만 진입 화면(요리 가능 식사 목록)은 fallback. P1.2. |
 | LEFTOVERS | ✅ LeftoversScreen | △ fallback | P1.3. fallback에서 동작 정상. |
 | ATE_LIST | ✅ AteListScreen | △ fallback | P1.3. |
 | MANUAL_RECIPE_CREATE | ✅ ManualRecipeCreateScreen | △ fallback | P1.3. desktop에서는 form layout 권장. |
@@ -98,12 +103,13 @@
 
 ## 요약
 
-- **모바일 주요 화면 21/21** — RECIPEBOOK_DETAIL 추가로 100% 도달.
-- **데스크톱 전용 layout**: 5 → **10개**.
-  - 추가된 5개: MENU_ADD, SHOPPING_FLOW, SHOPPING_DETAIL, COOK_MODE, RECIPEBOOK_DETAIL
-  - 추가된 1개 모달: DesktopIngredientFilterDialog
-- **데스크톱 fallback 잔존**: P1.2 4개 + P1.3 7개 = 11개. 모두 desktop shell 안 `max-width: 720` 컨테이너로 진입 가능. 시각·동작 깨지지 않음.
-- **데스크톱 picker/sheet/modal**: P2 (8개) 미수행. 다음 Wave에서 ConfirmDialog 일관 패턴 + dropdown panel 패턴 도입 예정.
+- **모바일 주요 화면 21/21** — Wave 1.5의 RECIPEBOOK_DETAIL 추가로 100% 유지.
+- **데스크톱 전용 layout**: 5 → 10 → **14개** (Wave 1.6에서 P1.2 4개 추가).
+  - Wave 1.5 추가 5개: MENU_ADD, SHOPPING_FLOW, SHOPPING_DETAIL, COOK_MODE, RECIPEBOOK_DETAIL
+  - **Wave 1.6 추가 4개: LOGIN, SETTINGS, MEAL_SCREEN, COOK_READY_LIST**
+  - 추가 모달: DesktopIngredientFilterDialog (Wave 1.5)
+- **데스크톱 fallback 잔존**: P1.3 **7개**로 감소. 모두 desktop shell 안 `max-width: 720` 컨테이너로 진입 가능.
+- **데스크톱 picker/sheet/modal**: P2 (8개) 미수행. NicknameEditSheet는 Wave 1.6에서 SETTINGS desktop의 fixed-overlay wrapper로 활용됨.
 
 ## 다음 사람을 위한 진입 경로
 
@@ -116,6 +122,11 @@
 3. **INGREDIENT_FILTER_MODAL 흐름** — HOME → 재료 칩 줄 끝 ‘🔎 재료로 거르기’ → 카테고리별 다중 선택 → 적용
 4. **servingChangeConfirm** — Meal detail 진입 후 인분 스테퍼 조작 (status가 cooked/shopped일 때만 confirm 발동)
 5. **데스크톱 shell 토글** — 상단 토글로 ‘🖥 데스크톱 웹’ 선택 → 위 4개 흐름 모두 desktop 전용 layout으로 표시
+6. **Wave 1.6 진입 (데스크톱 shell)** — quick panel ‘Wave 1.6 데스크톱’ 섹션:
+   - 🔐 로그인 화면 → DesktopLoginScreen (gradient hero + provider 카드)
+   - 🥘 요리 준비 리스트 → DesktopCookListScreen
+   - 🍽️ 끼니 상세 → DesktopMealDetailScreen (자동으로 등록된 식사 슬롯 진입)
+   - 마이페이지 → ⚙️ 환경설정 → DesktopSettingsScreen (5-section 사이드바)
 
 ## 참고
 

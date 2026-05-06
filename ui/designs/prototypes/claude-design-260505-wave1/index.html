@@ -3168,11 +3168,600 @@ function DesktopCookRunScreen({ date, slot, planner, onBack, onComplete, showToa
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// Wave 1.6 — Desktop variants (LOGIN / SETTINGS / MEAL_SCREEN / COOK_READY_LIST)
+// 모바일 컴포넌트와 동일한 prop 시그니처를 유지해서 App 측 wiring 변화를 최소화한다.
+// ─────────────────────────────────────────────────────────────
+
+// Desktop: LOGIN (P1.2)
+function DesktopLoginScreen({ returnTo, onBack, onLogin }) {
+  const providers = [
+    { k: 'kakao',  label: '카카오로 시작',   bg: '#FEE500', color: '#191919', emoji: '💬' },
+    { k: 'naver',  label: '네이버로 시작',   bg: '#03C75A', color: '#fff',    emoji: 'N' },
+    { k: 'google', label: 'Google로 시작',  bg: '#fff',    color: '#212529', emoji: 'G', border: T.border },
+    { k: 'apple',  label: 'Apple로 시작',   bg: '#212529', color: '#fff',    emoji: '' },
+  ];
+  return (
+    <div style={{
+      minHeight: 'calc(100vh - 120px)',
+      display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 32, alignItems: 'stretch',
+    }}>
+      {/* Hero panel */}
+      <div style={{
+        background: `linear-gradient(135deg, ${T.mint} 0%, ${T.mintDeep} 100%)`,
+        color: '#fff', borderRadius: 20, padding: 48, position: 'relative',
+        display: 'flex', flexDirection: 'column', justifyContent: 'space-between', overflow: 'hidden',
+      }}>
+        <div>
+          <div style={{
+            width: 80, height: 80, borderRadius: 22, background: 'rgba(255,255,255,0.18)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 38, fontFamily: T.fontBrand, fontWeight: 800, marginBottom: 24,
+            backdropFilter: 'blur(8px)',
+          }}>홈</div>
+          <div style={{ fontSize: 36, fontWeight: 800, lineHeight: 1.25, fontFamily: T.fontBrand }}>
+            홈쿡과 함께<br />오늘 뭐 먹지 정해봐요
+          </div>
+          <div style={{ fontSize: 15, opacity: 0.92, marginTop: 14, lineHeight: 1.6, maxWidth: 420 }}>
+            식단을 짜고, 장 보고, 요리한 기록을 남길 수 있어요.<br />
+            로그인하면 모든 기록이 자동으로 동기화돼요.
+          </div>
+        </div>
+        <div style={{
+          display: 'flex', gap: 16, opacity: 0.9, fontSize: 13,
+          background: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: 14, backdropFilter: 'blur(8px)',
+        }}>
+          <span>🍳 식단 플래너</span>
+          <span>·</span>
+          <span>🛒 장보기</span>
+          <span>·</span>
+          <span>🧊 팬트리</span>
+          <span>·</span>
+          <span>📖 레시피북</span>
+        </div>
+      </div>
+
+      {/* Login panel */}
+      <div style={{
+        background: '#fff', borderRadius: 20, padding: 40, boxShadow: T.shadowDeep,
+        display: 'flex', flexDirection: 'column', gap: 16,
+      }}>
+        <div>
+          <div style={{ fontSize: 11, color: T.text3, fontWeight: 700, letterSpacing: 1.2 }}>SIGN IN</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand, marginTop: 6 }}>
+            소셜 계정으로 빠르게
+          </div>
+        </div>
+
+        {returnTo && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            border: `1px solid ${T.mint}`, background: T.mintSoft,
+            borderRadius: 12, padding: 14,
+          }}>
+            <span style={{ fontSize: 22 }}>↩️</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: T.mintDeep, fontWeight: 800 }}>로그인 후 이어서</div>
+              <div style={{ fontSize: 14, color: T.ink, fontWeight: 700, marginTop: 1 }}>{returnTo.label}</div>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+          {providers.map(p => (
+            <button key={p.k} onClick={() => onLogin?.(p.k, returnTo)} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '14px 18px', borderRadius: 12,
+              background: p.bg, color: p.color, fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              border: p.border ? `1px solid ${p.border}` : 'none',
+              boxShadow: T.shadowNatural, fontFamily: T.fontUI, justifyContent: 'flex-start',
+            }}>
+              <span style={{
+                width: 28, height: 28, borderRadius: 14,
+                background: p.k === 'apple' ? '#fff' : 'rgba(0,0,0,0.06)',
+                color: p.k === 'apple' ? '#000' : 'inherit',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14,
+              }}>{p.emoji}</span>
+              <span style={{ flex: 1, textAlign: 'left' }}>{p.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div style={{
+          fontSize: 11, color: T.text3, lineHeight: 1.55, marginTop: 6,
+          padding: 12, background: T.surfaceFill, borderRadius: 10,
+        }}>
+          ⓘ 로그인 없이 둘러보고 싶다면 <button onClick={onBack} style={{
+            background: 'none', border: 'none', color: T.mintDeep, fontWeight: 700, cursor: 'pointer', padding: 0,
+          }}>건너뛰기</button>. 단, 작성한 식단·레시피·팬트리 기록은 기기 내에만 저장돼요.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Desktop: SETTINGS (P1.2)
+function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAccount, showToast }) {
+  const [keepAwake, setKeepAwake] = dUseState(true);
+  const [voice, setVoice] = dUseState(false);
+  const [autoNext, setAutoNext] = dUseState(false);
+  const [showNick, setShowNick] = dUseState(false);
+  const [confirmLogout, setConfirmLogout] = dUseState(false);
+  const [confirmDelete, setConfirmDelete] = dUseState(false);
+  const [section, setSection] = dUseState('account');
+
+  const sections = [
+    { k: 'account', label: '계정', emoji: '👤' },
+    { k: 'cook',    label: '요리 모드', emoji: '🍳' },
+    { k: 'notif',   label: '알림', emoji: '🔔' },
+    { k: 'data',    label: '데이터 · 백업', emoji: '💾' },
+    { k: 'danger',  label: '계정 삭제', emoji: '⚠️' },
+  ];
+
+  return (
+    <div>
+      <button onClick={onBack} style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        color: T.text2, fontSize: 13, fontWeight: 600, marginBottom: 16,
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+      }}>{Icon.chevL(T.text2)} 마이페이지</button>
+
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>설정</div>
+        <div style={{ fontSize: 12, color: T.text3 }}>변경 사항은 자동 저장돼요</div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 24, alignItems: 'start' }}>
+        <aside style={{ display: 'flex', flexDirection: 'column', gap: 4, position: 'sticky', top: 24 }}>
+          {sections.map(s => (
+            <button key={s.k} onClick={() => setSection(s.k)} style={{
+              textAlign: 'left', padding: '11px 14px', borderRadius: 10,
+              background: section === s.k ? T.mintSoft : 'transparent',
+              border: section === s.k ? `1px solid ${T.mint}` : '1px solid transparent',
+              color: section === s.k ? T.mintDeep : (s.k === 'danger' ? T.red : T.text1),
+              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <span style={{ fontSize: 16 }}>{s.emoji}</span>{s.label}
+            </button>
+          ))}
+        </aside>
+
+        <main style={{ background: '#fff', borderRadius: 16, padding: 28, boxShadow: T.shadowDeep, minHeight: 400 }}>
+          {section === 'account' && (
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>계정 정보</div>
+              <DesktopSettingRow label="닉네임" sub="레시피북·후기에 표시되는 이름이에요"
+                right={<><span style={{ fontSize: 14, color: T.text2, fontWeight: 600 }}>{profile.nickname}</span>
+                  <button onClick={() => setShowNick(true)} style={editLinkBtnDsk}>변경</button></>} />
+              <DesktopSettingRow label="이메일" sub="로그인에 사용된 계정 이메일"
+                right={<span style={{ fontSize: 14, color: T.text3 }}>{profile.email}</span>} />
+              <DesktopSettingRow label="로그아웃" sub="이 기기에서 로그아웃해요"
+                right={<button onClick={() => setConfirmLogout(true)} style={{
+                  padding: '8px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
+                  background: '#fff', color: T.text2, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                }}>로그아웃</button>} />
+            </div>
+          )}
+          {section === 'cook' && (
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>요리 모드</div>
+              <DesktopToggleRow label="화면 켜둠" sub="요리 중 화면이 꺼지지 않아요" on={keepAwake} onChange={setKeepAwake} />
+              <DesktopToggleRow label="음성 안내" sub="단계 음성을 읽어줘요 (베타)" on={voice} onChange={setVoice} />
+              <DesktopToggleRow label="타이머 끝나면 다음 단계 자동" sub="타이머 종료 시 자동으로 다음 단계로 넘어갑니다" on={autoNext} onChange={setAutoNext} />
+            </div>
+          )}
+          {section === 'notif' && (
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>알림</div>
+              <div style={{ background: T.surfaceFill, borderRadius: 10, padding: 24, fontSize: 13, color: T.text2, textAlign: 'center' }}>
+                알림 설정은 다음 Wave에서 제공돼요. 현재는 모두 기본 설정으로 동작합니다.
+              </div>
+            </div>
+          )}
+          {section === 'data' && (
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>데이터 · 백업</div>
+              <DesktopSettingRow label="데이터 내보내기" sub="식단·레시피·팬트리를 JSON으로 받아요"
+                right={<button onClick={() => showToast?.('내보내기는 다음 Wave (베타)')} style={editLinkBtnDsk}>내보내기</button>} />
+              <DesktopSettingRow label="기기 데이터 초기화" sub="이 기기의 임시 캐시만 비웁니다"
+                right={<button onClick={() => showToast?.('캐시가 비워졌어요')} style={editLinkBtnDsk}>초기화</button>} />
+            </div>
+          )}
+          {section === 'danger' && (
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.red, marginBottom: 12 }}>위험 영역</div>
+              <div style={{
+                background: '#FFF5F5', border: `1px solid ${T.red}`, borderRadius: 12,
+                padding: 18, marginBottom: 14,
+              }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: T.redDeep, marginBottom: 6 }}>회원 탈퇴</div>
+                <div style={{ fontSize: 12, color: T.text2, lineHeight: 1.6, marginBottom: 14 }}>
+                  탈퇴하면 모든 식단·레시피·팬트리·장보기 기록이 영구 삭제됩니다. 이 동작은 되돌릴 수 없어요.<br />
+                  <span style={{ color: T.red }}>※ 7일 이내 재로그인 시 일부 데이터는 복구가 가능합니다 (베타).</span>
+                </div>
+                <button onClick={() => setConfirmDelete(true)} style={{
+                  padding: '10px 18px', borderRadius: 8, border: 'none',
+                  background: T.red, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+                }}>탈퇴 진행</button>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {showNick && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
+          <NicknameEditSheet current={profile.nickname}
+            onClose={() => setShowNick(false)}
+            onSave={(v) => { onUpdateProfile?.({ nickname: v }); setShowNick(false); showToast?.('닉네임이 변경됐어요'); }} />
+        </div>
+      )}
+      {confirmLogout && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
+          <ConfirmDialog title="로그아웃 할까요?" body="다시 로그인해야 식단·팬트리가 동기화돼요."
+            confirmLabel="로그아웃" onClose={() => setConfirmLogout(false)}
+            onConfirm={() => { setConfirmLogout(false); onLogout?.(); }} />
+        </div>
+      )}
+      {confirmDelete && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
+          <ConfirmDialog title="정말 탈퇴하시겠어요?"
+            body="모든 식단, 레시피, 팬트리 기록이 영구 삭제됩니다. 이 동작은 되돌릴 수 없어요."
+            destructive confirmLabel="탈퇴하기" onClose={() => setConfirmDelete(false)}
+            onConfirm={() => { setConfirmDelete(false); onDeleteAccount?.(); }}
+            extra={<div style={{
+              padding: 10, background: '#FFF5F5', borderRadius: 8, fontSize: 11, color: T.red, lineHeight: 1.5,
+            }}>⚠ 7일 이내 재로그인 시 일부 데이터는 복구가 가능합니다 (베타).</div>} />
+        </div>
+      )}
+    </div>
+  );
+}
+function DesktopSettingRow({ label, sub, right }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '14px 0', borderBottom: `1px solid ${T.surfaceSubtle}`, gap: 16,
+    }}>
+      <div>
+        <div style={{ fontSize: 14, color: T.ink, fontWeight: 700 }}>{label}</div>
+        {sub && <div style={{ fontSize: 12, color: T.text3, marginTop: 3 }}>{sub}</div>}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>{right}</div>
+    </div>
+  );
+}
+function DesktopToggleRow({ label, sub, on, onChange }) {
+  return (
+    <DesktopSettingRow label={label} sub={sub} right={
+      <button onClick={() => onChange(!on)} style={{
+        width: 48, height: 28, borderRadius: 14,
+        background: on ? T.mint : '#DEE2E6', border: 'none',
+        position: 'relative', cursor: 'pointer', transition: 'background 0.15s',
+      }}>
+        <div style={{
+          position: 'absolute', top: 2, left: on ? 22 : 2,
+          width: 24, height: 24, borderRadius: 12, background: '#fff',
+          transition: 'left 0.15s', boxShadow: '0 1px 3px rgba(0,0,0,0.16)',
+        }} />
+      </button>
+    } />
+  );
+}
+const editLinkBtnDsk = {
+  background: 'none', border: 'none', color: T.mintDeep,
+  fontSize: 13, fontWeight: 800, cursor: 'pointer', padding: 0,
+};
+
+// Desktop: MEAL_SCREEN (P1.2)
+function DesktopMealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, onStartCook, onCreateShopping, onChangeStatus, onRemove, onChangeServings }) {
+  const meal = planner[date]?.[slot];
+  const recipe = meal && RECIPES.find(r => r.id === meal.recipeId);
+  const [askDelete, setAskDelete] = dUseState(false);
+  if (!recipe) {
+    return (
+      <div>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text2, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>{Icon.chevL(T.text2)} 돌아가기</button>
+        <div style={{ padding: 60, textAlign: 'center', color: T.text3 }}>끼니를 찾을 수 없어요</div>
+      </div>
+    );
+  }
+  const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
+  const statusFlow = [
+    { k: 'registered', l: '등록됨',       emoji: '📝' },
+    { k: 'shopped',    l: '장보기 완료',   emoji: '🛒' },
+    { k: 'cooked',     l: '요리 완료',     emoji: '🍳' },
+  ];
+  const statusOrder = statusFlow.findIndex(x => x.k === meal.status);
+
+  return (
+    <div>
+      <button onClick={onBack} style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        color: T.text2, fontSize: 13, fontWeight: 600, marginBottom: 14,
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+      }}>{Icon.chevL(T.text2)} 플래너</button>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 24, alignItems: 'start' }}>
+        <main style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Hero card */}
+          <div style={{
+            background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: T.shadowDeep,
+          }}>
+            <div style={{
+              aspectRatio: '16/8', background: recipe.bg,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 120, position: 'relative',
+            }}>
+              {recipe.emoji}
+              <div style={{
+                position: 'absolute', top: 14, left: 14,
+                background: 'rgba(255,255,255,0.92)', color: T.ink,
+                padding: '6px 12px', borderRadius: 9999, fontSize: 11, fontWeight: 800,
+              }}>{date} · {slot}</div>
+            </div>
+            <div style={{ padding: '20px 24px 22px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: m.text, background: m.bg, padding: '4px 10px', borderRadius: 9999 }}>
+                  {m.label}
+                </span>
+                <StatusPill status={meal.status} />
+              </div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand, marginBottom: 6 }}>
+                {recipe.name}
+              </div>
+              <div style={{ fontSize: 13, color: T.text3 }}>
+                {recipe.minutes}분 · {recipe.kcal}kcal · 평점 {recipe.rating}
+              </div>
+              <button onClick={() => onOpenRecipe?.(recipe.id)} style={{
+                marginTop: 14, padding: '8px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
+                background: '#fff', color: T.text2, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              }}>전체 레시피 보기 →</button>
+            </div>
+          </div>
+
+          {/* Status timeline */}
+          <div style={{
+            background: '#fff', borderRadius: 16, padding: 22, boxShadow: T.shadowDeep,
+          }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 14 }}>진행 상태</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {statusFlow.map((s, i) => {
+                const active = i <= statusOrder;
+                return (
+                  <button key={s.k} onClick={() => onChangeStatus?.(date, slot, s.k)} style={{
+                    flex: 1, padding: '14px 10px', borderRadius: 12,
+                    border: active ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+                    background: active ? T.mintSoft : '#fff', cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  }}>
+                    <span style={{ fontSize: 24 }}>{s.emoji}</span>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: active ? T.mintDeep : T.text3 }}>{s.l}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: 11, color: T.text3, marginTop: 12, lineHeight: 1.5 }}>
+              ⓘ 상태를 클릭하면 즉시 적용돼요. ‘요리 완료’는 보통 요리 모드에서 자동 처리되지만 수동으로도 가능합니다.
+            </div>
+          </div>
+
+          {/* Ingredients */}
+          <div style={{ background: '#fff', borderRadius: 16, padding: 22, boxShadow: T.shadowDeep }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 12 }}>
+              필요 재료 <span style={{ color: T.text3, fontWeight: 600, fontSize: 12 }}>· {recipe.ingredients.length}개</span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {recipe.ingredients.map(ing => (
+                <span key={ing.name} style={{
+                  fontSize: 12, color: T.text2, background: T.surfaceFill,
+                  padding: '7px 12px', borderRadius: 9999, fontWeight: 600,
+                }}>{ing.name} <b style={{ color: T.text3, fontWeight: 600 }}>{ing.qty}</b></span>
+              ))}
+            </div>
+          </div>
+        </main>
+
+        <aside style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 24 }}>
+          {/* Servings */}
+          <div style={{ background: '#fff', borderRadius: 14, padding: 18, boxShadow: T.shadowDeep }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 10 }}>인분</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <button onClick={() => onChangeServings?.(date, slot, Math.max(1, meal.servings - 1))} style={{
+                width: 38, height: 38, borderRadius: 19, border: 'none',
+                background: T.surfaceFill, fontSize: 18, fontWeight: 800, cursor: 'pointer',
+              }}>−</button>
+              <div style={{ fontSize: 28, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
+                {meal.servings}<span style={{ fontSize: 13, color: T.text3, marginLeft: 4 }}>인분</span>
+              </div>
+              <button onClick={() => onChangeServings?.(date, slot, Math.min(12, meal.servings + 1))} style={{
+                width: 38, height: 38, borderRadius: 19, border: 'none',
+                background: T.mint, color: '#fff', fontSize: 18, fontWeight: 800, cursor: 'pointer',
+              }}>+</button>
+            </div>
+            {meal.status !== 'registered' && (
+              <div style={{
+                fontSize: 11, color: T.text3, marginTop: 10, padding: '8px 10px',
+                background: T.surfaceFill, borderRadius: 8, lineHeight: 1.5,
+              }}>
+                ⓘ 이 식사는 장보기/요리 흐름에 들어가 있어요. 인분 변경 시 영향을 안내하는 confirm이 뜹니다.
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div style={{ background: '#fff', borderRadius: 14, padding: 18, boxShadow: T.shadowDeep }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 10 }}>다음 단계</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button onClick={() => onStartCook?.(date, slot)} style={{
+                padding: '14px 16px', borderRadius: 10, border: 'none',
+                background: T.mint, color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}>🍳 요리 시작</button>
+              <button onClick={() => onCreateShopping?.(date, slot)} style={{
+                padding: '12px 16px', borderRadius: 10, border: `1px solid ${T.border}`,
+                background: '#fff', color: T.text1, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}>🛒 장보기 목록 만들기</button>
+            </div>
+          </div>
+
+          {/* Danger */}
+          <div style={{ background: '#fff', borderRadius: 14, padding: 18, boxShadow: T.shadowDeep }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 10 }}>이 끼니 삭제</div>
+            <button onClick={() => setAskDelete(true)} style={{
+              width: '100%', padding: '11px 0', borderRadius: 10, border: `1px solid ${T.border}`,
+              background: '#fff', color: T.red, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}>식단에서 빼기</button>
+          </div>
+        </aside>
+      </div>
+
+      {askDelete && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
+          <ConfirmDialog title="이 끼니를 삭제할까요?"
+            body={recipe.name + ' (' + date + ' ' + slot + ') 가 식단에서 제거돼요.'}
+            destructive confirmLabel="삭제"
+            onClose={() => setAskDelete(false)}
+            onConfirm={() => { setAskDelete(false); onRemove?.(date, slot); }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Desktop: COOK_READY_LIST (P1.2)
+function DesktopCookListScreen({ planner, onBack, onStartCook, onOpenMeal }) {
+  const days = Object.keys(planner);
+  const todayK = days[todayIdx];
+  const tomorrowK = days[todayIdx + 1];
+  const groups = [
+    { k: 'today',   label: '오늘',                dayKeys: [todayK],                emoji: '🌟' },
+    { k: 'tomorrow', label: '내일',               dayKeys: [tomorrowK],             emoji: '⏭️' },
+    { k: 'rest',    label: '이번 주 남은 끼니',     dayKeys: days.slice(todayIdx + 2), emoji: '📅' },
+  ];
+  const buildMeals = (dayKeys) => {
+    const list = [];
+    dayKeys.forEach(d => {
+      ['아침','점심','저녁'].forEach(s => {
+        const m = planner[d]?.[s];
+        if (m && m.status !== 'cooked') list.push({ date: d, slot: s, meal: m });
+      });
+    });
+    return list;
+  };
+  const totalReady = groups.reduce((acc, g) => acc + buildMeals(g.dayKeys).length, 0);
+
+  return (
+    <div>
+      <button onClick={onBack} style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        color: T.text2, fontSize: 13, fontWeight: 600, marginBottom: 14,
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+      }}>{Icon.chevL(T.text2)} 플래너</button>
+
+      <div style={{
+        background: 'linear-gradient(135deg,' + T.mintSoft + ' 0%, #fff 100%)',
+        border: `1px solid ${T.mint}`, borderRadius: 16, padding: 28, marginBottom: 24,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div>
+          <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 800, letterSpacing: 1, marginBottom: 4 }}>COOK READY</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
+            지금 요리할 수 있는 식사 {totalReady}건
+          </div>
+          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>오늘부터 이번 주말까지, 아직 요리하지 않은 식사를 모았어요</div>
+        </div>
+        <div style={{ fontSize: 80, opacity: 0.85 }}>🍳</div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+        {groups.map(g => {
+          const meals = buildMeals(g.dayKeys);
+          if (meals.length === 0 && g.k !== 'today') return null;
+          return (
+            <section key={g.k}>
+              <div style={{
+                display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12,
+              }}>
+                <span style={{ fontSize: 18 }}>{g.emoji}</span>
+                <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>{g.label}</div>
+                <div style={{ fontSize: 12, color: T.text3 }}>· {meals.length}끼</div>
+              </div>
+              {meals.length === 0 ? (
+                <div style={{
+                  background: '#fff', border: `1px dashed ${T.border}`, borderRadius: 12,
+                  padding: 32, textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: 32, marginBottom: 6 }}>✨</div>
+                  <div style={{ fontSize: 13, color: T.text2, fontWeight: 700 }}>오늘 요리할 끼니가 없어요</div>
+                  <div style={{ fontSize: 11, color: T.text3, marginTop: 4 }}>플래너에서 식단을 등록해 보세요</div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+                  {meals.map(({ date, slot, meal }) => {
+                    const recipe = RECIPES.find(r => r.id === meal.recipeId);
+                    if (!recipe) return null;
+                    const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
+                    return (
+                      <div key={date+slot} style={{
+                        background: '#fff', borderRadius: 14, overflow: 'hidden',
+                        border: `1px solid ${T.border}`, boxShadow: T.shadowNatural,
+                        borderLeft: `4px solid ${m.border}`,
+                        display: 'flex', flexDirection: 'column',
+                      }}>
+                        <div onClick={() => onOpenMeal?.(date, slot)} style={{
+                          padding: 14, display: 'flex', gap: 12, alignItems: 'center', cursor: 'pointer',
+                        }}>
+                          <div style={{
+                            width: 64, height: 64, borderRadius: 12, background: recipe.bg,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, flexShrink: 0,
+                          }}>{recipe.emoji}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4, flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: 10, fontWeight: 800, color: m.text, background: m.bg, padding: '2px 6px', borderRadius: 4 }}>
+                                {m.label}
+                              </span>
+                              <StatusPill status={meal.status} />
+                            </div>
+                            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {recipe.name}
+                            </div>
+                            <div style={{ fontSize: 11, color: T.text3 }}>
+                              {date} {slot} · {meal.servings}인분 · {recipe.minutes}분
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ padding: '0 14px 14px', display: 'flex', gap: 8 }}>
+                          <button onClick={() => onOpenMeal?.(date, slot)} style={{
+                            flex: 1, padding: '10px 0', borderRadius: 10, border: `1px solid ${T.border}`,
+                            background: '#fff', color: T.text2, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                          }}>상세 보기</button>
+                          <button onClick={() => onStartCook?.(date, slot)} style={{
+                            flex: 2, padding: '10px 0', borderRadius: 10, border: 'none',
+                            background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+                          }}>🍳 요리 시작</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 Object.assign(window, {
   DesktopHome, DesktopPlanner, DesktopRecipeDetail, DesktopPantry, DesktopMyPage,
   // Wave 1.5 desktop variants
   DesktopMyPageRecipebookDetail, DesktopIngredientFilterDialog,
   DesktopMenuAddScreen, DesktopShoppingCreateScreen, DesktopShoppingDetailScreen, DesktopCookRunScreen,
+  // Wave 1.6 desktop variants
+  DesktopLoginScreen, DesktopSettingsScreen, DesktopMealDetailScreen, DesktopCookListScreen,
 });
 
 
@@ -6125,6 +6714,25 @@ function App() {
       onRemoveRecipe={(bookId, recipeId) => showToast('레시피북에서 제거됐어요')}
       onDeleteBook={(book) => { backFromPage(); showToast(book.name + ' 삭제됐어요'); }}
       showToast={showToast} />;
+  } else if (route.page === 'login') {
+    // Wave 1.6 — desktop variant
+    desktopPageContent = <DesktopLoginScreen returnTo={pa.returnTo} onBack={backFromPage} onLogin={completeLogin} />;
+  } else if (route.page === 'settings') {
+    desktopPageContent = <DesktopSettingsScreen profile={profile} onBack={backFromPage}
+      onUpdateProfile={(patch) => setProfile(p => ({ ...p, ...patch }))}
+      onLogout={() => { setProfile(p => ({ ...p, authed: false })); backFromPage(); showToast('로그아웃 되었어요'); }}
+      onDeleteAccount={() => { backFromPage(); showToast('탈퇴 처리됐어요 (베타)'); }}
+      showToast={showToast} />;
+  } else if (route.page === 'meal-detail') {
+    desktopPageContent = <DesktopMealDetailScreen date={pa.date} slot={pa.slot} planner={planner}
+      onBack={backFromPage} onOpenRecipe={openRecipe}
+      onStartCook={(d, s) => goPage('cook-run', { date: d, slot: s })}
+      onCreateShopping={() => goPage('shopping-create')}
+      onChangeStatus={changeStatus} onRemove={removeMeal} onChangeServings={changeServings} />;
+  } else if (route.page === 'cook-list') {
+    desktopPageContent = <DesktopCookListScreen planner={planner} onBack={backFromPage}
+      onStartCook={(d, s) => goPage('cook-run', { date: d, slot: s })}
+      onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })} />;
   }
 
   // ============ Top shell switcher ============
@@ -6608,6 +7216,19 @@ function App() {
             style={quickBtn}>📒 레시피북 상세 (DETAIL)</button>
           <button onClick={() => { setRoute({ tab: 'home' }); setTimeout(() => setIngredientFilterOpen(true), 200); }}
             style={quickBtn}>🔎 재료 필터 모달 (INGREDIENT_FILTER)</button>
+        </div>
+
+        <div style={{ fontSize: 11, color: '#868E96', fontWeight: 700, marginTop: 16, marginBottom: 8 }}>Wave 1.6 데스크톱</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button onClick={() => goPage('login')}
+            style={quickBtn}>🔐 로그인 화면 (LOGIN page)</button>
+          <button onClick={() => goPage('cook-list')}
+            style={quickBtn}>🥘 요리 준비 리스트 (COOK_READY_LIST)</button>
+          <button onClick={() => {
+            const k = Object.keys(planner)[1];
+            const slot = ['아침','점심','저녁'].find(s => planner[k]?.[s]) || '저녁';
+            goPage('meal-detail', { date: k, slot });
+          }} style={quickBtn}>🍽️ 끼니 상세 (MEAL_SCREEN)</button>
         </div>
       </div>
 
