@@ -445,6 +445,25 @@ function App() {
       onRemoveRecipe={(bookId, recipeId) => showToast('레시피북에서 제거됐어요')}
       onDeleteBook={(book) => { backFromPage(); showToast(book.name + ' 삭제됐어요'); }}
       showToast={showToast} />;
+  } else if (route.page === 'login') {
+    // Wave 1.6 — desktop variant
+    desktopPageContent = <DesktopLoginScreen returnTo={pa.returnTo} onBack={backFromPage} onLogin={completeLogin} />;
+  } else if (route.page === 'settings') {
+    desktopPageContent = <DesktopSettingsScreen profile={profile} onBack={backFromPage}
+      onUpdateProfile={(patch) => setProfile(p => ({ ...p, ...patch }))}
+      onLogout={() => { setProfile(p => ({ ...p, authed: false })); backFromPage(); showToast('로그아웃 되었어요'); }}
+      onDeleteAccount={() => { backFromPage(); showToast('탈퇴 처리됐어요 (베타)'); }}
+      showToast={showToast} />;
+  } else if (route.page === 'meal-detail') {
+    desktopPageContent = <DesktopMealDetailScreen date={pa.date} slot={pa.slot} planner={planner}
+      onBack={backFromPage} onOpenRecipe={openRecipe}
+      onStartCook={(d, s) => goPage('cook-run', { date: d, slot: s })}
+      onCreateShopping={() => goPage('shopping-create')}
+      onChangeStatus={changeStatus} onRemove={removeMeal} onChangeServings={changeServings} />;
+  } else if (route.page === 'cook-list') {
+    desktopPageContent = <DesktopCookListScreen planner={planner} onBack={backFromPage}
+      onStartCook={(d, s) => goPage('cook-run', { date: d, slot: s })}
+      onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })} />;
   }
 
   // ============ Top shell switcher ============
@@ -928,6 +947,19 @@ function App() {
             style={quickBtn}>📒 레시피북 상세 (DETAIL)</button>
           <button onClick={() => { setRoute({ tab: 'home' }); setTimeout(() => setIngredientFilterOpen(true), 200); }}
             style={quickBtn}>🔎 재료 필터 모달 (INGREDIENT_FILTER)</button>
+        </div>
+
+        <div style={{ fontSize: 11, color: '#868E96', fontWeight: 700, marginTop: 16, marginBottom: 8 }}>Wave 1.6 데스크톱</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button onClick={() => goPage('login')}
+            style={quickBtn}>🔐 로그인 화면 (LOGIN page)</button>
+          <button onClick={() => goPage('cook-list')}
+            style={quickBtn}>🥘 요리 준비 리스트 (COOK_READY_LIST)</button>
+          <button onClick={() => {
+            const k = Object.keys(planner)[1];
+            const slot = ['아침','점심','저녁'].find(s => planner[k]?.[s]) || '저녁';
+            goPage('meal-detail', { date: k, slot });
+          }} style={quickBtn}>🍽️ 끼니 상세 (MEAL_SCREEN)</button>
         </div>
       </div>
 
