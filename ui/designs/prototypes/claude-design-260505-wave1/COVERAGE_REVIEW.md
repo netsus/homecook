@@ -1,9 +1,9 @@
 # Claude Design Coverage Review
 
-> Date: 2026-05-06 (Wave 1.6 완료 시점)
+> Date: 2026-05-06 (Wave 1.8 완료 시점)
 > Source: `ui/designs/prototypes/claude-design-260505-wave1/`
 > Source-of-truth: `index.html` (= `homecook-baemin-prototype.html`, byte-identical)
-> Wave: **1.6 (P0 + P1.1 + P1.2)**
+> Wave: **1.8 (P0 + P1.1 + P1.2 + P1.3 + P2)**
 
 ## 범례
 
@@ -45,17 +45,17 @@
 | MEAL_SCREEN | ✅ MealDetailScreen | ✅ DesktopMealDetailScreen | 좌 hero/timeline/ingredients + 우 sticky 인분/액션/삭제 카드. servingChangeConfirm 자동 발동. **Wave 1.6 신규** |
 | COOK_READY_LIST | ✅ CookListScreen | ✅ DesktopCookListScreen | gradient hero + 오늘/내일/이번 주 3-section 카드 그리드. **Wave 1.6 신규** |
 
-### Wave 1 routes — 데스크톱이 아직 fallback인 화면 (P1.3)
+### Wave 1.7에서 추가 승격된 화면 (P1.3)
 
-| ID | 모바일 | 데스크톱 | Fallback 사유 |
-|----|--------|---------|--------------|
-| LEFTOVERS | ✅ LeftoversScreen | △ fallback | P1.3. fallback에서 동작 정상. |
-| ATE_LIST | ✅ AteListScreen | △ fallback | P1.3. |
-| MANUAL_RECIPE_CREATE | ✅ ManualRecipeCreateScreen | △ fallback | P1.3. desktop에서는 form layout 권장. |
-| YT_IMPORT | ✅ YtImportScreen | △ fallback | P1.3. |
-| RECIPE_SEARCH_PICKER (모바일 picker) | ✅ RecipeSearchPicker | △ fallback | desktop은 DesktopMenuAddScreen `검색` 탭이 사실상 대체. picker 단독은 미구현. |
-| MYPAGE_TAB_RECIPEBOOK | ✅ MyPageRecipebookTab | △ fallback | 책 목록은 fallback. 책 상세(`mypage-recipebook-detail`)는 desktop 전용 ✅ |
-| MYPAGE_TAB_SHOPPINGLISTS | ✅ MyPageShoppingTab | △ fallback | desktop 정렬/필터 미구현. P1.3. |
+| ID | 모바일 | 데스크톱 | 비고 |
+|----|--------|---------|------|
+| LEFTOVERS | ✅ LeftoversScreen | ✅ DesktopLeftoversScreen | 카드 그리드 + 덜먹음/다시 식단/다 먹음 액션. **Wave 1.7 신규** |
+| ATE_LIST | ✅ AteListScreen | ✅ DesktopAteListScreen | 가로 row 리스트 + 되돌리기/다시 만들기. **Wave 1.7 신규** |
+| MANUAL_RECIPE_CREATE | ✅ ManualRecipeCreateScreen | ✅ DesktopManualRecipeCreateScreen | 좌 form / 우 sticky preview 2-col. **Wave 1.7 신규** |
+| YT_IMPORT | ✅ YtImportScreen | ✅ DesktopYtImportScreen | URL 입력 + 추출 결과 미리보기 2-col. **Wave 1.7 신규** |
+| RECIPE_SEARCH_PICKER (단독) | ✅ RecipeSearchPicker | ✅ DesktopRecipeSearchPicker (export only) | DesktopMenuAddScreen ‘검색’ 탭이 메인 사용처. 단독 export는 향후 직접 진입 위해 보존. **Wave 1.7 신규** |
+| MYPAGE_TAB_RECIPEBOOK | ✅ MyPageRecipebookTab | ✅ DesktopMyPageRecipebookList | 책 카드 그리드 + 새 책 만들기 + 삭제 confirm. **Wave 1.7 신규** |
+| MYPAGE_TAB_SHOPPINGLISTS | ✅ MyPageShoppingTab | ✅ DesktopMyPageShoppingList | 진행 중/완료 2-section 카드 그리드. **Wave 1.7 신규** |
 
 ## 모달 / 피커 / 시트
 
@@ -89,27 +89,27 @@
 | **DesktopIngredientFilterDialog** | ✅ **신규 (P0)** | 720px 가로 + 2-col 카테고리 그리드 |
 | **PlanningServingsModal** | ✅ **신규 (P0)** | 모바일과 동일 컴포넌트 재사용 (centered) |
 | **servingChangeConfirm (ConfirmDialog)** | ✅ **신규 wired (P0)** | App-level fixed overlay |
-| RecipeSearchPicker | △ fallback | desktop은 DesktopMenuAddScreen ‘검색’ 탭이 대체. P2. |
-| RecipeBookSelector | △ fallback | DesktopMenuAddScreen ‘레시피북’ 탭이 대체. P2. |
-| RecipeBookDetailPicker | △ fallback | desktop dialog 미구현. P2. |
-| PantryMatchPicker | △ fallback | DesktopMenuAddScreen ‘팬트리 매칭’ 탭이 대체. P2. |
-| PantryAddSheet | △ fallback | desktop dialog 미구현. P2. |
-| PantryBundlePicker | △ fallback | P2. |
-| PantryReflectPicker | △ fallback | P2. |
-| ConsumedIngredientSheet | △ fallback | DesktopCookRunScreen 사이드바 차감 체크리스트가 일부 대체. P2. |
-| NicknameEditSheet | △ fallback | P2. |
+| RecipeSearchPicker | ✅ DesktopRecipeSearchPicker (export) + DesktopMenuAddScreen tab | Wave 1.7에서 단독 export 추가. desktop 메인 진입은 MENU_ADD ‘검색’ 탭. |
+| RecipeBookSelector | ✅ DesktopRecipeBookSelectorDialog | 540px centered dialog. **Wave 1.8 신규** |
+| RecipeBookDetailPicker | ✅ DesktopRecipeBookDetailPickerDialog | 620px dialog + 책 안 레시피 그리드. **Wave 1.8 신규** |
+| PantryMatchPicker | ✅ DesktopPantryMatchPickerDialog | 매칭% 정렬 9개 카드 그리드. **Wave 1.8 신규** |
+| PantryAddSheet | ✅ DesktopPantryAddDialog | 460px form dialog. desktop shell에서 모바일 sheet 대신 자동 사용. **Wave 1.8 신규** |
+| PantryBundleSheet | ✅ DesktopPantryBundleDialog | 560px 2-col 묶음 그리드. **Wave 1.8 신규** |
+| PantryReflectPicker | ✅ DesktopPantryReflectDialog | 520px 항목 체크리스트. **Wave 1.8 신규** |
+| ConsumedIngredientSheet | ✅ DesktopConsumedIngredientDialog | 540px 2-col 차감 체크리스트. **Wave 1.8 신규** |
+| NicknameEditSheet | ✅ fixed-overlay (mobile sheet 재사용) | DesktopSettings의 fixed-overlay wrapper로 wired. 별도 desktop 컴포넌트 불요. |
 | LogoutConfirm / AccountDeleteConfirm | ✅ ConfirmDialog 재사용 | desktop fixed overlay |
 | RecipeBookDeleteConfirm | ✅ ConfirmDialog 재사용 | DesktopMyPageRecipebookDetail 내부에서 동작 확인 |
 
 ## 요약
 
 - **모바일 주요 화면 21/21** — Wave 1.5의 RECIPEBOOK_DETAIL 추가로 100% 유지.
-- **데스크톱 전용 layout**: 5 → 10 → **14개** (Wave 1.6에서 P1.2 4개 추가).
-  - Wave 1.5 추가 5개: MENU_ADD, SHOPPING_FLOW, SHOPPING_DETAIL, COOK_MODE, RECIPEBOOK_DETAIL
-  - **Wave 1.6 추가 4개: LOGIN, SETTINGS, MEAL_SCREEN, COOK_READY_LIST**
-  - 추가 모달: DesktopIngredientFilterDialog (Wave 1.5)
-- **데스크톱 fallback 잔존**: P1.3 **7개**로 감소. 모두 desktop shell 안 `max-width: 720` 컨테이너로 진입 가능.
-- **데스크톱 picker/sheet/modal**: P2 (8개) 미수행. NicknameEditSheet는 Wave 1.6에서 SETTINGS desktop의 fixed-overlay wrapper로 활용됨.
+- **데스크톱 전용 layout**: 5 → 10 → 14 → **21개** (Wave 1.7에서 P1.3 7개 추가).
+  - Wave 1.5: MENU_ADD, SHOPPING_FLOW, SHOPPING_DETAIL, COOK_MODE, RECIPEBOOK_DETAIL
+  - Wave 1.6: LOGIN, SETTINGS, MEAL_SCREEN, COOK_READY_LIST
+  - **Wave 1.7: LEFTOVERS, ATE_LIST, MANUAL_RECIPE_CREATE, YT_IMPORT, MYPAGE_TAB_RECIPEBOOK, MYPAGE_TAB_SHOPPINGLISTS, RECIPE_SEARCH_PICKER(export)**
+- **데스크톱 fallback 잔존: 0개** — 모든 P1.x 라우트는 desktop 전용 layout 보유. (기존 ‘△ fallback’ 항목 모두 ✅로 승격)
+- **데스크톱 picker/sheet/modal**: P2 7개 신규 추가 (Wave 1.8). NicknameEditSheet는 SETTINGS desktop wrapper로 흡수.
 
 ## 다음 사람을 위한 진입 경로
 
@@ -127,6 +127,8 @@
    - 🥘 요리 준비 리스트 → DesktopCookListScreen
    - 🍽️ 끼니 상세 → DesktopMealDetailScreen (자동으로 등록된 식사 슬롯 진입)
    - 마이페이지 → ⚙️ 환경설정 → DesktopSettingsScreen (5-section 사이드바)
+7. **Wave 1.7 진입** — quick panel ‘Wave 1.7 데스크톱 (P1.3)’ 섹션 6개 버튼: LEFTOVERS / ATE_LIST / MANUAL_CREATE / YT_IMPORT / MYPAGE_RECIPEBOOK 목록 / MYPAGE_SHOPPING 목록.
+8. **Wave 1.8 진입** — quick panel ‘Wave 1.8 데스크톱 (P2)’ 섹션 6개 버튼: PantryAdd / PantryBundle / PantryReflect / RecipeBookSelector / PantryMatch / Consumed dialog. 데스크톱 shell에서 PANTRY ‘+’ 등 기존 흐름도 자동으로 desktop dialog로 swap됨.
 
 ## 참고
 
