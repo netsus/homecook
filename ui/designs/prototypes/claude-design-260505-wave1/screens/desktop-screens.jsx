@@ -1756,6 +1756,957 @@ function DesktopCookListScreen({ planner, onBack, onStartCook, onOpenMeal }) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// Wave 1.7 — P1.3 desktop screens (LEFTOVERS, ATE_LIST, MANUAL_CREATE,
+// YT_IMPORT, RECIPE_SEARCH_PICKER, MYPAGE_TAB_* lists)
+// ─────────────────────────────────────────────────────────────
+
+// Common back-link helper
+function DskBackLink({ onClick, label }) {
+  return (
+    <button onClick={onClick} style={{
+      background: 'none', border: 'none', cursor: 'pointer',
+      color: T.text2, fontSize: 13, fontWeight: 600, marginBottom: 14,
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+    }}>{Icon.chevL(T.text2)} {label}</button>
+  );
+}
+
+// Desktop: LEFTOVERS (P1.3)
+function DesktopLeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkAte, onMarkPartial, showToast }) {
+  // 'cooked' 인데 ateAt이 없는 끼니 = "남은 요리"
+  const leftovers = [];
+  Object.entries(planner).forEach(([date, day]) => {
+    ['아침','점심','저녁'].forEach(slot => {
+      const m = day[slot];
+      if (m && m.status === 'cooked' && !m.ateAt) {
+        const r = RECIPES.find(x => x.id === m.recipeId);
+        if (r) leftovers.push({ date, slot, meal: m, recipe: r });
+      }
+    });
+  });
+  return (
+    <div>
+      <DskBackLink onClick={onBack} label="마이페이지" />
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>남은 요리</div>
+          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>다 먹지 않은 식사 {leftovers.length}건. 다시 식단에 올리거나 다 먹은 것으로 기록하세요.</div>
+        </div>
+        <button onClick={onGoAteList} style={{
+          padding: '10px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
+          background: '#fff', color: T.text2, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+        }}>다먹은 기록 보기 →</button>
+      </div>
+      {leftovers.length === 0 ? (
+        <div style={{ background: '#fff', borderRadius: 16, padding: 60, textAlign: 'center', boxShadow: T.shadowDeep }}>
+          <div style={{ fontSize: 44, marginBottom: 8 }}>🥡</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: T.text2 }}>남은 요리가 없어요</div>
+          <div style={{ fontSize: 12, color: T.text3, marginTop: 4 }}>모든 끼니를 다 드셨거나 아직 요리한 끼니가 없어요</div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
+          {leftovers.map(({ date, slot, meal, recipe }) => (
+            <div key={date+slot} style={{
+              background: '#fff', borderRadius: 14, overflow: 'hidden',
+              border: `1px solid ${T.border}`, boxShadow: T.shadowNatural,
+            }}>
+              <div style={{ display: 'flex', gap: 12, padding: 14, alignItems: 'center' }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: 12, background: recipe.bg,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36,
+                }}>{recipe.emoji}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 3 }}>{recipe.name}</div>
+                  <div style={{ fontSize: 11, color: T.text3 }}>{date} {slot} · {meal.servings}인분</div>
+                  <div style={{ fontSize: 10, color: T.tealLight, marginTop: 4, fontWeight: 700 }}>🍳 요리 완료, 아직 안 먹음</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, padding: '0 14px 14px' }}>
+                <button onClick={() => onMarkPartial?.(date, slot)} style={{
+                  flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${T.border}`,
+                  background: '#fff', color: T.text2, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                }}>덜 먹음</button>
+                <button onClick={() => onReuse?.(date, slot)} style={{
+                  flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${T.border}`,
+                  background: '#fff', color: T.text2, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                }}>다시 식단</button>
+                <button onClick={() => onMarkAte?.(date, slot)} style={{
+                  flex: 1, padding: '9px 0', borderRadius: 8, border: 'none',
+                  background: T.mint, color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                }}>다 먹음</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Desktop: ATE_LIST (P1.3)
+function DesktopAteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
+  const ateMeals = [];
+  Object.entries(planner).forEach(([date, day]) => {
+    ['아침','점심','저녁'].forEach(slot => {
+      const m = day[slot];
+      if (m && m.ateAt) {
+        const r = RECIPES.find(x => x.id === m.recipeId);
+        if (r) ateMeals.push({ date, slot, meal: m, recipe: r });
+      }
+    });
+  });
+  return (
+    <div>
+      <DskBackLink onClick={onBack} label="남은 요리" />
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>다먹은 기록</div>
+        <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>다 먹은 끼니 {ateMeals.length}건. 잘못 표시했다면 되돌릴 수 있어요.</div>
+      </div>
+      {ateMeals.length === 0 ? (
+        <div style={{ background: '#fff', borderRadius: 16, padding: 60, textAlign: 'center', boxShadow: T.shadowDeep }}>
+          <div style={{ fontSize: 44, marginBottom: 8 }}>🍽️</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: T.text2 }}>아직 다먹은 기록이 없어요</div>
+        </div>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 14, padding: 8, boxShadow: T.shadowDeep }}>
+          {ateMeals.map(({ date, slot, recipe }, i) => (
+            <div key={date+slot} style={{
+              display: 'flex', alignItems: 'center', gap: 14, padding: 14,
+              borderBottom: i < ateMeals.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none',
+            }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 10, background: recipe.bg,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0,
+              }}>{recipe.emoji}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{recipe.name}</div>
+                <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{date} {slot} · ✓ 다 먹음</div>
+              </div>
+              <button onClick={() => onUndoAte?.(date, slot)} style={{
+                padding: '8px 12px', borderRadius: 8, border: `1px solid ${T.border}`,
+                background: '#fff', color: T.text2, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              }}>되돌리기</button>
+              <button onClick={() => onRecreate?.(recipe.id)} style={{
+                padding: '8px 12px', borderRadius: 8, border: 'none',
+                background: T.mint, color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer',
+              }}>다시 만들기</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Desktop: MANUAL_RECIPE_CREATE (P1.3)
+function DesktopManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCreated, showToast }) {
+  const [name, setName]         = dUseState('');
+  const [emoji, setEmoji]       = dUseState('🍽️');
+  const [minutes, setMinutes]   = dUseState(20);
+  const [servings, setServings] = dUseState(2);
+  const [ingredients, setIngredients] = dUseState([{ name: '', qty: '' }]);
+  const [steps, setSteps]       = dUseState(['']);
+  const valid = name.trim().length > 0 && ingredients.some(i => i.name.trim());
+  const slotLabel = presetDate && presetSlot ? `${presetDate} ${presetSlot}` : '플래너 미선택';
+  const submit = () => {
+    const recipe = {
+      id: 'r_user_' + Date.now(), name: name.trim(), emoji, minutes, servings,
+      bg: T.mintSoft, rating: 5, saves: 0, kcal: 0,
+      ingredients: ingredients.filter(i => i.name.trim()).map(i => ({ name: i.name.trim(), qty: i.qty || '약간' })),
+      steps: steps.filter(s => s.trim()).map(s => ({ text: s.trim(), kind: 'etc' })),
+      tags: ['직접 등록'], theme: '집밥', method: 'prep',
+    };
+    onCreated?.(recipe, presetDate, presetSlot);
+    showToast?.('레시피가 등록됐어요');
+  };
+  return (
+    <div>
+      <DskBackLink onClick={onBack} label="식사 추가" />
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>직접 레시피 등록</div>
+          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>대상: {slotLabel}</div>
+        </div>
+        <button onClick={submit} disabled={!valid} style={{
+          padding: '11px 20px', borderRadius: 10, border: 'none',
+          background: valid ? T.mint : T.surfaceFill,
+          color: valid ? '#fff' : T.text4,
+          fontSize: 13, fontWeight: 800, cursor: valid ? 'pointer' : 'default',
+        }}>등록 + 플래너 추가</button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 24, alignItems: 'start' }}>
+        <main style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Basic info */}
+          <div style={{ background: '#fff', borderRadius: 14, padding: 22, boxShadow: T.shadowDeep }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.text2, marginBottom: 14 }}>기본 정보</div>
+            <DesktopFormRow label="이모지">
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {['🍽️','🍳','🥘','🍲','🍝','🍔','🥗','🍣','🍕','🌮','🍜','🥟'].map(e => (
+                  <button key={e} onClick={() => setEmoji(e)} style={{
+                    width: 40, height: 40, fontSize: 22, borderRadius: 10,
+                    background: emoji === e ? T.mintSoft : T.surfaceFill,
+                    border: emoji === e ? `1px solid ${T.mint}` : '1px solid transparent',
+                    cursor: 'pointer',
+                  }}>{e}</button>
+                ))}
+              </div>
+            </DesktopFormRow>
+            <DesktopFormRow label="레시피 이름 *">
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="예: 엄마표 김치찌개"
+                style={dskInputStyle} />
+            </DesktopFormRow>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <DesktopFormRow label="조리시간 (분)">
+                <input type="number" min={1} max={300} value={minutes} onChange={e => setMinutes(parseInt(e.target.value)||0)} style={dskInputStyle} />
+              </DesktopFormRow>
+              <DesktopFormRow label="기준 인분">
+                <input type="number" min={1} max={12} value={servings} onChange={e => setServings(parseInt(e.target.value)||1)} style={dskInputStyle} />
+              </DesktopFormRow>
+            </div>
+          </div>
+
+          {/* Ingredients */}
+          <div style={{ background: '#fff', borderRadius: 14, padding: 22, boxShadow: T.shadowDeep }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.text2 }}>재료 ({ingredients.length})</div>
+              <button onClick={() => setIngredients([...ingredients, { name: '', qty: '' }])} style={dskAddBtn}>+ 재료 추가</button>
+            </div>
+            {ingredients.map((it, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 32px', gap: 8, marginBottom: 8 }}>
+                <input value={it.name} onChange={e => { const n = [...ingredients]; n[i].name = e.target.value; setIngredients(n); }}
+                  placeholder="재료 이름" style={dskInputStyle} />
+                <input value={it.qty} onChange={e => { const n = [...ingredients]; n[i].qty = e.target.value; setIngredients(n); }}
+                  placeholder="수량 (예: 2개)" style={dskInputStyle} />
+                <button onClick={() => setIngredients(ingredients.filter((_, j) => j !== i))} style={{
+                  border: 'none', background: T.surfaceFill, borderRadius: 8, color: T.text3,
+                  fontSize: 16, cursor: 'pointer',
+                }} title="삭제">×</button>
+              </div>
+            ))}
+          </div>
+
+          {/* Steps */}
+          <div style={{ background: '#fff', borderRadius: 14, padding: 22, boxShadow: T.shadowDeep }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.text2 }}>조리 순서 ({steps.length})</div>
+              <button onClick={() => setSteps([...steps, ''])} style={dskAddBtn}>+ 단계 추가</button>
+            </div>
+            {steps.map((s, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '36px 1fr 32px', gap: 8, marginBottom: 8, alignItems: 'flex-start' }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 16, background: T.mintSoft, color: T.mintDeep,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800,
+                }}>{i+1}</div>
+                <textarea value={s} onChange={e => { const n = [...steps]; n[i] = e.target.value; setSteps(n); }}
+                  placeholder="조리 과정 설명"
+                  rows={2}
+                  style={{ ...dskInputStyle, resize: 'vertical', fontFamily: T.fontUI }} />
+                <button onClick={() => setSteps(steps.filter((_, j) => j !== i))} style={{
+                  border: 'none', background: T.surfaceFill, borderRadius: 8, color: T.text3,
+                  fontSize: 16, cursor: 'pointer', height: 32,
+                }} title="삭제">×</button>
+              </div>
+            ))}
+          </div>
+        </main>
+
+        <aside style={{ background: '#fff', borderRadius: 14, padding: 22, boxShadow: T.shadowDeep, position: 'sticky', top: 24 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 12 }}>미리보기</div>
+          <div style={{
+            aspectRatio: '4/3', background: T.mintSoft, borderRadius: 12,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80, marginBottom: 12,
+          }}>{emoji}</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 4 }}>
+            {name || '레시피 이름'}
+          </div>
+          <div style={{ fontSize: 11, color: T.text3, marginBottom: 14 }}>
+            {minutes}분 · {servings}인분 · 직접 등록
+          </div>
+          <div style={{ fontSize: 11, color: T.text3, lineHeight: 1.6 }}>
+            ⓘ 등록 후 자동으로 {presetDate && presetSlot ? `${presetDate} ${presetSlot}에 추가` : '레시피 상세로 이동'}돼요.
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+function DesktopFormRow({ label, children }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: T.text2, marginBottom: 6 }}>{label}</div>
+      {children}
+    </div>
+  );
+}
+const dskInputStyle = {
+  width: '100%', padding: '10px 12px', borderRadius: 8,
+  border: `1px solid ${T.border}`, background: '#fff', color: T.ink,
+  fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+};
+const dskAddBtn = {
+  padding: '6px 12px', borderRadius: 8, border: `1px dashed ${T.border}`,
+  background: '#fff', color: T.mintDeep, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+};
+
+// Desktop: YT_IMPORT (P1.3)
+function DesktopYtImportScreen({ presetDate, presetSlot, onBack, onCreated, showToast }) {
+  const [url, setUrl]   = dUseState('');
+  const [loading, setL] = dUseState(false);
+  const [parsed, setParsed] = dUseState(null);
+  const slotLabel = presetDate && presetSlot ? `${presetDate} ${presetSlot}` : '플래너 미선택';
+  const fakeImport = () => {
+    if (!url) return;
+    setL(true);
+    setTimeout(() => {
+      setParsed({
+        title: '백종원 김치찌개 (자동 추출)',
+        emoji: '🍲',
+        channel: 'PaikJongWon Lab',
+        ingredients: [
+          { name: '김치', qty: '300g' }, { name: '돼지고기', qty: '200g' },
+          { name: '두부', qty: '1모' }, { name: '대파', qty: '1대' },
+          { name: '간장', qty: '1큰술' }, { name: '설탕', qty: '1작은술' },
+        ],
+        steps: ['냄비에 김치를 볶는다', '돼지고기 추가', '물 붓고 끓인다', '두부·대파 추가 후 마무리'],
+      });
+      setL(false);
+    }, 800);
+  };
+  const confirm = () => {
+    if (!parsed) return;
+    onCreated?.({
+      id: 'r_yt_' + Date.now(),
+      name: parsed.title, emoji: parsed.emoji,
+      minutes: 25, servings: 4, bg: '#FFE4B5',
+      rating: 4.6, saves: 0, kcal: 0,
+      ingredients: parsed.ingredients,
+      steps: parsed.steps.map(s => ({ text: s, kind: 'etc' })),
+      tags: ['유튜브 가져오기'], theme: '집밥', method: 'prep',
+    }, presetDate, presetSlot);
+    showToast?.('유튜브 레시피가 등록됐어요');
+  };
+  return (
+    <div>
+      <DskBackLink onClick={onBack} label="식사 추가" />
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>유튜브에서 가져오기</div>
+        <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>대상: {slotLabel} · URL을 붙여넣으면 재료·조리법을 자동 추출해요 (베타)</div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
+        <main style={{ background: '#fff', borderRadius: 14, padding: 22, boxShadow: T.shadowDeep }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.text2, marginBottom: 12 }}>YouTube URL</div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://youtube.com/..."
+              style={{ ...dskInputStyle, flex: 1 }} />
+            <button onClick={fakeImport} disabled={!url || loading} style={{
+              padding: '10px 18px', borderRadius: 8, border: 'none',
+              background: url && !loading ? T.mint : T.surfaceFill,
+              color: url && !loading ? '#fff' : T.text4,
+              fontSize: 13, fontWeight: 800, cursor: url && !loading ? 'pointer' : 'default',
+            }}>{loading ? '추출 중…' : '가져오기'}</button>
+          </div>
+          <div style={{
+            fontSize: 11, color: T.text3, lineHeight: 1.6,
+            padding: 12, background: T.surfaceFill, borderRadius: 8,
+          }}>
+            ⓘ 이 데모는 자동 추출 결과를 시뮬레이션합니다. 실제 환경에서는 영상 자막·설명을 분석해요.
+          </div>
+        </main>
+        <aside style={{ background: '#fff', borderRadius: 14, padding: 22, boxShadow: T.shadowDeep, minHeight: 360 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.text2, marginBottom: 12 }}>추출 결과</div>
+          {!parsed ? (
+            <div style={{ padding: 40, textAlign: 'center', color: T.text3, fontSize: 12 }}>
+              URL을 입력하고 ‘가져오기’를 눌러주세요
+            </div>
+          ) : (
+            <div>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
+                <div style={{ fontSize: 56 }}>{parsed.emoji}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 2 }}>{parsed.title}</div>
+                  <div style={{ fontSize: 11, color: T.text3 }}>{parsed.channel}</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: T.text2, marginTop: 14, marginBottom: 6 }}>재료 ({parsed.ingredients.length})</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
+                {parsed.ingredients.map(ing => (
+                  <span key={ing.name} style={{
+                    fontSize: 11, color: T.text2, background: T.surfaceFill,
+                    padding: '4px 10px', borderRadius: 9999,
+                  }}>{ing.name} {ing.qty}</span>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: T.text2, marginBottom: 6 }}>조리 단계 ({parsed.steps.length})</div>
+              <ol style={{ paddingLeft: 18, margin: 0, fontSize: 12, color: T.text2, lineHeight: 1.7 }}>
+                {parsed.steps.map((s, i) => <li key={i}>{s}</li>)}
+              </ol>
+              <button onClick={confirm} style={{
+                width: '100%', marginTop: 16, padding: '12px 0', borderRadius: 10, border: 'none',
+                background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+              }}>등록 + 플래너 추가</button>
+            </div>
+          )}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+// Desktop: RECIPE_SEARCH_PICKER 단독 (P1.3)
+function DesktopRecipeSearchPicker({ title='레시피 검색', slotLabel, onBack, onPick }) {
+  const [query, setQuery] = dUseState('');
+  const filtered = dUseMemo(() => {
+    if (!query) return RECIPES;
+    return RECIPES.filter(r => r.name.includes(query) || r.tags.some(t => t.includes(query)));
+  }, [query]);
+  return (
+    <div>
+      <DskBackLink onClick={onBack} label="돌아가기" />
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>{title}</div>
+        {slotLabel && <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>대상: {slotLabel}</div>}
+      </div>
+      <div style={{ background: '#fff', borderRadius: 12, padding: '0 16px', height: 48, display: 'flex', alignItems: 'center', gap: 8, boxShadow: T.shadowNatural, marginBottom: 18 }}>
+        {Icon.search()}
+        <input value={query} onChange={e => setQuery(e.target.value)} autoFocus
+          placeholder="레시피·태그 검색"
+          style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 14, color: T.ink, fontFamily: 'inherit' }} />
+        {query && <button onClick={() => setQuery('')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: T.text3, fontSize: 18 }}>×</button>}
+      </div>
+      {filtered.length === 0 ? (
+        <div style={{ background: '#fff', borderRadius: 16, padding: 60, textAlign: 'center', boxShadow: T.shadowDeep }}>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>🔍</div>
+          <div style={{ fontSize: 13, color: T.text3 }}>검색 결과가 없어요</div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
+          {filtered.map(r => (
+            <div key={r.id} onClick={() => onPick?.(r.id)} style={{
+              background: '#fff', borderRadius: 12, overflow: 'hidden',
+              border: `1px solid ${T.border}`, cursor: 'pointer',
+            }}>
+              <div style={{ aspectRatio: '4/3', background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>{r.emoji}</div>
+              <div style={{ padding: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginBottom: 2 }}>{r.name}</div>
+                <div style={{ fontSize: 10, color: T.text3 }}>⭐ {r.rating} · {r.minutes}분</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Desktop: MYPAGE_TAB_RECIPEBOOK 목록 (P1.3)
+function DesktopMyPageRecipebookList({ onBack, onOpenBook, onCreateBook, onDeleteBook, showToast }) {
+  const [confirmId, setConfirmId] = dUseState(null);
+  const books = window.RECIPEBOOK_SAMPLES || [];
+  return (
+    <div>
+      <DskBackLink onClick={onBack} label="마이페이지" />
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>레시피북</div>
+          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>모은 레시피를 책으로 정리해요 · {books.length}권</div>
+        </div>
+        <button onClick={onCreateBook} style={{
+          padding: '11px 18px', borderRadius: 10, border: 'none',
+          background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+        }}>+ 새 레시피북</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+        {books.map(b => (
+          <div key={b.id} style={{
+            background: '#fff', borderRadius: 14, padding: 18,
+            border: `1px solid ${T.border}`, boxShadow: T.shadowNatural, position: 'relative',
+          }}>
+            {b.kind === 'custom' && (
+              <button onClick={() => setConfirmId(b.id)} style={{
+                position: 'absolute', top: 14, right: 14,
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: T.text4, fontSize: 18, padding: 4,
+              }}>⋯</button>
+            )}
+            <div onClick={() => onOpenBook?.(b.id)} style={{ cursor: 'pointer' }}>
+              <div style={{
+                width: 64, height: 64, borderRadius: 14, background: T.mintSoft,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, marginBottom: 14,
+              }}>{b.emoji}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>{b.name}</span>
+                <span style={{
+                  fontSize: 10, color: T.text3, background: T.surfaceFill,
+                  padding: '2px 6px', borderRadius: 4, fontWeight: 700,
+                }}>{b.kind === 'saved' ? '저장' : '내 책'}</span>
+              </div>
+              <div style={{ fontSize: 11, color: T.text3 }}>{b.recipeIds.length}개 레시피</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {confirmId && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
+          <ConfirmDialog title="레시피북을 삭제할까요?"
+            body="레시피북 안의 레시피는 삭제되지 않아요."
+            destructive confirmLabel="삭제하기"
+            onClose={() => setConfirmId(null)}
+            onConfirm={() => { onDeleteBook?.(confirmId); setConfirmId(null); showToast?.('레시피북이 삭제됐어요'); }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Desktop: MYPAGE_TAB_SHOPPINGLISTS (P1.3)
+function DesktopMyPageShoppingList({ shoppingLists = [], onBack, onOpen }) {
+  const active = shoppingLists.filter(l => l.status !== 'completed');
+  const done   = shoppingLists.filter(l => l.status === 'completed');
+  return (
+    <div>
+      <DskBackLink onClick={onBack} label="마이페이지" />
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>장보기 기록</div>
+        <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>진행 중 {active.length}건 · 완료 {done.length}건</div>
+      </div>
+      {[['진행 중', active], ['완료', done]].map(([label, list]) => (
+        list.length === 0 ? null : (
+          <section key={label} style={{ marginBottom: 22 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: T.text2, marginBottom: 10 }}>{label} ({list.length})</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+              {list.map(l => (
+                <button key={l.id} onClick={() => onOpen?.(l.id)} style={{
+                  textAlign: 'left', cursor: 'pointer',
+                  background: '#fff', border: `1px solid ${T.border}`, borderRadius: 14, padding: 16,
+                  boxShadow: T.shadowNatural,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 10,
+                      background: l.status === 'completed' ? T.mintSoft : T.surfaceFill,
+                      color: l.status === 'completed' ? T.mintDeep : T.text2,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                    }}>{l.status === 'completed' ? '✓' : '🛒'}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{l.name}</div>
+                      <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
+                        {l.items.length}개 재료 · {l.status === 'completed' ? '완료' : '진행 중'}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{
+                    fontSize: 11, color: T.text3, lineHeight: 1.6,
+                    background: T.surfaceFill, borderRadius: 8, padding: 8,
+                  }}>
+                    {l.items.slice(0, 4).map(i => i.name).join(' · ')}{l.items.length > 4 ? ` 외 ${l.items.length - 4}개` : ''}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )
+      ))}
+      {shoppingLists.length === 0 && (
+        <div style={{ background: '#fff', borderRadius: 16, padding: 60, textAlign: 'center', boxShadow: T.shadowDeep }}>
+          <div style={{ fontSize: 44, marginBottom: 8 }}>🛒</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: T.text2 }}>아직 장보기 기록이 없어요</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Wave 1.8 — P2 desktop modal/picker variants (centered dialogs)
+// ─────────────────────────────────────────────────────────────
+
+function DskOverlay({ children, onClose, width = 480 }) {
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9500, padding: 24,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: '#fff', borderRadius: 16, width, maxHeight: '88vh',
+        display: 'flex', flexDirection: 'column', boxShadow: T.shadowCrisp, overflow: 'hidden',
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+function DskDialogHeader({ title, sub, onClose }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+      padding: '18px 22px 14px', borderBottom: `1px solid ${T.border}`,
+    }}>
+      <div>
+        <div style={{ fontSize: 17, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>{title}</div>
+        {sub && <div style={{ fontSize: 12, color: T.text3, marginTop: 3 }}>{sub}</div>}
+      </div>
+      <button onClick={onClose} style={{
+        width: 30, height: 30, borderRadius: 15, background: T.surfaceFill, border: 'none', cursor: 'pointer', fontSize: 16, color: T.text2,
+      }}>✕</button>
+    </div>
+  );
+}
+function DskDialogFooter({ children }) {
+  return (
+    <div style={{
+      display: 'flex', gap: 8, justifyContent: 'flex-end',
+      padding: '14px 22px', borderTop: `1px solid ${T.border}`, background: '#fff',
+    }}>{children}</div>
+  );
+}
+
+// P2 — PantryAdd
+function DesktopPantryAddDialog({ onClose, onAddItem, onOpenBundle }) {
+  const [name, setName]       = dUseState('');
+  const [section, setSection] = dUseState('냉장');
+  const sections = ['냉장','냉동','실온','양념','기타'];
+  const valid = name.trim().length > 0;
+  return (
+    <DskOverlay onClose={onClose} width={460}>
+      <DskDialogHeader title="재료 추가" onClose={onClose} />
+      <div style={{ padding: '18px 22px', overflowY: 'auto' }}>
+        <button onClick={onOpenBundle} style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+          background: T.mintSoft, border: `1px solid ${T.mint}`,
+          borderRadius: 10, padding: '12px 14px', cursor: 'pointer', textAlign: 'left',
+          marginBottom: 16,
+        }}>
+          <span style={{ fontSize: 22 }}>📦</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.mintDeep }}>묶음으로 한꺼번에 추가</div>
+            <div style={{ fontSize: 11, color: T.mintDeep, marginTop: 2 }}>김치찌개 재료 / 한식 기본 양념 등</div>
+          </div>
+          {Icon.chevR(T.mintDeep)}
+        </button>
+        <DesktopFormRow label="재료 이름">
+          <input value={name} onChange={e => setName(e.target.value)} autoFocus
+            placeholder="예: 양파" style={dskInputStyle} />
+        </DesktopFormRow>
+        <DesktopFormRow label="구역">
+          <div style={{ display: 'flex', gap: 6 }}>
+            {sections.map(s => (
+              <button key={s} onClick={() => setSection(s)} style={{
+                flex: 1, padding: '9px 0', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                background: section === s ? T.mintSoft : '#fff',
+                color: section === s ? T.mintDeep : T.text2,
+                border: section === s ? `1px solid ${T.mint}` : `1px solid ${T.border}`,
+                cursor: 'pointer',
+              }}>{s}</button>
+            ))}
+          </div>
+        </DesktopFormRow>
+      </div>
+      <DskDialogFooter>
+        <button onClick={onClose} style={dskGhostBtn}>취소</button>
+        <button disabled={!valid} onClick={() => onAddItem?.({ name: name.trim(), section, have: true })} style={{
+          ...dskPrimaryBtn, opacity: valid ? 1 : 0.5, cursor: valid ? 'pointer' : 'default',
+        }}>추가</button>
+      </DskDialogFooter>
+    </DskOverlay>
+  );
+}
+
+// P2 — PantryBundle
+function DesktopPantryBundleDialog({ onClose, onConfirm }) {
+  const bundles = [
+    { id: 'kor_basic', name: '한식 기본 양념', emoji: '🧂', items: ['간장','된장','고추장','참기름','다진마늘','설탕'] },
+    { id: 'kimchi_jjigae', name: '김치찌개 재료', emoji: '🥘', items: ['김치','돼지고기','두부','대파','양파'] },
+    { id: 'pasta_basic', name: '파스타 기본', emoji: '🍝', items: ['스파게티','올리브유','마늘','파마산','페퍼론치노'] },
+    { id: 'salad_basic', name: '샐러드 기본', emoji: '🥗', items: ['양상추','방울토마토','오이','드레싱','계란'] },
+  ];
+  const [selectedId, setSelectedId] = dUseState(null);
+  const [picked, setPicked] = dUseState(new Set());
+  const bundle = bundles.find(b => b.id === selectedId);
+  const togglePick = (n) => setPicked(p => { const x = new Set(p); x.has(n) ? x.delete(n) : x.add(n); return x; });
+  return (
+    <DskOverlay onClose={onClose} width={560}>
+      <DskDialogHeader
+        title={bundle ? bundle.name : '재료 묶음 선택'}
+        sub={bundle ? '추가할 항목을 골라주세요' : '자주 함께 쓰는 재료를 한 번에 추가해요'}
+        onClose={onClose} />
+      {bundle && (
+        <div style={{ padding: '10px 22px 0' }}>
+          <button onClick={() => { setSelectedId(null); setPicked(new Set()); }} style={dskGhostBtn}>← 묶음 다시 고르기</button>
+        </div>
+      )}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 22px 18px' }}>
+        {!bundle ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {bundles.map(b => (
+              <button key={b.id} onClick={() => { setSelectedId(b.id); setPicked(new Set(b.items)); }} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12,
+                padding: '12px 14px', cursor: 'pointer', textAlign: 'left',
+              }}>
+                <span style={{ fontSize: 26 }}>{b.emoji}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{b.name}</div>
+                  <div style={{ fontSize: 10, color: T.text3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {b.items.join(', ')}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            {bundle.items.map(it => {
+              const on = picked.has(it);
+              return (
+                <button key={it} onClick={() => togglePick(it)} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  background: on ? T.mintSoft : '#fff', border: `1px solid ${on ? T.mint : T.border}`, borderRadius: 10,
+                  padding: '10px 12px', cursor: 'pointer', textAlign: 'left',
+                }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: 5,
+                    background: on ? T.mint : '#fff', border: `1.5px solid ${on ? T.mint : T.border}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 800,
+                  }}>{on ? '✓' : ''}</div>
+                  <span style={{ fontSize: 13, color: T.ink, fontWeight: 700 }}>{it}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <DskDialogFooter>
+        <button onClick={onClose} style={dskGhostBtn}>취소</button>
+        {bundle && (
+          <button disabled={picked.size === 0} onClick={() => onConfirm?.([...picked])} style={{
+            ...dskPrimaryBtn, opacity: picked.size === 0 ? 0.5 : 1, cursor: picked.size === 0 ? 'default' : 'pointer',
+          }}>{picked.size}개 추가</button>
+        )}
+      </DskDialogFooter>
+    </DskOverlay>
+  );
+}
+
+// P2 — PantryReflect
+function DesktopPantryReflectDialog({ list, onClose, onConfirm }) {
+  const buyable = (list?.items || []).filter(i => !i.have);
+  const [picked, setPicked] = dUseState(new Set(buyable.filter(i => i.checked).map(i => i.name)));
+  const toggle = (n) => setPicked(p => { const x = new Set(p); x.has(n) ? x.delete(n) : x.add(n); return x; });
+  return (
+    <DskOverlay onClose={onClose} width={520}>
+      <DskDialogHeader
+        title="팬트리에 반영할까요?"
+        sub={`'${list?.name || '장보기'}'에서 산 재료를 팬트리 보유로 표시해요`}
+        onClose={onClose} />
+      <div style={{ padding: '14px 22px', overflowY: 'auto', flex: 1 }}>
+        {buyable.length === 0 ? (
+          <div style={{ padding: 24, textAlign: 'center', color: T.text3, fontSize: 12 }}>
+            반영할 재료가 없어요
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {buyable.map(it => {
+              const on = picked.has(it.name);
+              return (
+                <button key={it.name} onClick={() => toggle(it.name)} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
+                  background: on ? T.mintSoft : T.surfaceFill, border: 'none', cursor: 'pointer', textAlign: 'left',
+                }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 5,
+                    background: on ? T.mint : '#fff', border: `1.5px solid ${on ? T.mint : T.border}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 800,
+                  }}>{on ? '✓' : ''}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{it.name}</div>
+                    <div style={{ fontSize: 10, color: T.text3 }}>{it.qty} · {it.section}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <DskDialogFooter>
+        <button onClick={() => onConfirm?.([])} style={dskGhostBtn}>건너뛰기</button>
+        <button onClick={() => onConfirm?.([...picked])} style={dskPrimaryBtn}>
+          {picked.size}개 반영
+        </button>
+      </DskDialogFooter>
+    </DskOverlay>
+  );
+}
+
+// P2 — ConsumedIngredient
+function DesktopConsumedIngredientDialog({ recipe, defaultSelection, onClose, onConfirm }) {
+  const [picked, setPicked] = dUseState(new Set(defaultSelection || (recipe?.ingredients || []).map(i => i.name)));
+  const toggle = (n) => setPicked(p => { const x = new Set(p); x.has(n) ? x.delete(n) : x.add(n); return x; });
+  if (!recipe) return null;
+  return (
+    <DskOverlay onClose={onClose} width={540}>
+      <DskDialogHeader
+        title="소진된 재료를 확인해주세요"
+        sub={`체크된 재료는 팬트리에서 자동으로 빠져요 · ${recipe.name}`}
+        onClose={onClose} />
+      <div style={{ padding: '14px 22px', overflowY: 'auto', flex: 1 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+          {(recipe.ingredients || []).map(it => {
+            const on = picked.has(it.name);
+            return (
+              <button key={it.name} onClick={() => toggle(it.name)} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10,
+                background: on ? T.mintSoft : T.surfaceFill, border: 'none', cursor: 'pointer', textAlign: 'left',
+              }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: 5,
+                  background: on ? T.mint : '#fff', border: `1.5px solid ${on ? T.mint : T.border}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 800,
+                }}>{on ? '✓' : ''}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{it.name}</div>
+                  <div style={{ fontSize: 10, color: T.text3 }}>{it.qty}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <DskDialogFooter>
+        <button onClick={() => onConfirm?.([])} style={dskGhostBtn}>건너뛰기</button>
+        <button onClick={() => onConfirm?.([...picked])} style={dskPrimaryBtn}>
+          요리 완료 ({picked.size}개 차감)
+        </button>
+      </DskDialogFooter>
+    </DskOverlay>
+  );
+}
+
+// P2 — RecipeBookSelector
+function DesktopRecipeBookSelectorDialog({ slotLabel, onClose, onPick }) {
+  const books = window.RECIPEBOOK_SAMPLES || [];
+  return (
+    <DskOverlay onClose={onClose} width={540}>
+      <DskDialogHeader
+        title="레시피북 고르기"
+        sub={slotLabel ? `대상: ${slotLabel}` : '책을 선택하면 안의 레시피로 이동해요'}
+        onClose={onClose} />
+      <div style={{ padding: '14px 22px', overflowY: 'auto', flex: 1 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {books.map(b => (
+            <button key={b.id} onClick={() => onPick?.(b.id)} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12,
+              padding: '12px 14px', cursor: 'pointer', textAlign: 'left',
+            }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: T.mintSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{b.emoji}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{b.name}</div>
+                <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{b.recipeIds.length}개 레시피</div>
+              </div>
+              {Icon.chevR(T.text4)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <DskDialogFooter>
+        <button onClick={onClose} style={dskGhostBtn}>닫기</button>
+      </DskDialogFooter>
+    </DskOverlay>
+  );
+}
+
+// P2 — RecipeBookDetailPicker (책 안 레시피 선택)
+function DesktopRecipeBookDetailPickerDialog({ bookId, slotLabel, onClose, onPick }) {
+  const book = (window.RECIPEBOOK_SAMPLES || []).find(b => b.id === bookId);
+  const recipes = book ? book.recipeIds.map(id => RECIPES.find(r => r.id === id)).filter(Boolean) : [];
+  return (
+    <DskOverlay onClose={onClose} width={620}>
+      <DskDialogHeader
+        title={book ? book.name + ' · 레시피 고르기' : '레시피북'}
+        sub={slotLabel ? `대상: ${slotLabel}` : '클릭하면 해당 레시피로 식사 추가'}
+        onClose={onClose} />
+      <div style={{ padding: '14px 22px', overflowY: 'auto', flex: 1 }}>
+        {recipes.length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center', color: T.text3, fontSize: 12 }}>
+            레시피북에 레시피가 없어요
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+            {recipes.map(r => (
+              <button key={r.id} onClick={() => onPick?.(r.id)} style={{
+                background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12, overflow: 'hidden',
+                cursor: 'pointer', textAlign: 'left', padding: 0,
+              }}>
+                <div style={{ aspectRatio: '4/3', background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>{r.emoji}</div>
+                <div style={{ padding: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.ink }}>{r.name}</div>
+                  <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>⭐ {r.rating} · {r.minutes}분</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <DskDialogFooter>
+        <button onClick={onClose} style={dskGhostBtn}>닫기</button>
+      </DskDialogFooter>
+    </DskOverlay>
+  );
+}
+
+// P2 — PantryMatchPicker
+function DesktopPantryMatchPickerDialog({ pantry, slotLabel, onClose, onPick }) {
+  const haveSet = new Set(Object.values(pantry || {}).filter(v => v.have).map(v => v.name));
+  const ranked = dUseMemo(() => RECIPES.map(r => {
+    const need = r.ingredients.length || 1;
+    const matched = r.ingredients.filter(i => haveSet.has(i.name)).length;
+    return { r, score: Math.round((matched / need) * 100), matched, need };
+  }).sort((a, b) => b.score - a.score), [haveSet]);
+  return (
+    <DskOverlay onClose={onClose} width={620}>
+      <DskDialogHeader
+        title="팬트리 매칭"
+        sub={slotLabel ? `대상: ${slotLabel} · 보유 재료가 많이 일치하는 순서` : '보유 재료가 많이 일치하는 순서'}
+        onClose={onClose} />
+      <div style={{ padding: '14px 22px', overflowY: 'auto', flex: 1 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+          {ranked.slice(0, 9).map(({ r, score, matched, need }) => (
+            <button key={r.id} onClick={() => onPick?.(r.id)} style={{
+              background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12, overflow: 'hidden',
+              position: 'relative', cursor: 'pointer', textAlign: 'left', padding: 0,
+            }}>
+              <div style={{
+                position: 'absolute', top: 8, left: 8,
+                background: T.mint, color: '#fff', fontSize: 10, fontWeight: 800,
+                padding: '3px 8px', borderRadius: 9999,
+              }}>매칭 {score}%</div>
+              <div style={{ aspectRatio: '4/3', background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>{r.emoji}</div>
+              <div style={{ padding: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.name}</div>
+                <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>{matched}/{need}개 보유 · {r.minutes}분</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+      <DskDialogFooter>
+        <button onClick={onClose} style={dskGhostBtn}>닫기</button>
+      </DskDialogFooter>
+    </DskOverlay>
+  );
+}
+
+const dskGhostBtn = {
+  padding: '10px 16px', borderRadius: 8, border: `1px solid ${T.border}`,
+  background: '#fff', color: T.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+};
+const dskPrimaryBtn = {
+  padding: '10px 18px', borderRadius: 8, border: 'none',
+  background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+};
+
 Object.assign(window, {
   DesktopHome, DesktopPlanner, DesktopRecipeDetail, DesktopPantry, DesktopMyPage,
   // Wave 1.5 desktop variants
@@ -1763,4 +2714,11 @@ Object.assign(window, {
   DesktopMenuAddScreen, DesktopShoppingCreateScreen, DesktopShoppingDetailScreen, DesktopCookRunScreen,
   // Wave 1.6 desktop variants
   DesktopLoginScreen, DesktopSettingsScreen, DesktopMealDetailScreen, DesktopCookListScreen,
+  // Wave 1.7 desktop variants (P1.3)
+  DesktopLeftoversScreen, DesktopAteListScreen, DesktopManualRecipeCreateScreen, DesktopYtImportScreen,
+  DesktopRecipeSearchPicker, DesktopMyPageRecipebookList, DesktopMyPageShoppingList,
+  // Wave 1.8 desktop modals (P2)
+  DesktopPantryAddDialog, DesktopPantryBundleDialog, DesktopPantryReflectDialog,
+  DesktopConsumedIngredientDialog, DesktopRecipeBookSelectorDialog,
+  DesktopRecipeBookDetailPickerDialog, DesktopPantryMatchPickerDialog,
 });
