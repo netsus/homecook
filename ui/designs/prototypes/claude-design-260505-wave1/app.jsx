@@ -56,6 +56,11 @@ function App() {
   // Wave 1.5 — P0 modals
   const [ingredientFilterOpen, setIngredientFilterOpen] = useState(false);
   const [planningServings, setPlanningServings] = useState(null); // { recipeId, presetDate?, presetSlot? }
+  // Wave 1.8 — P2 desktop pickers (state-driven, desktop-only consumption)
+  const [bookSelectorOpen, setBookSelectorOpen] = useState(false);
+  const [bookDetailPicker, setBookDetailPicker] = useState(null); // { bookId }
+  const [pantryMatchPickerOpen, setPantryMatchPickerOpen] = useState(false);
+  const [consumedDialog, setConsumedDialog] = useState(null); // { recipe, defaultSelection? }
   const [toast, setToast] = useState('');
 
   // Tweaks
@@ -464,6 +469,30 @@ function App() {
     desktopPageContent = <DesktopCookListScreen planner={planner} onBack={backFromPage}
       onStartCook={(d, s) => goPage('cook-run', { date: d, slot: s })}
       onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })} />;
+  } else if (route.page === 'leftovers') {
+    // Wave 1.7 — P1.3 desktop variants
+    desktopPageContent = <DesktopLeftoversScreen planner={planner} onBack={backFromPage}
+      onReuse={reuseLeftover} onGoAteList={() => goPage('ate-list')}
+      onMarkAte={markAte} onMarkPartial={markPartial} showToast={showToast} />;
+  } else if (route.page === 'ate-list') {
+    desktopPageContent = <DesktopAteListScreen planner={planner} onBack={backFromPage}
+      onUndoAte={undoAte} onRecreate={(rid) => { backFromPage(); openRecipe(rid); }} />;
+  } else if (route.page === 'manual-create') {
+    desktopPageContent = <DesktopManualRecipeCreateScreen presetDate={pa.date} presetSlot={pa.slot}
+      onBack={backFromPage} onCreated={onRecipeCreated} showToast={showToast} />;
+  } else if (route.page === 'yt-import') {
+    desktopPageContent = <DesktopYtImportScreen presetDate={pa.date} presetSlot={pa.slot}
+      onBack={backFromPage} onCreated={onRecipeCreated} showToast={showToast} />;
+  } else if (route.page === 'mypage-recipebook') {
+    desktopPageContent = <DesktopMyPageRecipebookList onBack={backFromPage}
+      onOpenBook={(bookId) => goPage('mypage-recipebook-detail', { bookId })}
+      onCreateBook={() => showToast('레시피북 만들기 (Wave 다음)')}
+      onDeleteBook={(id) => showToast('레시피북이 삭제됐어요')}
+      showToast={showToast} />;
+  } else if (route.page === 'mypage-shopping') {
+    desktopPageContent = <DesktopMyPageShoppingList shoppingLists={shoppingLists}
+      onBack={backFromPage}
+      onOpen={(id) => goPage('shopping-detail', { listId: id })} />;
   }
 
   // ============ Top shell switcher ============
@@ -581,40 +610,56 @@ function App() {
             <AddToPantryModal items={pantryAddItems} onClose={() => setPantryAddItems(null)} onConfirm={confirmAddPantry} />
           </div>
         )}
+        {/* Wave 1.8 — desktop dialog variants (replaces mobile sheets in desktop shell) */}
         {pantryAddSheet && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
-            <PantryAddSheet
-              onClose={() => setPantryAddSheet(false)}
-              onAddItem={(item) => {
-                setPantry(p => ({ ...p, [item.name]: { name: item.name, section: item.section, have: true } }));
-                setPantryAddSheet(false);
-                showToast(item.name + ' 추가됨');
-              }}
-              onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
-            />
-          </div>
+          <DesktopPantryAddDialog
+            onClose={() => setPantryAddSheet(false)}
+            onAddItem={(item) => {
+              setPantry(p => ({ ...p, [item.name]: { name: item.name, section: item.section, have: true } }));
+              setPantryAddSheet(false);
+              showToast(item.name + ' 추가됨');
+            }}
+            onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
+          />
         )}
         {pantryBundlePicker && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
-            <PantryBundlePicker
-              onClose={() => setPantryBundlePicker(false)}
-              onConfirm={(items) => {
-                setPantry(p => {
-                  const next = { ...p };
-                  items.forEach(name => { next[name] = { name, section: '양념', have: true }; });
-                  return next;
-                });
-                setPantryBundlePicker(false);
-                showToast(items.length + '개 일괄 추가됨');
-              }}
-            />
-          </div>
+          <DesktopPantryBundleDialog
+            onClose={() => setPantryBundlePicker(false)}
+            onConfirm={(items) => {
+              setPantry(p => {
+                const next = { ...p };
+                items.forEach(name => { next[name] = { name, section: '양념', have: true }; });
+                return next;
+              });
+              setPantryBundlePicker(false);
+              showToast(items.length + '개 일괄 추가됨');
+            }}
+          />
         )}
         {reflectPicker && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
-            <PantryReflectPicker list={reflectPicker} onClose={() => setReflectPicker(null)}
-              onConfirm={(names) => reflectToPantry(reflectPicker, names)} />
-          </div>
+          <DesktopPantryReflectDialog list={reflectPicker} onClose={() => setReflectPicker(null)}
+            onConfirm={(names) => reflectToPantry(reflectPicker, names)} />
+        )}
+        {bookSelectorOpen && (
+          <DesktopRecipeBookSelectorDialog
+            onClose={() => setBookSelectorOpen(false)}
+            onPick={(bookId) => { setBookSelectorOpen(false); setBookDetailPicker({ bookId }); }} />
+        )}
+        {bookDetailPicker && (
+          <DesktopRecipeBookDetailPickerDialog bookId={bookDetailPicker.bookId}
+            onClose={() => setBookDetailPicker(null)}
+            onPick={(rid) => { setBookDetailPicker(null); openRecipe(rid); }} />
+        )}
+        {pantryMatchPickerOpen && (
+          <DesktopPantryMatchPickerDialog pantry={pantry}
+            onClose={() => setPantryMatchPickerOpen(false)}
+            onPick={(rid) => { setPantryMatchPickerOpen(false); openRecipe(rid); }} />
+        )}
+        {consumedDialog && (
+          <DesktopConsumedIngredientDialog recipe={consumedDialog.recipe}
+            defaultSelection={consumedDialog.defaultSelection}
+            onClose={() => setConsumedDialog(null)}
+            onConfirm={(names) => { setConsumedDialog(null); showToast(names.length + '개 재료 차감됐어요'); }} />
         )}
         {/* Wave 1.5 — P0 modals (desktop shell) */}
         {ingredientFilterOpen && (
@@ -960,6 +1005,38 @@ function App() {
             const slot = ['아침','점심','저녁'].find(s => planner[k]?.[s]) || '저녁';
             goPage('meal-detail', { date: k, slot });
           }} style={quickBtn}>🍽️ 끼니 상세 (MEAL_SCREEN)</button>
+        </div>
+
+        <div style={{ fontSize: 11, color: '#868E96', fontWeight: 700, marginTop: 16, marginBottom: 8 }}>Wave 1.7 데스크톱 (P1.3)</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button onClick={() => goPage('leftovers')}
+            style={quickBtn}>🥡 남은 요리 (LEFTOVERS)</button>
+          <button onClick={() => goPage('ate-list')}
+            style={quickBtn}>🍽️ 다먹은 기록 (ATE_LIST)</button>
+          <button onClick={() => goPage('manual-create')}
+            style={quickBtn}>✏️ 직접 등록 (MANUAL_CREATE)</button>
+          <button onClick={() => goPage('yt-import')}
+            style={quickBtn}>📺 유튜브 가져오기 (YT_IMPORT)</button>
+          <button onClick={() => goPage('mypage-recipebook')}
+            style={quickBtn}>📚 레시피북 목록 (MYPAGE_RECIPEBOOK)</button>
+          <button onClick={() => goPage('mypage-shopping')}
+            style={quickBtn}>🧾 장보기 기록 목록 (MYPAGE_SHOPPING)</button>
+        </div>
+
+        <div style={{ fontSize: 11, color: '#868E96', fontWeight: 700, marginTop: 16, marginBottom: 8 }}>Wave 1.8 데스크톱 (P2)</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button onClick={() => setPantryAddSheet(true)}
+            style={quickBtn}>➕ 재료 추가 dialog (PantryAdd)</button>
+          <button onClick={() => setPantryBundlePicker(true)}
+            style={quickBtn}>📦 재료 묶음 dialog (PantryBundle)</button>
+          <button onClick={() => setReflectPicker(shoppingLists[1] || shoppingLists[0])}
+            style={quickBtn}>🔄 팬트리 반영 dialog (PantryReflect)</button>
+          <button onClick={() => setBookSelectorOpen(true)}
+            style={quickBtn}>📕 레시피북 선택 dialog (BookSelector)</button>
+          <button onClick={() => setPantryMatchPickerOpen(true)}
+            style={quickBtn}>🧊 팬트리 매칭 dialog (PantryMatch)</button>
+          <button onClick={() => setConsumedDialog({ recipe: RECIPES[0] })}
+            style={quickBtn}>✓ 차감 재료 dialog (Consumed)</button>
         </div>
       </div>
 

@@ -933,3 +933,83 @@ P1.2 4개 화면을 데스크톱 전용 layout으로 승격.
 - 4개 신규 컴포넌트(`DesktopLoginScreen`, `DesktopSettingsScreen`, `DesktopMealDetailScreen`, `DesktopCookListScreen`) 모두 `screens/desktop-screens.jsx`에 존재 ✅
 - desktopPageContent 분기에 4개 wired (login/settings/meal-detail/cook-list) ✅
 - quick flow panel ‘Wave 1.6 데스크톱’ 섹션 3개 진입 버튼 추가 ✅
+
+---
+
+## 부록 F — Wave 1.7 + 1.8 Pass Status (2026-05-06)
+
+P1.3 7개 데스크톱 화면 + P2 7개 데스크톱 모달 일괄 처리.
+
+### 추가된 데스크톱 화면 (Wave 1.7, P1.3)
+
+- **DesktopLeftoversScreen** (`route.page === 'leftovers'`)
+  남은 요리 카드 그리드 + 덜 먹음/다시 식단/다 먹음 액션. 빈 상태 카드 포함.
+- **DesktopAteListScreen** (`route.page === 'ate-list'`)
+  다먹은 기록 리스트(가로형 row) + 되돌리기/다시 만들기 액션.
+- **DesktopManualRecipeCreateScreen** (`route.page === 'manual-create'`)
+  2-col 레이아웃 — 좌측 form(이모지 picker, 이름·시간·인분, 재료 N개, 단계 N개) + 우측 sticky preview 카드.
+- **DesktopYtImportScreen** (`route.page === 'yt-import'`)
+  좌측 URL 입력 + 우측 추출 결과 미리보기(재료/단계). 데모용 fake import.
+- **DesktopRecipeSearchPicker** (export only)
+  검색 헤더 + 4-col 카드 그리드. MENU_ADD 데스크톱 사이드바 ‘검색’ 탭이 메인 사용처이므로 별도 route는 두지 않고 export로만 제공.
+- **DesktopMyPageRecipebookList** (`route.page === 'mypage-recipebook'`)
+  레시피북 카드 그리드 + 새 책 만들기 + 책별 삭제 confirm.
+- **DesktopMyPageShoppingList** (`route.page === 'mypage-shopping'`)
+  진행 중 / 완료 2-section 카드 그리드. 각 카드에 항목 미리보기 4개.
+
+### 추가된 데스크톱 모달 (Wave 1.8, P2)
+
+centered fixed-overlay dialog 패턴(`DskOverlay` + `DskDialogHeader` + `DskDialogFooter` 헬퍼)으로 통일.
+
+- **DesktopPantryAddDialog** — 460px, 묶음 추가 진입 + 이름/구역 form
+- **DesktopPantryBundleDialog** — 560px, 2-col 묶음 그리드 → 항목 다중 선택
+- **DesktopPantryReflectDialog** — 520px, 장보기 후 보유 반영 항목 체크리스트
+- **DesktopConsumedIngredientDialog** — 540px, 요리 완료 후 차감 재료 2-col 체크리스트
+- **DesktopRecipeBookSelectorDialog** — 540px, 책 카드 2-col
+- **DesktopRecipeBookDetailPickerDialog** — 620px, 책 안 레시피 카드 그리드
+- **DesktopPantryMatchPickerDialog** — 620px, 매칭% 정렬된 9개 카드 그리드
+
+### App 변경
+
+신규 state:
+- `bookSelectorOpen` boolean
+- `bookDetailPicker` `{ bookId } | null`
+- `pantryMatchPickerOpen` boolean
+- `consumedDialog` `{ recipe, defaultSelection? } | null`
+
+데스크톱 shell 모달 블록의 P2 모바일 시트 3개를 데스크톱 dialog로 교체:
+- `pantryAddSheet` → `DesktopPantryAddDialog`
+- `pantryBundlePicker` → `DesktopPantryBundleDialog`
+- `reflectPicker` → `DesktopPantryReflectDialog`
+
+신규 dialog 4개는 별도 state로 직접 렌더 (모바일 진입 흐름과 분리되어 데스크톱에서 독립 진입).
+
+`desktopPageContent` 분기에 6개 추가:
+- leftovers / ate-list / manual-create / yt-import / mypage-recipebook / mypage-shopping
+
+### Quick flow panel
+
+`Wave 1.7 데스크톱 (P1.3)` 6 버튼 + `Wave 1.8 데스크톱 (P2)` 6 버튼 추가. 각각 단일 클릭으로 신규 화면/dialog 즉시 검증 가능.
+
+### 모바일 영향
+
+P2 모바일 시트(`PantryAddSheet`, `PantryBundlePicker`, `PantryReflectPicker`, `ConsumedIngredientSheet`)는 모바일 shell에서 그대로 유지됨. 데스크톱 shell만 dialog로 swap. 모바일 흐름은 완전히 보존.
+
+### 아직 남은 gap
+
+- **데스크톱 fallback 0개** — 모든 P1.x 라우트는 desktop 전용 layout 보유.
+- **MOBILE-only sheet (의도적)**: `NicknameEditSheet`는 모바일/데스크톱 모두 동일 컴포넌트 사용 중 (DesktopSettingsScreen이 fixed-overlay wrapper로 감쌈). 현 시점 desktop dedicated dialog는 불필요.
+- **추후 권장**:
+  1. RecipeSearchPicker 단독 desktop screen 라우트화 (현재 export만) — 필요 시 추가.
+  2. LOGIN/SETTINGS의 i18n + a11y 보강.
+  3. desktop-screens.jsx (현재 2,726 lines) 모듈 분리 검토.
+
+### 검증 결과 (Wave 1.7 + 1.8)
+
+- `index.html` script block: `@babel/parser` 통과 ✅ (391,757 chars)
+- 15개 split source: 모두 babel-parser 통과 ✅ (desktop-screens.jsx 2,726 lines)
+- `homecook-baemin-prototype.html` ↔ `index.html` byte-identical (`diff -q` 통과) ✅
+- Wave 1.7 신규 7개 + Wave 1.8 신규 7개 = **14개 컴포넌트** 모두 index.html과 split source에 존재 ✅
+- desktopPageContent 분기 P1.3 6개 wired (`leftovers/ate-list/manual-create/yt-import/mypage-recipebook/mypage-shopping`) ✅
+- 데스크톱 shell 모달 블록: P2 시트 3개 swap + dialog 4개 신규 wiring ✅
+- quick flow panel: Wave 1.7 6 버튼 + Wave 1.8 6 버튼 추가 ✅
