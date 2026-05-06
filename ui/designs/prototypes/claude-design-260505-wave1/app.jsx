@@ -405,6 +405,8 @@ function App() {
       <DesktopPlanner
         planner={planner}
         onOpenRecipe={openRecipe}
+        onCreateShopping={() => goPage('shopping-create')}
+        onCookList={() => goPage('cook-list')}
         onMenuAdd={(date, slot) => goPage('menu-add', date && slot ? { date, slot } : {})}
         onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })}
       />

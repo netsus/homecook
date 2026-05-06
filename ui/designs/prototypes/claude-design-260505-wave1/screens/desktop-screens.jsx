@@ -142,7 +142,7 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
   );
 }
 
-function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd }) {
+function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList }) {
   const days = Object.keys(planner);
   const slots = ['아침', '점심', '저녁'];
 
@@ -153,10 +153,16 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd }) 
           <div style={{ fontSize: 22, fontWeight: 700, color: T.ink }}>이번 주 식단</div>
           <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>2026년 4월 14일 ~ 4월 20일</div>
         </div>
-        <button onClick={() => onMenuAdd?.()} style={{
-          background: T.mint, color: '#fff', border: 'none', padding: '10px 16px',
-          borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-        }}>+ 식단 추가</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button onClick={() => onCookList?.()} style={{
+            background: '#FFF4E1', color: '#B8860B', border: 'none', padding: '10px 16px',
+            borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+          }}>🍳 요리하기</button>
+          <button onClick={() => onCreateShopping?.()} style={{
+            background: T.ink, color: '#fff', border: 'none', padding: '10px 16px',
+            borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+          }}>🛒 장보기 목록 만들기</button>
+        </div>
       </div>
 
       <div style={{
