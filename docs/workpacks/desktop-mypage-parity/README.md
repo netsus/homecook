@@ -93,9 +93,9 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed)
 - [ ] N/A
 
 > 프로토타입 전용 low-risk 변경이므로 Stage 4 완료 후 low-risk design check로 Stage 6에서 confirmed 승격 가능.
@@ -155,11 +155,11 @@
 > 이 체크리스트는 Stage 4~6 동안 갱신하는 living closeout 문서다.
 > 이 슬라이스는 BE 구현 없음(Stage 2/3 N/A), Stage 4에서 프로토타입 DesktopMyPage parity를 구현한다.
 
-- [ ] DesktopMyPage aside에 모바일 9개 메뉴 항목 추가 (emoji + label + detail + chevron) <!-- omo:id=dmp-menu-items;stage=4;scope=frontend;review=6 -->
-- [ ] DesktopMyPage에 `onGoPage` prop 추가 및 앱 루트에서 연결 <!-- omo:id=dmp-ongopage-wiring;stage=4;scope=frontend;review=6 -->
-- [ ] 각 메뉴 항목 클릭 시 올바른 route key로 이동 확인 <!-- omo:id=dmp-menu-routing;stage=4;scope=frontend;review=6 -->
-- [ ] 기존 프로필/통계 섹션 regression 없음 확인 <!-- omo:id=dmp-profile-intact;stage=4;scope=frontend;review=6 -->
-- [ ] 기존 저장 레시피 그리드 regression 없음 확인 <!-- omo:id=dmp-saved-grid-intact;stage=4;scope=frontend;review=6 -->
-- [ ] `index.html`과 `screens/desktop-screens.jsx` 동기화 <!-- omo:id=dmp-split-sync;stage=4;scope=frontend;review=6 -->
-- [ ] `homecook-baemin-prototype.html`과 `index.html` byte-identical 확인 <!-- omo:id=dmp-html-identical;stage=4;scope=frontend;review=6 -->
-- [ ] `git diff --check` 통과 <!-- omo:id=dmp-diff-check;stage=4;scope=frontend;review=6 -->
+- [x] DesktopMyPage aside에 모바일 9개 메뉴 항목 추가 (emoji + label + detail + chevron) <!-- omo:id=dmp-menu-items;stage=4;scope=frontend;review=6 -->
+- [x] DesktopMyPage에 `onGoPage` prop 추가 및 앱 루트에서 연결 <!-- omo:id=dmp-ongopage-wiring;stage=4;scope=frontend;review=6 -->
+- [x] 각 메뉴 항목 클릭 시 올바른 route key로 이동 확인 <!-- omo:id=dmp-menu-routing;stage=4;scope=frontend;review=6 -->
+- [x] 기존 프로필/통계 섹션 regression 없음 확인 <!-- omo:id=dmp-profile-intact;stage=4;scope=frontend;review=6 -->
+- [x] 기존 저장 레시피 그리드 regression 없음 확인 <!-- omo:id=dmp-saved-grid-intact;stage=4;scope=frontend;review=6 -->
+- [x] `index.html`과 `screens/desktop-screens.jsx` 동기화 <!-- omo:id=dmp-split-sync;stage=4;scope=frontend;review=6 -->
+- [x] `homecook-baemin-prototype.html`과 `index.html` byte-identical 확인 <!-- omo:id=dmp-html-identical;stage=4;scope=frontend;review=6 -->
+- [x] `git diff --check` 통과 <!-- omo:id=dmp-diff-check;stage=4;scope=frontend;review=6 -->
