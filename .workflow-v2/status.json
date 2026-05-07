@@ -819,6 +819,18 @@
         "git diff --check"
       ],
       "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs merged via PR #347. Stage 2/3 N/A (prototype-only). Stage 4 frontend implemented by Claude through resume session bbe4b815-9a73-4886-b3d4-5b0caa279bc8. Stage 5 lightweight design check absorbed in Codex Stage 6; authority-required=false, Design Status confirmed. Local diff, workflow-v2, workpack, split HTML, and headless Chrome DOM route checks passed. closeout_phase=completed closeout_recovery=manual_patch:0|ci_resync:0 closeout_recovery_detail=manual_patch:0|ci_resync:0 closeout_repair=codex:0|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,PR body last_recovery_at=2026-05-07T17:16:59Z"
+    },
+    {
+      "id": "desktop-home-pantry-parity",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/desktop-home-pantry-parity",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs created. Stage 2/3 N/A (prototype-only). Stage 4 pending. Desktop home + pantry mobile feature parity — search, INGREDIENT_FILTERS, THEMES carousel, planner promo, sort key fix (time→fast), pantry search + add button wiring."
     }
   ]
 }

@@ -1,0 +1,84 @@
+{
+  "id": "desktop-home-pantry-parity",
+  "title": "Desktop prototype home and pantry mobile feature parity",
+  "summary": "데스크톱 웹 프로토타입 홈에 검색, INGREDIENT_FILTERS, THEMES 카러셀, 플래너 프로모 스트립을 추가하고 정렬 키를 time→fast로 수정한다. 데스크톱 팬트리에 검색과 추가 버튼을 추가한다. 프로토타입 전용 변경이며 production 코드에 영향 없음.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "Add mobile search, INGREDIENT_FILTERS parity, THEMES carousel, planner promo strip to DesktopHome and fix sort key time→fast. Add search input and add-button wiring to DesktopPantry. Prototype-only, no product code changes.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "desktop-planner-parity",
+    "desktop-mypage-parity",
+    "baemin-prototype-home-parity",
+    "13-pantry-core"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/desktop-home-pantry-parity/README.md",
+      "docs/workpacks/desktop-home-pantry-parity/acceptance.md",
+      "docs/workpacks/desktop-home-pantry-parity/automation-spec.json"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/workpacks/desktop-planner-parity/README.md",
+      "docs/workpacks/desktop-mypage-parity/README.md",
+      "ui/designs/prototypes/claude-design-260505-wave1/screens/home.jsx",
+      "ui/designs/prototypes/claude-design-260505-wave1/screens/pantry.jsx",
+      "ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx",
+      "ui/designs/prototypes/claude-design-260505-wave1/data.jsx",
+      "ui/designs/prototypes/claude-design-260505-wave1/index.html",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 2
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "no-product-code-change",
+      "split-source-sync",
+      "html-byte-identical"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "notes": "Stage 1 docs created. Stage 2/3 N/A (prototype-only). Stage 4 pending.",
+  "out_of_scope": [
+    "Desktop mypage, planner parity (separate slices, already merged)",
+    "Backend/API/schema changes",
+    "Product Next.js runtime code changes",
+    "Mobile HomeScreen/PantryScreen behavior changes",
+    "New npm dependencies",
+    "Desktop home/pantry information architecture changes",
+    "DesktopPantryAddDialog functionality changes (already implemented)",
+    "Ingredient filter regex logic changes",
+    "Case-insensitive or fuzzy search matching"
+  ],
+  "open_questions": []
+}
