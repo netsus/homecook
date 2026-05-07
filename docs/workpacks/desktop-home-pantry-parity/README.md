@@ -96,9 +96,9 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed)
 - [ ] N/A
 
 > 프로토타입 전용 low-risk 변경이므로 Stage 4 완료 후 low-risk design check로 Stage 6에서 confirmed 승격 가능.
@@ -174,14 +174,14 @@
 > 이 체크리스트는 Stage 4~6 동안 갱신하는 living closeout 문서다.
 > 이 슬라이스는 BE 구현 없음(Stage 2/3 N/A), Stage 4에서 프로토타입 DesktopHome/DesktopPantry parity를 구현한다.
 
-- [ ] DesktopHome에 검색 입력 추가 (query 상태, name includes 필터링) <!-- omo:id=dhp-search-input;stage=4;scope=frontend;review=6 -->
-- [ ] DesktopHome 재료 필터를 모바일 INGREDIENT_FILTERS 6개로 교체 (emoji 포함) <!-- omo:id=dhp-ingredient-filters;stage=4;scope=frontend;review=6 -->
-- [ ] DesktopHome에 THEMES 카러셀 추가 (6개 테마 카드, activeTheme 필터링) <!-- omo:id=dhp-themes-carousel;stage=4;scope=frontend;review=6 -->
-- [ ] DesktopHome에 플래너 프로모 스트립 추가 (mint-to-teal gradient) <!-- omo:id=dhp-planner-promo;stage=4;scope=frontend;review=6 -->
-- [ ] DesktopHome 정렬 키를 time/시간순에서 fast/빠른 조리순으로 수정 <!-- omo:id=dhp-sort-key-fix;stage=4;scope=frontend;review=6 -->
-- [ ] DesktopPantry에 검색 입력 추가 (query 상태, name includes 필터링) <!-- omo:id=dhp-pantry-search;stage=4;scope=frontend;review=6 -->
-- [ ] DesktopPantry에 onOpenAdd prop 추가 및 + 버튼으로 DesktopPantryAddDialog 연결 <!-- omo:id=dhp-pantry-add-button;stage=4;scope=frontend;review=6 -->
-- [ ] 앱 루트(`app.jsx`)에서 DesktopPantry에 `onOpenAdd` 콜백 전달 확인 <!-- omo:id=dhp-app-root-wiring;stage=4;scope=frontend;review=6 -->
-- [ ] `index.html`과 `screens/desktop-screens.jsx`, `app.jsx` 동기화 <!-- omo:id=dhp-split-sync;stage=4;scope=frontend;review=6 -->
-- [ ] `homecook-baemin-prototype.html`과 `index.html` byte-identical 확인 <!-- omo:id=dhp-html-identical;stage=4;scope=frontend;review=6 -->
-- [ ] `git diff --check` 통과 <!-- omo:id=dhp-diff-check;stage=4;scope=frontend;review=6 -->
+- [x] DesktopHome에 검색 입력 추가 (query 상태, name includes 필터링) <!-- omo:id=dhp-search-input;stage=4;scope=frontend;review=6 -->
+- [x] DesktopHome 재료 필터를 모바일 INGREDIENT_FILTERS 6개로 교체 (emoji 포함) <!-- omo:id=dhp-ingredient-filters;stage=4;scope=frontend;review=6 -->
+- [x] DesktopHome에 THEMES 카러셀 추가 (6개 테마 카드, activeTheme 필터링) <!-- omo:id=dhp-themes-carousel;stage=4;scope=frontend;review=6 -->
+- [x] DesktopHome에 플래너 프로모 스트립 추가 (mint-to-teal gradient) <!-- omo:id=dhp-planner-promo;stage=4;scope=frontend;review=6 -->
+- [x] DesktopHome 정렬 키를 time/시간순에서 fast/빠른 조리순으로 수정 <!-- omo:id=dhp-sort-key-fix;stage=4;scope=frontend;review=6 -->
+- [x] DesktopPantry에 검색 입력 추가 (query 상태, name includes 필터링) <!-- omo:id=dhp-pantry-search;stage=4;scope=frontend;review=6 -->
+- [x] DesktopPantry에 onOpenAdd prop 추가 및 + 버튼으로 DesktopPantryAddDialog 연결 <!-- omo:id=dhp-pantry-add-button;stage=4;scope=frontend;review=6 -->
+- [x] 앱 루트(`app.jsx`)에서 DesktopPantry에 `onOpenAdd` 콜백 전달 확인 <!-- omo:id=dhp-app-root-wiring;stage=4;scope=frontend;review=6 -->
+- [x] `index.html`과 `screens/desktop-screens.jsx`, `app.jsx` 동기화 <!-- omo:id=dhp-split-sync;stage=4;scope=frontend;review=6 -->
+- [x] `homecook-baemin-prototype.html`과 `index.html` byte-identical 확인 <!-- omo:id=dhp-html-identical;stage=4;scope=frontend;review=6 -->
+- [x] `git diff --check` 통과 <!-- omo:id=dhp-diff-check;stage=4;scope=frontend;review=6 -->

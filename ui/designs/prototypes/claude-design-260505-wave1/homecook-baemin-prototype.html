@@ -2068,9 +2068,27 @@ window.DesktopShell = DesktopShell;
 const { useMemo: dUseMemo, useState: dUseState } = React;
 
 function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy, setShowSortSheet, onOpenIngredientFilter, ingredientNames = [] }) {
+  const [query, setQuery] = dUseState('');
+  const [activeTheme, setActiveTheme] = dUseState(null);
+
   const filtered = dUseMemo(() => {
     let r = [...RECIPES];
-    if (ingFilter.length) r = r.filter(x => ingFilter.every(f => x.tags.some(t => t.includes(f)) || x.name.includes(f)));
+    if (query) r = r.filter(x => x.name.includes(query));
+    if (activeTheme) r = r.filter(x => x.theme === activeTheme);
+    if (ingFilter.length > 0) {
+      r = r.filter(x => {
+        const names = x.ingredients.map(i => i.name).join(' ');
+        return ingFilter.some(f => {
+          if (f === 'rice') return /밥|국수|면|밀가루/.test(names);
+          if (f === 'meat') return /돼지|소고기|닭|앞다리/.test(names);
+          if (f === 'fish') return /연어|멸치|해산물/.test(names);
+          if (f === 'veg') return /양파|감자|당근|호박|로메인/.test(names);
+          if (f === 'egg') return /계란|두부/.test(names);
+          if (f === 'kimchi') return /김치|묵은지/.test(names);
+          return true;
+        });
+      });
+    }
     if (ingredientNames.length) {
       r = r.filter(recipe => {
         const names = recipe.ingredients.map(i => i.name).join(' ');
@@ -2078,10 +2096,12 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
       });
     }
     if (sortBy === 'rating') r.sort((a, b) => b.rating - a.rating);
-    if (sortBy === 'time')   r.sort((a, b) => a.minutes - b.minutes);
+    if (sortBy === 'fast')   r.sort((a, b) => a.minutes - b.minutes);
     if (sortBy === 'saves')  r.sort((a, b) => b.saves - a.saves);
     return r;
-  }, [ingFilter, ingredientNames, sortBy]);
+  }, [query, activeTheme, ingFilter, ingredientNames, sortBy]);
+
+  const sortLabel = { latest: '\uCD5C\uC2E0\uC21C', rating: '\uBCC4\uC810\uC21C', saves: '\uC800\uC7A5\uC21C', fast: '\uBE60\uB978 \uC870\uB9AC\uC21C' }[sortBy];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -2136,24 +2156,40 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
         </div>
       </section>
 
-      {/* Filter row */}
+      {/* Search */}
       <section>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>레시피 둘러보기</div>
-          <button onClick={() => setShowSortSheet(true)} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 13, color: T.text2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
-          }}>
-            정렬: {{rating:'평점순', time:'시간순', saves:'저장순'}[sortBy]} {Icon.chevD(T.text2)}
-          </button>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: T.surfaceFill, borderRadius: 12, padding: '0 16px', height: 44,
+        }}>
+          {Icon.search()}
+          <input value={query} onChange={e => setQuery(e.target.value)}
+            placeholder={'\uAE40\uCE58\uBCF6\uC74C\uBC25, \uB41C\uC7A5\uCC0C\uAC1C\u2026'}
+            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none',
+              fontSize: 14, color: T.ink, fontFamily: T.fontUI }} />
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
-          {['김치','돼지고기','두부','계란','감자','애호박','참치','김'].map(ing => (
-            <Chip key={ing}
-              active={ingFilter.includes(ing)}
-              onClick={() => setIngFilter(f => f.includes(ing) ? f.filter(x => x !== ing) : [...f, ing])}
-            >{ing}</Chip>
-          ))}
+      </section>
+
+      {/* Ingredient filter row — mobile INGREDIENT_FILTERS parity */}
+      <section>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {INGREDIENT_FILTERS.map(f => {
+            const active = ingFilter.includes(f.id);
+            return (
+              <button key={f.id} onClick={() => {
+                setIngFilter(active ? ingFilter.filter(x => x !== f.id) : [...ingFilter, f.id]);
+              }} style={{
+                flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 9999,
+                background: active ? T.mintSoft : T.surfaceFill,
+                border: active ? `1px solid ${T.mint}` : '1px solid transparent',
+                color: active ? T.mintDeep : T.text2,
+                fontSize: 13, fontWeight: active ? 700 : 500, cursor: 'pointer',
+              }}>
+                <span style={{ fontSize: 14 }}>{f.emoji}</span>{f.name}
+              </button>
+            );
+          })}
           {onOpenIngredientFilter && (
             <button onClick={onOpenIngredientFilter} style={{
               padding: '8px 14px', borderRadius: 9999,
@@ -2161,8 +2197,65 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
               border: `1px dashed ${ingredientNames.length > 0 ? T.mintDeep : T.border}`,
               color: ingredientNames.length > 0 ? '#fff' : T.text2,
               fontSize: 12, fontWeight: 700, cursor: 'pointer', marginLeft: 4,
-            }}>🔎 {ingredientNames.length > 0 ? `재료 ${ingredientNames.length}개 적용` : '재료로 거르기'}</button>
+            }}>{'\uD83D\uDD0E'} {ingredientNames.length > 0 ? `\uC7AC\uB8CC ${ingredientNames.length}\uAC1C \uC801\uC6A9` : '\uC7AC\uB8CC\uB85C \uAC70\uB974\uAE30'}</button>
           )}
+        </div>
+      </section>
+
+      {/* Theme carousel — desktop density */}
+      <section>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>{'\uD14C\uB9C8\uBCC4 \uB808\uC2DC\uD53C'}</div>
+          <div style={{ fontSize: 12, color: T.text3 }}>{'\uC804\uCCB4\uBCF4\uAE30 \u203A'}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
+          {THEMES.map(t => {
+            const active = activeTheme === t.name;
+            return (
+              <div key={t.id} onClick={() => setActiveTheme(active ? null : t.name)} style={{
+                flexShrink: 0, width: 150, height: 96, borderRadius: 14,
+                background: t.bg, padding: 14, cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                border: active ? `2px solid ${T.mint}` : '2px solid transparent',
+                boxShadow: T.shadowNatural,
+              }}>
+                <div style={{ fontSize: 28 }}>{t.emoji}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand }}>{t.name}</div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Planner promo strip */}
+      <section>
+        <div style={{
+          background: `linear-gradient(135deg, ${T.mint} 0%, ${T.teal} 100%)`,
+          borderRadius: 12, padding: 16, display: 'flex', alignItems: 'center',
+          gap: 12, color: '#fff',
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 2 }}>{'\uC774\uBC88 \uC8FC \uC2DD\uB2E8 \uD50C\uB798\uB108'}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, fontFamily: T.fontBrand }}>
+              {'\uC624\uB298 \uC800\uB141\uAE4C\uC9C0 2\uB07C \uB0A8\uC558\uC5B4\uC694'}
+            </div>
+          </div>
+          <div style={{ fontSize: 32 }}>{'\uD83C\uDF73'}</div>
+        </div>
+      </section>
+
+      {/* All recipes with sort */}
+      <section>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>
+            {'\uB808\uC2DC\uD53C \uB458\uB7EC\uBCF4\uAE30'} <span style={{ color: T.text3, fontSize: 14, fontWeight: 500 }}>({filtered.length})</span>
+          </div>
+          <button onClick={() => setShowSortSheet(true)} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 13, color: T.text2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
+          }}>
+            {'\uC815\uB82C: '}{sortLabel} {Icon.chevD(T.text2)}
+          </button>
         </div>
 
         {/* 3-col grid */}
@@ -2187,7 +2280,7 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
                     position: 'absolute', top: 12, left: 12,
                     background: T.red, color: '#fff', fontSize: 11, fontWeight: 700,
                     padding: '4px 8px', borderRadius: 4,
-                  }}>🔥 인기</div>
+                  }}>{'\uD83D\uDD25 \uC778\uAE30'}</div>
                 )}
               </div>
               <div style={{ padding: 14 }}>
@@ -2203,6 +2296,12 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
             </div>
           ))}
         </div>
+        {filtered.length === 0 && (
+          <div style={{ padding: '48px 16px', textAlign: 'center', color: T.text3 }}>
+            <div style={{ fontSize: 48, marginBottom: 8 }}>{'\uD83C\uDF7D\uFE0F'}</div>
+            <div style={{ fontSize: 14 }}>{'\uC870\uAC74\uC5D0 \uB9DE\uB294 \uB808\uC2DC\uD53C\uAC00 \uC5C6\uC5B4\uC694'}</div>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -2512,53 +2611,84 @@ const dQtyBtn = {
   background: '#fff', color: T.ink, fontSize: 18, fontWeight: 700, cursor: 'pointer',
 };
 
-function DesktopPantry({ pantry, setPantry }) {
+function DesktopPantry({ pantry, setPantry, onOpenAdd }) {
+  const [query, setQuery] = dUseState('');
   const sections = {};
   Object.entries(pantry).forEach(([key, item]) => {
+    if (query && !item.name.includes(query)) return;
     if (!sections[item.section]) sections[item.section] = [];
     sections[item.section].push({ key, ...item });
   });
   const totalHave = Object.values(pantry).filter(x => x.have).length;
   const total = Object.keys(pantry).length;
+  const sectionEntries = Object.entries(sections);
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: T.ink, marginBottom: 4 }}>팬트리</div>
-          <div style={{ fontSize: 13, color: T.text3 }}>보유 중인 재료를 표시하면 가능한 레시피를 추천해 드려요</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: T.ink, marginBottom: 4 }}>{'\uD32C\uD2B8\uB9AC'}</div>
+          <div style={{ fontSize: 13, color: T.text3 }}>{'\uBCF4\uC720 \uC911\uC778 \uC7AC\uB8CC\uB97C \uD45C\uC2DC\uD558\uBA74 \uAC00\uB2A5\uD55C \uB808\uC2DC\uD53C\uB97C \uCD94\uCC9C\uD574 \uB4DC\uB824\uC694'}</div>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            background: T.mintSoft, color: T.mintDeep, padding: '8px 14px',
+            borderRadius: 8, fontSize: 13, fontWeight: 700,
+          }}>{'\uBCF4\uC720'} {totalHave} / {total}</div>
+          {onOpenAdd && (
+            <button onClick={onOpenAdd} style={{
+              background: T.mint, color: '#fff', border: 'none', cursor: 'pointer',
+              width: 36, height: 36, borderRadius: 8, fontSize: 20, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>+</button>
+          )}
+        </div>
+      </div>
+      <div style={{ marginBottom: 20 }}>
         <div style={{
-          background: T.mintSoft, color: T.mintDeep, padding: '8px 14px',
-          borderRadius: 8, fontSize: 13, fontWeight: 700,
-        }}>보유 {totalHave} / {total}</div>
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: T.surfaceFill, borderRadius: 12, padding: '0 16px', height: 44,
+        }}>
+          {Icon.search()}
+          <input value={query} onChange={e => setQuery(e.target.value)}
+            placeholder={'\uC7AC\uB8CC \uAC80\uC0C9'}
+            style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none',
+              fontSize: 14, color: T.ink, fontFamily: T.fontUI }} />
+        </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
-        {Object.entries(sections).map(([cat, items]) => (
-          <div key={cat} style={{
-            background: '#fff', borderRadius: 12, padding: 20, boxShadow: T.shadowDeep,
-          }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 12 }}>{cat}</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {items.map(it => (
-                <button key={it.key} onClick={() => {
-                  setPantry(p => ({ ...p, [it.key]: { ...p[it.key], have: !p[it.key].have } }));
-                }} style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '8px 12px', borderRadius: 9999,
-                  background: it.have ? T.mintSoft : T.surfaceFill,
-                  border: it.have ? `1px solid ${T.mint}` : '1px solid transparent',
-                  color: it.have ? T.mintDeep : T.text2,
-                  fontSize: 13, fontWeight: it.have ? 700 : 500, cursor: 'pointer',
-                }}>
-                  {it.have && Icon.check(T.mintDeep)}
-                  {it.name}
-                </button>
-              ))}
+      {sectionEntries.length > 0 ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
+          {sectionEntries.map(([cat, items]) => (
+            <div key={cat} style={{
+              background: '#fff', borderRadius: 12, padding: 20, boxShadow: T.shadowDeep,
+            }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 12 }}>{cat}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {items.map(it => (
+                  <button key={it.key} onClick={() => {
+                    setPantry(p => ({ ...p, [it.key]: { ...p[it.key], have: !p[it.key].have } }));
+                  }} style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '8px 12px', borderRadius: 9999,
+                    background: it.have ? T.mintSoft : T.surfaceFill,
+                    border: it.have ? `1px solid ${T.mint}` : '1px solid transparent',
+                    color: it.have ? T.mintDeep : T.text2,
+                    fontSize: 13, fontWeight: it.have ? 700 : 500, cursor: 'pointer',
+                  }}>
+                    {it.have && Icon.check(T.mintDeep)}
+                    {it.name}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ padding: '48px 16px', textAlign: 'center', color: T.text3 }}>
+          <div style={{ fontSize: 48, marginBottom: 8 }}>{'\uD83E\uDD6C'}</div>
+          <div style={{ fontSize: 14 }}>{'\uAC80\uC0C9 \uACB0\uACFC\uAC00 \uC5C6\uC5B4\uC694'}</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -8137,7 +8267,7 @@ function App() {
       />
     );
   } else if (route.tab === 'pantry') {
-    desktopContent = <DesktopPantry pantry={pantry} setPantry={setPantry} />;
+    desktopContent = <DesktopPantry pantry={pantry} setPantry={setPantry} onOpenAdd={() => setPantryAddSheet(true)} />;
   } else if (route.tab === 'mypage') {
     desktopContent = <DesktopMyPage savedIds={savedIds} onOpenRecipe={openRecipe} onGoPage={goPage} />;
   }
