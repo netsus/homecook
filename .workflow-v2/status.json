@@ -807,6 +807,18 @@
         "git diff --check"
       ],
       "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs merged via PR #344. Stage 2/3 N/A (prototype-only). Stage 4 frontend implemented by Claude through resume session 073535f9-aae2-4953-8535-50ca28b30312, then Claude repaired ambiguous M/D date parsing for date range and desktop grid weekdays. Stage 5 lightweight design check absorbed in Codex Stage 6; authority-required=false, Design Status confirmed. Local diff, workflow-v2, workpack, split HTML, date/weekdays, and headless Chrome DOM checks passed. closeout_phase=completed closeout_recovery=ci_resync:1 closeout_recovery_detail=manual_patch:0|ci_resync:1 closeout_repair=codex:0|claude:2|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,PR #345 body last_recovery_at=2026-05-07T16:39:26Z"
+    },
+    {
+      "id": "desktop-mypage-parity",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/desktop-mypage-parity",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs created on docs/desktop-mypage-parity branch. Desktop prototype mypage mobile menu parity. Prototype-only change — adds mobile MyPageScreen full menu list to DesktopMyPage aside. Stage 2/3 N/A."
     }
   ]
 }
