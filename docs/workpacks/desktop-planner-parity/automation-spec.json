@@ -1,0 +1,54 @@
+{
+  "slice_id": "desktop-planner-parity",
+  "execution_mode": "manual",
+  "risk_class": "low",
+  "merge_policy": "manual",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change",
+      "prototype-only"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [],
+    "required_states": [],
+    "verify_commands": [
+      "git diff --check"
+    ],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "no-product-code-change",
+      "split-source-sync",
+      "html-byte-identical"
+    ],
+    "design_authority": {
+      "ui_risk": "low-risk",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "product-code-change",
+    "api-db-status-change",
+    "split-source-desync",
+    "html-not-identical"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 2
+  },
+  "notes": "Desktop prototype planner parity follow-up. Prototype-only change — adds mobile summary stats to DesktopPlanner and fixes stale date range. No product code, no BE, no API/DB changes. Stage 2/3 N/A."
+}

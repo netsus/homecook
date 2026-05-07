@@ -794,6 +794,18 @@
         "pnpm typecheck"
       ],
       "notes": "Merged via PR #321 on 2026-05-01T19:35:34Z after Stage 1 docs PR #319, Stage 2 backend PR #320, Claude Stage 3/4 work, Codex Stage 5/6 review, Claude final authority gate, full frontend verification, exploratory QA/eval, real smoke, and internal 6.5 closeout validators. closeout_phase=completed closeout_recovery=ci_resync:1 closeout_repair=codex:3|claude:2|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,git history,PR #321 body,docs/workpacks/19-youtube-import/omo-report.md last_recovery_at=2026-05-01T19:35:34Z"
+    },
+    {
+      "id": "desktop-planner-parity",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/desktop-planner-parity",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "git diff --check"
+      ],
+      "notes": "Desktop prototype planner parity follow-up. Adds mobile weekly summary stats to DesktopPlanner and fixes stale date range. Prototype-only, no product code changes. Stage 2/3 N/A. closeout_phase=collecting"
     }
   ]
 }
