@@ -60,10 +60,11 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
+    "lifecycle": "merged",
+    "approval_state": "codex_approved",
     "verification_status": "passed"
   },
+  "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs merged via PR #344. Stage 2/3 N/A (prototype-only). Stage 4 frontend implemented by Claude through resume session 073535f9-aae2-4953-8535-50ca28b30312, then Claude repaired ambiguous M/D date parsing for date range and desktop grid weekdays. Stage 5 lightweight design check absorbed in Codex Stage 6; authority-required=false, Design Status confirmed. closeout_phase=completed closeout_recovery=ci_resync:1 closeout_recovery_detail=manual_patch:0|ci_resync:1 closeout_repair=codex:0|claude:2|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,PR #345 body last_recovery_at=2026-05-07T16:39:26Z",
   "out_of_scope": [
     "Desktop mypage, home, pantry parity",
     "Backend/API/schema changes",
@@ -74,10 +75,10 @@
   ],
   "open_questions": [],
   "closeout": {
-    "phase": "projecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "in_progress",
-      "design_status": "temporary",
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
       "delivery_checklist": "complete",
       "design_authority": "not_required",
       "acceptance": "complete",
@@ -97,22 +98,35 @@
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending",
-      "approval_state": "not_started",
-      "all_checks_green": false
+      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "approval_state": "codex_approved",
+      "all_checks_green": true
     },
     "recovery_summary": {
       "manual_patch_count": 0,
       "manual_handoff": false,
       "stale_lock_count": 0,
-      "ci_resync_count": 0,
+      "ci_resync_count": 1,
       "artifact_missing": false,
-      "last_recovery_at": null
+      "last_recovery_at": "2026-05-07T16:39:26Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 2,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage4_ambiguous_date_parse_repair",
+      "evidence_sources": [
+        ".omx/artifacts",
+        "GitHub PR/CI",
+        "PR #345 body"
+      ]
     },
     "projection_state": {
-      "docs_synced_at": null,
-      "status_synced_at": null,
-      "pr_body_synced_at": null
+      "docs_synced_at": "2026-05-07T16:39:26Z",
+      "status_synced_at": "2026-05-07T16:39:26Z",
+      "pr_body_synced_at": "2026-05-07T16:39:26Z"
     }
   }
 }

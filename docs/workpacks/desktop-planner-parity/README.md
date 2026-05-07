@@ -83,12 +83,15 @@
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed)
 - [ ] N/A
 
 > 프로토타입 전용 low-risk 변경이므로 Stage 4 완료 후 low-risk design check로 Stage 6에서 흡수 가능.
+>
+> Stage 5 lightweight design check absorbed in Codex Stage 6 on 2026-05-07.
+> Result: existing desktop tokens/spacing pattern preserved, summary cards use mobile PlannerScreen parity content in desktop horizontal density, authority-required=false, blocker 0.
 
 ## Source Links
 
@@ -152,3 +155,12 @@
 - [x] `index.html`과 `screens/desktop-screens.jsx` 동기화 <!-- omo:id=dp-split-sync;stage=4;scope=frontend;review=6 -->
 - [x] `homecook-baemin-prototype.html`과 `index.html` byte-identical 확인 <!-- omo:id=dp-html-identical;stage=4;scope=frontend;review=6 -->
 - [x] `git diff --check` 통과 <!-- omo:id=dp-diff-check;stage=4;scope=frontend;review=6 -->
+
+## Stage 6 / Internal 6.5 Evidence
+
+- PR: `https://github.com/netsus/homecook/pull/345`
+- Codex Stage 6 review: no blocking findings after Claude repaired ambiguous `M/D` date parsing in both the date range and desktop grid weekday headers.
+- Internal 6.5 closeout projection: roadmap/work-item/status projected to `merged`, Design Status `confirmed`, acceptance complete for all non-manual items, required local checks passed, merge gate pending final current-head CI.
+- Deterministic gates: `git diff --check`, `diff -q ui/designs/prototypes/claude-design-260505-wave1/index.html ui/designs/prototypes/claude-design-260505-wave1/homecook-baemin-prototype.html`, `pnpm validate:workflow-v2`, `pnpm validate:workpack -- --slice desktop-planner-parity`.
+- Browser verification: headless Chrome loaded local `index.html` in desktop planner mode and verified `이번 주 10개 음식 계획 중`, `요리 완료 2개`, `장보기 완료 2개`, `등록 6개`, `2026년 4월 20일 ~ 4월 26일`, and `월20 화21 수22 목23 금24 토25 일26`.
+- Remaining manual-only item: user taste approval for visual density and placement.
