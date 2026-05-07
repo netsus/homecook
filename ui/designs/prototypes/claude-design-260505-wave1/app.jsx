@@ -98,6 +98,14 @@ function App() {
   const goPage = (page, args = {}) => setRoute({ ...route, page, pageArgs: args });
   const backFromPage = () => setRoute({ ...route, page: null, pageArgs: null });
 
+  const addPlannerMeal = (date, slot, meal) => {
+    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: appendMealToSlot(p[date]?.[slot], meal) } }));
+  };
+
+  const updatePlannerMeal = (date, slot, mealIndex, updater) => {
+    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: updateMealInSlot(p[date]?.[slot], mealIndex, updater) } }));
+  };
+
   // Auth gate that captures return-to-action
   const requireAuth = (label, run) => {
     if (profile.authed) { run(); return; }
@@ -146,16 +154,16 @@ function App() {
   };
 
   // Leftovers
-  const reuseLeftover = (date, slot) => {
-    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], status: 'registered' } } }));
+  const reuseLeftover = (date, slot, mealIndex = 0) => {
+    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, status: 'registered' }));
     showToast('플래너에 다시 올렸어요');
   };
-  const markAte = (date, slot) => {
-    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], ateAt: 'now' } } }));
+  const markAte = (date, slot, mealIndex = 0) => {
+    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, ateAt: 'now' }));
     showToast('다먹음으로 기록');
   };
-  const undoAte = (date, slot) => {
-    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], ateAt: null } } }));
+  const undoAte = (date, slot, mealIndex = 0) => {
+    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, ateAt: null }));
     showToast('덜먹음으로 되돌렸어요');
   };
   const markPartial = (date, slot) => {
@@ -163,19 +171,19 @@ function App() {
   };
 
   // Meal actions (delete + serving change with confirm)
-  const removeMeal = (date, slot) => {
-    setPlanner(p => { const d = { ...p[date] }; delete d[slot]; return { ...p, [date]: d }; });
+  const removeMeal = (date, slot, mealIndex = 0) => {
+    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: removeMealFromSlot(p[date]?.[slot], mealIndex) } }));
     showToast('끼니가 삭제됐어요');
     backFromPage();
   };
-  const changeServings = (date, slot, next) => {
-    const meal = planner[date]?.[slot];
+  const changeServings = (date, slot, next, mealIndex = 0) => {
+    const meal = mealItems(planner[date]?.[slot])[mealIndex];
     if (!meal) return;
     if (meal.status !== 'registered') {
-      setServingChangeConfirm({ date, slot, next });
+      setServingChangeConfirm({ date, slot, next, mealIndex });
       return;
     }
-    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], servings: next } } }));
+    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, servings: next }));
   };
 
   // Manual recipe / YT import → planner
@@ -184,7 +192,7 @@ function App() {
     setExtraRecipes(rs => [...rs, recipe]);
     if (window.RECIPES && !window.RECIPES.find(r => r.id === recipe.id)) window.RECIPES.push(recipe);
     if (presetDate && presetSlot) {
-      setPlanner(p => ({ ...p, [presetDate]: { ...p[presetDate], [presetSlot]: { recipeId: recipe.id, status: 'registered', servings: recipe.servings || 2 } } }));
+      addPlannerMeal(presetDate, presetSlot, { recipeId: recipe.id, status: 'registered', servings: recipe.servings || 2 });
       showToast('레시피 등록 + 플래너 추가 완료');
       setRoute({ tab: 'planner', page: null });
     } else {
@@ -209,8 +217,8 @@ function App() {
     showToast(`${Object.keys(qtys).length}개 재료가 팬트리에 추가됐어요`);
     setRoute({ tab: 'pantry' });
   };
-  const markCooked = (date, slot, consumed) => {
-    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], status: 'cooked' } } }));
+  const markCooked = (date, slot, consumed, mealIndex = 0) => {
+    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, status: 'cooked' }));
     if (consumed && consumed.length) {
       setPantry(p => {
         const next = { ...p };
@@ -226,8 +234,8 @@ function App() {
     }
     backFromPage();
   };
-  const changeStatus = (date, slot, status) => {
-    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], status } } }));
+  const changeStatus = (date, slot, status, mealIndex = 0) => {
+    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, status }));
   };
 
   // Content
@@ -280,15 +288,15 @@ function App() {
       onBack={backFromPage} onAddToPantry={addItemsToPantry} showToast={showToast} />;
   } else if (route.page === 'cook-list') {
     content = <CookListScreen planner={planner} onBack={backFromPage}
-      onStartCook={(d, s) => goPage('cook-run', { date: d, slot: s })}
+      onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
       onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })} />;
   } else if (route.page === 'cook-run') {
-    content = <CookRunScreen date={pa.date} slot={pa.slot} planner={planner}
+    content = <CookRunScreen date={pa.date} slot={pa.slot} mealIndex={pa.mealIndex || 0} planner={planner}
       onBack={backFromPage} onComplete={markCooked} showToast={showToast} />;
   } else if (route.page === 'meal-detail') {
     content = <MealDetailScreen date={pa.date} slot={pa.slot} planner={planner}
       onBack={backFromPage} onOpenRecipe={openRecipe}
-      onStartCook={(d, s) => goPage('cook-run', { date: d, slot: s })}
+      onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
       onCreateShopping={() => goPage('shopping-create')}
       onChangeStatus={changeStatus} onRemove={removeMeal} onChangeServings={changeServings} />;
   } else if (route.page === 'mypage-saved') {
@@ -407,6 +415,7 @@ function App() {
         onOpenRecipe={openRecipe}
         onCreateShopping={() => goPage('shopping-create')}
         onCookList={() => goPage('cook-list')}
+        onOpenMeal={(date, slot) => goPage('meal-detail', { date, slot })}
         onMenuAdd={(date, slot) => goPage('menu-add', date && slot ? { date, slot } : {})}
         onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })}
       />
@@ -443,7 +452,7 @@ function App() {
       onReflect={(l) => setReflectPicker(l)} showToast={showToast} />;
   } else if (route.page === 'cook-run') {
     desktopPageContent = <DesktopCookRunScreen
-      date={pa.date} slot={pa.slot} planner={planner}
+      date={pa.date} slot={pa.slot} mealIndex={pa.mealIndex || 0} planner={planner}
       onBack={backFromPage} onComplete={markCooked} showToast={showToast} />;
   } else if (route.page === 'mypage-recipebook-detail') {
     desktopPageContent = <DesktopMyPageRecipebookDetail
@@ -464,12 +473,12 @@ function App() {
   } else if (route.page === 'meal-detail') {
     desktopPageContent = <DesktopMealDetailScreen date={pa.date} slot={pa.slot} planner={planner}
       onBack={backFromPage} onOpenRecipe={openRecipe}
-      onStartCook={(d, s) => goPage('cook-run', { date: d, slot: s })}
+      onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
       onCreateShopping={() => goPage('shopping-create')}
       onChangeStatus={changeStatus} onRemove={removeMeal} onChangeServings={changeServings} />;
   } else if (route.page === 'cook-list') {
     desktopPageContent = <DesktopCookListScreen planner={planner} onBack={backFromPage}
-      onStartCook={(d, s) => goPage('cook-run', { date: d, slot: s })}
+      onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
       onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })} />;
   } else if (route.page === 'leftovers') {
     // Wave 1.7 — P1.3 desktop variants
@@ -550,10 +559,7 @@ function App() {
                 planner={planner}
                 onClose={() => setPlannerAdd(null)}
                 onConfirm={(date, slot, qty) => {
-                  setPlanner(p => ({
-                    ...p,
-                    [date]: { ...p[date], [slot]: { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty } },
-                  }));
+                  addPlannerMeal(date, slot, { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty });
                   setPlannerAdd(null);
                   showToast(date + ' ' + slot + '에 추가됐어요');
                 }}
@@ -679,7 +685,7 @@ function App() {
               onConfirm={(servings) => {
                 const { recipeId, presetDate, presetSlot } = planningServings;
                 if (presetDate && presetSlot) {
-                  setPlanner(p => ({ ...p, [presetDate]: { ...p[presetDate], [presetSlot]: { recipeId, status: 'registered', servings } } }));
+                  addPlannerMeal(presetDate, presetSlot, { recipeId, status: 'registered', servings });
                   showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
                   setRoute({ tab: 'planner', page: null });
                 }
@@ -695,8 +701,8 @@ function App() {
               confirmLabel="변경하기"
               onClose={() => setServingChangeConfirm(null)}
               onConfirm={() => {
-                const { date, slot, next } = servingChangeConfirm;
-                setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], servings: next } } }));
+                const { date, slot, next, mealIndex } = servingChangeConfirm;
+                updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, servings: next }));
                 setServingChangeConfirm(null);
                 showToast('인분이 변경됐어요');
               }} />
@@ -743,7 +749,7 @@ function App() {
                   recipeId={plannerAdd.recipeId} planner={planner}
                   onClose={() => setPlannerAdd(null)}
                   onConfirm={(date, slot, qty) => {
-                    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty } } }));
+                    addPlannerMeal(date, slot, { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty });
                     setPlannerAdd(null);
                     showToast(date + ' ' + slot + '에 추가됐어요');
                   }}
@@ -802,7 +808,7 @@ function App() {
                   onConfirm={(servings) => {
                     const { recipeId, presetDate, presetSlot } = planningServings;
                     if (presetDate && presetSlot) {
-                      setPlanner(p => ({ ...p, [presetDate]: { ...p[presetDate], [presetSlot]: { recipeId, status: 'registered', servings } } }));
+                      addPlannerMeal(presetDate, presetSlot, { recipeId, status: 'registered', servings });
                       showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
                       setRoute({ tab: 'planner', page: null });
                     }
@@ -816,8 +822,8 @@ function App() {
                   confirmLabel="변경하기"
                   onClose={() => setServingChangeConfirm(null)}
                   onConfirm={() => {
-                    const { date, slot, next } = servingChangeConfirm;
-                    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], servings: next } } }));
+                    const { date, slot, next, mealIndex } = servingChangeConfirm;
+                    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, servings: next }));
                     setServingChangeConfirm(null);
                     showToast('인분이 변경됐어요');
                   }} />
@@ -835,7 +841,7 @@ function App() {
                   recipeId={plannerAdd.recipeId} planner={planner}
                   onClose={() => setPlannerAdd(null)}
                   onConfirm={(date, slot, qty) => {
-                    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty } } }));
+                    addPlannerMeal(date, slot, { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty });
                     setPlannerAdd(null);
                     showToast(date + ' ' + slot + '에 추가됐어요');
                   }}
@@ -894,7 +900,7 @@ function App() {
                   onConfirm={(servings) => {
                     const { recipeId, presetDate, presetSlot } = planningServings;
                     if (presetDate && presetSlot) {
-                      setPlanner(p => ({ ...p, [presetDate]: { ...p[presetDate], [presetSlot]: { recipeId, status: 'registered', servings } } }));
+                      addPlannerMeal(presetDate, presetSlot, { recipeId, status: 'registered', servings });
                       showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
                       setRoute({ tab: 'planner', page: null });
                     }
@@ -908,8 +914,8 @@ function App() {
                   confirmLabel="변경하기"
                   onClose={() => setServingChangeConfirm(null)}
                   onConfirm={() => {
-                    const { date, slot, next } = servingChangeConfirm;
-                    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], servings: next } } }));
+                    const { date, slot, next, mealIndex } = servingChangeConfirm;
+                    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, servings: next }));
                     setServingChangeConfirm(null);
                     showToast('인분이 변경됐어요');
                   }} />

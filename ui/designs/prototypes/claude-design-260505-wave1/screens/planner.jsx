@@ -9,12 +9,11 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
     let total = 0,cooked = 0,shopped = 0;
     keys.forEach((k) => {
       ['아침', '점심', '저녁'].forEach((slot) => {
-        const m = planner[k][slot];
-        if (m) {
+        mealItems(planner[k][slot]).forEach((m) => {
           total++;
           if (m.status === 'cooked') cooked++;
           if (m.status === 'shopped') shopped++;
-        }
+        });
       });
     });
     return { total, cooked, shopped };
@@ -28,27 +27,27 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
       <div style={{ background: '#fff', padding: '16px 20px', borderBottom: `1px solid ${T.border}` }}>
         <div style={{ fontSize: 14, color: T.text3, marginBottom: 4 }}>4월 20일 — 26일</div>
         <div style={{ fontSize: 20, fontWeight: 700, color: T.ink, marginBottom: 12, fontFamily: T.fontBrand }}>
-          이번 주 {stats.total}끼 계획 중
+          이번 주 {stats.total}개 음식 계획 중
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{
             flex: 1, background: T.mintSoft, borderRadius: 10, padding: 12
           }}>
             <div style={{ fontSize: 11, color: T.mintDeep, fontWeight: 600 }}>요리 완료</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: T.mintDeep }}>{stats.cooked}끼</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: T.mintDeep }}>{stats.cooked}개</div>
           </div>
           <div style={{
             flex: 1, background: '#FFF4E1', borderRadius: 10, padding: 12
           }}>
             <div style={{ fontSize: 11, color: '#B8860B', fontWeight: 600 }}>장보기 완료</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#B8860B' }}>{stats.shopped}끼</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#B8860B' }}>{stats.shopped}개</div>
           </div>
           <div style={{
             flex: 1, background: T.surfaceFill, borderRadius: 10, padding: 12
           }}>
             <div style={{ fontSize: 11, color: T.text2, fontWeight: 600 }}>등록</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: T.ink }}>
-              {stats.total - stats.cooked - stats.shopped}끼
+              {stats.total - stats.cooked - stats.shopped}개
             </div>
           </div>
         </div>
@@ -86,20 +85,21 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: T.text3 }}>
-                  {['아침', '점심', '저녁'].filter((s) => day[s]).length}/3
+                  {['아침', '점심', '저녁'].filter((s) => mealItems(day[s]).length).length}/3
                 </div>
               </div>
               {/* Slot rows */}
               {slots.map(([slot, emoji]) => {
-                const meal = day[slot];
-                const recipe = meal ? RECIPES.find((r) => r.id === meal.recipeId) : null;
+                const meals = mealItems(day[slot]);
+                const recipes = meals.map((meal) => RECIPES.find((r) => r.id === meal.recipeId)).filter(Boolean);
+                const summary = slotStatusSummary(day[slot]);
                 return (
                   <div key={slot} style={{
                     display: 'flex', alignItems: 'center', padding: '10px 16px',
                     borderBottom: `1px solid ${T.surfaceSubtle}`,
-                    cursor: recipe ? 'pointer' : 'default'
+                    cursor: recipes.length ? 'pointer' : 'default'
                   }} onClick={() => {
-                    if (recipe) onOpenMeal(k, slot); else
+                    if (recipes.length) onOpenMeal(k, slot); else
                     onOpenPlannerAdd(k, slot);
                   }}>
                     <div style={{
@@ -109,20 +109,35 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
                       <div style={{ fontSize: 18 }}>{emoji}</div>
                       {slot}
                     </div>
-                    {recipe ?
+                    {recipes.length ?
                     <>
-                        <div style={{
-                        width: 44, height: 44, borderRadius: 8, background: recipe.bg,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 24, marginRight: 10, marginLeft: 4
-                      }}>{recipe.emoji}</div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: T.ink, marginBottom: 2 }}>
-                            {recipe.name}
+                        <div style={{ flex: 1, marginLeft: 12, minWidth: 0 }}>
+                          <div style={{ display: 'flex', gap: 6, marginBottom: 7, flexWrap: 'wrap' }}>
+                            {recipes.slice(0, 3).map((recipe, idx) => (
+                              <span key={recipe.id + idx} style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                maxWidth: 116, padding: '4px 7px', borderRadius: 8,
+                                background: recipe.bg, color: T.ink,
+                                fontSize: 11, fontWeight: 700,
+                              }}>
+                                <span>{recipe.emoji}</span>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</span>
+                              </span>
+                            ))}
+                            {recipes.length > 3 && (
+                              <span style={{ fontSize: 11, color: T.text2, background: T.surfaceFill, padding: '4px 7px', borderRadius: 8, fontWeight: 700 }}>
+                                +{recipes.length - 3}개 더
+                              </span>
+                            )}
                           </div>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                            <StatusPill status={meal.status} />
-                            <span style={{ fontSize: 11, color: T.text3 }}>{meal.servings}인분 · {recipe.minutes}분</span>
+                            <StatusPill status={summary.status === 'mixed' ? 'shopped' : summary.status} />
+                            <span style={{ fontSize: 11, color: T.text3 }}>{recipes.length}개 음식 · {summary.label}</span>
+                            <button onClick={(e) => { e.stopPropagation(); onMenuAdd?.(k, slot); }} style={{
+                              marginLeft: 'auto', border: `1px dashed ${T.border}`, background: '#fff',
+                              color: T.text2, borderRadius: 7, padding: '4px 8px', fontSize: 11,
+                              fontWeight: 700, cursor: 'pointer',
+                            }}>+ 음식</button>
                           </div>
                         </div>
                         {Icon.chevR()}
@@ -165,5 +180,3 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
 }
 
 window.PlannerScreen = PlannerScreen;
-
-

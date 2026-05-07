@@ -368,8 +368,9 @@ function LeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkAte, onM
   const items = [];
   days.forEach(d => {
     ['아침','점심','저녁'].forEach(s => {
-      const m = planner[d]?.[s];
-      if (m?.status === 'cooked' && !m.ateAt) items.push({ date: d, slot: s, meal: m });
+      mealItems(planner[d]?.[s]).forEach((m, mealIndex) => {
+        if (m?.status === 'cooked' && !m.ateAt) items.push({ date: d, slot: s, meal: m, mealIndex });
+      });
     });
   });
 
@@ -395,10 +396,11 @@ function LeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkAte, onM
         </div>
       ) : (
         <div style={{ padding: 16 }}>
-          {items.map(({ date, slot, meal }) => {
+          {items.map(({ date, slot, meal, mealIndex }) => {
             const r = RECIPES.find(x => x.id === meal.recipeId);
+            if (!r) return null;
             return (
-              <div key={date+slot} style={{
+              <div key={`${date}-${slot}-${mealIndex}`} style={{
                 background: '#fff', borderRadius: 12, marginBottom: 10,
                 border: `1px solid ${T.border}`, overflow: 'hidden',
               }}>
@@ -410,14 +412,14 @@ function LeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkAte, onM
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{r.name}</div>
                     <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
-                      {date} {slot} · {meal.servings}인분
+                      {date} {slot} #{mealIndex + 1} · {meal.servings}인분
                     </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, padding: '0 12px 12px' }}>
-                  <button onClick={() => onReuse(date, slot)} style={smallSecBtn}>🔁 다시 플래너에</button>
+                  <button onClick={() => onReuse(date, slot, mealIndex)} style={smallSecBtn}>🔁 다시 플래너에</button>
                   <button onClick={() => onMarkPartial(date, slot)} style={smallSecBtn}>🥢 덜먹음</button>
-                  <button onClick={() => onMarkAte(date, slot)} style={{
+                  <button onClick={() => onMarkAte(date, slot, mealIndex)} style={{
                     ...smallSecBtn, background: T.mint, color: '#fff', border: 'none', flex: 1,
                   }}>✓ 다먹음</button>
                 </div>
@@ -443,8 +445,9 @@ function AteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
   const items = [];
   days.forEach(d => {
     ['아침','점심','저녁'].forEach(s => {
-      const m = planner[d]?.[s];
-      if (m?.ateAt) items.push({ date: d, slot: s, meal: m });
+      mealItems(planner[d]?.[s]).forEach((m, mealIndex) => {
+        if (m?.ateAt) items.push({ date: d, slot: s, meal: m, mealIndex });
+      });
     });
   });
   return (
@@ -456,10 +459,11 @@ function AteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
             <div style={{ fontSize: 36, marginBottom: 8 }}>📒</div>
             <div style={{ fontSize: 13, color: T.text3 }}>아직 다먹은 기록이 없어요</div>
           </div>
-        ) : items.map(({ date, slot, meal }) => {
+        ) : items.map(({ date, slot, meal, mealIndex }) => {
           const r = RECIPES.find(x => x.id === meal.recipeId);
+          if (!r) return null;
           return (
-            <div key={date+slot} style={{
+            <div key={`${date}-${slot}-${mealIndex}`} style={{
               background: '#fff', borderRadius: 12, marginBottom: 10,
               border: `1px solid ${T.border}`, padding: 14,
               display: 'flex', alignItems: 'center', gap: 12,
@@ -471,10 +475,10 @@ function AteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{r.name}</div>
                 <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
-                  {date} {slot} · {meal.servings}인분 다먹음
+                  {date} {slot} #{mealIndex + 1} · {meal.servings}인분 다먹음
                 </div>
               </div>
-              <button onClick={() => onUndoAte(date, slot)} style={smallSecBtn}>덜먹음으로</button>
+              <button onClick={() => onUndoAte(date, slot, mealIndex)} style={smallSecBtn}>덜먹음으로</button>
               <button onClick={() => onRecreate(meal.recipeId)} style={{ ...smallSecBtn, color: T.mintDeep, border: `1px solid ${T.mint}` }}>다시 만들기</button>
             </div>
           );
@@ -1665,5 +1669,4 @@ Object.assign(window, {
   // Wave 1.5
   MyPageRecipebookDetailScreen, IngredientFilterModal, PlanningServingsModal,
 });
-
 
