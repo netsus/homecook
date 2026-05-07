@@ -3,7 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <title>homecook_ — Baemin Redesign</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#2AC1BC" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="homecook_" />
+<link rel="icon" type="image/svg+xml" href="icon.svg" />
+<link rel="apple-touch-icon" href="icon.svg" />
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; padding: 0; background: #E9ECEF; font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; }
@@ -289,10 +297,55 @@ function makeInitialPlanner() {
   plan[keys[1]].점심 = { recipeId: 'r1', status: 'cooked', servings: 1 };
   plan[keys[1]].저녁 = { recipeId: 'r4', status: 'shopped', servings: 2 };
   plan[keys[2]].저녁 = { recipeId: 'r6', status: 'registered', servings: 2 };
+  plan[keys[3]].아침 = [
+    { recipeId: 'r1', status: 'registered', servings: 1 },
+    { recipeId: 'r2', status: 'shopped', servings: 2 },
+    { recipeId: 'r3', status: 'registered', servings: 1 }
+  ];
   plan[keys[3]].점심 = { recipeId: 'r3', status: 'registered', servings: 1 };
   plan[keys[3]].저녁 = { recipeId: 'r2', status: 'registered', servings: 2 };
   plan[keys[5]].저녁 = { recipeId: 'r5', status: 'registered', servings: 2 };
   return plan;
+}
+
+function mealItems(slotValue) {
+  if (!slotValue) return [];
+  return Array.isArray(slotValue) ? slotValue.filter(Boolean) : [slotValue];
+}
+
+function slotPrimaryMeal(slotValue) {
+  return mealItems(slotValue)[0] || null;
+}
+
+function appendMealToSlot(slotValue, meal) {
+  const items = mealItems(slotValue);
+  return items.length ? [...items, meal] : meal;
+}
+
+function updateMealInSlot(slotValue, index, updater) {
+  const items = mealItems(slotValue);
+  if (!items.length) return slotValue;
+  const targetIndex = Math.max(0, Math.min(index || 0, items.length - 1));
+  const next = items.map((item, i) => i === targetIndex ? updater(item) : item);
+  return Array.isArray(slotValue) ? next : next[0];
+}
+
+function removeMealFromSlot(slotValue, index) {
+  const items = mealItems(slotValue);
+  if (!items.length) return null;
+  const targetIndex = Math.max(0, Math.min(index || 0, items.length - 1));
+  const next = items.filter((_, i) => i !== targetIndex);
+  if (next.length === 0) return null;
+  return next.length === 1 ? next[0] : next;
+}
+
+function slotStatusSummary(slotValue) {
+  const items = mealItems(slotValue);
+  if (!items.length) return { status: null, label: '비어 있음' };
+  if (items.every(m => m.status === 'cooked')) return { status: 'cooked', label: '요리 완료' };
+  if (items.some(m => m.status === 'cooked')) return { status: 'mixed', label: '일부 완료' };
+  if (items.some(m => m.status === 'shopped')) return { status: 'shopped', label: '일부 준비됨' };
+  return { status: 'registered', label: '장보기 전' };
 }
 
 const INITIAL_PANTRY = {
@@ -318,7 +371,8 @@ const INITIAL_PANTRY = {
 
 Object.assign(window, {
   RECIPES, METHOD_COLORS, THEMES, INGREDIENT_FILTERS,
-  makeInitialPlanner, weekDays, WEEK_START, INITIAL_PANTRY, todayIdx
+  makeInitialPlanner, weekDays, WEEK_START, INITIAL_PANTRY, todayIdx,
+  mealItems, slotPrimaryMeal, appendMealToSlot, updateMealInSlot, removeMealFromSlot, slotStatusSummary
 });
 
 
@@ -1308,12 +1362,11 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
     let total = 0,cooked = 0,shopped = 0;
     keys.forEach((k) => {
       ['아침', '점심', '저녁'].forEach((slot) => {
-        const m = planner[k][slot];
-        if (m) {
+        mealItems(planner[k][slot]).forEach((m) => {
           total++;
           if (m.status === 'cooked') cooked++;
           if (m.status === 'shopped') shopped++;
-        }
+        });
       });
     });
     return { total, cooked, shopped };
@@ -1327,27 +1380,27 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
       <div style={{ background: '#fff', padding: '16px 20px', borderBottom: `1px solid ${T.border}` }}>
         <div style={{ fontSize: 14, color: T.text3, marginBottom: 4 }}>4월 20일 — 26일</div>
         <div style={{ fontSize: 20, fontWeight: 700, color: T.ink, marginBottom: 12, fontFamily: T.fontBrand }}>
-          이번 주 {stats.total}끼 계획 중
+          이번 주 {stats.total}개 음식 계획 중
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{
             flex: 1, background: T.mintSoft, borderRadius: 10, padding: 12
           }}>
             <div style={{ fontSize: 11, color: T.mintDeep, fontWeight: 600 }}>요리 완료</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: T.mintDeep }}>{stats.cooked}끼</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: T.mintDeep }}>{stats.cooked}개</div>
           </div>
           <div style={{
             flex: 1, background: '#FFF4E1', borderRadius: 10, padding: 12
           }}>
             <div style={{ fontSize: 11, color: '#B8860B', fontWeight: 600 }}>장보기 완료</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#B8860B' }}>{stats.shopped}끼</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#B8860B' }}>{stats.shopped}개</div>
           </div>
           <div style={{
             flex: 1, background: T.surfaceFill, borderRadius: 10, padding: 12
           }}>
             <div style={{ fontSize: 11, color: T.text2, fontWeight: 600 }}>등록</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: T.ink }}>
-              {stats.total - stats.cooked - stats.shopped}끼
+              {stats.total - stats.cooked - stats.shopped}개
             </div>
           </div>
         </div>
@@ -1385,20 +1438,21 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: T.text3 }}>
-                  {['아침', '점심', '저녁'].filter((s) => day[s]).length}/3
+                  {['아침', '점심', '저녁'].filter((s) => mealItems(day[s]).length).length}/3
                 </div>
               </div>
               {/* Slot rows */}
               {slots.map(([slot, emoji]) => {
-                const meal = day[slot];
-                const recipe = meal ? RECIPES.find((r) => r.id === meal.recipeId) : null;
+                const meals = mealItems(day[slot]);
+                const recipes = meals.map((meal) => RECIPES.find((r) => r.id === meal.recipeId)).filter(Boolean);
+                const summary = slotStatusSummary(day[slot]);
                 return (
                   <div key={slot} style={{
                     display: 'flex', alignItems: 'center', padding: '10px 16px',
                     borderBottom: `1px solid ${T.surfaceSubtle}`,
-                    cursor: recipe ? 'pointer' : 'default'
+                    cursor: recipes.length ? 'pointer' : 'default'
                   }} onClick={() => {
-                    if (recipe) onOpenMeal(k, slot); else
+                    if (recipes.length) onOpenMeal(k, slot); else
                     onOpenPlannerAdd(k, slot);
                   }}>
                     <div style={{
@@ -1408,20 +1462,35 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
                       <div style={{ fontSize: 18 }}>{emoji}</div>
                       {slot}
                     </div>
-                    {recipe ?
+                    {recipes.length ?
                     <>
-                        <div style={{
-                        width: 44, height: 44, borderRadius: 8, background: recipe.bg,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 24, marginRight: 10, marginLeft: 4
-                      }}>{recipe.emoji}</div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: T.ink, marginBottom: 2 }}>
-                            {recipe.name}
+                        <div style={{ flex: 1, marginLeft: 12, minWidth: 0 }}>
+                          <div style={{ display: 'flex', gap: 6, marginBottom: 7, flexWrap: 'wrap' }}>
+                            {recipes.slice(0, 3).map((recipe, idx) => (
+                              <span key={recipe.id + idx} style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                maxWidth: 116, padding: '4px 7px', borderRadius: 8,
+                                background: recipe.bg, color: T.ink,
+                                fontSize: 11, fontWeight: 700,
+                              }}>
+                                <span>{recipe.emoji}</span>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</span>
+                              </span>
+                            ))}
+                            {recipes.length > 3 && (
+                              <span style={{ fontSize: 11, color: T.text2, background: T.surfaceFill, padding: '4px 7px', borderRadius: 8, fontWeight: 700 }}>
+                                +{recipes.length - 3}개 더
+                              </span>
+                            )}
                           </div>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                            <StatusPill status={meal.status} />
-                            <span style={{ fontSize: 11, color: T.text3 }}>{meal.servings}인분 · {recipe.minutes}분</span>
+                            <StatusPill status={summary.status === 'mixed' ? 'shopped' : summary.status} />
+                            <span style={{ fontSize: 11, color: T.text3 }}>{recipes.length}개 음식 · {summary.label}</span>
+                            <button onClick={(e) => { e.stopPropagation(); onMenuAdd?.(k, slot); }} style={{
+                              marginLeft: 'auto', border: `1px dashed ${T.border}`, background: '#fff',
+                              color: T.text2, borderRadius: 7, padding: '4px 8px', fontSize: 11,
+                              fontWeight: 700, cursor: 'pointer',
+                            }}>+ 음식</button>
                           </div>
                         </div>
                         {Icon.chevR()}
@@ -1464,8 +1533,6 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
 }
 
 window.PlannerScreen = PlannerScreen;
-
-
 // ===== screens/pantry.jsx =====
 // Pantry screen
 const { useState: useState_PT } = React;
@@ -2141,7 +2208,7 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
   );
 }
 
-function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList }) {
+function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList, onOpenMeal }) {
   const days = Object.keys(planner);
   const slots = ['아침', '점심', '저녁'];
 
@@ -2197,23 +2264,46 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>{slot}</div>
             {days.map(d => {
-              const meal = planner[d]?.[slot];
-              const recipe = meal && RECIPES.find(r => r.id === meal.recipeId);
+              const meals = mealItems(planner[d]?.[slot]);
+              const recipes = meals.map(meal => RECIPES.find(r => r.id === meal.recipeId)).filter(Boolean);
+              const summary = slotStatusSummary(planner[d]?.[slot]);
               return (
                 <div key={d+slot} style={{
                   borderLeft: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`,
                   minHeight: 110, padding: 6,
                 }}>
-                  {recipe ? (
-                    <div onClick={() => onOpenRecipe(recipe.id)} style={{
-                      background: recipe.bg || T.surfaceFill, borderRadius: 8, padding: 8, height: '100%',
-                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                  {recipes.length ? (
+                    <div onClick={() => onOpenMeal?.(d, slot)} style={{
+                      background: T.surfaceFill, borderRadius: 8, padding: 8, minHeight: '100%',
+                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 6,
                       cursor: 'pointer',
                     }}>
-                      <div style={{ fontSize: 24, lineHeight: 1 }}>{recipe.emoji || '🍽️'}</div>
                       <div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: T.ink, lineHeight: 1.3, marginBottom: 4 }}>{recipe.name}</div>
-                        <StatusPill status={meal.status} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {recipes.slice(0, 3).map((recipe, idx) => (
+                            <div key={recipe.id + idx} style={{
+                              background: '#fff', borderRadius: 7, padding: '5px 6px',
+                              display: 'flex', alignItems: 'center', gap: 5, minWidth: 0,
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                            }}>
+                              <span style={{ fontSize: 15 }}>{recipe.emoji || '🍽️'}</span>
+                              <span style={{ fontSize: 10, fontWeight: 800, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</span>
+                            </div>
+                          ))}
+                          {recipes.length > 3 && (
+                            <div style={{ fontSize: 10, color: T.text2, fontWeight: 800, paddingLeft: 2 }}>
+                              +{recipes.length - 3}개 더
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <StatusPill status={summary.status === 'mixed' ? 'shopped' : summary.status} />
+                        <button onClick={(e) => { e.stopPropagation(); onMenuAdd?.(d, slot); }} style={{
+                          marginLeft: 'auto', width: 24, height: 24, borderRadius: 7,
+                          border: `1px dashed ${T.border}`, background: '#fff', color: T.text2,
+                          cursor: 'pointer', fontSize: 14, lineHeight: 1,
+                        }}>+</button>
                       </div>
                     </div>
                   ) : (
@@ -2842,14 +2932,15 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, s
     const acc = {};
     Object.entries(planner).forEach(([date, day]) => {
       ['아침','점심','저녁'].forEach(slot => {
-        const m = day[slot];
-        if (!m || m.status === 'cooked') return;
-        const r = RECIPES.find(x => x.id === m.recipeId);
-        if (!r) return;
-        r.ingredients.forEach(ing => {
-          const key = ing.name;
-          if (!acc[key]) acc[key] = { name: ing.name, qty: '약간', section: ing.section || '기타', meals: [], have: !!pantry[key]?.have };
-          acc[key].meals.push(`${date} ${slot}`);
+        mealItems(day[slot]).forEach((m) => {
+          if (m.status === 'cooked') return;
+          const r = RECIPES.find(x => x.id === m.recipeId);
+          if (!r) return;
+          r.ingredients.forEach(ing => {
+            const key = ing.name;
+            if (!acc[key]) acc[key] = { name: ing.name, qty: ing.qty || '약간', section: ing.section || '기타', meals: [], have: !!pantry[key]?.have };
+            acc[key].meals.push(`${date} ${slot} · ${r.name}`);
+          });
         });
       });
     });
@@ -2919,7 +3010,7 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, s
         <aside style={{ background: '#fff', borderRadius: 14, padding: 20, boxShadow: T.shadowDeep, position: 'sticky', top: 24 }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.ink, marginBottom: 14 }}>요약</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Stat label="이번 주 식단" value={Object.values(planner).reduce((a, d) => a + ['아침','점심','저녁'].filter(s => d[s]).length, 0) + '끼'} />
+            <Stat label="이번 주 음식" value={Object.values(planner).reduce((a, d) => a + ['아침','점심','저녁'].reduce((sum, s) => sum + mealItems(d[s]).length, 0), 0) + '개'} />
             <Stat label="필요한 재료" value={items.length + '개'} />
             <Stat label="이미 보유" value={have.length + '개'} color={T.mintDeep} />
             <Stat label="구매 필요" value={need.length + '개'} color={T.red} />
@@ -3041,8 +3132,8 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
 }
 
 // Desktop: COOK_MODE (= CookRun, P1.1)
-function DesktopCookRunScreen({ date, slot, planner, onBack, onComplete, showToast }) {
-  const meal = planner[date]?.[slot];
+function DesktopCookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete, showToast }) {
+  const meal = mealItems(planner[date]?.[slot])[mealIndex];
   const recipe = meal && RECIPES.find(r => r.id === meal.recipeId);
   const [step, setStep] = dUseState(0);
   const [consumed, setConsumed] = dUseState(new Set());
@@ -3112,7 +3203,7 @@ function DesktopCookRunScreen({ date, slot, planner, onBack, onComplete, showToa
                   background: T.mint, color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer',
                 }}>다음 단계 ▶</button>
               ) : (
-                <button onClick={() => onComplete?.(date, slot, [...consumed])} style={{
+                <button onClick={() => onComplete?.(date, slot, [...consumed], mealIndex)} style={{
                   padding: '12px 28px', borderRadius: 10, border: 'none',
                   background: T.tealLight, color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer',
                 }}>🎉 요리 완료</button>
@@ -3459,12 +3550,158 @@ const editLinkBtnDsk = {
   background: 'none', border: 'none', color: T.mintDeep,
   fontSize: 13, fontWeight: 800, cursor: 'pointer', padding: 0,
 };
+const dskRoundBtn = {
+  width: 32, height: 32, borderRadius: 16, border: 'none',
+  background: '#fff', color: T.text2, fontSize: 18, fontWeight: 800, cursor: 'pointer',
+};
+const dskMealActionBtn = {
+  padding: '11px 8px', borderRadius: 10, border: `1px solid ${T.border}`,
+  background: '#fff', color: T.text2, fontSize: 12, fontWeight: 800, cursor: 'pointer',
+};
 
 // Desktop: MEAL_SCREEN (P1.2)
 function DesktopMealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, onStartCook, onCreateShopping, onChangeStatus, onRemove, onChangeServings }) {
-  const meal = planner[date]?.[slot];
+  const statusFlow = [
+    { k: 'registered', l: '등록됨',       emoji: '📝' },
+    { k: 'shopped',    l: '장보기 완료',   emoji: '🛒' },
+    { k: 'cooked',     l: '요리 완료',     emoji: '🍳' },
+  ];
+  const meals = mealItems(planner[date]?.[slot]);
+  const [askDelete, setAskDelete] = dUseState(null);
+  if (meals.length === 0) {
+    return (
+      <div>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text2, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>{Icon.chevL(T.text2)} 돌아가기</button>
+        <div style={{ padding: 60, textAlign: 'center', color: T.text3 }}>끼니를 찾을 수 없어요</div>
+      </div>
+    );
+  }
+
+  if (meals.length > 1) {
+    const totalServings = meals.reduce((sum, meal) => sum + (meal.servings || 1), 0);
+    return (
+      <div>
+        <button onClick={onBack} style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: T.text2, fontSize: 13, fontWeight: 600, marginBottom: 14,
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+        }}>{Icon.chevL(T.text2)} 플래너</button>
+
+        <div style={{
+          background: '#fff', borderRadius: 18, boxShadow: T.shadowDeep, padding: 28, marginBottom: 22,
+          display: 'grid', gridTemplateColumns: '1fr 280px', gap: 24, alignItems: 'center',
+        }}>
+          <div>
+            <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 800, letterSpacing: 1, marginBottom: 6 }}>
+              MEAL GROUP · {date} {slot}
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
+              {slot}에 먹을 음식 {meals.length}개
+            </div>
+            <div style={{ fontSize: 13, color: T.text3, marginTop: 6 }}>
+              한 끼니 안에서 여러 레시피의 인분, 상태, 요리 시작을 각각 관리해요.
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <Stat label="음식 수" value={meals.length + '개'} />
+            <Stat label="총 인분" value={totalServings + '인분'} color={T.mintDeep} />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+          {meals.map((meal, mealIndex) => {
+            const recipe = RECIPES.find(r => r.id === meal.recipeId);
+            if (!recipe) return null;
+            const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
+            const statusOrder = statusFlow.findIndex(x => x.k === meal.status);
+            return (
+              <div key={`${meal.recipeId}-${mealIndex}`} style={{
+                background: '#fff', borderRadius: 16, boxShadow: T.shadowDeep, overflow: 'hidden',
+                border: `1px solid ${T.border}`,
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '112px 1fr', gap: 14, padding: 16 }}>
+                  <div style={{
+                    width: 112, height: 112, borderRadius: 14, background: recipe.bg,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 62,
+                  }}>{recipe.emoji}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 7 }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: m.text, background: m.bg, padding: '3px 7px', borderRadius: 4 }}>
+                        {m.label}
+                      </span>
+                      <StatusPill status={meal.status} />
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand, marginBottom: 4 }}>
+                      {recipe.name}
+                    </div>
+                    <div style={{ fontSize: 12, color: T.text3 }}>
+                      {recipe.minutes}분 · {recipe.kcal}kcal · {meal.servings}인분
+                    </div>
+                    <button onClick={() => onOpenRecipe?.(recipe.id)} style={{
+                      marginTop: 10, padding: '7px 11px', borderRadius: 8, border: `1px solid ${T.border}`,
+                      background: '#fff', color: T.text2, fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                    }}>전체 레시피 보기</button>
+                  </div>
+                </div>
+
+                <div style={{ padding: '0 16px 16px' }}>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                    {statusFlow.map((s, i) => {
+                      const active = i <= statusOrder;
+                      return (
+                        <button key={s.k} onClick={() => onChangeStatus?.(date, slot, s.k, mealIndex)} style={{
+                          flex: 1, padding: '9px 6px', borderRadius: 10,
+                          border: active ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+                          background: active ? T.mintSoft : '#fff', color: active ? T.mintDeep : T.text3,
+                          fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                        }}>{s.emoji} {s.l}</button>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: T.surfaceFill, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                    <span style={{ fontSize: 12, color: T.text2, fontWeight: 800 }}>계획 인분</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <button onClick={() => onChangeServings?.(date, slot, Math.max(1, meal.servings - 1), mealIndex)} style={dskRoundBtn}>−</button>
+                      <span style={{ minWidth: 48, textAlign: 'center', fontSize: 16, fontWeight: 800, color: T.ink }}>{meal.servings}인분</span>
+                      <button onClick={() => onChangeServings?.(date, slot, Math.min(12, meal.servings + 1), mealIndex)} style={{ ...dskRoundBtn, background: T.mint, color: '#fff' }}>+</button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                    {recipe.ingredients.slice(0, 6).map(ing => (
+                      <span key={ing.name} style={{ fontSize: 11, color: T.text2, background: T.surfaceFill, padding: '6px 9px', borderRadius: 9999 }}>
+                        {ing.name}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                    <button onClick={() => onCreateShopping?.(date, slot)} style={dskMealActionBtn}>🛒 장보기</button>
+                    <button onClick={() => onStartCook?.(date, slot, mealIndex)} style={{ ...dskMealActionBtn, background: T.mint, borderColor: T.mint, color: '#fff' }}>🍳 요리 시작</button>
+                    <button onClick={() => setAskDelete({ index: mealIndex, recipe })} style={{ ...dskMealActionBtn, color: T.red }}>삭제</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {askDelete && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
+            <ConfirmDialog title="이 음식을 삭제할까요?"
+              body={askDelete.recipe.name + ' (' + date + ' ' + slot + ') 가 식단에서 제거돼요.'}
+              destructive confirmLabel="삭제"
+              onClose={() => setAskDelete(null)}
+              onConfirm={() => { const idx = askDelete.index; setAskDelete(null); onRemove?.(date, slot, idx); }} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const meal = meals[0];
   const recipe = meal && RECIPES.find(r => r.id === meal.recipeId);
-  const [askDelete, setAskDelete] = dUseState(false);
   if (!recipe) {
     return (
       <div>
@@ -3474,11 +3711,6 @@ function DesktopMealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, on
     );
   }
   const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
-  const statusFlow = [
-    { k: 'registered', l: '등록됨',       emoji: '📝' },
-    { k: 'shopped',    l: '장보기 완료',   emoji: '🛒' },
-    { k: 'cooked',     l: '요리 완료',     emoji: '🍳' },
-  ];
   const statusOrder = statusFlow.findIndex(x => x.k === meal.status);
 
   return (
@@ -3615,7 +3847,7 @@ function DesktopMealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, on
           {/* Danger */}
           <div style={{ background: '#fff', borderRadius: 14, padding: 18, boxShadow: T.shadowDeep }}>
             <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 10 }}>이 끼니 삭제</div>
-            <button onClick={() => setAskDelete(true)} style={{
+            <button onClick={() => setAskDelete({ index: 0, recipe })} style={{
               width: '100%', padding: '11px 0', borderRadius: 10, border: `1px solid ${T.border}`,
               background: '#fff', color: T.red, fontSize: 13, fontWeight: 700, cursor: 'pointer',
             }}>식단에서 빼기</button>
@@ -3626,10 +3858,10 @@ function DesktopMealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, on
       {askDelete && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
           <ConfirmDialog title="이 끼니를 삭제할까요?"
-            body={recipe.name + ' (' + date + ' ' + slot + ') 가 식단에서 제거돼요.'}
+            body={askDelete.recipe.name + ' (' + date + ' ' + slot + ') 가 식단에서 제거돼요.'}
             destructive confirmLabel="삭제"
-            onClose={() => setAskDelete(false)}
-            onConfirm={() => { setAskDelete(false); onRemove?.(date, slot); }} />
+            onClose={() => setAskDelete(null)}
+            onConfirm={() => { const idx = askDelete.index; setAskDelete(null); onRemove?.(date, slot, idx); }} />
         </div>
       )}
     </div>
@@ -3650,8 +3882,9 @@ function DesktopCookListScreen({ planner, onBack, onStartCook, onOpenMeal }) {
     const list = [];
     dayKeys.forEach(d => {
       ['아침','점심','저녁'].forEach(s => {
-        const m = planner[d]?.[s];
-        if (m && m.status !== 'cooked') list.push({ date: d, slot: s, meal: m });
+        mealItems(planner[d]?.[s]).forEach((m, mealIndex) => {
+          if (m.status !== 'cooked') list.push({ date: d, slot: s, meal: m, mealIndex });
+        });
       });
     });
     return list;
@@ -3705,12 +3938,12 @@ function DesktopCookListScreen({ planner, onBack, onStartCook, onOpenMeal }) {
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
-                  {meals.map(({ date, slot, meal }) => {
+                  {meals.map(({ date, slot, meal, mealIndex }) => {
                     const recipe = RECIPES.find(r => r.id === meal.recipeId);
                     if (!recipe) return null;
                     const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
                     return (
-                      <div key={date+slot} style={{
+                      <div key={`${date}-${slot}-${mealIndex}`} style={{
                         background: '#fff', borderRadius: 14, overflow: 'hidden',
                         border: `1px solid ${T.border}`, boxShadow: T.shadowNatural,
                         borderLeft: `4px solid ${m.border}`,
@@ -3734,7 +3967,7 @@ function DesktopCookListScreen({ planner, onBack, onStartCook, onOpenMeal }) {
                               {recipe.name}
                             </div>
                             <div style={{ fontSize: 11, color: T.text3 }}>
-                              {date} {slot} · {meal.servings}인분 · {recipe.minutes}분
+                              {date} {slot} #{mealIndex + 1} · {meal.servings}인분 · {recipe.minutes}분
                             </div>
                           </div>
                         </div>
@@ -3743,7 +3976,7 @@ function DesktopCookListScreen({ planner, onBack, onStartCook, onOpenMeal }) {
                             flex: 1, padding: '10px 0', borderRadius: 10, border: `1px solid ${T.border}`,
                             background: '#fff', color: T.text2, fontSize: 12, fontWeight: 700, cursor: 'pointer',
                           }}>상세 보기</button>
-                          <button onClick={() => onStartCook?.(date, slot)} style={{
+                          <button onClick={() => onStartCook?.(date, slot, mealIndex)} style={{
                             flex: 2, padding: '10px 0', borderRadius: 10, border: 'none',
                             background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
                           }}>🍳 요리 시작</button>
@@ -3783,11 +4016,12 @@ function DesktopLeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkA
   const leftovers = [];
   Object.entries(planner).forEach(([date, day]) => {
     ['아침','점심','저녁'].forEach(slot => {
-      const m = day[slot];
-      if (m && m.status === 'cooked' && !m.ateAt) {
-        const r = RECIPES.find(x => x.id === m.recipeId);
-        if (r) leftovers.push({ date, slot, meal: m, recipe: r });
-      }
+      mealItems(day[slot]).forEach((m, mealIndex) => {
+        if (m && m.status === 'cooked' && !m.ateAt) {
+          const r = RECIPES.find(x => x.id === m.recipeId);
+          if (r) leftovers.push({ date, slot, meal: m, mealIndex, recipe: r });
+        }
+      });
     });
   });
   return (
@@ -3811,8 +4045,8 @@ function DesktopLeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkA
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
-          {leftovers.map(({ date, slot, meal, recipe }) => (
-            <div key={date+slot} style={{
+          {leftovers.map(({ date, slot, meal, mealIndex, recipe }) => (
+            <div key={`${date}-${slot}-${mealIndex}`} style={{
               background: '#fff', borderRadius: 14, overflow: 'hidden',
               border: `1px solid ${T.border}`, boxShadow: T.shadowNatural,
             }}>
@@ -3823,7 +4057,7 @@ function DesktopLeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkA
                 }}>{recipe.emoji}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 3 }}>{recipe.name}</div>
-                  <div style={{ fontSize: 11, color: T.text3 }}>{date} {slot} · {meal.servings}인분</div>
+                  <div style={{ fontSize: 11, color: T.text3 }}>{date} {slot} #{mealIndex + 1} · {meal.servings}인분</div>
                   <div style={{ fontSize: 10, color: T.tealLight, marginTop: 4, fontWeight: 700 }}>🍳 요리 완료, 아직 안 먹음</div>
                 </div>
               </div>
@@ -3832,11 +4066,11 @@ function DesktopLeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkA
                   flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${T.border}`,
                   background: '#fff', color: T.text2, fontSize: 11, fontWeight: 700, cursor: 'pointer',
                 }}>덜 먹음</button>
-                <button onClick={() => onReuse?.(date, slot)} style={{
+                <button onClick={() => onReuse?.(date, slot, mealIndex)} style={{
                   flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${T.border}`,
                   background: '#fff', color: T.text2, fontSize: 11, fontWeight: 700, cursor: 'pointer',
                 }}>다시 식단</button>
-                <button onClick={() => onMarkAte?.(date, slot)} style={{
+                <button onClick={() => onMarkAte?.(date, slot, mealIndex)} style={{
                   flex: 1, padding: '9px 0', borderRadius: 8, border: 'none',
                   background: T.mint, color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer',
                 }}>다 먹음</button>
@@ -3854,11 +4088,12 @@ function DesktopAteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
   const ateMeals = [];
   Object.entries(planner).forEach(([date, day]) => {
     ['아침','점심','저녁'].forEach(slot => {
-      const m = day[slot];
-      if (m && m.ateAt) {
-        const r = RECIPES.find(x => x.id === m.recipeId);
-        if (r) ateMeals.push({ date, slot, meal: m, recipe: r });
-      }
+      mealItems(day[slot]).forEach((m, mealIndex) => {
+        if (m && m.ateAt) {
+          const r = RECIPES.find(x => x.id === m.recipeId);
+          if (r) ateMeals.push({ date, slot, meal: m, mealIndex, recipe: r });
+        }
+      });
     });
   });
   return (
@@ -3875,8 +4110,8 @@ function DesktopAteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
         </div>
       ) : (
         <div style={{ background: '#fff', borderRadius: 14, padding: 8, boxShadow: T.shadowDeep }}>
-          {ateMeals.map(({ date, slot, recipe }, i) => (
-            <div key={date+slot} style={{
+          {ateMeals.map(({ date, slot, mealIndex, recipe }, i) => (
+            <div key={`${date}-${slot}-${mealIndex}`} style={{
               display: 'flex', alignItems: 'center', gap: 14, padding: 14,
               borderBottom: i < ateMeals.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none',
             }}>
@@ -3886,9 +4121,9 @@ function DesktopAteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
               }}>{recipe.emoji}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{recipe.name}</div>
-                <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{date} {slot} · ✓ 다 먹음</div>
+                <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{date} {slot} #{mealIndex + 1} · ✓ 다 먹음</div>
               </div>
-              <button onClick={() => onUndoAte?.(date, slot)} style={{
+              <button onClick={() => onUndoAte?.(date, slot, mealIndex)} style={{
                 padding: '8px 12px', borderRadius: 8, border: `1px solid ${T.border}`,
                 background: '#fff', color: T.text2, fontSize: 12, fontWeight: 700, cursor: 'pointer',
               }}>되돌리기</button>
@@ -4727,8 +4962,6 @@ Object.assign(window, {
   DesktopConsumedIngredientDialog, DesktopRecipeBookSelectorDialog,
   DesktopRecipeBookDetailPickerDialog, DesktopPantryMatchPickerDialog,
 });
-
-
 // ===== screens/extras.jsx =====
 // ===== Extra screens — Phase 2 =====
 // Shopping list, Cook list/run, Meal detail, MyPage subpages
@@ -4737,18 +4970,20 @@ const { useState: useState_X, useMemo: useMemo_X } = React;
 // Utility — collect aggregated ingredients across selected planner slots
 function aggregateIngredients(planner, selection, pantry) {
   const map = new Map();
-  selection.forEach(({ date, slot }) => {
-    const meal = planner[date]?.[slot];
-    if (!meal) return;
-    const recipe = RECIPES.find(r => r.id === meal.recipeId);
-    if (!recipe) return;
-    recipe.ingredients.forEach(ing => {
-      const key = ing.name;
-      const have = Object.values(pantry || {}).some(p => p.name === ing.name && p.have);
-      if (!map.has(key)) {
-        map.set(key, { name: ing.name, qty: ing.qty, section: ing.section, have, fromMeals: [] });
-      }
-      map.get(key).fromMeals.push(`${date} ${slot}`);
+  selection.forEach(({ date, slot, mealIndex }) => {
+    const slotMeals = mealItems(planner[date]?.[slot]);
+    const targets = mealIndex == null ? slotMeals : [slotMeals[mealIndex]].filter(Boolean);
+    targets.forEach((meal) => {
+      const recipe = RECIPES.find(r => r.id === meal.recipeId);
+      if (!recipe) return;
+      recipe.ingredients.forEach(ing => {
+        const key = ing.name;
+        const have = Object.values(pantry || {}).some(p => p.name === ing.name && p.have);
+        if (!map.has(key)) {
+          map.set(key, { name: ing.name, qty: ing.qty, section: ing.section, have, fromMeals: [] });
+        }
+        map.get(key).fromMeals.push(`${date} ${slot} · ${recipe.name}`);
+      });
     });
   });
   return [...map.values()];
@@ -4766,8 +5001,9 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
   const initialSel = [];
   days.forEach(d => {
     ['아침','점심','저녁'].forEach(s => {
-      const m = planner[d]?.[s];
-      if (m && m.status !== 'cooked') initialSel.push({ date: d, slot: s });
+      mealItems(planner[d]?.[s]).forEach((m, mealIndex) => {
+        if (m.status !== 'cooked') initialSel.push({ date: d, slot: s, mealIndex });
+      });
     });
   });
   const [selection, setSelection] = useState_X(initialSel);
@@ -4780,10 +5016,10 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
   const needed = items.filter(it => !it.have);
   const progress = needed.length ? Math.round([...checked].filter(k => needed.find(n => n.name === k)).length / needed.length * 100) : 0;
 
-  const toggleSel = (date, slot) => {
+  const toggleSel = (date, slot, mealIndex) => {
     setSelection(s => {
-      const exists = s.find(x => x.date === date && x.slot === slot);
-      return exists ? s.filter(x => x !== exists) : [...s, { date, slot }];
+      const exists = s.find(x => x.date === date && x.slot === slot && x.mealIndex === mealIndex);
+      return exists ? s.filter(x => x !== exists) : [...s, { date, slot, mealIndex }];
     });
   };
   const toggleCheck = (name) => {
@@ -4813,7 +5049,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
           {days.map(d => {
             const day = planner[d] || {};
             const slots = [['아침','🌅'],['점심','☀️'],['저녁','🌙']];
-            const hasAny = slots.some(([s]) => day[s]);
+            const hasAny = slots.some(([s]) => mealItems(day[s]).length > 0);
             if (!hasAny) return null;
             return (
               <div key={d} style={{
@@ -4824,13 +5060,15 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
                   {d}
                 </div>
                 {slots.map(([s, emo]) => {
-                  const m = day[s];
-                  if (!m) return null;
-                  const recipe = RECIPES.find(r => r.id === m.recipeId);
-                  const sel = selection.some(x => x.date === d && x.slot === s);
-                  const cooked = m.status === 'cooked';
-                  return (
-                    <button key={s} disabled={cooked} onClick={() => toggleSel(d, s)} style={{
+                  const meals = mealItems(day[s]);
+                  if (meals.length === 0) return null;
+                  return meals.map((m, mealIndex) => {
+                    const recipe = RECIPES.find(r => r.id === m.recipeId);
+                    if (!recipe) return null;
+                    const sel = selection.some(x => x.date === d && x.slot === s && x.mealIndex === mealIndex);
+                    const cooked = m.status === 'cooked';
+                    return (
+                    <button key={`${s}-${mealIndex}`} disabled={cooked} onClick={() => toggleSel(d, s, mealIndex)} style={{
                       width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                       padding: '12px 16px', border: 'none', background: 'none',
                       borderTop: `1px solid ${T.surfaceSubtle}`, cursor: cooked ? 'default' : 'pointer',
@@ -4850,11 +5088,12 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>{recipe.name}</div>
                         <div style={{ fontSize: 11, color: T.text3 }}>
-                          {s} · {m.servings}인분 {cooked && '· 요리 완료'}
+                          {s} #{mealIndex + 1} · {m.servings}인분 {cooked && '· 요리 완료'}
                         </div>
                       </div>
                     </button>
-                  );
+                    );
+                  });
                 })}
               </div>
             );
@@ -4866,7 +5105,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
           background: '#fff', borderTop: `1px solid ${T.border}`,
         }}>
           <Button full disabled={selection.length === 0} onClick={() => setStep('review')}>
-            {selection.length}끼 재료 모으기
+            {selection.length}개 음식 재료 모으기
           </Button>
         </div>
       </div>
@@ -5045,8 +5284,9 @@ function CookListScreen({ planner, onBack, onStartCook, onOpenMeal }) {
           const meals = [];
           dayKeys.forEach(d => {
             ['아침','점심','저녁'].forEach(s => {
-              const m = planner[d]?.[s];
-              if (m && m.status !== 'cooked') meals.push({ date: d, slot: s, meal: m });
+              mealItems(planner[d]?.[s]).forEach((m, mealIndex) => {
+                if (m.status !== 'cooked') meals.push({ date: d, slot: s, meal: m, mealIndex });
+              });
             });
           });
           if (meals.length === 0 && label === '오늘') {
@@ -5069,11 +5309,12 @@ function CookListScreen({ planner, onBack, onStartCook, onOpenMeal }) {
                 {label} <span style={{ color: T.text3, fontWeight: 500 }}>· {meals.length}끼</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {meals.map(({ date, slot, meal }) => {
+                {meals.map(({ date, slot, meal, mealIndex }) => {
                   const recipe = RECIPES.find(r => r.id === meal.recipeId);
+                  if (!recipe) return null;
                   const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
                   return (
-                    <div key={date+slot} style={{
+                    <div key={`${date}-${slot}-${mealIndex}`} style={{
                       background: '#fff', borderRadius: 12, overflow: 'hidden',
                       border: `1px solid ${T.border}`,
                       borderLeft: `4px solid ${m.border}`,
@@ -5095,12 +5336,12 @@ function CookListScreen({ planner, onBack, onStartCook, onOpenMeal }) {
                             {recipe.name}
                           </div>
                           <div style={{ fontSize: 11, color: T.text3 }}>
-                            {date} {slot} · {meal.servings}인분 · {recipe.minutes}분
+                            {date} {slot} #{mealIndex + 1} · {meal.servings}인분 · {recipe.minutes}분
                           </div>
                         </div>
                       </div>
                       <div style={{ padding: '0 14px 14px' }}>
-                        <Button full onClick={() => onStartCook(date, slot)}>
+                        <Button full onClick={() => onStartCook(date, slot, mealIndex)}>
                           🍳 요리 시작
                         </Button>
                       </div>
@@ -5119,8 +5360,8 @@ function CookListScreen({ planner, onBack, onStartCook, onOpenMeal }) {
 // ─────────────────────────────────────────────────────
 // 요리하기 진행 페이지
 // ─────────────────────────────────────────────────────
-function CookRunScreen({ date, slot, planner, onBack, onComplete, showToast }) {
-  const meal = planner[date]?.[slot];
+function CookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete, showToast }) {
+  const meal = mealItems(planner[date]?.[slot])[mealIndex];
   if (!meal) return <div style={{ padding: 40 }}>끼니를 찾을 수 없어요</div>;
   const recipe = RECIPES.find(r => r.id === meal.recipeId);
   const [stepIdx, setStepIdx] = useState_X(0);
@@ -5232,7 +5473,7 @@ function CookRunScreen({ date, slot, planner, onBack, onComplete, showToast }) {
       {showConsumed && (
         <ConsumedIngredientSheet recipe={recipe}
           onClose={() => setShowConsumed(false)}
-          onConfirm={(picked) => { setShowConsumed(false); onComplete(date, slot, picked); }} />
+          onConfirm={(picked) => { setShowConsumed(false); onComplete(date, slot, picked, mealIndex); }} />
       )}
     </div>
   );
@@ -5241,18 +5482,145 @@ function CookRunScreen({ date, slot, planner, onBack, onComplete, showToast }) {
 // ─────────────────────────────────────────────────────
 // 플래너 끼니 상세
 // ─────────────────────────────────────────────────────
+const servingMiniBtn = {
+  width: 28, height: 28, borderRadius: 14, border: 'none',
+  background: '#fff', color: T.text2, fontSize: 16, fontWeight: 800, cursor: 'pointer',
+};
+const mealActionBtn = {
+  padding: '10px 8px', borderRadius: 10, border: `1px solid ${T.border}`,
+  background: '#fff', color: T.text2, fontSize: 12, fontWeight: 800, cursor: 'pointer',
+};
 function MealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, onStartCook, onCreateShopping, onChangeStatus, onRemove, onChangeServings }) {
-  const meal = planner[date]?.[slot];
-  const recipe = meal && RECIPES.find(r => r.id === meal.recipeId);
-  const [askDelete, setAskDelete] = useState_X(false);
-  if (!recipe) return <div style={{ padding: 40 }}>끼니를 찾을 수 없어요</div>;
-  const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
-
   const statusFlow = [
     { k: 'registered', l: '등록됨', emoji: '📝' },
     { k: 'shopped', l: '장보기 완료', emoji: '🛒' },
     { k: 'cooked', l: '요리 완료', emoji: '🍳' },
   ];
+  const meals = mealItems(planner[date]?.[slot]);
+  const [askDelete, setAskDelete] = useState_X(null);
+  if (meals.length === 0) return <div style={{ padding: 40 }}>끼니를 찾을 수 없어요</div>;
+
+  if (meals.length > 1) {
+    const totalServings = meals.reduce((sum, meal) => sum + (meal.servings || 1), 0);
+    return (
+      <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 110 }}>
+        <AppBar title={`${slot} 음식 ${meals.length}개`} left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>} />
+
+        <div style={{ background: '#fff', padding: 20, borderBottom: `1px solid ${T.border}` }}>
+          <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 800, marginBottom: 4 }}>
+            {date} · {slot}
+          </div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
+            한 끼에 여러 음식을 같이 먹어요
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: T.text2, background: T.surfaceFill, padding: '6px 10px', borderRadius: 9999 }}>
+              {meals.length}개 음식
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: T.text2, background: T.surfaceFill, padding: '6px 10px', borderRadius: 9999 }}>
+              총 {totalServings}인분 계획
+            </span>
+          </div>
+        </div>
+
+        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {meals.map((meal, mealIndex) => {
+            const recipe = RECIPES.find(r => r.id === meal.recipeId);
+            if (!recipe) return null;
+            const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
+            const order = statusFlow.findIndex(x => x.k === meal.status);
+            return (
+              <div key={`${meal.recipeId}-${mealIndex}`} style={{
+                background: '#fff', border: `1px solid ${T.border}`, borderRadius: 14,
+                overflow: 'hidden', boxShadow: T.shadowNatural,
+              }}>
+                <div style={{ display: 'flex', gap: 12, padding: 14 }}>
+                  <div style={{
+                    width: 76, height: 76, borderRadius: 12, background: recipe.bg,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40,
+                    flexShrink: 0,
+                  }}>{recipe.emoji}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 5, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: m.text, background: m.bg, padding: '3px 7px', borderRadius: 5 }}>
+                        {m.label}
+                      </span>
+                      <StatusPill status={meal.status} />
+                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 3 }}>
+                      {recipe.name}
+                    </div>
+                    <div style={{ fontSize: 12, color: T.text3 }}>
+                      {recipe.minutes}분 · {recipe.kcal}kcal · {meal.servings}인분
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ padding: '0 14px 14px' }}>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                    {statusFlow.map((s, i) => {
+                      const active = i <= order;
+                      return (
+                        <button key={s.k} onClick={() => onChangeStatus(date, slot, s.k, mealIndex)} style={{
+                          flex: 1, padding: '8px 4px', borderRadius: 9,
+                          border: active ? `1px solid ${T.mint}` : `1px solid ${T.border}`,
+                          background: active ? T.mintSoft : '#fff', color: active ? T.mintDeep : T.text3,
+                          fontSize: 10, fontWeight: 800, cursor: 'pointer',
+                        }}>{s.emoji} {s.l}</button>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: 10, background: T.surfaceFill, borderRadius: 10, marginBottom: 10,
+                  }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: T.text2 }}>계획 인분</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <button onClick={() => onChangeServings(date, slot, Math.max(1, meal.servings - 1), mealIndex)} style={servingMiniBtn}>−</button>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: T.ink, minWidth: 42, textAlign: 'center' }}>{meal.servings}인분</span>
+                      <button onClick={() => onChangeServings(date, slot, Math.min(12, meal.servings + 1), mealIndex)} style={{ ...servingMiniBtn, background: T.mint, color: '#fff' }}>+</button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 12 }}>
+                    {recipe.ingredients.slice(0, 5).map(ing => (
+                      <span key={ing.name} style={{ fontSize: 11, color: T.text2, background: T.surfaceFill, padding: '5px 8px', borderRadius: 9999 }}>
+                        {ing.name}
+                      </span>
+                    ))}
+                    {recipe.ingredients.length > 5 && (
+                      <span style={{ fontSize: 11, color: T.text3, padding: '5px 2px' }}>+{recipe.ingredients.length - 5}</span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <button onClick={() => onOpenRecipe(recipe.id)} style={mealActionBtn}>레시피 보기</button>
+                    <button onClick={() => onStartCook(date, slot, mealIndex)} style={{ ...mealActionBtn, background: T.mint, borderColor: T.mint, color: '#fff' }}>🍳 요리</button>
+                    <button onClick={() => onCreateShopping(date, slot)} style={mealActionBtn}>🛒 장보기</button>
+                    <button onClick={() => setAskDelete({ index: mealIndex, recipe })} style={{ ...mealActionBtn, color: T.red }}>삭제</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {askDelete && (
+          <ConfirmDialog title="이 음식을 삭제할까요?"
+            body={`${askDelete.recipe.name} (${date} ${slot}) 가 식단에서 제거돼요.`}
+            destructive confirmLabel="삭제"
+            onClose={() => setAskDelete(null)}
+            onConfirm={() => { const idx = askDelete.index; setAskDelete(null); onRemove(date, slot, idx); }} />
+        )}
+      </div>
+    );
+  }
+
+  const meal = meals[0];
+  const recipe = meal && RECIPES.find(r => r.id === meal.recipeId);
+  if (!recipe) return <div style={{ padding: 40 }}>끼니를 찾을 수 없어요</div>;
+  const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
 
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 120 }}>
@@ -5332,7 +5700,7 @@ function MealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, onStartCo
         padding: 16, background: '#fff', borderTop: `1px solid ${T.border}`,
         display: 'flex', gap: 8,
       }}>
-        <button onClick={() => setAskDelete(true)} style={{
+        <button onClick={() => setAskDelete({ index: 0, recipe })} style={{
           padding: '12px 14px', borderRadius: 10, background: '#fff',
           border: `1px solid ${T.border}`, color: T.red, fontSize: 13, fontWeight: 700, cursor: 'pointer',
         }}>삭제</button>
@@ -5341,10 +5709,10 @@ function MealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, onStartCo
       </div>
       {askDelete && (
         <ConfirmDialog title="이 끼니를 삭제할까요?"
-          body={`${recipe.name} (${date} ${slot}) 가 식단에서 제거돼요.`}
+          body={`${askDelete.recipe.name} (${date} ${slot}) 가 식단에서 제거돼요.`}
           destructive confirmLabel="삭제"
-          onClose={() => setAskDelete(false)}
-          onConfirm={() => { setAskDelete(false); onRemove(date, slot); }} />
+          onClose={() => setAskDelete(null)}
+          onConfirm={() => { const idx = askDelete.index; setAskDelete(null); onRemove(date, slot, idx); }} />
       )}
     </div>
   );
@@ -5557,9 +5925,6 @@ Object.assign(window, {
   ShoppingCreateScreen, AddToPantryModal, CookListScreen, CookRunScreen,
   MealDetailScreen, MyPageSavedScreen, MyPageAccountScreen, MyPageNotifScreen, MyPageHelpScreen,
 });
-
-
-
 // ===== screens/wave1.jsx =====
 // ===== Wave 1: missing/partial screens & modals =====
 // Style follows screens/extras.jsx — uses T tokens, AppBar, Button, Icon, Sheet patterns.
@@ -5931,8 +6296,9 @@ function LeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkAte, onM
   const items = [];
   days.forEach(d => {
     ['아침','점심','저녁'].forEach(s => {
-      const m = planner[d]?.[s];
-      if (m?.status === 'cooked' && !m.ateAt) items.push({ date: d, slot: s, meal: m });
+      mealItems(planner[d]?.[s]).forEach((m, mealIndex) => {
+        if (m?.status === 'cooked' && !m.ateAt) items.push({ date: d, slot: s, meal: m, mealIndex });
+      });
     });
   });
 
@@ -5958,10 +6324,11 @@ function LeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkAte, onM
         </div>
       ) : (
         <div style={{ padding: 16 }}>
-          {items.map(({ date, slot, meal }) => {
+          {items.map(({ date, slot, meal, mealIndex }) => {
             const r = RECIPES.find(x => x.id === meal.recipeId);
+            if (!r) return null;
             return (
-              <div key={date+slot} style={{
+              <div key={`${date}-${slot}-${mealIndex}`} style={{
                 background: '#fff', borderRadius: 12, marginBottom: 10,
                 border: `1px solid ${T.border}`, overflow: 'hidden',
               }}>
@@ -5973,14 +6340,14 @@ function LeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkAte, onM
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{r.name}</div>
                     <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
-                      {date} {slot} · {meal.servings}인분
+                      {date} {slot} #{mealIndex + 1} · {meal.servings}인분
                     </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, padding: '0 12px 12px' }}>
-                  <button onClick={() => onReuse(date, slot)} style={smallSecBtn}>🔁 다시 플래너에</button>
+                  <button onClick={() => onReuse(date, slot, mealIndex)} style={smallSecBtn}>🔁 다시 플래너에</button>
                   <button onClick={() => onMarkPartial(date, slot)} style={smallSecBtn}>🥢 덜먹음</button>
-                  <button onClick={() => onMarkAte(date, slot)} style={{
+                  <button onClick={() => onMarkAte(date, slot, mealIndex)} style={{
                     ...smallSecBtn, background: T.mint, color: '#fff', border: 'none', flex: 1,
                   }}>✓ 다먹음</button>
                 </div>
@@ -6006,8 +6373,9 @@ function AteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
   const items = [];
   days.forEach(d => {
     ['아침','점심','저녁'].forEach(s => {
-      const m = planner[d]?.[s];
-      if (m?.ateAt) items.push({ date: d, slot: s, meal: m });
+      mealItems(planner[d]?.[s]).forEach((m, mealIndex) => {
+        if (m?.ateAt) items.push({ date: d, slot: s, meal: m, mealIndex });
+      });
     });
   });
   return (
@@ -6019,10 +6387,11 @@ function AteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
             <div style={{ fontSize: 36, marginBottom: 8 }}>📒</div>
             <div style={{ fontSize: 13, color: T.text3 }}>아직 다먹은 기록이 없어요</div>
           </div>
-        ) : items.map(({ date, slot, meal }) => {
+        ) : items.map(({ date, slot, meal, mealIndex }) => {
           const r = RECIPES.find(x => x.id === meal.recipeId);
+          if (!r) return null;
           return (
-            <div key={date+slot} style={{
+            <div key={`${date}-${slot}-${mealIndex}`} style={{
               background: '#fff', borderRadius: 12, marginBottom: 10,
               border: `1px solid ${T.border}`, padding: 14,
               display: 'flex', alignItems: 'center', gap: 12,
@@ -6034,10 +6403,10 @@ function AteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{r.name}</div>
                 <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
-                  {date} {slot} · {meal.servings}인분 다먹음
+                  {date} {slot} #{mealIndex + 1} · {meal.servings}인분 다먹음
                 </div>
               </div>
-              <button onClick={() => onUndoAte(date, slot)} style={smallSecBtn}>덜먹음으로</button>
+              <button onClick={() => onUndoAte(date, slot, mealIndex)} style={smallSecBtn}>덜먹음으로</button>
               <button onClick={() => onRecreate(meal.recipeId)} style={{ ...smallSecBtn, color: T.mintDeep, border: `1px solid ${T.mint}` }}>다시 만들기</button>
             </div>
           );
@@ -7228,8 +7597,6 @@ Object.assign(window, {
   // Wave 1.5
   MyPageRecipebookDetailScreen, IngredientFilterModal, PlanningServingsModal,
 });
-
-
 // ===== app.jsx =====
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "accentColor": "#2AC1BC",
@@ -7237,12 +7604,58 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "density": "comfortable"
 }/*EDITMODE-END*/;
 
+// Phone-shell only: floating button that calls requestFullscreen() on tap.
+// Lets users hide Android Chrome's URL bar and nav bar without an HTTPS PWA install.
+function FullscreenToggle() {
+  const { useState, useEffect } = React;
+  const [isFs, setIsFs] = useState(false);
+  const [supported, setSupported] = useState(true);
+  useEffect(() => {
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+    setSupported(typeof req === 'function');
+    const onChange = () =>
+      setIsFs(!!(document.fullscreenElement || document.webkitFullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+    };
+  }, []);
+  if (isFs || !supported) return null;
+  const enter = () => {
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+    try { req && req.call(el).catch(() => {}); } catch (e) {}
+  };
+  return (
+    <button onClick={enter} aria-label="전체화면"
+      style={{
+        position: 'fixed',
+        bottom: 'calc(78px + env(safe-area-inset-bottom))',
+        right: 12, zIndex: 9999,
+        width: 44, height: 44, borderRadius: 22,
+        background: 'rgba(33,37,41,0.72)', border: 'none', color: '#fff',
+        fontSize: 18, cursor: 'pointer',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        WebkitBackdropFilter: 'blur(8px)', backdropFilter: 'blur(8px)',
+      }}>⛶</button>
+  );
+}
+
 function App() {
   const { useState, useEffect } = React;
   // persisted route
   const [route, setRoute] = useState(() => {
-    try {return JSON.parse(localStorage.getItem('hc_route')) || { tab: 'home' };}
-    catch {return { tab: 'home' };}
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get('screen');
+      const mobileTabs = ['home', 'planner', 'pantry', 'mypage'];
+      if (s && mobileTabs.includes(s)) return { tab: s };
+      return JSON.parse(localStorage.getItem('hc_route')) || { tab: 'home' };
+    } catch { return { tab: 'home' }; }
   });
   useEffect(() => {localStorage.setItem('hc_route', JSON.stringify(route));}, [route]);
 
@@ -7331,6 +7744,14 @@ function App() {
   const goPage = (page, args = {}) => setRoute({ ...route, page, pageArgs: args });
   const backFromPage = () => setRoute({ ...route, page: null, pageArgs: null });
 
+  const addPlannerMeal = (date, slot, meal) => {
+    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: appendMealToSlot(p[date]?.[slot], meal) } }));
+  };
+
+  const updatePlannerMeal = (date, slot, mealIndex, updater) => {
+    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: updateMealInSlot(p[date]?.[slot], mealIndex, updater) } }));
+  };
+
   // Auth gate that captures return-to-action
   const requireAuth = (label, run) => {
     if (profile.authed) { run(); return; }
@@ -7379,16 +7800,16 @@ function App() {
   };
 
   // Leftovers
-  const reuseLeftover = (date, slot) => {
-    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], status: 'registered' } } }));
+  const reuseLeftover = (date, slot, mealIndex = 0) => {
+    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, status: 'registered' }));
     showToast('플래너에 다시 올렸어요');
   };
-  const markAte = (date, slot) => {
-    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], ateAt: 'now' } } }));
+  const markAte = (date, slot, mealIndex = 0) => {
+    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, ateAt: 'now' }));
     showToast('다먹음으로 기록');
   };
-  const undoAte = (date, slot) => {
-    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], ateAt: null } } }));
+  const undoAte = (date, slot, mealIndex = 0) => {
+    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, ateAt: null }));
     showToast('덜먹음으로 되돌렸어요');
   };
   const markPartial = (date, slot) => {
@@ -7396,19 +7817,19 @@ function App() {
   };
 
   // Meal actions (delete + serving change with confirm)
-  const removeMeal = (date, slot) => {
-    setPlanner(p => { const d = { ...p[date] }; delete d[slot]; return { ...p, [date]: d }; });
+  const removeMeal = (date, slot, mealIndex = 0) => {
+    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: removeMealFromSlot(p[date]?.[slot], mealIndex) } }));
     showToast('끼니가 삭제됐어요');
     backFromPage();
   };
-  const changeServings = (date, slot, next) => {
-    const meal = planner[date]?.[slot];
+  const changeServings = (date, slot, next, mealIndex = 0) => {
+    const meal = mealItems(planner[date]?.[slot])[mealIndex];
     if (!meal) return;
     if (meal.status !== 'registered') {
-      setServingChangeConfirm({ date, slot, next });
+      setServingChangeConfirm({ date, slot, next, mealIndex });
       return;
     }
-    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], servings: next } } }));
+    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, servings: next }));
   };
 
   // Manual recipe / YT import → planner
@@ -7417,7 +7838,7 @@ function App() {
     setExtraRecipes(rs => [...rs, recipe]);
     if (window.RECIPES && !window.RECIPES.find(r => r.id === recipe.id)) window.RECIPES.push(recipe);
     if (presetDate && presetSlot) {
-      setPlanner(p => ({ ...p, [presetDate]: { ...p[presetDate], [presetSlot]: { recipeId: recipe.id, status: 'registered', servings: recipe.servings || 2 } } }));
+      addPlannerMeal(presetDate, presetSlot, { recipeId: recipe.id, status: 'registered', servings: recipe.servings || 2 });
       showToast('레시피 등록 + 플래너 추가 완료');
       setRoute({ tab: 'planner', page: null });
     } else {
@@ -7442,8 +7863,8 @@ function App() {
     showToast(`${Object.keys(qtys).length}개 재료가 팬트리에 추가됐어요`);
     setRoute({ tab: 'pantry' });
   };
-  const markCooked = (date, slot, consumed) => {
-    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], status: 'cooked' } } }));
+  const markCooked = (date, slot, consumed, mealIndex = 0) => {
+    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, status: 'cooked' }));
     if (consumed && consumed.length) {
       setPantry(p => {
         const next = { ...p };
@@ -7459,8 +7880,8 @@ function App() {
     }
     backFromPage();
   };
-  const changeStatus = (date, slot, status) => {
-    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], status } } }));
+  const changeStatus = (date, slot, status, mealIndex = 0) => {
+    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, status }));
   };
 
   // Content
@@ -7513,15 +7934,15 @@ function App() {
       onBack={backFromPage} onAddToPantry={addItemsToPantry} showToast={showToast} />;
   } else if (route.page === 'cook-list') {
     content = <CookListScreen planner={planner} onBack={backFromPage}
-      onStartCook={(d, s) => goPage('cook-run', { date: d, slot: s })}
+      onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
       onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })} />;
   } else if (route.page === 'cook-run') {
-    content = <CookRunScreen date={pa.date} slot={pa.slot} planner={planner}
+    content = <CookRunScreen date={pa.date} slot={pa.slot} mealIndex={pa.mealIndex || 0} planner={planner}
       onBack={backFromPage} onComplete={markCooked} showToast={showToast} />;
   } else if (route.page === 'meal-detail') {
     content = <MealDetailScreen date={pa.date} slot={pa.slot} planner={planner}
       onBack={backFromPage} onOpenRecipe={openRecipe}
-      onStartCook={(d, s) => goPage('cook-run', { date: d, slot: s })}
+      onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
       onCreateShopping={() => goPage('shopping-create')}
       onChangeStatus={changeStatus} onRemove={removeMeal} onChangeServings={changeServings} />;
   } else if (route.page === 'mypage-saved') {
@@ -7603,11 +8024,19 @@ function App() {
 
   const fontBase = tweaks.density === 'compact' ? 13 : 14;
 
-  // Shell mode: 'webview' | 'web-mobile' | 'desktop'
+  // Shell mode: 'webview' | 'web-mobile' | 'desktop' | 'phone'
+  // 'phone' is a fullscreen-on-real-phone shell, opt-in via ?phone=1 or ?screen=<tab>.
   const [shell, setShell] = useState(() => {
-    try { return localStorage.getItem('hc_shell') || 'webview'; } catch (e) { return 'webview'; }
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('phone') === '1' || params.has('screen')) return 'phone';
+      return localStorage.getItem('hc_shell') || 'webview';
+    } catch (e) { return 'webview'; }
   });
-  useEffect(() => { try { localStorage.setItem('hc_shell', shell); } catch (e) {} }, [shell]);
+  useEffect(() => {
+    if (shell === 'phone') return; // don't persist URL-driven phone mode
+    try { localStorage.setItem('hc_shell', shell); } catch (e) {}
+  }, [shell]);
 
   // Desktop content
   let desktopContent;
@@ -7640,6 +8069,7 @@ function App() {
         onOpenRecipe={openRecipe}
         onCreateShopping={() => goPage('shopping-create')}
         onCookList={() => goPage('cook-list')}
+        onOpenMeal={(date, slot) => goPage('meal-detail', { date, slot })}
         onMenuAdd={(date, slot) => goPage('menu-add', date && slot ? { date, slot } : {})}
         onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })}
       />
@@ -7676,7 +8106,7 @@ function App() {
       onReflect={(l) => setReflectPicker(l)} showToast={showToast} />;
   } else if (route.page === 'cook-run') {
     desktopPageContent = <DesktopCookRunScreen
-      date={pa.date} slot={pa.slot} planner={planner}
+      date={pa.date} slot={pa.slot} mealIndex={pa.mealIndex || 0} planner={planner}
       onBack={backFromPage} onComplete={markCooked} showToast={showToast} />;
   } else if (route.page === 'mypage-recipebook-detail') {
     desktopPageContent = <DesktopMyPageRecipebookDetail
@@ -7697,12 +8127,12 @@ function App() {
   } else if (route.page === 'meal-detail') {
     desktopPageContent = <DesktopMealDetailScreen date={pa.date} slot={pa.slot} planner={planner}
       onBack={backFromPage} onOpenRecipe={openRecipe}
-      onStartCook={(d, s) => goPage('cook-run', { date: d, slot: s })}
+      onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
       onCreateShopping={() => goPage('shopping-create')}
       onChangeStatus={changeStatus} onRemove={removeMeal} onChangeServings={changeServings} />;
   } else if (route.page === 'cook-list') {
     desktopPageContent = <DesktopCookListScreen planner={planner} onBack={backFromPage}
-      onStartCook={(d, s) => goPage('cook-run', { date: d, slot: s })}
+      onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
       onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })} />;
   } else if (route.page === 'leftovers') {
     // Wave 1.7 — P1.3 desktop variants
@@ -7783,10 +8213,7 @@ function App() {
                 planner={planner}
                 onClose={() => setPlannerAdd(null)}
                 onConfirm={(date, slot, qty) => {
-                  setPlanner(p => ({
-                    ...p,
-                    [date]: { ...p[date], [slot]: { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty } },
-                  }));
+                  addPlannerMeal(date, slot, { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty });
                   setPlannerAdd(null);
                   showToast(date + ' ' + slot + '에 추가됐어요');
                 }}
@@ -7912,7 +8339,7 @@ function App() {
               onConfirm={(servings) => {
                 const { recipeId, presetDate, presetSlot } = planningServings;
                 if (presetDate && presetSlot) {
-                  setPlanner(p => ({ ...p, [presetDate]: { ...p[presetDate], [presetSlot]: { recipeId, status: 'registered', servings } } }));
+                  addPlannerMeal(presetDate, presetSlot, { recipeId, status: 'registered', servings });
                   showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
                   setRoute({ tab: 'planner', page: null });
                 }
@@ -7928,14 +8355,114 @@ function App() {
               confirmLabel="변경하기"
               onClose={() => setServingChangeConfirm(null)}
               onConfirm={() => {
-                const { date, slot, next } = servingChangeConfirm;
-                setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], servings: next } } }));
+                const { date, slot, next, mealIndex } = servingChangeConfirm;
+                updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, servings: next }));
                 setServingChangeConfirm(null);
                 showToast('인분이 변경됐어요');
               }} />
           </div>
         )}
         {tweaksOn && <TweaksPanel tweaks={tweaks} setTweaks={setTweaks} />}
+      </div>
+    );
+  }
+
+  // ============ PHONE shell (real-phone fullscreen, opt-in via ?phone=1 / ?screen=) ============
+  if (shell === 'phone') {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, background: '#fff', overflow: 'hidden',
+        WebkitTapHighlightColor: 'transparent',
+      }}>
+        <div style={{ height: '100dvh', position: 'relative', overflow: 'hidden', background: '#fff' }}>
+          <div style={{ height: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>{content}</div>
+          {!route.detail && <BottomTab tab={route.tab} onTab={goTab} />}
+          {plannerAdd && (
+            <PlannerAddPopup
+              recipeId={plannerAdd.recipeId} planner={planner}
+              onClose={() => setPlannerAdd(null)}
+              onConfirm={(date, slot, qty) => {
+                addPlannerMeal(date, slot, { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty });
+                setPlannerAdd(null);
+                showToast(date + ' ' + slot + '에 추가됐어요');
+              }}
+            />
+          )}
+          {saveModal && (
+            <SavePopup recipeId={saveModal.recipeId} saved={savedIds.includes(saveModal.recipeId)}
+              onClose={() => setSaveModal(null)}
+              onConfirm={() => { toggleSaved(saveModal.recipeId); setSaveModal(null); showToast(savedIds.includes(saveModal.recipeId) ? '저장이 해제됐어요' : '저장됐어요'); }} />
+          )}
+          {sortSheet && <SortSheet value={sortBy} onChange={setSortBy} onClose={() => setSortSheet(false)} />}
+          {loginGate && <LoginGate onClose={() => setLoginGate(false)} onLogin={() => { setLoginGate(false); showToast('로그인됨'); }} />}
+          {pantryAddItems && <AddToPantryModal items={pantryAddItems} onClose={() => setPantryAddItems(null)} onConfirm={confirmAddPantry} />}
+          {pantryAddSheet && (
+            <PantryAddSheet
+              onClose={() => setPantryAddSheet(false)}
+              onAddItem={(item) => {
+                const key = item.name;
+                setPantry(p => ({ ...p, [key]: { name: item.name, section: item.section, have: true } }));
+                setPantryAddSheet(false);
+                showToast(item.name + ' 추가됨');
+              }}
+              onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
+            />
+          )}
+          {pantryBundlePicker && (
+            <PantryBundlePicker
+              onClose={() => setPantryBundlePicker(false)}
+              onConfirm={(items) => {
+                setPantry(p => {
+                  const next = { ...p };
+                  items.forEach(name => { next[name] = { name, section: '양념', have: true }; });
+                  return next;
+                });
+                setPantryBundlePicker(false);
+                showToast(items.length + '개 일괄 추가됨');
+              }}
+            />
+          )}
+          {reflectPicker && (
+            <PantryReflectPicker list={reflectPicker} onClose={() => setReflectPicker(null)}
+              onConfirm={(names) => reflectToPantry(reflectPicker, names)} />
+          )}
+          {ingredientFilterOpen && (
+            <IngredientFilterModal value={ingredientNames}
+              onApply={(names) => { setIngredientNames(names); setIngredientFilterOpen(false); }}
+              onClose={() => setIngredientFilterOpen(false)} />
+          )}
+          {planningServings && (
+            <PlanningServingsModal
+              recipe={RECIPES.find(r => r.id === planningServings.recipeId)}
+              presetDate={planningServings.presetDate}
+              presetSlot={planningServings.presetSlot}
+              onClose={() => setPlanningServings(null)}
+              onConfirm={(servings) => {
+                const { recipeId, presetDate, presetSlot } = planningServings;
+                if (presetDate && presetSlot) {
+                  addPlannerMeal(presetDate, presetSlot, { recipeId, status: 'registered', servings });
+                  showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
+                  setRoute({ tab: 'planner', page: null });
+                }
+                setPlanningServings(null);
+              }} />
+          )}
+          {servingChangeConfirm && (
+            <ConfirmDialog
+              title="인분을 변경할까요?"
+              body="이 식사는 장보기/요리 흐름에 들어가 있어요. 인분을 바꾸면 장보기 수량과 차감 분량이 함께 갱신돼요."
+              confirmLabel="변경하기"
+              onClose={() => setServingChangeConfirm(null)}
+              onConfirm={() => {
+                const { date, slot, next, mealIndex } = servingChangeConfirm;
+                updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, servings: next }));
+                setServingChangeConfirm(null);
+                showToast('인분이 변경됐어요');
+              }} />
+          )}
+          <Toast message={toast} />
+          <FullscreenToggle />
+        </div>
       </div>
     );
   }
@@ -7976,7 +8503,7 @@ function App() {
                   recipeId={plannerAdd.recipeId} planner={planner}
                   onClose={() => setPlannerAdd(null)}
                   onConfirm={(date, slot, qty) => {
-                    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty } } }));
+                    addPlannerMeal(date, slot, { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty });
                     setPlannerAdd(null);
                     showToast(date + ' ' + slot + '에 추가됐어요');
                   }}
@@ -8035,7 +8562,7 @@ function App() {
                   onConfirm={(servings) => {
                     const { recipeId, presetDate, presetSlot } = planningServings;
                     if (presetDate && presetSlot) {
-                      setPlanner(p => ({ ...p, [presetDate]: { ...p[presetDate], [presetSlot]: { recipeId, status: 'registered', servings } } }));
+                      addPlannerMeal(presetDate, presetSlot, { recipeId, status: 'registered', servings });
                       showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
                       setRoute({ tab: 'planner', page: null });
                     }
@@ -8049,8 +8576,8 @@ function App() {
                   confirmLabel="변경하기"
                   onClose={() => setServingChangeConfirm(null)}
                   onConfirm={() => {
-                    const { date, slot, next } = servingChangeConfirm;
-                    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], servings: next } } }));
+                    const { date, slot, next, mealIndex } = servingChangeConfirm;
+                    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, servings: next }));
                     setServingChangeConfirm(null);
                     showToast('인분이 변경됐어요');
                   }} />
@@ -8068,7 +8595,7 @@ function App() {
                   recipeId={plannerAdd.recipeId} planner={planner}
                   onClose={() => setPlannerAdd(null)}
                   onConfirm={(date, slot, qty) => {
-                    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty } } }));
+                    addPlannerMeal(date, slot, { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty });
                     setPlannerAdd(null);
                     showToast(date + ' ' + slot + '에 추가됐어요');
                   }}
@@ -8127,7 +8654,7 @@ function App() {
                   onConfirm={(servings) => {
                     const { recipeId, presetDate, presetSlot } = planningServings;
                     if (presetDate && presetSlot) {
-                      setPlanner(p => ({ ...p, [presetDate]: { ...p[presetDate], [presetSlot]: { recipeId, status: 'registered', servings } } }));
+                      addPlannerMeal(presetDate, presetSlot, { recipeId, status: 'registered', servings });
                       showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
                       setRoute({ tab: 'planner', page: null });
                     }
@@ -8141,8 +8668,8 @@ function App() {
                   confirmLabel="변경하기"
                   onClose={() => setServingChangeConfirm(null)}
                   onConfirm={() => {
-                    const { date, slot, next } = servingChangeConfirm;
-                    setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: { ...p[date][slot], servings: next } } }));
+                    const { date, slot, next, mealIndex } = servingChangeConfirm;
+                    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, servings: next }));
                     setServingChangeConfirm(null);
                     showToast('인분이 변경됐어요');
                   }} />

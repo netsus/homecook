@@ -218,10 +218,55 @@ function makeInitialPlanner() {
   plan[keys[1]].점심 = { recipeId: 'r1', status: 'cooked', servings: 1 };
   plan[keys[1]].저녁 = { recipeId: 'r4', status: 'shopped', servings: 2 };
   plan[keys[2]].저녁 = { recipeId: 'r6', status: 'registered', servings: 2 };
+  plan[keys[3]].아침 = [
+    { recipeId: 'r1', status: 'registered', servings: 1 },
+    { recipeId: 'r2', status: 'shopped', servings: 2 },
+    { recipeId: 'r3', status: 'registered', servings: 1 },
+  ];
   plan[keys[3]].점심 = { recipeId: 'r3', status: 'registered', servings: 1 };
   plan[keys[3]].저녁 = { recipeId: 'r2', status: 'registered', servings: 2 };
   plan[keys[5]].저녁 = { recipeId: 'r5', status: 'registered', servings: 2 };
   return plan;
+}
+
+function mealItems(slotValue) {
+  if (!slotValue) return [];
+  return Array.isArray(slotValue) ? slotValue.filter(Boolean) : [slotValue];
+}
+
+function slotPrimaryMeal(slotValue) {
+  return mealItems(slotValue)[0] || null;
+}
+
+function appendMealToSlot(slotValue, meal) {
+  const items = mealItems(slotValue);
+  return items.length ? [...items, meal] : meal;
+}
+
+function updateMealInSlot(slotValue, index, updater) {
+  const items = mealItems(slotValue);
+  if (!items.length) return slotValue;
+  const targetIndex = Math.max(0, Math.min(index || 0, items.length - 1));
+  const next = items.map((item, i) => i === targetIndex ? updater(item) : item);
+  return Array.isArray(slotValue) ? next : next[0];
+}
+
+function removeMealFromSlot(slotValue, index) {
+  const items = mealItems(slotValue);
+  if (!items.length) return null;
+  const targetIndex = Math.max(0, Math.min(index || 0, items.length - 1));
+  const next = items.filter((_, i) => i !== targetIndex);
+  if (next.length === 0) return null;
+  return next.length === 1 ? next[0] : next;
+}
+
+function slotStatusSummary(slotValue) {
+  const items = mealItems(slotValue);
+  if (!items.length) return { status: null, label: '비어 있음' };
+  if (items.every(m => m.status === 'cooked')) return { status: 'cooked', label: '요리 완료' };
+  if (items.some(m => m.status === 'cooked')) return { status: 'mixed', label: '일부 완료' };
+  if (items.some(m => m.status === 'shopped')) return { status: 'shopped', label: '일부 준비됨' };
+  return { status: 'registered', label: '장보기 전' };
 }
 
 const INITIAL_PANTRY = {
@@ -248,4 +293,5 @@ const INITIAL_PANTRY = {
 Object.assign(window, {
   RECIPES, METHOD_COLORS, THEMES, INGREDIENT_FILTERS,
   makeInitialPlanner, weekDays, WEEK_START, INITIAL_PANTRY, todayIdx,
+  mealItems, slotPrimaryMeal, appendMealToSlot, updateMealInSlot, removeMealFromSlot, slotStatusSummary,
 });
