@@ -1,0 +1,77 @@
+{
+  "id": "desktop-mypage-parity",
+  "title": "Desktop prototype mypage mobile menu parity",
+  "summary": "데스크톱 웹 프로토타입 마이페이지에 모바일 MyPageScreen의 전체 메뉴 목록(9개 항목, emoji 아이콘, onGoPage 라우팅)을 추가한다. 프로토타입 전용 변경이며 production 코드에 영향 없음.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "low",
+  "preset": "vertical-slice-strict",
+  "goal": "Add mobile MyPageScreen full menu list (9 items with emoji icons, detail text, and onGoPage routing) to DesktopMyPage prototype aside. Prototype-only, no product code changes.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "desktop-planner-parity",
+    "17a-mypage-overview-history"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/workpacks/desktop-mypage-parity/README.md",
+      "docs/workpacks/desktop-mypage-parity/acceptance.md",
+      "docs/workpacks/desktop-mypage-parity/automation-spec.json"
+    ],
+    "governing_docs": [
+      "docs/workpacks/README.md",
+      "docs/workpacks/desktop-planner-parity/README.md",
+      "ui/designs/prototypes/claude-design-260505-wave1/screens/mypage.jsx",
+      "ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx",
+      "ui/designs/prototypes/claude-design-260505-wave1/index.html",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "manual",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 2
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "git diff --check"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "no-product-code-change",
+      "split-source-sync",
+      "html-byte-identical"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending"
+  },
+  "notes": "Stage 1 docs created on docs/desktop-mypage-parity branch. Stage 2/3 N/A (prototype-only). Stage 4 will add mobile menu parity to DesktopMyPage.",
+  "out_of_scope": [
+    "Desktop home, planner, pantry parity",
+    "Backend/API/schema changes",
+    "Product Next.js runtime code changes",
+    "Mobile MyPageScreen behavior changes",
+    "New npm dependencies",
+    "Desktop mypage information architecture changes",
+    "desktop-home-pantry-parity (separate slice)"
+  ],
+  "open_questions": []
+}
