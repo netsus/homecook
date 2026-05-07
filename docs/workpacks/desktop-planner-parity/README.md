@@ -144,11 +144,11 @@
 > 이 체크리스트는 Stage 4~6 동안 갱신하는 living closeout 문서다.
 > 이 슬라이스는 BE 구현 없음(Stage 2/3 N/A), Stage 4에서 프로토타입 DesktopPlanner parity를 구현한다.
 
-- [ ] DesktopPlanner에 주간 요약 통계 계산 추가 (total/cooked/shopped) <!-- omo:id=dp-stats-compute;stage=4;scope=frontend;review=6 -->
-- [ ] 요약 카드 4개 UI 렌더링 (요리 완료, 장보기 완료, 등록, 전체 타이틀) <!-- omo:id=dp-summary-cards;stage=4;scope=frontend;review=6 -->
-- [ ] 날짜 범위를 WEEK_START 기반 동적 계산으로 수정 <!-- omo:id=dp-date-range-fix;stage=4;scope=frontend;review=6 -->
-- [ ] 데스크톱 밀도에 맞는 가로 배치 적용 <!-- omo:id=dp-desktop-density;stage=4;scope=frontend;review=6 -->
-- [ ] 기존 7일 grid/CTA/셀 클릭 동작 regression 없음 확인 <!-- omo:id=dp-no-regression;stage=4;scope=frontend;review=6 -->
-- [ ] `index.html`과 `screens/desktop-screens.jsx` 동기화 <!-- omo:id=dp-split-sync;stage=4;scope=frontend;review=6 -->
-- [ ] `homecook-baemin-prototype.html`과 `index.html` byte-identical 확인 <!-- omo:id=dp-html-identical;stage=4;scope=frontend;review=6 -->
-- [ ] `git diff --check` 통과 <!-- omo:id=dp-diff-check;stage=4;scope=frontend;review=6 -->
+- [x] DesktopPlanner에 주간 요약 통계 계산 추가 (total/cooked/shopped) <!-- omo:id=dp-stats-compute;stage=4;scope=frontend;review=6 -->
+- [x] 요약 카드 4개 UI 렌더링 (요리 완료, 장보기 완료, 등록, 전체 타이틀) <!-- omo:id=dp-summary-cards;stage=4;scope=frontend;review=6 -->
+- [x] 날짜 범위를 WEEK_START 기반 동적 계산으로 수정 <!-- omo:id=dp-date-range-fix;stage=4;scope=frontend;review=6 -->
+- [x] 데스크톱 밀도에 맞는 가로 배치 적용 <!-- omo:id=dp-desktop-density;stage=4;scope=frontend;review=6 -->
+- [x] 기존 7일 grid/CTA/셀 클릭 동작 regression 없음 확인 <!-- omo:id=dp-no-regression;stage=4;scope=frontend;review=6 -->
+- [x] `index.html`과 `screens/desktop-screens.jsx` 동기화 <!-- omo:id=dp-split-sync;stage=4;scope=frontend;review=6 -->
+- [x] `homecook-baemin-prototype.html`과 `index.html` byte-identical 확인 <!-- omo:id=dp-html-identical;stage=4;scope=frontend;review=6 -->
+- [x] `git diff --check` 통과 <!-- omo:id=dp-diff-check;stage=4;scope=frontend;review=6 -->

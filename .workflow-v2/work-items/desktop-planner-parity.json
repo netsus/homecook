@@ -60,9 +60,9 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
-    "verification_status": "pending"
+    "verification_status": "passed"
   },
   "out_of_scope": [
     "Desktop mypage, home, pantry parity",
@@ -74,20 +74,27 @@
   ],
   "open_questions": [],
   "closeout": {
-    "phase": "collecting",
+    "phase": "projecting",
     "docs_projection": {
-      "roadmap_lifecycle": "planned",
+      "roadmap_lifecycle": "in_progress",
       "design_status": "temporary",
-      "delivery_checklist": "pending",
+      "delivery_checklist": "complete",
       "design_authority": "not_required",
-      "acceptance": "pending",
+      "acceptance": "complete",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "pending",
+      "required_checks": "passed",
       "external_smokes": "skipped",
       "authority_reports": [],
-      "actual_verification_refs": []
+      "actual_verification_refs": [
+        "git diff --check: passed",
+        "diff -q index.html homecook-baemin-prototype.html: identical",
+        "headless Chrome browser DOM check: DesktopPlanner summary/date/weekdays present",
+        "node date/weekdays check: 2026년 4월 20일 ~ 4월 26일; 월, 화, 수, 목, 금, 토, 일",
+        "grep stats.total in desktop-screens.jsx/index.html/homecook-baemin-prototype.html: present",
+        "grep dateRange in desktop-screens.jsx/index.html/homecook-baemin-prototype.html: present"
+      ]
     },
     "merge_gate_projection": {
       "current_head_sha": "pending",

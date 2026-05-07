@@ -798,14 +798,14 @@
     {
       "id": "desktop-planner-parity",
       "preset": "vertical-slice-strict",
-      "branch": "docs/desktop-planner-parity",
-      "lifecycle": "planned",
+      "branch": "feature/fe-desktop-planner-parity",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
-      "verification_status": "pending",
+      "verification_status": "passed",
       "required_checks": [
         "git diff --check"
       ],
-      "notes": "Desktop prototype planner parity follow-up. Adds mobile weekly summary stats to DesktopPlanner and fixes stale date range. Prototype-only, no product code changes. Stage 2/3 N/A. closeout_phase=collecting"
+      "notes": "Desktop prototype planner parity follow-up. Adds mobile weekly summary stats to DesktopPlanner and fixes stale date range. Prototype-only, no product code changes. Stage 2/3 N/A. Stage 4 implementation complete by Claude. closeout_phase=projecting"
     }
   ]
 }
