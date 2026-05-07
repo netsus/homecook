@@ -421,7 +421,7 @@ function App() {
       />
     );
   } else if (route.tab === 'pantry') {
-    desktopContent = <DesktopPantry pantry={pantry} setPantry={setPantry} />;
+    desktopContent = <DesktopPantry pantry={pantry} setPantry={setPantry} onOpenAdd={() => setPantryAddSheet(true)} />;
   } else if (route.tab === 'mypage') {
     desktopContent = <DesktopMyPage savedIds={savedIds} onOpenRecipe={openRecipe} onGoPage={goPage} />;
   }
