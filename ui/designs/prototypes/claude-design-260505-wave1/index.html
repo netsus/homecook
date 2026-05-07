@@ -2563,8 +2563,19 @@ function DesktopPantry({ pantry, setPantry }) {
   );
 }
 
-function DesktopMyPage({ savedIds, onOpenRecipe }) {
+function DesktopMyPage({ savedIds, onOpenRecipe, onGoPage }) {
   const saved = RECIPES.filter(r => savedIds.includes(r.id));
+  const menuItems = [
+    ['\u{1F516}', '\uC800\uC7A5\uD55C \uB808\uC2DC\uD53C', `${savedIds.length}\uAC1C`, 'mypage-saved'],
+    ['\u{1F4DA}', '\uB808\uC2DC\uD53C\uBD81', '5\uAC1C', 'mypage-recipebook'],
+    ['\u{1F6D2}', '\uC7A5\uBCF4\uAE30 \uAE30\uB85D', '12\uD68C', 'mypage-shopping'],
+    ['\u{1F371}', '\uB0A8\uC740\uC694\uB9AC', '\uAD00\uB9AC', 'leftovers'],
+    ['\u{1F37D}\uFE0F', '\uB2E4\uBA39\uC740 \uAE30\uB85D', '\uD788\uC2A4\uD1A0\uB9AC', 'ate-list'],
+    ['\u2699\uFE0F', '\uD658\uACBD\uC124\uC815', null, 'settings'],
+    ['\u{1F464}', '\uACC4\uC815 \uC815\uBCF4', null, 'mypage-account'],
+    ['\u{1F514}', '\uC54C\uB9BC \uC124\uC815', null, 'mypage-notif'],
+    ['\u{1F4AC}', '\uB3C4\uC6C0\uB9D0 \u00B7 FAQ', null, 'mypage-help'],
+  ];
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 32, alignItems: 'start' }}>
       <aside style={{
@@ -2586,13 +2597,19 @@ function DesktopMyPage({ savedIds, onOpenRecipe }) {
             </div>
           ))}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {['알림 설정','계정 정보','도움말','로그아웃'].map(m => (
-            <button key={m} style={{
-              padding: '10px 12px', background: 'none', border: 'none',
-              cursor: 'pointer', textAlign: 'left', borderRadius: 6,
-              fontSize: 13, color: T.text2, fontWeight: 500,
-            }}>{m}</button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {menuItems.map(([emoji, label, detail, page], i, arr) => (
+            <div key={label} onClick={() => page && onGoPage && onGoPage(page)} style={{
+              display: 'flex', alignItems: 'center', padding: '10px 8px',
+              borderTop: i > 0 ? `1px solid ${T.surfaceSubtle}` : 'none',
+              cursor: 'pointer', borderRadius: i === 0 ? '6px 6px 0 0' : i === arr.length - 1 ? '0 0 6px 6px' : 0,
+              textAlign: 'left',
+            }}>
+              <div style={{ fontSize: 16, width: 26, flexShrink: 0 }}>{emoji}</div>
+              <div style={{ flex: 1, fontSize: 13, color: T.ink, fontWeight: 500 }}>{label}</div>
+              {detail && <div style={{ fontSize: 12, color: T.text3, marginRight: 4 }}>{detail}</div>}
+              <div style={{ fontSize: 12, color: T.text4 }}>›</div>
+            </div>
           ))}
         </div>
       </aside>
@@ -8122,7 +8139,7 @@ function App() {
   } else if (route.tab === 'pantry') {
     desktopContent = <DesktopPantry pantry={pantry} setPantry={setPantry} />;
   } else if (route.tab === 'mypage') {
-    desktopContent = <DesktopMyPage savedIds={savedIds} onOpenRecipe={openRecipe} />;
+    desktopContent = <DesktopMyPage savedIds={savedIds} onOpenRecipe={openRecipe} onGoPage={goPage} />;
   }
 
   // Wave 1.5 — desktop variants for selected route.page values (P0 + P1.1)

@@ -423,7 +423,7 @@ function App() {
   } else if (route.tab === 'pantry') {
     desktopContent = <DesktopPantry pantry={pantry} setPantry={setPantry} />;
   } else if (route.tab === 'mypage') {
-    desktopContent = <DesktopMyPage savedIds={savedIds} onOpenRecipe={openRecipe} />;
+    desktopContent = <DesktopMyPage savedIds={savedIds} onOpenRecipe={openRecipe} onGoPage={goPage} />;
   }
 
   // Wave 1.5 — desktop variants for selected route.page values (P0 + P1.1)
