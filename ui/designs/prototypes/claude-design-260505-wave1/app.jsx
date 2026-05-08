@@ -390,7 +390,8 @@ function App() {
       onOpenPlannerAdd={() => setPlannerAdd({ recipeId: route.detail })}
       onOpenSave={() => setSaveModal({ recipeId: route.detail })}
       saved={savedIds.includes(route.detail)}
-      toggleSaved={() => toggleSaved(route.detail)} />;
+      onStartCook={() => showToast('요리하기 — 플래너에 추가 후 이용할 수 있어요')} />;
+
 
 
   } else if (route.tab === 'home') {
@@ -449,7 +450,7 @@ function App() {
         onOpenPlannerAdd={() => setPlannerAdd({ recipeId: route.detail })}
         onOpenSave={() => setSaveModal({ recipeId: route.detail })}
         saved={savedIds.includes(route.detail)}
-        toggleSaved={() => toggleSaved(route.detail)}
+        onStartCook={() => showToast('요리하기 — 플래너에 추가 후 이용할 수 있어요')}
       />
     );
   } else if (route.tab === 'home') {
@@ -777,7 +778,8 @@ function App() {
       }}>
         <div style={{ height: '100dvh', position: 'relative', overflow: 'hidden', background: '#fff' }}>
           <div style={{ height: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>{content}</div>
-          {!route.detail && <BottomTab tab={route.tab} onTab={goTab} />}
+          {/* vNext S3 — BottomTab을 detail에서도 유지 */}
+          <BottomTab tab={route.tab} onTab={goTab} />
           {plannerAdd && (
             <PlannerAddPopup
               recipeId={plannerAdd.recipeId} planner={planner}
@@ -898,7 +900,8 @@ function App() {
             </div>
             <div style={{ height: 830, position: 'relative', overflow: 'hidden', background: '#fff' }}>
               <div style={{ height: '100%', overflowY: 'auto' }}>{content}</div>
-              {!route.detail && <BottomTab tab={route.tab} onTab={goTab} />}
+              {/* vNext S3 — BottomTab을 detail에서도 유지 */}
+              <BottomTab tab={route.tab} onTab={goTab} />
               {plannerAdd && (
                 <PlannerAddPopup
                   recipeId={plannerAdd.recipeId} planner={planner}
@@ -990,7 +993,8 @@ function App() {
           <IOSDevice>
             <div style={{ height: '100%', position: 'relative', overflow: 'hidden', background: '#fff' }}>
               <div style={{ height: '100%', overflowY: 'auto' }}>{content}</div>
-              {!route.detail && <BottomTab tab={route.tab} onTab={goTab} />}
+              {/* vNext S3 — BottomTab을 detail에서도 유지 */}
+              <BottomTab tab={route.tab} onTab={goTab} />
               {plannerAdd && (
                 <PlannerAddPopup
                   recipeId={plannerAdd.recipeId} planner={planner}

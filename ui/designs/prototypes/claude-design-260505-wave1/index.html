@@ -1189,7 +1189,7 @@ window.HomeScreen = HomeScreen;
 // Recipe Detail screen
 const { useState: useState_RD } = React;
 
-function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, toggleSaved }) {
+function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, onStartCook }) {
   const recipe = RECIPES.find((r) => r.id === recipeId);
   const [tab, setTab] = useState_RD('ingredients');
   const [servings, setServings] = useState_RD(recipe.servings);
@@ -1205,7 +1205,7 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, t
   });
 
   return (
-    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 120 }}>
+    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 160 }}>
       {/* Hero image */}
       <div style={{
         position: 'relative', width: '100%', aspectRatio: '4/3',
@@ -1225,7 +1225,7 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, t
             border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>{Icon.heart(liked)}</button>
-          <button onClick={toggleSaved} style={{
+          <button onClick={onOpenSave} style={{
             width: 36, height: 36, borderRadius: 18, background: 'rgba(255,255,255,0.92)',
             border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center'
@@ -1241,13 +1241,22 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, t
         <div style={{ fontSize: 24, fontWeight: 700, color: T.ink, marginBottom: 10 }}>
           {recipe.name}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: T.text2, fontSize: 13 }}>
-          {Icon.star()} <span style={{ color: T.ink, fontWeight: 600 }}>{recipe.rating}</span>
-          <span style={{ color: T.text3 }}>({recipe.saves.toLocaleString()})</span>
-          <span style={{ color: T.text4 }}>·</span>
+        {/* vNext S3 — 별점 대체: MetricRow 행동 메트릭 */}
+        {/* CONTRACT_CHECK: 메트릭 4종 데이터 소스·집계 단위 확정 필요 — vNext에서는 UI shape만 */}
+        <MetricRow
+          likes={Math.round(recipe.saves * 0.6)}
+          saves={recipe.saves}
+          cooks={Math.round(recipe.saves * 0.3)}
+          views={recipe.saves * 4}
+        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: T.text3, fontSize: 12, marginTop: 8 }}>
           {Icon.clock()} {recipe.minutes}분
-          <span style={{ color: T.text4 }}>·</span>
+          <span>·</span>
           {Icon.fire()} {recipe.kcal}kcal
+          {(recipe.tags || []).length > 0 && <>
+            <span>·</span>
+            {recipe.tags.join(' · ')}
+          </>}
         </div>
       </div>
 
@@ -1294,24 +1303,18 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, t
             </div>
           </div>
 
-          {Object.entries(grouped).map(([section, items]) =>
-        <div key={section} style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 13, color: T.text3, fontWeight: 600, marginBottom: 8 }}>
-                {section}
-              </div>
-              {items.map((i, idx) =>
+          {/* vNext S3 — 카테고리 헤더 제거, 정렬 순서만 유지 */}
+          {Object.entries(grouped).flatMap(([, items]) => items).map((i, idx, all) =>
           <div key={idx} style={{
             display: 'flex', justifyContent: 'space-between', padding: '12px 0',
-            borderBottom: idx < items.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none'
+            borderBottom: idx < all.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none'
           }}>
-                  <span style={{ fontSize: 15, color: T.ink, fontWeight: 500 }}>{i.name}</span>
-                  <span style={{ fontSize: 14, color: T.text2 }}>
-                    {scaleQty(i.qty, scale)}
-                  </span>
-                </div>
-          )}
+              <span style={{ fontSize: 15, color: T.ink, fontWeight: 500 }}>{i.name}</span>
+              <span style={{ fontSize: 14, color: T.text2 }}>
+                {scaleQty(i.qty, scale)}
+              </span>
             </div>
-        )}
+          )}
         </div>
       }
 
@@ -1339,7 +1342,8 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, t
                 }}>{c.label}</span>
                   <span style={{ color: T.text3, fontSize: 12 }}>{s.minutes}분</span>
                 </div>
-                <div style={{ fontSize: 14, color: T.text2, lineHeight: 1.57, paddingLeft: 36 }}>
+                {/* vNext S3 — 조리법 폰트 키움 14→16 */}
+                <div style={{ fontSize: 16, color: T.text2, lineHeight: 1.6, paddingLeft: 36 }}>
                   {s.body}
                 </div>
               </div>);
@@ -1368,9 +1372,8 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, t
               fontSize: 12, fontWeight: 700, color: T.mintDeep
             }}>{rv.u[0]}</div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>{rv.u}</div>
-                <div style={{ display: 'flex', gap: 1 }}>
-                  {Array.from({ length: rv.r }).map((_, k) => <span key={k}>{Icon.star()}</span>)}
-                </div>
+                {/* vNext S3 — 별점 제거, 리뷰 날짜/좋아요로 대체 */}
+                <div style={{ fontSize: 11, color: T.text3 }}>2일 전</div>
               </div>
               <div style={{ fontSize: 14, color: T.text2, lineHeight: 1.5 }}>{rv.t}</div>
             </div>
@@ -1378,18 +1381,18 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, t
         </div>
       }
 
-      {/* Bottom CTA bar */}
+      {/* vNext S3 — 하단 CTA: 저장 버튼 제거(이미지 옆 북마크로 대체), 2버튼 레이아웃 */}
       <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20,
-        background: '#fff', padding: '12px 16px 32px',
+        position: 'absolute', bottom: 56, left: 0, right: 0, zIndex: 20,
+        background: '#fff', padding: '12px 16px 12px',
         borderTop: `0.5px solid ${T.border}`,
         display: 'flex', gap: 8
       }}>
-        <Button variant="secondary" size="md" onClick={onOpenSave} style={{ flex: 1 }}>
-          저장
-        </Button>
-        <Button variant="primary" size="md" onClick={onOpenPlannerAdd} style={{ flex: 2 }}>
+        <Button variant="secondary" size="md" onClick={onOpenPlannerAdd} style={{ flex: 1 }}>
           플래너에 추가
+        </Button>
+        <Button variant="primary" size="md" onClick={onStartCook} style={{ flex: 1 }}>
+          요리하기
         </Button>
       </div>
     </div>);
@@ -1913,8 +1916,9 @@ function PlannerAddPopup({ recipeId, onClose, onConfirm, planner }) {
 }
 
 function SavePopup({ recipeId, onClose, onConfirm, saved }) {
-  const recipe = RECIPES.find((r) => r.id === recipeId);
   const [folder, setFolder] = React.useState('기본 폴더');
+  const [creating, setCreating] = React.useState(false);
+  const [newName, setNewName] = React.useState('');
   const folders = ['기본 폴더', '주말에 해먹기', '주중 간단식', '손님 오는 날'];
 
   return (
@@ -1923,25 +1927,13 @@ function SavePopup({ recipeId, onClose, onConfirm, saved }) {
         저장
       </Button>
     }>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12, padding: 12,
-        background: '#fff', borderRadius: 12, marginBottom: 16, border: `1px solid ${T.border}`
-      }}>
-        <div style={{
-          width: 48, height: 48, borderRadius: 8, background: recipe.bg,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26
-        }}>{recipe.emoji}</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>{recipe.name}</div>
-          <div style={{ fontSize: 12, color: T.text3 }}>{recipe.theme}</div>
-        </div>
-      </div>
-      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>폴더 선택</div>
+      {/* vNext S3 — 레시피 정보 프리뷰 섹션 제거 */}
+      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>레시피북 선택</div>
       <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${T.border}` }}>
         {folders.map((f, i) =>
         <div key={f} onClick={() => setFolder(f)} style={{
           display: 'flex', alignItems: 'center', padding: '12px 16px', cursor: 'pointer',
-          borderBottom: i < folders.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none'
+          borderBottom: `1px solid ${T.surfaceSubtle}`
         }}>
             <div style={{
             width: 18, height: 18, borderRadius: 9,
@@ -1951,6 +1943,34 @@ function SavePopup({ recipeId, onClose, onConfirm, saved }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>{folder === f && <div style={{ width: 6, height: 6, borderRadius: 3, background: '#fff' }} />}</div>
             <div style={{ flex: 1, fontSize: 14, color: T.ink }}>{f}</div>
+          </div>
+        )}
+        {/* vNext S3 — 새 레시피북 만들기 인라인 UI */}
+        {/* CONTRACT_CHECK: 레시피북 생성 API (POST /recipe-books) 트랜잭션 위치 확정 필요 — vNext에서는 UI shape만 */}
+        {!creating ? (
+          <div onClick={() => setCreating(true)} style={{
+            display: 'flex', alignItems: 'center', padding: '12px 16px', cursor: 'pointer',
+            color: T.mint, fontSize: 14, fontWeight: 600, gap: 8
+          }}>
+            <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> 새 레시피북 만들기
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', gap: 8 }}>
+            <input
+              autoFocus
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              placeholder="레시피북 이름"
+              style={{
+                flex: 1, padding: '8px 10px', border: `1px solid ${T.mint}`,
+                borderRadius: 8, fontSize: 14, outline: 'none', color: T.ink,
+                fontFamily: T.fontUI
+              }}
+            />
+            <button onClick={() => { if (newName.trim()) { setFolder(newName.trim()); setCreating(false); setNewName(''); } }} style={{
+              background: T.mint, color: '#fff', border: 'none', borderRadius: 8,
+              padding: '8px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer'
+            }}>추가</button>
           </div>
         )}
       </div>
@@ -2512,7 +2532,8 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
   );
 }
 
-function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, toggleSaved }) {
+// vNext S3 — DesktopRecipeDetail: 별점→MetricRow, 카테고리 헤더 제거, 조리법 폰트 키움, 우측 CTA 카드 정리
+function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, onStartCook }) {
   const r = RECIPES.find(x => x.id === recipeId);
   const [servings, setServings] = dUseState(r.servings);
   const [tab, setTab] = dUseState('ingredients');
@@ -2531,26 +2552,38 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
           <div style={{
             width: '100%', aspectRatio: '16/9', background: r.bg, borderRadius: 16,
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 140,
-            marginBottom: 20,
-          }}>{r.emoji}</div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: T.ink, margin: 0 }}>{r.name}</h1>
-            <button onClick={toggleSaved} style={{
-              background: 'none', border: 'none', cursor: 'pointer', display: 'flex',
-            }}>{Icon.heart(saved)}</button>
+            marginBottom: 20, position: 'relative',
+          }}>
+            {r.emoji}
+            {/* vNext S3 — 북마크 토글을 히어로 이미지 위에 유지 */}
+            <button onClick={onOpenSave} style={{
+              position: 'absolute', top: 16, right: 16,
+              width: 40, height: 40, borderRadius: 20, background: 'rgba(255,255,255,0.92)',
+              border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>{Icon.bookmark(saved)}</button>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: T.text2, fontSize: 14, marginBottom: 24, flexWrap: 'wrap' }}>
-            {Icon.star()} <span style={{ fontWeight: 700, color: T.ink }}>{r.rating}</span>
-            <span>({r.saves.toLocaleString()})</span>
-            <span>·</span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: T.ink, margin: 0 }}>{r.name}</h1>
+          </div>
+          {/* vNext S3 — 별점 대체: MetricRow 행동 메트릭 */}
+          {/* CONTRACT_CHECK: 메트릭 4종 데이터 소스·집계 단위 확정 필요 — vNext에서는 UI shape만 */}
+          <MetricRow
+            likes={Math.round(r.saves * 0.6)}
+            saves={r.saves}
+            cooks={Math.round(r.saves * 0.3)}
+            views={r.saves * 4}
+            style={{ marginBottom: 8 }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: T.text3, fontSize: 13, marginBottom: 24, flexWrap: 'wrap' }}>
             {Icon.clock()} {r.minutes}분
             <span>·</span>
             {(r.tags || []).join(' · ')}
           </div>
 
           <div style={{ display: 'flex', gap: 24, borderBottom: `1px solid ${T.border}`, marginBottom: 20 }}>
-            {[['ingredients','재료'],['cook','조리법'],['reviews','리뷰 '+r.saves]].map(([k,l]) => (
+            {[['ingredients','재료'],['cook','조리법'],['reviews','리뷰']].map(([k,l]) => (
               <button key={k} onClick={() => setTab(k)} style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 padding: '12px 0', fontSize: 14, fontWeight: 700,
@@ -2561,6 +2594,7 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
             ))}
           </div>
 
+          {/* vNext S3 — 재료 탭: 카테고리 헤더 제거, 정렬 순서 유지, 수량 스케일링 보존 */}
           {tab === 'ingredients' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
               {(r.ingredients || []).map((ing, i) => (
@@ -2604,7 +2638,8 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
                         }}>{m.label}</span>
                         {s.time && <span style={{ fontSize: 12, color: T.text3 }}>{s.time}</span>}
                       </div>
-                      <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.6 }}>{s.text}</div>
+                      {/* vNext S3 — 조리법 폰트 키움 14→16 (데스크톱 base 16 기준 +2) */}
+                      <div style={{ fontSize: 16, color: T.ink, lineHeight: 1.6 }}>{s.text}</div>
                     </div>
                   </div>
                 );
@@ -2614,11 +2649,12 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
 
           {tab === 'reviews' && (
             <div style={{ color: T.text3, padding: 40, textAlign: 'center', fontSize: 14 }}>
-              리뷰 {r.saves.toLocaleString()}개 — 데모에서는 비활성
+              리뷰 — 데모에서는 비활성
             </div>
           )}
         </div>
 
+        {/* vNext S3 — 우측 sticky 카드: 인분 조절 + 플래너에 추가 + 요리하기 (저장은 히어로 북마크로 이동) */}
         <aside style={{ position: 'sticky', top: 88 }}>
           <div style={{
             background: '#fff', borderRadius: 12, padding: 20,
@@ -2635,7 +2671,7 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <Button variant="primary" full onClick={onOpenPlannerAdd}>플래너에 추가</Button>
-              <Button variant="secondary" full onClick={onOpenSave}>{saved ? '저장 해제' : '저장하기'}</Button>
+              <Button variant="secondary" full onClick={onStartCook}>요리하기</Button>
             </div>
           </div>
 
@@ -2643,7 +2679,7 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
             marginTop: 16, padding: 16, background: T.mintSoft,
             borderRadius: 12, fontSize: 12, color: T.mintDeep, lineHeight: 1.5,
           }}>
-            💡 같은 재료로 <b style={{ fontWeight: 700 }}>3개 레시피</b>를 더 만들 수 있어요
+            같은 재료로 <b style={{ fontWeight: 700 }}>3개 레시피</b>를 더 만들 수 있어요
           </div>
         </aside>
       </div>
@@ -8226,7 +8262,8 @@ function App() {
       onOpenPlannerAdd={() => setPlannerAdd({ recipeId: route.detail })}
       onOpenSave={() => setSaveModal({ recipeId: route.detail })}
       saved={savedIds.includes(route.detail)}
-      toggleSaved={() => toggleSaved(route.detail)} />;
+      onStartCook={() => showToast('요리하기 — 플래너에 추가 후 이용할 수 있어요')} />;
+
 
 
   } else if (route.tab === 'home') {
@@ -8285,7 +8322,7 @@ function App() {
         onOpenPlannerAdd={() => setPlannerAdd({ recipeId: route.detail })}
         onOpenSave={() => setSaveModal({ recipeId: route.detail })}
         saved={savedIds.includes(route.detail)}
-        toggleSaved={() => toggleSaved(route.detail)}
+        onStartCook={() => showToast('요리하기 — 플래너에 추가 후 이용할 수 있어요')}
       />
     );
   } else if (route.tab === 'home') {
@@ -8613,7 +8650,8 @@ function App() {
       }}>
         <div style={{ height: '100dvh', position: 'relative', overflow: 'hidden', background: '#fff' }}>
           <div style={{ height: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>{content}</div>
-          {!route.detail && <BottomTab tab={route.tab} onTab={goTab} />}
+          {/* vNext S3 — BottomTab을 detail에서도 유지 */}
+          <BottomTab tab={route.tab} onTab={goTab} />
           {plannerAdd && (
             <PlannerAddPopup
               recipeId={plannerAdd.recipeId} planner={planner}
@@ -8734,7 +8772,8 @@ function App() {
             </div>
             <div style={{ height: 830, position: 'relative', overflow: 'hidden', background: '#fff' }}>
               <div style={{ height: '100%', overflowY: 'auto' }}>{content}</div>
-              {!route.detail && <BottomTab tab={route.tab} onTab={goTab} />}
+              {/* vNext S3 — BottomTab을 detail에서도 유지 */}
+              <BottomTab tab={route.tab} onTab={goTab} />
               {plannerAdd && (
                 <PlannerAddPopup
                   recipeId={plannerAdd.recipeId} planner={planner}
@@ -8826,7 +8865,8 @@ function App() {
           <IOSDevice>
             <div style={{ height: '100%', position: 'relative', overflow: 'hidden', background: '#fff' }}>
               <div style={{ height: '100%', overflowY: 'auto' }}>{content}</div>
-              {!route.detail && <BottomTab tab={route.tab} onTab={goTab} />}
+              {/* vNext S3 — BottomTab을 detail에서도 유지 */}
+              <BottomTab tab={route.tab} onTab={goTab} />
               {plannerAdd && (
                 <PlannerAddPopup
                   recipeId={plannerAdd.recipeId} planner={planner}
