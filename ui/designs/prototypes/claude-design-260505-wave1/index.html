@@ -3295,8 +3295,11 @@ function DesktopMenuAddScreen({ presetDate, presetSlot, planner, pantry, onBack,
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
                       <div style={{ width: 40, height: 40, borderRadius: 10, background: T.mintSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{b.emoji}</div>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{b.name}</div>
-                        <div style={{ fontSize: 11, color: T.text3 }}>{b.recipeIds.length}개</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginBottom: 3 }}>{b.name}</div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: T.mintDeep }}>{b.recipeIds.length}개 레시피</span>
+                          <span style={{ fontSize: 11, color: T.text3 }}>{b.kind === 'saved' ? '저장' : '내 책'}</span>
+                        </div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -4008,11 +4011,6 @@ const dskMealActionBtn = {
 
 // Desktop: MEAL_SCREEN (P1.2)
 function DesktopMealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, onStartCook, onCreateShopping, onChangeStatus, onRemove, onChangeServings }) {
-  const statusFlow = [
-    { k: 'registered', l: '등록됨',       emoji: '📝' },
-    { k: 'shopped',    l: '장보기 완료',   emoji: '🛒' },
-    { k: 'cooked',     l: '요리 완료',     emoji: '🍳' },
-  ];
   const meals = mealItems(planner[date]?.[slot]);
   const [askDelete, setAskDelete] = dUseState(null);
   if (meals.length === 0) {
@@ -4024,141 +4022,73 @@ function DesktopMealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, on
     );
   }
 
-  if (meals.length > 1) {
-    const totalServings = meals.reduce((sum, meal) => sum + (meal.servings || 1), 0);
+  /* ─── Unified desktop card renderer ─── */
+  const DskMealCard = ({ meal, mealIndex }) => {
+    const recipe = RECIPES.find(r => r.id === meal.recipeId);
+    if (!recipe) return null;
     return (
-      <div>
-        <button onClick={onBack} style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          color: T.text2, fontSize: 13, fontWeight: 600, marginBottom: 14,
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-        }}>{Icon.chevL(T.text2)} 플래너</button>
+      <div style={{
+        background: '#fff', borderRadius: 16, boxShadow: T.shadowDeep, overflow: 'hidden',
+        border: `1px solid ${T.border}`, position: 'relative',
+      }}>
+        {/* Trash icon — top-right */}
+        <button aria-label="삭제" onClick={() => setAskDelete({ index: mealIndex, recipe })} style={{
+          position: 'absolute', top: 14, right: 14, zIndex: 1,
+          width: 34, height: 34, borderRadius: 17, border: 'none',
+          background: T.surfaceFill, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>{Icon.trash(T.text3, 16)}</button>
 
-        <div style={{
-          background: '#fff', borderRadius: 18, boxShadow: T.shadowDeep, padding: 28, marginBottom: 22,
-          display: 'grid', gridTemplateColumns: '1fr 280px', gap: 24, alignItems: 'center',
-        }}>
-          <div>
-            <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 800, letterSpacing: 1, marginBottom: 6 }}>
-              MEAL GROUP · {date} {slot}
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
-              {slot}에 먹을 음식 {meals.length}개
-            </div>
-            <div style={{ fontSize: 13, color: T.text3, marginTop: 6 }}>
-              한 끼니 안에서 여러 레시피의 인분, 상태, 요리 시작을 각각 관리해요.
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Stat label="음식 수" value={meals.length + '개'} />
-            <Stat label="총 인분" value={totalServings + '인분'} color={T.mintDeep} />
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
-          {meals.map((meal, mealIndex) => {
-            const recipe = RECIPES.find(r => r.id === meal.recipeId);
-            if (!recipe) return null;
-            const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
-            const statusOrder = statusFlow.findIndex(x => x.k === meal.status);
-            return (
-              <div key={`${meal.recipeId}-${mealIndex}`} style={{
-                background: '#fff', borderRadius: 16, boxShadow: T.shadowDeep, overflow: 'hidden',
-                border: `1px solid ${T.border}`,
-              }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '112px 1fr', gap: 14, padding: 16 }}>
-                  <div style={{
-                    width: 112, height: 112, borderRadius: 14, background: recipe.bg,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 62,
-                  }}>{recipe.emoji}</div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 7 }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: m.text, background: m.bg, padding: '3px 7px', borderRadius: 4 }}>
-                        {m.label}
-                      </span>
-                      <StatusPill status={meal.status} />
-                    </div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand, marginBottom: 4 }}>
-                      {recipe.name}
-                    </div>
-                    <div style={{ fontSize: 12, color: T.text3 }}>
-                      {recipe.minutes}분 · {recipe.kcal}kcal · {meal.servings}인분
-                    </div>
-                    <button onClick={() => onOpenRecipe?.(recipe.id)} style={{
-                      marginTop: 10, padding: '7px 11px', borderRadius: 8, border: `1px solid ${T.border}`,
-                      background: '#fff', color: T.text2, fontSize: 11, fontWeight: 800, cursor: 'pointer',
-                    }}>전체 레시피 보기</button>
-                  </div>
-                </div>
-
-                <div style={{ padding: '0 16px 16px' }}>
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                    {statusFlow.map((s, i) => {
-                      const active = i <= statusOrder;
-                      return (
-                        <button key={s.k} onClick={() => onChangeStatus?.(date, slot, s.k, mealIndex)} style={{
-                          flex: 1, padding: '9px 6px', borderRadius: 10,
-                          border: active ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
-                          background: active ? T.mintSoft : '#fff', color: active ? T.mintDeep : T.text3,
-                          fontSize: 11, fontWeight: 800, cursor: 'pointer',
-                        }}>{s.emoji} {s.l}</button>
-                      );
-                    })}
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: T.surfaceFill, borderRadius: 12, padding: 12, marginBottom: 12 }}>
-                    <span style={{ fontSize: 12, color: T.text2, fontWeight: 800 }}>계획 인분</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <button onClick={() => onChangeServings?.(date, slot, Math.max(1, meal.servings - 1), mealIndex)} style={dskRoundBtn}>−</button>
-                      <span style={{ minWidth: 48, textAlign: 'center', fontSize: 16, fontWeight: 800, color: T.ink }}>{meal.servings}인분</span>
-                      <button onClick={() => onChangeServings?.(date, slot, Math.min(12, meal.servings + 1), mealIndex)} style={{ ...dskRoundBtn, background: T.mint, color: '#fff' }}>+</button>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                    {recipe.ingredients.slice(0, 6).map(ing => (
-                      <span key={ing.name} style={{ fontSize: 11, color: T.text2, background: T.surfaceFill, padding: '6px 9px', borderRadius: 9999 }}>
-                        {ing.name}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                    <button onClick={() => onCreateShopping?.(date, slot)} style={dskMealActionBtn}>🛒 장보기</button>
-                    <button onClick={() => onStartCook?.(date, slot, mealIndex)} style={{ ...dskMealActionBtn, background: T.mint, borderColor: T.mint, color: '#fff' }}>🍳 요리 시작</button>
-                    <button onClick={() => setAskDelete({ index: mealIndex, recipe })} style={{ ...dskMealActionBtn, color: T.red }}>삭제</button>
-                  </div>
-                </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '112px 1fr', gap: 14, padding: 16 }}>
+          <div style={{
+            width: 112, height: 112, borderRadius: 14, background: recipe.bg,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 62,
+          }}>{recipe.emoji}</div>
+          <div style={{ minWidth: 0, paddingRight: 30 }}>
+            <button onClick={() => onOpenRecipe?.(recipe.id)} style={{
+              background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left',
+            }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand, marginBottom: 4 }}>
+                {recipe.name}
               </div>
-            );
-          })}
+            </button>
+            <div style={{ fontSize: 12, color: T.text3 }}>
+              {recipe.minutes}분 · {recipe.kcal}kcal · {meal.servings}인분
+            </div>
+          </div>
         </div>
 
-        {askDelete && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
-            <ConfirmDialog title="이 음식을 삭제할까요?"
-              body={askDelete.recipe.name + ' (' + date + ' ' + slot + ') 가 식단에서 제거돼요.'}
-              destructive confirmLabel="삭제"
-              onClose={() => setAskDelete(null)}
-              onConfirm={() => { const idx = askDelete.index; setAskDelete(null); onRemove?.(date, slot, idx); }} />
+        <div style={{ padding: '0 16px 16px' }}>
+          {/* Servings stepper */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: T.surfaceFill, borderRadius: 12, padding: 12, marginBottom: 12 }}>
+            <span style={{ fontSize: 12, color: T.text2, fontWeight: 800 }}>계획 인분</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button onClick={() => onChangeServings?.(date, slot, Math.max(1, meal.servings - 1), mealIndex)} style={dskRoundBtn}>−</button>
+              <span style={{ minWidth: 48, textAlign: 'center', fontSize: 16, fontWeight: 800, color: T.ink }}>{meal.servings}인분</span>
+              <button onClick={() => onChangeServings?.(date, slot, Math.min(12, meal.servings + 1), mealIndex)} style={{ ...dskRoundBtn, background: T.mint, color: '#fff' }}>+</button>
+            </div>
           </div>
-        )}
-      </div>
-    );
-  }
 
-  const meal = meals[0];
-  const recipe = meal && RECIPES.find(r => r.id === meal.recipeId);
-  if (!recipe) {
-    return (
-      <div>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text2, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>{Icon.chevL(T.text2)} 돌아가기</button>
-        <div style={{ padding: 60, textAlign: 'center', color: T.text3 }}>끼니를 찾을 수 없어요</div>
+          {/* Ingredient chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+            {recipe.ingredients.slice(0, 6).map(ing => (
+              <span key={ing.name} style={{ fontSize: 11, color: T.text2, background: T.surfaceFill, padding: '6px 9px', borderRadius: 9999 }}>
+                {ing.name}
+              </span>
+            ))}
+          </div>
+
+          {/* Actions: 장보기 + 요리하기 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <button onClick={() => onCreateShopping?.(date, slot)} style={dskMealActionBtn}>장보기</button>
+            <button onClick={() => onStartCook?.(date, slot, mealIndex)} style={{ ...dskMealActionBtn, background: T.mint, borderColor: T.mint, color: '#fff' }}>요리하기</button>
+          </div>
+        </div>
       </div>
     );
-  }
-  const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
-  const statusOrder = statusFlow.findIndex(x => x.k === meal.status);
+  };
+
+  const totalServings = meals.reduce((sum, meal) => sum + (meal.servings || 1), 0);
 
   return (
     <div>
@@ -4168,143 +4098,36 @@ function DesktopMealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, on
         display: 'inline-flex', alignItems: 'center', gap: 6,
       }}>{Icon.chevL(T.text2)} 플래너</button>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 24, alignItems: 'start' }}>
-        <main style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Hero card */}
-          <div style={{
-            background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: T.shadowDeep,
-          }}>
-            <div style={{
-              aspectRatio: '16/8', background: recipe.bg,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 120, position: 'relative',
-            }}>
-              {recipe.emoji}
-              <div style={{
-                position: 'absolute', top: 14, left: 14,
-                background: 'rgba(255,255,255,0.92)', color: T.ink,
-                padding: '6px 12px', borderRadius: 9999, fontSize: 11, fontWeight: 800,
-              }}>{date} · {slot}</div>
-            </div>
-            <div style={{ padding: '20px 24px 22px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: m.text, background: m.bg, padding: '4px 10px', borderRadius: 9999 }}>
-                  {m.label}
-                </span>
-                <StatusPill status={meal.status} />
-              </div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand, marginBottom: 6 }}>
-                {recipe.name}
-              </div>
-              <div style={{ fontSize: 13, color: T.text3 }}>
-                {recipe.minutes}분 · {recipe.kcal}kcal · 평점 {recipe.rating}
-              </div>
-              <button onClick={() => onOpenRecipe?.(recipe.id)} style={{
-                marginTop: 14, padding: '8px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
-                background: '#fff', color: T.text2, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-              }}>전체 레시피 보기 →</button>
-            </div>
+      <div style={{
+        background: '#fff', borderRadius: 18, boxShadow: T.shadowDeep, padding: 28, marginBottom: 22,
+        display: 'grid', gridTemplateColumns: '1fr 280px', gap: 24, alignItems: 'center',
+      }}>
+        <div>
+          <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 800, letterSpacing: 1, marginBottom: 6 }}>
+            {date} · {slot}
           </div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
+            {meals.length > 1 ? `${slot}에 먹을 음식 ${meals.length}개` : (RECIPES.find(r => r.id === meals[0]?.recipeId)?.name || slot)}
+          </div>
+          <div style={{ fontSize: 13, color: T.text3, marginTop: 6 }}>
+            {meals.length > 1 ? '한 끼니 안에서 여러 레시피의 인분과 요리를 관리해요.' : '이 끼니의 인분과 재료를 확인하세요.'}
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <Stat label="음식 수" value={meals.length + '개'} />
+          <Stat label="총 인분" value={totalServings + '인분'} color={T.mintDeep} />
+        </div>
+      </div>
 
-          {/* Status timeline */}
-          <div style={{
-            background: '#fff', borderRadius: 16, padding: 22, boxShadow: T.shadowDeep,
-          }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 14 }}>진행 상태</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {statusFlow.map((s, i) => {
-                const active = i <= statusOrder;
-                return (
-                  <button key={s.k} onClick={() => onChangeStatus?.(date, slot, s.k)} style={{
-                    flex: 1, padding: '14px 10px', borderRadius: 12,
-                    border: active ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
-                    background: active ? T.mintSoft : '#fff', cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                  }}>
-                    <span style={{ fontSize: 24 }}>{s.emoji}</span>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: active ? T.mintDeep : T.text3 }}>{s.l}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <div style={{ fontSize: 11, color: T.text3, marginTop: 12, lineHeight: 1.5 }}>
-              ⓘ 상태를 클릭하면 즉시 적용돼요. ‘요리 완료’는 보통 요리 모드에서 자동 처리되지만 수동으로도 가능합니다.
-            </div>
-          </div>
-
-          {/* Ingredients */}
-          <div style={{ background: '#fff', borderRadius: 16, padding: 22, boxShadow: T.shadowDeep }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 12 }}>
-              필요 재료 <span style={{ color: T.text3, fontWeight: 600, fontSize: 12 }}>· {recipe.ingredients.length}개</span>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {recipe.ingredients.map(ing => (
-                <span key={ing.name} style={{
-                  fontSize: 12, color: T.text2, background: T.surfaceFill,
-                  padding: '7px 12px', borderRadius: 9999, fontWeight: 600,
-                }}>{ing.name} <b style={{ color: T.text3, fontWeight: 600 }}>{ing.qty}</b></span>
-              ))}
-            </div>
-          </div>
-        </main>
-
-        <aside style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 24 }}>
-          {/* Servings */}
-          <div style={{ background: '#fff', borderRadius: 14, padding: 18, boxShadow: T.shadowDeep }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 10 }}>인분</div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <button onClick={() => onChangeServings?.(date, slot, Math.max(1, meal.servings - 1))} style={{
-                width: 38, height: 38, borderRadius: 19, border: 'none',
-                background: T.surfaceFill, fontSize: 18, fontWeight: 800, cursor: 'pointer',
-              }}>−</button>
-              <div style={{ fontSize: 28, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
-                {meal.servings}<span style={{ fontSize: 13, color: T.text3, marginLeft: 4 }}>인분</span>
-              </div>
-              <button onClick={() => onChangeServings?.(date, slot, Math.min(12, meal.servings + 1))} style={{
-                width: 38, height: 38, borderRadius: 19, border: 'none',
-                background: T.mint, color: '#fff', fontSize: 18, fontWeight: 800, cursor: 'pointer',
-              }}>+</button>
-            </div>
-            {meal.status !== 'registered' && (
-              <div style={{
-                fontSize: 11, color: T.text3, marginTop: 10, padding: '8px 10px',
-                background: T.surfaceFill, borderRadius: 8, lineHeight: 1.5,
-              }}>
-                ⓘ 이 식사는 장보기/요리 흐름에 들어가 있어요. 인분 변경 시 영향을 안내하는 confirm이 뜹니다.
-              </div>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div style={{ background: '#fff', borderRadius: 14, padding: 18, boxShadow: T.shadowDeep }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 10 }}>다음 단계</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button onClick={() => onStartCook?.(date, slot)} style={{
-                padding: '14px 16px', borderRadius: 10, border: 'none',
-                background: T.mint, color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              }}>🍳 요리 시작</button>
-              <button onClick={() => onCreateShopping?.(date, slot)} style={{
-                padding: '12px 16px', borderRadius: 10, border: `1px solid ${T.border}`,
-                background: '#fff', color: T.text1, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              }}>🛒 장보기 목록 만들기</button>
-            </div>
-          </div>
-
-          {/* Danger */}
-          <div style={{ background: '#fff', borderRadius: 14, padding: 18, boxShadow: T.shadowDeep }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 10 }}>이 끼니 삭제</div>
-            <button onClick={() => setAskDelete({ index: 0, recipe })} style={{
-              width: '100%', padding: '11px 0', borderRadius: 10, border: `1px solid ${T.border}`,
-              background: '#fff', color: T.red, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            }}>식단에서 빼기</button>
-          </div>
-        </aside>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+        {meals.map((meal, mealIndex) => (
+          <DskMealCard key={`${meal.recipeId}-${mealIndex}`} meal={meal} mealIndex={mealIndex} />
+        ))}
       </div>
 
       {askDelete && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
-          <ConfirmDialog title="이 끼니를 삭제할까요?"
+          <ConfirmDialog title="이 음식을 삭제할까요?"
             body={askDelete.recipe.name + ' (' + date + ' ' + slot + ') 가 식단에서 제거돼요.'}
             destructive confirmLabel="삭제"
             onClose={() => setAskDelete(null)}
@@ -4592,15 +4415,16 @@ function DesktopManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCre
   const [emoji, setEmoji]       = dUseState('🍽️');
   const [minutes, setMinutes]   = dUseState(20);
   const [servings, setServings] = dUseState(2);
-  const [ingredients, setIngredients] = dUseState([{ name: '', qty: '' }]);
+  const [ingredients, setIngredients] = dUseState([]);
   const [steps, setSteps]       = dUseState(['']);
-  const valid = name.trim().length > 0 && ingredients.some(i => i.name.trim());
+  const [ingModal, setIngModal] = dUseState(false);
+  const valid = name.trim().length > 0 && ingredients.length > 0;
   const slotLabel = presetDate && presetSlot ? `${presetDate} ${presetSlot}` : '플래너 미선택';
   const submit = () => {
     const recipe = {
       id: 'r_user_' + Date.now(), name: name.trim(), emoji, minutes, servings,
       bg: T.mintSoft, rating: 5, saves: 0, kcal: 0,
-      ingredients: ingredients.filter(i => i.name.trim()).map(i => ({ name: i.name.trim(), qty: i.qty || '약간' })),
+      ingredients: ingredients.map(i => ({ name: i.name, qty: (i.amount || '') + (i.unit || 'g'), section: i.category || '직접 입력' })),
       steps: steps.filter(s => s.trim()).map(s => ({ text: s.trim(), kind: 'etc' })),
       tags: ['직접 등록'], theme: '집밥', method: 'prep',
     };
@@ -4658,17 +4482,33 @@ function DesktopManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCre
           <div style={{ background: '#fff', borderRadius: 14, padding: 22, boxShadow: T.shadowDeep }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: T.text2 }}>재료 ({ingredients.length})</div>
-              <button onClick={() => setIngredients([...ingredients, { name: '', qty: '' }])} style={dskAddBtn}>+ 재료 추가</button>
+              <button onClick={() => setIngModal(true)} style={dskAddBtn}>+ 재료 선택</button>
             </div>
-            {ingredients.map((it, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 32px', gap: 8, marginBottom: 8 }}>
-                <input value={it.name} onChange={e => { const n = [...ingredients]; n[i].name = e.target.value; setIngredients(n); }}
-                  placeholder="재료 이름" style={dskInputStyle} />
-                <input value={it.qty} onChange={e => { const n = [...ingredients]; n[i].qty = e.target.value; setIngredients(n); }}
-                  placeholder="수량 (예: 2개)" style={dskInputStyle} />
+            {ingredients.length === 0 ? (
+              <button onClick={() => setIngModal(true)} style={{
+                width: '100%', padding: 18, borderRadius: 12,
+                border: `1.5px dashed ${T.mint}`, background: T.mintSoft,
+                color: T.mintDeep, fontSize: 13, fontWeight: 800, cursor: 'pointer',
+              }}>재료를 검색해서 여러 개 선택하기</button>
+            ) : ingredients.map((it, i) => (
+              <div key={it.name} style={{ display: 'grid', gridTemplateColumns: '2fr 90px 104px 32px', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{it.name}</div>
+                <input type="number" inputMode="numeric" value={it.amount || ''}
+                  onChange={e => setIngredients(ingredients.map((x, j) => j === i ? { ...x, amount: e.target.value.replace(/[^0-9]/g, '') } : x))}
+                  placeholder="양" style={{ ...dskInputStyle, textAlign: 'center' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+                  {['g', 'ml'].map(unit => (
+                    <button key={unit} onClick={() => setIngredients(ingredients.map((x, j) => j === i ? { ...x, unit } : x))} style={{
+                      border: `1px solid ${it.unit === unit ? T.mint : T.border}`,
+                      background: it.unit === unit ? T.mintSoft : '#fff',
+                      color: it.unit === unit ? T.mintDeep : T.text2,
+                      borderRadius: 8, padding: '10px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer',
+                    }}>{unit}</button>
+                  ))}
+                </div>
                 <button onClick={() => setIngredients(ingredients.filter((_, j) => j !== i))} style={{
                   border: 'none', background: T.surfaceFill, borderRadius: 8, color: T.text3,
-                  fontSize: 16, cursor: 'pointer',
+                  fontSize: 16, cursor: 'pointer', height: 36,
                 }} title="삭제">×</button>
               </div>
             ))}
@@ -4716,6 +4556,10 @@ function DesktopManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCre
           </div>
         </aside>
       </div>
+      {ingModal && <IngredientPickerModal
+        selected={ingredients}
+        onConfirm={(picked) => { setIngredients(picked); setIngModal(false); }}
+        onClose={() => setIngModal(false)} />}
     </div>
   );
 }
@@ -5289,8 +5133,11 @@ function DesktopRecipeBookSelectorDialog({ slotLabel, onClose, onPick }) {
             }}>
               <div style={{ width: 44, height: 44, borderRadius: 10, background: T.mintSoft, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{b.emoji}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{b.name}</div>
-                <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{b.recipeIds.length}개 레시피</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: T.ink, marginBottom: 3 }}>{b.name}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: T.mintDeep }}>{b.recipeIds.length}개 레시피</span>
+                  <span style={{ fontSize: 11, color: T.text3 }}>{b.kind === 'saved' ? '저장' : '내 책'}</span>
+                </div>
               </div>
               {Icon.chevR(T.text4)}
             </button>
@@ -5938,224 +5785,115 @@ const mealActionBtn = {
   background: '#fff', color: T.text2, fontSize: 12, fontWeight: 800, cursor: 'pointer',
 };
 function MealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, onStartCook, onCreateShopping, onChangeStatus, onRemove, onChangeServings }) {
-  const statusFlow = [
-    { k: 'registered', l: '등록됨', emoji: '📝' },
-    { k: 'shopped', l: '장보기 완료', emoji: '🛒' },
-    { k: 'cooked', l: '요리 완료', emoji: '🍳' },
-  ];
   const meals = mealItems(planner[date]?.[slot]);
   const [askDelete, setAskDelete] = useState_X(null);
   if (meals.length === 0) return <div style={{ padding: 40 }}>끼니를 찾을 수 없어요</div>;
 
-  if (meals.length > 1) {
-    const totalServings = meals.reduce((sum, meal) => sum + (meal.servings || 1), 0);
+  /* ─── Unified card renderer ─── */
+  const MealCard = ({ meal, mealIndex }) => {
+    const recipe = RECIPES.find(r => r.id === meal.recipeId);
+    if (!recipe) return null;
     return (
-      <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 110 }}>
-        <AppBar title={`${slot} 음식 ${meals.length}개`} left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>} />
+      <div style={{
+        background: '#fff', border: `1px solid ${T.border}`, borderRadius: 14,
+        overflow: 'hidden', boxShadow: T.shadowNatural, position: 'relative',
+      }}>
+        {/* Trash icon — top-right */}
+        <button aria-label="삭제" onClick={() => setAskDelete({ index: mealIndex, recipe })} style={{
+          position: 'absolute', top: 12, right: 12, zIndex: 1,
+          width: 32, height: 32, borderRadius: 16, border: 'none',
+          background: T.surfaceFill, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>{Icon.trash(T.text3, 16)}</button>
 
-        <div style={{ background: '#fff', padding: 20, borderBottom: `1px solid ${T.border}` }}>
-          <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 800, marginBottom: 4 }}>
-            {date} · {slot}
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
-            한 끼에 여러 음식을 같이 먹어요
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: T.text2, background: T.surfaceFill, padding: '6px 10px', borderRadius: 9999 }}>
-              {meals.length}개 음식
-            </span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: T.text2, background: T.surfaceFill, padding: '6px 10px', borderRadius: 9999 }}>
-              총 {totalServings}인분 계획
-            </span>
-          </div>
-        </div>
-
-        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {meals.map((meal, mealIndex) => {
-            const recipe = RECIPES.find(r => r.id === meal.recipeId);
-            if (!recipe) return null;
-            const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
-            const order = statusFlow.findIndex(x => x.k === meal.status);
-            return (
-              <div key={`${meal.recipeId}-${mealIndex}`} style={{
-                background: '#fff', border: `1px solid ${T.border}`, borderRadius: 14,
-                overflow: 'hidden', boxShadow: T.shadowNatural,
-              }}>
-                <div style={{ display: 'flex', gap: 12, padding: 14 }}>
-                  <div style={{
-                    width: 76, height: 76, borderRadius: 12, background: recipe.bg,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40,
-                    flexShrink: 0,
-                  }}>{recipe.emoji}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 5, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: m.text, background: m.bg, padding: '3px 7px', borderRadius: 5 }}>
-                        {m.label}
-                      </span>
-                      <StatusPill status={meal.status} />
-                    </div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 3 }}>
-                      {recipe.name}
-                    </div>
-                    <div style={{ fontSize: 12, color: T.text3 }}>
-                      {recipe.minutes}분 · {recipe.kcal}kcal · {meal.servings}인분
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ padding: '0 14px 14px' }}>
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                    {statusFlow.map((s, i) => {
-                      const active = i <= order;
-                      return (
-                        <button key={s.k} onClick={() => onChangeStatus(date, slot, s.k, mealIndex)} style={{
-                          flex: 1, padding: '8px 4px', borderRadius: 9,
-                          border: active ? `1px solid ${T.mint}` : `1px solid ${T.border}`,
-                          background: active ? T.mintSoft : '#fff', color: active ? T.mintDeep : T.text3,
-                          fontSize: 10, fontWeight: 800, cursor: 'pointer',
-                        }}>{s.emoji} {s.l}</button>
-                      );
-                    })}
-                  </div>
-
-                  <div style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: 10, background: T.surfaceFill, borderRadius: 10, marginBottom: 10,
-                  }}>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: T.text2 }}>계획 인분</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <button onClick={() => onChangeServings(date, slot, Math.max(1, meal.servings - 1), mealIndex)} style={servingMiniBtn}>−</button>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: T.ink, minWidth: 42, textAlign: 'center' }}>{meal.servings}인분</span>
-                      <button onClick={() => onChangeServings(date, slot, Math.min(12, meal.servings + 1), mealIndex)} style={{ ...servingMiniBtn, background: T.mint, color: '#fff' }}>+</button>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 12 }}>
-                    {recipe.ingredients.slice(0, 5).map(ing => (
-                      <span key={ing.name} style={{ fontSize: 11, color: T.text2, background: T.surfaceFill, padding: '5px 8px', borderRadius: 9999 }}>
-                        {ing.name}
-                      </span>
-                    ))}
-                    {recipe.ingredients.length > 5 && (
-                      <span style={{ fontSize: 11, color: T.text3, padding: '5px 2px' }}>+{recipe.ingredients.length - 5}</span>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <button onClick={() => onOpenRecipe(recipe.id)} style={mealActionBtn}>레시피 보기</button>
-                    <button onClick={() => onStartCook(date, slot, mealIndex)} style={{ ...mealActionBtn, background: T.mint, borderColor: T.mint, color: '#fff' }}>🍳 요리</button>
-                    <button onClick={() => onCreateShopping(date, slot)} style={mealActionBtn}>🛒 장보기</button>
-                    <button onClick={() => setAskDelete({ index: mealIndex, recipe })} style={{ ...mealActionBtn, color: T.red }}>삭제</button>
-                  </div>
-                </div>
+        <div style={{ display: 'flex', gap: 12, padding: 14 }}>
+          <div style={{
+            width: 76, height: 76, borderRadius: 12, background: recipe.bg,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40,
+            flexShrink: 0,
+          }}>{recipe.emoji}</div>
+          <div style={{ flex: 1, minWidth: 0, paddingRight: 28 }}>
+            <button onClick={() => onOpenRecipe(recipe.id)} style={{
+              background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left',
+            }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 3 }}>
+                {recipe.name}
               </div>
-            );
-          })}
+            </button>
+            <div style={{ fontSize: 12, color: T.text3, marginBottom: 6 }}>
+              {recipe.minutes}분 · {recipe.kcal}kcal · {meal.servings}인분
+            </div>
+          </div>
         </div>
 
-        {askDelete && (
-          <ConfirmDialog title="이 음식을 삭제할까요?"
-            body={`${askDelete.recipe.name} (${date} ${slot}) 가 식단에서 제거돼요.`}
-            destructive confirmLabel="삭제"
-            onClose={() => setAskDelete(null)}
-            onConfirm={() => { const idx = askDelete.index; setAskDelete(null); onRemove(date, slot, idx); }} />
-        )}
+        <div style={{ padding: '0 14px 14px' }}>
+          {/* Servings stepper */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: 10, background: T.surfaceFill, borderRadius: 10, marginBottom: 10,
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: T.text2 }}>계획 인분</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button onClick={() => onChangeServings(date, slot, Math.max(1, meal.servings - 1), mealIndex)} style={servingMiniBtn}>−</button>
+              <span style={{ fontSize: 16, fontWeight: 800, color: T.ink, minWidth: 42, textAlign: 'center' }}>{meal.servings}인분</span>
+              <button onClick={() => onChangeServings(date, slot, Math.min(12, meal.servings + 1), mealIndex)} style={{ ...servingMiniBtn, background: T.mint, color: '#fff' }}>+</button>
+            </div>
+          </div>
+
+          {/* Ingredient chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 12 }}>
+            {recipe.ingredients.slice(0, 5).map(ing => (
+              <span key={ing.name} style={{ fontSize: 11, color: T.text2, background: T.surfaceFill, padding: '5px 8px', borderRadius: 9999 }}>
+                {ing.name}
+              </span>
+            ))}
+            {recipe.ingredients.length > 5 && (
+              <span style={{ fontSize: 11, color: T.text3, padding: '5px 2px' }}>+{recipe.ingredients.length - 5}</span>
+            )}
+          </div>
+
+          {/* Actions: 장보기 + 요리하기 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <button onClick={() => onCreateShopping(date, slot)} style={mealActionBtn}>장보기</button>
+            <button onClick={() => onStartCook(date, slot, mealIndex)} style={{ ...mealActionBtn, background: T.mint, borderColor: T.mint, color: '#fff' }}>요리하기</button>
+          </div>
+        </div>
       </div>
     );
-  }
+  };
 
-  const meal = meals[0];
-  const recipe = meal && RECIPES.find(r => r.id === meal.recipeId);
-  if (!recipe) return <div style={{ padding: 40 }}>끼니를 찾을 수 없어요</div>;
-  const m = METHOD_COLORS[recipe.method] || METHOD_COLORS.prep;
+  const totalServings = meals.reduce((sum, meal) => sum + (meal.servings || 1), 0);
 
   return (
-    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 120 }}>
-      {/* Hero */}
-      <div style={{
-        position: 'relative', width: '100%', aspectRatio: '4/3',
-        background: recipe.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 140,
-      }}>
-        {recipe.emoji}
-        <button onClick={onBack} style={{
-          position: 'absolute', top: 52, left: 16,
-          width: 36, height: 36, borderRadius: 18, background: 'rgba(255,255,255,0.92)',
-          border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>{Icon.chevL()}</button>
-      </div>
+    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 56 }}>
+      <AppBar title={`${slot} 음식 ${meals.length > 1 ? meals.length + '개' : ''}`}
+        left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>} />
 
-      <div style={{ background: '#fff', padding: 20 }}>
-        <div style={{ fontSize: 12, color: T.text3, fontWeight: 600, marginBottom: 4 }}>
+      <div style={{ background: '#fff', padding: 20, borderBottom: `1px solid ${T.border}` }}>
+        <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 800, marginBottom: 4 }}>
           {date} · {slot}
         </div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: T.ink, marginBottom: 8, fontFamily: T.fontBrand }}>
-          {recipe.name}
+        <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
+          {meals.length > 1 ? '한 끼에 여러 음식을 같이 먹어요' : meals[0] && RECIPES.find(r => r.id === meals[0].recipeId)?.name}
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: m.text, background: m.bg, padding: '4px 10px', borderRadius: 9999 }}>
-            {m.label}
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: T.text2, background: T.surfaceFill, padding: '6px 10px', borderRadius: 9999 }}>
+            {meals.length}개 음식
           </span>
-          <span style={{ fontSize: 12, color: T.text3 }}>{recipe.minutes}분 · {meal.servings}인분 · {recipe.kcal}kcal</span>
-        </div>
-        <button onClick={() => onOpenRecipe(recipe.id)} style={{
-          background: T.surfaceFill, border: 'none', padding: '8px 12px',
-          borderRadius: 6, fontSize: 12, color: T.text2, fontWeight: 600, cursor: 'pointer',
-        }}>전체 레시피 보기 →</button>
-      </div>
-
-      {/* Status timeline */}
-      <div style={{ background: '#fff', marginTop: 8, padding: 20 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 14 }}>진행 상태</div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {statusFlow.map((s, i) => {
-            const order = statusFlow.findIndex(x => x.k === meal.status);
-            const active = i <= order;
-            return (
-              <button key={s.k} onClick={() => onChangeStatus(date, slot, s.k)} style={{
-                flex: 1, padding: '12px 8px', borderRadius: 10,
-                border: active ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
-                background: active ? T.mintSoft : '#fff', cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-              }}>
-                <span style={{ fontSize: 22 }}>{s.emoji}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: active ? T.mintDeep : T.text3 }}>{s.l}</span>
-              </button>
-            );
-          })}
+          <span style={{ fontSize: 12, fontWeight: 700, color: T.text2, background: T.surfaceFill, padding: '6px 10px', borderRadius: 9999 }}>
+            총 {totalServings}인분 계획
+          </span>
         </div>
       </div>
 
-      {/* Ingredients summary */}
-      <div style={{ background: '#fff', marginTop: 8, padding: 20 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 12 }}>
-          필요 재료 <span style={{ color: T.text3, fontWeight: 500 }}>· {recipe.ingredients.length}개</span>
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {recipe.ingredients.map(ing => (
-            <span key={ing.name} style={{
-              fontSize: 12, color: T.text2, background: T.surfaceFill,
-              padding: '6px 10px', borderRadius: 9999, fontWeight: 500,
-            }}>{ing.name} <b style={{ color: T.text3, fontWeight: 500 }}>{ing.qty}</b></span>
-          ))}
-        </div>
+      <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {meals.map((meal, mealIndex) => (
+          <MealCard key={`${meal.recipeId}-${mealIndex}`} meal={meal} mealIndex={mealIndex} />
+        ))}
       </div>
 
-      {/* Actions */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        padding: 16, background: '#fff', borderTop: `1px solid ${T.border}`,
-        display: 'flex', gap: 8,
-      }}>
-        <button onClick={() => setAskDelete({ index: 0, recipe })} style={{
-          padding: '12px 14px', borderRadius: 10, background: '#fff',
-          border: `1px solid ${T.border}`, color: T.red, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-        }}>삭제</button>
-        <Button variant="neutral" onClick={() => onCreateShopping(date, slot)}>🛒 장보기</Button>
-        <Button full onClick={() => onStartCook(date, slot)}>🍳 요리 시작</Button>
-      </div>
       {askDelete && (
-        <ConfirmDialog title="이 끼니를 삭제할까요?"
+        <ConfirmDialog title="이 음식을 삭제할까요?"
           body={`${askDelete.recipe.name} (${date} ${slot}) 가 식단에서 제거돼요.`}
           destructive confirmLabel="삭제"
           onClose={() => setAskDelete(null)}
@@ -6606,9 +6344,9 @@ function RecipeSearchPicker({ title='레시피 검색', slotLabel, onBack, onPic
 // ─────────────────────────────────────────────────────────────
 function RecipeBookSelector({ slotLabel, onBack, onPick }) {
   const books = [
-    { id: 'b_saved', kind: 'saved', name: '저장한 레시피', count: 8, emoji: '🔖' },
-    { id: 'b_custom1', kind: 'custom', name: '평일 저녁 빠른요리', count: 12, emoji: '🍳' },
-    { id: 'b_custom2', kind: 'custom', name: '주말 한 상 차림', count: 5, emoji: '🍽️' },
+    { id: 'b_saved', kind: 'saved', name: '저장한 레시피', count: 8, emoji: '🔖', desc: '좋아요·북마크한 레시피 모음' },
+    { id: 'b_custom1', kind: 'custom', name: '평일 저녁 빠른요리', count: 12, emoji: '🍳', desc: '30분 이내 간단 저녁 메뉴' },
+    { id: 'b_custom2', kind: 'custom', name: '주말 한 상 차림', count: 5, emoji: '🍽️', desc: '주말 특별 식사용 레시피' },
   ];
   const [openId, setOpenId] = useState_W(null);
   if (openId) return <RecipeBookDetailPicker bookId={openId}
@@ -6632,11 +6370,10 @@ function RecipeBookSelector({ slotLabel, onBack, onPick }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>{b.name}</span>
                 <span style={{
-                  fontSize: 10, color: T.text3, background: T.surfaceFill,
-                  padding: '2px 6px', borderRadius: 4, fontWeight: 600,
-                }}>{b.kind === 'saved' ? '저장' : '내 책'}</span>
+                  fontSize: 12, fontWeight: 800, color: T.mintDeep,
+                }}>{b.count}개</span>
               </div>
-              <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{b.count}개 레시피</div>
+              <div style={{ fontSize: 12, color: T.text3, marginTop: 2 }}>{b.desc}</div>
             </div>
             {Icon.chevR(T.text4)}
           </button>
@@ -6664,7 +6401,7 @@ function RecipeBookDetailPicker({ bookId, book, slotLabel, onBack, onPick }) {
               }}>{r.emoji}</div>
               <div style={{ padding: 10 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.name}</div>
-                <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>⭐ {r.rating} · {r.minutes}분</div>
+                <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{r.minutes}분 · {r.kcal}kcal</div>
               </div>
             </button>
           ))}
@@ -6870,9 +6607,10 @@ function ManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCreated, s
   const [name, setName] = useState_W('');
   const [minutes, setMinutes] = useState_W(20);
   const [servings, setServings] = useState_W(2);
-  const [ings, setIngs] = useState_W([{ name: '', qty: '' }]);
+  const [ings, setIngs] = useState_W([]);
   const [steps, setSteps] = useState_W([{ method: 'prep', text: '' }]);
-  const valid = name.trim() && ings.some(i => i.name.trim()) && steps.some(s => s.text.trim());
+  const [ingModal, setIngModal] = useState_W(false);
+  const valid = name.trim() && ings.length > 0 && steps.some(s => s.text.trim());
   const methods = Object.keys(METHOD_COLORS);
 
   const submit = () => {
@@ -6882,7 +6620,7 @@ function ManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCreated, s
       id, name: name.trim(), minutes, servings,
       bg: T.mintSoft, emoji: '🍳', rating: 0, saves: 0, kcal: 0,
       tags: ['직접 등록'], method: 'prep',
-      ingredients: ings.filter(i => i.name.trim()).map(i => ({ name: i.name.trim(), qty: i.qty || '적당량', section: '직접 입력' })),
+      ingredients: ings.map(i => ({ name: i.name, qty: (i.amount || '') + (i.unit || 'g'), section: i.category || '직접 입력' })),
       steps: steps.filter(s => s.text.trim()).map((s, i) => ({ method: s.method, title: `Step ${i+1}`, body: s.text, minutes: 2, text: s.text, time: '약 2분' })),
     }, presetDate, presetSlot);
   };
@@ -6907,19 +6645,46 @@ function ManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCreated, s
 
       {/* 재료 */}
       <Section title="재료" right={
-        <button onClick={() => setIngs([...ings, { name: '', qty: '' }])} style={addLinkBtn}>+ 추가</button>
+        <span style={{ fontSize: 12, color: T.text3 }}>{ings.length}개 선택됨</span>
       }>
-        {ings.map((it, i) => (
-          <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <input value={it.name} onChange={e => setIngs(ings.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
-              placeholder="재료" style={{ ...inp, flex: 1.4 }} />
-            <input value={it.qty} onChange={e => setIngs(ings.map((x, j) => j === i ? { ...x, qty: e.target.value } : x))}
-              placeholder="양 (예: 200g)" style={{ ...inp, flex: 1 }} />
-            {ings.length > 1 && (
-              <button onClick={() => setIngs(ings.filter((_, j) => j !== i))} style={removeBtn}>−</button>
-            )}
+        {ings.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+            {ings.map((it, i) => (
+              <div key={it.name} style={{
+                display: 'grid', gridTemplateColumns: '1fr 72px 88px 28px',
+                gap: 8, alignItems: 'center',
+                background: '#fff', border: `1px solid ${T.border}`,
+                borderRadius: 10, padding: 10,
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{it.name}</div>
+                <input type="number" inputMode="numeric" value={it.amount || ''}
+                  onChange={e => setIngs(ings.map((x, j) => j === i ? { ...x, amount: e.target.value.replace(/[^0-9]/g, '') } : x))}
+                  placeholder="양" style={{ ...inp, padding: '7px 8px', textAlign: 'center' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+                  {['g', 'ml'].map(unit => (
+                    <button key={unit} onClick={() => setIngs(ings.map((x, j) => j === i ? { ...x, unit } : x))} style={{
+                      border: `1px solid ${it.unit === unit ? T.mint : T.border}`,
+                      background: it.unit === unit ? T.mintSoft : '#fff',
+                      color: it.unit === unit ? T.mintDeep : T.text2,
+                      borderRadius: 7, padding: '7px 0', fontSize: 12, fontWeight: 800, cursor: 'pointer',
+                    }}>{unit}</button>
+                  ))}
+                </div>
+                <button onClick={() => setIngs(ings.filter((_, j) => j !== i))} style={{
+                  background: T.surfaceFill, border: 'none', color: T.text3,
+                  borderRadius: 7, fontSize: 16, cursor: 'pointer', height: 28,
+                }}>×</button>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+        <button onClick={() => setIngModal(true)} style={{
+          width: '100%', padding: '12px 16px', borderRadius: 10,
+          border: `1.5px dashed ${T.mint}`, background: T.mintSoft,
+          color: T.mintDeep, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        }}>+ 재료 추가하기</button>
+        {/* CONTRACT_CHECK: POST /ingredients/search — vNext에서는 UI shape만 */}
       </Section>
 
       {/* 조리법 */}
@@ -6958,6 +6723,138 @@ function ManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCreated, s
         background: '#fff', borderTop: `1px solid ${T.border}`,
       }}>
         <Button full disabled={!valid} onClick={submit}>등록하고 다음 단계 →</Button>
+      </div>
+
+      {ingModal && <IngredientPickerModal
+        selected={ings}
+        onConfirm={(picked) => { setIngs(picked); setIngModal(false); }}
+        onClose={() => setIngModal(false)} />}
+    </div>
+  );
+}
+
+/* ─── Ingredient Picker Modal ─── */
+function IngredientPickerModal({ selected, onConfirm, onClose }) {
+  const categories = ['채소', '육류', '해산물', '양념', '유제품', '곡물'];
+  const DEMO_INGS = {
+    '채소': ['양파', '대파', '마늘', '감자', '당근', '배추', '시금치', '애호박', '고추', '깻잎'],
+    '육류': ['돼지고기', '소고기', '닭고기', '삼겹살', '목살', '안심', '다짐육'],
+    '해산물': ['새우', '조개', '오징어', '멸치', '참치', '연어', '미역'],
+    '양념': ['간장', '고추장', '된장', '소금', '설탕', '참기름', '식용유', '후추', '고춧가루'],
+    '유제품': ['우유', '버터', '치즈', '생크림', '요거트'],
+    '곡물': ['쌀', '밀가루', '당면', '두부', '계란', '빵가루'],
+  };
+
+  const [search, setSearch] = useState_W('');
+  const [activeCat, setActiveCat] = useState_W('채소');
+  const [picks, setPicks] = useState_W(selected.map(s => ({ ...s })));
+
+  const isSelected = (name) => picks.some(p => p.name === name);
+  const toggle = (ingName) => {
+    if (isSelected(ingName)) {
+      setPicks(picks.filter(p => p.name !== ingName));
+    } else {
+      setPicks([...picks, { name: ingName, amount: '', unit: 'g', category: activeCat }]);
+    }
+  };
+
+  const updateAmount = (ingName, amount) => {
+    setPicks(picks.map(p => p.name === ingName ? { ...p, amount } : p));
+  };
+  const setUnit = (ingName, unit) => {
+    setPicks(picks.map(p => p.name === ingName ? { ...p, unit } : p));
+  };
+
+  const filtered = search.trim()
+    ? Object.values(DEMO_INGS).flat().filter(n => n.includes(search.trim()))
+    : (DEMO_INGS[activeCat] || []);
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9000,
+      background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'flex-end',
+    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        width: '100%', maxHeight: '85vh', background: '#fff',
+        borderRadius: '20px 20px 0 0', display: 'flex', flexDirection: 'column',
+        overflow: 'hidden',
+      }}>
+        {/* Header */}
+        <div style={{ padding: '16px 20px 12px', borderBottom: `1px solid ${T.border}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontSize: 17, fontWeight: 800, color: T.ink }}>재료 선택</span>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, color: T.text3, cursor: 'pointer' }}>×</button>
+          </div>
+          <input autoFocus value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="재료 검색..."
+            style={{ ...inp, background: T.surfaceFill }} />
+        </div>
+
+        {/* Category chips */}
+        {!search.trim() && (
+          <div style={{ padding: '10px 20px 6px', display: 'flex', gap: 6, overflowX: 'auto' }}>
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setActiveCat(cat)} style={{
+                padding: '7px 14px', borderRadius: 9999, whiteSpace: 'nowrap',
+                border: activeCat === cat ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+                background: activeCat === cat ? T.mintSoft : '#fff',
+                color: activeCat === cat ? T.mintDeep : T.text2,
+                fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+              }}>{cat}</button>
+            ))}
+          </div>
+        )}
+
+        {/* Ingredient grid */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '10px 20px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {filtered.map(ingName => {
+              const sel = isSelected(ingName);
+              return (
+                <button key={ingName} onClick={() => toggle(ingName)} style={{
+                  padding: '8px 14px', borderRadius: 9999,
+                  border: sel ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+                  background: sel ? T.mintSoft : '#fff',
+                  color: sel ? T.mintDeep : T.ink,
+                  fontSize: 13, fontWeight: sel ? 700 : 500, cursor: 'pointer',
+                }}>{sel && '✓ '}{ingName}</button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Selected items with quantity inputs */}
+        {picks.length > 0 && (
+          <div style={{ padding: '10px 20px', borderTop: `1px solid ${T.border}`, maxHeight: 180, overflowY: 'auto' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.text3, marginBottom: 8 }}>
+              선택된 재료 ({picks.length}개) — 양 입력
+            </div>
+            {picks.map(p => (
+              <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 13, color: T.ink, fontWeight: 600, flex: 1 }}>{p.name}</span>
+                <input type="number" value={p.amount} onChange={e => updateAmount(p.name, e.target.value)}
+                  placeholder="양" style={{ ...inp, width: 70, textAlign: 'center', padding: '6px 8px', fontSize: 13 }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+                  {['g', 'ml'].map(unit => (
+                    <button key={unit} onClick={() => setUnit(p.name, unit)} style={{
+                      padding: '6px 9px', borderRadius: 8, fontSize: 12, fontWeight: 800, cursor: 'pointer',
+                      border: `1px solid ${p.unit === unit ? T.mint : T.border}`,
+                      background: p.unit === unit ? T.mintSoft : '#fff',
+                      color: p.unit === unit ? T.mintDeep : T.text2,
+                    }}>{unit}</button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ padding: '12px 20px 16px', borderTop: `1px solid ${T.border}` }}>
+          <Button full onClick={() => onConfirm(picks)}>
+            {picks.length > 0 ? `${picks.length}개 재료 확인` : '재료를 선택하세요'}
+          </Button>
+        </div>
       </div>
     </div>
   );
