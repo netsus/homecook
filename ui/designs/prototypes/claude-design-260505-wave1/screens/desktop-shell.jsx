@@ -1,3 +1,4 @@
+// ===== screens/desktop-shell.jsx =====
 // Desktop shell — SideNav + content area + optional right rail
 function DesktopShell({ tab, onTab, children, brand = true, showLogin }) {
   const items = [

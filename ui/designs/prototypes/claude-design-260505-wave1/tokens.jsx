@@ -1,3 +1,4 @@
+// ===== tokens.jsx =====
 // Baemin tokens applied to homecook_
 const T = {
   mint: '#2AC1BC',
@@ -29,6 +30,12 @@ const T = {
 
   fontUI: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif',
   fontBrand: '"Jua", -apple-system, sans-serif', // BMJua-ish substitute from Google Fonts
+
+  // vNext S1 — metric tokens (별점 대체 → 좋아요/저장/요리완료/조회수)
+  metricLike: '#FF6B6B',   // = red
+  metricSave: '#2AC1BC',   // = mint (brand)
+  metricCook: '#12B886',   // = teal (accent)
+  metricView: '#868E96'    // = text3
 };
 
 window.T = T;

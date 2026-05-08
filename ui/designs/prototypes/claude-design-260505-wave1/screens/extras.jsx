@@ -1,3 +1,4 @@
+// ===== screens/extras.jsx =====
 // ===== Extra screens — Phase 2 =====
 // Shopping list, Cook list/run, Meal detail, MyPage subpages
 const { useState: useState_X, useMemo: useMemo_X } = React;

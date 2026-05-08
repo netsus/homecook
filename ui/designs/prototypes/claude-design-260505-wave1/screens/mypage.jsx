@@ -1,3 +1,4 @@
+// ===== screens/mypage.jsx =====
 // MyPage screen
 function MyPageScreen({ savedIds, onOpenRecipe, onGoPage }) {
   const stats = [

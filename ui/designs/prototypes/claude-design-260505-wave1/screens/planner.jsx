@@ -1,3 +1,4 @@
+// ===== screens/planner.jsx =====
 // Planner screen (week view with day cards, slot rows per 화면정의서 H4)
 const { useState: useState_P } = React;
 

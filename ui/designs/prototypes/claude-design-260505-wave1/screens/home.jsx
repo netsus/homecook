@@ -1,3 +1,4 @@
+// ===== screens/home.jsx =====
 // Home screen
 const { useState: useState_H, useMemo: useMemo_H } = React;
 
