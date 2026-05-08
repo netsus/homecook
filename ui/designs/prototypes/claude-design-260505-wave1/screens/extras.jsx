@@ -688,7 +688,6 @@ function MyPageAccountScreen({ onBack }) {
         </div>
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <Button variant="neutral">비밀번호 변경</Button>
-          <Button variant="destructive" full>회원 탈퇴</Button>
         </div>
       </div>
     </div>

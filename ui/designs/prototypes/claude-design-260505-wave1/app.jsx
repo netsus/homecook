@@ -211,10 +211,10 @@ function App() {
   };
   const undoAte = (date, slot, mealIndex = 0) => {
     updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, ateAt: null }));
-    showToast('덜먹음으로 되돌렸어요');
+    showToast('남은 요리로 되돌렸어요');
   };
   const markPartial = (date, slot) => {
-    showToast('덜먹음으로 표시했어요');
+    showToast('남은 요리로 표시했어요');
   };
 
   // Meal actions (delete + serving change with confirm)
@@ -330,6 +330,7 @@ function App() {
       onMarkAte={markAte} onMarkPartial={markPartial} showToast={showToast} />;
   } else if (route.page === 'ate-list') {
     content = <AteListScreen planner={planner} onBack={backFromPage}
+      onGoLeftovers={() => goPage('leftovers')}
       onUndoAte={undoAte} onRecreate={(rid) => { backFromPage(); openRecipe(rid); }} />;
   } else if (route.page === 'shopping-detail') {
     const list = shoppingLists.find(l => l.id === pa.listId);
@@ -375,7 +376,8 @@ function App() {
         <MyPageRecipebookTab
           onOpenBook={(bookId) => goPage('mypage-recipebook-detail', { bookId })}
           onCreateBook={() => showToast('레시피북 만들기 (Wave 다음)')}
-          onDeleteBook={(id) => showToast('레시피북이 삭제됐어요')} />
+          onDeleteBook={(id) => showToast('레시피북이 삭제됐어요')}
+          showToast={showToast} />
       </div>
     );
   } else if (route.page === 'mypage-recipebook-detail') {
@@ -562,6 +564,7 @@ function App() {
       onMarkAte={markAte} onMarkPartial={markPartial} showToast={showToast} />;
   } else if (route.page === 'ate-list') {
     desktopPageContent = <DesktopAteListScreen planner={planner} onBack={backFromPage}
+      onGoLeftovers={() => goPage('leftovers')}
       onUndoAte={undoAte} onRecreate={(rid) => { backFromPage(); openRecipe(rid); }} />;
   } else if (route.page === 'manual-create') {
     desktopPageContent = <DesktopManualRecipeCreateScreen presetDate={pa.date} presetSlot={pa.slot}
@@ -1179,7 +1182,7 @@ function App() {
           <button onClick={() => goPage('leftovers')}
             style={quickBtn}>🥡 남은 요리 (LEFTOVERS)</button>
           <button onClick={() => goPage('ate-list')}
-            style={quickBtn}>🍽️ 다먹은 기록 (ATE_LIST)</button>
+            style={quickBtn}>🍽️ 다먹은 요리 (ATE_LIST)</button>
           <button onClick={() => goPage('manual-create')}
             style={quickBtn}>✏️ 직접 등록 (MANUAL_CREATE)</button>
           <button onClick={() => goPage('yt-import')}
