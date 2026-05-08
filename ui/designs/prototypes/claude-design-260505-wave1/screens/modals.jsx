@@ -130,8 +130,9 @@ function PlannerAddPopup({ recipeId, onClose, onConfirm, planner }) {
 }
 
 function SavePopup({ recipeId, onClose, onConfirm, saved }) {
-  const recipe = RECIPES.find((r) => r.id === recipeId);
   const [folder, setFolder] = React.useState('기본 폴더');
+  const [creating, setCreating] = React.useState(false);
+  const [newName, setNewName] = React.useState('');
   const folders = ['기본 폴더', '주말에 해먹기', '주중 간단식', '손님 오는 날'];
 
   return (
@@ -140,25 +141,13 @@ function SavePopup({ recipeId, onClose, onConfirm, saved }) {
         저장
       </Button>
     }>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12, padding: 12,
-        background: '#fff', borderRadius: 12, marginBottom: 16, border: `1px solid ${T.border}`
-      }}>
-        <div style={{
-          width: 48, height: 48, borderRadius: 8, background: recipe.bg,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26
-        }}>{recipe.emoji}</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>{recipe.name}</div>
-          <div style={{ fontSize: 12, color: T.text3 }}>{recipe.theme}</div>
-        </div>
-      </div>
-      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>폴더 선택</div>
+      {/* vNext S3 — 레시피 정보 프리뷰 섹션 제거 */}
+      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>레시피북 선택</div>
       <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${T.border}` }}>
         {folders.map((f, i) =>
         <div key={f} onClick={() => setFolder(f)} style={{
           display: 'flex', alignItems: 'center', padding: '12px 16px', cursor: 'pointer',
-          borderBottom: i < folders.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none'
+          borderBottom: `1px solid ${T.surfaceSubtle}`
         }}>
             <div style={{
             width: 18, height: 18, borderRadius: 9,
@@ -168,6 +157,34 @@ function SavePopup({ recipeId, onClose, onConfirm, saved }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>{folder === f && <div style={{ width: 6, height: 6, borderRadius: 3, background: '#fff' }} />}</div>
             <div style={{ flex: 1, fontSize: 14, color: T.ink }}>{f}</div>
+          </div>
+        )}
+        {/* vNext S3 — 새 레시피북 만들기 인라인 UI */}
+        {/* CONTRACT_CHECK: 레시피북 생성 API (POST /recipe-books) 트랜잭션 위치 확정 필요 — vNext에서는 UI shape만 */}
+        {!creating ? (
+          <div onClick={() => setCreating(true)} style={{
+            display: 'flex', alignItems: 'center', padding: '12px 16px', cursor: 'pointer',
+            color: T.mint, fontSize: 14, fontWeight: 600, gap: 8
+          }}>
+            <span style={{ fontSize: 18, lineHeight: 1 }}>+</span> 새 레시피북 만들기
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', gap: 8 }}>
+            <input
+              autoFocus
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              placeholder="레시피북 이름"
+              style={{
+                flex: 1, padding: '8px 10px', border: `1px solid ${T.mint}`,
+                borderRadius: 8, fontSize: 14, outline: 'none', color: T.ink,
+                fontFamily: T.fontUI
+              }}
+            />
+            <button onClick={() => { if (newName.trim()) { setFolder(newName.trim()); setCreating(false); setNewName(''); } }} style={{
+              background: T.mint, color: '#fff', border: 'none', borderRadius: 8,
+              padding: '8px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer'
+            }}>추가</button>
           </div>
         )}
       </div>

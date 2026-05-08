@@ -384,7 +384,8 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
   );
 }
 
-function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, toggleSaved }) {
+// vNext S3 — DesktopRecipeDetail: 별점→MetricRow, 카테고리 헤더 제거, 조리법 폰트 키움, 우측 CTA 카드 정리
+function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, onStartCook }) {
   const r = RECIPES.find(x => x.id === recipeId);
   const [servings, setServings] = dUseState(r.servings);
   const [tab, setTab] = dUseState('ingredients');
@@ -403,26 +404,38 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
           <div style={{
             width: '100%', aspectRatio: '16/9', background: r.bg, borderRadius: 16,
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 140,
-            marginBottom: 20,
-          }}>{r.emoji}</div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: T.ink, margin: 0 }}>{r.name}</h1>
-            <button onClick={toggleSaved} style={{
-              background: 'none', border: 'none', cursor: 'pointer', display: 'flex',
-            }}>{Icon.heart(saved)}</button>
+            marginBottom: 20, position: 'relative',
+          }}>
+            {r.emoji}
+            {/* vNext S3 — 북마크 토글을 히어로 이미지 위에 유지 */}
+            <button onClick={onOpenSave} style={{
+              position: 'absolute', top: 16, right: 16,
+              width: 40, height: 40, borderRadius: 20, background: 'rgba(255,255,255,0.92)',
+              border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>{Icon.bookmark(saved)}</button>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: T.text2, fontSize: 14, marginBottom: 24, flexWrap: 'wrap' }}>
-            {Icon.star()} <span style={{ fontWeight: 700, color: T.ink }}>{r.rating}</span>
-            <span>({r.saves.toLocaleString()})</span>
-            <span>·</span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 800, color: T.ink, margin: 0 }}>{r.name}</h1>
+          </div>
+          {/* vNext S3 — 별점 대체: MetricRow 행동 메트릭 */}
+          {/* CONTRACT_CHECK: 메트릭 4종 데이터 소스·집계 단위 확정 필요 — vNext에서는 UI shape만 */}
+          <MetricRow
+            likes={Math.round(r.saves * 0.6)}
+            saves={r.saves}
+            cooks={Math.round(r.saves * 0.3)}
+            views={r.saves * 4}
+            style={{ marginBottom: 8 }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: T.text3, fontSize: 13, marginBottom: 24, flexWrap: 'wrap' }}>
             {Icon.clock()} {r.minutes}분
             <span>·</span>
             {(r.tags || []).join(' · ')}
           </div>
 
           <div style={{ display: 'flex', gap: 24, borderBottom: `1px solid ${T.border}`, marginBottom: 20 }}>
-            {[['ingredients','재료'],['cook','조리법'],['reviews','리뷰 '+r.saves]].map(([k,l]) => (
+            {[['ingredients','재료'],['cook','조리법'],['reviews','리뷰']].map(([k,l]) => (
               <button key={k} onClick={() => setTab(k)} style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 padding: '12px 0', fontSize: 14, fontWeight: 700,
@@ -433,6 +446,7 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
             ))}
           </div>
 
+          {/* vNext S3 — 재료 탭: 카테고리 헤더 제거, 정렬 순서 유지, 수량 스케일링 보존 */}
           {tab === 'ingredients' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
               {(r.ingredients || []).map((ing, i) => (
@@ -476,7 +490,8 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
                         }}>{m.label}</span>
                         {s.time && <span style={{ fontSize: 12, color: T.text3 }}>{s.time}</span>}
                       </div>
-                      <div style={{ fontSize: 14, color: T.ink, lineHeight: 1.6 }}>{s.text}</div>
+                      {/* vNext S3 — 조리법 폰트 키움 14→16 (데스크톱 base 16 기준 +2) */}
+                      <div style={{ fontSize: 16, color: T.ink, lineHeight: 1.6 }}>{s.text}</div>
                     </div>
                   </div>
                 );
@@ -486,11 +501,12 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
 
           {tab === 'reviews' && (
             <div style={{ color: T.text3, padding: 40, textAlign: 'center', fontSize: 14 }}>
-              리뷰 {r.saves.toLocaleString()}개 — 데모에서는 비활성
+              리뷰 — 데모에서는 비활성
             </div>
           )}
         </div>
 
+        {/* vNext S3 — 우측 sticky 카드: 인분 조절 + 플래너에 추가 + 요리하기 (저장은 히어로 북마크로 이동) */}
         <aside style={{ position: 'sticky', top: 88 }}>
           <div style={{
             background: '#fff', borderRadius: 12, padding: 20,
@@ -507,7 +523,7 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <Button variant="primary" full onClick={onOpenPlannerAdd}>플래너에 추가</Button>
-              <Button variant="secondary" full onClick={onOpenSave}>{saved ? '저장 해제' : '저장하기'}</Button>
+              <Button variant="secondary" full onClick={onStartCook}>요리하기</Button>
             </div>
           </div>
 
@@ -515,7 +531,7 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
             marginTop: 16, padding: 16, background: T.mintSoft,
             borderRadius: 12, fontSize: 12, color: T.mintDeep, lineHeight: 1.5,
           }}>
-            💡 같은 재료로 <b style={{ fontWeight: 700 }}>3개 레시피</b>를 더 만들 수 있어요
+            같은 재료로 <b style={{ fontWeight: 700 }}>3개 레시피</b>를 더 만들 수 있어요
           </div>
         </aside>
       </div>
