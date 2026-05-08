@@ -375,9 +375,35 @@ const INITIAL_PANTRY = {
   garlic: { name: '다진마늘', have: true, section: '양념' }
 };
 
+const PANTRY_CATEGORIES = ['주식', '채소', '단백질', '양념'];
+const PANTRY_IMAGES = {
+  쌀: '🍚', 국수: '🍜', 스파게티: '🍝', 당면: '🍜', 밀가루: '🌾', 빵가루: '🍞',
+  양파: '🧅', 감자: '🥔', 당근: '🥕', 청양고추: '🌶️', 애호박: '🥒', 대파: '🌿', 마늘: '🧄',
+  배추: '🥬', 시금치: '🥬', 깻잎: '🌿', 방울토마토: '🍅', 오이: '🥒',
+  계란: '🥚', 두부: '◻️', 닭가슴살: '🍗', 닭고기: '🍗', 돼지고기: '🥩', 소고기: '🥩',
+  삼겹살: '🥓', 새우: '🦐', 참치: '🐟', 연어: '🐟',
+  김치: '🥬', 간장: '🫙', 고추장: '🌶️', 된장: '🫙', 참기름: '🫗', 고춧가루: '🌶️',
+  설탕: '🧂', 다진마늘: '🧄', 소금: '🧂', 후추: '🧂', 식용유: '🫗', 올리브유: '🫒',
+  버터: '🧈', 우유: '🥛', 치즈: '🧀'
+};
+const PANTRY_ADD_ITEMS = [
+  ...Object.values(INITIAL_PANTRY).map(item => ({ ...item, image: PANTRY_IMAGES[item.name] || '🥬' })),
+  { name: '스파게티', have: false, section: '주식', image: '🍝' },
+  { name: '당면', have: false, section: '주식', image: '🍜' },
+  { name: '돼지고기', have: false, section: '단백질', image: '🥩' },
+  { name: '소고기', have: false, section: '단백질', image: '🥩' },
+  { name: '닭고기', have: false, section: '단백질', image: '🍗' },
+  { name: '새우', have: false, section: '단백질', image: '🦐' },
+  { name: '참치', have: false, section: '단백질', image: '🐟' },
+  { name: '소금', have: false, section: '양념', image: '🧂' },
+  { name: '후추', have: false, section: '양념', image: '🧂' },
+  { name: '식용유', have: false, section: '양념', image: '🫗' },
+  { name: '올리브유', have: false, section: '양념', image: '🫒' }
+].filter((item, index, arr) => arr.findIndex(x => x.name === item.name) === index);
+
 Object.assign(window, {
   RECIPES, METHOD_COLORS, THEMES, INGREDIENT_FILTERS,
-  makeInitialPlanner, weekDays, WEEK_START, INITIAL_PANTRY, todayIdx,
+  makeInitialPlanner, weekDays, WEEK_START, INITIAL_PANTRY, PANTRY_CATEGORIES, PANTRY_IMAGES, PANTRY_ADD_ITEMS, todayIdx,
   mealItems, slotPrimaryMeal, appendMealToSlot, updateMealInSlot, removeMealFromSlot, slotStatusSummary
 });
 
@@ -1685,26 +1711,50 @@ window.MealAddModal = MealAddModal;
 // Pantry screen
 const { useState: useState_PT } = React;
 
-function PantryScreen({ pantry, setPantry, onOpenAdd }) {
+function PantryScreen({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
   const [query, setQuery] = useState_PT('');
+  const [activeCat, setActiveCat] = useState_PT('전체');
+  const [selected, setSelected] = useState_PT(new Set());
+  const categories = ['전체', ...PANTRY_CATEGORIES];
+  const ownedEntries = Object.entries(pantry).filter(([, v]) => v.have);
   const sections = {};
-  Object.entries(pantry).forEach(([k, v]) => {
+  ownedEntries.forEach(([k, v]) => {
     if (query && !v.name.includes(query)) return;
+    if (activeCat !== '전체' && v.section !== activeCat) return;
     if (!sections[v.section]) sections[v.section] = [];
     sections[v.section].push({ key: k, ...v });
   });
 
-  const haveCount = Object.values(pantry).filter((v) => v.have).length;
-  const total = Object.keys(pantry).length;
+  const haveCount = ownedEntries.length;
+  const total = PANTRY_ADD_ITEMS.length;
+  const toggleSelected = (key) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
+  const deleteSelected = () => {
+    setPantry(prev => {
+      const next = { ...prev };
+      selected.forEach(key => {
+        if (next[key]) next[key] = { ...next[key], have: false };
+      });
+      return next;
+    });
+    setSelected(new Set());
+    /* CONTRACT_CHECK: DELETE /pantry-items bulk — vNext에서는 UI shape만 */
+  };
 
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
-      <AppBar title="팬트리" left={null} right={
-        <button onClick={onOpenAdd} style={{
-          background: 'transparent', border: 'none', cursor: 'pointer',
-          fontSize: 22, color: T.text2, padding: 0, lineHeight: 1
-        }}>+</button>
-      } />
+      <AppBar title="팬트리" left={null} right={selected.size > 0 ? (
+        <button onClick={deleteSelected} style={{
+          background: T.red, border: 'none', cursor: 'pointer',
+          fontSize: 12, fontWeight: 800, color: '#fff', padding: '7px 10px',
+          borderRadius: 9999,
+        }}>삭제 {selected.size}</button>
+      ) : null} />
 
       {/* Hero */}
       <div style={{ background: '#fff', padding: '16px 20px 20px', borderBottom: `1px solid ${T.border}` }}>
@@ -1723,11 +1773,36 @@ function PantryScreen({ pantry, setPantry, onOpenAdd }) {
           style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none',
             fontSize: 14, color: T.ink, fontFamily: T.fontUI }} />
         </div>
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingTop: 12 }}>
+          {categories.map(cat => (
+            <button key={cat} onClick={() => setActiveCat(cat)} style={{
+              flexShrink: 0, padding: '7px 12px', borderRadius: 9999,
+              border: activeCat === cat ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+              background: activeCat === cat ? T.mintSoft : '#fff',
+              color: activeCat === cat ? T.mintDeep : T.text2,
+              fontSize: 12, fontWeight: 800, cursor: 'pointer',
+            }}>{cat}</button>
+          ))}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
+          <button onClick={onOpenAdd} style={{
+            padding: '11px 12px', borderRadius: 10, border: 'none',
+            background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+          }}>재료 추가</button>
+          <button onClick={onOpenBundle} style={{
+            padding: '11px 12px', borderRadius: 10, border: `1px solid ${T.border}`,
+            background: '#fff', color: T.text2, fontSize: 13, fontWeight: 800, cursor: 'pointer',
+          }}>묶음 추가</button>
+        </div>
       </div>
 
       {/* Sections */}
       <div style={{ padding: 16 }}>
-        {Object.entries(sections).map(([sec, items]) =>
+        {Object.entries(sections).length === 0 ? (
+          <div style={{ background: '#fff', borderRadius: 12, padding: 40, textAlign: 'center', color: T.text3, border: `1px solid ${T.border}` }}>
+            보유한 재료가 없어요
+          </div>
+        ) : Object.entries(sections).map(([sec, items]) =>
         <div key={sec} style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: T.text2, padding: '4px 4px 10px' }}>
               {sec}
@@ -1739,21 +1814,24 @@ function PantryScreen({ pantry, setPantry, onOpenAdd }) {
               display: 'flex', alignItems: 'center', padding: '14px 16px',
               borderBottom: i < items.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none',
               cursor: 'pointer'
-            }} onClick={() => {
-              setPantry({ ...pantry, [it.key]: { ...pantry[it.key], have: !it.have } });
-            }}>
+            }} onClick={() => toggleSelected(it.key)}>
                   <div style={{
-                width: 24, height: 24, borderRadius: 12,
-                background: it.have ? T.mint : '#fff',
-                border: it.have ? 'none' : `2px solid ${T.border}`,
+                width: 34, height: 34, borderRadius: 12,
+                background: T.surfaceFill,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                marginRight: 12
-              }}>{it.have && Icon.check()}</div>
+                marginRight: 12, fontSize: 20,
+              }}>{PANTRY_IMAGES[it.name] || '🥬'}</div>
+                  <div style={{
+                width: 22, height: 22, borderRadius: 11,
+                background: selected.has(it.key) ? T.mint : '#fff',
+                border: selected.has(it.key) ? 'none' : `1.5px solid ${T.border}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginRight: 10,
+              }}>{selected.has(it.key) && Icon.check()}</div>
                   <div style={{ flex: 1, fontSize: 15,
-                color: it.have ? T.ink : T.text3,
-                fontWeight: it.have ? 600 : 400,
+                color: T.ink,
+                fontWeight: 700,
                 textDecoration: 'none' }}>{it.name}</div>
-                  {it.have && <span style={{ fontSize: 11, color: T.mintDeep, fontWeight: 600 }}>보유</span>}
                 </div>
             )}
             </div>
@@ -2866,17 +2944,38 @@ const dQtyBtn = {
   background: '#fff', color: T.ink, fontSize: 18, fontWeight: 700, cursor: 'pointer',
 };
 
-function DesktopPantry({ pantry, setPantry, onOpenAdd }) {
+function DesktopPantry({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
   const [query, setQuery] = dUseState('');
+  const [activeCat, setActiveCat] = dUseState('전체');
+  const [selected, setSelected] = dUseState(new Set());
+  const categories = ['전체', ...PANTRY_CATEGORIES];
   const sections = {};
   Object.entries(pantry).forEach(([key, item]) => {
+    if (!item.have) return;
     if (query && !item.name.includes(query)) return;
+    if (activeCat !== '전체' && item.section !== activeCat) return;
     if (!sections[item.section]) sections[item.section] = [];
     sections[item.section].push({ key, ...item });
   });
   const totalHave = Object.values(pantry).filter(x => x.have).length;
-  const total = Object.keys(pantry).length;
+  const total = PANTRY_ADD_ITEMS.length;
   const sectionEntries = Object.entries(sections);
+  const toggleSelected = (key) => setSelected(prev => {
+    const next = new Set(prev);
+    next.has(key) ? next.delete(key) : next.add(key);
+    return next;
+  });
+  const deleteSelected = () => {
+    setPantry(p => {
+      const next = { ...p };
+      selected.forEach(key => {
+        if (next[key]) next[key] = { ...next[key], have: false };
+      });
+      return next;
+    });
+    setSelected(new Set());
+    /* CONTRACT_CHECK: DELETE /pantry-items bulk — vNext에서는 UI shape만 */
+  };
 
   return (
     <div>
@@ -2893,9 +2992,21 @@ function DesktopPantry({ pantry, setPantry, onOpenAdd }) {
           {onOpenAdd && (
             <button onClick={onOpenAdd} style={{
               background: T.mint, color: '#fff', border: 'none', cursor: 'pointer',
-              width: 36, height: 36, borderRadius: 8, fontSize: 20, fontWeight: 700,
+              padding: '10px 14px', height: 36, borderRadius: 8, fontSize: 13, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>+</button>
+            }}>재료 추가</button>
+          )}
+          {onOpenBundle && (
+            <button onClick={onOpenBundle} style={{
+              background: '#fff', color: T.text2, border: `1px solid ${T.border}`, cursor: 'pointer',
+              padding: '10px 14px', height: 36, borderRadius: 8, fontSize: 13, fontWeight: 800,
+            }}>묶음 추가</button>
+          )}
+          {selected.size > 0 && (
+            <button onClick={deleteSelected} style={{
+              background: T.red, color: '#fff', border: 'none', cursor: 'pointer',
+              padding: '10px 14px', height: 36, borderRadius: 8, fontSize: 13, fontWeight: 800,
+            }}>선택 삭제 {selected.size}</button>
           )}
         </div>
       </div>
@@ -2910,6 +3021,17 @@ function DesktopPantry({ pantry, setPantry, onOpenAdd }) {
             style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none',
               fontSize: 14, color: T.ink, fontFamily: T.fontUI }} />
         </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'auto' }}>
+          {categories.map(cat => (
+            <button key={cat} onClick={() => setActiveCat(cat)} style={{
+              flexShrink: 0, padding: '8px 14px', borderRadius: 9999,
+              border: activeCat === cat ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+              background: activeCat === cat ? T.mintSoft : '#fff',
+              color: activeCat === cat ? T.mintDeep : T.text2,
+              fontSize: 12, fontWeight: 800, cursor: 'pointer',
+            }}>{cat}</button>
+          ))}
+        </div>
       </div>
       {sectionEntries.length > 0 ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
@@ -2920,17 +3042,16 @@ function DesktopPantry({ pantry, setPantry, onOpenAdd }) {
               <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 12 }}>{cat}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {items.map(it => (
-                  <button key={it.key} onClick={() => {
-                    setPantry(p => ({ ...p, [it.key]: { ...p[it.key], have: !p[it.key].have } }));
-                  }} style={{
+                  <button key={it.key} onClick={() => toggleSelected(it.key)} style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '8px 12px', borderRadius: 9999,
-                    background: it.have ? T.mintSoft : T.surfaceFill,
-                    border: it.have ? `1px solid ${T.mint}` : '1px solid transparent',
-                    color: it.have ? T.mintDeep : T.text2,
-                    fontSize: 13, fontWeight: it.have ? 700 : 500, cursor: 'pointer',
+                    background: selected.has(it.key) ? T.mintSoft : T.surfaceFill,
+                    border: selected.has(it.key) ? `1px solid ${T.mint}` : '1px solid transparent',
+                    color: selected.has(it.key) ? T.mintDeep : T.ink,
+                    fontSize: 13, fontWeight: 800, cursor: 'pointer',
                   }}>
-                    {it.have && Icon.check(T.mintDeep)}
+                    <span>{PANTRY_IMAGES[it.name] || '🥬'}</span>
+                    {selected.has(it.key) && Icon.check(T.mintDeep)}
                     {it.name}
                   </button>
                 ))}
@@ -4966,50 +5087,70 @@ function DskDialogFooter({ children }) {
 
 // P2 — PantryAdd
 function DesktopPantryAddDialog({ onClose, onAddItem, onOpenBundle }) {
-  const [name, setName]       = dUseState('');
-  const [section, setSection] = dUseState('냉장');
-  const sections = ['냉장','냉동','실온','양념','기타'];
-  const valid = name.trim().length > 0;
+  const [query, setQuery] = dUseState('');
+  const [activeCat, setActiveCat] = dUseState('전체');
+  const [picked, setPicked] = dUseState(new Set());
+  const categories = ['전체', ...PANTRY_CATEGORIES];
+  const filtered = PANTRY_ADD_ITEMS.filter(item => {
+    if (activeCat !== '전체' && item.section !== activeCat) return false;
+    if (query.trim() && !item.name.includes(query.trim())) return false;
+    return true;
+  });
+  const togglePick = (name) => setPicked(prev => {
+    const next = new Set(prev);
+    next.has(name) ? next.delete(name) : next.add(name);
+    return next;
+  });
+  const pickedItems = PANTRY_ADD_ITEMS.filter(item => picked.has(item.name));
   return (
-    <DskOverlay onClose={onClose} width={460}>
+    <DskOverlay onClose={onClose} width={620}>
       <DskDialogHeader title="재료 추가" onClose={onClose} />
       <div style={{ padding: '18px 22px', overflowY: 'auto' }}>
+        <input value={query} onChange={e => setQuery(e.target.value)} autoFocus
+          placeholder="재료 검색" style={{ ...dskInputStyle, background: T.surfaceFill, marginBottom: 10 }} />
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 16 }}>
+          {categories.map(cat => (
+            <button key={cat} onClick={() => setActiveCat(cat)} style={{
+              flexShrink: 0, padding: '8px 14px', borderRadius: 9999,
+              border: activeCat === cat ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+              background: activeCat === cat ? T.mintSoft : '#fff',
+              color: activeCat === cat ? T.mintDeep : T.text2,
+              fontSize: 12, fontWeight: 800, cursor: 'pointer',
+            }}>{cat}</button>
+          ))}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          {filtered.map(item => {
+            const on = picked.has(item.name);
+            return (
+              <button key={item.name} onClick={() => togglePick(item.name)} style={{
+                display: 'flex', alignItems: 'center', gap: 8, minHeight: 54,
+                padding: '10px 12px', borderRadius: 12,
+                border: on ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+                background: on ? T.mintSoft : '#fff', cursor: 'pointer', textAlign: 'left',
+              }}>
+                <span style={{ width: 30, height: 30, borderRadius: 10, background: T.surfaceFill,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{item.image}</span>
+                <span style={{ flex: 1, fontSize: 13, color: T.ink, fontWeight: 800 }}>{item.name}</span>
+                {on && Icon.check(T.mintDeep, 16)}
+              </button>
+            );
+          })}
+        </div>
+        {filtered.length === 0 && (
+          <div style={{ padding: 34, textAlign: 'center', color: T.text3, fontSize: 13 }}>검색 결과가 없어요</div>
+        )}
         <button onClick={onOpenBundle} style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-          background: T.mintSoft, border: `1px solid ${T.mint}`,
-          borderRadius: 10, padding: '12px 14px', cursor: 'pointer', textAlign: 'left',
-          marginBottom: 16,
-        }}>
-          <span style={{ fontSize: 22 }}>📦</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: T.mintDeep }}>묶음으로 한꺼번에 추가</div>
-            <div style={{ fontSize: 11, color: T.mintDeep, marginTop: 2 }}>김치찌개 재료 / 한식 기본 양념 등</div>
-          </div>
-          {Icon.chevR(T.mintDeep)}
-        </button>
-        <DesktopFormRow label="재료 이름">
-          <input value={name} onChange={e => setName(e.target.value)} autoFocus
-            placeholder="예: 양파" style={dskInputStyle} />
-        </DesktopFormRow>
-        <DesktopFormRow label="구역">
-          <div style={{ display: 'flex', gap: 6 }}>
-            {sections.map(s => (
-              <button key={s} onClick={() => setSection(s)} style={{
-                flex: 1, padding: '9px 0', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                background: section === s ? T.mintSoft : '#fff',
-                color: section === s ? T.mintDeep : T.text2,
-                border: section === s ? `1px solid ${T.mint}` : `1px solid ${T.border}`,
-                cursor: 'pointer',
-              }}>{s}</button>
-            ))}
-          </div>
-        </DesktopFormRow>
+          marginTop: 14, width: '100%', borderRadius: 10, border: `1px solid ${T.border}`,
+          background: '#fff', color: T.text2, padding: '11px 14px',
+          fontSize: 13, fontWeight: 800, cursor: 'pointer',
+        }}>묶음 추가</button>
       </div>
       <DskDialogFooter>
         <button onClick={onClose} style={dskGhostBtn}>취소</button>
-        <button disabled={!valid} onClick={() => onAddItem?.({ name: name.trim(), section, have: true })} style={{
-          ...dskPrimaryBtn, opacity: valid ? 1 : 0.5, cursor: valid ? 'pointer' : 'default',
-        }}>추가</button>
+        <button disabled={picked.size === 0} onClick={() => onAddItem?.(pickedItems)} style={{
+          ...dskPrimaryBtn, opacity: picked.size ? 1 : 0.5, cursor: picked.size ? 'pointer' : 'default',
+        }}>{picked.size > 0 ? `${picked.size}개 추가` : '재료 선택'}</button>
       </DskDialogFooter>
     </DskOverlay>
   );
@@ -5327,6 +5468,8 @@ Object.assign(window, {
   DesktopConsumedIngredientDialog, DesktopRecipeBookSelectorDialog,
   DesktopRecipeBookDetailPickerDialog, DesktopPantryMatchPickerDialog,
 });
+
+
 // ===== screens/extras.jsx =====
 // ===== Extra screens — Phase 2 =====
 // Shopping list, Cook list/run, Meal detail, MyPage subpages
@@ -7566,55 +7709,87 @@ function MyPageShoppingTab({ shoppingLists, onOpen }) {
 // PANTRY — PantryAddSheet + PANTRY_BUNDLE_PICKER
 // ─────────────────────────────────────────────────────────────
 function PantryAddSheet({ onClose, onAddItem, onOpenBundle }) {
-  const [name, setName] = useState_W('');
-  const [section, setSection] = useState_W('냉장');
-  const sections = ['냉장', '냉동', '실온', '양념', '기타'];
-  const valid = name.trim().length > 0;
+  const [query, setQuery] = useState_W('');
+  const [activeCat, setActiveCat] = useState_W('전체');
+  const [picked, setPicked] = useState_W(new Set());
+  const categories = ['전체', ...PANTRY_CATEGORIES];
+  const filtered = PANTRY_ADD_ITEMS.filter(item => {
+    if (activeCat !== '전체' && item.section !== activeCat) return false;
+    if (query.trim() && !item.name.includes(query.trim())) return false;
+    return true;
+  });
+  const togglePick = (name) => setPicked(prev => {
+    const next = new Set(prev);
+    next.has(name) ? next.delete(name) : next.add(name);
+    return next;
+  });
+  const pickedItems = PANTRY_ADD_ITEMS.filter(item => picked.has(item.name));
   return (
     <div style={overlay} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{
         background: '#fff', borderRadius: '20px 20px 0 0',
-        position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20,
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        maxHeight: '88%', display: 'flex', flexDirection: 'column',
       }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand, marginBottom: 12 }}>
-          재료 추가
-        </div>
-
-        <button onClick={onOpenBundle} style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-          background: T.mintSoft, border: `1px solid ${T.mint}`,
-          borderRadius: 10, padding: '12px 14px', cursor: 'pointer', textAlign: 'left',
-          marginBottom: 14,
-        }}>
-          <span style={{ fontSize: 22 }}>📦</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: T.mintDeep }}>묶음으로 한꺼번에 추가</div>
-            <div style={{ fontSize: 11, color: T.mintDeep, marginTop: 2 }}>김치찌개 재료 / 한식 기본 양념 등</div>
+        <div style={{ padding: '18px 20px 12px', borderBottom: `1px solid ${T.border}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand }}>
+              재료 추가
+            </div>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, color: T.text3, cursor: 'pointer' }}>×</button>
           </div>
-          {Icon.chevR(T.mintDeep)}
-        </button>
-
-        <Field label="재료 이름">
-          <input value={name} onChange={e => setName(e.target.value)} autoFocus
-            placeholder="예: 양파" style={inp} />
-        </Field>
-        <Field label="구역">
-          <div style={{ display: 'flex', gap: 6 }}>
-            {sections.map(s => (
-              <button key={s} onClick={() => setSection(s)} style={{
-                flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                background: section === s ? T.mintSoft : '#fff',
-                color: section === s ? T.mintDeep : T.text2,
-                border: section === s ? `1px solid ${T.mint}` : `1px solid ${T.border}`,
-                cursor: 'pointer',
-              }}>{s}</button>
+          <input value={query} onChange={e => setQuery(e.target.value)} autoFocus
+            placeholder="재료 검색" style={{ ...inp, background: T.surfaceFill }} />
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginTop: 10 }}>
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setActiveCat(cat)} style={{
+                flexShrink: 0, padding: '7px 13px', borderRadius: 9999,
+                border: activeCat === cat ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+                background: activeCat === cat ? T.mintSoft : '#fff',
+                color: activeCat === cat ? T.mintDeep : T.text2,
+                fontSize: 12, fontWeight: 800, cursor: 'pointer',
+              }}>{cat}</button>
             ))}
           </div>
-        </Field>
+        </div>
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {filtered.map(item => {
+              const on = picked.has(item.name);
+              return (
+                <button key={item.name} onClick={() => togglePick(item.name)} style={{
+                  display: 'flex', alignItems: 'center', gap: 9, minHeight: 54,
+                  borderRadius: 12, border: on ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+                  background: on ? T.mintSoft : '#fff', cursor: 'pointer',
+                  padding: '9px 10px', textAlign: 'left',
+                }}>
+                  <span style={{ width: 30, height: 30, borderRadius: 10, background: T.surfaceFill,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{item.image}</span>
+                  <span style={{ flex: 1, fontSize: 13, color: T.ink, fontWeight: 800 }}>{item.name}</span>
+                  {on && Icon.check(T.mintDeep, 16)}
+                </button>
+              );
+            })}
+          </div>
+          {filtered.length === 0 && (
+            <div style={{ padding: 30, textAlign: 'center', color: T.text3, fontSize: 13 }}>검색 결과가 없어요</div>
+          )}
+          <button onClick={onOpenBundle} style={{
+            width: '100%', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            background: '#fff', border: `1px solid ${T.border}`,
+            borderRadius: 10, padding: '12px 14px', cursor: 'pointer',
+            color: T.text2, fontSize: 13, fontWeight: 800,
+          }}>
+            <span>📦</span> 묶음 추가
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, padding: 16, borderTop: `1px solid ${T.border}` }}>
           <Button variant="neutral" onClick={onClose}>취소</Button>
-          <Button full disabled={!valid} onClick={() => onAddItem({ name: name.trim(), section, have: true })}>추가</Button>
+          <Button full disabled={picked.size === 0} onClick={() => onAddItem(pickedItems)}>
+            {picked.size > 0 ? `${picked.size}개 추가` : '재료 선택'}
+          </Button>
         </div>
       </div>
     </div>
@@ -8037,6 +8212,8 @@ Object.assign(window, {
   // Wave 1.5
   MyPageRecipebookDetailScreen, IngredientFilterModal, PlanningServingsModal,
 });
+
+
 // ===== app.jsx =====
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "accentColor": "#2AC1BC",
@@ -8303,6 +8480,19 @@ function App() {
     showToast(`${Object.keys(qtys).length}개 재료가 팬트리에 추가됐어요`);
     setRoute({ tab: 'pantry' });
   };
+  const addPickedPantryItems = (items) => {
+    const list = Array.isArray(items) ? items : [items];
+    setPantry(p => {
+      const next = { ...p };
+      list.forEach(item => {
+        if (!item?.name) return;
+        next[item.name] = { name: item.name, section: item.section, have: true };
+      });
+      return next;
+    });
+    setPantryAddSheet(false);
+    showToast(`${list.length}개 재료 추가됨`);
+  };
   const markCooked = (date, slot, consumed, mealIndex = 0) => {
     updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, status: 'cooked' }));
     if (consumed && consumed.length) {
@@ -8458,7 +8648,9 @@ function App() {
 
 
   } else if (route.tab === 'pantry') {
-    content = <PantryScreen pantry={pantry} setPantry={setPantry} onOpenAdd={() => setPantryAddSheet(true)} />;
+    content = <PantryScreen pantry={pantry} setPantry={setPantry}
+      onOpenAdd={() => setPantryAddSheet(true)}
+      onOpenBundle={() => setPantryBundlePicker(true)} />;
   } else if (route.tab === 'mypage') {
     content = <MyPageScreen savedIds={savedIds} onOpenRecipe={openRecipe} onGoPage={goPage}
       shoppingLists={shoppingLists} profile={profile} />;
@@ -8518,7 +8710,9 @@ function App() {
       />
     );
   } else if (route.tab === 'pantry') {
-    desktopContent = <DesktopPantry pantry={pantry} setPantry={setPantry} onOpenAdd={() => setPantryAddSheet(true)} />;
+    desktopContent = <DesktopPantry pantry={pantry} setPantry={setPantry}
+      onOpenAdd={() => setPantryAddSheet(true)}
+      onOpenBundle={() => setPantryBundlePicker(true)} />;
   } else if (route.tab === 'mypage') {
     desktopContent = <DesktopMyPage savedIds={savedIds} onOpenRecipe={openRecipe} onGoPage={goPage} />;
   }
@@ -8719,11 +8913,7 @@ function App() {
         {pantryAddSheet && (
           <DesktopPantryAddDialog
             onClose={() => setPantryAddSheet(false)}
-            onAddItem={(item) => {
-              setPantry(p => ({ ...p, [item.name]: { name: item.name, section: item.section, have: true } }));
-              setPantryAddSheet(false);
-              showToast(item.name + ' 추가됨');
-            }}
+            onAddItem={addPickedPantryItems}
             onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
           />
         )}
@@ -8843,12 +9033,7 @@ function App() {
           {pantryAddSheet && (
             <PantryAddSheet
               onClose={() => setPantryAddSheet(false)}
-              onAddItem={(item) => {
-                const key = item.name;
-                setPantry(p => ({ ...p, [key]: { name: item.name, section: item.section, have: true } }));
-                setPantryAddSheet(false);
-                showToast(item.name + ' 추가됨');
-              }}
+              onAddItem={addPickedPantryItems}
               onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
             />
           )}
@@ -8965,12 +9150,7 @@ function App() {
               {pantryAddSheet && (
                 <PantryAddSheet
                   onClose={() => setPantryAddSheet(false)}
-                  onAddItem={(item) => {
-                    const key = item.name;
-                    setPantry(p => ({ ...p, [key]: { name: item.name, section: item.section, have: true } }));
-                    setPantryAddSheet(false);
-                    showToast(item.name + ' 추가됨');
-                  }}
+                  onAddItem={addPickedPantryItems}
                   onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
                 />
               )}
@@ -9058,12 +9238,7 @@ function App() {
               {pantryAddSheet && (
                 <PantryAddSheet
                   onClose={() => setPantryAddSheet(false)}
-                  onAddItem={(item) => {
-                    const key = item.name;
-                    setPantry(p => ({ ...p, [key]: { name: item.name, section: item.section, have: true } }));
-                    setPantryAddSheet(false);
-                    showToast(item.name + ' 추가됨');
-                  }}
+                  onAddItem={addPickedPantryItems}
                   onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
                 />
               )}
@@ -9316,6 +9491,8 @@ const quickBtn = {
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+
 </script>
 </body>
 </html>
