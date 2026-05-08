@@ -1261,14 +1261,19 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
       </div>
     );
   }
-  const checked = list.items.filter(i => i.checked).length;
-  const total = list.items.length;
+  const completed = list.status === 'completed';
+  const [localSkipRevived, setLocalSkipRevived] = dUseState(new Set());
+  const [localBuyExcluded, setLocalBuyExcluded] = dUseState(new Set());
+  const buy = list.items.filter(i => !i.have || localSkipRevived.has(i.name)).filter(i => !localBuyExcluded.has(i.name));
+  const skip = list.items.filter(i => (i.have && !localSkipRevived.has(i.name)) || localBuyExcluded.has(i.name));
+  const checked = buy.filter(i => i.checked).length;
+  const total = buy.length;
   const progress = total > 0 ? checked / total : 0;
-  const sections = {};
-  list.items.forEach(it => {
-    if (!sections[it.section]) sections[it.section] = [];
-    sections[it.section].push(it);
-  });
+  const createdDate = list.createdAt || '2026-04-20';
+  const sections = buy.reduce((acc, it) => {
+    (acc[it.section] = acc[it.section] || []).push(it);
+    return acc;
+  }, {});
 
   return (
     <div>
@@ -1282,11 +1287,15 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>{list.name}</div>
           <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>
-            {list.status === 'completed' ? `완료 · ${list.completedAt || ''}` : '진행 중'} · {checked}/{total} 체크
+            {createdDate} 생성 · {completed ? `완료 · ${list.completedAt || ''}` : '진행 중'} · {checked}/{total} 체크
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          {list.status === 'completed' ? (
+          <button aria-label="공유" onClick={() => showToast?.('공유 링크가 복사됐어요')} style={{
+            padding: '10px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
+            background: '#fff', color: T.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          }}>공유</button>
+          {completed ? (
             <>
               <button onClick={() => onReopen?.(list.id)} style={{
                 padding: '10px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
@@ -1308,6 +1317,10 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
 
       {/* Progress */}
       <div style={{ background: '#fff', borderRadius: 12, padding: 16, marginBottom: 20, boxShadow: T.shadowNatural }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={{ fontSize: 12, color: T.text2, fontWeight: 800 }}>구매할 재료 {buy.length}개</span>
+          <span style={{ fontSize: 12, color: T.text3 }}>팬트리 제외 {skip.length}개</span>
+        </div>
         <div style={{ height: 8, background: T.surfaceFill, borderRadius: 4, overflow: 'hidden' }}>
           <div style={{ width: `${progress*100}%`, height: '100%', background: T.mint, transition: 'width 0.2s' }} />
         </div>
@@ -1316,18 +1329,22 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 24, alignItems: 'start' }}>
+        <main style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {Object.entries(sections).map(([sec, items]) => (
           <div key={sec} style={{ background: '#fff', borderRadius: 12, padding: 16, boxShadow: T.shadowDeep }}>
             <div style={{ fontSize: 13, fontWeight: 800, color: T.text2, marginBottom: 12 }}>{sec} ({items.length})</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {items.map(it => (
-                <button key={it.name} onClick={() => onToggleItem?.(it.name)} style={{
+                <div key={it.name} style={{
                   display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10,
-                  background: it.checked ? T.mintSoft : T.surfaceFill, border: 'none', cursor: 'pointer', textAlign: 'left',
-                  textDecoration: it.checked ? 'line-through' : 'none',
-                  opacity: it.have ? 0.6 : 1,
+                  background: it.checked ? T.mintSoft : T.surfaceFill,
                 }}>
+                  <button disabled={completed} onClick={() => onToggleItem?.(it.name)} style={{
+                    flex: 1, display: 'flex', alignItems: 'center', gap: 12,
+                    border: 'none', background: 'none', cursor: completed ? 'default' : 'pointer',
+                    textAlign: 'left', padding: 0,
+                  }}>
                   <div style={{
                     width: 22, height: 22, borderRadius: 11,
                     background: it.checked ? T.mint : '#fff',
@@ -1335,16 +1352,82 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
                     display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 800,
                   }}>{it.checked ? '✓' : ''}</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{it.name}</div>
-                    <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>{it.qty} · {(it.fromMeals || []).join(' · ')}{it.have ? ' · 보유' : ''}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, textDecoration: it.checked ? 'line-through' : 'none' }}>{it.name}</div>
+                    <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>{it.qty} · {(it.fromMeals || []).join(' · ')}</div>
                   </div>
-                </button>
+                  </button>
+                  {!completed && (
+                    <button onClick={() => {
+                      setLocalBuyExcluded(s => { const n = new Set(s); n.add(it.name); return n; });
+                      showToast?.(`${it.name} → 이미 있음 처리`);
+                      /* CONTRACT_CHECK: PATCH /shopping-lists/:id/items/:name {have:true} — vNext에서는 UI shape만 */
+                    }} style={{
+                      padding: '6px 10px', borderRadius: 8, border: `1px solid ${T.border}`,
+                      background: '#fff', color: T.text2, fontSize: 11, fontWeight: 800,
+                      cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}>이미있음</button>
+                  )}
+                </div>
               ))}
             </div>
           </div>
         ))}
+        {Object.keys(sections).length === 0 && (
+          <div style={{ background: '#fff', borderRadius: 12, padding: 40, boxShadow: T.shadowDeep, textAlign: 'center', color: T.text3 }}>
+            구매할 재료가 없어요
+          </div>
+        )}
+        </main>
+
+        <aside style={{ background: '#fff', borderRadius: 12, padding: 16, boxShadow: T.shadowDeep, position: 'sticky', top: 24 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.text2, marginBottom: 12 }}>
+            팬트리에 있어 제외 ({skip.length})
+          </div>
+          {skip.length === 0 ? (
+            <div style={{ fontSize: 12, color: T.text3, lineHeight: 1.6 }}>제외된 재료가 없어요.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {skip.map(it => (
+                <div key={it.name} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 12px', borderRadius: 10, background: T.surfaceFill,
+                }}>
+                  <span style={{ width: 22, height: 22, borderRadius: 11, background: T.mintSoft, color: T.mintDeep,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 900 }}>✓</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.text2 }}>{it.name}</div>
+                    <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>{it.qty}</div>
+                  </div>
+                  {!completed && (
+                    <button onClick={() => {
+                      setLocalSkipRevived(s => { const n = new Set(s); n.add(it.name); return n; });
+                      setLocalBuyExcluded(s => { const n = new Set(s); n.delete(it.name); return n; });
+                      showToast?.(`${it.name} → 장보기 목록으로 복원`);
+                      /* CONTRACT_CHECK: PATCH /shopping-lists/:id/items/:name {have:false} — vNext에서는 UI shape만 */
+                    }} style={{
+                      padding: '6px 10px', borderRadius: 8, border: `1px solid ${T.mint}`,
+                      background: T.mintSoft, color: T.mintDeep, fontSize: 11, fontWeight: 800,
+                      cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}>되살리기</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </aside>
       </div>
-    </div>
+
+      {!completed && (
+        <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
+          <button disabled={buy.length === 0} onClick={() => onComplete?.(list.id)} style={{
+            padding: '13px 28px', borderRadius: 10, border: 'none',
+            background: buy.length === 0 ? T.border : T.mint, color: '#fff',
+            fontSize: 14, fontWeight: 800, cursor: buy.length === 0 ? 'default' : 'pointer',
+            fontFamily: T.fontBrand,
+          }}>장보기 완료</button>
+        </div>
+      )}
+      </div>
   );
 }
 
@@ -1352,8 +1435,8 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
 function DesktopCookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete, showToast }) {
   const meal = mealItems(planner[date]?.[slot])[mealIndex];
   const recipe = meal && RECIPES.find(r => r.id === meal.recipeId);
-  const [step, setStep] = dUseState(0);
   const [consumed, setConsumed] = dUseState(new Set());
+  const [confirmCancel, setConfirmCancel] = dUseState(false);
   if (!recipe) {
     return (
       <div>
@@ -1363,92 +1446,70 @@ function DesktopCookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onCo
     );
   }
   const steps = recipe.steps || [{ text: '레시피 단계 정보가 없어요' }];
-  const cur = steps[step] || steps[0];
-  const stepKind = (cur.kind || 'etc');
-  const stepColor = T['cook' + stepKind.charAt(0).toUpperCase() + stepKind.slice(1)] || T.text3;
 
   return (
     <div>
-      <button onClick={onBack} style={{
+      <button onClick={() => setConfirmCancel(true)} style={{
         background: 'none', border: 'none', cursor: 'pointer',
         color: T.text2, fontSize: 13, fontWeight: 600, marginBottom: 14,
         display: 'inline-flex', alignItems: 'center', gap: 6,
-      }}>{Icon.chevL(T.text2)} 그만두기</button>
+      }}>{Icon.chevL(T.text2)} 취소</button>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
         <div>
           <div style={{ fontSize: 11, color: T.text3, fontWeight: 700, letterSpacing: 1 }}>요리 모드 · {date} {slot}</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>{recipe.name}</div>
         </div>
-        <div style={{ fontSize: 13, color: T.text3 }}>{step + 1} / {steps.length} 단계</div>
+        <div style={{ fontSize: 13, color: T.text3 }}>{steps.length}단계</div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 24, alignItems: 'start' }}>
-        <main style={{
-          background: '#fff', borderRadius: 16, boxShadow: T.shadowDeep, overflow: 'hidden',
-        }}>
-          <div style={{
-            aspectRatio: '16/9', background: recipe.bg || T.surfaceFill,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 96, position: 'relative',
-          }}>
-            {recipe.emoji}
-            <div style={{
-              position: 'absolute', top: 14, left: 14,
-              background: stepColor, color: '#fff', fontSize: 11, fontWeight: 800,
-              padding: '6px 12px', borderRadius: 9999, letterSpacing: 0.5,
-            }}>{stepKind.toUpperCase()}</div>
-          </div>
-          <div style={{ padding: 28 }}>
-            <div style={{ fontSize: 12, color: T.text3, fontWeight: 700, marginBottom: 8 }}>STEP {step + 1}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: T.ink, lineHeight: 1.55, marginBottom: 18 }}>
-              {cur.text || '단계 설명'}
-            </div>
-            {cur.tip && (
-              <div style={{ background: T.surfaceFill, borderRadius: 10, padding: 14, fontSize: 13, color: T.text2, lineHeight: 1.55 }}>
-                💡 {cur.tip}
+        {/* All steps — scrollable main area */}
+        <main style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {steps.map((cur, i) => {
+            const m = METHOD_COLORS[cur.method] || METHOD_COLORS.prep;
+            return (
+              <div key={i} style={{
+                background: '#fff', borderRadius: 16, boxShadow: T.shadowDeep, overflow: 'hidden',
+                borderLeft: `5px solid ${m.border}`,
+              }}>
+                <div style={{ padding: 22 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{
+                      fontSize: 11, fontWeight: 800, color: '#fff', background: m.border,
+                      padding: '3px 10px', borderRadius: 9999,
+                    }}>STEP {i + 1}</span>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, color: m.text, background: m.bg,
+                      padding: '3px 8px', borderRadius: 9999,
+                    }}>{m.label}</span>
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, lineHeight: 1.55, marginBottom: 8, fontFamily: T.fontBrand }}>
+                    {cur.title || `단계 ${i + 1}`}
+                  </div>
+                  <div style={{ fontSize: 14, color: T.text1, lineHeight: 1.6 }}>
+                    {cur.body || cur.text || ''}
+                  </div>
+                </div>
               </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24 }}>
-              <button onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0} style={{
-                padding: '12px 22px', borderRadius: 10, border: `1px solid ${T.border}`,
-                background: '#fff', color: step === 0 ? T.text4 : T.text2,
-                fontSize: 14, fontWeight: 700, cursor: step === 0 ? 'default' : 'pointer',
-              }}>◀ 이전</button>
-              {step < steps.length - 1 ? (
-                <button onClick={() => setStep(s => s + 1)} style={{
-                  padding: '12px 28px', borderRadius: 10, border: 'none',
-                  background: T.mint, color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer',
-                }}>다음 단계 ▶</button>
-              ) : (
-                <button onClick={() => onComplete?.(date, slot, [...consumed], mealIndex)} style={{
-                  padding: '12px 28px', borderRadius: 10, border: 'none',
-                  background: T.tealLight, color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer',
-                }}>🎉 요리 완료</button>
-              )}
-            </div>
+            );
+          })}
+
+          {/* Complete button at bottom of steps */}
+          <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+            <button onClick={() => setConfirmCancel(true)} style={{
+              padding: '14px 24px', borderRadius: 10, border: `1px solid ${T.border}`,
+              background: '#fff', color: T.text2, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            }}>취소</button>
+            <button onClick={() => onComplete?.(date, slot, [...consumed], mealIndex)} style={{
+              flex: 1, padding: '14px 28px', borderRadius: 10, border: 'none',
+              background: T.mint, color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
+              fontFamily: T.fontBrand,
+            }}>요리 완료</button>
           </div>
         </main>
 
         <aside style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 24 }}>
-          {/* Steps overview */}
-          <div style={{ background: '#fff', borderRadius: 12, padding: 16, boxShadow: T.shadowDeep }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 10 }}>전체 단계</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {steps.map((s, i) => (
-                <button key={i} onClick={() => setStep(i)} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', borderRadius: 8,
-                  background: i === step ? T.mintSoft : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left',
-                }}>
-                  <span style={{ fontSize: 11, color: i < step ? T.mintDeep : (i === step ? T.mintDeep : T.text3), fontWeight: 800, minWidth: 18 }}>
-                    {i < step ? '✓' : i + 1}
-                  </span>
-                  <span style={{ fontSize: 12, color: i === step ? T.ink : T.text2, fontWeight: i === step ? 700 : 500, lineHeight: 1.4 }}>
-                    {s.text || `단계 ${i+1}`}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
           {/* Consumed checklist */}
           <div style={{ background: '#fff', borderRadius: 12, padding: 16, boxShadow: T.shadowDeep }}>
             <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 10 }}>차감할 재료</div>
@@ -1478,6 +1539,16 @@ function DesktopCookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onCo
           </div>
         </aside>
       </div>
+
+      {confirmCancel && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
+          <ConfirmDialog title="요리를 취소할까요?"
+            body="진행 중인 요리 기록이 사라져요."
+            destructive confirmLabel="취소하기" cancelLabel="계속하기"
+            onClose={() => setConfirmCancel(false)}
+            onConfirm={() => { setConfirmCancel(false); onBack(); }} />
+        </div>
+      )}
     </div>
   );
 }
