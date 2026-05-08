@@ -3,14 +3,12 @@
 function MyPageScreen({ savedIds, onOpenRecipe, onGoPage }) {
   const stats = [
   { k: 'cooked', l: '요리 완료', v: 24, c: T.mint },
-  { k: 'saved', l: '저장', v: savedIds.length, c: T.orange },
+  { k: 'books', l: '레시피북', v: 5, c: T.orange },
   { k: 'streak', l: '연속', v: 7, c: T.red }];
-
-  const savedRecipes = RECIPES.filter((r) => savedIds.includes(r.id));
 
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
-      <AppBar title="마이페이지" left={null} right={<span style={{ fontSize: 18 }}>⚙️</span>} />
+      <AppBar title="마이페이지" left={null} right={null} />
 
       {/* Profile hero */}
       <div style={{ background: '#fff', padding: 20, borderBottom: `1px solid ${T.border}` }}>
@@ -44,37 +42,15 @@ function MyPageScreen({ savedIds, onOpenRecipe, onGoPage }) {
         </div>
       </div>
 
-      {/* Saved recipes */}
-      <div style={{ padding: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>저장한 레시피</div>
-          <div style={{ fontSize: 12, color: T.text3 }}>{savedRecipes.length}개 ›</div>
-        </div>
-        {savedRecipes.length > 0 ?
-        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollbarWidth: 'none' }}>
-            {savedRecipes.map((r) =>
-          <RecipeCard key={r.id} recipe={r} compact onClick={() => onOpenRecipe(r.id)} />
-          )}
-          </div> :
-
-        <div style={{ background: '#fff', borderRadius: 12, padding: 32, textAlign: 'center',
-          border: `1px solid ${T.border}` }}>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>🔖</div>
-            <div style={{ fontSize: 14, color: T.text3 }}>아직 저장한 레시피가 없어요</div>
-          </div>
-        }
-      </div>
-
       {/* Menu list */}
-      <div style={{ padding: '0 16px' }}>
+      <div style={{ padding: 16 }}>
         <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden',
           border: `1px solid ${T.border}` }}>
           {[
-          ['🔖', '저장한 레시피', `${savedIds.length}개`, 'mypage-saved'],
           ['📚', '레시피북', '5개', 'mypage-recipebook'],
           ['🛒', '장보기 기록', '12회', 'mypage-shopping'],
           ['🍱', '남은요리', '관리', 'leftovers'],
-          ['🍽️', '다먹은 기록', '히스토리', 'ate-list'],
+          ['🍽️', '다먹은 요리', '히스토리', 'ate-list'],
           ['⚙️', '환경설정', null, 'settings'],
           ['👤', '계정 정보', null, 'mypage-account'],
           ['🔔', '알림 설정', null, 'mypage-notif'],
@@ -98,5 +74,4 @@ function MyPageScreen({ savedIds, onOpenRecipe, onGoPage }) {
 }
 
 window.MyPageScreen = MyPageScreen;
-
 

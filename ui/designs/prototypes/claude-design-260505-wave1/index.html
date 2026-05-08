@@ -1850,14 +1850,12 @@ window.PantryScreen = PantryScreen;
 function MyPageScreen({ savedIds, onOpenRecipe, onGoPage }) {
   const stats = [
   { k: 'cooked', l: '요리 완료', v: 24, c: T.mint },
-  { k: 'saved', l: '저장', v: savedIds.length, c: T.orange },
+  { k: 'books', l: '레시피북', v: 5, c: T.orange },
   { k: 'streak', l: '연속', v: 7, c: T.red }];
-
-  const savedRecipes = RECIPES.filter((r) => savedIds.includes(r.id));
 
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
-      <AppBar title="마이페이지" left={null} right={<span style={{ fontSize: 18 }}>⚙️</span>} />
+      <AppBar title="마이페이지" left={null} right={null} />
 
       {/* Profile hero */}
       <div style={{ background: '#fff', padding: 20, borderBottom: `1px solid ${T.border}` }}>
@@ -1891,37 +1889,15 @@ function MyPageScreen({ savedIds, onOpenRecipe, onGoPage }) {
         </div>
       </div>
 
-      {/* Saved recipes */}
-      <div style={{ padding: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>저장한 레시피</div>
-          <div style={{ fontSize: 12, color: T.text3 }}>{savedRecipes.length}개 ›</div>
-        </div>
-        {savedRecipes.length > 0 ?
-        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollbarWidth: 'none' }}>
-            {savedRecipes.map((r) =>
-          <RecipeCard key={r.id} recipe={r} compact onClick={() => onOpenRecipe(r.id)} />
-          )}
-          </div> :
-
-        <div style={{ background: '#fff', borderRadius: 12, padding: 32, textAlign: 'center',
-          border: `1px solid ${T.border}` }}>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>🔖</div>
-            <div style={{ fontSize: 14, color: T.text3 }}>아직 저장한 레시피가 없어요</div>
-          </div>
-        }
-      </div>
-
       {/* Menu list */}
-      <div style={{ padding: '0 16px' }}>
+      <div style={{ padding: 16 }}>
         <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden',
           border: `1px solid ${T.border}` }}>
           {[
-          ['🔖', '저장한 레시피', `${savedIds.length}개`, 'mypage-saved'],
           ['📚', '레시피북', '5개', 'mypage-recipebook'],
           ['🛒', '장보기 기록', '12회', 'mypage-shopping'],
           ['🍱', '남은요리', '관리', 'leftovers'],
-          ['🍽️', '다먹은 기록', '히스토리', 'ate-list'],
+          ['🍽️', '다먹은 요리', '히스토리', 'ate-list'],
           ['⚙️', '환경설정', null, 'settings'],
           ['👤', '계정 정보', null, 'mypage-account'],
           ['🔔', '알림 설정', null, 'mypage-notif'],
@@ -3070,13 +3046,12 @@ function DesktopPantry({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
 }
 
 function DesktopMyPage({ savedIds, onOpenRecipe, onGoPage }) {
-  const saved = RECIPES.filter(r => savedIds.includes(r.id));
+  const books = (window.RECIPEBOOK_SAMPLES || []).filter(b => b.kind === 'custom');
   const menuItems = [
-    ['\u{1F516}', '\uC800\uC7A5\uD55C \uB808\uC2DC\uD53C', `${savedIds.length}\uAC1C`, 'mypage-saved'],
     ['\u{1F4DA}', '\uB808\uC2DC\uD53C\uBD81', '5\uAC1C', 'mypage-recipebook'],
     ['\u{1F6D2}', '\uC7A5\uBCF4\uAE30 \uAE30\uB85D', '12\uD68C', 'mypage-shopping'],
     ['\u{1F371}', '\uB0A8\uC740\uC694\uB9AC', '\uAD00\uB9AC', 'leftovers'],
-    ['\u{1F37D}\uFE0F', '\uB2E4\uBA39\uC740 \uAE30\uB85D', '\uD788\uC2A4\uD1A0\uB9AC', 'ate-list'],
+    ['\u{1F37D}\uFE0F', '\uB2E4\uBA39\uC740 \uC694\uB9AC', '\uD788\uC2A4\uD1A0\uB9AC', 'ate-list'],
     ['\u2699\uFE0F', '\uD658\uACBD\uC124\uC815', null, 'settings'],
     ['\u{1F464}', '\uACC4\uC815 \uC815\uBCF4', null, 'mypage-account'],
     ['\u{1F514}', '\uC54C\uB9BC \uC124\uC815', null, 'mypage-notif'],
@@ -3096,7 +3071,7 @@ function DesktopMyPage({ savedIds, onOpenRecipe, onGoPage }) {
         <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>유저</div>
         <div style={{ fontSize: 12, color: T.text3, marginBottom: 20 }}>user@example.com</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 16 }}>
-          {[['저장', saved.length],['요리', 12],['플래너', 24]].map(([l,n]) => (
+          {[['레시피북', 5],['요리', 12],['플래너', 24]].map(([l,n]) => (
             <div key={l} style={{ background: T.surfaceFill, padding: '12px 8px', borderRadius: 8 }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: T.ink }}>{n}</div>
               <div style={{ fontSize: 11, color: T.text3 }}>{l}</div>
@@ -3120,21 +3095,21 @@ function DesktopMyPage({ savedIds, onOpenRecipe, onGoPage }) {
         </div>
       </aside>
       <div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 12 }}>저장한 레시피</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 12 }}>레시피북</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-          {saved.map(r => (
-            <div key={r.id} onClick={() => onOpenRecipe(r.id)} style={{
+          {books.map(b => (
+            <div key={b.id} onClick={() => onGoPage?.('mypage-recipebook')} style={{
               background: '#fff', borderRadius: 12, overflow: 'hidden',
               boxShadow: T.shadowDeep, cursor: 'pointer',
             }}>
               <div style={{
-                width: '100%', aspectRatio: '4/3', background: r.bg,
+                width: '100%', aspectRatio: '4/3', background: T.mintSoft,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64,
-              }}>{r.emoji}</div>
+              }}>{b.emoji}</div>
               <div style={{ padding: 12 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{r.name}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{b.name}</div>
                 <div style={{ fontSize: 12, color: T.text3, marginTop: 4 }}>
-                  ⭐ {r.rating} · {r.minutes}분
+                  {b.recipeIds?.length || 0}개 레시피 · 내 책
                 </div>
               </div>
             </div>
@@ -3915,10 +3890,8 @@ function DesktopCookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onCo
 // Desktop: LOGIN (P1.2)
 function DesktopLoginScreen({ returnTo, onBack, onLogin }) {
   const providers = [
-    { k: 'kakao',  label: '카카오로 시작',   bg: '#FEE500', color: '#191919', emoji: '💬' },
     { k: 'naver',  label: '네이버로 시작',   bg: '#03C75A', color: '#fff',    emoji: 'N' },
     { k: 'google', label: 'Google로 시작',  bg: '#fff',    color: '#212529', emoji: 'G', border: T.border },
-    { k: 'apple',  label: 'Apple로 시작',   bg: '#212529', color: '#fff',    emoji: '' },
   ];
   return (
     <div style={{
@@ -4024,17 +3997,37 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
   const [keepAwake, setKeepAwake] = dUseState(true);
   const [voice, setVoice] = dUseState(false);
   const [autoNext, setAutoNext] = dUseState(false);
-  const [showNick, setShowNick] = dUseState(false);
   const [confirmLogout, setConfirmLogout] = dUseState(false);
   const [confirmDelete, setConfirmDelete] = dUseState(false);
-  const [section, setSection] = dUseState('account');
+  const [mealColumns, setMealColumns] = dUseState(['아침', '점심', '저녁']);
+  const [newMealName, setNewMealName] = dUseState('');
+  const [section, setSection] = dUseState('planner');
+
+  const addMealColumn = () => {
+    const name = newMealName.trim();
+    if (!name) return;
+    if (mealColumns.includes(name)) {
+      showToast?.('이미 있는 끼니예요');
+      return;
+    }
+    setMealColumns(cols => [...cols, name]);
+    setNewMealName('');
+    showToast?.('끼니 컬럼이 추가됐어요');
+  };
+  const updateMealColumn = (idx, value) => {
+    setMealColumns(cols => cols.map((name, i) => i === idx ? value : name));
+  };
+  const removeMealColumn = (idx) => {
+    setMealColumns(cols => cols.filter((_, i) => i !== idx));
+    showToast?.('끼니 컬럼이 삭제됐어요');
+  };
 
   const sections = [
-    { k: 'account', label: '계정', emoji: '👤' },
+    { k: 'planner', label: '플래너 끼니', emoji: '🗓️' },
     { k: 'cook',    label: '요리 모드', emoji: '🍳' },
     { k: 'notif',   label: '알림', emoji: '🔔' },
     { k: 'data',    label: '데이터 · 백업', emoji: '💾' },
-    { k: 'danger',  label: '계정 삭제', emoji: '⚠️' },
+    { k: 'etc',     label: '기타', emoji: '⚙️' },
   ];
 
   return (
@@ -4057,7 +4050,7 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
               textAlign: 'left', padding: '11px 14px', borderRadius: 10,
               background: section === s.k ? T.mintSoft : 'transparent',
               border: section === s.k ? `1px solid ${T.mint}` : '1px solid transparent',
-              color: section === s.k ? T.mintDeep : (s.k === 'danger' ? T.red : T.text1),
+              color: section === s.k ? T.mintDeep : T.text1,
               fontSize: 13, fontWeight: 700, cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: 10,
             }}>
@@ -4067,19 +4060,37 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
         </aside>
 
         <main style={{ background: '#fff', borderRadius: 16, padding: 28, boxShadow: T.shadowDeep, minHeight: 400 }}>
-          {section === 'account' && (
+          {section === 'planner' && (
             <div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>계정 정보</div>
-              <DesktopSettingRow label="닉네임" sub="레시피북·후기에 표시되는 이름이에요"
-                right={<><span style={{ fontSize: 14, color: T.text2, fontWeight: 600 }}>{profile.nickname}</span>
-                  <button onClick={() => setShowNick(true)} style={editLinkBtnDsk}>변경</button></>} />
-              <DesktopSettingRow label="이메일" sub="로그인에 사용된 계정 이메일"
-                right={<span style={{ fontSize: 14, color: T.text3 }}>{profile.email}</span>} />
-              <DesktopSettingRow label="로그아웃" sub="이 기기에서 로그아웃해요"
-                right={<button onClick={() => setConfirmLogout(true)} style={{
-                  padding: '8px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
-                  background: '#fff', color: T.text2, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                }}>로그아웃</button>} />
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>플래너 끼니 컬럼</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {mealColumns.map((name, idx) => (
+                  <div key={`${name}-${idx}`} style={{
+                    display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'center',
+                    padding: 12, borderRadius: 12, border: `1px solid ${T.border}`, background: T.surfaceFill,
+                  }}>
+                    <input value={name} onChange={e => updateMealColumn(idx, e.target.value)}
+                      style={{ ...inp, background: '#fff', padding: '11px 12px', fontSize: 13 }}
+                      aria-label={`끼니 컬럼 ${idx + 1}`} />
+                    <button onClick={() => removeMealColumn(idx)} disabled={mealColumns.length <= 1} style={{
+                      width: 40, height: 40, borderRadius: 10, border: `1px solid ${T.border}`,
+                      background: mealColumns.length <= 1 ? T.surfaceFill : '#fff',
+                      color: mealColumns.length <= 1 ? T.text4 : T.red,
+                      cursor: mealColumns.length <= 1 ? 'not-allowed' : 'pointer',
+                      fontSize: 17, fontWeight: 800,
+                    }}>×</button>
+                  </div>
+                ))}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, marginTop: 4 }}>
+                  <input value={newMealName} onChange={e => setNewMealName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') addMealColumn(); }}
+                    placeholder="새 끼니 이름" style={{ ...inp, padding: '12px 14px', fontSize: 13 }} />
+                  <button onClick={addMealColumn} style={{
+                    padding: '0 16px', borderRadius: 10, border: 'none',
+                    background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+                  }}>+ 끼니 컬럼 추가</button>
+                </div>
+              </div>
             </div>
           )}
           {section === 'cook' && (
@@ -4107,35 +4118,18 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
                 right={<button onClick={() => showToast?.('캐시가 비워졌어요')} style={editLinkBtnDsk}>초기화</button>} />
             </div>
           )}
-          {section === 'danger' && (
+          {section === 'etc' && (
             <div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: T.red, marginBottom: 12 }}>위험 영역</div>
-              <div style={{
-                background: '#FFF5F5', border: `1px solid ${T.red}`, borderRadius: 12,
-                padding: 18, marginBottom: 14,
-              }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: T.redDeep, marginBottom: 6 }}>회원 탈퇴</div>
-                <div style={{ fontSize: 12, color: T.text2, lineHeight: 1.6, marginBottom: 14 }}>
-                  탈퇴하면 모든 식단·레시피·팬트리·장보기 기록이 영구 삭제됩니다. 이 동작은 되돌릴 수 없어요.<br />
-                  <span style={{ color: T.red }}>※ 7일 이내 재로그인 시 일부 데이터는 복구가 가능합니다 (베타).</span>
-                </div>
-                <button onClick={() => setConfirmDelete(true)} style={{
-                  padding: '10px 18px', borderRadius: 8, border: 'none',
-                  background: T.red, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
-                }}>탈퇴 진행</button>
-              </div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>기타</div>
+              <DesktopSettingRow label={<button onClick={() => setConfirmLogout(true)} style={settingsActionBtnDsk}>로그아웃</button>}
+                sub="이 기기에서 로그아웃해요" right={null} />
+              <DesktopSettingRow label={<button onClick={() => setConfirmDelete(true)} style={{ ...settingsActionBtnDsk, color: T.red }}>회원탈퇴</button>}
+                sub="모든 기록을 삭제하는 요청을 시작해요" right={null} />
             </div>
           )}
         </main>
       </div>
 
-      {showNick && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
-          <NicknameEditSheet current={profile.nickname}
-            onClose={() => setShowNick(false)}
-            onSave={(v) => { onUpdateProfile?.({ nickname: v }); setShowNick(false); showToast?.('닉네임이 변경됐어요'); }} />
-        </div>
-      )}
       {confirmLogout && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
           <ConfirmDialog title="로그아웃 할까요?" body="다시 로그인해야 식단·팬트리가 동기화돼요."
@@ -4167,7 +4161,7 @@ function DesktopSettingRow({ label, sub, right }) {
         <div style={{ fontSize: 14, color: T.ink, fontWeight: 700 }}>{label}</div>
         {sub && <div style={{ fontSize: 12, color: T.text3, marginTop: 3 }}>{sub}</div>}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>{right}</div>
+      {right != null && <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>{right}</div>}
     </div>
   );
 }
@@ -4191,6 +4185,10 @@ function DesktopToggleRow({ label, sub, on, onChange }) {
 const editLinkBtnDsk = {
   background: 'none', border: 'none', color: T.mintDeep,
   fontSize: 13, fontWeight: 800, cursor: 'pointer', padding: 0,
+};
+const settingsActionBtnDsk = {
+  background: 'none', border: 'none', color: T.ink,
+  fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: 0,
 };
 const dskRoundBtn = {
   width: 32, height: 32, borderRadius: 16, border: 'none',
@@ -4492,12 +4490,12 @@ function DesktopLeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkA
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>남은 요리</div>
-          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>다 먹지 않은 식사 {leftovers.length}건. 다시 식단에 올리거나 다 먹은 것으로 기록하세요.</div>
+          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>다 먹지 않은 식사 {leftovers.length}건. 플래너에 다시 올리거나 다 먹은 것으로 기록하세요.</div>
         </div>
         <button onClick={onGoAteList} style={{
           padding: '10px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
           background: '#fff', color: T.text2, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-        }}>다먹은 기록 보기 →</button>
+        }}>다먹은 요리</button>
       </div>
       {leftovers.length === 0 ? (
         <div style={{ background: '#fff', borderRadius: 16, padding: 60, textAlign: 'center', boxShadow: T.shadowDeep }}>
@@ -4517,21 +4515,17 @@ function DesktopLeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkA
                   width: 64, height: 64, borderRadius: 12, background: recipe.bg,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36,
                 }}>{recipe.emoji}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 3 }}>{recipe.name}</div>
-                  <div style={{ fontSize: 11, color: T.text3 }}>{date} {slot} #{mealIndex + 1} · {meal.servings}인분</div>
+                  <div style={{ fontSize: 11, color: T.text3 }}>{date} {slot} {meal.servings}인분</div>
                   <div style={{ fontSize: 10, color: T.tealLight, marginTop: 4, fontWeight: 700 }}>🍳 요리 완료, 아직 안 먹음</div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 6, padding: '0 14px 14px' }}>
-                <button onClick={() => onMarkPartial?.(date, slot)} style={{
-                  flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${T.border}`,
-                  background: '#fff', color: T.text2, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                }}>덜 먹음</button>
                 <button onClick={() => onReuse?.(date, slot, mealIndex)} style={{
                   flex: 1, padding: '9px 0', borderRadius: 8, border: `1px solid ${T.border}`,
                   background: '#fff', color: T.text2, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                }}>다시 식단</button>
+                }}>플래너에 추가</button>
                 <button onClick={() => onMarkAte?.(date, slot, mealIndex)} style={{
                   flex: 1, padding: '9px 0', borderRadius: 8, border: 'none',
                   background: T.mint, color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer',
@@ -4546,7 +4540,7 @@ function DesktopLeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkA
 }
 
 // Desktop: ATE_LIST (P1.3)
-function DesktopAteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
+function DesktopAteListScreen({ planner, onBack, onGoLeftovers, onUndoAte, onRecreate }) {
   const ateMeals = [];
   Object.entries(planner).forEach(([date, day]) => {
     ['아침','점심','저녁'].forEach(slot => {
@@ -4561,18 +4555,24 @@ function DesktopAteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
   return (
     <div>
       <DskBackLink onClick={onBack} label="남은 요리" />
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>다먹은 기록</div>
-        <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>다 먹은 끼니 {ateMeals.length}건. 잘못 표시했다면 되돌릴 수 있어요.</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>다먹은 요리</div>
+          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>다 먹은 끼니 {ateMeals.length}건. 잘못 표시했다면 되돌릴 수 있어요.</div>
+        </div>
+        <button onClick={onGoLeftovers} style={{
+          padding: '10px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
+          background: '#fff', color: T.text2, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+        }}>남은 요리</button>
       </div>
       {ateMeals.length === 0 ? (
         <div style={{ background: '#fff', borderRadius: 16, padding: 60, textAlign: 'center', boxShadow: T.shadowDeep }}>
           <div style={{ fontSize: 44, marginBottom: 8 }}>🍽️</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: T.text2 }}>아직 다먹은 기록이 없어요</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: T.text2 }}>아직 다먹은 요리가 없어요</div>
         </div>
       ) : (
         <div style={{ background: '#fff', borderRadius: 14, padding: 8, boxShadow: T.shadowDeep }}>
-          {ateMeals.map(({ date, slot, mealIndex, recipe }, i) => (
+          {ateMeals.map(({ date, slot, meal, mealIndex, recipe }, i) => (
             <div key={`${date}-${slot}-${mealIndex}`} style={{
               display: 'flex', alignItems: 'center', gap: 14, padding: 14,
               borderBottom: i < ateMeals.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none',
@@ -4583,7 +4583,7 @@ function DesktopAteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
               }}>{recipe.emoji}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{recipe.name}</div>
-                <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{date} {slot} #{mealIndex + 1} · ✓ 다 먹음</div>
+                <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{date} {slot} {meal.servings}인분 다먹음</div>
               </div>
               <button onClick={() => onUndoAte?.(date, slot, mealIndex)} style={{
                 padding: '8px 12px', borderRadius: 8, border: `1px solid ${T.border}`,
@@ -4926,6 +4926,7 @@ function DesktopRecipeSearchPicker({ title='레시피 검색', slotLabel, onBack
 // Desktop: MYPAGE_TAB_RECIPEBOOK 목록 (P1.3)
 function DesktopMyPageRecipebookList({ onBack, onOpenBook, onCreateBook, onDeleteBook, showToast }) {
   const [confirmId, setConfirmId] = dUseState(null);
+  const [menuId, setMenuId] = dUseState(null);
   const books = window.RECIPEBOOK_SAMPLES || [];
   return (
     <div>
@@ -4947,11 +4948,27 @@ function DesktopMyPageRecipebookList({ onBack, onOpenBook, onCreateBook, onDelet
             border: `1px solid ${T.border}`, boxShadow: T.shadowNatural, position: 'relative',
           }}>
             {b.kind === 'custom' && (
-              <button onClick={() => setConfirmId(b.id)} style={{
+              <button onClick={() => setMenuId(menuId === b.id ? null : b.id)} style={{
                 position: 'absolute', top: 14, right: 14,
                 background: 'none', border: 'none', cursor: 'pointer',
                 color: T.text4, fontSize: 18, padding: 4,
               }}>⋯</button>
+            )}
+            {menuId === b.id && (
+              <div style={{
+                position: 'absolute', top: 48, right: 14, zIndex: 20,
+                background: '#fff', border: `1px solid ${T.border}`, borderRadius: 10,
+                boxShadow: T.shadowDeep, overflow: 'hidden', minWidth: 128,
+              }}>
+                <button onClick={() => { setMenuId(null); showToast?.('이름 변경은 다음 Wave에서 제공돼요'); }} style={{
+                  width: '100%', background: '#fff', border: 'none', padding: '10px 12px',
+                  textAlign: 'left', fontSize: 13, fontWeight: 700, color: T.ink, cursor: 'pointer',
+                }}>이름 변경</button>
+                <button onClick={() => { setMenuId(null); setConfirmId(b.id); }} style={{
+                  width: '100%', background: '#fff', border: 'none', borderTop: `1px solid ${T.surfaceSubtle}`,
+                  padding: '10px 12px', textAlign: 'left', fontSize: 13, fontWeight: 700, color: T.red, cursor: 'pointer',
+                }}>삭제</button>
+              </div>
             )}
             <div onClick={() => onOpenBook?.(b.id)} style={{ cursor: 'pointer' }}>
               <div style={{
@@ -6160,7 +6177,6 @@ function MyPageAccountScreen({ onBack }) {
         </div>
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <Button variant="neutral">비밀번호 변경</Button>
-          <Button variant="destructive" full>회원 탈퇴</Button>
         </div>
       </div>
     </div>
@@ -6297,6 +6313,8 @@ Object.assign(window, {
   ShoppingCreateScreen, AddToPantryModal, CookListScreen, CookRunScreen,
   MealDetailScreen, MyPageSavedScreen, MyPageAccountScreen, MyPageNotifScreen, MyPageHelpScreen,
 });
+
+
 // ===== screens/wave1.jsx =====
 // ===== Wave 1: missing/partial screens & modals =====
 // Style follows screens/extras.jsx — uses T tokens, AppBar, Button, Icon, Sheet patterns.
@@ -6380,14 +6398,11 @@ function LoginScreen({ returnTo, onBack, onLogin }) {
         <div style={{ flex: 1, minHeight: 40 }} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-          <button onClick={() => onLogin('kakao', returnTo)} style={socialBtn('#FEE500', '#191919')}>
-            <span style={{ fontSize: 18 }}>💬</span> 카카오로 시작하기
-          </button>
-          <button onClick={() => onLogin('apple', returnTo)} style={socialBtn('#000', '#fff')}>
-            <span style={{ fontSize: 18 }}></span> Apple로 시작하기
-          </button>
           <button onClick={() => onLogin('google', returnTo)} style={socialBtn('#fff', '#191919', `1px solid ${T.border}`)}>
             <span style={{ fontSize: 16 }}>G</span> Google로 시작하기
+          </button>
+          <button onClick={() => onLogin('naver', returnTo)} style={socialBtn('#03C75A', '#fff')}>
+            <span style={{ fontSize: 16, fontWeight: 900 }}>N</span> 네이버로 시작하기
           </button>
         </div>
         <div style={{ textAlign: 'center', fontSize: 11, color: T.text3, lineHeight: 1.5 }}>
@@ -6679,7 +6694,7 @@ function LeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkAte, onM
         right={<button onClick={onGoAteList} style={{
           background: 'none', border: 'none', cursor: 'pointer',
           fontSize: 13, color: T.mintDeep, fontWeight: 700,
-        }}>다먹은 기록</button>} />
+        }}>다먹은 요리</button>} />
       <div style={{ padding: '14px 16px', background: '#fff', borderBottom: `1px solid ${T.border}` }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand }}>
           {items.length === 0 ? '남은 요리가 없어요' : `남은 요리 ${items.length}개`}
@@ -6711,13 +6726,12 @@ function LeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkAte, onM
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{r.name}</div>
                     <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
-                      {date} {slot} #{mealIndex + 1} · {meal.servings}인분
+                      {date} {slot} {meal.servings}인분
                     </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, padding: '0 12px 12px' }}>
-                  <button onClick={() => onReuse(date, slot, mealIndex)} style={smallSecBtn}>🔁 다시 플래너에</button>
-                  <button onClick={() => onMarkPartial(date, slot)} style={smallSecBtn}>🥢 덜먹음</button>
+                  <button onClick={() => onReuse(date, slot, mealIndex)} style={smallSecBtn}>🔁 플래너에 추가</button>
                   <button onClick={() => onMarkAte(date, slot, mealIndex)} style={{
                     ...smallSecBtn, background: T.mint, color: '#fff', border: 'none', flex: 1,
                   }}>✓ 다먹음</button>
@@ -6739,7 +6753,7 @@ const smallSecBtn = {
 // ─────────────────────────────────────────────────────────────
 // ATE_LIST — 다먹은 히스토리
 // ─────────────────────────────────────────────────────────────
-function AteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
+function AteListScreen({ planner, onBack, onGoLeftovers, onUndoAte, onRecreate }) {
   const days = Object.keys(planner);
   const items = [];
   days.forEach(d => {
@@ -6751,12 +6765,16 @@ function AteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
   });
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%' }}>
-      <AppBar title="다먹은 기록" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>} />
+      <AppBar title="다먹은 요리" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>}
+        right={<button onClick={onGoLeftovers} style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: 13, color: T.mintDeep, fontWeight: 700,
+        }}>남은 요리</button>} />
       <div style={{ padding: 16 }}>
         {items.length === 0 ? (
           <div style={{ background: '#fff', borderRadius: 12, padding: 40, textAlign: 'center' }}>
             <div style={{ fontSize: 36, marginBottom: 8 }}>📒</div>
-            <div style={{ fontSize: 13, color: T.text3 }}>아직 다먹은 기록이 없어요</div>
+            <div style={{ fontSize: 13, color: T.text3 }}>아직 다먹은 요리가 없어요</div>
           </div>
         ) : items.map(({ date, slot, meal, mealIndex }) => {
           const r = RECIPES.find(x => x.id === meal.recipeId);
@@ -6774,10 +6792,10 @@ function AteListScreen({ planner, onBack, onUndoAte, onRecreate }) {
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{r.name}</div>
                 <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
-                  {date} {slot} #{mealIndex + 1} · {meal.servings}인분 다먹음
+                  {date} {slot} {meal.servings}인분 다먹음
                 </div>
               </div>
-              <button onClick={() => onUndoAte(date, slot, mealIndex)} style={smallSecBtn}>덜먹음으로</button>
+              <button onClick={() => onUndoAte(date, slot, mealIndex)} style={smallSecBtn}>남은 요리로</button>
               <button onClick={() => onRecreate(meal.recipeId)} style={{ ...smallSecBtn, color: T.mintDeep, border: `1px solid ${T.mint}` }}>다시 만들기</button>
             </div>
           );
@@ -7506,21 +7524,33 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
   const [keepAwake, setKeepAwake] = useState_W(true);
   const [voice, setVoice] = useState_W(false);
   const [autoNext, setAutoNext] = useState_W(false);
-  const [showNick, setShowNick] = useState_W(false);
   const [confirmLogout, setConfirmLogout] = useState_W(false);
   const [confirmDelete, setConfirmDelete] = useState_W(false);
+  const [mealColumns, setMealColumns] = useState_W(['아침', '점심', '저녁']);
+  const [newMealName, setNewMealName] = useState_W('');
+
+  const addMealColumn = () => {
+    const name = newMealName.trim();
+    if (!name) return;
+    if (mealColumns.includes(name)) {
+      showToast?.('이미 있는 끼니예요');
+      return;
+    }
+    setMealColumns(cols => [...cols, name]);
+    setNewMealName('');
+    showToast?.('끼니 컬럼이 추가됐어요');
+  };
+  const updateMealColumn = (idx, value) => {
+    setMealColumns(cols => cols.map((name, i) => i === idx ? value : name));
+  };
+  const removeMealColumn = (idx) => {
+    setMealColumns(cols => cols.filter((_, i) => i !== idx));
+    showToast?.('끼니 컬럼이 삭제됐어요');
+  };
 
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 40 }}>
       <AppBar title="설정" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>} />
-
-      <Section title="계정">
-        <Row left="닉네임" right={<>
-          <span style={{ fontSize: 13, color: T.text2 }}>{profile.nickname}</span>
-          <button onClick={() => setShowNick(true)} style={editLinkBtn}>변경</button>
-        </>} />
-        <Row left="이메일" right={<span style={{ fontSize: 13, color: T.text3 }}>{profile.email}</span>} />
-      </Section>
 
       <Section title="요리 모드">
         <ToggleRow label="화면 켜둠" sub="요리 중 화면이 꺼지지 않아요" on={keepAwake} onChange={setKeepAwake} />
@@ -7528,17 +7558,39 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
         <ToggleRow label="타이머 끝나면 다음 단계 자동" sub="" on={autoNext} onChange={setAutoNext} />
       </Section>
 
-      <Section title="기타">
-        <Row left="로그아웃" right={<button onClick={() => setConfirmLogout(true)} style={editLinkBtn}>실행</button>} />
-        <Row left={<span style={{ color: T.red }}>회원 탈퇴</span>}
-          right={<button onClick={() => setConfirmDelete(true)} style={{ ...editLinkBtn, color: T.red }}>탈퇴</button>} />
+      <Section title="플래너 끼니 컬럼">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {mealColumns.map((name, idx) => (
+            <div key={`${name}-${idx}`} style={{
+              display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center',
+            }}>
+              <input value={name} onChange={e => updateMealColumn(idx, e.target.value)}
+                style={{ ...inp, padding: '10px 12px', fontSize: 13 }} aria-label={`끼니 컬럼 ${idx + 1}`} />
+              <button onClick={() => removeMealColumn(idx)} disabled={mealColumns.length <= 1} style={{
+                width: 38, height: 38, borderRadius: 10, border: `1px solid ${T.border}`,
+                background: mealColumns.length <= 1 ? T.surfaceFill : '#fff',
+                color: mealColumns.length <= 1 ? T.text4 : T.red, cursor: mealColumns.length <= 1 ? 'not-allowed' : 'pointer',
+                fontSize: 16, fontWeight: 800,
+              }}>×</button>
+            </div>
+          ))}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 4 }}>
+            <input value={newMealName} onChange={e => setNewMealName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addMealColumn(); }}
+              placeholder="새 끼니 이름" style={{ ...inp, padding: '10px 12px', fontSize: 13 }} />
+            <button onClick={addMealColumn} style={{
+              padding: '0 12px', borderRadius: 10, border: 'none', background: T.mint,
+              color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer',
+            }}>+ 끼니 컬럼 추가</button>
+          </div>
+        </div>
       </Section>
 
-      {showNick && (
-        <NicknameEditSheet current={profile.nickname}
-          onClose={() => setShowNick(false)}
-          onSave={(v) => { onUpdateProfile({ nickname: v }); setShowNick(false); showToast?.('닉네임이 변경됐어요'); }} />
-      )}
+      <Section title="기타">
+        <Row left={<button onClick={() => setConfirmLogout(true)} style={settingsActionBtn}>로그아웃</button>} right={null} />
+        <Row left={<button onClick={() => setConfirmDelete(true)} style={{ ...settingsActionBtn, color: T.red }}>회원탈퇴</button>} right={null} />
+      </Section>
+
       {confirmLogout && (
         <ConfirmDialog title="로그아웃 할까요?" body="다시 로그인해야 식단·팬트리가 동기화돼요."
           confirmLabel="로그아웃" onClose={() => setConfirmLogout(false)}
@@ -7563,7 +7615,7 @@ function Row({ left, right }) {
       padding: '12px 0', borderBottom: `1px solid ${T.surfaceSubtle}`,
     }}>
       <div style={{ fontSize: 14, color: T.ink, fontWeight: 600 }}>{left}</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{right}</div>
+      {right != null && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{right}</div>}
     </div>
   );
 }
@@ -7590,6 +7642,10 @@ function ToggleRow({ label, sub, on, onChange }) {
 const editLinkBtn = {
   background: 'none', border: 'none', color: T.mintDeep,
   fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: 0,
+};
+const settingsActionBtn = {
+  background: 'none', border: 'none', color: T.ink,
+  fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: 0,
 };
 
 function NicknameEditSheet({ current, onClose, onSave }) {
@@ -7621,8 +7677,9 @@ function NicknameEditSheet({ current, onClose, onSave }) {
 // ─────────────────────────────────────────────────────────────
 // MYPAGE TABS — recipebook + shopping history (host inside MyPage)
 // ─────────────────────────────────────────────────────────────
-function MyPageRecipebookTab({ onOpenBook, onCreateBook, onDeleteBook }) {
+function MyPageRecipebookTab({ onOpenBook, onCreateBook, onDeleteBook, showToast }) {
   const [confirmId, setConfirmId] = useState_W(null);
+  const [menuId, setMenuId] = useState_W(null);
   const books = [
     { id: 'b_saved', kind: 'saved', name: '저장한 레시피', count: 8, emoji: '🔖' },
     { id: 'b_custom1', kind: 'custom', name: '평일 저녁 빠른요리', count: 12, emoji: '🍳' },
@@ -7634,7 +7691,7 @@ function MyPageRecipebookTab({ onOpenBook, onCreateBook, onDeleteBook }) {
         <div key={b.id} style={{
           display: 'flex', alignItems: 'center', gap: 12,
           background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12,
-          padding: '14px 16px', marginBottom: 8,
+          padding: '14px 16px', marginBottom: 8, position: 'relative',
         }}>
           <div style={{
             width: 44, height: 44, borderRadius: 10, background: T.mintSoft,
@@ -7651,9 +7708,25 @@ function MyPageRecipebookTab({ onOpenBook, onCreateBook, onDeleteBook }) {
             <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{b.count}개 레시피</div>
           </div>
           {b.kind === 'custom' && (
-            <button onClick={() => setConfirmId(b.id)} style={{
+            <button onClick={() => setMenuId(menuId === b.id ? null : b.id)} style={{
               background: 'none', border: 'none', cursor: 'pointer', padding: 8, color: T.text4, fontSize: 18,
             }}>⋯</button>
+          )}
+          {menuId === b.id && (
+            <div style={{
+              position: 'absolute', top: 44, right: 12, zIndex: 20,
+              background: '#fff', border: `1px solid ${T.border}`, borderRadius: 10,
+              boxShadow: T.shadowDeep, overflow: 'hidden', minWidth: 120,
+            }}>
+              <button onClick={() => { setMenuId(null); showToast?.('이름 변경은 다음 Wave에서 제공돼요'); }} style={{
+                width: '100%', background: '#fff', border: 'none', padding: '10px 12px',
+                textAlign: 'left', fontSize: 13, fontWeight: 700, color: T.ink, cursor: 'pointer',
+              }}>이름 변경</button>
+              <button onClick={() => { setMenuId(null); setConfirmId(b.id); }} style={{
+                width: '100%', background: '#fff', border: 'none', borderTop: `1px solid ${T.surfaceSubtle}`,
+                padding: '10px 12px', textAlign: 'left', fontSize: 13, fontWeight: 700, color: T.red, cursor: 'pointer',
+              }}>삭제</button>
+            </div>
           )}
         </div>
       ))}
@@ -8427,10 +8500,10 @@ function App() {
   };
   const undoAte = (date, slot, mealIndex = 0) => {
     updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, ateAt: null }));
-    showToast('덜먹음으로 되돌렸어요');
+    showToast('남은 요리로 되돌렸어요');
   };
   const markPartial = (date, slot) => {
-    showToast('덜먹음으로 표시했어요');
+    showToast('남은 요리로 표시했어요');
   };
 
   // Meal actions (delete + serving change with confirm)
@@ -8546,6 +8619,7 @@ function App() {
       onMarkAte={markAte} onMarkPartial={markPartial} showToast={showToast} />;
   } else if (route.page === 'ate-list') {
     content = <AteListScreen planner={planner} onBack={backFromPage}
+      onGoLeftovers={() => goPage('leftovers')}
       onUndoAte={undoAte} onRecreate={(rid) => { backFromPage(); openRecipe(rid); }} />;
   } else if (route.page === 'shopping-detail') {
     const list = shoppingLists.find(l => l.id === pa.listId);
@@ -8591,7 +8665,8 @@ function App() {
         <MyPageRecipebookTab
           onOpenBook={(bookId) => goPage('mypage-recipebook-detail', { bookId })}
           onCreateBook={() => showToast('레시피북 만들기 (Wave 다음)')}
-          onDeleteBook={(id) => showToast('레시피북이 삭제됐어요')} />
+          onDeleteBook={(id) => showToast('레시피북이 삭제됐어요')}
+          showToast={showToast} />
       </div>
     );
   } else if (route.page === 'mypage-recipebook-detail') {
@@ -8778,6 +8853,7 @@ function App() {
       onMarkAte={markAte} onMarkPartial={markPartial} showToast={showToast} />;
   } else if (route.page === 'ate-list') {
     desktopPageContent = <DesktopAteListScreen planner={planner} onBack={backFromPage}
+      onGoLeftovers={() => goPage('leftovers')}
       onUndoAte={undoAte} onRecreate={(rid) => { backFromPage(); openRecipe(rid); }} />;
   } else if (route.page === 'manual-create') {
     desktopPageContent = <DesktopManualRecipeCreateScreen presetDate={pa.date} presetSlot={pa.slot}
@@ -9395,7 +9471,7 @@ function App() {
           <button onClick={() => goPage('leftovers')}
             style={quickBtn}>🥡 남은 요리 (LEFTOVERS)</button>
           <button onClick={() => goPage('ate-list')}
-            style={quickBtn}>🍽️ 다먹은 기록 (ATE_LIST)</button>
+            style={quickBtn}>🍽️ 다먹은 요리 (ATE_LIST)</button>
           <button onClick={() => goPage('manual-create')}
             style={quickBtn}>✏️ 직접 등록 (MANUAL_CREATE)</button>
           <button onClick={() => goPage('yt-import')}
