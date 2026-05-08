@@ -2,7 +2,8 @@
 // Desktop variants of screens — reuse data, rearrange layout.
 const { useMemo: dUseMemo, useState: dUseState } = React;
 
-function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy, setShowSortSheet, onOpenIngredientFilter, ingredientNames = [] }) {
+// vNext S2 — DesktopHome: 앱 개선사항을 웹 레이아웃에 자연스럽게 변환
+function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy, onOpenIngredientFilter, ingredientNames = [], onGoPlanner }) {
   const [query, setQuery] = dUseState('');
   const [activeTheme, setActiveTheme] = dUseState(null);
 
@@ -30,17 +31,14 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
         return ingredientNames.every(name => names.includes(name));
       });
     }
-    if (sortBy === 'rating') r.sort((a, b) => b.rating - a.rating);
-    if (sortBy === 'fast')   r.sort((a, b) => a.minutes - b.minutes);
     if (sortBy === 'saves')  r.sort((a, b) => b.saves - a.saves);
+    if (sortBy === 'fast')   r.sort((a, b) => a.minutes - b.minutes);
     return r;
   }, [query, activeTheme, ingFilter, ingredientNames, sortBy]);
 
-  const sortLabel = { latest: '\uCD5C\uC2E0\uC21C', rating: '\uBCC4\uC810\uC21C', saves: '\uC800\uC7A5\uC21C', fast: '\uBE60\uB978 \uC870\uB9AC\uC21C' }[sortBy];
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-      {/* Hero / today */}
+      {/* Hero / today — vNext: 플래너 카드 클릭→플래너 탭 */}
       <section style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20 }}>
         <div style={{
           background: `linear-gradient(135deg, ${T.mint} 0%, ${T.mintDeep} 100%)`,
@@ -64,10 +62,15 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
           }}>모음 보기</button>
         </div>
 
-        <div style={{
+        {/* vNext: 이번 주 플래너 카드 — 클릭으로 플래너 탭 이동 */}
+        <div onClick={onGoPlanner} style={{
           background: '#fff', borderRadius: 16, padding: 24,
           boxShadow: T.shadowDeep, display: 'flex', flexDirection: 'column', gap: 14,
-        }}>
+          cursor: 'pointer', transition: 'box-shadow 0.15s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.boxShadow = T.shadowSharp; }}
+        onMouseLeave={e => { e.currentTarget.style.boxShadow = T.shadowDeep; }}
+        >
           <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>이번 주 플래너</div>
           <div style={{ display: 'flex', gap: 8 }}>
             {['월','화','수','목','금','토','일'].map((d, i) => (
@@ -86,7 +89,7 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
             ))}
           </div>
           <div style={{ fontSize: 12, color: T.text3 }}>
-            화요일에 등록된 식단 3건 · <span style={{ color: T.mint, fontWeight: 700, cursor: 'pointer' }}>전체 보기</span>
+            화요일에 등록된 식단 3건 · <span style={{ color: T.mint, fontWeight: 700 }}>전체 보기</span>
           </div>
         </div>
       </section>
@@ -99,49 +102,17 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
         }}>
           {Icon.search()}
           <input value={query} onChange={e => setQuery(e.target.value)}
-            placeholder={'\uAE40\uCE58\uBCF6\uC74C\uBC25, \uB41C\uC7A5\uCC0C\uAC1C\u2026'}
+            placeholder="김치볶음밥, 된장찌개…"
             style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none',
               fontSize: 14, color: T.ink, fontFamily: T.fontUI }} />
         </div>
       </section>
 
-      {/* Ingredient filter row — mobile INGREDIENT_FILTERS parity */}
-      <section>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          {INGREDIENT_FILTERS.map(f => {
-            const active = ingFilter.includes(f.id);
-            return (
-              <button key={f.id} onClick={() => {
-                setIngFilter(active ? ingFilter.filter(x => x !== f.id) : [...ingFilter, f.id]);
-              }} style={{
-                flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px', borderRadius: 9999,
-                background: active ? T.mintSoft : T.surfaceFill,
-                border: active ? `1px solid ${T.mint}` : '1px solid transparent',
-                color: active ? T.mintDeep : T.text2,
-                fontSize: 13, fontWeight: active ? 700 : 500, cursor: 'pointer',
-              }}>
-                <span style={{ fontSize: 14 }}>{f.emoji}</span>{f.name}
-              </button>
-            );
-          })}
-          {onOpenIngredientFilter && (
-            <button onClick={onOpenIngredientFilter} style={{
-              padding: '8px 14px', borderRadius: 9999,
-              background: ingredientNames.length > 0 ? T.mint : '#fff',
-              border: `1px dashed ${ingredientNames.length > 0 ? T.mintDeep : T.border}`,
-              color: ingredientNames.length > 0 ? '#fff' : T.text2,
-              fontSize: 12, fontWeight: 700, cursor: 'pointer', marginLeft: 4,
-            }}>{'\uD83D\uDD0E'} {ingredientNames.length > 0 ? `\uC7AC\uB8CC ${ingredientNames.length}\uAC1C \uC801\uC6A9` : '\uC7AC\uB8CC\uB85C \uAC70\uB974\uAE30'}</button>
-          )}
-        </div>
-      </section>
-
-      {/* Theme carousel — desktop density */}
+      {/* Theme row — 데스크톱은 테마 먼저 표시, 재료 칩은 아래 (모바일과 동일 순서) */}
       <section>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>{'\uD14C\uB9C8\uBCC4 \uB808\uC2DC\uD53C'}</div>
-          <div style={{ fontSize: 12, color: T.text3 }}>{'\uC804\uCCB4\uBCF4\uAE30 \u203A'}</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>테마별 레시피</div>
+          <div style={{ fontSize: 12, color: T.text3 }}>전체보기 ›</div>
         </div>
         <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
           {THEMES.map(t => {
@@ -162,35 +133,46 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
         </div>
       </section>
 
-      {/* Planner promo strip */}
+      {/* vNext: 재료 칩 — 테마 아래, "재료로 검색" 맨 앞 */}
       <section>
-        <div style={{
-          background: `linear-gradient(135deg, ${T.mint} 0%, ${T.teal} 100%)`,
-          borderRadius: 12, padding: 16, display: 'flex', alignItems: 'center',
-          gap: 12, color: '#fff',
-        }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 2 }}>{'\uC774\uBC88 \uC8FC \uC2DD\uB2E8 \uD50C\uB798\uB108'}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, fontFamily: T.fontBrand }}>
-              {'\uC624\uB298 \uC800\uB141\uAE4C\uC9C0 2\uB07C \uB0A8\uC558\uC5B4\uC694'}
-            </div>
-          </div>
-          <div style={{ fontSize: 32 }}>{'\uD83C\uDF73'}</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {onOpenIngredientFilter && (
+            <button onClick={onOpenIngredientFilter} style={{
+              padding: '8px 14px', borderRadius: 9999,
+              background: ingredientNames.length > 0 ? T.mint : '#fff',
+              border: `1.5px solid ${ingredientNames.length > 0 ? T.mintDeep : T.mint}`,
+              color: ingredientNames.length > 0 ? '#fff' : T.mintDeep,
+              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>{Icon.search(ingredientNames.length > 0 ? '#fff' : T.mintDeep)} {ingredientNames.length > 0 ? `재료 ${ingredientNames.length}개 적용` : '재료로 검색'}</button>
+          )}
+          {INGREDIENT_FILTERS.map(f => {
+            const active = ingFilter.includes(f.id);
+            return (
+              <button key={f.id} onClick={() => {
+                setIngFilter(active ? ingFilter.filter(x => x !== f.id) : [...ingFilter, f.id]);
+              }} style={{
+                flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 9999,
+                background: active ? T.mintSoft : T.surfaceFill,
+                border: active ? `1px solid ${T.mint}` : '1px solid transparent',
+                color: active ? T.mintDeep : T.text2,
+                fontSize: 13, fontWeight: active ? 700 : 500, cursor: 'pointer',
+              }}>
+                <span style={{ fontSize: 14 }}>{f.emoji}</span>{f.name}
+              </button>
+            );
+          })}
         </div>
       </section>
 
-      {/* All recipes with sort */}
+      {/* All recipes with sort — vNext: SortDropdown 인라인 (시트 제거) */}
       <section>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>
-            {'\uB808\uC2DC\uD53C \uB458\uB7EC\uBCF4\uAE30'} <span style={{ color: T.text3, fontSize: 14, fontWeight: 500 }}>({filtered.length})</span>
+            레시피 둘러보기 <span style={{ color: T.text3, fontSize: 14, fontWeight: 500 }}>({filtered.length})</span>
           </div>
-          <button onClick={() => setShowSortSheet(true)} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 13, color: T.text2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
-          }}>
-            {'\uC815\uB82C: '}{sortLabel} {Icon.chevD(T.text2)}
-          </button>
+          <SortDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
         </div>
 
         {/* 3-col grid */}
@@ -215,17 +197,17 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
                     position: 'absolute', top: 12, left: 12,
                     background: T.red, color: '#fff', fontSize: 11, fontWeight: 700,
                     padding: '4px 8px', borderRadius: 4,
-                  }}>{'\uD83D\uDD25 \uC778\uAE30'}</div>
+                  }}>🔥 인기</div>
                 )}
               </div>
               <div style={{ padding: 14 }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 4 }}>{r.name}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: T.text3, fontSize: 12 }}>
-                  {Icon.star()} <span style={{ color: T.ink, fontWeight: 600 }}>{r.rating}</span>
-                  <span>·</span>
                   {Icon.clock()} {r.minutes}분
                   <span>·</span>
                   {Icon.users()} {r.servings}인
+                  <span>·</span>
+                  {Icon.bookmark(false, T.text3)} {r.saves.toLocaleString()}
                 </div>
               </div>
             </div>
@@ -233,8 +215,8 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
         </div>
         {filtered.length === 0 && (
           <div style={{ padding: '48px 16px', textAlign: 'center', color: T.text3 }}>
-            <div style={{ fontSize: 48, marginBottom: 8 }}>{'\uD83C\uDF7D\uFE0F'}</div>
-            <div style={{ fontSize: 14 }}>{'\uC870\uAC74\uC5D0 \uB9DE\uB294 \uB808\uC2DC\uD53C\uAC00 \uC5C6\uC5B4\uC694'}</div>
+            <div style={{ fontSize: 48, marginBottom: 8 }}>🍽️</div>
+            <div style={{ fontSize: 14 }}>조건에 맞는 레시피가 없어요</div>
           </div>
         )}
       </section>

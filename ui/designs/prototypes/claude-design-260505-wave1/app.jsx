@@ -63,7 +63,7 @@ function App() {
   const [planner, setPlanner] = useState(makeInitialPlanner());
   const [pantry, setPantry] = useState(INITIAL_PANTRY);
   const [savedIds, setSavedIds] = useState(['r1', 'r2', 'r4']);
-  const [sortBy, setSortBy] = useState('rating');
+  const [sortBy, setSortBy] = useState('latest');
   const [ingFilter, setIngFilter] = useState([]);
   // Wave 1.5 — INGREDIENT_FILTER_MODAL 의 fine-grained 재료 이름 목록.
   // 기존 ingFilter(category)와 별개로 운영. 둘 다 적용 시 AND.
@@ -401,7 +401,7 @@ function App() {
       ingFilter={ingFilter} setIngFilter={setIngFilter}
       onOpenIngredientFilter={() => setIngredientFilterOpen(true)}
       ingredientNames={ingredientNames}
-      showSortSheet={sortSheet} setShowSortSheet={setSortSheet} />;
+      onGoPlanner={() => setRoute({ tab: 'planner', page: null })} />;
 
 
   } else if (route.tab === 'planner') {
@@ -460,7 +460,7 @@ function App() {
         ingFilter={ingFilter} setIngFilter={setIngFilter}
         onOpenIngredientFilter={() => setIngredientFilterOpen(true)}
         ingredientNames={ingredientNames}
-        setShowSortSheet={setSortSheet}
+        onGoPlanner={() => setRoute({ tab: 'planner', page: null })}
       />
     );
   } else if (route.tab === 'planner') {
