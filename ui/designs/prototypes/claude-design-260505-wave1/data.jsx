@@ -291,8 +291,34 @@ const INITIAL_PANTRY = {
   garlic: { name: '다진마늘', have: true, section: '양념' }
 };
 
+const PANTRY_CATEGORIES = ['주식', '채소', '단백질', '양념'];
+const PANTRY_IMAGES = {
+  쌀: '🍚', 국수: '🍜', 스파게티: '🍝', 당면: '🍜', 밀가루: '🌾', 빵가루: '🍞',
+  양파: '🧅', 감자: '🥔', 당근: '🥕', 청양고추: '🌶️', 애호박: '🥒', 대파: '🌿', 마늘: '🧄',
+  배추: '🥬', 시금치: '🥬', 깻잎: '🌿', 방울토마토: '🍅', 오이: '🥒',
+  계란: '🥚', 두부: '◻️', 닭가슴살: '🍗', 닭고기: '🍗', 돼지고기: '🥩', 소고기: '🥩',
+  삼겹살: '🥓', 새우: '🦐', 참치: '🐟', 연어: '🐟',
+  김치: '🥬', 간장: '🫙', 고추장: '🌶️', 된장: '🫙', 참기름: '🫗', 고춧가루: '🌶️',
+  설탕: '🧂', 다진마늘: '🧄', 소금: '🧂', 후추: '🧂', 식용유: '🫗', 올리브유: '🫒',
+  버터: '🧈', 우유: '🥛', 치즈: '🧀'
+};
+const PANTRY_ADD_ITEMS = [
+  ...Object.values(INITIAL_PANTRY).map(item => ({ ...item, image: PANTRY_IMAGES[item.name] || '🥬' })),
+  { name: '스파게티', have: false, section: '주식', image: '🍝' },
+  { name: '당면', have: false, section: '주식', image: '🍜' },
+  { name: '돼지고기', have: false, section: '단백질', image: '🥩' },
+  { name: '소고기', have: false, section: '단백질', image: '🥩' },
+  { name: '닭고기', have: false, section: '단백질', image: '🍗' },
+  { name: '새우', have: false, section: '단백질', image: '🦐' },
+  { name: '참치', have: false, section: '단백질', image: '🐟' },
+  { name: '소금', have: false, section: '양념', image: '🧂' },
+  { name: '후추', have: false, section: '양념', image: '🧂' },
+  { name: '식용유', have: false, section: '양념', image: '🫗' },
+  { name: '올리브유', have: false, section: '양념', image: '🫒' }
+].filter((item, index, arr) => arr.findIndex(x => x.name === item.name) === index);
+
 Object.assign(window, {
   RECIPES, METHOD_COLORS, THEMES, INGREDIENT_FILTERS,
-  makeInitialPlanner, weekDays, WEEK_START, INITIAL_PANTRY, todayIdx,
+  makeInitialPlanner, weekDays, WEEK_START, INITIAL_PANTRY, PANTRY_CATEGORIES, PANTRY_IMAGES, PANTRY_ADD_ITEMS, todayIdx,
   mealItems, slotPrimaryMeal, appendMealToSlot, updateMealInSlot, removeMealFromSlot, slotStatusSummary
 });

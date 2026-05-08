@@ -1410,55 +1410,87 @@ function MyPageShoppingTab({ shoppingLists, onOpen }) {
 // PANTRY — PantryAddSheet + PANTRY_BUNDLE_PICKER
 // ─────────────────────────────────────────────────────────────
 function PantryAddSheet({ onClose, onAddItem, onOpenBundle }) {
-  const [name, setName] = useState_W('');
-  const [section, setSection] = useState_W('냉장');
-  const sections = ['냉장', '냉동', '실온', '양념', '기타'];
-  const valid = name.trim().length > 0;
+  const [query, setQuery] = useState_W('');
+  const [activeCat, setActiveCat] = useState_W('전체');
+  const [picked, setPicked] = useState_W(new Set());
+  const categories = ['전체', ...PANTRY_CATEGORIES];
+  const filtered = PANTRY_ADD_ITEMS.filter(item => {
+    if (activeCat !== '전체' && item.section !== activeCat) return false;
+    if (query.trim() && !item.name.includes(query.trim())) return false;
+    return true;
+  });
+  const togglePick = (name) => setPicked(prev => {
+    const next = new Set(prev);
+    next.has(name) ? next.delete(name) : next.add(name);
+    return next;
+  });
+  const pickedItems = PANTRY_ADD_ITEMS.filter(item => picked.has(item.name));
   return (
     <div style={overlay} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{
         background: '#fff', borderRadius: '20px 20px 0 0',
-        position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20,
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        maxHeight: '88%', display: 'flex', flexDirection: 'column',
       }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand, marginBottom: 12 }}>
-          재료 추가
-        </div>
-
-        <button onClick={onOpenBundle} style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-          background: T.mintSoft, border: `1px solid ${T.mint}`,
-          borderRadius: 10, padding: '12px 14px', cursor: 'pointer', textAlign: 'left',
-          marginBottom: 14,
-        }}>
-          <span style={{ fontSize: 22 }}>📦</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: T.mintDeep }}>묶음으로 한꺼번에 추가</div>
-            <div style={{ fontSize: 11, color: T.mintDeep, marginTop: 2 }}>김치찌개 재료 / 한식 기본 양념 등</div>
+        <div style={{ padding: '18px 20px 12px', borderBottom: `1px solid ${T.border}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand }}>
+              재료 추가
+            </div>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, color: T.text3, cursor: 'pointer' }}>×</button>
           </div>
-          {Icon.chevR(T.mintDeep)}
-        </button>
-
-        <Field label="재료 이름">
-          <input value={name} onChange={e => setName(e.target.value)} autoFocus
-            placeholder="예: 양파" style={inp} />
-        </Field>
-        <Field label="구역">
-          <div style={{ display: 'flex', gap: 6 }}>
-            {sections.map(s => (
-              <button key={s} onClick={() => setSection(s)} style={{
-                flex: 1, padding: '10px 0', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                background: section === s ? T.mintSoft : '#fff',
-                color: section === s ? T.mintDeep : T.text2,
-                border: section === s ? `1px solid ${T.mint}` : `1px solid ${T.border}`,
-                cursor: 'pointer',
-              }}>{s}</button>
+          <input value={query} onChange={e => setQuery(e.target.value)} autoFocus
+            placeholder="재료 검색" style={{ ...inp, background: T.surfaceFill }} />
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginTop: 10 }}>
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setActiveCat(cat)} style={{
+                flexShrink: 0, padding: '7px 13px', borderRadius: 9999,
+                border: activeCat === cat ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+                background: activeCat === cat ? T.mintSoft : '#fff',
+                color: activeCat === cat ? T.mintDeep : T.text2,
+                fontSize: 12, fontWeight: 800, cursor: 'pointer',
+              }}>{cat}</button>
             ))}
           </div>
-        </Field>
+        </div>
 
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {filtered.map(item => {
+              const on = picked.has(item.name);
+              return (
+                <button key={item.name} onClick={() => togglePick(item.name)} style={{
+                  display: 'flex', alignItems: 'center', gap: 9, minHeight: 54,
+                  borderRadius: 12, border: on ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+                  background: on ? T.mintSoft : '#fff', cursor: 'pointer',
+                  padding: '9px 10px', textAlign: 'left',
+                }}>
+                  <span style={{ width: 30, height: 30, borderRadius: 10, background: T.surfaceFill,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{item.image}</span>
+                  <span style={{ flex: 1, fontSize: 13, color: T.ink, fontWeight: 800 }}>{item.name}</span>
+                  {on && Icon.check(T.mintDeep, 16)}
+                </button>
+              );
+            })}
+          </div>
+          {filtered.length === 0 && (
+            <div style={{ padding: 30, textAlign: 'center', color: T.text3, fontSize: 13 }}>검색 결과가 없어요</div>
+          )}
+          <button onClick={onOpenBundle} style={{
+            width: '100%', marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            background: '#fff', border: `1px solid ${T.border}`,
+            borderRadius: 10, padding: '12px 14px', cursor: 'pointer',
+            color: T.text2, fontSize: 13, fontWeight: 800,
+          }}>
+            <span>📦</span> 묶음 추가
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, padding: 16, borderTop: `1px solid ${T.border}` }}>
           <Button variant="neutral" onClick={onClose}>취소</Button>
-          <Button full disabled={!valid} onClick={() => onAddItem({ name: name.trim(), section, have: true })}>추가</Button>
+          <Button full disabled={picked.size === 0} onClick={() => onAddItem(pickedItems)}>
+            {picked.size > 0 ? `${picked.size}개 추가` : '재료 선택'}
+          </Button>
         </div>
       </div>
     </div>

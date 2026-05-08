@@ -264,6 +264,19 @@ function App() {
     showToast(`${Object.keys(qtys).length}개 재료가 팬트리에 추가됐어요`);
     setRoute({ tab: 'pantry' });
   };
+  const addPickedPantryItems = (items) => {
+    const list = Array.isArray(items) ? items : [items];
+    setPantry(p => {
+      const next = { ...p };
+      list.forEach(item => {
+        if (!item?.name) return;
+        next[item.name] = { name: item.name, section: item.section, have: true };
+      });
+      return next;
+    });
+    setPantryAddSheet(false);
+    showToast(`${list.length}개 재료 추가됨`);
+  };
   const markCooked = (date, slot, consumed, mealIndex = 0) => {
     updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, status: 'cooked' }));
     if (consumed && consumed.length) {
@@ -419,7 +432,9 @@ function App() {
 
 
   } else if (route.tab === 'pantry') {
-    content = <PantryScreen pantry={pantry} setPantry={setPantry} onOpenAdd={() => setPantryAddSheet(true)} />;
+    content = <PantryScreen pantry={pantry} setPantry={setPantry}
+      onOpenAdd={() => setPantryAddSheet(true)}
+      onOpenBundle={() => setPantryBundlePicker(true)} />;
   } else if (route.tab === 'mypage') {
     content = <MyPageScreen savedIds={savedIds} onOpenRecipe={openRecipe} onGoPage={goPage}
       shoppingLists={shoppingLists} profile={profile} />;
@@ -479,7 +494,9 @@ function App() {
       />
     );
   } else if (route.tab === 'pantry') {
-    desktopContent = <DesktopPantry pantry={pantry} setPantry={setPantry} onOpenAdd={() => setPantryAddSheet(true)} />;
+    desktopContent = <DesktopPantry pantry={pantry} setPantry={setPantry}
+      onOpenAdd={() => setPantryAddSheet(true)}
+      onOpenBundle={() => setPantryBundlePicker(true)} />;
   } else if (route.tab === 'mypage') {
     desktopContent = <DesktopMyPage savedIds={savedIds} onOpenRecipe={openRecipe} onGoPage={goPage} />;
   }
@@ -680,11 +697,7 @@ function App() {
         {pantryAddSheet && (
           <DesktopPantryAddDialog
             onClose={() => setPantryAddSheet(false)}
-            onAddItem={(item) => {
-              setPantry(p => ({ ...p, [item.name]: { name: item.name, section: item.section, have: true } }));
-              setPantryAddSheet(false);
-              showToast(item.name + ' 추가됨');
-            }}
+            onAddItem={addPickedPantryItems}
             onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
           />
         )}
@@ -804,12 +817,7 @@ function App() {
           {pantryAddSheet && (
             <PantryAddSheet
               onClose={() => setPantryAddSheet(false)}
-              onAddItem={(item) => {
-                const key = item.name;
-                setPantry(p => ({ ...p, [key]: { name: item.name, section: item.section, have: true } }));
-                setPantryAddSheet(false);
-                showToast(item.name + ' 추가됨');
-              }}
+              onAddItem={addPickedPantryItems}
               onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
             />
           )}
@@ -926,12 +934,7 @@ function App() {
               {pantryAddSheet && (
                 <PantryAddSheet
                   onClose={() => setPantryAddSheet(false)}
-                  onAddItem={(item) => {
-                    const key = item.name;
-                    setPantry(p => ({ ...p, [key]: { name: item.name, section: item.section, have: true } }));
-                    setPantryAddSheet(false);
-                    showToast(item.name + ' 추가됨');
-                  }}
+                  onAddItem={addPickedPantryItems}
                   onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
                 />
               )}
@@ -1019,12 +1022,7 @@ function App() {
               {pantryAddSheet && (
                 <PantryAddSheet
                   onClose={() => setPantryAddSheet(false)}
-                  onAddItem={(item) => {
-                    const key = item.name;
-                    setPantry(p => ({ ...p, [key]: { name: item.name, section: item.section, have: true } }));
-                    setPantryAddSheet(false);
-                    showToast(item.name + ' 추가됨');
-                  }}
+                  onAddItem={addPickedPantryItems}
                   onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
                 />
               )}
