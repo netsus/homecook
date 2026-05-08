@@ -1,3 +1,4 @@
+// ===== screens/desktop-screens.jsx =====
 // Desktop variants of screens — reuse data, rearrange layout.
 const { useMemo: dUseMemo, useState: dUseState } = React;
 

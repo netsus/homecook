@@ -1,15 +1,62 @@
+// ===== app.jsx =====
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "accentColor": "#2AC1BC",
   "showBrandFont": true,
   "density": "comfortable"
 }/*EDITMODE-END*/;
 
+// Phone-shell only: floating button that calls requestFullscreen() on tap.
+// Lets users hide Android Chrome's URL bar and nav bar without an HTTPS PWA install.
+function FullscreenToggle() {
+  const { useState, useEffect } = React;
+  const [isFs, setIsFs] = useState(false);
+  const [supported, setSupported] = useState(true);
+  useEffect(() => {
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+    setSupported(typeof req === 'function');
+    const onChange = () =>
+      setIsFs(!!(document.fullscreenElement || document.webkitFullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+    };
+  }, []);
+  if (isFs || !supported) return null;
+  const enter = () => {
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+    try { req && req.call(el).catch(() => {}); } catch (e) {}
+  };
+  return (
+    <button onClick={enter} aria-label="전체화면"
+      style={{
+        position: 'fixed',
+        bottom: 'calc(78px + env(safe-area-inset-bottom))',
+        right: 12, zIndex: 9999,
+        width: 44, height: 44, borderRadius: 22,
+        background: 'rgba(33,37,41,0.72)', border: 'none', color: '#fff',
+        fontSize: 18, cursor: 'pointer',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        WebkitBackdropFilter: 'blur(8px)', backdropFilter: 'blur(8px)',
+      }}>⛶</button>
+  );
+}
+
 function App() {
   const { useState, useEffect } = React;
   // persisted route
   const [route, setRoute] = useState(() => {
-    try {return JSON.parse(localStorage.getItem('hc_route')) || { tab: 'home' };}
-    catch {return { tab: 'home' };}
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get('screen');
+      const mobileTabs = ['home', 'planner', 'pantry', 'mypage'];
+      if (s && mobileTabs.includes(s)) return { tab: s };
+      return JSON.parse(localStorage.getItem('hc_route')) || { tab: 'home' };
+    } catch { return { tab: 'home' }; }
   });
   useEffect(() => {localStorage.setItem('hc_route', JSON.stringify(route));}, [route]);
 
@@ -378,11 +425,19 @@ function App() {
 
   const fontBase = tweaks.density === 'compact' ? 13 : 14;
 
-  // Shell mode: 'webview' | 'web-mobile' | 'desktop'
+  // Shell mode: 'webview' | 'web-mobile' | 'desktop' | 'phone'
+  // 'phone' is a fullscreen-on-real-phone shell, opt-in via ?phone=1 or ?screen=<tab>.
   const [shell, setShell] = useState(() => {
-    try { return localStorage.getItem('hc_shell') || 'webview'; } catch (e) { return 'webview'; }
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('phone') === '1' || params.has('screen')) return 'phone';
+      return localStorage.getItem('hc_shell') || 'webview';
+    } catch (e) { return 'webview'; }
   });
-  useEffect(() => { try { localStorage.setItem('hc_shell', shell); } catch (e) {} }, [shell]);
+  useEffect(() => {
+    if (shell === 'phone') return; // don't persist URL-driven phone mode
+    try { localStorage.setItem('hc_shell', shell); } catch (e) {}
+  }, [shell]);
 
   // Desktop content
   let desktopContent;
@@ -709,6 +764,106 @@ function App() {
           </div>
         )}
         {tweaksOn && <TweaksPanel tweaks={tweaks} setTweaks={setTweaks} />}
+      </div>
+    );
+  }
+
+  // ============ PHONE shell (real-phone fullscreen, opt-in via ?phone=1 / ?screen=) ============
+  if (shell === 'phone') {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, background: '#fff', overflow: 'hidden',
+        WebkitTapHighlightColor: 'transparent',
+      }}>
+        <div style={{ height: '100dvh', position: 'relative', overflow: 'hidden', background: '#fff' }}>
+          <div style={{ height: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>{content}</div>
+          {!route.detail && <BottomTab tab={route.tab} onTab={goTab} />}
+          {plannerAdd && (
+            <PlannerAddPopup
+              recipeId={plannerAdd.recipeId} planner={planner}
+              onClose={() => setPlannerAdd(null)}
+              onConfirm={(date, slot, qty) => {
+                addPlannerMeal(date, slot, { recipeId: plannerAdd.recipeId, status: 'registered', servings: qty });
+                setPlannerAdd(null);
+                showToast(date + ' ' + slot + '에 추가됐어요');
+              }}
+            />
+          )}
+          {saveModal && (
+            <SavePopup recipeId={saveModal.recipeId} saved={savedIds.includes(saveModal.recipeId)}
+              onClose={() => setSaveModal(null)}
+              onConfirm={() => { toggleSaved(saveModal.recipeId); setSaveModal(null); showToast(savedIds.includes(saveModal.recipeId) ? '저장이 해제됐어요' : '저장됐어요'); }} />
+          )}
+          {sortSheet && <SortSheet value={sortBy} onChange={setSortBy} onClose={() => setSortSheet(false)} />}
+          {loginGate && <LoginGate onClose={() => setLoginGate(false)} onLogin={() => { setLoginGate(false); showToast('로그인됨'); }} />}
+          {pantryAddItems && <AddToPantryModal items={pantryAddItems} onClose={() => setPantryAddItems(null)} onConfirm={confirmAddPantry} />}
+          {pantryAddSheet && (
+            <PantryAddSheet
+              onClose={() => setPantryAddSheet(false)}
+              onAddItem={(item) => {
+                const key = item.name;
+                setPantry(p => ({ ...p, [key]: { name: item.name, section: item.section, have: true } }));
+                setPantryAddSheet(false);
+                showToast(item.name + ' 추가됨');
+              }}
+              onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
+            />
+          )}
+          {pantryBundlePicker && (
+            <PantryBundlePicker
+              onClose={() => setPantryBundlePicker(false)}
+              onConfirm={(items) => {
+                setPantry(p => {
+                  const next = { ...p };
+                  items.forEach(name => { next[name] = { name, section: '양념', have: true }; });
+                  return next;
+                });
+                setPantryBundlePicker(false);
+                showToast(items.length + '개 일괄 추가됨');
+              }}
+            />
+          )}
+          {reflectPicker && (
+            <PantryReflectPicker list={reflectPicker} onClose={() => setReflectPicker(null)}
+              onConfirm={(names) => reflectToPantry(reflectPicker, names)} />
+          )}
+          {ingredientFilterOpen && (
+            <IngredientFilterModal value={ingredientNames}
+              onApply={(names) => { setIngredientNames(names); setIngredientFilterOpen(false); }}
+              onClose={() => setIngredientFilterOpen(false)} />
+          )}
+          {planningServings && (
+            <PlanningServingsModal
+              recipe={RECIPES.find(r => r.id === planningServings.recipeId)}
+              presetDate={planningServings.presetDate}
+              presetSlot={planningServings.presetSlot}
+              onClose={() => setPlanningServings(null)}
+              onConfirm={(servings) => {
+                const { recipeId, presetDate, presetSlot } = planningServings;
+                if (presetDate && presetSlot) {
+                  addPlannerMeal(presetDate, presetSlot, { recipeId, status: 'registered', servings });
+                  showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
+                  setRoute({ tab: 'planner', page: null });
+                }
+                setPlanningServings(null);
+              }} />
+          )}
+          {servingChangeConfirm && (
+            <ConfirmDialog
+              title="인분을 변경할까요?"
+              body="이 식사는 장보기/요리 흐름에 들어가 있어요. 인분을 바꾸면 장보기 수량과 차감 분량이 함께 갱신돼요."
+              confirmLabel="변경하기"
+              onClose={() => setServingChangeConfirm(null)}
+              onConfirm={() => {
+                const { date, slot, next, mealIndex } = servingChangeConfirm;
+                updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, servings: next }));
+                setServingChangeConfirm(null);
+                showToast('인분이 변경됐어요');
+              }} />
+          )}
+          <Toast message={toast} />
+          <FullscreenToggle />
+        </div>
       </div>
     );
   }

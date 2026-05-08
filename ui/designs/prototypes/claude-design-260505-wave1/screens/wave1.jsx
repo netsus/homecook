@@ -1,3 +1,4 @@
+// ===== screens/wave1.jsx =====
 // ===== Wave 1: missing/partial screens & modals =====
 // Style follows screens/extras.jsx — uses T tokens, AppBar, Button, Icon, Sheet patterns.
 // No new domain logic; only UI surfaces matching 화면정의서 v1.5.1 + ledger constraints.
@@ -1669,4 +1670,3 @@ Object.assign(window, {
   // Wave 1.5
   MyPageRecipebookDetailScreen, IngredientFilterModal, PlanningServingsModal,
 });
-

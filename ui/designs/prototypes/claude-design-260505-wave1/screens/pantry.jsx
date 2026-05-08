@@ -1,3 +1,4 @@
+// ===== screens/pantry.jsx =====
 // Pantry screen
 const { useState: useState_PT } = React;
 

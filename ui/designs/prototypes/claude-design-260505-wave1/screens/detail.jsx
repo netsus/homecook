@@ -1,3 +1,4 @@
+// ===== screens/detail.jsx =====
 // Recipe Detail screen
 const { useState: useState_RD } = React;
 
