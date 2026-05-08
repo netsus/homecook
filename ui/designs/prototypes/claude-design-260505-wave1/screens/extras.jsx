@@ -84,8 +84,8 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
         <div style={{ padding: 16 }}>
           {days.map(d => {
             const day = planner[d] || {};
-            const slots = [['아침','🌅'],['점심','☀️'],['저녁','🌙']];
-            const hasAny = slots.some(([s]) => mealItems(day[s]).length > 0);
+            const slots = ['아침','점심','저녁'];
+            const hasAny = slots.some(s => mealItems(day[s]).length > 0);
             if (!hasAny) return null;
             return (
               <div key={d} style={{
@@ -95,7 +95,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
                 <div style={{ padding: '10px 16px', fontSize: 13, fontWeight: 700, color: T.ink, background: T.surfaceFill }}>
                   {d}
                 </div>
-                {slots.map(([s, emo]) => {
+                {slots.map(s => {
                   const meals = mealItems(day[s]);
                   if (meals.length === 0) return null;
                   return meals.map((m, mealIndex) => {
@@ -116,7 +116,6 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
                         border: `1.5px solid ${sel ? T.mint : T.border}`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>{sel && Icon.check('#fff')}</div>
-                      <span style={{ fontSize: 18 }}>{emo}</span>
                       <div style={{
                         width: 32, height: 32, borderRadius: 6, background: recipe.bg,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
@@ -124,7 +123,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>{recipe.name}</div>
                         <div style={{ fontSize: 11, color: T.text3 }}>
-                          {s} #{mealIndex + 1} · {m.servings}인분 {cooked && '· 요리 완료'}
+                          {s} · {m.servings}인분 {cooked && '· 요리 완료'}
                         </div>
                       </div>
                     </button>
@@ -215,12 +214,20 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16,
         background: '#fff', borderTop: `1px solid ${T.border}`,
-        display: 'flex', gap: 8,
+        display: 'flex', flexDirection: 'column', gap: 8,
       }}>
-        <Button variant="neutral" onClick={() => { showToast('공유 링크가 복사됐어요'); }}>공유</Button>
-        <Button full disabled={checked.size === 0} onClick={() => onAddToPantry([...checked])}>
-          담은 재료 팬트리에 추가 ({checked.size})
+        <Button full disabled={needed.length === 0} onClick={() => {
+          showToast('장보기 목록이 만들어졌어요');
+          /* CONTRACT_CHECK: POST /shopping-lists — vNext에서는 UI shape만 */
+        }}>
+          장보기 목록 만들기
         </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button variant="neutral" onClick={() => { showToast('공유 링크가 복사됐어요'); }}>공유</Button>
+          <Button full variant="neutral" disabled={checked.size === 0} onClick={() => onAddToPantry([...checked])}>
+            담은 재료 팬트리에 추가 ({checked.size})
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -400,25 +407,8 @@ function CookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete,
   const meal = mealItems(planner[date]?.[slot])[mealIndex];
   if (!meal) return <div style={{ padding: 40 }}>끼니를 찾을 수 없어요</div>;
   const recipe = RECIPES.find(r => r.id === meal.recipeId);
-  const [stepIdx, setStepIdx] = useState_X(0);
-  const [seconds, setSeconds] = useState_X(0);
-  const [running, setRunning] = useState_X(true);
-
-  React.useEffect(() => {
-    if (!running) return;
-    const t = setInterval(() => setSeconds(s => s + 1), 1000);
-    return () => clearInterval(t);
-  }, [running]);
-
-  const step = recipe.steps[stepIdx];
-  const m = METHOD_COLORS[step.method] || METHOD_COLORS.prep;
-  const fmt = (s) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
-
-  const next = () => {
-    if (stepIdx < recipe.steps.length - 1) setStepIdx(stepIdx + 1);
-    else setShowConsumed(true);
-  };
   const [showConsumed, setShowConsumed] = useState_X(false);
+  const [confirmCancel, setConfirmCancel] = useState_X(false);
 
   return (
     <div style={{ background: '#0E1014', minHeight: '100%', color: '#fff', display: 'flex', flexDirection: 'column' }}>
@@ -427,89 +417,72 @@ function CookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '52px 16px 14px',
       }}>
-        <button onClick={onBack} style={{ ...iconBtn, background: 'rgba(255,255,255,0.1)' }}>{Icon.chevL('#fff')}</button>
+        <button onClick={() => setConfirmCancel(true)} style={{ ...iconBtn, background: 'rgba(255,255,255,0.1)' }}>{Icon.chevL('#fff')}</button>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 11, opacity: 0.6, fontWeight: 600 }}>{recipe.name}</div>
           <div style={{ fontSize: 13, fontWeight: 700, fontFamily: T.fontBrand }}>
-            {stepIdx + 1} / {recipe.steps.length} 스텝
+            {recipe.steps.length}단계
           </div>
         </div>
-        <button onClick={() => showToast('레시피 노트 — 추후 구현')}
-          style={{ ...iconBtn, background: 'rgba(255,255,255,0.1)' }}>📝</button>
+        <div style={{ width: 36 }} />
       </div>
 
-      {/* Progress dots */}
-      <div style={{ display: 'flex', gap: 4, padding: '0 16px 12px' }}>
-        {recipe.steps.map((s, i) => (
-          <div key={i} style={{
-            flex: 1, height: 3, borderRadius: 2,
-            background: i <= stepIdx ? T.mint : 'rgba(255,255,255,0.15)',
-          }} />
-        ))}
+      {/* All steps — scrollable */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
+        {recipe.steps.map((step, i) => {
+          const m = METHOD_COLORS[step.method] || METHOD_COLORS.prep;
+          return (
+            <div key={i} style={{
+              background: m.bg, borderRadius: 16, padding: 20, marginBottom: 12,
+              color: '#1a1a2e', borderLeft: `5px solid ${m.border}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{
+                  fontSize: 11, fontWeight: 800, color: '#fff', background: m.border,
+                  padding: '3px 10px', borderRadius: 9999,
+                }}>STEP {i + 1}</span>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, color: m.text, background: '#fff',
+                  padding: '3px 8px', borderRadius: 9999,
+                }}>{m.label}</span>
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#1a1a2e', marginBottom: 8, fontFamily: T.fontBrand }}>
+                {step.title}
+              </div>
+              <div style={{ fontSize: 15, color: '#1a1a2e', lineHeight: 1.6 }}>{step.body}</div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Big timer */}
-      <div style={{ padding: '8px 16px 0', textAlign: 'center' }}>
-        <div style={{ fontSize: 11, opacity: 0.5, fontWeight: 600, letterSpacing: 1 }}>경과 시간</div>
-        <div style={{ fontSize: 56, fontWeight: 800, fontFamily: '"SF Mono", monospace', letterSpacing: 2, marginTop: 4 }}>
-          {fmt(seconds)}
-        </div>
-        <div style={{ fontSize: 12, opacity: 0.6 }}>예상 {recipe.minutes}분 · 이번 스텝 약 {step.minutes}분</div>
-      </div>
-
-      {/* Step card */}
-      <div style={{ flex: 1, padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div style={{
-          background: m.bg, borderRadius: 20, padding: 24,
-          color: '#1a1a2e', borderLeft: `6px solid ${m.border}`,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <span style={{
-              fontSize: 12, fontWeight: 700, color: m.text, background: '#fff',
-              padding: '4px 10px', borderRadius: 9999,
-            }}>{m.label}</span>
-            <span style={{ fontSize: 12, color: m.text, fontWeight: 600 }}>약 {step.minutes}분</span>
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#1a1a2e', marginBottom: 10, fontFamily: T.fontBrand }}>
-            {step.title}
-          </div>
-          <div style={{ fontSize: 16, color: '#1a1a2e', lineHeight: 1.55 }}>{step.body}</div>
-        </div>
-
-        {/* Mini ingredients hint */}
-        <div style={{
-          marginTop: 14, background: 'rgba(255,255,255,0.06)', padding: 12, borderRadius: 10,
-          fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5,
-        }}>
-          <span style={{ color: T.mint, fontWeight: 700 }}>이 단계 재료</span> · {recipe.ingredients.slice(0, 3).map(i => `${i.name} ${i.qty}`).join(', ')}…
-        </div>
-      </div>
-
-      {/* Bottom controls */}
+      {/* Bottom controls: 취소 + 요리완료 */}
       <div style={{
         padding: '12px 16px 28px', display: 'flex', gap: 8, alignItems: 'center',
         background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.5))',
       }}>
-        <button onClick={() => setStepIdx(Math.max(0, stepIdx - 1))} disabled={stepIdx === 0}
-          style={{
-            background: 'rgba(255,255,255,0.12)', color: '#fff', border: 'none',
-            height: 56, padding: '0 18px', borderRadius: 12, fontSize: 14, fontWeight: 700,
-            cursor: stepIdx === 0 ? 'default' : 'pointer', opacity: stepIdx === 0 ? 0.4 : 1,
-          }}>이전</button>
-        <button onClick={() => setRunning(r => !r)} style={{
+        <button onClick={() => setConfirmCancel(true)} style={{
           background: 'rgba(255,255,255,0.12)', color: '#fff', border: 'none',
-          width: 56, height: 56, borderRadius: 28, fontSize: 18, cursor: 'pointer',
-        }}>{running ? '⏸' : '▶'}</button>
-        <button onClick={next} style={{
+          height: 56, padding: '0 20px', borderRadius: 12, fontSize: 14, fontWeight: 700,
+          cursor: 'pointer',
+        }}>취소</button>
+        <button onClick={() => setShowConsumed(true)} style={{
           flex: 1, background: T.mint, color: '#fff', border: 'none',
           height: 56, borderRadius: 12, fontSize: 16, fontWeight: 800, cursor: 'pointer',
           fontFamily: T.fontBrand, letterSpacing: 0.5,
-        }}>{stepIdx === recipe.steps.length - 1 ? '✓ 요리 완료' : '다음 스텝 →'}</button>
+        }}>요리 완료</button>
       </div>
+
       {showConsumed && (
         <ConsumedIngredientSheet recipe={recipe}
           onClose={() => setShowConsumed(false)}
           onConfirm={(picked) => { setShowConsumed(false); onComplete(date, slot, picked, mealIndex); }} />
+      )}
+      {confirmCancel && (
+        <ConfirmDialog title="요리를 취소할까요?"
+          body="진행 중인 요리 기록이 사라져요."
+          destructive confirmLabel="취소하기" cancelLabel="계속하기"
+          onClose={() => setConfirmCancel(false)}
+          onConfirm={() => { setConfirmCancel(false); onBack(); }} />
       )}
     </div>
   );
