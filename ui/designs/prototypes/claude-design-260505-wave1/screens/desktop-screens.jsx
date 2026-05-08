@@ -224,9 +224,14 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
   );
 }
 
-function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList, onOpenMeal }) {
+// vNext S4 — DesktopPlanner: week nav, 이모지 제거, 상태 배지 제거, 요리하기 제거, 식사추가 다이얼로그
+function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList, onOpenMeal, onGoManual }) {
   const days = Object.keys(planner);
   const slots = ['아침', '점심', '저녁'];
+  // vNext S4 — week navigation (prototype: label만 변경)
+  const [weekOffset, setWeekOffset] = dUseState(0);
+  // vNext S4 — 식사 추가 다이얼로그 상태
+  const [mealAddDialog, setMealAddDialog] = dUseState(null); // { date, slot }
 
   const stats = dUseMemo(() => {
     let total = 0, cooked = 0, shopped = 0;
@@ -244,36 +249,54 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
 
   const dateRange = dUseMemo(() => {
     if (!days.length) return '';
-    const year = WEEK_START.getFullYear();
-    const parse = d => { const [m, day] = d.split('/').map(Number); return new Date(year, m - 1, day); };
-    const first = parse(days[0]);
-    const last = parse(days[days.length - 1]);
-    return `${first.getFullYear()}년 ${first.getMonth()+1}월 ${first.getDate()}일 ~ ${last.getMonth()+1}월 ${last.getDate()}일`;
-  }, [days]);
+    const base = new Date(WEEK_START);
+    base.setDate(base.getDate() + weekOffset * 7);
+    const end = new Date(base);
+    end.setDate(end.getDate() + 6);
+    return `${base.getFullYear()}년 ${base.getMonth()+1}월 ${base.getDate()}일 ~ ${end.getMonth()+1}월 ${end.getDate()}일`;
+  }, [days, weekOffset]);
+
+  const weekLabel = weekOffset === 0 ? '이번 주 식단' : weekOffset === 1 ? '다음 주 식단' : weekOffset === -1 ? '지난 주 식단' : '식단';
+
+  // 식사 추가 다이얼로그 옵션
+  const mealAddOptions = [
+    { id: 'recipebook', label: '레시피북에서 추가', icon: '📖' },
+    { id: 'pantry',     label: '팬트리 기반 추천',  icon: '🧊' },
+    { id: 'leftover',   label: '남은요리에서 추가',  icon: '🍱' },
+    { id: 'youtube',    label: '유튜브에서 가져오기', icon: '🎬' },
+    { id: 'manual',     label: '직접 등록',          icon: '✏️' },
+  ];
 
   return (
     <div>
+      {/* vNext S4 — Header with week nav, 요리하기 제거, 장보기 텍스트 축약 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: T.ink }}>이번 주 식단</div>
-          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>{dateRange}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button onClick={() => setWeekOffset(w => w - 1)} style={{
+            background: T.surfaceFill, border: `1px solid ${T.border}`, borderRadius: 8,
+            width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: T.text2,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>‹</button>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: T.ink }}>{weekLabel}</div>
+            <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>{dateRange}</div>
+          </div>
+          <button onClick={() => setWeekOffset(w => w + 1)} style={{
+            background: T.surfaceFill, border: `1px solid ${T.border}`, borderRadius: 8,
+            width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: T.text2,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>›</button>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={() => onCookList?.()} style={{
-            background: '#FFF4E1', color: '#B8860B', border: 'none', padding: '10px 16px',
-            borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-          }}>🍳 요리하기</button>
-          <button onClick={() => onCreateShopping?.()} style={{
-            background: T.ink, color: '#fff', border: 'none', padding: '10px 16px',
-            borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
-          }}>🛒 장보기 목록 만들기</button>
-        </div>
+        <button onClick={() => onCreateShopping?.()} style={{
+          background: T.ink, color: '#fff', border: 'none', padding: '10px 16px',
+          borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+        }}>장보기</button>
       </div>
 
-      {/* Weekly summary cards — parity with mobile PlannerScreen */}
+      {/* Weekly summary cards */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 10, fontFamily: T.fontBrand }}>
-          이번 주 {stats.total}개 음식 계획 중
+          {stats.total}개 음식 계획 중
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <div style={{ flex: 1, background: T.mintSoft, borderRadius: 10, padding: '12px 16px' }}>
@@ -317,17 +340,17 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
           );
         })}
 
+        {/* vNext S4 — 슬롯 라벨 강화(fontWeight 700→800, color T.ink), 상태배지 제거, + 음식 버튼 강화 */}
         {slots.map(slot => (
           <React.Fragment key={slot}>
             <div style={{
-              padding: 12, background: T.surfaceFill, color: T.text2, fontWeight: 700, fontSize: 12,
+              padding: 12, background: T.surfaceFill, color: T.ink, fontWeight: 800, fontSize: 13,
               borderBottom: `1px solid ${T.border}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>{slot}</div>
             {days.map(d => {
               const meals = mealItems(planner[d]?.[slot]);
               const recipes = meals.map(meal => RECIPES.find(r => r.id === meal.recipeId)).filter(Boolean);
-              const summary = slotStatusSummary(planner[d]?.[slot]);
               return (
                 <div key={d+slot} style={{
                   borderLeft: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`,
@@ -339,40 +362,36 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
                       display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 6,
                       cursor: 'pointer',
                     }}>
-                      <div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          {recipes.slice(0, 3).map((recipe, idx) => (
-                            <div key={recipe.id + idx} style={{
-                              background: '#fff', borderRadius: 7, padding: '5px 6px',
-                              display: 'flex', alignItems: 'center', gap: 5, minWidth: 0,
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                            }}>
-                              <span style={{ fontSize: 15 }}>{recipe.emoji || '🍽️'}</span>
-                              <span style={{ fontSize: 10, fontWeight: 800, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</span>
-                            </div>
-                          ))}
-                          {recipes.length > 3 && (
-                            <div style={{ fontSize: 10, color: T.text2, fontWeight: 800, paddingLeft: 2 }}>
-                              +{recipes.length - 3}개 더
-                            </div>
-                          )}
-                        </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {recipes.slice(0, 3).map((recipe, idx) => (
+                          <div key={recipe.id + idx} style={{
+                            background: '#fff', borderRadius: 7, padding: '5px 6px',
+                            display: 'flex', alignItems: 'center', gap: 5, minWidth: 0,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                          }}>
+                            <span style={{ fontSize: 15 }}>{recipe.emoji || ''}</span>
+                            <span style={{ fontSize: 10, fontWeight: 800, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</span>
+                          </div>
+                        ))}
+                        {recipes.length > 3 && (
+                          <div style={{ fontSize: 10, color: T.text2, fontWeight: 800, paddingLeft: 2 }}>
+                            +{recipes.length - 3}개 더
+                          </div>
+                        )}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <StatusPill status={summary.status === 'mixed' ? 'shopped' : summary.status} />
-                        <button onClick={(e) => { e.stopPropagation(); onMenuAdd?.(d, slot); }} style={{
-                          marginLeft: 'auto', width: 24, height: 24, borderRadius: 7,
-                          border: `1px dashed ${T.border}`, background: '#fff', color: T.text2,
-                          cursor: 'pointer', fontSize: 14, lineHeight: 1,
-                        }}>+</button>
-                      </div>
+                      {/* vNext S4 — StatusPill 제거, + 음식 버튼 강화 */}
+                      <button onClick={(e) => { e.stopPropagation(); setMealAddDialog({ date: d, slot }); }} style={{
+                        marginLeft: 'auto', border: `1.5px solid ${T.mint}`, background: T.mintSoft,
+                        color: T.mintDeep, borderRadius: 7, padding: '3px 8px', fontSize: 11,
+                        fontWeight: 700, cursor: 'pointer',
+                      }}>+ 음식</button>
                     </div>
                   ) : (
-                    <button onClick={() => onMenuAdd?.(d, slot)} style={{
+                    <button onClick={() => setMealAddDialog({ date: d, slot })} style={{
                       width: '100%', height: '100%',
-                      background: 'transparent', border: `1.5px dashed ${T.border}`, borderRadius: 8,
-                      color: T.text3, fontSize: 18, cursor: 'pointer',
-                    }}>+</button>
+                      background: T.mintSoft, border: `1.5px dashed ${T.mint}`, borderRadius: 8,
+                      color: T.mintDeep, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                    }}>+ 추가</button>
                   )}
                 </div>
               );
@@ -380,6 +399,76 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
           </React.Fragment>
         ))}
       </div>
+
+      {/* vNext S4 — 식사 추가 데스크톱 다이얼로그 (centered) */}
+      {mealAddDialog && (
+        <>
+          <div onClick={() => setMealAddDialog(null)} style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000,
+          }} />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            zIndex: 1001, background: '#FAF8F2', borderRadius: 16,
+            width: 420, maxHeight: '80vh', overflowY: 'auto',
+            boxShadow: T.shadowCrisp, padding: 24,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>
+                {mealAddDialog.date} {mealAddDialog.slot} · 식사 추가
+              </div>
+              <button onClick={() => setMealAddDialog(null)} style={{
+                width: 32, height: 32, borderRadius: 16, background: T.surfaceFill,
+                border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{Icon.close()}</button>
+            </div>
+            {/* 검색 input */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: T.surfaceFill, borderRadius: 10, padding: '0 12px', height: 40,
+              marginBottom: 16, border: `1px solid ${T.border}`,
+            }}>
+              {Icon.search()}
+              <input
+                placeholder="레시피 검색"
+                onFocus={() => { const d = mealAddDialog; setMealAddDialog(null); onMenuAdd(d.date, d.slot); }}
+                style={{
+                  flex: 1, border: 'none', background: 'transparent', outline: 'none',
+                  fontSize: 14, color: T.ink, fontFamily: T.fontUI,
+                }}
+              />
+            </div>
+            {/* 옵션 2열 그리드 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {mealAddOptions.map(o => (
+                <button key={o.id} onClick={() => {
+                  const d = mealAddDialog;
+                  setMealAddDialog(null);
+                  if (o.id === 'manual') {
+                    // CONTRACT_CHECK: 직접 등록 경로 — S5에서 직접 manual-create callback 연결 필요 — vNext에서는 UI shape만
+                    onGoManual?.(d.date, d.slot) || onMenuAdd(d.date, d.slot);
+                  } else {
+                    onMenuAdd(d.date, d.slot);
+                  }
+                }} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '14px 12px', borderRadius: 10,
+                  background: '#fff', border: `1px solid ${T.border}`,
+                  cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.ink,
+                  textAlign: 'left',
+                  transition: 'border-color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = T.mint; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; }}
+                >
+                  <span style={{ fontSize: 20 }}>{o.icon}</span>
+                  <span>{o.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

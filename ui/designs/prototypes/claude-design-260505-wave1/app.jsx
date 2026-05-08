@@ -414,6 +414,7 @@ function App() {
       onCreateShopping={() => goPage('shopping-create')}
       onCookList={() => goPage('cook-list')}
       onMenuAdd={(date, slot) => goPage('menu-add', { date, slot })}
+      onGoManual={(date, slot) => goPage('manual-create', { date, slot })}
       onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })} />;
 
 
@@ -473,6 +474,7 @@ function App() {
         onCookList={() => goPage('cook-list')}
         onOpenMeal={(date, slot) => goPage('meal-detail', { date, slot })}
         onMenuAdd={(date, slot) => goPage('menu-add', date && slot ? { date, slot } : {})}
+        onGoManual={(date, slot) => goPage('manual-create', { date, slot })}
         onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })}
       />
     );
