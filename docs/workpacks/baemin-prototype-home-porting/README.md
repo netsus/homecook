@@ -62,6 +62,13 @@ HOME 화면을 `ui/designs/prototypes/baemin-redesign/screens/home.jsx` 기준�
 - `docs/workpacks/baemin-prototype-home-porting/acceptance.md`
 - `ui/designs/authority/HOME-prototype-porting-authority.md`
 
+## Design Status
+
+- [ ] 임시 UI (temporary)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed) — PR #297 merged on 2026-04-29. HOME prototype porting implementation, tests, visual checks, and acceptance checklist are complete.
+- [ ] N/A
+
 ## Verification Plan
 
 - `tests/home-screen.test.tsx`
@@ -76,3 +83,15 @@ HOME 화면을 `ui/designs/prototypes/baemin-redesign/screens/home.jsx` 기준�
   - `/` 390px, 320px 수동 브라우저 확인
   - initial, scrolled, sort-open, filter-active, loading, empty, error 확인
 
+## Delivery Checklist
+
+- [x] HOME prototype AppBar, hero greeting, search pill 렌더 <!-- omo:id=home-port-hero;stage=4;scope=frontend;review=5,6 -->
+- [x] Inline ingredient chip rail 렌더 및 `ingredient_ids` query 반영 <!-- omo:id=home-port-inline-chips;stage=4;scope=frontend;review=5,6 -->
+- [x] `더보기` chip이 기존 `IngredientFilterModal`을 연다 <!-- omo:id=home-port-more-chip-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] Theme carousel, promo strip, all recipes section 렌더 <!-- omo:id=home-port-sections;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME 전용 bottom tab 렌더 및 `/` shared bottom tab 숨김 <!-- omo:id=home-port-bottom-tab;stage=4;scope=frontend;review=5,6 -->
+- [x] RecipeCard prototype 구조 적용 <!-- omo:id=home-port-card;stage=4;scope=frontend;review=5,6 -->
+- [x] 검색 debounce 300ms 유지 <!-- omo:id=home-port-search-debounce;stage=4;scope=frontend;review=5,6 -->
+- [x] loading / empty / error 상태 유지 <!-- omo:id=home-port-states;stage=4;scope=frontend;review=5,6 -->
+- [x] API endpoint, DB schema, status value, public field 추가 없음 <!-- omo:id=home-port-contract-unchanged;stage=4;scope=frontend;review=5,6 -->
+- [x] 새 dependency 추가 없음 <!-- omo:id=home-port-no-dependency;stage=4;scope=frontend;review=5,6 -->
