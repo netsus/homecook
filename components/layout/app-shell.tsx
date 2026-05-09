@@ -21,7 +21,7 @@ export function AppShell({
   const brandAsPageTitle = currentTab === "home";
 
   return (
-    <div className="app-shell bottom-safe">
+    <div className={`app-shell${showSharedBottomTabs ? " bottom-safe" : ""}`}>
       <div className="mx-auto flex max-w-6xl flex-col gap-[clamp(1rem,4vw,1.5rem)]">
         {showSharedHeader ? <AppHeader brandAsPageTitle={brandAsPageTitle} /> : null}
         <main>{children}</main>

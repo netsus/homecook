@@ -60,11 +60,11 @@
 | --- | --- | --- |
 | `01-discovery-detail-auth` ~ `19-youtube-import` | merged | [x] |
 | `planner-column-customization` | merged | [x] |
-| `baemin-prototype-home-porting` | in-progress | [x] 충돌 영향도 아래 기록 |
+| `baemin-prototype-home-porting` | merged | [x] PR #297 merge 확인 |
 
 ### baemin-prototype-home-porting 충돌 분석
 
-- **현재 상태**: `in-progress`. HOME에 prototype AppBar, hero, search pill, inline chip rail, theme carousel, promo strip, HOME 전용 bottom tab을 도입 중.
+- **현재 상태**: `merged` (PR #297, 2026-04-29). HOME에 prototype AppBar, hero, search pill, inline chip rail, theme carousel, promo strip, HOME 전용 bottom tab이 도입됐다.
 - **AppShell 영향**: `baemin-prototype-home-porting`은 `/`에서 shared header/bottom tab을 숨기고 HOME 전용 bottom tab을 쓴다. `AppShell.bottomTabsMode="hidden"` 옵션을 추가했다.
 - **충돌 위험**: 이 슬라이스(wave1-port-foundation)는 `AppShell`의 기존 `bottomTabsMode` / `headerMode` 인터페이스를 변경하지 않고 안정화만 한다. HOME 전용 bottom tab은 `baemin-prototype-home-porting`의 ownership이다.
 - **잠금 규칙**: wave1-port-foundation은 `bottom-tabs.tsx`의 shared tab(4탭: 홈/플래너/팬트리/마이) 구조만 다루고, HOME 전용 bottom tab(`baemin-prototype-home-porting` 소유)은 건드리지 않는다. 양쪽이 동시에 `AppShell` props를 변경하면 merge conflict가 발생할 수 있으므로, `baemin-prototype-home-porting`이 merge된 이후에 wave1-port-foundation의 AppShell 관련 변경을 rebase한다.
@@ -92,20 +92,21 @@
 
 - UI risk: `high-risk` — 새 공용 primitive 도입(sort dropdown)과 기존 shared primitive의 시각적 정비가 후속 모든 화면에 영향을 주므로.
 - Anchor screen dependency: 없음 (직접 수정하지 않음). 단, 변경된 primitive를 anchor screen이 소비하므로 간접 영향 있음.
-- Visual artifact: Stage 4에서 mobile 390px/320px screenshot evidence를 생성할 예정.
+- Visual artifact: Stage 4/5에서 mobile 390px/320px screenshot evidence를 생성하고 dev overlay 없이 재캡처했다.
   - `ui/designs/evidence/wave1-port-foundation/primitives-mobile.png`
   - `ui/designs/evidence/wave1-port-foundation/primitives-mobile-narrow.png`
-- Authority status: `required` — 새 공용 primitive(sort dropdown) 도입이 high-risk UI change에 해당.
+- Authority status: `reviewed`
 - Notes:
+  - Codex Stage 5 authority report와 Claude final authority gate가 blocker 0개로 통과했다.
   - `design-generator` / `design-critic`은 화면 단위 도구이며, 이 슬라이스는 화면이 아닌 공용 primitive 정비다. 화면 설계 산출물(`ui/designs/<SCREEN_ID>.md`)은 생성하지 않는다.
   - **생략 근거**: 이 슬라이스는 신규 화면이 아니다. In Scope의 변경은 기존 공용 컴포넌트의 additive 보강과 새 dropdown primitive 하나 도입이다. 화면 단위 `design-generator` / `design-critic` 대상이 아니다. 대신 Stage 4에서 primitive 단위 screenshot evidence를 생성하고, authority review에서 후속 화면 적용 전에 primitive 품질을 확인한다.
   - raw prototype mint/Jua/asset은 production scope 밖이다. `BAEMIN_STYLE_DIRECTION.md`의 `out of prototype scope` 용어를 적용한다.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed) - Codex Stage 5 review + Claude final authority gate 통과
 - [ ] N/A
 
 ## Source Links
@@ -152,18 +153,26 @@
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > Stage 2는 N/A (UI-only slice). Stage 4~6에서 프론트/QA/디자인/closeout 항목을 닫는다.
 
-- [ ] AppShell spacing/gap Wave1 기준 조정 <!-- omo:id=foundation-appshell-spacing;stage=4;scope=frontend;review=5,6 -->
-- [ ] AppShell bottomTabsMode/headerMode 안정화 <!-- omo:id=foundation-appshell-modes;stage=4;scope=frontend;review=5,6 -->
-- [ ] BottomTabs shared tab 구조 정합 확인 <!-- omo:id=foundation-bottom-tabs;stage=4;scope=frontend;review=5,6 -->
-- [ ] Button variant/size CTA 위계 정리 <!-- omo:id=foundation-button-cta;stage=4;scope=frontend;review=5,6 -->
-- [ ] Chip filter/selection variant spacing 정합 <!-- omo:id=foundation-chip-variants;stage=4;scope=frontend;review=5,6 -->
-- [ ] Card interactive/loading 변형 일관성 확인 <!-- omo:id=foundation-card-variants;stage=4;scope=frontend;review=5,6 -->
-- [ ] Modal/Sheet footer label 정합 <!-- omo:id=foundation-modal-footer;stage=4;scope=frontend;review=5,6 -->
-- [ ] Sort dropdown primitive 도입 <!-- omo:id=foundation-sort-dropdown;stage=4;scope=frontend;review=5,6 -->
-- [ ] SelectionChipRail horizontal scroll 안정화 <!-- omo:id=foundation-chip-rail-scroll;stage=4;scope=frontend;review=5,6 -->
-- [ ] globals.css safe-area/bottom-safe 값 검증 <!-- omo:id=foundation-globals-safe-area;stage=4;scope=frontend;review=5,6 -->
-- [ ] 공용 primitive Vitest 렌더 테스트 <!-- omo:id=foundation-vitest-primitives;stage=4;scope=frontend;review=5,6 -->
-- [ ] mobile 390/320 screenshot evidence 생성 <!-- omo:id=foundation-screenshot-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] no horizontal overflow spot check <!-- omo:id=foundation-no-overflow;stage=4;scope=frontend;review=5,6 -->
-- [ ] `loading / empty / error / read-only` primitive 렌더 확인 <!-- omo:id=foundation-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm verify:frontend` 통과 <!-- omo:id=foundation-verify-frontend;stage=4;scope=frontend;review=6 -->
+- [x] AppShell spacing/gap Wave1 기준 조정 <!-- omo:id=foundation-appshell-spacing;stage=4;scope=frontend;review=5,6 -->
+- [x] AppShell bottomTabsMode/headerMode 안정화 <!-- omo:id=foundation-appshell-modes;stage=4;scope=frontend;review=5,6 -->
+- [x] BottomTabs shared tab 구조 정합 확인 <!-- omo:id=foundation-bottom-tabs;stage=4;scope=frontend;review=5,6 -->
+- [x] Button variant/size CTA 위계 정리 <!-- omo:id=foundation-button-cta;stage=4;scope=frontend;review=5,6 -->
+- [x] Chip filter/selection variant spacing 정합 <!-- omo:id=foundation-chip-variants;stage=4;scope=frontend;review=5,6 -->
+- [x] Card interactive/loading 변형 일관성 확인 <!-- omo:id=foundation-card-variants;stage=4;scope=frontend;review=5,6 -->
+- [x] Modal/Sheet footer label 정합 <!-- omo:id=foundation-modal-footer;stage=4;scope=frontend;review=5,6 -->
+- [x] Sort dropdown primitive 도입 <!-- omo:id=foundation-sort-dropdown;stage=4;scope=frontend;review=5,6 -->
+- [x] SelectionChipRail horizontal scroll 안정화 <!-- omo:id=foundation-chip-rail-scroll;stage=4;scope=frontend;review=5,6 -->
+- [x] globals.css safe-area/bottom-safe 값 검증 <!-- omo:id=foundation-globals-safe-area;stage=4;scope=frontend;review=5,6 -->
+- [x] 공용 primitive Vitest 렌더 테스트 <!-- omo:id=foundation-vitest-primitives;stage=4;scope=frontend;review=5,6 -->
+- [x] mobile 390/320 screenshot evidence 생성 <!-- omo:id=foundation-screenshot-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] no horizontal overflow spot check <!-- omo:id=foundation-no-overflow;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / read-only` primitive 렌더 확인 <!-- omo:id=foundation-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend` 통과 <!-- omo:id=foundation-verify-frontend;stage=4;scope=frontend;review=6 -->
+
+## Stage 6 Closeout Evidence
+
+- Design authority: `ui/designs/authority/WAVE1_FOUNDATION-authority.md` - pass, blocker 0
+- Claude final authority gate: `.omx/artifacts/claude-delegate-3f4ca745-db71-4392-a3f1-4e3c4493e9bc-wave1-port-foundation-final-authority-gate-response-20260509T204619Z.md` - pass, blocker 0
+- Exploratory QA: `.artifacts/qa/wave1-port-foundation/2026-05-09T20-50-stage6/exploratory-report.json` and `eval-result.json` - score 100
+- Verification: `pnpm verify:frontend`, `pnpm validate:workflow-v2`, `pnpm validate:workpack`, `PR_IS_DRAFT=false pnpm validate:authority-evidence-presence`, `git diff --check` passed
+- Targeted browser check: `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 PLAYWRIGHT_REUSE_EXISTING_SERVER=1 pnpm exec playwright test tests/e2e/slice-wave1-port-foundation.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small` passed
