@@ -1,0 +1,91 @@
+{
+  "id": "planner-column-customization",
+  "title": "Planner column customization — dynamic meal columns with rename, add, delete from Settings",
+  "summary": "끼니 컬럼 정책을 4개 고정에서 사용자별 동적 관리로 변경. 신규 사용자 기본 3개(아침/점심/저녁), 설정에서 이름 변경/추가/삭제 가능, 최소 1개~최대 5개, 연결된 식사가 있는 컬럼 삭제 금지. GET/POST/PATCH/DELETE /planner/columns 계약 재도입. PLANNER_WEEK 동적 컬럼 렌더링.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "fullstack",
+  "risk": "medium",
+  "preset": "vertical-slice-strict",
+  "goal": "사용자가 설정 화면에서 플래너 끼니 컬럼을 이름 변경, 추가, 삭제할 수 있도록 한다. 신규 사용자 기본값은 아침/점심/저녁 3개이며, 최소 1개~최대 5개까지 허용한다. PLANNER_WEEK는 사용자별 동적 컬럼을 표시하고, 기존 사용자에게 이미 생성된 컬럼은 자동 삭제하지 않는다.",
+  "owners": {
+    "claude": "stage1,stage3,stage4",
+    "codex": "stage2,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "05-planner-week-core",
+    "17c-settings-account"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/요구사항기준선-v1.6.5.md",
+      "docs/화면정의서-v1.5.2.md",
+      "docs/api문서-v1.2.3.md",
+      "docs/db설계-v1.3.2.md",
+      "docs/유저flow맵-v1.3.2.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/planner-column-customization/README.md",
+      "docs/workpacks/planner-column-customization/acceptance.md",
+      "docs/workpacks/planner-column-customization/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/tdd-vitest.md",
+      "docs/engineering/playwright-e2e.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [
+      "pnpm dev:local-supabase",
+      "pnpm dev:demo"
+    ],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 4,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend",
+      "pnpm lint",
+      "pnpm typecheck"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Contract-evolution PR #367 merged on 2026-05-10. Stage 1 docs authoring in progress on branch docs/planner-column-customization. This slice changes meal_plan_columns from 4-fixed to user-managed (3 default, 1-5 range). Anchor-extension on PLANNER_WEEK requires authority review.",
+  "out_of_scope": [
+    "컬럼 순서 변경 (drag-and-drop reorder) — 1차 구현 범위 밖",
+    "기존 사용자의 4번째 컬럼(간식) 자동 삭제",
+    "MEAL_SCREEN 변경",
+    "POST /meals 요청/응답 shape 변경",
+    "prototype parity promotion"
+  ],
+  "open_questions": []
+}
