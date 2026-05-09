@@ -1,17 +1,30 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.6.4.md`
-- `docs/화면정의서-v1.5.1.md`
-- `docs/유저flow맵-v1.3.1.md`
-- `docs/db설계-v1.3.1.md`
-- `docs/api문서-v1.2.2.md`
+- `docs/요구사항기준선-v1.6.5.md`
+- `docs/화면정의서-v1.5.2.md`
+- `docs/유저flow맵-v1.3.2.md`
+- `docs/db설계-v1.3.2.md`
+- `docs/api문서-v1.2.3.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## v1.6.4 / v1.5.1 / v1.3.1 / DB v1.3.1 / API v1.2.2 → v1.6.5 / v1.5.2 / v1.3.2 / DB v1.3.2 / API v1.2.3 변경 이력 (2026-05-10)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.6.5 | 기본 끼니 컬럼을 `아침 / 점심 / 저녁` 3개로 변경하고, 설정에서 이름 변경/추가/삭제 가능하도록 승인 |
+| 화면정의서 v1.5.2 | `PLANNER_WEEK`는 사용자별 동적 끼니 컬럼을 표시하고, `SETTINGS`에 끼니 컬럼 관리 섹션을 추가 |
+| 유저플로우 v1.3.2 | 신규 회원 bootstrap은 `meal_plan_columns ×3`, 설정에서 컬럼 관리 flow 추가 |
+| DB v1.3.2 | `meal_plan_columns` 공개 정책을 기본 3개 + 사용자 관리 1~5개로 변경, 빈 컬럼만 삭제 가능 |
+| API v1.2.3 | `GET/POST/PATCH/DELETE /planner/columns` 계약 추가, 중복명/최대개수/최소개수/식사 연결 삭제 제한 명시 |
+
+> 이 변경은 사용자 승인(2026-05-10)을 기반으로 한 planner column customization contract-evolution이다.
+> 기존 사용자에게 이미 생성된 컬럼은 자동 삭제하지 않고, 설정 화면에서 사용자가 직접 정리할 수 있게 한다.
 
 ## v1.6.3 / v1.5.0 / v1.3.0 → v1.6.4 / v1.5.1 / v1.3.1 변경 이력 (2026-04-27)
 
