@@ -5,6 +5,7 @@ const { useState: useState_PT } = React;
 function PantryScreen({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
   const [query, setQuery] = useState_PT('');
   const [activeCat, setActiveCat] = useState_PT('전체');
+  const [deleteMode, setDeleteMode] = useState_PT(false);
   const [selected, setSelected] = useState_PT(new Set());
   const categories = ['전체', ...PANTRY_CATEGORIES];
   const ownedEntries = Object.entries(pantry).filter(([, v]) => v.have);
@@ -26,6 +27,7 @@ function PantryScreen({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
     });
   };
   const deleteSelected = () => {
+    if (selected.size === 0) return;
     setPantry(prev => {
       const next = { ...prev };
       selected.forEach(key => {
@@ -34,18 +36,25 @@ function PantryScreen({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
       return next;
     });
     setSelected(new Set());
+    setDeleteMode(false);
     /* CONTRACT_CHECK: DELETE /pantry-items bulk — vNext에서는 UI shape만 */
+  };
+  const toggleDeleteMode = () => {
+    setDeleteMode(on => {
+      if (on) setSelected(new Set());
+      return !on;
+    });
   };
 
   return (
-    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
-      <AppBar title="팬트리" left={null} right={selected.size > 0 ? (
-        <button onClick={deleteSelected} style={{
-          background: T.red, border: 'none', cursor: 'pointer',
-          fontSize: 12, fontWeight: 800, color: '#fff', padding: '7px 10px',
-          borderRadius: 9999,
-        }}>삭제 {selected.size}</button>
-      ) : null} />
+    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 170 }}>
+      <AppBar title="팬트리" left={null} right={(
+        <button onClick={toggleDeleteMode} style={{
+          background: deleteMode ? T.surfaceFill : '#fff', border: `1px solid ${deleteMode ? T.border : T.red}`, cursor: 'pointer',
+          fontSize: 12, fontWeight: 800, color: deleteMode ? T.text2 : T.red, padding: '7px 12px',
+          borderRadius: 9999, whiteSpace: 'nowrap', minWidth: 48,
+        }}>{deleteMode ? '취소' : '삭제'}</button>
+      )} />
 
       {/* Hero */}
       <div style={{ background: '#fff', padding: '16px 20px 20px', borderBottom: `1px solid ${T.border}` }}>
@@ -64,17 +73,6 @@ function PantryScreen({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
           style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none',
             fontSize: 14, color: T.ink, fontFamily: T.fontUI }} />
         </div>
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingTop: 12 }}>
-          {categories.map(cat => (
-            <button key={cat} onClick={() => setActiveCat(cat)} style={{
-              flexShrink: 0, padding: '7px 12px', borderRadius: 9999,
-              border: activeCat === cat ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
-              background: activeCat === cat ? T.mintSoft : '#fff',
-              color: activeCat === cat ? T.mintDeep : T.text2,
-              fontSize: 12, fontWeight: 800, cursor: 'pointer',
-            }}>{cat}</button>
-          ))}
-        </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
           <button onClick={onOpenAdd} style={{
             padding: '11px 12px', borderRadius: 10, border: 'none',
@@ -84,6 +82,20 @@ function PantryScreen({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
             padding: '11px 12px', borderRadius: 10, border: `1px solid ${T.border}`,
             background: '#fff', color: T.text2, fontSize: 13, fontWeight: 800, cursor: 'pointer',
           }}>묶음 추가</button>
+        </div>
+      </div>
+
+      <div style={{ background: T.surfaceFill, padding: '12px 16px 0' }}>
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+          {categories.map(cat => (
+            <button key={cat} onClick={() => setActiveCat(cat)} style={{
+              flexShrink: 0, padding: '7px 12px', borderRadius: 9999,
+              border: activeCat === cat ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+              background: activeCat === cat ? T.mintSoft : '#fff',
+              color: activeCat === cat ? T.mintDeep : T.text2,
+              fontSize: 12, fontWeight: 800, cursor: 'pointer',
+            }}>{cat}</button>
+          ))}
         </div>
       </div>
 
@@ -100,38 +112,51 @@ function PantryScreen({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
             </div>
             <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden',
             border: `1px solid ${T.border}` }}>
-              {items.map((it, i) =>
-            <div key={it.key} style={{
-              display: 'flex', alignItems: 'center', padding: '14px 16px',
-              borderBottom: i < items.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none',
-              cursor: 'pointer'
-            }} onClick={() => toggleSelected(it.key)}>
-                  <div style={{
-                width: 34, height: 34, borderRadius: 12,
-                background: T.surfaceFill,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                marginRight: 12, fontSize: 20,
-              }}>{PANTRY_IMAGES[it.name] || '🥬'}</div>
-                  <div style={{
-                width: 22, height: 22, borderRadius: 11,
-                background: selected.has(it.key) ? T.mint : '#fff',
-                border: selected.has(it.key) ? 'none' : `1.5px solid ${T.border}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                marginRight: 10,
-              }}>{selected.has(it.key) && Icon.check()}</div>
-                  <div style={{ flex: 1, fontSize: 15,
-                color: T.ink,
-                fontWeight: 700,
-                textDecoration: 'none' }}>{it.name}</div>
+	              {items.map((it, i) =>
+	            <div key={it.key} style={{
+	              display: 'flex', alignItems: 'center', padding: '14px 16px',
+	              borderBottom: i < items.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none',
+	              cursor: deleteMode ? 'pointer' : 'default'
+	            }} onClick={() => deleteMode && toggleSelected(it.key)}>
+	                  {deleteMode && (
+	                <div style={{
+	                  width: 22, height: 22, borderRadius: 11,
+	                  background: selected.has(it.key) ? T.mint : '#fff',
+	                  border: selected.has(it.key) ? 'none' : `1.5px solid ${T.border}`,
+	                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+	                  marginRight: 10, flexShrink: 0,
+	                }}>{selected.has(it.key) && Icon.check()}</div>
+	              )}
+	                  <div style={{
+	                width: 34, height: 34, borderRadius: 12,
+	                background: T.surfaceFill,
+	                display: 'flex', alignItems: 'center', justifyContent: 'center',
+	                marginRight: 12, fontSize: 20, flexShrink: 0,
+	              }}>{PANTRY_IMAGES[it.name] || '🥬'}</div>
+	                  <div style={{ flex: 1, fontSize: 15,
+	                color: T.ink,
+	                fontWeight: 700,
+	                textDecoration: 'none' }}>{it.name}</div>
                 </div>
             )}
             </div>
           </div>
-        )}
-      </div>
-    </div>);
+	        )}
+	      </div>
+	      {deleteMode && selected.size > 0 && (
+	        <div style={{
+	          position: 'absolute', left: 0, right: 0, bottom: 92, zIndex: 45,
+	          display: 'flex', justifyContent: 'center', pointerEvents: 'none',
+	        }}>
+	          <button onClick={deleteSelected} style={{
+	            pointerEvents: 'auto', background: T.red, color: '#fff', border: 'none',
+	            borderRadius: 9999, padding: '13px 24px', fontSize: 14, fontWeight: 900,
+	            cursor: 'pointer', boxShadow: T.shadowSharp, whiteSpace: 'nowrap',
+	          }}>제거하기</button>
+	        </div>
+	      )}
+	    </div>);
 
 }
 
 window.PantryScreen = PantryScreen;
-

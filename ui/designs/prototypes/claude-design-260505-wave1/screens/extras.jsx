@@ -343,7 +343,7 @@ function CookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete,
   const [confirmCancel, setConfirmCancel] = useState_X(false);
 
   return (
-    <div style={{ background: '#0E1014', minHeight: '100%', color: '#fff', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: '#0E1014', minHeight: '100%', color: '#fff', display: 'flex', flexDirection: 'column', paddingBottom: 96 }}>
       {/* Top bar */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -389,7 +389,8 @@ function CookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete,
 
       {/* Bottom controls: 취소 + 요리완료 */}
       <div style={{
-        padding: '12px 16px 28px', display: 'flex', gap: 8, alignItems: 'center',
+        position: 'sticky', bottom: 80, zIndex: 45,
+        padding: '12px 16px 18px', display: 'flex', gap: 8, alignItems: 'center',
         background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.5))',
       }}>
         <button onClick={() => setConfirmCancel(true)} style={{
