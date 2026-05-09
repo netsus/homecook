@@ -171,9 +171,16 @@ function App() {
       ...l, items: l.items.map(it => it.name === name ? { ...it, checked: !it.checked } : it),
     })));
   };
-  const completeShopping = (listId) => {
-    setShoppingLists(ls => ls.map(l => l.id !== listId ? l : ({ ...l, status: 'completed', completedAt: '방금 완료' })));
-    const list = shoppingLists.find(l => l.id === listId);
+  const completeShopping = (listOrId) => {
+    const incoming = typeof listOrId === 'object' ? listOrId : null;
+    const listId = incoming?.id || listOrId;
+    setShoppingLists(ls => ls.map(l => l.id !== listId ? l : ({
+      ...l,
+      ...(incoming?.items ? { items: incoming.items } : {}),
+      status: 'completed',
+      completedAt: '방금 완료'
+    })));
+    const list = incoming || shoppingLists.find(l => l.id === listId);
     if (list) setReflectPicker({ ...list, status: 'completed' });
   };
   const reopenShopping = (listId) => {
@@ -248,22 +255,6 @@ function App() {
     }
   };
 
-  // Pantry add handler (장보기 → 팬트리)
-  const [pantryAddItems, setPantryAddItems] = useState(null);
-  const addItemsToPantry = (names) => setPantryAddItems(names);
-  const confirmAddPantry = (qtys) => {
-    setPantry(p => {
-      const next = { ...p };
-      Object.keys(qtys).forEach(name => {
-        const key = Object.keys(next).find(k => next[k].name === name) || `new_${name}`;
-        next[key] = { name, have: true, section: next[key]?.section || '구매' };
-      });
-      return next;
-    });
-    setPantryAddItems(null);
-    showToast(`${Object.keys(qtys).length}개 재료가 팬트리에 추가됐어요`);
-    setRoute({ tab: 'pantry' });
-  };
   const addPickedPantryItems = (items) => {
     const list = Array.isArray(items) ? items : [items];
     setPantry(p => {
@@ -337,7 +328,7 @@ function App() {
     content = <ShoppingDetailScreen list={list} onBack={backFromPage}
       onToggleItem={(name) => toggleShoppingItem(pa.listId, name)}
       onComplete={completeShopping} onReopen={reopenShopping}
-      onReflect={(l) => setReflectPicker(l)} showToast={showToast} />;
+      showToast={showToast} />;
   } else if (route.page === 'settings') {
     content = <SettingsScreen profile={profile} onBack={backFromPage}
       onUpdateProfile={(patch) => setProfile(p => ({ ...p, ...patch }))}
@@ -346,7 +337,7 @@ function App() {
       showToast={showToast} />;
   } else if (route.page === 'shopping-create') {
     content = <ShoppingCreateScreen planner={planner} pantry={pantry}
-      onBack={backFromPage} onAddToPantry={addItemsToPantry} showToast={showToast} />;
+      onBack={backFromPage} showToast={showToast} />;
   } else if (route.page === 'cook-list') {
     content = <CookListScreen planner={planner} onBack={backFromPage}
       onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
@@ -523,14 +514,14 @@ function App() {
   } else if (route.page === 'shopping-create') {
     desktopPageContent = <DesktopShoppingCreateScreen
       planner={planner} pantry={pantry}
-      onBack={backFromPage} onAddToPantry={addItemsToPantry} showToast={showToast} />;
+      onBack={backFromPage} showToast={showToast} />;
   } else if (route.page === 'shopping-detail') {
     const list = shoppingLists.find(l => l.id === pa.listId);
     desktopPageContent = <DesktopShoppingDetailScreen
       list={list} onBack={backFromPage}
       onToggleItem={(name) => toggleShoppingItem(pa.listId, name)}
       onComplete={completeShopping} onReopen={reopenShopping}
-      onReflect={(l) => setReflectPicker(l)} showToast={showToast} />;
+      showToast={showToast} />;
   } else if (route.page === 'cook-run') {
     desktopPageContent = <DesktopCookRunScreen
       date={pa.date} slot={pa.slot} mealIndex={pa.mealIndex || 0} planner={planner}
@@ -695,11 +686,6 @@ function App() {
             borderRadius: 8, fontSize: 14, fontWeight: 600, zIndex: 9600,
           }}>{toast}</div>
         )}
-        {pantryAddItems && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
-            <AddToPantryModal items={pantryAddItems} onClose={() => setPantryAddItems(null)} onConfirm={confirmAddPantry} />
-          </div>
-        )}
         {/* Wave 1.8 — desktop dialog variants (replaces mobile sheets in desktop shell) */}
         {pantryAddSheet && (
           <DesktopPantryAddDialog
@@ -820,7 +806,6 @@ function App() {
           )}
           {sortSheet && <SortSheet value={sortBy} onChange={setSortBy} onClose={() => setSortSheet(false)} />}
           {loginGate && <LoginGate onClose={() => setLoginGate(false)} onLogin={() => { setLoginGate(false); showToast('로그인됨'); }} />}
-          {pantryAddItems && <AddToPantryModal items={pantryAddItems} onClose={() => setPantryAddItems(null)} onConfirm={confirmAddPantry} />}
           {pantryAddSheet && (
             <PantryAddSheet
               onClose={() => setPantryAddSheet(false)}
@@ -937,7 +922,6 @@ function App() {
               )}
               {sortSheet && <SortSheet value={sortBy} onChange={setSortBy} onClose={() => setSortSheet(false)} />}
               {loginGate && <LoginGate onClose={() => setLoginGate(false)} onLogin={() => { setLoginGate(false); showToast('로그인됨'); }} />}
-              {pantryAddItems && <AddToPantryModal items={pantryAddItems} onClose={() => setPantryAddItems(null)} onConfirm={confirmAddPantry} />}
               {pantryAddSheet && (
                 <PantryAddSheet
                   onClose={() => setPantryAddSheet(false)}
@@ -1025,7 +1009,6 @@ function App() {
               )}
               {sortSheet && <SortSheet value={sortBy} onChange={setSortBy} onClose={() => setSortSheet(false)} />}
               {loginGate && <LoginGate onClose={() => setLoginGate(false)} onLogin={() => { setLoginGate(false); showToast('로그인됨'); }} />}
-              {pantryAddItems && <AddToPantryModal items={pantryAddItems} onClose={() => setPantryAddItems(null)} onConfirm={confirmAddPantry} />}
               {pantryAddSheet && (
                 <PantryAddSheet
                   onClose={() => setPantryAddSheet(false)}

@@ -949,7 +949,7 @@ function YtImportScreen({ presetDate, presetSlot, onBack, onCreated, onAddPlanne
 // list: { id, name, items: [{ name, qty, section, fromMeals[], have, checked? }],
 //         status: 'active' | 'completed', completedAt?, pantryReflect? }
 // ─────────────────────────────────────────────────────────────
-function ShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, onReopen, onReflect, showToast }) {
+function ShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, onReopen, showToast }) {
   if (!list) return <div style={{ padding: 40 }}>장보기 목록을 찾을 수 없어요</div>;
   const completed = list.status === 'completed';
 
@@ -963,11 +963,19 @@ function ShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, onReopen
   const sectionsMap = buy.reduce((acc, it) => {
     (acc[it.section] = acc[it.section] || []).push(it); return acc;
   }, {});
+  const completeCurrentShopping = () => {
+    const skipNames = new Set(skip.map(i => i.name));
+    const currentItems = list.items.map(i => {
+      const isHave = skipNames.has(i.name);
+      return { ...i, have: isHave, checked: isHave ? false : i.checked };
+    });
+    onComplete({ ...list, items: currentItems });
+  };
 
   const createdDate = list.createdAt || '2026-04-20';
 
   return (
-    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 130 }}>
+    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 210 }}>
       <AppBar title={list.name} left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>}
         right={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {completed && (
@@ -1051,6 +1059,7 @@ function ShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, onReopen
                   {!completed && (
                     <button onClick={() => {
                       setLocalBuyExcluded(s => { const n = new Set(s); n.add(it.name); return n; });
+                      setLocalSkipRevived(s => { const n = new Set(s); n.delete(it.name); return n; });
                       showToast(`${it.name} → 이미 있음 처리`);
                       /* CONTRACT_CHECK: PATCH /shopping-lists/:id/items/:name {have:true} — vNext에서는 UI shape만 */
                     }} style={{
@@ -1069,7 +1078,7 @@ function ShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, onReopen
         {skip.length > 0 && (
           <div style={{ marginTop: 6 }}>
             <div style={{ fontSize: 12, color: T.text3, fontWeight: 700, marginBottom: 8 }}>
-              이미 보유 중 <span style={{ color: T.text4 }}>· {skip.length}</span>
+              팬트리에 이미 있어 제외 <span style={{ color: T.text4 }}>· {skip.length}</span>
             </div>
             <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: `1px solid ${T.border}` }}>
               {skip.map((it, i) => (
@@ -1089,7 +1098,7 @@ function ShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, onReopen
                   </div>
                   {!completed && (
                     <button onClick={() => {
-                      setLocalSkipRevived(s => { const n = new Set(s); n.add(it.name); return n; });
+                      if (it.have) setLocalSkipRevived(s => { const n = new Set(s); n.add(it.name); return n; });
                       setLocalBuyExcluded(s => { const n = new Set(s); n.delete(it.name); return n; });
                       showToast(`${it.name} → 장보기 목록으로 복원`);
                       /* CONTRACT_CHECK: PATCH /shopping-lists/:id/items/:name {have:false} — vNext에서는 UI shape만 */
@@ -1108,17 +1117,16 @@ function ShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, onReopen
 
       {/* CTA */}
       <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16,
-        background: '#fff', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8,
+        position: 'absolute', bottom: 80, left: 0, right: 0, padding: 16,
+        background: '#fff', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8, zIndex: 45,
       }}>
         {completed ? (
           <>
-            <Button variant="neutral" onClick={() => onReflect(list)}>팬트리에 반영</Button>
             <Button full variant="neutral" onClick={() => onReopen(list.id)}>다시 열기</Button>
           </>
         ) : (
-          <Button full disabled={buy.length === 0} onClick={() => onComplete(list.id)}>
-            {allDone ? '장보기 완료' : `장보기 완료 (${checkedCount}/${buy.length})`}
+          <Button full disabled={buy.length === 0} onClick={completeCurrentShopping}>
+            장보기 완료
           </Button>
         )}
       </div>
