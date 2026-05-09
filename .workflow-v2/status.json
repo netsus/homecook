@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-10T00:00:00Z",
+  "updated_at": "2026-05-09T17:20:37Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -835,8 +835,8 @@
     {
       "id": "planner-column-customization",
       "preset": "vertical-slice-strict",
-      "branch": "docs/planner-column-customization",
-      "lifecycle": "planned",
+      "branch": "feature/be-planner-column-customization",
+      "lifecycle": "in_progress",
       "approval_state": "not_started",
       "verification_status": "pending",
       "required_checks": [
@@ -845,7 +845,7 @@
         "pnpm lint",
         "pnpm typecheck"
       ],
-      "notes": "Stage 1 docs authoring for planner column customization. Contract-evolution PR #367 merged on 2026-05-10. Changes meal_plan_columns from 4-fixed to user-managed (3 default, 1-5 range). Anchor-extension on PLANNER_WEEK."
+      "notes": "Stage 1 docs merged via PR #368 after contract-evolution PR #367. Stage 2 backend implementation is in progress on feature/be-planner-column-customization with dynamic planner columns, /planner/columns CRUD, bootstrap x3, and meals dynamic column owner checks covered by targeted Vitest."
     }
   ]
 }

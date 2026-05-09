@@ -119,7 +119,7 @@ describe("GET /api/v1/planner", () => {
     });
   });
 
-  it("returns fixed four planner slots even when legacy users only have three columns", async () => {
+  it("returns the user's dynamic planner columns without adding the old snack slot", async () => {
     const mealPlanColumnsQuery = createThenableQuery([
       {
         data: [
@@ -188,18 +188,12 @@ describe("GET /api/v1/planner", () => {
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(body.data.columns).toHaveLength(4);
+    expect(body.data.columns).toHaveLength(3);
     expect(body.data.columns.map((column: { name: string }) => column.name)).toEqual([
       "아침",
       "점심",
-      "간식",
       "저녁",
     ]);
-    expect(body.data.columns[2]).toMatchObject({
-      name: "간식",
-      sort_order: 2,
-      id: expect.any(String),
-    });
     expect(body.data.meals).toMatchObject([
       {
         id: "meal-1",
@@ -293,7 +287,7 @@ describe("GET /api/v1/planner", () => {
     expect(shoppingListsQuery.in).toHaveBeenCalledWith("id", ["shopping-list-1"]);
   });
 
-  it("normalizes legacy custom columns into the fixed four-slot response", async () => {
+  it("preserves legacy custom columns and meal column ids in the planner response", async () => {
     const mealPlanColumnsQuery = createThenableQuery([
       {
         data: [
@@ -363,25 +357,22 @@ describe("GET /api/v1/planner", () => {
 
     expect(response.status).toBe(200);
     expect(body.data.columns.map((column: { name: string }) => column.name)).toEqual([
-      "아침",
+      "브런치",
       "점심",
-      "간식",
       "저녁",
+      "야식",
     ]);
-
-    const breakfastSlot = body.data.columns.find((column: { name: string }) => column.name === "아침");
-    const snackSlot = body.data.columns.find((column: { name: string }) => column.name === "간식");
 
     expect(body.data.meals).toMatchObject([
       {
         id: "meal-1",
         recipe_title: "오믈렛",
-        column_id: breakfastSlot?.id,
+        column_id: "column-brunch",
       },
       {
         id: "meal-2",
         recipe_title: "과일볼",
-        column_id: snackSlot?.id,
+        column_id: "column-night",
       },
     ]);
   });

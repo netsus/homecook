@@ -298,7 +298,7 @@ describe("POST /api/v1/meals", () => {
     });
   });
 
-  it("returns 404 when column name is not a canonical planner slot", async () => {
+  it("creates a registered meal for an owned custom planner column", async () => {
     const recipesTable = createRecipesTable({
       selectResults: [{ data: { id: "recipe-1" }, error: null }],
     });
@@ -310,7 +310,23 @@ describe("POST /api/v1/meals", () => {
         },
       ],
     });
-    const mealsTable = createMealsTable({ insertResults: [] });
+    const mealsTable = createMealsTable({
+      insertResults: [
+        {
+          data: {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            plan_date: "2026-03-02",
+            column_id: "column-1",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+            leftover_dish_id: null,
+          },
+          error: null,
+        },
+      ],
+    });
 
     createRouteHandlerClient.mockResolvedValue({
       auth: { getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })) },
@@ -335,11 +351,27 @@ describe("POST /api/v1/meals", () => {
     }));
     const body = await response.json();
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(201);
     expect(body).toMatchObject({
-      success: false,
-      data: null,
-      error: { code: "RESOURCE_NOT_FOUND" },
+      success: true,
+      data: {
+        id: "meal-1",
+        column_id: "column-1",
+        status: "registered",
+      },
+      error: null,
+    });
+    expect(mealsTable.insert).toHaveBeenCalledWith({
+      user_id: "user-1",
+      recipe_id: "550e8400-e29b-41d4-a716-446655440025",
+      plan_date: "2026-03-02",
+      column_id: "550e8400-e29b-41d4-a716-446655440026",
+      planned_servings: 2,
+      status: "registered",
+      is_leftover: false,
+      leftover_dish_id: null,
+      shopping_list_id: null,
+      cooked_at: null,
     });
   });
 

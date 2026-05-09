@@ -17,7 +17,7 @@ import {
 } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { MealCreateBody, MealCreateData, MealListData, MealListItemData } from "@/types/meal";
-import { PLANNER_FIXED_SLOT_NAMES, type MealStatus } from "@/types/planner";
+import type { MealStatus } from "@/types/planner";
 
 interface QueryError {
   code?: string;
@@ -345,10 +345,6 @@ export async function GET(request: NextRequest) {
     return fail("FORBIDDEN", "내 플래너 슬롯만 조회할 수 있어요.", 403);
   }
 
-  if (!PLANNER_FIXED_SLOT_NAMES.includes(columnResult.data.name as (typeof PLANNER_FIXED_SLOT_NAMES)[number])) {
-    return fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404);
-  }
-
   const mealsResult = await dbClient
     .from("meals")
     .select("id, recipe_id, planned_servings, status, is_leftover, created_at")
@@ -386,6 +382,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: Request) {
+  let routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>> | null = null;
+  let user: Awaited<ReturnType<typeof requireUser>> | null = null;
+
   if (isQaFixtureModeEnabled()) {
     const authOverride = readE2EAuthOverrideHeader(request.headers);
 
@@ -393,8 +392,8 @@ export async function POST(request: Request) {
       return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
     }
   } else {
-    const routeClient = await createRouteHandlerClient();
-    const user = await requireUser(routeClient);
+    routeClient = await createRouteHandlerClient();
+    user = await requireUser(routeClient);
 
     if (!user) {
       return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
@@ -453,10 +452,7 @@ export async function POST(request: Request) {
     return ok(fixtureMeal.data, { status: 201 });
   }
 
-  const routeClient = await createRouteHandlerClient();
-  const user = await requireUser(routeClient);
-
-  if (!user) {
+  if (!routeClient || !user) {
     return fail("UNAUTHORIZED", "로그인이 필요해요.", 401);
   }
 
@@ -495,10 +491,6 @@ export async function POST(request: Request) {
 
   if (columnResult.data.user_id !== user.id) {
     return fail("FORBIDDEN", "내 플래너 슬롯만 선택할 수 있어요.", 403);
-  }
-
-  if (!PLANNER_FIXED_SLOT_NAMES.includes(columnResult.data.name as (typeof PLANNER_FIXED_SLOT_NAMES)[number])) {
-    return fail("RESOURCE_NOT_FOUND", "끼니 컬럼을 찾을 수 없어요.", 404);
   }
 
   if (parsed.leftoverDishId) {

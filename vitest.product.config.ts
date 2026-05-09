@@ -19,6 +19,8 @@ export default defineConfig({
       "tests/local-dev-*.test.tsx",
       "tests/local-google-oauth-env.test.ts",
       "tests/login-screen.test.tsx",
+      "tests/meal-*.test.ts",
+      "tests/meals-*.test.ts",
       "tests/mypage-*.test.tsx",
       "tests/pantry-*.test.tsx",
       "tests/pending-action.test.ts",

@@ -13,18 +13,18 @@
 - [ ] 컬럼 이름을 변경하면 PLANNER_WEEK에 즉시 반영된다 <!-- omo:id=accept-rename-reflect;stage=4;scope=frontend;review=5,6 -->
 - [ ] 컬럼을 추가하면 PLANNER_WEEK에 새 슬롯이 표시된다 <!-- omo:id=accept-add-reflect;stage=4;scope=frontend;review=5,6 -->
 - [ ] 빈 컬럼을 삭제하면 PLANNER_WEEK에서 해당 슬롯이 제거된다 <!-- omo:id=accept-delete-reflect;stage=4;scope=frontend;review=5,6 -->
-- [ ] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
+- [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
-- [ ] GET /planner 응답의 columns가 사용자별 동적 목록을 반환한다 <!-- omo:id=accept-planner-dynamic-columns;stage=2;scope=backend;review=3,6 -->
+- [x] GET /planner 응답의 columns가 사용자별 동적 목록을 반환한다 <!-- omo:id=accept-planner-dynamic-columns;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
 
-- [ ] 신규 사용자 bootstrap이 3개 컬럼(아침/점심/저녁)을 생성한다 <!-- omo:id=accept-bootstrap-three;stage=2;scope=backend;review=3,6 -->
-- [ ] 컬럼 수 최소 1개 제한이 서버에서 강제된다 <!-- omo:id=accept-min-one;stage=2;scope=backend;review=3,6 -->
-- [ ] 컬럼 수 최대 5개 제한이 서버에서 강제된다 <!-- omo:id=accept-max-five;stage=2;scope=backend;review=3,6 -->
-- [ ] 삭제 후 남은 컬럼의 sort_order가 0부터 재정렬된다 <!-- omo:id=accept-reorder-after-delete;stage=2;scope=backend;review=3,6 -->
-- [ ] 컬럼 추가 시 sort_order가 마지막 + 1로 설정된다 <!-- omo:id=accept-add-sort-order;stage=2;scope=backend;review=3,6 -->
-- [ ] 중복 호출에도 결과가 꼬이지 않는다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
+- [x] 신규 사용자 bootstrap이 3개 컬럼(아침/점심/저녁)을 생성한다 <!-- omo:id=accept-bootstrap-three;stage=2;scope=backend;review=3,6 -->
+- [x] 컬럼 수 최소 1개 제한이 서버에서 강제된다 <!-- omo:id=accept-min-one;stage=2;scope=backend;review=3,6 -->
+- [x] 컬럼 수 최대 5개 제한이 서버에서 강제된다 <!-- omo:id=accept-max-five;stage=2;scope=backend;review=3,6 -->
+- [x] 삭제 후 남은 컬럼의 sort_order가 0부터 재정렬된다 <!-- omo:id=accept-reorder-after-delete;stage=2;scope=backend;review=3,6 -->
+- [x] 컬럼 추가 시 sort_order가 마지막 + 1로 설정된다 <!-- omo:id=accept-add-sort-order;stage=2;scope=backend;review=3,6 -->
+- [x] 중복 호출에도 결과가 꼬이지 않는다 <!-- omo:id=accept-idempotency;stage=2;scope=backend;review=3,6 -->
 
 ## Error / Permission
 
@@ -35,25 +35,25 @@
 - [ ] 409 COLUMN_NAME_DUPLICATE — 중복 이름 시도 시 적절한 안내가 있다 <!-- omo:id=accept-name-duplicate;stage=4;scope=frontend;review=5,6 -->
 - [ ] 409 COLUMN_HAS_MEALS — 식사가 연결된 컬럼 삭제 시도 시 삭제 불가 안내가 있다 <!-- omo:id=accept-has-meals;stage=4;scope=frontend;review=5,6 -->
 - [ ] 409 MIN_COLUMN_REQUIRED — 마지막 1개 컬럼 삭제 시도 시 삭제 불가 안내가 있다 <!-- omo:id=accept-min-column-required;stage=4;scope=frontend;review=5,6 -->
-- [ ] 422 — 이름이 빈 문자열이거나 30자 초과 시 적절한 에러 처리 <!-- omo:id=accept-invalid-name;stage=2;scope=backend;review=3,6 -->
-- [ ] 404 — 존재하지 않는 컬럼 수정/삭제 시도 시 처리 <!-- omo:id=accept-not-found;stage=2;scope=backend;review=3,6 -->
+- [x] 422 — 이름이 빈 문자열이거나 30자 초과 시 적절한 에러 처리 <!-- omo:id=accept-invalid-name;stage=2;scope=backend;review=3,6 -->
+- [x] 404 — 존재하지 않는 컬럼 수정/삭제 시도 시 처리 <!-- omo:id=accept-not-found;stage=2;scope=backend;review=3,6 -->
 - [ ] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
-- [ ] 타인 리소스를 수정할 수 없다 (user_id 소유자 검증) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] 이름 공백 trim 후 중복 검사가 수행된다 <!-- omo:id=accept-name-trim;stage=2;scope=backend;review=3,6 -->
-- [ ] 이름 길이 1~30자 범위가 서버에서 검증된다 <!-- omo:id=accept-name-length;stage=2;scope=backend;review=3,6 -->
-- [ ] 삭제 전 meals FK 참조 확인이 서버에서 수행된다 <!-- omo:id=accept-fk-check;stage=2;scope=backend;review=3,6 -->
-- [ ] 기존 4컬럼 사용자의 데이터가 손상되지 않는다 <!-- omo:id=accept-legacy-compat;stage=2;scope=backend;review=3,6 -->
-- [ ] GET /meals가 사용자 소유의 동적 column_id를 가진 식사만 반환한다 <!-- omo:id=accept-meals-get-dynamic;stage=2;scope=backend;review=3,6 -->
-- [ ] POST /meals가 column_id로 사용자 소유의 동적 컬럼만 허용하고 타인 컬럼은 거부한다 <!-- omo:id=accept-meals-post-dynamic;stage=2;scope=backend;review=3,6 -->
+- [x] 타인 리소스를 수정할 수 없다 (user_id 소유자 검증) <!-- omo:id=accept-owner-guard;stage=2;scope=backend;review=3,6 -->
+- [x] 이름 공백 trim 후 중복 검사가 수행된다 <!-- omo:id=accept-name-trim;stage=2;scope=backend;review=3,6 -->
+- [x] 이름 길이 1~30자 범위가 서버에서 검증된다 <!-- omo:id=accept-name-length;stage=2;scope=backend;review=3,6 -->
+- [x] 삭제 전 meals FK 참조 확인이 서버에서 수행된다 <!-- omo:id=accept-fk-check;stage=2;scope=backend;review=3,6 -->
+- [x] 기존 4컬럼 사용자의 데이터가 손상되지 않는다 <!-- omo:id=accept-legacy-compat;stage=2;scope=backend;review=3,6 -->
+- [x] GET /meals가 사용자 소유의 동적 column_id를 가진 식사만 반환한다 <!-- omo:id=accept-meals-get-dynamic;stage=2;scope=backend;review=3,6 -->
+- [x] POST /meals가 column_id로 사용자 소유의 동적 컬럼만 허용하고 타인 컬럼은 거부한다 <!-- omo:id=accept-meals-post-dynamic;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
 
-- [ ] fixture에서 3컬럼/4컬럼/5컬럼/1컬럼 사용자 baseline이 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 meal_plan_columns seed가 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
-- [ ] bootstrap 변경(×4 → ×3)이 신규 사용자 가입 flow에서 검증 가능하다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
+- [x] fixture에서 3컬럼/4컬럼/5컬럼/1컬럼 사용자 baseline이 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 meal_plan_columns seed가 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] bootstrap 변경(×4 → ×3)이 신규 사용자 가입 flow에서 검증 가능하다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
 
@@ -75,14 +75,14 @@
 
 ### Vitest
 
-- [ ] GET/POST/PATCH/DELETE /planner/columns 응답 형식 테스트 <!-- omo:id=accept-vitest-api-response;stage=2;scope=backend;review=3,6 -->
-- [ ] 컬럼 수 min/max 경계값 테스트 <!-- omo:id=accept-vitest-boundary;stage=2;scope=backend;review=3,6 -->
-- [ ] 이름 중복/trim/길이 검증 테스트 <!-- omo:id=accept-vitest-name-validation;stage=2;scope=backend;review=3,6 -->
-- [ ] 삭제 시 meals FK 참조 확인 테스트 <!-- omo:id=accept-vitest-fk-guard;stage=2;scope=backend;review=3,6 -->
-- [ ] 삭제 후 sort_order 재정렬 테스트 <!-- omo:id=accept-vitest-reorder;stage=2;scope=backend;review=3,6 -->
-- [ ] 소유자 검증 테스트 (타인 컬럼 접근 금지) <!-- omo:id=accept-vitest-owner;stage=2;scope=backend;review=3,6 -->
-- [ ] bootstrap ×3 생성 테스트 <!-- omo:id=accept-vitest-bootstrap;stage=2;scope=backend;review=3,6 -->
-- [ ] GET/POST /meals 동적 column_id 소유자 검증 테스트 <!-- omo:id=accept-vitest-meals-dynamic;stage=2;scope=backend;review=3,6 -->
+- [x] GET/POST/PATCH/DELETE /planner/columns 응답 형식 테스트 <!-- omo:id=accept-vitest-api-response;stage=2;scope=backend;review=3,6 -->
+- [x] 컬럼 수 min/max 경계값 테스트 <!-- omo:id=accept-vitest-boundary;stage=2;scope=backend;review=3,6 -->
+- [x] 이름 중복/trim/길이 검증 테스트 <!-- omo:id=accept-vitest-name-validation;stage=2;scope=backend;review=3,6 -->
+- [x] 삭제 시 meals FK 참조 확인 테스트 <!-- omo:id=accept-vitest-fk-guard;stage=2;scope=backend;review=3,6 -->
+- [x] 삭제 후 sort_order 재정렬 테스트 <!-- omo:id=accept-vitest-reorder;stage=2;scope=backend;review=3,6 -->
+- [x] 소유자 검증 테스트 (타인 컬럼 접근 금지) <!-- omo:id=accept-vitest-owner;stage=2;scope=backend;review=3,6 -->
+- [x] bootstrap ×3 생성 테스트 <!-- omo:id=accept-vitest-bootstrap;stage=2;scope=backend;review=3,6 -->
+- [x] GET/POST /meals 동적 column_id 소유자 검증 테스트 <!-- omo:id=accept-vitest-meals-dynamic;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright
 

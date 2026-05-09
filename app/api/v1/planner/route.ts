@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 
 import { readE2EAuthOverrideHeader } from "@/lib/auth/e2e-auth-override";
-import { buildFixedPlannerColumns } from "@/lib/planner/fixed-slots";
 import { fail, ok } from "@/lib/api/response";
 import { getQaFixturePlannerData, isQaFixtureModeEnabled } from "@/lib/mock/recipes";
 import {
@@ -286,15 +285,17 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const normalizedColumns = buildFixedPlannerColumns(columnsResult.data);
   const responseData: PlannerData = {
-    columns: normalizedColumns.columns,
+    columns: columnsResult.data.map((column) => ({
+      id: column.id,
+      name: column.name,
+      sort_order: column.sort_order,
+    })),
     meals: mealsResult.data.map((meal) =>
       toPlannerMeal(
         {
           ...meal,
           shopping_list_id: meal.shopping_list_id ?? null,
-          column_id: normalizedColumns.getFixedColumnId(meal.column_id),
         },
         recipeMap,
         shoppingListMap,
