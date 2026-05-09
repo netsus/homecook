@@ -52,7 +52,7 @@
 ## Data Setup / Preconditions
 
 - [x] fixture에서 3컬럼/4컬럼/5컬럼/1컬럼 사용자 baseline이 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
-- [ ] real DB smoke에 필요한 meal_plan_columns seed가 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
+- [x] real DB smoke에 필요한 meal_plan_columns seed가 준비되어 있다 <!-- omo:id=accept-real-db-ready;stage=2;scope=shared;review=3,6 -->
 - [x] bootstrap 변경(×4 → ×3)이 신규 사용자 가입 flow에서 검증 가능하다 <!-- omo:id=accept-bootstrap-owning-flow;stage=2;scope=shared;review=3,6 -->
 
 ## Manual QA
