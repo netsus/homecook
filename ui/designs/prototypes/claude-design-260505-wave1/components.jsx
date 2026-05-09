@@ -238,6 +238,13 @@ function BottomTab({ tab, onTab }) {
 
 // App bar (top)
 function AppBar({ title, left, right, brand }) {
+  const sideSlotStyle = {
+    minWidth: 32,
+    flex: '0 0 auto',
+    display: 'flex',
+    alignItems: 'center',
+    overflow: 'visible',
+  };
   return (
     <div style={{
       position: 'sticky', top: 0, background: '#fff', zIndex: 30,
@@ -245,9 +252,10 @@ function AppBar({ title, left, right, brand }) {
       padding: '10px 16px', display: 'flex', alignItems: 'center',
       minHeight: 52
     }}>
-      <div style={{ width: 32 }}>{left}</div>
+      <div style={{ ...sideSlotStyle, justifyContent: 'flex-start' }}>{left}</div>
       <div style={{
-        flex: 1, textAlign: 'center',
+        flex: 1, minWidth: 0, textAlign: 'center',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         fontSize: brand ? 22 : 18, fontWeight: 700, color: T.ink,
         fontFamily: brand ? T.fontBrand : T.fontUI,
         letterSpacing: brand ? 0.5 : 0
@@ -255,7 +263,7 @@ function AppBar({ title, left, right, brand }) {
         {brand ? <span style={{ color: T.mint }}>homecook</span> : title}
         {brand && <span style={{ color: T.ink }}>_</span>}
       </div>
-      <div style={{ width: 32, textAlign: 'right' }}>{right}</div>
+      <div style={{ ...sideSlotStyle, justifyContent: 'flex-end', textAlign: 'right' }}>{right}</div>
     </div>);
 
 }

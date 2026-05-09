@@ -644,6 +644,13 @@ function BottomTab({ tab, onTab }) {
 
 // App bar (top)
 function AppBar({ title, left, right, brand }) {
+  const sideSlotStyle = {
+    minWidth: 32,
+    flex: '0 0 auto',
+    display: 'flex',
+    alignItems: 'center',
+    overflow: 'visible',
+  };
   return (
     <div style={{
       position: 'sticky', top: 0, background: '#fff', zIndex: 30,
@@ -651,9 +658,10 @@ function AppBar({ title, left, right, brand }) {
       padding: '10px 16px', display: 'flex', alignItems: 'center',
       minHeight: 52
     }}>
-      <div style={{ width: 32 }}>{left}</div>
+      <div style={{ ...sideSlotStyle, justifyContent: 'flex-start' }}>{left}</div>
       <div style={{
-        flex: 1, textAlign: 'center',
+        flex: 1, minWidth: 0, textAlign: 'center',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         fontSize: brand ? 22 : 18, fontWeight: 700, color: T.ink,
         fontFamily: brand ? T.fontBrand : T.fontUI,
         letterSpacing: brand ? 0.5 : 0
@@ -661,7 +669,7 @@ function AppBar({ title, left, right, brand }) {
         {brand ? <span style={{ color: T.mint }}>homecook</span> : title}
         {brand && <span style={{ color: T.ink }}>_</span>}
       </div>
-      <div style={{ width: 32, textAlign: 'right' }}>{right}</div>
+      <div style={{ ...sideSlotStyle, justifyContent: 'flex-end', textAlign: 'right' }}>{right}</div>
     </div>);
 
 }
@@ -727,7 +735,6 @@ function MetricRow({ likes, saves, cooks, views, style }) {
 }
 
 Object.assign(window, { Icon, Chip, Button, RecipeHeroStats, StatusPill, RecipeCard, BottomTab, AppBar, SortDropdown, MetricRow });
-
 // ===== ios-frame.jsx =====
 
 // iOS.jsx — Simplified iOS 26 (Liquid Glass) device frame
@@ -2083,8 +2090,8 @@ function PantryScreen({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
       <AppBar title="팬트리" left={null} right={(
         <button onClick={toggleDeleteMode} style={{
           background: deleteMode ? T.surfaceFill : '#fff', border: `1px solid ${deleteMode ? T.border : T.red}`, cursor: 'pointer',
-          fontSize: 12, fontWeight: 800, color: deleteMode ? T.text2 : T.red, padding: '7px 12px',
-          borderRadius: 9999, whiteSpace: 'nowrap', minWidth: 48,
+          fontSize: 11, fontWeight: 800, color: deleteMode ? T.text2 : T.red, padding: '6px 9px',
+          borderRadius: 9999, whiteSpace: 'nowrap', minWidth: 42,
         }}>{deleteMode ? '취소' : '삭제'}</button>
       )} />
 
@@ -2192,7 +2199,6 @@ function PantryScreen({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
 }
 
 window.PantryScreen = PantryScreen;
-
 // ===== screens/mypage.jsx =====
 // MyPage screen
 function MyPageScreen({ savedIds, onOpenRecipe, onGoPage }) {
@@ -3662,7 +3668,8 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
           if (!r) return;
           r.ingredients.forEach(ing => {
             const key = ing.name;
-            if (!acc[key]) acc[key] = { name: ing.name, qty: ing.qty || '약간', section: ing.section || '기타', meals: [], have: !!pantry[key]?.have };
+            const have = Object.values(pantry || {}).some(p => p.name === ing.name && p.have);
+            if (!acc[key]) acc[key] = { name: ing.name, qty: ing.qty || '약간', section: ing.section || '기타', meals: [], have };
             acc[key].meals.push(`${date} ${slot} · ${r.name}`);
           });
         });
@@ -3670,11 +3677,35 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
     });
     return Object.values(acc);
   }, [planner, pantry]);
+  const [localSkipRevived, setLocalSkipRevived] = dUseState(new Set());
+  const [localBuyExcluded, setLocalBuyExcluded] = dUseState(new Set());
 
   const sections = ['채소','육류','해산물','유제품','곡류','양념','기타'];
-  const grouped = sections.map(sec => ({ sec, list: items.filter(i => i.section === sec) })).filter(g => g.list.length > 0);
-  const need = items.filter(i => !i.have);
-  const have = items.filter(i => i.have);
+  const buy = items.filter(i => (!i.have || localSkipRevived.has(i.name)) && !localBuyExcluded.has(i.name));
+  const skip = items.filter(i => (i.have && !localSkipRevived.has(i.name)) || localBuyExcluded.has(i.name));
+  const grouped = sections.map(sec => ({ sec, list: buy.filter(i => i.section === sec) })).filter(g => g.list.length > 0);
+  const shoppingListTitle = '장보기 목록 · 2026.05.10';
+  const moveToSkip = (name) => {
+    setLocalBuyExcluded(s => new Set(s).add(name));
+    setLocalSkipRevived(s => {
+      const n = new Set(s);
+      n.delete(name);
+      return n;
+    });
+  };
+  const reviveToBuy = (name) => {
+    setLocalBuyExcluded(s => {
+      const n = new Set(s);
+      n.delete(name);
+      return n;
+    });
+    setLocalSkipRevived(s => new Set(s).add(name));
+  };
+  const desktopMoveBtn = {
+    border: `1px solid ${T.border}`, background: '#fff', color: T.text2,
+    borderRadius: 9999, padding: '6px 10px', fontSize: 11, fontWeight: 800,
+    whiteSpace: 'nowrap', cursor: 'pointer', flexShrink: 0,
+  };
 
   return (
     <div>
@@ -3686,19 +3717,25 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>장보기 목록 만들기</div>
-          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>이번 주 등록된 식단 기준 · 총 {items.length}개 재료</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>{shoppingListTitle}</div>
+          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>이번 주 등록된 식단 기준 · 구매 예정 {buy.length}개 · 팬트리 제외 {skip.length}개</div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => showToast?.('장보기 목록이 만들어졌어요')} style={{
+          <button disabled={buy.length === 0} onClick={() => showToast?.('장보기 완료')} style={{
             padding: '10px 18px', borderRadius: 8, border: 'none',
-            background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
-          }}>장보기 목록 만들기</button>
+            background: buy.length === 0 ? T.border : T.mint, color: buy.length === 0 ? T.text4 : '#fff',
+            fontSize: 13, fontWeight: 800, cursor: buy.length === 0 ? 'default' : 'pointer',
+          }}>장보기 완료</button>
+          <button onClick={() => showToast?.('공유 링크가 복사됐어요')} style={{
+            padding: '10px 16px', borderRadius: 8, border: 'none',
+            background: T.surfaceFill, color: T.ink, fontSize: 13, fontWeight: 800, cursor: 'pointer',
+          }}>공유</button>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, alignItems: 'start' }}>
         <div style={{ background: '#fff', borderRadius: 14, padding: 8, boxShadow: T.shadowDeep }}>
+          <div style={{ padding: '12px 16px 4px', fontSize: 14, fontWeight: 800, color: T.ink }}>장볼 재료 목록</div>
           {grouped.map(g => (
             <div key={g.sec} style={{ padding: '12px 16px' }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 8 }}>{g.sec} ({g.list.length})</div>
@@ -3707,24 +3744,51 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
                   <div key={it.name} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 12px', borderRadius: 10,
-                    background: it.have ? T.mintSoft : T.surfaceFill,
+                    background: T.surfaceFill,
                   }}>
-                    <span style={{ fontSize: 14 }}>{it.have ? '✓' : '🛒'}</span>
+                    <span style={{ fontSize: 14 }}>🛒</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: it.have ? T.mintDeep : T.ink }}>{it.name}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{it.name}</div>
                       <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>{it.meals.slice(0, 2).join(' · ')}{it.meals.length > 2 ? ` 외 ${it.meals.length - 2}` : ''}</div>
                     </div>
                     <span style={{ fontSize: 11, color: T.text3, fontWeight: 600 }}>{it.qty}</span>
+                    <button onClick={() => moveToSkip(it.name)} style={desktopMoveBtn}>이미있음</button>
                   </div>
                 ))}
               </div>
             </div>
           ))}
           {grouped.length === 0 && (
-            <div style={{ padding: 60, textAlign: 'center', color: T.text3, fontSize: 13 }}>
-              플래너에 등록된 식단이 없어요
+            <div style={{ padding: 40, textAlign: 'center', color: T.text3, fontSize: 13 }}>
+              장볼 재료가 없어요. 아래 재료를 되살리면 목록에 다시 들어가요.
             </div>
           )}
+          <div style={{ padding: '18px 16px 14px', borderTop: `1px solid ${T.surfaceSubtle}` }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 10 }}>
+              팬트리에 있어서 제외된 재료 <span style={{ color: T.text4 }}>· {skip.length}</span>
+            </div>
+            {skip.length === 0 ? (
+              <div style={{ padding: 18, borderRadius: 10, background: T.surfaceFill, color: T.text3, fontSize: 13, textAlign: 'center' }}>
+                제외된 재료가 없어요.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                {skip.map(it => (
+                  <div key={it.name} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 12px', borderRadius: 10, background: T.surfaceSubtle,
+                  }}>
+                    <span style={{ fontSize: 14, color: T.text4 }}>✓</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: T.text4 }}>{it.name}</div>
+                      <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>{it.qty} · {it.meals.length}끼에 사용</div>
+                    </div>
+                    <button onClick={() => reviveToBuy(it.name)} style={{ ...desktopMoveBtn, color: T.mintDeep }}>되살리기</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <aside style={{ background: '#fff', borderRadius: 14, padding: 20, boxShadow: T.shadowDeep, position: 'sticky', top: 24 }}>
@@ -3732,8 +3796,8 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <Stat label="이번 주 음식" value={Object.values(planner).reduce((a, d) => a + ['아침','점심','저녁'].reduce((sum, s) => sum + mealItems(d[s]).length, 0), 0) + '개'} />
             <Stat label="필요한 재료" value={items.length + '개'} />
-            <Stat label="이미 보유" value={have.length + '개'} color={T.mintDeep} />
-            <Stat label="구매 필요" value={need.length + '개'} color={T.red} />
+            <Stat label="팬트리 제외" value={skip.length + '개'} color={T.mintDeep} />
+            <Stat label="구매 예정" value={buy.length + '개'} color={T.red} />
           </div>
           <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${T.surfaceSubtle}` }}>
             <div style={{ fontSize: 11, color: T.text3, lineHeight: 1.55 }}>
@@ -5666,7 +5730,6 @@ Object.assign(window, {
   DesktopConsumedIngredientDialog, DesktopRecipeBookSelectorDialog,
   DesktopRecipeBookDetailPickerDialog, DesktopPantryMatchPickerDialog,
 });
-
 // ===== screens/extras.jsx =====
 // ===== Extra screens — Phase 2 =====
 // Shopping list, Cook list/run, Meal detail, MyPage subpages
@@ -5713,13 +5776,17 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
   });
   const [selection, setSelection] = useState_X(initialSel);
   const [checked, setChecked] = useState_X(new Set());
+  const [reviewRestored, setReviewRestored] = useState_X(new Set());
+  const [reviewExcluded, setReviewExcluded] = useState_X(new Set());
 
   const items = useMemo_X(() => aggregateIngredients(planner, selection, pantry), [selection, planner, pantry]);
-  const sectionsMap = items.reduce((acc, it) => {
+  const buyItems = items.filter(it => (!it.have || reviewRestored.has(it.name)) && !reviewExcluded.has(it.name));
+  const excludedItems = items.filter(it => (it.have && !reviewRestored.has(it.name)) || reviewExcluded.has(it.name));
+  const sectionsMap = buyItems.reduce((acc, it) => {
     (acc[it.section] = acc[it.section] || []).push(it); return acc;
   }, {});
-  const needed = items.filter(it => !it.have);
-  const progress = needed.length ? Math.round([...checked].filter(k => needed.find(n => n.name === k)).length / needed.length * 100) : 0;
+  const shoppingListTitle = '장보기 목록 · 2026.05.10';
+  const progress = buyItems.length ? Math.round([...checked].filter(k => buyItems.find(n => n.name === k)).length / buyItems.length * 100) : 0;
 
   const toggleSel = (date, slot, mealIndex) => {
     setSelection(s => {
@@ -5733,6 +5800,40 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
       n.has(name) ? n.delete(name) : n.add(name);
       return n;
     });
+  };
+  const moveToExcluded = (name) => {
+    setReviewExcluded(s => {
+      const n = new Set(s);
+      n.add(name);
+      return n;
+    });
+    setReviewRestored(s => {
+      const n = new Set(s);
+      n.delete(name);
+      return n;
+    });
+    setChecked(c => {
+      const n = new Set(c);
+      n.delete(name);
+      return n;
+    });
+  };
+  const restoreToBuy = (name) => {
+    setReviewExcluded(s => {
+      const n = new Set(s);
+      n.delete(name);
+      return n;
+    });
+    setReviewRestored(s => {
+      const n = new Set(s);
+      n.add(name);
+      return n;
+    });
+  };
+  const moveBtnStyle = {
+    border: `1px solid ${T.border}`, background: '#fff', color: T.text2,
+    borderRadius: 9999, padding: '6px 9px', fontSize: 11, fontWeight: 800,
+    whiteSpace: 'nowrap', cursor: 'pointer', flexShrink: 0,
   };
 
   if (step === 'select') {
@@ -5826,7 +5927,10 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
           <div>
             <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 700, marginBottom: 4 }}>STEP 2 / 2</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand }}>
-              {needed.length}개 재료를 사야 해요
+              {shoppingListTitle}
+            </div>
+            <div style={{ fontSize: 12, color: T.text3, marginTop: 5 }}>
+              {buyItems.length}개 구매 예정 · {excludedItems.length}개 팬트리 제외
             </div>
           </div>
           <div style={{ fontSize: 32, fontWeight: 700, color: T.mint, fontFamily: T.fontBrand }}>{progress}%</div>
@@ -5837,7 +5941,17 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
       </div>
 
       <div style={{ padding: 16 }}>
-        {Object.entries(sectionsMap).map(([sec, list]) => (
+        <div style={{ fontSize: 13, color: T.ink, fontWeight: 800, marginBottom: 10, padding: '0 4px' }}>
+          장볼 재료 목록
+        </div>
+        {buyItems.length === 0 ? (
+          <div style={{
+            background: '#fff', borderRadius: 12, border: `1px solid ${T.border}`,
+            padding: 24, textAlign: 'center', color: T.text3, fontSize: 13,
+          }}>
+            장볼 재료가 없어요. 아래 재료를 되살리면 목록에 다시 들어가요.
+          </div>
+        ) : Object.entries(sectionsMap).map(([sec, list]) => (
           <div key={sec} style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 12, color: T.text3, fontWeight: 700, marginBottom: 8, padding: '0 4px' }}>
               {sec} <span style={{ color: T.text4 }}>· {list.length}</span>
@@ -5846,52 +5960,91 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
               {list.map((it, i) => {
                 const isChecked = checked.has(it.name);
                 return (
-                  <button key={it.name} disabled={it.have} onClick={() => toggleCheck(it.name)} style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '14px 16px', border: 'none', background: 'none', cursor: it.have ? 'default' : 'pointer',
+                  <div key={it.name} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
                     borderBottom: i < list.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none',
-                    textAlign: 'left',
                   }}>
-                    <div style={{
-                      width: 22, height: 22, borderRadius: 11,
-                      background: it.have ? T.mintSoft : (isChecked ? T.mint : '#fff'),
-                      border: `1.5px solid ${it.have ? T.mint : (isChecked ? T.mint : T.border)}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>{(isChecked || it.have) && Icon.check(it.have ? T.mintDeep : '#fff')}</div>
-                    <div style={{ flex: 1 }}>
+                    <button onClick={() => toggleCheck(it.name)} style={{
+                      flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '14px 0 14px 16px', border: 'none', background: 'none', cursor: 'pointer',
+                      textAlign: 'left',
+                    }}>
                       <div style={{
-                        fontSize: 15, fontWeight: 600, color: it.have ? T.text4 : T.ink,
-                        textDecoration: isChecked ? 'line-through' : 'none',
-                      }}>{it.name}</div>
-                      <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
-                        {it.qty} · {it.fromMeals.length}끼에 사용
+                        width: 22, height: 22, borderRadius: 11,
+                        background: isChecked ? T.mint : '#fff',
+                        border: `1.5px solid ${isChecked ? T.mint : T.border}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>{isChecked && Icon.check('#fff')}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: 15, fontWeight: 600, color: T.ink,
+                          textDecoration: isChecked ? 'line-through' : 'none',
+                        }}>{it.name}</div>
+                        <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
+                          {it.qty} · {it.fromMeals.length}끼에 사용
+                        </div>
                       </div>
-                    </div>
-                    {it.have ? (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: T.mintDeep, background: T.mintSoft, padding: '3px 8px', borderRadius: 4 }}>보유</span>
-                    ) : (
-                      <span style={{ fontSize: 11, color: T.text3 }}>{isChecked ? '담음' : ''}</span>
-                    )}
-                  </button>
+                    </button>
+                    <button onClick={() => moveToExcluded(it.name)} style={{ ...moveBtnStyle, marginRight: 12 }}>
+                      이미있음
+                    </button>
+                  </div>
                 );
               })}
             </div>
           </div>
         ))}
+
+        <div style={{ marginTop: 20 }}>
+          <div style={{ fontSize: 13, color: T.ink, fontWeight: 800, marginBottom: 10, padding: '0 4px' }}>
+            팬트리에 있어서 제외된 재료
+            <span style={{ color: T.text4, marginLeft: 4 }}>· {excludedItems.length}</span>
+          </div>
+          <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: `1px solid ${T.border}` }}>
+            {excludedItems.length === 0 ? (
+              <div style={{ padding: 18, color: T.text3, fontSize: 13, textAlign: 'center' }}>
+                제외된 재료가 없어요.
+              </div>
+            ) : excludedItems.map((it, i) => (
+              <div key={it.name} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '14px 12px 14px 16px', background: T.surfaceSubtle,
+                borderBottom: i < excludedItems.length - 1 ? `1px solid ${T.border}` : 'none',
+              }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: 11, background: '#fff',
+                  border: `1.5px solid ${T.border}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>{Icon.check(T.text4)}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: T.text4 }}>{it.name}</div>
+                  <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
+                    {it.qty} · {it.fromMeals.length}끼에 사용
+                  </div>
+                </div>
+                <button onClick={() => restoreToBuy(it.name)} style={{ ...moveBtnStyle, color: T.mintDeep }}>
+                  되살리기
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div style={{
         position: 'absolute', bottom: 80, left: 0, right: 0, padding: 16,
         background: '#fff', borderTop: `1px solid ${T.border}`,
-        display: 'flex', flexDirection: 'column', gap: 8, zIndex: 45,
+        display: 'flex', flexDirection: 'row', gap: 8, zIndex: 45,
       }}>
-        <Button full disabled={needed.length === 0} onClick={() => {
-          showToast('장보기 목록이 만들어졌어요');
+        <Button disabled={buyItems.length === 0} style={{ flex: 1 }} onClick={() => {
+          showToast('장보기 완료');
           /* CONTRACT_CHECK: POST /shopping-lists — vNext에서는 UI shape만 */
         }}>
-          장보기 목록 만들기
+          장보기 완료
         </Button>
-        <Button full variant="neutral" onClick={() => { showToast('공유 링크가 복사됐어요'); }}>공유</Button>
+        <Button variant="neutral" style={{ flex: '0 0 86px', padding: '0 16px' }} onClick={() => { showToast('공유 링크가 복사됐어요'); }}>공유</Button>
       </div>
     </div>
   );
@@ -6421,7 +6574,6 @@ Object.assign(window, {
   ShoppingCreateScreen, CookListScreen, CookRunScreen,
   MealDetailScreen, MyPageSavedScreen, MyPageAccountScreen, MyPageNotifScreen, MyPageHelpScreen,
 });
-
 // ===== screens/wave1.jsx =====
 // ===== Wave 1: missing/partial screens & modals =====
 // Style follows screens/extras.jsx — uses T tokens, AppBar, Button, Icon, Sheet patterns.
@@ -6798,7 +6950,7 @@ function LeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkAte, onM
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 40 }}>
       <AppBar title="남은요리" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>}
-        right={<button onClick={onGoAteList} style={mealSwitchBtn}>다먹은 요리</button>} />
+        right={<button onClick={onGoAteList} style={mealSwitchBtn}>다먹음</button>} />
       <div style={{ padding: '14px 16px', background: '#fff', borderBottom: `1px solid ${T.border}` }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand }}>
           {items.length === 0 ? '남은 요리가 없어요' : `남은 요리 ${items.length}개`}
@@ -6855,8 +7007,8 @@ const smallSecBtn = {
 };
 const mealSwitchBtn = {
   background: '#fff', border: `1px solid ${T.border}`, cursor: 'pointer',
-  fontSize: 12, color: T.mintDeep, fontWeight: 800, borderRadius: 9999,
-  padding: '7px 11px', whiteSpace: 'nowrap', minWidth: 76,
+  fontSize: 11, color: T.mintDeep, fontWeight: 800, borderRadius: 9999,
+  padding: '6px 9px', whiteSpace: 'nowrap', minWidth: 54,
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -6875,7 +7027,7 @@ function AteListScreen({ planner, onBack, onGoLeftovers, onUndoAte, onRecreate }
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%' }}>
       <AppBar title="다먹은 요리" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>}
-        right={<button onClick={onGoLeftovers} style={mealSwitchBtn}>남은 요리</button>} />
+        right={<button onClick={onGoLeftovers} style={mealSwitchBtn}>남은요리</button>} />
       <div style={{ padding: 16 }}>
         {items.length === 0 ? (
           <div style={{ background: '#fff', borderRadius: 12, padding: 40, textAlign: 'center' }}>
@@ -8394,7 +8546,6 @@ Object.assign(window, {
   // Wave 1.5
   MyPageRecipebookDetailScreen, IngredientFilterModal, PlanningServingsModal,
 });
-
 // ===== app.jsx =====
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "accentColor": "#2AC1BC",

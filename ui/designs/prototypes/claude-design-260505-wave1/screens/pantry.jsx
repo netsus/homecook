@@ -51,8 +51,8 @@ function PantryScreen({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
       <AppBar title="팬트리" left={null} right={(
         <button onClick={toggleDeleteMode} style={{
           background: deleteMode ? T.surfaceFill : '#fff', border: `1px solid ${deleteMode ? T.border : T.red}`, cursor: 'pointer',
-          fontSize: 12, fontWeight: 800, color: deleteMode ? T.text2 : T.red, padding: '7px 12px',
-          borderRadius: 9999, whiteSpace: 'nowrap', minWidth: 48,
+          fontSize: 11, fontWeight: 800, color: deleteMode ? T.text2 : T.red, padding: '6px 9px',
+          borderRadius: 9999, whiteSpace: 'nowrap', minWidth: 42,
         }}>{deleteMode ? '취소' : '삭제'}</button>
       )} />
 

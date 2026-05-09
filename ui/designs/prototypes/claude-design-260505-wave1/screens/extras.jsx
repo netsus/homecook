@@ -44,13 +44,17 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
   });
   const [selection, setSelection] = useState_X(initialSel);
   const [checked, setChecked] = useState_X(new Set());
+  const [reviewRestored, setReviewRestored] = useState_X(new Set());
+  const [reviewExcluded, setReviewExcluded] = useState_X(new Set());
 
   const items = useMemo_X(() => aggregateIngredients(planner, selection, pantry), [selection, planner, pantry]);
-  const sectionsMap = items.reduce((acc, it) => {
+  const buyItems = items.filter(it => (!it.have || reviewRestored.has(it.name)) && !reviewExcluded.has(it.name));
+  const excludedItems = items.filter(it => (it.have && !reviewRestored.has(it.name)) || reviewExcluded.has(it.name));
+  const sectionsMap = buyItems.reduce((acc, it) => {
     (acc[it.section] = acc[it.section] || []).push(it); return acc;
   }, {});
-  const needed = items.filter(it => !it.have);
-  const progress = needed.length ? Math.round([...checked].filter(k => needed.find(n => n.name === k)).length / needed.length * 100) : 0;
+  const shoppingListTitle = '장보기 목록 · 2026.05.10';
+  const progress = buyItems.length ? Math.round([...checked].filter(k => buyItems.find(n => n.name === k)).length / buyItems.length * 100) : 0;
 
   const toggleSel = (date, slot, mealIndex) => {
     setSelection(s => {
@@ -64,6 +68,40 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
       n.has(name) ? n.delete(name) : n.add(name);
       return n;
     });
+  };
+  const moveToExcluded = (name) => {
+    setReviewExcluded(s => {
+      const n = new Set(s);
+      n.add(name);
+      return n;
+    });
+    setReviewRestored(s => {
+      const n = new Set(s);
+      n.delete(name);
+      return n;
+    });
+    setChecked(c => {
+      const n = new Set(c);
+      n.delete(name);
+      return n;
+    });
+  };
+  const restoreToBuy = (name) => {
+    setReviewExcluded(s => {
+      const n = new Set(s);
+      n.delete(name);
+      return n;
+    });
+    setReviewRestored(s => {
+      const n = new Set(s);
+      n.add(name);
+      return n;
+    });
+  };
+  const moveBtnStyle = {
+    border: `1px solid ${T.border}`, background: '#fff', color: T.text2,
+    borderRadius: 9999, padding: '6px 9px', fontSize: 11, fontWeight: 800,
+    whiteSpace: 'nowrap', cursor: 'pointer', flexShrink: 0,
   };
 
   if (step === 'select') {
@@ -157,7 +195,10 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
           <div>
             <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 700, marginBottom: 4 }}>STEP 2 / 2</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand }}>
-              {needed.length}개 재료를 사야 해요
+              {shoppingListTitle}
+            </div>
+            <div style={{ fontSize: 12, color: T.text3, marginTop: 5 }}>
+              {buyItems.length}개 구매 예정 · {excludedItems.length}개 팬트리 제외
             </div>
           </div>
           <div style={{ fontSize: 32, fontWeight: 700, color: T.mint, fontFamily: T.fontBrand }}>{progress}%</div>
@@ -168,7 +209,17 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
       </div>
 
       <div style={{ padding: 16 }}>
-        {Object.entries(sectionsMap).map(([sec, list]) => (
+        <div style={{ fontSize: 13, color: T.ink, fontWeight: 800, marginBottom: 10, padding: '0 4px' }}>
+          장볼 재료 목록
+        </div>
+        {buyItems.length === 0 ? (
+          <div style={{
+            background: '#fff', borderRadius: 12, border: `1px solid ${T.border}`,
+            padding: 24, textAlign: 'center', color: T.text3, fontSize: 13,
+          }}>
+            장볼 재료가 없어요. 아래 재료를 되살리면 목록에 다시 들어가요.
+          </div>
+        ) : Object.entries(sectionsMap).map(([sec, list]) => (
           <div key={sec} style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 12, color: T.text3, fontWeight: 700, marginBottom: 8, padding: '0 4px' }}>
               {sec} <span style={{ color: T.text4 }}>· {list.length}</span>
@@ -177,52 +228,91 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
               {list.map((it, i) => {
                 const isChecked = checked.has(it.name);
                 return (
-                  <button key={it.name} disabled={it.have} onClick={() => toggleCheck(it.name)} style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                    padding: '14px 16px', border: 'none', background: 'none', cursor: it.have ? 'default' : 'pointer',
+                  <div key={it.name} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
                     borderBottom: i < list.length - 1 ? `1px solid ${T.surfaceSubtle}` : 'none',
-                    textAlign: 'left',
                   }}>
-                    <div style={{
-                      width: 22, height: 22, borderRadius: 11,
-                      background: it.have ? T.mintSoft : (isChecked ? T.mint : '#fff'),
-                      border: `1.5px solid ${it.have ? T.mint : (isChecked ? T.mint : T.border)}`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>{(isChecked || it.have) && Icon.check(it.have ? T.mintDeep : '#fff')}</div>
-                    <div style={{ flex: 1 }}>
+                    <button onClick={() => toggleCheck(it.name)} style={{
+                      flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '14px 0 14px 16px', border: 'none', background: 'none', cursor: 'pointer',
+                      textAlign: 'left',
+                    }}>
                       <div style={{
-                        fontSize: 15, fontWeight: 600, color: it.have ? T.text4 : T.ink,
-                        textDecoration: isChecked ? 'line-through' : 'none',
-                      }}>{it.name}</div>
-                      <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
-                        {it.qty} · {it.fromMeals.length}끼에 사용
+                        width: 22, height: 22, borderRadius: 11,
+                        background: isChecked ? T.mint : '#fff',
+                        border: `1.5px solid ${isChecked ? T.mint : T.border}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>{isChecked && Icon.check('#fff')}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: 15, fontWeight: 600, color: T.ink,
+                          textDecoration: isChecked ? 'line-through' : 'none',
+                        }}>{it.name}</div>
+                        <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
+                          {it.qty} · {it.fromMeals.length}끼에 사용
+                        </div>
                       </div>
-                    </div>
-                    {it.have ? (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: T.mintDeep, background: T.mintSoft, padding: '3px 8px', borderRadius: 4 }}>보유</span>
-                    ) : (
-                      <span style={{ fontSize: 11, color: T.text3 }}>{isChecked ? '담음' : ''}</span>
-                    )}
-                  </button>
+                    </button>
+                    <button onClick={() => moveToExcluded(it.name)} style={{ ...moveBtnStyle, marginRight: 12 }}>
+                      이미있음
+                    </button>
+                  </div>
                 );
               })}
             </div>
           </div>
         ))}
+
+        <div style={{ marginTop: 20 }}>
+          <div style={{ fontSize: 13, color: T.ink, fontWeight: 800, marginBottom: 10, padding: '0 4px' }}>
+            팬트리에 있어서 제외된 재료
+            <span style={{ color: T.text4, marginLeft: 4 }}>· {excludedItems.length}</span>
+          </div>
+          <div style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', border: `1px solid ${T.border}` }}>
+            {excludedItems.length === 0 ? (
+              <div style={{ padding: 18, color: T.text3, fontSize: 13, textAlign: 'center' }}>
+                제외된 재료가 없어요.
+              </div>
+            ) : excludedItems.map((it, i) => (
+              <div key={it.name} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '14px 12px 14px 16px', background: T.surfaceSubtle,
+                borderBottom: i < excludedItems.length - 1 ? `1px solid ${T.border}` : 'none',
+              }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: 11, background: '#fff',
+                  border: `1.5px solid ${T.border}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>{Icon.check(T.text4)}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: T.text4 }}>{it.name}</div>
+                  <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
+                    {it.qty} · {it.fromMeals.length}끼에 사용
+                  </div>
+                </div>
+                <button onClick={() => restoreToBuy(it.name)} style={{ ...moveBtnStyle, color: T.mintDeep }}>
+                  되살리기
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div style={{
         position: 'absolute', bottom: 80, left: 0, right: 0, padding: 16,
         background: '#fff', borderTop: `1px solid ${T.border}`,
-        display: 'flex', flexDirection: 'column', gap: 8, zIndex: 45,
+        display: 'flex', flexDirection: 'row', gap: 8, zIndex: 45,
       }}>
-        <Button full disabled={needed.length === 0} onClick={() => {
-          showToast('장보기 목록이 만들어졌어요');
+        <Button disabled={buyItems.length === 0} style={{ flex: 1 }} onClick={() => {
+          showToast('장보기 완료');
           /* CONTRACT_CHECK: POST /shopping-lists — vNext에서는 UI shape만 */
         }}>
-          장보기 목록 만들기
+          장보기 완료
         </Button>
-        <Button full variant="neutral" onClick={() => { showToast('공유 링크가 복사됐어요'); }}>공유</Button>
+        <Button variant="neutral" style={{ flex: '0 0 86px', padding: '0 16px' }} onClick={() => { showToast('공유 링크가 복사됐어요'); }}>공유</Button>
       </div>
     </div>
   );
