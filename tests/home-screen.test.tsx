@@ -206,29 +206,23 @@ describe("home screen", () => {
     }, { timeout: 1000 });
   });
 
-  it("uses a custom sort menu so the selected option stays readable on mobile", async () => {
+  it("uses an inline SortDropdown and defaults to 좋아요순", async () => {
     const user = userEvent.setup();
-    window.innerWidth = 390;
-    window.dispatchEvent(new Event("resize"));
 
     render(<HomeScreen />);
 
     const sortButton = await screen.findByRole("button", { name: /정렬 기준/i });
-    expect(sortButton.textContent).toContain("조회수순");
+    expect(sortButton.textContent).toContain("좋아요순");
 
     await user.click(sortButton);
 
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { level: 2, name: "정렬 기준" })).toBeTruthy();
-    });
-
-    const listbox = screen.getByRole("listbox", { name: "정렬 기준" });
+    const listbox = screen.getByRole("listbox");
     expect(listbox).toBeTruthy();
 
-    await user.click(screen.getByRole("option", { name: "좋아요순" }));
+    await user.click(screen.getByText("저장순"));
 
     await waitFor(() => {
-      expect(sortButton.textContent).toContain("좋아요순");
+      expect(sortButton.textContent).toContain("저장순");
       expect(
         fetchJson.mock.calls.some(([input]) => {
           if (typeof input !== "string" || !input.startsWith("/api/v1/recipes?")) {
@@ -236,7 +230,7 @@ describe("home screen", () => {
           }
 
           const url = new URL(input, "http://localhost:3000");
-          return url.searchParams.get("sort") === "like_count";
+          return url.searchParams.get("sort") === "save_count";
         }),
       ).toBe(true);
     });
@@ -257,7 +251,7 @@ describe("home screen", () => {
     }).length;
 
     await user.click(await screen.findByRole("button", { name: /정렬 기준/i }));
-    await user.click(screen.getByRole("option", { name: "좋아요순" }));
+    await user.click(screen.getByText("저장순"));
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { level: 2, name: "테마별 레시피" })).toBeTruthy();
@@ -268,7 +262,7 @@ describe("home screen", () => {
           }
 
           const url = new URL(input, "http://localhost:3000");
-          return url.searchParams.get("sort") === "like_count";
+          return url.searchParams.get("sort") === "save_count";
         }),
       ).toBe(true);
     });
@@ -426,5 +420,30 @@ describe("home screen", () => {
     });
 
     expect(window.location.search).toBe("");
+  });
+
+  it("positions ingredient filter chips under the recipe list heading", async () => {
+    render(<HomeScreen />);
+
+    const allRecipesHeading = await screen.findByRole("heading", {
+      level: 2,
+      name: "모든 레시피",
+    });
+    const ingredientButton = screen.getByRole("button", { name: "양파" });
+    const moreButton = screen.getByRole("button", { name: "재료 더보기" });
+    const listSection = allRecipesHeading.closest("section");
+
+    expect(listSection).not.toBeNull();
+    expect(listSection?.contains(ingredientButton)).toBe(true);
+    expect(listSection?.contains(moreButton)).toBe(true);
+  });
+
+  it("does not render header profile or cart icons", async () => {
+    render(<HomeScreen />);
+
+    await screen.findByText("homecook_");
+
+    expect(screen.queryByRole("button", { name: "장보기" })).toBeNull();
+    expect(screen.queryByText("채")).toBeNull();
   });
 });

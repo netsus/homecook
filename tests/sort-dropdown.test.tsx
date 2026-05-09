@@ -81,16 +81,12 @@ describe("SortDropdown", () => {
     });
   });
 
-  it("dropdown option buttons meet 44px minimum touch target", () => {
+  it("dropdown options meet 44px minimum touch target", () => {
     render(<SortDropdown onChange={() => {}} options={options} value="latest" />);
     fireEvent.click(screen.getByRole("button", { expanded: false }));
 
-    const optionButtons = screen
-      .getAllByRole("option")
-      .map((opt) => opt.querySelector("button")!);
-
-    optionButtons.forEach((btn) => {
-      expect(btn.className).toContain("min-h-[44px]");
+    screen.getAllByRole("option").forEach((option) => {
+      expect(option.className).toContain("min-h-[44px]");
     });
   });
 

@@ -39,9 +39,12 @@ export function SocialLoginButtons({
   const localDevAuthEnabled = isLocalDevAuthEnabled();
   const localGoogleOAuthEnabled = isLocalGoogleOAuthEnabled();
   const qaFixtureMode = isQaFixtureClientModeEnabled();
+  const HIDDEN_PROVIDERS: AuthProviderId[] = ["kakao"];
   const providers = localDevAuthEnabled && !localGoogleOAuthEnabled
     ? []
-    : getEnabledAuthProviders();
+    : getEnabledAuthProviders().filter(
+        (id) => !HIDDEN_PROVIDERS.includes(id),
+      );
 
   const handleSignIn = (provider: AuthProviderId) => {
     startTransition(async () => {

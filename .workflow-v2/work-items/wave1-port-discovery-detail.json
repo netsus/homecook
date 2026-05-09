@@ -81,9 +81,9 @@
   },
 
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
@@ -91,50 +91,71 @@
     "blocked_reason_code": null
   },
 
-  "notes": "Stage 1 docs created by Claude session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc. UI-only slice — Stage 2 N/A. anchor-extension risk: HOME + RECIPE_DETAIL 두 anchor screen의 정보 구조/CTA hierarchy 변경. 기존 API 공식 필드(like_count, save_count, cook_count, plan_count, view_count, user_status)만 소비. login provider 숨김은 FE-only, Supabase config 변경은 contract evolution candidate. closeout_phase=collecting",
+  "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs PR #374 merged. Stage 2/3 N/A (UI-only). Stage 4 frontend implemented by Claude through resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc, then Codex completed Stage 5/6 review, authority evidence, exploratory QA/eval, accessibility repair, Linux visual snapshot repair, full frontend verification, and Claude final authority gate. Design Status confirmed; authority blocker 0. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:1 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,Playwright,Docker Linux visual,ui/designs/authority/WAVE1_DISCOVERY_DETAIL-authority.md,Claude final authority gate,QA eval,GitHub policy check",
 
   "closeout": {
-    "phase": "collecting",
+    "phase": "completed",
     "docs_projection": {
-      "roadmap_lifecycle": "in_progress",
-      "design_status": "temporary",
-      "delivery_checklist": "pending",
-      "design_authority": "pending",
-      "acceptance": "pending",
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
       "automation_spec_metadata": "synced"
     },
     "verification_projection": {
-      "required_checks": "pending",
+      "required_checks": "passed",
       "external_smokes": "skipped",
-      "authority_reports": [],
-      "actual_verification_refs": []
+      "authority_reports": ["ui/designs/authority/WAVE1_DISCOVERY_DETAIL-authority.md"],
+      "actual_verification_refs": [
+        "pnpm verify:frontend",
+        "tests/e2e/slice-wave1-port-discovery-detail.spec.ts",
+        "tests/e2e/qa-wave1-discovery-detail-evidence.spec.ts",
+        "ui/designs/evidence/wave1-port-discovery-detail/",
+        "PR_IS_DRAFT=false pnpm validate:authority-evidence-presence",
+        "PR_IS_DRAFT=false pnpm validate:exploratory-qa-evidence",
+        "pnpm validate:workpack -- --slice wave1-port-discovery-detail",
+        "pnpm validate:workflow-v2",
+        "git diff --check",
+        ".artifacts/qa/wave1-port-discovery-detail/2026-05-09T22-28-28-457Z/eval-result.json",
+        ".omx/artifacts/claude-delegate-3f4ca745-db71-4392-a3f1-4e3c4493e9bc-wave1-port-discovery-detail-final-authority-gate-response-20260509T222027Z.md",
+        "Docker Linux visual snapshot verification"
+      ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending",
-      "approval_state": "not_started",
+      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "approval_state": "dual_approved",
       "all_checks_green": false
     },
     "recovery_summary": {
-      "manual_patch_count": 0,
+      "manual_patch_count": 1,
       "manual_handoff": false,
       "stale_lock_count": 0,
-      "ci_resync_count": 0,
+      "ci_resync_count": 1,
       "artifact_missing": false,
-      "last_recovery_at": null
+      "last_recovery_at": "2026-05-09T23:00:10Z"
     },
     "repair_summary": {
-      "codex_repairable_count": 0,
+      "codex_repairable_count": 2,
       "claude_repairable_count": 0,
       "manual_decision_required_count": 0,
       "human_escalation_count": 0,
       "post_merge_stale_count": 0,
-      "latest_reason_code": null,
-      "evidence_sources": []
+      "latest_reason_code": "stage6-closeout-policy-projection-repair",
+      "evidence_sources": [
+        "pnpm verify:frontend",
+        "Playwright",
+        "Docker Linux visual",
+        "ui/designs/authority/WAVE1_DISCOVERY_DETAIL-authority.md",
+        "Claude final authority gate",
+        "QA eval",
+        "GitHub policy check"
+      ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-05-09T21:25:09Z",
-      "status_synced_at": "2026-05-09T21:25:09Z",
-      "pr_body_synced_at": null
+      "docs_synced_at": "2026-05-09T23:00:10Z",
+      "status_synced_at": "2026-05-09T23:00:10Z",
+      "pr_body_synced_at": "pending-pr-body-update"
     }
   },
 

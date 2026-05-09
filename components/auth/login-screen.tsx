@@ -76,7 +76,7 @@ export function LoginScreen({
               </h1>
               <ul className="mt-6 space-y-3 text-sm leading-6 text-[var(--muted)]">
                 <li>보호 액션은 로그인 후 원래 레시피로 복귀합니다.</li>
-                <li>카카오, 네이버, 구글 OAuth 흐름을 같은 기준으로 맞춥니다.</li>
+                <li>네이버, 구글 OAuth 흐름을 같은 기준으로 맞춥니다.</li>
                 <li>Slice 01에서는 로그인 게이트와 복귀 경험까지 닫습니다.</li>
               </ul>
             </div>

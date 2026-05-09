@@ -704,6 +704,7 @@ export function RecipeDetailScreen({
   const plannerCountLabel = formatCount(recipe.plan_count);
   const likeCountLabel = formatCount(recipe.like_count);
   const saveCountLabel = formatCount(recipe.save_count);
+  const cookCountLabel = formatCount(recipe.cook_count);
 
   return (
     <>
@@ -751,25 +752,8 @@ export function RecipeDetailScreen({
               </p>
             </div>
 
-            <div className="recipe-overview-metrics-compact flex flex-wrap items-center gap-2 max-[360px]:order-1 max-[360px]:grid max-[360px]:grid-cols-[minmax(0,1fr)_44px_64px_64px]">
-              <div className="min-w-[8.5rem] flex-1 max-[360px]:min-w-0 max-[360px]:flex-none md:min-w-[9rem] md:flex-none">
-                <UtilityStatButton
-                  ariaLabel={`플래너 등록 ${plannerCountLabel}`}
-                  count={plannerCountLabel}
-                  icon={<PlannerIcon />}
-                  label="플래너"
-                  tone="neutral"
-                />
-              </div>
-              <div className="w-11 shrink-0 max-[360px]:w-11 md:w-[3rem]">
-                <IconActionButton
-                  ariaLabel="공유하기"
-                  icon={<ShareIcon />}
-                  onClick={handleShare}
-                  tone="neutral"
-                />
-              </div>
-              <div className="min-w-[5.5rem] flex-1 max-[360px]:min-w-0 max-[360px]:flex-none md:min-w-[6.25rem] md:flex-none">
+            <div className="recipe-overview-metrics-compact grid grid-cols-3 items-center gap-2 max-[360px]:order-1 max-[360px]:grid-cols-2 md:flex md:flex-wrap">
+              <div className="min-w-0 md:min-w-[6.25rem] md:flex-none">
                 <MetricActionButton
                   ariaLabel={
                     likeRequestState === "pending"
@@ -779,7 +763,6 @@ export function RecipeDetailScreen({
                   ariaPressed={recipe.user_status?.is_liked ?? false}
                   count={likeCountLabel}
                   disabled={likeRequestState === "pending"}
-                  hideLabel
                   icon={
                     <HeartIcon
                       filled={recipe.user_status?.is_liked ?? false}
@@ -790,16 +773,41 @@ export function RecipeDetailScreen({
                   tone={recipe.user_status?.is_liked ? "signal" : "neutral"}
                 />
               </div>
-              <div className="min-w-[5.5rem] flex-1 max-[360px]:min-w-0 max-[360px]:flex-none md:min-w-[6.25rem] md:flex-none">
+              <div className="min-w-0 md:min-w-[6.25rem] md:flex-none">
                 <MetricActionButton
                   ariaLabel="저장"
                   ariaPressed={recipe.user_status?.is_saved ?? false}
                   count={saveCountLabel}
-                  hideLabel
                   icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
                   label="저장"
                   onClick={() => handleProtectedAction("save")}
                   tone={recipe.user_status?.is_saved ? "olive" : "neutral"}
+                />
+              </div>
+              <div className="min-w-0 md:min-w-[6.25rem] md:flex-none">
+                <UtilityStatButton
+                  ariaLabel={`요리완료 ${cookCountLabel}`}
+                  count={cookCountLabel}
+                  icon={<CookIcon />}
+                  label="요리완료"
+                  tone="neutral"
+                />
+              </div>
+              <div className="min-w-0 md:min-w-[6.25rem] md:flex-none">
+                <UtilityStatButton
+                  ariaLabel={`플래너 등록 ${plannerCountLabel}`}
+                  count={plannerCountLabel}
+                  icon={<PlannerIcon />}
+                  label="플래너"
+                  tone="neutral"
+                />
+              </div>
+              <div className="min-w-0 md:w-[3rem] md:shrink-0">
+                <IconActionButton
+                  ariaLabel="공유하기"
+                  icon={<ShareIcon />}
+                  onClick={handleShare}
+                  tone="neutral"
                 />
               </div>
             </div>
@@ -810,22 +818,6 @@ export function RecipeDetailScreen({
               </p>
             </div>
 
-            <div className="grid grid-cols-[1fr_2fr] gap-2 max-[360px]:order-2 max-[360px]:grid-cols-2">
-              <ActionButton
-                label="플래너에 추가"
-                onClick={() => handleProtectedAction("planner")}
-                tone="olive"
-              />
-              <ActionButton
-                label="요리하기"
-                onClick={() =>
-                  router.push(
-                    `/cooking/recipes/${recipeId}/cook-mode?servings=${selectedServings}`,
-                  )
-                }
-                tone="brand"
-              />
-            </div>
           </div>
 
         <div className="bg-[var(--panel)] px-5 py-5">
@@ -950,7 +942,7 @@ export function RecipeDetailScreen({
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-2 pl-9 text-sm leading-6 text-[var(--text-2)]">
+                <p className="mt-2 pl-9 text-base leading-7 text-[var(--text-2)]">
                   {step.instruction}
                 </p>
                 {step.heat_level ? (
@@ -961,6 +953,24 @@ export function RecipeDetailScreen({
               </li>
             ))}
           </ol>
+        </div>
+      </div>
+      <div className="sticky bottom-0 z-20 border-t border-[var(--line)] bg-[var(--surface)] px-5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
+        <div className="grid grid-cols-[1fr_2fr] gap-2 max-[360px]:grid-cols-2">
+          <ActionButton
+            label="플래너에 추가"
+            onClick={() => handleProtectedAction("planner")}
+            tone="olive"
+          />
+          <ActionButton
+            label="요리하기"
+            onClick={() =>
+              router.push(
+                `/cooking/recipes/${recipeId}/cook-mode?servings=${selectedServings}`,
+              )
+            }
+            tone="brand"
+          />
         </div>
       </div>
       <SaveModal
@@ -1190,14 +1200,14 @@ function UtilityStatButton({
   return (
     <div
       aria-label={ariaLabel}
-      className={`flex min-h-11 w-full items-center justify-center gap-1 rounded-[var(--radius-md)] border px-2 py-1.5 text-[11px] font-semibold shadow-[var(--shadow-1)] md:px-2.5 md:py-2 md:text-[13px] ${getRecipeActionToneClass(tone)}`}
+      className={`flex min-h-11 w-full items-center justify-center gap-1 rounded-[var(--radius-md)] border px-1.5 py-1.5 text-[11px] font-semibold shadow-[var(--shadow-1)] md:px-2.5 md:py-2 md:text-[13px] ${getRecipeActionToneClass(tone)}`}
       role="status"
     >
       <span aria-hidden="true" className="shrink-0">
         {icon}
       </span>
-      <span className="truncate">{label}</span>
-      <span className="rounded-[var(--radius-full)] bg-[var(--surface-fill)] px-1.25 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-1.75 md:text-[11px]">
+      <span className="shrink-0 whitespace-nowrap">{label}</span>
+      <span className="shrink-0 rounded-[var(--radius-full)] bg-[var(--surface-fill)] px-1.25 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-1.75 md:text-[11px]">
         {count}
       </span>
     </div>
@@ -1229,7 +1239,7 @@ function MetricActionButton({
     <button
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
-      className={`flex min-h-11 w-full items-center ${hideLabel ? "justify-center" : ""} gap-1 rounded-[var(--radius-md)] border px-2 py-1.5 text-[11px] font-semibold shadow-[var(--shadow-1)] disabled:cursor-not-allowed disabled:opacity-60 md:gap-1.5 md:px-2.5 md:py-2 md:text-[13px] ${getRecipeActionToneClass(tone)}`}
+      className={`flex min-h-11 w-full items-center justify-center gap-1 rounded-[var(--radius-md)] border px-1.5 py-1.5 text-[11px] font-semibold shadow-[var(--shadow-1)] disabled:cursor-not-allowed disabled:opacity-60 md:gap-1.5 md:px-2.5 md:py-2 md:text-[13px] ${getRecipeActionToneClass(tone)}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -1237,10 +1247,10 @@ function MetricActionButton({
       <span aria-hidden="true" className="shrink-0">
         {icon}
       </span>
-      {hideLabel ? null : <span>{label}</span>}
+      {hideLabel ? null : <span className="shrink-0 whitespace-nowrap">{label}</span>}
       <span
         aria-hidden={ariaLabel !== `좋아요 ${count}`}
-        className="rounded-[var(--radius-full)] bg-[var(--surface-fill)] px-1.25 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-1.75 md:text-[11px]"
+        className="shrink-0 rounded-[var(--radius-full)] bg-[var(--surface-fill)] px-1.25 py-0.5 text-[10px] font-bold text-[var(--foreground)] md:px-1.75 md:text-[11px]"
       >
         {count}
       </span>
@@ -1294,6 +1304,23 @@ function BookmarkIcon({ filled = false }: { filled?: boolean }) {
       width="18"
     >
       <path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.7L6 20V5.5a1 1 0 0 1 1-1Z" />
+    </svg>
+  );
+}
+
+function CookIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+      width="18"
+    >
+      <path d="M12 3v2M5.6 5.6l1.4 1.4M3 12h2M5.6 18.4l1.4-1.4M12 19v2M17 17l1.4 1.4M19 12h2M17 7l1.4-1.4" />
+      <circle cx="12" cy="12" r="4" />
     </svg>
   );
 }

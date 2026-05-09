@@ -179,7 +179,7 @@ describe("recipe detail screen", () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(screen.queryByText("조회")).toBeNull();
-    expect(screen.queryByText("요리완료")).toBeNull();
+    expect(screen.getByText("요리완료")).toBeTruthy();
   });
 
   it("keeps the overview metrics row compact so hero actions stay closer to the first fold", async () => {
@@ -193,18 +193,18 @@ describe("recipe detail screen", () => {
     expect(metricsRow?.className).toContain("flex-wrap");
   });
 
-  it("removes internal scaffolding cards and keeps primary actions above the recipe body", async () => {
+  it("removes internal scaffolding cards and places primary CTA in a sticky bottom bar", async () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 
     const plannerButton = await screen.findByRole("button", {
       name: "플래너에 추가",
     });
-    const ingredientHeading = screen.getByText("인분에 따라 재료량이 바뀝니다");
+    const cookButton = screen.getByRole("button", { name: "요리하기" });
 
-    expect(
-      plannerButton.compareDocumentPosition(ingredientHeading) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    // CTA buttons are in a sticky bottom bar
+    const stickyBar = plannerButton.closest(".sticky");
+    expect(stickyBar).not.toBeNull();
+    expect(stickyBar?.contains(cookButton)).toBe(true);
     expect(screen.queryByText("Recipe Snapshot")).toBeNull();
     expect(screen.queryByText("Slice Note")).toBeNull();
   });
@@ -448,6 +448,40 @@ describe("recipe detail screen", () => {
     ).toBeTruthy();
     expect(modalScope.getByRole("button", { name: /저장한 레시피/ })).toBeTruthy();
     expect(modalScope.getByRole("button", { name: /주말 파티/ })).toBeTruthy();
+  });
+
+  it("renders save modal without recipe preview and with 저장 button label", async () => {
+    const detail = buildRecipeDetail();
+
+    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
+    fetchJson.mockImplementation((input: string, init?: RequestInit) => {
+      if (!init?.method && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}`) {
+        return Promise.resolve(detail);
+      }
+
+      if (!init?.method && input === "/api/v1/recipe-books") {
+        return Promise.resolve(buildSaveableBooks());
+      }
+
+      return Promise.reject(new Error(`Unexpected request: ${input}`));
+    });
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "저장" }));
+
+    const modal = await screen.findByRole("dialog");
+    const modalScope = within(modal);
+
+    // No recipe preview block
+    expect(modalScope.queryByText(MOCK_RECIPE_DETAIL.title)).toBeNull();
+    expect(modalScope.queryByText(MOCK_RECIPE_DETAIL.description!)).toBeNull();
+
+    // Footer button says "저장"
+    const saveButton = modalScope.getAllByRole("button").find(
+      (btn) => btn.textContent === "저장",
+    );
+    expect(saveButton).toBeTruthy();
   });
 
   it("shows load error UI and retries recipe-book loading", async () => {
@@ -774,5 +808,58 @@ describe("recipe detail screen", () => {
       );
       expect(toast).toBeTruthy();
     });
+  });
+
+  it("displays hero action metrics including cook_count and plan_count", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    expect(await screen.findByText("요리완료")).toBeTruthy();
+    expect(screen.getByText("플래너")).toBeTruthy();
+    expect(
+      screen.getByRole("status", { name: /요리완료/ }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("status", { name: /플래너 등록/ }),
+    ).toBeTruthy();
+  });
+
+  it("renders the bottom sticky CTA with planner-add and cook buttons", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const plannerButton = await screen.findByRole("button", {
+      name: "플래너에 추가",
+    });
+    const cookButton = screen.getByRole("button", { name: "요리하기" });
+
+    const stickyBar = plannerButton.closest(".sticky");
+    expect(stickyBar).not.toBeNull();
+    expect(stickyBar?.contains(cookButton)).toBe(true);
+    expect(stickyBar?.className).toContain("bottom-0");
+  });
+
+  it("renders cooking step instructions with text-base font size", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    const stepInstruction = screen.getByText(
+      MOCK_RECIPE_DETAIL.steps[0]!.instruction,
+    );
+    expect(stepInstruction.className).toContain("text-base");
+  });
+
+  it("does not display view_count in the metrics area", async () => {
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    await screen.findByRole("heading", {
+      level: 1,
+      name: MOCK_RECIPE_DETAIL.title,
+    });
+
+    expect(screen.queryByText("조회")).toBeNull();
+    expect(screen.queryByText("조회수")).toBeNull();
   });
 });
