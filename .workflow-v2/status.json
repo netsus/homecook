@@ -539,7 +539,7 @@
       "id": "baemin-prototype-home-parity",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-baemin-prototype-home-parity",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/373",
       "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
