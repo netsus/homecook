@@ -689,6 +689,7 @@ const dQtyBtn = {
 function DesktopPantry({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
   const [query, setQuery] = dUseState('');
   const [activeCat, setActiveCat] = dUseState('전체');
+  const [deleteMode, setDeleteMode] = dUseState(false);
   const [selected, setSelected] = dUseState(new Set());
   const categories = ['전체', ...PANTRY_CATEGORIES];
   const sections = {};
@@ -708,6 +709,7 @@ function DesktopPantry({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
     return next;
   });
   const deleteSelected = () => {
+    if (selected.size === 0) return;
     setPantry(p => {
       const next = { ...p };
       selected.forEach(key => {
@@ -716,7 +718,14 @@ function DesktopPantry({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
       return next;
     });
     setSelected(new Set());
+    setDeleteMode(false);
     /* CONTRACT_CHECK: DELETE /pantry-items bulk — vNext에서는 UI shape만 */
+  };
+  const toggleDeleteMode = () => {
+    setDeleteMode(on => {
+      if (on) setSelected(new Set());
+      return !on;
+    });
   };
 
   return (
@@ -744,14 +753,14 @@ function DesktopPantry({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
               padding: '10px 14px', height: 36, borderRadius: 8, fontSize: 13, fontWeight: 800,
             }}>묶음 추가</button>
           )}
-          {selected.size > 0 && (
-            <button onClick={deleteSelected} style={{
-              background: T.red, color: '#fff', border: 'none', cursor: 'pointer',
-              padding: '10px 14px', height: 36, borderRadius: 8, fontSize: 13, fontWeight: 800,
-            }}>선택 삭제 {selected.size}</button>
-          )}
-        </div>
-      </div>
+	          <button onClick={toggleDeleteMode} style={{
+	            background: deleteMode ? '#fff' : T.red, color: deleteMode ? T.text2 : '#fff',
+	            border: deleteMode ? `1px solid ${T.border}` : 'none', cursor: 'pointer',
+	            padding: '10px 14px', height: 36, borderRadius: 8, fontSize: 13, fontWeight: 800,
+	            whiteSpace: 'nowrap',
+	          }}>{deleteMode ? '취소' : '삭제'}</button>
+	        </div>
+	      </div>
       <div style={{ marginBottom: 20 }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
@@ -763,18 +772,20 @@ function DesktopPantry({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
             style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none',
               fontSize: 14, color: T.ink, fontFamily: T.fontUI }} />
         </div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 12, overflowX: 'auto' }}>
-          {categories.map(cat => (
-            <button key={cat} onClick={() => setActiveCat(cat)} style={{
-              flexShrink: 0, padding: '8px 14px', borderRadius: 9999,
-              border: activeCat === cat ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
-              background: activeCat === cat ? T.mintSoft : '#fff',
-              color: activeCat === cat ? T.mintDeep : T.text2,
-              fontSize: 12, fontWeight: 800, cursor: 'pointer',
-            }}>{cat}</button>
-          ))}
-        </div>
-      </div>
+	      </div>
+	      <div style={{ background: T.surfaceFill, borderRadius: 12, padding: 12, marginBottom: 20 }}>
+	        <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
+	          {categories.map(cat => (
+	            <button key={cat} onClick={() => setActiveCat(cat)} style={{
+	              flexShrink: 0, padding: '8px 14px', borderRadius: 9999,
+	              border: activeCat === cat ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+	              background: activeCat === cat ? T.mintSoft : '#fff',
+	              color: activeCat === cat ? T.mintDeep : T.text2,
+	              fontSize: 12, fontWeight: 800, cursor: 'pointer',
+	            }}>{cat}</button>
+	          ))}
+	        </div>
+	      </div>
       {sectionEntries.length > 0 ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
           {sectionEntries.map(([cat, items]) => (
@@ -784,30 +795,49 @@ function DesktopPantry({ pantry, setPantry, onOpenAdd, onOpenBundle }) {
               <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, marginBottom: 12 }}>{cat}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {items.map(it => (
-                  <button key={it.key} onClick={() => toggleSelected(it.key)} style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '8px 12px', borderRadius: 9999,
-                    background: selected.has(it.key) ? T.mintSoft : T.surfaceFill,
-                    border: selected.has(it.key) ? `1px solid ${T.mint}` : '1px solid transparent',
-                    color: selected.has(it.key) ? T.mintDeep : T.ink,
-                    fontSize: 13, fontWeight: 800, cursor: 'pointer',
-                  }}>
-                    <span>{PANTRY_IMAGES[it.name] || '🥬'}</span>
-                    {selected.has(it.key) && Icon.check(T.mintDeep)}
-                    {it.name}
-                  </button>
+	                  <button key={it.key} onClick={() => deleteMode && toggleSelected(it.key)} style={{
+	                    display: 'flex', alignItems: 'center', gap: 6,
+	                    padding: '8px 12px', borderRadius: 9999,
+	                    background: selected.has(it.key) ? T.mintSoft : T.surfaceFill,
+	                    border: selected.has(it.key) ? `1px solid ${T.mint}` : '1px solid transparent',
+	                    color: selected.has(it.key) ? T.mintDeep : T.ink,
+	                    fontSize: 13, fontWeight: 800, cursor: deleteMode ? 'pointer' : 'default',
+	                  }}>
+	                    {deleteMode && (
+	                      <span style={{
+	                        width: 16, height: 16, borderRadius: 8,
+	                        background: selected.has(it.key) ? T.mint : '#fff',
+	                        border: selected.has(it.key) ? 'none' : `1.5px solid ${T.border}`,
+	                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+	                      }}>{selected.has(it.key) && Icon.check('#fff', 12)}</span>
+	                    )}
+	                    <span>{PANTRY_IMAGES[it.name] || '🥬'}</span>
+	                    {it.name}
+	                  </button>
                 ))}
               </div>
             </div>
           ))}
         </div>
-      ) : (
-        <div style={{ padding: '48px 16px', textAlign: 'center', color: T.text3 }}>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>{'\uD83E\uDD6C'}</div>
-          <div style={{ fontSize: 14 }}>{'\uAC80\uC0C9 \uACB0\uACFC\uAC00 \uC5C6\uC5B4\uC694'}</div>
-        </div>
-      )}
-    </div>
+	      ) : (
+	        <div style={{ padding: '48px 16px', textAlign: 'center', color: T.text3 }}>
+	          <div style={{ fontSize: 48, marginBottom: 8 }}>{'\uD83E\uDD6C'}</div>
+	          <div style={{ fontSize: 14 }}>{'\uAC80\uC0C9 \uACB0\uACFC\uAC00 \uC5C6\uC5B4\uC694'}</div>
+	        </div>
+	      )}
+	      {deleteMode && selected.size > 0 && (
+	        <div style={{
+	          position: 'fixed', left: 0, right: 0, bottom: 28, zIndex: 9500,
+	          display: 'flex', justifyContent: 'center', pointerEvents: 'none',
+	        }}>
+	          <button onClick={deleteSelected} style={{
+	            pointerEvents: 'auto', background: T.red, color: '#fff', border: 'none',
+	            borderRadius: 9999, padding: '13px 28px', fontSize: 14, fontWeight: 900,
+	            cursor: 'pointer', boxShadow: T.shadowSharp, whiteSpace: 'nowrap',
+	          }}>제거하기</button>
+	        </div>
+	      )}
+	    </div>
   );
 }
 
@@ -1592,22 +1622,24 @@ function DesktopCookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onCo
             );
           })}
 
-          {/* Complete button at bottom of steps */}
-          <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-            <button onClick={() => setConfirmCancel(true)} style={{
-              padding: '14px 24px', borderRadius: 10, border: `1px solid ${T.border}`,
-              background: '#fff', color: T.text2, fontSize: 14, fontWeight: 700, cursor: 'pointer',
-            }}>취소</button>
-            <button onClick={() => onComplete?.(date, slot, [...consumed], mealIndex)} style={{
-              flex: 1, padding: '14px 28px', borderRadius: 10, border: 'none',
-              background: T.mint, color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer',
-              fontFamily: T.fontBrand,
-            }}>요리 완료</button>
-          </div>
-        </main>
+	        </main>
 
-        <aside style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 24 }}>
-          {/* Consumed checklist */}
+	        <aside style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 24 }}>
+	          <div style={{ background: '#fff', borderRadius: 12, padding: 16, boxShadow: T.shadowDeep }}>
+	            <div style={{ display: 'flex', gap: 10 }}>
+	              <button onClick={() => setConfirmCancel(true)} style={{
+	                padding: '12px 16px', borderRadius: 10, border: `1px solid ${T.border}`,
+	                background: '#fff', color: T.text2, fontSize: 13, fontWeight: 800, cursor: 'pointer',
+	                whiteSpace: 'nowrap',
+	              }}>취소</button>
+	              <button onClick={() => onComplete?.(date, slot, [...consumed], mealIndex)} style={{
+	                flex: 1, padding: '12px 18px', borderRadius: 10, border: 'none',
+	                background: T.mint, color: '#fff', fontSize: 14, fontWeight: 900, cursor: 'pointer',
+	                fontFamily: T.fontBrand, whiteSpace: 'nowrap',
+	              }}>요리 완료</button>
+	            </div>
+	          </div>
+	          {/* Consumed checklist */}
           <div style={{ background: '#fff', borderRadius: 12, padding: 16, boxShadow: T.shadowDeep }}>
             <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 10 }}>차감할 재료</div>
             <div style={{ fontSize: 11, color: T.text3, marginBottom: 10 }}>완료 시 팬트리에서 차감돼요. 안 쓴 재료는 체크 해제.</div>
@@ -2238,6 +2270,12 @@ function DskBackLink({ onClick, label }) {
   );
 }
 
+const desktopMealSwitchBtn = {
+  padding: '10px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
+  background: '#fff', color: T.text2, fontSize: 12, fontWeight: 800,
+  cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 86,
+};
+
 // Desktop: LEFTOVERS (P1.3)
 function DesktopLeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkAte, onMarkPartial, showToast }) {
   // 'cooked' 인데 ateAt이 없는 끼니 = "남은 요리"
@@ -2260,10 +2298,7 @@ function DesktopLeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkA
           <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>남은 요리</div>
           <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>다 먹지 않은 식사 {leftovers.length}건. 플래너에 다시 올리거나 다 먹은 것으로 기록하세요.</div>
         </div>
-        <button onClick={onGoAteList} style={{
-          padding: '10px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
-          background: '#fff', color: T.text2, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-        }}>다먹은 요리</button>
+	        <button onClick={onGoAteList} style={desktopMealSwitchBtn}>다먹은 요리</button>
       </div>
       {leftovers.length === 0 ? (
         <div style={{ background: '#fff', borderRadius: 16, padding: 60, textAlign: 'center', boxShadow: T.shadowDeep }}>
@@ -2328,10 +2363,7 @@ function DesktopAteListScreen({ planner, onBack, onGoLeftovers, onUndoAte, onRec
           <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>다먹은 요리</div>
           <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>다 먹은 끼니 {ateMeals.length}건. 잘못 표시했다면 되돌릴 수 있어요.</div>
         </div>
-        <button onClick={onGoLeftovers} style={{
-          padding: '10px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
-          background: '#fff', color: T.text2, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-        }}>남은 요리</button>
+	        <button onClick={onGoLeftovers} style={desktopMealSwitchBtn}>남은 요리</button>
       </div>
       {ateMeals.length === 0 ? (
         <div style={{ background: '#fff', borderRadius: 16, padding: 60, textAlign: 'center', boxShadow: T.shadowDeep }}>
@@ -2351,7 +2383,7 @@ function DesktopAteListScreen({ planner, onBack, onGoLeftovers, onUndoAte, onRec
               }}>{recipe.emoji}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{recipe.name}</div>
-                <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{date} {slot} {meal.servings}인분 다먹음</div>
+	                <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{date} {slot} {meal.servings}인분</div>
               </div>
               <button onClick={() => onUndoAte?.(date, slot, mealIndex)} style={{
                 padding: '8px 12px', borderRadius: 8, border: `1px solid ${T.border}`,
