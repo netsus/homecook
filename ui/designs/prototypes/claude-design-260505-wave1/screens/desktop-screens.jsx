@@ -1281,7 +1281,8 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
           if (!r) return;
           r.ingredients.forEach(ing => {
             const key = ing.name;
-            if (!acc[key]) acc[key] = { name: ing.name, qty: ing.qty || '약간', section: ing.section || '기타', meals: [], have: !!pantry[key]?.have };
+            const have = Object.values(pantry || {}).some(p => p.name === ing.name && p.have);
+            if (!acc[key]) acc[key] = { name: ing.name, qty: ing.qty || '약간', section: ing.section || '기타', meals: [], have };
             acc[key].meals.push(`${date} ${slot} · ${r.name}`);
           });
         });
@@ -1289,11 +1290,35 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
     });
     return Object.values(acc);
   }, [planner, pantry]);
+  const [localSkipRevived, setLocalSkipRevived] = dUseState(new Set());
+  const [localBuyExcluded, setLocalBuyExcluded] = dUseState(new Set());
 
   const sections = ['채소','육류','해산물','유제품','곡류','양념','기타'];
-  const grouped = sections.map(sec => ({ sec, list: items.filter(i => i.section === sec) })).filter(g => g.list.length > 0);
-  const need = items.filter(i => !i.have);
-  const have = items.filter(i => i.have);
+  const buy = items.filter(i => (!i.have || localSkipRevived.has(i.name)) && !localBuyExcluded.has(i.name));
+  const skip = items.filter(i => (i.have && !localSkipRevived.has(i.name)) || localBuyExcluded.has(i.name));
+  const grouped = sections.map(sec => ({ sec, list: buy.filter(i => i.section === sec) })).filter(g => g.list.length > 0);
+  const shoppingListTitle = '장보기 목록 · 2026.05.10';
+  const moveToSkip = (name) => {
+    setLocalBuyExcluded(s => new Set(s).add(name));
+    setLocalSkipRevived(s => {
+      const n = new Set(s);
+      n.delete(name);
+      return n;
+    });
+  };
+  const reviveToBuy = (name) => {
+    setLocalBuyExcluded(s => {
+      const n = new Set(s);
+      n.delete(name);
+      return n;
+    });
+    setLocalSkipRevived(s => new Set(s).add(name));
+  };
+  const desktopMoveBtn = {
+    border: `1px solid ${T.border}`, background: '#fff', color: T.text2,
+    borderRadius: 9999, padding: '6px 10px', fontSize: 11, fontWeight: 800,
+    whiteSpace: 'nowrap', cursor: 'pointer', flexShrink: 0,
+  };
 
   return (
     <div>
@@ -1305,19 +1330,25 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>장보기 목록 만들기</div>
-          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>이번 주 등록된 식단 기준 · 총 {items.length}개 재료</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>{shoppingListTitle}</div>
+          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>이번 주 등록된 식단 기준 · 구매 예정 {buy.length}개 · 팬트리 제외 {skip.length}개</div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => showToast?.('장보기 목록이 만들어졌어요')} style={{
+          <button disabled={buy.length === 0} onClick={() => showToast?.('장보기 완료')} style={{
             padding: '10px 18px', borderRadius: 8, border: 'none',
-            background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
-          }}>장보기 목록 만들기</button>
+            background: buy.length === 0 ? T.border : T.mint, color: buy.length === 0 ? T.text4 : '#fff',
+            fontSize: 13, fontWeight: 800, cursor: buy.length === 0 ? 'default' : 'pointer',
+          }}>장보기 완료</button>
+          <button onClick={() => showToast?.('공유 링크가 복사됐어요')} style={{
+            padding: '10px 16px', borderRadius: 8, border: 'none',
+            background: T.surfaceFill, color: T.ink, fontSize: 13, fontWeight: 800, cursor: 'pointer',
+          }}>공유</button>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, alignItems: 'start' }}>
         <div style={{ background: '#fff', borderRadius: 14, padding: 8, boxShadow: T.shadowDeep }}>
+          <div style={{ padding: '12px 16px 4px', fontSize: 14, fontWeight: 800, color: T.ink }}>장볼 재료 목록</div>
           {grouped.map(g => (
             <div key={g.sec} style={{ padding: '12px 16px' }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: T.text2, marginBottom: 8 }}>{g.sec} ({g.list.length})</div>
@@ -1326,24 +1357,51 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
                   <div key={it.name} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 12px', borderRadius: 10,
-                    background: it.have ? T.mintSoft : T.surfaceFill,
+                    background: T.surfaceFill,
                   }}>
-                    <span style={{ fontSize: 14 }}>{it.have ? '✓' : '🛒'}</span>
+                    <span style={{ fontSize: 14 }}>🛒</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: it.have ? T.mintDeep : T.ink }}>{it.name}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{it.name}</div>
                       <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>{it.meals.slice(0, 2).join(' · ')}{it.meals.length > 2 ? ` 외 ${it.meals.length - 2}` : ''}</div>
                     </div>
                     <span style={{ fontSize: 11, color: T.text3, fontWeight: 600 }}>{it.qty}</span>
+                    <button onClick={() => moveToSkip(it.name)} style={desktopMoveBtn}>이미있음</button>
                   </div>
                 ))}
               </div>
             </div>
           ))}
           {grouped.length === 0 && (
-            <div style={{ padding: 60, textAlign: 'center', color: T.text3, fontSize: 13 }}>
-              플래너에 등록된 식단이 없어요
+            <div style={{ padding: 40, textAlign: 'center', color: T.text3, fontSize: 13 }}>
+              장볼 재료가 없어요. 아래 재료를 되살리면 목록에 다시 들어가요.
             </div>
           )}
+          <div style={{ padding: '18px 16px 14px', borderTop: `1px solid ${T.surfaceSubtle}` }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: T.ink, marginBottom: 10 }}>
+              팬트리에 있어서 제외된 재료 <span style={{ color: T.text4 }}>· {skip.length}</span>
+            </div>
+            {skip.length === 0 ? (
+              <div style={{ padding: 18, borderRadius: 10, background: T.surfaceFill, color: T.text3, fontSize: 13, textAlign: 'center' }}>
+                제외된 재료가 없어요.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                {skip.map(it => (
+                  <div key={it.name} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 12px', borderRadius: 10, background: T.surfaceSubtle,
+                  }}>
+                    <span style={{ fontSize: 14, color: T.text4 }}>✓</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: T.text4 }}>{it.name}</div>
+                      <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>{it.qty} · {it.meals.length}끼에 사용</div>
+                    </div>
+                    <button onClick={() => reviveToBuy(it.name)} style={{ ...desktopMoveBtn, color: T.mintDeep }}>되살리기</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <aside style={{ background: '#fff', borderRadius: 14, padding: 20, boxShadow: T.shadowDeep, position: 'sticky', top: 24 }}>
@@ -1351,8 +1409,8 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <Stat label="이번 주 음식" value={Object.values(planner).reduce((a, d) => a + ['아침','점심','저녁'].reduce((sum, s) => sum + mealItems(d[s]).length, 0), 0) + '개'} />
             <Stat label="필요한 재료" value={items.length + '개'} />
-            <Stat label="이미 보유" value={have.length + '개'} color={T.mintDeep} />
-            <Stat label="구매 필요" value={need.length + '개'} color={T.red} />
+            <Stat label="팬트리 제외" value={skip.length + '개'} color={T.mintDeep} />
+            <Stat label="구매 예정" value={buy.length + '개'} color={T.red} />
           </div>
           <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${T.surfaceSubtle}` }}>
             <div style={{ fontSize: 11, color: T.text3, lineHeight: 1.55 }}>

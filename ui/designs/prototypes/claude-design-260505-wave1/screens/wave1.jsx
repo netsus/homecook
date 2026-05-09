@@ -374,7 +374,7 @@ function LeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkAte, onM
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 40 }}>
       <AppBar title="남은요리" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>}
-        right={<button onClick={onGoAteList} style={mealSwitchBtn}>다먹은 요리</button>} />
+        right={<button onClick={onGoAteList} style={mealSwitchBtn}>다먹음</button>} />
       <div style={{ padding: '14px 16px', background: '#fff', borderBottom: `1px solid ${T.border}` }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand }}>
           {items.length === 0 ? '남은 요리가 없어요' : `남은 요리 ${items.length}개`}
@@ -431,8 +431,8 @@ const smallSecBtn = {
 };
 const mealSwitchBtn = {
   background: '#fff', border: `1px solid ${T.border}`, cursor: 'pointer',
-  fontSize: 12, color: T.mintDeep, fontWeight: 800, borderRadius: 9999,
-  padding: '7px 11px', whiteSpace: 'nowrap', minWidth: 76,
+  fontSize: 11, color: T.mintDeep, fontWeight: 800, borderRadius: 9999,
+  padding: '6px 9px', whiteSpace: 'nowrap', minWidth: 54,
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -451,7 +451,7 @@ function AteListScreen({ planner, onBack, onGoLeftovers, onUndoAte, onRecreate }
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%' }}>
       <AppBar title="다먹은 요리" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>}
-        right={<button onClick={onGoLeftovers} style={mealSwitchBtn}>남은 요리</button>} />
+        right={<button onClick={onGoLeftovers} style={mealSwitchBtn}>남은요리</button>} />
       <div style={{ padding: 16 }}>
         {items.length === 0 ? (
           <div style={{ background: '#fff', borderRadius: 12, padding: 40, textAlign: 'center' }}>
