@@ -12,9 +12,8 @@ import {
 import { IngredientFilterModal } from "@/components/home/ingredient-filter-modal";
 import { RecipeCard } from "@/components/home/recipe-card";
 import { ContentState } from "@/components/shared/content-state";
-import { ModalHeader } from "@/components/shared/modal-header";
-import { OptionRow } from "@/components/shared/option-row";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { fetchJson } from "@/lib/api/fetch-json";
 import { useDiscoveryFilterStore } from "@/stores/discovery-filter-store";
 import type {
@@ -27,7 +26,6 @@ import type {
 } from "@/types/recipe";
 
 const SORT_OPTIONS: Array<{ label: string; value: RecipeSortKey }> = [
-  { label: "조회수순", value: "view_count" },
   { label: "좋아요순", value: "like_count" },
   { label: "저장순", value: "save_count" },
   { label: "플래너 등록순", value: "plan_count" },
@@ -39,8 +37,7 @@ type AsyncState = "loading" | "ready";
 export function HomeScreen() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [sort, setSort] = useState<RecipeSortKey>("view_count");
-  const [isSortMenuOpen, setSortMenuOpen] = useState(false);
+  const [sort, setSort] = useState<RecipeSortKey>("like_count");
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [themeState, setThemeState] = useState<AsyncState>("loading");
   const [ingredientState, setIngredientState] = useState<AsyncState>("loading");
@@ -50,7 +47,6 @@ export function HomeScreen() {
   const [activeThemeId, setActiveThemeId] = useState<string | null>(null);
   const [isIngredientModalOpen, setIngredientModalOpen] = useState(false);
   const recipeRequestIdRef = useRef(0);
-  const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const appliedIngredientIds = useDiscoveryFilterStore(
     (state) => state.appliedIngredientIds,
   );
@@ -87,38 +83,6 @@ export function HomeScreen() {
       window.history.replaceState({}, "", nextUrl);
     }
   }, [appliedIngredientIds]);
-
-  useEffect(() => {
-    if (!isSortMenuOpen) {
-      return;
-    }
-
-    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
-      if (!(event.target instanceof Node)) {
-        return;
-      }
-
-      if (!sortMenuRef.current?.contains(event.target)) {
-        setSortMenuOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setSortMenuOpen(false);
-      }
-    };
-
-    window.addEventListener("mousedown", handlePointerDown);
-    window.addEventListener("touchstart", handlePointerDown);
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("mousedown", handlePointerDown);
-      window.removeEventListener("touchstart", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isSortMenuOpen]);
 
   const loadThemes = useCallback(async () => {
     try {
@@ -194,10 +158,6 @@ export function HomeScreen() {
   const hasQuery = debouncedQuery.trim().length > 0;
   const hasIngredientFilter = appliedIngredientIds.length > 0;
   const hasActiveFilters = hasQuery || hasIngredientFilter;
-  const selectedSortLabel = useMemo(
-    () => SORT_OPTIONS.find((option) => option.value === sort)?.label ?? "조회수순",
-    [sort],
-  );
   const selectedTheme = useMemo(
     () => themes?.themes.find((theme) => theme.id === activeThemeId) ?? null,
     [activeThemeId, themes],
@@ -242,14 +202,10 @@ export function HomeScreen() {
     [appliedIngredientIds, setAppliedIngredientIds],
   );
 
-  const selectSort = useCallback((nextSort: RecipeSortKey) => {
-    setSort(nextSort);
-    setSortMenuOpen(false);
+  const selectSort = useCallback((nextSort: string) => {
+    setSort(nextSort as RecipeSortKey);
     setActiveThemeId(null);
   }, []);
-
-  const sortControlClassName =
-    "flex min-h-11 items-center gap-1 whitespace-nowrap rounded-full bg-[#F8F9FA] px-3 text-sm font-extrabold text-[#495057]";
 
   return (
     <>
@@ -290,15 +246,6 @@ export function HomeScreen() {
                   value={query}
                 />
               </label>
-
-              <QuickIngredientRail
-                appliedIngredientIds={appliedIngredientIds}
-                ingredients={quickIngredients}
-                isLoading={ingredientState === "loading"}
-                onClear={clearIngredientFilters}
-                onOpenModal={() => setIngredientModalOpen(true)}
-                onToggle={toggleQuickIngredient}
-              />
             </section>
 
             {screenState === "error" ? (
@@ -341,19 +288,23 @@ export function HomeScreen() {
                     </span>
                   </div>
                   {recipes?.items.length ? (
-                    <SortMenu
-                      buttonClassName={sortControlClassName}
-                      currentLabel={selectedSortLabel}
-                      isOpen={isSortMenuOpen}
-                      onClose={() => setSortMenuOpen(false)}
-                      onSelect={selectSort}
-                      onToggle={() => setSortMenuOpen((current) => !current)}
+                    <SortDropdown
+                      label="정렬 기준"
+                      onChange={selectSort}
                       options={SORT_OPTIONS}
-                      selectedValue={sort}
-                      sortMenuRef={sortMenuRef}
+                      value={sort}
                     />
                   ) : null}
                 </div>
+
+                <QuickIngredientRail
+                  appliedIngredientIds={appliedIngredientIds}
+                  ingredients={quickIngredients}
+                  isLoading={ingredientState === "loading"}
+                  onClear={clearIngredientFilters}
+                  onOpenModal={() => setIngredientModalOpen(true)}
+                  onToggle={toggleQuickIngredient}
+                />
 
                 {screenState === "loading" ? <RecipeListSkeleton /> : null}
 
@@ -394,20 +345,10 @@ export function HomeScreen() {
 
 function HomeAppBar() {
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-[#F1F3F5] bg-white/96 px-5 backdrop-blur">
-      <div className="grid h-9 w-9 place-items-center rounded-full bg-[#E6F8F7] text-sm font-black text-[#0B6F6C]">
-        채
-      </div>
+    <header className="sticky top-0 z-20 flex h-14 items-center justify-center border-b border-[#F1F3F5] bg-white/96 px-5 backdrop-blur">
       <div className="text-[18px] font-black tracking-normal text-[#0B6F6C]">
         homecook_
       </div>
-      <button
-        aria-label="장보기"
-        className="grid h-9 w-9 place-items-center rounded-full bg-[#F8F9FA] text-[#212529]"
-        type="button"
-      >
-        <BagIcon />
-      </button>
     </header>
   );
 }
@@ -617,149 +558,6 @@ function HomeBottomTab() {
   );
 }
 
-function SortMenu({
-  buttonClassName,
-  currentLabel,
-  isOpen,
-  onClose,
-  onSelect,
-  onToggle,
-  options,
-  selectedValue,
-  sortMenuRef,
-}: {
-  buttonClassName?: string;
-  currentLabel: string;
-  isOpen: boolean;
-  onClose: () => void;
-  onSelect: (value: RecipeSortKey) => void;
-  onToggle: () => void;
-  options: Array<{ label: string; value: RecipeSortKey }>;
-  selectedValue: RecipeSortKey;
-  sortMenuRef: React.RefObject<HTMLDivElement | null>;
-}) {
-  const [isDesktopView, setDesktopView] = useState(false);
-  const [openAbove, setOpenAbove] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const desktopMenuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const syncViewport = () => {
-      setDesktopView(window.innerWidth >= 768);
-    };
-
-    syncViewport();
-    window.addEventListener("resize", syncViewport);
-
-    return () => {
-      window.removeEventListener("resize", syncViewport);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen || !isDesktopView) {
-      setOpenAbove(false);
-      return;
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      const buttonRect = buttonRef.current?.getBoundingClientRect();
-      const menuRect = desktopMenuRef.current?.getBoundingClientRect();
-
-      if (!buttonRect || !menuRect) {
-        return;
-      }
-
-      const gap = 12;
-      const viewportHeight = window.innerHeight;
-      const spaceBelow = viewportHeight - buttonRect.bottom;
-      const spaceAbove = buttonRect.top;
-      const shouldOpenAbove =
-        spaceBelow < menuRect.height + gap && spaceAbove > spaceBelow;
-
-      setOpenAbove(shouldOpenAbove);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, [isDesktopView, isOpen]);
-
-  return (
-    <div className="relative" ref={sortMenuRef}>
-      <button
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-        aria-label={`정렬 기준 ${currentLabel}`}
-        ref={buttonRef}
-        className={
-          buttonClassName ??
-          "flex min-h-11 items-center gap-1 whitespace-nowrap bg-transparent text-sm font-semibold text-[var(--text-2)]"
-        }
-        onClick={onToggle}
-        type="button"
-      >
-        <span className="truncate">{currentLabel}</span>
-        <span
-          aria-hidden="true"
-          className={`shrink-0 text-[#495057] transition ${isOpen ? "rotate-180" : ""}`}
-        >
-          <ChevronIcon />
-        </span>
-      </button>
-      {isOpen && !isDesktopView ? (
-        <>
-          <button
-            aria-label="정렬 메뉴 닫기"
-            className="fixed inset-0 z-30 bg-[rgba(33,37,41,0.42)] backdrop-blur-[1px] md:hidden"
-            onClick={onClose}
-            type="button"
-          />
-          <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] rounded-t-[24px] border-t-2 border-t-[#0B6F6C] bg-white px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-16px_40px_rgba(33,37,41,0.16)] md:hidden">
-            <div className="mx-auto h-1 w-9 rounded-sm bg-[#DEE2E6]" />
-            <div className="mt-4">
-              <ModalHeader
-                description="모든 레시피 순서를 바꿔요"
-                onClose={onClose}
-                title="정렬 기준"
-              />
-            </div>
-            <div aria-label="정렬 기준" className="mt-4 space-y-2" role="listbox">
-              {options.map((option) => (
-                <OptionRow
-                  isSelected={option.value === selectedValue}
-                  key={`mobile-${option.value}`}
-                  label={option.label}
-                  onClick={() => onSelect(option.value)}
-                />
-              ))}
-            </div>
-          </div>
-        </>
-      ) : null}
-      {isOpen && isDesktopView ? (
-        <div
-          className={`absolute right-0 z-20 w-60 rounded-[16px] border border-[#E9ECEF] bg-white p-2 shadow-[0_12px_28px_rgba(33,37,41,0.14)] ${
-            openAbove ? "bottom-[calc(100%+10px)]" : "top-[calc(100%+10px)]"
-          }`}
-          ref={desktopMenuRef}
-        >
-          <div aria-label="정렬 기준" className="space-y-1" role="listbox">
-            {options.map((option) => (
-              <OptionRow
-                isSelected={option.value === selectedValue}
-                key={`desktop-${option.value}`}
-                label={option.label}
-                onClick={() => onSelect(option.value)}
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function SearchIcon() {
   return (
     <svg
@@ -774,40 +572,6 @@ function SearchIcon() {
     >
       <circle cx="11" cy="11" r="8" />
       <path d="m21 21-4.3-4.3" />
-    </svg>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 16 16"
-    >
-      <path d="M4 6l4 4 4-4" />
-    </svg>
-  );
-}
-
-function BagIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <path d="M6 7h12l-1 13H7L6 7Z" />
-      <path d="M9 7a3 3 0 0 1 6 0" />
     </svg>
   );
 }
