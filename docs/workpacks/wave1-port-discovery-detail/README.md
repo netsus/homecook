@@ -120,10 +120,10 @@ HOME과 RECIPE_DETAIL 화면의 Wave1 프로토타입 개선사항을 실제 서
 - UI risk: `anchor-extension` — HOME과 RECIPE_DETAIL 두 anchor screen의 정보 구조, CTA hierarchy, section 배치를 동시에 변경
 - Anchor screen dependency: `HOME`, `RECIPE_DETAIL`
 - Visual artifact: Stage 4/5에서 mobile 390px/320px screenshot evidence 생성
-  - `ui/designs/evidence/wave1-port-discovery-detail/home-mobile.png`
+  - `ui/designs/evidence/wave1-port-discovery-detail/home-mobile-default.png`
   - `ui/designs/evidence/wave1-port-discovery-detail/home-mobile-narrow.png`
-  - `ui/designs/evidence/wave1-port-discovery-detail/home-sort-dropdown.png`
-  - `ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile.png`
+  - `ui/designs/evidence/wave1-port-discovery-detail/home-sort-dropdown-open.png`
+  - `ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile-default.png`
   - `ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile-narrow.png`
   - `ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-hero-stats.png`
   - `ui/designs/evidence/wave1-port-discovery-detail/save-modal.png`
@@ -137,9 +137,9 @@ HOME과 RECIPE_DETAIL 화면의 Wave1 프로토타입 개선사항을 실제 서
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed)
 - [ ] N/A
 
 ## Source Links
@@ -203,21 +203,21 @@ HOME과 RECIPE_DETAIL 화면의 Wave1 프로토타입 개선사항을 실제 서
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > Stage 2는 N/A (UI-only slice). Stage 4~6에서 프론트/QA/디자인/closeout 항목을 닫는다.
 
-- [ ] HOME header 프로필/장바구니 제거 <!-- omo:id=discovery-home-header-cleanup;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME 배너 클릭 -> `/planner` 이동 <!-- omo:id=discovery-home-banner-planner;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME sort sheet -> SortDropdown 전환 <!-- omo:id=discovery-home-sort-dropdown;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME 재료 검색 칩 위치 재배치 <!-- omo:id=discovery-home-filter-chip-position;stage=4;scope=frontend;review=5,6 -->
-- [ ] HOME "재료로 거르기" -> "재료로 검색" 문구 변경 <!-- omo:id=discovery-home-filter-label;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL 별점/rating 제거 <!-- omo:id=discovery-detail-rating-removal;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL hero 영역 행동 metric 표시 (like/save/cook) <!-- omo:id=discovery-detail-hero-metrics;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL 하단 저장 버튼 제거 + 이미지 북마크 흡수 <!-- omo:id=discovery-detail-save-to-bookmark;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL 하단 CTA 2버튼 (플래너에 추가 + 요리하기) <!-- omo:id=discovery-detail-bottom-cta;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL 재료 탭 카테고리 헤더 제거 <!-- omo:id=discovery-detail-ingredient-header-removal;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPE_DETAIL 조리법 폰트 키움 <!-- omo:id=discovery-detail-step-font;stage=4;scope=frontend;review=5,6 -->
-- [ ] save modal 프리뷰 섹션 제거 + "저장" 버튼 문구 <!-- omo:id=discovery-save-modal-cleanup;stage=4;scope=frontend;review=5,6 -->
-- [ ] login provider 카카오/Apple 숨김 <!-- omo:id=discovery-login-provider-hide;stage=4;scope=frontend;review=5,6 -->
-- [ ] `loading / empty / error / unauthorized` 상태 점검 <!-- omo:id=discovery-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 이 슬라이스의 Vitest / Playwright 자동화 범위 구분 <!-- omo:id=discovery-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] mobile 390/320 HOME screenshot evidence <!-- omo:id=discovery-home-screenshot;stage=4;scope=frontend;review=5,6 -->
-- [ ] mobile 390/320 RECIPE_DETAIL screenshot evidence <!-- omo:id=discovery-detail-screenshot;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm verify:frontend` 통과 <!-- omo:id=discovery-verify-frontend;stage=4;scope=frontend;review=6 -->
+- [x] HOME header 프로필/장바구니 제거 <!-- omo:id=discovery-home-header-cleanup;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME 배너 클릭 -> `/planner` 이동 <!-- omo:id=discovery-home-banner-planner;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME sort sheet -> SortDropdown 전환 <!-- omo:id=discovery-home-sort-dropdown;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME 재료 검색 칩 위치 재배치 <!-- omo:id=discovery-home-filter-chip-position;stage=4;scope=frontend;review=5,6 -->
+- [x] HOME "재료로 거르기" -> "재료로 검색" 문구 변경 <!-- omo:id=discovery-home-filter-label;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL 별점/rating 제거 <!-- omo:id=discovery-detail-rating-removal;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL hero 영역 행동 metric 표시 (like/save/cook) <!-- omo:id=discovery-detail-hero-metrics;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL 하단 저장 버튼 제거 + 이미지 북마크 흡수 <!-- omo:id=discovery-detail-save-to-bookmark;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL 하단 CTA 2버튼 (플래너에 추가 + 요리하기) <!-- omo:id=discovery-detail-bottom-cta;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL 재료 탭 카테고리 헤더 제거 <!-- omo:id=discovery-detail-ingredient-header-removal;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPE_DETAIL 조리법 폰트 키움 <!-- omo:id=discovery-detail-step-font;stage=4;scope=frontend;review=5,6 -->
+- [x] save modal 프리뷰 섹션 제거 + "저장" 버튼 문구 <!-- omo:id=discovery-save-modal-cleanup;stage=4;scope=frontend;review=5,6 -->
+- [x] login provider 카카오/Apple 숨김 <!-- omo:id=discovery-login-provider-hide;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / unauthorized` 상태 점검 <!-- omo:id=discovery-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 Vitest / Playwright 자동화 범위 구분 <!-- omo:id=discovery-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] mobile 390/320 HOME screenshot evidence <!-- omo:id=discovery-home-screenshot;stage=4;scope=frontend;review=5,6 -->
+- [x] mobile 390/320 RECIPE_DETAIL screenshot evidence <!-- omo:id=discovery-detail-screenshot;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend` 통과 <!-- omo:id=discovery-verify-frontend;stage=4;scope=frontend;review=6 -->

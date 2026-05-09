@@ -80,10 +80,10 @@
       ],
       "design_generator_skip_reason": "변경이 프로토타입 기준의 정리(정보 밀도 축소, CTA 재배치)이므로 screenshot evidence 기반 authority로 충분하다. Stage 4에서 design-generator/design-critic 필요 여부를 재판단한다.",
       "evidence_artifact_refs": [
-        "ui/designs/evidence/wave1-port-discovery-detail/home-mobile.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/home-mobile-default.png",
         "ui/designs/evidence/wave1-port-discovery-detail/home-mobile-narrow.png",
-        "ui/designs/evidence/wave1-port-discovery-detail/home-sort-dropdown.png",
-        "ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/home-sort-dropdown-open.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile-default.png",
         "ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile-narrow.png",
         "ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-hero-stats.png",
         "ui/designs/evidence/wave1-port-discovery-detail/save-modal.png",
