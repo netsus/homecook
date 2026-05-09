@@ -1,0 +1,68 @@
+{
+  "slice_id": "wave1-port-foundation",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "manual",
+
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": [],
+    "stage2_na_reason": "UI-only slice. 공용 shell/primitive 정비만 수행하며 route handler, DB, status transition 변경이 없다."
+  },
+
+  "frontend": {
+    "required_routes": [],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": ["pnpm verify:frontend"],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "screenshot"
+    ],
+
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow",
+        "primitives-gallery"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/WAVE1_FOUNDATION-authority.md"
+      ],
+      "design_generator_skip_reason": "이 슬라이스는 신규 화면이 아닌 공용 primitive 정비다. design-generator/design-critic은 화면 단위 도구이므로 해당하지 않는다. 대신 Stage 4에서 primitive 단위 screenshot evidence를 생성하고 authority review에서 품질을 확인한다.",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/wave1-port-foundation/primitives-mobile.png",
+        "ui/designs/evidence/wave1-port-foundation/primitives-mobile-narrow.png"
+      ]
+    }
+  },
+
+  "external_smokes": [],
+  "blocked_conditions": [
+    "baemin-prototype-home-porting-appshell-conflict"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}
