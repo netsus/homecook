@@ -79,7 +79,7 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Contract-evolution PR #367 and Stage 1 docs PR #368 merged on 2026-05-10. Stage 2 backend implementation is in progress on feature/be-planner-column-customization. Backend covers dynamic /planner columns, /planner/columns CRUD, bootstrap x3, and GET/POST /meals dynamic column owner validation. Anchor-extension on PLANNER_WEEK still requires Stage 4/5 authority review.",
+  "notes": "Contract-evolution PR #367, Stage 1 docs PR #368, and Stage 2 backend PR #369 are merged. Stage 4 frontend implementation is in progress on feature/fe-planner-column-customization: SETTINGS column management, planner column API client, dynamic PLANNER_WEEK E2E coverage, and authority screenshots were added. Stage 5/6 Codex review and merge gate remain pending.",
   "out_of_scope": [
     "컬럼 순서 변경 (drag-and-drop reorder) — 1차 구현 범위 밖",
     "기존 사용자의 4번째 컬럼(간식) 자동 삭제",

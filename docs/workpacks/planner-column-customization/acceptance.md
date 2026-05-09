@@ -9,12 +9,12 @@
 
 ## Happy Path
 
-- [ ] SETTINGS 끼니 컬럼 관리에서 현재 컬럼 목록이 표시된다 <!-- omo:id=accept-column-list;stage=4;scope=frontend;review=5,6 -->
-- [ ] 컬럼 이름을 변경하면 PLANNER_WEEK에 즉시 반영된다 <!-- omo:id=accept-rename-reflect;stage=4;scope=frontend;review=5,6 -->
-- [ ] 컬럼을 추가하면 PLANNER_WEEK에 새 슬롯이 표시된다 <!-- omo:id=accept-add-reflect;stage=4;scope=frontend;review=5,6 -->
-- [ ] 빈 컬럼을 삭제하면 PLANNER_WEEK에서 해당 슬롯이 제거된다 <!-- omo:id=accept-delete-reflect;stage=4;scope=frontend;review=5,6 -->
+- [x] SETTINGS 끼니 컬럼 관리에서 현재 컬럼 목록이 표시된다 <!-- omo:id=accept-column-list;stage=4;scope=frontend;review=5,6 -->
+- [x] 컬럼 이름을 변경하면 PLANNER_WEEK에 즉시 반영된다 <!-- omo:id=accept-rename-reflect;stage=4;scope=frontend;review=5,6 -->
+- [x] 컬럼을 추가하면 PLANNER_WEEK에 새 슬롯이 표시된다 <!-- omo:id=accept-add-reflect;stage=4;scope=frontend;review=5,6 -->
+- [x] 빈 컬럼을 삭제하면 PLANNER_WEEK에서 해당 슬롯이 제거된다 <!-- omo:id=accept-delete-reflect;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
-- [ ] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
+- [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 - [x] GET /planner 응답의 columns가 사용자별 동적 목록을 반환한다 <!-- omo:id=accept-planner-dynamic-columns;stage=2;scope=backend;review=3,6 -->
 
 ## State / Policy
@@ -28,16 +28,16 @@
 
 ## Error / Permission
 
-- [ ] loading 상태가 있다 (컬럼 목록 로딩) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
-- [ ] error 상태가 있다 (API 실패) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
-- [ ] unauthorized 처리 흐름이 있다 (로그인 게이트) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
-- [ ] 409 COLUMN_LIMIT_REACHED — 5개 초과 추가 시도 시 적절한 안내가 있다 <!-- omo:id=accept-limit-reached;stage=4;scope=frontend;review=5,6 -->
-- [ ] 409 COLUMN_NAME_DUPLICATE — 중복 이름 시도 시 적절한 안내가 있다 <!-- omo:id=accept-name-duplicate;stage=4;scope=frontend;review=5,6 -->
-- [ ] 409 COLUMN_HAS_MEALS — 식사가 연결된 컬럼 삭제 시도 시 삭제 불가 안내가 있다 <!-- omo:id=accept-has-meals;stage=4;scope=frontend;review=5,6 -->
-- [ ] 409 MIN_COLUMN_REQUIRED — 마지막 1개 컬럼 삭제 시도 시 삭제 불가 안내가 있다 <!-- omo:id=accept-min-column-required;stage=4;scope=frontend;review=5,6 -->
+- [x] loading 상태가 있다 (컬럼 목록 로딩) <!-- omo:id=accept-loading;stage=4;scope=frontend;review=5,6 -->
+- [x] error 상태가 있다 (API 실패) <!-- omo:id=accept-error;stage=4;scope=frontend;review=5,6 -->
+- [x] unauthorized 처리 흐름이 있다 (로그인 게이트) <!-- omo:id=accept-unauthorized;stage=4;scope=frontend;review=5,6 -->
+- [x] 409 COLUMN_LIMIT_REACHED — 5개 초과 추가 시도 시 적절한 안내가 있다 <!-- omo:id=accept-limit-reached;stage=4;scope=frontend;review=5,6 -->
+- [x] 409 COLUMN_NAME_DUPLICATE — 중복 이름 시도 시 적절한 안내가 있다 <!-- omo:id=accept-name-duplicate;stage=4;scope=frontend;review=5,6 -->
+- [x] 409 COLUMN_HAS_MEALS — 식사가 연결된 컬럼 삭제 시도 시 삭제 불가 안내가 있다 <!-- omo:id=accept-has-meals;stage=4;scope=frontend;review=5,6 -->
+- [x] 409 MIN_COLUMN_REQUIRED — 마지막 1개 컬럼 삭제 시도 시 삭제 불가 안내가 있다 <!-- omo:id=accept-min-column-required;stage=4;scope=frontend;review=5,6 -->
 - [x] 422 — 이름이 빈 문자열이거나 30자 초과 시 적절한 에러 처리 <!-- omo:id=accept-invalid-name;stage=2;scope=backend;review=3,6 -->
 - [x] 404 — 존재하지 않는 컬럼 수정/삭제 시도 시 처리 <!-- omo:id=accept-not-found;stage=2;scope=backend;review=3,6 -->
-- [ ] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
+- [x] 로그인 게이트 후 return-to-action이 맞다 <!-- omo:id=accept-return-to-action;stage=4;scope=frontend;review=5,6 -->
 
 ## Data Integrity
 
@@ -86,10 +86,10 @@
 
 ### Playwright
 
-- [ ] SETTINGS 끼니 컬럼 관리 CRUD 전체 흐름 <!-- omo:id=accept-playwright-settings-crud;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK 동적 컬럼 렌더링 확인 <!-- omo:id=accept-playwright-planner-dynamic;stage=4;scope=frontend;review=5,6 -->
-- [ ] 에러 상태(409 제한, 중복) UI 반영 확인 <!-- omo:id=accept-playwright-error-states;stage=4;scope=frontend;review=5,6 -->
-- [ ] 로그인 게이트 후 return-to-action 확인 <!-- omo:id=accept-playwright-return-action;stage=4;scope=frontend;review=5,6 -->
+- [x] SETTINGS 끼니 컬럼 관리 CRUD 전체 흐름 <!-- omo:id=accept-playwright-settings-crud;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK 동적 컬럼 렌더링 확인 <!-- omo:id=accept-playwright-planner-dynamic;stage=4;scope=frontend;review=5,6 -->
+- [x] 에러 상태(409 제한, 중복) UI 반영 확인 <!-- omo:id=accept-playwright-error-states;stage=4;scope=frontend;review=5,6 -->
+- [x] 로그인 게이트 후 return-to-action 확인 <!-- omo:id=accept-playwright-return-action;stage=4;scope=frontend;review=5,6 -->
 
 ### Manual Only
 
