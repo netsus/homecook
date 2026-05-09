@@ -128,7 +128,7 @@ HOME과 RECIPE_DETAIL 화면의 Wave1 프로토타입 개선사항을 실제 서
   - `ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-hero-stats.png`
   - `ui/designs/evidence/wave1-port-discovery-detail/save-modal.png`
   - `ui/designs/evidence/wave1-port-discovery-detail/login-screen.png`
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes:
   - HOME + RECIPE_DETAIL은 anchor screen이므로 authority review 필수
   - `design-generator` / `design-critic` 사용 여부는 Stage 4에서 판단. anchor screen의 레이아웃 변경이므로 기본적으로 required이나, 변경이 프로토타입 기준의 정리(정보 밀도 축소, CTA 재배치)이므로 screenshot evidence 기반 authority로 충분할 수 있음
