@@ -16,6 +16,14 @@
   - 결과: 신규 기본 끼니 컬럼은 `아침 / 점심 / 저녁` 3개, SETTINGS에서 1~5개 범위로 이름 변경/추가/삭제 가능.
 - 따라서 이후 포팅 slice에서 플래너 컬럼 3개 기본값과 SETTINGS 컬럼 관리는 다시 만들지 말고, 이미 merged된 계약과 컴포넌트를 소비한다.
 - 기존 `docs/workpacks/baemin-prototype-home-porting`과 일부 HOME 범위가 겹칠 수 있다. HOME 관련 slice 착수 전 현재 구현과 해당 workpack 상태를 먼저 확인한다.
+- **Slice A `wave1-port-foundation`**: merged.
+  - Stage 1 docs PR: #372
+  - Stage 4~6 frontend/closeout PR: #373
+  - 결과: AppShell bottom-safe 조건부, Button/Chip 44px 터치 타겟, Card interactive cursor, ModalFooterActions min-h, SelectionChipRail px-1, SortDropdown primitive 신규 도입. Claude final authority gate pass, blocker 0.
+- **Slice B `wave1-port-discovery-detail`**: Stage 1 docs 작성 중.
+  - Branch: `docs/wave1-port-discovery-detail`
+  - Stage 1 Claude session: `3f4ca745-db71-4392-a3f1-4e3c4493e9bc`
+  - 범위: HOME header 단순화, sort dropdown 전환, filter chip 재배치, RECIPE_DETAIL 별점 제거/행동 metric/CTA 재구성, save modal 정리, login provider 축소. UI-only, Stage 2 N/A.
 
 ## Read First
 
@@ -58,7 +66,7 @@
 - Stage 4는 Claude가 FE 포팅을 수행한다. UI가 실제로 바뀌면 관련 `ui/designs/<SCREEN_ID>.md` 또는 authority/design closeout 메모도 현재 화면 기준으로 맞춘다.
 - Stage 5는 Codex가 public design review와 authority precheck를 수행한다. authority-required slice는 Claude `final_authority_gate`에서 blocker 0개 확인 후에만 `confirmed`로 닫는다.
 - Stage 6은 Codex가 code review, local verification, PR checks, merge까지 닫는다.
-- 사용자가 `$claude-delegate`를 명시하면 기존 Claude session `d0277030-99a8-46ec-a6e7-3b8013bd7682`에 `--resume`으로 붙는다. 가능하면 `session_attach_mode=resume`, `model=opus`, `effort=xhigh` 의도로 기록한다. 로컬 CLI가 `xhigh`를 받지 않으면 `high`로 대체하고 그 사실을 artifact에 남긴다.
+- 사용자가 `$claude-delegate`를 명시하면 기존 Claude session `3f4ca745-db71-4392-a3f1-4e3c4493e9bc`에 `--resume`으로 붙는다. 가능하면 `session_attach_mode=resume`, `model=opus`, `effort=xhigh` 의도로 기록한다. 로컬 CLI가 `xhigh`를 받지 않으면 `high`로 대체하고 그 사실을 artifact에 남긴다.
 
 ## Stage Flow Per Slice
 
@@ -474,20 +482,26 @@
 새 세션을 시작할 때 아래처럼 요청하면 된다.
 
 ```text
-docs/workpacks/wave1-service-porting-plan.md를 먼저 읽고, Wave1 실제 서비스 포팅을 Slice A부터 진행해줘.
-AGENTS.md 규칙에 따라 Stage 1은 Claude에게 workpack/acceptance를 맡기고, 필요한 경우 $claude-delegate로 기존 세션 d0277030-99a8-46ec-a6e7-3b8013bd7682에 --resume으로 붙어줘.
+docs/workpacks/wave1-service-porting-plan.md를 먼저 읽고, Wave1 실제 서비스 포팅을 Slice B(wave1-port-discovery-detail)부터 진행해줘.
+Slice A(wave1-port-foundation)는 merged. Slice B Stage 1 docs도 완료 — Stage 4 FE 포팅을 시작한다.
+AGENTS.md 규칙에 따라 Stage 4는 Claude에게 FE 포팅을 맡기고, 필요한 경우 $claude-delegate로 기존 세션 3f4ca745-db71-4392-a3f1-4e3c4493e9bc에 --resume으로 붙어줘.
 각 slice는 UI-only / 기존 API로 가능 / contract-evolution 필요 항목을 먼저 판정하고, 완료 후 $ship-pr-loop로 PR merge까지 진행해줘.
 ```
 
 ## First Next Action
 
-다음 세션의 첫 실제 작업은 `wave1-port-foundation` Stage 1이다.
+다음 세션의 첫 실제 작업은 `wave1-port-discovery-detail` Stage 4 FE 포팅이다.
 
-1. `pnpm branch:start -- --slice wave1-port-foundation --role docs`
-2. Claude에게 Stage 1 workpack 작성 위임
-3. `docs/workpacks/wave1-port-foundation/README.md`, `acceptance.md`, `automation-spec.json` 생성
-4. `.workflow-v2/work-items/wave1-port-foundation.json`과 `.workflow-v2/status.json` matching item 생성
-5. `docs/workpacks/README.md`에 `wave1-port-foundation` row가 없으면 등록하고 Status를 `docs`로 기록. 이미 있으면 `planned -> docs`
-6. `baemin-prototype-home-porting` / 현재 `AppShell` / bottom tab 구현과 충돌 여부를 dependency로 잠금
-7. 공통 UI primitive 범위를 실제 repo 파일 기준으로 좁힘
-8. internal 1.5 docs gate 통과 후 Stage 1 docs PR merge
+- Slice A `wave1-port-foundation`: merged (PR #372, #373).
+- Slice B `wave1-port-discovery-detail`: Stage 1 docs 완료, Stage 1.5 repair 완료.
+
+1. `pnpm branch:start -- --slice wave1-port-discovery-detail --role fe`
+2. Claude에게 Stage 4 FE 포팅 위임
+3. HOME header 단순화, sort dropdown 전환, filter chip 재배치
+4. RECIPE_DETAIL 별점 제거, hero metric 표시, 하단 CTA 2버튼 재구성
+5. save modal 프리뷰 제거 + 버튼 라벨 정리
+6. login provider 카카오/Apple 숨김
+7. Vitest + Playwright 테스트
+8. mobile 390/320 screenshot evidence 생성
+9. `pnpm verify:frontend` 통과
+10. `pnpm validate:pr-ready -- --slice wave1-port-discovery-detail --pr-body <pr-body-file> --mode frontend`

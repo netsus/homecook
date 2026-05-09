@@ -1,0 +1,101 @@
+{
+  "slice_id": "wave1-port-discovery-detail",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "manual",
+
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": [],
+    "stage2_na_reason": "UI-only slice. HOME/RECIPE_DETAIL/save modal/login의 UI 포팅만 수행하며, route handler, DB, status transition 변경이 없다. 기존 API 응답의 공식 필드(like_count, save_count, cook_count, plan_count, view_count, user_status)만 소비한다."
+  },
+
+  "frontend": {
+    "required_routes": [
+      "/",
+      "/recipe/[id]",
+      "/login"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:pr-ready -- --slice wave1-port-discovery-detail --pr-body <pr-body-file> --mode frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "screenshot",
+      "authority-report"
+    ],
+    "expected_tests": {
+      "vitest": [
+        "HOME sort dropdown 전환",
+        "HOME filter chip 위치/라벨",
+        "RECIPE_DETAIL metric 표시",
+        "RECIPE_DETAIL 하단 CTA 2버튼",
+        "save modal 프리뷰 제거 + 버튼 라벨",
+        "login provider 표시"
+      ],
+      "playwright": [
+        "HOME → RECIPE_DETAIL → save modal E2E",
+        "RECIPE_DETAIL → 플래너 추가 E2E",
+        "login provider 버튼 표시"
+      ]
+    },
+
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": ["HOME", "RECIPE_DETAIL"],
+      "required_screens": ["HOME", "RECIPE_DETAIL"],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default-home",
+        "mobile-narrow-home",
+        "mobile-default-detail",
+        "mobile-narrow-detail",
+        "sort-dropdown-open",
+        "hero-stats",
+        "save-modal",
+        "login-screen"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/WAVE1_DISCOVERY_DETAIL-authority.md"
+      ],
+      "design_generator_skip_reason": "변경이 프로토타입 기준의 정리(정보 밀도 축소, CTA 재배치)이므로 screenshot evidence 기반 authority로 충분하다. Stage 4에서 design-generator/design-critic 필요 여부를 재판단한다.",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/wave1-port-discovery-detail/home-mobile.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/home-mobile-narrow.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/home-sort-dropdown.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile-narrow.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-hero-stats.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/save-modal.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/login-screen.png"
+      ]
+    }
+  },
+
+  "external_smokes": [],
+  "blocked_conditions": [],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}

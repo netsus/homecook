@@ -1,0 +1,153 @@
+{
+  "id": "wave1-port-discovery-detail",
+  "title": "Wave1 Port Discovery Detail — HOME, RECIPE_DETAIL, save modal, login provider display",
+  "summary": "HOME과 RECIPE_DETAIL 화면의 Wave1 프로토타입 개선사항을 실제 서비스에 포팅하고, recipe save modal과 login provider display를 정리한다. 기존 공식 API 필드만 소비하는 UI-only 포팅이다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+
+  "goal": "HOME header 단순화, sort sheet->dropdown 전환, filter chip 재배치, 배너->플래너 링크, RECIPE_DETAIL 별점 제거/행동 metric 전환/하단 CTA 재구성, save modal 정리, login provider 축소를 기존 공식 API 계약 범위 안에서 UI-only로 포팅한다.",
+
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+
+  "dependencies": [
+    "wave1-port-foundation",
+    "baemin-prototype-home-porting",
+    "baemin-prototype-home-parity",
+    "baemin-prototype-recipe-detail-parity",
+    "baemin-style-home-retrofit",
+    "baemin-style-recipe-detail-retrofit",
+    "planner-column-customization"
+  ],
+
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/design/design-tokens.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/wave1-port-discovery-detail/README.md",
+      "docs/workpacks/wave1-port-discovery-detail/acceptance.md",
+      "docs/workpacks/wave1-port-discovery-detail/automation-spec.json",
+      "docs/workpacks/wave1-service-porting-plan.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md",
+      "ui/designs/prototypes/claude-design-260505-wave1/VNEXT_DESIGN_PRINCIPLES.md",
+      "ui/designs/prototypes/claude-design-260505-wave1/HANDOFF.md"
+    ]
+  },
+
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+
+  "verification": {
+    "required_checks": [
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:pr-ready -- --slice wave1-port-discovery-detail --pr-body <pr-body-file> --mode frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "screenshot",
+      "authority-report"
+    ]
+  },
+
+  "status": {
+    "lifecycle": "in_progress",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+
+  "notes": "Stage 1 docs created by Claude session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc. UI-only slice — Stage 2 N/A. anchor-extension risk: HOME + RECIPE_DETAIL 두 anchor screen의 정보 구조/CTA hierarchy 변경. 기존 API 공식 필드(like_count, save_count, cook_count, plan_count, view_count, user_status)만 소비. login provider 숨김은 FE-only, Supabase config 변경은 contract evolution candidate. closeout_phase=collecting",
+
+  "closeout": {
+    "phase": "collecting",
+    "docs_projection": {
+      "roadmap_lifecycle": "in_progress",
+      "design_status": "temporary",
+      "delivery_checklist": "pending",
+      "design_authority": "pending",
+      "acceptance": "pending",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "pending",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": []
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending",
+      "approval_state": "not_started",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": null
+    },
+    "repair_summary": {
+      "codex_repairable_count": 0,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": null,
+      "evidence_sources": []
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-09T21:25:09Z",
+      "status_synced_at": "2026-05-09T21:25:09Z",
+      "pr_body_synced_at": null
+    }
+  },
+
+  "out_of_scope": [
+    "PLANNER_WEEK, SHOPPING, COOK_MODE 화면 변경 (Slice C~D)",
+    "PANTRY, MYPAGE, SETTINGS 화면 변경 (Slice E~F)",
+    "API/DB/status/endpoint/field 추가 또는 변경",
+    "새 npm dependency 추가",
+    "prototype mint/Jua/asset 도입",
+    "Supabase auth provider config 변경",
+    "플래너 컬럼 CRUD (planner-column-customization에서 완료)",
+    "HOME 전용 bottom tab 구조 변경 (baemin-prototype-home-porting 소유)"
+  ],
+
+  "open_questions": []
+}
