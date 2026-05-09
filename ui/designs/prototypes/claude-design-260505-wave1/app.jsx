@@ -140,7 +140,7 @@ function App() {
 
   // Routing helpers
   const goTab = (tab) => setRoute({ tab });
-  const openRecipe = (id) => setRoute({ ...route, detail: id });
+  const openRecipe = (id) => setRoute({ tab: route.tab || 'home', detail: id, page: null, pageArgs: null });
   const backFromDetail = () => setRoute({ ...route, detail: null, page: null });
   const goPage = (page, args = {}) => setRoute({ ...route, page, pageArgs: args });
   const backFromPage = () => setRoute({ ...route, page: null, pageArgs: null });
@@ -304,7 +304,7 @@ function App() {
   if (route.page === 'login') {
     content = <LoginScreen returnTo={pa.returnTo} onBack={backFromPage} onLogin={completeLogin} />;
   } else if (route.page === 'menu-add') {
-    content = <MenuAddScreen presetDate={pa.date} presetSlot={pa.slot} planner={planner} pantry={pantry}
+    content = <MenuAddScreen presetDate={pa.date} presetSlot={pa.slot} initialMode={pa.mode} planner={planner} pantry={pantry}
       onBack={backFromPage}
       onPickRecipe={(id) => {
         // Wave 1.5: planner slot로 추가하는 흐름은 PlanningServingsModal을 거친다.
@@ -428,8 +428,10 @@ function App() {
       onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })}
       onCreateShopping={() => goPage('shopping-create')}
       onCookList={() => goPage('cook-list')}
-      onMenuAdd={(date, slot) => goPage('menu-add', { date, slot })}
+      onMenuAdd={(date, slot, mode) => goPage('menu-add', { date, slot, mode })}
       onGoManual={(date, slot) => goPage('manual-create', { date, slot })}
+      onGoYtImport={(date, slot) => goPage('yt-import', { date, slot })}
+      onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot })}
       onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })} />;
 
 
@@ -490,8 +492,10 @@ function App() {
         onCreateShopping={() => goPage('shopping-create')}
         onCookList={() => goPage('cook-list')}
         onOpenMeal={(date, slot) => goPage('meal-detail', { date, slot })}
-        onMenuAdd={(date, slot) => goPage('menu-add', date && slot ? { date, slot } : {})}
+        onMenuAdd={(date, slot, mode) => goPage('menu-add', date && slot ? { date, slot, mode } : { mode })}
         onGoManual={(date, slot) => goPage('manual-create', { date, slot })}
+        onGoYtImport={(date, slot) => goPage('yt-import', { date, slot })}
+        onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot })}
         onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })}
       />
     );
@@ -507,7 +511,7 @@ function App() {
   let desktopPageContent = null;
   if (route.page === 'menu-add') {
     desktopPageContent = <DesktopMenuAddScreen
-      presetDate={pa.date} presetSlot={pa.slot} planner={planner} pantry={pantry}
+      presetDate={pa.date} presetSlot={pa.slot} initialMode={pa.mode} planner={planner} pantry={pantry}
       onBack={backFromPage}
       onPickRecipe={(id) => {
         if (pa.date && pa.slot) setPlanningServings({ recipeId: id, presetDate: pa.date, presetSlot: pa.slot });

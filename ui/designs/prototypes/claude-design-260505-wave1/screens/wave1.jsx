@@ -106,9 +106,9 @@ const socialBtn = (bg, fg, border = 'none') => ({
 // MENU_ADD — 식사 추가 방식 선택 hub + 4 pickers
 // host: planner slot + (presetDate, presetSlot)
 // ─────────────────────────────────────────────────────────────
-function MenuAddScreen({ presetDate, presetSlot, planner, pantry, onBack, onPickRecipe, onGoManual, onGoYtImport, showToast }) {
+function MenuAddScreen({ presetDate, presetSlot, initialMode, planner, pantry, onBack, onPickRecipe, onGoManual, onGoYtImport, showToast }) {
   // mode: 'hub' | 'search' | 'books' | 'pantry-match'
-  const [mode, setMode] = useState_W('hub');
+  const [mode, setMode] = useState_W(initialMode || 'hub');
   const slotLabel = presetDate && presetSlot ? `${presetDate} ${presetSlot}` : '플래너';
 
   if (mode === 'search') {
@@ -514,7 +514,7 @@ function ManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCreated, s
   };
 
   return (
-    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
+    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 120 }}>
       <AppBar title="직접 등록" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>} />
       {/* 기본 정보 */}
       <Section title="기본 정보">
@@ -607,10 +607,10 @@ function ManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCreated, s
       </Section>
 
       <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16,
+        position: 'sticky', bottom: 0, left: 0, right: 0, padding: 16,
         background: '#fff', borderTop: `1px solid ${T.border}`,
       }}>
-        <Button full disabled={!valid} onClick={submit}>등록하고 다음 단계 →</Button>
+        <Button full disabled={!valid} onClick={submit}>완료</Button>
       </div>
 
       {ingModal && <IngredientPickerModal
@@ -646,13 +646,6 @@ function IngredientPickerModal({ selected, onConfirm, onClose }) {
     }
   };
 
-  const updateAmount = (ingName, amount) => {
-    setPicks(picks.map(p => p.name === ingName ? { ...p, amount } : p));
-  };
-  const setUnit = (ingName, unit) => {
-    setPicks(picks.map(p => p.name === ingName ? { ...p, unit } : p));
-  };
-
   const filtered = search.trim()
     ? Object.values(DEMO_INGS).flat().filter(n => n.includes(search.trim()))
     : (DEMO_INGS[activeCat] || []);
@@ -661,10 +654,11 @@ function IngredientPickerModal({ selected, onConfirm, onClose }) {
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9000,
       background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'flex-end',
+      justifyContent: 'center', padding: '0 16px 12px',
     }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{
-        width: '100%', maxHeight: '85vh', background: '#fff',
-        borderRadius: '20px 20px 0 0', display: 'flex', flexDirection: 'column',
+        width: '100%', maxWidth: 420, maxHeight: '85vh', background: '#fff',
+        borderRadius: 20, display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
       }}>
         {/* Header */}
@@ -680,21 +674,27 @@ function IngredientPickerModal({ selected, onConfirm, onClose }) {
 
         {/* Category chips */}
         {!search.trim() && (
-          <div style={{ padding: '10px 20px 6px', display: 'flex', gap: 6, overflowX: 'auto' }}>
+          <div style={{ padding: '10px 20px 6px' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: T.text3, marginBottom: 8 }}>카테고리</div>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
             {categories.map(cat => (
               <button key={cat} onClick={() => setActiveCat(cat)} style={{
-                padding: '7px 14px', borderRadius: 9999, whiteSpace: 'nowrap',
-                border: activeCat === cat ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
-                background: activeCat === cat ? T.mintSoft : '#fff',
-                color: activeCat === cat ? T.mintDeep : T.text2,
-                fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+                padding: '8px 13px', borderRadius: 8, whiteSpace: 'nowrap',
+                border: activeCat === cat ? `1.5px solid ${T.mintDeep}` : '1px solid transparent',
+                background: activeCat === cat ? T.mint : T.surfaceFill,
+                color: activeCat === cat ? '#fff' : T.text2,
+                fontSize: 12, fontWeight: 800, cursor: 'pointer', flexShrink: 0,
               }}>{cat}</button>
             ))}
+            </div>
           </div>
         )}
 
         {/* Ingredient grid */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '10px 20px' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: T.text3, marginBottom: 8 }}>
+            재료 선택
+          </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {filtered.map(ingName => {
               const sel = isSelected(ingName);
@@ -711,29 +711,24 @@ function IngredientPickerModal({ selected, onConfirm, onClose }) {
           </div>
         </div>
 
-        {/* Selected items with quantity inputs */}
+        {/* Selected items — 양 입력은 직접 등록 재료 화면에서 처리 */}
         {picks.length > 0 && (
-          <div style={{ padding: '10px 20px', borderTop: `1px solid ${T.border}`, maxHeight: 180, overflowY: 'auto' }}>
+          <div style={{ padding: '10px 20px', borderTop: `1px solid ${T.border}`, maxHeight: 150, overflowY: 'auto' }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: T.text3, marginBottom: 8 }}>
-              선택된 재료 ({picks.length}개) — 양 입력
+              선택된 재료 ({picks.length}개)
             </div>
-            {picks.map(p => (
-              <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 13, color: T.ink, fontWeight: 600, flex: 1 }}>{p.name}</span>
-                <input type="number" value={p.amount} onChange={e => updateAmount(p.name, e.target.value)}
-                  placeholder="양" style={{ ...inp, width: 70, textAlign: 'center', padding: '6px 8px', fontSize: 13 }} />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-                  {['g', 'ml'].map(unit => (
-                    <button key={unit} onClick={() => setUnit(p.name, unit)} style={{
-                      padding: '6px 9px', borderRadius: 8, fontSize: 12, fontWeight: 800, cursor: 'pointer',
-                      border: `1px solid ${p.unit === unit ? T.mint : T.border}`,
-                      background: p.unit === unit ? T.mintSoft : '#fff',
-                      color: p.unit === unit ? T.mintDeep : T.text2,
-                    }}>{unit}</button>
-                  ))}
-                </div>
-              </div>
-            ))}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {picks.map(p => (
+                <button key={p.name} onClick={() => toggle(p.name)} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '6px 10px', borderRadius: 9999,
+                  border: `1px solid ${T.mint}`, background: T.mintSoft,
+                  color: T.mintDeep, fontSize: 12, fontWeight: 800, cursor: 'pointer',
+                }}>
+                  {p.name}<span style={{ color: T.text3 }}>×</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

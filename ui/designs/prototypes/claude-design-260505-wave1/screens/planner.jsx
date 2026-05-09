@@ -3,7 +3,7 @@
 const { useState: useState_P } = React;
 
 // vNext S4 — 식사 추가 옵션 모달 (모바일)
-function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual }) {
+function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers }) {
   const [query, setQuery] = useState_P('');
   const options = [
     { id: 'recipebook', label: '레시피북에서 추가', icon: '📖' },
@@ -24,7 +24,7 @@ function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual }) {
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
-          onFocus={() => { onClose(); onMenuAdd(date, slot); }}
+          onFocus={() => { onClose(); onMenuAdd(date, slot, 'search'); }}
           placeholder="레시피 검색"
           style={{
             flex: 1, border: 'none', background: 'transparent', outline: 'none',
@@ -38,11 +38,20 @@ function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual }) {
           <button key={o.id} onClick={() => {
             onClose();
             if (o.id === 'manual') {
-              // CONTRACT_CHECK: 직접 등록 경로 — S5에서 직접 manual-create callback 연결 필요 — vNext에서는 UI shape만
-              onGoManual?.(date, slot) || onMenuAdd(date, slot);
+              if (onGoManual) onGoManual(date, slot);
+              else onMenuAdd(date, slot);
+            } else if (o.id === 'recipebook') {
+              onMenuAdd(date, slot, 'books');
+            } else if (o.id === 'pantry') {
+              onMenuAdd(date, slot, 'pantry-match');
+            } else if (o.id === 'leftover') {
+              if (onGoLeftovers) onGoLeftovers(date, slot);
+              else onMenuAdd(date, slot, 'search');
+            } else if (o.id === 'youtube') {
+              if (onGoYtImport) onGoYtImport(date, slot);
+              else onMenuAdd(date, slot, 'search');
             } else {
-              // S4는 기존 menu-add 라우트로 폴백
-              onMenuAdd(date, slot);
+              onMenuAdd(date, slot, 'search');
             }
           }} style={{
             display: 'flex', alignItems: 'center', gap: 10,
@@ -60,7 +69,7 @@ function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual }) {
   );
 }
 
-function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, onOpenMeal, onCreateShopping, onCookList, onMenuAdd, onGoManual }) {
+function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, onOpenMeal, onCreateShopping, onCookList, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers }) {
   const keys = Object.keys(planner);
   const todayK = keys[todayIdx];
   // vNext S4 — week navigation (prototype: label만 변경, 데이터는 동일)
@@ -75,6 +84,21 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
     end.setDate(end.getDate() + 6);
     return `${base.getMonth()+1}월 ${base.getDate()}일 — ${end.getMonth()+1}월 ${end.getDate()}일`;
   }, [weekOffset]);
+
+  const formatWeekRange = (offset) => {
+    const base = new Date(WEEK_START);
+    base.setDate(base.getDate() + offset * 7);
+    const end = new Date(base);
+    end.setDate(end.getDate() + 6);
+    return `${base.getMonth()+1}.${base.getDate()} - ${end.getMonth()+1}.${end.getDate()}`;
+  };
+  const weekName = (offset) => (
+    offset === 0 ? '이번 주' :
+    offset === 1 ? '다음 주' :
+    offset === -1 ? '지난 주' :
+    offset > 1 ? `${offset}주 뒤` : `${Math.abs(offset)}주 전`
+  );
+  const weekChoices = [weekOffset - 2, weekOffset - 1, weekOffset, weekOffset + 1, weekOffset + 2];
 
   const stats = React.useMemo(() => {
     let total = 0,cooked = 0,shopped = 0;
@@ -111,6 +135,28 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
             background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
             fontSize: 18, color: T.text2,
           }}>›</button>
+        </div>
+        {/* vNext follow-up: MVP처럼 가로 스크롤로 주간 이동 */}
+        <div style={{
+          display: 'flex', gap: 8, overflowX: 'auto', padding: '4px 0 12px',
+          scrollSnapType: 'x proximity', scrollbarWidth: 'none',
+        }}>
+          {weekChoices.map((offset) => {
+            const active = offset === weekOffset;
+            return (
+              <button key={offset} onClick={() => setWeekOffset(offset)} style={{
+                flex: '0 0 auto', minWidth: 118, scrollSnapAlign: 'start',
+                padding: '9px 12px', borderRadius: 10,
+                border: active ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+                background: active ? T.mintSoft : '#fff',
+                color: active ? T.mintDeep : T.text2,
+                textAlign: 'left', cursor: 'pointer',
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 800 }}>{weekName(offset)}</div>
+                <div style={{ fontSize: 11, marginTop: 2, color: active ? T.mintDeep : T.text3 }}>{formatWeekRange(offset)}</div>
+              </button>
+            );
+          })}
         </div>
         <div style={{ fontSize: 20, fontWeight: 700, color: T.ink, marginBottom: 12, fontFamily: T.fontBrand }}>
           {stats.total}개 음식 계획 중
@@ -258,6 +304,8 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
           onClose={() => setMealAddModal(null)}
           onMenuAdd={onMenuAdd}
           onGoManual={onGoManual}
+          onGoYtImport={onGoYtImport}
+          onGoLeftovers={onGoLeftovers}
         />
       )}
     </div>);

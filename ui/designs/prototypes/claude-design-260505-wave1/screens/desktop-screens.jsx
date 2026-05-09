@@ -223,7 +223,7 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
 }
 
 // vNext S4 — DesktopPlanner: week nav, 이모지 제거, 상태 배지 제거, 요리하기 제거, 식사추가 다이얼로그
-function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList, onOpenMeal, onGoManual }) {
+function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList, onOpenMeal, onGoManual, onGoYtImport, onGoLeftovers }) {
   const days = Object.keys(planner);
   const slots = ['아침', '점심', '저녁'];
   // vNext S4 — week navigation (prototype: label만 변경)
@@ -255,6 +255,20 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
   }, [days, weekOffset]);
 
   const weekLabel = weekOffset === 0 ? '이번 주 식단' : weekOffset === 1 ? '다음 주 식단' : weekOffset === -1 ? '지난 주 식단' : '식단';
+  const weekName = (offset) => (
+    offset === 0 ? '이번 주' :
+    offset === 1 ? '다음 주' :
+    offset === -1 ? '지난 주' :
+    offset > 1 ? `${offset}주 뒤` : `${Math.abs(offset)}주 전`
+  );
+  const formatWeekRange = (offset) => {
+    const base = new Date(WEEK_START);
+    base.setDate(base.getDate() + offset * 7);
+    const end = new Date(base);
+    end.setDate(end.getDate() + 6);
+    return `${base.getMonth()+1}.${base.getDate()} - ${end.getMonth()+1}.${end.getDate()}`;
+  };
+  const weekChoices = [weekOffset - 2, weekOffset - 1, weekOffset, weekOffset + 1, weekOffset + 2];
 
   // 식사 추가 다이얼로그 옵션
   const mealAddOptions = [
@@ -289,6 +303,29 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
           background: T.ink, color: '#fff', border: 'none', padding: '10px 16px',
           borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
         }}>장보기</button>
+      </div>
+
+      {/* vNext follow-up: MVP처럼 가로 스크롤로 주간 이동 */}
+      <div style={{
+        display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 14,
+        marginBottom: 8, scrollSnapType: 'x proximity', scrollbarWidth: 'none',
+      }}>
+        {weekChoices.map((offset) => {
+          const active = offset === weekOffset;
+          return (
+            <button key={offset} onClick={() => setWeekOffset(offset)} style={{
+              flex: '0 0 auto', minWidth: 132, scrollSnapAlign: 'start',
+              padding: '10px 12px', borderRadius: 10,
+              border: active ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+              background: active ? T.mintSoft : '#fff',
+              color: active ? T.mintDeep : T.text2,
+              cursor: 'pointer', textAlign: 'left',
+            }}>
+              <div style={{ fontSize: 12, fontWeight: 800 }}>{weekName(offset)}</div>
+              <div style={{ fontSize: 11, marginTop: 2, color: active ? T.mintDeep : T.text3 }}>{formatWeekRange(offset)}</div>
+            </button>
+          );
+        })}
       </div>
 
       {/* Weekly summary cards */}
@@ -429,7 +466,7 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
               {Icon.search()}
               <input
                 placeholder="레시피 검색"
-                onFocus={() => { const d = mealAddDialog; setMealAddDialog(null); onMenuAdd(d.date, d.slot); }}
+                onFocus={() => { const d = mealAddDialog; setMealAddDialog(null); onMenuAdd(d.date, d.slot, 'search'); }}
                 style={{
                   flex: 1, border: 'none', background: 'transparent', outline: 'none',
                   fontSize: 14, color: T.ink, fontFamily: T.fontUI,
@@ -443,10 +480,20 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
                   const d = mealAddDialog;
                   setMealAddDialog(null);
                   if (o.id === 'manual') {
-                    // CONTRACT_CHECK: 직접 등록 경로 — S5에서 직접 manual-create callback 연결 필요 — vNext에서는 UI shape만
-                    onGoManual?.(d.date, d.slot) || onMenuAdd(d.date, d.slot);
+                    if (onGoManual) onGoManual(d.date, d.slot);
+                    else onMenuAdd(d.date, d.slot);
+                  } else if (o.id === 'recipebook') {
+                    onMenuAdd(d.date, d.slot, 'books');
+                  } else if (o.id === 'pantry') {
+                    onMenuAdd(d.date, d.slot, 'pantry-match');
+                  } else if (o.id === 'leftover') {
+                    if (onGoLeftovers) onGoLeftovers(d.date, d.slot);
+                    else onMenuAdd(d.date, d.slot, 'search');
+                  } else if (o.id === 'youtube') {
+                    if (onGoYtImport) onGoYtImport(d.date, d.slot);
+                    else onMenuAdd(d.date, d.slot, 'search');
                   } else {
-                    onMenuAdd(d.date, d.slot);
+                    onMenuAdd(d.date, d.slot, 'search');
                   }
                 }} style={{
                   display: 'flex', alignItems: 'center', gap: 10,
@@ -1035,8 +1082,9 @@ function DesktopIngredientFilterDialog({ value = [], onApply, onClose }) {
 }
 
 // Desktop: MENU_ADD (P1.1)
-function DesktopMenuAddScreen({ presetDate, presetSlot, planner, pantry, onBack, onPickRecipe, onGoManual, onGoYtImport, showToast }) {
-  const [tab, setTab] = dUseState('search');
+function DesktopMenuAddScreen({ presetDate, presetSlot, initialMode, planner, pantry, onBack, onPickRecipe, onGoManual, onGoYtImport, showToast }) {
+  const initialTab = initialMode === 'books' ? 'book' : initialMode === 'pantry-match' ? 'pantry' : initialMode === 'search' ? 'search' : 'search';
+  const [tab, setTab] = dUseState(initialTab);
   const slotLabel = presetDate && presetSlot ? `${presetDate} ${presetSlot}` : '플래너';
   const tabs = [
     { k: 'search', label: '레시피 검색', emoji: '🔎' },
@@ -2355,7 +2403,7 @@ function DesktopManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCre
           background: valid ? T.mint : T.surfaceFill,
           color: valid ? '#fff' : T.text4,
           fontSize: 13, fontWeight: 800, cursor: valid ? 'pointer' : 'default',
-        }}>등록 + 플래너 추가</button>
+        }}>완료</button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 24, alignItems: 'start' }}>
