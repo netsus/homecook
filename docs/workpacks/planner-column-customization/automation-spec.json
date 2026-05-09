@@ -1,0 +1,102 @@
+{
+  "slice_id": "planner-column-customization",
+  "execution_mode": "autonomous",
+  "risk_class": "medium",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [
+      "GET /api/v1/planner/columns",
+      "POST /api/v1/planner/columns",
+      "PATCH /api/v1/planner/columns/{column_id}",
+      "DELETE /api/v1/planner/columns/{column_id}",
+      "GET /api/v1/meals",
+      "POST /api/v1/meals"
+    ],
+    "invariants": [
+      "api-envelope-format",
+      "authenticated-only",
+      "owner-authorization",
+      "column-count-min-1",
+      "column-count-max-5",
+      "column-name-unique-per-user",
+      "column-name-trim-before-check",
+      "column-name-length-1-30",
+      "column-delete-fk-guard",
+      "column-delete-reorder-sort",
+      "column-add-sort-order-append",
+      "bootstrap-three-columns",
+      "meals-dynamic-column-owner-check",
+      "min-column-required"
+    ],
+    "verify_commands": [
+      "pnpm verify:backend"
+    ],
+    "required_test_targets": [
+      "tests/planner-column-customization.backend.test.ts"
+    ]
+  },
+  "frontend": {
+    "required_routes": [
+      "/settings",
+      "/planner"
+    ],
+    "required_states": [
+      "loading",
+      "empty:na",
+      "error",
+      "read-only:na",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "trace.zip",
+      "screenshot"
+    ],
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": [
+        "PLANNER_WEEK"
+      ],
+      "required_screens": [
+        "PLANNER_WEEK",
+        "SETTINGS"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": true,
+      "critic_artifact": "ui/designs/critiques/PLANNER_WEEK-column-customization-critique.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default",
+        "mobile-narrow",
+        "planner-3-column",
+        "planner-5-column",
+        "settings-column-list"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/PLANNER_WEEK-column-customization-authority.md"
+      ]
+    }
+  },
+  "external_smokes": [
+    "pnpm dev:local-supabase",
+    "pnpm dev:demo"
+  ],
+  "blocked_conditions": [
+    "official-doc-conflict",
+    "meal-plan-columns-table-missing",
+    "settings-screen-missing"
+  ],
+  "max_fix_rounds": {
+    "backend": 4,
+    "frontend": 4
+  }
+}

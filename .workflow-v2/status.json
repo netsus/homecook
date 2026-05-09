@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-04T12:21:06Z",
+  "updated_at": "2026-05-10T00:00:00Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -831,6 +831,21 @@
         "git diff --check"
       ],
       "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs merged via PR #350. Stage 2/3 N/A (prototype-only). Stage 4 frontend implemented by Claude through resume session bbe4b815-9a73-4886-b3d4-5b0caa279bc8, then Claude resumed after provider reset and repaired DesktopHome Unicode placeholder rendering. Stage 5 lightweight design check absorbed in Codex Stage 6; authority-required=false, Design Status confirmed. Local diff, workflow-v2, workpack, split HTML, closeout sync, and headless Chrome Home/Pantry DOM checks passed. closeout_phase=completed closeout_recovery=manual_patch:0|ci_resync:0 closeout_recovery_detail=manual_patch:0|ci_resync:0 closeout_repair=codex:0|claude:2|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,PR body last_recovery_at=2026-05-07T19:33:38Z"
+    },
+    {
+      "id": "planner-column-customization",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/planner-column-customization",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:backend",
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck"
+      ],
+      "notes": "Stage 1 docs authoring for planner column customization. Contract-evolution PR #367 merged on 2026-05-10. Changes meal_plan_columns from 4-fixed to user-managed (3 default, 1-5 range). Anchor-extension on PLANNER_WEEK."
     }
   ]
 }
