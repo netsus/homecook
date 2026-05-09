@@ -17,6 +17,14 @@ import {
   updateSettings,
   type UserProfileData,
 } from "@/lib/api/mypage";
+import {
+  createPlannerColumn,
+  deletePlannerColumn,
+  fetchPlannerColumns,
+  isPlannerApiError,
+  updatePlannerColumn,
+} from "@/lib/api/planner";
+import type { PlannerColumnData } from "@/types/planner";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -52,6 +60,24 @@ export function SettingsScreen({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const [plannerColumns, setPlannerColumns] = useState<PlannerColumnData[]>([]);
+  const [columnsLoading, setColumnsLoading] = useState(true);
+  const [columnsError, setColumnsError] = useState<string | null>(null);
+
+  const [showColumnAddSheet, setShowColumnAddSheet] = useState(false);
+  const [columnAddInput, setColumnAddInput] = useState("");
+  const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const [columnAddError, setColumnAddError] = useState<string | null>(null);
+
+  const [renameTarget, setRenameTarget] = useState<PlannerColumnData | null>(null);
+  const [columnRenameInput, setColumnRenameInput] = useState("");
+  const [isRenamingColumn, setIsRenamingColumn] = useState(false);
+  const [columnRenameError, setColumnRenameError] = useState<string | null>(null);
+
+  const [deleteColumnTarget, setDeleteColumnTarget] = useState<PlannerColumnData | null>(null);
+  const [isDeletingColumn, setIsDeletingColumn] = useState(false);
+  const [deleteColumnError, setDeleteColumnError] = useState<string | null>(null);
 
   const loadProfile = useCallback(async () => {
     setViewState("loading");
@@ -129,10 +155,31 @@ export function SettingsScreen({
     };
   }, [initialAuthenticated]);
 
+  const loadColumns = useCallback(async () => {
+    setColumnsLoading(true);
+    setColumnsError(null);
+    try {
+      const result = await fetchPlannerColumns();
+      setPlannerColumns(
+        [...result.columns].sort((a, b) => a.sort_order - b.sort_order),
+      );
+    } catch (error) {
+      if (isPlannerApiError(error) && error.status === 401) {
+        return;
+      }
+      setColumnsError(
+        isPlannerApiError(error) ? error.message : "끼니 컬럼을 불러오지 못했어요",
+      );
+    } finally {
+      setColumnsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (authState !== "authenticated") return;
     void loadProfile();
-  }, [authState, loadProfile]);
+    void loadColumns();
+  }, [authState, loadProfile, loadColumns]);
 
   const handleToggleWakeLock = useCallback(async () => {
     if (!profile) return;
@@ -225,6 +272,92 @@ export function SettingsScreen({
     setNicknameError(null);
     setShowNicknameSheet(true);
   }, [profile]);
+
+  const handleAddColumn = useCallback(async () => {
+    const trimmed = columnAddInput.trim();
+    if (trimmed.length < 1 || trimmed.length > 30) return;
+
+    setColumnAddError(null);
+    setIsAddingColumn(true);
+    try {
+      const result = await createPlannerColumn(trimmed);
+      setPlannerColumns((prev) =>
+        [...prev, result.column].sort((a, b) => a.sort_order - b.sort_order),
+      );
+      setShowColumnAddSheet(false);
+      setColumnAddInput("");
+    } catch (error) {
+      if (isPlannerApiError(error)) {
+        setColumnAddError(error.message);
+      } else {
+        setColumnAddError("끼니 컬럼을 추가하지 못했어요");
+      }
+    } finally {
+      setIsAddingColumn(false);
+    }
+  }, [columnAddInput]);
+
+  const handleRenameColumn = useCallback(async () => {
+    if (!renameTarget) return;
+    const trimmed = columnRenameInput.trim();
+    if (trimmed.length < 1 || trimmed.length > 30) return;
+
+    setColumnRenameError(null);
+    setIsRenamingColumn(true);
+    try {
+      const result = await updatePlannerColumn(renameTarget.id, trimmed);
+      setPlannerColumns((prev) =>
+        prev.map((col) => (col.id === result.column.id ? result.column : col)),
+      );
+      setRenameTarget(null);
+    } catch (error) {
+      if (isPlannerApiError(error)) {
+        setColumnRenameError(error.message);
+      } else {
+        setColumnRenameError("끼니 이름을 변경하지 못했어요");
+      }
+    } finally {
+      setIsRenamingColumn(false);
+    }
+  }, [renameTarget, columnRenameInput]);
+
+  const handleDeleteColumn = useCallback(async () => {
+    if (!deleteColumnTarget) return;
+
+    setDeleteColumnError(null);
+    setIsDeletingColumn(true);
+    try {
+      await deletePlannerColumn(deleteColumnTarget.id);
+      setPlannerColumns((prev) =>
+        prev
+          .filter((col) => col.id !== deleteColumnTarget.id)
+          .map((col, index) => ({ ...col, sort_order: index })),
+      );
+      setDeleteColumnTarget(null);
+    } catch (error) {
+      if (isPlannerApiError(error)) {
+        setDeleteColumnError(error.message);
+      } else {
+        setDeleteColumnError("끼니 컬럼을 삭제하지 못했어요");
+      }
+    } finally {
+      setIsDeletingColumn(false);
+    }
+  }, [deleteColumnTarget]);
+
+  const openColumnRenameSheet = useCallback((column: PlannerColumnData) => {
+    setColumnRenameInput(column.name);
+    setColumnRenameError(null);
+    setRenameTarget(column);
+  }, []);
+
+  const columnAddValid =
+    columnAddInput.trim().length >= 1 && columnAddInput.trim().length <= 30;
+  const columnAddSaveDisabled = !columnAddValid || isAddingColumn;
+
+  const columnRenameValid =
+    columnRenameInput.trim().length >= 1 && columnRenameInput.trim().length <= 30;
+  const columnRenameSaveDisabled = !columnRenameValid || isRenamingColumn;
 
   const nicknameValid =
     nicknameInput.trim().length >= 2 && nicknameInput.trim().length <= 30;
@@ -363,6 +496,101 @@ export function SettingsScreen({
         </div>
       </div>
 
+      <div className="px-4 pt-6" data-testid="column-management-section">
+        <p className="mb-2 text-sm font-semibold text-[var(--text-3)]">
+          끼니 컬럼 관리
+        </p>
+
+        {columnsLoading ? (
+          <div className="rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]" data-testid="columns-loading">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="mt-3 h-5 w-32" />
+            <Skeleton className="mt-3 h-5 w-28" />
+          </div>
+        ) : columnsError ? (
+          <div className="rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]" data-testid="columns-error">
+            <p className="text-sm text-[var(--danger)]">{columnsError}</p>
+            <button
+              className="mt-2 text-sm font-semibold text-[var(--brand)]"
+              onClick={() => void loadColumns()}
+              type="button"
+            >
+              다시 시도
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-[var(--radius-lg)] bg-[var(--surface)] shadow-[var(--shadow-1)]">
+            <div className="divide-y divide-[var(--surface-subtle)]" data-testid="column-list">
+              {plannerColumns.map((column) => (
+                <div
+                  key={column.id}
+                  className="flex min-h-[52px] items-center px-4 py-2.5"
+                  data-testid={`column-item-${column.id}`}
+                >
+                  <span className="min-w-0 flex-1 truncate text-base font-medium text-[var(--foreground)]">
+                    {column.name}
+                  </span>
+                  <button
+                    aria-label={`${column.name} 이름 변경`}
+                    className="ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[var(--text-3)]"
+                    data-testid={`rename-column-${column.id}`}
+                    onClick={() => openColumnRenameSheet(column)}
+                    type="button"
+                  >
+                    <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <button
+                    aria-label={`${column.name} 삭제`}
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center ${
+                      plannerColumns.length <= 1
+                        ? "text-[var(--text-4)] cursor-not-allowed"
+                        : "text-[var(--text-3)]"
+                    }`}
+                    data-testid={`delete-column-${column.id}`}
+                    disabled={plannerColumns.length <= 1}
+                    onClick={() => setDeleteColumnTarget(column)}
+                    type="button"
+                  >
+                    <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-[var(--surface-subtle)] px-4 py-3">
+              <button
+                className={`flex w-full min-h-[44px] items-center justify-center rounded-[var(--radius-md)] text-sm font-semibold ${
+                  plannerColumns.length >= 5
+                    ? "bg-[var(--surface-subtle)] text-[var(--text-4)] cursor-not-allowed"
+                    : "bg-[var(--surface-fill)] text-[var(--brand)]"
+                }`}
+                data-testid="add-column-button"
+                disabled={plannerColumns.length >= 5}
+                onClick={() => {
+                  setColumnAddInput("");
+                  setColumnAddError(null);
+                  setShowColumnAddSheet(true);
+                }}
+                type="button"
+              >
+                {plannerColumns.length >= 5
+                  ? "끼니 컬럼은 최대 5개까지 만들 수 있어요"
+                  : "+ 끼니 컬럼 추가"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <p className="mt-2 px-1 text-xs text-[var(--text-4)]">
+          최소 1개 ~ 최대 5개 · 현재 {plannerColumns.length}개
+        </p>
+      </div>
+
       <div className="px-4 pt-6">
         <p className="mb-2 text-sm font-semibold text-[var(--text-3)]">
           계정 관리
@@ -455,6 +683,59 @@ export function SettingsScreen({
           }}
           onConfirm={() => void handleDeleteAccount()}
           title="정말 탈퇴하시겠어요?"
+        />
+      ) : null}
+
+      {showColumnAddSheet ? (
+        <ColumnNameSheet
+          errorMessage={columnAddError}
+          inputValue={columnAddInput}
+          isSaving={isAddingColumn}
+          onClose={() => setShowColumnAddSheet(false)}
+          onInputChange={(v) => {
+            setColumnAddInput(v);
+            setColumnAddError(null);
+          }}
+          onSave={() => void handleAddColumn()}
+          saveDisabled={columnAddSaveDisabled}
+          testIdPrefix="add-column"
+          title="끼니 컬럼 추가"
+        />
+      ) : null}
+
+      {renameTarget ? (
+        <ColumnNameSheet
+          errorMessage={columnRenameError}
+          inputValue={columnRenameInput}
+          isSaving={isRenamingColumn}
+          onClose={() => {
+            setRenameTarget(null);
+            setColumnRenameError(null);
+          }}
+          onInputChange={(v) => {
+            setColumnRenameInput(v);
+            setColumnRenameError(null);
+          }}
+          onSave={() => void handleRenameColumn()}
+          saveDisabled={columnRenameSaveDisabled}
+          testIdPrefix="rename-column"
+          title="끼니 이름 변경"
+        />
+      ) : null}
+
+      {deleteColumnTarget ? (
+        <ConfirmDialog
+          confirmLabel={isDeletingColumn ? "삭제 중..." : "삭제하기"}
+          confirmTone="danger"
+          description={`"${deleteColumnTarget.name}" 컬럼을 삭제할까요?`}
+          disabled={isDeletingColumn}
+          errorMessage={deleteColumnError}
+          onCancel={() => {
+            setDeleteColumnTarget(null);
+            setDeleteColumnError(null);
+          }}
+          onConfirm={() => void handleDeleteColumn()}
+          title="끼니 컬럼 삭제"
         />
       ) : null}
     </div>
@@ -677,6 +958,118 @@ function ConfirmDialog({
             {confirmLabel}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+interface ColumnNameSheetProps {
+  title: string;
+  inputValue: string;
+  onInputChange: (value: string) => void;
+  onSave: () => void;
+  onClose: () => void;
+  saveDisabled: boolean;
+  isSaving: boolean;
+  errorMessage: string | null;
+  testIdPrefix: string;
+}
+
+function ColumnNameSheet({
+  title,
+  inputValue,
+  onInputChange,
+  onSave,
+  onClose,
+  saveDisabled,
+  isSaving,
+  errorMessage,
+  testIdPrefix,
+}: ColumnNameSheetProps) {
+  const titleId = `${testIdPrefix}-title`;
+  const inputHelpId = `${testIdPrefix}-help`;
+  const inputErrorId = `${testIdPrefix}-error`;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
+      data-testid={`${testIdPrefix}-sheet-backdrop`}
+      onClick={onClose}
+    >
+      <div
+        aria-labelledby={titleId}
+        aria-modal="true"
+        className="w-full max-w-md rounded-t-[var(--radius-xl)] bg-[var(--panel)] p-6 shadow-[var(--shadow-3)]"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <div className="mx-auto mb-4 h-1 w-8 rounded-full bg-[var(--line)]" />
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-[var(--foreground)]" id={titleId}>
+            {title}
+          </h2>
+          <button
+            aria-label="닫기"
+            className="flex h-11 w-11 items-center justify-center text-[var(--text-3)]"
+            onClick={onClose}
+            type="button"
+          >
+            <svg
+              aria-hidden="true"
+              className="h-6 w-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+            >
+              <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+
+        <input
+          aria-describedby={errorMessage ? `${inputHelpId} ${inputErrorId}` : inputHelpId}
+          aria-label={title}
+          autoFocus
+          className={`w-full rounded-[var(--radius-sm)] border-b-2 bg-[var(--surface-fill)] px-4 py-3 text-base text-[var(--foreground)] outline-none ${
+            errorMessage
+              ? "border-[var(--danger)]"
+              : "border-transparent focus:border-[var(--brand)]"
+          }`}
+          data-testid={`${testIdPrefix}-input`}
+          maxLength={30}
+          onChange={(e) => onInputChange(e.target.value)}
+          type="text"
+          value={inputValue}
+        />
+
+        <p className="mt-2 text-xs text-[var(--text-3)]" id={inputHelpId}>
+          1~30자로 입력해 주세요
+        </p>
+
+        {errorMessage ? (
+          <p
+            className="mt-2 text-xs text-[var(--danger)]"
+            data-testid={`${testIdPrefix}-sheet-error`}
+            id={inputErrorId}
+          >
+            {errorMessage}
+          </p>
+        ) : null}
+
+        <button
+          className={`mt-4 flex w-full min-h-[52px] items-center justify-center rounded-[var(--radius-md)] text-base font-semibold ${
+            saveDisabled
+              ? "bg-[var(--surface-subtle)] text-[var(--text-4)]"
+              : "bg-[var(--brand)] text-white"
+          }`}
+          data-testid={`${testIdPrefix}-save`}
+          disabled={saveDisabled}
+          onClick={onSave}
+          type="button"
+        >
+          {isSaving ? "저장 중..." : "저장하기"}
+        </button>
       </div>
     </div>
   );
