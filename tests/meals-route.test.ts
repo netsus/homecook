@@ -303,6 +303,75 @@ describe("GET /api/v1/meals", () => {
     expect(mealsQuery.order).toHaveBeenNthCalledWith(2, "id", { ascending: true });
   });
 
+  it("returns meals for an owned custom planner column", async () => {
+    const columnQuery = createMaybeSingleQuery([
+      {
+        data: {
+          id: "column-1",
+          user_id: "user-1",
+          name: "야식",
+        },
+        error: null,
+      },
+    ]);
+    const mealsQuery = createThenableQuery([
+      {
+        data: [
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            planned_servings: 1,
+            status: "registered",
+            is_leftover: false,
+            created_at: "2026-03-01T22:00:00Z",
+          },
+        ],
+        error: null,
+      },
+    ]);
+    const recipesQuery = createThenableQuery([
+      {
+        data: [
+          { id: "recipe-1", title: "야식라면", thumbnail_url: null },
+        ],
+        error: null,
+      },
+    ]);
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "meal_plan_columns") return { select: vi.fn(() => columnQuery) };
+        if (table === "meals") return { select: vi.fn(() => mealsQuery) };
+        if (table === "recipes") return { select: vi.fn(() => recipesQuery) };
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { GET } = await importRoute();
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/meals?plan_date=2026-03-01&column_id=550e8400-e29b-41d4-a716-446655440015"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      success: true,
+      data: {
+        items: [
+          {
+            id: "meal-1",
+            recipe_title: "야식라면",
+            planned_servings: 1,
+          },
+        ],
+      },
+      error: null,
+    });
+  });
+
   it("returns formatted bootstrap errors before loading meals", async () => {
     ensurePublicUserRow.mockRejectedValue(new Error("Could not find the table 'public.meals' in the schema cache"));
 
