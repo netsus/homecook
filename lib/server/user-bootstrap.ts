@@ -1,6 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 
-import { PLANNER_FIXED_SLOT_NAMES } from "@/types/planner";
+import { DEFAULT_PLANNER_COLUMN_NAMES } from "@/types/planner";
 
 interface QueryError {
   code?: string;
@@ -133,7 +133,7 @@ export interface UserBootstrapDbClient {
   from(table: "meal_plan_columns"): PlannerColumnsTable;
 }
 
-export const USER_BOOTSTRAP_VERSION = 2;
+export const USER_BOOTSTRAP_VERSION = 3;
 
 const USER_BOOTSTRAP_VERSION_KEY = "user_bootstrap_version";
 const DEFAULT_RECIPE_BOOKS = [
@@ -141,7 +141,7 @@ const DEFAULT_RECIPE_BOOKS = [
   { name: "저장한 레시피", book_type: "saved" as const, sort_order: 1 },
   { name: "좋아요한 레시피", book_type: "liked" as const, sort_order: 2 },
 ];
-const DEFAULT_PLANNER_COLUMNS = PLANNER_FIXED_SLOT_NAMES.map((name, sort_order) => ({
+const DEFAULT_PLANNER_COLUMNS = DEFAULT_PLANNER_COLUMN_NAMES.map((name, sort_order) => ({
   name,
   sort_order,
 }));
@@ -391,11 +391,13 @@ export async function ensureUserBootstrapState(
       .select("id, name, sort_order")
       .maybeSingle();
 
-    if (createResult.error || !createResult.data) {
+    if (!isDuplicateKeyConflict(createResult.error) && (createResult.error || !createResult.data)) {
       throw new Error(createResult.error?.message ?? "meal_plan_columns insert failed");
     }
 
-    currentColumns.push(createResult.data);
+    if (createResult.data) {
+      currentColumns.push(createResult.data);
+    }
   }
 
   const updateResult = await dbClient

@@ -1,5 +1,5 @@
 import fixtureData from "@/qa/fixtures/slices-01-05.json";
-import { buildFixedPlannerColumns } from "@/lib/planner/fixed-slots";
+import { sortPlannerColumns } from "@/lib/planner/fixed-slots";
 import type {
   IngredientItem,
   IngredientListData,
@@ -484,11 +484,11 @@ function resolveAnchoredDate(startDate: string, endDate: string, anchor: DateAnc
 
 export function getQaFixturePlannerData(startDate: string, endDate: string) {
   const state = getQaFixtureState();
-  const normalizedColumns = buildFixedPlannerColumns(state.plannerColumns);
+  const columns = sortPlannerColumns(state.plannerColumns);
   const createdMeals = state.createdMeals.filter((meal) => meal.plan_date >= startDate && meal.plan_date <= endDate);
 
   return {
-    columns: normalizedColumns.columns,
+    columns,
     meals: [
       ...clone(state.plannerMealTemplates).map((meal) => ({
         id: meal.id,
@@ -496,7 +496,7 @@ export function getQaFixturePlannerData(startDate: string, endDate: string) {
         recipe_title: fixtureData.recipe.title,
         recipe_thumbnail_url: fixtureData.recipe.thumbnailUrl,
         plan_date: resolveAnchoredDate(startDate, endDate, meal.date_anchor),
-        column_id: normalizedColumns.getFixedColumnId(meal.column_id),
+        column_id: meal.column_id,
         planned_servings: meal.planned_servings,
         status: meal.status,
         is_leftover: meal.is_leftover,
@@ -505,10 +505,13 @@ export function getQaFixturePlannerData(startDate: string, endDate: string) {
         ...meal,
         recipe_title: fixtureData.recipe.title,
         recipe_thumbnail_url: fixtureData.recipe.thumbnailUrl,
-        column_id: normalizedColumns.getFixedColumnId(meal.column_id),
       })),
     ],
   } satisfies PlannerData;
+}
+
+export function getQaFixturePlannerColumns() {
+  return sortPlannerColumns(getQaFixtureState().plannerColumns);
 }
 
 function toLeftoverMutationData(row: FixtureLeftoverDish): LeftoverMutationData {
@@ -857,20 +860,33 @@ export function deleteQaFixtureMeal(mealId: string) {
 
 export function createQaFixturePlannerColumn(name: string) {
   const state = getQaFixtureState();
+  const normalizedName = name.trim();
 
   if (state.plannerColumns.length >= 5) {
     return {
       ok: false as const,
-      code: "MAX_COLUMNS_REACHED",
+      code: "COLUMN_LIMIT_REACHED",
       message: "최대 5개까지 추가할 수 있어요",
+      status: 409,
+    };
+  }
+
+  if (state.plannerColumns.some((column) => column.name.trim() === normalizedName)) {
+    return {
+      ok: false as const,
+      code: "COLUMN_NAME_DUPLICATE",
+      message: "이미 있는 끼니 이름이에요.",
       status: 409,
     };
   }
 
   const createdColumn: PlannerColumnData = {
     id: crypto.randomUUID(),
-    name: name.trim(),
-    sort_order: state.plannerColumns.length,
+    name: normalizedName,
+    sort_order:
+      state.plannerColumns.length === 0
+        ? 0
+        : Math.max(...state.plannerColumns.map((column) => column.sort_order)) + 1,
   };
 
   state.plannerColumns = [...state.plannerColumns, createdColumn];
@@ -906,7 +922,20 @@ export function updateQaFixturePlannerColumn(
   const target = orderedColumns[currentIndex]!;
 
   if (typeof updates.name === "string") {
-    target.name = updates.name.trim();
+    const normalizedName = updates.name.trim();
+    const duplicate = orderedColumns.some((column) =>
+      column.id !== columnId && column.name.trim() === normalizedName);
+
+    if (duplicate) {
+      return {
+        ok: false as const,
+        code: "COLUMN_NAME_DUPLICATE",
+        message: "이미 있는 끼니 이름이에요.",
+        status: 409,
+      };
+    }
+
+    target.name = normalizedName;
   }
 
   if (typeof updates.sort_order === "number") {
@@ -943,7 +972,25 @@ export function deleteQaFixturePlannerColumn(columnId: string) {
     };
   }
 
+  if (state.plannerColumns.length <= 1) {
+    return {
+      ok: false as const,
+      code: "MIN_COLUMN_REQUIRED",
+      message: "끼니 컬럼은 최소 1개가 필요해요.",
+      status: 409,
+    };
+  }
+
   if (state.plannerMealTemplates.some((meal) => meal.column_id === columnId)) {
+    return {
+      ok: false as const,
+      code: "COLUMN_HAS_MEALS",
+      message: "식사가 등록된 컬럼은 삭제할 수 없어요.",
+      status: 409,
+    };
+  }
+
+  if (state.createdMeals.some((meal) => meal.column_id === columnId)) {
     return {
       ok: false as const,
       code: "COLUMN_HAS_MEALS",
