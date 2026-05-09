@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-09T19:56:41Z",
+  "updated_at": "2026-05-09T23:35:23Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -878,6 +878,22 @@
         "git diff --check"
       ],
       "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs PR #374 merged. Stage 2/3 N/A (UI-only). Stage 4 frontend implemented by Claude through resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc, then Codex completed Stage 5/6 review, authority evidence, exploratory QA/eval, accessibility repair, Linux visual snapshot repair, full frontend verification, and Claude final authority gate. Design Status confirmed; authority blocker 0. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:1 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,Playwright,Docker Linux visual,ui/designs/authority/WAVE1_DISCOVERY_DETAIL-authority.md,Claude final authority gate,QA eval,GitHub policy check last_recovery_at=2026-05-09T23:00:10Z"
+    },
+    {
+      "id": "wave1-port-planner-meal-add",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/wave1-port-planner-meal-add",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:frontend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs created by Claude. Stage 2 N/A (UI-only). PLANNER_WEEK/MENU_ADD/MANUAL_CREATE/MEAL_SCREEN UI porting. Planner column CRUD already merged in planner-column-customization (#367-#370). Weekly navigation uses existing shiftPlannerRange + fetchPlanner."
     }
   ]
 }

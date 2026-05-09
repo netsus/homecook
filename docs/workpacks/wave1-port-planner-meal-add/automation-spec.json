@@ -1,0 +1,102 @@
+{
+  "slice_id": "wave1-port-planner-meal-add",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "manual",
+
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": [],
+    "stage2_na_reason": "UI-only slice. PLANNER_WEEK/MENU_ADD/MANUAL_CREATE/MEAL_SCREEN의 UI 포팅만 수행하며, route handler, DB, status transition 변경이 없다. 기존 API의 공식 필드(columns, meals[].status, meals[].is_leftover, meals[].leftover_dish_id)와 기존 유틸리티(shiftPlannerRange, fetchPlanner)만 소비한다."
+  },
+
+  "frontend": {
+    "required_routes": [
+      "/planner",
+      "/menu-add",
+      "/menu/add/manual",
+      "/planner/[date]/[columnId]"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:pr-ready -- --slice wave1-port-planner-meal-add --pr-body <pr-body-file> --mode frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "screenshot",
+      "authority-report"
+    ],
+    "expected_tests": {
+      "vitest": [
+        "PLANNER_WEEK 이모티콘 제거 + 텍스트 렌더",
+        "PLANNER_WEEK status badge 제거",
+        "PLANNER_WEEK 주간 이동",
+        "PLANNER_WEEK 장보기 문구 + 요리하기 제거",
+        "MENU_ADD 2열 그리드 + 남은요리 옵션",
+        "MEAL_SCREEN 레시피 클릭 + 삭제 아이콘 + status selector 제거"
+      ],
+      "playwright": [
+        "PLANNER_WEEK → 주간 이동 → 식사 추가 E2E",
+        "MENU_ADD 옵션 선택 → 라우팅 E2E",
+        "MEAL_SCREEN 레시피 클릭 → RECIPE_DETAIL + 삭제 E2E"
+      ]
+    },
+
+    "design_authority": {
+      "ui_risk": "anchor-extension",
+      "anchor_screens": ["PLANNER_WEEK"],
+      "required_screens": ["PLANNER_WEEK", "MENU_ADD", "MEAL_SCREEN"],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mobile-default-planner",
+        "mobile-narrow-planner",
+        "planner-week-navigation",
+        "menu-add-option-grid",
+        "manual-create-ingredient-modal",
+        "meal-screen-default",
+        "meal-screen-narrow",
+        "meal-screen-recipe-click"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/WAVE1_PLANNER_MEAL_ADD-authority.md"
+      ],
+      "design_generator_skip_reason": "변경이 프로토타입 기준의 정리(이모지/배지 제거, CTA 재배치, 2열 그리드)이므로 screenshot evidence 기반 authority로 충분하다. Stage 4에서 design-generator/design-critic 필요 여부를 재판단한다.",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/wave1-port-planner-meal-add/planner-mobile-default.png",
+        "ui/designs/evidence/wave1-port-planner-meal-add/planner-mobile-narrow.png",
+        "ui/designs/evidence/wave1-port-planner-meal-add/planner-week-navigation.png",
+        "ui/designs/evidence/wave1-port-planner-meal-add/menu-add-option-grid.png",
+        "ui/designs/evidence/wave1-port-planner-meal-add/manual-create-ingredient-modal.png",
+        "ui/designs/evidence/wave1-port-planner-meal-add/meal-screen-default.png",
+        "ui/designs/evidence/wave1-port-planner-meal-add/meal-screen-narrow.png",
+        "ui/designs/evidence/wave1-port-planner-meal-add/meal-screen-recipe-click.png"
+      ]
+    }
+  },
+
+  "external_smokes": [],
+  "blocked_conditions": [],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}
