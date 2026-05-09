@@ -26,10 +26,20 @@
 3. `docs/engineering/slice-workflow.md`
 4. `docs/engineering/agent-workflow-overview.md`
 5. `docs/engineering/product-design-authority.md`
-6. `docs/design/mobile-ux-rules.md`
-7. `ui/designs/prototypes/claude-design-260505-wave1/VNEXT_DESIGN_PRINCIPLES.md`
-8. `ui/designs/prototypes/claude-design-260505-wave1/HANDOFF.md`
-9. 실제 구현 대상 화면의 현재 서비스 파일
+6. `docs/design/design-tokens.md`
+7. `docs/design/mobile-ux-rules.md`
+8. `docs/design/anchor-screens.md`
+9. `ui/designs/BAEMIN_STYLE_DIRECTION.md`
+10. slice 13+ future screen이면 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`
+11. `ui/designs/prototypes/claude-design-260505-wave1/VNEXT_DESIGN_PRINCIPLES.md`
+12. `ui/designs/prototypes/claude-design-260505-wave1/HANDOFF.md`
+13. 실제 구현 대상 화면의 현재 서비스 파일
+
+토큰 기준 주의:
+
+- production 기준 brand token은 `docs/design/design-tokens.md`와 `app/globals.css`의 승인 값을 따른다.
+- prototype의 mint/Jua/font/asset은 바로 production 계약이 아니다.
+- `ui/designs/BAEMIN_STYLE_DIRECTION.md`의 `prototype parity`, `prototype-derived design`, `out of prototype scope` 용어만 사용한다.
 
 프로토타입 쪽 참고 파일:
 
@@ -42,11 +52,11 @@
 ## Working Contract
 
 - product slice는 Stage 1~6 흐름을 따른다.
-- Stage 1은 Claude가 workpack README/acceptance/automation-spec을 작성하고 merge한다.
+- Stage 1은 Claude가 workpack README/acceptance/automation-spec, `.workflow-v2/work-items/<slice>.json`, `.workflow-v2/status.json` matching item을 작성하고 `docs/workpacks/README.md`에 해당 slice row와 Status를 맞춘다.
 - Stage 2는 Codex가 BE 변경이 필요한 경우만 수행한다. UI-only 또는 기존 API로 가능한 slice는 `N/A` 근거를 남긴다.
 - Stage 3은 BE 변경이 있었을 때 Claude review를 받는다.
-- Stage 4는 Claude가 FE 포팅을 수행한다.
-- Stage 5는 Codex가 디자인/authority review를 수행한다.
+- Stage 4는 Claude가 FE 포팅을 수행한다. UI가 실제로 바뀌면 관련 `ui/designs/<SCREEN_ID>.md` 또는 authority/design closeout 메모도 현재 화면 기준으로 맞춘다.
+- Stage 5는 Codex가 public design review와 authority precheck를 수행한다. authority-required slice는 Claude `final_authority_gate`에서 blocker 0개 확인 후에만 `confirmed`로 닫는다.
 - Stage 6은 Codex가 code review, local verification, PR checks, merge까지 닫는다.
 - 사용자가 `$claude-delegate`를 명시하면 기존 Claude session `d0277030-99a8-46ec-a6e7-3b8013bd7682`에 `--resume`으로 붙는다. 가능하면 `session_attach_mode=resume`, `model=opus`, `effort=xhigh` 의도로 기록한다. 로컬 CLI가 `xhigh`를 받지 않으면 `high`로 대체하고 그 사실을 artifact에 남긴다.
 
@@ -57,8 +67,13 @@
 1. Stage 1, Claude
    - `docs/workpacks/<slice>/README.md`
    - `docs/workpacks/<slice>/acceptance.md`
-   - 필요 시 `docs/workpacks/<slice>/automation-spec.json`
+   - `docs/workpacks/<slice>/automation-spec.json`
+   - `.workflow-v2/work-items/<slice>.json`
+   - `.workflow-v2/status.json` matching item
+   - `docs/workpacks/README.md`에 해당 Wave1 slice row가 없으면 먼저 등록하고 Status를 `docs`로 기록. 이미 `planned` row가 있으면 `planned -> docs`
    - `Design Authority` 섹션과 screenshot/Figma evidence 계획
+   - 신규 화면, high-risk UI change, anchor extension이면 `ui/designs/<SCREEN_ID>.md`와 `ui/designs/critiques/<SCREEN_ID>-critique.md`
+   - Baemin prototype 적용 화면은 `BAEMIN_STYLE_DIRECTION.md` 용어를 사용하고, slice 13+는 h8 screen/surface matrix 반영
    - 공식 문서/API와 충돌하는 항목은 `Contract Evolution Candidate`로 분리
 
 2. Stage 2, Codex
@@ -75,26 +90,31 @@
    - 기존 API wrapper `{ success, data, error }` 유지
    - `loading / empty / error / read-only / unauthorized` 상태 유지
    - 모바일 390px/320px evidence 생성
+   - new-screen/high-risk UI change는 `pnpm qa:explore -- --slice <slice>`와 `pnpm qa:eval` 수행, 생략 시 PR에 low-risk skip 근거 기록
+   - Draft PR Ready 전 `pnpm validate:pr-ready -- --slice <slice> --pr-body <pr-body-file> --mode frontend`
 
 5. Stage 5, Codex
-   - screenshot evidence 기반 authority review
-   - anchor screen은 blocker 0개 확인
-   - 필요하면 touch target, overflow, CTA clipping, text wrapping 보완
+   - screenshot evidence 기반 authority precheck / public design review
+   - anchor screen은 authority report와 blocker 0개 확인
+   - touch target, overflow, CTA clipping, text wrapping finding 기록
+   - authority-required slice는 Claude final authority gate 통과 전 merge-ready로 넘기지 않음
 
 6. Stage 6, Codex
    - code review
    - `pnpm verify:frontend`
    - 필요 시 `pnpm qa:explore -- --slice <slice>`와 `pnpm qa:eval`
    - `pnpm validate:authority-evidence-presence`
+   - exploratory QA를 실행했거나 required인 경우 `pnpm validate:exploratory-qa-evidence`
+   - real DB smoke가 필요한 slice는 `pnpm validate:real-smoke-presence`
    - PR checks current head green 확인
-   - merge 후 Discord 알림
+   - merge 후 알림 채널이 설정되어 있으면 Discord 알림
 
 ## Recommended Order
 
 | Order | Slice ID | Goal | Primary Owner Flow | Notes |
 | --- | --- | --- | --- | --- |
 | 0 | `planner-column-customization` | SETTINGS 끼니 컬럼 관리 + PLANNER_WEEK 동적 컬럼 | Done | PR #367~#370 merged. 다시 하지 않는다. |
-| A | `wave1-port-foundation` | 공통 shell, 공용 UI 패턴, CTA/칩/카드/모달 위계 | Stage 1~6 | 가장 먼저. 뒤 slice의 중복 스타일 변경을 줄인다. |
+| A | `wave1-port-foundation` | 공통 shell, 공용 UI 패턴, CTA/칩/카드/모달 위계 | Stage 1~6 | 가장 먼저. 단, AppShell/bottom tab은 `baemin-prototype-home-porting` 현재 상태와 충돌 여부를 Stage 1에서 먼저 잠근다. |
 | B | `wave1-port-discovery-detail` | HOME, RECIPE_DETAIL, save modal, login provider display | Stage 1~6 | HOME은 기존 `baemin-prototype-home-porting`과 충돌/중복 확인 후 시작. |
 | C | `wave1-port-planner-meal-add` | PLANNER, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN | Stage 1~6 | 컬럼 CRUD는 완료된 `planner-column-customization` 계약을 소비한다. |
 | D | `wave1-port-shopping-cooking` | SHOPPING_FLOW, SHOPPING_DETAIL, COOK_READY/COOK_MODE | Stage 1~6 | 장보기 read-only/exclude/add_to_pantry 규칙을 테스트로 고정. |
@@ -112,6 +132,13 @@
 - 정렬 dropdown 패턴
 - 공통 CTA 위계
 - app-wide spacing, safe-area, sticky bottom action rules
+
+### Stage 1 Must Resolve
+
+- `docs/workpacks/baemin-prototype-home-porting` status와 현재 HOME/AppShell 구현을 먼저 확인한다.
+- HOME 전용 bottom tab, shared `AppShell`, `components/layout/bottom-tabs.tsx` 중복 변경 가능성을 dependency로 기록한다.
+- production 토큰은 `docs/design/design-tokens.md` 승인 값을 기본으로 쓰고, prototype mint/Jua/asset은 별도 승인 없이 공통 foundation으로 승격하지 않는다.
+- 새 공용 primitive 도입은 high-risk UI change로 보고 design-generator/design-critic 필요 여부와 authority evidence 계획을 `automation-spec.json`에 명시한다.
 
 ### Expected Files
 
@@ -134,8 +161,8 @@
 
 ### Verification
 
-- `pnpm lint`
-- `pnpm typecheck`
+- `pnpm verify:frontend`
+- `pnpm validate:pr-ready -- --slice wave1-port-foundation --pr-body <pr-body-file> --mode frontend`
 - 공통 UI unit/component test
 - 모바일 320/390 screenshot evidence
 - no horizontal overflow spot check
@@ -169,19 +196,16 @@
 | HOME banner -> planner | UI-only / existing route | `/planner` 라우트 존재 확인. |
 | sort dropdown | UI-only | Slice A primitive 사용. |
 | RECIPE_DETAIL 별점 제거 | UI-only | rating field를 추가하지 않는다. |
-| 좋아요/저장수 표시 | 기존 API로 가능 여부 확인 | 현재 detail response에 count가 있으면 소비. 없으면 contract candidate. |
-| 요리완료수 표시 | 기존 API로 가능 여부 확인 | `cook_count`/`plan_count` 등 실제 필드 확인. 없으면 docs+BE. |
+| 좋아요/저장수 표시 | 공식 API로 가능 | detail response의 `like_count`, `save_count` 소비. 구현 타입/fixture 정합만 확인. |
+| 요리완료수 표시 | 공식 API로 가능 | detail response의 `cook_count` 소비. 플래너 등록수는 `plan_count`. |
 | 조회수 제거 | UI-only | 데이터는 보존 가능, 화면에서 숨김. |
 | save modal recipebook 생성 | 기존 API로 가능 | `POST /recipe-books`, save API 소비. |
 | login provider 축소 | UI-only + auth config 확인 | 버튼 숨김은 FE 가능. 실제 provider disable은 운영 config 정책 확인. |
 
 ### Contract Evolution Candidates
 
-- metric count source가 공식 API에 없을 때:
-  - 좋아요수
-  - 저장수
-  - 요리완료수
-  - 조회수 표시/비표시 정책
+- metric source를 기존 `view_count` / `like_count` / `save_count` / `plan_count` / `cook_count` 외 새 집계로 바꾸려 할 때
+- 조회수 표시/비표시 정책을 공식 화면 계약과 다르게 바꾸려 할 때
 - provider list를 실제 Supabase config에서 비활성화해야 할 때
 
 ### Verification
@@ -191,6 +215,7 @@
 - save modal E2E
 - login provider display test
 - mobile 390/320 authority evidence for HOME and RECIPE_DETAIL
+- `pnpm validate:authority-evidence-presence`
 
 ## Slice C: wave1-port-planner-meal-add
 
@@ -224,18 +249,18 @@
 | weekly 이동 | 기존 API로 가능 | `fetchPlanner(start,end)`와 `shiftPlannerRange` 사용 가능 여부 확인. |
 | `+ 음식` 위치 변경 | UI-only | route/query 유지. |
 | 식사추가 option modal | UI-only + existing flows | 각 option route/modal 연결을 실제 라우트에 맞춘다. |
-| 남은요리에서 추가 | 기존 API로 가능 여부 확인 | leftovers -> meal attach 경로가 있는지 확인. 없으면 contract candidate. |
+| 남은요리에서 추가 | 공식 API로 가능 | `POST /meals`에 `leftover_dish_id` 포함. 구현 라우팅/상태만 확인. |
 | 직접등록 완료 버튼 | UI-only / existing API | `POST /recipes` 후 완료 CTA. |
 | 재료 선택 modal 다중 선택 | 기존 API로 가능 | ingredients API 소비. |
 | 재료 양 입력 위치 변경 | UI-only | 저장 payload shape 유지. |
 | MEAL_SCREEN recipe click | UI-only / existing route | `/recipe/[id]` 이동. |
-| meal -> cook_done -> leftover 자동 생성 | docs+BE 필요 가능성 높음 | 도메인 상태 전이와 leftover row 생성 정책 필요. |
+| meal -> cook_done -> leftover 자동 생성 | 공식 요리 완료 API로 가능 | `POST /cooking/sessions/{id}/complete` 경유 시 공식 계약. 세션을 우회하거나 새 상태 전이를 만들면 contract candidate. |
 
 ### Contract Evolution Candidates
 
-- leftover -> planner attach API가 없을 때
-- meal 완료 시 leftover 자동 생성 정책
-- pantry 미사용 사용자 분기에서 meal status/cook_done 처리 변경
+- `POST /meals` + `leftover_dish_id`가 아닌 별도 leftover attach API를 새로 만들려 할 때
+- cooking session complete를 우회해 `meals.status`를 직접 바꾸려 할 때
+- pantry 미사용 사용자 분기에서 공식 9-4/9-6 완료 흐름과 다른 상태 전이를 요구할 때
 
 ### Verification
 
@@ -278,8 +303,8 @@
 | `장보기 목록 만들기` -> `장보기 완료` 등 label | UI-only | 화면 맥락별 문구만 변경. |
 | pantry excluded section | 기존 API로 가능 | 현재 `is_pantry_excluded` 규칙 소비. |
 | `이미있음` / `되살리기` | 기존 API로 가능 | `exclude -> uncheck` 규칙 유지. |
-| share button | 기존 API로 가능 | `share-text` endpoint 확인. |
-| shopping list title/date | 기존 API로 가능 여부 확인 | title/date 필드가 없으면 frontend fallback 또는 contract candidate. |
+| share button | 공식 API로 가능 | `GET /shopping/lists/{id}/share-text` 소비. |
+| shopping list title/date | 공식 API로 가능 | `shopping_lists.title`, `created_at` 소비. 없는 fixture/type만 보강. |
 | complete 후 pantry add modal | 기존 API로 가능 | `add_to_pantry_item_ids` 3-way 규칙 유지. |
 | COOK_MODE controls 제거 | UI-only | session/complete API 유지. |
 | consumed ingredient wrapping | UI-only | payload 유지. |
@@ -328,17 +353,23 @@
 | Item | Classification | Notes |
 | --- | --- | --- |
 | chip/filter 위치 | UI-only | 기존 pantry list filtering. |
-| delete mode UI | UI-only + existing API | delete endpoint가 batch인지 단건인지 확인. |
-| multi-delete | 기존 API로 가능 여부 확인 | 단건 delete만 있으면 FE loop 또는 BE batch candidate. |
+| delete mode UI | UI-only + 공식 API | `DELETE /pantry` + `ingredient_ids` 사용. |
+| multi-delete | 공식 API로 가능 | batch delete endpoint가 이미 공식 계약에 있음. |
 | ingredient image | 기존 API로 가능 여부 확인 | image field가 없으면 placeholder or contract candidate. |
 | category chips | 기존 API로 가능 여부 확인 | category enum/mapping 확인. |
 | hidden unowned ingredients | UI-only | pantry screen에서는 보유 items만 보여줌. |
+
+### Design Authority Notes
+
+- h8 기준 `PANTRY`는 screen-level `prototype parity` 후보이다.
+- `PANTRY_BUNDLE_PICKER`는 별도 승격 전까지 `prototype-derived design`이다.
+- prototype-only bottom tab behavior, `Jua`, prototype-only assets는 scope 밖이다.
 
 ### Contract Evolution Candidates
 
 - ingredient image URL이 공식 API에 없을 때
 - category group이 `주식/채소/단백질/양념`으로 정규화되어 있지 않을 때
-- batch delete endpoint가 필요하다고 판단될 때
+- 기존 `DELETE /pantry` 계약으로 부족해 새로운 삭제 정책이 필요할 때
 
 ### Verification
 
@@ -384,6 +415,12 @@
 | `덜먹음` 제거 | UI-only unless API action removed | API는 유지해도 숨길 수 있음. |
 | recipebook kebab menu | 기존 API로 가능 | rename/delete endpoints 확인. |
 
+### Design Authority Notes
+
+- h8 기준 `MYPAGE` shell은 screen-level `prototype parity` 후보이다.
+- MYPAGE sub-tabs, `SETTINGS`, `LEFTOVERS`, `ATE_LIST`, `RECIPEBOOK_DETAIL`은 별도 승격 전까지 `prototype-derived design`이다.
+- shell parity가 sub-surface parity로 자동 전파되지 않게 Stage 1에서 화면별 classification을 분리한다.
+
 ### Verification
 
 - MYPAGE E2E
@@ -399,22 +436,22 @@
 | Header/profile/cart removal | yes | no | no |
 | Filter chip position | yes | ingredients/recipes unchanged | no |
 | Sort modal -> dropdown | yes | no | no |
-| Recipe detail metric layout | yes | count fields 확인 | missing count fields |
+| Recipe detail metric layout | yes | documented count fields | new metrics beyond documented fields |
 | Recipe detail bottom CTA | yes | planner add/cook routes | no |
-| Save modal copy/layout | yes | save/book APIs | book quick-create transaction if missing |
+| Save modal copy/layout | yes | save/book APIs | no if existing endpoints sufficient |
 | Planner weekly movement | mostly | planner range API | no if current API sufficient |
 | Planner column default/customization | done | done | done in #367~#370 |
-| Meal add option modal | yes | existing add flows | leftover attach if missing |
+| Meal add option modal | yes | existing add flows incl. `leftover_dish_id` | no unless new attach policy |
 | Manual create ingredient modal | mostly | ingredients + recipe create | unit/category contract if missing |
 | Meal screen recipe click | yes | recipe route | no |
-| Meal cook_done -> leftover auto | no | maybe existing cook complete | likely docs+BE if behavior changes |
+| Meal cook_done -> leftover auto | no | official cooking complete APIs | docs+BE only if bypassing official complete flow |
 | Shopping excluded section | mostly | shopping detail item APIs | no if current contract sufficient |
-| Shopping list title/date | maybe | list title/date fields 확인 | title generation contract if missing |
+| Shopping list title/date | yes | title/date fields documented | no unless generation policy changes |
 | Shopping share | yes | share-text API | no |
 | Pantry reflect on complete | yes | complete API | no, preserve 3-way rules |
 | Cook mode control removal | yes | existing session APIs | no |
 | Pantry category chips/images | maybe | pantry/ingredient fields 확인 | image/category contract if missing |
-| Pantry multi-delete | maybe | delete endpoint 확인 | batch delete if required |
+| Pantry multi-delete | yes | `DELETE /pantry` with ids | no unless new delete semantics |
 | Mypage/settings polish | yes | existing account APIs | no |
 | Leftovers/Ate copy/buttons | yes | leftovers APIs | no unless state/action removed |
 | Recipebook menu | mostly | recipebook rename/delete | no if endpoints exist |
@@ -422,7 +459,7 @@
 
 ## Contract Evolution Rule
 
-다음 중 하나라도 해당하면 구현 전에 docs-governance / contract-evolution PR을 먼저 만든다.
+다음 중 하나라도 해당하면 구현 전에 사용자 승인 기반 `contract-evolution` PR을 먼저 만든다.
 
 - 공식 API 문서에 없는 endpoint, response field, request field가 필요하다.
 - DB schema 또는 status enum을 바꿔야 한다.
@@ -430,6 +467,7 @@
 - shopping read-only, `exclude -> uncheck`, `add_to_pantry_item_ids` 3-way 규칙을 바꾸게 된다.
 - auth provider 자체를 운영 설정에서 제거해야 한다.
 - production data migration 또는 backfill이 필요하다.
+- anchor screen의 header 구조, section 배치, action hierarchy 같은 공식 화면 계약을 바꾸게 된다.
 
 ## Suggested New Session Prompt
 
@@ -447,7 +485,9 @@ AGENTS.md 규칙에 따라 Stage 1은 Claude에게 workpack/acceptance를 맡기
 
 1. `pnpm branch:start -- --slice wave1-port-foundation --role docs`
 2. Claude에게 Stage 1 workpack 작성 위임
-3. `docs/workpacks/wave1-port-foundation/README.md`, `acceptance.md`, 필요 시 `automation-spec.json` 생성
-4. 공통 UI primitive 범위를 실제 repo 파일 기준으로 좁힘
-5. Stage 1 docs PR merge
-
+3. `docs/workpacks/wave1-port-foundation/README.md`, `acceptance.md`, `automation-spec.json` 생성
+4. `.workflow-v2/work-items/wave1-port-foundation.json`과 `.workflow-v2/status.json` matching item 생성
+5. `docs/workpacks/README.md`에 `wave1-port-foundation` row가 없으면 등록하고 Status를 `docs`로 기록. 이미 있으면 `planned -> docs`
+6. `baemin-prototype-home-porting` / 현재 `AppShell` / bottom tab 구현과 충돌 여부를 dependency로 잠금
+7. 공통 UI primitive 범위를 실제 repo 파일 기준으로 좁힘
+8. internal 1.5 docs gate 통과 후 Stage 1 docs PR merge
