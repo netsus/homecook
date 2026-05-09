@@ -28,7 +28,7 @@ function aggregateIngredients(planner, selection, pantry) {
 // ─────────────────────────────────────────────────────
 // 장보기 목록 만들기
 // ─────────────────────────────────────────────────────
-function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToast }) {
+function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
   // step: 'select' (끼니 선택) → 'review' (재료 체크리스트)
   const [step, setStep] = useState_X('select');
   const days = Object.keys(planner);
@@ -68,7 +68,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
 
   if (step === 'select') {
     return (
-      <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 120 }}>
+      <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 200 }}>
         <AppBar title="장보기 목록" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>} />
 
         <div style={{ background: '#fff', padding: 20, borderBottom: `1px solid ${T.border}` }}>
@@ -136,11 +136,11 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
         </div>
 
         <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16,
-          background: '#fff', borderTop: `1px solid ${T.border}`,
+          position: 'absolute', bottom: 80, left: 0, right: 0, padding: 16,
+          background: '#fff', borderTop: `1px solid ${T.border}`, zIndex: 45,
         }}>
           <Button full disabled={selection.length === 0} onClick={() => setStep('review')}>
-            {selection.length}개 음식 재료 모으기
+            장보기 목록 만들기
           </Button>
         </div>
       </div>
@@ -149,7 +149,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
 
   // step === 'review'
   return (
-    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 140 }}>
+    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 220 }}>
       <AppBar title="장보기 목록" left={<button onClick={() => setStep('select')} style={iconBtn}>{Icon.chevL()}</button>} />
 
       <div style={{ background: '#fff', padding: 20, borderBottom: `1px solid ${T.border}` }}>
@@ -212,9 +212,9 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
       </div>
 
       <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16,
+        position: 'absolute', bottom: 80, left: 0, right: 0, padding: 16,
         background: '#fff', borderTop: `1px solid ${T.border}`,
-        display: 'flex', flexDirection: 'column', gap: 8,
+        display: 'flex', flexDirection: 'column', gap: 8, zIndex: 45,
       }}>
         <Button full disabled={needed.length === 0} onClick={() => {
           showToast('장보기 목록이 만들어졌어요');
@@ -222,75 +222,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToas
         }}>
           장보기 목록 만들기
         </Button>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button variant="neutral" onClick={() => { showToast('공유 링크가 복사됐어요'); }}>공유</Button>
-          <Button full variant="neutral" disabled={checked.size === 0} onClick={() => onAddToPantry([...checked])}>
-            담은 재료 팬트리에 추가 ({checked.size})
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────
-// 장보기 → 팬트리 추가 모달
-// ─────────────────────────────────────────────────────
-function AddToPantryModal({ items, onClose, onConfirm }) {
-  const [quantities, setQuantities] = useState_X(
-    Object.fromEntries(items.map(n => [n, 1]))
-  );
-
-  return (
-    <div style={overlay} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{
-        background: '#fff', borderRadius: '20px 20px 0 0',
-        position: 'absolute', bottom: 0, left: 0, right: 0,
-        maxHeight: '85%', display: 'flex', flexDirection: 'column',
-      }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '18px 20px 12px', borderBottom: `1px solid ${T.border}`,
-        }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand }}>
-              팬트리에 추가
-            </div>
-            <div style={{ fontSize: 12, color: T.text3, marginTop: 2 }}>
-              담은 재료 {items.length}개를 보유 재료로 등록해요
-            </div>
-          </div>
-          <button onClick={onClose} style={iconBtn}>{Icon.close()}</button>
-        </div>
-
-        <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
-          {items.map(name => (
-            <div key={name} style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '12px 0', borderBottom: `1px solid ${T.surfaceSubtle}`,
-            }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 18, background: T.mintSoft,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
-              }}>🥕</div>
-              <div style={{ flex: 1, fontSize: 15, fontWeight: 600, color: T.ink }}>{name}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button onClick={() => setQuantities(q => ({ ...q, [name]: Math.max(1, (q[name]||1) - 1) }))}
-                  style={qtyBtn}>−</button>
-                <span style={{ minWidth: 24, textAlign: 'center', fontSize: 14, fontWeight: 700, color: T.ink }}>
-                  {quantities[name] || 1}
-                </span>
-                <button onClick={() => setQuantities(q => ({ ...q, [name]: (q[name]||1) + 1 }))}
-                  style={{ ...qtyBtn, background: T.mint, color: '#fff', border: 'none' }}>+</button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ padding: 16, borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8 }}>
-          <Button variant="neutral" onClick={onClose}>취소</Button>
-          <Button full onClick={() => onConfirm(quantities)}>추가하기</Button>
-        </div>
+        <Button full variant="neutral" onClick={() => { showToast('공유 링크가 복사됐어요'); }}>공유</Button>
       </div>
     </div>
   );
@@ -815,12 +747,7 @@ const iconBtn = {
   width: 32, height: 32, borderRadius: 16, border: 'none', background: 'transparent',
   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
-const qtyBtn = {
-  width: 28, height: 28, borderRadius: 14, border: `1px solid ${T.border}`,
-  background: '#fff', color: T.ink, fontSize: 16, fontWeight: 700, cursor: 'pointer',
-};
-
 Object.assign(window, {
-  ShoppingCreateScreen, AddToPantryModal, CookListScreen, CookRunScreen,
+  ShoppingCreateScreen, CookListScreen, CookRunScreen,
   MealDetailScreen, MyPageSavedScreen, MyPageAccountScreen, MyPageNotifScreen, MyPageHelpScreen,
 });

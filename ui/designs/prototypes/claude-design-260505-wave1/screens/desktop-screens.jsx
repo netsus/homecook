@@ -1239,7 +1239,7 @@ function DesktopMenuAddScreen({ presetDate, presetSlot, initialMode, planner, pa
 }
 
 // Desktop: SHOPPING_FLOW (= ShoppingCreate, P1.1)
-function DesktopShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, showToast }) {
+function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
   // Aggregate ingredients from registered meals
   const items = dUseMemo(() => {
     const acc = {};
@@ -1279,14 +1279,10 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, onAddToPantry, s
           <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>이번 주 등록된 식단 기준 · 총 {items.length}개 재료</div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => onAddToPantry?.(have.map(i => i.name))} style={{
-            padding: '10px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
-            background: '#fff', color: T.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          }}>보유 재료 팬트리 반영</button>
           <button onClick={() => showToast?.('장보기 목록이 만들어졌어요')} style={{
             padding: '10px 18px', borderRadius: 8, border: 'none',
             background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
-          }}>🛒 {need.length}개 사야 함 · 목록 만들기</button>
+          }}>장보기 목록 만들기</button>
         </div>
       </div>
 
@@ -1348,7 +1344,7 @@ function Stat({ label, value, color }) {
 }
 
 // Desktop: SHOPPING_DETAIL (P1.1)
-function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, onReopen, onReflect, showToast }) {
+function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, onReopen, showToast }) {
   if (!list) {
     return (
       <div>
@@ -1370,6 +1366,14 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
     (acc[it.section] = acc[it.section] || []).push(it);
     return acc;
   }, {});
+  const completeCurrentShopping = () => {
+    const skipNames = new Set(skip.map(i => i.name));
+    const currentItems = list.items.map(i => {
+      const isHave = skipNames.has(i.name);
+      return { ...i, have: isHave, checked: isHave ? false : i.checked };
+    });
+    onComplete?.({ ...list, items: currentItems });
+  };
 
   return (
     <div>
@@ -1397,13 +1401,9 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
                 padding: '10px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
                 background: '#fff', color: T.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
               }}>다시 열기</button>
-              <button onClick={() => onReflect?.(list)} style={{
-                padding: '10px 18px', borderRadius: 8, border: 'none',
-                background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
-              }}>팬트리 반영</button>
             </>
           ) : (
-            <button onClick={() => onComplete?.(list.id)} style={{
+            <button onClick={completeCurrentShopping} style={{
               padding: '10px 18px', borderRadius: 8, border: 'none',
               background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
             }}>장보기 완료</button>
@@ -1455,6 +1455,7 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
                   {!completed && (
                     <button onClick={() => {
                       setLocalBuyExcluded(s => { const n = new Set(s); n.add(it.name); return n; });
+                      setLocalSkipRevived(s => { const n = new Set(s); n.delete(it.name); return n; });
                       showToast?.(`${it.name} → 이미 있음 처리`);
                       /* CONTRACT_CHECK: PATCH /shopping-lists/:id/items/:name {have:true} — vNext에서는 UI shape만 */
                     }} style={{
@@ -1477,7 +1478,7 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
 
         <aside style={{ background: '#fff', borderRadius: 12, padding: 16, boxShadow: T.shadowDeep, position: 'sticky', top: 24 }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.text2, marginBottom: 12 }}>
-            팬트리에 있어 제외 ({skip.length})
+            팬트리에 이미 있어 제외 ({skip.length})
           </div>
           {skip.length === 0 ? (
             <div style={{ fontSize: 12, color: T.text3, lineHeight: 1.6 }}>제외된 재료가 없어요.</div>
@@ -1496,7 +1497,7 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
                   </div>
                   {!completed && (
                     <button onClick={() => {
-                      setLocalSkipRevived(s => { const n = new Set(s); n.add(it.name); return n; });
+                      if (it.have) setLocalSkipRevived(s => { const n = new Set(s); n.add(it.name); return n; });
                       setLocalBuyExcluded(s => { const n = new Set(s); n.delete(it.name); return n; });
                       showToast?.(`${it.name} → 장보기 목록으로 복원`);
                       /* CONTRACT_CHECK: PATCH /shopping-lists/:id/items/:name {have:false} — vNext에서는 UI shape만 */
@@ -1515,7 +1516,7 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
 
       {!completed && (
         <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
-          <button disabled={buy.length === 0} onClick={() => onComplete?.(list.id)} style={{
+          <button disabled={buy.length === 0} onClick={completeCurrentShopping} style={{
             padding: '13px 28px', borderRadius: 10, border: 'none',
             background: buy.length === 0 ? T.border : T.mint, color: '#fff',
             fontSize: 14, fontWeight: 800, cursor: buy.length === 0 ? 'default' : 'pointer',
