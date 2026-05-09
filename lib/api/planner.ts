@@ -1,6 +1,11 @@
 import { withE2EAuthOverrideHeaders } from "@/lib/auth/e2e-auth-override";
 import type { ApiError, ApiResponse } from "@/types/api";
-import type { PlannerData } from "@/types/planner";
+import type {
+  PlannerColumnDeleteData,
+  PlannerColumnMutationData,
+  PlannerColumnsData,
+  PlannerData,
+} from "@/types/planner";
 
 interface PlannerApiError extends Error {
   status: number;
@@ -114,4 +119,34 @@ export async function fetchPlanner(startDate: string, endDate: string) {
   });
 
   return requestPlanner<PlannerData>(`/api/v1/planner?${params.toString()}`);
+}
+
+export async function fetchPlannerColumns() {
+  return requestPlanner<PlannerColumnsData>("/api/v1/planner/columns");
+}
+
+export async function createPlannerColumn(name: string) {
+  return requestPlanner<PlannerColumnMutationData>("/api/v1/planner/columns", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function updatePlannerColumn(columnId: string, name: string) {
+  return requestPlanner<PlannerColumnMutationData>(
+    `/api/v1/planner/columns/${columnId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    },
+  );
+}
+
+export async function deletePlannerColumn(columnId: string) {
+  return requestPlanner<PlannerColumnDeleteData>(
+    `/api/v1/planner/columns/${columnId}`,
+    { method: "DELETE" },
+  );
 }

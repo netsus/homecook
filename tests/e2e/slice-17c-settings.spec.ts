@@ -32,6 +32,123 @@ function makeMockProfile(overrides?: Partial<MockProfile>): MockProfile {
   };
 }
 
+interface MockColumn {
+  id: string;
+  name: string;
+  sort_order: number;
+}
+
+function makeDefaultColumns(): MockColumn[] {
+  return [
+    { id: "col-1", name: "아침", sort_order: 0 },
+    { id: "col-2", name: "점심", sort_order: 1 },
+    { id: "col-3", name: "저녁", sort_order: 2 },
+  ];
+}
+
+async function installColumnRoutes(
+  page: Page,
+  options?: {
+    columns?: MockColumn[];
+    columnsError?: boolean;
+    createError?: { code: string; message: string; status: number };
+    renameError?: { code: string; message: string; status: number };
+    deleteError?: { code: string; message: string; status: number };
+  },
+) {
+  const columns = options?.columns ?? makeDefaultColumns();
+  const columnsError = options?.columnsError ?? false;
+
+  await page.route("**/api/v1/planner/columns", async (route) => {
+    if (route.request().method() === "GET") {
+      if (columnsError) {
+        await route.fulfill({
+          status: 500,
+          json: { success: false, data: null, error: { code: "INTERNAL_ERROR", message: "끼니 컬럼을 불러오지 못했어요.", fields: [] } },
+        });
+      } else {
+        await route.fulfill({
+          json: { success: true, data: { columns: [...columns] }, error: null },
+        });
+      }
+    } else if (route.request().method() === "POST") {
+      if (options?.createError) {
+        await route.fulfill({
+          status: options.createError.status,
+          json: { success: false, data: null, error: { code: options.createError.code, message: options.createError.message, fields: [] } },
+        });
+      } else {
+        const body = route.request().postDataJSON() as { name: string };
+        const newColumn: MockColumn = {
+          id: `col-${Date.now()}`,
+          name: body.name.trim(),
+          sort_order: columns.length,
+        };
+        columns.push(newColumn);
+        await route.fulfill({
+          status: 201,
+          json: { success: true, data: { column: newColumn }, error: null },
+        });
+      }
+    } else {
+      await route.fulfill({ status: 405 });
+    }
+  });
+
+  await page.route("**/api/v1/planner/columns/*", async (route) => {
+    const url = route.request().url();
+    const columnId = url.split("/planner/columns/")[1]?.split("?")[0];
+
+    if (route.request().method() === "PATCH") {
+      if (options?.renameError) {
+        await route.fulfill({
+          status: options.renameError.status,
+          json: { success: false, data: null, error: { code: options.renameError.code, message: options.renameError.message, fields: [] } },
+        });
+      } else {
+        const body = route.request().postDataJSON() as { name: string };
+        const col = columns.find((c) => c.id === columnId);
+        if (col) {
+          col.name = body.name.trim();
+          await route.fulfill({
+            json: { success: true, data: { column: { ...col } }, error: null },
+          });
+        } else {
+          await route.fulfill({
+            status: 404,
+            json: { success: false, data: null, error: { code: "RESOURCE_NOT_FOUND", message: "끼니 컬럼을 찾을 수 없어요.", fields: [] } },
+          });
+        }
+      }
+    } else if (route.request().method() === "DELETE") {
+      if (options?.deleteError) {
+        await route.fulfill({
+          status: options.deleteError.status,
+          json: { success: false, data: null, error: { code: options.deleteError.code, message: options.deleteError.message, fields: [] } },
+        });
+      } else {
+        const idx = columns.findIndex((c) => c.id === columnId);
+        if (idx >= 0) {
+          columns.splice(idx, 1);
+          columns.forEach((c, i) => { c.sort_order = i; });
+          await route.fulfill({
+            json: { success: true, data: { deleted: true }, error: null },
+          });
+        } else {
+          await route.fulfill({
+            status: 404,
+            json: { success: false, data: null, error: { code: "RESOURCE_NOT_FOUND", message: "끼니 컬럼을 찾을 수 없어요.", fields: [] } },
+          });
+        }
+      }
+    } else {
+      await route.fulfill({ status: 405 });
+    }
+  });
+
+  return { columns };
+}
+
 async function installSettingsRoutes(
   page: Page,
   options?: {
@@ -344,5 +461,220 @@ test.describe("SETTINGS screen", () => {
 
     await page.waitForURL("/settings");
     await expect(page.getByText("설정")).toBeVisible();
+  });
+});
+
+test.describe("SETTINGS planner column management", () => {
+  test("shows column list with default 3 columns", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page);
+    await installColumnRoutes(page);
+    await page.goto("/settings");
+
+    await expect(page.getByTestId("column-management-section")).toBeVisible();
+    await expect(page.getByText("끼니 컬럼 관리")).toBeVisible();
+
+    const list = page.getByTestId("column-list");
+    await expect(list).toBeVisible();
+    await expect(list.getByText("아침")).toBeVisible();
+    await expect(list.getByText("점심")).toBeVisible();
+    await expect(list.getByText("저녁")).toBeVisible();
+  });
+
+  test("adds a new column", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page);
+    await installColumnRoutes(page);
+    await page.goto("/settings");
+
+    await expect(page.getByTestId("column-list")).toBeVisible();
+    await page.getByTestId("add-column-button").click();
+
+    await expect(page.getByRole("heading", { name: "끼니 컬럼 추가" })).toBeVisible();
+
+    const input = page.getByTestId("add-column-input");
+    await input.fill("간식");
+    await page.getByTestId("add-column-save").click();
+
+    await expect(page.getByTestId("add-column-sheet-backdrop")).not.toBeVisible();
+    await expect(page.getByTestId("column-list").getByText("간식")).toBeVisible();
+  });
+
+  test("renames a column", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page);
+    await installColumnRoutes(page);
+    await page.goto("/settings");
+
+    await expect(page.getByTestId("column-list")).toBeVisible();
+    await page.getByTestId("rename-column-col-1").click();
+
+    await expect(page.getByText("끼니 이름 변경")).toBeVisible();
+
+    const input = page.getByTestId("rename-column-input");
+    await input.clear();
+    await input.fill("브런치");
+    await page.getByTestId("rename-column-save").click();
+
+    await expect(page.getByTestId("rename-column-sheet-backdrop")).not.toBeVisible();
+    await expect(page.getByTestId("column-list").getByText("브런치")).toBeVisible();
+  });
+
+  test("deletes an empty column", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page);
+    await installColumnRoutes(page);
+    await page.goto("/settings");
+
+    await expect(page.getByTestId("column-list")).toBeVisible();
+    await page.getByTestId("delete-column-col-3").click();
+
+    await expect(page.getByText("끼니 컬럼 삭제")).toBeVisible();
+    await expect(page.getByText('"저녁" 컬럼을 삭제할까요?')).toBeVisible();
+    await page.getByText("삭제하기").click();
+
+    await expect(page.getByText("끼니 컬럼 삭제")).not.toBeVisible();
+    await expect(page.getByTestId("column-list").getByText("저녁")).not.toBeVisible();
+  });
+
+  test("shows add limit message when 5 columns exist", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page);
+    await installColumnRoutes(page, {
+      columns: [
+        { id: "col-1", name: "아침", sort_order: 0 },
+        { id: "col-2", name: "점심", sort_order: 1 },
+        { id: "col-3", name: "저녁", sort_order: 2 },
+        { id: "col-4", name: "간식", sort_order: 3 },
+        { id: "col-5", name: "야식", sort_order: 4 },
+      ],
+    });
+    await page.goto("/settings");
+
+    await expect(page.getByTestId("column-list")).toBeVisible();
+    const addButton = page.getByTestId("add-column-button");
+    await expect(addButton).toBeDisabled();
+    await expect(addButton).toContainText("최대 5개");
+  });
+
+  test("disables delete button when only 1 column exists", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page);
+    await installColumnRoutes(page, {
+      columns: [{ id: "col-1", name: "아침", sort_order: 0 }],
+    });
+    await page.goto("/settings");
+
+    await expect(page.getByTestId("column-list")).toBeVisible();
+    await expect(page.getByTestId("delete-column-col-1")).toBeDisabled();
+  });
+
+  test("shows error when column add returns COLUMN_LIMIT_REACHED", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page);
+    await installColumnRoutes(page, {
+      createError: { code: "COLUMN_LIMIT_REACHED", message: "끼니 컬럼은 최대 5개까지 만들 수 있어요.", status: 409 },
+    });
+    await page.goto("/settings");
+
+    await expect(page.getByTestId("column-list")).toBeVisible();
+    await page.getByTestId("add-column-button").click();
+
+    const input = page.getByTestId("add-column-input");
+    await input.fill("야식");
+    await page.getByTestId("add-column-save").click();
+
+    await expect(page.getByTestId("add-column-sheet-error")).toContainText("최대 5개");
+  });
+
+  test("shows error when column add returns COLUMN_NAME_DUPLICATE", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page);
+    await installColumnRoutes(page, {
+      createError: { code: "COLUMN_NAME_DUPLICATE", message: "이미 있는 끼니 이름이에요.", status: 409 },
+    });
+    await page.goto("/settings");
+
+    await expect(page.getByTestId("column-list")).toBeVisible();
+    await page.getByTestId("add-column-button").click();
+
+    const input = page.getByTestId("add-column-input");
+    await input.fill("아침");
+    await page.getByTestId("add-column-save").click();
+
+    await expect(page.getByTestId("add-column-sheet-error")).toContainText("이미 있는 끼니 이름");
+  });
+
+  test("shows error when column delete returns COLUMN_HAS_MEALS", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page);
+    await installColumnRoutes(page, {
+      deleteError: { code: "COLUMN_HAS_MEALS", message: "식사가 등록된 컬럼은 삭제할 수 없어요.", status: 409 },
+    });
+    await page.goto("/settings");
+
+    await expect(page.getByTestId("column-list")).toBeVisible();
+    await page.getByTestId("delete-column-col-3").click();
+
+    await expect(page.getByText("끼니 컬럼 삭제")).toBeVisible();
+    await page.getByText("삭제하기").click();
+
+    await expect(page.getByTestId("dialog-error")).toContainText("식사가 등록된 컬럼은 삭제할 수 없어요");
+  });
+
+  test("shows error when column rename returns COLUMN_NAME_DUPLICATE", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page);
+    await installColumnRoutes(page, {
+      renameError: { code: "COLUMN_NAME_DUPLICATE", message: "이미 있는 끼니 이름이에요.", status: 409 },
+    });
+    await page.goto("/settings");
+
+    await expect(page.getByTestId("column-list")).toBeVisible();
+    await page.getByTestId("rename-column-col-1").click();
+
+    const input = page.getByTestId("rename-column-input");
+    await input.clear();
+    await input.fill("점심");
+    await page.getByTestId("rename-column-save").click();
+
+    await expect(page.getByTestId("rename-column-sheet-error")).toContainText("이미 있는 끼니 이름");
+  });
+
+  test("shows column loading skeleton", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page);
+
+    const deferred: { resolve: (() => void) | null } = { resolve: null };
+    await page.route("**/api/v1/planner/columns", async (route) => {
+      await new Promise<void>((resolve) => { deferred.resolve = resolve; });
+      await route.fulfill({
+        json: { success: true, data: { columns: makeDefaultColumns() }, error: null },
+      });
+    });
+
+    await page.goto("/settings");
+
+    await expect(page.getByTestId("columns-loading")).toBeVisible();
+    deferred.resolve?.();
+    await expect(page.getByTestId("column-list")).toBeVisible();
+  });
+
+  test("shows column load error with retry", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installSettingsRoutes(page);
+    await installColumnRoutes(page, { columnsError: true });
+    await page.goto("/settings");
+
+    await expect(page.getByTestId("columns-error")).toBeVisible();
+    await expect(page.getByTestId("columns-error")).toContainText("끼니 컬럼을 불러오지 못했어요");
+  });
+
+  test("column management is hidden for unauthenticated users", async ({ page }) => {
+    await setAuthOverride(page, "guest");
+    await page.goto("/settings");
+
+    await expect(page.getByRole("heading", { name: "로그인이 필요해요" })).toBeVisible();
+    await expect(page.getByTestId("column-management-section")).not.toBeVisible();
   });
 });

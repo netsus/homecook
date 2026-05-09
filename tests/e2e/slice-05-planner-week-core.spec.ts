@@ -29,16 +29,22 @@ async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   );
 }
 
-async function mockPlannerRoutes(page: Page) {
+async function mockPlannerRoutes(
+  page: Page,
+  options?: {
+    columns?: PlannerColumn[];
+    meals?: PlannerMeal[];
+  },
+) {
   const requestedRanges: string[] = [];
 
-  const columns: PlannerColumn[] = [
+  const columns: PlannerColumn[] = options?.columns ?? [
     { id: "column-breakfast", name: "아침", sort_order: 0 },
     { id: "column-lunch", name: "점심", sort_order: 1 },
     { id: "column-snack", name: "간식", sort_order: 2 },
     { id: "column-dinner", name: "저녁", sort_order: 3 },
   ];
-  const meals: PlannerMeal[] = [
+  const meals: PlannerMeal[] = options?.meals ?? [
     {
       id: "meal-1",
       recipe_id: "recipe-1",
@@ -122,7 +128,7 @@ async function centerWeekStrip(page: Page) {
 }
 
 test.describe("Slice 05 planner week core", () => {
-  test("authenticated user sees fixed four-slot day cards and planner status badges", async ({ page }, testInfo) => {
+  test("authenticated user sees dynamic column day cards and planner status badges", async ({ page }, testInfo) => {
     const isDesktopProject = testInfo.project.name === "desktop-chrome";
 
     await setAuthOverride(page, "authenticated");
@@ -221,5 +227,87 @@ test.describe("Slice 05 planner week core", () => {
 
     await expect(page.getByRole("heading", { name: "식단 플래너" })).toBeVisible();
     await expect(page.getByText("김치찌개")).toBeVisible();
+  });
+
+  test("renders 3-column layout when user has 3 custom columns", async ({ page }) => {
+    const threeColumns: PlannerColumn[] = [
+      { id: "col-a", name: "아침", sort_order: 0 },
+      { id: "col-b", name: "점심", sort_order: 1 },
+      { id: "col-c", name: "저녁", sort_order: 2 },
+    ];
+    const threeMeals: PlannerMeal[] = [
+      {
+        id: "meal-a1",
+        recipe_id: "recipe-1",
+        recipe_title: "토스트",
+        recipe_thumbnail_url: null,
+        plan_date: "",
+        column_id: "col-a",
+        planned_servings: 1,
+        status: "registered",
+        is_leftover: false,
+      },
+    ];
+
+    await setAuthOverride(page, "authenticated");
+    await mockPlannerRoutes(page, { columns: threeColumns, meals: threeMeals });
+    await page.goto("/planner");
+
+    const firstDayCard = page.getByLabel(/식단 카드$/).first();
+
+    await expect(firstDayCard.getByText("아침")).toBeVisible();
+    await expect(firstDayCard.getByText("점심")).toBeVisible();
+    await expect(firstDayCard.getByText("저녁")).toBeVisible();
+    // Should NOT show a 4th column
+    await expect(firstDayCard.getByText("간식")).not.toBeVisible();
+
+    await expect(page.getByText("토스트")).toBeVisible();
+
+    const pageHasHorizontalOverflow = await page.evaluate(() => {
+      return document.documentElement.scrollWidth > window.innerWidth + 4;
+    });
+    expect(pageHasHorizontalOverflow).toBe(false);
+  });
+
+  test("renders 5-column layout with fallback emoji for custom names", async ({ page }) => {
+    const fiveColumns: PlannerColumn[] = [
+      { id: "col-1", name: "아침", sort_order: 0 },
+      { id: "col-2", name: "점심", sort_order: 1 },
+      { id: "col-3", name: "간식", sort_order: 2 },
+      { id: "col-4", name: "저녁", sort_order: 3 },
+      { id: "col-5", name: "야식", sort_order: 4 },
+    ];
+    const fiveMeals: PlannerMeal[] = [
+      {
+        id: "meal-x1",
+        recipe_id: "recipe-x",
+        recipe_title: "라면",
+        recipe_thumbnail_url: null,
+        plan_date: "",
+        column_id: "col-5",
+        planned_servings: 1,
+        status: "registered",
+        is_leftover: false,
+      },
+    ];
+
+    await setAuthOverride(page, "authenticated");
+    await mockPlannerRoutes(page, { columns: fiveColumns, meals: fiveMeals });
+    await page.goto("/planner");
+
+    const firstDayCard = page.getByLabel(/식단 카드$/).first();
+
+    await expect(firstDayCard.getByText("아침")).toBeVisible();
+    await expect(firstDayCard.getByText("점심")).toBeVisible();
+    await expect(firstDayCard.getByText("간식")).toBeVisible();
+    await expect(firstDayCard.getByText("저녁")).toBeVisible();
+    await expect(firstDayCard.getByText("야식")).toBeVisible();
+
+    await expect(page.getByText("라면")).toBeVisible();
+
+    const pageHasHorizontalOverflow = await page.evaluate(() => {
+      return document.documentElement.scrollWidth > window.innerWidth + 4;
+    });
+    expect(pageHasHorizontalOverflow).toBe(false);
   });
 });
