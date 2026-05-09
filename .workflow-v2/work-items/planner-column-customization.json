@@ -70,7 +70,7 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
+    "lifecycle": "in_progress",
     "approval_state": "not_started",
     "verification_status": "pending",
     "evaluation_status": "not_started",
@@ -79,7 +79,7 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Contract-evolution PR #367 merged on 2026-05-10. Stage 1 docs authoring in progress on branch docs/planner-column-customization. This slice changes meal_plan_columns from 4-fixed to user-managed (3 default, 1-5 range). Anchor-extension on PLANNER_WEEK requires authority review.",
+  "notes": "Contract-evolution PR #367 and Stage 1 docs PR #368 merged on 2026-05-10. Stage 2 backend implementation is in progress on feature/be-planner-column-customization. Backend covers dynamic /planner columns, /planner/columns CRUD, bootstrap x3, and GET/POST /meals dynamic column owner validation. Anchor-extension on PLANNER_WEEK still requires Stage 4/5 authority review.",
   "out_of_scope": [
     "컬럼 순서 변경 (drag-and-drop reorder) — 1차 구현 범위 밖",
     "기존 사용자의 4번째 컬럼(간식) 자동 삭제",
