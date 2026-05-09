@@ -70,16 +70,77 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Contract-evolution PR #367, Stage 1 docs PR #368, and Stage 2 backend PR #369 are merged. Stage 4 frontend implementation is in progress on feature/fe-planner-column-customization: SETTINGS column management, planner column API client, dynamic PLANNER_WEEK E2E coverage, and authority screenshots were added. Stage 5/6 Codex review and merge gate remain pending.",
+  "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Contract-evolution PR #367, Stage 1 docs PR #368, and Stage 2 backend PR #369 are merged. Stage 4 frontend implementation was completed by Claude via resume session d0277030-99a8-46ec-a6e7-3b8013bd7682, then Codex completed Stage 5/6 review, touch-target/accessibility refinements, authority evidence, local verification, and real dev:demo smoke. Design Status confirmed; authority blocker 0. closeout_phase=completed closeout_recovery=manual_patch:0|ci_resync:0 closeout_repair=codex:2|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:.omx/artifacts,GitHub PR/CI,PR body",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "passed",
+      "authority_reports": [
+        "ui/designs/authority/PLANNER_WEEK-column-customization-authority.md",
+        "ui/designs/critiques/PLANNER_WEEK-column-customization-critique.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm verify:frontend",
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm exec playwright test tests/e2e/slice-17c-settings.spec.ts tests/e2e/slice-05-planner-week-core.spec.ts --project=mobile-chrome --project=mobile-ios-small",
+        "pnpm exec playwright test tests/e2e/slice-17c-settings.spec.ts --project=mobile-chrome --project=mobile-ios-small",
+        "PR_IS_DRAFT=false pnpm validate:authority-evidence-presence",
+        "pnpm validate:workpack",
+        "pnpm validate:workflow-v2",
+        "pnpm dev:demo --seed -p 3130 real smoke"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 0,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-05-09T18:39:03Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage5-touch-target-accessibility-refinement",
+      "evidence_sources": [
+        ".omx/artifacts",
+        "GitHub PR/CI",
+        "PR body"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-09T18:39:03Z",
+      "status_synced_at": "2026-05-09T18:39:03Z",
+      "pr_body_synced_at": "2026-05-09T18:39:03Z"
+    }
+  },
   "out_of_scope": [
     "컬럼 순서 변경 (drag-and-drop reorder) — 1차 구현 범위 밖",
     "기존 사용자의 4번째 컬럼(간식) 자동 삭제",

@@ -172,14 +172,14 @@ DELETE /planner/columns/{column_id}
 - UI risk: `anchor-extension`
 - Anchor screen dependency: `PLANNER_WEEK`
 - Visual artifact: Stage 4 완료 후 implementation screenshot 생성
-- Authority status: `required`
+- Authority status: `reviewed`
 - Notes: `PLANNER_WEEK`는 앵커 스크린이므로 동적 컬럼 표시가 기존 레이아웃/밀도를 해치지 않는지 authority review 필요. `SETTINGS` 컬럼 관리 섹션은 기존 설정 화면 확장이므로 low-risk.
 
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
-- [x] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
-- [ ] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
+- [ ] 리뷰 대기 (pending-review) — Stage 4 완료 후, public review 준비 상태
+- [x] 확정 (confirmed) — Stage 5 public review 통과 후, authority-required면 final authority gate까지 통과, Tailwind/공용 컴포넌트 정리 완료, authority blocker 0개
 - [ ] N/A — BE-only 슬라이스 (FE 화면 없음, Stage 4~6 스킵)
 
 > Design Status 전이: `temporary` (Stage 1 기본값)
