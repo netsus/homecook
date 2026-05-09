@@ -80,6 +80,44 @@ function Button({ children, variant = 'primary', onClick, style, disabled, size 
 
 }
 
+function formatMetricCount(value) {
+  if (typeof value !== 'number') return value;
+  if (value >= 10000) return `${Math.round(value / 1000) / 10}만`;
+  return value.toLocaleString();
+}
+
+function RecipeHeroStats({ likes, saves, cooks, liked, saved, onLike, onSave, style }) {
+  const itemStyle = {
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+    color: T.ink, fontSize: 11, fontWeight: 800,
+    textShadow: '0 1px 2px rgba(255,255,255,0.75)'
+  };
+  const circleStyle = {
+    width: 38, height: 38, borderRadius: 19,
+    background: 'rgba(255,255,255,0.94)', border: 'none',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.10)'
+  };
+  const items = [
+    { key: 'like', icon: Icon.heart(liked), value: likes, label: '좋아요', onClick: onLike, circle: circleStyle },
+    { key: 'save', icon: Icon.bookmark(saved), value: saves, label: '저장', onClick: onSave, circle: circleStyle },
+    { key: 'cook', icon: Icon.chef(T.metricCook), value: cooks, label: '완료', onClick: null, circle: { ...circleStyle, cursor: 'default' } }
+  ];
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9, ...style }}>
+      {items.map((it) => (
+        <div key={it.key} style={itemStyle}>
+          <button onClick={it.onClick || undefined} style={{
+            ...it.circle, cursor: it.onClick ? 'pointer' : 'default',
+          }}>{it.icon}</button>
+          <div style={{ lineHeight: 1 }}>{formatMetricCount(it.value)}</div>
+          <div style={{ fontSize: 10, color: T.text2, fontWeight: 700, lineHeight: 1 }}>{it.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function StatusPill({ status }) {
   const map = {
     registered: { label: '등록', bg: T.surfaceSubtle, fg: T.text2 },
@@ -282,4 +320,4 @@ function MetricRow({ likes, saves, cooks, views, style }) {
   );
 }
 
-Object.assign(window, { Icon, Chip, Button, StatusPill, RecipeCard, BottomTab, AppBar, SortDropdown, MetricRow });
+Object.assign(window, { Icon, Chip, Button, RecipeHeroStats, StatusPill, RecipeCard, BottomTab, AppBar, SortDropdown, MetricRow });

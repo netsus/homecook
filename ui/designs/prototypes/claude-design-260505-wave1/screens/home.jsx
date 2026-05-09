@@ -97,9 +97,33 @@ function HomeScreen({ onOpenRecipe, sortBy, setSortBy, ingFilter, setIngFilter, 
         </div>
       </div>
 
-      {/* vNext: 재료 필터 칩 — 테마 카루셀 아래로 이동 */}
-      <div style={{ padding: '4px 16px 16px', display: 'flex', gap: 8, overflowX: 'auto' }}>
-        {/* vNext: "재료로 검색" 버튼 — 맨 앞, 눈에 잘 보이는 위치 */}
+      {/* Promo strip — vNext: 클릭 시 플래너 탭으로 이동 */}
+      <div style={{ padding: '0 16px 20px' }}>
+        <div onClick={onGoPlanner} style={{
+          background: `linear-gradient(135deg, ${T.mint} 0%, ${T.teal} 100%)`,
+          borderRadius: 12, padding: 16, display: 'flex', alignItems: 'center',
+          gap: 12, color: "rgb(255, 255, 255)", cursor: 'pointer'
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 2 }}>이번 주 식단 플래너</div>
+            <div style={{ fontSize: 16, fontWeight: 700, fontFamily: T.fontBrand }}>
+              오늘 저녁까지 2끼 남았어요
+            </div>
+          </div>
+          <div style={{ fontSize: 32 }}>🍳</div>
+        </div>
+      </div>
+
+      {/* All recipes with sort — vNext: SortDropdown 인라인 (SortSheet 대체) */}
+      <div style={{ padding: '0 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>
+          모든 레시피 <span style={{ color: T.text3, fontSize: 14, fontWeight: 500 }}>({sorted.length})</span>
+        </div>
+        <SortDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
+      </div>
+
+      {/* vNext follow-up: 레시피 검색 필터 칩 — 모든 레시피 바로 아래 */}
+      <div style={{ padding: '0 16px 14px', display: 'flex', gap: 8, overflowX: 'auto' }}>
         {onOpenIngredientFilter && (
           <button onClick={onOpenIngredientFilter} style={{
             flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
@@ -128,31 +152,6 @@ function HomeScreen({ onOpenRecipe, sortBy, setSortBy, ingFilter, setIngFilter, 
               <span style={{ fontSize: 14 }}>{f.emoji}</span>{f.name}
             </button>);
         })}
-      </div>
-
-      {/* Promo strip — vNext: 클릭 시 플래너 탭으로 이동 */}
-      <div style={{ padding: '0 16px 20px' }}>
-        <div onClick={onGoPlanner} style={{
-          background: `linear-gradient(135deg, ${T.mint} 0%, ${T.teal} 100%)`,
-          borderRadius: 12, padding: 16, display: 'flex', alignItems: 'center',
-          gap: 12, color: "rgb(255, 255, 255)", cursor: 'pointer'
-        }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, opacity: 0.9, marginBottom: 2 }}>이번 주 식단 플래너</div>
-            <div style={{ fontSize: 16, fontWeight: 700, fontFamily: T.fontBrand }}>
-              오늘 저녁까지 2끼 남았어요
-            </div>
-          </div>
-          <div style={{ fontSize: 32 }}>🍳</div>
-        </div>
-      </div>
-
-      {/* All recipes with sort — vNext: SortDropdown 인라인 (SortSheet 대체) */}
-      <div style={{ padding: '0 16px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>
-          모든 레시피 <span style={{ color: T.text3, fontSize: 14, fontWeight: 500 }}>({sorted.length})</span>
-        </div>
-        <SortDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
       </div>
 
       <div style={{ padding: '0 16px' }}>

@@ -133,9 +133,17 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
         </div>
       </section>
 
-      {/* vNext: 재료 칩 — 테마 아래, "재료로 검색" 맨 앞 */}
+      {/* All recipes with sort — vNext: SortDropdown 인라인 (시트 제거) */}
       <section>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>
+            모든 레시피 <span style={{ color: T.text3, fontSize: 14, fontWeight: 500 }}>({filtered.length})</span>
+          </div>
+          <SortDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
+        </div>
+
+        {/* vNext follow-up: 레시피 검색 필터 칩 — 모든 레시피 아래 */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
           {onOpenIngredientFilter && (
             <button onClick={onOpenIngredientFilter} style={{
               padding: '8px 14px', borderRadius: 9999,
@@ -163,16 +171,6 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
               </button>
             );
           })}
-        </div>
-      </section>
-
-      {/* All recipes with sort — vNext: SortDropdown 인라인 (시트 제거) */}
-      <section>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>
-            레시피 둘러보기 <span style={{ color: T.text3, fontSize: 14, fontWeight: 500 }}>({filtered.length})</span>
-          </div>
-          <SortDropdown value={sortBy} onChange={setSortBy} options={SORT_OPTIONS} />
         </div>
 
         {/* 3-col grid */}
@@ -478,7 +476,11 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
   const r = RECIPES.find(x => x.id === recipeId);
   const [servings, setServings] = dUseState(r.servings);
   const [tab, setTab] = dUseState('ingredients');
+  const [liked, setLiked] = dUseState(false);
   const scale = servings / r.servings;
+  const baseLikes = Math.round(r.saves * 0.6);
+  const cookCount = Math.round(r.saves * 0.3);
+  const displayTags = (r.tags || []).filter((tag) => !/분$/.test(tag));
 
   return (
     <div>
@@ -496,31 +498,35 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
             marginBottom: 20, position: 'relative',
           }}>
             {r.emoji}
-            {/* vNext S3 — 북마크 토글을 히어로 이미지 위에 유지 */}
-            <button onClick={onOpenSave} style={{
-              position: 'absolute', top: 16, right: 16,
-              width: 40, height: 40, borderRadius: 20, background: 'rgba(255,255,255,0.92)',
-              border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>{Icon.bookmark(saved)}</button>
+            {/* vNext follow-up: 좋아요/저장/요리완료 지표를 이미지 오른쪽에 세로 배치 */}
+            <RecipeHeroStats
+              likes={baseLikes + (liked ? 1 : 0)}
+              saves={r.saves}
+              cooks={cookCount}
+              liked={liked}
+              saved={saved}
+              onLike={() => setLiked(!liked)}
+              onSave={onOpenSave}
+              style={{ position: 'absolute', top: 18, right: 18 }}
+            />
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <h1 style={{ fontSize: 28, fontWeight: 800, color: T.ink, margin: 0 }}>{r.name}</h1>
           </div>
-          {/* vNext S3 — 별점 대체: MetricRow 행동 메트릭 */}
-          {/* CONTRACT_CHECK: 메트릭 4종 데이터 소스·집계 단위 확정 필요 — vNext에서는 UI shape만 */}
-          <MetricRow
-            likes={Math.round(r.saves * 0.6)}
-            saves={r.saves}
-            cooks={Math.round(r.saves * 0.3)}
-            views={r.saves * 4}
-            style={{ marginBottom: 8 }}
-          />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: T.text3, fontSize: 13, marginBottom: 24, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+            {[r.theme, ...displayTags].filter(Boolean).map((tag, idx) => (
+              <span key={`${tag}-${idx}`} style={{
+                fontSize: 12, color: idx === 0 ? T.mintDeep : T.text2,
+                fontWeight: 800, background: idx === 0 ? T.mintSoft : T.surfaceFill,
+                padding: '4px 9px', borderRadius: 9999,
+              }}>{tag}</span>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.text3, fontSize: 13, marginBottom: 24, flexWrap: 'wrap' }}>
             {Icon.clock()} {r.minutes}분
             <span>·</span>
-            {(r.tags || []).join(' · ')}
+            {Icon.fire()} {r.kcal}kcal
           </div>
 
           <div style={{ display: 'flex', gap: 24, borderBottom: `1px solid ${T.border}`, marginBottom: 20 }}>

@@ -9,6 +9,9 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, o
   const [liked, setLiked] = useState_RD(false);
 
   const scale = servings / recipe.servings;
+  const baseLikes = Math.round(recipe.saves * 0.6);
+  const cookCount = Math.round(recipe.saves * 0.3);
+  const displayTags = (recipe.tags || []).filter((tag) => !/분$/.test(tag));
 
   // group ingredients by section
   const grouped = {};
@@ -18,7 +21,7 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, o
   });
 
   return (
-    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 160 }}>
+    <div style={{ background: '#fff', minHeight: '100%', paddingBottom: 92 }}>
       {/* Hero image */}
       <div style={{
         position: 'relative', width: '100%', aspectRatio: '4/3',
@@ -32,44 +35,36 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, o
           border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>{Icon.chevL()}</button>
-        <div style={{ position: 'absolute', top: 52, right: 16, display: 'flex', gap: 8 }}>
-          <button onClick={() => setLiked(!liked)} style={{
-            width: 36, height: 36, borderRadius: 18, background: 'rgba(255,255,255,0.92)',
-            border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>{Icon.heart(liked)}</button>
-          <button onClick={onOpenSave} style={{
-            width: 36, height: 36, borderRadius: 18, background: 'rgba(255,255,255,0.92)',
-            border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>{Icon.bookmark(saved)}</button>
-        </div>
+        <RecipeHeroStats
+          likes={baseLikes + (liked ? 1 : 0)}
+          saves={recipe.saves}
+          cooks={cookCount}
+          liked={liked}
+          saved={saved}
+          onLike={() => setLiked(!liked)}
+          onSave={onOpenSave}
+          style={{ position: 'absolute', top: 48, right: 14 }}
+        />
       </div>
 
       {/* Title block */}
       <div style={{ background: '#fff', padding: 20, borderBottom: `1px solid ${T.border}` }}>
-        <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 700, marginBottom: 6 }}>
-          {recipe.theme}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+          {[recipe.theme, ...displayTags].filter(Boolean).map((tag, idx) => (
+            <span key={`${tag}-${idx}`} style={{
+              fontSize: 12, color: idx === 0 ? T.mintDeep : T.text2,
+              fontWeight: 800, background: idx === 0 ? T.mintSoft : T.surfaceFill,
+              padding: '4px 9px', borderRadius: 9999
+            }}>{tag}</span>
+          ))}
         </div>
         <div style={{ fontSize: 24, fontWeight: 700, color: T.ink, marginBottom: 10 }}>
           {recipe.name}
         </div>
-        {/* vNext S3 — 별점 대체: MetricRow 행동 메트릭 */}
-        {/* CONTRACT_CHECK: 메트릭 4종 데이터 소스·집계 단위 확정 필요 — vNext에서는 UI shape만 */}
-        <MetricRow
-          likes={Math.round(recipe.saves * 0.6)}
-          saves={recipe.saves}
-          cooks={Math.round(recipe.saves * 0.3)}
-          views={recipe.saves * 4}
-        />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: T.text3, fontSize: 12, marginTop: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: T.text3, fontSize: 12 }}>
           {Icon.clock()} {recipe.minutes}분
           <span>·</span>
           {Icon.fire()} {recipe.kcal}kcal
-          {(recipe.tags || []).length > 0 && <>
-            <span>·</span>
-            {recipe.tags.join(' · ')}
-          </>}
         </div>
       </div>
 
@@ -162,7 +157,7 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, o
               </div>);
 
         })}
-          <button style={{
+          <button onClick={onStartCook} style={{
           width: '100%', padding: 14, marginTop: 8, background: T.ink, color: '#fff',
           border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
@@ -196,8 +191,8 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, o
 
       {/* vNext S3 — 하단 CTA: 저장 버튼 제거(이미지 옆 북마크로 대체), 2버튼 레이아웃 */}
       <div style={{
-        position: 'absolute', bottom: 56, left: 0, right: 0, zIndex: 20,
-        background: '#fff', padding: '12px 16px 12px',
+        position: 'sticky', bottom: 78, left: 0, right: 0, zIndex: 20,
+        background: '#fff', padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
         borderTop: `0.5px solid ${T.border}`,
         display: 'flex', gap: 8
       }}>
