@@ -44,7 +44,7 @@
       "stage4_evidence_requirements": [
         "mobile-default",
         "mobile-narrow",
-        "primitives-gallery"
+        "primitives"
       ],
       "authority_report_paths": [
         "ui/designs/authority/WAVE1_FOUNDATION-authority.md"
@@ -52,7 +52,9 @@
       "design_generator_skip_reason": "이 슬라이스는 신규 화면이 아닌 공용 primitive 정비다. design-generator/design-critic은 화면 단위 도구이므로 해당하지 않는다. 대신 Stage 4에서 primitive 단위 screenshot evidence를 생성하고 authority review에서 품질을 확인한다.",
       "evidence_artifact_refs": [
         "ui/designs/evidence/wave1-port-foundation/primitives-mobile.png",
-        "ui/designs/evidence/wave1-port-foundation/primitives-mobile-narrow.png"
+        "ui/designs/evidence/wave1-port-foundation/primitives-mobile-narrow.png",
+        "ui/designs/evidence/wave1-port-foundation/planner-primitives-mobile.png",
+        "ui/designs/evidence/wave1-port-foundation/planner-primitives-mobile-narrow.png"
       ]
     }
   },
