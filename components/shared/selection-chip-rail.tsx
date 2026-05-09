@@ -37,7 +37,7 @@ export function SelectionChipRail({
   return (
     <div
       aria-label={ariaLabel}
-      className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide"
+      className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 scrollbar-hide"
       role="group"
     >
       {chips.map(({ value, label, topLabel, bottomLabel }) => {

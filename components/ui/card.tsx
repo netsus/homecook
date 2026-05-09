@@ -21,7 +21,7 @@ export function Card({
       className={[
         "rounded-[var(--radius-lg)] bg-[var(--surface)] shadow-[var(--shadow-2)]",
         interactive
-          ? "transition-all hover:shadow-[var(--shadow-3)] hover:-translate-y-0.5 active:scale-[0.98]"
+          ? "cursor-pointer transition-all hover:shadow-[var(--shadow-3)] hover:-translate-y-0.5 active:scale-[0.98]"
           : "",
         loading ? "animate-pulse" : "",
         className,

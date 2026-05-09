@@ -41,4 +41,42 @@ describe("app shell", () => {
     expect(screen.queryByText("Homecook")).toBeNull();
     expect(screen.getByText("content")).toBeTruthy();
   });
+
+  it("applies bottom-safe class when shared bottom tabs are visible", () => {
+    const { container } = render(
+      <AppShell currentTab="planner">
+        <div>content</div>
+      </AppShell>,
+    );
+
+    const shell = container.firstElementChild as HTMLElement;
+    expect(shell.className).toContain("bottom-safe");
+    expect(screen.getByText("bottom-tabs:planner")).toBeTruthy();
+  });
+
+  it("omits bottom-safe class when bottom tabs are hidden", () => {
+    const { container } = render(
+      <AppShell bottomTabsMode="hidden" currentTab="home">
+        <div>content</div>
+      </AppShell>,
+    );
+
+    const shell = container.firstElementChild as HTMLElement;
+    expect(shell.className).not.toContain("bottom-safe");
+    expect(screen.queryByText(/bottom-tabs:/)).toBeNull();
+  });
+
+  it("supports combined hidden header and hidden bottom tabs", () => {
+    const { container } = render(
+      <AppShell bottomTabsMode="hidden" currentTab="home" headerMode="hidden">
+        <div>content</div>
+      </AppShell>,
+    );
+
+    const shell = container.firstElementChild as HTMLElement;
+    expect(shell.className).not.toContain("bottom-safe");
+    expect(screen.queryByText("Homecook")).toBeNull();
+    expect(screen.queryByText(/bottom-tabs:/)).toBeNull();
+    expect(screen.getByText("content")).toBeTruthy();
+  });
 });

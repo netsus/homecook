@@ -40,7 +40,7 @@ const variantStyles: Record<ButtonVariant, { base: string; hover: string; active
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "h-9 px-3 text-[13px]",
+  sm: "min-h-[44px] px-3 text-[13px]",
   md: "h-12 px-5 text-base",
   lg: "h-14 px-6 text-[17px]",
 };

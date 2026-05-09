@@ -44,7 +44,7 @@ export function Chip({
     <button
       aria-pressed={active}
       className={[
-        "inline-flex shrink-0 items-center rounded-[var(--radius-full)] transition-colors",
+        "inline-flex min-h-[44px] shrink-0 items-center rounded-[var(--radius-full)] transition-colors",
         sizeClass,
         stateClass,
         className,

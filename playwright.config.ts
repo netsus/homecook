@@ -2,7 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 const DEFAULT_PLAYWRIGHT_BASE_URL = "http://127.0.0.1:3100";
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? DEFAULT_PLAYWRIGHT_BASE_URL;
-const snapshotPlatform = process.platform === "darwin" ? "darwin" : "linux";
+const snapshotPlatform =
+  process.env.PLAYWRIGHT_SNAPSHOT_PLATFORM ??
+  (process.platform === "darwin" ? "darwin" : "linux");
 const webServerUrl = new URL(baseURL);
 const webServerHost = webServerUrl.hostname;
 const webServerPort =
