@@ -1,0 +1,108 @@
+{
+  "id": "wave1-port-planner-meal-add",
+  "title": "Wave1 Port Planner Meal Add — PLANNER_WEEK, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN",
+  "summary": "PLANNER_WEEK의 주간 이동/이모지·배지 제거/CTA 정리, MENU_ADD의 2열 옵션 레이아웃, MANUAL_CREATE의 재료 모달 흐름 정리, MEAL_SCREEN의 레시피 클릭·상태 셀렉터 제거·삭제 아이콘 정리를 기존 공식 API 계약 범위 안에서 UI-only로 포팅한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+
+  "goal": "PLANNER_WEEK 주간 이동, 이모지/배지 제거, CTA 정리, MENU_ADD 2열 옵션 그리드, MANUAL_CREATE 재료 모달 정리, MEAL_SCREEN 레시피 클릭/삭제 아이콘/status selector 제거를 기존 공식 API 계약 범위 안에서 UI-only로 포팅한다.",
+
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+
+  "dependencies": [
+    "wave1-port-foundation",
+    "wave1-port-discovery-detail",
+    "planner-column-customization",
+    "baemin-prototype-planner-week-parity",
+    "baemin-style-planner-week-retrofit",
+    "baemin-prototype-modal-overlay-parity"
+  ],
+
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/design/design-tokens.md",
+      "docs/design/mobile-ux-rules.md",
+      "docs/design/anchor-screens.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/wave1-port-planner-meal-add/README.md",
+      "docs/workpacks/wave1-port-planner-meal-add/acceptance.md",
+      "docs/workpacks/wave1-port-planner-meal-add/automation-spec.json",
+      "docs/workpacks/wave1-service-porting-plan.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md",
+      "ui/designs/prototypes/claude-design-260505-wave1/VNEXT_DESIGN_PRINCIPLES.md",
+      "ui/designs/prototypes/claude-design-260505-wave1/HANDOFF.md"
+    ]
+  },
+
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+
+  "verification": {
+    "required_checks": [
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:pr-ready -- --slice wave1-port-planner-meal-add --pr-body <pr-body-file> --mode frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "screenshot",
+      "authority-report"
+    ]
+  },
+
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+
+  "notes": "Stage 1 docs created by Claude. Stage 2 N/A (UI-only). Planner column CRUD already merged in planner-column-customization (#367-#370). Weekly navigation uses existing shiftPlannerRange + fetchPlanner. POST /meals leftover_dish_id is existing contract.",
+
+  "out_of_scope": [
+    "HOME, RECIPE_DETAIL, save modal 화면 변경 (Slice B wave1-port-discovery-detail에서 완료)",
+    "SHOPPING, COOK_MODE 화면 변경 (Slice D wave1-port-shopping-cooking)",
+    "PANTRY, MYPAGE, SETTINGS 화면 변경 (Slice E~F)",
+    "끼니 컬럼 CRUD/기본 컬럼 (planner-column-customization에서 완료)",
+    "API/DB/status/endpoint/field 추가 또는 변경",
+    "새 npm dependency 추가",
+    "prototype mint/Jua/asset 도입",
+    "meals.status 직접 mutation",
+    "끼니 컬럼 순서 변경(reorder)"
+  ],
+
+  "open_questions": []
+}
