@@ -4,11 +4,16 @@
 
 ## Repair 0: Navigation And Return Context
 
-- [ ] MEAL_SCREEN -> RECIPE_DETAIL -> back이 원래 끼니 화면으로 복귀한다.
-- [ ] MENU_ADD option -> destination -> back이 식사추가 modal 열린 PLANNER 상태로 복귀한다.
-- [ ] MYPAGE shopping history -> SHOPPING_DETAIL -> back이 장보기기록 화면으로 복귀한다.
-- [ ] MYPAGE recipebook list -> RECIPEBOOK_DETAIL -> back이 레시피북 목록으로 복귀한다.
-- [ ] Mobile shell과 desktop shell에서 같은 return context 규칙을 적용한다.
+- [x] MEAL_SCREEN -> RECIPE_DETAIL -> back이 원래 끼니 화면으로 복귀한다.
+- [x] MENU_ADD option -> destination -> back이 식사추가 modal 열린 PLANNER 상태로 복귀한다.
+- [x] MYPAGE shopping history -> SHOPPING_DETAIL -> back이 장보기기록 화면으로 복귀한다.
+- [x] MYPAGE recipebook list -> RECIPEBOOK_DETAIL -> back이 레시피북 목록으로 복귀한다.
+- [x] Mobile shell과 desktop shell에서 같은 return context 규칙을 적용한다.
+
+Evidence:
+
+- `prototype Repair 0 navigation smoke OK`
+- `prototype Repair 0 desktop navigation smoke OK`
 
 ## Repair 1: Modal And Interaction Fixes
 

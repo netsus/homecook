@@ -69,7 +69,7 @@ function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual, onGoYtImport
   );
 }
 
-function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, onOpenMeal, onCreateShopping, onCookList, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers }) {
+function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, onOpenMeal, onCreateShopping, onCookList, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers, initialMealAdd }) {
   const keys = Object.keys(planner);
   const todayK = keys[todayIdx];
   // vNext S4 — week navigation (prototype: label만 변경, 데이터는 동일)
@@ -116,6 +116,12 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
 
   // 식사 추가 진입점: 모달 열기
   const openMealAdd = (date, slot) => setMealAddModal({ date, slot });
+
+  React.useEffect(() => {
+    if (initialMealAdd?.date && initialMealAdd?.slot) {
+      setMealAddModal({ date: initialMealAdd.date, slot: initialMealAdd.slot });
+    }
+  }, [initialMealAdd?.nonce]);
 
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
