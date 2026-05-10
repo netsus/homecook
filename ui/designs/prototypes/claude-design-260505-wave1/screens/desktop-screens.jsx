@@ -3,7 +3,7 @@
 const { useMemo: dUseMemo, useState: dUseState } = React;
 
 // vNext S2 — DesktopHome: 앱 개선사항을 웹 레이아웃에 자연스럽게 변환
-function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy, onOpenIngredientFilter, ingredientNames = [], onGoPlanner }) {
+function DesktopHome({ onOpenRecipe, onOpenSave, savedIds = [], ingFilter, setIngFilter, sortBy, setSortBy, onOpenIngredientFilter, ingredientNames = [], onGoPlanner }) {
   const [query, setQuery] = dUseState('');
   const [activeTheme, setActiveTheme] = dUseState(null);
 
@@ -190,6 +190,12 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
                 fontSize: 80, position: 'relative',
               }}>
                 {r.emoji}
+                <button aria-label={`${r.name} 저장`} onClick={(e) => { e.stopPropagation(); onOpenSave?.(r.id); }} style={{
+                  position: 'absolute', top: 12, right: 12,
+                  width: 36, height: 36, borderRadius: 18, border: 'none',
+                  background: 'rgba(255,255,255,0.92)', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>{Icon.bookmark(savedIds.includes(r.id))}</button>
                 {r.saves > 2000 && (
                   <div style={{
                     position: 'absolute', top: 12, left: 12,
@@ -1772,16 +1778,17 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
 }
 
 // Desktop: COOK_MODE (= CookRun, P1.1)
-function DesktopCookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete, showToast }) {
-  const meal = mealItems(planner[date]?.[slot])[mealIndex];
-  const recipe = meal && RECIPES.find(r => r.id === meal.recipeId);
+function DesktopCookRunScreen({ date, slot, mealIndex = 0, recipeId, planner, onBack, onComplete, showToast }) {
+  const meal = date && slot ? mealItems(planner[date]?.[slot])[mealIndex] : null;
+  const recipe = RECIPES.find(r => r.id === (recipeId || meal?.recipeId));
+  const independentCook = !!recipeId && !meal;
   const [consumed, setConsumed] = dUseState(new Set());
   const [confirmCancel, setConfirmCancel] = dUseState(false);
   if (!recipe) {
     return (
       <div>
         <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text2, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>{Icon.chevL(T.text2)} 돌아가기</button>
-        <div style={{ padding: 60, textAlign: 'center', color: T.text3 }}>식사를 찾을 수 없어요</div>
+        <div style={{ padding: 60, textAlign: 'center', color: T.text3 }}>레시피를 찾을 수 없어요</div>
       </div>
     );
   }
@@ -1797,7 +1804,9 @@ function DesktopCookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onCo
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
         <div>
-          <div style={{ fontSize: 11, color: T.text3, fontWeight: 700, letterSpacing: 1 }}>요리 모드 · {date} {slot}</div>
+          <div style={{ fontSize: 11, color: T.text3, fontWeight: 700, letterSpacing: 1 }}>
+            {independentCook ? '요리 모드 · 독립 요리' : `요리 모드 · ${date} ${slot}`}
+          </div>
           <div style={{ fontSize: 24, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>{recipe.name}</div>
         </div>
         <div style={{ fontSize: 13, color: T.text3 }}>{steps.length}단계</div>
@@ -1845,7 +1854,14 @@ function DesktopCookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onCo
 	                background: '#fff', color: T.text2, fontSize: 13, fontWeight: 800, cursor: 'pointer',
 	                whiteSpace: 'nowrap',
 	              }}>취소</button>
-	              <button onClick={() => onComplete?.(date, slot, [...consumed], mealIndex)} style={{
+	              <button onClick={() => {
+                  if (independentCook) {
+                    showToast?.('🎉 요리 완료!');
+                    onBack?.();
+                  } else {
+                    onComplete?.(date, slot, [...consumed], mealIndex);
+                  }
+                }} style={{
 	                flex: 1, padding: '12px 18px', borderRadius: 10, border: 'none',
 	                background: T.mint, color: '#fff', fontSize: 14, fontWeight: 900, cursor: 'pointer',
 	                fontFamily: T.fontBrand, whiteSpace: 'nowrap',
@@ -2007,18 +2023,25 @@ function DesktopLoginScreen({ returnTo, onBack, onLogin }) {
 
 // Desktop: SETTINGS (P1.2)
 function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAccount, showToast }) {
-  const [keepAwake, setKeepAwake] = dUseState(true);
-  const [voice, setVoice] = dUseState(false);
-  const [autoNext, setAutoNext] = dUseState(false);
+  const defaultPrefs = { keepAwake: true, voice: false, autoNext: false };
+  const [savedPrefs, setSavedPrefs] = dUseState(defaultPrefs);
+  const [draftPrefs, setDraftPrefs] = dUseState(defaultPrefs);
+  const [nicknameDraft, setNicknameDraft] = dUseState(profile?.nickname || '집밥러버');
   const [confirmLogout, setConfirmLogout] = dUseState(false);
   const [confirmDelete, setConfirmDelete] = dUseState(false);
   const [mealColumns, setMealColumns] = dUseState(['아침', '점심', '저녁']);
   const [newMealName, setNewMealName] = dUseState('');
-  const [section, setSection] = dUseState('planner');
+  const [section, setSection] = dUseState('account');
+  const prefsDirty = JSON.stringify(savedPrefs) !== JSON.stringify(draftPrefs);
+  const setDraftPref = (key, value) => setDraftPrefs(prev => ({ ...prev, [key]: value }));
 
   const addMealColumn = () => {
     const name = newMealName.trim();
     if (!name) return;
+    if (mealColumns.length >= 5) {
+      showToast?.('끼니 컬럼은 최대 5개까지 가능해요');
+      return;
+    }
     if (mealColumns.includes(name)) {
       showToast?.('이미 있는 끼니예요');
       return;
@@ -2036,6 +2059,7 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
   };
 
   const sections = [
+    { k: 'account', label: '계정', emoji: '👤' },
     { k: 'planner', label: '플래너 끼니', emoji: '🗓️' },
     { k: 'cook',    label: '요리 모드', emoji: '🍳' },
     { k: 'notif',   label: '알림', emoji: '🔔' },
@@ -2053,7 +2077,7 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
 
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
         <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>설정</div>
-        <div style={{ fontSize: 12, color: T.text3 }}>변경 사항은 자동 저장돼요</div>
+        <div style={{ fontSize: 12, color: T.text3 }}>필요한 설정은 저장 후 반영돼요</div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 24, alignItems: 'start' }}>
@@ -2073,6 +2097,25 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
         </aside>
 
         <main style={{ background: '#fff', borderRadius: 16, padding: 28, boxShadow: T.shadowDeep, minHeight: 400 }}>
+          {section === 'account' && (
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>계정</div>
+              <DesktopSettingRow label="닉네임" sub={profile?.email || 'user@homecook.app'}
+                right={<div style={{ display: 'flex', gap: 8 }}>
+                  <input value={nicknameDraft} onChange={e => setNicknameDraft(e.target.value)}
+                    maxLength={12} style={{ ...inp, width: 180, padding: '10px 12px', fontSize: 13 }} />
+                  <button onClick={() => {
+                    const nickname = nicknameDraft.trim();
+                    if (nickname.length < 2) {
+                      showToast?.('닉네임은 2자 이상이에요');
+                      return;
+                    }
+                    onUpdateProfile?.({ nickname });
+                    showToast?.('닉네임이 변경됐어요');
+                  }} style={editLinkBtnDsk}>저장</button>
+                </div>} />
+            </div>
+          )}
           {section === 'planner' && (
             <div>
               <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>플래너 끼니 컬럼</div>
@@ -2097,21 +2140,37 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, marginTop: 4 }}>
                   <input value={newMealName} onChange={e => setNewMealName(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') addMealColumn(); }}
-                    placeholder="새 끼니 이름" style={{ ...inp, padding: '12px 14px', fontSize: 13 }} />
-                  <button onClick={addMealColumn} style={{
+                    placeholder="새 끼니 이름" disabled={mealColumns.length >= 5}
+                    style={{ ...inp, padding: '12px 14px', fontSize: 13, background: mealColumns.length >= 5 ? T.surfaceFill : '#fff' }} />
+                  <button onClick={addMealColumn} disabled={mealColumns.length >= 5} style={{
                     padding: '0 16px', borderRadius: 10, border: 'none',
-                    background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+                    background: mealColumns.length >= 5 ? T.border : T.mint,
+                    color: mealColumns.length >= 5 ? T.text4 : '#fff',
+                    fontSize: 13, fontWeight: 800, cursor: mealColumns.length >= 5 ? 'not-allowed' : 'pointer',
                   }}>+ 끼니 컬럼 추가</button>
                 </div>
+                <div style={{ fontSize: 11, color: mealColumns.length >= 5 ? T.red : T.text3, marginTop: 2 }}>{mealColumns.length}/5개</div>
               </div>
             </div>
           )}
           {section === 'cook' && (
             <div>
               <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>요리 모드</div>
-              <DesktopToggleRow label="화면 켜둠" sub="요리 중 화면이 꺼지지 않아요" on={keepAwake} onChange={setKeepAwake} />
-              <DesktopToggleRow label="음성 안내" sub="단계 음성을 읽어줘요 (베타)" on={voice} onChange={setVoice} />
-              <DesktopToggleRow label="타이머 끝나면 다음 단계 자동" sub="타이머 종료 시 자동으로 다음 단계로 넘어갑니다" on={autoNext} onChange={setAutoNext} />
+              <DesktopToggleRow label="화면 켜둠" sub="요리 중 화면이 꺼지지 않아요" on={draftPrefs.keepAwake} onChange={(v) => setDraftPref('keepAwake', v)} />
+              <DesktopToggleRow label="음성 안내" sub="단계 음성을 읽어줘요 (베타)" on={draftPrefs.voice} onChange={(v) => setDraftPref('voice', v)} />
+              <DesktopToggleRow label="타이머 끝나면 다음 단계 자동" sub="타이머 종료 시 자동으로 다음 단계로 넘어갑니다" on={draftPrefs.autoNext} onChange={(v) => setDraftPref('autoNext', v)} />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+                <button disabled={!prefsDirty} onClick={() => { setDraftPrefs(savedPrefs); showToast?.('환경설정 변경을 취소했어요'); }} style={{
+                  padding: '10px 16px', borderRadius: 10, border: `1px solid ${T.border}`,
+                  background: '#fff', color: prefsDirty ? T.text2 : T.text4, fontSize: 13, fontWeight: 800,
+                  cursor: prefsDirty ? 'pointer' : 'not-allowed',
+                }}>취소</button>
+                <button disabled={!prefsDirty} onClick={() => { setSavedPrefs(draftPrefs); showToast?.('환경설정이 저장됐어요'); }} style={{
+                  padding: '10px 18px', borderRadius: 10, border: 'none',
+                  background: prefsDirty ? T.mint : T.border, color: '#fff', fontSize: 13, fontWeight: 900,
+                  cursor: prefsDirty ? 'pointer' : 'not-allowed',
+                }}>저장</button>
+              </div>
             </div>
           )}
           {section === 'notif' && (
