@@ -19,7 +19,7 @@ type SelectionMode = "all" | "selected" | "none";
  * allowing users to choose which checked items to add to pantry.
  *
  * Three modes:
- * - "모두 추가" (all): calls onConfirm(undefined) → backend reflects all valid items
+ * - "모두 추가" (all): calls onConfirm(undefined) → parent sends default policy
  * - "선택 추가" (selected): shows checkboxes, calls onConfirm([...selectedIds])
  * - "추가 안 함" (none): calls onConfirm([])
  *
@@ -67,7 +67,7 @@ export function PantryReflectionPopup({
 
   const handleConfirm = () => {
     if (mode === "all") {
-      // undefined → backend reflects all valid items (default policy)
+      // undefined is the UI signal for the default pantry reflection policy.
       onConfirm(undefined);
     } else if (mode === "none") {
       // [] → no pantry reflection

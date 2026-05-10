@@ -120,10 +120,10 @@ export function ConsumedIngredientSheet({
                 onChange={() => toggleIngredient(ing.ingredient_id)}
                 type="checkbox"
               />
-              <span className="flex-1 text-sm text-[var(--foreground)]">
+              <span className="min-w-0 flex-1 break-keep text-sm text-[var(--foreground)]">
                 {ing.standard_name}
               </span>
-              <span className="text-xs text-[var(--muted)]">
+              <span className="min-w-0 max-w-[44%] break-words text-right text-xs text-[var(--muted)]">
                 {ing.display_text ?? ""}
               </span>
             </label>
@@ -132,7 +132,7 @@ export function ConsumedIngredientSheet({
 
         <div className="flex gap-3 px-5 pb-[max(env(safe-area-inset-bottom),16px)] pt-4 md:px-6">
           <button
-            className="flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--line)] bg-transparent text-sm font-semibold text-[var(--muted)]"
+            className="flex min-h-11 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] border border-[var(--line)] bg-transparent px-3 text-sm font-semibold text-[var(--muted)]"
             data-testid="consumed-skip-button"
             onClick={onSkip}
             type="button"
@@ -140,7 +140,7 @@ export function ConsumedIngredientSheet({
             건너뛰기
           </button>
           <button
-            className="flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand)] text-sm font-bold text-white"
+            className="flex min-h-11 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--brand)] px-3 text-sm font-bold text-white"
             data-testid="consumed-confirm-button"
             onClick={handleConfirm}
             type="button"

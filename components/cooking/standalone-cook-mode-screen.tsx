@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
@@ -17,7 +17,6 @@ import { useStandaloneCookModeStore } from "@/stores/standalone-cook-mode-store"
 import type { CookingModeIngredient, CookingModeStep } from "@/types/cooking";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
-type ActiveTab = "ingredients" | "steps";
 
 function formatHeatLevel(heat: string | null): string | null {
   if (!heat) return null;
@@ -37,49 +36,6 @@ function formatHeatLevel(heat: string | null): string | null {
   }
 }
 
-function formatDuration(seconds: number | null, text: string | null): string | null {
-  if (text) return text;
-  if (seconds === null) return null;
-  if (seconds < 60) return `${seconds}초`;
-  const min = Math.floor(seconds / 60);
-  const sec = seconds % 60;
-  return sec > 0 ? `${min}분 ${sec}초` : `${min}분`;
-}
-
-const SWIPE_MIN_DISTANCE = 30;
-
-function useSwipe(onSwipeLeft: () => void, onSwipeRight: () => void) {
-  const startRef = useRef<{ x: number; y: number } | null>(null);
-
-  const handlers = useMemo(
-    () => ({
-      onTouchStart: (e: React.TouchEvent) => {
-        const touch = e.touches[0];
-        startRef.current = { x: touch.clientX, y: touch.clientY };
-      },
-      onTouchEnd: (e: React.TouchEvent) => {
-        if (!startRef.current) return;
-        const touch = e.changedTouches[0];
-        const dx = touch.clientX - startRef.current.x;
-        const dy = touch.clientY - startRef.current.y;
-        startRef.current = null;
-
-        if (Math.abs(dx) < SWIPE_MIN_DISTANCE) return;
-        if (Math.abs(dy) > Math.abs(dx)) return;
-
-        if (dx < 0) {
-          onSwipeLeft();
-        } else {
-          onSwipeRight();
-        }
-      },
-    }),
-    [onSwipeLeft, onSwipeRight],
-  );
-
-  return handlers;
-}
-
 export interface StandaloneCookModeScreenProps {
   recipeId: string;
   servings: number;
@@ -91,7 +47,6 @@ export function StandaloneCookModeScreen({
 }: StandaloneCookModeScreenProps) {
   const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>("checking");
-  const [activeTab, setActiveTab] = useState<ActiveTab>("ingredients");
   const [showConsumedSheet, setShowConsumedSheet] = useState(false);
   const [showLoginGate, setShowLoginGate] = useState(false);
   const completePendingRef = useRef(false);
@@ -209,10 +164,6 @@ export function StandaloneCookModeScreen({
   const handleRetry = useCallback(() => {
     void loadStandaloneCookMode(recipeId, servings);
   }, [loadStandaloneCookMode, recipeId, servings]);
-
-  const handleSwipeLeft = useCallback(() => setActiveTab("steps"), []);
-  const handleSwipeRight = useCallback(() => setActiveTab("ingredients"), []);
-  const swipeHandlers = useSwipe(handleSwipeLeft, handleSwipeRight);
 
   const returnPath = `/cooking/recipes/${recipeId}/cook-mode?servings=${servings}`;
 
@@ -374,75 +325,51 @@ export function StandaloneCookModeScreen({
         </span>
       </header>
 
-      {/* Tabs */}
-      <nav
-        className="flex border-b border-[var(--line)] bg-[var(--surface)]"
-        data-testid="standalone-cook-mode-tabs"
-        role="tablist"
-      >
-        <button
-          aria-selected={activeTab === "ingredients"}
-          className={`flex-1 py-3 text-center text-sm font-semibold transition-colors ${
-            activeTab === "ingredients"
-              ? "border-b-2 border-[var(--brand)] text-[var(--brand)]"
-              : "text-[var(--muted)]"
-          }`}
-          data-testid="tab-ingredients"
-          onClick={() => setActiveTab("ingredients")}
-          role="tab"
-          type="button"
-        >
-          재료
-        </button>
-        <button
-          aria-selected={activeTab === "steps"}
-          className={`flex-1 py-3 text-center text-sm font-semibold transition-colors ${
-            activeTab === "steps"
-              ? "border-b-2 border-[var(--brand)] text-[var(--brand)]"
-              : "text-[var(--muted)]"
-          }`}
-          data-testid="tab-steps"
-          onClick={() => setActiveTab("steps")}
-          role="tab"
-          type="button"
-        >
-          과정
-        </button>
-      </nav>
-
       {/* Content */}
       <div
         className="flex-1 overflow-y-auto px-4 pb-36 pt-4"
         data-testid="standalone-cook-mode-content"
-        {...swipeHandlers}
       >
-        {activeTab === "ingredients" ? (
+        <section className="mb-6" aria-labelledby="standalone-ingredients-heading">
+          <h2
+            className="mb-3 text-sm font-bold text-[var(--muted)]"
+            id="standalone-ingredients-heading"
+          >
+            재료
+          </h2>
           <IngredientList ingredients={recipe.ingredients} />
-        ) : (
+        </section>
+        <section aria-labelledby="standalone-steps-heading">
+          <h2
+            className="mb-3 text-sm font-bold text-[var(--muted)]"
+            id="standalone-steps-heading"
+          >
+            조리 과정
+          </h2>
           <StepList steps={recipe.steps} />
-        )}
+        </section>
       </div>
 
       {/* Bottom CTA */}
       <div className="fixed inset-x-0 bottom-0 border-t border-[var(--line)] bg-[var(--surface)] px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3">
         <div className="flex gap-3">
           <button
-            className="flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand)] px-4 py-3 text-sm font-bold text-white"
-            data-testid="standalone-complete-button"
-            disabled={screenState !== "ready"}
-            onClick={handleCompleteClick}
-            type="button"
-          >
-            요리 완료
-          </button>
-          <button
-            className="flex min-h-11 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--muted)] bg-transparent px-4 py-3 text-sm font-semibold text-[var(--foreground)]"
+            className="flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--muted)] bg-transparent px-3 py-3 text-sm font-semibold text-[var(--foreground)]"
             data-testid="standalone-cancel-button"
             disabled={screenState !== "ready"}
             onClick={handleCancelClick}
             type="button"
           >
             취소
+          </button>
+          <button
+            className="flex min-h-11 min-w-0 flex-[2] items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand)] px-3 py-3 text-sm font-bold text-white"
+            data-testid="standalone-complete-button"
+            disabled={screenState !== "ready"}
+            onClick={handleCompleteClick}
+            type="button"
+          >
+            요리 완료
           </button>
         </div>
       </div>
@@ -505,7 +432,6 @@ function StepList({ steps }: { steps: CookingModeStep[] }) {
       {steps.map((step) => {
         const methodColor = getCookingMethodColor(step.cooking_method.color_key);
         const heat = formatHeatLevel(step.heat_level);
-        const duration = formatDuration(step.duration_seconds, step.duration_text);
 
         return (
           <li
@@ -531,14 +457,9 @@ function StepList({ steps }: { steps: CookingModeStep[] }) {
               <p className="text-sm leading-relaxed text-[var(--foreground)]">
                 {step.instruction}
               </p>
-              {heat || duration ? (
+              {heat ? (
                 <div className="mt-2 flex gap-3">
-                  {heat ? (
-                    <span className="text-xs text-[var(--muted)]">{heat}</span>
-                  ) : null}
-                  {duration ? (
-                    <span className="text-xs text-[var(--muted)]">{duration}</span>
-                  ) : null}
+                  <span className="text-xs text-[var(--muted)]">{heat}</span>
                 </div>
               ) : null}
             </div>

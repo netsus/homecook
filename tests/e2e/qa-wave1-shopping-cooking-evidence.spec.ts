@@ -1,0 +1,451 @@
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
+
+import { expect, test, type Browser, type Page } from "@playwright/test";
+
+const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
+const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
+const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
+const EVIDENCE_DIR = path.resolve(
+  process.cwd(),
+  "ui/designs/evidence/wave1-port-shopping-cooking",
+);
+
+const viewports = {
+  mobile: { width: 390, height: 844 },
+  narrow: { width: 320, height: 568 },
+} as const;
+
+async function preparePage(
+  browser: Browser,
+  viewport: { width: number; height: number },
+) {
+  const context = await browser.newContext({
+    deviceScaleFactor: 2,
+    viewport,
+  });
+  const page = await context.newPage();
+  return { context, page };
+}
+
+async function stabilize(page: Page) {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.addStyleTag({
+    content: `
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+        caret-color: transparent !important;
+      }
+
+      nextjs-portal,
+      [data-next-badge-root],
+      [aria-label="Open Next.js Dev Tools"],
+      [data-nextjs-dev-tools-button],
+      [data-nextjs-toast] {
+        display: none !important;
+        visibility: hidden !important;
+      }
+    `,
+  });
+}
+
+async function setAuthOverride(page: Page) {
+  await page.context().addCookies([
+    {
+      name: E2E_AUTH_OVERRIDE_COOKIE,
+      sameSite: "Lax",
+      url: BASE_URL,
+      value: "authenticated",
+    },
+  ]);
+  await page.addInitScript(
+    ({ key, state }: { key: string; state: string }) => {
+      window.localStorage.setItem(key, state);
+    },
+    { key: E2E_AUTH_OVERRIDE_KEY, state: "authenticated" },
+  );
+}
+
+function shoppingItems() {
+  return [
+    {
+      id: "item-1",
+      ingredient_id: "ing-1",
+      display_text: "양파 2개",
+      amounts_json: [{ amount: 2, unit: "개" }],
+      is_checked: false,
+      is_pantry_excluded: false,
+      added_to_pantry: false,
+      sort_order: 0,
+    },
+    {
+      id: "item-2",
+      ingredient_id: "ing-2",
+      display_text: "두부 1모",
+      amounts_json: [{ amount: 1, unit: "모" }],
+      is_checked: true,
+      is_pantry_excluded: false,
+      added_to_pantry: false,
+      sort_order: 100,
+    },
+    {
+      id: "item-3",
+      ingredient_id: "ing-3",
+      display_text: "간장 2큰술",
+      amounts_json: [{ amount: 2, unit: "큰술" }],
+      is_checked: false,
+      is_pantry_excluded: true,
+      added_to_pantry: false,
+      sort_order: 200,
+    },
+    {
+      id: "item-4",
+      ingredient_id: "ing-4",
+      display_text: "고춧가루 1큰술",
+      amounts_json: [{ amount: 1, unit: "큰술" }],
+      is_checked: false,
+      is_pantry_excluded: true,
+      added_to_pantry: false,
+      sort_order: 300,
+    },
+  ];
+}
+
+function shoppingListDetail({ completed = false } = {}) {
+  return {
+    id: completed ? "list-completed" : "list-1",
+    title: completed ? "완료된 장보기" : "4월 12일 장보기",
+    date_range_start: "2026-04-12",
+    date_range_end: "2026-04-20",
+    is_completed: completed,
+    completed_at: completed ? "2026-04-13T00:00:00.000Z" : null,
+    created_at: "2026-04-12T00:00:00.000Z",
+    updated_at: "2026-04-12T00:00:00.000Z",
+    recipes: [
+      {
+        recipe_id: "recipe-1",
+        recipe_name: "김치찌개",
+        recipe_thumbnail: null,
+        shopping_servings: 4,
+        planned_servings_total: 4,
+      },
+    ],
+    items: shoppingItems(),
+  };
+}
+
+async function installShoppingRoutes(page: Page) {
+  await page.route("**/api/v1/shopping/preview", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          eligible_meals: [
+            {
+              id: "meal-1",
+              recipe_id: "recipe-1",
+              recipe_name: "김치찌개",
+              recipe_thumbnail: null,
+              planned_servings: 2,
+              created_at: "2026-04-12T00:00:00.000Z",
+            },
+            {
+              id: "meal-2",
+              recipe_id: "recipe-1",
+              recipe_name: "김치찌개",
+              recipe_thumbnail: null,
+              planned_servings: 2,
+              created_at: "2026-04-13T00:00:00.000Z",
+            },
+          ],
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/shopping/lists/*", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    const isCompleted = route.request().url().includes("list-completed");
+    await route.fulfill({
+      json: {
+        success: true,
+        data: shoppingListDetail({ completed: isCompleted }),
+        error: null,
+      },
+    });
+  });
+}
+
+function cookModeData() {
+  return {
+    session_id: "session-abc",
+    recipe: {
+      id: "recipe-1",
+      title: "김치찌개",
+      cooking_servings: 2,
+      ingredients: [
+        {
+          ingredient_id: "ing-1",
+          standard_name: "양파",
+          amount: 1,
+          unit: "개",
+          display_text: "양파 1개",
+          ingredient_type: "QUANT",
+          scalable: true,
+        },
+        {
+          ingredient_id: "ing-2",
+          standard_name: "김치",
+          amount: 200,
+          unit: "g",
+          display_text: "김치 200g",
+          ingredient_type: "QUANT",
+          scalable: true,
+        },
+      ],
+      steps: [
+        {
+          step_number: 1,
+          instruction: "양파를 썰어주세요.",
+          cooking_method: {
+            code: "stir_fry",
+            label: "볶기",
+            color_key: "stir_fry",
+          },
+          ingredients_used: [],
+          heat_level: null,
+          duration_seconds: null,
+          duration_text: null,
+        },
+        {
+          step_number: 2,
+          instruction: "김치를 넣고 끓여주세요.",
+          cooking_method: {
+            code: "boil",
+            label: "끓이기",
+            color_key: "boil",
+          },
+          ingredients_used: [],
+          heat_level: "medium",
+          duration_seconds: 600,
+          duration_text: null,
+        },
+        {
+          step_number: 3,
+          instruction: "두부를 넣고 한 번 더 끓여주세요.",
+          cooking_method: {
+            code: "boil",
+            label: "끓이기",
+            color_key: "boil",
+          },
+          ingredients_used: [],
+          heat_level: "low",
+          duration_seconds: null,
+          duration_text: null,
+        },
+      ],
+    },
+  };
+}
+
+async function installCookingRoutes(page: Page) {
+  await page.route("**/api/v1/cooking/ready", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          date_range: { start: "2026-04-12", end: "2026-04-20" },
+          recipes: [
+            {
+              recipe_id: "recipe-1",
+              recipe_name: "김치찌개",
+              recipe_thumbnail: null,
+              shopping_list_id: "list-1",
+              date_range_start: "2026-04-12",
+              date_range_end: "2026-04-20",
+              meals: [
+                {
+                  meal_id: "meal-1",
+                  plan_date: "2026-04-12",
+                  column_name: "저녁",
+                  planned_servings: 2,
+                },
+              ],
+            },
+          ],
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/cooking/sessions/*/cook-mode", async (route) => {
+    await route.fulfill({
+      json: { success: true, data: cookModeData(), error: null },
+    });
+  });
+
+  await page.route("**/api/v1/recipes/*/cook-mode*", async (route) => {
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { recipe: cookModeData().recipe },
+        error: null,
+      },
+    });
+  });
+}
+
+test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) => {
+  await mkdir(EVIDENCE_DIR, { recursive: true });
+
+  {
+    const { context, page } = await preparePage(browser, viewports.mobile);
+    await setAuthOverride(page);
+    await installShoppingRoutes(page);
+    await page.goto(`${BASE_URL}/shopping/flow`);
+    await expect(page.getByText("김치찌개")).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "shopping-flow-preview.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.narrow);
+    await setAuthOverride(page);
+    await installShoppingRoutes(page);
+    await page.goto(`${BASE_URL}/shopping/flow`);
+    await expect(page.getByText("김치찌개")).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "shopping-flow-narrow.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.mobile);
+    await setAuthOverride(page);
+    await installShoppingRoutes(page);
+    await page.goto(`${BASE_URL}/shopping/lists/list-1`);
+    await expect(page.getByText("4월 12일 장보기")).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "shopping-detail-default.png"),
+    });
+
+    await page.getByRole("button", { name: "장보기 완료" }).click();
+    await expect(page.getByRole("dialog", { name: "팬트리에 추가할까요?" })).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "shopping-complete-pantry.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.narrow);
+    await setAuthOverride(page);
+    await installShoppingRoutes(page);
+    await page.goto(`${BASE_URL}/shopping/lists/list-1`);
+    await expect(page.getByText("4월 12일 장보기")).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "shopping-detail-narrow.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.mobile);
+    await setAuthOverride(page);
+    await installShoppingRoutes(page);
+    await page.goto(`${BASE_URL}/shopping/lists/list-completed`);
+    await expect(page.getByRole("heading", { name: "완료된 장보기" })).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "shopping-detail-readonly.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.mobile);
+    await setAuthOverride(page);
+    await installCookingRoutes(page);
+    await page.goto(`${BASE_URL}/cooking/ready`);
+    await expect(page.getByRole("heading", { name: "요리하기" })).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "cook-ready-list.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.mobile);
+    await setAuthOverride(page);
+    await installCookingRoutes(page);
+    await page.goto(`${BASE_URL}/cooking/sessions/session-abc/cook-mode`);
+    await expect(page.getByTestId("step-list")).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "cook-mode-scroll.png"),
+    });
+
+    await page.getByTestId("complete-button").click();
+    await expect(page.getByTestId("consumed-ingredient-sheet")).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "cook-mode-complete.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.narrow);
+    await setAuthOverride(page);
+    await installCookingRoutes(page);
+    await page.goto(`${BASE_URL}/cooking/sessions/session-abc/cook-mode`);
+    await expect(page.getByTestId("step-list")).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "cook-mode-narrow.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.mobile);
+    await setAuthOverride(page);
+    await installCookingRoutes(page);
+    await page.goto(`${BASE_URL}/cooking/recipes/recipe-1/cook-mode?servings=2`);
+    await expect(page.getByTestId("step-list")).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "standalone-cook-mode-scroll.png"),
+    });
+    await context.close();
+  }
+});

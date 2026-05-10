@@ -219,7 +219,7 @@ test.describe("15b standalone cook mode", () => {
     ).toBeVisible();
   });
 
-  test("swipe switches between ingredients and steps tabs", async ({
+  test("standalone cook mode uses one scroll view without tab controls", async ({
     page,
   }) => {
     await setAuthOverride(page, "authenticated");
@@ -228,26 +228,11 @@ test.describe("15b standalone cook mode", () => {
     await page.goto(`/cooking/recipes/${RECIPE_ID}/cook-mode?servings=2`);
     await page.waitForSelector('[data-testid="standalone-cook-mode-content"]');
 
-    // Initially shows ingredients
     await expect(page.getByTestId("ingredient-list")).toBeVisible();
-
-    const content = page.getByTestId("standalone-cook-mode-content");
-
-    await content.dispatchEvent("touchstart", {
-      touches: [{ identifier: 1, clientX: 240, clientY: 160 }],
-    });
-    await content.dispatchEvent("touchend", {
-      changedTouches: [{ identifier: 1, clientX: 120, clientY: 160 }],
-    });
     await expect(page.getByTestId("step-list")).toBeVisible();
-
-    await content.dispatchEvent("touchstart", {
-      touches: [{ identifier: 2, clientX: 120, clientY: 160 }],
-    });
-    await content.dispatchEvent("touchend", {
-      changedTouches: [{ identifier: 2, clientX: 240, clientY: 160 }],
-    });
-    await expect(page.getByTestId("ingredient-list")).toBeVisible();
+    await expect(page.getByTestId("tab-steps")).toHaveCount(0);
+    await expect(page.getByText("10분")).toHaveCount(0);
+    await expect(page.getByText(/타이머|메모|일시정지|이전|다음/)).toHaveCount(0);
   });
 
   test("complete with skip (empty consumed_ingredient_ids)", async ({

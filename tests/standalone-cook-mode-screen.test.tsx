@@ -143,6 +143,8 @@ describe("StandaloneCookModeScreen", () => {
     expect(screen.getByText("김치찌개")).toBeTruthy();
     expect(screen.getByText("2인분")).toBeTruthy();
     expect(screen.getByTestId("ingredient-list")).toBeTruthy();
+    expect(screen.getByTestId("step-list")).toBeTruthy();
+    expect(screen.queryByTestId("standalone-cook-mode-tabs")).not.toBeTruthy();
     expect(screen.getAllByTestId("ingredient-item")).toHaveLength(2);
   });
 
@@ -213,12 +215,6 @@ describe("StandaloneCookModeScreen", () => {
 
     const Screen = await importScreen();
     render(<Screen recipeId="recipe-1" servings={2} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("tab-steps")).toBeTruthy();
-    });
-
-    fireEvent.click(screen.getByTestId("tab-steps"));
 
     await waitFor(() => {
       expect(screen.getByTestId("step-list")).toBeTruthy();
@@ -370,9 +366,22 @@ describe("StandaloneCookModeScreen", () => {
     });
   });
 
-  it("switches between ingredients and steps tabs with swipe", async () => {
+  it("renders standalone cook mode as one scroll view without tab or timer controls", async () => {
     readE2EAuthOverride.mockReturnValue(true);
-    fetchStandaloneCookMode.mockResolvedValue(buildStandaloneCookModeData());
+    fetchStandaloneCookMode.mockResolvedValue(
+      buildStandaloneCookModeData({
+        recipe: {
+          ...buildStandaloneCookModeData().recipe,
+          steps: [
+            buildStep({
+              duration_seconds: 600,
+              duration_text: null,
+              heat_level: "medium",
+            }),
+          ],
+        },
+      }),
+    );
 
     const Screen = await importScreen();
     render(<Screen recipeId="recipe-1" servings={2} />);
@@ -381,31 +390,12 @@ describe("StandaloneCookModeScreen", () => {
       expect(screen.getByTestId("standalone-cook-mode-content")).toBeTruthy();
     });
 
-    const content = screen.getByTestId("standalone-cook-mode-content");
-
-    // Swipe left to switch to steps
-    fireEvent.touchStart(content, {
-      touches: [{ clientX: 200, clientY: 100 }],
-    });
-    fireEvent.touchEnd(content, {
-      changedTouches: [{ clientX: 100, clientY: 100 }],
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId("step-list")).toBeTruthy();
-    });
-
-    // Swipe right to switch back to ingredients
-    fireEvent.touchStart(content, {
-      touches: [{ clientX: 100, clientY: 100 }],
-    });
-    fireEvent.touchEnd(content, {
-      changedTouches: [{ clientX: 200, clientY: 100 }],
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId("ingredient-list")).toBeTruthy();
-    });
+    expect(screen.getByTestId("ingredient-list")).toBeTruthy();
+    expect(screen.getByTestId("step-list")).toBeTruthy();
+    expect(screen.queryByTestId("tab-steps")).not.toBeTruthy();
+    expect(screen.queryByTestId("tab-ingredients")).not.toBeTruthy();
+    expect(screen.queryByText("10분")).not.toBeTruthy();
+    expect(screen.queryByText(/타이머|메모|일시정지|이전|다음/)).not.toBeTruthy();
   });
 
   it("displays servings as read-only (no stepper UI)", async () => {

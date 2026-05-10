@@ -311,8 +311,10 @@ test.describe("slice 11: shopping reorder", () => {
 
       await page.waitForTimeout(500);
 
-      // Conflict error should appear
-      await expect(page.getByText("완료된 장보기 기록은 수정할 수 없어요")).toBeVisible();
+      // Conflict error should appear in the reorder error alert.
+      await expect(
+        page.getByRole("alert").filter({ hasText: "완료된 장보기 기록은 수정할 수 없어요" })
+      ).toBeVisible();
     });
 
     test("should rollback order on reorder failure", async ({ page }) => {

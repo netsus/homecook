@@ -898,18 +898,18 @@
     {
       "id": "wave1-port-shopping-cooking",
       "preset": "vertical-slice-strict",
-      "branch": "docs/wave1-port-shopping-cooking",
+      "branch": "feature/fe-wave1-port-shopping-cooking",
       "pr_path": "pending",
-      "lifecycle": "planned",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "ready_for_review",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:frontend",
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs created by Claude. Stage 2 N/A (UI-only). Slice D of Wave1 porting plan: SHOPPING_FLOW/SHOPPING_DETAIL/COOK_READY_LIST/COOK_MODE UI improvements. COOK_MODE interaction model change classified as high-risk-ui-change. Roadmap status: docs (Stage 1 complete, awaiting merge)."
+      "notes": "Internal closeout projection after Codex Stage 6 review. Stage 1 docs PR #378 merged. Stage 2/3 N/A (UI-only). Stage 4 Claude handoff attempted through resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc but provider limit blocked implementation, so Codex completed fallback implementation, authority evidence, stale E2E repairs, and closeout. Design Status confirmed by Codex fallback authority, blocker 0. Local lint, typecheck, product tests, build, serial Playwright shopping/cooking E2E, authority evidence, workpack/workflow-v2, and diff checks passed. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:3|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm lint,pnpm typecheck,pnpm test:product,pnpm build,Playwright,ui/designs/authority/WAVE1_SHOPPING_COOKING-authority.md last_recovery_at=2026-05-10T01:56:00Z"
     }
   ]
 }

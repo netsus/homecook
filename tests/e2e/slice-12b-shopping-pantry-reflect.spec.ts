@@ -203,8 +203,10 @@ test.describe("slice 12b: shopping pantry reflect", () => {
       await confirmButton.click();
       const completeRequest = await completeRequestPromise;
 
-      // Should call API with undefined body (no add_to_pantry_item_ids field)
-      expect(parseJsonRequestBody(completeRequest)).toBeUndefined();
+      // Should call API with explicit null default policy
+      expect(parseJsonRequestBody(completeRequest)).toEqual({
+        add_to_pantry_item_ids: null,
+      });
 
       // Should show success message
       await expect(page.getByText(/장보기를 완료했어요.*2개 식사.*팬트리 2개 추가/)).toBeVisible();
