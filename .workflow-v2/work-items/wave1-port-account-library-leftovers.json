@@ -99,7 +99,7 @@
     "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "notes": "Closeout projection for Stage 4~6 frontend PR. Stage 1 docs PR #382 merged after Claude handoff attempted through resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc with model=opus, permission_mode=bypassPermissions, requested effort=xhigh recorded, CLI effort=high; provider limit reset 13:20 Asia/Seoul blocked Claude editing, so Codex completed fallback per user instruction. Stage 2/3 N/A (UI-only). Stage 4/5 Codex fallback completed MYPAGE visible settings entry, LEFTOVERS/ATE_LIST button clipping and copy polish, ATE_LIST uneat API preservation with 남은요리로 복귀 label, RECIPEBOOK_DETAIL custom book menu using existing PATCH/DELETE endpoints, 390/320 screenshot evidence, WAVE1_ACCOUNT_LIBRARY_LEFTOVERS authority report with blocker 0, exploratory QA eval score 98, targeted Vitest/Playwright, and pnpm verify:frontend. Manual Only real-device/real-seed smokes remain deferred by acceptance. Final current-head GitHub checks remain the merge gate. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,Vitest,Playwright,QA eval,ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md last_recovery_at=2026-05-10T05:03:14.264Z",
+  "notes": "Closeout projection for Stage 4~6 frontend PR #383. Stage 1 docs PR #382 merged after Claude handoff attempted through resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc with model=opus, permission_mode=bypassPermissions, requested effort=xhigh recorded, CLI effort=high; provider limit reset 13:20 Asia/Seoul blocked Claude editing, so Codex completed fallback per user instruction. Stage 2/3 N/A (UI-only). Stage 4/5 Codex fallback completed MYPAGE visible settings entry, LEFTOVERS/ATE_LIST button clipping and copy polish, ATE_LIST uneat API preservation with 남은요리로 복귀 label, RECIPEBOOK_DETAIL custom book menu using existing PATCH/DELETE endpoints, 390/320 screenshot evidence, WAVE1_ACCOUNT_LIBRARY_LEFTOVERS authority report with blocker 0, exploratory QA eval score 98, targeted Vitest/Playwright, and pnpm verify:frontend. Manual Only real-device/real-seed smokes remain deferred by acceptance. #383 opened as https://github.com/netsus/homecook/pull/383. Final current-head GitHub checks remain the merge gate. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,Vitest,Playwright,QA eval,ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md last_recovery_at=2026-05-10T05:03:14.264Z",
   "out_of_scope": [
     "API/DB/status/endpoint/field 추가 또는 변경",
     "leftover_dishes 응답에 끼니명/인분/meal column 정보를 임의 추가",
@@ -143,7 +143,7 @@
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending-pr-head",
+      "current_head_sha": "pending_github_current_head_after_pr_sync",
       "approval_state": "codex_approved",
       "all_checks_green": "pending_github_current_head"
     },
@@ -172,8 +172,8 @@
     },
     "projection_state": {
       "docs_synced_at": "2026-05-10T05:03:14.264Z",
-      "status_synced_at": "2026-05-10T05:03:14.264Z",
-      "pr_body_synced_at": "pending-pr"
+      "status_synced_at": "2026-05-10T05:15:31Z",
+      "pr_body_synced_at": "2026-05-10T05:15:31Z"
     }
   }
 }

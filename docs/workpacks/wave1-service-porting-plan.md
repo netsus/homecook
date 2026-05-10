@@ -36,6 +36,7 @@
   - 결과: PANTRY/add sheet/bundle picker/multi-delete Wave1 UI-only 포팅, authority blocker 0. `ingredients.image_url`은 contract-evolution 후보로 분리.
 - **Slice F `wave1-port-account-library-leftovers`**: Stage 4~6 closeout projection.
   - Stage 1 docs PR: #382
+  - Stage 4~6 frontend/closeout PR: #383
   - Stage 4~6 frontend/closeout branch: `feature/fe-wave1-port-account-library-leftovers`
   - Claude Stage 1 handoff attempted via resume session `3f4ca745-db71-4392-a3f1-4e3c4493e9bc`; provider limit reset 13:20 Asia/Seoul blocked editing, so Codex fallback prepared Stage 1 docs and frontend closeout.
   - 결과: MYPAGE visible settings entry, LEFTOVERS/ATE_LIST clipping/copy polish, ATE_LIST uneat API preserved with `남은요리로 복귀` label, RECIPEBOOK_DETAIL custom book menu, 390/320 screenshot evidence, authority blocker 0, `pnpm verify:frontend` passed.
@@ -472,6 +473,7 @@
 
 - Stage 1 docs branch: `docs/wave1-port-account-library-leftovers`
 - Stage 4~6 implementation branch: `feature/fe-wave1-port-account-library-leftovers`
+- Stage 4~6 frontend/closeout PR: #383
 - Stage 2/3: N/A, existing contracts were sufficient.
 - Codex fallback: completed FE implementation after Claude provider limit blocked Stage 4 delegation.
 - Authority: `ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md`, verdict pass, blocker 0.

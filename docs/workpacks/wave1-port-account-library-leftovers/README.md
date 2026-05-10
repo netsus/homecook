@@ -289,6 +289,7 @@ None.
 
 ## Stage 6 Verification Evidence
 
+- PR: #383 (`https://github.com/netsus/homecook/pull/383`)
 - `pnpm verify:frontend` — passed: lint, typecheck, 624 product tests, production build, smoke E2E 758 passed / 4 skipped, a11y 6 passed, visual 12 passed, security 9 passed, Lighthouse autorun passed for 2 URLs / 6 runs.
 - `pnpm exec vitest run tests/mypage-screen.test.tsx tests/settings-screen.test.tsx tests/leftovers.frontend.test.tsx tests/recipe-book-detail-screen.test.tsx` — passed, 78 tests.
 - `pnpm exec playwright test tests/e2e/slice-17a-mypage.spec.ts tests/e2e/slice-17c-settings.spec.ts tests/e2e/slice-16-leftovers.spec.ts tests/e2e/slice-17b-recipebook-detail.spec.ts tests/e2e/qa-wave1-account-library-leftovers-evidence.spec.ts` — passed, 189 tests.
