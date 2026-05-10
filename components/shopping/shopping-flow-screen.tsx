@@ -395,6 +395,7 @@ export function ShoppingFlowScreen({
         <div className="mx-auto w-full max-w-[720px]">
           <button
             className="w-full rounded-[12px] bg-[var(--brand)] px-5 py-3 text-base font-semibold text-white disabled:opacity-50"
+            data-testid="shopping-create-button"
             disabled={isCreateDisabled}
             onClick={handleCreateList}
             type="button"
@@ -439,7 +440,7 @@ function AppBar({ onBack }: AppBarProps) {
             />
           </svg>
         </button>
-        <h1 className="min-w-0 flex-1 truncate text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
+        <h1 className="min-w-0 flex-1 truncate text-xl font-extrabold tracking-normal text-[var(--foreground)]">
           장보기 준비
         </h1>
         {/* Right spacer matching back button width */}

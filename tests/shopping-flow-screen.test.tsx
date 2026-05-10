@@ -206,6 +206,11 @@ describe("shopping flow screen", () => {
       expect(screen.getByLabelText("4인분")).toBeTruthy();
       expect(screen.getByText("장보기 목록 만들기")).toBeTruthy();
       expect(screen.getByText("장보기 목록 만들기")).not.toBe(true);
+      expect(screen.queryByText(/^#\d+$/)).not.toBeTruthy();
+      expect(screen.queryByText(/[🍳🍚🥘🍽️]/u)).not.toBeTruthy();
+      expect(screen.getByTestId("shopping-create-button").textContent).toBe(
+        "장보기 목록 만들기"
+      );
     });
 
     it("should group duplicate recipe meals and explain what each serving value means", async () => {

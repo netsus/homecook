@@ -9,8 +9,8 @@
   "preset": "vertical-slice-strict",
   "goal": "SHOPPING_FLOW 프리뷰 정리, SHOPPING_DETAIL 구매/제외 섹션·버튼 배치·title 표시, pantry 반영 modal 정리, COOK_READY_LIST 그룹 라벨, COOK_MODE 단일 스크롤 뷰·control 제거·하단 sticky를 기존 공식 API 계약 범위 안에서 UI-only로 포팅한다.",
   "owners": {
-    "claude": "stage1,stage4",
-    "codex": "stage5,stage6",
+    "claude": "stage1,stage4-attempt-provider-limited",
+    "codex": "stage4-fallback,stage5,stage6",
     "workers": []
   },
   "dependencies": [
@@ -78,16 +78,16 @@
     ]
   },
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
+    "lifecycle": "ready_for_review",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": "ui/designs/authority/WAVE1_SHOPPING_COOKING-authority.md",
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs created by Claude. Stage 2 N/A (UI-only). COOK_MODE interaction model change (step-by-step -> single scroll) classified as high-risk-ui-change; authority review required at Stage 4/5.",
+  "notes": "Stage 1 docs PR #378 merged. Stage 2/3 N/A (UI-only). Stage 4 Claude handoff attempted via resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc, but provider limit blocked implementation; per user instruction Codex completed Stage 4 fallback, Stage 5 authority precheck, and Stage 6 closeout. Local lint, typecheck, product tests, build, focused Vitest, serial Playwright shopping/cooking E2E, authority evidence, workpack/workflow-v2, and diff checks passed. Design Status confirmed by Codex fallback authority, blocker 0. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:3|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm lint,pnpm typecheck,pnpm test:product,pnpm build,Playwright,ui/designs/authority/WAVE1_SHOPPING_COOKING-authority.md last_recovery_at=2026-05-10T01:56:00Z",
   "out_of_scope": [
     "HOME, RECIPE_DETAIL, save modal 화면 변경 (Slice B wave1-port-discovery-detail에서 완료)",
     "PLANNER_WEEK, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN 변경 (Slice C wave1-port-planner-meal-add에서 완료)",

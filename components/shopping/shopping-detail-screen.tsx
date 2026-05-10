@@ -62,6 +62,20 @@ export function ShoppingDetailScreen({
 
   useEffect(() => clearShareToastTimer, [clearShareToastTimer]);
 
+  const markListReadOnly = useCallback((message: string) => {
+    setListDetail((prev) =>
+      prev
+        ? {
+            ...prev,
+            is_completed: true,
+            completed_at: prev.completed_at,
+          }
+        : prev,
+    );
+    setCompleteToast({ type: "error", message });
+    setTimeout(() => setCompleteToast(null), 3000);
+  }, []);
+
   const loadDetail = useCallback(async () => {
     setViewState("loading");
     setErrorMessage("");
@@ -140,7 +154,7 @@ export function ShoppingDetailScreen({
 
         if (isShoppingApiError(error)) {
           if (error.status === 409) {
-            console.error("완료된 장보기 기록은 수정할 수 없어요.");
+            markListReadOnly("완료된 장보기 기록은 수정할 수 없어요");
           } else {
             console.error(error.message);
           }
@@ -149,7 +163,7 @@ export function ShoppingDetailScreen({
         setUpdatingItem(null);
       }
     },
-    [listId, listDetail]
+    [listId, listDetail, markListReadOnly]
   );
 
   const handleToggleExclude = useCallback(
@@ -214,7 +228,7 @@ export function ShoppingDetailScreen({
 
         if (isShoppingApiError(error)) {
           if (error.status === 409) {
-            console.error("완료된 장보기 기록은 수정할 수 없어요.");
+            markListReadOnly("완료된 장보기 기록은 수정할 수 없어요");
           } else {
             console.error(error.message);
           }
@@ -223,7 +237,7 @@ export function ShoppingDetailScreen({
         setUpdatingItem(null);
       }
     },
-    [listId, listDetail]
+    [listId, listDetail, markListReadOnly]
   );
 
   const handleShare = useCallback(async () => {
@@ -338,6 +352,7 @@ export function ShoppingDetailScreen({
         if (isShoppingApiError(error)) {
           if (error.status === 409) {
             setReorderError("완료된 장보기 기록은 수정할 수 없어요");
+            markListReadOnly("완료된 장보기 기록은 수정할 수 없어요");
           } else if (error.status === 401) {
             router.push(`/login?next=/shopping/lists/${listId}`);
             return;
@@ -353,7 +368,7 @@ export function ShoppingDetailScreen({
         setIsReordering(false);
       }
     },
-    [listId, listDetail, router]
+    [listId, listDetail, markListReadOnly, router]
   );
 
   const handleCompleteClick = useCallback(() => {
@@ -378,7 +393,7 @@ export function ShoppingDetailScreen({
       try {
         const body =
           selectedItemIds === undefined
-            ? undefined
+            ? { add_to_pantry_item_ids: null }
             : { add_to_pantry_item_ids: selectedItemIds };
 
         const {
@@ -426,6 +441,7 @@ export function ShoppingDetailScreen({
             return;
           }
           if (error.status === 409) {
+            markListReadOnly("이미 완료된 장보기 기록이에요");
             setCompleteToast({
               type: "error",
               message: "이미 완료된 장보기 기록이에요",
@@ -447,7 +463,7 @@ export function ShoppingDetailScreen({
         setIsCompleting(false);
       }
     },
-    [listId, listDetail, router]
+    [listId, listDetail, markListReadOnly, router]
   );
 
   const handlePantryCancel = useCallback(() => {
@@ -553,7 +569,11 @@ export function ShoppingDetailScreen({
       <div className="border-b border-[var(--line)] px-4 py-4">
         <h2 className="text-lg font-bold">{listDetail.title}</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          {formatDateRange(listDetail.date_range_start, listDetail.date_range_end)}
+          <span>생성 {formatDate(listDetail.created_at)}</span>
+          <span className="mx-2">·</span>
+          <span>
+            {formatDateRange(listDetail.date_range_start, listDetail.date_range_end)}
+          </span>
         </p>
         {isReadOnly && listDetail.completed_at && (
           <p className="mt-1 text-sm font-semibold text-[var(--olive)]">
@@ -567,7 +587,7 @@ export function ShoppingDetailScreen({
         <div className="bg-[color:rgba(46,166,122,0.08)] px-4 py-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-[var(--muted)]">
-              ℹ️ 완료된 장보기 기록은 수정할 수 없어요
+              완료된 장보기 기록은 수정할 수 없어요
             </p>
             <button
               className="inline-flex min-h-10 items-center justify-center rounded-full border border-[var(--olive)] bg-white px-4 py-2 text-sm font-bold text-[var(--olive)]"
@@ -585,7 +605,6 @@ export function ShoppingDetailScreen({
         {/* Empty state */}
         {isEmpty && (
           <div className="mb-6 text-center">
-            <p className="text-2xl">🛒</p>
             <p className="mt-3 text-base font-semibold text-[var(--foreground)]">
               팬트리에 이미 있어서
             </p>
@@ -719,6 +738,8 @@ function ShoppingItemCard({
     .join(" + ");
 
   const showReorderButtons = !isReadOnly && (onMoveUp || onMoveDown);
+  const showCheckButton = !isReadOnly && !item.is_pantry_excluded;
+  const toggleLabel = item.is_pantry_excluded ? "되살리기" : "이미있음";
 
   return (
     <div className="flex items-center gap-3 rounded-2xl bg-[var(--surface)] px-4 py-3 shadow-sm">
@@ -749,25 +770,34 @@ function ShoppingItemCard({
         </div>
       )}
 
-      <button
-        onClick={() => onToggleCheck(item.id, item.is_checked)}
-        disabled={isReadOnly || isUpdating}
-        className="flex h-11 w-11 shrink-0 items-center justify-center disabled:opacity-50"
-        type="button"
-        aria-label={`${item.display_text} 구매 완료 표시`}
-        aria-checked={item.is_checked}
-        role="checkbox"
-      >
-        <div
-          className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
-            item.is_checked
-              ? "border-[var(--olive)] bg-[var(--olive)]"
-              : "border-[var(--line)] bg-white"
-          }`}
+      {showCheckButton ? (
+        <button
+          onClick={() => onToggleCheck(item.id, item.is_checked)}
+          disabled={isUpdating}
+          className="flex h-11 w-11 shrink-0 items-center justify-center disabled:opacity-50"
+          type="button"
+          aria-label={`${item.display_text} 구매 완료 표시`}
+          aria-checked={item.is_checked}
+          role="checkbox"
         >
-          {item.is_checked && <span className="text-xs text-white">✓</span>}
+          <div
+            className={`flex h-6 w-6 items-center justify-center rounded border-2 transition-colors ${
+              item.is_checked
+                ? "border-[var(--olive)] bg-[var(--olive)]"
+                : "border-[var(--line)] bg-white"
+            }`}
+          >
+            {item.is_checked && <span className="text-xs text-white">✓</span>}
+          </div>
+        </button>
+      ) : (
+        <div
+          className="flex h-11 w-11 shrink-0 items-center justify-center"
+          aria-hidden="true"
+        >
+          <div className="h-2 w-2 rounded-full bg-[var(--line)]" />
         </div>
-      </button>
+      )}
 
       <div className="flex-1">
         <p className={`text-base font-semibold ${item.is_checked ? "line-through opacity-60" : ""}`}>
@@ -782,9 +812,9 @@ function ShoppingItemCard({
           disabled={isUpdating}
           className="flex min-h-11 shrink-0 items-center justify-center rounded-full border border-[var(--olive)] px-4 text-xs font-semibold text-[var(--olive)] hover:bg-[var(--olive)] hover:text-white disabled:opacity-50"
           type="button"
-          aria-label={`${item.display_text} 팬트리 ${item.is_pantry_excluded ? "되살리기" : "제외"}`}
+          aria-label={`${item.display_text} ${toggleLabel}`}
         >
-          {item.is_pantry_excluded ? "되살리기" : "팬트리 제외"}
+          {toggleLabel}
         </button>
       )}
 

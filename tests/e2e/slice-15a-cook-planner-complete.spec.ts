@@ -172,7 +172,7 @@ test.describe("Slice 15a cook planner complete", () => {
     await expect(page.getByText("2인분")).toBeVisible();
   });
 
-  test("ingredients tab shows by default", async ({ page }) => {
+  test("ingredients and steps show together in one scroll view", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockCookModeRoute(page);
 
@@ -181,20 +181,10 @@ test.describe("Slice 15a cook planner complete", () => {
     await expect(page.getByTestId("ingredient-list")).toBeVisible();
     await expect(page.getByText("양파 1개")).toBeVisible();
     await expect(page.getByText("김치 200g")).toBeVisible();
-  });
-
-  test("switching to steps tab shows step cards", async ({ page }) => {
-    await setAuthOverride(page, "authenticated");
-    await mockCookModeRoute(page);
-
-    await page.goto("/cooking/sessions/session-abc/cook-mode");
-
-    await expect(page.getByTestId("tab-steps")).toBeVisible();
-    await page.getByTestId("tab-steps").click();
-
     await expect(page.getByTestId("step-list")).toBeVisible();
     await expect(page.getByText("양파를 썰어주세요.")).toBeVisible();
     await expect(page.getByText("김치를 넣고 끓여주세요.")).toBeVisible();
+    await expect(page.getByTestId("tab-steps")).toHaveCount(0);
   });
 
   test("complete flow: opens consumed sheet, checks ingredient, confirms, navigates to ready", async ({
@@ -276,114 +266,27 @@ test.describe("Slice 15a cook planner complete", () => {
     ).toBeVisible();
   });
 
-  test("swipe left switches from ingredients to steps", async ({ page }) => {
+  test("cook mode has no tab, timer, or prev/next controls", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockCookModeRoute(page);
 
     await page.goto("/cooking/sessions/session-abc/cook-mode");
 
     await expect(page.getByTestId("ingredient-list")).toBeVisible();
-
-    const content = page.getByTestId("cook-mode-content");
-    const box = await content.boundingBox();
-    if (!box) throw new Error("content box not found");
-
-    const startX = box.x + box.width * 0.8;
-    const endX = box.x + box.width * 0.2;
-    const y = box.y + box.height / 2;
-
-    // Use page.evaluate to dispatch touch events with proper TouchInit
-    await page.evaluate(
-      ({ sx, ex, cy }) => {
-        const el = document.querySelector(
-          '[data-testid="cook-mode-content"]',
-        )!;
-        const touchStart = new Touch({
-          identifier: 0,
-          target: el,
-          clientX: sx,
-          clientY: cy,
-        });
-        el.dispatchEvent(
-          new TouchEvent("touchstart", {
-            touches: [touchStart],
-            bubbles: true,
-          }),
-        );
-        const touchEnd = new Touch({
-          identifier: 0,
-          target: el,
-          clientX: ex,
-          clientY: cy,
-        });
-        el.dispatchEvent(
-          new TouchEvent("touchend", {
-            changedTouches: [touchEnd],
-            bubbles: true,
-          }),
-        );
-      },
-      { sx: startX, ex: endX, cy: y },
-    );
-
     await expect(page.getByTestId("step-list")).toBeVisible();
+    await expect(page.getByTestId("tab-steps")).toHaveCount(0);
+    await expect(page.getByText("10분")).toHaveCount(0);
+    await expect(page.getByText(/타이머|메모|일시정지|이전|다음/)).toHaveCount(0);
   });
 
-  test("swipe right switches from steps back to ingredients", async ({
-    page,
-  }) => {
+  test("bottom cancel and complete controls stay visible", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockCookModeRoute(page);
 
     await page.goto("/cooking/sessions/session-abc/cook-mode");
 
-    // Switch to steps tab first
-    await page.getByTestId("tab-steps").click();
-    await expect(page.getByTestId("step-list")).toBeVisible();
-
-    const content = page.getByTestId("cook-mode-content");
-    const box = await content.boundingBox();
-    if (!box) throw new Error("content box not found");
-
-    const startX = box.x + box.width * 0.2;
-    const endX = box.x + box.width * 0.8;
-    const y = box.y + box.height / 2;
-
-    // Use page.evaluate to dispatch touch events with proper TouchInit
-    await page.evaluate(
-      ({ sx, ex, cy }) => {
-        const el = document.querySelector(
-          '[data-testid="cook-mode-content"]',
-        )!;
-        const touchStart = new Touch({
-          identifier: 0,
-          target: el,
-          clientX: sx,
-          clientY: cy,
-        });
-        el.dispatchEvent(
-          new TouchEvent("touchstart", {
-            touches: [touchStart],
-            bubbles: true,
-          }),
-        );
-        const touchEnd = new Touch({
-          identifier: 0,
-          target: el,
-          clientX: ex,
-          clientY: cy,
-        });
-        el.dispatchEvent(
-          new TouchEvent("touchend", {
-            changedTouches: [touchEnd],
-            bubbles: true,
-          }),
-        );
-      },
-      { sx: startX, ex: endX, cy: y },
-    );
-
-    await expect(page.getByTestId("ingredient-list")).toBeVisible();
+    await expect(page.getByTestId("cancel-button")).toBeVisible();
+    await expect(page.getByTestId("complete-button")).toBeVisible();
   });
 
   test("404 session shows not-found state", async ({ page }) => {

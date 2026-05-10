@@ -96,6 +96,7 @@ describe("ShoppingDetailScreen", () => {
     });
 
     expect(screen.getByText("4월 12일 ~ 20일")).toBeTruthy();
+    expect(screen.getByText("생성 4월 12일")).toBeTruthy();
     expect(screen.getByText(/구매할 재료 \(1개\)/)).toBeTruthy();
     expect(screen.getByText(/팬트리 제외 항목 \(1개\)/)).toBeTruthy();
   });
@@ -221,7 +222,7 @@ describe("ShoppingDetailScreen", () => {
       expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
     });
 
-    const excludeButton = screen.getByRole("button", { name: /양파.*팬트리 제외/ });
+    const excludeButton = screen.getByRole("button", { name: /양파.*이미있음/ });
     await user.click(excludeButton);
 
     await waitFor(() => {
@@ -230,6 +231,9 @@ describe("ShoppingDetailScreen", () => {
         "item-1",
         { is_pantry_excluded: true }
       );
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/팬트리 제외 항목 \(2개\)/)).toBeTruthy();
     });
   });
 
@@ -242,7 +246,7 @@ describe("ShoppingDetailScreen", () => {
       expect(screen.getByText(/팬트리 제외 항목 \(1개\)/)).toBeTruthy();
     });
 
-    const restoreButton = screen.getByRole("button", { name: /간장.*팬트리 되살리기/ });
+    const restoreButton = screen.getByRole("button", { name: /간장.*되살리기/ });
     expect(restoreButton.textContent).toContain("되살리기");
   });
 
@@ -261,11 +265,12 @@ describe("ShoppingDetailScreen", () => {
       expect(screen.getByText(/완료된 장보기 기록은 수정할 수 없어요/)).toBeTruthy();
     });
 
-    expect(screen.queryByRole("button", { name: /팬트리 제외/ })).not.toBeTruthy();
+    expect(screen.queryByRole("button", { name: /이미있음/ })).not.toBeTruthy();
     expect(screen.queryByRole("button", { name: /되살리기/ })).not.toBeTruthy();
+    expect(screen.queryByRole("checkbox", { name: /구매 완료 표시/ })).not.toBeTruthy();
   });
 
-  it("handles 409 conflict error when updating completed list", async () => {
+  it("switches to read-only mode when update returns 409 conflict", async () => {
     vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
 
     const conflictError = new Error("완료된 장보기 기록은 수정할 수 없어요.");
@@ -273,8 +278,6 @@ describe("ShoppingDetailScreen", () => {
 
     vi.spyOn(shoppingApi, "updateShoppingListItem").mockRejectedValue(conflictError);
     vi.spyOn(shoppingApi, "isShoppingApiError").mockReturnValue(true);
-
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const user = userEvent.setup();
 
@@ -288,10 +291,13 @@ describe("ShoppingDetailScreen", () => {
     await user.click(checkbox);
 
     await waitFor(() => {
-      expect(consoleErrorSpy).toHaveBeenCalledWith("완료된 장보기 기록은 수정할 수 없어요.");
+      expect(
+        screen.getAllByText("완료된 장보기 기록은 수정할 수 없어요").length
+      ).toBeGreaterThan(0);
     });
 
-    consoleErrorSpy.mockRestore();
+    expect(screen.queryByRole("checkbox", { name: /구매 완료 표시/ })).not.toBeTruthy();
+    expect(screen.queryByRole("button", { name: "장보기 완료" })).toBeFalsy();
   });
 
   describe("share text (10b)", () => {
@@ -668,7 +674,9 @@ describe("ShoppingDetailScreen", () => {
       await user.click(moveDownButton);
 
       await waitFor(() => {
-        expect(screen.getByText("완료된 장보기 기록은 수정할 수 없어요")).toBeTruthy();
+        expect(
+          screen.getAllByText("완료된 장보기 기록은 수정할 수 없어요").length
+        ).toBeGreaterThan(0);
       });
     });
   });
@@ -752,7 +760,7 @@ describe("ShoppingDetailScreen", () => {
       expect(screen.getByText("추가 안 함")).toBeTruthy();
     });
 
-    it("completes shopping list with 모두 추가 (undefined body)", async () => {
+    it("completes shopping list with 모두 추가 (null default body)", async () => {
       const listWithCheckedItem: ShoppingListDetail = {
         ...mockListDetail,
         items: mockListDetail.items.map((item) =>
@@ -788,9 +796,11 @@ describe("ShoppingDetailScreen", () => {
       const confirmButton = screen.getByRole("button", { name: "완료" });
       await user.click(confirmButton);
 
-      // Should call API with undefined body (default policy)
+      // Should call API with explicit null default policy
       await waitFor(() => {
-        expect(completeSpy).toHaveBeenCalledWith("list-1", undefined);
+        expect(completeSpy).toHaveBeenCalledWith("list-1", {
+          add_to_pantry_item_ids: null,
+        });
       });
 
       // Should show success message with pantry count

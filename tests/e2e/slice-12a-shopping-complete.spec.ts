@@ -430,13 +430,11 @@ test.describe("slice 12a: shopping complete", () => {
 
       await expect(page.getByText("4월 12일 장보기")).toBeVisible();
 
-      // Check controls should be disabled
-      const checkboxes = page.getByRole("checkbox");
-      const firstCheckbox = checkboxes.first();
-      await expect(firstCheckbox).toBeDisabled();
+      // Check controls should be hidden
+      await expect(page.getByRole("checkbox")).toHaveCount(0);
 
       // Exclude buttons should not be visible
-      await expect(page.getByRole("button", { name: /팬트리 제외/ })).not.toBeVisible();
+      await expect(page.getByRole("button", { name: /이미있음/ })).not.toBeVisible();
 
       // Reorder buttons should not be visible
       await expect(page.getByRole("button", { name: /위로 이동/ })).not.toBeVisible();

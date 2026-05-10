@@ -1,8 +1,8 @@
 # wave1-port-shopping-cooking
 
 > Slice D of Wave1 Service Porting Plan
-> Stage: 1 (docs)
-> Owner: Claude (Stage 1, 4), Codex (Stage 5, 6)
+> Stage: 5/6 closeout
+> Owner: Claude (Stage 1), Codex (Stage 4 fallback, 5, 6)
 
 ## Goal
 
@@ -149,6 +149,26 @@ UI-only slice. 모든 변경은 기존 공식 API의 request/response 계약 범
 
 ## Design Authority
 
+- UI risk: `high-risk` — COOK_MODE interaction model이 step-by-step/tabs에서 단일 스크롤 뷰로 바뀐다.
+- Anchor screen dependency: `N/A`
+- Visual artifact: Stage 4/5에서 mobile 390px/320px screenshot evidence 생성
+  - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-preview.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-narrow.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-default.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-narrow.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-readonly.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-complete-pantry.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/cook-ready-list.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-scroll.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-narrow.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-complete.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/standalone-cook-mode-scroll.png`
+- Authority status: `reviewed`
+- Notes:
+  - Claude Stage 4 handoff was attempted through the resume session but hit provider limit.
+  - Codex fallback authority precheck passed with blocker 0.
+  - authority report: `ui/designs/authority/WAVE1_SHOPPING_COOKING-authority.md`
+
 ### UI Risk Classification
 
 - SHOPPING_FLOW: `low-risk-ui-change` (라벨/아이콘 제거, 버튼 정리)
@@ -180,17 +200,18 @@ UI-only slice. 모든 변경은 기존 공식 API의 request/response 계약 범
 | `cook-mode-scroll` | COOK_MODE 스크롤 뷰 | 390px |
 | `cook-mode-narrow` | COOK_MODE | 320px |
 | `cook-mode-complete` | COOK_MODE 완료 버튼 | 390px |
+| `standalone-cook-mode-scroll` | Standalone COOK_MODE 스크롤 뷰 | 390px |
 
-### Authority Status
+## Design Status
 
 - [ ] 임시 UI (temporary)
-- [x] 리뷰 대기 (pending) — Stage 4 완료 후 screenshot evidence 대기
-- [ ] 확정 (confirmed)
+- [ ] 리뷰 대기 (pending-review)
+- [x] 확정 (confirmed) — Codex fallback authority precheck PASS, blocker 0, Claude provider limit recorded
 - [ ] N/A
 
-### Authority Report
+## Authority Report
 
-`ui/designs/authority/WAVE1_SHOPPING_COOKING-authority.md` (Stage 4에서 생성)
+`ui/designs/authority/WAVE1_SHOPPING_COOKING-authority.md`
 
 ## Non-Negotiable Rules
 
@@ -276,39 +297,30 @@ N/A. 모든 변경이 UI-only이고 기존 API 계약을 변경하지 않으므�
 
 ## Delivery Checklist
 
-### Docs (Stage 1)
-
-- [x] README.md 작성 <!-- omo:id=docs-readme;stage=1;scope=docs;review=1.5 -->
-- [x] acceptance.md 작성 <!-- omo:id=docs-acceptance;stage=1;scope=docs;review=1.5 -->
-- [x] automation-spec.json 작성 <!-- omo:id=docs-automation-spec;stage=1;scope=docs;review=1.5 -->
-- [x] `.workflow-v2/work-items/wave1-port-shopping-cooking.json` 생성 <!-- omo:id=docs-work-item;stage=1;scope=docs;review=1.5 -->
-- [x] `.workflow-v2/status.json` entry 추가 <!-- omo:id=docs-status;stage=1;scope=docs;review=1.5 -->
-- [x] `docs/workpacks/README.md` row 추가 <!-- omo:id=docs-roadmap-row;stage=1;scope=docs;review=1.5 -->
-
 ### Backend (Stage 2)
 
 - [x] Stage 2 N/A 확인 — UI-only slice <!-- omo:id=be-na;stage=2;scope=backend;review=3 -->
 
 ### Frontend (Stage 4)
 
-- [ ] SHOPPING_FLOW 프리뷰 라벨/아이콘 제거 <!-- omo:id=fe-shopping-flow;stage=4;scope=frontend;review=5,6 -->
-- [ ] SHOPPING_DETAIL 구매/제외 섹션 UI 정리 <!-- omo:id=fe-shopping-detail;stage=4;scope=frontend;review=5,6 -->
-- [ ] SHOPPING_DETAIL title/date 표시 <!-- omo:id=fe-shopping-detail-title;stage=4;scope=frontend;review=5,6 -->
-- [ ] SHOPPING_DETAIL share/complete 버튼 배치 <!-- omo:id=fe-shopping-buttons;stage=4;scope=frontend;review=5,6 -->
-- [ ] SHOPPING_DETAIL `이미있음`/`되살리기` 토글 버튼 <!-- omo:id=fe-shopping-toggle;stage=4;scope=frontend;review=5,6 -->
-- [ ] Pantry 반영 modal 정리 <!-- omo:id=fe-pantry-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] COOK_READY_LIST 그룹 라벨 정리 <!-- omo:id=fe-cook-ready;stage=4;scope=frontend;review=5,6 -->
-- [ ] COOK_MODE step-by-step -> 단일 스크롤 뷰 전환 <!-- omo:id=fe-cook-mode-scroll;stage=4;scope=frontend;review=5,6 -->
-- [ ] COOK_MODE timer/note/pause/prev/next 제거 <!-- omo:id=fe-cook-controls-remove;stage=4;scope=frontend;review=5,6 -->
-- [ ] COOK_MODE cancel/complete 하단 sticky <!-- omo:id=fe-cook-sticky;stage=4;scope=frontend;review=5,6 -->
-- [ ] Consumed ingredient 줄바꿈 수정 <!-- omo:id=fe-consumed-wrap;stage=4;scope=frontend;review=5,6 -->
-- [ ] Standalone cook mode 동일 변경 적용 <!-- omo:id=fe-standalone-cook;stage=4;scope=frontend;review=5,6 -->
-- [ ] Vitest 테스트 추가/갱신 <!-- omo:id=fe-vitest;stage=4;scope=frontend;review=5,6 -->
-- [ ] Playwright E2E 테스트 갱신 <!-- omo:id=fe-e2e;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm verify:frontend` 통과 <!-- omo:id=fe-verify;stage=4;scope=frontend;review=5,6 -->
-- [ ] Screenshot evidence 생성 (390px + 320px) <!-- omo:id=fe-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] SHOPPING_FLOW 프리뷰 라벨/아이콘 제거 <!-- omo:id=fe-shopping-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] SHOPPING_DETAIL 구매/제외 섹션 UI 정리 <!-- omo:id=fe-shopping-detail;stage=4;scope=frontend;review=5,6 -->
+- [x] SHOPPING_DETAIL title/date 표시 <!-- omo:id=fe-shopping-detail-title;stage=4;scope=frontend;review=5,6 -->
+- [x] SHOPPING_DETAIL share/complete 버튼 배치 <!-- omo:id=fe-shopping-buttons;stage=4;scope=frontend;review=5,6 -->
+- [x] SHOPPING_DETAIL `이미있음`/`되살리기` 토글 버튼 <!-- omo:id=fe-shopping-toggle;stage=4;scope=frontend;review=5,6 -->
+- [x] Pantry 반영 modal 정리 <!-- omo:id=fe-pantry-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_READY_LIST 그룹 라벨 정리 <!-- omo:id=fe-cook-ready;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_MODE step-by-step -> 단일 스크롤 뷰 전환 <!-- omo:id=fe-cook-mode-scroll;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_MODE timer/note/pause/prev/next 제거 <!-- omo:id=fe-cook-controls-remove;stage=4;scope=frontend;review=5,6 -->
+- [x] COOK_MODE cancel/complete 하단 sticky <!-- omo:id=fe-cook-sticky;stage=4;scope=frontend;review=5,6 -->
+- [x] Consumed ingredient 줄바꿈 수정 <!-- omo:id=fe-consumed-wrap;stage=4;scope=frontend;review=5,6 -->
+- [x] Standalone cook mode 동일 변경 적용 <!-- omo:id=fe-standalone-cook;stage=4;scope=frontend;review=5,6 -->
+- [x] Vitest 테스트 추가/갱신 <!-- omo:id=fe-vitest;stage=4;scope=frontend;review=5,6 -->
+- [x] Playwright E2E 테스트 갱신 <!-- omo:id=fe-e2e;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend` 상당 로컬 게이트 통과 (`lint`, `typecheck`, `test:product`, `build`, focused E2E) <!-- omo:id=fe-verify;stage=4;scope=frontend;review=5,6 -->
+- [x] Screenshot evidence 생성 (390px + 320px) <!-- omo:id=fe-evidence;stage=4;scope=frontend;review=5,6 -->
 
 ### Design (Stage 5)
 
-- [ ] Authority report 작성 <!-- omo:id=design-authority;stage=5;scope=design;review=5,6 -->
-- [ ] Design Status -> `confirmed` (blocker 0) <!-- omo:id=design-confirmed;stage=5;scope=design;review=5,6 -->
+- [x] Authority report 작성 <!-- omo:id=design-authority;stage=4;scope=frontend;review=5,6 -->
+- [x] Design Status -> `confirmed` (blocker 0) <!-- omo:id=design-confirmed;stage=4;scope=frontend;review=5,6 -->

@@ -125,7 +125,7 @@
 | A | `wave1-port-foundation` | 공통 shell, 공용 UI 패턴, CTA/칩/카드/모달 위계 | Stage 1~6 | 가장 먼저. 단, AppShell/bottom tab은 `baemin-prototype-home-porting` 현재 상태와 충돌 여부를 Stage 1에서 먼저 잠근다. |
 | B | `wave1-port-discovery-detail` | HOME, RECIPE_DETAIL, save modal, login provider display | Stage 1~6 | HOME은 기존 `baemin-prototype-home-porting`과 충돌/중복 확인 후 시작. |
 | C | `wave1-port-planner-meal-add` | PLANNER, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN | Stage 1~6 | 컬럼 CRUD는 완료된 `planner-column-customization` 계약을 소비한다. |
-| D | `wave1-port-shopping-cooking` | SHOPPING_FLOW, SHOPPING_DETAIL, COOK_READY/COOK_MODE | Stage 1~6 | 장보기 read-only/exclude/add_to_pantry 규칙을 테스트로 고정. |
+| D | `wave1-port-shopping-cooking` | SHOPPING_FLOW, SHOPPING_DETAIL, COOK_READY/COOK_MODE | Stage 5/6 closeout | 장보기 read-only/exclude/add_to_pantry 규칙을 테스트로 고정. Claude provider limit 이후 Codex fallback으로 Stage 4 evidence/검증 완료. |
 | E | `wave1-port-pantry` | PANTRY, ingredient picker, bundle picker, multi-delete | Stage 1~6 | 재료 이미지/category API 유무를 먼저 확인. |
 | F | `wave1-port-account-library-leftovers` | MYPAGE, SETTINGS polish, LEFTOVERS, ATE_LIST, RECIPEBOOK_DETAIL | Stage 1~6 | SETTINGS 컬럼 관리 완료 상태와 충돌하지 않게 조심. |
 | G | `wave1-port-web-followup` | 앱 포팅 이후 웹-only 조정 | 별도 계획 | 앱 slice 완료 후 최신 프로토타입 기준으로 다시 작성. |
@@ -287,6 +287,13 @@
 - pantry exclusion section
 - share/list title
 - COOK_READY_LIST / COOK_MODE
+
+### Delivery Status
+
+- Stage 1 docs/workpack PR merged as #378.
+- Stage 4 frontend implementation and screenshot evidence completed on `feature/fe-wave1-port-shopping-cooking`.
+- Claude resume session `3f4ca745-db71-4392-a3f1-4e3c4493e9bc` was attempted for Stage 4, but provider limit blocked completion; per user instruction, Codex completed the slice directly.
+- Stage 5/6 closeout is ready for PR validation and merge through the ship loop.
 
 ### Main Changes
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -203,7 +203,7 @@ describe("CookModeScreen", () => {
     });
   });
 
-  it("shows ingredients tab by default with ingredient items", async () => {
+  it("shows ingredients and all steps in one scroll view", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
 
@@ -217,30 +217,11 @@ describe("CookModeScreen", () => {
     expect(screen.getByText("양파")).toBeTruthy();
     expect(screen.getByText("김치")).toBeTruthy();
     expect(screen.getByText("소금")).toBeTruthy();
-  });
-
-  it("switches to steps tab and shows step cards", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchCookMode.mockResolvedValue(buildCookModeData());
-
-    const CookModeScreen = await importCookModeScreen();
-    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("tab-steps")).toBeTruthy();
-    });
-
-    const user = userEvent.setup();
-    await user.click(screen.getByTestId("tab-steps"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("step-list")).toBeTruthy();
-    });
-
     expect(screen.getByText("양파를 썰어주세요.")).toBeTruthy();
     expect(screen.getByText("김치를 넣고 볶아주세요.")).toBeTruthy();
     expect(screen.getByText("중불")).toBeTruthy();
-    expect(screen.getByText("10분")).toBeTruthy();
+    expect(screen.queryByText("10분")).not.toBeTruthy();
+    expect(screen.queryByTestId("cook-mode-tabs")).not.toBeTruthy();
   });
 
   it("uses cooking method color keys from recipe data on step cards", async () => {
@@ -264,13 +245,6 @@ describe("CookModeScreen", () => {
 
     const CookModeScreen = await importCookModeScreen();
     render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("tab-steps")).toBeTruthy();
-    });
-
-    const user = userEvent.setup();
-    await user.click(screen.getByTestId("tab-steps"));
 
     await waitFor(() => {
       expect(screen.getByTestId("step-list")).toBeTruthy();
@@ -546,70 +520,7 @@ describe("CookModeScreen", () => {
     expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
-  it("swipe left on content area switches to steps tab", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchCookMode.mockResolvedValue(buildCookModeData());
-
-    const CookModeScreen = await importCookModeScreen();
-    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("cook-mode-content")).toBeTruthy();
-    });
-
-    // Start on ingredients tab
-    expect(screen.getByTestId("ingredient-list")).toBeTruthy();
-
-    const content = screen.getByTestId("cook-mode-content");
-
-    // Simulate swipe left (finger moves from x=200 to x=100)
-    fireEvent.touchStart(content, {
-      touches: [{ clientX: 200, clientY: 300 }],
-    });
-    fireEvent.touchEnd(content, {
-      changedTouches: [{ clientX: 100, clientY: 300 }],
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId("step-list")).toBeTruthy();
-    });
-  });
-
-  it("swipe right on content area switches to ingredients tab", async () => {
-    readE2EAuthOverride.mockReturnValue(true);
-    fetchCookMode.mockResolvedValue(buildCookModeData());
-
-    const CookModeScreen = await importCookModeScreen();
-    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("tab-steps")).toBeTruthy();
-    });
-
-    // Switch to steps first via tab click
-    const user = userEvent.setup();
-    await user.click(screen.getByTestId("tab-steps"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("step-list")).toBeTruthy();
-    });
-
-    const content = screen.getByTestId("cook-mode-content");
-
-    // Simulate swipe right (finger moves from x=100 to x=200)
-    fireEvent.touchStart(content, {
-      touches: [{ clientX: 100, clientY: 300 }],
-    });
-    fireEvent.touchEnd(content, {
-      changedTouches: [{ clientX: 200, clientY: 300 }],
-    });
-
-    await waitFor(() => {
-      expect(screen.getByTestId("ingredient-list")).toBeTruthy();
-    });
-  });
-
-  it("vertical-dominant gesture does not switch tabs", async () => {
+  it("does not render timer or step navigation controls", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
 
@@ -621,19 +532,29 @@ describe("CookModeScreen", () => {
     });
 
     expect(screen.getByTestId("ingredient-list")).toBeTruthy();
+    expect(screen.getByTestId("step-list")).toBeTruthy();
+    expect(screen.queryByText(/타이머|메모|일시정지|이전|다음/)).not.toBeTruthy();
+    expect(screen.queryByTestId("tab-steps")).not.toBeTruthy();
+    expect(screen.queryByTestId("tab-ingredients")).not.toBeTruthy();
+  });
 
-    const content = screen.getByTestId("cook-mode-content");
+  it("keeps cancel and complete buttons in the sticky bottom area", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(buildCookModeData());
 
-    // Simulate mostly-vertical swipe (dy=150 > dx=50)
-    fireEvent.touchStart(content, {
-      touches: [{ clientX: 200, clientY: 100 }],
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cancel-button")).toBeTruthy();
     });
-    fireEvent.touchEnd(content, {
-      changedTouches: [{ clientX: 150, clientY: 250 }],
-    });
 
-    // Should still be on ingredients
-    expect(screen.getByTestId("ingredient-list")).toBeTruthy();
-    expect(screen.queryByTestId("step-list")).toBeNull();
+    const cancelButton = screen.getByTestId("cancel-button");
+    const completeButton = screen.getByTestId("complete-button");
+
+    expect(cancelButton.closest(".fixed")).toBeTruthy();
+    expect(completeButton.closest(".fixed")).toBeTruthy();
+    expect(cancelButton.className).toContain("min-w-0");
+    expect(completeButton.className).toContain("min-w-0");
   });
 });

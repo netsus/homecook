@@ -314,7 +314,7 @@ test.describe("slice 10a: shopping detail interact", () => {
 
       await page.goto(SHOPPING_DETAIL_URL);
 
-      const excludeButton = page.getByRole("button", { name: /양파.*팬트리 제외/ });
+      const excludeButton = page.getByRole("button", { name: /양파.*이미있음/ });
       await excludeButton.click();
 
       await page.waitForTimeout(200);
@@ -351,7 +351,7 @@ test.describe("slice 10a: shopping detail interact", () => {
 
       await page.goto(SHOPPING_DETAIL_URL);
 
-      const restoreButton = page.getByRole("button", { name: /간장.*팬트리 되살리기/ });
+      const restoreButton = page.getByRole("button", { name: /간장.*되살리기/ });
       await restoreButton.click();
 
       await page.waitForTimeout(200);
@@ -394,11 +394,11 @@ test.describe("slice 10a: shopping detail interact", () => {
       await expect(page.getByText(/구매한 재료 \(2개\)/)).toBeVisible();
 
       // Action buttons should not be present
-      await expect(page.getByRole("button", { name: /팬트리 제외/ })).not.toBeVisible();
+      await expect(page.getByRole("button", { name: /이미있음/ })).not.toBeVisible();
       await expect(page.getByRole("button", { name: /되살리기/ })).not.toBeVisible();
     });
 
-    test("should disable checkboxes in read-only mode", async ({ page }) => {
+    test("should hide checkboxes in read-only mode", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
 
       const completedList = buildShoppingListDetail({
@@ -411,21 +411,16 @@ test.describe("slice 10a: shopping detail interact", () => {
       await page.goto(SHOPPING_DETAIL_URL);
 
       const checkbox = page.getByRole("checkbox", { name: /양파.*구매 완료 표시/ });
-      await expect(checkbox).toBeDisabled();
+      await expect(checkbox).toHaveCount(0);
     });
   });
 
   test.describe("conflict handling", () => {
-    test("should handle 409 conflict when updating completed list", async ({ page }) => {
+    test("should switch to read-only mode when update returns 409 conflict", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
 
       const listDetail = buildShoppingListDetail();
       await installShoppingDetailRoute(page, listDetail);
-
-      page.on("dialog", async (dialog) => {
-        expect(dialog.message()).toBe("완료된 장보기 기록은 수정할 수 없어요.");
-        await dialog.accept();
-      });
 
       await page.route(
         `**/api/v1/shopping/lists/${SHOPPING_LIST_ID}/items/item-1`,
@@ -454,7 +449,10 @@ test.describe("slice 10a: shopping detail interact", () => {
       const checkbox = page.getByRole("checkbox", { name: /양파.*구매 완료 표시/ });
       await checkbox.click();
 
-      await page.waitForTimeout(300);
+      await expect(
+        page.getByText("완료된 장보기 기록은 수정할 수 없어요").first(),
+      ).toBeVisible();
+      await expect(page.getByRole("checkbox", { name: /구매 완료 표시/ })).toHaveCount(0);
     });
   });
 });
