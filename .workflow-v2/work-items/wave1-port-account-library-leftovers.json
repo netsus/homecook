@@ -10,7 +10,7 @@
   "goal": "MYPAGE top gear/saved section/account action 정리, SETTINGS logout/delete/account category polish, LEFTOVERS/ATE_LIST button/copy/meta polish, RECIPEBOOK_DETAIL custom book kebab menu를 기존 16/17a/17b/17c/planner-column-customization 계약 범위 안에서 포팅한다.",
   "owners": {
     "claude": "stage1-attempt-provider-limited",
-    "codex": "stage1-fallback,stage2-na-review,stage5,stage6",
+    "codex": "stage1-fallback,stage2-na-review,stage4-fallback,stage5,stage6",
     "workers": []
   },
   "dependencies": [
@@ -90,16 +90,16 @@
     ]
   },
   "status": {
-    "lifecycle": "in_progress",
-    "approval_state": "not_started",
-    "verification_status": "pending",
-    "evaluation_status": "not_started",
-    "evaluation_round": 0,
-    "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "lifecycle": "merged",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "passed",
+    "evaluation_round": 1,
+    "last_evaluator_result": "ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md",
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs attempted through Claude resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc with model=opus, permission_mode=bypassPermissions, requested effort=xhigh recorded, CLI effort=high. Claude provider limit reset 13:20 Asia/Seoul blocked editing, so Codex completed Stage 1 fallback per user instruction. Backend Stage 2/3 defaults to N/A because current official contracts support the planned UI-only port. Contract-evolution candidates are LEFTOVERS meta extension, uneat policy removal, system recipebook rename/delete, and account/planner-column policy changes.",
+  "notes": "Closeout projection for Stage 4~6 frontend PR #383. Stage 1 docs PR #382 merged after Claude handoff attempted through resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc with model=opus, permission_mode=bypassPermissions, requested effort=xhigh recorded, CLI effort=high; provider limit reset 13:20 Asia/Seoul blocked Claude editing, so Codex completed fallback per user instruction. Stage 2/3 N/A (UI-only). Stage 4/5 Codex fallback completed MYPAGE visible settings entry, LEFTOVERS/ATE_LIST button clipping and copy polish, ATE_LIST uneat API preservation with 남은요리로 복귀 label, RECIPEBOOK_DETAIL custom book menu using existing PATCH/DELETE endpoints, 390/320 screenshot evidence, WAVE1_ACCOUNT_LIBRARY_LEFTOVERS authority report with blocker 0, exploratory QA eval score 98, targeted Vitest/Playwright, and pnpm verify:frontend. Manual Only real-device/real-seed smokes remain deferred by acceptance. #383 opened as https://github.com/netsus/homecook/pull/383. Final current-head GitHub checks remain the merge gate. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,Vitest,Playwright,QA eval,ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md last_recovery_at=2026-05-10T05:03:14.264Z",
   "out_of_scope": [
     "API/DB/status/endpoint/field 추가 또는 변경",
     "leftover_dishes 응답에 끼니명/인분/meal column 정보를 임의 추가",
@@ -115,5 +115,65 @@
     "LEFTOVERS meta에서 끼니명/인분이 꼭 필요해지면 contract-evolution으로 분리한다.",
     "ATE_LIST의 덜먹음 action은 API를 유지한 채 숨김/보조화/문구 변경 중 Stage 4에서 결정하고 근거를 남긴다.",
     "RECIPEBOOK_DETAIL 전체 재디자인은 drift proof가 있을 때만 진행한다."
-  ]
+  ],
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm verify:frontend",
+        "pnpm exec vitest run tests/mypage-screen.test.tsx tests/settings-screen.test.tsx tests/leftovers.frontend.test.tsx tests/recipe-book-detail-screen.test.tsx",
+        "pnpm exec playwright test tests/e2e/slice-17a-mypage.spec.ts tests/e2e/slice-17c-settings.spec.ts tests/e2e/slice-16-leftovers.spec.ts tests/e2e/slice-17b-recipebook-detail.spec.ts tests/e2e/qa-wave1-account-library-leftovers-evidence.spec.ts",
+        "pnpm exec playwright test tests/e2e/qa-wave1-account-library-leftovers-evidence.spec.ts --project=desktop-chrome",
+        "pnpm qa:eval -- --checklist .artifacts/qa/wave1-port-account-library-leftovers/2026-05-10T04-43-48-093Z/exploratory-checklist.json --report .artifacts/qa/wave1-port-account-library-leftovers/2026-05-10T04-43-48-093Z/exploratory-report.json --fail-under 85",
+        "ui/designs/evidence/wave1-port-account-library-leftovers/",
+        "ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending_github_current_head_after_pr_sync",
+      "approval_state": "codex_approved",
+      "all_checks_green": "pending_github_current_head"
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-05-10T05:03:14.264Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 1,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "closeout-projection-before-pr-merge",
+      "evidence_sources": [
+        "pnpm verify:frontend",
+        "Vitest",
+        "Playwright",
+        "QA eval",
+        "ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-10T05:03:14.264Z",
+      "status_synced_at": "2026-05-10T05:15:31Z",
+      "pr_body_synced_at": "2026-05-10T05:15:31Z"
+    }
+  }
 }

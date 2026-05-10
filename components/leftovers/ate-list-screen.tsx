@@ -55,44 +55,45 @@ function AteListCard({
       className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]"
       data-testid="ate-list-card"
     >
-      <div className="flex items-center gap-3">
-        {item.recipe_thumbnail_url ? (
-          <Image
-            alt=""
-            className="h-14 w-14 shrink-0 rounded-[var(--radius-md)] object-cover"
-            height={56}
-            src={item.recipe_thumbnail_url}
-            unoptimized
-            width={56}
-          />
-        ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-fill)]">
-            <span className="text-xl" aria-hidden="true">
-              🍽️
-            </span>
-          </div>
-        )}
+      <div className="flex flex-col gap-3 min-[361px]:flex-row min-[361px]:items-center">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          {item.recipe_thumbnail_url ? (
+            <Image
+              alt=""
+              className="h-14 w-14 shrink-0 rounded-[var(--radius-md)] object-cover"
+              height={56}
+              src={item.recipe_thumbnail_url}
+              unoptimized
+              width={56}
+            />
+          ) : (
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-fill)]">
+              <span className="text-xl" aria-hidden="true">
+                🍽️
+              </span>
+            </div>
+          )}
 
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-bold text-[var(--foreground)]">
-            {item.recipe_title}
-          </p>
-          {item.eaten_at ? (
-            <p className="text-sm text-[var(--text-3)]">
-              {formatEatenAt(item.eaten_at)} 다먹음
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-base font-bold text-[var(--foreground)]">
+              {item.recipe_title}
             </p>
-          ) : null}
+            {item.eaten_at ? (
+              <p className="text-sm text-[var(--text-3)]">
+                {formatEatenAt(item.eaten_at)}
+              </p>
+            ) : null}
+          </div>
         </div>
 
         <button
-          className="shrink-0 rounded-[var(--radius-md)] border border-[var(--brand-deep)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--brand-deep)] active:bg-[var(--brand-soft)] disabled:opacity-60"
+          className="flex min-h-[44px] w-full min-w-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand-deep)] bg-white px-4 py-2.5 text-center text-sm font-semibold leading-5 text-[var(--brand-deep)] active:bg-[var(--brand-soft)] disabled:opacity-60 min-[361px]:w-auto min-[361px]:shrink-0"
           data-testid="uneat-button"
           disabled={anyMutating}
           onClick={() => onUneat(item.id)}
-          style={{ minHeight: 44 }}
           type="button"
         >
-          {isUneating ? "처리 중..." : "덜먹음"}
+          {isUneating ? "처리 중..." : "남은요리로 복귀"}
         </button>
       </div>
     </article>
@@ -245,7 +246,7 @@ export function AteListScreen({
           message:
             error instanceof Error
               ? error.message
-              : "덜먹음 처리에 실패했어요.",
+              : "남은요리 복귀에 실패했어요.",
           tone: "error",
         });
       } finally {
@@ -360,7 +361,7 @@ export function AteListScreen({
       {screenState === "empty" ? (
         <ContentState
           actionLabel="남은요리로 돌아가기"
-          description="남은요리에서 다먹음 처리하면 여기에 기록돼요"
+          description="먹은 기록이 여기에 모여요"
           onAction={() => {
             window.location.href = "/leftovers";
           }}

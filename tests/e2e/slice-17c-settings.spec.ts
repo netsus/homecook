@@ -439,7 +439,7 @@ test.describe("SETTINGS screen", () => {
     await page.waitForURL("/mypage");
   });
 
-  test("MYPAGE gear button opens /settings", async ({ page }) => {
+  test("MYPAGE settings row opens /settings", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     // Install routes for both mypage and settings
     await installSettingsRoutes(page);
@@ -456,8 +456,8 @@ test.describe("SETTINGS screen", () => {
     });
 
     await page.goto("/mypage");
-    await expect(page.getByLabel("설정")).toBeVisible();
-    await page.getByLabel("설정").click();
+    await expect(page.getByLabel("설정")).toHaveCount(0);
+    await page.getByTestId("mypage-settings-link").click();
 
     await page.waitForURL("/settings");
     await expect(page.getByText("설정")).toBeVisible();

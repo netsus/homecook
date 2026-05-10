@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
@@ -9,6 +10,7 @@ import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { ContentState } from "@/components/shared/content-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
+import { deleteRecipeBook, renameRecipeBook } from "@/lib/api/mypage";
 import {
   fetchRecipeBookRecipes,
   removeRecipeBookRecipe,
@@ -59,9 +61,11 @@ export function RecipeBookDetailScreen({
   bookType,
   initialAuthenticated = false,
 }: RecipeBookDetailScreenProps) {
+  const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
+  const [currentBookName, setCurrentBookName] = useState(bookName);
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [items, setItems] = useState<RecipeBookRecipeItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -73,8 +77,15 @@ export function RecipeBookDetailScreen({
     message: string;
     tone: "success" | "error";
   } | null>(null);
+  const [bookMenuOpen, setBookMenuOpen] = useState(false);
+  const [bookRenameOpen, setBookRenameOpen] = useState(false);
+  const [bookRenameValue, setBookRenameValue] = useState(bookName);
+  const [bookDeleteOpen, setBookDeleteOpen] = useState(false);
+  const [bookActionError, setBookActionError] = useState<string | null>(null);
+  const [isBookActionSaving, setIsBookActionSaving] = useState(false);
 
   const scrollSentinelRef = useRef<HTMLDivElement | null>(null);
+  const canManageBook = bookType === "custom";
 
   const showToast = useCallback(
     (message: string, tone: "success" | "error") => {
@@ -170,6 +181,111 @@ export function RecipeBookDetailScreen({
     },
     [bookId, bookType, items, removingId, showToast],
   );
+
+  const handleBookRenameStart = useCallback(() => {
+    setBookMenuOpen(false);
+    setBookRenameValue(currentBookName);
+    setBookActionError(null);
+    setBookRenameOpen(true);
+  }, [currentBookName]);
+
+  const handleBookRenameCancel = useCallback(() => {
+    setBookRenameOpen(false);
+    setBookRenameValue(currentBookName);
+    setBookActionError(null);
+  }, [currentBookName]);
+
+  const handleBookRename = useCallback(async () => {
+    if (!canManageBook || isBookActionSaving) return;
+
+    const trimmed = bookRenameValue.trim();
+    if (!trimmed) return;
+
+    if (trimmed === currentBookName) {
+      handleBookRenameCancel();
+      return;
+    }
+
+    setIsBookActionSaving(true);
+    setBookActionError(null);
+
+    try {
+      const result = await renameRecipeBook(bookId, trimmed);
+      setCurrentBookName(result.name);
+      setBookRenameOpen(false);
+      showToast("레시피북 이름을 변경했어요", "success");
+    } catch (error) {
+      setBookActionError(
+        error instanceof Error ? error.message : "이름 변경에 실패했어요.",
+      );
+    } finally {
+      setIsBookActionSaving(false);
+    }
+  }, [
+    bookId,
+    bookRenameValue,
+    canManageBook,
+    currentBookName,
+    handleBookRenameCancel,
+    isBookActionSaving,
+    showToast,
+  ]);
+
+  const handleBookDeleteRequest = useCallback(() => {
+    setBookMenuOpen(false);
+    setBookActionError(null);
+    setBookDeleteOpen(true);
+  }, []);
+
+  const handleBookDelete = useCallback(async () => {
+    if (!canManageBook || isBookActionSaving) return;
+
+    setIsBookActionSaving(true);
+    setBookActionError(null);
+
+    try {
+      await deleteRecipeBook(bookId);
+      router.replace("/mypage");
+    } catch (error) {
+      setBookActionError(
+        error instanceof Error ? error.message : "레시피북 삭제에 실패했어요.",
+      );
+    } finally {
+      setIsBookActionSaving(false);
+    }
+  }, [bookId, canManageBook, isBookActionSaving, router]);
+
+  const renderDetailHeader = () => (
+    <DetailHeader
+      bookName={currentBookName}
+      canManageBook={canManageBook}
+      errorMessage={bookRenameOpen ? bookActionError : null}
+      isMenuOpen={bookMenuOpen}
+      isRenaming={bookRenameOpen}
+      isSaving={isBookActionSaving}
+      onDeleteRequest={handleBookDeleteRequest}
+      onMenuToggle={() => setBookMenuOpen((current) => !current)}
+      onRenameCancel={handleBookRenameCancel}
+      onRenameConfirm={() => void handleBookRename()}
+      onRenameStart={handleBookRenameStart}
+      onRenameValueChange={setBookRenameValue}
+      renameValue={bookRenameValue}
+    />
+  );
+
+  const renderBookDeleteDialog = () =>
+    bookDeleteOpen ? (
+      <BookDeleteConfirmDialog
+        bookName={currentBookName}
+        disabled={isBookActionSaving}
+        errorMessage={bookActionError}
+        onCancel={() => {
+          setBookDeleteOpen(false);
+          setBookActionError(null);
+        }}
+        onConfirm={() => void handleBookDelete()}
+      />
+    ) : null;
 
   // Auth check
   useEffect(() => {
@@ -285,7 +401,13 @@ export function RecipeBookDetailScreen({
               저장한 레시피를 확인하고 관리할 수 있어요.
             </p>
           </div>
-          <SocialLoginButtons nextPath={buildRecipeBookDetailHref({ bookId, bookName, bookType })} />
+          <SocialLoginButtons
+            nextPath={buildRecipeBookDetailHref({
+              bookId,
+              bookName: currentBookName,
+              bookType,
+            })}
+          />
           <Link
             className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--muted)]"
             href="/mypage"
@@ -298,13 +420,13 @@ export function RecipeBookDetailScreen({
   }
 
   if (viewState === "loading") {
-    return <RecipeBookDetailSkeleton bookName={bookName} />;
+    return <RecipeBookDetailSkeleton bookName={currentBookName} />;
   }
 
   if (viewState === "error") {
     return (
       <div className="pb-32">
-        <DetailHeader bookName={bookName} />
+        {renderDetailHeader()}
         <div className="flex flex-col items-center justify-center px-4 py-16">
           <h2 className="text-lg font-bold text-[var(--foreground)]">
             {errorMessage}
@@ -317,6 +439,7 @@ export function RecipeBookDetailScreen({
             다시 시도
           </button>
         </div>
+        {renderBookDeleteDialog()}
       </div>
     );
   }
@@ -324,7 +447,7 @@ export function RecipeBookDetailScreen({
   if (viewState === "empty") {
     return (
       <div className="pb-32">
-        <DetailHeader bookName={bookName} />
+        {renderDetailHeader()}
         <ContentState
           className="mx-4 mt-8"
           description="레시피를 추가하면 여기에 표시돼요."
@@ -339,6 +462,7 @@ export function RecipeBookDetailScreen({
             레시피 둘러보기
           </Link>
         </ContentState>
+        {renderBookDeleteDialog()}
       </div>
     );
   }
@@ -348,7 +472,7 @@ export function RecipeBookDetailScreen({
 
   return (
     <div className="pb-32">
-      <DetailHeader bookName={bookName} />
+      {renderDetailHeader()}
       <div
         aria-live="polite"
         className="space-y-2 px-4 pt-4 max-[360px]:space-y-1 max-[360px]:pt-2"
@@ -386,13 +510,44 @@ export function RecipeBookDetailScreen({
           {toast.message}
         </div>
       ) : null}
+      {renderBookDeleteDialog()}
     </div>
   );
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function DetailHeader({ bookName }: { bookName: string }) {
+interface DetailHeaderProps {
+  bookName: string;
+  canManageBook?: boolean;
+  isMenuOpen?: boolean;
+  isRenaming?: boolean;
+  isSaving?: boolean;
+  renameValue?: string;
+  errorMessage?: string | null;
+  onMenuToggle?: () => void;
+  onRenameStart?: () => void;
+  onRenameCancel?: () => void;
+  onRenameConfirm?: () => void;
+  onRenameValueChange?: (value: string) => void;
+  onDeleteRequest?: () => void;
+}
+
+function DetailHeader({
+  bookName,
+  canManageBook = false,
+  isMenuOpen = false,
+  isRenaming = false,
+  isSaving = false,
+  renameValue = "",
+  errorMessage = null,
+  onMenuToggle,
+  onRenameStart,
+  onRenameCancel,
+  onRenameConfirm,
+  onRenameValueChange,
+  onDeleteRequest,
+}: DetailHeaderProps) {
   return (
     <div
       className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3"
@@ -418,9 +573,165 @@ function DetailHeader({ bookName }: { bookName: string }) {
           />
         </svg>
       </Link>
-      <h1 className="min-w-0 flex-1 truncate text-lg font-bold text-[var(--foreground)]">
-        {bookName}
-      </h1>
+      {isRenaming ? (
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <input
+              aria-label="레시피북 이름"
+              className="min-h-11 min-w-0 flex-1 rounded-[var(--radius-md)] border border-[var(--brand)] bg-[var(--surface-fill)] px-3 text-base font-semibold text-[var(--foreground)] outline-none"
+              disabled={isSaving}
+              maxLength={50}
+              onChange={(event) => onRenameValueChange?.(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") onRenameConfirm?.();
+                if (event.key === "Escape") onRenameCancel?.();
+              }}
+              value={renameValue}
+            />
+            <button
+              className="flex min-h-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-3 text-sm font-bold text-white disabled:opacity-50"
+              disabled={isSaving || !renameValue.trim()}
+              onClick={onRenameConfirm}
+              type="button"
+            >
+              {isSaving ? "저장 중..." : "완료"}
+            </button>
+            <button
+              className="flex min-h-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] px-3 text-sm font-semibold text-[var(--text-2)] disabled:opacity-50"
+              disabled={isSaving}
+              onClick={onRenameCancel}
+              type="button"
+            >
+              취소
+            </button>
+          </div>
+          {errorMessage ? (
+            <p className="mt-1 text-xs font-semibold text-[var(--danger)]">
+              {errorMessage}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          <h1 className="min-w-0 flex-1 truncate text-lg font-bold text-[var(--foreground)]">
+            {bookName}
+          </h1>
+          {canManageBook ? (
+            <div className="relative">
+              <button
+                aria-controls="recipebook-detail-book-menu"
+                aria-expanded={isMenuOpen}
+                aria-haspopup="menu"
+                aria-label={`${bookName} 옵션 메뉴`}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-3)]"
+                onClick={onMenuToggle}
+                type="button"
+              >
+                <svg
+                  aria-hidden="true"
+                  className="h-5 w-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <circle cx="10" cy="4" r="1.5" />
+                  <circle cx="10" cy="10" r="1.5" />
+                  <circle cx="10" cy="16" r="1.5" />
+                </svg>
+              </button>
+              {isMenuOpen ? (
+                <div
+                  id="recipebook-detail-book-menu"
+                  className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-[var(--radius-md)] bg-[var(--surface)] shadow-[var(--shadow-2)]"
+                  role="menu"
+                >
+                  <button
+                    className="flex w-full items-center px-4 py-3 text-base font-medium text-[var(--foreground)] hover:bg-[var(--surface-fill)]"
+                    onClick={onRenameStart}
+                    role="menuitem"
+                    type="button"
+                  >
+                    이름 변경
+                  </button>
+                  <div className="border-t border-[var(--line)]" />
+                  <button
+                    className="flex w-full items-center px-4 py-3 text-base font-medium text-[var(--danger)] hover:bg-[var(--surface-fill)]"
+                    onClick={onDeleteRequest}
+                    role="menuitem"
+                    type="button"
+                  >
+                    삭제
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
+function BookDeleteConfirmDialog({
+  bookName,
+  disabled,
+  errorMessage,
+  onCancel,
+  onConfirm,
+}: {
+  bookName: string;
+  disabled: boolean;
+  errorMessage: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div
+        aria-describedby="recipebook-delete-description"
+        aria-labelledby="recipebook-delete-title"
+        aria-modal="true"
+        className="w-full max-w-sm rounded-[var(--radius-xl)] bg-[var(--surface)] p-6 shadow-[var(--shadow-3)]"
+        role="alertdialog"
+      >
+        <h2
+          className="text-lg font-bold text-[var(--foreground)]"
+          id="recipebook-delete-title"
+        >
+          레시피북을 삭제할까요?
+        </h2>
+        <p
+          className="mt-2 text-sm leading-6 text-[var(--text-3)]"
+          id="recipebook-delete-description"
+        >
+          &ldquo;{bookName}&rdquo;을 삭제하면 되돌릴 수 없어요.
+        </p>
+        {errorMessage ? (
+          <p
+            className="mt-3 rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-3 py-2 text-sm font-semibold text-[var(--danger)]"
+            role="alert"
+          >
+            {errorMessage}
+          </p>
+        ) : null}
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <button
+            className="flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] text-sm font-semibold text-[var(--text-2)] disabled:opacity-50"
+            disabled={disabled}
+            onClick={onCancel}
+            type="button"
+          >
+            취소
+          </button>
+          <button
+            className="flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--danger)] text-sm font-semibold text-white disabled:opacity-50"
+            disabled={disabled}
+            onClick={onConfirm}
+            type="button"
+          >
+            {disabled ? "삭제 중..." : "삭제"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -9,12 +9,26 @@ import { RecipeBookDetailScreen } from "@/components/recipebook/recipebook-detai
 
 const mockFetchRecipeBookRecipes = vi.fn();
 const mockRemoveRecipeBookRecipe = vi.fn();
+const mockRenameRecipeBook = vi.fn();
+const mockDeleteRecipeBook = vi.fn();
+const mockRouterReplace = vi.fn();
 
 vi.mock("@/lib/api/recipe", () => ({
   fetchRecipeBookRecipes: (...args: unknown[]) =>
     mockFetchRecipeBookRecipes(...args),
   removeRecipeBookRecipe: (...args: unknown[]) =>
     mockRemoveRecipeBookRecipe(...args),
+}));
+
+vi.mock("@/lib/api/mypage", () => ({
+  renameRecipeBook: (...args: unknown[]) => mockRenameRecipeBook(...args),
+  deleteRecipeBook: (...args: unknown[]) => mockDeleteRecipeBook(...args),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    replace: mockRouterReplace,
+  }),
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
@@ -98,7 +112,18 @@ describe("RecipeBookDetailScreen", () => {
     originalIntersectionObserver = globalThis.IntersectionObserver;
     mockFetchRecipeBookRecipes.mockReset();
     mockRemoveRecipeBookRecipe.mockReset();
+    mockRenameRecipeBook.mockReset();
+    mockDeleteRecipeBook.mockReset();
+    mockRouterReplace.mockReset();
     mockFetchRecipeBookRecipes.mockResolvedValue(MOCK_ITEMS);
+    mockRenameRecipeBook.mockResolvedValue({
+      id: "book-custom",
+      name: "주말 모임",
+      book_type: "custom",
+      recipe_count: 2,
+      sort_order: 3,
+    });
+    mockDeleteRecipeBook.mockResolvedValue({ deleted: true });
   });
 
   // ─── Auth / Gate ────────────────────────────────────────────────────────────
@@ -153,6 +178,78 @@ describe("RecipeBookDetailScreen", () => {
     expect(screen.getByText("한식 · 찌개")).toBeTruthy();
     expect(screen.getByTestId("recipebook-detail-header")).toBeTruthy();
     expect(screen.getByText("저장한 레시피")).toBeTruthy();
+  });
+
+  it("shows no book-level rename/delete menu for system books", async () => {
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-saved"
+        bookName="저장한 레시피"
+        bookType="saved"
+        initialAuthenticated
+      />,
+    );
+
+    await screen.findByText("된장찌개");
+
+    expect(screen.queryByLabelText("저장한 레시피 옵션 메뉴")).toBeNull();
+  });
+
+  it("renames a custom book from the book-level menu", async () => {
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-custom"
+        bookName="주말 파티"
+        bookType="custom"
+        initialAuthenticated
+      />,
+    );
+
+    await screen.findByText("된장찌개");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("주말 파티 옵션 메뉴"));
+    await user.click(screen.getByRole("menuitem", { name: "이름 변경" }));
+
+    const input = screen.getByDisplayValue("주말 파티");
+    await user.clear(input);
+    await user.type(input, "주말 모임");
+    await user.click(screen.getByRole("button", { name: "완료" }));
+
+    await waitFor(() => {
+      expect(mockRenameRecipeBook).toHaveBeenCalledWith(
+        "book-custom",
+        "주말 모임",
+      );
+    });
+
+    expect(await screen.findByText("레시피북 이름을 변경했어요")).toBeTruthy();
+    expect(screen.getByText("주말 모임")).toBeTruthy();
+  });
+
+  it("deletes a custom book from the book-level menu and returns to mypage", async () => {
+    render(
+      <RecipeBookDetailScreen
+        bookId="book-custom"
+        bookName="주말 파티"
+        bookType="custom"
+        initialAuthenticated
+      />,
+    );
+
+    await screen.findByText("된장찌개");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByLabelText("주말 파티 옵션 메뉴"));
+    await user.click(screen.getByRole("menuitem", { name: "삭제" }));
+
+    expect(screen.getByRole("alertdialog")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "삭제" }));
+
+    await waitFor(() => {
+      expect(mockDeleteRecipeBook).toHaveBeenCalledWith("book-custom");
+      expect(mockRouterReplace).toHaveBeenCalledWith("/mypage");
+    });
   });
 
   it("links recipe cards to RECIPE_DETAIL", async () => {

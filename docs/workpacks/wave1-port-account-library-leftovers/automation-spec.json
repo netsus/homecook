@@ -94,8 +94,8 @@
         "leftovers-narrow",
         "ate-list-default",
         "ate-list-narrow",
-        "recipebook-detail-default-if-touched",
-        "recipebook-detail-narrow-if-touched"
+        "recipebook-detail-default",
+        "recipebook-detail-narrow"
       ],
       "authority_report_paths": [
         "ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md"
@@ -109,7 +109,9 @@
         "ui/designs/evidence/wave1-port-account-library-leftovers/leftovers-default.png",
         "ui/designs/evidence/wave1-port-account-library-leftovers/leftovers-narrow.png",
         "ui/designs/evidence/wave1-port-account-library-leftovers/ate-list-default.png",
-        "ui/designs/evidence/wave1-port-account-library-leftovers/ate-list-narrow.png"
+        "ui/designs/evidence/wave1-port-account-library-leftovers/ate-list-narrow.png",
+        "ui/designs/evidence/wave1-port-account-library-leftovers/recipebook-detail-default.png",
+        "ui/designs/evidence/wave1-port-account-library-leftovers/recipebook-detail-narrow.png"
       ]
     }
   },

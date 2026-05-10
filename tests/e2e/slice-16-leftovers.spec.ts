@@ -190,6 +190,8 @@ test.describe("LEFTOVERS screen", () => {
     await expect(page.getByTestId("leftover-card").first()).toBeVisible();
     await expect(page.getByTestId("eat-button").first()).toBeVisible();
     await expect(page.getByTestId("planner-add-button").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "다 먹었어요" }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "식단에 추가" }).first()).toBeVisible();
     await expect(page.getByTestId("leftover-card")).toHaveCount(2);
   });
 
@@ -241,7 +243,7 @@ test.describe("LEFTOVERS screen", () => {
     await installLeftoverRoutes(page);
     await page.goto("/leftovers");
 
-    await expect(page.getByTestId("leftover-card").first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "남은요리" })).toBeVisible();
     const ateLink = page.getByText("다먹은 목록");
     await expect(ateLink).toBeVisible();
     await expect(ateLink).toHaveAttribute("href", "/leftovers/ate");
@@ -255,6 +257,9 @@ test.describe("ATE_LIST screen", () => {
     await page.goto("/leftovers/ate");
 
     await expect(page.getByTestId("ate-list-card").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "남은요리로 복귀" })).toBeVisible();
+    await expect(page.getByText("4월 28일")).toBeVisible();
+    await expect(page.getByText(/다먹음/)).toHaveCount(0);
   });
 
   test("uneat action removes item from eaten list", async ({ page }) => {
@@ -263,7 +268,7 @@ test.describe("ATE_LIST screen", () => {
     await page.goto("/leftovers/ate");
 
     await expect(page.getByTestId("ate-list-card").first()).toBeVisible();
-    await page.getByTestId("uneat-button").first().click();
+    await page.getByRole("button", { name: "남은요리로 복귀" }).click();
 
     await expect(page.getByTestId("feedback-toast")).toBeVisible();
     await expect(page.getByTestId("feedback-toast")).toContainText("남은요리로 복귀됐어요");
@@ -283,6 +288,7 @@ test.describe("ATE_LIST screen", () => {
     await page.goto("/leftovers/ate");
 
     await expect(page.getByText("다먹은 기록이 없어요")).toBeVisible();
+    await expect(page.getByText("먹은 기록이 여기에 모여요")).toBeVisible();
   });
 
   test("has back link to leftovers", async ({ page }) => {

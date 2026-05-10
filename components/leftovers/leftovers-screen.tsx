@@ -89,24 +89,24 @@ function LeftoverCard({
         </div>
       </div>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 min-[361px]:grid-cols-2">
         <button
-          className="flex min-h-[44px] flex-1 items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] text-sm font-semibold text-[var(--text-2)] active:border-[var(--text-2)] active:bg-[var(--surface-subtle)] disabled:opacity-60"
+          className="flex min-h-[44px] min-w-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] px-3 text-center text-sm font-semibold leading-5 text-[var(--text-2)] active:border-[var(--text-2)] active:bg-[var(--surface-subtle)] disabled:opacity-60"
           data-testid="eat-button"
           disabled={anyMutating}
           onClick={() => onEat(item.id)}
           type="button"
         >
-          {isEating ? "처리 중..." : "다먹음"}
+          {isEating ? "처리 중..." : "다 먹었어요"}
         </button>
         <button
-          className="flex min-h-[44px] flex-1 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] text-sm font-bold text-white active:bg-[var(--brand-deep)] disabled:opacity-60"
+          className="flex min-h-[44px] min-w-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-3 text-center text-sm font-bold leading-5 text-white active:bg-[var(--brand-deep)] disabled:opacity-60"
           data-testid="planner-add-button"
           disabled={anyMutating}
           onClick={() => onPlannerAdd(item)}
           type="button"
         >
-          플래너에 추가
+          식단에 추가
         </button>
       </div>
     </article>
