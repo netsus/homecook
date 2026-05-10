@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-10T00:41:24Z",
+  "updated_at": "2026-05-10T01:26:16Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -894,6 +894,22 @@
         "git diff --check"
       ],
       "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs PR #376 merged. Stage 2/3 N/A (UI-only). Stage 4 frontend implemented by Claude through resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc, then Codex completed Stage 5/6 review, authority evidence, exploratory QA/eval, planner CTA overlap repair, stale E2E selector/status expectation repair, full frontend verification, and Claude final authority gate. Design Status confirmed; authority blocker 0. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,Playwright,ui/designs/authority/WAVE1_PLANNER_MEAL_ADD-authority.md,Claude final authority gate,QA eval last_recovery_at=2026-05-10T00:41:24Z"
+    },
+    {
+      "id": "wave1-port-shopping-cooking",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/wave1-port-shopping-cooking",
+      "pr_path": "pending",
+      "lifecycle": "planned",
+      "approval_state": "not_started",
+      "verification_status": "pending",
+      "required_checks": [
+        "pnpm verify:frontend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack",
+        "git diff --check"
+      ],
+      "notes": "Stage 1 docs created by Claude. Stage 2 N/A (UI-only). Slice D of Wave1 porting plan: SHOPPING_FLOW/SHOPPING_DETAIL/COOK_READY_LIST/COOK_MODE UI improvements. COOK_MODE interaction model change classified as high-risk-ui-change. Roadmap status: docs (Stage 1 complete, awaiting merge)."
     }
   ]
 }

@@ -1,0 +1,113 @@
+{
+  "slice_id": "wave1-port-shopping-cooking",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "manual",
+
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [],
+    "verify_commands": [],
+    "required_test_targets": [],
+    "stage2_na_reason": "UI-only slice. SHOPPING_FLOW/SHOPPING_DETAIL/COOK_READY_LIST/COOK_MODE의 UI 포팅만 수행하며, route handler, DB, status transition 변경이 없다. 기존 API의 공식 필드(shopping_lists.title, created_at, is_completed, is_pantry_excluded, is_checked, add_to_pantry_item_ids, cooking_sessions.status)와 기존 endpoint만 소비한다."
+  },
+
+  "frontend": {
+    "required_routes": [
+      "/shopping/flow",
+      "/shopping/lists/[list_id]",
+      "/cooking/ready",
+      "/cooking/sessions/[session_id]/cook-mode",
+      "/cooking/recipes/[recipe_id]/cook-mode"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "read-only",
+      "unauthorized"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:pr-ready -- --slice wave1-port-shopping-cooking --pr-body <pr-body-file> --mode frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "screenshot",
+      "authority-report"
+    ],
+    "expected_tests": {
+      "vitest": [
+        "SHOPPING_FLOW 번호 라벨/이모티콘 제거",
+        "SHOPPING_DETAIL 구매/제외 섹션 분리 + 이미있음/되살리기 토글",
+        "SHOPPING_DETAIL title/date 표시 + complete 하단 배치",
+        "COOK_MODE 전체 step 스크롤 뷰 렌더",
+        "COOK_MODE timer/note/pause/prev/next 부재",
+        "COOK_MODE cancel/complete 하단 sticky",
+        "COOK_MODE consumed ingredient 줄바꿈",
+        "standalone COOK_MODE 동일 변경"
+      ],
+      "playwright": [
+        "Shopping flow preview -> create E2E 회귀",
+        "Shopping detail check/exclude/toggle E2E",
+        "Shopping complete + pantry reflect E2E 회귀",
+        "Cook ready list -> session start E2E 회귀",
+        "Cook mode scroll view + complete E2E",
+        "Standalone cook mode E2E 회귀",
+        "Shopping detail read-only completed list E2E"
+      ]
+    },
+
+    "design_authority": {
+      "ui_risk": "high-risk-ui-change",
+      "anchor_screens": [],
+      "required_screens": ["SHOPPING_FLOW", "SHOPPING_DETAIL", "PANTRY_REFLECTION", "COOK_READY_LIST", "COOK_MODE"],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "shopping-flow-preview",
+        "shopping-flow-narrow",
+        "shopping-detail-default",
+        "shopping-detail-narrow",
+        "shopping-detail-readonly",
+        "shopping-complete-pantry",
+        "cook-ready-list",
+        "cook-mode-scroll",
+        "cook-mode-narrow",
+        "cook-mode-complete"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/WAVE1_SHOPPING_COOKING-authority.md"
+      ],
+      "design_generator_skip_reason": "SHOPPING_FLOW/SHOPPING_DETAIL은 기존 화면의 라벨/버튼 배치 정리이므로 low-risk. COOK_MODE는 step-by-step에서 단일 스크롤로 interaction model 변경이지만 프로토타입 참조 방향이 확립되어 있으므로 screenshot evidence 기반 authority로 충분하다.",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-preview.png",
+        "ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-narrow.png",
+        "ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-default.png",
+        "ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-narrow.png",
+        "ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-readonly.png",
+        "ui/designs/evidence/wave1-port-shopping-cooking/shopping-complete-pantry.png",
+        "ui/designs/evidence/wave1-port-shopping-cooking/cook-ready-list.png",
+        "ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-scroll.png",
+        "ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-narrow.png",
+        "ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-complete.png"
+      ]
+    }
+  },
+
+  "external_smokes": [],
+  "blocked_conditions": [],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}
