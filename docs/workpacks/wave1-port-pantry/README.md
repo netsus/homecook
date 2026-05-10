@@ -150,7 +150,7 @@ None.
   - `ui/designs/evidence/wave1-port-pantry/pantry-empty.png`
   - `ui/designs/evidence/wave1-port-pantry/pantry-add-sheet.png`
   - `ui/designs/evidence/wave1-port-pantry/pantry-bundle-picker.png`
-- Authority status: `pending-review`
+- Authority status: `reviewed`
 - Notes:
   - `PANTRY`는 h8 기준 screen-level `prototype parity` 후보이다.
   - `PANTRY_BUNDLE_PICKER`는 별도 승격 전까지 `prototype-derived design`이다.

@@ -79,8 +79,8 @@
     ]
   },
   "status": {
-    "lifecycle": "ready_for_review",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
@@ -88,7 +88,74 @@
     "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs prepared on docs/wave1-port-pantry-stage1. Claude Stage 1 handoff attempted via resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc with model=opus, permission_mode=bypassPermissions, requested effort=xhigh recorded, CLI effort=high; provider limit reset 13:20 Asia/Seoul blocked Claude editing, so Codex completed Stage 1 fallback per user instruction. Backend Stage 2/3 defaults to N/A because current official contracts support the planned UI-only port. Stage 4/5 Codex fallback completed PANTRY UI labels, category placeholder cards, add sheet retry state, bundle picker ownership labels, multi-delete bottom CTA, targeted Vitest, Playwright E2E, screenshot evidence, WAVE1_PANTRY authority report with blocker 0, full pnpm verify:frontend, and exploratory QA eval score 99. Ingredient image URL remains contract-evolution candidate.",
+  "notes": "Merged via PR #381 on 2026-05-10T03:58:59Z. Stage 1 docs prepared on docs/wave1-port-pantry-stage1. Claude Stage 1 handoff attempted via resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc with model=opus, permission_mode=bypassPermissions, requested effort=xhigh recorded, CLI effort=high; provider limit reset 13:20 Asia/Seoul blocked Claude editing, so Codex completed Stage 1 fallback per user instruction. Backend Stage 2/3 defaults to N/A because current official contracts support the planned UI-only port. Stage 4/5 Codex fallback completed PANTRY UI labels, category placeholder cards, add sheet retry state, bundle picker ownership labels, multi-delete bottom CTA, targeted Vitest, Playwright E2E, screenshot evidence, WAVE1_PANTRY authority report with blocker 0, full pnpm verify:frontend, and exploratory QA eval score 99. Ingredient image URL remains contract-evolution candidate.",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/WAVE1_PANTRY-authority.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm verify:frontend",
+        "pnpm exec vitest run tests/pantry-screen.test.tsx",
+        "pnpm exec playwright test tests/e2e/slice-13-pantry-core.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small",
+        "pnpm exec playwright test tests/e2e/qa-wave1-pantry-evidence.spec.ts --project=desktop-chrome",
+        "ui/designs/evidence/wave1-port-pantry/",
+        "ui/designs/authority/WAVE1_PANTRY-authority.md",
+        "pnpm qa:eval -- --checklist .artifacts/qa/wave1-port-pantry/2026-05-10T03-37-57-571Z/exploratory-checklist.json --report .artifacts/qa/wave1-port-pantry/2026-05-10T03-37-57-571Z/exploratory-report.json",
+        "PR_IS_DRAFT=false pnpm validate:authority-evidence-presence",
+        "PR_IS_DRAFT=false pnpm validate:exploratory-qa-evidence",
+        "pnpm validate:workpack -- --slice wave1-port-pantry",
+        "pnpm validate:workflow-v2",
+        "git diff --check",
+        "PR #381 GitHub checks"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "048e301a0d86ac682b84d53f4650a9826b2c51ab",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-05-10T03:34:11Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 2,
+      "claude_repairable_count": 1,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "post-merge-bookkeeping-sync",
+      "evidence_sources": [
+        "pnpm verify:frontend",
+        "Vitest",
+        "Playwright",
+        "QA eval",
+        "ui/designs/authority/WAVE1_PANTRY-authority.md",
+        "PR #381"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-10T04:10:17Z",
+      "status_synced_at": "2026-05-10T04:10:17Z",
+      "pr_body_synced_at": "PR #381"
+    }
+  },
   "out_of_scope": [
     "API/DB/status/endpoint/field 추가 또는 변경",
     "ingredients.image_url 또는 pantry item image URL 필드 임의 추가",

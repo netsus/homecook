@@ -78,8 +78,8 @@
     ]
   },
   "status": {
-    "lifecycle": "ready_for_review",
-    "approval_state": "codex_approved",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
     "verification_status": "passed",
     "evaluation_status": "passed",
     "evaluation_round": 1,
@@ -87,7 +87,74 @@
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs PR #378 merged. Stage 2/3 N/A (UI-only). Stage 4 Claude handoff attempted via resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc, but provider limit blocked implementation; per user instruction Codex completed Stage 4 fallback, Stage 5 authority precheck, and Stage 6 closeout. Local lint, typecheck, product tests, build, focused Vitest, serial Playwright shopping/cooking E2E, authority evidence, workpack/workflow-v2, and diff checks passed. Design Status confirmed by Codex fallback authority, blocker 0. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:3|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm lint,pnpm typecheck,pnpm test:product,pnpm build,Playwright,ui/designs/authority/WAVE1_SHOPPING_COOKING-authority.md last_recovery_at=2026-05-10T01:56:00Z",
+  "notes": "Merged via PR #379 on 2026-05-10T02:50:47Z. Stage 1 docs PR #378 merged. Stage 2/3 N/A (UI-only). Stage 4 Claude handoff attempted via resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc, but provider limit blocked implementation; per user instruction Codex completed Stage 4 fallback, Stage 5 authority precheck, and Stage 6 closeout. Local lint, typecheck, product tests, build, focused Vitest, serial Playwright shopping/cooking E2E, authority evidence, workpack/workflow-v2, and diff checks passed. Design Status confirmed by Codex fallback authority, blocker 0. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:3|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm lint,pnpm typecheck,pnpm test:product,pnpm build,Playwright,ui/designs/authority/WAVE1_SHOPPING_COOKING-authority.md last_recovery_at=2026-05-10T01:56:00Z",
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/WAVE1_SHOPPING_COOKING-authority.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm test:product",
+        "pnpm build",
+        "pnpm exec playwright test tests/e2e/qa-wave1-shopping-cooking-evidence.spec.ts",
+        "pnpm exec playwright test tests/e2e/slice-09-shopping-preview-create.spec.ts tests/e2e/slice-10a-shopping-detail-interact.spec.ts tests/e2e/slice-12a-shopping-complete.spec.ts tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts tests/e2e/slice-14-cook-session-start.spec.ts tests/e2e/slice-15a-cook-planner-complete.spec.ts tests/e2e/slice-15b-cook-standalone-complete.spec.ts",
+        "ui/designs/evidence/wave1-port-shopping-cooking/",
+        "ui/designs/authority/WAVE1_SHOPPING_COOKING-authority.md",
+        "pnpm validate:workpack -- --slice wave1-port-shopping-cooking",
+        "pnpm validate:workflow-v2",
+        "git diff --check",
+        "PR #379 GitHub checks"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "a5a264e444167d25a1afdb072fd8c0eecb8f1730",
+      "approval_state": "dual_approved",
+      "all_checks_green": true
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-05-10T01:56:00Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 3,
+      "claude_repairable_count": 1,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "post-merge-bookkeeping-sync",
+      "evidence_sources": [
+        "pnpm lint",
+        "pnpm typecheck",
+        "pnpm test:product",
+        "pnpm build",
+        "Playwright",
+        "ui/designs/authority/WAVE1_SHOPPING_COOKING-authority.md",
+        "PR #379"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-10T04:10:17Z",
+      "status_synced_at": "2026-05-10T04:10:17Z",
+      "pr_body_synced_at": "PR #379"
+    }
+  },
   "out_of_scope": [
     "HOME, RECIPE_DETAIL, save modal 화면 변경 (Slice B wave1-port-discovery-detail에서 완료)",
     "PLANNER_WEEK, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN 변경 (Slice C wave1-port-planner-meal-add에서 완료)",

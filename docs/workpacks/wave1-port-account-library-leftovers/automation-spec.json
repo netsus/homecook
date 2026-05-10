@@ -1,0 +1,128 @@
+{
+  "slice_id": "wave1-port-account-library-leftovers",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "manual",
+
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "leftover_dishes.status remains leftover/eaten only.",
+      "POST /leftovers/{id}/eat and POST /leftovers/{id}/uneat remain idempotent and owner-scoped.",
+      "Planner column management remains the planner-column-customization contract: default 3 columns, user-managed 1-5, delete only empty columns.",
+      "System recipe books my_added/saved/liked cannot be renamed or deleted.",
+      "Account deletion remains soft-delete with confirmation; logout/delete-account APIs are unchanged."
+    ],
+    "verify_commands": [],
+    "required_test_targets": [],
+    "stage2_na_reason": "UI-only slice. Existing 16-leftovers, 17a-mypage-overview-history, 17b-recipebook-detail-remove, 17c-settings-account, and planner-column-customization contracts already provide the needed APIs for MYPAGE, SETTINGS, LEFTOVERS, ATE_LIST, and RECIPEBOOK_DETAIL polish. New leftover meta fields, uneat policy removal, system recipebook rename/delete, or account policy changes must be split into contract-evolution."
+  },
+
+  "frontend": {
+    "required_routes": [
+      "/mypage",
+      "/settings",
+      "/leftovers",
+      "/leftovers/ate",
+      "/mypage/recipe-books/[book_id]"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "unauthorized",
+      "destructive-confirm"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:exploratory-qa-evidence",
+      "pnpm validate:pr-ready -- --slice wave1-port-account-library-leftovers --pr-body <pr-body-file> --mode frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "screenshot",
+      "authority-report",
+      "exploratory-qa"
+    ],
+    "expected_tests": {
+      "vitest": [
+        "MYPAGE 설정 진입 UI, saved section 흡수, account destructive action 미노출",
+        "SETTINGS logout/delete text trigger, category cleanup, planner column contract regression",
+        "LEFTOVERS CTA layout/copy, planner add payload, eat feedback",
+        "ATE_LIST repeated copy removal, uneat API preservation 또는 UI policy",
+        "RECIPEBOOK_DETAIL custom book menu/system book no-menu/recipe removal regression",
+        "loading/empty/error/unauthorized/destructive-confirm states"
+      ],
+      "playwright": [
+        "MYPAGE E2E regression",
+        "SETTINGS E2E regression",
+        "LEFTOVERS / ATE_LIST E2E regression",
+        "RECIPEBOOK_DETAIL E2E regression",
+        "320px/390px button clipping screenshot evidence"
+      ]
+    },
+
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [],
+      "required_screens": [
+        "MYPAGE",
+        "SETTINGS",
+        "LEFTOVERS",
+        "ATE_LIST"
+      ],
+      "optional_screens": [
+        "RECIPEBOOK_DETAIL"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": true,
+      "critic_artifact": "ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "mypage-default",
+        "mypage-narrow",
+        "settings-default",
+        "settings-narrow",
+        "leftovers-default",
+        "leftovers-narrow",
+        "ate-list-default",
+        "ate-list-narrow",
+        "recipebook-detail-default-if-touched",
+        "recipebook-detail-narrow-if-touched"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md"
+      ],
+      "design_generator_skip_reason": "This is a Wave1 port of already implemented screens using existing prototype/design authority artifacts. Stage 4 should compare current service screens against the Wave1 prototype and existing authority docs instead of creating a new visual direction.",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/wave1-port-account-library-leftovers/mypage-default.png",
+        "ui/designs/evidence/wave1-port-account-library-leftovers/mypage-narrow.png",
+        "ui/designs/evidence/wave1-port-account-library-leftovers/settings-default.png",
+        "ui/designs/evidence/wave1-port-account-library-leftovers/settings-narrow.png",
+        "ui/designs/evidence/wave1-port-account-library-leftovers/leftovers-default.png",
+        "ui/designs/evidence/wave1-port-account-library-leftovers/leftovers-narrow.png",
+        "ui/designs/evidence/wave1-port-account-library-leftovers/ate-list-default.png",
+        "ui/designs/evidence/wave1-port-account-library-leftovers/ate-list-narrow.png"
+      ]
+    }
+  },
+
+  "external_smokes": [],
+  "blocked_conditions": [
+    "Stage 4 requires undocumented LEFTOVERS meta such as meal column name or servings.",
+    "Stage 4 removes the uneat API or officially documented ATE_LIST recovery flow.",
+    "Stage 4 allows rename/delete for system recipe books.",
+    "Stage 4 changes logout/delete-account or planner column management policy."
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}

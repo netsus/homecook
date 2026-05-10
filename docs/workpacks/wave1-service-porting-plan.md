@@ -20,10 +20,24 @@
   - Stage 1 docs PR: #372
   - Stage 4~6 frontend/closeout PR: #373
   - 결과: AppShell bottom-safe 조건부, Button/Chip 44px 터치 타겟, Card interactive cursor, ModalFooterActions min-h, SelectionChipRail px-1, SortDropdown primitive 신규 도입. Claude final authority gate pass, blocker 0.
-- **Slice B `wave1-port-discovery-detail`**: Stage 1 docs 작성 중.
-  - Branch: `docs/wave1-port-discovery-detail`
-  - Stage 1 Claude session: `3f4ca745-db71-4392-a3f1-4e3c4493e9bc`
-  - 범위: HOME header 단순화, sort dropdown 전환, filter chip 재배치, RECIPE_DETAIL 별점 제거/행동 metric/CTA 재구성, save modal 정리, login provider 축소. UI-only, Stage 2 N/A.
+- **Slice B `wave1-port-discovery-detail`**: merged.
+  - Stage 1 docs PR: #374
+  - 결과: HOME header 단순화, sort dropdown 전환, filter chip 재배치, RECIPE_DETAIL 별점 제거/행동 metric/CTA 재구성, save modal 정리, login provider 축소. Stage 2 N/A.
+- **Slice C `wave1-port-planner-meal-add`**: merged.
+  - Stage 1 docs PR: #376
+  - 결과: PLANNER_WEEK 주간 이동/이모지·배지 제거/CTA 정리, MENU_ADD 2열 옵션, MANUAL_CREATE 재료 모달, MEAL_SCREEN 정리. Stage 2 N/A.
+- **Slice D `wave1-port-shopping-cooking`**: merged.
+  - Stage 1 docs PR: #378
+  - Stage 4~6 frontend/closeout PR: #379
+  - 결과: SHOPPING_FLOW/SHOPPING_DETAIL/COOK_MODE Wave1 UI-only 포팅, authority blocker 0.
+- **Slice E `wave1-port-pantry`**: merged.
+  - Stage 1 docs PR: #380
+  - Stage 4~6 frontend/closeout PR: #381
+  - 결과: PANTRY/add sheet/bundle picker/multi-delete Wave1 UI-only 포팅, authority blocker 0. `ingredients.image_url`은 contract-evolution 후보로 분리.
+- **Slice F `wave1-port-account-library-leftovers`**: Stage 1 docs.
+  - Branch: `docs/wave1-port-account-library-leftovers`
+  - Claude Stage 1 handoff attempted via resume session `3f4ca745-db71-4392-a3f1-4e3c4493e9bc`; provider limit reset 13:20 Asia/Seoul blocked editing, so Codex fallback prepared Stage 1 docs.
+  - 범위: MYPAGE/SETTINGS polish, LEFTOVERS/ATE_LIST 버튼·문구 정리, RECIPEBOOK_DETAIL custom book menu. UI-only default, Stage 2 N/A unless contract-evolution candidate is needed.
 
 ## Read First
 
@@ -125,9 +139,9 @@
 | A | `wave1-port-foundation` | 공통 shell, 공용 UI 패턴, CTA/칩/카드/모달 위계 | Stage 1~6 | 가장 먼저. 단, AppShell/bottom tab은 `baemin-prototype-home-porting` 현재 상태와 충돌 여부를 Stage 1에서 먼저 잠근다. |
 | B | `wave1-port-discovery-detail` | HOME, RECIPE_DETAIL, save modal, login provider display | Stage 1~6 | HOME은 기존 `baemin-prototype-home-porting`과 충돌/중복 확인 후 시작. |
 | C | `wave1-port-planner-meal-add` | PLANNER, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN | Stage 1~6 | 컬럼 CRUD는 완료된 `planner-column-customization` 계약을 소비한다. |
-| D | `wave1-port-shopping-cooking` | SHOPPING_FLOW, SHOPPING_DETAIL, COOK_READY/COOK_MODE | Stage 5/6 closeout | 장보기 read-only/exclude/add_to_pantry 규칙을 테스트로 고정. Claude provider limit 이후 Codex fallback으로 Stage 4 evidence/검증 완료. |
-| E | `wave1-port-pantry` | PANTRY, ingredient picker, bundle picker, multi-delete | Stage 5 authority-reviewed | 재료 이미지/category API 확인 결과 category는 기존 계약에 있고 ingredient image URL은 계약 후보로 분리. Claude provider limit 이후 Codex fallback으로 Stage 4/5 구현, evidence, authority report 작성. |
-| F | `wave1-port-account-library-leftovers` | MYPAGE, SETTINGS polish, LEFTOVERS, ATE_LIST, RECIPEBOOK_DETAIL | Stage 1~6 | SETTINGS 컬럼 관리 완료 상태와 충돌하지 않게 조심. |
+| D | `wave1-port-shopping-cooking` | SHOPPING_FLOW, SHOPPING_DETAIL, COOK_READY/COOK_MODE | Done | PR #379 merged. 장보기 read-only/exclude/add_to_pantry 규칙 유지. |
+| E | `wave1-port-pantry` | PANTRY, ingredient picker, bundle picker, multi-delete | Done | PR #381 merged. 재료 이미지 URL은 계약 후보로 분리. |
+| F | `wave1-port-account-library-leftovers` | MYPAGE, SETTINGS polish, LEFTOVERS, ATE_LIST, RECIPEBOOK_DETAIL | Stage 1 docs | SETTINGS 컬럼 관리 완료 상태와 충돌하지 않게 조심. |
 | G | `wave1-port-web-followup` | 앱 포팅 이후 웹-only 조정 | 별도 계획 | 앱 slice 완료 후 최신 프로토타입 기준으로 다시 작성. |
 
 ## Slice A: wave1-port-foundation
