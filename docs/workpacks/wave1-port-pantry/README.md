@@ -1,7 +1,7 @@
 # wave1-port-pantry
 
 > Slice E of Wave1 Service Porting Plan
-> Stage: 1 docs-ready
+> Stage: 5 authority-reviewed
 > Owner: Claude (Stage 1 attempted), Codex (Stage 1 fallback because Claude provider limit reset was 13:20 Asia/Seoul)
 
 ## Goal
@@ -171,9 +171,9 @@ None.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 scope lock, implementation pending
+- [ ] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed) — Codex fallback authority report blocker 0
 - [ ] N/A
 
 ## Source Links
@@ -219,12 +219,12 @@ None.
 
 ## Delivery Checklist
 
-- [x] Stage 1 scope and source links locked <!-- omo:id=delivery-stage1-scope;stage=1;scope=docs;review=1.5,6 -->
-- [x] Backend N/A reasoning documented <!-- omo:id=delivery-backend-na;stage=1;scope=docs;review=1.5,6 -->
-- [x] Contract evolution candidates separated <!-- omo:id=delivery-contract-candidates;stage=1;scope=docs;review=1.5,6 -->
-- [ ] PANTRY UI port implemented <!-- omo:id=delivery-pantry-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] Ingredient add sheet polish implemented <!-- omo:id=delivery-add-sheet;stage=4;scope=frontend;review=5,6 -->
-- [ ] Bundle picker polish implemented <!-- omo:id=delivery-bundle-picker;stage=4;scope=frontend;review=5,6 -->
-- [ ] Multi-delete bottom CTA implemented <!-- omo:id=delivery-delete-mode;stage=4;scope=frontend;review=5,6 -->
-- [ ] Screenshot evidence captured <!-- omo:id=delivery-screenshot-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Stage 5/6 authority and closeout complete <!-- omo:id=delivery-closeout;stage=6;scope=frontend;review=6 -->
+- [x] Stage 1 scope and source links locked <!-- omo:id=delivery-stage1-scope;stage=4;scope=frontend;review=5,6 -->
+- [x] Backend N/A reasoning documented <!-- omo:id=delivery-backend-na;stage=4;scope=frontend;review=5,6 -->
+- [x] Contract evolution candidates separated <!-- omo:id=delivery-contract-candidates;stage=4;scope=frontend;review=5,6 -->
+- [x] PANTRY UI port implemented <!-- omo:id=delivery-pantry-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Ingredient add sheet polish implemented <!-- omo:id=delivery-add-sheet;stage=4;scope=frontend;review=5,6 -->
+- [x] Bundle picker polish implemented <!-- omo:id=delivery-bundle-picker;stage=4;scope=frontend;review=5,6 -->
+- [x] Multi-delete bottom CTA implemented <!-- omo:id=delivery-delete-mode;stage=4;scope=frontend;review=5,6 -->
+- [x] Screenshot evidence captured <!-- omo:id=delivery-screenshot-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Stage 5/6 authority and closeout complete <!-- omo:id=delivery-closeout;stage=4;scope=frontend;review=5,6 -->

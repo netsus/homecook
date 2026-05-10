@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-10T02:56:00Z",
+  "updated_at": "2026-05-10T03:34:11Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -914,17 +914,19 @@
     {
       "id": "wave1-port-pantry",
       "preset": "vertical-slice-strict",
-      "branch": "docs/wave1-port-pantry-stage1",
+      "branch": "feature/fe-wave1-port-pantry",
       "pr_path": "pending",
       "lifecycle": "ready_for_review",
       "approval_state": "codex_approved",
       "verification_status": "passed",
       "required_checks": [
+        "pnpm verify:frontend",
         "pnpm validate:workflow-v2",
         "pnpm validate:workpack",
+        "pnpm validate:authority-evidence-presence",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs prepared after Claude Stage 1 handoff attempted via resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc with model=opus, permission_mode=bypassPermissions, requested effort=xhigh recorded, CLI effort=high; provider limit reset 13:20 Asia/Seoul blocked Claude editing, so Codex completed Stage 1 fallback per user instruction. Backend Stage 2/3 defaults to N/A because current official contracts support the planned UI-only port. Ingredient image URL remains contract-evolution candidate."
+      "notes": "Internal closeout projection after Codex Stage 5 authority review. Stage 1 docs PR #380 merged after Claude Stage 1 handoff attempted via resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc with model=opus, permission_mode=bypassPermissions, requested effort=xhigh recorded, CLI effort=high; provider limit reset 13:20 Asia/Seoul blocked Claude editing, so Codex completed fallback per user instruction. Stage 2/3 N/A (UI-only). Stage 4/5 Codex fallback completed PANTRY UI labels, category placeholder cards, add sheet retry state, bundle picker ownership labels, multi-delete bottom CTA, targeted Vitest, Playwright E2E, screenshot evidence, and WAVE1_PANTRY authority report with blocker 0. Full pnpm verify:frontend passed. Exploratory QA eval passed with score 99. Ingredient image URL remains contract-evolution candidate. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,pnpm exec vitest run tests/pantry-screen.test.tsx,pnpm exec playwright test tests/e2e/slice-13-pantry-core.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small,pnpm exec playwright test tests/e2e/qa-wave1-pantry-evidence.spec.ts --project=desktop-chrome,pnpm qa:eval -- --checklist .artifacts/qa/wave1-port-pantry/2026-05-10T03-37-57-571Z/exploratory-checklist.json --report .artifacts/qa/wave1-port-pantry/2026-05-10T03-37-57-571Z/exploratory-report.json,PR_IS_DRAFT=false pnpm validate:authority-evidence-presence,ui/designs/authority/WAVE1_PANTRY-authority.md last_recovery_at=2026-05-10T03:34:11Z"
     }
   ]
 }

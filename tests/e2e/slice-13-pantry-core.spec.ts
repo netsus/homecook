@@ -95,10 +95,22 @@ async function installPantryRoutes(page: Page) {
     const method = route.request().method();
 
     if (method === "GET") {
+      const requestUrl = new URL(route.request().url());
+      const q = requestUrl.searchParams.get("q")?.trim();
+      const category = requestUrl.searchParams.get("category")?.trim();
+      let items = [...pantryItems];
+
+      if (q) {
+        items = items.filter((item) => item.standard_name.includes(q));
+      }
+      if (category) {
+        items = items.filter((item) => item.category === category);
+      }
+
       await route.fulfill({
         json: {
           success: true,
-          data: { items: pantryItems },
+          data: { items },
           error: null,
         },
       });
@@ -187,7 +199,7 @@ test.describe("PANTRY screen", () => {
     await page.goto("/pantry");
 
     await expect(page.getByText("나의 팬트리")).toBeVisible();
-    await expect(page.getByText("3개 재료 보유 중")).toBeVisible();
+    await expect(page.getByText("3개 재료", { exact: true })).toBeVisible();
     await expect(page.getByText(/양파/)).toBeVisible();
     await expect(page.getByText(/마늘/)).toBeVisible();
     await expect(page.getByText(/돼지고기/)).toBeVisible();
@@ -217,7 +229,7 @@ test.describe("PANTRY screen", () => {
     await expect(page.getByText(/양파/)).toBeVisible();
 
     // Enter select mode
-    await page.getByRole("button", { name: "선택" }).click();
+    await page.getByRole("button", { name: "삭제" }).click();
 
     // Select first item
     const checkboxes = page.getByRole("checkbox");
@@ -226,7 +238,7 @@ test.describe("PANTRY screen", () => {
     await expect(page.getByText("1개 선택됨")).toBeVisible();
 
     // Click delete
-    await page.getByRole("button", { name: /선택 삭제/ }).click();
+    await page.getByRole("button", { name: /제거하기/ }).click();
 
     // Confirm delete
     await expect(page.getByText("재료를 삭제할까요?")).toBeVisible();
@@ -256,7 +268,7 @@ test.describe("PANTRY screen", () => {
     await page.getByRole("button", { name: "팬트리에 추가 (1)" }).click();
 
     await expect(page.getByText("1개 재료가 팬트리에 추가됐어요")).toBeVisible();
-    await expect(page.getByText("4개 재료 보유 중")).toBeVisible();
+    await expect(page.getByText("4개 재료", { exact: true })).toBeVisible();
     await expect(page.getByText(/대파/)).toBeVisible();
   });
 
@@ -268,7 +280,7 @@ test.describe("PANTRY screen", () => {
     await expect(page.getByText(/양파/)).toBeVisible();
 
     // Open bundle picker
-    await page.getByRole("button", { name: /묶음 추가/ }).click();
+    await page.getByRole("button", { name: /묶음으로 추가/ }).click();
 
     // Should show bundle picker dialog
     await expect(
@@ -281,8 +293,23 @@ test.describe("PANTRY screen", () => {
     await page.getByRole("button", { name: "3개 팬트리에 추가" }).click();
 
     await expect(page.getByText("3개 재료를 팬트리에 추가했어요")).toBeVisible();
-    await expect(page.getByText("6개 재료 보유 중")).toBeVisible();
+    await expect(page.getByText("6개 재료", { exact: true })).toBeVisible();
     await expect(page.getByText(/간장/)).toBeVisible();
+  });
+
+  test("searches pantry items and shows an empty result state", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installPantryRoutes(page);
+    await page.goto("/pantry");
+
+    await expect(page.getByText(/양파/)).toBeVisible();
+
+    await page.getByRole("searchbox", { name: "팬트리 재료 검색" }).fill("없는");
+
+    await expect(
+      page.getByText('"없는"에 해당하는 재료가 없어요'),
+    ).toBeVisible();
+    await expect(page.getByText("검색어 지우기")).toBeVisible();
   });
 
   test("filters items by category chip", async ({ page }) => {
@@ -297,5 +324,6 @@ test.describe("PANTRY screen", () => {
 
     // Should refetch with category filter
     await expect(page.getByText(/양파/)).toBeVisible();
+    await expect(page.getByText(/마늘/)).toBeHidden();
   });
 });
