@@ -126,7 +126,7 @@
 | B | `wave1-port-discovery-detail` | HOME, RECIPE_DETAIL, save modal, login provider display | Stage 1~6 | HOME은 기존 `baemin-prototype-home-porting`과 충돌/중복 확인 후 시작. |
 | C | `wave1-port-planner-meal-add` | PLANNER, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN | Stage 1~6 | 컬럼 CRUD는 완료된 `planner-column-customization` 계약을 소비한다. |
 | D | `wave1-port-shopping-cooking` | SHOPPING_FLOW, SHOPPING_DETAIL, COOK_READY/COOK_MODE | Stage 5/6 closeout | 장보기 read-only/exclude/add_to_pantry 규칙을 테스트로 고정. Claude provider limit 이후 Codex fallback으로 Stage 4 evidence/검증 완료. |
-| E | `wave1-port-pantry` | PANTRY, ingredient picker, bundle picker, multi-delete | Stage 1~6 | 재료 이미지/category API 유무를 먼저 확인. |
+| E | `wave1-port-pantry` | PANTRY, ingredient picker, bundle picker, multi-delete | Stage 1 docs-ready | 재료 이미지/category API 확인 결과 category는 기존 계약에 있고 ingredient image URL은 계약 후보로 분리. Claude provider limit 이후 Codex fallback으로 Stage 1 작성. |
 | F | `wave1-port-account-library-leftovers` | MYPAGE, SETTINGS polish, LEFTOVERS, ATE_LIST, RECIPEBOOK_DETAIL | Stage 1~6 | SETTINGS 컬럼 관리 완료 상태와 충돌하지 않게 조심. |
 | G | `wave1-port-web-followup` | 앱 포팅 이후 웹-only 조정 | 별도 계획 | 앱 slice 완료 후 최신 프로토타입 기준으로 다시 작성. |
 
@@ -393,6 +393,13 @@
 - bundle add E2E
 - multi-delete E2E
 - mobile screenshot evidence 390/320
+
+### Delivery Status
+
+- Stage 1 docs branch: `docs/wave1-port-pantry-stage1`
+- Claude Stage 1 handoff: attempted with resume session `3f4ca745-db71-4392-a3f1-4e3c4493e9bc`; provider limit reset was 13:20 Asia/Seoul.
+- Codex fallback: Stage 1 workpack docs created because the user explicitly instructed Codex to continue directly when Claude token limit ends.
+- Contract finding: official `category` exists on `ingredients`/`pantry` responses; official ingredient image URL does not exist and remains a contract-evolution candidate.
 
 ## Slice F: wave1-port-account-library-leftovers
 
