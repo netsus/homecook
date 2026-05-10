@@ -50,9 +50,14 @@ function PlannerAddPopup({ recipeId, onClose, onConfirm, planner }) {
 
   return (
     <Sheet title="플래너에 추가" onClose={onClose} footer={
-    <Button variant="primary" full onClick={() => onConfirm(selDate, selSlot, qty)}>
-        {selDate} {selSlot}에 추가
-      </Button>
+    <div style={{ display: 'flex', gap: 8 }}>
+        <Button variant="neutral" style={{ flex: '0 0 88px', whiteSpace: 'nowrap' }} onClick={onClose}>
+          취소
+        </Button>
+        <Button variant="primary" full onClick={() => onConfirm(selDate, selSlot, qty)}>
+          {selDate} {selSlot}에 추가
+        </Button>
+      </div>
     }>
       {/* Recipe preview */}
       <div style={{
@@ -66,7 +71,7 @@ function PlannerAddPopup({ recipeId, onClose, onConfirm, planner }) {
         }}>{recipe.emoji}</div>
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>{recipe.name}</div>
-          <div style={{ fontSize: 12, color: T.text3 }}>{recipe.minutes}분 · {recipe.kcal}kcal</div>
+          <div style={{ fontSize: 12, color: T.text3 }}>{recipe.minutes}분 · 선택 {qty}인분</div>
         </div>
       </div>
 
@@ -129,36 +134,71 @@ function PlannerAddPopup({ recipeId, onClose, onConfirm, planner }) {
 
 }
 
-function SavePopup({ recipeId, onClose, onConfirm, saved }) {
-  const [folder, setFolder] = React.useState('기본 폴더');
+function SavePopup({ recipeId, onClose, onConfirm, saved, savedBookIds = [], books: providedBooks, onCreateBook }) {
   const [creating, setCreating] = React.useState(false);
   const [newName, setNewName] = React.useState('');
-  const folders = ['기본 폴더', '주말에 해먹기', '주중 간단식', '손님 오는 날'];
+  const fallbackBooks = [
+    { id: 'b_saved', kind: 'saved', name: '저장한 레시피', emoji: '🔖', recipeIds: [] },
+    { id: 'b_custom1', kind: 'custom', name: '평일 저녁 빠른요리', emoji: '🍳', recipeIds: [] },
+    { id: 'b_custom2', kind: 'custom', name: '주말 한 상 차림', emoji: '🍽️', recipeIds: [] },
+  ];
+  const baseBooks = (providedBooks && providedBooks.length)
+    ? providedBooks
+    : (window.RECIPEBOOK_SAMPLES && window.RECIPEBOOK_SAMPLES.length)
+    ? window.RECIPEBOOK_SAMPLES
+    : fallbackBooks;
+  const books = baseBooks;
+  const [selected, setSelected] = React.useState(() => new Set(
+    savedBookIds.length ? savedBookIds : (saved ? ['b_saved'] : [])
+  ));
+  const toggleBook = (id) => setSelected(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
 
   return (
     <Sheet title="레시피 저장" onClose={onClose} footer={
-    <Button variant="primary" full onClick={() => onConfirm()}>
-        저장
-      </Button>
+    <div style={{ display: 'flex', gap: 8 }}>
+        <Button variant="neutral" style={{ flex: '0 0 88px', whiteSpace: 'nowrap' }} onClick={onClose}>
+          취소
+        </Button>
+        <Button variant="primary" full onClick={() => onConfirm([...selected])}>
+          {selected.size ? `${selected.size}개 레시피북 반영` : '저장 해제'}
+        </Button>
+      </div>
     }>
       {/* vNext S3 — 레시피 정보 프리뷰 섹션 제거 */}
-      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>레시피북 선택</div>
+      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>레시피북 다중 선택</div>
       <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${T.border}` }}>
-        {folders.map((f, i) =>
-        <div key={f} onClick={() => setFolder(f)} style={{
+        {books.map((book, i) => {
+          const on = selected.has(book.id);
+          return (
+        <div key={book.id} onClick={() => toggleBook(book.id)} style={{
           display: 'flex', alignItems: 'center', padding: '12px 16px', cursor: 'pointer',
           borderBottom: `1px solid ${T.surfaceSubtle}`
         }}>
             <div style={{
-            width: 18, height: 18, borderRadius: 9,
-            border: `2px solid ${folder === f ? T.mint : T.border}`,
-            background: folder === f ? T.mint : '#fff',
+            width: 20, height: 20, borderRadius: 6,
+            border: `2px solid ${on ? T.mint : T.border}`,
+            background: on ? T.mint : '#fff',
             marginRight: 10,
             display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>{folder === f && <div style={{ width: 6, height: 6, borderRadius: 3, background: '#fff' }} />}</div>
-            <div style={{ flex: 1, fontSize: 14, color: T.ink }}>{f}</div>
+          }}>{on && Icon.check('#fff')}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, color: T.ink, fontWeight: 800 }}>{book.name}</div>
+              <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
+                {on ? '저장됨 · 선택 해제하면 이 책에서 삭제' : '미저장 · 선택하면 이 책에 추가'}
+              </div>
+            </div>
+            <span style={{
+              fontSize: 11, color: book.kind === 'saved' ? T.mintDeep : T.text3,
+              background: book.kind === 'saved' ? T.mintSoft : T.surfaceFill,
+              padding: '3px 7px', borderRadius: 9999, fontWeight: 800,
+            }}>{book.kind === 'saved' ? '저장' : '내 책'}</span>
           </div>
-        )}
+          );
+        })}
         {/* vNext S3 — 새 레시피북 만들기 인라인 UI */}
         {/* CONTRACT_CHECK: 레시피북 생성 API (POST /recipe-books) 트랜잭션 위치 확정 필요 — vNext에서는 UI shape만 */}
         {!creating ? (
@@ -181,7 +221,14 @@ function SavePopup({ recipeId, onClose, onConfirm, saved }) {
                 fontFamily: T.fontUI
               }}
             />
-            <button onClick={() => { if (newName.trim()) { setFolder(newName.trim()); setCreating(false); setNewName(''); } }} style={{
+            <button onClick={() => {
+              const name = newName.trim();
+              if (!name) return;
+              const id = onCreateBook ? onCreateBook(name) : 'b_new_' + Date.now();
+              setSelected(prev => new Set([...prev, id]));
+              setCreating(false);
+              setNewName('');
+            }} style={{
               background: T.mint, color: '#fff', border: 'none', borderRadius: 8,
               padding: '8px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer'
             }}>추가</button>

@@ -63,6 +63,16 @@ function App() {
   const [planner, setPlanner] = useState(makeInitialPlanner());
   const [pantry, setPantry] = useState(INITIAL_PANTRY);
   const [savedIds, setSavedIds] = useState(['r1', 'r2', 'r4']);
+  const [recipeBooks, setRecipeBooks] = useState(() => window.RECIPEBOOK_SAMPLES || []);
+  const [recipeBookSaves, setRecipeBookSaves] = useState(() => {
+    const map = {};
+    (window.RECIPEBOOK_SAMPLES || []).forEach(book => {
+      (book.recipeIds || []).forEach(recipeId => {
+        map[recipeId] = Array.from(new Set([...(map[recipeId] || []), book.id]));
+      });
+    });
+    return map;
+  });
   const [sortBy, setSortBy] = useState('latest');
   const [ingFilter, setIngFilter] = useState([]);
   // Wave 1.5 — INGREDIENT_FILTER_MODAL 의 fine-grained 재료 이름 목록.
@@ -136,6 +146,25 @@ function App() {
 
   const toggleSaved = (id) => {
     setSavedIds((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
+  };
+  const savedBookIdsFor = (recipeId) => (
+    recipeBookSaves[recipeId] || (savedIds.includes(recipeId) ? ['b_saved'] : [])
+  );
+  const applyRecipeBookSaves = (recipeId, bookIds) => {
+    const nextIds = Array.from(new Set(bookIds || []));
+    setRecipeBookSaves(prev => ({ ...prev, [recipeId]: nextIds }));
+    setSavedIds(prev => {
+      const hasSavedBook = nextIds.includes('b_saved');
+      if (hasSavedBook && !prev.includes(recipeId)) return [...prev, recipeId];
+      if (!hasSavedBook && prev.includes(recipeId)) return prev.filter(id => id !== recipeId);
+      return prev;
+    });
+    showToast(nextIds.length ? `${nextIds.length}개 레시피북에 반영됐어요` : '레시피북 저장을 해제했어요');
+  };
+  const createRecipeBookForSave = (name) => {
+    const id = 'b_new_' + Date.now();
+    setRecipeBooks(prev => [...prev, { id, kind: 'custom', name, emoji: '📘', recipeIds: [] }]);
+    return id;
   };
 
   // Routing helpers
@@ -303,16 +332,40 @@ function App() {
 
   const addPickedPantryItems = (items) => {
     const list = Array.isArray(items) ? items : [items];
+    const existingNames = new Set(Object.values(pantry || {}).filter(item => item.have).map(item => item.name));
+    const unique = list.filter(item => item?.name && !existingNames.has(item.name));
+    if (unique.length === 0) {
+      setPantryAddSheet(false);
+      showToast('이미 팬트리에 있는 재료예요');
+      return;
+    }
     setPantry(p => {
       const next = { ...p };
-      list.forEach(item => {
+      unique.forEach(item => {
         if (!item?.name) return;
         next[item.name] = { name: item.name, section: item.section, have: true };
       });
       return next;
     });
     setPantryAddSheet(false);
-    showToast(`${list.length}개 재료 추가됨`);
+    showToast(`${unique.length}개 재료 추가됨`);
+  };
+  const addPantryNames = (names, section = '양념') => {
+    const list = Array.isArray(names) ? names : [names];
+    const existingNames = new Set(Object.values(pantry || {}).filter(item => item.have).map(item => item.name));
+    const unique = list.filter(name => name && !existingNames.has(name));
+    if (unique.length === 0) {
+      setPantryBundlePicker(false);
+      showToast('이미 팬트리에 있는 재료예요');
+      return;
+    }
+    setPantry(p => {
+      const next = { ...p };
+      unique.forEach(name => { next[name] = { name, section, have: true }; });
+      return next;
+    });
+    setPantryBundlePicker(false);
+    showToast(unique.length + '개 일괄 추가됨');
   };
   const markCooked = (date, slot, consumed, mealIndex = 0) => {
     updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, status: 'cooked' }));
@@ -461,6 +514,7 @@ function App() {
     content =
     <PlannerScreen
       planner={planner} setPlanner={setPlanner}
+      pantry={pantry}
       onOpenRecipe={openRecipe}
       onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })}
       onCreateShopping={() => goPage('shopping-create')}
@@ -469,6 +523,8 @@ function App() {
       onGoManual={(date, slot) => goPage('manual-create', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
       onGoYtImport={(date, slot) => goPage('yt-import', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
       onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+      onPickRecipeFromMealAdd={(date, slot, recipeId) => setPlanningServings({ recipeId, presetDate: date, presetSlot: slot })}
+      showToast={showToast}
       initialMealAdd={route.restoreMealAdd}
       onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })} />;
 
@@ -534,6 +590,9 @@ function App() {
         onGoManual={(date, slot) => goPage('manual-create', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
         onGoYtImport={(date, slot) => goPage('yt-import', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
         onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+        pantry={pantry}
+        onPickRecipeFromMealAdd={(date, slot, recipeId) => setPlanningServings({ recipeId, presetDate: date, presetSlot: slot })}
+        showToast={showToast}
         initialMealAdd={route.restoreMealAdd}
         onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })}
       />
@@ -697,11 +756,13 @@ function App() {
               <SavePopup
                 recipeId={saveModal.recipeId}
                 saved={savedIds.includes(saveModal.recipeId)}
+                savedBookIds={savedBookIdsFor(saveModal.recipeId)}
+                books={recipeBooks}
+                onCreateBook={createRecipeBookForSave}
                 onClose={() => setSaveModal(null)}
-                onConfirm={() => {
-                  toggleSaved(saveModal.recipeId);
+                onConfirm={(bookIds) => {
+                  applyRecipeBookSaves(saveModal.recipeId, bookIds);
                   setSaveModal(null);
-                  showToast(savedIds.includes(saveModal.recipeId) ? '저장이 해제됐어요' : '저장됐어요');
                 }}
               />
             </div>
@@ -737,6 +798,7 @@ function App() {
         {/* Wave 1.8 — desktop dialog variants (replaces mobile sheets in desktop shell) */}
         {pantryAddSheet && (
           <DesktopPantryAddDialog
+            pantry={pantry}
             onClose={() => setPantryAddSheet(false)}
             onAddItem={addPickedPantryItems}
             onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
@@ -745,15 +807,7 @@ function App() {
         {pantryBundlePicker && (
           <DesktopPantryBundleDialog
             onClose={() => setPantryBundlePicker(false)}
-            onConfirm={(items) => {
-              setPantry(p => {
-                const next = { ...p };
-                items.forEach(name => { next[name] = { name, section: '양념', have: true }; });
-                return next;
-              });
-              setPantryBundlePicker(false);
-              showToast(items.length + '개 일괄 추가됨');
-            }}
+            onConfirm={(items) => addPantryNames(items)}
           />
         )}
         {reflectPicker && (
@@ -849,13 +903,17 @@ function App() {
           )}
           {saveModal && (
             <SavePopup recipeId={saveModal.recipeId} saved={savedIds.includes(saveModal.recipeId)}
+              savedBookIds={savedBookIdsFor(saveModal.recipeId)}
+              books={recipeBooks}
+              onCreateBook={createRecipeBookForSave}
               onClose={() => setSaveModal(null)}
-              onConfirm={() => { toggleSaved(saveModal.recipeId); setSaveModal(null); showToast(savedIds.includes(saveModal.recipeId) ? '저장이 해제됐어요' : '저장됐어요'); }} />
+              onConfirm={(bookIds) => { applyRecipeBookSaves(saveModal.recipeId, bookIds); setSaveModal(null); }} />
           )}
           {sortSheet && <SortSheet value={sortBy} onChange={setSortBy} onClose={() => setSortSheet(false)} />}
           {loginGate && <LoginGate onClose={() => setLoginGate(false)} onLogin={() => { setLoginGate(false); showToast('로그인됨'); }} />}
           {pantryAddSheet && (
             <PantryAddSheet
+              pantry={pantry}
               onClose={() => setPantryAddSheet(false)}
               onAddItem={addPickedPantryItems}
               onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
@@ -864,15 +922,7 @@ function App() {
           {pantryBundlePicker && (
             <PantryBundlePicker
               onClose={() => setPantryBundlePicker(false)}
-              onConfirm={(items) => {
-                setPantry(p => {
-                  const next = { ...p };
-                  items.forEach(name => { next[name] = { name, section: '양념', have: true }; });
-                  return next;
-                });
-                setPantryBundlePicker(false);
-                showToast(items.length + '개 일괄 추가됨');
-              }}
+              onConfirm={(items) => addPantryNames(items)}
             />
           )}
           {reflectPicker && (
@@ -965,13 +1015,17 @@ function App() {
               )}
               {saveModal && (
                 <SavePopup recipeId={saveModal.recipeId} saved={savedIds.includes(saveModal.recipeId)}
+                  savedBookIds={savedBookIdsFor(saveModal.recipeId)}
+                  books={recipeBooks}
+                  onCreateBook={createRecipeBookForSave}
                   onClose={() => setSaveModal(null)}
-                  onConfirm={() => { toggleSaved(saveModal.recipeId); setSaveModal(null); showToast(savedIds.includes(saveModal.recipeId) ? '저장이 해제됐어요' : '저장됐어요'); }} />
+                  onConfirm={(bookIds) => { applyRecipeBookSaves(saveModal.recipeId, bookIds); setSaveModal(null); }} />
               )}
               {sortSheet && <SortSheet value={sortBy} onChange={setSortBy} onClose={() => setSortSheet(false)} />}
               {loginGate && <LoginGate onClose={() => setLoginGate(false)} onLogin={() => { setLoginGate(false); showToast('로그인됨'); }} />}
               {pantryAddSheet && (
                 <PantryAddSheet
+                  pantry={pantry}
                   onClose={() => setPantryAddSheet(false)}
                   onAddItem={addPickedPantryItems}
                   onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
@@ -980,15 +1034,7 @@ function App() {
               {pantryBundlePicker && (
                 <PantryBundlePicker
                   onClose={() => setPantryBundlePicker(false)}
-                  onConfirm={(items) => {
-                    setPantry(p => {
-                      const next = { ...p };
-                      items.forEach(name => { next[name] = { name, section: '양념', have: true }; });
-                      return next;
-                    });
-                    setPantryBundlePicker(false);
-                    showToast(items.length + '개 일괄 추가됨');
-                  }}
+                  onConfirm={(items) => addPantryNames(items)}
                 />
               )}
               {reflectPicker && (
@@ -1052,13 +1098,17 @@ function App() {
               )}
               {saveModal && (
                 <SavePopup recipeId={saveModal.recipeId} saved={savedIds.includes(saveModal.recipeId)}
+                  savedBookIds={savedBookIdsFor(saveModal.recipeId)}
+                  books={recipeBooks}
+                  onCreateBook={createRecipeBookForSave}
                   onClose={() => setSaveModal(null)}
-                  onConfirm={() => { toggleSaved(saveModal.recipeId); setSaveModal(null); showToast(savedIds.includes(saveModal.recipeId) ? '저장이 해제됐어요' : '저장됐어요'); }} />
+                  onConfirm={(bookIds) => { applyRecipeBookSaves(saveModal.recipeId, bookIds); setSaveModal(null); }} />
               )}
               {sortSheet && <SortSheet value={sortBy} onChange={setSortBy} onClose={() => setSortSheet(false)} />}
               {loginGate && <LoginGate onClose={() => setLoginGate(false)} onLogin={() => { setLoginGate(false); showToast('로그인됨'); }} />}
               {pantryAddSheet && (
                 <PantryAddSheet
+                  pantry={pantry}
                   onClose={() => setPantryAddSheet(false)}
                   onAddItem={addPickedPantryItems}
                   onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
@@ -1067,15 +1117,7 @@ function App() {
               {pantryBundlePicker && (
                 <PantryBundlePicker
                   onClose={() => setPantryBundlePicker(false)}
-                  onConfirm={(items) => {
-                    setPantry(p => {
-                      const next = { ...p };
-                      items.forEach(name => { next[name] = { name, section: '양념', have: true }; });
-                      return next;
-                    });
-                    setPantryBundlePicker(false);
-                    showToast(items.length + '개 일괄 추가됨');
-                  }}
+                  onConfirm={(items) => addPantryNames(items)}
                 />
               )}
               {reflectPicker && (

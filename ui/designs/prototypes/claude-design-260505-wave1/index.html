@@ -1124,9 +1124,14 @@ function PlannerAddPopup({ recipeId, onClose, onConfirm, planner }) {
 
   return (
     <Sheet title="플래너에 추가" onClose={onClose} footer={
-    <Button variant="primary" full onClick={() => onConfirm(selDate, selSlot, qty)}>
-        {selDate} {selSlot}에 추가
-      </Button>
+    <div style={{ display: 'flex', gap: 8 }}>
+        <Button variant="neutral" style={{ flex: '0 0 88px', whiteSpace: 'nowrap' }} onClick={onClose}>
+          취소
+        </Button>
+        <Button variant="primary" full onClick={() => onConfirm(selDate, selSlot, qty)}>
+          {selDate} {selSlot}에 추가
+        </Button>
+      </div>
     }>
       {/* Recipe preview */}
       <div style={{
@@ -1140,7 +1145,7 @@ function PlannerAddPopup({ recipeId, onClose, onConfirm, planner }) {
         }}>{recipe.emoji}</div>
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, color: T.ink }}>{recipe.name}</div>
-          <div style={{ fontSize: 12, color: T.text3 }}>{recipe.minutes}분 · {recipe.kcal}kcal</div>
+          <div style={{ fontSize: 12, color: T.text3 }}>{recipe.minutes}분 · 선택 {qty}인분</div>
         </div>
       </div>
 
@@ -1203,36 +1208,71 @@ function PlannerAddPopup({ recipeId, onClose, onConfirm, planner }) {
 
 }
 
-function SavePopup({ recipeId, onClose, onConfirm, saved }) {
-  const [folder, setFolder] = React.useState('기본 폴더');
+function SavePopup({ recipeId, onClose, onConfirm, saved, savedBookIds = [], books: providedBooks, onCreateBook }) {
   const [creating, setCreating] = React.useState(false);
   const [newName, setNewName] = React.useState('');
-  const folders = ['기본 폴더', '주말에 해먹기', '주중 간단식', '손님 오는 날'];
+  const fallbackBooks = [
+    { id: 'b_saved', kind: 'saved', name: '저장한 레시피', emoji: '🔖', recipeIds: [] },
+    { id: 'b_custom1', kind: 'custom', name: '평일 저녁 빠른요리', emoji: '🍳', recipeIds: [] },
+    { id: 'b_custom2', kind: 'custom', name: '주말 한 상 차림', emoji: '🍽️', recipeIds: [] },
+  ];
+  const baseBooks = (providedBooks && providedBooks.length)
+    ? providedBooks
+    : (window.RECIPEBOOK_SAMPLES && window.RECIPEBOOK_SAMPLES.length)
+    ? window.RECIPEBOOK_SAMPLES
+    : fallbackBooks;
+  const books = baseBooks;
+  const [selected, setSelected] = React.useState(() => new Set(
+    savedBookIds.length ? savedBookIds : (saved ? ['b_saved'] : [])
+  ));
+  const toggleBook = (id) => setSelected(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
 
   return (
     <Sheet title="레시피 저장" onClose={onClose} footer={
-    <Button variant="primary" full onClick={() => onConfirm()}>
-        저장
-      </Button>
+    <div style={{ display: 'flex', gap: 8 }}>
+        <Button variant="neutral" style={{ flex: '0 0 88px', whiteSpace: 'nowrap' }} onClick={onClose}>
+          취소
+        </Button>
+        <Button variant="primary" full onClick={() => onConfirm([...selected])}>
+          {selected.size ? `${selected.size}개 레시피북 반영` : '저장 해제'}
+        </Button>
+      </div>
     }>
       {/* vNext S3 — 레시피 정보 프리뷰 섹션 제거 */}
-      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>레시피북 선택</div>
+      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>레시피북 다중 선택</div>
       <div style={{ background: '#fff', borderRadius: 10, border: `1px solid ${T.border}` }}>
-        {folders.map((f, i) =>
-        <div key={f} onClick={() => setFolder(f)} style={{
+        {books.map((book, i) => {
+          const on = selected.has(book.id);
+          return (
+        <div key={book.id} onClick={() => toggleBook(book.id)} style={{
           display: 'flex', alignItems: 'center', padding: '12px 16px', cursor: 'pointer',
           borderBottom: `1px solid ${T.surfaceSubtle}`
         }}>
             <div style={{
-            width: 18, height: 18, borderRadius: 9,
-            border: `2px solid ${folder === f ? T.mint : T.border}`,
-            background: folder === f ? T.mint : '#fff',
+            width: 20, height: 20, borderRadius: 6,
+            border: `2px solid ${on ? T.mint : T.border}`,
+            background: on ? T.mint : '#fff',
             marginRight: 10,
             display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>{folder === f && <div style={{ width: 6, height: 6, borderRadius: 3, background: '#fff' }} />}</div>
-            <div style={{ flex: 1, fontSize: 14, color: T.ink }}>{f}</div>
+          }}>{on && Icon.check('#fff')}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, color: T.ink, fontWeight: 800 }}>{book.name}</div>
+              <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
+                {on ? '저장됨 · 선택 해제하면 이 책에서 삭제' : '미저장 · 선택하면 이 책에 추가'}
+              </div>
+            </div>
+            <span style={{
+              fontSize: 11, color: book.kind === 'saved' ? T.mintDeep : T.text3,
+              background: book.kind === 'saved' ? T.mintSoft : T.surfaceFill,
+              padding: '3px 7px', borderRadius: 9999, fontWeight: 800,
+            }}>{book.kind === 'saved' ? '저장' : '내 책'}</span>
           </div>
-        )}
+          );
+        })}
         {/* vNext S3 — 새 레시피북 만들기 인라인 UI */}
         {/* CONTRACT_CHECK: 레시피북 생성 API (POST /recipe-books) 트랜잭션 위치 확정 필요 — vNext에서는 UI shape만 */}
         {!creating ? (
@@ -1255,7 +1295,14 @@ function SavePopup({ recipeId, onClose, onConfirm, saved }) {
                 fontFamily: T.fontUI
               }}
             />
-            <button onClick={() => { if (newName.trim()) { setFolder(newName.trim()); setCreating(false); setNewName(''); } }} style={{
+            <button onClick={() => {
+              const name = newName.trim();
+              if (!name) return;
+              const id = onCreateBook ? onCreateBook(name) : 'b_new_' + Date.now();
+              setSelected(prev => new Set([...prev, id]));
+              setCreating(false);
+              setNewName('');
+            }} style={{
               background: T.mint, color: '#fff', border: 'none', borderRadius: 8,
               padding: '8px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer'
             }}>추가</button>
@@ -1719,8 +1766,11 @@ window.RecipeDetail = RecipeDetail;
 const { useState: useState_P } = React;
 
 // vNext S4 — 식사 추가 옵션 모달 (모바일)
-function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers }) {
+function MealAddModal({ date, slot, planner, pantry, onClose, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers, onPickRecipe, showToast }) {
   const [query, setQuery] = useState_P('');
+  const [mode, setMode] = useState_P('hub');
+  const [bookId, setBookId] = useState_P(null);
+  const [ytUrl, setYtUrl] = useState_P('');
   const options = [
     { id: 'recipebook', label: '레시피북에서 추가', icon: '📖' },
     { id: 'pantry',     label: '팬트리 기반 추천',  icon: '🧊' },
@@ -1728,8 +1778,148 @@ function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual, onGoYtImport
     { id: 'youtube',    label: '유튜브에서 가져오기', icon: '🎬' },
     { id: 'manual',     label: '직접 등록',          icon: '✏️' },
   ];
+  const close = () => {
+    setMode('hub');
+    setBookId(null);
+    onClose();
+  };
+  const pickRecipe = (recipeId) => {
+    close();
+    if (onPickRecipe) onPickRecipe(date, slot, recipeId);
+    else onMenuAdd(date, slot, 'search');
+  };
+  const books = window.RECIPEBOOK_SAMPLES || [
+    { id: 'b_saved', kind: 'saved', name: '저장한 레시피', emoji: '🔖', recipeIds: ['r1','r2','r4'] },
+    { id: 'b_custom1', kind: 'custom', name: '평일 저녁 빠른요리', emoji: '🍳', recipeIds: ['r1','r3','r4'] },
+    { id: 'b_custom2', kind: 'custom', name: '주말 한 상 차림', emoji: '🍽️', recipeIds: ['r2'] },
+  ];
+  const selectedBook = books.find(b => b.id === bookId);
+  const haveSet = new Set(Object.values(pantry || {}).filter(p => p.have).map(p => p.name));
+  const pantryMatches = RECIPES.map(r => {
+    const total = (r.ingredients || []).length || 1;
+    const hit = (r.ingredients || []).filter(i => haveSet.has(i.name)).length;
+    return { recipe: r, hit, total, score: Math.round(hit / total * 100) };
+  }).sort((a, b) => b.score - a.score);
+  const leftoverMeals = [];
+  Object.keys(planner || {}).forEach(day => {
+    ['아침', '점심', '저녁'].forEach(mealSlot => {
+      mealItems(planner[day]?.[mealSlot]).forEach((meal, mealIndex) => {
+        if (meal.status === 'cooked' && !meal.ateAt) {
+          const recipe = RECIPES.find(r => r.id === meal.recipeId);
+          if (recipe) leftoverMeals.push({ day, mealSlot, mealIndex, meal, recipe });
+        }
+      });
+    });
+  });
+  const backButton = (
+    <button onClick={() => { setMode('hub'); setBookId(null); }} style={{
+      border: 'none', background: T.surfaceFill, color: T.text2,
+      borderRadius: 9999, padding: '7px 11px', fontSize: 12, fontWeight: 800,
+      cursor: 'pointer', marginBottom: 12,
+    }}>← 식사 추가</button>
+  );
+  const recipeRow = (recipe, meta) => (
+    <button key={recipe.id + (meta || '')} onClick={() => pickRecipe(recipe.id)} style={{
+      width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+      background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12,
+      padding: 12, marginBottom: 8, cursor: 'pointer', textAlign: 'left',
+    }}>
+      <div style={{
+        width: 52, height: 52, borderRadius: 10, background: recipe.bg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
+      }}>{recipe.emoji}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{recipe.name}</div>
+        <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{meta || `${recipe.minutes}분 · ${recipe.servings}인분`}</div>
+      </div>
+      <span style={{
+        fontSize: 12, fontWeight: 800, color: T.mintDeep,
+        background: T.mintSoft, padding: '6px 10px', borderRadius: 8,
+      }}>추가</span>
+    </button>
+  );
+
+  if (mode === 'books') {
+    return (
+      <Sheet title={selectedBook ? selectedBook.name : '레시피북에서 추가'} onClose={close}>
+        {backButton}
+        {!selectedBook ? books.map(book => (
+          <button key={book.id} onClick={() => setBookId(book.id)} style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+            background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12,
+            padding: '13px 14px', marginBottom: 8, cursor: 'pointer', textAlign: 'left',
+          }}>
+            <span style={{ fontSize: 22 }}>{book.emoji}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{book.name}</div>
+              <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{(book.recipeIds || []).length}개 레시피 · {book.kind === 'saved' ? '저장' : '내 책'}</div>
+            </div>
+            {Icon.chevR(T.text4)}
+          </button>
+        )) : (selectedBook.recipeIds || []).map(id => RECIPES.find(r => r.id === id)).filter(Boolean)
+          .map(recipe => recipeRow(recipe))}
+      </Sheet>
+    );
+  }
+
+  if (mode === 'pantry') {
+    return (
+      <Sheet title="팬트리 기반 추천" onClose={close}>
+        {backButton}
+        <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 800, lineHeight: 1.5, marginBottom: 12 }}>
+          보유 재료가 많이 맞는 레시피부터 보여드려요.
+        </div>
+        {pantryMatches.slice(0, 7).map(({ recipe, hit, total, score }) =>
+          recipeRow(recipe, `매칭 ${score}% · ${hit}/${total}개 보유 · ${recipe.minutes}분`)
+        )}
+      </Sheet>
+    );
+  }
+
+  if (mode === 'leftover') {
+    return (
+      <Sheet title="남은 요리에서 추가" onClose={close}>
+        {backButton}
+        {leftoverMeals.length === 0 ? (
+          <div style={{ padding: 28, textAlign: 'center', color: T.text3, fontSize: 13 }}>
+            추가할 남은 요리가 없어요.
+          </div>
+        ) : leftoverMeals.map(item =>
+          recipeRow(item.recipe, `${item.day} ${item.mealSlot} · 남은 요리 ${item.meal.servings || 1}인분`)
+        )}
+      </Sheet>
+    );
+  }
+
+  if (mode === 'youtube') {
+    const canImport = ytUrl.trim().length > 0;
+    return (
+      <Sheet title="유튜브에서 가져오기" onClose={close} footer={
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button variant="neutral" style={{ flex: '0 0 88px', whiteSpace: 'nowrap' }} onClick={close}>취소</Button>
+          <Button full disabled={!canImport} onClick={() => {
+            showToast?.('영상에서 레시피를 가져왔어요');
+            pickRecipe('r5');
+          }}>가져오기</Button>
+        </div>
+      }>
+        {backButton}
+        <input value={ytUrl} onChange={e => setYtUrl(e.target.value)}
+          placeholder="유튜브 URL 붙여넣기" autoFocus
+          style={{
+            width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+            border: `1px solid ${T.border}`, borderRadius: 10, outline: 'none',
+            fontSize: 14, fontFamily: T.fontUI, color: T.ink, background: '#fff',
+          }} />
+        <div style={{ marginTop: 12, fontSize: 12, color: T.text3, lineHeight: 1.5 }}>
+          프로토타입에서는 URL 입력 후 샘플 레시피를 식사 추가 흐름에 연결합니다.
+        </div>
+      </Sheet>
+    );
+  }
+
   return (
-    <Sheet title={`${date} ${slot} · 식사 추가`} onClose={onClose}>
+    <Sheet title={`${date} ${slot} · 식사 추가`} onClose={close}>
       {/* 검색 input — 포커스 시 기존 menu-add 검색으로 이동 */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
@@ -1740,7 +1930,7 @@ function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual, onGoYtImport
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
-          onFocus={() => { onClose(); onMenuAdd(date, slot, 'search'); }}
+          onFocus={() => { close(); onMenuAdd(date, slot, 'search'); }}
           placeholder="레시피 검색"
           style={{
             flex: 1, border: 'none', background: 'transparent', outline: 'none',
@@ -1752,21 +1942,20 @@ function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual, onGoYtImport
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {options.map(o => (
           <button key={o.id} onClick={() => {
-            onClose();
             if (o.id === 'manual') {
+              close();
               if (onGoManual) onGoManual(date, slot);
               else onMenuAdd(date, slot);
             } else if (o.id === 'recipebook') {
-              onMenuAdd(date, slot, 'books');
+              setMode('books');
             } else if (o.id === 'pantry') {
-              onMenuAdd(date, slot, 'pantry-match');
+              setMode('pantry');
             } else if (o.id === 'leftover') {
-              if (onGoLeftovers) onGoLeftovers(date, slot);
-              else onMenuAdd(date, slot, 'search');
+              setMode('leftover');
             } else if (o.id === 'youtube') {
-              if (onGoYtImport) onGoYtImport(date, slot);
-              else onMenuAdd(date, slot, 'search');
+              setMode('youtube');
             } else {
+              close();
               onMenuAdd(date, slot, 'search');
             }
           }} style={{
@@ -1785,7 +1974,7 @@ function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual, onGoYtImport
   );
 }
 
-function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, onOpenMeal, onCreateShopping, onCookList, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers, initialMealAdd }) {
+function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlannerAdd, onOpenMeal, onCreateShopping, onCookList, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers, onPickRecipeFromMealAdd, showToast, initialMealAdd }) {
   const keys = Object.keys(planner);
   const todayK = keys[todayIdx];
   // vNext S4 — week navigation (prototype: label만 변경, 데이터는 동일)
@@ -2023,11 +2212,15 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
         <MealAddModal
           date={mealAddModal.date}
           slot={mealAddModal.slot}
+          planner={planner}
+          pantry={pantry}
           onClose={() => setMealAddModal(null)}
           onMenuAdd={onMenuAdd}
           onGoManual={onGoManual}
           onGoYtImport={onGoYtImport}
           onGoLeftovers={onGoLeftovers}
+          onPickRecipe={onPickRecipeFromMealAdd}
+          showToast={showToast}
         />
       )}
     </div>);
@@ -2607,13 +2800,16 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
 }
 
 // vNext S4 — DesktopPlanner: week nav, 이모지 제거, 상태 배지 제거, 요리하기 제거, 식사추가 다이얼로그
-function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList, onOpenMeal, onGoManual, onGoYtImport, onGoLeftovers, initialMealAdd }) {
+function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList, onOpenMeal, onGoManual, onGoYtImport, onGoLeftovers, onPickRecipeFromMealAdd, showToast, initialMealAdd }) {
   const days = Object.keys(planner);
   const slots = ['아침', '점심', '저녁'];
   // vNext S4 — week navigation (prototype: label만 변경)
   const [weekOffset, setWeekOffset] = dUseState(0);
   // vNext S4 — 식사 추가 다이얼로그 상태
   const [mealAddDialog, setMealAddDialog] = dUseState(null); // { date, slot }
+  const [mealAddMode, setMealAddMode] = dUseState('hub');
+  const [mealAddBookId, setMealAddBookId] = dUseState(null);
+  const [mealAddYtUrl, setMealAddYtUrl] = dUseState('');
 
   const stats = dUseMemo(() => {
     let total = 0, cooked = 0, shopped = 0;
@@ -2666,8 +2862,198 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
   React.useEffect(() => {
     if (initialMealAdd?.date && initialMealAdd?.slot) {
       setMealAddDialog({ date: initialMealAdd.date, slot: initialMealAdd.slot });
+      setMealAddMode('hub');
+      setMealAddBookId(null);
     }
   }, [initialMealAdd?.nonce]);
+
+  const closeMealAddDialog = () => {
+    setMealAddDialog(null);
+    setMealAddMode('hub');
+    setMealAddBookId(null);
+    setMealAddYtUrl('');
+  };
+  const pickMealAddRecipe = (recipeId) => {
+    const target = mealAddDialog;
+    closeMealAddDialog();
+    if (target?.date && target?.slot && onPickRecipeFromMealAdd) {
+      onPickRecipeFromMealAdd(target.date, target.slot, recipeId);
+    } else {
+      onOpenRecipe?.(recipeId);
+    }
+  };
+  const mealAddBooks = window.RECIPEBOOK_SAMPLES || [];
+  const mealAddBook = mealAddBooks.find(b => b.id === mealAddBookId);
+  const mealAddHaveSet = new Set(Object.values(pantry || {}).filter(v => v.have).map(v => v.name));
+  const mealAddPantryMatches = RECIPES.map(r => {
+    const need = r.ingredients.length || 1;
+    const matched = r.ingredients.filter(i => mealAddHaveSet.has(i.name)).length;
+    return { r, score: Math.round((matched / need) * 100), matched, need };
+  }).sort((a, b) => b.score - a.score);
+  const mealAddLeftovers = [];
+  Object.keys(planner || {}).forEach(day => {
+    ['아침', '점심', '저녁'].forEach(mealSlot => {
+      mealItems(planner[day]?.[mealSlot]).forEach((meal, mealIndex) => {
+        if (meal.status === 'cooked' && !meal.ateAt) {
+          const recipe = RECIPES.find(r => r.id === meal.recipeId);
+          if (recipe) mealAddLeftovers.push({ day, mealSlot, mealIndex, meal, recipe });
+        }
+      });
+    });
+  });
+  const mealAddBackBtn = (
+    <button onClick={() => { setMealAddMode('hub'); setMealAddBookId(null); }} style={{
+      border: `1px solid ${T.border}`, background: '#fff', color: T.text2,
+      borderRadius: 9999, padding: '7px 12px', fontSize: 12, fontWeight: 800,
+      cursor: 'pointer', marginBottom: 14,
+    }}>← 식사 추가</button>
+  );
+  const mealAddRecipeRow = (recipe, meta) => (
+    <button key={recipe.id + (meta || '')} onClick={() => pickMealAddRecipe(recipe.id)} style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12,
+      padding: 12, cursor: 'pointer', textAlign: 'left',
+    }}>
+      <div style={{
+        width: 56, height: 56, borderRadius: 10, background: recipe.bg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30,
+      }}>{recipe.emoji}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{recipe.name}</div>
+        <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{meta || `${recipe.minutes}분 · ${recipe.servings}인분`}</div>
+      </div>
+      <span style={{ fontSize: 12, fontWeight: 800, color: T.mintDeep, background: T.mintSoft, padding: '6px 10px', borderRadius: 8 }}>추가</span>
+    </button>
+  );
+  const renderMealAddDialogBody = () => {
+    if (!mealAddDialog) return null;
+    if (mealAddMode === 'books') {
+      return (
+        <>
+          {mealAddBackBtn}
+          {!mealAddBook ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {mealAddBooks.map(book => (
+                <button key={book.id} onClick={() => setMealAddBookId(book.id)} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12,
+                  padding: '12px 14px', cursor: 'pointer', textAlign: 'left',
+                }}>
+                  <span style={{ fontSize: 24 }}>{book.emoji}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{book.name}</div>
+                    <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>{(book.recipeIds || []).length}개 레시피 · {book.kind === 'saved' ? '저장' : '내 책'}</div>
+                  </div>
+                  {Icon.chevR(T.text4)}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {(mealAddBook.recipeIds || []).map(id => RECIPES.find(r => r.id === id)).filter(Boolean).map(recipe => mealAddRecipeRow(recipe))}
+            </div>
+          )}
+        </>
+      );
+    }
+    if (mealAddMode === 'pantry') {
+      return (
+        <>
+          {mealAddBackBtn}
+          <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 800, marginBottom: 12 }}>보유 재료가 많이 맞는 레시피부터 보여드려요.</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {mealAddPantryMatches.slice(0, 8).map(({ r, score, matched, need }) => mealAddRecipeRow(r, `매칭 ${score}% · ${matched}/${need}개 보유`))}
+          </div>
+        </>
+      );
+    }
+    if (mealAddMode === 'leftover') {
+      return (
+        <>
+          {mealAddBackBtn}
+          {mealAddLeftovers.length === 0 ? (
+            <div style={{ padding: 30, textAlign: 'center', color: T.text3, fontSize: 13 }}>추가할 남은 요리가 없어요.</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {mealAddLeftovers.map(item => mealAddRecipeRow(item.recipe, `${item.day} ${item.mealSlot} · 남은 요리 ${item.meal.servings || 1}인분`))}
+            </div>
+          )}
+        </>
+      );
+    }
+    if (mealAddMode === 'youtube') {
+      const canImport = mealAddYtUrl.trim().length > 0;
+      return (
+        <>
+          {mealAddBackBtn}
+          <input value={mealAddYtUrl} onChange={e => setMealAddYtUrl(e.target.value)} autoFocus
+            placeholder="유튜브 URL 붙여넣기" style={{ ...dskInputStyle, background: '#fff', marginBottom: 12 }} />
+          <button disabled={!canImport} onClick={() => {
+            showToast?.('영상에서 레시피를 가져왔어요');
+            pickMealAddRecipe('r5');
+          }} style={{
+            ...dskPrimaryBtn, width: '100%', opacity: canImport ? 1 : 0.5,
+            cursor: canImport ? 'pointer' : 'default',
+          }}>가져오기</button>
+        </>
+      );
+    }
+    return (
+      <>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: T.surfaceFill, borderRadius: 10, padding: '0 12px', height: 40,
+          marginBottom: 16, border: `1px solid ${T.border}`,
+        }}>
+          {Icon.search()}
+          <input
+            placeholder="레시피 검색"
+            onFocus={() => { const d = mealAddDialog; closeMealAddDialog(); onMenuAdd(d.date, d.slot, 'search'); }}
+            style={{
+              flex: 1, border: 'none', background: 'transparent', outline: 'none',
+              fontSize: 14, color: T.ink, fontFamily: T.fontUI,
+            }}
+          />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {mealAddOptions.map(o => (
+            <button key={o.id} onClick={() => {
+              const d = mealAddDialog;
+              if (o.id === 'manual') {
+                closeMealAddDialog();
+                if (onGoManual) onGoManual(d.date, d.slot);
+                else onMenuAdd(d.date, d.slot);
+              } else if (o.id === 'recipebook') {
+                setMealAddMode('books');
+              } else if (o.id === 'pantry') {
+                setMealAddMode('pantry');
+              } else if (o.id === 'leftover') {
+                setMealAddMode('leftover');
+              } else if (o.id === 'youtube') {
+                setMealAddMode('youtube');
+              } else {
+                closeMealAddDialog();
+                onMenuAdd(d.date, d.slot, 'search');
+              }
+            }} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '14px 12px', borderRadius: 10,
+              background: '#fff', border: `1px solid ${T.border}`,
+              cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.ink,
+              textAlign: 'left',
+              transition: 'border-color 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = T.mint; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; }}
+            >
+              <span style={{ fontSize: 20 }}>{o.icon}</span>
+              <span>{o.label}</span>
+            </button>
+          ))}
+        </div>
+      </>
+    );
+  };
 
   return (
     <div>
@@ -2828,79 +3214,31 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
       {/* vNext S4 — 식사 추가 데스크톱 다이얼로그 (centered) */}
       {mealAddDialog && (
         <>
-          <div onClick={() => setMealAddDialog(null)} style={{
+          <div onClick={closeMealAddDialog} style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000,
           }} />
           <div style={{
             position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
             zIndex: 1001, background: '#FAF8F2', borderRadius: 16,
-            width: 420, maxHeight: '80vh', overflowY: 'auto',
+            width: mealAddMode === 'hub' ? 420 : 620, maxHeight: '80vh', overflowY: 'auto',
             boxShadow: T.shadowCrisp, padding: 24,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>
-                {mealAddDialog.date} {mealAddDialog.slot} · 식사 추가
+                {mealAddMode === 'books' && mealAddBook ? mealAddBook.name :
+                  mealAddMode === 'books' ? '레시피북에서 추가' :
+                  mealAddMode === 'pantry' ? '팬트리 기반 추천' :
+                  mealAddMode === 'leftover' ? '남은요리에서 추가' :
+                  mealAddMode === 'youtube' ? '유튜브에서 가져오기' :
+                  `${mealAddDialog.date} ${mealAddDialog.slot} · 식사 추가`}
               </div>
-              <button onClick={() => setMealAddDialog(null)} style={{
+              <button onClick={closeMealAddDialog} style={{
                 width: 32, height: 32, borderRadius: 16, background: T.surfaceFill,
                 border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>{Icon.close()}</button>
             </div>
-            {/* 검색 input */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: T.surfaceFill, borderRadius: 10, padding: '0 12px', height: 40,
-              marginBottom: 16, border: `1px solid ${T.border}`,
-            }}>
-              {Icon.search()}
-              <input
-                placeholder="레시피 검색"
-                onFocus={() => { const d = mealAddDialog; setMealAddDialog(null); onMenuAdd(d.date, d.slot, 'search'); }}
-                style={{
-                  flex: 1, border: 'none', background: 'transparent', outline: 'none',
-                  fontSize: 14, color: T.ink, fontFamily: T.fontUI,
-                }}
-              />
-            </div>
-            {/* 옵션 2열 그리드 */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {mealAddOptions.map(o => (
-                <button key={o.id} onClick={() => {
-                  const d = mealAddDialog;
-                  setMealAddDialog(null);
-                  if (o.id === 'manual') {
-                    if (onGoManual) onGoManual(d.date, d.slot);
-                    else onMenuAdd(d.date, d.slot);
-                  } else if (o.id === 'recipebook') {
-                    onMenuAdd(d.date, d.slot, 'books');
-                  } else if (o.id === 'pantry') {
-                    onMenuAdd(d.date, d.slot, 'pantry-match');
-                  } else if (o.id === 'leftover') {
-                    if (onGoLeftovers) onGoLeftovers(d.date, d.slot);
-                    else onMenuAdd(d.date, d.slot, 'search');
-                  } else if (o.id === 'youtube') {
-                    if (onGoYtImport) onGoYtImport(d.date, d.slot);
-                    else onMenuAdd(d.date, d.slot, 'search');
-                  } else {
-                    onMenuAdd(d.date, d.slot, 'search');
-                  }
-                }} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '14px 12px', borderRadius: 10,
-                  background: '#fff', border: `1px solid ${T.border}`,
-                  cursor: 'pointer', fontSize: 13, fontWeight: 600, color: T.ink,
-                  textAlign: 'left',
-                  transition: 'border-color 0.15s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = T.mint; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = T.border; }}
-                >
-                  <span style={{ fontSize: 20 }}>{o.icon}</span>
-                  <span>{o.label}</span>
-                </button>
-              ))}
-            </div>
+            {renderMealAddDialogBody()}
           </div>
         </>
       )}
@@ -5351,10 +5689,11 @@ function DskDialogFooter({ children }) {
 }
 
 // P2 — PantryAdd
-function DesktopPantryAddDialog({ onClose, onAddItem, onOpenBundle }) {
+function DesktopPantryAddDialog({ pantry, onClose, onAddItem, onOpenBundle }) {
   const [query, setQuery] = dUseState('');
   const [activeCat, setActiveCat] = dUseState('전체');
   const [picked, setPicked] = dUseState(new Set());
+  const ownedNames = new Set(Object.values(pantry || {}).filter(item => item.have).map(item => item.name));
   const categories = ['전체', ...PANTRY_CATEGORIES];
   const filtered = PANTRY_ADD_ITEMS.filter(item => {
     if (activeCat !== '전체' && item.section !== activeCat) return false;
@@ -5362,6 +5701,7 @@ function DesktopPantryAddDialog({ onClose, onAddItem, onOpenBundle }) {
     return true;
   });
   const togglePick = (name) => setPicked(prev => {
+    if (ownedNames.has(name)) return prev;
     const next = new Set(prev);
     next.has(name) ? next.delete(name) : next.add(name);
     return next;
@@ -5387,16 +5727,20 @@ function DesktopPantryAddDialog({ onClose, onAddItem, onOpenBundle }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {filtered.map(item => {
             const on = picked.has(item.name);
+            const owned = ownedNames.has(item.name);
             return (
-              <button key={item.name} onClick={() => togglePick(item.name)} style={{
+              <button key={item.name} disabled={owned} onClick={() => togglePick(item.name)} style={{
                 display: 'flex', alignItems: 'center', gap: 8, minHeight: 54,
                 padding: '10px 12px', borderRadius: 12,
                 border: on ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
-                background: on ? T.mintSoft : '#fff', cursor: 'pointer', textAlign: 'left',
+                background: owned ? T.surfaceFill : on ? T.mintSoft : '#fff',
+                cursor: owned ? 'not-allowed' : 'pointer', opacity: owned ? 0.55 : 1,
+                textAlign: 'left',
               }}>
                 <span style={{ width: 30, height: 30, borderRadius: 10, background: T.surfaceFill,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{item.image}</span>
                 <span style={{ flex: 1, fontSize: 13, color: T.ink, fontWeight: 800 }}>{item.name}</span>
+                {owned && <span style={{ fontSize: 10, color: T.text3, fontWeight: 800 }}>보유중</span>}
                 {on && Icon.check(T.mintDeep, 16)}
               </button>
             );
@@ -5712,6 +6056,7 @@ function DesktopPantryMatchPickerDialog({ pantry, slotLabel, onClose, onPick }) 
 const dskGhostBtn = {
   padding: '10px 16px', borderRadius: 8, border: `1px solid ${T.border}`,
   background: '#fff', color: T.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+  whiteSpace: 'nowrap',
 };
 const dskPrimaryBtn = {
   padding: '10px 18px', borderRadius: 8, border: 'none',
@@ -8045,10 +8390,11 @@ function MyPageShoppingTab({ shoppingLists, onOpen }) {
 // ─────────────────────────────────────────────────────────────
 // PANTRY — PantryAddSheet + PANTRY_BUNDLE_PICKER
 // ─────────────────────────────────────────────────────────────
-function PantryAddSheet({ onClose, onAddItem, onOpenBundle }) {
+function PantryAddSheet({ pantry, onClose, onAddItem, onOpenBundle }) {
   const [query, setQuery] = useState_W('');
   const [activeCat, setActiveCat] = useState_W('전체');
   const [picked, setPicked] = useState_W(new Set());
+  const ownedNames = new Set(Object.values(pantry || {}).filter(item => item.have).map(item => item.name));
   const categories = ['전체', ...PANTRY_CATEGORIES];
   const filtered = PANTRY_ADD_ITEMS.filter(item => {
     if (activeCat !== '전체' && item.section !== activeCat) return false;
@@ -8056,6 +8402,7 @@ function PantryAddSheet({ onClose, onAddItem, onOpenBundle }) {
     return true;
   });
   const togglePick = (name) => setPicked(prev => {
+    if (ownedNames.has(name)) return prev;
     const next = new Set(prev);
     next.has(name) ? next.delete(name) : next.add(name);
     return next;
@@ -8094,16 +8441,19 @@ function PantryAddSheet({ onClose, onAddItem, onOpenBundle }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {filtered.map(item => {
               const on = picked.has(item.name);
+              const owned = ownedNames.has(item.name);
               return (
-                <button key={item.name} onClick={() => togglePick(item.name)} style={{
+                <button key={item.name} disabled={owned} onClick={() => togglePick(item.name)} style={{
                   display: 'flex', alignItems: 'center', gap: 9, minHeight: 54,
                   borderRadius: 12, border: on ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
-                  background: on ? T.mintSoft : '#fff', cursor: 'pointer',
+                  background: owned ? T.surfaceFill : on ? T.mintSoft : '#fff',
+                  cursor: owned ? 'not-allowed' : 'pointer', opacity: owned ? 0.55 : 1,
                   padding: '9px 10px', textAlign: 'left',
                 }}>
                   <span style={{ width: 30, height: 30, borderRadius: 10, background: T.surfaceFill,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{item.image}</span>
                   <span style={{ flex: 1, fontSize: 13, color: T.ink, fontWeight: 800 }}>{item.name}</span>
+                  {owned && <span style={{ fontSize: 10, color: T.text3, fontWeight: 800 }}>보유중</span>}
                   {on && Icon.check(T.mintDeep, 16)}
                 </button>
               );
@@ -8202,7 +8552,7 @@ function PantryBundlePicker({ onClose, onConfirm }) {
 
         {bundle && (
           <div style={{ padding: 16, borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8 }}>
-            <Button variant="neutral" onClick={onClose}>취소</Button>
+            <Button variant="neutral" style={{ flex: '0 0 88px', whiteSpace: 'nowrap', minWidth: 88 }} onClick={onClose}>취소</Button>
             <Button full disabled={picked.size === 0} onClick={() => onConfirm([...picked])}>
               {picked.size}개 추가
             </Button>
@@ -8515,24 +8865,41 @@ function PlanningServingsModal({ recipe, presetDate, presetSlot, onClose, onConf
       onClose={onClose}
       onConfirm={() => onConfirm(servings)}
       extra={
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: T.surfaceFill, borderRadius: 12, padding: '12px 16px', marginTop: 4,
-        }}>
-          <div style={{ fontSize: 13, color: T.text2, fontWeight: 600 }}>계획 인분</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button onClick={() => setServings(s => Math.max(1, s - 1))} style={{
-              width: 32, height: 32, borderRadius: 16, border: 'none',
-              background: '#fff', color: T.text1, fontSize: 16, fontWeight: 800, cursor: 'pointer',
-              boxShadow: T.shadowNatural,
-            }}>−</button>
-            <div style={{ minWidth: 36, textAlign: 'center', fontSize: 18, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
-              {servings}인분
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12, padding: 10,
+          }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 10, background: recipe?.bg || T.mintSoft,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
+            }}>{recipe?.emoji || '🍳'}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{recipe?.name || '레시피'}</div>
+              <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
+                {recipe?.minutes || 0}분 · 선택 {servings}인분
+              </div>
             </div>
-            <button onClick={() => setServings(s => Math.min(12, s + 1))} style={{
-              width: 32, height: 32, borderRadius: 16, border: 'none',
-              background: T.mint, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer',
-            }}>+</button>
+          </div>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: T.surfaceFill, borderRadius: 12, padding: '12px 16px',
+          }}>
+            <div style={{ fontSize: 13, color: T.text2, fontWeight: 600 }}>계획 인분</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button onClick={() => setServings(s => Math.max(1, s - 1))} style={{
+                width: 32, height: 32, borderRadius: 16, border: 'none',
+                background: '#fff', color: T.ink, fontSize: 16, fontWeight: 800, cursor: 'pointer',
+                boxShadow: T.shadowNatural,
+              }}>−</button>
+              <div style={{ minWidth: 36, textAlign: 'center', fontSize: 18, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
+                {servings}인분
+              </div>
+              <button onClick={() => setServings(s => Math.min(12, s + 1))} style={{
+                width: 32, height: 32, borderRadius: 16, border: 'none',
+                background: T.mint, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer',
+              }}>+</button>
+            </div>
           </div>
         </div>
       }
@@ -8614,6 +8981,16 @@ function App() {
   const [planner, setPlanner] = useState(makeInitialPlanner());
   const [pantry, setPantry] = useState(INITIAL_PANTRY);
   const [savedIds, setSavedIds] = useState(['r1', 'r2', 'r4']);
+  const [recipeBooks, setRecipeBooks] = useState(() => window.RECIPEBOOK_SAMPLES || []);
+  const [recipeBookSaves, setRecipeBookSaves] = useState(() => {
+    const map = {};
+    (window.RECIPEBOOK_SAMPLES || []).forEach(book => {
+      (book.recipeIds || []).forEach(recipeId => {
+        map[recipeId] = Array.from(new Set([...(map[recipeId] || []), book.id]));
+      });
+    });
+    return map;
+  });
   const [sortBy, setSortBy] = useState('latest');
   const [ingFilter, setIngFilter] = useState([]);
   // Wave 1.5 — INGREDIENT_FILTER_MODAL 의 fine-grained 재료 이름 목록.
@@ -8687,6 +9064,25 @@ function App() {
 
   const toggleSaved = (id) => {
     setSavedIds((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
+  };
+  const savedBookIdsFor = (recipeId) => (
+    recipeBookSaves[recipeId] || (savedIds.includes(recipeId) ? ['b_saved'] : [])
+  );
+  const applyRecipeBookSaves = (recipeId, bookIds) => {
+    const nextIds = Array.from(new Set(bookIds || []));
+    setRecipeBookSaves(prev => ({ ...prev, [recipeId]: nextIds }));
+    setSavedIds(prev => {
+      const hasSavedBook = nextIds.includes('b_saved');
+      if (hasSavedBook && !prev.includes(recipeId)) return [...prev, recipeId];
+      if (!hasSavedBook && prev.includes(recipeId)) return prev.filter(id => id !== recipeId);
+      return prev;
+    });
+    showToast(nextIds.length ? `${nextIds.length}개 레시피북에 반영됐어요` : '레시피북 저장을 해제했어요');
+  };
+  const createRecipeBookForSave = (name) => {
+    const id = 'b_new_' + Date.now();
+    setRecipeBooks(prev => [...prev, { id, kind: 'custom', name, emoji: '📘', recipeIds: [] }]);
+    return id;
   };
 
   // Routing helpers
@@ -8854,16 +9250,40 @@ function App() {
 
   const addPickedPantryItems = (items) => {
     const list = Array.isArray(items) ? items : [items];
+    const existingNames = new Set(Object.values(pantry || {}).filter(item => item.have).map(item => item.name));
+    const unique = list.filter(item => item?.name && !existingNames.has(item.name));
+    if (unique.length === 0) {
+      setPantryAddSheet(false);
+      showToast('이미 팬트리에 있는 재료예요');
+      return;
+    }
     setPantry(p => {
       const next = { ...p };
-      list.forEach(item => {
+      unique.forEach(item => {
         if (!item?.name) return;
         next[item.name] = { name: item.name, section: item.section, have: true };
       });
       return next;
     });
     setPantryAddSheet(false);
-    showToast(`${list.length}개 재료 추가됨`);
+    showToast(`${unique.length}개 재료 추가됨`);
+  };
+  const addPantryNames = (names, section = '양념') => {
+    const list = Array.isArray(names) ? names : [names];
+    const existingNames = new Set(Object.values(pantry || {}).filter(item => item.have).map(item => item.name));
+    const unique = list.filter(name => name && !existingNames.has(name));
+    if (unique.length === 0) {
+      setPantryBundlePicker(false);
+      showToast('이미 팬트리에 있는 재료예요');
+      return;
+    }
+    setPantry(p => {
+      const next = { ...p };
+      unique.forEach(name => { next[name] = { name, section, have: true }; });
+      return next;
+    });
+    setPantryBundlePicker(false);
+    showToast(unique.length + '개 일괄 추가됨');
   };
   const markCooked = (date, slot, consumed, mealIndex = 0) => {
     updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, status: 'cooked' }));
@@ -9012,6 +9432,7 @@ function App() {
     content =
     <PlannerScreen
       planner={planner} setPlanner={setPlanner}
+      pantry={pantry}
       onOpenRecipe={openRecipe}
       onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })}
       onCreateShopping={() => goPage('shopping-create')}
@@ -9020,6 +9441,8 @@ function App() {
       onGoManual={(date, slot) => goPage('manual-create', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
       onGoYtImport={(date, slot) => goPage('yt-import', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
       onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+      onPickRecipeFromMealAdd={(date, slot, recipeId) => setPlanningServings({ recipeId, presetDate: date, presetSlot: slot })}
+      showToast={showToast}
       initialMealAdd={route.restoreMealAdd}
       onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })} />;
 
@@ -9085,6 +9508,9 @@ function App() {
         onGoManual={(date, slot) => goPage('manual-create', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
         onGoYtImport={(date, slot) => goPage('yt-import', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
         onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+        pantry={pantry}
+        onPickRecipeFromMealAdd={(date, slot, recipeId) => setPlanningServings({ recipeId, presetDate: date, presetSlot: slot })}
+        showToast={showToast}
         initialMealAdd={route.restoreMealAdd}
         onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })}
       />
@@ -9248,11 +9674,13 @@ function App() {
               <SavePopup
                 recipeId={saveModal.recipeId}
                 saved={savedIds.includes(saveModal.recipeId)}
+                savedBookIds={savedBookIdsFor(saveModal.recipeId)}
+                books={recipeBooks}
+                onCreateBook={createRecipeBookForSave}
                 onClose={() => setSaveModal(null)}
-                onConfirm={() => {
-                  toggleSaved(saveModal.recipeId);
+                onConfirm={(bookIds) => {
+                  applyRecipeBookSaves(saveModal.recipeId, bookIds);
                   setSaveModal(null);
-                  showToast(savedIds.includes(saveModal.recipeId) ? '저장이 해제됐어요' : '저장됐어요');
                 }}
               />
             </div>
@@ -9288,6 +9716,7 @@ function App() {
         {/* Wave 1.8 — desktop dialog variants (replaces mobile sheets in desktop shell) */}
         {pantryAddSheet && (
           <DesktopPantryAddDialog
+            pantry={pantry}
             onClose={() => setPantryAddSheet(false)}
             onAddItem={addPickedPantryItems}
             onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
@@ -9296,15 +9725,7 @@ function App() {
         {pantryBundlePicker && (
           <DesktopPantryBundleDialog
             onClose={() => setPantryBundlePicker(false)}
-            onConfirm={(items) => {
-              setPantry(p => {
-                const next = { ...p };
-                items.forEach(name => { next[name] = { name, section: '양념', have: true }; });
-                return next;
-              });
-              setPantryBundlePicker(false);
-              showToast(items.length + '개 일괄 추가됨');
-            }}
+            onConfirm={(items) => addPantryNames(items)}
           />
         )}
         {reflectPicker && (
@@ -9400,13 +9821,17 @@ function App() {
           )}
           {saveModal && (
             <SavePopup recipeId={saveModal.recipeId} saved={savedIds.includes(saveModal.recipeId)}
+              savedBookIds={savedBookIdsFor(saveModal.recipeId)}
+              books={recipeBooks}
+              onCreateBook={createRecipeBookForSave}
               onClose={() => setSaveModal(null)}
-              onConfirm={() => { toggleSaved(saveModal.recipeId); setSaveModal(null); showToast(savedIds.includes(saveModal.recipeId) ? '저장이 해제됐어요' : '저장됐어요'); }} />
+              onConfirm={(bookIds) => { applyRecipeBookSaves(saveModal.recipeId, bookIds); setSaveModal(null); }} />
           )}
           {sortSheet && <SortSheet value={sortBy} onChange={setSortBy} onClose={() => setSortSheet(false)} />}
           {loginGate && <LoginGate onClose={() => setLoginGate(false)} onLogin={() => { setLoginGate(false); showToast('로그인됨'); }} />}
           {pantryAddSheet && (
             <PantryAddSheet
+              pantry={pantry}
               onClose={() => setPantryAddSheet(false)}
               onAddItem={addPickedPantryItems}
               onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
@@ -9415,15 +9840,7 @@ function App() {
           {pantryBundlePicker && (
             <PantryBundlePicker
               onClose={() => setPantryBundlePicker(false)}
-              onConfirm={(items) => {
-                setPantry(p => {
-                  const next = { ...p };
-                  items.forEach(name => { next[name] = { name, section: '양념', have: true }; });
-                  return next;
-                });
-                setPantryBundlePicker(false);
-                showToast(items.length + '개 일괄 추가됨');
-              }}
+              onConfirm={(items) => addPantryNames(items)}
             />
           )}
           {reflectPicker && (
@@ -9516,13 +9933,17 @@ function App() {
               )}
               {saveModal && (
                 <SavePopup recipeId={saveModal.recipeId} saved={savedIds.includes(saveModal.recipeId)}
+                  savedBookIds={savedBookIdsFor(saveModal.recipeId)}
+                  books={recipeBooks}
+                  onCreateBook={createRecipeBookForSave}
                   onClose={() => setSaveModal(null)}
-                  onConfirm={() => { toggleSaved(saveModal.recipeId); setSaveModal(null); showToast(savedIds.includes(saveModal.recipeId) ? '저장이 해제됐어요' : '저장됐어요'); }} />
+                  onConfirm={(bookIds) => { applyRecipeBookSaves(saveModal.recipeId, bookIds); setSaveModal(null); }} />
               )}
               {sortSheet && <SortSheet value={sortBy} onChange={setSortBy} onClose={() => setSortSheet(false)} />}
               {loginGate && <LoginGate onClose={() => setLoginGate(false)} onLogin={() => { setLoginGate(false); showToast('로그인됨'); }} />}
               {pantryAddSheet && (
                 <PantryAddSheet
+                  pantry={pantry}
                   onClose={() => setPantryAddSheet(false)}
                   onAddItem={addPickedPantryItems}
                   onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
@@ -9531,15 +9952,7 @@ function App() {
               {pantryBundlePicker && (
                 <PantryBundlePicker
                   onClose={() => setPantryBundlePicker(false)}
-                  onConfirm={(items) => {
-                    setPantry(p => {
-                      const next = { ...p };
-                      items.forEach(name => { next[name] = { name, section: '양념', have: true }; });
-                      return next;
-                    });
-                    setPantryBundlePicker(false);
-                    showToast(items.length + '개 일괄 추가됨');
-                  }}
+                  onConfirm={(items) => addPantryNames(items)}
                 />
               )}
               {reflectPicker && (
@@ -9603,13 +10016,17 @@ function App() {
               )}
               {saveModal && (
                 <SavePopup recipeId={saveModal.recipeId} saved={savedIds.includes(saveModal.recipeId)}
+                  savedBookIds={savedBookIdsFor(saveModal.recipeId)}
+                  books={recipeBooks}
+                  onCreateBook={createRecipeBookForSave}
                   onClose={() => setSaveModal(null)}
-                  onConfirm={() => { toggleSaved(saveModal.recipeId); setSaveModal(null); showToast(savedIds.includes(saveModal.recipeId) ? '저장이 해제됐어요' : '저장됐어요'); }} />
+                  onConfirm={(bookIds) => { applyRecipeBookSaves(saveModal.recipeId, bookIds); setSaveModal(null); }} />
               )}
               {sortSheet && <SortSheet value={sortBy} onChange={setSortBy} onClose={() => setSortSheet(false)} />}
               {loginGate && <LoginGate onClose={() => setLoginGate(false)} onLogin={() => { setLoginGate(false); showToast('로그인됨'); }} />}
               {pantryAddSheet && (
                 <PantryAddSheet
+                  pantry={pantry}
                   onClose={() => setPantryAddSheet(false)}
                   onAddItem={addPickedPantryItems}
                   onOpenBundle={() => { setPantryAddSheet(false); setPantryBundlePicker(true); }}
@@ -9618,15 +10035,7 @@ function App() {
               {pantryBundlePicker && (
                 <PantryBundlePicker
                   onClose={() => setPantryBundlePicker(false)}
-                  onConfirm={(items) => {
-                    setPantry(p => {
-                      const next = { ...p };
-                      items.forEach(name => { next[name] = { name, section: '양념', have: true }; });
-                      return next;
-                    });
-                    setPantryBundlePicker(false);
-                    showToast(items.length + '개 일괄 추가됨');
-                  }}
+                  onConfirm={(items) => addPantryNames(items)}
                 />
               )}
               {reflectPicker && (
