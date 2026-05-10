@@ -3,11 +3,16 @@
 > 목적: `ui/designs/prototypes/claude-design-260505-wave1`에 정리된 앱/웹 디자인 개선사항을 실제 서비스로 작은 vertical slice 단위로 포팅하기 위한 새 세션용 실행 계획이다.
 > 작성일: 2026-05-10 KST
 > 기준 프로토타입: `ui/designs/prototypes/claude-design-260505-wave1`
+> fixed prototype implementation SHA: `95a93180a1329d2b317a561aa7c954a39cbe104c`
 > 핵심 원칙: 프로토타입은 visual/layout source of truth이고, 기능 동작은 현재 MVP 구현과 공식 문서가 source of truth다. 공식 문서와 실제 API 계약을 넘는 변경은 먼저 contract-evolution 문서/PR로 닫고, FE는 그 계약을 그대로 소비한다.
 
 ## Current Status
 
 - Wave1 vNext prototype은 최신 기준 프로토타입으로 사용한다.
+- 2026-05-11 Prototype Repair 0~4 이후 service porting 기준은 fixed prototype implementation SHA `95a93180a1329d2b317a561aa7c954a39cbe104c`다.
+  - Freeze closeout: `docs/workpacks/wave1-prototype-repair/closeout.md`
+  - 이후 Slice A~F prompt와 PR body는 이 SHA를 read-only visual/layout reference로 명시한다.
+  - Repair 4는 docs/evidence gate이므로 prototype 구현 기준 SHA는 Repair 3 merge commit을 가리킨다.
 - 2026-05-10 사용자 결정: 기존 Wave1 포팅 PR들은 merge 이력으로만 본다. 사용자가 원하는 다음 작업은 **전체 Wave1 slice A~F를 다시 prototype 기준으로 디자인 재감사/재포팅**하는 것이다.
   - 기존 PR #373, #374, #376, #379, #381, #383의 screenshot/authority 결과는 historical evidence일 뿐, 현재 visual parity 완료 근거로 재사용하지 않는다.
   - 각 slice는 기존 MVP 기능과 공식 계약을 보존하면서, `claude-design-260505-wave1`와 실제 서비스 화면의 visual/layout 차이를 다시 확인하고 필요한 만큼 수정한다.
@@ -101,7 +106,7 @@
 - Stage 4는 Claude가 FE 포팅을 수행한다. UI가 실제로 바뀌면 관련 `ui/designs/<SCREEN_ID>.md` 또는 authority/design closeout 메모도 현재 화면 기준으로 맞춘다.
 - Stage 5는 Codex가 public design review와 authority precheck를 수행한다. authority-required slice는 Claude `final_authority_gate`에서 blocker 0개 확인 후에만 `confirmed`로 닫는다.
 - Stage 6은 Codex가 code review, local verification, PR checks, merge까지 닫는다.
-- 사용자가 `$claude-delegate`를 명시하면 기존 Claude session `3f4ca745-db71-4392-a3f1-4e3c4493e9bc`에 `--resume`으로 붙는다. 가능하면 `session_attach_mode=resume`, `model=opus`, `effort=xhigh` 의도로 기록한다. 로컬 CLI가 `xhigh`를 받지 않으면 `high`로 대체하고 그 사실을 artifact에 남긴다.
+- 사용자가 `$claude-delegate`를 명시하면 기존 Claude session `39d5c7fb-0624-4e39-bc3c-7fa87fb03462`에 `--resume`으로 붙는다. `session_attach_mode=resume`, `model=opus`, `effort=high`, `permission_mode=bypassPermissions`로 기록한다.
 
 ## Stage Flow Per Slice
 
@@ -190,6 +195,8 @@
 - service porting의 100% parity는 visual/layout parity만 뜻한다. route, submit, API, 저장/삭제/복구, auth, 상태 전이는 MVP/공식 문서 기준을 유지한다.
 - Repair slice PR은 독립적으로 리뷰 가능해야 하며, 이전 repair slice가 merge되지 않으면 다음 repair slice를 시작하지 않는다.
 - Repair 4에서 fixed prototype commit SHA를 기록하고, 이후 service porting은 그 commit의 prototype을 read-only reference로 사용한다.
+- Current fixed prototype implementation SHA: `95a93180a1329d2b317a561aa7c954a39cbe104c`
+- Current freeze closeout note: `docs/workpacks/wave1-prototype-repair/closeout.md`
 
 ### Prototype Repair 0: Navigation And Return Context
 
@@ -321,6 +328,7 @@
 
 - Prototype Repair 0~3이 merged된 뒤에만 service Slice A~F 재포팅을 시작한다.
 - 이후 service porting prompt는 fixed prototype 경로/commit SHA를 명시한다.
+- 이후 service porting prompt는 `fixed_prototype_implementation_sha=95a93180a1329d2b317a561aa7c954a39cbe104c`를 명시한다.
 - fixed prototype의 화면 이동은 MVP 기준으로 보정된 reference이며, service route 변경 근거로 오해하지 않게 기록한다.
 
 ## All-Slice Re-Port Charter

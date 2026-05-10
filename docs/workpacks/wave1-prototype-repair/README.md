@@ -12,7 +12,7 @@
 - Repair 1: `fix/wave1-prototype-modal-interaction-repair`
 - Repair 2: `fix/wave1-prototype-visual-repair`
 - Repair 3: `fix/wave1-prototype-functional-logic-repair`
-- Repair 4: `fix/wave1-prototype-freeze`
+- Repair 4: `chore/wave1-prototype-freeze-gate`
 
 ## Source Of Truth
 
@@ -44,6 +44,18 @@
 - Prototype broken behavior must be repaired in prototype or documented; it must not be copied into service.
 - Each repair slice PR must merge before the next repair slice starts.
 - Repair 4 records the fixed prototype commit SHA. Later service porting uses that commit as a read-only reference.
+
+## Freeze Status
+
+- Fixed prototype implementation SHA: `95a93180a1329d2b317a561aa7c954a39cbe104c`
+- Closeout note: `docs/workpacks/wave1-prototype-repair/closeout.md`
+- Merged repair PRs:
+  - Repair 0 navigation: #386, merge commit `268893953f9b831c299e0378cfab8863b6b8a858`
+  - Repair 1 modal/interaction: #387, merge commit `d351ab1405d979d8bf1f6db305a9594b618c070f`
+  - Repair 2 visual/layout: #388, merge commit `0d36d871f71a797d61f8e50604f2190bd6e6500e`
+  - Repair 3 functional logic: #389, merge commit `95a93180a1329d2b317a561aa7c954a39cbe104c`
+
+Service Slice A~F re-porting must pin the fixed prototype implementation SHA above. Repair 4 is a docs/evidence gate; it does not redefine the prototype implementation itself.
 
 ## Repair Slices
 
