@@ -1,8 +1,8 @@
 # wave1-port-account-library-leftovers
 
 > Slice F of Wave1 Service Porting Plan
-> Stage: docs
-> Owner: Claude Stage 1 attempted, Codex fallback because Claude provider limit reset was 13:20 Asia/Seoul
+> Stage: Stage 6 frontend closeout
+> Owner: Codex fallback after Claude provider limit reset was 13:20 Asia/Seoul
 
 ## Goal
 
@@ -192,7 +192,7 @@ None.
   - `ui/designs/evidence/wave1-port-account-library-leftovers/recipebook-detail-narrow.png` if touched
 - Authority report path:
   - `ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md`
-- Authority status: `pending-review`
+- Authority status: `reviewed`
 
 ### Design Generator / Critic
 
@@ -203,9 +203,9 @@ None.
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — Stage 1 docs 기준
+- [ ] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed) — Codex fallback authority report blocker 0
 - [ ] N/A
 
 ## Source Links
@@ -268,12 +268,28 @@ None.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
 
 - [x] Stage 1 docs fallback completed by Codex after Claude provider limit <!-- omo:id=delivery-stage1-docs;stage=1;scope=docs;review=1.5,6 -->
-- [ ] Stage 2 N/A 근거 confirmed or backend escalation separated <!-- omo:id=delivery-stage2-na;stage=2;scope=backend;review=3,6 -->
-- [ ] MYPAGE polish implemented without changing recipebook/shopping APIs <!-- omo:id=delivery-mypage-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] SETTINGS polish implemented without changing planner column/account contracts <!-- omo:id=delivery-settings-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] LEFTOVERS / ATE_LIST button clipping and copy polish implemented <!-- omo:id=delivery-leftovers-ate-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] RECIPEBOOK_DETAIL scope either low-risk reused or custom-book menu implemented with existing endpoints <!-- omo:id=delivery-recipebook-detail-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] Targeted Vitest and Playwright coverage updated <!-- omo:id=delivery-tests;stage=4;scope=frontend;review=5,6 -->
-- [ ] Screenshot evidence generated for 390px and 320px touched surfaces <!-- omo:id=delivery-screenshot-evidence;stage=4;scope=frontend;review=5,6 -->
-- [ ] Authority report has blocker 0 before Design Status confirmed <!-- omo:id=delivery-authority-report;stage=5;scope=frontend;review=5,6 -->
-- [ ] `pnpm verify:frontend` passed before merge-ready <!-- omo:id=delivery-verify-frontend;stage=6;scope=frontend;review=6 -->
+- [x] Stage 2 N/A 근거 confirmed or backend escalation separated <!-- omo:id=delivery-stage2-na;stage=2;scope=backend;review=3,6 -->
+- [x] MYPAGE polish implemented without changing recipebook/shopping APIs <!-- omo:id=delivery-mypage-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] SETTINGS polish implemented without changing planner column/account contracts <!-- omo:id=delivery-settings-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] LEFTOVERS / ATE_LIST button clipping and copy polish implemented <!-- omo:id=delivery-leftovers-ate-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPEBOOK_DETAIL scope either low-risk reused or custom-book menu implemented with existing endpoints <!-- omo:id=delivery-recipebook-detail-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] Targeted Vitest and Playwright coverage updated <!-- omo:id=delivery-tests;stage=4;scope=frontend;review=5,6 -->
+- [x] Screenshot evidence generated for 390px and 320px touched surfaces <!-- omo:id=delivery-screenshot-evidence;stage=4;scope=frontend;review=5,6 -->
+- [x] Authority report has blocker 0 before Design Status confirmed <!-- omo:id=delivery-authority-report;stage=5;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend` passed before merge-ready <!-- omo:id=delivery-verify-frontend;stage=6;scope=frontend;review=6 -->
+
+## Stage 4/5 Evidence
+
+- Stage 4 implementation kept the slice UI-only: no API, DB, endpoint, status, dependency, or public contract changes.
+- ATE_LIST keeps the existing uneat API but relabels the recovery action to `남은요리로 복귀`; this is the chosen policy because the documented backend flow remains valid.
+- Screenshot evidence was generated for MYPAGE, SETTINGS, LEFTOVERS, ATE_LIST, and touched RECIPEBOOK_DETAIL at 390px and 320px.
+- Authority report: `ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md` — verdict `pass`, blocker 0, major 0, minor 2.
+- Exploratory QA: `.artifacts/qa/wave1-port-account-library-leftovers/2026-05-10T04-43-48-093Z/exploratory-report.json` — desktop/mobile/small viewport coverage, findings 0.
+- QA eval: `.artifacts/qa/wave1-port-account-library-leftovers/2026-05-10T04-43-48-093Z/eval-result.json` — score 98, pass.
+
+## Stage 6 Verification Evidence
+
+- `pnpm verify:frontend` — passed: lint, typecheck, 624 product tests, production build, smoke E2E 758 passed / 4 skipped, a11y 6 passed, visual 12 passed, security 9 passed, Lighthouse autorun passed for 2 URLs / 6 runs.
+- `pnpm exec vitest run tests/mypage-screen.test.tsx tests/settings-screen.test.tsx tests/leftovers.frontend.test.tsx tests/recipe-book-detail-screen.test.tsx` — passed, 78 tests.
+- `pnpm exec playwright test tests/e2e/slice-17a-mypage.spec.ts tests/e2e/slice-17c-settings.spec.ts tests/e2e/slice-16-leftovers.spec.ts tests/e2e/slice-17b-recipebook-detail.spec.ts tests/e2e/qa-wave1-account-library-leftovers-evidence.spec.ts` — passed, 189 tests.
+- `pnpm exec playwright test tests/e2e/qa-wave1-account-library-leftovers-evidence.spec.ts --project=desktop-chrome` — passed, generated 10 evidence screenshots.

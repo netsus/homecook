@@ -34,10 +34,11 @@
   - Stage 1 docs PR: #380
   - Stage 4~6 frontend/closeout PR: #381
   - 결과: PANTRY/add sheet/bundle picker/multi-delete Wave1 UI-only 포팅, authority blocker 0. `ingredients.image_url`은 contract-evolution 후보로 분리.
-- **Slice F `wave1-port-account-library-leftovers`**: Stage 1 docs.
-  - Branch: `docs/wave1-port-account-library-leftovers`
-  - Claude Stage 1 handoff attempted via resume session `3f4ca745-db71-4392-a3f1-4e3c4493e9bc`; provider limit reset 13:20 Asia/Seoul blocked editing, so Codex fallback prepared Stage 1 docs.
-  - 범위: MYPAGE/SETTINGS polish, LEFTOVERS/ATE_LIST 버튼·문구 정리, RECIPEBOOK_DETAIL custom book menu. UI-only default, Stage 2 N/A unless contract-evolution candidate is needed.
+- **Slice F `wave1-port-account-library-leftovers`**: Stage 4~6 closeout projection.
+  - Stage 1 docs PR: #382
+  - Stage 4~6 frontend/closeout branch: `feature/fe-wave1-port-account-library-leftovers`
+  - Claude Stage 1 handoff attempted via resume session `3f4ca745-db71-4392-a3f1-4e3c4493e9bc`; provider limit reset 13:20 Asia/Seoul blocked editing, so Codex fallback prepared Stage 1 docs and frontend closeout.
+  - 결과: MYPAGE visible settings entry, LEFTOVERS/ATE_LIST clipping/copy polish, ATE_LIST uneat API preserved with `남은요리로 복귀` label, RECIPEBOOK_DETAIL custom book menu, 390/320 screenshot evidence, authority blocker 0, `pnpm verify:frontend` passed.
 
 ## Read First
 
@@ -141,7 +142,7 @@
 | C | `wave1-port-planner-meal-add` | PLANNER, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN | Stage 1~6 | 컬럼 CRUD는 완료된 `planner-column-customization` 계약을 소비한다. |
 | D | `wave1-port-shopping-cooking` | SHOPPING_FLOW, SHOPPING_DETAIL, COOK_READY/COOK_MODE | Done | PR #379 merged. 장보기 read-only/exclude/add_to_pantry 규칙 유지. |
 | E | `wave1-port-pantry` | PANTRY, ingredient picker, bundle picker, multi-delete | Done | PR #381 merged. 재료 이미지 URL은 계약 후보로 분리. |
-| F | `wave1-port-account-library-leftovers` | MYPAGE, SETTINGS polish, LEFTOVERS, ATE_LIST, RECIPEBOOK_DETAIL | Stage 1 docs | SETTINGS 컬럼 관리 완료 상태와 충돌하지 않게 조심. |
+| F | `wave1-port-account-library-leftovers` | MYPAGE, SETTINGS polish, LEFTOVERS, ATE_LIST, RECIPEBOOK_DETAIL | Stage 4~6 closeout | SETTINGS 컬럼 관리 완료 상태와 충돌하지 않게 조심. |
 | G | `wave1-port-web-followup` | 앱 포팅 이후 웹-only 조정 | 별도 계획 | 앱 slice 완료 후 최신 프로토타입 기준으로 다시 작성. |
 
 ## Slice A: wave1-port-foundation
@@ -436,9 +437,9 @@
 - settings account category cleanup
 - 남은요리/다먹은요리 양방향 button이 잘리지 않게 정리
 - 다먹은요리 description에서 `다먹음` 텍스트 제거
-- `덜먹음` 제거
+- `덜먹음` API 유지, UI label을 `남은요리로 복귀`로 조정
 - `플래너에 추가` 문구 정리
-- leftover/eaten meta는 `4/20 저녁 2인분`만 유지
+- leftover/eaten meta는 현재 공식 응답에서 가능한 날짜 중심 정보만 유지
 - recipebook detail kebab menu: rename/delete
 
 ### Classification
@@ -450,7 +451,7 @@
 | planner column management | Done | `planner-column-customization` merged. 다시 만들지 않음. |
 | leftovers/ate button shape | UI-only | route links 유지. |
 | `다먹음` 텍스트 제거 | UI-only | list source 유지. |
-| `덜먹음` 제거 | UI-only unless API action removed | API는 유지해도 숨길 수 있음. |
+| `덜먹음` label 조정 | UI-only | API와 상태 전이는 유지. |
 | recipebook kebab menu | 기존 API로 가능 | rename/delete endpoints 확인. |
 
 ### Design Authority Notes
@@ -466,6 +467,15 @@
 - LEFTOVERS / ATE_LIST E2E
 - RECIPEBOOK_DETAIL E2E
 - button clipping screenshots 320/390
+
+### Delivery Status
+
+- Stage 1 docs branch: `docs/wave1-port-account-library-leftovers`
+- Stage 4~6 implementation branch: `feature/fe-wave1-port-account-library-leftovers`
+- Stage 2/3: N/A, existing contracts were sufficient.
+- Codex fallback: completed FE implementation after Claude provider limit blocked Stage 4 delegation.
+- Authority: `ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md`, verdict pass, blocker 0.
+- Verification: targeted Vitest passed 78 tests, modified Playwright bundle passed 189 tests, exploratory QA eval score 98, and `pnpm verify:frontend` passed.
 
 ## Cross-Slice Mapping Table
 

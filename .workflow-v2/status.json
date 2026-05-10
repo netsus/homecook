@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-10T04:10:17Z",
+  "updated_at": "2026-05-10T05:03:14.264Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -931,11 +931,11 @@
     {
       "id": "wave1-port-account-library-leftovers",
       "preset": "vertical-slice-strict",
-      "branch": "docs/wave1-port-account-library-leftovers",
+      "branch": "feature/fe-wave1-port-account-library-leftovers",
       "pr_path": "pending",
-      "lifecycle": "in_progress",
-      "approval_state": "not_started",
-      "verification_status": "pending",
+      "lifecycle": "merged",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
       "required_checks": [
         "pnpm verify:frontend",
         "pnpm validate:workflow-v2",
@@ -944,7 +944,12 @@
         "pnpm validate:exploratory-qa-evidence",
         "git diff --check"
       ],
-      "notes": "Stage 1 docs fallback after Claude handoff attempted through resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc with model=opus, permission_mode=bypassPermissions, requested effort=xhigh recorded, CLI effort=high. Claude provider limit reset 13:20 Asia/Seoul blocked editing, so Codex prepared Stage 1 docs per user instruction. Stage 2/3 defaults to N/A unless Stage 4 needs contract-evolution for LEFTOVERS meta, uneat policy removal, system recipebook rename/delete, or account/planner-column policy changes."
+      "notes": "Closeout projection for Stage 4~6 frontend PR. Stage 1 docs PR #382 merged after Claude handoff attempted through resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc with model=opus, permission_mode=bypassPermissions, requested effort=xhigh recorded, CLI effort=high; provider limit reset 13:20 Asia/Seoul blocked Claude editing, so Codex completed fallback per user instruction. Stage 2/3 N/A (UI-only). Stage 4/5 Codex fallback completed MYPAGE visible settings entry, LEFTOVERS/ATE_LIST button clipping and copy polish, ATE_LIST uneat API preservation with 남은요리로 복귀 label, RECIPEBOOK_DETAIL custom book menu using existing PATCH/DELETE endpoints, 390/320 screenshot evidence, WAVE1_ACCOUNT_LIBRARY_LEFTOVERS authority report with blocker 0, exploratory QA eval score 98, targeted Vitest/Playwright, and pnpm verify:frontend. Manual Only real-device/real-seed smokes remain deferred by acceptance. Final current-head GitHub checks remain the merge gate. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,Vitest,Playwright,QA eval,ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md last_recovery_at=2026-05-10T05:03:14.264Z",
+      "evaluation_status": "passed",
+      "evaluation_round": 1,
+      "last_evaluator_result": "ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md",
+      "auto_merge_eligible": true,
+      "blocked_reason_code": null
     }
   ]
 }
