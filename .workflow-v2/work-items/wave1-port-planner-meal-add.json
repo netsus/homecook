@@ -7,15 +7,12 @@
   "surface": "frontend",
   "risk": "high",
   "preset": "vertical-slice-strict",
-
   "goal": "PLANNER_WEEK 주간 이동, 이모지/배지 제거, CTA 정리, MENU_ADD 2열 옵션 그리드, MANUAL_CREATE 재료 모달 정리, MEAL_SCREEN 레시피 클릭/삭제 아이콘/status selector 제거를 기존 공식 API 계약 범위 안에서 UI-only로 포팅한다.",
-
   "owners": {
     "claude": "stage1,stage4",
     "codex": "stage5,stage6",
     "workers": []
   },
-
   "dependencies": [
     "wave1-port-foundation",
     "wave1-port-discovery-detail",
@@ -24,7 +21,6 @@
     "baemin-style-planner-week-retrofit",
     "baemin-prototype-modal-overlay-parity"
   ],
-
   "docs_refs": {
     "source_of_truth": [
       "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
@@ -45,7 +41,6 @@
       "ui/designs/prototypes/claude-design-260505-wave1/HANDOFF.md"
     ]
   },
-
   "workflow": {
     "plan_loop": "skipped",
     "review_loop": "required",
@@ -58,7 +53,6 @@
       "frontend": 4
     }
   },
-
   "verification": {
     "required_checks": [
       "pnpm verify:frontend",
@@ -78,20 +72,17 @@
       "authority-report"
     ]
   },
-
   "status": {
-    "lifecycle": "planned",
-    "approval_state": "not_started",
-    "verification_status": "pending",
+    "lifecycle": "merged",
+    "approval_state": "dual_approved",
+    "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
     "last_evaluator_result": null,
     "auto_merge_eligible": false,
     "blocked_reason_code": null
   },
-
-  "notes": "Stage 1 docs created by Claude. Stage 2 N/A (UI-only). Planner column CRUD already merged in planner-column-customization (#367-#370). Weekly navigation uses existing shiftPlannerRange + fetchPlanner. POST /meals leftover_dish_id is existing contract.",
-
+  "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs PR #376 merged. Stage 2/3 N/A (UI-only). Stage 4 frontend implemented by Claude through resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc, then Codex completed Stage 5/6 review, authority evidence, exploratory QA/eval, planner CTA overlap repair, stale E2E selector/status expectation repair, full frontend verification, and Claude final authority gate. Design Status confirmed; authority blocker 0. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:4|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,Playwright,ui/designs/authority/WAVE1_PLANNER_MEAL_ADD-authority.md,Claude final authority gate,QA eval",
   "out_of_scope": [
     "HOME, RECIPE_DETAIL, save modal 화면 변경 (Slice B wave1-port-discovery-detail에서 완료)",
     "SHOPPING, COOK_MODE 화면 변경 (Slice D wave1-port-shopping-cooking)",
@@ -103,6 +94,74 @@
     "meals.status 직접 mutation",
     "끼니 컬럼 순서 변경(reorder)"
   ],
-
-  "open_questions": []
+  "open_questions": [],
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "passed",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [
+        "ui/designs/authority/WAVE1_PLANNER_MEAL_ADD-authority.md"
+      ],
+      "actual_verification_refs": [
+        "pnpm verify:frontend",
+        "tests/e2e/qa-wave1-planner-meal-add-evidence.spec.ts",
+        "tests/e2e/slice-05-planner-week-core.spec.ts",
+        "tests/e2e/slice-07-meal-manage.spec.ts",
+        "tests/e2e/slice-08a-meal-add-search.spec.ts",
+        "tests/e2e/slice-08b-meal-add-books-pantry.spec.ts",
+        "tests/e2e/slice-12a-shopping-complete.spec.ts",
+        "tests/e2e/slice-14-cook-session-start.spec.ts",
+        "ui/designs/evidence/wave1-port-planner-meal-add/",
+        "PR_IS_DRAFT=false pnpm validate:authority-evidence-presence",
+        "PR_IS_DRAFT=false pnpm validate:exploratory-qa-evidence",
+        "pnpm validate:workpack -- --slice wave1-port-planner-meal-add",
+        "pnpm validate:workflow-v2",
+        "git diff --check",
+        ".artifacts/qa/wave1-port-planner-meal-add/2026-05-10T00-32-50-753Z/eval-result.json",
+        ".omx/artifacts/claude-delegate-3f4ca745-db71-4392-a3f1-4e3c4493e9bc-wave1-port-planner-meal-add-final-authority-gate-response-20260510T003455Z.md"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "approval_state": "dual_approved",
+      "all_checks_green": false
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-05-10T00:41:24Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 4,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "stage6-closeout-policy-projection-repair",
+      "evidence_sources": [
+        "pnpm verify:frontend",
+        "Playwright",
+        "ui/designs/authority/WAVE1_PLANNER_MEAL_ADD-authority.md",
+        "Claude final authority gate",
+        "QA eval"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-10T00:41:24Z",
+      "status_synced_at": "2026-05-10T00:41:24Z",
+      "pr_body_synced_at": "pending-pr-body-update"
+    }
+  }
 }
