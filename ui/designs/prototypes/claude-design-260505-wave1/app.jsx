@@ -273,7 +273,9 @@ function App() {
       const next = { ...p };
       names.forEach(name => {
         const key = Object.keys(next).find(k => next[k].name === name) || `new_${name}`;
-        next[key] = { name, have: true, section: next[key]?.section || '구매' };
+        const sourceSection = list?.items?.find((item) => item.name === name)?.section;
+        const section = PANTRY_CATEGORIES.includes(sourceSection) ? sourceSection : '주식';
+        next[key] = { name, have: true, section: next[key]?.section || section };
       });
       return next;
     });
@@ -975,14 +977,15 @@ function App() {
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'flex-start',
-      justifyContent: 'center', padding: 40, paddingTop: 80, gap: 40,
+      justifyContent: 'center', padding: '80px 12px 40px', gap: 40,
+      flexWrap: 'wrap', overflowX: 'hidden',
       background: '#E9ECEF',
     }}>
       <ShellSwitcher />
       <div style={{ position: 'relative' }}>
         {isWeb ? (
           <div style={{
-            width: 402, background: '#fff', borderRadius: 24, overflow: 'hidden',
+            width: 'min(402px, calc(100vw - 24px))', background: '#fff', borderRadius: 24, overflow: 'hidden',
             boxShadow: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)',
           }}>
             <div style={{

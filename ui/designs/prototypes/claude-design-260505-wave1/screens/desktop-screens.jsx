@@ -226,7 +226,7 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
 function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList, onOpenMeal, onGoManual, onGoYtImport, onGoLeftovers, onPickRecipeFromMealAdd, showToast, initialMealAdd }) {
   const days = Object.keys(planner);
   const slots = ['아침', '점심', '저녁'];
-  // vNext S4 — week navigation (prototype: label만 변경)
+  // vNext S4 — week navigation label은 유지하고, 이동 UI는 일주일 날짜 카드로 고정
   const [weekOffset, setWeekOffset] = dUseState(0);
   // vNext S4 — 식사 추가 다이얼로그 상태
   const [mealAddDialog, setMealAddDialog] = dUseState(null); // { date, slot }
@@ -258,20 +258,11 @@ function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMen
   }, [days, weekOffset]);
 
   const weekLabel = weekOffset === 0 ? '이번 주 식단' : weekOffset === 1 ? '다음 주 식단' : weekOffset === -1 ? '지난 주 식단' : '식단';
-  const weekName = (offset) => (
-    offset === 0 ? '이번 주' :
-    offset === 1 ? '다음 주' :
-    offset === -1 ? '지난 주' :
-    offset > 1 ? `${offset}주 뒤` : `${Math.abs(offset)}주 전`
-  );
-  const formatWeekRange = (offset) => {
-    const base = new Date(WEEK_START);
-    base.setDate(base.getDate() + offset * 7);
-    const end = new Date(base);
-    end.setDate(end.getDate() + 6);
-    return `${base.getMonth()+1}.${base.getDate()} - ${end.getMonth()+1}.${end.getDate()}`;
+  const dateCardMeta = (index) => {
+    const d = new Date(WEEK_START);
+    d.setDate(d.getDate() + index + weekOffset * 7);
+    return { dow: weekDays[index], day: d.getDate(), label: `${d.getMonth() + 1}/${d.getDate()}` };
   };
-  const weekChoices = [weekOffset - 2, weekOffset - 1, weekOffset, weekOffset + 1, weekOffset + 2];
 
   // 식사 추가 다이얼로그 옵션
   const mealAddOptions = [
@@ -504,24 +495,26 @@ function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMen
         }}>장보기</button>
       </div>
 
-      {/* vNext follow-up: MVP처럼 가로 스크롤로 주간 이동 */}
+      {/* vNext repair — MVP처럼 한 주 날짜 카드로 이동 */}
       <div style={{
         display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 14,
-        marginBottom: 8, scrollSnapType: 'x proximity', scrollbarWidth: 'none',
+        marginBottom: 8, scrollSnapType: 'x mandatory', scrollbarWidth: 'none',
       }}>
-        {weekChoices.map((offset) => {
-          const active = offset === weekOffset;
+        {days.map((day, index) => {
+          const active = index === todayIdx;
+          const meta = dateCardMeta(index);
           return (
-            <button key={offset} onClick={() => setWeekOffset(offset)} style={{
-              flex: '0 0 auto', minWidth: 132, scrollSnapAlign: 'start',
-              padding: '10px 12px', borderRadius: 10,
-              border: active ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+            <button key={day} style={{
+              flex: '0 0 78px', height: 70, scrollSnapAlign: 'start',
+              borderRadius: 12,
+              border: active ? `2px solid ${T.mint}` : `1px solid ${T.border}`,
               background: active ? T.mintSoft : '#fff',
               color: active ? T.mintDeep : T.text2,
-              cursor: 'pointer', textAlign: 'left',
+              cursor: 'pointer', textAlign: 'center',
             }}>
-              <div style={{ fontSize: 12, fontWeight: 800 }}>{weekName(offset)}</div>
-              <div style={{ fontSize: 11, marginTop: 2, color: active ? T.mintDeep : T.text3 }}>{formatWeekRange(offset)}</div>
+              <div style={{ fontSize: 11, fontWeight: 800, marginTop: 8 }}>{meta.dow}</div>
+              <div style={{ fontSize: 22, fontWeight: 900, fontFamily: T.fontBrand, marginTop: 1 }}>{meta.day}</div>
+              <div style={{ fontSize: 10, color: active ? T.mintDeep : T.text4, marginTop: 1 }}>{meta.label}</div>
             </button>
           );
         })}
@@ -584,47 +577,58 @@ function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMen
             }}>{slot}</div>
             {days.map(d => {
               const meals = mealItems(planner[d]?.[slot]);
-              const recipes = meals.map(meal => RECIPES.find(r => r.id === meal.recipeId)).filter(Boolean);
+              const mealRows = meals.map(meal => ({
+                meal,
+                recipe: RECIPES.find(r => r.id === meal.recipeId)
+              })).filter(row => row.recipe);
               return (
                 <div key={d+slot} style={{
                   borderLeft: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`,
                   minHeight: 110, padding: 6,
                 }}>
-                  {recipes.length ? (
+                  {mealRows.length ? (
                     <div onClick={() => onOpenMeal?.(d, slot)} style={{
-                      background: T.surfaceFill, borderRadius: 8, padding: 8, minHeight: '100%',
+                      background: '#fff', borderRadius: 8, padding: 6, minHeight: '100%',
+                      border: `1px solid ${T.surfaceSubtle}`,
                       display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 6,
                       cursor: 'pointer',
                     }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {recipes.slice(0, 3).map((recipe, idx) => (
+                        {mealRows.slice(0, 2).map(({ meal, recipe }, idx) => (
                           <div key={recipe.id + idx} style={{
-                            background: '#fff', borderRadius: 7, padding: '5px 6px',
-                            display: 'flex', alignItems: 'center', gap: 5, minWidth: 0,
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                            background: T.surfaceFill, borderRadius: 7,
+                            display: 'flex', alignItems: 'center', gap: 6, minWidth: 0,
+                            height: 36, overflow: 'hidden',
                           }}>
-                            <span style={{ fontSize: 15 }}>{recipe.emoji || ''}</span>
-                            <span style={{ fontSize: 10, fontWeight: 800, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</span>
+                            <span style={{
+                              width: 36, height: 36, flexShrink: 0, background: recipe.bg,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 18,
+                            }}>{recipe.emoji || ''}</span>
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</span>
+                              <span style={{ display: 'block', fontSize: 9, color: T.text3, marginTop: 1 }}>{meal.servings || recipe.servings}인분</span>
+                            </span>
                           </div>
                         ))}
-                        {recipes.length > 3 && (
+                        {mealRows.length > 2 && (
                           <div style={{ fontSize: 10, color: T.text2, fontWeight: 800, paddingLeft: 2 }}>
-                            +{recipes.length - 3}개 더
+                            +{mealRows.length - 2}
                           </div>
                         )}
                       </div>
-                      {/* vNext S4 — StatusPill 제거, + 음식 버튼 강화 */}
+                      {/* vNext S4 — StatusPill 제거, + 버튼 축약 */}
                       <button onClick={(e) => { e.stopPropagation(); setMealAddDialog({ date: d, slot }); }} style={{
-                        marginLeft: 'auto', border: `1.5px solid ${T.mint}`, background: T.mintSoft,
-                        color: T.mintDeep, borderRadius: 7, padding: '3px 8px', fontSize: 11,
-                        fontWeight: 700, cursor: 'pointer',
-                      }}>+ 음식</button>
+                        marginLeft: 'auto', border: '1.5px solid #F59E0B', background: '#FFF7ED',
+                        color: '#B45309', borderRadius: 8, width: 28, height: 28, fontSize: 18,
+                        lineHeight: 1, fontWeight: 900, cursor: 'pointer',
+                      }}>+</button>
                     </div>
                   ) : (
                     <button onClick={() => setMealAddDialog({ date: d, slot })} style={{
                       width: '100%', height: '100%',
-                      background: T.mintSoft, border: `1.5px dashed ${T.mint}`, borderRadius: 8,
-                      color: T.mintDeep, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                      background: '#FFF7ED', border: '1.5px dashed #F59E0B', borderRadius: 8,
+                      color: '#B45309', fontSize: 14, fontWeight: 700, cursor: 'pointer',
                     }}>+ 추가</button>
                   )}
                 </div>
@@ -705,7 +709,7 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
               saved={saved}
               onLike={() => setLiked(!liked)}
               onSave={onOpenSave}
-              style={{ position: 'absolute', top: 18, right: 18 }}
+              style={{ position: 'absolute', right: 18, bottom: 18 }}
             />
           </div>
 
@@ -724,7 +728,7 @@ function DesktopRecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, s
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: T.text3, fontSize: 13, marginBottom: 24, flexWrap: 'wrap' }}>
             {Icon.clock()} {r.minutes}분
             <span>·</span>
-            {Icon.fire()} {r.kcal}kcal
+            {Icon.users()} {r.servings}인분
           </div>
 
           <div style={{ display: 'flex', gap: 24, borderBottom: `1px solid ${T.border}`, marginBottom: 20 }}>
@@ -1143,7 +1147,7 @@ function DesktopMyPageRecipebookDetail({ bookId, onBack, onOpenRecipe, onRemoveR
                   }}>{r.emoji || '🍽️'}</div>
                   <div style={{ padding: 14 }}>
                     <div onClick={() => onOpenRecipe(r.id)} style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 6, cursor: 'pointer' }}>{r.name}</div>
-                    <div style={{ fontSize: 11, color: T.text3 }}>⭐ {r.rating} · {r.minutes}분 · {r.servings}인분</div>
+                    <div style={{ fontSize: 11, color: T.text3 }}>조회 {formatMetricCount(recipeViewCount(r))} · {r.minutes}분 · {r.servings}인분</div>
                     {isCustom && (
                       <button onClick={() => setRemovingId(r.id)} style={{
                         marginTop: 10, padding: '6px 12px', borderRadius: 8, border: `1px solid ${T.border}`,
@@ -1321,7 +1325,7 @@ function DesktopMenuAddScreen({ presetDate, presetSlot, initialMode, planner, pa
                     <div style={{ aspectRatio: '4/3', background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>{r.emoji}</div>
                     <div style={{ padding: 10 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.name}</div>
-                      <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>⭐ {r.rating} · {r.minutes}분</div>
+                      <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>조회 {formatMetricCount(recipeViewCount(r))} · {r.minutes}분</div>
                     </div>
                   </div>
                 ))}
@@ -1448,7 +1452,7 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
   const buy = items.filter(i => (!i.have || localSkipRevived.has(i.name)) && !localBuyExcluded.has(i.name));
   const skip = items.filter(i => (i.have && !localSkipRevived.has(i.name)) || localBuyExcluded.has(i.name));
   const grouped = sections.map(sec => ({ sec, list: buy.filter(i => i.section === sec) })).filter(g => g.list.length > 0);
-  const shoppingListTitle = '장보기 목록 · 2026.05.10';
+  const shoppingListTitle = '2026.05.10 · 장보기 목록';
   const moveToSkip = (name) => {
     setLocalBuyExcluded(s => new Set(s).add(name));
     setLocalSkipRevived(s => {
@@ -2252,7 +2256,7 @@ function DesktopMealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, on
               </div>
             </button>
             <div style={{ fontSize: 12, color: T.text3 }}>
-              {recipe.minutes}분 · {recipe.kcal}kcal · {meal.servings}인분
+              {recipe.minutes}분 · {meal.servings}인분
             </div>
           </div>
         </div>
@@ -2922,7 +2926,7 @@ function DesktopRecipeSearchPicker({ title='레시피 검색', slotLabel, onBack
               <div style={{ aspectRatio: '4/3', background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>{r.emoji}</div>
               <div style={{ padding: 10 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginBottom: 2 }}>{r.name}</div>
-                <div style={{ fontSize: 10, color: T.text3 }}>⭐ {r.rating} · {r.minutes}분</div>
+                <div style={{ fontSize: 10, color: T.text3 }}>조회 {formatMetricCount(recipeViewCount(r))} · {r.minutes}분</div>
               </div>
             </div>
           ))}
@@ -2987,11 +2991,11 @@ function DesktopMyPageRecipebookList({ onBack, onOpenBook, onCreateBook, onDelet
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                 <span style={{ fontSize: 15, fontWeight: 800, color: T.ink }}>{b.name}</span>
                 <span style={{
-                  fontSize: 10, color: T.text3, background: T.surfaceFill,
+                  fontSize: 10, color: T.mintDeep, background: T.mintSoft,
                   padding: '2px 6px', borderRadius: 4, fontWeight: 700,
-                }}>{b.kind === 'saved' ? '저장' : '내 책'}</span>
+                }}>{b.recipeIds.length}개 레시피</span>
               </div>
-              <div style={{ fontSize: 11, color: T.text3 }}>{b.recipeIds.length}개 레시피</div>
+              <div style={{ fontSize: 11, color: T.text3 }}>{b.kind === 'saved' ? '저장' : '내 책'}</div>
             </div>
           </div>
         ))}
@@ -3420,7 +3424,7 @@ function DesktopRecipeBookDetailPickerDialog({ bookId, slotLabel, onClose, onPic
                 <div style={{ aspectRatio: '4/3', background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>{r.emoji}</div>
                 <div style={{ padding: 10 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: T.ink }}>{r.name}</div>
-                  <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>⭐ {r.rating} · {r.minutes}분</div>
+                  <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>조회 {formatMetricCount(recipeViewCount(r))} · {r.minutes}분</div>
                 </div>
               </button>
             ))}

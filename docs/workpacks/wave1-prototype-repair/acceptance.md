@@ -36,24 +36,30 @@ Evidence:
 
 ## Repair 2: Screen Visual Corrections
 
-- [ ] HOME 재료 검색 modal은 search input 아래 가로 category chip rail과 filtered ingredient list를 가진다.
-- [ ] HOME recipe card는 별점 대신 조회수를 보여준다.
-- [ ] HOME recipe card tag는 MVP처럼 recipe 요약 정보를 보여주고 인분/조리시간 중복을 피한다.
-- [ ] RECIPE_DETAIL hero metric은 이미지 오른쪽 아래에 붙고 흰 배경 없이 흰 icon/text + shadow로 보인다.
-- [ ] RECIPE_DETAIL `완료` label은 `요리완료`로 바뀐다.
-- [ ] RECIPE_DETAIL 칼로리 정보가 제거된다.
-- [ ] Login social login CTA가 viewport에서 잘리지 않는다.
-- [ ] PLANNER week rail은 일주일 날짜 카드 가로 스크롤과 sticky behavior를 가진다.
-- [ ] PLANNER date chip click이 해당 날짜 영역으로 scroll한다.
-- [ ] PLANNER meal card는 emoji를 제거하고 recipe image/servings를 표시한다.
-- [ ] PLANNER 한 끼니에 2개까지 보이고 초과분은 `+1`처럼 표시하며 row height가 커지지 않는다.
-- [ ] PLANNER `+음식`은 `+`로 변경되고 색상 충돌이 줄어든다.
-- [ ] SHOPPING_DETAIL Step2 title은 날짜가 먼저 나온다.
-- [ ] Completed shopping detail의 공유 버튼 왼쪽 `완료` 상태 표시는 제거된다.
-- [ ] COOK_MODE 상단 recipe title이 더 크게 보인다.
-- [ ] PANTRY `구매` category가 제거된다.
-- [ ] MYPAGE recipebook card의 recipe count와 description 위치/디자인이 switch된다.
-- [ ] LEFTOVERS 이동 버튼 텍스트가 `다먹은 요리`, `남은 요리`로 표시된다.
+- [x] HOME 재료 검색 modal은 search input 아래 가로 category chip rail과 filtered ingredient list를 가진다.
+- [x] HOME recipe card는 별점 대신 조회수를 보여준다.
+- [x] HOME recipe card tag는 MVP처럼 recipe 요약 정보를 보여주고 인분/조리시간 중복을 피한다.
+- [x] RECIPE_DETAIL hero metric은 이미지 오른쪽 아래에 붙고 흰 배경 없이 흰 icon/text + shadow로 보인다.
+- [x] RECIPE_DETAIL `완료` label은 `요리완료`로 바뀐다.
+- [x] RECIPE_DETAIL 칼로리 정보가 제거된다.
+- [x] Login social login CTA가 viewport에서 잘리지 않는다.
+- [x] PLANNER week rail은 일주일 날짜 카드 가로 스크롤과 sticky behavior를 가진다.
+- [x] PLANNER date chip click이 해당 날짜 영역으로 scroll한다.
+- [x] PLANNER meal card는 emoji를 제거하고 recipe image/servings를 표시한다.
+- [x] PLANNER 한 끼니에 2개까지 보이고 초과분은 `+1`처럼 표시하며 row height가 커지지 않는다.
+- [x] PLANNER `+음식`은 `+`로 변경되고 색상 충돌이 줄어든다.
+- [x] SHOPPING_DETAIL Step2 title은 날짜가 먼저 나온다.
+- [x] Completed shopping detail의 공유 버튼 왼쪽 `완료` 상태 표시는 제거된다.
+- [x] COOK_MODE 상단 recipe title이 더 크게 보인다.
+- [x] PANTRY `구매` category가 제거된다.
+- [x] MYPAGE recipebook card의 recipe count와 description 위치/디자인이 switch된다.
+- [x] LEFTOVERS 이동 버튼 텍스트가 `다먹은 요리`, `남은 요리`로 표시된다.
+
+Evidence:
+
+- `prototype Repair 2 visual smoke OK`
+- Screenshot evidence captured at `.omx/artifacts/wave1-repair2/repair2-390-*.png`
+- Screenshot evidence captured at `.omx/artifacts/wave1-repair2/repair2-320-*.png`
 
 ## Repair 3: Functional Logic Fixes
 

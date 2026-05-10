@@ -214,7 +214,8 @@ function MealAddModal({ date, slot, planner, pantry, onClose, onMenuAdd, onGoMan
 function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlannerAdd, onOpenMeal, onCreateShopping, onCookList, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers, onPickRecipeFromMealAdd, showToast, initialMealAdd }) {
   const keys = Object.keys(planner);
   const todayK = keys[todayIdx];
-  // vNext S4 — week navigation (prototype: label만 변경, 데이터는 동일)
+  const dayRefs = React.useRef({});
+  // vNext S4 — week navigation label은 유지하고, 이동 UI는 일주일 날짜 카드로 고정
   const [weekOffset, setWeekOffset] = useState_P(0);
   // vNext S4 — 식사 추가 모달 상태
   const [mealAddModal, setMealAddModal] = useState_P(null); // { date, slot }
@@ -227,20 +228,18 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
     return `${base.getMonth()+1}월 ${base.getDate()}일 — ${end.getMonth()+1}월 ${end.getDate()}일`;
   }, [weekOffset]);
 
-  const formatWeekRange = (offset) => {
-    const base = new Date(WEEK_START);
-    base.setDate(base.getDate() + offset * 7);
-    const end = new Date(base);
-    end.setDate(end.getDate() + 6);
-    return `${base.getMonth()+1}.${base.getDate()} - ${end.getMonth()+1}.${end.getDate()}`;
+  const scrollToDay = (key) => {
+    dayRefs.current[key]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
-  const weekName = (offset) => (
-    offset === 0 ? '이번 주' :
-    offset === 1 ? '다음 주' :
-    offset === -1 ? '지난 주' :
-    offset > 1 ? `${offset}주 뒤` : `${Math.abs(offset)}주 전`
-  );
-  const weekChoices = [weekOffset - 2, weekOffset - 1, weekOffset, weekOffset + 1, weekOffset + 2];
+  const dateCardMeta = (key, index) => {
+    const d = new Date(WEEK_START);
+    d.setDate(d.getDate() + index + weekOffset * 7);
+    return {
+      dow: weekDays[index],
+      day: d.getDate(),
+      label: `${d.getMonth() + 1}/${d.getDate()}`
+    };
+  };
 
   const stats = React.useMemo(() => {
     let total = 0,cooked = 0,shopped = 0;
@@ -284,28 +283,6 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
             fontSize: 18, color: T.text2,
           }}>›</button>
         </div>
-        {/* vNext follow-up: MVP처럼 가로 스크롤로 주간 이동 */}
-        <div style={{
-          display: 'flex', gap: 8, overflowX: 'auto', padding: '4px 0 12px',
-          scrollSnapType: 'x proximity', scrollbarWidth: 'none',
-        }}>
-          {weekChoices.map((offset) => {
-            const active = offset === weekOffset;
-            return (
-              <button key={offset} onClick={() => setWeekOffset(offset)} style={{
-                flex: '0 0 auto', minWidth: 118, scrollSnapAlign: 'start',
-                padding: '9px 12px', borderRadius: 10,
-                border: active ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
-                background: active ? T.mintSoft : '#fff',
-                color: active ? T.mintDeep : T.text2,
-                textAlign: 'left', cursor: 'pointer',
-              }}>
-                <div style={{ fontSize: 12, fontWeight: 800 }}>{weekName(offset)}</div>
-                <div style={{ fontSize: 11, marginTop: 2, color: active ? T.mintDeep : T.text3 }}>{formatWeekRange(offset)}</div>
-              </button>
-            );
-          })}
-        </div>
         <div style={{ fontSize: 20, fontWeight: 700, color: T.ink, marginBottom: 12, fontFamily: T.fontBrand }}>
           {stats.total}개 음식 계획 중
         </div>
@@ -333,6 +310,39 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
         </div>
       </div>
 
+      {/* vNext repair — MVP처럼 일주일 날짜 카드만 보여주고 스크롤 중 상단에 고정 */}
+      <div style={{
+        position: 'sticky', top: 52, zIndex: 24,
+        background: '#fff', borderBottom: `1px solid ${T.border}`,
+        padding: '10px 14px',
+      }}>
+        <div style={{
+          display: 'flex', gap: 8, overflowX: 'auto',
+          scrollSnapType: 'x mandatory', scrollbarWidth: 'none',
+        }}>
+          {keys.map((k, index) => {
+            const active = k === todayK;
+            const meta = dateCardMeta(k, index);
+            return (
+              <button key={k} onClick={() => scrollToDay(k)} style={{
+                flex: '0 0 58px', height: 66, scrollSnapAlign: 'start',
+                borderRadius: 12,
+                border: active ? `2px solid ${T.mint}` : `1px solid ${T.border}`,
+                background: active ? T.mintSoft : '#fff',
+                color: active ? T.mintDeep : T.text2,
+                cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: 2,
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 800 }}>{meta.dow}</div>
+                <div style={{ fontSize: 21, fontWeight: 900, fontFamily: T.fontBrand }}>{meta.day}</div>
+                <div style={{ fontSize: 10, color: active ? T.mintDeep : T.text4 }}>{meta.label}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Day cards */}
       <div style={{ padding: 16 }}>
         {keys.map((k, i) => {
@@ -340,11 +350,11 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
           const day = planner[k];
           const slots = ['아침', '점심', '저녁'];
           return (
-            <div key={k} style={{
+            <div key={k} ref={(node) => { if (node) dayRefs.current[k] = node; }} style={{
               background: '#fff', borderRadius: 12, marginBottom: 12,
               border: isToday ? `2px solid ${T.mint}` : `1px solid ${T.border}`,
               boxShadow: isToday ? T.shadowDeep : 'none',
-              overflow: 'hidden'
+              overflow: 'hidden', scrollMarginTop: 132
             }}>
               {/* Day header */}
               <div style={{
@@ -371,55 +381,68 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
               {/* vNext S4 — Slot rows: 이모지 제거, 라벨 강화, 상태 배지·chevron 제거, + 음식 강화 */}
               {slots.map((slot) => {
                 const meals = mealItems(day[slot]);
-                const recipes = meals.map((meal) => RECIPES.find((r) => r.id === meal.recipeId)).filter(Boolean);
+                const mealRows = meals.map((meal) => ({
+                  meal,
+                  recipe: RECIPES.find((r) => r.id === meal.recipeId)
+                })).filter((row) => row.recipe);
                 return (
                   <div key={slot} style={{
-                    display: 'flex', alignItems: 'center', padding: '10px 16px',
+                    display: 'flex', alignItems: 'center', padding: '8px 12px',
+                    height: 104, boxSizing: 'border-box',
                     borderBottom: `1px solid ${T.surfaceSubtle}`,
-                    cursor: recipes.length ? 'pointer' : 'default'
+                    cursor: mealRows.length ? 'pointer' : 'default'
                   }} onClick={() => {
-                    if (recipes.length) onOpenMeal(k, slot);
+                    if (mealRows.length) onOpenMeal(k, slot);
                   }}>
                     {/* vNext S4 — 이모지 제거, 라벨만 또렷하게 */}
                     <div style={{
-                      width: 40, fontSize: 13, color: T.ink,
+                      width: 38, fontSize: 13, color: T.ink,
                       fontWeight: 700, flexShrink: 0,
                     }}>
                       {slot}
                     </div>
-                    {recipes.length ?
+                    {mealRows.length ?
                     <>
-                        <div style={{ flex: 1, marginLeft: 12, minWidth: 0 }}>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            {recipes.slice(0, 3).map((recipe, idx) => (
-                              <span key={recipe.id + idx} style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 4,
-                                maxWidth: 116, padding: '4px 7px', borderRadius: 8,
-                                background: recipe.bg, color: T.ink,
-                                fontSize: 11, fontWeight: 700,
+                        <div style={{ flex: 1, marginLeft: 10, minWidth: 0 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {mealRows.slice(0, 2).map(({ meal, recipe }, idx) => (
+                              <div key={recipe.id + idx} style={{
+                                display: 'flex', alignItems: 'center', gap: 8,
+                                height: 42, borderRadius: 8,
+                                background: '#fff', color: T.ink,
+                                border: `1px solid ${T.surfaceSubtle}`,
+                                overflow: 'hidden',
                               }}>
-                                <span>{recipe.emoji}</span>
-                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</span>
-                              </span>
+                                <div style={{
+                                  width: 42, height: 42, background: recipe.bg, flexShrink: 0,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  fontSize: 23,
+                                }}>{recipe.emoji}</div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: 12, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</div>
+                                  <div style={{ fontSize: 10, color: T.text3, marginTop: 1 }}>{meal.servings || recipe.servings}인분</div>
+                                </div>
+                              </div>
                             ))}
-                            {recipes.length > 3 && (
-                              <span style={{ fontSize: 11, color: T.text2, background: T.surfaceFill, padding: '4px 7px', borderRadius: 8, fontWeight: 700 }}>
-                                +{recipes.length - 3}개 더
-                              </span>
+                            {mealRows.length > 2 && (
+                              <div style={{ fontSize: 11, color: T.text2, background: T.surfaceFill, padding: '4px 8px', borderRadius: 8, fontWeight: 800, alignSelf: 'flex-start' }}>
+                                +{mealRows.length - 2}
+                              </div>
                             )}
                           </div>
                         </div>
-                        {/* vNext S4 — + 음식 버튼을 chevron 자리로 이동, 더 눈에 띄게 */}
+                        {/* vNext S4 — + 음식 버튼을 + 아이콘형으로 축약하고 색상 충돌 완화 */}
                         <button onClick={(e) => { e.stopPropagation(); openMealAdd(k, slot); }} style={{
-                          marginLeft: 8, border: `1.5px solid ${T.mint}`, background: T.mintSoft,
-                          color: T.mintDeep, borderRadius: 8, padding: '5px 10px', fontSize: 12,
-                          fontWeight: 700, cursor: 'pointer', flexShrink: 0,
-                        }}>+ 음식</button>
+                          marginLeft: 8, width: 34, height: 34,
+                          border: '1.5px solid #F59E0B', background: '#FFF7ED',
+                          color: '#B45309', borderRadius: 10, fontSize: 22, lineHeight: 1,
+                          fontWeight: 900, cursor: 'pointer', flexShrink: 0,
+                        }}>+</button>
                       </> :
 
                     <button onClick={() => openMealAdd(k, slot)} style={{
-                      flex: 1, marginLeft: 12, height: 44, border: `1.5px dashed ${T.mint}`,
-                      background: T.mintSoft, borderRadius: 8, color: T.mintDeep,
+                      flex: 1, marginLeft: 10, height: 48, border: '1.5px dashed #F59E0B',
+                      background: '#FFF7ED', borderRadius: 8, color: '#B45309',
                       fontSize: 13, fontWeight: 600, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
                     }}>+ 식사 추가</button>
