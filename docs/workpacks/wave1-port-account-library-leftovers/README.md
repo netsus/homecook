@@ -267,7 +267,7 @@ None.
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
 
-- [x] Stage 1 docs fallback completed by Codex after Claude provider limit <!-- omo:id=delivery-stage1-docs;stage=1;scope=docs;review=1.5,6 -->
+- [x] Stage 1 docs fallback completed by Codex after Claude provider limit <!-- omo:id=delivery-stage1-docs;stage=4;scope=shared;review=6 -->
 - [x] Stage 2 N/A 근거 confirmed or backend escalation separated <!-- omo:id=delivery-stage2-na;stage=2;scope=backend;review=3,6 -->
 - [x] MYPAGE polish implemented without changing recipebook/shopping APIs <!-- omo:id=delivery-mypage-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] SETTINGS polish implemented without changing planner column/account contracts <!-- omo:id=delivery-settings-ui;stage=4;scope=frontend;review=5,6 -->
@@ -275,8 +275,8 @@ None.
 - [x] RECIPEBOOK_DETAIL scope either low-risk reused or custom-book menu implemented with existing endpoints <!-- omo:id=delivery-recipebook-detail-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] Targeted Vitest and Playwright coverage updated <!-- omo:id=delivery-tests;stage=4;scope=frontend;review=5,6 -->
 - [x] Screenshot evidence generated for 390px and 320px touched surfaces <!-- omo:id=delivery-screenshot-evidence;stage=4;scope=frontend;review=5,6 -->
-- [x] Authority report has blocker 0 before Design Status confirmed <!-- omo:id=delivery-authority-report;stage=5;scope=frontend;review=5,6 -->
-- [x] `pnpm verify:frontend` passed before merge-ready <!-- omo:id=delivery-verify-frontend;stage=6;scope=frontend;review=6 -->
+- [x] Authority report has blocker 0 before Design Status confirmed <!-- omo:id=delivery-authority-report;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend` passed before merge-ready <!-- omo:id=delivery-verify-frontend;stage=4;scope=frontend;review=6 -->
 
 ## Stage 4/5 Evidence
 

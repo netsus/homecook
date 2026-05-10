@@ -79,7 +79,7 @@
 - [x] LEFTOVERS 390px + 320px screenshot evidence가 생성된다 <!-- omo:id=accept-evidence-leftovers;stage=4;scope=frontend;review=5,6 -->
 - [x] ATE_LIST 390px + 320px screenshot evidence가 생성된다 <!-- omo:id=accept-evidence-ate-list;stage=4;scope=frontend;review=5,6 -->
 - [x] RECIPEBOOK_DETAIL을 실제로 건드린 경우 390px + 320px screenshot evidence가 생성된다 <!-- omo:id=accept-evidence-recipebook-detail;stage=4;scope=frontend;review=5,6 -->
-- [x] `WAVE1_ACCOUNT_LIBRARY_LEFTOVERS` authority report가 blocker 0으로 남는다 <!-- omo:id=accept-authority-report;stage=5;scope=frontend;review=5,6 -->
+- [x] `WAVE1_ACCOUNT_LIBRARY_LEFTOVERS` authority report가 blocker 0으로 남는다 <!-- omo:id=accept-authority-report;stage=4;scope=frontend;review=5,6 -->
 
 ## Manual Verification
 
