@@ -219,16 +219,18 @@ describe("planner week screen", () => {
     expect(screen.getAllByLabelText(/식단 카드$/)).toHaveLength(7);
     expect(screen.getAllByText("3월 24일 ~ 3월 30일")).toHaveLength(1);
     expect(screen.queryByText("화면 상태")).toBeNull();
-    expect(screen.queryByRole("button", { name: "이전 주" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "다음 주" })).toBeNull();
+    // Wave1: week nav buttons now always visible (mobile uses icon-only)
+    expect(screen.getByRole("button", { name: "이전 주" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "다음 주" })).toBeTruthy();
     expect(screen.getByText("김치찌개")).toBeTruthy();
     expect(screen.getByText("샐러드")).toBeTruthy();
-    expect(screen.getByLabelText("식사 등록 완료")).toBeTruthy();
-    expect(screen.getByLabelText("장보기 완료")).toBeTruthy();
+    // Wave1: status badges removed; status data preserved in meal objects
+    expect(screen.queryByLabelText("식사 등록 완료")).toBeNull();
+    expect(screen.queryByLabelText("장보기 완료")).toBeNull();
     expect(screen.queryByRole("button", { name: "컬럼 추가" })).toBeNull();
   });
 
-  it("enables the shopping and cooking CTAs while keeping later planner CTAs disabled", async () => {
+  it("enables the shopping and leftover CTAs in a 2-column grid (요리하기 removed per Wave1)", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
 
@@ -238,14 +240,14 @@ describe("planner week screen", () => {
 
     const toolbar = screen.getByRole("group", { name: "플래너 보조 작업" });
     const shoppingLink = within(toolbar).getByRole("link", { name: "장보기" }) as HTMLAnchorElement;
-    const cookingLink = within(toolbar).getByRole("link", { name: "요리하기" }) as HTMLAnchorElement;
     const leftoverLink = within(toolbar).getByRole("link", { name: "남은요리" }) as HTMLAnchorElement;
 
-    expect(toolbar.className).toContain("grid-cols-3");
+    expect(toolbar.className).toContain("grid-cols-2");
     expect(toolbar.className).toContain("rounded-[var(--radius-lg)]");
     expect(shoppingLink.getAttribute("href")).toBe("/shopping/flow");
-    expect(cookingLink.getAttribute("href")).toBe("/cooking/ready");
     expect(leftoverLink.getAttribute("href")).toBe("/leftovers");
+    // Wave1: 요리하기 CTA removed
+    expect(within(toolbar).queryByRole("link", { name: "요리하기" })).toBeNull();
   });
 
   it("shows a direct link back to an existing shopping list", async () => {
@@ -279,7 +281,7 @@ describe("planner week screen", () => {
     expect(shoppingListLink.getAttribute("href")).toBe("/shopping/lists/shopping-list-1");
   });
 
-  it("compresses meal slot metadata into compact chips while keeping empty slots lightweight", async () => {
+  it("compresses meal slot metadata into compact chips while keeping empty slots with '+ 음식' CTA (Wave1)", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(
       createPlannerData({
@@ -311,8 +313,10 @@ describe("planner week screen", () => {
     expect(dinnerRow).not.toBeNull();
     expect(breakfastRow?.className).toContain("min-h-[44px]");
     expect(within(breakfastRow as HTMLElement).getByText("2인분")).toBeTruthy();
-    expect(within(breakfastRow as HTMLElement).getByText("등록")).toBeTruthy();
-    expect(within(dinnerRow as HTMLElement).getByText(/식사 추가/).tagName).toBe("SPAN");
+    // Wave1: status badge removed — no "등록" text
+    expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
+    // Wave1: empty slot shows "+ 음식" instead of "식사 추가"
+    expect(within(dinnerRow as HTMLElement).getByText(/음식/).tagName).toBe("SPAN");
   });
 
   it("marks leftover meals with an explicit leftover chip", async () => {
@@ -412,7 +416,7 @@ describe("planner week screen", () => {
       expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
     });
 
-    const resetButton = screen.getByRole("button", { name: "이번주로 가기" });
+    const resetButton = screen.getByRole("button", { name: "이번주로" });
     await user.click(resetButton);
 
     await waitFor(() => {
@@ -525,10 +529,10 @@ describe("planner week screen", () => {
     expect(await screen.findByText("오므라이스")).toBeTruthy();
   });
 
-  it("shows desktop week navigation buttons and shifts range with the next-week action", async () => {
+  it("shows week navigation buttons on all viewports and shifts range with the next-week action (Wave1)", async () => {
     const user = userEvent.setup();
 
-    setDesktopViewport(true);
+    // Wave1: buttons visible on mobile too (chevron icons); text labels visible on sm+
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner
       .mockResolvedValueOnce(createPlannerData({ meals: [] }))
@@ -558,7 +562,173 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
-    expect(screen.getAllByText(/식사 추가/).length).toBeGreaterThanOrEqual(1);
+    // Wave1: empty slots show "+ 음식" instead of "식사 추가"
+    expect(screen.getAllByText(/음식/).length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByPlaceholderText("새 끼니 컬럼 이름")).toBeNull();
+  });
+
+  // ─── Wave1 acceptance tests ─────────────────────────────────────────────────
+
+  it("renders slot column names as text only without emoji (Wave1 SLOT_EMOJI removal)", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_title: "비빔밥",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 2,
+            status: "registered",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
+    const breakfastSlot = within(firstDayCard).getByText("비빔밥").closest("a");
+
+    expect(breakfastSlot).not.toBeNull();
+    // Slot name rendered as text — no emoji characters present
+    const slotNameEl = within(breakfastSlot as HTMLElement).getByText("아침");
+    expect(slotNameEl).toBeTruthy();
+    expect(slotNameEl.textContent).toBe("아침");
+    // Verify no emoji in the slot area (previously had 🌅 🌞 🍪 🌙)
+    const slotAreaText = (breakfastSlot as HTMLElement).textContent ?? "";
+    expect(slotAreaText).not.toMatch(/[\u{1F300}-\u{1F9FF}]/u);
+  });
+
+  it("does not render status badges on filled meal slots (Wave1 STATUS_META removal)", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_title: "된장찌개",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 1,
+            status: "registered",
+            is_leftover: false,
+          },
+          {
+            id: "meal-2",
+            recipe_id: "recipe-2",
+            recipe_title: "파스타",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-dinner",
+            planned_servings: 1,
+            status: "shopping_done",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
+    // Check meal slot rows specifically — no status badge text inside the slot rows
+    const breakfastRow = within(firstDayCard).getByText("된장찌개").closest("a");
+    const dinnerRow = within(firstDayCard).getByText("파스타").closest("a");
+
+    expect(breakfastRow).not.toBeNull();
+    expect(dinnerRow).not.toBeNull();
+    // No status badge labels within meal slot rows
+    expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
+    expect(within(dinnerRow as HTMLElement).queryByText("장보기 완료")).toBeNull();
+    // No aria labels for status badges
+    expect(screen.queryByLabelText("식사 등록 완료")).toBeNull();
+    expect(screen.queryByLabelText("장보기 완료")).toBeNull();
+    expect(screen.queryByLabelText("요리 완료")).toBeNull();
+  });
+
+  it("shows '+ 음식' button on filled slots and '+ 음식' CTA on empty slots (Wave1)", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_title: "김밥",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-breakfast",
+            planned_servings: 1,
+            status: "registered",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
+    // All slots (filled + empty) should show "+ 음식" text
+    const foodButtons = within(firstDayCard).getAllByText(/\+\s*음식/);
+    // 4 slots total: 1 filled (has "+ 음식" button) + 3 empty (each has "+ 음식" CTA)
+    expect(foodButtons.length).toBe(4);
+  });
+
+  it("uses the top shopping CTA without a floating overlap CTA (Wave1)", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    await screen.findByText(/아직 등록된 식사가 없어요/);
+
+    const shoppingLinks = screen.getAllByRole("link", { name: "장보기" });
+    expect(shoppingLinks.length).toBeGreaterThanOrEqual(1);
+    const fixedShoppingCta = shoppingLinks.find(
+      (link) => link.closest(".fixed") !== null,
+    );
+    expect(fixedShoppingCta).toBeUndefined();
+    expect(shoppingLinks[0]?.textContent?.trim()).toBe("장보기");
+    expect(shoppingLinks[0]?.textContent).not.toContain("🛒");
+  });
+
+  it("shows empty-thumbnail placeholder with first character of column name instead of emoji (Wave1)", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(
+      createPlannerData({
+        meals: [
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_title: "불고기",
+            recipe_thumbnail_url: null,
+            plan_date: "2026-03-24",
+            column_id: "column-dinner",
+            planned_servings: 1,
+            status: "registered",
+            is_leftover: false,
+          },
+        ],
+      }),
+    );
+
+    render(<PlannerWeekScreen />);
+
+    const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
+    const dinnerRow = within(firstDayCard).getByText("불고기").closest("a");
+
+    expect(dinnerRow).not.toBeNull();
+    // The empty-thumbnail placeholder should show "저" (first char of "저녁"), not the moon emoji
+    const placeholderTexts = within(dinnerRow as HTMLElement).getAllByText("저");
+    // At least one element shows "저" as thumbnail placeholder (the slot name "저녁" also starts with "저")
+    expect(placeholderTexts.length).toBeGreaterThanOrEqual(1);
   });
 });

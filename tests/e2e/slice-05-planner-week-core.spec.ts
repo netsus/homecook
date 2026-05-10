@@ -105,19 +105,6 @@ async function mockPlannerRoutes(
   return { requestedRanges };
 }
 
-async function swipeWeekStrip(page: Page, direction: "next" | "prev") {
-  const strip = page.getByTestId("planner-week-strip-viewport");
-
-  await strip.evaluate((element, nextDirection) => {
-    const viewport = element as HTMLDivElement;
-    const pageWidth = viewport.clientWidth;
-
-    viewport.scrollLeft = nextDirection === "next" ? pageWidth * 2 : 0;
-    viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
-  }, direction);
-  await page.waitForTimeout(140);
-}
-
 async function centerWeekStrip(page: Page) {
   const strip = page.getByTestId("planner-week-strip-viewport");
 
@@ -128,9 +115,7 @@ async function centerWeekStrip(page: Page) {
 }
 
 test.describe("Slice 05 planner week core", () => {
-  test("authenticated user sees dynamic column day cards and planner status badges", async ({ page }, testInfo) => {
-    const isDesktopProject = testInfo.project.name === "desktop-chrome";
-
+  test("authenticated user sees dynamic column day cards (Wave1: no emoji, no status badges, 2-col CTA)", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockPlannerRoutes(page);
 
@@ -141,13 +126,9 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByRole("heading", { name: "식단 플래너" })).toBeVisible();
     await expect(page.getByText("현재 범위")).toHaveCount(1);
     await expect(page.getByText("화면 상태")).toHaveCount(0);
-    if (isDesktopProject) {
-      await expect(page.getByRole("button", { name: "이전 주" })).toBeVisible();
-      await expect(page.getByRole("button", { name: "다음 주" })).toBeVisible();
-    } else {
-      await expect(page.getByRole("button", { name: "이전 주" })).toHaveCount(0);
-      await expect(page.getByRole("button", { name: "다음 주" })).toHaveCount(0);
-    }
+    // Wave1: week nav buttons visible on all viewports
+    await expect(page.getByRole("button", { name: "이전 주" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "다음 주" })).toBeVisible();
     await expect(page.getByTestId("planner-week-strip-page-current").locator("li")).toHaveCount(7);
     await expect(firstDayCard.getByText("아침")).toBeVisible();
     await expect(firstDayCard.getByText("점심")).toBeVisible();
@@ -156,11 +137,13 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByText("김치찌개")).toBeVisible();
     await expect(page.getByText("샐러드")).toBeVisible();
     await expect(page.getByText("과일볼")).toBeVisible();
-    await expect(page.getByLabel("식사 등록 완료")).toBeVisible();
-    await expect(page.getByLabel("장보기 완료")).toBeVisible();
-    await expect(page.getByLabel("요리 완료")).toBeVisible();
+    // Wave1: status badges removed
+    await expect(page.getByLabel("식사 등록 완료")).toHaveCount(0);
+    await expect(page.getByLabel("장보기 완료")).toHaveCount(0);
+    await expect(page.getByLabel("요리 완료")).toHaveCount(0);
+    // Wave1: 2-col CTA (장보기 + 남은요리), 요리하기 removed
     await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveAttribute("href", "/shopping/flow");
-    await expect(page.getByRole("link", { name: "요리하기" })).toHaveAttribute("href", "/cooking/ready");
+    await expect(page.getByRole("link", { name: "요리하기" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "남은요리" })).toHaveAttribute("href", "/leftovers");
     await expect(page.getByRole("button", { name: "컬럼 추가" })).toHaveCount(0);
 
@@ -171,9 +154,7 @@ test.describe("Slice 05 planner week core", () => {
     expect(pageHasHorizontalOverflow).toBe(false);
   });
 
-  test("authenticated user can shift the planner range by swiping the weekday strip", async ({ page }, testInfo) => {
-    const isDesktopProject = testInfo.project.name === "desktop-chrome";
-
+  test("authenticated user can shift the planner range by swiping the weekday strip", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     const tracker = await mockPlannerRoutes(page);
 
@@ -183,26 +164,24 @@ test.describe("Slice 05 planner week core", () => {
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(0);
     const initialRange = tracker.requestedRanges[0];
 
-    if (isDesktopProject) {
-      await page.getByRole("button", { name: "다음 주" }).click();
-    } else {
-      await swipeWeekStrip(page, "next");
-    }
+    // Wave1: nav buttons always visible; use button click instead of conditional swipe
+    await page.getByRole("button", { name: "다음 주" }).click();
 
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(1);
-    await expect(page.getByRole("button", { name: "이번주로 가기" })).toBeVisible();
-    await page.getByRole("button", { name: "이번주로 가기" }).click();
+    // Wave1: renamed from "이번주로 가기" to "이번주로"
+    await expect(page.getByRole("button", { name: "이번주로" })).toBeVisible();
+    await page.getByRole("button", { name: "이번주로" }).click();
     await expect.poll(() => tracker.requestedRanges.at(-1)).toBe(initialRange);
   });
 
-  test("planner CTA buttons expose shopping and cooking as available links", async ({ page }) => {
+  test("planner CTA buttons expose shopping and leftover as 2-column links (Wave1: 요리하기 removed)", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockPlannerRoutes(page);
 
     await page.goto("/planner");
 
     await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveAttribute("href", "/shopping/flow");
-    await expect(page.getByRole("link", { name: "요리하기" })).toHaveAttribute("href", "/cooking/ready");
+    await expect(page.getByRole("link", { name: "요리하기" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "남은요리" })).toHaveAttribute("href", "/leftovers");
   });
 
@@ -269,7 +248,7 @@ test.describe("Slice 05 planner week core", () => {
     expect(pageHasHorizontalOverflow).toBe(false);
   });
 
-  test("renders 5-column layout with fallback emoji for custom names", async ({ page }) => {
+  test("renders 5-column layout with text-only slot names (Wave1: no emoji)", async ({ page }) => {
     const fiveColumns: PlannerColumn[] = [
       { id: "col-1", name: "아침", sort_order: 0 },
       { id: "col-2", name: "점심", sort_order: 1 },

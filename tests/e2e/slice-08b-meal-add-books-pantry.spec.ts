@@ -358,7 +358,7 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await page.locator("button:has-text('선택')").first().click();
 
     await expect(page.locator("text=계획 인분 입력")).toBeVisible();
-    await page.locator("button:has-text('추가')").click();
+    await page.getByRole("button", { exact: true, name: "추가" }).click();
 
     // Should navigate back to MEAL_SCREEN
     await page.waitForURL(new RegExp(`/planner/${PLAN_DATE}/${COLUMN_ID}`));
@@ -390,7 +390,7 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await page.locator("button:has-text('레시피북')").click();
     await page.locator("button:has-text('선택')").first().click();
     await page.locator("button:has-text('선택')").first().click();
-    await page.locator("button:has-text('추가')").click();
+    await page.getByRole("button", { exact: true, name: "추가" }).click();
 
     await page.waitForURL(new RegExp(`/planner/${PLAN_DATE}/${COLUMN_ID}`));
 
@@ -428,7 +428,7 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await page.locator("button:has-text('레시피북')").click();
     await page.locator("button:has-text('선택')").first().click();
     await page.locator("button:has-text('선택')").first().click();
-    await page.locator("button:has-text('추가')").click();
+    await page.getByRole("button", { exact: true, name: "추가" }).click();
 
     await page.waitForURL(new RegExp(`/planner/${PLAN_DATE}/${COLUMN_ID}`));
 
@@ -521,7 +521,7 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await page.locator("button:has-text('선택')").first().click();
 
     await expect(page.locator("text=계획 인분 입력")).toBeVisible();
-    await page.locator("button:has-text('추가')").click();
+    await page.getByRole("button", { exact: true, name: "추가" }).click();
 
     // Should navigate back to MEAL_SCREEN
     await page.waitForURL(new RegExp(`/planner/${PLAN_DATE}/${COLUMN_ID}`));

@@ -220,7 +220,7 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     // Increase servings to 3
     await page.locator('button[aria-label="인분 늘리기"]').click();
 
-    await page.locator("button:has-text('추가')").click();
+    await page.getByRole("button", { exact: true, name: "추가" }).click();
 
     // Should navigate back to MEAL_SCREEN
     await page.waitForURL(new RegExp(`/planner/${PLAN_DATE}/${COLUMN_ID}`));

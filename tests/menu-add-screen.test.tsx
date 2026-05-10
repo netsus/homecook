@@ -50,7 +50,7 @@ describe("MenuAddScreen", () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
     const user = userEvent.setup();
-    const youtubeButton = screen.getByRole("button", { name: "유튜브" });
+    const youtubeButton = screen.getByTestId("menu-add-option-youtube");
 
     expect((youtubeButton as HTMLButtonElement).disabled).toBe(false);
 
@@ -59,6 +59,56 @@ describe("MenuAddScreen", () => {
     expect(mockRouterPush).toHaveBeenCalledWith(
       `/menu/add/youtube?date=${DEFAULT_PROPS.planDate}&columnId=${DEFAULT_PROPS.columnId}&slot=${encodeURIComponent(DEFAULT_PROPS.slotName)}`,
     );
+  });
+
+  // ─── Wave1 acceptance tests ─────────────────────────────────────────────────
+
+  it("renders a 2-column option grid with correct data-testids (Wave1)", () => {
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const grid = screen.getByTestId("menu-add-option-grid");
+    expect(grid).toBeTruthy();
+    expect(grid.className).toContain("grid-cols-2");
+
+    // All six Wave1 options should be present.
+    expect(screen.getByTestId("menu-add-option-search")).toBeTruthy();
+    expect(screen.getByTestId("menu-add-option-recipebook")).toBeTruthy();
+    expect(screen.getByTestId("menu-add-option-pantry")).toBeTruthy();
+    expect(screen.getByTestId("menu-add-option-leftover")).toBeTruthy();
+    expect(screen.getByTestId("menu-add-option-youtube")).toBeTruthy();
+    expect(screen.getByTestId("menu-add-option-manual")).toBeTruthy();
+  });
+
+  it("focuses the recipe search input from the search option tile (Wave1)", async () => {
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("menu-add-option-search"));
+
+    expect(document.activeElement).toBe(screen.getByLabelText("레시피 검색"));
+  });
+
+  it("shows heading '추가 방법 선택' instead of '다른 방법으로 추가' (Wave1)", () => {
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    expect(screen.getByText("추가 방법 선택")).toBeTruthy();
+    expect(screen.queryByText("다른 방법으로 추가")).toBeNull();
+  });
+
+  it("renders each option with emoji, label, and subtitle (Wave1)", () => {
+    render(<MenuAddScreen {...DEFAULT_PROPS} />);
+
+    // Check leftover option has all parts
+    const leftoverBtn = screen.getByTestId("menu-add-option-leftover");
+    expect(leftoverBtn.textContent).toContain("🍱");
+    expect(leftoverBtn.textContent).toContain("남은요리");
+    expect(leftoverBtn.textContent).toContain("남은 요리에서 추가");
+
+    // Check manual option
+    const manualBtn = screen.getByTestId("menu-add-option-manual");
+    expect(manualBtn.textContent).toContain("✏️");
+    expect(manualBtn.textContent).toContain("직접 등록");
+    expect(manualBtn.textContent).toContain("레시피 직접 작성");
   });
 
   it("adds a leftover dish to the current planner slot", async () => {
