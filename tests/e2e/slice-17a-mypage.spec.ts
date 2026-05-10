@@ -171,6 +171,11 @@ test.describe("MYPAGE screen", () => {
     await expect(page.getByTestId("mypage-profile")).toBeVisible();
     await expect(page.getByText("집밥러")).toBeVisible();
     await expect(page.getByText("카카오 로그인")).toBeVisible();
+    await expect(page.getByLabel("설정")).toHaveCount(0);
+    await expect(page.getByTestId("mypage-settings-link")).toHaveAttribute(
+      "href",
+      "/settings",
+    );
 
     await expect(page.getByText("내가 추가한 레시피")).toBeVisible();
     await expect(page.getByText("저장한 레시피")).toBeVisible();

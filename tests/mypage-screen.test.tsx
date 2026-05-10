@@ -139,6 +139,20 @@ describe("MypageScreen", () => {
     expect(screen.getByText("주말 파티")).toBeTruthy();
   });
 
+  it("uses a visible settings row instead of an icon-only profile gear", async () => {
+    render(<MypageScreen initialAuthenticated />);
+
+    await screen.findByText("집밥러");
+
+    expect(screen.queryByLabelText("설정")).toBeNull();
+
+    const settingsLink = screen.getByText("설정으로 이동").closest("a");
+    expect(settingsLink?.getAttribute("href")).toBe("/settings");
+    expect(screen.getByTestId("mypage-profile").textContent).not.toContain(
+      "회원탈퇴",
+    );
+  });
+
   it("displays system books with correct recipe counts", async () => {
     render(<MypageScreen initialAuthenticated />);
 

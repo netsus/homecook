@@ -149,6 +149,12 @@ describe("LeftoversScreen", () => {
     expect(screen.getAllByTestId("leftover-card")).toHaveLength(2);
     expect(screen.getAllByTestId("eat-button")).toHaveLength(2);
     expect(screen.getAllByTestId("planner-add-button")).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "다 먹었어요" })).toHaveLength(
+      2,
+    );
+    expect(screen.getAllByRole("button", { name: "식단에 추가" })).toHaveLength(
+      2,
+    );
   });
 
   it("renders empty state when no leftovers", async () => {
@@ -436,6 +442,9 @@ describe("AteListScreen", () => {
 
     expect(screen.getAllByTestId("ate-list-card")).toHaveLength(1);
     expect(screen.getByTestId("uneat-button")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "남은요리로 복귀" })).toBeTruthy();
+    expect(screen.getByText("4월 22일")).toBeTruthy();
+    expect(screen.queryByText(/다먹음/)).toBeNull();
   });
 
   it("renders empty state when no eaten items", async () => {
@@ -450,9 +459,7 @@ describe("AteListScreen", () => {
     });
 
     expect(
-      screen.getByText(
-        "남은요리에서 다먹음 처리하면 여기에 기록돼요",
-      ),
+      screen.getByText("먹은 기록이 여기에 모여요"),
     ).toBeTruthy();
   });
 
@@ -524,7 +531,7 @@ describe("AteListScreen", () => {
       items: EATEN_ITEMS,
     });
     vi.spyOn(leftoversApi, "uneatLeftover").mockRejectedValue(
-      new Error("덜먹음 처리에 실패했어요."),
+      new Error("남은요리 복귀에 실패했어요."),
     );
 
     render(<AteListScreen initialAuthenticated={true} />);
@@ -538,7 +545,7 @@ describe("AteListScreen", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("덜먹음 처리에 실패했어요."),
+        screen.getByText("남은요리 복귀에 실패했어요."),
       ).toBeTruthy();
     });
 

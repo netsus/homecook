@@ -81,11 +81,57 @@ async function installDetailRoutes(
   });
 }
 
+async function installBookActionRoutes(page: Page) {
+  await page.route(
+    (url) => /^\/api\/v1\/recipe-books\/[^/]+$/.test(url.pathname),
+    async (route) => {
+      const bookId = route.request().url().split("/").pop() ?? "book-custom";
+
+      if (route.request().method() === "PATCH") {
+        const body = route.request().postDataJSON() as { name: string };
+        await route.fulfill({
+          json: {
+            success: true,
+            data: {
+              id: bookId,
+              name: body.name,
+              book_type: "custom",
+              recipe_count: 2,
+              sort_order: 3,
+              created_at: "2026-04-30T00:00:00.000Z",
+              updated_at: "2026-04-30T01:00:00.000Z",
+            },
+            error: null,
+          },
+        });
+        return;
+      }
+
+      if (route.request().method() === "DELETE") {
+        await route.fulfill({
+          json: {
+            success: true,
+            data: { deleted: true },
+            error: null,
+          },
+        });
+        return;
+      }
+
+      await route.continue();
+    },
+  );
+}
+
 const BOOK_ID = "book-saved";
 
 function detailUrl(bookType: string, bookName: string) {
+  return detailUrlForBook(BOOK_ID, bookType, bookName);
+}
+
+function detailUrlForBook(bookId: string, bookType: string, bookName: string) {
   const params = new URLSearchParams({ type: bookType, name: bookName });
-  return `/mypage/recipe-books/${BOOK_ID}?${params.toString()}`;
+  return `/mypage/recipe-books/${bookId}?${params.toString()}`;
 }
 
 test.describe("RECIPEBOOK_DETAIL screen", () => {
@@ -130,6 +176,41 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     // Remove buttons visible for saved type
     await expect(page.getByLabel("된장찌개 제거")).toBeVisible();
     await expect(page.getByLabel("김치볶음밥 제거")).toBeVisible();
+    await expect(page.getByLabel("저장한 레시피 옵션 메뉴")).toHaveCount(0);
+  });
+
+  test("renames a custom book from the book-level menu", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installDetailRoutes(page);
+    await installBookActionRoutes(page);
+    await page.goto(detailUrlForBook("book-custom", "custom", "주말 파티"));
+
+    await expect(page.getByText("된장찌개")).toBeVisible();
+    await page.getByLabel("주말 파티 옵션 메뉴").click();
+    await page.getByRole("menuitem", { name: "이름 변경" }).click();
+
+    const input = page.getByRole("textbox");
+    await input.fill("주말 모임");
+    await page.getByRole("button", { name: "완료" }).click();
+
+    await expect(page.getByText("레시피북 이름을 변경했어요")).toBeVisible();
+    await expect(page.getByText("주말 모임")).toBeVisible();
+  });
+
+  test("deletes a custom book from the book-level menu", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installDetailRoutes(page);
+    await installBookActionRoutes(page);
+    await page.goto(detailUrlForBook("book-custom", "custom", "주말 파티"));
+
+    await expect(page.getByText("된장찌개")).toBeVisible();
+    await page.getByLabel("주말 파티 옵션 메뉴").click();
+    await page.getByRole("menuitem", { name: "삭제" }).click();
+
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+    await page.getByRole("button", { name: "삭제" }).click();
+
+    await page.waitForURL("/mypage");
   });
 
   test("shows 좋아요 해제 label for liked books", async ({ page }) => {
