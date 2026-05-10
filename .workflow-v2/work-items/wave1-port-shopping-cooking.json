@@ -1,0 +1,102 @@
+{
+  "id": "wave1-port-shopping-cooking",
+  "title": "Wave1 Port Shopping Cooking — SHOPPING_FLOW, SHOPPING_DETAIL, COOK_READY_LIST, COOK_MODE",
+  "summary": "SHOPPING_FLOW의 프리뷰 라벨/아이콘 제거, SHOPPING_DETAIL의 구매/제외 섹션 명확화·이미있음/되살리기 토글·title/date 표시·share/complete 배치 정리, COOK_MODE의 단일 스크롤 뷰 전환·timer/note/pause 제거·cancel/complete 하단 sticky·consumed ingredient 줄바꿈을 기존 공식 API 계약 범위 안에서 UI-only로 포팅한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "SHOPPING_FLOW 프리뷰 정리, SHOPPING_DETAIL 구매/제외 섹션·버튼 배치·title 표시, pantry 반영 modal 정리, COOK_READY_LIST 그룹 라벨, COOK_MODE 단일 스크롤 뷰·control 제거·하단 sticky를 기존 공식 API 계약 범위 안에서 UI-only로 포팅한다.",
+  "owners": {
+    "claude": "stage1,stage4",
+    "codex": "stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "wave1-port-foundation",
+    "wave1-port-discovery-detail",
+    "wave1-port-planner-meal-add",
+    "09-shopping-preview-create",
+    "10a-shopping-detail-interact",
+    "10b-shopping-share-text",
+    "11-shopping-reorder",
+    "12a-shopping-complete",
+    "12b-shopping-pantry-reflect",
+    "14-cook-session-start",
+    "15a-cook-planner-complete",
+    "15b-cook-standalone-complete"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/design/design-tokens.md",
+      "docs/design/mobile-ux-rules.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/wave1-port-shopping-cooking/README.md",
+      "docs/workpacks/wave1-port-shopping-cooking/acceptance.md",
+      "docs/workpacks/wave1-port-shopping-cooking/automation-spec.json",
+      "docs/workpacks/wave1-service-porting-plan.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md",
+      "ui/designs/prototypes/claude-design-260505-wave1/VNEXT_DESIGN_PRINCIPLES.md",
+      "ui/designs/prototypes/claude-design-260505-wave1/HANDOFF.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:pr-ready -- --slice wave1-port-shopping-cooking --pr-body <pr-body-file> --mode frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "screenshot",
+      "authority-report"
+    ]
+  },
+  "status": {
+    "lifecycle": "planned",
+    "approval_state": "not_started",
+    "verification_status": "pending",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Stage 1 docs created by Claude. Stage 2 N/A (UI-only). COOK_MODE interaction model change (step-by-step -> single scroll) classified as high-risk-ui-change; authority review required at Stage 4/5.",
+  "out_of_scope": [
+    "HOME, RECIPE_DETAIL, save modal 화면 변경 (Slice B wave1-port-discovery-detail에서 완료)",
+    "PLANNER_WEEK, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN 변경 (Slice C wave1-port-planner-meal-add에서 완료)",
+    "PANTRY, MYPAGE, SETTINGS 화면 변경 (Slice E~F)",
+    "API/DB/status/endpoint/field 추가 또는 변경",
+    "새 npm dependency 추가",
+    "prototype mint/Jua/asset 도입",
+    "meals.status 직접 mutation",
+    "장보기 목록 drag-drop 재정렬 방식 변경 (slice 11에서 완료)"
+  ],
+  "open_questions": []
+}
