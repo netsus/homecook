@@ -142,7 +142,7 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
         <div className="px-5 pt-3 pb-3">
           <ModalHeader
             closeButtonRef={closeButtonRef}
-            description="자주 쓰는 재료를 묶음으로 한번에 추가해요"
+            description="자주 쓰는 재료를 묶음으로 한 번에 추가해요"
             onClose={onClose}
             title="묶음으로 추가"
             titleId="bundle-picker-title"
@@ -261,11 +261,11 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
                                   aria-label="이미 보유 중"
                                   className="shrink-0 rounded-full bg-[var(--surface-fill)] px-2 py-0.5 text-xs text-[var(--text-3)]"
                                 >
-                                  보유중
+                                  보유 중
                                 </span>
                               ) : (
                                 <span className="shrink-0 text-xs text-[var(--text-4)]">
-                                  (없음)
+                                  추가 가능
                                 </span>
                               )}
                             </button>

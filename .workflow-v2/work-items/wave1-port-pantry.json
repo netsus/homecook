@@ -10,7 +10,7 @@
   "goal": "PANTRY, ingredient add sheet, bundle picker, category chips, search, multi-delete를 기존 GET/POST/DELETE /pantry, GET /pantry/bundles, GET /ingredients 계약 범위 안에서 UI-first로 포팅한다.",
   "owners": {
     "claude": "stage1-attempt-provider-limited",
-    "codex": "stage1-fallback,stage4-if-provider-limited,stage5,stage6",
+    "codex": "stage1-fallback,stage4,stage5,stage6",
     "workers": []
   },
   "dependencies": [
@@ -60,8 +60,10 @@
   },
   "verification": {
     "required_checks": [
+      "pnpm verify:frontend",
       "pnpm validate:workflow-v2",
       "pnpm validate:workpack",
+      "pnpm validate:authority-evidence-presence",
       "git diff --check"
     ],
     "verify_commands": [
@@ -82,11 +84,11 @@
     "verification_status": "passed",
     "evaluation_status": "not_started",
     "evaluation_round": 0,
-    "last_evaluator_result": null,
-    "auto_merge_eligible": false,
+    "last_evaluator_result": "ui/designs/authority/WAVE1_PANTRY-authority.md",
+    "auto_merge_eligible": true,
     "blocked_reason_code": null
   },
-  "notes": "Stage 1 docs prepared on docs/wave1-port-pantry-stage1. Claude Stage 1 handoff attempted via resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc with model=opus, permission_mode=bypassPermissions, requested effort=xhigh recorded, CLI effort=high; provider limit reset 13:20 Asia/Seoul blocked Claude editing, so Codex completed Stage 1 fallback per user instruction. Backend Stage 2/3 defaults to N/A because current official contracts support the planned UI-only port. Ingredient image URL remains contract-evolution candidate.",
+  "notes": "Stage 1 docs prepared on docs/wave1-port-pantry-stage1. Claude Stage 1 handoff attempted via resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc with model=opus, permission_mode=bypassPermissions, requested effort=xhigh recorded, CLI effort=high; provider limit reset 13:20 Asia/Seoul blocked Claude editing, so Codex completed Stage 1 fallback per user instruction. Backend Stage 2/3 defaults to N/A because current official contracts support the planned UI-only port. Stage 4/5 Codex fallback completed PANTRY UI labels, category placeholder cards, add sheet retry state, bundle picker ownership labels, multi-delete bottom CTA, targeted Vitest, Playwright E2E, screenshot evidence, WAVE1_PANTRY authority report with blocker 0, full pnpm verify:frontend, and exploratory QA eval score 99. Ingredient image URL remains contract-evolution candidate.",
   "out_of_scope": [
     "API/DB/status/endpoint/field 추가 또는 변경",
     "ingredients.image_url 또는 pantry item image URL 필드 임의 추가",

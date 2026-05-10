@@ -26,7 +26,7 @@ type ViewState = "loading" | "error" | "ready";
 const SEARCH_DEBOUNCE_MS = 300;
 const TOAST_DURATION_MS = 3000;
 
-const CATEGORY_EMOJI: Record<string, string> = {
+const CATEGORY_VISUAL: Record<string, string> = {
   채소: "🥬",
   육류: "🥩",
   해산물: "🐟",
@@ -339,7 +339,7 @@ export function PantryScreen({
       <div className="px-1">
         <h1 className="text-xl font-bold text-[var(--foreground)]">나의 팬트리</h1>
         <p className="mt-0.5 text-sm text-[var(--muted)]">
-          {items.length}개 재료 보유 중
+          {items.length}개 재료
         </p>
       </div>
 
@@ -413,14 +413,14 @@ export function PantryScreen({
             onClick={() => setShowAddSheet(true)}
             type="button"
           >
-            + 재료 추가
+            재료 추가하기
           </button>
           <button
             className="flex min-h-[44px] flex-1 items-center justify-center rounded-[var(--radius-md)] border border-[var(--olive)] bg-[var(--surface)] text-sm font-semibold text-[var(--olive)]"
             onClick={() => setShowBundlePicker(true)}
             type="button"
           >
-            묶음 추가
+            묶음으로 추가
           </button>
         </div>
       )}
@@ -440,14 +440,14 @@ export function PantryScreen({
             onClick={() => setShowAddSheet(true)}
             type="button"
           >
-            + 재료 추가
+            재료 추가하기
           </button>
           <button
             className="mt-2 flex min-h-[44px] items-center justify-center rounded-[var(--radius-md)] border border-[var(--olive)] bg-[var(--surface)] px-6 text-sm font-semibold text-[var(--olive)]"
             onClick={() => setShowBundlePicker(true)}
             type="button"
           >
-            묶음으로 한번에 추가
+            묶음으로 추가
           </button>
         </div>
       )}
@@ -486,7 +486,7 @@ export function PantryScreen({
                 onClick={() => setIsSelectMode(true)}
                 type="button"
               >
-                선택
+                삭제
               </button>
             ) : (
               <button
@@ -538,9 +538,15 @@ export function PantryScreen({
                       {isSelected && "✓"}
                     </span>
                   )}
+                  <span
+                    aria-hidden="true"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-fill)] text-base"
+                  >
+                    {CATEGORY_VISUAL[item.category] ?? CATEGORY_VISUAL.기타}
+                  </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-[var(--foreground)]">
-                      {CATEGORY_EMOJI[item.category] ?? "🥄"} {item.standard_name}
+                      {item.standard_name}
                     </p>
                     <p className="text-xs text-[var(--text-3)]">{item.category}</p>
                   </div>
@@ -560,7 +566,7 @@ export function PantryScreen({
             onClick={() => setShowDeleteConfirm(true)}
             type="button"
           >
-            선택 삭제 ({selectedIds.size})
+            제거하기 ({selectedIds.size})
           </button>
         </div>
       )}

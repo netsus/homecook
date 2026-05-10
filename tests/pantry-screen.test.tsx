@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -110,7 +110,8 @@ describe("PantryScreen", () => {
     expect(await screen.findByText("양파", { exact: false })).toBeTruthy();
     expect(screen.getByText("마늘", { exact: false })).toBeTruthy();
     expect(screen.getByText(/돼지고기/)).toBeTruthy();
-    expect(screen.getByText("3개 재료 보유 중")).toBeTruthy();
+    expect(screen.getByText("3개 재료")).toBeTruthy();
+    expect(screen.queryByText("3개 재료 보유 중")).toBeNull();
   });
 
   it("shows the empty state when pantry has no items", async () => {
@@ -145,11 +146,11 @@ describe("PantryScreen", () => {
     await screen.findByText("양파", { exact: false });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "선택" }));
+    await user.click(screen.getByRole("button", { name: "삭제" }));
 
     expect(screen.getByRole("button", { name: "취소" })).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: /선택 삭제/ }),
+      screen.getByRole("button", { name: /제거하기/ }),
     ).toBeTruthy();
   });
 
@@ -159,14 +160,14 @@ describe("PantryScreen", () => {
     await screen.findByText("양파", { exact: false });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "선택" }));
+    await user.click(screen.getByRole("button", { name: "삭제" }));
 
     const checkboxes = screen.getAllByRole("checkbox");
     await user.click(checkboxes[0]);
 
     expect(screen.getByText("1개 선택됨")).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: /선택 삭제/ }));
+    await user.click(screen.getByRole("button", { name: /제거하기/ }));
 
     expect(
       screen.getByText("재료를 삭제할까요?"),
@@ -181,11 +182,11 @@ describe("PantryScreen", () => {
     await screen.findByText("양파", { exact: false });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "선택" }));
+    await user.click(screen.getByRole("button", { name: "삭제" }));
 
     const checkboxes = screen.getAllByRole("checkbox");
     await user.click(checkboxes[0]);
-    await user.click(screen.getByRole("button", { name: /선택 삭제/ }));
+    await user.click(screen.getByRole("button", { name: /제거하기/ }));
     const confirmButtons = screen.getAllByRole("button", { name: /삭제/ });
     const confirmDeleteButton = confirmButtons.find(
       (btn) => btn.textContent?.trim() === "삭제 (1)",
@@ -194,6 +195,94 @@ describe("PantryScreen", () => {
 
     await waitFor(() => {
       expect(screen.getByText("1개 재료가 삭제됐어요")).toBeTruthy();
+    });
+    expect(mockDeletePantryItems).toHaveBeenCalledWith(["i1"]);
+  });
+
+  it("searches pantry items with the q parameter", async () => {
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("searchbox"), "양");
+
+    await waitFor(() => {
+      expect(mockFetchPantryList).toHaveBeenCalledWith(
+        expect.objectContaining({ q: "양" }),
+      );
+    });
+  });
+
+  it("adds only newly selected ingredients from the add sheet", async () => {
+    mockFetchIngredients.mockResolvedValue({
+      items: [
+        { id: "i1", standard_name: "양파", category: "채소" },
+        { id: "i4", standard_name: "대파", category: "채소" },
+      ],
+    });
+    mockAddPantryItems.mockResolvedValue({ added: 1 });
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /재료 추가하기/ }));
+
+    const ownedIngredient = await screen.findByRole("checkbox", { name: /양파/ });
+    expect((ownedIngredient as HTMLButtonElement).disabled).toBe(true);
+
+    await user.click(screen.getByRole("checkbox", { name: "대파" }));
+    await user.click(screen.getByRole("button", { name: "팬트리에 추가 (1)" }));
+
+    await waitFor(() => {
+      expect(mockAddPantryItems).toHaveBeenCalledWith(["i4"]);
+    });
+  });
+
+  it("adds only selected missing bundle ingredients", async () => {
+    mockFetchPantryBundles.mockResolvedValue({
+      bundles: [
+        {
+          id: "b1",
+          name: "기본 야채",
+          display_order: 1,
+          ingredients: [
+            {
+              ingredient_id: "i1",
+              is_in_pantry: true,
+              standard_name: "양파",
+            },
+            {
+              ingredient_id: "i4",
+              is_in_pantry: false,
+              standard_name: "대파",
+            },
+            {
+              ingredient_id: "i5",
+              is_in_pantry: false,
+              standard_name: "감자",
+            },
+          ],
+        },
+      ],
+    });
+    mockAddPantryItems.mockResolvedValue({ added: 2 });
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "묶음으로 추가" }));
+    await screen.findByRole("dialog", { name: "묶음으로 재료 추가" });
+
+    await user.click(screen.getByRole("button", { name: /기본 야채/ }));
+    await user.click(screen.getByRole("button", { name: "2개 팬트리에 추가" }));
+
+    await waitFor(() => {
+      expect(mockAddPantryItems).toHaveBeenCalledWith(["i4", "i5"]);
     });
   });
 
@@ -208,7 +297,7 @@ describe("PantryScreen", () => {
     await screen.findByText("양파", { exact: false });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /재료 추가/ }));
+    await user.click(screen.getByRole("button", { name: /재료 추가하기/ }));
 
     expect(await screen.findByRole("dialog", { name: "재료 추가" })).toBeTruthy();
 
@@ -245,7 +334,7 @@ describe("PantryScreen", () => {
     await screen.findByText("양파", { exact: false });
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "묶음 추가" }));
+    await user.click(screen.getByRole("button", { name: "묶음으로 추가" }));
 
     expect(
       await screen.findByRole("dialog", { name: "묶음으로 재료 추가" }),
@@ -293,5 +382,70 @@ describe("PantryScreen", () => {
     await screen.findByText("양파", { exact: false });
 
     expect(screen.getByRole("searchbox")).toBeTruthy();
+  });
+
+  it("shows a reset action when pantry search has no results", async () => {
+    mockFetchPantryList
+      .mockResolvedValueOnce({ items: MOCK_ITEMS })
+      .mockResolvedValueOnce({ items: [] });
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("searchbox"), "없는");
+
+    expect(
+      await screen.findByText('"없는"에 해당하는 재료가 없어요'),
+    ).toBeTruthy();
+    expect(screen.getByText("검색어 지우기")).toBeTruthy();
+  });
+
+  it("filters add sheet ingredients by category", async () => {
+    mockFetchIngredients.mockResolvedValue({
+      items: [
+        { id: "i4", standard_name: "대파", category: "채소" },
+        { id: "i10", standard_name: "간장", category: "양념" },
+      ],
+    });
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /재료 추가하기/ }));
+    const dialog = await screen.findByRole("dialog", { name: "재료 추가" });
+    await user.click(within(dialog).getByRole("tab", { name: "채소" }));
+
+    await waitFor(() => {
+      expect(mockFetchIngredients).toHaveBeenCalledWith(
+        expect.objectContaining({ category: "채소" }),
+      );
+    });
+  });
+
+  it("shows add sheet load error state and retries", async () => {
+    mockFetchIngredients
+      .mockRejectedValueOnce(new Error("fail"))
+      .mockResolvedValueOnce({
+        items: [{ id: "i4", standard_name: "대파", category: "채소" }],
+      });
+
+    render(<PantryScreen initialAuthenticated />);
+
+    await screen.findByText("양파", { exact: false });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /재료 추가하기/ }));
+
+    expect(
+      await screen.findByText("재료 목록을 불러오지 못했어요"),
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    expect(await screen.findByRole("checkbox", { name: "대파" })).toBeTruthy();
   });
 });

@@ -9,6 +9,7 @@ import { addPantryItems, fetchIngredients } from "@/lib/api/pantry";
 import type { IngredientItem } from "@/types/recipe";
 
 const SEARCH_DEBOUNCE_MS = 300;
+type SheetState = "loading" | "error" | "empty" | "ready";
 
 interface PantryAddSheetProps {
   existingIngredientIds: string[];
@@ -22,7 +23,7 @@ export function PantryAddSheet({
   onClose,
 }: PantryAddSheetProps) {
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [sheetState, setSheetState] = useState<SheetState>("loading");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -41,17 +42,17 @@ export function PantryAddSheet({
 
   const loadIngredients = useCallback(
     async (query?: string, category?: string | null) => {
-      setIsLoading(true);
+      setSheetState("loading");
       try {
         const result = await fetchIngredients({
           q: query || undefined,
           category: category || undefined,
         });
         setIngredients(result.items);
+        setSheetState(result.items.length === 0 ? "empty" : "ready");
       } catch {
         setIngredients([]);
-      } finally {
-        setIsLoading(false);
+        setSheetState("error");
       }
     },
     [],
@@ -202,13 +203,26 @@ export function PantryAddSheet({
 
         {/* Ingredient list */}
         <div className="flex-1 overflow-y-auto px-5 py-3" style={{ overscrollBehavior: "contain" }}>
-          {isLoading ? (
+          {sheetState === "loading" ? (
             <div className="space-y-2">
               {[1, 2, 3, 4, 5].map((i) => (
                 <Skeleton className="w-full" height={44} key={i} rounded="md" />
               ))}
             </div>
-          ) : ingredients.length === 0 ? (
+          ) : sheetState === "error" ? (
+            <div className="flex flex-col items-center py-8 text-center">
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                재료 목록을 불러오지 못했어요
+              </p>
+              <button
+                className="mt-4 flex min-h-[44px] items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-5 text-sm font-semibold text-[var(--surface)]"
+                onClick={() => void loadIngredients(searchQuery, activeCategory)}
+                type="button"
+              >
+                다시 시도
+              </button>
+            </div>
+          ) : sheetState === "empty" ? (
             <p className="py-8 text-center text-sm text-[var(--muted)]">
               검색 결과가 없어요
             </p>
