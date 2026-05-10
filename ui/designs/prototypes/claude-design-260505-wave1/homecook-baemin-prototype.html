@@ -549,7 +549,7 @@ function StatusPill({ status }) {
 }
 
 // Recipe card — large (used in Home feed)
-function RecipeCard({ recipe, onClick, compact }) {
+function RecipeCard({ recipe, onClick, onSave, saved, compact }) {
   const summaryTags = recipeSummaryTags(recipe);
   const views = recipeViewCount(recipe);
   if (compact) {
@@ -583,12 +583,13 @@ function RecipeCard({ recipe, onClick, compact }) {
         fontSize: 96, position: 'relative'
       }}>
         {recipe.emoji}
-        <div style={{
+        <button aria-label={`${recipe.name} 저장`} onClick={(e) => { e.stopPropagation(); onSave?.(recipe.id); }} style={{
           position: 'absolute', top: 12, right: 12,
           width: 36, height: 36, borderRadius: 18,
           background: 'rgba(255,255,255,0.92)',
+          border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>{Icon.bookmark(false)}</div>
+        }}>{Icon.bookmark(!!saved)}</button>
         {recipe.saves > 2000 &&
         <div style={{
           position: 'absolute', top: 12, left: 12,
@@ -1389,7 +1390,7 @@ const { useState: useState_H, useMemo: useMemo_H } = React;
 //       "재료로 거르기"→"재료로 검색", SortSheet→SortDropdown, 배너→플래너 탭
 const SORT_OPTIONS = [['latest', '최신순'], ['saves', '저장순'], ['fast', '빠른 조리순']];
 
-function HomeScreen({ onOpenRecipe, sortBy, setSortBy, ingFilter, setIngFilter, onOpenIngredientFilter, ingredientNames = [], onGoPlanner }) {
+function HomeScreen({ onOpenRecipe, onOpenSave, savedIds = [], sortBy, setSortBy, ingFilter, setIngFilter, onOpenIngredientFilter, ingredientNames = [], onGoPlanner }) {
   const [query, setQuery] = useState_H('');
   const [activeTheme, setActiveTheme] = useState_H(null);
 
@@ -1538,7 +1539,8 @@ function HomeScreen({ onOpenRecipe, sortBy, setSortBy, ingFilter, setIngFilter, 
 
       <div style={{ padding: '0 16px' }}>
         {sorted.map((r) =>
-        <RecipeCard key={r.id} recipe={r} onClick={() => onOpenRecipe(r.id)} />
+        <RecipeCard key={r.id} recipe={r} onClick={() => onOpenRecipe(r.id)}
+          onSave={(id) => onOpenSave?.(id)} saved={savedIds.includes(r.id)} />
         )}
         {sorted.length === 0 &&
         <div style={{ padding: '48px 16px', textAlign: 'center', color: T.text3 }}>
@@ -2615,7 +2617,7 @@ window.DesktopShell = DesktopShell;
 const { useMemo: dUseMemo, useState: dUseState } = React;
 
 // vNext S2 — DesktopHome: 앱 개선사항을 웹 레이아웃에 자연스럽게 변환
-function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy, onOpenIngredientFilter, ingredientNames = [], onGoPlanner }) {
+function DesktopHome({ onOpenRecipe, onOpenSave, savedIds = [], ingFilter, setIngFilter, sortBy, setSortBy, onOpenIngredientFilter, ingredientNames = [], onGoPlanner }) {
   const [query, setQuery] = dUseState('');
   const [activeTheme, setActiveTheme] = dUseState(null);
 
@@ -2802,6 +2804,12 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
                 fontSize: 80, position: 'relative',
               }}>
                 {r.emoji}
+                <button aria-label={`${r.name} 저장`} onClick={(e) => { e.stopPropagation(); onOpenSave?.(r.id); }} style={{
+                  position: 'absolute', top: 12, right: 12,
+                  width: 36, height: 36, borderRadius: 18, border: 'none',
+                  background: 'rgba(255,255,255,0.92)', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>{Icon.bookmark(savedIds.includes(r.id))}</button>
                 {r.saves > 2000 && (
                   <div style={{
                     position: 'absolute', top: 12, left: 12,
@@ -4384,16 +4392,17 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
 }
 
 // Desktop: COOK_MODE (= CookRun, P1.1)
-function DesktopCookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete, showToast }) {
-  const meal = mealItems(planner[date]?.[slot])[mealIndex];
-  const recipe = meal && RECIPES.find(r => r.id === meal.recipeId);
+function DesktopCookRunScreen({ date, slot, mealIndex = 0, recipeId, planner, onBack, onComplete, showToast }) {
+  const meal = date && slot ? mealItems(planner[date]?.[slot])[mealIndex] : null;
+  const recipe = RECIPES.find(r => r.id === (recipeId || meal?.recipeId));
+  const independentCook = !!recipeId && !meal;
   const [consumed, setConsumed] = dUseState(new Set());
   const [confirmCancel, setConfirmCancel] = dUseState(false);
   if (!recipe) {
     return (
       <div>
         <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.text2, fontSize: 13, fontWeight: 600, marginBottom: 14 }}>{Icon.chevL(T.text2)} 돌아가기</button>
-        <div style={{ padding: 60, textAlign: 'center', color: T.text3 }}>식사를 찾을 수 없어요</div>
+        <div style={{ padding: 60, textAlign: 'center', color: T.text3 }}>레시피를 찾을 수 없어요</div>
       </div>
     );
   }
@@ -4409,7 +4418,9 @@ function DesktopCookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onCo
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
         <div>
-          <div style={{ fontSize: 11, color: T.text3, fontWeight: 700, letterSpacing: 1 }}>요리 모드 · {date} {slot}</div>
+          <div style={{ fontSize: 11, color: T.text3, fontWeight: 700, letterSpacing: 1 }}>
+            {independentCook ? '요리 모드 · 독립 요리' : `요리 모드 · ${date} ${slot}`}
+          </div>
           <div style={{ fontSize: 24, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>{recipe.name}</div>
         </div>
         <div style={{ fontSize: 13, color: T.text3 }}>{steps.length}단계</div>
@@ -4457,7 +4468,14 @@ function DesktopCookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onCo
 	                background: '#fff', color: T.text2, fontSize: 13, fontWeight: 800, cursor: 'pointer',
 	                whiteSpace: 'nowrap',
 	              }}>취소</button>
-	              <button onClick={() => onComplete?.(date, slot, [...consumed], mealIndex)} style={{
+	              <button onClick={() => {
+                  if (independentCook) {
+                    showToast?.('🎉 요리 완료!');
+                    onBack?.();
+                  } else {
+                    onComplete?.(date, slot, [...consumed], mealIndex);
+                  }
+                }} style={{
 	                flex: 1, padding: '12px 18px', borderRadius: 10, border: 'none',
 	                background: T.mint, color: '#fff', fontSize: 14, fontWeight: 900, cursor: 'pointer',
 	                fontFamily: T.fontBrand, whiteSpace: 'nowrap',
@@ -4619,18 +4637,25 @@ function DesktopLoginScreen({ returnTo, onBack, onLogin }) {
 
 // Desktop: SETTINGS (P1.2)
 function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAccount, showToast }) {
-  const [keepAwake, setKeepAwake] = dUseState(true);
-  const [voice, setVoice] = dUseState(false);
-  const [autoNext, setAutoNext] = dUseState(false);
+  const defaultPrefs = { keepAwake: true, voice: false, autoNext: false };
+  const [savedPrefs, setSavedPrefs] = dUseState(defaultPrefs);
+  const [draftPrefs, setDraftPrefs] = dUseState(defaultPrefs);
+  const [nicknameDraft, setNicknameDraft] = dUseState(profile?.nickname || '집밥러버');
   const [confirmLogout, setConfirmLogout] = dUseState(false);
   const [confirmDelete, setConfirmDelete] = dUseState(false);
   const [mealColumns, setMealColumns] = dUseState(['아침', '점심', '저녁']);
   const [newMealName, setNewMealName] = dUseState('');
-  const [section, setSection] = dUseState('planner');
+  const [section, setSection] = dUseState('account');
+  const prefsDirty = JSON.stringify(savedPrefs) !== JSON.stringify(draftPrefs);
+  const setDraftPref = (key, value) => setDraftPrefs(prev => ({ ...prev, [key]: value }));
 
   const addMealColumn = () => {
     const name = newMealName.trim();
     if (!name) return;
+    if (mealColumns.length >= 5) {
+      showToast?.('끼니 컬럼은 최대 5개까지 가능해요');
+      return;
+    }
     if (mealColumns.includes(name)) {
       showToast?.('이미 있는 끼니예요');
       return;
@@ -4648,6 +4673,7 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
   };
 
   const sections = [
+    { k: 'account', label: '계정', emoji: '👤' },
     { k: 'planner', label: '플래너 끼니', emoji: '🗓️' },
     { k: 'cook',    label: '요리 모드', emoji: '🍳' },
     { k: 'notif',   label: '알림', emoji: '🔔' },
@@ -4665,7 +4691,7 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
 
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
         <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>설정</div>
-        <div style={{ fontSize: 12, color: T.text3 }}>변경 사항은 자동 저장돼요</div>
+        <div style={{ fontSize: 12, color: T.text3 }}>필요한 설정은 저장 후 반영돼요</div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 24, alignItems: 'start' }}>
@@ -4685,6 +4711,25 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
         </aside>
 
         <main style={{ background: '#fff', borderRadius: 16, padding: 28, boxShadow: T.shadowDeep, minHeight: 400 }}>
+          {section === 'account' && (
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>계정</div>
+              <DesktopSettingRow label="닉네임" sub={profile?.email || 'user@homecook.app'}
+                right={<div style={{ display: 'flex', gap: 8 }}>
+                  <input value={nicknameDraft} onChange={e => setNicknameDraft(e.target.value)}
+                    maxLength={12} style={{ ...inp, width: 180, padding: '10px 12px', fontSize: 13 }} />
+                  <button onClick={() => {
+                    const nickname = nicknameDraft.trim();
+                    if (nickname.length < 2) {
+                      showToast?.('닉네임은 2자 이상이에요');
+                      return;
+                    }
+                    onUpdateProfile?.({ nickname });
+                    showToast?.('닉네임이 변경됐어요');
+                  }} style={editLinkBtnDsk}>저장</button>
+                </div>} />
+            </div>
+          )}
           {section === 'planner' && (
             <div>
               <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>플래너 끼니 컬럼</div>
@@ -4709,21 +4754,37 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, marginTop: 4 }}>
                   <input value={newMealName} onChange={e => setNewMealName(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') addMealColumn(); }}
-                    placeholder="새 끼니 이름" style={{ ...inp, padding: '12px 14px', fontSize: 13 }} />
-                  <button onClick={addMealColumn} style={{
+                    placeholder="새 끼니 이름" disabled={mealColumns.length >= 5}
+                    style={{ ...inp, padding: '12px 14px', fontSize: 13, background: mealColumns.length >= 5 ? T.surfaceFill : '#fff' }} />
+                  <button onClick={addMealColumn} disabled={mealColumns.length >= 5} style={{
                     padding: '0 16px', borderRadius: 10, border: 'none',
-                    background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer',
+                    background: mealColumns.length >= 5 ? T.border : T.mint,
+                    color: mealColumns.length >= 5 ? T.text4 : '#fff',
+                    fontSize: 13, fontWeight: 800, cursor: mealColumns.length >= 5 ? 'not-allowed' : 'pointer',
                   }}>+ 끼니 컬럼 추가</button>
                 </div>
+                <div style={{ fontSize: 11, color: mealColumns.length >= 5 ? T.red : T.text3, marginTop: 2 }}>{mealColumns.length}/5개</div>
               </div>
             </div>
           )}
           {section === 'cook' && (
             <div>
               <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>요리 모드</div>
-              <DesktopToggleRow label="화면 켜둠" sub="요리 중 화면이 꺼지지 않아요" on={keepAwake} onChange={setKeepAwake} />
-              <DesktopToggleRow label="음성 안내" sub="단계 음성을 읽어줘요 (베타)" on={voice} onChange={setVoice} />
-              <DesktopToggleRow label="타이머 끝나면 다음 단계 자동" sub="타이머 종료 시 자동으로 다음 단계로 넘어갑니다" on={autoNext} onChange={setAutoNext} />
+              <DesktopToggleRow label="화면 켜둠" sub="요리 중 화면이 꺼지지 않아요" on={draftPrefs.keepAwake} onChange={(v) => setDraftPref('keepAwake', v)} />
+              <DesktopToggleRow label="음성 안내" sub="단계 음성을 읽어줘요 (베타)" on={draftPrefs.voice} onChange={(v) => setDraftPref('voice', v)} />
+              <DesktopToggleRow label="타이머 끝나면 다음 단계 자동" sub="타이머 종료 시 자동으로 다음 단계로 넘어갑니다" on={draftPrefs.autoNext} onChange={(v) => setDraftPref('autoNext', v)} />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
+                <button disabled={!prefsDirty} onClick={() => { setDraftPrefs(savedPrefs); showToast?.('환경설정 변경을 취소했어요'); }} style={{
+                  padding: '10px 16px', borderRadius: 10, border: `1px solid ${T.border}`,
+                  background: '#fff', color: prefsDirty ? T.text2 : T.text4, fontSize: 13, fontWeight: 800,
+                  cursor: prefsDirty ? 'pointer' : 'not-allowed',
+                }}>취소</button>
+                <button disabled={!prefsDirty} onClick={() => { setSavedPrefs(draftPrefs); showToast?.('환경설정이 저장됐어요'); }} style={{
+                  padding: '10px 18px', borderRadius: 10, border: 'none',
+                  background: prefsDirty ? T.mint : T.border, color: '#fff', fontSize: 13, fontWeight: 900,
+                  cursor: prefsDirty ? 'pointer' : 'not-allowed',
+                }}>저장</button>
+              </div>
             </div>
           )}
           {section === 'notif' && (
@@ -6544,12 +6605,13 @@ function CookListScreen({ planner, onBack, onStartCook, onOpenMeal }) {
 // ─────────────────────────────────────────────────────
 // 요리하기 진행 페이지
 // ─────────────────────────────────────────────────────
-function CookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete, showToast }) {
-  const meal = mealItems(planner[date]?.[slot])[mealIndex];
-  if (!meal) return <div style={{ padding: 40 }}>끼니를 찾을 수 없어요</div>;
-  const recipe = RECIPES.find(r => r.id === meal.recipeId);
+function CookRunScreen({ date, slot, mealIndex = 0, recipeId, planner, onBack, onComplete, showToast }) {
+  const meal = date && slot ? mealItems(planner[date]?.[slot])[mealIndex] : null;
+  const recipe = RECIPES.find(r => r.id === (recipeId || meal?.recipeId));
+  const independentCook = !!recipeId && !meal;
   const [showConsumed, setShowConsumed] = useState_X(false);
   const [confirmCancel, setConfirmCancel] = useState_X(false);
+  if (!recipe) return <div style={{ padding: 40 }}>레시피를 찾을 수 없어요</div>;
 
   return (
     <div style={{ background: '#0E1014', minHeight: '100%', color: '#fff', display: 'flex', flexDirection: 'column', paddingBottom: 96 }}>
@@ -6560,6 +6622,9 @@ function CookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete,
       }}>
         <button onClick={() => setConfirmCancel(true)} style={{ ...iconBtn, background: 'rgba(255,255,255,0.1)' }}>{Icon.chevL('#fff')}</button>
         <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 11, opacity: 0.65, fontWeight: 700, marginBottom: 2 }}>
+            {independentCook ? '요리 모드 · 독립 요리' : `요리 모드 · ${date} ${slot}`}
+          </div>
           <div style={{ fontSize: 17, opacity: 0.95, fontWeight: 900, fontFamily: T.fontBrand }}>{recipe.name}</div>
           <div style={{ fontSize: 13, fontWeight: 700, fontFamily: T.fontBrand }}>
             {recipe.steps.length}단계
@@ -6617,7 +6682,15 @@ function CookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete,
       {showConsumed && (
         <ConsumedIngredientSheet recipe={recipe}
           onClose={() => setShowConsumed(false)}
-          onConfirm={(picked) => { setShowConsumed(false); onComplete(date, slot, picked, mealIndex); }} />
+          onConfirm={(picked) => {
+            setShowConsumed(false);
+            if (independentCook) {
+              showToast?.('🎉 요리 완료!');
+              onBack();
+            } else {
+              onComplete(date, slot, picked, mealIndex);
+            }
+          }} />
       )}
       {confirmCancel && (
         <ConfirmDialog title="요리를 취소할까요?"
@@ -8163,17 +8236,32 @@ function PantryReflectPicker({ list, onClose, onConfirm }) {
 // SETTINGS — cook-mode prefs + nickname/logout/account-delete
 // ─────────────────────────────────────────────────────────────
 function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAccount, showToast }) {
-  const [keepAwake, setKeepAwake] = useState_W(true);
-  const [voice, setVoice] = useState_W(false);
-  const [autoNext, setAutoNext] = useState_W(false);
+  const defaultPrefs = { keepAwake: true, voice: false, autoNext: false };
+  const [savedPrefs, setSavedPrefs] = useState_W(defaultPrefs);
+  const [draftPrefs, setDraftPrefs] = useState_W(defaultPrefs);
+  const [nicknameSheet, setNicknameSheet] = useState_W(false);
   const [confirmLogout, setConfirmLogout] = useState_W(false);
   const [confirmDelete, setConfirmDelete] = useState_W(false);
   const [mealColumns, setMealColumns] = useState_W(['아침', '점심', '저녁']);
   const [newMealName, setNewMealName] = useState_W('');
+  const prefsDirty = JSON.stringify(savedPrefs) !== JSON.stringify(draftPrefs);
+  const setDraftPref = (key, value) => setDraftPrefs(prev => ({ ...prev, [key]: value }));
+  const savePrefs = () => {
+    setSavedPrefs(draftPrefs);
+    showToast?.('환경설정이 저장됐어요');
+  };
+  const cancelPrefs = () => {
+    setDraftPrefs(savedPrefs);
+    showToast?.('환경설정 변경을 취소했어요');
+  };
 
   const addMealColumn = () => {
     const name = newMealName.trim();
     if (!name) return;
+    if (mealColumns.length >= 5) {
+      showToast?.('끼니 컬럼은 최대 5개까지 가능해요');
+      return;
+    }
     if (mealColumns.includes(name)) {
       showToast?.('이미 있는 끼니예요');
       return;
@@ -8194,10 +8282,21 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 40 }}>
       <AppBar title="설정" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>} />
 
+      <Section title="계정">
+        <Row left={<div>
+          <div style={{ fontSize: 14, color: T.ink, fontWeight: 600 }}>닉네임</div>
+          <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{profile?.nickname || '집밥러버'}</div>
+        </div>} right={<button onClick={() => setNicknameSheet(true)} style={editLinkBtn}>변경</button>} />
+      </Section>
+
       <Section title="요리 모드">
-        <ToggleRow label="화면 켜둠" sub="요리 중 화면이 꺼지지 않아요" on={keepAwake} onChange={setKeepAwake} />
-        <ToggleRow label="음성 안내" sub="단계 음성을 읽어줘요 (베타)" on={voice} onChange={setVoice} />
-        <ToggleRow label="타이머 끝나면 다음 단계 자동" sub="" on={autoNext} onChange={setAutoNext} />
+        <ToggleRow label="화면 켜둠" sub="요리 중 화면이 꺼지지 않아요" on={draftPrefs.keepAwake} onChange={(v) => setDraftPref('keepAwake', v)} />
+        <ToggleRow label="음성 안내" sub="단계 음성을 읽어줘요 (베타)" on={draftPrefs.voice} onChange={(v) => setDraftPref('voice', v)} />
+        <ToggleRow label="타이머 끝나면 다음 단계 자동" sub="" on={draftPrefs.autoNext} onChange={(v) => setDraftPref('autoNext', v)} />
+        <div style={{ display: 'flex', gap: 8, paddingTop: 12 }}>
+          <Button variant="neutral" disabled={!prefsDirty} onClick={cancelPrefs}>취소</Button>
+          <Button full disabled={!prefsDirty} onClick={savePrefs}>저장</Button>
+        </div>
       </Section>
 
       <Section title="플래너 끼니 컬럼">
@@ -8219,11 +8318,17 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 4 }}>
             <input value={newMealName} onChange={e => setNewMealName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addMealColumn(); }}
-              placeholder="새 끼니 이름" style={{ ...inp, padding: '10px 12px', fontSize: 13 }} />
-            <button onClick={addMealColumn} style={{
-              padding: '0 12px', borderRadius: 10, border: 'none', background: T.mint,
-              color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer',
+              placeholder="새 끼니 이름" disabled={mealColumns.length >= 5}
+              style={{ ...inp, padding: '10px 12px', fontSize: 13, background: mealColumns.length >= 5 ? T.surfaceFill : '#fff' }} />
+            <button onClick={addMealColumn} disabled={mealColumns.length >= 5} style={{
+              padding: '0 12px', borderRadius: 10, border: 'none',
+              background: mealColumns.length >= 5 ? T.border : T.mint,
+              color: mealColumns.length >= 5 ? T.text4 : '#fff',
+              fontSize: 12, fontWeight: 800, cursor: mealColumns.length >= 5 ? 'not-allowed' : 'pointer',
             }}>+ 끼니 컬럼 추가</button>
+          </div>
+          <div style={{ fontSize: 11, color: mealColumns.length >= 5 ? T.red : T.text3, marginTop: 2 }}>
+            {mealColumns.length}/5개
           </div>
         </div>
       </Section>
@@ -8246,6 +8351,15 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
           extra={<div style={{
             padding: 10, background: '#FFF5F5', borderRadius: 8, fontSize: 11, color: T.red, lineHeight: 1.5,
           }}>⚠ 7일 이내 재로그인 시 일부 데이터는 복구가 가능합니다 (베타).</div>} />
+      )}
+      {nicknameSheet && (
+        <NicknameEditSheet current={profile?.nickname}
+          onClose={() => setNicknameSheet(false)}
+          onSave={(nickname) => {
+            onUpdateProfile?.({ nickname });
+            setNicknameSheet(false);
+            showToast?.('닉네임이 변경됐어요');
+          }} />
       )}
     </div>
   );
@@ -9257,7 +9371,21 @@ function App() {
 
   // Leftovers
   const reuseLeftover = (date, slot, mealIndex = 0) => {
-    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, status: 'registered' }));
+    setPlanner(prev => {
+      const source = mealItems(prev[date]?.[slot])[mealIndex];
+      if (!source) return prev;
+      return {
+        ...prev,
+        [date]: {
+          ...prev[date],
+          [slot]: appendMealToSlot(prev[date]?.[slot], {
+            recipeId: source.recipeId,
+            servings: source.servings || 1,
+            status: 'registered'
+          })
+        }
+      };
+    });
     showToast('플래너에 다시 올렸어요');
   };
   const markAte = (date, slot, mealIndex = 0) => {
@@ -9415,7 +9543,7 @@ function App() {
       onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
       onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })} />;
   } else if (route.page === 'cook-run') {
-    content = <CookRunScreen date={pa.date} slot={pa.slot} mealIndex={pa.mealIndex || 0} planner={planner}
+    content = <CookRunScreen date={pa.date} slot={pa.slot} mealIndex={pa.mealIndex || 0} recipeId={pa.recipeId} planner={planner}
       onBack={backFromPage} onComplete={markCooked} showToast={showToast} />;
   } else if (route.page === 'meal-detail') {
     content = <MealDetailScreen date={pa.date} slot={pa.slot} planner={planner}
@@ -9468,7 +9596,7 @@ function App() {
       onOpenPlannerAdd={() => setPlannerAdd({ recipeId: route.detail })}
       onOpenSave={() => setSaveModal({ recipeId: route.detail })}
       saved={savedIds.includes(route.detail)}
-      onStartCook={() => showToast('요리하기 — 플래너에 추가 후 이용할 수 있어요')} />;
+      onStartCook={() => goPage('cook-run', { recipeId: route.detail })} />;
 
 
 
@@ -9476,6 +9604,8 @@ function App() {
     content =
     <HomeScreen
       onOpenRecipe={openRecipe}
+      onOpenSave={(recipeId) => setSaveModal({ recipeId })}
+      savedIds={savedIds}
       sortBy={sortBy} setSortBy={setSortBy}
       ingFilter={ingFilter} setIngFilter={setIngFilter}
       onOpenIngredientFilter={() => setIngredientFilterOpen(true)}
@@ -9537,13 +9667,15 @@ function App() {
         onOpenPlannerAdd={() => setPlannerAdd({ recipeId: route.detail })}
         onOpenSave={() => setSaveModal({ recipeId: route.detail })}
         saved={savedIds.includes(route.detail)}
-        onStartCook={() => showToast('요리하기 — 플래너에 추가 후 이용할 수 있어요')}
+        onStartCook={() => goPage('cook-run', { recipeId: route.detail })}
       />
     );
   } else if (route.tab === 'home') {
     desktopContent = (
       <DesktopHome
         onOpenRecipe={openRecipe}
+        onOpenSave={(recipeId) => setSaveModal({ recipeId })}
+        savedIds={savedIds}
         sortBy={sortBy} setSortBy={setSortBy}
         ingFilter={ingFilter} setIngFilter={setIngFilter}
         onOpenIngredientFilter={() => setIngredientFilterOpen(true)}
@@ -9604,7 +9736,7 @@ function App() {
       showToast={showToast} />;
   } else if (route.page === 'cook-run') {
     desktopPageContent = <DesktopCookRunScreen
-      date={pa.date} slot={pa.slot} mealIndex={pa.mealIndex || 0} planner={planner}
+      date={pa.date} slot={pa.slot} mealIndex={pa.mealIndex || 0} recipeId={pa.recipeId} planner={planner}
       onBack={backFromPage} onComplete={markCooked} showToast={showToast} />;
   } else if (route.page === 'mypage-recipebook-detail') {
     desktopPageContent = <DesktopMyPageRecipebookDetail

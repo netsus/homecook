@@ -63,12 +63,18 @@ Evidence:
 
 ## Repair 3: Functional Logic Fixes
 
-- [ ] RECIPE_DETAIL `요리하기`는 플래너 추가 없이 요리모드로 진입한다.
-- [ ] HOME recipe card 우측 상단 저장 버튼은 Save Modal을 연다.
-- [ ] SETTINGS nickname change가 prototype state에 반영된다.
-- [ ] SETTINGS meal column은 최대 5개를 넘지 않는다.
-- [ ] SETTINGS 환경설정에 저장/취소 버튼이 있다.
-- [ ] LEFTOVERS에서 planner add 후 해당 남은요리가 사라지지 않는다.
+- [x] RECIPE_DETAIL `요리하기`는 플래너 추가 없이 요리모드로 진입한다.
+- [x] HOME recipe card 우측 상단 저장 버튼은 Save Modal을 연다.
+- [x] SETTINGS nickname change가 prototype state에 반영된다.
+- [x] SETTINGS meal column은 최대 5개를 넘지 않는다.
+- [x] SETTINGS 환경설정에 저장/취소 버튼이 있다.
+- [x] LEFTOVERS에서 planner add 후 해당 남은요리가 사라지지 않는다.
+
+Evidence:
+
+- `prototype Repair 3 functional smoke OK`
+- Screenshot evidence captured at `.omx/artifacts/wave1-repair3/repair3-390-*.png`
+- Screenshot evidence captured at `.omx/artifacts/wave1-repair3/repair3-320-*.png`
 
 ## Repair 4: Freeze And Service Porting Gate
 

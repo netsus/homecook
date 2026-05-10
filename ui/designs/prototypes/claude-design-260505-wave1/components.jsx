@@ -145,7 +145,7 @@ function StatusPill({ status }) {
 }
 
 // Recipe card — large (used in Home feed)
-function RecipeCard({ recipe, onClick, compact }) {
+function RecipeCard({ recipe, onClick, onSave, saved, compact }) {
   const summaryTags = recipeSummaryTags(recipe);
   const views = recipeViewCount(recipe);
   if (compact) {
@@ -179,12 +179,13 @@ function RecipeCard({ recipe, onClick, compact }) {
         fontSize: 96, position: 'relative'
       }}>
         {recipe.emoji}
-        <div style={{
+        <button aria-label={`${recipe.name} 저장`} onClick={(e) => { e.stopPropagation(); onSave?.(recipe.id); }} style={{
           position: 'absolute', top: 12, right: 12,
           width: 36, height: 36, borderRadius: 18,
           background: 'rgba(255,255,255,0.92)',
+          border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>{Icon.bookmark(false)}</div>
+        }}>{Icon.bookmark(!!saved)}</button>
         {recipe.saves > 2000 &&
         <div style={{
           position: 'absolute', top: 12, left: 12,

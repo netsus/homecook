@@ -425,12 +425,13 @@ function CookListScreen({ planner, onBack, onStartCook, onOpenMeal }) {
 // ─────────────────────────────────────────────────────
 // 요리하기 진행 페이지
 // ─────────────────────────────────────────────────────
-function CookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete, showToast }) {
-  const meal = mealItems(planner[date]?.[slot])[mealIndex];
-  if (!meal) return <div style={{ padding: 40 }}>끼니를 찾을 수 없어요</div>;
-  const recipe = RECIPES.find(r => r.id === meal.recipeId);
+function CookRunScreen({ date, slot, mealIndex = 0, recipeId, planner, onBack, onComplete, showToast }) {
+  const meal = date && slot ? mealItems(planner[date]?.[slot])[mealIndex] : null;
+  const recipe = RECIPES.find(r => r.id === (recipeId || meal?.recipeId));
+  const independentCook = !!recipeId && !meal;
   const [showConsumed, setShowConsumed] = useState_X(false);
   const [confirmCancel, setConfirmCancel] = useState_X(false);
+  if (!recipe) return <div style={{ padding: 40 }}>레시피를 찾을 수 없어요</div>;
 
   return (
     <div style={{ background: '#0E1014', minHeight: '100%', color: '#fff', display: 'flex', flexDirection: 'column', paddingBottom: 96 }}>
@@ -441,6 +442,9 @@ function CookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete,
       }}>
         <button onClick={() => setConfirmCancel(true)} style={{ ...iconBtn, background: 'rgba(255,255,255,0.1)' }}>{Icon.chevL('#fff')}</button>
         <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 11, opacity: 0.65, fontWeight: 700, marginBottom: 2 }}>
+            {independentCook ? '요리 모드 · 독립 요리' : `요리 모드 · ${date} ${slot}`}
+          </div>
           <div style={{ fontSize: 17, opacity: 0.95, fontWeight: 900, fontFamily: T.fontBrand }}>{recipe.name}</div>
           <div style={{ fontSize: 13, fontWeight: 700, fontFamily: T.fontBrand }}>
             {recipe.steps.length}단계
@@ -498,7 +502,15 @@ function CookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete,
       {showConsumed && (
         <ConsumedIngredientSheet recipe={recipe}
           onClose={() => setShowConsumed(false)}
-          onConfirm={(picked) => { setShowConsumed(false); onComplete(date, slot, picked, mealIndex); }} />
+          onConfirm={(picked) => {
+            setShowConsumed(false);
+            if (independentCook) {
+              showToast?.('🎉 요리 완료!');
+              onBack();
+            } else {
+              onComplete(date, slot, picked, mealIndex);
+            }
+          }} />
       )}
       {confirmCancel && (
         <ConfirmDialog title="요리를 취소할까요?"

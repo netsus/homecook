@@ -1200,17 +1200,32 @@ function PantryReflectPicker({ list, onClose, onConfirm }) {
 // SETTINGS — cook-mode prefs + nickname/logout/account-delete
 // ─────────────────────────────────────────────────────────────
 function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAccount, showToast }) {
-  const [keepAwake, setKeepAwake] = useState_W(true);
-  const [voice, setVoice] = useState_W(false);
-  const [autoNext, setAutoNext] = useState_W(false);
+  const defaultPrefs = { keepAwake: true, voice: false, autoNext: false };
+  const [savedPrefs, setSavedPrefs] = useState_W(defaultPrefs);
+  const [draftPrefs, setDraftPrefs] = useState_W(defaultPrefs);
+  const [nicknameSheet, setNicknameSheet] = useState_W(false);
   const [confirmLogout, setConfirmLogout] = useState_W(false);
   const [confirmDelete, setConfirmDelete] = useState_W(false);
   const [mealColumns, setMealColumns] = useState_W(['아침', '점심', '저녁']);
   const [newMealName, setNewMealName] = useState_W('');
+  const prefsDirty = JSON.stringify(savedPrefs) !== JSON.stringify(draftPrefs);
+  const setDraftPref = (key, value) => setDraftPrefs(prev => ({ ...prev, [key]: value }));
+  const savePrefs = () => {
+    setSavedPrefs(draftPrefs);
+    showToast?.('환경설정이 저장됐어요');
+  };
+  const cancelPrefs = () => {
+    setDraftPrefs(savedPrefs);
+    showToast?.('환경설정 변경을 취소했어요');
+  };
 
   const addMealColumn = () => {
     const name = newMealName.trim();
     if (!name) return;
+    if (mealColumns.length >= 5) {
+      showToast?.('끼니 컬럼은 최대 5개까지 가능해요');
+      return;
+    }
     if (mealColumns.includes(name)) {
       showToast?.('이미 있는 끼니예요');
       return;
@@ -1231,10 +1246,21 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 40 }}>
       <AppBar title="설정" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>} />
 
+      <Section title="계정">
+        <Row left={<div>
+          <div style={{ fontSize: 14, color: T.ink, fontWeight: 600 }}>닉네임</div>
+          <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{profile?.nickname || '집밥러버'}</div>
+        </div>} right={<button onClick={() => setNicknameSheet(true)} style={editLinkBtn}>변경</button>} />
+      </Section>
+
       <Section title="요리 모드">
-        <ToggleRow label="화면 켜둠" sub="요리 중 화면이 꺼지지 않아요" on={keepAwake} onChange={setKeepAwake} />
-        <ToggleRow label="음성 안내" sub="단계 음성을 읽어줘요 (베타)" on={voice} onChange={setVoice} />
-        <ToggleRow label="타이머 끝나면 다음 단계 자동" sub="" on={autoNext} onChange={setAutoNext} />
+        <ToggleRow label="화면 켜둠" sub="요리 중 화면이 꺼지지 않아요" on={draftPrefs.keepAwake} onChange={(v) => setDraftPref('keepAwake', v)} />
+        <ToggleRow label="음성 안내" sub="단계 음성을 읽어줘요 (베타)" on={draftPrefs.voice} onChange={(v) => setDraftPref('voice', v)} />
+        <ToggleRow label="타이머 끝나면 다음 단계 자동" sub="" on={draftPrefs.autoNext} onChange={(v) => setDraftPref('autoNext', v)} />
+        <div style={{ display: 'flex', gap: 8, paddingTop: 12 }}>
+          <Button variant="neutral" disabled={!prefsDirty} onClick={cancelPrefs}>취소</Button>
+          <Button full disabled={!prefsDirty} onClick={savePrefs}>저장</Button>
+        </div>
       </Section>
 
       <Section title="플래너 끼니 컬럼">
@@ -1256,11 +1282,17 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 4 }}>
             <input value={newMealName} onChange={e => setNewMealName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addMealColumn(); }}
-              placeholder="새 끼니 이름" style={{ ...inp, padding: '10px 12px', fontSize: 13 }} />
-            <button onClick={addMealColumn} style={{
-              padding: '0 12px', borderRadius: 10, border: 'none', background: T.mint,
-              color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer',
+              placeholder="새 끼니 이름" disabled={mealColumns.length >= 5}
+              style={{ ...inp, padding: '10px 12px', fontSize: 13, background: mealColumns.length >= 5 ? T.surfaceFill : '#fff' }} />
+            <button onClick={addMealColumn} disabled={mealColumns.length >= 5} style={{
+              padding: '0 12px', borderRadius: 10, border: 'none',
+              background: mealColumns.length >= 5 ? T.border : T.mint,
+              color: mealColumns.length >= 5 ? T.text4 : '#fff',
+              fontSize: 12, fontWeight: 800, cursor: mealColumns.length >= 5 ? 'not-allowed' : 'pointer',
             }}>+ 끼니 컬럼 추가</button>
+          </div>
+          <div style={{ fontSize: 11, color: mealColumns.length >= 5 ? T.red : T.text3, marginTop: 2 }}>
+            {mealColumns.length}/5개
           </div>
         </div>
       </Section>
@@ -1283,6 +1315,15 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
           extra={<div style={{
             padding: 10, background: '#FFF5F5', borderRadius: 8, fontSize: 11, color: T.red, lineHeight: 1.5,
           }}>⚠ 7일 이내 재로그인 시 일부 데이터는 복구가 가능합니다 (베타).</div>} />
+      )}
+      {nicknameSheet && (
+        <NicknameEditSheet current={profile?.nickname}
+          onClose={() => setNicknameSheet(false)}
+          onSave={(nickname) => {
+            onUpdateProfile?.({ nickname });
+            setNicknameSheet(false);
+            showToast?.('닉네임이 변경됐어요');
+          }} />
       )}
     </div>
   );

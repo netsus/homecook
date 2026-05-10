@@ -7,7 +7,7 @@ const { useState: useState_H, useMemo: useMemo_H } = React;
 //       "재료로 거르기"→"재료로 검색", SortSheet→SortDropdown, 배너→플래너 탭
 const SORT_OPTIONS = [['latest', '최신순'], ['saves', '저장순'], ['fast', '빠른 조리순']];
 
-function HomeScreen({ onOpenRecipe, sortBy, setSortBy, ingFilter, setIngFilter, onOpenIngredientFilter, ingredientNames = [], onGoPlanner }) {
+function HomeScreen({ onOpenRecipe, onOpenSave, savedIds = [], sortBy, setSortBy, ingFilter, setIngFilter, onOpenIngredientFilter, ingredientNames = [], onGoPlanner }) {
   const [query, setQuery] = useState_H('');
   const [activeTheme, setActiveTheme] = useState_H(null);
 
@@ -156,7 +156,8 @@ function HomeScreen({ onOpenRecipe, sortBy, setSortBy, ingFilter, setIngFilter, 
 
       <div style={{ padding: '0 16px' }}>
         {sorted.map((r) =>
-        <RecipeCard key={r.id} recipe={r} onClick={() => onOpenRecipe(r.id)} />
+        <RecipeCard key={r.id} recipe={r} onClick={() => onOpenRecipe(r.id)}
+          onSave={(id) => onOpenSave?.(id)} saved={savedIds.includes(r.id)} />
         )}
         {sorted.length === 0 &&
         <div style={{ padding: '48px 16px', textAlign: 'center', color: T.text3 }}>

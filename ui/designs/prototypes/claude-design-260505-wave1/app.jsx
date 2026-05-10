@@ -286,7 +286,21 @@ function App() {
 
   // Leftovers
   const reuseLeftover = (date, slot, mealIndex = 0) => {
-    updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, status: 'registered' }));
+    setPlanner(prev => {
+      const source = mealItems(prev[date]?.[slot])[mealIndex];
+      if (!source) return prev;
+      return {
+        ...prev,
+        [date]: {
+          ...prev[date],
+          [slot]: appendMealToSlot(prev[date]?.[slot], {
+            recipeId: source.recipeId,
+            servings: source.servings || 1,
+            status: 'registered'
+          })
+        }
+      };
+    });
     showToast('플래너에 다시 올렸어요');
   };
   const markAte = (date, slot, mealIndex = 0) => {
@@ -444,7 +458,7 @@ function App() {
       onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
       onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })} />;
   } else if (route.page === 'cook-run') {
-    content = <CookRunScreen date={pa.date} slot={pa.slot} mealIndex={pa.mealIndex || 0} planner={planner}
+    content = <CookRunScreen date={pa.date} slot={pa.slot} mealIndex={pa.mealIndex || 0} recipeId={pa.recipeId} planner={planner}
       onBack={backFromPage} onComplete={markCooked} showToast={showToast} />;
   } else if (route.page === 'meal-detail') {
     content = <MealDetailScreen date={pa.date} slot={pa.slot} planner={planner}
@@ -497,7 +511,7 @@ function App() {
       onOpenPlannerAdd={() => setPlannerAdd({ recipeId: route.detail })}
       onOpenSave={() => setSaveModal({ recipeId: route.detail })}
       saved={savedIds.includes(route.detail)}
-      onStartCook={() => showToast('요리하기 — 플래너에 추가 후 이용할 수 있어요')} />;
+      onStartCook={() => goPage('cook-run', { recipeId: route.detail })} />;
 
 
 
@@ -505,6 +519,8 @@ function App() {
     content =
     <HomeScreen
       onOpenRecipe={openRecipe}
+      onOpenSave={(recipeId) => setSaveModal({ recipeId })}
+      savedIds={savedIds}
       sortBy={sortBy} setSortBy={setSortBy}
       ingFilter={ingFilter} setIngFilter={setIngFilter}
       onOpenIngredientFilter={() => setIngredientFilterOpen(true)}
@@ -566,13 +582,15 @@ function App() {
         onOpenPlannerAdd={() => setPlannerAdd({ recipeId: route.detail })}
         onOpenSave={() => setSaveModal({ recipeId: route.detail })}
         saved={savedIds.includes(route.detail)}
-        onStartCook={() => showToast('요리하기 — 플래너에 추가 후 이용할 수 있어요')}
+        onStartCook={() => goPage('cook-run', { recipeId: route.detail })}
       />
     );
   } else if (route.tab === 'home') {
     desktopContent = (
       <DesktopHome
         onOpenRecipe={openRecipe}
+        onOpenSave={(recipeId) => setSaveModal({ recipeId })}
+        savedIds={savedIds}
         sortBy={sortBy} setSortBy={setSortBy}
         ingFilter={ingFilter} setIngFilter={setIngFilter}
         onOpenIngredientFilter={() => setIngredientFilterOpen(true)}
@@ -633,7 +651,7 @@ function App() {
       showToast={showToast} />;
   } else if (route.page === 'cook-run') {
     desktopPageContent = <DesktopCookRunScreen
-      date={pa.date} slot={pa.slot} mealIndex={pa.mealIndex || 0} planner={planner}
+      date={pa.date} slot={pa.slot} mealIndex={pa.mealIndex || 0} recipeId={pa.recipeId} planner={planner}
       onBack={backFromPage} onComplete={markCooked} showToast={showToast} />;
   } else if (route.page === 'mypage-recipebook-detail') {
     desktopPageContent = <DesktopMyPageRecipebookDetail
