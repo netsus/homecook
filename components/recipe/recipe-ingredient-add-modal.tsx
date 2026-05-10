@@ -42,6 +42,7 @@ export function RecipeIngredientAddModal({
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
   const [listState, setListState] = useState<IngredientListState>("loading");
   const requestIdRef = useRef(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -151,9 +152,11 @@ export function RecipeIngredientAddModal({
           <label className="mt-4 flex min-h-11 items-center rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-4">
             <span className="visually-hidden">재료명으로 검색</span>
             <input
+              autoFocus
               className="w-full bg-transparent py-3 text-base outline-none placeholder:text-[var(--muted)]"
               onChange={(event) => setQuery(event.target.value)}
               placeholder="재료 검색"
+              ref={searchInputRef}
               value={query}
             />
           </label>

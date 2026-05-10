@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 
 import { LeftoverPicker } from "@/components/planner/leftover-picker";
 import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
@@ -71,6 +71,7 @@ function AppBar({ onBack }: AppBarProps) {
 // ─── Action Buttons ──────────────────────────────────────────────────────────
 
 interface ActionButtonsProps {
+  onSearchClick: () => void;
   onRecipeBookClick: () => void;
   onPantryClick: () => void;
   onLeftoverClick: () => void;
@@ -78,35 +79,53 @@ interface ActionButtonsProps {
   onYoutubeRecipeClick: () => void;
 }
 
+const MENU_ADD_OPTIONS = [
+  { id: "search", emoji: "🔍", label: "검색", subtitle: "레시피 검색" },
+  { id: "recipebook", emoji: "📖", label: "레시피북", subtitle: "저장한 레시피" },
+  { id: "pantry", emoji: "🧊", label: "팬트리 추천", subtitle: "보유 재료 기반" },
+  { id: "leftover", emoji: "🍱", label: "남은요리", subtitle: "남은 요리에서 추가" },
+  { id: "youtube", emoji: "🎬", label: "유튜브", subtitle: "유튜브에서 가져오기" },
+  { id: "manual", emoji: "✏️", label: "직접 등록", subtitle: "레시피 직접 작성" },
+] as const;
+
 function ActionButtons({
   onLeftoverClick,
   onManualRecipeClick,
   onPantryClick,
   onRecipeBookClick,
+  onSearchClick,
   onYoutubeRecipeClick,
 }: ActionButtonsProps) {
-  const enabledActions = [
-    { id: "recipebook", label: "레시피북", onClick: onRecipeBookClick },
-    { id: "pantry", label: "팬트리", onClick: onPantryClick },
-    { id: "leftover", label: "남은요리", onClick: onLeftoverClick },
-    { id: "manual", label: "직접 등록", onClick: onManualRecipeClick },
-    { id: "youtube", label: "유튜브", onClick: onYoutubeRecipeClick },
-  ];
+  const actionMap: Record<(typeof MENU_ADD_OPTIONS)[number]["id"], () => void> = {
+    search: onSearchClick,
+    recipebook: onRecipeBookClick,
+    pantry: onPantryClick,
+    leftover: onLeftoverClick,
+    manual: onManualRecipeClick,
+    youtube: onYoutubeRecipeClick,
+  };
 
   return (
-    <div className="mt-8 space-y-4">
+    <div className="mt-6 space-y-3">
       <h2 className="text-sm font-semibold text-[var(--muted)]">
-        다른 방법으로 추가
+        추가 방법 선택
       </h2>
-      <div className="grid grid-cols-2 gap-3">
-        {enabledActions.map((action) => (
+      <div className="grid grid-cols-2 gap-3" data-testid="menu-add-option-grid">
+        {MENU_ADD_OPTIONS.map((option) => (
           <button
-            key={action.id}
-            className="flex h-16 items-center justify-center rounded-[12px] border border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--foreground)] hover:bg-[var(--line)]"
-            onClick={action.onClick}
+            key={option.id}
+            className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-left hover:bg-[var(--surface-fill)]"
+            data-testid={`menu-add-option-${option.id}`}
+            onClick={actionMap[option.id]}
             type="button"
           >
-            {action.label}
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-soft)] text-[20px]">
+              {option.emoji}
+            </span>
+            <div className="min-w-0">
+              <p className="text-[14px] font-bold text-[var(--foreground)]">{option.label}</p>
+              <p className="mt-0.5 truncate text-[11px] text-[var(--text-3)]">{option.subtitle}</p>
+            </div>
           </button>
         ))}
       </div>
@@ -122,6 +141,7 @@ export function MenuAddScreen({
   slotName,
 }: MenuAddScreenProps) {
   const router = useRouter();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeCardItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [creationError, setCreationError] = useState<string | null>(null);
@@ -153,6 +173,11 @@ export function MenuAddScreen({
 
   const handleRecipeSelect = useCallback((recipe: RecipeCardItem) => {
     setSelectedRecipe(recipe);
+  }, []);
+
+  const handleSearchOptionClick = useCallback(() => {
+    searchInputRef.current?.focus();
+    searchInputRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" });
   }, []);
 
   const handleServingsConfirm = useCallback(
@@ -368,6 +393,7 @@ export function MenuAddScreen({
               onRecipeSelect={handleRecipeSelect}
               onServingsCancel={handleServingsCancel}
               onServingsConfirm={handleServingsConfirm}
+              searchInputRef={searchInputRef}
               selectedRecipe={selectedRecipe}
             />
           </div>
@@ -384,6 +410,7 @@ export function MenuAddScreen({
             onManualRecipeClick={handleManualRecipeClick}
             onPantryClick={handlePantryClick}
             onRecipeBookClick={handleRecipeBookClick}
+            onSearchClick={handleSearchOptionClick}
             onYoutubeRecipeClick={handleYoutubeRecipeClick}
           />
         </div>
