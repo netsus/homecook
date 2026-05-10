@@ -78,9 +78,9 @@ function LoginScreen({ returnTo, onBack, onLogin }) {
           </div>
         )}
 
-        <div style={{ flex: 1, minHeight: 40 }} />
+        <div style={{ flex: '0 0 28px' }} />
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
           <button onClick={() => onLogin('google', returnTo)} style={socialBtn('#fff', '#191919', `1px solid ${T.border}`)}>
             <span style={{ fontSize: 16 }}>G</span> Google로 시작하기
           </button>
@@ -210,7 +210,7 @@ function RecipeSearchPicker({ title='레시피 검색', slotLabel, onBack, onPic
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{r.name}</div>
               <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
-                ⭐ {r.rating} · {r.minutes}분 · {(r.tags || []).join(' · ')}
+                조회 {formatMetricCount(recipeViewCount(r))} · {r.minutes}분 · {recipeSummaryTags(r).join(' · ')}
               </div>
             </div>
             <span style={{
@@ -286,7 +286,7 @@ function RecipeBookDetailPicker({ bookId, book, slotLabel, onBack, onPick }) {
               }}>{r.emoji}</div>
               <div style={{ padding: 10 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.name}</div>
-                <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{r.minutes}분 · {r.kcal}kcal</div>
+                <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{r.minutes}분 · {r.servings}인분</div>
               </div>
             </button>
           ))}
@@ -374,7 +374,7 @@ function LeftoversScreen({ planner, onBack, onReuse, onGoAteList, onMarkAte, onM
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 40 }}>
       <AppBar title="남은요리" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>}
-        right={<button onClick={onGoAteList} style={mealSwitchBtn}>다먹음</button>} />
+        right={<button onClick={onGoAteList} style={mealSwitchBtn}>다먹은 요리</button>} />
       <div style={{ padding: '14px 16px', background: '#fff', borderBottom: `1px solid ${T.border}` }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, fontFamily: T.fontBrand }}>
           {items.length === 0 ? '남은 요리가 없어요' : `남은 요리 ${items.length}개`}
@@ -432,7 +432,7 @@ const smallSecBtn = {
 const mealSwitchBtn = {
   background: '#fff', border: `1px solid ${T.border}`, cursor: 'pointer',
   fontSize: 11, color: T.mintDeep, fontWeight: 800, borderRadius: 9999,
-  padding: '6px 9px', whiteSpace: 'nowrap', minWidth: 54,
+  padding: '6px 10px', whiteSpace: 'nowrap', minWidth: 72,
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -451,7 +451,7 @@ function AteListScreen({ planner, onBack, onGoLeftovers, onUndoAte, onRecreate }
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%' }}>
       <AppBar title="다먹은 요리" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>}
-        right={<button onClick={onGoLeftovers} style={mealSwitchBtn}>남은요리</button>} />
+        right={<button onClick={onGoLeftovers} style={mealSwitchBtn}>남은 요리</button>} />
       <div style={{ padding: 16 }}>
         {items.length === 0 ? (
           <div style={{ background: '#fff', borderRadius: 12, padding: 40, textAlign: 'center' }}>
@@ -977,12 +977,6 @@ function ShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, onReopen
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 210 }}>
       <AppBar title={list.name} left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>}
         right={<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {completed && (
-            <span style={{
-              fontSize: 11, fontWeight: 700, color: T.mintDeep, background: T.mintSoft,
-              padding: '4px 10px', borderRadius: 9999,
-            }}>완료</span>
-          )}
           <button aria-label="공유" onClick={() => showToast('공유 링크가 복사됐어요')} style={{
             ...iconBtn, background: T.surfaceFill,
           }}>
@@ -1386,11 +1380,11 @@ function MyPageRecipebookTab({ onOpenBook, onCreateBook, onDeleteBook, showToast
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{b.name}</span>
               <span style={{
-                fontSize: 10, color: T.text3, background: T.surfaceFill,
-                padding: '2px 6px', borderRadius: 4, fontWeight: 600,
-              }}>{b.kind === 'saved' ? '저장' : '내 책'}</span>
+                fontSize: 10, color: T.mintDeep, background: T.mintSoft,
+                padding: '2px 6px', borderRadius: 4, fontWeight: 800,
+              }}>{b.count}개 레시피</span>
             </div>
-            <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{b.count}개 레시피</div>
+            <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{b.kind === 'saved' ? '저장' : '내 책'}</div>
           </div>
           {b.kind === 'custom' && (
             <button onClick={() => setMenuId(menuId === b.id ? null : b.id)} style={{
@@ -1778,7 +1772,7 @@ function MyPageRecipebookDetailScreen({ bookId, onBack, onOpenRecipe, onRemoveRe
             <div onClick={() => onOpenRecipe(r.id)} style={{ flex: 1, cursor: 'pointer' }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 2 }}>{r.name}</div>
               <div style={{ fontSize: 11, color: T.text3 }}>
-                ⭐ {r.rating} · {r.minutes}분 · {r.servings}인분
+                조회 {formatMetricCount(recipeViewCount(r))} · {r.minutes}분 · {r.servings}인분
               </div>
             </div>
             {isCustom && (
@@ -1825,11 +1819,13 @@ window.INGREDIENT_FILTER_GROUPS = INGREDIENT_FILTER_GROUPS;
 function IngredientFilterModal({ value = [], onApply, onClose }) {
   const [selected, setSelected] = useState_W(new Set(value));
   const [query, setQuery] = useState_W('');
+  const [activeCat, setActiveCat] = useState_W('전체');
   const toggle = (name) => setSelected(s => {
     const next = new Set(s);
     if (next.has(name)) next.delete(name); else next.add(name);
     return next;
   });
+  const categories = ['전체', ...INGREDIENT_FILTER_GROUPS.map(g => g.cat)];
   return (
     <>
       <div onClick={onClose} style={{
@@ -1848,7 +1844,7 @@ function IngredientFilterModal({ value = [], onApply, onClose }) {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '12px 20px 8px' }}>
           <div style={{ flex: 1, fontSize: 17, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
-            재료로 거르기
+            재료로 검색
           </div>
           <button onClick={onClose} style={{
             width: 32, height: 32, borderRadius: 16, background: T.surfaceFill,
@@ -1867,6 +1863,24 @@ function IngredientFilterModal({ value = [], onApply, onClose }) {
               style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: 14, color: T.ink }} />
           </div>
         </div>
+        {/* Category rail — MVP처럼 검색창 아래에서 카테고리로 재료 목록을 필터링 */}
+        <div style={{
+          display: 'flex', gap: 8, overflowX: 'auto',
+          padding: '0 20px 12px', scrollbarWidth: 'none',
+        }}>
+          {categories.map(cat => {
+            const active = activeCat === cat;
+            return (
+              <button key={cat} onClick={() => setActiveCat(cat)} style={{
+                flexShrink: 0, padding: '8px 13px', borderRadius: 9999,
+                border: active ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
+                background: active ? T.mintSoft : '#fff',
+                color: active ? T.mintDeep : T.text2,
+                fontSize: 12, fontWeight: 800, cursor: 'pointer',
+              }}>{cat}</button>
+            );
+          })}
+        </div>
         {/* Selected summary */}
         {selected.size > 0 && (
           <div style={{
@@ -1882,7 +1896,7 @@ function IngredientFilterModal({ value = [], onApply, onClose }) {
         )}
         {/* Categories */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 16px' }}>
-          {INGREDIENT_FILTER_GROUPS.map(g => {
+          {INGREDIENT_FILTER_GROUPS.filter(g => activeCat === '전체' || g.cat === activeCat).map(g => {
             const filtered = query ? g.ingredients.filter(n => n.includes(query)) : g.ingredients;
             if (filtered.length === 0) return null;
             return (

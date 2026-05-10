@@ -86,22 +86,33 @@ function formatMetricCount(value) {
   return value.toLocaleString();
 }
 
+function recipeViewCount(recipe) {
+  return Math.max(0, Math.round((recipe?.saves || 0) * 3.7 + (recipe?.minutes || 0) * 19));
+}
+
+function recipeSummaryTags(recipe) {
+  const methodLabel = METHOD_COLORS[recipe?.method]?.label;
+  return [recipe?.theme, methodLabel, (recipe?.ingredients || [])[0]?.name]
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
 function RecipeHeroStats({ likes, saves, cooks, liked, saved, onLike, onSave, style }) {
   const itemStyle = {
     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-    color: T.ink, fontSize: 11, fontWeight: 800,
-    textShadow: '0 1px 2px rgba(255,255,255,0.75)'
+    color: '#fff', fontSize: 11, fontWeight: 900,
+    textShadow: '0 1px 4px rgba(0,0,0,0.55), 0 0 10px rgba(0,0,0,0.28)'
   };
   const circleStyle = {
     width: 38, height: 38, borderRadius: 19,
-    background: 'rgba(255,255,255,0.94)', border: 'none',
+    background: 'transparent', border: 'none',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.10)'
+    filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.55))'
   };
   const items = [
-    { key: 'like', icon: Icon.heart(liked), value: likes, label: '좋아요', onClick: onLike, circle: circleStyle },
-    { key: 'save', icon: Icon.bookmark(saved), value: saves, label: '저장', onClick: onSave, circle: circleStyle },
-    { key: 'cook', icon: Icon.chef(T.metricCook), value: cooks, label: '완료', onClick: null, circle: { ...circleStyle, cursor: 'default' } }
+    { key: 'like', icon: Icon.heart(false, '#fff'), value: likes, label: null, onClick: onLike, circle: circleStyle },
+    { key: 'save', icon: Icon.bookmark(false, '#fff'), value: saves, label: null, onClick: onSave, circle: circleStyle },
+    { key: 'cook', icon: Icon.chef('#fff'), value: cooks, label: '요리완료', onClick: null, circle: { ...circleStyle, cursor: 'default' } }
   ];
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9, ...style }}>
@@ -111,7 +122,7 @@ function RecipeHeroStats({ likes, saves, cooks, liked, saved, onLike, onSave, st
             ...it.circle, cursor: it.onClick ? 'pointer' : 'default',
           }}>{it.icon}</button>
           <div style={{ lineHeight: 1 }}>{formatMetricCount(it.value)}</div>
-          <div style={{ fontSize: 10, color: T.text2, fontWeight: 700, lineHeight: 1 }}>{it.label}</div>
+          {it.label && <div style={{ fontSize: 10, color: '#fff', fontWeight: 900, lineHeight: 1 }}>{it.label}</div>}
         </div>
       ))}
     </div>
@@ -135,6 +146,8 @@ function StatusPill({ status }) {
 
 // Recipe card — large (used in Home feed)
 function RecipeCard({ recipe, onClick, compact }) {
+  const summaryTags = recipeSummaryTags(recipe);
+  const views = recipeViewCount(recipe);
   if (compact) {
     return (
       <div onClick={onClick} style={{
@@ -150,7 +163,7 @@ function RecipeCard({ recipe, onClick, compact }) {
         <div style={{ fontSize: 12, color: T.text3, display: 'flex', alignItems: 'center', gap: 4 }}>
           {Icon.clock()}{recipe.minutes}분
           <span style={{ margin: '0 3px' }}>·</span>
-          {Icon.star()}{recipe.rating}
+          {Icon.eye()} 조회 {formatMetricCount(views)}
         </div>
       </div>);
 
@@ -183,15 +196,14 @@ function RecipeCard({ recipe, onClick, compact }) {
       <div style={{ padding: 16 }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: T.ink, marginBottom: 4 }}>{recipe.name}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: T.text3, fontSize: 13, marginBottom: 10 }}>
-          {Icon.star()} <span style={{ color: T.ink, fontWeight: 600 }}>{recipe.rating}</span>
-          <span>({recipe.saves.toLocaleString()})</span>
+          {Icon.eye()} <span style={{ color: T.ink, fontWeight: 600 }}>조회 {formatMetricCount(views)}</span>
           <span>·</span>
           {Icon.clock()} {recipe.minutes}분
           <span>·</span>
           {Icon.users()} {recipe.servings}인
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          {recipe.tags.map((t) =>
+          {summaryTags.map((t) =>
           <span key={t} style={{
             background: T.surfaceSubtle, color: T.text2, fontSize: 12, fontWeight: 500,
             padding: '4px 10px', borderRadius: 9999

@@ -53,7 +53,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
   const sectionsMap = buyItems.reduce((acc, it) => {
     (acc[it.section] = acc[it.section] || []).push(it); return acc;
   }, {});
-  const shoppingListTitle = '장보기 목록 · 2026.05.10';
+  const shoppingListTitle = '2026.05.10 · 장보기 목록';
   const progress = buyItems.length ? Math.round([...checked].filter(k => buyItems.find(n => n.name === k)).length / buyItems.length * 100) : 0;
 
   const toggleSel = (date, slot, mealIndex) => {
@@ -441,7 +441,7 @@ function CookRunScreen({ date, slot, mealIndex = 0, planner, onBack, onComplete,
       }}>
         <button onClick={() => setConfirmCancel(true)} style={{ ...iconBtn, background: 'rgba(255,255,255,0.1)' }}>{Icon.chevL('#fff')}</button>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 11, opacity: 0.6, fontWeight: 600 }}>{recipe.name}</div>
+          <div style={{ fontSize: 17, opacity: 0.95, fontWeight: 900, fontFamily: T.fontBrand }}>{recipe.name}</div>
           <div style={{ fontSize: 13, fontWeight: 700, fontFamily: T.fontBrand }}>
             {recipe.steps.length}단계
           </div>
@@ -559,7 +559,7 @@ function MealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, onStartCo
               </div>
             </button>
             <div style={{ fontSize: 12, color: T.text3, marginBottom: 6 }}>
-              {recipe.minutes}분 · {recipe.kcal}kcal · {meal.servings}인분
+              {recipe.minutes}분 · {meal.servings}인분
             </div>
           </div>
         </div>
@@ -671,7 +671,7 @@ function MyPageSavedScreen({ savedIds, onBack, onOpenRecipe, toggleSaved }) {
               <div style={{ fontSize: 11, color: T.mintDeep, fontWeight: 700 }}>{r.theme}</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, margin: '2px 0' }}>{r.name}</div>
               <div style={{ fontSize: 12, color: T.text3, display: 'flex', gap: 6, alignItems: 'center' }}>
-                {Icon.star()} {r.rating} · {Icon.clock()} {r.minutes}분
+                {Icon.eye()} 조회 {formatMetricCount(recipeViewCount(r))} · {Icon.clock()} {r.minutes}분
               </div>
             </div>
             <button onClick={e => { e.stopPropagation(); toggleSaved(r.id); }} style={{

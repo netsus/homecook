@@ -43,7 +43,7 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, o
           saved={saved}
           onLike={() => setLiked(!liked)}
           onSave={onOpenSave}
-          style={{ position: 'absolute', top: 48, right: 14 }}
+          style={{ position: 'absolute', right: 14, bottom: 18 }}
         />
       </div>
 
@@ -64,7 +64,7 @@ function RecipeDetail({ recipeId, onBack, onOpenPlannerAdd, onOpenSave, saved, o
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: T.text3, fontSize: 12 }}>
           {Icon.clock()} {recipe.minutes}분
           <span>·</span>
-          {Icon.fire()} {recipe.kcal}kcal
+          {Icon.users()} {recipe.servings}인분
         </div>
       </div>
 
