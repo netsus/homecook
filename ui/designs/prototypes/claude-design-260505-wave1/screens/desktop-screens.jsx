@@ -223,7 +223,7 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
 }
 
 // vNext S4 — DesktopPlanner: week nav, 이모지 제거, 상태 배지 제거, 요리하기 제거, 식사추가 다이얼로그
-function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList, onOpenMeal, onGoManual, onGoYtImport, onGoLeftovers }) {
+function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList, onOpenMeal, onGoManual, onGoYtImport, onGoLeftovers, initialMealAdd }) {
   const days = Object.keys(planner);
   const slots = ['아침', '점심', '저녁'];
   // vNext S4 — week navigation (prototype: label만 변경)
@@ -278,6 +278,12 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
     { id: 'youtube',    label: '유튜브에서 가져오기', icon: '🎬' },
     { id: 'manual',     label: '직접 등록',          icon: '✏️' },
   ];
+
+  React.useEffect(() => {
+    if (initialMealAdd?.date && initialMealAdd?.slot) {
+      setMealAddDialog({ date: initialMealAdd.date, slot: initialMealAdd.slot });
+    }
+  }, [initialMealAdd?.nonce]);
 
   return (
     <div>

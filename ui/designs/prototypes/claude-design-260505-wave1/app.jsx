@@ -140,10 +140,56 @@ function App() {
 
   // Routing helpers
   const goTab = (tab) => setRoute({ tab });
-  const openRecipe = (id) => setRoute({ tab: route.tab || 'home', detail: id, page: null, pageArgs: null });
-  const backFromDetail = () => setRoute({ ...route, detail: null, page: null });
-  const goPage = (page, args = {}) => setRoute({ ...route, page, pageArgs: args });
-  const backFromPage = () => setRoute({ ...route, page: null, pageArgs: null });
+  const openRecipe = (id) => setRoute(prev => {
+    const detailReturnTo = prev.page
+      ? { tab: prev.tab || 'home', page: prev.page, pageArgs: prev.pageArgs || null }
+      : null;
+    return { tab: prev.tab || 'home', detail: id, page: null, pageArgs: null, detailReturnTo };
+  });
+  const backFromDetail = () => setRoute(prev => (
+    prev.detailReturnTo
+      ? { ...prev.detailReturnTo, detail: null, detailReturnTo: null }
+      : { ...prev, detail: null, page: null, detailReturnTo: null }
+  ));
+  const goPage = (page, args = {}) => setRoute(prev => {
+    const returnToModal = args.returnToModal || prev.pageArgs?.returnToModal || null;
+    const returnToPage = returnToModal || args.returnToPage
+      ? args.returnToPage || null
+      : prev.page
+        ? { page: prev.page, pageArgs: prev.pageArgs || null }
+        : null;
+    return {
+      ...prev,
+      detail: null,
+      page,
+      pageArgs: {
+        ...args,
+        ...(returnToModal ? { returnToModal } : {}),
+        ...(returnToPage ? { returnToPage } : {}),
+      },
+    };
+  });
+  const backFromPage = () => setRoute(prev => {
+    const args = prev.pageArgs || {};
+    if (args.returnToModal?.type === 'meal-add') {
+      const { date, slot } = args.returnToModal;
+      return {
+        tab: 'planner',
+        page: null,
+        pageArgs: null,
+        restoreMealAdd: { date, slot, nonce: Date.now() },
+      };
+    }
+    if (args.returnToPage?.page) {
+      return {
+        ...prev,
+        detail: null,
+        page: args.returnToPage.page,
+        pageArgs: args.returnToPage.pageArgs || null,
+      };
+    }
+    return { ...prev, detail: null, page: null, pageArgs: null };
+  });
 
   const addPlannerMeal = (date, slot, meal) => {
     setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: appendMealToSlot(p[date]?.[slot], meal) } }));
@@ -419,10 +465,11 @@ function App() {
       onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })}
       onCreateShopping={() => goPage('shopping-create')}
       onCookList={() => goPage('cook-list')}
-      onMenuAdd={(date, slot, mode) => goPage('menu-add', { date, slot, mode })}
-      onGoManual={(date, slot) => goPage('manual-create', { date, slot })}
-      onGoYtImport={(date, slot) => goPage('yt-import', { date, slot })}
-      onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot })}
+      onMenuAdd={(date, slot, mode) => goPage('menu-add', date && slot ? { date, slot, mode, returnToModal: { type: 'meal-add', date, slot } } : { mode })}
+      onGoManual={(date, slot) => goPage('manual-create', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+      onGoYtImport={(date, slot) => goPage('yt-import', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+      onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+      initialMealAdd={route.restoreMealAdd}
       onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })} />;
 
 
@@ -483,10 +530,11 @@ function App() {
         onCreateShopping={() => goPage('shopping-create')}
         onCookList={() => goPage('cook-list')}
         onOpenMeal={(date, slot) => goPage('meal-detail', { date, slot })}
-        onMenuAdd={(date, slot, mode) => goPage('menu-add', date && slot ? { date, slot, mode } : { mode })}
-        onGoManual={(date, slot) => goPage('manual-create', { date, slot })}
-        onGoYtImport={(date, slot) => goPage('yt-import', { date, slot })}
-        onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot })}
+        onMenuAdd={(date, slot, mode) => goPage('menu-add', date && slot ? { date, slot, mode, returnToModal: { type: 'meal-add', date, slot } } : { mode })}
+        onGoManual={(date, slot) => goPage('manual-create', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+        onGoYtImport={(date, slot) => goPage('yt-import', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+        onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+        initialMealAdd={route.restoreMealAdd}
         onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })}
       />
     );

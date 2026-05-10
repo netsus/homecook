@@ -78,7 +78,6 @@ const T = {
 };
 
 window.T = T;
-
 // ===== data.jsx =====
 // Mock data for the homecook_ prototype
 // All recipes use emoji placeholders to avoid hotlinking copyrighted food photos.
@@ -403,7 +402,6 @@ Object.assign(window, {
   makeInitialPlanner, weekDays, WEEK_START, INITIAL_PANTRY, PANTRY_CATEGORIES, PANTRY_IMAGES, PANTRY_ADD_ITEMS, todayIdx,
   mealItems, slotPrimaryMeal, appendMealToSlot, updateMealInSlot, removeMealFromSlot, slotStatusSummary
 });
-
 // ===== components.jsx =====
 // Shared components
 const { useState, useEffect, useRef, useMemo } = React;
@@ -1074,7 +1072,6 @@ function IOSKeyboard({ dark = false }) {
 Object.assign(window, {
   IOSDevice, IOSStatusBar, IOSNavBar, IOSGlassPill, IOSList, IOSListRow, IOSKeyboard
 });
-
 // ===== screens/modals.jsx =====
 // Modals / Sheets — Quiet Kitchen Sheet style (olive base + thin orange)
 function Sheet({ title, onClose, children, footer }) {
@@ -1324,7 +1321,6 @@ function Toast({ message }) {
 }
 
 Object.assign(window, { Sheet, PlannerAddPopup, SavePopup, SortSheet, LoginGate, Toast });
-
 // ===== screens/home.jsx =====
 // Home screen
 const { useState: useState_H, useMemo: useMemo_H } = React;
@@ -1497,7 +1493,6 @@ function HomeScreen({ onOpenRecipe, sortBy, setSortBy, ingFilter, setIngFilter, 
 }
 
 window.HomeScreen = HomeScreen;
-
 // ===== screens/detail.jsx =====
 // Recipe Detail screen
 const { useState: useState_RD } = React;
@@ -1719,7 +1714,6 @@ function scaleQty(qty, scale) {
 }
 
 window.RecipeDetail = RecipeDetail;
-
 // ===== screens/planner.jsx =====
 // vNext S4 — Planner screen: week nav, emoji 제거, 상태 배지 제거, 요리하기 버튼 제거, 식사추가 모달
 const { useState: useState_P } = React;
@@ -1791,7 +1785,7 @@ function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual, onGoYtImport
   );
 }
 
-function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, onOpenMeal, onCreateShopping, onCookList, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers }) {
+function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, onOpenMeal, onCreateShopping, onCookList, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers, initialMealAdd }) {
   const keys = Object.keys(planner);
   const todayK = keys[todayIdx];
   // vNext S4 — week navigation (prototype: label만 변경, 데이터는 동일)
@@ -1838,6 +1832,12 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
 
   // 식사 추가 진입점: 모달 열기
   const openMealAdd = (date, slot) => setMealAddModal({ date, slot });
+
+  React.useEffect(() => {
+    if (initialMealAdd?.date && initialMealAdd?.slot) {
+      setMealAddModal({ date: initialMealAdd.date, slot: initialMealAdd.slot });
+    }
+  }, [initialMealAdd?.nonce]);
 
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
@@ -2036,7 +2036,6 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
 
 window.PlannerScreen = PlannerScreen;
 window.MealAddModal = MealAddModal;
-
 // ===== screens/pantry.jsx =====
 // Pantry screen
 const { useState: useState_PT } = React;
@@ -2275,7 +2274,6 @@ function MyPageScreen({ savedIds, onOpenRecipe, onGoPage }) {
 }
 
 window.MyPageScreen = MyPageScreen;
-
 // ===== screens/desktop-shell.jsx =====
 // Desktop shell — SideNav + content area + optional right rail
 function DesktopShell({ tab, onTab, children, brand = true, showLogin }) {
@@ -2384,7 +2382,6 @@ function DesktopShell({ tab, onTab, children, brand = true, showLogin }) {
 }
 
 window.DesktopShell = DesktopShell;
-
 // ===== screens/desktop-screens.jsx =====
 // Desktop variants of screens — reuse data, rearrange layout.
 const { useMemo: dUseMemo, useState: dUseState } = React;
@@ -2610,7 +2607,7 @@ function DesktopHome({ onOpenRecipe, ingFilter, setIngFilter, sortBy, setSortBy,
 }
 
 // vNext S4 — DesktopPlanner: week nav, 이모지 제거, 상태 배지 제거, 요리하기 제거, 식사추가 다이얼로그
-function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList, onOpenMeal, onGoManual, onGoYtImport, onGoLeftovers }) {
+function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, onCreateShopping, onCookList, onOpenMeal, onGoManual, onGoYtImport, onGoLeftovers, initialMealAdd }) {
   const days = Object.keys(planner);
   const slots = ['아침', '점심', '저녁'];
   // vNext S4 — week navigation (prototype: label만 변경)
@@ -2665,6 +2662,12 @@ function DesktopPlanner({ planner, onOpenRecipe, onOpenPlannerAdd, onMenuAdd, on
     { id: 'youtube',    label: '유튜브에서 가져오기', icon: '🎬' },
     { id: 'manual',     label: '직접 등록',          icon: '✏️' },
   ];
+
+  React.useEffect(() => {
+    if (initialMealAdd?.date && initialMealAdd?.slot) {
+      setMealAddDialog({ date: initialMealAdd.date, slot: initialMealAdd.slot });
+    }
+  }, [initialMealAdd?.nonce]);
 
   return (
     <div>
@@ -8688,10 +8691,56 @@ function App() {
 
   // Routing helpers
   const goTab = (tab) => setRoute({ tab });
-  const openRecipe = (id) => setRoute({ tab: route.tab || 'home', detail: id, page: null, pageArgs: null });
-  const backFromDetail = () => setRoute({ ...route, detail: null, page: null });
-  const goPage = (page, args = {}) => setRoute({ ...route, page, pageArgs: args });
-  const backFromPage = () => setRoute({ ...route, page: null, pageArgs: null });
+  const openRecipe = (id) => setRoute(prev => {
+    const detailReturnTo = prev.page
+      ? { tab: prev.tab || 'home', page: prev.page, pageArgs: prev.pageArgs || null }
+      : null;
+    return { tab: prev.tab || 'home', detail: id, page: null, pageArgs: null, detailReturnTo };
+  });
+  const backFromDetail = () => setRoute(prev => (
+    prev.detailReturnTo
+      ? { ...prev.detailReturnTo, detail: null, detailReturnTo: null }
+      : { ...prev, detail: null, page: null, detailReturnTo: null }
+  ));
+  const goPage = (page, args = {}) => setRoute(prev => {
+    const returnToModal = args.returnToModal || prev.pageArgs?.returnToModal || null;
+    const returnToPage = returnToModal || args.returnToPage
+      ? args.returnToPage || null
+      : prev.page
+        ? { page: prev.page, pageArgs: prev.pageArgs || null }
+        : null;
+    return {
+      ...prev,
+      detail: null,
+      page,
+      pageArgs: {
+        ...args,
+        ...(returnToModal ? { returnToModal } : {}),
+        ...(returnToPage ? { returnToPage } : {}),
+      },
+    };
+  });
+  const backFromPage = () => setRoute(prev => {
+    const args = prev.pageArgs || {};
+    if (args.returnToModal?.type === 'meal-add') {
+      const { date, slot } = args.returnToModal;
+      return {
+        tab: 'planner',
+        page: null,
+        pageArgs: null,
+        restoreMealAdd: { date, slot, nonce: Date.now() },
+      };
+    }
+    if (args.returnToPage?.page) {
+      return {
+        ...prev,
+        detail: null,
+        page: args.returnToPage.page,
+        pageArgs: args.returnToPage.pageArgs || null,
+      };
+    }
+    return { ...prev, detail: null, page: null, pageArgs: null };
+  });
 
   const addPlannerMeal = (date, slot, meal) => {
     setPlanner(p => ({ ...p, [date]: { ...p[date], [slot]: appendMealToSlot(p[date]?.[slot], meal) } }));
@@ -8967,10 +9016,11 @@ function App() {
       onOpenMeal={(d, s) => goPage('meal-detail', { date: d, slot: s })}
       onCreateShopping={() => goPage('shopping-create')}
       onCookList={() => goPage('cook-list')}
-      onMenuAdd={(date, slot, mode) => goPage('menu-add', { date, slot, mode })}
-      onGoManual={(date, slot) => goPage('manual-create', { date, slot })}
-      onGoYtImport={(date, slot) => goPage('yt-import', { date, slot })}
-      onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot })}
+      onMenuAdd={(date, slot, mode) => goPage('menu-add', date && slot ? { date, slot, mode, returnToModal: { type: 'meal-add', date, slot } } : { mode })}
+      onGoManual={(date, slot) => goPage('manual-create', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+      onGoYtImport={(date, slot) => goPage('yt-import', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+      onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+      initialMealAdd={route.restoreMealAdd}
       onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })} />;
 
 
@@ -9031,10 +9081,11 @@ function App() {
         onCreateShopping={() => goPage('shopping-create')}
         onCookList={() => goPage('cook-list')}
         onOpenMeal={(date, slot) => goPage('meal-detail', { date, slot })}
-        onMenuAdd={(date, slot, mode) => goPage('menu-add', date && slot ? { date, slot, mode } : { mode })}
-        onGoManual={(date, slot) => goPage('manual-create', { date, slot })}
-        onGoYtImport={(date, slot) => goPage('yt-import', { date, slot })}
-        onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot })}
+        onMenuAdd={(date, slot, mode) => goPage('menu-add', date && slot ? { date, slot, mode, returnToModal: { type: 'meal-add', date, slot } } : { mode })}
+        onGoManual={(date, slot) => goPage('manual-create', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+        onGoYtImport={(date, slot) => goPage('yt-import', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+        onGoLeftovers={(date, slot) => goPage('leftovers', { date, slot, returnToModal: { type: 'meal-add', date, slot } })}
+        initialMealAdd={route.restoreMealAdd}
         onOpenPlannerAdd={(date, slot) => setPlannerAdd({ recipeId: 'r1', presetDate: date, presetSlot: slot })}
       />
     );
