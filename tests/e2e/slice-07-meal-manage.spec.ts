@@ -120,8 +120,9 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
 
     await expect(page.getByText("김치찌개")).toBeVisible();
     await expect(page.getByText("미역국")).toBeVisible();
-    await expect(page.getByLabel("식사 등록 완료")).toBeVisible();
-    await expect(page.getByLabel("장보기 완료")).toBeVisible();
+    // Wave1: status badges removed visually; verify they do NOT appear
+    await expect(page.getByLabel("식사 등록 완료")).toHaveCount(0);
+    await expect(page.getByLabel("장보기 완료")).toHaveCount(0);
   });
 
   test("shows date and slot name in app bar", async ({ page }) => {
@@ -345,5 +346,62 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     });
 
     expect(hasOverflow).toBe(false);
+  });
+
+  // ── Wave1 acceptance: recipe click → RECIPE_DETAIL ─────────────────────────
+
+  test("clicking recipe title navigates to RECIPE_DETAIL (Wave1)", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installMealsListRoute(page, [
+      buildMeal({ id: "meal-1", recipe_id: "recipe-abc", recipe_title: "김치찌개" }),
+    ]);
+
+    await page.goto(MEAL_SCREEN_URL);
+    await expect(page.getByText("김치찌개")).toBeVisible();
+
+    await page.getByTestId("meal-recipe-link-meal-1").click();
+
+    await expect(page).toHaveURL(/\/recipe\/recipe-abc/);
+  });
+
+  // ── Wave1 acceptance: trash icon + data-testid ─────────────────────────────
+
+  test("delete uses trash icon button with data-testid (Wave1)", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installMealsListRoute(page, [
+      buildMeal({ id: "meal-1", recipe_title: "김치찌개" }),
+    ]);
+
+    await page.goto(MEAL_SCREEN_URL);
+    await expect(page.getByText("김치찌개")).toBeVisible();
+
+    const trashBtn = page.getByTestId("meal-delete-meal-1");
+    await expect(trashBtn).toBeVisible();
+    // Should contain an SVG icon (trash), no text "삭제"
+    await expect(trashBtn.locator("svg")).toBeVisible();
+
+    await trashBtn.click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+  });
+
+  // ── Wave1 acceptance: no status badges/selectors ───────────────────────────
+
+  test("no status badges or selectors visible on meal cards (Wave1)", async ({ page }) => {
+    await setAuthOverride(page, "authenticated");
+    await installMealsListRoute(page, [
+      buildMeal({ id: "meal-1", status: "registered" }),
+      buildMeal({ id: "meal-2", recipe_id: "r2", recipe_title: "파스타", status: "shopping_done" }),
+    ]);
+
+    await page.goto(MEAL_SCREEN_URL);
+    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(page.getByText("파스타")).toBeVisible();
+
+    // Status badge text should not be present on cards
+    await expect(page.getByLabel("식사 등록 완료")).toHaveCount(0);
+    await expect(page.getByLabel("장보기 완료")).toHaveCount(0);
+    await expect(page.getByLabel("요리 완료")).toHaveCount(0);
+    // No status dropdown
+    await expect(page.getByLabel("상태 변경")).toHaveCount(0);
   });
 });

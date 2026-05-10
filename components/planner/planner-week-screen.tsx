@@ -18,7 +18,7 @@ import {
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { usePlannerStore } from "@/stores/planner-store";
-import type { MealStatus, PlannerMealData } from "@/types/planner";
+import type { PlannerMealData } from "@/types/planner";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 
@@ -29,37 +29,9 @@ export interface PlannerWeekScreenProps {
 const RANGE_SHIFT_DAYS = 7;
 const WEEK_PAGE_INDEX_CURRENT = 1;
 const WEEK_SCROLL_SETTLE_MS = 96;
-const CTA_BUTTONS = ["장보기", "요리하기", "남은요리"] as const;
+const CTA_BUTTONS = ["장보기", "남은요리"] as const;
 const PLANNER_CTA_CLASS =
   "min-h-[40px] rounded-[var(--radius-md)] border border-transparent px-2 py-2 text-[11px] font-medium leading-none tracking-[-0.01em] sm:px-3 sm:text-[12px]";
-
-const STATUS_META: Record<
-  MealStatus,
-  { label: string; shortLabel: string; className: string }
-> = {
-  registered: {
-    label: "식사 등록 완료",
-    shortLabel: "등록",
-    className: "bg-[color-mix(in_srgb,var(--brand)_12%,transparent)] text-[var(--brand-deep)]",
-  },
-  shopping_done: {
-    label: "장보기 완료",
-    shortLabel: "장보기",
-    className: "bg-[color-mix(in_srgb,var(--olive)_12%,transparent)] text-[var(--olive)]",
-  },
-  cook_done: {
-    label: "요리 완료",
-    shortLabel: "요리",
-    className: "bg-[color-mix(in_srgb,var(--foreground)_8%,transparent)] text-[var(--foreground)]",
-  },
-};
-
-const SLOT_EMOJI: Record<string, string> = {
-  아침: "🌅",
-  점심: "☀️",
-  간식: "🍪",
-  저녁: "🌙",
-};
 
 function getTodayDateKey() {
   const now = new Date();
@@ -142,7 +114,6 @@ export function PlannerWeekScreen({
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
-  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
 
   const dateKeys = useMemo(
     () => buildDateKeys(rangeStartDate, rangeEndDate),
@@ -363,24 +334,6 @@ export function PlannerWeekScreen({
   }
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia("(min-width: 768px)");
-    const syncViewport = () => {
-      setIsDesktopViewport(mediaQuery.matches);
-    };
-
-    syncViewport();
-    mediaQuery.addEventListener("change", syncViewport);
-
-    return () => {
-      mediaQuery.removeEventListener("change", syncViewport);
-    };
-  }, []);
-
-  useEffect(() => {
     const e2eAuthOverride = readE2EAuthOverride();
 
     if (typeof e2eAuthOverride === "boolean") {
@@ -526,7 +479,7 @@ export function PlannerWeekScreen({
           </div>
           <div
             aria-label="플래너 보조 작업"
-            className="grid w-full grid-cols-3 gap-1 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-1 md:ml-6 md:w-auto md:min-w-[17rem]"
+            className="grid w-full grid-cols-2 gap-1 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-1 md:ml-6 md:w-auto md:min-w-[14rem]"
             role="group"
           >
             {CTA_BUTTONS.map((label) => {
@@ -535,17 +488,6 @@ export function PlannerWeekScreen({
                   <Link
                     className={`${PLANNER_CTA_CLASS} flex items-center justify-center bg-[var(--brand)] text-[var(--surface)] shadow-[0_8px_18px_color-mix(in_srgb,var(--brand)_18%,transparent)]`}
                     href="/shopping/flow"
-                    key={label}
-                  >
-                    {label}
-                  </Link>
-                );
-              }
-              if (label === "요리하기") {
-                return (
-                  <Link
-                    className={`${PLANNER_CTA_CLASS} flex items-center justify-center bg-[var(--brand)] text-[var(--surface)] shadow-[0_8px_18px_color-mix(in_srgb,var(--brand)_18%,transparent)]`}
-                    href="/cooking/ready"
                     key={label}
                   >
                     {label}
@@ -563,17 +505,7 @@ export function PlannerWeekScreen({
                   </Link>
                 );
               }
-              return (
-                <button
-                  key={label}
-                  aria-disabled="true"
-                  className={`${PLANNER_CTA_CLASS} bg-[var(--surface)] text-[var(--muted)] opacity-72`}
-                  disabled
-                  type="button"
-                >
-                  {label}
-                </button>
-              );
+              return null;
             })}
           </div>
         </div>
@@ -637,14 +569,15 @@ export function PlannerWeekScreen({
                   {formatRangeLabel(rangeStartDate, rangeEndDate)}
                 </h3>
               </div>
-              {isDesktopViewport ? (
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                   <button
-                    className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-[12px]"
+                    aria-label="이전 주"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] sm:h-10 sm:w-auto sm:px-4"
                     onClick={() => runPlannerAction(shiftRange(-RANGE_SHIFT_DAYS))}
                     type="button"
                   >
-                    이전 주
+                    <svg className="h-4 w-4 sm:hidden" fill="none" viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeLinecap="round" strokeWidth="2"/></svg>
+                    <span className="hidden text-[12px] font-medium sm:inline">이전 주</span>
                   </button>
                   {!isCurrentRange ? (
                     <button
@@ -652,26 +585,19 @@ export function PlannerWeekScreen({
                       onClick={() => runPlannerAction(resetRange())}
                       type="button"
                     >
-                      이번주로 가기
+                      이번주로
                     </button>
                   ) : null}
                   <button
-                    className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-[12px]"
+                    aria-label="다음 주"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] sm:h-10 sm:w-auto sm:px-4"
                     onClick={() => runPlannerAction(shiftRange(RANGE_SHIFT_DAYS))}
                     type="button"
                   >
-                    다음 주
+                    <svg className="h-4 w-4 sm:hidden" fill="none" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" stroke="currentColor" strokeLinecap="round" strokeWidth="2"/></svg>
+                    <span className="hidden text-[12px] font-medium sm:inline">다음 주</span>
                   </button>
                 </div>
-              ) : !isCurrentRange ? (
-                <button
-                  className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-[12px]"
-                  onClick={() => runPlannerAction(resetRange())}
-                  type="button"
-                >
-                  이번주로 가기
-                </button>
-              ) : null}
             </div>
           </div>
 
@@ -818,12 +744,9 @@ export function PlannerWeekScreen({
                         className="flex min-h-[44px] items-center px-4 py-2.5"
                         href={`/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`}
                       >
-                        {/* Emoji + slot name */}
+                        {/* Slot name (text only, no emoji) */}
                         <div className="w-12 shrink-0 text-center">
-                          <span className="text-[18px] leading-none">
-                            {SLOT_EMOJI[column.name] ?? "🍽️"}
-                          </span>
-                          <p className="mt-0.5 text-[12px] font-semibold text-[var(--text-3)]">
+                          <p className="text-[13px] font-bold text-[var(--foreground)]">
                             {column.name}
                           </p>
                         </div>
@@ -842,8 +765,8 @@ export function PlannerWeekScreen({
                               />
                             ) : (
                               <div className="ml-1 mr-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface-fill)]">
-                                <span className="text-xl">
-                                  {SLOT_EMOJI[column.name] ?? "🍽️"}
+                                <span className="text-[13px] font-bold text-[var(--text-3)]">
+                                  {column.name.charAt(0)}
                                 </span>
                               </div>
                             )}
@@ -860,12 +783,6 @@ export function PlannerWeekScreen({
                                 ) : null}
                               </p>
                               <div className="mt-0.5 flex items-center gap-1.5">
-                                <span
-                                  aria-label={STATUS_META[meal.status].label}
-                                  className={`inline-flex shrink-0 rounded-[4px] px-1.5 py-0.5 text-[10px] font-bold tracking-[-0.02em] ${STATUS_META[meal.status].className}`}
-                                >
-                                  {STATUS_META[meal.status].shortLabel}
-                                </span>
                                 <span className="text-[11px] text-[var(--text-3)]">
                                   {meal.planned_servings}인분
                                 </span>
@@ -879,25 +796,14 @@ export function PlannerWeekScreen({
                                 ) : null}
                               </div>
                             </div>
-                            {/* Chevron */}
-                            <svg
-                              className="ml-2 shrink-0 text-[var(--text-3)]"
-                              fill="none"
-                              height="14"
-                              viewBox="0 0 8 14"
-                              width="8"
-                            >
-                              <path
-                                d="M1 1l6 6-6 6"
-                                stroke="currentColor"
-                                strokeLinecap="round"
-                                strokeWidth="2"
-                              />
-                            </svg>
+                            {/* + 음식 button (replaces chevron) */}
+                            <span className="ml-2 inline-flex shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--brand)] bg-[var(--brand-soft)] px-2 py-1 text-[11px] font-bold text-[var(--brand)]">
+                              + 음식
+                            </span>
                           </>
                         ) : (
-                          <span className="ml-3 flex h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-dashed border-[var(--line)] text-[13px] text-[var(--text-3)]">
-                            + 식사 추가
+                          <span className="ml-3 flex h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--brand)] bg-[var(--brand-soft)] text-[13px] font-bold text-[var(--brand)]">
+                            + 음식
                           </span>
                         )}
                       </Link>
@@ -910,18 +816,6 @@ export function PlannerWeekScreen({
         </section>
       ) : null}
 
-      {/* Floating shopping CTA */}
-      {(screenState === "ready" || screenState === "empty") ? (
-        <div className="fixed bottom-[88px] right-4 z-40">
-          <Link
-            className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--foreground)] px-[18px] py-3 text-[14px] font-bold shadow-[0_4px_12px_rgba(0,0,0,0.10)]"
-            href="/shopping/flow"
-            style={{ color: "var(--surface)" }}
-          >
-            🛒 장보기 목록 만들기
-          </Link>
-        </div>
-      ) : null}
     </div>
   );
 }

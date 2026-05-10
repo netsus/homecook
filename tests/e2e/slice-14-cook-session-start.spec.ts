@@ -218,7 +218,7 @@ test.describe("Slice 14 cook session start", () => {
     await expect(page).toHaveURL(/\/planner/);
   });
 
-  test("planner 요리하기 CTA button links to /cooking/ready", async ({
+  test("planner-level 요리하기 CTA is hidden after Wave1 planner cleanup", async ({
     page,
   }) => {
     await setAuthOverride(page, "authenticated");
@@ -229,8 +229,8 @@ test.describe("Slice 14 cook session start", () => {
 
     await expect(page.getByText("김치찌개")).toBeVisible();
 
-    const cookButton = page.getByRole("link", { name: "요리하기" });
-    await expect(cookButton).toBeVisible();
-    await expect(cookButton).toHaveAttribute("href", "/cooking/ready");
+    await expect(page.getByRole("link", { name: "요리하기" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "장보기", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "남은요리" })).toBeVisible();
   });
 });

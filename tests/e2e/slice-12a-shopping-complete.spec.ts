@@ -247,7 +247,7 @@ test.describe("slice 12a: shopping complete", () => {
       await expect(page.getByText(/완료됨/)).toBeVisible();
     });
 
-    test("should show shopping_done status in planner after completion", async ({ page }) => {
+    test("keeps the completed meal visible in planner without a status badge", async ({ page }) => {
       await setAuthOverride(page, "authenticated");
 
       let listCompleted = false;
@@ -307,7 +307,7 @@ test.describe("slice 12a: shopping complete", () => {
       await page.goto("/planner");
 
       await expect(page.getByText("김치찌개")).toBeVisible();
-      await expect(page.locator('[aria-label="장보기 완료"]')).toBeVisible();
+      await expect(page.locator('[aria-label="장보기 완료"]')).toHaveCount(0);
     });
 
     test("should handle 401 error by redirecting to login", async ({ page }) => {

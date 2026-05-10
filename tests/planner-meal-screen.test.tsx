@@ -215,7 +215,7 @@ describe("MealScreen", () => {
 
   // ── Meal cards ──────────────────────────────────────────────────────────
 
-  it("renders meal cards with recipe title and status badge", async () => {
+  it("renders meal cards with recipe title and hides status badges", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchMeals.mockResolvedValue({
       items: [
@@ -232,9 +232,9 @@ describe("MealScreen", () => {
     });
     expect(screen.getByText("미역국")).toBeTruthy();
     expect(screen.getByText("시금치볶음")).toBeTruthy();
-    expect(screen.getByLabelText("식사 등록 완료")).toBeTruthy();
-    expect(screen.getByLabelText("장보기 완료")).toBeTruthy();
-    expect(screen.getByLabelText("요리 완료")).toBeTruthy();
+    expect(screen.queryByLabelText("식사 등록 완료")).toBeNull();
+    expect(screen.queryByLabelText("장보기 완료")).toBeNull();
+    expect(screen.queryByLabelText("요리 완료")).toBeNull();
   });
 
   it("shows the app bar title heading", async () => {

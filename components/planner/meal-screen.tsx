@@ -11,7 +11,6 @@ import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import type { MealListItemData } from "@/types/meal";
-import type { MealStatus } from "@/types/planner";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type ScreenState = "loading" | "ready" | "empty" | "error";
@@ -29,20 +28,7 @@ export interface MealScreenProps {
   initialAuthenticated: boolean;
 }
 
-const STATUS_META: Record<MealStatus, { label: string; className: string }> = {
-  registered: {
-    label: "식사 등록 완료",
-    className: "bg-[var(--muted)] text-[var(--surface)]",
-  },
-  shopping_done: {
-    label: "장보기 완료",
-    className: "bg-[var(--brand)] text-white",
-  },
-  cook_done: {
-    label: "요리 완료",
-    className: "bg-[var(--olive)] text-white",
-  },
-};
+// Status data preserved for logic; visual badges removed per Wave1 port.
 
 function formatDateLong(planDate: string) {
   const date = new Date(`${planDate}T00:00:00.000Z`);
@@ -134,19 +120,7 @@ function LoadingSkeleton() {
   );
 }
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: MealStatus }) {
-  const meta = STATUS_META[status];
-  return (
-    <span
-      aria-label={meta.label}
-      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${meta.className}`}
-    >
-      {meta.label}
-    </span>
-  );
-}
+// Status badge visually removed per Wave1 port. Status data preserved in meal object.
 
 // ─── Meal card ────────────────────────────────────────────────────────────────
 
@@ -157,6 +131,7 @@ interface MealCardProps {
   onStepDown: () => void;
   onStepUp: () => void;
   onDelete: () => void;
+  onRecipeClick: () => void;
 }
 
 function MealCard({
@@ -166,6 +141,7 @@ function MealCard({
   onStepDown,
   onStepUp,
   onDelete,
+  onRecipeClick,
 }: MealCardProps) {
   const isMin = meal.planned_servings <= 1;
 
@@ -176,18 +152,34 @@ function MealCard({
   return (
     <article
       aria-label={`${meal.recipe_title} 식사 카드`}
-      className={`rounded-[16px] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)] transition-opacity ${isPending ? "opacity-60" : ""}`}
+      className={`relative rounded-[16px] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)] transition-opacity ${isPending ? "opacity-60" : ""}`}
     >
-      {/* Recipe title */}
-      <p className="truncate text-base font-bold text-[var(--foreground)]">{meal.recipe_title}</p>
+      {/* Delete trash icon — top-right */}
+      <button
+        aria-label={`${meal.recipe_title} 삭제`}
+        className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-fill)] text-[var(--muted)] disabled:opacity-40"
+        data-testid={`meal-delete-${meal.id}`}
+        disabled={isPending}
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+        type="button"
+      >
+        <svg fill="none" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
+        </svg>
+      </button>
 
-      {/* Status badge */}
-      <div className="mt-1.5">
-        <StatusBadge status={meal.status} />
-      </div>
+      {/* Recipe title — clickable to RECIPE_DETAIL */}
+      <button
+        className="block w-full truncate pr-12 text-left text-base font-bold text-[var(--foreground)] hover:text-[var(--brand)]"
+        data-testid={`meal-recipe-link-${meal.id}`}
+        onClick={onRecipeClick}
+        type="button"
+      >
+        {meal.recipe_title}
+      </button>
 
-      {/* Stepper + delete row */}
-      <div className="mt-3 flex items-center justify-between">
+      {/* Stepper row */}
+      <div className="mt-3 flex items-center">
         {/* Stepper */}
         <div className="flex items-center gap-2" onClick={stopProp} role="group" aria-label="인분 조절">
           <button
@@ -217,17 +209,6 @@ function MealCard({
             <span aria-hidden="true" className="text-lg font-bold leading-none">+</span>
           </button>
         </div>
-
-        {/* Delete button */}
-        <button
-          aria-label={`${meal.recipe_title} 삭제`}
-          className="flex h-11 min-w-[44px] items-center justify-center px-2 text-sm text-[var(--muted)] disabled:opacity-40"
-          disabled={isPending}
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          type="button"
-        >
-          삭제
-        </button>
       </div>
 
       {/* 409 conflict inline error */}
@@ -620,6 +601,7 @@ export function MealScreen({
                       isPending={pendingMealIds.has(meal.id)}
                       meal={meal}
                       onDelete={() => handleDeleteTap(meal.id)}
+                      onRecipeClick={() => router.push(`/recipe/${meal.recipe_id}`)}
                       onStepDown={() => handleStepperTap(meal, -1)}
                       onStepUp={() => handleStepperTap(meal, 1)}
                     />

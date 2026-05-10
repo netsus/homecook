@@ -12,6 +12,7 @@ export interface RecipeSearchPickerProps {
   onRecipeSelect: (recipe: RecipeCardItem) => void;
   onServingsConfirm: (servings: number) => void;
   onServingsCancel: () => void;
+  searchInputRef?: React.Ref<HTMLInputElement>;
 }
 
 type SearchState = "idle" | "loading" | "ready" | "empty" | "error";
@@ -23,9 +24,16 @@ interface SearchInputProps {
   onChange: (value: string) => void;
   onSearch: () => void;
   disabled: boolean;
+  inputRef?: React.Ref<HTMLInputElement>;
 }
 
-function SearchInput({ value, onChange, onSearch, disabled }: SearchInputProps) {
+function SearchInput({
+  value,
+  onChange,
+  onSearch,
+  disabled,
+  inputRef,
+}: SearchInputProps) {
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") {
@@ -44,6 +52,7 @@ function SearchInput({ value, onChange, onSearch, disabled }: SearchInputProps) 
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="레시피 이름으로 검색"
+        ref={inputRef}
         type="text"
         value={value}
       />
@@ -179,6 +188,7 @@ export function RecipeSearchPicker({
   onRecipeSelect,
   onServingsConfirm,
   onServingsCancel,
+  searchInputRef,
 }: RecipeSearchPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchState, setSearchState] = useState<SearchState>("idle");
@@ -225,6 +235,7 @@ export function RecipeSearchPicker({
       <div className="space-y-4">
         <SearchInput
           disabled={searchState === "loading"}
+          inputRef={searchInputRef}
           onChange={setSearchQuery}
           onSearch={handleSearch}
           value={searchQuery}

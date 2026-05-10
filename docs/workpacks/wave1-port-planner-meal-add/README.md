@@ -128,19 +128,19 @@ PLANNER_WEEK, 식사추가 옵션 모달(MENU_ADD), 직접등록(MANUAL_CREATE),
   - `ui/designs/evidence/wave1-port-planner-meal-add/meal-screen-default.png`
   - `ui/designs/evidence/wave1-port-planner-meal-add/meal-screen-narrow.png`
   - `ui/designs/evidence/wave1-port-planner-meal-add/meal-screen-recipe-click.png`
-- Authority status: `pending-review`
+- Authority status: `reviewed`
 - Notes:
   - PLANNER_WEEK는 anchor screen이므로 authority review 필수
   - MENU_ADD, MANUAL_CREATE, MEAL_SCREEN은 anchor screen은 아니지만 PLANNER_WEEK에서 진입하는 핵심 흐름이므로 evidence에 포함
   - `design-generator` / `design-critic`: 변경이 프로토타입 기준의 정리(이모지/배지 제거, CTA 재배치, 2열 그리드)이므로 screenshot evidence 기반 authority로 충분. Stage 4에서 재판단.
   - authority report: `ui/designs/authority/WAVE1_PLANNER_MEAL_ADD-authority.md`
-  - Claude final authority gate 통과 필수 (blocker 0개 확인 후 `confirmed`)
+  - Claude final authority gate PASS, blocker 0, 2026-05-10
 
 ## Design Status
 
-- [x] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
+- [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review)
-- [ ] 확정 (confirmed)
+- [x] 확정 (confirmed) — Claude final authority gate PASS, blocker 0, 2026-05-10
 - [ ] N/A
 
 ## Source Links
@@ -205,21 +205,21 @@ PLANNER_WEEK, 식사추가 옵션 모달(MENU_ADD), 직접등록(MANUAL_CREATE),
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > Stage 2는 N/A (UI-only slice). Stage 4~6에서 프론트/QA/디자인/closeout 항목을 닫는다.
 
-- [ ] PLANNER_WEEK 끼니 컬럼 이모티콘 제거 <!-- omo:id=planner-emoji-removal;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK recipe status badge 시각적 제거 <!-- omo:id=planner-badge-removal;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK `+ 음식` 버튼 위치/강조 변경 <!-- omo:id=planner-add-food-button;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK `장보기 목록 만들기` → `장보기` 문구 변경 <!-- omo:id=planner-shopping-label;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK planner-level `요리하기` 버튼 제거 <!-- omo:id=planner-cook-button-removal;stage=4;scope=frontend;review=5,6 -->
-- [ ] PLANNER_WEEK 주간 이동(이전주/다음주) UI 구현 <!-- omo:id=planner-week-navigation;stage=4;scope=frontend;review=5,6 -->
-- [ ] MENU_ADD 2열 옵션 그리드 레이아웃 <!-- omo:id=menu-add-grid-layout;stage=4;scope=frontend;review=5,6 -->
-- [ ] MENU_ADD `남은 요리에서 추가` 옵션 포함 <!-- omo:id=menu-add-leftover-option;stage=4;scope=frontend;review=5,6 -->
-- [ ] MANUAL_CREATE 재료 추가 모달 흐름 정리 <!-- omo:id=manual-create-ingredient-modal;stage=4;scope=frontend;review=5,6 -->
-- [ ] MEAL_SCREEN 레시피명 클릭 → RECIPE_DETAIL 이동 <!-- omo:id=meal-recipe-click;stage=4;scope=frontend;review=5,6 -->
-- [ ] MEAL_SCREEN 진행상태 selector 제거 <!-- omo:id=meal-status-selector-removal;stage=4;scope=frontend;review=5,6 -->
-- [ ] MEAL_SCREEN 삭제 아이콘 정리 <!-- omo:id=meal-delete-icon;stage=4;scope=frontend;review=5,6 -->
-- [ ] `loading / empty / error / unauthorized` 상태 점검 <!-- omo:id=planner-state-ui;stage=4;scope=frontend;review=5,6 -->
-- [ ] 이 슬라이스의 Vitest / Playwright 자동화 범위 구분 <!-- omo:id=planner-test-split;stage=4;scope=frontend;review=5,6 -->
-- [ ] mobile 390/320 PLANNER_WEEK screenshot evidence <!-- omo:id=planner-screenshot;stage=4;scope=frontend;review=5,6 -->
-- [ ] mobile 390/320 MENU_ADD/MEAL_SCREEN screenshot evidence <!-- omo:id=menu-meal-screenshot;stage=4;scope=frontend;review=5,6 -->
-- [ ] `pnpm verify:frontend` 통과 <!-- omo:id=planner-verify-frontend;stage=4;scope=frontend;review=6 -->
-- [ ] authority report 생성 <!-- omo:id=planner-authority-report;stage=5;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK 끼니 컬럼 이모티콘 제거 <!-- omo:id=planner-emoji-removal;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK recipe status badge 시각적 제거 <!-- omo:id=planner-badge-removal;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK `+ 음식` 버튼 위치/강조 변경 <!-- omo:id=planner-add-food-button;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK `장보기 목록 만들기` → `장보기` 문구 변경 <!-- omo:id=planner-shopping-label;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK planner-level `요리하기` 버튼 제거 <!-- omo:id=planner-cook-button-removal;stage=4;scope=frontend;review=5,6 -->
+- [x] PLANNER_WEEK 주간 이동(이전주/다음주) UI 구현 <!-- omo:id=planner-week-navigation;stage=4;scope=frontend;review=5,6 -->
+- [x] MENU_ADD 2열 옵션 그리드 레이아웃 <!-- omo:id=menu-add-grid-layout;stage=4;scope=frontend;review=5,6 -->
+- [x] MENU_ADD `남은 요리에서 추가` 옵션 포함 <!-- omo:id=menu-add-leftover-option;stage=4;scope=frontend;review=5,6 -->
+- [x] MANUAL_CREATE 재료 추가 모달 흐름 정리 <!-- omo:id=manual-create-ingredient-modal;stage=4;scope=frontend;review=5,6 -->
+- [x] MEAL_SCREEN 레시피명 클릭 → RECIPE_DETAIL 이동 <!-- omo:id=meal-recipe-click;stage=4;scope=frontend;review=5,6 -->
+- [x] MEAL_SCREEN 진행상태 selector 제거 <!-- omo:id=meal-status-selector-removal;stage=4;scope=frontend;review=5,6 -->
+- [x] MEAL_SCREEN 삭제 아이콘 정리 <!-- omo:id=meal-delete-icon;stage=4;scope=frontend;review=5,6 -->
+- [x] `loading / empty / error / unauthorized` 상태 점검 <!-- omo:id=planner-state-ui;stage=4;scope=frontend;review=5,6 -->
+- [x] 이 슬라이스의 Vitest / Playwright 자동화 범위 구분 <!-- omo:id=planner-test-split;stage=4;scope=frontend;review=5,6 -->
+- [x] mobile 390/320 PLANNER_WEEK screenshot evidence <!-- omo:id=planner-screenshot;stage=4;scope=frontend;review=5,6 -->
+- [x] mobile 390/320 MENU_ADD/MEAL_SCREEN screenshot evidence <!-- omo:id=menu-meal-screenshot;stage=4;scope=frontend;review=5,6 -->
+- [x] `pnpm verify:frontend` 통과 <!-- omo:id=planner-verify-frontend;stage=4;scope=frontend;review=6 -->
+- [x] authority report 생성 <!-- omo:id=planner-authority-report;stage=4;scope=frontend;review=5,6 -->
