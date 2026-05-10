@@ -92,6 +92,7 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `wave1-port-shopping-cooking` | merged | SHOPPING_FLOW 프리뷰 정리, SHOPPING_DETAIL 구매/제외 섹션·버튼 배치·title 표시, COOK_MODE 단일 스크롤 뷰·control 제거·하단 sticky |
 | `wave1-port-pantry` | merged | PANTRY 추가/묶음 추가 CTA, category chip rail, 보유 재료 카드, delete mode checkbox, selected items bottom `제거하기` CTA |
 | `wave1-port-account-library-leftovers` | merged | MYPAGE/SETTINGS polish, LEFTOVERS/ATE_LIST 버튼·문구 정리, RECIPEBOOK_DETAIL custom book menu |
+| `wave1-prototype-repair` | planned | service 재포팅 전 `claude-design-260505-wave1` prototype의 navigation, modal/interaction, visual, functional-logic 문제를 repair하고 fixed prototype을 freeze |
 
 ## Design Decision Gates
 

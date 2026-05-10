@@ -3,11 +3,15 @@
 > 목적: `ui/designs/prototypes/claude-design-260505-wave1`에 정리된 앱/웹 디자인 개선사항을 실제 서비스로 작은 vertical slice 단위로 포팅하기 위한 새 세션용 실행 계획이다.
 > 작성일: 2026-05-10 KST
 > 기준 프로토타입: `ui/designs/prototypes/claude-design-260505-wave1`
-> 핵심 원칙: 공식 문서와 실제 API 계약을 넘는 변경은 먼저 contract-evolution 문서/PR로 닫고, FE는 그 계약을 그대로 소비한다.
+> 핵심 원칙: 프로토타입은 visual/layout source of truth이고, 기능 동작은 현재 MVP 구현과 공식 문서가 source of truth다. 공식 문서와 실제 API 계약을 넘는 변경은 먼저 contract-evolution 문서/PR로 닫고, FE는 그 계약을 그대로 소비한다.
 
 ## Current Status
 
 - Wave1 vNext prototype은 최신 기준 프로토타입으로 사용한다.
+- 2026-05-10 사용자 결정: 기존 Wave1 포팅 PR들은 merge 이력으로만 본다. 사용자가 원하는 다음 작업은 **전체 Wave1 slice A~F를 다시 prototype 기준으로 디자인 재감사/재포팅**하는 것이다.
+  - 기존 PR #373, #374, #376, #379, #381, #383의 screenshot/authority 결과는 historical evidence일 뿐, 현재 visual parity 완료 근거로 재사용하지 않는다.
+  - 각 slice는 기존 MVP 기능과 공식 계약을 보존하면서, `claude-design-260505-wave1`와 실제 서비스 화면의 visual/layout 차이를 다시 확인하고 필요한 만큼 수정한다.
+  - Slice F의 PR #383 문제는 전체 재포팅이 필요한 대표 사례이며, 다음 계획이 Slice F에만 한정된다는 뜻이 아니다.
 - `planner-column-customization`은 이미 완료됐다.
   - contract-evolution PR: #367
   - Stage 1 docs PR: #368
@@ -16,30 +20,31 @@
   - 결과: 신규 기본 끼니 컬럼은 `아침 / 점심 / 저녁` 3개, SETTINGS에서 1~5개 범위로 이름 변경/추가/삭제 가능.
 - 따라서 이후 포팅 slice에서 플래너 컬럼 3개 기본값과 SETTINGS 컬럼 관리는 다시 만들지 말고, 이미 merged된 계약과 컴포넌트를 소비한다.
 - 기존 `docs/workpacks/baemin-prototype-home-porting`과 일부 HOME 범위가 겹칠 수 있다. HOME 관련 slice 착수 전 현재 구현과 해당 workpack 상태를 먼저 확인한다.
-- **Slice A `wave1-port-foundation`**: merged.
+- **Slice A `wave1-port-foundation`**: merged, but visual parity re-audit required.
   - Stage 1 docs PR: #372
   - Stage 4~6 frontend/closeout PR: #373
   - 결과: AppShell bottom-safe 조건부, Button/Chip 44px 터치 타겟, Card interactive cursor, ModalFooterActions min-h, SelectionChipRail px-1, SortDropdown primitive 신규 도입. Claude final authority gate pass, blocker 0.
-- **Slice B `wave1-port-discovery-detail`**: merged.
+- **Slice B `wave1-port-discovery-detail`**: merged, but visual parity re-audit required.
   - Stage 1 docs PR: #374
   - 결과: HOME header 단순화, sort dropdown 전환, filter chip 재배치, RECIPE_DETAIL 별점 제거/행동 metric/CTA 재구성, save modal 정리, login provider 축소. Stage 2 N/A.
-- **Slice C `wave1-port-planner-meal-add`**: merged.
+- **Slice C `wave1-port-planner-meal-add`**: merged, but visual parity re-audit required.
   - Stage 1 docs PR: #376
   - 결과: PLANNER_WEEK 주간 이동/이모지·배지 제거/CTA 정리, MENU_ADD 2열 옵션, MANUAL_CREATE 재료 모달, MEAL_SCREEN 정리. Stage 2 N/A.
-- **Slice D `wave1-port-shopping-cooking`**: merged.
+- **Slice D `wave1-port-shopping-cooking`**: merged, but visual parity re-audit required.
   - Stage 1 docs PR: #378
   - Stage 4~6 frontend/closeout PR: #379
   - 결과: SHOPPING_FLOW/SHOPPING_DETAIL/COOK_MODE Wave1 UI-only 포팅, authority blocker 0.
-- **Slice E `wave1-port-pantry`**: merged.
+- **Slice E `wave1-port-pantry`**: merged, but visual parity re-audit required.
   - Stage 1 docs PR: #380
   - Stage 4~6 frontend/closeout PR: #381
   - 결과: PANTRY/add sheet/bundle picker/multi-delete Wave1 UI-only 포팅, authority blocker 0. `ingredients.image_url`은 contract-evolution 후보로 분리.
-- **Slice F `wave1-port-account-library-leftovers`**: Stage 4~6 closeout projection.
+- **Slice F `wave1-port-account-library-leftovers`**: merged, but visual parity repair required.
   - Stage 1 docs PR: #382
   - Stage 4~6 frontend/closeout PR: #383
   - Stage 4~6 frontend/closeout branch: `feature/fe-wave1-port-account-library-leftovers`
   - Claude Stage 1 handoff attempted via resume session `3f4ca745-db71-4392-a3f1-4e3c4493e9bc`; provider limit reset 13:20 Asia/Seoul blocked editing, so Codex fallback prepared Stage 1 docs and frontend closeout.
   - 결과: MYPAGE visible settings entry, LEFTOVERS/ATE_LIST clipping/copy polish, ATE_LIST uneat API preserved with `남은요리로 복귀` label, RECIPEBOOK_DETAIL custom book menu, 390/320 screenshot evidence, authority blocker 0, `pnpm verify:frontend` passed.
+  - 2026-05-10 사용자 확인: #383 closeout은 기능 보존과 일부 polish는 통과했지만, 확정 디자인 소스 `ui/designs/prototypes/claude-design-260505-wave1`와 화면 구조/카드 밀도/배민 톤/섹션 구성/모바일·데스크톱 layout이 충분히 맞지 않는다. #383 authority/evidence는 visual parity 완료 근거로 재사용하지 말고, PR #383 보정 작업으로 다시 캡처/비교/수정한다.
 
 ## Read First
 
@@ -64,6 +69,7 @@
 - production 기준 brand token은 `docs/design/design-tokens.md`와 `app/globals.css`의 승인 값을 따른다.
 - prototype의 mint/Jua/font/asset은 바로 production 계약이 아니다.
 - `ui/designs/BAEMIN_STYLE_DIRECTION.md`의 `prototype parity`, `prototype-derived design`, `out of prototype scope` 용어만 사용한다.
+- 이번 보정에서 사용자가 "배민 민트 톤까지 prototype과 맞춘다"고 명시적으로 승인하지 않는 한, 민트/Jua/프로토타입 전용 asset을 production token으로 승격하지 않는다. 색상 차이가 visual parity 점수에 영향을 주면 "approved token divergence"로 기록하거나 별도 design-token decision 후보로 분리한다.
 
 프로토타입 쪽 참고 파일:
 
@@ -75,6 +81,19 @@
 
 ## Working Contract
 
+- **Visual vs Functional Source of Truth**
+  - `claude-design-260505-wave1`는 화면 구조, 카드 밀도, spacing, hierarchy, 섹션 구성, responsive layout, visual tone의 기준이다.
+  - 현재 MVP 구현과 공식 문서는 기능 동작, API 호출, request/response payload, route navigation, submit 동작, auth/permission, loading/empty/error/unauthorized/read-only 상태, 상태 전이의 기준이다.
+  - 현재 구현의 낡은 시각 형태는 방어하지 않는다. 하지만 잘 동작하는 기능은 regression test로 고정하고 보존한다.
+  - 프로토타입에서 버튼이 미연결, demo-only, placeholder, broken behavior인 경우 그 동작을 복사하지 않는다. UI 모양만 참고하고 `onClick`/`onSubmit`/API 연결은 현재 서비스의 정상 동작을 유지한다.
+  - 테스트가 UI selector 변경 때문에 깨지면 기능 기대값은 유지하고 selector를 새 UI에 맞게 조정한다. 디자인 변경을 이유로 기능 테스트를 삭제하지 않는다.
+- **전체 Wave1 재포팅 원칙**
+  - 서비스 재포팅 대상은 Slice A~F 전체다. 특정 slice만 먼저 실패가 확인됐더라도, 이전 merge 상태를 전체 완료 판정으로 간주하지 않는다.
+  - 단, 2026-05-11 사용자 QA에서 prototype 자체의 화면이동/동작/디자인 문제가 확인됐으므로, 서비스 재포팅을 시작하기 전에 **Prototype Repair 0~4를 먼저 완료하고 fixed prototype을 freeze**한다.
+  - 각 slice는 "현재 서비스 screenshot -> prototype reference screenshot -> 차이표 -> 기능 보존 테스트 -> 디자인 수정 -> screenshot 재캡처 -> visual verdict" 순서로 닫는다.
+  - slice별 completion은 PR merge 여부가 아니라 prototype 대비 visual verdict 90점 이상, blocker 0개, 기능 regression 통과로 판단한다.
+  - 한 PR에 모든 화면을 몰아넣지 않는다. 기존 vertical slice 경계 A~F를 유지하고, 각 slice repair PR을 작고 검증 가능하게 만든다.
+  - Foundation Slice A는 공통 shell/component/tokens 영향이 크므로 먼저 재감사한다. 다만 기능을 깨는 전역 리팩터링은 하지 않고, 이후 slice에서 필요한 공통 primitive만 보수한다.
 - product slice는 Stage 1~6 흐름을 따른다.
 - Stage 1은 Claude가 workpack README/acceptance/automation-spec, `.workflow-v2/work-items/<slice>.json`, `.workflow-v2/status.json` matching item을 작성하고 `docs/workpacks/README.md`에 해당 slice row와 Status를 맞춘다.
 - Stage 2는 Codex가 BE 변경이 필요한 경우만 수행한다. UI-only 또는 기존 API로 가능한 slice는 `N/A` 근거를 남긴다.
@@ -111,14 +130,26 @@
 
 4. Stage 4, Claude
    - FE 포팅
+   - 구현 전에 화면별 "프로토타입 대비 현재 구현 차이표"를 작성한다.
+     - reference prototype component/function
+     - 현재 서비스 파일
+     - 빠진 visual/layout 요소
+     - 유지해야 하는 MVP 기능 동작
+     - 적용할 수정 방향
+   - 대상 화면의 핵심 기능 regression test를 먼저 확인하고, 부족하면 최소 기능 보존 테스트를 추가한다.
    - 기존 API wrapper `{ success, data, error }` 유지
    - `loading / empty / error / read-only / unauthorized` 상태 유지
    - 모바일 390px/320px evidence 생성
+   - reference prototype screenshot과 generated service screenshot을 함께 보관한다.
+   - `$visual-verdict` 또는 동등한 엄격한 비교 기준으로 reference prototype 대비 점수를 남긴다. 목표는 90점 이상이다.
+   - 점수가 90점 미만이면 다음 코드 수정 전에 verdict의 `differences[]` / `suggestions[]`를 근거로 다시 수정하고 재캡처한다.
+   - visual verdict는 `.omx/state/<slice>/ralph-progress.json`에 score, pass/fail, reasoning, suggestions, next_actions를 저장한다.
    - new-screen/high-risk UI change는 `pnpm qa:explore -- --slice <slice>`와 `pnpm qa:eval` 수행, 생략 시 PR에 low-risk skip 근거 기록
    - Draft PR Ready 전 `pnpm validate:pr-ready -- --slice <slice> --pr-body <pr-body-file> --mode frontend`
 
 5. Stage 5, Codex
    - screenshot evidence 기반 authority precheck / public design review
+   - authority precheck는 "스크린샷이 존재한다"만으로 통과하지 않는다. prototype reference와 service generated screenshot을 나란히 보고 실제 visual parity 차이를 blocker/major/minor로 기록한다.
    - anchor screen은 authority report와 blocker 0개 확인
    - touch target, overflow, CTA clipping, text wrapping finding 기록
    - authority-required slice는 Claude final authority gate 통과 전 merge-ready로 넘기지 않음
@@ -138,13 +169,191 @@
 | Order | Slice ID | Goal | Primary Owner Flow | Notes |
 | --- | --- | --- | --- | --- |
 | 0 | `planner-column-customization` | SETTINGS 끼니 컬럼 관리 + PLANNER_WEEK 동적 컬럼 | Done | PR #367~#370 merged. 다시 하지 않는다. |
-| A | `wave1-port-foundation` | 공통 shell, 공용 UI 패턴, CTA/칩/카드/모달 위계 | Stage 1~6 | 가장 먼저. 단, AppShell/bottom tab은 `baemin-prototype-home-porting` 현재 상태와 충돌 여부를 Stage 1에서 먼저 잠근다. |
-| B | `wave1-port-discovery-detail` | HOME, RECIPE_DETAIL, save modal, login provider display | Stage 1~6 | HOME은 기존 `baemin-prototype-home-porting`과 충돌/중복 확인 후 시작. |
-| C | `wave1-port-planner-meal-add` | PLANNER, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN | Stage 1~6 | 컬럼 CRUD는 완료된 `planner-column-customization` 계약을 소비한다. |
-| D | `wave1-port-shopping-cooking` | SHOPPING_FLOW, SHOPPING_DETAIL, COOK_READY/COOK_MODE | Done | PR #379 merged. 장보기 read-only/exclude/add_to_pantry 규칙 유지. |
-| E | `wave1-port-pantry` | PANTRY, ingredient picker, bundle picker, multi-delete | Done | PR #381 merged. 재료 이미지 URL은 계약 후보로 분리. |
-| F | `wave1-port-account-library-leftovers` | MYPAGE, SETTINGS polish, LEFTOVERS, ATE_LIST, RECIPEBOOK_DETAIL | Stage 4~6 closeout | SETTINGS 컬럼 관리 완료 상태와 충돌하지 않게 조심. |
+| A | `wave1-port-foundation` | 공통 shell, 공용 UI 패턴, CTA/칩/카드/모달 위계 | Re-audit / repair | 전체 재포팅의 첫 단계. AppShell, bottom tab, 공통 primitive가 prototype과 실제로 맞는지 다시 확인한다. |
+| B | `wave1-port-discovery-detail` | HOME, RECIPE_DETAIL, save modal, login provider display | Re-audit / repair | HOME은 기존 `baemin-prototype-home-porting`과 충돌/중복 확인 후, prototype reference 대비 90+ visual verdict를 다시 달성한다. |
+| C | `wave1-port-planner-meal-add` | PLANNER, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN | Re-audit / repair | 컬럼 CRUD는 완료된 `planner-column-customization` 계약을 소비한다. PLANNER/식사추가/직접등록 화면의 layout parity를 다시 확인한다. |
+| D | `wave1-port-shopping-cooking` | SHOPPING_FLOW, SHOPPING_DETAIL, COOK_READY/COOK_MODE | Re-audit / repair | PR #379 merged 이력은 완료 근거로 쓰지 않는다. 장보기 read-only/exclude/add_to_pantry 기능은 보존하고 디자인만 재포팅한다. |
+| E | `wave1-port-pantry` | PANTRY, ingredient picker, bundle picker, multi-delete | Re-audit / repair | PR #381 merged 이력은 완료 근거로 쓰지 않는다. 재료 이미지 URL은 계속 계약 후보로 분리하고, 가능한 UI만 prototype에 맞춘다. |
+| F | `wave1-port-account-library-leftovers` | MYPAGE, SETTINGS polish, LEFTOVERS, ATE_LIST, RECIPEBOOK_DETAIL | Re-audit / repair | PR #383은 visual parity 실패 사례다. Slice F만 다시 하는 것이 아니라 전체 재포팅 순서의 마지막 slice로 다시 닫는다. SETTINGS 컬럼 관리 완료 상태와 충돌하지 않게 조심. |
 | G | `wave1-port-web-followup` | 앱 포팅 이후 웹-only 조정 | 별도 계획 | 앱 slice 완료 후 최신 프로토타입 기준으로 다시 작성. |
+
+## Prototype Repair Before Service Porting
+
+서비스 화면을 다시 포팅하기 전에 `ui/designs/prototypes/claude-design-260505-wave1` 자체를 먼저 고친다. 사용자가 확인한 prototype 문제는 화면 이동, MVP와 다른 기능 동작, 일부 디자인 문제에 걸쳐 있으므로, fixed prototype이 freeze되기 전에는 service visual parity 작업을 시작하지 않는다.
+
+중요한 구분:
+
+- **prototype repair**는 이후 포팅 기준이 될 디자인/흐름 기준 prototype을 고치는 작업이다.
+- **service porting**은 fixed prototype의 visual/layout을 실제 MVP 서비스에 반영하는 작업이다.
+- prototype repair는 `ui/designs/prototypes/` 경로 내부에서만 수행한다. MVP service source는 Prototype Repair 0~4 동안 수정하지 않는다.
+- prototype repair에서 고친 화면 이동은 "prototype 기준을 MVP에 맞춘 것"이지, 나중에 service route를 prototype 임의 흐름으로 바꿔도 된다는 뜻이 아니다.
+- service porting의 100% parity는 visual/layout parity만 뜻한다. route, submit, API, 저장/삭제/복구, auth, 상태 전이는 MVP/공식 문서 기준을 유지한다.
+- Repair slice PR은 독립적으로 리뷰 가능해야 하며, 이전 repair slice가 merge되지 않으면 다음 repair slice를 시작하지 않는다.
+- Repair 4에서 fixed prototype commit SHA를 기록하고, 이후 service porting은 그 commit의 prototype을 read-only reference로 사용한다.
+
+### Prototype Repair 0: Navigation And Return Context
+
+목표: prototype의 상단 뒤로가기와 모달 복귀가 MVP 사용 흐름과 맞게 동작하도록 고친다.
+
+범위:
+
+- MEAL_SCREEN에서 레시피명 클릭 -> RECIPE_DETAIL -> 뒤로가기 시 해당 끼니 화면으로 복귀
+- MENU_ADD 옵션 진입 후 뒤로가기 시 식사추가 모달이 열린 PLANNER 상태로 복귀
+- MYPAGE 장보기기록 -> SHOPPING_DETAIL -> 뒤로가기 시 장보기기록으로 복귀
+- MYPAGE 레시피북 목록 -> RECIPEBOOK_DETAIL -> 뒤로가기 시 레시피북 목록으로 복귀
+
+예상 파일:
+
+- `ui/designs/prototypes/claude-design-260505-wave1/app.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/planner.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/extras.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx`
+
+완료 기준:
+
+- 뒤로가기 버튼이 단순 tab/page 초기화가 아니라 진입 context를 보존한다.
+- modal-origin flow는 뒤로가기 후 원래 modal 상태를 복원한다.
+- desktop/mobile shell 양쪽에서 동일한 흐름을 확인한다.
+
+### Prototype Repair 1: Modal And Interaction Fixes
+
+목표: 화면 이동보다 좁은 modal open/close, 선택, 입력, footer button 문제를 MVP 기대 흐름에 맞춘다.
+
+범위:
+
+- MENU_ADD의 레시피북/팬트리 추천/남은요리/유튜브 가져오기 option은 별도 화면이 아니라 modal로 표시
+- Save Modal: 레시피북 다중 선택, 이미 저장된 책은 해제, 저장 안 된 책은 추가
+- `플래너에 추가` 모달: 취소 버튼 추가, 선택 인분이 레시피 정보 영역에 실시간 표시
+- Bundle Picker: 취소 버튼 글자 가로 정렬
+- SHOPPING_DETAIL: 장보기 완료 후 팬트리 반영 모달을 거쳐 completed read-only 화면으로 이동
+- PANTRY: 이미 팬트리에 있는 재료는 추가 모달에서 비활성화하고 중복 추가 방지
+- MANUAL_CREATE: 재료 수량 입력은 숫자만 허용
+
+예상 파일:
+
+- `ui/designs/prototypes/claude-design-260505-wave1/app.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/modals.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/extras.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/pantry.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/planner.jsx`
+
+완료 기준:
+
+- modal을 닫거나 취소했을 때 의도하지 않은 page 전환이 없다.
+- 선택/해제/중복 방지/숫자 입력 제한이 prototype에서 명확히 표현된다.
+- contract 밖의 API/DB/status/field를 prototype 기준으로 새로 요구하지 않는다.
+
+### Prototype Repair 2: Screen Visual Corrections
+
+목표: 사용자가 확인한 화면별 visual/layout 문제를 fixed prototype에 반영한다.
+
+범위:
+
+- HOME: 재료 검색 모달 구조를 검색 input + 가로 category chip + filtered ingredient list로 변경
+- HOME: recipe card에서 별점 제거, 조회수 표시, tag 내용은 MVP처럼 recipe 요약 정보로 변경, 우측 상단 저장 버튼은 save modal 연결
+- RECIPE_DETAIL: hero image metric을 오른쪽 아래로 이동, 흰 배경 제거, icon/text 색상과 그림자 정리, `완료`를 `요리완료`로 변경, 칼로리 제거
+- LOGIN: 소셜 로그인 버튼 잘림 수정
+- PLANNER: MVP식 일주일 날짜 카드 가로 스크롤, sticky date rail, date chip -> 해당 날짜 scroll, meal card 이미지/인분/밀도 조정, `+음식` -> `+`, 색상 충돌 정리
+- SHOPPING_DETAIL: Step2 장보기 목록 이름은 날짜 먼저, 마이페이지 진입 completed detail의 공유 버튼 왼쪽 `완료` 표시 제거
+- COOK_MODE: 상단 recipe title 크기 확대
+- PANTRY: `구매` category 제거
+- MYPAGE: recipebook card의 recipe count와 description 위치/디자인 switch
+- LEFTOVERS: 남은요리/다먹은요리 이동 버튼 텍스트를 `다먹은 요리`, `남은 요리`로 변경
+
+예상 파일:
+
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/home.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/detail.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/modals.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/planner.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/extras.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/pantry.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/mypage.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/desktop-screens.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/components.jsx`
+
+완료 기준:
+
+- 320px/390px에서 버튼, 텍스트, modal footer가 잘리지 않는다.
+- 사용자가 명시한 visual 문제는 fixed prototype에서 재현되지 않는다.
+- visual 변경이 MVP 기능 기준을 뒤집지 않는다.
+
+### Prototype Repair 3: Functional Logic Fixes
+
+목표: prototype의 demo-only 또는 MVP와 어긋나는 기능 로직을 MVP 기준으로 맞춘다.
+
+범위:
+
+- RECIPE_DETAIL `요리하기`: 플래너 추가 없이 요리모드 진입 가능
+- SETTINGS: 닉네임 변경 동작
+- SETTINGS: 끼니 컬럼 최대 5개 제한
+- SETTINGS: 환경설정 저장/취소 버튼 제공
+- LEFTOVERS: 플래너에 추가해도 해당 남은요리가 남은요리 화면에서 사라지지 않음
+- HOME: recipe card 우측 상단 저장 버튼이 Save Modal을 연다
+
+예상 파일:
+
+- `ui/designs/prototypes/claude-design-260505-wave1/app.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/home.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/detail.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/extras.jsx`
+- `ui/designs/prototypes/claude-design-260505-wave1/screens/mypage.jsx`
+
+완료 기준:
+
+- MVP에서 정상 동작해야 하는 저장/복구/요리하기/설정 저장 흐름이 prototype에서 깨진 상태로 남지 않는다.
+- service porting 때 prototype의 broken behavior를 복사할 여지를 줄인다.
+- contract 밖의 API/DB/status/field를 prototype 기준으로 새로 요구하지 않는다.
+
+### Prototype Repair 4: Freeze And Service Porting Gate
+
+목표: repaired prototype을 service porting 기준으로 freeze한다.
+
+필수 산출물:
+
+- repaired prototype screenshot evidence: 320px, 390px, 가능하면 desktop
+- navigation smoke evidence: 뒤로가기 4개 흐름
+- modal behavior smoke evidence: MENU_ADD modal-origin flow, Save Modal, Pantry reflect, Pantry add
+- `HANDOFF.md` 또는 별도 closeout note에 fixed prototype 기준과 남은 divergence 기록
+- `index.html`과 `homecook-baemin-prototype.html` 정합성 확인
+
+완료 기준:
+
+- Prototype Repair 0~3이 merged된 뒤에만 service Slice A~F 재포팅을 시작한다.
+- 이후 service porting prompt는 fixed prototype 경로/commit SHA를 명시한다.
+- fixed prototype의 화면 이동은 MVP 기준으로 보정된 reference이며, service route 변경 근거로 오해하지 않게 기록한다.
+
+## All-Slice Re-Port Charter
+
+이번 계획의 목표는 이미 merge된 특정 PR을 보정하는 것이 아니라, `claude-design-260505-wave1` 기준으로 **앱 화면 전체 Wave1 디자인 포팅을 다시 신뢰 가능하게 닫는 것**이다.
+
+재포팅 범위:
+
+- Slice A: 공통 shell, bottom tab, 공용 UI primitive, app-wide spacing/safe-area
+- Slice B: HOME, RECIPE_DETAIL, save modal, login provider display
+- Slice C: PLANNER, 식사추가, recipebook/pantry/search add flows, MANUAL_CREATE, MEAL_SCREEN
+- Slice D: SHOPPING_FLOW, SHOPPING_DETAIL, pantry exclusion section, COOK_READY_LIST, COOK_MODE
+- Slice E: PANTRY, ingredient add modal, bundle picker, category/search, multi-delete
+- Slice F: MYPAGE, SETTINGS, LEFTOVERS, ATE_LIST, RECIPEBOOK_DETAIL
+
+각 slice에서 반복할 공통 절차:
+
+1. 기존 workpack/acceptance와 prototype reference 파일을 읽는다.
+2. 서비스 현재 화면 screenshot과 prototype reference screenshot을 390px/320px에서 확보한다. 가능하면 desktop도 확보한다.
+3. 화면별 "프로토타입 대비 현재 구현 차이표"를 작성한다.
+4. 유지해야 하는 MVP 기능을 regression test나 기존 E2E로 먼저 확인한다.
+5. API/DB/status/endpoint/field 추가 없이 UI 구조, spacing, 카드 밀도, visual hierarchy, responsive layout을 수정한다.
+6. screenshot evidence를 다시 캡처하고 `$visual-verdict` 또는 동등 기준으로 90점 이상을 달성한다.
+7. 90점 미만이면 verdict의 blocker/major difference를 기준으로 다시 수정한다.
+8. slice workpack/acceptance/authority/evidence에 "전체 Wave1 디자인 재포팅"과 남은 approved divergence를 기록한다.
+
+완료 기준:
+
+- slice의 모든 대상 화면이 reference 대비 visual verdict 90점 이상이다.
+- visual blocker가 0개다.
+- MVP 기능 regression이 통과한다.
+- official contract 밖의 기능 변경은 구현하지 않았거나 contract-evolution 후보로만 문서화했다.
+- PR current-head GitHub checks가 모두 green이다.
 
 ## Slice A: wave1-port-foundation
 
@@ -309,7 +518,7 @@
 - Stage 1 docs/workpack PR merged as #378.
 - Stage 4 frontend implementation and screenshot evidence completed on `feature/fe-wave1-port-shopping-cooking`.
 - Claude resume session `3f4ca745-db71-4392-a3f1-4e3c4493e9bc` was attempted for Stage 4, but provider limit blocked completion; per user instruction, Codex completed the slice directly.
-- Stage 5/6 closeout is ready for PR validation and merge through the ship loop.
+- Repair status: required as part of the all-slice Wave1 visual re-port. Treat prior screenshots/authority evidence as historical until reference-vs-service visual verdict is rerun.
 
 ### Main Changes
 
@@ -418,8 +627,23 @@
 - Codex fallback: Stage 1 workpack docs created because the user explicitly instructed Codex to continue directly when Claude token limit ends.
 - Codex Stage 4/5 fallback: PANTRY UI, add sheet retry state, bundle picker labels, multi-delete bottom CTA, Playwright evidence, and `ui/designs/authority/WAVE1_PANTRY-authority.md` completed with blocker 0.
 - Contract finding: official `category` exists on `ingredients`/`pantry` responses; official ingredient image URL does not exist and remains a contract-evolution candidate.
+- Repair status: required as part of the all-slice Wave1 visual re-port. Keep the image URL finding as contract-evolution only; do not invent the field during visual repair.
 
 ## Slice F: wave1-port-account-library-leftovers
+
+### Slice F Repair Notes
+
+PR #383 `feat(wave1): merge account library leftovers closeout`은 merged 상태지만, 사용자가 확인한 실제 서비스 화면은 `claude-design-260505-wave1` 확정 디자인과 충분히 맞지 않는다. 이 섹션은 전체 Wave1 재포팅 중 Slice F에 적용할 추가 주의사항이다. 다음 작업이 Slice F에만 한정된다는 뜻이 아니다.
+
+보정 작업의 기준:
+
+- prototype은 visual/layout 기준이다.
+- MVP와 공식 문서는 기능 기준이다.
+- 화면 구조, 카드 밀도, spacing, 배민 스타일 톤, 섹션 구성, 모바일/데스크톱 layout은 prototype reference에 최대한 맞춘다.
+- API 호출, payload, route, submit, loading/empty/error/unauthorized/read-only, 권한, 상태 전이는 현재 MVP 기능을 유지한다.
+- prototype에서 잘 작동하지 않는 demo-only 기능은 복사하지 않는다.
+- #383 screenshot evidence와 authority report는 historical evidence로만 본다. 보정 작업에서는 reference prototype screenshot, current service screenshot, after screenshot, visual verdict를 새로 남긴다.
+- `docs/workpacks/wave1-service-porting-plan.md`, `docs/workpacks/wave1-port-account-library-leftovers/README.md`, `acceptance.md`, authority/evidence 문서에는 "PR #383 보정 작업"임을 명확히 기록한다.
 
 ### Scope
 
@@ -431,17 +655,12 @@
 
 ### Main Changes
 
-- MYPAGE top gear 제거
-- saved recipes section 제거 or recipebook로 흡수
-- account info에서 withdrawal button 제거
-- SETTINGS logout/withdrawal text itself as trigger
-- settings account category cleanup
-- 남은요리/다먹은요리 양방향 button이 잘리지 않게 정리
-- 다먹은요리 description에서 `다먹음` 텍스트 제거
-- `덜먹음` API 유지, UI label을 `남은요리로 복귀`로 조정
-- `플래너에 추가` 문구 정리
-- leftover/eaten meta는 현재 공식 응답에서 가능한 날짜 중심 정보만 유지
-- recipebook detail kebab menu: rename/delete
+- MYPAGE: `screens/mypage.jsx` / desktop reference의 profile card, tab/card density, recipebook/shopping sections, settings entry hierarchy를 실제 서비스에 반영한다.
+- SETTINGS: `screens/extras.jsx` / desktop reference의 settings layout, row density, destructive action hierarchy를 반영하되 planner column management 기능은 현재 MVP 구현을 유지한다.
+- LEFTOVERS: prototype의 카드 구조, meta density, CTA hierarchy, 반대 화면 이동 버튼 형태를 반영한다. `POST /meals` + `leftover_dish_id`, eat API는 유지한다.
+- ATE_LIST: prototype의 다먹은 요리 list/card 구조와 `남은요리로 복귀` 복구 action hierarchy를 반영한다. uneat API는 유지한다.
+- RECIPEBOOK_DETAIL: prototype의 전용 화면 구조, custom book menu, recipe card density를 반영하되 system book 보호와 recipe removal 정책은 유지한다.
+- 공통: 390px/320px뿐 아니라 가능하면 desktop screenshot도 남기고, reference 대비 visual verdict 90+를 달성할 때까지 반복한다.
 
 ### Classification
 
@@ -463,6 +682,23 @@
 
 ### Verification
 
+- PR #383 repair diff table
+  - 화면별 reference component/function
+  - 현재 서비스 파일
+  - 빠진 visual/layout 요소
+  - 유지할 MVP 기능
+  - 적용할 수정 방향
+- 기능 보존 regression
+  - MYPAGE: 레시피북 탭, 장보기 기록 탭, 설정 이동, 책 상세 이동
+  - SETTINGS: 닉네임 변경, 화면 꺼짐 방지, planner column CRUD, logout/delete confirm
+  - LEFTOVERS: eat, planner add with `leftover_dish_id`
+  - ATE_LIST: uneat / `남은요리로 복귀`
+  - RECIPEBOOK_DETAIL: custom book rename/delete, system book no-menu, recipe removal
+- visual parity evidence
+  - reference prototype screenshots
+  - current service screenshots before repair
+  - after service screenshots
+  - `$visual-verdict` JSON, target score 90+
 - MYPAGE E2E
 - SETTINGS E2E regression
 - LEFTOVERS / ATE_LIST E2E
@@ -478,6 +714,7 @@
 - Codex fallback: completed FE implementation after Claude provider limit blocked Stage 4 delegation.
 - Authority: `ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md`, verdict pass, blocker 0.
 - Verification: targeted Vitest passed 78 tests, modified Playwright bundle passed 189 tests, exploratory QA eval score 98, and `pnpm verify:frontend` passed.
+- Repair status: required. Treat #383 as function-preserving but visually insufficient. Next implementation branch should be `fix/wave1-account-library-leftovers-design-parity` or equivalent and should not call the slice complete until reference prototype vs service visual verdict is 90+ for the touched Slice F screens.
 
 ## Cross-Slice Mapping Table
 
@@ -524,26 +761,126 @@
 새 세션을 시작할 때 아래처럼 요청하면 된다.
 
 ```text
-docs/workpacks/wave1-service-porting-plan.md를 먼저 읽고, Wave1 실제 서비스 포팅을 Slice B(wave1-port-discovery-detail)부터 진행해줘.
-Slice A(wave1-port-foundation)는 merged. Slice B Stage 1 docs도 완료 — Stage 4 FE 포팅을 시작한다.
-AGENTS.md 규칙에 따라 Stage 4는 Claude에게 FE 포팅을 맡기고, 필요한 경우 $claude-delegate로 기존 세션 3f4ca745-db71-4392-a3f1-4e3c4493e9bc에 --resume으로 붙어줘.
-각 slice는 UI-only / 기존 API로 가능 / contract-evolution 필요 항목을 먼저 판정하고, 완료 후 $ship-pr-loop로 PR merge까지 진행해줘.
+너는 /Users/shj/2025/2026/homecook1 저장소에서 작업한다. 한국어로 보고해라.
+
+docs/workpacks/wave1-service-porting-plan.md를 먼저 읽고, `ui/designs/prototypes/claude-design-260505-wave1` 기준으로 전체 Wave1 디자인 재포팅을 다시 진행해줘.
+
+문제:
+- 기존 Wave1 포팅 PR들은 merge됐지만, 실제 서비스 화면이 확정 디자인 소스 `claude-design-260505-wave1`와 충분히 맞는지 신뢰할 수 없다.
+- 특히 PR #383 `feat(wave1): merge account library leftovers closeout`은 사용자가 직접 visual parity 실패를 확인했다.
+- 2026-05-11 사용자 QA에서 prototype 자체의 화면이동/동작/디자인 문제가 확인됐다.
+- 이번 작업은 먼저 Prototype Repair 0~4를 끝내고 fixed prototype을 freeze한 뒤, Slice A~F 전체를 fixed prototype 기준으로 재감사하고 필요한 slice를 다시 디자인 포팅하는 작업이다.
+- 단순 문구/버튼 polish가 아니라 화면 구조, 카드 밀도, spacing, 배민 스타일 톤, 섹션 구성, 모바일/데스크톱 layout을 prototype 기준으로 맞춘다.
+
+가장 중요한 원칙:
+- fixed prototype은 visual/layout source of truth다.
+- 현재 MVP 구현과 공식 문서는 기능 source of truth다.
+- service porting의 100% parity는 visual/layout parity만 뜻한다.
+- route navigation, API 호출, payload, submit 동작, loading/empty/error/unauthorized/read-only 상태, 권한 정책, status 전이는 기존 MVP 그대로 보존한다.
+- prototype에서 버튼이 미연결/demo-only/broken behavior이면 그 동작을 service로 복사하지 않는다. Prototype Repair 단계에서 MVP 기준으로 먼저 고친다.
+- 테스트가 selector 변경으로 깨지면 기능 기대값은 유지하고 selector만 새 UI에 맞게 고친다. 기능 테스트를 디자인 때문에 삭제하지 않는다.
+
+먼저 새 브랜치를 만든다:
+- 첫 작업은 `pnpm branch:start -- --branch fix/wave1-prototype-navigation-repair`
+- 이후 repair slice마다 `fix/wave1-prototype-<scope>-repair` 형태로 분리한다.
+
+반드시 먼저 읽는다:
+1. AGENTS.md
+2. docs/sync/CURRENT_SOURCE_OF_TRUTH.md
+3. docs/workpacks/wave1-service-porting-plan.md
+4. docs/workpacks/README.md
+5. docs/engineering/product-design-authority.md
+6. docs/design/mobile-ux-rules.md
+7. ui/designs/BAEMIN_STYLE_DIRECTION.md
+8. ui/designs/prototypes/claude-design-260505-wave1/HANDOFF.md
+9. ui/designs/prototypes/claude-design-260505-wave1/COVERAGE_REVIEW.md
+10. ui/designs/prototypes/claude-design-260505-wave1/VNEXT_DESIGN_PRINCIPLES.md
+11. ui/designs/prototypes/claude-design-260505-wave1/app.jsx
+12. ui/designs/prototypes/claude-design-260505-wave1/components.jsx
+13. ui/designs/prototypes/claude-design-260505-wave1/tokens.jsx
+14. ui/designs/prototypes/claude-design-260505-wave1/screens/*.jsx
+
+Prototype Repair 순서:
+1. Prototype Repair 0: Navigation And Return Context
+2. Prototype Repair 1: Modal And Interaction Fixes
+3. Prototype Repair 2: Screen Visual Corrections
+4. Prototype Repair 3: Functional Logic Fixes
+5. Prototype Repair 4: Freeze And Service Porting Gate
+
+Prototype Repair가 끝난 후 service 재포팅 순서:
+1. Slice A `wave1-port-foundation`
+2. Slice B `wave1-port-discovery-detail`
+3. Slice C `wave1-port-planner-meal-add`
+4. Slice D `wave1-port-shopping-cooking`
+5. Slice E `wave1-port-pantry`
+6. Slice F `wave1-port-account-library-leftovers`
+
+구현 전에 repair 체크포인트를 만든다:
+- repair slice별 target screens/flows
+- prototype reference file/function
+- 현재 broken behavior 또는 visual issue
+- MVP 기준 기대 동작
+- 적용할 수정 방향
+- 필요한 screenshot/smoke evidence 경로
+
+기능 보존 잠금 예시:
+- Slice B: HOME 검색/필터/정렬, recipe detail 저장/좋아요/플래너 추가/요리하기, save modal book 생성/저장, 로그인 redirect 유지
+- Slice C: planner range 이동, 식사 추가 옵션 연결, `leftover_dish_id` 기반 추가, 직접등록 저장, meal 삭제/요리하기 흐름 유지
+- Slice D: shopping preview/create, completed detail read-only, exclude -> uncheck, `add_to_pantry_item_ids` 3-way, share, cooking complete 유지
+- Slice E: pantry 검색/필터/add, bundle add, multi-delete, 공식 category/image 계약 제한 유지
+- Slice F: MYPAGE 탭/설정 이동, SETTINGS 계정/컬럼 관리, LEFTOVERS eat/planner add, ATE_LIST uneat, RECIPEBOOK_DETAIL custom/system book 정책 유지
+
+작업 방식:
+1. 한 번에 한 repair slice만 PR로 진행한다. 첫 순서는 Prototype Repair 0이다.
+2. 대상 flow/screen의 현재 prototype 동작을 먼저 확인한다.
+3. prototype 코드를 수정한다. service 코드는 Prototype Repair 0~4 동안 건드리지 않는다.
+4. API/DB/status/endpoint/field는 임의 추가하지 않는다. prototype demo data로만 표현한다.
+5. 320px/390px smoke 또는 screenshot evidence를 남긴다. 가능하면 desktop도 포함한다.
+6. Repair 0~3이 모두 merged된 뒤 Repair 4에서 fixed prototype 기준을 freeze한다.
+7. 그 후 service Slice A~F 재포팅을 시작한다.
+8. 각 PR은 current-head GitHub checks 통과 확인 후 merge한다.
+9. merge 후 알림 채널이 설정되어 있으면 Discord 완료 알림을 보낸다.
+10. 다음 repair slice 또는 service slice로 넘어갈 때 새 branch intent를 선언한다.
+
+검증:
+- targeted Vitest
+- targeted Playwright
+- screenshot evidence capture
+- `pnpm verify:frontend`
+- `pnpm validate:workflow-v2`
+- service slice에서는 `pnpm validate:workpack -- --slice <slice>`
+- `PR_IS_DRAFT=false pnpm validate:authority-evidence-presence`
+- `PR_IS_DRAFT=false PR_BODY_FILE=<pr-body-file> pnpm validate:exploratory-qa-evidence`
+- `BRANCH_NAME=<branch> BASE_REF=master node scripts/validate-omo-bookkeeping.mjs`
+- GitHub PR current-head checks green before merge
+
+최종 보고:
+- 어떤 repair slice 또는 service slice를 얼마나 바꿨는지
+- fixed prototype 대비 남은 차이
+- 보존한 MVP 기능과 관련 테스트
+- 테스트/CI 결과
+- PR 링크와 merge commit
+- Manual Only 잔여 위험
 ```
 
 ## First Next Action
 
-다음 세션의 첫 실제 작업은 `wave1-port-discovery-detail` Stage 4 FE 포팅이다.
+다음 세션의 첫 실제 작업은 **Prototype Repair 0: Navigation And Return Context**다.
 
-- Slice A `wave1-port-foundation`: merged (PR #372, #373).
-- Slice B `wave1-port-discovery-detail`: Stage 1 docs 완료, Stage 1.5 repair 완료.
+- 목표: service porting 전에 prototype의 잘못된 뒤로가기/화면복귀 흐름을 MVP 기준으로 고친다.
+- 이 단계에서는 service 코드를 건드리지 않는다.
+- Repair 0~4가 끝난 뒤에만 Slice A~F service 재포팅을 시작한다.
 
-1. `pnpm branch:start -- --slice wave1-port-discovery-detail --role fe`
-2. Claude에게 Stage 4 FE 포팅 위임
-3. HOME header 단순화, sort dropdown 전환, filter chip 재배치
-4. RECIPE_DETAIL 별점 제거, hero metric 표시, 하단 CTA 2버튼 재구성
-5. save modal 프리뷰 제거 + 버튼 라벨 정리
-6. login provider 카카오/Apple 숨김
-7. Vitest + Playwright 테스트
-8. mobile 390/320 screenshot evidence 생성
-9. `pnpm verify:frontend` 통과
-10. `pnpm validate:pr-ready -- --slice wave1-port-discovery-detail --pr-body <pr-body-file> --mode frontend`
+1. `pnpm branch:start -- --branch fix/wave1-prototype-navigation-repair`
+2. 필수 문서와 prototype files를 읽는다.
+3. 아래 4개 flow의 현재 prototype 동작을 확인한다.
+   - MEAL_SCREEN -> RECIPE_DETAIL -> back
+   - MENU_ADD option -> destination -> back
+   - MYPAGE shopping history -> SHOPPING_DETAIL -> back
+   - MYPAGE recipebook list -> RECIPEBOOK_DETAIL -> back
+4. route/pageArgs/back context 설계를 작게 고정한다.
+5. `app.jsx` 중심으로 수정하고 필요한 screen prop만 좁게 추가한다.
+6. 320px/390px 또는 Playwright smoke로 back flow를 확인한다.
+7. `index.html`과 `homecook-baemin-prototype.html` 정합성을 확인한다.
+8. PR 생성, current-head checks green 확인, merge한다.
+9. merge 후 Prototype Repair 1로 넘어간다.
