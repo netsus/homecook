@@ -1,0 +1,105 @@
+{
+  "id": "wave1-port-pantry",
+  "title": "Wave1 Port Pantry — PANTRY, ingredient add sheet, bundle picker, multi-delete",
+  "summary": "PANTRY와 PANTRY_BUNDLE_PICKER의 Wave1 프로토타입 개선사항을 기존 공식 API 계약 범위 안에서 UI-only로 포팅한다. 추가/묶음 추가 CTA, category chip rail, 보유 재료 카드, delete mode checkbox, selected items bottom 제거하기 CTA를 정리한다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "PANTRY, ingredient add sheet, bundle picker, category chips, search, multi-delete를 기존 GET/POST/DELETE /pantry, GET /pantry/bundles, GET /ingredients 계약 범위 안에서 UI-first로 포팅한다.",
+  "owners": {
+    "claude": "stage1-attempt-provider-limited",
+    "codex": "stage1-fallback,stage4-if-provider-limited,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "wave1-port-foundation",
+    "wave1-port-discovery-detail",
+    "wave1-port-planner-meal-add",
+    "wave1-port-shopping-cooking",
+    "13-pantry-core",
+    "12b-shopping-pantry-reflect",
+    "15a-cook-planner-complete",
+    "15b-cook-standalone-complete",
+    "h8-baemin-prototype-reference-future-screens-direction"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/요구사항기준선-v1.6.5.md",
+      "docs/화면정의서-v1.5.2.md",
+      "docs/api문서-v1.2.3.md",
+      "docs/db설계-v1.3.2.md",
+      "docs/유저flow맵-v1.3.2.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/wave1-port-pantry/README.md",
+      "docs/workpacks/wave1-port-pantry/acceptance.md",
+      "docs/workpacks/wave1-port-pantry/automation-spec.json",
+      "docs/workpacks/wave1-service-porting-plan.md",
+      "docs/workpacks/13-pantry-core/README.md",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md",
+      "docs/design/mobile-ux-rules.md",
+      "ui/designs/prototypes/claude-design-260505-wave1/screens/pantry.jsx"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "evaluator_profile": "vertical-slice-strict",
+    "merge_policy": "manual",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:pr-ready -- --slice wave1-port-pantry --pr-body <pr-body-file> --mode frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "playwright-report",
+      "screenshot",
+      "authority-report"
+    ]
+  },
+  "status": {
+    "lifecycle": "ready_for_review",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "notes": "Stage 1 docs prepared on docs/wave1-port-pantry-stage1. Claude Stage 1 handoff attempted via resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc with model=opus, permission_mode=bypassPermissions, requested effort=xhigh recorded, CLI effort=high; provider limit reset 13:20 Asia/Seoul blocked Claude editing, so Codex completed Stage 1 fallback per user instruction. Backend Stage 2/3 defaults to N/A because current official contracts support the planned UI-only port. Ingredient image URL remains contract-evolution candidate.",
+  "out_of_scope": [
+    "API/DB/status/endpoint/field 추가 또는 변경",
+    "ingredients.image_url 또는 pantry item image URL 필드 임의 추가",
+    "팬트리 수량/유통기한/재고량 관리",
+    "재료 마스터 CRUD",
+    "HOME의 이 재료로 레시피 보기 이동",
+    "팬트리 기반 추천",
+    "MYPAGE, SETTINGS, LEFTOVERS 화면 변경",
+    "새 npm dependency 추가",
+    "prototype-only font/asset/bottom-tab behavior 도입"
+  ],
+  "open_questions": [
+    "Stage 4에서 실제 ingredient image가 필요하다고 판단되면 contract-evolution 후보로 분리할지 결정한다.",
+    "Prototype category grouping이 공식 category vocabulary와 다를 경우 공식 category 유지 또는 contract-evolution 분리 중 선택한다."
+  ]
+}

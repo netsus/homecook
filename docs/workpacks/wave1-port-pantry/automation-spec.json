@@ -1,0 +1,112 @@
+{
+  "slice_id": "wave1-port-pantry",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "manual",
+
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "팬트리는 수량이 아니라 보유 여부만 관리한다.",
+      "POST /pantry는 중복 ingredient_id를 오류로 처리하지 않는다.",
+      "DELETE /pantry는 이미 없는 ingredient_id를 오류로 처리하지 않는다.",
+      "모든 pantry mutation은 현재 로그인 사용자의 pantry_items만 대상으로 한다."
+    ],
+    "verify_commands": [],
+    "required_test_targets": [],
+    "stage2_na_reason": "UI-only slice. 기존 GET/POST/DELETE /pantry, GET /pantry/bundles, GET /ingredients 계약으로 PANTRY/add sheet/bundle picker/search/category/multi-delete 포팅이 가능하다. 공식 응답에 ingredient image URL은 없으므로 image field 추가는 contract-evolution 후보로만 기록하고 Stage 4에서는 category placeholder를 사용한다."
+  },
+
+  "frontend": {
+    "required_routes": [
+      "/pantry"
+    ],
+    "required_states": [
+      "loading",
+      "empty",
+      "error",
+      "unauthorized",
+      "selecting"
+    ],
+    "verify_commands": [
+      "pnpm verify:frontend",
+      "pnpm validate:authority-evidence-presence",
+      "pnpm validate:pr-ready -- --slice wave1-port-pantry --pr-body <pr-body-file> --mode frontend"
+    ],
+    "playwright_projects": [
+      "desktop-chrome",
+      "mobile-chrome",
+      "mobile-ios-small"
+    ],
+    "artifact_assertions": [
+      "playwright-report",
+      "screenshot",
+      "authority-report"
+    ],
+    "expected_tests": {
+      "vitest": [
+        "PANTRY 보유 재료 목록/count/category placeholder 렌더",
+        "PANTRY 검색/category filter 호출 파라미터",
+        "PANTRY delete mode checkbox/selected count/bottom CTA",
+        "Add sheet 기존 보유 재료 disabled + POST body",
+        "Bundle picker 미보유 기본 선택 + 보유 상태 표시 + POST body",
+        "loading/empty/error/unauthorized 상태"
+      ],
+      "playwright": [
+        "PANTRY list/search/category E2E 회귀",
+        "Add ingredient sheet E2E 회귀",
+        "Bundle picker E2E 회귀",
+        "Multi-delete E2E 회귀",
+        "Login gate E2E 회귀",
+        "Mobile screenshot evidence E2E"
+      ]
+    },
+
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [
+        "PANTRY"
+      ],
+      "required_screens": [
+        "PANTRY",
+        "INGREDIENT_ADD_SHEET",
+        "PANTRY_BUNDLE_PICKER"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": true,
+      "critic_artifact": "ui/designs/authority/WAVE1_PANTRY-authority.md",
+      "authority_required": true,
+      "stage4_evidence_requirements": [
+        "pantry-default",
+        "pantry-narrow",
+        "pantry-select-delete",
+        "pantry-empty",
+        "pantry-add-sheet",
+        "pantry-bundle-picker"
+      ],
+      "authority_report_paths": [
+        "ui/designs/authority/WAVE1_PANTRY-authority.md"
+      ],
+      "design_generator_skip_reason": "PANTRY는 h8 screen-level prototype parity candidate지만 신규 visual direction 생성이 아니라 기존 Wave1 prototype, 13-pantry-core evidence, current tokens를 기준으로 실제 화면을 정리하는 포팅 작업이다. Stage 4 evidence + authority review로 충분하다.",
+      "evidence_artifact_refs": [
+        "ui/designs/evidence/wave1-port-pantry/pantry-default.png",
+        "ui/designs/evidence/wave1-port-pantry/pantry-narrow.png",
+        "ui/designs/evidence/wave1-port-pantry/pantry-select-delete.png",
+        "ui/designs/evidence/wave1-port-pantry/pantry-empty.png",
+        "ui/designs/evidence/wave1-port-pantry/pantry-add-sheet.png",
+        "ui/designs/evidence/wave1-port-pantry/pantry-bundle-picker.png"
+      ]
+    }
+  },
+
+  "external_smokes": [],
+  "blocked_conditions": [
+    "Stage 4가 ingredient image URL 필드를 필요로 하면 contract-evolution으로 분리한다.",
+    "Stage 4가 공식 category vocabulary 외 grouping을 필요로 하면 contract-evolution으로 분리한다."
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}
