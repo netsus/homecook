@@ -3,8 +3,11 @@
 const { useState: useState_P } = React;
 
 // vNext S4 — 식사 추가 옵션 모달 (모바일)
-function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers }) {
+function MealAddModal({ date, slot, planner, pantry, onClose, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers, onPickRecipe, showToast }) {
   const [query, setQuery] = useState_P('');
+  const [mode, setMode] = useState_P('hub');
+  const [bookId, setBookId] = useState_P(null);
+  const [ytUrl, setYtUrl] = useState_P('');
   const options = [
     { id: 'recipebook', label: '레시피북에서 추가', icon: '📖' },
     { id: 'pantry',     label: '팬트리 기반 추천',  icon: '🧊' },
@@ -12,8 +15,148 @@ function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual, onGoYtImport
     { id: 'youtube',    label: '유튜브에서 가져오기', icon: '🎬' },
     { id: 'manual',     label: '직접 등록',          icon: '✏️' },
   ];
+  const close = () => {
+    setMode('hub');
+    setBookId(null);
+    onClose();
+  };
+  const pickRecipe = (recipeId) => {
+    close();
+    if (onPickRecipe) onPickRecipe(date, slot, recipeId);
+    else onMenuAdd(date, slot, 'search');
+  };
+  const books = window.RECIPEBOOK_SAMPLES || [
+    { id: 'b_saved', kind: 'saved', name: '저장한 레시피', emoji: '🔖', recipeIds: ['r1','r2','r4'] },
+    { id: 'b_custom1', kind: 'custom', name: '평일 저녁 빠른요리', emoji: '🍳', recipeIds: ['r1','r3','r4'] },
+    { id: 'b_custom2', kind: 'custom', name: '주말 한 상 차림', emoji: '🍽️', recipeIds: ['r2'] },
+  ];
+  const selectedBook = books.find(b => b.id === bookId);
+  const haveSet = new Set(Object.values(pantry || {}).filter(p => p.have).map(p => p.name));
+  const pantryMatches = RECIPES.map(r => {
+    const total = (r.ingredients || []).length || 1;
+    const hit = (r.ingredients || []).filter(i => haveSet.has(i.name)).length;
+    return { recipe: r, hit, total, score: Math.round(hit / total * 100) };
+  }).sort((a, b) => b.score - a.score);
+  const leftoverMeals = [];
+  Object.keys(planner || {}).forEach(day => {
+    ['아침', '점심', '저녁'].forEach(mealSlot => {
+      mealItems(planner[day]?.[mealSlot]).forEach((meal, mealIndex) => {
+        if (meal.status === 'cooked' && !meal.ateAt) {
+          const recipe = RECIPES.find(r => r.id === meal.recipeId);
+          if (recipe) leftoverMeals.push({ day, mealSlot, mealIndex, meal, recipe });
+        }
+      });
+    });
+  });
+  const backButton = (
+    <button onClick={() => { setMode('hub'); setBookId(null); }} style={{
+      border: 'none', background: T.surfaceFill, color: T.text2,
+      borderRadius: 9999, padding: '7px 11px', fontSize: 12, fontWeight: 800,
+      cursor: 'pointer', marginBottom: 12,
+    }}>← 식사 추가</button>
+  );
+  const recipeRow = (recipe, meta) => (
+    <button key={recipe.id + (meta || '')} onClick={() => pickRecipe(recipe.id)} style={{
+      width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+      background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12,
+      padding: 12, marginBottom: 8, cursor: 'pointer', textAlign: 'left',
+    }}>
+      <div style={{
+        width: 52, height: 52, borderRadius: 10, background: recipe.bg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
+      }}>{recipe.emoji}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{recipe.name}</div>
+        <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{meta || `${recipe.minutes}분 · ${recipe.servings}인분`}</div>
+      </div>
+      <span style={{
+        fontSize: 12, fontWeight: 800, color: T.mintDeep,
+        background: T.mintSoft, padding: '6px 10px', borderRadius: 8,
+      }}>추가</span>
+    </button>
+  );
+
+  if (mode === 'books') {
+    return (
+      <Sheet title={selectedBook ? selectedBook.name : '레시피북에서 추가'} onClose={close}>
+        {backButton}
+        {!selectedBook ? books.map(book => (
+          <button key={book.id} onClick={() => setBookId(book.id)} style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+            background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12,
+            padding: '13px 14px', marginBottom: 8, cursor: 'pointer', textAlign: 'left',
+          }}>
+            <span style={{ fontSize: 22 }}>{book.emoji}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{book.name}</div>
+              <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{(book.recipeIds || []).length}개 레시피 · {book.kind === 'saved' ? '저장' : '내 책'}</div>
+            </div>
+            {Icon.chevR(T.text4)}
+          </button>
+        )) : (selectedBook.recipeIds || []).map(id => RECIPES.find(r => r.id === id)).filter(Boolean)
+          .map(recipe => recipeRow(recipe))}
+      </Sheet>
+    );
+  }
+
+  if (mode === 'pantry') {
+    return (
+      <Sheet title="팬트리 기반 추천" onClose={close}>
+        {backButton}
+        <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 800, lineHeight: 1.5, marginBottom: 12 }}>
+          보유 재료가 많이 맞는 레시피부터 보여드려요.
+        </div>
+        {pantryMatches.slice(0, 7).map(({ recipe, hit, total, score }) =>
+          recipeRow(recipe, `매칭 ${score}% · ${hit}/${total}개 보유 · ${recipe.minutes}분`)
+        )}
+      </Sheet>
+    );
+  }
+
+  if (mode === 'leftover') {
+    return (
+      <Sheet title="남은 요리에서 추가" onClose={close}>
+        {backButton}
+        {leftoverMeals.length === 0 ? (
+          <div style={{ padding: 28, textAlign: 'center', color: T.text3, fontSize: 13 }}>
+            추가할 남은 요리가 없어요.
+          </div>
+        ) : leftoverMeals.map(item =>
+          recipeRow(item.recipe, `${item.day} ${item.mealSlot} · 남은 요리 ${item.meal.servings || 1}인분`)
+        )}
+      </Sheet>
+    );
+  }
+
+  if (mode === 'youtube') {
+    const canImport = ytUrl.trim().length > 0;
+    return (
+      <Sheet title="유튜브에서 가져오기" onClose={close} footer={
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button variant="neutral" style={{ flex: '0 0 88px', whiteSpace: 'nowrap' }} onClick={close}>취소</Button>
+          <Button full disabled={!canImport} onClick={() => {
+            showToast?.('영상에서 레시피를 가져왔어요');
+            pickRecipe('r5');
+          }}>가져오기</Button>
+        </div>
+      }>
+        {backButton}
+        <input value={ytUrl} onChange={e => setYtUrl(e.target.value)}
+          placeholder="유튜브 URL 붙여넣기" autoFocus
+          style={{
+            width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+            border: `1px solid ${T.border}`, borderRadius: 10, outline: 'none',
+            fontSize: 14, fontFamily: T.fontUI, color: T.ink, background: '#fff',
+          }} />
+        <div style={{ marginTop: 12, fontSize: 12, color: T.text3, lineHeight: 1.5 }}>
+          프로토타입에서는 URL 입력 후 샘플 레시피를 식사 추가 흐름에 연결합니다.
+        </div>
+      </Sheet>
+    );
+  }
+
   return (
-    <Sheet title={`${date} ${slot} · 식사 추가`} onClose={onClose}>
+    <Sheet title={`${date} ${slot} · 식사 추가`} onClose={close}>
       {/* 검색 input — 포커스 시 기존 menu-add 검색으로 이동 */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
@@ -24,7 +167,7 @@ function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual, onGoYtImport
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
-          onFocus={() => { onClose(); onMenuAdd(date, slot, 'search'); }}
+          onFocus={() => { close(); onMenuAdd(date, slot, 'search'); }}
           placeholder="레시피 검색"
           style={{
             flex: 1, border: 'none', background: 'transparent', outline: 'none',
@@ -36,21 +179,20 @@ function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual, onGoYtImport
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {options.map(o => (
           <button key={o.id} onClick={() => {
-            onClose();
             if (o.id === 'manual') {
+              close();
               if (onGoManual) onGoManual(date, slot);
               else onMenuAdd(date, slot);
             } else if (o.id === 'recipebook') {
-              onMenuAdd(date, slot, 'books');
+              setMode('books');
             } else if (o.id === 'pantry') {
-              onMenuAdd(date, slot, 'pantry-match');
+              setMode('pantry');
             } else if (o.id === 'leftover') {
-              if (onGoLeftovers) onGoLeftovers(date, slot);
-              else onMenuAdd(date, slot, 'search');
+              setMode('leftover');
             } else if (o.id === 'youtube') {
-              if (onGoYtImport) onGoYtImport(date, slot);
-              else onMenuAdd(date, slot, 'search');
+              setMode('youtube');
             } else {
+              close();
               onMenuAdd(date, slot, 'search');
             }
           }} style={{
@@ -69,7 +211,7 @@ function MealAddModal({ date, slot, onClose, onMenuAdd, onGoManual, onGoYtImport
   );
 }
 
-function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, onOpenMeal, onCreateShopping, onCookList, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers, initialMealAdd }) {
+function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlannerAdd, onOpenMeal, onCreateShopping, onCookList, onMenuAdd, onGoManual, onGoYtImport, onGoLeftovers, onPickRecipeFromMealAdd, showToast, initialMealAdd }) {
   const keys = Object.keys(planner);
   const todayK = keys[todayIdx];
   // vNext S4 — week navigation (prototype: label만 변경, 데이터는 동일)
@@ -307,11 +449,15 @@ function PlannerScreen({ planner, setPlanner, onOpenRecipe, onOpenPlannerAdd, on
         <MealAddModal
           date={mealAddModal.date}
           slot={mealAddModal.slot}
+          planner={planner}
+          pantry={pantry}
           onClose={() => setMealAddModal(null)}
           onMenuAdd={onMenuAdd}
           onGoManual={onGoManual}
           onGoYtImport={onGoYtImport}
           onGoLeftovers={onGoLeftovers}
+          onPickRecipe={onPickRecipeFromMealAdd}
+          showToast={showToast}
         />
       )}
     </div>);

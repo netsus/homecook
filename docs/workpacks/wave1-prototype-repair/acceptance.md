@@ -17,15 +17,22 @@ Evidence:
 
 ## Repair 1: Modal And Interaction Fixes
 
-- [ ] MENU_ADD의 레시피북/팬트리 추천/남은요리/유튜브 가져오기 option이 modal로 열린다.
-- [ ] Save Modal이 레시피북 다중 선택을 지원한다.
-- [ ] Save Modal에서 이미 저장된 책은 해제, 저장 안 된 책은 추가로 표현된다.
-- [ ] Planner add modal에 취소 버튼이 있다.
-- [ ] Planner add modal의 recipe info에 선택 인분이 실시간 표시된다.
-- [ ] MANUAL_CREATE 재료 수량 입력은 숫자만 허용한다.
-- [ ] SHOPPING_DETAIL 장보기 완료 후 pantry reflect modal이 열린다.
-- [ ] Pantry add modal은 이미 보유한 재료를 disabled로 표시하고 중복 추가하지 않는다.
-- [ ] Bundle Picker 취소 버튼 텍스트가 가로로 렌더된다.
+- [x] MENU_ADD의 레시피북/팬트리 추천/남은요리/유튜브 가져오기 option이 modal로 열린다.
+- [x] Save Modal이 레시피북 다중 선택을 지원한다.
+- [x] Save Modal에서 이미 저장된 책은 해제, 저장 안 된 책은 추가로 표현된다.
+- [x] Planner add modal에 취소 버튼이 있다.
+- [x] Planner add modal의 recipe info에 선택 인분이 실시간 표시된다.
+- [x] MANUAL_CREATE 재료 수량 입력은 숫자만 허용한다.
+- [x] SHOPPING_DETAIL 장보기 완료 후 pantry reflect modal이 열린다.
+- [x] Pantry add modal은 이미 보유한 재료를 disabled로 표시하고 중복 추가하지 않는다.
+- [x] Bundle Picker 취소 버튼 텍스트가 가로로 렌더된다.
+
+Evidence:
+
+- `prototype Repair 1 mobile modal smoke OK`
+- `prototype Repair 1 save modal smoke OK`
+- `prototype Repair 1 save/pantry smoke OK`
+- `prototype Repair 1 desktop modal smoke OK`
 
 ## Repair 2: Screen Visual Corrections
 

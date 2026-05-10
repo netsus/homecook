@@ -1466,10 +1466,11 @@ function MyPageShoppingTab({ shoppingLists, onOpen }) {
 // ─────────────────────────────────────────────────────────────
 // PANTRY — PantryAddSheet + PANTRY_BUNDLE_PICKER
 // ─────────────────────────────────────────────────────────────
-function PantryAddSheet({ onClose, onAddItem, onOpenBundle }) {
+function PantryAddSheet({ pantry, onClose, onAddItem, onOpenBundle }) {
   const [query, setQuery] = useState_W('');
   const [activeCat, setActiveCat] = useState_W('전체');
   const [picked, setPicked] = useState_W(new Set());
+  const ownedNames = new Set(Object.values(pantry || {}).filter(item => item.have).map(item => item.name));
   const categories = ['전체', ...PANTRY_CATEGORIES];
   const filtered = PANTRY_ADD_ITEMS.filter(item => {
     if (activeCat !== '전체' && item.section !== activeCat) return false;
@@ -1477,6 +1478,7 @@ function PantryAddSheet({ onClose, onAddItem, onOpenBundle }) {
     return true;
   });
   const togglePick = (name) => setPicked(prev => {
+    if (ownedNames.has(name)) return prev;
     const next = new Set(prev);
     next.has(name) ? next.delete(name) : next.add(name);
     return next;
@@ -1515,16 +1517,19 @@ function PantryAddSheet({ onClose, onAddItem, onOpenBundle }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {filtered.map(item => {
               const on = picked.has(item.name);
+              const owned = ownedNames.has(item.name);
               return (
-                <button key={item.name} onClick={() => togglePick(item.name)} style={{
+                <button key={item.name} disabled={owned} onClick={() => togglePick(item.name)} style={{
                   display: 'flex', alignItems: 'center', gap: 9, minHeight: 54,
                   borderRadius: 12, border: on ? `1.5px solid ${T.mint}` : `1px solid ${T.border}`,
-                  background: on ? T.mintSoft : '#fff', cursor: 'pointer',
+                  background: owned ? T.surfaceFill : on ? T.mintSoft : '#fff',
+                  cursor: owned ? 'not-allowed' : 'pointer', opacity: owned ? 0.55 : 1,
                   padding: '9px 10px', textAlign: 'left',
                 }}>
                   <span style={{ width: 30, height: 30, borderRadius: 10, background: T.surfaceFill,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{item.image}</span>
                   <span style={{ flex: 1, fontSize: 13, color: T.ink, fontWeight: 800 }}>{item.name}</span>
+                  {owned && <span style={{ fontSize: 10, color: T.text3, fontWeight: 800 }}>보유중</span>}
                   {on && Icon.check(T.mintDeep, 16)}
                 </button>
               );
@@ -1623,7 +1628,7 @@ function PantryBundlePicker({ onClose, onConfirm }) {
 
         {bundle && (
           <div style={{ padding: 16, borderTop: `1px solid ${T.border}`, display: 'flex', gap: 8 }}>
-            <Button variant="neutral" onClick={onClose}>취소</Button>
+            <Button variant="neutral" style={{ flex: '0 0 88px', whiteSpace: 'nowrap', minWidth: 88 }} onClick={onClose}>취소</Button>
             <Button full disabled={picked.size === 0} onClick={() => onConfirm([...picked])}>
               {picked.size}개 추가
             </Button>
@@ -1936,24 +1941,41 @@ function PlanningServingsModal({ recipe, presetDate, presetSlot, onClose, onConf
       onClose={onClose}
       onConfirm={() => onConfirm(servings)}
       extra={
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: T.surfaceFill, borderRadius: 12, padding: '12px 16px', marginTop: 4,
-        }}>
-          <div style={{ fontSize: 13, color: T.text2, fontWeight: 600 }}>계획 인분</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button onClick={() => setServings(s => Math.max(1, s - 1))} style={{
-              width: 32, height: 32, borderRadius: 16, border: 'none',
-              background: '#fff', color: T.text1, fontSize: 16, fontWeight: 800, cursor: 'pointer',
-              boxShadow: T.shadowNatural,
-            }}>−</button>
-            <div style={{ minWidth: 36, textAlign: 'center', fontSize: 18, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
-              {servings}인분
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12, padding: 10,
+          }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 10, background: recipe?.bg || T.mintSoft,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
+            }}>{recipe?.emoji || '🍳'}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{recipe?.name || '레시피'}</div>
+              <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>
+                {recipe?.minutes || 0}분 · 선택 {servings}인분
+              </div>
             </div>
-            <button onClick={() => setServings(s => Math.min(12, s + 1))} style={{
-              width: 32, height: 32, borderRadius: 16, border: 'none',
-              background: T.mint, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer',
-            }}>+</button>
+          </div>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: T.surfaceFill, borderRadius: 12, padding: '12px 16px',
+          }}>
+            <div style={{ fontSize: 13, color: T.text2, fontWeight: 600 }}>계획 인분</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button onClick={() => setServings(s => Math.max(1, s - 1))} style={{
+                width: 32, height: 32, borderRadius: 16, border: 'none',
+                background: '#fff', color: T.ink, fontSize: 16, fontWeight: 800, cursor: 'pointer',
+                boxShadow: T.shadowNatural,
+              }}>−</button>
+              <div style={{ minWidth: 36, textAlign: 'center', fontSize: 18, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>
+                {servings}인분
+              </div>
+              <button onClick={() => setServings(s => Math.min(12, s + 1))} style={{
+                width: 32, height: 32, borderRadius: 16, border: 'none',
+                background: T.mint, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer',
+              }}>+</button>
+            </div>
           </div>
         </div>
       }
