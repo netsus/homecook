@@ -78,17 +78,25 @@ Evidence:
 
 ## Repair 4: Freeze And Service Porting Gate
 
-- [ ] Repair 0~3 PR이 모두 merged됐다.
-- [ ] Fixed prototype commit SHA가 closeout note에 기록됐다.
-- [ ] 320px/390px screenshot evidence가 남아 있다.
-- [ ] Navigation smoke evidence가 남아 있다.
-- [ ] Modal behavior smoke evidence가 남아 있다.
-- [ ] `index.html`과 `homecook-baemin-prototype.html` 정합성 확인이 통과했다.
-- [ ] 이후 service Slice A~F porting prompt가 fixed prototype commit SHA를 reference로 명시한다.
+- [x] Repair 0~3 PR이 모두 merged됐다.
+- [x] Fixed prototype commit SHA가 closeout note에 기록됐다.
+- [x] 320px/390px screenshot evidence가 남아 있다.
+- [x] Navigation smoke evidence가 남아 있다.
+- [x] Modal behavior smoke evidence가 남아 있다.
+- [x] `index.html`과 `homecook-baemin-prototype.html` 정합성 확인이 통과했다.
+- [x] 이후 service Slice A~F porting prompt가 fixed prototype commit SHA를 reference로 명시한다.
+
+Evidence:
+
+- Closeout note: `docs/workpacks/wave1-prototype-repair/closeout.md`
+- Fixed prototype implementation SHA: `95a93180a1329d2b317a561aa7c954a39cbe104c`
+- Merged PRs: #386, #387, #388, #389
+- Screenshot evidence: `.omx/artifacts/wave1-repair2/repair2-390-*.png`, `.omx/artifacts/wave1-repair2/repair2-320-*.png`, `.omx/artifacts/wave1-repair3/repair3-390-*.png`, `.omx/artifacts/wave1-repair3/repair3-320-*.png`
+- Mirror check: `diff -q ui/designs/prototypes/claude-design-260505-wave1/index.html ui/designs/prototypes/claude-design-260505-wave1/homecook-baemin-prototype.html`
 
 ## Guardrails
 
-- [ ] Prototype repair 동안 MVP service source를 수정하지 않는다.
-- [ ] API/DB/status/endpoint/field를 새로 추가하지 않는다.
-- [ ] 새 dependency를 추가하지 않는다.
-- [ ] Prototype의 broken/demo-only behavior를 service porting 기준으로 남기지 않는다.
+- [x] Prototype repair 동안 MVP service source를 수정하지 않는다.
+- [x] API/DB/status/endpoint/field를 새로 추가하지 않는다.
+- [x] 새 dependency를 추가하지 않는다.
+- [x] Prototype의 broken/demo-only behavior를 service porting 기준으로 남기지 않는다.
