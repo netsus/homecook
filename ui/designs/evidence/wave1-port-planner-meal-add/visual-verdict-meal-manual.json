@@ -1,0 +1,78 @@
+{
+  "scope": "wave1-mobile-phase4-meal-manual",
+  "threshold": 90,
+  "comparisons": [
+    {
+      "surface": "MEAL_SCREEN",
+      "viewport": "390x844",
+      "reference": "ui/designs/reference/wave1-fixed-prototype/mobile-390-meal-screen.png",
+      "generated": "ui/designs/evidence/wave1-port-planner-meal-add/meal-screen-default.png",
+      "score": 96,
+      "verdict": "pass",
+      "category_match": true,
+      "differences": [
+        "Trash icon stroke and circle weight are slightly heavier in MVP.",
+        "Second card vertical start differs by roughly 4-6px."
+      ],
+      "suggestions": [
+        "Keep current implementation; remaining differences are below the Phase 4 small-batch threshold."
+      ],
+      "reasoning": "Header, summary band, card colors, spacing, chips, CTA buttons, and bottom tab match the prototype closely."
+    },
+    {
+      "surface": "MEAL_SCREEN",
+      "viewport": "320x568",
+      "reference": "ui/designs/reference/wave1-fixed-prototype/mobile-320-meal-screen.png",
+      "generated": "ui/designs/evidence/wave1-port-planner-meal-add/meal-screen-narrow.png",
+      "score": 94,
+      "verdict": "pass",
+      "category_match": true,
+      "differences": [
+        "Bottom-tab overlap crops the next meal card a few pixels differently.",
+        "Trash icon rendering remains slightly heavier than reference."
+      ],
+      "suggestions": [
+        "No further edit for this batch; preserve current narrow viewport framing."
+      ],
+      "reasoning": "The narrow mobile layout preserves the prototype hierarchy, first card geometry, and bottom tab placement."
+    },
+    {
+      "surface": "MANUAL_RECIPE_CREATE",
+      "viewport": "390x844",
+      "reference": "ui/designs/reference/wave1-fixed-prototype/mobile-390-manual-recipe-create.png",
+      "generated": "ui/designs/evidence/wave1-port-planner-meal-add/manual-recipe-create.png",
+      "score": 93,
+      "verdict": "pass",
+      "category_match": true,
+      "differences": [
+        "The disabled step method control is slightly narrower and sits a few pixels lower.",
+        "The 완료 band is roughly 6-10px lower than the prototype."
+      ],
+      "suggestions": [
+        "Defer tiny alignment tweaks unless a later manual-create interaction pass touches the inline step editor."
+      ],
+      "reasoning": "The mobile screen now matches the prototype colors, section rhythm, input sizing, dashed add button, empty step card, CTA band, and bottom tab."
+    },
+    {
+      "surface": "MANUAL_RECIPE_CREATE",
+      "viewport": "320x568",
+      "reference": "ui/designs/reference/wave1-fixed-prototype/mobile-320-manual-recipe-create.png",
+      "generated": "ui/designs/evidence/wave1-port-planner-meal-add/manual-recipe-create-narrow.png",
+      "score": 94,
+      "verdict": "pass",
+      "category_match": true,
+      "differences": [
+        "The bottom tab covers the lower part of the empty step card at nearly the same point but with a small y-offset.",
+        "The step method control width remains slightly narrower."
+      ],
+      "suggestions": [
+        "Keep current narrow layout; it matches the reference clipping and hierarchy."
+      ],
+      "reasoning": "The 320px viewport keeps the same compact form structure and bottom navigation behavior as the fixed prototype reference."
+    }
+  ],
+  "next_actions": [
+    "Run targeted functional E2E for slice 07 and slice 18.",
+    "Run lint/build checks before opening the PR."
+  ]
+}

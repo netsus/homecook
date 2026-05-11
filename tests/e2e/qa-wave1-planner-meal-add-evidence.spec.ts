@@ -19,9 +19,10 @@ const EVIDENCE_DIR = path.resolve(
 const PLAN_DATE = "2026-04-18";
 const COLUMN_ID = "column-breakfast";
 const SLOT_NAME = "아침";
+const MEAL_SCREEN_PLAN_DATE = "2026-04-23";
 const MENU_ADD_PLAN_DATE = "2026-04-23";
 const MENU_ADD_SLOT_NAME = "점심";
-const MEAL_SCREEN_PATH = `/planner/${PLAN_DATE}/${COLUMN_ID}?slot=${encodeURIComponent(SLOT_NAME)}`;
+const MEAL_SCREEN_PATH = `/planner/${MEAL_SCREEN_PLAN_DATE}/${COLUMN_ID}?slot=${encodeURIComponent(SLOT_NAME)}`;
 const MENU_ADD_PATH = `/menu-add?date=${MENU_ADD_PLAN_DATE}&columnId=${COLUMN_ID}&slot=${encodeURIComponent(MENU_ADD_SLOT_NAME)}`;
 const MANUAL_CREATE_PATH = `/menu/add/manual?date=${PLAN_DATE}&columnId=${COLUMN_ID}&slot=${encodeURIComponent(SLOT_NAME)}`;
 const FIXED_NOW = "2026-04-23T09:00:00.000+09:00";
@@ -274,10 +275,28 @@ async function installMealRoutes(page: Page) {
           items: [
             {
               id: "meal-1",
+              recipe_id: "recipe-kimchi-rice",
+              recipe_title: "김치볶음밥",
+              recipe_thumbnail_url: createFoodThumbDataUri("🍚", "#FFE2CF"),
+              planned_servings: 1,
+              status: "registered",
+              is_leftover: false,
+            },
+            {
+              id: "meal-2",
               recipe_id: RECIPE_ID,
-              recipe_title: "김치찌개",
-              recipe_thumbnail_url: null,
+              recipe_title: "된장찌개",
+              recipe_thumbnail_url: createFoodThumbDataUri("🍲", "#FFE1E1"),
               planned_servings: 2,
+              status: "registered",
+              is_leftover: false,
+            },
+            {
+              id: "meal-3",
+              recipe_id: "recipe-salad",
+              recipe_title: "닭가슴살 샐러드",
+              recipe_thumbnail_url: createFoodThumbDataUri("🥗", "#DFF5E7"),
+              planned_servings: 1,
               status: "registered",
               is_leftover: false,
             },
@@ -849,12 +868,33 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await setAuthOverride(page);
     await installManualCreateRoutes(page);
     await page.goto(`${BASE_URL}${MANUAL_CREATE_PATH}`);
-    await page.getByRole("button", { name: "+ 재료 추가" }).click();
+    await expect(page.getByRole("heading", { name: "직접 등록" })).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "manual-recipe-create.png"),
+    });
+
+    await page.getByRole("button", { name: /재료 추가/ }).click();
     const dialog = page.getByRole("dialog").last();
     await expect(dialog).toBeVisible();
     await stabilize(page);
     await dialog.screenshot({
       path: path.join(EVIDENCE_DIR, "manual-create-ingredient-modal.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.narrow);
+    await setAuthOverride(page);
+    await installManualCreateRoutes(page);
+    await page.goto(`${BASE_URL}${MANUAL_CREATE_PATH}`);
+    await expect(page.getByRole("heading", { name: "직접 등록" })).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "manual-recipe-create-narrow.png"),
     });
     await context.close();
   }
@@ -893,7 +933,7 @@ test("capture Wave1 planner/meal-add authority evidence", async ({ browser }, te
     await installMealRoutes(page);
     await installRecipeDetailRoutes(page);
     await page.goto(`${BASE_URL}${MEAL_SCREEN_PATH}`);
-    await page.getByTestId("meal-recipe-link-meal-1").click();
+    await page.getByTestId("meal-recipe-link-meal-2").click();
     await expect(page.getByRole("heading", { name: "집밥 김치찌개" })).toBeVisible();
     await stabilize(page);
     await page.screenshot({

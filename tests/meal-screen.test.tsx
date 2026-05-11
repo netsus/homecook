@@ -129,9 +129,9 @@ describe("MealScreen", () => {
     // Should contain an SVG icon, not text "삭제"
     expect(deleteBtn.querySelector("svg")).toBeTruthy();
     expect(deleteBtn.textContent?.trim()).toBe("");
-    // 44x44 touch target
-    expect(deleteBtn.className).toContain("h-11");
-    expect(deleteBtn.className).toContain("w-11");
+    // Wave1 fixed reference uses a compact 32px circular icon button.
+    expect(deleteBtn.className).toContain("h-8");
+    expect(deleteBtn.className).toContain("w-8");
     expect(deleteBtn.className).toContain("rounded-full");
   });
 
