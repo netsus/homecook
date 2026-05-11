@@ -542,9 +542,9 @@ function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMen
             <div style={{ fontSize: 11, color: T.cookDoneFg, fontWeight: 600 }}>요리 완료</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: T.cookDoneFg }}>{stats.cooked}개</div>
           </div>
-          <div style={{ flex: 1, background: '#FFF4E1', borderRadius: 10, padding: '12px 16px' }}>
-            <div style={{ fontSize: 11, color: '#B8860B', fontWeight: 600 }}>장보기 완료</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#B8860B' }}>{stats.shopped}개</div>
+          <div style={{ flex: 1, background: T.shoppingDoneBg, borderRadius: 10, padding: '12px 16px' }}>
+            <div style={{ fontSize: 11, color: T.shoppingDoneFg, fontWeight: 600 }}>장보기 완료</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: T.shoppingDoneFg }}>{stats.shopped}개</div>
           </div>
           <div style={{ flex: 1, background: T.surfaceFill, borderRadius: 10, padding: '12px 16px' }}>
             <div style={{ fontSize: 11, color: T.text2, fontWeight: 600 }}>등록</div>
