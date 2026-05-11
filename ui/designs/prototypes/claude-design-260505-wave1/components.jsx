@@ -75,6 +75,8 @@ function Button({ children, variant = 'primary', onClick, style, disabled, size 
       background: ds.bg, color: ds.color, border: `1px solid ${ds.border}`,
       fontSize: sizes.fs, fontWeight: 700, cursor: disabled ? 'default' : 'pointer',
       width: full ? '100%' : undefined, fontFamily: T.fontUI,
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      whiteSpace: 'nowrap', flexShrink: full ? 1 : 0, minWidth: full ? 0 : undefined, lineHeight: 1,
       ...style
     }}>{children}</button>);
 

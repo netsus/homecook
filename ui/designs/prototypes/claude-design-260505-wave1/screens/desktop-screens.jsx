@@ -2147,18 +2147,19 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
                     }}>×</button>
                   </div>
                 ))}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, marginTop: 4 }}>
-                  <input value={newMealName} onChange={e => setNewMealName(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') addMealColumn(); }}
-                    placeholder="새 끼니 이름" disabled={mealColumns.length >= 5}
-                    style={{ ...inp, padding: '12px 14px', fontSize: 13, background: mealColumns.length >= 5 ? T.surfaceFill : '#fff' }} />
-                  <button onClick={addMealColumn} disabled={mealColumns.length >= 5} style={{
-                    padding: '0 16px', borderRadius: 10, border: 'none',
-                    background: mealColumns.length >= 5 ? T.border : T.mint,
-                    color: mealColumns.length >= 5 ? T.text4 : '#fff',
-                    fontSize: 13, fontWeight: 800, cursor: mealColumns.length >= 5 ? 'not-allowed' : 'pointer',
-                  }}>+ 끼니 컬럼 추가</button>
-                </div>
+                {mealColumns.length < 5 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, marginTop: 4 }}>
+                    <input value={newMealName} onChange={e => setNewMealName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') addMealColumn(); }}
+                      placeholder="새 끼니 이름"
+                      style={{ ...inp, padding: '12px 14px', fontSize: 13 }} />
+                    <button onClick={addMealColumn} style={{
+                      padding: '0 16px', borderRadius: 10, border: 'none',
+                      background: T.mint, color: '#fff', fontSize: 13, fontWeight: 800,
+                      cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}>+ 끼니 컬럼 추가</button>
+                  </div>
+                )}
                 <div style={{ fontSize: 11, color: mealColumns.length >= 5 ? T.red : T.text3, marginTop: 2 }}>{mealColumns.length}/5개</div>
               </div>
             </div>
@@ -2266,11 +2267,13 @@ function DesktopToggleRow({ label, sub, on, onChange }) {
 }
 const editLinkBtnDsk = {
   background: 'none', border: 'none', color: T.mintDeep,
-  fontSize: 13, fontWeight: 800, cursor: 'pointer', padding: 0,
+  fontSize: 13, fontWeight: 800, cursor: 'pointer', padding: '4px 0',
+  whiteSpace: 'nowrap', lineHeight: 1.2,
 };
 const settingsActionBtnDsk = {
   background: 'none', border: 'none', color: T.ink,
-  fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: 0,
+  fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '2px 0',
+  whiteSpace: 'nowrap', lineHeight: 1.3,
 };
 const dskRoundBtn = {
   width: 32, height: 32, borderRadius: 16, border: 'none',

@@ -1243,13 +1243,13 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
   };
 
   return (
-    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 40 }}>
+    <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 96 }}>
       <AppBar title="설정" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>} />
 
       <Section title="계정">
-        <Row left={<div>
-          <div style={{ fontSize: 14, color: T.ink, fontWeight: 600 }}>닉네임</div>
-          <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{profile?.nickname || '집밥러버'}</div>
+        <Row compact left={<div>
+          <div style={{ fontSize: 14, color: T.ink, fontWeight: 700 }}>닉네임</div>
+          <div style={{ fontSize: 12, color: T.text2, marginTop: 7, fontWeight: 700 }}>{profile?.nickname || '집밥러버'}</div>
         </div>} right={<button onClick={() => setNicknameSheet(true)} style={editLinkBtn}>변경</button>} />
       </Section>
 
@@ -1257,10 +1257,6 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
         <ToggleRow label="화면 켜둠" sub="요리 중 화면이 꺼지지 않아요" on={draftPrefs.keepAwake} onChange={(v) => setDraftPref('keepAwake', v)} />
         <ToggleRow label="음성 안내" sub="단계 음성을 읽어줘요 (베타)" on={draftPrefs.voice} onChange={(v) => setDraftPref('voice', v)} />
         <ToggleRow label="타이머 끝나면 다음 단계 자동" sub="" on={draftPrefs.autoNext} onChange={(v) => setDraftPref('autoNext', v)} />
-        <div style={{ display: 'flex', gap: 8, paddingTop: 12 }}>
-          <Button variant="neutral" disabled={!prefsDirty} onClick={cancelPrefs}>취소</Button>
-          <Button full disabled={!prefsDirty} onClick={savePrefs}>저장</Button>
-        </div>
       </Section>
 
       <Section title="플래너 끼니 컬럼">
@@ -1279,23 +1275,32 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
               }}>×</button>
             </div>
           ))}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 4 }}>
-            <input value={newMealName} onChange={e => setNewMealName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') addMealColumn(); }}
-              placeholder="새 끼니 이름" disabled={mealColumns.length >= 5}
-              style={{ ...inp, padding: '10px 12px', fontSize: 13, background: mealColumns.length >= 5 ? T.surfaceFill : '#fff' }} />
-            <button onClick={addMealColumn} disabled={mealColumns.length >= 5} style={{
-              padding: '0 12px', borderRadius: 10, border: 'none',
-              background: mealColumns.length >= 5 ? T.border : T.mint,
-              color: mealColumns.length >= 5 ? T.text4 : '#fff',
-              fontSize: 12, fontWeight: 800, cursor: mealColumns.length >= 5 ? 'not-allowed' : 'pointer',
-            }}>+ 끼니 컬럼 추가</button>
-          </div>
+          {mealColumns.length < 5 && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 4 }}>
+              <input value={newMealName} onChange={e => setNewMealName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') addMealColumn(); }}
+                placeholder="새 끼니 이름"
+                style={{ ...inp, padding: '10px 12px', fontSize: 13 }} />
+              <button onClick={addMealColumn} style={{
+                padding: '0 12px', borderRadius: 10, border: 'none',
+                background: T.mint, color: '#fff', fontSize: 12, fontWeight: 800,
+                cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>+ 끼니 컬럼 추가</button>
+            </div>
+          )}
           <div style={{ fontSize: 11, color: mealColumns.length >= 5 ? T.red : T.text3, marginTop: 2 }}>
             {mealColumns.length}/5개
           </div>
         </div>
       </Section>
+
+      <div style={{
+        display: 'flex', gap: 8, padding: '12px 16px',
+        background: '#fff', borderTop: `1px solid ${T.border}`,
+      }}>
+        <Button variant="neutral" disabled={!prefsDirty} onClick={cancelPrefs}>취소</Button>
+        <Button full disabled={!prefsDirty} onClick={savePrefs}>저장</Button>
+      </div>
 
       <Section title="기타">
         <Row left={<button onClick={() => setConfirmLogout(true)} style={settingsActionBtn}>로그아웃</button>} right={null} />
@@ -1328,14 +1333,15 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
     </div>
   );
 }
-function Row({ left, right }) {
+function Row({ left, right, compact = false }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '12px 0', borderBottom: `1px solid ${T.surfaceSubtle}`,
+      padding: compact ? '6px 0 8px' : '12px 0', borderBottom: `1px solid ${T.surfaceSubtle}`,
+      gap: 12,
     }}>
-      <div style={{ fontSize: 14, color: T.ink, fontWeight: 600 }}>{left}</div>
-      {right != null && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{right}</div>}
+      <div style={{ fontSize: 14, color: T.ink, fontWeight: 600, minWidth: 0 }}>{left}</div>
+      {right != null && <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>{right}</div>}
     </div>
   );
 }
@@ -1361,11 +1367,13 @@ function ToggleRow({ label, sub, on, onChange }) {
 }
 const editLinkBtn = {
   background: 'none', border: 'none', color: T.mintDeep,
-  fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: 0,
+  fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '4px 0',
+  whiteSpace: 'nowrap', lineHeight: 1.2,
 };
 const settingsActionBtn = {
   background: 'none', border: 'none', color: T.ink,
-  fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: 0,
+  fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '2px 0',
+  whiteSpace: 'nowrap', lineHeight: 1.3,
 };
 
 function NicknameEditSheet({ current, onClose, onSave }) {
