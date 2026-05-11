@@ -36,7 +36,7 @@ For Wave1 mobile porting slices A-F, the following rules override prior design c
 4. Prior visual verdict scores and screenshot evidence from merged PRs #373, #374, #376, #379, #381, and #383 cannot be reused as current completion evidence.
 5. If this baseline conflicts with `docs/design/design-tokens.md`, `ui/designs/BAEMIN_STYLE_DIRECTION.md`, `docs/engineering/product-design-authority.md`, or screen-level `ui/designs/*.md`, this baseline wins for Wave1 mobile surfaces.
 6. For web/desktop or non-Wave1 legacy surfaces, existing docs continue to apply until a separate web redesign plan supersedes them.
-7. `ui/designs/reference/wave1-fixed-prototype/manifest.json` and the Wave1 validator must be updated to represent exact parity mode before Phase 5 closeout.
+7. `ui/designs/reference/wave1-fixed-prototype/manifest.json` and the Wave1 validator must stay in exact parity mode before any service porting PR can be accepted.
 
 ## Non-Negotiable Target
 

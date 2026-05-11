@@ -1,14 +1,25 @@
 {
-  "lock_version": 1,
+  "lock_version": 2,
   "locked_on": "2026-05-11",
   "fixed_prototype_path": "ui/designs/prototypes/claude-design-260505-wave1",
   "fixed_prototype_implementation_sha": "9bf7a34c6b422d0c9981d4c2968e3350d5a28892",
   "visual_layout_source_of_truth": "fixed prototype",
   "functional_source_of_truth": "MVP service implementation + official docs",
+  "parity_mode": "exact-mobile",
   "reference_capture_command": "pnpm capture:wave1-prototype-lock",
   "validation_command": "pnpm validate:wave1-prototype-lock",
-  "required_visual_verdict_score": 90,
-  "allowed_divergence_policy": "Only user-approved divergences may be recorded in the service porting PR body. They do not replace the required reference screenshot, service screenshot, visual verdict score, and blocker count evidence.",
+  "required_unclassified_visual_differences": 0,
+  "required_visual_blockers": 0,
+  "required_evidence": [
+    "fixed_prototype_sha",
+    "reference_screenshot",
+    "service_screenshot",
+    "screenshot_diff",
+    "computed_style_audit",
+    "dom_geometry_audit",
+    "remaining_difference_ledger"
+  ],
+  "allowed_divergence_policy": "Exact-reference-ready mobile surfaces must reach zero unclassified visual differences in the controlled verification environment. Approved divergence language may only classify functional-contract-required, browser-rendering-limited, not-in-mobile-scope, or not-yet-prototyped differences; it cannot replace screenshot diff, computed-style audit, DOM geometry audit, blocker 0, and unclassified visual difference 0 evidence.",
   "screenshots": [
     {
       "surface": "HOME",

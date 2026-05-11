@@ -36,10 +36,22 @@ function createFixture() {
     "ui/designs/reference/wave1-fixed-prototype/manifest.json",
     `${JSON.stringify(
       {
+        lock_version: 2,
         fixed_prototype_path: "ui/designs/prototypes/claude-design-260505-wave1",
         fixed_prototype_implementation_sha: FIXED_SHA,
         visual_layout_source_of_truth: "fixed prototype",
-        required_visual_verdict_score: 90,
+        parity_mode: "exact-mobile",
+        required_unclassified_visual_differences: 0,
+        required_visual_blockers: 0,
+        required_evidence: [
+          "fixed_prototype_sha",
+          "reference_screenshot",
+          "service_screenshot",
+          "screenshot_diff",
+          "computed_style_audit",
+          "dom_geometry_audit",
+          "remaining_difference_ledger",
+        ],
         screenshots: [
           {
             surface: "HOME",
@@ -61,8 +73,12 @@ function buildReadyBody() {
     `- fixed prototype SHA: ${FIXED_SHA}`,
     "- reference screenshot: `ui/designs/reference/wave1-fixed-prototype/mobile-390-home.png`",
     "- service screenshot: `.omx/artifacts/wave1-port-foundation/mobile-390-home-after.png`",
-    "- visual verdict score: 94",
-    "- blocker: 0",
+    "- visual parity comparison: pass",
+    "- screenshot diff: `.omx/artifacts/wave1-port-foundation/mobile-390-home-diff.png`",
+    "- computed-style audit: pass",
+    "- DOM geometry audit: pass",
+    "- unclassified visual difference: 0",
+    "- blocker count: 0",
     "",
   ].join("\n");
 }
@@ -83,10 +99,22 @@ describe("Wave1 prototype lock validator", () => {
       "ui/designs/reference/wave1-fixed-prototype/manifest.json",
       `${JSON.stringify(
         {
+          lock_version: 2,
           fixed_prototype_path: "ui/designs/prototypes/claude-design-260505-wave1",
           fixed_prototype_implementation_sha: FIXED_SHA,
           visual_layout_source_of_truth: "fixed prototype",
-          required_visual_verdict_score: 90,
+          parity_mode: "exact-mobile",
+          required_unclassified_visual_differences: 0,
+          required_visual_blockers: 0,
+          required_evidence: [
+            "fixed_prototype_sha",
+            "reference_screenshot",
+            "service_screenshot",
+            "screenshot_diff",
+            "computed_style_audit",
+            "dom_geometry_audit",
+            "remaining_difference_ledger",
+          ],
           screenshots: [
             {
               surface: "HOME",
@@ -105,6 +133,40 @@ describe("Wave1 prototype lock validator", () => {
     expect(results[0]?.errors[0]?.message).toContain("reference screenshot is missing");
   });
 
+  it("rejects legacy visual verdict score thresholds", () => {
+    const rootDir = createFixture();
+    writeFixtureFile(
+      rootDir,
+      "ui/designs/reference/wave1-fixed-prototype/manifest.json",
+      `${JSON.stringify(
+        {
+          lock_version: 1,
+          fixed_prototype_path: "ui/designs/prototypes/claude-design-260505-wave1",
+          fixed_prototype_implementation_sha: FIXED_SHA,
+          visual_layout_source_of_truth: "fixed prototype",
+          required_visual_verdict_score: 90,
+          screenshots: [
+            {
+              surface: "HOME",
+              viewport: "mobile-390",
+              path: "ui/designs/reference/wave1-fixed-prototype/mobile-390-home.png",
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const results = validateLock({ rootDir });
+    const messages =
+      results[0]?.errors.map((error: { message: string }) => error.message).join("\n") ?? "";
+
+    expect(messages).toContain("Legacy visual verdict score thresholds are not allowed");
+    expect(messages).toContain("Expected parity mode exact-mobile");
+    expect(messages).toContain("unclassified visual differences to be 0");
+  });
+
   it("enforces prototype comparison evidence for Wave1 service porting PRs", () => {
     const rootDir = createFixture();
 
@@ -117,7 +179,7 @@ describe("Wave1 prototype lock validator", () => {
     expect(results).toEqual([]);
   });
 
-  it("fails Wave1 service porting PRs without visual verdict evidence", () => {
+  it("fails Wave1 service porting PRs without exact parity evidence", () => {
     const rootDir = createFixture();
 
     const results = validateLock({
@@ -133,7 +195,11 @@ describe("Wave1 prototype lock validator", () => {
 
     const messages = results[0]?.errors.map((error: { message: string }) => error.message).join("\n") ?? "";
     expect(messages).toContain("generated service screenshot");
-    expect(messages).toContain("visual verdict");
+    expect(messages).toContain("visual parity comparison");
+    expect(messages).toContain("screenshot diff");
+    expect(messages).toContain("computed-style audit");
+    expect(messages).toContain("DOM geometry audit");
+    expect(messages).toContain("unclassified visual differences as 0");
     expect(messages).toContain("blocker count");
   });
 
