@@ -97,7 +97,7 @@ test.describe("QA visual regression", () => {
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
-    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개...")).toBeVisible();
+    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개…")).toBeVisible();
 
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-home-default.png", {
@@ -130,7 +130,7 @@ test.describe("QA visual regression", () => {
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
-    await page.getByRole("button", { name: "재료 더보기" }).click();
+    await page.getByRole("button", { name: "재료로 검색" }).click();
     const dialog = page.getByRole("dialog", { name: "재료로 검색" });
     await expect(dialog).toBeVisible();
 

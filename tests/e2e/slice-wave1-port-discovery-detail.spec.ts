@@ -38,11 +38,11 @@ test.describe("wave1 port discovery detail", () => {
     page,
   }) => {
     await page.goto("/");
-    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개...")).toBeVisible();
+    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개…")).toBeVisible();
 
     const sortButton = page.getByRole("button", { name: /정렬 기준/i });
     await expect(sortButton).toBeVisible();
-    await expect(sortButton).toContainText("좋아요순");
+    await expect(sortButton).toContainText("최신순");
 
     await sortButton.click();
 
@@ -65,7 +65,7 @@ test.describe("wave1 port discovery detail", () => {
     const recipeListSection = page.locator('section[aria-label="모든 레시피"]');
     await expect(recipeListSection.getByRole("button", { name: "양파" })).toBeVisible();
     await expect(
-      recipeListSection.getByRole("button", { name: "재료 더보기" }),
+      recipeListSection.getByRole("button", { name: "재료로 검색" }),
     ).toBeVisible();
   });
 

@@ -83,10 +83,10 @@ describe("home screen", () => {
       await screen.findByRole("heading", { level: 1, name: "오늘은 뭐 해먹지?" }),
     ).toBeTruthy();
     expect(screen.getByText("목요일 저녁,")).toBeTruthy();
-    expect(screen.getByText("homecook_")).toBeTruthy();
-    expect(screen.getByPlaceholderText("김치볶음밥, 된장찌개...")).toBeTruthy();
+    expect(screen.getByLabelText("homecook_")).toBeTruthy();
+    expect(screen.getByPlaceholderText("김치볶음밥, 된장찌개…")).toBeTruthy();
     expect(screen.getByRole("button", { name: "양파" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "재료 더보기" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /재료로 검색/ })).toBeTruthy();
     expect(
       screen.getByRole("heading", { level: 2, name: "테마별 레시피" }),
     ).toBeTruthy();
@@ -124,7 +124,7 @@ describe("home screen", () => {
 
     render(<HomeScreen />);
 
-    await user.click(await screen.findByRole("button", { name: "재료 더보기" }));
+    await user.click(await screen.findByRole("button", { name: /재료로 검색/ }));
     await screen.findByRole("dialog", { name: "재료로 검색" });
 
     expect(await screen.findByRole("checkbox", { name: "양파" })).toBeTruthy();
@@ -164,7 +164,7 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     const searchInput = await screen.findByPlaceholderText(
-      "김치볶음밥, 된장찌개...",
+      "김치볶음밥, 된장찌개…",
     );
 
     await waitFor(() => {
@@ -206,13 +206,13 @@ describe("home screen", () => {
     }, { timeout: 1000 });
   });
 
-  it("uses an inline SortDropdown and defaults to 좋아요순", async () => {
+  it("uses an inline SortDropdown and defaults to the prototype first option", async () => {
     const user = userEvent.setup();
 
     render(<HomeScreen />);
 
     const sortButton = await screen.findByRole("button", { name: /정렬 기준/i });
-    expect(sortButton.textContent).toContain("좋아요순");
+    expect(sortButton.textContent).toContain("최신순");
 
     await user.click(sortButton);
 
@@ -373,7 +373,7 @@ describe("home screen", () => {
     render(<HomeScreen />);
 
     await user.type(
-      await screen.findByPlaceholderText("김치볶음밥, 된장찌개..."),
+      await screen.findByPlaceholderText("김치볶음밥, 된장찌개…"),
       "김치",
     );
 
@@ -398,7 +398,7 @@ describe("home screen", () => {
 
     await user.click(screen.getAllByRole("button", { name: "초기화" })[0]!);
 
-    expect(screen.getByPlaceholderText("김치볶음밥, 된장찌개...")).toHaveProperty(
+    expect(screen.getByPlaceholderText("김치볶음밥, 된장찌개…")).toHaveProperty(
       "value",
       "김치",
     );
@@ -430,7 +430,7 @@ describe("home screen", () => {
       name: "모든 레시피",
     });
     const ingredientButton = screen.getByRole("button", { name: "양파" });
-    const moreButton = screen.getByRole("button", { name: "재료 더보기" });
+    const moreButton = screen.getByRole("button", { name: /재료로 검색/ });
     const listSection = allRecipesHeading.closest("section");
 
     expect(listSection).not.toBeNull();
@@ -441,7 +441,7 @@ describe("home screen", () => {
   it("does not render header profile or cart icons", async () => {
     render(<HomeScreen />);
 
-    await screen.findByText("homecook_");
+    await screen.findByLabelText("homecook_");
 
     expect(screen.queryByRole("button", { name: "장보기" })).toBeNull();
     expect(screen.queryByText("채")).toBeNull();

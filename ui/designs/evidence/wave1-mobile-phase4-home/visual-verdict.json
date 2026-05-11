@@ -1,0 +1,26 @@
+{
+  "scope": "wave1-mobile-phase4-home",
+  "updated_at": "2026-05-11T17:13:21Z",
+  "threshold": 90,
+  "score": 88,
+  "verdict": "revise",
+  "category_match": true,
+  "evidence_after_dir": "ui/designs/evidence/wave1-mobile-phase4-home-after",
+  "evidence_before_dir": "ui/designs/evidence/wave1-mobile-phase4-home-before",
+  "reference_dir": "ui/designs/reference/wave1-fixed-prototype",
+  "differences": [
+    "HOME initial mobile viewports now closely match the prototype, with only minor card crop and font raster differences.",
+    "Sort-open state remains visually different because the prototype has three sort options while MVP keeps the official four-option API contract.",
+    "The 320px sort menu opens upward to keep all official options visible on a short viewport, while the prototype reference shows a shorter menu opening downward."
+  ],
+  "suggestions": [
+    "Keep the HOME shell and card spacing fixed as the current Phase 4 mobile baseline.",
+    "Do not add prototype-only 빠른 조리순 without contract-evolution approval.",
+    "In the next HOME polish pass, tune dropdown width and row height without changing official sort values."
+  ],
+  "next_actions": [
+    "Ship the HOME mobile Phase 4 slice as the first small PR.",
+    "Continue Phase 4 with the next mobile reference group after this baseline is merged."
+  ],
+  "reasoning": "The first HOME mobile pass is strong enough to become the current implementation baseline, but exact sort-open parity is blocked by the official MVP sort contract."
+}

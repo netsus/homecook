@@ -60,6 +60,25 @@ function capturePath(viewport, state, layer) {
   );
 }
 
+async function hideNextDevOverlay(page) {
+  await page.addStyleTag({
+    content: `
+      nextjs-portal,
+      [data-nextjs-dev-tools-button],
+      [data-nextjs-dev-tools-indicator],
+      [data-nextjs-dialog],
+      [data-nextjs-dialog-overlay],
+      [data-nextjs-toast],
+      [data-nextjs-terminal],
+      [data-nextjs-build-error] {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+    `,
+  });
+}
+
 /* ── Mock route helpers (for loading/empty/error states) ─────────── */
 
 const MOCK_RECIPES = {
@@ -70,6 +89,7 @@ const MOCK_RECIPES = {
         id: "r1",
         title: "김치볶음밥",
         source_type: "system",
+        view_count: 1284,
         like_count: 120,
         save_count: 230,
         base_servings: 2,
@@ -80,8 +100,10 @@ const MOCK_RECIPES = {
         id: "r2",
         title: "된장찌개",
         source_type: "system",
+        view_count: 890,
         like_count: 89,
         save_count: 150,
+        base_servings: 2,
         tags: ["한식", "찌개"],
         thumbnail_url: null,
       },
@@ -89,8 +111,10 @@ const MOCK_RECIPES = {
         id: "r3",
         title: "제육볶음",
         source_type: "youtube",
+        view_count: 2200,
         like_count: 200,
         save_count: 310,
+        base_servings: 2,
         tags: ["한식", "볶음"],
         thumbnail_url: null,
       },
@@ -98,8 +122,10 @@ const MOCK_RECIPES = {
         id: "r4",
         title: "파스타 알리오 올리오",
         source_type: "manual",
+        view_count: 950,
         like_count: 95,
         save_count: 80,
+        base_servings: 2,
         tags: ["양식", "파스타"],
         thumbnail_url: null,
       },
@@ -107,8 +133,10 @@ const MOCK_RECIPES = {
         id: "r5",
         title: "닭갈비",
         source_type: "system",
+        view_count: 1500,
         like_count: 150,
         save_count: 180,
+        base_servings: 2,
         tags: ["한식"],
         thumbnail_url: null,
       },
@@ -116,8 +144,10 @@ const MOCK_RECIPES = {
         id: "r6",
         title: "순두부찌개",
         source_type: "system",
+        view_count: 1100,
         like_count: 110,
         save_count: 140,
+        base_servings: 2,
         tags: ["한식", "찌개"],
         thumbnail_url: null,
       },
@@ -134,8 +164,18 @@ const MOCK_THEMES = {
     themes: [
       {
         id: "t1",
-        title: "오늘의 한식 추천",
+        title: "자취생 간단식",
         recipes: MOCK_RECIPES.data.items.slice(0, 4),
+      },
+      {
+        id: "t2",
+        title: "집밥 기본기",
+        recipes: MOCK_RECIPES.data.items.slice(1, 5),
+      },
+      {
+        id: "t3",
+        title: "다이어트 식단",
+        recipes: MOCK_RECIPES.data.items.slice(2, 6),
       },
     ],
   },
@@ -146,9 +186,9 @@ const MOCK_INGREDIENTS = {
   success: true,
   data: {
     items: [
-      { id: "ing1", name: "양파", category: "채소" },
-      { id: "ing2", name: "대파", category: "채소" },
-      { id: "ing3", name: "소고기", category: "육류" },
+      { id: "ing1", standard_name: "밥·면", category: "곡류" },
+      { id: "ing2", standard_name: "육류", category: "육류" },
+      { id: "ing3", standard_name: "해산물", category: "해산물" },
     ],
   },
   error: null,
@@ -302,6 +342,8 @@ async function captureState(browser, viewport, stateId, layer) {
   await setupRoutes(page);
 
   await page.goto(BASE_URL, { waitUntil: "commit" });
+  await page.waitForLoadState("domcontentloaded", { timeout: 10000 }).catch(() => {});
+  await hideNextDevOverlay(page);
 
   // Wait for appropriate state
   switch (stateId) {
@@ -363,7 +405,7 @@ async function captureState(browser, viewport, stateId, layer) {
   const filePath = capturePath(viewport.label, stateId, layer);
   await page.screenshot({
     path: filePath,
-    fullPage: stateId !== "loading", // loading state may have infinite scroll
+    fullPage: false,
   });
 
   await page.close();

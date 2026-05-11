@@ -9,8 +9,8 @@ test.describe("wave1 port foundation", () => {
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
-    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개...")).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "하단 탭" })).toBeVisible();
+    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개…")).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "HOME 하단 탭" })).toBeVisible();
 
     const pageHasHorizontalOverflow = await page.evaluate(() => {
       return document.documentElement.scrollWidth > window.innerWidth + 4;
