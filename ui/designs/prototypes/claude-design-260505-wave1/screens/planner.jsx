@@ -217,6 +217,9 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
   const keys = Object.keys(planner);
   const todayK = keys[todayIdx];
   const dayRefs = React.useRef({});
+  const weekRailRef = React.useRef(null);
+  const weekRailSnapTimer = React.useRef(null);
+  const weekRailResetting = React.useRef(false);
   // vNext S4 — week navigation label은 유지하고, 이동 UI는 일주일 날짜 카드로 고정
   const [weekOffset, setWeekOffset] = useState_P(0);
   // vNext S4 — 식사 추가 모달 상태
@@ -233,14 +236,46 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
   const scrollToDay = (key) => {
     dayRefs.current[key]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
-  const dateCardMeta = (key, index) => {
+  const dateCardMeta = (index, offset = weekOffset) => {
     const d = new Date(WEEK_START);
-    d.setDate(d.getDate() + index + weekOffset * 7);
+    d.setDate(d.getDate() + index + offset * 7);
     return {
       dow: weekDays[index],
       day: d.getDate(),
       label: `${d.getMonth() + 1}/${d.getDate()}`
     };
+  };
+
+  const centerWeekRail = () => {
+    const el = weekRailRef.current;
+    if (!el) return;
+    weekRailResetting.current = true;
+    el.scrollLeft = el.clientWidth;
+    window.setTimeout(() => { weekRailResetting.current = false; }, 80);
+  };
+
+  React.useEffect(() => {
+    centerWeekRail();
+  }, [weekOffset]);
+
+  React.useEffect(() => () => window.clearTimeout(weekRailSnapTimer.current), []);
+
+  const handleWeekRailScroll = () => {
+    if (weekRailResetting.current) return;
+    window.clearTimeout(weekRailSnapTimer.current);
+    weekRailSnapTimer.current = window.setTimeout(() => {
+      const el = weekRailRef.current;
+      if (!el) return;
+      const page = el.clientWidth || 1;
+      const index = Math.round(el.scrollLeft / page);
+      if (index <= 0) {
+        setWeekOffset(w => w - 1);
+      } else if (index >= 2) {
+        setWeekOffset(w => w + 1);
+      } else {
+        centerWeekRail();
+      }
+    }, 140);
   };
 
   const stats = React.useMemo(() => {
@@ -326,27 +361,40 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
           }}>›</button>
         </div>
         <div style={{
-          display: 'flex', gap: 8, overflowX: 'auto',
+          display: 'flex', overflowX: 'auto',
           scrollSnapType: 'x mandatory', scrollbarWidth: 'none',
-        }}>
-          {keys.map((k, index) => {
-            const active = k === todayK;
-            const meta = dateCardMeta(k, index);
+          scrollBehavior: 'smooth',
+        }} ref={weekRailRef} onScroll={handleWeekRailScroll}>
+          {[-1, 0, 1].map(relative => {
+            const pageOffset = weekOffset + relative;
             return (
-              <button key={k} onClick={() => scrollToDay(k)} style={{
-                flex: '0 0 58px', height: 66, scrollSnapAlign: 'start',
-                borderRadius: 12,
-                border: active ? `2px solid ${T.mint}` : `1px solid ${T.border}`,
-                background: active ? T.mintSoft : '#fff',
-                color: active ? T.mintDeep : T.text2,
-                cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                gap: 2,
+              <div key={pageOffset} style={{
+                flex: '0 0 100%', scrollSnapAlign: 'start',
+                display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 4,
               }}>
-                <div style={{ fontSize: 11, fontWeight: 800 }}>{meta.dow}</div>
-                <div style={{ fontSize: 21, fontWeight: 900, fontFamily: T.fontBrand }}>{meta.day}</div>
-                <div style={{ fontSize: 10, color: active ? T.mintDeep : T.text4 }}>{meta.label}</div>
-              </button>
+                {keys.map((k, index) => {
+                  const active = relative === 0 && k === todayK;
+                  const meta = dateCardMeta(index, pageOffset);
+                  return (
+                    <button key={`${pageOffset}-${k}`} onClick={() => {
+                      if (relative !== 0) setWeekOffset(pageOffset);
+                      scrollToDay(k);
+                    }} style={{
+                      minWidth: 0, height: 52,
+                      borderRadius: 11,
+                      border: active ? `2px solid ${T.mint}` : `1px solid ${T.border}`,
+                      background: active ? T.mintSoft : '#fff',
+                      color: active ? T.mintDeep : T.text2,
+                      cursor: 'pointer',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: 1,
+                    }}>
+                      <div style={{ fontSize: 10, fontWeight: 800 }}>{meta.dow}</div>
+                      <div style={{ fontSize: 19, fontWeight: 900, fontFamily: T.fontBrand }}>{meta.day}</div>
+                    </button>
+                  );
+                })}
+              </div>
             );
           })}
         </div>
