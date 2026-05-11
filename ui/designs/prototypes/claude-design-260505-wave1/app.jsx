@@ -249,14 +249,22 @@ function App() {
   const completeShopping = (listOrId) => {
     const incoming = typeof listOrId === 'object' ? listOrId : null;
     const listId = incoming?.id || listOrId;
-    setShoppingLists(ls => ls.map(l => l.id !== listId ? l : ({
-      ...l,
+    const base = incoming || shoppingLists.find(l => l.id === listId);
+    if (!base) return;
+    const completedList = {
+      ...base,
       ...(incoming?.items ? { items: incoming.items } : {}),
       status: 'completed',
       completedAt: '방금 완료'
-    })));
-    const list = incoming || shoppingLists.find(l => l.id === listId);
-    if (list) setReflectPicker({ ...list, status: 'completed' });
+    };
+    setShoppingLists(ls => {
+      const exists = ls.some(l => l.id === completedList.id);
+      return exists
+        ? ls.map(l => l.id !== completedList.id ? l : completedList)
+        : [completedList, ...ls];
+    });
+    setReflectPicker(completedList);
+    setRoute(prev => ({ ...prev, detail: null, page: 'shopping-detail', pageArgs: { listId: completedList.id } }));
   };
   const reopenShopping = (listId) => {
     setShoppingLists(ls => ls.map(l => l.id !== listId ? l : ({ ...l, status: 'active', completedAt: null })));
@@ -482,7 +490,8 @@ function App() {
       showToast={showToast} />;
   } else if (route.page === 'shopping-create') {
     content = <ShoppingCreateScreen planner={planner} pantry={pantry}
-      onBack={backFromPage} showToast={showToast} />;
+      presetDate={pa.date} presetSlot={pa.slot} presetMealIndex={pa.mealIndex}
+      onBack={backFromPage} onComplete={completeShopping} showToast={showToast} />;
   } else if (route.page === 'cook-list') {
     content = <CookListScreen planner={planner} onBack={backFromPage}
       onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
@@ -494,7 +503,7 @@ function App() {
     content = <MealDetailScreen date={pa.date} slot={pa.slot} planner={planner}
       onBack={backFromPage} onOpenRecipe={openRecipe}
       onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
-      onCreateShopping={() => goPage('shopping-create')}
+      onCreateShopping={(d, s, mealIndex = 0) => goPage('shopping-create', { date: d, slot: s, mealIndex })}
       onChangeStatus={changeStatus} onRemove={removeMeal} onChangeServings={changeServings} />;
   } else if (route.page === 'mypage-saved') {
     content = <MyPageSavedScreen savedIds={savedIds} onBack={backFromPage}
@@ -671,7 +680,8 @@ function App() {
   } else if (route.page === 'shopping-create') {
     desktopPageContent = <DesktopShoppingCreateScreen
       planner={planner} pantry={pantry}
-      onBack={backFromPage} showToast={showToast} />;
+      presetDate={pa.date} presetSlot={pa.slot} presetMealIndex={pa.mealIndex}
+      onBack={backFromPage} onComplete={completeShopping} showToast={showToast} />;
   } else if (route.page === 'shopping-detail') {
     const list = shoppingLists.find(l => l.id === pa.listId);
     desktopPageContent = <DesktopShoppingDetailScreen
@@ -703,7 +713,7 @@ function App() {
     desktopPageContent = <DesktopMealDetailScreen date={pa.date} slot={pa.slot} planner={planner}
       onBack={backFromPage} onOpenRecipe={openRecipe}
       onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
-      onCreateShopping={() => goPage('shopping-create')}
+      onCreateShopping={(d, s, mealIndex = 0) => goPage('shopping-create', { date: d, slot: s, mealIndex })}
       onChangeStatus={changeStatus} onRemove={removeMeal} onChangeServings={changeServings} />;
   } else if (route.page === 'cook-list') {
     desktopPageContent = <DesktopCookListScreen planner={planner} onBack={backFromPage}

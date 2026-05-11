@@ -1119,7 +1119,7 @@ function ShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, onReopen
       }}>
         {completed ? (
           <>
-            <Button full variant="neutral" onClick={() => onReopen(list.id)}>다시 열기</Button>
+            <Button full variant="neutral" disabled>완료된 장보기</Button>
           </>
         ) : (
           <Button full disabled={buy.length === 0} onClick={completeCurrentShopping}>
