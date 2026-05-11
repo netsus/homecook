@@ -215,7 +215,7 @@ export function HomeScreen() {
         style={
           {
             "--home-mint": "#2AC1BC",
-            "--home-mint-deep": "#20A8A4",
+            "--home-mint-deep": "#007A76",
             "--home-mint-soft": "#E6F8F7",
             "--home-bg": "#FFFFFF",
             "--home-ink": "#212529",
@@ -228,7 +228,7 @@ export function HomeScreen() {
           <div className="pb-[100px]">
             {/* Hero greeting */}
             <div className="bg-white px-4 pb-3 pt-5">
-              <div className="mb-0.5 text-[14px] text-[#868E96]">목요일 저녁,</div>
+              <div className="mb-0.5 text-[14px] text-[#495057]">목요일 저녁,</div>
               <h1 className="text-[22px] font-bold leading-[1.2] text-[#212529]" style={{ fontFamily: '"Jua", -apple-system, sans-serif' }}>
                 오늘은 뭐 해먹지?
               </h1>
@@ -290,7 +290,7 @@ export function HomeScreen() {
                     <h2 className="text-[18px] font-bold text-[#212529]">
                       {listTitle}
                     </h2>
-                    <span className="text-[14px] font-medium text-[#868E96]">
+                    <span className="text-[14px] font-medium text-[#495057]">
                       ({displayedRecipes.length})
                     </span>
                   </div>
@@ -363,7 +363,7 @@ function HomeAppBar() {
         className="text-[22px] font-bold tracking-[0.5px]"
         style={{ fontFamily: '"Jua", -apple-system, sans-serif' }}
       >
-        <span className="text-[#2AC1BC]">homecook</span>
+        <span className="text-[#008F8A]">homecook</span>
         <span className="text-[#212529]">_</span>
       </div>
     </header>
@@ -391,22 +391,22 @@ function QuickIngredientRail({
     <div className="scrollbar-hide flex gap-2 overflow-x-auto px-4 pb-1">
       {/* "재료로 검색" button — prototype style */}
       <button
-        className={`flex h-[38px] shrink-0 items-center gap-1.5 rounded-full border-[1.5px] px-3.5 text-[13px] font-bold ${
+        className={`flex h-11 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] px-3.5 text-[13px] font-bold ${
           hasFilters
-            ? "border-[#20A8A4] bg-[#2AC1BC] text-white"
-            : "border-[#2AC1BC] bg-white text-[#20A8A4]"
+            ? "border-[#007A76] bg-[#007A76] text-white"
+            : "border-[#007A76] bg-white text-[#007A76]"
         }`}
         onClick={onOpenModal}
         type="button"
       >
-        <SearchSmallIcon color={hasFilters ? "#fff" : "#20A8A4"} />
+        <SearchSmallIcon color={hasFilters ? "#fff" : "#007A76"} />
         {hasFilters ? `재료 ${appliedIngredientIds.length}개` : "재료로 검색"}
       </button>
 
       {isLoading
         ? Array.from({ length: 4 }).map((_, index) => (
             <Skeleton
-              className="h-[38px] w-16 shrink-0 rounded-full"
+              className="h-11 w-16 shrink-0 rounded-full"
               key={`ingredient-skeleton-${index}`}
             />
           ))
@@ -416,9 +416,9 @@ function QuickIngredientRail({
             return (
               <button
                 aria-pressed={isActive}
-                className={`flex h-[38px] shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium ${
+                className={`flex h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium ${
                   isActive
-                    ? "border border-[#2AC1BC] bg-[#E6F8F7] text-[#20A8A4]"
+                    ? "border border-[#007A76] bg-[#E6F8F7] text-[#007A76]"
                     : "border border-transparent bg-[#F8F9FA] text-[#495057]"
                 }`}
                 key={ingredient.id}
@@ -435,7 +435,7 @@ function QuickIngredientRail({
 
       {hasFilters ? (
         <button
-          className="flex h-[38px] shrink-0 items-center rounded-full border border-[#DEE2E6] bg-white px-3.5 text-[13px] font-medium text-[#495057]"
+          className="flex h-11 shrink-0 items-center rounded-full border border-[#DEE2E6] bg-white px-3.5 text-[13px] font-medium text-[#495057]"
           onClick={onClear}
           type="button"
         >
@@ -468,7 +468,7 @@ function ThemeCarousel({
     <section aria-label="테마별 레시피" className="pb-4 pt-2">
       <div className="flex items-baseline justify-between px-4 pb-3">
         <h2 className="text-[18px] font-bold text-[#212529]">테마별 레시피</h2>
-        <span className="text-[12px] text-[#868E96]">전체보기 ›</span>
+        <span className="text-[12px] text-[#495057]">전체보기 ›</span>
       </div>
       <div className="scrollbar-hide flex gap-2.5 overflow-x-auto px-4 pb-1">
         {themes.map((theme, index) => (
@@ -577,7 +577,7 @@ function HomeBottomTab() {
             }`}
             href={tab.href}
             key={tab.label}
-            style={{ color: tab.isActive ? "#2AC1BC" : "#868E96" }}
+            style={{ color: tab.isActive ? "#007A76" : "#495057" }}
           >
             {tab.icon}
             <span>{tab.label}</span>
@@ -587,7 +587,7 @@ function HomeBottomTab() {
           <button
             className="flex flex-col items-center justify-center gap-[3px] py-1 text-[11px] font-medium"
             key={tab.label}
-            style={{ color: "#868E96" }}
+            style={{ color: "#495057" }}
             type="button"
           >
             {tab.icon}

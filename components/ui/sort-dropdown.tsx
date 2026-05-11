@@ -116,7 +116,7 @@ export function SortDropdown({
         <span>{selectedOption?.label ?? label}</span>
         <svg
           aria-hidden="true"
-          className={`h-3 w-3 text-[#868E96] transition-transform ${open ? "rotate-180" : ""}`}
+          className={`h-3 w-3 text-[#495057] transition-transform ${open ? "rotate-180" : ""}`}
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
@@ -167,7 +167,7 @@ export function SortDropdown({
                 {isSelected ? (
                   <svg
                     aria-hidden="true"
-                    className="ml-2 h-4 w-4 shrink-0 text-[#2AC1BC]"
+                    className="ml-2 h-4 w-4 shrink-0 text-[#007A76]"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2.5"

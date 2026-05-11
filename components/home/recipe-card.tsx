@@ -1,7 +1,6 @@
 import React from "react";
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
 import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
 import type { RecipeCardItem } from "@/types/recipe";
 
@@ -45,15 +44,12 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
             {presentation.emoji}
           </span>
         ) : null}
-        <Badge
-          variant="brand"
-          className="absolute left-3 top-3 rounded-[4px] border-0 bg-[#FF6B6B] px-2 py-1 text-[11px] font-bold text-white shadow-none"
-        >
+        <span className="absolute left-3 top-3 rounded-[4px] bg-[#C92A2A] px-2 py-1 text-[11px] font-bold text-white">
           {badgeLabel}
-        </Badge>
+        </span>
         <span
           aria-label="북마크"
-          className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/92 text-[#2AC1BC]"
+          className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/92 text-[#007A76]"
           data-testid="recipe-card-bookmark"
         >
           <BookmarkIcon />
@@ -63,7 +59,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         <h3 className="line-clamp-2 text-[18px] font-bold leading-snug text-[#212529]">
           {recipe.title}
         </h3>
-        <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-[#868E96]">
+        <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-[#495057]">
           <span className="inline-flex items-center gap-1">
             <EyeIcon />
             <span className="font-semibold text-[#212529]">
@@ -72,7 +68,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           </span>
           <span>·</span>
           <span>{formatCount(recipe.save_count)}저장</span>
-          <span className="text-[#E9ECEF]">·</span>
+          <span aria-hidden="true" className="text-[#ADB5BD]">·</span>
           <span>기본 {recipe.base_servings}인</span>
         </div>
         <div className="flex flex-wrap gap-1.5 pt-0.5">
@@ -115,7 +111,7 @@ function EyeIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="h-3.5 w-3.5 text-[#868E96]"
+      className="h-3.5 w-3.5 text-[#495057]"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
