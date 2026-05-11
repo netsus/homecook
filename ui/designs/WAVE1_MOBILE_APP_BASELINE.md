@@ -191,7 +191,7 @@ The authoritative row-by-row classification lives in `ui/designs/WAVE1_APP_WEB_R
 
 ## Current Exact Reference Set
 
-The current manifest already contains mobile 390px and 320px screenshots for:
+The current manifest contains mobile 390px and 320px screenshots for the original exact-ready surfaces:
 
 - `HOME`
 - `RECIPE_DETAIL`
@@ -204,9 +204,28 @@ The current manifest already contains mobile 390px and 320px screenshots for:
 - `ACCOUNT`
 - `LEFTOVERS`
 
-Surfaces such as `ATE_LIST`, `RECIPEBOOK_DETAIL`, `MEAL_SCREEN`, `SHOPPING_FLOW`, `COOK_READY_LIST`, `COOK_MODE`, `PantryAddSheet`, `PantryBundlePicker`, `PlannerAddPopup`, and `SavePopup` need explicit matrix confirmation and may need new reference captures before porting.
+Phase 3 added 62 new mobile screenshots for 31 additional states, including:
 
-Phase 2 confirmed those rows in `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md` as `needs-prototype-freeze`; they are blocked from 100% parity claims until new fixed references are captured.
+- `LOGIN`
+- `ATE_LIST`
+- `RECIPEBOOK_DETAIL`
+- `MEAL_SCREEN`
+- `SHOPPING_FLOW_SELECT` / `SHOPPING_FLOW_REVIEW`
+- `COOK_READY_LIST`
+- `COOK_MODE_PLANNER` / `COOK_MODE_STANDALONE`
+- `MANUAL_RECIPE_CREATE`
+- `YT_IMPORT` / `YT_IMPORT_REVIEW`
+- `MENU_ADD_*` picker and planned-servings states
+- `PANTRY_ADD_SHEET` / `PANTRY_BUNDLE_PICKER`
+- `RECIPE_DETAIL_PLANNER_ADD_POPUP` / `RECIPE_DETAIL_SAVE_POPUP`
+- `HOME_SORT_OPEN_STATE` / `HOME_INGREDIENT_FILTER_MODAL`
+- `SHOPPING_DETAIL_PANTRY_REFLECT_PICKER`
+- `COOK_MODE_CONSUMED_INGREDIENT_CHECKLIST`
+- `SETTINGS_*` sheet/confirm states
+- `MYPAGE_RECIPEBOOK_DELETE_CONFIRM`
+- `MYPAGE_RECIPEBOOK_TAB` / `MYPAGE_SHOPPING_LISTS_TAB`
+
+The authoritative row-by-row status is `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`. As of Phase 3, `GLOBAL::LoginGateModal` remains the only known mobile app row still blocked by missing deterministic prototype capture.
 
 ## Required Evidence Per Ported Surface
 
