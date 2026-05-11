@@ -70,7 +70,7 @@ function Button({ children, variant = 'primary', onClick, style, disabled, size 
   const sizes = { sm: { h: 36, fs: 13, pad: '0 14px' }, md: { h: 48, fs: 16, pad: '0 24px' } }[size];
   const ds = disabled ? { bg: T.border, color: T.text4, border: 'transparent' } : vs;
   return (
-    <button onClick={disabled ? undefined : onClick} style={{
+    <button disabled={disabled} onClick={disabled ? undefined : onClick} style={{
       height: sizes.h, padding: sizes.pad, borderRadius: 8,
       background: ds.bg, color: ds.color, border: `1px solid ${ds.border}`,
       fontSize: sizes.fs, fontWeight: 700, cursor: disabled ? 'default' : 'pointer',

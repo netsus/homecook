@@ -486,7 +486,9 @@ function ManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCreated, s
   const [ings, setIngs] = useState_W([]);
   const [steps, setSteps] = useState_W([{ method: 'prep', text: '' }]);
   const [ingModal, setIngModal] = useState_W(false);
-  const valid = name.trim() && ings.length > 0 && steps.some(s => s.text.trim());
+  const ingredientsComplete = ings.length > 0 && ings.every(i => i.name && String(i.amount || '').trim());
+  const stepsComplete = steps.length > 0 && steps.every(s => s.text.trim());
+  const valid = name.trim() && ingredientsComplete && stepsComplete;
   const methods = Object.keys(METHOD_COLORS);
   const warnNumericOnly = () => showToast?.('재료 수량은 숫자만 입력할 수 있어요');
   const blockNonNumericInput = (e) => {
@@ -503,7 +505,10 @@ function ManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCreated, s
   };
 
   const submit = () => {
-    if (!valid) return;
+    if (!valid) {
+      showToast?.('재료 수량과 조리법 빈칸을 채워주세요');
+      return;
+    }
     const id = 'r_manual_' + Date.now();
     onCreated({
       id, name: name.trim(), minutes, servings,
