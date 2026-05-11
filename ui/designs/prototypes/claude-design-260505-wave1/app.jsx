@@ -509,7 +509,11 @@ function App() {
     content = <MyPageSavedScreen savedIds={savedIds} onBack={backFromPage}
       onOpenRecipe={openRecipe} toggleSaved={toggleSaved} />;
   } else if (route.page === 'mypage-account') {
-    content = <MyPageAccountScreen onBack={backFromPage} />;
+    content = <MyPageAccountScreen profile={profile} onBack={backFromPage}
+      onUpdateProfile={(patch) => setProfile(p => ({ ...p, ...patch }))}
+      onLogout={() => { setProfile(p => ({ ...p, authed: false })); backFromPage(); showToast('로그아웃 되었어요'); }}
+      onDeleteAccount={() => { backFromPage(); showToast('탈퇴 처리됐어요 (베타)'); }}
+      showToast={showToast} />;
   } else if (route.page === 'mypage-notif') {
     content = <MyPageNotifScreen onBack={backFromPage} />;
   } else if (route.page === 'mypage-help') {

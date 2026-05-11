@@ -2060,16 +2060,35 @@ function DesktopLoginScreen({ returnTo, onBack, onLogin }) {
 // Desktop: SETTINGS (P1.2)
 function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAccount, showToast }) {
   const defaultPrefs = { keepAwake: true, voice: false, autoNext: false };
+  const defaultMealColumns = ['아침', '점심', '저녁'];
   const [savedPrefs, setSavedPrefs] = dUseState(defaultPrefs);
   const [draftPrefs, setDraftPrefs] = dUseState(defaultPrefs);
-  const [nicknameDraft, setNicknameDraft] = dUseState(profile?.nickname || '집밥러버');
-  const [confirmLogout, setConfirmLogout] = dUseState(false);
-  const [confirmDelete, setConfirmDelete] = dUseState(false);
-  const [mealColumns, setMealColumns] = dUseState(['아침', '점심', '저녁']);
+  const [savedMealColumns, setSavedMealColumns] = dUseState(defaultMealColumns);
+  const [mealColumns, setMealColumns] = dUseState(defaultMealColumns);
   const [newMealName, setNewMealName] = dUseState('');
-  const [section, setSection] = dUseState('account');
+  const [section, setSection] = dUseState('planner');
   const prefsDirty = JSON.stringify(savedPrefs) !== JSON.stringify(draftPrefs);
+  const normalizedMealColumns = mealColumns.map(name => name.trim()).filter(Boolean);
+  const mealColumnsDirty = JSON.stringify(savedMealColumns) !== JSON.stringify(normalizedMealColumns);
+  const mealColumnsValid = normalizedMealColumns.length === mealColumns.length && normalizedMealColumns.length > 0;
+  const settingsDirty = prefsDirty || mealColumnsDirty;
   const setDraftPref = (key, value) => setDraftPrefs(prev => ({ ...prev, [key]: value }));
+  const saveSettings = () => {
+    if (!mealColumnsValid) {
+      showToast?.('끼니 이름을 모두 입력해주세요');
+      return;
+    }
+    setSavedPrefs(draftPrefs);
+    setSavedMealColumns(normalizedMealColumns);
+    setMealColumns(normalizedMealColumns);
+    showToast?.('환경설정이 저장됐어요');
+  };
+  const cancelSettings = () => {
+    setDraftPrefs(savedPrefs);
+    setMealColumns(savedMealColumns);
+    setNewMealName('');
+    showToast?.('환경설정 변경을 취소했어요');
+  };
 
   const addMealColumn = () => {
     const name = newMealName.trim();
@@ -2095,12 +2114,10 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
   };
 
   const sections = [
-    { k: 'account', label: '계정', emoji: '👤' },
     { k: 'planner', label: '플래너 끼니', emoji: '🗓️' },
     { k: 'cook',    label: '요리 모드', emoji: '🍳' },
     { k: 'notif',   label: '알림', emoji: '🔔' },
     { k: 'data',    label: '데이터 · 백업', emoji: '💾' },
-    { k: 'etc',     label: '기타', emoji: '⚙️' },
   ];
 
   return (
@@ -2133,25 +2150,6 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
         </aside>
 
         <main style={{ background: '#fff', borderRadius: 16, padding: 28, boxShadow: T.shadowDeep, minHeight: 400 }}>
-          {section === 'account' && (
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>계정</div>
-              <DesktopSettingRow label="닉네임" sub={profile?.email || 'user@homecook.app'}
-                right={<div style={{ display: 'flex', gap: 8 }}>
-                  <input value={nicknameDraft} onChange={e => setNicknameDraft(e.target.value)}
-                    maxLength={12} style={{ ...inp, width: 180, padding: '10px 12px', fontSize: 13 }} />
-                  <button onClick={() => {
-                    const nickname = nicknameDraft.trim();
-                    if (nickname.length < 2) {
-                      showToast?.('닉네임은 2자 이상이에요');
-                      return;
-                    }
-                    onUpdateProfile?.({ nickname });
-                    showToast?.('닉네임이 변경됐어요');
-                  }} style={editLinkBtnDsk}>저장</button>
-                </div>} />
-            </div>
-          )}
           {section === 'planner' && (
             <div>
               <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>플래너 끼니 컬럼</div>
@@ -2196,18 +2194,6 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
               <DesktopToggleRow label="화면 켜둠" sub="요리 중 화면이 꺼지지 않아요" on={draftPrefs.keepAwake} onChange={(v) => setDraftPref('keepAwake', v)} />
               <DesktopToggleRow label="음성 안내" sub="단계 음성을 읽어줘요 (베타)" on={draftPrefs.voice} onChange={(v) => setDraftPref('voice', v)} />
               <DesktopToggleRow label="타이머 끝나면 다음 단계 자동" sub="타이머 종료 시 자동으로 다음 단계로 넘어갑니다" on={draftPrefs.autoNext} onChange={(v) => setDraftPref('autoNext', v)} />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 18 }}>
-                <button disabled={!prefsDirty} onClick={() => { setDraftPrefs(savedPrefs); showToast?.('환경설정 변경을 취소했어요'); }} style={{
-                  padding: '10px 16px', borderRadius: 10, border: `1px solid ${T.border}`,
-                  background: '#fff', color: prefsDirty ? T.text2 : T.text4, fontSize: 13, fontWeight: 800,
-                  cursor: prefsDirty ? 'pointer' : 'not-allowed',
-                }}>취소</button>
-                <button disabled={!prefsDirty} onClick={() => { setSavedPrefs(draftPrefs); showToast?.('환경설정이 저장됐어요'); }} style={{
-                  padding: '10px 18px', borderRadius: 10, border: 'none',
-                  background: prefsDirty ? T.mint : T.border, color: '#fff', fontSize: 13, fontWeight: 900,
-                  cursor: prefsDirty ? 'pointer' : 'not-allowed',
-                }}>저장</button>
-              </div>
             </div>
           )}
           {section === 'notif' && (
@@ -2227,36 +2213,20 @@ function DesktopSettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onD
                 right={<button onClick={() => showToast?.('캐시가 비워졌어요')} style={editLinkBtnDsk}>초기화</button>} />
             </div>
           )}
-          {section === 'etc' && (
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: T.ink, marginBottom: 18 }}>기타</div>
-              <DesktopSettingRow label={<button onClick={() => setConfirmLogout(true)} style={settingsActionBtnDsk}>로그아웃</button>}
-                sub="이 기기에서 로그아웃해요" right={null} />
-              <DesktopSettingRow label={<button onClick={() => setConfirmDelete(true)} style={{ ...settingsActionBtnDsk, color: T.red }}>회원탈퇴</button>}
-                sub="모든 기록을 삭제하는 요청을 시작해요" right={null} />
-            </div>
-          )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 22 }}>
+            <button disabled={!settingsDirty} onClick={cancelSettings} style={{
+              padding: '10px 16px', borderRadius: 10, border: `1px solid ${T.border}`,
+              background: '#fff', color: settingsDirty ? T.text2 : T.text4, fontSize: 13, fontWeight: 800,
+              cursor: settingsDirty ? 'pointer' : 'not-allowed',
+            }}>취소</button>
+            <button disabled={!settingsDirty || !mealColumnsValid} onClick={saveSettings} style={{
+              padding: '10px 18px', borderRadius: 10, border: 'none',
+              background: settingsDirty && mealColumnsValid ? T.mint : T.border, color: '#fff', fontSize: 13, fontWeight: 900,
+              cursor: settingsDirty && mealColumnsValid ? 'pointer' : 'not-allowed',
+            }}>저장</button>
+          </div>
         </main>
       </div>
-
-      {confirmLogout && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
-          <ConfirmDialog title="로그아웃 할까요?" body="다시 로그인해야 식단·팬트리가 동기화돼요."
-            confirmLabel="로그아웃" onClose={() => setConfirmLogout(false)}
-            onConfirm={() => { setConfirmLogout(false); onLogout?.(); }} />
-        </div>
-      )}
-      {confirmDelete && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9500 }}>
-          <ConfirmDialog title="정말 탈퇴하시겠어요?"
-            body="모든 식단, 레시피, 팬트리 기록이 영구 삭제됩니다. 이 동작은 되돌릴 수 없어요."
-            destructive confirmLabel="탈퇴하기" onClose={() => setConfirmDelete(false)}
-            onConfirm={() => { setConfirmDelete(false); onDeleteAccount?.(); }}
-            extra={<div style={{
-              padding: 10, background: '#FFF5F5', borderRadius: 8, fontSize: 11, color: T.red, lineHeight: 1.5,
-            }}>⚠ 7일 이내 재로그인 시 일부 데이터는 복구가 가능합니다 (베타).</div>} />
-        </div>
-      )}
     </div>
   );
 }
@@ -2295,11 +2265,6 @@ const editLinkBtnDsk = {
   background: 'none', border: 'none', color: T.mintDeep,
   fontSize: 13, fontWeight: 800, cursor: 'pointer', padding: '4px 0',
   whiteSpace: 'nowrap', lineHeight: 1.2,
-};
-const settingsActionBtnDsk = {
-  background: 'none', border: 'none', color: T.ink,
-  fontSize: 14, fontWeight: 800, cursor: 'pointer', padding: '2px 0',
-  whiteSpace: 'nowrap', lineHeight: 1.3,
 };
 const dskRoundBtn = {
   width: 32, height: 32, borderRadius: 16, border: 'none',

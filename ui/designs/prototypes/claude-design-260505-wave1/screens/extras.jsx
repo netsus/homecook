@@ -717,10 +717,13 @@ function MyPageSavedScreen({ savedIds, onBack, onOpenRecipe, toggleSaved }) {
   );
 }
 
-function MyPageAccountScreen({ onBack }) {
+function MyPageAccountScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAccount, showToast }) {
+  const [nicknameSheet, setNicknameSheet] = useState_X(false);
+  const [confirmLogout, setConfirmLogout] = useState_X(false);
+  const [confirmDelete, setConfirmDelete] = useState_X(false);
   const fields = [
-    ['이름', '채실장'],
-    ['이메일', 'chae@homecook.app'],
+    ['이름', profile?.nickname || '집밥러버'],
+    ['이메일', profile?.email || 'user@homecook.app'],
     ['전화번호', '010-1234-5678'],
     ['생일', '1995-04-12'],
     ['요리 레벨', '레벨 5 · 집밥 러너'],
@@ -743,9 +746,35 @@ function MyPageAccountScreen({ onBack }) {
           ))}
         </div>
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Button onClick={() => setNicknameSheet(true)}>닉네임 변경</Button>
           <Button variant="neutral">비밀번호 변경</Button>
+          <Button variant="neutral" onClick={() => setConfirmLogout(true)}>로그아웃</Button>
+          <Button variant="destructive" onClick={() => setConfirmDelete(true)}>회원탈퇴</Button>
         </div>
       </div>
+      {confirmLogout && (
+        <ConfirmDialog title="로그아웃 할까요?" body="다시 로그인해야 식단·팬트리가 동기화돼요."
+          confirmLabel="로그아웃" onClose={() => setConfirmLogout(false)}
+          onConfirm={() => { setConfirmLogout(false); onLogout?.(); }} />
+      )}
+      {confirmDelete && (
+        <ConfirmDialog title="정말 탈퇴하시겠어요?"
+          body="모든 식단, 레시피, 팬트리 기록이 영구 삭제됩니다. 이 동작은 되돌릴 수 없어요."
+          destructive confirmLabel="탈퇴하기" onClose={() => setConfirmDelete(false)}
+          onConfirm={() => { setConfirmDelete(false); onDeleteAccount?.(); }}
+          extra={<div style={{
+            padding: 10, background: '#FFF5F5', borderRadius: 8, fontSize: 11, color: T.red, lineHeight: 1.5,
+          }}>⚠ 7일 이내 재로그인 시 일부 데이터는 복구가 가능합니다 (베타).</div>} />
+      )}
+      {nicknameSheet && (
+        <NicknameEditSheet current={profile?.nickname}
+          onClose={() => setNicknameSheet(false)}
+          onSave={(nickname) => {
+            onUpdateProfile?.({ nickname });
+            setNicknameSheet(false);
+            showToast?.('닉네임이 변경됐어요');
+          }} />
+      )}
     </div>
   );
 }
