@@ -11,6 +11,7 @@ import {
 import { validateAuthorityEvidencePresence } from "./lib/validate-authority-evidence-presence.mjs";
 import { validateExploratoryQaEvidence } from "./lib/validate-exploratory-qa-evidence.mjs";
 import { validateRealSmokePresence } from "./lib/validate-real-smoke-presence.mjs";
+import { validateWave1PrototypeLock } from "./lib/validate-wave1-prototype-lock.mjs";
 import {
   extractMarkdownSection,
   normalizeInlineCode,
@@ -204,6 +205,12 @@ export function validatePrReady({
     }),
     ...validateRealSmokePresence({
       rootDir,
+      env: validationEnv,
+    }),
+    ...validateWave1PrototypeLock({
+      rootDir,
+      slice,
+      prBody,
       env: validationEnv,
     }),
   ];

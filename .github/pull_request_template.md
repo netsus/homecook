@@ -85,6 +85,12 @@
 
 - 디자인 시스템 영향:
 - loading / empty / error / read-only 확인:
+- Wave1 service porting lock evidence:
+  - fixed prototype SHA:
+  - reference screenshot:
+  - service screenshot:
+  - visual verdict score / blocker count:
+  - approved divergence:
 - `N/A` 또는 영향 없음 근거:
 
 ## Breaking Changes
