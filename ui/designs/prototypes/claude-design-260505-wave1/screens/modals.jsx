@@ -1,16 +1,16 @@
 // ===== screens/modals.jsx =====
-// Modals / Sheets — Quiet Kitchen Sheet style (olive base + thin orange)
+// Modals / Sheets — unified white bottom sheet style
 function Sheet({ title, onClose, children, footer }) {
   return (
     <>
       <div onClick={onClose} style={{
-        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100
+        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.42)', zIndex: 210
       }} />
       <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 101,
-        background: '#FAF8F2', // olive base
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 211,
+        width: '100%', maxWidth: 480, margin: '0 auto',
+        background: '#fff',
         borderTopLeftRadius: 20, borderTopRightRadius: 20,
-        borderTop: `2px solid ${T.orange}`, // thin orange highlight
         maxHeight: '85%', overflowY: 'auto',
         boxShadow: T.shadowCrisp,
         paddingBottom: 24
@@ -32,7 +32,7 @@ function Sheet({ title, onClose, children, footer }) {
         </div>
         <div style={{ padding: '8px 20px 16px' }}>{children}</div>
         {footer &&
-        <div style={{ padding: '12px 20px 8px', borderTop: `1px solid ${T.border}` }}>
+        <div style={{ padding: '12px 20px 8px', borderTop: `1px solid ${T.border}`, background: '#fff' }}>
             {footer}
           </div>
         }
@@ -59,10 +59,9 @@ function PlannerAddPopup({ recipeId, onClose, onConfirm, planner }) {
         </Button>
       </div>
     }>
-      {/* Recipe preview */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12, padding: 12,
-        background: '#fff', borderRadius: 12, marginBottom: 16,
+        background: T.surfaceFill, borderRadius: 12, marginBottom: 16,
         border: `1px solid ${T.border}`
       }}>
         <div style={{
@@ -75,7 +74,6 @@ function PlannerAddPopup({ recipeId, onClose, onConfirm, planner }) {
         </div>
       </div>
 
-      {/* Date chips: 요일 + 4/17 */}
       <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>날짜</div>
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 16, paddingBottom: 4 }}>
         {keys.map((k, i) => {
@@ -94,8 +92,7 @@ function PlannerAddPopup({ recipeId, onClose, onConfirm, planner }) {
         })}
       </div>
 
-      {/* Slot */}
-      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>식사 시간</div>
+      <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>끼니</div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {['아침', '점심', '저녁'].map((s) => {
           const active = selSlot === s;
@@ -111,11 +108,10 @@ function PlannerAddPopup({ recipeId, onClose, onConfirm, planner }) {
         })}
       </div>
 
-      {/* Compact stepper */}
       <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>인분</div>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: 10, background: '#fff', borderRadius: 10, border: `1px solid ${T.border}`
+        padding: 10, background: T.surfaceFill, borderRadius: 10, border: `1px solid ${T.border}`
       }}>
         <div style={{ fontSize: 14, color: T.text2 }}>몇 인분 계획할까요?</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

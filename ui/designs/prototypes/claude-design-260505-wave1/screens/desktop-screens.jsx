@@ -656,18 +656,23 @@ function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMen
         ))}
       </div>
 
-      {/* vNext S4 — 식사 추가 데스크톱 다이얼로그 (centered) */}
+      {/* vNext S4 — 식사 추가 데스크톱 다이얼로그 (unified bottom sheet) */}
       {mealAddDialog && (
         <>
           <div onClick={closeMealAddDialog} style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000,
           }} />
           <div style={{
-            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            zIndex: 1001, background: '#FAF8F2', borderRadius: 16,
-            width: mealAddMode === 'hub' ? 420 : 620, maxHeight: '80vh', overflowY: 'auto',
-            boxShadow: T.shadowCrisp, padding: 24,
+            position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 1001, background: '#fff',
+            borderTopLeftRadius: 20, borderTopRightRadius: 20,
+            width: mealAddMode === 'hub' ? 420 : 620, maxWidth: 'calc(100vw - 32px)',
+            maxHeight: '85vh', overflowY: 'auto',
+            boxShadow: T.shadowCrisp, padding: '8px 24px 24px',
           }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '0 0 10px' }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border }} />
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: T.ink }}>
                 {mealAddMode === 'books' && mealAddBook ? mealAddBook.name :
