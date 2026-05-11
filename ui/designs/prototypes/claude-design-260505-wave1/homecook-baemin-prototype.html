@@ -4094,13 +4094,16 @@ function DesktopMenuAddScreen({ presetDate, presetSlot, initialMode, planner, pa
 }
 
 // Desktop: SHOPPING_FLOW (= ShoppingCreate, P1.1)
-function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
+function DesktopShoppingCreateScreen({ planner, pantry, presetDate, presetSlot, presetMealIndex, onBack, onComplete, showToast }) {
+  const singleMealMode = presetDate && presetSlot && presetMealIndex != null;
   // Aggregate ingredients from registered meals
   const items = dUseMemo(() => {
     const acc = {};
     Object.entries(planner).forEach(([date, day]) => {
       ['아침','점심','저녁'].forEach(slot => {
-        mealItems(day[slot]).forEach((m) => {
+        if (singleMealMode && (date !== presetDate || slot !== presetSlot)) return;
+        mealItems(day[slot]).forEach((m, mealIndex) => {
+          if (singleMealMode && mealIndex !== presetMealIndex) return;
           if (m.status === 'cooked') return;
           const r = RECIPES.find(x => x.id === m.recipeId);
           if (!r) return;
@@ -4114,7 +4117,7 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
       });
     });
     return Object.values(acc);
-  }, [planner, pantry]);
+  }, [planner, pantry, presetDate, presetSlot, presetMealIndex]);
   const [localSkipRevived, setLocalSkipRevived] = dUseState(new Set());
   const [localBuyExcluded, setLocalBuyExcluded] = dUseState(new Set());
 
@@ -4122,7 +4125,27 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
   const buy = items.filter(i => (!i.have || localSkipRevived.has(i.name)) && !localBuyExcluded.has(i.name));
   const skip = items.filter(i => (i.have && !localSkipRevived.has(i.name)) || localBuyExcluded.has(i.name));
   const grouped = sections.map(sec => ({ sec, list: buy.filter(i => i.section === sec) })).filter(g => g.list.length > 0);
-  const shoppingListTitle = '2026.05.10 · 장보기 목록';
+  const shoppingListTitle = singleMealMode ? `${presetDate} ${presetSlot} 음식 장보기` : '2026.05.10 · 장보기 목록';
+  const completeCurrentShopping = () => {
+    const skipNames = new Set(skip.map(i => i.name));
+    const currentItems = items.map(i => {
+      const isHave = skipNames.has(i.name);
+      return {
+        ...i,
+        fromMeals: i.meals,
+        have: isHave,
+        checked: !isHave,
+      };
+    });
+    onComplete?.({
+      id: 'sl_' + Date.now(),
+      name: shoppingListTitle,
+      createdAt: '2026-05-10',
+      status: 'active',
+      items: currentItems,
+    });
+    /* CONTRACT_CHECK: POST /shopping-lists — vNext에서는 UI shape만 */
+  };
   const moveToSkip = (name) => {
     setLocalBuyExcluded(s => new Set(s).add(name));
     setLocalSkipRevived(s => {
@@ -4156,10 +4179,12 @@ function DesktopShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand }}>{shoppingListTitle}</div>
-          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>이번 주 등록된 식단 기준 · 구매 예정 {buy.length}개 · 팬트리 제외 {skip.length}개</div>
+          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>
+            {singleMealMode ? '해당 음식 기준' : '이번 주 등록된 식단 기준'} · 구매 예정 {buy.length}개 · 팬트리 제외 {skip.length}개
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button disabled={buy.length === 0} onClick={() => showToast?.('장보기 완료')} style={{
+          <button disabled={buy.length === 0} onClick={completeCurrentShopping} style={{
             padding: '10px 18px', borderRadius: 8, border: 'none',
             background: buy.length === 0 ? T.border : T.mint, color: buy.length === 0 ? T.text4 : '#fff',
             fontSize: 13, fontWeight: 800, cursor: buy.length === 0 ? 'default' : 'pointer',
@@ -4309,12 +4334,10 @@ function DesktopShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, o
             background: '#fff', color: T.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
           }}>공유</button>
           {completed ? (
-            <>
-              <button onClick={() => onReopen?.(list.id)} style={{
-                padding: '10px 14px', borderRadius: 8, border: `1px solid ${T.border}`,
-                background: '#fff', color: T.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              }}>다시 열기</button>
-            </>
+            <span style={{
+              padding: '10px 14px', borderRadius: 8, background: T.surfaceFill,
+              color: T.text3, fontSize: 13, fontWeight: 800,
+            }}>읽기 전용</span>
           ) : (
             <button onClick={completeCurrentShopping} style={{
               padding: '10px 18px', borderRadius: 8, border: 'none',
@@ -5009,7 +5032,7 @@ function DesktopMealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, on
 
           {/* Actions: 장보기 + 요리하기 */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <button onClick={() => onCreateShopping?.(date, slot)} style={dskMealActionBtn}>장보기</button>
+            <button onClick={() => onCreateShopping?.(date, slot, mealIndex)} style={dskMealActionBtn}>장보기</button>
             <button onClick={() => onStartCook?.(date, slot, mealIndex)} style={{ ...dskMealActionBtn, background: T.mint, borderColor: T.mint, color: '#fff' }}>요리하기</button>
           </div>
         </div>
@@ -6271,20 +6294,25 @@ function aggregateIngredients(planner, selection, pantry) {
 // ─────────────────────────────────────────────────────
 // 장보기 목록 만들기
 // ─────────────────────────────────────────────────────
-function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
+function ShoppingCreateScreen({ planner, pantry, presetDate, presetSlot, presetMealIndex, onBack, onComplete, showToast }) {
   // step: 'select' (끼니 선택) → 'review' (재료 체크리스트)
-  const [step, setStep] = useState_X('select');
+  const singleMealMode = presetDate && presetSlot && presetMealIndex != null;
+  const [step, setStep] = useState_X(singleMealMode ? 'review' : 'select');
   const days = Object.keys(planner);
 
   // Pre-select all uncooked meals by default
   const initialSel = [];
-  days.forEach(d => {
-    ['아침','점심','저녁'].forEach(s => {
-      mealItems(planner[d]?.[s]).forEach((m, mealIndex) => {
-        if (m.status !== 'cooked') initialSel.push({ date: d, slot: s, mealIndex });
+  if (singleMealMode) {
+    initialSel.push({ date: presetDate, slot: presetSlot, mealIndex: presetMealIndex });
+  } else {
+    days.forEach(d => {
+      ['아침','점심','저녁'].forEach(s => {
+        mealItems(planner[d]?.[s]).forEach((m, mealIndex) => {
+          if (m.status !== 'cooked') initialSel.push({ date: d, slot: s, mealIndex });
+        });
       });
     });
-  });
+  }
   const [selection, setSelection] = useState_X(initialSel);
   const [checked, setChecked] = useState_X(new Set());
   const [reviewRestored, setReviewRestored] = useState_X(new Set());
@@ -6296,8 +6324,27 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
   const sectionsMap = buyItems.reduce((acc, it) => {
     (acc[it.section] = acc[it.section] || []).push(it); return acc;
   }, {});
-  const shoppingListTitle = '2026.05.10 · 장보기 목록';
+  const shoppingListTitle = singleMealMode ? `${presetDate} ${presetSlot} 음식 장보기` : '2026.05.10 · 장보기 목록';
   const progress = buyItems.length ? Math.round([...checked].filter(k => buyItems.find(n => n.name === k)).length / buyItems.length * 100) : 0;
+  const completeCurrentShopping = () => {
+    const skipNames = new Set(excludedItems.map(i => i.name));
+    const currentItems = items.map(i => {
+      const isHave = skipNames.has(i.name);
+      return {
+        ...i,
+        have: isHave,
+        checked: isHave ? false : true,
+      };
+    });
+    onComplete?.({
+      id: 'sl_' + Date.now(),
+      name: shoppingListTitle,
+      createdAt: '2026-05-10',
+      status: 'active',
+      items: currentItems,
+    });
+    /* CONTRACT_CHECK: POST /shopping-lists — vNext에서는 UI shape만 */
+  };
 
   const toggleSel = (date, slot, mealIndex) => {
     setSelection(s => {
@@ -6431,7 +6478,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
   // step === 'review'
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 220 }}>
-      <AppBar title="장보기 목록" left={<button onClick={() => setStep('select')} style={iconBtn}>{Icon.chevL()}</button>} />
+      <AppBar title="장보기 목록" left={<button onClick={() => singleMealMode ? onBack() : setStep('select')} style={iconBtn}>{Icon.chevL()}</button>} />
 
       <div style={{ background: '#fff', padding: 20, borderBottom: `1px solid ${T.border}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -6441,7 +6488,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
               {shoppingListTitle}
             </div>
             <div style={{ fontSize: 12, color: T.text3, marginTop: 5 }}>
-              {buyItems.length}개 구매 예정 · {excludedItems.length}개 팬트리 제외
+              {singleMealMode ? '이 음식에 필요한 재료만 모았어요 · ' : ''}{buyItems.length}개 구매 예정 · {excludedItems.length}개 팬트리 제외
             </div>
           </div>
           <div style={{ fontSize: 32, fontWeight: 700, color: T.mint, fontFamily: T.fontBrand }}>{progress}%</div>
@@ -6549,10 +6596,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
         background: '#fff', borderTop: `1px solid ${T.border}`,
         display: 'flex', flexDirection: 'row', gap: 8, zIndex: 45,
       }}>
-        <Button disabled={buyItems.length === 0} style={{ flex: 1 }} onClick={() => {
-          showToast('장보기 완료');
-          /* CONTRACT_CHECK: POST /shopping-lists — vNext에서는 UI shape만 */
-        }}>
+        <Button disabled={buyItems.length === 0} style={{ flex: 1 }} onClick={completeCurrentShopping}>
           장보기 완료
         </Button>
         <Button variant="neutral" style={{ flex: '0 0 86px', padding: '0 16px' }} onClick={() => { showToast('공유 링크가 복사됐어요'); }}>공유</Button>
@@ -6847,7 +6891,7 @@ function MealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, onStartCo
 
           {/* Actions: 장보기 + 요리하기 */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <button onClick={() => onCreateShopping(date, slot)} style={mealActionBtn}>장보기</button>
+            <button onClick={() => onCreateShopping(date, slot, mealIndex)} style={mealActionBtn}>장보기</button>
             <button onClick={() => onStartCook(date, slot, mealIndex)} style={{ ...mealActionBtn, background: T.mint, borderColor: T.mint, color: '#fff' }}>요리하기</button>
           </div>
         </div>
@@ -8218,7 +8262,7 @@ function ShoppingDetailScreen({ list, onBack, onToggleItem, onComplete, onReopen
       }}>
         {completed ? (
           <>
-            <Button full variant="neutral" onClick={() => onReopen(list.id)}>다시 열기</Button>
+            <Button full variant="neutral" disabled>완료된 장보기</Button>
           </>
         ) : (
           <Button full disabled={buy.length === 0} onClick={completeCurrentShopping}>
@@ -9409,14 +9453,22 @@ function App() {
   const completeShopping = (listOrId) => {
     const incoming = typeof listOrId === 'object' ? listOrId : null;
     const listId = incoming?.id || listOrId;
-    setShoppingLists(ls => ls.map(l => l.id !== listId ? l : ({
-      ...l,
+    const base = incoming || shoppingLists.find(l => l.id === listId);
+    if (!base) return;
+    const completedList = {
+      ...base,
       ...(incoming?.items ? { items: incoming.items } : {}),
       status: 'completed',
       completedAt: '방금 완료'
-    })));
-    const list = incoming || shoppingLists.find(l => l.id === listId);
-    if (list) setReflectPicker({ ...list, status: 'completed' });
+    };
+    setShoppingLists(ls => {
+      const exists = ls.some(l => l.id === completedList.id);
+      return exists
+        ? ls.map(l => l.id !== completedList.id ? l : completedList)
+        : [completedList, ...ls];
+    });
+    setReflectPicker(completedList);
+    setRoute(prev => ({ ...prev, detail: null, page: 'shopping-detail', pageArgs: { listId: completedList.id } }));
   };
   const reopenShopping = (listId) => {
     setShoppingLists(ls => ls.map(l => l.id !== listId ? l : ({ ...l, status: 'active', completedAt: null })));
@@ -9642,7 +9694,8 @@ function App() {
       showToast={showToast} />;
   } else if (route.page === 'shopping-create') {
     content = <ShoppingCreateScreen planner={planner} pantry={pantry}
-      onBack={backFromPage} showToast={showToast} />;
+      presetDate={pa.date} presetSlot={pa.slot} presetMealIndex={pa.mealIndex}
+      onBack={backFromPage} onComplete={completeShopping} showToast={showToast} />;
   } else if (route.page === 'cook-list') {
     content = <CookListScreen planner={planner} onBack={backFromPage}
       onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
@@ -9654,7 +9707,7 @@ function App() {
     content = <MealDetailScreen date={pa.date} slot={pa.slot} planner={planner}
       onBack={backFromPage} onOpenRecipe={openRecipe}
       onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
-      onCreateShopping={() => goPage('shopping-create')}
+      onCreateShopping={(d, s, mealIndex = 0) => goPage('shopping-create', { date: d, slot: s, mealIndex })}
       onChangeStatus={changeStatus} onRemove={removeMeal} onChangeServings={changeServings} />;
   } else if (route.page === 'mypage-saved') {
     content = <MyPageSavedScreen savedIds={savedIds} onBack={backFromPage}
@@ -9831,7 +9884,8 @@ function App() {
   } else if (route.page === 'shopping-create') {
     desktopPageContent = <DesktopShoppingCreateScreen
       planner={planner} pantry={pantry}
-      onBack={backFromPage} showToast={showToast} />;
+      presetDate={pa.date} presetSlot={pa.slot} presetMealIndex={pa.mealIndex}
+      onBack={backFromPage} onComplete={completeShopping} showToast={showToast} />;
   } else if (route.page === 'shopping-detail') {
     const list = shoppingLists.find(l => l.id === pa.listId);
     desktopPageContent = <DesktopShoppingDetailScreen
@@ -9863,7 +9917,7 @@ function App() {
     desktopPageContent = <DesktopMealDetailScreen date={pa.date} slot={pa.slot} planner={planner}
       onBack={backFromPage} onOpenRecipe={openRecipe}
       onStartCook={(d, s, mealIndex = 0) => goPage('cook-run', { date: d, slot: s, mealIndex })}
-      onCreateShopping={() => goPage('shopping-create')}
+      onCreateShopping={(d, s, mealIndex = 0) => goPage('shopping-create', { date: d, slot: s, mealIndex })}
       onChangeStatus={changeStatus} onRemove={removeMeal} onChangeServings={changeServings} />;
   } else if (route.page === 'cook-list') {
     desktopPageContent = <DesktopCookListScreen planner={planner} onBack={backFromPage}

@@ -74,6 +74,14 @@ Do not copy prototype demo behavior into the MVP service. The repaired prototype
 - No dependency was added.
 - Broken/demo-only prototype behavior identified by the user was either repaired in the prototype or fenced off from service porting semantics.
 
+## Contract Candidates From Follow-Up Repair 7
+
+These notes are **not** official contract changes. They record prototype behavior that service porting must compare against current official docs before implementation:
+
+- Per-meal shopping creation: when a user starts shopping from a specific meal card inside `MEAL_SCREEN`, the creation flow should carry `date`, `slot`, and `mealIndex` so only that meal's ingredients are included.
+- Shopping completion from create/review: completing Step 2 should persist or upsert a shopping list, mark it completed, open the pantry-reflection choice, and route to the completed read-only detail screen under the modal.
+- Completed shopping detail: completed lists should remain read-only in the prototype flow; reopening or item mutation is not part of the repaired reference behavior.
+
 ## Residual Risk
 
 - Actual service visual parity is not complete yet. It is deferred to service Slice A~F re-porting.

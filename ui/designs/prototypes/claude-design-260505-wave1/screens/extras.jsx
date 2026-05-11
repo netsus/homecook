@@ -28,20 +28,25 @@ function aggregateIngredients(planner, selection, pantry) {
 // ─────────────────────────────────────────────────────
 // 장보기 목록 만들기
 // ─────────────────────────────────────────────────────
-function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
+function ShoppingCreateScreen({ planner, pantry, presetDate, presetSlot, presetMealIndex, onBack, onComplete, showToast }) {
   // step: 'select' (끼니 선택) → 'review' (재료 체크리스트)
-  const [step, setStep] = useState_X('select');
+  const singleMealMode = presetDate && presetSlot && presetMealIndex != null;
+  const [step, setStep] = useState_X(singleMealMode ? 'review' : 'select');
   const days = Object.keys(planner);
 
   // Pre-select all uncooked meals by default
   const initialSel = [];
-  days.forEach(d => {
-    ['아침','점심','저녁'].forEach(s => {
-      mealItems(planner[d]?.[s]).forEach((m, mealIndex) => {
-        if (m.status !== 'cooked') initialSel.push({ date: d, slot: s, mealIndex });
+  if (singleMealMode) {
+    initialSel.push({ date: presetDate, slot: presetSlot, mealIndex: presetMealIndex });
+  } else {
+    days.forEach(d => {
+      ['아침','점심','저녁'].forEach(s => {
+        mealItems(planner[d]?.[s]).forEach((m, mealIndex) => {
+          if (m.status !== 'cooked') initialSel.push({ date: d, slot: s, mealIndex });
+        });
       });
     });
-  });
+  }
   const [selection, setSelection] = useState_X(initialSel);
   const [checked, setChecked] = useState_X(new Set());
   const [reviewRestored, setReviewRestored] = useState_X(new Set());
@@ -53,8 +58,27 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
   const sectionsMap = buyItems.reduce((acc, it) => {
     (acc[it.section] = acc[it.section] || []).push(it); return acc;
   }, {});
-  const shoppingListTitle = '2026.05.10 · 장보기 목록';
+  const shoppingListTitle = singleMealMode ? `${presetDate} ${presetSlot} 음식 장보기` : '2026.05.10 · 장보기 목록';
   const progress = buyItems.length ? Math.round([...checked].filter(k => buyItems.find(n => n.name === k)).length / buyItems.length * 100) : 0;
+  const completeCurrentShopping = () => {
+    const skipNames = new Set(excludedItems.map(i => i.name));
+    const currentItems = items.map(i => {
+      const isHave = skipNames.has(i.name);
+      return {
+        ...i,
+        have: isHave,
+        checked: isHave ? false : true,
+      };
+    });
+    onComplete?.({
+      id: 'sl_' + Date.now(),
+      name: shoppingListTitle,
+      createdAt: '2026-05-10',
+      status: 'active',
+      items: currentItems,
+    });
+    /* CONTRACT_CHECK: POST /shopping-lists — vNext에서는 UI shape만 */
+  };
 
   const toggleSel = (date, slot, mealIndex) => {
     setSelection(s => {
@@ -188,7 +212,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
   // step === 'review'
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 220 }}>
-      <AppBar title="장보기 목록" left={<button onClick={() => setStep('select')} style={iconBtn}>{Icon.chevL()}</button>} />
+      <AppBar title="장보기 목록" left={<button onClick={() => singleMealMode ? onBack() : setStep('select')} style={iconBtn}>{Icon.chevL()}</button>} />
 
       <div style={{ background: '#fff', padding: 20, borderBottom: `1px solid ${T.border}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -198,7 +222,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
               {shoppingListTitle}
             </div>
             <div style={{ fontSize: 12, color: T.text3, marginTop: 5 }}>
-              {buyItems.length}개 구매 예정 · {excludedItems.length}개 팬트리 제외
+              {singleMealMode ? '이 음식에 필요한 재료만 모았어요 · ' : ''}{buyItems.length}개 구매 예정 · {excludedItems.length}개 팬트리 제외
             </div>
           </div>
           <div style={{ fontSize: 32, fontWeight: 700, color: T.mint, fontFamily: T.fontBrand }}>{progress}%</div>
@@ -306,10 +330,7 @@ function ShoppingCreateScreen({ planner, pantry, onBack, showToast }) {
         background: '#fff', borderTop: `1px solid ${T.border}`,
         display: 'flex', flexDirection: 'row', gap: 8, zIndex: 45,
       }}>
-        <Button disabled={buyItems.length === 0} style={{ flex: 1 }} onClick={() => {
-          showToast('장보기 완료');
-          /* CONTRACT_CHECK: POST /shopping-lists — vNext에서는 UI shape만 */
-        }}>
+        <Button disabled={buyItems.length === 0} style={{ flex: 1 }} onClick={completeCurrentShopping}>
           장보기 완료
         </Button>
         <Button variant="neutral" style={{ flex: '0 0 86px', padding: '0 16px' }} onClick={() => { showToast('공유 링크가 복사됐어요'); }}>공유</Button>
@@ -604,7 +625,7 @@ function MealDetailScreen({ date, slot, planner, onBack, onOpenRecipe, onStartCo
 
           {/* Actions: 장보기 + 요리하기 */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            <button onClick={() => onCreateShopping(date, slot)} style={mealActionBtn}>장보기</button>
+            <button onClick={() => onCreateShopping(date, slot, mealIndex)} style={mealActionBtn}>장보기</button>
             <button onClick={() => onStartCook(date, slot, mealIndex)} style={{ ...mealActionBtn, background: T.mint, borderColor: T.mint, color: '#fff' }}>요리하기</button>
           </div>
         </div>
