@@ -22,3 +22,5 @@ Wave1 service porting PRs must compare their service screenshots against these r
 - The manifest uses `lock_version: 2` and `parity_mode: exact-mobile`.
 - The validator no longer accepts historical `required_visual_verdict_score: 90` completion gates.
 - Wave1 service porting PRs must include screenshot diff, computed-style audit, DOM geometry audit, visual blocker `0`, and unclassified visual difference `0` evidence before they can pass `pnpm validate:wave1-prototype-lock`.
+- Phase 3 added 62 mobile screenshots for 31 additional surface states. Existing references are skipped by default during `pnpm capture:wave1-prototype-lock`; use `-- --force` only for an intentional user-approved refreeze.
+- `GLOBAL::LoginGateModal` is not captured yet because the fixed phone shell has no deterministic mobile trigger.

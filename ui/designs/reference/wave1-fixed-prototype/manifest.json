@@ -145,6 +145,316 @@
       "surface": "LEFTOVERS",
       "viewport": "desktop-1280",
       "path": "ui/designs/reference/wave1-fixed-prototype/desktop-1280-leftovers.png"
+    },
+    {
+      "surface": "LOGIN",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-login.png"
+    },
+    {
+      "surface": "LOGIN",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-login.png"
+    },
+    {
+      "surface": "ATE_LIST",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-ate-list.png"
+    },
+    {
+      "surface": "ATE_LIST",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-ate-list.png"
+    },
+    {
+      "surface": "RECIPEBOOK_DETAIL",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-recipebook-detail.png"
+    },
+    {
+      "surface": "RECIPEBOOK_DETAIL",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-recipebook-detail.png"
+    },
+    {
+      "surface": "MEAL_SCREEN",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-meal-screen.png"
+    },
+    {
+      "surface": "MEAL_SCREEN",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-meal-screen.png"
+    },
+    {
+      "surface": "SHOPPING_FLOW_SELECT",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-shopping-flow-select.png"
+    },
+    {
+      "surface": "SHOPPING_FLOW_SELECT",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-shopping-flow-select.png"
+    },
+    {
+      "surface": "SHOPPING_FLOW_REVIEW",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-shopping-flow-review.png"
+    },
+    {
+      "surface": "SHOPPING_FLOW_REVIEW",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-shopping-flow-review.png"
+    },
+    {
+      "surface": "COOK_READY_LIST",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-cook-ready-list.png"
+    },
+    {
+      "surface": "COOK_READY_LIST",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-cook-ready-list.png"
+    },
+    {
+      "surface": "COOK_MODE_PLANNER",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-cook-mode-planner.png"
+    },
+    {
+      "surface": "COOK_MODE_PLANNER",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-cook-mode-planner.png"
+    },
+    {
+      "surface": "COOK_MODE_STANDALONE",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-cook-mode-standalone.png"
+    },
+    {
+      "surface": "COOK_MODE_STANDALONE",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-cook-mode-standalone.png"
+    },
+    {
+      "surface": "MANUAL_RECIPE_CREATE",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-manual-recipe-create.png"
+    },
+    {
+      "surface": "MANUAL_RECIPE_CREATE",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-manual-recipe-create.png"
+    },
+    {
+      "surface": "YT_IMPORT",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-yt-import.png"
+    },
+    {
+      "surface": "YT_IMPORT",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-yt-import.png"
+    },
+    {
+      "surface": "YT_IMPORT_REVIEW",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-yt-import-review.png"
+    },
+    {
+      "surface": "YT_IMPORT_REVIEW",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-yt-import-review.png"
+    },
+    {
+      "surface": "MENU_ADD_RECIPE_SEARCH_PICKER",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-recipe-search-picker.png"
+    },
+    {
+      "surface": "MENU_ADD_RECIPE_SEARCH_PICKER",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-recipe-search-picker.png"
+    },
+    {
+      "surface": "MENU_ADD_RECIPE_BOOK_SELECTOR",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-recipe-book-selector.png"
+    },
+    {
+      "surface": "MENU_ADD_RECIPE_BOOK_SELECTOR",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-recipe-book-selector.png"
+    },
+    {
+      "surface": "MENU_ADD_RECIPE_BOOK_DETAIL_PICKER",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-recipe-book-detail-picker.png"
+    },
+    {
+      "surface": "MENU_ADD_RECIPE_BOOK_DETAIL_PICKER",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-recipe-book-detail-picker.png"
+    },
+    {
+      "surface": "MENU_ADD_PANTRY_MATCH_PICKER",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-pantry-match-picker.png"
+    },
+    {
+      "surface": "MENU_ADD_PANTRY_MATCH_PICKER",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-pantry-match-picker.png"
+    },
+    {
+      "surface": "MENU_ADD_PLANNED_SERVINGS_INPUT",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-planned-servings-input.png"
+    },
+    {
+      "surface": "MENU_ADD_PLANNED_SERVINGS_INPUT",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-planned-servings-input.png"
+    },
+    {
+      "surface": "PANTRY_ADD_SHEET",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-pantry-add-sheet.png"
+    },
+    {
+      "surface": "PANTRY_ADD_SHEET",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-pantry-add-sheet.png"
+    },
+    {
+      "surface": "PANTRY_BUNDLE_PICKER",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-pantry-bundle-picker.png"
+    },
+    {
+      "surface": "PANTRY_BUNDLE_PICKER",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-pantry-bundle-picker.png"
+    },
+    {
+      "surface": "RECIPE_DETAIL_PLANNER_ADD_POPUP",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-planner-add-popup.png"
+    },
+    {
+      "surface": "RECIPE_DETAIL_PLANNER_ADD_POPUP",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-planner-add-popup.png"
+    },
+    {
+      "surface": "RECIPE_DETAIL_SAVE_POPUP",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-save-popup.png"
+    },
+    {
+      "surface": "RECIPE_DETAIL_SAVE_POPUP",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-save-popup.png"
+    },
+    {
+      "surface": "HOME_SORT_OPEN_STATE",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-home-sort-open-state.png"
+    },
+    {
+      "surface": "HOME_SORT_OPEN_STATE",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-home-sort-open-state.png"
+    },
+    {
+      "surface": "HOME_INGREDIENT_FILTER_MODAL",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-ingredient-filter-modal.png"
+    },
+    {
+      "surface": "HOME_INGREDIENT_FILTER_MODAL",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-ingredient-filter-modal.png"
+    },
+    {
+      "surface": "SHOPPING_DETAIL_PANTRY_REFLECT_PICKER",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-pantry-reflect-picker.png"
+    },
+    {
+      "surface": "SHOPPING_DETAIL_PANTRY_REFLECT_PICKER",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-pantry-reflect-picker.png"
+    },
+    {
+      "surface": "COOK_MODE_CONSUMED_INGREDIENT_CHECKLIST",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-consumed-ingredient-checklist.png"
+    },
+    {
+      "surface": "COOK_MODE_CONSUMED_INGREDIENT_CHECKLIST",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-consumed-ingredient-checklist.png"
+    },
+    {
+      "surface": "SETTINGS_NICKNAME_EDIT_SHEET",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-nickname-edit-sheet.png"
+    },
+    {
+      "surface": "SETTINGS_NICKNAME_EDIT_SHEET",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-nickname-edit-sheet.png"
+    },
+    {
+      "surface": "SETTINGS_LOGOUT_CONFIRM",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-logout-confirm.png"
+    },
+    {
+      "surface": "SETTINGS_LOGOUT_CONFIRM",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-logout-confirm.png"
+    },
+    {
+      "surface": "SETTINGS_ACCOUNT_DELETE_CONFIRM",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-account-delete-confirm.png"
+    },
+    {
+      "surface": "SETTINGS_ACCOUNT_DELETE_CONFIRM",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-account-delete-confirm.png"
+    },
+    {
+      "surface": "MYPAGE_RECIPEBOOK_DELETE_CONFIRM",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-recipebook-delete-confirm.png"
+    },
+    {
+      "surface": "MYPAGE_RECIPEBOOK_DELETE_CONFIRM",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-recipebook-delete-confirm.png"
+    },
+    {
+      "surface": "MYPAGE_RECIPEBOOK_TAB",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-mypage-recipebook-tab.png"
+    },
+    {
+      "surface": "MYPAGE_RECIPEBOOK_TAB",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-mypage-recipebook-tab.png"
+    },
+    {
+      "surface": "MYPAGE_SHOPPING_LISTS_TAB",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-mypage-shopping-lists-tab.png"
+    },
+    {
+      "surface": "MYPAGE_SHOPPING_LISTS_TAB",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-mypage-shopping-lists-tab.png"
     }
   ]
 }
