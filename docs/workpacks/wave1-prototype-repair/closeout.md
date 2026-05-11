@@ -5,11 +5,11 @@
 ## Frozen Reference
 
 - Fixed prototype path: `ui/designs/prototypes/claude-design-260505-wave1`
-- Fixed prototype implementation SHA: `4b49e05906c998fe83f68a2fa374bf53b7079291`
+- Fixed prototype implementation SHA: `9bf7a34c6b422d0c9981d4c2968e3350d5a28892`
 - Freeze workpack: `docs/workpacks/wave1-prototype-repair`
 - Service porting plan: `docs/workpacks/wave1-service-porting-plan.md`
 
-`4b49e05906c998fe83f68a2fa374bf53b7079291` is the last merged commit that changed the prototype implementation during the 2026-05-11 repair and follow-up sequence. It supersedes the initial Repair 4 freeze reference (`95a93180a1329d2b317a561aa7c954a39cbe104c`), the earlier follow-up freeze reference (`0000c86a7d6f719e2bb1c0966c6d1e307061df7c`), and the final QA reference (`c83a851f95e358cf07f5a21c6f413ee091a3d2be`) because the user provided additional prototype-finalization changes after PR #390, after PR #394, and after PR #398. Later service porting prompts must pin the SHA above as the read-only visual/layout reference for the prototype files.
+`9bf7a34c6b422d0c9981d4c2968e3350d5a28892` is the last merged commit that changed the prototype implementation during the 2026-05-11 repair and follow-up sequence. It supersedes the initial Repair 4 freeze reference (`95a93180a1329d2b317a561aa7c954a39cbe104c`), the earlier follow-up freeze reference (`0000c86a7d6f719e2bb1c0966c6d1e307061df7c`), the final QA reference (`c83a851f95e358cf07f5a21c6f413ee091a3d2be`), and the previous planner polish reference (`4b49e05906c998fe83f68a2fa374bf53b7079291`) because the user provided additional prototype-finalization changes after PR #390, after PR #394, after PR #398, and after PR #403. Later service porting prompts must pin the SHA above as the read-only visual/layout reference for the prototype files.
 
 ## Merged Repair PRs
 
@@ -31,6 +31,8 @@
 | Final modal sheet unification | #400 | `9d096c677274dce266318b0c383f8a1c82c02d14` | White bottom-sheet modal unification |
 | Final planner week rail snap | #401 | `4fc940ca8e69528755300c88c1f95a1467775eef` | Seven-card week rail fit and next-week snap |
 | Final planner row density | #402 | `4b49e05906c998fe83f68a2fa374bf53b7079291` | Compact meal rows and planner border cleanup |
+| Final follow-up freeze 3 | #403 | `b8f9bf7304a0e7d4b36b8452297f783b26f48009` | Freeze after modal and planner polish |
+| Final planner color density polish | #404 | `9bf7a34c6b422d0c9981d4c2968e3350d5a28892` | Home-theme planner colors and final row density |
 
 ## Evidence
 
@@ -54,6 +56,7 @@ Smoke evidence:
 - Final modal sheet unification: Playwright mobile My Page leftovers planner-add smoke, mobile Recipe Detail planner-add smoke, planner-origin serving-only smoke, and desktop meal-add smoke
 - Final planner week rail snap: Playwright 390px/320px rail fit smoke and next-week snap smoke
 - Final planner row density: Playwright 390px row density/border smoke
+- Final planner color density polish: Playwright 390px final polish smoke, 320px rail/color smoke, and desktop planner summary color smoke
 
 Screenshot evidence:
 
@@ -88,7 +91,7 @@ Service Slice A~F porting may start only after this closeout is merged.
 All service porting prompts must include:
 
 - `fixed_prototype_path=ui/designs/prototypes/claude-design-260505-wave1`
-- `fixed_prototype_implementation_sha=4b49e05906c998fe83f68a2fa374bf53b7079291`
+- `fixed_prototype_implementation_sha=9bf7a34c6b422d0c9981d4c2968e3350d5a28892`
 - `visual_layout_source_of_truth=fixed prototype`
 - `functional_source_of_truth=MVP service implementation + official docs`
 

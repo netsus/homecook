@@ -26,6 +26,8 @@
 - Final planner week rail snap: `fix/wave1-prototype-week-rail-snap`
 - Final planner row density: `fix/wave1-prototype-planner-row-density`
 - Final follow-up freeze 3: `docs/wave1-prototype-followup3-freeze`
+- Final planner color density polish: `fix/wave1-prototype-final-planner-polish`
+- Final follow-up freeze 4: `docs/wave1-prototype-final-planner-polish-freeze`
 
 ## Source Of Truth
 
@@ -56,11 +58,11 @@
 - MVP routes, API calls, submit behavior, auth, saved/deleted/restored state, and official status transitions remain MVP/official-doc sourced.
 - Prototype broken behavior must be repaired in prototype or documented; it must not be copied into service.
 - Each repair slice PR must merge before the next repair slice starts.
-- Repair 4 recorded the initial fixed prototype commit SHA; the follow-up freezes update that SHA after PRs #391~#402. Later service porting uses the updated commit as a read-only reference.
+- Repair 4 recorded the initial fixed prototype commit SHA; the follow-up freezes update that SHA after PRs #391~#404. Later service porting uses the updated commit as a read-only reference.
 
 ## Freeze Status
 
-- Fixed prototype implementation SHA: `4b49e05906c998fe83f68a2fa374bf53b7079291`
+- Fixed prototype implementation SHA: `9bf7a34c6b422d0c9981d4c2968e3350d5a28892`
 - Closeout note: `docs/workpacks/wave1-prototype-repair/closeout.md`
 - Merged repair PRs:
   - Repair 0 navigation: #386, merge commit `268893953f9b831c299e0378cfab8863b6b8a858`
@@ -79,8 +81,10 @@
   - Final modal sheet unification: #400, merge commit `9d096c677274dce266318b0c383f8a1c82c02d14`
   - Final planner week rail snap: #401, merge commit `4fc940ca8e69528755300c88c1f95a1467775eef`
   - Final planner row density: #402, merge commit `4b49e05906c998fe83f68a2fa374bf53b7079291`
+  - Final follow-up freeze 3: #403, merge commit `b8f9bf7304a0e7d4b36b8452297f783b26f48009`
+  - Final planner color density polish: #404, merge commit `9bf7a34c6b422d0c9981d4c2968e3350d5a28892`
 
-Service Slice A~F re-porting must pin the fixed prototype implementation SHA above. The follow-up freezes supersede the initial Repair 4 SHA, the earlier follow-up SHA `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`, and the final QA SHA `c83a851f95e358cf07f5a21c6f413ee091a3d2be` because the user provided additional prototype-finalization changes after PR #390, after PR #394, and after PR #398.
+Service Slice A~F re-porting must pin the fixed prototype implementation SHA above. The follow-up freezes supersede the initial Repair 4 SHA, the earlier follow-up SHA `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`, the final QA SHA `c83a851f95e358cf07f5a21c6f413ee091a3d2be`, and the previous planner polish SHA `4b49e05906c998fe83f68a2fa374bf53b7079291` because the user provided additional prototype-finalization changes after PR #390, after PR #394, after PR #398, and after PR #403.
 
 ## Repair Slices
 
@@ -103,6 +107,8 @@ Service Slice A~F re-porting must pin the fixed prototype implementation SHA abo
 | 14 | Modal Sheet Unification | 모달 배경/형식/위치를 white bottom sheet로 통일 | 추가 변경사항 모달 1.1~1.3 |
 | 15 | Planner Final Polish | 주간 날짜 rail 7일 fit/snap, 끼니 row density, border 정리 | 추가 변경사항 플래너 2.1~2.5 |
 | 16 | Final Follow-up Freeze 3 | fixed prototype SHA와 closeout/service-porting 기준 최종 재갱신 | Repair 14~15 closeout |
+| 17 | Planner Final Color Density Polish | 홈 테마 색상 재사용, 주간/날짜 weight, 끼니 row 추가 축소 | 마지막 추가 변경사항 플래너 1~5 |
+| 18 | Final Follow-up Freeze 4 | fixed prototype SHA와 closeout/service-porting 기준 최종 재갱신 | Repair 17 closeout |
 
 ## Expected Files
 
