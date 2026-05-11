@@ -22,6 +22,10 @@
 - Final QA settings account split: `fix/wave1-prototype-settings-account-split`
 - Final QA leftovers target selection: `fix/wave1-prototype-leftovers-target-selection`
 - Final follow-up freeze 2: `docs/wave1-prototype-followup2-freeze`
+- Final modal sheet unification: `fix/wave1-prototype-modal-unification`
+- Final planner week rail snap: `fix/wave1-prototype-week-rail-snap`
+- Final planner row density: `fix/wave1-prototype-planner-row-density`
+- Final follow-up freeze 3: `docs/wave1-prototype-followup3-freeze`
 
 ## Source Of Truth
 
@@ -52,11 +56,11 @@
 - MVP routes, API calls, submit behavior, auth, saved/deleted/restored state, and official status transitions remain MVP/official-doc sourced.
 - Prototype broken behavior must be repaired in prototype or documented; it must not be copied into service.
 - Each repair slice PR must merge before the next repair slice starts.
-- Repair 4 recorded the initial fixed prototype commit SHA; the follow-up freezes update that SHA after PRs #391~#398. Later service porting uses the updated commit as a read-only reference.
+- Repair 4 recorded the initial fixed prototype commit SHA; the follow-up freezes update that SHA after PRs #391~#402. Later service porting uses the updated commit as a read-only reference.
 
 ## Freeze Status
 
-- Fixed prototype implementation SHA: `c83a851f95e358cf07f5a21c6f413ee091a3d2be`
+- Fixed prototype implementation SHA: `4b49e05906c998fe83f68a2fa374bf53b7079291`
 - Closeout note: `docs/workpacks/wave1-prototype-repair/closeout.md`
 - Merged repair PRs:
   - Repair 0 navigation: #386, merge commit `268893953f9b831c299e0378cfab8863b6b8a858`
@@ -71,8 +75,12 @@
   - Final QA manual-create validation: #396, merge commit `28d114dcdc4bf750ce7841f5f8c42c69bb394abc`
   - Final QA settings account split: #397, merge commit `fa2a64a1e5c0548ec946d9a417333671a8572c30`
   - Final QA leftovers target selection: #398, merge commit `c83a851f95e358cf07f5a21c6f413ee091a3d2be`
+  - Final follow-up freeze 2: #399, merge commit `cf1b303283d08c6df7e10e0b4dd5e8b47aedc53d`
+  - Final modal sheet unification: #400, merge commit `9d096c677274dce266318b0c383f8a1c82c02d14`
+  - Final planner week rail snap: #401, merge commit `4fc940ca8e69528755300c88c1f95a1467775eef`
+  - Final planner row density: #402, merge commit `4b49e05906c998fe83f68a2fa374bf53b7079291`
 
-Service Slice A~F re-porting must pin the fixed prototype implementation SHA above. The follow-up freezes supersede both the initial Repair 4 SHA and the earlier follow-up SHA `0000c86a7d6f719e2bb1c0966c6d1e307061df7c` because the user provided additional prototype-finalization changes after PR #390 and after PR #394.
+Service Slice A~F re-porting must pin the fixed prototype implementation SHA above. The follow-up freezes supersede the initial Repair 4 SHA, the earlier follow-up SHA `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`, and the final QA SHA `c83a851f95e358cf07f5a21c6f413ee091a3d2be` because the user provided additional prototype-finalization changes after PR #390, after PR #394, and after PR #398.
 
 ## Repair Slices
 
@@ -92,6 +100,9 @@ Service Slice A~F re-porting must pin the fixed prototype implementation SHA abo
 | 11 | Settings Account Split | 끼니 컬럼 dirty state, 계정/닉네임/로그아웃/회원탈퇴 위치 보정 | 추가 변경사항 SETTINGS 2.1~2.2 |
 | 12 | Leftovers Target Selection | 진입 경로별 날짜/끼니/인분 선택 범위 분기 | 추가 변경사항 LEFTOVERS 3.1 |
 | 13 | Final Follow-up Freeze 2 | fixed prototype SHA와 closeout/service-porting 기준 재갱신 | Repair 10~12 closeout |
+| 14 | Modal Sheet Unification | 모달 배경/형식/위치를 white bottom sheet로 통일 | 추가 변경사항 모달 1.1~1.3 |
+| 15 | Planner Final Polish | 주간 날짜 rail 7일 fit/snap, 끼니 row density, border 정리 | 추가 변경사항 플래너 2.1~2.5 |
+| 16 | Final Follow-up Freeze 3 | fixed prototype SHA와 closeout/service-porting 기준 최종 재갱신 | Repair 14~15 closeout |
 
 ## Expected Files
 

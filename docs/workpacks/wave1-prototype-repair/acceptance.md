@@ -79,7 +79,7 @@ Evidence:
 ## Repair 4: Freeze And Service Porting Gate
 
 - [x] Repair 0~3 PR이 모두 merged됐다.
-- [x] 2026-05-11 follow-up repair PR #391~#398이 모두 merged됐다.
+- [x] 2026-05-11 follow-up repair PR #391~#402가 모두 merged됐다.
 - [x] Fixed prototype commit SHA가 closeout note에 기록됐다.
 - [x] 320px/390px screenshot evidence가 남아 있다.
 - [x] Navigation smoke evidence가 남아 있다.
@@ -90,8 +90,8 @@ Evidence:
 Evidence:
 
 - Closeout note: `docs/workpacks/wave1-prototype-repair/closeout.md`
-- Fixed prototype implementation SHA: `c83a851f95e358cf07f5a21c6f413ee091a3d2be`
-- Merged PRs: #386, #387, #388, #389, #390, #391, #392, #393, #394, #396, #397, #398
+- Fixed prototype implementation SHA: `4b49e05906c998fe83f68a2fa374bf53b7079291`
+- Merged PRs: #386, #387, #388, #389, #390, #391, #392, #393, #394, #396, #397, #398, #399, #400, #401, #402
 - Screenshot evidence: `.omx/artifacts/wave1-repair2/repair2-390-*.png`, `.omx/artifacts/wave1-repair2/repair2-320-*.png`, `.omx/artifacts/wave1-repair3/repair3-390-*.png`, `.omx/artifacts/wave1-repair3/repair3-320-*.png`
 - Follow-up screenshot evidence: `.omx/artifacts/wave1-repair5/*.png`, `.omx/artifacts/wave1-repair6/*.png`, `.omx/artifacts/wave1-repair7/*.png`, `.omx/artifacts/wave1-repair8/*.png`
 - Mirror check: `diff -q ui/designs/prototypes/claude-design-260505-wave1/index.html ui/designs/prototypes/claude-design-260505-wave1/homecook-baemin-prototype.html`
@@ -109,6 +109,25 @@ Evidence:
 - Final manual create validation: Playwright mobile/desktop blank ingredient amount and blank step smoke.
 - Final settings account split: Playwright mobile/desktop settings dirty-state and account action smoke.
 - Final leftovers target selection: Playwright mobile My Page target selection, planner-origin servings-only smoke, and desktop target selection smoke.
+
+## Repair 14~15: Modal And Planner Final Polish
+
+- [x] 모든 주요 prototype modal/sheet 배경은 흰색으로 통일된다.
+- [x] 마이페이지 남은요리 플래너 추가와 레시피 상세 플래너 추가 modal은 날짜/끼니/인분 선택 형식이 일치한다.
+- [x] modal 위치는 모바일/desktop prototype 모두 bottom sheet 방식으로 통일된다.
+- [x] PLANNER week rail은 390px와 320px viewport에서 현재 주 날짜 카드 7개가 한 화면 안에 모두 들어온다.
+- [x] PLANNER week rail 날짜 카드 안의 작은 `월/일` 보조 텍스트가 제거된다.
+- [x] PLANNER week rail은 한 번 가로 스크롤하면 다음 주 7일치 카드로 snap되고 가운데 페이지로 재정렬된다.
+- [x] PLANNER 끼니 row 높이는 등록 식사 카드와 식사 추가 버튼에 맞게 줄어든다.
+- [x] PLANNER 끼니명과 식사 추가/등록 식사 사이 간격이 줄어든다.
+- [x] PLANNER 등록 식사 카드 border와 음식 계획 중 요약 박스 아래 border가 제거된다.
+- [x] PLANNER 등록된 끼니 칸의 `+` 버튼은 식사추가 버튼처럼 점선 border를 사용한다.
+
+Evidence:
+
+- Final modal sheet unification: Playwright mobile My Page leftovers planner-add smoke, mobile Recipe Detail planner-add smoke, planner-origin servings-only smoke, desktop meal-add smoke.
+- Final planner week rail snap: Playwright 390px/320px rail fit smoke and next-week snap smoke.
+- Final planner row density: Playwright 390px row density/border smoke.
 
 ## Guardrails
 
