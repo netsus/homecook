@@ -328,7 +328,7 @@ function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMen
       cursor: 'pointer', marginBottom: 14,
     }}>← 식사 추가</button>
   );
-  const mealAddRecipeRow = (recipe, meta) => (
+  const mealAddRecipeRow = (recipe, meta, extra) => (
     <button key={recipe.id + (meta || '')} onClick={() => pickMealAddRecipe(recipe.id)} style={{
       display: 'flex', alignItems: 'center', gap: 12,
       background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12,
@@ -340,7 +340,7 @@ function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMen
       }}>{recipe.emoji}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{recipe.name}</div>
-        <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{meta || `${recipe.minutes}분 · ${recipe.servings}인분`}</div>
+        {extra || <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{meta || `${recipe.minutes}분 · ${recipe.servings}인분`}</div>}
       </div>
       <span style={{ fontSize: 12, fontWeight: 800, color: T.mintDeep, background: T.mintSoft, padding: '6px 10px', borderRadius: 8 }}>추가</span>
     </button>
@@ -382,7 +382,9 @@ function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMen
           {mealAddBackBtn}
           <div style={{ fontSize: 12, color: T.mintDeep, fontWeight: 800, marginBottom: 12 }}>보유 재료가 많이 맞는 레시피부터 보여드려요.</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            {mealAddPantryMatches.slice(0, 8).map(({ r, score, matched, need }) => mealAddRecipeRow(r, `매칭 ${score}% · ${matched}/${need}개 보유`))}
+            {mealAddPantryMatches.slice(0, 8).map(({ r, score, matched, need }) => mealAddRecipeRow(r, null, (
+              <MatchProgressBar score={score} sub={`${matched}/${need}개 보유`} compact style={{ marginTop: 7 }} />
+            )))}
           </div>
         </>
       );
@@ -1287,6 +1289,12 @@ function DesktopMenuAddScreen({ presetDate, presetSlot, initialMode, planner, pa
   const initialTab = initialMode === 'books' ? 'book' : initialMode === 'pantry-match' ? 'pantry' : initialMode === 'search' ? 'search' : 'search';
   const [tab, setTab] = dUseState(initialTab);
   const slotLabel = presetDate && presetSlot ? `${presetDate} ${presetSlot}` : '플래너';
+  const menuHaveSet = new Set(Object.values(pantry || {}).filter(v => v.have).map(v => v.name));
+  const menuPantryMatches = RECIPES.map(r => {
+    const need = (r.ingredients || []).length || 1;
+    const matched = (r.ingredients || []).filter(i => menuHaveSet.has(i.name)).length;
+    return { r, score: Math.round((matched / need) * 100), matched, need };
+  }).sort((a, b) => b.score - a.score);
   const tabs = [
     { k: 'search', label: '레시피 검색', emoji: '🔎' },
     { k: 'book', label: '레시피북', emoji: '📚' },
@@ -1392,20 +1400,15 @@ function DesktopMenuAddScreen({ presetDate, presetSlot, initialMode, planner, pa
                 보유 재료가 많이 일치하는 순서로 정렬돼요.
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
-                {RECIPES.slice(0, 6).map(r => (
+                {menuPantryMatches.slice(0, 6).map(({ r, score, matched, need }) => (
                   <div key={r.id} onClick={() => onPickRecipe?.(r.id)} style={{
                     background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12, overflow: 'hidden', cursor: 'pointer',
                     position: 'relative',
                   }}>
-                    <div style={{
-                      position: 'absolute', top: 8, left: 8,
-                      background: T.mint, color: '#fff', fontSize: 10, fontWeight: 800,
-                      padding: '3px 8px', borderRadius: 9999,
-                    }}>매칭 {Math.floor(60 + Math.random()*30)}%</div>
                     <div style={{ aspectRatio: '4/3', background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>{r.emoji}</div>
                     <div style={{ padding: 10 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.name}</div>
-                      <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>{r.minutes}분 · {r.servings}인분</div>
+                      <MatchProgressBar score={score} sub={`${matched}/${need}개 보유`} compact style={{ marginTop: 8 }} />
                     </div>
                   </div>
                 ))}
@@ -2697,6 +2700,19 @@ function DesktopManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCre
   const [ingModal, setIngModal] = dUseState(false);
   const valid = name.trim().length > 0 && ingredients.length > 0;
   const slotLabel = presetDate && presetSlot ? `${presetDate} ${presetSlot}` : '플래너 미선택';
+  const warnNumericOnly = () => showToast?.('재료 수량은 숫자만 입력할 수 있어요');
+  const blockNonNumericInput = (e) => {
+    const text = e.data ?? e.clipboardData?.getData('text') ?? '';
+    if (text && /[^0-9]/.test(text)) {
+      e.preventDefault();
+      warnNumericOnly();
+    }
+  };
+  const setIngredientAmount = (idx, value) => {
+    if (/[^0-9]/.test(value)) warnNumericOnly();
+    const amount = value.replace(/[^0-9]/g, '');
+    setIngredients(ingredients.map((x, j) => j === idx ? { ...x, amount } : x));
+  };
   const submit = () => {
     const recipe = {
       id: 'r_user_' + Date.now(), name: name.trim(), emoji, minutes, servings,
@@ -2770,8 +2786,10 @@ function DesktopManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCre
             ) : ingredients.map((it, i) => (
               <div key={it.name} style={{ display: 'grid', gridTemplateColumns: '2fr 90px 104px 32px', gap: 8, marginBottom: 8, alignItems: 'center' }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: T.ink }}>{it.name}</div>
-                <input type="number" inputMode="numeric" value={it.amount || ''}
-                  onChange={e => setIngredients(ingredients.map((x, j) => j === i ? { ...x, amount: e.target.value.replace(/[^0-9]/g, '') } : x))}
+                <input type="text" inputMode="numeric" pattern="[0-9]*" value={it.amount || ''}
+                  onBeforeInput={blockNonNumericInput}
+                  onPaste={blockNonNumericInput}
+                  onChange={e => setIngredientAmount(i, e.target.value)}
                   placeholder="양" style={{ ...dskInputStyle, textAlign: 'center' }} />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
                   {['g', 'ml'].map(unit => (
@@ -3531,15 +3549,10 @@ function DesktopPantryMatchPickerDialog({ pantry, slotLabel, onClose, onPick }) 
               background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12, overflow: 'hidden',
               position: 'relative', cursor: 'pointer', textAlign: 'left', padding: 0,
             }}>
-              <div style={{
-                position: 'absolute', top: 8, left: 8,
-                background: T.mint, color: '#fff', fontSize: 10, fontWeight: 800,
-                padding: '3px 8px', borderRadius: 9999,
-              }}>매칭 {score}%</div>
               <div style={{ aspectRatio: '4/3', background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>{r.emoji}</div>
               <div style={{ padding: 10 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{r.name}</div>
-                <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>{matched}/{need}개 보유 · {r.minutes}분</div>
+                <MatchProgressBar score={score} sub={`${matched}/${need}개 보유 · ${r.minutes}분`} compact style={{ marginTop: 8 }} />
               </div>
             </button>
           ))}

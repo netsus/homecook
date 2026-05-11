@@ -319,7 +319,7 @@ function PantryMatchPicker({ pantry, slotLabel, onBack, onPick }) {
         </div>
       </div>
       <div style={{ padding: 12 }}>
-        {ranked.map(({ r, hit, total, missing }) => (
+        {ranked.map(({ r, hit, total, ratio, missing }) => (
           <button key={r.id} onClick={() => onPick(r.id)} style={{
             width: '100%', display: 'flex', gap: 12, padding: 12,
             background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12,
@@ -331,18 +331,7 @@ function PantryMatchPicker({ pantry, slotLabel, onBack, onPick }) {
             }}>{r.emoji}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{r.name}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                <span style={{
-                  fontSize: 11, fontWeight: 700, color: T.mintDeep,
-                  background: T.mintSoft, padding: '3px 8px', borderRadius: 4,
-                }}>재료 {hit}/{total}</span>
-                <div style={{
-                  flex: 1, height: 4, background: T.surfaceSubtle,
-                  borderRadius: 2, overflow: 'hidden',
-                }}>
-                  <div style={{ width: `${(hit/Math.max(1,total))*100}%`, height: '100%', background: T.mint }} />
-                </div>
-              </div>
+              <MatchProgressBar score={ratio * 100} sub={`${hit}/${total}개 보유`} style={{ marginTop: 7 }} />
               {missing.length > 0 && (
                 <div style={{ fontSize: 11, color: T.text3, marginTop: 6, lineHeight: 1.4 }}>
                   부족 · {missing.slice(0, 3).join(', ')}{missing.length > 3 ? ` 외 ${missing.length-3}` : ''}
@@ -499,6 +488,19 @@ function ManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCreated, s
   const [ingModal, setIngModal] = useState_W(false);
   const valid = name.trim() && ings.length > 0 && steps.some(s => s.text.trim());
   const methods = Object.keys(METHOD_COLORS);
+  const warnNumericOnly = () => showToast?.('재료 수량은 숫자만 입력할 수 있어요');
+  const blockNonNumericInput = (e) => {
+    const text = e.data ?? e.clipboardData?.getData('text') ?? '';
+    if (text && /[^0-9]/.test(text)) {
+      e.preventDefault();
+      warnNumericOnly();
+    }
+  };
+  const setIngredientAmount = (idx, value) => {
+    if (/[^0-9]/.test(value)) warnNumericOnly();
+    const amount = value.replace(/[^0-9]/g, '');
+    setIngs(ings.map((x, j) => j === idx ? { ...x, amount } : x));
+  };
 
   const submit = () => {
     if (!valid) return;
@@ -544,8 +546,10 @@ function ManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCreated, s
                 borderRadius: 10, padding: 10,
               }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{it.name}</div>
-                <input type="number" inputMode="numeric" value={it.amount || ''}
-                  onChange={e => setIngs(ings.map((x, j) => j === i ? { ...x, amount: e.target.value.replace(/[^0-9]/g, '') } : x))}
+                <input type="text" inputMode="numeric" pattern="[0-9]*" value={it.amount || ''}
+                  onBeforeInput={blockNonNumericInput}
+                  onPaste={blockNonNumericInput}
+                  onChange={e => setIngredientAmount(i, e.target.value)}
                   placeholder="양" style={{ ...inp, padding: '7px 8px', textAlign: 'center' }} />
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
                   {['g', 'ml'].map(unit => (
@@ -1992,8 +1996,8 @@ function IngredientFilterModal({ value = [], onApply, onClose }) {
 // PlanningServingsModal — 식사 추가 직전 계획 인분 입력
 // 진입: MENU_ADD onPickRecipe 흐름이 plan에 commit하기 전
 // ─────────────────────────────────────────────────────────────
-function PlanningServingsModal({ recipe, presetDate, presetSlot, onClose, onConfirm }) {
-  const [servings, setServings] = useState_W(recipe?.servings || 2);
+function PlanningServingsModal({ recipe, presetDate, presetSlot, initialServings, onClose, onConfirm }) {
+  const [servings, setServings] = useState_W(initialServings || recipe?.servings || 2);
   const slotLabel = presetDate && presetSlot ? `${presetDate} ${presetSlot}` : '플래너에 추가';
   return (
     <ConfirmDialog

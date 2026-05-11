@@ -55,7 +55,7 @@ function MealAddModal({ date, slot, planner, pantry, onClose, onMenuAdd, onGoMan
       cursor: 'pointer', marginBottom: 12,
     }}>← 식사 추가</button>
   );
-  const recipeRow = (recipe, meta) => (
+  const recipeRow = (recipe, meta, extra) => (
     <button key={recipe.id + (meta || '')} onClick={() => pickRecipe(recipe.id)} style={{
       width: '100%', display: 'flex', alignItems: 'center', gap: 12,
       background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12,
@@ -67,7 +67,7 @@ function MealAddModal({ date, slot, planner, pantry, onClose, onMenuAdd, onGoMan
       }}>{recipe.emoji}</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: T.ink }}>{recipe.name}</div>
-        <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{meta || `${recipe.minutes}분 · ${recipe.servings}인분`}</div>
+        {extra || <div style={{ fontSize: 11, color: T.text3, marginTop: 2 }}>{meta || `${recipe.minutes}분 · ${recipe.servings}인분`}</div>}
       </div>
       <span style={{
         fontSize: 12, fontWeight: 800, color: T.mintDeep,
@@ -107,7 +107,9 @@ function MealAddModal({ date, slot, planner, pantry, onClose, onMenuAdd, onGoMan
           보유 재료가 많이 맞는 레시피부터 보여드려요.
         </div>
         {pantryMatches.slice(0, 7).map(({ recipe, hit, total, score }) =>
-          recipeRow(recipe, `매칭 ${score}% · ${hit}/${total}개 보유 · ${recipe.minutes}분`)
+          recipeRow(recipe, null, (
+            <MatchProgressBar score={score} sub={`${hit}/${total}개 보유 · ${recipe.minutes}분`} style={{ marginTop: 7 }} />
+          ))
         )}
       </Sheet>
     );
