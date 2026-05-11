@@ -1965,9 +1965,18 @@ function IngredientFilterModal({ value = [], onApply, onClose }) {
 // PlanningServingsModal — 식사 추가 직전 계획 인분 입력
 // 진입: MENU_ADD onPickRecipe 흐름이 plan에 commit하기 전
 // ─────────────────────────────────────────────────────────────
-function PlanningServingsModal({ recipe, presetDate, presetSlot, initialServings, onClose, onConfirm }) {
+function PlanningServingsModal({ recipe, presetDate, presetSlot, initialServings, planner, onClose, onConfirm }) {
   const [servings, setServings] = useState_W(initialServings || recipe?.servings || 2);
-  const slotLabel = presetDate && presetSlot ? `${presetDate} ${presetSlot}` : '플래너에 추가';
+  const dateOptions = Object.keys(planner || {});
+  const [selectedDate, setSelectedDate] = useState_W(presetDate || dateOptions[0] || '');
+  const slotOptions = Array.from(new Set([
+    ...Object.keys(planner?.[selectedDate] || {}),
+    '아침', '점심', '저녁'
+  ])).filter(Boolean);
+  const [selectedSlot, setSelectedSlot] = useState_W(presetSlot || slotOptions[0] || '아침');
+  const needsTargetSelection = !(presetDate && presetSlot);
+  const slotLabel = `${selectedDate || presetDate || '날짜 선택'} ${selectedSlot || presetSlot || '끼니 선택'}`;
+  const confirmTarget = () => onConfirm(servings, selectedDate || presetDate, selectedSlot || presetSlot);
   return (
     <ConfirmDialog
       title="몇 인분으로 계획할까요?"
@@ -1975,9 +1984,34 @@ function PlanningServingsModal({ recipe, presetDate, presetSlot, initialServings
       confirmLabel="추가하기"
       cancelLabel="취소"
       onClose={onClose}
-      onConfirm={() => onConfirm(servings)}
+      onConfirm={confirmTarget}
       extra={
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {needsTargetSelection && (
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
+              background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12, padding: 10,
+            }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11, color: T.text3, fontWeight: 800 }}>
+                날짜
+                <select value={selectedDate} onChange={e => {
+                  const nextDate = e.target.value;
+                  setSelectedDate(nextDate);
+                  const nextSlots = Object.keys(planner?.[nextDate] || {});
+                  if (nextSlots.length && !nextSlots.includes(selectedSlot)) setSelectedSlot(nextSlots[0]);
+                }} style={{ ...inp, padding: '9px 10px', fontSize: 13 }}>
+                  {dateOptions.map(date => <option key={date} value={date}>{date}</option>)}
+                </select>
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11, color: T.text3, fontWeight: 800 }}>
+                끼니
+                <select value={selectedSlot} onChange={e => setSelectedSlot(e.target.value)}
+                  style={{ ...inp, padding: '9px 10px', fontSize: 13 }}>
+                  {slotOptions.map(slot => <option key={slot} value={slot}>{slot}</option>)}
+                </select>
+              </label>
+            </div>
+          )}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
             background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12, padding: 10,
