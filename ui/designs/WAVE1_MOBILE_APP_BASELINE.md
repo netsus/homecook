@@ -5,6 +5,7 @@
 > Prototype source: `ui/designs/prototypes/claude-design-260505-wave1`
 > Fixed prototype SHA: `9bf7a34c6b422d0c9981d4c2968e3350d5a28892`
 > Reference manifest: `ui/designs/reference/wave1-fixed-prototype/manifest.json`
+> App/web responsibility matrix: `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`
 
 ## Purpose
 
@@ -22,7 +23,8 @@ For Wave1 mobile app porting, apply these authorities in order:
    API, DB, route contract, auth, permissions, status transitions, read-only behavior, idempotency, loading, empty, error, and unauthorized states.
 2. Fixed Wave1 prototype references govern mobile visual/layout output:
    color, font, type scale, spacing, radius, shadow, density, icon treatment, card/list/sheet geometry, app shell, bottom tab, sticky CTA, and visible copy placement.
-3. Legacy MVP visual rules are historical unless explicitly re-adopted for a non-Wave1 or web-only surface.
+3. `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md` decides whether a surface is exact-reference-ready, must first receive new screenshots, or belongs to the later web redesign track.
+4. Legacy MVP visual rules are historical unless explicitly re-adopted for a non-Wave1 or web-only surface.
 
 If prototype behavior conflicts with official MVP behavior, preserve MVP behavior and record the visual/behavior boundary in the parity ledger.
 
@@ -36,7 +38,7 @@ For Wave1 mobile porting slices A-F, the following rules override prior design c
 4. Prior visual verdict scores and screenshot evidence from merged PRs #373, #374, #376, #379, #381, and #383 cannot be reused as current completion evidence.
 5. If this baseline conflicts with `docs/design/design-tokens.md`, `ui/designs/BAEMIN_STYLE_DIRECTION.md`, `docs/engineering/product-design-authority.md`, or screen-level `ui/designs/*.md`, this baseline wins for Wave1 mobile surfaces.
 6. For web/desktop or non-Wave1 legacy surfaces, existing docs continue to apply until a separate web redesign plan supersedes them.
-7. `ui/designs/reference/wave1-fixed-prototype/manifest.json` and the Wave1 validator must stay in exact parity mode before any service porting PR can be accepted.
+7. `ui/designs/reference/wave1-fixed-prototype/manifest.json`, `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`, and the Wave1 validator must stay in exact parity mode before any service porting PR can be accepted.
 
 ## Non-Negotiable Target
 
@@ -185,6 +187,8 @@ Use these statuses in Phase 2 and later:
 | `excluded-functional` | Prototype behavior conflicts with MVP official behavior; visual treatment may be ported but behavior remains MVP-governed. |
 | `web-only` | Not part of this mobile app porting effort. |
 
+The authoritative row-by-row classification lives in `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`. Do not start mobile porting for a row marked `needs-prototype-freeze` until Phase 3 captures and commits its 390px and 320px references.
+
 ## Current Exact Reference Set
 
 The current manifest already contains mobile 390px and 320px screenshots for:
@@ -201,6 +205,8 @@ The current manifest already contains mobile 390px and 320px screenshots for:
 - `LEFTOVERS`
 
 Surfaces such as `ATE_LIST`, `RECIPEBOOK_DETAIL`, `MEAL_SCREEN`, `SHOPPING_FLOW`, `COOK_READY_LIST`, `COOK_MODE`, `PantryAddSheet`, `PantryBundlePicker`, `PlannerAddPopup`, and `SavePopup` need explicit matrix confirmation and may need new reference captures before porting.
+
+Phase 2 confirmed those rows in `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md` as `needs-prototype-freeze`; they are blocked from 100% parity claims until new fixed references are captured.
 
 ## Required Evidence Per Ported Surface
 

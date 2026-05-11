@@ -6,11 +6,15 @@
 > fixed prototype implementation SHA: `9bf7a34c6b422d0c9981d4c2968e3350d5a28892`
 > 핵심 원칙: 프로토타입은 visual/layout source of truth이고, 기능 동작은 현재 MVP 구현과 공식 문서가 source of truth다. 공식 문서와 실제 API 계약을 넘는 변경은 먼저 contract-evolution 문서/PR로 닫고, FE는 그 계약을 그대로 소비한다.
 > 2026-05-11 Phase 1 update: Wave1 모바일 앱 재포팅은 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`를 우선 디자인 기준으로 사용한다. 모바일 목표는 `90+` 또는 near-100%가 아니라 fixed prototype reference 대비 100% parity다.
+> 2026-05-12 Phase 2 update: 앱/웹 책임 분리와 exact-ready/freeze 대상은 `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`를 따른다.
 
 ## Current Status
 
 - Wave1 vNext prototype은 최신 기준 프로토타입으로 사용한다.
 - Wave1 모바일 앱 재포팅의 기준 문서는 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`다.
+  - Phase 2 row-by-row 책임 분리 기준은 `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`다.
+  - `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK`, `MENU_ADD`, `SHOPPING_DETAIL`, `PANTRY`, `MYPAGE`, `SETTINGS`, `ACCOUNT`, `LEFTOVERS`만 현재 exact-reference-ready다.
+  - 그 외 앱 화면, picker, sheet, popup은 먼저 Phase 3 reference capture/freeze를 거쳐야 100% parity 포팅에 들어갈 수 있다.
   - 기존 C2 / h6 / h7 / h8 design authority와 PR #373, #374, #376, #379, #381, #383 evidence는 historical evidence다.
   - fixed reference가 있는 모바일 surface는 색상, 폰트, spacing, radius, shadow, layout, icon, sheet/bottom-tab geometry까지 prototype과 일치해야 한다.
   - broad approved divergence, coral-vs-mint token mapping, non-Jua font substitution, warm-cream background 유지 같은 이전 예외는 현재 Wave1 mobile 100% parity completion proof로 사용할 수 없다.
@@ -69,13 +73,14 @@
 5. `docs/engineering/product-design-authority.md`
 6. `docs/design/design-tokens.md`
 7. `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`
-8. `docs/design/mobile-ux-rules.md`
-9. `docs/design/anchor-screens.md`
-10. `ui/designs/BAEMIN_STYLE_DIRECTION.md`
-11. slice 13+ future screen이면 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`
-12. `ui/designs/prototypes/claude-design-260505-wave1/VNEXT_DESIGN_PRINCIPLES.md`
-13. `ui/designs/prototypes/claude-design-260505-wave1/HANDOFF.md`
-14. 실제 구현 대상 화면의 현재 서비스 파일
+8. `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`
+9. `docs/design/mobile-ux-rules.md`
+10. `docs/design/anchor-screens.md`
+11. `ui/designs/BAEMIN_STYLE_DIRECTION.md`
+12. slice 13+ future screen이면 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`
+13. `ui/designs/prototypes/claude-design-260505-wave1/VNEXT_DESIGN_PRINCIPLES.md`
+14. `ui/designs/prototypes/claude-design-260505-wave1/HANDOFF.md`
+15. 실제 구현 대상 화면의 현재 서비스 파일
 
 토큰 기준 주의:
 
@@ -118,7 +123,7 @@
 - Stage 4는 Claude가 FE 포팅을 수행한다. UI가 실제로 바뀌면 관련 `ui/designs/<SCREEN_ID>.md` 또는 authority/design closeout 메모도 현재 화면 기준으로 맞춘다.
 - Stage 5는 Codex가 public design review와 authority precheck를 수행한다. authority-required slice는 Claude `final_authority_gate`에서 blocker 0개 확인 후에만 `confirmed`로 닫는다.
 - Stage 6은 Codex가 code review, local verification, PR checks, merge까지 닫는다.
-- 사용자가 `$claude-delegate`를 명시하면 기존 Claude session `2937f409-95c1-4627-a6e2-3febf3e3955f`에 `--resume`으로 붙는다. `session_attach_mode=resume`, `model=opus`, `effort=xhigh`, `permission_mode=bypassPermissions`로 기록한다.
+- 사용자가 `$claude-delegate`와 기존 Claude session을 명시하면 해당 session에 `--resume`으로 붙는다. 현재 Wave1 Phase 2 요청 session은 `a5fcbba9-be8d-4765-b939-b628995c071e`이며, `session_attach_mode=resume`, `model=opus`, `effort=high`, `permission_mode=bypassPermissions`로 기록한다.
 
 ## Stage Flow Per Slice
 
@@ -190,6 +195,7 @@
 | --- | --- | --- | --- | --- |
 | 0 | `planner-column-customization` | SETTINGS 끼니 컬럼 관리 + PLANNER_WEEK 동적 컬럼 | Done | PR #367~#370 merged. 다시 하지 않는다. |
 | 0.5 | `wave1-exact-parity-validator-baseline` | manifest/validator를 `90+` 점수 기준에서 exact mobile parity 기준으로 승격 | Done | `lock_version: 2`, `parity_mode: exact-mobile`, screenshot diff, computed-style audit, geometry audit, visual blocker 0, unclassified visual difference 0을 검증한다. 이 gate가 깨지면 Slice A~F 포팅을 시작하지 않는다. |
+| 0.6 | `wave1-app-web-responsibility-matrix` | 모바일 exact-ready, needs-freeze, web-only 책임을 분리하고 token scoping 기본 경로를 확정 | Done | `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`가 기준이다. `needs-prototype-freeze` row는 Phase 3 capture/freeze 전에는 포팅하지 않는다. |
 | A | `wave1-port-foundation` | 공통 shell, 공용 UI 패턴, CTA/칩/카드/모달 위계 | Re-audit / repair | 전체 재포팅의 첫 단계. AppShell, bottom tab, 공통 primitive가 prototype과 실제로 맞는지 다시 확인한다. |
 | B | `wave1-port-discovery-detail` | HOME, RECIPE_DETAIL, save modal, login provider display | Re-audit / repair | HOME은 기존 `baemin-prototype-home-porting`과 충돌/중복 확인 후, fixed prototype reference 대비 unclassified visual difference 0을 달성한다. |
 | C | `wave1-port-planner-meal-add` | PLANNER, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN | Re-audit / repair | 컬럼 CRUD는 완료된 `planner-column-customization` 계약을 소비한다. PLANNER/식사추가/직접등록 화면의 layout parity를 다시 확인한다. |

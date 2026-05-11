@@ -4,6 +4,7 @@
 > 기준 방향: C2 — 명랑한 주방 (Bright Kitchen)
 > 적용 범위: Slice 02 Stage 4부터 모든 슬라이스
 > 2026-05-11 Wave1 mobile update: Wave1 모바일 100% prototype parity surface의 목표값은 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`가 우선한다.
+> 2026-05-12 Phase 2 update: app/web 책임 분리는 `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`를 따르고, 기본 구현 경로는 mobile-scoped Wave1 token layer다.
 
 ---
 
@@ -14,6 +15,8 @@
 하지만 Wave1 mobile 100% re-porting에서는 이 값들이 목표 디자인 기준이 아니다. `exact-reference-ready` 모바일 surface는 fixed prototype reference와 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`의 token/type/material 값을 따른다.
 
 ### Wave1 Mobile Target Tokens
+
+This table is a short operational summary. The complete authoritative Wave1 mobile token list is `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`.
 
 | 역할 | 목표값 |
 |------|--------|
@@ -36,12 +39,12 @@
 
 ### Runtime Token Rule
 
-Do not change global runtime tokens blindly in Phase 1 if that would redesign web or unrelated legacy surfaces.
+Do not change global runtime tokens blindly if that would redesign web or unrelated legacy surfaces.
 
 Instead:
 
 - record Wave1 mobile target values here and in `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`;
-- use Phase 2 app/web responsibility matrix to decide whether a value can become global or must be scoped to mobile/Wave1 surfaces;
+- use `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md` to decide whether a value can become global or must be scoped to mobile/Wave1 surfaces;
 - during Phase 4/5 implementation, exact-reference-ready mobile surfaces must render the prototype values even if web/legacy surfaces still use old values;
 - if a prototype font or asset is required but not available in production, block completion until the font/asset is packaged or the prototype reference is refrozen.
 
@@ -49,17 +52,17 @@ Do not use the older coral/cream token values as approved divergences for Wave1 
 
 ### Wave1 Mobile Token Scoping Strategy
 
-Phase 1 intentionally documents the target values without rewriting all runtime globals.
+Phase 1 intentionally documented the target values without rewriting all runtime globals.
 
-Phase 2 must choose one of these implementation paths before Phase 4/5 code work:
+Phase 2 chose the default implementation path below before Phase 4/5 code work:
 
-| Path | When to use | Risk |
+| Path | Phase 2 decision | Risk |
 |------|-------------|------|
-| mobile-scoped token layer, for example app shell or data attribute scope | preferred when shared desktop/web components still use legacy visuals | requires careful component boundary mapping |
-| per-component exact values from shared prototype tokens | useful for isolated surfaces or sheets | can duplicate values if not centralized after porting |
-| global token replacement | only after app/web matrix proves web impact is acceptable or web redesign branch owns the change | high risk of accidental web redesign |
+| mobile-scoped token layer, for example app shell or data attribute scope | default path for Wave1 mobile exact-reference-ready surfaces | requires careful component boundary mapping |
+| per-component exact values from shared prototype tokens | allowed only for isolated surfaces or sheets, and must stay traceable to `WAVE1_MOBILE_APP_BASELINE.md` | can duplicate values if not centralized after porting |
+| global token replacement | deferred until the web redesign branch owns the change or a later matrix update proves no web impact | high risk of accidental web redesign |
 
-Until that decision is made, `app/globals.css` values remain legacy runtime defaults, not Wave1 mobile target values.
+Therefore `app/globals.css` values remain legacy runtime defaults, not Wave1 mobile target values, unless a later approved web/no-impact gate changes that decision.
 
 ---
 
@@ -176,3 +179,5 @@ Until that decision is made, `app/globals.css` values remain legacy runtime defa
 | 2026-03-20 | 초기 확정 (C2 명랑한 주방) | design-consultant |
 | 2026-04-27 | 배민 스타일 후속 전환용 additive 토큰 14개 추가 | Codex |
 | 2026-04-27 | 사용자 승인 brand 토큰 값 변경: `--brand` #ED7470, `--brand-deep` #C84C48, `--brand-soft` #FDEBEA; additive gray/surface/radius/shadow 값 유지 확정 | Claude |
+| 2026-05-11 | Wave1 Mobile 100% Parity Override 섹션 추가, mobile target tokens 문서화 | Codex |
+| 2026-05-12 | Phase 2 app/web 책임 분리 및 mobile-scoped token layer 기본 경로 확정 | Codex |
