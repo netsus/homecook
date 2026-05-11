@@ -18,6 +18,10 @@
 - Follow-up menu/inputs/leftovers: `fix/wave1-prototype-menu-inputs-leftovers-repair`
 - Follow-up shopping flow: `fix/wave1-prototype-shopping-flow-repair`
 - Final follow-up freeze: `docs/wave1-prototype-followup-freeze`
+- Final QA manual-create validation: `fix/wave1-prototype-manual-create-validation`
+- Final QA settings account split: `fix/wave1-prototype-settings-account-split`
+- Final QA leftovers target selection: `fix/wave1-prototype-leftovers-target-selection`
+- Final follow-up freeze 2: `docs/wave1-prototype-followup2-freeze`
 
 ## Source Of Truth
 
@@ -48,11 +52,11 @@
 - MVP routes, API calls, submit behavior, auth, saved/deleted/restored state, and official status transitions remain MVP/official-doc sourced.
 - Prototype broken behavior must be repaired in prototype or documented; it must not be copied into service.
 - Each repair slice PR must merge before the next repair slice starts.
-- Repair 4 recorded the initial fixed prototype commit SHA; the final follow-up freeze updates that SHA after PRs #391~#394. Later service porting uses the updated commit as a read-only reference.
+- Repair 4 recorded the initial fixed prototype commit SHA; the follow-up freezes update that SHA after PRs #391~#398. Later service porting uses the updated commit as a read-only reference.
 
 ## Freeze Status
 
-- Fixed prototype implementation SHA: `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`
+- Fixed prototype implementation SHA: `c83a851f95e358cf07f5a21c6f413ee091a3d2be`
 - Closeout note: `docs/workpacks/wave1-prototype-repair/closeout.md`
 - Merged repair PRs:
   - Repair 0 navigation: #386, merge commit `268893953f9b831c299e0378cfab8863b6b8a858`
@@ -64,8 +68,11 @@
   - Follow-up settings/layout polish: #392, merge commit `43f65e33782c489b48d67c4b4c76267566f7130e`
   - Follow-up menu/inputs/leftovers: #393, merge commit `9ba3740b2bab07e7540f7206ec064a0ac0493724`
   - Follow-up shopping flow: #394, merge commit `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`
+  - Final QA manual-create validation: #396, merge commit `28d114dcdc4bf750ce7841f5f8c42c69bb394abc`
+  - Final QA settings account split: #397, merge commit `fa2a64a1e5c0548ec946d9a417333671a8572c30`
+  - Final QA leftovers target selection: #398, merge commit `c83a851f95e358cf07f5a21c6f413ee091a3d2be`
 
-Service Slice A~F re-porting must pin the fixed prototype implementation SHA above. The follow-up freeze supersedes the initial Repair 4 SHA because the user provided additional prototype-finalization changes after PR #390.
+Service Slice A~F re-porting must pin the fixed prototype implementation SHA above. The follow-up freezes supersede both the initial Repair 4 SHA and the earlier follow-up SHA `0000c86a7d6f719e2bb1c0966c6d1e307061df7c` because the user provided additional prototype-finalization changes after PR #390 and after PR #394.
 
 ## Repair Slices
 
@@ -81,6 +88,10 @@ Service Slice A~F re-porting must pin the fixed prototype implementation SHA abo
 | 7 | Shopping Completion Flow | 식사별 장보기와 완료 후 팬트리 반영/read-only 전환 | 추가 변경사항 PLANNER 1.5, SHOPPING_DETAIL 4.1 |
 | 8 | Settings And Pantry Layout | 팬트리/설정 버튼 정렬, 저장/취소, 5개 끼니 제한 보정 | 추가 변경사항 PANTRY 5.1, SETTINGS 6.1~6.5 |
 | 9 | Follow-up Freeze | fixed prototype SHA와 closeout/service-porting 기준 갱신 | Repair 5~8 closeout |
+| 10 | Manual Create Final Validation | 직접등록 완료 전 빈 재료/조리법 필드 차단 | 추가 변경사항 MANUAL_CREATE 1.1 |
+| 11 | Settings Account Split | 끼니 컬럼 dirty state, 계정/닉네임/로그아웃/회원탈퇴 위치 보정 | 추가 변경사항 SETTINGS 2.1~2.2 |
+| 12 | Leftovers Target Selection | 진입 경로별 날짜/끼니/인분 선택 범위 분기 | 추가 변경사항 LEFTOVERS 3.1 |
+| 13 | Final Follow-up Freeze 2 | fixed prototype SHA와 closeout/service-porting 기준 재갱신 | Repair 10~12 closeout |
 
 ## Expected Files
 
