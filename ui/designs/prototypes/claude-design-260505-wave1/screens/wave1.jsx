@@ -5,19 +5,26 @@
 const { useState: useState_W, useMemo: useMemo_W, useEffect: useEffect_W } = React;
 
 // ─────────────────────────────────────────────────────────────
-// 공용 — 확인 다이얼로그 (centered modal, Baemin tone)
+// 공용 — 확인 다이얼로그 (unified white bottom sheet)
 // ─────────────────────────────────────────────────────────────
 function ConfirmDialog({ title, body, confirmLabel='확인', cancelLabel='취소', destructive=false, onConfirm, onClose, extra }) {
   return (
     <div style={{
-      position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.42)', zIndex: 220,
+      display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
     }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: '#fff', borderRadius: 16, width: '100%', maxWidth: 320,
-        padding: '20px 20px 16px', boxShadow: T.shadowDeep,
+        background: '#fff',
+        borderTopLeftRadius: 20, borderTopRightRadius: 20,
+        width: '100%', maxWidth: 480,
+        maxHeight: '85%', overflowY: 'auto',
+        padding: '8px 20px calc(16px + env(safe-area-inset-bottom))',
+        boxShadow: T.shadowCrisp,
       }}>
-        <div style={{ fontSize: 17, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand, marginBottom: 8 }}>{title}</div>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '0 0 10px' }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: T.border }} />
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: T.ink, fontFamily: T.fontBrand, marginBottom: 8 }}>{title}</div>
         {body && <div style={{ fontSize: 13, color: T.text2, lineHeight: 1.55, marginBottom: 16 }}>{body}</div>}
         {extra}
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
@@ -1979,42 +1986,17 @@ function PlanningServingsModal({ recipe, presetDate, presetSlot, initialServings
   const confirmTarget = () => onConfirm(servings, selectedDate || presetDate, selectedSlot || presetSlot);
   return (
     <ConfirmDialog
-      title="몇 인분으로 계획할까요?"
-      body={`${recipe?.name || '레시피'} · ${slotLabel}`}
+      title="플래너에 추가"
+      body={needsTargetSelection ? '추가할 날짜와 끼니, 인분을 선택해주세요.' : `${slotLabel}에 추가할 인분을 선택해주세요.`}
       confirmLabel="추가하기"
       cancelLabel="취소"
       onClose={onClose}
       onConfirm={confirmTarget}
       extra={
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {needsTargetSelection && (
-            <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8,
-              background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12, padding: 10,
-            }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11, color: T.text3, fontWeight: 800 }}>
-                날짜
-                <select value={selectedDate} onChange={e => {
-                  const nextDate = e.target.value;
-                  setSelectedDate(nextDate);
-                  const nextSlots = Object.keys(planner?.[nextDate] || {});
-                  if (nextSlots.length && !nextSlots.includes(selectedSlot)) setSelectedSlot(nextSlots[0]);
-                }} style={{ ...inp, padding: '9px 10px', fontSize: 13 }}>
-                  {dateOptions.map(date => <option key={date} value={date}>{date}</option>)}
-                </select>
-              </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11, color: T.text3, fontWeight: 800 }}>
-                끼니
-                <select value={selectedSlot} onChange={e => setSelectedSlot(e.target.value)}
-                  style={{ ...inp, padding: '9px 10px', fontSize: 13 }}>
-                  {slotOptions.map(slot => <option key={slot} value={slot}>{slot}</option>)}
-                </select>
-              </label>
-            </div>
-          )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
-            background: '#fff', border: `1px solid ${T.border}`, borderRadius: 12, padding: 10,
+            background: T.surfaceFill, border: `1px solid ${T.border}`, borderRadius: 12, padding: 10,
           }}>
             <div style={{
               width: 44, height: 44, borderRadius: 10, background: recipe?.bg || T.mintSoft,
@@ -2027,9 +2009,62 @@ function PlanningServingsModal({ recipe, presetDate, presetSlot, initialServings
               </div>
             </div>
           </div>
+          {needsTargetSelection ? (
+            <>
+              <div>
+                <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>날짜</div>
+                <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+                  {dateOptions.map((date, idx) => {
+                    const active = selectedDate === date;
+                    return (
+                      <button key={date} onClick={() => {
+                        setSelectedDate(date);
+                        const nextSlots = Object.keys(planner?.[date] || {});
+                        if (nextSlots.length && !nextSlots.includes(selectedSlot)) setSelectedSlot(nextSlots[0]);
+                      }} style={{
+                        flexShrink: 0, padding: '8px 12px', borderRadius: 9999,
+                        background: active ? T.ink : '#fff',
+                        color: active ? '#fff' : T.text2,
+                        border: `1px solid ${active ? T.ink : T.border}`,
+                        fontSize: 13, fontWeight: active ? 700 : 500, cursor: 'pointer'
+                      }}>
+                        {weekDays[idx] || ''} {date}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 13, color: T.text2, fontWeight: 600, marginBottom: 8 }}>끼니</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {slotOptions.map((slot) => {
+                    const active = selectedSlot === slot;
+                    return (
+                      <button key={slot} onClick={() => setSelectedSlot(slot)} style={{
+                        flex: 1, padding: '10px 0', borderRadius: 10,
+                        background: active ? T.mintSoft : '#fff',
+                        color: active ? T.mintDeep : T.text2,
+                        border: `1px solid ${active ? T.mint : T.border}`,
+                        fontSize: 14, fontWeight: active ? 700 : 500, cursor: 'pointer'
+                      }}>{slot}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{
+              background: T.surfaceFill, border: `1px solid ${T.border}`, borderRadius: 10,
+              padding: '10px 12px', fontSize: 13, color: T.text2, fontWeight: 700,
+            }}>
+              {slotLabel}
+            </div>
+          )}
+          <div style={{ fontSize: 13, color: T.text2, fontWeight: 600 }}>인분</div>
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             background: T.surfaceFill, borderRadius: 12, padding: '12px 16px',
+            border: `1px solid ${T.border}`,
           }}>
             <div style={{ fontSize: 13, color: T.text2, fontWeight: 600 }}>계획 인분</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
