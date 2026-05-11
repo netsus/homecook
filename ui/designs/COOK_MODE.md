@@ -3,6 +3,7 @@
 > 기준 문서: 화면정의서 v1.5.1 §14 / 요구사항 v1.6.4 §1-3, §2-8
 > 생성일: 2026-04-29
 > 슬라이스: 15a-cook-planner-complete
+> Wave1 mobile 100% parity note: this surface needs explicit fixed reference confirmation. Once exact-reference-ready, `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersedes older MVP/C2 visual target notes.
 
 ## 화면 목적
 

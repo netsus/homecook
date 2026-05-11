@@ -5,10 +5,15 @@
 > 기준 프로토타입: `ui/designs/prototypes/claude-design-260505-wave1`
 > fixed prototype implementation SHA: `9bf7a34c6b422d0c9981d4c2968e3350d5a28892`
 > 핵심 원칙: 프로토타입은 visual/layout source of truth이고, 기능 동작은 현재 MVP 구현과 공식 문서가 source of truth다. 공식 문서와 실제 API 계약을 넘는 변경은 먼저 contract-evolution 문서/PR로 닫고, FE는 그 계약을 그대로 소비한다.
+> 2026-05-11 Phase 1 update: Wave1 모바일 앱 재포팅은 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`를 우선 디자인 기준으로 사용한다. 모바일 목표는 `90+` 또는 near-100%가 아니라 fixed prototype reference 대비 100% parity다.
 
 ## Current Status
 
 - Wave1 vNext prototype은 최신 기준 프로토타입으로 사용한다.
+- Wave1 모바일 앱 재포팅의 기준 문서는 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`다.
+  - 기존 C2 / h6 / h7 / h8 design authority와 PR #373, #374, #376, #379, #381, #383 evidence는 historical evidence다.
+  - fixed reference가 있는 모바일 surface는 색상, 폰트, spacing, radius, shadow, layout, icon, sheet/bottom-tab geometry까지 prototype과 일치해야 한다.
+  - broad approved divergence, coral-vs-mint token mapping, non-Jua font substitution, warm-cream background 유지 같은 이전 예외는 현재 Wave1 mobile 100% parity completion proof로 사용할 수 없다.
 - 2026-05-11 Prototype Repair 0~4 및 follow-up repair #391~#404 이후 service porting 기준은 fixed prototype implementation SHA `9bf7a34c6b422d0c9981d4c2968e3350d5a28892`다.
   - Freeze closeout: `docs/workpacks/wave1-prototype-repair/closeout.md`
   - Reference lock manifest: `ui/designs/reference/wave1-fixed-prototype/manifest.json`
@@ -63,20 +68,22 @@
 4. `docs/engineering/agent-workflow-overview.md`
 5. `docs/engineering/product-design-authority.md`
 6. `docs/design/design-tokens.md`
-7. `docs/design/mobile-ux-rules.md`
-8. `docs/design/anchor-screens.md`
-9. `ui/designs/BAEMIN_STYLE_DIRECTION.md`
-10. slice 13+ future screen이면 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`
-11. `ui/designs/prototypes/claude-design-260505-wave1/VNEXT_DESIGN_PRINCIPLES.md`
-12. `ui/designs/prototypes/claude-design-260505-wave1/HANDOFF.md`
-13. 실제 구현 대상 화면의 현재 서비스 파일
+7. `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`
+8. `docs/design/mobile-ux-rules.md`
+9. `docs/design/anchor-screens.md`
+10. `ui/designs/BAEMIN_STYLE_DIRECTION.md`
+11. slice 13+ future screen이면 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`
+12. `ui/designs/prototypes/claude-design-260505-wave1/VNEXT_DESIGN_PRINCIPLES.md`
+13. `ui/designs/prototypes/claude-design-260505-wave1/HANDOFF.md`
+14. 실제 구현 대상 화면의 현재 서비스 파일
 
 토큰 기준 주의:
 
-- production 기준 brand token은 `docs/design/design-tokens.md`와 `app/globals.css`의 승인 값을 따른다.
-- prototype의 mint/Jua/font/asset은 바로 production 계약이 아니다.
+- Wave1 mobile 100% parity 기준 brand/font/background/material 값은 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`의 prototype baseline을 따른다.
+- `docs/design/design-tokens.md`와 `app/globals.css`에 남아 있는 legacy C2/coral 값은 non-Wave1 또는 아직 이관되지 않은 web/legacy surface의 현재 구현값일 수 있으나, Wave1 mobile exact-reference-ready surface의 목표값은 아니다.
+- prototype의 mint/Jua/font/asset은 더 이상 blanket exclusion이 아니다. fixed reference에 보이는 경우 exact parity 대상이며, production에서 사용할 수 없으면 surface를 `needs-prototype-freeze` 또는 unresolved asset/font decision으로 막는다.
 - `ui/designs/BAEMIN_STYLE_DIRECTION.md`의 `prototype parity`, `prototype-derived design`, `out of prototype scope` 용어만 사용한다.
-- 이번 보정에서 사용자가 "배민 민트 톤까지 prototype과 맞춘다"고 명시적으로 승인하지 않는 한, 민트/Jua/프로토타입 전용 asset을 production token으로 승격하지 않는다. 색상 차이가 visual parity 점수에 영향을 주면 "approved token divergence"로 기록하거나 별도 design-token decision 후보로 분리한다.
+- 사용자가 2026-05-11에 모바일 화면의 색상과 폰트 크기까지 100% 일치를 요구했으므로, Wave1 mobile exact-reference-ready surface에서는 "approved token divergence"를 completion escape hatch로 쓰지 않는다.
 
 프로토타입 쪽 참고 파일:
 
@@ -97,10 +104,10 @@
 - **전체 Wave1 재포팅 원칙**
   - 서비스 재포팅 대상은 Slice A~F 전체다. 특정 slice만 먼저 실패가 확인됐더라도, 이전 merge 상태를 전체 완료 판정으로 간주하지 않는다.
   - 단, 2026-05-11 사용자 QA에서 prototype 자체의 화면이동/동작/디자인 문제가 확인됐으므로, 서비스 재포팅을 시작하기 전에 **Prototype Repair 0~4와 follow-up repair #391~#404를 완료하고 fixed prototype을 freeze**한다.
-  - 각 slice는 "현재 서비스 screenshot -> prototype reference screenshot -> 차이표 -> 기능 보존 테스트 -> 디자인 수정 -> screenshot 재캡처 -> visual verdict" 순서로 닫는다.
-  - slice별 completion은 PR merge 여부가 아니라 prototype 대비 visual verdict 90점 이상, blocker 0개, 기능 regression 통과로 판단한다.
+  - 각 slice는 "현재 서비스 screenshot -> prototype reference screenshot -> 차이표 -> 기능 보존 테스트 -> 디자인 수정 -> screenshot 재캡처 -> screenshot diff + computed-style audit + geometry audit" 순서로 닫는다.
+  - slice별 completion은 PR merge 여부나 visual verdict 90점 이상이 아니라 fixed prototype 대비 unclassified visual difference 0개, blocker 0개, 기능 regression 통과로 판단한다.
   - reference prototype screenshot은 `ui/designs/reference/wave1-fixed-prototype/manifest.json`에 등록된 커밋된 PNG를 사용한다. `.omx/artifacts`에만 남은 prototype screenshot은 final PR 근거로 쓰지 않는다.
-  - 각 `wave1-port-*` PR은 `pnpm validate:pr-ready -- --slice <slice> --pr-body <pr-body-file> --mode frontend`를 통과해야 하며, 이 검증에는 fixed SHA, reference screenshot, service screenshot, visual verdict 90+, blocker 0개 확인이 포함된다.
+  - 각 `wave1-port-*` PR은 `pnpm validate:pr-ready -- --slice <slice> --pr-body <pr-body-file> --mode frontend`를 통과해야 하며, 이 검증에는 fixed SHA, reference screenshot, service screenshot, screenshot diff, computed-style audit, geometry audit, blocker 0개, unclassified visual difference 0개 확인이 포함된다.
   - 한 PR에 모든 화면을 몰아넣지 않는다. 기존 vertical slice 경계 A~F를 유지하고, 각 slice repair PR을 작고 검증 가능하게 만든다.
   - Foundation Slice A는 공통 shell/component/tokens 영향이 크므로 먼저 재감사한다. 다만 기능을 깨는 전역 리팩터링은 하지 않고, 이후 slice에서 필요한 공통 primitive만 보수한다.
 - product slice는 Stage 1~6 흐름을 따른다.
@@ -151,10 +158,10 @@
    - 모바일 390px/320px evidence 생성
    - reference prototype screenshot과 generated service screenshot을 함께 보관한다.
    - reference prototype screenshot은 `ui/designs/reference/wave1-fixed-prototype/`의 커밋된 baseline을 사용한다.
-   - PR body의 Design / Accessibility 섹션에 fixed SHA, reference screenshot path, service screenshot path, visual verdict score, blocker count 0을 기록한다.
-   - `$visual-verdict` 또는 동등한 엄격한 비교 기준으로 reference prototype 대비 점수를 남긴다. 목표는 90점 이상이다.
-   - 점수가 90점 미만이면 다음 코드 수정 전에 verdict의 `differences[]` / `suggestions[]`를 근거로 다시 수정하고 재캡처한다.
-   - visual verdict는 `.omx/state/<slice>/ralph-progress.json`에 score, pass/fail, reasoning, suggestions, next_actions를 저장한다.
+   - PR body의 Design / Accessibility 섹션에 fixed SHA, reference screenshot path, service screenshot path, screenshot diff, computed-style audit, geometry audit, blocker count 0, unclassified visual difference 0을 기록한다.
+   - `$visual-verdict`는 보조 reviewer로 사용할 수 있지만, Wave1 mobile 100% parity completion은 점수가 아니라 unclassified visual difference 0개로 판단한다.
+   - 차이가 남으면 다음 코드 수정 전에 screenshot diff, computed-style audit, geometry audit의 finding을 근거로 다시 수정하고 재캡처한다.
+   - parity verdict/audit 결과는 `.omx/state/<slice>/ralph-progress.json`에 pass/fail, reasoning, findings, next_actions를 저장한다.
    - new-screen/high-risk UI change는 `pnpm qa:explore -- --slice <slice>`와 `pnpm qa:eval` 수행, 생략 시 PR에 low-risk skip 근거 기록
    - Draft PR Ready 전 `pnpm validate:pr-ready -- --slice <slice> --pr-body <pr-body-file> --mode frontend`
 
@@ -182,7 +189,7 @@
 | --- | --- | --- | --- | --- |
 | 0 | `planner-column-customization` | SETTINGS 끼니 컬럼 관리 + PLANNER_WEEK 동적 컬럼 | Done | PR #367~#370 merged. 다시 하지 않는다. |
 | A | `wave1-port-foundation` | 공통 shell, 공용 UI 패턴, CTA/칩/카드/모달 위계 | Re-audit / repair | 전체 재포팅의 첫 단계. AppShell, bottom tab, 공통 primitive가 prototype과 실제로 맞는지 다시 확인한다. |
-| B | `wave1-port-discovery-detail` | HOME, RECIPE_DETAIL, save modal, login provider display | Re-audit / repair | HOME은 기존 `baemin-prototype-home-porting`과 충돌/중복 확인 후, prototype reference 대비 90+ visual verdict를 다시 달성한다. |
+| B | `wave1-port-discovery-detail` | HOME, RECIPE_DETAIL, save modal, login provider display | Re-audit / repair | HOME은 기존 `baemin-prototype-home-porting`과 충돌/중복 확인 후, fixed prototype reference 대비 unclassified visual difference 0을 달성한다. |
 | C | `wave1-port-planner-meal-add` | PLANNER, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN | Re-audit / repair | 컬럼 CRUD는 완료된 `planner-column-customization` 계약을 소비한다. PLANNER/식사추가/직접등록 화면의 layout parity를 다시 확인한다. |
 | D | `wave1-port-shopping-cooking` | SHOPPING_FLOW, SHOPPING_DETAIL, COOK_READY/COOK_MODE | Re-audit / repair | PR #379 merged 이력은 완료 근거로 쓰지 않는다. 장보기 read-only/exclude/add_to_pantry 기능은 보존하고 디자인만 재포팅한다. |
 | E | `wave1-port-pantry` | PANTRY, ingredient picker, bundle picker, multi-delete | Re-audit / repair | PR #381 merged 이력은 완료 근거로 쓰지 않는다. 재료 이미지 URL은 계속 계약 후보로 분리하고, 가능한 UI만 prototype에 맞춘다. |
@@ -358,13 +365,13 @@
 3. 화면별 "프로토타입 대비 현재 구현 차이표"를 작성한다.
 4. 유지해야 하는 MVP 기능을 regression test나 기존 E2E로 먼저 확인한다.
 5. API/DB/status/endpoint/field 추가 없이 UI 구조, spacing, 카드 밀도, visual hierarchy, responsive layout을 수정한다.
-6. screenshot evidence를 다시 캡처하고 `$visual-verdict` 또는 동등 기준으로 90점 이상을 달성한다.
-7. 90점 미만이면 verdict의 blocker/major difference를 기준으로 다시 수정한다.
-8. slice workpack/acceptance/authority/evidence에 "전체 Wave1 디자인 재포팅"과 남은 approved divergence를 기록한다.
+6. screenshot evidence를 다시 캡처하고 screenshot diff, computed-style audit, geometry audit으로 unclassified visual difference 0을 달성한다.
+7. 차이가 남으면 audit finding의 blocker/major difference를 기준으로 다시 수정한다.
+8. slice workpack/acceptance/authority/evidence에 "전체 Wave1 모바일 100% 재포팅"과 허용 taxonomy에 해당하는 차이만 기록한다.
 
 완료 기준:
 
-- slice의 모든 대상 화면이 reference 대비 visual verdict 90점 이상이다.
+- slice의 모든 exact-reference-ready 모바일 화면이 fixed reference 대비 unclassified visual difference 0개다.
 - visual blocker가 0개다.
 - MVP 기능 regression이 통과한다.
 - official contract 밖의 기능 변경은 구현하지 않았거나 contract-evolution 후보로만 문서화했다.
@@ -385,7 +392,7 @@
 
 - `docs/workpacks/baemin-prototype-home-porting` status와 현재 HOME/AppShell 구현을 먼저 확인한다.
 - HOME 전용 bottom tab, shared `AppShell`, `components/layout/bottom-tabs.tsx` 중복 변경 가능성을 dependency로 기록한다.
-- production 토큰은 `docs/design/design-tokens.md` 승인 값을 기본으로 쓰고, prototype mint/Jua/asset은 별도 승인 없이 공통 foundation으로 승격하지 않는다.
+- Wave1 mobile exact-reference-ready surface는 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`의 prototype token/font/asset 기준을 따른다. web/legacy surface 영향은 app/web responsibility matrix에서 분리한다.
 - 새 공용 primitive 도입은 high-risk UI change로 보고 design-generator/design-critic 필요 여부와 authority evidence 계획을 `automation-spec.json`에 명시한다.
 
 ### Expected Files
@@ -618,7 +625,7 @@
 
 - h8 기준 `PANTRY`는 screen-level `prototype parity` 후보이다.
 - `PANTRY_BUNDLE_PICKER`는 별도 승격 전까지 `prototype-derived design`이다.
-- prototype-only bottom tab behavior, `Jua`, prototype-only assets는 scope 밖이다.
+- `Jua`와 prototype-only assets는 blanket scope 밖이 아니다. fixed mobile reference에 보이는 경우 exact parity 대상이며, 사용할 수 없으면 font/asset decision 또는 `needs-prototype-freeze` blocker로 기록한다.
 
 ### Contract Evolution Candidates
 
@@ -675,7 +682,7 @@ PR #383 `feat(wave1): merge account library leftovers closeout`은 merged 상태
 - LEFTOVERS: prototype의 카드 구조, meta density, CTA hierarchy, 반대 화면 이동 버튼 형태를 반영한다. `POST /meals` + `leftover_dish_id`, eat API는 유지한다.
 - ATE_LIST: prototype의 다먹은 요리 list/card 구조와 `남은요리로 복귀` 복구 action hierarchy를 반영한다. uneat API는 유지한다.
 - RECIPEBOOK_DETAIL: prototype의 전용 화면 구조, custom book menu, recipe card density를 반영하되 system book 보호와 recipe removal 정책은 유지한다.
-- 공통: 390px/320px뿐 아니라 가능하면 desktop screenshot도 남기고, reference 대비 visual verdict 90+를 달성할 때까지 반복한다.
+- 공통: 390px/320px뿐 아니라 shared responsive 영향이 있으면 desktop screenshot도 남기고, reference 대비 unclassified visual difference 0을 달성할 때까지 반복한다.
 
 ### Classification
 
@@ -713,7 +720,7 @@ PR #383 `feat(wave1): merge account library leftovers closeout`은 merged 상태
   - reference prototype screenshots
   - current service screenshots before repair
   - after service screenshots
-  - `$visual-verdict` JSON, target score 90+
+  - screenshot diff, computed-style audit, geometry audit, unclassified visual difference 0 ledger
 - MYPAGE E2E
 - SETTINGS E2E regression
 - LEFTOVERS / ATE_LIST E2E
@@ -729,7 +736,7 @@ PR #383 `feat(wave1): merge account library leftovers closeout`은 merged 상태
 - Codex fallback: completed FE implementation after Claude provider limit blocked Stage 4 delegation.
 - Authority: `ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md`, verdict pass, blocker 0.
 - Verification: targeted Vitest passed 78 tests, modified Playwright bundle passed 189 tests, exploratory QA eval score 98, and `pnpm verify:frontend` passed.
-- Repair status: required. Treat #383 as function-preserving but visually insufficient. Next implementation branch should be `fix/wave1-account-library-leftovers-design-parity` or equivalent and should not call the slice complete until reference prototype vs service visual verdict is 90+ for the touched Slice F screens.
+- Repair status: required. Treat #383 as function-preserving but visually insufficient. Next implementation branch should be `fix/wave1-account-library-leftovers-design-parity` or equivalent and should not call the slice complete until fixed prototype vs service unclassified visual difference is 0 for the touched exact-reference-ready Slice F screens.
 
 ## Cross-Slice Mapping Table
 

@@ -21,6 +21,7 @@
 - unresolved authority blocker가 남아 있으면 `Design Status: confirmed`를 줄 수 없다.
 - authority는 critique와 hold 권한을 가지지만, 사용자 승인 없이 익숙한 interaction model을 다른 모델로 교체하는 근거가 되어서는 안 된다.
 - overflow 문제를 잡는 것과 interaction model을 바꾸는 것은 별개로 본다.
+- Wave1 mobile 100% prototype parity 작업에서는 screenshot 존재만으로 pass를 줄 수 없다. fixed prototype reference, service screenshot, screenshot diff, computed-style audit, DOM geometry audit, remaining-difference ledger가 함께 필요하다.
 
 ---
 
@@ -59,8 +60,9 @@
 6. 관련 `docs/workpacks/<slice>/README.md`
 7. 관련 `ui/designs/<SCREEN_ID>.md`
 8. Baemin prototype 기준이 적용되는 화면이면 `ui/designs/BAEMIN_STYLE_DIRECTION.md`
-9. slice 13-19 future screen이면 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`
-10. 아래 중 최소 1개
+9. Wave1 mobile 100% re-porting이면 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`
+10. slice 13-19 future screen이면 `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`
+11. 아래 중 최소 1개
    - Figma frame URL
    - 구현 스크린샷 경로
    - 비교 가능한 화면 캡처 묶음
@@ -90,6 +92,22 @@ authority 리뷰는 아래 evidence가 있어야 한다.
 - `ui/designs/evidence/<slice>/<SCREEN_ID>-after-mobile.png`
 - Figma frame URL 1개 + narrow variant 1개
 
+### Wave1 Mobile 100% Parity Evidence
+
+Wave1 mobile 100% prototype parity scope에서는 아래 evidence를 추가로 요구한다.
+
+- fixed prototype reference screenshot:
+  `ui/designs/reference/wave1-fixed-prototype/<viewport>-<surface>.png`
+- current MVP before screenshot at `390px` and `320px`
+- after MVP screenshot at `390px` and `320px`
+- screenshot diff report
+- computed-style audit for colors, font family, font size, font weight, line height, letter spacing, spacing, radius, border, shadow, and opacity
+- DOM geometry audit for key elements such as app bar, bottom tab, sticky CTA, card, list row, chip rail, modal, and bottom sheet
+- remaining-difference ledger with zero unclassified visual differences
+- functional regression result proving MVP behavior stayed intact
+
+For these surfaces, `90+`, `95+`, "near-100%", or broad "approved divergence" evidence is historical only and cannot by itself support `confirmed`.
+
 ---
 
 ## Blocker 판정 기준
@@ -104,6 +122,8 @@ authority 리뷰는 아래 evidence가 있어야 한다.
 - anchor screen에서 기존 패턴과 충돌하는 새로운 상호작용을 도입함
 - 작은 모바일 sentinel에서 레이아웃 붕괴, 잘림, CTA 가림, 터치 타겟 축소가 발생함
 - critique나 authority report에 남은 blocker가 해결 또는 명시 수용되지 않았는데 `confirmed`를 주려 함
+- Wave1 mobile exact-reference-ready surface에서 color, font, spacing, radius, shadow, density, icon treatment, app shell, bottom tab, sticky CTA, modal/sheet geometry 차이를 "approved divergence"로 처리하고 완료하려 함
+- Wave1 mobile surface에 fixed reference가 없는데 current MVP를 prototype-derived styling만으로 수정하고 100% parity 완료라고 주장함
 
 예시:
 
@@ -181,6 +201,7 @@ authority report에는 아래를 반드시 포함한다.
 - 신규 화면, high-risk UI change, anchor screen 확장에서는
   `ui/designs/<SCREEN_ID>.md`만으로 충분하지 않다.
 - Baemin prototype 적용 화면은 분류 용어를 `BAEMIN_STYLE_DIRECTION.md`에서만 가져오고, slice 13-19 화면은 h8 matrix의 screen/surface-level classification을 확인한다.
+- Wave1 mobile 100% re-porting은 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`를 먼저 확인하고, `exact-reference-ready` / `needs-prototype-freeze` / `excluded-functional` / `web-only` 상태를 Stage 1 산출물에 기록한다.
 - Stage 1 문서에는 반드시 아래 중 하나를 넣는다.
   - Figma frame URL
   - 스크린샷 artifact 경로
@@ -206,6 +227,7 @@ authority report에는 아래를 반드시 포함한다.
 - Codex가 public Stage 5 디자인 리뷰를 수행한다.
 - authority-required slice면 Claude가 sparse `final_authority_gate`에서 authority report를 읽고 blocker 0개를 확인한 뒤에만 `confirmed`를 허용한다.
 - authority report가 없거나 evidence가 약하면 `confirmed`를 보류한다.
+- Wave1 mobile 100% re-porting에서는 fixed reference와 after screenshot을 나란히 보는 것에 더해 screenshot diff, computed-style audit, geometry audit의 unresolved finding을 확인한다. unclassified visual difference가 남아 있으면 `hold`가 기본값이다.
 
 ---
 

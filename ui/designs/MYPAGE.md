@@ -4,6 +4,7 @@
 > 슬라이스: 17a-mypage-overview-history
 > h8 분류: MYPAGE shell = `prototype parity` 후보 (screen-level only); MYPAGE_TAB_RECIPEBOOK, MYPAGE_TAB_SHOPPINGLISTS = `prototype-derived design`
 > 생성일: 2026-04-30
+> Wave1 mobile 100% parity note: fixed prototype reference and `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersede older h8 near/prototype-derived visual target notes for exact-reference-ready mobile surfaces.
 
 ---
 

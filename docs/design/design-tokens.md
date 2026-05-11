@@ -3,6 +3,63 @@
 > 확정일: 2026-03-20
 > 기준 방향: C2 — 명랑한 주방 (Bright Kitchen)
 > 적용 범위: Slice 02 Stage 4부터 모든 슬라이스
+> 2026-05-11 Wave1 mobile update: Wave1 모바일 100% prototype parity surface의 목표값은 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`가 우선한다.
+
+---
+
+## Wave1 Mobile 100% Parity Override
+
+`docs/design/design-tokens.md`의 C2 / h6 / h7 값은 기존 MVP와 web/legacy surface의 현재 구현 이력을 설명한다.
+
+하지만 Wave1 mobile 100% re-porting에서는 이 값들이 목표 디자인 기준이 아니다. `exact-reference-ready` 모바일 surface는 fixed prototype reference와 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`의 token/type/material 값을 따른다.
+
+### Wave1 Mobile Target Tokens
+
+| 역할 | 목표값 |
+|------|--------|
+| App background | `#FFFFFF` |
+| Foreground / ink | `#212529` |
+| Brand | `#2AC1BC` |
+| Brand deep | `#20A8A4` |
+| Brand soft | `#E6F8F7` |
+| Accent teal | `#12B886` |
+| Danger / like | `#FF6B6B` |
+| Text 2 | `#495057` |
+| Text 3 | `#868E96` |
+| Text 4 | `#ADB5BD` |
+| Border | `#DEE2E6` |
+| Surface | `#FFFFFF` |
+| Surface fill | `#F8F9FA` |
+| Surface subtle | `#F1F3F5` |
+| UI font | `-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif` |
+| Brand font | `"Jua", -apple-system, sans-serif` |
+
+### Runtime Token Rule
+
+Do not change global runtime tokens blindly in Phase 1 if that would redesign web or unrelated legacy surfaces.
+
+Instead:
+
+- record Wave1 mobile target values here and in `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`;
+- use Phase 2 app/web responsibility matrix to decide whether a value can become global or must be scoped to mobile/Wave1 surfaces;
+- during Phase 4/5 implementation, exact-reference-ready mobile surfaces must render the prototype values even if web/legacy surfaces still use old values;
+- if a prototype font or asset is required but not available in production, block completion until the font/asset is packaged or the prototype reference is refrozen.
+
+Do not use the older coral/cream token values as approved divergences for Wave1 mobile 100% completion.
+
+### Wave1 Mobile Token Scoping Strategy
+
+Phase 1 intentionally documents the target values without rewriting all runtime globals.
+
+Phase 2 must choose one of these implementation paths before Phase 4/5 code work:
+
+| Path | When to use | Risk |
+|------|-------------|------|
+| mobile-scoped token layer, for example app shell or data attribute scope | preferred when shared desktop/web components still use legacy visuals | requires careful component boundary mapping |
+| per-component exact values from shared prototype tokens | useful for isolated surfaces or sheets | can duplicate values if not centralized after porting |
+| global token replacement | only after app/web matrix proves web impact is acceptable or web redesign branch owns the change | high risk of accidental web redesign |
+
+Until that decision is made, `app/globals.css` values remain legacy runtime defaults, not Wave1 mobile target values.
 
 ---
 

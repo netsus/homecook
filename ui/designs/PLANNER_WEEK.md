@@ -4,6 +4,7 @@
 > 갱신일: 2026-04-27
 > **Prototype parity supersession**: H2/H4의 planner-level "가로 스크롤 없음", vertical-only day-card overview, 기존 slot-row layout lock은 Baemin prototype planner parity 범위에서 supersede됨.
 > **보존**: API/DB/상태 전이/auth/empty/error 계약과 의도치 않은 page-level horizontal overflow 금지는 유지.
+> Wave1 mobile 100% parity note: fixed prototype reference and `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersede earlier near-parity score gates and approved token divergences for mobile re-porting.
 
 ---
 

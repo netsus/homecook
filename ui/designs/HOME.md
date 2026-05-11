@@ -3,6 +3,7 @@
 > 기준 문서: 화면정의서 v1.4.0 §1 / 요구사항 v1.6.3 §1-1 / 유저Flow맵 v1.3.0 §① / 디자인 토큰 C2 명랑한 주방
 > 생성일: 2026-03-21
 > 최종 갱신: 2026-04-17 (H1 home-first-impression Stage 4 — carousel strip 전환)
+> Wave1 mobile 100% parity note: fixed prototype reference and `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersede this document's older C2/h6/h7 visual target notes for mobile re-porting.
 
 ---
 

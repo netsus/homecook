@@ -1,20 +1,22 @@
 # Baemin Style Direction
 
-> Status: official product direction adopted by user; h7 parity is complete for covered anchor surfaces; h8 governs future-screen rollout.
+> Status: official product direction adopted by user; 2026-05-11 Wave1 mobile 100% parity baseline supersedes earlier mobile near-parity scoring for the current re-port.
 
 ## Decision
 
-`homecook` will adopt the Baemin-style prototype as its official visual direction. The adoption is gradual and visual-only. The app may temporarily contain mixed old and new UI while follow-up slices retrofit existing surfaces.
+`homecook` will adopt the Baemin-style prototype as its official visual direction. For the current Wave1 mobile app re-port, the fixed prototype is the exact mobile visual/layout authority. The adoption remains visual-only: API, DB, auth, permissions, status transitions, read-only behavior, loading/empty/error states, and route contracts remain MVP-governed.
 
 This document is the first success checkpoint. It must be approved before value-changing design implementation starts.
+
+For exact Wave1 mobile criteria, read `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` before this document's historical h6/h7/h8 notes.
 
 ## Current Baseline vs Target Direction
 
 | Area | Current C2 Bright Kitchen | Baemin-style target |
 | --- | --- | --- |
 | App mood | warm cream, orange, kitchen editorial | clean white, mint accent, dense mobile app |
-| Primary brand | `--brand: #FF6C3C` | mint direction from prototype, pending value approval |
-| Background | `--background: #fff9f2` | white app canvas, pending value approval |
+| Primary brand | legacy `--brand` coral values | fixed prototype mint `#2AC1BC` for Wave1 mobile exact-reference-ready surfaces |
+| Background | legacy `--background: #fff9f2` | fixed prototype white app canvas for Wave1 mobile exact-reference-ready surfaces |
 | Text | warm/dark navy | neutral ink/gray hierarchy |
 | Components | current recipe cards, modal family, H1/H2/H5 decisions | keep behavior, restyle surfaces/components gradually |
 | Evidence | existing authority reports by screen | before/after evidence per retrofit slice |
@@ -31,6 +33,15 @@ These definitions are the canonical vocabulary for post-`h7` future-screen desig
 
 Promotion is always per screen or surface. A slice, tab adjacency, shared bottom-tab presence, or visual similarity does not automatically promote another screen or sub-surface.
 
+### Wave1 Mobile 100% Parity Override
+
+For the 2026-05-11 Wave1 mobile re-port:
+
+- `prototype parity` means exact mobile parity for `exact-reference-ready` surfaces, not `90+` or broad near-parity.
+- Existing approved divergences such as coral-vs-mint, cream-vs-white, non-Jua font stack, and olive-vs-teal are historical only for this mobile re-port.
+- If a fixed reference includes a prototype font, icon, image, emoji, bottom tab, sheet, or asset, it is part of the visual target unless classified as `functional-contract-required`, `browser-rendering-limited`, `not-in-mobile-scope`, or `not-yet-prototyped`.
+- Web-only redesign remains out of scope; web behavior is preserved and later redesigned separately.
+
 ## Why Adopt
 
 - The prototype gives the app a clearer mobile product identity.
@@ -42,19 +53,18 @@ Promotion is always per screen or surface. A slice, tab adjacency, shared bottom
 
 - Do not change API contracts, DB schema, status transitions, permissions, or domain rules.
 - Do not change information architecture just because the prototype shows a different screen.
-- Do not ship prototype-only `PANTRY` or `MYPAGE` as production scope before their official slices.
-- Do not add new font dependencies or external assets without explicit approval.
-- Do not import Jua or any other prototype-only font into production; the prototype's Google Fonts usage does not constitute approval.
-- Do not treat prototype JSX as production implementation.
-- Do not promote prototype-only bottom tab behavior, `Jua`, or prototype-only assets through screen adjacency.
+- Do not use prototype JSX as production implementation.
+- Do not expand product scope through prototype-only behavior or unsupported data.
+- Do not apply mobile-only exact parity changes to desktop/web redesign without a separate web plan.
+- Do not silently substitute fonts/assets. If `Jua` or another prototype asset is needed for exact mobile parity, either package the exact asset/font, refreeze the prototype without it, or block the surface as unresolved.
 
 ## Approval Boundaries
 
 | Needs user approval | Agent may decide |
 | --- | --- |
-| Brand color value | CSS variable naming |
-| App background value | Internal component structure |
-| Font direction or dependency | PR split and branch names |
+| Contract/behavior changes | CSS variable naming |
+| Adding external font/asset dependencies | Internal component structure |
+| Refreezing a prototype reference | PR split and branch names |
 | Final screen feel | Screenshot/evidence paths |
 | App-wide visual confirmation | Verification command details |
 
@@ -90,7 +100,8 @@ Promotion is always per screen or surface. A slice, tab adjacency, shared bottom
 
 | Checkpoint | Required before |
 | --- | --- |
-| Direction doc approval | any value-changing UI work |
-| Token value approval | changing `--brand`, `--background`, `--foreground`, font stack |
-| Component evidence | shared component rollout |
+| `WAVE1_MOBILE_APP_BASELINE.md` alignment | any Wave1 mobile 100% porting work |
+| App/web responsibility matrix | changing shared components or tokens that may affect web |
+| Font/asset decision | claiming 100% parity for a surface that uses that font/asset |
+| New fixed reference capture | porting a `needs-prototype-freeze` surface |
 | Anchor authority report | marking `HOME`, `RECIPE_DETAIL`, or `PLANNER_WEEK` as confirmed |
