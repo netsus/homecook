@@ -130,7 +130,7 @@ test.describe("Slice 02 discovery filter flow", () => {
   }) => {
     await page.goto("/");
 
-    await page.getByRole("button", { name: "재료 더보기" }).click();
+    await page.getByRole("button", { name: "재료로 검색" }).click();
     await expect(
       page.getByRole("dialog", { name: "재료로 검색" }),
     ).toBeVisible();
@@ -146,7 +146,7 @@ test.describe("Slice 02 discovery filter flow", () => {
       page.getByRole("button", { name: "양파" }),
     ).toBeVisible();
 
-    await page.getByRole("button", { name: "재료 더보기" }).click();
+    await page.getByRole("button", { name: "재료 1개" }).click();
     await expect(page.getByRole("checkbox", { name: "양파" })).toBeChecked();
     await page.getByRole("button", { name: "닫기" }).click();
 
@@ -154,7 +154,7 @@ test.describe("Slice 02 discovery filter flow", () => {
 
     await expect(page).toHaveURL(/\/$/);
     await expect(
-      page.getByRole("button", { name: "재료 더보기" }),
+      page.getByRole("button", { name: "재료로 검색" }),
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: /집밥 김치찌개/i }).first(),
@@ -166,7 +166,7 @@ test.describe("Slice 02 discovery filter flow", () => {
   }) => {
     await page.goto("/");
 
-    await page.getByRole("button", { name: "재료 더보기" }).click();
+    await page.getByRole("button", { name: "재료로 검색" }).click();
     await page.getByRole("button", { name: "육류" }).click();
     await page
       .getByRole("dialog", { name: "재료로 검색" })
@@ -184,7 +184,7 @@ test.describe("Slice 02 discovery filter flow", () => {
 
     await expect(page).toHaveURL(/\/$/);
     await expect(
-      page.getByRole("button", { name: "재료 더보기" }),
+      page.getByRole("button", { name: "재료로 검색" }),
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: /집밥 김치찌개/i }).first(),
@@ -196,7 +196,7 @@ test.describe("Slice 02 discovery filter flow", () => {
   }) => {
     await page.goto("/");
 
-    await page.getByRole("button", { name: "재료 더보기" }).click();
+    await page.getByRole("button", { name: "재료로 검색" }).click();
     await page
       .getByRole("textbox", { name: "재료명으로 검색" })
       .fill("없는재료");
@@ -212,7 +212,7 @@ test.describe("Slice 02 discovery filter flow", () => {
   }) => {
     await page.goto("/");
 
-    await page.getByRole("button", { name: "재료 더보기" }).click();
+    await page.getByRole("button", { name: "재료로 검색" }).click();
     const resetButton = page.getByRole("button", { name: "초기화" });
     const applyButton = page.getByRole("button", { name: /적용/ });
 

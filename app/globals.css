@@ -174,3 +174,10 @@ button {
     gap: 0.5rem;
   }
 }
+
+@media (max-width: 767px) {
+  .app-shell.wave1-home-shell {
+    background: #ffffff;
+    padding: 0;
+  }
+}

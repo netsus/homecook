@@ -26,8 +26,9 @@ import type {
 } from "@/types/recipe";
 
 const SORT_OPTIONS: Array<{ label: string; value: RecipeSortKey }> = [
-  { label: "좋아요순", value: "like_count" },
+  { label: "최신순", value: "view_count" },
   { label: "저장순", value: "save_count" },
+  { label: "좋아요순", value: "like_count" },
   { label: "플래너 등록순", value: "plan_count" },
 ];
 
@@ -37,7 +38,7 @@ type AsyncState = "loading" | "ready";
 export function HomeScreen() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [sort, setSort] = useState<RecipeSortKey>("like_count");
+  const [sort, setSort] = useState<RecipeSortKey>("view_count");
   const [screenState, setScreenState] = useState<ScreenState>("loading");
   const [themeState, setThemeState] = useState<AsyncState>("loading");
   const [ingredientState, setIngredientState] = useState<AsyncState>("loading");
@@ -214,7 +215,7 @@ export function HomeScreen() {
         style={
           {
             "--home-mint": "#2AC1BC",
-            "--home-mint-deep": "#20A8A4",
+            "--home-mint-deep": "#007A76",
             "--home-mint-soft": "#E6F8F7",
             "--home-bg": "#FFFFFF",
             "--home-ink": "#212529",
@@ -224,43 +225,48 @@ export function HomeScreen() {
         <div className="mx-auto flex min-h-screen max-w-[430px] flex-col bg-white pb-[calc(86px+env(safe-area-inset-bottom))] shadow-[0_0_0_1px_rgba(33,37,41,0.04)]">
           <HomeAppBar />
 
-          <div className="space-y-6 px-5 pb-6 pt-4">
-            <section className="space-y-4">
-              <div>
-                <p className="text-[15px] font-bold text-[#495057]">목요일 저녁,</p>
-                <h1 className="mt-1 text-[28px] font-black leading-tight text-[#212529]">
-                  오늘은 뭐 해먹지?
-                </h1>
-              </div>
+          <div className="pb-[100px]">
+            {/* Hero greeting */}
+            <div className="bg-white px-4 pb-3 pt-5">
+              <div className="mb-0.5 text-[14px] text-[#495057]">목요일 저녁,</div>
+              <h1 className="text-[22px] font-bold leading-[1.2] text-[#212529]" style={{ fontFamily: "var(--font-jua), -apple-system, sans-serif" }}>
+                오늘은 뭐 해먹지?
+              </h1>
+            </div>
 
-              <label className="flex h-12 items-center gap-2 rounded-full bg-[#F8F9FA] px-4 shadow-[inset_0_0_0_1px_rgba(233,236,239,0.8)]">
+            {/* Search */}
+            <div className="px-4 pb-3 pt-1">
+              <label className="flex h-[44px] items-center gap-2 rounded-[20px] bg-[#F8F9FA] px-4">
                 <SearchIcon />
                 <span className="visually-hidden">레시피 제목 검색</span>
                 <input
-                  className="w-full bg-transparent text-[15px] font-semibold text-[#212529] outline-none placeholder:text-[#495057]"
+                  className="w-full bg-transparent text-[14px] text-[#212529] outline-none placeholder:text-[#868E96]"
                   onChange={(event) => {
                     setQuery(event.target.value);
                     setActiveThemeId(null);
                   }}
-                  placeholder="김치볶음밥, 된장찌개..."
+                  placeholder="김치볶음밥, 된장찌개…"
                   value={query}
+                  style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif' }}
                 />
               </label>
-            </section>
+            </div>
 
             {screenState === "error" ? (
-              <ContentState
-                actionLabel="다시 시도"
-                description="Supabase 연결이나 API 설정을 확인한 뒤 다시 불러올 수 있어요."
-                eyebrow="목록 동기화 오류"
-                onAction={() => void loadRecipes()}
-                tone="error"
-                title="레시피를 불러오지 못했어요"
-              />
+              <div className="px-4 pb-4">
+                <ContentState
+                  actionLabel="다시 시도"
+                  description="Supabase 연결이나 API 설정을 확인한 뒤 다시 불러올 수 있어요."
+                  eyebrow="목록 동기화 오류"
+                  onAction={() => void loadRecipes()}
+                  tone="error"
+                  title="레시피를 불러오지 못했어요"
+                />
+              </div>
             ) : null}
 
             {showInitialDiscoverySkeleton ? (
-              <div className="space-y-6">
+              <div className="space-y-4 px-4">
                 <ThemeCarouselSkeleton />
                 <RecipeListSkeleton />
               </div>
@@ -277,13 +283,14 @@ export function HomeScreen() {
             {!showInitialDiscoverySkeleton ? <PromoStrip /> : null}
 
             {screenState !== "error" && !showInitialDiscoverySkeleton ? (
-              <section className="space-y-4" aria-label={listTitle}>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-baseline gap-2">
-                    <h2 className="text-[20px] font-black text-[#212529]">
+              <section aria-label={listTitle}>
+                {/* Section header with sort */}
+                <div className="flex items-center justify-between px-4 pb-2">
+                  <div className="flex items-baseline gap-1.5">
+                    <h2 className="text-[18px] font-bold text-[#212529]">
                       {listTitle}
                     </h2>
-                    <span className="text-sm font-bold text-[#495057]">
+                    <span className="text-[14px] font-medium text-[#495057]">
                       ({displayedRecipes.length})
                     </span>
                   </div>
@@ -297,19 +304,22 @@ export function HomeScreen() {
                   ) : null}
                 </div>
 
-                <QuickIngredientRail
-                  appliedIngredientIds={appliedIngredientIds}
-                  ingredients={quickIngredients}
-                  isLoading={ingredientState === "loading"}
-                  onClear={clearIngredientFilters}
-                  onOpenModal={() => setIngredientModalOpen(true)}
-                  onToggle={toggleQuickIngredient}
-                />
+                {/* Quick ingredient chip rail */}
+                <div className="pb-2.5">
+                  <QuickIngredientRail
+                    appliedIngredientIds={appliedIngredientIds}
+                    ingredients={quickIngredients}
+                    isLoading={ingredientState === "loading"}
+                    onClear={clearIngredientFilters}
+                    onOpenModal={() => setIngredientModalOpen(true)}
+                    onToggle={toggleQuickIngredient}
+                  />
+                </div>
 
-                {screenState === "loading" ? <RecipeListSkeleton /> : null}
+                {screenState === "loading" ? <div className="px-4"><RecipeListSkeleton /></div> : null}
 
                 {screenState === "ready" && displayedRecipes.length ? (
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 gap-4 px-4">
                     {displayedRecipes.map((recipe) => (
                       <RecipeCard key={recipe.id} recipe={recipe} />
                     ))}
@@ -317,14 +327,16 @@ export function HomeScreen() {
                 ) : null}
 
                 {showEmptyState ? (
-                  <ContentState
-                    actionLabel={hasIngredientFilter ? "초기화" : "검색 초기화"}
-                    description="조건에 맞는 레시피가 없어요."
-                    eyebrow="다른 조합"
-                    tone="empty"
-                    onAction={hasIngredientFilter ? clearIngredientFilters : clearSearch}
-                    title="다른 조합을 찾아보세요"
-                  />
+                  <div className="px-4">
+                    <ContentState
+                      actionLabel={hasIngredientFilter ? "초기화" : "검색 초기화"}
+                      description="조건에 맞는 레시피가 없어요."
+                      eyebrow="다른 조합"
+                      tone="empty"
+                      onAction={hasIngredientFilter ? clearIngredientFilters : clearSearch}
+                      title="다른 조합을 찾아보세요"
+                    />
+                  </div>
                 ) : null}
               </section>
             ) : null}
@@ -345,9 +357,14 @@ export function HomeScreen() {
 
 function HomeAppBar() {
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center justify-center border-b border-[#F1F3F5] bg-white/96 px-5 backdrop-blur">
-      <div className="text-[18px] font-black tracking-normal text-[#0B6F6C]">
-        homecook_
+    <header className="sticky top-0 z-20 flex min-h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4" style={{ borderBottomWidth: '0.5px' }}>
+      <div
+        aria-label="homecook_"
+        className="text-[22px] font-bold tracking-[0.5px]"
+        style={{ fontFamily: "var(--font-jua), -apple-system, sans-serif" }}
+      >
+        <span className="text-[#008F8A]">homecook</span>
+        <span className="text-[#212529]">_</span>
       </div>
     </header>
   );
@@ -368,8 +385,24 @@ function QuickIngredientRail({
   onOpenModal: () => void;
   onToggle: (ingredientId: string) => void;
 }) {
+  const hasFilters = appliedIngredientIds.length > 0;
+
   return (
-    <div className="scrollbar-hide -mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
+    <div className="scrollbar-hide flex gap-2 overflow-x-auto px-4 pb-1">
+      {/* "재료로 검색" button — prototype style */}
+      <button
+        className={`flex h-11 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] px-3.5 text-[13px] font-bold ${
+          hasFilters
+            ? "border-[#007A76] bg-[#007A76] text-white"
+            : "border-[#007A76] bg-white text-[#007A76]"
+        }`}
+        onClick={onOpenModal}
+        type="button"
+      >
+        <SearchSmallIcon color={hasFilters ? "#fff" : "#007A76"} />
+        {hasFilters ? `재료 ${appliedIngredientIds.length}개` : "재료로 검색"}
+      </button>
+
       {isLoading
         ? Array.from({ length: 4 }).map((_, index) => (
             <Skeleton
@@ -383,32 +416,26 @@ function QuickIngredientRail({
             return (
               <button
                 aria-pressed={isActive}
-                className={`h-11 shrink-0 rounded-full px-4 text-sm font-extrabold transition ${
+                className={`flex h-11 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium ${
                   isActive
-                    ? "bg-[#0B6F6C] text-white shadow-[0_6px_14px_rgba(42,193,188,0.24)]"
-                    : "bg-[#E6F8F7] text-[#0B6F6C]"
+                    ? "border border-[#007A76] bg-[#E6F8F7] text-[#007A76]"
+                    : "border border-transparent bg-[#F8F9FA] text-[#495057]"
                 }`}
                 key={ingredient.id}
                 onClick={() => onToggle(ingredient.id)}
                 type="button"
               >
+                <span aria-hidden="true" className="text-[14px]">
+                  {ingredientEmoji(ingredient.standard_name)}
+                </span>
                 {ingredient.standard_name}
               </button>
             );
           })}
 
-      <button
-        aria-label="재료 더보기"
-        className="h-11 shrink-0 rounded-full bg-[#F8F9FA] px-4 text-sm font-extrabold text-[#495057]"
-        onClick={onOpenModal}
-        type="button"
-      >
-        더보기
-      </button>
-
-      {appliedIngredientIds.length > 0 ? (
+      {hasFilters ? (
         <button
-          className="h-11 shrink-0 rounded-full border border-[#E9ECEF] bg-white px-4 text-sm font-extrabold text-[#495057]"
+          className="flex h-11 shrink-0 items-center rounded-full border border-[#DEE2E6] bg-white px-3.5 text-[13px] font-medium text-[#495057]"
           onClick={onClear}
           type="button"
         >
@@ -417,6 +444,15 @@ function QuickIngredientRail({
       ) : null}
     </div>
   );
+}
+
+function ingredientEmoji(name: string) {
+  if (/밥|면|쌀|국수|밀가루/.test(name)) return "🍚";
+  if (/고기|소고기|돼지|닭|육류/.test(name)) return "🥩";
+  if (/생선|해산|멸치|연어|새우/.test(name)) return "🐟";
+  if (/계란|달걀|두부/.test(name)) return "🥚";
+  if (/김치/.test(name)) return "🥬";
+  return "🥕";
 }
 
 function ThemeCarousel({
@@ -429,12 +465,12 @@ function ThemeCarousel({
   themes: RecipeTheme[];
 }) {
   return (
-    <section aria-label="테마별 레시피" className="space-y-3">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-[20px] font-black text-[#212529]">테마별 레시피</h2>
-        <span className="text-xs font-black text-[#495057]">전체보기 ›</span>
+    <section aria-label="테마별 레시피" className="pb-4 pt-2">
+      <div className="flex items-baseline justify-between px-4 pb-3">
+        <h2 className="text-[18px] font-bold text-[#212529]">테마별 레시피</h2>
+        <span className="text-[12px] text-[#495057]">전체보기 ›</span>
       </div>
-      <div className="scrollbar-hide -mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
+      <div className="scrollbar-hide flex gap-2.5 overflow-x-auto px-4 pb-1">
         {themes.map((theme, index) => (
           <ThemeCarouselCard
             isActive={activeThemeId === theme.id}
@@ -460,63 +496,62 @@ function ThemeCarouselCard({
   theme: RecipeTheme;
   variantIndex: number;
 }) {
-  const palette = [
-    "linear-gradient(135deg,#E6F8F7,#FFF5C2)",
-    "linear-gradient(135deg,#FFE8D6,#E6F8F7)",
-    "linear-gradient(135deg,#E8F0FF,#F1F8E9)",
-  ];
-  const emoji = ["🍲", "🍚", "🥗", "🍳"][variantIndex % 4];
-  const representative = theme.recipes[0];
+  const THEME_BGS = ["#FFE8DC", "#E8F5FF", "#E8F8E0", "#FFEBEB", "#F3E8FF"];
+  const emoji = ["🍳", "🏠", "🥗", "🍚", "🍷"][variantIndex % 5];
 
   return (
     <button
       aria-pressed={isActive}
-      className={`relative h-[132px] w-[148px] shrink-0 overflow-hidden rounded-[12px] p-3 text-left shadow-[0_8px_20px_rgba(33,37,41,0.10)] transition ${
-        isActive ? "ring-2 ring-[#0B6F6C]" : ""
+      className={`relative flex h-[92px] w-[140px] shrink-0 flex-col justify-between overflow-hidden rounded-[14px] p-3 text-left ${
+        isActive ? "ring-2 ring-[#2AC1BC]" : ""
       }`}
       onClick={onClick}
-      style={{ background: palette[variantIndex % palette.length] }}
+      style={{
+        background: THEME_BGS[variantIndex % THEME_BGS.length],
+        boxShadow: "0px 1px 3px rgba(0,0,0,0.04)",
+        border: isActive ? "2px solid #2AC1BC" : "2px solid transparent",
+      }}
       type="button"
     >
-      <span className="absolute right-3 top-3 text-4xl" aria-hidden="true">
+      <span className="text-[30px] leading-none" aria-hidden="true">
         {emoji}
       </span>
-      <span className="relative z-10 mt-10 block max-w-[108px] text-[16px] font-black leading-tight text-[#212529]">
+      <span className="text-[14px] font-bold text-[#212529]" style={{ fontFamily: "var(--font-jua), -apple-system, sans-serif" }}>
         {theme.title}
       </span>
-      {representative ? (
-        <span className="relative z-10 mt-2 line-clamp-1 block text-[11px] font-bold text-[#495057]">
-          {representative.title}
-        </span>
-      ) : null}
     </button>
   );
 }
 
 function PromoStrip() {
   return (
-    <Link
-      className="flex min-h-[84px] items-center justify-between rounded-[16px] bg-[linear-gradient(135deg,#0B6F6C,#085F5C)] px-4 text-white shadow-[0_10px_24px_rgba(42,193,188,0.26)]"
-      href="/planner"
-    >
-      <span>
-        <span className="block text-[13px] font-bold opacity-85">
-          오늘 저녁까지 2끼 남았어요
+    <div className="px-4 pb-3">
+      <Link
+        className="flex items-center justify-between rounded-[12px] px-4 py-3 text-white"
+        href="/planner"
+        style={{
+          background: "linear-gradient(135deg, #2AC1BC 0%, #12B886 100%)",
+        }}
+      >
+        <span>
+          <span className="block text-[12px] font-normal" style={{ opacity: 0.9 }}>
+            이번 주 식단 플래너
+          </span>
+          <span className="mt-0.5 block text-[16px] font-bold" style={{ fontFamily: "var(--font-jua), -apple-system, sans-serif" }}>
+            오늘 저녁까지 2끼 남았어요
+          </span>
         </span>
-        <span className="mt-1 block text-[19px] font-black">
-          이번 주 식단 플래너
+        <span className="text-[32px]" aria-hidden="true">
+          🍳
         </span>
-      </span>
-      <span className="text-4xl" aria-hidden="true">
-        🍳
-      </span>
-    </Link>
+      </Link>
+    </div>
   );
 }
 
 function HomeBottomTab() {
   const tabs = [
-    { href: "/", icon: <HomeIcon />, isActive: true, label: "홈" },
+    { href: "/", icon: <HomeIcon filled />, isActive: true, label: "홈" },
     { href: "/planner", icon: <CalendarIcon />, isActive: false, label: "플래너" },
   ];
   const pendingTabs = [
@@ -527,17 +562,22 @@ function HomeBottomTab() {
   return (
     <nav
       aria-label="HOME 하단 탭"
-      className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] border-t border-[#E9ECEF] bg-white/96 px-4 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] bg-white px-4 pt-2"
+      style={{
+        borderTop: "0.5px solid #DEE2E6",
+        paddingBottom: "calc(28px)",
+      }}
     >
       <div className="grid grid-cols-4">
         {tabs.map((tab) => (
           <Link
             aria-current={tab.isActive ? "page" : undefined}
-            className={`flex h-14 flex-col items-center justify-center gap-1 text-[11px] font-black ${
-              tab.isActive ? "text-[#0B6F6C]" : "text-[#495057]"
+            className={`flex flex-col items-center justify-center gap-[3px] py-1 text-[11px] ${
+              tab.isActive ? "font-bold" : "font-medium"
             }`}
             href={tab.href}
             key={tab.label}
+            style={{ color: tab.isActive ? "#007A76" : "#495057" }}
           >
             {tab.icon}
             <span>{tab.label}</span>
@@ -545,8 +585,9 @@ function HomeBottomTab() {
         ))}
         {pendingTabs.map((tab) => (
           <button
-            className="flex h-14 flex-col items-center justify-center gap-1 text-[11px] font-black text-[#495057]"
+            className="flex flex-col items-center justify-center gap-[3px] py-1 text-[11px] font-medium"
             key={tab.label}
+            style={{ color: "#495057" }}
             type="button"
           >
             {tab.icon}
@@ -576,20 +617,35 @@ function SearchIcon() {
   );
 }
 
-function HomeIcon() {
+function SearchSmallIcon({ color }: { color: string }) {
   return (
     <svg
       aria-hidden="true"
-      className="h-5 w-5"
+      className="h-4 w-4 shrink-0"
       fill="none"
-      stroke="currentColor"
+      stroke={color}
       strokeLinecap="round"
+      strokeWidth="2"
+      viewBox="0 0 20 20"
+    >
+      <circle cx="9" cy="9" r="6" />
+      <path d="m14 14 3 3" />
+    </svg>
+  );
+}
+
+function HomeIcon({ filled = false }: { filled?: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-6 w-6"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
       strokeLinejoin="round"
       strokeWidth="2"
       viewBox="0 0 24 24"
     >
-      <path d="M3 11.5 12 4l9 7.5" />
-      <path d="M5 10.5V20h14v-9.5" />
+      <path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9z" />
     </svg>
   );
 }
@@ -598,7 +654,7 @@ function CalendarIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="h-5 w-5"
+      className="h-6 w-6"
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"
@@ -615,7 +671,7 @@ function PantryIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="h-5 w-5"
+      className="h-6 w-6"
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"
@@ -634,7 +690,7 @@ function UserIcon() {
   return (
     <svg
       aria-hidden="true"
-      className="h-5 w-5"
+      className="h-6 w-6"
       fill="none"
       stroke="currentColor"
       strokeLinecap="round"

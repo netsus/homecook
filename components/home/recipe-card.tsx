@@ -1,7 +1,6 @@
 import React from "react";
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
 import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
 import type { RecipeCardItem } from "@/types/recipe";
 
@@ -17,7 +16,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
 
   return (
     <Link
-      className="group flex min-h-full flex-col overflow-hidden rounded-[12px] bg-white shadow-[0_10px_24px_rgba(33,37,41,0.10)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(33,37,41,0.14)]"
+      className="group flex min-h-full flex-col overflow-hidden rounded-[12px] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0px_4px_12px_rgba(0,0,0,0.10)]"
       href={`/recipe/${recipe.id}`}
       prefetch={false}
     >
@@ -40,52 +39,49 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         {!recipe.thumbnail_url ? (
           <span
             aria-hidden="true"
-            className="absolute inset-0 grid place-items-center text-5xl"
+            className="absolute inset-0 grid place-items-center text-[88px]"
           >
             {presentation.emoji}
           </span>
         ) : null}
-        <Badge
-          variant="brand"
-          className="absolute left-3 top-3 rounded-full border-0 bg-white/92 px-2.5 py-1 text-[10px] font-bold text-[#0B6F6C] shadow-[0_4px_12px_rgba(33,37,41,0.12)]"
-        >
+        <span className="absolute left-3 top-3 rounded-[4px] bg-[#C92A2A] px-2 py-1 text-[11px] font-bold text-white">
           {badgeLabel}
-        </Badge>
+        </span>
         <span
           aria-label="북마크"
-          className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-white/94 text-[#0B6F6C] shadow-[0_4px_12px_rgba(33,37,41,0.14)]"
+          className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/92 text-[#007A76]"
           data-testid="recipe-card-bookmark"
         >
-          ♡
+          <BookmarkIcon />
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-2.5 px-4 py-3.5">
-        <h3 className="line-clamp-2 text-[16px] font-extrabold leading-snug text-[#212529]">
+      <div className="flex flex-1 flex-col gap-2 px-4 py-4">
+        <h3 className="line-clamp-2 text-[18px] font-bold leading-snug text-[#212529]">
           {recipe.title}
         </h3>
-        <div className="flex flex-wrap items-center gap-1.5 text-[12px] font-semibold text-[#495057]">
-          <span>
-            ⭐
-            <span className="ml-1 text-[#212529]">
-              {formatCount(recipe.like_count)}
+        <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-[#495057]">
+          <span className="inline-flex items-center gap-1">
+            <EyeIcon />
+            <span className="font-semibold text-[#212529]">
+              조회 {formatCount(recipe.view_count)}
             </span>
           </span>
-          <span className="text-[#E9ECEF]">·</span>
+          <span>·</span>
           <span>{formatCount(recipe.save_count)}저장</span>
-          <span className="text-[#E9ECEF]">·</span>
+          <span aria-hidden="true" className="text-[#ADB5BD]">·</span>
           <span>기본 {recipe.base_servings}인</span>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5 pt-0.5">
           {recipe.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-[#F8F9FA] px-2.5 py-1 text-[11px] font-bold text-[#495057]"
+              className="rounded-full bg-[#F1F3F5] px-2.5 py-1 text-[12px] font-medium text-[#495057]"
             >
               {tag}
             </span>
           ))}
           {remainingTagCount ? (
-            <span className="rounded-full bg-[#F8F9FA] px-2.5 py-1 text-[11px] font-bold text-[#495057]">
+            <span className="rounded-full bg-[#F1F3F5] px-2.5 py-1 text-[12px] font-medium text-[#495057]">
               +{remainingTagCount}
             </span>
           ) : null}
@@ -95,11 +91,43 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   );
 }
 
+function BookmarkIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M6 3h12v18l-6-4-6 4V3z" />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-3.5 w-3.5 text-[#495057]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
 function getRecipePresentation(recipe: RecipeCardItem) {
   const emojiByTag = [
+    { keyword: "밥", emoji: "🍚" },
     { keyword: "김치", emoji: "🥘" },
     { keyword: "찌개", emoji: "🍲" },
-    { keyword: "밥", emoji: "🍚" },
     { keyword: "면", emoji: "🍜" },
     { keyword: "고기", emoji: "🥩" },
     { keyword: "채소", emoji: "🥬" },
@@ -110,14 +138,17 @@ function getRecipePresentation(recipe: RecipeCardItem) {
   const index = recipe.id.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
   const emoji = matched?.emoji ?? fallbackEmojis[index % fallbackEmojis.length]!;
   const gradients = [
+    "linear-gradient(135deg,#FFE8E0 0%,#FFD0BC 100%)",
     "linear-gradient(135deg,#E6F8F7,#FFF4D6)",
     "linear-gradient(135deg,#F1F8E9,#E6F8F7)",
-    "linear-gradient(135deg,#FFE8D6,#E6F8F7)",
     "linear-gradient(135deg,#E8F0FF,#FFF4D6)",
   ];
+  const gradient = recipe.title.includes("김치볶음밥")
+    ? gradients[0]!
+    : gradients[index % gradients.length]!;
 
   return {
     emoji,
-    gradient: gradients[index % gradients.length]!,
+    gradient,
   };
 }

@@ -6,12 +6,14 @@ import { BottomTabs } from "@/components/layout/bottom-tabs";
 interface AppShellProps {
   children: React.ReactNode;
   currentTab: "home" | "planner" | "pantry" | "mypage";
+  className?: string;
   headerMode?: "default" | "hidden";
   bottomTabsMode?: "default" | "hidden";
 }
 
 export function AppShell({
   children,
+  className,
   currentTab,
   bottomTabsMode = "default",
   headerMode = "default",
@@ -19,9 +21,12 @@ export function AppShell({
   const showSharedHeader = headerMode === "default";
   const showSharedBottomTabs = bottomTabsMode === "default";
   const brandAsPageTitle = currentTab === "home";
+  const shellClassName = ["app-shell", showSharedBottomTabs ? "bottom-safe" : "", className ?? ""]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <div className={`app-shell${showSharedBottomTabs ? " bottom-safe" : ""}`}>
+    <div className={shellClassName}>
       <div className="mx-auto flex max-w-6xl flex-col gap-[clamp(1rem,4vw,1.5rem)]">
         {showSharedHeader ? <AppHeader brandAsPageTitle={brandAsPageTitle} /> : null}
         <main>{children}</main>

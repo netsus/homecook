@@ -5,6 +5,7 @@ export default function Home() {
   return (
     <AppShell
       bottomTabsMode="hidden"
+      className="wave1-home-shell"
       currentTab="home"
       headerMode="hidden"
     >

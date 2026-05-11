@@ -1,6 +1,14 @@
 import type { Metadata } from "next";
+import { Jua } from "next/font/google";
 import { QaFixtureToolbar } from "@/components/layout/qa-fixture-toolbar";
 import "./globals.css";
+
+const jua = Jua({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-jua",
+  weight: "400",
+});
 
 export const metadata: Metadata = {
   title: "집밥",
@@ -14,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body>
+      <body className={jua.variable}>
         {children}
         <QaFixtureToolbar />
       </body>
