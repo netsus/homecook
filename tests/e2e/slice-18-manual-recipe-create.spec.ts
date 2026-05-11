@@ -53,6 +53,22 @@ function parseLoginReturnToAction(loginUrl: string) {
   return new URL(next!, E2E_APP_ORIGIN);
 }
 
+function getSaveButton(page: Page) {
+  return page.getByRole("button", { name: /^(저장|완료)$/ });
+}
+
+async function fillRecipeTitle(page: Page, title: string) {
+  await page.getByLabel("요리 이름").fill(title);
+}
+
+async function setBaseServings(page: Page, servings: number) {
+  await page.getByLabel("기준 인분").fill(String(servings));
+}
+
+async function openStepAdd(page: Page) {
+  await page.getByRole("button", { name: "+ 단계" }).click();
+}
+
 async function installCookingMethodsRoute(page: Page, methods: CookingMethodItem[]) {
   await page.route("**/api/v1/cooking-methods", async (route) => {
     if (route.request().method() !== "GET") {
@@ -172,11 +188,11 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await page.goto(MANUAL_RECIPE_CREATE_URL);
 
     // Fill in title
-    await page.fill('input[placeholder="레시피명 (필수)"]', "김치찌개");
+    await fillRecipeTitle(page, "김치찌개");
 
     // Increase servings to 3
-    await page.click('button[aria-label="인분 늘리기"]');
-    await expect(page.locator("text=3")).toBeVisible();
+    await setBaseServings(page, 3);
+    await expect(page.getByLabel("기준 인분")).toHaveValue("3");
 
     // Add ingredient
     await page.click("text=+ 재료 추가");
@@ -194,7 +210,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await expect(page.locator("text=200g")).toBeVisible();
 
     // Add step
-    await page.click("text=+ 조리 과정 추가");
+    await openStepAdd(page);
     await page.click('button:has-text("볶기")');
     await page.fill(
       'textarea[placeholder="조리 설명을 입력하세요"]',
@@ -210,7 +226,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await expect(page.locator("text=볶기")).toBeVisible();
 
     // Save recipe
-    await page.click('button:has-text("저장")');
+    await getSaveButton(page).click();
 
     // Success modal should appear
     await expect(page.locator("text=레시피 등록 완료")).toBeVisible({ timeout: 5000 });
@@ -280,7 +296,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     });
 
     await page.goto(MANUAL_RECIPE_CREATE_URL);
-    await page.fill('input[placeholder="레시피명 (필수)"]', "재시도 레시피");
+    await fillRecipeTitle(page, "재시도 레시피");
 
     await page.click("text=+ 재료 추가");
     await page.fill('input[placeholder="재료 검색"]', "양파");
@@ -290,7 +306,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
     await ingredientModal.locator('button:has-text("완료")').click();
 
-    await page.click("text=+ 조리 과정 추가");
+    await openStepAdd(page);
     await page.click('button:has-text("볶기")');
     await page.fill(
       'textarea[placeholder="조리 설명을 입력하세요"]',
@@ -302,7 +318,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
       .locator('button:has-text("추가")')
       .click();
 
-    const saveButton = page.locator('button:has-text("저장")');
+    const saveButton = getSaveButton(page);
     await expect(saveButton).toBeEnabled();
 
     await saveButton.click();
@@ -332,11 +348,11 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await page.goto(MANUAL_RECIPE_CREATE_URL);
 
     // Save button should be disabled initially
-    const saveButton = page.locator('button:has-text("저장")');
+    const saveButton = getSaveButton(page);
     await expect(saveButton).toBeDisabled();
 
     // Add title only
-    await page.fill('input[placeholder="레시피명 (필수)"]', "테스트 레시피");
+    await fillRecipeTitle(page, "테스트 레시피");
     await expect(saveButton).toBeDisabled(); // Still disabled (no ingredients/steps)
 
     // Add ingredient
@@ -352,7 +368,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await expect(saveButton).toBeDisabled(); // Still disabled (no steps)
 
     // Add step
-    await page.click("text=+ 조리 과정 추가");
+    await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
     await page.fill('textarea[placeholder="조리 설명을 입력하세요"]', "소금을 약간 넣어주세요");
 
@@ -453,7 +469,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     );
 
     // Create minimal recipe
-    await page.fill('input[placeholder="레시피명 (필수)"]', "테스트 레시피");
+    await fillRecipeTitle(page, "테스트 레시피");
 
     await page.click("text=+ 재료 추가");
     await page.fill('input[placeholder="재료 검색"]', "소금");
@@ -463,13 +479,13 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
     await ingredientModal.locator('button:has-text("완료")').click();
 
-    await page.click("text=+ 조리 과정 추가");
+    await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
     await page.fill('textarea[placeholder="조리 설명을 입력하세요"]', "소금을 약간 넣어주세요");
     const stepModal = page.locator('div.fixed.inset-0.z-50').last();
     await stepModal.locator('button:has-text("추가")').click();
 
-    await page.click('button:has-text("저장")');
+    await getSaveButton(page).click();
     await expect(page.locator("text=레시피 등록 완료")).toBeVisible({ timeout: 5000 });
 
     // Click "끼니에 추가"
@@ -547,7 +563,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
     await page.goto(MANUAL_RECIPE_CREATE_URL);
 
-    await page.fill('input[placeholder="레시피명 (필수)"]', createdRecipe.title);
+    await fillRecipeTitle(page, createdRecipe.title);
 
     await page.click("text=+ 재료 추가");
     await page.fill('input[placeholder="재료 검색"]', "소금");
@@ -557,13 +573,13 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
     await ingredientModal.locator('button:has-text("완료")').click();
 
-    await page.click("text=+ 조리 과정 추가");
+    await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
     await page.fill('textarea[placeholder="조리 설명을 입력하세요"]', "재료를 잘 섞어주세요");
     const stepModal = page.locator('div.fixed.inset-0.z-50').last();
     await stepModal.locator('button:has-text("추가")').click();
 
-    await page.click('button:has-text("저장")');
+    await getSaveButton(page).click();
     await expect(page.locator("text=레시피 등록 완료")).toBeVisible({ timeout: 5000 });
 
     await page.click('button:has-text("끼니에 추가")');
@@ -601,7 +617,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     // Create manual recipe
     await page.goto(MANUAL_RECIPE_CREATE_URL);
 
-    await page.fill('input[placeholder="레시피명 (필수)"]', createdRecipe.title);
+    await fillRecipeTitle(page, createdRecipe.title);
 
     await page.click("text=+ 재료 추가");
     await page.fill('input[placeholder="재료 검색"]', "소금");
@@ -611,13 +627,13 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await ingredientModal.getByRole("button", { name: "선택한 재료 추가" }).click();
     await ingredientModal.locator('button:has-text("완료")').click();
 
-    await page.click("text=+ 조리 과정 추가");
+    await openStepAdd(page);
     await page.click('button:has-text("섞기/준비")');
     await page.fill('textarea[placeholder="조리 설명을 입력하세요"]', "재료를 잘 섞어주세요");
     const stepModal = page.locator('div.fixed.inset-0.z-50').last();
     await stepModal.locator('button:has-text("추가")').click();
 
-    await page.click('button:has-text("저장")');
+    await getSaveButton(page).click();
     await expect(page.locator("text=레시피 등록 완료")).toBeVisible({ timeout: 5000 });
 
     // Mock my_added recipebook API to return the created recipe
@@ -975,7 +991,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     ]);
 
     await page.goto(MANUAL_RECIPE_CREATE_URL);
-    await page.click("text=+ 조리 과정 추가");
+    await openStepAdd(page);
 
     const stepModal = page.locator('div.fixed.inset-0.z-50').last();
     await expect(stepModal.getByText("조리 과정 추가")).toBeVisible();

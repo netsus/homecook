@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
 
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { RecipeIngredientAddModal } from "@/components/recipe/recipe-ingredient-add-modal";
 import { Button } from "@/components/ui/button";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
@@ -52,11 +53,11 @@ interface AppBarProps {
 
 function AppBar({ onBack, onSave, canSave, isSaving }: AppBarProps) {
   return (
-    <div className="shrink-0 border-b border-[var(--line)] bg-[var(--background)]">
-      <div className="flex h-14 items-center gap-2 px-2">
+    <div className="shrink-0 border-b border-[#DEE2E6] bg-white">
+      <div className="flex min-h-[52px] items-center gap-2 px-4 py-2.5">
         <button
           aria-label="뒤로 가기"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-white/60"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529] hover:bg-[#F8F9FA]"
           onClick={onBack}
           type="button"
           disabled={isSaving}
@@ -77,15 +78,15 @@ function AppBar({ onBack, onSave, canSave, isSaving }: AppBarProps) {
             />
           </svg>
         </button>
-        <h1 className="min-w-0 flex-1 truncate text-xl font-extrabold text-[var(--foreground)]">
-          직접 레시피 등록
+        <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[#212529]">
+          직접 등록
         </h1>
         <button
           className={[
-            "h-11 px-4 text-base font-semibold rounded-[var(--radius-sm)]",
+            "hidden h-11 rounded-[8px] px-4 text-base font-semibold md:block",
             canSave && !isSaving
-              ? "text-[var(--brand)] hover:bg-[var(--brand-soft)]"
-              : "text-[var(--text-4)] cursor-not-allowed",
+              ? "text-[#20A8A4] hover:bg-[#E6F8F7]"
+              : "cursor-not-allowed text-[#ADB5BD]",
           ].join(" ")}
           onClick={onSave}
           disabled={!canSave || isSaving}
@@ -93,6 +94,7 @@ function AppBar({ onBack, onSave, canSave, isSaving }: AppBarProps) {
         >
           {isSaving ? "저장 중..." : "저장"}
         </button>
+        <div aria-hidden="true" className="h-8 w-8 shrink-0 md:hidden" />
       </div>
     </div>
   );
@@ -108,7 +110,9 @@ interface IngredientListProps {
 function IngredientList({ ingredients, onRemove }: IngredientListProps) {
   if (ingredients.length === 0) {
     return (
-      <p className="text-sm text-[var(--muted)] py-4">재료를 추가해주세요</p>
+      <p className="hidden py-4 text-sm text-[var(--muted)] md:block">
+        재료를 추가해주세요
+      </p>
     );
   }
 
@@ -153,9 +157,25 @@ interface StepListProps {
 function StepList({ steps, onRemove }: StepListProps) {
   if (steps.length === 0) {
     return (
-      <p className="text-sm text-[var(--muted)] py-4">
-        조리 과정을 추가해주세요
-      </p>
+      <div className="rounded-[10px] border-l-4 border-[#ADB5BD] bg-[#F8F9FA] px-4 py-3">
+        <div className="mb-2 flex items-center gap-3">
+          <span className="text-[12px] font-extrabold leading-[1.3] text-[#868E96]">
+            STEP 1
+          </span>
+          <div
+            aria-hidden="true"
+            className="rounded-[6px] border border-[#ADB5BD] bg-white px-3 py-1.5 text-[12px] font-bold text-[#495057]"
+          >
+            준비⌄
+          </div>
+        </div>
+        <div
+          aria-hidden="true"
+          className="min-h-[56px] rounded-[8px] border border-[#DEE2E6] bg-white px-3 py-3 text-[14px] font-medium text-[#868E96]"
+        >
+          이 단계에서 무엇을 하나요?
+        </div>
+      </div>
     );
   }
 
@@ -578,96 +598,111 @@ export function ManualRecipeCreateScreen({
   }, [router]);
 
   return (
-    <div className="flex h-screen flex-col bg-[var(--background)]">
+    <div className="flex h-screen flex-col bg-[#F8F9FA] md:bg-[var(--background)]">
       <AppBar
         onBack={handleBack}
         onSave={handleSave}
         canSave={canSave}
         isSaving={isSaving}
       />
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
-        <div className="mx-auto max-w-2xl py-4 space-y-6">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-[84px] md:px-4 md:pb-6">
+        <div className="mx-auto max-w-2xl space-y-2 md:space-y-6 md:py-4">
           {/* Basic Info */}
-          <section>
-            <h2 className="mb-3 text-lg font-bold text-[var(--foreground)]">
-              📝 기본 정보
+          <section className="border-b border-[#DEE2E6] bg-white px-4 pb-3 pt-5 md:rounded-[16px] md:border md:border-[var(--line)]">
+            <h2 className="mb-3 text-[16px] font-bold leading-[1.3] text-[#212529]">
+              기본 정보
             </h2>
             <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="레시피명 (필수)"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3 text-base placeholder:text-[var(--text-3)]"
-              />
-              <div className="flex items-center justify-between">
-                <span className="text-base text-[var(--foreground)]">
-                  기본 인분
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-bold leading-[1.4] text-[#868E96]">
+                  요리 이름
                 </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    aria-label="인분 줄이기"
-                    className="flex h-11 w-11 items-center justify-center"
-                    disabled={baseServings <= 1}
-                    onClick={() =>
-                      setBaseServings((prev) => Math.max(1, prev - 1))
-                    }
-                    type="button"
-                  >
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--line)] bg-white text-sm font-medium">
-                      −
-                    </span>
-                  </button>
-                  <span className="min-w-5 text-center font-bold">
-                    {baseServings}
+                <input
+                  type="text"
+                  placeholder="예: 김치찌개"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="h-[38px] w-full rounded-[8px] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-medium text-[#212529] placeholder:text-[#868E96] focus:border-[#2AC1BC] focus:outline-none"
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="mb-1.5 block text-[12px] font-bold leading-[1.4] text-[#868E96]">
+                    조리 시간(분)
                   </span>
-                  <button
-                    aria-label="인분 늘리기"
-                    className="flex h-11 w-11 items-center justify-center"
-                    onClick={() => setBaseServings((prev) => prev + 1)}
-                    type="button"
-                  >
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand)] text-sm font-bold text-white">
-                      +
-                    </span>
-                  </button>
-                </div>
+                  <input
+                    type="number"
+                    min={1}
+                    readOnly
+                    value={20}
+                    className="h-[38px] w-full rounded-[8px] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-medium text-[#212529] focus:border-[#2AC1BC] focus:outline-none"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-[12px] font-bold leading-[1.4] text-[#868E96]">
+                    기준 인분
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={baseServings}
+                    onChange={(e) =>
+                      setBaseServings(Math.max(1, Number(e.target.value) || 1))
+                    }
+                    className="h-[38px] w-full rounded-[8px] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-medium text-[#212529] focus:border-[#2AC1BC] focus:outline-none"
+                  />
+                </label>
               </div>
             </div>
           </section>
 
           {/* Ingredients */}
-          <section>
-            <h2 className="mb-3 text-lg font-bold text-[var(--foreground)]">
-              🥬 재료
-            </h2>
+          <section className="border-b border-[#DEE2E6] bg-white px-4 pb-3 pt-5 md:rounded-[16px] md:border md:border-[var(--line)]">
+            <div className="mb-1 flex items-center justify-between">
+              <h2 className="text-[16px] font-bold leading-[1.3] text-[#212529]">
+                재료
+              </h2>
+              <span className="text-[12px] font-medium text-[#868E96]">
+                {ingredients.length}개 선택됨
+              </span>
+            </div>
             <IngredientList
               ingredients={ingredients}
               onRemove={handleRemoveIngredient}
             />
             <button
-              className="mt-3 w-full rounded-[var(--radius-sm)] border border-[var(--brand)] bg-transparent py-3 text-base font-semibold text-[var(--brand)] hover:bg-[var(--brand-soft)]"
+              className="flex h-[42px] w-full items-center justify-center rounded-[10px] border border-dashed border-[#2AC1BC] bg-[#E6F8F7] text-[13px] font-bold text-[#20A8A4] hover:bg-[#E6F8F7]"
               onClick={() => setModalMode("ingredient-add")}
               type="button"
             >
-              + 재료 추가
+              + 재료 추가하기
             </button>
           </section>
 
           {/* Steps */}
-          <section>
-            <h2 className="mb-3 text-lg font-bold text-[var(--foreground)]">
-              👨‍🍳 조리 과정
-            </h2>
+          <section className="border-b border-[#DEE2E6] bg-white px-4 py-5 md:rounded-[16px] md:border md:border-[var(--line)]">
+            <div className="mb-1 flex items-center justify-between">
+              <h2 className="text-[16px] font-bold leading-[1.3] text-[#212529]">
+                조리법
+              </h2>
+              <button
+                className="text-[13px] font-bold text-[#20A8A4] disabled:opacity-40"
+                disabled={isLoadingMethods}
+                onClick={() => setModalMode("step-add")}
+                type="button"
+              >
+                + 단계
+              </button>
+            </div>
             {isLoadingMethods ? (
-              <p className="text-sm text-[var(--muted)] py-4">
+              <p className="py-4 text-sm text-[#868E96]">
                 조리방법 불러오는 중...
               </p>
             ) : (
               <>
                 <StepList steps={steps} onRemove={handleRemoveStep} />
                 <button
-                  className="mt-3 w-full rounded-[var(--radius-sm)] border border-[var(--brand)] bg-transparent py-3 text-base font-semibold text-[var(--brand)] hover:bg-[var(--brand-soft)]"
+                  className="mt-3 hidden min-h-[44px] w-full items-center justify-center rounded-[10px] border border-[#2AC1BC] bg-white py-3 text-[13px] font-bold text-[#20A8A4] hover:bg-[#E6F8F7] md:flex"
                   onClick={() => setModalMode("step-add")}
                   type="button"
                 >
@@ -679,14 +714,34 @@ export function ManualRecipeCreateScreen({
 
           {saveError && (
             <div
-              className="rounded-[12px] border border-red-300 bg-red-50 p-3 text-sm text-red-700"
+              className="mx-4 rounded-[12px] border border-red-300 bg-red-50 p-3 text-sm text-red-700 md:mx-0"
               role="alert"
             >
               {saveError}
             </div>
           )}
         </div>
+
+        <div className="border-t border-[#DEE2E6] bg-white px-4 py-4 md:hidden">
+          <button
+            className={[
+              "flex min-h-[48px] w-full items-center justify-center rounded-[8px] text-[16px] font-bold",
+              canSave && !isSaving
+                ? "bg-[#2AC1BC] text-white"
+                : "bg-[#DEE2E6] text-[#ADB5BD]",
+            ].join(" ")}
+            disabled={!canSave || isSaving}
+            onClick={handleSave}
+            type="button"
+          >
+            {isSaving ? "저장 중..." : "완료"}
+          </button>
+        </div>
       </div>
+      <Wave1MobileBottomTab
+        ariaLabel="직접 등록 화면 하단 탐색"
+        currentTab="planner"
+      />
 
       {/* Modals */}
       {modalMode === "ingredient-add" && (

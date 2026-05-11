@@ -50,7 +50,9 @@ export default async function MealScreenPage({
         planDate={date}
         slotName={slot ?? ""}
       />
-      <BottomTabs currentTab="planner" />
+      <div className="hidden md:block">
+        <BottomTabs currentTab="planner" />
+      </div>
     </div>
   );
 }
