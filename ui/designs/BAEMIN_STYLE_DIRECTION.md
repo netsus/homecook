@@ -27,7 +27,7 @@ These definitions are the canonical vocabulary for post-`h7` future-screen desig
 
 | Term | Meaning | Implementation rule |
 | --- | --- | --- |
-| `prototype parity` | A screen or surface is allowed to target near-100% visual parity with the Baemin prototype, subject to official docs, domain rules, and authority evidence. | Treat prototype capture as the primary visual reference for the named screen/surface only. Preserve API, DB, status, auth, and read-only contracts. |
+| `prototype parity` | A screen or surface targets prototype visual parity, subject to official docs, domain rules, and authority evidence. For Wave1 mobile `exact-reference-ready` surfaces this means exact 100% parity; for older h7 historical gates it meant near-100%. | Treat prototype capture as the primary visual reference for the named screen/surface only. For Wave1 mobile, apply the 100% parity override below and preserve API, DB, status, auth, and read-only contracts. |
 | `prototype-derived design` | A screen or surface should use the Baemin prototype's visual vocabulary, material, spacing, and mobile app tone, but is not scored as a near-100% parity surface. | Derive local production UI from approved tokens/components and official docs. Do not copy prototype-only layout, behavior, assets, or unsupported features as a contract. |
 | `out of prototype scope` | A prototype element is intentionally excluded from production authority unless a later explicit gate promotes it. | Do not score absence as a visual deficit, and do not introduce the element as production scope without a separate approved gate. |
 
