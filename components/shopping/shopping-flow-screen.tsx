@@ -198,6 +198,7 @@ function selectMealIdsForShoppingServings(
 function shouldUseInlineReview() {
   return (
     typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
     window.matchMedia("(max-width: 767px)").matches
   );
 }
@@ -268,7 +269,10 @@ export function ShoppingFlowScreen({
   const [reviewToast, setReviewToast] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
       return;
     }
 
