@@ -11,6 +11,11 @@ const T = {
   orange: '#FFB347',
   blue: '#74C0FC',
   promo: '#FF0000',
+  cookDoneBg: '#EEF2FF',
+  cookDoneFg: '#4F46E5',
+  mealAddBg: '#FFF1F2',
+  mealAddBorder: '#F9A8B4',
+  mealAddFg: '#BE123C',
 
   ink: '#212529',
   text2: '#495057',
