@@ -14,4 +14,10 @@ pnpm capture:wave1-prototype-lock
 pnpm validate:wave1-prototype-lock
 ```
 
-Wave1 service porting PRs must compare their service screenshots against these reference screenshots and record the visual verdict score, blocker count, and any approved divergence in the PR body.
+Wave1 service porting PRs must compare their service screenshots against these reference screenshots and record parity evidence in the PR body.
+
+2026-05-11 Wave1 mobile 100% parity update:
+
+- For mobile re-porting, these screenshots are exact visual/layout references, not loose scoring aids.
+- The current manifest/validator still contains historical `required_visual_verdict_score: 90` fields and must be upgraded before Phase 5 closeout.
+- Until that tooling upgrade lands, use `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` as the stricter human-facing design authority: unclassified mobile visual differences are blockers.

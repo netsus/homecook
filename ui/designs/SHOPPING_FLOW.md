@@ -2,6 +2,7 @@
 
 > 기준 문서: 화면정의서 v1.5.0 § 11 / 요구사항 v1.6.3 § 1-4, 1-6
 > 생성일: 2026-04-26
+> Wave1 mobile 100% parity note: this surface needs explicit fixed reference confirmation. Once exact-reference-ready, `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersedes older MVP/C2 visual target notes.
 
 ## 레이아웃 와이어프레임
 

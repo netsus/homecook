@@ -1,6 +1,14 @@
 @import "tailwindcss";
 
 :root {
+  /*
+   * Legacy runtime tokens.
+   * Wave1 mobile 100% prototype parity surfaces must use
+   * ui/designs/WAVE1_MOBILE_APP_BASELINE.md as the visual target.
+   * Do not treat these coral/cream values as approved mobile parity
+   * divergences. Scope prototype token changes through the Wave1
+   * app/web responsibility matrix before changing global runtime values.
+   */
   /* ── 색상 토큰 (C2 명랑한 주방 · 2026-03-20 확정) ── */
   --background: #fff9f2;
   --foreground: #1a1a2e;

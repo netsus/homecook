@@ -2,6 +2,7 @@
 
 > 기준 문서: 화면정의서 v1.5.0 §7 / 요구사항기준선 v1.6.3 §1-4 / 유저flow맵 v1.3.0 §③-a
 > 생성일: 2026-04-24
+> Wave1 mobile 100% parity note: fixed prototype reference and `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersede older MVP/C2 visual target notes for mobile re-porting.
 
 ## Layout Summary
 

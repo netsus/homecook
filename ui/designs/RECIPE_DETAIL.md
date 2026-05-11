@@ -2,6 +2,7 @@
 
 > 기준 문서: 화면정의서 v1.2.3 §3 / 요구사항기준선 v1.6.3 §1-2 / 유저flow맵 v1.2.3 / design-tokens C2 명랑한 주방
 > 생성일: 2026-03-21
+> Wave1 mobile 100% parity note: fixed prototype reference and `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersede this document's older C2/h6/h7 visual target notes for mobile re-porting.
 
 ---
 

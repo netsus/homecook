@@ -4,6 +4,7 @@
 > 슬라이스: 14-cook-session-start
 > h8 분류: `prototype-derived design` (Baemin vocabulary/material 사용, screen-level parity 아님)
 > 생성일: 2026-04-29
+> Wave1 mobile 100% parity note: this surface needs explicit fixed reference confirmation. Once exact-reference-ready, `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersedes older h8 prototype-derived visual target notes.
 
 ---
 

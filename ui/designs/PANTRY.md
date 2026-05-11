@@ -21,6 +21,8 @@
 
 ---
 
+> Wave1 mobile 100% parity note: for the current mobile re-port, fixed prototype reference and `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersede h8's older prototype-derived/near-parity visual target language where an exact reference is available.
+
 ## 레이아웃 와이어프레임
 
 ### 기본 상태 -- mobile-baseline (375px)

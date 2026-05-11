@@ -4,6 +4,7 @@
 > 슬라이스: 16-leftovers
 > h8 분류: `prototype-derived design` (Baemin vocabulary/material 사용, screen-level parity 아님)
 > 생성일: 2026-04-29
+> Wave1 mobile 100% parity note: fixed prototype reference and `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersede older h8 prototype-derived visual target notes when this surface is exact-reference-ready.
 
 ---
 

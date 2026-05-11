@@ -3,6 +3,7 @@
 > 기준 문서: 화면정의서 v1.5.1 SS 19-D / 요구사항 v1.6.4 SS 1-9, 1-3 / 유저플로우 v1.3.1 SS 11 / api문서 v1.2.2 SS 13
 > 슬라이스: 17c-settings-account
 > 생성일: 2026-04-30
+> Wave1 mobile 100% parity note: fixed prototype reference and `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersede older MVP/C2 visual target notes for mobile re-porting.
 
 ---
 

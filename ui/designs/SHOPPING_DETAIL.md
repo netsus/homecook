@@ -2,6 +2,7 @@
 
 > 기준 문서: 화면정의서 v1.5.0 § 12 SHOPPING_DETAIL / 요구사항 v1.6.3 § 2-12
 > 생성일: 2026-04-26
+> Wave1 mobile 100% parity note: fixed prototype reference and `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersede older MVP/C2 visual target notes for mobile re-porting.
 
 ## 레이아웃 와이어프레임
 

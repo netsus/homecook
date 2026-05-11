@@ -4,6 +4,7 @@
 > API: v1.2.2 SS 11-4 (GET /pantry/bundles), SS 11-2 (POST /pantry)
 > h8 classification: `prototype-derived design` -- Baemin vocabulary/material 사용, near-100% parity 아님
 > 생성일: 2026-04-28
+> Wave1 mobile 100% parity note: this surface needs explicit fixed reference confirmation. Once exact-reference-ready, `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` supersedes older h8 prototype-derived visual target notes.
 
 ---
 
