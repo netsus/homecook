@@ -21,7 +21,11 @@ export default async function RecipePage({
   const user = hasSupabasePublicEnv() ? await getServerAuthUser() : null;
 
   return (
-    <AppShell currentTab="home" bottomTabsMode="hidden">
+    <AppShell
+      bottomTabsMode="hidden"
+      className="wave1-recipe-shell"
+      currentTab="home"
+    >
       <RecipeDetailScreen
         authError={resolvedSearchParams.authError ?? null}
         initialAuthenticated={Boolean(user)}

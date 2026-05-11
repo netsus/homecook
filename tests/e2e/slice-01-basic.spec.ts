@@ -60,30 +60,32 @@ test.describe("Slice 01 basic flow", () => {
     await expect(
       page.getByRole("heading", { name: "집밥 김치찌개" }),
     ).toBeVisible();
-    await expect(page.getByText("인분에 따라 재료량이 바뀝니다")).toBeVisible();
+    await expect(page.getByText("김치", { exact: true })).toBeVisible();
+    await expect(page.getByText("돼지고기", { exact: true })).toBeVisible();
+    await expect(page.getByText("몇 인분?")).toBeVisible();
     await expect(page.getByRole("button", { name: "플래너에 추가" })).toBeVisible();
     await expect(page.getByRole("button", { name: "공유하기" })).toHaveCount(1);
     await expect(page.getByRole("button", { name: "좋아요 203" })).toBeVisible();
 
-    const likeChipPrecedesIngredients = await page.evaluate(() => {
+    const likeChipPrecedesFirstIngredient = await page.evaluate(() => {
       const likeButton = document.querySelector(
         'button[aria-label="좋아요 203"]',
       );
-      const ingredientHeading = Array.from(document.querySelectorAll("h2, h3, p, span")).find(
-        (element) => element.textContent?.trim() === "인분에 따라 재료량이 바뀝니다",
+      const firstIngredient = Array.from(document.querySelectorAll("li, span")).find(
+        (element) => element.textContent?.trim() === "김치",
       );
 
-      if (!(likeButton instanceof HTMLElement) || !(ingredientHeading instanceof HTMLElement)) {
+      if (!(likeButton instanceof HTMLElement) || !(firstIngredient instanceof HTMLElement)) {
         return false;
       }
 
       return Boolean(
-        likeButton.compareDocumentPosition(ingredientHeading) &
+        likeButton.compareDocumentPosition(firstIngredient) &
           Node.DOCUMENT_POSITION_FOLLOWING,
       );
     });
 
-    expect(likeChipPrecedesIngredients).toBe(true);
+    expect(likeChipPrecedesFirstIngredient).toBe(true);
   });
 
   test("small iOS viewport keeps detail actions above the fold with touch-friendly targets", async ({

@@ -1,9 +1,13 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const PENDING_ACTION_KEY = "homecook.pending-recipe-action";
 const RECIPE_ID = "mock-kimchi-jjigae";
 const RECIPE_PATH = `/recipe/${RECIPE_ID}`;
+
+function isDesktopProject(testInfo: TestInfo) {
+  return testInfo.project.name.includes("desktop");
+}
 
 interface SaveBook {
   id: string;
@@ -201,7 +205,10 @@ async function mockRecipeSaveRoutes(page: Page) {
 }
 
 test.describe("Slice 04 recipe save flow", () => {
-  test("logged-in user can save to an existing recipe book", async ({ page }) => {
+  test("logged-in user can save to an existing recipe book", async (
+    { page },
+    testInfo,
+  ) => {
     await installAuthenticatedSession(page);
     await mockRecipeSaveRoutes(page);
 
@@ -214,7 +221,9 @@ test.describe("Slice 04 recipe save flow", () => {
     const modal = page.getByRole("dialog");
     await expect(modal).toBeVisible();
     await expect(modal.getByRole("heading", { name: "레시피 저장" })).toBeVisible();
-    await expect(modal.getByText("저장할 레시피북을 선택하세요")).toBeVisible();
+    await expect(
+      modal.getByText(isDesktopProject(testInfo) ? "폴더 선택" : "레시피북 다중 선택"),
+    ).toBeVisible();
 
     await modal.getByRole("button", { name: /저장한 레시피/ }).click();
     await modal.getByRole("button", { name: /^저장$/ }).click();
@@ -225,7 +234,10 @@ test.describe("Slice 04 recipe save flow", () => {
     await expect(saveActionButton.getByText("90")).toBeVisible();
   });
 
-  test("logged-in user can quick-create a custom book and save", async ({ page }) => {
+  test("logged-in user can quick-create a custom book and save", async (
+    { page },
+    testInfo,
+  ) => {
     await installAuthenticatedSession(page);
     await mockRecipeSaveRoutes(page);
 
@@ -238,8 +250,14 @@ test.describe("Slice 04 recipe save flow", () => {
     const modal = page.getByRole("dialog");
     await expect(modal).toBeVisible();
 
-    await modal.getByPlaceholder("예: 주말 파티").fill("오늘 저녁");
-    await modal.getByRole("button", { name: "생성" }).click();
+    if (isDesktopProject(testInfo)) {
+      await modal.getByPlaceholder("예: 주말 파티").fill("오늘 저녁");
+      await modal.getByRole("button", { name: /^생성$/ }).click();
+    } else {
+      await modal.getByRole("button", { name: /새 레시피북 만들기/ }).click();
+      await modal.getByPlaceholder("레시피북 이름").fill("오늘 저녁");
+      await modal.getByRole("button", { name: /^추가$/ }).click();
+    }
 
     await expect(modal.getByRole("button", { name: /오늘 저녁/ })).toBeVisible();
     await modal.getByRole("button", { name: /오늘 저녁/ }).click();
@@ -252,7 +270,7 @@ test.describe("Slice 04 recipe save flow", () => {
 
   test("guest user sees login gate and save modal reopens after return-to-action", async ({
     page,
-  }) => {
+  }, testInfo) => {
     await mockRecipeSaveRoutes(page);
 
     await page.goto(RECIPE_PATH);
@@ -287,7 +305,9 @@ test.describe("Slice 04 recipe save flow", () => {
 
     const modal = page.getByRole("dialog");
     await expect(modal.getByRole("heading", { name: "레시피 저장" })).toBeVisible();
-    await expect(modal.getByText("저장할 레시피북을 선택하세요")).toBeVisible();
+    await expect(
+      modal.getByText(isDesktopProject(testInfo) ? "폴더 선택" : "레시피북 다중 선택"),
+    ).toBeVisible();
 
     await expect
       .poll(() =>

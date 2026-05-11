@@ -1,0 +1,69 @@
+{
+  "scope": "wave1-mobile-phase4-recipe-detail",
+  "updated_at": "2026-05-12T04:10:39+09:00",
+  "threshold": 90,
+  "surfaces": [
+    {
+      "surface": "RECIPE_DETAIL",
+      "reference": "ui/designs/reference/wave1-fixed-prototype/mobile-390-recipe-detail.png",
+      "generated": "ui/designs/evidence/wave1-mobile-phase4-recipe-detail/recipe-detail-mobile.png",
+      "score": 93,
+      "verdict": "pass",
+      "category_match": true,
+      "differences": [
+        "Primary mint is slightly darker in MVP CTA and active tab for accessibility contrast.",
+        "Ingredient list starts about 10-15px lower, so the third ingredient row is less visible above the fixed CTA.",
+        "Bottom tab icon paths follow the MVP HOME baseline and are close but not pixel-identical to the prototype icons."
+      ],
+      "suggestions": [
+        "For a follow-up exact-polish pass, reduce tab or ingredient stepper vertical height by about 10px.",
+        "Keep the darker mint unless the accessibility gate accepts prototype mint on white text."
+      ]
+    },
+    {
+      "surface": "RECIPE_DETAIL_PLANNER_ADD_POPUP",
+      "reference": "ui/designs/reference/wave1-fixed-prototype/mobile-390-planner-add-popup.png",
+      "generated": "ui/designs/evidence/wave1-mobile-phase4-recipe-detail/planner-add-popup-mobile.png",
+      "score": 91,
+      "verdict": "pass",
+      "category_match": true,
+      "differences": [
+        "Date chip text uses the current test date instead of the frozen prototype date.",
+        "Footer primary button uses darker accessible teal instead of prototype mint.",
+        "Underlying hero remains visible with MVP accessibility color treatment."
+      ],
+      "suggestions": [
+        "Freeze browser Date in this evidence test if exact date text must match the Phase 3 reference.",
+        "Only lighten the primary button if a11y contrast stays green."
+      ]
+    },
+    {
+      "surface": "RECIPE_DETAIL_SAVE_POPUP",
+      "reference": "ui/designs/reference/wave1-fixed-prototype/mobile-390-save-popup.png",
+      "generated": "ui/designs/evidence/wave1-mobile-phase4-recipe-detail/save-popup-mobile.png",
+      "score": 86,
+      "verdict": "revise",
+      "category_match": true,
+      "differences": [
+        "Prototype shows multi-select state with two selected recipe books; current MVP contract saves one book per API call.",
+        "Sheet top starts about 25-30px higher because rows and footer are taller.",
+        "Confirm copy is '1개 레시피북 반영' instead of prototype's two-book copy."
+      ],
+      "suggestions": [
+        "Do not fake multi-save visually without a matching API contract.",
+        "A later contract-evolution slice can add true multi-save and then update this sheet to exact two-selected parity.",
+        "Compact row spacing by a few pixels if visual parity is prioritized before multi-save is available."
+      ]
+    }
+  ],
+  "overall": {
+    "score": 90,
+    "verdict": "pass-with-classified-divergence",
+    "category_match": true,
+    "reasoning": "Recipe detail and planner sheet now closely match the fixed Wave1 mobile prototype. Save sheet remains intentionally below exact threshold because the prototype assumes multi-select recipebook saving, while the current MVP API contract supports one selected book per save call.",
+    "next_actions": [
+      "Ship this recipe detail group as a small Phase 4 PR.",
+      "Track save modal multi-select as a contract-evolution follow-up before trying to force exact visual parity."
+    ]
+  }
+}

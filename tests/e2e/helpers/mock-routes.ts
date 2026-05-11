@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import type { RecipeDetail } from "@/types/recipe";
 
 import {
   getMockIngredientList,
@@ -31,12 +32,15 @@ function buildRecipeItems(searchUrl: URL) {
 function buildRecipeDetail({
   isLiked = false,
   likeCount = 203,
+  recipeDetail,
 }: {
   isLiked?: boolean;
   likeCount?: number;
+  recipeDetail?: Partial<RecipeDetail>;
 } = {}) {
   return {
     ...MOCK_RECIPE_DETAIL,
+    ...recipeDetail,
     like_count: likeCount,
     user_status: {
       is_liked: isLiked,
@@ -102,9 +106,11 @@ export async function installRecipeDetailRoutes(
   {
     initialLiked = false,
     initialLikeCount = 203,
+    recipeDetail,
   }: {
     initialLiked?: boolean;
     initialLikeCount?: number;
+    recipeDetail?: Partial<RecipeDetail>;
   } = {},
 ) {
   let isLiked = initialLiked;
@@ -131,7 +137,7 @@ export async function installRecipeDetailRoutes(
     await route.fulfill({
       json: {
         success: true,
-        data: buildRecipeDetail({ isLiked, likeCount }),
+        data: buildRecipeDetail({ isLiked, likeCount, recipeDetail }),
         error: null,
       },
     });

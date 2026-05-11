@@ -189,12 +189,12 @@ describe("planner add flow", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog", { name: "플래너에 추가" })).toBeNull();
     });
-    // Toast: exact contract format "N월 D일 아침에 추가됐어요" (D3, no trailing period)
+    // Toast: exact contract format "N월 D일 끼니에 추가됐어요" (D3, no trailing period)
     // Date is today's selectableDates[0], built locale-independently the same way the component does
     const today = new Date();
     const m = today.getMonth() + 1;
     const d = today.getDate();
-    const expectedToast = `${m}월 ${d}일 아침에 추가됐어요`;
+    const expectedToast = `${m}월 ${d}일 저녁에 추가됐어요`;
     await waitFor(() => {
       const statusElements = screen.getAllByRole("status");
       const toast = statusElements.find((el) => el.textContent === expectedToast);
@@ -205,7 +205,7 @@ describe("planner add flow", () => {
     expect(createMeal).toHaveBeenCalledWith(
       expect.objectContaining({
         recipe_id: MOCK_RECIPE_DETAIL.id,
-        column_id: "col-breakfast",
+        column_id: "col-dinner",
         planned_servings: expect.any(Number),
       }),
     );
@@ -229,7 +229,10 @@ describe("planner add flow", () => {
 
     const todayLabel = buildSelectedDateLabel(new Date());
     expect(within(dialog).queryByText(todayLabel)).toBeNull();
-    expect(within(dialog).getAllByText("플래너에 추가")).toHaveLength(2);
+    expect(within(dialog).getByText("플래너에 추가")).toBeTruthy();
+    expect(
+      within(dialog).getByRole("button", { name: "플래너에 추가" }),
+    ).toBeTruthy();
   });
 
   it("auto-dismisses the planner add success toast after a short delay", async () => {
@@ -253,7 +256,7 @@ describe("planner add flow", () => {
     );
 
     const today = new Date();
-    const expectedToast = `${today.getMonth() + 1}월 ${today.getDate()}일 아침에 추가됐어요`;
+    const expectedToast = `${today.getMonth() + 1}월 ${today.getDate()}일 저녁에 추가됐어요`;
 
     await waitFor(() => {
       expect(screen.getByText(expectedToast)).toBeTruthy();
