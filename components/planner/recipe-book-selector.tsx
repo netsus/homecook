@@ -2,12 +2,16 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { fetchRecipeBooks } from "@/lib/api/recipe";
 import type { RecipeBookSummary } from "@/types/recipe";
 
 export interface RecipeBookSelectorProps {
   onBookSelect: (book: RecipeBookSummary) => void;
   onClose: () => void;
+  onBack?: () => void;
+  presentation?: "dialog" | "screen";
+  slotLabel?: string;
 }
 
 type LoadState = "idle" | "loading" | "ready" | "empty" | "error";
@@ -17,15 +21,55 @@ type LoadState = "idle" | "loading" | "ready" | "empty" | "error";
 interface BookCardProps {
   book: RecipeBookSummary;
   onSelect: (book: RecipeBookSummary) => void;
+  presentation?: "dialog" | "screen";
 }
 
-function BookCard({ book, onSelect }: BookCardProps) {
+function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
   const bookTypeLabel = {
     my_added: "직접 추가",
     saved: "저장한 레시피",
     liked: "좋아요",
     custom: "커스텀",
   }[book.book_type];
+  const screenSubtitle =
+    {
+      "저장한 레시피": "좋아요·북마크한 레시피 모음",
+      "평일 저녁 빠른요리": "30분 이내 간단 저녁 메뉴",
+      "주말 한 상 차림": "주말 특별 식사용 레시피",
+    }[book.name] ?? bookTypeLabel;
+  const screenIcon =
+    {
+      "저장한 레시피": "🔖",
+      "평일 저녁 빠른요리": "🍳",
+      "주말 한 상 차림": "🍽️",
+    }[book.name] ?? (book.book_type === "liked" ? "💚" : book.book_type === "custom" ? "🍳" : "🔖");
+
+  if (presentation === "screen") {
+    return (
+      <button
+        className="mb-2 flex min-h-[74px] w-full items-center gap-3 rounded-[12px] border border-[#DEE2E6] bg-white px-4 py-3.5 text-left"
+        onClick={() => onSelect(book)}
+        type="button"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#E6F8F7] text-[20px]">
+          {screenIcon}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-[15px] font-bold text-[#212529]">{book.name}</span>
+            <span className="shrink-0 text-[12px] font-extrabold text-[#20A8A4]">
+              {book.recipe_count}개
+            </span>
+          </span>
+          <span className="mt-0.5 block text-[12px] text-[#868E96]">{screenSubtitle}</span>
+        </span>
+        <span className="text-[22px] text-[#ADB5BD]" aria-hidden="true">
+          ›
+        </span>
+        <span className="sr-only">선택</span>
+      </button>
+    );
+  }
 
   return (
     <div className="rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
@@ -50,7 +94,12 @@ function BookCard({ book, onSelect }: BookCardProps) {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export function RecipeBookSelector({ onBookSelect, onClose }: RecipeBookSelectorProps) {
+export function RecipeBookSelector({
+  onBookSelect,
+  onClose,
+  onBack,
+  presentation = "dialog",
+}: RecipeBookSelectorProps) {
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [books, setBooks] = useState<RecipeBookSummary[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -80,6 +129,72 @@ export function RecipeBookSelector({ onBookSelect, onClose }: RecipeBookSelector
   useEffect(() => {
     loadBooks();
   }, [loadBooks]);
+
+  const content = (
+    <>
+      {loadState === "loading" && (
+        <div className="py-8 text-center text-sm text-[var(--muted)]" aria-busy="true">
+          레시피북 불러오는 중...
+        </div>
+      )}
+
+      {loadState === "empty" && (
+        <div className="py-8 text-center">
+          <p className="text-base font-semibold text-[var(--foreground)]">
+            레시피북이 없어요
+          </p>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            레시피를 저장하면 레시피북이 생성돼요.
+          </p>
+        </div>
+      )}
+
+      {loadState === "error" && (
+        <div
+          className="rounded-[12px] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
+          role="alert"
+        >
+          {errorMessage}
+        </div>
+      )}
+
+      {loadState === "ready" && books.length > 0 && (
+        <div className={presentation === "screen" ? "" : "space-y-3"}>
+          {books.map((book) => (
+            <BookCard
+              key={book.id}
+              book={book}
+              onSelect={onBookSelect}
+              presentation={presentation}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
+
+  if (presentation === "screen") {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
+        <div className="flex min-h-[52px] items-center border-b border-[#DEE2E6] bg-white px-2">
+          <button
+            aria-label="뒤로"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
+            onClick={onBack ?? onClose}
+            type="button"
+          >
+            ‹
+          </button>
+          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
+            레시피북에서 추가
+          </h1>
+          <div className="h-11 w-11 shrink-0" aria-hidden="true" />
+        </div>
+        <div className="p-4 pb-[112px]">{content}</div>
+        <Wave1MobileBottomTab ariaLabel="레시피북 선택 하단 탭" currentTab="planner" />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -123,41 +238,7 @@ export function RecipeBookSelector({ onBookSelect, onClose }: RecipeBookSelector
           </button>
         </div>
 
-        <div className="mt-4 max-h-[60vh] overflow-y-auto">
-          {loadState === "loading" && (
-            <div className="py-8 text-center text-sm text-[var(--muted)]" aria-busy="true">
-              레시피북 불러오는 중...
-            </div>
-          )}
-
-          {loadState === "empty" && (
-            <div className="py-8 text-center">
-              <p className="text-base font-semibold text-[var(--foreground)]">
-                레시피북이 없어요
-              </p>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                레시피를 저장하면 레시피북이 생성돼요.
-              </p>
-            </div>
-          )}
-
-          {loadState === "error" && (
-            <div
-              className="rounded-[12px] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
-              role="alert"
-            >
-              {errorMessage}
-            </div>
-          )}
-
-          {loadState === "ready" && books.length > 0 && (
-            <div className="space-y-3">
-              {books.map((book) => (
-                <BookCard key={book.id} book={book} onSelect={onBookSelect} />
-              ))}
-            </div>
-          )}
-        </div>
+        <div className="mt-4 max-h-[60vh] overflow-y-auto">{content}</div>
       </div>
     </div>
   );

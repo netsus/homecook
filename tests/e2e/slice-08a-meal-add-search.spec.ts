@@ -57,6 +57,31 @@ function parseLoginReturnToAction(loginUrl: string) {
   return new URL(next!, E2E_APP_ORIGIN);
 }
 
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1024) < 768;
+}
+
+async function openMobileSearchPicker(page: Page) {
+  if (!isMobileViewport(page)) return;
+
+  await page.getByTestId("menu-add-option-search").click();
+  await expect(page.getByRole("heading", { name: "검색으로 추가" })).toBeVisible();
+}
+
+async function expectServingsDialog(page: Page) {
+  if (isMobileViewport(page)) {
+    await expect(page.getByRole("dialog", { name: "플래너에 추가" })).toBeVisible();
+    return;
+  }
+
+  await expect(page.locator("text=계획 인분 입력")).toBeVisible();
+}
+
+async function clickServingsConfirm(page: Page) {
+  const label = isMobileViewport(page) ? "추가하기" : "추가";
+  await page.getByRole("button", { exact: true, name: label }).click();
+}
+
 function buildRecipe(overrides: Partial<RecipeCardItem> = {}): RecipeCardItem {
   return {
     id: "recipe-1",
@@ -129,17 +154,24 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     await page.goto(MENU_ADD_URL);
 
     await expect(page.locator("h1:has-text('식사 추가')")).toBeVisible();
-    await expect(page.locator('input[aria-label="레시피 검색"]')).toBeVisible();
     await expect(page.locator("button:has-text('유튜브')")).toBeEnabled();
     await expect(page.locator("button:has-text('레시피북')")).toBeEnabled();
     await expect(page.locator("button:has-text('남은요리')")).toBeEnabled();
     await expect(page.locator("button:has-text('팬트리')")).toBeEnabled();
+
+    if (isMobileViewport(page)) {
+      await page.getByTestId("menu-add-option-search").click();
+      await expect(page.locator('input[aria-label="레시피 검색"]')).toBeVisible();
+    } else {
+      await expect(page.locator('input[aria-label="레시피 검색"]')).toBeVisible();
+    }
   });
 
   test("shows empty state when search returns no results", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installRecipeSearchRoute(page, []);
     await page.goto(MENU_ADD_URL);
+    await openMobileSearchPicker(page);
 
     const searchInput = page.locator('input[aria-label="레시피 검색"]');
     await searchInput.fill("존재하지않는레시피");
@@ -156,6 +188,7 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     ];
     await installRecipeSearchRoute(page, recipes);
     await page.goto(MENU_ADD_URL);
+    await openMobileSearchPicker(page);
 
     const searchInput = page.locator('input[aria-label="레시피 검색"]');
     await searchInput.fill("김치");
@@ -172,6 +205,7 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     const recipes = [buildRecipe({ id: "r1", title: "김치찌개", base_servings: 2 })];
     await installRecipeSearchRoute(page, recipes);
     await page.goto(MENU_ADD_URL);
+    await openMobileSearchPicker(page);
 
     const searchInput = page.locator('input[aria-label="레시피 검색"]');
     await searchInput.fill("김치");
@@ -180,11 +214,15 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     await expect(page.locator("text=김치찌개")).toBeVisible();
     await page.locator("button:has-text('선택')").first().click();
 
-    await expect(page.locator("text=계획 인분 입력")).toBeVisible();
-    await expect(page.locator("text=김치찌개 — 기본 2인분")).toBeVisible();
+    await expectServingsDialog(page);
+    if (isMobileViewport(page)) {
+      await expect(page.locator("text=기본 2인분 · 선택 2인분")).toBeVisible();
+    } else {
+      await expect(page.locator("text=김치찌개 — 기본 2인분")).toBeVisible();
+    }
 
     await page.locator("button:has-text('취소')").click();
-    await expect(page.locator("text=계획 인분 입력")).not.toBeVisible();
+    await expect(page.getByRole("dialog")).not.toBeVisible();
   });
 
   // ── Meal creation ──────────────────────────────────────────────────────────
@@ -207,6 +245,7 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     await installMealCreateRoute(page, createdMeal);
 
     await page.goto(MENU_ADD_URL);
+    await openMobileSearchPicker(page);
 
     const searchInput = page.locator('input[aria-label="레시피 검색"]');
     await searchInput.fill("김치");
@@ -215,12 +254,12 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     await expect(page.locator("text=김치찌개")).toBeVisible();
     await page.locator("button:has-text('선택')").first().click();
 
-    await expect(page.locator("text=계획 인분 입력")).toBeVisible();
+    await expectServingsDialog(page);
 
     // Increase servings to 3
     await page.locator('button[aria-label="인분 늘리기"]').click();
 
-    await page.getByRole("button", { exact: true, name: "추가" }).click();
+    await clickServingsConfirm(page);
 
     // Should navigate back to MEAL_SCREEN
     await page.waitForURL(new RegExp(`/planner/${PLAN_DATE}/${COLUMN_ID}`));

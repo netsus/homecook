@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import React, { useCallback, useEffect, useState } from "react";
 
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { fetchRecipeBookRecipes } from "@/lib/api/recipe";
 import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
@@ -14,6 +16,8 @@ export interface RecipeBookDetailPickerProps {
   onServingsConfirm: (servings: number) => void;
   onServingsCancel: () => void;
   onBack: () => void;
+  presentation?: "dialog" | "screen";
+  slotLabel?: string;
 }
 
 type LoadState = "idle" | "loading" | "ready" | "empty" | "error";
@@ -23,9 +27,50 @@ type LoadState = "idle" | "loading" | "ready" | "empty" | "error";
 interface RecipeCardProps {
   recipe: RecipeBookRecipeItem;
   onSelect: (recipe: RecipeBookRecipeItem) => void;
+  presentation?: "dialog" | "screen";
 }
 
-function RecipeCard({ recipe, onSelect }: RecipeCardProps) {
+function RecipeThumb({ recipe }: { recipe: RecipeBookRecipeItem }) {
+  if (recipe.thumbnail_url) {
+    return (
+      <Image
+        alt=""
+        className="h-full w-full object-cover"
+        height={120}
+        src={recipe.thumbnail_url}
+        unoptimized
+        width={160}
+      />
+    );
+  }
+
+  return <span className="text-[34px]" aria-hidden="true">🍳</span>;
+}
+
+function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardProps) {
+  if (presentation === "screen") {
+    return (
+      <button
+        className="overflow-hidden rounded-[12px] border border-[#DEE2E6] bg-white text-left"
+        onClick={() => onSelect(recipe)}
+        type="button"
+      >
+        <div className="flex aspect-[4/3] w-full items-center justify-center bg-[#E6F8F7]">
+          <RecipeThumb recipe={recipe} />
+        </div>
+        <div className="p-2.5">
+          <h3 className="line-clamp-2 text-[13px] font-bold text-[#212529]">
+            {recipe.title}
+          </h3>
+          <p className="mt-0.5 truncate text-[11px] text-[#868E96]">
+            {recipe.tags.slice(0, 2).join(" · ") || "저장한 레시피"}
+          </p>
+          <span className="sr-only">선택</span>
+        </div>
+      </button>
+    );
+  }
+
   return (
     <div className="rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
       <h3 className="line-clamp-2 text-2xl font-bold tracking-[-0.02em] text-[var(--foreground)]">
@@ -61,15 +106,94 @@ interface ServingsModalProps {
   isCreating: boolean;
   onConfirm: (servings: number) => void;
   onCancel: () => void;
+  presentation?: "dialog" | "screen";
+  slotLabel?: string;
 }
 
-function ServingsModal({ recipe, isCreating, onConfirm, onCancel }: ServingsModalProps) {
+function ServingsModal({
+  recipe,
+  isCreating,
+  onConfirm,
+  onCancel,
+  presentation = "dialog",
+  slotLabel,
+}: ServingsModalProps) {
   const [servings, setServings] = useState(2);
 
   const handleConfirm = useCallback(() => {
     if (servings < 1) return;
     onConfirm(servings);
   }, [servings, onConfirm]);
+
+  if (presentation === "screen") {
+    return (
+      <div className="fixed inset-0 z-50 flex items-end bg-black/42" onClick={onCancel}>
+        <div
+          aria-labelledby="servings-modal-title"
+          aria-modal="true"
+          className="w-full rounded-t-[20px] bg-white px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)]"
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+        >
+          <div className="flex justify-center pb-4">
+            <div className="h-1 w-9 rounded-full bg-[#DEE2E6]" />
+          </div>
+          <h2 className="text-[20px] font-bold text-[#212529]" id="servings-modal-title">
+            플래너에 추가
+          </h2>
+          <p className="mt-1 text-[13px] text-[#868E96]">
+            {slotLabel ? `${slotLabel}에 추가할 인분을 선택해주세요.` : "추가할 인분을 선택해주세요."}
+          </p>
+          <div className="mt-4 flex items-center gap-3 rounded-[12px] border border-[#DEE2E6] bg-[#F8F9FA] p-2.5">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-[#E6F8F7]">
+              <RecipeThumb recipe={recipe} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] font-extrabold text-[#212529]">
+                {recipe.title}
+              </span>
+              <span className="mt-0.5 block text-[11px] text-[#868E96]">
+                선택 {servings}인분
+              </span>
+            </span>
+          </div>
+          {slotLabel ? (
+            <div className="mt-3 rounded-[12px] border border-[#DEE2E6] bg-[#F8F9FA] px-3.5 py-3 text-[14px] font-bold text-[#495057]">
+              {slotLabel}
+            </div>
+          ) : null}
+          <p className="mt-3 text-[13px] font-bold text-[#495057]">인분</p>
+          <div className="mt-3 [&>div]:w-full">
+            <NumericStepperCompact
+              disabled={isCreating}
+              min={1}
+              onChange={setServings}
+              unit="인분"
+              value={servings}
+            />
+          </div>
+          <div className="mt-6 flex gap-3">
+            <button
+              className="h-11 flex-1 rounded-[10px] border border-[#DEE2E6] bg-white text-[14px] font-bold text-[#495057]"
+              disabled={isCreating}
+              onClick={onCancel}
+              type="button"
+            >
+              취소
+            </button>
+            <button
+              className="h-11 flex-1 rounded-[10px] bg-[#2AC1BC] text-[14px] font-bold text-white disabled:opacity-50"
+              disabled={isCreating || servings < 1}
+              onClick={handleConfirm}
+              type="button"
+            >
+              {isCreating ? "추가 중..." : "추가하기"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -132,6 +256,8 @@ export function RecipeBookDetailPicker({
   onServingsConfirm,
   onServingsCancel,
   onBack,
+  presentation = "dialog",
+  slotLabel,
 }: RecipeBookDetailPickerProps) {
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [recipes, setRecipes] = useState<RecipeBookRecipeItem[]>([]);
@@ -162,6 +288,82 @@ export function RecipeBookDetailPicker({
   useEffect(() => {
     loadRecipes();
   }, [loadRecipes]);
+
+  const content = (
+    <>
+      {loadState === "loading" && (
+        <div className="py-8 text-center text-sm text-[var(--muted)]" aria-busy="true">
+          레시피 불러오는 중...
+        </div>
+      )}
+
+      {loadState === "empty" && (
+        <div className="py-8 text-center">
+          <p className="text-base font-semibold text-[var(--foreground)]">
+            레시피가 없어요
+          </p>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            레시피를 저장하면 이 레시피북에 추가돼요.
+          </p>
+        </div>
+      )}
+
+      {loadState === "error" && (
+        <div
+          className="rounded-[12px] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
+          role="alert"
+        >
+          {errorMessage}
+        </div>
+      )}
+
+      {loadState === "ready" && recipes.length > 0 && (
+        <div className={presentation === "screen" ? "grid grid-cols-2 gap-2.5" : "space-y-3"}>
+          {recipes.map((recipe) => (
+            <RecipeCard
+              key={recipe.recipe_id}
+              onSelect={onRecipeSelect}
+              presentation={presentation}
+              recipe={recipe}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
+
+  if (presentation === "screen") {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
+        <div className="flex min-h-[52px] items-center border-b border-[#DEE2E6] bg-white px-2">
+          <button
+            aria-label="뒤로"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
+            onClick={onBack}
+            type="button"
+          >
+            ‹
+          </button>
+          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
+            {book.name}
+          </h1>
+          <div className="h-11 w-11 shrink-0" aria-hidden="true" />
+        </div>
+        <div className="p-3 pb-[112px]">{content}</div>
+        {selectedRecipe && (
+          <ServingsModal
+            isCreating={isCreating}
+            onCancel={onServingsCancel}
+            onConfirm={onServingsConfirm}
+            presentation="screen"
+            recipe={selectedRecipe}
+            slotLabel={slotLabel}
+          />
+        )}
+        <Wave1MobileBottomTab ariaLabel="레시피북 상세 하단 탭" currentTab="planner" />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -206,41 +408,7 @@ export function RecipeBookDetailPicker({
           </h2>
         </div>
 
-        <div className="mt-4 max-h-[60vh] overflow-y-auto">
-          {loadState === "loading" && (
-            <div className="py-8 text-center text-sm text-[var(--muted)]" aria-busy="true">
-              레시피 불러오는 중...
-            </div>
-          )}
-
-          {loadState === "empty" && (
-            <div className="py-8 text-center">
-              <p className="text-base font-semibold text-[var(--foreground)]">
-                레시피가 없어요
-              </p>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                레시피를 저장하면 이 레시피북에 추가돼요.
-              </p>
-            </div>
-          )}
-
-          {loadState === "error" && (
-            <div
-              className="rounded-[12px] border border-red-300 bg-red-50 p-4 text-sm text-red-700"
-              role="alert"
-            >
-              {errorMessage}
-            </div>
-          )}
-
-          {loadState === "ready" && recipes.length > 0 && (
-            <div className="space-y-3">
-              {recipes.map((recipe) => (
-                <RecipeCard key={recipe.recipe_id} onSelect={onRecipeSelect} recipe={recipe} />
-              ))}
-            </div>
-          )}
-        </div>
+        <div className="mt-4 max-h-[60vh] overflow-y-auto">{content}</div>
       </div>
 
       {selectedRecipe && (
@@ -248,6 +416,7 @@ export function RecipeBookDetailPicker({
           isCreating={isCreating}
           onCancel={onServingsCancel}
           onConfirm={onServingsConfirm}
+          presentation={presentation}
           recipe={selectedRecipe}
         />
       )}
