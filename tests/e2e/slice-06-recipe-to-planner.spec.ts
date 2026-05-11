@@ -38,6 +38,10 @@ function formatLocalDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) < 768;
+}
+
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   await page.addInitScript(
     ({ key, state }) => {
@@ -223,7 +227,11 @@ test.describe("Slice 06 recipe-to-planner", () => {
 
     await page.goto("/planner");
 
-    await expect(page.getByRole("heading", { name: "식단 플래너" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: isMobileViewport(page) ? "플래너" : "식단 플래너",
+      }),
+    ).toBeVisible();
     await expect(page.getByText(RECIPE_TITLE)).toBeVisible();
   });
 

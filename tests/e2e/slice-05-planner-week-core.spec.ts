@@ -114,17 +114,29 @@ async function centerWeekStrip(page: Page) {
   });
 }
 
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) < 768;
+}
+
 test.describe("Slice 05 planner week core", () => {
-  test("authenticated user sees dynamic column day cards (Wave1: no emoji, no status badges, 2-col CTA)", async ({ page }) => {
+  test("authenticated user sees dynamic column day cards (Wave1 mobile shell, no emoji, no status badges)", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockPlannerRoutes(page);
 
     await page.goto("/planner");
 
+    const isMobile = isMobileViewport(page);
     const firstDayCard = page.getByLabel(/식단 카드$/).first();
 
-    await expect(page.getByRole("heading", { name: "식단 플래너" })).toBeVisible();
-    await expect(page.getByText("현재 범위")).toHaveCount(1);
+    await expect(
+      page.getByRole("heading", { name: isMobile ? "플래너" : "식단 플래너" }),
+    ).toBeVisible();
+    if (isMobile) {
+      await expect(page.getByText(/음식 계획 중/)).toBeVisible();
+      await expect(page.getByText("현재 범위")).toHaveCount(0);
+    } else {
+      await expect(page.getByText("현재 범위")).toHaveCount(1);
+    }
     await expect(page.getByText("화면 상태")).toHaveCount(0);
     // Wave1: week nav buttons visible on all viewports
     await expect(page.getByRole("button", { name: "이전 주" })).toBeVisible();
@@ -141,10 +153,17 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByLabel("식사 등록 완료")).toHaveCount(0);
     await expect(page.getByLabel("장보기 완료")).toHaveCount(0);
     await expect(page.getByLabel("요리 완료")).toHaveCount(0);
-    // Wave1: 2-col CTA (장보기 + 남은요리), 요리하기 removed
+    // Wave1: mobile uses a floating shopping CTA; desktop keeps the existing helper links.
     await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveAttribute("href", "/shopping/flow");
     await expect(page.getByRole("link", { name: "요리하기" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "남은요리" })).toHaveAttribute("href", "/leftovers");
+    if (isMobile) {
+      const shoppingLink = page.getByRole("link", { name: "장보기", exact: true });
+      await expect(shoppingLink).toHaveClass(/fixed/);
+      await expect(page.getByRole("navigation", { name: "플래너 하단 탭" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
+    } else {
+      await expect(page.getByRole("link", { name: "남은요리" })).toHaveAttribute("href", "/leftovers");
+    }
     await expect(page.getByRole("button", { name: "컬럼 추가" })).toHaveCount(0);
 
     const pageHasHorizontalOverflow = await page.evaluate(() => {
@@ -160,6 +179,7 @@ test.describe("Slice 05 planner week core", () => {
 
     await page.goto("/planner");
     await centerWeekStrip(page);
+    const isMobile = isMobileViewport(page);
 
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(0);
     const initialRange = tracker.requestedRanges[0];
@@ -168,13 +188,17 @@ test.describe("Slice 05 planner week core", () => {
     await page.getByRole("button", { name: "다음 주" }).click();
 
     await expect.poll(() => tracker.requestedRanges.length).toBeGreaterThan(1);
-    // Wave1: renamed from "이번주로 가기" to "이번주로"
-    await expect(page.getByRole("button", { name: "이번주로" })).toBeVisible();
-    await page.getByRole("button", { name: "이번주로" }).click();
-    await expect.poll(() => tracker.requestedRanges.at(-1)).toBe(initialRange);
+    if (isMobile) {
+      await expect(page.getByRole("button", { name: "이번주로" })).toHaveCount(0);
+    } else {
+      // Wave1 desktop preserve: renamed from "이번주로 가기" to "이번주로"
+      await expect(page.getByRole("button", { name: "이번주로" })).toBeVisible();
+      await page.getByRole("button", { name: "이번주로" }).click();
+      await expect.poll(() => tracker.requestedRanges.at(-1)).toBe(initialRange);
+    }
   });
 
-  test("planner CTA buttons expose shopping and leftover as 2-column links (Wave1: 요리하기 removed)", async ({ page }) => {
+  test("planner CTA actions match the Wave1 mobile shell and preserve desktop links", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await mockPlannerRoutes(page);
 
@@ -182,7 +206,13 @@ test.describe("Slice 05 planner week core", () => {
 
     await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveAttribute("href", "/shopping/flow");
     await expect(page.getByRole("link", { name: "요리하기" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "남은요리" })).toHaveAttribute("href", "/leftovers");
+    if (isMobileViewport(page)) {
+      await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveClass(/fixed/);
+      await expect(page.getByRole("navigation", { name: "플래너 하단 탭" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
+    } else {
+      await expect(page.getByRole("link", { name: "남은요리" })).toHaveAttribute("href", "/leftovers");
+    }
   });
 
   test("guest user sees unauthorized state on planner route", async ({ page }) => {
@@ -204,7 +234,11 @@ test.describe("Slice 05 planner week core", () => {
     await setAuthOverride(page, "authenticated");
     await page.goto("/planner");
 
-    await expect(page.getByRole("heading", { name: "식단 플래너" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: isMobileViewport(page) ? "플래너" : "식단 플래너",
+      }),
+    ).toBeVisible();
     await expect(page.getByText("김치찌개")).toBeVisible();
   });
 

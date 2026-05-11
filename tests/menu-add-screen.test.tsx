@@ -95,6 +95,15 @@ describe("MenuAddScreen", () => {
     expect(screen.queryByText("다른 방법으로 추가")).toBeNull();
   });
 
+  it("opens the requested picker when source is provided by the planner sheet", async () => {
+    vi.mocked(leftoversApi.fetchLeftovers).mockResolvedValue({ items: [] });
+
+    render(<MenuAddScreen {...DEFAULT_PROPS} initialSource="leftover" />);
+
+    expect(await screen.findByRole("dialog", { name: "남은요리 선택" })).toBeTruthy();
+    expect(leftoversApi.fetchLeftovers).toHaveBeenCalledWith("leftover");
+  });
+
   it("renders each option with emoji, label, and subtitle (Wave1)", () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 

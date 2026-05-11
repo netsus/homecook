@@ -11,6 +11,10 @@ async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   );
 }
 
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) < 768;
+}
+
 async function mockCookingReadyRoutes(
   page: Page,
   options: { empty?: boolean } = {},
@@ -231,6 +235,11 @@ test.describe("Slice 14 cook session start", () => {
 
     await expect(page.getByRole("link", { name: "요리하기" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "장보기", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "남은요리" })).toBeVisible();
+    if (isMobileViewport(page)) {
+      await expect(page.getByRole("navigation", { name: "플래너 하단 탭" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
+    } else {
+      await expect(page.getByRole("link", { name: "남은요리" })).toBeVisible();
+    }
   });
 });

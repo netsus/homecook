@@ -92,9 +92,12 @@ export function isPlannerApiError(error: unknown): error is PlannerApiError {
 
 export function createDefaultPlannerRange(baseDate = new Date()) {
   const startDate = new Date(baseDate);
+  const daysSinceMonday = (startDate.getDay() + 6) % 7;
+  startDate.setHours(0, 0, 0, 0);
+  startDate.setDate(startDate.getDate() - daysSinceMonday);
 
-  const endDate = new Date(baseDate);
-  endDate.setDate(endDate.getDate() + 6);
+  const endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + 6);
 
   return {
     startDate: formatDateKey(startDate),

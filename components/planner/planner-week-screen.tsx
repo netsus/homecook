@@ -8,6 +8,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { ContentState } from "@/components/shared/content-state";
+import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
@@ -21,6 +22,11 @@ import { usePlannerStore } from "@/stores/planner-store";
 import type { PlannerMealData } from "@/types/planner";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
+type MealAddSheetState = {
+  columnId: string;
+  dateKey: string;
+  slotName: string;
+} | null;
 
 export interface PlannerWeekScreenProps {
   initialAuthenticated?: boolean;
@@ -77,6 +83,16 @@ function formatRangeLabel(startDate: string, endDate: string) {
   return `${formatDateLabel(startDate)} ~ ${formatDateLabel(endDate)}`;
 }
 
+function formatCompactDateLabel(dateKey: string) {
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
+
+  return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
+}
+
+function formatMobileWeekRangeLabel(startDate: string, endDate: string) {
+  return `${formatDateLabel(startDate)} - ${formatDateLabel(endDate)}`;
+}
+
 function getRangeContextLabel(startDate: string, defaultStartDate: string) {
   if (startDate === defaultStartDate) {
     return "이번 주";
@@ -100,6 +116,7 @@ function buildMealMap(meals: PlannerMealData[]) {
 export function PlannerWeekScreen({
   initialAuthenticated = false,
 }: PlannerWeekScreenProps) {
+  const isDesktopViewport = useDesktopViewport();
   const rangeStartDate = usePlannerStore((state) => state.rangeStartDate);
   const rangeEndDate = usePlannerStore((state) => state.rangeEndDate);
   const columns = usePlannerStore((state) => state.columns);
@@ -114,6 +131,7 @@ export function PlannerWeekScreen({
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
+  const [mealAddSheet, setMealAddSheet] = useState<MealAddSheetState>(null);
 
   const dateKeys = useMemo(
     () => buildDateKeys(rangeStartDate, rangeEndDate),
@@ -422,6 +440,58 @@ export function PlannerWeekScreen({
     transition: "opacity 180ms ease",
   } as const;
 
+  function buildMenuAddQuery({
+    columnId,
+    dateKey,
+    slotName,
+  }: {
+    columnId: string;
+    dateKey: string;
+    slotName: string;
+  }) {
+    const params = new URLSearchParams({
+      columnId,
+      date: dateKey,
+      slot: slotName,
+    });
+
+    return params.toString();
+  }
+
+  function openMealAddSheet(dateKey: string, column: { id: string; name: string }) {
+    setMealAddSheet({
+      columnId: column.id,
+      dateKey,
+      slotName: column.name,
+    });
+  }
+
+  function closeMealAddSheet() {
+    setMealAddSheet(null);
+  }
+
+  function getMealAddHref(target: "search" | "recipebook" | "pantry" | "leftover" | "manual" | "youtube") {
+    if (!mealAddSheet) {
+      return "/planner";
+    }
+
+    const baseQuery = buildMenuAddQuery(mealAddSheet);
+
+    if (target === "manual") {
+      return `/menu/add/manual?${baseQuery}`;
+    }
+
+    if (target === "youtube") {
+      return `/menu/add/youtube?${baseQuery}`;
+    }
+
+    if (target === "recipebook" || target === "pantry" || target === "leftover") {
+      return `/menu-add?${baseQuery}&source=${target}`;
+    }
+
+    return `/menu-add?${baseQuery}`;
+  }
+
   if (authState === "checking") {
     return (
       <ContentState
@@ -462,6 +532,389 @@ export function PlannerWeekScreen({
           </Link>
         </div>
       </ContentState>
+    );
+  }
+
+  if (!isDesktopViewport) {
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] pb-[128px] text-[#212529]">
+        <div className="sticky top-0 z-30 flex min-h-[52px] items-center border-b border-[#DEE2E6] bg-white px-4">
+          <div className="min-w-8 flex-1" aria-hidden="true" />
+          <h1 className="flex-1 text-center text-[18px] font-bold leading-none text-[#212529]">
+            플래너
+          </h1>
+          <div className="min-w-8 flex-1" aria-hidden="true" />
+        </div>
+
+        <section className="border-b border-[#F1F3F5] bg-white px-5 py-4">
+          <p className="mb-3 text-[20px] font-bold leading-[1.25] text-[#212529]">
+            {mealStats.total}개 음식 계획 중
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-[10px] bg-[#E8F8E0] p-3">
+              <p className="text-[11px] font-semibold text-[#51CF66]">요리 완료</p>
+              <p className="mt-0.5 text-[20px] font-bold leading-none text-[#51CF66]">
+                {mealStats.cookDone}개
+              </p>
+            </div>
+            <div className="rounded-[10px] bg-[#FFEBEB] p-3">
+              <p className="text-[11px] font-semibold text-[#FF6B6B]">장보기 완료</p>
+              <p className="mt-0.5 text-[20px] font-bold leading-none text-[#FF6B6B]">
+                {mealStats.shoppingDone}개
+              </p>
+            </div>
+            <div className="rounded-[10px] bg-[#F8F9FA] p-3">
+              <p className="text-[11px] font-semibold text-[#495057]">등록</p>
+              <p className="mt-0.5 text-[20px] font-bold leading-none text-[#212529]">
+                {mealStats.registered}개
+              </p>
+            </div>
+          </div>
+          {shoppingListLinks.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {shoppingListLinks.map((shoppingList) => (
+                <Link
+                  className="inline-flex min-h-9 items-center justify-center rounded-full border border-[#2AC1BC] bg-[#E6F8F7] px-3 text-[12px] font-bold text-[#007A76]"
+                  href={`/shopping/lists/${shoppingList.id}`}
+                  key={shoppingList.id}
+                  style={{ color: "#007A76" }}
+                >
+                  {shoppingList.title} 보기
+                </Link>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section
+          className="sticky top-[52px] z-20 border-b border-[#DEE2E6] bg-white px-3.5 py-3"
+          data-testid="planner-week-shell"
+        >
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <button
+              aria-label="이전 주"
+              className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[#DEE2E6] bg-[#F8F9FA] text-[17px] leading-none text-[#495057]"
+              onClick={() => runPlannerAction(shiftRange(-RANGE_SHIFT_DAYS))}
+              type="button"
+            >
+              ‹
+            </button>
+            <p className="min-w-0 flex-1 truncate text-center text-[14px] font-semibold text-[#212529]">
+              {rangeContextLabel} {formatMobileWeekRangeLabel(rangeStartDate, rangeEndDate)}
+            </p>
+            <button
+              aria-label="다음 주"
+              className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[#DEE2E6] bg-[#F8F9FA] text-[17px] leading-none text-[#495057]"
+              onClick={() => runPlannerAction(shiftRange(RANGE_SHIFT_DAYS))}
+              type="button"
+            >
+              ›
+            </button>
+          </div>
+          <p className="sr-only" id="planner-week-strip-hint">
+            주간 날짜 스트립을 좌우로 넘기면 이전 주 또는 다음 주로 이동할 수 있어요.
+          </p>
+          <div
+            aria-describedby="planner-week-strip-hint"
+            aria-busy={isRefreshing}
+            aria-label="주간 날짜 스트립"
+            className="scrollbar-hide overflow-x-auto overscroll-x-contain snap-x snap-mandatory touch-pan-x"
+            data-testid="planner-week-strip-viewport"
+            onKeyDown={handleWeekStripKeyDown}
+            onMouseDown={handleWeekStripInteractionStart}
+            onMouseLeave={handleWeekStripInteractionEnd}
+            onMouseUp={handleWeekStripInteractionEnd}
+            onScroll={handleWeekStripScroll}
+            onTouchCancel={handleWeekStripInteractionEnd}
+            onTouchEnd={handleWeekStripInteractionEnd}
+            onTouchStart={handleWeekStripInteractionStart}
+            ref={weekStripViewportRef}
+            tabIndex={0}
+          >
+            <div className="flex">
+              {weekPages.map((page) => (
+                <section
+                  className="min-w-full snap-center snap-always"
+                  data-testid={`planner-week-strip-page-${page.key}`}
+                  key={page.key}
+                >
+                  <ol className="grid grid-cols-7 gap-1">
+                    {page.dateKeys.map((dateKey) => {
+                      const isActive = page.key === "current" && dateKey === todayKey;
+
+                      return (
+                        <li className="list-none" key={dateKey}>
+                          <button
+                            className={[
+                              "flex h-[52px] w-full min-w-0 flex-col items-center justify-center gap-px rounded-[11px] text-center",
+                              isActive
+                                ? "border-2 border-[#2AC1BC] bg-[#E6F8F7] text-[#007A76]"
+                                : "border border-[#DEE2E6] bg-white text-[#495057]",
+                            ].join(" ")}
+                            type="button"
+                          >
+                            <span className="text-[10px] font-extrabold leading-none">
+                              {formatWeekdayLabel(dateKey)}
+                            </span>
+                            <span className="text-[19px] font-bold leading-none">
+                              {dateKey.slice(8)}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </section>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {screenState === "loading" ? (
+          <div className="grid gap-3 p-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton
+                className="min-h-36 border border-[#DEE2E6]"
+                key={index}
+                style={{ borderRadius: 12 }}
+              />
+            ))}
+          </div>
+        ) : null}
+
+        {screenState === "error" ? (
+          <ContentState
+            actionLabel="다시 시도"
+            description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+            onAction={() => {
+              runPlannerAction(loadPlanner());
+            }}
+            title="플래너를 불러오지 못했어요"
+          />
+        ) : null}
+
+        {screenState === "ready" || screenState === "empty" ? (
+          <section
+            aria-busy={isRefreshing}
+            className="space-y-3 px-4 py-4"
+            data-testid="planner-week-body"
+            style={plannerBodyMotionStyle}
+          >
+            {screenState === "empty" ? (
+              <p className="sr-only">아직 등록된 식사가 없어요.</p>
+            ) : null}
+
+            {dateKeys.map((dateKey) => {
+              const isToday = dateKey === todayKey;
+              const dayMealCount = columns.filter((col) =>
+                mealsByDateAndColumn.has(`${dateKey}:${col.id}`),
+              ).length;
+
+              return (
+                <article
+                  aria-label={`${formatDateLabel(dateKey)} 식단 카드`}
+                  className={[
+                    "overflow-hidden rounded-[12px] bg-white",
+                    isToday
+                      ? "border-2 border-[#2AC1BC] shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+                      : "border border-[#DEE2E6]",
+                  ].join(" ")}
+                  key={dateKey}
+                >
+                  <div className="flex items-center border-b border-[#F1F3F5] px-4 py-3">
+                    <span
+                      className={[
+                        "mr-2.5 flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold",
+                        isToday ? "bg-[#2AC1BC] text-white" : "bg-[#F8F9FA] text-[#212529]",
+                      ].join(" ")}
+                    >
+                      {formatWeekdayLabel(dateKey)}
+                    </span>
+                    <p className="flex-1 text-[16px] font-bold text-[#212529]">
+                      {formatCompactDateLabel(dateKey)}
+                    </p>
+                    <span className="text-[12px] text-[#868E96]">
+                      {dayMealCount}/{columns.length}
+                    </span>
+                  </div>
+
+                  <div>
+                    {columns.map((column, columnIndex) => {
+                      const slotKey = `${dateKey}:${column.id}`;
+                      const slotMeals = mealsByDateAndColumn.get(slotKey) ?? [];
+                      const visibleMeals = slotMeals.slice(0, 2);
+
+                      return (
+                        <div
+                          className={[
+                            "flex items-center gap-2 px-2.5 py-1.5",
+                            columnIndex < columns.length - 1 ? "border-b border-[#F1F3F5]" : "",
+                          ].join(" ")}
+                          key={slotKey}
+                        >
+                          <div className="w-[34px] shrink-0 text-[12px] font-bold text-[#212529]">
+                            {column.name}
+                          </div>
+
+                          {visibleMeals.length > 0 ? (
+                            <>
+                              <Link
+                                className={[
+                                  "grid min-h-[46px] min-w-0 flex-1 gap-[5px]",
+                                  visibleMeals.length > 1
+                                    ? "grid-cols-2"
+                                    : "grid-cols-1",
+                                ].join(" ")}
+                                href={`/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`}
+                              >
+                                {visibleMeals.map((meal, mealIndex) => (
+                                  <span
+                                    className="relative flex h-[46px] min-w-0 items-center overflow-hidden rounded-[8px] bg-[#F8F9FA] text-[#212529]"
+                                    key={`${meal.id}-${mealIndex}`}
+                                  >
+                                    {meal.recipe_thumbnail_url ? (
+                                      <Image
+                                        alt=""
+                                        className="h-[46px] w-[34px] shrink-0 object-cover"
+                                        height={46}
+                                        src={meal.recipe_thumbnail_url}
+                                        unoptimized
+                                        width={34}
+                                      />
+                                    ) : (
+                                      <span className="flex h-[46px] w-[34px] shrink-0 items-center justify-center bg-[#E6F8F7] text-[14px] font-bold text-[#007A76]">
+                                        {column.name.charAt(0)}
+                                      </span>
+                                    )}
+                                    <span className="min-w-0 flex-1 px-1.5">
+                                      <span
+                                        className={`block truncate text-[12px] font-extrabold ${meal.is_leftover ? "text-[#12B886]" : "text-[#212529]"}`}
+                                      >
+                                        {meal.recipe_title}
+                                      </span>
+                                      {meal.is_leftover ? (
+                                        <span aria-label="남은요리 식사" className="sr-only">
+                                          남은요리
+                                        </span>
+                                      ) : null}
+                                      <span className="mt-px block text-[10px] text-[#868E96]">
+                                        {meal.planned_servings}인분
+                                      </span>
+                                    </span>
+                                    {mealIndex === 1 && slotMeals.length > 2 ? (
+                                      <span className="absolute bottom-1 right-1 rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-extrabold text-[#495057]">
+                                        +{slotMeals.length - 2}
+                                      </span>
+                                    ) : null}
+                                  </span>
+                                ))}
+                              </Link>
+                              <button
+                                aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
+                                className="ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-dashed border-[#4DABF7] bg-[#E8F5FF] text-[20px] font-semibold leading-none text-[#4DABF7]"
+                                onClick={() => openMealAddSheet(dateKey, column)}
+                                type="button"
+                              >
+                                +
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className="flex h-[42px] flex-1 items-center justify-center rounded-[8px] border border-dashed border-[#4DABF7] bg-[#E8F5FF] text-[13px] font-semibold text-[#4DABF7]"
+                              onClick={() => openMealAddSheet(dateKey, column)}
+                              type="button"
+                            >
+                              + 식사 추가
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+        ) : null}
+
+        <Link
+          className="fixed bottom-[92px] right-4 z-20 inline-flex min-h-11 items-center justify-center rounded-full bg-[#212529] px-[18px] text-[14px] font-bold text-white shadow-[0_4px_12px_rgba(0,0,0,0.10)]"
+          href="/shopping/flow"
+          style={{ color: "#FFFFFF" }}
+        >
+          장보기
+        </Link>
+
+        {mealAddSheet ? (
+          <div
+            className="fixed inset-0 z-40 flex items-end justify-center bg-black/42"
+            onClick={closeMealAddSheet}
+          >
+            <div
+              aria-labelledby="planner-meal-add-title"
+              aria-modal="true"
+              className="min-h-[364px] w-full max-w-[480px] rounded-t-[20px] bg-white px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)] max-[360px]:min-h-[375px]"
+              data-testid="planner-meal-add-sheet"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+            >
+              <div className="flex justify-center pb-4">
+                <div className="h-1 w-9 rounded-full bg-[#DEE2E6]" />
+              </div>
+              <div className="mb-4 flex items-center gap-3">
+                <h2
+                  className="min-w-0 flex-1 text-[20px] font-bold text-[#212529]"
+                  id="planner-meal-add-title"
+                >
+                  {formatCompactDateLabel(mealAddSheet.dateKey)} {mealAddSheet.slotName} · 식사 추가
+                </h2>
+                <button
+                  aria-label="닫기"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F8F9FA] text-[24px] leading-none text-[#495057]"
+                  onClick={closeMealAddSheet}
+                  type="button"
+                >
+                  ×
+                </button>
+              </div>
+              <Link
+                className="mb-4 flex h-10 w-full items-center gap-2 rounded-[10px] bg-[#F8F9FA] px-3 text-left text-[14px] text-[#868E96]"
+                href={getMealAddHref("search")}
+                onClick={closeMealAddSheet}
+                style={{ color: "#868E96" }}
+              >
+                <span className="text-[18px]" aria-hidden="true">⌕</span>
+                <span>레시피 검색</span>
+              </Link>
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  ["recipebook", "📖", "레시피북에서 추가"],
+                  ["pantry", "🧊", "팬트리 기반 추천"],
+                  ["leftover", "🍱", "남은요리에서 추가"],
+                  ["youtube", "🎬", "유튜브에서 가져오기"],
+                  ["manual", "✏️", "직접 등록"],
+                ].map(([target, icon, label]) => (
+                  <Link
+                    className="flex min-h-[58px] items-center gap-2.5 rounded-[10px] border border-[#DEE2E6] bg-white px-3 text-left text-[13px] font-semibold text-[#212529]"
+                    href={getMealAddHref(
+                      target as "search" | "recipebook" | "pantry" | "leftover" | "manual" | "youtube",
+                    )}
+                    key={target}
+                    onClick={closeMealAddSheet}
+                  >
+                    <span className="text-[20px]" aria-hidden="true">
+                      {icon}
+                    </span>
+                    <span>{label}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        <Wave1PlannerBottomTab />
+      </div>
     );
   }
 
@@ -817,5 +1270,112 @@ export function PlannerWeekScreen({
       ) : null}
 
     </div>
+  );
+}
+
+function Wave1PlannerBottomTab() {
+  const items = [
+    { href: "/", icon: <PlannerHomeIcon />, label: "홈" },
+    { href: "/planner", icon: <PlannerCalendarIcon />, label: "플래너", active: true },
+    { href: "/pantry", icon: <PlannerPantryIcon />, label: "팬트리" },
+    { href: "/mypage", icon: <PlannerUserIcon />, label: "마이" },
+  ];
+
+  return (
+    <nav
+      aria-label="플래너 하단 탭"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-[#DEE2E6] bg-white px-4 pb-[calc(28px+env(safe-area-inset-bottom))] pt-2"
+      style={{ borderTopWidth: "0.5px" }}
+    >
+      <div className="mx-auto grid max-w-[430px] grid-cols-4">
+        {items.map((item) => (
+          <Link
+            aria-current={item.active ? "page" : undefined}
+            className={[
+              "flex min-h-[52px] flex-col items-center justify-center gap-[3px] py-1 text-[11px]",
+              item.active ? "font-bold text-[#2AC1BC]" : "font-medium text-[#868E96]",
+            ].join(" ")}
+            href={item.href}
+            key={item.href}
+            prefetch={false}
+            style={{ color: item.active ? "#2AC1BC" : "#868E96" }}
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function PlannerHomeIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-6 w-6"
+      fill="none"
+      stroke="currentColor"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9z" />
+    </svg>
+  );
+}
+
+function PlannerCalendarIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-6 w-6"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+      viewBox="0 0 24 24"
+    >
+      <path d="M7 3v3M17 3v3M4 8h16M5 5h14v15H5z" fill="none" />
+      <path d="M8 12h3v3H8zM13 12h3v3h-3z" stroke="none" />
+    </svg>
+  );
+}
+
+function PlannerPantryIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-6 w-6"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M5 9h14v11H5z" />
+      <path d="M8 9V6h8v3" />
+      <path d="M9 13h6" />
+    </svg>
+  );
+}
+
+function PlannerUserIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-6 w-6"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </svg>
   );
 }
