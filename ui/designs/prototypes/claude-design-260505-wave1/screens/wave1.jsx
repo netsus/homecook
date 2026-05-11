@@ -1206,25 +1206,36 @@ function PantryReflectPicker({ list, onClose, onConfirm }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// SETTINGS — cook-mode prefs + nickname/logout/account-delete
+// SETTINGS — cook-mode prefs + planner meal columns
 // ─────────────────────────────────────────────────────────────
 function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAccount, showToast }) {
   const defaultPrefs = { keepAwake: true, voice: false, autoNext: false };
+  const defaultMealColumns = ['아침', '점심', '저녁'];
   const [savedPrefs, setSavedPrefs] = useState_W(defaultPrefs);
   const [draftPrefs, setDraftPrefs] = useState_W(defaultPrefs);
-  const [nicknameSheet, setNicknameSheet] = useState_W(false);
-  const [confirmLogout, setConfirmLogout] = useState_W(false);
-  const [confirmDelete, setConfirmDelete] = useState_W(false);
-  const [mealColumns, setMealColumns] = useState_W(['아침', '점심', '저녁']);
+  const [savedMealColumns, setSavedMealColumns] = useState_W(defaultMealColumns);
+  const [mealColumns, setMealColumns] = useState_W(defaultMealColumns);
   const [newMealName, setNewMealName] = useState_W('');
   const prefsDirty = JSON.stringify(savedPrefs) !== JSON.stringify(draftPrefs);
+  const normalizedMealColumns = mealColumns.map(name => name.trim()).filter(Boolean);
+  const mealColumnsDirty = JSON.stringify(savedMealColumns) !== JSON.stringify(normalizedMealColumns);
+  const mealColumnsValid = normalizedMealColumns.length === mealColumns.length && normalizedMealColumns.length > 0;
+  const settingsDirty = prefsDirty || mealColumnsDirty;
   const setDraftPref = (key, value) => setDraftPrefs(prev => ({ ...prev, [key]: value }));
   const savePrefs = () => {
+    if (!mealColumnsValid) {
+      showToast?.('끼니 이름을 모두 입력해주세요');
+      return;
+    }
     setSavedPrefs(draftPrefs);
+    setSavedMealColumns(normalizedMealColumns);
+    setMealColumns(normalizedMealColumns);
     showToast?.('환경설정이 저장됐어요');
   };
   const cancelPrefs = () => {
     setDraftPrefs(savedPrefs);
+    setMealColumns(savedMealColumns);
+    setNewMealName('');
     showToast?.('환경설정 변경을 취소했어요');
   };
 
@@ -1254,13 +1265,6 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
   return (
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 96 }}>
       <AppBar title="설정" left={<button onClick={onBack} style={iconBtn}>{Icon.chevL()}</button>} />
-
-      <Section title="계정">
-        <Row compact left={<div>
-          <div style={{ fontSize: 14, color: T.ink, fontWeight: 700 }}>닉네임</div>
-          <div style={{ fontSize: 12, color: T.text2, marginTop: 7, fontWeight: 700 }}>{profile?.nickname || '집밥러버'}</div>
-        </div>} right={<button onClick={() => setNicknameSheet(true)} style={editLinkBtn}>변경</button>} />
-      </Section>
 
       <Section title="요리 모드">
         <ToggleRow label="화면 켜둠" sub="요리 중 화면이 꺼지지 않아요" on={draftPrefs.keepAwake} onChange={(v) => setDraftPref('keepAwake', v)} />
@@ -1307,38 +1311,9 @@ function SettingsScreen({ profile, onBack, onUpdateProfile, onLogout, onDeleteAc
         display: 'flex', gap: 8, padding: '12px 16px',
         background: '#fff', borderTop: `1px solid ${T.border}`,
       }}>
-        <Button variant="neutral" disabled={!prefsDirty} onClick={cancelPrefs}>취소</Button>
-        <Button full disabled={!prefsDirty} onClick={savePrefs}>저장</Button>
+        <Button variant="neutral" disabled={!settingsDirty} onClick={cancelPrefs}>취소</Button>
+        <Button full disabled={!settingsDirty || !mealColumnsValid} onClick={savePrefs}>저장</Button>
       </div>
-
-      <Section title="기타">
-        <Row left={<button onClick={() => setConfirmLogout(true)} style={settingsActionBtn}>로그아웃</button>} right={null} />
-        <Row left={<button onClick={() => setConfirmDelete(true)} style={{ ...settingsActionBtn, color: T.red }}>회원탈퇴</button>} right={null} />
-      </Section>
-
-      {confirmLogout && (
-        <ConfirmDialog title="로그아웃 할까요?" body="다시 로그인해야 식단·팬트리가 동기화돼요."
-          confirmLabel="로그아웃" onClose={() => setConfirmLogout(false)}
-          onConfirm={() => { setConfirmLogout(false); onLogout(); }} />
-      )}
-      {confirmDelete && (
-        <ConfirmDialog title="정말 탈퇴하시겠어요?"
-          body="모든 식단, 레시피, 팬트리 기록이 영구 삭제됩니다. 이 동작은 되돌릴 수 없어요."
-          destructive confirmLabel="탈퇴하기" onClose={() => setConfirmDelete(false)}
-          onConfirm={() => { setConfirmDelete(false); onDeleteAccount(); }}
-          extra={<div style={{
-            padding: 10, background: '#FFF5F5', borderRadius: 8, fontSize: 11, color: T.red, lineHeight: 1.5,
-          }}>⚠ 7일 이내 재로그인 시 일부 데이터는 복구가 가능합니다 (베타).</div>} />
-      )}
-      {nicknameSheet && (
-        <NicknameEditSheet current={profile?.nickname}
-          onClose={() => setNicknameSheet(false)}
-          onSave={(nickname) => {
-            onUpdateProfile?.({ nickname });
-            setNicknameSheet(false);
-            showToast?.('닉네임이 변경됐어요');
-          }} />
-      )}
     </div>
   );
 }
@@ -1374,17 +1349,6 @@ function ToggleRow({ label, sub, on, onChange }) {
     } />
   );
 }
-const editLinkBtn = {
-  background: 'none', border: 'none', color: T.mintDeep,
-  fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '4px 0',
-  whiteSpace: 'nowrap', lineHeight: 1.2,
-};
-const settingsActionBtn = {
-  background: 'none', border: 'none', color: T.ink,
-  fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '2px 0',
-  whiteSpace: 'nowrap', lineHeight: 1.3,
-};
-
 function NicknameEditSheet({ current, onClose, onSave }) {
   const [v, setV] = useState_W(current || '');
   const valid = v.trim().length >= 2 && v.trim().length <= 12;
