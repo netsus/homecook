@@ -85,9 +85,9 @@ test.describe("wave1 port discovery detail", () => {
   }) => {
     await page.goto(RECIPE_PATH);
 
-    await expect(page.getByText("좋아요")).toBeVisible();
-    await expect(page.getByText("요리완료")).toBeVisible();
-    await expect(page.getByLabel("플래너 등록")).toBeVisible();
+    await expect(page.getByRole("button", { name: "좋아요 203" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "저장" })).toBeVisible();
+    await expect(page.getByRole("status", { name: /요리완료/ })).toBeVisible();
 
     const plannerCta = page.getByRole("button", { name: "플래너에 추가" });
     const cookCta = page.getByRole("button", { name: "요리하기" });
@@ -95,8 +95,8 @@ test.describe("wave1 port discovery detail", () => {
     await expect(plannerCta).toBeVisible();
     await expect(cookCta).toBeVisible();
 
-    const stickyParent = page.locator(".sticky.bottom-0");
-    await expect(stickyParent).toBeVisible();
+    const ctaBar = page.locator(".wave1-recipe-cta-bar, .sticky.bottom-0").first();
+    await expect(ctaBar).toBeVisible();
   });
 
   test("RECIPE_DETAIL planner add sheet opens from sticky CTA", async ({
