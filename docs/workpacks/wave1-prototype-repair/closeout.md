@@ -5,11 +5,11 @@
 ## Frozen Reference
 
 - Fixed prototype path: `ui/designs/prototypes/claude-design-260505-wave1`
-- Fixed prototype implementation SHA: `95a93180a1329d2b317a561aa7c954a39cbe104c`
+- Fixed prototype implementation SHA: `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`
 - Freeze workpack: `docs/workpacks/wave1-prototype-repair`
 - Service porting plan: `docs/workpacks/wave1-service-porting-plan.md`
 
-`95a93180a1329d2b317a561aa7c954a39cbe104c` is the last merged commit that changed the prototype implementation during this repair sequence. Repair 4 is a docs/evidence gate only, so later service porting prompts must pin this SHA as the read-only visual/layout reference for the prototype files.
+`0000c86a7d6f719e2bb1c0966c6d1e307061df7c` is the last merged commit that changed the prototype implementation during the 2026-05-11 repair and follow-up sequence. It supersedes the initial Repair 4 freeze reference (`95a93180a1329d2b317a561aa7c954a39cbe104c`) because the user provided additional prototype-finalization changes after PR #390. Later service porting prompts must pin the SHA above as the read-only visual/layout reference for the prototype files.
 
 ## Merged Repair PRs
 
@@ -19,6 +19,11 @@
 | Repair 1 | #387 | `d351ab1405d979d8bf1f6db305a9594b618c070f` | Modal and interaction fixes |
 | Repair 2 | #388 | `0d36d871f71a797d61f8e50604f2190bd6e6500e` | Screen visual corrections |
 | Repair 3 | #389 | `95a93180a1329d2b317a561aa7c954a39cbe104c` | Functional logic fixes |
+| Repair 4 | #390 | `e5c897201cea6b641b5e811f992610c256c4f2c3` | Initial freeze gate |
+| Follow-up planner polish | #391 | `c89f71aa590b37f7eb45c0ba954b2c449ed9fc10` | Planner layout/color polish |
+| Follow-up settings/layout | #392 | `43f65e33782c489b48d67c4b4c76267566f7130e` | Pantry and settings layout polish |
+| Follow-up menu/leftovers | #393 | `9ba3740b2bab07e7540f7206ec064a0ac0493724` | Menu add, manual input, leftovers flow |
+| Follow-up shopping flow | #394 | `0000c86a7d6f719e2bb1c0966c6d1e307061df7c` | Per-meal shopping and completion flow |
 
 ## Evidence
 
@@ -32,6 +37,10 @@ Smoke evidence:
 - Repair 1 desktop: `prototype Repair 1 desktop modal smoke OK`
 - Repair 2: `prototype Repair 2 visual smoke OK`
 - Repair 3: `prototype Repair 3 functional smoke OK`
+- Follow-up planner polish: Playwright 390px/320px planner smoke
+- Follow-up settings/layout: Playwright mobile settings and pantry-add smoke
+- Follow-up menu/leftovers: Playwright mobile menu-add/manual-create/leftovers smoke and desktop menu-add smoke
+- Follow-up shopping flow: Playwright mobile per-meal shopping and existing shopping-detail completion smoke
 
 Screenshot evidence:
 
@@ -39,6 +48,10 @@ Screenshot evidence:
 - Repair 2 320px: `.omx/artifacts/wave1-repair2/repair2-320-*.png`
 - Repair 3 390px: `.omx/artifacts/wave1-repair3/repair3-390-*.png`
 - Repair 3 320px: `.omx/artifacts/wave1-repair3/repair3-320-*.png`
+- Follow-up planner polish: `.omx/artifacts/wave1-repair5/planner-*.png`
+- Follow-up settings/layout: `.omx/artifacts/wave1-repair8/*.png`
+- Follow-up menu/leftovers: `.omx/artifacts/wave1-repair6/*.png`
+- Follow-up shopping flow: `.omx/artifacts/wave1-repair7/*.png`
 
 Mirror file check:
 
@@ -46,10 +59,11 @@ Mirror file check:
 diff -q ui/designs/prototypes/claude-design-260505-wave1/index.html ui/designs/prototypes/claude-design-260505-wave1/homecook-baemin-prototype.html
 ```
 
-Repair 4 local validation:
+Final local validation:
 
 ```bash
 git diff --check
+pnpm validate:branch
 pnpm validate:workflow-v2
 pnpm validate:workpack -- --slice wave1-prototype-repair
 ```
@@ -61,7 +75,7 @@ Service Slice A~F porting may start only after this closeout is merged.
 All service porting prompts must include:
 
 - `fixed_prototype_path=ui/designs/prototypes/claude-design-260505-wave1`
-- `fixed_prototype_implementation_sha=95a93180a1329d2b317a561aa7c954a39cbe104c`
+- `fixed_prototype_implementation_sha=0000c86a7d6f719e2bb1c0966c6d1e307061df7c`
 - `visual_layout_source_of_truth=fixed prototype`
 - `functional_source_of_truth=MVP service implementation + official docs`
 
@@ -69,7 +83,7 @@ Do not copy prototype demo behavior into the MVP service. The repaired prototype
 
 ## Guardrails
 
-- Prototype Repair 0~4 stayed out of MVP service source.
+- Prototype Repair 0~4 and follow-up repairs stayed out of MVP service source.
 - No API, DB, status, endpoint, or field was added.
 - No dependency was added.
 - Broken/demo-only prototype behavior identified by the user was either repaired in the prototype or fenced off from service porting semantics.

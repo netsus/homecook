@@ -4,7 +4,7 @@
 
 `ui/designs/prototypes/claude-design-260505-wave1`를 service porting의 신뢰 가능한 기준으로 만들기 위해, 사용자가 MVP와 비교해 확인한 prototype의 화면 이동, modal/interaction, visual/layout, 기능 로직 문제를 repair slice로 나눠 고친다.
 
-이 workpack은 **prototype 전용**이다. MVP service source는 수정하지 않는다. Prototype Repair 0~4가 모두 merge되고 fixed prototype이 freeze된 뒤에만 `docs/workpacks/wave1-service-porting-plan.md`의 service Slice A~F 재포팅을 시작한다.
+이 workpack은 **prototype 전용**이다. MVP service source는 수정하지 않는다. Prototype Repair 0~4와 2026-05-11 follow-up repair가 모두 merge되고 fixed prototype이 freeze된 뒤에만 `docs/workpacks/wave1-service-porting-plan.md`의 service Slice A~F 재포팅을 시작한다.
 
 ## Branches
 
@@ -13,6 +13,11 @@
 - Repair 2: `fix/wave1-prototype-visual-repair`
 - Repair 3: `fix/wave1-prototype-functional-logic-repair`
 - Repair 4: `chore/wave1-prototype-freeze-gate`
+- Follow-up planner polish: `fix/wave1-prototype-planner-polish-repair`
+- Follow-up settings/layout polish: `fix/wave1-prototype-settings-layout-repair`
+- Follow-up menu/inputs/leftovers: `fix/wave1-prototype-menu-inputs-leftovers-repair`
+- Follow-up shopping flow: `fix/wave1-prototype-shopping-flow-repair`
+- Final follow-up freeze: `docs/wave1-prototype-followup-freeze`
 
 ## Source Of Truth
 
@@ -43,19 +48,24 @@
 - MVP routes, API calls, submit behavior, auth, saved/deleted/restored state, and official status transitions remain MVP/official-doc sourced.
 - Prototype broken behavior must be repaired in prototype or documented; it must not be copied into service.
 - Each repair slice PR must merge before the next repair slice starts.
-- Repair 4 records the fixed prototype commit SHA. Later service porting uses that commit as a read-only reference.
+- Repair 4 recorded the initial fixed prototype commit SHA; the final follow-up freeze updates that SHA after PRs #391~#394. Later service porting uses the updated commit as a read-only reference.
 
 ## Freeze Status
 
-- Fixed prototype implementation SHA: `95a93180a1329d2b317a561aa7c954a39cbe104c`
+- Fixed prototype implementation SHA: `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`
 - Closeout note: `docs/workpacks/wave1-prototype-repair/closeout.md`
 - Merged repair PRs:
   - Repair 0 navigation: #386, merge commit `268893953f9b831c299e0378cfab8863b6b8a858`
   - Repair 1 modal/interaction: #387, merge commit `d351ab1405d979d8bf1f6db305a9594b618c070f`
   - Repair 2 visual/layout: #388, merge commit `0d36d871f71a797d61f8e50604f2190bd6e6500e`
   - Repair 3 functional logic: #389, merge commit `95a93180a1329d2b317a561aa7c954a39cbe104c`
+  - Repair 4 freeze gate: #390, merge commit `e5c897201cea6b641b5e811f992610c256c4f2c3`
+  - Follow-up planner polish: #391, merge commit `c89f71aa590b37f7eb45c0ba954b2c449ed9fc10`
+  - Follow-up settings/layout polish: #392, merge commit `43f65e33782c489b48d67c4b4c76267566f7130e`
+  - Follow-up menu/inputs/leftovers: #393, merge commit `9ba3740b2bab07e7540f7206ec064a0ac0493724`
+  - Follow-up shopping flow: #394, merge commit `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`
 
-Service Slice A~F re-porting must pin the fixed prototype implementation SHA above. Repair 4 is a docs/evidence gate; it does not redefine the prototype implementation itself.
+Service Slice A~F re-porting must pin the fixed prototype implementation SHA above. The follow-up freeze supersedes the initial Repair 4 SHA because the user provided additional prototype-finalization changes after PR #390.
 
 ## Repair Slices
 
@@ -66,6 +76,11 @@ Service Slice A~F re-porting must pin the fixed prototype implementation SHA abo
 | 2 | Screen Visual Corrections | 화면별 visual/layout 문제 반영 | Home 1~2, RECIPE_DETAIL 1~2/5, Login 1, PLANNER 1~7, SHOPPING_DETAIL 2~3, COOK_MODE 1, PANTRY 1, MYPAGE 1, LEFTOVERS 2 |
 | 3 | Functional Logic Fixes | prototype demo logic을 MVP 기대 동작에 맞춤 | RECIPE_DETAIL 3, Home 3, SETTINGS 1~3, LEFTOVERS 1 |
 | 4 | Freeze And Service Porting Gate | fixed prototype evidence와 freeze 선언 | Repair 0~3 closeout |
+| 5 | Planner Follow-up Polish | 플래너 주간 네비, 색상, 다중 식사 배치 보정 | 추가 변경사항 PLANNER 1.1~1.4 |
+| 6 | Menu Inputs And Leftovers | 팬트리 매칭 바, 수량 숫자 입력 제한, 남은요리 인분 모달 | 추가 변경사항 MENU_ADD 2.1, MANUAL_CREATE 3.1, LEFTOVERS 7.1 |
+| 7 | Shopping Completion Flow | 식사별 장보기와 완료 후 팬트리 반영/read-only 전환 | 추가 변경사항 PLANNER 1.5, SHOPPING_DETAIL 4.1 |
+| 8 | Settings And Pantry Layout | 팬트리/설정 버튼 정렬, 저장/취소, 5개 끼니 제한 보정 | 추가 변경사항 PANTRY 5.1, SETTINGS 6.1~6.5 |
+| 9 | Follow-up Freeze | fixed prototype SHA와 closeout/service-porting 기준 갱신 | Repair 5~8 closeout |
 
 ## Expected Files
 
@@ -92,13 +107,13 @@ Service Slice A~F re-porting must pin the fixed prototype implementation SHA abo
 
 ## Claude Delegate
 
-Codex may attach to the user-provided Claude session `39d5c7fb-0624-4e39-bc3c-7fa87fb03462` when a repair slice needs cross-model review.
+Codex may attach to the user-provided Claude session `2937f409-95c1-4627-a6e2-3febf3e3955f` when a repair slice needs cross-model review.
 
 Required recording:
 
 - `session_attach_mode=resume`
 - `model=opus`
-- `effort=high`
+- `effort=xhigh`
 - `permission_mode=bypassPermissions`
 
-Use `--resume 39d5c7fb-0624-4e39-bc3c-7fa87fb03462`, not `--session-id`.
+Use `--resume 2937f409-95c1-4627-a6e2-3febf3e3955f`, not `--session-id`.
