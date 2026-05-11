@@ -485,7 +485,7 @@ export function PlannerWeekScreen({
       return `/menu/add/youtube?${baseQuery}`;
     }
 
-    if (target === "recipebook" || target === "pantry" || target === "leftover") {
+    if (target === "search" || target === "recipebook" || target === "pantry" || target === "leftover") {
       return `/menu-add?${baseQuery}&source=${target}`;
     }
 

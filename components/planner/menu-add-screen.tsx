@@ -8,6 +8,8 @@ import { PantryMatchPicker } from "@/components/planner/pantry-match-picker";
 import { RecipeBookDetailPicker } from "@/components/planner/recipe-book-detail-picker";
 import { RecipeBookSelector } from "@/components/planner/recipe-book-selector";
 import { RecipeSearchPicker } from "@/components/planner/recipe-search-picker";
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { createMealSafe } from "@/lib/api/meal";
 import type { LeftoverListItemData } from "@/types/leftover";
 import type {
@@ -25,7 +27,7 @@ export interface MenuAddScreenProps {
   initialSource?: string;
 }
 
-type PickerMode = "none" | "recipebook-selector" | "recipebook-detail" | "pantry" | "leftover";
+type PickerMode = "none" | "search" | "recipebook-selector" | "recipebook-detail" | "pantry" | "leftover";
 
 // ─── AppBar ──────────────────────────────────────────────────────────────────
 
@@ -89,6 +91,16 @@ const MENU_ADD_OPTIONS = [
   { id: "manual", emoji: "✏️", label: "직접 등록", subtitle: "레시피 직접 작성" },
 ] as const;
 
+function formatTargetLabel(planDate: string, slotName: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(planDate);
+  const dateLabel = match
+    ? `${Number(match[2])}/${Number(match[3])}`
+    : planDate;
+
+  if (dateLabel && slotName) return `${dateLabel} ${slotName}`;
+  return slotName || dateLabel || "플래너";
+}
+
 function ActionButtons({
   onLeftoverClick,
   onManualRecipeClick,
@@ -143,6 +155,7 @@ export function MenuAddScreen({
   slotName,
 }: MenuAddScreenProps) {
   const router = useRouter();
+  const isDesktopViewport = useDesktopViewport();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeCardItem | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -150,6 +163,7 @@ export function MenuAddScreen({
 
   // Recipe book state
   const [pickerMode, setPickerMode] = useState<PickerMode>(() => {
+    if (initialSource === "search") return "search";
     if (initialSource === "recipebook") return "recipebook-selector";
     if (initialSource === "pantry") return "pantry";
     if (initialSource === "leftover") return "leftover";
@@ -183,9 +197,14 @@ export function MenuAddScreen({
   }, []);
 
   const handleSearchOptionClick = useCallback(() => {
+    if (!isDesktopViewport) {
+      setPickerMode("search");
+      return;
+    }
+
     searchInputRef.current?.focus();
     searchInputRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" });
-  }, []);
+  }, [isDesktopViewport]);
 
   const handleServingsConfirm = useCallback(
     async (servings: number) => {
@@ -385,6 +404,145 @@ export function MenuAddScreen({
     const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
     router.push(`/menu/add/youtube${queryString}`);
   }, [router, planDate, columnId, slotName]);
+
+  const targetLabel = formatTargetLabel(planDate, slotName);
+
+  const actionMapForMobile = (id: (typeof MENU_ADD_OPTIONS)[number]["id"]) => {
+    const actionMap: Record<(typeof MENU_ADD_OPTIONS)[number]["id"], () => void> = {
+      search: handleSearchOptionClick,
+      recipebook: handleRecipeBookClick,
+      pantry: handlePantryClick,
+      leftover: handleLeftoverClick,
+      manual: handleManualRecipeClick,
+      youtube: handleYoutubeRecipeClick,
+    };
+
+    return actionMap[id];
+  };
+
+  if (!isDesktopViewport) {
+    if (pickerMode === "search") {
+      return (
+        <RecipeSearchPicker
+          isCreating={isCreating}
+          onBack={() => setPickerMode("none")}
+          onRecipeSelect={handleRecipeSelect}
+          onServingsCancel={handleServingsCancel}
+          onServingsConfirm={handleServingsConfirm}
+          presentation="screen"
+          searchInputRef={searchInputRef}
+          selectedRecipe={selectedRecipe}
+          slotLabel={targetLabel}
+          title="검색으로 추가"
+        />
+      );
+    }
+
+    if (pickerMode === "recipebook-selector") {
+      return (
+        <RecipeBookSelector
+          onBack={() => setPickerMode("none")}
+          onBookSelect={handleBookSelect}
+          onClose={handleRecipeBookClose}
+          presentation="screen"
+          slotLabel={targetLabel}
+        />
+      );
+    }
+
+    if (pickerMode === "recipebook-detail" && selectedBook) {
+      return (
+        <RecipeBookDetailPicker
+          book={selectedBook}
+          isCreating={isCreating}
+          onBack={handleRecipeBookBack}
+          onRecipeSelect={handleBookRecipeSelect}
+          onServingsCancel={handleBookServingsCancel}
+          onServingsConfirm={handleBookServingsConfirm}
+          presentation="screen"
+          selectedRecipe={selectedBookRecipe}
+          slotLabel={targetLabel}
+        />
+      );
+    }
+
+    if (pickerMode === "pantry") {
+      return (
+        <PantryMatchPicker
+          isCreating={isCreating}
+          onBack={() => setPickerMode("none")}
+          onClose={handlePantryClose}
+          onRecipeSelect={handlePantryRecipeSelect}
+          onServingsCancel={handlePantryServingsCancel}
+          onServingsConfirm={handlePantryServingsConfirm}
+          presentation="screen"
+          selectedRecipe={selectedPantryRecipe}
+          slotLabel={targetLabel}
+        />
+      );
+    }
+
+    if (pickerMode === "leftover") {
+      return (
+        <LeftoverPicker
+          isCreating={isCreating}
+          onClose={handleLeftoverClose}
+          onLeftoverSelect={handleLeftoverSelect}
+          onServingsCancel={handleLeftoverServingsCancel}
+          onServingsConfirm={handleLeftoverServingsConfirm}
+          selectedLeftover={selectedLeftover}
+        />
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-[#F8F9FA] pb-[112px] text-[#212529]">
+        <div className="flex min-h-[52px] items-center border-b border-[#DEE2E6] bg-white px-2">
+          <button
+            aria-label="뒤로 가기"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[28px] leading-none text-[#212529]"
+            onClick={handleBack}
+            type="button"
+          >
+            ‹
+          </button>
+          <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold text-[#212529]">
+            식사 추가
+          </h1>
+          <div className="h-11 w-11 shrink-0" aria-hidden="true" />
+        </div>
+
+        <section className="px-5 py-3">
+          <p className="text-[11px] font-bold text-[#20A8A4]">대상</p>
+          <p className="mt-0.5 text-[16px] font-bold text-[#212529]">{targetLabel}</p>
+        </section>
+
+        <section className="flex flex-col gap-2.5 px-4 pb-8" data-testid="menu-add-option-grid">
+          {MENU_ADD_OPTIONS.map((option) => (
+            <button
+              className="flex min-h-[76px] w-full items-center gap-3.5 rounded-[12px] border border-[#DEE2E6] bg-white p-4 text-left"
+              data-testid={`menu-add-option-${option.id}`}
+              key={option.id}
+              onClick={actionMapForMobile(option.id)}
+              type="button"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-[#E6F8F7] text-[22px]">
+                {option.emoji}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-bold text-[#212529]">{option.label}</span>
+                <span className="mt-0.5 block text-[12px] text-[#868E96]">{option.subtitle}</span>
+              </span>
+              <span className="text-[22px] text-[#ADB5BD]" aria-hidden="true">
+                ›
+              </span>
+            </button>
+          ))}
+        </section>
+        <Wave1MobileBottomTab ariaLabel="식사 추가 하단 탭" currentTab="planner" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col bg-[var(--background)]">

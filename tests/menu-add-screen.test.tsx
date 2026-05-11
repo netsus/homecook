@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MenuAddScreen } from "@/components/planner/menu-add-screen";
 import * as leftoversApi from "@/lib/api/leftovers";
 import * as mealApi from "@/lib/api/meal";
+import * as recipeApi from "@/lib/api/recipe";
 
 const mockRouterPush = vi.fn();
 const mockRouterReplace = vi.fn();
@@ -27,6 +28,10 @@ vi.mock("@/lib/api/meal", () => ({
   createMealSafe: vi.fn(),
 }));
 
+vi.mock("@/lib/api/recipe", () => ({
+  fetchRecipes: vi.fn(),
+}));
+
 const DEFAULT_PROPS = {
   planDate: "2026-04-18",
   columnId: "550e8400-e29b-41d4-a716-446655440050",
@@ -40,6 +45,16 @@ describe("MenuAddScreen", () => {
     mockRouterReplace.mockReset();
     vi.mocked(leftoversApi.fetchLeftovers).mockReset();
     vi.mocked(mealApi.createMealSafe).mockReset();
+    vi.mocked(recipeApi.fetchRecipes).mockReset();
+    vi.mocked(recipeApi.fetchRecipes).mockResolvedValue({
+      success: true,
+      data: {
+        has_next: false,
+        items: [],
+        next_cursor: null,
+      },
+      error: null,
+    });
   });
 
   afterEach(() => {
@@ -63,12 +78,12 @@ describe("MenuAddScreen", () => {
 
   // ─── Wave1 acceptance tests ─────────────────────────────────────────────────
 
-  it("renders a 2-column option grid with correct data-testids (Wave1)", () => {
+  it("renders the mobile option list with correct data-testids (Wave1)", () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
     const grid = screen.getByTestId("menu-add-option-grid");
     expect(grid).toBeTruthy();
-    expect(grid.className).toContain("grid-cols-2");
+    expect(grid.className).toContain("flex");
 
     // All six Wave1 options should be present.
     expect(screen.getByTestId("menu-add-option-search")).toBeTruthy();
@@ -79,19 +94,21 @@ describe("MenuAddScreen", () => {
     expect(screen.getByTestId("menu-add-option-manual")).toBeTruthy();
   });
 
-  it("focuses the recipe search input from the search option tile (Wave1)", async () => {
+  it("opens and focuses the mobile recipe search picker from the search option tile (Wave1)", async () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
     const user = userEvent.setup();
     await user.click(screen.getByTestId("menu-add-option-search"));
 
+    expect(screen.getByRole("heading", { name: "검색으로 추가" })).toBeTruthy();
     expect(document.activeElement).toBe(screen.getByLabelText("레시피 검색"));
   });
 
-  it("shows heading '추가 방법 선택' instead of '다른 방법으로 추가' (Wave1)", () => {
+  it("shows the mobile target context instead of the legacy secondary heading (Wave1)", () => {
     render(<MenuAddScreen {...DEFAULT_PROPS} />);
 
-    expect(screen.getByText("추가 방법 선택")).toBeTruthy();
+    expect(screen.getByText("대상")).toBeTruthy();
+    expect(screen.getByText("4/18 아침")).toBeTruthy();
     expect(screen.queryByText("다른 방법으로 추가")).toBeNull();
   });
 

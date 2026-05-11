@@ -1,0 +1,41 @@
+{
+  "scope": "wave1-mobile-phase4-menu-add-pickers",
+  "score": 91,
+  "verdict": "pass",
+  "category_match": true,
+  "reference_images": [
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-recipe-search-picker.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-recipe-search-picker.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-recipe-book-selector.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-recipe-book-selector.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-recipe-book-detail-picker.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-recipe-book-detail-picker.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-pantry-match-picker.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-pantry-match-picker.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-planned-servings-input.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-planned-servings-input.png"
+  ],
+  "generated_screenshots": [
+    "ui/designs/evidence/wave1-port-planner-meal-add/recipe-search-picker.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/recipe-search-picker-narrow.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/recipe-book-selector.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/recipe-book-selector-narrow.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/recipe-book-detail-picker.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/recipe-book-detail-picker-narrow.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/pantry-match-picker.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/pantry-match-picker-narrow.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/planned-servings-input.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/planned-servings-input-narrow.png"
+  ],
+  "differences": [
+    "Bottom tab structure, picker card density, search/result list layout, and pantry match rows now match the mobile prototype category.",
+    "Planned servings sheet remains slightly taller than the prototype by about 20-25px on 390px and about 20px on 320px.",
+    "Bottom-tab icon glyphs are service-local SVGs, so they are visually close but not pixel-identical to the prototype icons.",
+    "Food thumbnails use deterministic local SVG emoji assets for evidence, so raster antialiasing differs from the prototype reference."
+  ],
+  "suggestions": [
+    "In a later precision pass, extract the Wave1 planned-servings sheet as a shared component and tune its fixed vertical rhythm.",
+    "If pixel parity is required for icons, consolidate the prototype tab SVG paths into the shared Wave1 mobile bottom tab component."
+  ],
+  "reasoning": "The core mobile picker layouts now align with the fixed prototype references across 390px and 320px. Remaining differences are localized to icon glyphs, deterministic evidence thumbnails, and small bottom-sheet vertical rhythm."
+}
