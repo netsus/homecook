@@ -2721,7 +2721,9 @@ function DesktopManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCre
   const [ingredients, setIngredients] = dUseState([]);
   const [steps, setSteps]       = dUseState(['']);
   const [ingModal, setIngModal] = dUseState(false);
-  const valid = name.trim().length > 0 && ingredients.length > 0;
+  const ingredientsComplete = ingredients.length > 0 && ingredients.every(i => i.name && String(i.amount || '').trim());
+  const stepsComplete = steps.length > 0 && steps.every(s => s.trim());
+  const valid = name.trim().length > 0 && ingredientsComplete && stepsComplete;
   const slotLabel = presetDate && presetSlot ? `${presetDate} ${presetSlot}` : '플래너 미선택';
   const warnNumericOnly = () => showToast?.('재료 수량은 숫자만 입력할 수 있어요');
   const blockNonNumericInput = (e) => {
@@ -2737,6 +2739,10 @@ function DesktopManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCre
     setIngredients(ingredients.map((x, j) => j === idx ? { ...x, amount } : x));
   };
   const submit = () => {
+    if (!valid) {
+      showToast?.('재료 수량과 조리법 빈칸을 채워주세요');
+      return;
+    }
     const recipe = {
       id: 'r_user_' + Date.now(), name: name.trim(), emoji, minutes, servings,
       bg: T.mintSoft, rating: 5, saves: 0, kcal: 0,

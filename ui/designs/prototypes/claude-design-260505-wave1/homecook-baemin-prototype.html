@@ -479,7 +479,7 @@ function Button({ children, variant = 'primary', onClick, style, disabled, size 
   const sizes = { sm: { h: 36, fs: 13, pad: '0 14px' }, md: { h: 48, fs: 16, pad: '0 24px' } }[size];
   const ds = disabled ? { bg: T.border, color: T.text4, border: 'transparent' } : vs;
   return (
-    <button onClick={disabled ? undefined : onClick} style={{
+    <button disabled={disabled} onClick={disabled ? undefined : onClick} style={{
       height: sizes.h, padding: sizes.pad, borderRadius: 8,
       background: ds.bg, color: ds.color, border: `1px solid ${ds.border}`,
       fontSize: sizes.fs, fontWeight: 700, cursor: disabled ? 'default' : 'pointer',
@@ -5372,7 +5372,9 @@ function DesktopManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCre
   const [ingredients, setIngredients] = dUseState([]);
   const [steps, setSteps]       = dUseState(['']);
   const [ingModal, setIngModal] = dUseState(false);
-  const valid = name.trim().length > 0 && ingredients.length > 0;
+  const ingredientsComplete = ingredients.length > 0 && ingredients.every(i => i.name && String(i.amount || '').trim());
+  const stepsComplete = steps.length > 0 && steps.every(s => s.trim());
+  const valid = name.trim().length > 0 && ingredientsComplete && stepsComplete;
   const slotLabel = presetDate && presetSlot ? `${presetDate} ${presetSlot}` : '플래너 미선택';
   const warnNumericOnly = () => showToast?.('재료 수량은 숫자만 입력할 수 있어요');
   const blockNonNumericInput = (e) => {
@@ -5388,6 +5390,10 @@ function DesktopManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCre
     setIngredients(ingredients.map((x, j) => j === idx ? { ...x, amount } : x));
   };
   const submit = () => {
+    if (!valid) {
+      showToast?.('재료 수량과 조리법 빈칸을 채워주세요');
+      return;
+    }
     const recipe = {
       id: 'r_user_' + Date.now(), name: name.trim(), emoji, minutes, servings,
       bg: T.mintSoft, rating: 5, saves: 0, kcal: 0,
@@ -7629,7 +7635,9 @@ function ManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCreated, s
   const [ings, setIngs] = useState_W([]);
   const [steps, setSteps] = useState_W([{ method: 'prep', text: '' }]);
   const [ingModal, setIngModal] = useState_W(false);
-  const valid = name.trim() && ings.length > 0 && steps.some(s => s.text.trim());
+  const ingredientsComplete = ings.length > 0 && ings.every(i => i.name && String(i.amount || '').trim());
+  const stepsComplete = steps.length > 0 && steps.every(s => s.text.trim());
+  const valid = name.trim() && ingredientsComplete && stepsComplete;
   const methods = Object.keys(METHOD_COLORS);
   const warnNumericOnly = () => showToast?.('재료 수량은 숫자만 입력할 수 있어요');
   const blockNonNumericInput = (e) => {
@@ -7646,7 +7654,10 @@ function ManualRecipeCreateScreen({ presetDate, presetSlot, onBack, onCreated, s
   };
 
   const submit = () => {
-    if (!valid) return;
+    if (!valid) {
+      showToast?.('재료 수량과 조리법 빈칸을 채워주세요');
+      return;
+    }
     const id = 'r_manual_' + Date.now();
     onCreated({
       id, name: name.trim(), minutes, servings,
