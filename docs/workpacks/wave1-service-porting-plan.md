@@ -3,16 +3,16 @@
 > 목적: `ui/designs/prototypes/claude-design-260505-wave1`에 정리된 앱/웹 디자인 개선사항을 실제 서비스로 작은 vertical slice 단위로 포팅하기 위한 새 세션용 실행 계획이다.
 > 작성일: 2026-05-10 KST
 > 기준 프로토타입: `ui/designs/prototypes/claude-design-260505-wave1`
-> fixed prototype implementation SHA: `c83a851f95e358cf07f5a21c6f413ee091a3d2be`
+> fixed prototype implementation SHA: `4b49e05906c998fe83f68a2fa374bf53b7079291`
 > 핵심 원칙: 프로토타입은 visual/layout source of truth이고, 기능 동작은 현재 MVP 구현과 공식 문서가 source of truth다. 공식 문서와 실제 API 계약을 넘는 변경은 먼저 contract-evolution 문서/PR로 닫고, FE는 그 계약을 그대로 소비한다.
 
 ## Current Status
 
 - Wave1 vNext prototype은 최신 기준 프로토타입으로 사용한다.
-- 2026-05-11 Prototype Repair 0~4 및 follow-up repair #391~#398 이후 service porting 기준은 fixed prototype implementation SHA `c83a851f95e358cf07f5a21c6f413ee091a3d2be`다.
+- 2026-05-11 Prototype Repair 0~4 및 follow-up repair #391~#402 이후 service porting 기준은 fixed prototype implementation SHA `4b49e05906c998fe83f68a2fa374bf53b7079291`다.
   - Freeze closeout: `docs/workpacks/wave1-prototype-repair/closeout.md`
   - 이후 Slice A~F prompt와 PR body는 이 SHA를 read-only visual/layout reference로 명시한다.
-  - 이 SHA는 초기 Repair 4 freeze reference와 이전 follow-up SHA `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`를 추가 prototype-finalization PR 이후 갱신한 최종 기준이다.
+  - 이 SHA는 초기 Repair 4 freeze reference, 이전 follow-up SHA `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`, Final QA SHA `c83a851f95e358cf07f5a21c6f413ee091a3d2be`를 추가 prototype-finalization PR 이후 갱신한 최종 기준이다.
 - 2026-05-10 사용자 결정: 기존 Wave1 포팅 PR들은 merge 이력으로만 본다. 사용자가 원하는 다음 작업은 **전체 Wave1 slice A~F를 다시 prototype 기준으로 디자인 재감사/재포팅**하는 것이다.
   - 기존 PR #373, #374, #376, #379, #381, #383의 screenshot/authority 결과는 historical evidence일 뿐, 현재 visual parity 완료 근거로 재사용하지 않는다.
   - 각 slice는 기존 MVP 기능과 공식 계약을 보존하면서, `claude-design-260505-wave1`와 실제 서비스 화면의 visual/layout 차이를 다시 확인하고 필요한 만큼 수정한다.
@@ -94,7 +94,7 @@
   - 테스트가 UI selector 변경 때문에 깨지면 기능 기대값은 유지하고 selector를 새 UI에 맞게 조정한다. 디자인 변경을 이유로 기능 테스트를 삭제하지 않는다.
 - **전체 Wave1 재포팅 원칙**
   - 서비스 재포팅 대상은 Slice A~F 전체다. 특정 slice만 먼저 실패가 확인됐더라도, 이전 merge 상태를 전체 완료 판정으로 간주하지 않는다.
-  - 단, 2026-05-11 사용자 QA에서 prototype 자체의 화면이동/동작/디자인 문제가 확인됐으므로, 서비스 재포팅을 시작하기 전에 **Prototype Repair 0~4와 follow-up repair #391~#398을 완료하고 fixed prototype을 freeze**한다.
+  - 단, 2026-05-11 사용자 QA에서 prototype 자체의 화면이동/동작/디자인 문제가 확인됐으므로, 서비스 재포팅을 시작하기 전에 **Prototype Repair 0~4와 follow-up repair #391~#402를 완료하고 fixed prototype을 freeze**한다.
   - 각 slice는 "현재 서비스 screenshot -> prototype reference screenshot -> 차이표 -> 기능 보존 테스트 -> 디자인 수정 -> screenshot 재캡처 -> visual verdict" 순서로 닫는다.
   - slice별 completion은 PR merge 여부가 아니라 prototype 대비 visual verdict 90점 이상, blocker 0개, 기능 regression 통과로 판단한다.
   - 한 PR에 모든 화면을 몰아넣지 않는다. 기존 vertical slice 경계 A~F를 유지하고, 각 slice repair PR을 작고 검증 가능하게 만든다.
@@ -194,8 +194,8 @@
 - prototype repair에서 고친 화면 이동은 "prototype 기준을 MVP에 맞춘 것"이지, 나중에 service route를 prototype 임의 흐름으로 바꿔도 된다는 뜻이 아니다.
 - service porting의 100% parity는 visual/layout parity만 뜻한다. route, submit, API, 저장/삭제/복구, auth, 상태 전이는 MVP/공식 문서 기준을 유지한다.
 - Repair slice PR은 독립적으로 리뷰 가능해야 하며, 이전 repair slice가 merge되지 않으면 다음 repair slice를 시작하지 않는다.
-- Repair 4에서 initial fixed prototype commit SHA를 기록했고, follow-up freezes에서 additional repair PR #391~#398을 반영한 최종 SHA를 기록한다. 이후 service porting은 그 commit의 prototype을 read-only reference로 사용한다.
-- Current fixed prototype implementation SHA: `c83a851f95e358cf07f5a21c6f413ee091a3d2be`
+- Repair 4에서 initial fixed prototype commit SHA를 기록했고, follow-up freezes에서 additional repair PR #391~#402를 반영한 최종 SHA를 기록한다. 이후 service porting은 그 commit의 prototype을 read-only reference로 사용한다.
+- Current fixed prototype implementation SHA: `4b49e05906c998fe83f68a2fa374bf53b7079291`
 - Current freeze closeout note: `docs/workpacks/wave1-prototype-repair/closeout.md`
 
 ### Prototype Repair 0: Navigation And Return Context
@@ -326,9 +326,9 @@
 
 완료 기준:
 
-- Prototype Repair 0~4와 follow-up repair PR #391~#398이 merged된 뒤에만 service Slice A~F 재포팅을 시작한다.
+- Prototype Repair 0~4와 follow-up repair PR #391~#402가 merged된 뒤에만 service Slice A~F 재포팅을 시작한다.
 - 이후 service porting prompt는 fixed prototype 경로/commit SHA를 명시한다.
-- 이후 service porting prompt는 `fixed_prototype_implementation_sha=c83a851f95e358cf07f5a21c6f413ee091a3d2be`를 명시한다.
+- 이후 service porting prompt는 `fixed_prototype_implementation_sha=4b49e05906c998fe83f68a2fa374bf53b7079291`를 명시한다.
 - fixed prototype의 화면 이동은 MVP 기준으로 보정된 reference이며, service route 변경 근거로 오해하지 않게 기록한다.
 
 ## All-Slice Re-Port Charter
@@ -777,7 +777,7 @@ docs/workpacks/wave1-service-porting-plan.md를 먼저 읽고, `ui/designs/proto
 - 기존 Wave1 포팅 PR들은 merge됐지만, 실제 서비스 화면이 확정 디자인 소스 `claude-design-260505-wave1`와 충분히 맞는지 신뢰할 수 없다.
 - 특히 PR #383 `feat(wave1): merge account library leftovers closeout`은 사용자가 직접 visual parity 실패를 확인했다.
 - 2026-05-11 사용자 QA에서 prototype 자체의 화면이동/동작/디자인 문제가 확인됐다.
-- 이번 작업은 먼저 Prototype Repair 0~4와 follow-up repair #391~#398을 끝내고 fixed prototype을 freeze한 뒤, Slice A~F 전체를 fixed prototype 기준으로 재감사하고 필요한 slice를 다시 디자인 포팅하는 작업이다.
+- 이번 작업은 먼저 Prototype Repair 0~4와 follow-up repair #391~#402를 끝내고 fixed prototype을 freeze한 뒤, Slice A~F 전체를 fixed prototype 기준으로 재감사하고 필요한 slice를 다시 디자인 포팅하는 작업이다.
 - 단순 문구/버튼 polish가 아니라 화면 구조, 카드 밀도, spacing, 배민 스타일 톤, 섹션 구성, 모바일/데스크톱 layout을 prototype 기준으로 맞춘다.
 
 가장 중요한 원칙:
@@ -848,7 +848,7 @@ Prototype Repair가 끝난 후 service 재포팅 순서:
 4. API/DB/status/endpoint/field는 임의 추가하지 않고 prototype demo data로만 표현했다.
 5. 320px/390px smoke 또는 screenshot evidence를 남겼고, 가능한 경우 desktop도 포함했다.
 6. Repair 0~3이 모두 merged된 뒤 Repair 4에서 initial fixed prototype 기준을 freeze했다.
-7. 사용자 follow-up repair #391~#398이 모두 merged된 뒤 최종 fixed prototype 기준을 다시 freeze했다.
+7. 사용자 follow-up repair #391~#402가 모두 merged된 뒤 최종 fixed prototype 기준을 다시 freeze했다.
 8. 이후 service Slice A~F 재포팅을 시작한다.
 9. 각 PR은 current-head GitHub checks 통과 확인 후 merge한다.
 10. merge 후 알림 채널이 설정되어 있으면 Discord 완료 알림을 보낸다.
@@ -880,7 +880,7 @@ Prototype Repair가 끝난 후 service 재포팅 순서:
 Prototype repair and follow-up freeze are complete. The next product implementation step is **Slice A `wave1-port-foundation` service porting** using:
 
 - `fixed_prototype_path=ui/designs/prototypes/claude-design-260505-wave1`
-- `fixed_prototype_implementation_sha=c83a851f95e358cf07f5a21c6f413ee091a3d2be`
+- `fixed_prototype_implementation_sha=4b49e05906c998fe83f68a2fa374bf53b7079291`
 - `visual_layout_source_of_truth=fixed prototype`
 - `functional_source_of_truth=MVP service implementation + official docs`
 
