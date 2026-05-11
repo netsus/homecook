@@ -25,7 +25,9 @@ export function SortDropdown({
   className,
 }: SortDropdownProps) {
   const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<"bottom" | "top">("bottom");
   const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const selectedOption = options.find((o) => o.value === value);
@@ -53,6 +55,25 @@ export function SortDropdown({
   useEffect(() => {
     if (!open) return;
 
+    function updatePlacement() {
+      const triggerBounds = triggerRef.current?.getBoundingClientRect();
+      if (!triggerBounds) return;
+
+      const listHeight = listRef.current?.offsetHeight ?? options.length * 44;
+      const spaceBelow = window.innerHeight - triggerBounds.bottom;
+      const spaceAbove = triggerBounds.top;
+
+      setPlacement(
+        spaceBelow < listHeight + 8 && spaceAbove > spaceBelow
+          ? "top"
+          : "bottom",
+      );
+    }
+
+    updatePlacement();
+    window.addEventListener("resize", updatePlacement);
+    window.addEventListener("scroll", updatePlacement, true);
+
     function handleClickOutside(e: MouseEvent) {
       if (
         containerRef.current &&
@@ -63,8 +84,12 @@ export function SortDropdown({
     }
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("resize", updatePlacement);
+      window.removeEventListener("scroll", updatePlacement, true);
+    };
+  }, [open, options.length]);
 
   return (
     <div
@@ -77,10 +102,8 @@ export function SortDropdown({
         aria-haspopup="listbox"
         aria-label={`${label}: ${selectedOption?.label ?? ""}`}
         className={[
-          "inline-flex min-h-[44px] items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-full)] border px-4 py-2 text-sm font-semibold transition-colors",
-          open
-            ? "border-[var(--olive)] bg-[color-mix(in_srgb,var(--olive)_8%,transparent)] text-[var(--olive)]"
-            : "border-[var(--line)] bg-[var(--surface)] text-[var(--text-2)] hover:border-[var(--olive)] hover:text-[var(--olive)]",
+          "inline-flex min-h-[44px] items-center gap-1 whitespace-nowrap rounded-none border-0 bg-transparent px-0 py-1 text-[13px] font-semibold text-[#495057] transition-colors",
+          open ? "text-[#212529]" : "hover:text-[#212529]",
           disabled ? "cursor-not-allowed opacity-60" : "",
         ]
           .filter(Boolean)
@@ -93,7 +116,7 @@ export function SortDropdown({
         <span>{selectedOption?.label ?? label}</span>
         <svg
           aria-hidden="true"
-          className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`h-3 w-3 text-[#868E96] transition-transform ${open ? "rotate-180" : ""}`}
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
@@ -111,7 +134,11 @@ export function SortDropdown({
       {open ? (
         <ul
           aria-label={`${label} 옵션`}
-          className="absolute left-0 z-40 mt-1 min-w-[160px] overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-2)]"
+          className={[
+            "absolute right-0 z-40 min-w-[140px] overflow-hidden rounded-[10px] border border-[#DEE2E6] bg-white shadow-[0px_4px_12px_rgba(0,0,0,0.10)]",
+            placement === "top" ? "bottom-full mb-1" : "top-full mt-1",
+          ].join(" ")}
+          ref={listRef}
           role="listbox"
         >
           {options.map((option) => {
@@ -122,8 +149,8 @@ export function SortDropdown({
                 className={[
                   "flex min-h-[44px] w-full cursor-pointer items-center whitespace-nowrap px-4 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--olive)] focus:ring-inset",
                   isSelected
-                    ? "font-bold text-[var(--olive)]"
-                    : "font-medium text-[var(--foreground)] hover:bg-[var(--surface-fill)]",
+                    ? "bg-[#F1F3F5] font-bold text-[#212529]"
+                    : "bg-white font-medium text-[#212529] hover:bg-[#F8F9FA]",
                 ].join(" ")}
                 key={option.value}
                 onClick={() => handleSelect(option.value)}
@@ -140,7 +167,7 @@ export function SortDropdown({
                 {isSelected ? (
                   <svg
                     aria-hidden="true"
-                    className="ml-2 h-4 w-4 shrink-0 text-[var(--olive)]"
+                    className="ml-2 h-4 w-4 shrink-0 text-[#2AC1BC]"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2.5"

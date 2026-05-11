@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Jua&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -172,5 +173,12 @@ button {
 
   .recipe-overview-metrics-compact {
     gap: 0.5rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-shell.wave1-home-shell {
+    background: #ffffff;
+    padding: 0;
   }
 }
