@@ -6,7 +6,7 @@ export default async function PlannerPage() {
   const user = await getServerAuthUser();
 
   return (
-    <AppShell currentTab="planner">
+    <AppShell className="wave1-planner-shell" currentTab="planner">
       <PlannerWeekScreen initialAuthenticated={Boolean(user)} />
     </AppShell>
   );

@@ -211,13 +211,13 @@ describe("planner week screen", () => {
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByRole("heading", { name: "식단 플래너" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "플래너" })).toBeTruthy();
     expect(screen.getAllByText("아침").length).toBeGreaterThan(0);
     expect(screen.getAllByText("점심").length).toBeGreaterThan(0);
     expect(screen.getAllByText("간식").length).toBeGreaterThan(0);
     expect(screen.getAllByText("저녁").length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText(/식단 카드$/)).toHaveLength(7);
-    expect(screen.getAllByText("3월 24일 ~ 3월 30일")).toHaveLength(1);
+    expect(screen.getByText("이번 주 3월 24일 - 3월 30일")).toBeTruthy();
     expect(screen.queryByText("화면 상태")).toBeNull();
     // Wave1: week nav buttons now always visible (mobile uses icon-only)
     expect(screen.getByRole("button", { name: "이전 주" })).toBeTruthy();
@@ -230,24 +230,52 @@ describe("planner week screen", () => {
     expect(screen.queryByRole("button", { name: "컬럼 추가" })).toBeNull();
   });
 
-  it("enables the shopping and leftover CTAs in a 2-column grid (요리하기 removed per Wave1)", async () => {
+  it("keeps Wave1 mobile navigation with a floating shopping CTA", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
 
     render(<PlannerWeekScreen />);
 
-    expect(await screen.findByRole("heading", { name: "식단 플래너" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "플래너" })).toBeTruthy();
 
-    const toolbar = screen.getByRole("group", { name: "플래너 보조 작업" });
-    const shoppingLink = within(toolbar).getByRole("link", { name: "장보기" }) as HTMLAnchorElement;
-    const leftoverLink = within(toolbar).getByRole("link", { name: "남은요리" }) as HTMLAnchorElement;
+    const shoppingLink = screen.getByRole("link", { name: "장보기" }) as HTMLAnchorElement;
+    const bottomTabs = screen.getByRole("navigation", { name: "플래너 하단 탭" });
+    const plannerTab = within(bottomTabs).getByRole("link", { name: "플래너" });
 
-    expect(toolbar.className).toContain("grid-cols-2");
-    expect(toolbar.className).toContain("rounded-[var(--radius-lg)]");
+    expect(shoppingLink.closest(".fixed")).not.toBeNull();
     expect(shoppingLink.getAttribute("href")).toBe("/shopping/flow");
-    expect(leftoverLink.getAttribute("href")).toBe("/leftovers");
-    // Wave1: 요리하기 CTA removed
-    expect(within(toolbar).queryByRole("link", { name: "요리하기" })).toBeNull();
+    expect(plannerTab.getAttribute("aria-current")).toBe("page");
+    expect(screen.queryByRole("group", { name: "플래너 보조 작업" })).toBeNull();
+  });
+
+  it("opens the Wave1 meal-add sheet and preserves the selected option in links", async () => {
+    const user = userEvent.setup();
+
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    await screen.findByRole("heading", { name: "플래너" });
+    await user.click(screen.getAllByRole("button", { name: "+ 식사 추가" })[0]);
+
+    const sheet = screen.getByTestId("planner-meal-add-sheet");
+    expect(within(sheet).getByRole("heading", { name: "3/24 아침 · 식사 추가" })).toBeTruthy();
+
+    const searchLink = within(sheet).getByRole("link", { name: /레시피 검색/ });
+    const recipeBookLink = within(sheet).getByRole("link", { name: /레시피북에서 추가/ });
+    const pantryLink = within(sheet).getByRole("link", { name: /팬트리 기반 추천/ });
+    const leftoverLink = within(sheet).getByRole("link", { name: /남은요리에서 추가/ });
+    const youtubeLink = within(sheet).getByRole("link", { name: /유튜브에서 가져오기/ });
+    const manualLink = within(sheet).getByRole("link", { name: /직접 등록/ });
+
+    expect(searchLink.getAttribute("href")).toContain("/menu-add?");
+    expect(searchLink.getAttribute("href")).toContain("date=2026-03-24");
+    expect(recipeBookLink.getAttribute("href")).toContain("source=recipebook");
+    expect(pantryLink.getAttribute("href")).toContain("source=pantry");
+    expect(leftoverLink.getAttribute("href")).toContain("source=leftover");
+    expect(youtubeLink.getAttribute("href")).toContain("/menu/add/youtube?");
+    expect(manualLink.getAttribute("href")).toContain("/menu/add/manual?");
   });
 
   it("shows a direct link back to an existing shopping list", async () => {
@@ -281,7 +309,7 @@ describe("planner week screen", () => {
     expect(shoppingListLink.getAttribute("href")).toBe("/shopping/lists/shopping-list-1");
   });
 
-  it("compresses meal slot metadata into compact chips while keeping empty slots with '+ 음식' CTA (Wave1)", async () => {
+  it("compresses meal slot metadata while keeping empty slots with '+ 식사 추가' CTA (Wave1)", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(
       createPlannerData({
@@ -304,19 +332,19 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
-    // slot rows are links with min-h-[44px]; find the breakfast row via meal title
+    // slot rows keep the meal link compact; empty rows open the Wave1 add sheet.
     const breakfastRow = within(firstDayCard).getByText("김치찌개").closest("a");
-    // find the dinner row via its 끼니명 label
-    const dinnerRow = within(firstDayCard).getByText("저녁").closest("a");
+    const dinnerButton = within(firstDayCard).getAllByRole("button", {
+      name: "+ 식사 추가",
+    })[2];
 
     expect(breakfastRow).not.toBeNull();
-    expect(dinnerRow).not.toBeNull();
-    expect(breakfastRow?.className).toContain("min-h-[44px]");
+    expect(dinnerButton).toBeTruthy();
+    expect(breakfastRow?.className).toContain("min-h-[46px]");
     expect(within(breakfastRow as HTMLElement).getByText("2인분")).toBeTruthy();
     // Wave1: status badge removed — no "등록" text
     expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
-    // Wave1: empty slot shows "+ 음식" instead of "식사 추가"
-    expect(within(dinnerRow as HTMLElement).getByText(/음식/).tagName).toBe("SPAN");
+    expect(dinnerButton.textContent?.trim()).toBe("+ 식사 추가");
   });
 
   it("marks leftover meals with an explicit leftover chip", async () => {
@@ -393,9 +421,7 @@ describe("planner week screen", () => {
     expect(fetchPlanner).toHaveBeenCalledTimes(2);
   });
 
-  it("shifts planner range when the native week strip scroll settles on the next page and keeps current-week reset as a secondary action", async () => {
-    const user = userEvent.setup();
-
+  it("shifts planner range when the native week strip scroll settles on the next page", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner
       .mockResolvedValueOnce(createPlannerData({ meals: [] }))
@@ -416,12 +442,7 @@ describe("planner week screen", () => {
       expect(fetchPlanner).toHaveBeenNthCalledWith(2, "2026-03-31", "2026-04-06");
     });
 
-    const resetButton = screen.getByRole("button", { name: "이번주로" });
-    await user.click(resetButton);
-
-    await waitFor(() => {
-      expect(fetchPlanner).toHaveBeenNthCalledWith(3, "2026-03-24", "2026-03-30");
-    });
+    expect(screen.queryByRole("button", { name: "이번주로" })).toBeNull();
   });
 
   it("renders the week strip as a sticky native horizontal scroller with hidden scrollbar", async () => {
@@ -562,8 +583,7 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
-    // Wave1: empty slots show "+ 음식" instead of "식사 추가"
-    expect(screen.getAllByText(/음식/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("+ 식사 추가").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByPlaceholderText("새 끼니 컬럼 이름")).toBeNull();
   });
 
@@ -596,11 +616,11 @@ describe("planner week screen", () => {
 
     expect(breakfastSlot).not.toBeNull();
     // Slot name rendered as text — no emoji characters present
-    const slotNameEl = within(breakfastSlot as HTMLElement).getByText("아침");
+    const slotNameEl = within(firstDayCard).getByText("아침");
     expect(slotNameEl).toBeTruthy();
     expect(slotNameEl.textContent).toBe("아침");
     // Verify no emoji in the slot area (previously had 🌅 🌞 🍪 🌙)
-    const slotAreaText = (breakfastSlot as HTMLElement).textContent ?? "";
+    const slotAreaText = firstDayCard.textContent ?? "";
     expect(slotAreaText).not.toMatch(/[\u{1F300}-\u{1F9FF}]/u);
   });
 
@@ -653,7 +673,7 @@ describe("planner week screen", () => {
     expect(screen.queryByLabelText("요리 완료")).toBeNull();
   });
 
-  it("shows '+ 음식' button on filled slots and '+ 음식' CTA on empty slots (Wave1)", async () => {
+  it("shows '+' button on filled slots and '+ 식사 추가' CTA on empty slots (Wave1)", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(
       createPlannerData({
@@ -676,13 +696,18 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
-    // All slots (filled + empty) should show "+ 음식" text
-    const foodButtons = within(firstDayCard).getAllByText(/\+\s*음식/);
-    // 4 slots total: 1 filled (has "+ 음식" button) + 3 empty (each has "+ 음식" CTA)
-    expect(foodButtons.length).toBe(4);
+    const filledAddButton = within(firstDayCard).getByRole("button", {
+      name: "3/24 아침 식사 추가",
+    });
+    const emptyAddButtons = within(firstDayCard).getAllByRole("button", {
+      name: "+ 식사 추가",
+    });
+
+    expect(filledAddButton.textContent?.trim()).toBe("+");
+    expect(emptyAddButtons).toHaveLength(3);
   });
 
-  it("uses the top shopping CTA without a floating overlap CTA (Wave1)", async () => {
+  it("uses the floating shopping CTA from the Wave1 mobile reference", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
 
@@ -691,12 +716,13 @@ describe("planner week screen", () => {
     await screen.findByText(/아직 등록된 식사가 없어요/);
 
     const shoppingLinks = screen.getAllByRole("link", { name: "장보기" });
-    expect(shoppingLinks.length).toBeGreaterThanOrEqual(1);
+    expect(shoppingLinks).toHaveLength(1);
     const fixedShoppingCta = shoppingLinks.find(
       (link) => link.closest(".fixed") !== null,
     );
-    expect(fixedShoppingCta).toBeUndefined();
-    expect(shoppingLinks[0]?.textContent?.trim()).toBe("장보기");
+    expect(fixedShoppingCta).toBeTruthy();
+    expect(fixedShoppingCta?.getAttribute("href")).toBe("/shopping/flow");
+    expect(fixedShoppingCta?.textContent?.trim()).toBe("장보기");
     expect(shoppingLinks[0]?.textContent).not.toContain("🛒");
   });
 

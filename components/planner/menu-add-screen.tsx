@@ -22,6 +22,7 @@ export interface MenuAddScreenProps {
   columnId: string;
   slotName: string;
   initialAuthenticated: boolean;
+  initialSource?: string;
 }
 
 type PickerMode = "none" | "recipebook-selector" | "recipebook-detail" | "pantry" | "leftover";
@@ -136,6 +137,7 @@ function ActionButtons({
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function MenuAddScreen({
+  initialSource = "",
   planDate,
   columnId,
   slotName,
@@ -147,7 +149,12 @@ export function MenuAddScreen({
   const [creationError, setCreationError] = useState<string | null>(null);
 
   // Recipe book state
-  const [pickerMode, setPickerMode] = useState<PickerMode>("none");
+  const [pickerMode, setPickerMode] = useState<PickerMode>(() => {
+    if (initialSource === "recipebook") return "recipebook-selector";
+    if (initialSource === "pantry") return "pantry";
+    if (initialSource === "leftover") return "leftover";
+    return "none";
+  });
   const [selectedBook, setSelectedBook] = useState<RecipeBookSummary | null>(null);
   const [selectedBookRecipe, setSelectedBookRecipe] = useState<RecipeBookRecipeItem | null>(null);
 
