@@ -60,6 +60,8 @@ Smoke evidence:
 
 Screenshot evidence:
 
+- Fixed prototype reference screenshots: `ui/designs/reference/wave1-fixed-prototype/`
+- Fixed prototype reference manifest: `ui/designs/reference/wave1-fixed-prototype/manifest.json`
 - Repair 2 390px: `.omx/artifacts/wave1-repair2/repair2-390-*.png`
 - Repair 2 320px: `.omx/artifacts/wave1-repair2/repair2-320-*.png`
 - Repair 3 390px: `.omx/artifacts/wave1-repair3/repair3-390-*.png`
@@ -82,6 +84,7 @@ git diff --check
 pnpm validate:branch
 pnpm validate:workflow-v2
 pnpm validate:workpack -- --slice wave1-prototype-repair
+pnpm validate:wave1-prototype-lock
 ```
 
 ## Service Porting Gate
@@ -94,8 +97,12 @@ All service porting prompts must include:
 - `fixed_prototype_implementation_sha=9bf7a34c6b422d0c9981d4c2968e3350d5a28892`
 - `visual_layout_source_of_truth=fixed prototype`
 - `functional_source_of_truth=MVP service implementation + official docs`
+- `reference_manifest=ui/designs/reference/wave1-fixed-prototype/manifest.json`
+- `reference_screenshots=ui/designs/reference/wave1-fixed-prototype/*.png`
 
 Do not copy prototype demo behavior into the MVP service. The repaired prototype is a visual/layout and reference-flow artifact. Service routes, submit behavior, auth, persistence, API wrappers, read-only rules, and status transitions remain sourced from the current MVP implementation and official docs.
+
+Wave1 service porting PRs must pass `pnpm validate:pr-ready -- --slice <wave1-port-slice> --pr-body <pr-body-file> --mode frontend`. That validator now includes the Wave1 prototype lock gate: the PR body must mention the fixed SHA, at least one committed reference screenshot path, at least one generated service screenshot path, a visual verdict score of 90+, and blocker count 0.
 
 ## Guardrails
 

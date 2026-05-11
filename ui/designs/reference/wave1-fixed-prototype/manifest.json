@@ -1,0 +1,139 @@
+{
+  "lock_version": 1,
+  "locked_on": "2026-05-11",
+  "fixed_prototype_path": "ui/designs/prototypes/claude-design-260505-wave1",
+  "fixed_prototype_implementation_sha": "9bf7a34c6b422d0c9981d4c2968e3350d5a28892",
+  "visual_layout_source_of_truth": "fixed prototype",
+  "functional_source_of_truth": "MVP service implementation + official docs",
+  "reference_capture_command": "pnpm capture:wave1-prototype-lock",
+  "validation_command": "pnpm validate:wave1-prototype-lock",
+  "required_visual_verdict_score": 90,
+  "allowed_divergence_policy": "Only user-approved divergences may be recorded in the service porting PR body. They do not replace the required reference screenshot, service screenshot, visual verdict score, and blocker count evidence.",
+  "screenshots": [
+    {
+      "surface": "HOME",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-home.png"
+    },
+    {
+      "surface": "HOME",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-home.png"
+    },
+    {
+      "surface": "HOME",
+      "viewport": "desktop-1280",
+      "path": "ui/designs/reference/wave1-fixed-prototype/desktop-1280-home.png"
+    },
+    {
+      "surface": "RECIPE_DETAIL",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-recipe-detail.png"
+    },
+    {
+      "surface": "RECIPE_DETAIL",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-recipe-detail.png"
+    },
+    {
+      "surface": "PLANNER_WEEK",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-planner.png"
+    },
+    {
+      "surface": "PLANNER_WEEK",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-planner.png"
+    },
+    {
+      "surface": "PLANNER_WEEK",
+      "viewport": "desktop-1280",
+      "path": "ui/designs/reference/wave1-fixed-prototype/desktop-1280-planner.png"
+    },
+    {
+      "surface": "MENU_ADD",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-planner-meal-add.png"
+    },
+    {
+      "surface": "MENU_ADD",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-planner-meal-add.png"
+    },
+    {
+      "surface": "SHOPPING_DETAIL",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-shopping-detail.png"
+    },
+    {
+      "surface": "SHOPPING_DETAIL",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-shopping-detail.png"
+    },
+    {
+      "surface": "PANTRY",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-pantry.png"
+    },
+    {
+      "surface": "PANTRY",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-pantry.png"
+    },
+    {
+      "surface": "MYPAGE",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-mypage.png"
+    },
+    {
+      "surface": "MYPAGE",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-mypage.png"
+    },
+    {
+      "surface": "MYPAGE",
+      "viewport": "desktop-1280",
+      "path": "ui/designs/reference/wave1-fixed-prototype/desktop-1280-mypage.png"
+    },
+    {
+      "surface": "SETTINGS",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-settings.png"
+    },
+    {
+      "surface": "SETTINGS",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-settings.png"
+    },
+    {
+      "surface": "SETTINGS",
+      "viewport": "desktop-1280",
+      "path": "ui/designs/reference/wave1-fixed-prototype/desktop-1280-settings.png"
+    },
+    {
+      "surface": "ACCOUNT",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-account.png"
+    },
+    {
+      "surface": "ACCOUNT",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-account.png"
+    },
+    {
+      "surface": "LEFTOVERS",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-leftovers.png"
+    },
+    {
+      "surface": "LEFTOVERS",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-leftovers.png"
+    },
+    {
+      "surface": "LEFTOVERS",
+      "viewport": "desktop-1280",
+      "path": "ui/designs/reference/wave1-fixed-prototype/desktop-1280-leftovers.png"
+    }
+  ]
+}

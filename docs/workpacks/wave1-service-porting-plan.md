@@ -11,6 +11,8 @@
 - Wave1 vNext prototype은 최신 기준 프로토타입으로 사용한다.
 - 2026-05-11 Prototype Repair 0~4 및 follow-up repair #391~#404 이후 service porting 기준은 fixed prototype implementation SHA `9bf7a34c6b422d0c9981d4c2968e3350d5a28892`다.
   - Freeze closeout: `docs/workpacks/wave1-prototype-repair/closeout.md`
+  - Reference lock manifest: `ui/designs/reference/wave1-fixed-prototype/manifest.json`
+  - Committed reference screenshots: `ui/designs/reference/wave1-fixed-prototype/*.png`
   - 이후 Slice A~F prompt와 PR body는 이 SHA를 read-only visual/layout reference로 명시한다.
   - 이 SHA는 초기 Repair 4 freeze reference, 이전 follow-up SHA `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`, Final QA SHA `c83a851f95e358cf07f5a21c6f413ee091a3d2be`, 이전 planner polish SHA `4b49e05906c998fe83f68a2fa374bf53b7079291`를 추가 prototype-finalization PR 이후 갱신한 최종 기준이다.
 - 2026-05-10 사용자 결정: 기존 Wave1 포팅 PR들은 merge 이력으로만 본다. 사용자가 원하는 다음 작업은 **전체 Wave1 slice A~F를 다시 prototype 기준으로 디자인 재감사/재포팅**하는 것이다.
@@ -97,6 +99,8 @@
   - 단, 2026-05-11 사용자 QA에서 prototype 자체의 화면이동/동작/디자인 문제가 확인됐으므로, 서비스 재포팅을 시작하기 전에 **Prototype Repair 0~4와 follow-up repair #391~#404를 완료하고 fixed prototype을 freeze**한다.
   - 각 slice는 "현재 서비스 screenshot -> prototype reference screenshot -> 차이표 -> 기능 보존 테스트 -> 디자인 수정 -> screenshot 재캡처 -> visual verdict" 순서로 닫는다.
   - slice별 completion은 PR merge 여부가 아니라 prototype 대비 visual verdict 90점 이상, blocker 0개, 기능 regression 통과로 판단한다.
+  - reference prototype screenshot은 `ui/designs/reference/wave1-fixed-prototype/manifest.json`에 등록된 커밋된 PNG를 사용한다. `.omx/artifacts`에만 남은 prototype screenshot은 final PR 근거로 쓰지 않는다.
+  - 각 `wave1-port-*` PR은 `pnpm validate:pr-ready -- --slice <slice> --pr-body <pr-body-file> --mode frontend`를 통과해야 하며, 이 검증에는 fixed SHA, reference screenshot, service screenshot, visual verdict 90+, blocker 0개 확인이 포함된다.
   - 한 PR에 모든 화면을 몰아넣지 않는다. 기존 vertical slice 경계 A~F를 유지하고, 각 slice repair PR을 작고 검증 가능하게 만든다.
   - Foundation Slice A는 공통 shell/component/tokens 영향이 크므로 먼저 재감사한다. 다만 기능을 깨는 전역 리팩터링은 하지 않고, 이후 slice에서 필요한 공통 primitive만 보수한다.
 - product slice는 Stage 1~6 흐름을 따른다.
@@ -146,6 +150,8 @@
    - `loading / empty / error / read-only / unauthorized` 상태 유지
    - 모바일 390px/320px evidence 생성
    - reference prototype screenshot과 generated service screenshot을 함께 보관한다.
+   - reference prototype screenshot은 `ui/designs/reference/wave1-fixed-prototype/`의 커밋된 baseline을 사용한다.
+   - PR body의 Design / Accessibility 섹션에 fixed SHA, reference screenshot path, service screenshot path, visual verdict score, blocker count 0을 기록한다.
    - `$visual-verdict` 또는 동등한 엄격한 비교 기준으로 reference prototype 대비 점수를 남긴다. 목표는 90점 이상이다.
    - 점수가 90점 미만이면 다음 코드 수정 전에 verdict의 `differences[]` / `suggestions[]`를 근거로 다시 수정하고 재캡처한다.
    - visual verdict는 `.omx/state/<slice>/ralph-progress.json`에 score, pass/fail, reasoning, suggestions, next_actions를 저장한다.
@@ -166,6 +172,7 @@
    - `pnpm validate:authority-evidence-presence`
    - exploratory QA를 실행했거나 required인 경우 `pnpm validate:exploratory-qa-evidence`
    - real DB smoke가 필요한 slice는 `pnpm validate:real-smoke-presence`
+   - `pnpm validate:wave1-prototype-lock -- --slice <slice> --pr-body <pr-body-file>`
    - PR checks current head green 확인
    - merge 후 알림 채널이 설정되어 있으면 Discord 알림
 
