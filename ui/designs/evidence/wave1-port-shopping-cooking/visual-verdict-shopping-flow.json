@@ -1,0 +1,80 @@
+{
+  "scope": "wave1-mobile-phase4-shopping-flow",
+  "threshold": 90,
+  "comparisons": [
+    {
+      "surface": "SHOPPING_FLOW_SELECT",
+      "viewport": "390x844",
+      "reference": "ui/designs/reference/wave1-fixed-prototype/mobile-390-shopping-flow-select.png",
+      "generated": "ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-preview.png",
+      "score": 94,
+      "verdict": "pass",
+      "category_match": true,
+      "differences": [
+        "Fixture dates and recipe names are close but not identical to the frozen prototype.",
+        "Food thumbnail artwork differs because MVP uses deterministic emoji placeholders.",
+        "The visible list height differs slightly because the MVP fixture has fewer rows in the first viewport."
+      ],
+      "suggestions": [
+        "Keep the current shell, grouped list, fixed CTA, and bottom tab geometry for this batch."
+      ],
+      "reasoning": "The mobile select step now matches the prototype app bar, STEP 1 hierarchy, date-group cards, checkbox treatment, fixed CTA, and Wave1 bottom navigation."
+    },
+    {
+      "surface": "SHOPPING_FLOW_SELECT",
+      "viewport": "320x568",
+      "reference": "ui/designs/reference/wave1-fixed-prototype/mobile-320-shopping-flow-select.png",
+      "generated": "ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-narrow.png",
+      "score": 92,
+      "verdict": "pass",
+      "category_match": true,
+      "differences": [
+        "The bottom CTA overlaps the list at a slightly different y-position.",
+        "Recipe fixture content differs from the fixed prototype but preserves the same grouped card pattern."
+      ],
+      "suggestions": [
+        "No further narrow-viewport edit for this small batch."
+      ],
+      "reasoning": "The 320px select state preserves the prototype header, list grouping, fixed CTA, and bottom tab clipping behavior."
+    },
+    {
+      "surface": "SHOPPING_FLOW_REVIEW",
+      "viewport": "390x844",
+      "reference": "ui/designs/reference/wave1-fixed-prototype/mobile-390-shopping-flow-review.png",
+      "generated": "ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-review.png",
+      "score": 93,
+      "verdict": "pass",
+      "category_match": true,
+      "differences": [
+        "Review summary counts and date come from MVP fixture data rather than the prototype fixture.",
+        "Ingredient row text differs, but row height, checkbox, pill button, and divider rhythm match closely.",
+        "The ingredient card bottom lands a few pixels higher than the reference."
+      ],
+      "suggestions": [
+        "Carry the current review shell into the later SHOPPING_DETAIL repair pass so shared item styling can converge further."
+      ],
+      "reasoning": "The review step now matches the prototype STEP 2 header, progress treatment, ingredient list card, fixed complete/share action bar, and bottom navigation."
+    },
+    {
+      "surface": "SHOPPING_FLOW_REVIEW",
+      "viewport": "320x568",
+      "reference": "ui/designs/reference/wave1-fixed-prototype/mobile-320-shopping-flow-review.png",
+      "generated": "ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-review-narrow.png",
+      "score": 91,
+      "verdict": "pass",
+      "category_match": true,
+      "differences": [
+        "The title and percent fit similarly, but the MVP count text is shorter than the prototype.",
+        "The fixed action bar covers the third row at a slightly different point."
+      ],
+      "suggestions": [
+        "Keep the current narrow review layout and re-check after SHOPPING_DETAIL item-category styling is repaired."
+      ],
+      "reasoning": "The 320px review state keeps the same compact hierarchy and fixed action/bottom-tab stack as the prototype."
+    }
+  ],
+  "next_actions": [
+    "Ship this small SHOPPING_FLOW_SELECT/REVIEW batch after local and CI checks pass.",
+    "Continue Slice D with SHOPPING_DETAIL and pantry reflection picker in the next batch."
+  ]
+}

@@ -74,6 +74,9 @@ async function installShoppingPreviewRoute(
   });
 }
 
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 0) < 768;
+}
 
 test.describe("slice 09: shopping preview and list creation", () => {
   test.describe("loading state", () => {
@@ -244,6 +247,12 @@ test.describe("slice 09: shopping preview and list creation", () => {
 
       await expect(page.getByText("김치찌개")).toBeVisible();
 
+      if (isMobileViewport(page)) {
+        await expect(page.getByLabel("인분 늘리기")).toHaveCount(0);
+        await expect(page.getByText("장보기 목록 만들기")).toBeEnabled();
+        return;
+      }
+
       // Increase servings
       const plusButton = page.getByLabel("인분 늘리기");
       await plusButton.click();
@@ -272,6 +281,11 @@ test.describe("slice 09: shopping preview and list creation", () => {
 
       await expect(page.getByText("김치찌개")).toBeVisible();
 
+      if (isMobileViewport(page)) {
+        await expect(page.getByLabel("인분 줄이기")).toHaveCount(0);
+        return;
+      }
+
       const minusButton = page.getByLabel("인분 줄이기");
       await expect(minusButton).toBeDisabled();
     });
@@ -288,6 +302,13 @@ test.describe("slice 09: shopping preview and list creation", () => {
 
       const checkbox = page.getByLabel("김치찌개 선택 해제");
       await checkbox.click();
+
+      if (isMobileViewport(page)) {
+        await expect(page.getByLabel("인분 늘리기")).toHaveCount(0);
+        await expect(page.getByLabel("인분 줄이기")).toHaveCount(0);
+        await expect(page.getByText("장보기 목록 만들기")).toBeDisabled();
+        return;
+      }
 
       const plusButton = page.getByLabel("인분 늘리기");
       const minusButton = page.getByLabel("인분 줄이기");
@@ -425,6 +446,21 @@ test.describe("slice 09: shopping preview and list creation", () => {
       await page.goto(SHOPPING_FLOW_URL);
 
       await expect(page.getByText("김치찌개")).toBeVisible();
+
+      if (isMobileViewport(page)) {
+        await expect(page.getByLabel("인분 늘리기")).toHaveCount(0);
+        await page.getByText("장보기 목록 만들기").click();
+        expect(requestBody).toEqual({
+          recipes: [
+            {
+              recipe_id: "recipe-1",
+              meal_ids: ["meal-1"],
+              shopping_servings: 2,
+            },
+          ],
+        });
+        return;
+      }
 
       // Increase to 4 servings
       const plusButton = page.getByLabel("인분 늘리기");

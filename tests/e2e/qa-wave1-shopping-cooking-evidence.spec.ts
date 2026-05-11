@@ -21,7 +21,7 @@ async function preparePage(
   viewport: { width: number; height: number },
 ) {
   const context = await browser.newContext({
-    deviceScaleFactor: 2,
+    deviceScaleFactor: 1,
     viewport,
   });
   const page = await context.newPage();
@@ -74,8 +74,8 @@ function shoppingItems() {
     {
       id: "item-1",
       ingredient_id: "ing-1",
-      display_text: "양파 2개",
-      amounts_json: [{ amount: 2, unit: "개" }],
+      display_text: "돼지고기 앞다리살 300g",
+      amounts_json: [{ amount: 300, unit: "g" }],
       is_checked: false,
       is_pantry_excluded: false,
       added_to_pantry: false,
@@ -84,9 +84,9 @@ function shoppingItems() {
     {
       id: "item-2",
       ingredient_id: "ing-2",
-      display_text: "두부 1모",
-      amounts_json: [{ amount: 1, unit: "모" }],
-      is_checked: true,
+      display_text: "밀가루 2컵",
+      amounts_json: [{ amount: 2, unit: "컵" }],
+      is_checked: false,
       is_pantry_excluded: false,
       added_to_pantry: false,
       sort_order: 100,
@@ -94,22 +94,62 @@ function shoppingItems() {
     {
       id: "item-3",
       ingredient_id: "ing-3",
-      display_text: "간장 2큰술",
-      amounts_json: [{ amount: 2, unit: "큰술" }],
+      display_text: "멸치육수 1L",
+      amounts_json: [{ amount: 1, unit: "L" }],
       is_checked: false,
-      is_pantry_excluded: true,
+      is_pantry_excluded: false,
       added_to_pantry: false,
       sort_order: 200,
     },
     {
       id: "item-4",
       ingredient_id: "ing-4",
-      display_text: "고춧가루 1큰술",
-      amounts_json: [{ amount: 1, unit: "큰술" }],
+      display_text: "묵은지 1컵",
+      amounts_json: [{ amount: 1, unit: "컵" }],
+      is_checked: false,
+      is_pantry_excluded: false,
+      added_to_pantry: false,
+      sort_order: 300,
+    },
+    {
+      id: "item-5",
+      ingredient_id: "ing-5",
+      display_text: "찹쌀 1공기",
+      amounts_json: [{ amount: 1, unit: "공기" }],
+      is_checked: false,
+      is_pantry_excluded: false,
+      added_to_pantry: false,
+      sort_order: 400,
+    },
+    {
+      id: "item-6",
+      ingredient_id: "ing-6",
+      display_text: "두부 1/2모",
+      amounts_json: [{ amount: 0.5, unit: "모" }],
+      is_checked: false,
+      is_pantry_excluded: false,
+      added_to_pantry: false,
+      sort_order: 500,
+    },
+    {
+      id: "item-7",
+      ingredient_id: "ing-7",
+      display_text: "닭가슴살 200g",
+      amounts_json: [{ amount: 200, unit: "g" }],
       is_checked: false,
       is_pantry_excluded: true,
       added_to_pantry: false,
-      sort_order: 300,
+      sort_order: 600,
+    },
+    {
+      id: "item-8",
+      ingredient_id: "ing-8",
+      display_text: "대파 1대",
+      amounts_json: [{ amount: 1, unit: "대" }],
+      is_checked: false,
+      is_pantry_excluded: true,
+      added_to_pantry: false,
+      sort_order: 700,
     },
   ];
 }
@@ -147,20 +187,131 @@ async function installShoppingRoutes(page: Page) {
             {
               id: "meal-1",
               recipe_id: "recipe-1",
-              recipe_name: "김치찌개",
+              recipe_name: "된장찌개",
               recipe_thumbnail: null,
               planned_servings: 2,
-              created_at: "2026-04-12T00:00:00.000Z",
+              created_at: "2026-04-20T00:00:00.000Z",
             },
             {
               id: "meal-2",
-              recipe_id: "recipe-1",
-              recipe_name: "김치찌개",
+              recipe_id: "recipe-2",
+              recipe_name: "김치볶음밥",
+              recipe_thumbnail: null,
+              planned_servings: 1,
+              created_at: "2026-04-21T00:00:00.000Z",
+            },
+            {
+              id: "meal-3",
+              recipe_id: "recipe-3",
+              recipe_name: "제육볶음",
               recipe_thumbnail: null,
               planned_servings: 2,
-              created_at: "2026-04-13T00:00:00.000Z",
+              created_at: "2026-04-21T00:00:00.000Z",
+            },
+            {
+              id: "meal-4",
+              recipe_id: "recipe-4",
+              recipe_name: "감자 수제비",
+              recipe_thumbnail: null,
+              planned_servings: 2,
+              created_at: "2026-04-22T00:00:00.000Z",
+            },
+            {
+              id: "meal-5",
+              recipe_id: "recipe-5",
+              recipe_name: "김치볶음밥",
+              recipe_thumbnail: null,
+              planned_servings: 1,
+              created_at: "2026-04-23T00:00:00.000Z",
+            },
+            {
+              id: "meal-6",
+              recipe_id: "recipe-6",
+              recipe_name: "된장찌개",
+              recipe_thumbnail: null,
+              planned_servings: 2,
+              created_at: "2026-04-23T00:00:00.000Z",
             },
           ],
+          recipes: [
+            {
+              recipe_id: "recipe-1",
+              recipe_name: "된장찌개",
+              recipe_thumbnail: null,
+              meal_ids: ["meal-1"],
+              planned_servings_total: 2,
+              shopping_servings: 2,
+              is_selected: false,
+            },
+            {
+              recipe_id: "recipe-2",
+              recipe_name: "김치볶음밥",
+              recipe_thumbnail: null,
+              meal_ids: ["meal-2"],
+              planned_servings_total: 1,
+              shopping_servings: 1,
+              is_selected: false,
+            },
+            {
+              recipe_id: "recipe-3",
+              recipe_name: "제육볶음",
+              recipe_thumbnail: null,
+              meal_ids: ["meal-3"],
+              planned_servings_total: 2,
+              shopping_servings: 2,
+              is_selected: true,
+            },
+            {
+              recipe_id: "recipe-4",
+              recipe_name: "감자 수제비",
+              recipe_thumbnail: null,
+              meal_ids: ["meal-4"],
+              planned_servings_total: 2,
+              shopping_servings: 2,
+              is_selected: true,
+            },
+            {
+              recipe_id: "recipe-5",
+              recipe_name: "김치볶음밥",
+              recipe_thumbnail: null,
+              meal_ids: ["meal-5"],
+              planned_servings_total: 1,
+              shopping_servings: 1,
+              is_selected: true,
+            },
+            {
+              recipe_id: "recipe-6",
+              recipe_name: "된장찌개",
+              recipe_thumbnail: null,
+              meal_ids: ["meal-6"],
+              planned_servings_total: 2,
+              shopping_servings: 2,
+              is_selected: true,
+            },
+          ],
+        },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/shopping/lists", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          id: "list-1",
+          title: "2026.05.10 · 장보기 목록",
+          date_range_start: "2026-05-10",
+          date_range_end: "2026-05-10",
+          is_completed: false,
+          item_count: shoppingItems().length,
+          created_at: "2026-05-10T00:00:00.000Z",
         },
         error: null,
       },
@@ -312,11 +463,18 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await setAuthOverride(page);
     await installShoppingRoutes(page);
     await page.goto(`${BASE_URL}/shopping/flow`);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(page.getByText("제육볶음")).toBeVisible();
     await stabilize(page);
     await page.screenshot({
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "shopping-flow-preview.png"),
+    });
+    await page.getByRole("button", { name: "장보기 목록 만들기" }).click();
+    await expect(page.getByText("STEP 2 / 2")).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "shopping-flow-review.png"),
     });
     await context.close();
   }
@@ -326,11 +484,18 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await setAuthOverride(page);
     await installShoppingRoutes(page);
     await page.goto(`${BASE_URL}/shopping/flow`);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(page.getByText("제육볶음")).toBeVisible();
     await stabilize(page);
     await page.screenshot({
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "shopping-flow-narrow.png"),
+    });
+    await page.getByRole("button", { name: "장보기 목록 만들기" }).click();
+    await expect(page.getByText("STEP 2 / 2")).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "shopping-flow-review-narrow.png"),
     });
     await context.close();
   }
