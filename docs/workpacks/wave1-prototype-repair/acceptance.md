@@ -79,7 +79,7 @@ Evidence:
 ## Repair 4: Freeze And Service Porting Gate
 
 - [x] Repair 0~3 PR이 모두 merged됐다.
-- [x] 2026-05-11 follow-up repair PR #391~#402가 모두 merged됐다.
+- [x] 2026-05-11 follow-up repair PR #391~#404가 모두 merged됐다.
 - [x] Fixed prototype commit SHA가 closeout note에 기록됐다.
 - [x] 320px/390px screenshot evidence가 남아 있다.
 - [x] Navigation smoke evidence가 남아 있다.
@@ -90,8 +90,8 @@ Evidence:
 Evidence:
 
 - Closeout note: `docs/workpacks/wave1-prototype-repair/closeout.md`
-- Fixed prototype implementation SHA: `4b49e05906c998fe83f68a2fa374bf53b7079291`
-- Merged PRs: #386, #387, #388, #389, #390, #391, #392, #393, #394, #396, #397, #398, #399, #400, #401, #402
+- Fixed prototype implementation SHA: `9bf7a34c6b422d0c9981d4c2968e3350d5a28892`
+- Merged PRs: #386, #387, #388, #389, #390, #391, #392, #393, #394, #396, #397, #398, #399, #400, #401, #402, #403, #404
 - Screenshot evidence: `.omx/artifacts/wave1-repair2/repair2-390-*.png`, `.omx/artifacts/wave1-repair2/repair2-320-*.png`, `.omx/artifacts/wave1-repair3/repair3-390-*.png`, `.omx/artifacts/wave1-repair3/repair3-320-*.png`
 - Follow-up screenshot evidence: `.omx/artifacts/wave1-repair5/*.png`, `.omx/artifacts/wave1-repair6/*.png`, `.omx/artifacts/wave1-repair7/*.png`, `.omx/artifacts/wave1-repair8/*.png`
 - Mirror check: `diff -q ui/designs/prototypes/claude-design-260505-wave1/index.html ui/designs/prototypes/claude-design-260505-wave1/homecook-baemin-prototype.html`
@@ -122,12 +122,17 @@ Evidence:
 - [x] PLANNER 끼니명과 식사 추가/등록 식사 사이 간격이 줄어든다.
 - [x] PLANNER 등록 식사 카드 border와 음식 계획 중 요약 박스 아래 border가 제거된다.
 - [x] PLANNER 등록된 끼니 칸의 `+` 버튼은 식사추가 버튼처럼 점선 border를 사용한다.
+- [x] PLANNER `요리완료`는 HOME `다이어트 식단` 색상, `장보기완료`는 HOME `밥도둑` 색상을 사용한다.
+- [x] PLANNER `식사 추가`와 `+` 버튼은 HOME `집밥 기본기` 색상을 사용한다.
+- [x] PLANNER week label font weight는 기존보다 낮아지고 날짜 카드 숫자는 normal weight로 표시된다.
+- [x] PLANNER 등록 식사 박스 left margin은 0px이고 끼니 row 고정 height는 제거된다.
 
 Evidence:
 
 - Final modal sheet unification: Playwright mobile My Page leftovers planner-add smoke, mobile Recipe Detail planner-add smoke, planner-origin servings-only smoke, desktop meal-add smoke.
 - Final planner week rail snap: Playwright 390px/320px rail fit smoke and next-week snap smoke.
 - Final planner row density: Playwright 390px row density/border smoke.
+- Final planner color density polish: Playwright 390px final polish smoke, 320px rail/color smoke, and desktop planner summary color smoke.
 
 ## Guardrails
 
