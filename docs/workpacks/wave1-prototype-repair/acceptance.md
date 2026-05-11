@@ -79,7 +79,7 @@ Evidence:
 ## Repair 4: Freeze And Service Porting Gate
 
 - [x] Repair 0~3 PR이 모두 merged됐다.
-- [x] 2026-05-11 follow-up repair PR #391~#394가 모두 merged됐다.
+- [x] 2026-05-11 follow-up repair PR #391~#398이 모두 merged됐다.
 - [x] Fixed prototype commit SHA가 closeout note에 기록됐다.
 - [x] 320px/390px screenshot evidence가 남아 있다.
 - [x] Navigation smoke evidence가 남아 있다.
@@ -90,11 +90,25 @@ Evidence:
 Evidence:
 
 - Closeout note: `docs/workpacks/wave1-prototype-repair/closeout.md`
-- Fixed prototype implementation SHA: `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`
-- Merged PRs: #386, #387, #388, #389, #390, #391, #392, #393, #394
+- Fixed prototype implementation SHA: `c83a851f95e358cf07f5a21c6f413ee091a3d2be`
+- Merged PRs: #386, #387, #388, #389, #390, #391, #392, #393, #394, #396, #397, #398
 - Screenshot evidence: `.omx/artifacts/wave1-repair2/repair2-390-*.png`, `.omx/artifacts/wave1-repair2/repair2-320-*.png`, `.omx/artifacts/wave1-repair3/repair3-390-*.png`, `.omx/artifacts/wave1-repair3/repair3-320-*.png`
 - Follow-up screenshot evidence: `.omx/artifacts/wave1-repair5/*.png`, `.omx/artifacts/wave1-repair6/*.png`, `.omx/artifacts/wave1-repair7/*.png`, `.omx/artifacts/wave1-repair8/*.png`
 - Mirror check: `diff -q ui/designs/prototypes/claude-design-260505-wave1/index.html ui/designs/prototypes/claude-design-260505-wave1/homecook-baemin-prototype.html`
+
+## Repair 10~12: Final QA Follow-Up
+
+- [x] MANUAL_CREATE는 재료 수량이나 조리법에 빈칸이 있으면 완료 버튼이 비활성화된다.
+- [x] SETTINGS는 끼니 컬럼 변경만으로도 저장 버튼이 활성화되고 취소 시 저장된 컬럼으로 돌아간다.
+- [x] SETTINGS 환경설정 화면에서 계정/닉네임/닉네임 변경/로그아웃/회원탈퇴가 빠지고 계정정보 화면으로 이동했다.
+- [x] LEFTOVERS 마이페이지 진입은 플래너 추가 모달에서 날짜, 끼니, 인분을 선택한다.
+- [x] LEFTOVERS 플래너 식사추가 진입은 이미 날짜/끼니가 선택되어 있으므로 인분만 선택한다.
+
+Evidence:
+
+- Final manual create validation: Playwright mobile/desktop blank ingredient amount and blank step smoke.
+- Final settings account split: Playwright mobile/desktop settings dirty-state and account action smoke.
+- Final leftovers target selection: Playwright mobile My Page target selection, planner-origin servings-only smoke, and desktop target selection smoke.
 
 ## Guardrails
 

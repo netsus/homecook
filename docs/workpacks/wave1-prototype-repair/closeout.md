@@ -5,11 +5,11 @@
 ## Frozen Reference
 
 - Fixed prototype path: `ui/designs/prototypes/claude-design-260505-wave1`
-- Fixed prototype implementation SHA: `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`
+- Fixed prototype implementation SHA: `c83a851f95e358cf07f5a21c6f413ee091a3d2be`
 - Freeze workpack: `docs/workpacks/wave1-prototype-repair`
 - Service porting plan: `docs/workpacks/wave1-service-porting-plan.md`
 
-`0000c86a7d6f719e2bb1c0966c6d1e307061df7c` is the last merged commit that changed the prototype implementation during the 2026-05-11 repair and follow-up sequence. It supersedes the initial Repair 4 freeze reference (`95a93180a1329d2b317a561aa7c954a39cbe104c`) because the user provided additional prototype-finalization changes after PR #390. Later service porting prompts must pin the SHA above as the read-only visual/layout reference for the prototype files.
+`c83a851f95e358cf07f5a21c6f413ee091a3d2be` is the last merged commit that changed the prototype implementation during the 2026-05-11 repair and follow-up sequence. It supersedes the initial Repair 4 freeze reference (`95a93180a1329d2b317a561aa7c954a39cbe104c`) and the earlier follow-up freeze reference (`0000c86a7d6f719e2bb1c0966c6d1e307061df7c`) because the user provided additional prototype-finalization changes after PR #390 and after PR #394. Later service porting prompts must pin the SHA above as the read-only visual/layout reference for the prototype files.
 
 ## Merged Repair PRs
 
@@ -24,6 +24,9 @@
 | Follow-up settings/layout | #392 | `43f65e33782c489b48d67c4b4c76267566f7130e` | Pantry and settings layout polish |
 | Follow-up menu/leftovers | #393 | `9ba3740b2bab07e7540f7206ec064a0ac0493724` | Menu add, manual input, leftovers flow |
 | Follow-up shopping flow | #394 | `0000c86a7d6f719e2bb1c0966c6d1e307061df7c` | Per-meal shopping and completion flow |
+| Final manual-create validation | #396 | `28d114dcdc4bf750ce7841f5f8c42c69bb394abc` | Required manual recipe field validation |
+| Final settings account split | #397 | `fa2a64a1e5c0548ec946d9a417333671a8572c30` | Settings dirty-state and account action relocation |
+| Final leftovers targeting | #398 | `c83a851f95e358cf07f5a21c6f413ee091a3d2be` | Leftover add-to-planner target selection by entry path |
 
 ## Evidence
 
@@ -41,6 +44,9 @@ Smoke evidence:
 - Follow-up settings/layout: Playwright mobile settings and pantry-add smoke
 - Follow-up menu/leftovers: Playwright mobile menu-add/manual-create/leftovers smoke and desktop menu-add smoke
 - Follow-up shopping flow: Playwright mobile per-meal shopping and existing shopping-detail completion smoke
+- Final manual-create validation: Playwright mobile and desktop blank ingredient amount / blank cooking step smoke
+- Final settings account split: Playwright mobile and desktop settings dirty-state / account action smoke
+- Final leftovers targeting: Playwright mobile My Page target selection, planner-origin serving-only smoke, and desktop target selection smoke
 
 Screenshot evidence:
 
@@ -75,7 +81,7 @@ Service Slice A~F porting may start only after this closeout is merged.
 All service porting prompts must include:
 
 - `fixed_prototype_path=ui/designs/prototypes/claude-design-260505-wave1`
-- `fixed_prototype_implementation_sha=0000c86a7d6f719e2bb1c0966c6d1e307061df7c`
+- `fixed_prototype_implementation_sha=c83a851f95e358cf07f5a21c6f413ee091a3d2be`
 - `visual_layout_source_of_truth=fixed prototype`
 - `functional_source_of_truth=MVP service implementation + official docs`
 
