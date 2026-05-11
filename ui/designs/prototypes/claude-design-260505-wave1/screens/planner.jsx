@@ -318,10 +318,10 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
             <div style={{ fontSize: 20, fontWeight: 700, color: T.cookDoneFg }}>{stats.cooked}개</div>
           </div>
           <div style={{
-            flex: 1, background: '#FFF4E1', borderRadius: 10, padding: 12
+            flex: 1, background: T.shoppingDoneBg, borderRadius: 10, padding: 12
           }}>
-            <div style={{ fontSize: 11, color: '#B8860B', fontWeight: 600 }}>장보기 완료</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#B8860B' }}>{stats.shopped}개</div>
+            <div style={{ fontSize: 11, color: T.shoppingDoneFg, fontWeight: 600 }}>장보기 완료</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: T.shoppingDoneFg }}>{stats.shopped}개</div>
           </div>
           <div style={{
             flex: 1, background: T.surfaceFill, borderRadius: 10, padding: 12
@@ -350,7 +350,7 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
             cursor: 'pointer', fontSize: 17, color: T.text2,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>‹</button>
-          <div style={{ fontSize: 14, color: T.ink, fontWeight: 800 }}>
+          <div style={{ fontSize: 14, color: T.ink, fontWeight: 600 }}>
             {weekOffset === 0 ? '이번 주' : weekOffset === 1 ? '다음 주' : weekOffset === -1 ? '지난 주' : '식단'} {weekLabel}
           </div>
           <button onClick={() => setWeekOffset(w => w + 1)} style={{
@@ -390,7 +390,7 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
                       gap: 1,
                     }}>
                       <div style={{ fontSize: 10, fontWeight: 800 }}>{meta.dow}</div>
-                      <div style={{ fontSize: 19, fontWeight: 900, fontFamily: T.fontBrand }}>{meta.day}</div>
+                      <div style={{ fontSize: 19, fontWeight: 400, fontFamily: T.fontBrand }}>{meta.day}</div>
                     </button>
                   );
                 })}
@@ -445,7 +445,7 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
                 return (
                   <div key={slot} style={{
                     display: 'flex', alignItems: 'center', padding: '6px 10px',
-                    height: 76, boxSizing: 'border-box',
+                    boxSizing: 'border-box',
                     borderBottom: `1px solid ${T.surfaceSubtle}`,
                     cursor: mealRows.length ? 'pointer' : 'default'
                   }} onClick={() => {
@@ -460,7 +460,7 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
                     </div>
                     {mealRows.length ?
                     <>
-	                        <div style={{ flex: 1, marginLeft: 6, minWidth: 0, position: 'relative' }}>
+	                        <div style={{ flex: 1, marginLeft: 0, minWidth: 0, position: 'relative' }}>
 	                          <div style={{
 	                            display: 'grid',
 	                            gridTemplateColumns: mealRows.length > 1 ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)',
@@ -504,7 +504,7 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
 	                      </> :
 
 	                    <button onClick={() => openMealAdd(k, slot)} style={{
-	                      flex: 1, marginLeft: 6, height: 42, border: `1.5px dashed ${T.mealAddBorder}`,
+	                      flex: 1, marginLeft: 0, height: 42, border: `1.5px dashed ${T.mealAddBorder}`,
 	                      background: T.mealAddBg, borderRadius: 8, color: T.mealAddFg,
 	                      fontSize: 13, fontWeight: 600, cursor: 'pointer',
 	                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
