@@ -108,6 +108,7 @@
   - slice별 completion은 PR merge 여부나 visual verdict 90점 이상이 아니라 fixed prototype 대비 unclassified visual difference 0개, blocker 0개, 기능 regression 통과로 판단한다.
   - reference prototype screenshot은 `ui/designs/reference/wave1-fixed-prototype/manifest.json`에 등록된 커밋된 PNG를 사용한다. `.omx/artifacts`에만 남은 prototype screenshot은 final PR 근거로 쓰지 않는다.
   - 각 `wave1-port-*` PR은 `pnpm validate:pr-ready -- --slice <slice> --pr-body <pr-body-file> --mode frontend`를 통과해야 하며, 이 검증에는 fixed SHA, reference screenshot, service screenshot, screenshot diff, computed-style audit, geometry audit, blocker 0개, unclassified visual difference 0개 확인이 포함된다.
+  - 2026-05-12 기준 `pnpm validate:wave1-prototype-lock`는 manifest `parity_mode: exact-mobile`과 exact parity PR evidence를 검사한다. historical `required_visual_verdict_score: 90` 필드는 더 이상 허용하지 않는다.
   - 한 PR에 모든 화면을 몰아넣지 않는다. 기존 vertical slice 경계 A~F를 유지하고, 각 slice repair PR을 작고 검증 가능하게 만든다.
   - Foundation Slice A는 공통 shell/component/tokens 영향이 크므로 먼저 재감사한다. 다만 기능을 깨는 전역 리팩터링은 하지 않고, 이후 slice에서 필요한 공통 primitive만 보수한다.
 - product slice는 Stage 1~6 흐름을 따른다.
@@ -188,6 +189,7 @@
 | Order | Slice ID | Goal | Primary Owner Flow | Notes |
 | --- | --- | --- | --- | --- |
 | 0 | `planner-column-customization` | SETTINGS 끼니 컬럼 관리 + PLANNER_WEEK 동적 컬럼 | Done | PR #367~#370 merged. 다시 하지 않는다. |
+| 0.5 | `wave1-exact-parity-validator-baseline` | manifest/validator를 `90+` 점수 기준에서 exact mobile parity 기준으로 승격 | Done | `lock_version: 2`, `parity_mode: exact-mobile`, screenshot diff, computed-style audit, geometry audit, visual blocker 0, unclassified visual difference 0을 검증한다. 이 gate가 깨지면 Slice A~F 포팅을 시작하지 않는다. |
 | A | `wave1-port-foundation` | 공통 shell, 공용 UI 패턴, CTA/칩/카드/모달 위계 | Re-audit / repair | 전체 재포팅의 첫 단계. AppShell, bottom tab, 공통 primitive가 prototype과 실제로 맞는지 다시 확인한다. |
 | B | `wave1-port-discovery-detail` | HOME, RECIPE_DETAIL, save modal, login provider display | Re-audit / repair | HOME은 기존 `baemin-prototype-home-porting`과 충돌/중복 확인 후, fixed prototype reference 대비 unclassified visual difference 0을 달성한다. |
 | C | `wave1-port-planner-meal-add` | PLANNER, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN | Re-audit / repair | 컬럼 CRUD는 완료된 `planner-column-customization` 계약을 소비한다. PLANNER/식사추가/직접등록 화면의 layout parity를 다시 확인한다. |

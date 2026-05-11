@@ -5,7 +5,18 @@ export const WAVE1_PROTOTYPE_LOCK = {
   manifestPath: "ui/designs/reference/wave1-fixed-prototype/manifest.json",
   fixedPrototypePath: "ui/designs/prototypes/claude-design-260505-wave1",
   fixedPrototypeImplementationSha: "9bf7a34c6b422d0c9981d4c2968e3350d5a28892",
-  requiredVisualVerdictScore: 90,
+  parityMode: "exact-mobile",
+  requiredUnclassifiedVisualDifferences: 0,
+  requiredVisualBlockers: 0,
+  requiredEvidence: [
+    "fixed_prototype_sha",
+    "reference_screenshot",
+    "service_screenshot",
+    "screenshot_diff",
+    "computed_style_audit",
+    "dom_geometry_audit",
+    "remaining_difference_ledger",
+  ],
 };
 
 const WAVE1_SERVICE_PORTING_SLICE_PATTERN = /^wave1-port-/;
@@ -17,6 +28,14 @@ const VISUAL_VERDICT_LABEL_PATTERN =
   /(visual[\s-]*(?:verdict|parity)|시각\s*비교|비주얼\s*(?:비교|판정|점수)|디자인\s*비교)/i;
 const BLOCKER_ZERO_PATTERN =
   /(?:blocker|블로커)[^\n]*(?:0\s*(?:개|건)?|none|없음)/i;
+const SCREENSHOT_DIFF_PATTERN =
+  /(?:screenshot\s*(?:diff|comparison)|스크린샷\s*(?:diff|비교)|이미지\s*비교)/i;
+const COMPUTED_STYLE_AUDIT_PATTERN =
+  /(?:computed[-\s]*style\s*audit|computed\s*style|스타일\s*(?:audit|감사|검증)|계산된\s*스타일)/i;
+const DOM_GEOMETRY_AUDIT_PATTERN =
+  /(?:(?:dom\s*)?geometry\s*audit|dom\s*geometry|geometry\s*audit|기하\s*(?:audit|감사|검증)|좌표\s*(?:audit|감사|검증)|요소\s*좌표)/i;
+const UNCLASSIFIED_VISUAL_DIFFERENCE_ZERO_PATTERN =
+  /(?:unclassified\s*visual\s*differences?|미분류\s*(?:visual|시각|디자인)?\s*차이|분류되지\s*않은\s*(?:시각|디자인)?\s*차이)[^\n]*(?:0\s*(?:개|건)?|none|없음|zero)/i;
 
 function buildResult(errors) {
   return errors.length > 0 ? [{ name: "wave1-prototype-lock", errors }] : [];
@@ -79,31 +98,6 @@ function collectScreenshotPaths(manifest) {
     .map((entryPath) => entryPath.trim());
 }
 
-function extractVisualVerdictScores(body) {
-  const scores = [];
-  const lines = body.split(/\r?\n/);
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    const nearby = [lines[index - 1], line, lines[index + 1]]
-      .filter(Boolean)
-      .join(" ");
-
-    if (!VISUAL_VERDICT_LABEL_PATTERN.test(nearby) && !/(score|점수)/i.test(line)) {
-      continue;
-    }
-
-    for (const match of nearby.matchAll(/(?:score|점수)?\s*[:=]?\s*(\d{2,3})(?:\s*\+|\s*점|\s*%|\b)/gi)) {
-      const score = Number.parseInt(match[1], 10);
-      if (Number.isFinite(score)) {
-        scores.push(score);
-      }
-    }
-  }
-
-  return scores;
-}
-
 function validateManifest({ rootDir, manifestPath }) {
   const errors = [];
   const resolvedManifestPath = resolve(rootDir, manifestPath);
@@ -163,13 +157,47 @@ function validateManifest({ rootDir, manifestPath }) {
     });
   }
 
-  const requiredScore = Number(manifest.required_visual_verdict_score);
-  if (requiredScore !== WAVE1_PROTOTYPE_LOCK.requiredVisualVerdictScore) {
+  if (Object.hasOwn(manifest, "required_visual_verdict_score")) {
     errors.push({
       path: `${manifestPath}:required_visual_verdict_score`,
-      message:
-        `Expected visual verdict threshold ${WAVE1_PROTOTYPE_LOCK.requiredVisualVerdictScore}.`,
+      message: "Legacy visual verdict score thresholds are not allowed for Wave1 exact mobile parity.",
     });
+  }
+
+  if (manifest.parity_mode !== WAVE1_PROTOTYPE_LOCK.parityMode) {
+    errors.push({
+      path: `${manifestPath}:parity_mode`,
+      message: `Expected parity mode ${WAVE1_PROTOTYPE_LOCK.parityMode}.`,
+    });
+  }
+
+  if (
+    Number(manifest.required_unclassified_visual_differences) !==
+    WAVE1_PROTOTYPE_LOCK.requiredUnclassifiedVisualDifferences
+  ) {
+    errors.push({
+      path: `${manifestPath}:required_unclassified_visual_differences`,
+      message: "Wave1 exact mobile parity requires unclassified visual differences to be 0.",
+    });
+  }
+
+  if (Number(manifest.required_visual_blockers) !== WAVE1_PROTOTYPE_LOCK.requiredVisualBlockers) {
+    errors.push({
+      path: `${manifestPath}:required_visual_blockers`,
+      message: "Wave1 exact mobile parity requires visual blockers to be 0.",
+    });
+  }
+
+  const requiredEvidence = Array.isArray(manifest.required_evidence)
+    ? manifest.required_evidence
+    : [];
+  for (const evidence of WAVE1_PROTOTYPE_LOCK.requiredEvidence) {
+    if (!requiredEvidence.includes(evidence)) {
+      errors.push({
+        path: `${manifestPath}:required_evidence`,
+        message: `Missing required exact parity evidence key: ${evidence}`,
+      });
+    }
   }
 
   const screenshotPaths = collectScreenshotPaths(manifest);
@@ -249,16 +277,37 @@ function validatePortingPrBody({ body, slice }) {
     errors.push({
       path: "PR_BODY",
       message:
-        "Wave1 service porting PR must record a visual verdict or visual parity comparison.",
+        "Wave1 service porting PR must record a visual parity comparison against the fixed prototype.",
     });
   }
 
-  const scores = extractVisualVerdictScores(body);
-  if (!scores.some((score) => score >= WAVE1_PROTOTYPE_LOCK.requiredVisualVerdictScore)) {
+  if (!SCREENSHOT_DIFF_PATTERN.test(body)) {
+    errors.push({
+      path: "PR_BODY",
+      message: "Wave1 service porting PR must include screenshot diff evidence.",
+    });
+  }
+
+  if (!COMPUTED_STYLE_AUDIT_PATTERN.test(body)) {
     errors.push({
       path: "PR_BODY",
       message:
-        `Wave1 service porting PR must record a visual verdict score of ${WAVE1_PROTOTYPE_LOCK.requiredVisualVerdictScore}+ against the fixed prototype.`,
+        "Wave1 service porting PR must include computed-style audit evidence for color, type, spacing, radius, border, shadow, and opacity.",
+    });
+  }
+
+  if (!DOM_GEOMETRY_AUDIT_PATTERN.test(body)) {
+    errors.push({
+      path: "PR_BODY",
+      message: "Wave1 service porting PR must include DOM geometry audit evidence.",
+    });
+  }
+
+  if (!UNCLASSIFIED_VISUAL_DIFFERENCE_ZERO_PATTERN.test(body)) {
+    errors.push({
+      path: "PR_BODY",
+      message:
+        "Wave1 service porting PR must record unclassified visual differences as 0.",
     });
   }
 
