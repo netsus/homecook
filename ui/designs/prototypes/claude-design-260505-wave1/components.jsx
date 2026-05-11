@@ -133,7 +133,7 @@ function StatusPill({ status }) {
   const map = {
     registered: { label: '등록', bg: T.surfaceSubtle, fg: T.text2 },
     shopped: { label: '장보기 완료', bg: '#FFF4E1', fg: '#B8860B' },
-    cooked: { label: '요리 완료', bg: T.mintSoft, fg: T.mintDeep }
+    cooked: { label: '요리 완료', bg: T.cookDoneBg, fg: T.cookDoneFg }
   };
   const s = map[status] || map.registered;
   return (

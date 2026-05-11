@@ -477,23 +477,11 @@ function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMen
 
   return (
     <div>
-      {/* vNext S4 — Header with week nav, 요리하기 제거, 장보기 텍스트 축약 */}
+      {/* vNext S4 — Header, 요리하기 제거, 장보기 텍스트 축약 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => setWeekOffset(w => w - 1)} style={{
-            background: T.surfaceFill, border: `1px solid ${T.border}`, borderRadius: 8,
-            width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: T.text2,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>‹</button>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: T.ink }}>{weekLabel}</div>
-            <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>{dateRange}</div>
-          </div>
-          <button onClick={() => setWeekOffset(w => w + 1)} style={{
-            background: T.surfaceFill, border: `1px solid ${T.border}`, borderRadius: 8,
-            width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: T.text2,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>›</button>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: T.ink }}>{weekLabel}</div>
+          <div style={{ fontSize: 13, color: T.text3, marginTop: 2 }}>{dateRange}</div>
         </div>
         <button onClick={() => onCreateShopping?.()} style={{
           background: T.ink, color: '#fff', border: 'none', padding: '10px 16px',
@@ -502,6 +490,22 @@ function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMen
       </div>
 
       {/* vNext repair — MVP처럼 한 주 날짜 카드로 이동 */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 10,
+      }}>
+        <button onClick={() => setWeekOffset(w => w - 1)} style={{
+          background: T.surfaceFill, border: `1px solid ${T.border}`, borderRadius: 8,
+          width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: T.text2,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>‹</button>
+        <div style={{ fontSize: 14, color: T.ink, fontWeight: 800 }}>{weekLabel} · {dateRange}</div>
+        <button onClick={() => setWeekOffset(w => w + 1)} style={{
+          background: T.surfaceFill, border: `1px solid ${T.border}`, borderRadius: 8,
+          width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: T.text2,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>›</button>
+      </div>
       <div style={{
         display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 14,
         marginBottom: 8, scrollSnapType: 'x mandatory', scrollbarWidth: 'none',
@@ -532,9 +536,9 @@ function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMen
           {stats.total}개 음식 계획 중
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <div style={{ flex: 1, background: T.mintSoft, borderRadius: 10, padding: '12px 16px' }}>
-            <div style={{ fontSize: 11, color: T.mintDeep, fontWeight: 600 }}>요리 완료</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: T.mintDeep }}>{stats.cooked}개</div>
+          <div style={{ flex: 1, background: T.cookDoneBg, borderRadius: 10, padding: '12px 16px' }}>
+            <div style={{ fontSize: 11, color: T.cookDoneFg, fontWeight: 600 }}>요리 완료</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: T.cookDoneFg }}>{stats.cooked}개</div>
           </div>
           <div style={{ flex: 1, background: '#FFF4E1', borderRadius: 10, padding: '12px 16px' }}>
             <div style={{ fontSize: 11, color: '#B8860B', fontWeight: 600 }}>장보기 완료</div>
@@ -599,15 +603,19 @@ function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMen
                       display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 6,
                       cursor: 'pointer',
                     }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: mealRows.length > 1 ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)',
+                        gap: 4,
+                      }}>
                         {mealRows.slice(0, 2).map(({ meal, recipe }, idx) => (
                           <div key={recipe.id + idx} style={{
                             background: T.surfaceFill, borderRadius: 7,
                             display: 'flex', alignItems: 'center', gap: 6, minWidth: 0,
-                            height: 36, overflow: 'hidden',
+                            height: 44, overflow: 'hidden', position: 'relative',
                           }}>
                             <span style={{
-                              width: 36, height: 36, flexShrink: 0, background: recipe.bg,
+                              width: 32, height: 44, flexShrink: 0, background: recipe.bg,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               fontSize: 18,
                             }}>{recipe.emoji || ''}</span>
@@ -615,26 +623,28 @@ function DesktopPlanner({ planner, pantry, onOpenRecipe, onOpenPlannerAdd, onMen
                               <span style={{ display: 'block', fontSize: 10, fontWeight: 800, color: T.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</span>
                               <span style={{ display: 'block', fontSize: 9, color: T.text3, marginTop: 1 }}>{meal.servings || recipe.servings}인분</span>
                             </span>
+                            {idx === 1 && mealRows.length > 2 && (
+                              <span style={{
+                                position: 'absolute', right: 4, bottom: 4,
+                                fontSize: 9, color: T.text2, background: 'rgba(255,255,255,0.9)',
+                                padding: '1px 5px', borderRadius: 9999, fontWeight: 800,
+                              }}>+{mealRows.length - 2}</span>
+                            )}
                           </div>
                         ))}
-                        {mealRows.length > 2 && (
-                          <div style={{ fontSize: 10, color: T.text2, fontWeight: 800, paddingLeft: 2 }}>
-                            +{mealRows.length - 2}
-                          </div>
-                        )}
                       </div>
                       {/* vNext S4 — StatusPill 제거, + 버튼 축약 */}
                       <button onClick={(e) => { e.stopPropagation(); setMealAddDialog({ date: d, slot }); }} style={{
-                        marginLeft: 'auto', border: '1.5px solid #F59E0B', background: '#FFF7ED',
-                        color: '#B45309', borderRadius: 8, width: 28, height: 28, fontSize: 18,
-                        lineHeight: 1, fontWeight: 900, cursor: 'pointer',
+                        marginLeft: 'auto', border: `1.5px solid ${T.mealAddBorder}`, background: T.mealAddBg,
+                        color: T.mealAddFg, borderRadius: 8, width: 28, height: 28, fontSize: 17,
+                        lineHeight: 1, fontWeight: 700, cursor: 'pointer',
                       }}>+</button>
                     </div>
                   ) : (
                     <button onClick={() => setMealAddDialog({ date: d, slot })} style={{
                       width: '100%', height: '100%',
-                      background: '#FFF7ED', border: '1.5px dashed #F59E0B', borderRadius: 8,
-                      color: '#B45309', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                      background: T.mealAddBg, border: `1.5px dashed ${T.mealAddBorder}`, borderRadius: 8,
+                      color: T.mealAddFg, fontSize: 14, fontWeight: 700, cursor: 'pointer',
                     }}>+ 추가</button>
                   )}
                 </div>

@@ -268,30 +268,17 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
     <div style={{ background: T.surfaceFill, minHeight: '100%', paddingBottom: 100 }}>
       <AppBar title="플래너" />
 
-      {/* vNext S4 — Week navigation + Summary */}
+      {/* vNext S4 — Week summary */}
       <div style={{ background: '#fff', padding: '16px 20px', borderBottom: `1px solid ${T.border}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <button onClick={() => setWeekOffset(w => w - 1)} style={{
-            background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
-            fontSize: 18, color: T.text2,
-          }}>‹</button>
-          <div style={{ fontSize: 14, color: T.text3, fontWeight: 600 }}>
-            {weekOffset === 0 ? '이번 주' : weekOffset === 1 ? '다음 주' : weekOffset === -1 ? '지난 주' : ''} {weekLabel}
-          </div>
-          <button onClick={() => setWeekOffset(w => w + 1)} style={{
-            background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px',
-            fontSize: 18, color: T.text2,
-          }}>›</button>
-        </div>
         <div style={{ fontSize: 20, fontWeight: 700, color: T.ink, marginBottom: 12, fontFamily: T.fontBrand }}>
           {stats.total}개 음식 계획 중
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{
-            flex: 1, background: T.mintSoft, borderRadius: 10, padding: 12
+            flex: 1, background: T.cookDoneBg, borderRadius: 10, padding: 12
           }}>
-            <div style={{ fontSize: 11, color: T.mintDeep, fontWeight: 600 }}>요리 완료</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: T.mintDeep }}>{stats.cooked}개</div>
+            <div style={{ fontSize: 11, color: T.cookDoneFg, fontWeight: 600 }}>요리 완료</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: T.cookDoneFg }}>{stats.cooked}개</div>
           </div>
           <div style={{
             flex: 1, background: '#FFF4E1', borderRadius: 10, padding: 12
@@ -314,8 +301,28 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
       <div style={{
         position: 'sticky', top: 52, zIndex: 24,
         background: '#fff', borderBottom: `1px solid ${T.border}`,
-        padding: '10px 14px',
+        padding: '10px 14px 12px',
       }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: 8,
+        }}>
+          <button onClick={() => setWeekOffset(w => w - 1)} style={{
+            width: 30, height: 30, borderRadius: 15,
+            background: T.surfaceFill, border: `1px solid ${T.border}`,
+            cursor: 'pointer', fontSize: 17, color: T.text2,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>‹</button>
+          <div style={{ fontSize: 14, color: T.ink, fontWeight: 800 }}>
+            {weekOffset === 0 ? '이번 주' : weekOffset === 1 ? '다음 주' : weekOffset === -1 ? '지난 주' : '식단'} {weekLabel}
+          </div>
+          <button onClick={() => setWeekOffset(w => w + 1)} style={{
+            width: 30, height: 30, borderRadius: 15,
+            background: T.surfaceFill, border: `1px solid ${T.border}`,
+            cursor: 'pointer', fontSize: 17, color: T.text2,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>›</button>
+        </div>
         <div style={{
           display: 'flex', gap: 8, overflowX: 'auto',
           scrollSnapType: 'x mandatory', scrollbarWidth: 'none',
@@ -403,49 +410,55 @@ function PlannerScreen({ planner, setPlanner, pantry, onOpenRecipe, onOpenPlanne
                     </div>
                     {mealRows.length ?
                     <>
-                        <div style={{ flex: 1, marginLeft: 10, minWidth: 0 }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {mealRows.slice(0, 2).map(({ meal, recipe }, idx) => (
-                              <div key={recipe.id + idx} style={{
-                                display: 'flex', alignItems: 'center', gap: 8,
-                                height: 42, borderRadius: 8,
-                                background: '#fff', color: T.ink,
-                                border: `1px solid ${T.surfaceSubtle}`,
-                                overflow: 'hidden',
-                              }}>
-                                <div style={{
-                                  width: 42, height: 42, background: recipe.bg, flexShrink: 0,
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  fontSize: 23,
-                                }}>{recipe.emoji}</div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontSize: 12, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</div>
-                                  <div style={{ fontSize: 10, color: T.text3, marginTop: 1 }}>{meal.servings || recipe.servings}인분</div>
-                                </div>
-                              </div>
-                            ))}
-                            {mealRows.length > 2 && (
-                              <div style={{ fontSize: 11, color: T.text2, background: T.surfaceFill, padding: '4px 8px', borderRadius: 8, fontWeight: 800, alignSelf: 'flex-start' }}>
-                                +{mealRows.length - 2}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        {/* vNext S4 — + 음식 버튼을 + 아이콘형으로 축약하고 색상 충돌 완화 */}
-                        <button onClick={(e) => { e.stopPropagation(); openMealAdd(k, slot); }} style={{
-                          marginLeft: 8, width: 34, height: 34,
-                          border: '1.5px solid #F59E0B', background: '#FFF7ED',
-                          color: '#B45309', borderRadius: 10, fontSize: 22, lineHeight: 1,
-                          fontWeight: 900, cursor: 'pointer', flexShrink: 0,
-                        }}>+</button>
-                      </> :
+	                        <div style={{ flex: 1, marginLeft: 10, minWidth: 0, position: 'relative' }}>
+	                          <div style={{
+	                            display: 'grid',
+	                            gridTemplateColumns: mealRows.length > 1 ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)',
+	                            gap: 6,
+	                          }}>
+	                            {mealRows.slice(0, 2).map(({ meal, recipe }, idx) => (
+	                              <div key={recipe.id + idx} style={{
+	                                display: 'flex', alignItems: 'center', gap: 8,
+	                                height: 50, borderRadius: 8,
+	                                background: '#fff', color: T.ink,
+	                                border: `1px solid ${T.surfaceSubtle}`,
+	                                overflow: 'hidden', position: 'relative',
+	                              }}>
+	                                <div style={{
+	                                  width: 38, height: 50, background: recipe.bg, flexShrink: 0,
+	                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+	                                  fontSize: 22,
+	                                }}>{recipe.emoji}</div>
+	                                <div style={{ flex: 1, minWidth: 0 }}>
+	                                  <div style={{ fontSize: 12, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</div>
+	                                  <div style={{ fontSize: 10, color: T.text3, marginTop: 1 }}>{meal.servings || recipe.servings}인분</div>
+	                                </div>
+	                                {idx === 1 && mealRows.length > 2 && (
+	                                  <div style={{
+	                                    position: 'absolute', right: 4, bottom: 4,
+	                                    fontSize: 10, color: T.text2, background: 'rgba(248,249,250,0.92)',
+	                                    padding: '2px 6px', borderRadius: 9999, fontWeight: 800,
+	                                  }}>+{mealRows.length - 2}</div>
+	                                )}
+	                              </div>
+	                            ))}
+	                          </div>
+	                        </div>
+	                        {/* vNext S4 — + 음식 버튼을 + 아이콘형으로 축약하고 색상 충돌 완화 */}
+	                        <button onClick={(e) => { e.stopPropagation(); openMealAdd(k, slot); }} style={{
+	                          marginLeft: 8, width: 34, height: 34,
+	                          border: `1.5px solid ${T.mealAddBorder}`, background: T.mealAddBg,
+	                          color: T.mealAddFg, borderRadius: 10, fontSize: 20, lineHeight: 1,
+	                          fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+	                        }}>+</button>
+	                      </> :
 
-                    <button onClick={() => openMealAdd(k, slot)} style={{
-                      flex: 1, marginLeft: 10, height: 48, border: '1.5px dashed #F59E0B',
-                      background: '#FFF7ED', borderRadius: 8, color: '#B45309',
-                      fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
-                    }}>+ 식사 추가</button>
+	                    <button onClick={() => openMealAdd(k, slot)} style={{
+	                      flex: 1, marginLeft: 10, height: 48, border: `1.5px dashed ${T.mealAddBorder}`,
+	                      background: T.mealAddBg, borderRadius: 8, color: T.mealAddFg,
+	                      fontSize: 13, fontWeight: 600, cursor: 'pointer',
+	                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
+	                    }}>+ 식사 추가</button>
                     }
                   </div>);
 
