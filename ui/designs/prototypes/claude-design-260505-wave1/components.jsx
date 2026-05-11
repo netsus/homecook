@@ -82,6 +82,21 @@ function Button({ children, variant = 'primary', onClick, style, disabled, size 
 
 }
 
+function MatchProgressBar({ score = 0, label, sub, compact = false, style }) {
+  const pct = Math.max(0, Math.min(100, Math.round(score || 0)));
+  return (
+    <div style={{ width: '100%', ...style }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: compact ? 4 : 5 }}>
+        <span style={{ fontSize: compact ? 10 : 11, color: T.mintDeep, fontWeight: 900 }}>{label || `매칭 ${pct}%`}</span>
+        {sub && <span style={{ fontSize: compact ? 9 : 10, color: T.text3, fontWeight: 700, whiteSpace: 'nowrap' }}>{sub}</span>}
+      </div>
+      <div style={{ height: compact ? 5 : 6, borderRadius: 9999, background: T.surfaceSubtle, overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', borderRadius: 9999, background: T.mint }} />
+      </div>
+    </div>
+  );
+}
+
 function formatMetricCount(value) {
   if (typeof value !== 'number') return value;
   if (value >= 10000) return `${Math.round(value / 1000) / 10}만`;

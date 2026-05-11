@@ -112,7 +112,7 @@ function App() {
   const [servingChangeConfirm, setServingChangeConfirm] = useState(null); // { date, slot, next }
   // Wave 1.5 — P0 modals
   const [ingredientFilterOpen, setIngredientFilterOpen] = useState(false);
-  const [planningServings, setPlanningServings] = useState(null); // { recipeId, presetDate?, presetSlot? }
+  const [planningServings, setPlanningServings] = useState(null); // { recipeId, presetDate?, presetSlot?, source?, initialServings? }
   // Wave 1.8 — P2 desktop pickers (state-driven, desktop-only consumption)
   const [bookSelectorOpen, setBookSelectorOpen] = useState(false);
   const [bookDetailPicker, setBookDetailPicker] = useState(null); // { bookId }
@@ -285,7 +285,22 @@ function App() {
   };
 
   // Leftovers
-  const reuseLeftover = (date, slot, mealIndex = 0) => {
+  const openLeftoverServings = (date, slot, mealIndex = 0) => {
+    const source = mealItems(planner[date]?.[slot])[mealIndex];
+    if (!source) return;
+    setPlanningServings({
+      recipeId: source.recipeId,
+      presetDate: date,
+      presetSlot: slot,
+      source: 'leftover',
+      sourceMealIndex: mealIndex,
+      initialServings: source.servings || 1,
+    });
+  };
+  const reuseLeftover = (date, slot, mealIndex = 0, servingsOverride) => {
+    const currentSource = mealItems(planner[date]?.[slot])[mealIndex];
+    if (!currentSource) return;
+    const usedServings = servingsOverride || currentSource.servings || 1;
     setPlanner(prev => {
       const source = mealItems(prev[date]?.[slot])[mealIndex];
       if (!source) return prev;
@@ -295,13 +310,13 @@ function App() {
           ...prev[date],
           [slot]: appendMealToSlot(prev[date]?.[slot], {
             recipeId: source.recipeId,
-            servings: source.servings || 1,
+            servings: usedServings,
             status: 'registered'
           })
         }
       };
     });
-    showToast('플래너에 다시 올렸어요');
+    showToast(`플래너에 ${usedServings}인분 다시 올렸어요`);
   };
   const markAte = (date, slot, mealIndex = 0) => {
     updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, ateAt: 'now' }));
@@ -403,6 +418,21 @@ function App() {
   const changeStatus = (date, slot, status, mealIndex = 0) => {
     updatePlannerMeal(date, slot, mealIndex, m => ({ ...m, status }));
   };
+  const confirmPlanningServings = (servings) => {
+    const current = planningServings;
+    if (!current) return;
+    const { recipeId, presetDate, presetSlot, source, sourceMealIndex } = current;
+    if (presetDate && presetSlot) {
+      if (source === 'leftover') {
+        reuseLeftover(presetDate, presetSlot, sourceMealIndex || 0, servings);
+      } else {
+        addPlannerMeal(presetDate, presetSlot, { recipeId, status: 'registered', servings });
+        showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
+      }
+      setRoute({ tab: 'planner', page: null });
+    }
+    setPlanningServings(null);
+  };
 
   // Content
   let content;
@@ -432,7 +462,7 @@ function App() {
       onBack={backFromPage} onCreated={onRecipeCreated} showToast={showToast} />;
   } else if (route.page === 'leftovers') {
     content = <LeftoversScreen planner={planner} onBack={backFromPage}
-      onReuse={reuseLeftover} onGoAteList={() => goPage('ate-list')}
+      onReuse={openLeftoverServings} onGoAteList={() => goPage('ate-list')}
       onMarkAte={markAte} onMarkPartial={markPartial} showToast={showToast} />;
   } else if (route.page === 'ate-list') {
     content = <AteListScreen planner={planner} onBack={backFromPage}
@@ -682,7 +712,7 @@ function App() {
   } else if (route.page === 'leftovers') {
     // Wave 1.7 — P1.3 desktop variants
     desktopPageContent = <DesktopLeftoversScreen planner={planner} onBack={backFromPage}
-      onReuse={reuseLeftover} onGoAteList={() => goPage('ate-list')}
+      onReuse={openLeftoverServings} onGoAteList={() => goPage('ate-list')}
       onMarkAte={markAte} onMarkPartial={markPartial} showToast={showToast} />;
   } else if (route.page === 'ate-list') {
     desktopPageContent = <DesktopAteListScreen planner={planner} onBack={backFromPage}
@@ -867,16 +897,9 @@ function App() {
               recipe={RECIPES.find(r => r.id === planningServings.recipeId)}
               presetDate={planningServings.presetDate}
               presetSlot={planningServings.presetSlot}
+              initialServings={planningServings.initialServings}
               onClose={() => setPlanningServings(null)}
-              onConfirm={(servings) => {
-                const { recipeId, presetDate, presetSlot } = planningServings;
-                if (presetDate && presetSlot) {
-                  addPlannerMeal(presetDate, presetSlot, { recipeId, status: 'registered', servings });
-                  showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
-                  setRoute({ tab: 'planner', page: null });
-                }
-                setPlanningServings(null);
-              }} />
+              onConfirm={confirmPlanningServings} />
           </div>
         )}
         {servingChangeConfirm && (
@@ -959,16 +982,9 @@ function App() {
               recipe={RECIPES.find(r => r.id === planningServings.recipeId)}
               presetDate={planningServings.presetDate}
               presetSlot={planningServings.presetSlot}
+              initialServings={planningServings.initialServings}
               onClose={() => setPlanningServings(null)}
-              onConfirm={(servings) => {
-                const { recipeId, presetDate, presetSlot } = planningServings;
-                if (presetDate && presetSlot) {
-                  addPlannerMeal(presetDate, presetSlot, { recipeId, status: 'registered', servings });
-                  showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
-                  setRoute({ tab: 'planner', page: null });
-                }
-                setPlanningServings(null);
-              }} />
+              onConfirm={confirmPlanningServings} />
           )}
           {servingChangeConfirm && (
             <ConfirmDialog
@@ -1073,16 +1089,9 @@ function App() {
                   recipe={RECIPES.find(r => r.id === planningServings.recipeId)}
                   presetDate={planningServings.presetDate}
                   presetSlot={planningServings.presetSlot}
+                  initialServings={planningServings.initialServings}
                   onClose={() => setPlanningServings(null)}
-                  onConfirm={(servings) => {
-                    const { recipeId, presetDate, presetSlot } = planningServings;
-                    if (presetDate && presetSlot) {
-                      addPlannerMeal(presetDate, presetSlot, { recipeId, status: 'registered', servings });
-                      showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
-                      setRoute({ tab: 'planner', page: null });
-                    }
-                    setPlanningServings(null);
-                  }} />
+                  onConfirm={confirmPlanningServings} />
               )}
               {servingChangeConfirm && (
                 <ConfirmDialog
@@ -1156,16 +1165,9 @@ function App() {
                   recipe={RECIPES.find(r => r.id === planningServings.recipeId)}
                   presetDate={planningServings.presetDate}
                   presetSlot={planningServings.presetSlot}
+                  initialServings={planningServings.initialServings}
                   onClose={() => setPlanningServings(null)}
-                  onConfirm={(servings) => {
-                    const { recipeId, presetDate, presetSlot } = planningServings;
-                    if (presetDate && presetSlot) {
-                      addPlannerMeal(presetDate, presetSlot, { recipeId, status: 'registered', servings });
-                      showToast(presetDate + ' ' + presetSlot + '에 ' + servings + '인분 추가됐어요');
-                      setRoute({ tab: 'planner', page: null });
-                    }
-                    setPlanningServings(null);
-                  }} />
+                  onConfirm={confirmPlanningServings} />
               )}
               {servingChangeConfirm && (
                 <ConfirmDialog
