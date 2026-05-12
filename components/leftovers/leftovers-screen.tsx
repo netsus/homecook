@@ -9,6 +9,8 @@ import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { ContentState } from "@/components/shared/content-state";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   eatLeftover,
@@ -41,6 +43,18 @@ function formatCookedAt(dateStr: string) {
     day: "numeric",
     timeZone: "UTC",
   }).format(date);
+}
+
+function formatShortDate(dateStr: string) {
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
+}
+
+function getFallbackEmoji(title: string) {
+  if (title.includes("밥")) return "🍚";
+  if (title.includes("찌개")) return "🍲";
+  return "🍽️";
 }
 
 function LeftoverCard({
@@ -116,6 +130,7 @@ function LeftoverCard({
 export function LeftoversScreen({
   initialAuthenticated = false,
 }: LeftoversScreenProps) {
+  const isMobileViewport = useIsMobileViewport();
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
@@ -398,6 +413,25 @@ export function LeftoversScreen({
     selectedPlanDate,
   ]);
 
+  const plannerAddSheet = (
+    <PlannerAddSheet
+      columns={plannerColumns}
+      errorMessage={plannerAddError}
+      isOpen={isPlannerAddSheetOpen}
+      onChangeServings={setPlannerServings}
+      onClose={closePlannerAddSheet}
+      onRetryLoad={loadPlannerColumns}
+      onSelectColumn={setSelectedPlanColumnId}
+      onSelectDate={setSelectedPlanDate}
+      onSubmit={handlePlannerAddSubmit}
+      selectableDates={selectableDates}
+      selectedColumnId={selectedPlanColumnId}
+      selectedDate={selectedPlanDate}
+      servings={plannerServings}
+      sheetState={plannerAddSheetState}
+    />
+  );
+
   // Auth checking state
   if (authState === "checking") {
     return (
@@ -430,6 +464,22 @@ export function LeftoversScreen({
           </Link>
         </div>
       </ContentState>
+    );
+  }
+
+  if (isMobileViewport) {
+    return (
+      <LeftoversMobileView
+        eatingId={eatingId}
+        errorMessage={errorMessage}
+        feedback={feedback}
+        items={items}
+        onEat={handleEat}
+        onPlannerAdd={openPlannerAddSheet}
+        onRetry={loadLeftovers}
+        plannerAddSheet={plannerAddSheet}
+        screenState={screenState}
+      />
     );
   }
 
@@ -538,22 +588,273 @@ export function LeftoversScreen({
       ) : null}
 
       {/* Planner Add Sheet */}
-      <PlannerAddSheet
-        columns={plannerColumns}
-        errorMessage={plannerAddError}
-        isOpen={isPlannerAddSheetOpen}
-        onChangeServings={setPlannerServings}
-        onClose={closePlannerAddSheet}
-        onRetryLoad={loadPlannerColumns}
-        onSelectColumn={setSelectedPlanColumnId}
-        onSelectDate={setSelectedPlanDate}
-        onSubmit={handlePlannerAddSubmit}
-        selectableDates={selectableDates}
-        selectedColumnId={selectedPlanColumnId}
-        selectedDate={selectedPlanDate}
-        servings={plannerServings}
-        sheetState={plannerAddSheetState}
+      {plannerAddSheet}
+    </div>
+  );
+}
+
+function LeftoversMobileView({
+  eatingId,
+  errorMessage,
+  feedback,
+  items,
+  onEat,
+  onPlannerAdd,
+  onRetry,
+  plannerAddSheet,
+  screenState,
+}: {
+  eatingId: string | null;
+  errorMessage: string | null;
+  feedback: { message: string; tone: FeedbackTone } | null;
+  items: LeftoverListItemData[];
+  onEat: (id: string) => void;
+  onPlannerAdd: (item: LeftoverListItemData) => void;
+  onRetry: () => void;
+  plannerAddSheet: React.ReactNode;
+  screenState: ScreenState;
+}) {
+  return (
+    <div
+      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] md:hidden"
+      data-testid="leftovers-screen"
+      style={{
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif',
+      }}
+    >
+      <MobileAppBar
+        actionHref="/leftovers/ate"
+        actionLabel="다먹은 요리"
+        backHref="/planner"
+        title="남은요리"
       />
+
+      {feedback ? <MobileFeedback feedback={feedback} /> : null}
+
+      <section className="border-b border-[#DEE2E6] bg-white px-4 py-3">
+        <h2 className="text-[18px] font-extrabold leading-[1.35] text-[#212529]">
+          남은 요리 {items.length}개
+        </h2>
+        <p className="mt-1 text-[12px] font-medium leading-[1.35] text-[#868E96]">
+          요리한 끼니를 다시 플래너에 올리거나 다 먹은 것으로 정리할 수 있어요.
+        </p>
+      </section>
+
+      {screenState === "loading" ? (
+        <div className="space-y-3 p-4" data-testid="leftovers-loading">
+          {[1, 2].map((index) => (
+            <div
+              className="h-[136px] rounded-xl border border-[#DEE2E6] bg-white"
+              key={index}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {screenState === "error" ? (
+        <div className="p-4">
+          <ContentState
+            actionLabel="다시 시도"
+            description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+            onAction={() => {
+              void onRetry();
+            }}
+            title="남은요리를 불러오지 못했어요"
+            tone="error"
+          />
+        </div>
+      ) : null}
+
+      {screenState === "empty" ? (
+        <div className="p-4">
+          <ContentState
+            actionLabel="플래너로 돌아가기"
+            description="요리를 완료하면 여기에 저장돼요"
+            onAction={() => {
+              window.location.href = "/planner";
+            }}
+            title="남은 요리가 없어요"
+            tone="empty"
+          />
+        </div>
+      ) : null}
+
+      {screenState === "ready" ? (
+        <div className="space-y-[10px] p-4" data-testid="leftover-list">
+          {items.map((item) => (
+            <MobileLeftoverCard
+              anyMutating={eatingId !== null}
+              isEating={eatingId === item.id}
+              item={item}
+              key={item.id}
+              onEat={onEat}
+              onPlannerAdd={onPlannerAdd}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {plannerAddSheet}
+      <Wave1MobileBottomTab ariaLabel="남은요리 하단 탭" currentTab="mypage" />
+    </div>
+  );
+}
+
+function MobileLeftoverCard({
+  anyMutating,
+  isEating,
+  item,
+  onEat,
+  onPlannerAdd,
+}: {
+  anyMutating: boolean;
+  isEating: boolean;
+  item: LeftoverListItemData;
+  onEat: (id: string) => void;
+  onPlannerAdd: (item: LeftoverListItemData) => void;
+}) {
+  return (
+    <article
+      className="rounded-xl border border-[#DEE2E6] bg-white p-3"
+      data-testid="leftover-card"
+    >
+      <div className="flex items-center gap-3">
+        <MobileDishThumb
+          emoji={getFallbackEmoji(item.recipe_title)}
+          src={item.recipe_thumbnail_url}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-extrabold leading-[1.35] text-[#212529]">
+            {item.recipe_title}
+          </p>
+          <p className="mt-0.5 truncate text-[12px] font-medium leading-[1.35] text-[#868E96]">
+            {formatShortDate(item.cooked_at)} 요리
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-[106px_minmax(0,1fr)] gap-2">
+        <button
+          className="flex h-10 min-w-0 items-center justify-center gap-1 rounded-lg border border-[#DEE2E6] bg-white px-2 text-center text-[12px] font-extrabold leading-none text-[#495057] disabled:opacity-60"
+          data-testid="planner-add-button"
+          disabled={anyMutating}
+          onClick={() => onPlannerAdd(item)}
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            className="flex h-[14px] w-[14px] items-center justify-center rounded-[4px] bg-[#E7F5FF] text-[9px] text-[#4DABF7]"
+          >
+            ↗
+          </span>
+          <span className="whitespace-nowrap">플래너에 추가</span>
+        </button>
+        <button
+          className="flex h-10 min-w-0 items-center justify-center rounded-lg bg-[#2AC1BC] px-2 text-center text-[13px] font-extrabold leading-none text-white disabled:opacity-60"
+          data-testid="eat-button"
+          disabled={anyMutating}
+          onClick={() => onEat(item.id)}
+          type="button"
+        >
+          {isEating ? "처리 중..." : "✓ 다먹음"}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function MobileDishThumb({
+  emoji,
+  src,
+}: {
+  emoji: string;
+  src: string | null;
+}) {
+  if (src) {
+    return (
+      <Image
+        alt=""
+        className="h-14 w-14 shrink-0 rounded-lg object-cover"
+        height={56}
+        src={src}
+        unoptimized
+        width={56}
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[#FFE3E3] text-[24px]">
+      <span aria-hidden="true">{emoji}</span>
+    </div>
+  );
+}
+
+function MobileFeedback({
+  feedback,
+}: {
+  feedback: { message: string; tone: FeedbackTone };
+}) {
+  return (
+    <div
+      className={[
+        "mx-4 mt-2 rounded-lg px-4 py-3 text-center text-[13px] font-extrabold",
+        feedback.tone === "error"
+          ? "bg-[#FFF5F5] text-[#FF6B6B]"
+          : "bg-[#E6FCF5] text-[#099268]",
+      ].join(" ")}
+      data-testid="feedback-toast"
+      role="alert"
+    >
+      {feedback.message}
+    </div>
+  );
+}
+
+function MobileAppBar({
+  actionHref,
+  actionLabel,
+  backHref,
+  title,
+}: {
+  actionHref: string;
+  actionLabel: string;
+  backHref: string;
+  title: string;
+}) {
+  return (
+    <div
+      className="sticky top-0 z-30 flex min-h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+      style={{ borderBottomWidth: "0.5px" }}
+    >
+      <Link
+        aria-label="뒤로가기"
+        className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start text-[#212529]"
+        href={backHref}
+      >
+        <svg
+          aria-hidden="true"
+          className="h-6 w-6"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2.3"
+          viewBox="0 0 24 24"
+        >
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      </Link>
+      <h1 className="truncate text-center text-[18px] font-extrabold leading-none text-[#212529]">
+        {title}
+      </h1>
+      <Link
+        className="absolute right-4 top-1/2 flex h-7 -translate-y-1/2 items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-3 text-[12px] font-extrabold text-[#2AC1BC]"
+        href={actionHref}
+      >
+        {actionLabel}
+      </Link>
     </div>
   );
 }

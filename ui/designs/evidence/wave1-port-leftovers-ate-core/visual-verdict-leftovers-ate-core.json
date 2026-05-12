@@ -1,0 +1,15 @@
+{
+  "score": 93,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "Leftover card meta copy is date-based because the current MVP API does not expose meal label or serving count.",
+    "Null recipe thumbnails render the MVP fallback food tile rather than prototype-specific bitmap thumbnails.",
+    "The shared bottom-tab pantry icon has a slightly different glyph shape from the fixed prototype."
+  ],
+  "suggestions": [
+    "Only add meal label, serving count, or thumbnail data after an official contract update exposes those fields.",
+    "Keep shared bottom-tab icon reshaping in a shared navigation follow-up."
+  ],
+  "reasoning": "The mobile LEFTOVERS and ATE_LIST surfaces now match the fixed reference layout, app bar, card density, CTA hierarchy, colors, radius, and bottom-tab placement. Remaining differences are classified contract/shared-navigation follow-ups, so unclassified visual differences are 0."
+}

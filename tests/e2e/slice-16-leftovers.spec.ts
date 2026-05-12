@@ -21,6 +21,10 @@ async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   );
 }
 
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) < 768;
+}
+
 function makeLeftoverItems(): LeftoverItem[] {
   return [
     {
@@ -190,8 +194,20 @@ test.describe("LEFTOVERS screen", () => {
     await expect(page.getByTestId("leftover-card").first()).toBeVisible();
     await expect(page.getByTestId("eat-button").first()).toBeVisible();
     await expect(page.getByTestId("planner-add-button").first()).toBeVisible();
-    await expect(page.getByRole("button", { name: "다 먹었어요" }).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: "식단에 추가" }).first()).toBeVisible();
+    await expect(
+      page
+        .getByRole("button", {
+          name: isMobileViewport(page) ? /다먹음/ : "다 먹었어요",
+        })
+        .first(),
+    ).toBeVisible();
+    await expect(
+      page
+        .getByRole("button", {
+          name: isMobileViewport(page) ? /플래너에 추가/ : "식단에 추가",
+        })
+        .first(),
+    ).toBeVisible();
     await expect(page.getByTestId("leftover-card")).toHaveCount(2);
   });
 
@@ -244,7 +260,9 @@ test.describe("LEFTOVERS screen", () => {
     await page.goto("/leftovers");
 
     await expect(page.getByRole("heading", { name: "남은요리" })).toBeVisible();
-    const ateLink = page.getByText("다먹은 목록");
+    const ateLink = page.getByText(
+      isMobileViewport(page) ? "다먹은 요리" : "다먹은 목록",
+    );
     await expect(ateLink).toBeVisible();
     await expect(ateLink).toHaveAttribute("href", "/leftovers/ate");
   });
@@ -258,8 +276,14 @@ test.describe("ATE_LIST screen", () => {
 
     await expect(page.getByTestId("ate-list-card").first()).toBeVisible();
     await expect(page.getByRole("button", { name: "남은요리로 복귀" })).toBeVisible();
-    await expect(page.getByText("4월 28일")).toBeVisible();
-    await expect(page.getByText(/다먹음/)).toHaveCount(0);
+    await expect(
+      page.getByText(isMobileViewport(page) ? "4/20 요리" : "4월 28일"),
+    ).toBeVisible();
+    if (isMobileViewport(page)) {
+      await expect(page.getByText("다먹음으로 기록")).toBeVisible();
+    } else {
+      await expect(page.getByText(/다먹음/)).toHaveCount(0);
+    }
   });
 
   test("uneat action removes item from eaten list", async ({ page }) => {

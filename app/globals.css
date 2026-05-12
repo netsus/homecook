@@ -188,7 +188,8 @@ button {
 
   .app-shell.wave1-planner-shell,
   .app-shell.wave1-pantry-shell,
-  .app-shell.wave1-mypage-shell {
+  .app-shell.wave1-mypage-shell,
+  .app-shell.wave1-leftovers-shell {
     background: #f8f9fa;
     padding: 0;
   }
@@ -196,6 +197,7 @@ button {
   .app-shell.wave1-planner-shell > div,
   .app-shell.wave1-pantry-shell > div,
   .app-shell.wave1-mypage-shell > div,
+  .app-shell.wave1-leftovers-shell > div,
   .app-shell.wave1-recipe-shell > div {
     max-width: none;
     gap: 0;
@@ -211,13 +213,15 @@ button {
   .app-shell.wave1-planner-shell main,
   .app-shell.wave1-pantry-shell main,
   .app-shell.wave1-mypage-shell main,
+  .app-shell.wave1-leftovers-shell main,
   .app-shell.wave1-recipe-shell main {
     width: 100%;
   }
 
   .app-shell.wave1-planner-shell > nav,
   .app-shell.wave1-pantry-shell > nav,
-  .app-shell.wave1-mypage-shell > nav {
+  .app-shell.wave1-mypage-shell > nav,
+  .app-shell.wave1-leftovers-shell > nav {
     display: none;
   }
 }
