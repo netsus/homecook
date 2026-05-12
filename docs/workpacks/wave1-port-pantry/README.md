@@ -143,17 +143,24 @@ None.
 
 - UI risk: `high-risk` — PANTRY는 screen-level prototype parity candidate이고, delete mode/bottom CTA는 주요 조작 흐름이다.
 - Anchor screen dependency: `PANTRY`
-- Visual artifact: Stage 4/5에서 mobile 390px/320px screenshot evidence 생성
+- Visual artifact: Stage 4/5에서 fixed reference 대비 mobile 390px/320px screenshot evidence 생성
+  - `ui/designs/evidence/wave1-port-pantry/phase4-prep.md`
+  - `ui/designs/evidence/wave1-port-pantry/phase5-visual-audit.md`
+  - `ui/designs/evidence/wave1-port-pantry/visual-verdict.json`
+  - `ui/designs/evidence/wave1-port-pantry/claude-final-authority-gate.md`
   - `ui/designs/evidence/wave1-port-pantry/pantry-default.png`
   - `ui/designs/evidence/wave1-port-pantry/pantry-narrow.png`
   - `ui/designs/evidence/wave1-port-pantry/pantry-select-delete.png`
   - `ui/designs/evidence/wave1-port-pantry/pantry-empty.png`
   - `ui/designs/evidence/wave1-port-pantry/pantry-add-sheet.png`
+  - `ui/designs/evidence/wave1-port-pantry/pantry-add-sheet-narrow.png`
   - `ui/designs/evidence/wave1-port-pantry/pantry-bundle-picker.png`
+  - `ui/designs/evidence/wave1-port-pantry/pantry-bundle-picker-narrow.png`
 - Authority status: `reviewed`
 - Notes:
-  - `PANTRY`는 h8 기준 screen-level `prototype parity` 후보이다.
-  - `PANTRY_BUNDLE_PICKER`는 별도 승격 전까지 `prototype-derived design`이다.
+  - `PANTRY`, `INGREDIENT_ADD_SHEET`, `PANTRY_BUNDLE_PICKER`는 fixed prototype 390px/320px reference가 있는 exact-reference-ready surface다.
+  - Visual/layout은 fixed prototype이 기준이고 기능 동작은 MVP/공식 API 계약이 기준이다.
+  - Phase5 fixed-reference re-audit was refreshed on 2026-05-13.
   - prototype-only font, image asset, bottom tab behavior는 scope 밖이다.
 
 ### UI Risk Classification
@@ -173,7 +180,7 @@ None.
 
 - [ ] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [x] 확정 (confirmed) — Codex fallback authority report blocker 0
+- [x] 확정 (confirmed) — 2026-05-13 Phase5 re-audit blocker 0, unclassified visual differences 0
 - [ ] N/A
 
 ## Source Links

@@ -83,7 +83,9 @@
         "pantry-select-delete",
         "pantry-empty",
         "pantry-add-sheet",
-        "pantry-bundle-picker"
+        "pantry-add-sheet-narrow",
+        "pantry-bundle-picker",
+        "pantry-bundle-picker-narrow"
       ],
       "authority_report_paths": [
         "ui/designs/authority/WAVE1_PANTRY-authority.md"
@@ -95,7 +97,9 @@
         "ui/designs/evidence/wave1-port-pantry/pantry-select-delete.png",
         "ui/designs/evidence/wave1-port-pantry/pantry-empty.png",
         "ui/designs/evidence/wave1-port-pantry/pantry-add-sheet.png",
-        "ui/designs/evidence/wave1-port-pantry/pantry-bundle-picker.png"
+        "ui/designs/evidence/wave1-port-pantry/pantry-add-sheet-narrow.png",
+        "ui/designs/evidence/wave1-port-pantry/pantry-bundle-picker.png",
+        "ui/designs/evidence/wave1-port-pantry/pantry-bundle-picker-narrow.png"
       ]
     }
   },
