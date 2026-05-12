@@ -2,14 +2,16 @@
 
 > slice: wave1-port-shopping-cooking
 > stage: 5
-> reviewer: Codex authority_precheck fallback
-> date: 2026-05-10
+> reviewer: Codex authority_precheck + Claude final authority gate
+> date: 2026-05-13
 
 ## Design Status
 
 **reviewed**
 
-Claude Stage 4 implementation was requested through the existing VS Code Claude session `3f4ca745-db71-4392-a3f1-4e3c4493e9bc` with `--resume`, `model=opus`, requested `effort=xhigh` (CLI `high`), and `permission_mode=bypassPermissions`, but Claude returned a provider limit response. Per user instruction, Codex proceeded directly and performed the authority precheck against the screenshot evidence below.
+2026-05-13 Phase5 re-audit refreshed the Slice D evidence bundle against the Wave1 fixed prototype reference set. Historical PR #379 and 2026-05-10 evidence remain preserved, but the current closeout proof is `phase4-prep.md`, `phase5-visual-audit.md`, `visual-verdict.json`, and `claude-final-authority-gate.md`.
+
+Claude final authority gate returned PASS with blocker 0 and unclassified visual differences 0. The remaining differences are classified as MVP functional-contract preservation, browser rendering limits, or prototype-derived supplemental states.
 
 ## Changes Summary
 
@@ -47,17 +49,27 @@ Claude Stage 4 implementation was requested through the existing VS Code Claude 
 ## Evidence
 
 > evidence:
+> - Phase4 prep: `ui/designs/evidence/wave1-port-shopping-cooking/phase4-prep.md`
+> - Phase5 visual audit: `ui/designs/evidence/wave1-port-shopping-cooking/phase5-visual-audit.md`
+> - Aggregate visual verdict: `ui/designs/evidence/wave1-port-shopping-cooking/visual-verdict.json`
+> - Claude final authority gate: `ui/designs/evidence/wave1-port-shopping-cooking/claude-final-authority-gate.md`
 > - SHOPPING_FLOW 390: `ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-preview.png`
 > - SHOPPING_FLOW 320: `ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-narrow.png`
+> - SHOPPING_FLOW review 390: `ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-review.png`
+> - SHOPPING_FLOW review 320: `ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-review-narrow.png`
 > - SHOPPING_DETAIL 390: `ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-default.png`
 > - SHOPPING_DETAIL 320: `ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-narrow.png`
 > - SHOPPING_DETAIL read-only: `ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-readonly.png`
-> - Pantry reflection modal: `ui/designs/evidence/wave1-port-shopping-cooking/shopping-complete-pantry.png`
-> - COOK_READY_LIST: `ui/designs/evidence/wave1-port-shopping-cooking/cook-ready-list.png`
+> - Pantry reflection modal 390: `ui/designs/evidence/wave1-port-shopping-cooking/shopping-complete-pantry.png`
+> - Pantry reflection modal 320: `ui/designs/evidence/wave1-port-shopping-cooking/shopping-complete-pantry-narrow.png`
+> - COOK_READY_LIST 390: `ui/designs/evidence/wave1-port-shopping-cooking/cook-ready-list.png`
+> - COOK_READY_LIST 320: `ui/designs/evidence/wave1-port-shopping-cooking/cook-ready-list-narrow.png`
 > - COOK_MODE scroll 390: `ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-scroll.png`
 > - COOK_MODE scroll 320: `ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-narrow.png`
 > - COOK_MODE consumed sheet: `ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-complete.png`
-> - Standalone COOK_MODE scroll: `ui/designs/evidence/wave1-port-shopping-cooking/standalone-cook-mode-scroll.png`
+> - COOK_MODE consumed sheet 320: `ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-complete-narrow.png`
+> - Standalone COOK_MODE scroll 390: `ui/designs/evidence/wave1-port-shopping-cooking/standalone-cook-mode-scroll.png`
+> - Standalone COOK_MODE scroll 320: `ui/designs/evidence/wave1-port-shopping-cooking/standalone-cook-mode-narrow.png`
 
 ## Verification
 
@@ -71,8 +83,9 @@ Claude Stage 4 implementation was requested through the existing VS Code Claude 
 - `pnpm validate:workpack -- --slice wave1-port-shopping-cooking` — passed.
 - `PR_IS_DRAFT=false pnpm validate:authority-evidence-presence` — passed.
 - `BRANCH_NAME=feature/fe-wave1-port-shopping-cooking BASE_REF=master node scripts/validate-omo-bookkeeping.mjs` — passed.
-- `pnpm exec playwright test tests/e2e/slice-10a-shopping-detail-interact.spec.ts tests/e2e/slice-12a-shopping-complete.spec.ts tests/e2e/qa-wave1-shopping-cooking-evidence.spec.ts --project=desktop-chrome` — passed, 21 tests, generated 11 evidence screenshots.
-- `pnpm exec playwright test tests/e2e/slice-09-shopping-preview-create.spec.ts tests/e2e/slice-10a-shopping-detail-interact.spec.ts tests/e2e/slice-12a-shopping-complete.spec.ts tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts tests/e2e/slice-14-cook-session-start.spec.ts tests/e2e/slice-15a-cook-planner-complete.spec.ts tests/e2e/slice-15b-cook-standalone-complete.spec.ts tests/e2e/qa-wave1-shopping-cooking-evidence.spec.ts --project=desktop-chrome --workers=1` — passed, 66 tests.
+- `pnpm exec playwright test tests/e2e/qa-wave1-shopping-cooking-evidence.spec.ts --project=mobile-chrome` — passed, generated/refreshed 17 evidence screenshots including 320px pantry reflect picker.
+- `pnpm exec playwright test tests/e2e/slice-09-shopping-preview-create.spec.ts tests/e2e/slice-10a-shopping-detail-interact.spec.ts tests/e2e/slice-10b-shopping-share-text.spec.ts tests/e2e/slice-12a-shopping-complete.spec.ts tests/e2e/slice-12b-shopping-pantry-reflect.spec.ts tests/e2e/slice-14-cook-session-start.spec.ts tests/e2e/slice-15a-cook-planner-complete.spec.ts tests/e2e/slice-15b-cook-standalone-complete.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small` — passed, 204 tests.
+- `pnpm verify:frontend` — passed (`lint`, `typecheck`, product Vitest 65 files / 629 tests, build, smoke E2E 758 passed / 4 skipped, a11y 6, visual 12, security 9, Lighthouse assertions over 6 runs).
 
 ## Scorecard
 
@@ -88,12 +101,13 @@ Claude Stage 4 implementation was requested through the existing VS Code Claude 
 
 verdict: pass
 
-**PASS** — `confirmed_allowed: true` for Codex fallback closeout.
+**PASS** — `confirmed_allowed: true` for Phase5 closeout.
 
 - **Blockers**: 0
 - **Majors**: 0
 - **Minors**: 2
   1. COOK_MODE still uses plain utility styling rather than a richer branded cooking surface. Acceptable for this UI-only port because the scope is interaction cleanup and contract preservation.
   2. SHOPPING_DETAIL read-only indicator is text-only. Acceptable because controls are hidden and share remains available.
+- **Unclassified visual differences**: 0
 
-Claude final authority gate could not complete due provider limit; this is recorded as provider-bound automation limit, not an unresolved design blocker.
+Claude final authority gate passed on 2026-05-13 and allows Codex to proceed to Stage 6 PR closeout.

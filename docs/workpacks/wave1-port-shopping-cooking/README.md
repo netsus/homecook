@@ -151,22 +151,33 @@ UI-only slice. 모든 변경은 기존 공식 API의 request/response 계약 범
 
 - UI risk: `high-risk` — COOK_MODE interaction model이 step-by-step/tabs에서 단일 스크롤 뷰로 바뀐다.
 - Anchor screen dependency: `N/A`
-- Visual artifact: Stage 4/5에서 mobile 390px/320px screenshot evidence 생성
+- Visual artifact: 2026-05-13 Phase4/Phase5 re-audit에서 mobile 390px/320px screenshot evidence 생성
+  - `ui/designs/evidence/wave1-port-shopping-cooking/phase4-prep.md`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/phase5-visual-audit.md`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/visual-verdict.json`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/claude-final-authority-gate.md`
   - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-preview.png`
   - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-narrow.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-review.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-flow-review-narrow.png`
   - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-default.png`
   - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-narrow.png`
   - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-readonly.png`
   - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-complete-pantry.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/shopping-complete-pantry-narrow.png`
   - `ui/designs/evidence/wave1-port-shopping-cooking/cook-ready-list.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/cook-ready-list-narrow.png`
   - `ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-scroll.png`
   - `ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-narrow.png`
   - `ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-complete.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/cook-mode-complete-narrow.png`
   - `ui/designs/evidence/wave1-port-shopping-cooking/standalone-cook-mode-scroll.png`
+  - `ui/designs/evidence/wave1-port-shopping-cooking/standalone-cook-mode-narrow.png`
 - Authority status: `reviewed`
 - Notes:
-  - Claude Stage 4 handoff was attempted through the resume session but hit provider limit.
-  - Codex fallback authority precheck passed with blocker 0.
+  - Historical Claude Stage 4 handoff was attempted through the resume session but hit provider limit; Codex fallback implementation remains the historical source.
+  - 2026-05-13 Phase5 re-audit refreshed evidence against the fixed Wave1 prototype and added missing 320px pantry reflect picker evidence.
+  - Claude final authority gate PASS: blocker 0, unclassified visual differences 0.
   - authority report: `ui/designs/authority/WAVE1_SHOPPING_COOKING-authority.md`
 
 ### UI Risk Classification
@@ -192,21 +203,27 @@ UI-only slice. 모든 변경은 기존 공식 API의 request/response 계약 범
 |------------|--------|----------|
 | `shopping-flow-preview` | SHOPPING_FLOW 프리뷰 | 390px |
 | `shopping-flow-narrow` | SHOPPING_FLOW 프리뷰 | 320px |
+| `shopping-flow-review` | SHOPPING_FLOW review | 390px |
+| `shopping-flow-review-narrow` | SHOPPING_FLOW review | 320px |
 | `shopping-detail-default` | SHOPPING_DETAIL 구매/제외 섹션 | 390px |
 | `shopping-detail-narrow` | SHOPPING_DETAIL | 320px |
 | `shopping-detail-readonly` | SHOPPING_DETAIL 완료 상태 | 390px |
 | `shopping-complete-pantry` | pantry 반영 modal | 390px |
+| `shopping-complete-pantry-narrow` | pantry 반영 modal | 320px |
 | `cook-ready-list` | COOK_READY_LIST | 390px |
+| `cook-ready-list-narrow` | COOK_READY_LIST | 320px |
 | `cook-mode-scroll` | COOK_MODE 스크롤 뷰 | 390px |
 | `cook-mode-narrow` | COOK_MODE | 320px |
 | `cook-mode-complete` | COOK_MODE 완료 버튼 | 390px |
+| `cook-mode-complete-narrow` | COOK_MODE 완료 버튼 | 320px |
 | `standalone-cook-mode-scroll` | Standalone COOK_MODE 스크롤 뷰 | 390px |
+| `standalone-cook-mode-narrow` | Standalone COOK_MODE 스크롤 뷰 | 320px |
 
 ## Design Status
 
 - [ ] 임시 UI (temporary)
 - [ ] 리뷰 대기 (pending-review)
-- [x] 확정 (confirmed) — Codex fallback authority precheck PASS, blocker 0, Claude provider limit recorded
+- [x] 확정 (confirmed) — 2026-05-13 refreshed evidence, visual audit, and Claude final authority gate PASS로 다시 잠근다.
 - [ ] N/A
 
 ## Authority Report

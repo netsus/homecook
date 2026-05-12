@@ -714,6 +714,16 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "shopping-detail-narrow.png"),
     });
+
+    await page.getByRole("button", { name: "장보기 완료" }).click();
+    await expect(
+      page.getByRole("dialog", { name: /팬트리에 (추가|반영)할까요\?/ }),
+    ).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "shopping-complete-pantry-narrow.png"),
+    });
     await context.close();
   }
 

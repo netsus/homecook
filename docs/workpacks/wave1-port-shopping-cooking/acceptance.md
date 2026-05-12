@@ -92,6 +92,8 @@
 - [x] Screenshot evidence가 Stage 4 완료 시 생성된다 (390px + 320px) <!-- omo:id=accept-screenshot-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] COOK_MODE의 모바일 스크롤 UX evidence가 포함된다 <!-- omo:id=accept-cook-mode-evidence;stage=4;scope=frontend;review=5,6 -->
 
+2026-05-13 Phase5 re-audit note: current service evidence was regenerated from `tests/e2e/qa-wave1-shopping-cooking-evidence.spec.ts` and the missing 320px pantry reflect picker capture was added. Phase5 closeout evidence now lives in `ui/designs/evidence/wave1-port-shopping-cooking/phase4-prep.md`, `phase5-visual-audit.md`, `visual-verdict.json`, and `claude-final-authority-gate.md`.
+
 ## Data Setup / Preconditions
 
 - 기존 QA fixture 서버의 shopping/cooking mock 데이터 사용
