@@ -6,7 +6,11 @@ export default async function CookingReadyPage() {
   const user = await getServerAuthUser();
 
   return (
-    <AppShell currentTab="planner" headerMode="hidden">
+    <AppShell
+      className="wave1-planner-shell"
+      currentTab="planner"
+      headerMode="hidden"
+    >
       <CookReadyListScreen initialAuthenticated={Boolean(user)} />
     </AppShell>
   );

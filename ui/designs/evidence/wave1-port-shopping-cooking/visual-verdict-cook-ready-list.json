@@ -1,0 +1,8 @@
+{
+  "score": 99,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [],
+  "suggestions": [],
+  "reasoning": "COOK_READY_LIST 390px and 320px service captures match the fixed prototype app bar, header band, section label, card geometry, method/status pills, mint CTA, and bottom tab structure. No unclassified visual differences were observed in the controlled Playwright capture."
+}

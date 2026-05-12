@@ -483,23 +483,42 @@ async function installCookingRoutes(page: Page) {
       json: {
         success: true,
         data: {
-          date_range: { start: "2026-04-12", end: "2026-04-20" },
+          date_range: { start: "2026-04-23", end: "2026-04-23" },
           recipes: [
             {
               recipe_id: "recipe-1",
-              recipe_name: "김치찌개",
-              recipe_thumbnail: null,
-              shopping_list_id: "list-1",
-              date_range_start: "2026-04-12",
-              date_range_end: "2026-04-20",
-              meals: [
-                {
-                  meal_id: "meal-1",
-                  plan_date: "2026-04-12",
-                  column_name: "저녁",
-                  planned_servings: 2,
-                },
-              ],
+              recipe_title: "김치볶음밥",
+              recipe_thumbnail_url: null,
+              meal_ids: ["meal-1"],
+              total_servings: 1,
+            },
+            {
+              recipe_id: "recipe-2",
+              recipe_title: "된장찌개",
+              recipe_thumbnail_url: null,
+              meal_ids: ["meal-2"],
+              total_servings: 2,
+            },
+            {
+              recipe_id: "recipe-3",
+              recipe_title: "닭가슴살 샐러드",
+              recipe_thumbnail_url: null,
+              meal_ids: ["meal-3"],
+              total_servings: 1,
+            },
+            {
+              recipe_id: "recipe-4",
+              recipe_title: "닭가슴살 샐러드",
+              recipe_thumbnail_url: null,
+              meal_ids: ["meal-4"],
+              total_servings: 1,
+            },
+            {
+              recipe_id: "recipe-5",
+              recipe_title: "된장찌개",
+              recipe_thumbnail_url: null,
+              meal_ids: ["meal-5"],
+              total_servings: 2,
             },
           ],
         },
@@ -632,6 +651,20 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await page.screenshot({
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "cook-ready-list.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.narrow);
+    await setAuthOverride(page);
+    await installCookingRoutes(page);
+    await page.goto(`${BASE_URL}/cooking/ready`);
+    await expect(page.getByRole("heading", { name: "요리하기" })).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "cook-ready-list-narrow.png"),
     });
     await context.close();
   }
