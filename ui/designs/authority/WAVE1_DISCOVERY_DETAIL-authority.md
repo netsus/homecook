@@ -5,6 +5,8 @@
 > reviewer: Codex design authority precheck + Claude final authority gate
 > date: 2026-05-10
 
+> 2026-05-13 rerun note: this report is historical closeout evidence for PR #374. Current exact-mobile rerun prep is recorded in `ui/designs/evidence/wave1-port-discovery-detail/phase4-prep.md`; Phase5 must refresh this authority report with new reference/service/diff/audit evidence before claiming confirmed status again.
+
 ## Design Status
 
 **confirmed**

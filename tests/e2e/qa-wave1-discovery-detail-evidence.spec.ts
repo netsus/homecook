@@ -27,7 +27,9 @@ async function preparePage(
   viewport: { width: number; height: number },
 ) {
   const context = await browser.newContext({
-    deviceScaleFactor: 2,
+    // Keep generated service screenshots at the same pixel size as the fixed
+    // reference PNGs so Phase5 screenshot diffs do not need DPR normalization.
+    deviceScaleFactor: 1,
     viewport,
   });
   const page = await context.newPage();
