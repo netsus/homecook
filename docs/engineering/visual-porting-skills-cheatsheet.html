@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Visual Porting Skills Guide</title>
+    <style>
+      :root {
+        --ink: #1f2528;
+        --muted: #657176;
+        --line: #dfe8e5;
+        --paper: #fffaf0;
+        --surface: #ffffff;
+        --wash: #f5f8f4;
+        --mint: #ddf7f4;
+        --brand: #20b8b2;
+        --brand-dark: #117b77;
+        --olive: #6f8d4e;
+        --clay: #d17845;
+        --butter: #ffe7a1;
+        --code: #172323;
+        --code-text: #eaf7f2;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 12% 8%, rgba(32, 184, 178, 0.18), transparent 26%),
+          radial-gradient(circle at 90% 18%, rgba(255, 231, 161, 0.7), transparent 24%),
+          linear-gradient(180deg, #fffdf8, var(--paper));
+        font-family:
+          ui-sans-serif,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Apple SD Gothic Neo",
+          "Malgun Gothic",
+          "Noto Sans KR",
+          sans-serif;
+        line-height: 1.62;
+      }
+
+      a {
+        color: var(--brand-dark);
+        text-decoration: none;
+        border-bottom: 1px solid rgba(17, 123, 119, 0.28);
+      }
+
+      main {
+        width: min(1080px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 38px 0 64px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        max-width: 820px;
+        margin-top: 18px;
+        font-size: clamp(34px, 6vw, 64px);
+        line-height: 1.12;
+      }
+
+      h2 {
+        font-size: clamp(24px, 4vw, 38px);
+        line-height: 1.18;
+      }
+
+      h3 {
+        font-size: 22px;
+        line-height: 1.2;
+      }
+
+      p,
+      h1,
+      h2,
+      h3,
+      .card,
+      .skill,
+      .flow-step,
+      .table-wrap {
+        overflow-wrap: anywhere;
+      }
+
+      .hero,
+      .section,
+      .card,
+      .skill,
+      .flow,
+      .note {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.88);
+      }
+
+      .hero {
+        padding: 30px;
+        box-shadow: 0 18px 58px rgba(31, 37, 40, 0.1);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--mint);
+        color: var(--brand-dark);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .lead {
+        max-width: 780px;
+        margin-top: 16px;
+        color: #394448;
+        font-size: 18px;
+      }
+
+      .quick {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 22px;
+      }
+
+      .quick .card {
+        padding: 16px;
+      }
+
+      .quick b {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .section {
+        margin-top: 24px;
+        padding: 26px;
+      }
+
+      .section > p {
+        margin-top: 10px;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .card {
+        min-width: 0;
+        padding: 18px;
+        background: var(--surface);
+      }
+
+      .tag {
+        display: inline-flex;
+        width: fit-content;
+        margin-bottom: 10px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: var(--mint);
+        color: var(--brand-dark);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .skills {
+        display: grid;
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .skill {
+        display: grid;
+        grid-template-columns: minmax(0, 230px) minmax(0, 1fr);
+        gap: 18px;
+        min-width: 0;
+        padding: 20px;
+        background: var(--surface);
+      }
+
+      .skill > * {
+        min-width: 0;
+      }
+
+      .badge {
+        display: inline-flex;
+        width: fit-content;
+        margin-top: 10px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: #f4f7f2;
+        color: var(--olive);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .skill-body {
+        display: grid;
+        gap: 12px;
+      }
+
+      .labels {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .label {
+        padding: 5px 8px;
+        border-radius: 999px;
+        background: var(--mint);
+        color: var(--brand-dark);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: rgba(32, 184, 178, 0.12);
+        color: #123f3e;
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Monaco,
+          Consolas,
+          monospace;
+        font-size: 0.92em;
+      }
+
+      pre {
+        overflow-x: auto;
+        margin: 0;
+        padding: 15px;
+        border-radius: 8px;
+        background: var(--code);
+        color: var(--code-text);
+        line-height: 1.55;
+      }
+
+      pre code {
+        display: block;
+        min-width: 0;
+        padding: 0;
+        background: transparent;
+        color: inherit;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 18px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.86);
+      }
+
+      .flow-step {
+        min-height: 118px;
+        padding: 14px;
+        border-radius: 8px;
+        background: var(--wash);
+      }
+
+      .flow-step b {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .steps {
+        display: grid;
+        gap: 12px;
+        margin-top: 18px;
+        counter-reset: step;
+      }
+
+      .step {
+        position: relative;
+        min-height: 76px;
+        padding: 17px 17px 17px 68px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+
+      .step::before {
+        counter-increment: step;
+        content: counter(step);
+        position: absolute;
+        top: 17px;
+        left: 17px;
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: var(--brand);
+        color: #ffffff;
+        font-weight: 900;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        margin-top: 18px;
+        background: #fff;
+      }
+
+      table {
+        width: 100%;
+        min-width: 720px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--wash);
+        font-size: 13px;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .note {
+        margin-top: 18px;
+        padding: 18px 20px;
+        border-left: 5px solid var(--clay);
+        background: #fff4df;
+      }
+
+      .footer {
+        margin-top: 22px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      @media (max-width: 820px) {
+        .quick,
+        .grid,
+        .grid.two,
+        .skill,
+        .flow {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .hero,
+        .section,
+        .skill {
+          padding: 22px;
+        }
+
+        .step {
+          padding-right: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <span class="eyebrow">Homecook visual porting</span>
+        <h1>디자인 포팅과 화면 비교를 한 번에 이해하기</h1>
+        <p class="lead">
+          Figma나 prototype을 우리 프론트엔드에 옮길 때는 세 단계를 나누면 쉽습니다.
+          먼저 화면을 구현하고, 브라우저에서 실제로 확인하고, 마지막으로 참조 이미지와
+          점수로 비교합니다.
+        </p>
+
+        <div class="quick" aria-label="summary">
+          <div class="card">
+            <b>1. 구현</b>
+            <code>frontend-design</code>으로 Figma/prototype을 코드에 옮깁니다.
+          </div>
+          <div class="card">
+            <b>2. 브라우저 확인</b>
+            <code>playwright-visual-review-loop</code>로 모바일/데스크톱 화면을 확인합니다.
+          </div>
+          <div class="card">
+            <b>3. 비교 판정</b>
+            <code>visual-verdict</code>로 참조 이미지와 구현 스크린샷을 비교합니다.
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Playwright visual comparison이란?</h2>
+        <p>
+          Playwright가 실제 브라우저에서 화면을 PNG로 찍고, 저장된 기준 이미지와 비교하는
+          테스트입니다. 버튼 위치, 모달 크기, 카드 간격, 하단 탭 겹침처럼 눈으로 보던 차이를
+          자동으로 잡는 데 씁니다.
+        </p>
+
+        <div class="grid">
+          <div class="card">
+            <span class="tag">기준 이미지</span>
+            <p>정답으로 삼을 스크린샷입니다. 의도한 디자인이 확정됐을 때 저장합니다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">현재 이미지</span>
+            <p>테스트 실행 시점의 실제 프론트엔드 화면입니다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">diff 이미지</span>
+            <p>두 이미지가 다른 부분을 보여줍니다. 큰 차이는 레이아웃 문제일 가능성이 큽니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>우리 저장소에서 쓰는 명령어</h2>
+        <p>
+          이미 Homecook에는 Playwright visual test가 설정되어 있습니다. 테스트 파일은
+          <code>tests/e2e/qa-visual.spec.ts</code>입니다.
+        </p>
+
+        <div class="grid two">
+          <div class="card">
+            <span class="tag">비교 실행</span>
+            <h3>현재 화면이 기준과 같은지 확인</h3>
+            <pre><code>pnpm test:e2e:visual</code></pre>
+          </div>
+          <div class="card">
+            <span class="tag">기준 갱신</span>
+            <h3>의도한 디자인 변경일 때만 사용</h3>
+            <pre><code>pnpm test:e2e:visual:update</code></pre>
+          </div>
+        </div>
+
+        <div class="note">
+          기준 갱신은 “테스트를 통과시키기 위해” 누르는 버튼이 아닙니다. 바뀐 PNG를 직접 보고
+          이 화면이 새 정답이라고 판단될 때만 사용해야 합니다.
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>가장 작은 테스트 예시</h2>
+        <p>
+          아래 코드는 개념 설명용입니다. 실제 우리 저장소 테스트는 폰트 고정, 애니메이션 제거,
+          mock route까지 더 넣어서 스크린샷이 흔들리지 않게 합니다.
+        </p>
+
+        <pre style="margin-top: 18px"><code>import { test, expect } from "@playwright/test";
+
+test("플래너 화면이 기준 이미지와 맞는다", async ({ page }) =&gt; {
+  await page.goto("/planner");
+  await expect(page.getByRole("heading", { name: "플래너" })).toBeVisible();
+
+  await expect(page).toHaveScreenshot("planner-default.png", {
+    fullPage: true,
+    animations: "disabled",
+    maxDiffPixels: 150,
+  });
+});</code></pre>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>옵션</th>
+                <th>뜻</th>
+                <th>언제 쓰나</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>fullPage</code></td>
+                <td>스크롤 가능한 전체 페이지 캡처</td>
+                <td>페이지 전체 레이아웃을 보고 싶을 때 씁니다.</td>
+              </tr>
+              <tr>
+                <td><code>animations</code></td>
+                <td>애니메이션 처리 방식</td>
+                <td>움직임 때문에 매번 다른 사진이 나오지 않게 보통 끕니다.</td>
+              </tr>
+              <tr>
+                <td><code>maxDiffPixels</code></td>
+                <td>허용할 다른 픽셀 수</td>
+                <td>폰트 렌더링 같은 작은 차이를 일부 허용할 때 씁니다.</td>
+              </tr>
+              <tr>
+                <td><code>mask</code></td>
+                <td>특정 요소 가리기</td>
+                <td>날짜, 랜덤 이미지처럼 매번 바뀌는 영역을 비교에서 뺄 때 씁니다.</td>
+              </tr>
+              <tr>
+                <td><code>stylePath</code></td>
+                <td>스크린샷 전용 CSS 적용</td>
+                <td>커서, 개발 배너, 외부 위젯 같은 변동 요소를 숨길 때 씁니다.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>바로 쓸 수 있는 3가지 스킬</h2>
+        <p>처음에는 한 화면, 한 상태만 맡기는 것이 좋습니다. 예: 플래너 기본 화면, 식사 추가 모달 열린 상태.</p>
+
+        <div class="skills">
+          <article class="skill">
+            <div>
+              <h3>frontend-design</h3>
+              <span class="badge">구현/포팅</span>
+            </div>
+            <div class="skill-body">
+              <p>
+                Figma나 prototype을 보고 우리 Next.js 컴포넌트에 맞게 실제 화면을 구현할 때 씁니다.
+                기존 API 계약과 상태 전이는 유지하고, visual만 맞추는 식으로 요청하면 안전합니다.
+              </p>
+              <div class="labels">
+                <span class="label">화면 구현</span>
+                <span class="label">모달 구조</span>
+                <span class="label">상태 UI</span>
+              </div>
+              <pre><code>예시 요청:
+"이 Figma 플래너 frame을 frontend-design 방식으로 우리 플래너 화면에 포팅해줘.
+동작 계약은 바꾸지 말고 visual만 맞춰줘."</code></pre>
+              <p>기대효과: 버튼, 카드, 모달, empty/loading/error 상태를 코드 구조에 맞춰 정리합니다.</p>
+            </div>
+          </article>
+
+          <article class="skill">
+            <div>
+              <h3>playwright-visual-review-loop</h3>
+              <span class="badge">브라우저 QA</span>
+            </div>
+            <div class="skill-body">
+              <p>
+                로컬 프론트엔드를 띄우고 모바일/데스크톱 스크린샷, 콘솔 에러, 페이지 에러,
+                실패한 요청을 함께 확인합니다.
+              </p>
+              <div class="labels">
+                <span class="label">모바일 깨짐</span>
+                <span class="label">모달 위치</span>
+                <span class="label">콘솔 에러</span>
+              </div>
+              <pre><code>예시 요청:
+"localhost 플래너 화면을 playwright-visual-review-loop로 확인해줘.
+390px, 320px, desktop에서 스크린샷 찍고 깨진 부분을 찾아줘."</code></pre>
+              <p>기대효과: 실제 브라우저에서 버튼 가림, 모달 잘림, 가로 스크롤을 빠르게 찾습니다.</p>
+            </div>
+          </article>
+
+          <article class="skill">
+            <div>
+              <h3>visual-verdict</h3>
+              <span class="badge">비교 판정</span>
+            </div>
+            <div class="skill-body">
+              <p>
+                참조 이미지와 현재 구현 스크린샷을 비교해서 <code>0~100</code> 점수, 다른 점,
+                다음 수정 제안을 냅니다.
+              </p>
+              <div class="labels">
+                <span class="label">레이아웃 차이</span>
+                <span class="label">간격 차이</span>
+                <span class="label">폰트/색상 차이</span>
+              </div>
+              <pre><code>예시 요청:
+"이 참조 이미지와 현재 플래너 스크린샷을 visual-verdict로 비교해줘.
+90점 미만이면 어떤 부분을 고쳐야 하는지 알려줘."</code></pre>
+              <p>기대효과: “느낌이 다르다”를 “카드 간격이 넓다”, “버튼 위치가 낮다”처럼 바꿉니다.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>추천 작업 순서</h2>
+        <div class="flow">
+          <div class="flow-step">
+            <b>1. 기준 준비</b>
+            Figma frame 또는 prototype 스크린샷을 정합니다.
+          </div>
+          <div class="flow-step">
+            <b>2. 구현</b>
+            <code>frontend-design</code>으로 한 화면을 포팅합니다.
+          </div>
+          <div class="flow-step">
+            <b>3. 브라우저 확인</b>
+            <code>playwright-visual-review-loop</code>로 실제 화면을 찍습니다.
+          </div>
+          <div class="flow-step">
+            <b>4. 비교 판정</b>
+            <code>visual-verdict</code>로 참조 이미지와 비교합니다.
+          </div>
+          <div class="flow-step">
+            <b>5. 반복 수정</b>
+            90점 이상 또는 눈에 띄는 차이가 없어질 때까지 반복합니다.
+          </div>
+        </div>
+
+        <div class="note">
+          한 번에 전체 앱을 똑같이 만들기보다, <strong>플래너 기본 화면</strong>,
+          <strong>식사 추가 모달 열린 상태</strong>처럼 작은 단위로 나누면 성공률이 높습니다.
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>실패했을 때 판단 기준</h2>
+        <p>
+          실패는 “화면이 달라졌다”는 신호입니다. 의도한 변경인지, 실제 버그인지 나누는 것이 중요합니다.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>상황</th>
+                <th>해석</th>
+                <th>다음 행동</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>모달 위치나 카드 구조가 크게 다름</td>
+                <td>구현 버그일 가능성이 큽니다.</td>
+                <td>컴포넌트 구조나 CSS를 고친 뒤 다시 캡처합니다.</td>
+              </tr>
+              <tr>
+                <td>1~2px, 폰트 렌더링만 조금 다름</td>
+                <td>환경 차이일 수 있습니다.</td>
+                <td>허용치, 고정 폰트, 애니메이션 끄기를 확인합니다.</td>
+              </tr>
+              <tr>
+                <td>의도한 리디자인으로 전체가 달라짐</td>
+                <td>새 기준 이미지가 필요합니다.</td>
+                <td><code>pnpm test:e2e:visual:update</code> 후 PNG를 직접 확인합니다.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="steps">
+          <div class="step">
+            <h3>Playwright report를 엽니다</h3>
+            <p>기준 이미지, 현재 이미지, diff 이미지를 보고 차이가 큰 영역부터 확인합니다.</p>
+          </div>
+          <div class="step">
+            <h3>레이아웃 차이인지 스타일 차이인지 나눕니다</h3>
+            <p>버튼 위치, 모달 위치, 카드 개수 차이는 버그 가능성이 큽니다. 작은 색상 차이는 허용치 조정 대상일 수 있습니다.</p>
+          </div>
+          <div class="step">
+            <h3>의도한 변경이면 기준을 갱신합니다</h3>
+            <p><code>pnpm test:e2e:visual:update</code> 실행 후 바뀐 PNG를 직접 보고 커밋합니다.</p>
+          </div>
+          <div class="step">
+            <h3>의도하지 않은 변경이면 코드를 고칩니다</h3>
+            <p>CSS나 컴포넌트 구조를 수정하고 다시 <code>pnpm test:e2e:visual</code>을 실행합니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>자주 막히는 지점</h2>
+        <div class="grid two">
+          <div class="card">
+            <span class="tag">1~2px씩 계속 달라짐</span>
+            <p>폰트, OS, 브라우저 렌더링 차이일 수 있습니다. 테스트 전용 폰트와 애니메이션 제거가 도움이 됩니다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">날짜/이미지 때문에 실패</span>
+            <p>날짜, 랜덤 추천, 외부 이미지는 변동 요소입니다. mock data, <code>mask</code>, <code>stylePath</code>를 씁니다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">모달 비교가 부정확함</span>
+            <p>전체 페이지 대신 <code>dialog</code> 같은 특정 locator만 캡처하면 더 안정적입니다.</p>
+          </div>
+          <div class="card">
+            <span class="tag">Figma 캡처와 코드가 다름</span>
+            <p>Figma HTML 캡처는 raw frame입니다. Figma screenshot, node context, Playwright 결과를 같이 봐야 합니다.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>참고 링크</h2>
+        <p>
+          Playwright 공식 문서:
+          <a href="https://playwright.dev/docs/test-snapshots">Visual comparisons</a>,
+          <a href="https://playwright.dev/docs/api/class-pageassertions">PageAssertions</a>
+        </p>
+        <p style="margin-top: 8px">
+          저장소 기준 문서:
+          <code>docs/engineering/playwright-e2e.md</code>,
+          <code>docs/engineering/qa-system.md</code>
+        </p>
+      </section>
+
+      <p class="footer">
+        요약: <code>frontend-design</code>은 만들기, <code>playwright-visual-review-loop</code>는
+        실제 브라우저 확인, <code>visual-verdict</code>는 참조 이미지와 점수 비교입니다.
+      </p>
+    </main>
+  </body>
+</html>
