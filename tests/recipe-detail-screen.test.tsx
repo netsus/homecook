@@ -163,6 +163,23 @@ describe("recipe detail screen", () => {
     expect(closeButton.textContent).toBe("");
   });
 
+  it("shows recipe detail load errors on the prototype-derived state shell", async () => {
+    fetchJson.mockRejectedValue(new Error("recipe failed"));
+
+    render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
+
+    const heading = await screen.findByRole("heading", {
+      name: "레시피 상세를 불러오지 못했어요",
+    });
+
+    expect(
+      heading
+        .closest("[data-state-kind='prototype-derived']")
+        ?.getAttribute("data-state-tone"),
+    ).toBe("error");
+    expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
+  });
+
   it("keeps a single share action and places interactive chips above the ingredient section", async () => {
     render(<RecipeDetailScreen recipeId={MOCK_RECIPE_DETAIL.id} />);
 

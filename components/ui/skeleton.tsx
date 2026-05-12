@@ -26,12 +26,15 @@ export function Skeleton({
   return (
     <div
       className={[
-        "animate-pulse bg-[var(--surface-fill)]",
+        "animate-pulse bg-[#F1F3F5]",
         roundedMap[rounded],
         className,
       ]
         .filter(Boolean)
         .join(" ")}
+      aria-hidden="true"
+      data-state-kind="prototype-derived"
+      data-state-tone="skeleton"
       style={{
         width: typeof width === "number" ? `${width}px` : width,
         height: typeof height === "number" ? `${height}px` : height,

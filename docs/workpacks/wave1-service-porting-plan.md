@@ -9,6 +9,7 @@
 > 2026-05-12 Phase 2 update: 앱/웹 책임 분리와 exact-ready/freeze 대상은 `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`를 따른다.
 > 2026-05-12 contract update: 사용자 결정에 따라 official docs가 `요구사항 v1.6.6 / 화면정의서 v1.5.3 / 유저flow v1.3.3 / DB v1.3.3 / API v1.2.4`로 갱신됐다. Phase4 재진행 전 이 계약을 먼저 구현/검증한다.
 > 2026-05-12 reference refresh gate: Phase4 재진행 전 `HOME_SORT_OPEN_STATE`와 `SHOPPING_DETAIL_PANTRY_REFLECT_PICKER` fixed reference를 새 계약 기준으로 다시 freeze한다.
+> 2026-05-12 derived state UI prep: Phase4 재진행 전 `loading / skeleton / empty / error / unauthorized / not-found / submitting` 같은 prototype에 직접 없는 상태 UI는 `prototype-derived design`으로 분류하고, 공통 규칙 + 공통 컴포넌트 + 대표 3화면(HOME / RECIPE_DETAIL / PLANNER_WEEK)까지만 먼저 잠근다. 나머지 화면은 각 Phase4 slice 안에서 같은 패턴으로 확산한다.
 
 ## Current Status
 
@@ -19,6 +20,7 @@
   - `GLOBAL::LoginGateModal`은 prototype-owned phone-shell `?modal=login-gate` trigger와 390px/320px reference가 추가되어 `needs-prototype-freeze`에서 해제됐다.
   - 2026-05-12 contract-evolution: HOME `latest` sort, SavePopup multi-save, shopping history `completed_at` + `다시열기`, leftovers/ate card metadata, recipebook detail metadata, prototype colors/touch sizes/bottom-tab icons are now official Wave1 criteria.
   - Phase4 재진행 전 reference refresh 대상: HOME sort-open state, pantry reflect picker state. 이전 reference가 계약과 충돌하면 visual 100% 근거로 쓰지 않는다.
+  - `wave1-derived-state-ui-prep`는 완료됐다. 이 prep은 fixed reference가 없는 상태 화면을 exact parity 대상으로 과장하지 않고, MVP 기능 계약을 유지한 채 Wave1 mobile visual language에서 파생한 공통 상태 UI 기준을 잠갔다.
   - 기존 C2 / h6 / h7 / h8 design authority와 PR #373, #374, #376, #379, #381, #383 evidence는 historical evidence다.
   - fixed reference가 있는 모바일 surface는 색상, 폰트, spacing, radius, shadow, layout, icon, sheet/bottom-tab geometry까지 prototype과 일치해야 한다.
   - broad approved divergence, coral-vs-mint token mapping, non-Jua font substitution, warm-cream background 유지 같은 이전 예외는 현재 Wave1 mobile 100% parity completion proof로 사용할 수 없다.
@@ -96,6 +98,7 @@
 - prototype의 mint/Jua/font/asset은 더 이상 blanket exclusion이 아니다. fixed reference에 보이는 경우 exact parity 대상이며, production에서 사용할 수 없으면 surface를 `needs-prototype-freeze` 또는 unresolved asset/font decision으로 막는다.
 - `ui/designs/BAEMIN_STYLE_DIRECTION.md`의 `prototype parity`, `prototype-derived design`, `out of prototype scope` 용어만 사용한다.
 - 사용자가 2026-05-11에 모바일 화면의 색상과 폰트 크기까지 100% 일치를 요구했으므로, Wave1 mobile exact-reference-ready surface에서는 "approved token divergence"를 completion escape hatch로 쓰지 않는다.
+- fixed prototype reference가 없는 상태 UI는 `prototype parity`가 아니라 `prototype-derived design`으로만 기록한다. 예: loading, skeleton, empty, error, unauthorized, not-found, submitting/creating/completing.
 
 프로토타입 쪽 참고 파일:
 
@@ -110,6 +113,7 @@
 - **Visual vs Functional Source of Truth**
   - `claude-design-260505-wave1`는 화면 구조, 카드 밀도, spacing, hierarchy, 섹션 구성, responsive layout, visual tone의 기준이다.
   - 현재 MVP 구현과 공식 문서는 기능 동작, API 호출, request/response payload, route navigation, submit 동작, auth/permission, loading/empty/error/unauthorized/read-only 상태, 상태 전이의 기준이다.
+  - prototype에 직접 없는 상태 UI는 MVP 기능 계약을 유지하고, Wave1 mobile token/spacing/card/button/density 규칙에서 파생한다. 이 경우 completion 문구는 "fixed reference 대비 100% pixel parity"가 아니라 "prototype-derived state UI 기준 충족"으로 쓴다.
   - 현재 구현의 낡은 시각 형태는 방어하지 않는다. 하지만 잘 동작하는 기능은 regression test로 고정하고 보존한다.
   - 프로토타입에서 버튼이 미연결, demo-only, placeholder, broken behavior인 경우 그 동작을 복사하지 않는다. UI 모양만 참고하고 `onClick`/`onSubmit`/API 연결은 현재 서비스의 정상 동작을 유지한다.
   - 테스트가 UI selector 변경 때문에 깨지면 기능 기대값은 유지하고 selector를 새 UI에 맞게 조정한다. 디자인 변경을 이유로 기능 테스트를 삭제하지 않는다.
@@ -205,6 +209,7 @@
 | 0.6 | `wave1-app-web-responsibility-matrix` | 모바일 exact-ready, needs-freeze, web-only 책임을 분리하고 token scoping 기본 경로를 확정 | Done | `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`가 기준이다. `needs-prototype-freeze` row는 Phase 3 capture/freeze 전에는 포팅하지 않는다. |
 | 0.7 | `wave1-phase3-reference-freeze` | missing 모바일 prototype reference를 390px/320px fixed screenshots로 동결 | Done | 31개 surface state, 62개 신규 mobile PNG를 manifest에 추가했다. 기존 reference는 기본 capture에서 skip된다. |
 | 0.8 | `wave1-login-gate-reference-freeze` | `GLOBAL::LoginGateModal` deterministic trigger와 390px/320px fixed screenshots 추가 | Done | prototype-owned `?modal=login-gate` trigger로 `GLOBAL::LoginGateModal` reference 2장을 manifest에 추가했다. Phase 4/5 재개 전 남은 `needs-prototype-freeze` row를 해제한다. |
+| 0.9 | `wave1-derived-state-ui-prep` | prototype에 직접 없는 loading/skeleton/empty/error류 상태 UI의 공통 기준 잠금 | Done | `ContentState`, `Skeleton`, legacy `EmptyState`/`ErrorState`의 Wave1-derived visual 기준과 대표 3화면(HOME / RECIPE_DETAIL / PLANNER_WEEK) 적용을 닫았다. 모든 화면을 선행 PR에서 완성하지 않고, 나머지는 Slice A~F에서 확산한다. |
 | A | `wave1-port-foundation` | 공통 shell, 공용 UI 패턴, CTA/칩/카드/모달 위계 | Re-audit / repair | 전체 재포팅의 첫 단계. AppShell, bottom tab, 공통 primitive가 prototype과 실제로 맞는지 다시 확인한다. |
 | B | `wave1-port-discovery-detail` | HOME, RECIPE_DETAIL, save modal, login provider display | Re-audit / repair | HOME은 기존 `baemin-prototype-home-porting`과 충돌/중복 확인 후, fixed prototype reference 대비 unclassified visual difference 0을 달성한다. |
 | C | `wave1-port-planner-meal-add` | PLANNER, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN | Re-audit / repair | 컬럼 CRUD는 완료된 `planner-column-customization` 계약을 소비한다. PLANNER/식사추가/직접등록 화면의 layout parity를 다시 확인한다. |
@@ -212,6 +217,65 @@
 | E | `wave1-port-pantry` | PANTRY, ingredient picker, bundle picker, multi-delete | Re-audit / repair | PR #381 merged 이력은 완료 근거로 쓰지 않는다. 재료 이미지 URL은 계속 계약 후보로 분리하고, 가능한 UI만 prototype에 맞춘다. |
 | F | `wave1-port-account-library-leftovers` | MYPAGE, SETTINGS polish, LEFTOVERS, ATE_LIST, RECIPEBOOK_DETAIL | Re-audit / repair | PR #383은 visual parity 실패 사례다. Slice F만 다시 하는 것이 아니라 전체 재포팅 순서의 마지막 slice로 다시 닫는다. SETTINGS 컬럼 관리 완료 상태와 충돌하지 않게 조심. |
 | G | `wave1-port-web-followup` | 앱 포팅 이후 웹-only 조정 | 별도 계획 | 앱 slice 완료 후 최신 프로토타입 기준으로 다시 작성. |
+
+## Derived State UI Prep Before Phase4
+
+`wave1-derived-state-ui-prep`은 Phase4를 오래 막는 별도 전체 리디자인이 아니다. 목적은 fixed reference가 없는 상태 화면을 화면별로 임의 해석하지 않도록, 작고 재사용 가능한 기준을 먼저 잠그는 것이다.
+
+Closeout status: complete. `ContentState`, `Skeleton`, legacy `EmptyState`/`ErrorState`, HOME / RECIPE_DETAIL / PLANNER_WEEK representative state tests, workpack acceptance, workflow-v2 bookkeeping, and `pnpm verify:frontend` are closed. Remaining Phase4 work should consume this derived state UI baseline inside Slice A~F instead of reopening it as a separate blocker.
+
+### Scope
+
+- 공통 상태 UI 규칙 문서화:
+  - `loading`
+  - `skeleton`
+  - `empty`
+  - `error`
+  - `unauthorized`
+  - `not-found`
+  - `submitting / creating / completing`
+- 공통 컴포넌트 정리:
+  - `components/shared/content-state.tsx`
+  - `components/ui/skeleton.tsx`
+  - legacy `components/ui/empty-state.tsx`
+  - legacy `components/ui/error-state.tsx`
+- 대표 적용 화면:
+  - `HOME`
+  - `RECIPE_DETAIL`
+  - `PLANNER_WEEK`
+- 주요 화면별 상태 UI inventory 작성:
+  - exact reference가 있는 상태
+  - prototype-derived로 처리할 상태
+  - Phase4 각 slice에서 확산할 상태
+
+### Non-Goals
+
+- 이 prep에서 모든 화면의 loading/empty/error를 전부 완성하지 않는다.
+- fixed reference가 없는 상태를 100% pixel parity로 주장하지 않는다.
+- route, API, payload, auth, status transition, read-only 정책은 변경하지 않는다.
+- 상태 copy를 공식 문서 계약보다 앞서 임의 변경하지 않는다.
+
+### Design Classification
+
+- fixed reference가 있는 surface: `prototype parity`
+- fixed reference가 없지만 같은 화면의 visual language에서 파생 가능한 state: `prototype-derived design`
+- prototype에도 없고 현재 제품 범위에도 필요하지 않은 state: `out of prototype scope`
+
+`prototype-derived design` 상태는 아래 기준으로 닫는다:
+
+- 현재 MVP 기능 계약과 상태 전이를 유지한다.
+- Wave1 mobile token, spacing, card density, button hierarchy, bottom safe-area, typography scale을 따른다.
+- old MVP glass/radius/color treatment를 제거한다.
+- loading/skeleton은 최종 콘텐츠의 구조와 밀도를 예고해야 하며, 과장된 장식 카드나 화면 설명문으로 대체하지 않는다.
+- empty/error/unauthorized/not-found는 사용자가 다음 행동을 이해할 수 있게 하되, fixed reference 없는 pixel parity 점수를 completion proof로 사용하지 않는다.
+
+### Acceptance
+
+- 공통 상태 UI 규칙과 화면별 state inventory가 문서에 남아 있다.
+- `ContentState`, `Skeleton`, `EmptyState`, `ErrorState`가 Wave1-derived 기준으로 정리되어 있다.
+- HOME / RECIPE_DETAIL / PLANNER_WEEK에서 대표 loading/skeleton/empty/error 또는 gate 상태가 새 기준을 소비한다.
+- 기존 기능 테스트와 상태 전이 테스트는 삭제하지 않고 필요한 selector만 업데이트한다.
+- PR closeout에는 `prototype-derived design` 상태와 `prototype parity` 상태를 분리해 기록한다.
 
 ## Prototype Repair Before Service Porting
 
@@ -810,7 +874,7 @@ docs/workpacks/wave1-service-porting-plan.md를 먼저 읽고, `ui/designs/proto
 - 기존 Wave1 포팅 PR들은 merge됐지만, 실제 서비스 화면이 확정 디자인 소스 `claude-design-260505-wave1`와 충분히 맞는지 신뢰할 수 없다.
 - 특히 PR #383 `feat(wave1): merge account library leftovers closeout`은 사용자가 직접 visual parity 실패를 확인했다.
 - 2026-05-11 사용자 QA에서 prototype 자체의 화면이동/동작/디자인 문제가 확인됐다.
-- 이번 작업은 먼저 Prototype Repair 0~4와 follow-up repair #391~#404를 끝내고 fixed prototype을 freeze한 뒤, Slice A~F 전체를 fixed prototype 기준으로 재감사하고 필요한 slice를 다시 디자인 포팅하는 작업이다.
+- Prototype Repair 0~4, follow-up repair #391~#404, fixed prototype freeze, `wave1-derived-state-ui-prep`는 완료됐다. 이제 Slice A~F 전체를 fixed prototype 기준으로 재감사하고 필요한 slice를 다시 디자인 포팅한다.
 - 단순 문구/버튼 polish가 아니라 화면 구조, 카드 밀도, spacing, 배민 스타일 톤, 섹션 구성, 모바일/데스크톱 layout을 prototype 기준으로 맞춘다.
 
 가장 중요한 원칙:
@@ -818,12 +882,13 @@ docs/workpacks/wave1-service-porting-plan.md를 먼저 읽고, `ui/designs/proto
 - 현재 MVP 구현과 공식 문서는 기능 source of truth다.
 - service porting의 100% parity는 visual/layout parity만 뜻한다.
 - route navigation, API 호출, payload, submit 동작, loading/empty/error/unauthorized/read-only 상태, 권한 정책, status 전이는 기존 MVP 그대로 보존한다.
+- fixed prototype에 직접 없는 loading/skeleton/empty/error/unauthorized/not-found/submitting 상태는 `prototype-derived design`으로 분류한다. `wave1-derived-state-ui-prep`에서 잠근 공통 규칙, 공통 컴포넌트, HOME/RECIPE_DETAIL/PLANNER_WEEK 대표 적용을 기준으로 Slice A~F 안에서 확산한다.
 - prototype에서 버튼이 미연결/demo-only/broken behavior이면 그 동작을 service로 복사하지 않는다. Prototype Repair 단계에서 MVP 기준으로 먼저 고친다.
 - 테스트가 selector 변경으로 깨지면 기능 기대값은 유지하고 selector만 새 UI에 맞게 고친다. 기능 테스트를 디자인 때문에 삭제하지 않는다.
 
 먼저 새 브랜치를 만든다:
-- 첫 작업은 `pnpm branch:start -- --branch fix/wave1-prototype-navigation-repair`
-- 이후 repair slice마다 `fix/wave1-prototype-<scope>-repair` 형태로 분리한다.
+- 첫 작업은 `pnpm branch:start -- --branch feature/fe-wave1-port-foundation-reaudit`
+- 이후 service slice마다 작은 re-audit / repair 브랜치로 분리한다.
 
 반드시 먼저 읽는다:
 1. AGENTS.md
@@ -841,17 +906,13 @@ docs/workpacks/wave1-service-porting-plan.md를 먼저 읽고, `ui/designs/proto
 13. ui/designs/prototypes/claude-design-260505-wave1/tokens.jsx
 14. ui/designs/prototypes/claude-design-260505-wave1/screens/*.jsx
 
-Prototype Repair 순서:
-1. Prototype Repair 0: Navigation And Return Context
-2. Prototype Repair 1: Modal And Interaction Fixes
-3. Prototype Repair 2: Screen Visual Corrections
-4. Prototype Repair 3: Functional Logic Fixes
-5. Prototype Repair 4: Freeze And Service Porting Gate
-6. Follow-up repair #391~#394: planner/settings/menu/shopping finalization
-7. Final QA repair #396~#398: manual-create validation, settings account split, leftovers target selection
-8. Follow-up freeze: fixed prototype SHA update
+완료된 선행 gate:
+1. Prototype Repair 0~4
+2. Follow-up repair #391~#404
+3. Fixed prototype SHA freeze
+4. `wave1-derived-state-ui-prep`
 
-Prototype Repair가 끝난 후 service 재포팅 순서:
+Service 재포팅 순서:
 1. Slice A `wave1-port-foundation`
 2. Slice B `wave1-port-discovery-detail`
 3. Slice C `wave1-port-planner-meal-add`
@@ -859,8 +920,8 @@ Prototype Repair가 끝난 후 service 재포팅 순서:
 5. Slice E `wave1-port-pantry`
 6. Slice F `wave1-port-account-library-leftovers`
 
-구현 전에 repair 체크포인트를 만든다:
-- repair slice별 target screens/flows
+구현 전에 service repair 체크포인트를 만든다:
+- service slice별 target screens/flows
 - prototype reference file/function
 - 현재 broken behavior 또는 visual issue
 - MVP 기준 기대 동작
@@ -875,17 +936,14 @@ Prototype Repair가 끝난 후 service 재포팅 순서:
 - Slice F: MYPAGE 탭/설정 이동, SETTINGS 계정/컬럼 관리, LEFTOVERS eat/planner add, ATE_LIST uneat, RECIPEBOOK_DETAIL custom/system book 정책 유지
 
 작업 방식:
-1. Prototype Repair는 한 번에 한 repair slice만 PR로 진행했다.
-2. 각 repair slice는 대상 flow/screen의 현재 prototype 동작을 먼저 확인했다.
-3. prototype 코드를 수정했고, service 코드는 Prototype Repair와 follow-up repair 동안 건드리지 않았다.
-4. API/DB/status/endpoint/field는 임의 추가하지 않고 prototype demo data로만 표현했다.
-5. 320px/390px smoke 또는 screenshot evidence를 남겼고, 가능한 경우 desktop도 포함했다.
-6. Repair 0~3이 모두 merged된 뒤 Repair 4에서 initial fixed prototype 기준을 freeze했다.
-7. 사용자 follow-up repair #391~#404가 모두 merged된 뒤 최종 fixed prototype 기준을 다시 freeze했다.
-8. 이후 service Slice A~F 재포팅을 시작한다.
-9. 각 PR은 current-head GitHub checks 통과 확인 후 merge한다.
-10. merge 후 알림 채널이 설정되어 있으면 Discord 완료 알림을 보낸다.
-11. 다음 service slice로 넘어갈 때 새 branch intent를 선언한다.
+1. service Slice A부터 한 번에 한 service slice만 PR로 진행한다.
+2. 각 slice는 fixed reference screenshot과 현재 service screenshot을 먼저 비교한다.
+3. service 코드는 MVP route/API/auth/status/read-only 동작을 보존하면서 visual/layout만 repair한다.
+4. API/DB/status/endpoint/field는 임의 추가하지 않고, 필요한 경우 contract-evolution 후보로 분리한다.
+5. 320px/390px screenshot evidence를 남기고, 가능한 경우 desktop도 포함한다.
+6. 각 PR은 current-head GitHub checks 통과 확인 후 merge한다.
+7. merge 후 알림 채널이 설정되어 있으면 Discord 완료 알림을 보낸다.
+8. 다음 service slice로 넘어갈 때 새 branch intent를 선언한다.
 
 검증:
 - targeted Vitest
@@ -910,15 +968,17 @@ Prototype Repair가 끝난 후 service 재포팅 순서:
 
 ## First Next Action
 
-Prototype repair and follow-up freeze are complete. The next product implementation step is **Slice A `wave1-port-foundation` service porting** using:
+Prototype repair, follow-up freeze, and **`wave1-derived-state-ui-prep`** are complete. The next product implementation step is Slice A **`wave1-port-foundation`** service porting re-audit/repair using:
 
 - `fixed_prototype_path=ui/designs/prototypes/claude-design-260505-wave1`
 - `fixed_prototype_implementation_sha=9bf7a34c6b422d0c9981d4c2968e3350d5a28892`
 - `visual_layout_source_of_truth=fixed prototype`
 - `functional_source_of_truth=MVP service implementation + official docs`
 
-1. `pnpm branch:start -- --slice wave1-port-foundation --role fe`
-2. Capture current service screenshots and fixed prototype screenshots for Slice A surfaces.
-3. Build the diff table before editing service code.
-4. Preserve current MVP behavior with focused tests before changing service UI.
-5. PR 생성, current-head checks green 확인, merge한다.
+1. `pnpm branch:start -- --branch feature/fe-wave1-port-foundation-reaudit`
+2. Read `docs/workpacks/wave1-port-foundation/README.md`, `docs/workpacks/wave1-port-foundation/acceptance.md`, `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`, `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`, and the fixed reference manifest before editing.
+3. Capture or reuse committed fixed reference screenshots, then capture current service screenshots for Slice A surfaces.
+4. Build a difference table for AppShell, bottom tab, shared CTA/button/chip/card/modal primitives, touch targets, spacing, radius, and safe-area behavior.
+5. Lock existing MVP behavior with focused regression tests before visual repair, including no route/API/auth/status/read-only contract changes.
+6. Apply only the foundation repairs needed for fixed reference parity and derived state UI compatibility, leaving Slice B~F screen-specific repairs to their own PRs.
+7. Run targeted tests, `pnpm verify:frontend`, Wave1 PR-ready validators, authority evidence checks, code review, current-head PR checks, and merge.

@@ -161,6 +161,12 @@ describe("planner week screen", () => {
 
     expect(await screen.findByText("이 화면은 로그인이 필요해요")).toBeTruthy();
     expect(
+      screen
+        .getByRole("heading", { name: "이 화면은 로그인이 필요해요" })
+        .closest("[data-state-kind='prototype-derived']")
+        ?.getAttribute("data-state-tone"),
+    ).toBe("gate");
+    expect(
       screen.getByRole("button", { name: /Google로 시작하기|로컬 테스트 계정으로 시작/ }),
     ).toBeTruthy();
   });
@@ -413,6 +419,12 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     expect(await screen.findByText("플래너를 불러오지 못했어요")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("heading", { name: "플래너를 불러오지 못했어요" })
+        .closest("[data-state-kind='prototype-derived']")
+        ?.getAttribute("data-state-tone"),
+    ).toBe("error");
     expect(screen.getByText("planner failed")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "다시 시도" }));

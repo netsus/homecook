@@ -689,6 +689,7 @@ export function PlannerWeekScreen({
             onAction={() => {
               runPlannerAction(loadPlanner());
             }}
+            tone="error"
             title="플래너를 불러오지 못했어요"
           />
         ) : null}
@@ -1119,6 +1120,7 @@ export function PlannerWeekScreen({
           onAction={() => {
             runPlannerAction(loadPlanner());
           }}
+          tone="error"
           title="플래너를 불러오지 못했어요"
         />
       ) : null}

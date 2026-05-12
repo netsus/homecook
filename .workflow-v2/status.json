@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project_profile": "homecook",
-  "updated_at": "2026-05-10T05:03:14.264Z",
+  "updated_at": "2026-05-12T13:57:11Z",
   "items": [
     {
       "id": "workflow-v2-foundation",
@@ -555,7 +555,7 @@
       "id": "baemin-prototype-recipe-detail-parity",
       "preset": "vertical-slice-strict",
       "branch": "feature/fe-baemin-prototype-recipe-detail-parity",
-      "pr_path": "pending",
+      "pr_path": "https://github.com/netsus/homecook/pull/428",
       "lifecycle": "merged",
       "approval_state": "dual_approved",
       "verification_status": "passed",
@@ -950,6 +950,23 @@
       "last_evaluator_result": "ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md",
       "auto_merge_eligible": true,
       "blocked_reason_code": null
+    },
+    {
+      "id": "wave1-derived-state-ui-prep",
+      "preset": "vertical-slice-strict",
+      "branch": "docs/wave1-derived-state-ui-prep",
+      "pr_path": "pending",
+      "lifecycle": "merged",
+      "approval_state": "codex_approved",
+      "verification_status": "passed",
+      "required_checks": [
+        "pnpm exec vitest run tests/content-state.test.tsx tests/home-screen.test.tsx tests/recipe-detail-screen.test.tsx tests/planner-week-screen.test.tsx",
+        "pnpm verify:frontend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice wave1-derived-state-ui-prep",
+        "git diff --check"
+      ],
+      "notes": "Closed as Codex fallback at explicit user request. Phase4 Slice A re-audit/repair may start after this PR merges. Scope: classify fixed-reference-missing state UI as prototype-derived design, update common state UI components, and apply representative HOME/RECIPE_DETAIL/PLANNER_WEEK states without API/DB/auth/status changes. closeout_phase=completed closeout_recovery=manual_patch:1 closeout_repair=codex:1|claude:0|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:Vitest,pnpm verify:frontend,workflow-v2 validator,workpack validator last_recovery_at=2026-05-12T13:43:18Z"
     }
   ]
 }

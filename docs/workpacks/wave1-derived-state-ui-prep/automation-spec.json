@@ -1,0 +1,81 @@
+{
+  "slice_id": "wave1-derived-state-ui-prep",
+  "execution_mode": "autonomous",
+  "risk_class": "high",
+  "merge_policy": "conditional-auto",
+  "backend": {
+    "required_endpoints": [],
+    "invariants": [
+      "no-api-change",
+      "no-db-change",
+      "no-status-transition-change",
+      "no-auth-policy-change"
+    ],
+    "verify_commands": [],
+    "required_test_targets": []
+  },
+  "frontend": {
+    "required_routes": [
+      "/",
+      "/recipes/[id]",
+      "/planner"
+    ],
+    "required_states": [
+      "loading",
+      "skeleton",
+      "empty",
+      "error",
+      "unauthorized",
+      "not-found",
+      "submitting"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/content-state.test.tsx tests/home-screen.test.tsx tests/recipe-detail-screen.test.tsx tests/planner-week-screen.test.tsx",
+      "pnpm verify:frontend"
+    ],
+    "playwright_projects": [],
+    "artifact_assertions": [
+      "prototype-derived-state-classification",
+      "representative-anchor-state-tests",
+      "no-api-db-contract-change"
+    ],
+    "design_authority": {
+      "ui_risk": "high-risk",
+      "anchor_screens": [
+        "HOME",
+        "RECIPE_DETAIL",
+        "PLANNER_WEEK"
+      ],
+      "required_screens": [
+        "HOME",
+        "RECIPE_DETAIL",
+        "PLANNER_WEEK"
+      ],
+      "generator_required": false,
+      "generator_artifact": null,
+      "critic_required": false,
+      "critic_artifact": null,
+      "authority_required": false,
+      "stage4_evidence_requirements": [
+        "tests/content-state.test.tsx",
+        "tests/home-screen.test.tsx",
+        "tests/recipe-detail-screen.test.tsx",
+        "tests/planner-week-screen.test.tsx",
+        "docs/workpacks/wave1-derived-state-ui-prep/README.md#state-inventory"
+      ],
+      "authority_report_paths": []
+    }
+  },
+  "external_smokes": [],
+  "blocked_conditions": [
+    "prototype-derived-state-claimed-as-pixel-parity",
+    "api-db-auth-status-contract-changed",
+    "representative-anchor-state-not-consuming-common-state-ui",
+    "legacy-glass-treatment-left-in-content-state",
+    "missing-first-next-action-update"
+  ],
+  "max_fix_rounds": {
+    "backend": 0,
+    "frontend": 4
+  }
+}
