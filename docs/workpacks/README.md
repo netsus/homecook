@@ -87,8 +87,8 @@ Slice Order 표의 Status 값은 위 이벤트가 발생한 PR 또는 closeout b
 | `18-manual-recipe-create`      | merged      | 직접 레시피 등록, 조리방법 선택, 상세/플래너 연계, `my_added` 반영                                               |
 | `19-youtube-import`            | merged | 유튜브 검증/추출/등록, 신규 조리방법 반영, 플래너 연계, `my_added` 반영                                          |
 | `planner-column-customization` | merged        | 끼니 컬럼 기본 3개 + 설정 커스터마이징(이름 변경/추가/삭제), 최소 1~최대 5, PLANNER_WEEK 동적 컬럼               |
-| `wave1-port-foundation` | merged | 공통 shell, 공용 UI 프리미티브(Button/Chip/Card/Modal/Sort Dropdown), CTA 위계, spacing/safe-area 정비 — Wave1 포팅 기반 |
-| `wave1-port-discovery-detail` | merged | HOME header 단순화, sort dropdown 전환, filter chip 재배치, RECIPE_DETAIL 별점 제거/행동 metric/CTA 재구성, save modal 정리, login provider 축소 |
+| `wave1-port-foundation` | merged | 공통 shell, 공용 UI 프리미티브(Button/Chip/Card/Modal/Sort Dropdown), CTA 위계, spacing/safe-area 정비 — Phase4 foundation re-audit PR #432 merged |
+| `wave1-port-discovery-detail` | merged | Historical closeout은 merged 상태로 보존. 다음 작업은 fixed prototype 기준 Slice B Phase4 prep 후 HOME/RECIPE_DETAIL/save modal/login 재포팅 |
 | `wave1-port-planner-meal-add` | merged | PLANNER_WEEK 주간 이동/이모지·배지 제거/CTA 정리, MENU_ADD 2열 옵션, MANUAL_CREATE 재료 모달, MEAL_SCREEN 레시피 클릭/삭제 아이콘/status selector 제거 |
 | `wave1-port-shopping-cooking` | merged | SHOPPING_FLOW 프리뷰 정리, SHOPPING_DETAIL 구매/제외 섹션·버튼 배치·title 표시, COOK_MODE 단일 스크롤 뷰·control 제거·하단 sticky |
 | `wave1-port-pantry` | merged | PANTRY 추가/묶음 추가 CTA, category chip rail, 보유 재료 카드, delete mode checkbox, selected items bottom `제거하기` CTA |

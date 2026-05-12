@@ -4,6 +4,8 @@
 > acceptance는 living closeout 문서다. 체크는 테스트, exploratory QA, real DB smoke, 실제 브라우저 확인처럼 evidence가 생긴 뒤에만 한다.
 > Stage 6 merge 시점에는 `Manual Only`를 제외한 In Scope acceptance 항목이 모두 체크되어 있어야 한다.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 `Manual Only`를 제외한 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
+> 아래 체크 상태는 PR #374 historical closeout evidence를 보존한다. 2026-05-13 Wave1 exact-parity rerun에서는 Phase4 prep artifacts(current/reference screenshots, diff table, computed-style/geometry audit plan, MVP regression lock)를 먼저 만들고, Phase5 PR에서 새 evidence로 갱신한다.
+> Historical `UI-only`/`production 승인 토큰` 표현은 최신 기준에서는 그대로 쓰지 않는다. Slice B rerun은 official API v1.2.4의 `latest` sort와 `book_ids[]` save 계약을 먼저 재검증하고, visual/layout은 fixed prototype reference + Slice A `--wave1-*` foundation을 따른다.
 
 ## Happy Path
 
@@ -41,7 +43,7 @@
 
 - [x] HOME과 RECIPE_DETAIL의 loading/empty/error 상태가 올바르게 표시된다 <!-- omo:id=accept-state-ui-home-detail;stage=4;scope=frontend;review=5,6 -->
 - [x] 비로그인 사용자가 보호 액션(좋아요/저장/플래너추가/요리하기) 시도 시 로그인 게이트가 표시된다 <!-- omo:id=accept-login-gate;stage=4;scope=frontend;review=5,6 -->
-- [x] production 승인 토큰만 사용하고 prototype mint/Jua/asset은 사용하지 않는다 <!-- omo:id=accept-approved-tokens;stage=4;scope=frontend;review=5,6 -->
+- [x] historical closeout 당시 production 승인 토큰 정책을 준수했다. Re-audit에서는 fixed prototype visual/layout 기준과 Slice A `--wave1-*` foundation을 따른다 <!-- omo:id=accept-approved-tokens;stage=4;scope=frontend;review=5,6 -->
 - [x] 기존 API 응답 필드만 소비하고 새 endpoint/field가 추가되지 않는다 <!-- omo:id=accept-no-contract-change;stage=4;scope=frontend;review=6 -->
 - [x] 새 npm dependency가 추가되지 않는다 <!-- omo:id=accept-no-new-dep;stage=4;scope=frontend;review=6 -->
 

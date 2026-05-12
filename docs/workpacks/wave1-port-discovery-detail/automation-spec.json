@@ -5,11 +5,24 @@
   "merge_policy": "manual",
 
   "backend": {
-    "required_endpoints": [],
-    "invariants": [],
-    "verify_commands": [],
-    "required_test_targets": [],
-    "stage2_na_reason": "UI-only slice. HOME/RECIPE_DETAIL/save modal/login의 UI 포팅만 수행하며, route handler, DB, status transition 변경이 없다. 기존 API 응답의 공식 필드(like_count, save_count, cook_count, plan_count, view_count, user_status)만 소비한다."
+    "required_endpoints": [
+      "GET /api/v1/recipes?sort=latest",
+      "POST /api/v1/recipes/{id}/save with book_ids[]"
+    ],
+    "invariants": [
+      "API responses keep the { success, data, error } wrapper",
+      "latest sort maps to created_at DESC with deterministic id tie-break",
+      "recipe save multi-select distinguishes book_ids, created_book_ids, and already_saved_book_ids",
+      "recipe detail user_status.saved_book_ids remains the source for already-saved UI"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/recipe-api-contracts.test.ts tests/recipe-save-route.test.ts"
+    ],
+    "required_test_targets": [
+      "tests/recipe-api-contracts.test.ts",
+      "tests/recipe-save-route.test.ts"
+    ],
+    "stage2_contract_note": "Historical PR #374 treated this as UI-only. As of official API v1.2.4, Slice B Phase4 prep must verify the latest sort and book_ids[] save contracts already present in master before visual repair. Only mismatches require BE repair."
   },
 
   "frontend": {
@@ -28,6 +41,7 @@
     "verify_commands": [
       "pnpm verify:frontend",
       "pnpm validate:authority-evidence-presence",
+      "pnpm exec vitest run tests/home-screen.test.tsx tests/recipe-detail-screen.test.tsx tests/recipe-api-contracts.test.ts tests/recipe-save-route.test.ts",
       "pnpm validate:pr-ready -- --slice wave1-port-discovery-detail --pr-body <pr-body-file> --mode frontend"
     ],
     "playwright_projects": [
@@ -66,19 +80,25 @@
       "critic_artifact": null,
       "authority_required": true,
       "stage4_evidence_requirements": [
+        "fixed-reference-mapping",
+        "current-service-screenshots-390-and-320",
         "mobile-default-home",
         "mobile-narrow-home",
+        "home-sort-open",
         "mobile-default-detail",
         "mobile-narrow-detail",
-        "sort-dropdown-open",
-        "hero-stats",
+        "recipe-detail-action-states",
         "save-modal",
-        "login-screen"
+        "login-or-login-gate-provider-surface",
+        "prototype-vs-service-diff-table",
+        "computed-style-audit-plan",
+        "dom-geometry-audit-plan",
+        "mvp-regression-lock"
       ],
       "authority_report_paths": [
         "ui/designs/authority/WAVE1_DISCOVERY_DETAIL-authority.md"
       ],
-      "design_generator_skip_reason": "변경이 프로토타입 기준의 정리(정보 밀도 축소, CTA 재배치)이므로 screenshot evidence 기반 authority로 충분하다. Stage 4에서 design-generator/design-critic 필요 여부를 재판단한다.",
+      "design_generator_skip_reason": "다음 작업은 design generation이 아니라 fixed prototype 대비 Phase4 prep/re-audit이다. 필요 시 Phase5 repair에서 screen-level design review를 갱신한다.",
       "evidence_artifact_refs": [
         "ui/designs/evidence/wave1-port-discovery-detail/home-mobile-default.png",
         "ui/designs/evidence/wave1-port-discovery-detail/home-mobile-narrow.png",

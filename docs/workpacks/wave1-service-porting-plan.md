@@ -42,16 +42,18 @@
   - 결과: 신규 기본 끼니 컬럼은 `아침 / 점심 / 저녁` 3개, SETTINGS에서 1~5개 범위로 이름 변경/추가/삭제 가능.
 - 따라서 이후 포팅 slice에서 플래너 컬럼 3개 기본값과 SETTINGS 컬럼 관리는 다시 만들지 말고, 이미 merged된 계약과 컴포넌트를 소비한다.
 - 기존 `docs/workpacks/baemin-prototype-home-porting`과 일부 HOME 범위가 겹칠 수 있다. HOME 관련 slice 착수 전 현재 구현과 해당 workpack 상태를 먼저 확인한다.
-- **Slice A `wave1-port-foundation`**: Phase4 re-audit/repair closeout in progress.
+- **Slice A `wave1-port-foundation`**: Phase4 foundation re-audit/repair complete.
   - Stage 1 docs PR: #372
   - Stage 4~6 frontend/closeout PR: #373
+  - Phase4 re-audit/repair PR: #432
   - 결과: AppShell bottom-safe 조건부, Button/Chip 44px 터치 타겟, Card interactive cursor, ModalFooterActions min-h, SelectionChipRail px-1, SortDropdown primitive 신규 도입. Claude final authority gate pass, blocker 0.
   - Phase4 re-audit repair: additive `--wave1-*` token aliases, shared AppHeader/BottomTabs, Button/Chip/Card/Badge, ModalHeader/Footer, SelectionChipRail, OptionRow, NumericStepperCompact, SortDropdown focus ring.
   - Phase4 evidence: `ui/designs/evidence/wave1-port-foundation/*`, `ui/designs/authority/WAVE1_FOUNDATION-authority.md`, targeted Vitest/Playwright.
-- **Slice B `wave1-port-discovery-detail`**: merged, but visual parity re-audit required.
+- **Slice B `wave1-port-discovery-detail`**: next Phase4 prep target. Historical closeout is merged, but fixed prototype exact-parity re-audit is not complete.
   - Stage 1 docs PR: #374
-  - 결과: HOME header 단순화, sort dropdown 전환, filter chip 재배치, RECIPE_DETAIL 별점 제거/행동 metric/CTA 재구성, save modal 정리, login provider 축소. Stage 2 N/A.
+  - Historical result: HOME header 단순화, sort dropdown 전환, filter chip 재배치, RECIPE_DETAIL 별점 제거/행동 metric/CTA 재구성, save modal 정리, login provider 축소. 당시 Stage 2는 N/A였지만 최신 rerun 기준으로는 그대로 쓰지 않는다.
   - 2026-05-12 contract update 이후 Stage 2 is no longer N/A: `GET /recipes sort=latest`와 `POST /recipes/{id}/save book_ids[]` 구현/테스트가 필요하다.
+  - 2026-05-13 handoff: current master already contains tests/implementation for `sort=latest` and `book_ids[]`; Slice B Phase4 prep must verify that contract before visual repair and record the exact evidence instead of treating the slice as UI-only.
 - **Slice C `wave1-port-planner-meal-add`**: merged, but visual parity re-audit required.
   - Stage 1 docs PR: #376
   - 결과: PLANNER_WEEK 주간 이동/이모지·배지 제거/CTA 정리, MENU_ADD 2열 옵션, MANUAL_CREATE 재료 모달, MEAL_SCREEN 정리. Stage 2 N/A.
@@ -212,8 +214,8 @@
 | 0.7 | `wave1-phase3-reference-freeze` | missing 모바일 prototype reference를 390px/320px fixed screenshots로 동결 | Done | 31개 surface state, 62개 신규 mobile PNG를 manifest에 추가했다. 기존 reference는 기본 capture에서 skip된다. |
 | 0.8 | `wave1-login-gate-reference-freeze` | `GLOBAL::LoginGateModal` deterministic trigger와 390px/320px fixed screenshots 추가 | Done | prototype-owned `?modal=login-gate` trigger로 `GLOBAL::LoginGateModal` reference 2장을 manifest에 추가했다. Phase 4/5 재개 전 남은 `needs-prototype-freeze` row를 해제한다. |
 | 0.9 | `wave1-derived-state-ui-prep` | prototype에 직접 없는 loading/skeleton/empty/error류 상태 UI의 공통 기준 잠금 | Done | `ContentState`, `Skeleton`, legacy `EmptyState`/`ErrorState`의 Wave1-derived visual 기준과 대표 3화면(HOME / RECIPE_DETAIL / PLANNER_WEEK) 적용을 닫았다. 모든 화면을 선행 PR에서 완성하지 않고, 나머지는 Slice A~F에서 확산한다. |
-| A | `wave1-port-foundation` | 공통 shell, 공용 UI 패턴, CTA/칩/카드/모달 위계 | Re-audit / repair | 전체 재포팅의 첫 단계. AppShell, bottom tab, 공통 primitive가 prototype과 실제로 맞는지 다시 확인한다. |
-| B | `wave1-port-discovery-detail` | HOME, RECIPE_DETAIL, save modal, login provider display | Re-audit / repair | HOME은 기존 `baemin-prototype-home-porting`과 충돌/중복 확인 후, fixed prototype reference 대비 unclassified visual difference 0을 달성한다. |
+| A | `wave1-port-foundation` | 공통 shell, 공용 UI 패턴, CTA/칩/카드/모달 위계 | Done | Phase4 foundation re-audit PR #432 merged. 후속 Slice B~F는 additive `--wave1-*` aliases와 shared primitives를 소비한다. |
+| B | `wave1-port-discovery-detail` | HOME, RECIPE_DETAIL, save modal, login provider display | Next: Phase4 prep | HOME은 기존 `baemin-prototype-home-porting`과 충돌/중복 확인 후, fixed prototype reference 대비 unclassified visual difference 0을 달성한다. Phase5 구현 전 current service screenshots, reference mapping, diff table, MVP regression lock을 먼저 만든다. |
 | C | `wave1-port-planner-meal-add` | PLANNER, MENU_ADD, MANUAL_CREATE, MEAL_SCREEN | Re-audit / repair | 컬럼 CRUD는 완료된 `planner-column-customization` 계약을 소비한다. PLANNER/식사추가/직접등록 화면의 layout parity를 다시 확인한다. |
 | D | `wave1-port-shopping-cooking` | SHOPPING_FLOW, SHOPPING_DETAIL, COOK_READY/COOK_MODE | Re-audit / repair | PR #379 merged 이력은 완료 근거로 쓰지 않는다. 장보기 read-only/exclude/add_to_pantry 기능은 보존하고 디자인만 재포팅한다. |
 | E | `wave1-port-pantry` | PANTRY, ingredient picker, bundle picker, multi-delete | Re-audit / repair | PR #381 merged 이력은 완료 근거로 쓰지 않는다. 재료 이미지 URL은 계속 계약 후보로 분리하고, 가능한 UI만 prototype에 맞춘다. |
@@ -876,7 +878,7 @@ docs/workpacks/wave1-service-porting-plan.md를 먼저 읽고, `ui/designs/proto
 - 기존 Wave1 포팅 PR들은 merge됐지만, 실제 서비스 화면이 확정 디자인 소스 `claude-design-260505-wave1`와 충분히 맞는지 신뢰할 수 없다.
 - 특히 PR #383 `feat(wave1): merge account library leftovers closeout`은 사용자가 직접 visual parity 실패를 확인했다.
 - 2026-05-11 사용자 QA에서 prototype 자체의 화면이동/동작/디자인 문제가 확인됐다.
-- Prototype Repair 0~4, follow-up repair #391~#404, fixed prototype freeze, `wave1-derived-state-ui-prep`는 완료됐다. 이제 Slice A~F 전체를 fixed prototype 기준으로 재감사하고 필요한 slice를 다시 디자인 포팅한다.
+- Prototype Repair 0~4, follow-up repair #391~#404, fixed prototype freeze, `wave1-derived-state-ui-prep`, Slice A `wave1-port-foundation` Phase4 foundation re-audit PR #432는 완료됐다. 이제 Slice B부터 fixed prototype 기준으로 slice별 Phase4 prep -> Phase5 port/verify 루프를 진행한다.
 - 단순 문구/버튼 polish가 아니라 화면 구조, 카드 밀도, spacing, 배민 스타일 톤, 섹션 구성, 모바일/데스크톱 layout을 prototype 기준으로 맞춘다.
 
 가장 중요한 원칙:
@@ -889,8 +891,8 @@ docs/workpacks/wave1-service-porting-plan.md를 먼저 읽고, `ui/designs/proto
 - 테스트가 selector 변경으로 깨지면 기능 기대값은 유지하고 selector만 새 UI에 맞게 고친다. 기능 테스트를 디자인 때문에 삭제하지 않는다.
 
 먼저 새 브랜치를 만든다:
-- 첫 작업은 `pnpm branch:start -- --branch feature/fe-wave1-port-foundation-reaudit`
-- 이후 service slice마다 작은 re-audit / repair 브랜치로 분리한다.
+- 첫 작업은 `pnpm branch:start -- --slice wave1-port-discovery-detail --role fe`
+- 이후 service slice마다 작은 Phase4 prep / Phase5 repair 브랜치로 분리한다.
 
 반드시 먼저 읽는다:
 1. AGENTS.md
@@ -913,10 +915,11 @@ docs/workpacks/wave1-service-porting-plan.md를 먼저 읽고, `ui/designs/proto
 2. Follow-up repair #391~#404
 3. Fixed prototype SHA freeze
 4. `wave1-derived-state-ui-prep`
+5. Slice A `wave1-port-foundation` Phase4 foundation re-audit / PR #432
 
 Service 재포팅 순서:
-1. Slice A `wave1-port-foundation` — current closeout
-2. Slice B `wave1-port-discovery-detail` — next after Slice A merge
+1. Slice A `wave1-port-foundation` — complete / merged as PR #432
+2. Slice B `wave1-port-discovery-detail` — next Phase4 prep target
 3. Slice C `wave1-port-planner-meal-add`
 4. Slice D `wave1-port-shopping-cooking`
 5. Slice E `wave1-port-pantry`
@@ -938,7 +941,7 @@ Service 재포팅 순서:
 - Slice F: MYPAGE 탭/설정 이동, SETTINGS 계정/컬럼 관리, LEFTOVERS eat/planner add, ATE_LIST uneat, RECIPEBOOK_DETAIL custom/system book 정책 유지
 
 작업 방식:
-1. service Slice A부터 한 번에 한 service slice만 PR로 진행한다.
+1. Slice A는 완료됐으므로 service Slice B부터 한 번에 한 service slice만 PR로 진행한다.
 2. 각 slice는 fixed reference screenshot과 현재 service screenshot을 먼저 비교한다.
 3. service 코드는 MVP route/API/auth/status/read-only 동작을 보존하면서 visual/layout만 repair한다.
 4. API/DB/status/endpoint/field는 임의 추가하지 않고, 필요한 경우 contract-evolution 후보로 분리한다.
@@ -970,16 +973,16 @@ Service 재포팅 순서:
 
 ## First Next Action
 
-Prototype repair, follow-up freeze, and **`wave1-derived-state-ui-prep`** are complete. Slice A **`wave1-port-foundation`** Phase4 service porting re-audit/repair is the current closeout branch. After this PR is merged, the next product implementation step is Slice B **`wave1-port-discovery-detail`** using:
+Prototype repair, follow-up freeze, **`wave1-derived-state-ui-prep`**, and Slice A **`wave1-port-foundation`** Phase4 foundation re-audit are complete. The next product implementation step is Slice B **`wave1-port-discovery-detail`** Phase4 prep using:
 
 - `fixed_prototype_path=ui/designs/prototypes/claude-design-260505-wave1`
 - `fixed_prototype_implementation_sha=9bf7a34c6b422d0c9981d4c2968e3350d5a28892`
 - `visual_layout_source_of_truth=fixed prototype`
 - `functional_source_of_truth=MVP service implementation + official docs`
 
-1. Merge the current Slice A PR after `pnpm verify:frontend`, Wave1 validators, authority evidence checks, code review, and current-head GitHub checks are green.
-2. Start Slice B with `pnpm branch:start -- --slice wave1-port-discovery-detail --role fe`.
-3. Read `docs/workpacks/wave1-port-discovery-detail/README.md`, `docs/workpacks/wave1-port-discovery-detail/acceptance.md`, `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`, `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`, and the fixed reference manifest before editing.
-4. Capture or reuse committed fixed reference screenshots, then capture current service screenshots for HOME / RECIPE_DETAIL / save popup / login provider surfaces.
-5. Lock existing MVP behavior with focused regression tests before visual repair, including search/filter/sort, recipe save/like/planner-add/cook entry, login return-to-action, and any required API contract updates.
-6. Apply only Slice B repairs, leaving Slice C~F screen-specific repairs to their own PRs.
+1. Start Slice B with `pnpm branch:start -- --slice wave1-port-discovery-detail --role fe`.
+2. Read `docs/workpacks/wave1-port-discovery-detail/README.md`, `docs/workpacks/wave1-port-discovery-detail/acceptance.md`, `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`, `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`, and the fixed reference manifest before editing.
+3. Verify the contract-backed Slice B APIs already present in master: `GET /recipes sort=latest` and `POST /recipes/{id}/save book_ids[]`.
+4. Capture or reuse committed fixed reference screenshots, then capture current service screenshots for HOME / RECIPE_DETAIL / save popup / login provider surfaces at 390px and 320px.
+5. Create the Phase4 prep artifacts before UI repair: reference mapping, current screenshot list, prototype-vs-service diff table, computed-style/geometry audit plan, MVP regression test lock, PR-ready evidence checklist.
+6. Only after Phase4 prep is complete, begin Phase5 Slice B visual repair. Apply only Slice B repairs, leaving Slice C~F screen-specific repairs to their own PRs.
