@@ -6,7 +6,7 @@ export default async function MypagePage() {
   const user = await getServerAuthUser();
 
   return (
-    <AppShell currentTab="mypage">
+    <AppShell className="wave1-mypage-shell" currentTab="mypage">
       <MypageScreen initialAuthenticated={Boolean(user)} />
     </AppShell>
   );

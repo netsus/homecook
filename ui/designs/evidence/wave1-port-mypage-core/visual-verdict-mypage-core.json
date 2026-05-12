@@ -1,0 +1,14 @@
+{
+  "score": 94,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "Completed shopping-list rows show MVP's available status text instead of the prototype's relative completion phrase because the current shopping history contract does not expose completed_at.",
+    "The shared Wave1 bottom-tab pantry icon has a slightly different glyph shape from the fixed prototype and is inherited from the already-merged shared mobile tab component."
+  ],
+  "suggestions": [
+    "If the official shopping history contract later adds a completion timestamp, append the relative completed text in the mobile shopping history subtitle.",
+    "Keep any bottom-tab icon reshaping in a shared navigation follow-up instead of widening this MYPAGE-only PR."
+  ],
+  "reasoning": "The mobile MYPAGE default menu, recipebook list, and shopping-history list now match the fixed reference structure, colors, spacing, radius, typography scale, app-bar placement, and bottom-tab placement closely. Remaining differences are classified contract/shared-navigation follow-ups, so unclassified visual differences are 0."
+}

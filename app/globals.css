@@ -187,13 +187,15 @@ button {
   }
 
   .app-shell.wave1-planner-shell,
-  .app-shell.wave1-pantry-shell {
+  .app-shell.wave1-pantry-shell,
+  .app-shell.wave1-mypage-shell {
     background: #f8f9fa;
     padding: 0;
   }
 
   .app-shell.wave1-planner-shell > div,
   .app-shell.wave1-pantry-shell > div,
+  .app-shell.wave1-mypage-shell > div,
   .app-shell.wave1-recipe-shell > div {
     max-width: none;
     gap: 0;
@@ -201,18 +203,21 @@ button {
 
   .app-shell.wave1-planner-shell header,
   .app-shell.wave1-pantry-shell header,
+  .app-shell.wave1-mypage-shell header,
   .app-shell.wave1-recipe-shell header {
     display: none;
   }
 
   .app-shell.wave1-planner-shell main,
   .app-shell.wave1-pantry-shell main,
+  .app-shell.wave1-mypage-shell main,
   .app-shell.wave1-recipe-shell main {
     width: 100%;
   }
 
   .app-shell.wave1-planner-shell > nav,
-  .app-shell.wave1-pantry-shell > nav {
+  .app-shell.wave1-pantry-shell > nav,
+  .app-shell.wave1-mypage-shell > nav {
     display: none;
   }
 }
