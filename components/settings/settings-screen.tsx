@@ -6,6 +6,11 @@ import { useRouter } from "next/navigation";
 
 import { ContentState } from "@/components/shared/content-state";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import {
+  SettingsMobileScreen,
+  type SettingsMobileSurface,
+} from "@/components/settings/settings-mobile-screen";
+import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
@@ -40,6 +45,9 @@ export function SettingsScreen({
   initialAuthenticated = false,
 }: SettingsScreenProps) {
   const router = useRouter();
+  const isMobileViewport = useIsMobileViewport();
+  const [mobileSurface, setMobileSurface] =
+    useState<SettingsMobileSurface>("settings");
 
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
@@ -98,6 +106,12 @@ export function SettingsScreen({
         setViewState("error");
       }
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    setMobileSurface(params.get("view") === "account" ? "account" : "settings");
   }, []);
 
   useEffect(() => {
@@ -435,6 +449,105 @@ export function SettingsScreen({
           </button>
         </div>
       </div>
+    );
+  }
+
+  if (isMobileViewport) {
+    return (
+      <SettingsMobileScreen
+        columnAddError={columnAddError}
+        columnAddInput={columnAddInput}
+        columnAddSaveDisabled={columnAddSaveDisabled}
+        columnRenameError={columnRenameError}
+        columnRenameInput={columnRenameInput}
+        columnRenameSaveDisabled={columnRenameSaveDisabled}
+        columnsError={columnsError}
+        columnsLoading={columnsLoading}
+        deleteColumnError={deleteColumnError}
+        deleteColumnTarget={deleteColumnTarget}
+        deleteError={deleteError}
+        errorMessage={errorMessage}
+        isAddingColumn={isAddingColumn}
+        isDeleting={isDeleting}
+        isDeletingColumn={isDeletingColumn}
+        isLoggingOut={isLoggingOut}
+        isRenamingColumn={isRenamingColumn}
+        isSavingNickname={isSavingNickname}
+        logoutError={logoutError}
+        nicknameError={nicknameError}
+        nicknameInput={nicknameInput}
+        nicknameSaveDisabled={nicknameSaveDisabled}
+        plannerColumns={plannerColumns}
+        profile={profile}
+        renameTarget={renameTarget}
+        showColumnAddSheet={showColumnAddSheet}
+        showDeleteDialog={showDeleteDialog}
+        showLogoutDialog={showLogoutDialog}
+        showNicknameSheet={showNicknameSheet}
+        surface={mobileSurface}
+        onAddColumn={() => void handleAddColumn()}
+        onCloseColumnAddSheet={() => {
+          setShowColumnAddSheet(false);
+          setColumnAddError(null);
+        }}
+        onCloseDeleteColumnDialog={() => {
+          setDeleteColumnTarget(null);
+          setDeleteColumnError(null);
+        }}
+        onCloseDeleteDialog={() => {
+          setShowDeleteDialog(false);
+          setDeleteError(null);
+        }}
+        onCloseLogoutDialog={() => {
+          setShowLogoutDialog(false);
+          setLogoutError(null);
+        }}
+        onCloseNicknameSheet={() => {
+          setShowNicknameSheet(false);
+          setNicknameError(null);
+        }}
+        onCloseRenameColumnSheet={() => {
+          setRenameTarget(null);
+          setColumnRenameError(null);
+        }}
+        onColumnAddInputChange={(value) => {
+          setColumnAddInput(value);
+          setColumnAddError(null);
+        }}
+        onColumnRenameInputChange={(value) => {
+          setColumnRenameInput(value);
+          setColumnRenameError(null);
+        }}
+        onConfirmDelete={() => void handleDeleteAccount()}
+        onConfirmDeleteColumn={() => void handleDeleteColumn()}
+        onConfirmLogout={() => void handleLogout()}
+        onDeleteColumnTarget={(column) => {
+          setDeleteColumnError(null);
+          setDeleteColumnTarget(column);
+        }}
+        onOpenColumnAddSheet={() => {
+          setColumnAddError(null);
+          setShowColumnAddSheet(true);
+        }}
+        onOpenDeleteDialog={() => {
+          setDeleteError(null);
+          setShowDeleteDialog(true);
+        }}
+        onOpenLogoutDialog={() => {
+          setLogoutError(null);
+          setShowLogoutDialog(true);
+        }}
+        onOpenNicknameSheet={openNicknameSheet}
+        onRenameColumn={() => void handleRenameColumn()}
+        onRenameColumnTarget={openColumnRenameSheet}
+        onRetryColumns={() => void loadColumns()}
+        onSaveNickname={() => void handleSaveNickname()}
+        onToggleWakeLock={() => void handleToggleWakeLock()}
+        onNicknameInputChange={(value) => {
+          setNicknameInput(value);
+          setNicknameError(null);
+        }}
+      />
     );
   }
 

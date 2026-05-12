@@ -1,0 +1,12 @@
+{
+  "score": 95,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "The shared bottom-tab pantry icon has a slightly different glyph shape from the fixed prototype and is inherited from the already-merged shared mobile tab component."
+  ],
+  "suggestions": [
+    "Keep any bottom-tab icon reshaping in a shared navigation follow-up instead of widening this SETTINGS-only PR."
+  ],
+  "reasoning": "The mobile SETTINGS, ACCOUNT, nickname sheet, logout sheet, and account-delete sheet match the fixed reference structure, colors, typography scale, spacing, radius, app-bar placement, and bottom-sheet placement closely. Remaining difference is a classified shared-navigation follow-up, so unclassified visual differences are 0."
+}

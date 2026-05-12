@@ -11,6 +11,10 @@ async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   );
 }
 
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) < 768;
+}
+
 interface MockProfile {
   id: string;
   nickname: string;
@@ -255,15 +259,23 @@ test.describe("SETTINGS screen", () => {
   test("shows settings items when authenticated", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page);
+    await installColumnRoutes(page);
     await page.goto("/settings");
 
     await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
     await expect(page.getByLabel("뒤로가기")).toBeVisible();
-    await expect(page.getByText("요리모드 화면 꺼짐 방지")).toBeVisible();
-    await expect(page.getByText("닉네임")).toBeVisible();
-    await expect(page.getByText("집밥러")).toBeVisible();
-    await expect(page.getByText("로그아웃")).toBeVisible();
-    await expect(page.getByText("회원탈퇴")).toBeVisible();
+    if (isMobileViewport(page)) {
+      await expect(page.getByText("화면 켜둠")).toBeVisible();
+      await expect(page.getByText("음성 안내")).toBeVisible();
+      await expect(page.getByText("타이머 끝나면 다음 단계 자동")).toBeVisible();
+      await expect(page.getByText("플래너 끼니 컬럼")).toBeVisible();
+    } else {
+      await expect(page.getByText("요리모드 화면 꺼짐 방지")).toBeVisible();
+      await expect(page.getByText("닉네임")).toBeVisible();
+      await expect(page.getByText("집밥러")).toBeVisible();
+      await expect(page.getByText("로그아웃")).toBeVisible();
+      await expect(page.getByText("회원탈퇴")).toBeVisible();
+    }
   });
 
   test("shows login gate with login link for unauthenticated users", async ({ page }) => {
@@ -282,10 +294,13 @@ test.describe("SETTINGS screen", () => {
   test("toggles screen wake lock", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page);
+    await installColumnRoutes(page);
     await page.goto("/settings");
 
-    await expect(page.getByRole("switch")).toBeVisible();
-    const toggle = page.getByRole("switch");
+    const toggle = page.getByRole("switch", {
+      name: isMobileViewport(page) ? "화면 켜둠" : "요리모드 화면 꺼짐 방지",
+    });
+    await expect(toggle).toBeVisible();
     await expect(toggle).toHaveAttribute("aria-checked", "false");
 
     await toggle.click();
@@ -295,9 +310,12 @@ test.describe("SETTINGS screen", () => {
   test("settings toggle failure reverts value and shows error", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page, { settingsError: true });
+    await installColumnRoutes(page);
     await page.goto("/settings");
 
-    const toggle = page.getByRole("switch");
+    const toggle = page.getByRole("switch", {
+      name: isMobileViewport(page) ? "화면 켜둠" : "요리모드 화면 꺼짐 방지",
+    });
     await expect(toggle).toHaveAttribute("aria-checked", "false");
 
     await toggle.click();
@@ -309,16 +327,21 @@ test.describe("SETTINGS screen", () => {
   test("opens nickname edit sheet and saves", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page);
-    await page.goto("/settings");
+    await installColumnRoutes(page);
+    await page.goto(isMobileViewport(page) ? "/settings?view=account" : "/settings");
 
     await expect(page.getByText("집밥러")).toBeVisible();
     await page.getByTestId("nickname-row").click();
 
-    await expect(page.getByText("닉네임 변경")).toBeVisible();
+    await expect(
+      page.getByRole("dialog").getByRole("heading", { name: "닉네임 변경" }),
+    ).toBeVisible();
 
     const input = page.getByRole("textbox");
     await input.fill("새집밥러");
-    await page.getByRole("button", { name: "변경하기" }).click();
+    await page.getByRole("button", {
+      name: isMobileViewport(page) ? "저장" : "변경하기",
+    }).click();
 
     await expect(page.getByText("새집밥러")).toBeVisible();
   });
@@ -326,13 +349,16 @@ test.describe("SETTINGS screen", () => {
   test("logout confirm triggers API and navigates home", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page);
-    await page.goto("/settings");
+    await installColumnRoutes(page);
+    await page.goto(isMobileViewport(page) ? "/settings?view=account" : "/settings");
 
     await expect(page.getByText("로그아웃")).toBeVisible();
-    await page.getByText("로그아웃").click();
+    await page.getByRole("button", { name: "로그아웃" }).click();
 
-    await expect(page.getByText("로그아웃할까요?")).toBeVisible();
-    await page.getByText("로그아웃하기").click();
+    await expect(page.getByText(isMobileViewport(page) ? "로그아웃 할까요?" : "로그아웃할까요?")).toBeVisible();
+    await page.getByRole("alertdialog").getByRole("button", {
+      name: isMobileViewport(page) ? "로그아웃" : "로그아웃하기",
+    }).click();
 
     await page.waitForURL("/");
   });
@@ -340,24 +366,28 @@ test.describe("SETTINGS screen", () => {
   test("logout failure keeps dialog open and shows error", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page, { logoutError: true });
-    await page.goto("/settings");
+    await installColumnRoutes(page);
+    await page.goto(isMobileViewport(page) ? "/settings?view=account" : "/settings");
 
     await expect(page.getByText("로그아웃")).toBeVisible();
-    await page.getByText("로그아웃").click();
+    await page.getByRole("button", { name: "로그아웃" }).click();
 
-    await expect(page.getByText("로그아웃할까요?")).toBeVisible();
-    await page.getByText("로그아웃하기").click();
+    await expect(page.getByText(isMobileViewport(page) ? "로그아웃 할까요?" : "로그아웃할까요?")).toBeVisible();
+    await page.getByRole("alertdialog").getByRole("button", {
+      name: isMobileViewport(page) ? "로그아웃" : "로그아웃하기",
+    }).click();
 
     await expect(page.getByTestId("dialog-error")).toBeVisible();
     await expect(page.getByText("로그아웃에 실패했어요.")).toBeVisible();
-    await expect(page.getByText("로그아웃할까요?")).toBeVisible();
-    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByText(isMobileViewport(page) ? "로그아웃 할까요?" : "로그아웃할까요?")).toBeVisible();
+    await expect(page).toHaveURL(/\/settings(?:\?view=account)?$/);
   });
 
   test("delete confirm triggers API and navigates home", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page);
-    await page.goto("/settings");
+    await installColumnRoutes(page);
+    await page.goto(isMobileViewport(page) ? "/settings?view=account" : "/settings");
 
     await expect(page.getByText("회원탈퇴")).toBeVisible();
     await page.getByText("회원탈퇴").click();
@@ -371,7 +401,8 @@ test.describe("SETTINGS screen", () => {
   test("delete failure keeps dialog open and shows error", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page, { deleteError: true });
-    await page.goto("/settings");
+    await installColumnRoutes(page);
+    await page.goto(isMobileViewport(page) ? "/settings?view=account" : "/settings");
 
     await expect(page.getByText("회원탈퇴")).toBeVisible();
     await page.getByText("회원탈퇴").click();
@@ -382,13 +413,14 @@ test.describe("SETTINGS screen", () => {
     await expect(page.getByTestId("dialog-error")).toBeVisible();
     await expect(page.getByText("탈퇴에 실패했어요.")).toBeVisible();
     await expect(page.getByText("정말 탈퇴하시겠어요?")).toBeVisible();
-    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page).toHaveURL(/\/settings(?:\?view=account)?$/);
   });
 
   test("delete confirm dialog can be cancelled", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page);
-    await page.goto("/settings");
+    await installColumnRoutes(page);
+    await page.goto(isMobileViewport(page) ? "/settings?view=account" : "/settings");
 
     await expect(page.getByText("회원탈퇴")).toBeVisible();
     await page.getByText("회원탈퇴").click();
@@ -402,7 +434,8 @@ test.describe("SETTINGS screen", () => {
   test("delete succeeds but logout cleanup fails shows error and stays", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page, { logoutError: true });
-    await page.goto("/settings");
+    await installColumnRoutes(page);
+    await page.goto(isMobileViewport(page) ? "/settings?view=account" : "/settings");
 
     await expect(page.getByText("회원탈퇴")).toBeVisible();
     await page.getByText("회원탈퇴").click();
@@ -420,6 +453,7 @@ test.describe("SETTINGS screen", () => {
   test("back button navigates to /mypage", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
     await installSettingsRoutes(page);
+    await installColumnRoutes(page);
     // Need mypage routes for navigation target
     await page.route("**/api/v1/recipe-books", async (route) => {
       await route.fulfill({
@@ -443,6 +477,7 @@ test.describe("SETTINGS screen", () => {
     await setAuthOverride(page, "authenticated");
     // Install routes for both mypage and settings
     await installSettingsRoutes(page);
+    await installColumnRoutes(page);
     // Also need mypage routes for the mypage screen
     await page.route("**/api/v1/recipe-books", async (route) => {
       await route.fulfill({
@@ -472,7 +507,9 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("column-management-section")).toBeVisible();
-    await expect(page.getByText("끼니 컬럼 관리")).toBeVisible();
+    await expect(
+      page.getByText(isMobileViewport(page) ? "플래너 끼니 컬럼" : "끼니 컬럼 관리"),
+    ).toBeVisible();
 
     const list = page.getByTestId("column-list");
     await expect(list).toBeVisible();
