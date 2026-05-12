@@ -1,0 +1,43 @@
+{
+  "slice": "wave1-port-planner-meal-add",
+  "stage": 5,
+  "date": "2026-05-13",
+  "fixed_prototype_sha": "9bf7a34c6b422d0c9981d4c2968e3350d5a28892",
+  "visual_parity_score": 96,
+  "blocker_count": 0,
+  "major_count": 0,
+  "minor_count": 0,
+  "unclassified_visual_differences": 0,
+  "category_match": true,
+  "evidence": [
+    "ui/designs/evidence/wave1-port-planner-meal-add/planner-mobile-default.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/planner-mobile-narrow.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/planner-week-navigation.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/planner-meal-add-sheet.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/planner-meal-add-sheet-narrow.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/recipe-search-picker.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/recipe-search-picker-narrow.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/recipe-book-selector.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/recipe-book-selector-narrow.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/recipe-book-detail-picker.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/recipe-book-detail-picker-narrow.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/pantry-match-picker.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/pantry-match-picker-narrow.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/planned-servings-input.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/planned-servings-input-narrow.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/manual-recipe-create.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/manual-recipe-create-narrow.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/manual-create-ingredient-modal.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/meal-screen-default.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/meal-screen-narrow.png",
+    "ui/designs/evidence/wave1-port-planner-meal-add/meal-screen-recipe-click.png"
+  ],
+  "audit": "ui/designs/evidence/wave1-port-planner-meal-add/phase5-visual-audit.md",
+  "classified_differences": [
+    "functional-contract-required: MVP fixture recipe/book/pantry names and counts differ from prototype literals.",
+    "functional-contract-required: deterministic local SVG/emoji thumbnails stand in for service images in evidence.",
+    "browser-rendering-limited: regenerated PNGs show minor antialiasing/byte churn on macOS.",
+    "prototype-derived design: manual ingredient modal is supplemental interaction evidence."
+  ],
+  "reasoning": "PLANNER_WEEK, MENU_ADD, MANUAL_RECIPE_CREATE, MEAL_SCREEN, and Slice C picker states match the fixed Wave1 mobile structure in controlled captures. Remaining differences are classified as MVP data, deterministic fixture image, browser rendering, or supplemental interaction-state differences."
+}

@@ -4,6 +4,7 @@
 > acceptance는 living closeout 문서다. 체크는 테스트, exploratory QA, real DB smoke, 실제 브라우저 확인처럼 evidence가 생긴 뒤에만 한다.
 > Stage 6 merge 시점에는 `Manual Only`를 제외한 In Scope acceptance 항목이 모두 체크되어 있어야 한다.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 `Manual Only`를 제외한 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
+> 아래 체크 상태는 historical closeout evidence를 보존한다. 2026-05-13 Wave1 exact-parity rerun에서는 Phase4 prep artifacts(current/reference screenshots, comparison table, computed-style/geometry audit plan, MVP regression lock)를 먼저 만들고, Phase5 PR에서 새 evidence로 갱신한다.
 
 ## Happy Path
 
