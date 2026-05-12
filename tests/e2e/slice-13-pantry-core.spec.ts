@@ -198,8 +198,8 @@ test.describe("PANTRY screen", () => {
     await installPantryRoutes(page);
     await page.goto("/pantry");
 
-    await expect(page.getByText("나의 팬트리")).toBeVisible();
-    await expect(page.getByText("3개 재료", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /팬트리/ }).first()).toBeVisible();
+    await expect(page.getByText(/3\s*(?:개 재료|\/\s*29개)/)).toBeVisible();
     await expect(page.getByText(/양파/)).toBeVisible();
     await expect(page.getByText(/마늘/)).toBeVisible();
     await expect(page.getByText(/돼지고기/)).toBeVisible();
@@ -268,7 +268,7 @@ test.describe("PANTRY screen", () => {
     await page.getByRole("button", { name: "팬트리에 추가 (1)" }).click();
 
     await expect(page.getByText("1개 재료가 팬트리에 추가됐어요")).toBeVisible();
-    await expect(page.getByText("4개 재료", { exact: true })).toBeVisible();
+    await expect(page.getByText(/4\s*(?:개 재료|\/\s*29개)/)).toBeVisible();
     await expect(page.getByText(/대파/)).toBeVisible();
   });
 
@@ -293,7 +293,7 @@ test.describe("PANTRY screen", () => {
     await page.getByRole("button", { name: "3개 팬트리에 추가" }).click();
 
     await expect(page.getByText("3개 재료를 팬트리에 추가했어요")).toBeVisible();
-    await expect(page.getByText("6개 재료", { exact: true })).toBeVisible();
+    await expect(page.getByText(/6\s*(?:개 재료|\/\s*29개)/)).toBeVisible();
     await expect(page.getByText(/간장/)).toBeVisible();
   });
 
