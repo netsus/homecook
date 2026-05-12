@@ -17,9 +17,9 @@ async function expectNoAxeViolations(
 function getLoginActionButton(
   page: import("@playwright/test").Page,
 ) {
-  return page.getByRole("button", {
-    name: /Google로 시작하기|카카오로 시작하기|네이버로 시작하기|로컬 테스트 계정으로 시작|다른 테스트 계정으로 시작/,
-  }).first();
+  return page
+    .getByRole("dialog", { name: "로그인이 필요한 작업이에요" })
+    .getByRole("button", { name: "로그인" });
 }
 
 async function expectReadableTouchTarget(

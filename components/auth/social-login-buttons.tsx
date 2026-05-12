@@ -40,11 +40,13 @@ export function SocialLoginButtons({
   const localGoogleOAuthEnabled = isLocalGoogleOAuthEnabled();
   const qaFixtureMode = isQaFixtureClientModeEnabled();
   const HIDDEN_PROVIDERS: AuthProviderId[] = ["kakao"];
+  const enabledProviders = getEnabledAuthProviders();
   const providers = localDevAuthEnabled && !localGoogleOAuthEnabled
     ? []
-    : getEnabledAuthProviders().filter(
-        (id) => !HIDDEN_PROVIDERS.includes(id),
-      );
+    : (qaFixtureMode
+        ? ensureFixtureProviders(enabledProviders)
+        : enabledProviders
+      ).filter((id) => !HIDDEN_PROVIDERS.includes(id));
 
   const handleSignIn = (provider: AuthProviderId) => {
     startTransition(async () => {
@@ -100,14 +102,14 @@ export function SocialLoginButtons({
         return (
           <button
             key={providerId}
-            className={`flex min-h-[52px] w-full items-center justify-center rounded-[12px] px-4 py-4 text-base font-semibold transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60 ${provider.className}`}
+            className={`flex min-h-[48px] w-full items-center justify-center rounded-[8px] px-4 py-3.5 text-[15px] font-bold transition hover:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${getProviderButtonClass(providerId, provider.className)}`}
             disabled={isPending}
             onClick={() => handleSignIn(providerId)}
             type="button"
           >
             <span
               aria-hidden="true"
-              className="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/5 text-xs font-bold uppercase"
+              className="mr-3 inline-flex h-5 w-5 items-center justify-center text-[15px] font-black uppercase"
             >
               {providerId.slice(0, 1)}
             </span>
@@ -152,4 +154,27 @@ export function SocialLoginButtons({
       ) : null}
     </div>
   );
+}
+
+function ensureFixtureProviders(providers: AuthProviderId[]) {
+  const fixtureProviders: AuthProviderId[] = ["google", "naver"];
+  return [
+    ...providers,
+    ...fixtureProviders.filter((provider) => !providers.includes(provider)),
+  ];
+}
+
+function getProviderButtonClass(
+  providerId: AuthProviderId,
+  fallbackClassName: string,
+) {
+  if (providerId === "google") {
+    return "border border-[#DEE2E6] bg-white text-[#212529]";
+  }
+
+  if (providerId === "naver") {
+    return "border border-[#03C75A] bg-[#03C75A] text-white";
+  }
+
+  return fallbackClassName;
 }

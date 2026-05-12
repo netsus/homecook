@@ -143,7 +143,7 @@ function getRecipePresentation(recipe: RecipeCardItem) {
     "linear-gradient(135deg,#F1F8E9,#E6F8F7)",
     "linear-gradient(135deg,#E8F0FF,#FFF4D6)",
   ];
-  const gradient = recipe.title.includes("김치볶음밥")
+  const gradient = /밥|김치/.test(sourceText)
     ? gradients[0]!
     : gradients[index % gradients.length]!;
 

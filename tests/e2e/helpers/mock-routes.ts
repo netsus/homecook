@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import type { RecipeDetail } from "@/types/recipe";
+import type { RecipeCardItem, RecipeDetail } from "@/types/recipe";
 
 import {
   getMockIngredientList,
@@ -26,7 +26,67 @@ function buildRecipeItems(searchUrl: URL) {
     .map((value) => value.trim())
     .filter(Boolean);
 
-  return getMockRecipeList(query, ingredientIds).items;
+  const baseItems = getMockRecipeList(query, ingredientIds).items;
+
+  if (baseItems.length === 0) {
+    return [];
+  }
+
+  return buildDenseDiscoveryItems(baseItems[0]!);
+}
+
+function buildDenseDiscoveryItems(primaryItem: RecipeCardItem) {
+  const primary = {
+    ...primaryItem,
+    thumbnail_url: null,
+    view_count: 1921,
+    save_count: 89,
+  };
+  const variants: RecipeCardItem[] = [
+    primary,
+    {
+      ...primary,
+      id: `${primary.id}-soy-stew`,
+      title: "된장찌개 기본",
+      tags: ["집밥", "찌개", "한식"],
+      view_count: 1520,
+      save_count: 980,
+    },
+    {
+      ...primary,
+      id: `${primary.id}-spicy-pork`,
+      title: "매콤 돼지고기 볶음",
+      tags: ["육류", "매콤", "저녁"],
+      view_count: 1418,
+      save_count: 860,
+    },
+    {
+      ...primary,
+      id: `${primary.id}-rice-bowl`,
+      title: "남은 밥 한 그릇",
+      tags: ["밥", "간단식", "혼밥"],
+      view_count: 1260,
+      save_count: 740,
+    },
+    {
+      ...primary,
+      id: `${primary.id}-tofu`,
+      title: "두부 채소조림",
+      tags: ["채소", "두부", "반찬"],
+      view_count: 1014,
+      save_count: 522,
+    },
+    {
+      ...primary,
+      id: `${primary.id}-noodle`,
+      title: "빠른 잔치국수",
+      tags: ["면", "간단식", "점심"],
+      view_count: 884,
+      save_count: 420,
+    },
+  ];
+
+  return variants;
 }
 
 function buildRecipeDetail({
@@ -42,7 +102,7 @@ function buildRecipeDetail({
     ...MOCK_RECIPE_DETAIL,
     ...recipeDetail,
     like_count: likeCount,
-    user_status: {
+    user_status: recipeDetail?.user_status ?? {
       is_liked: isLiked,
       is_saved: false,
       saved_book_ids: [],
@@ -52,6 +112,8 @@ function buildRecipeDetail({
 
 export async function installDiscoveryRoutes(page: Page) {
   await page.route("**/api/v1/recipes/themes", async (route) => {
+    const recipes = buildRecipeItems(new URL("http://localhost/api/v1/recipes"));
+
     await route.fulfill({
       json: {
         success: true,
@@ -59,7 +121,19 @@ export async function installDiscoveryRoutes(page: Page) {
           themes: [
             {
               ...getMockRecipeThemes().themes[0],
-              recipes: buildRecipeItems(new URL("http://localhost/api/v1/recipes")),
+              id: "solo",
+              title: "자취생 간단식",
+              recipes,
+            },
+            {
+              id: "home-basic",
+              title: "집밥 기본기",
+              recipes,
+            },
+            {
+              id: "light",
+              title: "다이어트 식단",
+              recipes,
             },
           ],
         },

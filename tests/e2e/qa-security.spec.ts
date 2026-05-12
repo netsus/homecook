@@ -70,6 +70,11 @@ test.describe("QA auth and session security smoke", () => {
     await expect(
       page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" }),
     ).toBeVisible();
-    await expect(page.getByText("로그인하면 원래 레시피로 바로 돌아옵니다.")).toBeVisible();
+    await expect(
+      page.getByText(
+        "플래너 추가 기능은 로그인 후 이용할 수 있어요. 로그인하면 원래 하려던 작업으로 자동 이동합니다.",
+      ),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "로그인" })).toBeVisible();
   });
 });

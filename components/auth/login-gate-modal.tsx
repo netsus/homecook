@@ -3,8 +3,8 @@
 import React from "react";
 import { useEffect, useMemo, useRef } from "react";
 
-import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
-import { ModalHeader } from "@/components/shared/modal-header";
+import { createPostAuthNextCookie } from "@/lib/auth/post-auth-next";
+import { savePendingAction } from "@/lib/auth/pending-action";
 import { useAuthGateStore } from "@/stores/ui-store";
 
 const ACTION_LABELS = {
@@ -22,7 +22,7 @@ export function LoginGateModal() {
       return "";
     }
 
-    return `${ACTION_LABELS[action.type]} 기능은 로그인 후 이어서 진행돼요. 로그인하고 원래 보던 레시피로 돌아옵니다.`;
+    return `${ACTION_LABELS[action.type]} 기능은 로그인 후 이용할 수 있어요. 로그인하면 원래 하려던 작업으로 자동 이동합니다.`;
   }, [action]);
 
   useEffect(() => {
@@ -49,52 +49,87 @@ export function LoginGateModal() {
     return null;
   }
 
+  const handleLogin = () => {
+    savePendingAction(action);
+    document.cookie = createPostAuthNextCookie(action.redirectTo);
+    window.location.assign(`/login?next=${encodeURIComponent(action.redirectTo)}`);
+    close();
+  };
+
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-4 backdrop-blur-[1px] md:items-center md:justify-center"
+      className="fixed inset-0 z-40 flex items-end bg-black/40 md:items-center md:justify-center md:p-4"
       onClick={close}
     >
       <div
         aria-labelledby="login-gate-title"
         aria-modal="true"
-        className="w-full max-w-md rounded-t-[var(--radius-xl)] border border-[var(--line)] border-t-2 border-t-[var(--brand)] bg-[var(--panel)] pb-6 shadow-[var(--shadow-3)] md:rounded-[var(--radius-xl)] md:border-t-2 md:border-t-[var(--brand)]"
+        className="w-full max-w-md overflow-hidden rounded-t-[20px] bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.18)] md:rounded-[20px]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        {/* Grabber */}
-        <div className="flex justify-center pt-2 md:hidden">
-          <div className="h-1 w-9 rounded-sm bg-[var(--line)]" />
+        <div className="flex justify-center pt-2">
+          <div className="h-1 w-9 rounded-sm bg-[#DEE2E6]" />
         </div>
-        {/* D2: no eyebrow · D3: icon-only close · D6: modal family join */}
-        <div className="px-5 pt-3 md:px-6 md:pt-5">
-          <ModalHeader
-            closeButtonRef={closeButtonRef}
-            onClose={close}
-            title="로그인이 필요한 작업이에요"
-            titleId="login-gate-title"
-          />
+        <div className="flex items-center px-5 pb-2 pt-3">
+          <h2
+            className="flex-1 text-[18px] font-bold leading-tight text-[var(--wave1-ink)]"
+            id="login-gate-title"
+          >
+            로그인이 필요한 작업이에요
+          </h2>
+          <button
+            aria-label="닫기"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--wave1-text-2)] transition-colors hover:bg-[var(--wave1-surface-fill)]"
+            onClick={close}
+            ref={closeButtonRef}
+            type="button"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--wave1-surface-fill)]">
+              <CloseIcon />
+            </span>
+          </button>
         </div>
-        <div className="px-5 pt-2 pb-0 md:px-6">
-          <p className="text-sm leading-6 text-[var(--muted)]">
+        <div className="px-5 pb-7 pt-3">
+          <p className="text-[14px] font-medium leading-6 text-[var(--wave1-text-2)]">
             {description}
           </p>
-          <div className="mt-4 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-4">
-            <p className="text-sm font-semibold text-[var(--foreground)]">
-              로그인하면 원래 레시피로 바로 돌아옵니다.
-            </p>
-            <p className="mt-1.5 text-sm text-[var(--muted)]">
-              보호 액션 위치를 저장해 두었다가 로그인 완료 후 한 번만 복구합니다.
-            </p>
-          </div>
-          <div className="mt-4">
-            <SocialLoginButtons
-              nextPath={action.redirectTo}
-              onStarted={close}
-              pendingAction={action}
-            />
-          </div>
+        </div>
+        <div className="flex gap-2 border-t border-[#DEE2E6] bg-white px-5 pb-[calc(28px+env(safe-area-inset-bottom))] pt-3">
+          <button
+            className="min-h-[48px] flex-1 rounded-[8px] bg-[var(--wave1-surface-fill)] px-4 text-[15px] font-bold text-[var(--wave1-ink)]"
+            onClick={close}
+            type="button"
+          >
+            취소
+          </button>
+          <button
+            className="min-h-[48px] flex-[1.45] rounded-[8px] bg-[var(--wave1-mint-contrast)] px-4 text-[15px] font-bold text-white"
+            onClick={handleLogin}
+            type="button"
+          >
+            로그인
+          </button>
         </div>
       </div>
     </div>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
   );
 }
