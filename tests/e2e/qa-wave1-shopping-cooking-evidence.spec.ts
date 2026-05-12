@@ -154,16 +154,85 @@ function shoppingItems() {
   ];
 }
 
-function shoppingListDetail({ completed = false } = {}) {
+function shoppingDetailItems() {
+  return [
+    {
+      id: "detail-item-1",
+      ingredient_id: "detail-ing-1",
+      display_text: "돼지고기 400g",
+      amounts_json: [{ amount: 400, unit: "g" }],
+      is_checked: true,
+      is_pantry_excluded: false,
+      added_to_pantry: false,
+      sort_order: 0,
+    },
+    {
+      id: "detail-item-2",
+      ingredient_id: "detail-ing-2",
+      display_text: "양파 2개",
+      amounts_json: [{ amount: 2, unit: "개" }],
+      is_checked: false,
+      is_pantry_excluded: false,
+      added_to_pantry: false,
+      sort_order: 100,
+    },
+    {
+      id: "detail-item-3",
+      ingredient_id: "detail-ing-3",
+      display_text: "대파 1대",
+      amounts_json: [{ amount: 1, unit: "대" }],
+      is_checked: false,
+      is_pantry_excluded: false,
+      added_to_pantry: false,
+      sort_order: 200,
+    },
+    {
+      id: "detail-item-4",
+      ingredient_id: "detail-ing-4",
+      display_text: "간장 3큰술",
+      amounts_json: [{ amount: 3, unit: "큰술" }],
+      is_checked: true,
+      is_pantry_excluded: true,
+      added_to_pantry: false,
+      sort_order: 300,
+    },
+    {
+      id: "detail-item-5",
+      ingredient_id: "detail-ing-5",
+      display_text: "다진마늘 1큰술",
+      amounts_json: [{ amount: 1, unit: "큰술" }],
+      is_checked: true,
+      is_pantry_excluded: true,
+      added_to_pantry: false,
+      sort_order: 400,
+    },
+  ];
+}
+
+function shoppingListDetail({
+  completed = false,
+  flow = false,
+}: {
+  completed?: boolean;
+  flow?: boolean;
+} = {}) {
+  const createdAt = flow
+    ? "2026-05-10T00:00:00.000Z"
+    : "2026-04-20T00:00:00.000Z";
+
   return {
-    id: completed ? "list-completed" : "list-1",
-    title: completed ? "완료된 장보기" : "4월 12일 장보기",
-    date_range_start: "2026-04-12",
-    date_range_end: "2026-04-20",
+    id: flow ? "list-flow" : completed ? "list-completed" : "list-1",
+    title: flow
+      ? "2026.05.10 · 장보기 목록"
+      : completed
+        ? "완료된 장보기"
+        : "이번 주 평일 저녁",
+    date_range_start: flow ? "2026-05-10" : "2026-04-20",
+    date_range_end: flow ? "2026-05-10" : "2026-04-20",
     is_completed: completed,
     completed_at: completed ? "2026-04-13T00:00:00.000Z" : null,
-    created_at: "2026-04-12T00:00:00.000Z",
-    updated_at: "2026-04-12T00:00:00.000Z",
+    created_at: createdAt,
+    updated_at: createdAt,
     recipes: [
       {
         recipe_id: "recipe-1",
@@ -173,7 +242,7 @@ function shoppingListDetail({ completed = false } = {}) {
         planned_servings_total: 4,
       },
     ],
-    items: shoppingItems(),
+    items: flow ? shoppingItems() : shoppingDetailItems(),
   };
 }
 
@@ -305,7 +374,7 @@ async function installShoppingRoutes(page: Page) {
       json: {
         success: true,
         data: {
-          id: "list-1",
+          id: "list-flow",
           title: "2026.05.10 · 장보기 목록",
           date_range_start: "2026-05-10",
           date_range_end: "2026-05-10",
@@ -325,10 +394,11 @@ async function installShoppingRoutes(page: Page) {
     }
 
     const isCompleted = route.request().url().includes("list-completed");
+    const isFlow = route.request().url().includes("list-flow");
     await route.fulfill({
       json: {
         success: true,
-        data: shoppingListDetail({ completed: isCompleted }),
+        data: shoppingListDetail({ completed: isCompleted, flow: isFlow }),
         error: null,
       },
     });
@@ -505,7 +575,7 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await setAuthOverride(page);
     await installShoppingRoutes(page);
     await page.goto(`${BASE_URL}/shopping/lists/list-1`);
-    await expect(page.getByText("4월 12일 장보기")).toBeVisible();
+    await expect(page.getByText("이번 주 평일 저녁")).toBeVisible();
     await stabilize(page);
     await page.screenshot({
       fullPage: false,
@@ -527,7 +597,7 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await setAuthOverride(page);
     await installShoppingRoutes(page);
     await page.goto(`${BASE_URL}/shopping/lists/list-1`);
-    await expect(page.getByText("4월 12일 장보기")).toBeVisible();
+    await expect(page.getByText("이번 주 평일 저녁")).toBeVisible();
     await stabilize(page);
     await page.screenshot({
       fullPage: false,

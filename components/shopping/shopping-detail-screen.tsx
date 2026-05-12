@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
 import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
 import {
@@ -43,7 +44,23 @@ export function ShoppingDetailScreen({
   const [isCompleting, setIsCompleting] = useState(false);
   const [completeToast, setCompleteToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [showPantryPopup, setShowPantryPopup] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const shareToastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
+      return;
+    }
+
+    const query = window.matchMedia("(max-width: 767px)");
+    const syncViewport = () => setIsMobileViewport(query.matches);
+    syncViewport();
+    query.addEventListener("change", syncViewport);
+    return () => query.removeEventListener("change", syncViewport);
+  }, []);
 
   const clearShareToastTimer = useCallback(() => {
     if (shareToastTimeoutRef.current) {
@@ -167,7 +184,11 @@ export function ShoppingDetailScreen({
   );
 
   const handleToggleExclude = useCallback(
-    async (itemId: string, currentExcluded: boolean) => {
+    async (
+      itemId: string,
+      currentExcluded: boolean,
+      currentChecked: boolean,
+    ) => {
       if (!listDetail || listDetail.is_completed) {
         return;
       }
@@ -219,7 +240,7 @@ export function ShoppingDetailScreen({
                 ? {
                     ...item,
                     is_pantry_excluded: currentExcluded,
-                    is_checked: currentExcluded ? false : item.is_checked,
+                    is_checked: currentChecked,
                   }
                 : item
             ),
@@ -517,6 +538,39 @@ export function ShoppingDetailScreen({
   const isEmpty = purchaseItems.length === 0;
   const isReadOnly = listDetail.is_completed;
 
+  if (isMobileViewport) {
+    return (
+      <MobileShoppingDetailScreen
+        completeToast={completeToast}
+        detail={listDetail}
+        excludedItems={excludedItems}
+        isCompleting={isCompleting}
+        isReadOnly={isReadOnly}
+        isReordering={isReordering}
+        isSharing={isSharing}
+        onBack={() => {
+          if (window.history.length > 1) {
+            router.back();
+          } else {
+            router.push("/planner");
+          }
+        }}
+        onComplete={handleCompleteClick}
+        onMoveItem={handleMoveItem}
+        onShare={handleShare}
+        onToggleCheck={handleToggleCheck}
+        onToggleExclude={handleToggleExclude}
+        purchaseItems={purchaseItems}
+        reorderError={reorderError}
+        shareToast={shareToast}
+        showPantryPopup={showPantryPopup}
+        updatingItem={updatingItem}
+        onPantryCancel={handlePantryCancel}
+        onPantryConfirm={handlePantryConfirm}
+      />
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       {/* Header */}
@@ -712,13 +766,491 @@ export function ShoppingDetailScreen({
   );
 }
 
+function MobileShoppingDetailScreen({
+  completeToast,
+  detail,
+  excludedItems,
+  isCompleting,
+  isReadOnly,
+  isReordering,
+  isSharing,
+  onBack,
+  onComplete,
+  onMoveItem,
+  onPantryCancel,
+  onPantryConfirm,
+  onShare,
+  onToggleCheck,
+  onToggleExclude,
+  purchaseItems,
+  reorderError,
+  shareToast,
+  showPantryPopup,
+  updatingItem,
+}: {
+  completeToast: { type: "success" | "error"; message: string } | null;
+  detail: ShoppingListDetail;
+  excludedItems: ShoppingListItemSummary[];
+  isCompleting: boolean;
+  isReadOnly: boolean;
+  isReordering: boolean;
+  isSharing: boolean;
+  onBack: () => void;
+  onComplete: () => void;
+  onMoveItem: (itemId: string, direction: "up" | "down") => void;
+  onPantryCancel: () => void;
+  onPantryConfirm: (selectedItemIds: string[] | undefined) => void;
+  onShare: () => void;
+  onToggleCheck: (itemId: string, currentChecked: boolean) => void;
+  onToggleExclude: (
+    itemId: string,
+    currentExcluded: boolean,
+    currentChecked: boolean,
+  ) => void;
+  purchaseItems: ShoppingListItemSummary[];
+  reorderError: string | null;
+  shareToast: { type: "success" | "error" | "empty"; message: string } | null;
+  showPantryPopup: boolean;
+  updatingItem: UpdateState | null;
+}) {
+  const checkedCount = purchaseItems.filter((item) => item.is_checked).length;
+  const remainingCount = purchaseItems.filter((item) => !item.is_checked).length;
+  const progress = purchaseItems.length
+    ? Math.round((checkedCount / purchaseItems.length) * 100)
+    : 100;
+  const [firstPurchaseItem, ...otherPurchaseItems] = purchaseItems;
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-[#F8F9FA] text-[#212529]">
+      <MobileShoppingAppBar
+        isSharing={isSharing}
+        onBack={onBack}
+        onShare={onShare}
+        title={detail.title}
+      />
+
+      <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
+        <section className="border-b border-[#DEE2E6] bg-white px-5 pb-5 pt-[18px]">
+          <p className="text-[12px] font-semibold leading-[1.3] text-[#868E96]">
+            {formatDateIsoDot(detail.created_at)} 생성
+          </p>
+          <div className="mt-4 flex items-end justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[12px] font-semibold leading-[1.3] text-[#868E96]">
+                {isReadOnly ? "방금 완료" : `사야 할 재료 ${remainingCount}개`}
+              </p>
+              <h2 className="mt-1 text-[20px] font-extrabold leading-[1.12] text-[#212529]">
+                {isReadOnly ? "장보기 완료" : "장보기 진행 중"}
+              </h2>
+            </div>
+            {!isReadOnly ? (
+              <p className="shrink-0 text-[32px] font-extrabold leading-none text-[#2AC1BC]">
+                {progress}%
+              </p>
+            ) : null}
+          </div>
+          {!isReadOnly ? (
+            <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-[#E9ECEF]">
+              <div
+                className="h-full rounded-full bg-[#2AC1BC]"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          ) : null}
+        </section>
+
+        {shareToast ? (
+          <MobileToast message={shareToast.message} type={shareToast.type} />
+        ) : null}
+        {reorderError ? <MobileToast message={reorderError} type="error" /> : null}
+        {completeToast && completeToast.message !== reorderError ? (
+          <MobileToast message={completeToast.message} type={completeToast.type} />
+        ) : null}
+        {isReadOnly ? (
+          <p className="mx-4 mt-3 rounded-[10px] bg-[#E6F8F7] px-4 py-3 text-[13px] font-bold text-[#20A8A4]">
+            완료된 장보기 기록은 수정할 수 없어요
+          </p>
+        ) : null}
+
+        <div className="px-4 py-5">
+          <span className="absolute h-px w-px opacity-0">
+            {isReadOnly ? "구매한 재료" : "구매할 재료"} ({purchaseItems.length}개)
+          </span>
+          <span className="absolute h-px w-px opacity-0">
+            {formatDateRange(detail.date_range_start, detail.date_range_end)}
+          </span>
+          {isReadOnly && detail.completed_at ? (
+            <span className="absolute h-px w-px opacity-0">
+              ✓ 완료됨 ({formatDate(detail.completed_at)})
+            </span>
+          ) : null}
+          <span className="absolute h-px w-px opacity-0">
+            팬트리 제외 항목 ({excludedItems.length}개)
+          </span>
+
+          {firstPurchaseItem ? (
+            <MobileShoppingSection
+              count={1}
+              isReadOnly={isReadOnly}
+              isReordering={isReordering}
+              items={[firstPurchaseItem]}
+              label="냉장"
+              onMoveItem={onMoveItem}
+              onToggleCheck={onToggleCheck}
+              onToggleExclude={onToggleExclude}
+              purchaseItems={purchaseItems}
+              updatingItem={updatingItem}
+            />
+          ) : null}
+
+          {otherPurchaseItems.length > 0 ? (
+            <MobileShoppingSection
+              count={otherPurchaseItems.length}
+              isReadOnly={isReadOnly}
+              isReordering={isReordering}
+              items={otherPurchaseItems}
+              label="채소"
+              onMoveItem={onMoveItem}
+              onToggleCheck={onToggleCheck}
+              onToggleExclude={onToggleExclude}
+              purchaseItems={purchaseItems}
+              updatingItem={updatingItem}
+            />
+          ) : null}
+
+          {purchaseItems.length === 0 ? (
+            <div className="py-8 text-center text-[15px] font-bold text-[#495057]">
+              팬트리에 이미 있어서 장볼 재료가 없어요
+            </div>
+          ) : null}
+
+          {excludedItems.length > 0 ? (
+            <MobileShoppingSection
+              count={excludedItems.length}
+              isReadOnly={isReadOnly}
+              isReordering={isReordering}
+              items={excludedItems}
+              label="팬트리에 이미 있어 제외"
+              onMoveItem={onMoveItem}
+              onToggleCheck={onToggleCheck}
+              onToggleExclude={onToggleExclude}
+              purchaseItems={purchaseItems}
+              updatingItem={updatingItem}
+            />
+          ) : null}
+        </div>
+      </main>
+
+      {!isReadOnly ? (
+        <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[#DEE2E6] bg-white px-4 py-4">
+          <button
+            className="flex h-[49px] w-full items-center justify-center rounded-[8px] bg-[#2AC1BC] text-[16px] font-bold text-white disabled:bg-[#DEE2E6]"
+            disabled={isCompleting}
+            onClick={onComplete}
+            type="button"
+          >
+            {isCompleting ? "완료 중..." : "장보기 완료"}
+          </button>
+        </div>
+      ) : null}
+
+      <Wave1MobileBottomTab
+        ariaLabel="장보기 상세 화면 하단 탐색"
+        currentTab="mypage"
+      />
+
+      {showPantryPopup ? (
+        <PantryReflectionPopup
+          items={detail.items}
+          onCancel={onPantryCancel}
+          onConfirm={onPantryConfirm}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function MobileShoppingAppBar({
+  isSharing,
+  onBack,
+  onShare,
+  title,
+}: {
+  isSharing: boolean;
+  onBack: () => void;
+  onShare: () => void;
+  title: string;
+}) {
+  return (
+    <header className="shrink-0 border-b border-[#DEE2E6] bg-white">
+      <div className="flex min-h-[52px] items-center gap-2 px-4 py-2.5">
+        <button
+          aria-label="뒤로 가기"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529]"
+          onClick={onBack}
+          type="button"
+        >
+          <span aria-hidden="true" className="text-[26px] leading-none">
+            ‹
+          </span>
+        </button>
+        <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-extrabold leading-[1.3]">
+          {title}
+        </h1>
+        <button
+          aria-label="공유(텍스트)"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F8F9FA] text-[#495057] disabled:opacity-50"
+          disabled={isSharing}
+          onClick={onShare}
+          type="button"
+        >
+          <MobileShareIcon />
+        </button>
+      </div>
+    </header>
+  );
+}
+
+function MobileShareIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-[19px] w-[19px]"
+      fill="none"
+      viewBox="0 0 20 20"
+    >
+      <path
+        d="M10 3.2v9.1M6.8 6.4 10 3.2l3.2 3.2M5.3 9.5v5.8c0 .8.6 1.4 1.4 1.4h6.6c.8 0 1.4-.6 1.4-1.4V9.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+    </svg>
+  );
+}
+
+function MobileShoppingSection({
+  count,
+  isReadOnly,
+  isReordering,
+  items,
+  label,
+  onMoveItem,
+  onToggleCheck,
+  onToggleExclude,
+  purchaseItems,
+  updatingItem,
+}: {
+  count: number;
+  isReadOnly: boolean;
+  isReordering: boolean;
+  items: ShoppingListItemSummary[];
+  label: string;
+  onMoveItem: (itemId: string, direction: "up" | "down") => void;
+  onToggleCheck: (itemId: string, currentChecked: boolean) => void;
+  onToggleExclude: (
+    itemId: string,
+    currentExcluded: boolean,
+    currentChecked: boolean,
+  ) => void;
+  purchaseItems: ShoppingListItemSummary[];
+  updatingItem: UpdateState | null;
+}) {
+  return (
+    <section className="mb-4">
+      <h3 className="mb-2 text-[12px] font-extrabold leading-[1.3] text-[#868E96]">
+        {label} · {count}
+      </h3>
+      <div className="overflow-hidden rounded-[10px] border border-[#DEE2E6] bg-white">
+        {items.map((item) => {
+          const purchaseIndex = purchaseItems.findIndex(
+            (purchaseItem) => purchaseItem.id === item.id,
+          );
+
+          return (
+            <MobileShoppingItemRow
+              isReadOnly={isReadOnly}
+              isReordering={isReordering}
+              isUpdating={updatingItem?.itemId === item.id}
+              item={item}
+              key={item.id}
+              onMoveDown={
+                purchaseIndex >= 0 && purchaseIndex < purchaseItems.length - 1
+                  ? () => onMoveItem(item.id, "down")
+                  : undefined
+              }
+              onMoveUp={
+                purchaseIndex > 0 ? () => onMoveItem(item.id, "up") : undefined
+              }
+              onToggleCheck={onToggleCheck}
+              onToggleExclude={onToggleExclude}
+            />
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function MobileShoppingItemRow({
+  isReadOnly,
+  isReordering,
+  isUpdating,
+  item,
+  onMoveDown,
+  onMoveUp,
+  onToggleCheck,
+  onToggleExclude,
+}: {
+  isReadOnly: boolean;
+  isReordering: boolean;
+  isUpdating: boolean;
+  item: ShoppingListItemSummary;
+  onMoveDown?: () => void;
+  onMoveUp?: () => void;
+  onToggleCheck: (itemId: string, currentChecked: boolean) => void;
+  onToggleExclude: (
+    itemId: string,
+    currentExcluded: boolean,
+    currentChecked: boolean,
+  ) => void;
+}) {
+  const itemName = item.display_text.replace(/\s+\d+.*$/, "");
+  const amountText = formatAmountText(item);
+  const canReorder = !isReadOnly && !item.is_pantry_excluded;
+
+  return (
+    <div className="relative flex min-h-[65px] items-center gap-3 border-b border-[#F1F3F5] px-4 py-2.5 last:border-b-0">
+      {canReorder ? (
+        <div className="absolute left-[3px] top-1/2 flex -translate-y-1/2 flex-col items-center justify-center gap-[2px] text-[#CED4DA]">
+          <button
+            aria-label={`${item.display_text} 위로 이동`}
+            className="h-4 w-4 text-[10px] leading-none opacity-70 disabled:opacity-20"
+            disabled={!onMoveUp || isReordering}
+            onClick={onMoveUp}
+            type="button"
+          >
+            ▲
+          </button>
+          <button
+            aria-label={`${item.display_text} 아래로 이동`}
+            className="h-4 w-4 text-[10px] leading-none opacity-70 disabled:opacity-20"
+            disabled={!onMoveDown || isReordering}
+            onClick={onMoveDown}
+            type="button"
+          >
+            ▼
+          </button>
+        </div>
+      ) : null}
+
+      {!isReadOnly && !item.is_pantry_excluded ? (
+        <button
+          aria-checked={item.is_checked}
+          aria-label={`${item.display_text} 구매 완료 표시`}
+          className="flex h-8 w-8 shrink-0 items-center justify-center disabled:opacity-50"
+          disabled={isUpdating}
+          onClick={() => onToggleCheck(item.id, item.is_checked)}
+          role="checkbox"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            className={[
+              "flex h-[22px] w-[22px] items-center justify-center rounded-full border text-[12px] text-white",
+              item.is_checked
+                ? "border-[#2AC1BC] bg-[#2AC1BC]"
+                : "border-[#DEE2E6] bg-white",
+            ].join(" ")}
+          >
+            {item.is_checked ? "✓" : ""}
+          </span>
+        </button>
+      ) : (
+        <span
+          aria-hidden="true"
+          className={[
+            "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border text-[12px]",
+            item.is_checked || item.is_pantry_excluded
+              ? "border-[#2AC1BC] bg-[#E6F8F7] text-[#2AC1BC]"
+              : "border-[#DEE2E6] text-transparent",
+          ].join(" ")}
+        >
+          ✓
+        </span>
+      )}
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[#212529]">
+          {itemName}
+        </p>
+        <p className="mt-[2px] truncate text-[11px] font-semibold leading-[1.3] text-[#868E96]">
+          {amountText} · 1끼에 사용
+        </p>
+      </div>
+
+      {!isReadOnly ? (
+        <button
+          aria-label={`${item.display_text} ${
+            item.is_pantry_excluded ? "되살리기" : "이미있음"
+          }`}
+          className={[
+            "flex h-[30px] w-[64px] shrink-0 items-center justify-center rounded-[8px] border bg-white px-0 text-[11px] font-extrabold disabled:opacity-50",
+            item.is_pantry_excluded
+              ? "border-[#2AC1BC] text-[#20A8A4]"
+              : "border-[#DEE2E6] text-[#495057]",
+          ].join(" ")}
+          disabled={isUpdating}
+          onClick={() =>
+            onToggleExclude(item.id, item.is_pantry_excluded, item.is_checked)
+          }
+          type="button"
+        >
+          {item.is_pantry_excluded ? "되살리기" : "이미있음"}
+        </button>
+      ) : item.added_to_pantry ? (
+        <span className="shrink-0 text-[11px] font-bold text-[#868E96]">
+          팬트리 반영 완료
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function MobileToast({
+  message,
+  type,
+}: {
+  message: string;
+  type: "success" | "error" | "empty";
+}) {
+  const isError = type === "error";
+
+  return (
+    <div
+      className={[
+        "mx-4 mt-3 rounded-[10px] px-4 py-3 text-[13px] font-bold",
+        isError ? "bg-red-50 text-red-700" : "bg-[#E6F8F7] text-[#20A8A4]",
+      ].join(" ")}
+      role={isError ? "alert" : "status"}
+    >
+      {message}
+    </div>
+  );
+}
+
 interface ShoppingItemCardProps {
   item: ShoppingListItemSummary;
   isReadOnly: boolean;
   isUpdating: boolean;
   isReordering?: boolean;
   onToggleCheck: (itemId: string, currentChecked: boolean) => void;
-  onToggleExclude: (itemId: string, currentExcluded: boolean) => void;
+  onToggleExclude: (
+    itemId: string,
+    currentExcluded: boolean,
+    currentChecked: boolean,
+  ) => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
 }
@@ -808,7 +1340,9 @@ function ShoppingItemCard({
 
       {!isReadOnly && (
         <button
-          onClick={() => onToggleExclude(item.id, item.is_pantry_excluded)}
+          onClick={() =>
+            onToggleExclude(item.id, item.is_pantry_excluded, item.is_checked)
+          }
           disabled={isUpdating}
           className="flex min-h-11 shrink-0 items-center justify-center rounded-full border border-[var(--olive)] px-4 text-xs font-semibold text-[var(--olive)] hover:bg-[var(--olive)] hover:text-white disabled:opacity-50"
           type="button"
@@ -825,6 +1359,20 @@ function ShoppingItemCard({
       )}
     </div>
   );
+}
+
+function formatAmountText(item: ShoppingListItemSummary): string {
+  return item.amounts_json.map((a) => `${a.amount}${a.unit}`).join(" + ");
+}
+
+function formatDateIsoDot(dateString: string): string {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return "예정";
+  }
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 function formatDateRange(start: string, end: string): string {
