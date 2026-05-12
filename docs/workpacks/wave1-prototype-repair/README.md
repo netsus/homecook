@@ -86,6 +86,21 @@
 
 Service Slice A~F re-porting must pin the fixed prototype implementation SHA above. The follow-up freezes supersede the initial Repair 4 SHA, the earlier follow-up SHA `0000c86a7d6f719e2bb1c0966c6d1e307061df7c`, the final QA SHA `c83a851f95e358cf07f5a21c6f413ee091a3d2be`, and the previous planner polish SHA `4b49e05906c998fe83f68a2fa374bf53b7079291` because the user provided additional prototype-finalization changes after PR #390, after PR #394, after PR #398, and after PR #403.
 
+## Design Status
+
+- [ ] Temporary (temporary)
+- [ ] Review pending (pending-review)
+- [x] Confirmed (confirmed) — prototype repair/freeze PRs merged and fixed SHA recorded
+- [ ] N/A
+
+## Delivery Checklist
+
+- [x] Prototype Repair 0~4 merged
+- [x] Follow-up repair #391~#404 merged
+- [x] Fixed prototype SHA recorded
+- [x] Closeout note recorded in `docs/workpacks/wave1-prototype-repair/closeout.md`
+- [x] Service porting plan pins the fixed prototype SHA for Slice A~F
+
 ## Repair Slices
 
 | Order | Repair Slice | Goal | User Items |

@@ -2,6 +2,8 @@
 
 import React from "react";
 
+import { ContentState } from "@/components/shared/content-state";
+
 interface ErrorStateProps {
   title?: string;
   message?: string;
@@ -16,11 +18,18 @@ export function ErrorState({
   retryLabel = "다시 시도",
 }: ErrorStateProps) {
   return (
-    <div className="flex flex-col items-center px-4 py-12 text-center">
-      <div className="mb-3">
+    <ContentState
+      actionLabel={onRetry ? retryLabel : undefined}
+      description={message}
+      onAction={onRetry}
+      tone="error"
+      title={title}
+      variant="subtle"
+    >
+      <div className="flex justify-center">
         <svg
           aria-hidden="true"
-          className="h-10 w-10 text-[var(--brand)]"
+          className="h-10 w-10 text-[#FF6B6B]"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.5"
@@ -34,19 +43,6 @@ export function ErrorState({
           />
         </svg>
       </div>
-      <h3 className="text-base font-bold text-[var(--foreground)]">{title}</h3>
-      {message ? (
-        <p className="mt-1 text-sm text-[var(--text-3)]">{message}</p>
-      ) : null}
-      {onRetry ? (
-        <button
-          className="mt-4 rounded-[var(--radius-sm)] bg-[var(--brand)] px-5 py-2.5 text-sm font-bold text-[var(--surface)] transition-colors hover:bg-[var(--brand-deep)]"
-          onClick={onRetry}
-          type="button"
-        >
-          {retryLabel}
-        </button>
-      ) : null}
-    </div>
+    </ContentState>
   );
 }

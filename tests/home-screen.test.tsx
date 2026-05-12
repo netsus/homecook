@@ -298,6 +298,12 @@ describe("home screen", () => {
     expect(
       await screen.findByRole("heading", { name: "다른 조합을 찾아보세요" }),
     ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("heading", { name: "다른 조합을 찾아보세요" })
+        .closest("[data-state-kind='prototype-derived']")
+        ?.getAttribute("data-state-tone"),
+    ).toBe("empty");
   });
 
   it("keeps the recipe list visible when only themes fail", async () => {
@@ -341,6 +347,12 @@ describe("home screen", () => {
     expect(
       await screen.findByRole("heading", { name: "레시피를 불러오지 못했어요" }),
     ).toBeTruthy();
+    expect(
+      screen
+        .getByRole("heading", { name: "레시피를 불러오지 못했어요" })
+        .closest("[data-state-kind='prototype-derived']")
+        ?.getAttribute("data-state-tone"),
+    ).toBe("error");
   });
 
   it("keeps the title search when clearing only the ingredient filter", async () => {

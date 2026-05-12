@@ -1,0 +1,146 @@
+{
+  "id": "wave1-derived-state-ui-prep",
+  "title": "Wave1 derived state UI prep before Phase4",
+  "summary": "Phase4 재진행 전 fixed prototype에 직접 없는 loading/skeleton/empty/error/unauthorized/not-found/submitting 상태 UI를 prototype-derived design으로 분류하고, 공통 상태 UI 컴포넌트와 HOME/RECIPE_DETAIL/PLANNER_WEEK 대표 적용을 먼저 잠근다.",
+  "project_profile": "homecook",
+  "change_type": "product",
+  "surface": "frontend",
+  "risk": "high",
+  "preset": "vertical-slice-strict",
+  "goal": "Wave1 Phase4 slice A-F가 상태 화면을 각자 임의 해석하지 않도록 derived state UI 기준과 대표 적용을 선행 고정한다. API/DB/auth/status 계약은 변경하지 않는다.",
+  "owners": {
+    "claude": "stage1,stage4 normally",
+    "codex": "user-requested fallback,stage5,stage6",
+    "workers": []
+  },
+  "dependencies": [
+    "wave1-prototype-repair",
+    "wave1-exact-parity-validator-baseline",
+    "wave1-app-web-responsibility-matrix",
+    "wave1-login-gate-reference-freeze"
+  ],
+  "docs_refs": {
+    "source_of_truth": [
+      "docs/sync/CURRENT_SOURCE_OF_TRUTH.md",
+      "docs/workpacks/wave1-service-porting-plan.md",
+      "docs/workpacks/wave1-prototype-repair/closeout.md",
+      "ui/designs/WAVE1_MOBILE_APP_BASELINE.md",
+      "ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md",
+      "ui/designs/BAEMIN_STYLE_DIRECTION.md"
+    ],
+    "governing_docs": [
+      "docs/workpacks/wave1-derived-state-ui-prep/README.md",
+      "docs/workpacks/wave1-derived-state-ui-prep/acceptance.md",
+      "docs/workpacks/wave1-derived-state-ui-prep/automation-spec.json",
+      "docs/engineering/slice-workflow.md",
+      "docs/engineering/agent-workflow-overview.md",
+      "docs/engineering/product-design-authority.md"
+    ]
+  },
+  "workflow": {
+    "plan_loop": "skipped",
+    "review_loop": "required",
+    "external_smokes": [],
+    "execution_mode": "autonomous",
+    "merge_policy": "conditional-auto",
+    "max_fix_rounds": {
+      "backend": 0,
+      "frontend": 4
+    }
+  },
+  "verification": {
+    "required_checks": [
+      "pnpm exec vitest run tests/content-state.test.tsx tests/home-screen.test.tsx tests/recipe-detail-screen.test.tsx tests/planner-week-screen.test.tsx",
+      "pnpm verify:frontend",
+      "pnpm validate:workflow-v2",
+      "pnpm validate:workpack -- --slice wave1-derived-state-ui-prep",
+      "git diff --check"
+    ],
+    "verify_commands": [
+      "pnpm exec vitest run tests/content-state.test.tsx tests/home-screen.test.tsx tests/recipe-detail-screen.test.tsx tests/planner-week-screen.test.tsx",
+      "pnpm verify:frontend"
+    ],
+    "evaluator_commands": [],
+    "artifact_assertions": [
+      "prototype-derived-state-classification",
+      "representative-anchor-state-tests",
+      "no-api-db-contract-change"
+    ]
+  },
+  "status": {
+    "lifecycle": "merged",
+    "approval_state": "codex_approved",
+    "verification_status": "passed",
+    "evaluation_status": "not_started",
+    "evaluation_round": 0,
+    "last_evaluator_result": null,
+    "auto_merge_eligible": false,
+    "blocked_reason_code": null
+  },
+  "closeout": {
+    "phase": "completed",
+    "docs_projection": {
+      "roadmap_lifecycle": "merged",
+      "design_status": "confirmed",
+      "delivery_checklist": "complete",
+      "design_authority": "not_required",
+      "acceptance": "complete",
+      "automation_spec_metadata": "synced"
+    },
+    "verification_projection": {
+      "required_checks": "passed",
+      "external_smokes": "skipped",
+      "authority_reports": [],
+      "actual_verification_refs": [
+        "pnpm exec vitest run tests/content-state.test.tsx tests/home-screen.test.tsx tests/recipe-detail-screen.test.tsx tests/planner-week-screen.test.tsx",
+        "pnpm exec vitest run tests/ui-primitives.test.tsx",
+        "pnpm verify:frontend",
+        "pnpm validate:workflow-v2",
+        "pnpm validate:workpack -- --slice wave1-derived-state-ui-prep",
+        "git diff --check"
+      ]
+    },
+    "merge_gate_projection": {
+      "current_head_sha": "pending_github_current_head_after_pr_sync",
+      "approval_state": "codex_approved",
+      "all_checks_green": "pending_github_current_head"
+    },
+    "recovery_summary": {
+      "manual_patch_count": 1,
+      "manual_handoff": false,
+      "stale_lock_count": 0,
+      "ci_resync_count": 0,
+      "artifact_missing": false,
+      "last_recovery_at": "2026-05-12T13:43:18Z"
+    },
+    "repair_summary": {
+      "codex_repairable_count": 1,
+      "claude_repairable_count": 0,
+      "manual_decision_required_count": 0,
+      "human_escalation_count": 0,
+      "post_merge_stale_count": 0,
+      "latest_reason_code": "derived-state-ui-prep-closeout-before-pr-merge",
+      "evidence_sources": [
+        "Vitest",
+        "pnpm verify:frontend",
+        "workflow-v2 validator",
+        "workpack validator"
+      ]
+    },
+    "projection_state": {
+      "docs_synced_at": "2026-05-12T13:43:18Z",
+      "status_synced_at": "2026-05-12T13:43:18Z",
+      "pr_body_synced_at": "pending-pr-body-update"
+    }
+  },
+  "notes": "Closed as Codex fallback at explicit user request. Phase4 Slice A re-audit/repair may start after this PR merges. Scope: classify fixed-reference-missing state UI as prototype-derived design, update common state UI components, and apply representative HOME/RECIPE_DETAIL/PLANNER_WEEK states without API/DB/auth/status changes.",
+  "out_of_scope": [
+    "Slice A-F full Phase4 re-porting",
+    "fixed-reference ready-state exact parity completion",
+    "all screen loading/empty/error replacement",
+    "API, DB, auth, route, read-only, or status transition changes",
+    "new dependencies, fonts, or prototype-only assets",
+    "global Wave1 token value changes"
+  ],
+  "open_questions": []
+}
