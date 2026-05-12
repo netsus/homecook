@@ -16,9 +16,9 @@ export function OptionRow({ label, isSelected, onClick, disabled }: OptionRowPro
       aria-selected={isSelected}
       className={`flex min-h-14 w-full items-center rounded-[16px] px-4 py-3.5 text-left transition-colors ${
         isSelected
-          ? "bg-[var(--surface)] text-[var(--foreground)] font-bold"
-          : "bg-[var(--surface)] text-[var(--foreground)] font-medium"
-      } border border-[var(--line)]`}
+          ? "bg-[var(--wave1-surface)] text-[var(--wave1-ink)] font-bold"
+          : "bg-[var(--wave1-surface)] text-[var(--wave1-ink)] font-medium"
+      } border border-[var(--wave1-border)]`}
       disabled={disabled}
       onClick={onClick}
       role="option"
@@ -27,7 +27,7 @@ export function OptionRow({ label, isSelected, onClick, disabled }: OptionRowPro
       <span className="flex-1 text-[15px]">{label}</span>
       {isSelected ? (
         <svg
-          className="shrink-0 text-[var(--olive)]"
+          className="shrink-0 text-[var(--wave1-mint-contrast)]"
           fill="none"
           height="18"
           viewBox="0 0 18 18"

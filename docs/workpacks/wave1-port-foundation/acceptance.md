@@ -19,7 +19,7 @@
 ## State / Policy
 
 - [x] 공용 primitive가 disabled/loading/active/inactive 상태를 올바르게 반영한다 <!-- omo:id=accept-primitive-states;stage=4;scope=frontend;review=5,6 -->
-- [x] production 승인 토큰(`--brand`, `--brand-deep`, `--olive`, `--surface`, `--muted` 등)만 사용하고, prototype mint/Jua/asset은 사용하지 않는다 <!-- omo:id=accept-approved-tokens-only;stage=4;scope=frontend;review=5,6 -->
+- [x] Wave1 고정 프로토타입 토큰은 additive `--wave1-*` alias로만 사용하고, 기존 전역 런타임 토큰 값은 교체하지 않는다. 밝은 배경 위 텍스트/아이콘/CTA는 `--wave1-*-contrast` alias로 접근성 대비를 유지한다 <!-- omo:id=accept-approved-tokens-only;stage=4;scope=frontend;review=5,6 -->
 - [x] 기존 컴포넌트의 public API(props interface)가 breaking하게 변경되지 않는다 <!-- omo:id=accept-no-breaking-api;stage=4;scope=frontend;review=5,6 -->
 - [x] AppShell의 5개 필수 상태 지원이 소비자에게 올바르게 위임된다 (loading/empty/error/read-only/unauthorized) <!-- omo:id=accept-state-delegation;stage=4;scope=frontend;review=5,6 -->
 

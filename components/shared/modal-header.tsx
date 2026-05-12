@@ -30,7 +30,7 @@ export function ModalHeader({
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <h2
-            className="text-lg font-bold tracking-[-0.01em] text-[var(--foreground)]"
+            className="text-lg font-bold text-[var(--wave1-ink)]"
             id={titleId}
           >
             {title}
@@ -38,18 +38,18 @@ export function ModalHeader({
           {badge}
         </div>
         {description ? (
-          <p className="mt-1 text-sm text-[var(--text-2)]">{description}</p>
+          <p className="mt-1 text-sm text-[var(--wave1-text-2)]">{description}</p>
         ) : null}
       </div>
       <button
         aria-label="닫기"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-3)] transition-colors disabled:opacity-40"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--wave1-text-2)] transition-colors disabled:opacity-40"
         disabled={closeDisabled}
         onClick={onClose}
         ref={closeButtonRef}
         type="button"
       >
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-fill)] transition-colors hover:brightness-95">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--wave1-surface-fill)] transition-colors hover:brightness-95">
           <svg
             fill="none"
             height="18"

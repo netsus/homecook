@@ -24,7 +24,11 @@ describe("app shell", () => {
       </AppShell>,
     );
 
-    expect(screen.getByRole("link", { name: "Homecook" }).getAttribute("href")).toBe("/");
+    const brandLink = screen.getByRole("link", { name: "Homecook" });
+    expect(brandLink.getAttribute("href")).toBe("/");
+    expect(brandLink.textContent).toBe("homecook_");
+    expect(brandLink.className).toContain("text-[22px]");
+    expect(brandLink.className).not.toContain("uppercase");
     expect(screen.queryByText("오늘 집밥 메뉴를 찾는 주방")).toBeNull();
     expect(screen.queryByText("MVP Slice 01")).toBeNull();
     expect(screen.queryByText("local-dev-controls")).toBeNull();

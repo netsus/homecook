@@ -11,7 +11,7 @@ interface NumericStepperCompactProps {
   unit?: string;
 }
 
-/** Compact −/value/+ stepper row in a frosted pill container. */
+/** Compact −/value/+ stepper row. */
 export function NumericStepperCompact({
   value,
   min = 1,
@@ -20,8 +20,8 @@ export function NumericStepperCompact({
   unit,
 }: NumericStepperCompactProps) {
   return (
-    <div className="flex items-center justify-between rounded-[10px] border border-[var(--line)] bg-white px-3 py-2.5">
-      <span className="text-sm text-[var(--text-2)]">
+    <div className="flex items-center justify-between rounded-[10px] border border-[var(--wave1-border)] bg-white px-3 py-2.5">
+      <span className="text-sm text-[var(--wave1-text-2)]">
         {unit ? `몇 ${unit} 계획할까요?` : ""}
       </span>
       <div className="flex items-center gap-0.5">
@@ -32,14 +32,14 @@ export function NumericStepperCompact({
           onClick={() => onChange(Math.max(min, value - 1))}
           type="button"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--line)] bg-white text-sm font-medium text-[var(--foreground)]">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--wave1-border)] bg-white text-sm font-medium text-[var(--wave1-ink)]">
             −
           </span>
         </button>
         <span
           aria-label={unit ? `${value}${unit}` : String(value)}
           aria-live="polite"
-          className="min-w-5 text-center font-bold text-[var(--foreground)]"
+          className="min-w-5 text-center font-bold text-[var(--wave1-ink)]"
         >
           {value}
         </span>
@@ -50,7 +50,7 @@ export function NumericStepperCompact({
           onClick={() => onChange(value + 1)}
           type="button"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full border-none bg-[var(--foreground)] text-sm font-bold text-white">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full border-none bg-[var(--wave1-ink)] text-sm font-bold text-white">
             +
           </span>
         </button>

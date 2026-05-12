@@ -147,7 +147,7 @@ export function SortDropdown({
               <li
                 aria-selected={isSelected}
                 className={[
-                  "flex min-h-[44px] w-full cursor-pointer items-center whitespace-nowrap px-4 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--olive)] focus:ring-inset",
+                  "flex min-h-[44px] w-full cursor-pointer items-center whitespace-nowrap px-4 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--wave1-mint-contrast)] focus:ring-inset",
                   isSelected
                     ? "bg-[#F1F3F5] font-bold text-[#212529]"
                     : "bg-white font-medium text-[#212529] hover:bg-[#F8F9FA]",
@@ -167,7 +167,7 @@ export function SortDropdown({
                 {isSelected ? (
                   <svg
                     aria-hidden="true"
-                    className="ml-2 h-4 w-4 shrink-0 text-[#007A76]"
+                    className="ml-2 h-4 w-4 shrink-0 text-[var(--wave1-mint-contrast)]"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2.5"

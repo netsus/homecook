@@ -90,6 +90,15 @@ describe("SortDropdown", () => {
     });
   });
 
+  it("uses the accessible Wave1 mint focus ring for keyboard navigation", () => {
+    render(<SortDropdown onChange={() => {}} options={options} value="latest" />);
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
+
+    screen.getAllByRole("option").forEach((option) => {
+      expect(option.className).toContain("focus:ring-[var(--wave1-mint-contrast)]");
+    });
+  });
+
   it("disables trigger when disabled", () => {
     render(
       <SortDropdown disabled onChange={() => {}} options={options} value="latest" />,

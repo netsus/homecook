@@ -2,7 +2,7 @@
 
 ## Goal
 
-공통 shell, 공용 UI 프리미티브(Button, Chip, Card, Modal/Sheet, Dropdown), CTA 위계, app-wide spacing/safe-area/sticky-bottom 규칙을 Wave1 프로토타입 기준으로 정비해, 후속 Wave1 포팅 슬라이스(B~F)가 일관된 UI foundation 위에서 작업할 수 있게 한다. API/DB/status 변경 없이 기존 승인 토큰과 컴포넌트 구조를 additive하게 보강하는 UI-only 슬라이스다.
+공통 shell, 공용 UI 프리미티브(Button, Chip, Card, Modal/Sheet, Dropdown), CTA 위계, app-wide spacing/safe-area/sticky-bottom 규칙을 Wave1 고정 프로토타입 기준으로 정비해, 후속 Wave1 포팅 슬라이스(B~F)가 일관된 UI foundation 위에서 작업할 수 있게 한다. API/DB/status 변경 없이 기존 전역 런타임 토큰은 유지하고, Wave1 전용 `--wave1-*` alias를 additive하게 보강하는 UI-only 슬라이스다.
 
 ## Branches
 
@@ -41,14 +41,14 @@
 
 ### App-wide Spacing / Safe-area / Sticky Bottom
 
-- `app/globals.css`: 기존 승인 토큰 유지, `.bottom-safe` / `.action-safe-bottom-panel` 값 검증, utility class 보강 (필요 시)
+- `app/globals.css`: 기존 승인 토큰 유지, Wave1 고정 프로토타입 token alias 추가, `.bottom-safe` / `.action-safe-bottom-panel` 값 검증, utility class 보강 (필요 시)
 
 ## Out of Scope
 
 - HOME, RECIPE_DETAIL, PLANNER_WEEK 화면 자체 변경 (Slice B 이후)
 - API/DB/status/endpoint/field 추가 또는 변경
-- `baemin-prototype-home-porting`에서 도입한 HOME 전용 mint token alias (`#2AC1BC`, `#20A8A4`, `#E6F8F7` 등) — 이 슬라이스는 production 승인 토큰 기준
-- Jua 폰트 또는 prototype-only asset 도입
+- 기존 전역 런타임 토큰(`--brand`, `--foreground` 등)의 값 교체
+- 신규 폰트 파일/외부 폰트 다운로드 또는 prototype-only asset 도입
 - 새 npm dependency 추가
 - AppShell `bottomTabsMode="hidden"` 이외의 새 모드 추가
 - 화면별 헤더 액션 제거/이동 (각 화면 slice에서 처리)
@@ -68,7 +68,7 @@
 - **AppShell 영향**: `baemin-prototype-home-porting`은 `/`에서 shared header/bottom tab을 숨기고 HOME 전용 bottom tab을 쓴다. `AppShell.bottomTabsMode="hidden"` 옵션을 추가했다.
 - **충돌 위험**: 이 슬라이스(wave1-port-foundation)는 `AppShell`의 기존 `bottomTabsMode` / `headerMode` 인터페이스를 변경하지 않고 안정화만 한다. HOME 전용 bottom tab은 `baemin-prototype-home-porting`의 ownership이다.
 - **잠금 규칙**: wave1-port-foundation은 `bottom-tabs.tsx`의 shared tab(4탭: 홈/플래너/팬트리/마이) 구조만 다루고, HOME 전용 bottom tab(`baemin-prototype-home-porting` 소유)은 건드리지 않는다. 양쪽이 동시에 `AppShell` props를 변경하면 merge conflict가 발생할 수 있으므로, `baemin-prototype-home-porting`이 merge된 이후에 wave1-port-foundation의 AppShell 관련 변경을 rebase한다.
-- **HOME 전용 mint token alias**: production scope 밖. wave1-port-foundation은 `docs/design/design-tokens.md`와 `app/globals.css`의 승인 값만 사용한다.
+- **Wave1 token alias 재분류**: 이전 production-token-only guard는 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md` 확정 전 기준이다. 현재는 기존 전역 런타임 토큰을 교체하지 않고 `app/globals.css`에 additive `--wave1-*` alias를 두어 fixed prototype 색상/그림자/폰트 기준을 공용 primitive에서 참조한다. 밝은 배경 위 텍스트/아이콘/CTA는 a11y 대비를 위해 `--wave1-*-contrast` alias를 사용한다.
 
 ## Backend First Contract
 
@@ -92,7 +92,7 @@
 
 - UI risk: `high-risk` — 새 공용 primitive 도입(sort dropdown)과 기존 shared primitive의 시각적 정비가 후속 모든 화면에 영향을 주므로.
 - Anchor screen dependency: 없음 (직접 수정하지 않음). 단, 변경된 primitive를 anchor screen이 소비하므로 간접 영향 있음.
-- Visual artifact: Stage 4/5에서 mobile 390px/320px screenshot evidence를 생성하고 dev overlay 없이 재캡처했다.
+- Visual artifact: Stage 4/5와 Phase4 re-audit에서 mobile 390px/320px screenshot evidence를 생성하고 dev overlay 없이 재캡처한다.
   - `ui/designs/evidence/wave1-port-foundation/primitives-mobile.png`
   - `ui/designs/evidence/wave1-port-foundation/primitives-mobile-narrow.png`
 - Authority status: `reviewed`
@@ -100,7 +100,7 @@
   - Codex Stage 5 authority report와 Claude final authority gate가 blocker 0개로 통과했다.
   - `design-generator` / `design-critic`은 화면 단위 도구이며, 이 슬라이스는 화면이 아닌 공용 primitive 정비다. 화면 설계 산출물(`ui/designs/<SCREEN_ID>.md`)은 생성하지 않는다.
   - **생략 근거**: 이 슬라이스는 신규 화면이 아니다. In Scope의 변경은 기존 공용 컴포넌트의 additive 보강과 새 dropdown primitive 하나 도입이다. 화면 단위 `design-generator` / `design-critic` 대상이 아니다. 대신 Stage 4에서 primitive 단위 screenshot evidence를 생성하고, authority review에서 후속 화면 적용 전에 primitive 품질을 확인한다.
-  - raw prototype mint/Jua/asset은 production scope 밖이다. `BAEMIN_STYLE_DIRECTION.md`의 `out of prototype scope` 용어를 적용한다.
+  - raw prototype asset은 production scope 밖이다. 색상/그림자/폰트 기준은 `--wave1-*` alias로만 승격하고 legacy 전역 토큰 값은 유지한다.
 
 ## Design Status
 
@@ -114,6 +114,8 @@
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 - `docs/workpacks/README.md`
 - `docs/workpacks/wave1-service-porting-plan.md`
+- `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`
+- `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`
 - `docs/design/design-tokens.md`
 - `docs/design/mobile-ux-rules.md`
 - `docs/design/anchor-screens.md`
@@ -130,8 +132,9 @@
 
 ## Key Rules
 
-- production 토큰은 `docs/design/design-tokens.md` 승인 값을 기본으로 쓴다.
-- prototype mint/Jua/asset은 별도 승인 없이 공통 foundation으로 승격하지 않는다.
+- Wave1 mobile exact-ready surface의 공용 primitive는 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`의 fixed prototype token을 따른다.
+- legacy/web 영향 방지를 위해 기존 전역 런타임 토큰 값은 교체하지 않고 additive `--wave1-*` alias만 사용한다.
+- prototype-only asset은 별도 승인 없이 공통 foundation으로 승격하지 않는다.
 - 기존 컴포넌트의 public API(props interface)를 breaking하게 바꾸지 않는다. additive 보강만 허용한다.
 - `AppShell` props 변경이 `baemin-prototype-home-porting`과 conflict하면 해당 slice merge 후 rebase한다.
 - Sort dropdown은 stateless primitive로 도입한다. 상태 관리와 화면 적용은 소비자 slice(B~F) 책임이다.
@@ -163,6 +166,7 @@
 - [x] Sort dropdown primitive 도입 <!-- omo:id=foundation-sort-dropdown;stage=4;scope=frontend;review=5,6 -->
 - [x] SelectionChipRail horizontal scroll 안정화 <!-- omo:id=foundation-chip-rail-scroll;stage=4;scope=frontend;review=5,6 -->
 - [x] globals.css safe-area/bottom-safe 값 검증 <!-- omo:id=foundation-globals-safe-area;stage=4;scope=frontend;review=5,6 -->
+- [x] Wave1 fixed prototype token alias 적용 <!-- omo:id=foundation-wave1-token-alias;stage=4;scope=frontend;review=5,6 -->
 - [x] 공용 primitive Vitest 렌더 테스트 <!-- omo:id=foundation-vitest-primitives;stage=4;scope=frontend;review=5,6 -->
 - [x] mobile 390/320 screenshot evidence 생성 <!-- omo:id=foundation-screenshot-evidence;stage=4;scope=frontend;review=5,6 -->
 - [x] no horizontal overflow spot check <!-- omo:id=foundation-no-overflow;stage=4;scope=frontend;review=5,6 -->
@@ -171,6 +175,8 @@
 
 ## Stage 6 Closeout Evidence
 
+- Phase4 re-audit / repair: shared `AppHeader`, `BottomTabs`, Button/Chip/Card/Badge, ModalHeader/Footer, SelectionChipRail, OptionRow, NumericStepperCompact, SortDropdown focus ring aligned to additive `--wave1-*` tokens, with `--wave1-*-contrast` variants for text/icon/CTA contrast.
+- Phase4 regression tests: `pnpm exec vitest run tests/app-shell.test.tsx tests/ui-primitives.test.tsx tests/sort-dropdown.test.tsx tests/bottom-tabs.test.tsx tests/content-state.test.tsx` passed.
 - Design authority: `ui/designs/authority/WAVE1_FOUNDATION-authority.md` - pass, blocker 0
 - Claude final authority gate: `.omx/artifacts/claude-delegate-3f4ca745-db71-4392-a3f1-4e3c4493e9bc-wave1-port-foundation-final-authority-gate-response-20260509T204619Z.md` - pass, blocker 0
 - Exploratory QA: `.artifacts/qa/wave1-port-foundation/2026-05-09T20-50-stage6/exploratory-report.json` and `eval-result.json` - score 100

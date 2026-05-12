@@ -14,28 +14,28 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, { base: string; hover: string; active: string; disabled: string }> = {
   primary: {
-    base: "bg-[var(--brand)] text-[var(--surface)]",
-    hover: "hover:bg-[var(--brand-deep)] hover:shadow-[var(--shadow-2)]",
-    active: "active:bg-[var(--brand-deep)] active:shadow-[inset_0_1px_0_color-mix(in_srgb,var(--foreground)_6%,transparent)]",
-    disabled: "bg-[var(--line)] text-[var(--text-4)]",
+    base: "bg-[var(--wave1-mint-contrast)] text-[var(--wave1-surface)]",
+    hover: "hover:bg-[var(--wave1-mint-contrast-deep)] hover:shadow-[var(--wave1-shadow-deep)]",
+    active: "active:bg-[var(--wave1-mint-contrast-deep)] active:shadow-[inset_0_1px_0_color-mix(in_srgb,var(--wave1-ink)_6%,transparent)]",
+    disabled: "bg-[var(--wave1-border)] text-[var(--wave1-text-4)]",
   },
   secondary: {
-    base: "bg-transparent text-[var(--brand)] border border-[var(--brand)]",
-    hover: "hover:bg-[var(--brand-soft)] hover:text-[var(--brand-deep)] hover:border-[var(--brand-deep)]",
-    active: "active:bg-[var(--brand-soft)]",
-    disabled: "border-[var(--line)] text-[var(--text-4)] bg-transparent",
+    base: "bg-transparent text-[var(--wave1-mint-contrast)] border border-[var(--wave1-mint-contrast)]",
+    hover: "hover:bg-[var(--wave1-mint-soft)] hover:text-[var(--wave1-mint-contrast-deep)] hover:border-[var(--wave1-mint-contrast-deep)]",
+    active: "active:bg-[var(--wave1-mint-soft)]",
+    disabled: "border-[var(--wave1-border)] text-[var(--wave1-text-4)] bg-transparent",
   },
   neutral: {
-    base: "bg-[var(--surface-fill)] text-[var(--foreground)]",
-    hover: "hover:bg-[var(--surface-subtle)]",
-    active: "active:bg-[var(--surface-subtle)]",
-    disabled: "bg-[var(--surface-fill)] text-[var(--text-4)]",
+    base: "bg-[var(--wave1-surface-fill)] text-[var(--wave1-ink)]",
+    hover: "hover:bg-[var(--wave1-surface-subtle)]",
+    active: "active:bg-[var(--wave1-surface-subtle)]",
+    disabled: "bg-[var(--wave1-surface-fill)] text-[var(--wave1-text-4)]",
   },
   destructive: {
-    base: "bg-[color-mix(in_srgb,var(--brand),var(--surface)_10%)] text-[var(--surface)]",
-    hover: "hover:bg-[color-mix(in_srgb,var(--brand-deep),var(--foreground)_20%)] hover:shadow-[var(--shadow-2)]",
-    active: "active:bg-[color-mix(in_srgb,var(--brand-deep),var(--foreground)_20%)]",
-    disabled: "bg-[var(--line)] text-[var(--text-4)]",
+    base: "bg-[var(--wave1-red-contrast)] text-[var(--wave1-surface)]",
+    hover: "hover:bg-[var(--wave1-red-contrast-deep)] hover:shadow-[var(--wave1-shadow-deep)]",
+    active: "active:bg-[var(--wave1-red-contrast-deep)]",
+    disabled: "bg-[var(--wave1-border)] text-[var(--wave1-text-4)]",
   },
 };
 
