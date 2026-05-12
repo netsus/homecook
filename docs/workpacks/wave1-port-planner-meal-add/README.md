@@ -2,7 +2,9 @@
 
 ## Goal
 
-PLANNER_WEEK, 식사추가 옵션 모달(MENU_ADD), 직접등록(MANUAL_CREATE), 끼니 화면(MEAL_SCREEN) 네 화면의 Wave1 프로토타입 개선사항을 실제 서비스에 포팅한다. PLANNER_WEEK의 주간 이동/이모지·배지 제거/CTA 정리, MENU_ADD의 2열 옵션 레이아웃, MANUAL_CREATE의 재료 추가 모달 흐름 정리, MEAL_SCREEN의 레시피 클릭·상태 셀렉터 제거·삭제 아이콘 정리를 수행한다. 끼니 컬럼 CRUD는 이미 merged된 `planner-column-customization` 계약을 소비하며, 모든 변경은 기존 공식 API 계약과 승인 토큰 범위 안에서 UI-only 포팅이다.
+PLANNER_WEEK, 식사추가 옵션 모달(MENU_ADD), 직접등록(MANUAL_CREATE), 끼니 화면(MEAL_SCREEN)을 Wave1 fixed prototype 기준으로 다시 Phase4 prep한 뒤 Phase5 evidence로 닫는다. Historical closeout(PR #376 계열)은 보존하지만, 현재 완료 근거로 재사용하지 않는다. 이번 재진입 기준은 fixed reference 대비 mobile visual/layout parity이며, 기능 동작은 현재 MVP 구현과 official docs가 source of truth다.
+
+Phase4 prep의 목표는 구현이 아니라 준비 산출물을 잠그는 것이다: current service screenshots, fixed reference mapping, prototype-vs-service diff table, computed-style/geometry audit plan, MVP regression lock, PR-ready evidence checklist. Phase5에서는 이미 구현된 UI를 current reference 기준으로 재검증하고, 필요한 경우에만 작은 repair를 수행한다.
 
 ## Branches
 
@@ -71,8 +73,8 @@ PLANNER_WEEK, 식사추가 옵션 모달(MENU_ADD), 직접등록(MANUAL_CREATE),
 | --- | --- | --- |
 | `01-discovery-detail-auth` ~ `19-youtube-import` | merged | [x] |
 | `planner-column-customization` | merged | [x] PR #367~#370 |
-| `wave1-port-foundation` | merged | [x] PR #372, #373 |
-| `wave1-port-discovery-detail` | merged | [x] PR #374, #375 |
+| `wave1-port-foundation` | merged | [x] PR #372, #373, Phase4 foundation re-audit PR #432 |
+| `wave1-port-discovery-detail` | merged | [x] PR #374, #375, Phase5 re-audit PR #434 |
 | `baemin-prototype-planner-week-parity` | merged | [x] |
 | `baemin-style-planner-week-retrofit` | merged | [x] |
 | `baemin-prototype-modal-overlay-parity` | merged | [x] |
@@ -119,11 +121,21 @@ PLANNER_WEEK, 식사추가 옵션 모달(MENU_ADD), 직접등록(MANUAL_CREATE),
 
 - UI risk: `anchor-extension` — PLANNER_WEEK는 anchor screen이며, 이 슬라이스에서 주간 이동 UI, 이모지/배지 제거, CTA hierarchy 변경을 수행
 - Anchor screen dependency: `PLANNER_WEEK`
-- Visual artifact: Stage 4/5에서 mobile 390px/320px screenshot evidence 생성
+- Visual artifact: Phase4/5에서 fixed reference mapping과 mobile 390px/320px service screenshot evidence 생성
+  - fixed reference screenshots: `ui/designs/reference/wave1-fixed-prototype/manifest.json`에 등록된 PLANNER_WEEK / MENU_ADD / MEAL_SCREEN / MANUAL_RECIPE_CREATE / MENU_ADD picker 관련 390px/320px PNG
+  - current service screenshots: `ui/designs/evidence/wave1-port-planner-meal-add/` 아래에 PLANNER_WEEK / MENU_ADD sheet / picker states / MANUAL_CREATE / MEAL_SCREEN surfaces별 390px/320px
+  - required audit evidence: screenshot comparison, computed-style audit, DOM geometry audit, remaining-difference ledger with blocker 0 and unclassified visual difference 0
   - `ui/designs/evidence/wave1-port-planner-meal-add/planner-mobile-default.png`
   - `ui/designs/evidence/wave1-port-planner-meal-add/planner-mobile-narrow.png`
   - `ui/designs/evidence/wave1-port-planner-meal-add/planner-week-navigation.png`
-  - `ui/designs/evidence/wave1-port-planner-meal-add/menu-add-option-grid.png`
+  - `ui/designs/evidence/wave1-port-planner-meal-add/planner-meal-add-sheet.png`
+  - `ui/designs/evidence/wave1-port-planner-meal-add/planner-meal-add-sheet-narrow.png`
+  - `ui/designs/evidence/wave1-port-planner-meal-add/recipe-search-picker.png`
+  - `ui/designs/evidence/wave1-port-planner-meal-add/recipe-book-selector.png`
+  - `ui/designs/evidence/wave1-port-planner-meal-add/pantry-match-picker.png`
+  - `ui/designs/evidence/wave1-port-planner-meal-add/planned-servings-input.png`
+  - `ui/designs/evidence/wave1-port-planner-meal-add/manual-recipe-create.png`
+  - `ui/designs/evidence/wave1-port-planner-meal-add/manual-recipe-create-narrow.png`
   - `ui/designs/evidence/wave1-port-planner-meal-add/manual-create-ingredient-modal.png`
   - `ui/designs/evidence/wave1-port-planner-meal-add/meal-screen-default.png`
   - `ui/designs/evidence/wave1-port-planner-meal-add/meal-screen-narrow.png`
@@ -134,13 +146,14 @@ PLANNER_WEEK, 식사추가 옵션 모달(MENU_ADD), 직접등록(MANUAL_CREATE),
   - MENU_ADD, MANUAL_CREATE, MEAL_SCREEN은 anchor screen은 아니지만 PLANNER_WEEK에서 진입하는 핵심 흐름이므로 evidence에 포함
   - `design-generator` / `design-critic`: 변경이 프로토타입 기준의 정리(이모지/배지 제거, CTA 재배치, 2열 그리드)이므로 screenshot evidence 기반 authority로 충분. Stage 4에서 재판단.
   - authority report: `ui/designs/authority/WAVE1_PLANNER_MEAL_ADD-authority.md`
-  - Claude final authority gate PASS, blocker 0, 2026-05-10
+  - refreshed evidence artifacts: `ui/designs/evidence/wave1-port-planner-meal-add/phase4-prep.md`, `ui/designs/evidence/wave1-port-planner-meal-add/phase5-visual-audit.md`, `ui/designs/evidence/wave1-port-planner-meal-add/visual-verdict.json`
+  - Claude final authority gate PASS required before Phase5 merge
 
 ## Design Status
 
 - [ ] 임시 UI (temporary) — 기능 완성 우선, Stage 4 완료 후 pending-review로 전환
 - [ ] 리뷰 대기 (pending-review)
-- [x] 확정 (confirmed) — Claude final authority gate PASS, blocker 0, 2026-05-10
+- [x] 확정 (confirmed) — historical Claude final authority gate PASS, blocker 0, 2026-05-10. 2026-05-13 Phase5 re-audit 기준으로 refreshed evidence, visual audit, and Claude final authority gate PASS로 다시 잠근다.
 - [ ] N/A
 
 ## Source Links
@@ -169,8 +182,10 @@ PLANNER_WEEK, 식사추가 옵션 모달(MENU_ADD), 직접등록(MANUAL_CREATE),
 
 ## Key Rules
 
-- production 토큰은 `docs/design/design-tokens.md` 승인 값을 기본으로 쓴다.
-- prototype mint/Jua/asset은 별도 승인 없이 사용하지 않는다.
+- Wave1 mobile exact-ready surface의 visual/layout 목표값은 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`와 fixed prototype reference를 따른다.
+- 기존 global legacy token 값은 전역 교체하지 않는다. Wave1 repair는 Slice A의 additive `--wave1-*` aliases 또는 화면-local/class-level 적용으로 제한한다.
+- fixed prototype에 보이는 색상, 폰트 크기, spacing, radius, shadow, icon geometry는 completion escape hatch로 임의 divergence 처리하지 않는다.
+- fixed prototype에 직접 없는 loading/skeleton/empty/error/unauthorized/not-found/submitting 상태는 `prototype-derived design`으로 분류하고 `wave1-derived-state-ui-prep` 기준에서 벗어나지 않는다.
 - 기존 API 응답의 공식 필드(`columns`, `meals[].status`, `meals[].is_leftover`, `meals[].leftover_dish_id`, `meals[].recipe_title`)만 소비한다.
 - `meals.status` 전이는 `registered -> shopping_done -> cook_done`을 보존한다. 직접 mutation하지 않는다.
 - 끼니 컬럼 CRUD는 `planner-column-customization`에서 완료. 이 슬라이스는 `GET /planner/columns` 결과를 그대로 소비한다.
@@ -200,10 +215,29 @@ PLANNER_WEEK, 식사추가 옵션 모달(MENU_ADD), 직접등록(MANUAL_CREATE),
 8. MEAL_SCREEN에서 삭제 아이콘으로 불필요한 식사를 제거한다.
 9. `장보기` 버튼으로 장보기 흐름으로 진입한다.
 
+## Phase4 Re-Audit Prep Contract
+
+다음 evidence는 Phase5 merge 전에 current branch 기준으로 다시 잠근다.
+
+- Current service screenshots: PLANNER_WEEK default/narrow/navigation, MENU_ADD sheet default/narrow, recipe search/recipebook/pantry/planned servings picker states, MANUAL_CREATE default/narrow/ingredient modal, MEAL_SCREEN default/narrow/recipe-click state.
+- Fixed reference mapping: 각 current screenshot이 `ui/designs/reference/wave1-fixed-prototype/manifest.json`의 어떤 surface/state/viewport와 비교되는지 표로 기록한다.
+- Prototype-vs-service diff table: color, font, spacing, radius, shadow, layout/geometry, icon/asset, copy/hierarchy, MVP-governed behavior differences를 분리한다.
+- Contract verification: `GET /planner`, `POST /meals`, `POST /recipes`, `GET /recipe-books`, `GET /recipes/pantry-match`, meal recipe navigation, servings/delete behavior를 targeted tests로 잠근다.
+- Derived state scope: loading/skeleton/empty/error/unauthorized/submitting은 fixed pixel parity가 아니라 `prototype-derived design`으로 기록한다.
+- Phase5 entry condition: blocker 0을 주장하기 전에 PR body에 reference screenshot, service screenshot, screenshot comparison, computed-style audit, DOM geometry audit, remaining-difference ledger를 연결할 수 있어야 한다.
+
+Prep artifact:
+
+- `ui/designs/evidence/wave1-port-planner-meal-add/phase4-prep.md` — current service screenshots, fixed reference mapping, diff table, audit plan, MVP regression lock, PR-ready evidence checklist
+- `ui/designs/evidence/wave1-port-planner-meal-add/phase5-visual-audit.md` — screenshot comparison, computed-style audit, DOM geometry audit, remaining-difference ledger
+- `ui/designs/evidence/wave1-port-planner-meal-add/visual-verdict.json` — blocker 0, unclassified visual differences 0
+- `ui/designs/evidence/wave1-port-planner-meal-add/claude-final-authority-gate.md` — Claude final gate PASS, blocker 0
+
 ## Delivery Checklist
 
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.
 > Stage 2는 N/A (UI-only slice). Stage 4~6에서 프론트/QA/디자인/closeout 항목을 닫는다.
+> Historical closeout 체크 상태는 보존한다. 2026-05-13 re-audit에서는 위 `Phase4 Re-Audit Prep Contract`를 먼저 충족한 뒤 새 evidence로 Phase5를 닫는다.
 
 - [x] PLANNER_WEEK 끼니 컬럼 이모티콘 제거 <!-- omo:id=planner-emoji-removal;stage=4;scope=frontend;review=5,6 -->
 - [x] PLANNER_WEEK recipe status badge 시각적 제거 <!-- omo:id=planner-badge-removal;stage=4;scope=frontend;review=5,6 -->
