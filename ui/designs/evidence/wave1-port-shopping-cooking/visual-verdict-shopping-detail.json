@@ -1,0 +1,38 @@
+{
+  "scope": "wave1-mobile-phase4-shopping-detail",
+  "captured_at": "2026-05-12T09:36:00+09:00",
+  "reference_images": [
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-shopping-detail.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-shopping-detail.png"
+  ],
+  "generated_screenshots": [
+    "ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-default.png",
+    "ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-narrow.png",
+    "ui/designs/evidence/wave1-port-shopping-cooking/shopping-detail-readonly.png"
+  ],
+  "score": 92,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "Purchase rows retain faint up/down reorder controls on the left edge; the fixed prototype has no visible reorder control.",
+    "The mobile action buttons and share icon are close to the prototype but not pixel-identical in glyph shape and width.",
+    "Read-only completed detail uses MVP copy for the immutable-state notice because completed-list behavior remains MVP-governed."
+  ],
+  "classified_differences": [
+    {
+      "difference": "Visible reorder controls on purchase rows",
+      "classification": "functional-contract-required",
+      "reason": "Slice 11 reorder behavior is an existing MVP mobile interaction and is covered by E2E tests."
+    },
+    {
+      "difference": "Completed-list notice copy",
+      "classification": "functional-contract-required",
+      "reason": "Read-only completed shopping semantics and user feedback remain MVP-governed per the responsibility matrix."
+    }
+  ],
+  "suggestions": [
+    "If product approves hiding mobile reorder controls, remove the faint arrow overlay and update Slice 11 expectations.",
+    "During the pantry-reflect picker batch, keep the shopping detail shell untouched and port only the popup/sheet component."
+  ],
+  "reasoning": "The primary mobile shell, summary band, grouped item cards, CTA, and bottom tab match the fixed shopping-detail reference closely. Remaining differences are classified as MVP functional preservation rather than unclassified visual drift."
+}
