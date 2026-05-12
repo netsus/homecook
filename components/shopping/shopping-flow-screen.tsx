@@ -463,7 +463,11 @@ export function ShoppingFlowScreen({
   );
 
   const handleReviewExclude = useCallback(
-    async (itemId: string, currentExcluded: boolean) => {
+    async (
+      itemId: string,
+      currentExcluded: boolean,
+      currentChecked: boolean,
+    ) => {
       if (!reviewDetail || reviewDetail.is_completed) {
         return;
       }
@@ -510,7 +514,7 @@ export function ShoppingFlowScreen({
                   item.id === itemId
                     ? {
                         ...item,
-                        is_checked: currentExcluded ? false : item.is_checked,
+                        is_checked: currentChecked,
                         is_pantry_excluded: currentExcluded,
                       }
                     : item,
@@ -989,7 +993,11 @@ function MobileReviewScreen({
   onComplete: () => void;
   onShare: () => void;
   onToggleCheck: (itemId: string, currentChecked: boolean) => void;
-  onToggleExclude: (itemId: string, currentExcluded: boolean) => void;
+  onToggleExclude: (
+    itemId: string,
+    currentExcluded: boolean,
+    currentChecked: boolean,
+  ) => void;
   toast: string | null;
   updatingItemId: string | null;
 }) {
@@ -1098,7 +1106,11 @@ function MobileReviewItem({
   isUpdating: boolean;
   item: ShoppingListItemSummary;
   onToggleCheck: (itemId: string, currentChecked: boolean) => void;
-  onToggleExclude: (itemId: string, currentExcluded: boolean) => void;
+  onToggleExclude: (
+    itemId: string,
+    currentExcluded: boolean,
+    currentChecked: boolean,
+  ) => void;
 }) {
   const label = item.display_text.replace(/\s+\d+.*$/, "");
 
@@ -1139,7 +1151,9 @@ function MobileReviewItem({
         aria-label={`${item.display_text} 이미있음`}
         className="flex h-[30px] shrink-0 items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-3 text-[11px] font-extrabold text-[#495057] disabled:opacity-50"
         disabled={isUpdating}
-        onClick={() => onToggleExclude(item.id, item.is_pantry_excluded)}
+        onClick={() =>
+          onToggleExclude(item.id, item.is_pantry_excluded, item.is_checked)
+        }
         type="button"
       >
         이미있음
