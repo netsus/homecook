@@ -6,15 +6,17 @@
     "ui/designs/reference/wave1-fixed-prototype/mobile-320-pantry-reflect-picker.png"
   ],
   "generated_screenshots": [
-    "ui/designs/evidence/wave1-port-shopping-cooking/shopping-complete-pantry.png"
+    "ui/designs/evidence/wave1-port-shopping-cooking/shopping-complete-pantry.png",
+    "ui/designs/evidence/wave1-port-shopping-cooking/shopping-complete-pantry-narrow.png"
   ],
-  "score": 91,
+  "score": 92,
   "verdict": "pass",
   "category_match": true,
   "differences": [
     "The bottom sheet title, description, row, divider, checkbox, and two-button footer now match the Wave1 picker structure.",
     "The backdrop page remains the in-progress shopping detail state in MVP, while the fixed prototype reference shows the completed/read-only shopping state behind the sheet.",
-    "The sheet top edge is a few pixels lower in the generated 390px capture because the MVP completion flow opens the picker before the complete API call resolves."
+    "The sheet top edge is a few pixels lower in the generated 390px capture because the MVP completion flow opens the picker before the complete API call resolves.",
+    "The 320px generated capture keeps the title, copy, checklist row, and footer buttons visible without clipping."
   ],
   "classified_differences": [
     {
@@ -27,5 +29,5 @@
     "Keep the picker API semantics unchanged: all selected maps to null/default policy, none maps to [], subset maps to selected IDs.",
     "If product later allows a two-step optimistic completion UI, refreeze the prototype/MVP flow together before changing the backdrop state."
   ],
-  "reasoning": "The mobile picker sheet itself is visually aligned with the fixed Wave1 reference. The remaining backdrop mismatch is classified as functional-contract-required because the production API needs the selection before completion."
+  "reasoning": "The mobile picker sheet itself is visually aligned with the fixed Wave1 reference at 390px and 320px. The remaining backdrop mismatch is classified as functional-contract-required because the production API needs the selection before completion."
 }
