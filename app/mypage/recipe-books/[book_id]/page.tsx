@@ -36,7 +36,11 @@ export default async function RecipeBookDetailPage({
       : "레시피북";
 
   return (
-    <AppShell currentTab="mypage" headerMode="hidden">
+    <AppShell
+      className="wave1-mypage-shell"
+      currentTab="mypage"
+      headerMode="hidden"
+    >
       <RecipeBookDetailScreen
         bookId={bookId}
         bookName={bookName}

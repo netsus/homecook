@@ -168,7 +168,7 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await expect(
       page.getByTestId("recipebook-detail-header"),
     ).toBeVisible();
-    await expect(page.getByText("저장한 레시피")).toBeVisible();
+    await expect(page.getByText("저장한 레시피").first()).toBeVisible();
 
     await expect(page.getByText("된장찌개")).toBeVisible();
     await expect(page.getByText("김치볶음밥")).toBeVisible();
@@ -194,7 +194,7 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await page.getByRole("button", { name: "완료" }).click();
 
     await expect(page.getByText("레시피북 이름을 변경했어요")).toBeVisible();
-    await expect(page.getByText("주말 모임")).toBeVisible();
+    await expect(page.getByText("주말 모임").first()).toBeVisible();
   });
 
   test("deletes a custom book from the book-level menu", async ({ page }) => {
@@ -390,7 +390,7 @@ test.describe("RECIPEBOOK_DETAIL screen", () => {
     await installDetailRoutes(page);
     await page.goto(detailUrl("saved", "저장한 레시피"));
 
-    await expect(page.getByText("저장한 레시피")).toBeVisible();
+    await expect(page.getByText("저장한 레시피").first()).toBeVisible();
 
     const backLink = page.getByLabel("뒤로 가기");
     await expect(backLink).toHaveAttribute("href", "/mypage");
