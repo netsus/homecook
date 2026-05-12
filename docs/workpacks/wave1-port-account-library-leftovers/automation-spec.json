@@ -15,7 +15,7 @@
     ],
     "verify_commands": [],
     "required_test_targets": [],
-    "stage2_na_reason": "UI-only slice. Existing 16-leftovers, 17a-mypage-overview-history, 17b-recipebook-detail-remove, 17c-settings-account, and planner-column-customization contracts already provide the needed APIs for MYPAGE, SETTINGS, LEFTOVERS, ATE_LIST, and RECIPEBOOK_DETAIL polish. New leftover meta fields, uneat policy removal, system recipebook rename/delete, or account policy changes must be split into contract-evolution."
+    "stage2_na_reason": "UI-only Phase4/5 refresh. Current official v1.2.4 API contracts provide LEFTOVERS metadata (source_meal_label, source_planned_servings, cooking_servings) and RECIPEBOOK_DETAIL metadata (view_count, total_duration_text, base_servings), while existing 17a/17b/17c and planner-column-customization contracts provide the needed MYPAGE, SETTINGS, ACCOUNT, ATE_LIST, and recipebook actions. Metadata beyond the current official fields, uneat policy removal, system recipebook rename/delete, or account policy changes must be split into contract-evolution."
   },
 
   "frontend": {
@@ -74,6 +74,7 @@
       "required_screens": [
         "MYPAGE",
         "SETTINGS",
+        "ACCOUNT",
         "LEFTOVERS",
         "ATE_LIST"
       ],
@@ -90,6 +91,8 @@
         "mypage-narrow",
         "settings-default",
         "settings-narrow",
+        "account-default",
+        "account-narrow",
         "leftovers-default",
         "leftovers-narrow",
         "ate-list-default",
@@ -106,6 +109,8 @@
         "ui/designs/evidence/wave1-port-account-library-leftovers/mypage-narrow.png",
         "ui/designs/evidence/wave1-port-account-library-leftovers/settings-default.png",
         "ui/designs/evidence/wave1-port-account-library-leftovers/settings-narrow.png",
+        "ui/designs/evidence/wave1-port-account-library-leftovers/account-default.png",
+        "ui/designs/evidence/wave1-port-account-library-leftovers/account-narrow.png",
         "ui/designs/evidence/wave1-port-account-library-leftovers/leftovers-default.png",
         "ui/designs/evidence/wave1-port-account-library-leftovers/leftovers-narrow.png",
         "ui/designs/evidence/wave1-port-account-library-leftovers/ate-list-default.png",
@@ -118,7 +123,7 @@
 
   "external_smokes": [],
   "blocked_conditions": [
-    "Stage 4 requires undocumented LEFTOVERS meta such as meal column name or servings.",
+    "Stage 4 requires undocumented LEFTOVERS meta beyond source_meal_label, source_planned_servings, or cooking_servings.",
     "Stage 4 removes the uneat API or officially documented ATE_LIST recovery flow.",
     "Stage 4 allows rename/delete for system recipe books.",
     "Stage 4 changes logout/delete-account or planner column management policy."

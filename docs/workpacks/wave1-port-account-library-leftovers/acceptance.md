@@ -28,7 +28,7 @@
 - [x] LEFTOVERS 화면에서 남은요리 목록이 기존 `GET /leftovers` 계약으로 표시된다 <!-- omo:id=accept-leftovers-list;stage=4;scope=frontend;review=5,6 -->
 - [x] 남은요리 카드의 `다먹음` / `플래너에 추가` action이 320px에서 잘리지 않는다 <!-- omo:id=accept-leftovers-buttons-fit;stage=4;scope=frontend;review=5,6 -->
 - [x] `플래너에 추가`는 기존 `POST /meals` + `leftover_dish_id` 경로를 유지한다 <!-- omo:id=accept-leftovers-planner-add-contract;stage=4;scope=frontend;review=5,6 -->
-- [x] leftover meta는 현재 공식 응답에서 가능한 정보만 표시하고 문서에 없는 끼니명/인분 필드를 요구하지 않는다 <!-- omo:id=accept-leftovers-meta-contract;stage=4;scope=frontend;review=5,6 -->
+- [x] leftover meta는 현재 공식 응답의 `source_meal_label`, `source_planned_servings`, `cooking_servings` 범위 안에서만 표시하고 문서에 없는 추가 필드를 요구하지 않는다 <!-- omo:id=accept-leftovers-meta-contract;stage=4;scope=frontend;review=5,6 -->
 - [x] 다먹음 처리 성공/실패 피드백은 기존 멱등 API 결과와 일치한다 <!-- omo:id=accept-leftovers-eat-feedback;stage=4;scope=frontend;review=5,6 -->
 
 ### ATE_LIST
@@ -76,6 +76,7 @@
 
 - [x] MYPAGE 390px + 320px screenshot evidence가 생성된다 <!-- omo:id=accept-evidence-mypage;stage=4;scope=frontend;review=5,6 -->
 - [x] SETTINGS 390px + 320px screenshot evidence가 생성된다 <!-- omo:id=accept-evidence-settings;stage=4;scope=frontend;review=5,6 -->
+- [x] ACCOUNT 390px + 320px screenshot evidence가 생성된다 <!-- omo:id=accept-evidence-account;stage=4;scope=frontend;review=5,6 -->
 - [x] LEFTOVERS 390px + 320px screenshot evidence가 생성된다 <!-- omo:id=accept-evidence-leftovers;stage=4;scope=frontend;review=5,6 -->
 - [x] ATE_LIST 390px + 320px screenshot evidence가 생성된다 <!-- omo:id=accept-evidence-ate-list;stage=4;scope=frontend;review=5,6 -->
 - [x] RECIPEBOOK_DETAIL을 실제로 건드린 경우 390px + 320px screenshot evidence가 생성된다 <!-- omo:id=accept-evidence-recipebook-detail;stage=4;scope=frontend;review=5,6 -->

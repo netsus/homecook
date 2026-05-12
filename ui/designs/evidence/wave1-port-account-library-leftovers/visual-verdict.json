@@ -1,0 +1,16 @@
+{
+  "score": 94,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "MYPAGE, SETTINGS, ACCOUNT, LEFTOVERS, ATE_LIST, and RECIPEBOOK_DETAIL 390px and 320px service captures match the fixed reference for app bars, card rhythm, action geometry, metadata hierarchy, and bottom tab placement.",
+    "Content values differ from prototype literals because service evidence uses official MVP fixture data for profile, leftover metadata, recipebook metadata, shopping counts, and account settings.",
+    "Derived states such as destructive confirms, rename sheets, empty, loading, error, and unauthorized states are behavior-verified outside the default fixed-reference capture set."
+  ],
+  "suggestions": [
+    "Keep current UI implementation unchanged for Phase5 unless current-head CI screenshots reveal new layout drift.",
+    "Preserve official v1.2.4 leftover metadata fields and recipebook detail metadata fields; do not add undocumented UI-only fields.",
+    "Keep ACCOUNT evidence in the Slice F bundle because account is an exact-reference-ready surface adjacent to SETTINGS."
+  ],
+  "reasoning": "Slice F current service captures match the fixed Wave1 mobile references across account, library, settings, leftovers, eaten list, and recipebook detail surfaces. Remaining differences are classified as MVP functional-contract preservation, browser rendering limits, or prototype-derived supplemental states, with visual blockers 0 and unclassified visual differences 0."
+}
