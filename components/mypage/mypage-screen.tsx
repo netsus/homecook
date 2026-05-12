@@ -12,7 +12,12 @@ import {
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import {
+  MypageMobileScreen,
+  type MypageMobileSurface,
+} from "@/components/mypage/mypage-mobile-screen";
 import { ContentState } from "@/components/shared/content-state";
+import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
@@ -61,6 +66,8 @@ export function MypageScreen({
   );
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [activeTab, setActiveTab] = useState<MypageTab>("recipebook");
+  const [mobileSurface, setMobileSurface] = useState<MypageMobileSurface>("home");
+  const isMobileViewport = useIsMobileViewport();
 
   // Profile
   const [profile, setProfile] = useState<UserProfileData | null>(null);
@@ -426,6 +433,85 @@ export function MypageScreen({
           다시 시도
         </button>
       </div>
+    );
+  }
+
+  if (isMobileViewport) {
+    return (
+      <>
+        <MypageMobileScreen
+          books={books}
+          createInputRef={createInputRef}
+          createName={createName}
+          customBooks={customBooks}
+          deleteTarget={deleteTarget}
+          isCreating={isCreating}
+          isDeleting={isDeleting}
+          isLoadingMore={isLoadingMore}
+          isRenaming={isRenaming}
+          menuOpenBookId={menuOpenBookId}
+          menuRef={menuRef}
+          profile={profile}
+          renameInputRef={renameInputRef}
+          renameValue={renameValue}
+          renamingBookId={renamingBookId}
+          scrollSentinelRef={scrollSentinelRef}
+          shoppingHasNext={shoppingHasNext}
+          shoppingItems={shoppingItems}
+          shoppingLoaded={shoppingLoaded}
+          showCreateInput={showCreateInput}
+          surface={mobileSurface}
+          systemBooks={systemBooks}
+          onCancelCreate={() => {
+            setShowCreateInput(false);
+            setCreateName("");
+          }}
+          onCancelRename={() => {
+            setRenamingBookId(null);
+            setRenameValue("");
+          }}
+          onCloseDeleteDialog={() => setDeleteTarget(null)}
+          onConfirmDelete={handleDeleteBook}
+          onConfirmRename={handleRenameBook}
+          onCreateBook={handleCreateBook}
+          onCreateNameChange={setCreateName}
+          onMenuClose={() => setMenuOpenBookId(null)}
+          onMenuOpen={(id) => setMenuOpenBookId(id)}
+          onRenameStart={(book) => {
+            setRenamingBookId(book.id);
+            setRenameValue(book.name);
+            setMenuOpenBookId(null);
+          }}
+          onRenameValueChange={setRenameValue}
+          onRequestDelete={(book) => {
+            setDeleteTarget(book);
+            setMenuOpenBookId(null);
+          }}
+          onShowCreateInput={() => setShowCreateInput(true)}
+          onSurfaceChange={(surface) => {
+            setMobileSurface(surface);
+            if (surface === "shopping") {
+              setActiveTab("shopping");
+            }
+            if (surface === "recipebook") {
+              setActiveTab("recipebook");
+            }
+          }}
+        />
+
+        {toast ? (
+          <div
+            className={`fixed inset-x-4 bottom-24 z-50 mx-auto max-w-md rounded-xl px-4 py-3 text-center text-sm font-bold shadow-lg ${
+              toast.tone === "success"
+                ? "bg-[#20A8A4] text-white"
+                : "bg-[#FF6B6B] text-white"
+            }`}
+            role="status"
+          >
+            {toast.message}
+          </div>
+        ) : null}
+      </>
     );
   }
 

@@ -1,0 +1,57 @@
+{
+  "slice": "wave1-port-mypage-core",
+  "fixed_prototype_sha": "9bf7a34c6b422d0c9981d4c2968e3350d5a28892",
+  "reference_images": [
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-mypage.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-mypage.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-mypage-recipebook-tab.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-mypage-recipebook-tab.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-mypage-shopping-lists-tab.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-mypage-shopping-lists-tab.png"
+  ],
+  "service_screenshots": [
+    "ui/designs/evidence/wave1-port-mypage-core/mypage-default.png",
+    "ui/designs/evidence/wave1-port-mypage-core/mypage-narrow.png",
+    "ui/designs/evidence/wave1-port-mypage-core/mypage-recipebook-tab.png",
+    "ui/designs/evidence/wave1-port-mypage-core/mypage-recipebook-tab-narrow.png",
+    "ui/designs/evidence/wave1-port-mypage-core/mypage-shopping-lists-tab.png",
+    "ui/designs/evidence/wave1-port-mypage-core/mypage-shopping-lists-tab-narrow.png"
+  ],
+  "screenshot_diff": {
+    "method": "side-by-side fixed reference PNG versus MVP screenshot review",
+    "status": "pass",
+    "unclassified_visual_differences": 0
+  },
+  "computed_style_audit": {
+    "status": "pass",
+    "checks": [
+      "background colors",
+      "text colors",
+      "font sizes",
+      "font weight",
+      "line height",
+      "spacing",
+      "radius",
+      "border",
+      "shadow",
+      "opacity"
+    ]
+  },
+  "dom_geometry_audit": {
+    "status": "pass",
+    "checks": [
+      "52px mobile app bar",
+      "profile hero and stat card placement",
+      "menu card and row density",
+      "recipebook card stack",
+      "shopping-history card stack",
+      "fixed bottom tab placement"
+    ]
+  },
+  "blocker_count": 0,
+  "unclassified_visual_differences": 0,
+  "classified_followups": [
+    "Completed shopping-list relative completion text needs a future contract field before exact data copy can be rendered.",
+    "Shared bottom-tab pantry icon shape belongs to shared navigation, not this MYPAGE-only scope."
+  ]
+}

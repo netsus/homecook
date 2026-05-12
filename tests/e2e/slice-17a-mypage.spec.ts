@@ -162,6 +162,27 @@ async function installMypageRoutes(
   });
 }
 
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1024) < 768;
+}
+
+async function openRecipebookSurface(page: Page) {
+  if (!isMobileViewport(page)) return;
+
+  await page.getByRole("button", { name: /레시피북/ }).click();
+  await expect(page.getByRole("heading", { name: "레시피북" })).toBeVisible();
+}
+
+async function openShoppingSurface(page: Page) {
+  if (isMobileViewport(page)) {
+    await page.getByRole("button", { name: /장보기 기록/ }).click();
+    await expect(page.getByRole("heading", { name: "장보기 기록" })).toBeVisible();
+    return;
+  }
+
+  await page.getByRole("tab", { name: "장보기 기록" }).click();
+}
+
 test.describe("MYPAGE screen", () => {
   test("shows profile and recipe books when authenticated", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
@@ -170,13 +191,18 @@ test.describe("MYPAGE screen", () => {
 
     await expect(page.getByTestId("mypage-profile")).toBeVisible();
     await expect(page.getByText("집밥러")).toBeVisible();
-    await expect(page.getByText("카카오 로그인")).toBeVisible();
+    if (isMobileViewport(page)) {
+      await expect(page.getByText("집밥 러너 · 레벨 5")).toBeVisible();
+    } else {
+      await expect(page.getByText("카카오 로그인")).toBeVisible();
+    }
     await expect(page.getByLabel("설정")).toHaveCount(0);
     await expect(page.getByTestId("mypage-settings-link")).toHaveAttribute(
       "href",
       "/settings",
     );
 
+    await openRecipebookSurface(page);
     await expect(page.getByText("내가 추가한 레시피")).toBeVisible();
     await expect(page.getByText("저장한 레시피")).toBeVisible();
     await expect(page.getByText("좋아요한 레시피")).toBeVisible();
@@ -197,7 +223,7 @@ test.describe("MYPAGE screen", () => {
     await page.goto("/mypage");
 
     await expect(page.getByText("집밥러")).toBeVisible();
-    await page.getByRole("tab", { name: "장보기 기록" }).click();
+    await openShoppingSurface(page);
 
     await expect(page.getByText("4/30 장보기")).toBeVisible();
     await expect(page.getByText("4/23 장보기")).toBeVisible();
@@ -211,7 +237,7 @@ test.describe("MYPAGE screen", () => {
     await page.goto("/mypage");
 
     await expect(page.getByText("집밥러")).toBeVisible();
-    await page.getByRole("tab", { name: "장보기 기록" }).click();
+    await openShoppingSurface(page);
 
     const card = page.getByTestId("shopping-card-list-1");
     await expect(card).toBeVisible();
@@ -224,9 +250,15 @@ test.describe("MYPAGE screen", () => {
     await page.goto("/mypage");
 
     await expect(page.getByText("집밥러")).toBeVisible();
-    await page.getByRole("tab", { name: "장보기 기록" }).click();
+    await openShoppingSurface(page);
 
-    await expect(page.getByText("저장된 장보기 기록이 없어요")).toBeVisible();
+    await expect(
+      page.getByText(
+        isMobileViewport(page)
+          ? "아직 장보기 기록이 없어요"
+          : "저장된 장보기 기록이 없어요",
+      ),
+    ).toBeVisible();
     await expect(page.getByText("플래너로 이동")).toBeVisible();
   });
 
@@ -236,6 +268,7 @@ test.describe("MYPAGE screen", () => {
     await page.goto("/mypage");
 
     await expect(page.getByText("집밥러")).toBeVisible();
+    await openRecipebookSurface(page);
     await page.getByLabel("새 레시피북 만들기").click();
     await page.getByPlaceholder("레시피북 이름").fill("주말 브런치");
     await page.getByRole("button", { name: /완료/ }).click();
@@ -248,6 +281,7 @@ test.describe("MYPAGE screen", () => {
     await installMypageRoutes(page);
     await page.goto("/mypage");
 
+    await openRecipebookSurface(page);
     await expect(page.getByText("주말 파티")).toBeVisible();
     await page.getByLabel("주말 파티 옵션 메뉴").click();
     await page.getByRole("menuitem", { name: "이름 변경" }).click();
@@ -265,6 +299,7 @@ test.describe("MYPAGE screen", () => {
     await installMypageRoutes(page);
     await page.goto("/mypage");
 
+    await openRecipebookSurface(page);
     await expect(page.getByText("주말 파티")).toBeVisible();
     await page.getByLabel("주말 파티 옵션 메뉴").click();
     await page.getByRole("menuitem", { name: "삭제" }).click();
@@ -293,9 +328,15 @@ test.describe("MYPAGE screen", () => {
     await page.goto("/mypage");
 
     await expect(page.getByText("집밥러")).toBeVisible();
-    await expect(page.getByRole("tablist")).toBeVisible();
-    await expect(page.getByRole("tab", { name: "레시피북" })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("tab", { name: "장보기 기록" })).toHaveAttribute("aria-selected", "false");
+    if (isMobileViewport(page)) {
+      await expect(page.getByTestId("mypage-menu-card")).toBeVisible();
+      await expect(page.getByRole("button", { name: /레시피북/ })).toBeVisible();
+      await expect(page.getByRole("button", { name: /장보기 기록/ })).toBeVisible();
+    } else {
+      await expect(page.getByRole("tablist")).toBeVisible();
+      await expect(page.getByRole("tab", { name: "레시피북" })).toHaveAttribute("aria-selected", "true");
+      await expect(page.getByRole("tab", { name: "장보기 기록" })).toHaveAttribute("aria-selected", "false");
+    }
   });
 
   test("no content overlaps bottom nav at scrollY=0", async ({ page }) => {
