@@ -98,6 +98,17 @@ const SURFACES = [
     mobile: { route: { tab: "home", page: "login" } },
   },
   {
+    id: "login-gate-modal",
+    surface: "GLOBAL::LoginGateModal",
+    mobile: {
+      route: { tab: "home" },
+      modal: "login-gate",
+      interact: async (page) => {
+        await waitForText(page, "로그인이 필요해요");
+      },
+    },
+  },
+  {
     id: "ate-list",
     surface: "ATE_LIST",
     mobile: {
@@ -672,14 +683,17 @@ async function capture({ browser, baseUrl, viewportId, surface }) {
   try {
     await page.emulateMedia({ reducedMotion: "reduce" });
 
-    const url =
-      viewport.isMobile && definition.tab
-        ? `${baseUrl}/index.html?screen=${definition.tab}`
-        : viewport.isMobile
-          ? `${baseUrl}/index.html?phone=1`
-          : `${baseUrl}/index.html`;
+    const url = new URL("/index.html", baseUrl);
+    if (viewport.isMobile && definition.tab) {
+      url.searchParams.set("screen", definition.tab);
+    } else if (viewport.isMobile) {
+      url.searchParams.set("phone", "1");
+    }
+    if (definition.modal) {
+      url.searchParams.set("modal", definition.modal);
+    }
 
-    await page.goto(url, { waitUntil: "networkidle", timeout: 60000 });
+    await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 60000 });
     await waitForPrototypeReady(page);
     await installStableCaptureCss(page);
     await page.evaluate(() => window.scrollTo(0, 0));

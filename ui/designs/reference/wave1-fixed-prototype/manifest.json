@@ -157,6 +157,16 @@
       "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-login.png"
     },
     {
+      "surface": "GLOBAL::LoginGateModal",
+      "viewport": "mobile-390",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-login-gate-modal.png"
+    },
+    {
+      "surface": "GLOBAL::LoginGateModal",
+      "viewport": "mobile-320",
+      "path": "ui/designs/reference/wave1-fixed-prototype/mobile-320-login-gate-modal.png"
+    },
+    {
       "surface": "ATE_LIST",
       "viewport": "mobile-390",
       "path": "ui/designs/reference/wave1-fixed-prototype/mobile-390-ate-list.png"
