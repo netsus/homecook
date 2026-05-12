@@ -83,6 +83,9 @@ const leftoverItems = [
     status: "leftover",
     cooked_at: "2026-04-28T10:00:00.000Z",
     eaten_at: null,
+    cooking_servings: 2,
+    source_meal_label: "저녁",
+    source_planned_servings: 2,
   },
   {
     id: "ld-2",
@@ -92,6 +95,9 @@ const leftoverItems = [
     status: "leftover",
     cooked_at: "2026-04-27T10:00:00.000Z",
     eaten_at: null,
+    cooking_servings: 1,
+    source_meal_label: "점심",
+    source_planned_servings: 1,
   },
 ];
 
@@ -104,6 +110,9 @@ const eatenItems = [
     status: "eaten",
     cooked_at: "2026-04-26T10:00:00.000Z",
     eaten_at: "2026-04-28T12:00:00.000Z",
+    cooking_servings: 2,
+    source_meal_label: "저녁",
+    source_planned_servings: 2,
   },
 ];
 
@@ -113,6 +122,10 @@ const bookRecipes = [
     title: "된장찌개",
     thumbnail_url: null,
     tags: ["한식", "찌개"],
+    view_count: 128,
+    total_duration_seconds: 2100,
+    total_duration_text: "35분",
+    base_servings: 2,
     added_at: "2026-04-30T09:00:00.000Z",
   },
   {
@@ -120,6 +133,10 @@ const bookRecipes = [
     title: "김치볶음밥",
     thumbnail_url: null,
     tags: ["한식"],
+    view_count: 87,
+    total_duration_seconds: 1200,
+    total_duration_text: "20분",
+    base_servings: 1,
     added_at: "2026-04-29T09:00:00.000Z",
   },
 ];
@@ -129,7 +146,7 @@ async function preparePage(
   viewport: { width: number; height: number },
 ) {
   const context = await browser.newContext({
-    deviceScaleFactor: 2,
+    deviceScaleFactor: 1,
     viewport,
   });
   const page = await context.newPage();
@@ -260,7 +277,8 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     "/mypage",
     async (page) => {
       await expect(page.getByTestId("mypage-settings-link")).toBeVisible();
-      await expect(page.getByText("주말 파티")).toBeVisible();
+      await expect(page.getByText("남은요리")).toBeVisible();
+      await expect(page.getByText("다먹은 요리")).toBeVisible();
     },
     "mypage-default.png",
   );
@@ -271,7 +289,8 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     "/mypage",
     async (page) => {
       await expect(page.getByTestId("mypage-settings-link")).toBeVisible();
-      await expect(page.getByText("주말 파티")).toBeVisible();
+      await expect(page.getByText("남은요리")).toBeVisible();
+      await expect(page.getByText("다먹은 요리")).toBeVisible();
     },
     "mypage-narrow.png",
   );
@@ -282,7 +301,8 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     "/settings",
     async (page) => {
       await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
-      await expect(page.getByText("회원탈퇴")).toBeVisible();
+      await expect(page.getByText("요리 모드")).toBeVisible();
+      await expect(page.getByText("플래너 끼니 컬럼")).toBeVisible();
     },
     "settings-default.png",
   );
@@ -293,7 +313,8 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     "/settings",
     async (page) => {
       await expect(page.getByRole("heading", { name: "설정" })).toBeVisible();
-      await expect(page.getByText("회원탈퇴")).toBeVisible();
+      await expect(page.getByText("요리 모드")).toBeVisible();
+      await expect(page.getByText("플래너 끼니 컬럼")).toBeVisible();
     },
     "settings-narrow.png",
   );
@@ -301,10 +322,35 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
   await capture(
     browser,
     viewports.mobile,
+    "/settings?view=account",
+    async (page) => {
+      await expect(page.getByRole("heading", { name: "계정 정보" })).toBeVisible();
+      await expect(page.getByTestId("nickname-row")).toBeVisible();
+      await expect(page.getByRole("button", { name: "회원탈퇴" })).toBeVisible();
+    },
+    "account-default.png",
+  );
+
+  await capture(
+    browser,
+    viewports.narrow,
+    "/settings?view=account",
+    async (page) => {
+      await expect(page.getByRole("heading", { name: "계정 정보" })).toBeVisible();
+      await expect(page.getByTestId("nickname-row")).toBeVisible();
+      await expect(page.getByRole("button", { name: "회원탈퇴" })).toBeVisible();
+    },
+    "account-narrow.png",
+  );
+
+  await capture(
+    browser,
+    viewports.mobile,
     "/leftovers",
     async (page) => {
-      await expect(page.getByRole("button", { name: "다 먹었어요" }).first()).toBeVisible();
-      await expect(page.getByRole("button", { name: "식단에 추가" }).first()).toBeVisible();
+      await expect(page.getByTestId("leftover-card").first()).toBeVisible();
+      await expect(page.getByTestId("planner-add-button").first()).toBeVisible();
+      await expect(page.getByTestId("eat-button").first()).toBeVisible();
     },
     "leftovers-default.png",
   );
@@ -314,8 +360,9 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     viewports.narrow,
     "/leftovers",
     async (page) => {
-      await expect(page.getByRole("button", { name: "다 먹었어요" }).first()).toBeVisible();
-      await expect(page.getByRole("button", { name: "식단에 추가" }).first()).toBeVisible();
+      await expect(page.getByTestId("leftover-card").first()).toBeVisible();
+      await expect(page.getByTestId("planner-add-button").first()).toBeVisible();
+      await expect(page.getByTestId("eat-button").first()).toBeVisible();
     },
     "leftovers-narrow.png",
   );
@@ -326,7 +373,8 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     "/leftovers/ate",
     async (page) => {
       await expect(page.getByRole("button", { name: "남은요리로 복귀" })).toBeVisible();
-      await expect(page.getByText("4월 28일")).toBeVisible();
+      await expect(page.getByTestId("ate-list-card").first()).toBeVisible();
+      await expect(page.getByText("볶음밥")).toBeVisible();
     },
     "ate-list-default.png",
   );
@@ -337,7 +385,8 @@ test("capture Wave1 account/library/leftovers authority evidence", async ({
     "/leftovers/ate",
     async (page) => {
       await expect(page.getByRole("button", { name: "남은요리로 복귀" })).toBeVisible();
-      await expect(page.getByText("4월 28일")).toBeVisible();
+      await expect(page.getByTestId("ate-list-card").first()).toBeVisible();
+      await expect(page.getByText("볶음밥")).toBeVisible();
     },
     "ate-list-narrow.png",
   );

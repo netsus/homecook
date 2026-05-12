@@ -1,8 +1,8 @@
 # wave1-port-account-library-leftovers
 
 > Slice F of Wave1 Service Porting Plan
-> Stage: Stage 6 frontend closeout
-> Owner: Codex fallback after Claude provider limit reset was 13:20 Asia/Seoul
+> Stage: Stage 5 fixed-reference closeout refresh
+> Owner: Codex with Claude final authority gate
 
 ## Goal
 
@@ -90,9 +90,9 @@ None.
 
 ## Backend First Contract
 
-### Stage 2: N/A by default
+### Stage 2: satisfied by current official contract
 
-이 slice는 UI-only 포팅으로 시작한다. 현재 공식 계약과 구현이 Wave1 주요 변경을 지원한다.
+이 slice는 UI-only Phase4/5 refresh로 진행한다. 2026-05-12 contract evolution 이후 현재 공식 계약과 구현이 Wave1 주요 변경을 지원한다.
 
 근거:
 
@@ -100,14 +100,14 @@ None.
 - saved recipes standalone section 제거 또는 recipebook 흡수는 `GET /recipe-books`의 system book(`saved`) 카드로 충분하다.
 - SETTINGS logout/withdrawal 텍스트 trigger와 account category cleanup은 기존 `POST /auth/logout`, `DELETE /users/me`를 그대로 호출한다.
 - SETTINGS planner column management는 이미 `GET/POST/PATCH/DELETE /planner/columns` 계약으로 완료됐다.
-- LEFTOVERS/ATE_LIST 카드/CTA clipping, copy, meta 축소는 `GET /leftovers`, eat/uneat/move-to-planner API를 유지한 UI 변경이다.
-- RECIPEBOOK_DETAIL의 custom book rename/delete menu는 기존 `PATCH/DELETE /recipe-books/{book_id}`로 가능하다.
+- LEFTOVERS/ATE_LIST 카드/CTA clipping, copy, meta 표시는 `GET /leftovers`의 `source_meal_label`, `source_planned_servings`, `cooking_servings` 계약과 eat/uneat/move-to-planner API를 유지한 UI 변경이다.
+- RECIPEBOOK_DETAIL의 custom book rename/delete menu는 기존 `PATCH/DELETE /recipe-books/{book_id}`로 가능하며, recipe card meta는 `GET /recipe-books/{book_id}/recipes`의 `view_count`, `total_duration_text`, `base_servings` 계약을 소비한다.
 
 ### Stage 2 Escalation Conditions
 
 아래 중 하나가 확인되면 Stage 4 구현 전에 contract-evolution 또는 별도 BE slice로 분리한다.
 
-- LEFTOVERS meta에 `저녁`, `2인분` 같은 정보가 필요한데 현재 `GET /leftovers` 응답과 공식 문서에 없다.
+- LEFTOVERS meta에 현재 v1.2.4의 `source_meal_label`, `source_planned_servings`, `cooking_servings`를 넘어서는 새 정보가 필요하다.
 - `덜먹음` action을 제품에서 제거하려면 공식 화면/flow 계약을 함께 바꿔야 한다.
 - RECIPEBOOK_DETAIL에서 system book rename/delete를 허용하려는 요구가 생긴다.
 - 회원 탈퇴/로그아웃 confirm 정책, 삭제 복구 정책, provider/account policy를 바꾸려 한다.
@@ -184,12 +184,17 @@ None.
   - `ui/designs/evidence/wave1-port-account-library-leftovers/mypage-narrow.png`
   - `ui/designs/evidence/wave1-port-account-library-leftovers/settings-default.png`
   - `ui/designs/evidence/wave1-port-account-library-leftovers/settings-narrow.png`
+  - `ui/designs/evidence/wave1-port-account-library-leftovers/account-default.png`
+  - `ui/designs/evidence/wave1-port-account-library-leftovers/account-narrow.png`
   - `ui/designs/evidence/wave1-port-account-library-leftovers/leftovers-default.png`
   - `ui/designs/evidence/wave1-port-account-library-leftovers/leftovers-narrow.png`
   - `ui/designs/evidence/wave1-port-account-library-leftovers/ate-list-default.png`
   - `ui/designs/evidence/wave1-port-account-library-leftovers/ate-list-narrow.png`
   - `ui/designs/evidence/wave1-port-account-library-leftovers/recipebook-detail-default.png` if touched
   - `ui/designs/evidence/wave1-port-account-library-leftovers/recipebook-detail-narrow.png` if touched
+  - `ui/designs/evidence/wave1-port-account-library-leftovers/phase4-prep.md`
+  - `ui/designs/evidence/wave1-port-account-library-leftovers/phase5-visual-audit.md`
+  - `ui/designs/evidence/wave1-port-account-library-leftovers/visual-verdict.json`
 - Authority report path:
   - `ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md`
 - Authority status: `reviewed`
@@ -211,11 +216,11 @@ None.
 ## Source Links
 
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
-- `docs/요구사항기준선-v1.6.5.md`
-- `docs/화면정의서-v1.5.2.md`
-- `docs/api문서-v1.2.3.md`
-- `docs/db설계-v1.3.2.md`
-- `docs/유저flow맵-v1.3.2.md`
+- `docs/요구사항기준선-v1.6.6.md`
+- `docs/화면정의서-v1.5.3.md`
+- `docs/api문서-v1.2.4.md`
+- `docs/db설계-v1.3.3.md`
+- `docs/유저flow맵-v1.3.3.md`
 - `docs/workpacks/wave1-service-porting-plan.md`
 - `docs/workpacks/16-leftovers/README.md`
 - `docs/workpacks/17a-mypage-overview-history/README.md`
@@ -238,7 +243,7 @@ None.
 
 | Candidate | Reason | Default in this slice |
 | --- | --- | --- |
-| LEFTOVERS meta 확장 | 현재 `GET /leftovers`는 `cooked_at`, `eaten_at`, recipe title/thumbnail 중심이다. `저녁`, `2인분`을 안정적으로 표시하려면 공식 응답 확장이 필요할 수 있다. | 현재 응답으로 가능한 날짜 중심 meta만 표시 |
+| LEFTOVERS 추가 meta 확장 | 현재 v1.2.4는 `source_meal_label`, `source_planned_servings`, `cooking_servings`까지 제공한다. 그 밖의 meal title, serving history, pantry-derived meta가 필요하면 별도 공식 계약이 필요하다. | v1.2.4 응답 범위만 표시 |
 | `덜먹음` action 제거 | 공식 API와 기존 ATE_LIST 복구 흐름이 존재한다. 제품 정책에서 제거하려면 flow/screen 계약 sync 필요. | API 유지, UI에서 보조화/label 조정 우선 |
 | SETTINGS account policy 변경 | logout/delete account confirm, 소프트 삭제, auth cleanup 정책은 보안/계정 계약이다. | 기존 동작 유지 |
 | system recipe book rename/delete | 공식 정책상 system book은 이름 변경/삭제 불가다. | custom book만 menu 제공 |
@@ -268,7 +273,7 @@ None.
 > `automation-spec.json`을 함께 쓰는 새 슬라이스에서는 각 체크박스 끝에 `<!-- omo:id=...;stage=...;scope=...;review=... -->` metadata를 유지한다.
 
 - [x] Stage 1 docs fallback completed by Codex after Claude provider limit <!-- omo:id=delivery-stage1-docs;stage=4;scope=shared;review=6 -->
-- [x] Stage 2 N/A 근거 confirmed or backend escalation separated <!-- omo:id=delivery-stage2-na;stage=2;scope=backend;review=3,6 -->
+- [x] Stage 2 current official contract coverage confirmed or backend escalation separated <!-- omo:id=delivery-stage2-na;stage=2;scope=backend;review=3,6 -->
 - [x] MYPAGE polish implemented without changing recipebook/shopping APIs <!-- omo:id=delivery-mypage-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] SETTINGS polish implemented without changing planner column/account contracts <!-- omo:id=delivery-settings-ui;stage=4;scope=frontend;review=5,6 -->
 - [x] LEFTOVERS / ATE_LIST button clipping and copy polish implemented <!-- omo:id=delivery-leftovers-ate-ui;stage=4;scope=frontend;review=5,6 -->
@@ -280,17 +285,28 @@ None.
 
 ## Stage 4/5 Evidence
 
-- Stage 4 implementation kept the slice UI-only: no API, DB, endpoint, status, dependency, or public contract changes.
-- ATE_LIST keeps the existing uneat API but relabels the recovery action to `남은요리로 복귀`; this is the chosen policy because the documented backend flow remains valid.
-- Screenshot evidence was generated for MYPAGE, SETTINGS, LEFTOVERS, ATE_LIST, and touched RECIPEBOOK_DETAIL at 390px and 320px.
-- Authority report: `ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md` — verdict `pass`, blocker 0, major 0, minor 2.
+- Phase4/5 refresh kept the slice UI-only: no API, DB, endpoint, status, dependency, or public contract changes.
+- ATE_LIST keeps the existing uneat API and uses the fixed-reference recovery action; this is the chosen policy because the documented backend flow remains valid.
+- Screenshot evidence was regenerated for MYPAGE, SETTINGS, ACCOUNT, LEFTOVERS, ATE_LIST, and RECIPEBOOK_DETAIL at 390px and 320px.
+- Phase4 prep: `ui/designs/evidence/wave1-port-account-library-leftovers/phase4-prep.md`.
+- Phase5 visual audit: `ui/designs/evidence/wave1-port-account-library-leftovers/phase5-visual-audit.md`.
+- Visual verdict: `ui/designs/evidence/wave1-port-account-library-leftovers/visual-verdict.json` — score 94, blocker 0, unclassified visual differences 0.
+- Authority report: `ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md` — verdict `pass`, blocker 0, major 0, minor 0.
+- Claude final authority gate: `ui/designs/evidence/wave1-port-account-library-leftovers/claude-final-authority-gate.md` — PASS, required changes none.
 - Exploratory QA: `.artifacts/qa/wave1-port-account-library-leftovers/2026-05-10T04-43-48-093Z/exploratory-report.json` — desktop/mobile/small viewport coverage, findings 0.
 - QA eval: `.artifacts/qa/wave1-port-account-library-leftovers/2026-05-10T04-43-48-093Z/eval-result.json` — score 98, pass.
 
-## Stage 6 Verification Evidence
+## Historical Stage 6 Verification Evidence
 
 - PR: #383 (`https://github.com/netsus/homecook/pull/383`)
 - `pnpm verify:frontend` — passed: lint, typecheck, 624 product tests, production build, smoke E2E 758 passed / 4 skipped, a11y 6 passed, visual 12 passed, security 9 passed, Lighthouse autorun passed for 2 URLs / 6 runs.
 - `pnpm exec vitest run tests/mypage-screen.test.tsx tests/settings-screen.test.tsx tests/leftovers.frontend.test.tsx tests/recipe-book-detail-screen.test.tsx` — passed, 78 tests.
 - `pnpm exec playwright test tests/e2e/slice-17a-mypage.spec.ts tests/e2e/slice-17c-settings.spec.ts tests/e2e/slice-16-leftovers.spec.ts tests/e2e/slice-17b-recipebook-detail.spec.ts tests/e2e/qa-wave1-account-library-leftovers-evidence.spec.ts` — passed, 189 tests.
 - `pnpm exec playwright test tests/e2e/qa-wave1-account-library-leftovers-evidence.spec.ts --project=desktop-chrome` — passed, generated 10 evidence screenshots.
+
+## Current Phase5 Verification Evidence
+
+- `pnpm exec playwright test tests/e2e/qa-wave1-account-library-leftovers-evidence.spec.ts --project=mobile-chrome` — passed, generated/refreshed 12 evidence screenshots.
+- `pnpm exec vitest run tests/mypage-screen.test.tsx tests/settings-screen.test.tsx tests/leftovers.frontend.test.tsx tests/recipe-book-detail-screen.test.tsx` — passed, 78 tests.
+- `pnpm exec playwright test tests/e2e/slice-17a-mypage.spec.ts tests/e2e/slice-17c-settings.spec.ts tests/e2e/slice-16-leftovers.spec.ts tests/e2e/slice-17b-recipebook-detail.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small` — passed, 186 tests.
+- `pnpm verify:frontend` — passed: lint, typecheck, product Vitest 65 files / 629 tests, build, smoke E2E 758 passed / 4 skipped, a11y 6 passed, visual 12 passed, security 9 passed, Lighthouse assertions over 6 runs.
