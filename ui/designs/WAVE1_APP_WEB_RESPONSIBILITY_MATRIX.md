@@ -30,7 +30,7 @@ Do not redefine the vocabulary in slice workpacks. Link back here.
 - A surface may start Phase 4/5 mobile porting only when it is either `exact-reference-ready` with 390px and 320px fixed references, or Phase 3 has captured and committed those references first.
 - Missing screenshots are blockers for 100% parity claims, not acceptable "approved divergence."
 - Desktop screenshots in the manifest are smoke references only for this track. They do not authorize desktop/web redesign here.
-- Phase 3 added 62 new mobile reference screenshots for 31 additional mobile surface states. GLOBAL::LoginGateModal remains the only known needs-prototype-freeze row because the fixed phone shell has no deterministic mobile trigger.
+- Phase 3 added 62 new mobile reference screenshots for 31 additional mobile surface states. The LoginGateModal follow-up added the final 2 mobile reference screenshots after introducing a deterministic phone-shell trigger.
 
 ## Status Vocabulary
 
@@ -77,11 +77,12 @@ The fixed-reference paths below are the committed manifest entries under `ui/des
 
 ## Phase 3 Exact-Reference-Ready Rows
 
-Phase 3 added the fixed-reference paths below from the existing fixed prototype code. Existing Phase 1/2 references were skipped during capture; these rows add only new mobile 390px/320px screenshots.
+Phase 3 and the LoginGateModal reference-freeze follow-up added the fixed-reference paths below from the existing fixed prototype code. Existing Phase 1/2 references were skipped during capture; these rows add only new mobile 390px/320px screenshots.
 
 | surface | mobile parity status | canonical classification | fixed reference | prototype source | MVP component | web status | desktop smoke owner | required functional tests | 100% parity verification |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | LOGIN | exact-reference-ready | prototype parity | ui/designs/reference/wave1-fixed-prototype/mobile-390-login.png<br>ui/designs/reference/wave1-fixed-prototype/mobile-320-login.png | screens/wave1.jsx::LoginScreen | app/login/page.tsx / components/auth/login-screen.tsx | shared responsive preserve | Codex Stage 6 if shared responsive UI changes | See row-specific slice tests and MVP regression tests | Exact gate bundle. Auth provider behavior remains MVP-governed. |
+| GLOBAL::LoginGateModal | exact-reference-ready | prototype parity | ui/designs/reference/wave1-fixed-prototype/mobile-390-login-gate-modal.png<br>ui/designs/reference/wave1-fixed-prototype/mobile-320-login-gate-modal.png | screens/modals.jsx::LoginGate via phone-shell `?modal=login-gate` trigger | components/auth/login-gate-modal.tsx | shared responsive preserve | Codex Stage 6 if auth modal responsive layout changes | tests/auth-gate-store.test.ts<br>tests/e2e/slice-06-recipe-to-planner.spec.ts | Exact gate bundle. Return-to-action remains MVP-governed. |
 | ATE_LIST | exact-reference-ready | prototype parity | ui/designs/reference/wave1-fixed-prototype/mobile-390-ate-list.png<br>ui/designs/reference/wave1-fixed-prototype/mobile-320-ate-list.png | screens/wave1.jsx::AteListScreen via LEFTOVERS -> 다먹음 -> 다먹은 요리 | app/leftovers/ate/page.tsx / components/leftovers/ate-list-screen.tsx | shared responsive preserve | Codex Stage 6 if shared responsive UI changes | See row-specific slice tests and MVP regression tests | Exact gate bundle. Eat/uneat API behavior remains MVP-governed. |
 | RECIPEBOOK_DETAIL | exact-reference-ready | prototype-derived design | ui/designs/reference/wave1-fixed-prototype/mobile-390-recipebook-detail.png<br>ui/designs/reference/wave1-fixed-prototype/mobile-320-recipebook-detail.png | screens/wave1.jsx::MyPageRecipebookDetailScreen | app/mypage/recipe-books/[book_id]/page.tsx / components/recipebook/recipebook-detail-screen.tsx | shared responsive preserve | Codex Stage 6 if shared responsive UI changes | See row-specific slice tests and MVP regression tests | Exact gate bundle. Recipebook ownership/deletion behavior remains MVP-governed. |
 | MEAL_SCREEN | exact-reference-ready | prototype-derived design | ui/designs/reference/wave1-fixed-prototype/mobile-390-meal-screen.png<br>ui/designs/reference/wave1-fixed-prototype/mobile-320-meal-screen.png | screens/extras.jsx::MealDetailScreen | app/planner/[date]/[columnId]/page.tsx / components/planner/meal-screen.tsx | shared responsive preserve | Codex Stage 6 if shared responsive UI changes | See row-specific slice tests and MVP regression tests | Exact gate bundle. Planner status transitions remain MVP-governed. |
@@ -113,15 +114,11 @@ Phase 3 added the fixed-reference paths below from the existing fixed prototype 
 | MYPAGE_RECIPEBOOK_TAB | exact-reference-ready | prototype-derived design | ui/designs/reference/wave1-fixed-prototype/mobile-390-mypage-recipebook-tab.png<br>ui/designs/reference/wave1-fixed-prototype/mobile-320-mypage-recipebook-tab.png | screens/wave1.jsx::MyPageRecipebookTab | components/mypage/mypage-screen.tsx | shared responsive preserve | Codex Stage 6 if shared responsive UI changes | See row-specific slice tests and MVP regression tests | Exact gate bundle for recipebook tab state. |
 | MYPAGE_SHOPPING_LISTS_TAB | exact-reference-ready | prototype-derived design | ui/designs/reference/wave1-fixed-prototype/mobile-390-mypage-shopping-lists-tab.png<br>ui/designs/reference/wave1-fixed-prototype/mobile-320-mypage-shopping-lists-tab.png | screens/wave1.jsx::MyPageShoppingTab | components/mypage/mypage-screen.tsx | shared responsive preserve | Codex Stage 6 if shared responsive UI changes | See row-specific slice tests and MVP regression tests | Exact gate bundle for shopping-list tab state. |
 
-GLOBAL::LoginGateModal remains blocked because the fixed phone shell currently renders LoginGate only from internal state and has no deterministic mobile protected-action route or capture hook. Do not invent a screenshot for that row; either add/freeze a prototype-owned trigger first or keep the MVP modal out of exact parity claims.
+GLOBAL::LoginGateModal is now exact-reference-ready because the prototype owns a deterministic phone-shell trigger for the existing LoginGate component. The trigger is capture-only; production return-to-action remains MVP-governed.
 
 ## Needs-Prototype-Freeze Rows
 
-These rows cannot claim 100% mobile parity yet. Phase 3 reduced this list to only states that still cannot be opened deterministically from the fixed mobile prototype without modifying prototype source.
-
-| surface | mobile parity status | canonical classification | fixed reference | prototype source | MVP component | web status | desktop smoke owner | required functional tests | 100% parity verification |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| GLOBAL::LoginGateModal | needs-prototype-freeze | prototype parity | none | screens/modals.jsx::LoginGate; blocked because phone shell has no deterministic protected-action trigger or capture-only route | components/auth/login-gate-modal.tsx | shared responsive preserve | Codex Stage 6 if auth modal responsive layout changes | tests/auth-gate-store.test.ts / tests/e2e/slice-06-recipe-to-planner.spec.ts | Add/freeze a prototype-owned mobile trigger first. Return-to-action remains MVP-governed. |
+No current mobile app rows remain in `needs-prototype-freeze`.
 
 ## Web-Only And Deferred Rows
 
@@ -144,19 +141,19 @@ These rows cannot claim 100% mobile parity yet. Phase 3 reduced this list to onl
 
 Phase 3 captured every matrix row that already exists in the fixed mobile prototype and can be reached through deterministic route or interaction scripting.
 
-- New committed mobile references: 62 PNGs for 31 surface states.
+- New committed mobile references: 64 PNGs for 32 surface states.
 - Existing Phase 1/2 references were skipped by default during capture; use pnpm capture:wave1-prototype-lock -- --force only for an intentional user-approved refreeze.
 - Split states were recorded separately where needed: SHOPPING_FLOW_SELECT / SHOPPING_FLOW_REVIEW, COOK_MODE_PLANNER / COOK_MODE_STANDALONE, and YT_IMPORT / YT_IMPORT_REVIEW.
 - HOME::HomeSortOpenState is now represented by HOME_SORT_OPEN_STATE, the actual current mobile SortDropdown open state. The obsolete SortSheet is not the mobile reference.
-- GLOBAL::LoginGateModal remains blocked until the prototype provides a deterministic phone-shell trigger or the design owner freezes a reference.
+- GLOBAL::LoginGateModal is now captured through the prototype-owned phone-shell `?modal=login-gate` trigger.
 
-Each Phase 3 capture updated ui/designs/reference/wave1-fixed-prototype/manifest.json and passed pnpm validate:wave1-prototype-lock.
+Each reference capture updated ui/designs/reference/wave1-fixed-prototype/manifest.json and passed pnpm validate:wave1-prototype-lock.
 
 ## Phase 2 Closeout Checklist
 
 - Every manifest mobile surface appears in the exact-ready table.
 - Every exact-ready table row lists both 390px and 320px reference paths.
-- Every known missing app surface is classified as `needs-prototype-freeze`, not silently allowed into porting.
+- No known missing app surface is silently allowed into porting; every ported row has committed 390px and 320px references.
 - Web/desktop redesign is isolated as `web-only` or `future web redesign`.
 - Token implementation path is mobile-scoped by default.
 - No row uses `90+`, `95+`, or broad approved divergence as completion proof.
