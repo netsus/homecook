@@ -73,7 +73,7 @@ function App() {
     });
     return map;
   });
-  const [sortBy, setSortBy] = useState('latest');
+  const [sortBy, setSortBy] = useState('views');
   const [ingFilter, setIngFilter] = useState([]);
   // Wave 1.5 — INGREDIENT_FILTER_MODAL 의 fine-grained 재료 이름 목록.
   // 기존 ingFilter(category)와 별개로 운영. 둘 다 적용 시 AND.
@@ -255,20 +255,20 @@ function App() {
     const listId = incoming?.id || listOrId;
     const base = incoming || shoppingLists.find(l => l.id === listId);
     if (!base) return;
-    const completedList = {
+    const pendingList = {
       ...base,
       ...(incoming?.items ? { items: incoming.items } : {}),
-      status: 'completed',
-      completedAt: '방금 완료'
+      status: 'active',
+      completedAt: null
     };
     setShoppingLists(ls => {
-      const exists = ls.some(l => l.id === completedList.id);
+      const exists = ls.some(l => l.id === pendingList.id);
       return exists
-        ? ls.map(l => l.id !== completedList.id ? l : completedList)
-        : [completedList, ...ls];
+        ? ls.map(l => l.id !== pendingList.id ? l : pendingList)
+        : [pendingList, ...ls];
     });
-    setReflectPicker(completedList);
-    setRoute(prev => ({ ...prev, detail: null, page: 'shopping-detail', pageArgs: { listId: completedList.id } }));
+    setReflectPicker(pendingList);
+    setRoute(prev => ({ ...prev, detail: null, page: 'shopping-detail', pageArgs: { listId: pendingList.id } }));
   };
   const reopenShopping = (listId) => {
     setShoppingLists(ls => ls.map(l => l.id !== listId ? l : ({ ...l, status: 'active', completedAt: null })));
@@ -276,7 +276,12 @@ function App() {
   };
   const reflectToPantry = (list, names) => {
     if (!names || names.length === 0) {
-      setShoppingLists(ls => ls.map(l => l.id !== list.id ? l : ({ ...l, pantryReflect: [] })));
+      setShoppingLists(ls => ls.map(l => l.id !== list.id ? l : ({
+        ...l,
+        status: 'completed',
+        completedAt: '방금 완료',
+        pantryReflect: [],
+      })));
       setReflectPicker(null);
       showToast('팬트리에 반영하지 않았어요');
       return;
@@ -291,7 +296,12 @@ function App() {
       });
       return next;
     });
-    setShoppingLists(ls => ls.map(l => l.id !== list.id ? l : ({ ...l, pantryReflect: names })));
+    setShoppingLists(ls => ls.map(l => l.id !== list.id ? l : ({
+      ...l,
+      status: 'completed',
+      completedAt: '방금 완료',
+      pantryReflect: names,
+    })));
     setReflectPicker(null);
     showToast(`${names.length}개 재료가 팬트리에 추가됐어요`);
   };

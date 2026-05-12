@@ -1351,10 +1351,10 @@ function SavePopup({ recipeId, onClose, onConfirm, saved, savedBookIds = [], boo
 // 이 컴포넌트는 교체 전까지 하위 호환용으로 유지.
 function SortSheet({ value, onChange, onClose }) {
   const opts = [
+  ['views', '조회수순'],
   ['latest', '최신순'],
-  ['rating', '별점순'], // CONTRACT_CHECK: 별점 → 행동 메트릭 전환 시 정렬 기준 재정의 필요
   ['saves', '저장순'],
-  ['fast', '빠른 조리순']];
+  ['plans', '플래너 등록순']];
 
   return (
     <Sheet title="정렬" onClose={onClose}>
@@ -1408,7 +1408,7 @@ const { useState: useState_H, useMemo: useMemo_H } = React;
 // vNext S2 — HOME 개선 적용
 // 변경: 헤더 프로필/장바구니 제거, 로고 safe-area 아래로, 재료칩 테마 아래로 이동,
 //       "재료로 거르기"→"재료로 검색", SortSheet→SortDropdown, 배너→플래너 탭
-const SORT_OPTIONS = [['latest', '최신순'], ['saves', '저장순'], ['fast', '빠른 조리순']];
+const SORT_OPTIONS = [['views', '조회수순'], ['latest', '최신순'], ['saves', '저장순'], ['plans', '플래너 등록순']];
 
 function HomeScreen({ onOpenRecipe, onOpenSave, savedIds = [], sortBy, setSortBy, ingFilter, setIngFilter, onOpenIngredientFilter, ingredientNames = [], onGoPlanner }) {
   const [query, setQuery] = useState_H('');
@@ -1438,8 +1438,10 @@ function HomeScreen({ onOpenRecipe, onOpenSave, savedIds = [], sortBy, setSortBy
         return ingredientNames.every((name) => names.includes(name));
       });
     }
+    if (sortBy === 'views') list.sort((a, b) => recipeViewCount(b) - recipeViewCount(a));
+    if (sortBy === 'latest') list.sort((a, b) => b.id.localeCompare(a.id));
     if (sortBy === 'saves') list.sort((a, b) => b.saves - a.saves);
-    if (sortBy === 'fast') list.sort((a, b) => a.minutes - b.minutes);
+    if (sortBy === 'plans') list.sort((a, b) => b.rating - a.rating);
     return list;
   }, [query, activeTheme, ingFilter, ingredientNames, sortBy]);
 
@@ -9366,7 +9368,7 @@ function App() {
     });
     return map;
   });
-  const [sortBy, setSortBy] = useState('latest');
+  const [sortBy, setSortBy] = useState('views');
   const [ingFilter, setIngFilter] = useState([]);
   // Wave 1.5 — INGREDIENT_FILTER_MODAL 의 fine-grained 재료 이름 목록.
   // 기존 ingFilter(category)와 별개로 운영. 둘 다 적용 시 AND.
@@ -9548,20 +9550,20 @@ function App() {
     const listId = incoming?.id || listOrId;
     const base = incoming || shoppingLists.find(l => l.id === listId);
     if (!base) return;
-    const completedList = {
+    const pendingList = {
       ...base,
       ...(incoming?.items ? { items: incoming.items } : {}),
-      status: 'completed',
-      completedAt: '방금 완료'
+      status: 'active',
+      completedAt: null
     };
     setShoppingLists(ls => {
-      const exists = ls.some(l => l.id === completedList.id);
+      const exists = ls.some(l => l.id === pendingList.id);
       return exists
-        ? ls.map(l => l.id !== completedList.id ? l : completedList)
-        : [completedList, ...ls];
+        ? ls.map(l => l.id !== pendingList.id ? l : pendingList)
+        : [pendingList, ...ls];
     });
-    setReflectPicker(completedList);
-    setRoute(prev => ({ ...prev, detail: null, page: 'shopping-detail', pageArgs: { listId: completedList.id } }));
+    setReflectPicker(pendingList);
+    setRoute(prev => ({ ...prev, detail: null, page: 'shopping-detail', pageArgs: { listId: pendingList.id } }));
   };
   const reopenShopping = (listId) => {
     setShoppingLists(ls => ls.map(l => l.id !== listId ? l : ({ ...l, status: 'active', completedAt: null })));
@@ -9569,7 +9571,12 @@ function App() {
   };
   const reflectToPantry = (list, names) => {
     if (!names || names.length === 0) {
-      setShoppingLists(ls => ls.map(l => l.id !== list.id ? l : ({ ...l, pantryReflect: [] })));
+      setShoppingLists(ls => ls.map(l => l.id !== list.id ? l : ({
+        ...l,
+        status: 'completed',
+        completedAt: '방금 완료',
+        pantryReflect: [],
+      })));
       setReflectPicker(null);
       showToast('팬트리에 반영하지 않았어요');
       return;
@@ -9584,7 +9591,12 @@ function App() {
       });
       return next;
     });
-    setShoppingLists(ls => ls.map(l => l.id !== list.id ? l : ({ ...l, pantryReflect: names })));
+    setShoppingLists(ls => ls.map(l => l.id !== list.id ? l : ({
+      ...l,
+      status: 'completed',
+      completedAt: '방금 완료',
+      pantryReflect: names,
+    })));
     setReflectPicker(null);
     showToast(`${names.length}개 재료가 팬트리에 추가됐어요`);
   };
