@@ -1,0 +1,49 @@
+{
+  "slice": "wave1-port-recipebook-detail-core",
+  "fixed_prototype_sha": "9bf7a34c6b422d0c9981d4c2968e3350d5a28892",
+  "reference_images": [
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-recipebook-detail.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-recipebook-detail.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-recipebook-delete-confirm.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-recipebook-delete-confirm.png"
+  ],
+  "service_screenshots": [
+    "ui/designs/evidence/wave1-port-recipebook-detail-core/recipebook-detail-default.png",
+    "ui/designs/evidence/wave1-port-recipebook-detail-core/recipebook-detail-narrow.png",
+    "ui/designs/evidence/wave1-port-recipebook-detail-core/recipebook-delete-confirm-default.png",
+    "ui/designs/evidence/wave1-port-recipebook-detail-core/recipebook-delete-confirm-narrow.png"
+  ],
+  "screenshot_diff": {
+    "method": "side-by-side fixed reference PNG versus MVP screenshot review",
+    "status": "pass",
+    "unclassified_visual_differences": 0
+  },
+  "computed_style_audit": {
+    "status": "pass",
+    "checks": [
+      "mobile app bar height and destructive action placement",
+      "background colors",
+      "summary header tile, badge, and typography",
+      "recipe card border, radius, spacing, and CTA hierarchy",
+      "delete bottom sheet radius, dim overlay, button fill, and spacing",
+      "bottom tab placement"
+    ]
+  },
+  "dom_geometry_audit": {
+    "status": "pass",
+    "checks": [
+      "390px and 320px app bar geometry",
+      "summary header card vertical placement",
+      "recipe list top offset and card density",
+      "remove button horizontal fit at 320px",
+      "delete confirmation sheet bottom anchoring",
+      "bottom tab safe-area spacing"
+    ]
+  },
+  "blocker_count": 0,
+  "unclassified_visual_differences": 0,
+  "classified_followups": [
+    "Shared bottom-tab pantry icon shape remains inherited from the already-merged Wave1 mobile navigation component and is outside this RECIPEBOOK_DETAIL branch.",
+    "Recipebook API exposes tag strings but not dedicated view-count, minutes, or servings fields, so production metadata remains contract-derived while visual evidence uses representative tag strings."
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "score": 95,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [
+    "The shared bottom-tab pantry icon has a slightly different glyph shape from the fixed prototype.",
+    "Production recipebook metadata is limited to the existing tag array because the API contract does not expose dedicated view count, minutes, or servings fields."
+  ],
+  "suggestions": [
+    "Keep shared bottom-tab icon reshaping in a shared navigation follow-up.",
+    "Only add dedicated recipe metric fields after an official contract update exposes them."
+  ],
+  "reasoning": "The mobile RECIPEBOOK_DETAIL and delete confirmation sheet match the fixed references in layout, spacing, card density, typography, destructive action hierarchy, and bottom-sheet placement. Remaining differences are classified contract/shared-navigation follow-ups, so unclassified visual differences are 0."
+}

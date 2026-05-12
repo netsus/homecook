@@ -7,7 +7,9 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
+import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { deleteRecipeBook, renameRecipeBook } from "@/lib/api/mypage";
@@ -29,6 +31,13 @@ const REMOVE_LABEL: Record<string, string> = {
   liked: "좋아요 해제",
   saved: "제거",
   custom: "제거",
+};
+
+const BOOK_BADGE_LABEL: Record<RecipeBookType, string> = {
+  custom: "내 책",
+  liked: "좋아요",
+  my_added: "내 레시피",
+  saved: "저장",
 };
 
 function buildRecipeBookDetailHref({
@@ -62,6 +71,7 @@ export function RecipeBookDetailScreen({
   initialAuthenticated = false,
 }: RecipeBookDetailScreenProps) {
   const router = useRouter();
+  const isMobileViewport = useIsMobileViewport();
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
@@ -279,6 +289,7 @@ export function RecipeBookDetailScreen({
         bookName={currentBookName}
         disabled={isBookActionSaving}
         errorMessage={bookActionError}
+        mobile={isMobileViewport}
         onCancel={() => {
           setBookDeleteOpen(false);
           setBookActionError(null);
@@ -469,6 +480,37 @@ export function RecipeBookDetailScreen({
 
   const canRemove = bookType !== "my_added";
   const removeLabel = REMOVE_LABEL[bookType] ?? "제거";
+
+  if (isMobileViewport) {
+    return (
+      <MobileRecipeBookDetailView
+        bookMenuOpen={bookMenuOpen}
+        bookName={currentBookName}
+        bookRenameOpen={bookRenameOpen}
+        bookRenameValue={bookRenameValue}
+        bookType={bookType}
+        canManageBook={canManageBook}
+        canRemove={canRemove}
+        errorMessage={bookActionError}
+        hasNext={hasNext}
+        isLoadingMore={isLoadingMore}
+        isSaving={isBookActionSaving}
+        items={items}
+        onDeleteRequest={handleBookDeleteRequest}
+        onMenuToggle={() => setBookMenuOpen((current) => !current)}
+        onRemove={(recipeId) => void handleRemove(recipeId)}
+        onRenameCancel={handleBookRenameCancel}
+        onRenameConfirm={() => void handleBookRename()}
+        onRenameStart={handleBookRenameStart}
+        onRenameValueChange={setBookRenameValue}
+        removeLabel={removeLabel}
+        removingId={removingId}
+        renderBookDeleteDialog={renderBookDeleteDialog}
+        scrollSentinelRef={scrollSentinelRef}
+        toast={toast}
+      />
+    );
+  }
 
   return (
     <div className="pb-32">
@@ -675,15 +717,74 @@ function BookDeleteConfirmDialog({
   bookName,
   disabled,
   errorMessage,
+  mobile = false,
   onCancel,
   onConfirm,
 }: {
   bookName: string;
   disabled: boolean;
   errorMessage: string | null;
+  mobile?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  if (mobile) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+        <div
+          aria-describedby="recipebook-delete-description"
+          aria-labelledby="recipebook-delete-title"
+          aria-modal="true"
+          className="w-full rounded-t-[20px] bg-white px-5 pb-[calc(14px+env(safe-area-inset-bottom))] pt-5 shadow-[0_-8px_28px_rgba(0,0,0,0.18)]"
+          role="alertdialog"
+        >
+          <div
+            aria-hidden="true"
+            className="mx-auto mb-3 h-1 w-9 rounded-full bg-[#DEE2E6] min-[390px]:hidden"
+          />
+          <h2
+            className="text-[18px] font-extrabold leading-[1.35] text-[#212529]"
+            id="recipebook-delete-title"
+          >
+            이 레시피북을 삭제할까요?
+          </h2>
+          <p
+            className="mt-4 text-[13px] font-medium leading-[1.45] text-[#495057]"
+            id="recipebook-delete-description"
+          >
+            레시피북 안의 레시피는 삭제되지 않아요.
+          </p>
+          {errorMessage ? (
+            <p
+              className="mt-3 rounded-lg bg-[#FFF5F5] px-3 py-2 text-[13px] font-bold text-[#FF6B6B]"
+              role="alert"
+            >
+              {errorMessage}
+            </p>
+          ) : null}
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <button
+              className="flex h-11 items-center justify-center rounded-lg border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057] disabled:opacity-50"
+              disabled={disabled}
+              onClick={onCancel}
+              type="button"
+            >
+              취소
+            </button>
+            <button
+              className="flex h-11 items-center justify-center rounded-lg bg-[#FF6B6B] text-[14px] font-extrabold text-white disabled:opacity-50"
+              disabled={disabled}
+              onClick={onConfirm}
+              type="button"
+            >
+              {disabled ? "삭제 중..." : "삭제하기"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div
@@ -734,6 +835,412 @@ function BookDeleteConfirmDialog({
       </div>
     </div>
   );
+}
+
+function MobileRecipeBookDetailView({
+  bookMenuOpen,
+  bookName,
+  bookRenameOpen,
+  bookRenameValue,
+  bookType,
+  canManageBook,
+  canRemove,
+  errorMessage,
+  hasNext,
+  isLoadingMore,
+  isSaving,
+  items,
+  onDeleteRequest,
+  onMenuToggle,
+  onRemove,
+  onRenameCancel,
+  onRenameConfirm,
+  onRenameStart,
+  onRenameValueChange,
+  removeLabel,
+  removingId,
+  renderBookDeleteDialog,
+  scrollSentinelRef,
+  toast,
+}: {
+  bookMenuOpen: boolean;
+  bookName: string;
+  bookRenameOpen: boolean;
+  bookRenameValue: string;
+  bookType: RecipeBookType;
+  canManageBook: boolean;
+  canRemove: boolean;
+  errorMessage: string | null;
+  hasNext: boolean;
+  isLoadingMore: boolean;
+  isSaving: boolean;
+  items: RecipeBookRecipeItem[];
+  onDeleteRequest: () => void;
+  onMenuToggle: () => void;
+  onRemove: (recipeId: string) => void;
+  onRenameCancel: () => void;
+  onRenameConfirm: () => void;
+  onRenameStart: () => void;
+  onRenameValueChange: (value: string) => void;
+  removeLabel: string;
+  removingId: string | null;
+  renderBookDeleteDialog: () => React.ReactNode;
+  scrollSentinelRef: React.RefObject<HTMLDivElement | null>;
+  toast: { message: string; tone: "success" | "error" } | null;
+}) {
+  return (
+    <div
+      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] md:hidden"
+      data-testid="recipebook-detail-mobile"
+      style={{
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif',
+      }}
+    >
+      <MobileRecipeBookAppBar
+        bookName={bookName}
+        canManageBook={canManageBook}
+        isMenuOpen={bookMenuOpen}
+        onDeleteRequest={onDeleteRequest}
+        onMenuToggle={onMenuToggle}
+        onRenameStart={onRenameStart}
+      />
+      <MobileRecipeBookSummary
+        bookName={bookName}
+        bookType={bookType}
+        count={items.length}
+      />
+
+      <div
+        aria-live="polite"
+        className="space-y-[10px] p-4"
+        data-testid="recipebook-detail-list"
+        role="list"
+      >
+        {items.map((item) => (
+          <MobileRecipeBookRecipeCard
+            canRemove={canRemove}
+            item={item}
+            key={item.recipe_id}
+            onRemove={() => onRemove(item.recipe_id)}
+            removeLabel={removeLabel}
+            removing={removingId === item.recipe_id}
+          />
+        ))}
+      </div>
+      {isLoadingMore ? (
+        <div className="flex justify-center py-4">
+          <Skeleton className="h-5 w-32" />
+        </div>
+      ) : null}
+      {hasNext ? <div ref={scrollSentinelRef} className="h-4" /> : null}
+      {toast ? (
+        <div
+          className={[
+            "fixed inset-x-4 bottom-[calc(86px+env(safe-area-inset-bottom))] z-40 mx-auto max-w-md rounded-lg px-4 py-3 text-center text-[13px] font-extrabold shadow-lg",
+            toast.tone === "success"
+              ? "bg-[#E6FCF5] text-[#099268]"
+              : "bg-[#FFF5F5] text-[#FF6B6B]",
+          ].join(" ")}
+          role="status"
+        >
+          {toast.message}
+        </div>
+      ) : null}
+      {bookRenameOpen ? (
+        <MobileRecipeBookRenameSheet
+          disabled={isSaving}
+          errorMessage={errorMessage}
+          onCancel={onRenameCancel}
+          onConfirm={onRenameConfirm}
+          onValueChange={onRenameValueChange}
+          value={bookRenameValue}
+        />
+      ) : null}
+      {renderBookDeleteDialog()}
+      <Wave1MobileBottomTab
+        ariaLabel="레시피북 상세 하단 탭"
+        currentTab="mypage"
+      />
+    </div>
+  );
+}
+
+function MobileRecipeBookAppBar({
+  bookName,
+  canManageBook,
+  isMenuOpen,
+  onDeleteRequest,
+  onMenuToggle,
+  onRenameStart,
+}: {
+  bookName: string;
+  canManageBook: boolean;
+  isMenuOpen: boolean;
+  onDeleteRequest: () => void;
+  onMenuToggle: () => void;
+  onRenameStart: () => void;
+}) {
+  return (
+    <div
+      className="sticky top-0 z-30 flex min-h-[52px] items-center justify-center border-b border-[#DEE2E6] bg-white px-4"
+      style={{ borderBottomWidth: "0.5px" }}
+    >
+      <Link
+        aria-label="뒤로 가기"
+        className="absolute left-4 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-start text-[#212529]"
+        href="/mypage"
+      >
+        <svg
+          aria-hidden="true"
+          className="h-6 w-6"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2.3"
+          viewBox="0 0 24 24"
+        >
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+      </Link>
+      <h1 className="max-w-[190px] truncate text-center text-[18px] font-extrabold leading-none text-[#212529] min-[390px]:max-w-[230px]">
+        {bookName}
+      </h1>
+      {canManageBook ? (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          <button
+            aria-controls="recipebook-detail-book-menu"
+            aria-expanded={isMenuOpen}
+            aria-haspopup="menu"
+            aria-label={`${bookName} 옵션 메뉴`}
+            className="flex h-8 items-center justify-center rounded-full bg-white px-1 text-[13px] font-extrabold text-[#FF6B6B]"
+            onClick={onMenuToggle}
+            type="button"
+          >
+            삭제
+          </button>
+          {isMenuOpen ? (
+            <div
+              className="absolute right-0 top-full z-40 mt-2 w-36 overflow-hidden rounded-lg border border-[#DEE2E6] bg-white shadow-[0_8px_22px_rgba(0,0,0,0.14)]"
+              id="recipebook-detail-book-menu"
+              role="menu"
+            >
+              <button
+                className="flex w-full items-center px-4 py-3 text-[14px] font-bold text-[#212529]"
+                onClick={onRenameStart}
+                role="menuitem"
+                type="button"
+              >
+                이름 변경
+              </button>
+              <div className="border-t border-[#DEE2E6]" />
+              <button
+                className="flex w-full items-center px-4 py-3 text-[14px] font-bold text-[#FF6B6B]"
+                onClick={onDeleteRequest}
+                role="menuitem"
+                type="button"
+              >
+                삭제
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MobileRecipeBookSummary({
+  bookName,
+  bookType,
+  count,
+}: {
+  bookName: string;
+  bookType: RecipeBookType;
+  count: number;
+}) {
+  return (
+    <section
+      className="border-b border-[#DEE2E6] bg-white px-5 py-5"
+      data-testid="recipebook-detail-header"
+    >
+      <div className="flex items-center gap-[14px]">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[14px] bg-[#E6FCF5] text-[26px]">
+          <span aria-hidden="true">{getBookEmoji(bookType, bookName)}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <h2 className="truncate text-[17px] font-extrabold leading-[1.3] text-[#212529]">
+              {bookName}
+            </h2>
+            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-extrabold leading-[1.2] text-[#868E96] bg-[#F8F9FA]">
+              {BOOK_BADGE_LABEL[bookType]}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[12px] font-medium leading-[1.3] text-[#868E96]">
+            {count}개 레시피
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MobileRecipeBookRecipeCard({
+  canRemove,
+  item,
+  onRemove,
+  removeLabel,
+  removing,
+}: RecipeItemCardProps) {
+  return (
+    <article
+      className="flex min-h-[82px] items-center gap-3 rounded-xl border border-[#DEE2E6] bg-white p-3"
+      data-testid={`recipe-item-${item.recipe_id}`}
+      role="listitem"
+    >
+      <Link
+        className="flex min-w-0 flex-1 items-center gap-3"
+        href={`/recipe/${item.recipe_id}`}
+      >
+        <MobileRecipeThumb item={item} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-extrabold leading-[1.35] text-[#212529]">
+            {item.title}
+          </p>
+          {item.tags.length > 0 ? (
+            <p className="mt-0.5 truncate text-[11px] font-medium leading-[1.35] text-[#868E96]">
+              {item.tags.join(" · ")}
+            </p>
+          ) : null}
+        </div>
+      </Link>
+      {canRemove ? (
+        <button
+          aria-label={`${item.title} ${removeLabel}`}
+          className="h-9 shrink-0 rounded-lg border border-[#DEE2E6] bg-white px-3 text-[11px] font-extrabold text-[#495057] disabled:opacity-50"
+          disabled={removing}
+          onClick={onRemove}
+          type="button"
+        >
+          {removing ? "처리 중..." : removeLabel}
+        </button>
+      ) : null}
+    </article>
+  );
+}
+
+function MobileRecipeThumb({ item }: { item: RecipeBookRecipeItem }) {
+  if (item.thumbnail_url) {
+    return (
+      <Image
+        alt={item.title}
+        className="h-14 w-14 shrink-0 rounded-[10px] object-cover"
+        height={56}
+        src={item.thumbnail_url}
+        unoptimized
+        width={56}
+      />
+    );
+  }
+
+  return (
+    <div
+      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] text-[24px]"
+      style={{ backgroundColor: getRecipeThumbColor(item.title) }}
+    >
+      <span aria-hidden="true">{getRecipeEmoji(item.title)}</span>
+    </div>
+  );
+}
+
+function MobileRecipeBookRenameSheet({
+  disabled,
+  errorMessage,
+  onCancel,
+  onConfirm,
+  onValueChange,
+  value,
+}: {
+  disabled: boolean;
+  errorMessage: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+  onValueChange: (value: string) => void;
+  value: string;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+      <div
+        aria-modal="true"
+        className="w-full rounded-t-[20px] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-5 shadow-[0_-8px_28px_rgba(0,0,0,0.18)]"
+        role="dialog"
+      >
+        <h2 className="text-[18px] font-extrabold text-[#212529]">
+          레시피북 이름 변경
+        </h2>
+        <input
+          aria-label="레시피북 이름"
+          className="mt-4 h-12 w-full rounded-lg border border-[#DEE2E6] bg-[#F8F9FA] px-3 text-[15px] font-bold text-[#212529] outline-none focus:border-[#2AC1BC]"
+          disabled={disabled}
+          maxLength={50}
+          onChange={(event) => onValueChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") onConfirm();
+            if (event.key === "Escape") onCancel();
+          }}
+          value={value}
+        />
+        {errorMessage ? (
+          <p className="mt-2 text-[13px] font-bold text-[#FF6B6B]" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <button
+            className="h-11 rounded-lg border border-[#DEE2E6] bg-white text-[14px] font-extrabold text-[#495057] disabled:opacity-50"
+            disabled={disabled}
+            onClick={onCancel}
+            type="button"
+          >
+            취소
+          </button>
+          <button
+            className="h-11 rounded-lg bg-[#2AC1BC] text-[14px] font-extrabold text-white disabled:opacity-50"
+            disabled={disabled || !value.trim()}
+            onClick={onConfirm}
+            type="button"
+          >
+            {disabled ? "저장 중..." : "완료"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getBookEmoji(bookType: RecipeBookType, bookName: string) {
+  if (bookType === "saved") return "🔖";
+  if (bookType === "liked") return "❤️";
+  if (bookType === "my_added") return "👩‍🍳";
+  if (bookName.includes("주말")) return "🍽️";
+  return "🍳";
+}
+
+function getRecipeEmoji(title: string) {
+  if (title.includes("볶음밥") || title.includes("밥")) return "🍚";
+  if (title.includes("샐러드")) return "🥗";
+  if (title.includes("제육") || title.includes("고기")) return "🥩";
+  if (title.includes("찌개")) return "🍲";
+  return "🍽️";
+}
+
+function getRecipeThumbColor(title: string) {
+  if (title.includes("샐러드")) return "#D8F5A2";
+  if (title.includes("제육") || title.includes("고기")) return "#FFC9C9";
+  if (title.includes("볶음밥") || title.includes("밥")) return "#FFD8CC";
+  return "#F1F3F5";
 }
 
 function mergeUniqueRecipeItems(
