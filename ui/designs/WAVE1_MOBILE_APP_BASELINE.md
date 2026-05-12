@@ -204,9 +204,10 @@ The current manifest contains mobile 390px and 320px screenshots for the origina
 - `ACCOUNT`
 - `LEFTOVERS`
 
-Phase 3 added 62 new mobile screenshots for 31 additional states, including:
+Phase 3 plus the LoginGateModal reference-freeze follow-up added 64 new mobile screenshots for 32 additional states, including:
 
 - `LOGIN`
+- `GLOBAL::LoginGateModal`
 - `ATE_LIST`
 - `RECIPEBOOK_DETAIL`
 - `MEAL_SCREEN`
@@ -225,7 +226,7 @@ Phase 3 added 62 new mobile screenshots for 31 additional states, including:
 - `MYPAGE_RECIPEBOOK_DELETE_CONFIRM`
 - `MYPAGE_RECIPEBOOK_TAB` / `MYPAGE_SHOPPING_LISTS_TAB`
 
-The authoritative row-by-row status is `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`. As of Phase 3, `GLOBAL::LoginGateModal` remains the only known mobile app row still blocked by missing deterministic prototype capture.
+The authoritative row-by-row status is `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`. As of the LoginGateModal reference-freeze follow-up, no known mobile app row remains blocked by missing deterministic prototype capture.
 
 ## Required Evidence Per Ported Surface
 

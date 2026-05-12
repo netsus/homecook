@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -84,6 +84,38 @@ function buildReadyBody() {
 }
 
 describe("Wave1 prototype lock validator", () => {
+  it("locks GLOBAL::LoginGateModal as a committed mobile reference pair", () => {
+    const rootDir = process.cwd();
+
+    const results = validateLock({ rootDir });
+    const manifest = JSON.parse(
+      readFileSync(
+        join(rootDir, "ui/designs/reference/wave1-fixed-prototype/manifest.json"),
+        "utf8",
+      ),
+    );
+    const loginGateReferences = [
+      {
+        surface: "GLOBAL::LoginGateModal",
+        viewport: "mobile-390",
+        path: "ui/designs/reference/wave1-fixed-prototype/mobile-390-login-gate-modal.png",
+      },
+      {
+        surface: "GLOBAL::LoginGateModal",
+        viewport: "mobile-320",
+        path: "ui/designs/reference/wave1-fixed-prototype/mobile-320-login-gate-modal.png",
+      },
+    ];
+
+    expect(results).toEqual([]);
+    expect(manifest.screenshots).toEqual(
+      expect.arrayContaining(loginGateReferences),
+    );
+    for (const reference of loginGateReferences) {
+      expect(existsSync(join(rootDir, reference.path))).toBe(true);
+    }
+  });
+
   it("passes the committed lock when manifest screenshots exist", () => {
     const rootDir = createFixture();
 

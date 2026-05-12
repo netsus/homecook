@@ -9397,7 +9397,11 @@ function App() {
   const [plannerAdd, setPlannerAdd] = useState(null); // { recipeId, presetDate?, presetSlot? }
   const [saveModal, setSaveModal] = useState(null);
   const [sortSheet, setSortSheet] = useState(false);
-  const [loginGate, setLoginGate] = useState(false);
+  const [loginGate, setLoginGate] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('modal') === 'login-gate';
+    } catch { return false; }
+  });
   const [pantryAddOpen, setPantryAddOpen] = useState(false);
   const [pantryBundleOpen, setPantryBundleOpen] = useState(false);
   const [consumedSheet, setConsumedSheet] = useState(null); // { date, slot, recipe }
