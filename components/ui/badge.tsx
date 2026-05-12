@@ -10,10 +10,10 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  brand: "bg-[var(--brand-soft)] text-[var(--brand-deep)]",
-  danger: "bg-[var(--brand-soft)] text-[color-mix(in_srgb,var(--brand-deep),var(--foreground)_20%)]",
-  olive: "bg-[color-mix(in_srgb,var(--olive)_12%,transparent)] text-[var(--olive)]",
-  muted: "bg-[var(--surface-fill)] text-[var(--text-3)]",
+  brand: "bg-[var(--wave1-mint-soft)] text-[var(--wave1-mint-contrast)]",
+  danger: "bg-[#FFEBEB] text-[var(--wave1-red-contrast)]",
+  olive: "bg-[#E8F8E0] text-[var(--wave1-teal-contrast)]",
+  muted: "bg-[var(--wave1-surface-fill)] text-[var(--wave1-text-2)]",
 };
 
 export function Badge({

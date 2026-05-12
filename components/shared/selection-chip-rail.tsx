@@ -22,7 +22,7 @@ interface SelectionChipRailProps {
 
 /**
  * Horizontal scrollable chip rail with scrollbar-hide.
- * D1: olive fill/tint when selected.
+ * Uses Wave1 fixed prototype tint/fill states when selected.
  * Two render modes:
  *  - pill (label only): rounded-full, single line — for category filters
  *  - two-line (topLabel + bottomLabel): rounded-[14px] — for date chips (D4)
@@ -51,8 +51,8 @@ export function SelectionChipRail({
               className={[
                 "min-h-11 shrink-0 rounded-[var(--radius-full)] border px-4 py-2 text-sm font-semibold transition-colors",
                 isSelected
-                  ? "border-[var(--olive)] bg-[color-mix(in_srgb,var(--olive)_12%,transparent)] text-[var(--olive)]"
-                  : "border-[var(--line)] bg-[var(--surface)] text-[var(--text-2)] hover:border-[var(--olive)] hover:text-[var(--olive)]",
+                  ? "border-[var(--wave1-mint)] bg-[var(--wave1-mint-soft)] text-[var(--wave1-mint-contrast)]"
+                  : "border-[var(--wave1-border)] bg-[var(--wave1-surface)] text-[var(--wave1-text-2)] hover:border-[var(--wave1-mint-contrast)] hover:text-[var(--wave1-mint-contrast)]",
                 disabled ? "opacity-60" : "",
               ]
                 .filter(Boolean)
@@ -73,8 +73,8 @@ export function SelectionChipRail({
             className={[
               "min-h-11 shrink-0 rounded-[var(--radius-full)] border px-3 py-2 text-[13px] transition-colors",
               isSelected
-                ? "border-[var(--foreground)] bg-[var(--foreground)] font-bold text-white"
-                : "border-[var(--line)] bg-white font-medium text-[var(--text-2)]",
+                ? "border-[var(--wave1-ink)] bg-[var(--wave1-ink)] font-bold text-white"
+                : "border-[var(--wave1-border)] bg-white font-medium text-[var(--wave1-text-2)]",
               disabled ? "opacity-60" : "",
             ]
               .filter(Boolean)

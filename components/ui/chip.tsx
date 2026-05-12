@@ -28,16 +28,16 @@ export function Chip({
 
   let stateClass: string;
   if (disabled) {
-    stateClass = "bg-[var(--surface-subtle)] text-[var(--text-4)] cursor-not-allowed";
+    stateClass = "bg-[var(--wave1-surface-subtle)] text-[var(--wave1-text-4)] cursor-not-allowed";
   } else if (active && isFilter) {
     stateClass =
-      "bg-[var(--foreground)] text-[var(--surface)] font-bold";
+      "bg-[var(--wave1-ink)] text-[var(--wave1-surface)] font-bold";
   } else if (active && !isFilter) {
     stateClass =
-      "bg-[var(--brand)] text-[var(--surface)] font-bold";
+      "bg-[var(--wave1-mint-contrast)] text-[var(--wave1-surface)] font-bold";
   } else {
     stateClass =
-      "bg-[var(--surface-subtle)] text-[var(--text-2)] font-medium hover:bg-[var(--surface-fill)] hover:text-[var(--foreground)]";
+      "bg-[var(--wave1-surface-subtle)] text-[var(--wave1-text-2)] font-medium hover:bg-[var(--wave1-surface-fill)] hover:text-[var(--wave1-ink)]";
   }
 
   return (

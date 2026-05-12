@@ -36,6 +36,35 @@
   --radius-xl:   20px;
   --radius-full: 9999px;
 
+  /* ── Wave1 fixed prototype token aliases (additive, do not replace legacy runtime tokens) ── */
+  --wave1-mint: #2AC1BC;
+  --wave1-mint-deep: #20A8A4;
+  --wave1-mint-contrast: #007A76;
+  --wave1-mint-contrast-deep: #006B67;
+  --wave1-mint-soft: #E6F8F7;
+  --wave1-teal: #12B886;
+  --wave1-teal-contrast: #087F5B;
+  --wave1-red: #FF6B6B;
+  --wave1-red-deep: #E03131;
+  --wave1-red-contrast: #C92A2A;
+  --wave1-red-contrast-deep: #A61E1E;
+  --wave1-ink: #212529;
+  --wave1-text-2: #495057;
+  --wave1-text-3: #868E96;
+  --wave1-text-4: #ADB5BD;
+  --wave1-border: #DEE2E6;
+  --wave1-surface: #FFFFFF;
+  --wave1-surface-fill: #F8F9FA;
+  --wave1-surface-subtle: #F1F3F5;
+  --wave1-shadow-natural: 0px 1px 3px rgba(0, 0, 0, 0.04);
+  --wave1-shadow-deep: 0px 2px 8px rgba(0, 0, 0, 0.08);
+  --wave1-shadow-sharp: 0px 4px 12px rgba(0, 0, 0, 0.10);
+  --wave1-shadow-crisp: 0px 8px 24px rgba(0, 0, 0, 0.16);
+  --wave1-font-ui:
+    -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo",
+    "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --wave1-font-brand: "Jua", -apple-system, sans-serif;
+
   /* ── 요리모드 조리방법 색상 ── */
   --cook-stir:   #FF8C42;
   --cook-boil:   #E8453C;

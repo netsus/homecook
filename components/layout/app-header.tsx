@@ -8,16 +8,21 @@ interface AppHeaderProps {
 export function AppHeader({ brandAsPageTitle = false }: AppHeaderProps) {
   const brandLink = (
     <Link
-      className="inline-flex text-[1rem] font-black uppercase tracking-[0.22em] text-[var(--foreground)] transition hover:text-[var(--brand-deep)] md:text-[1.12rem]"
+      aria-label="Homecook"
+      className="inline-flex text-[22px] font-bold leading-none transition-opacity hover:opacity-80 [font-family:var(--wave1-font-brand)]"
       href="/"
     >
-      Homecook
+      <span className="text-[var(--wave1-mint-contrast)]">homecook</span>
+      <span className="text-[var(--wave1-ink)]">_</span>
     </Link>
   );
 
   return (
-    <header className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-1)] md:rounded-[calc(var(--radius-xl)+4px)]">
-      <div className="flex items-center justify-between gap-3 px-[clamp(1rem,4vw,1.25rem)] py-[clamp(0.75rem,3vw,0.875rem)] md:px-7 md:py-4">
+    <header
+      className="sticky top-0 z-20 border-b border-[var(--wave1-border)] bg-[var(--wave1-surface)]"
+      style={{ borderBottomWidth: "0.5px" }}
+    >
+      <div className="flex min-h-[52px] items-center justify-center px-4 md:min-h-[56px] md:px-6">
         {brandAsPageTitle ? <h1>{brandLink}</h1> : brandLink}
       </div>
     </header>

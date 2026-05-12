@@ -42,10 +42,12 @@
   - 결과: 신규 기본 끼니 컬럼은 `아침 / 점심 / 저녁` 3개, SETTINGS에서 1~5개 범위로 이름 변경/추가/삭제 가능.
 - 따라서 이후 포팅 slice에서 플래너 컬럼 3개 기본값과 SETTINGS 컬럼 관리는 다시 만들지 말고, 이미 merged된 계약과 컴포넌트를 소비한다.
 - 기존 `docs/workpacks/baemin-prototype-home-porting`과 일부 HOME 범위가 겹칠 수 있다. HOME 관련 slice 착수 전 현재 구현과 해당 workpack 상태를 먼저 확인한다.
-- **Slice A `wave1-port-foundation`**: merged, but visual parity re-audit required.
+- **Slice A `wave1-port-foundation`**: Phase4 re-audit/repair closeout in progress.
   - Stage 1 docs PR: #372
   - Stage 4~6 frontend/closeout PR: #373
   - 결과: AppShell bottom-safe 조건부, Button/Chip 44px 터치 타겟, Card interactive cursor, ModalFooterActions min-h, SelectionChipRail px-1, SortDropdown primitive 신규 도입. Claude final authority gate pass, blocker 0.
+  - Phase4 re-audit repair: additive `--wave1-*` token aliases, shared AppHeader/BottomTabs, Button/Chip/Card/Badge, ModalHeader/Footer, SelectionChipRail, OptionRow, NumericStepperCompact, SortDropdown focus ring.
+  - Phase4 evidence: `ui/designs/evidence/wave1-port-foundation/*`, `ui/designs/authority/WAVE1_FOUNDATION-authority.md`, targeted Vitest/Playwright.
 - **Slice B `wave1-port-discovery-detail`**: merged, but visual parity re-audit required.
   - Stage 1 docs PR: #374
   - 결과: HOME header 단순화, sort dropdown 전환, filter chip 재배치, RECIPE_DETAIL 별점 제거/행동 metric/CTA 재구성, save modal 정리, login provider 축소. Stage 2 N/A.
@@ -913,8 +915,8 @@ docs/workpacks/wave1-service-porting-plan.md를 먼저 읽고, `ui/designs/proto
 4. `wave1-derived-state-ui-prep`
 
 Service 재포팅 순서:
-1. Slice A `wave1-port-foundation`
-2. Slice B `wave1-port-discovery-detail`
+1. Slice A `wave1-port-foundation` — current closeout
+2. Slice B `wave1-port-discovery-detail` — next after Slice A merge
 3. Slice C `wave1-port-planner-meal-add`
 4. Slice D `wave1-port-shopping-cooking`
 5. Slice E `wave1-port-pantry`
@@ -968,17 +970,16 @@ Service 재포팅 순서:
 
 ## First Next Action
 
-Prototype repair, follow-up freeze, and **`wave1-derived-state-ui-prep`** are complete. The next product implementation step is Slice A **`wave1-port-foundation`** service porting re-audit/repair using:
+Prototype repair, follow-up freeze, and **`wave1-derived-state-ui-prep`** are complete. Slice A **`wave1-port-foundation`** Phase4 service porting re-audit/repair is the current closeout branch. After this PR is merged, the next product implementation step is Slice B **`wave1-port-discovery-detail`** using:
 
 - `fixed_prototype_path=ui/designs/prototypes/claude-design-260505-wave1`
 - `fixed_prototype_implementation_sha=9bf7a34c6b422d0c9981d4c2968e3350d5a28892`
 - `visual_layout_source_of_truth=fixed prototype`
 - `functional_source_of_truth=MVP service implementation + official docs`
 
-1. `pnpm branch:start -- --branch feature/fe-wave1-port-foundation-reaudit`
-2. Read `docs/workpacks/wave1-port-foundation/README.md`, `docs/workpacks/wave1-port-foundation/acceptance.md`, `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`, `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`, and the fixed reference manifest before editing.
-3. Capture or reuse committed fixed reference screenshots, then capture current service screenshots for Slice A surfaces.
-4. Build a difference table for AppShell, bottom tab, shared CTA/button/chip/card/modal primitives, touch targets, spacing, radius, and safe-area behavior.
-5. Lock existing MVP behavior with focused regression tests before visual repair, including no route/API/auth/status/read-only contract changes.
-6. Apply only the foundation repairs needed for fixed reference parity and derived state UI compatibility, leaving Slice B~F screen-specific repairs to their own PRs.
-7. Run targeted tests, `pnpm verify:frontend`, Wave1 PR-ready validators, authority evidence checks, code review, current-head PR checks, and merge.
+1. Merge the current Slice A PR after `pnpm verify:frontend`, Wave1 validators, authority evidence checks, code review, and current-head GitHub checks are green.
+2. Start Slice B with `pnpm branch:start -- --slice wave1-port-discovery-detail --role fe`.
+3. Read `docs/workpacks/wave1-port-discovery-detail/README.md`, `docs/workpacks/wave1-port-discovery-detail/acceptance.md`, `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`, `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`, and the fixed reference manifest before editing.
+4. Capture or reuse committed fixed reference screenshots, then capture current service screenshots for HOME / RECIPE_DETAIL / save popup / login provider surfaces.
+5. Lock existing MVP behavior with focused regression tests before visual repair, including search/filter/sort, recipe save/like/planner-add/cook entry, login return-to-action, and any required API contract updates.
+6. Apply only Slice B repairs, leaving Slice C~F screen-specific repairs to their own PRs.

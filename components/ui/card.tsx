@@ -19,9 +19,9 @@ export function Card({
   return (
     <Tag
       className={[
-        "rounded-[var(--radius-lg)] bg-[var(--surface)] shadow-[var(--shadow-2)]",
+        "rounded-[var(--radius-lg)] bg-[var(--wave1-surface)] shadow-[var(--wave1-shadow-deep)]",
         interactive
-          ? "cursor-pointer transition-all hover:shadow-[var(--shadow-3)] hover:-translate-y-0.5 active:scale-[0.98]"
+          ? "cursor-pointer transition-all hover:shadow-[var(--wave1-shadow-crisp)] hover:-translate-y-0.5 active:scale-[0.98]"
           : "",
         loading ? "animate-pulse" : "",
         className,

@@ -1,9 +1,14 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ModalFooterActions } from "@/components/shared/modal-footer-actions";
+import { ModalHeader } from "@/components/shared/modal-header";
+import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
+import { OptionRow } from "@/components/shared/option-row";
+import { SelectionChipRail } from "@/components/shared/selection-chip-rail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,26 +26,28 @@ describe("Button", () => {
     render(<Button>Save</Button>);
     const btn = screen.getByRole("button", { name: "Save" });
     expect(btn).toBeTruthy();
-    expect(btn.className).toContain("bg-[var(--brand)]");
+    expect(btn.className).toContain("bg-[var(--wave1-mint-contrast)]");
   });
 
   it("renders secondary variant with border", () => {
     render(<Button variant="secondary">Cancel</Button>);
     const btn = screen.getByRole("button", { name: "Cancel" });
     expect(btn.className).toContain("border");
-    expect(btn.className).toContain("text-[var(--brand)]");
+    expect(btn.className).toContain("text-[var(--wave1-mint-contrast)]");
   });
 
   it("renders neutral variant", () => {
     render(<Button variant="neutral">Neutral</Button>);
     const btn = screen.getByRole("button", { name: "Neutral" });
-    expect(btn.className).toContain("bg-[var(--surface-fill)]");
+    expect(btn.className).toContain("bg-[var(--wave1-surface-fill)]");
   });
 
   it("renders destructive variant", () => {
     render(<Button variant="destructive">Delete</Button>);
     const btn = screen.getByRole("button", { name: "Delete" });
-    expect(btn.className).toContain("text-[var(--surface)]");
+    expect(btn.className).toContain("text-[var(--wave1-surface)]");
+    expect(btn.className).toContain("bg-[var(--wave1-red-contrast)]");
+    expect(btn.className).toContain("hover:bg-[var(--wave1-red-contrast-deep)]");
   });
 
   it("sm size meets 44px minimum touch target", () => {
@@ -75,21 +82,21 @@ describe("Chip", () => {
     render(<Chip label="Korean" />);
     const btn = screen.getByRole("button", { name: "Korean" });
     expect(btn.getAttribute("aria-pressed")).toBe("false");
-    expect(btn.className).toContain("bg-[var(--surface-subtle)]");
+    expect(btn.className).toContain("bg-[var(--wave1-surface-subtle)]");
   });
 
   it("renders filter chip in active state with dark bg", () => {
     render(<Chip active label="Korean" variant="filter" />);
     const btn = screen.getByRole("button", { name: "Korean" });
     expect(btn.getAttribute("aria-pressed")).toBe("true");
-    expect(btn.className).toContain("bg-[var(--foreground)]");
+    expect(btn.className).toContain("bg-[var(--wave1-ink)]");
     expect(btn.className).toContain("font-bold");
   });
 
-  it("renders selection chip in active state with brand bg", () => {
+  it("renders selection chip in active state with Wave1 mint bg", () => {
     render(<Chip active label="Popular" variant="selection" />);
     const btn = screen.getByRole("button", { name: "Popular" });
-    expect(btn.className).toContain("bg-[var(--brand)]");
+    expect(btn.className).toContain("bg-[var(--wave1-mint-contrast)]");
   });
 
   it("applies 44px minimum touch target", () => {
@@ -111,14 +118,15 @@ describe("Card", () => {
     render(<Card>Content</Card>);
     const el = screen.getByText("Content");
     expect(el.className).toContain("rounded-[var(--radius-lg)]");
-    expect(el.className).toContain("shadow-[var(--shadow-2)]");
+    expect(el.className).toContain("bg-[var(--wave1-surface)]");
+    expect(el.className).toContain("shadow-[var(--wave1-shadow-deep)]");
   });
 
   it("adds cursor-pointer and hover effects when interactive", () => {
     render(<Card interactive>Click me</Card>);
     const el = screen.getByText("Click me");
     expect(el.className).toContain("cursor-pointer");
-    expect(el.className).toContain("hover:shadow-[var(--shadow-3)]");
+    expect(el.className).toContain("hover:shadow-[var(--wave1-shadow-crisp)]");
   });
 
   it("adds pulse animation when loading", () => {
@@ -138,25 +146,139 @@ describe("Badge", () => {
   it("renders brand variant by default", () => {
     render(<Badge>New</Badge>);
     const el = screen.getByText("New");
-    expect(el.className).toContain("bg-[var(--brand-soft)]");
+    expect(el.className).toContain("bg-[var(--wave1-mint-soft)]");
   });
 
-  it("renders olive variant", () => {
+  it("renders olive variant with Wave1 success accent", () => {
     render(<Badge variant="olive">Active</Badge>);
     const el = screen.getByText("Active");
-    expect(el.className).toContain("text-[var(--olive)]");
+    expect(el.className).toContain("text-[var(--wave1-teal-contrast)]");
   });
 
   it("renders muted variant", () => {
     render(<Badge variant="muted">Info</Badge>);
     const el = screen.getByText("Info");
-    expect(el.className).toContain("bg-[var(--surface-fill)]");
+    expect(el.className).toContain("bg-[var(--wave1-surface-fill)]");
   });
 
   it("uses pill shape radius", () => {
     render(<Badge>Pill</Badge>);
     const el = screen.getByText("Pill");
     expect(el.className).toContain("rounded-[var(--radius-full)]");
+  });
+});
+
+describe("Modal shared primitives", () => {
+  it("renders ModalHeader with fixed prototype text and close treatment", () => {
+    const onClose = vi.fn();
+    render(
+      <ModalHeader
+        description="Helper copy"
+        onClose={onClose}
+        title="플래너에 추가"
+      />,
+    );
+
+    const heading = screen.getByRole("heading", { name: "플래너에 추가" });
+    expect(heading.className).toContain("text-[var(--wave1-ink)]");
+    expect(heading.className).not.toContain("tracking-[");
+
+    const closeButton = screen.getByRole("button", { name: "닫기" });
+    expect(closeButton.className).toContain("text-[var(--wave1-text-2)]");
+    expect(closeButton.querySelector("span")?.className).toContain(
+      "bg-[var(--wave1-surface-fill)]",
+    );
+  });
+
+  it("renders ModalFooterActions with mint primary and neutral cancel hierarchy", () => {
+    const onCancel = vi.fn();
+    const onConfirm = vi.fn();
+
+    render(
+      <ModalFooterActions
+        confirmLabel="추가"
+        onCancel={onCancel}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    const cancel = screen.getByRole("button", { name: "취소" });
+    const confirm = screen.getByRole("button", { name: "추가" });
+
+    expect(cancel.className).toContain("border-[var(--wave1-border)]");
+    expect(cancel.className).toContain("text-[var(--wave1-text-2)]");
+    expect(confirm.className).toContain("bg-[var(--wave1-mint-contrast)]");
+
+    fireEvent.click(cancel);
+    fireEvent.click(confirm);
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onConfirm).toHaveBeenCalledOnce();
+  });
+});
+
+describe("SelectionChipRail", () => {
+  it("renders selected pill chips with Wave1 mint state", () => {
+    const onSelect = vi.fn();
+
+    render(
+      <SelectionChipRail
+        chips={[
+          { label: "전체", value: "all" },
+          { label: "채소", value: "veg" },
+        ]}
+        onSelect={onSelect}
+        selectedValue="veg"
+      />,
+    );
+
+    const selected = screen.getByRole("button", { name: "채소" });
+    expect(selected.className).toContain("border-[var(--wave1-mint)]");
+    expect(selected.className).toContain("bg-[var(--wave1-mint-soft)]");
+    expect(selected.className).toContain("text-[var(--wave1-mint-contrast)]");
+  });
+});
+
+describe("OptionRow", () => {
+  it("renders selected rows with Wave1 surface and mint checkmark", () => {
+    render(<OptionRow isSelected label="최신순" onClick={() => {}} />);
+
+    const row = screen.getByRole("option", { name: "최신순", selected: true });
+    expect(row.className).toContain("border-[var(--wave1-border)]");
+    expect(row.className).toContain("bg-[var(--wave1-surface)]");
+    expect(row.className).toContain("text-[var(--wave1-ink)]");
+    expect(row.querySelector("svg")?.getAttribute("class")).toContain(
+      "text-[var(--wave1-mint-contrast)]",
+    );
+  });
+});
+
+describe("NumericStepperCompact", () => {
+  it("uses Wave1 controls and emits bounded value changes", () => {
+    const onChange = vi.fn();
+
+    render(
+      <NumericStepperCompact
+        min={1}
+        onChange={onChange}
+        unit="인분"
+        value={2}
+      />,
+    );
+
+    const decrease = screen.getByRole("button", { name: "인분 줄이기" });
+    const increase = screen.getByRole("button", { name: "인분 늘리기" });
+
+    expect(decrease.querySelector("span")?.className).toContain(
+      "border-[var(--wave1-border)]",
+    );
+    expect(increase.querySelector("span")?.className).toContain(
+      "bg-[var(--wave1-ink)]",
+    );
+
+    fireEvent.click(decrease);
+    fireEvent.click(increase);
+    expect(onChange).toHaveBeenNthCalledWith(1, 1);
+    expect(onChange).toHaveBeenNthCalledWith(2, 3);
   });
 });
 

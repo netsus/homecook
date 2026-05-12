@@ -11,7 +11,7 @@ interface ModalFooterActionsProps {
   cancelDisabled?: boolean;
 }
 
-/** Cancel (flex-1) + primary confirm (flex-2) footer row. D1: olive CTA. */
+/** Cancel (flex-1) + primary confirm (flex-2) footer row. */
 export function ModalFooterActions({
   cancelLabel = "취소",
   confirmLabel,
@@ -23,7 +23,7 @@ export function ModalFooterActions({
   return (
     <div className="flex gap-2.5">
       <button
-        className="flex min-h-[48px] flex-1 items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] py-3.5 text-sm font-semibold text-[var(--foreground)] transition-colors hover:bg-[var(--surface-fill)] disabled:opacity-40"
+        className="flex min-h-[48px] flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--wave1-border)] bg-[var(--wave1-surface)] py-3.5 text-sm font-semibold text-[var(--wave1-text-2)] transition-colors hover:bg-[var(--wave1-surface-fill)] disabled:opacity-40"
         disabled={cancelDisabled}
         onClick={onCancel}
         type="button"
@@ -31,7 +31,7 @@ export function ModalFooterActions({
         {cancelLabel}
       </button>
       <button
-        className="flex min-h-[48px] flex-[2] items-center justify-center rounded-[var(--radius-md)] bg-[var(--olive)] py-3.5 text-sm font-bold text-[var(--surface)] shadow-[var(--shadow-1)] transition-colors hover:brightness-110 disabled:opacity-50"
+        className="flex min-h-[48px] flex-[2] items-center justify-center rounded-[var(--radius-sm)] bg-[var(--wave1-mint-contrast)] py-3.5 text-sm font-bold text-[var(--wave1-surface)] shadow-[var(--wave1-shadow-natural)] transition-colors hover:bg-[var(--wave1-mint-contrast-deep)] disabled:opacity-50"
         disabled={confirmDisabled}
         onClick={onConfirm}
         type="button"
