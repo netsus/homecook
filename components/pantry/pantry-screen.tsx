@@ -8,7 +8,9 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { PantryAddSheet } from "@/components/pantry/pantry-add-sheet";
 import { PantryBundlePicker } from "@/components/pantry/pantry-bundle-picker";
+import { PantryMobileScreen } from "@/components/pantry/pantry-mobile-screen";
 import { ContentState } from "@/components/shared/content-state";
+import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
@@ -58,6 +60,7 @@ export function PantryScreen({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" } | null>(null);
+  const isMobileViewport = useIsMobileViewport();
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedQueryRef = useRef("");
@@ -332,6 +335,114 @@ export function PantryScreen({
 
   const isEmpty = items.length === 0 && !searchQuery && !activeCategory;
   const isSearchEmpty = displayItems.length === 0 && (searchQuery || activeCategory);
+  const overlayNodes = (
+    <>
+      {/* Delete confirm modal */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-end bg-black/40 p-4 md:items-center md:justify-center"
+          onClick={() => setShowDeleteConfirm(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-t-[var(--radius-xl)] bg-[var(--panel)] p-5 shadow-[var(--shadow-3)] md:rounded-[var(--radius-xl)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center pt-1 md:hidden">
+              <div className="h-1 w-9 rounded-sm bg-[var(--line)]" />
+            </div>
+            <div className="flex items-start justify-between gap-3 pt-3">
+              <h3 className="text-lg font-bold text-[var(--foreground)]">
+                재료를 삭제할까요?
+              </h3>
+              <button
+                aria-label="닫기"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-3)]"
+                onClick={() => setShowDeleteConfirm(false)}
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              삭제하면 장보기 목록에서 자동 제외되지 않아요
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                className="flex min-h-[44px] flex-1 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface)] text-sm font-semibold text-[var(--foreground)]"
+                onClick={() => setShowDeleteConfirm(false)}
+                type="button"
+              >
+                취소
+              </button>
+              <button
+                className="flex min-h-[44px] flex-1 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-deep)] text-sm font-semibold text-[var(--surface)] disabled:opacity-50"
+                disabled={isDeleting}
+                onClick={() => void handleDeleteConfirm()}
+                type="button"
+              >
+                {isDeleting ? "삭제 중..." : `삭제 (${selectedIds.size})`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed left-1/2 top-16 z-50 -translate-x-1/2 rounded-[var(--radius-md)] px-4 py-2.5 text-sm font-medium shadow-lg transition-opacity ${
+            toast.tone === "success"
+              ? "bg-[var(--olive)] text-[var(--surface)]"
+              : "bg-[var(--brand-deep)] text-[var(--surface)]"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
+      {/* Add sheet */}
+      {showAddSheet && (
+        <PantryAddSheet
+          existingIngredientIds={items.map((item) => item.ingredient_id)}
+          onAdd={handleAddComplete}
+          onClose={() => setShowAddSheet(false)}
+        />
+      )}
+
+      {/* Bundle picker */}
+      {showBundlePicker && (
+        <PantryBundlePicker
+          onAdd={handleBundleAddComplete}
+          onClose={() => setShowBundlePicker(false)}
+        />
+      )}
+    </>
+  );
+
+  if (isMobileViewport) {
+    return (
+      <>
+        <PantryMobileScreen
+          activeCategory={activeCategory}
+          displayItems={displayItems}
+          isSelectMode={isSelectMode}
+          items={items}
+          onCategoryChange={handleCategoryChange}
+          onClearSearch={handleClearSearch}
+          onExitSelectMode={handleExitSelectMode}
+          onOpenAddSheet={() => setShowAddSheet(true)}
+          onOpenBundlePicker={() => setShowBundlePicker(true)}
+          onRequestDelete={() => setShowDeleteConfirm(true)}
+          onSearchChange={handleSearch}
+          onSelectToggle={handleSelectToggle}
+          onStartSelectMode={() => setIsSelectMode(true)}
+          searchQuery={searchQuery}
+          selectedIds={selectedIds}
+        />
+        {overlayNodes}
+      </>
+    );
+  }
 
   return (
     <div className="space-y-3 pb-24">

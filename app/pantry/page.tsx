@@ -6,7 +6,7 @@ export default async function PantryPage() {
   const user = await getServerAuthUser();
 
   return (
-    <AppShell currentTab="pantry">
+    <AppShell className="wave1-pantry-shell" currentTab="pantry">
       <PantryScreen initialAuthenticated={Boolean(user)} />
     </AppShell>
   );
