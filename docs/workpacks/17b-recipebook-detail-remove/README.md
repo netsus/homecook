@@ -204,7 +204,7 @@
 
 - [x] 백엔드 계약 고정 (`GET /recipe-books/{book_id}/recipes`, `DELETE /recipe-books/{book_id}/recipes/{recipe_id}`) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 (Route Handler 2개 추가) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [ ] 2026-05-12 타입 반영 (`RecipeBookDetailItem` with recipe_id/title/thumbnail_url/tags/view_count/total_duration_seconds/total_duration_text/base_servings/added_at, delete response types) <!-- omo:id=delivery-types-v124;stage=2;scope=shared;review=3,6 -->
+- [x] 2026-05-12 타입 반영 (`RecipeBookDetailItem` with recipe_id/title/thumbnail_url/tags/view_count/total_duration_seconds/total_duration_text/base_servings/added_at, delete response types) <!-- omo:id=delivery-types-v124;stage=2;scope=shared;review=3,6 -->
 - [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 (owner-guard, my_added 403, liked/saved/custom 분기, 404, count 갱신) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->

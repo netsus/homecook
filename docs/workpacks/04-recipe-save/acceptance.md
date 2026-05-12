@@ -5,7 +5,7 @@
 ## Happy Path
 - [x] 사용자가 RECIPE_DETAIL에서 [저장] 버튼 클릭 시 SAVE_MODAL이 오픈된다
 - [x] SAVE_MODAL에서 저장 가능한 레시피북 목록(saved/custom)이 노출된다
-- [ ] 2026-05-12 계약 기준으로 기존 레시피북을 여러 개 선택하고 [저장] 클릭 시 레시피가 선택한 saved/custom 책 전체에 저장된다
+- [x] 2026-05-12 계약 기준으로 기존 레시피북을 여러 개 선택하고 [저장] 클릭 시 레시피가 선택한 saved/custom 책 전체에 저장된다
 - [x] "새 레시피북 만들기" 입력 후 저장 시 커스텀 레시피북이 생성되고 레시피가 저장된다
 - [x] 저장 성공 시 SAVE_MODAL이 닫히고 RECIPE_DETAIL의 save_count가 증가한다
 - [x] 저장 후 RECIPE_DETAIL의 user_status.is_saved가 true로 변경된다
@@ -16,10 +16,10 @@
 ## State / Policy
 - [x] book_type이 'saved' 또는 'custom'인 레시피북만 저장 대상으로 노출된다
 - [x] book_type이 'my_added' 또는 'liked'인 레시피북으로 저장 시도 시 409 CONFLICT 반환된다
-- [ ] 이미 저장된 레시피북을 포함해 multi-save하면 200으로 응답하고 해당 책은 `already_saved_book_ids`에 포함된다
+- [x] 이미 저장된 레시피북을 포함해 multi-save하면 200으로 응답하고 해당 책은 `already_saved_book_ids`에 포함된다
 - [x] 다른 유저의 레시피북으로 저장 시도 시 403 FORBIDDEN 반환된다
 - [x] 레시피북 생성 시 book_type은 자동으로 'custom'으로 설정된다
-- [ ] 저장 성공 시 recipes.save_count가 새로 생성된 recipe_book_items 수만큼 증가한다
+- [x] 저장 성공 시 recipes.save_count가 새로 생성된 recipe_book_items 수만큼 증가한다
 
 ## Error / Permission
 - [x] SAVE_MODAL 로딩 상태가 있다 (레시피북 목록 조회 중)
@@ -38,7 +38,7 @@
 - [x] 레시피북 생성 시 name이 50자를 초과하면 422 VALIDATION_ERROR 반환된다
 - [x] 레시피북 목록은 로그인된 사용자의 책만 조회된다
 - [x] 저장 후 recipe_book_items 테이블에 (book_id, recipe_id) row가 생성된다
-- [ ] 중복 저장 시도는 UNIQUE 제약을 우회하지 않고 idempotent하게 200 + `already_saved_book_ids`로 처리된다
+- [x] 중복 저장 시도는 UNIQUE 제약을 우회하지 않고 idempotent하게 200 + `already_saved_book_ids`로 처리된다
 
 ## Data Setup / Preconditions
 
@@ -69,15 +69,15 @@
 ### Vitest
 - [x] 레시피북 목록 조회 로직 (book_type 필터링)
 - [x] 레시피북 생성 로직 (name 검증, book_type 자동 설정)
-- [ ] 레시피 multi-save 로직 (`book_ids[]`, 중복 정규화, already_saved_book_ids, 권한 검증)
-- [ ] save_count 증가 로직 (신규 insert 수만큼 증가)
+- [x] 레시피 multi-save 로직 (`book_ids[]`, 중복 정규화, already_saved_book_ids, 권한 검증)
+- [x] save_count 증가 로직 (신규 insert 수만큼 증가)
 - [x] user_status 업데이트 로직 (is_saved, saved_book_ids)
 - [x] book_type 제한 정책 (saved/custom만 허용)
-- [ ] 에러 케이스 (401, 403, 404, invalid book_type 409, validation 422)
+- [x] 에러 케이스 (401, 403, 404, invalid book_type 409, validation 422)
 
 ### Playwright
 - [x] 비로그인 상태에서 저장 버튼 클릭 → 로그인 게이트 → 로그인 후 return-to-action 흐름
-- [ ] 저장 모달 오픈 → 레시피북 목록 노출 → 여러 책 선택 → 저장 → 모달 닫힘 흐름
+- [x] 저장 모달 오픈 → 레시피북 목록 노출 → 여러 책 선택 → 저장 → 모달 닫힘 흐름
 - [x] 저장 모달 오픈 → 새 레시피북 만들기 → 저장 → 모달 닫힘 흐름
 - [x] 저장 후 레시피 상세 화면의 save_count 증가 확인
 - [x] 저장 후 user_status 반영 확인 (is_saved=true)

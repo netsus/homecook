@@ -9,12 +9,12 @@
 
 ## Happy Path
 - [x] PLANNER_WEEK [남은요리] → LEFTOVERS 화면 진입 시 남은요리 리스트가 최근순으로 표시된다 <!-- omo:id=accept-happy-leftovers-list;stage=4;scope=frontend;review=5,6 -->
-- [ ] 2026-05-12 계약 기준 LEFTOVERS 아이템 카드에 레시피명, 썸네일, 요리완료일, 최신 연결 끼니명, 요리 인분, [다먹음], [플래너에 추가] 버튼이 표시된다 <!-- omo:id=accept-happy-leftovers-card-v124;stage=4;scope=frontend;review=5,6 -->
+- [x] 2026-05-12 계약 기준 LEFTOVERS 아이템 카드에 레시피명, 썸네일, 요리완료일, 최신 연결 끼니명, 요리 인분, [다먹음], [플래너에 추가] 버튼이 표시된다 <!-- omo:id=accept-happy-leftovers-card-v124;stage=4;scope=frontend;review=5,6 -->
 - [x] [다먹음] 클릭 시 해당 항목이 eaten 상태로 전이되고 LEFTOVERS 리스트에서 사라진다 <!-- omo:id=accept-happy-eat;stage=4;scope=frontend;review=5,6 -->
-- [ ] 2026-05-12 계약 기준 ATE_LIST 화면에서 다먹은 항목이 최신순으로 표시된다 (레시피명, 썸네일, 다먹은 날짜, 최신 연결 끼니명, 요리 인분) <!-- omo:id=accept-happy-ate-list-v124;stage=4;scope=frontend;review=5,6 -->
+- [x] 2026-05-12 계약 기준 ATE_LIST 화면에서 다먹은 항목이 최신순으로 표시된다 (레시피명, 썸네일, 다먹은 날짜, 최신 연결 끼니명, 요리 인분) <!-- omo:id=accept-happy-ate-list-v124;stage=4;scope=frontend;review=5,6 -->
 - [x] ATE_LIST에서 [덜먹음] 클릭 시 해당 항목이 leftover 상태로 복귀하고 LEFTOVERS 리스트에 다시 나타난다 <!-- omo:id=accept-happy-uneat;stage=4;scope=frontend;review=5,6 -->
 - [x] [플래너에 추가] 클릭 시 날짜/끼니 선택 + 인분 입력 → Meal 생성 성공 (is_leftover=true, leftover_dish_id 포함) <!-- omo:id=accept-happy-planner-add;stage=4;scope=frontend;review=5,6 -->
-- [ ] GET /leftovers 응답이 공식 API v1.2.4 §10-1 형식과 일치한다 (`source_meal_label`, `source_planned_servings`, `cooking_servings` 포함) <!-- omo:id=accept-happy-get-response-v124;stage=2;scope=backend;review=3,6 -->
+- [x] GET /leftovers 응답이 공식 API v1.2.4 §10-1 형식과 일치한다 (`source_meal_label`, `source_planned_servings`, `cooking_servings` 포함) <!-- omo:id=accept-happy-get-response-v124;stage=2;scope=backend;review=3,6 -->
 - [x] POST /leftovers/{id}/eat 응답이 공식 API §10-2 형식과 일치한다 <!-- omo:id=accept-happy-eat-response;stage=2;scope=backend;review=3,6 -->
 - [x] POST /leftovers/{id}/uneat 응답이 공식 API §10-3 형식과 일치한다 <!-- omo:id=accept-happy-uneat-response;stage=2;scope=backend;review=3,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
@@ -22,7 +22,7 @@
 
 ## State / Policy
 - [x] leftover_dishes.status 전이가 공식 문서와 일치한다 (leftover ↔ eaten) <!-- omo:id=accept-state-transition;stage=2;scope=shared;review=3,6 -->
-- [ ] leftover_dishes.cooking_servings가 요리 완료 시 1 이상으로 저장되고 GET /leftovers에 노출된다 <!-- omo:id=accept-cooking-servings;stage=2;scope=backend;review=3,6 -->
+- [x] leftover_dishes.cooking_servings가 요리 완료 시 1 이상으로 저장되고 GET /leftovers에 노출된다 <!-- omo:id=accept-cooking-servings;stage=2;scope=backend;review=3,6 -->
 - [x] eat 시 eaten_at=now(), auto_hide_at=eaten_at+30d가 설정된다 <!-- omo:id=accept-state-eat-fields;stage=2;scope=backend;review=3,6 -->
 - [x] uneat 시 eaten_at=NULL, auto_hide_at=NULL이 설정된다 <!-- omo:id=accept-state-uneat-fields;stage=2;scope=backend;review=3,6 -->
 - [x] DB CHECK 제약을 위반하는 상태 전이가 없다 <!-- omo:id=accept-state-check-constraint;stage=2;scope=backend;review=3,6 -->
@@ -45,7 +45,7 @@
 - [x] 타인 소유 leftover에 대한 상태 전이가 거부된다 <!-- omo:id=accept-owner-guard-reject;stage=2;scope=backend;review=3,6 -->
 - [x] 남은요리 → 플래너 추가 시 leftover_dish_id 소유자 검증이 된다 <!-- omo:id=accept-planner-add-owner-guard;stage=2;scope=backend;review=3,6 -->
 - [x] leftover_dishes.recipe_id가 recipes 테이블에 실재하는 레시피를 참조한다 <!-- omo:id=accept-derived-fields;stage=2;scope=backend;review=3,6 -->
-- [ ] `source_meal_label` / `source_planned_servings`는 `meals.leftover_dish_id`와 `meal_plan_columns`에서 최신 연결 meal 기준으로 파생된다 <!-- omo:id=accept-leftover-source-meal-meta;stage=2;scope=backend;review=3,6 -->
+- [x] `source_meal_label` / `source_planned_servings`는 `meals.leftover_dish_id`와 `meal_plan_columns`에서 최신 연결 meal 기준으로 파생된다 <!-- omo:id=accept-leftover-source-meal-meta;stage=2;scope=backend;review=3,6 -->
 
 ## Data Setup / Preconditions
 - [x] fixture / mock에서 leftover_dishes (leftover, eaten, 만료 eaten) + recipes + meal_plan_columns가 준비되어 있다 <!-- omo:id=accept-fixture-baseline;stage=2;scope=shared;review=3,6 -->
@@ -67,7 +67,7 @@
 ## Automation Split
 
 ### Vitest
-- [ ] GET /leftovers 핸들러: status=leftover/eaten 조회, 30일 초과 eaten 필터링, 정렬 순서, 401 에러, v1.2.4 card metadata <!-- omo:id=accept-vitest-get-leftovers-v124;stage=2;scope=backend;review=3,6 -->
+- [x] GET /leftovers 핸들러: status=leftover/eaten 조회, 30일 초과 eaten 필터링, 정렬 순서, 401 에러, v1.2.4 card metadata <!-- omo:id=accept-vitest-get-leftovers-v124;stage=2;scope=backend;review=3,6 -->
 - [x] POST /leftovers/{id}/eat 핸들러: 정상 전이, 멱등성, 소유자 검증(403), 미존재(404), 비로그인(401) <!-- omo:id=accept-vitest-eat;stage=2;scope=backend;review=3,6 -->
 - [x] POST /leftovers/{id}/uneat 핸들러: 정상 전이, 멱등성, 소유자 검증(403), 미존재(404), 비로그인(401) <!-- omo:id=accept-vitest-uneat;stage=2;scope=backend;review=3,6 -->
 - [x] POST /meals (leftover_dish_id): is_leftover=true 자동 세팅, leftover 소유자 검증 <!-- omo:id=accept-vitest-planner-add-leftover;stage=2;scope=backend;review=3,6 -->
