@@ -25,8 +25,12 @@ The current service screenshots below were regenerated from `tests/e2e/qa-wave1-
 | RECIPE_DETAIL default | 390x844 | `ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile-default.png` | `ui/designs/reference/wave1-fixed-prototype/mobile-390-recipe-detail.png` | Current MVP data differs from reference title/counts; repair should focus geometry and classify data-only differences. |
 | RECIPE_DETAIL default | 320x568 | `ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile-narrow.png` | `ui/designs/reference/wave1-fixed-prototype/mobile-320-recipe-detail.png` | Needs CTA, tab, and ingredient row fit check at 320px. |
 | RECIPE_DETAIL metric cluster | element capture | `ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-hero-stats.png` | `ui/designs/reference/wave1-fixed-prototype/mobile-390-recipe-detail.png` | Element-level capture is supplementary; final verdict must still use full-screen reference. |
-| SavePopup | 390-width dialog | `ui/designs/evidence/wave1-port-discovery-detail/save-modal.png` | `ui/designs/reference/wave1-fixed-prototype/mobile-390-save-popup.png` | Current sheet is close in structure but lacks dimmed page context in the standalone dialog capture. |
-| LOGIN | 390x844 | `ui/designs/evidence/wave1-port-discovery-detail/login-screen.png` | `ui/designs/reference/wave1-fixed-prototype/mobile-390-login.png` | Current service login is still legacy card/brand narrative and is a major Phase5 repair target. |
+| SavePopup | 390x844 | `ui/designs/evidence/wave1-port-discovery-detail/save-modal.png` | `ui/designs/reference/wave1-fixed-prototype/mobile-390-save-popup.png` | Phase5 recapture now includes full dimmed page context and multi-book selected state. |
+| SavePopup | 320x568 | `ui/designs/evidence/wave1-port-discovery-detail/save-modal-narrow.png` | `ui/designs/reference/wave1-fixed-prototype/mobile-320-save-popup.png` | Phase5 recapture confirms footer actions stay visible at 320px. |
+| LOGIN | 390x844 | `ui/designs/evidence/wave1-port-discovery-detail/login-screen.png` | `ui/designs/reference/wave1-fixed-prototype/mobile-390-login.png` | Phase5 repair replaced the legacy card narrative with the compact mint login composition. |
+| LOGIN | 320x568 | `ui/designs/evidence/wave1-port-discovery-detail/login-screen-narrow.png` | `ui/designs/reference/wave1-fixed-prototype/mobile-320-login.png` | Phase5 recapture confirms provider buttons fit at 320px. |
+| Global LoginGateModal | 390x844 | `ui/designs/evidence/wave1-port-discovery-detail/login-gate-modal.png` | `ui/designs/reference/wave1-fixed-prototype/mobile-390-login-gate-modal.png` | Phase5 recapture adds deterministic protected-action evidence. |
+| Global LoginGateModal | 320x568 | `ui/designs/evidence/wave1-port-discovery-detail/login-gate-modal-narrow.png` | `ui/designs/reference/wave1-fixed-prototype/mobile-320-login-gate-modal.png` | Phase5 recapture confirms footer actions stay visible at 320px. |
 
 ## Prototype vs Service Diff Table
 
@@ -76,13 +80,13 @@ Phase5 repair PR must include:
 ## PR-Ready Evidence Checklist
 
 - [x] Current service screenshots regenerated at 390px and 320px for HOME and RECIPE_DETAIL.
-- [x] HOME sort-open, SavePopup, and LOGIN current screenshots regenerated.
+- [x] HOME sort-open, SavePopup, LOGIN, and LoginGate current screenshots regenerated.
 - [x] Screenshot pixel dimensions aligned with fixed references by switching Slice B evidence capture to DPR 1.
 - [x] Fixed reference mapping recorded in this prep artifact.
 - [x] Prototype-vs-service diff table recorded.
 - [x] MVP regression lock recorded with targeted Vitest and Playwright commands.
-- [ ] Phase5 repair: screenshot diff images/reports generated.
-- [ ] Phase5 repair: computed-style audit generated.
-- [ ] Phase5 repair: DOM geometry audit generated.
-- [ ] Phase5 repair: remaining-difference ledger reaches visual blockers 0 and unclassified visual differences 0.
-- [ ] Phase5 repair: authority report refreshed and Claude final authority gate rerun.
+- [x] Phase5 repair: screenshot diff reports generated in `ui/designs/evidence/wave1-port-discovery-detail/phase5-visual-audit.md`.
+- [x] Phase5 repair: computed-style audit generated in `ui/designs/evidence/wave1-port-discovery-detail/phase5-visual-audit.md`.
+- [x] Phase5 repair: DOM geometry audit generated in `ui/designs/evidence/wave1-port-discovery-detail/phase5-visual-audit.md`.
+- [x] Phase5 repair: remaining-difference ledger reaches visual blockers 0 and unclassified visual differences 0.
+- [x] Phase5 repair: authority report refreshed and Claude final authority gate rerun.

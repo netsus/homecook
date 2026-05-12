@@ -210,6 +210,11 @@ button {
     padding: 0;
   }
 
+  .app-shell.wave1-login-shell {
+    background: #ffffff;
+    padding: 0;
+  }
+
   .app-shell.wave1-recipe-shell {
     background: #ffffff;
     padding: 0;
@@ -227,6 +232,7 @@ button {
   .app-shell.wave1-pantry-shell > div,
   .app-shell.wave1-mypage-shell > div,
   .app-shell.wave1-leftovers-shell > div,
+  .app-shell.wave1-login-shell > div,
   .app-shell.wave1-recipe-shell > div {
     max-width: none;
     gap: 0;
@@ -243,6 +249,7 @@ button {
   .app-shell.wave1-pantry-shell main,
   .app-shell.wave1-mypage-shell main,
   .app-shell.wave1-leftovers-shell main,
+  .app-shell.wave1-login-shell main,
   .app-shell.wave1-recipe-shell main {
     width: 100%;
   }

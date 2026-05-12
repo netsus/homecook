@@ -68,20 +68,21 @@ describe("login screen", () => {
     expect(screen.getByText("social-buttons:/")).toBeTruthy();
   });
 
-  it("renders the step 1 social login copy by default", () => {
+  it("renders the Wave1 mobile login copy by default", () => {
     render(<LoginScreen />);
 
     expect(
-      screen.getByRole("heading", { name: "소셜 로그인으로 이어서 진행하세요" }),
+      screen.getByRole("heading", { name: "홈쿡과 함께오늘 뭐 먹지 정해봐요" }),
     ).toBeTruthy();
-    expect(screen.getByText("집밥하는 모든 과정을 함께")).toBeTruthy();
+    expect(
+      screen.getByText("식단을 짜고, 장 보고, 요리한 기록을 남길 수 있어요."),
+    ).toBeTruthy();
   });
 
   it("uses the provided nextPath for login actions", () => {
     render(<LoginScreen nextPath="/planner" />);
 
     expect(screen.getByText("social-buttons:/planner")).toBeTruthy();
-    expect(screen.getByText("/planner")).toBeTruthy();
   });
 
   it("redirects authenticated users away from the login screen", async () => {

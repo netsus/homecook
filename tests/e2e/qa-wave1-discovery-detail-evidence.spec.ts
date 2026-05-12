@@ -93,10 +93,17 @@ async function installRecipeBookRoutes(page: Page) {
             },
             {
               book_type: "custom",
-              id: "book-custom",
-              name: "주말 파티",
+              id: "book-weeknight",
+              name: "평일 저녁 빠른요리",
               recipe_count: 1,
               sort_order: 1,
+            },
+            {
+              book_type: "custom",
+              id: "book-weekend",
+              name: "주말 한 상 차림",
+              recipe_count: 0,
+              sort_order: 2,
             },
           ],
         },
@@ -175,15 +182,48 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
   {
     const { context, page } = await preparePage(browser, viewports.mobile);
     await setAuthOverride(page, "authenticated");
-    await installRecipeDetailRoutes(page);
+    await installRecipeDetailRoutes(page, {
+      recipeDetail: {
+        user_status: {
+          is_liked: false,
+          is_saved: true,
+          saved_book_ids: ["book-saved", "book-weeknight"],
+        },
+      },
+    });
     await installRecipeBookRoutes(page);
     await page.goto(`${BASE_URL}${RECIPE_PATH}`);
     await page.getByRole("button", { name: "저장" }).click();
     const dialog = page.getByRole("dialog", { name: "레시피 저장" });
     await expect(dialog).toBeVisible();
     await stabilize(page);
-    await dialog.screenshot({
+    await page.screenshot({
+      fullPage: false,
       path: path.join(EVIDENCE_DIR, "save-modal.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.narrow);
+    await setAuthOverride(page, "authenticated");
+    await installRecipeDetailRoutes(page, {
+      recipeDetail: {
+        user_status: {
+          is_liked: false,
+          is_saved: true,
+          saved_book_ids: ["book-saved", "book-weeknight"],
+        },
+      },
+    });
+    await installRecipeBookRoutes(page);
+    await page.goto(`${BASE_URL}${RECIPE_PATH}`);
+    await page.getByRole("button", { name: "저장" }).click();
+    await expect(page.getByRole("dialog", { name: "레시피 저장" })).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "save-modal-narrow.png"),
     });
     await context.close();
   }
@@ -198,6 +238,54 @@ test("capture Wave1 discovery/detail authority evidence", async ({ browser }) =>
     await page.screenshot({
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "login-screen.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.narrow);
+    await page.goto(`${BASE_URL}/login`);
+    const googleLoginButton = page.getByRole("button", { name: "Google로 시작하기" });
+    await expect(googleLoginButton).toBeVisible();
+    await googleLoginButton.scrollIntoViewIfNeeded();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "login-screen-narrow.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.mobile);
+    await setAuthOverride(page, "guest");
+    await installRecipeDetailRoutes(page);
+    await page.goto(`${BASE_URL}${RECIPE_PATH}`);
+    await page.getByRole("button", { name: "저장" }).click();
+    await expect(
+      page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" }),
+    ).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "login-gate-modal.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.narrow);
+    await setAuthOverride(page, "guest");
+    await installRecipeDetailRoutes(page);
+    await page.goto(`${BASE_URL}${RECIPE_PATH}`);
+    await page.getByRole("button", { name: "저장" }).click();
+    await expect(
+      page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" }),
+    ).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "login-gate-modal-narrow.png"),
     });
     await context.close();
   }

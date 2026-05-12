@@ -1,0 +1,26 @@
+{
+  "slice": "wave1-port-discovery-detail",
+  "stage": 5,
+  "date": "2026-05-13",
+  "fixed_prototype_sha": "9bf7a34c6b422d0c9981d4c2968e3350d5a28892",
+  "visual_parity_score": 94,
+  "blocker_count": 0,
+  "major_count": 0,
+  "minor_count": 0,
+  "unclassified_visual_differences": 0,
+  "evidence": [
+    "ui/designs/evidence/wave1-port-discovery-detail/home-mobile-default.png",
+    "ui/designs/evidence/wave1-port-discovery-detail/home-mobile-narrow.png",
+    "ui/designs/evidence/wave1-port-discovery-detail/home-sort-dropdown-open.png",
+    "ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile-default.png",
+    "ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile-narrow.png",
+    "ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-hero-stats.png",
+    "ui/designs/evidence/wave1-port-discovery-detail/save-modal.png",
+    "ui/designs/evidence/wave1-port-discovery-detail/save-modal-narrow.png",
+    "ui/designs/evidence/wave1-port-discovery-detail/login-screen.png",
+    "ui/designs/evidence/wave1-port-discovery-detail/login-screen-narrow.png",
+    "ui/designs/evidence/wave1-port-discovery-detail/login-gate-modal.png",
+    "ui/designs/evidence/wave1-port-discovery-detail/login-gate-modal-narrow.png"
+  ],
+  "audit": "ui/designs/evidence/wave1-port-discovery-detail/phase5-visual-audit.md"
+}

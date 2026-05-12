@@ -41,9 +41,9 @@ export function LoginScreen({
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, session: Session | null) => {
-      if (session) {
-        window.location.replace(nextPath);
-      }
+        if (session) {
+          window.location.replace(nextPath);
+        }
       },
     );
 
@@ -54,81 +54,74 @@ export function LoginScreen({
   }, [nextPath]);
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <section className="glass-panel overflow-hidden rounded-[20px]">
-          <div className="relative h-full px-6 py-7">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,108,60,0.22),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(46,166,122,0.18),transparent_40%)]" />
-            <div className="relative">
-              <div className="inline-flex rounded-full bg-[color:rgba(255,108,60,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--brand-deep)]">
-                Homecook
-              </div>
-              <div className="mt-6 flex h-28 w-28 items-center justify-center rounded-[20px] bg-[var(--surface)] text-4xl shadow-[var(--shadow)]">
-                집밥
-              </div>
-              <p className="mt-6 text-sm font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
-                집밥하는 모든 과정을 함께
-              </p>
-              <h1 className="mt-3 text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
-                오늘의 레시피 흐름을
-                <br />
-                같은 자리에서 이어갑니다
-              </h1>
-              <ul className="mt-6 space-y-3 text-sm leading-6 text-[var(--muted)]">
-                <li>보호 액션은 로그인 후 원래 레시피로 복귀합니다.</li>
-                <li>네이버, 구글 OAuth 흐름을 같은 기준으로 맞춥니다.</li>
-                <li>Slice 01에서는 로그인 게이트와 복귀 경험까지 닫습니다.</li>
-              </ul>
-            </div>
-          </div>
-        </section>
+    <div className="min-h-screen bg-white text-[var(--wave1-ink)]">
+      <section className="mx-auto flex min-h-screen max-w-[430px] flex-col bg-white px-6 pb-[calc(116px+env(safe-area-inset-bottom))] pt-[56px] md:min-h-[720px] md:justify-center md:pb-16 md:pt-16">
+        <button
+          aria-label="이전 화면으로"
+          className="mb-7 flex h-9 w-9 items-center justify-center rounded-full text-[var(--wave1-ink)] transition-colors hover:bg-[var(--wave1-surface-fill)]"
+          onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+              return;
+            }
 
-        <section className="glass-panel rounded-[20px] px-6 py-7">
-          {showAuthError ? (
-            <div className="rounded-[12px] border border-[color:rgba(255,108,60,0.2)] bg-[color:rgba(255,108,60,0.08)] px-4 py-3 text-sm font-medium text-[var(--foreground)]">
-              로그인에 실패했어요. 다시 시도해주세요.
-            </div>
-          ) : null}
+            window.location.assign(nextPath);
+          }}
+          type="button"
+        >
+          <ChevronLeftIcon />
+        </button>
 
-          <p
-            className={`text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)] ${
-              showAuthError ? "mt-4" : "mt-1"
-            }`}
+        <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[18px] bg-[var(--wave1-mint)] text-white shadow-[0_10px_22px_rgba(42,193,188,0.24)]">
+          <span
+            aria-hidden="true"
+            className="text-[30px] leading-none [font-family:var(--wave1-font-brand)]"
           >
-            Login
-          </p>
-          <h2 className="mt-3 text-3xl font-extrabold tracking-[-0.03em] text-[var(--foreground)]">
-            소셜 로그인으로 이어서 진행하세요
-          </h2>
-          <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-            로그인 후에는 원래 보고 있던 레시피나 액션 위치로 자연스럽게 돌아옵니다.
-          </p>
+            홈
+          </span>
+        </div>
 
-          <div className="mt-7">
-            <SocialLoginButtonsDeferred nextPath={nextPath} />
-          </div>
+        <h1 className="mt-5 text-[26px] font-bold leading-[1.35] text-[var(--wave1-ink)] [font-family:var(--wave1-font-brand)]">
+          홈쿡과 함께
+          <br />
+          오늘 뭐 먹지 정해봐요
+        </h1>
+        <p className="mt-4 text-[14px] font-medium leading-6 text-[var(--wave1-text-3)]">
+          식단을 짜고, 장 보고, 요리한 기록을 남길 수 있어요.
+        </p>
 
-          <div className="mt-8 grid gap-3 rounded-[16px] border border-[var(--line)] bg-white/70 p-4 text-sm text-[var(--muted)]">
-            <div className="flex items-center justify-between gap-3">
-              <span>복귀 경로</span>
-              <strong className="font-semibold text-[var(--foreground)]">
-                {nextPath === "/" ? "HOME 또는 원래 레시피" : nextPath}
-              </strong>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span>지원 방식</span>
-              <strong className="font-semibold text-[var(--foreground)]">
-                OAuth + return-to-action
-              </strong>
-            </div>
+        {showAuthError ? (
+          <div className="mt-7 rounded-[12px] border border-[#FFB8B4] bg-[#FFF1F0] px-4 py-3 text-[13px] font-semibold text-[#C84C48]">
+            로그인에 실패했어요. 다시 시도해주세요.
           </div>
+        ) : null}
 
-          <div className="mt-8 flex flex-wrap gap-3 text-xs font-medium text-[var(--muted)]">
-            <span>이용약관</span>
-            <span>개인정보처리방침</span>
-          </div>
-        </section>
-      </div>
+        <div className={showAuthError ? "mt-4" : "mt-8"}>
+          <SocialLoginButtonsDeferred nextPath={nextPath} />
+        </div>
+
+        <p className="mt-4 text-center text-[11px] font-medium leading-5 text-[var(--wave1-text-3)]">
+          계속 진행하면 <span className="underline underline-offset-2">이용약관</span>과{" "}
+          <span className="underline underline-offset-2">개인정보처리방침</span>에 동의합니다.
+        </p>
+      </section>
     </div>
+  );
+}
+
+function ChevronLeftIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-7 w-7"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.4"
+      viewBox="0 0 24 24"
+    >
+      <path d="m15 18-6-6 6-6" />
+    </svg>
   );
 }

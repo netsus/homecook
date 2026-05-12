@@ -21,7 +21,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <AppShell currentTab="home">
+    <AppShell
+      className="wave1-login-shell"
+      currentTab="home"
+      headerMode="hidden"
+    >
       <LoginScreen
         authError={resolvedSearchParams.authError ?? null}
         nextPath={nextPath}

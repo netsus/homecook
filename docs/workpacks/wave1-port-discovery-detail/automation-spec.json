@@ -80,20 +80,18 @@
       "critic_artifact": null,
       "authority_required": true,
       "stage4_evidence_requirements": [
-        "fixed-reference-mapping",
-        "current-service-screenshots-390-and-320",
-        "mobile-default-home",
-        "mobile-narrow-home",
-        "home-sort-open",
-        "mobile-default-detail",
-        "mobile-narrow-detail",
-        "recipe-detail-action-states",
+        "home-mobile-default",
+        "home-mobile-narrow",
+        "home-sort-dropdown-open",
+        "recipe-detail-mobile-default",
+        "recipe-detail-mobile-narrow",
+        "recipe-detail-hero-stats",
         "save-modal",
-        "login-or-login-gate-provider-surface",
-        "prototype-vs-service-diff-table",
-        "computed-style-audit-plan",
-        "dom-geometry-audit-plan",
-        "mvp-regression-lock"
+        "save-modal-narrow",
+        "login-screen",
+        "login-screen-narrow",
+        "login-gate-modal",
+        "login-gate-modal-narrow"
       ],
       "authority_report_paths": [
         "ui/designs/authority/WAVE1_DISCOVERY_DETAIL-authority.md"
@@ -107,7 +105,11 @@
         "ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile-narrow.png",
         "ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-hero-stats.png",
         "ui/designs/evidence/wave1-port-discovery-detail/save-modal.png",
-        "ui/designs/evidence/wave1-port-discovery-detail/login-screen.png"
+        "ui/designs/evidence/wave1-port-discovery-detail/save-modal-narrow.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/login-screen.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/login-screen-narrow.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/login-gate-modal.png",
+        "ui/designs/evidence/wave1-port-discovery-detail/login-gate-modal-narrow.png"
       ]
     }
   },

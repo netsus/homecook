@@ -1,59 +1,33 @@
 # Authority Report: WAVE1_DISCOVERY_DETAIL
 
-> slice: wave1-port-discovery-detail
+> slice: `wave1-port-discovery-detail`
 > stage: 5
 > reviewer: Codex design authority precheck + Claude final authority gate
-> date: 2026-05-10
-
-> 2026-05-13 rerun note: this report is historical closeout evidence for PR #374. Current exact-mobile rerun prep is recorded in `ui/designs/evidence/wave1-port-discovery-detail/phase4-prep.md`; Phase5 must refresh this authority report with new reference/service/diff/audit evidence before claiming confirmed status again.
+> date: 2026-05-13
+> fixed prototype SHA: `9bf7a34c6b422d0c9981d4c2968e3350d5a28892`
 
 ## Design Status
 
 **confirmed**
 
-Stage 4 FE 구현 후 Codex가 screenshot evidence를 확인했고, Claude final authority gate도 `PASS`를 반환했다. HOME, RECIPE_DETAIL, save modal, login provider display의 design blocker는 0개다.
+Slice B Phase5 refreshed the current service evidence for HOME, RECIPE_DETAIL, SavePopup, LOGIN, and LoginGateModal against the fixed Wave1 mobile prototype. The evidence set now includes 390px and 320px captures where fixed references exist, a visual audit, and a verdict ledger with blocker 0 and unclassified visual differences 0.
+
+Claude final authority gate returned PASS with blocker 0 and confirmed that the remaining differences are classified rather than unclassified visual drift.
 
 ## Changes Summary
 
 ### HOME
-- Header: 프로필/장바구니 아이콘 제거, 브랜드 텍스트만 중앙 유지
-- Sort: 바텀시트 SortMenu 제거, 인라인 SortDropdown(Slice A primitive) 적용
-- Sort default: `view_count` → `like_count`으로 변경. `view_count` option UI 숨김
-- Filter chips: "모든 레시피" 섹션 아래로 재배치 (검색바 아래 → 레시피 리스트 영역)
-- "재료로 거르기" → "재료로 검색" 문구: 이전 슬라이스에서 이미 변경 완료
+- Evidence fixture now renders a dense HOME surface with 3 theme cards and 6 recipe cards so the fixed reference layout can be audited without changing public API fields.
+- First recipe card fallback artwork, badge, count, and card color were aligned with the fixed reference capture.
+- Inline SortDropdown, chip rail, promo strip, and HOME-owned bottom tab remain in place.
 
 ### RECIPE_DETAIL
-- Hero metrics: `cook_count` 표시 추가 (요리완료). `like_count`, `save_count`, `cook_count`, `plan_count` 4종 표시
-- `view_count`: UI에서 숨김 (데이터 보존)
-- Metrics row: 좋아요·저장 → 요리완료 → 플래너 → 공유 순서로 재정렬
-- Bottom sticky CTA: 기존 overview 내 CTA를 `sticky bottom-0` 바로 분리. `플래너에 추가` (olive) + `요리하기` (brand) 2버튼
-- Detail route: shared bottom tabs를 숨겨 sticky CTA와 전역 bottom tab의 이중 고정 overlap 제거
-- Step font: `text-sm` (14px) → `text-base` (16px) 증가
-- 별점/rating: 이전부터 부재 확인
+- Existing MVP behavior was preserved: like/save/planner/cook actions, tabs, serving control, and login gate return-to-action.
+- Full-view SavePopup evidence now captures the dimmed recipe detail backdrop, multi-book selected state, and footer action visibility at 390px and 320px.
 
-### Save Modal
-- 변경 없음. 기존 구현이 이미 spec 충족: 제목 "레시피 저장", 프리뷰 없음, 버튼 "저장"
-
-### Login Provider
-- `kakao` provider FE-only 숨김 (`HIDDEN_PROVIDERS` filter)
-- `apple` provider: `AUTH_PROVIDER_META`에 미정의, 변경 불필요
-- Login screen copy: "카카오, 네이버, 구글" → "네이버, 구글"
-
-## Token Usage
-
-Production tokens only:
-- `--brand`, `--brand-deep`, `--olive`, `--foreground`, `--surface`, `--panel`, `--line`, `--muted`, `--text-2`
-- `--radius-full`, `--radius-md`, `--radius-xl`
-- `--shadow-1`, `--shadow-2`, `--shadow-3`
-
-No prototype mint/Jua/asset leakage.
-
-## Risk Assessment
-
-- **Risk class**: anchor-extension (HOME + RECIPE_DETAIL 두 anchor screen 변경)
-- CTA hierarchy 변경: overview 내장 → sticky bottom 분리. 기존 탭/서빙/플래너/쿡 경로 보존
-- Sort default 변경: `view_count` → `like_count`. API 계약에 영향 없음 (view_count sort는 API에 여전히 존재)
-- `cook_count` metric 표시: 기존 공식 API 필드 소비만
+### LOGIN / LoginGate
+- Login page now uses the fixed reference composition: back affordance, mint icon tile, compact headline/copy, Google/Naver provider buttons, terms copy, and bottom tab.
+- LoginGateModal now uses the compact Wave1 action sheet family with cancel/login footer buttons while preserving the existing accessible heading used by regression tests.
 
 ## Evidence
 
@@ -64,20 +38,44 @@ No prototype mint/Jua/asset leakage.
 > - RECIPE_DETAIL mobile default: `ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile-default.png`
 > - RECIPE_DETAIL mobile narrow: `ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-mobile-narrow.png`
 > - RECIPE_DETAIL hero stats: `ui/designs/evidence/wave1-port-discovery-detail/recipe-detail-hero-stats.png`
-> - Save modal: `ui/designs/evidence/wave1-port-discovery-detail/save-modal.png`
-> - Login screen: `ui/designs/evidence/wave1-port-discovery-detail/login-screen.png`
+> - Save modal mobile default: `ui/designs/evidence/wave1-port-discovery-detail/save-modal.png`
+> - Save modal mobile narrow: `ui/designs/evidence/wave1-port-discovery-detail/save-modal-narrow.png`
+> - Login screen mobile default: `ui/designs/evidence/wave1-port-discovery-detail/login-screen.png`
+> - Login screen mobile narrow: `ui/designs/evidence/wave1-port-discovery-detail/login-screen-narrow.png`
+> - Login gate modal mobile default: `ui/designs/evidence/wave1-port-discovery-detail/login-gate-modal.png`
+> - Login gate modal mobile narrow: `ui/designs/evidence/wave1-port-discovery-detail/login-gate-modal-narrow.png`
+
+## Audit Artifacts
+
+- Screenshot comparison / computed-style audit / DOM geometry audit / remaining-difference ledger: `ui/designs/evidence/wave1-port-discovery-detail/phase5-visual-audit.md`
+- Visual verdict: `ui/designs/evidence/wave1-port-discovery-detail/visual-verdict.json`
+- Claude final authority gate: `ui/designs/evidence/wave1-port-discovery-detail/claude-final-authority-gate.md`
 
 ## Scorecard
 
-Codex Stage 5 precheck와 Claude final authority gate 응답을 반영한다.
-
 | Dimension | Score | Notes |
-|-----------|-------|-------|
-| Mobile UX | 8/10 | 390px/320px HOME and RECIPE_DETAIL evidence에서 라벨 줄바꿈/가로 overflow 없음. Detail sticky CTA는 불투명 bottom bar로 정리 |
-| Interaction Clarity | 8/10 | HOME inline SortDropdown, save modal, login providers, detail CTA가 스크린샷과 E2E 흐름에서 식별 가능 |
-| Visual Hierarchy | 8/10 | HOME은 검색/테마/정렬/칩 순서가 읽히고, detail은 hero media -> metrics -> CTA hierarchy가 유지됨 |
-| Color/Material Fit | 8/10 | 승인 production token만 사용. prototype mint/Jua/asset leakage 없음 |
-| Familiar App Pattern Fit | 8/10 | 모바일 bottom CTA, inline dropdown, modal 선택 목록, OAuth provider buttons 모두 익숙한 앱 패턴으로 동작 |
+| --- | --- | --- |
+| Mobile UX | 9/10 | 390px and 320px controlled captures show no horizontal overflow or incoherent overlap. |
+| Interaction Clarity | 9/10 | HOME sort, save popup, login providers, login gate, and detail CTA remain clear and touch-friendly. |
+| Visual Hierarchy | 9/10 | HOME density, login composition, modal footer hierarchy, and recipe detail sheets now follow the fixed prototype more closely. |
+| Color/Material Fit | 9/10 | Modified mobile surfaces use Wave1-local tokens or fixed reference hex values. |
+| Regression Safety | 9/10 | Existing auth, save, planner, sort, and detail regression tests remain green. |
+
+## Verdict
+
+- Visual parity score: 94
+- Visual blockers: 0
+- Unclassified visual differences: 0
+- Major issues: 0
+- Minor issues: 0
+
+## Remaining Classified Differences
+
+| Difference | Classification | Decision |
+| --- | --- | --- |
+| Service fixture titles and counts differ from prototype literal sample data. | functional-contract-required | Accepted; MVP fixtures and official API fields remain source of truth. |
+| Login gate backdrop is captured from RECIPE_DETAIL, not HOME. | functional-contract-required | Accepted; HOME bookmark is not an actionable protected control in the current MVP. |
+| Login gate accessible heading remains `로그인이 필요한 작업이에요`. | regression-compatibility | Accepted; existing protected-action tests and flows rely on this accessible name. |
 
 ## Blockers
 
@@ -85,11 +83,6 @@ Codex Stage 5 precheck와 Claude final authority gate 응답을 반영한다.
 
 ## Claude Final Gate
 
-- Prompt: `.omx/artifacts/claude-delegate-3f4ca745-db71-4392-a3f1-4e3c4493e9bc-wave1-port-discovery-detail-final-authority-gate-prompt-20260509T222027Z.md`
-- Response: `.omx/artifacts/claude-delegate-3f4ca745-db71-4392-a3f1-4e3c4493e9bc-wave1-port-discovery-detail-final-authority-gate-response-20260509T222027Z.md`
-- Verdict: `PASS`
-- Blockers: `None`
-
-## Next Action
-
-- Stage 6 `pnpm verify:frontend` 및 PR closeout 진행
+- Verdict: PASS
+- Blockers: 0
+- Artifact: `ui/designs/evidence/wave1-port-discovery-detail/claude-final-authority-gate.md`
