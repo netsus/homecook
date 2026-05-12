@@ -1,7 +1,7 @@
 # Slice: 17b-recipebook-detail-remove
 
 ## Goal
-로그인한 사용자가 마이페이지 레시피북 목록에서 특정 레시피북을 탭하여 상세 화면(`RECIPEBOOK_DETAIL`)으로 진입하고, 레시피 목록을 cursor pagination으로 탐색하며, saved/custom 책에서 레시피를 제거하거나 liked 책에서 좋아요를 해제할 수 있도록 한다. `my_added` 책의 레시피는 제거 불가(403)임을 지킨다.
+로그인한 사용자가 마이페이지 레시피북 목록에서 특정 레시피북을 탭하여 상세 화면(`RECIPEBOOK_DETAIL`)으로 진입하고, 태그/조회수/조리시간/기본 인분이 포함된 레시피 목록을 cursor pagination으로 탐색하며, saved/custom 책에서 레시피를 제거하거나 liked 책에서 좋아요를 해제할 수 있도록 한다. `my_added` 책의 레시피는 제거 불가(403)임을 지킨다.
 
 ## Branches
 
@@ -14,7 +14,7 @@
   - `GET /recipe-books/{book_id}/recipes` (12-6) — 레시피북 상세 레시피 목록 조회 (cursor pagination)
   - `DELETE /recipe-books/{book_id}/recipes/{recipe_id}` (12-7) — 레시피북에서 레시피 제거 (book_type별 분기)
 - 상태 전이: 없음 (읽기 + 삭제만)
-- DB 영향: `recipe_books` (읽기, 소유자 검증), `recipe_book_items` (읽기, 삭제), `recipe_likes` (삭제 — liked 해제), `recipes` (비정규화 카운트 갱신: `like_count`, `save_count`)
+- DB 영향: `recipe_books` (읽기, 소유자 검증), `recipe_book_items` (읽기, 삭제), `recipe_likes` (삭제 — liked 해제), `recipes` (비정규화 카운트/카드 메타: `like_count`, `save_count`, `view_count`, `base_servings`, `tags`), `recipe_steps` (조리시간 합산)
 - Schema Change:
   - [x] 없음 (기존 테이블 읽기 + 삭제)
 
@@ -50,10 +50,14 @@
     "items": [
       {
         "recipe_id": "uuid",
-        "title": "김치찌개",
-        "thumbnail_url": "https://...",
-        "tags": ["한식", "찌개"],
-        "added_at": "2026-03-01T10:00:00Z"
+	        "title": "김치찌개",
+	        "thumbnail_url": "https://...",
+	        "tags": ["한식", "찌개"],
+	        "view_count": 1520,
+	        "total_duration_seconds": 1200,
+	        "total_duration_text": "20분",
+	        "base_servings": 2,
+	        "added_at": "2026-03-01T10:00:00Z"
       }
     ],
     "next_cursor": "opaque-cursor",
@@ -200,7 +204,7 @@
 
 - [x] 백엔드 계약 고정 (`GET /recipe-books/{book_id}/recipes`, `DELETE /recipe-books/{book_id}/recipes/{recipe_id}`) <!-- omo:id=delivery-backend-contract;stage=2;scope=backend;review=3,6 -->
 - [x] API 또는 adapter 연결 (Route Handler 2개 추가) <!-- omo:id=delivery-api-adapter;stage=2;scope=backend;review=3,6 -->
-- [x] 타입 반영 (`RecipeBookDetailItem` with recipe_id/title/thumbnail_url/tags/added_at, delete response types) <!-- omo:id=delivery-types;stage=2;scope=shared;review=3,6 -->
+- [ ] 2026-05-12 타입 반영 (`RecipeBookDetailItem` with recipe_id/title/thumbnail_url/tags/view_count/total_duration_seconds/total_duration_text/base_servings/added_at, delete response types) <!-- omo:id=delivery-types-v124;stage=2;scope=shared;review=3,6 -->
 - [x] UI 연결 <!-- omo:id=delivery-ui-connection;stage=4;scope=frontend;review=5,6 -->
 - [x] 상태 전이 / 권한 / 멱등성 테스트 (owner-guard, my_added 403, liked/saved/custom 분기, 404, count 갱신) <!-- omo:id=delivery-state-policy-tests;stage=2;scope=shared;review=3,6 -->
 - [x] 이 슬라이스의 `Vitest` / `Playwright` 자동화 범위 구분 <!-- omo:id=delivery-test-split;stage=4;scope=frontend;review=5,6 -->

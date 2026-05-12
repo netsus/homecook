@@ -7,6 +7,8 @@
 > 핵심 원칙: 프로토타입은 visual/layout source of truth이고, 기능 동작은 현재 MVP 구현과 공식 문서가 source of truth다. 공식 문서와 실제 API 계약을 넘는 변경은 먼저 contract-evolution 문서/PR로 닫고, FE는 그 계약을 그대로 소비한다.
 > 2026-05-11 Phase 1 update: Wave1 모바일 앱 재포팅은 `ui/designs/WAVE1_MOBILE_APP_BASELINE.md`를 우선 디자인 기준으로 사용한다. 모바일 목표는 `90+` 또는 near-100%가 아니라 fixed prototype reference 대비 100% parity다.
 > 2026-05-12 Phase 2 update: 앱/웹 책임 분리와 exact-ready/freeze 대상은 `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`를 따른다.
+> 2026-05-12 contract update: 사용자 결정에 따라 official docs가 `요구사항 v1.6.6 / 화면정의서 v1.5.3 / 유저flow v1.3.3 / DB v1.3.3 / API v1.2.4`로 갱신됐다. Phase4 재진행 전 이 계약을 먼저 구현/검증한다.
+> 2026-05-12 reference refresh gate: Phase4 재진행 전 `HOME_SORT_OPEN_STATE`와 `SHOPPING_DETAIL_PANTRY_REFLECT_PICKER` fixed reference를 새 계약 기준으로 다시 freeze한다.
 
 ## Current Status
 
@@ -15,6 +17,8 @@
   - Phase 2 row-by-row 책임 분리 기준은 `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`다.
   - Phase 3 reference freeze 이후 `HOME`, `RECIPE_DETAIL`, `PLANNER_WEEK`, `MENU_ADD`, `SHOPPING_DETAIL`, `PANTRY`, `MYPAGE`, `SETTINGS`, `ACCOUNT`, `LEFTOVERS`에 더해 `LOGIN`, `GLOBAL::LoginGateModal`, `ATE_LIST`, `RECIPEBOOK_DETAIL`, `MEAL_SCREEN`, `SHOPPING_FLOW_SELECT/REVIEW`, `COOK_READY_LIST`, `COOK_MODE_PLANNER/STANDALONE`, `MANUAL_RECIPE_CREATE`, `YT_IMPORT/REVIEW`, MENU_ADD 내부 picker, PANTRY sheet, RECIPE_DETAIL popup, HOME sort/filter modal, SHOPPING_DETAIL pantry reflect, COOK_MODE consumed checklist, SETTINGS confirm/sheet, MYPAGE recipebook/shopping-list tab 상태가 exact-reference-ready다.
   - `GLOBAL::LoginGateModal`은 prototype-owned phone-shell `?modal=login-gate` trigger와 390px/320px reference가 추가되어 `needs-prototype-freeze`에서 해제됐다.
+  - 2026-05-12 contract-evolution: HOME `latest` sort, SavePopup multi-save, shopping history `completed_at` + `다시열기`, leftovers/ate card metadata, recipebook detail metadata, prototype colors/touch sizes/bottom-tab icons are now official Wave1 criteria.
+  - Phase4 재진행 전 reference refresh 대상: HOME sort-open state, pantry reflect picker state. 이전 reference가 계약과 충돌하면 visual 100% 근거로 쓰지 않는다.
   - 기존 C2 / h6 / h7 / h8 design authority와 PR #373, #374, #376, #379, #381, #383 evidence는 historical evidence다.
   - fixed reference가 있는 모바일 surface는 색상, 폰트, spacing, radius, shadow, layout, icon, sheet/bottom-tab geometry까지 prototype과 일치해야 한다.
   - broad approved divergence, coral-vs-mint token mapping, non-Jua font substitution, warm-cream background 유지 같은 이전 예외는 현재 Wave1 mobile 100% parity completion proof로 사용할 수 없다.
@@ -43,6 +47,7 @@
 - **Slice B `wave1-port-discovery-detail`**: merged, but visual parity re-audit required.
   - Stage 1 docs PR: #374
   - 결과: HOME header 단순화, sort dropdown 전환, filter chip 재배치, RECIPE_DETAIL 별점 제거/행동 metric/CTA 재구성, save modal 정리, login provider 축소. Stage 2 N/A.
+  - 2026-05-12 contract update 이후 Stage 2 is no longer N/A: `GET /recipes sort=latest`와 `POST /recipes/{id}/save book_ids[]` 구현/테스트가 필요하다.
 - **Slice C `wave1-port-planner-meal-add`**: merged, but visual parity re-audit required.
   - Stage 1 docs PR: #376
   - 결과: PLANNER_WEEK 주간 이동/이모지·배지 제거/CTA 정리, MENU_ADD 2열 옵션, MANUAL_CREATE 재료 모달, MEAL_SCREEN 정리. Stage 2 N/A.
@@ -50,6 +55,7 @@
   - Stage 1 docs PR: #378
   - Stage 4~6 frontend/closeout PR: #379
   - 결과: SHOPPING_FLOW/SHOPPING_DETAIL/COOK_MODE Wave1 UI-only 포팅, authority blocker 0.
+  - 2026-05-12 contract update 이후 `/shopping/lists` 목록 응답에 `completed_at`을 포함하고, pantry reflect picker는 pre-complete state 기준으로 phase4를 진행한다.
 - **Slice E `wave1-port-pantry`**: merged, but visual parity re-audit required.
   - Stage 1 docs PR: #380
   - Stage 4~6 frontend/closeout PR: #381
@@ -60,6 +66,7 @@
   - Stage 4~6 frontend/closeout branch: `feature/fe-wave1-port-account-library-leftovers`
   - Claude Stage 1 handoff attempted via resume session `3f4ca745-db71-4392-a3f1-4e3c4493e9bc`; provider limit reset 13:20 Asia/Seoul blocked editing, so Codex fallback prepared Stage 1 docs and frontend closeout.
   - 결과: MYPAGE visible settings entry, LEFTOVERS/ATE_LIST clipping/copy polish, ATE_LIST uneat API preserved with `남은요리로 복귀` label, RECIPEBOOK_DETAIL custom book menu, 390/320 screenshot evidence, authority blocker 0, `pnpm verify:frontend` passed.
+  - 2026-05-12 contract update 이후 Stage 2 is no longer N/A: leftovers/ate card metadata, recipebook detail metadata, shopping history `completed_at`를 API/types/tests에 반영해야 한다.
   - 2026-05-10 사용자 확인: #383 closeout은 기능 보존과 일부 polish는 통과했지만, 확정 디자인 소스 `ui/designs/prototypes/claude-design-260505-wave1`와 화면 구조/카드 밀도/배민 톤/섹션 구성/모바일·데스크톱 layout이 충분히 맞지 않는다. #383 authority/evidence는 visual parity 완료 근거로 재사용하지 말고, PR #383 보정 작업으로 다시 캡처/비교/수정한다.
 
 ## Read First
@@ -459,17 +466,17 @@
 | --- | --- | --- |
 | HOME filter chip 위치 | UI-only | 기존 recipes/ingredients API 소비. |
 | HOME banner -> planner | UI-only / existing route | `/planner` 라우트 존재 확인. |
-| sort dropdown | UI-only | Slice A primitive 사용. |
+| sort dropdown | API + UI | API v1.2.4의 `latest` sort를 구현하고, HOME 노출 옵션은 `조회수순/최신순/저장순/플래너 등록순`으로 맞춘다. |
 | RECIPE_DETAIL 별점 제거 | UI-only | rating field를 추가하지 않는다. |
 | 좋아요/저장수 표시 | 공식 API로 가능 | detail response의 `like_count`, `save_count` 소비. 구현 타입/fixture 정합만 확인. |
 | 요리완료수 표시 | 공식 API로 가능 | detail response의 `cook_count` 소비. 플래너 등록수는 `plan_count`. |
 | 조회수 제거 | UI-only | 데이터는 보존 가능, 화면에서 숨김. |
-| save modal recipebook 생성 | 기존 API로 가능 | `POST /recipe-books`, save API 소비. |
+| save modal multi-save | API + UI | `POST /recipes/{id}/save`는 `book_ids[]`를 소비한다. Prototype multi-select를 기능 divergence로 분류하지 않는다. |
 | login provider 축소 | UI-only + auth config 확인 | 버튼 숨김은 FE 가능. 실제 provider disable은 운영 config 정책 확인. |
 
 ### Contract Evolution Candidates
 
-- metric source를 기존 `view_count` / `like_count` / `save_count` / `plan_count` / `cook_count` 외 새 집계로 바꾸려 할 때
+- metric source를 official docs v1.6.6 / API v1.2.4의 `view_count` / `latest` / `save_count` / `plan_count` / `cook_count` 외 새 집계로 바꾸려 할 때
 - 조회수 표시/비표시 정책을 공식 화면 계약과 다르게 바꾸려 할 때
 - provider list를 실제 Supabase config에서 비활성화해야 할 때
 
@@ -689,9 +696,9 @@ PR #383 `feat(wave1): merge account library leftovers closeout`은 merged 상태
 
 - MYPAGE: `screens/mypage.jsx` / desktop reference의 profile card, tab/card density, recipebook/shopping sections, settings entry hierarchy를 실제 서비스에 반영한다.
 - SETTINGS: `screens/extras.jsx` / desktop reference의 settings layout, row density, destructive action hierarchy를 반영하되 planner column management 기능은 현재 MVP 구현을 유지한다.
-- LEFTOVERS: prototype의 카드 구조, meta density, CTA hierarchy, 반대 화면 이동 버튼 형태를 반영한다. `POST /meals` + `leftover_dish_id`, eat API는 유지한다.
-- ATE_LIST: prototype의 다먹은 요리 list/card 구조와 `남은요리로 복귀` 복구 action hierarchy를 반영한다. uneat API는 유지한다.
-- RECIPEBOOK_DETAIL: prototype의 전용 화면 구조, custom book menu, recipe card density를 반영하되 system book 보호와 recipe removal 정책은 유지한다.
+- LEFTOVERS: prototype의 카드 구조, meta density, CTA hierarchy, 반대 화면 이동 버튼 형태를 반영한다. API v1.2.4의 `source_meal_label`, `source_planned_servings`, `cooking_servings`를 소비하고, `POST /meals` + `leftover_dish_id`, eat API는 유지한다.
+- ATE_LIST: prototype의 다먹은 요리 list/card 구조와 `남은요리로 복귀` 복구 action hierarchy를 반영한다. API v1.2.4의 card metadata를 소비하고 uneat API는 유지한다.
+- RECIPEBOOK_DETAIL: prototype의 전용 화면 구조, custom book menu, recipe card density를 반영하되 API v1.2.4의 `tags`, `view_count`, `total_duration_seconds/text`, `base_servings`를 소비한다. System book 보호와 recipe removal 정책은 유지한다.
 - 공통: 390px/320px뿐 아니라 shared responsive 영향이 있으면 desktop screenshot도 남기고, reference 대비 unclassified visual difference 0을 달성할 때까지 반복한다.
 
 ### Classification
@@ -704,12 +711,14 @@ PR #383 `feat(wave1): merge account library leftovers closeout`은 merged 상태
 | leftovers/ate button shape | UI-only | route links 유지. |
 | `다먹음` 텍스트 제거 | UI-only | list source 유지. |
 | `덜먹음` label 조정 | UI-only | API와 상태 전이는 유지. |
+| leftovers/ate card metadata | API + UI | API v1.2.4 / DB v1.3.3 필드 구현 후 prototype layout에 맞춘다. |
+| recipebook detail metadata | API + UI | API v1.2.4의 tags/view/time/servings를 카드에 표시한다. |
 | recipebook kebab menu | 기존 API로 가능 | rename/delete endpoints 확인. |
 
 ### Design Authority Notes
 
 - h8 기준 `MYPAGE` shell은 screen-level `prototype parity` 후보이다.
-- MYPAGE sub-tabs, `SETTINGS`, `LEFTOVERS`, `ATE_LIST`, `RECIPEBOOK_DETAIL`은 별도 승격 전까지 `prototype-derived design`이다.
+- MYPAGE shopping-list tab, `LEFTOVERS`, `ATE_LIST`, `RECIPEBOOK_DETAIL`은 2026-05-12 contract update 이후 prototype parity target이다. `SETTINGS`는 planner column management 기능을 유지하면서 exact reference를 따른다.
 - shell parity가 sub-surface parity로 자동 전파되지 않게 Stage 1에서 화면별 classification을 분리한다.
 
 ### Verification
@@ -742,7 +751,7 @@ PR #383 `feat(wave1): merge account library leftovers closeout`은 merged 상태
 - Stage 1 docs branch: `docs/wave1-port-account-library-leftovers`
 - Stage 4~6 implementation branch: `feature/fe-wave1-port-account-library-leftovers`
 - Stage 4~6 frontend/closeout PR: #383
-- Stage 2/3: N/A, existing contracts were sufficient.
+- Historical Stage 2/3: N/A at PR #383 time. As of 2026-05-12 contract update, Stage 2 is required before Slice F Phase4 rerun.
 - Codex fallback: completed FE implementation after Claude provider limit blocked Stage 4 delegation.
 - Authority: `ui/designs/authority/WAVE1_ACCOUNT_LIBRARY_LEFTOVERS-authority.md`, verdict pass, blocker 0.
 - Verification: targeted Vitest passed 78 tests, modified Playwright bundle passed 189 tests, exploratory QA eval score 98, and `pnpm verify:frontend` passed.
@@ -757,7 +766,7 @@ PR #383 `feat(wave1): merge account library leftovers closeout`은 merged 상태
 | Sort modal -> dropdown | yes | no | no |
 | Recipe detail metric layout | yes | documented count fields | new metrics beyond documented fields |
 | Recipe detail bottom CTA | yes | planner add/cook routes | no |
-| Save modal copy/layout | yes | save/book APIs | no if existing endpoints sufficient |
+| Save modal copy/layout | yes | save/book APIs | yes: API v1.2.4 multi-save |
 | Planner weekly movement | mostly | planner range API | no if current API sufficient |
 | Planner column default/customization | done | done | done in #367~#370 |
 | Meal add option modal | yes | existing add flows incl. `leftover_dish_id` | no unless new attach policy |
@@ -772,8 +781,8 @@ PR #383 `feat(wave1): merge account library leftovers closeout`은 merged 상태
 | Pantry category chips/images | maybe | pantry/ingredient fields 확인 | image/category contract if missing |
 | Pantry multi-delete | yes | `DELETE /pantry` with ids | no unless new delete semantics |
 | Mypage/settings polish | yes | existing account APIs | no |
-| Leftovers/Ate copy/buttons | yes | leftovers APIs | no unless state/action removed |
-| Recipebook menu | mostly | recipebook rename/delete | no if endpoints exist |
+| Leftovers/Ate copy/buttons/meta | yes | leftovers APIs | yes: API v1.2.4 metadata |
+| Recipebook menu/card meta | mostly | recipebook rename/delete/detail | yes for card metadata; no for menu endpoints if existing endpoints suffice |
 | Login provider display | FE yes | auth config 확인 | provider policy/config if disabling server-side |
 
 ## Contract Evolution Rule

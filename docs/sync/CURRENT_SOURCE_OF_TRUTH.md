@@ -1,17 +1,30 @@
 # Current Source of Truth
 
 ## Official Files
-- `docs/요구사항기준선-v1.6.5.md`
-- `docs/화면정의서-v1.5.2.md`
-- `docs/유저flow맵-v1.3.2.md`
-- `docs/db설계-v1.3.2.md`
-- `docs/api문서-v1.2.3.md`
+- `docs/요구사항기준선-v1.6.6.md`
+- `docs/화면정의서-v1.5.3.md`
+- `docs/유저flow맵-v1.3.3.md`
+- `docs/db설계-v1.3.3.md`
+- `docs/api문서-v1.2.4.md`
 
 ## Notes
 - 위 5개 파일이 현재 공식 기준 문서다.
 - `docs/reference/wireframes/`는 보조 참고 자료다.
 - 구현 중 문서 충돌이 보이면 먼저 충돌 항목을 정리하고 작업 범위를 다시 확정한다.
 - 사용자 승인으로 공식 계약을 바꾸는 경우에도 구현보다 문서가 먼저다. 관련 공식 문서와 이 파일의 버전/경로를 같은 `contract-evolution` PR에서 먼저 갱신한다.
+
+## v1.6.5 / v1.5.2 / v1.3.2 / DB v1.3.2 / API v1.2.3 → v1.6.6 / v1.5.3 / v1.3.3 / DB v1.3.3 / API v1.2.4 변경 이력 (2026-05-12)
+
+| 문서 | 변경 내용 |
+|------|----------|
+| 요구사항 기준선 v1.6.6 | Wave1 prototype parity 결정 반영: HOME 최신순, SavePopup multi-save, 장보기 기록 다시열기, 남은요리/레시피북 상세 메타 확장, prototype visual 우선 |
+| 화면정의서 v1.5.3 | HOME 정렬 옵션, SavePopup multi-select, LoginGateModal visual/behavior 경계, 장보기 기록 `다시열기`, LEFTOVERS/ATE_LIST/RECIPEBOOK_DETAIL 카드 메타 확정 |
+| 유저플로우 v1.3.3 | 탐색 정렬, multi-save, 장보기 기록 read-only reopen, 남은요리/레시피북 상세 메타 flow 갱신 |
+| DB v1.3.3 | `leftover_dishes.cooking_servings` 추가, HOME 최신순/남은요리 메타 조회 인덱스 추가, 기존 `completed_at` 재사용 명시 |
+| API v1.2.4 | `GET /recipes sort=latest`, `POST /recipes/{id}/save book_ids[]`, `/shopping/lists completed_at`, `/leftovers` 카드 메타, `/recipe-books/{id}/recipes` 메타 확장 |
+
+> 이 변경은 사용자 승인(2026-05-12)을 기반으로 한 Wave1 prototype parity contract-evolution이다.
+> Phase4 재진행 전에 official MVP 기능 계약과 fixed prototype visual 기준의 충돌을 줄이기 위한 선행 문서 잠금이다.
 
 ## v1.6.4 / v1.5.1 / v1.3.1 / DB v1.3.1 / API v1.2.2 → v1.6.5 / v1.5.2 / v1.3.2 / DB v1.3.2 / API v1.2.3 변경 이력 (2026-05-10)
 

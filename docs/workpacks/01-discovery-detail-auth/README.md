@@ -73,7 +73,7 @@
 
 ### `GET /api/v1/recipes`
 
-- Query: `q` (string?, 제목 검색), `sort` (string?, `view_count`/`like_count`/`save_count`/`plan_count`, 기본 `view_count`), `cursor` (string?, opaque), `limit` (int?, 기본 20)
+- Query: `q` (string?, 제목 검색), `sort` (string?, `view_count`/`latest`/`save_count`/`plan_count`, 기본 `view_count`), `cursor` (string?, opaque), `limit` (int?, 기본 20)
 - `ingredient_ids`는 이 슬라이스 Out of Scope
 - Response 200: `{ success: true, data: { items: Recipe[], next_cursor: string|null, has_next: bool }, error: null }`
 - Error: 없음 (비로그인 허용, 검색 결과 없으면 빈 배열)
@@ -159,6 +159,7 @@
 ## Key Rules
 
 - `HOME`은 제목 검색(`q`)과 정렬(`sort`)을 지원한다. 재료 필터(`ingredient_ids`)는 Slice 02.
+- 2026-05-12 contract update: HOME 노출 정렬은 `조회수순(기본) / 최신순 / 저장순 / 플래너 등록순`이다. `like_count`는 지표로 남지만 HOME 정렬 옵션에서는 제외한다.
 - `HOME`의 정렬 컨트롤은 검색 패널이 아니라 `모든 레시피` 섹션 헤더에 둔다.
 - `HOME`에 테마 섹션(`GET /recipes/themes`)이 있어야 한다. — **bootstrap 미구현, Retrofit Stage 2에서 추가**
 - `RECIPE_DETAIL`은 비로그인 조회가 가능하다.
