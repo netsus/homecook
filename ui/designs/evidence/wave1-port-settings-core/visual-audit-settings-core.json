@@ -1,0 +1,66 @@
+{
+  "slice": "wave1-port-settings-core",
+  "fixed_prototype_sha": "9bf7a34c6b422d0c9981d4c2968e3350d5a28892",
+  "reference_images": [
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-settings.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-settings.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-account.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-account.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-nickname-edit-sheet.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-nickname-edit-sheet.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-logout-confirm.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-logout-confirm.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-account-delete-confirm.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-account-delete-confirm.png"
+  ],
+  "service_screenshots": [
+    "ui/designs/evidence/wave1-port-settings-core/settings-default.png",
+    "ui/designs/evidence/wave1-port-settings-core/settings-narrow.png",
+    "ui/designs/evidence/wave1-port-settings-core/account-default.png",
+    "ui/designs/evidence/wave1-port-settings-core/account-narrow.png",
+    "ui/designs/evidence/wave1-port-settings-core/nickname-edit-sheet.png",
+    "ui/designs/evidence/wave1-port-settings-core/nickname-edit-sheet-narrow.png",
+    "ui/designs/evidence/wave1-port-settings-core/logout-confirm.png",
+    "ui/designs/evidence/wave1-port-settings-core/logout-confirm-narrow.png",
+    "ui/designs/evidence/wave1-port-settings-core/account-delete-confirm.png",
+    "ui/designs/evidence/wave1-port-settings-core/account-delete-confirm-narrow.png"
+  ],
+  "screenshot_diff": {
+    "method": "side-by-side fixed reference PNG versus MVP screenshot review",
+    "status": "pass",
+    "unclassified_visual_differences": 0
+  },
+  "computed_style_audit": {
+    "status": "pass",
+    "checks": [
+      "mobile-only background colors",
+      "app bar color and 52px height",
+      "text colors",
+      "font sizes",
+      "font weights",
+      "setting toggle colors and knob positions",
+      "input borders",
+      "button fills",
+      "sheet backdrop opacity",
+      "bottom sheet radius"
+    ]
+  },
+  "dom_geometry_audit": {
+    "status": "pass",
+    "checks": [
+      "SETTINGS app bar and cooking-mode block placement",
+      "planner column row density at 390px and 320px",
+      "disabled save/cancel bar placement",
+      "ACCOUNT info card row geometry",
+      "nickname sheet bottom alignment",
+      "logout confirm bottom sheet alignment",
+      "account delete confirm warning box placement",
+      "fixed bottom tab placement"
+    ]
+  },
+  "blocker_count": 0,
+  "unclassified_visual_differences": 0,
+  "classified_followups": [
+    "Shared bottom-tab pantry icon shape remains inherited from the already-merged Wave1 mobile navigation component and is outside this SETTINGS-only branch."
+  ]
+}

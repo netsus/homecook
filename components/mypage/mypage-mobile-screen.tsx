@@ -243,6 +243,7 @@ function MobileHomeSurface({
     },
     {
       emoji: "👤",
+      href: "/settings?view=account",
       label: "계정 정보",
     },
     {
