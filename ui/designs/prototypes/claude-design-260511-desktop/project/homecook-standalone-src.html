@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=1024"/>
+<title>homecook · Desktop Web Prototype</title>
+
+<!-- Inlined food photos — lifted from data.jsx so the bundler can capture them -->
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1553163147-622ab57be1c7?w=900&h=675&fit=crop&q=80" data-resource-id="bibimbap" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1583224964978-2257b960c3d3?w=900&h=675&fit=crop&q=80" data-resource-id="kimchijjigae" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=900&h=675&fit=crop&q=80" data-resource-id="bulgogi" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1607330289024-1535c6b4e1c1?w=900&h=675&fit=crop&q=80" data-resource-id="japchae" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=900&h=675&fit=crop&q=80" data-resource-id="doenjang" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=900&h=675&fit=crop&q=80" data-resource-id="pasta" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=900&h=675&fit=crop&q=80" data-resource-id="pancake" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=900&h=675&fit=crop&q=80" data-resource-id="salad" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=900&h=675&fit=crop&q=80" data-resource-id="noodle" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1623341214825-9f4f963727da?w=900&h=675&fit=crop&q=80" data-resource-id="ramen" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1591343395082-e120087004b4?w=900&h=675&fit=crop&q=80" data-resource-id="galbi" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1607301406259-dfb186e15de8?w=900&h=675&fit=crop&q=80" data-resource-id="rolls" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1635363638580-c2809d049eee?w=900&h=675&fit=crop&q=80" data-resource-id="tteokbokki" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1571091655789-405eb7a3a3a8?w=900&h=675&fit=crop&q=80" data-resource-id="porridge" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=900&h=675&fit=crop&q=80" data-resource-id="rice" />
+<meta name="ext-resource-dependency" content="https://images.unsplash.com/photo-1547592180-85f173990554?w=900&h=675&fit=crop&q=80" data-resource-id="soup" />
+
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"/>
+<link rel="stylesheet" href="styles.css"/>
+<link rel="stylesheet" href="styles-patch.css"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<template id="__bundler_thumbnail" data-bg-color="#F7F7F8">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#F7F7F8"/>
+    <!-- Bowl silhouette -->
+    <g transform="translate(600 420)">
+      <ellipse cx="0" cy="40" rx="220" ry="40" fill="#EAEDEF"/>
+      <path d="M -220 0 A 220 220 0 0 0 220 0 Z" fill="#FFFFFF" stroke="#D9DEE2" stroke-width="3"/>
+      <ellipse cx="0" cy="0" rx="220" ry="42" fill="#FFFFFF" stroke="#D9DEE2" stroke-width="3"/>
+      <!-- food bits -->
+      <circle cx="-90" cy="-6" r="22" fill="#E86A4B"/>
+      <circle cx="-30" cy="-12" r="20" fill="#1F8A5B"/>
+      <circle cx="35" cy="-4" r="24" fill="#F2C14E"/>
+      <circle cx="95" cy="-10" r="18" fill="#00A1FF"/>
+      <!-- steam -->
+      <path d="M -60 -90 q 20 -30 0 -60" stroke="#C7CCD1" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M 0 -100 q 20 -30 0 -60" stroke="#C7CCD1" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M 60 -90 q 20 -30 0 -60" stroke="#C7CCD1" stroke-width="6" fill="none" stroke-linecap="round"/>
+    </g>
+    <text x="600" y="640" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="42" font-weight="700" fill="#2A2D31" letter-spacing="-1">homecook</text>
+    <text x="600" y="680" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#6E747A">Desktop Web Prototype</text>
+  </svg>
+</template>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="data-standalone.jsx"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="screens-1.jsx"></script>
+<script type="text/babel" src="screens-2.jsx"></script>
+<script type="text/babel" src="modals.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>
