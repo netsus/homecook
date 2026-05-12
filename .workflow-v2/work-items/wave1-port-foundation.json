@@ -80,7 +80,7 @@
     "blocked_reason_code": null
   },
 
-  "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs PR #372 merged. Stage 2/3 N/A (UI-only). Stage 4 frontend implemented by Claude through resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc, then Codex completed Stage 5/6 review, evidence capture cleanup, Linux visual snapshot repair, exploratory QA/eval, full frontend verification, and Claude final authority gate. Design Status confirmed; authority blocker 0. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,Playwright,Docker Linux visual,ui/designs/authority/WAVE1_FOUNDATION-authority.md,Claude final authority gate,QA eval",
+  "notes": "Internal 6.5 projection sync after Codex Stage 6 review. Stage 1 docs PR #372 merged. Stage 2/3 N/A (UI-only). Stage 4 frontend implemented by Claude through resume session 3f4ca745-db71-4392-a3f1-4e3c4493e9bc, then Codex completed Stage 5/6 review, evidence capture cleanup, Linux visual snapshot repair, exploratory QA/eval, full frontend verification, and Claude final authority gate. Design Status confirmed; authority blocker 0. 2026-05-13 bookkeeping update: Phase4 foundation re-audit/repair PR #432 merged on master (merge commit 72674a9), and Slice B is the next Phase4 prep target. closeout_phase=completed closeout_recovery=manual_patch:1|ci_resync:0 closeout_repair=codex:2|claude:1|manual_decision:0|human_escalation:0|post_merge_stale:0|sources:pnpm verify:frontend,Playwright,Docker Linux visual,ui/designs/authority/WAVE1_FOUNDATION-authority.md,Claude final authority gate,QA eval,GitHub PR #432",
 
   "closeout": {
     "phase": "completed",
@@ -110,9 +110,9 @@
       ]
     },
     "merge_gate_projection": {
-      "current_head_sha": "pending-pr-head-after-closeout-commit",
+      "current_head_sha": "72674a9cc98c879bc9827edcee46630ffec792f9",
       "approval_state": "dual_approved",
-      "all_checks_green": false
+      "all_checks_green": true
     },
     "recovery_summary": {
       "manual_patch_count": 1,
@@ -120,7 +120,7 @@
       "stale_lock_count": 0,
       "ci_resync_count": 0,
       "artifact_missing": false,
-      "last_recovery_at": "2026-05-09T20:51:49Z"
+      "last_recovery_at": "2026-05-13T01:38:47+09:00"
     },
     "repair_summary": {
       "codex_repairable_count": 2,
@@ -139,17 +139,17 @@
       ]
     },
     "projection_state": {
-      "docs_synced_at": "2026-05-09T20:51:49Z",
-      "status_synced_at": "2026-05-09T20:51:49Z",
-      "pr_body_synced_at": "pending-pr-body-update"
+      "docs_synced_at": "2026-05-13T01:38:47+09:00",
+      "status_synced_at": "2026-05-13T01:38:47+09:00",
+      "pr_body_synced_at": "PR #432 merged"
     }
   },
 
   "out_of_scope": [
     "HOME, RECIPE_DETAIL, PLANNER_WEEK 화면 자체 변경 (Slice B 이후)",
     "API/DB/status/endpoint/field 추가 또는 변경",
-    "prototype mint token alias (#2AC1BC, #20A8A4, #E6F8F7)",
-    "Jua 폰트 또는 prototype-only asset 도입",
+    "legacy global token value replacement",
+    "new font files or prototype-only asset introduction without an explicit production decision",
     "새 npm dependency 추가",
     "화면별 헤더 액션 제거/이동 (각 화면 slice에서 처리)",
     "Sort dropdown의 HOME 적용 (Slice B)"
