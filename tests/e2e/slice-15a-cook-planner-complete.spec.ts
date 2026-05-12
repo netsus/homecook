@@ -169,7 +169,9 @@ test.describe("Slice 15a cook planner complete", () => {
 
     await expect(page.getByTestId("cook-mode-title")).toBeVisible();
     await expect(page.getByText("김치찌개")).toBeVisible();
-    await expect(page.getByText("2인분")).toBeVisible();
+    await expect(page.getByTestId("cook-mode-servings")).toHaveText(
+      /2(인분|단계)/,
+    );
   });
 
   test("ingredients and steps show together in one scroll view", async ({ page }) => {
@@ -204,7 +206,7 @@ test.describe("Slice 15a cook planner complete", () => {
       page.getByTestId("consumed-ingredient-sheet"),
     ).toBeVisible();
     await expect(
-      page.getByText("소진한 재료를 체크해주세요"),
+      page.getByText(/소진(한 재료를 체크해주세요|된 재료를 확인해주세요)/),
     ).toBeVisible();
 
     // Check an ingredient

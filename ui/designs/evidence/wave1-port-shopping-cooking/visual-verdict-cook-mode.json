@@ -1,0 +1,8 @@
+{
+  "score": 98,
+  "verdict": "pass",
+  "category_match": true,
+  "differences": [],
+  "suggestions": [],
+  "reasoning": "COOK_MODE_PLANNER, COOK_MODE_STANDALONE, and COOK_MODE_CONSUMED_INGREDIENT_CHECKLIST 390px/320px service captures match the fixed prototype dark cook shell, step-card colors, bottom CTA geometry, bottom tab state, and consumed-ingredient sheet structure. No unclassified visual differences were observed in the controlled Playwright capture."
+}

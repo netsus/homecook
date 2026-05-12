@@ -6,6 +6,10 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { ConsumedIngredientSheet } from "@/components/cooking/consumed-ingredient-sheet";
+import {
+  MobileCookModeView,
+  useIsMobileViewport,
+} from "@/components/cooking/cook-mode-mobile-ui";
 import { ContentState } from "@/components/shared/content-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isCookingApiError } from "@/lib/api/cooking";
@@ -49,6 +53,7 @@ export function StandaloneCookModeScreen({
   const [authState, setAuthState] = useState<AuthState>("checking");
   const [showConsumedSheet, setShowConsumedSheet] = useState(false);
   const [showLoginGate, setShowLoginGate] = useState(false);
+  const isMobileViewport = useIsMobileViewport();
   const completePendingRef = useRef(false);
 
   const screenState = useStandaloneCookModeStore((s) => s.screenState);
@@ -304,6 +309,36 @@ export function StandaloneCookModeScreen({
 
   const { recipe } = data;
 
+  if (isMobileViewport) {
+    return (
+      <>
+        <MobileCookModeView
+          cancelButtonTestId="standalone-cancel-button"
+          completeButtonTestId="standalone-complete-button"
+          contentTestId="standalone-cook-mode-content"
+          controlsDisabled={screenState !== "ready"}
+          onCancel={handleCancelClick}
+          onComplete={handleCompleteClick}
+          recipe={recipe}
+          screenTestId="standalone-cook-mode-screen"
+          servingsTestId="standalone-cook-mode-servings"
+          titleTestId="standalone-cook-mode-title"
+          variant="standalone"
+        />
+
+        {showConsumedSheet ? (
+          <ConsumedIngredientSheet
+            ingredients={recipe.ingredients}
+            onClose={() => setShowConsumedSheet(false)}
+            onConfirm={handleConsumedConfirm}
+            onSkip={handleConsumedSkip}
+            recipeTitle={recipe.title}
+          />
+        ) : null}
+      </>
+    );
+  }
+
   return (
     <div
       className="flex min-h-dvh flex-col bg-[var(--background)]"
@@ -381,6 +416,7 @@ export function StandaloneCookModeScreen({
           onClose={() => setShowConsumedSheet(false)}
           onConfirm={handleConsumedConfirm}
           onSkip={handleConsumedSkip}
+          recipeTitle={recipe.title}
         />
       ) : null}
     </div>
