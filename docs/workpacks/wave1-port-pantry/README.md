@@ -156,10 +156,11 @@ None.
   - `ui/designs/evidence/wave1-port-pantry/pantry-add-sheet-narrow.png`
   - `ui/designs/evidence/wave1-port-pantry/pantry-bundle-picker.png`
   - `ui/designs/evidence/wave1-port-pantry/pantry-bundle-picker-narrow.png`
-- Authority status: `reviewed` — Phase5 fixed-reference re-audit refreshed 2026-05-13
+- Authority status: `reviewed`
 - Notes:
   - `PANTRY`, `INGREDIENT_ADD_SHEET`, `PANTRY_BUNDLE_PICKER`는 fixed prototype 390px/320px reference가 있는 exact-reference-ready surface다.
   - Visual/layout은 fixed prototype이 기준이고 기능 동작은 MVP/공식 API 계약이 기준이다.
+  - Phase5 fixed-reference re-audit was refreshed on 2026-05-13.
   - prototype-only font, image asset, bottom tab behavior는 scope 밖이다.
 
 ### UI Risk Classification
