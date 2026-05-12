@@ -6,6 +6,10 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { ConsumedIngredientSheet } from "@/components/cooking/consumed-ingredient-sheet";
+import {
+  MobileCookModeView,
+  useIsMobileViewport,
+} from "@/components/cooking/cook-mode-mobile-ui";
 import { ContentState } from "@/components/shared/content-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isCookingApiError } from "@/lib/api/cooking";
@@ -51,6 +55,7 @@ export function CookModeScreen({
   );
   const [showConsumedSheet, setShowConsumedSheet] = useState(false);
   const [cancelConfirm, setCancelConfirm] = useState(false);
+  const isMobileViewport = useIsMobileViewport();
   const completePendingRef = useRef(false);
   const cancelPendingRef = useRef(false);
 
@@ -328,6 +333,80 @@ export function CookModeScreen({
 
   const { recipe } = visibleData;
 
+  if (isMobileViewport) {
+    return (
+      <>
+        <MobileCookModeView
+          cancelButtonTestId="cancel-button"
+          completeButtonTestId="complete-button"
+          contentTestId="cook-mode-content"
+          controlsDisabled={screenState !== "ready"}
+          onCancel={handleCancelClick}
+          onComplete={handleCompleteClick}
+          recipe={recipe}
+          screenTestId="cook-mode-screen"
+          servingsTestId="cook-mode-servings"
+          titleTestId="cook-mode-title"
+          variant="planner"
+        />
+
+        {showConsumedSheet ? (
+          <ConsumedIngredientSheet
+            ingredients={recipe.ingredients}
+            onClose={() => setShowConsumedSheet(false)}
+            onConfirm={handleConsumedConfirm}
+            onSkip={handleConsumedSkip}
+            recipeTitle={recipe.title}
+          />
+        ) : null}
+
+        {cancelConfirm ? (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-4 backdrop-blur-[1px]"
+            data-testid="cancel-confirm-overlay"
+            onClick={() => setCancelConfirm(false)}
+          >
+            <div
+              aria-labelledby="cancel-confirm-title"
+              aria-modal="true"
+              className="w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-3)]"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+            >
+              <h3
+                className="text-base font-bold text-[var(--foreground)]"
+                id="cancel-confirm-title"
+              >
+                요리를 취소할까요?
+              </h3>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                취소하면 요리 준비 리스트로 돌아갑니다.
+              </p>
+              <div className="mt-4 flex gap-3">
+                <button
+                  className="flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--line)] bg-transparent text-sm font-semibold text-[var(--foreground)]"
+                  data-testid="cancel-confirm-no"
+                  onClick={() => setCancelConfirm(false)}
+                  type="button"
+                >
+                  아니요
+                </button>
+                <button
+                  className="flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-deep)] text-sm font-bold text-white"
+                  data-testid="cancel-confirm-yes"
+                  onClick={handleCancelConfirm}
+                  type="button"
+                >
+                  취소하기
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </>
+    );
+  }
+
   return (
     <div
       className="flex min-h-dvh flex-col bg-[var(--background)]"
@@ -405,6 +484,7 @@ export function CookModeScreen({
           onClose={() => setShowConsumedSheet(false)}
           onConfirm={handleConsumedConfirm}
           onSkip={handleConsumedSkip}
+          recipeTitle={recipe.title}
         />
       ) : null}
 

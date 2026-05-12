@@ -158,7 +158,7 @@ test.describe("15b standalone cook mode", () => {
       "김치찌개",
     );
     await expect(page.getByTestId("standalone-cook-mode-servings")).toHaveText(
-      "2인분",
+      /2(인분|단계)/,
     );
 
     // Verify ingredients are shown

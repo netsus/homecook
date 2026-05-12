@@ -410,24 +410,51 @@ function cookModeData() {
     session_id: "session-abc",
     recipe: {
       id: "recipe-1",
-      title: "김치찌개",
+      title: "닭가슴살 샐러드",
       cooking_servings: 2,
       ingredients: [
         {
           ingredient_id: "ing-1",
-          standard_name: "양파",
-          amount: 1,
-          unit: "개",
-          display_text: "양파 1개",
+          standard_name: "닭가슴살",
+          amount: 100,
+          unit: "g",
+          display_text: "100g",
           ingredient_type: "QUANT",
           scalable: true,
         },
         {
           ingredient_id: "ing-2",
-          standard_name: "김치",
-          amount: 200,
-          unit: "g",
-          display_text: "김치 200g",
+          standard_name: "로메인",
+          amount: 2,
+          unit: "줌",
+          display_text: "2줌",
+          ingredient_type: "QUANT",
+          scalable: true,
+        },
+        {
+          ingredient_id: "ing-3",
+          standard_name: "방울토마토",
+          amount: 5,
+          unit: "개",
+          display_text: "5개",
+          ingredient_type: "QUANT",
+          scalable: true,
+        },
+        {
+          ingredient_id: "ing-4",
+          standard_name: "아보카도",
+          amount: 0.5,
+          unit: "개",
+          display_text: "1/2개",
+          ingredient_type: "QUANT",
+          scalable: true,
+        },
+        {
+          ingredient_id: "ing-5",
+          standard_name: "발사믹 드레싱",
+          amount: 2,
+          unit: "T",
+          display_text: "2T",
           ingredient_type: "QUANT",
           scalable: true,
         },
@@ -435,7 +462,83 @@ function cookModeData() {
       steps: [
         {
           step_number: 1,
-          instruction: "양파를 썰어주세요.",
+          instruction: "닭가슴살 슬라이스, 로메인 뜯기, 토마토 반 갈라요.",
+          cooking_method: {
+            code: "prep",
+            label: "준비",
+            color_key: "prep",
+          },
+          ingredients_used: [],
+          heat_level: null,
+          duration_seconds: null,
+          duration_text: null,
+        },
+        {
+          step_number: 2,
+          instruction: "볼에 모두 담고 드레싱 뿌려 가볍게 버무려요.",
+          cooking_method: {
+            code: "mix",
+            label: "무치기",
+            color_key: "mix",
+          },
+          ingredients_used: [],
+          heat_level: null,
+          duration_seconds: null,
+          duration_text: null,
+        },
+      ],
+    },
+  };
+}
+
+function standaloneCookModeData() {
+  return {
+    recipe: {
+      id: "recipe-standalone",
+      title: "제육볶음",
+      cooking_servings: 2,
+      ingredients: [
+        {
+          ingredient_id: "standalone-ing-1",
+          standard_name: "돼지고기",
+          amount: 300,
+          unit: "g",
+          display_text: "300g",
+          ingredient_type: "QUANT",
+          scalable: true,
+        },
+        {
+          ingredient_id: "standalone-ing-2",
+          standard_name: "양파",
+          amount: 1,
+          unit: "개",
+          display_text: "1개",
+          ingredient_type: "QUANT",
+          scalable: true,
+        },
+      ],
+      steps: [
+        {
+          step_number: 1,
+          instruction: "고추장, 고춧가루, 설탕, 마늘 섞어 양념장을 만들어요.",
+          cooking_method: { code: "prep", label: "준비", color_key: "prep" },
+          ingredients_used: [],
+          heat_level: null,
+          duration_seconds: null,
+          duration_text: null,
+        },
+        {
+          step_number: 2,
+          instruction: "돼지고기에 양념장 버무려 10분 재워요.",
+          cooking_method: { code: "prep", label: "준비", color_key: "prep" },
+          ingredients_used: [],
+          heat_level: null,
+          duration_seconds: null,
+          duration_text: null,
+        },
+        {
+          step_number: 3,
+          instruction: "달군 팬에 재운 고기를 넣고 센불에 4분 볶아요.",
           cooking_method: {
             code: "stir_fry",
             label: "볶기",
@@ -447,28 +550,15 @@ function cookModeData() {
           duration_text: null,
         },
         {
-          step_number: 2,
-          instruction: "김치를 넣고 끓여주세요.",
+          step_number: 4,
+          instruction: "양파와 대파를 넣고 3분 더 볶아 마무리.",
           cooking_method: {
-            code: "boil",
-            label: "끓이기",
-            color_key: "boil",
+            code: "stir_fry",
+            label: "볶기",
+            color_key: "stir_fry",
           },
           ingredients_used: [],
-          heat_level: "medium",
-          duration_seconds: 600,
-          duration_text: null,
-        },
-        {
-          step_number: 3,
-          instruction: "두부를 넣고 한 번 더 끓여주세요.",
-          cooking_method: {
-            code: "boil",
-            label: "끓이기",
-            color_key: "boil",
-          },
-          ingredients_used: [],
-          heat_level: "low",
+          heat_level: null,
           duration_seconds: null,
           duration_text: null,
         },
@@ -537,7 +627,7 @@ async function installCookingRoutes(page: Page) {
     await route.fulfill({
       json: {
         success: true,
-        data: { recipe: cookModeData().recipe },
+        data: standaloneCookModeData(),
         error: null,
       },
     });
@@ -702,6 +792,14 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "cook-mode-narrow.png"),
     });
+
+    await page.getByTestId("complete-button").click();
+    await expect(page.getByTestId("consumed-ingredient-sheet")).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "cook-mode-complete-narrow.png"),
+    });
     await context.close();
   }
 
@@ -715,6 +813,20 @@ test("capture Wave1 shopping/cooking authority evidence", async ({ browser }) =>
     await page.screenshot({
       fullPage: false,
       path: path.join(EVIDENCE_DIR, "standalone-cook-mode-scroll.png"),
+    });
+    await context.close();
+  }
+
+  {
+    const { context, page } = await preparePage(browser, viewports.narrow);
+    await setAuthOverride(page);
+    await installCookingRoutes(page);
+    await page.goto(`${BASE_URL}/cooking/recipes/recipe-1/cook-mode?servings=2`);
+    await expect(page.getByTestId("step-list")).toBeVisible();
+    await stabilize(page);
+    await page.screenshot({
+      fullPage: false,
+      path: path.join(EVIDENCE_DIR, "standalone-cook-mode-narrow.png"),
     });
     await context.close();
   }
