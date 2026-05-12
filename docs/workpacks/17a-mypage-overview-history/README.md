@@ -1,7 +1,7 @@
 # Slice: 17a-mypage-overview-history
 
 ## Goal
-로그인한 사용자가 마이페이지에서 자신의 프로필 정보를 확인하고, 레시피북(시스템 자동 3개 + 커스텀)을 목록으로 관리(생성/이름 변경/삭제)하며, 장보기 기록을 최신순으로 재열람할 수 있도록 한다. MYPAGE shell과 두 탭(레시피북/장보기 기록)의 읽기·쓰기 기능을 이 슬라이스에서 닫는다.
+로그인한 사용자가 마이페이지에서 자신의 프로필 정보를 확인하고, 레시피북(시스템 자동 3개 + 커스텀)을 목록으로 관리(생성/이름 변경/삭제)하며, 장보기 기록을 최신순으로 보고 완료된 기록을 `다시열기`로 read-only 재열람할 수 있도록 한다. MYPAGE shell과 두 탭(레시피북/장보기 기록)의 읽기·쓰기 기능을 이 슬라이스에서 닫는다.
 
 ## Branches
 
@@ -28,7 +28,7 @@
 - `SETTINGS` 화면, 로그아웃, 화면 꺼짐 방지 토글, 닉네임 변경, 회원 탈퇴 → `17c-settings-account`
 - 직접 레시피 등록(manual) / 유튜브 레시피 등록 흐름 → `18-manual-recipe-create`, `19-youtube-import`
 - 레시피 저장/좋아요 액션 자체 (이미 slice 03, 04에서 구현 완료)
-- 장보기 상세 재열람 UI 개선 (기존 `SHOPPING_DETAIL` read-only 모드는 10a/12a에서 이미 구현)
+	- 장보기 상세 수정 기능 (완료 기록은 `다시열기`로 read-only 재열람만 허용)
 
 ## Dependencies
 
@@ -120,10 +120,11 @@
       {
         "id": "uuid",
         "title": "3/1 장보기",
-        "date_range_start": "2026-03-01",
-        "date_range_end": "2026-03-07",
-        "is_completed": true,
-        "item_count": 12,
+	        "date_range_start": "2026-03-01",
+	        "date_range_end": "2026-03-07",
+	        "is_completed": true,
+	        "completed_at": "2026-03-01T18:30:00Z",
+	        "item_count": 12,
         "created_at": "2026-03-01T09:00:00Z"
       }
     ],
@@ -197,10 +198,10 @@
 ## Source Links
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 - `docs/workpacks/README.md`
-- `docs/요구사항기준선-v1.6.4.md` — §1-9 마이페이지, §2-13 레시피북 정책
-- `docs/화면정의서-v1.5.1.md` — §19 MYPAGE
-- `docs/api문서-v1.2.2.md` — §12 마이페이지 (12-1~12-5, 12-8)
-- `docs/db설계-v1.3.1.md` — §10 레시피북, §6 장보기
+- `docs/요구사항기준선-v1.6.6.md` — §1-9 마이페이지, §2-13 레시피북 정책
+- `docs/화면정의서-v1.5.3.md` — §19 MYPAGE
+- `docs/api문서-v1.2.4.md` — §12 마이페이지 (12-1~12-5, 12-8)
+- `docs/db설계-v1.3.3.md` — §10 레시피북, §6 장보기
 - `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`
 - `ui/designs/BAEMIN_STYLE_DIRECTION.md`
 
@@ -239,7 +240,7 @@
 4. `[+ 새 레시피북]`을 탭하여 커스텀 레시피북을 생성한다.
 5. 커스텀 레시피북의 점3개(⋯) 메뉴에서 이름을 변경하거나 삭제한다.
 6. **장보기 기록** 탭으로 전환하여 저장된 장보기 리스트를 최신순으로 확인한다.
-7. 장보기 기록 항목을 탭하면 `SHOPPING_DETAIL` read-only 모드로 재열람한다.
+7. 완료된 장보기 기록의 `다시열기`를 탭하면 `SHOPPING_DETAIL` read-only 모드로 재열람한다.
 
 ## Delivery Checklist
 > 이 체크리스트는 Stage 2~6 동안 계속 갱신하는 living closeout 문서다.

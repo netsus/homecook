@@ -69,6 +69,7 @@ interface ShoppingListHistoryRow {
   date_range_start: string;
   date_range_end: string;
   is_completed: boolean;
+  completed_at: string | null;
   created_at: string;
 }
 
@@ -754,7 +755,7 @@ export async function GET(request: Request) {
   const cursor = parseShoppingHistoryCursor(url.searchParams.get("cursor"));
   const listsResult = await dbClient
     .from("shopping_lists")
-    .select("id, title, date_range_start, date_range_end, is_completed, created_at")
+    .select("id, title, date_range_start, date_range_end, is_completed, completed_at, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false });
@@ -798,6 +799,7 @@ export async function GET(request: Request) {
       date_range_start: row.date_range_start,
       date_range_end: row.date_range_end,
       is_completed: row.is_completed,
+      completed_at: row.completed_at,
       item_count: itemCountByListId.get(row.id) ?? 0,
       created_at: row.created_at,
     })),

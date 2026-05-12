@@ -40,6 +40,12 @@ For Wave1 mobile porting slices A-F, the following rules override prior design c
 6. For web/desktop or non-Wave1 legacy surfaces, existing docs continue to apply until a separate web redesign plan supersedes them.
 7. `ui/designs/reference/wave1-fixed-prototype/manifest.json`, `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md`, and the Wave1 validator must stay in exact parity mode before any service porting PR can be accepted.
 
+## 2026-05-12 Contract Decisions
+
+- Visual accessibility overrides are not a completion escape hatch for Wave1 mobile exact parity. Prototype colors, font sizes, touch sizes, and card/chip geometry win unless the fixed prototype is refrozen.
+- Shared bottom-tab icon shapes, including the pantry tab icon, must match the fixed prototype. Keep icon reshaping in the shared navigation scope instead of classifying it as a per-screen approved divergence.
+- `GLOBAL::LoginGateModal` visual output follows the fixed prototype reference, while login return-to-action behavior remains MVP-governed.
+
 ## Non-Negotiable Target
 
 For a mobile surface marked `exact-reference-ready`, completion requires all of the following:

@@ -155,27 +155,13 @@ async function mockRecipeSaveRoutes(page: Page) {
   });
 
   await page.route(`**/api/v1/recipes/${RECIPE_ID}/save`, async (route) => {
-    const body = route.request().postDataJSON() as { book_id?: string };
-    const bookId = body.book_id ?? "";
+    const body = route.request().postDataJSON() as { book_ids?: string[] };
+    const bookIds = Array.from(new Set(body.book_ids ?? []));
+    const createdBookIds = bookIds.filter((bookId) => !savedBookIds.includes(bookId));
+    const alreadySavedBookIds = bookIds.filter((bookId) => savedBookIds.includes(bookId));
 
-    if (savedBookIds.includes(bookId)) {
-      await route.fulfill({
-        status: 409,
-        json: {
-          success: false,
-          data: null,
-          error: {
-            code: "CONFLICT",
-            message: "이미 저장된 레시피예요.",
-            fields: [],
-          },
-        },
-      });
-      return;
-    }
-
-    savedBookIds = [...savedBookIds, bookId];
-    saveCount += 1;
+    savedBookIds = Array.from(new Set([...savedBookIds, ...createdBookIds]));
+    saveCount += createdBookIds.length;
 
     await route.fulfill({
       json: {
@@ -183,7 +169,9 @@ async function mockRecipeSaveRoutes(page: Page) {
         data: {
           saved: true,
           save_count: saveCount,
-          book_id: bookId,
+          book_ids: bookIds,
+          created_book_ids: createdBookIds,
+          already_saved_book_ids: alreadySavedBookIds,
         },
         error: null,
       },
@@ -225,8 +213,7 @@ test.describe("Slice 04 recipe save flow", () => {
       modal.getByText(isDesktopProject(testInfo) ? "폴더 선택" : "레시피북 다중 선택"),
     ).toBeVisible();
 
-    await modal.getByRole("button", { name: /저장한 레시피/ }).click();
-    await modal.getByRole("button", { name: /^저장$/ }).click();
+    await modal.getByRole("button", { name: /(\d+개 레시피북에 저장|^저장$)/ }).click();
 
     await expect(modal).not.toBeVisible();
     await expect(saveActionButton).toHaveAttribute("aria-pressed", "true");
@@ -260,12 +247,11 @@ test.describe("Slice 04 recipe save flow", () => {
     }
 
     await expect(modal.getByRole("button", { name: /오늘 저녁/ })).toBeVisible();
-    await modal.getByRole("button", { name: /오늘 저녁/ }).click();
-    await modal.getByRole("button", { name: /^저장$/ }).click();
+    await modal.getByRole("button", { name: /(\d+개 레시피북에 저장|^저장$)/ }).click();
 
     await expect(modal).not.toBeVisible();
     await expect(saveActionButton).toHaveAttribute("aria-pressed", "true");
-    await expect(saveActionButton.getByText("90")).toBeVisible();
+    await expect(saveActionButton.getByText("91")).toBeVisible();
   });
 
   test("guest user sees login gate and save modal reopens after return-to-action", async ({

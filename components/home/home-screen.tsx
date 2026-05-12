@@ -26,9 +26,9 @@ import type {
 } from "@/types/recipe";
 
 const SORT_OPTIONS: Array<{ label: string; value: RecipeSortKey }> = [
-  { label: "최신순", value: "view_count" },
+  { label: "조회수순", value: "view_count" },
+  { label: "최신순", value: "latest" },
   { label: "저장순", value: "save_count" },
-  { label: "좋아요순", value: "like_count" },
   { label: "플래너 등록순", value: "plan_count" },
 ];
 

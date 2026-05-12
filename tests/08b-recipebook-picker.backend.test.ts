@@ -94,18 +94,57 @@ function createRecipeBookItemsTable({
 function createRecipesTable({
   selectResults,
 }: {
-  selectResults: Array<QueryResult<Array<{ id: string; title: string; thumbnail_url: string | null; tags: string[] | null }> | null>>;
+  selectResults: Array<QueryResult<Array<{
+    id: string;
+    title: string;
+    thumbnail_url: string | null;
+    tags: string[] | null;
+    view_count: number;
+    base_servings: number;
+  }> | null>>;
 }) {
   const selectQuery = {
     in: vi.fn(() => selectQuery),
     then(
-      onFulfilled?: (value: QueryResult<Array<{ id: string; title: string; thumbnail_url: string | null; tags: string[] | null }> | null>) => unknown,
+      onFulfilled?: (value: QueryResult<Array<{
+        id: string;
+        title: string;
+        thumbnail_url: string | null;
+        tags: string[] | null;
+        view_count: number;
+        base_servings: number;
+      }> | null>) => unknown,
       onRejected?: (reason: unknown) => unknown,
     ) {
       return Promise.resolve(
         selectResults.shift() ?? {
           data: null,
           error: { message: "missing recipes select result" },
+        },
+      ).then(onFulfilled, onRejected);
+    },
+  };
+
+  return {
+    select: vi.fn(() => selectQuery),
+  };
+}
+
+function createRecipeStepsTable({
+  selectResults,
+}: {
+  selectResults: Array<QueryResult<Array<{ recipe_id: string; duration_seconds: number | null }> | null>>;
+}) {
+  const selectQuery = {
+    in: vi.fn(() => selectQuery),
+    then(
+      onFulfilled?: (value: QueryResult<Array<{ recipe_id: string; duration_seconds: number | null }> | null>) => unknown,
+      onRejected?: (reason: unknown) => unknown,
+    ) {
+      return Promise.resolve(
+        selectResults.shift() ?? {
+          data: null,
+          error: { message: "missing recipe_steps select result" },
         },
       ).then(onFulfilled, onRejected);
     },
@@ -257,13 +296,29 @@ describe("08b recipe book detail picker backend", () => {
               title: "김치찌개",
               thumbnail_url: "https://example.com/kimchi.jpg",
               tags: ["한식", "찌개"],
+              view_count: 120,
+              base_servings: 2,
             },
             {
               id: "recipe-2",
               title: "된장찌개",
               thumbnail_url: "https://example.com/doenjang.jpg",
               tags: ["한식"],
+              view_count: 240,
+              base_servings: 3,
             },
+          ],
+          error: null,
+        },
+      ],
+    });
+    const recipeStepsTable = createRecipeStepsTable({
+      selectResults: [
+        {
+          data: [
+            { recipe_id: "recipe-1", duration_seconds: 600 },
+            { recipe_id: "recipe-2", duration_seconds: 900 },
+            { recipe_id: "recipe-2", duration_seconds: 300 },
           ],
           error: null,
         },
@@ -278,6 +333,7 @@ describe("08b recipe book detail picker backend", () => {
         if (table === "recipe_books") return recipeBooksTable;
         if (table === "recipe_book_items") return recipeBookItemsTable;
         if (table === "recipes") return recipesTable;
+        if (table === "recipe_steps") return recipeStepsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
     });
@@ -303,6 +359,10 @@ describe("08b recipe book detail picker backend", () => {
             title: "된장찌개",
             thumbnail_url: "https://example.com/doenjang.jpg",
             tags: ["한식"],
+            view_count: 240,
+            total_duration_seconds: 1200,
+            total_duration_text: "20분",
+            base_servings: 3,
             added_at: "2026-04-24T10:00:00.000Z",
           },
         ],

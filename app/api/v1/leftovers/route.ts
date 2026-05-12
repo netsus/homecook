@@ -14,6 +14,7 @@ import {
   toLeftoverListItem,
   type LeftoverDishRow,
   type LeftoverRecipeRow,
+  type LeftoverSourceMealRow,
 } from "@/lib/server/leftovers";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { LeftoverListData } from "@/types/leftover";
@@ -44,6 +45,13 @@ interface RecipeSelectQuery {
   then: ArrayQueryResult<LeftoverRecipeRow>["then"];
 }
 
+interface SourceMealSelectQuery {
+  eq(column: string, value: string): SourceMealSelectQuery;
+  in(column: string, values: string[]): SourceMealSelectQuery;
+  order(column: string, options: QueryOrderOption): SourceMealSelectQuery;
+  then: ArrayQueryResult<LeftoverSourceMealRow>["then"];
+}
+
 interface LeftoverDishesTable {
   select(columns: string): LeftoverSelectQuery;
 }
@@ -52,9 +60,14 @@ interface RecipesTable {
   select(columns: string): RecipeSelectQuery;
 }
 
+interface MealsTable {
+  select(columns: string): SourceMealSelectQuery;
+}
+
 interface LeftoversDbClient {
   from(table: "leftover_dishes"): LeftoverDishesTable;
   from(table: "recipes"): RecipesTable;
+  from(table: "meals"): MealsTable;
 }
 
 async function requireUser(routeClient: Awaited<ReturnType<typeof createRouteHandlerClient>>) {
@@ -104,7 +117,7 @@ export async function GET(request: NextRequest) {
 
   let leftoversQuery = dbClient
     .from("leftover_dishes")
-    .select("id, user_id, recipe_id, status, cooked_at, eaten_at, auto_hide_at")
+    .select("id, user_id, recipe_id, status, cooked_at, eaten_at, auto_hide_at, cooking_servings")
     .eq("user_id", user.id)
     .eq("status", status);
 
@@ -126,7 +139,9 @@ export async function GET(request: NextRequest) {
   }
 
   const recipeIds = [...new Set(leftoversResult.data.map((item) => item.recipe_id))];
+  const leftoverIds = leftoversResult.data.map((item) => item.id);
   const recipeMap = new Map<string, LeftoverRecipeRow>();
+  const sourceMealMap = new Map<string, LeftoverSourceMealRow>();
 
   if (recipeIds.length > 0) {
     const recipesResult = await dbClient
@@ -143,7 +158,25 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  if (leftoverIds.length > 0) {
+    const sourceMealsResult = await dbClient
+      .from("meals")
+      .select("leftover_dish_id, planned_servings, meal_plan_columns(name)")
+      .eq("user_id", user.id)
+      .in("leftover_dish_id", leftoverIds)
+      .order("cooked_at", { ascending: false })
+      .order("id", { ascending: false });
+
+    if (!sourceMealsResult.error && sourceMealsResult.data) {
+      sourceMealsResult.data.forEach((meal) => {
+        if (meal.leftover_dish_id && !sourceMealMap.has(meal.leftover_dish_id)) {
+          sourceMealMap.set(meal.leftover_dish_id, meal);
+        }
+      });
+    }
+  }
+
   return ok({
-    items: leftoversResult.data.map((row) => toLeftoverListItem(row, recipeMap)),
+    items: leftoversResult.data.map((row) => toLeftoverListItem(row, recipeMap, sourceMealMap)),
   } satisfies LeftoverListData);
 }

@@ -852,7 +852,8 @@ function MobileShoppingCard({ item }: { item: ShoppingListHistoryItem }) {
           {item.title}
         </p>
         <p className="mt-0.5 truncate text-[11px] font-medium leading-[1.35] text-[#868E96]">
-          {item.item_count}개 재료 · {completed ? "완료" : "진행 중"}
+          {item.item_count}개 재료 · {completed ? "다시열기" : "진행 중"}
+          {item.completed_at ? ` · ${formatShortDate(item.completed_at)} 완료` : ""}
         </p>
       </div>
       <ChevronRightIcon />
@@ -887,6 +888,15 @@ function buildBookDetailHref(book: RecipeBookSummary) {
 
 function formatRecipeCount(count: number) {
   return `${Number.isFinite(count) ? count : 0}개`;
+}
+
+function formatShortDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
 function BackIcon() {

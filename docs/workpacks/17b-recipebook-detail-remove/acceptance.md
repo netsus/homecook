@@ -9,6 +9,7 @@
 
 ## Happy Path
 - [x] MYPAGE 레시피북 탭에서 레시피북 탭 → RECIPEBOOK_DETAIL 진입, 레시피 목록 표시 <!-- omo:id=accept-happy-path;stage=4;scope=frontend;review=5,6 -->
+- [x] 2026-05-12 계약 기준 RECIPEBOOK_DETAIL 카드에 태그, 조회수, 조리시간, 기본 인분이 표시된다 <!-- omo:id=accept-recipebook-card-meta-v124;stage=4;scope=frontend;review=5,6 -->
 - [x] 레시피 카드 탭 → RECIPE_DETAIL 이동 <!-- omo:id=accept-recipe-card-navigate;stage=4;scope=frontend;review=5,6 -->
 - [x] saved/custom 책에서 레시피 제거 → 목록에서 사라짐 <!-- omo:id=accept-remove-saved-custom;stage=4;scope=frontend;review=5,6 -->
 - [x] liked 책에서 레시피 제거 → 좋아요 해제, 목록에서 사라짐 <!-- omo:id=accept-remove-liked;stage=4;scope=frontend;review=5,6 -->
@@ -53,12 +54,12 @@
 ## Automation Split
 
 ### Vitest
-- [x] GET /recipe-books/{book_id}/recipes 응답 형식, cursor pagination, owner-guard 검증 <!-- omo:id=accept-vitest-detail-list;stage=2;scope=backend;review=3,6 -->
+- [x] GET /recipe-books/{book_id}/recipes 응답 형식, cursor pagination, owner-guard, v1.2.4 card metadata 검증 <!-- omo:id=accept-vitest-detail-list-v124;stage=2;scope=backend;review=3,6 -->
 - [x] DELETE book_type별 분기 (liked/saved/custom/my_added) + count 갱신 검증 <!-- omo:id=accept-vitest-remove-policy;stage=2;scope=backend;review=3,6 -->
 - [x] 멱등성, 403/404 에러 시나리오 <!-- omo:id=accept-vitest-error-scenarios;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright
-- [x] RECIPEBOOK_DETAIL 진입, 레시피 목록 표시, 제거, empty 전환 브라우저 테스트 <!-- omo:id=accept-playwright-flow;stage=4;scope=frontend;review=5,6 -->
+- [x] RECIPEBOOK_DETAIL 진입, 레시피 목록 metadata 표시, 제거, empty 전환 브라우저 테스트 <!-- omo:id=accept-playwright-flow-v124;stage=4;scope=frontend;review=5,6 -->
 - [x] 외부 연동이 필요한 경우 기본 게이트와 선택 실행 시나리오가 구분되어 있다 <!-- omo:id=accept-playwright-live-split;stage=4;scope=frontend;review=6 -->
 
 ### Manual Only

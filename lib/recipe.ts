@@ -2,7 +2,7 @@ import type { RecipeCardItem, RecipeIngredient, RecipeSortKey } from "@/types/re
 
 const SORT_KEYS: RecipeSortKey[] = [
   "view_count",
-  "like_count",
+  "latest",
   "save_count",
   "plan_count",
 ];

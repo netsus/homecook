@@ -240,10 +240,10 @@ function SavePopup({ recipeId, onClose, onConfirm, saved, savedBookIds = [], boo
 // 이 컴포넌트는 교체 전까지 하위 호환용으로 유지.
 function SortSheet({ value, onChange, onClose }) {
   const opts = [
+  ['views', '조회수순'],
   ['latest', '최신순'],
-  ['rating', '별점순'], // CONTRACT_CHECK: 별점 → 행동 메트릭 전환 시 정렬 기준 재정의 필요
   ['saves', '저장순'],
-  ['fast', '빠른 조리순']];
+  ['plans', '플래너 등록순']];
 
   return (
     <Sheet title="정렬" onClose={onClose}>

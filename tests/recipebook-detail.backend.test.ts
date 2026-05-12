@@ -140,7 +140,19 @@ describe("17b recipebook detail backend", () => {
             title: "된장찌개",
             thumbnail_url: null,
             tags: ["한식"],
+            view_count: 120,
+            base_servings: 2,
           },
+        ],
+        error: null,
+      },
+    ]);
+    const recipeStepsTable = createTable([
+      {
+        data: [
+          { recipe_id: RECIPE_ID, duration_seconds: 300 },
+          { recipe_id: RECIPE_ID, duration_seconds: 120 },
+          { recipe_id: RECIPE_ID, duration_seconds: null },
         ],
         error: null,
       },
@@ -150,6 +162,7 @@ describe("17b recipebook detail backend", () => {
         if (table === "recipe_books") return recipeBooksTable;
         if (table === "recipe_likes") return recipeLikesTable;
         if (table === "recipes") return recipesTable;
+        if (table === "recipe_steps") return recipeStepsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
     });
@@ -169,6 +182,10 @@ describe("17b recipebook detail backend", () => {
           title: "된장찌개",
           thumbnail_url: null,
           tags: ["한식"],
+          view_count: 120,
+          total_duration_seconds: 420,
+          total_duration_text: "7분",
+          base_servings: 2,
           added_at: "2026-04-30T09:00:00.000Z",
         },
       ],
@@ -191,8 +208,18 @@ describe("17b recipebook detail backend", () => {
             title: "직접 등록 찌개",
             thumbnail_url: "https://example.com/manual.jpg",
             tags: ["직접등록"],
+            view_count: 7,
+            base_servings: 3,
             created_at: "2026-04-30T08:00:00.000Z",
           },
+        ],
+        error: null,
+      },
+    ]);
+    const recipeStepsTable = createTable([
+      {
+        data: [
+          { recipe_id: RECIPE_ID, duration_seconds: 180 },
         ],
         error: null,
       },
@@ -201,6 +228,7 @@ describe("17b recipebook detail backend", () => {
       from: vi.fn((table: string) => {
         if (table === "recipe_books") return recipeBooksTable;
         if (table === "recipes") return recipesTable;
+        if (table === "recipe_steps") return recipeStepsTable;
         throw new Error(`unexpected table: ${table}`);
       }),
     });
@@ -219,9 +247,16 @@ describe("17b recipebook detail backend", () => {
         title: "직접 등록 찌개",
         thumbnail_url: "https://example.com/manual.jpg",
         tags: ["직접등록"],
+        view_count: 7,
+        total_duration_seconds: 180,
+        total_duration_text: "3분",
+        base_servings: 3,
         added_at: "2026-04-30T08:00:00.000Z",
       },
     ]);
+    expect(recipesTable.select).toHaveBeenCalledWith(
+      "id, title, thumbnail_url, tags, view_count, base_servings, created_at",
+    );
     expect(recipesTable.__query.eq).toHaveBeenCalledWith("created_by", "user-1");
     expect(recipesTable.__query.in).toHaveBeenCalledWith("source_type", ["youtube", "manual"]);
   });

@@ -1,7 +1,7 @@
 # Slice: 16-leftovers
 
 ## Goal
-요리 완료 후 자동 등록된 남은요리를 조회·관리하고, 다먹음/덜먹음 전이를 통해 남은요리 소비를 추적하며, 남은요리를 플래너에 재등록할 수 있도록 한다. 사용자는 LEFTOVERS 화면에서 현재 남은요리를 한눈에 보고, ATE_LIST에서 다먹은 기록을 확인할 수 있다.
+요리 완료 후 자동 등록된 남은요리를 조회·관리하고, 다먹음/덜먹음 전이를 통해 남은요리 소비를 추적하며, 남은요리를 플래너에 재등록할 수 있도록 한다. 사용자는 LEFTOVERS 화면에서 현재 남은요리를 prototype 기준 카드 메타(썸네일, 끼니명, 요리 인분 포함)로 보고, ATE_LIST에서 다먹은 기록을 확인할 수 있다.
 
 ## Branches
 
@@ -21,11 +21,11 @@
   - `leftover_dishes.eaten_at`: 다먹음 시 `now()`, 덜먹음 시 `null`
   - `leftover_dishes.auto_hide_at`: 다먹음 시 `eaten_at + 30일`, 덜먹음 시 `null`
   - 남은요리 → 플래너 추가 시: `meals` INSERT (`status='registered'`, `is_leftover=true`, `leftover_dish_id=해당 ID`)
-- DB 영향: `leftover_dishes` (READ, UPDATE status/eaten_at/auto_hide_at), `meals` (INSERT via POST /meals), `recipes` (READ — 레시피 제목/썸네일 조인)
+- DB 영향: `leftover_dishes` (READ, UPDATE status/eaten_at/auto_hide_at, cooking_servings), `meals` (INSERT via POST /meals, source meal metadata 조회), `meal_plan_columns` (source_meal_label 조회), `recipes` (READ — 레시피 제목/썸네일 조인)
 - Schema Change:
-  - [x] 없음 — 기존 테이블 READ/UPDATE 및 기존 POST /meals INSERT 경로 재사용
-  - [ ] 있음
-  > `leftover_dishes` 테이블과 CHECK 제약은 15a migration에서 이미 생성됨. 이 슬라이스는 기존 테이블의 status UPDATE와 READ를 수행하고, `POST /meals`의 `leftover_dish_id` 경로도 기존 계약(§2-5)에 이미 정의됨. 신규 migration 파일 없음.
+  - [ ] 없음
+  - [x] 있음 — 2026-05-12 계약 기준 `leftover_dishes.cooking_servings` 추가 필요
+  > `leftover_dishes` status CHECK는 기존 정책을 유지한다. v1.3.3에서는 `cooking_servings`와 최신 연결 meal metadata 조회가 추가됐다.
 
 ## Out of Scope
 - 남은요리 자동 생성 (요리 완료 시 INSERT) — 15a/15b에서 구현 완료
@@ -80,9 +80,12 @@
       {
         "id": "uuid",
         "recipe_id": "uuid",
-        "recipe_title": "김치찌개",
-        "recipe_thumbnail_url": "https://...",
-        "status": "leftover",
+	    "recipe_title": "김치찌개",
+	    "recipe_thumbnail_url": "https://...",
+	    "source_meal_label": "저녁",
+	    "source_planned_servings": 2,
+	    "cooking_servings": 2,
+	    "status": "leftover",
         "cooked_at": "2026-03-01T18:00:00Z",
         "eaten_at": null
       }
@@ -198,11 +201,11 @@
 ## Source Links
 - `docs/sync/CURRENT_SOURCE_OF_TRUTH.md`
 - `docs/workpacks/README.md`
-- `docs/요구사항기준선-v1.6.4.md` — §1-7 남은요리/다먹은 목록, §2-8 식사 상태 & 상태 전이
-- `docs/화면정의서-v1.5.1.md` — §15 LEFTOVERS, §16 ATE_LIST, §14 COOK_MODE [요리 완료] 액션
-- `docs/api문서-v1.2.2.md` — §10 남은요리 (10-1 ~ 10-4), §2-5 POST /meals (leftover_dish_id)
-- `docs/db설계-v1.3.1.md` — §9-1 leftover_dishes, §5-2 meals (is_leftover, leftover_dish_id)
-- `docs/유저flow맵-v1.3.1.md` — §⑥ 남은요리 관리 여정
+- `docs/요구사항기준선-v1.6.6.md` — §1-7 남은요리/다먹은 목록, §2-8 식사 상태 & 상태 전이
+- `docs/화면정의서-v1.5.3.md` — §15 LEFTOVERS, §16 ATE_LIST, §14 COOK_MODE [요리 완료] 액션
+- `docs/api문서-v1.2.4.md` — §10 남은요리 (10-1 ~ 10-4), §2-5 POST /meals (leftover_dish_id)
+- `docs/db설계-v1.3.3.md` — §9-1 leftover_dishes, §5-2 meals (is_leftover, leftover_dish_id)
+- `docs/유저flow맵-v1.3.3.md` — §⑥ 남은요리 관리 여정
 - `docs/workpacks/15a-cook-planner-complete/README.md` — leftover_dishes INSERT 구현
 - `docs/workpacks/15b-cook-standalone-complete/README.md` — standalone leftover INSERT 구현
 - `docs/workpacks/h8-baemin-prototype-reference-future-screens-direction/README.md`
@@ -245,14 +248,14 @@
 - **플래너 추가 시 날짜/끼니/인분 선택 필수**: 기존 PlannerAddSheet/PlannerAddPopup 재사용
 
 ## Contract Evolution Candidates (Optional)
-없음. 공식 API 문서(v1.2.2) §10-1~10-4와 §2-5(leftover_dish_id 경로)가 이 슬라이스 범위를 완전히 커버한다.
+2026-05-12 사용자 승인으로 공식 API 문서(v1.2.4)와 DB 설계(v1.3.3)에 남은요리 카드 메타가 추가됐다. 구현 전에는 더 이상 contract-evolution 후보가 아니라 required scope다.
 
 ## Primary User Path
 1. **PLANNER_WEEK** 상단 [남은요리] 버튼 클릭 → **LEFTOVERS** 화면 진입
-2. 남은요리 리스트 확인 (레시피명, 요리완료일, 최근순 정렬)
+2. 남은요리 리스트 확인 (레시피명, 썸네일, 요리완료일, 끼니명, 요리 인분, 최근순 정렬)
 3. (경로 A) **[다먹음]** 클릭 → 해당 항목이 `eaten` 상태로 전이, ATE_LIST로 이동
 4. (경로 B) **[플래너에 추가]** 클릭 → 날짜/끼니 선택 + 인분 입력 → `POST /meals` (leftover_dish_id 포함) → Meal 생성
-5. **ATE_LIST** 탭/화면 진입 → 다먹은 기록 확인 (레시피명, 다먹은 날짜, 최근순)
+5. **ATE_LIST** 탭/화면 진입 → 다먹은 기록 확인 (레시피명, 썸네일, 다먹은 날짜, 끼니명, 요리 인분, 최근순)
 6. ATE_LIST에서 **[덜먹음]** 클릭 → `leftover` 상태 복귀 → LEFTOVERS 리스트로 복원
 
 ## Delivery Checklist

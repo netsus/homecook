@@ -1114,6 +1114,9 @@ function MobileRecipeBookRecipeCard({
               {item.tags.join(" · ")}
             </p>
           ) : null}
+          <p className="mt-0.5 truncate text-[11px] font-medium leading-[1.35] text-[#868E96]">
+            조회 {formatRecipeBookMetric(item.view_count)} · {item.total_duration_text ?? "시간 미정"} · {item.base_servings}인분
+          </p>
         </div>
       </Link>
       {canRemove ? (
@@ -1330,6 +1333,9 @@ function RecipeItemCard({
               {item.tags.join(" · ")}
             </p>
           ) : null}
+          <p className="mt-0.5 truncate text-sm text-[var(--text-3)] max-[360px]:text-xs">
+            조회 {formatRecipeBookMetric(item.view_count)} · {item.total_duration_text ?? "시간 미정"} · {item.base_servings}인분
+          </p>
         </div>
       </Link>
       {canRemove ? (
@@ -1345,4 +1351,11 @@ function RecipeItemCard({
       ) : null}
     </div>
   );
+}
+
+function formatRecipeBookMetric(value: number) {
+  return new Intl.NumberFormat("ko-KR", {
+    notation: value >= 1000 ? "compact" : "standard",
+    maximumFractionDigits: 1,
+  }).format(value);
 }

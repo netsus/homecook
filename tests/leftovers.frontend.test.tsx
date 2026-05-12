@@ -76,6 +76,9 @@ const LEFTOVER_ITEMS: LeftoverListItemData[] = [
     status: "leftover",
     cooked_at: "2026-04-20",
     eaten_at: null,
+    cooking_servings: 2,
+    source_meal_label: "저녁",
+    source_planned_servings: 2,
   },
   {
     id: "ld-2",
@@ -85,6 +88,9 @@ const LEFTOVER_ITEMS: LeftoverListItemData[] = [
     status: "leftover",
     cooked_at: "2026-04-19",
     eaten_at: null,
+    cooking_servings: 1,
+    source_meal_label: "점심",
+    source_planned_servings: 1,
   },
 ];
 
@@ -97,6 +103,9 @@ const EATEN_ITEMS: LeftoverListItemData[] = [
     status: "eaten",
     cooked_at: "2026-04-18",
     eaten_at: "2026-04-22T00:00:00.000Z",
+    cooking_servings: 2,
+    source_meal_label: "저녁",
+    source_planned_servings: 2,
   },
 ];
 

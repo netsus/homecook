@@ -1,7 +1,7 @@
 # Slice: 04-recipe-save
 
 ## Goal
-레시피 상세 화면에서 사용자가 레시피를 저장할 수 있도록 한다. 저장 버튼 클릭 시 저장 대상 레시피북 선택 모달이 열리며, "저장한 레시피북(saved)" 또는 "커스텀 레시피북(custom)" 중 하나를 선택하거나 새 커스텀 레시피북을 빠르게 생성하여 저장할 수 있다. 저장 후 레시피의 save_count가 증가하고, 사용자의 user_status에 저장 상태가 반영된다.
+레시피 상세 화면에서 사용자가 레시피를 저장할 수 있도록 한다. 저장 버튼 클릭 시 저장 대상 레시피북 선택 모달이 열리며, "저장한 레시피북(saved)" 또는 "커스텀 레시피북(custom)"을 여러 개 선택하거나 새 커스텀 레시피북을 빠르게 생성하여 저장할 수 있다. 저장 후 레시피의 save_count가 새로 저장된 책 수만큼 증가하고, 사용자의 user_status에 저장 상태가 반영된다.
 
 ## Branches
 
@@ -15,10 +15,10 @@
 - API:
   - `GET /recipe-books` — 저장 가능한 레시피북 목록 조회 (saved/custom 필터링)
   - `POST /recipe-books` — 커스텀 레시피북 생성 (quick-create용)
-  - `POST /recipes/{recipe_id}/save` — 레시피 저장 (book_id 전달)
+  - `POST /recipes/{recipe_id}/save` — 레시피 저장 (`book_ids[]` 전달)
 - 상태 전이:
   - 레시피 저장 전: `is_saved=false`, `saved_book_ids=[]`
-  - 레시피 저장 후: `is_saved=true`, `saved_book_ids=[...]`, `save_count += 1`
+  - 레시피 저장 후: `is_saved=true`, `saved_book_ids=[...]`, `save_count += 신규 저장 책 수`
 - DB 영향:
   - `recipe_books` (조회 및 생성)
   - `recipe_book_items` (저장 시 INSERT)
@@ -98,15 +98,17 @@
 - **Request Body**:
   ```json
   {
-    "book_id": "uuid" // required, 저장할 레시피북 ID
+    "book_ids": ["uuid-1", "uuid-2"] // required, 저장할 레시피북 ID 목록
   }
   ```
 - **Response** (`200`):
   ```json
   {
     "saved": true,
-    "save_count": 211,
-    "book_id": "uuid"
+    "save_count": 213,
+    "book_ids": ["uuid-1", "uuid-2"],
+    "created_book_ids": ["uuid-2"],
+    "already_saved_book_ids": ["uuid-1"]
   }
   ```
 - **Error**:
@@ -114,15 +116,14 @@
   - `404 RESOURCE_NOT_FOUND` — 레시피 또는 레시피북이 존재하지 않음
   - `403 FORBIDDEN` — 다른 유저의 레시피북에 저장 시도
   - `409 CONFLICT` — book_type이 `saved` 또는 `custom`이 아닌 경우 (my_added, liked 불가)
-  - `409 CONFLICT` — 이미 해당 레시피북에 저장된 경우 (중복 저장)
 
 ### 권한 / 소유자 검증
 - `GET /recipe-books`: 로그인된 사용자의 레시피북만 조회
 - `POST /recipe-books`: 로그인된 사용자의 레시피북 생성
-- `POST /recipes/{id}/save`: book_id가 요청 유저의 레시피북인지 검증 (403)
+- `POST /recipes/{id}/save`: 모든 `book_ids`가 요청 유저의 레시피북인지 검증 (403)
 
 ### 멱등성
-- `POST /recipes/{id}/save`: 동일 레시피를 동일 레시피북에 재저장 시도 → `409 CONFLICT` 반환 (멱등하지 않음, 명시적 실패)
+- `POST /recipes/{id}/save`: 동일 레시피가 이미 저장된 책은 오류가 아니라 `already_saved_book_ids`에 포함하고 200 반환
 
 ## Frontend Delivery Mode
 - 디자인 확정 전: 기능 가능한 임시 UI
@@ -179,10 +180,10 @@
 
 ## Key Rules
 - **저장 가능 book_type 제한**: `saved` 또는 `custom`만 허용. `my_added`, `liked`로 저장 시도 시 `409 CONFLICT`
-- **중복 저장 방지**: 동일 레시피를 동일 레시피북에 재저장 시 `409 CONFLICT`
-- **레시피북 소유자 검증**: book_id가 요청 유저의 레시피북인지 확인 (403)
-- **비정규화 카운트 갱신**: 저장 성공 시 `recipes.save_count += 1`
-- **user_status 반영**: 저장 후 `is_saved=true`, `saved_book_ids`에 book_id 추가
+- **중복 저장 방지**: 동일 레시피를 동일 레시피북에 재저장해도 중복 row를 만들지 않고 `already_saved_book_ids`로 반환
+- **레시피북 소유자 검증**: 모든 `book_ids`가 요청 유저의 레시피북인지 확인 (403)
+- **비정규화 카운트 갱신**: 저장 성공 시 `recipes.save_count += 신규 recipe_book_items 수`
+- **user_status 반영**: 저장 후 `is_saved=true`, `saved_book_ids`에 저장된 book_ids 반영
 - **로그인 게이트**: 비로그인 상태에서 저장 시도 → 로그인 안내 모달 → 로그인 후 return-to-action
 
 ## Contract Evolution Candidates (Optional)
@@ -192,8 +193,8 @@
 1. 사용자가 `RECIPE_DETAIL`에서 레시피를 확인하고 [저장] 버튼 클릭
 2. 로그인 상태라면 `SAVE_MODAL` 오픈, 비로그인이라면 로그인 게이트 모달 → 로그인 후 `SAVE_MODAL` 오픈
 3. `SAVE_MODAL`에서 저장 가능한 레시피북 목록 조회 (saved/custom만 노출)
-4. 기존 레시피북 선택 또는 "새 레시피북 만들기" 입력 후 생성
-5. [저장] 버튼 클릭 → `POST /recipes/{id}/save` → 성공 시 모달 닫힘, save_count 증가, 저장 버튼 상태 변경
+4. 기존 레시피북 여러 개 선택 또는 "새 레시피북 만들기" 입력 후 생성
+5. [저장] 버튼 클릭 → `POST /recipes/{id}/save` with `book_ids[]` → 성공 시 모달 닫힘, save_count 증가, 저장 버튼 상태 변경
 
 ## Delivery Checklist
 - [x] 백엔드 계약 고정

@@ -39,6 +39,7 @@ function makeMockShoppingHistory() {
       date_range_start: "2026-04-30",
       date_range_end: "2026-05-06",
       is_completed: true,
+      completed_at: "2026-04-30T10:00:00Z",
       item_count: 12,
       created_at: "2026-04-30T00:00:00Z",
     },
@@ -48,6 +49,7 @@ function makeMockShoppingHistory() {
       date_range_start: "2026-04-23",
       date_range_end: "2026-04-29",
       is_completed: false,
+      completed_at: null,
       item_count: 8,
       created_at: "2026-04-23T00:00:00Z",
     },
@@ -227,7 +229,8 @@ test.describe("MYPAGE screen", () => {
 
     await expect(page.getByText("4/30 장보기")).toBeVisible();
     await expect(page.getByText("4/23 장보기")).toBeVisible();
-    await expect(page.getByText("완료")).toBeVisible();
+    await expect(page.getByText("다시열기")).toBeVisible();
+    await expect(page.getByText("4/30 완료")).toBeVisible();
     await expect(page.getByText("진행 중")).toBeVisible();
   });
 

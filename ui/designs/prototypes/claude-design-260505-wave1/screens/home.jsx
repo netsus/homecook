@@ -5,7 +5,7 @@ const { useState: useState_H, useMemo: useMemo_H } = React;
 // vNext S2 — HOME 개선 적용
 // 변경: 헤더 프로필/장바구니 제거, 로고 safe-area 아래로, 재료칩 테마 아래로 이동,
 //       "재료로 거르기"→"재료로 검색", SortSheet→SortDropdown, 배너→플래너 탭
-const SORT_OPTIONS = [['latest', '최신순'], ['saves', '저장순'], ['fast', '빠른 조리순']];
+const SORT_OPTIONS = [['views', '조회수순'], ['latest', '최신순'], ['saves', '저장순'], ['plans', '플래너 등록순']];
 
 function HomeScreen({ onOpenRecipe, onOpenSave, savedIds = [], sortBy, setSortBy, ingFilter, setIngFilter, onOpenIngredientFilter, ingredientNames = [], onGoPlanner }) {
   const [query, setQuery] = useState_H('');
@@ -35,8 +35,10 @@ function HomeScreen({ onOpenRecipe, onOpenSave, savedIds = [], sortBy, setSortBy
         return ingredientNames.every((name) => names.includes(name));
       });
     }
+    if (sortBy === 'views') list.sort((a, b) => recipeViewCount(b) - recipeViewCount(a));
+    if (sortBy === 'latest') list.sort((a, b) => b.id.localeCompare(a.id));
     if (sortBy === 'saves') list.sort((a, b) => b.saves - a.saves);
-    if (sortBy === 'fast') list.sort((a, b) => a.minutes - b.minutes);
+    if (sortBy === 'plans') list.sort((a, b) => b.rating - a.rating);
     return list;
   }, [query, activeTheme, ingFilter, ingredientNames, sortBy]);
 

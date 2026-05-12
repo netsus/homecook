@@ -477,7 +477,7 @@ describe("recipe detail screen", () => {
     expect(modalScope.queryByText(MOCK_RECIPE_DETAIL.description!)).toBeNull();
 
     const saveButton = modalScope.getByRole("button", { name: "저장" });
-    expect(saveButton.textContent).toBe("1개 레시피북 반영");
+    expect(saveButton.textContent).toBe("1개 레시피북에 저장");
   });
 
   it("shows load error UI and retries recipe-book loading", async () => {
@@ -523,7 +523,7 @@ describe("recipe detail screen", () => {
     expect(recipeBookRequests).toBe(2);
   });
 
-  it("disables save when the selected recipe book already contains the recipe", async () => {
+  it("keeps already-saved books selectable for multi-save", async () => {
     const detail = buildRecipeDetail({
       user_status: {
         is_liked: false,
@@ -553,18 +553,18 @@ describe("recipe detail screen", () => {
     const saveButton = modalScope.getByRole("button", { name: "저장" }) as HTMLButtonElement;
 
     await waitFor(() => {
-      expect(
-        modalScope.getByText("이미 선택한 레시피북에 저장된 레시피예요. 다른 레시피북을 선택해 주세요."),
-      ).toBeTruthy();
+      expect(modalScope.getByText("선택됨")).toBeTruthy();
     });
-    expect(saveButton.disabled).toBe(true);
+    expect(
+      modalScope.queryByText("이미 선택한 레시피북에 저장된 레시피예요. 다른 레시피북을 선택해 주세요."),
+    ).toBeNull();
+    expect(saveButton.disabled).toBe(false);
+    expect(saveButton.textContent).toBe("1개 레시피북에 저장");
 
     await userEvent.click(modalScope.getByRole("button", { name: /주말 파티/ }));
 
     await waitFor(() => {
-      expect(
-        modalScope.queryByText("이미 선택한 레시피북에 저장된 레시피예요. 다른 레시피북을 선택해 주세요."),
-      ).toBeNull();
+      expect(saveButton.textContent).toBe("2개 레시피북에 저장");
     });
     expect(saveButton.disabled).toBe(false);
   });
@@ -572,6 +572,7 @@ describe("recipe detail screen", () => {
   it("creates a custom recipe book and saves the recipe", async () => {
     const detail = buildRecipeDetail();
     const createdBookId = "book-fresh";
+    let saveRequestBody: unknown = null;
 
     getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } } });
     fetchJson.mockImplementation((input: string, init?: RequestInit) => {
@@ -596,10 +597,13 @@ describe("recipe detail screen", () => {
       }
 
       if (init?.method === "POST" && input === `/api/v1/recipes/${MOCK_RECIPE_DETAIL.id}/save`) {
+        saveRequestBody = init.body ? JSON.parse(String(init.body)) : null;
         return Promise.resolve({
           saved: true,
-          save_count: 90,
-          book_id: createdBookId,
+          save_count: 91,
+          book_ids: ["book-saved", createdBookId],
+          created_book_ids: ["book-saved", createdBookId],
+          already_saved_book_ids: [],
         } satisfies RecipeSaveData);
       }
 
@@ -625,7 +629,6 @@ describe("recipe detail screen", () => {
       expect(modalScope.getByRole("button", { name: /새로운 책/ })).toBeTruthy();
     });
 
-    await userEvent.click(modalScope.getByRole("button", { name: /새로운 책/ }));
     await userEvent.click(modalScope.getByRole("button", { name: "저장" }));
 
     await waitFor(() => {
@@ -634,8 +637,11 @@ describe("recipe detail screen", () => {
 
     expect(await screen.findByText("레시피를 저장했어요.")).toBeTruthy();
     expect((await findSaveActionButton()).getAttribute("aria-pressed")).toBe("true");
+    expect(saveRequestBody).toEqual({
+      book_ids: ["book-saved", createdBookId],
+    });
     await waitFor(() => {
-      expect(within(screen.getByRole("button", { name: "저장" })).getByText("90")).toBeTruthy();
+      expect(within(screen.getByRole("button", { name: "저장" })).getByText("91")).toBeTruthy();
     });
   });
 

@@ -520,9 +520,17 @@ export async function GET(request: NextRequest) {
       .select(
         "id, title, thumbnail_url, tags, base_servings, view_count, like_count, save_count, source_type",
       )
-      .order(sort, { ascending: false })
-      .order("id", { ascending: true })
       .limit(limit);
+
+    if (sort === "latest") {
+      recipeQuery = recipeQuery
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false });
+    } else {
+      recipeQuery = recipeQuery
+        .order(sort, { ascending: false })
+        .order("id", { ascending: true });
+    }
 
     if (filteredRecipeIds) {
       recipeQuery = recipeQuery.in("id", filteredRecipeIds);

@@ -206,23 +206,25 @@ describe("home screen", () => {
     }, { timeout: 1000 });
   });
 
-  it("uses an inline SortDropdown and defaults to the prototype first option", async () => {
+  it("uses an inline SortDropdown with the approved MVP/prototype sort contract", async () => {
     const user = userEvent.setup();
 
     render(<HomeScreen />);
 
     const sortButton = await screen.findByRole("button", { name: /정렬 기준/i });
-    expect(sortButton.textContent).toContain("최신순");
+    expect(sortButton.textContent).toContain("조회수순");
 
     await user.click(sortButton);
 
     const listbox = screen.getByRole("listbox");
     expect(listbox).toBeTruthy();
+    expect(screen.getByText("최신순")).toBeTruthy();
+    expect(screen.queryByText("좋아요순")).toBeNull();
 
-    await user.click(screen.getByText("저장순"));
+    await user.click(screen.getByText("최신순"));
 
     await waitFor(() => {
-      expect(sortButton.textContent).toContain("저장순");
+      expect(sortButton.textContent).toContain("최신순");
       expect(
         fetchJson.mock.calls.some(([input]) => {
           if (typeof input !== "string" || !input.startsWith("/api/v1/recipes?")) {
@@ -230,7 +232,7 @@ describe("home screen", () => {
           }
 
           const url = new URL(input, "http://localhost:3000");
-          return url.searchParams.get("sort") === "save_count";
+          return url.searchParams.get("sort") === "latest";
         }),
       ).toBe(true);
     });

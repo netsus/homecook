@@ -47,8 +47,9 @@ test.describe("Slice 01 basic flow", () => {
     expect((optionBounds?.y ?? 0) + (optionBounds?.height ?? 0)).toBeLessThanOrEqual(
       (viewport?.height ?? 0) - 4,
     );
-    await page.getByRole("option", { name: "좋아요순" }).click();
-    await expect(sortButton).toContainText("좋아요순");
+    await expect(page.getByRole("option", { name: "좋아요순" })).toHaveCount(0);
+    await page.getByRole("option", { name: "최신순" }).click();
+    await expect(sortButton).toContainText("최신순");
   });
 
   test("Recipe detail route shows key sections", async ({

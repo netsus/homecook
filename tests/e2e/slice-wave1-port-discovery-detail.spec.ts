@@ -42,7 +42,7 @@ test.describe("wave1 port discovery detail", () => {
 
     const sortButton = page.getByRole("button", { name: /정렬 기준/i });
     await expect(sortButton).toBeVisible();
-    await expect(sortButton).toContainText("최신순");
+    await expect(sortButton).toContainText("조회수순");
 
     await sortButton.click();
 

@@ -44,12 +44,14 @@ begin
     user_id,
     recipe_id,
     status,
-    cooked_at
+    cooked_at,
+    cooking_servings
   ) values (
     p_user_id,
     p_recipe_id,
     'leftover',
-    v_now
+    v_now,
+    p_cooking_servings
   )
   returning id into v_leftover_dish_id;
 

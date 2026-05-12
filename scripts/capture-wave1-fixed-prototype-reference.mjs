@@ -343,8 +343,8 @@ const SURFACES = [
     mobile: {
       tab: "home",
       interact: async (page) => {
-        await clickButtonByName(page, "최신순");
-        await waitForText(page, "저장순");
+        await clickButtonByName(page, "조회수순");
+        await waitForText(page, "플래너 등록순");
       },
     },
   },

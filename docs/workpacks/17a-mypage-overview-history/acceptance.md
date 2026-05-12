@@ -15,7 +15,7 @@
 - [x] 커스텀 레시피북의 ⋯ 메뉴에서 이름을 변경할 수 있다 <!-- omo:id=accept-rename-book;stage=4;scope=frontend;review=5,6 -->
 - [x] 커스텀 레시피북의 ⋯ 메뉴에서 삭제할 수 있다 <!-- omo:id=accept-delete-book;stage=4;scope=frontend;review=5,6 -->
 - [x] 장보기 기록 탭에서 목록이 최신순으로 표시된다 <!-- omo:id=accept-shopping-history-display;stage=4;scope=frontend;review=5,6 -->
-- [x] 장보기 기록 항목 탭 시 `SHOPPING_DETAIL` read-only 모드로 이동한다 <!-- omo:id=accept-shopping-detail-nav;stage=4;scope=frontend;review=5,6 -->
+- [x] 2026-05-12 계약 기준 장보기 기록 카드에 완료 시각이 표시되고 완료된 항목은 `다시열기` CTA로 `SHOPPING_DETAIL` read-only 모드로 이동한다 <!-- omo:id=accept-shopping-detail-reopen-v124;stage=4;scope=frontend;review=5,6 -->
 - [x] API 응답 형식이 `{ success, data, error }`를 따른다 <!-- omo:id=accept-api-envelope;stage=2;scope=backend;review=3,6 -->
 - [x] 백엔드 계약과 프론트 타입이 일치한다 <!-- omo:id=accept-backend-frontend-types;stage=4;scope=shared;review=6 -->
 
@@ -64,13 +64,13 @@
 - [x] POST /recipe-books 성공, 빈 name 422 <!-- omo:id=accept-vitest-create-book;stage=2;scope=backend;review=3,6 -->
 - [x] PATCH /recipe-books 커스텀 성공, 시스템 403 <!-- omo:id=accept-vitest-rename-book;stage=2;scope=backend;review=3,6 -->
 - [x] DELETE /recipe-books 커스텀 성공, 시스템 403, 타인 403, 없는 404 <!-- omo:id=accept-vitest-delete-book;stage=2;scope=backend;review=3,6 -->
-- [x] GET /shopping/lists 최신순, cursor pagination <!-- omo:id=accept-vitest-shopping-lists;stage=2;scope=backend;review=3,6 -->
+- [x] GET /shopping/lists 최신순, cursor pagination, `completed_at` 포함 계약 검증 <!-- omo:id=accept-vitest-shopping-lists-v124;stage=2;scope=backend;review=3,6 -->
 - [x] 소유자 검증 (recipe-books, shopping/lists) <!-- omo:id=accept-vitest-owner-guard;stage=2;scope=backend;review=3,6 -->
 
 ### Playwright
 - [x] MYPAGE 진입 → 프로필 표시 → 탭 전환 → 레시피북/장보기 기록 확인 <!-- omo:id=accept-playwright-mypage-flow;stage=4;scope=frontend;review=5,6 -->
 - [x] 커스텀 레시피북 CRUD flow (생성 → 이름 변경 → 삭제) <!-- omo:id=accept-playwright-book-crud;stage=4;scope=frontend;review=5,6 -->
-- [x] 장보기 기록 탭 → 항목 클릭 → SHOPPING_DETAIL 이동 <!-- omo:id=accept-playwright-shopping-nav;stage=4;scope=frontend;review=5,6 -->
+- [x] 장보기 기록 탭 → 완료 항목 `다시열기` 클릭 → SHOPPING_DETAIL read-only 이동 <!-- omo:id=accept-playwright-shopping-reopen-v124;stage=4;scope=frontend;review=5,6 -->
 - [x] 비로그인 → 마이페이지 → 로그인 게이트 <!-- omo:id=accept-playwright-login-gate;stage=4;scope=frontend;review=5,6 -->
 - [x] empty 상태 (커스텀 레시피북 없음, 장보기 기록 없음) <!-- omo:id=accept-playwright-empty-states;stage=4;scope=frontend;review=5,6 -->
 

@@ -42,6 +42,13 @@ interface LeftoverRow {
   cooked_at: string;
   eaten_at: string | null;
   auto_hide_at: string | null;
+  cooking_servings?: number | null;
+}
+
+interface SourceMealRow {
+  leftover_dish_id: string | null;
+  planned_servings: number;
+  meal_plan_columns: { name: string | null } | null;
 }
 
 interface RecipeRow {
@@ -113,16 +120,20 @@ function createUpdateQuery<T>(results: Array<QueryResult<T | null>>) {
 function createLeftoverListDb({
   leftovers,
   recipes,
+  sourceMeals = [],
 }: {
   leftovers: LeftoverRow[];
   recipes: RecipeRow[];
+  sourceMeals?: SourceMealRow[];
 }) {
   const leftoversQuery = createThenableQuery([{ data: leftovers, error: null }]);
   const recipesQuery = createThenableQuery([{ data: recipes, error: null }]);
+  const sourceMealsQuery = createThenableQuery([{ data: sourceMeals, error: null }]);
 
   return {
     leftoversQuery,
     recipesQuery,
+    sourceMealsQuery,
     db: {
       from: vi.fn((table: string) => {
         if (table === "leftover_dishes") {
@@ -131,6 +142,10 @@ function createLeftoverListDb({
 
         if (table === "recipes") {
           return { select: vi.fn(() => recipesQuery) };
+        }
+
+        if (table === "meals") {
+          return { select: vi.fn(() => sourceMealsQuery) };
         }
 
         throw new Error(`unexpected table: ${table}`);
@@ -260,6 +275,7 @@ describe("GET /api/v1/leftovers", () => {
           cooked_at: "2026-04-28T10:00:00.000Z",
           eaten_at: null,
           auto_hide_at: null,
+          cooking_servings: 4,
         },
         {
           id: otherLeftoverId,
@@ -269,11 +285,19 @@ describe("GET /api/v1/leftovers", () => {
           cooked_at: "2026-04-27T10:00:00.000Z",
           eaten_at: null,
           auto_hide_at: null,
+          cooking_servings: 1,
         },
       ],
       recipes: [
         { id: recipeId, title: "김치찌개", thumbnail_url: "https://example.com/kimchi.png" },
         { id: otherRecipeId, title: "된장찌개", thumbnail_url: null },
+      ],
+      sourceMeals: [
+        {
+          leftover_dish_id: leftoverId,
+          planned_servings: 2,
+          meal_plan_columns: { name: "저녁" },
+        },
       ],
     });
     setupAuthenticatedDb(db);
@@ -299,6 +323,9 @@ describe("GET /api/v1/leftovers", () => {
             status: "leftover",
             cooked_at: "2026-04-28T10:00:00.000Z",
             eaten_at: null,
+            cooking_servings: 4,
+            source_meal_label: "저녁",
+            source_planned_servings: 2,
           },
           {
             id: otherLeftoverId,
@@ -308,6 +335,9 @@ describe("GET /api/v1/leftovers", () => {
             status: "leftover",
             cooked_at: "2026-04-27T10:00:00.000Z",
             eaten_at: null,
+            cooking_servings: 1,
+            source_meal_label: null,
+            source_planned_servings: null,
           },
         ],
       },

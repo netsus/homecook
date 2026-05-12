@@ -2,7 +2,7 @@ import type { ApiResponse } from "@/types/api";
 
 export type RecipeSortKey =
   | "view_count"
-  | "like_count"
+  | "latest"
   | "save_count"
   | "plan_count";
 
@@ -263,6 +263,10 @@ export interface RecipeBookRecipeItem {
   title: string;
   thumbnail_url: string | null;
   tags: string[];
+  view_count: number;
+  total_duration_seconds: number | null;
+  total_duration_text: string | null;
+  base_servings: number;
   added_at: string;
 }
 
@@ -292,13 +296,15 @@ export interface PantryMatchListData {
 }
 
 export interface RecipeSaveBody {
-  book_id: string;
+  book_ids: string[];
 }
 
 export interface RecipeSaveData {
   saved: true;
   save_count: number;
-  book_id: string;
+  book_ids: string[];
+  created_book_ids: string[];
+  already_saved_book_ids: string[];
 }
 
 export type RecipeBookListResponse = ApiResponse<RecipeBookListData>;

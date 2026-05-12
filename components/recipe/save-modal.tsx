@@ -12,11 +12,10 @@ interface SaveModalProps {
   isOpen: boolean;
   viewState: SaveModalViewState;
   books: RecipeBookSummary[];
-  selectedBookId: string | null;
+  selectedBookIds: string[];
   newBookName: string;
   isCreatingBook: boolean;
   isSavingRecipe: boolean;
-  isSelectedBookReadOnly: boolean;
   loadErrorMessage: string | null;
   saveErrorMessage: string | null;
   onClose: () => void;
@@ -31,11 +30,10 @@ export function SaveModal({
   isOpen,
   viewState,
   books,
-  selectedBookId,
+  selectedBookIds,
   newBookName,
   isCreatingBook,
   isSavingRecipe,
-  isSelectedBookReadOnly,
   loadErrorMessage,
   saveErrorMessage,
   onClose,
@@ -61,7 +59,7 @@ export function SaveModal({
   const disableCreate =
     isCreatingBook || isSavingRecipe || newBookName.trim().length === 0;
   const disableSave =
-    isSavingRecipe || isCreatingBook || !selectedBookId || isSelectedBookReadOnly;
+    isSavingRecipe || isCreatingBook || selectedBookIds.length === 0;
 
   return (
     <>
@@ -133,7 +131,7 @@ export function SaveModal({
                   </div>
                 ) : (
                   books.map((book) => {
-                    const isSelected = selectedBookId === book.id;
+                    const isSelected = selectedBookIds.includes(book.id);
                     const isSavedBook = book.book_type === "saved";
 
                     return (
@@ -161,8 +159,8 @@ export function SaveModal({
                           </span>
                           <span className="mt-0.5 block text-[11px] text-[#5F6470]">
                             {isSelected
-                              ? "저장됨 · 선택 해제하면 이 책에서 삭제"
-                              : "미저장 · 선택하면 이 책에 추가"}
+                              ? "선택됨"
+                              : "선택하면 이 책에 추가"}
                           </span>
                         </span>
                         <span
@@ -211,12 +209,6 @@ export function SaveModal({
                 )}
               </div>
 
-              {isSelectedBookReadOnly ? (
-                <p className="rounded-[10px] border border-[#BEEAE7] bg-[#E8F8F7] px-4 py-3 text-[13px] font-semibold text-[#007A76]">
-                  이미 선택한 레시피북에 저장된 레시피예요. 다른 레시피북을 선택해 주세요.
-                </p>
-              ) : null}
-
               {saveErrorMessage ? (
                 <p className="rounded-[10px] border border-[#F4C7C3] bg-[#FFF1F0] px-4 py-3 text-[13px] font-semibold text-[#C84C48]">
                   {saveErrorMessage}
@@ -242,8 +234,8 @@ export function SaveModal({
               >
                 {isSavingRecipe
                   ? "저장 중..."
-                  : selectedBookId
-                    ? "1개 레시피북 반영"
+                  : selectedBookIds.length > 0
+                    ? `${selectedBookIds.length}개 레시피북에 저장`
                     : "저장 해제"}
               </button>
             </div>
@@ -307,7 +299,7 @@ export function SaveModal({
             ) : (
               <div className="overflow-hidden rounded-[10px] border border-[var(--line)] bg-white">
                 {books.map((book, index) => {
-                  const isSelected = selectedBookId === book.id;
+                  const isSelected = selectedBookIds.includes(book.id);
 
                   return (
                     <button
@@ -364,12 +356,6 @@ export function SaveModal({
               </div>
             </div>
 
-            {isSelectedBookReadOnly ? (
-              <p className="rounded-[var(--radius-md)] border border-[color-mix(in_srgb,var(--olive)_25%,transparent)] bg-[color-mix(in_srgb,var(--olive)_12%,transparent)] px-4 py-3 text-sm text-[var(--olive)]">
-                이미 선택한 레시피북에 저장된 레시피예요. 다른 레시피북을 선택해 주세요.
-              </p>
-            ) : null}
-
             {saveErrorMessage ? (
               <p className="rounded-[var(--radius-md)] border border-[color-mix(in_srgb,var(--brand)_20%,transparent)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)] px-4 py-3 text-sm text-[var(--brand-deep)]">
                 {saveErrorMessage}
@@ -383,7 +369,11 @@ export function SaveModal({
                 onClick={onSaveRecipe}
                 type="button"
               >
-                {isSavingRecipe ? "저장 중..." : "저장"}
+                {isSavingRecipe
+                  ? "저장 중..."
+                  : selectedBookIds.length > 0
+                    ? `${selectedBookIds.length}개 레시피북에 저장`
+                    : "저장"}
               </button>
             </div>
           </div>
