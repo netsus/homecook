@@ -119,9 +119,14 @@ async function installShoppingDetailRoute(
 }
 
 async function confirmDefaultPantryReflection(page: Page) {
-  const dialog = page.getByRole("dialog", { name: "팬트리에 추가할까요?" });
+  const dialog = page.getByRole("dialog", {
+    name: /팬트리에 (추가|반영)할까요\?/,
+  });
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "완료", exact: true }).click();
+  const isMobile = (page.viewportSize()?.width ?? 1280) < 768;
+  await dialog
+    .getByRole("button", { name: isMobile ? /개 반영하기/ : "완료", exact: !isMobile })
+    .click();
 }
 
 async function installPlannerRoute(
