@@ -78,8 +78,8 @@
 - [x] PANTRY 기본 화면 screenshot evidence가 생성된다 (390px + 320px) <!-- omo:id=accept-evidence-pantry-default;stage=4;scope=frontend;review=5,6 -->
 - [x] PANTRY delete mode screenshot evidence가 생성된다 <!-- omo:id=accept-evidence-delete-mode;stage=4;scope=frontend;review=5,6 -->
 - [x] PANTRY empty/search-empty evidence가 생성된다 <!-- omo:id=accept-evidence-empty;stage=4;scope=frontend;review=5,6 -->
-- [x] Add sheet evidence가 생성된다 <!-- omo:id=accept-evidence-add-sheet;stage=4;scope=frontend;review=5,6 -->
-- [x] Bundle picker evidence가 생성된다 <!-- omo:id=accept-evidence-bundle-picker;stage=4;scope=frontend;review=5,6 -->
+- [x] Add sheet evidence가 생성된다 (390px + 320px) <!-- omo:id=accept-evidence-add-sheet;stage=4;scope=frontend;review=5,6 -->
+- [x] Bundle picker evidence가 생성된다 (390px + 320px) <!-- omo:id=accept-evidence-bundle-picker;stage=4;scope=frontend;review=5,6 -->
 - [x] Authority report가 blocker 0으로 남는다 <!-- omo:id=accept-authority-report;stage=4;scope=frontend;review=5,6 -->
 
 ## Manual Verification

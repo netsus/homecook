@@ -2,81 +2,87 @@
 
 > slice: wave1-port-pantry
 > stage: 5
-> reviewer: Codex authority_precheck fallback
-> date: 2026-05-10
+> reviewer: Codex authority_precheck + Claude final authority gate
+> date: 2026-05-13
 
 ## Design Status
 
-**confirmed**
+**reviewed**
 
-Claude Stage 1 handoff was attempted through the existing VS Code Claude session `3f4ca745-db71-4392-a3f1-4e3c4493e9bc` with `--resume`, `model=opus`, requested `effort=xhigh` (CLI `high`), and `permission_mode=bypassPermissions`, but Claude returned a provider limit response. Per user instruction, Codex proceeded directly and performed the authority precheck against the screenshot evidence below.
+2026-05-13 Phase5 re-audit refreshed the Slice E evidence bundle against the Wave1 fixed prototype reference set. Historical PR #383 and 2026-05-10 evidence remain preserved, but the current closeout proof is `phase4-prep.md`, `phase5-visual-audit.md`, `visual-verdict.json`, and `claude-final-authority-gate.md`.
+
+Claude final authority gate returned PASS with blocker 0 and unclassified visual differences 0. The remaining differences are classified as MVP functional-contract preservation, browser rendering limits, or prototype-derived supplemental states.
 
 ## Changes Summary
 
 ### PANTRY
-- Header count now uses the concise `{n}개 재료` form and removes the redundant `보유 중` copy from the primary count.
-- Primary CTA is `재료 추가하기`; secondary CTA is `묶음으로 추가`.
-- Category chip rail stays above the owned item list and uses official category values only.
-- Owned item cards show a category placeholder visual in a leading circular swatch, with the ingredient name rendered as plain text.
+
+- Header count, search, primary `재료 추가`, secondary `묶음 추가`, category rail, grouped item cards, and bottom tab align with the fixed pantry reference at 390px and 320px.
+- Owned item rows keep deterministic category/name placeholders because official pantry and ingredient responses do not expose image URLs.
 - Delete entry is exposed as `삭제`; select mode keeps checkboxes hidden until delete mode is active.
-- Selected count and bottom `제거하기 ({n})` CTA are visible in delete mode and clear enough at 390px and 320px.
+- Selected count and bottom `제거하기 ({n})` CTA remain visible without bottom-tab collision in the captured mobile viewport.
 
 ### INGREDIENT_ADD_SHEET
-- The add sheet keeps search, category filter, selected count CTA, existing-ingredient disabled state, and failure feedback.
-- Ingredient loading errors show a retry action instead of collapsing into a generic empty state.
-- Existing ingredients remain marked as `보유 중` inside the sheet only, where the user needs duplicate-add context.
+
+- Add sheet aligns with the fixed reference for sheet top, title, close button, search, category rail, two-column ingredient grid, disabled owned cards, and footer controls at 390px and 320px.
+- Existing ingredients remain disabled and marked as owned inside the sheet, where duplicate-add context is required.
+- Empty/error/loading states remain behavior-verified derived states and reuse the Wave1 sheet shell.
 
 ### PANTRY_BUNDLE_PICKER
-- Bundle entry is labeled `묶음으로 추가`.
-- Bundle picker distinguishes `보유 중` from `추가 가능` items.
+
+- Bundle picker aligns with the fixed reference for backdrop, sheet top, title/copy, bundle cards, icons, chevrons, and narrow viewport geometry.
+- Bundle picker distinguishes owned ingredients from missing ingredients according to `GET /pantry/bundles` `is_in_pantry`.
 - Missing ingredients are selected by default and submitted through the existing `POST /pantry` `ingredient_ids` contract.
 
 ## Contract / State Risk
 
 - No API, DB, endpoint, field, status, or dependency changes.
-- No ingredient image URL field was introduced; the UI uses existing category placeholder visuals.
+- No ingredient image URL field was introduced; the UI uses existing category/name placeholder visuals.
 - Pantry remains a presence-only store. No quantity, expiry, stock amount, or category remap was added.
 - `GET /pantry`, `POST /pantry`, `DELETE /pantry`, `GET /pantry/bundles`, and `GET /ingredients` keep the existing wrapped response contract.
 
 ## Evidence
 
 > evidence:
+> - Phase4 prep: `ui/designs/evidence/wave1-port-pantry/phase4-prep.md`
+> - Phase5 visual audit: `ui/designs/evidence/wave1-port-pantry/phase5-visual-audit.md`
+> - Aggregate visual verdict: `ui/designs/evidence/wave1-port-pantry/visual-verdict.json`
+> - Claude final authority gate: `ui/designs/evidence/wave1-port-pantry/claude-final-authority-gate.md`
 > - PANTRY mobile 390: `ui/designs/evidence/wave1-port-pantry/pantry-default.png`
 > - PANTRY mobile 320: `ui/designs/evidence/wave1-port-pantry/pantry-narrow.png`
 > - PANTRY delete mode: `ui/designs/evidence/wave1-port-pantry/pantry-select-delete.png`
 > - PANTRY empty: `ui/designs/evidence/wave1-port-pantry/pantry-empty.png`
-> - INGREDIENT_ADD_SHEET: `ui/designs/evidence/wave1-port-pantry/pantry-add-sheet.png`
-> - PANTRY_BUNDLE_PICKER: `ui/designs/evidence/wave1-port-pantry/pantry-bundle-picker.png`
+> - INGREDIENT_ADD_SHEET 390: `ui/designs/evidence/wave1-port-pantry/pantry-add-sheet.png`
+> - INGREDIENT_ADD_SHEET 320: `ui/designs/evidence/wave1-port-pantry/pantry-add-sheet-narrow.png`
+> - PANTRY_BUNDLE_PICKER 390: `ui/designs/evidence/wave1-port-pantry/pantry-bundle-picker.png`
+> - PANTRY_BUNDLE_PICKER 320: `ui/designs/evidence/wave1-port-pantry/pantry-bundle-picker-narrow.png`
 
 ## Verification
 
-- `pnpm verify:frontend` — passed: lint, typecheck, product tests (65 files / 620 tests), build, E2E smoke (752 passed / 4 skipped), a11y (6), visual (12), security (9), Lighthouse (6 runs).
+- `pnpm exec playwright test tests/e2e/qa-wave1-pantry-evidence.spec.ts --project=mobile-chrome` — passed, generated/refreshed 8 evidence screenshots.
 - `pnpm exec vitest run tests/pantry-screen.test.tsx` — passed, 18 tests.
 - `pnpm exec playwright test tests/e2e/slice-13-pantry-core.spec.ts --project=desktop-chrome --project=mobile-chrome --project=mobile-ios-small` — passed, 24 tests.
-- `pnpm exec playwright test tests/e2e/qa-wave1-pantry-evidence.spec.ts --project=desktop-chrome` — passed, generated 6 evidence screenshots.
-- `pnpm qa:eval -- --checklist .artifacts/qa/wave1-port-pantry/2026-05-10T03-37-57-571Z/exploratory-checklist.json --report .artifacts/qa/wave1-port-pantry/2026-05-10T03-37-57-571Z/exploratory-report.json` — passed, score 99.
-- `PR_IS_DRAFT=false pnpm validate:authority-evidence-presence` — passed.
+- `pnpm verify:frontend` — passed (`lint`, `typecheck`, product Vitest 65 files / 629 tests, build, smoke E2E 758 passed / 4 skipped, a11y 6, visual 12, security 9, Lighthouse assertions over 6 runs).
 
 ## Scorecard
 
 | Dimension | Score |
 |-----------|-------|
-| Mobile UX | 4/5 |
-| Interaction Clarity | 4/5 |
-| Visual Hierarchy | 4/5 |
+| Mobile UX | 5/5 |
+| Interaction Clarity | 5/5 |
+| Visual Hierarchy | 5/5 |
 | Contract Safety | 5/5 |
-| Narrow Viewport Robustness | 4/5 |
+| Narrow Viewport Robustness | 5/5 |
 
 ## Verdict
 
 verdict: pass
 
-**PASS** — `confirmed_allowed: true` for Codex fallback closeout.
+**PASS** — `confirmed_allowed: true` for Phase5 closeout.
 
 - **Blockers**: 0
 - **Majors**: 0
-- **Minors**: 2
-  1. The add sheet is dense when all existing ingredients are listed first. Acceptable because the search and category filter are available and the sheet preserves existing duplicate-add context.
-  2. The current category visuals are emoji placeholders rather than real ingredient images. Acceptable because image URL is not part of the official pantry/ingredient contract.
+- **Minors**: 0
+- **Unclassified visual differences**: 0
 
-Claude final authority gate could not complete before implementation because of provider limit. This is recorded as a provider-bound automation limit, not an unresolved design blocker.
+Claude final authority gate passed on 2026-05-13 and allows Codex to proceed to Stage 6 PR closeout.
