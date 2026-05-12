@@ -3,14 +3,25 @@
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
 
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
+import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
 import {
+  completeShoppingList,
   createShoppingList,
+  fetchShoppingListDetail,
+  fetchShoppingShareText,
   fetchShoppingPreview,
   isShoppingApiError,
+  updateShoppingListItem,
 } from "@/lib/api/shopping";
-import type { ShoppingPreviewData, ShoppingPreviewMeal } from "@/types/shopping";
+import type {
+  ShoppingListDetail,
+  ShoppingListItemSummary,
+  ShoppingPreviewData,
+  ShoppingPreviewMeal,
+} from "@/types/shopping";
 
 export interface ShoppingFlowScreenProps {
   initialAuthenticated: boolean;
@@ -27,12 +38,13 @@ interface MealConfig {
   shopping_servings: number;
   isSelected: boolean;
   recipe_name: string;
+  recipe_thumbnail: string | null;
   planned_servings_total: number;
   meal_count: number;
   created_at: string;
 }
 
-type ViewState = "loading" | "empty" | "error" | "ready" | "creating";
+type ViewState = "loading" | "empty" | "error" | "ready" | "creating" | "review";
 
 function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
   const grouped = new Map<string, MealConfig>();
@@ -69,6 +81,7 @@ function groupMealsByRecipe(meals: ShoppingPreviewMeal[]): MealConfig[] {
       shopping_servings: meal.planned_servings,
       isSelected: true,
       recipe_name: meal.recipe_name,
+      recipe_thumbnail: meal.recipe_thumbnail,
       planned_servings_total: meal.planned_servings,
       meal_count: 1,
       created_at: meal.created_at,
@@ -98,19 +111,28 @@ function buildMealConfigs(data: ShoppingPreviewData): MealConfig[] {
   );
 
   if (Array.isArray(data.recipes) && data.recipes.length > 0) {
-    return data.recipes.map((recipe) => ({
-      recipe_id: recipe.recipe_id,
-      meal_ids: recipe.meal_ids,
-      meals: recipe.meal_ids
+    return data.recipes.map((recipe) => {
+      const meals = recipe.meal_ids
         .map((mealId) => eligibleMealMap.get(mealId))
-        .filter((meal): meal is NonNullable<typeof meal> => meal !== undefined),
-      shopping_servings: recipe.shopping_servings,
-      isSelected: recipe.is_selected,
-      recipe_name: recipe.recipe_name,
-      planned_servings_total: recipe.planned_servings_total,
-      meal_count: recipe.meal_ids.length,
-      created_at: "",
-    }));
+        .filter((meal): meal is NonNullable<typeof meal> => meal !== undefined);
+      const createdAt =
+        [...meals].sort((left, right) =>
+          left.created_at.localeCompare(right.created_at),
+        )[0]?.created_at ?? "";
+
+      return {
+        recipe_id: recipe.recipe_id,
+        meal_ids: recipe.meal_ids,
+        meals,
+        shopping_servings: recipe.shopping_servings,
+        isSelected: recipe.is_selected,
+        recipe_name: recipe.recipe_name,
+        recipe_thumbnail: recipe.recipe_thumbnail,
+        planned_servings_total: recipe.planned_servings_total,
+        meal_count: recipe.meal_ids.length,
+        created_at: createdAt,
+      };
+    });
   }
 
   return groupMealsByRecipe(data.eligible_meals);
@@ -173,13 +195,93 @@ function selectMealIdsForShoppingServings(
   return [smallestMeal.id];
 }
 
+function shouldUseInlineReview() {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(max-width: 767px)").matches
+  );
+}
+
+function formatDateDot(dateString: string) {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return "예정";
+  }
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}.${month}.${day}`;
+}
+
+function formatDateShort(dateString: string) {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return "예정";
+  }
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function groupConfigsByDate(configs: MealConfig[]) {
+  const groups = new Map<string, MealConfig[]>();
+
+  configs.forEach((config) => {
+    const key = formatDateShort(config.created_at);
+    groups.set(key, [...(groups.get(key) ?? []), config]);
+  });
+
+  return [...groups.entries()];
+}
+
+const recipeVisualMeta: Record<string, { bg: string; emoji: string; meal: string }> = {
+  감자: { bg: "#FFEBC5", emoji: "🥟", meal: "저녁" },
+  감자수제비: { bg: "#FFEBC5", emoji: "🥟", meal: "저녁" },
+  김치볶음밥: { bg: "#FFE6E6", emoji: "🍚", meal: "아침" },
+  된장찌개: { bg: "#FFE7E2", emoji: "🍲", meal: "저녁" },
+  제육볶음: { bg: "#FFB69D", emoji: "🥩", meal: "저녁" },
+};
+
+function getRecipeVisual(config: MealConfig) {
+  return (
+    recipeVisualMeta[config.recipe_name] ??
+    Object.entries(recipeVisualMeta).find(([key]) =>
+      config.recipe_name.includes(key),
+    )?.[1] ?? { bg: "#E6F8F7", emoji: "🍽️", meal: "식사" }
+  );
+}
+
+function amountText(item: ShoppingListItemSummary) {
+  return item.amounts_json.map((amount) => `${amount.amount}${amount.unit}`).join(" + ");
+}
+
 export function ShoppingFlowScreen({
   initialAuthenticated,
 }: ShoppingFlowScreenProps) {
   const { push } = useRouter();
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [mealConfigs, setMealConfigs] = useState<MealConfig[]>([]);
+  const [reviewDetail, setReviewDetail] = useState<ShoppingListDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [showPantryPopup, setShowPantryPopup] = useState(false);
+  const [reviewToast, setReviewToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
+      return;
+    }
+
+    const query = window.matchMedia("(max-width: 767px)");
+    const syncViewport = () => setIsMobileViewport(query.matches);
+    syncViewport();
+    query.addEventListener("change", syncViewport);
+    return () => query.removeEventListener("change", syncViewport);
+  }, []);
 
   const loadPreview = useCallback(async () => {
     setViewState("loading");
@@ -262,8 +364,18 @@ export function ShoppingFlowScreen({
 
       const result = await createShoppingList(body);
 
-      // Navigate to shopping detail
-      push(`/shopping/lists/${result.id}`);
+      if (!shouldUseInlineReview()) {
+        push(`/shopping/lists/${result.id}`);
+        return;
+      }
+
+      try {
+        const detail = await fetchShoppingListDetail(result.id);
+        setReviewDetail(detail);
+        setViewState("review");
+      } catch {
+        push(`/shopping/lists/${result.id}`);
+      }
     } catch (error) {
       if (isShoppingApiError(error)) {
         if (error.status === 401) {
@@ -289,6 +401,207 @@ export function ShoppingFlowScreen({
   const handleRetry = useCallback(() => {
     void loadPreview();
   }, [loadPreview]);
+
+  const handleReviewBack = useCallback(() => {
+    if (viewState === "review") {
+      setViewState("ready");
+      return;
+    }
+    handleBack();
+  }, [handleBack, viewState]);
+
+  const handleReviewCheck = useCallback(
+    async (itemId: string, currentChecked: boolean) => {
+      if (!reviewDetail || reviewDetail.is_completed) {
+        return;
+      }
+
+      const nextChecked = !currentChecked;
+      setUpdatingItemId(itemId);
+      setReviewDetail((prev) =>
+        prev
+          ? {
+              ...prev,
+              items: prev.items.map((item) =>
+                item.id === itemId ? { ...item, is_checked: nextChecked } : item,
+              ),
+            }
+          : prev,
+      );
+
+      try {
+        const updated = await updateShoppingListItem(reviewDetail.id, itemId, {
+          is_checked: nextChecked,
+        });
+        setReviewDetail((prev) =>
+          prev
+            ? {
+                ...prev,
+                items: prev.items.map((item) =>
+                  item.id === itemId ? updated : item,
+                ),
+              }
+            : prev,
+        );
+      } catch {
+        setReviewDetail((prev) =>
+          prev
+            ? {
+                ...prev,
+                items: prev.items.map((item) =>
+                  item.id === itemId ? { ...item, is_checked: currentChecked } : item,
+                ),
+              }
+            : prev,
+        );
+        setReviewToast("구매 상태를 바꾸지 못했어요.");
+      } finally {
+        setUpdatingItemId(null);
+      }
+    },
+    [reviewDetail],
+  );
+
+  const handleReviewExclude = useCallback(
+    async (
+      itemId: string,
+      currentExcluded: boolean,
+      currentChecked: boolean,
+    ) => {
+      if (!reviewDetail || reviewDetail.is_completed) {
+        return;
+      }
+
+      const nextExcluded = !currentExcluded;
+      setUpdatingItemId(itemId);
+      setReviewDetail((prev) =>
+        prev
+          ? {
+              ...prev,
+              items: prev.items.map((item) =>
+                item.id === itemId
+                  ? {
+                      ...item,
+                      is_checked: nextExcluded ? false : item.is_checked,
+                      is_pantry_excluded: nextExcluded,
+                    }
+                  : item,
+              ),
+            }
+          : prev,
+      );
+
+      try {
+        const updated = await updateShoppingListItem(reviewDetail.id, itemId, {
+          is_pantry_excluded: nextExcluded,
+        });
+        setReviewDetail((prev) =>
+          prev
+            ? {
+                ...prev,
+                items: prev.items.map((item) =>
+                  item.id === itemId ? updated : item,
+                ),
+              }
+            : prev,
+        );
+      } catch {
+        setReviewDetail((prev) =>
+          prev
+            ? {
+                ...prev,
+                items: prev.items.map((item) =>
+                  item.id === itemId
+                    ? {
+                        ...item,
+                        is_checked: currentChecked,
+                        is_pantry_excluded: currentExcluded,
+                      }
+                    : item,
+                ),
+              }
+            : prev,
+        );
+        setReviewToast("팬트리 제외 상태를 바꾸지 못했어요.");
+      } finally {
+        setUpdatingItemId(null);
+      }
+    },
+    [reviewDetail],
+  );
+
+  const handleReviewShare = useCallback(async () => {
+    if (!reviewDetail) {
+      return;
+    }
+
+    setIsSharing(true);
+    setReviewToast(null);
+    try {
+      const { text } = await fetchShoppingShareText(reviewDetail.id);
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({ text });
+        setReviewToast("공유되었습니다.");
+      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        setReviewToast("복사되었습니다.");
+      } else {
+        setReviewToast("이 환경에서는 공유할 수 없어요.");
+      }
+    } catch {
+      setReviewToast("공유 텍스트를 만들지 못했어요.");
+    } finally {
+      setIsSharing(false);
+    }
+  }, [reviewDetail]);
+
+  const handleReviewComplete = useCallback(() => {
+    if (!reviewDetail || reviewDetail.is_completed) {
+      return;
+    }
+    setShowPantryPopup(true);
+  }, [reviewDetail]);
+
+  const handleReviewPantryConfirm = useCallback(
+    async (selectedItemIds: string[] | undefined) => {
+      if (!reviewDetail || reviewDetail.is_completed) {
+        return;
+      }
+
+      setShowPantryPopup(false);
+      setIsCompleting(true);
+      setReviewToast(null);
+
+      try {
+        const result = await completeShoppingList(
+          reviewDetail.id,
+          selectedItemIds === undefined
+            ? { add_to_pantry_item_ids: null }
+            : { add_to_pantry_item_ids: selectedItemIds },
+        );
+        setReviewDetail((prev) =>
+          prev
+            ? {
+                ...prev,
+                completed_at: new Date().toISOString(),
+                is_completed: true,
+                items: prev.items.map((item) =>
+                  result.pantry_added_item_ids.includes(item.id)
+                    ? { ...item, added_to_pantry: true }
+                    : item,
+                ),
+              }
+            : prev,
+        );
+        setReviewToast("장보기를 완료했어요.");
+      } catch {
+        setReviewToast("장보기를 완료하지 못했어요.");
+      } finally {
+        setIsCompleting(false);
+      }
+    },
+    [reviewDetail],
+  );
 
   // Loading state
   if (viewState === "loading") {
@@ -358,53 +671,91 @@ export function ShoppingFlowScreen({
     );
   }
 
+  if (viewState === "review" && reviewDetail) {
+    return (
+      <>
+        <MobileReviewScreen
+          detail={reviewDetail}
+          isCompleting={isCompleting}
+          isSharing={isSharing}
+          onBack={handleReviewBack}
+          onComplete={handleReviewComplete}
+          onShare={handleReviewShare}
+          onToggleCheck={handleReviewCheck}
+          onToggleExclude={handleReviewExclude}
+          toast={reviewToast}
+          updatingItemId={updatingItemId}
+        />
+        {showPantryPopup ? (
+          <PantryReflectionPopup
+            items={reviewDetail.items}
+            onCancel={() => setShowPantryPopup(false)}
+            onConfirm={handleReviewPantryConfirm}
+          />
+        ) : null}
+      </>
+    );
+  }
+
   // Ready state
   const selectedCount = mealConfigs.filter((config) => config.isSelected).length;
   const isCreateDisabled = selectedCount === 0;
 
+  if (isMobileViewport) {
+    return (
+      <MobileSelectScreen
+        configs={mealConfigs}
+        isCreateDisabled={isCreateDisabled}
+        onBack={handleBack}
+        onCreate={handleCreateList}
+        onToggle={handleToggleSelection}
+      />
+    );
+  }
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <AppBar onBack={handleBack} />
+      <div className="flex min-h-screen flex-col">
+        <AppBar onBack={handleBack} />
 
-      <main
-        className="mx-auto flex w-full max-w-[720px] flex-1 flex-col overflow-y-auto px-4 pb-28 pt-4"
-        data-testid="shopping-flow-shell"
-      >
-        <div className="mb-4 rounded-[14px] border border-[var(--line)] bg-white/70 px-4 py-3">
-          <p className="text-sm font-semibold text-[var(--foreground)]">
-            장보기 대상을 레시피별로 합산했어요
-          </p>
-          <p className="mt-1 text-sm leading-5 text-[var(--muted)]">
-            식사 등록 완료이면서 아직 장보기 리스트에 없는 식사입니다. 같은 레시피는 합산 계획 인분으로 묶이고, 장보기 완료·요리 완료·이미 연결된 식사는 자동으로 제외돼요.
-          </p>
-        </div>
+        <main
+          className="mx-auto flex w-full max-w-[720px] flex-1 flex-col overflow-y-auto px-4 pb-28 pt-4"
+          data-testid="shopping-flow-shell"
+        >
+          <div className="mb-4 rounded-[14px] border border-[var(--line)] bg-white/70 px-4 py-3">
+            <p className="text-sm font-semibold text-[var(--foreground)]">
+              장보기 대상을 레시피별로 합산했어요
+            </p>
+            <p className="mt-1 text-sm leading-5 text-[var(--muted)]">
+              식사 등록 완료이면서 아직 장보기 리스트에 없는 식사입니다. 같은 레시피는 합산 계획 인분으로 묶이고, 장보기 완료·요리 완료·이미 연결된 식사는 자동으로 제외돼요.
+            </p>
+          </div>
 
-        <div className="space-y-3">
-          {mealConfigs.map((config) => (
-            <RecipeCard
-              key={config.recipe_id}
-              config={config}
-              onToggle={handleToggleSelection}
-              onServingsChange={handleServingsChange}
-            />
-          ))}
-        </div>
-      </main>
+          <div className="space-y-3">
+            {mealConfigs.map((config) => (
+              <RecipeCard
+                key={config.recipe_id}
+                config={config}
+                onToggle={handleToggleSelection}
+                onServingsChange={handleServingsChange}
+              />
+            ))}
+          </div>
+        </main>
 
-      <div className="fixed bottom-0 left-0 right-0 border-t border-[var(--line)] bg-[var(--background)] p-4">
-        <div className="mx-auto w-full max-w-[720px]">
-          <button
-            className="w-full rounded-[12px] bg-[var(--brand)] px-5 py-3 text-base font-semibold text-white disabled:opacity-50"
-            data-testid="shopping-create-button"
-            disabled={isCreateDisabled}
-            onClick={handleCreateList}
-            type="button"
-          >
-            장보기 목록 만들기
-          </button>
+        <div className="fixed bottom-0 left-0 right-0 border-t border-[var(--line)] bg-[var(--background)] p-4">
+          <div className="mx-auto w-full max-w-[720px]">
+            <button
+              className="w-full rounded-[12px] bg-[var(--brand)] px-5 py-3 text-base font-semibold text-white disabled:opacity-50"
+              data-testid="shopping-create-button"
+              disabled={isCreateDisabled}
+              onClick={handleCreateList}
+              type="button"
+            >
+              장보기 목록 만들기
+            </button>
+          </div>
         </div>
       </div>
-    </div>
   );
 }
 
@@ -446,6 +797,367 @@ function AppBar({ onBack }: AppBarProps) {
         {/* Right spacer matching back button width */}
         <div aria-hidden="true" className="h-11 w-11 shrink-0" />
       </div>
+    </div>
+  );
+}
+
+function MobileAppBar({
+  onBack,
+  title = "장보기 목록",
+}: {
+  onBack: () => void;
+  title?: string;
+}) {
+  return (
+    <div className="shrink-0 border-b border-[#DEE2E6] bg-white">
+      <div className="flex min-h-[52px] items-center gap-2 px-4 py-2.5">
+        <button
+          aria-label="뒤로 가기"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#212529] hover:bg-[#F8F9FA]"
+          onClick={onBack}
+          type="button"
+        >
+          <svg
+            fill="none"
+            height="20"
+            viewBox="0 0 20 20"
+            width="20"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M12 5L7 10L12 15"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+            />
+          </svg>
+        </button>
+        <h1 className="min-w-0 flex-1 truncate text-center text-[18px] font-bold leading-[1.3] text-[#212529]">
+          {title}
+        </h1>
+        <div aria-hidden="true" className="h-8 w-8 shrink-0" />
+      </div>
+    </div>
+  );
+}
+
+function MobileSelectScreen({
+  configs,
+  isCreateDisabled,
+  onBack,
+  onCreate,
+  onToggle,
+}: {
+  configs: MealConfig[];
+  isCreateDisabled: boolean;
+  onBack: () => void;
+  onCreate: () => void;
+  onToggle: (recipeId: string) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] md:hidden">
+      <MobileAppBar onBack={onBack} />
+
+      <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
+        <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
+          <p className="text-[12px] font-extrabold leading-[1.3] text-[#20A8A4]">
+            STEP 1 / 2
+          </p>
+          <h2 className="mt-1 text-[20px] font-extrabold leading-[1.3] text-[#212529] [font-family:var(--font-jua),-apple-system,sans-serif]">
+            어떤 끼니의 재료를 살까요?
+          </h2>
+          <p className="mt-3 text-[13px] font-medium leading-[1.5] text-[#868E96]">
+            선택한 끼니의 재료를 자동으로 모아드려요
+          </p>
+        </section>
+
+        <div className="space-y-3 p-4">
+          {groupConfigsByDate(configs).map(([dateLabel, items]) => (
+            <section
+              className="overflow-hidden rounded-[12px] border border-[#DEE2E6] bg-white"
+              key={dateLabel}
+            >
+              <h3 className="border-b border-[#F1F3F5] bg-[#F8F9FA] px-4 py-2.5 text-[14px] font-extrabold leading-[1.3] text-[#212529]">
+                {dateLabel}
+              </h3>
+              <div className="divide-y divide-[#F1F3F5]">
+                {items.map((config) => (
+                  <MobileSelectRow
+                    config={config}
+                    key={config.recipe_id}
+                    onToggle={onToggle}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </main>
+
+      <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[#DEE2E6] bg-white px-4 py-4">
+        <button
+          className="flex h-[49px] w-full items-center justify-center rounded-[8px] bg-[#2AC1BC] text-[16px] font-bold text-white disabled:bg-[#DEE2E6] disabled:text-[#ADB5BD]"
+          data-testid="shopping-create-button"
+          disabled={isCreateDisabled}
+          onClick={onCreate}
+          type="button"
+        >
+          장보기 목록 만들기
+        </button>
+      </div>
+      <Wave1MobileBottomTab
+        ariaLabel="장보기 목록 생성 화면 하단 탐색"
+        currentTab="planner"
+      />
+    </div>
+  );
+}
+
+function MobileSelectRow({
+  config,
+  onToggle,
+}: {
+  config: MealConfig;
+  onToggle: (recipeId: string) => void;
+}) {
+  const visual = getRecipeVisual(config);
+
+  return (
+    <div className={`flex min-h-[56px] items-center gap-3 px-4 py-2.5 ${config.isSelected ? "" : "opacity-45"}`}>
+      <button
+        aria-label={
+          config.isSelected
+            ? `${config.recipe_name} 선택 해제`
+            : `${config.recipe_name} 선택`
+        }
+        className="flex h-8 w-8 shrink-0 items-center justify-center"
+        onClick={() => onToggle(config.recipe_id)}
+        type="button"
+      >
+        <span
+          aria-hidden="true"
+          className={[
+            "flex h-[22px] w-[22px] items-center justify-center rounded-[6px] border text-white",
+            config.isSelected
+              ? "border-[#2AC1BC] bg-[#2AC1BC]"
+              : "border-[#DEE2E6] bg-white",
+          ].join(" ")}
+        >
+          {config.isSelected ? "✓" : ""}
+        </span>
+      </button>
+      <div
+        className="flex h-[34px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-[7px] text-[18px]"
+        style={{ backgroundColor: visual.bg }}
+      >
+        {config.recipe_thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt=""
+            className="h-full w-full object-cover"
+            src={config.recipe_thumbnail}
+          />
+        ) : (
+          <span aria-hidden="true">{visual.emoji}</span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[#212529]">
+          {config.recipe_name}
+        </p>
+        <p className="mt-[2px] truncate text-[11px] font-medium leading-[1.3] text-[#868E96]">
+          {visual.meal} · {config.shopping_servings}인분 · 요리 완료
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function MobileReviewScreen({
+  detail,
+  isCompleting,
+  isSharing,
+  onBack,
+  onComplete,
+  onShare,
+  onToggleCheck,
+  onToggleExclude,
+  toast,
+  updatingItemId,
+}: {
+  detail: ShoppingListDetail;
+  isCompleting: boolean;
+  isSharing: boolean;
+  onBack: () => void;
+  onComplete: () => void;
+  onShare: () => void;
+  onToggleCheck: (itemId: string, currentChecked: boolean) => void;
+  onToggleExclude: (
+    itemId: string,
+    currentExcluded: boolean,
+    currentChecked: boolean,
+  ) => void;
+  toast: string | null;
+  updatingItemId: string | null;
+}) {
+  const purchaseItems = detail.items.filter((item) => !item.is_pantry_excluded);
+  const excludedItems = detail.items.filter((item) => item.is_pantry_excluded);
+  const checkedCount = purchaseItems.filter((item) => item.is_checked).length;
+  const progress = purchaseItems.length
+    ? Math.round((checkedCount / purchaseItems.length) * 100)
+    : 100;
+
+  return (
+    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] md:hidden">
+      <MobileAppBar onBack={onBack} />
+
+      <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
+        <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[12px] font-extrabold leading-[1.3] text-[#20A8A4]">
+                STEP 2 / 2
+              </p>
+              <h2 className="mt-1 truncate text-[20px] font-extrabold leading-[1.3] text-[#212529] [font-family:var(--font-jua),-apple-system,sans-serif]">
+                {formatDateDot(detail.created_at)} · 장보기 목록
+              </h2>
+              <p className="mt-2 text-[12px] font-medium leading-[1.4] text-[#868E96]">
+                {purchaseItems.length}개 구매 예정 · {excludedItems.length}개 팬트리 제외
+              </p>
+            </div>
+            <div className="shrink-0 text-[32px] font-extrabold leading-none text-[#2AC1BC]">
+              {progress}%
+            </div>
+          </div>
+          <div className="mt-3 h-1 rounded-full bg-[#F1F3F5]">
+            <div
+              className="h-full rounded-full bg-[#2AC1BC]"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </section>
+
+        {toast ? (
+          <div
+            className="mx-4 mt-3 rounded-[10px] bg-[#E6F8F7] px-4 py-3 text-[13px] font-bold text-[#20A8A4]"
+            role="status"
+          >
+            {toast}
+          </div>
+        ) : null}
+
+        <section className="px-4 py-5">
+          <h3 className="text-[14px] font-extrabold leading-[1.3] text-[#212529]">
+            장볼 재료 목록
+          </h3>
+          <p className="mt-3 text-[12px] font-bold leading-[1.3] text-[#868E96]">
+            메인 · {purchaseItems.length}
+          </p>
+
+          <div className="mt-3 overflow-hidden rounded-[10px] border border-[#DEE2E6] bg-white">
+            {purchaseItems.map((item) => (
+              <MobileReviewItem
+                isUpdating={updatingItemId === item.id}
+                item={item}
+                key={item.id}
+                onToggleCheck={onToggleCheck}
+                onToggleExclude={onToggleExclude}
+              />
+            ))}
+          </div>
+        </section>
+      </main>
+
+      <div className="fixed inset-x-0 bottom-[82px] z-20 border-t border-[#DEE2E6] bg-white px-4 py-4">
+        <div className="grid grid-cols-[1fr_86px] gap-2">
+          <button
+            className="flex h-[49px] items-center justify-center rounded-[8px] bg-[#2AC1BC] text-[16px] font-bold text-white disabled:bg-[#DEE2E6]"
+            disabled={isCompleting || detail.is_completed}
+            onClick={onComplete}
+            type="button"
+          >
+            {detail.is_completed ? "완료됨" : isCompleting ? "완료 중..." : "장보기 완료"}
+          </button>
+          <button
+            className="flex h-[49px] items-center justify-center rounded-[8px] bg-[#F8F9FA] text-[15px] font-bold text-[#212529] disabled:opacity-50"
+            disabled={isSharing}
+            onClick={onShare}
+            type="button"
+          >
+            {isSharing ? "공유 중" : "공유"}
+          </button>
+        </div>
+      </div>
+      <Wave1MobileBottomTab
+        ariaLabel="장보기 목록 리뷰 화면 하단 탐색"
+        currentTab="planner"
+      />
+    </div>
+  );
+}
+
+function MobileReviewItem({
+  isUpdating,
+  item,
+  onToggleCheck,
+  onToggleExclude,
+}: {
+  isUpdating: boolean;
+  item: ShoppingListItemSummary;
+  onToggleCheck: (itemId: string, currentChecked: boolean) => void;
+  onToggleExclude: (
+    itemId: string,
+    currentExcluded: boolean,
+    currentChecked: boolean,
+  ) => void;
+}) {
+  const label = item.display_text.replace(/\s+\d+.*$/, "");
+
+  return (
+    <div className="flex min-h-[64px] items-center gap-3 border-b border-[#F1F3F5] px-4 py-2.5 last:border-b-0">
+      <button
+        aria-checked={item.is_checked}
+        aria-label={`${item.display_text} 구매 완료 표시`}
+        className="flex h-8 w-8 shrink-0 items-center justify-center disabled:opacity-50"
+        disabled={isUpdating}
+        onClick={() => onToggleCheck(item.id, item.is_checked)}
+        role="checkbox"
+        type="button"
+      >
+        <span
+          aria-hidden="true"
+          className={[
+            "flex h-[22px] w-[22px] items-center justify-center rounded-full border text-[12px] text-white",
+            item.is_checked
+              ? "border-[#2AC1BC] bg-[#2AC1BC]"
+              : "border-[#DEE2E6] bg-white",
+          ].join(" ")}
+        >
+          {item.is_checked ? "✓" : ""}
+        </span>
+      </button>
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[14px] font-extrabold leading-[1.3] text-[#212529]">
+          {label}
+        </p>
+        <p className="mt-1 truncate text-[11px] font-medium leading-[1.3] text-[#868E96]">
+          {amountText(item)} · 1끼에 사용
+        </p>
+      </div>
+
+      <button
+        aria-label={`${item.display_text} 이미있음`}
+        className="flex h-[30px] shrink-0 items-center justify-center rounded-full border border-[#DEE2E6] bg-white px-3 text-[11px] font-extrabold text-[#495057] disabled:opacity-50"
+        disabled={isUpdating}
+        onClick={() =>
+          onToggleExclude(item.id, item.is_pantry_excluded, item.is_checked)
+        }
+        type="button"
+      >
+        이미있음
+      </button>
     </div>
   );
 }

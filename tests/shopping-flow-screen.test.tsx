@@ -10,6 +10,10 @@ import { ShoppingFlowScreen } from "@/components/shopping/shopping-flow-screen";
 const mockPush = vi.fn();
 const fetchShoppingPreview = vi.fn();
 const createShoppingList = vi.fn();
+const fetchShoppingListDetail = vi.fn();
+const updateShoppingListItem = vi.fn();
+const completeShoppingList = vi.fn();
+const fetchShoppingShareText = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -20,6 +24,15 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/api/shopping", () => ({
   fetchShoppingPreview: () => fetchShoppingPreview(),
   createShoppingList: (body: unknown) => createShoppingList(body),
+  fetchShoppingListDetail: (listId: string) => fetchShoppingListDetail(listId),
+  updateShoppingListItem: (
+    listId: string,
+    itemId: string,
+    body: unknown,
+  ) => updateShoppingListItem(listId, itemId, body),
+  completeShoppingList: (listId: string, body: unknown) =>
+    completeShoppingList(listId, body),
+  fetchShoppingShareText: (listId: string) => fetchShoppingShareText(listId),
   isShoppingApiError: (error: unknown) =>
     Boolean(error) &&
     typeof error === "object" &&
@@ -53,11 +66,64 @@ function createApiError(status: number, code: string, message: string) {
   return error;
 }
 
+function setMatchMedia(matches: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
+function createShoppingDetail({
+  isChecked = false,
+  isPantryExcluded = false,
+}: {
+  isChecked?: boolean;
+  isPantryExcluded?: boolean;
+} = {}) {
+  return {
+    id: "list-1",
+    title: "장보기 목록",
+    date_range_start: "2026-04-26",
+    date_range_end: "2026-04-26",
+    is_completed: false,
+    completed_at: null,
+    created_at: "2026-04-26T00:00:00.000Z",
+    updated_at: "2026-04-26T00:00:00.000Z",
+    recipes: [],
+    items: [
+      {
+        id: "item-1",
+        ingredient_id: "ingredient-1",
+        display_text: "양파 2개",
+        amounts_json: [{ amount: 2, unit: "개" }],
+        is_checked: isChecked,
+        is_pantry_excluded: isPantryExcluded,
+        added_to_pantry: false,
+        sort_order: 0,
+      },
+    ],
+  };
+}
+
 describe("shopping flow screen", () => {
   beforeEach(() => {
     mockPush.mockReset();
     fetchShoppingPreview.mockReset();
     createShoppingList.mockReset();
+    fetchShoppingListDetail.mockReset();
+    updateShoppingListItem.mockReset();
+    completeShoppingList.mockReset();
+    fetchShoppingShareText.mockReset();
+    setMatchMedia(false);
   });
 
   afterEach(() => {
@@ -645,6 +711,58 @@ describe("shopping flow screen", () => {
           ],
         });
       });
+    });
+
+    it("should restore a checked item when mobile pantry exclusion fails", async () => {
+      setMatchMedia(true);
+      fetchShoppingPreview.mockResolvedValue(
+        createPreviewData([
+          {
+            id: "meal-1",
+            recipe_id: "recipe-1",
+            recipe_name: "김치찌개",
+            planned_servings: 2,
+          },
+        ])
+      );
+      createShoppingList.mockResolvedValue({
+        id: "list-1",
+        title: "장보기 목록",
+        is_completed: false,
+        created_at: "2026-04-26T00:00:00.000Z",
+      });
+      fetchShoppingListDetail.mockResolvedValue(
+        createShoppingDetail({ isChecked: true })
+      );
+      updateShoppingListItem.mockRejectedValue(
+        createApiError(500, "INTERNAL_ERROR", "저장하지 못했어요.")
+      );
+
+      render(<ShoppingFlowScreen initialAuthenticated={true} />);
+
+      await waitFor(() => {
+        expect(screen.getByText("김치찌개")).toBeTruthy();
+      });
+
+      await userEvent.click(screen.getByText("장보기 목록 만들기"));
+
+      await waitFor(() => {
+        expect(screen.getByText("STEP 2 / 2")).toBeTruthy();
+      });
+
+      await userEvent.click(screen.getByRole("button", { name: "양파 2개 이미있음" }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("팬트리 제외 상태를 바꾸지 못했어요.")
+        ).toBeTruthy();
+      });
+
+      expect(
+        screen
+          .getByRole("checkbox", { name: "양파 2개 구매 완료 표시" })
+          .getAttribute("aria-checked")
+      ).toBe("true");
     });
   });
 
