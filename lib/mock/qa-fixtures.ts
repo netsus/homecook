@@ -49,6 +49,9 @@ interface FixtureLeftoverDish {
   cooked_at: string;
   eaten_at: string | null;
   auto_hide_at: string | null;
+  cooking_servings: number;
+  source_meal_label: string | null;
+  source_planned_servings: number | null;
 }
 
 interface QaFixtureState {
@@ -129,6 +132,9 @@ function buildInitialFixtureState(): QaFixtureState {
         cooked_at: "2026-04-28T10:00:00.000Z",
         eaten_at: null,
         auto_hide_at: null,
+        cooking_servings: 2,
+        source_meal_label: "저녁",
+        source_planned_servings: 2,
       },
       {
         id: "550e8400-e29b-41d4-a716-446655440204",
@@ -138,6 +144,9 @@ function buildInitialFixtureState(): QaFixtureState {
         cooked_at: "2026-04-27T10:00:00.000Z",
         eaten_at: null,
         auto_hide_at: null,
+        cooking_servings: 1,
+        source_meal_label: "점심",
+        source_planned_servings: 1,
       },
       {
         id: "550e8400-e29b-41d4-a716-446655440203",
@@ -147,6 +156,9 @@ function buildInitialFixtureState(): QaFixtureState {
         cooked_at: "2026-04-20T10:00:00.000Z",
         eaten_at: "2026-04-28T12:00:00.000Z",
         auto_hide_at: "2026-05-28T12:00:00.000Z",
+        cooking_servings: 2,
+        source_meal_label: "저녁",
+        source_planned_servings: 2,
       },
       {
         id: "550e8400-e29b-41d4-a716-446655440205",
@@ -156,6 +168,9 @@ function buildInitialFixtureState(): QaFixtureState {
         cooked_at: "2026-02-28T10:00:00.000Z",
         eaten_at: "2026-03-01T12:00:00.000Z",
         auto_hide_at: "2026-03-31T12:00:00.000Z",
+        cooking_servings: 1,
+        source_meal_label: "점심",
+        source_planned_servings: 1,
       },
       {
         id: "550e8400-e29b-41d4-a716-446655440202",
@@ -165,6 +180,9 @@ function buildInitialFixtureState(): QaFixtureState {
         cooked_at: "2026-04-28T09:00:00.000Z",
         eaten_at: null,
         auto_hide_at: null,
+        cooking_servings: 2,
+        source_meal_label: "저녁",
+        source_planned_servings: 2,
       },
     ],
   };
@@ -418,11 +436,11 @@ export function createQaFixtureRecipeBook(name: string) {
   } satisfies RecipeBookCreateData;
 }
 
-export function saveQaFixtureRecipeToBook(bookId: string) {
+export function saveQaFixtureRecipeToBook(bookIds: string[]) {
   const state = getQaFixtureState();
-  const selectedBook = state.books.find((book) => book.id === bookId);
+  const selectedBooks = bookIds.map((bookId) => state.books.find((book) => book.id === bookId));
 
-  if (!selectedBook) {
+  if (selectedBooks.some((book) => !book)) {
     return {
       ok: false as const,
       code: "RESOURCE_NOT_FOUND",
@@ -431,19 +449,12 @@ export function saveQaFixtureRecipeToBook(bookId: string) {
     };
   }
 
-  if (state.savedBookIds.includes(bookId)) {
-    return {
-      ok: false as const,
-      code: "CONFLICT",
-      message: "이미 저장된 레시피예요.",
-      status: 409,
-    };
-  }
-
-  state.savedBookIds = [...state.savedBookIds, bookId];
-  state.saveCount += 1;
+  const alreadySavedBookIds = bookIds.filter((bookId) => state.savedBookIds.includes(bookId));
+  const createdBookIds = bookIds.filter((bookId) => !state.savedBookIds.includes(bookId));
+  state.savedBookIds = [...state.savedBookIds, ...createdBookIds];
+  state.saveCount += createdBookIds.length;
   state.books = state.books.map((book) =>
-    book.id === bookId
+    createdBookIds.includes(book.id)
       ? {
           ...book,
           recipe_count: book.recipe_count + 1,
@@ -456,7 +467,9 @@ export function saveQaFixtureRecipeToBook(bookId: string) {
     data: {
       saved: true,
       save_count: state.saveCount,
-      book_id: bookId,
+      book_ids: bookIds,
+      created_book_ids: createdBookIds,
+      already_saved_book_ids: alreadySavedBookIds,
     } satisfies RecipeSaveData,
   };
 }
@@ -568,6 +581,9 @@ export function getQaFixtureLeftovers(status: LeftoverDishStatus) {
       status: leftover.status,
       cooked_at: leftover.cooked_at,
       eaten_at: leftover.eaten_at,
+      cooking_servings: leftover.cooking_servings,
+      source_meal_label: leftover.source_meal_label,
+      source_planned_servings: leftover.source_planned_servings,
     }));
 
   return { items } satisfies LeftoverListData;

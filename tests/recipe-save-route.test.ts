@@ -80,23 +80,52 @@ function createRecipesTable({
   };
 }
 
+interface RecipeBookRow {
+  id: string;
+  user_id: string;
+  book_type: string;
+}
+
 function createRecipeBooksTable({
   selectResults,
 }: {
-  selectResults: Array<QueryResult<{ id: string; user_id: string; book_type: string } | null>>;
+  selectResults: Array<QueryResult<RecipeBookRow | RecipeBookRow[] | null>>;
 }) {
   const selectQuery = {
     eq: vi.fn(() => selectQuery),
+    in: vi.fn(() => selectQuery),
     maybeSingle: vi.fn(() => createAwaitableQuery(
-      selectResults.shift() ?? {
+      (selectResults.shift() as QueryResult<RecipeBookRow | null> | undefined) ?? {
         data: null,
         error: { message: "missing recipe_books select result" },
       },
     )),
+    then(
+      onFulfilled?: (value: QueryResult<RecipeBookRow[]>) => unknown,
+      onRejected?: (reason: unknown) => unknown,
+    ) {
+      const result = (selectResults.shift() as QueryResult<RecipeBookRow[] | RecipeBookRow | null> | undefined) ?? {
+        data: [],
+        error: { message: "missing recipe_books select result" },
+      };
+      const normalizedResult: QueryResult<RecipeBookRow[]> = {
+        data: Array.isArray(result.data)
+          ? result.data
+          : result.data
+            ? [result.data]
+            : [],
+        error: result.error,
+      };
+
+      return Promise.resolve(
+        normalizedResult,
+      ).then(onFulfilled, onRejected);
+    },
   };
 
   return {
     select: vi.fn(() => selectQuery),
+    __selectQuery: selectQuery,
   };
 }
 
@@ -105,7 +134,7 @@ function createRecipeBookItemsTable({
   insertResults,
   deleteResults = [],
 }: {
-  selectResults?: Array<QueryResult<{ id: string }[]>>;
+  selectResults?: Array<QueryResult<Array<{ id: string; book_id?: string }>>>;
   insertResults: Array<QueryResult<{ id: string } | null>>;
   deleteResults?: Array<QueryResult<{ id: string } | null>>;
 }) {
@@ -121,8 +150,9 @@ function createRecipeBookItemsTable({
 
   const selectQuery = {
     eq: vi.fn(() => selectQuery),
+    in: vi.fn(() => selectQuery),
     then(
-      onFulfilled?: (value: QueryResult<{ id: string }[]>) => unknown,
+      onFulfilled?: (value: QueryResult<Array<{ id: string; book_id?: string }>>) => unknown,
       onRejected?: (reason: unknown) => unknown,
     ) {
       return Promise.resolve(
@@ -263,6 +293,12 @@ describe("POST /api/v1/recipes/[id]/save", () => {
           error: null,
         },
       ],
+      updateResults: [
+        {
+          data: { id: "recipe-1", save_count: 3 },
+          error: null,
+        },
+      ],
     });
     const recipeBooksTable = createRecipeBooksTable({
       selectResults: [
@@ -325,6 +361,12 @@ describe("POST /api/v1/recipes/[id]/save", () => {
           error: null,
         },
       ],
+      updateResults: [
+        {
+          data: { id: "recipe-1", save_count: 3 },
+          error: null,
+        },
+      ],
     });
     const recipeBooksTable = createRecipeBooksTable({
       selectResults: [
@@ -379,9 +421,17 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     });
   });
 
-  it("returns 409 when duplicate save is attempted", async () => {
+  it("reports an already-saved book without failing", async () => {
+    const bookId = "550e8400-e29b-41d4-a716-446655440010";
+    const recipeId = "550e8400-e29b-41d4-a716-446655440024";
     const recipesTable = createRecipesTable({
       selectResults: [
+        {
+          data: { id: "recipe-1", save_count: 3 },
+          error: null,
+        },
+      ],
+      updateResults: [
         {
           data: { id: "recipe-1", save_count: 3 },
           error: null,
@@ -401,13 +451,115 @@ describe("POST /api/v1/recipes/[id]/save", () => {
       ],
     });
     const recipeBookItemsTable = createRecipeBookItemsTable({
+      selectResults: [
+        {
+          data: [{ id: "existing-item", book_id: bookId }],
+          error: null,
+        },
+        {
+          data: [
+            { id: "existing-item", book_id: bookId },
+            { id: "second-item" },
+            { id: "third-item" },
+          ],
+          error: null,
+        },
+      ],
+      insertResults: [],
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn(async () => ({
+          data: { user: { id: "user-1" } },
+        })),
+      },
+      from: vi.fn((table: string) => {
+        if (table === "recipes") return recipesTable;
+        if (table === "recipe_books") return recipeBooksTable;
+        if (table === "recipe_book_items") return recipeBookItemsTable;
+
+        throw new Error(`unexpected table: ${table}`);
+      }),
+    });
+
+    const { POST } = await importRoute();
+    const response = await POST(new Request("http://localhost:3000/api/v1/recipes/recipe-1/save", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ book_ids: [bookId] }),
+    }), {
+      params: Promise.resolve({ id: recipeId }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        saved: true,
+        save_count: 3,
+        book_ids: [bookId],
+        created_book_ids: [],
+        already_saved_book_ids: [bookId],
+      },
+      error: null,
+    });
+    expect(recipeBookItemsTable.insert).not.toHaveBeenCalled();
+  });
+
+  it("multi-saves into selected books and reports already-saved books without failing", async () => {
+    const firstBookId = "550e8400-e29b-41d4-a716-446655440010";
+    const secondBookId = "550e8400-e29b-41d4-a716-446655440011";
+    const recipeId = "550e8400-e29b-41d4-a716-446655440025";
+    const recipesTable = createRecipesTable({
+      selectResults: [
+        {
+          data: { id: "recipe-1", save_count: 3 },
+          error: null,
+        },
+      ],
+      updateResults: [
+        {
+          data: { id: "recipe-1", save_count: 5 },
+          error: null,
+        },
+      ],
+    });
+    const recipeBooksTable = createRecipeBooksTable({
+      selectResults: [
+        {
+          data: [
+            { id: firstBookId, user_id: "user-1", book_type: "saved" },
+            { id: secondBookId, user_id: "user-1", book_type: "custom" },
+          ],
+          error: null,
+        },
+      ],
+    });
+    const recipeBookItemsTable = createRecipeBookItemsTable({
+      selectResults: [
+        {
+          data: [{ id: "existing-item", book_id: firstBookId }],
+          error: null,
+        },
+        {
+          data: [
+            { id: "existing-item", book_id: firstBookId },
+            { id: "another-item" },
+            { id: "third-item" },
+            { id: "fourth-item" },
+            { id: "new-item", book_id: secondBookId },
+          ],
+          error: null,
+        },
+      ],
       insertResults: [
         {
-          data: null,
-          error: {
-            code: "23505",
-            message: "duplicate key value violates unique constraint",
-          },
+          data: { id: "new-item" },
+          error: null,
         },
       ],
     });
@@ -433,19 +585,32 @@ describe("POST /api/v1/recipes/[id]/save", () => {
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ book_id: "550e8400-e29b-41d4-a716-446655440010" }),
+      body: JSON.stringify({ book_ids: [firstBookId, secondBookId, secondBookId] }),
     }), {
-      params: Promise.resolve({ id: "550e8400-e29b-41d4-a716-446655440024" }),
+      params: Promise.resolve({ id: recipeId }),
     });
     const body = await response.json();
 
-    expect(response.status).toBe(409);
-    expect(body).toMatchObject({
-      success: false,
-      data: null,
-      error: {
-        code: "CONFLICT",
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      data: {
+        saved: true,
+        save_count: 5,
+        book_ids: [firstBookId, secondBookId],
+        created_book_ids: [secondBookId],
+        already_saved_book_ids: [firstBookId],
       },
+      error: null,
+    });
+    expect(recipeBooksTable.__selectQuery.in).toHaveBeenCalledWith("id", [firstBookId, secondBookId]);
+    expect(recipeBookItemsTable.__selectQuery.in).toHaveBeenCalledWith("book_id", [firstBookId, secondBookId]);
+    expect(recipeBookItemsTable.insert).toHaveBeenCalledWith({
+      book_id: secondBookId,
+      recipe_id: recipeId,
+    });
+    expect(recipesTable.update).toHaveBeenCalledWith({
+      save_count: 5,
     });
   });
 
@@ -624,6 +789,8 @@ describe("POST /api/v1/recipes/[id]/save", () => {
   });
 
   it("saves the recipe and returns the updated save_count", async () => {
+    const bookId = "550e8400-e29b-41d4-a716-446655440010";
+    const recipeId = "550e8400-e29b-41d4-a716-446655440025";
     const recipesTable = createRecipesTable({
       selectResults: [
         {
@@ -652,6 +819,10 @@ describe("POST /api/v1/recipes/[id]/save", () => {
     });
     const recipeBookItemsTable = createRecipeBookItemsTable({
       selectResults: [
+        {
+          data: [],
+          error: null,
+        },
         {
           data: [
             { id: "existing-1" },
@@ -691,9 +862,9 @@ describe("POST /api/v1/recipes/[id]/save", () => {
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ book_id: "550e8400-e29b-41d4-a716-446655440010" }),
+      body: JSON.stringify({ book_ids: [bookId] }),
     }), {
-      params: Promise.resolve({ id: "550e8400-e29b-41d4-a716-446655440025" }),
+      params: Promise.resolve({ id: recipeId }),
     });
     const body = await response.json();
 
@@ -703,15 +874,17 @@ describe("POST /api/v1/recipes/[id]/save", () => {
       data: {
         saved: true,
         save_count: 4,
-        book_id: "550e8400-e29b-41d4-a716-446655440010",
+        book_ids: [bookId],
+        created_book_ids: [bookId],
+        already_saved_book_ids: [],
       },
       error: null,
     });
     expect(ensurePublicUserRow).toHaveBeenCalledWith(expect.anything(), { id: "user-1" });
     expect(ensureUserBootstrapState).toHaveBeenCalledWith(expect.anything(), "user-1");
     expect(recipeBookItemsTable.insert).toHaveBeenCalledWith({
-      book_id: "550e8400-e29b-41d4-a716-446655440010",
-      recipe_id: "550e8400-e29b-41d4-a716-446655440025",
+      book_id: bookId,
+      recipe_id: recipeId,
     });
     expect(recipesTable.update).toHaveBeenCalledWith({
       save_count: 4,

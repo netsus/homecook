@@ -119,6 +119,26 @@ describe("recipe API contracts", () => {
     });
   });
 
+  it("maps latest sort to created_at descending with deterministic id tie-break", async () => {
+    const listQuery = createQuery({
+      data: [],
+      error: null,
+    });
+
+    createRouteHandlerClient.mockResolvedValue({
+      from: vi.fn(() => listQuery),
+    });
+
+    const { GET } = await import("@/app/api/v1/recipes/route");
+    const response = await GET(
+      new NextRequest("http://localhost:3000/api/v1/recipes?sort=latest"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(listQuery.order).toHaveBeenNthCalledWith(1, "created_at", { ascending: false });
+    expect(listQuery.order).toHaveBeenNthCalledWith(2, "id", { ascending: false });
+  });
+
   it("returns a wrapped ingredient list for standard-name matches", async () => {
     const ingredientsQuery = createQuery({
       data: [

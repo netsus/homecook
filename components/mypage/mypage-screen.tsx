@@ -1207,6 +1207,11 @@ function ShoppingHistoryCard({ item }: { item: ShoppingListHistoryItem }) {
       <p className="mt-1 text-sm text-[var(--text-3)]">
         {dateRange} &middot; {item.item_count}개 항목
       </p>
+      {item.completed_at ? (
+        <p className="mt-1 text-sm text-[var(--text-3)]">
+          {formatShortDate(item.completed_at)} 완료
+        </p>
+      ) : null}
       <span
         className={`mt-2 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
           item.is_completed
@@ -1214,7 +1219,7 @@ function ShoppingHistoryCard({ item }: { item: ShoppingListHistoryItem }) {
             : "bg-[var(--brand-soft)] text-[var(--brand)]"
         }`}
       >
-        {item.is_completed ? "완료" : "진행 중"}
+        {item.is_completed ? "다시열기" : "진행 중"}
       </span>
     </Link>
   );

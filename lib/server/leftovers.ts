@@ -16,12 +16,19 @@ export interface LeftoverDishRow {
   cooked_at: string;
   eaten_at: string | null;
   auto_hide_at: string | null;
+  cooking_servings: number | null;
 }
 
 export interface LeftoverRecipeRow {
   id: string;
   title: string;
   thumbnail_url: string | null;
+}
+
+export interface LeftoverSourceMealRow {
+  leftover_dish_id: string | null;
+  planned_servings: number;
+  meal_plan_columns: { name: string | null } | null;
 }
 
 export function isUuid(value: string) {
@@ -61,8 +68,10 @@ export function toLeftoverMutationData(row: {
 export function toLeftoverListItem(
   row: LeftoverDishRow,
   recipeMap: Map<string, LeftoverRecipeRow>,
+  sourceMealMap = new Map<string, LeftoverSourceMealRow>(),
 ): LeftoverListItemData {
   const recipe = recipeMap.get(row.recipe_id);
+  const sourceMeal = sourceMealMap.get(row.id);
 
   return {
     id: row.id,
@@ -72,5 +81,8 @@ export function toLeftoverListItem(
     status: row.status,
     cooked_at: row.cooked_at,
     eaten_at: row.eaten_at,
+    cooking_servings: row.cooking_servings ?? 1,
+    source_meal_label: sourceMeal?.meal_plan_columns?.name ?? null,
+    source_planned_servings: sourceMeal?.planned_servings ?? null,
   };
 }

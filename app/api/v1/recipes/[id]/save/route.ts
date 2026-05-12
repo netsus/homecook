@@ -13,7 +13,7 @@ import {
   type UserBootstrapDbClient,
 } from "@/lib/server/user-bootstrap";
 import { createRouteHandlerClient, createServiceRoleClient } from "@/lib/supabase/server";
-import type { RecipeBookType, RecipeSaveBody, RecipeSaveData, SaveableRecipeBookType } from "@/types/recipe";
+import type { RecipeBookType, RecipeSaveData, SaveableRecipeBookType } from "@/types/recipe";
 
 interface RouteContext {
   params: Promise<{
@@ -39,6 +39,7 @@ interface RecipeBookRow {
 
 interface RecipeBookItemRow {
   id: string;
+  book_id?: string;
 }
 
 type MaybeSingleResult<T> = PromiseLike<{
@@ -59,7 +60,9 @@ interface RecipesUpdateQuery {
 
 interface RecipeBooksSelectQuery {
   eq(column: string, value: string): RecipeBooksSelectQuery;
+  in(column: string, values: string[]): RecipeBooksSelectQuery;
   maybeSingle(): MaybeSingleResult<RecipeBookRow>;
+  then: ManyResult<RecipeBookRow>["then"];
 }
 
 interface RecipeBookItemsInsertQuery {
@@ -74,6 +77,7 @@ type ManyResult<T> = PromiseLike<{
 
 interface RecipeBookItemsSelectQuery {
   eq(column: string, value: string): RecipeBookItemsSelectQuery;
+  in(column: string, values: string[]): RecipeBookItemsSelectQuery;
   then: ManyResult<RecipeBookItemRow>["then"];
 }
 
@@ -127,14 +131,56 @@ function clampSaveCount(value: number) {
   return Math.max(0, value);
 }
 
-function parseBookId(body: RecipeSaveBody) {
-  if (typeof body.book_id !== "string") {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeBookIds(value: unknown) {
+  if (!Array.isArray(value)) {
     return null;
   }
 
-  const bookId = body.book_id.trim();
+  const bookIds: string[] = [];
+  const seen = new Set<string>();
 
-  return isUuid(bookId) ? bookId : null;
+  for (const item of value) {
+    if (typeof item !== "string") {
+      return null;
+    }
+
+    const bookId = item.trim();
+
+    if (!isUuid(bookId)) {
+      return null;
+    }
+
+    if (!seen.has(bookId)) {
+      seen.add(bookId);
+      bookIds.push(bookId);
+    }
+  }
+
+  return bookIds.length > 0 ? bookIds : null;
+}
+
+function parseBookIds(body: unknown) {
+  if (!isRecord(body)) {
+    return null;
+  }
+
+  const bookIds = normalizeBookIds(body.book_ids);
+
+  if (bookIds) {
+    return bookIds;
+  }
+
+  // Older local fixtures may still send `book_id`; the public response stays on
+  // the v1.2.4 multi-save shape.
+  if (typeof body.book_id === "string") {
+    return normalizeBookIds([body.book_id]);
+  }
+
+  return null;
 }
 
 async function rollbackSavedRecipeItem(
@@ -176,17 +222,17 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
   }
 
-  let body: RecipeSaveBody;
+  let body: unknown;
 
   try {
-    body = (await request.json()) as RecipeSaveBody;
+    body = await request.json();
   } catch {
     return fail("RESOURCE_NOT_FOUND", "레시피북을 찾을 수 없어요.", 404);
   }
 
-  const bookId = parseBookId(body);
+  const bookIds = parseBookIds(body);
 
-  if (!bookId) {
+  if (!bookIds) {
     return fail("RESOURCE_NOT_FOUND", "레시피북을 찾을 수 없어요.", 404);
   }
 
@@ -221,7 +267,7 @@ export async function POST(request: Request, context: RouteContext) {
       return fail("INTERNAL_ERROR", "레시피를 저장하지 못했어요.", 500);
     }
 
-    const saveResult = saveQaFixtureRecipeToBook(bookId);
+    const saveResult = saveQaFixtureRecipeToBook(bookIds);
 
     if (!saveResult.ok) {
       return fail(saveResult.code, saveResult.message, saveResult.status);
@@ -262,39 +308,73 @@ export async function POST(request: Request, context: RouteContext) {
     return fail("RESOURCE_NOT_FOUND", "레시피를 찾을 수 없어요.", 404);
   }
 
-  const recipeBookResult = await dbClient
+  const recipeBooksResult = await dbClient
     .from("recipe_books")
     .select("id, user_id, book_type")
-    .eq("id", bookId)
-    .maybeSingle();
+    .in("id", bookIds);
 
-  if (recipeBookResult.error || !recipeBookResult.data) {
+  if (recipeBooksResult.error || !recipeBooksResult.data || recipeBooksResult.data.length !== bookIds.length) {
     return fail("RESOURCE_NOT_FOUND", "레시피북을 찾을 수 없어요.", 404);
   }
 
-  if (recipeBookResult.data.user_id !== user.id) {
+  if (recipeBooksResult.data.some((book) => book.user_id !== user.id)) {
     return fail("FORBIDDEN", "내 레시피북만 선택할 수 있어요.", 403);
   }
 
-  if (!isSaveableRecipeBookType(recipeBookResult.data.book_type)) {
+  if (recipeBooksResult.data.some((book) => !isSaveableRecipeBookType(book.book_type))) {
     return fail("CONFLICT", "저장 가능한 레시피북이 아니에요.", 409);
   }
 
-  const saveResult = await dbClient
+  const existingItemsResult = await dbClient
     .from("recipe_book_items")
-    .insert({
-      book_id: bookId,
-      recipe_id: id,
-    })
-    .select("id")
-    .maybeSingle();
+    .select("id, book_id")
+    .eq("recipe_id", id)
+    .in("book_id", bookIds);
 
-  if (isDuplicateSaveConflict(saveResult.error)) {
-    return fail("CONFLICT", "이미 저장된 레시피예요.", 409);
+  if (existingItemsResult.error || !existingItemsResult.data) {
+    return fail("INTERNAL_ERROR", "레시피를 저장하지 못했어요.", 500);
   }
 
-  if (saveResult.error || !saveResult.data) {
-    return fail("INTERNAL_ERROR", "레시피를 저장하지 못했어요.", 500);
+  const existingBookIds = new Set(
+    existingItemsResult.data
+      .map((item) => item.book_id)
+      .filter((bookId): bookId is string => typeof bookId === "string"),
+  );
+  const alreadySavedBookIds = bookIds.filter((bookId) => existingBookIds.has(bookId));
+  const createdBookIds: string[] = [];
+  const insertedItemIds: string[] = [];
+
+  for (const bookId of bookIds) {
+    if (existingBookIds.has(bookId)) {
+      continue;
+    }
+
+    const saveResult = await dbClient
+      .from("recipe_book_items")
+      .insert({
+        book_id: bookId,
+        recipe_id: id,
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (isDuplicateSaveConflict(saveResult.error)) {
+      alreadySavedBookIds.push(bookId);
+      existingBookIds.add(bookId);
+      continue;
+    }
+
+    if (saveResult.error || !saveResult.data) {
+      for (const itemId of insertedItemIds) {
+        await rollbackSavedRecipeItem(dbClient, itemId, id);
+      }
+
+      return fail("INTERNAL_ERROR", "레시피를 저장하지 못했어요.", 500);
+    }
+
+    createdBookIds.push(bookId);
+    insertedItemIds.push(saveResult.data.id);
+    existingBookIds.add(bookId);
   }
 
   const saveCountResult = await dbClient
@@ -303,7 +383,9 @@ export async function POST(request: Request, context: RouteContext) {
     .eq("recipe_id", id);
 
   if (saveCountResult.error || !saveCountResult.data) {
-    await rollbackSavedRecipeItem(dbClient, saveResult.data.id, id);
+    for (const itemId of insertedItemIds) {
+      await rollbackSavedRecipeItem(dbClient, itemId, id);
+    }
     return fail("INTERNAL_ERROR", "저장 수를 갱신하지 못했어요.", 500);
   }
 
@@ -318,14 +400,18 @@ export async function POST(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (updateResult.error || !updateResult.data) {
-    await rollbackSavedRecipeItem(dbClient, saveResult.data.id, id);
+    for (const itemId of insertedItemIds) {
+      await rollbackSavedRecipeItem(dbClient, itemId, id);
+    }
     return fail("INTERNAL_ERROR", "저장 수를 갱신하지 못했어요.", 500);
   }
 
   const responseData: RecipeSaveData = {
     saved: true,
     save_count: clampSaveCount(updateResult.data.save_count),
-    book_id: bookId,
+    book_ids: bookIds,
+    created_book_ids: createdBookIds,
+    already_saved_book_ids: alreadySavedBookIds,
   };
 
   return ok(responseData);

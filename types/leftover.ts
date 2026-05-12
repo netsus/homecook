@@ -10,6 +10,9 @@ export interface LeftoverListItemData {
   status: LeftoverDishStatus;
   cooked_at: string;
   eaten_at: string | null;
+  cooking_servings: number;
+  source_meal_label: string | null;
+  source_planned_servings: number | null;
 }
 
 export interface LeftoverListData {

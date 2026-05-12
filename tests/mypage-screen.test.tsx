@@ -84,6 +84,7 @@ const MOCK_SHOPPING_HISTORY = {
       is_completed: true,
       item_count: 12,
       created_at: "2026-04-30T00:00:00Z",
+      completed_at: "2026-05-01T09:30:00Z",
     },
     {
       id: "list-2",
@@ -93,6 +94,7 @@ const MOCK_SHOPPING_HISTORY = {
       is_completed: false,
       item_count: 8,
       created_at: "2026-04-23T00:00:00Z",
+      completed_at: null,
     },
   ],
   next_cursor: null,
@@ -360,7 +362,8 @@ describe("MypageScreen", () => {
 
     expect(await screen.findByText("4/30 장보기")).toBeTruthy();
     expect(screen.getByText("4/23 장보기")).toBeTruthy();
-    expect(screen.getByText("완료")).toBeTruthy();
+    expect(screen.getByText("다시열기")).toBeTruthy();
+    expect(screen.getByText("5/1 완료")).toBeTruthy();
     expect(screen.getByText("진행 중")).toBeTruthy();
     expect(screen.getByText(/12개 항목/)).toBeTruthy();
   });

@@ -51,6 +51,11 @@ function formatShortDate(dateStr: string) {
   return `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
 }
 
+function formatLeftoverMeta(item: LeftoverListItemData) {
+  const sourceLabel = item.source_meal_label ?? "연결 끼니 없음";
+  return `${sourceLabel} · ${item.cooking_servings}인분`;
+}
+
 function getFallbackEmoji(title: string) {
   if (title.includes("밥")) return "🍚";
   if (title.includes("찌개")) return "🍲";
@@ -99,6 +104,9 @@ function LeftoverCard({
           </p>
           <p className="text-sm text-[var(--text-3)]">
             {formatCookedAt(item.cooked_at)} 요리
+          </p>
+          <p className="text-sm text-[var(--text-3)]">
+            {formatLeftoverMeta(item)}
           </p>
         </div>
       </div>
@@ -729,7 +737,7 @@ function MobileLeftoverCard({
             {item.recipe_title}
           </p>
           <p className="mt-0.5 truncate text-[12px] font-medium leading-[1.35] text-[#868E96]">
-            {formatShortDate(item.cooked_at)} 요리
+            {formatShortDate(item.cooked_at)} 요리 · {formatLeftoverMeta(item)}
           </p>
         </div>
       </div>

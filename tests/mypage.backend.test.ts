@@ -332,6 +332,7 @@ describe("17a mypage backend", () => {
             date_range_start: "2026-04-30",
             date_range_end: "2026-05-06",
             is_completed: true,
+            completed_at: "2026-04-30T10:30:00Z",
             created_at: "2026-04-30T00:00:00Z",
           },
           {
@@ -340,6 +341,7 @@ describe("17a mypage backend", () => {
             date_range_start: "2026-04-23",
             date_range_end: "2026-04-29",
             is_completed: false,
+            completed_at: null,
             created_at: "2026-04-23T00:00:00Z",
           },
         ],
@@ -377,6 +379,7 @@ describe("17a mypage backend", () => {
           date_range_start: "2026-04-30",
           date_range_end: "2026-05-06",
           is_completed: true,
+          completed_at: "2026-04-30T10:30:00Z",
           item_count: 2,
           created_at: "2026-04-30T00:00:00Z",
         },

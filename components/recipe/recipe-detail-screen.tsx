@@ -21,7 +21,7 @@ import {
 import {
   createCustomRecipeBook,
   fetchSaveableRecipeBooks,
-  saveRecipeToBook,
+  saveRecipeToBooks,
 } from "@/lib/api/recipe-save";
 import { createMeal, isMealApiError } from "@/lib/api/meal";
 import { fetchJson } from "@/lib/api/fetch-json";
@@ -89,7 +89,7 @@ export function RecipeDetailScreen({
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [saveModalState, setSaveModalState] = useState<SaveModalState>("idle");
   const [saveBooks, setSaveBooks] = useState<RecipeBookSummary[]>([]);
-  const [selectedSaveBookId, setSelectedSaveBookId] = useState<string | null>(null);
+  const [selectedSaveBookIds, setSelectedSaveBookIds] = useState<string[]>([]);
   const [newSaveBookName, setNewSaveBookName] = useState("");
   const [saveLoadError, setSaveLoadError] = useState<string | null>(null);
   const [saveSubmitError, setSaveSubmitError] = useState<string | null>(null);
@@ -255,14 +255,15 @@ export function RecipeDetailScreen({
 
       const previousUserStatus = current.user_status;
       const previousSavedBookIds = previousUserStatus?.saved_book_ids ?? [];
-      const hasBook = previousSavedBookIds.includes(result.book_id);
+      const nextSavedBookIds = [
+        ...previousSavedBookIds,
+        ...result.book_ids.filter((bookId) => !previousSavedBookIds.includes(bookId)),
+      ];
 
       const nextUserStatus: RecipeUserStatus = {
         is_liked: previousUserStatus?.is_liked ?? false,
         is_saved: true,
-        saved_book_ids: hasBook
-          ? previousSavedBookIds
-          : [...previousSavedBookIds, result.book_id],
+        saved_book_ids: nextSavedBookIds,
       };
 
       return {
@@ -426,16 +427,27 @@ export function RecipeDetailScreen({
     try {
       const books = await fetchSaveableRecipeBooks();
       setSaveBooks(books);
-      setSelectedSaveBookId((currentSelectedBookId) => {
+      setSelectedSaveBookIds((currentSelectedBookIds) => {
         if (books.length === 0) {
-          return null;
+          return [];
         }
 
-        if (currentSelectedBookId && books.some((book) => book.id === currentSelectedBookId)) {
-          return currentSelectedBookId;
+        const availableBookIds = new Set(books.map((book) => book.id));
+        const retainedBookIds = currentSelectedBookIds.filter((bookId) => availableBookIds.has(bookId));
+
+        if (retainedBookIds.length > 0) {
+          return retainedBookIds;
         }
 
-        return books[0]?.id ?? null;
+        const alreadySavedBookIds = recipe?.user_status?.saved_book_ids.filter((bookId) =>
+          availableBookIds.has(bookId),
+        ) ?? [];
+
+        return alreadySavedBookIds.length > 0
+          ? alreadySavedBookIds
+          : books[0]
+            ? [books[0].id]
+            : [];
       });
       setSaveModalState("ready");
     } catch (error) {
@@ -446,7 +458,7 @@ export function RecipeDetailScreen({
       );
       setSaveModalState("error");
     }
-  }, []);
+  }, [recipe?.user_status?.saved_book_ids]);
 
   const openSaveModal = useCallback(
     async ({ source }: { source: "manual" | "return-to-action" }) => {
@@ -511,7 +523,11 @@ export function RecipeDetailScreen({
           return left.sort_order - right.sort_order;
         });
       });
-      setSelectedSaveBookId(createdBook.id);
+      setSelectedSaveBookIds((currentBookIds) => (
+        currentBookIds.includes(createdBook.id)
+          ? currentBookIds
+          : [...currentBookIds, createdBook.id]
+      ));
       setNewSaveBookName("");
       setSaveModalState("ready");
       setSaveSubmitError(null);
@@ -525,7 +541,7 @@ export function RecipeDetailScreen({
   }, [newSaveBookName]);
 
   const handleSaveRecipe = useCallback(async () => {
-    if (!recipe || !selectedSaveBookId || isSavingRecipe) {
+    if (!recipe || selectedSaveBookIds.length === 0 || isSavingRecipe) {
       return;
     }
 
@@ -533,7 +549,7 @@ export function RecipeDetailScreen({
     setSaveSubmitError(null);
 
     try {
-      const result = await saveRecipeToBook(recipe.id, selectedSaveBookId);
+      const result = await saveRecipeToBooks(recipe.id, selectedSaveBookIds);
       updateRecipeSaveState(result);
       setIsSaveModalOpen(false);
       setSaveModalState("idle");
@@ -548,15 +564,7 @@ export function RecipeDetailScreen({
     } finally {
       setIsSavingRecipe(false);
     }
-  }, [isSavingRecipe, recipe, selectedSaveBookId, updateRecipeSaveState]);
-
-  const isSelectedBookReadOnly = useMemo(() => {
-    if (!selectedSaveBookId || !recipe?.user_status) {
-      return false;
-    }
-
-    return recipe.user_status.saved_book_ids.includes(selectedSaveBookId);
-  }, [recipe?.user_status, selectedSaveBookId]);
+  }, [isSavingRecipe, recipe, selectedSaveBookIds, updateRecipeSaveState]);
 
   const handleLikeToggle = useCallback(
     async ({ source }: { source: "manual" | "return-to-action" }) => {
@@ -1273,7 +1281,6 @@ export function RecipeDetailScreen({
         isCreatingBook={isCreatingBook}
         isOpen={isSaveModalOpen}
         isSavingRecipe={isSavingRecipe}
-        isSelectedBookReadOnly={isSelectedBookReadOnly}
         loadErrorMessage={saveLoadError}
         newBookName={newSaveBookName}
         onClose={closeSaveModal}
@@ -1287,9 +1294,15 @@ export function RecipeDetailScreen({
         onSaveRecipe={() => {
           void handleSaveRecipe();
         }}
-        onSelectBook={setSelectedSaveBookId}
+        onSelectBook={(bookId) => {
+          setSelectedSaveBookIds((currentBookIds) =>
+            currentBookIds.includes(bookId)
+              ? currentBookIds.filter((currentBookId) => currentBookId !== bookId)
+              : [...currentBookIds, bookId],
+          );
+        }}
         saveErrorMessage={saveSubmitError}
-        selectedBookId={selectedSaveBookId}
+        selectedBookIds={selectedSaveBookIds}
         viewState={saveModalState === "idle" ? "loading" : saveModalState}
       />
       <PlannerAddSheet

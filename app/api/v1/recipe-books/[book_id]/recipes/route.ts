@@ -47,10 +47,17 @@ interface RecipeRow {
   title: string;
   thumbnail_url: string | null;
   tags: string[] | null;
+  view_count: number | null;
+  base_servings: number | null;
 }
 
 interface UserRecipeRow extends RecipeRow {
   created_at: string;
+}
+
+interface RecipeStepRow {
+  recipe_id: string;
+  duration_seconds: number | null;
 }
 
 type MaybeSingleResult<T> = PromiseLike<{
@@ -87,6 +94,11 @@ interface RecipesSelectQuery {
   then: ArrayResult<RecipeRow>["then"];
 }
 
+interface RecipeStepsSelectQuery {
+  in(column: string, values: string[]): RecipeStepsSelectQuery;
+  then: ArrayResult<RecipeStepRow>["then"];
+}
+
 interface RecipeBooksTable {
   select(columns: string): RecipeBooksSelectQuery;
 }
@@ -103,11 +115,16 @@ interface RecipesTable {
   select(columns: string): RecipesSelectQuery;
 }
 
+interface RecipeStepsTable {
+  select(columns: string): RecipeStepsSelectQuery;
+}
+
 interface RecipeBookRecipesDbClient {
   from(table: "recipe_books"): RecipeBooksTable;
   from(table: "recipe_book_items"): RecipeBookItemsTable;
   from(table: "recipe_likes"): RecipeLikesTable;
   from(table: "recipes"): RecipesTable;
+  from(table: "recipe_steps"): RecipeStepsTable;
 }
 
 const UUID_PATTERN
@@ -147,6 +164,82 @@ function createEmptyData(): RecipeBookRecipeListData {
     items: [],
     next_cursor: null,
     has_next: false,
+  };
+}
+
+function formatDurationText(totalSeconds: number | null) {
+  if (totalSeconds === null) {
+    return null;
+  }
+
+  const minutes = Math.max(1, Math.round(totalSeconds / 60));
+  return `${minutes}분`;
+}
+
+function buildDurationMap(rows: RecipeStepRow[]) {
+  const durationByRecipeId = new Map<string, number>();
+  const hasDurationByRecipeId = new Set<string>();
+
+  rows.forEach((row) => {
+    if (typeof row.duration_seconds !== "number") {
+      return;
+    }
+
+    hasDurationByRecipeId.add(row.recipe_id);
+    durationByRecipeId.set(
+      row.recipe_id,
+      (durationByRecipeId.get(row.recipe_id) ?? 0) + row.duration_seconds,
+    );
+  });
+
+  return new Map(
+    [...durationByRecipeId.entries()].map(([recipeId, seconds]) => [
+      recipeId,
+      hasDurationByRecipeId.has(recipeId) ? seconds : null,
+    ]),
+  );
+}
+
+async function readDurationMap(dbClient: RecipeBookRecipesDbClient, recipeIds: string[]) {
+  if (recipeIds.length === 0) {
+    return new Map<string, number | null>();
+  }
+
+  const stepsResult = await dbClient
+    .from("recipe_steps")
+    .select("recipe_id, duration_seconds")
+    .in("recipe_id", recipeIds);
+
+  if (stepsResult.error || !stepsResult.data) {
+    return new Map<string, number | null>();
+  }
+
+  return buildDurationMap(stepsResult.data);
+}
+
+function mapRecipeBookItem({
+  recipeId,
+  recipe,
+  addedAt,
+  durationSeconds,
+}: {
+  recipeId: string;
+  recipe: RecipeRow | undefined;
+  addedAt: string;
+  durationSeconds: number | null | undefined;
+}) {
+  const totalDurationSeconds = durationSeconds ?? null;
+
+  return {
+    recipe_id: recipeId,
+    title: recipe?.title ?? "",
+    thumbnail_url: recipe?.thumbnail_url ?? null,
+    tags: recipe?.tags ?? [],
+    view_count: recipe?.view_count ?? 0,
+    total_duration_seconds: totalDurationSeconds,
+    total_duration_text: formatDurationText(totalDurationSeconds),
+    base_servings: recipe?.base_servings ?? 1,
+    added_at: addedAt,
   };
 }
 
@@ -206,7 +299,7 @@ async function readBookSourceRows({
   if (book.book_type === "my_added") {
     const recipesResult = await dbClient
       .from("recipes")
-      .select("id, title, thumbnail_url, tags, created_at")
+      .select("id, title, thumbnail_url, tags, view_count, base_servings, created_at")
       .eq("created_by", userId)
       .in("source_type", ["youtube", "manual"])
       .order("created_at", { ascending: false })
@@ -225,7 +318,12 @@ async function readBookSourceRows({
   return itemsResult;
 }
 
-function mapUserRecipeRows(rows: UserRecipeRow[], cursor: string | null, limit: number) {
+async function mapUserRecipeRows(
+  dbClient: RecipeBookRecipesDbClient,
+  rows: UserRecipeRow[],
+  cursor: string | null,
+  limit: number,
+) {
   const sourceRows = rows.map((row) => ({
     id: row.id,
     recipe_id: row.id,
@@ -233,19 +331,20 @@ function mapUserRecipeRows(rows: UserRecipeRow[], cursor: string | null, limit: 
   }));
   const { pageRows, hasNext, nextCursor } = paginateRows(sourceRows, cursor, limit);
   const recipeMap = new Map(rows.map((row) => [row.id, row]));
+  const durationMap = await readDurationMap(
+    dbClient,
+    [...new Set(pageRows.map((row) => row.recipe_id))],
+  );
 
   return {
-    items: pageRows.map((row) => {
-      const recipe = recipeMap.get(row.recipe_id);
-
-      return {
-        recipe_id: row.recipe_id,
-        title: recipe?.title ?? "",
-        thumbnail_url: recipe?.thumbnail_url ?? null,
-        tags: recipe?.tags ?? [],
-        added_at: row.added_at,
-      };
-    }),
+    items: pageRows.map((row) =>
+      mapRecipeBookItem({
+        recipeId: row.recipe_id,
+        recipe: recipeMap.get(row.recipe_id),
+        addedAt: row.added_at,
+        durationSeconds: durationMap.get(row.recipe_id),
+      }),
+    ),
     next_cursor: nextCursor,
     has_next: hasNext,
   } satisfies RecipeBookRecipeListData;
@@ -277,6 +376,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
             title: detail.title,
             thumbnail_url: detail.thumbnail_url,
             tags: detail.tags,
+            view_count: detail.view_count,
+            total_duration_seconds: detail.steps.reduce(
+              (total, step) => total + (step.duration_seconds ?? 0),
+              0,
+            ),
+            total_duration_text: formatDurationText(
+              detail.steps.reduce((total, step) => total + (step.duration_seconds ?? 0), 0),
+            ),
+            base_servings: detail.base_servings,
             added_at: new Date().toISOString(),
           },
         ]
@@ -345,7 +453,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   if (bookResult.data.book_type === "my_added") {
-    return ok(mapUserRecipeRows(itemsResult.data as UserRecipeRow[], cursor, limit));
+    return ok(await mapUserRecipeRows(
+      dbClient,
+      itemsResult.data as UserRecipeRow[],
+      cursor,
+      limit,
+    ));
   }
 
   const { pageRows: pagedRows, hasNext, nextCursor } = paginateRows(
@@ -361,7 +474,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const recipeIds = [...new Set(pagedRows.map((row) => row.recipe_id))];
   const recipesResult = await dbClient
     .from("recipes")
-    .select("id, title, thumbnail_url, tags")
+    .select("id, title, thumbnail_url, tags, view_count, base_servings")
     .in("id", recipeIds);
 
   if (recipesResult.error || !recipesResult.data) {
@@ -372,19 +485,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
   recipesResult.data.forEach((recipe) => {
     recipeMap.set(recipe.id, recipe);
   });
+  const durationMap = await readDurationMap(dbClient, recipeIds);
 
   return ok({
-    items: pagedRows.map((row) => {
-      const recipe = recipeMap.get(row.recipe_id);
-
-      return {
-        recipe_id: row.recipe_id,
-        title: recipe?.title ?? "",
-        thumbnail_url: recipe?.thumbnail_url ?? null,
-        tags: recipe?.tags ?? [],
-        added_at: row.added_at,
-      };
-    }),
+    items: pagedRows.map((row) =>
+      mapRecipeBookItem({
+        recipeId: row.recipe_id,
+        recipe: recipeMap.get(row.recipe_id),
+        addedAt: row.added_at,
+        durationSeconds: durationMap.get(row.recipe_id),
+      }),
+    ),
     next_cursor: nextCursor,
     has_next: hasNext,
   } satisfies RecipeBookRecipeListData);

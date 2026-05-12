@@ -148,6 +148,9 @@ describe("MenuAddScreen", () => {
           status: "leftover",
           cooked_at: "2026-04-17T00:00:00.000Z",
           eaten_at: null,
+          cooking_servings: 2,
+          source_meal_label: "저녁",
+          source_planned_servings: 2,
         },
       ],
     });

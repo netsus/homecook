@@ -42,14 +42,14 @@ export async function createCustomRecipeBook(name: string) {
   return createdBook;
 }
 
-export async function saveRecipeToBook(recipeId: string, bookId: string) {
+export async function saveRecipeToBooks(recipeId: string, bookIds: string[]) {
   return fetchJson<RecipeSaveData>(`/api/v1/recipes/${recipeId}/save`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      book_id: bookId,
+      book_ids: bookIds,
     }),
   });
 }

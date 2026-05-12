@@ -46,6 +46,7 @@ export interface ShoppingListSummary {
   date_range_start?: string;
   date_range_end?: string;
   is_completed: boolean;
+  completed_at?: string | null;
   item_count?: number;
   created_at: string;
 }
@@ -56,6 +57,7 @@ export interface ShoppingListHistoryItem {
   date_range_start: string;
   date_range_end: string;
   is_completed: boolean;
+  completed_at: string | null;
   item_count: number;
   created_at: string;
 }
