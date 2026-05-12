@@ -87,7 +87,7 @@ describe("Wave1 prototype lock validator", () => {
   it("locks GLOBAL::LoginGateModal as a committed mobile reference pair", () => {
     const rootDir = process.cwd();
 
-    const results = validateLock({ rootDir });
+    const results = validateLock({ rootDir, env: {} });
     const manifest = JSON.parse(
       readFileSync(
         join(rootDir, "ui/designs/reference/wave1-fixed-prototype/manifest.json"),
@@ -119,7 +119,7 @@ describe("Wave1 prototype lock validator", () => {
   it("passes the committed lock when manifest screenshots exist", () => {
     const rootDir = createFixture();
 
-    const results = validateLock({ rootDir });
+    const results = validateLock({ rootDir, env: {} });
 
     expect(results).toEqual([]);
   });
