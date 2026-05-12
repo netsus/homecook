@@ -1,0 +1,51 @@
+{
+  "slice": "wave1-port-leftovers-ate-core",
+  "fixed_prototype_sha": "9bf7a34c6b422d0c9981d4c2968e3350d5a28892",
+  "reference_images": [
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-leftovers.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-leftovers.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-390-ate-list.png",
+    "ui/designs/reference/wave1-fixed-prototype/mobile-320-ate-list.png"
+  ],
+  "service_screenshots": [
+    "ui/designs/evidence/wave1-port-leftovers-ate-core/leftovers-default.png",
+    "ui/designs/evidence/wave1-port-leftovers-ate-core/leftovers-narrow.png",
+    "ui/designs/evidence/wave1-port-leftovers-ate-core/ate-list-default.png",
+    "ui/designs/evidence/wave1-port-leftovers-ate-core/ate-list-narrow.png"
+  ],
+  "screenshot_diff": {
+    "method": "side-by-side fixed reference PNG versus MVP screenshot review",
+    "status": "pass",
+    "unclassified_visual_differences": 0
+  },
+  "computed_style_audit": {
+    "status": "pass",
+    "checks": [
+      "mobile app bar height and border",
+      "background colors",
+      "card border and radius",
+      "button fill, border, and hierarchy",
+      "typography scale and weights",
+      "bottom tab placement",
+      "ATE floating action placement"
+    ]
+  },
+  "dom_geometry_audit": {
+    "status": "pass",
+    "checks": [
+      "LEFTOVERS summary block placement",
+      "LEFTOVERS 390px and 320px card density",
+      "LEFTOVERS planner/eat CTA grid",
+      "ATE_LIST card row geometry",
+      "ATE_LIST 390px and 320px action button alignment",
+      "fixed bottom tab and floating pill spacing"
+    ]
+  },
+  "blocker_count": 0,
+  "unclassified_visual_differences": 0,
+  "classified_followups": [
+    "MVP leftover list items do not expose planner meal label or serving count, so mobile meta copy stays date-based instead of reproducing the prototype's meal/servings phrase.",
+    "MVP leftover list items may not expose recipe thumbnail URLs, so null thumbnails use the existing fallback food tile instead of prototype-specific bitmap thumbnails.",
+    "Shared bottom-tab pantry icon shape remains inherited from the already-merged Wave1 mobile navigation component and is outside this LEFTOVERS/ATE branch."
+  ]
+}

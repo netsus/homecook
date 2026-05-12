@@ -6,7 +6,11 @@ export default async function LeftoversPage() {
   const user = await getServerAuthUser();
 
   return (
-    <AppShell currentTab="planner" headerMode="hidden">
+    <AppShell
+      className="wave1-leftovers-shell"
+      currentTab="planner"
+      headerMode="hidden"
+    >
       <LeftoversScreen initialAuthenticated={Boolean(user)} />
     </AppShell>
   );
