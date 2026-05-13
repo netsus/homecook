@@ -111,6 +111,74 @@ function PlannerAddModal({ open, recipeId, defaultDate, defaultCol, onClose, onC
   );
 }
 
+/* ---------------- Planned servings confirm (menu add pickers) ---------------- */
+function PlannedServingsConfirmModal({ open, recipe, defaultDate, defaultCol, onClose, onConfirm }) {
+  const [dateISO, setDate] = useStateM(defaultDate || DM.TODAY_ISO);
+  const [col, setCol] = useStateM(defaultCol || "col-d");
+  const [servings, setServings] = useStateM(recipe?.baseServings || 2);
+  const bodyRef = useRefM(null);
+
+  useEffectM(() => {
+    if (!open) return;
+    setDate(defaultDate || DM.TODAY_ISO);
+    setCol(defaultCol || "col-d");
+    setServings(recipe?.baseServings || 2);
+    window.setTimeout(() => bodyRef.current?.querySelector(".date-chip")?.focus(), 0);
+  }, [open, defaultDate, defaultCol, recipe?.id]);
+
+  if (!recipe) return null;
+
+  return (
+    <DialogM
+      open={open}
+      onClose={onClose}
+      narrow
+      title="끼니로 추가"
+      helper="날짜와 인분을 확인하세요"
+      footer={<>
+        <ButtonM variant="ghost" onClick={onClose}>취소</ButtonM>
+        <ButtonM
+          variant="primary"
+          leftIcon="cal"
+          onClick={() => onConfirm({ recipeId: recipe.id, date: dateISO, col, servings })}
+        >
+          플래너에 추가
+        </ButtonM>
+      </>}
+    >
+      <div className="servings-confirm" ref={bodyRef}>
+        <div className="servings-confirm-preview">
+          <div className="servings-confirm-thumb">
+            {recipe.photo && <img src={recipe.photo} alt={recipe.title} onError={(e) => { e.currentTarget.style.display = "none"; }} />}
+          </div>
+          <div className="servings-confirm-copy">
+            <div className="servings-confirm-title">{recipe.title}</div>
+            <div className="servings-confirm-meta tabular">
+              {recipe.cookTime || 30}분 · 기본 {recipe.baseServings || 2}인분
+            </div>
+          </div>
+        </div>
+        <div className="form-row">
+          <label className="form-label">요일</label>
+          <DateChipRailM value={dateISO} onChange={setDate} dates={DM.WEEK_DATES} />
+        </div>
+        <div className="form-row">
+          <label className="form-label">끼니</label>
+          <SegmentedRowM
+            value={col}
+            onChange={setCol}
+            options={DM.MEAL_COLUMNS.map(c => ({ value: c.id, label: c.name }))}
+          />
+        </div>
+        <div className="form-row form-row-inline">
+          <label className="form-label">먹을 인분</label>
+          <StepperM value={servings} onChange={setServings} min={1} max={10} unit="인분" />
+        </div>
+      </div>
+    </DialogM>
+  );
+}
+
 /* ---------------- INGREDIENT_FILTER_MODAL ---------------- */
 function IngredientFilterModal({ open, savedFilters, onClose, onApply }) {
   const [tab, setTab] = useStateM("전체");
@@ -182,6 +250,109 @@ function iconForCat(c) {
   if (c === "양념") return "seasoning";
   if (c === "곡물") return "grain";
   return "egg";
+}
+
+/* ---------------- Manual recipe ingredient picker ---------------- */
+function IngredientPickerModal_ManualCreate({ open, existingIds, onClose, onConfirm }) {
+  const [tab, setTab] = useStateM("전체");
+  const [picked, setPicked] = useStateM(new Set());
+  const [query, setQuery] = useStateM("");
+  const searchRef = useRefM(null);
+  const existing = useMemoM(() => new Set(existingIds || []), [existingIds]);
+
+  useEffectM(() => {
+    if (!open) return;
+    setPicked(new Set());
+    setQuery("");
+    setTab("전체");
+    window.setTimeout(() => searchRef.current?.focus(), 0);
+  }, [open]);
+
+  const items = useMemoM(() => {
+    let list = DM.INGREDIENTS;
+    if (tab !== "전체") list = list.filter(i => i.cat === tab);
+    if (query.trim()) list = list.filter(i => i.name.includes(query.trim()));
+    return list;
+  }, [tab, query]);
+
+  const selected = [...picked].map(id => DM.ING[id]).filter(Boolean);
+  const toggle = (id) => {
+    if (existing.has(id)) return;
+    setPicked(p => {
+      const n = new Set(p);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  return (
+    <DialogM
+      open={open}
+      onClose={onClose}
+      wide
+      title="재료 선택"
+      helper="직접 만든 레시피에 넣을 재료를 고르세요"
+      footer={<>
+        <ButtonM variant="ghost" onClick={onClose}>취소</ButtonM>
+        <ButtonM
+          variant="primary"
+          leftIcon="plus"
+          disabled={picked.size === 0}
+          onClick={() => onConfirm(selected)}
+        >
+          {picked.size}개 재료 추가
+        </ButtonM>
+      </>}
+    >
+      <div className="filter-modal-body manual-ing-picker">
+        <div className="search-bar">
+          <IconM name="search" size={14} color="var(--text-3)" />
+          <input ref={searchRef} type="text" placeholder="재료 이름 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </div>
+
+        <div className="filter-cat-row">
+          {DM.CATEGORIES.map(c => (
+            <ChipM key={c} active={tab === c} onClick={() => setTab(c)}>{c}</ChipM>
+          ))}
+        </div>
+
+        <div className="ing-picker-selected" aria-live="polite">
+          {selected.length === 0 ? (
+            <span className="ing-picker-empty">선택한 재료가 없어요</span>
+          ) : selected.map(i => (
+            <button key={i.id} className="ing-picker-pill" onClick={() => toggle(i.id)}>
+              {i.name} <IconM name="x" size={12} />
+            </button>
+          ))}
+        </div>
+
+        <div className="filter-grid">
+          {items.map(i => {
+            const on = picked.has(i.id);
+            const disabled = existing.has(i.id);
+            return (
+              <button
+                key={i.id}
+                className={`filter-cell manual-ing-cell ${on ? "on" : ""} ${disabled ? "disabled" : ""}`}
+                onClick={() => toggle(i.id)}
+                disabled={disabled}
+              >
+                <IconM name={iconForCat(i.cat)} size={20} />
+                <span className="filter-cell-name">{i.name}</span>
+                {disabled ? (
+                  <span className="filter-cell-sub">추가됨</span>
+                ) : on ? (
+                  <span className="filter-cell-check"><IconM name="check" size={11} /></span>
+                ) : (
+                  <span className="filter-cell-plus"><IconM name="plus" size={11} /></span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </DialogM>
+  );
 }
 
 /* ---------------- Lightbox ---------------- */
@@ -404,6 +575,7 @@ function LogoutModal({ open, provider, onClose, onConfirm }) {
 
 window.HC_MODALS = {
   SaveModal, PlannerAddModal, IngredientFilterModal, Lightbox,
+  PlannedServingsConfirmModal, IngredientPickerModal_ManualCreate,
   PantryAddIngredientModal, PantryAddBundleModal, PantryReflectModal,
   NicknameModal, LogoutModal,
 };
