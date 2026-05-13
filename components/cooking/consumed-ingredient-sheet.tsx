@@ -151,26 +151,21 @@ export function ConsumedIngredientSheet({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] backdrop-blur-[1px] md:items-center md:justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-4 backdrop-blur-[1px]"
       data-testid="consumed-ingredient-sheet"
       onClick={onClose}
     >
       <div
         aria-labelledby="consumed-sheet-title"
         aria-modal="true"
-        className="w-full max-w-md rounded-t-[var(--radius-xl)] border border-[var(--line)] border-t-2 border-t-[var(--brand)] bg-[var(--panel)] shadow-[var(--shadow-3)] md:rounded-[var(--radius-xl)] md:border-t-2 md:border-t-[var(--brand)]"
+        className="w-full max-w-2xl overflow-hidden rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow-3)]"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
       >
-        {/* Grabber */}
-        <div className="flex justify-center pt-2 md:hidden">
-          <div className="h-1 w-9 rounded-sm bg-[var(--line)]" />
-        </div>
-
-        <div className="px-5 pt-3 md:px-6 md:pt-5">
+        <div className="border-b border-[var(--line)] bg-[var(--surface)] px-6 py-5">
           <div className="flex items-center justify-between">
             <h3
-              className="text-base font-bold text-[var(--foreground)]"
+              className="text-xl font-bold tracking-[-0.3px] text-[var(--foreground)]"
               id="consumed-sheet-title"
             >
               소진한 재료를 체크해주세요
@@ -198,18 +193,19 @@ export function ConsumedIngredientSheet({
               </svg>
             </button>
           </div>
-          <p className="mt-1 text-sm text-[var(--muted)]">
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
             체크한 재료가 팬트리에서 제거됩니다.
+            {recipeTitle ? ` 요리: ${recipeTitle}` : null}
           </p>
         </div>
 
         <div
-          className="mt-3 max-h-[60vh] overflow-y-auto px-5 md:px-6"
+          className="max-h-[56vh] overflow-y-auto px-6 py-4"
           data-testid="consumed-ingredient-list"
         >
           {ingredients.map((ing) => (
             <label
-              className="flex cursor-pointer items-center gap-3 border-b border-[var(--line)] py-3 last:border-b-0"
+              className="mb-2 flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3 last:mb-0"
               data-testid="consumed-ingredient-item"
               key={ing.ingredient_id}
             >
@@ -230,9 +226,9 @@ export function ConsumedIngredientSheet({
           ))}
         </div>
 
-        <div className="flex gap-3 px-5 pb-[max(env(safe-area-inset-bottom),16px)] pt-4 md:px-6">
+        <div className="flex gap-3 border-t border-[var(--line)] bg-[var(--surface)] px-6 py-4">
           <button
-            className="flex min-h-11 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] border border-[var(--line)] bg-transparent px-3 text-sm font-semibold text-[var(--muted)]"
+            className="flex min-h-11 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] border border-[var(--line)] bg-transparent px-3 text-sm font-semibold text-[var(--muted)]"
             data-testid="consumed-skip-button"
             onClick={onSkip}
             type="button"
@@ -240,7 +236,7 @@ export function ConsumedIngredientSheet({
             건너뛰기
           </button>
           <button
-            className="flex min-h-11 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--brand)] px-3 text-sm font-bold text-white"
+            className="flex min-h-11 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[var(--radius-md)] bg-[var(--brand)] px-3 text-sm font-bold text-white"
             data-testid="consumed-confirm-button"
             onClick={handleConfirm}
             type="button"

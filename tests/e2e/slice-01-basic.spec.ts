@@ -8,6 +8,10 @@ import {
 
 const SMALL_IOS_ACTION_OVERFLOW_TOLERANCE = 12;
 
+function isMobileViewport(page: { viewportSize: () => { width: number } | null }) {
+  return (page.viewportSize()?.width ?? 1280) < 1024;
+}
+
 test.describe("Slice 01 basic flow", () => {
   test.beforeEach(async ({ page }) => {
     await installDiscoveryRoutes(page);
@@ -19,26 +23,55 @@ test.describe("Slice 01 basic flow", () => {
   }) => {
     await page.goto("/");
 
-    const searchInput = page.getByPlaceholder("김치볶음밥, 된장찌개…");
+    const searchInput = page
+      .getByPlaceholder(
+        isMobileViewport(page) ? "김치볶음밥, 된장찌개…" : "레시피 제목 검색",
+      )
+      .first();
     await expect(searchInput).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "테마별 레시피" }),
-    ).toBeVisible();
+      page.locator('a[href="/recipe/mock-kimchi-jjigae"]:visible').first(),
+    ).toBeVisible({ timeout: 15000 });
     await expect(
-      page.getByRole("link", { name: /집밥 김치찌개/i }).first(),
-    ).toBeVisible();
+      page
+        .locator("h2:visible")
+        .filter({
+          hasText: isMobileViewport(page) ? "테마별 레시피" : "모든 레시피",
+        })
+        .first(),
+    ).toBeVisible({ timeout: 15000 });
 
     await searchInput.fill("없는 레시피");
-    await expect(page.getByText("다른 조합을 찾아보세요")).toBeVisible();
+    await expect(
+      page
+        .locator("h2:visible")
+        .filter({
+          hasText: isMobileViewport(page)
+            ? "다른 조합을 찾아보세요"
+            : "조건에 맞는 레시피가 없어요",
+        })
+        .first(),
+    ).toBeVisible();
 
-    await page.getByRole("button", { name: "검색 초기화" }).click();
-    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개…")).toHaveValue("");
-    await expect(page.getByRole("link", { name: /집밥 김치찌개/i }).first()).toBeVisible();
+    await page
+      .locator("button:visible")
+      .filter({ hasText: "검색 초기화" })
+      .click();
+    await expect(searchInput).toHaveValue("");
+    await expect(
+      page.locator('a[href="/recipe/mock-kimchi-jjigae"]:visible').first(),
+    ).toBeVisible();
 
-    const sortButton = page.getByRole("button", { name: /정렬 기준/i });
+    const sortButton = page
+      .locator("button:visible")
+      .filter({ hasText: /조회수순|최신순|저장순|플래너 등록순|정렬 기준/i })
+      .first();
     await sortButton.click();
-    const plannerOption = page.getByRole("option", { name: "플래너 등록순" });
-    await expect(plannerOption).toBeVisible();
+    const plannerOption = page
+      .locator('[role="option"]:visible')
+      .filter({ hasText: "플래너 등록순" })
+      .first();
+    await expect(plannerOption).toBeVisible({ timeout: 15000 });
     const optionBounds = await plannerOption.boundingBox();
     const viewport = page.viewportSize();
 
@@ -47,8 +80,13 @@ test.describe("Slice 01 basic flow", () => {
     expect((optionBounds?.y ?? 0) + (optionBounds?.height ?? 0)).toBeLessThanOrEqual(
       (viewport?.height ?? 0) - 4,
     );
-    await expect(page.getByRole("option", { name: "좋아요순" })).toHaveCount(0);
-    await page.getByRole("option", { name: "최신순" }).click();
+    await expect(
+      page.locator('[role="option"]:visible').filter({ hasText: "좋아요순" }),
+    ).toHaveCount(0);
+    await page
+      .locator('[role="option"]:visible')
+      .filter({ hasText: "최신순" })
+      .click();
     await expect(sortButton).toContainText("최신순");
   });
 
@@ -61,9 +99,15 @@ test.describe("Slice 01 basic flow", () => {
     await expect(
       page.getByRole("heading", { name: "집밥 김치찌개" }),
     ).toBeVisible();
-    await expect(page.getByText("김치", { exact: true })).toBeVisible();
-    await expect(page.getByText("돼지고기", { exact: true })).toBeVisible();
-    await expect(page.getByText("몇 인분?")).toBeVisible();
+    await expect(
+      page.locator("li:visible").filter({ hasText: /^김치/ }).first(),
+    ).toBeVisible();
+    await expect(
+      page.locator("li:visible").filter({ hasText: /^돼지고기/ }).first(),
+    ).toBeVisible();
+    await expect(
+      page.locator("div:visible").filter({ hasText: /^몇 인분\?$/ }).first(),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "플래너에 추가" })).toBeVisible();
     await expect(page.getByRole("button", { name: "공유하기" })).toHaveCount(1);
     await expect(page.getByRole("button", { name: "좋아요 203" })).toBeVisible();

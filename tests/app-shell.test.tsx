@@ -46,6 +46,20 @@ describe("app shell", () => {
     expect(screen.getByText("content")).toBeTruthy();
   });
 
+  it("can render the shared header only at the web breakpoint", () => {
+    const { container } = render(
+      <AppShell currentTab="home" headerMode="desktop-only">
+        <div>content</div>
+      </AppShell>,
+    );
+
+    const wrapper = container.querySelector(".hidden.lg\\:block");
+    expect(wrapper).toBeTruthy();
+    expect(screen.getByRole("navigation", { name: "데스크탑 주요 메뉴" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "홈" }).getAttribute("aria-current")).toBe("page");
+  });
+
+
   it("applies bottom-safe class when shared bottom tabs are visible", () => {
     const { container } = render(
       <AppShell currentTab="planner">

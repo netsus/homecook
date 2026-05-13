@@ -95,6 +95,18 @@ function buildMeal(overrides: Partial<MealItem> = {}): MealItem {
   };
 }
 
+function visibleText(page: Page, text: string) {
+  return page.getByText(text, { exact: true }).filter({ visible: true }).first();
+}
+
+function visibleTextContaining(page: Page, text: string) {
+  return page.getByText(text).filter({ visible: true }).first();
+}
+
+function visibleTestId(page: Page, testId: string) {
+  return page.getByTestId(testId).filter({ visible: true });
+}
+
 test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
   // ── Unauthorized ──────────────────────────────────────────────────────────
 
@@ -118,8 +130,8 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
 
     await page.goto(MEAL_SCREEN_URL);
 
-    await expect(page.getByText("김치찌개")).toBeVisible();
-    await expect(page.getByText("미역국")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
+    await expect(visibleText(page, "미역국")).toBeVisible();
     // Wave1: status badges removed visually; verify they do NOT appear
     await expect(page.getByLabel("식사 등록 완료")).toHaveCount(0);
     await expect(page.getByLabel("장보기 완료")).toHaveCount(0);
@@ -132,9 +144,9 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     await page.goto(MEAL_SCREEN_URL);
 
     // App bar should have the heading with date info
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.locator("h1:visible").first()).toBeVisible();
     // Should include the slot name in the heading text
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("아침");
+    await expect(page.locator("h1:visible").first()).toContainText("아침");
   });
 
   test("shows empty state when no meals registered for slot", async ({ page }) => {
@@ -143,9 +155,9 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
 
     await page.goto(MEAL_SCREEN_URL);
 
-    await expect(page.getByTestId("meal-screen-empty")).toBeVisible();
-    await expect(page.getByText("이 끼니에 등록된 식사가 없어요.")).toBeVisible();
-    await expect(page.getByTestId("meal-screen-add-cta")).toBeVisible();
+    await expect(visibleTestId(page, "meal-screen-empty")).toBeVisible();
+    await expect(visibleText(page, "이 끼니에 등록된 식사가 없어요.")).toBeVisible();
+    await expect(visibleTestId(page, "meal-screen-add-cta")).toBeVisible();
   });
 
   // ── 식사 추가 CTA ─────────────────────────────────────────────────────────
@@ -156,8 +168,8 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
 
     await page.goto(MEAL_SCREEN_URL);
 
-    await expect(page.getByText("김치찌개")).toBeVisible();
-    await expect(page.getByTestId("meal-screen-add-cta")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
+    await expect(visibleTestId(page, "meal-screen-add-cta")).toBeVisible();
   });
 
   // ── Stepper — registered (no modal) ──────────────────────────────────────
@@ -185,7 +197,7 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     });
 
     await page.goto(MEAL_SCREEN_URL);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
 
     await page.getByRole("button", { name: "인분 증가" }).click();
 
@@ -199,7 +211,7 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     await installMealsListRoute(page, [buildMeal({ planned_servings: 1, status: "registered" })]);
 
     await page.goto(MEAL_SCREEN_URL);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
 
     await expect(page.getByRole("button", { name: "인분 감소" })).toBeDisabled();
   });
@@ -213,12 +225,12 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     await installMealsPatchRoute(page, { ...meal, planned_servings: 3 });
 
     await page.goto(MEAL_SCREEN_URL);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
 
     await page.getByRole("button", { name: "인분 증가" }).click();
 
     await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(page.getByText("상태가 진행된 식사입니다.")).toBeVisible();
+    await expect(visibleTextContaining(page, "상태가 진행된 식사입니다.")).toBeVisible();
   });
 
   test("serving-change confirm calls PATCH and dismisses modal", async ({ page }) => {
@@ -243,12 +255,12 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     });
 
     await page.goto(MEAL_SCREEN_URL);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
 
     await page.getByRole("button", { name: "인분 증가" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
 
-    await page.getByTestId("serving-change-confirm").click();
+    await visibleTestId(page, "serving-change-confirm").click();
 
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect.poll(() => patchRequests.length).toBe(1);
@@ -270,7 +282,7 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     });
 
     await page.goto(MEAL_SCREEN_URL);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
 
     await page.getByRole("button", { name: "인분 감소" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
@@ -288,12 +300,12 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     await installMealsListRoute(page, [buildMeal({ id: "meal-1", recipe_title: "김치찌개" })]);
 
     await page.goto(MEAL_SCREEN_URL);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
 
     await page.getByRole("button", { name: "김치찌개 삭제" }).click();
 
     await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(page.getByText("이 식사를 삭제하시겠어요?")).toBeVisible();
+    await expect(visibleText(page, "이 식사를 삭제하시겠어요?")).toBeVisible();
   });
 
   test("delete confirm removes meal card and shows empty state when last", async ({ page }) => {
@@ -302,15 +314,15 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     await installMealsDeleteRoute(page, "meal-1");
 
     await page.goto(MEAL_SCREEN_URL);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
 
     await page.getByRole("button", { name: "김치찌개 삭제" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
 
-    await page.getByTestId("delete-confirm").click();
+    await visibleTestId(page, "delete-confirm").click();
 
-    await expect(page.getByText("김치찌개")).toHaveCount(0);
-    await expect(page.getByTestId("meal-screen-empty")).toBeVisible();
+    await expect(page.getByText("김치찌개", { exact: true }).filter({ visible: true })).toHaveCount(0);
+    await expect(visibleTestId(page, "meal-screen-empty")).toBeVisible();
   });
 
   test("delete cancel dismisses modal without removing card", async ({ page }) => {
@@ -318,7 +330,7 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     await installMealsListRoute(page, [buildMeal({ id: "meal-1", recipe_title: "김치찌개" })]);
 
     await page.goto(MEAL_SCREEN_URL);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
 
     await page.getByRole("button", { name: "김치찌개 삭제" }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
@@ -326,7 +338,7 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     await page.getByRole("button", { name: "취소" }).click();
 
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
   });
 
   // ── No horizontal overflow ────────────────────────────────────────────────
@@ -339,7 +351,7 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     ]);
 
     await page.goto(MEAL_SCREEN_URL);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
 
     const hasOverflow = await page.evaluate(() => {
       return document.documentElement.scrollWidth > window.innerWidth + 4;
@@ -357,9 +369,9 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     ]);
 
     await page.goto(MEAL_SCREEN_URL);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
 
-    await page.getByTestId("meal-recipe-link-meal-1").click();
+    await visibleTestId(page, "meal-recipe-link-meal-1").click();
 
     await expect(page).toHaveURL(/\/recipe\/recipe-abc/);
   });
@@ -373,9 +385,9 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     ]);
 
     await page.goto(MEAL_SCREEN_URL);
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
 
-    const trashBtn = page.getByTestId("meal-delete-meal-1");
+    const trashBtn = visibleTestId(page, "meal-delete-meal-1");
     await expect(trashBtn).toBeVisible();
     // Should contain an SVG icon (trash), no text "삭제"
     await expect(trashBtn.locator("svg")).toBeVisible();
@@ -394,8 +406,8 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     ]);
 
     await page.goto(MEAL_SCREEN_URL);
-    await expect(page.getByText("김치찌개")).toBeVisible();
-    await expect(page.getByText("파스타")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
+    await expect(visibleText(page, "파스타")).toBeVisible();
 
     // Status badge text should not be present on cards
     await expect(page.getByLabel("식사 등록 완료")).toHaveCount(0);

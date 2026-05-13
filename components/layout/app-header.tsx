@@ -3,9 +3,20 @@ import * as React from "react";
 
 interface AppHeaderProps {
   brandAsPageTitle?: boolean;
+  currentTab?: "home" | "planner" | "pantry" | "mypage";
 }
 
-export function AppHeader({ brandAsPageTitle = false }: AppHeaderProps) {
+const navItems = [
+  { id: "home", href: "/", label: "홈" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이" },
+] as const;
+
+export function AppHeader({
+  brandAsPageTitle = false,
+  currentTab,
+}: AppHeaderProps) {
   const brandLink = (
     <Link
       aria-label="Homecook"
@@ -24,6 +35,28 @@ export function AppHeader({ brandAsPageTitle = false }: AppHeaderProps) {
     >
       <div className="flex min-h-[52px] items-center justify-center px-4 md:min-h-[56px] md:px-6">
         {brandAsPageTitle ? <h1>{brandLink}</h1> : brandLink}
+        <nav aria-label="데스크탑 주요 메뉴" className="hidden items-center gap-1 lg:flex">
+          {navItems.map((item) => {
+            const active = item.id === currentTab;
+
+            return (
+              <Link
+                aria-current={active ? "page" : undefined}
+                className={[
+                  "rounded-[var(--radius-full)] px-4 py-2 text-sm font-semibold transition",
+                  active
+                    ? "bg-[var(--brand-soft)] text-[var(--brand-deep)]"
+                    : "text-[var(--muted)] hover:bg-[var(--surface-fill)] hover:text-[var(--foreground)]",
+                ].join(" ")}
+                href={item.href}
+                key={item.id}
+                prefetch={false}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </header>
   );

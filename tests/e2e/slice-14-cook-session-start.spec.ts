@@ -12,7 +12,7 @@ async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
 }
 
 function isMobileViewport(page: Page) {
-  return (page.viewportSize()?.width ?? 1280) < 768;
+  return (page.viewportSize()?.width ?? 1280) < 1024;
 }
 
 async function mockCookingReadyRoutes(
@@ -148,7 +148,7 @@ test.describe("Slice 14 cook session start", () => {
     await expect(
       page.getByRole("heading", { name: "요리하기" }),
     ).toBeVisible();
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(page.getByText("김치찌개").first()).toBeVisible();
     await expect(page.getByText("된장찌개")).toBeVisible();
     await expect(page.getByText("4인분")).toBeVisible();
     await expect(page.getByText("2인분")).toBeVisible();
@@ -184,7 +184,7 @@ test.describe("Slice 14 cook session start", () => {
 
     await page.goto("/cooking/ready");
 
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(page.getByText("김치찌개").first()).toBeVisible();
 
     const startButtons = page.getByTestId("start-session-button");
     await startButtons.first().click();
@@ -199,7 +199,7 @@ test.describe("Slice 14 cook session start", () => {
 
     await page.goto("/cooking/ready");
 
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(page.getByText("김치찌개").first()).toBeVisible();
 
     const startButtons = page.getByTestId("start-session-button");
     await startButtons.first().click();
@@ -231,7 +231,9 @@ test.describe("Slice 14 cook session start", () => {
 
     await page.goto("/planner");
 
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /김치찌개/ }).first(),
+    ).toBeVisible();
 
     await expect(page.getByRole("link", { name: "요리하기" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "장보기", exact: true })).toBeVisible();

@@ -12,6 +12,7 @@ import {
 import { IngredientFilterModal } from "@/components/home/ingredient-filter-modal";
 import { RecipeCard } from "@/components/home/recipe-card";
 import { ContentState } from "@/components/shared/content-state";
+import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SortDropdown } from "@/components/ui/sort-dropdown";
 import { fetchJson } from "@/lib/api/fetch-json";
@@ -57,7 +58,7 @@ export function HomeScreen() {
   const setAppliedIngredientIds = useDiscoveryFilterStore(
     (state) => state.setAppliedIngredientIds,
   );
-
+  const isDesktopViewport = useDesktopViewport();
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setDebouncedQuery(query);
@@ -208,10 +209,50 @@ export function HomeScreen() {
     setActiveThemeId(null);
   }, []);
 
+  const ingredientFilterModal = (
+    <IngredientFilterModal
+      appliedIngredientIds={appliedIngredientIds}
+      isOpen={isIngredientModalOpen}
+      onApply={applyIngredientFilter}
+      onClose={() => setIngredientModalOpen(false)}
+    />
+  );
+  const shouldRenderWebView =
+    process.env.NODE_ENV !== "test" || isDesktopViewport;
+  const shouldRenderAppView =
+    process.env.NODE_ENV !== "test" || !isDesktopViewport;
+
   return (
     <>
+      {shouldRenderWebView ? (
+      <div className="hidden lg:block">
+        <HomeWebScreen
+          appliedIngredientIds={appliedIngredientIds}
+          clearIngredientFilters={clearIngredientFilters}
+          clearSearch={clearSearch}
+          displayedRecipes={displayedRecipes}
+          hasIngredientFilter={hasIngredientFilter}
+          ingredientState={ingredientState}
+          listTitle={listTitle}
+          onOpenIngredientModal={() => setIngredientModalOpen(true)}
+          onRetry={() => void loadRecipes()}
+          onSelectSort={selectSort}
+          onToggleQuickIngredient={toggleQuickIngredient}
+          query={query}
+          quickIngredients={quickIngredients}
+          screenState={screenState}
+          selectedTheme={selectedTheme}
+          setActiveThemeId={setActiveThemeId}
+          setQuery={setQuery}
+          sort={sort}
+          themes={themes?.themes ?? []}
+          totalRecipeCount={recipes?.items.length ?? 0}
+        />
+      </div>
+      ) : null}
+      {shouldRenderAppView ? (
       <div
-        className="min-h-screen bg-white text-[#212529]"
+        className="min-h-screen bg-white text-[#212529] lg:hidden"
         style={
           {
             "--home-mint": "#2AC1BC",
@@ -345,13 +386,278 @@ export function HomeScreen() {
           <HomeBottomTab />
         </div>
       </div>
-      <IngredientFilterModal
-        appliedIngredientIds={appliedIngredientIds}
-        isOpen={isIngredientModalOpen}
-        onApply={applyIngredientFilter}
-        onClose={() => setIngredientModalOpen(false)}
-      />
+      ) : null}
+      {ingredientFilterModal}
     </>
+  );
+}
+
+function HomeWebScreen({
+  appliedIngredientIds,
+  clearIngredientFilters,
+  clearSearch,
+  displayedRecipes,
+  hasIngredientFilter,
+  ingredientState,
+  listTitle,
+  onOpenIngredientModal,
+  onRetry,
+  onSelectSort,
+  onToggleQuickIngredient,
+  query,
+  quickIngredients,
+  screenState,
+  selectedTheme,
+  setActiveThemeId,
+  setQuery,
+  sort,
+  themes,
+  totalRecipeCount,
+}: {
+  appliedIngredientIds: string[];
+  clearIngredientFilters: () => void;
+  clearSearch: () => void;
+  displayedRecipes: RecipeListData["items"];
+  hasIngredientFilter: boolean;
+  ingredientState: AsyncState;
+  listTitle: string;
+  onOpenIngredientModal: () => void;
+  onRetry: () => void;
+  onSelectSort: (nextSort: string) => void;
+  onToggleQuickIngredient: (ingredientId: string) => void;
+  query: string;
+  quickIngredients: IngredientItem[];
+  screenState: ScreenState;
+  selectedTheme: RecipeTheme | null;
+  setActiveThemeId: (themeId: string | null) => void;
+  setQuery: (query: string) => void;
+  sort: RecipeSortKey;
+  themes: RecipeTheme[];
+  totalRecipeCount: number;
+}) {
+  const showEmptyState = screenState === "empty" && displayedRecipes.length === 0;
+
+  return (
+    <div className="min-h-screen bg-[var(--surface-fill)] text-[var(--foreground)]">
+      <div className="mx-auto max-w-[1200px] px-8 pb-16 pt-8">
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="rounded-[24px] border border-[var(--line)] bg-[var(--panel)] p-8 shadow-[var(--shadow-1)]">
+            <div className="max-w-2xl">
+              <p className="text-xs font-bold tracking-[-0.3px] text-[var(--foreground)]">
+                레시피 탐색
+              </p>
+              <h1 className="mt-3 text-[42px] font-black leading-[1.08] tracking-[-0.02em] text-[var(--foreground)]">
+                오늘 뭐 먹지?
+              </h1>
+              <p className="mt-3 text-base leading-7 text-[var(--text-2)]">
+                레시피 제목으로 찾고, 재료 필터로 지금 만들 수 있는 메뉴를 좁혀보세요.
+              </p>
+            </div>
+
+            <div className="mt-7 flex gap-3">
+              <label className="flex min-h-14 flex-1 items-center gap-3 rounded-[18px] border border-[var(--line)] bg-[var(--surface)] px-5 shadow-[var(--shadow-1)] focus-within:border-[var(--brand)]">
+                <SearchIcon />
+                <span className="visually-hidden">레시피 제목 검색</span>
+                <input
+                  className="w-full bg-transparent text-[15px] font-medium outline-none placeholder:text-[var(--muted)]"
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setActiveThemeId(null);
+                  }}
+                  placeholder="레시피 제목 검색"
+                  value={query}
+                />
+              </label>
+              <button
+                className="inline-flex min-h-14 items-center gap-2 rounded-[18px] bg-[var(--foreground)] px-5 text-sm font-bold text-white shadow-[var(--shadow-1)] transition hover:bg-[var(--brand-deep)]"
+                onClick={onOpenIngredientModal}
+                type="button"
+              >
+                <SearchSmallIcon color="currentColor" />
+                재료로 검색
+              </button>
+            </div>
+
+            <div className="mt-5">
+              <QuickIngredientRail
+                appliedIngredientIds={appliedIngredientIds}
+                ingredients={quickIngredients}
+                isLoading={ingredientState === "loading"}
+                onClear={clearIngredientFilters}
+                onOpenModal={onOpenIngredientModal}
+                onToggle={onToggleQuickIngredient}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-[var(--line)] bg-[var(--panel)] p-6 shadow-[var(--shadow-1)]">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--muted)]">
+              이번 주 식단
+            </p>
+            <h2 className="mt-3 text-2xl font-black tracking-[-0.02em]">
+              플래너로 이어가기
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-2)]">
+              마음에 드는 레시피를 저장하고 바로 끼니에 연결할 수 있어요.
+            </p>
+            <Link
+              className="mt-6 inline-flex w-full items-center justify-center rounded-[16px] bg-[var(--foreground)] px-4 py-3 text-sm font-bold text-white transition hover:bg-[var(--brand-deep)]"
+              href="/planner"
+              prefetch={false}
+            >
+              플래너 열기
+            </Link>
+          </div>
+        </section>
+
+        {themes.length > 0 ? (
+          <section className="mt-10">
+            <div className="mb-4 flex items-end justify-between">
+              <div>
+                <h2 className="text-2xl font-black tracking-[-0.02em]">
+                  이번 주 인기 테마
+                </h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  사진 중심 카드로 빠르게 둘러보세요.
+                </p>
+              </div>
+              {selectedTheme ? (
+                <button
+                  className="rounded-[var(--radius-full)] border border-[var(--line)] bg-[var(--panel)] px-4 py-2 text-sm font-bold text-[var(--text-2)]"
+                  onClick={() => setActiveThemeId(null)}
+                  type="button"
+                >
+                  전체 보기
+                </button>
+              ) : null}
+            </div>
+            <div className="grid gap-4 lg:grid-cols-4">
+              {themes.slice(0, 4).map((theme, index) => (
+                <button
+                  aria-pressed={selectedTheme?.id === theme.id}
+                  className={[
+                    "group overflow-hidden rounded-[18px] border bg-[var(--panel)] text-left shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgba(0,0,0,0.10)]",
+                    selectedTheme?.id === theme.id
+                      ? "border-[var(--brand)]"
+                      : "border-[var(--line)]",
+                  ].join(" ")}
+                  key={theme.id}
+                  onClick={() => setActiveThemeId(theme.id)}
+                  type="button"
+                >
+                  <div
+                    className="relative aspect-[4/3] overflow-hidden bg-[#EAEDEF]"
+                    style={
+                      theme.recipes[0]?.thumbnail_url
+                        ? {
+                            backgroundImage: `url(${theme.recipes[0].thumbnail_url})`,
+                            backgroundPosition: "center",
+                            backgroundSize: "cover",
+                          }
+                        : undefined
+                    }
+                  >
+                    {theme.recipes[0]?.thumbnail_url ? (
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-0 bg-cover bg-center transition duration-300 group-hover:scale-105"
+                        style={{
+                          backgroundImage: `url(${theme.recipes[0].thumbnail_url})`,
+                        }}
+                      />
+                    ) : (
+                      <span className="grid h-full place-items-center text-5xl">
+                        {["🍳", "🥘", "🥗", "🍚"][index % 4]}
+                      </span>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent p-4 text-white">
+                      <div className="text-lg font-black">{theme.title}</div>
+                      <div className="mt-1 text-xs font-semibold opacity-85">
+                        {theme.recipes.length}개 레시피
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <section className="mt-10">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-black tracking-[-0.02em]">
+                {listTitle}
+              </h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                {displayedRecipes.length}개 표시
+                {totalRecipeCount ? ` · 전체 ${totalRecipeCount}개` : ""}
+              </p>
+            </div>
+            <SortDropdown
+              label="정렬 기준"
+              onChange={onSelectSort}
+              options={SORT_OPTIONS}
+              value={sort}
+            />
+          </div>
+
+          {screenState === "loading" ? (
+            <RecipeGridSkeleton />
+          ) : null}
+
+          {screenState === "error" ? (
+            <ContentState
+              actionLabel="다시 시도"
+              description="네트워크 연결이나 API 설정을 확인한 뒤 다시 불러올 수 있어요."
+              eyebrow="목록 동기화 오류"
+              onAction={onRetry}
+              tone="error"
+              title="레시피를 불러오지 못했어요"
+            />
+          ) : null}
+
+          {screenState === "ready" && displayedRecipes.length ? (
+            <div className="grid gap-5 lg:grid-cols-4">
+              {displayedRecipes.map((recipe) => (
+                <RecipeCard key={recipe.id} recipe={recipe} />
+              ))}
+            </div>
+          ) : null}
+
+          {showEmptyState ? (
+            <ContentState
+              actionLabel={hasIngredientFilter ? "초기화" : "검색 초기화"}
+              description="다른 키워드나 재료 조합으로 다시 찾아보세요."
+              eyebrow="다른 조합"
+              onAction={hasIngredientFilter ? clearIngredientFilters : clearSearch}
+              tone="empty"
+              title="조건에 맞는 레시피가 없어요"
+            />
+          ) : null}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function RecipeGridSkeleton() {
+  return (
+    <div className="grid gap-5 lg:grid-cols-4">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div
+          className="overflow-hidden rounded-[18px] border border-[var(--line)] bg-[var(--panel)]"
+          key={`web-recipe-skeleton-${index}`}
+        >
+          <Skeleton className="aspect-[4/3] w-full rounded-none" />
+          <div className="space-y-3 p-4">
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-7 w-full rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 

@@ -40,6 +40,22 @@ vi.mock("@/lib/api/fetch-json", () => ({
   fetchJson: (...args: unknown[]) => fetchJson(...args),
 }));
 
+function installMatchMedia(matches: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(min-width: 1024px)" ? matches : !matches,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe("home screen", () => {
   beforeEach(() => {
     useDiscoveryFilterStore.setState({ appliedIngredientIds: [] });
@@ -71,6 +87,7 @@ describe("home screen", () => {
 
   afterEach(() => {
     cleanup();
+    Reflect.deleteProperty(window, "matchMedia");
     vi.useRealTimers();
     useDiscoveryFilterStore.setState({ appliedIngredientIds: [] });
     window.history.replaceState({}, "", "/");
@@ -86,13 +103,35 @@ describe("home screen", () => {
     expect(screen.getByLabelText("homecook_")).toBeTruthy();
     expect(screen.getByPlaceholderText("김치볶음밥, 된장찌개…")).toBeTruthy();
     expect(screen.getByRole("button", { name: "양파" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /재료로 검색/ })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /재료로 검색/ })).toHaveLength(1);
     expect(
       screen.getByRole("heading", { level: 2, name: "테마별 레시피" }),
     ).toBeTruthy();
     expect(screen.getByRole("link", { name: /이번 주 식단 플래너/ })).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "HOME 하단 탭" })).toBeTruthy();
     expect(screen.getByRole("heading", { level: 2, name: "모든 레시피" })).toBeTruthy();
+  });
+
+  it("renders the desktop HOME discovery layout at the web breakpoint", async () => {
+    installMatchMedia(true);
+
+    render(<HomeScreen />);
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "오늘 뭐 먹지?" }),
+    ).toBeTruthy();
+    expect(screen.getByText("레시피 탐색")).toBeTruthy();
+    expect(screen.getByPlaceholderText("레시피 제목 검색")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "플래너 열기" })).toBeTruthy();
+    expect(
+      screen.getAllByRole("button", { name: /재료로 검색/ }),
+    ).toHaveLength(2);
+    expect(
+      screen.queryByRole("navigation", { name: "HOME 하단 탭" }),
+    ).toBeNull();
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "모든 레시피" }),
+    ).toBeTruthy();
   });
 
   it("applies inline ingredient chips to the URL and recipe query", async () => {

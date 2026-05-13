@@ -123,7 +123,7 @@ function pantryDialog(page: Page) {
 }
 
 function isMobilePage(page: Page) {
-  return (page.viewportSize()?.width ?? 1280) < 768;
+  return (page.viewportSize()?.width ?? 1280) < 1024;
 }
 
 function pantryTitlePattern() {

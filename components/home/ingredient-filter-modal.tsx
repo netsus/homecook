@@ -217,19 +217,19 @@ export function IngredientFilterModal({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-0 backdrop-blur-[1px] md:items-center md:justify-center md:p-4"
+      className="fixed inset-0 z-40 flex items-end bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-0 backdrop-blur-[1px] lg:items-center lg:justify-center lg:p-4"
       onClick={handleClose}
     >
       <div
         aria-labelledby="ingredient-filter-title"
         aria-modal="true"
-        className="flex max-h-[min(88vh,42rem)] w-full flex-col rounded-t-[var(--radius-xl)] border border-[var(--line)] border-t-2 border-t-[var(--brand)] bg-[var(--panel)] shadow-[var(--shadow-3)] md:max-h-[85vh] md:max-w-2xl md:rounded-[var(--radius-xl)] md:border-t-2 md:border-t-[var(--brand)]"
+        className="flex max-h-[min(88vh,42rem)] w-full flex-col rounded-t-[var(--radius-xl)] border border-[var(--line)] border-t-2 border-t-[var(--brand)] bg-[var(--panel)] shadow-[var(--shadow-3)] lg:max-h-[85vh] lg:max-w-2xl lg:rounded-[var(--radius-xl)] lg:border-t-2 lg:border-t-[var(--brand)]"
         onClick={(event) => event.stopPropagation()}
         ref={dialogRef}
         role="dialog"
       >
         <div className="border-b border-[var(--line)] px-5 pb-5 pt-4 md:px-6">
-          <div className="mx-auto h-1 w-9 rounded-sm bg-[var(--line)] md:hidden" />
+          <div className="mx-auto h-1 w-9 rounded-sm bg-[var(--line)] lg:hidden" />
           {/* D2: no eyebrow · D3: icon-only close · closeButtonRef for focus management */}
           <div className="mt-4">
             <ModalHeader

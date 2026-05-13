@@ -420,7 +420,12 @@ export function MenuAddScreen({
     return actionMap[id];
   };
 
-  if (!isDesktopViewport) {
+  const shouldRenderWebView =
+    process.env.NODE_ENV !== "test" || isDesktopViewport;
+  const shouldRenderAppView =
+    process.env.NODE_ENV !== "test" || !isDesktopViewport;
+
+  const mobileContent = (() => {
     if (pickerMode === "search") {
       return (
         <RecipeSearchPicker
@@ -542,85 +547,93 @@ export function MenuAddScreen({
         <Wave1MobileBottomTab ariaLabel="식사 추가 하단 탭" currentTab="planner" />
       </div>
     );
-  }
+  })();
 
   return (
-    <div className="flex h-screen flex-col bg-[var(--background)]">
-      <AppBar onBack={handleBack} />
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
-        <div className="mx-auto max-w-2xl py-4">
-          <p className="text-sm text-[var(--muted)]">
-            레시피를 검색해서 식사에 추가할 수 있어요.
-          </p>
-          <div className="mt-4">
-            <RecipeSearchPicker
-              isCreating={isCreating}
-              onRecipeSelect={handleRecipeSelect}
-              onServingsCancel={handleServingsCancel}
-              onServingsConfirm={handleServingsConfirm}
-              searchInputRef={searchInputRef}
-              selectedRecipe={selectedRecipe}
-            />
-          </div>
-          {creationError && (
-            <div
-              className="mt-4 rounded-[12px] border border-red-300 bg-red-50 p-3 text-sm text-red-700"
-              role="alert"
-            >
-              {creationError}
+    <>
+      {shouldRenderAppView ? (
+        <div className="lg:hidden">{mobileContent}</div>
+      ) : null}
+
+      {shouldRenderWebView ? (
+        <div className="hidden h-screen flex-col bg-[var(--background)] lg:flex">
+          <AppBar onBack={handleBack} />
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
+            <div className="mx-auto max-w-2xl py-4">
+              <p className="text-sm text-[var(--muted)]">
+                레시피를 검색해서 식사에 추가할 수 있어요.
+              </p>
+              <div className="mt-4">
+                <RecipeSearchPicker
+                  isCreating={isCreating}
+                  onRecipeSelect={handleRecipeSelect}
+                  onServingsCancel={handleServingsCancel}
+                  onServingsConfirm={handleServingsConfirm}
+                  searchInputRef={searchInputRef}
+                  selectedRecipe={selectedRecipe}
+                />
+              </div>
+              {creationError && (
+                <div
+                  className="mt-4 rounded-[12px] border border-red-300 bg-red-50 p-3 text-sm text-red-700"
+                  role="alert"
+                >
+                  {creationError}
+                </div>
+              )}
+              <ActionButtons
+                onLeftoverClick={handleLeftoverClick}
+                onManualRecipeClick={handleManualRecipeClick}
+                onPantryClick={handlePantryClick}
+                onRecipeBookClick={handleRecipeBookClick}
+                onSearchClick={handleSearchOptionClick}
+                onYoutubeRecipeClick={handleYoutubeRecipeClick}
+              />
             </div>
+          </div>
+
+          {/* Recipe Book Selector */}
+          {pickerMode === "recipebook-selector" && (
+            <RecipeBookSelector onBookSelect={handleBookSelect} onClose={handleRecipeBookClose} />
           )}
-          <ActionButtons
-            onLeftoverClick={handleLeftoverClick}
-            onManualRecipeClick={handleManualRecipeClick}
-            onPantryClick={handlePantryClick}
-            onRecipeBookClick={handleRecipeBookClick}
-            onSearchClick={handleSearchOptionClick}
-            onYoutubeRecipeClick={handleYoutubeRecipeClick}
-          />
+
+          {/* Recipe Book Detail Picker */}
+          {pickerMode === "recipebook-detail" && selectedBook && (
+            <RecipeBookDetailPicker
+              book={selectedBook}
+              isCreating={isCreating}
+              onBack={handleRecipeBookBack}
+              onRecipeSelect={handleBookRecipeSelect}
+              onServingsCancel={handleBookServingsCancel}
+              onServingsConfirm={handleBookServingsConfirm}
+              selectedRecipe={selectedBookRecipe}
+            />
+          )}
+
+          {/* Pantry Match Picker */}
+          {pickerMode === "pantry" && (
+            <PantryMatchPicker
+              isCreating={isCreating}
+              onClose={handlePantryClose}
+              onRecipeSelect={handlePantryRecipeSelect}
+              onServingsCancel={handlePantryServingsCancel}
+              onServingsConfirm={handlePantryServingsConfirm}
+              selectedRecipe={selectedPantryRecipe}
+            />
+          )}
+
+          {pickerMode === "leftover" && (
+            <LeftoverPicker
+              isCreating={isCreating}
+              onClose={handleLeftoverClose}
+              onLeftoverSelect={handleLeftoverSelect}
+              onServingsCancel={handleLeftoverServingsCancel}
+              onServingsConfirm={handleLeftoverServingsConfirm}
+              selectedLeftover={selectedLeftover}
+            />
+          )}
         </div>
-      </div>
-
-      {/* Recipe Book Selector */}
-      {pickerMode === "recipebook-selector" && (
-        <RecipeBookSelector onBookSelect={handleBookSelect} onClose={handleRecipeBookClose} />
-      )}
-
-      {/* Recipe Book Detail Picker */}
-      {pickerMode === "recipebook-detail" && selectedBook && (
-        <RecipeBookDetailPicker
-          book={selectedBook}
-          isCreating={isCreating}
-          onBack={handleRecipeBookBack}
-          onRecipeSelect={handleBookRecipeSelect}
-          onServingsCancel={handleBookServingsCancel}
-          onServingsConfirm={handleBookServingsConfirm}
-          selectedRecipe={selectedBookRecipe}
-        />
-      )}
-
-      {/* Pantry Match Picker */}
-      {pickerMode === "pantry" && (
-        <PantryMatchPicker
-          isCreating={isCreating}
-          onClose={handlePantryClose}
-          onRecipeSelect={handlePantryRecipeSelect}
-          onServingsCancel={handlePantryServingsCancel}
-          onServingsConfirm={handlePantryServingsConfirm}
-          selectedRecipe={selectedPantryRecipe}
-        />
-      )}
-
-      {pickerMode === "leftover" && (
-        <LeftoverPicker
-          isCreating={isCreating}
-          onClose={handleLeftoverClose}
-          onLeftoverSelect={handleLeftoverSelect}
-          onServingsCancel={handleLeftoverServingsCancel}
-          onServingsConfirm={handleLeftoverServingsConfirm}
-          selectedLeftover={selectedLeftover}
-        />
-      )}
-    </div>
+      ) : null}
+    </>
   );
 }

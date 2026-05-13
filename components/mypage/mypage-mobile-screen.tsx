@@ -100,7 +100,7 @@ export function MypageMobileScreen({
 
   return (
     <div
-      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] md:hidden"
+      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
       style={{ fontFamily: mobileFontFamily }}
     >
       <MobileAppBar

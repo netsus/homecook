@@ -165,7 +165,7 @@ async function installMypageRoutes(
 }
 
 function isMobileViewport(page: Page) {
-  return (page.viewportSize()?.width ?? 1024) < 768;
+  return (page.viewportSize()?.width ?? 1024) < 1024;
 }
 
 async function openRecipebookSurface(page: Page) {

@@ -5,6 +5,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginScreen } from "@/components/auth/login-screen";
+import { WEB_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
 
 const hasSupabasePublicEnv = vi.fn();
 const getSession = vi.fn();
@@ -28,6 +29,22 @@ vi.mock("@/lib/supabase/browser", () => ({
     },
   }),
 }));
+
+function installMatchMedia(matchesDesktop: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === WEB_VIEW_MEDIA_QUERY ? matchesDesktop : !matchesDesktop,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
 
 describe("login screen", () => {
   const replace = vi.fn();
@@ -59,6 +76,7 @@ describe("login screen", () => {
 
   afterEach(() => {
     cleanup();
+    Reflect.deleteProperty(window, "matchMedia");
   });
 
   it("shows the OAuth failure banner when authError is present", () => {
@@ -83,6 +101,24 @@ describe("login screen", () => {
     render(<LoginScreen nextPath="/planner" />);
 
     expect(screen.getByText("social-buttons:/planner")).toBeTruthy();
+  });
+
+  it("renders the desktop web login panel at 1024px and above", () => {
+    installMatchMedia(true);
+
+    render(<LoginScreen nextPath="/planner" />);
+
+    expect(
+      screen.getByRole("heading", {
+        name: "소셜 로그인으로 이어서 진행하세요",
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText("social-buttons:/planner")).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", {
+        name: "홈쿡과 함께오늘 뭐 먹지 정해봐요",
+      }),
+    ).toBeNull();
   });
 
   it("redirects authenticated users away from the login screen", async () => {

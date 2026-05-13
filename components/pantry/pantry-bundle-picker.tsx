@@ -300,22 +300,17 @@ export function PantryBundlePicker({ onAdd, onClose }: PantryBundlePickerProps) 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end bg-black/40"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6"
       onClick={onClose}
     >
       <div
         aria-label="묶음으로 재료 추가"
         aria-modal="true"
-        className="flex w-full flex-col rounded-t-[var(--radius-xl)] bg-[var(--panel)] shadow-[var(--shadow-3)]"
+        className="flex w-full max-w-2xl flex-col rounded-[var(--radius-xl)] bg-[var(--panel)] shadow-[var(--shadow-3)]"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         style={{ maxHeight: "90vh" }}
       >
-        {/* Grabber */}
-        <div className="flex justify-center pt-2">
-          <div className="h-1 w-9 rounded-sm bg-[var(--line)]" />
-        </div>
-
         {/* Header */}
         <div className="px-5 pt-3 pb-3">
           <ModalHeader

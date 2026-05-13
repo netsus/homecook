@@ -513,11 +513,11 @@ export function RecipeBookDetailScreen({
   }
 
   return (
-    <div className="pb-32">
+    <div className="space-y-6 pb-20">
       {renderDetailHeader()}
       <div
         aria-live="polite"
-        className="space-y-2 px-4 pt-4 max-[360px]:space-y-1 max-[360px]:pt-2"
+        className="grid gap-4 lg:grid-cols-2"
         data-testid="recipebook-detail-list"
         role="list"
       >
@@ -591,10 +591,10 @@ function DetailHeader({
   onDeleteRequest,
 }: DetailHeaderProps) {
   return (
-    <div
-      className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3"
-      data-testid="recipebook-detail-header"
-    >
+      <div
+        className="flex items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] px-4 py-4 shadow-[var(--shadow-1)]"
+        data-testid="recipebook-detail-header"
+      >
       <Link
         aria-label="뒤로 가기"
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
@@ -655,7 +655,7 @@ function DetailHeader({
         </div>
       ) : (
         <>
-          <h1 className="min-w-0 flex-1 truncate text-lg font-bold text-[var(--foreground)]">
+          <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-[-0.3px] text-[var(--foreground)]">
             {bookName}
           </h1>
           {canManageBook ? (
@@ -890,7 +890,7 @@ function MobileRecipeBookDetailView({
 }) {
   return (
     <div
-      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] md:hidden"
+      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
       data-testid="recipebook-detail-mobile"
       style={{
         fontFamily:
@@ -1302,38 +1302,38 @@ function RecipeItemCard({
 }: RecipeItemCardProps) {
   return (
     <div
-      className="flex items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface)] p-3 shadow-[var(--shadow-1)] max-[360px]:gap-2 max-[360px]:p-2"
+      className="flex items-center gap-4 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)] transition hover:border-[var(--brand)] hover:shadow-[var(--shadow-2)]"
       data-testid={`recipe-item-${item.recipe_id}`}
       role="listitem"
     >
       <Link
-        className="flex min-w-0 flex-1 items-center gap-3 max-[360px]:gap-2"
+        className="flex min-w-0 flex-1 items-center gap-4"
         href={`/recipe/${item.recipe_id}`}
       >
         {item.thumbnail_url ? (
           <Image
             alt={item.title}
-            className="h-16 w-16 shrink-0 rounded-[var(--radius-md)] object-cover max-[360px]:h-14 max-[360px]:w-14"
-            height={64}
+            className="h-24 w-24 shrink-0 rounded-[var(--radius-md)] object-cover"
+            height={96}
             src={item.thumbnail_url}
             unoptimized
-            width={64}
+            width={96}
           />
         ) : (
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-fill)] text-2xl max-[360px]:h-14 max-[360px]:w-14">
+          <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-fill)] text-3xl">
             🍽️
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-semibold text-[var(--foreground)] max-[360px]:text-sm">
+          <p className="truncate text-lg font-semibold tracking-[-0.3px] text-[var(--foreground)]">
             {item.title}
           </p>
           {item.tags.length > 0 ? (
-            <p className="mt-0.5 truncate text-sm text-[var(--text-3)] max-[360px]:text-xs">
+            <p className="mt-1 truncate text-sm text-[var(--text-3)]">
               {item.tags.join(" · ")}
             </p>
           ) : null}
-          <p className="mt-0.5 truncate text-sm text-[var(--text-3)] max-[360px]:text-xs">
+          <p className="mt-2 truncate text-sm text-[var(--text-3)]">
             조회 {formatRecipeBookMetric(item.view_count)} · {item.total_duration_text ?? "시간 미정"} · {item.base_servings}인분
           </p>
         </div>
@@ -1341,7 +1341,7 @@ function RecipeItemCard({
       {canRemove ? (
         <button
           aria-label={`${item.title} ${removeLabel}`}
-          className="shrink-0 rounded-[var(--radius-md)] border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--text-2)] transition-colors hover:bg-[var(--surface-fill)] disabled:opacity-50 max-[360px]:px-2 max-[360px]:py-1"
+          className="shrink-0 rounded-[var(--radius-md)] border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--text-2)] transition-colors hover:bg-[var(--surface-fill)] disabled:opacity-50"
           disabled={removing}
           onClick={onRemove}
           type="button"

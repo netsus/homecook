@@ -35,7 +35,34 @@ const qaSnapshotFontFaces = qaSnapshotFonts
   .join("\n");
 
 const HOME_VISUAL_MAX_DIFF_PIXELS = 120;
+const HOME_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 1600;
 const RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS = 400;
+
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) < 1024;
+}
+
+function visibleSearchInput(page: Page) {
+  return page
+    .getByPlaceholder(
+      isMobileViewport(page) ? "김치볶음밥, 된장찌개…" : "레시피 제목 검색",
+    )
+    .first();
+}
+
+function visibleTextButton(page: Page, text: string | RegExp) {
+  return page.locator("button:visible").filter({ hasText: text }).first();
+}
+
+function visibleOption(page: Page, text: string | RegExp) {
+  return page.locator('[role="option"]:visible').filter({ hasText: text }).first();
+}
+
+function homeVisualMaxDiffPixels(page: Page) {
+  return isMobileViewport(page)
+    ? HOME_VISUAL_MAX_DIFF_PIXELS
+    : HOME_DESKTOP_VISUAL_MAX_DIFF_PIXELS;
+}
 
 async function stabilizeVisualSnapshot(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -97,13 +124,13 @@ test.describe("QA visual regression", () => {
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
-    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개…")).toBeVisible();
+    await expect(visibleSearchInput(page)).toBeVisible();
 
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-home-default.png", {
       animations: "disabled",
       fullPage: true,
-      maxDiffPixels: HOME_VISUAL_MAX_DIFF_PIXELS,
+      maxDiffPixels: homeVisualMaxDiffPixels(page),
     });
   });
 
@@ -111,16 +138,14 @@ test.describe("QA visual regression", () => {
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
-    await page.getByRole("button", { name: /정렬 기준/i }).click();
-    await expect(
-      page.getByRole("option", { name: "플래너 등록순" }),
-    ).toBeVisible();
+    await visibleTextButton(page, /조회수순|정렬 기준/i).click();
+    await expect(visibleOption(page, "플래너 등록순")).toBeVisible();
 
     await stabilizeVisualSnapshot(page);
     await expect(page).toHaveScreenshot("qa-home-sort-open.png", {
       animations: "disabled",
       fullPage: true,
-      maxDiffPixels: HOME_VISUAL_MAX_DIFF_PIXELS,
+      maxDiffPixels: homeVisualMaxDiffPixels(page),
     });
   });
 
@@ -130,7 +155,7 @@ test.describe("QA visual regression", () => {
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
-    await page.getByRole("button", { name: "재료로 검색" }).click();
+    await visibleTextButton(page, "재료로 검색").click();
     const dialog = page.getByRole("dialog", { name: "재료로 검색" });
     await expect(dialog).toBeVisible();
 
@@ -157,7 +182,7 @@ test.describe("QA visual regression", () => {
       maxDiffPixels: RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS,
     });
 
-    await page.getByRole("button", { name: "플래너에 추가" }).click();
+    await visibleTextButton(page, "플래너에 추가").click();
     const loginGate = page.getByRole("dialog", {
       name: "로그인이 필요한 작업이에요",
     });

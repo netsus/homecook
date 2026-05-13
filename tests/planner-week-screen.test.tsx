@@ -130,7 +130,7 @@ function setDesktopViewport(enabled: boolean) {
     configurable: true,
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
-      matches: enabled && query === "(min-width: 768px)",
+      matches: enabled && query === "(min-width: 1024px)",
       media: query,
       onchange: null,
       addEventListener: vi.fn(),
@@ -443,6 +443,7 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
 
     const strip = await screen.findByTestId("planner-week-strip-viewport");
     const viewport = primeWeekStripViewport(strip);
@@ -527,6 +528,7 @@ describe("planner week screen", () => {
     await waitFor(() => {
       expect(fetchPlanner).toHaveBeenCalledTimes(1);
     });
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
 
     const strip = screen.getByTestId("planner-week-strip-viewport");
     const viewport = primeWeekStripViewport(strip);

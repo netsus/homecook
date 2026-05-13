@@ -7,6 +7,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ModalHeader } from "@/components/shared/modal-header";
+import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { deleteMeal, fetchMeals, isMealApiError, updateMealServings } from "@/lib/api/meal";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -331,6 +332,163 @@ function MealCard({
   );
 }
 
+function getMealStatusLabel(status: MealListItemData["status"]) {
+  if (status === "shopping_done") {
+    return "장보기 완료";
+  }
+
+  if (status === "cook_done") {
+    return "요리 완료";
+  }
+
+  return "등록";
+}
+
+function MealWebCard({
+  meal,
+  conflictError,
+  isPending,
+  onCreateShopping,
+  onStepDown,
+  onStepUp,
+  onDelete,
+  onRecipeClick,
+  onStartCook,
+}: MealCardProps) {
+  const isMin = meal.planned_servings <= 1;
+
+  return (
+    <article
+      aria-label={`${meal.recipe_title} 식사 카드`}
+      className={`overflow-hidden rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow-1)] transition ${isPending ? "opacity-60" : "hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"}`}
+    >
+      <div className="grid gap-5 p-5 md:grid-cols-[132px_minmax(0,1fr)]">
+        <button
+          aria-label={`${meal.recipe_title} 레시피 보기`}
+          className="relative aspect-square overflow-hidden rounded-[18px] bg-[#EAEDEF]"
+          onClick={onRecipeClick}
+          type="button"
+        >
+          {meal.recipe_thumbnail_url ? (
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${meal.recipe_thumbnail_url})` }}
+            />
+          ) : (
+            <span className="grid h-full place-items-center text-4xl font-black text-[var(--muted)]">
+              {meal.recipe_title.charAt(0)}
+            </span>
+          )}
+        </button>
+
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <span className="inline-flex rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-bold text-[var(--brand-deep)]">
+                {getMealStatusLabel(meal.status)}
+              </span>
+              {meal.is_leftover ? (
+                <span className="ml-2 inline-flex rounded-full bg-[color-mix(in_srgb,var(--olive)_12%,transparent)] px-3 py-1 text-xs font-bold text-[var(--olive)]">
+                  남은요리
+                </span>
+              ) : null}
+              <button
+                className="mt-3 block w-full truncate text-left text-2xl font-black tracking-[-0.02em] text-[var(--foreground)] hover:text-[var(--brand)]"
+                data-testid={`meal-recipe-link-${meal.id}`}
+                onClick={onRecipeClick}
+                type="button"
+              >
+                {meal.recipe_title}
+              </button>
+              <p className="mt-1 text-sm font-semibold text-[var(--muted)]">
+                {meal.planned_servings}인분 계획
+              </p>
+            </div>
+            <button
+              aria-label={`${meal.recipe_title} 삭제`}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-40"
+              data-testid={`meal-delete-${meal.id}`}
+              disabled={isPending}
+              onClick={onDelete}
+              type="button"
+            >
+              <svg fill="none" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
+              </svg>
+            </button>
+          </div>
+
+          <div
+            aria-label="인분 조절"
+            className="mt-5 flex items-center justify-between rounded-[16px] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3"
+            role="group"
+          >
+            <span className="text-sm font-bold text-[var(--text-2)]">계획 인분</span>
+            <div className="flex items-center gap-3">
+              <button
+                aria-label="인분 감소"
+                className="grid h-9 w-9 place-items-center rounded-full bg-[var(--panel)] text-lg font-bold text-[var(--foreground)] shadow-[var(--shadow-1)] disabled:opacity-40"
+                disabled={isMin || isPending}
+                onClick={onStepDown}
+                type="button"
+              >
+                -
+              </button>
+              <span
+                aria-label={`${meal.planned_servings}인분`}
+                aria-live="polite"
+                className="min-w-16 text-center text-lg font-black text-[var(--foreground)]"
+              >
+                {meal.planned_servings}인분
+              </span>
+              <button
+                aria-label="인분 증가"
+                className="grid h-9 w-9 place-items-center rounded-full bg-[var(--brand)] text-lg font-bold text-white shadow-[var(--shadow-1)] disabled:opacity-40"
+                disabled={isPending}
+                onClick={onStepUp}
+                type="button"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            <button
+              className="min-h-11 rounded-[14px] border border-[var(--line)] bg-[var(--panel)] px-3 text-sm font-bold text-[var(--foreground)] hover:border-[var(--brand)]"
+              onClick={onRecipeClick}
+              type="button"
+            >
+              레시피 보기
+            </button>
+            <button
+              className="min-h-11 rounded-[14px] border border-[var(--line)] bg-[var(--panel)] px-3 text-sm font-bold text-[var(--foreground)] hover:border-[var(--brand)]"
+              onClick={onCreateShopping}
+              type="button"
+            >
+              장보기
+            </button>
+            <button
+              className="min-h-11 rounded-[14px] bg-[var(--brand)] px-3 text-sm font-bold text-white hover:brightness-95"
+              onClick={onStartCook}
+              type="button"
+            >
+              요리하기
+            </button>
+          </div>
+
+          {conflictError ? (
+            <p className="mt-4 text-sm font-semibold text-[var(--danger)]" role="alert">
+              {conflictError}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </article>
+  );
+}
+
 // ─── Center modal backdrop + container ───────────────────────────────────────
 
 interface CenterModalProps {
@@ -348,7 +506,7 @@ function CenterModal({ children, onClose, labelledBy }: CenterModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:px-5"
+      className="fixed inset-0 z-50 flex items-end justify-center lg:items-center lg:px-5"
       role="dialog"
       aria-modal="true"
       aria-labelledby={labelledBy}
@@ -362,11 +520,11 @@ function CenterModal({ children, onClose, labelledBy }: CenterModalProps) {
       {/* content */}
       <div
         ref={contentRef}
-        className="relative w-full max-w-sm rounded-t-[20px] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)] md:rounded-[20px] md:p-5"
+        className="relative w-full max-w-sm rounded-t-[20px] bg-white px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-2 shadow-[0_8px_24px_rgba(0,0,0,0.16)] lg:rounded-[20px] lg:p-5"
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-3 flex justify-center md:hidden">
+        <div className="mb-3 flex justify-center lg:hidden">
           <span className="h-1 w-9 rounded-full bg-[#DEE2E6]" />
         </div>
         {children}
@@ -384,6 +542,7 @@ export function MealScreen({
   initialAuthenticated,
 }: MealScreenProps) {
   const router = useRouter();
+  const isDesktopViewport = useDesktopViewport();
 
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
@@ -615,6 +774,10 @@ export function MealScreen({
   );
   const nextPath = buildNextPath(planDate, columnId, slotName);
   const addMealHref = `/menu-add?date=${encodeURIComponent(planDate)}&columnId=${encodeURIComponent(columnId)}${slotName ? `&slot=${encodeURIComponent(slotName)}` : ""}`;
+  const shouldRenderWebView =
+    process.env.NODE_ENV !== "test" || isDesktopViewport;
+  const shouldRenderAppView =
+    process.env.NODE_ENV !== "test" || !isDesktopViewport;
   const navigateToPlanner = useCallback(() => {
     router.replace("/planner");
   }, [router]);
@@ -623,7 +786,7 @@ export function MealScreen({
   if (authState === "unauthorized") {
     return (
       <div
-        className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] md:bg-[var(--background)]"
+        className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] lg:bg-[var(--background)]"
         style={{ paddingBottom: "84px" }}
       >
         <AppBar
@@ -649,11 +812,162 @@ export function MealScreen({
   // ── Main render ───────────────────────────────────────────────────────────
   return (
     <>
-      {/* Full-screen overlay — sits below BottomTabs (z-30) */}
-      <div
-        className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] md:bg-[var(--background)]"
-        style={{ paddingBottom: "84px" }}
-      >
+      {shouldRenderWebView ? (
+        <div className="hidden min-h-screen bg-[var(--surface-fill)] px-8 py-8 text-[var(--foreground)] lg:block">
+          <main className="mx-auto grid max-w-[1200px] gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <section className="min-w-0 space-y-5">
+              <div className="rounded-[24px] border border-[var(--line)] bg-[var(--panel)] p-6 shadow-[var(--shadow-1)]">
+                <button
+                  className="text-sm font-bold text-[var(--brand)]"
+                  onClick={navigateToPlanner}
+                  type="button"
+                >
+                  플래너로 돌아가기
+                </button>
+                <p className="mt-4 text-xs font-bold tracking-[0.2em] text-[var(--brand-deep)]">
+                  끼니 화면
+                </p>
+                <h1 className="mt-2 text-4xl font-black tracking-[-0.02em]">
+                  {titleFull}
+                </h1>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="rounded-full bg-[var(--surface-fill)] px-3 py-1.5 text-sm font-bold text-[var(--text-2)]">
+                    {formatDateLong(planDate)}
+                  </span>
+                  {slotName ? (
+                    <span className="rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-sm font-bold text-[var(--brand-deep)]">
+                      {slotName}
+                    </span>
+                  ) : null}
+                  <span className="rounded-full bg-[var(--surface-fill)] px-3 py-1.5 text-sm font-bold text-[var(--text-2)]">
+                    총 {totalServings}인분
+                  </span>
+                </div>
+              </div>
+
+              {authState === "checking" || screenState === "loading" ? (
+                <div className="grid gap-4">
+                  {Array.from({ length: 2 }).map((_, index) => (
+                    <div
+                      className="rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow-1)]"
+                      key={index}
+                    >
+                      <div className="h-5 w-48 animate-pulse rounded-full bg-[#EAEDEF]" />
+                      <div className="mt-4 h-24 animate-pulse rounded-[18px] bg-[#EAEDEF]" />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {screenState === "error" ? (
+                <div
+                  className="rounded-[24px] border border-[var(--line)] bg-[var(--panel)] p-8 text-center shadow-[var(--shadow-1)]"
+                  data-testid="meal-screen-error"
+                >
+                  <h2 className="text-xl font-black">식사 목록을 불러오지 못했어요.</h2>
+                  {errorMessage ? (
+                    <p className="mt-2 text-sm text-[var(--muted)]">{errorMessage}</p>
+                  ) : null}
+                  <button
+                    className="mt-5 rounded-[14px] bg-[var(--brand)] px-5 py-3 text-sm font-bold text-white"
+                    onClick={() => void loadMeals()}
+                    type="button"
+                  >
+                    다시 시도
+                  </button>
+                </div>
+              ) : null}
+
+              {screenState === "empty" ? (
+                <div
+                  className="rounded-[24px] border border-dashed border-[var(--line)] bg-[var(--panel)] p-10 text-center"
+                  data-testid="meal-screen-empty"
+                >
+                  <h2 className="text-xl font-black">이 끼니에 등록된 식사가 없어요.</h2>
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    레시피 검색, 팬트리 추천, 직접 입력으로 식사를 추가할 수 있어요.
+                  </p>
+                  <button
+                    className="mt-6 inline-flex min-h-12 items-center justify-center rounded-[14px] bg-[var(--brand)] px-6 text-sm font-bold text-white"
+                    data-testid="meal-screen-add-cta"
+                    onClick={() => router.push(addMealHref)}
+                    type="button"
+                  >
+                    + 식사 추가
+                  </button>
+                </div>
+              ) : null}
+
+              {screenState === "ready" ? (
+                <div className="space-y-4">
+                  {meals.map((meal) => (
+                    <MealWebCard
+                      key={meal.id}
+                      conflictError={conflictErrors[meal.id] ?? null}
+                      isPending={pendingMealIds.has(meal.id)}
+                      meal={meal}
+                      onCreateShopping={() => router.push("/shopping/flow")}
+                      onDelete={() => handleDeleteTap(meal.id)}
+                      onRecipeClick={() => router.push(`/recipe/${meal.recipe_id}`)}
+                      onStartCook={() => router.push("/cooking/ready")}
+                      onStepDown={() => handleStepperTap(meal, -1)}
+                      onStepUp={() => handleStepperTap(meal, 1)}
+                    />
+                  ))}
+                  <button
+                    className="flex min-h-12 w-full items-center justify-center rounded-[16px] border border-[var(--brand)] bg-[var(--panel)] text-sm font-bold text-[var(--brand)]"
+                    data-testid="meal-screen-add-cta"
+                    onClick={() => router.push(addMealHref)}
+                    type="button"
+                  >
+                    + 식사 추가
+                  </button>
+                </div>
+              ) : null}
+            </section>
+
+            <aside className="hidden xl:block">
+              <div className="sticky top-28 rounded-[24px] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow-1)]">
+                <p className="text-xs font-bold tracking-[0.2em] text-[var(--brand-deep)]">
+                  SUMMARY
+                </p>
+                <h2 className="mt-2 text-xl font-black">{summaryTitle}</h2>
+                <div className="mt-5 space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-[var(--muted)]">음식</span>
+                    <span className="font-bold">{meals.length}개</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--muted)]">총 인분</span>
+                    <span className="font-bold">{totalServings}인분</span>
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-2">
+                  <button
+                    className="min-h-11 rounded-[14px] bg-[var(--brand)] text-sm font-bold text-white"
+                    onClick={() => router.push(addMealHref)}
+                    type="button"
+                  >
+                    식사 추가
+                  </button>
+                  <button
+                    className="min-h-11 rounded-[14px] border border-[var(--line)] bg-[var(--panel)] text-sm font-bold text-[var(--foreground)]"
+                    onClick={() => router.push("/shopping/flow")}
+                    type="button"
+                  >
+                    장보기 만들기
+                  </button>
+                </div>
+              </div>
+            </aside>
+          </main>
+        </div>
+      ) : null}
+      {shouldRenderAppView ? (
+        <div
+          className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] lg:hidden"
+          style={{ paddingBottom: "84px" }}
+        >
         <AppBar
           titleFull={titleFull}
           titleShort={titleShort}
@@ -763,11 +1077,14 @@ export function MealScreen({
           </div>
         </div>
       </div>
+      ) : null}
 
-      <Wave1MobileBottomTab
-        ariaLabel="식사 화면 하단 탐색"
-        currentTab="planner"
-      />
+      {shouldRenderAppView ? (
+        <Wave1MobileBottomTab
+          ariaLabel="식사 화면 하단 탐색"
+          currentTab="planner"
+        />
+      ) : null}
 
       {/* Serving-change confirmation modal */}
       {modal?.type === "serving-change" ? (

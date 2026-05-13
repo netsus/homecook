@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtonsDeferred } from "@/components/auth/social-login-buttons-deferred";
+import { useViewMode } from "@/components/shared/use-view-mode";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 
@@ -18,6 +19,7 @@ export function LoginScreen({
   nextPath = "/",
 }: LoginScreenProps) {
   const showAuthError = authError === "oauth_failed";
+  const viewMode = useViewMode();
 
   useEffect(() => {
     if (!hasSupabasePublicEnv()) {
@@ -52,6 +54,86 @@ export function LoginScreen({
       subscription.unsubscribe();
     };
   }, [nextPath]);
+
+  if (viewMode === "web") {
+    return (
+      <div className="mx-auto max-w-5xl">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+          <section className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-1)]">
+            <div className="h-full px-6 py-7">
+              <div>
+                <div className="inline-flex rounded-full bg-[var(--surface-fill)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">
+                  Homecook
+                </div>
+                <div className="mt-6 flex h-28 w-28 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--surface-fill)] text-4xl shadow-[var(--shadow-1)]">
+                  집밥
+                </div>
+                <p className="mt-6 text-sm font-semibold tracking-[-0.3px] text-[var(--brand)]">
+                  집밥하는 모든 과정을 함께
+                </p>
+                <h1 className="mt-3 text-3xl font-extrabold tracking-[-0.3px] text-[var(--foreground)]">
+                  오늘의 레시피 흐름을
+                  <br />
+                  같은 자리에서 이어갑니다
+                </h1>
+                <ul className="mt-6 space-y-3 text-sm leading-6 text-[var(--muted)]">
+                  <li>보호 액션은 로그인 후 원래 레시피로 복귀합니다.</li>
+                  <li>네이버, 구글 OAuth 흐름을 같은 기준으로 맞춥니다.</li>
+                  <li>Slice 01에서는 로그인 게이트와 복귀 경험까지 닫습니다.</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] px-6 py-7 shadow-[var(--shadow-1)]">
+            {showAuthError ? (
+              <div className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3 text-sm font-medium text-[var(--foreground)]">
+                로그인에 실패했어요. 다시 시도해주세요.
+              </div>
+            ) : null}
+
+            <p
+              className={`text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand)] ${
+                showAuthError ? "mt-4" : "mt-1"
+              }`}
+            >
+              Login
+            </p>
+            <h2 className="mt-3 text-3xl font-extrabold tracking-[-0.3px] text-[var(--foreground)]">
+              소셜 로그인으로 이어서 진행하세요
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+              로그인 후에는 원래 보고 있던 레시피나 액션 위치로 자연스럽게 돌아옵니다.
+            </p>
+
+            <div className="mt-7">
+              <SocialLoginButtonsDeferred nextPath={nextPath} />
+            </div>
+
+            <div className="mt-8 grid gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] p-4 text-sm text-[var(--muted)]">
+              <div className="flex items-center justify-between gap-3">
+                <span>복귀 경로</span>
+                <strong className="font-semibold text-[var(--foreground)]">
+                  {nextPath === "/" ? "HOME 또는 원래 레시피" : nextPath}
+                </strong>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span>지원 방식</span>
+                <strong className="font-semibold text-[var(--foreground)]">
+                  OAuth + return-to-action
+                </strong>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-wrap gap-3 text-xs font-medium text-[var(--muted)]">
+              <span>이용약관</span>
+              <span>개인정보처리방침</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white text-[var(--wave1-ink)]">

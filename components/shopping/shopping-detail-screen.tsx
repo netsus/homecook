@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
+import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
 import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
 import {
   completeShoppingList,
@@ -55,7 +56,7 @@ export function ShoppingDetailScreen({
       return;
     }
 
-    const query = window.matchMedia("(max-width: 767px)");
+    const query = window.matchMedia(APP_VIEW_MEDIA_QUERY);
     const syncViewport = () => setIsMobileViewport(query.matches);
     syncViewport();
     query.addEventListener("change", syncViewport);
@@ -571,11 +572,16 @@ export function ShoppingDetailScreen({
     );
   }
 
+  const completedCount = purchaseItems.filter((item) => item.is_checked).length;
+  const progressPercent = purchaseItems.length
+    ? Math.round((completedCount / purchaseItems.length) * 100)
+    : 100;
+
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="min-h-screen bg-[var(--background)]">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-[var(--panel)] px-4 py-3 backdrop-blur-lg">
-        <div className="flex items-center justify-between">
+      <header className="sticky top-0 z-10 border-b border-[var(--line)] bg-[var(--panel)] px-6 py-3 backdrop-blur-lg">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
           <button
             onClick={() => {
               if (window.history.length > 1) {
@@ -590,7 +596,7 @@ export function ShoppingDetailScreen({
           >
             <span className="text-lg">←</span>
           </button>
-          <h1 className="text-xl font-extrabold tracking-tight">장보기 상세</h1>
+          <h1 className="text-base font-bold tracking-[-0.3px]">장보기 상세</h1>
           <button
             onClick={handleShare}
             disabled={isSharing}
@@ -605,7 +611,7 @@ export function ShoppingDetailScreen({
 
       {shareToast && (
         <div
-          className={`mx-4 mt-2 rounded-xl px-4 py-3 text-sm font-semibold ${
+          className={`mx-auto mt-4 max-w-6xl rounded-xl px-4 py-3 text-sm font-semibold ${
             shareToast.type === "error"
               ? "bg-red-50 text-red-700"
               : shareToast.type === "empty"
@@ -620,45 +626,53 @@ export function ShoppingDetailScreen({
       )}
 
       {/* Title and date range */}
-      <div className="border-b border-[var(--line)] px-4 py-4">
-        <h2 className="text-lg font-bold">{listDetail.title}</h2>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          <span>생성 {formatDate(listDetail.created_at)}</span>
-          <span className="mx-2">·</span>
-          <span>
-            {formatDateRange(listDetail.date_range_start, listDetail.date_range_end)}
-          </span>
-        </p>
-        {isReadOnly && listDetail.completed_at && (
-          <p className="mt-1 text-sm font-semibold text-[var(--olive)]">
-            ✓ 완료됨 ({formatDate(listDetail.completed_at)})
-          </p>
-        )}
-      </div>
-
-      {/* Read-only notice */}
-      {isReadOnly && (
-        <div className="bg-[color:rgba(46,166,122,0.08)] px-4 py-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-[var(--muted)]">
-              완료된 장보기 기록은 수정할 수 없어요
+      <section className="mx-auto max-w-6xl px-6 py-8">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
+              {isReadOnly ? "Completed Shopping" : "Shopping List"}
             </p>
-            <button
-              className="inline-flex min-h-10 items-center justify-center rounded-full border border-[var(--olive)] bg-white px-4 py-2 text-sm font-bold text-[var(--olive)]"
-              onClick={() => router.push("/planner")}
-              type="button"
-            >
-              플래너로 돌아가기
-            </button>
+            <h2 className="mt-2 text-3xl font-bold tracking-[-0.4px] text-[var(--foreground)]">
+              {listDetail.title}
+            </h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              <span>생성 {formatDate(listDetail.created_at)}</span>
+              <span className="mx-2">·</span>
+              <span>
+                {formatDateRange(listDetail.date_range_start, listDetail.date_range_end)}
+              </span>
+            </p>
+            {isReadOnly && listDetail.completed_at && (
+              <p className="mt-2 text-sm font-semibold text-[var(--olive)]">
+                ✓ 완료됨 ({formatDate(listDetail.completed_at)})
+              </p>
+            )}
           </div>
+
+          {!isReadOnly ? (
+            <div className="min-w-[260px] rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]">
+              <div className="flex items-center justify-between text-sm font-semibold text-[var(--muted)]">
+                <span>진행률</span>
+                <span className="tabular-nums text-[var(--foreground)]">
+                  {completedCount} / {purchaseItems.length} 항목 ({progressPercent}%)
+                </span>
+              </div>
+              <div className="mt-3 h-2 rounded-full bg-[var(--surface-fill)]">
+                <div
+                  className="h-full rounded-full bg-[var(--brand)]"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
-      )}
+      </section>
 
       {/* Main content */}
-      <div className="flex-1 px-4 py-6">
+      <main className="mx-auto grid max-w-6xl gap-8 px-6 pb-28 lg:grid-cols-[minmax(0,1fr)_360px]">
         {/* Empty state */}
         {isEmpty && (
-          <div className="mb-6 text-center">
+          <div className="mb-6 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-8 text-center">
             <p className="mt-3 text-base font-semibold text-[var(--foreground)]">
               팬트리에 이미 있어서
             </p>
@@ -694,65 +708,94 @@ export function ShoppingDetailScreen({
           </div>
         )}
 
-        {/* Purchase section */}
-        {!isEmpty && (
-          <section className="mb-6">
-            <h3 className="mb-3 text-sm font-bold text-[var(--muted)]">
-              {isReadOnly ? "구매한 재료" : "구매할 재료"} ({purchaseItems.length}개)
-            </h3>
-            <div className="space-y-3">
-              {purchaseItems.map((item, index) => (
-                <ShoppingItemCard
-                  key={item.id}
-                  item={item}
-                  isReadOnly={isReadOnly}
-                  isUpdating={updatingItem?.itemId === item.id}
-                  isReordering={isReordering}
-                  onToggleCheck={handleToggleCheck}
-                  onToggleExclude={handleToggleExclude}
-                  onMoveUp={index > 0 ? () => handleMoveItem(item.id, "up") : undefined}
-                  onMoveDown={index < purchaseItems.length - 1 ? () => handleMoveItem(item.id, "down") : undefined}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+        <div className="min-w-0">
+          {!isEmpty && (
+            <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[var(--foreground)]">
+                  {isReadOnly ? "구매한 재료" : "구매할 재료"} ({purchaseItems.length}개)
+                </h3>
+                <span className="text-xs font-semibold text-[var(--muted)]">
+                  체크 · 제외 · 순서 변경
+                </span>
+              </div>
+              <div className="grid gap-3 xl:grid-cols-2">
+                {purchaseItems.map((item, index) => (
+                  <ShoppingItemCard
+                    key={item.id}
+                    item={item}
+                    isReadOnly={isReadOnly}
+                    isUpdating={updatingItem?.itemId === item.id}
+                    isReordering={isReordering}
+                    onToggleCheck={handleToggleCheck}
+                    onToggleExclude={handleToggleExclude}
+                    onMoveUp={index > 0 ? () => handleMoveItem(item.id, "up") : undefined}
+                    onMoveDown={index < purchaseItems.length - 1 ? () => handleMoveItem(item.id, "down") : undefined}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
 
-        {/* Excluded section */}
-        {excludedItems.length > 0 && (
-          <section>
-            <h3 className="mb-3 text-sm font-bold text-[var(--muted)]">
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          {isReadOnly ? (
+            <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[color:rgba(46,166,122,0.08)] p-4">
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                완료된 장보기 기록은 수정할 수 없어요
+              </p>
+              <button
+                className="mt-4 inline-flex min-h-10 items-center justify-center rounded-full border border-[var(--olive)] bg-white px-4 py-2 text-sm font-bold text-[var(--olive)]"
+                onClick={() => router.push("/planner")}
+                type="button"
+              >
+                플래너로 돌아가기
+              </button>
+            </div>
+          ) : (
+            <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
+              <p className="text-sm font-bold text-[var(--foreground)]">
+                장보기를 마쳤나요?
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                완료하면 체크한 재료를 팬트리에 반영할 수 있어요.
+              </p>
+              <button
+                onClick={handleCompleteClick}
+                disabled={isCompleting}
+                className="mt-5 w-full rounded-full bg-[var(--brand)] py-4 text-base font-bold text-white hover:brightness-95 disabled:opacity-50"
+                type="button"
+              >
+                {isCompleting ? "완료 처리 중..." : "장보기 완료"}
+              </button>
+            </div>
+          )}
+
+          <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
+            <h3 className="mb-3 text-sm font-bold text-[var(--foreground)]">
               팬트리 제외 항목 ({excludedItems.length}개)
             </h3>
-            <div className="space-y-3">
-              {excludedItems.map((item) => (
-                <ShoppingItemCard
-                  key={item.id}
-                  item={item}
-                  isReadOnly={isReadOnly}
-                  isUpdating={updatingItem?.itemId === item.id}
-                  onToggleCheck={handleToggleCheck}
-                  onToggleExclude={handleToggleExclude}
-                />
-              ))}
-            </div>
+            {excludedItems.length > 0 ? (
+              <div className="space-y-3">
+                {excludedItems.map((item) => (
+                  <ShoppingItemCard
+                    key={item.id}
+                    item={item}
+                    isReadOnly={isReadOnly}
+                    isUpdating={updatingItem?.itemId === item.id}
+                    onToggleCheck={handleToggleCheck}
+                    onToggleExclude={handleToggleExclude}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm leading-6 text-[var(--muted)]">
+                팬트리에서 제외된 재료가 없어요.
+              </p>
+            )}
           </section>
-        )}
-      </div>
-
-      {/* Complete button */}
-      {!isReadOnly && (
-        <div className="sticky bottom-0 border-t border-[var(--line)] bg-[var(--panel)] px-4 py-4 backdrop-blur-lg">
-          <button
-            onClick={handleCompleteClick}
-            disabled={isCompleting}
-            className="w-full rounded-full bg-[var(--olive)] py-4 text-base font-bold text-white hover:bg-[var(--olive)]/90 disabled:opacity-50"
-            type="button"
-          >
-            {isCompleting ? "완료 처리 중..." : "장보기 완료"}
-          </button>
-        </div>
-      )}
+        </aside>
+      </main>
 
       {/* Pantry reflection popup */}
       {showPantryPopup && listDetail && (

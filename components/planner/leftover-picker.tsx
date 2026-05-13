@@ -94,7 +94,7 @@ function ServingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end bg-black/42 p-4 backdrop-blur-[1px] md:items-center md:justify-center"
+      className="fixed inset-0 z-50 flex items-end bg-black/42 p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
       onClick={onCancel}
     >
       <div
@@ -181,7 +181,7 @@ export function LeftoverPicker({
   return (
     <>
       <div
-        className="fixed inset-0 z-40 flex items-end bg-black/42 p-4 backdrop-blur-[1px] md:items-center md:justify-center"
+        className="fixed inset-0 z-40 flex items-end bg-black/42 p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
         onClick={onClose}
       >
         <div
