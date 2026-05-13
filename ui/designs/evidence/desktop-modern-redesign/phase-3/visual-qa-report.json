@@ -1,0 +1,186 @@
+{
+  "target": "http://127.0.0.1:4174/homecook%20desktop%20prototype.html",
+  "generatedAt": "2026-05-13T15:22:59.468Z",
+  "screenshots": [
+    "login-1024.png",
+    "login-1280.png",
+    "login-1440.png",
+    "login-gate-save-1024.png",
+    "login-gate-save-1280.png",
+    "login-gate-save-1440.png",
+    "login-gate-planner-1024.png",
+    "sort-dropdown-1280.png",
+    "filter-modal-1024.png",
+    "filter-modal-1280.png",
+    "save-modal-1280.png",
+    "planner-add-modal-1280.png",
+    "lightbox-1280.png",
+    "confirm-normal-1280.png",
+    "confirm-destructive-1280.png",
+    "home-after-login-1280.png"
+  ],
+  "assertions": {
+    "login-1024": {
+      "providerCount": 3,
+      "noHorizontalOverflow": true,
+      "cardVisible": true
+    },
+    "login-1280": {
+      "providerCount": 3,
+      "noHorizontalOverflow": true,
+      "cardVisible": true
+    },
+    "login-1440": {
+      "providerCount": 3,
+      "noHorizontalOverflow": true,
+      "cardVisible": true
+    },
+    "login-gate-save-1024": {
+      "providerCount": 3,
+      "focusedProvider": true,
+      "noHorizontalOverflow": true
+    },
+    "login-gate-save-1280": {
+      "providerCount": 3,
+      "focusedProvider": true,
+      "noHorizontalOverflow": true
+    },
+    "login-gate-save-1440": {
+      "providerCount": 3,
+      "focusedProvider": true,
+      "noHorizontalOverflow": true
+    },
+    "login-gate-planner-1024": {
+      "providerCount": 3,
+      "noHorizontalOverflow": true
+    },
+    "sort-dropdown-1280": {
+      "role": "listbox",
+      "optionCount": 4,
+      "expanded": "true",
+      "noHorizontalOverflow": true
+    },
+    "filter-modal-1024": {
+      "searchFocused": true,
+      "cellCount": 26,
+      "noHorizontalOverflow": true
+    },
+    "filter-modal-1280": {
+      "searchFocused": true,
+      "cellCount": 26,
+      "noHorizontalOverflow": true
+    },
+    "save-modal-1280": {
+      "rowCount": 4,
+      "noHorizontalOverflow": true
+    },
+    "planner-add-modal-1280": {
+      "dateChipCount": 7,
+      "segmentedCount": 3,
+      "noHorizontalOverflow": true
+    },
+    "lightbox-1280": {
+      "role": "dialog",
+      "ariaModal": "true",
+      "closeFocused": true,
+      "noHorizontalOverflow": true
+    },
+    "confirm-normal-1280": {
+      "focusedCancel": true,
+      "noHorizontalOverflow": true
+    },
+    "confirm-destructive-1280": {
+      "dangerButton": true,
+      "noHorizontalOverflow": true
+    },
+    "home-after-login-1280": {
+      "avatarAuthed": true,
+      "noHorizontalOverflow": true
+    }
+  },
+  "consoleMessages": [
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1024
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1280
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1440
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1024
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1280
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1440
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1024
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1280
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1024
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1280
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1280
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1280
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1280
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1280
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1280
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "width": 1280
+    }
+  ],
+  "pageErrors": [],
+  "failedRequests": [],
+  "findings": []
+}
