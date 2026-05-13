@@ -1,0 +1,311 @@
+{
+  "baseUrl": "http://127.0.0.1:4173/homecook%20desktop%20prototype.html",
+  "evidenceRoot": "ui/designs/evidence/desktop-modern-redesign/phase-2",
+  "generatedAt": "2026-05-13T14:39:25.209Z",
+  "viewports": [
+    {
+      "viewport": {
+        "name": "1024",
+        "width": 1024,
+        "height": 900
+      },
+      "screenshots": {
+        "home": "ui/designs/evidence/desktop-modern-redesign/phase-2/home-1024.png",
+        "recipeDetail": "ui/designs/evidence/desktop-modern-redesign/phase-2/recipe-detail-1024.png",
+        "plannerWeek": "ui/designs/evidence/desktop-modern-redesign/phase-2/planner-week-1024.png"
+      },
+      "home": {
+        "gridTemplateColumns": "304px 304px 304px",
+        "discoveryTitleFontSize": "28px",
+        "searchRowDirection": "column",
+        "firstCardTop": 875.046875,
+        "firstCardVisibleAboveFold": true,
+        "firstMeta": "ref: <Node>",
+        "metaWrapCount": 0,
+        "metaSamples": [
+          {
+            "text": "홈쿡 오리지널·조회 41.2k·저장 2980",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          },
+          {
+            "text": "홈쿡 오리지널·조회 33.1k·저장 3402",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          },
+          {
+            "text": "홈쿡 오리지널·조회 24.0k·저장 2104",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          },
+          {
+            "text": "홈쿡 오리지널·조회 22.1k·저장 1903",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          },
+          {
+            "text": "홈쿡 오리지널·조회 19.3k·저장 2105",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          }
+        ],
+        "gridColumns": 3
+      },
+      "recipe": {
+        "layoutColumns": "960px",
+        "photoHeight": 420,
+        "railPosition": "static",
+        "tagRowDisplay": "flex",
+        "metricRowDisplay": "flex",
+        "methodPills": 4,
+        "railButtons": [
+          "플래너에 추가",
+          "요리하기"
+        ],
+        "layoutColumnCount": 1
+      },
+      "planner": {
+        "layoutColumns": "260px 668px",
+        "sidePosition": "static",
+        "cellMinHeight": "96px",
+        "todayCellCount": 3,
+        "statusDotCount": 0,
+        "mealBorderLeftWidth": "3px",
+        "mealBorderLeftColor": "rgb(26, 174, 57)",
+        "thumbHeight": 40,
+        "legendMarginTop": "12px",
+        "layoutColumnCount": 2
+      },
+      "console": [
+        {
+          "type": "warning",
+          "text": "You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/"
+        }
+      ],
+      "pageErrors": []
+    },
+    {
+      "viewport": {
+        "name": "1280",
+        "width": 1280,
+        "height": 900
+      },
+      "screenshots": {
+        "home": "ui/designs/evidence/desktop-modern-redesign/phase-2/home-1280.png",
+        "recipeDetail": "ui/designs/evidence/desktop-modern-redesign/phase-2/recipe-detail-1280.png",
+        "plannerWeek": "ui/designs/evidence/desktop-modern-redesign/phase-2/planner-week-1280.png"
+      },
+      "home": {
+        "gridTemplateColumns": "286px 286px 286px 286px",
+        "discoveryTitleFontSize": "28px",
+        "searchRowDirection": "row",
+        "firstCardTop": 819.046875,
+        "firstCardVisibleAboveFold": true,
+        "firstMeta": "ref: <Node>",
+        "metaWrapCount": 0,
+        "metaSamples": [
+          {
+            "text": "홈쿡 오리지널·조회 41.2k·저장 2980",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          },
+          {
+            "text": "홈쿡 오리지널·조회 33.1k·저장 3402",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          },
+          {
+            "text": "홈쿡 오리지널·조회 24.0k·저장 2104",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          },
+          {
+            "text": "홈쿡 오리지널·조회 22.1k·저장 1903",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          },
+          {
+            "text": "홈쿡 오리지널·조회 19.3k·저장 2105",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          }
+        ],
+        "gridColumns": 4
+      },
+      "recipe": {
+        "layoutColumns": "828px 340px",
+        "photoHeight": 420,
+        "railPosition": "sticky",
+        "tagRowDisplay": "flex",
+        "metricRowDisplay": "flex",
+        "methodPills": 4,
+        "railButtons": [
+          "플래너에 추가",
+          "요리하기"
+        ],
+        "layoutColumnCount": 2
+      },
+      "planner": {
+        "layoutColumns": "260px 924px",
+        "sidePosition": "sticky",
+        "cellMinHeight": "96px",
+        "todayCellCount": 3,
+        "statusDotCount": 0,
+        "mealBorderLeftWidth": "3px",
+        "mealBorderLeftColor": "rgb(26, 174, 57)",
+        "thumbHeight": 40,
+        "legendMarginTop": "12px",
+        "layoutColumnCount": 2
+      },
+      "console": [
+        {
+          "type": "warning",
+          "text": "You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/"
+        }
+      ],
+      "pageErrors": []
+    },
+    {
+      "viewport": {
+        "name": "1440",
+        "width": 1440,
+        "height": 900
+      },
+      "screenshots": {
+        "home": "ui/designs/evidence/desktop-modern-redesign/phase-2/home-1440.png",
+        "recipeDetail": "ui/designs/evidence/desktop-modern-redesign/phase-2/recipe-detail-1440.png",
+        "plannerWeek": "ui/designs/evidence/desktop-modern-redesign/phase-2/planner-week-1440.png"
+      },
+      "home": {
+        "gridTemplateColumns": "249.594px 249.594px 249.609px 249.594px 249.609px",
+        "discoveryTitleFontSize": "28px",
+        "searchRowDirection": "row",
+        "firstCardTop": 819.046875,
+        "firstCardVisibleAboveFold": true,
+        "firstMeta": "ref: <Node>",
+        "metaWrapCount": 0,
+        "metaSamples": [
+          {
+            "text": "홈쿡 오리지널·조회 41.2k·저장 2980",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          },
+          {
+            "text": "홈쿡 오리지널·조회 33.1k·저장 3402",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          },
+          {
+            "text": "홈쿡 오리지널·조회 24.0k·저장 2104",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          },
+          {
+            "text": "홈쿡 오리지널·조회 22.1k·저장 1903",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          },
+          {
+            "text": "홈쿡 오리지널·조회 19.3k·저장 2105",
+            "height": 19.5,
+            "scrollHeight": 20,
+            "lineHeight": 19.5,
+            "wraps": false,
+            "display": "block",
+            "whiteSpace": "nowrap"
+          }
+        ],
+        "gridColumns": 5
+      },
+      "recipe": {
+        "layoutColumns": "972px 340px",
+        "photoHeight": 420,
+        "railPosition": "sticky",
+        "tagRowDisplay": "flex",
+        "metricRowDisplay": "flex",
+        "methodPills": 4,
+        "railButtons": [
+          "플래너에 추가",
+          "요리하기"
+        ],
+        "layoutColumnCount": 2
+      },
+      "planner": {
+        "layoutColumns": "260px 1068px",
+        "sidePosition": "sticky",
+        "cellMinHeight": "96px",
+        "todayCellCount": 3,
+        "statusDotCount": 0,
+        "mealBorderLeftWidth": "3px",
+        "mealBorderLeftColor": "rgb(26, 174, 57)",
+        "thumbHeight": 40,
+        "legendMarginTop": "12px",
+        "layoutColumnCount": 2
+      },
+      "console": [
+        {
+          "type": "warning",
+          "text": "You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/"
+        }
+      ],
+      "pageErrors": []
+    }
+  ],
+  "failures": []
+}
