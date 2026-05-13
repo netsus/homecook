@@ -67,42 +67,44 @@ function HomeScreen({ savedSet, onSaveToggle, onOpenRecipe, onOpenFilter, savedF
         <h1 className="discovery-title">오늘 뭐 먹지?</h1>
         <p className="discovery-sub">레시피 제목으로 검색하거나, 재료로 좁혀 보세요.</p>
 
-        <div className={`search-bar ${searchFocused ? "focused" : ""}`}>
-          <Icon name="search" size={18} color="var(--text-3)" />
-          <input
-            type="text"
-            placeholder="레시피 제목 검색"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-          />
-          {query && (
-            <button className="search-clear" onClick={() => setQuery("")}>
-              <Icon name="x" size={14} color="var(--text-3)" />
-            </button>
-          )}
-        </div>
+        <div className="discovery-search-row">
+          <div className={`search-bar ${searchFocused ? "focused" : ""}`}>
+            <Icon name="search" size={18} color="var(--text-3)" />
+            <input
+              type="text"
+              placeholder="레시피 제목 검색"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+            />
+            {query && (
+              <button className="search-clear" onClick={() => setQuery("")}>
+                <Icon name="x" size={14} color="var(--text-3)" />
+              </button>
+            )}
+          </div>
 
-        <div className="discovery-filter-row">
-          <Button variant="secondary" leftIcon="filter" onClick={onOpenFilter}>
-            재료로 검색
-          </Button>
-          {savedFilters && savedFilters.size > 0 && (
-            <div className="discovery-filter-tags">
-              {[...savedFilters].slice(0, 4).map(fid => (
-                <Chip
-                  key={fid}
-                  active
-                  removable
-                  onRemove={() => onSaveToggle?.()}
-                >{D1.ING[fid]?.name || fid}</Chip>
-              ))}
-              {savedFilters.size > 4 && (
-                <span className="tag">+ {savedFilters.size - 4}</span>
-              )}
-            </div>
-          )}
+          <div className="discovery-filter-row">
+            <Button variant="secondary" leftIcon="filter" onClick={onOpenFilter}>
+              재료로 검색
+            </Button>
+            {savedFilters && savedFilters.size > 0 && (
+              <div className="discovery-filter-tags">
+                {[...savedFilters].slice(0, 4).map(fid => (
+                  <Chip
+                    key={fid}
+                    active
+                    removable
+                    onRemove={() => onSaveToggle?.()}
+                  >{D1.ING[fid]?.name || fid}</Chip>
+                ))}
+                {savedFilters.size > 4 && (
+                  <span className="tag">+ {savedFilters.size - 4}</span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

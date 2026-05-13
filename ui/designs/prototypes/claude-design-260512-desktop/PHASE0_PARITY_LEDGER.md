@@ -64,7 +64,7 @@ These overrides intentionally differ from older ledgers:
 | --- | --- | ---: | --- |
 | Phase 0 | Contract and ledger lock | all rows | This document owns the lock. |
 | Phase 1 | Desktop shell, primitives, LoginGate foundation | 8 foundation overlays | Merged as foundation in PR #441; these rows still keep their later full-parity owner phases. |
-| Phase 2 | Anchor screens | 3 owner rows | Open. |
+| Phase 2 | Anchor screens | 3 owner rows | Verified in Phase 2; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-2/`. |
 | Phase 3 | Auth, gates, cross-cutting modals | 9 owner rows | Open except LoginGate foundation. |
 | Phase 4 | Planner, meal, menu add, pickers | 10 owner rows | Open. |
 | Phase 5 | Recipebook, MyPage, settings | 13 owner rows | Open except Recipebooks foundation. |
@@ -76,9 +76,9 @@ These overrides intentionally differ from older ledgers:
 
 | canonical_key | 260512 route/component | 260505 reference | owner phase | current status | required verification |
 | --- | --- | --- | --- | --- | --- |
-| `screen:HOME` | stack `HOME`, `screens-1.jsx::HomeScreen` | `HomeScreen`, `DesktopHome` | Phase 2 | `verified-foundation` | Anchor redesign screenshots at 1024/1280/1440; card metadata no orphan Korean syllable breaks. |
-| `screen:RECIPE_DETAIL` | stack `RECIPE`, `screens-1.jsx::RecipeDetailScreen` | `RecipeDetail`, `DesktopRecipeDetail` | Phase 2 | `verified-foundation` | Anchor detail screenshots; desktop reading/action rail; save/planner/filter/lightbox triggers. |
-| `screen:PLANNER_WEEK` | stack `PLANNER_WEEK`, `screens-2.jsx::PlannerWeekScreen` | `PlannerScreen`, `DesktopPlanner` | Phase 2 | `verified-foundation` | Anchor planner screenshots; planner/settings meal-column contract; grid remains above fold. |
+| `screen:HOME` | stack `HOME`, `screens-1.jsx::HomeScreen` | `HomeScreen`, `DesktopHome` | Phase 2 | `verified` | Evidence: `home-1024.png`, `home-1280.png`, `home-1440.png`, and `visual-qa-report.json`; card metadata has no orphan Korean syllable breaks. |
+| `screen:RECIPE_DETAIL` | stack `RECIPE`, `screens-1.jsx::RecipeDetailScreen` | `RecipeDetail`, `DesktopRecipeDetail` | Phase 2 | `verified` | Evidence: `recipe-detail-1024.png`, `recipe-detail-1280.png`, `recipe-detail-1440.png`, and `visual-qa-report.json`; desktop action rail and modal triggers remain wired. |
+| `screen:PLANNER_WEEK` | stack `PLANNER_WEEK`, `screens-2.jsx::PlannerWeekScreen` | `PlannerScreen`, `DesktopPlanner` | Phase 2 | `verified` | Evidence: `planner-week-1024.png`, `planner-week-1280.png`, `planner-week-1440.png`, and `visual-qa-report.json`; grid remains above fold and status is visible without thumbnail dots. |
 | `screen:LOGIN` | missing dedicated screen; Phase 1 only has `LoginGateDialog` | `LoginScreen`, `DesktopLoginScreen` | Phase 3 | `open` | Dedicated login screen or equivalent desktop auth entry; return-to-action flow proof. |
 | `screen:MEAL` | stack `MEAL`, `screens-3.jsx::MealScreen` | `MealDetailScreen`, `DesktopMealDetailScreen` | Phase 4 | `open` | Meal detail states, delete/serving changes, shopping/cook/recipe links. |
 | `screen:MENU_ADD` | stack `MENU_ADD`, `screens-3.jsx::MenuAddScreen` | `MenuAddScreen`, `DesktopMenuAddScreen` | Phase 4 | `open` | Real picker flows instead of demo toast-only branches. |

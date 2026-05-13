@@ -128,7 +128,7 @@ function PlannerWeekScreen({ meals, onOpenAdd, onOpenMeal, onOpenShopping, state
                   const k = `${d.iso}__${col.id}`;
                   const cellMeals = mealMap[k] || [];
                   return (
-                    <div key={d.iso} className="planner-cell">
+                    <div key={d.iso} className={`planner-cell ${d.iso === D2.TODAY_ISO ? "today-col" : ""}`}>
                       {cellMeals.map(m => {
                         const r = D2.RECIPE[m.recipeId];
                         return (
@@ -136,7 +136,6 @@ function PlannerWeekScreen({ meals, onOpenAdd, onOpenMeal, onOpenShopping, state
                             <div className="planner-meal-thumb">
                               <img src={r?.photo} alt={r?.title}
                                 onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                              <span className={`planner-meal-dot status-${m.status}`} />
                             </div>
                             <div className="planner-meal-title">{r?.title}</div>
                             <div className="planner-meal-meta tabular">{m.servings}인분</div>
