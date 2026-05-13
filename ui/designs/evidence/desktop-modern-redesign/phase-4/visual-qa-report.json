@@ -1,0 +1,266 @@
+{
+  "phase": 4,
+  "generatedAt": "2026-05-13T16:09:29.288Z",
+  "baseUrl": "http://127.0.0.1:4174/homecook%20desktop%20prototype.html",
+  "screenshots": [
+    {
+      "name": "meal-detail-1024",
+      "width": 1024,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/meal-detail-1024.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "\nHOMECOOK탐색플래너팬트리마이페이지 플래너/월 5/11 · 아침요리 완료김치볶음밥5월 11일 · 아침 · 1인분잘 익은 김치를 충분히 볶아 깊은 맛을 끌어낸 김치볶음밥.재료 (1인분 기준)쌀1 공기 팬트리배추김",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "pantryMarksVisible": true,
+        "stepperPresent": true
+      }
+    },
+    {
+      "name": "meal-detail-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/meal-detail-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "\nHOMECOOK탐색플래너팬트리마이페이지 플래너/월 5/11 · 아침요리 완료김치볶음밥5월 11일 · 아침 · 1인분잘 익은 김치를 충분히 볶아 깊은 맛을 끌어낸 김치볶음밥.재료 (1인분 기준)쌀1 공기 팬트리배추김",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "pantryMarksVisible": true,
+        "stepperPresent": true
+      }
+    },
+    {
+      "name": "meal-detail-1440",
+      "width": 1440,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/meal-detail-1440.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "\nHOMECOOK탐색플래너팬트리마이페이지 플래너/월 5/11 · 아침요리 완료김치볶음밥5월 11일 · 아침 · 1인분잘 익은 김치를 충분히 볶아 깊은 맛을 끌어낸 김치볶음밥.재료 (1인분 기준)쌀1 공기 팬트리배추김",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "pantryMarksVisible": true,
+        "stepperPresent": true
+      }
+    },
+    {
+      "name": "menu-add-1024",
+      "width": 1024,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/menu-add-1024.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "\nHOMECOOK탐색플래너팬트리마이페이지JY 플래너/끼니 추가월 5/11 · 아침어디서 레시피를 가져올까요?6가지 입구 중 하나를 골라 진행하세요.레시피 검색제목·재료로 홈쿡 레시피에서 찾기검색하기 레시피북에서 선택",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "menuCards": true
+      }
+    },
+    {
+      "name": "menu-add-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/menu-add-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "\nHOMECOOK탐색플래너팬트리마이페이지JY 플래너/끼니 추가월 5/11 · 아침어디서 레시피를 가져올까요?6가지 입구 중 하나를 골라 진행하세요.레시피 검색제목·재료로 홈쿡 레시피에서 찾기검색하기 레시피북에서 선택",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "menuCards": true
+      }
+    },
+    {
+      "name": "menu-add-1440",
+      "width": 1440,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/menu-add-1440.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "\nHOMECOOK탐색플래너팬트리마이페이지JY 플래너/끼니 추가월 5/11 · 아침어디서 레시피를 가져올까요?6가지 입구 중 하나를 골라 진행하세요.레시피 검색제목·재료로 홈쿡 레시피에서 찾기검색하기 레시피북에서 선택",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "menuCards": true
+      }
+    },
+    {
+      "name": "recipe-search-picker-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/recipe-search-picker-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "레시피 제목 또는 재료 검색",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "searchFocused": true,
+        "cardCount": true
+      }
+    },
+    {
+      "name": "recipe-search-picker-empty-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/recipe-search-picker-empty-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "레시피 제목 또는 재료 검색",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "emptyState": true
+      }
+    },
+    {
+      "name": "servings-confirm-modal-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/servings-confirm-modal-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "월5/11",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "dateChipCount": true,
+        "segmentedCount": true
+      }
+    },
+    {
+      "name": "recipebook-selector-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/recipebook-selector-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "\nHOMECOOK탐색플래너팬트리마이페이지JY 끼니 추가/레시피북에서 선택월 5/11 · 아침레시피북에서 선택북을 고른 뒤 레시피를 선택하면 끼니에 추가할 수 있어요.내가 추가한 레시피12개 레시피저장한 레시피38개 ",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "bookRows": true
+      }
+    },
+    {
+      "name": "recipebook-detail-picker-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/recipebook-detail-picker-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "\nHOMECOOK탐색플래너팬트리마이페이지JY 레시피북에서 선택/내가 추가한 레시피월 5/11 · 아침내가 추가한 레시피12개의 레시피 중 끼니에 추가할 메뉴를 고르세요.김치볶음밥15분 · 1인분소고기 미역국40분 ·",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "pickerModeCards": true
+      }
+    },
+    {
+      "name": "pantry-match-picker-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/pantry-match-picker-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "\nHOMECOOK탐색플래너팬트리마이페이지JY 끼니 추가/팬트리 매칭월 5/11 · 아침팬트리 재료로 고르기지금 보유한 재료와 잘 맞는 레시피를 먼저 보여드려요.김치볶음밥15분 · 1인분100%보유 6/6소불고기30분",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "progressBarVisible": true,
+        "sortedDescending": true
+      }
+    },
+    {
+      "name": "manual-create-1024",
+      "width": 1024,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/manual-create-1024.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "예: 된장찌개",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "nameInputPresent": true,
+        "footerPresent": true
+      }
+    },
+    {
+      "name": "manual-create-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/manual-create-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "예: 된장찌개",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "nameInputPresent": true,
+        "footerPresent": true
+      }
+    },
+    {
+      "name": "ingredient-picker-modal-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/ingredient-picker-modal-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "재료 이름 검색",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "searchFocused": true,
+        "selectedPillBarVisible": true
+      }
+    },
+    {
+      "name": "manual-create-with-ingredients-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/manual-create-with-ingredients-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "\nHOMECOOK탐색플래너팬트리마이페이지JY 끼니 추가/직접 만들기월 5/11 · 아침내 레시피 직접 만들기제목과 재료만 입력해도 끼니로 등록할 수 있어요.기본 정보레시피 이름조리 시간30 분기본 인분2 인분재료양파",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "ingredientRows": true
+      }
+    },
+    {
+      "name": "yt-import-input-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/yt-import-input-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "https://youtube.com/watch?v=...",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "urlInputFocused": true
+      }
+    },
+    {
+      "name": "yt-import-review-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/yt-import-review-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "text-input",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "preFilledTitle": true,
+        "ingredientCount": true
+      }
+    },
+    {
+      "name": "confirm-add-meal-1280",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-4/confirm-add-meal-1280.png",
+      "noHorizontalOverflow": true,
+      "activeElement": "\nHOMECOOK탐색플래너팬트리마이페이지JY주간 플래너5월 11일(월) — 5월 17일(일)이전 주다음 주장보기 미리보기화면 상태기본빈 주이번 주 요약등록된 끼니11개장본 끼니4요리 완료2빠른 추가 오늘 저녁 내일 ",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "failedRequests": [],
+      "assertions": {
+        "toastVisible": true,
+        "returnedPlanner": true
+      }
+    }
+  ],
+  "findings": []
+}
