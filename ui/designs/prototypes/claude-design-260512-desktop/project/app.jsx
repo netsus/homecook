@@ -2,7 +2,7 @@
 const { useState: useStateA, useCallback: useCallbackA, useMemo: useMemoA } = React;
 const HC_ = window.HC;
 const DA = window.HC_DATA;
-const { HomeScreen, RecipeDetailScreen } = window.HC_S1;
+const { LoginScreen, HomeScreen, RecipeDetailScreen } = window.HC_S1;
 const { PlannerWeekScreen, PantryScreen, MyPageScreen, RecipebooksScreen } = window.HC_S2;
 const {
   MealScreen, MenuAddScreen, ShoppingDetailScreen, ShoppingFlowScreen, ShoppingListsScreen,
@@ -46,6 +46,16 @@ function App() {
   const [cookNotice, setCookNotice] = useStateA(false);
   const [account, setAccount] = useStateA(DA.ACCOUNT);
   const [isAuthenticated, setIsAuthenticated] = useStateA(false);
+  const [confirmDialog, setConfirmDialog] = useStateA({
+    open: false,
+    title: "",
+    message: "",
+    confirmLabel: "",
+    cancelLabel: "",
+    destructive: false,
+    icon: "question",
+    onConfirm: null,
+  });
   const [loginGate, setLoginGate] = useStateA({
     open: false,
     actionLabel: "",
@@ -58,6 +68,38 @@ function App() {
   const replace = (entry) => { setStack(s => [...s.slice(0, -1), entry]); window.scrollTo({ top: 0, behavior: "instant" }); };
   const pop = () => { setStack(s => s.length > 1 ? s.slice(0, -1) : s); window.scrollTo({ top: 0, behavior: "instant" }); };
   const goTab = (tab) => { setStack([{ screen: tab }]); window.scrollTo({ top: 0, behavior: "instant" }); };
+
+  const closeConfirm = useCallbackA(() => {
+    setConfirmDialog({
+      open: false,
+      title: "",
+      message: "",
+      confirmLabel: "",
+      cancelLabel: "",
+      destructive: false,
+      icon: "question",
+      onConfirm: null,
+    });
+  }, []);
+
+  const openConfirm = useCallbackA((config) => {
+    setConfirmDialog({
+      open: true,
+      title: config?.title || "확인할까요?",
+      message: config?.message || "",
+      confirmLabel: config?.confirmLabel || "확인",
+      cancelLabel: config?.cancelLabel || "취소",
+      destructive: Boolean(config?.destructive),
+      icon: config?.icon || "question",
+      onConfirm: config?.onConfirm || null,
+    });
+  }, []);
+
+  const completeLogin = useCallbackA((provider, message = "로그인했어요.") => {
+    setIsAuthenticated(true);
+    setAccount(a => ({ ...a, provider: provider || a.provider }));
+    toast(message);
+  }, [toast]);
 
   // Protected actions — desktop LoginGate foundation
   const requireAuth = useCallbackA((config, action) => {
@@ -77,13 +119,12 @@ function App() {
     setLoginGate({ open: false, actionLabel: "", helper: "", resume: null });
   }, []);
 
-  const confirmLoginGate = useCallbackA(() => {
+  const confirmLoginGate = useCallbackA((provider) => {
     const resume = loginGate.resume;
-    setIsAuthenticated(true);
+    completeLogin(provider, "로그인했어요. 작업을 이어갑니다.");
     setLoginGate({ open: false, actionLabel: "", helper: "", resume: null });
-    toast("로그인했어요. 작업을 이어갑니다.");
     if (resume) window.setTimeout(() => resume(), 0);
-  }, [loginGate, toast]);
+  }, [loginGate, completeLogin]);
 
   // Save toggle (from PhotoCard)
   const toggleSave = (rid) => {
@@ -109,6 +150,7 @@ function App() {
   const topTab = (() => {
     const s = cur.screen;
     if (s === "HOME") return "HOME";
+    if (s === "LOGIN") return "";
     if (s === "PLANNER_WEEK" || s === "MEAL" || s === "MENU_ADD") return "PLANNER_WEEK";
     if (s === "PANTRY") return "PANTRY";
     if (s === "MYPAGE" || s === "RECIPEBOOKS" || s === "RECIPEBOOK_DETAIL" || s === "SHOPPING_FLOW" ||
@@ -131,6 +173,14 @@ function App() {
       onStateOverride={setHomeState}
       toast={toast}
     />;
+  } else if (s === "LOGIN") {
+    body = <LoginScreen
+      onLogin={(provider) => {
+        completeLogin(provider);
+        goTab("HOME");
+      }}
+      onGuest={() => goTab("HOME")}
+    />;
   } else if (s === "RECIPE") {
     body = <RecipeDetailScreen
       recipeId={cur.recipeId}
@@ -138,7 +188,10 @@ function App() {
       savedSet={savedSet}
       onSaveToggle={toggleSave}
       onOpenLightbox={(photos, idx) => setLightbox({ open: true, photos, idx })}
-      onOpenPlannerAdd={(rid, servings) => setPlannerAddModal({ open: true, recipeId: rid, date: DA.TODAY_ISO, col: "col-d" })}
+      onOpenPlannerAdd={(rid, servings) => requireAuth({
+        actionLabel: "플래너에 레시피 추가",
+        helper: "플래너에 식단을 등록하려면 로그인이 필요해요.",
+      }, () => setPlannerAddModal({ open: true, recipeId: rid, date: DA.TODAY_ISO, col: "col-d" }))}
       onOpenSave={() => requireAuth({
         actionLabel: "레시피북에 저장",
         helper: "저장할 레시피북을 고르려면 로그인이 필요해요.",
@@ -151,8 +204,13 @@ function App() {
     body = <PlannerWeekScreen
       meals={plannerState === "empty" ? [] : meals}
       onOpenAdd={(date, col, recipeId) => {
-        if (recipeId) setPlannerAddModal({ open: true, recipeId, date: date || DA.TODAY_ISO, col: col || "col-d" });
-        else push({ screen: "MENU_ADD", date, col });
+        requireAuth({
+          actionLabel: recipeId ? "플래너에 레시피 추가" : "플래너에 메뉴 추가",
+          helper: "플래너를 편집하려면 로그인이 필요해요.",
+        }, () => {
+          if (recipeId) setPlannerAddModal({ open: true, recipeId, date: date || DA.TODAY_ISO, col: col || "col-d" });
+          else push({ screen: "MENU_ADD", date, col });
+        });
       }}
       onOpenMeal={(mid) => push({ screen: "MEAL", mealId: mid })}
       onOpenShopping={() => push({ screen: "SHOPPING_DETAIL", listId: "sl1" })}
@@ -166,7 +224,18 @@ function App() {
       onCook={() => setCookNotice(true)}
       onGoShopping={() => push({ screen: "SHOPPING_DETAIL", listId: "sl1" })}
       onGoRecipe={(rid) => push({ screen: "RECIPE", recipeId: rid })}
-      onDelete={(mid) => { setMeals(ms => ms.filter(m => m.id !== mid)); toast("끼니를 삭제했어요"); pop(); }}
+      onDelete={(mid) => openConfirm({
+        title: "끼니를 삭제할까요?",
+        message: "이 플래너 항목만 삭제되며 저장한 레시피와 팬트리는 그대로 유지돼요.",
+        confirmLabel: "삭제",
+        destructive: true,
+        icon: "trash",
+        onConfirm: () => {
+          setMeals(ms => ms.filter(m => m.id !== mid));
+          toast("끼니를 삭제했어요");
+          pop();
+        },
+      })}
       onChangeServings={(mid, v) => setMeals(ms => ms.map(m => m.id === mid ? { ...m, servings: v } : m))}
       toast={toast}
     />;
@@ -263,7 +332,16 @@ function App() {
 
   return (
     <>
-      <HC_.TopNav tab={topTab} onTab={goTab} account={account} />
+      <HC_.TopNav
+        tab={topTab}
+        onTab={goTab}
+        account={account}
+        isAuthenticated={isAuthenticated}
+        onAvatarClick={() => {
+          if (isAuthenticated) goTab("MYPAGE");
+          else if (cur.screen !== "LOGIN") push({ screen: "LOGIN" });
+        }}
+      />
       {body}
 
       <SaveModal
@@ -362,6 +440,21 @@ function App() {
         helper={loginGate.helper}
         onClose={closeLoginGate}
         onConfirm={confirmLoginGate}
+      />
+      <HC_.ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel={confirmDialog.confirmLabel}
+        cancelLabel={confirmDialog.cancelLabel}
+        destructive={confirmDialog.destructive}
+        icon={confirmDialog.icon}
+        onClose={closeConfirm}
+        onConfirm={() => {
+          const fn = confirmDialog.onConfirm;
+          closeConfirm();
+          fn?.();
+        }}
       />
 
       <HC_.Toast bus={toastBus} />

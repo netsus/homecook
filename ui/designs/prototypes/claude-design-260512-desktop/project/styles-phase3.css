@@ -1,0 +1,297 @@
+/* ============================================
+   Phase 3 auth, gates, and cross-cutting modals
+   Scope: LOGIN, LoginGate, SortDropdown, focused modal states
+   Loaded after styles-phase2.css.
+   ============================================ */
+
+.topnav-avatar {
+  border: 1px solid transparent;
+}
+
+.topnav-avatar.guest {
+  background: var(--bg-alt);
+  color: var(--text-2);
+  border-color: var(--line);
+}
+
+.topnav-avatar:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+main.screen.login-screen {
+  max-width: none;
+  min-height: calc(100vh - var(--nav-h));
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--nav-h) + 48px) 24px 72px;
+  background:
+    linear-gradient(180deg, rgba(0, 161, 255, 0.06), rgba(255, 255, 255, 0) 42%),
+    var(--bg-alt);
+}
+
+.login-card {
+  width: min(440px, calc(100vw - 48px));
+  display: grid;
+  gap: 22px;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+
+.login-card-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-1);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.login-card-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.login-card-title {
+  margin: 0;
+  color: var(--text-1);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.32;
+  letter-spacing: 0;
+  word-break: keep-all;
+}
+
+.login-card-sub {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 14px;
+  line-height: 1.55;
+  letter-spacing: 0;
+  word-break: keep-all;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-3);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--divider);
+}
+
+.login-provider:focus-visible,
+.sort-trigger:focus-visible,
+.sort-item:focus-visible,
+.filter-cell:focus-visible,
+.save-row:focus-visible,
+.save-newbook:focus-visible,
+.date-chip:focus-visible,
+.segmented-item:focus-visible,
+.lightbox button:focus-visible,
+.btn-danger:focus-visible,
+.dialog-close:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.login-provider.naver .login-provider-mark {
+  background: #03c75a;
+  color: #fff;
+}
+
+.login-provider.google .login-provider-mark {
+  background: #fff;
+  color: #4285f4;
+  border: 1px solid var(--line);
+}
+
+.sort-dd {
+  position: relative;
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.sort-trigger {
+  min-width: 112px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.sort-trigger:hover,
+.sort-trigger[aria-expanded="true"] {
+  border-color: rgba(0, 0, 0, 0.16);
+  box-shadow: var(--shadow-card);
+}
+
+.sort-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 50;
+  width: 164px;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+
+.sort-item {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 10px;
+  border-radius: var(--r-xs);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-align: left;
+}
+
+.sort-item:hover,
+.sort-item.selected {
+  background: var(--brand-wash);
+  color: var(--brand-deep);
+}
+
+.filter-modal-body .search-bar:focus-within {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(0, 161, 255, 0.12);
+}
+
+.date-chip.active,
+.date-chip.on {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+.date-chip.active .date-chip-dow,
+.date-chip.active .date-chip-num,
+.date-chip.active .date-chip-today,
+.date-chip.on .date-chip-dow,
+.date-chip.on .date-chip-num,
+.date-chip.on .date-chip-today {
+  color: #fff;
+}
+
+.date-chip-num {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-1);
+  letter-spacing: 0;
+}
+
+.date-chip-today {
+  margin-top: 2px;
+  color: var(--brand-deep);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.segmented-item.active,
+.segmented button.active {
+  background: #fff;
+  color: var(--brand);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.confirm-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.confirm-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  background: var(--brand-wash);
+  color: var(--brand-deep);
+}
+
+.confirm-icon.danger {
+  background: rgba(255, 59, 48, 0.08);
+  color: var(--error);
+}
+
+.confirm-message {
+  min-width: 0;
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.6;
+  letter-spacing: 0;
+  word-break: keep-all;
+}
+
+.btn-danger {
+  background: var(--error);
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: #e33128;
+}
+
+.lightbox {
+  outline: none;
+}
+
+.lightbox-counter {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+@media (max-width: 1100px) {
+  .login-card {
+    padding: 28px;
+  }
+
+  .login-card-title {
+    font-size: 22px;
+  }
+}

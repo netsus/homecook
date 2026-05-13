@@ -92,7 +92,7 @@ function Icon({ name, size = 18, stroke = 1.8, fill, color, style, ...rest }) {
 }
 
 /* ---------------- TopNav ---------------- */
-function TopNav({ tab, onTab, account }) {
+function TopNav({ tab, onTab, account, isAuthenticated, onAvatarClick }) {
   const tabs = [
     { id: "HOME",         label: "탐색" },
     { id: "PLANNER_WEEK", label: "플래너" },
@@ -118,8 +118,13 @@ function TopNav({ tab, onTab, account }) {
           ))}
         </nav>
         <div className="topnav-right">
-          <button className="topnav-avatar" title={account?.nickname || ""}>
-            {account?.initials || "JY"}
+          <button
+            className={`topnav-avatar ${isAuthenticated ? "authed" : "guest"}`}
+            title={isAuthenticated ? (account?.nickname || "마이페이지") : "로그인"}
+            aria-label={isAuthenticated ? "마이페이지 열기" : "로그인"}
+            onClick={onAvatarClick}
+          >
+            {isAuthenticated ? (account?.initials || "JY") : <Icon name="user" size={16} />}
           </button>
         </div>
       </div>
@@ -229,6 +234,33 @@ function Dialog({ open, onClose, title, helper, footer, children, wide, narrow, 
 }
 
 /* ---------------- LoginGate (desktop return-to-action) ---------------- */
+const AUTH_PROVIDERS = [
+  { id: "kakao", label: "카카오로 계속하기", mark: "K", className: "kakao" },
+  { id: "naver", label: "네이버로 계속하기", mark: "N", className: "naver" },
+  { id: "google", label: "Google로 계속하기", mark: "G", className: "google" },
+];
+
+function ProviderButtonList({ onSelect, firstButtonRef }) {
+  return (
+    <div className="login-provider-list">
+      {AUTH_PROVIDERS.map((provider, idx) => (
+        <button
+          key={provider.id}
+          ref={idx === 0 ? firstButtonRef : null}
+          className={`login-provider ${provider.className}`}
+          onClick={() => onSelect?.(provider.id)}
+        >
+          <span className="login-provider-main">
+            <span className="login-provider-mark">{provider.mark}</span>
+            {provider.label}
+          </span>
+          <Icon name="chevR" size={14} color="var(--text-3)" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function LoginGateDialog({
   open,
   onClose,
@@ -237,6 +269,12 @@ function LoginGateDialog({
   title = "로그인이 필요해요",
   helper = "로그인하면 방금 하려던 작업을 이어서 완료할 수 있어요.",
 }) {
+  const firstProviderRef = useRefC(null);
+  useEffectC(() => {
+    if (!open) return;
+    window.setTimeout(() => firstProviderRef.current?.focus(), 0);
+  }, [open]);
+
   return (
     <Dialog
       open={open}
@@ -246,7 +284,7 @@ function LoginGateDialog({
       narrow
       footer={<>
         <Button variant="ghost" onClick={onClose}>나중에</Button>
-        <Button variant="primary" leftIcon="user" onClick={onConfirm}>로그인하고 계속</Button>
+        <Button variant="primary" leftIcon="user" onClick={() => onConfirm?.()}>로그인하고 계속</Button>
       </>}
     >
       <div className="login-gate">
@@ -257,25 +295,53 @@ function LoginGateDialog({
             <div className="login-gate-desc">{helper}</div>
           </div>
         </div>
-        <div className="login-provider-list">
-          <button className="login-provider kakao" onClick={onConfirm}>
-            <span className="login-provider-main">
-              <span className="login-provider-mark">K</span>
-              카카오로 계속하기
-            </span>
-            <Icon name="chevR" size={14} color="var(--text-3)" />
-          </button>
-          <button className="login-provider" onClick={onConfirm}>
-            <span className="login-provider-main">
-              <span className="login-provider-mark">G</span>
-              Google로 계속하기
-            </span>
-            <Icon name="chevR" size={14} color="var(--text-3)" />
-          </button>
-        </div>
+        <ProviderButtonList firstButtonRef={firstProviderRef} onSelect={onConfirm} />
         <div className="login-gate-note">
           데모에서는 로그인 후 같은 화면에서 작업을 바로 이어갑니다.
         </div>
+      </div>
+    </Dialog>
+  );
+}
+
+/* ---------------- Confirm dialog ---------------- */
+function ConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  title = "확인할까요?",
+  message,
+  confirmLabel = "확인",
+  cancelLabel = "취소",
+  destructive,
+  icon = "question",
+}) {
+  const cancelRef = useRefC(null);
+  useEffectC(() => {
+    if (!open) return;
+    window.setTimeout(() => cancelRef.current?.focus(), 0);
+  }, [open]);
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={title}
+      narrow
+      footer={<>
+        <button className="btn btn-ghost" ref={cancelRef} onClick={onClose}>{cancelLabel}</button>
+        <button className={`btn ${destructive ? "btn-danger" : "btn-primary"}`} onClick={onConfirm}>
+          {confirmLabel}
+        </button>
+      </>}
+    >
+      <div className="confirm-body">
+        {icon && (
+          <div className={`confirm-icon ${destructive ? "danger" : ""}`}>
+            <Icon name={icon} size={18} />
+          </div>
+        )}
+        <div className="confirm-message">{message}</div>
       </div>
     </Dialog>
   );
@@ -328,6 +394,8 @@ function HomeSkeletonGrid({ rows = 2 }) {
 function SortDropdown({ value, options, onChange }) {
   const [open, setOpen] = useStateC(false);
   const ref = useRefC(null);
+  const triggerRef = useRefC(null);
+  const menuRef = useRefC(null);
   useEffectC(() => {
     if (!open) return;
     const onDoc = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
@@ -335,20 +403,67 @@ function SortDropdown({ value, options, onChange }) {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
   const cur = options.find(o => o.value === value);
+  const focusItem = (idx) => {
+    window.setTimeout(() => {
+      const items = menuRef.current?.querySelectorAll(".sort-item");
+      items?.[idx]?.focus();
+    }, 0);
+  };
+  const selectedIndex = Math.max(0, options.findIndex(o => o.value === value));
+  const openMenu = (idx = selectedIndex) => {
+    setOpen(true);
+    focusItem(idx);
+  };
+  const onTriggerKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+      e.preventDefault();
+      openMenu(e.key === "ArrowDown" ? 0 : selectedIndex);
+    }
+  };
+  const onItemKeyDown = (e, idx, optionValue) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const delta = e.key === "ArrowDown" ? 1 : -1;
+      const next = (idx + delta + options.length) % options.length;
+      focusItem(next);
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onChange(optionValue);
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+  };
+
   return (
     <div className="sort-dd" ref={ref}>
-      <button className="sort-trigger" onClick={() => setOpen(o => !o)}>
+      <button
+        ref={triggerRef}
+        className="sort-trigger"
+        onClick={() => setOpen(o => !o)}
+        onKeyDown={onTriggerKeyDown}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
         <Icon name="sort" size={14} />
         <span>{cur?.label}</span>
         <Icon name="chevD" size={14} />
       </button>
       {open && (
-        <div className="sort-menu">
-          {options.map(o => (
+        <div className="sort-menu" role="listbox" aria-label="정렬 기준" ref={menuRef}>
+          {options.map((o, idx) => (
             <button
               key={o.value}
               className={`sort-item ${o.value === value ? "selected" : ""}`}
+              role="option"
+              aria-selected={o.value === value}
               onClick={() => { onChange(o.value); setOpen(false); }}
+              onKeyDown={(e) => onItemKeyDown(e, idx, o.value)}
             >
               {o.label}
               {o.value === value && <Icon name="check" size={14} color="var(--brand)" />}
@@ -432,6 +547,6 @@ function DateChipRail({ value, onChange, dates }) {
 
 window.HC = {
   Icon, TopNav, Button, Chip, Tag, PhotoCard,
-  Dialog, LoginGateDialog, Toast, StatePanel, HomeSkeletonGrid,
+  Dialog, ProviderButtonList, LoginGateDialog, ConfirmDialog, Toast, StatePanel, HomeSkeletonGrid,
   SortDropdown, Stepper, ScreenHeader, SegmentedRow, DateChipRail,
 };

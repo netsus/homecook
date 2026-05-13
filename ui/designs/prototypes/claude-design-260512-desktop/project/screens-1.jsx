@@ -5,9 +5,32 @@
 const { useState: useS1, useMemo: useMemo1, useEffect: useEffect1, useRef: useRef1 } = React;
 const {
   Icon, Button, Chip, Tag, PhotoCard, Dialog, StatePanel, HomeSkeletonGrid,
-  SortDropdown, Stepper, ScreenHeader,
+  SortDropdown, Stepper, ScreenHeader, ProviderButtonList,
 } = window.HC;
 const D1 = window.HC_DATA;
+
+/* ============================================
+   LOGIN (§auth)
+   ============================================ */
+function LoginScreen({ onLogin, onGuest }) {
+  return (
+    <main className="screen login-screen">
+      <section className="login-card" aria-labelledby="login-title">
+        <div className="login-card-brand">
+          <span className="dot" />
+          HOMECOOK
+        </div>
+        <div className="login-card-copy">
+          <h1 className="login-card-title" id="login-title">집밥 루틴을 이어가려면 로그인하세요</h1>
+          <p className="login-card-sub">저장한 레시피, 플래너, 팬트리를 같은 계정으로 관리할 수 있어요.</p>
+        </div>
+        <ProviderButtonList onSelect={onLogin} />
+        <div className="login-divider"><span>또는</span></div>
+        <Button variant="ghost" full onClick={onGuest}>로그인 없이 둘러보기</Button>
+      </section>
+    </main>
+  );
+}
 
 /* ============================================
    HOME (§1)
@@ -447,4 +470,4 @@ function methodColor(m) {
   return "prep";
 }
 
-window.HC_S1 = { HomeScreen, RecipeDetailScreen };
+window.HC_S1 = { LoginScreen, HomeScreen, RecipeDetailScreen };

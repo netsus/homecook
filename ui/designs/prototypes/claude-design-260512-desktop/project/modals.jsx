@@ -3,7 +3,7 @@
    Modals — Save, PlannerAdd, IngredientFilter, Lightbox,
    PantryAddIngredient, PantryAddBundle, PantryReflect, Nickname, Logout
    ============================================ */
-const { useState: useStateM, useMemo: useMemoM, useEffect: useEffectM } = React;
+const { useState: useStateM, useMemo: useMemoM, useEffect: useEffectM, useRef: useRefM } = React;
 const { Icon: IconM, Button: ButtonM, Chip: ChipM, Dialog: DialogM, SegmentedRow: SegmentedRowM, DateChipRail: DateChipRailM, Stepper: StepperM } = window.HC;
 const DM = window.HC_DATA;
 
@@ -116,7 +116,15 @@ function IngredientFilterModal({ open, savedFilters, onClose, onApply }) {
   const [tab, setTab] = useStateM("전체");
   const [picked, setPicked] = useStateM(new Set());
   const [query, setQuery] = useStateM("");
-  useEffectM(() => { if (open) { setPicked(new Set(savedFilters || [])); setQuery(""); setTab("전체"); } }, [open, savedFilters]);
+  const searchRef = useRefM(null);
+  useEffectM(() => {
+    if (open) {
+      setPicked(new Set(savedFilters || []));
+      setQuery("");
+      setTab("전체");
+      window.setTimeout(() => searchRef.current?.focus(), 0);
+    }
+  }, [open, savedFilters]);
 
   const items = useMemoM(() => {
     let list = DM.INGREDIENTS;
@@ -141,7 +149,7 @@ function IngredientFilterModal({ open, savedFilters, onClose, onApply }) {
       <div className="filter-modal-body">
         <div className="search-bar">
           <IconM name="search" size={14} color="var(--text-3)" />
-          <input type="text" placeholder="재료 이름 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input ref={searchRef} type="text" placeholder="재료 이름 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
 
         <div className="filter-cat-row">
@@ -178,20 +186,33 @@ function iconForCat(c) {
 
 /* ---------------- Lightbox ---------------- */
 function Lightbox({ open, photos, idx, onClose, onNav }) {
+  const closeRef = useRefM(null);
   useEffectM(() => {
     if (!open) return;
+    window.setTimeout(() => closeRef.current?.focus(), 0);
     const h = (e) => {
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowLeft") onNav(-1);
       if (e.key === "ArrowRight") onNav(1);
+      if (e.key === "Tab") {
+        const focusables = [...document.querySelectorAll(".lightbox button")];
+        if (focusables.length === 0) return;
+        const current = document.activeElement;
+        const idx = focusables.indexOf(current);
+        const nextIdx = e.shiftKey
+          ? (idx <= 0 ? focusables.length - 1 : idx - 1)
+          : (idx === focusables.length - 1 ? 0 : idx + 1);
+        e.preventDefault();
+        focusables[nextIdx].focus();
+      }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [open, onClose, onNav]);
   if (!open || !photos || photos.length === 0) return null;
   return (
-    <div className="lightbox" onClick={onClose}>
-      <button className="lightbox-close" onClick={(e) => { e.stopPropagation(); onClose(); }} aria-label="닫기">
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label="사진 보기" onClick={onClose}>
+      <button ref={closeRef} className="lightbox-close" onClick={(e) => { e.stopPropagation(); onClose(); }} aria-label="닫기">
         <IconM name="x" size={20} />
       </button>
       <button className="lightbox-nav lightbox-prev" onClick={(e) => { e.stopPropagation(); onNav(-1); }} aria-label="이전">
