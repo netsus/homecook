@@ -65,7 +65,7 @@ These overrides intentionally differ from older ledgers:
 | Phase 0 | Contract and ledger lock | all rows | This document owns the lock. |
 | Phase 1 | Desktop shell, primitives, LoginGate foundation | 8 foundation overlays | Merged as foundation in PR #441; these rows still keep their later full-parity owner phases. |
 | Phase 2 | Anchor screens | 3 owner rows | Verified in Phase 2; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-2/`. |
-| Phase 3 | Auth, gates, cross-cutting modals | 9 owner rows | Open except LoginGate foundation. |
+| Phase 3 | Auth, gates, cross-cutting modals | 9 owner rows | Verified in Phase 3; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-3/`. |
 | Phase 4 | Planner, meal, menu add, pickers | 10 owner rows | Open. |
 | Phase 5 | Recipebook, MyPage, settings | 13 owner rows | Open except Recipebooks foundation. |
 | Phase 6 | Pantry and shopping | 11 owner rows | Open except pantry foundation. |
@@ -79,7 +79,7 @@ These overrides intentionally differ from older ledgers:
 | `screen:HOME` | stack `HOME`, `screens-1.jsx::HomeScreen` | `HomeScreen`, `DesktopHome` | Phase 2 | `verified` | Evidence: `home-1024.png`, `home-1280.png`, `home-1440.png`, and `visual-qa-report.json`; card metadata has no orphan Korean syllable breaks. |
 | `screen:RECIPE_DETAIL` | stack `RECIPE`, `screens-1.jsx::RecipeDetailScreen` | `RecipeDetail`, `DesktopRecipeDetail` | Phase 2 | `verified` | Evidence: `recipe-detail-1024.png`, `recipe-detail-1280.png`, `recipe-detail-1440.png`, and `visual-qa-report.json`; desktop action rail and modal triggers remain wired. |
 | `screen:PLANNER_WEEK` | stack `PLANNER_WEEK`, `screens-2.jsx::PlannerWeekScreen` | `PlannerScreen`, `DesktopPlanner` | Phase 2 | `verified` | Evidence: `planner-week-1024.png`, `planner-week-1280.png`, `planner-week-1440.png`, and `visual-qa-report.json`; grid remains above fold and status is visible without thumbnail dots. |
-| `screen:LOGIN` | missing dedicated screen; Phase 1 only has `LoginGateDialog` | `LoginScreen`, `DesktopLoginScreen` | Phase 3 | `open` | Dedicated login screen or equivalent desktop auth entry; return-to-action flow proof. |
+| `screen:LOGIN` | stack `LOGIN`, `screens-1.jsx::LoginScreen` | `LoginScreen`, `DesktopLoginScreen` | Phase 3 | `verified` | Evidence: `login-1024.png`, `login-1280.png`, `login-1440.png`, `home-after-login-1280.png`, and `visual-qa-report.json`; provider count 3, no horizontal overflow, avatar auth transition verified. |
 | `screen:MEAL` | stack `MEAL`, `screens-3.jsx::MealScreen` | `MealDetailScreen`, `DesktopMealDetailScreen` | Phase 4 | `open` | Meal detail states, delete/serving changes, shopping/cook/recipe links. |
 | `screen:MENU_ADD` | stack `MENU_ADD`, `screens-3.jsx::MenuAddScreen` | `MenuAddScreen`, `DesktopMenuAddScreen` | Phase 4 | `open` | Real picker flows instead of demo toast-only branches. |
 | `screen:PANTRY` | stack `PANTRY`, `screens-2.jsx::PantryScreen` | `PantryScreen`, `DesktopPantry` | Phase 6 | `verified-foundation` | Full pantry state screenshots, add/bundle/search/filter, empty/held/out states. |
@@ -102,8 +102,8 @@ These overrides intentionally differ from older ledgers:
 
 | canonical_key | host/component | 260505 reference | owner phase | current status | required verification |
 | --- | --- | --- | --- | --- | --- |
-| `surface:HOME::SortDropdown` | `components.jsx::SortDropdown` | `SortSheet` / `HOME_SORT_OPEN_STATE` | Phase 3 | `open` | Desktop dropdown or sheet equivalent; current sort choices and no wrapping. |
-| `surface:HOME::IngredientFilter` | `modals.jsx::IngredientFilterModal` | `IngredientFilterModal`, `DesktopIngredientFilterDialog` | Phase 3 | `open` | Filter modal at desktop width; selected ingredient persistence. |
+| `surface:HOME::SortDropdown` | `components.jsx::SortDropdown` | `SortSheet` / `HOME_SORT_OPEN_STATE` | Phase 3 | `verified` | Evidence: `sort-dropdown-1280.png` and `visual-qa-report.json`; desktop listbox role, four options, expanded state, and no overflow verified. |
+| `surface:HOME::IngredientFilter` | `modals.jsx::IngredientFilterModal` | `IngredientFilterModal`, `DesktopIngredientFilterDialog` | Phase 3 | `verified` | Evidence: `filter-modal-1024.png`, `filter-modal-1280.png`, and `visual-qa-report.json`; search auto-focus, category grid, and no overflow verified. |
 | `surface:MENU_ADD::RecipeSearchPicker` | demo toast from `MenuAddScreen` | `RecipeSearchPicker`, `DesktopRecipeSearchPicker` | Phase 4 | `open` | Search picker reachable from menu add, keyboard/focus, recipe selection. |
 | `surface:MENU_ADD::RecipeBookSelector` | current `RECIPEBOOKS` pickerMode placeholder | `DesktopRecipeBookSelectorDialog` | Phase 4 | `open` | Book selector dialog/panel, then detail picker. |
 | `surface:MENU_ADD::RecipeBookDetailPicker` | current `RECIPEBOOKS` pickerMode placeholder | `RecipeBookDetailPicker`, `DesktopRecipeBookDetailPickerDialog` | Phase 4 | `open` | Pick recipe from selected book without confusing with full detail screen. |
@@ -123,12 +123,12 @@ These overrides intentionally differ from older ledgers:
 
 | canonical_key | 260512 component/trigger | 260505 reference | owner phase | current status | required verification |
 | --- | --- | --- | --- | --- | --- |
-| `gate:GLOBAL::LoginGate` | `components.jsx::LoginGateDialog`, `app.jsx::requireAuth` | `LoginGate`, `GLOBAL::LoginGateModal` | Phase 3 | `verified-foundation` | Foundation verified in PR #441; Phase 3 must add full login/account flow and providers. |
-| `modal:RECIPE_DETAIL::SaveModal` | `modals.jsx::SaveModal` | `SavePopup` | Phase 3 | `open` | Saved/custom book rules; LoginGate return-to-action; desktop dialog screenshot. |
-| `modal:RECIPE_DETAIL::PlannerAddModal` | `modals.jsx::PlannerAddModal` | `PlannerAddPopup` | Phase 3 | `open` | Date/meal/serving selection and return-to-action. |
-| `modal:HOME::IngredientFilterModal` | `modals.jsx::IngredientFilterModal` | `IngredientFilterModal` | Phase 3 | `open` | Apply/reset selected ingredients; desktop wide dialog. |
-| `modal:GLOBAL::Lightbox` | `modals.jsx::Lightbox` | photo lightbox behavior | Phase 3 | `open` | Image navigation/close/focus behavior. |
-| `modal:GLOBAL::ConfirmDialog` | missing generic component; some specific dialogs exist | `ConfirmDialog` | Phase 3 | `open` | Reusable confirm primitive for destructive/non-destructive paths. |
+| `gate:GLOBAL::LoginGate` | `components.jsx::LoginGateDialog`, `app.jsx::requireAuth` | `LoginGate`, `GLOBAL::LoginGateModal` | Phase 3 | `verified` | Evidence: `login-gate-save-1024.png`, `login-gate-save-1280.png`, `login-gate-save-1440.png`, `login-gate-planner-1024.png`, and `visual-qa-report.json`; three providers, provider focus, save/planner return-to-action verified. |
+| `modal:RECIPE_DETAIL::SaveModal` | `modals.jsx::SaveModal` | `SavePopup` | Phase 3 | `verified` | Evidence: `save-modal-1280.png` and `visual-qa-report.json`; saved/custom book rows and no overflow verified after auth. |
+| `modal:RECIPE_DETAIL::PlannerAddModal` | `modals.jsx::PlannerAddModal` | `PlannerAddPopup` | Phase 3 | `verified` | Evidence: `planner-add-modal-1280.png` and `visual-qa-report.json`; date/meal/serving controls and no overflow verified after auth. |
+| `modal:HOME::IngredientFilterModal` | `modals.jsx::IngredientFilterModal` | `IngredientFilterModal` | Phase 3 | `verified` | Evidence: `filter-modal-1024.png`, `filter-modal-1280.png`, and `visual-qa-report.json`; apply/reset footer, focused search, and dense grid verified. |
+| `modal:GLOBAL::Lightbox` | `modals.jsx::Lightbox` | photo lightbox behavior | Phase 3 | `verified` | Evidence: `lightbox-1280.png` and `visual-qa-report.json`; dialog role, `aria-modal`, close focus, navigation controls, and no overflow verified. |
+| `modal:GLOBAL::ConfirmDialog` | `components.jsx::ConfirmDialog`, `app.jsx::MealScreen` delete path | `ConfirmDialog` | Phase 3 | `verified` | Evidence: `confirm-normal-1280.png`, `confirm-destructive-1280.png`, and `visual-qa-report.json`; normal/destructive variants, cancel focus, danger CTA, and meal-delete consumer verified. |
 | `modal:MANUAL_RECIPE_CREATE::IngredientPickerModal` | missing in 260512; manual create demo toast only | `IngredientPickerModal` | Phase 4 | `open` | Manual recipe ingredient selection/add flow; distinct from HOME ingredient filter. |
 | `modal:SETTINGS::NicknameModal` | `modals.jsx::NicknameModal` | `NicknameEditSheet` | Phase 5 | `open` | Desktop dialog equivalent, profile update. |
 | `modal:SETTINGS::LogoutModal` | `modals.jsx::LogoutModal` | `LogoutConfirm` | Phase 5 | `open` | Confirm copy and auth state. |
@@ -146,7 +146,7 @@ These overrides intentionally differ from older ledgers:
 | --- | --- | --- |
 | Execution target | Phase 2 | Production-oriented desktop web prototype redesign; not a throwaway visual-only prototype. |
 | Desktop styling boundary | Phase 2 | `1024px+` desktop/web presentation only; no global mobile token rewrite. |
-| LoginGate behavior | Phase 2 protected actions and Phase 3 auth | Phase 1 foundation exists; Phase 3 owns full auth/account completion. |
+| LoginGate behavior | Phase 2 protected actions and Phase 3 auth | Phase 3 verified dedicated login, provider gate, account avatar transition, and protected save/planner return-to-action. |
 | Planner/settings meal-column rules | Phase 2 `PLANNER_WEEK` final anchor | Phase 5 `SETTINGS::MealColumns` must close before declaring planner fully verified. |
 | Shopping completed read-only contract | Phase 6 | Completed list edit-blocking UI plus server `409` remains mandatory. |
 | Pantry reflect semantics | Phase 6 | Preserve `add_to_pantry_item_ids`: `null` default, `[]` reflect none, selected ids reflect selected checked items. |
