@@ -6,10 +6,13 @@ const { LoginScreen, HomeScreen, RecipeDetailScreen } = window.HC_S1;
 const { PlannerWeekScreen, PantryScreen, MyPageScreen, RecipebooksScreen } = window.HC_S2;
 const {
   MealScreen, MenuAddScreen, ShoppingDetailScreen, ShoppingFlowScreen, ShoppingListsScreen,
+  RecipeSearchPickerScreen, RecipeBookSelectorScreen, RecipeBookDetailPickerScreen, PantryMatchPickerScreen,
+  ManualRecipeCreateScreen, YtImportScreen,
   LeftoversScreen, AteListScreen, RecipebookDetailScreen, SettingsScreen, CookNoticeDialog,
 } = window.HC_S3;
 const {
   SaveModal, PlannerAddModal, IngredientFilterModal, Lightbox,
+  PlannedServingsConfirmModal,
   PantryAddIngredientModal, PantryAddBundleModal, PantryReflectModal,
   NicknameModal, LogoutModal,
 } = window.HC_MODALS;
@@ -36,6 +39,7 @@ function App() {
   // Modals
   const [saveModal, setSaveModal] = useStateA({ open: false, recipeId: null });
   const [plannerAddModal, setPlannerAddModal] = useStateA({ open: false, recipeId: null, date: null, col: null });
+  const [servingsConfirm, setServingsConfirm] = useStateA({ open: false, recipe: null, date: null, col: null });
   const [filterModal, setFilterModal] = useStateA({ open: false });
   const [lightbox, setLightbox] = useStateA({ open: false, photos: [], idx: 0 });
   const [pantryAddIng, setPantryAddIng] = useStateA(false);
@@ -126,6 +130,33 @@ function App() {
     if (resume) window.setTimeout(() => resume(), 0);
   }, [loginGate, completeLogin]);
 
+  const openServingsConfirm = useCallbackA((recipe, date, col) => {
+    setServingsConfirm({
+      open: true,
+      recipe,
+      date: date || DA.TODAY_ISO,
+      col: col || "col-d",
+    });
+  }, []);
+
+  const closeServingsConfirm = useCallbackA(() => {
+    setServingsConfirm({ open: false, recipe: null, date: null, col: null });
+  }, []);
+
+  const addMealFromServingsConfirm = useCallbackA(({ recipeId, date, col, servings }) => {
+    const recipe = servingsConfirm.recipe;
+    if (recipe && !DA.RECIPE[recipeId]) {
+      DA.RECIPE[recipeId] = recipe;
+      DA.RECIPES.push(recipe);
+    }
+    const id = `m-${Date.now()}`;
+    setMeals(ms => [...ms, { id, recipeId, date, col, servings, status: "registered" }]);
+    closeServingsConfirm();
+    toast("플래너에 추가했어요");
+    setStack([{ screen: "PLANNER_WEEK" }]);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [servingsConfirm, closeServingsConfirm, toast]);
+
   // Save toggle (from PhotoCard)
   const toggleSave = (rid) => {
     if (!rid || rid === "clear-all") {
@@ -151,7 +182,10 @@ function App() {
     const s = cur.screen;
     if (s === "HOME") return "HOME";
     if (s === "LOGIN") return "";
-    if (s === "PLANNER_WEEK" || s === "MEAL" || s === "MENU_ADD") return "PLANNER_WEEK";
+    if (s === "PLANNER_WEEK" || s === "MEAL" || s === "MENU_ADD" ||
+        s === "RECIPE_SEARCH_PICKER" || s === "RECIPEBOOK_SELECTOR" ||
+        s === "RECIPEBOOK_DETAIL_PICKER" || s === "PANTRY_MATCH_PICKER" ||
+        s === "MANUAL_RECIPE_CREATE" || s === "YT_IMPORT") return "PLANNER_WEEK";
     if (s === "PANTRY") return "PANTRY";
     if (s === "MYPAGE" || s === "RECIPEBOOKS" || s === "RECIPEBOOK_DETAIL" || s === "SHOPPING_FLOW" ||
         s === "SHOPPING_DETAIL" || s === "SHOPPING_LISTS" || s === "LEFTOVERS" || s === "ATE_LIST" || s === "SETTINGS") return "MYPAGE";
@@ -220,6 +254,7 @@ function App() {
   } else if (s === "MEAL") {
     body = <MealScreen
       mealId={cur.mealId}
+      meal={meals.find(m => m.id === cur.mealId)}
       onBack={pop}
       onCook={() => setCookNotice(true)}
       onGoShopping={() => push({ screen: "SHOPPING_DETAIL", listId: "sl1" })}
@@ -237,6 +272,7 @@ function App() {
         },
       })}
       onChangeServings={(mid, v) => setMeals(ms => ms.map(m => m.id === mid ? { ...m, servings: v } : m))}
+      pantryHeld={pantryHeld}
       toast={toast}
     />;
   } else if (s === "MENU_ADD") {
@@ -244,12 +280,56 @@ function App() {
       onBack={pop}
       dateISO={cur.date}
       col={cur.col}
-      onPickRecipe={() => { toast("레시피 검색 (데모)"); pop(); }}
-      onPickFromBook={() => { push({ screen: "RECIPEBOOKS", pickerMode: true }); }}
-      onPickByPantry={() => { toast("팬트리 매칭 (데모)"); pop(); }}
-      onManualCreate={() => { toast("직접 만들기 (데모)"); pop(); }}
-      onYTImport={() => { toast("유튜브 가져오기 (데모)"); pop(); }}
+      onPickRecipe={() => push({ screen: "RECIPE_SEARCH_PICKER", date: cur.date, col: cur.col })}
+      onPickFromBook={() => push({ screen: "RECIPEBOOK_SELECTOR", date: cur.date, col: cur.col })}
+      onPickByPantry={() => push({ screen: "PANTRY_MATCH_PICKER", date: cur.date, col: cur.col })}
+      onManualCreate={() => push({ screen: "MANUAL_RECIPE_CREATE", date: cur.date, col: cur.col })}
+      onYTImport={() => push({ screen: "YT_IMPORT", date: cur.date, col: cur.col })}
       onSearchUrl={() => { toast("웹페이지 가져오기 (데모)"); pop(); }}
+    />;
+  } else if (s === "RECIPE_SEARCH_PICKER") {
+    body = <RecipeSearchPickerScreen
+      dateISO={cur.date}
+      col={cur.col}
+      onBack={pop}
+      onSelectRecipe={(recipe) => openServingsConfirm(recipe, cur.date, cur.col)}
+    />;
+  } else if (s === "RECIPEBOOK_SELECTOR") {
+    body = <RecipeBookSelectorScreen
+      dateISO={cur.date}
+      col={cur.col}
+      onBack={pop}
+      onOpenBook={(bookId) => push({ screen: "RECIPEBOOK_DETAIL_PICKER", bookId, date: cur.date, col: cur.col })}
+    />;
+  } else if (s === "RECIPEBOOK_DETAIL_PICKER") {
+    body = <RecipeBookDetailPickerScreen
+      bookId={cur.bookId}
+      dateISO={cur.date}
+      col={cur.col}
+      onBack={pop}
+      onSelectRecipe={(recipe) => openServingsConfirm(recipe, cur.date, cur.col)}
+    />;
+  } else if (s === "PANTRY_MATCH_PICKER") {
+    body = <PantryMatchPickerScreen
+      dateISO={cur.date}
+      col={cur.col}
+      pantryHeld={pantryHeld}
+      onBack={pop}
+      onSelectRecipe={(recipe) => openServingsConfirm(recipe, cur.date, cur.col)}
+    />;
+  } else if (s === "MANUAL_RECIPE_CREATE") {
+    body = <ManualRecipeCreateScreen
+      dateISO={cur.date}
+      col={cur.col}
+      onBack={pop}
+      onCreateRecipe={(recipe) => openServingsConfirm(recipe, cur.date, cur.col)}
+    />;
+  } else if (s === "YT_IMPORT") {
+    body = <YtImportScreen
+      dateISO={cur.date}
+      col={cur.col}
+      onBack={pop}
+      onCreateRecipe={(recipe) => openServingsConfirm(recipe, cur.date, cur.col)}
     />;
   } else if (s === "PANTRY") {
     body = <PantryScreen
@@ -368,6 +448,14 @@ function App() {
           setPlannerAddModal({ open: false, recipeId: null, date: null, col: null });
           toast("플래너에 추가했어요");
         }}
+      />
+      <PlannedServingsConfirmModal
+        open={servingsConfirm.open}
+        recipe={servingsConfirm.recipe}
+        defaultDate={servingsConfirm.date}
+        defaultCol={servingsConfirm.col}
+        onClose={closeServingsConfirm}
+        onConfirm={addMealFromServingsConfirm}
       />
       <IngredientFilterModal
         open={filterModal.open}

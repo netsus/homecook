@@ -2,22 +2,70 @@
 /* ============================================
    MEAL_SCREEN + MENU_ADD + SHOPPING_DETAIL + SHOPPING_FLOW + sub screens
    ============================================ */
-const { useState: useS3, useMemo: useMemo3 } = React;
+const { useState: useS3, useMemo: useMemo3, useEffect: useEffect3, useRef: useRef3 } = React;
 const {
   Icon, Button, Chip, Tag, StatePanel, ScreenHeader, SegmentedRow, DateChipRail, Stepper,
 } = window.HC;
 const D3 = window.HC_DATA;
 
+function plannerSlotLabel(dateISO, col) {
+  const day = D3.WEEK_DATES.find(d => d.iso === dateISO);
+  const colName = D3.MEAL_COLUMNS.find(c => c.id === col)?.name || "저녁";
+  return day ? `${day.dow} 5/${day.d} · ${colName}` : `끼니 추가 · ${colName}`;
+}
+
+function recipeIngredientName(item) {
+  return item.id ? D3.ING[item.id]?.name : item.name;
+}
+
+function recipeIngredientIds(recipe) {
+  return (recipe?.ingredients || []).map(i => i.id).filter(Boolean);
+}
+
+function recipesForBook(bookId) {
+  const map = {
+    "rb-my": ["r6", "r1", "r2", "r8"],
+    "rb-saved": ["r5", "r3", "r4", "r7"],
+    "rb-liked": ["r3", "r6", "r2", "r1"],
+    "rb-c1": ["r1", "r4", "r7", "r8"],
+    "rb-c2": ["r5", "r8", "r1", "r3"],
+    "rb-c3": ["r6", "r2", "r3", "r7"],
+  };
+  return (map[bookId] || D3.RECIPES.map(r => r.id)).map(id => D3.RECIPE[id]).filter(Boolean);
+}
+
+function createTempRecipe({ prefix, title, cookTime, baseServings, ingredients, memo, source, photo }) {
+  const now = Date.now();
+  return {
+    id: `${prefix}-${now}`,
+    title: title.trim(),
+    photo: photo || D3.FOOD.bowl,
+    source: source || "내가 추가한 레시피",
+    tags: ["직접 추가"],
+    baseServings,
+    views: 0,
+    likes: 0,
+    saves: 0,
+    plannerAdds: 0,
+    description: memo?.trim() || "직접 추가한 레시피입니다.",
+    cookTime,
+    difficulty: "보통",
+    ingredients,
+    steps: [{ method: "메모", text: memo?.trim() || "조리 메모가 아직 없어요." }],
+  };
+}
+
 /* ============================================
    MEAL_SCREEN (§6) — Today/Specific meal detail
    ============================================ */
-function MealScreen({ mealId, onBack, onCook, onGoShopping, onGoRecipe, onDelete, onChangeServings, toast }) {
-  const meal = D3.MEALS.find(m => m.id === mealId);
+function MealScreen({ mealId, meal: mealProp, onBack, onCook, onGoShopping, onGoRecipe, onDelete, onChangeServings, pantryHeld, toast }) {
+  const meal = mealProp || D3.MEALS.find(m => m.id === mealId);
   const recipe = meal ? D3.RECIPE[meal.recipeId] : null;
   if (!meal || !recipe) return null;
 
-  const ate = false; // could be derived
   const dayLabel = D3.fmtPlannerDate(meal.date);
+  const slotLabel = plannerSlotLabel(meal.date, meal.col);
+  const statusLabel = meal.status === "registered" ? "등록됨" : meal.status === "shopped" ? "장보기 완료" : "요리 완료";
 
   return (
     <main className="screen">
@@ -26,7 +74,7 @@ function MealScreen({ mealId, onBack, onCook, onGoShopping, onGoRecipe, onDelete
           <Icon name="chevL" size={14} /> 플래너
         </button>
         <span className="breadcrumb-sep">/</span>
-        <span className="breadcrumb-cur">{dayLabel} · {D3.MEAL_COLUMNS.find(c => c.id === meal.col)?.name}</span>
+        <span className="breadcrumb-cur">{slotLabel}</span>
       </div>
 
       <div className="meal-layout">
@@ -36,7 +84,7 @@ function MealScreen({ mealId, onBack, onCook, onGoShopping, onGoRecipe, onDelete
             <div className="meal-hero-overlay">
               <span className={`meal-status-pill status-${meal.status}`}>
                 <span className={`status-dot status-${meal.status}`} />
-                {meal.status === "registered" ? "등록됨" : meal.status === "shopped" ? "장본 끼니" : "요리 완료"}
+                {statusLabel}
               </span>
             </div>
           </div>
@@ -63,6 +111,9 @@ function MealScreen({ mealId, onBack, onCook, onGoShopping, onGoRecipe, onDelete
                       {typeof v === "number" ? (v >= 10 ? Math.round(v * 10) / 10 : v.toFixed(2).replace(/\.?0+$/, "")) : v}
                       {i.unit ? ` ${i.unit}` : ""}
                     </span>
+                    {i.id && pantryHeld?.has(i.id) && (
+                      <span className="ing-held-mark"><Icon name="check" size={11} /> 팬트리</span>
+                    )}
                   </li>
                 );
               })}
@@ -73,9 +124,16 @@ function MealScreen({ mealId, onBack, onCook, onGoShopping, onGoRecipe, onDelete
         <aside className="meal-rail">
           <div className="rail-card">
             <div className="rail-section">
-              <Button variant="primary" full leftIcon="pot" onClick={() => onCook(meal.id)}>
-                요리하기
-              </Button>
+              {meal.status === "cooked" ? (
+                <div className="meal-complete-note">
+                  <Icon name="check" size={16} />
+                  <span>요리 완료된 끼니예요</span>
+                </div>
+              ) : (
+                <Button variant="primary" full leftIcon="pot" onClick={() => onCook(meal.id)}>
+                  요리하기
+                </Button>
+              )}
               <div style={{ height: 8 }} />
               <Button variant="secondary" full leftIcon="book" onClick={() => onGoRecipe(recipe.id)}>
                 원본 레시피 보기
@@ -85,10 +143,10 @@ function MealScreen({ mealId, onBack, onCook, onGoShopping, onGoRecipe, onDelete
               <div className="rail-title">인분 조절</div>
               <Stepper value={meal.servings} onChange={(v) => onChangeServings(meal.id, v)} min={1} max={10} unit="인분" />
             </div>
-            {meal.status === "registered" && (
+            {meal.status !== "cooked" && (
               <div className="rail-section">
                 <Button variant="tertiary" full leftIcon="cart" onClick={onGoShopping}>
-                  이번주 장보기 보기
+                  {meal.status === "registered" ? "이번주 장보기 보기" : "장보기 확인하기"}
                 </Button>
               </div>
             )}
@@ -148,6 +206,535 @@ function MenuAddScreen({ onBack, dateISO, col, onPickRecipe, onPickFromBook, onP
           </button>
         ))}
       </div>
+    </main>
+  );
+}
+
+function PickerRecipeCard({ recipe, onPick, match }) {
+  return (
+    <button className="picker-recipe-card" onClick={() => onPick(recipe)}>
+      <div className="picker-recipe-thumb">
+        <img src={recipe.photo} alt={recipe.title} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+      </div>
+      <div className="picker-recipe-body">
+        <div className="picker-recipe-title">{recipe.title}</div>
+        <div className="picker-recipe-meta tabular">
+          {recipe.cookTime}분 · {recipe.baseServings}인분
+        </div>
+        {match && (
+          <div className="picker-recipe-match tabular">
+            보유 {match.held}/{match.total}
+          </div>
+        )}
+      </div>
+    </button>
+  );
+}
+
+/* ============================================
+   MENU_ADD PICKER — Recipe search
+   ============================================ */
+function RecipeSearchPickerScreen({ dateISO, col, onBack, onSelectRecipe }) {
+  const [query, setQuery] = useS3("");
+  const inputRef = useRef3(null);
+  useEffect3(() => { window.setTimeout(() => inputRef.current?.focus(), 0); }, []);
+
+  const recipes = useMemo3(() => {
+    const q = query.trim();
+    if (!q) return D3.RECIPES;
+    return D3.RECIPES.filter(r => {
+      const titleMatch = r.title.includes(q);
+      const ingredientMatch = r.ingredients.some(i => recipeIngredientName(i)?.includes(q));
+      return titleMatch || ingredientMatch;
+    });
+  }, [query]);
+
+  return (
+    <main className="screen">
+      <div className="breadcrumb">
+        <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 끼니 추가</button>
+        <span className="breadcrumb-sep">/</span>
+        <span className="breadcrumb-cur">레시피 검색</span>
+      </div>
+
+      <div className="picker-search-header">
+        <div>
+          <div className="eyebrow">{plannerSlotLabel(dateISO, col)}</div>
+          <h1 className="h1">레시피 검색</h1>
+        </div>
+        <div className="search-bar">
+          <Icon name="search" size={15} color="var(--text-3)" />
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="레시피 제목 또는 재료 검색"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {query && (
+            <button className="search-clear" onClick={() => setQuery("")} aria-label="검색어 지우기">
+              <Icon name="x" size={12} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {recipes.length === 0 ? (
+        <StatePanel icon="search" title="검색어와 일치하는 레시피가 없어요" desc="다른 제목이나 재료명으로 다시 찾아보세요." />
+      ) : (
+        <div className="picker-recipe-grid">
+          {recipes.map(r => <PickerRecipeCard key={r.id} recipe={r} onPick={onSelectRecipe} />)}
+        </div>
+      )}
+    </main>
+  );
+}
+
+/* ============================================
+   MENU_ADD PICKER — Recipebook selector
+   ============================================ */
+function RecipeBookSelectorScreen({ dateISO, col, onBack, onOpenBook }) {
+  return (
+    <main className="screen">
+      <div className="breadcrumb">
+        <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 끼니 추가</button>
+        <span className="breadcrumb-sep">/</span>
+        <span className="breadcrumb-cur">레시피북에서 선택</span>
+      </div>
+
+      <ScreenHeader
+        eyebrow={plannerSlotLabel(dateISO, col)}
+        title="레시피북에서 선택"
+        lead="북을 고른 뒤 레시피를 선택하면 끼니에 추가할 수 있어요."
+      />
+
+      <div className="meta-list picker-book-list">
+        {D3.RECIPEBOOKS.map(book => (
+          <button key={book.id} className="meta-row picker-book-row" onClick={() => onOpenBook(book.id)}>
+            <div className="meta-icon"><Icon name={book.type === "custom" ? "bookOpen" : "book"} size={16} /></div>
+            <div className="meta-body">
+              <div className="meta-title">{book.title}</div>
+              <div className="meta-sub tabular">{book.count}개 레시피</div>
+            </div>
+            <div className="picker-book-thumbs" aria-hidden="true">
+              {book.thumbs.slice(0, 3).map((src, idx) => (
+                <span key={`${book.id}-${idx}`} className="picker-book-thumb">
+                  <img src={src} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                </span>
+              ))}
+            </div>
+            <Icon name="chevR" size={16} color="var(--text-4)" />
+          </button>
+        ))}
+      </div>
+    </main>
+  );
+}
+
+function RecipeBookDetailPickerScreen({ bookId, dateISO, col, onBack, onSelectRecipe }) {
+  const book = D3.RECIPEBOOKS.find(b => b.id === bookId);
+  const recipes = recipesForBook(bookId);
+  if (!book) return null;
+
+  return (
+    <main className="screen">
+      <div className="breadcrumb">
+        <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 레시피북에서 선택</button>
+        <span className="breadcrumb-sep">/</span>
+        <span className="breadcrumb-cur">{book.title}</span>
+      </div>
+
+      <ScreenHeader
+        eyebrow={plannerSlotLabel(dateISO, col)}
+        title={book.title}
+        lead={`${book.count}개의 레시피 중 끼니에 추가할 메뉴를 고르세요.`}
+      />
+
+      <div className="picker-recipe-grid">
+        {recipes.map(r => <PickerRecipeCard key={r.id} recipe={r} onPick={onSelectRecipe} />)}
+      </div>
+    </main>
+  );
+}
+
+/* ============================================
+   MENU_ADD PICKER — Pantry match
+   ============================================ */
+function PantryMatchPickerScreen({ dateISO, col, pantryHeld, onBack, onSelectRecipe }) {
+  const matches = useMemo3(() => {
+    return D3.RECIPES.map(recipe => {
+      const ids = recipeIngredientIds(recipe);
+      const held = ids.filter(id => pantryHeld?.has(id)).length;
+      const missing = ids.filter(id => !pantryHeld?.has(id)).map(id => D3.ING[id]?.name).filter(Boolean);
+      const total = Math.max(ids.length, 1);
+      return { recipe, held, total: ids.length, pct: Math.round((held / total) * 100), missing };
+    }).sort((a, b) => b.pct - a.pct || a.recipe.cookTime - b.recipe.cookTime);
+  }, [pantryHeld]);
+
+  return (
+    <main className="screen">
+      <div className="breadcrumb">
+        <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 끼니 추가</button>
+        <span className="breadcrumb-sep">/</span>
+        <span className="breadcrumb-cur">팬트리 매칭</span>
+      </div>
+
+      <ScreenHeader
+        eyebrow={plannerSlotLabel(dateISO, col)}
+        title="팬트리 재료로 고르기"
+        lead="지금 보유한 재료와 잘 맞는 레시피를 먼저 보여드려요."
+      />
+
+      <div className="pantry-match-list" role="list">
+        {matches.map(item => (
+          <button
+            key={item.recipe.id}
+            className="pantry-match-card"
+            role="listitem"
+            onClick={() => onSelectRecipe(item.recipe)}
+          >
+            <div className="pantry-match-thumb">
+              <img src={item.recipe.photo} alt={item.recipe.title} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+            </div>
+            <div className="pantry-match-body">
+              <div className="pantry-match-head">
+                <div>
+                  <div className="pantry-match-title">{item.recipe.title}</div>
+                  <div className="pantry-match-meta tabular">{item.recipe.cookTime}분 · {item.recipe.baseServings}인분</div>
+                </div>
+                <div className="pantry-match-score tabular">{item.pct}%</div>
+              </div>
+              <div className="pantry-match-bar" aria-hidden="true">
+                <span className="pantry-match-fill" style={{ width: `${item.pct}%` }} />
+              </div>
+              <div className="pantry-match-detail">
+                <span className="tabular">보유 {item.held}/{item.total}</span>
+                {item.missing.length > 0 && <span>부족: {item.missing.slice(0, 4).join(", ")}</span>}
+              </div>
+            </div>
+            <Icon name="chevR" size={16} color="var(--text-4)" />
+          </button>
+        ))}
+      </div>
+    </main>
+  );
+}
+
+function IngredientEditor({ ingredients, onChange, onRemove, onOpenPicker }) {
+  return (
+    <div className="ing-edit-list">
+      {ingredients.map((ing, idx) => (
+        <div key={idx} className="ing-edit-row">
+          <div className="ing-edit-name">{recipeIngredientName(ing) || ing.name}</div>
+          <input
+            className="ing-edit-amount"
+            value={ing.amount}
+            onChange={(e) => onChange(idx, { amount: e.target.value })}
+            aria-label={`${recipeIngredientName(ing) || ing.name} 수량`}
+          />
+          <select
+            className="ing-edit-unit"
+            value={ing.unit || "개"}
+            onChange={(e) => onChange(idx, { unit: e.target.value })}
+            aria-label={`${recipeIngredientName(ing) || ing.name} 단위`}
+          >
+            {D3.UNIT_OPTIONS.map(unit => <option key={unit} value={unit}>{unit}</option>)}
+          </select>
+          <button className="ing-edit-remove" onClick={() => onRemove(idx)} aria-label={`${recipeIngredientName(ing) || ing.name} 삭제`}>
+            <Icon name="x" size={14} />
+          </button>
+        </div>
+      ))}
+      {ingredients.length === 0 && <div className="create-empty">아직 추가한 재료가 없어요.</div>}
+      <Button variant="tertiary" leftIcon="plus" onClick={onOpenPicker}>재료 추가</Button>
+    </div>
+  );
+}
+
+/* ============================================
+   MANUAL_RECIPE_CREATE
+   ============================================ */
+function ManualRecipeCreateScreen({ dateISO, col, onBack, onCreateRecipe }) {
+  const [title, setTitle] = useS3("");
+  const [cookTime, setCookTime] = useS3(30);
+  const [baseServings, setBaseServings] = useS3(2);
+  const [ingredients, setIngredients] = useS3([]);
+  const [memo, setMemo] = useS3("");
+  const [pickerOpen, setPickerOpen] = useS3(false);
+  const nameRef = useRef3(null);
+
+  useEffect3(() => { window.setTimeout(() => nameRef.current?.focus(), 0); }, []);
+
+  const updateIngredient = (idx, patch) => setIngredients(list => list.map((ing, i) => i === idx ? { ...ing, ...patch } : ing));
+  const removeIngredient = (idx) => setIngredients(list => list.filter((_, i) => i !== idx));
+  const addIngredients = (items) => {
+    setIngredients(list => [
+      ...list,
+      ...items
+        .filter(i => !list.some(existing => existing.id === i.id))
+        .map(i => ({ id: i.id, amount: 1, unit: i.cat === "양념" ? "큰술" : "개" })),
+    ]);
+    setPickerOpen(false);
+  };
+
+  const submit = () => {
+    if (!title.trim()) return;
+    onCreateRecipe(createTempRecipe({
+      prefix: "manual",
+      title,
+      cookTime,
+      baseServings,
+      ingredients,
+      memo,
+      source: "내가 추가한 레시피",
+      photo: D3.FOOD.bowl,
+    }));
+  };
+
+  const IngredientPicker = window.HC_MODALS?.IngredientPickerModal_ManualCreate;
+
+  return (
+    <main className="screen create-screen">
+      <div className="breadcrumb">
+        <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 끼니 추가</button>
+        <span className="breadcrumb-sep">/</span>
+        <span className="breadcrumb-cur">직접 만들기</span>
+      </div>
+
+      <div className="create-form-shell">
+        <ScreenHeader
+          eyebrow={plannerSlotLabel(dateISO, col)}
+          title="내 레시피 직접 만들기"
+          lead="제목과 재료만 입력해도 끼니로 등록할 수 있어요."
+        />
+
+        <div className="create-form">
+          <section className="create-section">
+            <h2 className="create-section-title">기본 정보</h2>
+            <div className="form-row">
+              <label className="form-label">레시피 이름</label>
+              <input
+                ref={nameRef}
+                className="text-input"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="예: 된장찌개"
+              />
+            </div>
+            <div className="create-inline-rows">
+              <div className="form-row form-row-inline">
+                <label className="form-label">조리 시간</label>
+                <Stepper value={cookTime} onChange={setCookTime} min={5} max={180} unit="분" />
+              </div>
+              <div className="form-row form-row-inline">
+                <label className="form-label">기본 인분</label>
+                <Stepper value={baseServings} onChange={setBaseServings} min={1} max={10} unit="인분" />
+              </div>
+            </div>
+          </section>
+
+          <section className="create-section">
+            <h2 className="create-section-title">재료</h2>
+            <IngredientEditor
+              ingredients={ingredients}
+              onChange={updateIngredient}
+              onRemove={removeIngredient}
+              onOpenPicker={() => setPickerOpen(true)}
+            />
+          </section>
+
+          <section className="create-section">
+            <h2 className="create-section-title">메모</h2>
+            <textarea
+              className="create-memo"
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              placeholder="조리법이나 가족 취향 메모를 적어두세요."
+            />
+          </section>
+        </div>
+
+        <div className="create-footer">
+          <Button variant="ghost" onClick={onBack}>취소</Button>
+          <Button variant="primary" leftIcon="cal" disabled={!title.trim()} onClick={submit}>등록하기</Button>
+        </div>
+      </div>
+
+      {IngredientPicker && (
+        <IngredientPicker
+          open={pickerOpen}
+          existingIds={ingredients.map(i => i.id).filter(Boolean)}
+          onClose={() => setPickerOpen(false)}
+          onConfirm={addIngredients}
+        />
+      )}
+    </main>
+  );
+}
+
+/* ============================================
+   YT_IMPORT
+   ============================================ */
+function YtImportScreen({ dateISO, col, onBack, onCreateRecipe }) {
+  const demo = D3.YT_DEMO_EXTRACTION;
+  const [url, setUrl] = useS3("");
+  const [loading, setLoading] = useS3(false);
+  const [review, setReview] = useS3(false);
+  const [title, setTitle] = useS3(demo.recipe.title);
+  const [cookTime, setCookTime] = useS3(demo.recipe.cookTime);
+  const [baseServings, setBaseServings] = useS3(demo.recipe.baseServings);
+  const [ingredients, setIngredients] = useS3(demo.recipe.ingredients);
+  const [memo, setMemo] = useS3(demo.recipe.memo);
+  const [pickerOpen, setPickerOpen] = useS3(false);
+  const urlRef = useRef3(null);
+  const titleRef = useRef3(null);
+
+  useEffect3(() => { window.setTimeout(() => urlRef.current?.focus(), 0); }, []);
+  useEffect3(() => { if (review) window.setTimeout(() => titleRef.current?.focus(), 0); }, [review]);
+
+  const startImport = () => {
+    if (!url.trim() || loading) return;
+    setLoading(true);
+    window.setTimeout(() => {
+      setTitle(demo.recipe.title);
+      setCookTime(demo.recipe.cookTime);
+      setBaseServings(demo.recipe.baseServings);
+      setIngredients(demo.recipe.ingredients);
+      setMemo(demo.recipe.memo);
+      setReview(true);
+      setLoading(false);
+    }, 800);
+  };
+
+  const updateIngredient = (idx, patch) => setIngredients(list => list.map((ing, i) => i === idx ? { ...ing, ...patch } : ing));
+  const removeIngredient = (idx) => setIngredients(list => list.filter((_, i) => i !== idx));
+  const addIngredients = (items) => {
+    setIngredients(list => [
+      ...list,
+      ...items
+        .filter(i => !list.some(existing => existing.id === i.id))
+        .map(i => ({ id: i.id, amount: 1, unit: i.cat === "양념" ? "큰술" : "개" })),
+    ]);
+    setPickerOpen(false);
+  };
+
+  const submit = () => {
+    if (!title.trim()) return;
+    onCreateRecipe(createTempRecipe({
+      prefix: "yt",
+      title,
+      cookTime,
+      baseServings,
+      ingredients,
+      memo,
+      source: "유튜브",
+      photo: demo.thumbnail,
+    }));
+  };
+
+  const IngredientPicker = window.HC_MODALS?.IngredientPickerModal_ManualCreate;
+
+  return (
+    <main className="screen create-screen">
+      <div className="breadcrumb">
+        <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 끼니 추가</button>
+        <span className="breadcrumb-sep">/</span>
+        <span className="breadcrumb-cur">유튜브 가져오기</span>
+      </div>
+
+      <div className="create-form-shell">
+        <ScreenHeader
+          eyebrow={plannerSlotLabel(dateISO, col)}
+          title="유튜브 레시피 가져오기"
+          lead="영상 링크를 붙여넣고 가져온 정보를 확인한 뒤 끼니로 등록하세요."
+        />
+
+        {!review ? (
+          <div className="create-form">
+            <section className="create-section yt-url-section">
+              <h2 className="create-section-title">영상 링크</h2>
+              <div className="yt-url-row">
+                <div className="search-bar yt-url-input">
+                  <Icon name="link" size={15} color="var(--text-3)" />
+                  <input
+                    ref={urlRef}
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") startImport(); }}
+                    placeholder="https://youtube.com/watch?v=..."
+                  />
+                </div>
+                <Button variant="primary" leftIcon="youtube" disabled={!url.trim() || loading} onClick={startImport}>
+                  {loading ? "가져오는 중" : "가져오기"}
+                </Button>
+              </div>
+              <div className="yt-info-grid">
+                <div className="yt-info-box"><Icon name="info" size={15} /> 설명란에 재료 목록이 있는 요리 영상이 잘 맞아요.</div>
+                <div className="yt-info-box"><Icon name="globe" size={15} /> 현재는 한국어 채널을 우선 지원하는 데모 흐름이에요.</div>
+              </div>
+              {loading && <div className="yt-loading">영상 설명을 읽고 레시피 정보를 정리하고 있어요.</div>}
+            </section>
+          </div>
+        ) : (
+          <>
+            <div className="yt-review-banner"><Icon name="check" size={15} /> 레시피 정보를 가져왔어요. 수정 후 등록하세요.</div>
+            <div className="yt-preview-card">
+              <div className="yt-preview-thumb">
+                <img src={demo.thumbnail} alt={demo.videoTitle} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+              </div>
+              <div>
+                <div className="yt-preview-title">{demo.videoTitle}</div>
+                <div className="yt-preview-meta">채널: {demo.channel}</div>
+              </div>
+            </div>
+            <div className="create-form">
+              <section className="create-section">
+                <h2 className="create-section-title">가져온 기본 정보</h2>
+                <div className="form-row">
+                  <label className="form-label">레시피 이름</label>
+                  <input ref={titleRef} className="text-input" value={title} onChange={(e) => setTitle(e.target.value)} />
+                </div>
+                <div className="create-inline-rows">
+                  <div className="form-row form-row-inline">
+                    <label className="form-label">조리 시간</label>
+                    <Stepper value={cookTime} onChange={setCookTime} min={5} max={180} unit="분" />
+                  </div>
+                  <div className="form-row form-row-inline">
+                    <label className="form-label">기본 인분</label>
+                    <Stepper value={baseServings} onChange={setBaseServings} min={1} max={10} unit="인분" />
+                  </div>
+                </div>
+              </section>
+              <section className="create-section">
+                <h2 className="create-section-title">재료</h2>
+                <IngredientEditor
+                  ingredients={ingredients}
+                  onChange={updateIngredient}
+                  onRemove={removeIngredient}
+                  onOpenPicker={() => setPickerOpen(true)}
+                />
+              </section>
+              <section className="create-section">
+                <h2 className="create-section-title">메모</h2>
+                <textarea className="create-memo" value={memo} onChange={(e) => setMemo(e.target.value)} />
+              </section>
+            </div>
+            <div className="create-footer">
+              <Button variant="ghost" onClick={onBack}>취소</Button>
+              <Button variant="primary" leftIcon="cal" disabled={!title.trim()} onClick={submit}>등록하기</Button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {IngredientPicker && (
+        <IngredientPicker
+          open={pickerOpen}
+          existingIds={ingredients.map(i => i.id).filter(Boolean)}
+          onClose={() => setPickerOpen(false)}
+          onConfirm={addIngredients}
+        />
+      )}
     </main>
   );
 }
@@ -600,5 +1187,7 @@ function CookNoticeDialog({ open, onClose }) {
 
 window.HC_S3 = {
   MealScreen, MenuAddScreen, ShoppingDetailScreen, ShoppingFlowScreen, ShoppingListsScreen,
+  RecipeSearchPickerScreen, RecipeBookSelectorScreen, RecipeBookDetailPickerScreen, PantryMatchPickerScreen,
+  ManualRecipeCreateScreen, YtImportScreen,
   LeftoversScreen, AteListScreen, RecipebookDetailScreen, SettingsScreen, CookNoticeDialog,
 };

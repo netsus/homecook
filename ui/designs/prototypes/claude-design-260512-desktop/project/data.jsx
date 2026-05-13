@@ -365,6 +365,28 @@ const RECIPEBOOKS = [
   { id:"rb-c3",     type:"custom",   title:"도시락 모음",         count:11, thumbs:[FOOD.sandwich, FOOD.salad, FOOD.bowl] },
 ];
 
+/* ---------- 메뉴 추가: 유튜브/직접 만들기 더미 데이터 ---------- */
+const YT_DEMO_EXTRACTION = {
+  videoTitle: "초간단 김치볶음밥 만들기 | 10분 레시피",
+  channel: "홈쿡 TV",
+  thumbnail: FOOD.kimchi,
+  recipe: {
+    title: "김치볶음밥",
+    cookTime: 15,
+    baseServings: 1,
+    ingredients: [
+      { id:"ing-rice",     amount:1,   unit:"공기" },
+      { id:"ing-kimchi-i", amount:100, unit:"g" },
+      { id:"ing-egg",      amount:1,   unit:"개" },
+      { id:"ing-greenon",  amount:0.5, unit:"대" },
+      { id:"ing-sesame",   amount:1,   unit:"작은술" },
+    ],
+    memo: "출처: 유튜브 — 홈쿡 TV",
+  },
+};
+
+const UNIT_OPTIONS = ["g", "ml", "개", "큰술", "작은술", "공기", "컵", "팩", "대", "장"];
+
 /* ---------- 토스트 코어 ---------- */
 function makeToastBus() {
   const subs = new Set();
@@ -391,5 +413,6 @@ window.HC_DATA = {
   PANTRY_HELD, PANTRY_GROUPS, PANTRY_BUNDLES,
   SHOPPING_LISTS, LEFTOVERS, ATE,
   ACCOUNT, RECIPEBOOKS,
+  YT_DEMO_EXTRACTION, UNIT_OPTIONS,
   makeToastBus, fmtPlannerDate, fmtChipDate,
 };
