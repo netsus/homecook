@@ -269,6 +269,13 @@ function ShoppingDetailScreen({ list, pantryHeld, onTogglePantry, onBack, onMark
    SHOPPING_FLOW (§11) — entry flow chooser
    ============================================ */
 function ShoppingFlowScreen({ onBack, onOpenCurrent, onOpenPast, onCreateNew, currentList }) {
+  const onCardKey = (handler) => (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handler();
+    }
+  };
+
   return (
     <main className="screen">
       <div className="breadcrumb">
@@ -281,29 +288,47 @@ function ShoppingFlowScreen({ onBack, onOpenCurrent, onOpenPast, onCreateNew, cu
 
       <div className="shopping-flow-grid">
         {currentList && (
-          <button className="shopping-flow-card primary" onClick={() => onOpenCurrent(currentList.id)}>
+          <div
+            className="shopping-flow-card primary"
+            role="button"
+            tabIndex={0}
+            onClick={() => onOpenCurrent(currentList.id)}
+            onKeyDown={onCardKey(() => onOpenCurrent(currentList.id))}
+          >
             <div className="shopping-flow-eyebrow">진행 중</div>
             <div className="shopping-flow-title">{currentList.title}</div>
             <div className="shopping-flow-meta tabular">
               {currentList.items.length}개 항목 · {currentList.mealIds.length}끼
             </div>
             <Button variant="primary" rightIcon="chevR" size="sm">바로 시작</Button>
-          </button>
+          </div>
         )}
 
-        <button className="shopping-flow-card" onClick={onOpenPast}>
+        <div
+          className="shopping-flow-card"
+          role="button"
+          tabIndex={0}
+          onClick={onOpenPast}
+          onKeyDown={onCardKey(onOpenPast)}
+        >
           <div className="shopping-flow-eyebrow">과거 목록</div>
           <div className="shopping-flow-title">지난 장보기 다시 보기</div>
           <div className="shopping-flow-meta">읽기 전용 · 다시 장보기로 복원 가능</div>
           <Button variant="tertiary" rightIcon="chevR" size="sm">목록 열기</Button>
-        </button>
+        </div>
 
-        <button className="shopping-flow-card" onClick={onCreateNew}>
+        <div
+          className="shopping-flow-card"
+          role="button"
+          tabIndex={0}
+          onClick={onCreateNew}
+          onKeyDown={onCardKey(onCreateNew)}
+        >
           <div className="shopping-flow-eyebrow">직접 만들기</div>
           <div className="shopping-flow-title">새 장보기 리스트</div>
           <div className="shopping-flow-meta">플래너 없이 항목만 적기</div>
           <Button variant="tertiary" rightIcon="plus" size="sm">새로 만들기</Button>
-        </button>
+        </div>
       </div>
     </main>
   );

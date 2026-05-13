@@ -45,6 +45,13 @@ function App() {
   const [logout, setLogout] = useStateA(false);
   const [cookNotice, setCookNotice] = useStateA(false);
   const [account, setAccount] = useStateA(DA.ACCOUNT);
+  const [isAuthenticated, setIsAuthenticated] = useStateA(false);
+  const [loginGate, setLoginGate] = useStateA({
+    open: false,
+    actionLabel: "",
+    helper: "",
+    resume: null,
+  });
 
   // Nav
   const push = (entry) => { setStack(s => [...s, entry]); window.scrollTo({ top: 0, behavior: "instant" }); };
@@ -52,17 +59,49 @@ function App() {
   const pop = () => { setStack(s => s.length > 1 ? s.slice(0, -1) : s); window.scrollTo({ top: 0, behavior: "instant" }); };
   const goTab = (tab) => { setStack([{ screen: tab }]); window.scrollTo({ top: 0, behavior: "instant" }); };
 
+  // Protected actions — desktop LoginGate foundation
+  const requireAuth = useCallbackA((config, action) => {
+    if (isAuthenticated) {
+      action?.();
+      return;
+    }
+    setLoginGate({
+      open: true,
+      actionLabel: config?.actionLabel || "보호된 작업",
+      helper: config?.helper || "로그인하면 방금 하려던 작업을 이어서 완료할 수 있어요.",
+      resume: action,
+    });
+  }, [isAuthenticated]);
+
+  const closeLoginGate = useCallbackA(() => {
+    setLoginGate({ open: false, actionLabel: "", helper: "", resume: null });
+  }, []);
+
+  const confirmLoginGate = useCallbackA(() => {
+    const resume = loginGate.resume;
+    setIsAuthenticated(true);
+    setLoginGate({ open: false, actionLabel: "", helper: "", resume: null });
+    toast("로그인했어요. 작업을 이어갑니다.");
+    if (resume) window.setTimeout(() => resume(), 0);
+  }, [loginGate, toast]);
+
   // Save toggle (from PhotoCard)
   const toggleSave = (rid) => {
     if (!rid || rid === "clear-all") {
       setSavedFilters(new Set());
       return;
     }
-    setSavedSet(prev => {
-      const n = new Set(prev);
-      if (n.has(rid)) { n.delete(rid); toast("저장 해제했어요"); }
-      else { n.add(rid); toast("저장한 레시피북에 담았어요"); }
-      return n;
+    const recipe = DA.RECIPE[rid];
+    requireAuth({
+      actionLabel: recipe ? `"${recipe.title}" 저장` : "레시피 저장",
+      helper: "저장한 레시피북에 담으려면 로그인이 필요해요.",
+    }, () => {
+      setSavedSet(prev => {
+        const n = new Set(prev);
+        if (n.has(rid)) { n.delete(rid); toast("저장 해제했어요"); }
+        else { n.add(rid); toast("저장한 레시피북에 담았어요"); }
+        return n;
+      });
     });
   };
 
@@ -100,7 +139,10 @@ function App() {
       onSaveToggle={toggleSave}
       onOpenLightbox={(photos, idx) => setLightbox({ open: true, photos, idx })}
       onOpenPlannerAdd={(rid, servings) => setPlannerAddModal({ open: true, recipeId: rid, date: DA.TODAY_ISO, col: "col-d" })}
-      onOpenSave={() => setSaveModal({ open: true, recipeId: cur.recipeId })}
+      onOpenSave={() => requireAuth({
+        actionLabel: "레시피북에 저장",
+        helper: "저장할 레시피북을 고르려면 로그인이 필요해요.",
+      }, () => setSaveModal({ open: true, recipeId: cur.recipeId }))}
       onCook={() => setCookNotice(true)}
       pantryHeld={pantryHeld}
       toast={toast}
@@ -313,6 +355,13 @@ function App() {
       <CookNoticeDialog
         open={cookNotice}
         onClose={() => setCookNotice(false)}
+      />
+      <HC_.LoginGateDialog
+        open={loginGate.open}
+        actionLabel={loginGate.actionLabel}
+        helper={loginGate.helper}
+        onClose={closeLoginGate}
+        onConfirm={confirmLoginGate}
       />
 
       <HC_.Toast bus={toastBus} />
