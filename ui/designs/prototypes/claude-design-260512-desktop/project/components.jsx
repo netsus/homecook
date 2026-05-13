@@ -21,6 +21,7 @@ const ICON_PATHS = {
   bookmarkF:"M6 4h12v17l-6-4-6 4V4Z",
   bell:     "M6 16h12l-1.5-2V10a4.5 4.5 0 0 0-9 0v4L6 16Zm4 2a2 2 0 0 0 4 0",
   user:     "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-8 9a8 8 0 0 1 16 0",
+  lock:     "M7 10V8a5 5 0 0 1 10 0v2M6 10h12v11H6V10Zm6 5v2",
   share:    "M16 8a3 3 0 1 0-2.83-4M8 14a3 3 0 1 0 0-4M16 20a3 3 0 1 0-2.83-4M10 13l5 3M10 11l5-3",
   cart:     "M5 6h15l-1.5 9H8L6 4H3M8 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm10 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z",
   bag:      "M6 8h12l-1 12H7L6 8Zm3-3a3 3 0 0 1 6 0",
@@ -227,6 +228,59 @@ function Dialog({ open, onClose, title, helper, footer, children, wide, narrow, 
   );
 }
 
+/* ---------------- LoginGate (desktop return-to-action) ---------------- */
+function LoginGateDialog({
+  open,
+  onClose,
+  onConfirm,
+  actionLabel = "이 작업",
+  title = "로그인이 필요해요",
+  helper = "로그인하면 방금 하려던 작업을 이어서 완료할 수 있어요.",
+}) {
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={title}
+      helper={actionLabel}
+      narrow
+      footer={<>
+        <Button variant="ghost" onClick={onClose}>나중에</Button>
+        <Button variant="primary" leftIcon="user" onClick={onConfirm}>로그인하고 계속</Button>
+      </>}
+    >
+      <div className="login-gate">
+        <div className="login-gate-summary">
+          <div className="login-gate-icon"><Icon name="lock" size={18} /></div>
+          <div className="login-gate-copy">
+            <div className="login-gate-title">{actionLabel}</div>
+            <div className="login-gate-desc">{helper}</div>
+          </div>
+        </div>
+        <div className="login-provider-list">
+          <button className="login-provider kakao" onClick={onConfirm}>
+            <span className="login-provider-main">
+              <span className="login-provider-mark">K</span>
+              카카오로 계속하기
+            </span>
+            <Icon name="chevR" size={14} color="var(--text-3)" />
+          </button>
+          <button className="login-provider" onClick={onConfirm}>
+            <span className="login-provider-main">
+              <span className="login-provider-mark">G</span>
+              Google로 계속하기
+            </span>
+            <Icon name="chevR" size={14} color="var(--text-3)" />
+          </button>
+        </div>
+        <div className="login-gate-note">
+          데모에서는 로그인 후 같은 화면에서 작업을 바로 이어갑니다.
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
 /* ---------------- Toast ---------------- */
 function Toast({ bus }) {
   const [msg, setMsg] = useStateC(null);
@@ -378,6 +432,6 @@ function DateChipRail({ value, onChange, dates }) {
 
 window.HC = {
   Icon, TopNav, Button, Chip, Tag, PhotoCard,
-  Dialog, Toast, StatePanel, HomeSkeletonGrid,
+  Dialog, LoginGateDialog, Toast, StatePanel, HomeSkeletonGrid,
   SortDropdown, Stepper, ScreenHeader, SegmentedRow, DateChipRail,
 };
