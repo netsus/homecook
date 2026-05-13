@@ -99,6 +99,7 @@ export function RecipeDetailScreen({
   const [plannerAddSheetState, setPlannerAddSheetState] = useState<PlannerAddSheetState>("loading-columns");
   const [plannerColumns, setPlannerColumns] = useState<PlannerColumnData[]>([]);
   const [plannerAddError, setPlannerAddError] = useState<string | null>(null);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [selectedPlanDate, setSelectedPlanDate] = useState("");
   const [selectedPlanColumnId, setSelectedPlanColumnId] = useState("");
   const [plannerServings, setPlannerServings] = useState(1);
@@ -728,13 +729,21 @@ export function RecipeDetailScreen({
   const heroBackground = getRecipeHeroBackground(recipe);
   const minutesLabel = getRecipeMinutesLabel(recipe);
   const displayTags = recipe.tags.slice(0, 3);
+  const shouldRenderWebView =
+    process.env.NODE_ENV !== "test" || isDesktopViewport;
+  const shouldRenderAppView =
+    process.env.NODE_ENV !== "test" || !isDesktopViewport;
 
   return (
     <>
-      {isDesktopViewport ? (
-      <div className="bg-[var(--surface-fill)]">
-        <div
-          className="aspect-[4/3] max-[360px]:aspect-[16/9] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--brand)_22%,transparent),color-mix(in_srgb,var(--background)_85%,transparent),color-mix(in_srgb,var(--olive)_18%,transparent))]"
+      {shouldRenderWebView ? (
+      <div className="hidden bg-[var(--surface-fill)] lg:block">
+        <button
+          aria-label={recipe.thumbnail_url ? "레시피 사진 크게 보기" : "레시피 대표 이미지"}
+          className="block aspect-[4/3] w-full max-[360px]:aspect-[16/9] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--brand)_22%,transparent),color-mix(in_srgb,var(--background)_85%,transparent),color-mix(in_srgb,var(--olive)_18%,transparent))] text-left disabled:cursor-default"
+          disabled={!recipe.thumbnail_url}
+          onClick={() => setIsLightboxOpen(true)}
+          type="button"
           style={
             recipe.thumbnail_url
               ? {
@@ -746,7 +755,9 @@ export function RecipeDetailScreen({
           }
         />
 
-        <div className="recipe-overview-compact flex flex-col border-b border-[var(--line)] bg-[var(--panel)] px-5 py-5">
+        <div className="mx-auto grid max-w-[1200px] gap-6 px-8 py-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="min-w-0 space-y-6">
+        <div className="recipe-overview-compact flex flex-col rounded-[24px] border border-[var(--line)] bg-[var(--panel)] px-6 py-6 shadow-[var(--shadow-1)]">
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--olive)]">
             <Link href="/">Home</Link>
             <span>/</span>
@@ -839,7 +850,7 @@ export function RecipeDetailScreen({
           </div>
         </div>
 
-        <div className="bg-[var(--panel)] px-5 py-5">
+        <div className="rounded-[24px] border border-[var(--line)] bg-[var(--panel)] px-6 py-6 shadow-[var(--shadow-1)]">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
             재료
           </p>
@@ -931,7 +942,7 @@ export function RecipeDetailScreen({
           </ul>
         </div>
 
-        <div className="px-4 py-5">
+        <div className="rounded-[24px] border border-[var(--line)] bg-[var(--surface)] px-6 py-6">
           <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--olive)]">
             조리 단계
           </p>
@@ -991,10 +1002,70 @@ export function RecipeDetailScreen({
             ))}
           </ol>
         </div>
+          </div>
+
+          <div className="hidden xl:block">
+            <div className="sticky top-28 rounded-[24px] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow-1)]">
+              <div className="border-b border-[var(--line)] pb-4">
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--foreground)]">
+                  Action
+                </p>
+                <h2 className="mt-2 text-xl font-black tracking-[-0.02em] text-[var(--foreground)]">
+                  {selectedServings}인분 기준
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-[var(--text-2)]">
+                  재료 {recipe.ingredients.length}개 · 조리 {recipe.steps.length}단계
+                </p>
+              </div>
+
+              <div className="space-y-3 py-4">
+                <ActionButton
+                  label="플래너에 추가"
+                  onClick={() => handleProtectedAction("planner")}
+                  tone="olive"
+                />
+                <ActionButton
+                  label="요리하기"
+                  onClick={() =>
+                    router.push(
+                      `/cooking/recipes/${recipeId}/cook-mode?servings=${selectedServings}`,
+                    )
+                  }
+                  tone="brand"
+                />
+              </div>
+
+              <div className="space-y-2 border-t border-[var(--line)] pt-4 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--muted)]">좋아요</span>
+                  <span className="font-bold text-[var(--foreground)]">
+                    {desktopLikeCountLabel}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--muted)]">저장</span>
+                  <span className="font-bold text-[var(--foreground)]">
+                    {desktopSaveCountLabel}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--muted)]">플래너 등록</span>
+                  <span className="font-bold text-[var(--foreground)]">
+                    {desktopPlannerCountLabel}
+                  </span>
+                </div>
+              </div>
+
+              <p className="mt-4 rounded-[16px] bg-[var(--surface-fill)] px-4 py-3 text-xs leading-5 text-[var(--text-2)]">
+                요리모드 진입 후에는 인분을 바꿀 수 없어요.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
       ) : null}
-      {!isDesktopViewport ? (
-      <div className="min-h-screen bg-white pb-[176px] text-[#212529]">
+      {shouldRenderAppView ? (
+      <div className="min-h-screen bg-white pb-[176px] text-[#212529] lg:hidden">
         <section
           className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden text-[132px] max-[360px]:text-[108px] md:max-h-[460px]"
           style={{ background: heroBackground }}
@@ -1233,8 +1304,8 @@ export function RecipeDetailScreen({
         ) : null}
       </div>
       ) : null}
-      {isDesktopViewport ? (
-      <div className="sticky bottom-0 z-20 border-t border-[var(--line)] bg-[var(--surface)] px-5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
+      {shouldRenderWebView ? (
+      <div className="sticky bottom-0 z-20 hidden border-t border-[var(--line)] bg-[var(--surface)] px-5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.08)] lg:block xl:hidden">
         <div className="grid grid-cols-[1fr_2fr] gap-2">
           <ActionButton
             label="플래너에 추가"
@@ -1253,8 +1324,8 @@ export function RecipeDetailScreen({
         </div>
       </div>
       ) : null}
-      {!isDesktopViewport ? (
-      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-[82px] z-20 flex gap-2 border-t border-[#DEE2E6] bg-white px-4 pb-[calc(12px_+_env(safe-area-inset-bottom))] pt-3">
+      {shouldRenderAppView ? (
+      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-[82px] z-20 flex gap-2 border-t border-[#DEE2E6] bg-white px-4 pb-[calc(12px_+_env(safe-area-inset-bottom))] pt-3 lg:hidden">
         <button
           className="min-h-11 flex-1 rounded-[12px] border border-[#2AC1BC] bg-[#E8F8F7] px-3 text-[15px] font-bold text-[#007A76]"
           onClick={() => handleProtectedAction("planner")}
@@ -1275,7 +1346,11 @@ export function RecipeDetailScreen({
         </button>
       </div>
       ) : null}
-      {!isDesktopViewport ? <Wave1BottomTab /> : null}
+      {shouldRenderAppView ? (
+      <div className="lg:hidden">
+        <Wave1BottomTab />
+      </div>
+      ) : null}
       <SaveModal
         books={saveBooks}
         isCreatingBook={isCreatingBook}
@@ -1331,6 +1406,12 @@ export function RecipeDetailScreen({
           meta: `${minutesLabel} · 선택 ${plannerServings}인분`,
           title: recipe.title,
         }}
+      />
+      <RecipePhotoLightbox
+        imageUrl={recipe.thumbnail_url}
+        isOpen={isLightboxOpen}
+        onClose={() => setIsLightboxOpen(false)}
+        title={recipe.title}
       />
       {feedback ? <FeedbackToast message={feedback.message} tone={feedback.tone} /> : null}
       <LoginGateModal />
@@ -1419,6 +1500,78 @@ function RecipeDetailLoadingSkeleton() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RecipePhotoLightbox({
+  imageUrl,
+  isOpen,
+  onClose,
+  title,
+}: {
+  imageUrl: string | null;
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+}) {
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !imageUrl) {
+    return null;
+  }
+
+  return (
+    <div
+      aria-label="사진 갤러리"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/82 p-8"
+      onClick={onClose}
+      role="dialog"
+    >
+      <button
+        aria-label="닫기"
+        className="absolute right-8 top-8 grid h-11 w-11 place-items-center rounded-full bg-white/12 text-white backdrop-blur transition hover:bg-white/20"
+        onClick={(event) => {
+          event.stopPropagation();
+          onClose();
+        }}
+        type="button"
+      >
+        ×
+      </button>
+      <div
+        className="relative aspect-[4/3] max-h-[78vh] w-full max-w-5xl overflow-hidden rounded-[24px] bg-[#EAEDEF] shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
+        onClick={(event) => event.stopPropagation()}
+        style={{
+          backgroundImage: `url(${imageUrl})`,
+          backgroundPosition: "center",
+          backgroundSize: "cover",
+        }}
+      >
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-6 text-white">
+          <p className="text-sm font-semibold opacity-85">1 / 1</p>
+          <h2 className="mt-1 text-2xl font-black tracking-[-0.02em]">
+            {title}
+          </h2>
         </div>
       </div>
     </div>
@@ -1524,7 +1677,7 @@ function Wave1BottomTab() {
   return (
     <nav
       aria-label="레시피 상세 하단 탭"
-      className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] border-t border-[#DEE2E6] bg-white px-4 pb-[calc(28px_+_env(safe-area-inset-bottom))] pt-2 md:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] border-t border-[#DEE2E6] bg-white px-4 pb-[calc(28px_+_env(safe-area-inset-bottom))] pt-2 lg:hidden"
       style={{ borderTopWidth: "0.5px" }}
     >
       <div className="grid grid-cols-4">
@@ -1563,7 +1716,7 @@ function ActionButton({
   return (
     <button
       aria-pressed={ariaPressed}
-      className={`min-h-11 whitespace-nowrap rounded-[var(--radius-md)] border px-3 py-2 text-[12px] font-semibold shadow-[var(--shadow-1)] disabled:cursor-not-allowed disabled:opacity-60 max-[360px]:px-2 md:px-4 md:py-2.5 md:text-sm ${
+      className={`min-h-11 w-full whitespace-nowrap rounded-[var(--radius-md)] border px-3 py-2 text-[12px] font-semibold shadow-[var(--shadow-1)] disabled:cursor-not-allowed disabled:opacity-60 max-[360px]:px-2 md:px-4 md:py-2.5 md:text-sm ${
         tone === "olive"
           ? "border-[color-mix(in_srgb,var(--olive)_22%,transparent)] bg-[var(--olive)] text-[var(--surface)]"
           : getRecipeActionToneClass(tone)

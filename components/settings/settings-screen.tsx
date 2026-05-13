@@ -552,204 +552,224 @@ export function SettingsScreen({
   }
 
   return (
-    <div>
-      <SettingsAppBar />
+    <div className="min-h-screen bg-[var(--background)] pb-16">
+      <div className="mx-auto max-w-6xl px-6 pt-6">
+        <SettingsAppBar />
 
-      {errorMessage ? (
-        <div
-          className="mx-4 mt-2 rounded-[var(--radius-md)] bg-[var(--danger)] px-4 py-3 text-center text-sm font-semibold text-white"
-          data-testid="settings-error-toast"
-          role="status"
-        >
-          {errorMessage}
-        </div>
-      ) : null}
+        {errorMessage ? (
+          <div
+            className="mt-3 rounded-[var(--radius-md)] bg-[var(--danger)] px-4 py-3 text-center text-sm font-semibold text-white"
+            data-testid="settings-error-toast"
+            role="status"
+          >
+            {errorMessage}
+          </div>
+        ) : null}
 
-      <div className="px-4 pt-4">
-        <p className="mb-2 text-sm font-semibold text-[var(--text-3)]">
-          앱 설정
-        </p>
+        <section className="mt-5 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
+            Settings
+          </p>
+          <h2 className="mt-1 text-3xl font-bold tracking-[-0.3px] text-[var(--foreground)]">
+            계정과 식단 관리
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+            요리 화면 유지, 플래너 끼니 컬럼, 계정 정보를 한 곳에서 관리해요.
+          </p>
+        </section>
 
-        <div className="rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 pr-3">
-              <p className="text-base font-medium text-[var(--foreground)]">
-                요리모드 화면 꺼짐 방지
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="space-y-6">
+            <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
+              <p className="mb-3 text-sm font-semibold text-[var(--text-3)]">
+                앱 설정
               </p>
-              <p className="mt-1 text-sm text-[var(--text-3)]">
-                요리 중 화면이 꺼지지 않아요
-              </p>
-            </div>
-            <button
-              aria-checked={profile?.settings.screen_wake_lock ?? false}
-              aria-label="요리모드 화면 꺼짐 방지"
-              className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center"
-              onClick={() => void handleToggleWakeLock()}
-              role="switch"
-              type="button"
-            >
-              <span
-                aria-hidden="true"
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-                  profile?.settings.screen_wake_lock
-                    ? "bg-[var(--brand)]"
-                    : "bg-[var(--surface-subtle)]"
-                }`}
-              >
-                <span
-                  className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
-                    profile?.settings.screen_wake_lock
-                      ? "translate-x-[22px]"
-                      : "translate-x-[2px]"
-                  }`}
-                />
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 pt-6" data-testid="column-management-section">
-        <p className="mb-2 text-sm font-semibold text-[var(--text-3)]">
-          끼니 컬럼 관리
-        </p>
-
-        {columnsLoading ? (
-          <div className="rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]" data-testid="columns-loading">
-            <Skeleton className="h-5 w-24" />
-            <Skeleton className="mt-3 h-5 w-32" />
-            <Skeleton className="mt-3 h-5 w-28" />
-          </div>
-        ) : columnsError ? (
-          <div className="rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]" data-testid="columns-error">
-            <p className="text-sm text-[var(--danger)]">{columnsError}</p>
-            <button
-              className="mt-2 text-sm font-semibold text-[var(--brand)]"
-              onClick={() => void loadColumns()}
-              type="button"
-            >
-              다시 시도
-            </button>
-          </div>
-        ) : (
-          <div className="rounded-[var(--radius-lg)] bg-[var(--surface)] shadow-[var(--shadow-1)]">
-            <div className="divide-y divide-[var(--surface-subtle)]" data-testid="column-list">
-              {plannerColumns.map((column) => (
-                <div
-                  key={column.id}
-                  className="flex min-h-[52px] items-center px-4 py-2.5"
-                  data-testid={`column-item-${column.id}`}
+              <div className="flex items-center justify-between rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
+                <div className="flex-1 pr-3">
+                  <p className="text-base font-semibold text-[var(--foreground)]">
+                    요리모드 화면 꺼짐 방지
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--text-3)]">
+                    요리 중 화면이 꺼지지 않아요
+                  </p>
+                </div>
+                <button
+                  aria-checked={profile?.settings.screen_wake_lock ?? false}
+                  aria-label="요리모드 화면 꺼짐 방지"
+                  className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center"
+                  onClick={() => void handleToggleWakeLock()}
+                  role="switch"
+                  type="button"
                 >
-                  <span className="min-w-0 flex-1 truncate text-base font-medium text-[var(--foreground)]">
-                    {column.name}
-                  </span>
-                  <button
-                    aria-label={`${column.name} 이름 변경`}
-                    className="ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[var(--text-3)]"
-                    data-testid={`rename-column-${column.id}`}
-                    onClick={() => openColumnRenameSheet(column)}
-                    type="button"
-                  >
-                    <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-                  <button
-                    aria-label={`${column.name} 삭제`}
-                    className={`flex h-11 w-11 shrink-0 items-center justify-center ${
-                      plannerColumns.length <= 1
-                        ? "text-[var(--text-4)] cursor-not-allowed"
-                        : "text-[var(--text-3)]"
+                  <span
+                    aria-hidden="true"
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
+                      profile?.settings.screen_wake_lock
+                        ? "bg-[var(--brand)]"
+                        : "bg-[var(--surface-subtle)]"
                     }`}
-                    data-testid={`delete-column-${column.id}`}
-                    disabled={plannerColumns.length <= 1}
-                    onClick={() => setDeleteColumnTarget(column)}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
+                        profile?.settings.screen_wake_lock
+                          ? "translate-x-[22px]"
+                          : "translate-x-[2px]"
+                      }`}
+                    />
+                  </span>
+                </button>
+              </div>
+            </section>
+
+            <section
+              className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]"
+              data-testid="column-management-section"
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-3)]">
+                    끼니 컬럼 관리
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--text-4)]">
+                    최소 1개 ~ 최대 5개 · 현재 {plannerColumns.length}개
+                  </p>
+                </div>
+              </div>
+
+              {columnsLoading ? (
+                <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] p-4" data-testid="columns-loading">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="mt-3 h-5 w-32" />
+                  <Skeleton className="mt-3 h-5 w-28" />
+                </div>
+              ) : columnsError ? (
+                <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] p-4" data-testid="columns-error">
+                  <p className="text-sm text-[var(--danger)]">{columnsError}</p>
+                  <button
+                    className="mt-2 text-sm font-semibold text-[var(--brand)]"
+                    onClick={() => void loadColumns()}
                     type="button"
                   >
-                    <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    다시 시도
                   </button>
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--panel)]">
+                  <div className="divide-y divide-[var(--surface-subtle)]" data-testid="column-list">
+                    {plannerColumns.map((column) => (
+                      <div
+                        key={column.id}
+                        className="flex min-h-[56px] items-center px-4 py-2.5"
+                        data-testid={`column-item-${column.id}`}
+                      >
+                        <span className="min-w-0 flex-1 truncate text-base font-medium text-[var(--foreground)]">
+                          {column.name}
+                        </span>
+                        <button
+                          aria-label={`${column.name} 이름 변경`}
+                          className="ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-[var(--text-3)] hover:text-[var(--brand)]"
+                          data-testid={`rename-column-${column.id}`}
+                          onClick={() => openColumnRenameSheet(column)}
+                          type="button"
+                        >
+                          <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                        <button
+                          aria-label={`${column.name} 삭제`}
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center ${
+                            plannerColumns.length <= 1
+                              ? "cursor-not-allowed text-[var(--text-4)]"
+                              : "text-[var(--text-3)] hover:text-[var(--danger)]"
+                          }`}
+                          data-testid={`delete-column-${column.id}`}
+                          disabled={plannerColumns.length <= 1}
+                          onClick={() => setDeleteColumnTarget(column)}
+                          type="button"
+                        >
+                          <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
 
-            <div className="border-t border-[var(--surface-subtle)] px-4 py-3">
+                  <div className="border-t border-[var(--surface-subtle)] px-4 py-3">
+                    <button
+                      className={`flex min-h-[44px] w-full items-center justify-center rounded-[var(--radius-md)] text-sm font-semibold ${
+                        plannerColumns.length >= 5
+                          ? "cursor-not-allowed bg-[var(--surface-subtle)] text-[var(--text-4)]"
+                          : "bg-[var(--surface-fill)] text-[var(--brand)] hover:bg-[var(--brand-soft)]"
+                      }`}
+                      data-testid="add-column-button"
+                      disabled={plannerColumns.length >= 5}
+                      onClick={() => {
+                        setColumnAddInput("");
+                        setColumnAddError(null);
+                        setShowColumnAddSheet(true);
+                      }}
+                      type="button"
+                    >
+                      {plannerColumns.length >= 5
+                        ? "끼니 컬럼은 최대 5개까지 만들 수 있어요"
+                        : "+ 끼니 컬럼 추가"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+          </div>
+
+          <aside className="h-fit rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
+            <p className="mb-3 text-sm font-semibold text-[var(--text-3)]">
+              계정 관리
+            </p>
+            <button
+              aria-label={`닉네임 변경, 현재 닉네임: ${profile?.nickname ?? ""}`}
+              className="flex w-full items-center rounded-[var(--radius-md)] bg-[var(--surface-fill)] p-4"
+              data-testid="nickname-row"
+              onClick={openNicknameSheet}
+              type="button"
+            >
+              <div className="flex-1 text-left">
+                <p className="text-sm text-[var(--text-3)]">닉네임</p>
+                <p className="mt-1 text-base font-semibold text-[var(--foreground)]">
+                  {profile?.nickname ?? ""}
+                </p>
+              </div>
+              <svg
+                aria-hidden="true"
+                className="h-5 w-5 shrink-0 text-[var(--text-3)]"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            <button
+              className="mt-4 flex min-h-[52px] w-full items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] text-base font-medium text-[var(--text-2)] hover:border-[var(--brand)]"
+              onClick={() => setShowLogoutDialog(true)}
+              type="button"
+            >
+              로그아웃
+            </button>
+
+            <div className="mt-4 flex justify-center">
               <button
-                className={`flex w-full min-h-[44px] items-center justify-center rounded-[var(--radius-md)] text-sm font-semibold ${
-                  plannerColumns.length >= 5
-                    ? "bg-[var(--surface-subtle)] text-[var(--text-4)] cursor-not-allowed"
-                    : "bg-[var(--surface-fill)] text-[var(--brand)]"
-                }`}
-                data-testid="add-column-button"
-                disabled={plannerColumns.length >= 5}
-                onClick={() => {
-                  setColumnAddInput("");
-                  setColumnAddError(null);
-                  setShowColumnAddSheet(true);
-                }}
+                className="min-h-[44px] text-sm text-[var(--text-3)] underline"
+                onClick={() => setShowDeleteDialog(true)}
                 type="button"
               >
-                {plannerColumns.length >= 5
-                  ? "끼니 컬럼은 최대 5개까지 만들 수 있어요"
-                  : "+ 끼니 컬럼 추가"}
+                회원탈퇴
               </button>
             </div>
-          </div>
-        )}
-
-        <p className="mt-2 px-1 text-xs text-[var(--text-4)]">
-          최소 1개 ~ 최대 5개 · 현재 {plannerColumns.length}개
-        </p>
-      </div>
-
-      <div className="px-4 pt-6">
-        <p className="mb-2 text-sm font-semibold text-[var(--text-3)]">
-          계정 관리
-        </p>
-
-        <button
-          aria-label={`닉네임 변경, 현재 닉네임: ${profile?.nickname ?? ""}`}
-          className="flex w-full items-center rounded-[var(--radius-lg)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]"
-          data-testid="nickname-row"
-          onClick={openNicknameSheet}
-          type="button"
-        >
-          <div className="flex-1 text-left">
-            <p className="text-sm text-[var(--text-3)]">닉네임</p>
-            <p className="mt-1 text-base font-medium text-[var(--foreground)]">
-              {profile?.nickname ?? ""}
-            </p>
-          </div>
-          <svg
-            aria-hidden="true"
-            className="h-5 w-5 shrink-0 text-[var(--text-3)]"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            viewBox="0 0 24 24"
-          >
-            <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-
-        <button
-          className="mt-8 flex w-full min-h-[52px] items-center justify-center rounded-[var(--radius-lg)] bg-[var(--surface)] text-base font-medium text-[var(--text-2)]"
-          onClick={() => setShowLogoutDialog(true)}
-          type="button"
-        >
-          로그아웃
-        </button>
-
-        <div className="mt-4 flex justify-center">
-          <button
-            className="min-h-[44px] text-sm text-[var(--text-3)] underline"
-            onClick={() => setShowDeleteDialog(true)}
-            type="button"
-          >
-            회원탈퇴
-          </button>
+          </aside>
         </div>
       </div>
 
@@ -931,17 +951,17 @@ function NicknameEditSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 lg:items-center"
       data-testid="nickname-sheet-backdrop"
       onClick={onClose}
     >
       <div
         aria-modal="true"
-        className="w-full max-w-md rounded-t-[var(--radius-xl)] bg-[var(--panel)] p-6 shadow-[var(--shadow-3)]"
+        className="w-full max-w-md rounded-t-[var(--radius-xl)] bg-[var(--panel)] p-6 shadow-[var(--shadow-3)] lg:rounded-[var(--radius-xl)]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <div className="mx-auto mb-4 h-1 w-8 rounded-full bg-[var(--line)]" />
+        <div className="mx-auto mb-4 h-1 w-8 rounded-full bg-[var(--line)] lg:hidden" />
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-[var(--foreground)]">
             닉네임 변경
@@ -1105,18 +1125,18 @@ function ColumnNameSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 lg:items-center"
       data-testid={`${testIdPrefix}-sheet-backdrop`}
       onClick={onClose}
     >
       <div
         aria-labelledby={titleId}
         aria-modal="true"
-        className="w-full max-w-md rounded-t-[var(--radius-xl)] bg-[var(--panel)] p-6 shadow-[var(--shadow-3)]"
+        className="w-full max-w-md rounded-t-[var(--radius-xl)] bg-[var(--panel)] p-6 shadow-[var(--shadow-3)] lg:rounded-[var(--radius-xl)]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <div className="mx-auto mb-4 h-1 w-8 rounded-full bg-[var(--line)]" />
+        <div className="mx-auto mb-4 h-1 w-8 rounded-full bg-[var(--line)] lg:hidden" />
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-[var(--foreground)]" id={titleId}>
             {title}

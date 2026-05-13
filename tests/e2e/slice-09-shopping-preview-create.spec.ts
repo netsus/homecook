@@ -75,7 +75,7 @@ async function installShoppingPreviewRoute(
 }
 
 function isMobileViewport(page: Page) {
-  return (page.viewportSize()?.width ?? 0) < 768;
+  return (page.viewportSize()?.width ?? 0) < 1024;
 }
 
 test.describe("slice 09: shopping preview and list creation", () => {

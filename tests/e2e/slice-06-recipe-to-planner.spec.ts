@@ -232,7 +232,9 @@ test.describe("Slice 06 recipe-to-planner", () => {
         name: isMobileViewport(page) ? "플래너" : "식단 플래너",
       }),
     ).toBeVisible();
-    await expect(page.getByText(RECIPE_TITLE)).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: new RegExp(RECIPE_TITLE) }),
+    ).toBeVisible();
   });
 
   // accept-unauthorized (Playwright-level smoke):

@@ -340,14 +340,14 @@ export function PantryScreen({
       {/* Delete confirm modal */}
       {showDeleteConfirm && (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-black/40 p-4 md:items-center md:justify-center"
+          className="fixed inset-0 z-50 flex items-end bg-black/40 p-4 lg:items-center lg:justify-center"
           onClick={() => setShowDeleteConfirm(false)}
         >
           <div
-            className="w-full max-w-md rounded-t-[var(--radius-xl)] bg-[var(--panel)] p-5 shadow-[var(--shadow-3)] md:rounded-[var(--radius-xl)]"
+            className="w-full max-w-md rounded-t-[var(--radius-xl)] bg-[var(--panel)] p-5 shadow-[var(--shadow-3)] lg:rounded-[var(--radius-xl)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-center pt-1 md:hidden">
+            <div className="flex justify-center pt-1 lg:hidden">
               <div className="h-1 w-9 rounded-sm bg-[var(--line)]" />
             </div>
             <div className="flex items-start justify-between gap-3 pt-3">
@@ -445,46 +445,111 @@ export function PantryScreen({
   }
 
   return (
-    <div className="space-y-3 pb-24">
-      {/* Header */}
-      <div className="px-1">
-        <h1 className="text-xl font-bold text-[var(--foreground)]">나의 팬트리</h1>
-        <p className="mt-0.5 text-sm text-[var(--muted)]">
-          {items.length}개 재료
-        </p>
-      </div>
+    <div className="space-y-6 pb-24">
+      <section className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
+              Pantry
+            </p>
+            <h1 className="mt-1 text-3xl font-bold tracking-[-0.3px] text-[var(--foreground)]">
+              나의 팬트리
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--muted)]">
+              갖고 있는 재료를 정리하면 장보기에서 이미 있는 재료를 자동으로 제외해요.
+            </p>
+          </div>
 
-      {/* Search bar */}
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]">
-          🔍
-        </span>
-        <input
-          aria-label="팬트리 재료 검색"
-          className="w-full rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--surface)] py-2.5 pl-9 pr-9 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
-          onChange={(e) => handleSearch(e.target.value)}
-          placeholder="재료 검색"
-          role="searchbox"
-          type="text"
-          value={searchQuery}
-        />
-        {searchQuery && (
-          <button
-            aria-label="검색어 지우기"
-            className="absolute right-2.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--surface-fill)] text-xs text-[var(--muted)]"
-            onClick={handleClearSearch}
-            type="button"
-          >
-            ✕
-          </button>
-        )}
-      </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex">
+            <button
+              className="flex min-h-[44px] items-center justify-center rounded-full bg-[var(--brand)] px-5 text-sm font-semibold text-[var(--surface)] shadow-[var(--shadow-1)]"
+              onClick={() => setShowAddSheet(true)}
+              type="button"
+            >
+              재료 추가하기
+            </button>
+            <button
+              className="flex min-h-[44px] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface-fill)] px-5 text-sm font-semibold text-[var(--foreground)] hover:border-[var(--brand)]"
+              onClick={() => setShowBundlePicker(true)}
+              type="button"
+            >
+              묶음으로 추가
+            </button>
+          </div>
+        </div>
 
-      {/* Category chip rail */}
-      <div
-        className="scrollbar-hide flex gap-2 overflow-x-auto"
-        role="tablist"
-      >
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
+            <p className="text-xs font-semibold text-[var(--muted)]">전체 재료</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">
+              {items.length}개 재료
+            </p>
+          </div>
+          <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
+            <p className="text-xs font-semibold text-[var(--muted)]">카테고리</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">
+              {categories.length}
+            </p>
+          </div>
+          <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
+            <p className="text-xs font-semibold text-[var(--muted)]">현재 보기</p>
+            <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">
+              {displayItems.length}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="sticky top-4 z-10 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--panel)] p-3 shadow-[var(--shadow-1)] backdrop-blur">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]">
+              🔍
+            </span>
+            <input
+              aria-label="팬트리 재료 검색"
+              className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-3 pl-9 pr-9 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]"
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="재료 검색"
+              role="searchbox"
+              type="text"
+              value={searchQuery}
+            />
+            {searchQuery && (
+              <button
+                aria-label="검색어 지우기"
+                className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--surface-fill)] text-xs text-[var(--muted)]"
+                onClick={handleClearSearch}
+                type="button"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {!isSelectMode ? (
+            <button
+              className="min-h-[44px] rounded-full border border-[var(--line)] px-5 text-sm font-semibold text-[var(--muted)] hover:border-[var(--danger)] hover:text-[var(--danger)]"
+              onClick={() => setIsSelectMode(true)}
+              type="button"
+            >
+              선택 모드
+            </button>
+          ) : (
+            <button
+              aria-label="선택 모드 취소"
+              className="min-h-[44px] rounded-full border border-[var(--line)] px-5 text-sm font-semibold text-[var(--foreground)]"
+              onClick={handleExitSelectMode}
+              type="button"
+            >
+              취소
+            </button>
+          )}
+        </div>
+
+        <div
+          className="scrollbar-hide mt-3 flex gap-2 overflow-x-auto"
+          role="tablist"
+        >
         <button
           aria-selected={!activeCategory}
           className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm transition ${
@@ -514,27 +579,8 @@ export function PantryScreen({
             {category}
           </button>
         ))}
-      </div>
-
-      {/* Action buttons */}
-      {!isEmpty && (
-        <div className="flex gap-2">
-          <button
-            className="flex min-h-[44px] flex-1 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] text-sm font-semibold text-[var(--surface)]"
-            onClick={() => setShowAddSheet(true)}
-            type="button"
-          >
-            재료 추가하기
-          </button>
-          <button
-            className="flex min-h-[44px] flex-1 items-center justify-center rounded-[var(--radius-md)] border border-[var(--olive)] bg-[var(--surface)] text-sm font-semibold text-[var(--olive)]"
-            onClick={() => setShowBundlePicker(true)}
-            type="button"
-          >
-            묶음으로 추가
-          </button>
         </div>
-      )}
+      </section>
 
       {/* Empty state (no items at all) */}
       {isEmpty && (
@@ -588,12 +634,12 @@ export function PantryScreen({
         <>
           {/* Section header */}
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-lg font-bold text-[var(--foreground)]">
+            <h2 className="text-xl font-bold tracking-[-0.3px] text-[var(--foreground)]">
               {activeCategory ? `${activeCategory} (${filteredCount})` : `보유 재료 (${items.length})`}
             </h2>
             {!isSelectMode ? (
               <button
-                className="text-sm text-[var(--olive)]"
+                className="rounded-full border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--muted)] hover:border-[var(--danger)] hover:text-[var(--danger)]"
                 onClick={() => setIsSelectMode(true)}
                 type="button"
               >
@@ -601,7 +647,7 @@ export function PantryScreen({
               </button>
             ) : (
               <button
-                className="text-sm text-[var(--muted)]"
+                className="rounded-full border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--foreground)]"
                 onClick={handleExitSelectMode}
                 type="button"
               >
@@ -620,16 +666,16 @@ export function PantryScreen({
           )}
 
           {/* Item cards */}
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-5">
             {displayItems.map((item) => {
               const isSelected = selectedIds.has(item.ingredient_id);
 
               return (
                 <div
-                  className={`flex items-center gap-3 rounded-[var(--radius-lg)] px-4 py-3 transition ${
+                  className={`relative flex min-h-[166px] flex-col rounded-[var(--radius-lg)] p-3 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)] ${
                     isSelectMode && isSelected
                       ? "border-2 border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_8%,transparent)]"
-                      : "border border-transparent bg-[var(--surface)] shadow-[var(--shadow-1)]"
+                      : "border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-1)]"
                   }`}
                   key={item.id}
                   onClick={isSelectMode ? () => handleSelectToggle(item.ingredient_id) : undefined}
@@ -640,7 +686,7 @@ export function PantryScreen({
                 >
                   {isSelectMode && (
                     <span
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs ${
+                      className={`absolute left-3 top-3 z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs ${
                         isSelected
                           ? "border-[var(--brand)] bg-[var(--brand)] text-white"
                           : "border-[var(--line)] bg-[var(--surface)]"
@@ -651,15 +697,17 @@ export function PantryScreen({
                   )}
                   <span
                     aria-hidden="true"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-fill)] text-base"
+                    className="flex aspect-square w-full shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[#EAEDEF] text-3xl"
                   >
                     {CATEGORY_VISUAL[item.category] ?? CATEGORY_VISUAL.기타}
                   </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[var(--foreground)]">
+                  <div className="mt-3 min-w-0">
+                    <p className="truncate text-sm font-semibold tracking-[-0.3px] text-[var(--foreground)]">
                       {item.standard_name}
                     </p>
-                    <p className="text-xs text-[var(--text-3)]">{item.category}</p>
+                    <p className="mt-1 text-xs tracking-[-0.3px] text-[var(--text-3)]">
+                      {item.category}
+                    </p>
                   </div>
                 </div>
               );
@@ -685,14 +733,14 @@ export function PantryScreen({
       {/* Delete confirm modal */}
       {showDeleteConfirm && (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-black/40 p-4 md:items-center md:justify-center"
+          className="fixed inset-0 z-50 flex items-end bg-black/40 p-4 lg:items-center lg:justify-center"
           onClick={() => setShowDeleteConfirm(false)}
         >
           <div
-            className="w-full max-w-md rounded-t-[var(--radius-xl)] bg-[var(--panel)] p-5 shadow-[var(--shadow-3)] md:rounded-[var(--radius-xl)]"
+            className="w-full max-w-md rounded-t-[var(--radius-xl)] bg-[var(--panel)] p-5 shadow-[var(--shadow-3)] lg:rounded-[var(--radius-xl)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-center pt-1 md:hidden">
+            <div className="flex justify-center pt-1 lg:hidden">
               <div className="h-1 w-9 rounded-sm bg-[var(--line)]" />
             </div>
             <div className="flex items-start justify-between gap-3 pt-3">

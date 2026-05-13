@@ -2,6 +2,10 @@ import { expect, test } from "@playwright/test";
 
 import { installDiscoveryRoutes } from "./helpers/mock-routes";
 
+function isMobileViewport(page: { viewportSize: () => { width: number } | null }) {
+  return (page.viewportSize()?.width ?? 1280) < 1024;
+}
+
 test.describe("wave1 port foundation", () => {
   test("shared home primitives do not create page-level horizontal overflow", async ({
     page,
@@ -9,8 +13,23 @@ test.describe("wave1 port foundation", () => {
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
-    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개…")).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "HOME 하단 탭" })).toBeVisible();
+    await expect(
+      page
+        .getByPlaceholder(
+          isMobileViewport(page)
+            ? "김치볶음밥, 된장찌개…"
+            : "레시피 제목 검색",
+        )
+        .first(),
+    ).toBeVisible();
+
+    if (isMobileViewport(page)) {
+      await expect(page.getByRole("navigation", { name: "HOME 하단 탭" })).toBeVisible();
+    } else {
+      await expect(
+        page.getByRole("navigation", { name: "데스크탑 주요 메뉴" }),
+      ).toBeVisible();
+    }
 
     const pageHasHorizontalOverflow = await page.evaluate(() => {
       return document.documentElement.scrollWidth > window.innerWidth + 4;

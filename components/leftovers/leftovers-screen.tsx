@@ -77,59 +77,73 @@ function LeftoverCard({
 }) {
   return (
     <article
-      className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]"
+      className="group overflow-hidden rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
       data-testid="leftover-card"
     >
-      <div className="flex items-center gap-3">
+      <div className="relative aspect-[16/10] overflow-hidden bg-[var(--surface-fill)]">
         {item.recipe_thumbnail_url ? (
           <Image
             alt=""
-            className="h-14 w-14 shrink-0 rounded-[var(--radius-md)] object-cover"
-            height={56}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            fill
+            sizes="(min-width: 1024px) 320px, 56px"
             src={item.recipe_thumbnail_url}
             unoptimized
-            width={56}
           />
         ) : (
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-fill)]">
-            <span className="text-xl" aria-hidden="true">
-              🍲
-            </span>
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-[var(--muted)]">
+            <svg
+              aria-hidden="true"
+              className="h-7 w-7"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.8"
+              viewBox="0 0 24 24"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+              <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
+            </svg>
+            <span className="text-xs font-semibold">남은요리</span>
           </div>
         )}
+      </div>
 
+      <div className="p-4">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-base font-bold text-[var(--foreground)]">
+          <p className="truncate text-lg font-bold tracking-[-0.3px] text-[var(--foreground)]">
             {item.recipe_title}
           </p>
-          <p className="text-sm text-[var(--text-3)]">
+          <p className="mt-1 text-sm text-[var(--text-3)]">
             {formatCookedAt(item.cooked_at)} 요리
           </p>
           <p className="text-sm text-[var(--text-3)]">
             {formatLeftoverMeta(item)}
           </p>
         </div>
-      </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-2 min-[361px]:grid-cols-2">
-        <button
-          className="flex min-h-[44px] min-w-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] px-3 text-center text-sm font-semibold leading-5 text-[var(--text-2)] active:border-[var(--text-2)] active:bg-[var(--surface-subtle)] disabled:opacity-60"
-          data-testid="eat-button"
-          disabled={anyMutating}
-          onClick={() => onEat(item.id)}
-          type="button"
-        >
-          {isEating ? "처리 중..." : "다 먹었어요"}
-        </button>
-        <button
-          className="flex min-h-[44px] min-w-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-3 text-center text-sm font-bold leading-5 text-white active:bg-[var(--brand-deep)] disabled:opacity-60"
-          data-testid="planner-add-button"
-          disabled={anyMutating}
-          onClick={() => onPlannerAdd(item)}
-          type="button"
-        >
-          식단에 추가
-        </button>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <button
+            className="flex min-h-[44px] min-w-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] px-3 text-center text-sm font-semibold leading-5 text-[var(--text-2)] active:border-[var(--text-2)] active:bg-[var(--surface-subtle)] disabled:opacity-60"
+            data-testid="eat-button"
+            disabled={anyMutating}
+            onClick={() => onEat(item.id)}
+            type="button"
+          >
+            {isEating ? "처리 중..." : "다 먹었어요"}
+          </button>
+          <button
+            className="flex min-h-[44px] min-w-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-3 text-center text-sm font-bold leading-5 text-white active:bg-[var(--brand-deep)] disabled:opacity-60"
+            data-testid="planner-add-button"
+            disabled={anyMutating}
+            onClick={() => onPlannerAdd(item)}
+            type="button"
+          >
+            식단에 추가
+          </button>
+        </div>
       </div>
     </article>
   );
@@ -491,43 +505,65 @@ export function LeftoversScreen({
     );
   }
 
-  return (
-    <div className="flex flex-col gap-3" data-testid="leftovers-screen">
-      {/* AppBar */}
-      <div className="flex items-center gap-3">
-        <Link
-          aria-label="뒤로가기"
-          className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--foreground)]"
-          href="/planner"
-        >
-          <svg fill="none" height="20" viewBox="0 0 12 20" width="12">
-            <path
-              d="M10 2L2 10l8 8"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeWidth="2.5"
-            />
-          </svg>
-        </Link>
-        <h1 className="text-xl font-extrabold text-[var(--foreground)]">
-          남은요리
-        </h1>
-        <Link
-          className="ml-auto text-sm font-semibold text-[var(--olive)]"
-          href="/leftovers/ate"
-        >
-          다먹은 목록
-        </Link>
-      </div>
+  const totalServings = items.reduce(
+    (sum, item) => sum + item.cooking_servings,
+    0,
+  );
 
-      {/* Feedback toast */}
+  return (
+    <div className="space-y-6 pb-12" data-testid="leftovers-screen">
+      <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[var(--shadow-1)]">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <Link
+              aria-label="뒤로가기"
+              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface-fill)] px-4 text-sm font-semibold text-[var(--text-2)] hover:text-[var(--brand)]"
+              href="/planner"
+            >
+              <span aria-hidden="true">&lt;</span>
+              플래너 보기
+            </Link>
+            <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
+              Leftovers
+            </p>
+            <h1 className="mt-1 text-3xl font-bold tracking-[-0.3px] text-[var(--foreground)]">
+              남은요리
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+              요리 완료 후 남은 음식을 다시 식단에 올리거나 먹은 기록으로 정리해요.
+            </p>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
+            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
+              <p className="text-xs font-semibold text-[var(--muted)]">남은요리</p>
+              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
+                {items.length}개
+              </p>
+            </div>
+            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
+              <p className="text-xs font-semibold text-[var(--muted)]">총 인분</p>
+              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
+                {totalServings}인분
+              </p>
+            </div>
+            <Link
+              className="flex min-h-[76px] items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand)] bg-[var(--brand-soft)] px-4 text-sm font-bold text-[var(--brand-deep)]"
+              href="/leftovers/ate"
+            >
+              다먹은 목록
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {feedback ? (
         <div
           className={[
             "rounded-[var(--radius-md)] border px-4 py-3 text-sm",
             feedback.tone === "error"
-              ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-deep)]"
-              : "border-[var(--olive)] bg-[color:rgba(46,166,122,0.1)] text-[var(--olive)]",
+              ? "border-[var(--danger)] bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] text-[color-mix(in_srgb,var(--danger)_70%,black)]"
+              : "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-deep)]",
           ].join(" ")}
           data-testid="feedback-toast"
           role="alert"
@@ -536,21 +572,22 @@ export function LeftoversScreen({
         </div>
       ) : null}
 
-      {/* Loading */}
       {screenState === "loading" ? (
-        <div className="flex flex-col gap-3" data-testid="leftovers-loading">
-          {Array.from({ length: 3 }).map((_, i) => (
+        <div
+          className="grid gap-4 lg:grid-cols-3"
+          data-testid="leftovers-loading"
+        >
+          {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton
               key={i}
               className="border border-[var(--line)]"
-              height={120}
+              height={280}
               rounded="lg"
             />
           ))}
         </div>
       ) : null}
 
-      {/* Error */}
       {screenState === "error" ? (
         <ContentState
           actionLabel="다시 시도"
@@ -563,7 +600,6 @@ export function LeftoversScreen({
         />
       ) : null}
 
-      {/* Empty */}
       {screenState === "empty" ? (
         <ContentState
           actionLabel="플래너로 돌아가기"
@@ -576,10 +612,9 @@ export function LeftoversScreen({
         />
       ) : null}
 
-      {/* Ready: leftover list */}
       {screenState === "ready" ? (
         <div
-          className="flex flex-col gap-3"
+          className="grid gap-4 lg:grid-cols-3"
           data-testid="leftover-list"
         >
           {items.map((item) => (
@@ -595,7 +630,6 @@ export function LeftoversScreen({
         </div>
       ) : null}
 
-      {/* Planner Add Sheet */}
       {plannerAddSheet}
     </div>
   );
@@ -624,7 +658,7 @@ function LeftoversMobileView({
 }) {
   return (
     <div
-      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] md:hidden"
+      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
       data-testid="leftovers-screen"
       style={{
         fontFamily:

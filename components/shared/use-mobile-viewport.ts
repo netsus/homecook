@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
+
 export function useIsMobileViewport() {
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
@@ -13,7 +15,7 @@ export function useIsMobileViewport() {
       return;
     }
 
-    const query = window.matchMedia("(max-width: 767px)");
+    const query = window.matchMedia(APP_VIEW_MEDIA_QUERY);
     const syncViewport = () => setIsMobileViewport(query.matches);
     syncViewport();
     query.addEventListener("change", syncViewport);

@@ -2,20 +2,28 @@
 
 import { useEffect, useState } from "react";
 
-const DESKTOP_VIEWPORT_QUERY = "(min-width: 768px)";
+import { WEB_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
+
+function getDesktopViewportSnapshot() {
+  if (typeof window === "undefined" || !window.matchMedia) {
+    return false;
+  }
+
+  return window.matchMedia(WEB_VIEW_MEDIA_QUERY).matches;
+}
 
 export function useDesktopViewport() {
-  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(
+    getDesktopViewportSnapshot,
+  );
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) {
       return;
     }
 
-    const mediaQuery = window.matchMedia(DESKTOP_VIEWPORT_QUERY);
-    const syncViewport = () => {
-      setIsDesktopViewport(mediaQuery.matches);
-    };
+    const mediaQuery = window.matchMedia(WEB_VIEW_MEDIA_QUERY);
+    const syncViewport = () => setIsDesktopViewport(mediaQuery.matches);
 
     syncViewport();
     mediaQuery.addEventListener("change", syncViewport);

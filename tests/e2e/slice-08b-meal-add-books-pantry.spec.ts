@@ -200,7 +200,15 @@ async function installMealListRoute(page: Page) {
 }
 
 function isMobileViewport(page: Page) {
-  return (page.viewportSize()?.width ?? 1024) < 768;
+  return (page.viewportSize()?.width ?? 1024) < 1024;
+}
+
+function visibleButtonText(page: Page, text: string) {
+  return page.locator(`button:has-text("${text}")`).filter({ visible: true }).first();
+}
+
+function visibleText(page: Page, text: string) {
+  return page.getByText(text).filter({ visible: true }).first();
 }
 
 async function expectRecipeBookSelector(page: Page) {
@@ -218,7 +226,7 @@ async function clickFirstBook(page: Page) {
     return;
   }
 
-  await page.locator("button:has-text('선택')").first().click();
+  await visibleButtonText(page, "선택").click();
 }
 
 async function clickFirstRecipe(page: Page) {
@@ -227,7 +235,7 @@ async function clickFirstRecipe(page: Page) {
     return;
   }
 
-  await page.locator("button:has-text('선택')").first().click();
+  await visibleButtonText(page, "선택").click();
 }
 
 async function expectServingsDialog(page: Page) {
@@ -236,7 +244,7 @@ async function expectServingsDialog(page: Page) {
     return;
   }
 
-  await expect(page.locator("text=계획 인분 입력")).toBeVisible();
+  await expect(visibleText(page, "계획 인분 입력")).toBeVisible();
 }
 
 async function clickServingsConfirm(page: Page) {
@@ -263,11 +271,11 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await setAuthOverride(page, "authenticated");
     await page.goto(MENU_ADD_URL);
 
-    await expect(page.locator("h1:has-text('식사 추가')")).toBeVisible();
-    await expect(page.locator("button:has-text('레시피북')")).toBeEnabled();
-    await expect(page.locator("button:has-text('팬트리')")).toBeEnabled();
-    await expect(page.locator("button:has-text('유튜브')")).toBeEnabled();
-    await expect(page.locator("button:has-text('남은요리')")).toBeEnabled();
+    await expect(page.getByRole("heading", { name: "식사 추가" })).toBeVisible();
+    await expect(visibleButtonText(page, "레시피북")).toBeEnabled();
+    await expect(visibleButtonText(page, "팬트리")).toBeEnabled();
+    await expect(visibleButtonText(page, "유튜브")).toBeEnabled();
+    await expect(visibleButtonText(page, "남은요리")).toBeEnabled();
   });
 
   // ── Recipe book selector ───────────────────────────────────────────────────
@@ -281,11 +289,11 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await installRecipeBooksRoute(page, books);
     await page.goto(MENU_ADD_URL);
 
-    await page.locator("button:has-text('레시피북')").click();
+    await visibleButtonText(page, "레시피북").click();
 
     await expectRecipeBookSelector(page);
-    await expect(page.getByText("저장한 레시피").first()).toBeVisible();
-    await expect(page.getByText("좋아요").first()).toBeVisible();
+    await expect(visibleText(page, "저장한 레시피")).toBeVisible();
+    await expect(visibleText(page, "좋아요")).toBeVisible();
   });
 
   test("shows empty state when no recipe books", async ({ page }) => {
@@ -293,9 +301,9 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await installRecipeBooksRoute(page, []);
     await page.goto(MENU_ADD_URL);
 
-    await page.locator("button:has-text('레시피북')").click();
+    await visibleButtonText(page, "레시피북").click();
 
-    await expect(page.locator("text=레시피북이 없어요")).toBeVisible();
+    await expect(visibleText(page, "레시피북이 없어요")).toBeVisible();
   });
 
   test("returns to planner from menu-add back without keeping menu-add in history", async ({ page }) => {
@@ -307,7 +315,7 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await page.goto(mealScreenUrl);
     await page.goto(MENU_ADD_URL);
 
-    await page.getByRole("button", { name: "뒤로 가기" }).click();
+    await page.getByRole("button", { name: /뒤로 가기|플래너로 돌아가기/ }).click();
 
     await expect(page).toHaveURL(/\/planner$/);
 
@@ -332,13 +340,13 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await installRecipeBookRecipesRoute(page, "b1", recipes);
     await page.goto(MENU_ADD_URL);
 
-    await page.locator("button:has-text('레시피북')").click();
+    await visibleButtonText(page, "레시피북").click();
     await expectRecipeBookSelector(page);
     await clickFirstBook(page);
 
     await expect(page.getByRole("heading", { name: "저장한 레시피" })).toBeVisible();
-    await expect(page.locator("text=김치찌개")).toBeVisible();
-    await expect(page.locator("text=된장찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
+    await expect(visibleText(page, "된장찌개")).toBeVisible();
   });
 
   test("shows empty state when recipe book has no recipes", async ({ page }) => {
@@ -348,10 +356,10 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await installRecipeBookRecipesRoute(page, "b1", []);
     await page.goto(MENU_ADD_URL);
 
-    await page.locator("button:has-text('레시피북')").click();
+    await visibleButtonText(page, "레시피북").click();
     await clickFirstBook(page);
 
-    await expect(page.locator("text=레시피가 없어요")).toBeVisible();
+    await expect(visibleText(page, "레시피가 없어요")).toBeVisible();
   });
 
   test("navigates back from recipe book detail to selector", async ({ page }) => {
@@ -362,17 +370,17 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await installRecipeBookRecipesRoute(page, "b1", recipes);
     await page.goto(MENU_ADD_URL);
 
-    await page.locator("button:has-text('레시피북')").click();
+    await visibleButtonText(page, "레시피북").click();
     await clickFirstBook(page);
 
     await expect(page.getByRole("heading", { name: "저장한 레시피" })).toBeVisible();
 
-    await page.locator('button[aria-label="뒤로"]').click();
+    await page.locator('button[aria-label="뒤로"]').filter({ visible: true }).first().click();
 
     if (isMobileViewport(page)) {
       await expect(page.getByRole("heading", { name: "레시피북에서 추가" })).toBeVisible();
     } else {
-      await expect(page.locator("text=레시피북 선택")).toBeVisible();
+      await expect(visibleText(page, "레시피북 선택")).toBeVisible();
     }
   });
 
@@ -399,10 +407,10 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
 
     await page.goto(MENU_ADD_URL);
 
-    await page.locator("button:has-text('레시피북')").click();
+    await visibleButtonText(page, "레시피북").click();
     await clickFirstBook(page);
 
-    await expect(page.locator("text=김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
     await clickFirstRecipe(page);
 
     await expectServingsDialog(page);
@@ -435,7 +443,7 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await page.goto(mealScreenUrl);
     await page.goto(MENU_ADD_URL);
 
-    await page.locator("button:has-text('레시피북')").click();
+    await visibleButtonText(page, "레시피북").click();
     await clickFirstBook(page);
     await clickFirstRecipe(page);
     await clickServingsConfirm(page);
@@ -473,14 +481,14 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await page.goto(mealScreenUrl);
     await page.goto(MENU_ADD_URL);
 
-    await page.locator("button:has-text('레시피북')").click();
+    await visibleButtonText(page, "레시피북").click();
     await clickFirstBook(page);
     await clickFirstRecipe(page);
     await clickServingsConfirm(page);
 
     await page.waitForURL(new RegExp(`/planner/${PLAN_DATE}/${COLUMN_ID}`));
 
-    await page.getByRole("button", { name: "뒤로 가기" }).click();
+    await page.getByRole("button", { name: /뒤로 가기|플래너로 돌아가기/ }).click();
 
     await expect(page).toHaveURL(/\/planner$/);
   });
@@ -513,21 +521,21 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await installPantryMatchRoute(page, recipes);
     await page.goto(MENU_ADD_URL);
 
-    await page.locator("button:has-text('팬트리')").click();
+    await visibleButtonText(page, "팬트리").click();
 
-    await expect(page.locator("text=팬트리 기반 추천")).toBeVisible();
-    await expect(page.locator("text=김치찌개")).toBeVisible();
-    await expect(page.locator("text=된장찌개")).toBeVisible();
+    await expect(visibleText(page, "팬트리 기반 추천")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
+    await expect(visibleText(page, "된장찌개")).toBeVisible();
     if (isMobileViewport(page)) {
-      await expect(page.locator("text=매칭 80%")).toBeVisible();
-      await expect(page.locator("text=매칭 60%")).toBeVisible();
-      await expect(page.getByText("부족 ·").first()).toBeVisible();
+      await expect(visibleText(page, "매칭 80%")).toBeVisible();
+      await expect(visibleText(page, "매칭 60%")).toBeVisible();
+      await expect(visibleText(page, "부족 ·")).toBeVisible();
     } else {
-      await expect(page.locator("text=80% 일치")).toBeVisible();
-      await expect(page.locator("text=60% 일치")).toBeVisible();
-      await expect(page.getByText("부족한 재료:").first()).toBeVisible();
+      await expect(visibleText(page, "80% 일치")).toBeVisible();
+      await expect(visibleText(page, "60% 일치")).toBeVisible();
+      await expect(visibleText(page, "부족한 재료:")).toBeVisible();
     }
-    await expect(page.locator("text=두부")).toBeVisible();
+    await expect(visibleText(page, "두부")).toBeVisible();
   });
 
   test("shows empty state when no pantry recommendations", async ({ page }) => {
@@ -535,9 +543,9 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await installPantryMatchRoute(page, []);
     await page.goto(MENU_ADD_URL);
 
-    await page.locator("button:has-text('팬트리')").click();
+    await visibleButtonText(page, "팬트리").click();
 
-    await expect(page.locator("text=추천 레시피가 없어요")).toBeVisible();
+    await expect(visibleText(page, "추천 레시피가 없어요")).toBeVisible();
   });
 
   // ── Pantry meal creation ───────────────────────────────────────────────────
@@ -569,9 +577,9 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
 
     await page.goto(MENU_ADD_URL);
 
-    await page.locator("button:has-text('팬트리')").click();
+    await visibleButtonText(page, "팬트리").click();
 
-    await expect(page.locator("text=김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
     await clickFirstRecipe(page);
 
     await expectServingsDialog(page);
@@ -589,16 +597,16 @@ test.describe("Slice 08b meal add books pantry — RECIPEBOOK + PANTRY paths", (
     await installPantryMatchRoute(page, recipes);
     await page.goto(MENU_ADD_URL);
 
-    await page.locator("button:has-text('팬트리')").click();
+    await visibleButtonText(page, "팬트리").click();
     await clickFirstRecipe(page);
 
     await expectServingsDialog(page);
 
-    await page.locator("button:has-text('취소')").click();
+    await visibleButtonText(page, "취소").click();
     if (isMobileViewport(page)) {
       await expect(page.getByRole("dialog")).not.toBeVisible();
     } else {
-      await expect(page.locator("text=계획 인분 입력")).not.toBeVisible();
+      await expect(visibleText(page, "계획 인분 입력")).not.toBeVisible();
     }
   });
 });

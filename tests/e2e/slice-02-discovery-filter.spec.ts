@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 const ONION_ID = "550e8400-e29b-41d4-a716-446655440010";
 const GREEN_ONION_ID = "550e8400-e29b-41d4-a716-446655440011";
@@ -37,6 +37,10 @@ const RECIPES = [
     ingredient_ids: [ONION_ID, GREEN_ONION_ID],
   },
 ];
+
+async function openIngredientFilter(page: Page) {
+  await page.locator('button:visible:has-text("재료로 검색")').first().click();
+}
 
 function buildRecipeItems(searchUrl: URL) {
   const query = searchUrl.searchParams.get("q")?.trim() ?? "";
@@ -130,7 +134,7 @@ test.describe("Slice 02 discovery filter flow", () => {
   }) => {
     await page.goto("/");
 
-    await page.getByRole("button", { name: "재료로 검색" }).click();
+    await openIngredientFilter(page);
     await expect(
       page.getByRole("dialog", { name: "재료로 검색" }),
     ).toBeVisible();
@@ -142,11 +146,9 @@ test.describe("Slice 02 discovery filter flow", () => {
     await page.getByRole("button", { name: /적용/ }).click();
 
     await expect(page).toHaveURL(new RegExp(`ingredient_ids=${ONION_ID}`));
-    await expect(
-      page.getByRole("button", { name: "양파" }),
-    ).toBeVisible();
+    await expect(page.locator('button:visible:has-text("양파")')).toBeVisible();
 
-    await page.getByRole("button", { name: "재료 1개" }).click();
+    await page.locator('button:visible:has-text("재료 1개")').click();
     await expect(page.getByRole("checkbox", { name: "양파" })).toBeChecked();
     await page.getByRole("button", { name: "닫기" }).click();
 
@@ -154,10 +156,10 @@ test.describe("Slice 02 discovery filter flow", () => {
 
     await expect(page).toHaveURL(/\/$/);
     await expect(
-      page.getByRole("button", { name: "재료로 검색" }),
+      page.locator('button:visible:has-text("재료로 검색")').first(),
     ).toBeVisible();
     await expect(
-      page.getByRole("link", { name: /집밥 김치찌개/i }).first(),
+      page.locator('a:visible:has-text("집밥 김치찌개")').first(),
     ).toBeVisible();
   });
 
@@ -166,7 +168,7 @@ test.describe("Slice 02 discovery filter flow", () => {
   }) => {
     await page.goto("/");
 
-    await page.getByRole("button", { name: "재료로 검색" }).click();
+    await openIngredientFilter(page);
     await page.getByRole("button", { name: "육류" }).click();
     await page
       .getByRole("dialog", { name: "재료로 검색" })
@@ -175,19 +177,24 @@ test.describe("Slice 02 discovery filter flow", () => {
     await page.getByRole("button", { name: /적용/ }).click();
 
     await expect(
-      page.getByRole("heading", { name: "다른 조합을 찾아보세요" }),
+      page
+        .locator("h2:visible")
+        .filter({
+          hasText: /다른 조합을 찾아보세요|조건에 맞는 레시피가 없어요/,
+        })
+        .first(),
     ).toBeVisible();
-    const resetButtons = page.getByRole("button", { name: "초기화" });
+    const resetButtons = page.locator('button:visible:has-text("초기화")');
     await expect(resetButtons.last()).toBeVisible();
 
     await resetButtons.last().click();
 
     await expect(page).toHaveURL(/\/$/);
     await expect(
-      page.getByRole("button", { name: "재료로 검색" }),
+      page.locator('button:visible:has-text("재료로 검색")').first(),
     ).toBeVisible();
     await expect(
-      page.getByRole("link", { name: /집밥 김치찌개/i }).first(),
+      page.locator('a:visible:has-text("집밥 김치찌개")').first(),
     ).toBeVisible();
   });
 
@@ -196,7 +203,7 @@ test.describe("Slice 02 discovery filter flow", () => {
   }) => {
     await page.goto("/");
 
-    await page.getByRole("button", { name: "재료로 검색" }).click();
+    await openIngredientFilter(page);
     await page
       .getByRole("textbox", { name: "재료명으로 검색" })
       .fill("없는재료");
@@ -212,7 +219,7 @@ test.describe("Slice 02 discovery filter flow", () => {
   }) => {
     await page.goto("/");
 
-    await page.getByRole("button", { name: "재료로 검색" }).click();
+    await openIngredientFilter(page);
     const resetButton = page.getByRole("button", { name: "초기화" });
     const applyButton = page.getByRole("button", { name: /적용/ });
 

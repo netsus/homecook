@@ -106,7 +106,7 @@ async function mockPlannerRoutes(
 }
 
 async function centerWeekStrip(page: Page) {
-  const strip = page.getByTestId("planner-week-strip-viewport");
+  const strip = page.getByTestId("planner-week-strip-viewport").filter({ visible: true });
 
   await strip.evaluate((element) => {
     const viewport = element as HTMLDivElement;
@@ -115,7 +115,15 @@ async function centerWeekStrip(page: Page) {
 }
 
 function isMobileViewport(page: Page) {
-  return (page.viewportSize()?.width ?? 1280) < 768;
+  return (page.viewportSize()?.width ?? 1280) < 1024;
+}
+
+function visibleText(page: Page, text: string) {
+  return page.getByRole("link", { name: new RegExp(text) }).first();
+}
+
+function visiblePlannerDayCard(page: Page) {
+  return page.getByLabel(/식단 카드$/).filter({ visible: true }).first();
 }
 
 test.describe("Slice 05 planner week core", () => {
@@ -126,29 +134,31 @@ test.describe("Slice 05 planner week core", () => {
     await page.goto("/planner");
 
     const isMobile = isMobileViewport(page);
-    const firstDayCard = page.getByLabel(/식단 카드$/).first();
+    const firstDayCard = visiblePlannerDayCard(page);
 
     await expect(
       page.getByRole("heading", { name: isMobile ? "플래너" : "식단 플래너" }),
     ).toBeVisible();
     if (isMobile) {
-      await expect(page.getByText(/음식 계획 중/)).toBeVisible();
-      await expect(page.getByText("현재 범위")).toHaveCount(0);
+      await expect(page.locator(':visible:has-text("음식 계획 중")').first()).toBeVisible();
+      await expect(page.getByText("현재 범위", { exact: true }).filter({ visible: true })).toHaveCount(0);
     } else {
-      await expect(page.getByText("현재 범위")).toHaveCount(1);
+      await expect(page.getByText("현재 범위", { exact: true }).filter({ visible: true })).toHaveCount(1);
     }
     await expect(page.getByText("화면 상태")).toHaveCount(0);
     // Wave1: week nav buttons visible on all viewports
     await expect(page.getByRole("button", { name: "이전 주" })).toBeVisible();
     await expect(page.getByRole("button", { name: "다음 주" })).toBeVisible();
-    await expect(page.getByTestId("planner-week-strip-page-current").locator("li")).toHaveCount(7);
+    await expect(
+      page.getByTestId("planner-week-strip-page-current").filter({ visible: true }).locator("li"),
+    ).toHaveCount(7);
     await expect(firstDayCard.getByText("아침")).toBeVisible();
     await expect(firstDayCard.getByText("점심")).toBeVisible();
     await expect(firstDayCard.getByText("간식")).toBeVisible();
     await expect(firstDayCard.getByText("저녁")).toBeVisible();
-    await expect(page.getByText("김치찌개")).toBeVisible();
-    await expect(page.getByText("샐러드")).toBeVisible();
-    await expect(page.getByText("과일볼")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
+    await expect(visibleText(page, "샐러드")).toBeVisible();
+    await expect(visibleText(page, "과일볼")).toBeVisible();
     // Wave1: status badges removed
     await expect(page.getByLabel("식사 등록 완료")).toHaveCount(0);
     await expect(page.getByLabel("장보기 완료")).toHaveCount(0);
@@ -239,7 +249,7 @@ test.describe("Slice 05 planner week core", () => {
         name: isMobileViewport(page) ? "플래너" : "식단 플래너",
       }),
     ).toBeVisible();
-    await expect(page.getByText("김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
   });
 
   test("renders 3-column layout when user has 3 custom columns", async ({ page }) => {
@@ -266,7 +276,7 @@ test.describe("Slice 05 planner week core", () => {
     await mockPlannerRoutes(page, { columns: threeColumns, meals: threeMeals });
     await page.goto("/planner");
 
-    const firstDayCard = page.getByLabel(/식단 카드$/).first();
+    const firstDayCard = visiblePlannerDayCard(page);
 
     await expect(firstDayCard.getByText("아침")).toBeVisible();
     await expect(firstDayCard.getByText("점심")).toBeVisible();
@@ -274,7 +284,7 @@ test.describe("Slice 05 planner week core", () => {
     // Should NOT show a 4th column
     await expect(firstDayCard.getByText("간식")).not.toBeVisible();
 
-    await expect(page.getByText("토스트")).toBeVisible();
+    await expect(visibleText(page, "토스트")).toBeVisible();
 
     const pageHasHorizontalOverflow = await page.evaluate(() => {
       return document.documentElement.scrollWidth > window.innerWidth + 4;
@@ -308,7 +318,7 @@ test.describe("Slice 05 planner week core", () => {
     await mockPlannerRoutes(page, { columns: fiveColumns, meals: fiveMeals });
     await page.goto("/planner");
 
-    const firstDayCard = page.getByLabel(/식단 카드$/).first();
+    const firstDayCard = visiblePlannerDayCard(page);
 
     await expect(firstDayCard.getByText("아침")).toBeVisible();
     await expect(firstDayCard.getByText("점심")).toBeVisible();
@@ -316,7 +326,7 @@ test.describe("Slice 05 planner week core", () => {
     await expect(firstDayCard.getByText("저녁")).toBeVisible();
     await expect(firstDayCard.getByText("야식")).toBeVisible();
 
-    await expect(page.getByText("라면")).toBeVisible();
+    await expect(visibleText(page, "라면")).toBeVisible();
 
     const pageHasHorizontalOverflow = await page.evaluate(() => {
       return document.documentElement.scrollWidth > window.innerWidth + 4;

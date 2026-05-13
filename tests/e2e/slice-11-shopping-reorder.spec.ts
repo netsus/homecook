@@ -350,9 +350,9 @@ test.describe("slice 11: shopping reorder", () => {
       await expect(page.getByText("4월 12일 장보기")).toBeVisible();
 
       // Get initial order
-      const purchaseSection = page.locator("text=/구매할 재료/").locator("..");
-      const itemsBefore = await purchaseSection.locator('[role="checkbox"]').all();
-      const firstItemText = await itemsBefore[0].getAttribute("aria-label");
+      const purchaseCheckboxes = page.getByRole("checkbox", { name: /구매 완료 표시/ });
+      await expect(purchaseCheckboxes.first()).toBeVisible();
+      const firstItemText = await purchaseCheckboxes.first().getAttribute("aria-label");
 
       // Click move down button
       const moveDownButton = page.getByRole("button", { name: /양파.*아래로 이동/ });
@@ -364,8 +364,7 @@ test.describe("slice 11: shopping reorder", () => {
       await expect(page.getByText("순서 변경에 실패했어요")).toBeVisible();
 
       // Check that order is restored (first item is still first)
-      const itemsAfter = await purchaseSection.locator('[role="checkbox"]').all();
-      const firstItemTextAfter = await itemsAfter[0].getAttribute("aria-label");
+      const firstItemTextAfter = await purchaseCheckboxes.first().getAttribute("aria-label");
       expect(firstItemTextAfter).toBe(firstItemText);
     });
   });

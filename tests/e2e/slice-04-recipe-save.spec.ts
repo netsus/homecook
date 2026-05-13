@@ -201,7 +201,9 @@ test.describe("Slice 04 recipe save flow", () => {
     await mockRecipeSaveRoutes(page);
 
     await page.goto(RECIPE_PATH);
-    const saveActionButton = page.locator('button[aria-label="저장"][aria-pressed]');
+    const saveActionButton = page.locator(
+      'button[aria-label="저장"][aria-pressed]:visible',
+    );
     await expect(saveActionButton.getByText("89")).toBeVisible();
 
     await page.getByRole("button", { name: "저장" }).click();
@@ -229,7 +231,9 @@ test.describe("Slice 04 recipe save flow", () => {
     await mockRecipeSaveRoutes(page);
 
     await page.goto(RECIPE_PATH);
-    const saveActionButton = page.locator('button[aria-label="저장"][aria-pressed]');
+    const saveActionButton = page.locator(
+      'button[aria-label="저장"][aria-pressed]:visible',
+    );
     await expect(saveActionButton.getByText("89")).toBeVisible();
 
     await page.getByRole("button", { name: "저장" }).click();
@@ -313,7 +317,9 @@ test.describe("Slice 04 recipe save flow", () => {
     await mockRecipeSaveRoutes(page);
     await page.goto(RECIPE_PATH);
     const title = page.getByRole("heading", { name: "집밥 김치찌개" });
-    const saveButton = page.locator('button[aria-label="저장"][aria-pressed]');
+    const saveButton = page.locator(
+      'button[aria-label="저장"][aria-pressed]:visible',
+    );
 
     await expect(title).toBeVisible();
     await expect(saveButton).toBeVisible();

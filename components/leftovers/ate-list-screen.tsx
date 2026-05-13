@@ -71,30 +71,41 @@ function AteListCard({
 }) {
   return (
     <article
-      className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]"
+      className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)] transition hover:bg-[var(--surface-fill)]"
       data-testid="ate-list-card"
     >
-      <div className="flex flex-col gap-3 min-[361px]:flex-row min-[361px]:items-center">
+      <div className="flex items-center gap-4">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           {item.recipe_thumbnail_url ? (
             <Image
               alt=""
-              className="h-14 w-14 shrink-0 rounded-[var(--radius-md)] object-cover"
-              height={56}
+              className="h-16 w-16 shrink-0 rounded-[var(--radius-md)] object-cover"
+              height={64}
               src={item.recipe_thumbnail_url}
               unoptimized
-              width={56}
+              width={64}
             />
           ) : (
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-fill)]">
-              <span className="text-xl" aria-hidden="true">
-                🍽️
-              </span>
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-fill)] text-[var(--muted)]">
+              <svg
+                aria-hidden="true"
+                className="h-6 w-6"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.8"
+                viewBox="0 0 24 24"
+              >
+                <path d="M5 12h14" />
+                <path d="M12 5v14" />
+                <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
+              </svg>
             </div>
           )}
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-bold text-[var(--foreground)]">
+            <p className="truncate text-base font-bold tracking-[-0.3px] text-[var(--foreground)]">
               {item.recipe_title}
             </p>
             {item.eaten_at ? (
@@ -109,7 +120,7 @@ function AteListCard({
         </div>
 
         <button
-          className="flex min-h-[44px] w-full min-w-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand-deep)] bg-white px-4 py-2.5 text-center text-sm font-semibold leading-5 text-[var(--brand-deep)] active:bg-[var(--brand-soft)] disabled:opacity-60 min-[361px]:w-auto min-[361px]:shrink-0"
+          className="flex min-h-[44px] w-auto min-w-[132px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand)] bg-white px-4 py-2.5 text-center text-sm font-semibold leading-5 text-[var(--brand)] active:bg-[var(--brand-soft)] disabled:opacity-60"
           data-testid="uneat-button"
           disabled={anyMutating}
           onClick={() => onUneat(item.id)}
@@ -329,36 +340,53 @@ export function AteListScreen({
   }
 
   return (
-    <div className="flex flex-col gap-3" data-testid="ate-list-screen">
-      {/* AppBar */}
-      <div className="flex items-center gap-3">
-        <Link
-          aria-label="뒤로가기"
-          className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--foreground)]"
-          href="/leftovers"
-        >
-          <svg fill="none" height="20" viewBox="0 0 12 20" width="12">
-            <path
-              d="M10 2L2 10l8 8"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeWidth="2.5"
-            />
-          </svg>
-        </Link>
-        <h1 className="text-xl font-extrabold text-[var(--foreground)]">
-          다먹은 목록
-        </h1>
-      </div>
+    <div className="space-y-6 pb-12" data-testid="ate-list-screen">
+      <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[var(--shadow-1)]">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <Link
+              aria-label="뒤로가기"
+              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface-fill)] px-4 text-sm font-semibold text-[var(--text-2)] hover:text-[var(--brand)]"
+              href="/leftovers"
+            >
+              <span aria-hidden="true">&lt;</span>
+              남은요리 보기
+            </Link>
+            <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
+              Ate List
+            </p>
+            <h1 className="mt-1 text-3xl font-bold tracking-[-0.3px] text-[var(--foreground)]">
+              다먹은 목록
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+              먹은 기록은 최근 30일 동안 확인할 수 있고, 필요하면 남은요리로 되돌릴 수 있어요.
+            </p>
+          </div>
 
-      {/* Feedback toast */}
+          <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[300px]">
+            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
+              <p className="text-xs font-semibold text-[var(--muted)]">먹은 기록</p>
+              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
+                {items.length}개
+              </p>
+            </div>
+            <Link
+              className="flex min-h-[76px] items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand)] bg-[var(--brand-soft)] px-4 text-sm font-bold text-[var(--brand-deep)]"
+              href="/leftovers"
+            >
+              남은요리
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {feedback ? (
         <div
           className={[
             "rounded-[var(--radius-md)] border px-4 py-3 text-sm",
             feedback.tone === "error"
-              ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-deep)]"
-              : "border-[var(--olive)] bg-[color:rgba(46,166,122,0.1)] text-[var(--olive)]",
+              ? "border-[var(--danger)] bg-[color-mix(in_srgb,var(--danger)_8%,transparent)] text-[color-mix(in_srgb,var(--danger)_70%,black)]"
+              : "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-deep)]",
           ].join(" ")}
           data-testid="feedback-toast"
           role="alert"
@@ -367,9 +395,8 @@ export function AteListScreen({
         </div>
       ) : null}
 
-      {/* Loading */}
       {screenState === "loading" ? (
-        <div className="flex flex-col gap-3" data-testid="ate-list-loading">
+        <div className="space-y-3" data-testid="ate-list-loading">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton
               key={i}
@@ -381,7 +408,6 @@ export function AteListScreen({
         </div>
       ) : null}
 
-      {/* Error */}
       {screenState === "error" ? (
         <ContentState
           actionLabel="다시 시도"
@@ -394,7 +420,6 @@ export function AteListScreen({
         />
       ) : null}
 
-      {/* Empty */}
       {screenState === "empty" ? (
         <ContentState
           actionLabel="남은요리로 돌아가기"
@@ -407,9 +432,11 @@ export function AteListScreen({
         />
       ) : null}
 
-      {/* Ready: ate list */}
       {screenState === "ready" ? (
-        <div className="flex flex-col gap-3" data-testid="ate-item-list">
+        <div
+          className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[var(--shadow-1)]"
+          data-testid="ate-item-list"
+        >
           {items.map((item) => (
             <AteListCard
               key={item.id}
@@ -444,7 +471,7 @@ function AteListMobileView({
 }) {
   return (
     <div
-      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] md:hidden"
+      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
       data-testid="ate-list-screen"
       style={{
         fontFamily:

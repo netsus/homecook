@@ -9,6 +9,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
+import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
@@ -136,45 +137,62 @@ function RecipeReadyCard({
 }) {
   return (
     <article
-      className="flex items-center gap-3 rounded-[var(--radius-lg)] bg-[var(--surface)] p-3 shadow-[var(--shadow-2)]"
+      className="group flex min-h-[160px] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-1)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"
       data-testid="recipe-ready-card"
     >
-      {recipe.recipe_thumbnail_url ? (
-        <Image
-          alt=""
-          className="h-16 w-16 shrink-0 rounded-[var(--radius-md)] object-cover"
-          height={64}
-          src={recipe.recipe_thumbnail_url}
-          unoptimized
-          width={64}
-        />
-      ) : (
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-fill)]">
-          <span className="text-2xl" aria-hidden="true">
-            🍳
-          </span>
-        </div>
-      )}
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-lg font-bold text-[var(--foreground)]">
-          {recipe.recipe_title}
-        </p>
-        <p className="text-sm text-[var(--text-3)]">
-          {recipe.total_servings}인분
-        </p>
+      <div className="relative aspect-[4/3] overflow-hidden bg-[var(--surface-fill)]">
+        {recipe.recipe_thumbnail_url ? (
+          <Image
+            alt=""
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+            fill
+            sizes="(min-width: 1024px) 280px, 64px"
+            src={recipe.recipe_thumbnail_url}
+            unoptimized
+          />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-[var(--muted)]">
+            <svg
+              aria-hidden="true"
+              className="h-7 w-7"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.8"
+              viewBox="0 0 24 24"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+              <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
+            </svg>
+            <span className="text-xs font-semibold">사진 없음</span>
+          </div>
+        )}
       </div>
 
-      <button
-        className="shrink-0 rounded-[var(--radius-md)] bg-[var(--brand)] px-4 py-2.5 text-sm font-bold text-white active:bg-[var(--brand-deep)] disabled:opacity-60"
-        data-testid="start-session-button"
-        disabled={anyCreating}
-        onClick={() => onStartSession(recipe)}
-        style={{ minHeight: 44 }}
-        type="button"
-      >
-        {isCreating ? "준비 중..." : "요리하기"}
-      </button>
+      <div className="flex flex-1 flex-col p-4">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-lg font-bold tracking-[-0.3px] text-[var(--foreground)]">
+            {recipe.recipe_title}
+          </p>
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-[var(--text-3)]">
+            <span>{recipe.total_servings}인분</span>
+            <span aria-hidden="true">·</span>
+            <span>{recipe.meal_ids.length}개 식사</span>
+          </p>
+        </div>
+
+        <button
+          className="mt-4 flex min-h-11 w-full items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand)] px-4 text-sm font-bold text-white active:bg-[var(--brand-deep)] disabled:opacity-60"
+          data-testid="start-session-button"
+          disabled={anyCreating}
+          onClick={() => onStartSession(recipe)}
+          type="button"
+        >
+          {isCreating ? "준비 중..." : "요리하기"}
+        </button>
+      </div>
     </article>
   );
 }
@@ -226,7 +244,7 @@ export function CookReadyListScreen({
       return;
     }
 
-    const query = window.matchMedia("(max-width: 767px)");
+    const query = window.matchMedia(APP_VIEW_MEDIA_QUERY);
     const syncViewport = () => setIsMobileViewport(query.matches);
     syncViewport();
     query.addEventListener("change", syncViewport);
@@ -403,42 +421,68 @@ export function CookReadyListScreen({
     );
   }
 
+  const totalReadyServings = recipes.reduce(
+    (sum, recipe) => sum + recipe.total_servings,
+    0,
+  );
+  const totalReadyMeals = recipes.reduce(
+    (sum, recipe) => sum + recipe.meal_ids.length,
+    0,
+  );
+
   return (
-    <div className="flex flex-col gap-3" data-testid="cook-ready-list-screen">
-      {/* AppBar-like header section */}
-      <div className="flex items-center gap-3">
-        <Link
-          aria-label="뒤로가기"
-          className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--foreground)]"
-          href="/planner"
-        >
-          <svg fill="none" height="20" viewBox="0 0 12 20" width="12">
-            <path
-              d="M10 2L2 10l8 8"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeWidth="2.5"
-            />
-          </svg>
-        </Link>
-        <h1 className="text-xl font-extrabold text-[var(--foreground)]">
-          요리하기
-        </h1>
-      </div>
+    <div className="space-y-6 pb-12" data-testid="cook-ready-list-screen">
+      <section className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[var(--shadow-1)]">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <Link
+              aria-label="뒤로가기"
+              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface-fill)] px-4 text-sm font-semibold text-[var(--text-2)] hover:text-[var(--brand)]"
+              href="/planner"
+            >
+              <span aria-hidden="true">&lt;</span>
+              플래너 보기
+            </Link>
+            <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
+              Cook Ready
+            </p>
+            <h1 className="mt-1 text-3xl font-bold tracking-[-0.3px] text-[var(--foreground)]">
+              요리하기
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              장보기까지 끝난 식사를 모아 바로 요리 세션을 시작해요.
+              {dateRange ? ` ${formatDateRange(dateRange.start, dateRange.end)}` : null}
+            </p>
+            {screenState === "ready" && dateRange ? (
+              <p className="mt-3 text-base font-semibold text-[var(--text-2)]">
+                장보기 완료된 레시피예요
+              </p>
+            ) : null}
+          </div>
 
-      {/* Helper section */}
-      {screenState === "ready" && dateRange ? (
-        <div className="px-1">
-          <p className="text-base font-semibold text-[var(--text-2)]">
-            장보기 완료된 레시피예요
-          </p>
-          <p className="text-sm text-[var(--text-3)]">
-            {formatDateRange(dateRange.start, dateRange.end)}
-          </p>
+          <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
+            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
+              <p className="text-xs font-semibold text-[var(--muted)]">레시피</p>
+              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
+                {recipes.length}개
+              </p>
+            </div>
+            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
+              <p className="text-xs font-semibold text-[var(--muted)]">식사</p>
+              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
+                {totalReadyMeals}개
+              </p>
+            </div>
+            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
+              <p className="text-xs font-semibold text-[var(--muted)]">인분</p>
+              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
+                {totalReadyServings}인분
+              </p>
+            </div>
+          </div>
         </div>
-      ) : null}
+      </section>
 
-      {/* Session error toast */}
       {sessionError ? (
         <div
           className="rounded-[var(--radius-md)] border border-[var(--brand)] bg-[var(--brand-soft)] px-4 py-3 text-sm text-[var(--brand-deep)]"
@@ -451,12 +495,15 @@ export function CookReadyListScreen({
 
       {/* Loading */}
       {screenState === "loading" ? (
-        <div className="flex flex-col gap-3" data-testid="cook-ready-loading">
-          {Array.from({ length: 3 }).map((_, i) => (
+        <div
+          className="grid gap-4 lg:grid-cols-3"
+          data-testid="cook-ready-loading"
+        >
+          {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton
               key={i}
               className="border border-[var(--line)]"
-              height={88}
+              height={248}
               rounded="lg"
             />
           ))}
@@ -490,7 +537,7 @@ export function CookReadyListScreen({
       {/* Ready: recipe list */}
       {screenState === "ready" ? (
         <div
-          className="flex flex-col gap-3"
+          className="grid gap-4 lg:grid-cols-3"
           data-testid="cook-ready-recipe-list"
         >
           {recipes.map((recipe) => (
@@ -531,7 +578,7 @@ function MobileCookReadyListScreen({
 }) {
   return (
     <div
-      className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] md:hidden"
+      className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] lg:hidden"
       data-testid="cook-ready-list-screen"
     >
       <div className="shrink-0 border-b border-[#DEE2E6] bg-white">

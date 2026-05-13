@@ -12,7 +12,7 @@ async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
 }
 
 function isMobileViewport(page: Page) {
-  return (page.viewportSize()?.width ?? 1280) < 768;
+  return (page.viewportSize()?.width ?? 1280) < 1024;
 }
 
 interface MockProfile {

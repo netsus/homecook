@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import React from "react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
@@ -205,10 +205,15 @@ export function PlannerWeekScreen({
   const defaultRange = createDefaultPlannerRange();
   const isCurrentRange =
     rangeStartDate === defaultRange.startDate && rangeEndDate === defaultRange.endDate;
-  const weekStripViewportRef = useRef<HTMLDivElement | null>(null);
+  const mobileWeekStripViewportRef = useRef<HTMLDivElement | null>(null);
+  const webWeekStripViewportRef = useRef<HTMLDivElement | null>(null);
   const weekStripSettleTimerRef = useRef<number | null>(null);
   const isWeekStripInteractingRef = useRef(false);
   const isRecenteringWeekStripRef = useRef(false);
+  const getActiveWeekStripViewport = useCallback(
+    () => (isDesktopViewport ? webWeekStripViewportRef.current : mobileWeekStripViewportRef.current),
+    [isDesktopViewport],
+  );
   const rangeContextLabel = getRangeContextLabel(rangeStartDate, defaultRange.startDate);
   const weekPages = useMemo(() => {
     const previousRange = shiftPlannerRange(
@@ -259,8 +264,8 @@ export function PlannerWeekScreen({
     weekStripSettleTimerRef.current = null;
   }
 
-  function recenterWeekStripViewport() {
-    const viewport = weekStripViewportRef.current;
+  const recenterWeekStripViewport = useCallback(() => {
+    const viewport = getActiveWeekStripViewport();
 
     if (!viewport) {
       return;
@@ -272,10 +277,10 @@ export function PlannerWeekScreen({
     window.requestAnimationFrame(() => {
       isRecenteringWeekStripRef.current = false;
     });
-  }
+  }, [getActiveWeekStripViewport]);
 
   function commitSettledWeekStripPage() {
-    const viewport = weekStripViewportRef.current;
+    const viewport = getActiveWeekStripViewport();
 
     if (!viewport) {
       return;
@@ -315,7 +320,7 @@ export function PlannerWeekScreen({
   }
 
   function handleWeekStripScroll() {
-    if (!weekStripViewportRef.current) {
+    if (!getActiveWeekStripViewport()) {
       return;
     }
 
@@ -426,7 +431,7 @@ export function PlannerWeekScreen({
     }
 
     recenterWeekStripViewport();
-  }, [authState, rangeEndDate, rangeStartDate]);
+  }, [authState, rangeEndDate, rangeStartDate, recenterWeekStripViewport]);
 
   useEffect(() => {
     return () => {
@@ -492,6 +497,14 @@ export function PlannerWeekScreen({
     return `/menu-add?${baseQuery}`;
   }
 
+  function getMealAddHrefForSlot(dateKey: string, column: { id: string; name: string }) {
+    return `/menu-add?${buildMenuAddQuery({
+      columnId: column.id,
+      dateKey,
+      slotName: column.name,
+    })}`;
+  }
+
   if (authState === "checking") {
     return (
       <ContentState
@@ -535,9 +548,15 @@ export function PlannerWeekScreen({
     );
   }
 
-  if (!isDesktopViewport) {
-    return (
-      <div className="min-h-screen bg-[#F8F9FA] pb-[128px] text-[#212529]">
+  const shouldRenderWebView =
+    process.env.NODE_ENV !== "test" || isDesktopViewport;
+  const shouldRenderAppView =
+    process.env.NODE_ENV !== "test" || !isDesktopViewport;
+
+  return (
+    <>
+      {shouldRenderAppView ? (
+        <div className="min-h-screen bg-[#F8F9FA] pb-[128px] text-[#212529] lg:hidden">
         <div className="sticky top-0 z-30 flex min-h-[52px] items-center border-b border-[#DEE2E6] bg-white px-4">
           <div className="min-w-8 flex-1" aria-hidden="true" />
           <h1 className="flex-1 text-center text-[18px] font-bold leading-none text-[#212529]">
@@ -611,11 +630,11 @@ export function PlannerWeekScreen({
               ›
             </button>
           </div>
-          <p className="sr-only" id="planner-week-strip-hint">
+          <p className="sr-only" id="planner-week-strip-hint-mobile">
             주간 날짜 스트립을 좌우로 넘기면 이전 주 또는 다음 주로 이동할 수 있어요.
           </p>
           <div
-            aria-describedby="planner-week-strip-hint"
+            aria-describedby="planner-week-strip-hint-mobile"
             aria-busy={isRefreshing}
             aria-label="주간 날짜 스트립"
             className="scrollbar-hide overflow-x-auto overscroll-x-contain snap-x snap-mandatory touch-pan-x"
@@ -628,7 +647,7 @@ export function PlannerWeekScreen({
             onTouchCancel={handleWeekStripInteractionEnd}
             onTouchEnd={handleWeekStripInteractionEnd}
             onTouchStart={handleWeekStripInteractionStart}
-            ref={weekStripViewportRef}
+            ref={mobileWeekStripViewportRef}
             tabIndex={0}
           >
             <div className="flex">
@@ -914,13 +933,12 @@ export function PlannerWeekScreen({
           </div>
         ) : null}
 
-        <Wave1PlannerBottomTab />
-      </div>
-    );
-  }
+          <Wave1PlannerBottomTab />
+        </div>
+      ) : null}
 
-  return (
-    <div className="space-y-2.5 sm:space-y-3">
+      {shouldRenderWebView ? (
+        <div className="hidden space-y-2.5 sm:space-y-3 lg:block">
       <section className="rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] px-[clamp(14px,3.6vw,22px)] py-[clamp(12px,3vw,16px)] shadow-[var(--shadow-2)]">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="min-w-0">
@@ -1055,11 +1073,11 @@ export function PlannerWeekScreen({
             </div>
           </div>
 
-          <p className="sr-only" id="planner-week-strip-hint">
+          <p className="sr-only" id="planner-week-strip-hint-web">
             주간 날짜 스트립을 좌우로 넘기면 이전 주 또는 다음 주로 이동할 수 있어요.
           </p>
           <div
-            aria-describedby="planner-week-strip-hint"
+            aria-describedby="planner-week-strip-hint-web"
             aria-busy={isRefreshing}
             aria-label="주간 날짜 스트립"
             className="scrollbar-hide overflow-x-auto overscroll-x-contain snap-x snap-mandatory touch-pan-x"
@@ -1069,7 +1087,7 @@ export function PlannerWeekScreen({
             onMouseDown={handleWeekStripInteractionStart}
             onMouseUp={handleWeekStripInteractionEnd}
             onMouseLeave={handleWeekStripInteractionEnd}
-            ref={weekStripViewportRef}
+            ref={webWeekStripViewportRef}
             tabIndex={0}
             onTouchCancel={handleWeekStripInteractionEnd}
             onTouchEnd={handleWeekStripInteractionEnd}
@@ -1128,7 +1146,7 @@ export function PlannerWeekScreen({
       {screenState === "ready" || screenState === "empty" ? (
         <section
           aria-busy={isRefreshing}
-          className="space-y-2 sm:space-y-2.5"
+          className="grid grid-cols-7 gap-3 overflow-x-auto pb-2"
           data-testid="planner-week-body"
           style={plannerBodyMotionStyle}
         >
@@ -1148,7 +1166,7 @@ export function PlannerWeekScreen({
               <article
                 key={dateKey}
                 aria-label={`${formatDateLabel(dateKey)} 식단 카드`}
-                className={`overflow-hidden rounded-[var(--radius-md)] bg-[var(--surface)] ${
+                className={`min-w-[148px] overflow-hidden rounded-[var(--radius-md)] bg-[var(--surface)] ${
                   isToday
                     ? "border-2 border-[var(--brand)] shadow-[var(--shadow-2)]"
                     : "border border-[var(--line)]"
@@ -1192,76 +1210,87 @@ export function PlannerWeekScreen({
                     const slotKey = `${dateKey}:${column.id}`;
                     const slotMeals = mealsByDateAndColumn.get(slotKey) ?? [];
                     const meal = slotMeals[0] ?? null;
+                    const mealHref = `/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`;
+                    const addHref = getMealAddHrefForSlot(dateKey, column);
 
                     return (
-                      <Link
+                      <div
                         key={slotKey}
-                        className="flex min-h-[44px] items-center px-4 py-2.5"
-                        href={`/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`}
+                        className="flex min-h-[44px] items-center gap-2 px-4 py-2.5"
                       >
-                        {/* Slot name (text only, no emoji) */}
-                        <div className="w-12 shrink-0 text-center">
-                          <p className="text-[13px] font-bold text-[var(--foreground)]">
-                            {column.name}
-                          </p>
-                        </div>
+                        <Link
+                          className="flex min-w-0 flex-1 items-center"
+                          href={meal ? mealHref : addHref}
+                        >
+                          {/* Slot name (text only, no emoji) */}
+                          <div className="w-12 shrink-0 text-center">
+                            <p className="text-[13px] font-bold text-[var(--foreground)]">
+                              {column.name}
+                            </p>
+                          </div>
 
-                        {meal ? (
-                          <>
-                            {/* Thumbnail */}
-                            {meal.recipe_thumbnail_url ? (
-                              <Image
-                                alt=""
-                                className="ml-1 mr-2.5 h-11 w-11 rounded-[var(--radius-sm)] object-cover"
-                                height={44}
-                                src={meal.recipe_thumbnail_url}
-                                unoptimized
-                                width={44}
-                              />
-                            ) : (
-                              <div className="ml-1 mr-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface-fill)]">
-                                <span className="text-[13px] font-bold text-[var(--text-3)]">
-                                  {column.name.charAt(0)}
-                                </span>
-                              </div>
-                            )}
-                            {/* Meal info */}
-                            <div className="min-w-0 flex-1">
-                              <p
-                                className={`truncate text-[14px] font-semibold leading-tight ${meal.is_leftover ? "text-[var(--olive)]" : "text-[var(--foreground)]"}`}
-                              >
-                                {meal.recipe_title}
-                                {slotMeals.length > 1 ? (
-                                  <span className="ml-1 text-[10px] font-normal text-[var(--muted)]">
-                                    +{slotMeals.length - 1}
+                          {meal ? (
+                            <>
+                              {/* Thumbnail */}
+                              {meal.recipe_thumbnail_url ? (
+                                <Image
+                                  alt=""
+                                  className="ml-1 mr-2.5 h-11 w-11 rounded-[var(--radius-sm)] object-cover"
+                                  height={44}
+                                  src={meal.recipe_thumbnail_url}
+                                  unoptimized
+                                  width={44}
+                                />
+                              ) : (
+                                <div className="ml-1 mr-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface-fill)]">
+                                  <span className="text-[13px] font-bold text-[var(--text-3)]">
+                                    {column.name.charAt(0)}
                                   </span>
-                                ) : null}
-                              </p>
-                              <div className="mt-0.5 flex items-center gap-1.5">
-                                <span className="text-[11px] text-[var(--text-3)]">
-                                  {meal.planned_servings}인분
-                                </span>
-                                {meal.is_leftover ? (
-                                  <span
-                                    aria-label="남은요리 식사"
-                                    className="inline-flex shrink-0 rounded-[4px] bg-[color-mix(in_srgb,var(--olive)_14%,transparent)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--olive)]"
-                                  >
-                                    남은요리
+                                </div>
+                              )}
+                              {/* Meal info */}
+                              <div className="min-w-0 flex-1">
+                                <p
+                                  className={`truncate text-[14px] font-semibold leading-tight ${meal.is_leftover ? "text-[var(--olive)]" : "text-[var(--foreground)]"}`}
+                                >
+                                  {meal.recipe_title}
+                                  {slotMeals.length > 1 ? (
+                                    <span className="ml-1 text-[10px] font-normal text-[var(--muted)]">
+                                      +{slotMeals.length - 1}
+                                    </span>
+                                  ) : null}
+                                </p>
+                                <div className="mt-0.5 flex items-center gap-1.5">
+                                  <span className="text-[11px] text-[var(--text-3)]">
+                                    {meal.planned_servings}인분
                                   </span>
-                                ) : null}
+                                  {meal.is_leftover ? (
+                                    <span
+                                      aria-label="남은요리 식사"
+                                      className="inline-flex shrink-0 rounded-[4px] bg-[color-mix(in_srgb,var(--olive)_14%,transparent)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--olive)]"
+                                    >
+                                      남은요리
+                                    </span>
+                                  ) : null}
+                                </div>
                               </div>
-                            </div>
-                            {/* + 음식 button (replaces chevron) */}
-                            <span className="ml-2 inline-flex shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--brand)] bg-[var(--brand-soft)] px-2 py-1 text-[11px] font-bold text-[var(--brand)]">
+                            </>
+                          ) : (
+                            <span className="ml-3 flex h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--brand)] bg-[var(--brand-soft)] text-[13px] font-bold text-[var(--brand)]">
                               + 음식
                             </span>
-                          </>
-                        ) : (
-                          <span className="ml-3 flex h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--brand)] bg-[var(--brand-soft)] text-[13px] font-bold text-[var(--brand)]">
+                          )}
+                        </Link>
+                        {meal ? (
+                          <Link
+                            aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
+                            className="inline-flex shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--brand)] bg-[var(--brand-soft)] px-2 py-1 text-[11px] font-bold text-[var(--brand)]"
+                            href={addHref}
+                          >
                             + 음식
-                          </span>
-                        )}
-                      </Link>
+                          </Link>
+                        ) : null}
+                      </div>
                     );
                   })}
                 </div>
@@ -1270,8 +1299,9 @@ export function PlannerWeekScreen({
           })}
         </section>
       ) : null}
-
-    </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 

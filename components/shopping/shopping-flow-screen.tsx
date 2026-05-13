@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
+import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
 import { PantryReflectionPopup } from "@/components/shopping/pantry-reflection-popup";
 import {
   completeShoppingList,
@@ -199,7 +200,7 @@ function shouldUseInlineReview() {
   return (
     typeof window !== "undefined" &&
     typeof window.matchMedia === "function" &&
-    window.matchMedia("(max-width: 767px)").matches
+    window.matchMedia(APP_VIEW_MEDIA_QUERY).matches
   );
 }
 
@@ -276,7 +277,7 @@ export function ShoppingFlowScreen({
       return;
     }
 
-    const query = window.matchMedia("(max-width: 767px)");
+    const query = window.matchMedia(APP_VIEW_MEDIA_QUERY);
     const syncViewport = () => setIsMobileViewport(query.matches);
     syncViewport();
     query.addEventListener("change", syncViewport);
@@ -714,23 +715,28 @@ export function ShoppingFlowScreen({
   }
 
   return (
-      <div className="flex min-h-screen flex-col">
-        <AppBar onBack={handleBack} />
+    <div className="min-h-screen bg-[var(--background)]">
+      <AppBar onBack={handleBack} />
 
-        <main
-          className="mx-auto flex w-full max-w-[720px] flex-1 flex-col overflow-y-auto px-4 pb-28 pt-4"
-          data-testid="shopping-flow-shell"
-        >
-          <div className="mb-4 rounded-[14px] border border-[var(--line)] bg-white/70 px-4 py-3">
-            <p className="text-sm font-semibold text-[var(--foreground)]">
-              장보기 대상을 레시피별로 합산했어요
+      <main
+        className="mx-auto grid w-full max-w-6xl gap-8 px-6 pb-16 pt-8 lg:grid-cols-[minmax(0,1fr)_340px]"
+        data-testid="shopping-flow-shell"
+      >
+        <div className="min-w-0">
+          <section className="mb-6 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
+              Shopping Preview
             </p>
-            <p className="mt-1 text-sm leading-5 text-[var(--muted)]">
-              식사 등록 완료이면서 아직 장보기 리스트에 없는 식사입니다. 같은 레시피는 합산 계획 인분으로 묶이고, 장보기 완료·요리 완료·이미 연결된 식사는 자동으로 제외돼요.
+            <h1 className="mt-2 text-3xl font-bold tracking-[-0.4px] text-[var(--foreground)]">
+              장보기 준비
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">
+              식사 등록 완료이면서 아직 장보기 리스트에 없는 식사입니다.
+              같은 레시피는 합산 계획 인분으로 묶이고, 장보기 완료·요리 완료·이미 연결된 식사는 자동으로 제외돼요.
             </p>
-          </div>
+          </section>
 
-          <div className="space-y-3">
+          <div className="grid gap-4 xl:grid-cols-2">
             {mealConfigs.map((config) => (
               <RecipeCard
                 key={config.recipe_id}
@@ -740,12 +746,21 @@ export function ShoppingFlowScreen({
               />
             ))}
           </div>
-        </main>
+        </div>
 
-        <div className="fixed bottom-0 left-0 right-0 border-t border-[var(--line)] bg-[var(--background)] p-4">
-          <div className="mx-auto w-full max-w-[720px]">
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
+            <p className="text-sm font-bold text-[var(--foreground)]">
+              선택한 레시피
+            </p>
+            <p className="mt-1 text-3xl font-bold text-[var(--foreground)]">
+              {selectedCount}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              장보기 기준 인분을 확인한 뒤 목록을 생성하세요.
+            </p>
             <button
-              className="w-full rounded-[12px] bg-[var(--brand)] px-5 py-3 text-base font-semibold text-white disabled:opacity-50"
+              className="mt-5 w-full rounded-full bg-[var(--brand)] px-5 py-4 text-base font-semibold text-white disabled:bg-[var(--surface-fill)] disabled:text-[var(--text-4)]"
               data-testid="shopping-create-button"
               disabled={isCreateDisabled}
               onClick={handleCreateList}
@@ -754,8 +769,9 @@ export function ShoppingFlowScreen({
               장보기 목록 만들기
             </button>
           </div>
-        </div>
-      </div>
+        </aside>
+      </main>
+    </div>
   );
 }
 
@@ -768,7 +784,7 @@ interface AppBarProps {
 function AppBar({ onBack }: AppBarProps) {
   return (
     <div className="shrink-0 border-b border-[var(--line)] bg-[var(--background)]">
-      <div className="mx-auto flex h-14 w-full max-w-[720px] items-center gap-2 px-2">
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-6">
         <button
           aria-label="뒤로 가기"
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-white/60"
@@ -856,7 +872,7 @@ function MobileSelectScreen({
   onToggle: (recipeId: string) => void;
 }) {
   return (
-    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] md:hidden">
+    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] lg:hidden">
       <MobileAppBar onBack={onBack} />
 
       <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">
@@ -1009,7 +1025,7 @@ function MobileReviewScreen({
     : 100;
 
   return (
-    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] md:hidden">
+    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#F8F9FA] lg:hidden">
       <MobileAppBar onBack={onBack} />
 
       <main className="min-h-0 flex-1 overflow-y-auto pb-[168px]">

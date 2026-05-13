@@ -516,142 +516,184 @@ export function MypageScreen({
   }
 
   return (
-    <div className="pb-32">
-      {/* Profile Section */}
-      <div
-        className="flex items-center gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-4 max-[360px]:gap-2 max-[360px]:py-2.5"
+    <div className="space-y-6 pb-20">
+      <section
+        className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]"
         data-testid="mypage-profile"
       >
-        {profile?.profile_image_url ? (
-          <Image
-            alt={`${profile.nickname} 프로필`}
-            className="h-12 w-12 shrink-0 rounded-full border border-[var(--line)] object-cover max-[360px]:h-10 max-[360px]:w-10"
-            height={48}
-            src={profile.profile_image_url}
-            unoptimized
-            width={48}
-          />
-        ) : (
-          <div
-            aria-label="프로필 이니셜"
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] text-base font-bold text-[var(--brand)] max-[360px]:h-10 max-[360px]:w-10 max-[360px]:text-sm"
-            data-testid="profile-fallback-avatar"
-          >
-            {profile?.nickname?.charAt(0) ?? "?"}
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            {profile?.profile_image_url ? (
+              <Image
+                alt={`${profile.nickname} 프로필`}
+                className="h-16 w-16 shrink-0 rounded-full border border-[var(--line)] object-cover"
+                height={64}
+                src={profile.profile_image_url}
+                unoptimized
+                width={64}
+              />
+            ) : (
+              <div
+                aria-label="프로필 이니셜"
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[var(--brand-soft)] text-xl font-bold text-[var(--brand)]"
+                data-testid="profile-fallback-avatar"
+              >
+                {profile?.nickname?.charAt(0) ?? "?"}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand)]">
+                My Homecook
+              </p>
+              <h1 className="mt-1 truncate text-3xl font-bold tracking-[-0.3px] text-[var(--foreground)]">
+                {profile?.nickname ?? ""}
+              </h1>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                {SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}
+              </p>
+            </div>
           </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-lg font-bold text-[var(--foreground)]">
-            {profile?.nickname ?? ""}
-          </p>
-          <p className="text-sm text-[var(--text-3)]">
-            {SOCIAL_PROVIDER_LABELS[profile?.social_provider ?? ""] ?? ""}
-          </p>
+          <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[360px]">
+            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
+              <p className="text-xs font-semibold text-[var(--muted)]">레시피북</p>
+              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
+                {books.length}개
+              </p>
+            </div>
+            <div className="rounded-[var(--radius-md)] bg-[var(--surface-fill)] px-4 py-3">
+              <p className="text-xs font-semibold text-[var(--muted)]">저장 레시피</p>
+              <p className="mt-1 text-xl font-bold text-[var(--foreground)]">
+                {books.reduce((sum, book) => sum + book.recipe_count, 0)}개
+              </p>
+            </div>
+            <Link
+              className="flex min-h-[68px] items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--panel)] px-4 text-sm font-semibold text-[var(--foreground)] hover:border-[var(--brand)]"
+              data-testid="mypage-settings-link"
+              href="/settings"
+            >
+              설정으로 이동
+            </Link>
+          </div>
         </div>
-        <Link
-          className="flex min-h-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-fill)] px-3 text-sm font-semibold text-[var(--foreground)] max-[360px]:px-2 max-[360px]:text-xs"
-          data-testid="mypage-settings-link"
-          href="/settings"
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="h-fit rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[var(--shadow-1)]">
+          <div
+            className="grid gap-2"
+            data-testid="mypage-tabbar"
+            role="tablist"
+          >
+            <button
+              aria-label="레시피북"
+              aria-selected={activeTab === "recipebook"}
+              className={`flex min-h-12 items-center justify-between rounded-[var(--radius-md)] px-4 text-left text-sm font-bold transition-colors ${
+                activeTab === "recipebook"
+                  ? "bg-[var(--brand)] text-white"
+                  : "text-[var(--text-2)] hover:bg-[var(--surface-fill)]"
+              }`}
+              onClick={() => setActiveTab("recipebook")}
+              role="tab"
+              type="button"
+            >
+              <span>레시피북</span>
+              <span>{books.length}</span>
+            </button>
+            <button
+              aria-label="장보기 기록"
+              aria-selected={activeTab === "shopping"}
+              className={`flex min-h-12 items-center justify-between rounded-[var(--radius-md)] px-4 text-left text-sm font-bold transition-colors ${
+                activeTab === "shopping"
+                  ? "bg-[var(--brand)] text-white"
+                  : "text-[var(--text-2)] hover:bg-[var(--surface-fill)]"
+              }`}
+              onClick={() => setActiveTab("shopping")}
+              role="tab"
+              type="button"
+            >
+              <span>장보기 기록</span>
+              <span>{shoppingItems.length}</span>
+            </button>
+          </div>
+          <div className="mt-3 border-t border-[var(--line)] pt-3">
+            <Link
+              className="flex min-h-11 items-center rounded-[var(--radius-md)] px-4 text-sm font-semibold text-[var(--text-2)] hover:bg-[var(--surface-fill)]"
+              href="/leftovers"
+            >
+              남은요리 관리
+            </Link>
+            <Link
+              className="mt-1 flex min-h-11 items-center rounded-[var(--radius-md)] px-4 text-sm font-semibold text-[var(--text-2)] hover:bg-[var(--surface-fill)]"
+              href="/planner"
+            >
+              식단 플래너
+            </Link>
+          </div>
+        </aside>
+
+        <section
+          className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]"
+          role="tabpanel"
         >
-          <span>설정으로 이동</span>
-        </Link>
+          {activeTab === "recipebook" ? (
+            <RecipeBookTabContent
+              books={books}
+              createInputRef={createInputRef}
+              createName={createName}
+              customBooks={customBooks}
+              deleteTarget={deleteTarget}
+              isCreating={isCreating}
+              isDeleting={isDeleting}
+              isRenaming={isRenaming}
+              menuOpenBookId={menuOpenBookId}
+              menuRef={menuRef}
+              onCancelCreate={() => {
+                setShowCreateInput(false);
+                setCreateName("");
+              }}
+              onCancelRename={() => {
+                setRenamingBookId(null);
+                setRenameValue("");
+              }}
+              onCloseDeleteDialog={() => setDeleteTarget(null)}
+              onConfirmDelete={handleDeleteBook}
+              onConfirmRename={handleRenameBook}
+              onCreateBook={handleCreateBook}
+              onCreateNameChange={setCreateName}
+              onMenuClose={() => setMenuOpenBookId(null)}
+              onMenuOpen={(id) => setMenuOpenBookId(id)}
+              onRenameStart={(book) => {
+                setRenamingBookId(book.id);
+                setRenameValue(book.name);
+                setMenuOpenBookId(null);
+              }}
+              onRequestDelete={(book) => {
+                setDeleteTarget(book);
+                setMenuOpenBookId(null);
+              }}
+              onRenameValueChange={setRenameValue}
+              onShowCreateInput={() => setShowCreateInput(true)}
+              renameInputRef={renameInputRef}
+              renameValue={renameValue}
+              renamingBookId={renamingBookId}
+              showCreateInput={showCreateInput}
+              systemBooks={systemBooks}
+            />
+          ) : (
+            <ShoppingHistoryTabContent
+              hasNext={shoppingHasNext}
+              isLoadingMore={isLoadingMore}
+              items={shoppingItems}
+              loaded={shoppingLoaded}
+              scrollSentinelRef={scrollSentinelRef}
+            />
+          )}
+        </section>
       </div>
 
-      {/* Tab Bar */}
-      <div
-        className="sticky top-0 z-10 flex border-b border-[var(--line)] bg-[var(--surface)]"
-        data-testid="mypage-tabbar"
-        role="tablist"
-      >
-        <button
-          aria-selected={activeTab === "recipebook"}
-          className={`flex-1 py-3 text-center text-sm font-bold transition-colors max-[360px]:py-2 ${
-            activeTab === "recipebook"
-              ? "border-b-2 border-[var(--brand)] text-[var(--brand)]"
-              : "text-[var(--text-3)]"
-          }`}
-          onClick={() => setActiveTab("recipebook")}
-          role="tab"
-          type="button"
-        >
-          레시피북
-        </button>
-        <button
-          aria-selected={activeTab === "shopping"}
-          className={`flex-1 py-3 text-center text-sm font-bold transition-colors max-[360px]:py-2 ${
-            activeTab === "shopping"
-              ? "border-b-2 border-[var(--brand)] text-[var(--brand)]"
-              : "text-[var(--text-3)]"
-          }`}
-          onClick={() => setActiveTab("shopping")}
-          role="tab"
-          type="button"
-        >
-          장보기 기록
-        </button>
-      </div>
-
-      {/* Tab Content */}
-      <div className="px-4 pt-4 max-[360px]:pt-2" role="tabpanel">
-        {activeTab === "recipebook" ? (
-          <RecipeBookTabContent
-            books={books}
-            createInputRef={createInputRef}
-            createName={createName}
-            customBooks={customBooks}
-            deleteTarget={deleteTarget}
-            isCreating={isCreating}
-            isDeleting={isDeleting}
-            isRenaming={isRenaming}
-            menuOpenBookId={menuOpenBookId}
-            menuRef={menuRef}
-            onCancelCreate={() => {
-              setShowCreateInput(false);
-              setCreateName("");
-            }}
-            onCancelRename={() => {
-              setRenamingBookId(null);
-              setRenameValue("");
-            }}
-            onCloseDeleteDialog={() => setDeleteTarget(null)}
-            onConfirmDelete={handleDeleteBook}
-            onConfirmRename={handleRenameBook}
-            onCreateBook={handleCreateBook}
-            onCreateNameChange={setCreateName}
-            onMenuClose={() => setMenuOpenBookId(null)}
-            onMenuOpen={(id) => setMenuOpenBookId(id)}
-            onRenameStart={(book) => {
-              setRenamingBookId(book.id);
-              setRenameValue(book.name);
-              setMenuOpenBookId(null);
-            }}
-            onRequestDelete={(book) => {
-              setDeleteTarget(book);
-              setMenuOpenBookId(null);
-            }}
-            onRenameValueChange={setRenameValue}
-            onShowCreateInput={() => setShowCreateInput(true)}
-            renameInputRef={renameInputRef}
-            renameValue={renameValue}
-            renamingBookId={renamingBookId}
-            showCreateInput={showCreateInput}
-            systemBooks={systemBooks}
-          />
-        ) : (
-          <ShoppingHistoryTabContent
-            hasNext={shoppingHasNext}
-            isLoadingMore={isLoadingMore}
-            items={shoppingItems}
-            loaded={shoppingLoaded}
-            scrollSentinelRef={scrollSentinelRef}
-          />
-        )}
-      </div>
-
-      {/* Toast */}
       {toast ? (
         <div
-          className={`fixed inset-x-4 bottom-20 z-50 mx-auto max-w-md rounded-[var(--radius-lg)] px-4 py-3 text-center text-sm font-semibold shadow-lg ${
+          className={`fixed inset-x-4 bottom-8 z-50 mx-auto max-w-md rounded-[var(--radius-lg)] px-4 py-3 text-center text-sm font-semibold shadow-lg ${
             toast.tone === "success"
               ? "bg-[var(--olive)] text-white"
               : "bg-[var(--danger)] text-white"

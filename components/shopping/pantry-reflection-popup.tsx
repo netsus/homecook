@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 
+import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
 import type { ShoppingListItemSummary } from "@/types/shopping";
 
 export interface PantryReflectionPopupProps {
@@ -62,7 +63,7 @@ export function PantryReflectionPopup({
       return;
     }
 
-    const query = window.matchMedia("(max-width: 767px)");
+    const query = window.matchMedia(APP_VIEW_MEDIA_QUERY);
     const syncViewport = () => setIsMobileViewport(query.matches);
     syncViewport();
     query.addEventListener("change", syncViewport);

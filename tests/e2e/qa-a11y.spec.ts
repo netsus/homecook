@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import {
   installDiscoveryRoutes,
@@ -12,6 +12,29 @@ async function expectNoAxeViolations(
 ) {
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
+}
+
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) < 1024;
+}
+
+function visibleSearchInput(page: Page) {
+  return page
+    .getByPlaceholder(
+      isMobileViewport(page) ? "김치볶음밥, 된장찌개…" : "레시피 제목 검색",
+    )
+    .first();
+}
+
+function visibleTextButton(page: Page, text: string | RegExp) {
+  return page.locator("button:visible").filter({ hasText: text }).first();
+}
+
+function visibleSortButton(page: Page) {
+  return visibleTextButton(
+    page,
+    /조회수순|최신순|저장순|플래너 등록순|정렬 기준/i,
+  );
 }
 
 function getLoginActionButton(
@@ -127,29 +150,27 @@ test.describe("QA accessibility smoke", () => {
     await installRecipeDetailRoutes(page);
 
     await page.goto("/");
-    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개…")).toBeVisible();
+    await expect(visibleSearchInput(page)).toBeVisible();
     await expectNoAxeViolations(page);
-    await expectReadableTouchTarget(
-      page.getByRole("button", { name: "재료로 검색" }),
-    );
-    await expectMatchingControlTypography(
-      page.getByRole("button", { name: "재료로 검색" }),
-      page.getByRole("button", { name: /정렬 기준/i }),
-    );
-    await expectCompactToolbarControl(
-      page.getByRole("button", { name: /정렬 기준/i }),
-    );
-    await expectReadableTouchTarget(
-      page.getByRole("button", { name: /정렬 기준/i }),
-    );
-    await page.getByRole("button", { name: /정렬 기준/i }).click();
+    const ingredientSearchButton = visibleTextButton(page, "재료로 검색");
+    const sortButton = visibleSortButton(page);
+
+    await expectReadableTouchTarget(ingredientSearchButton);
+    if (isMobileViewport(page)) {
+      await expectMatchingControlTypography(ingredientSearchButton, sortButton);
+    }
+    await expectCompactToolbarControl(sortButton);
+    await expectReadableTouchTarget(sortButton);
+    await sortButton.click();
+    const plannerOption = page
+      .locator('[role="option"]:visible')
+      .filter({ hasText: "플래너 등록순" })
+      .first();
     await expect(
-      page.getByRole("option", { name: "플래너 등록순" }),
+      plannerOption,
     ).toBeVisible();
     await expectNoAxeViolations(page);
-    await expectReadableTouchTarget(
-      page.getByRole("option", { name: "플래너 등록순" }),
-    );
+    await expectReadableTouchTarget(plannerOption);
 
     await page.goto(RECIPE_PATH);
     await expect(
@@ -157,10 +178,10 @@ test.describe("QA accessibility smoke", () => {
     ).toBeVisible();
     await expectNoAxeViolations(page);
     await expectReadableTouchTarget(
-      page.getByRole("button", { name: "플래너에 추가" }),
+      visibleTextButton(page, "플래너에 추가"),
     );
     await expectReadableTouchTarget(
-      page.getByRole("button", { name: /좋아요/ }),
+      page.locator('button:visible[aria-label*="좋아요"]').first(),
     );
   });
 
@@ -171,7 +192,7 @@ test.describe("QA accessibility smoke", () => {
     await installRecipeDetailRoutes(page);
 
     await page.goto("/");
-    await page.getByRole("button", { name: "재료로 검색" }).click();
+    await visibleTextButton(page, "재료로 검색").click();
     await expect(
       page.getByRole("dialog", { name: "재료로 검색" }),
     ).toBeVisible();
@@ -190,7 +211,7 @@ test.describe("QA accessibility smoke", () => {
     );
 
     await page.goto(RECIPE_PATH);
-    await page.getByRole("button", { name: "플래너에 추가" }).click();
+    await visibleTextButton(page, "플래너에 추가").click();
     await expect(
       page.getByRole("dialog", { name: "로그인이 필요한 작업이에요" }),
     ).toBeVisible();

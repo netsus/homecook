@@ -123,7 +123,7 @@ async function confirmDefaultPantryReflection(page: Page) {
     name: /팬트리에 (추가|반영)할까요\?/,
   });
   await expect(dialog).toBeVisible();
-  const isMobile = (page.viewportSize()?.width ?? 1280) < 768;
+  const isMobile = (page.viewportSize()?.width ?? 1280) < 1024;
   await dialog
     .getByRole("button", { name: isMobile ? /개 반영하기/ : "완료", exact: !isMobile })
     .click();
@@ -311,7 +311,7 @@ test.describe("slice 12a: shopping complete", () => {
 
       await page.goto("/planner");
 
-      await expect(page.getByText("김치찌개")).toBeVisible();
+      await expect(page.locator('a:visible:has-text("김치찌개")').first()).toBeVisible();
       await expect(page.locator('[aria-label="장보기 완료"]')).toHaveCount(0);
     });
 

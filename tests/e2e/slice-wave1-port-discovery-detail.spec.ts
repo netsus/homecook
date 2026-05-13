@@ -11,6 +11,10 @@ const E2E_AUTH_OVERRIDE_COOKIE = E2E_AUTH_OVERRIDE_KEY;
 const E2E_APP_ORIGIN =
   process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
 
+function isMobileViewport(page: Page) {
+  return (page.viewportSize()?.width ?? 1280) < 1024;
+}
+
 async function setAuthOverride(page: Page, value: "authenticated" | "guest") {
   await page.context().addCookies([
     {
@@ -38,18 +42,32 @@ test.describe("wave1 port discovery detail", () => {
     page,
   }) => {
     await page.goto("/");
-    await expect(page.getByPlaceholder("김치볶음밥, 된장찌개…")).toBeVisible();
+    await expect(
+      page
+        .getByPlaceholder(
+          isMobileViewport(page)
+            ? "김치볶음밥, 된장찌개…"
+            : "레시피 제목 검색",
+        )
+        .first(),
+    ).toBeVisible();
 
-    const sortButton = page.getByRole("button", { name: /정렬 기준/i });
+    const sortButton = page
+      .locator("button:visible")
+      .filter({ hasText: /조회수순|최신순|저장순|플래너 등록순|정렬 기준/i })
+      .first();
     await expect(sortButton).toBeVisible();
     await expect(sortButton).toContainText("조회수순");
 
     await sortButton.click();
 
-    const listbox = page.getByRole("listbox");
-    await expect(listbox).toBeVisible();
+    const listbox = page.locator('[role="listbox"]:visible');
+    await expect(listbox).toBeVisible({ timeout: 15000 });
 
-    await page.getByText("저장순").click();
+    await page
+      .locator('[role="option"]:visible')
+      .filter({ hasText: "저장순" })
+      .click();
 
     await expect(sortButton).toContainText("저장순");
   });
@@ -59,21 +77,40 @@ test.describe("wave1 port discovery detail", () => {
   }) => {
     await page.goto("/");
     await expect(
-      page.getByRole("heading", { level: 2, name: "모든 레시피" }),
-    ).toBeVisible();
-
-    const recipeListSection = page.locator('section[aria-label="모든 레시피"]');
-    await expect(recipeListSection.getByRole("button", { name: "양파" })).toBeVisible();
+      page.locator('a[href="/recipe/mock-kimchi-jjigae"]:visible').first(),
+    ).toBeVisible({ timeout: 15000 });
     await expect(
-      recipeListSection.getByRole("button", { name: "재료로 검색" }),
-    ).toBeVisible();
+      page.locator("h2:visible").filter({ hasText: "모든 레시피" }).first(),
+    ).toBeVisible({ timeout: 15000 });
+
+    if (isMobileViewport(page)) {
+      const recipeListSection = page.locator('section[aria-label="모든 레시피"]');
+      await expect(recipeListSection.getByRole("button", { name: "양파" })).toBeVisible();
+      await expect(
+        recipeListSection.getByRole("button", { name: "재료로 검색" }),
+      ).toBeVisible();
+    } else {
+      await expect(
+        page.locator("button:visible").filter({ hasText: "양파" }).first(),
+      ).toBeVisible();
+      await expect(
+        page.locator("button:visible").filter({ hasText: "재료로 검색" }).first(),
+      ).toBeVisible();
+    }
   });
 
   test("HOME header does not contain profile or cart icons", async ({
     page,
   }) => {
     await page.goto("/");
-    await expect(page.getByText("homecook_")).toBeVisible();
+    if (isMobileViewport(page)) {
+      await expect(page.getByLabel("homecook_")).toBeVisible();
+    } else {
+      await expect(page.getByRole("link", { name: "Homecook" })).toBeVisible();
+      await expect(
+        page.getByRole("navigation", { name: "데스크탑 주요 메뉴" }),
+      ).toBeVisible();
+    }
 
     await expect(
       page.getByRole("button", { name: "장보기" }),
@@ -89,14 +126,18 @@ test.describe("wave1 port discovery detail", () => {
     await expect(page.getByRole("button", { name: "저장" })).toBeVisible();
     await expect(page.getByRole("status", { name: /요리완료/ })).toBeVisible();
 
-    const plannerCta = page.getByRole("button", { name: "플래너에 추가" });
-    const cookCta = page.getByRole("button", { name: "요리하기" });
+    const plannerCta = page.getByRole("button", { name: "플래너에 추가" }).first();
+    const cookCta = page.getByRole("button", { name: "요리하기" }).first();
 
     await expect(plannerCta).toBeVisible();
     await expect(cookCta).toBeVisible();
 
-    const ctaBar = page.locator(".wave1-recipe-cta-bar, .sticky.bottom-0").first();
-    await expect(ctaBar).toBeVisible();
+    if (isMobileViewport(page)) {
+      const ctaBar = page.locator(".wave1-recipe-cta-bar").first();
+      await expect(ctaBar).toBeVisible();
+    } else {
+      await expect(page.getByText("요리모드 진입 후에는 인분을 바꿀 수 없어요.")).toBeVisible();
+    }
   });
 
   test("RECIPE_DETAIL planner add sheet opens from sticky CTA", async ({

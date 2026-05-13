@@ -58,13 +58,33 @@ function parseLoginReturnToAction(loginUrl: string) {
 }
 
 function isMobileViewport(page: Page) {
-  return (page.viewportSize()?.width ?? 1024) < 768;
+  return (page.viewportSize()?.width ?? 1024) < 1024;
+}
+
+function visibleByTestId(page: Page, testId: string) {
+  return page.getByTestId(testId).filter({ visible: true });
+}
+
+function visibleButtonText(page: Page, text: string) {
+  return page.locator(`button:has-text("${text}")`).filter({ visible: true }).first();
+}
+
+function visibleText(page: Page, text: string) {
+  return page.getByText(text).filter({ visible: true }).first();
+}
+
+function visibleSearchInput(page: Page) {
+  return page.locator('input[aria-label="레시피 검색"]').filter({ visible: true }).first();
+}
+
+function visibleSearchButton(page: Page) {
+  return page.locator('button[aria-label="검색"]').filter({ visible: true }).first();
 }
 
 async function openMobileSearchPicker(page: Page) {
   if (!isMobileViewport(page)) return;
 
-  await page.getByTestId("menu-add-option-search").click();
+  await visibleByTestId(page, "menu-add-option-search").click();
   await expect(page.getByRole("heading", { name: "검색으로 추가" })).toBeVisible();
 }
 
@@ -74,7 +94,7 @@ async function expectServingsDialog(page: Page) {
     return;
   }
 
-  await expect(page.locator("text=계획 인분 입력")).toBeVisible();
+  await expect(visibleText(page, "계획 인분 입력")).toBeVisible();
 }
 
 async function clickServingsConfirm(page: Page) {
@@ -153,17 +173,17 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     await setAuthOverride(page, "authenticated");
     await page.goto(MENU_ADD_URL);
 
-    await expect(page.locator("h1:has-text('식사 추가')")).toBeVisible();
-    await expect(page.locator("button:has-text('유튜브')")).toBeEnabled();
-    await expect(page.locator("button:has-text('레시피북')")).toBeEnabled();
-    await expect(page.locator("button:has-text('남은요리')")).toBeEnabled();
-    await expect(page.locator("button:has-text('팬트리')")).toBeEnabled();
+    await expect(page.getByRole("heading", { name: "식사 추가" })).toBeVisible();
+    await expect(visibleButtonText(page, "유튜브")).toBeEnabled();
+    await expect(visibleButtonText(page, "레시피북")).toBeEnabled();
+    await expect(visibleButtonText(page, "남은요리")).toBeEnabled();
+    await expect(visibleButtonText(page, "팬트리")).toBeEnabled();
 
     if (isMobileViewport(page)) {
-      await page.getByTestId("menu-add-option-search").click();
-      await expect(page.locator('input[aria-label="레시피 검색"]')).toBeVisible();
+      await visibleByTestId(page, "menu-add-option-search").click();
+      await expect(visibleSearchInput(page)).toBeVisible();
     } else {
-      await expect(page.locator('input[aria-label="레시피 검색"]')).toBeVisible();
+      await expect(visibleSearchInput(page)).toBeVisible();
     }
   });
 
@@ -173,11 +193,11 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     await page.goto(MENU_ADD_URL);
     await openMobileSearchPicker(page);
 
-    const searchInput = page.locator('input[aria-label="레시피 검색"]');
+    const searchInput = visibleSearchInput(page);
     await searchInput.fill("존재하지않는레시피");
-    await page.locator('button[aria-label="검색"]').click();
+    await visibleSearchButton(page).click();
 
-    await expect(page.locator("text=검색 결과가 없어요")).toBeVisible();
+    await expect(visibleText(page, "검색 결과가 없어요")).toBeVisible();
   });
 
   test("displays search results and allows recipe selection", async ({ page }) => {
@@ -190,12 +210,12 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     await page.goto(MENU_ADD_URL);
     await openMobileSearchPicker(page);
 
-    const searchInput = page.locator('input[aria-label="레시피 검색"]');
+    const searchInput = visibleSearchInput(page);
     await searchInput.fill("김치");
-    await page.locator('button[aria-label="검색"]').click();
+    await visibleSearchButton(page).click();
 
-    await expect(page.locator("text=김치찌개")).toBeVisible();
-    await expect(page.locator("text=김치볶음밥")).toBeVisible();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
+    await expect(visibleText(page, "김치볶음밥")).toBeVisible();
   });
 
   // ── Servings modal ─────────────────────────────────────────────────────────
@@ -207,21 +227,21 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     await page.goto(MENU_ADD_URL);
     await openMobileSearchPicker(page);
 
-    const searchInput = page.locator('input[aria-label="레시피 검색"]');
+    const searchInput = visibleSearchInput(page);
     await searchInput.fill("김치");
-    await page.locator('button[aria-label="검색"]').click();
+    await visibleSearchButton(page).click();
 
-    await expect(page.locator("text=김치찌개")).toBeVisible();
-    await page.locator("button:has-text('선택')").first().click();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
+    await visibleButtonText(page, "선택").click();
 
     await expectServingsDialog(page);
     if (isMobileViewport(page)) {
-      await expect(page.locator("text=기본 2인분 · 선택 2인분")).toBeVisible();
+      await expect(visibleText(page, "기본 2인분 · 선택 2인분")).toBeVisible();
     } else {
-      await expect(page.locator("text=김치찌개 — 기본 2인분")).toBeVisible();
+      await expect(visibleText(page, "김치찌개 — 기본 2인분")).toBeVisible();
     }
 
-    await page.locator("button:has-text('취소')").click();
+    await visibleButtonText(page, "취소").click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
   });
 
@@ -247,17 +267,17 @@ test.describe("Slice 08a meal add search — MENU_ADD + RECIPE_SEARCH_PICKER", (
     await page.goto(MENU_ADD_URL);
     await openMobileSearchPicker(page);
 
-    const searchInput = page.locator('input[aria-label="레시피 검색"]');
+    const searchInput = visibleSearchInput(page);
     await searchInput.fill("김치");
-    await page.locator('button[aria-label="검색"]').click();
+    await visibleSearchButton(page).click();
 
-    await expect(page.locator("text=김치찌개")).toBeVisible();
-    await page.locator("button:has-text('선택')").first().click();
+    await expect(visibleText(page, "김치찌개")).toBeVisible();
+    await visibleButtonText(page, "선택").click();
 
     await expectServingsDialog(page);
 
     // Increase servings to 3
-    await page.locator('button[aria-label="인분 늘리기"]').click();
+    await page.locator('button[aria-label="인분 늘리기"]').filter({ visible: true }).first().click();
 
     await clickServingsConfirm(page);
 

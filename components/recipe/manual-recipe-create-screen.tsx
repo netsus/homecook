@@ -83,7 +83,7 @@ function AppBar({ onBack, onSave, canSave, isSaving }: AppBarProps) {
         </h1>
         <button
           className={[
-            "hidden h-11 rounded-[8px] px-4 text-base font-semibold md:block",
+            "hidden h-11 rounded-[8px] px-4 text-base font-semibold lg:block",
             canSave && !isSaving
               ? "text-[#20A8A4] hover:bg-[#E6F8F7]"
               : "cursor-not-allowed text-[#ADB5BD]",
@@ -94,7 +94,7 @@ function AppBar({ onBack, onSave, canSave, isSaving }: AppBarProps) {
         >
           {isSaving ? "저장 중..." : "저장"}
         </button>
-        <div aria-hidden="true" className="h-8 w-8 shrink-0 md:hidden" />
+        <div aria-hidden="true" className="h-8 w-8 shrink-0 lg:hidden" />
       </div>
     </div>
   );
@@ -110,7 +110,7 @@ interface IngredientListProps {
 function IngredientList({ ingredients, onRemove }: IngredientListProps) {
   if (ingredients.length === 0) {
     return (
-      <p className="hidden py-4 text-sm text-[var(--muted)] md:block">
+      <p className="hidden py-4 text-sm text-[var(--muted)] lg:block">
         재료를 추가해주세요
       </p>
     );
@@ -702,7 +702,7 @@ export function ManualRecipeCreateScreen({
               <>
                 <StepList steps={steps} onRemove={handleRemoveStep} />
                 <button
-                  className="mt-3 hidden min-h-[44px] w-full items-center justify-center rounded-[10px] border border-[#2AC1BC] bg-white py-3 text-[13px] font-bold text-[#20A8A4] hover:bg-[#E6F8F7] md:flex"
+                  className="mt-3 hidden min-h-[44px] w-full items-center justify-center rounded-[10px] border border-[#2AC1BC] bg-white py-3 text-[13px] font-bold text-[#20A8A4] hover:bg-[#E6F8F7] lg:flex"
                   onClick={() => setModalMode("step-add")}
                   type="button"
                 >
@@ -722,7 +722,7 @@ export function ManualRecipeCreateScreen({
           )}
         </div>
 
-        <div className="border-t border-[#DEE2E6] bg-white px-4 py-4 md:hidden">
+        <div className="border-t border-[#DEE2E6] bg-white px-4 py-4 lg:hidden">
           <button
             className={[
               "flex min-h-[48px] w-full items-center justify-center rounded-[8px] text-[16px] font-bold",

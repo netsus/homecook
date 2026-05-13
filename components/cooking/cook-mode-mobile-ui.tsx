@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
+import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
 import type {
   CookingModeIngredient,
   CookingModeRecipe,
@@ -84,7 +85,7 @@ export function useIsMobileViewport() {
       return;
     }
 
-    const query = window.matchMedia("(max-width: 767px)");
+    const query = window.matchMedia(APP_VIEW_MEDIA_QUERY);
     const syncViewport = () => setIsMobileViewport(query.matches);
     syncViewport();
     query.addEventListener("change", syncViewport);

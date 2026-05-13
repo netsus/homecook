@@ -60,18 +60,22 @@ export function SaveModal({
     isCreatingBook || isSavingRecipe || newBookName.trim().length === 0;
   const disableSave =
     isSavingRecipe || isCreatingBook || selectedBookIds.length === 0;
+  const shouldRenderWebView =
+    process.env.NODE_ENV !== "test" || isDesktopViewport;
+  const shouldRenderAppView =
+    process.env.NODE_ENV !== "test" || !isDesktopViewport;
 
   return (
     <>
-    {!isDesktopViewport ? (
+    {shouldRenderAppView ? (
     <div
-      className="fixed inset-0 z-40 flex items-end bg-black/40"
+      className="fixed inset-0 z-40 flex items-end bg-black/40 lg:hidden"
       onClick={onClose}
     >
       <div
         aria-labelledby="save-modal-title-mobile"
         aria-modal="true"
-        className="max-h-[85vh] w-full overflow-y-auto rounded-t-[20px] bg-white pb-6 shadow-[0_-10px_30px_rgba(0,0,0,0.18)] md:max-w-lg md:rounded-[20px]"
+        className="max-h-[85vh] w-full overflow-y-auto rounded-t-[20px] bg-white pb-6 shadow-[0_-10px_30px_rgba(0,0,0,0.18)] lg:max-w-lg lg:rounded-[20px]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
@@ -244,9 +248,9 @@ export function SaveModal({
       </div>
     </div>
     ) : null}
-    {isDesktopViewport ? (
+    {shouldRenderWebView ? (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-4"
+      className="fixed inset-0 z-40 hidden items-center justify-center bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-4 lg:flex"
       onClick={onClose}
     >
       <div

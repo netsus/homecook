@@ -24,6 +24,22 @@ const isCookingApiError = vi.fn(
 );
 const mockRouterPush = vi.fn();
 
+function installMatchMedia(matchesAppView: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(max-width: 1023px)" ? matchesAppView : !matchesAppView,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => readE2EAuthOverride(),
 }));
@@ -147,6 +163,7 @@ describe("CookModeScreen", () => {
     const resetStore = await importResetStore();
     resetStore();
     cleanup();
+    Reflect.deleteProperty(window, "matchMedia");
   });
 
   it("shows unauthorized state when not authenticated", async () => {
@@ -538,7 +555,7 @@ describe("CookModeScreen", () => {
     expect(screen.queryByTestId("tab-ingredients")).not.toBeTruthy();
   });
 
-  it("keeps cancel and complete buttons in the sticky bottom area", async () => {
+  it("keeps cancel and complete buttons in the desktop action rail", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchCookMode.mockResolvedValue(buildCookModeData());
 
@@ -551,10 +568,30 @@ describe("CookModeScreen", () => {
 
     const cancelButton = screen.getByTestId("cancel-button");
     const completeButton = screen.getByTestId("complete-button");
+    const actionRail = screen.getByTestId("cook-mode-action-rail");
 
-    expect(cancelButton.closest(".fixed")).toBeTruthy();
-    expect(completeButton.closest(".fixed")).toBeTruthy();
-    expect(cancelButton.className).toContain("min-w-0");
-    expect(completeButton.className).toContain("min-w-0");
+    expect(actionRail.contains(cancelButton)).toBe(true);
+    expect(actionRail.contains(completeButton)).toBe(true);
+    expect(actionRail.className).toContain("sticky");
+  });
+
+  it("keeps cancel and complete buttons in the mobile fixed bottom bar", async () => {
+    installMatchMedia(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(buildCookModeData());
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cancel-button")).toBeTruthy();
+    });
+
+    const cancelButton = screen.getByTestId("cancel-button");
+    const completeButton = screen.getByTestId("complete-button");
+    const fixedBottomBar = cancelButton.closest(".fixed");
+
+    expect(fixedBottomBar).not.toBeNull();
+    expect(fixedBottomBar?.contains(completeButton)).toBe(true);
   });
 });

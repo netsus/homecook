@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import { CookModeDesktopView } from "@/components/cooking/cook-mode-desktop-view";
 import { ConsumedIngredientSheet } from "@/components/cooking/consumed-ingredient-sheet";
 import {
   MobileCookModeView,
@@ -14,31 +15,11 @@ import { ContentState } from "@/components/shared/content-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
-import { getCookingMethodColor } from "@/lib/cooking-method-colors";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { useCookModeStore } from "@/stores/cook-mode-store";
-import type { CookingModeIngredient, CookingModeStep } from "@/types/cooking";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
-
-function formatHeatLevel(heat: string | null): string | null {
-  if (!heat) return null;
-  switch (heat) {
-    case "high":
-      return "강불";
-    case "medium_high":
-      return "중강불";
-    case "medium":
-      return "중불";
-    case "medium_low":
-      return "중약불";
-    case "low":
-      return "약불";
-    default:
-      return heat;
-  }
-}
 
 export interface CookModeScreenProps {
   sessionId: string;
@@ -408,76 +389,21 @@ export function CookModeScreen({
   }
 
   return (
-    <div
-      className="flex min-h-dvh flex-col bg-[var(--background)]"
-      data-testid="cook-mode-screen"
-    >
-      {/* Header */}
-      <header className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3">
-        <h1
-          className="truncate text-lg font-bold text-[var(--foreground)]"
-          data-testid="cook-mode-title"
-        >
-          {recipe.title}
-        </h1>
-        <span
-          className="shrink-0 rounded-full border border-[var(--line)] px-3 py-1 text-xs font-semibold text-[var(--muted)]"
-          data-testid="cook-mode-servings"
-        >
-          {recipe.cooking_servings}인분
-        </span>
-      </header>
+    <>
+      <CookModeDesktopView
+        cancelButtonTestId="cancel-button"
+        completeButtonTestId="complete-button"
+        contentTestId="cook-mode-content"
+        controlsDisabled={screenState !== "ready"}
+        onCancel={handleCancelClick}
+        onComplete={handleCompleteClick}
+        recipe={recipe}
+        screenTestId="cook-mode-screen"
+        servingsTestId="cook-mode-servings"
+        titleTestId="cook-mode-title"
+        variant="planner"
+      />
 
-      {/* Content */}
-      <div
-        className="flex-1 overflow-y-auto px-4 pb-36 pt-4"
-        data-testid="cook-mode-content"
-      >
-        <section className="mb-6" aria-labelledby="cook-ingredients-heading">
-          <h2
-            className="mb-3 text-sm font-bold text-[var(--muted)]"
-            id="cook-ingredients-heading"
-          >
-            재료
-          </h2>
-          <IngredientList ingredients={recipe.ingredients} />
-        </section>
-        <section aria-labelledby="cook-steps-heading">
-          <h2
-            className="mb-3 text-sm font-bold text-[var(--muted)]"
-            id="cook-steps-heading"
-          >
-            조리 과정
-          </h2>
-          <StepList steps={recipe.steps} />
-        </section>
-      </div>
-
-      {/* Bottom CTA */}
-      <div className="fixed inset-x-0 bottom-0 border-t border-[var(--line)] bg-[var(--surface)] px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3">
-        <div className="flex gap-3">
-          <button
-            className="flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--muted)] bg-transparent px-3 py-3 text-sm font-semibold text-[var(--foreground)]"
-            data-testid="cancel-button"
-            disabled={screenState !== "ready"}
-            onClick={handleCancelClick}
-            type="button"
-          >
-            취소
-          </button>
-          <button
-            className="flex min-h-11 min-w-0 flex-[2] items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand)] px-3 py-3 text-sm font-bold text-white"
-            data-testid="complete-button"
-            disabled={screenState !== "ready"}
-            onClick={handleCompleteClick}
-            type="button"
-          >
-            요리 완료
-          </button>
-        </div>
-      </div>
-
-      {/* Consumed ingredient sheet */}
       {showConsumedSheet ? (
         <ConsumedIngredientSheet
           ingredients={recipe.ingredients}
@@ -488,7 +414,6 @@ export function CookModeScreen({
         />
       ) : null}
 
-      {/* Cancel confirmation dialog */}
       {cancelConfirm ? (
         <div
           className="fixed inset-0 z-40 flex items-center justify-center bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-4 backdrop-blur-[1px]"
@@ -532,89 +457,6 @@ export function CookModeScreen({
           </div>
         </div>
       ) : null}
-    </div>
-  );
-}
-
-// --- Sub-components ---
-
-function IngredientList({ ingredients }: { ingredients: CookingModeIngredient[] }) {
-  if (ingredients.length === 0) {
-    return (
-      <p className="py-8 text-center text-sm text-[var(--muted)]">
-        등록된 재료가 없어요.
-      </p>
-    );
-  }
-
-  return (
-    <ul className="flex flex-col gap-2" data-testid="ingredient-list">
-      {ingredients.map((ing) => (
-        <li
-          className="flex items-center justify-between rounded-[var(--radius-md)] bg-[var(--surface)] px-4 py-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
-          data-testid="ingredient-item"
-          key={ing.ingredient_id}
-        >
-          <span className="text-sm font-medium text-[var(--foreground)]">
-            {ing.standard_name}
-          </span>
-          <span className="text-sm text-[var(--muted)]">
-            {ing.display_text ?? (ing.ingredient_type === "TO_TASTE" ? "적당량" : "")}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function StepList({ steps }: { steps: CookingModeStep[] }) {
-  if (steps.length === 0) {
-    return (
-      <p className="py-8 text-center text-sm text-[var(--muted)]">
-        등록된 조리 과정이 없어요.
-      </p>
-    );
-  }
-
-  return (
-    <ol className="flex flex-col gap-4" data-testid="step-list">
-      {steps.map((step) => {
-        const methodColor = getCookingMethodColor(step.cooking_method.color_key);
-        const heat = formatHeatLevel(step.heat_level);
-
-        return (
-          <li
-            className="rounded-[var(--radius-md)] bg-[var(--surface)] shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
-            data-testid="step-item"
-            key={step.step_number}
-            style={{ borderLeft: `4px solid ${methodColor}` }}
-          >
-            <div className="px-4 py-3">
-              <div className="mb-1 flex items-center gap-2">
-                <span className="text-xs font-bold text-[var(--muted)]">
-                  {step.step_number}단계
-                </span>
-                {step.cooking_method.label ? (
-                  <span
-                    className="rounded-full px-2 py-0.5 text-[11px] font-semibold text-white"
-                    style={{ backgroundColor: methodColor }}
-                  >
-                    {step.cooking_method.label}
-                  </span>
-                ) : null}
-              </div>
-              <p className="text-sm leading-relaxed text-[var(--foreground)]">
-                {step.instruction}
-              </p>
-              {heat ? (
-                <div className="mt-2 flex gap-3">
-                  <span className="text-xs text-[var(--muted)]">{heat}</span>
-                </div>
-              ) : null}
-            </div>
-          </li>
-        );
-      })}
-    </ol>
+    </>
   );
 }

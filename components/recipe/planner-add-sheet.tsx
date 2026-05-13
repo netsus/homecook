@@ -6,7 +6,6 @@ import { ModalFooterActions } from "@/components/shared/modal-footer-actions";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
 import { SelectionChipRail } from "@/components/shared/selection-chip-rail";
-import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import type { PlannerColumnData } from "@/types/planner";
 
 export type PlannerAddSheetState = "loading-columns" | "ready" | "submitting" | "error";
@@ -67,8 +66,6 @@ export function PlannerAddSheet({
   recipePreview,
   variant = "default",
 }: PlannerAddSheetProps) {
-  const isDesktopViewport = useDesktopViewport();
-
   if (!isOpen) {
     return null;
   }
@@ -92,39 +89,17 @@ export function PlannerAddSheet({
     columns.find((column) => column.id === selectedColumnId)?.name ?? "끼니";
   const selectedDateShort = selectedDate ? formatDateLabel(selectedDate) : "";
 
-  if (variant === "recipe-detail" && isDesktopViewport) {
-    return (
-      <PlannerAddSheet
-        columns={columns}
-        errorMessage={errorMessage}
-        isOpen={isOpen}
-        onChangeServings={onChangeServings}
-        onClose={onClose}
-        onRetryLoad={onRetryLoad}
-        onSelectColumn={onSelectColumn}
-        onSelectDate={onSelectDate}
-        onSubmit={onSubmit}
-        selectableDates={selectableDates}
-        selectedColumnId={selectedColumnId}
-        selectedDate={selectedDate}
-        servings={servings}
-        sheetState={sheetState}
-        variant="default"
-      />
-    );
-  }
-
   if (variant === "recipe-detail") {
     return (
       <div
         aria-labelledby="planner-add-sheet-title-mobile"
         aria-modal="true"
-        className="fixed inset-0 z-40 flex items-end bg-black/40"
+        className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 lg:items-center lg:p-4"
         onClick={onClose}
         role="dialog"
       >
         <div
-          className="max-h-[85vh] w-full overflow-y-auto rounded-t-[20px] bg-white pb-6 shadow-[0_-10px_30px_rgba(0,0,0,0.18)] md:max-w-lg md:rounded-[20px]"
+          className="max-h-[85vh] w-full overflow-y-auto rounded-t-[20px] bg-white pb-6 shadow-[0_-10px_30px_rgba(0,0,0,0.18)] lg:max-w-lg lg:rounded-[20px]"
           onClick={(event) => event.stopPropagation()}
         >
           <div className="flex justify-center pt-2">
@@ -327,16 +302,16 @@ export function PlannerAddSheet({
     <div
       aria-labelledby="planner-add-sheet-title"
       aria-modal="true"
-      className="fixed inset-0 z-40 flex items-end bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-4 md:items-center md:justify-center"
+      className="fixed inset-0 z-40 flex items-end bg-[color-mix(in_srgb,var(--foreground)_42%,transparent)] p-4 lg:items-center lg:justify-center"
       onClick={onClose}
       role="dialog"
     >
       <div
-        className="w-full max-w-lg rounded-t-[var(--radius-xl)] border border-[var(--line)] border-t-2 border-t-[var(--brand)] bg-[var(--panel)] pb-6 shadow-[var(--shadow-3)] md:rounded-[var(--radius-xl)] md:border-t-2 md:border-t-[var(--brand)]"
+        className="w-full max-w-lg rounded-t-[var(--radius-xl)] border border-[var(--line)] border-t-2 border-t-[var(--brand)] bg-[var(--panel)] pb-6 shadow-[var(--shadow-3)] lg:rounded-[var(--radius-xl)] lg:border-t-2 lg:border-t-[var(--brand)]"
         onClick={(event) => event.stopPropagation()}
       >
         {/* Grabber */}
-        <div className="flex justify-center pt-2 md:hidden">
+        <div className="flex justify-center pt-2 lg:hidden">
           <div className="h-1 w-9 rounded-sm bg-[var(--line)]" />
         </div>
         {/* Header — D2: no eyebrow · D3: icon-only close */}

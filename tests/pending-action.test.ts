@@ -74,4 +74,16 @@ describe("pending action", () => {
       createdAt: 1,
     });
   });
+
+  it("keeps recipe pending actions recipe-scoped until later web slices generalize protected actions", () => {
+    expect(
+      parsePendingAction(
+        JSON.stringify({
+          type: "shopping-create",
+          redirectTo: "/shopping/flow",
+          createdAt: 1,
+        }),
+      ),
+    ).toBeNull();
+  });
 });
