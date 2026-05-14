@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { LoginGateModal } from "@/components/auth/login-gate-modal";
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { PlannerAddSheet } from "@/components/recipe/planner-add-sheet";
 import type { PlannerAddSheetState } from "@/components/recipe/planner-add-sheet";
 import { SaveModal } from "@/components/recipe/save-modal";
@@ -542,7 +543,12 @@ export function RecipeDetailScreen({
   }, [newSaveBookName]);
 
   const handleSaveRecipe = useCallback(async () => {
-    if (!recipe || selectedSaveBookIds.length === 0 || isSavingRecipe) {
+    const alreadySavedBookIds = recipe?.user_status?.saved_book_ids ?? [];
+    const newBookIds = selectedSaveBookIds.filter(
+      (bookId) => !alreadySavedBookIds.includes(bookId),
+    );
+
+    if (!recipe || newBookIds.length === 0 || isSavingRecipe) {
       return;
     }
 
@@ -550,7 +556,7 @@ export function RecipeDetailScreen({
     setSaveSubmitError(null);
 
     try {
-      const result = await saveRecipeToBooks(recipe.id, selectedSaveBookIds);
+      const result = await saveRecipeToBooks(recipe.id, newBookIds);
       updateRecipeSaveState(result);
       setIsSaveModalOpen(false);
       setSaveModalState("idle");
@@ -1065,7 +1071,7 @@ export function RecipeDetailScreen({
       </div>
       ) : null}
       {shouldRenderAppView ? (
-      <div className="min-h-screen bg-white pb-[176px] text-[#212529] lg:hidden">
+      <div className="min-h-screen bg-white pb-[190px] text-[#212529] lg:hidden">
         <section
           className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden text-[132px] max-[360px]:text-[108px] md:max-h-[460px]"
           style={{ background: heroBackground }}
@@ -1100,6 +1106,7 @@ export function RecipeDetailScreen({
               count={likeCountLabel}
               disabled={likeRequestState === "pending"}
               icon={<HeartIcon filled={recipe.user_status?.is_liked ?? false} />}
+              label={likeRequestState === "pending" ? "처리 중" : "좋아요"}
               onClick={() => handleProtectedAction("like")}
             />
             <Wave1HeroMetricButton
@@ -1107,6 +1114,7 @@ export function RecipeDetailScreen({
               ariaPressed={recipe.user_status?.is_saved ?? false}
               count={saveCountLabel}
               icon={<BookmarkIcon filled={recipe.user_status?.is_saved ?? false} />}
+              label="저장"
               onClick={() => handleProtectedAction("save")}
             />
             <Wave1HeroMetricStatus
@@ -1141,7 +1149,7 @@ export function RecipeDetailScreen({
             <ClockIcon />
             <span>{minutesLabel}</span>
             <span>·</span>
-            <UsersIcon />
+            <ServingsIcon />
             <span>{recipe.base_servings}인분</span>
           </div>
         </section>
@@ -1325,7 +1333,7 @@ export function RecipeDetailScreen({
       </div>
       ) : null}
       {shouldRenderAppView ? (
-      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-[82px] z-20 flex gap-2 border-t border-[#DEE2E6] bg-white px-4 pb-[calc(12px_+_env(safe-area-inset-bottom))] pt-3 lg:hidden">
+      <div className="wave1-recipe-cta-bar fixed inset-x-0 bottom-[96px] z-20 flex gap-2 border-t border-[#DEE2E6] bg-white px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 lg:hidden">
         <button
           className="min-h-11 flex-1 rounded-[12px] border border-[#2AC1BC] bg-[#E8F8F7] px-3 text-[15px] font-bold text-[#007A76]"
           onClick={() => handleProtectedAction("planner")}
@@ -1348,10 +1356,11 @@ export function RecipeDetailScreen({
       ) : null}
       {shouldRenderAppView ? (
       <div className="lg:hidden">
-        <Wave1BottomTab />
+        <Wave1MobileBottomTab ariaLabel="레시피 상세 하단 탭" currentTab="home" />
       </div>
       ) : null}
       <SaveModal
+        alreadySavedBookIds={recipe.user_status?.saved_book_ids ?? []}
         books={saveBooks}
         isCreatingBook={isCreatingBook}
         isOpen={isSaveModalOpen}
@@ -1370,6 +1379,10 @@ export function RecipeDetailScreen({
           void handleSaveRecipe();
         }}
         onSelectBook={(bookId) => {
+          if (recipe.user_status?.saved_book_ids.includes(bookId)) {
+            return;
+          }
+
           setSelectedSaveBookIds((currentBookIds) =>
             currentBookIds.includes(bookId)
               ? currentBookIds.filter((currentBookId) => currentBookId !== bookId)
@@ -1605,6 +1618,7 @@ function Wave1HeroMetricButton({
   count,
   disabled = false,
   icon,
+  label,
   onClick,
 }: {
   ariaLabel: string;
@@ -1612,25 +1626,29 @@ function Wave1HeroMetricButton({
   count: string;
   disabled?: boolean;
   icon: React.ReactNode;
+  label: string;
   onClick: () => void;
 }) {
   return (
     <button
       aria-label={ariaLabel}
       aria-pressed={ariaPressed}
-      className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-[3px] border-0 bg-transparent p-0 text-[11px] font-black leading-none text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.55)] disabled:cursor-not-allowed disabled:opacity-70"
+      className="flex min-h-[58px] min-w-[52px] flex-col items-center justify-center gap-[3px] rounded-[14px] border border-white/70 bg-white/92 px-1.5 py-1 text-[11px] font-bold leading-none text-[#212529] shadow-[0_2px_10px_rgba(0,0,0,0.18)] backdrop-blur disabled:cursor-not-allowed disabled:opacity-70"
       disabled={disabled}
       onClick={onClick}
       type="button"
     >
-      <span aria-hidden="true" className="flex h-[38px] w-[38px] items-center justify-center">
+      <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center">
         {icon}
       </span>
       <span
         aria-hidden={ariaLabel !== `좋아요 ${count}`}
-        className="text-[11px] font-black leading-none [text-shadow:0_1px_4px_rgba(0,0,0,0.55),0_0_10px_rgba(0,0,0,0.28)]"
+        className="text-[11px] font-bold leading-none"
       >
         {count}
+      </span>
+      <span className="text-[10px] font-semibold leading-none text-[#495057]">
+        {label}
       </span>
     </button>
   );
@@ -1650,53 +1668,19 @@ function Wave1HeroMetricStatus({
   return (
     <div
       aria-label={ariaLabel}
-      className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-[3px] text-[11px] font-black leading-none text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.55)]"
+      className="flex min-h-[58px] min-w-[52px] flex-col items-center justify-center gap-[3px] rounded-[14px] border border-white/70 bg-white/92 px-1.5 py-1 text-[11px] font-bold leading-none text-[#212529] shadow-[0_2px_10px_rgba(0,0,0,0.18)] backdrop-blur"
       role="status"
     >
-      <span aria-hidden="true" className="flex h-[38px] w-[38px] items-center justify-center">
+      <span aria-hidden="true" className="flex h-5 w-5 items-center justify-center">
         {icon}
       </span>
-      <span className="text-[11px] font-black leading-none [text-shadow:0_1px_4px_rgba(0,0,0,0.55),0_0_10px_rgba(0,0,0,0.28)]">
+      <span className="text-[11px] font-bold leading-none">
         {count}
       </span>
-      <span className="text-[10px] font-black leading-none [text-shadow:0_1px_4px_rgba(0,0,0,0.55),0_0_10px_rgba(0,0,0,0.28)]">
+      <span className="text-[10px] font-semibold leading-none text-[#495057]">
         {label}
       </span>
     </div>
-  );
-}
-
-function Wave1BottomTab() {
-  const items = [
-    { href: "/", icon: <HomeIcon />, label: "홈", active: true },
-    { href: "/planner", icon: <CalendarIcon />, label: "플래너", active: false },
-    { href: "/pantry", icon: <FridgeIcon />, label: "팬트리", active: false },
-    { href: "/mypage", icon: <UserIcon />, label: "마이", active: false },
-  ];
-
-  return (
-    <nav
-      aria-label="레시피 상세 하단 탭"
-      className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] border-t border-[#DEE2E6] bg-white px-4 pb-[calc(28px_+_env(safe-area-inset-bottom))] pt-2 lg:hidden"
-      style={{ borderTopWidth: "0.5px" }}
-    >
-      <div className="grid grid-cols-4">
-      {items.map((item) => (
-        <Link
-          aria-current={item.active ? "page" : undefined}
-          className={[
-            "flex flex-col items-center justify-center gap-[3px] py-1 text-[11px]",
-            item.active ? "font-bold text-[#007A76]" : "font-medium text-[#495057]",
-          ].join(" ")}
-          href={item.href}
-          key={item.label}
-        >
-          {item.icon}
-          <span>{item.label}</span>
-        </Link>
-      ))}
-      </div>
-    </nav>
   );
 }
 
@@ -1851,6 +1835,7 @@ function HeartIcon({ filled = false }: { filled?: boolean }) {
   return (
     <svg
       aria-hidden="true"
+      className={filled ? "text-[#E03131]" : undefined}
       fill={filled ? "currentColor" : "none"}
       height="18"
       stroke="currentColor"
@@ -1933,7 +1918,7 @@ function ClockIcon() {
   );
 }
 
-function UsersIcon() {
+function ServingsIcon() {
   return (
     <svg
       aria-hidden="true"
@@ -1946,77 +1931,9 @@ function UsersIcon() {
       viewBox="0 0 24 24"
       width="16"
     >
-      <path d="M16 19v-1.5a3.5 3.5 0 0 0-7 0V19M12.5 10a3 3 0 1 0-6 0 3 3 0 0 0 6 0M18 10.5a2.5 2.5 0 0 0-3-2.45M19.5 19v-1a3 3 0 0 0-2.4-2.94" />
-    </svg>
-  );
-}
-
-function HomeIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="currentColor"
-      stroke="currentColor"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9z" />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <path d="M7 3v3M17 3v3M4 8h16M5 5h14v15H5z" />
-    </svg>
-  );
-}
-
-function FridgeIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <path d="M5 9h14v11H5z" />
-      <path d="M8 9V6h8v3" />
-      <path d="M9 13h6" />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21a8 8 0 0 1 16 0" />
+      <path d="M4.5 11.5h15a6.5 6.5 0 0 1-6.5 6.5h-2a6.5 6.5 0 0 1-6.5-6.5Z" />
+      <path d="M7 8.5c.6-.7.6-1.4 0-2.1M12 8.5c.6-.7.6-1.4 0-2.1M17 8.5c.6-.7.6-1.4 0-2.1" />
+      <path d="M8 20h8" />
     </svg>
   );
 }

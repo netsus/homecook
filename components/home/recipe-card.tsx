@@ -5,66 +5,76 @@ import { formatCount, formatRecipeSourceLabel } from "@/lib/recipe";
 import type { RecipeCardItem } from "@/types/recipe";
 
 interface RecipeCardProps {
+  isSaved?: boolean;
+  onSave?: (recipe: RecipeCardItem) => void;
   recipe: RecipeCardItem;
 }
 
-export function RecipeCard({ recipe }: RecipeCardProps) {
+export function RecipeCard({ isSaved = false, onSave, recipe }: RecipeCardProps) {
   const remainingTagCount = Math.max(recipe.tags.length - 3, 0);
   const presentation = getRecipePresentation(recipe);
   const badgeLabel =
-    recipe.save_count > 100 ? "🔥 인기" : formatRecipeSourceLabel(recipe.source_type);
+    recipe.save_count > 100 ? "인기" : formatRecipeSourceLabel(recipe.source_type);
 
   return (
-    <Link
-      className="group flex min-h-full flex-col overflow-hidden rounded-[12px] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0px_4px_12px_rgba(0,0,0,0.10)]"
-      href={`/recipe/${recipe.id}`}
-      prefetch={false}
-    >
-      <div
-        className="relative overflow-hidden"
-        style={
-          recipe.thumbnail_url
-            ? {
-                backgroundImage: `linear-gradient(rgba(33,37,41,0.03),rgba(33,37,41,0.18)),url(${recipe.thumbnail_url})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                aspectRatio: "16/9",
-              }
-            : {
-                aspectRatio: "16/9",
-                background: presentation.gradient,
-              }
-        }
+    <article className="group relative flex min-h-full flex-col overflow-hidden rounded-[12px] bg-white shadow-[0px_2px_8px_rgba(0,0,0,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0px_4px_12px_rgba(0,0,0,0.10)]">
+      <Link
+        className="relative block overflow-hidden"
+        href={`/recipe/${recipe.id}`}
+        prefetch={false}
       >
-        {!recipe.thumbnail_url ? (
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 grid place-items-center text-[88px]"
-          >
-            {presentation.emoji}
-          </span>
-        ) : null}
-        <span className="absolute left-3 top-3 rounded-[4px] bg-[#C92A2A] px-2 py-1 text-[11px] font-bold text-white">
-          {badgeLabel}
-        </span>
-        <span
-          aria-label="북마크"
-          className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/92 text-[#007A76]"
-          data-testid="recipe-card-bookmark"
+        <div
+          className="relative overflow-hidden"
+          style={
+            recipe.thumbnail_url
+              ? {
+                  backgroundImage: `linear-gradient(rgba(33,37,41,0.03),rgba(33,37,41,0.18)),url(${recipe.thumbnail_url})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  aspectRatio: "16/9",
+                }
+              : {
+                  aspectRatio: "16/9",
+                  background: presentation.gradient,
+                }
+          }
         >
-          <BookmarkIcon />
-        </span>
-      </div>
+          {!recipe.thumbnail_url ? (
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 grid place-items-center text-[88px]"
+            >
+              {presentation.emoji}
+            </span>
+          ) : null}
+          <span className="absolute left-3 top-3 rounded-[6px] bg-white/92 px-2 py-1 text-[11px] font-bold text-[#007A76] shadow-[0_1px_4px_rgba(0,0,0,0.10)]">
+            {badgeLabel}
+          </span>
+        </div>
+      </Link>
+      <button
+        aria-label={`${recipe.title} 저장`}
+        aria-pressed={isSaved}
+        className={[
+          "absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/94 shadow-[0_1px_5px_rgba(0,0,0,0.14)]",
+          isSaved ? "text-[#007A76]" : "text-[#495057]",
+        ].join(" ")}
+        data-testid="recipe-card-bookmark"
+        onClick={() => onSave?.(recipe)}
+        type="button"
+      >
+        <BookmarkIcon filled={isSaved} />
+      </button>
       <div className="flex flex-1 flex-col gap-2 px-4 py-4">
-        <h3 className="line-clamp-2 text-[18px] font-bold leading-snug text-[#212529]">
-          {recipe.title}
-        </h3>
+        <Link href={`/recipe/${recipe.id}`} prefetch={false}>
+          <h3 className="line-clamp-2 text-[18px] font-bold leading-snug text-[#212529]">
+            {recipe.title}
+          </h3>
+        </Link>
         <div className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-[#495057]">
           <span className="inline-flex items-center gap-1">
             <EyeIcon />
-            <span className="font-semibold text-[#212529]">
-              조회 {formatCount(recipe.view_count)}
-            </span>
+            <span>조회 {formatCount(recipe.view_count)}</span>
           </span>
           <span>·</span>
           <span>{formatCount(recipe.save_count)}저장</span>
@@ -87,16 +97,16 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
           ) : null}
         </div>
       </div>
-    </Link>
+    </article>
   );
 }
 
-function BookmarkIcon() {
+function BookmarkIcon({ filled = false }: { filled?: boolean }) {
   return (
     <svg
       aria-hidden="true"
       className="h-5 w-5"
-      fill="none"
+      fill={filled ? "currentColor" : "none"}
       stroke="currentColor"
       strokeLinejoin="round"
       strokeWidth="2"

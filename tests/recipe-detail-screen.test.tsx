@@ -247,11 +247,15 @@ describe("recipe detail screen", () => {
       }),
     ).toBeTruthy();
 
-    for (const name of ["좋아요 203", "저장", "플래너에 추가"]) {
-      expect((await screen.findByRole("button", { name })).className).toContain(
-        "min-h-11",
-      );
-    }
+    expect((await screen.findByRole("button", { name: "좋아요 203" })).className).toContain(
+      "min-h-[58px]",
+    );
+    expect((await screen.findByRole("button", { name: "저장" })).className).toContain(
+      "min-h-[58px]",
+    );
+    expect(
+      (await screen.findByRole("button", { name: "플래너에 추가" })).className,
+    ).toContain("min-h-11");
   });
 
   it("marks TO_TASTE ingredients with a readable helper badge", async () => {
@@ -494,7 +498,7 @@ describe("recipe detail screen", () => {
     expect(modalScope.queryByText(MOCK_RECIPE_DETAIL.description!)).toBeNull();
 
     const saveButton = modalScope.getByRole("button", { name: "저장" });
-    expect(saveButton.textContent).toBe("1개 레시피북에 저장");
+    expect(saveButton.textContent).toBe("1개 레시피북에 추가 저장");
   });
 
   it("shows load error UI and retries recipe-book loading", async () => {
@@ -540,7 +544,7 @@ describe("recipe detail screen", () => {
     expect(recipeBookRequests).toBe(2);
   });
 
-  it("keeps already-saved books selectable for multi-save", async () => {
+  it("shows already-saved books as locked and counts only new save targets", async () => {
     const detail = buildRecipeDetail({
       user_status: {
         is_liked: false,
@@ -570,18 +574,15 @@ describe("recipe detail screen", () => {
     const saveButton = modalScope.getByRole("button", { name: "저장" }) as HTMLButtonElement;
 
     await waitFor(() => {
-      expect(modalScope.getByText("선택됨")).toBeTruthy();
+      expect(modalScope.getAllByText("이미 저장됨").length).toBeGreaterThan(0);
     });
-    expect(
-      modalScope.queryByText("이미 선택한 레시피북에 저장된 레시피예요. 다른 레시피북을 선택해 주세요."),
-    ).toBeNull();
-    expect(saveButton.disabled).toBe(false);
-    expect(saveButton.textContent).toBe("1개 레시피북에 저장");
+    expect(saveButton.disabled).toBe(true);
+    expect(saveButton.textContent).toBe("이미 저장됨");
 
     await userEvent.click(modalScope.getByRole("button", { name: /주말 파티/ }));
 
     await waitFor(() => {
-      expect(saveButton.textContent).toBe("2개 레시피북에 저장");
+      expect(saveButton.textContent).toBe("1개 레시피북에 추가 저장");
     });
     expect(saveButton.disabled).toBe(false);
   });
@@ -853,7 +854,7 @@ describe("recipe detail screen", () => {
     const ctaBar = plannerButton.closest(".wave1-recipe-cta-bar");
     expect(ctaBar).not.toBeNull();
     expect(ctaBar?.contains(cookButton)).toBe(true);
-    expect(ctaBar?.className).toContain("bottom-[82px]");
+    expect(ctaBar?.className).toContain("bottom-[96px]");
   });
 
   it("renders cooking step instructions with text-base font size", async () => {

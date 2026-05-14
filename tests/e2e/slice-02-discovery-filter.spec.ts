@@ -146,7 +146,7 @@ test.describe("Slice 02 discovery filter flow", () => {
     await page.getByRole("button", { name: /적용/ }).click();
 
     await expect(page).toHaveURL(new RegExp(`ingredient_ids=${ONION_ID}`));
-    await expect(page.locator('button:visible:has-text("양파")')).toBeVisible();
+    await expect(page.locator('button:visible:has-text("재료 1개")')).toBeVisible();
 
     await page.locator('button:visible:has-text("재료 1개")').click();
     await expect(page.getByRole("checkbox", { name: "양파" })).toBeChecked();
