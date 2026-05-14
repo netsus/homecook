@@ -1,0 +1,14 @@
+{
+  "url": "http://127.0.0.1:4174/homecook%20desktop%20prototype.html",
+  "checks": [
+    "manual shopping list creates independent active list",
+    "completed list re-add clones a new active independent list",
+    "original active shopping list remains in shopping history",
+    "custom recipebook create opens empty detail",
+    "custom recipebook edit updates detail and list title",
+    "planner recipebook picker shows empty state for new empty book, not all recipes",
+    "logout returns HOME signed-out and later login does not resume stale planner add action",
+    "live recipebook state remains after logout"
+  ],
+  "errors": []
+}
