@@ -494,7 +494,10 @@ export function ShoppingDetailScreen({
 
   if (viewState === "loading") {
     return (
-      <div className="flex min-h-screen flex-col">
+      <div
+        className="flex min-h-screen flex-col bg-[var(--wave1-surface)]"
+        data-testid="shopping-detail-state-shell"
+      >
         <div className="flex-1 px-4 py-6">
           <ContentState
             tone="loading"
@@ -517,7 +520,10 @@ export function ShoppingDetailScreen({
 
   if (viewState === "error") {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center px-4">
+      <div
+        className="flex min-h-screen flex-col items-center justify-center bg-[var(--wave1-surface)] px-4"
+        data-testid="shopping-detail-state-shell"
+      >
         <ContentState
           tone="error"
           title="장보기 리스트를 불러올 수 없어요"
@@ -578,7 +584,7 @@ export function ShoppingDetailScreen({
     : 100;
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen bg-[var(--wave1-surface-fill)]">
       {/* Header */}
       <header className="sticky top-0 z-10 border-b border-[var(--line)] bg-[var(--panel)] px-6 py-3 backdrop-blur-lg">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
@@ -999,7 +1005,7 @@ function MobileShoppingDetailScreen({
 
       <Wave1MobileBottomTab
         ariaLabel="장보기 상세 화면 하단 탐색"
-        currentTab="mypage"
+        currentTab="planner"
       />
 
       {showPantryPopup ? (
@@ -1213,8 +1219,9 @@ function MobileShoppingItemRow({
       ) : (
         <span
           aria-hidden="true"
+          data-testid={`shopping-readonly-status-${item.id}`}
           className={[
-            "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border text-[12px]",
+            "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[6px] border text-[12px]",
             item.is_checked || item.is_pantry_excluded
               ? "border-[#2AC1BC] bg-[#E6F8F7] text-[#2AC1BC]"
               : "border-[#DEE2E6] text-transparent",
@@ -1370,7 +1377,17 @@ function ShoppingItemCard({
           className="flex h-11 w-11 shrink-0 items-center justify-center"
           aria-hidden="true"
         >
-          <div className="h-2 w-2 rounded-full bg-[var(--line)]" />
+          <div
+            className={[
+              "flex h-6 w-6 items-center justify-center rounded-[6px] border text-xs",
+              item.is_checked || item.is_pantry_excluded
+                ? "border-[var(--brand)] bg-[color:rgba(42,193,188,0.10)] text-[var(--brand)]"
+                : "border-[var(--line)] bg-[var(--surface-fill)] text-transparent",
+            ].join(" ")}
+            data-testid={`shopping-readonly-status-${item.id}`}
+          >
+            ✓
+          </div>
         </div>
       )}
 

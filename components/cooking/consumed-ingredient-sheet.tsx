@@ -79,7 +79,7 @@ export function ConsumedIngredientSheet({
             >
               소진된 재료를 확인해주세요
             </h3>
-            <p className="mt-1 text-[12px] font-medium leading-[1.5] text-[#868E96]">
+            <p className="mt-1 text-[13px] font-normal leading-[1.5] text-[#868E96]">
               체크된 재료는 팬트리에서 자동으로 빠져요.
               {recipeTitle ? ` (요리: ${recipeTitle})` : null}
             </p>
@@ -102,7 +102,7 @@ export function ConsumedIngredientSheet({
                 >
                   <span
                     aria-hidden="true"
-                    className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md border-[1.5px]"
+                    className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[4px] border-[1.5px]"
                     style={{
                       background: isChecked ? "#2AC1BC" : "#FFFFFF",
                       borderColor: isChecked ? "#2AC1BC" : "#DEE2E6",
@@ -117,7 +117,7 @@ export function ConsumedIngredientSheet({
                     <span className="block text-[14px] font-semibold leading-[1.35] text-[#212529]">
                       {ingredient.standard_name}
                     </span>
-                    <span className="block text-[11px] font-medium leading-[1.35] text-[#868E96]">
+                    <span className="block text-[12px] font-normal leading-[1.35] text-[#868E96]">
                       {formatIngredientAmount(ingredient)}
                     </span>
                   </span>
