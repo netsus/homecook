@@ -7,6 +7,12 @@ const { useState: useStateM, useMemo: useMemoM, useEffect: useEffectM, useRef: u
 const { Icon: IconM, Button: ButtonM, Chip: ChipM, Dialog: DialogM, SegmentedRow: SegmentedRowM, DateChipRail: DateChipRailM, Stepper: StepperM } = window.HC;
 const DM = window.HC_DATA;
 
+function plannerSlotText(dateISO, col) {
+  const day = DM.WEEK_DATES.find(d => d.iso === dateISO);
+  const colName = DM.MEAL_COLUMNS.find(c => c.id === col)?.name || "저녁";
+  return day ? `${day.dow} 5/${day.d} · ${colName}` : `끼니 추가 · ${colName}`;
+}
+
 /* ---------------- Save modal ---------------- */
 function SaveModal({ open, recipeId, savedSet, recipebooks = DM.RECIPEBOOKS, onClose, onConfirm, toast }) {
   const recipe = recipeId ? DM.RECIPE[recipeId] : null;
@@ -117,14 +123,17 @@ function PlannedServingsConfirmModal({ open, recipe, defaultDate, defaultCol, on
   const [col, setCol] = useStateM(defaultCol || "col-d");
   const [servings, setServings] = useStateM(recipe?.baseServings || 2);
   const bodyRef = useRefM(null);
+  const lockedPlannerSlot = Boolean(defaultDate && defaultCol);
 
   useEffectM(() => {
     if (!open) return;
     setDate(defaultDate || DM.TODAY_ISO);
     setCol(defaultCol || "col-d");
     setServings(recipe?.baseServings || 2);
-    window.setTimeout(() => bodyRef.current?.querySelector(".date-chip")?.focus(), 0);
-  }, [open, defaultDate, defaultCol, recipe?.id]);
+    if (!lockedPlannerSlot) {
+      window.setTimeout(() => bodyRef.current?.querySelector(".date-chip")?.focus(), 0);
+    }
+  }, [open, defaultDate, defaultCol, lockedPlannerSlot, recipe?.id]);
 
   if (!recipe) return null;
 
@@ -134,7 +143,7 @@ function PlannedServingsConfirmModal({ open, recipe, defaultDate, defaultCol, on
       onClose={onClose}
       narrow
       title="끼니로 추가"
-      helper="날짜와 인분을 확인하세요"
+      helper={lockedPlannerSlot ? "선택한 끼니는 그대로 두고 인분만 정하세요" : "날짜와 인분을 확인하세요"}
       footer={<>
         <ButtonM variant="ghost" onClick={onClose}>취소</ButtonM>
         <ButtonM
@@ -158,18 +167,27 @@ function PlannedServingsConfirmModal({ open, recipe, defaultDate, defaultCol, on
             </div>
           </div>
         </div>
-        <div className="form-row">
-          <label className="form-label">요일</label>
-          <DateChipRailM value={dateISO} onChange={setDate} dates={DM.WEEK_DATES} />
-        </div>
-        <div className="form-row">
-          <label className="form-label">끼니</label>
-          <SegmentedRowM
-            value={col}
-            onChange={setCol}
-            options={DM.MEAL_COLUMNS.map(c => ({ value: c.id, label: c.name }))}
-          />
-        </div>
+        {lockedPlannerSlot ? (
+          <div className="servings-confirm-slot-card">
+            <div className="servings-confirm-slot-label">선택한 끼니</div>
+            <div className="servings-confirm-slot-value tabular">{plannerSlotText(dateISO, col)}</div>
+          </div>
+        ) : (
+          <>
+            <div className="form-row">
+              <label className="form-label">요일</label>
+              <DateChipRailM value={dateISO} onChange={setDate} dates={DM.WEEK_DATES} />
+            </div>
+            <div className="form-row">
+              <label className="form-label">끼니</label>
+              <SegmentedRowM
+                value={col}
+                onChange={setCol}
+                options={DM.MEAL_COLUMNS.map(c => ({ value: c.id, label: c.name }))}
+              />
+            </div>
+          </>
+        )}
         <div className="form-row form-row-inline">
           <label className="form-label">먹을 인분</label>
           <StepperM value={servings} onChange={setServings} min={1} max={10} unit="인분" />

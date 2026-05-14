@@ -1,0 +1,35 @@
+{
+  "url": "http://127.0.0.1:4174/homecook%20desktop%20prototype.html",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "branches": [
+    {
+      "branch": "search",
+      "dateChipCount": 0,
+      "segmentedCount": 0,
+      "slotText": "화 5/12 · 저녁",
+      "helper": "선택한 끼니는 그대로 두고 인분만 정하세요",
+      "hasServingsStepper": 1
+    },
+    {
+      "branch": "recipebook",
+      "dateChipCount": 0,
+      "segmentedCount": 0,
+      "slotText": "화 5/12 · 저녁",
+      "helper": "선택한 끼니는 그대로 두고 인분만 정하세요",
+      "hasServingsStepper": 1
+    },
+    {
+      "branch": "pantry",
+      "dateChipCount": 0,
+      "segmentedCount": 0,
+      "slotText": "화 5/12 · 저녁",
+      "helper": "선택한 끼니는 그대로 두고 인분만 정하세요",
+      "hasServingsStepper": 1
+    }
+  ],
+  "consoleErrors": [],
+  "pageErrors": []
+}
