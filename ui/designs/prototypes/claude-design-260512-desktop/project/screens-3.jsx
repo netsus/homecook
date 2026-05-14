@@ -129,6 +129,10 @@ function MealScreen({ mealId, meal: mealProp, onBack, onCook, onGoShopping, onGo
                   <Icon name="check" size={16} />
                   <span>요리 완료된 끼니예요</span>
                 </div>
+              ) : meal.status === "registered" ? (
+                <Button variant="secondary" full leftIcon="cart" disabled>
+                  장보기 완료 후 요리 가능
+                </Button>
               ) : (
                 <Button variant="primary" full leftIcon="pot" onClick={() => onCook(meal.id)}>
                   요리하기
@@ -992,7 +996,9 @@ function ShoppingHistoryRow({ list, onOpen }) {
 /* ============================================
    LEFTOVERS (§15)
    ============================================ */
-function LeftoversScreen({ onBack, onCook, onMarkAte }) {
+function LeftoversScreen({ onBack, onCook, onMarkAte, onReAddToPlanner, onGoAteList }) {
+  const [state, setState] = useS3("ok");
+  const leftovers = state === "empty" ? [] : D3.LEFTOVERS;
   return (
     <main className="screen">
       <div className="breadcrumb">
@@ -1001,24 +1007,34 @@ function LeftoversScreen({ onBack, onCook, onMarkAte }) {
         <span className="breadcrumb-cur">남은 요리</span>
       </div>
 
-      <ScreenHeader title="남은 요리" lead="요리한 뒤 남은 음식을 메모해 두면 다음 끼니로 빠르게 옮길 수 있어요." />
+      <ScreenHeader
+        title="남은 요리"
+        lead="요리한 뒤 남은 음식을 메모해 두면 다음 끼니로 빠르게 옮길 수 있어요."
+        right={<Button variant="tertiary" leftIcon="list" onClick={onGoAteList}>다먹은 목록</Button>}
+      />
 
-      {D3.LEFTOVERS.length === 0 ? (
-        <StatePanel icon="pot" title="남은 요리가 없어요" desc="요리모드에서 '남은 요리로 등록'을 누르면 여기에 쌓입니다." />
+      <PhaseStateToggle label="화면 상태" value={state} onChange={setState} />
+
+      {leftovers.length === 0 ? (
+        <StatePanel icon="fridge" title="남은 요리가 없어요" desc="요리모드 완료 후 남은 음식이 여기에 기록됩니다." />
       ) : (
         <div className="leftover-grid">
-          {D3.LEFTOVERS.map(lf => {
+          {leftovers.map(lf => {
             const r = D3.RECIPE[lf.recipeId];
             return (
-              <div key={lf.id} className="leftover-card">
+              <div key={lf.id} className="leftover-card" tabIndex={0}>
                 <div className="leftover-thumb">
                   <img src={r?.photo} alt={r?.title} onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 </div>
                 <div className="leftover-body">
-                  <div className="leftover-title">{r?.title}</div>
+                  <div className="leftover-head">
+                    <div className="leftover-title">{r?.title}</div>
+                    <Tag variant="brand">남은 요리</Tag>
+                  </div>
                   <div className="leftover-meta tabular">{D3.fmtPlannerDate(lf.createdAt)} · {lf.note}</div>
-                  <div className="row gap-2" style={{ marginTop: 12 }}>
-                    <Button variant="secondary" size="sm" leftIcon="cal" onClick={() => onCook(lf.id)}>플래너로 옮기기</Button>
+                  <div className="leftover-actions">
+                    <Button variant="secondary" size="sm" leftIcon="cal" onClick={() => onReAddToPlanner(lf.id)}>플래너에 추가</Button>
+                    <Button variant="tertiary" size="sm" leftIcon="pot" onClick={() => onCook(lf.id)}>요리하기</Button>
                     <Button variant="ghost" size="sm" leftIcon="check" onClick={() => onMarkAte(lf.id)}>다 먹었어요</Button>
                   </div>
                 </div>
@@ -1034,7 +1050,9 @@ function LeftoversScreen({ onBack, onCook, onMarkAte }) {
 /* ============================================
    ATE_LIST (§16)
    ============================================ */
-function AteListScreen({ onBack, onOpenRecipe }) {
+function AteListScreen({ onBack, onOpenRecipe, onUndoAte, onRecreate, onGoLeftovers }) {
+  const [state, setState] = useS3("ok");
+  const ateItems = state === "empty" ? [] : D3.ATE;
   return (
     <main className="screen">
       <div className="breadcrumb">
@@ -1043,28 +1061,322 @@ function AteListScreen({ onBack, onOpenRecipe }) {
         <span className="breadcrumb-cur">다먹은 목록</span>
       </div>
 
-      <ScreenHeader title="다먹은 목록" lead="요리모드를 완료했거나 '다 먹었어요'를 누른 끼니가 기록됩니다." />
+      <ScreenHeader
+        title="다먹은 목록"
+        lead="요리모드를 완료했거나 '다 먹었어요'를 누른 끼니가 기록됩니다."
+        right={<Button variant="tertiary" leftIcon="swap" onClick={onGoLeftovers}>남은 요리</Button>}
+      />
 
-      <div className="ate-list">
-        {D3.ATE.map(a => {
-          const r = D3.RECIPE[a.recipeId];
-          if (!r) return null;
+      <PhaseStateToggle label="화면 상태" value={state} onChange={setState} />
+
+      {ateItems.length === 0 ? (
+        <StatePanel icon="check" title="아직 다먹은 요리가 없어요" desc="요리를 완료하거나 남은 요리에서 '다 먹었어요'를 누르면 여기에 기록됩니다." />
+      ) : (
+        <div className="ate-list">
+          {ateItems.map(a => {
+            const r = D3.RECIPE[a.recipeId];
+            if (!r) return null;
+            return (
+              <div key={a.id} className="ate-row">
+                <div className="ate-thumb">
+                  <img src={r.photo} alt={r.title} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                </div>
+                <div className="ate-body">
+                  <div className="ate-title">{r.title}</div>
+                  <div className="ate-meta tabular">{D3.fmtPlannerDate(a.ateAt)}</div>
+                </div>
+                <div className="ate-actions">
+                  <Button variant="ghost" size="sm" leftIcon="swap" onClick={() => onUndoAte(a.id)}>되돌리기</Button>
+                  <Button variant="tertiary" size="sm" leftIcon="refresh" onClick={() => onRecreate(r.id)}>다시 만들기</Button>
+                </div>
+                <button className="ate-link" type="button" onClick={() => onOpenRecipe(r.id)} aria-label={`${r.title} 레시피 보기`}>
+                  <Icon name="chevR" size={16} color="var(--text-4)" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </main>
+  );
+}
+
+/* ============================================
+   COOK_READY_LIST + COOK_MODE (§17)
+   ============================================ */
+function CookReadyListScreen({ meals, onBack, onStartCook, onOpenMeal, onOpenNotice }) {
+  const [state, setState] = useS3("ok");
+  const cookable = meals.filter(m => m.status !== "cooked");
+  const visibleMeals = state === "empty" ? [] : cookable;
+  const grouped = useMemo3(() => {
+    const map = new Map();
+    visibleMeals.forEach(m => {
+      if (!map.has(m.date)) map.set(m.date, []);
+      map.get(m.date).push(m);
+    });
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [visibleMeals]);
+
+  return (
+    <main className="screen">
+      <div className="breadcrumb">
+        <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 플래너</button>
+        <span className="breadcrumb-sep">/</span>
+        <span className="breadcrumb-cur">요리 준비</span>
+      </div>
+
+      <ScreenHeader
+        title="요리 준비"
+        lead="플래너에 등록한 끼니 중 요리할 수 있는 메뉴를 모아 보여드려요."
+        right={<Button variant="tertiary" leftIcon="info" onClick={onOpenNotice}>요리모드 안내</Button>}
+      />
+
+      <PhaseStateToggle label="화면 상태" value={state} onChange={setState} />
+
+      {visibleMeals.length === 0 ? (
+        <StatePanel icon="pot" title="요리할 끼니가 없어요" desc="플래너에서 끼니를 등록하면 여기에 나타납니다." />
+      ) : (
+        grouped.map(([date, dateMeals]) => (
+          <section key={date} className="cook-date-section">
+            <div className="cook-date-head">
+              <h2 className="cook-date-title">{fmtCookDateSection(date)}</h2>
+              <span className="cook-date-count tabular">{dateMeals.length}개 끼니</span>
+            </div>
+            <div className="cook-date-list">
+              {dateMeals.map(meal => (
+                <CookReadyCard
+                  key={meal.id}
+                  meal={meal}
+                  onStartCook={() => onStartCook(meal.id)}
+                  onOpenMeal={() => onOpenMeal(meal.id)}
+                />
+              ))}
+            </div>
+          </section>
+        ))
+      )}
+    </main>
+  );
+}
+
+function PhaseStateToggle({ label, value, onChange }) {
+  return (
+    <div className="state-toggle">
+      <div className="state-toggle-label">{label}</div>
+      <div className="state-toggle-chips">
+        <button className={`state-toggle-chip ${value === "ok" ? "active" : ""}`} onClick={() => onChange("ok")}>기본</button>
+        <button className={`state-toggle-chip ${value === "empty" ? "active" : ""}`} onClick={() => onChange("empty")}>빈 상태</button>
+      </div>
+    </div>
+  );
+}
+
+function CookReadyCard({ meal, onStartCook, onOpenMeal }) {
+  const recipe = D3.RECIPE[meal.recipeId];
+  if (!recipe) return null;
+  const statusLabel = meal.status === "registered" ? "등록됨" : "장보기 완료";
+  const canStartCook = meal.status === "shopped";
+  return (
+    <div className="cook-ready-card">
+      <div className="cook-ready-head">
+        <span className={`cook-ready-status status-${meal.status}`}>
+          <span className={`status-dot status-${meal.status}`} />
+          {statusLabel}
+        </span>
+        <span className="cook-ready-time tabular">{recipe.cookTime}분</span>
+      </div>
+      <div className="cook-ready-title">{recipe.title}</div>
+      <div className="cook-ready-meta tabular">{plannerSlotLabel(meal.date, meal.col)} · {meal.servings}인분</div>
+      <div className="cook-ready-actions">
+        <Button variant="tertiary" size="sm" leftIcon="eye" onClick={onOpenMeal}>상세 보기</Button>
+        <Button
+          variant={canStartCook ? "primary" : "secondary"}
+          size="sm"
+          leftIcon={canStartCook ? "pot" : "cart"}
+          onClick={canStartCook ? onStartCook : undefined}
+          disabled={!canStartCook}
+        >
+          {canStartCook ? "요리 시작" : "장보기 필요"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CookModePlannerScreen({ meal, recipe, onBack, onComplete, pantryHeld }) {
+  if (!meal || !recipe) return null;
+  if (meal.status !== "shopped") {
+    return (
+      <main className="screen">
+        <div className="breadcrumb">
+          <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 요리 준비</button>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-cur">플래너 요리모드</span>
+        </div>
+        <StatePanel
+          icon="cart"
+          title="장보기 완료 후 요리할 수 있어요"
+          desc="플래너 요리 완료 처리는 등록됨 상태를 건너뛰지 않도록 막아두었어요."
+          action={<Button variant="secondary" leftIcon="chevL" onClick={onBack}>요리 준비로 돌아가기</Button>}
+        />
+      </main>
+    );
+  }
+  const statusLabel = meal.status === "registered" ? "등록됨" : "장보기 완료";
+  return (
+    <main className="screen cook-mode-screen">
+      <div className="breadcrumb">
+        <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 요리 준비</button>
+        <span className="breadcrumb-sep">/</span>
+        <span className="breadcrumb-cur">플래너 요리모드</span>
+      </div>
+
+      <div className="cook-mode-header planner">
+        <div className="cook-mode-context">
+          <span className={`meal-status-pill status-${meal.status}`}>
+            <span className={`status-dot status-${meal.status}`} />
+            {statusLabel}
+          </span>
+          <span className="cook-mode-slot tabular">{plannerSlotLabel(meal.date, meal.col)} · {meal.servings}인분</span>
+        </div>
+        <h1 className="h1">{recipe.title}</h1>
+        <p className="text-meta">{recipe.cookTime}분 · {recipe.difficulty}</p>
+      </div>
+
+      <div className="cook-mode-layout">
+        <div className="cook-mode-steps">
+          <h2 className="cook-section-title">조리 단계</h2>
+          {recipe.steps.map((step, idx) => <CookStepCard key={idx} step={step} index={idx + 1} />)}
+        </div>
+        <aside className="cook-mode-rail">
+          <CookIngredientChecklist
+            recipe={recipe}
+            servings={meal.servings}
+            pantryHeld={pantryHeld}
+            onComplete={() => onComplete(meal.id, recipe)}
+            onCancel={onBack}
+          />
+        </aside>
+      </div>
+    </main>
+  );
+}
+
+function CookModeStandaloneScreen({ recipe, onBack, onComplete, pantryHeld }) {
+  if (!recipe) return null;
+  return (
+    <main className="screen cook-mode-screen">
+      <div className="breadcrumb">
+        <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 레시피</button>
+        <span className="breadcrumb-sep">/</span>
+        <span className="breadcrumb-cur">독립 요리모드</span>
+      </div>
+
+      <div className="cook-mode-header standalone">
+        <h1 className="h1">{recipe.title}</h1>
+        <p className="text-meta">{recipe.cookTime}분 · {recipe.difficulty} · {recipe.baseServings}인분</p>
+        <div className="cook-mode-notice">
+          <Icon name="info" size={14} />
+          <span>이 요리는 플래너 끼니와 연결되지 않아요. 팬트리 재료 차감만 진행합니다.</span>
+        </div>
+      </div>
+
+      <div className="cook-mode-layout">
+        <div className="cook-mode-steps">
+          <h2 className="cook-section-title">조리 단계</h2>
+          {recipe.steps.map((step, idx) => <CookStepCard key={idx} step={step} index={idx + 1} />)}
+        </div>
+        <aside className="cook-mode-rail">
+          <CookIngredientChecklist
+            recipe={recipe}
+            servings={recipe.baseServings}
+            pantryHeld={pantryHeld}
+            onComplete={() => onComplete(recipe)}
+            onCancel={onBack}
+          />
+        </aside>
+      </div>
+    </main>
+  );
+}
+
+function CookStepCard({ step, index }) {
+  const colors = D3.COOK_METHOD_COLORS[step.method] || { bg: "var(--bg-alt)", fg: "var(--text-2)" };
+  return (
+    <div className="cook-step-card" style={{ borderLeftColor: colors.fg }}>
+      <div className="cook-step-head">
+        <span className="cook-step-badge" style={{ background: colors.bg, color: colors.fg }}>{step.method}</span>
+        <span className="cook-step-num tabular">단계 {index}</span>
+      </div>
+      <p className="cook-step-text">{step.text}</p>
+    </div>
+  );
+}
+
+function CookIngredientChecklist({ recipe, servings, pantryHeld, onComplete, onCancel }) {
+  const [checked, setChecked] = useS3(new Set());
+  useEffect3(() => {
+    setChecked(new Set(recipeIngredientIds(recipe).filter(id => pantryHeld?.has(id))));
+  }, [recipe, pantryHeld]);
+
+  const factor = servings / recipe.baseServings;
+  const ids = recipeIngredientIds(recipe);
+  const toggle = (id) => setChecked(prev => {
+    const n = new Set(prev);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+
+  return (
+    <div className="cook-rail-card">
+      <div className="cook-rail-title">차감할 재료</div>
+      <div className="cook-rail-list">
+        {recipe.ingredients.map((ing, idx) => {
+          const name = recipeIngredientName(ing);
+          const amount = scaleIngredientAmount(ing, factor);
+          const inPantry = ing.id && pantryHeld?.has(ing.id);
+          const on = ing.id && checked.has(ing.id);
           return (
-            <button key={a.id} className="ate-row" onClick={() => onOpenRecipe(r.id)}>
-              <div className="ate-thumb">
-                <img src={r.photo} alt={r.title} onError={(e) => { e.currentTarget.style.display = "none"; }} />
-              </div>
-              <div className="ate-body">
-                <div className="ate-title">{r.title}</div>
-                <div className="ate-meta tabular">{D3.fmtPlannerDate(a.ateAt)}</div>
-              </div>
-              <Icon name="chevR" size={16} color="var(--text-4)" />
+            <button
+              key={ing.id || idx}
+              className={`cook-rail-item ${on ? "on" : ""}`}
+              type="button"
+              disabled={!ing.id}
+              onClick={() => ing.id && toggle(ing.id)}
+            >
+              <span className={`check-box ${on ? "on" : ""}`}>{on && <Icon name="check" size={12} />}</span>
+              <span className="cook-rail-name">{name}</span>
+              <span className="cook-rail-amount tabular">{amount}</span>
+              {inPantry && <span className="cook-rail-held">보유</span>}
             </button>
           );
         })}
       </div>
-    </main>
+      <div className="cook-rail-summary tabular">{ids.length}개 중 {checked.size}개 선택</div>
+      <div className="cook-rail-footer">
+        <Button variant="primary" full leftIcon="check" onClick={() => onComplete([...checked])}>요리 완료 ({checked.size}개 차감)</Button>
+        <Button variant="ghost" full onClick={onCancel}>취소</Button>
+      </div>
+    </div>
   );
+}
+
+function fmtCookDateSection(iso) {
+  const today = D3.TODAY_ISO;
+  const d = new Date(`${iso}T00:00:00`);
+  const dow = ["일","월","화","수","목","금","토"][d.getDay()];
+  const tomorrow = new Date(new Date(`${today}T00:00:00`).getTime() + 86400000).toISOString().slice(0, 10);
+  if (iso === today) return `오늘 (${d.getMonth()+1}월 ${d.getDate()}일)`;
+  if (iso === tomorrow) return `내일 (${d.getMonth()+1}월 ${d.getDate()}일)`;
+  return `${dow}요일 (${d.getMonth()+1}월 ${d.getDate()}일)`;
+}
+
+function scaleIngredientAmount(ing, factor) {
+  const amount = typeof ing.amount === "number" ? ing.amount * factor : ing.amount;
+  const value = typeof amount === "number"
+    ? (amount >= 10 ? Math.round(amount * 10) / 10 : amount.toFixed(2).replace(/\.?0+$/, ""))
+    : amount;
+  return `${value || ""}${ing.unit ? ` ${ing.unit}` : ""}`;
 }
 
 /* ============================================
@@ -1282,27 +1594,27 @@ function MealColumnsEditor({ toast }) {
 /* ============================================
    COOK_NOTICE — mobile-only cooking mode notice
    ============================================ */
-function CookNoticeDialog({ open, onClose }) {
+function CookNoticeDialog({ open, onClose, onGoToCookList }) {
   const { Dialog, Button } = window.HC;
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      title="요리모드는 모바일에서만 지원돼요"
+      title="데스크탑 요리모드"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>닫기</Button>
-          <Button variant="primary" leftIcon="link" onClick={onClose}>모바일 앱 열기</Button>
+          <Button variant="primary" leftIcon="pot" onClick={onGoToCookList}>요리 준비 목록</Button>
         </>
       }
     >
       <div className="cook-notice">
         <div className="cook-notice-icon"><Icon name="pot" size={36} color="var(--brand-deep)" /></div>
-        <p className="reading">요리 단계 진행과 타이머는 데스크탑에서 사용하기 어려워, 모바일 앱에서만 지원합니다. 데스크탑에서는 레시피를 미리 살펴보고, 장보기를 마무리해 두세요.</p>
+        <p className="reading">데스크탑에서 레시피 단계를 보면서 요리하고, 사용한 재료를 팬트리에서 차감할 수 있어요.</p>
         <ul className="cook-notice-list">
-          <li><Icon name="check" size={14} color="var(--brand-deep)" /> 인분/재료 미리 조절</li>
-          <li><Icon name="check" size={14} color="var(--brand-deep)" /> 장보기 리스트 만들기</li>
-          <li><Icon name="check" size={14} color="var(--brand-deep)" /> 플래너 등록</li>
+          <li><Icon name="check" size={14} color="var(--brand-deep)" /> 조리 단계 확인</li>
+          <li><Icon name="check" size={14} color="var(--brand-deep)" /> 사용 재료 차감</li>
+          <li><Icon name="check" size={14} color="var(--brand-deep)" /> 플래너 끼니 완료 처리</li>
         </ul>
       </div>
     </Dialog>
@@ -1313,5 +1625,6 @@ window.HC_S3 = {
   MealScreen, MenuAddScreen, ShoppingDetailScreen, ShoppingFlowScreen, ShoppingListsScreen,
   RecipeSearchPickerScreen, RecipeBookSelectorScreen, RecipeBookDetailPickerScreen, PantryMatchPickerScreen,
   ManualRecipeCreateScreen, YtImportScreen,
-  LeftoversScreen, AteListScreen, RecipebookDetailScreen, SettingsScreen, CookNoticeDialog,
+  LeftoversScreen, AteListScreen, CookReadyListScreen, CookModePlannerScreen, CookModeStandaloneScreen,
+  RecipebookDetailScreen, SettingsScreen, CookNoticeDialog,
 };
