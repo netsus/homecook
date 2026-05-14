@@ -2,7 +2,8 @@
 
 import React from "react";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RecipeCard } from "@/components/home/recipe-card";
 import { MOCK_RECIPE_CARD } from "@/lib/mock/recipes";
@@ -17,27 +18,26 @@ describe("recipe card", () => {
     render(<RecipeCard recipe={MOCK_RECIPE_CARD} />);
 
     const title = screen.getByRole("heading", { name: MOCK_RECIPE_CARD.title });
-    const card = title.closest("a");
+    const titleLink = title.closest("a");
 
-    expect(card).not.toBeNull();
+    expect(titleLink).not.toBeNull();
 
     // Title is rendered as h3
     expect(title.tagName).toBe("H3");
 
     // Meta row contains servings info
-    const cardScope = within(card as HTMLElement);
-    expect(cardScope.getByTestId("recipe-card-bookmark")).toBeTruthy();
+    expect(screen.getByTestId("recipe-card-bookmark")).toBeTruthy();
     expect(
-      cardScope.getByText(
+      screen.getByText(
         new RegExp(`기본 ${MOCK_RECIPE_CARD.base_servings}인`),
       ),
     ).toBeTruthy();
 
     // Tags are rendered as pills
-    expect(cardScope.getByText(MOCK_RECIPE_CARD.tags[0])).toBeTruthy();
+    expect(screen.getByText(MOCK_RECIPE_CARD.tags[0])).toBeTruthy();
   });
 
-  it("renders the popular badge when the fallback view model crosses the threshold", () => {
+  it("renders the popular badge without the old red MVP badge treatment", () => {
     render(
       <RecipeCard
         recipe={{
@@ -48,8 +48,21 @@ describe("recipe card", () => {
       />,
     );
 
-    expect(screen.getByText("🔥 인기")).toBeTruthy();
+    expect(screen.getByText("인기")).toBeTruthy();
     expect(screen.getAllByTestId("recipe-card-bookmark")).toHaveLength(1);
+  });
+
+  it("calls the card save action without navigating the detail link", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+
+    render(<RecipeCard onSave={onSave} recipe={MOCK_RECIPE_CARD} />);
+
+    await user.click(
+      screen.getByRole("button", { name: `${MOCK_RECIPE_CARD.title} 저장` }),
+    );
+
+    expect(onSave).toHaveBeenCalledWith(MOCK_RECIPE_CARD);
   });
 
   it("renders source badges with localized Korean labels instead of raw enums", () => {

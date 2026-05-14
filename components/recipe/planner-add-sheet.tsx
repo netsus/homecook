@@ -88,6 +88,13 @@ export function PlannerAddSheet({
   const selectedColumnName =
     columns.find((column) => column.id === selectedColumnId)?.name ?? "끼니";
   const selectedDateShort = selectedDate ? formatDateLabel(selectedDate) : "";
+  const shouldScrollMealColumns = columns.length > 4;
+  const mealColumnGroupClass = shouldScrollMealColumns
+    ? "scrollbar-hide mb-4 flex gap-2 overflow-x-auto pb-1"
+    : [
+        "mb-4 grid gap-2",
+        columns.length === 4 ? "grid-cols-4" : "grid-cols-3",
+      ].join(" ");
 
   if (variant === "recipe-detail") {
     return (
@@ -204,7 +211,7 @@ export function PlannerAddSheet({
                 <div className="mb-2 text-[13px] font-semibold text-[#495057]">
                   끼니
                 </div>
-                <div aria-label="끼니 선택" className="mb-4 grid grid-cols-3 gap-2" role="group">
+                <div aria-label="끼니 선택" className={mealColumnGroupClass} role="group">
                   {columns.map((column) => {
                     const isSelected = column.id === selectedColumnId;
 
@@ -212,9 +219,10 @@ export function PlannerAddSheet({
                       <button
                         aria-pressed={isSelected}
                         className={[
-                          "min-h-11 rounded-[10px] border px-2 text-[14px] transition-colors",
+                          "min-h-11 rounded-[8px] border px-2 text-[14px] transition-colors",
+                          shouldScrollMealColumns ? "min-w-[76px] shrink-0" : "min-w-0",
                           isSelected
-                            ? "border-[#2AC1BC] bg-[#E8F8F7] font-bold text-[#007A76]"
+                            ? "border-[#2AC1BC] bg-[#E8F8F7] font-semibold text-[#007A76]"
                             : "border-[#DEE2E6] bg-white font-medium text-[#495057]",
                           isSubmitting ? "opacity-60" : "",
                         ]
@@ -241,19 +249,19 @@ export function PlannerAddSheet({
                   <div className="flex items-center gap-2.5">
                     <button
                       aria-label="인분 줄이기"
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-[#DEE2E6] bg-white text-[18px] text-[#212529] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-[#DEE2E6] bg-white text-[20px] font-medium leading-none text-[#212529] disabled:cursor-not-allowed disabled:opacity-50"
                       disabled={isSubmitting || servings <= 1}
                       onClick={() => onChangeServings(Math.max(1, servings - 1))}
                       type="button"
                     >
                       -
                     </button>
-                    <div className="min-w-5 text-center text-[15px] font-bold text-[#212529]">
+                    <div className="min-w-6 text-center text-[20px] font-medium text-[#212529]">
                       {servings}
                     </div>
                     <button
                       aria-label="인분 늘리기"
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-[#212529] text-[18px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-[#212529] text-[20px] font-medium leading-none text-white disabled:cursor-not-allowed disabled:opacity-50"
                       disabled={isSubmitting}
                       onClick={() => onChangeServings(servings + 1)}
                       type="button"
@@ -272,7 +280,7 @@ export function PlannerAddSheet({
 
               <div className="flex gap-2 border-t border-[#DEE2E6] bg-white px-5 pb-2 pt-3">
                 <button
-                  className="min-h-11 basis-[88px] rounded-[12px] border border-[#DEE2E6] bg-[#F8F9FA] px-4 text-[15px] font-bold text-[#495057] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="min-h-[48px] basis-[88px] rounded-[8px] border border-[#DEE2E6] bg-[#F8F9FA] px-4 text-[15px] font-bold text-[#495057] disabled:cursor-not-allowed disabled:opacity-60"
                   disabled={isSubmitting}
                   onClick={onClose}
                   type="button"
@@ -281,7 +289,7 @@ export function PlannerAddSheet({
                 </button>
                 <button
                   aria-label={isSubmitting ? "추가 중…" : "플래너에 추가"}
-                  className="min-h-11 flex-1 rounded-[12px] bg-[#007A76] px-4 text-[15px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#ADB5BD]"
+                  className="min-h-[48px] flex-1 rounded-[8px] bg-[#007A76] px-4 text-[15px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#ADB5BD]"
                   disabled={!canSubmit || isSubmitting}
                   onClick={onSubmit}
                   type="button"

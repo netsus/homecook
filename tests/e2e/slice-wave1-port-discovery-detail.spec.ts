@@ -72,7 +72,7 @@ test.describe("wave1 port discovery detail", () => {
     await expect(sortButton).toContainText("저장순");
   });
 
-  test("HOME ingredient chips are positioned under the recipe list heading", async ({
+  test("HOME recipe category chips replace ingredient quick chips under the recipe list heading", async ({
     page,
   }) => {
     await page.goto("/");
@@ -85,17 +85,31 @@ test.describe("wave1 port discovery detail", () => {
 
     if (isMobileViewport(page)) {
       const recipeListSection = page.locator('section[aria-label="모든 레시피"]');
-      await expect(recipeListSection.getByRole("button", { name: "양파" })).toBeVisible();
       await expect(
         recipeListSection.getByRole("button", { name: "재료로 검색" }),
       ).toBeVisible();
-    } else {
       await expect(
-        page.locator("button:visible").filter({ hasText: "양파" }).first(),
+        recipeListSection.getByRole("button", { name: "전체" }),
       ).toBeVisible();
+      await expect(
+        recipeListSection.getByRole("button", { name: "다이어트" }),
+      ).toBeVisible();
+      await expect(
+        recipeListSection.getByRole("button", { name: "양파" }),
+      ).not.toBeVisible();
+    } else {
       await expect(
         page.locator("button:visible").filter({ hasText: "재료로 검색" }).first(),
       ).toBeVisible();
+      await expect(
+        page.locator("button:visible").filter({ hasText: /^전체$/ }).first(),
+      ).toBeVisible();
+      await expect(
+        page.locator("button:visible").filter({ hasText: "다이어트" }).first(),
+      ).toBeVisible();
+      await expect(
+        page.locator("button:visible").filter({ hasText: "양파" }),
+      ).toHaveCount(0);
     }
   });
 

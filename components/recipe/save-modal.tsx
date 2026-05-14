@@ -9,6 +9,7 @@ import type { RecipeBookSummary } from "@/types/recipe";
 type SaveModalViewState = "loading" | "ready" | "error";
 
 interface SaveModalProps {
+  alreadySavedBookIds?: string[];
   isOpen: boolean;
   viewState: SaveModalViewState;
   books: RecipeBookSummary[];
@@ -27,6 +28,7 @@ interface SaveModalProps {
 }
 
 export function SaveModal({
+  alreadySavedBookIds = [],
   isOpen,
   viewState,
   books,
@@ -45,6 +47,13 @@ export function SaveModal({
 }: SaveModalProps) {
   const [isCreateExpanded, setIsCreateExpanded] = React.useState(false);
   const isDesktopViewport = useDesktopViewport();
+  const alreadySavedBookIdSet = React.useMemo(
+    () => new Set(alreadySavedBookIds),
+    [alreadySavedBookIds],
+  );
+  const newSelectedBookCount = selectedBookIds.filter(
+    (bookId) => !alreadySavedBookIdSet.has(bookId),
+  ).length;
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -59,7 +68,7 @@ export function SaveModal({
   const disableCreate =
     isCreatingBook || isSavingRecipe || newBookName.trim().length === 0;
   const disableSave =
-    isSavingRecipe || isCreatingBook || selectedBookIds.length === 0;
+    isSavingRecipe || isCreatingBook || newSelectedBookCount === 0;
   const shouldRenderWebView =
     process.env.NODE_ENV !== "test" || isDesktopViewport;
   const shouldRenderAppView =
@@ -137,11 +146,13 @@ export function SaveModal({
                   books.map((book) => {
                     const isSelected = selectedBookIds.includes(book.id);
                     const isSavedBook = book.book_type === "saved";
+                    const isAlreadySaved = alreadySavedBookIdSet.has(book.id);
 
                     return (
                       <button
                         aria-pressed={isSelected}
-                        className="flex w-full items-center gap-2.5 border-b border-[#F1F3F5] px-4 py-3 text-left last:border-b-0"
+                        className="flex w-full items-center gap-2.5 border-b border-[#F1F3F5] px-4 py-3 text-left last:border-b-0 disabled:cursor-default"
+                        disabled={isSavingRecipe || isCreatingBook || isAlreadySaved}
                         key={book.id}
                         onClick={() => onSelectBook(book.id)}
                         type="button"
@@ -162,9 +173,11 @@ export function SaveModal({
                             {book.name}
                           </span>
                           <span className="mt-0.5 block text-[11px] text-[#5F6470]">
-                            {isSelected
-                              ? "선택됨"
-                              : "선택하면 이 책에 추가"}
+                            {isAlreadySaved
+                              ? "이미 저장됨"
+                              : isSelected
+                                ? "저장 대상"
+                                : "선택하면 이 책에 추가"}
                           </span>
                         </span>
                         <span
@@ -175,7 +188,7 @@ export function SaveModal({
                               : "bg-[#F8F9FA] text-[#5F6470]",
                           ].join(" ")}
                         >
-                          {isSavedBook ? "저장" : "내 책"}
+                          {isAlreadySaved ? "완료" : isSavedBook ? "저장" : "내 책"}
                         </span>
                       </button>
                     );
@@ -238,9 +251,9 @@ export function SaveModal({
               >
                 {isSavingRecipe
                   ? "저장 중..."
-                  : selectedBookIds.length > 0
-                    ? `${selectedBookIds.length}개 레시피북에 저장`
-                    : "저장 해제"}
+                  : newSelectedBookCount > 0
+                    ? `${newSelectedBookCount}개 레시피북에 추가 저장`
+                    : "이미 저장됨"}
               </button>
             </div>
           </>
@@ -304,6 +317,7 @@ export function SaveModal({
               <div className="overflow-hidden rounded-[10px] border border-[var(--line)] bg-white">
                 {books.map((book, index) => {
                   const isSelected = selectedBookIds.includes(book.id);
+                  const isAlreadySaved = alreadySavedBookIdSet.has(book.id);
 
                   return (
                     <button
@@ -313,6 +327,7 @@ export function SaveModal({
                           ? "border-b border-[var(--surface-subtle)]"
                           : ""
                       }`}
+                      disabled={isSavingRecipe || isCreatingBook || isAlreadySaved}
                       key={book.id}
                       onClick={() => onSelectBook(book.id)}
                       type="button"
@@ -330,6 +345,11 @@ export function SaveModal({
                       </span>
                       <span className="flex-1 text-sm text-[var(--foreground)]">
                         {book.name}
+                        {isAlreadySaved ? (
+                          <span className="ml-2 text-xs font-semibold text-[var(--olive)]">
+                            이미 저장됨
+                          </span>
+                        ) : null}
                       </span>
                     </button>
                   );
@@ -375,9 +395,9 @@ export function SaveModal({
               >
                 {isSavingRecipe
                   ? "저장 중..."
-                  : selectedBookIds.length > 0
-                    ? `${selectedBookIds.length}개 레시피북에 저장`
-                    : "저장"}
+                  : newSelectedBookCount > 0
+                    ? `${newSelectedBookCount}개 레시피북에 추가 저장`
+                    : "이미 저장됨"}
               </button>
             </div>
           </div>

@@ -76,6 +76,17 @@ function buildPlannerData(): PlannerData {
   };
 }
 
+function buildPlannerDataWithColumns(names: string[]): PlannerData {
+  return {
+    columns: names.map((name, index) => ({
+      id: `col-${index}`,
+      name,
+      sort_order: index + 1,
+    })),
+    meals: [],
+  };
+}
+
 function buildMealCreateData(): MealCreateData {
   return {
     id: "meal-new-1",
@@ -233,6 +244,55 @@ describe("planner add flow", () => {
     expect(
       within(dialog).getByRole("button", { name: "플래너에 추가" }),
     ).toBeTruthy();
+  });
+
+  it("keeps four meal columns in one row and scrolls when there are five or more", async () => {
+    fetchPlanner.mockResolvedValueOnce(
+      buildPlannerDataWithColumns(["아침", "점심", "간식", "저녁"]),
+    );
+
+    const { unmount } = render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "플래너에 추가" }),
+    );
+
+    let dialog = await screen.findByRole("dialog", { name: "플래너에 추가" });
+    let mealGroup = within(dialog).getByRole("group", { name: "끼니 선택" });
+
+    expect(mealGroup.className).toContain("grid-cols-4");
+    expect(mealGroup.className).not.toContain("overflow-x-auto");
+
+    unmount();
+    cleanup();
+
+    fetchPlanner.mockResolvedValueOnce(
+      buildPlannerDataWithColumns(["아침", "점심", "간식", "저녁", "야식"]),
+    );
+
+    render(
+      <RecipeDetailScreen
+        initialAuthenticated
+        recipeId={MOCK_RECIPE_DETAIL.id}
+      />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "플래너에 추가" }),
+    );
+
+    dialog = await screen.findByRole("dialog", { name: "플래너에 추가" });
+    mealGroup = within(dialog).getByRole("group", { name: "끼니 선택" });
+
+    expect(mealGroup.className).toContain("overflow-x-auto");
+    expect(within(mealGroup).getByRole("button", { name: "야식" }).className).toContain(
+      "min-w-[76px]",
+    );
   });
 
   it("auto-dismisses the planner add success toast after a short delay", async () => {

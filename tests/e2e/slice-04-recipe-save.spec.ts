@@ -1,5 +1,7 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
+import { installDiscoveryRoutes } from "./helpers/mock-routes";
+
 const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
 const PENDING_ACTION_KEY = "homecook.pending-recipe-action";
 const RECIPE_ID = "mock-kimchi-jjigae";
@@ -193,6 +195,48 @@ async function mockRecipeSaveRoutes(page: Page) {
 }
 
 test.describe("Slice 04 recipe save flow", () => {
+  test("logged-in user can save from a HOME recipe card", async (
+    { page },
+    testInfo,
+  ) => {
+    await installAuthenticatedSession(page);
+    await installDiscoveryRoutes(page);
+    await mockRecipeSaveRoutes(page);
+
+    await page.goto("/");
+
+    const saveActionButton = page
+      .getByRole("button", { name: "집밥 김치찌개 저장" })
+      .first();
+    await expect(saveActionButton).toBeVisible();
+    await expect(saveActionButton).toHaveAttribute("aria-pressed", "false");
+
+    await saveActionButton.click();
+
+    const modal = page.getByRole("dialog");
+    await expect(modal.getByRole("heading", { name: "레시피 저장" })).toBeVisible();
+
+    await modal
+      .getByRole("button", {
+        name: /(\d+개 레시피북에 (추가 )?저장|^저장$)/,
+      })
+      .click();
+
+    await expect(modal).not.toBeVisible();
+    await expect(saveActionButton).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      page.locator("article:visible").filter({ hasText: "90저장" }).first(),
+    ).toBeVisible();
+
+    await saveActionButton.click();
+    await expect(modal.getByText("이미 저장됨").first()).toBeVisible();
+
+    const saveButtonName = isDesktopProject(testInfo) ? "이미 저장됨" : "저장";
+    await expect(
+      modal.getByRole("button", { name: saveButtonName }).last(),
+    ).toBeDisabled();
+  });
+
   test("logged-in user can save to an existing recipe book", async (
     { page },
     testInfo,
@@ -215,7 +259,11 @@ test.describe("Slice 04 recipe save flow", () => {
       modal.getByText(isDesktopProject(testInfo) ? "폴더 선택" : "레시피북 다중 선택"),
     ).toBeVisible();
 
-    await modal.getByRole("button", { name: /(\d+개 레시피북에 저장|^저장$)/ }).click();
+    await modal
+      .getByRole("button", {
+        name: /(\d+개 레시피북에 (추가 )?저장|^저장$)/,
+      })
+      .click();
 
     await expect(modal).not.toBeVisible();
     await expect(saveActionButton).toHaveAttribute("aria-pressed", "true");
@@ -251,7 +299,11 @@ test.describe("Slice 04 recipe save flow", () => {
     }
 
     await expect(modal.getByRole("button", { name: /오늘 저녁/ })).toBeVisible();
-    await modal.getByRole("button", { name: /(\d+개 레시피북에 저장|^저장$)/ }).click();
+    await modal
+      .getByRole("button", {
+        name: /(\d+개 레시피북에 (추가 )?저장|^저장$)/,
+      })
+      .click();
 
     await expect(modal).not.toBeVisible();
     await expect(saveActionButton).toHaveAttribute("aria-pressed", "true");
