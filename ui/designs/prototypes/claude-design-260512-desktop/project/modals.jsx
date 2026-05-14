@@ -69,19 +69,19 @@ function SaveRow({ checked, onToggle, title, count, icon }) {
 }
 
 /* ---------------- Planner add modal ---------------- */
-function PlannerAddModal({ open, recipeId, defaultDate, defaultCol, onClose, onConfirm }) {
+function PlannerAddModal({ open, recipeId, defaultDate, defaultCol, defaultServings, onClose, onConfirm }) {
   const recipe = recipeId ? DM.RECIPE[recipeId] : null;
   const [dateISO, setDate] = useStateM(defaultDate || DM.TODAY_ISO);
   const [col, setCol] = useStateM(defaultCol || "col-d");
-  const [servings, setServings] = useStateM(recipe?.baseServings || 2);
+  const [servings, setServings] = useStateM(defaultServings || recipe?.baseServings || 2);
 
   useEffectM(() => {
     if (open) {
       setDate(defaultDate || DM.TODAY_ISO);
       setCol(defaultCol || "col-d");
-      setServings(recipe?.baseServings || 2);
+      setServings(defaultServings || recipe?.baseServings || 2);
     }
-  }, [open, defaultDate, defaultCol, recipeId]);
+  }, [open, defaultDate, defaultCol, defaultServings, recipeId]);
 
   if (!recipe) return null;
 

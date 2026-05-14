@@ -1,0 +1,12 @@
+{
+  "url": "http://127.0.0.1:4174/homecook%20desktop%20prototype.html",
+  "firstLeftoverTitle": "소불고기",
+  "cookedTitle": "김치볶음밥",
+  "checks": [
+    "leftover planner add opens PlannerAddModal with leftover recipe and servings context",
+    "leftover mark-ate moves the same recipe to ATE_LIST",
+    "ATE_LIST undo restores the same recipe to LEFTOVERS",
+    "planner cook completion creates a new LEFTOVERS record for the cooked recipe"
+  ],
+  "errors": []
+}

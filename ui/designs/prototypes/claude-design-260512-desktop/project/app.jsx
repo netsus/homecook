@@ -130,8 +130,8 @@ function App() {
   const [meals, setMeals] = useStateA(() => DA.MEALS);
   const [shoppingLists, setShoppingLists] = useStateA(() => DA.SHOPPING_LISTS.map(normalizeShoppingList));
   const [activeShoppingListId, setActiveShoppingListId] = useStateA(() => latestActiveShoppingList(DA.SHOPPING_LISTS)?.id || null);
-  const [leftovers] = useStateA(() => DA.LEFTOVERS.map(normalizeLeftover));
-  const [ateItems] = useStateA(() => DA.ATE.map(normalizeAteItem));
+  const [leftovers, setLeftovers] = useStateA(() => DA.LEFTOVERS.map(normalizeLeftover));
+  const [ateItems, setAteItems] = useStateA(() => DA.ATE.map(normalizeAteItem));
   const [recipebooks] = useStateA(() => DA.RECIPEBOOKS.map(normalizeRecipebook));
   const [savedFilters, setSavedFilters] = useStateA(() => new Set());
 
@@ -150,7 +150,7 @@ function App() {
 
   // Modals
   const [saveModal, setSaveModal] = useStateA({ open: false, recipeId: null });
-  const [plannerAddModal, setPlannerAddModal] = useStateA({ open: false, recipeId: null, date: null, col: null });
+  const [plannerAddModal, setPlannerAddModal] = useStateA({ open: false, recipeId: null, date: null, col: null, servings: null });
   const [servingsConfirm, setServingsConfirm] = useStateA({ open: false, recipe: null, date: null, col: null, lockedSlot: false });
   const [filterModal, setFilterModal] = useStateA({ open: false });
   const [lightbox, setLightbox] = useStateA({ open: false, photos: [], idx: 0 });
@@ -372,6 +372,79 @@ function App() {
     toast("장보기를 완료했어요");
   }, [completeShoppingList, toast]);
 
+  const leftoverNote = useCallbackA((recipe, servings) => {
+    return `${recipe?.title || "요리"} ${servings}인분`;
+  }, []);
+
+  const recordPlannerLeftover = useCallbackA((meal, recipe) => {
+    if (!meal || !recipe) return;
+    const servings = Math.max(1, Math.ceil((meal.servings || recipe.baseServings || 2) / 2));
+    const leftover = normalizeLeftover({
+      id: `lf-${meal.id}`,
+      recipeId: meal.recipeId,
+      createdAt: DA.TODAY_ISO,
+      note: leftoverNote(recipe, servings),
+      servings,
+      sourceMealId: meal.id,
+      sourceDate: meal.date,
+      sourceCol: meal.col,
+    });
+    setLeftovers(prev => [
+      leftover,
+      ...prev.filter(item => item.sourceMealId !== meal.id),
+    ]);
+  }, [leftoverNote]);
+
+  const reAddLeftoverToPlanner = useCallbackA((leftoverId) => {
+    const leftover = leftovers.find(item => item.id === leftoverId);
+    if (!leftover) return;
+    const date = DA.WEEK_DATES.some(day => day.iso === leftover.sourceDate) ? leftover.sourceDate : DA.TODAY_ISO;
+    setPlannerAddModal({
+      open: true,
+      recipeId: leftover.recipeId,
+      date,
+      col: leftover.sourceCol || "col-d",
+      servings: leftover.servings || DA.RECIPE[leftover.recipeId]?.baseServings || 2,
+    });
+  }, [leftovers]);
+
+  const moveLeftoverToAte = useCallbackA((leftoverId) => {
+    const leftover = leftovers.find(item => item.id === leftoverId);
+    if (!leftover) return;
+    const ateItem = normalizeAteItem({
+      id: `a-${leftover.id}-${Date.now()}`,
+      recipeId: leftover.recipeId,
+      ateAt: DA.TODAY_ISO,
+      servings: leftover.servings || 1,
+      sourceMealId: leftover.sourceMealId || null,
+      sourceDate: leftover.sourceDate || leftover.createdAt || DA.TODAY_ISO,
+      sourceCol: leftover.sourceCol || null,
+    });
+    setLeftovers(prev => prev.filter(item => item.id !== leftoverId));
+    setAteItems(prev => [ateItem, ...prev]);
+    toast("다먹은 목록에 추가했어요");
+  }, [leftovers, toast]);
+
+  const undoAteToLeftover = useCallbackA((ateItemId) => {
+    const ateItem = ateItems.find(item => item.id === ateItemId);
+    if (!ateItem) return;
+    const recipe = DA.RECIPE[ateItem.recipeId];
+    const servings = ateItem.servings || 1;
+    const leftover = normalizeLeftover({
+      id: `lf-${ateItem.id}-${Date.now()}`,
+      recipeId: ateItem.recipeId,
+      createdAt: DA.TODAY_ISO,
+      note: leftoverNote(recipe, servings),
+      servings,
+      sourceMealId: ateItem.sourceMealId || null,
+      sourceDate: ateItem.sourceDate || ateItem.ateAt || DA.TODAY_ISO,
+      sourceCol: ateItem.sourceCol || null,
+    });
+    setAteItems(prev => prev.filter(item => item.id !== ateItemId));
+    setLeftovers(prev => [leftover, ...prev]);
+    toast("남은 요리로 되돌렸어요");
+  }, [ateItems, leftoverNote, toast]);
+
   const completeCookSession = useCallbackA(({ mealId, recipe, deductIds = [] }) => {
     setPantryHeld(prev => {
       const next = new Set(prev);
@@ -379,19 +452,22 @@ function App() {
       return next;
     });
     const fromPlanner = Boolean(mealId);
+    const meal = fromPlanner ? meals.find(item => item.id === mealId) : null;
+    const cookedRecipe = recipe || (meal ? DA.RECIPE[meal.recipeId] : null);
     if (fromPlanner) {
       setMeals(prev => prev.map(meal => meal.id === mealId ? { ...meal, status: "cooked" } : meal));
+      recordPlannerLeftover(meal, cookedRecipe);
     }
     toast(fromPlanner
       ? `요리 완료! ${deductIds.length}개 재료를 차감했어요`
-      : `${recipe?.title || "요리"} 완료! ${deductIds.length}개 재료를 차감했어요`);
+      : `${cookedRecipe?.title || "요리"} 완료! ${deductIds.length}개 재료를 차감했어요`);
     if (fromPlanner) {
       setStack([{ screen: "PLANNER_WEEK" }]);
       window.scrollTo({ top: 0, behavior: "instant" });
     } else {
       pop();
     }
-  }, [toast]);
+  }, [meals, recordPlannerLeftover, toast]);
 
   // Save toggle (from PhotoCard)
   const toggleSave = (rid) => {
@@ -463,7 +539,7 @@ function App() {
       onOpenPlannerAdd={(rid, servings) => requireAuth({
         actionLabel: "플래너에 레시피 추가",
         helper: "플래너에 식단을 등록하려면 로그인이 필요해요.",
-      }, () => setPlannerAddModal({ open: true, recipeId: rid, date: DA.TODAY_ISO, col: "col-d" }))}
+      }, () => setPlannerAddModal({ open: true, recipeId: rid, date: DA.TODAY_ISO, col: "col-d", servings }))}
       onOpenSave={() => requireAuth({
         actionLabel: "레시피북에 저장",
         helper: "저장할 레시피북을 고르려면 로그인이 필요해요.",
@@ -480,7 +556,7 @@ function App() {
           actionLabel: recipeId ? "플래너에 레시피 추가" : "플래너에 메뉴 추가",
           helper: "플래너를 편집하려면 로그인이 필요해요.",
         }, () => {
-          if (recipeId) setPlannerAddModal({ open: true, recipeId, date: date || DA.TODAY_ISO, col: col || "col-d" });
+          if (recipeId) setPlannerAddModal({ open: true, recipeId, date: date || DA.TODAY_ISO, col: col || "col-d", servings: null });
           else push({ screen: "MENU_ADD", date, col });
         });
       }}
@@ -661,8 +737,8 @@ function App() {
         const lf = leftovers.find(l => l.id === lfId);
         if (lf) push({ screen: "COOK_MODE_STANDALONE", recipeId: lf.recipeId });
       }}
-      onMarkAte={() => toast("다 먹은 목록에 추가했어요")}
-      onReAddToPlanner={() => toast("플래너에 다시 추가했어요 (데모)")}
+      onMarkAte={moveLeftoverToAte}
+      onReAddToPlanner={reAddLeftoverToPlanner}
       onGoAteList={() => push({ screen: "ATE_LIST" })}
     />;
   } else if (s === "ATE_LIST") {
@@ -670,7 +746,7 @@ function App() {
       ateItems={ateItems}
       onBack={pop}
       onOpenRecipe={(rid) => push({ screen: "RECIPE", recipeId: rid })}
-      onUndoAte={() => toast("남은 요리로 되돌렸어요 (데모)")}
+      onUndoAte={undoAteToLeftover}
       onRecreate={(rid) => push({ screen: "COOK_MODE_STANDALONE", recipeId: rid })}
       onGoLeftovers={() => push({ screen: "LEFTOVERS" })}
     />;
@@ -750,11 +826,12 @@ function App() {
         recipeId={plannerAddModal.recipeId}
         defaultDate={plannerAddModal.date}
         defaultCol={plannerAddModal.col}
-        onClose={() => setPlannerAddModal({ open: false, recipeId: null, date: null, col: null })}
+        defaultServings={plannerAddModal.servings}
+        onClose={() => setPlannerAddModal({ open: false, recipeId: null, date: null, col: null, servings: null })}
         onConfirm={({ recipeId, date, col, servings }) => {
           const id = `m-${Date.now()}`;
           setMeals(ms => [...ms, { id, recipeId, date, col, servings, status: "registered" }]);
-          setPlannerAddModal({ open: false, recipeId: null, date: null, col: null });
+          setPlannerAddModal({ open: false, recipeId: null, date: null, col: null, servings: null });
           toast("플래너에 추가했어요");
         }}
       />
