@@ -1,0 +1,122 @@
+/* ============================================
+   Phase 8 — Full-surface QA polish
+   ============================================ */
+
+@media (max-width: 720px) {
+  :root {
+    --nav-h: 56px;
+  }
+
+  .topnav-inner {
+    min-width: 0;
+    padding: 0 16px;
+    gap: 14px;
+  }
+
+  .topnav-brand {
+    flex: 0 0 auto;
+    font-size: 18px;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  .topnav-tabs {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .topnav-tab {
+    min-width: 0;
+    padding: 8px 4px;
+    font-size: 12px;
+    letter-spacing: 0;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topnav-right {
+    flex: 0 0 auto;
+    gap: 0;
+  }
+
+  .topnav-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .planner-grid {
+    grid-template-columns: 54px repeat(7, 92px);
+    overflow-x: auto;
+  }
+
+  .planner-head,
+  .planner-cell,
+  .planner-cell.timecol {
+    min-width: 0;
+  }
+
+  .planner-meal {
+    min-width: 0;
+  }
+
+  .pantry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .mypage .my-hero {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .my-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .my-stat {
+    min-width: 0;
+    padding: 0 4px;
+  }
+
+  .my-stat-num {
+    font-size: 24px;
+  }
+
+  .my-stat-lbl {
+    white-space: normal;
+  }
+
+  .my-stat-divider {
+    display: none;
+  }
+}
+
+@media (max-width: 430px) {
+  .topnav-inner {
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  .topnav-brand {
+    font-size: 16px;
+  }
+
+  .topnav-brand .dot {
+    display: none;
+  }
+
+  .topnav-tab {
+    font-size: 11px;
+    padding-inline: 2px;
+  }
+}
