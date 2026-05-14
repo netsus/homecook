@@ -484,6 +484,33 @@ main.screen.create-screen {
   letter-spacing: 0;
 }
 
+.servings-confirm-slot-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--brand-wash);
+}
+
+.servings-confirm-slot-label {
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.servings-confirm-slot-value {
+  color: var(--brand-deep);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
 .manual-ing-picker .filter-grid {
   max-height: 320px;
 }
