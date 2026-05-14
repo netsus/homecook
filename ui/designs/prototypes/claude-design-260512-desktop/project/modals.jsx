@@ -118,12 +118,12 @@ function PlannerAddModal({ open, recipeId, defaultDate, defaultCol, onClose, onC
 }
 
 /* ---------------- Planned servings confirm (menu add pickers) ---------------- */
-function PlannedServingsConfirmModal({ open, recipe, defaultDate, defaultCol, onClose, onConfirm }) {
+function PlannedServingsConfirmModal({ open, recipe, defaultDate, defaultCol, lockedSlot = false, onClose, onConfirm }) {
   const [dateISO, setDate] = useStateM(defaultDate || DM.TODAY_ISO);
   const [col, setCol] = useStateM(defaultCol || "col-d");
   const [servings, setServings] = useStateM(recipe?.baseServings || 2);
   const bodyRef = useRefM(null);
-  const lockedPlannerSlot = Boolean(defaultDate && defaultCol);
+  const lockedPlannerSlot = Boolean(lockedSlot && defaultDate && defaultCol);
 
   useEffectM(() => {
     if (!open) return;

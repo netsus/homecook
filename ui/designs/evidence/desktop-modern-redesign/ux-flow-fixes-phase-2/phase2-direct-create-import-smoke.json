@@ -1,0 +1,28 @@
+{
+  "url": "http://127.0.0.1:4174/homecook%20desktop%20prototype.html",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "scenarios": [
+    {
+      "scenario": "manual-create",
+      "directPlannerReturn": true,
+      "modalCount": 0,
+      "addedTitle": "테스트 된장국"
+    },
+    {
+      "scenario": "youtube-import",
+      "directPlannerReturn": true,
+      "modalCount": 0,
+      "addedTitle": "김치볶음밥"
+    },
+    {
+      "scenario": "search-regression",
+      "phase1Slot": "화 5/12 · 저녁",
+      "phase1DateChips": 0
+    }
+  ],
+  "consoleErrors": [],
+  "pageErrors": []
+}
