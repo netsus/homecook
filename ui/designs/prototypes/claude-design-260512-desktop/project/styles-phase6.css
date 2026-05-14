@@ -1,0 +1,338 @@
+/* ============================================
+   Phase 6 — Pantry & Shopping
+   ============================================ */
+
+.pantry-cat-tabs {
+  display: flex;
+  gap: 0;
+  margin: 0 -32px;
+  padding: 0 32px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.pantry-cat-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 20px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.pantry-cat-tab:hover {
+  color: var(--text-1);
+}
+
+.pantry-cat-tab.active {
+  color: var(--brand-deep);
+  border-bottom-color: var(--brand);
+}
+
+.pantry-cat-tab:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+.pantry-cat-tab-count {
+  min-width: 34px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: var(--r-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-alt);
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pantry-cat-tab.active .pantry-cat-tab-count {
+  color: var(--brand-deep);
+  background: rgba(0, 161, 255, 0.12);
+}
+
+.pantry-panel {
+  margin-top: 20px;
+}
+
+.pantry-toolbar {
+  margin-top: 18px;
+}
+
+.pantry-search {
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.pantry-search:focus-within {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+.pantry-card:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.pantry-card {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+}
+
+.shopping-history-section {
+  margin-bottom: 32px;
+}
+
+.shopping-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shopping-history-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.shopping-history-row:hover {
+  border-color: rgba(0, 0, 0, 0.16);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
+}
+
+.shopping-history-row:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.shopping-history-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.shopping-history-dot.active {
+  background: var(--brand);
+}
+
+.shopping-history-dot.done {
+  background: var(--success);
+}
+
+.shopping-history-body {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.shopping-history-title,
+.shopping-history-meta {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shopping-history-title {
+  color: var(--text-1);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.shopping-history-meta {
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.shopping-readonly-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: var(--r-md);
+  background: var(--bg-alt);
+  color: var(--text-2);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  margin-bottom: 20px;
+}
+
+.shopping-flow-card:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.shopping-flow-card.primary {
+  border-left: 3px solid var(--brand);
+}
+
+.shopping-flow-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.shopping-flow-cta.primary {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: white;
+}
+
+.shopping-progress-card {
+  background: var(--brand-wash);
+  border: 1px solid rgba(0, 161, 255, 0.15);
+}
+
+.check-row {
+  border: none;
+  background: transparent;
+}
+
+.check-row:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.check-row.on .check-name {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.shopping-side-card {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+.pantry-include-row {
+  padding: 12px 0;
+}
+
+.pantry-include-btn {
+  border-radius: var(--r-sm);
+}
+
+.pantry-include-btn:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.bundle-card {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 16px 20px;
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.bundle-card:hover {
+  border-color: rgba(0, 0, 0, 0.16);
+}
+
+.bundle-card.on {
+  border-color: var(--brand);
+  background: var(--brand-wash);
+}
+
+.bundle-card:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.bundle-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.bundle-card-title {
+  color: var(--text-1);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.bundle-card-meta {
+  color: var(--text-3);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.bundle-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bundle-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  background: var(--bg-alt);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bundle-tag.have {
+  color: var(--success);
+  background: rgba(26, 174, 57, 0.08);
+}
+
+.filter-modal-body .filter-grid {
+  gap: 10px;
+}
+
+.filter-modal-body .filter-cell:focus-visible,
+.save-row:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+@media (min-width: 1440px) {
+  .pantry-cat-tabs {
+    margin: 0 -40px;
+    padding: 0 40px;
+  }
+}
