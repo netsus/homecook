@@ -9,6 +9,11 @@ Ledger: `PHASE0_PARITY_LEDGER.md`
 CSS target: `styles-phase7.css` (loaded after `styles-phase6.css`)
 Evidence target: `ui/designs/evidence/desktop-modern-redesign/phase-7/`
 
+Post-review correction: Phase 7 implemented pantry deduction as the reachable inline
+`CookIngredientChecklist` rail inside planner/standalone cook mode, not as a separate
+`ConsumedIngredientSheet` modal. Claude/Ralph review on 2026-05-14 accepted the inline
+surface and removed the stale dead modal/evidence.
+
 ---
 
 ## 1. Phase 7 Rows To Close (7 rows)
@@ -23,11 +28,11 @@ Evidence target: `ui/designs/evidence/desktop-modern-redesign/phase-7/`
 | `screen:LEFTOVERS` | `open` | Redesign — richer card grid with status tags, action buttons, empty state, filter support, leftover-to-planner re-add flow |
 | `screen:ATE_LIST` | `open` | Redesign — table-like list with undo/recreate actions, empty state, filter support, recipe link |
 
-### Modals (2)
+### Cook Deduction Surface + Modal (2)
 
 | Row | Current status | Phase 7 action |
 | --- | --- | --- |
-| `modal:COOK_MODE::ConsumedIngredientSheet` | `open` | New modal — pantry deduction checklist after cooking, shows recipe ingredients with checkboxes, deducts selected from pantry |
+| `surface:COOK_MODE::CookIngredientChecklist` | `open` | Inline pantry deduction rail in planner/standalone cook mode; shows recipe ingredients with checkboxes and deducts selected from pantry |
 | `modal:COOK_MODE::CookNoticeDialog` | `open` | Replace — current notice-only dialog replaced with a useful redirect dialog that routes to `COOK_READY_LIST` or explains desktop cook mode |
 
 ---
@@ -109,13 +114,8 @@ window.HC_DATA = {
 ### 5.2 New app state
 
 ```javascript
-// Add to App() state declarations:
-const [consumedSheet, setConsumedSheet] = useStateA({
-  open: false,
-  recipe: null,
-  mealId: null,        // null for standalone cook
-  ingredients: [],
-});
+// No separate cook-deduction modal state is needed.
+// CookIngredientChecklist keeps its own selected ids and calls completeCookSession.
 ```
 
 ### 5.3 Routing changes
@@ -163,14 +163,7 @@ if (s === "COOK_MODE_STANDALONE") return "";
     meal={meal}
     recipe={meal ? DA.RECIPE[meal.recipeId] : null}
     onBack={pop}
-    onComplete={(mealId, recipe) => {
-      setConsumedSheet({
-        open: true,
-        recipe,
-        mealId,
-        ingredients: recipe.ingredients.filter(i => i.id),
-      });
-    }}
+    onComplete={(mealId, recipe, deductIds) => completeCookSession({ mealId, recipe, deductIds })}
     pantryHeld={pantryHeld}
   />;
 } else if (s === "COOK_MODE_STANDALONE") {
@@ -178,57 +171,18 @@ if (s === "COOK_MODE_STANDALONE") return "";
   body = <CookModeStandaloneScreen
     recipe={recipe}
     onBack={pop}
-    onComplete={(recipe) => {
-      setConsumedSheet({
-        open: true,
-        recipe,
-        mealId: null,
-        ingredients: recipe.ingredients.filter(i => i.id),
-      });
-    }}
+    onComplete={(recipe, deductIds) => completeCookSession({ recipe, deductIds })}
     pantryHeld={pantryHeld}
   />;
 }
 ```
 
-### 5.6 ConsumedIngredientSheet wiring
+### 5.6 CookIngredientChecklist completion wiring
 
-Add after existing modal renders:
-
-```javascript
-<ConsumedIngredientSheet
-  open={consumedSheet.open}
-  recipe={consumedSheet.recipe}
-  mealId={consumedSheet.mealId}
-  ingredients={consumedSheet.ingredients}
-  pantryHeld={pantryHeld}
-  onClose={() => setConsumedSheet({ open: false, recipe: null, mealId: null, ingredients: [] })}
-  onConfirm={(deductIds) => {
-    // Deduct from pantry
-    setPantryHeld(p => {
-      const n = new Set(p);
-      deductIds.forEach(id => n.delete(id));
-      return n;
-    });
-    // If planner cook, mark meal as cooked
-    if (consumedSheet.mealId) {
-      setMeals(ms => ms.map(m => m.id === consumedSheet.mealId ? { ...m, status: "cooked" } : m));
-    }
-    setConsumedSheet({ open: false, recipe: null, mealId: null, ingredients: [] });
-    const fromPlanner = Boolean(consumedSheet.mealId);
-    toast(fromPlanner
-      ? `요리 완료! ${deductIds.length}개 재료를 차감했어요`
-      : `${deductIds.length}개 재료를 팬트리에서 차감했어요`
-    );
-    if (fromPlanner) {
-      setStack([{ screen: "PLANNER_WEEK" }]);
-      window.scrollTo({ top: 0, behavior: "instant" });
-    } else {
-      pop();
-    }
-  }}
-/>
-```
+The shipped desktop implementation uses the reachable inline `CookIngredientChecklist`
+rail as the authoritative pantry deduction surface. It calls `completeCookSession`
+with selected deduction ids; planner mode mutates meal status, while standalone mode
+only deducts pantry items.
 
 ### 5.7 CookNoticeDialog replacement
 
@@ -295,14 +249,8 @@ window.HC_S3 = {
 };
 ```
 
-Add `ConsumedIngredientSheet` to `window.HC_MODALS`:
-
-```javascript
-window.HC_MODALS = {
-  // ... existing exports ...
-  ConsumedIngredientSheet,
-};
-```
+No cook-deduction modal export is needed; the reachable deduction UI is
+`CookIngredientChecklist` inside `screens-3.jsx`.
 
 ---
 
@@ -550,7 +498,7 @@ function CookModePlannerScreen({ meal, recipe, onBack, onComplete, pantryHeld })
             recipe={recipe}
             servings={meal.servings}
             pantryHeld={pantryHeld}
-            onComplete={(deductIds) => onComplete(meal.id, recipe)}
+            onComplete={(deductIds) => onComplete(meal.id, recipe, deductIds)}
             onCancel={onBack}
           />
         </aside>
@@ -560,9 +508,9 @@ function CookModePlannerScreen({ meal, recipe, onBack, onComplete, pantryHeld })
 }
 ```
 
-**Key: The actual deduction happens via `onComplete(mealId, recipe)` which opens `ConsumedIngredientSheet`. The inline checklist in the sidebar is a preview/reference — the modal is the authoritative deduction surface.**
-
-However, for desktop UX quality, provide an inline checklist in the rail that lets users preview which ingredients they'll deduct. The "요리 완료" button in the rail fires `onComplete(mealId, recipe)` which opens the `ConsumedIngredientSheet` modal for final confirmation.
+**Key: The actual deduction happens through `CookIngredientChecklist` in the sidebar.**
+The "요리 완료" button passes the selected ingredient ids directly to the cook completion
+handler, so the rail is the authoritative reachable deduction surface.
 
 ---
 
@@ -625,7 +573,7 @@ function CookModeStandaloneScreen({ recipe, onBack, onComplete, pantryHeld }) {
             recipe={recipe}
             servings={recipe.baseServings}
             pantryHeld={pantryHeld}
-            onComplete={(deductIds) => onComplete(recipe)}
+            onComplete={(deductIds) => onComplete(recipe, deductIds)}
             onCancel={onBack}
           />
         </aside>
@@ -658,7 +606,7 @@ function CookStepCard({ step, index }) {
 }
 ```
 
-#### `CookIngredientChecklist` (inline sidebar preview)
+#### `CookIngredientChecklist` (inline sidebar rail)
 
 ```jsx
 function CookIngredientChecklist({ recipe, servings, pantryHeld, onComplete, onCancel }) {
@@ -726,96 +674,21 @@ function CookIngredientChecklist({ recipe, servings, pantryHeld, onComplete, onC
 
 ---
 
-### 6.5 `modal:COOK_MODE::ConsumedIngredientSheet` — Pantry Deduction Modal
+### 6.5 `surface:COOK_MODE::CookIngredientChecklist` — Pantry Deduction Rail
 
-**Purpose:** Final confirmation modal for pantry ingredient deduction after cooking. Shows all deductible ingredients with checkboxes, count summary, and confirm/skip actions.
+**Purpose:** Reachable inline pantry ingredient deduction surface inside cook mode.
+It shows all recipe ingredients, preselects pantry-held items, supports toggling
+individual deductions, and allows completing with zero selected items.
 
-**Component:** `ConsumedIngredientSheet` in `modals.jsx`
-
-**Props:**
-```javascript
-function ConsumedIngredientSheet({ open, recipe, mealId, ingredients, pantryHeld, onClose, onConfirm })
-```
+**Component:** `CookIngredientChecklist` in `screens-3.jsx`
 
 **Behavior:**
-- Opens after user clicks "요리 완료" in cook mode
-- Pre-selects all ingredients that are currently in pantry (`pantryHeld`)
-- User can toggle individual ingredients
-- "건너뛰기" closes without deduction (but still marks planner meal as cooked if `mealId` exists)
-- "요리 완료 (N개 차감)" confirms and deducts selected ingredients
-
-**3-way semantics (parallels pantry reflect):**
-- Close/skip without confirm → `onClose()` → no deduction, but meal still marked cooked
-- Confirm with 0 selected → `onConfirm([])` → no deduction, meal marked cooked
-- Confirm with selections → `onConfirm([id1, id2, ...])` → deduct these from pantry
-
-**Markup pattern:**
-
-```jsx
-function ConsumedIngredientSheet({ open, recipe, mealId, ingredients, pantryHeld, onClose, onConfirm }) {
-  const [picked, setPicked] = useState(new Set());
-
-  useEffect(() => {
-    if (open) {
-      // Pre-select ingredients currently in pantry
-      setPicked(new Set(ingredients.filter(i => pantryHeld?.has(i.id)).map(i => i.id)));
-    }
-  }, [open, ingredients, pantryHeld]);
-
-  const toggle = (id) => setPicked(prev => {
-    const n = new Set(prev);
-    if (n.has(id)) n.delete(id); else n.add(id);
-    return n;
-  });
-
-  if (!recipe) return null;
-
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="재료 차감"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>건너뛰기</Button>
-          <Button variant="primary" leftIcon="check" onClick={() => onConfirm([...picked])}>
-            요리 완료 ({picked.size}개 차감)
-          </Button>
-        </>
-      }
-    >
-      <div className="consumed-sheet">
-        <p className="consumed-desc">
-          {mealId ? "이 끼니에서 사용한 재료를 팬트리에서 차감합니다." : "이 레시피에서 사용한 재료를 팬트리에서 차감합니다."}
-        </p>
-        <div className="consumed-list">
-          {ingredients.map(ing => {
-            const name = ing.id ? D3.ING[ing.id]?.name : ing.name;
-            const inPantry = pantryHeld?.has(ing.id);
-            return (
-              <button
-                key={ing.id}
-                className={`consumed-item ${picked.has(ing.id) ? "on" : ""}`}
-                onClick={() => toggle(ing.id)}
-                type="button"
-              >
-                <span className={`check-box ${picked.has(ing.id) ? "on" : ""}`}>
-                  {picked.has(ing.id) && <Icon name="check" size={12} />}
-                </span>
-                <span className="consumed-name">{name}</span>
-                <span className="consumed-amount tabular">
-                  {ing.amount}{ing.unit ? ` ${ing.unit}` : ""}
-                </span>
-                {inPantry && <Tag variant="brand" size="sm">보유</Tag>}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </Dialog>
-  );
-}
-```
+- Renders in both planner and standalone cook mode.
+- Pre-selects ingredients currently in pantry (`pantryHeld`).
+- User can toggle individual ingredient deductions.
+- "요리 완료 (N개 차감)" confirms with the selected ids.
+- Empty selection is valid and completes with no pantry deduction.
+- Planner mode additionally marks the source meal cooked; standalone mode does not mutate meal status.
 
 ---
 
@@ -1379,67 +1252,10 @@ main.cook-mode-screen {
 }
 ```
 
-### 7.5 Consumed Ingredient Sheet (Modal)
+### 7.5 Cook Ingredient Checklist Rail
 
-```css
-/* --- Consumed Ingredient Sheet --- */
-.consumed-sheet {
-  padding: 4px 0;
-}
-
-.consumed-desc {
-  font-size: 14px;
-  color: var(--text-2);
-  margin-bottom: 16px;
-  line-height: 1.5;
-}
-
-.consumed-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.consumed-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 12px;
-  border: none;
-  border-radius: var(--r-sm);
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-  transition: background 0.1s ease;
-}
-
-.consumed-item:hover {
-  background: var(--bg-alt);
-}
-
-.consumed-item.on .consumed-name {
-  text-decoration: line-through;
-  color: var(--text-3);
-}
-
-.consumed-name {
-  flex: 1;
-  font-size: 14px;
-  color: var(--text-1);
-}
-
-.consumed-amount {
-  font-size: 13px;
-  color: var(--text-3);
-}
-
-.consumed-item:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: -2px;
-}
-```
+The shipped CSS for the reachable deduction surface is under the `.cook-rail-*`
+classes in `styles-phase7.css`.
 
 ### 7.6 Leftover Card Polish
 
@@ -1564,7 +1380,6 @@ main.cook-mode-screen {
 | `cook-mode-planner-1024.png` | Planner cook mode at 1024px | 1024 | 2-col layout or stacked, brand header border, planner context |
 | `cook-mode-planner-1280.png` | Planner cook mode at 1280px | 1280 | 2-col layout, step cards with method colors, sticky rail |
 | `cook-mode-standalone-1280.png` | Standalone cook mode | 1280 | Different header (no brand border), info notice, no status pill |
-| `consumed-sheet-1280.png` | ConsumedIngredientSheet modal open | 1280 | Ingredient checkboxes, "보유" tags, deduction count, skip/confirm |
 | `cook-notice-1280.png` | Updated CookNoticeDialog | 1280 | New copy, "요리 준비 목록" CTA, desktop cooking checklist |
 | `leftovers-1024.png` | LeftoversScreen at 1024px | 1024 | Card grid, status tags, action buttons |
 | `leftovers-1280.png` | LeftoversScreen at 1280px | 1280 | 3-col grid, cross-nav to ate list, cards with actions |
@@ -1584,8 +1399,8 @@ Total: 13 PNGs + 1 JSON = **14 evidence files**
 | 1 | Cooking is not notice-only | `COOK_READY_LIST`, `COOK_MODE_PLANNER`, and `COOK_MODE_STANDALONE` are real desktop screens with recipe steps and ingredient checklists — not just a "mobile only" dialog |
 | 2 | No serving adjustment UI in cook mode | Neither `CookModePlannerScreen` nor `CookModeStandaloneScreen` contains a `Stepper` or any servings input. Servings are display-only. |
 | 3 | Planner cook and standalone cook are visually distinct | Planner mode: brand-colored header border, status pill, planner context (date/slot/servings). Standalone mode: neutral header border, info notice, no status pill. |
-| 4 | Planner cook completion marks meal as `cooked` | `ConsumedIngredientSheet.onConfirm` → `setMeals(ms => ms.map(m => m.id === mealId ? { ...m, status: "cooked" } : m))` |
-| 5 | Standalone cook does NOT mutate meal status | `consumedSheet.mealId` is `null` for standalone cook → no `setMeals` call |
+| 4 | Planner cook completion marks meal as `cooked` | `CookIngredientChecklist` → `completeCookSession({ mealId, ... })` → planner-only `setMeals` mutation |
+| 5 | Standalone cook does NOT mutate meal status | `CookIngredientChecklist` → `completeCookSession({ recipe, ... })` without `mealId` → no `setMeals` call |
 | 6 | Consumed ingredient flow deducts from pantry | `setPantryHeld(p => { const n = new Set(p); deductIds.forEach(id => n.delete(id)); return n; })` |
 | 7 | Leftovers and ate list have useful desktop states | Filter/empty states, cross-navigation between leftovers ↔ ate list, action buttons (re-add, cook, undo, recreate) |
 | 8 | Phase 8 rows remain open | No Phase 8 rows closed by this phase |
@@ -1619,7 +1434,7 @@ Change Phase 7 row in the summary table:
 ### Modal rows to update
 
 ```markdown
-| `modal:COOK_MODE::ConsumedIngredientSheet` | `modals.jsx::ConsumedIngredientSheet` | `ConsumedIngredientSheet`, `DesktopConsumedIngredientDialog` | Phase 7 | `verified` | Evidence: `consumed-sheet-1280.png` and `visual-qa-report.json`; ingredient checkboxes, pantry deduction, planner/standalone distinction verified. |
+| `surface:COOK_MODE::CookIngredientChecklist` | `screens-3.jsx::CookIngredientChecklist` | `ConsumedIngredientSheet`, `DesktopConsumedIngredientDialog` | Phase 7 | `verified` | Evidence: `cook-mode-planner-1280.png`, `cook-mode-standalone-1280.png`, and `visual-qa-report.json`; reachable inline ingredient checkboxes, pantry deduction, and planner/standalone distinction verified. |
 | `modal:COOK_MODE::CookNoticeDialog` | `screens-3.jsx::CookNoticeDialog` | notice/advisory only | Phase 7 | `verified` | Evidence: `cook-notice-1280.png` and `visual-qa-report.json`; replaced with desktop cook mode redirect dialog. |
 ```
 
@@ -1635,7 +1450,7 @@ Change Phase 7 row in the summary table:
 6. **`screens-3.jsx` CookReadyListScreen** — New cook-ready list with date grouping.
 7. **`screens-3.jsx` CookModePlannerScreen** — Planner cook mode with brand header.
 8. **`screens-3.jsx` CookModeStandaloneScreen** — Standalone cook mode with neutral header.
-9. **`modals.jsx` ConsumedIngredientSheet** — Pantry deduction modal.
+9. **`screens-3.jsx` CookIngredientChecklist** — Reachable inline pantry deduction rail.
 10. **`screens-3.jsx` LeftoversScreen** — Redesign with actions and cross-nav.
 11. **`screens-3.jsx` AteListScreen** — Redesign with undo/recreate and cross-nav.
 12. **`app.jsx`** — Add new state, routes, and wiring for all new screens/modals. Replace `setCookNotice(true)` calls.

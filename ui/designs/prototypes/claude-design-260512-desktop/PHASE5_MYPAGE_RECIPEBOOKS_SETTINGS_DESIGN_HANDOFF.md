@@ -1319,7 +1319,7 @@ All evidence should go to: `ui/designs/evidence/desktop-modern-redesign/phase-5/
 | `screen:COOK_READY_LIST` | `open` |
 | `screen:COOK_MODE_PLANNER` | `open` |
 | `screen:COOK_MODE_STANDALONE` | `open` |
-| `modal:COOK_MODE::ConsumedIngredientSheet` | `open` |
+| `surface:COOK_MODE::CookIngredientChecklist` | `open` |
 | `modal:COOK_MODE::CookNoticeDialog` | `open` |
 
 ### Phase 8 (Full QA) — all rows

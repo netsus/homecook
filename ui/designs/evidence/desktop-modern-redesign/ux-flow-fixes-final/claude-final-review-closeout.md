@@ -43,4 +43,4 @@ Codex accepted the final review as the Ralph architect sign-off for this closeou
 - `MEAL_COLUMNS` live editing remains explicitly deferred.
 - Standalone bundle sync remains out of scope for this RALPLAN.
 - Recipebook delete remains toast-only because it was not part of the frozen Phase 5 CTA list.
-- `ConsumedIngredientSheet` cleanup is not worth changing in this scope because it has no runtime impact and may still be relevant to standalone artifacts.
+- `ConsumedIngredientSheet` cleanup was deferred in this UX-flow scope, then handled later by the Phase 7 Claude/Ralph closeout.
