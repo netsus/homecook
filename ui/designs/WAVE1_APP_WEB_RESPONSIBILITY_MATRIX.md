@@ -48,6 +48,23 @@ Reference refresh before Phase4 rerun:
 - `SHOPPING_DETAIL_PANTRY_REFLECT_PICKER` must be refreshed or recaptured against the pre-complete backdrop required by the MVP complete API flow.
 - SavePopup does not need a functional-divergence exception after API v1.2.4 because multi-save is now official.
 
+## 2026-05-14 UX Remediation Supersession
+
+The Phase 0 foundation lock in `ui/designs/WAVE1_MOBILE_FOUNDATION_SPEC.md` intentionally supersedes a narrow set of shell/icon details from the currently committed fixed screenshots. This is a user-approved UX remediation decision, not a broad approved divergence.
+
+Superseded details:
+
+- Pantry bottom-tab icon: current fixed screenshots show the container/box icon; the remediation target uses a refrigerator icon.
+- LOGIN bottom tab: current fixed screenshots show the bottom tab; the remediation target hides it.
+- SETTINGS / ACCOUNT bottom tab: current fixed screenshots show the bottom tab; the remediation target hides it because these are push/account screens.
+- COOK_MODE_PLANNER / COOK_MODE_STANDALONE bottom tab: current fixed screenshots show the bottom tab; the remediation target hides it because cooking mode is a fullscreen task.
+
+Closeout rule:
+
+- Phase 1 may implement these remediation changes.
+- Final exact-parity closeout for the affected shell/icon details still requires either refreshed fixed references or explicit PR evidence that cites this supersession section.
+- No other visual difference is authorized by this section. Colors, typography, spacing, modal geometry, card/list geometry, and all non-listed surfaces remain governed by the current fixed screenshots.
+
 ## Status Vocabulary
 
 | Status | Meaning |
