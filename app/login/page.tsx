@@ -22,6 +22,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <AppShell
+      bottomTabsMode="hidden"
       className="wave1-login-shell"
       currentTab="home"
       headerMode="hidden"

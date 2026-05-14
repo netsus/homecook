@@ -22,6 +22,22 @@ const isCookingApiError = vi.fn(
 );
 const mockRouterPush = vi.fn();
 
+function installMatchMedia(matchesAppView: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(max-width: 1023px)" ? matchesAppView : !matchesAppView,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => readE2EAuthOverride(),
 }));
@@ -127,6 +143,7 @@ describe("StandaloneCookModeScreen", () => {
     const resetStore = await importResetStore();
     resetStore();
     cleanup();
+    Reflect.deleteProperty(window, "matchMedia");
   });
 
   it("loads and displays recipe data (public, no auth needed for viewing)", async () => {
@@ -435,5 +452,33 @@ describe("StandaloneCookModeScreen", () => {
     await waitFor(() => {
       expect(screen.queryByText("로그인이 필요해요")).toBeNull();
     });
+  });
+
+  it("does not render bottom tabs in the mobile fullscreen standalone cook mode", async () => {
+    installMatchMedia(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchStandaloneCookMode.mockResolvedValue(buildStandaloneCookModeData());
+
+    const Screen = await importScreen();
+    render(<Screen recipeId="recipe-1" servings={2} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("standalone-cook-mode-content")).toBeTruthy();
+    });
+
+    expect(
+      screen.queryByRole("navigation", { name: "요리모드 하단 탭" }),
+    ).toBeNull();
+  });
+
+  it("uses the Wave1 white surface for standalone cook loading states", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchStandaloneCookMode.mockReturnValue(new Promise(() => {}));
+
+    const Screen = await importScreen();
+    render(<Screen recipeId="recipe-1" servings={2} />);
+
+    const screenRoot = await screen.findByTestId("standalone-cook-mode-screen");
+    expect(screenRoot.className).toContain("bg-[var(--wave1-surface)]");
   });
 });

@@ -251,6 +251,9 @@ describe("planner week screen", () => {
     expect(shoppingLink.closest(".fixed")).not.toBeNull();
     expect(shoppingLink.getAttribute("href")).toBe("/shopping/flow");
     expect(plannerTab.getAttribute("aria-current")).toBe("page");
+    expect(
+      within(bottomTabs).getByTestId("bottom-tab-icon-pantry-fridge"),
+    ).toBeTruthy();
     expect(screen.queryByRole("group", { name: "플래너 보조 작업" })).toBeNull();
   });
 

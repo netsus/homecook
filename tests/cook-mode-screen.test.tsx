@@ -594,4 +594,32 @@ describe("CookModeScreen", () => {
     expect(fixedBottomBar).not.toBeNull();
     expect(fixedBottomBar?.contains(completeButton)).toBe(true);
   });
+
+  it("does not render bottom tabs in the mobile fullscreen cook mode", async () => {
+    installMatchMedia(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(buildCookModeData());
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cook-mode-content")).toBeTruthy();
+    });
+
+    expect(
+      screen.queryByRole("navigation", { name: "요리모드 하단 탭" }),
+    ).toBeNull();
+  });
+
+  it("uses the Wave1 white surface for cook mode loading states", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockReturnValue(new Promise(() => {}));
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    const screenRoot = await screen.findByTestId("cook-mode-screen");
+    expect(screenRoot.className).toContain("bg-[var(--wave1-surface)]");
+  });
 });

@@ -157,7 +157,7 @@ export function StandaloneCookModeScreen({
   if (authState === "checking") {
     return (
       <div
-        className="flex min-h-dvh flex-col bg-[var(--background)]"
+        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
         data-testid="standalone-cook-mode-screen"
       >
         <div className="flex flex-1 items-center justify-center p-4">
@@ -176,7 +176,7 @@ export function StandaloneCookModeScreen({
   if (showLoginGate) {
     return (
       <div
-        className="flex min-h-dvh flex-col bg-[var(--background)]"
+        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
         data-testid="standalone-cook-mode-screen"
       >
         <div className="flex flex-1 items-center justify-center p-4">
@@ -204,7 +204,7 @@ export function StandaloneCookModeScreen({
   if (screenState === "loading") {
     return (
       <div
-        className="flex min-h-dvh flex-col bg-[var(--background)]"
+        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
         data-testid="standalone-cook-mode-screen"
       >
         <div className="p-4" data-testid="standalone-cook-mode-loading">
@@ -229,7 +229,7 @@ export function StandaloneCookModeScreen({
   if (screenState === "not_found") {
     return (
       <div
-        className="flex min-h-dvh flex-col bg-[var(--background)]"
+        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
         data-testid="standalone-cook-mode-screen"
       >
         <div className="flex flex-1 items-center justify-center p-4">
@@ -249,7 +249,7 @@ export function StandaloneCookModeScreen({
   if (screenState === "error") {
     return (
       <div
-        className="flex min-h-dvh flex-col bg-[var(--background)]"
+        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
         data-testid="standalone-cook-mode-screen"
       >
         <div className="flex flex-1 items-center justify-center p-4">
@@ -271,7 +271,7 @@ export function StandaloneCookModeScreen({
   if (screenState === "completing") {
     return (
       <div
-        className="flex min-h-dvh flex-col bg-[var(--background)]"
+        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
         data-testid="standalone-cook-mode-screen"
       >
         <div className="flex flex-1 items-center justify-center p-4">

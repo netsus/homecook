@@ -44,7 +44,7 @@ export function Wave1MobileBottomTab({
   return (
     <nav
       aria-label={ariaLabel}
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-[#DEE2E6] bg-white px-4 pb-[calc(28px+env(safe-area-inset-bottom))] pt-2 lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--wave1-border)] bg-[var(--wave1-surface)] px-4 pb-[calc(28px+env(safe-area-inset-bottom))] pt-2 lg:hidden"
       style={{ borderTopWidth: "0.5px" }}
     >
       <div className="mx-auto grid max-w-[430px] grid-cols-4">
@@ -55,13 +55,14 @@ export function Wave1MobileBottomTab({
             <Link
               aria-current={active ? "page" : undefined}
               className={[
-                "flex min-h-[52px] flex-col items-center justify-center gap-[3px] py-1 text-[11px]",
-                active ? "font-bold text-[#2AC1BC]" : "font-medium text-[#868E96]",
+                "flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-[3px] py-1 text-[11px] transition-colors",
+                active
+                  ? "font-bold text-[var(--wave1-mint)]"
+                  : "font-medium text-[var(--wave1-text-3)] hover:text-[var(--wave1-text-2)]",
               ].join(" ")}
               href={item.href}
               key={item.id}
               prefetch={false}
-              style={{ color: active ? "#2AC1BC" : "#868E96" }}
             >
               {item.icon(active)}
               <span>{item.label}</span>
@@ -108,10 +109,13 @@ function CalendarIcon({ active }: { active: boolean }) {
 }
 
 function PantryIcon({ active }: { active: boolean }) {
+  const innerStroke = active ? "var(--wave1-surface)" : "currentColor";
+
   return (
     <svg
       aria-hidden="true"
       className="h-6 w-6"
+      data-testid="bottom-tab-icon-pantry-fridge"
       fill={active ? "currentColor" : "none"}
       stroke="currentColor"
       strokeLinecap="round"
@@ -119,9 +123,9 @@ function PantryIcon({ active }: { active: boolean }) {
       strokeWidth="2"
       viewBox="0 0 24 24"
     >
-      <path d="M5 9h14v11H5z" />
-      <path d="M8 9V6h8v3" />
-      <path d="M9 13h6" />
+      <rect height="18" rx="3" width="13" x="5.5" y="3" />
+      <path d="M5.5 9.5h13" stroke={innerStroke} />
+      <path d="M15 13v4" stroke={innerStroke} />
     </svg>
   );
 }

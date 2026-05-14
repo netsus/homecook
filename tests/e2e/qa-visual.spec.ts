@@ -138,6 +138,9 @@ test.describe("QA visual regression", () => {
     await installDiscoveryRoutes(page);
 
     await page.goto("/");
+    if (!isMobileViewport(page)) {
+      await page.evaluate(() => window.scrollTo(0, 260));
+    }
     await visibleTextButton(page, /조회수순|정렬 기준/i).click();
     await expect(visibleOption(page, "플래너 등록순")).toBeVisible();
 

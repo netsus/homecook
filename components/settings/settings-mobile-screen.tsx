@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import React from "react";
 
-import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import type { UserProfileData } from "@/lib/api/mypage";
 import type { PlannerColumnData } from "@/types/planner";
 
@@ -125,7 +124,7 @@ export function SettingsMobileScreen({
 
   return (
     <div
-      className="min-h-dvh bg-[#F8F9FA] pb-[calc(98px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
+      className="min-h-dvh bg-[#F8F9FA] pb-[calc(24px+env(safe-area-inset-bottom))] text-[#212529] lg:hidden"
       style={{
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif',
@@ -248,8 +247,6 @@ export function SettingsMobileScreen({
           title="끼니 컬럼 삭제"
         />
       ) : null}
-
-      <Wave1MobileBottomTab ariaLabel="설정 하단 탭" currentTab="mypage" />
     </div>
   );
 }

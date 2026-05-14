@@ -11,6 +11,7 @@ import {
 
 import { IngredientFilterModal } from "@/components/home/ingredient-filter-modal";
 import { RecipeCard } from "@/components/home/recipe-card";
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -383,7 +384,7 @@ export function HomeScreen() {
             ) : null}
           </div>
 
-          <HomeBottomTab />
+          <Wave1MobileBottomTab ariaLabel="HOME 하단 탭" currentTab="home" />
         </div>
       </div>
       ) : null}
@@ -855,56 +856,6 @@ function PromoStrip() {
   );
 }
 
-function HomeBottomTab() {
-  const tabs = [
-    { href: "/", icon: <HomeIcon filled />, isActive: true, label: "홈" },
-    { href: "/planner", icon: <CalendarIcon />, isActive: false, label: "플래너" },
-  ];
-  const pendingTabs = [
-    { icon: <PantryIcon />, label: "팬트리" },
-    { icon: <UserIcon />, label: "마이" },
-  ];
-
-  return (
-    <nav
-      aria-label="HOME 하단 탭"
-      className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] bg-white px-4 pt-2"
-      style={{
-        borderTop: "0.5px solid #DEE2E6",
-        paddingBottom: "calc(28px)",
-      }}
-    >
-      <div className="grid grid-cols-4">
-        {tabs.map((tab) => (
-          <Link
-            aria-current={tab.isActive ? "page" : undefined}
-            className={`flex flex-col items-center justify-center gap-[3px] py-1 text-[11px] ${
-              tab.isActive ? "font-bold" : "font-medium"
-            }`}
-            href={tab.href}
-            key={tab.label}
-            style={{ color: tab.isActive ? "#007A76" : "#495057" }}
-          >
-            {tab.icon}
-            <span>{tab.label}</span>
-          </Link>
-        ))}
-        {pendingTabs.map((tab) => (
-          <button
-            className="flex flex-col items-center justify-center gap-[3px] py-1 text-[11px] font-medium"
-            key={tab.label}
-            style={{ color: "#495057" }}
-            type="button"
-          >
-            {tab.icon}
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-    </nav>
-  );
-}
-
 function SearchIcon() {
   return (
     <svg
@@ -936,76 +887,6 @@ function SearchSmallIcon({ color }: { color: string }) {
     >
       <circle cx="9" cy="9" r="6" />
       <path d="m14 14 3 3" />
-    </svg>
-  );
-}
-
-function HomeIcon({ filled = false }: { filled?: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill={filled ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9z" />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <path d="M7 3v3M17 3v3M4 8h16M5 5h14v15H5z" />
-    </svg>
-  );
-}
-
-function PantryIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <path d="M5 9h14v11H5z" />
-      <path d="M8 9V6h8v3" />
-      <path d="M9 13h6" />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21a8 8 0 0 1 16 0" />
     </svg>
   );
 }

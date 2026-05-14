@@ -7,6 +7,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -933,7 +934,7 @@ export function PlannerWeekScreen({
           </div>
         ) : null}
 
-          <Wave1PlannerBottomTab />
+          <Wave1MobileBottomTab ariaLabel="플래너 하단 탭" currentTab="planner" />
         </div>
       ) : null}
 
@@ -1302,112 +1303,5 @@ export function PlannerWeekScreen({
         </div>
       ) : null}
     </>
-  );
-}
-
-function Wave1PlannerBottomTab() {
-  const items = [
-    { href: "/", icon: <PlannerHomeIcon />, label: "홈" },
-    { href: "/planner", icon: <PlannerCalendarIcon />, label: "플래너", active: true },
-    { href: "/pantry", icon: <PlannerPantryIcon />, label: "팬트리" },
-    { href: "/mypage", icon: <PlannerUserIcon />, label: "마이" },
-  ];
-
-  return (
-    <nav
-      aria-label="플래너 하단 탭"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-[#DEE2E6] bg-white px-4 pb-[calc(28px+env(safe-area-inset-bottom))] pt-2"
-      style={{ borderTopWidth: "0.5px" }}
-    >
-      <div className="mx-auto grid max-w-[430px] grid-cols-4">
-        {items.map((item) => (
-          <Link
-            aria-current={item.active ? "page" : undefined}
-            className={[
-              "flex min-h-[52px] flex-col items-center justify-center gap-[3px] py-1 text-[11px]",
-              item.active ? "font-bold text-[#2AC1BC]" : "font-medium text-[#868E96]",
-            ].join(" ")}
-            href={item.href}
-            key={item.href}
-            prefetch={false}
-            style={{ color: item.active ? "#2AC1BC" : "#868E96" }}
-          >
-            {item.icon}
-            <span>{item.label}</span>
-          </Link>
-        ))}
-      </div>
-    </nav>
-  );
-}
-
-function PlannerHomeIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9z" />
-    </svg>
-  );
-}
-
-function PlannerCalendarIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="currentColor"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="1.8"
-      viewBox="0 0 24 24"
-    >
-      <path d="M7 3v3M17 3v3M4 8h16M5 5h14v15H5z" fill="none" />
-      <path d="M8 12h3v3H8zM13 12h3v3h-3z" stroke="none" />
-    </svg>
-  );
-}
-
-function PlannerPantryIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <path d="M5 9h14v11H5z" />
-      <path d="M8 9V6h8v3" />
-      <path d="M9 13h6" />
-    </svg>
-  );
-}
-
-function PlannerUserIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-6 w-6"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21a8 8 0 0 1 16 0" />
-    </svg>
   );
 }
