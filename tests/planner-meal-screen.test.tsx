@@ -517,6 +517,25 @@ describe("MealScreen", () => {
     expect(screen.getByText("김치찌개")).toBeTruthy();
   });
 
+  it("folds long ingredient chips into a compact +N summary", async () => {
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchMeals.mockResolvedValue({
+      items: [buildMeal({ recipe_title: "김치볶음밥" })],
+    });
+
+    render(<MealScreen {...DEFAULT_PROPS} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("김치볶음밥")).toBeTruthy();
+    });
+
+    expect(screen.getByText("묵은지")).toBeTruthy();
+    expect(screen.getByText("찬밥")).toBeTruthy();
+    expect(screen.getByText("대파")).toBeTruthy();
+    expect(screen.queryByText("계란")).toBeNull();
+    expect(screen.getByText("+2")).toBeTruthy();
+  });
+
   // ── Sticky CTA ───────────────────────────────────────────────────────────
 
   it("renders the 식사 추가 CTA on ready state", async () => {

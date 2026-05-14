@@ -188,6 +188,16 @@ export function MenuAddScreen({
     router[mode](`/planner/${planDate}/${columnId}${slotSuffix}`);
   }, [router, planDate, columnId, slotName]);
 
+  const replaceMenuAddSource = useCallback(() => {
+    const params = new URLSearchParams();
+    if (planDate) params.set("date", planDate);
+    if (columnId) params.set("columnId", columnId);
+    if (slotName) params.set("slot", slotName);
+    const query = params.toString();
+
+    router.replace(query ? `/menu-add?${query}` : "/menu-add");
+  }, [columnId, planDate, router, slotName]);
+
   const handleBack = useCallback(() => {
     router.replace("/planner");
   }, [router]);
@@ -205,6 +215,17 @@ export function MenuAddScreen({
     searchInputRef.current?.focus();
     searchInputRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" });
   }, [isDesktopViewport]);
+
+  const handlePickerBackToMenu = useCallback(() => {
+    setPickerMode("none");
+    setSelectedRecipe(null);
+    setSelectedBook(null);
+    setSelectedBookRecipe(null);
+    setSelectedPantryRecipe(null);
+    setSelectedLeftover(null);
+    setCreationError(null);
+    replaceMenuAddSource();
+  }, [replaceMenuAddSource]);
 
   const handleServingsConfirm = useCallback(
     async (servings: number) => {
@@ -430,7 +451,7 @@ export function MenuAddScreen({
       return (
         <RecipeSearchPicker
           isCreating={isCreating}
-          onBack={() => setPickerMode("none")}
+          onBack={handlePickerBackToMenu}
           onRecipeSelect={handleRecipeSelect}
           onServingsCancel={handleServingsCancel}
           onServingsConfirm={handleServingsConfirm}
@@ -446,7 +467,7 @@ export function MenuAddScreen({
     if (pickerMode === "recipebook-selector") {
       return (
         <RecipeBookSelector
-          onBack={() => setPickerMode("none")}
+          onBack={handlePickerBackToMenu}
           onBookSelect={handleBookSelect}
           onClose={handleRecipeBookClose}
           presentation="screen"
@@ -475,7 +496,7 @@ export function MenuAddScreen({
       return (
         <PantryMatchPicker
           isCreating={isCreating}
-          onBack={() => setPickerMode("none")}
+          onBack={handlePickerBackToMenu}
           onClose={handlePantryClose}
           onRecipeSelect={handlePantryRecipeSelect}
           onServingsCancel={handlePantryServingsCancel}

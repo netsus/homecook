@@ -25,6 +25,7 @@ interface BookCardProps {
 }
 
 function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
+  const hasRecipes = book.recipe_count > 0;
   const bookTypeLabel = {
     my_added: "직접 추가",
     saved: "저장한 레시피",
@@ -47,18 +48,23 @@ function BookCard({ book, onSelect, presentation = "dialog" }: BookCardProps) {
   if (presentation === "screen") {
     return (
       <button
-        className="mb-2 flex min-h-[74px] w-full items-center gap-3 rounded-[12px] border border-[#DEE2E6] bg-white px-4 py-3.5 text-left"
+        className={[
+          "mb-2 flex min-h-[74px] w-full items-center gap-3 rounded-[12px] border px-4 py-3.5 text-left",
+          hasRecipes
+            ? "border-[#DEE2E6] bg-white active:border-[#2AC1BC] active:bg-[#E6F8F7]"
+            : "border-[#F1F3F5] bg-[#F8F9FA]",
+        ].join(" ")}
         onClick={() => onSelect(book)}
         type="button"
       >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-[#E6F8F7] text-[20px]">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-white text-[20px] shadow-[inset_0_0_0_1px_#DEE2E6]">
           {screenIcon}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-1.5">
             <span className="truncate text-[15px] font-bold text-[#212529]">{book.name}</span>
-            <span className="shrink-0 text-[12px] font-extrabold text-[#20A8A4]">
-              {book.recipe_count}개
+            <span className="shrink-0 rounded-[6px] bg-[#E6F8F7] px-1.5 py-0.5 text-[11px] font-semibold text-[#007A76]">
+              {hasRecipes ? `${book.recipe_count}개` : "비어 있음"}
             </span>
           </span>
           <span className="mt-0.5 block text-[12px] text-[#868E96]">{screenSubtitle}</span>
