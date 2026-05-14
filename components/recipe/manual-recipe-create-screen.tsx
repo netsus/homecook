@@ -42,6 +42,27 @@ interface TempStep extends Omit<ManualRecipeStepInput, "cooking_method_id"> {
   cooking_method: CookingMethodItem | null;
 }
 
+function getManualSaveRequirements({
+  title,
+  baseServings,
+  ingredients,
+  steps,
+}: {
+  title: string;
+  baseServings: number;
+  ingredients: TempIngredient[];
+  steps: TempStep[];
+}) {
+  const requirements: string[] = [];
+
+  if (title.trim().length === 0) requirements.push("요리 이름");
+  if (baseServings < 1) requirements.push("기준 인분");
+  if (ingredients.length === 0) requirements.push("재료");
+  if (steps.length === 0) requirements.push("조리법");
+
+  return requirements;
+}
+
 // ─── AppBar ──────────────────────────────────────────────────────────────────
 
 interface AppBarProps {
@@ -110,9 +131,9 @@ interface IngredientListProps {
 function IngredientList({ ingredients, onRemove }: IngredientListProps) {
   if (ingredients.length === 0) {
     return (
-      <p className="hidden py-4 text-sm text-[var(--muted)] lg:block">
-        재료를 추가해주세요
-      </p>
+      <div className="mb-3 rounded-[10px] bg-[#F8F9FA] px-4 py-3 text-[14px] font-medium leading-[1.5] text-[#868E96]">
+        재료를 1개 이상 추가해주세요.
+      </div>
     );
   }
 
@@ -159,19 +180,19 @@ function StepList({ steps, onRemove }: StepListProps) {
     return (
       <div className="rounded-[10px] border-l-4 border-[#ADB5BD] bg-[#F8F9FA] px-4 py-3">
         <div className="mb-2 flex items-center gap-3">
-          <span className="text-[12px] font-extrabold leading-[1.3] text-[#868E96]">
+          <span className="text-[12px] font-semibold leading-[1.3] text-[#868E96]">
             STEP 1
           </span>
           <div
             aria-hidden="true"
-            className="rounded-[6px] border border-[#ADB5BD] bg-white px-3 py-1.5 text-[12px] font-bold text-[#495057]"
+            className="rounded-[6px] border border-[#ADB5BD] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#495057]"
           >
-            준비⌄
+            준비
           </div>
         </div>
         <div
           aria-hidden="true"
-          className="min-h-[56px] rounded-[8px] border border-[#DEE2E6] bg-white px-3 py-3 text-[14px] font-medium text-[#868E96]"
+          className="min-h-[56px] rounded-[8px] border border-[#DEE2E6] bg-white px-3 py-3 text-[14px] font-normal text-[#868E96]"
         >
           이 단계에서 무엇을 하나요?
         </div>
@@ -213,6 +234,34 @@ function StepList({ steps, onRemove }: StepListProps) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function SaveRequirementsNotice({ requirements }: { requirements: string[] }) {
+  if (requirements.length === 0) {
+    return null;
+  }
+
+  return (
+    <div
+      className="mx-4 rounded-[12px] bg-white px-4 py-3 text-[#495057] md:mx-0 md:border md:border-[#EDF0F2]"
+      data-testid="manual-save-requirements"
+      role="status"
+    >
+      <p className="text-[13px] font-semibold leading-[1.45] text-[#495057]">
+        저장하려면 아래 항목을 채워주세요.
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {requirements.map((requirement) => (
+          <span
+            className="rounded-[8px] bg-[#F1F3F5] px-2.5 py-1 text-[12px] font-medium text-[#495057]"
+            key={requirement}
+          >
+            {requirement}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -464,11 +513,13 @@ export function ManualRecipeCreateScreen({
     loadCookingMethods();
   }, []);
 
-  const canSave =
-    title.trim().length > 0 &&
-    baseServings >= 1 &&
-    ingredients.length > 0 &&
-    steps.length > 0;
+  const saveRequirements = getManualSaveRequirements({
+    title,
+    baseServings,
+    ingredients,
+    steps,
+  });
+  const canSave = saveRequirements.length === 0;
 
   const handleBack = useCallback(() => {
     router.back();
@@ -608,13 +659,13 @@ export function ManualRecipeCreateScreen({
       <div className="min-h-0 flex-1 overflow-y-auto pb-[84px] md:px-4 md:pb-6">
         <div className="mx-auto max-w-2xl space-y-2 md:space-y-6 md:py-4">
           {/* Basic Info */}
-          <section className="border-b border-[#DEE2E6] bg-white px-4 pb-3 pt-5 md:rounded-[16px] md:border md:border-[var(--line)]">
-            <h2 className="mb-3 text-[16px] font-bold leading-[1.3] text-[#212529]">
+          <section className="bg-white px-4 pb-4 pt-5 md:rounded-[16px] md:border md:border-[var(--line)]">
+            <h2 className="mb-3 text-[16px] font-semibold leading-[1.3] text-[#212529]">
               기본 정보
             </h2>
             <div className="space-y-3">
               <label className="block">
-                <span className="mb-1.5 block text-[12px] font-bold leading-[1.4] text-[#868E96]">
+                <span className="mb-1.5 block text-[12px] font-medium leading-[1.4] text-[#868E96]">
                   요리 이름
                 </span>
                 <input
@@ -622,44 +673,30 @@ export function ManualRecipeCreateScreen({
                   placeholder="예: 김치찌개"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="h-[38px] w-full rounded-[8px] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-medium text-[#212529] placeholder:text-[#868E96] focus:border-[#2AC1BC] focus:outline-none"
+                  className="h-[38px] w-full rounded-[8px] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-normal text-[#212529] placeholder:text-[#868E96] focus:border-[#2AC1BC] focus:outline-none"
                 />
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="block">
-                  <span className="mb-1.5 block text-[12px] font-bold leading-[1.4] text-[#868E96]">
-                    조리 시간(분)
-                  </span>
-                  <input
-                    type="number"
-                    min={1}
-                    readOnly
-                    value={20}
-                    className="h-[38px] w-full rounded-[8px] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-medium text-[#212529] focus:border-[#2AC1BC] focus:outline-none"
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-[12px] font-bold leading-[1.4] text-[#868E96]">
-                    기준 인분
-                  </span>
-                  <input
-                    type="number"
-                    min={1}
-                    value={baseServings}
-                    onChange={(e) =>
-                      setBaseServings(Math.max(1, Number(e.target.value) || 1))
-                    }
-                    className="h-[38px] w-full rounded-[8px] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-medium text-[#212529] focus:border-[#2AC1BC] focus:outline-none"
-                  />
-                </label>
-              </div>
+              <label className="block max-w-[13rem]">
+                <span className="mb-1.5 block text-[12px] font-medium leading-[1.4] text-[#868E96]">
+                  기준 인분
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  value={baseServings}
+                  onChange={(e) =>
+                    setBaseServings(Math.max(1, Number(e.target.value) || 1))
+                  }
+                  className="h-[38px] w-full rounded-[8px] border border-[#DEE2E6] bg-white px-3.5 text-[14px] font-normal text-[#212529] focus:border-[#2AC1BC] focus:outline-none"
+                />
+              </label>
             </div>
           </section>
 
           {/* Ingredients */}
-          <section className="border-b border-[#DEE2E6] bg-white px-4 pb-3 pt-5 md:rounded-[16px] md:border md:border-[var(--line)]">
+          <section className="bg-white px-4 pb-4 pt-5 md:rounded-[16px] md:border md:border-[var(--line)]">
             <div className="mb-1 flex items-center justify-between">
-              <h2 className="text-[16px] font-bold leading-[1.3] text-[#212529]">
+              <h2 className="text-[16px] font-semibold leading-[1.3] text-[#212529]">
                 재료
               </h2>
               <span className="text-[12px] font-medium text-[#868E96]">
@@ -671,7 +708,7 @@ export function ManualRecipeCreateScreen({
               onRemove={handleRemoveIngredient}
             />
             <button
-              className="flex h-[42px] w-full items-center justify-center rounded-[10px] border border-dashed border-[#2AC1BC] bg-[#E6F8F7] text-[13px] font-bold text-[#20A8A4] hover:bg-[#E6F8F7]"
+              className="flex h-[42px] w-full items-center justify-center rounded-[8px] border border-dashed border-[#2AC1BC] bg-[#E6F8F7] text-[13px] font-semibold text-[#20A8A4] hover:bg-[#E6F8F7]"
               onClick={() => setModalMode("ingredient-add")}
               type="button"
             >
@@ -680,13 +717,13 @@ export function ManualRecipeCreateScreen({
           </section>
 
           {/* Steps */}
-          <section className="border-b border-[#DEE2E6] bg-white px-4 py-5 md:rounded-[16px] md:border md:border-[var(--line)]">
+          <section className="bg-white px-4 py-5 md:rounded-[16px] md:border md:border-[var(--line)]">
             <div className="mb-1 flex items-center justify-between">
-              <h2 className="text-[16px] font-bold leading-[1.3] text-[#212529]">
+              <h2 className="text-[16px] font-semibold leading-[1.3] text-[#212529]">
                 조리법
               </h2>
               <button
-                className="text-[13px] font-bold text-[#20A8A4] disabled:opacity-40"
+                className="text-[13px] font-semibold text-[#20A8A4] disabled:opacity-40"
                 disabled={isLoadingMethods}
                 onClick={() => setModalMode("step-add")}
                 type="button"
@@ -702,7 +739,7 @@ export function ManualRecipeCreateScreen({
               <>
                 <StepList steps={steps} onRemove={handleRemoveStep} />
                 <button
-                  className="mt-3 hidden min-h-[44px] w-full items-center justify-center rounded-[10px] border border-[#2AC1BC] bg-white py-3 text-[13px] font-bold text-[#20A8A4] hover:bg-[#E6F8F7] lg:flex"
+                  className="mt-3 hidden min-h-[44px] w-full items-center justify-center rounded-[8px] border border-[#2AC1BC] bg-white py-3 text-[13px] font-semibold text-[#20A8A4] hover:bg-[#E6F8F7] lg:flex"
                   onClick={() => setModalMode("step-add")}
                   type="button"
                 >
@@ -720,6 +757,8 @@ export function ManualRecipeCreateScreen({
               {saveError}
             </div>
           )}
+
+          <SaveRequirementsNotice requirements={saveRequirements} />
         </div>
 
         <div className="border-t border-[#DEE2E6] bg-white px-4 py-4 lg:hidden">

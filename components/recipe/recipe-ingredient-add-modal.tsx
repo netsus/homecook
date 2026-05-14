@@ -106,7 +106,7 @@ export function RecipeIngredientAddModal({
         return `${addedIngredientLabels.length}개 추가됨. 다음 재료를 선택하거나 완료를 눌러주세요.`;
       }
 
-      return "";
+      return "재료를 선택한 뒤 수량과 단위를 확인해주세요.";
     }
 
     if (!isAmountValid) {
@@ -143,11 +143,11 @@ export function RecipeIngredientAddModal({
     >
       <div
         aria-modal="true"
-        className="flex h-[min(90vh,44rem)] w-full max-w-2xl flex-col rounded-t-[20px] bg-[var(--surface)] shadow-[var(--shadow-3)] sm:rounded-[20px]"
+        className="flex h-[90dvh] max-h-[44rem] w-full max-w-2xl flex-col rounded-t-[20px] bg-[var(--surface)] shadow-[var(--shadow-3)] sm:rounded-[20px]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
       >
-        <div className="border-b border-[var(--line)] px-5 pb-4 pt-5">
+        <div className="border-b border-[var(--line)] px-5 pb-3 pt-4">
           <ModalHeader title="재료 추가" onClose={onClose} />
           <label className="mt-4 flex min-h-11 items-center rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface-fill)] px-4">
             <span className="visually-hidden">재료명으로 검색</span>
@@ -227,7 +227,7 @@ export function RecipeIngredientAddModal({
           ) : null}
         </div>
 
-        <div className="border-t border-[var(--line)] px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div className="border-t border-[var(--line)] px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <div className="space-y-3" data-testid="ingredient-editor">
             {addedIngredientLabels.length > 0 ? (
               <div
@@ -237,7 +237,7 @@ export function RecipeIngredientAddModal({
                 <div className="flex flex-wrap gap-2">
                   {addedIngredientLabels.map((label, index) => (
                     <span
-                      className="rounded-[var(--radius-full)] bg-[var(--olive)] px-3 py-1.5 text-sm font-bold text-white shadow-[var(--shadow-1)]"
+                      className="rounded-[var(--radius-sm)] bg-[var(--olive)] px-3 py-1.5 text-sm font-semibold text-white shadow-[var(--shadow-1)]"
                       key={`${label}-${index}`}
                     >
                       {label}
@@ -247,54 +247,61 @@ export function RecipeIngredientAddModal({
               </div>
             ) : null}
 
-            <div className="rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-2.5">
-              <div className="flex items-center gap-2">
-                <span className="min-w-0 flex-1 truncate rounded-[var(--radius-full)] bg-[var(--surface)] px-3 py-2 text-sm font-bold text-[var(--foreground)]">
-                  {selectedIngredient?.standard_name ?? "재료를 선택해주세요"}
-                </span>
-                <input
-                  aria-invalid={!isAmountValid}
-                  aria-label="수량"
-                  className="h-10 w-16 shrink-0 rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface)] px-2 text-center text-base font-semibold"
-                  inputMode="decimal"
-                  onChange={(event) => setAmount(event.target.value)}
-                  placeholder="수량"
-                  type="number"
-                  value={amount}
-                />
-                <div
-                  aria-label="단위"
-                  className="flex shrink-0 gap-1 rounded-[var(--radius-full)] bg-[var(--surface)] p-1"
-                  role="group"
-                >
-                  {COOKING_UNIT_OPTIONS.map((option) => (
-                    <button
-                      aria-pressed={unit === option}
-                      className={[
-                        "h-9 min-w-10 shrink-0 rounded-[var(--radius-full)] border px-2 text-base font-bold transition",
-                        unit === option
-                          ? "border-[var(--brand)] bg-[var(--brand)] text-white"
-                          : "border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)]",
-                      ].join(" ")}
-                      key={option}
-                      onClick={() => setUnit(option)}
-                      type="button"
-                    >
-                      {option}
-                    </button>
-                  ))}
+            {selectedIngredient ? (
+              <div className="rounded-[var(--radius-sm)] bg-[var(--surface-fill)] p-3">
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-[var(--text-2)]">
+                    선택 재료
+                  </p>
+                  <span className="block min-h-10 w-full truncate rounded-[var(--radius-sm)] bg-[var(--surface)] px-3 py-2 text-sm font-semibold text-[var(--foreground)]">
+                    {selectedIngredient.standard_name}
+                  </span>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <input
+                    aria-invalid={!isAmountValid}
+                    aria-label="수량"
+                    className="h-11 w-full rounded-[var(--radius-sm)] border border-[var(--line)] bg-[var(--surface)] px-3 text-center text-base font-semibold"
+                    inputMode="decimal"
+                    onChange={(event) => setAmount(event.target.value)}
+                    placeholder="수량"
+                    type="number"
+                    value={amount}
+                  />
+                  <div
+                    aria-label="단위"
+                    className="flex shrink-0 flex-wrap gap-1 rounded-[var(--radius-sm)] bg-[var(--surface)] p-1"
+                    role="group"
+                  >
+                    {COOKING_UNIT_OPTIONS.map((option) => (
+                      <button
+                        aria-pressed={unit === option}
+                        className={[
+                          "h-9 min-w-10 shrink-0 rounded-[var(--radius-sm)] border px-2 text-base font-semibold transition",
+                          unit === option
+                            ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                            : "border-[var(--line)] bg-[var(--surface)] text-[var(--foreground)]",
+                        ].join(" ")}
+                        key={option}
+                        onClick={() => setUnit(option)}
+                        type="button"
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <button
                   aria-label="선택한 재료 추가"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-full)] bg-[var(--olive)] text-xl font-black leading-none text-white shadow-[var(--shadow-1)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-[var(--line)] disabled:text-[var(--muted)] disabled:shadow-none"
+                  className="mt-3 flex h-11 w-full shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--olive)] text-base font-semibold leading-none text-white shadow-[var(--shadow-1)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-[var(--line)] disabled:text-[var(--muted)] disabled:shadow-none"
                   disabled={!canAddIngredient}
                   onClick={handleAdd}
                   type="button"
                 >
-                  +
+                  추가
                 </button>
               </div>
-            </div>
+            ) : null}
 
             <p
               className="min-h-5 text-sm text-[var(--muted)]"
@@ -305,7 +312,7 @@ export function RecipeIngredientAddModal({
           </div>
 
           <div className="mt-4">
-            <Button fullWidth variant="neutral" onClick={onClose}>
+            <Button fullWidth size="sm" variant="neutral" onClick={onClose}>
               완료
             </Button>
           </div>

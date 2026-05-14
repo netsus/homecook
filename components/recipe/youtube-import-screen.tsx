@@ -55,6 +55,27 @@ interface TempStep extends Omit<ManualRecipeStepInput, "cooking_method_id"> {
   cooking_method: (CookingMethodItem & { is_new?: boolean }) | null;
 }
 
+function getYoutubeRegisterRequirements({
+  title,
+  baseServings,
+  ingredients,
+  steps,
+}: {
+  title: string;
+  baseServings: number;
+  ingredients: TempIngredient[];
+  steps: TempStep[];
+}) {
+  const requirements: string[] = [];
+
+  if (title.trim().length === 0) requirements.push("레시피명");
+  if (baseServings < 1) requirements.push("기본 인분");
+  if (ingredients.length === 0) requirements.push("재료");
+  if (steps.length === 0) requirements.push("조리 과정");
+
+  return requirements;
+}
+
 // Cooking method color mapping
 const COOK_COLOR_MAP: Record<string, string> = {
   boil: "var(--cook-red, #E53E3E)",
@@ -84,7 +105,7 @@ interface AppBarProps {
 
 function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBarProps) {
   return (
-    <div className="shrink-0 border-b border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-2)]">
+    <div className="shrink-0 border-b border-[var(--line)] bg-white">
       <div className="flex h-14 items-center gap-2 px-2">
         {step !== "complete" && (
           <button
@@ -99,16 +120,16 @@ function AppBar({ step, onBack, onRegister, canRegister, isRegistering }: AppBar
             </svg>
           </button>
         )}
-        <h1 className="min-w-0 flex-1 truncate text-lg font-bold text-[var(--foreground)]">
-          {step === "review" ? "결과 확인" : "유튜브 레시피 가져오기"}
+        <h1 className="min-w-0 flex-1 truncate text-lg font-semibold text-[var(--foreground)]">
+          {step === "review" ? "추출 결과 확인" : "유튜브에서 가져오기"}
         </h1>
         {step === "review" && (
           <button
             className={[
-              "h-11 px-4 text-base font-semibold rounded-[var(--radius-sm)]",
+              "h-11 rounded-[var(--radius-sm)] px-4 text-base font-semibold",
               canRegister && !isRegistering
-                ? "text-[var(--brand)] hover:bg-[var(--brand-soft)]"
-                : "text-[var(--text-4)] cursor-not-allowed",
+                ? "bg-[var(--wave1-mint-contrast)] text-white shadow-[var(--wave1-shadow-soft)] hover:bg-[var(--wave1-mint-contrast-deep)]"
+                : "cursor-not-allowed bg-[#DEE2E6] text-[#ADB5BD]",
             ].join(" ")}
             onClick={onRegister}
             disabled={!canRegister || isRegistering}
@@ -136,8 +157,8 @@ function UrlInputStep({ url, onUrlChange, onSubmit, isValidating, urlError }: Ur
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="px-4 pt-8">
-      <h2 className="text-xl font-extrabold text-[var(--foreground)]">
+    <div className="px-4 pt-6">
+      <h2 className="text-xl font-semibold text-[var(--foreground)]">
         유튜브 영상에서
         <br />
         레시피를 가져와요
@@ -273,7 +294,7 @@ function ExtractionProgressStep({ videoTitle, elapsedMs }: ExtractionProgressSte
 
   return (
     <div className="px-4 pt-8">
-      <h2 className="text-xl font-extrabold text-[var(--foreground)]">
+      <h2 className="text-xl font-semibold text-[var(--foreground)]">
         레시피를 분석하고 있어요
       </h2>
       <p className="mt-3 text-base text-[var(--text-2)]">{videoTitle}</p>
@@ -345,7 +366,7 @@ interface ExtractionErrorStepProps {
 function ExtractionErrorStep({ errorMessage, onRetry, onReenter }: ExtractionErrorStepProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-4">
-      <h2 className="text-xl font-extrabold text-[var(--foreground)]">
+      <h2 className="text-xl font-semibold text-[var(--foreground)]">
         레시피 추출에 실패했어요
       </h2>
       <p className="mt-3 text-center text-base text-[var(--text-2)]">
@@ -394,6 +415,13 @@ function ReviewStep({
   onAddIngredient,
   onAddStep,
 }: ReviewStepProps) {
+  const registerRequirements = getYoutubeRegisterRequirements({
+    title,
+    baseServings,
+    ingredients,
+    steps,
+  });
+
   return (
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-8">
       <p className="pt-4 text-base text-[var(--text-2)]">추출 결과를 확인해주세요</p>
@@ -412,9 +440,31 @@ function ReviewStep({
         </div>
       )}
 
+      {registerRequirements.length > 0 ? (
+        <div
+          className="mt-4 rounded-[12px] bg-[#F8F9FA] px-4 py-3"
+          data-testid="youtube-register-requirements"
+          role="status"
+        >
+          <p className="text-[13px] font-semibold leading-[1.45] text-[#495057]">
+            등록하려면 아래 항목을 확인해주세요.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {registerRequirements.map((requirement) => (
+              <span
+                className="rounded-[8px] bg-white px-2.5 py-1 text-[12px] font-medium text-[#495057]"
+                key={requirement}
+              >
+                {requirement}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {/* Title */}
       <div className="mt-6">
-        <label className="text-sm font-semibold text-[var(--text-2)]">레시피명</label>
+        <label className="text-sm font-medium text-[var(--text-2)]">레시피명</label>
         <input
           type="text"
           value={title}
@@ -425,7 +475,7 @@ function ReviewStep({
 
       {/* Base servings */}
       <div className="mt-4">
-        <label className="text-sm font-semibold text-[var(--text-2)]">기본 인분</label>
+        <label className="text-sm font-medium text-[var(--text-2)]">기본 인분</label>
         <div className="mt-1">
           <NumericStepperCompact
             value={baseServings}
@@ -438,7 +488,7 @@ function ReviewStep({
 
       {/* Ingredients */}
       <div className="mt-6">
-        <h3 className="text-lg font-bold text-[var(--foreground)]">
+        <h3 className="text-lg font-semibold text-[var(--foreground)]">
           재료 ({ingredients.length}개)
         </h3>
         {ingredients.length === 0 ? (
@@ -487,7 +537,7 @@ function ReviewStep({
 
       {/* Steps */}
       <div className="mt-6">
-        <h3 className="text-lg font-bold text-[var(--foreground)]">
+        <h3 className="text-lg font-semibold text-[var(--foreground)]">
           조리 과정 ({steps.length}단계)
         </h3>
         {steps.length === 0 ? (
@@ -577,7 +627,7 @@ function CompleteStep({ recipeTitle, hasPlanContext, onMealAdd, onViewDetail, on
               <path d="M14 24l7 7 13-13" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
             </svg>
           </div>
-          <h2 className="mt-4 text-xl font-extrabold text-[var(--foreground)]">
+          <h2 className="mt-4 text-xl font-semibold text-[var(--foreground)]">
             레시피가 등록됐어요
           </h2>
           <p className="mt-2 text-base text-[var(--text-2)]">
@@ -1168,7 +1218,7 @@ export function YoutubeImportScreen({
   // ─── Render ────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-screen flex-col bg-[var(--background)]">
+    <div className="flex h-screen flex-col bg-white">
       {currentStep !== "complete" && (
         <AppBar
           step={currentStep}

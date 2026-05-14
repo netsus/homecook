@@ -271,6 +271,7 @@ test.describe("Slice 19: YouTube Import", () => {
     await page.goto(YOUTUBE_IMPORT_URL);
 
     // Step 1: URL input
+    await expect(page.getByRole("heading", { name: "유튜브에서 가져오기" })).toBeVisible();
     await expect(page.locator("text=유튜브 영상에서")).toBeVisible();
     const urlInput = page.locator('input[type="url"]');
     await urlInput.fill("https://www.youtube.com/watch?v=recipe12345");
@@ -671,6 +672,9 @@ test.describe("Slice 19: YouTube Import", () => {
     // Register button should be disabled (no ingredients or steps)
     const registerButton = page.locator('button:has-text("등록")');
     await expect(registerButton).toBeDisabled();
+    const requirements = page.getByTestId("youtube-register-requirements");
+    await expect(requirements).toContainText("재료");
+    await expect(requirements).toContainText("조리 과정");
 
     // Empty section messages should show
     await expect(page.locator("text=추출된 재료가 없어요. 직접 추가해주세요")).toBeVisible();
