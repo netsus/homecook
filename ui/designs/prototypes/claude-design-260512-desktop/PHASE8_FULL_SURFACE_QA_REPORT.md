@@ -70,7 +70,6 @@ Full 1280 route/modal traversal:
 - `cook-ready-list-1280.png`
 - `cook-notice-1280.png`
 - `cook-mode-planner-1280.png`
-- `consumed-sheet-1280.png`
 
 ## Fixes Made During Phase 8
 

@@ -242,15 +242,13 @@
   font-weight: 800;
 }
 
-.cook-rail-list,
-.consumed-list {
+.cook-rail-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.cook-rail-item,
-.consumed-item {
+.cook-rail-item {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
@@ -266,20 +264,17 @@
   font: inherit;
 }
 
-.cook-rail-item.on,
-.consumed-item.on {
+.cook-rail-item.on {
   border-color: var(--brand);
   background: var(--brand-wash);
 }
 
-.cook-rail-item:disabled,
-.consumed-item:disabled {
+.cook-rail-item:disabled {
   cursor: not-allowed;
   opacity: 0.58;
 }
 
-.cook-rail-name,
-.consumed-name {
+.cook-rail-name {
   min-width: 0;
   overflow: hidden;
   color: var(--text-1);
@@ -289,15 +284,13 @@
   white-space: nowrap;
 }
 
-.cook-rail-amount,
-.consumed-amount {
+.cook-rail-amount {
   color: var(--text-3);
   font-size: 12px;
   font-weight: 700;
 }
 
-.cook-rail-held,
-.consumed-tag {
+.cook-rail-held {
   height: 22px;
   padding: 0 8px;
   border-radius: var(--r-pill);
@@ -309,8 +302,7 @@
   font-weight: 800;
 }
 
-.cook-rail-held,
-.consumed-tag.held {
+.cook-rail-held {
   background: rgba(0, 161, 255, 0.12);
   color: var(--brand-deep);
 }
@@ -326,18 +318,6 @@
   display: grid;
   gap: 8px;
   margin-top: 14px;
-}
-
-.consumed-sheet {
-  display: grid;
-  gap: 14px;
-}
-
-.consumed-desc {
-  margin: 0;
-  color: var(--text-2);
-  font-size: 14px;
-  line-height: 1.55;
 }
 
 .leftover-grid {

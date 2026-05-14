@@ -910,7 +910,7 @@ Each row must have:
 | `screen:COOK_READY_LIST` | `open` | Phase 7 |
 | `screen:COOK_MODE_PLANNER` | `open` | Phase 7 |
 | `screen:COOK_MODE_STANDALONE` | `open` | Phase 7 |
-| `modal:COOK_MODE::ConsumedIngredientSheet` | `open` | Phase 7 |
+| `surface:COOK_MODE::CookIngredientChecklist` | `open` | Phase 7 |
 | `modal:COOK_MODE::CookNoticeDialog` | `open` | Phase 7 |
 
 ### Phase 8 rows
