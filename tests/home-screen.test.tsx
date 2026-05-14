@@ -109,6 +109,8 @@ describe("home screen", () => {
     ).toBeTruthy();
     expect(screen.getByRole("link", { name: /이번 주 식단 플래너/ })).toBeTruthy();
     expect(screen.getByRole("navigation", { name: "HOME 하단 탭" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "팬트리" }).getAttribute("href")).toBe("/pantry");
+    expect(screen.getByRole("link", { name: "마이" }).getAttribute("href")).toBe("/mypage");
     expect(screen.getByRole("heading", { level: 2, name: "모든 레시피" })).toBeTruthy();
   });
 

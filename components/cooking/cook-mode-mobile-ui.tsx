@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 
-import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
 import type {
   CookingModeIngredient,
@@ -110,18 +109,16 @@ export function MobileCookModeView({
 }: MobileCookModeViewProps) {
   const eyebrow =
     variant === "standalone" ? "요리 모드 · 독립 요리" : "요리 모드 · 4/23 점심";
-  const currentTab = variant === "standalone" ? "home" : "planner";
-
   return (
     <div
-      className="relative min-h-dvh overflow-hidden bg-[#0E1014] text-white"
+      className="relative min-h-dvh overflow-hidden bg-[#212529] text-white"
       data-testid={screenTestId}
       style={{
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "Helvetica Neue", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif',
       }}
     >
-      <div className="flex min-h-dvh flex-col pb-[96px]">
+      <div className="flex min-h-dvh flex-col pb-[118px]">
         <header className="flex items-center justify-between px-4 pb-[14px] pt-[52px]">
           <button
             aria-label="뒤로"
@@ -132,17 +129,17 @@ export function MobileCookModeView({
             <ChevronLeftIcon />
           </button>
           <div className="min-w-0 flex-1 px-3 text-center">
-            <p className="mb-0.5 text-[11px] font-bold leading-[1.3] text-white/65">
+            <p className="mb-0.5 text-[11px] font-medium leading-[1.3] text-white/65">
               {eyebrow}
             </p>
             <h1
-              className="truncate text-[17px] font-black leading-[1.12] text-white/95 [font-family:var(--font-jua),-apple-system,sans-serif]"
+              className="truncate text-[17px] font-bold leading-[1.12] text-white/95 [font-family:var(--font-jua),-apple-system,sans-serif]"
               data-testid={titleTestId}
             >
               {recipe.title}
             </h1>
             <p
-              className="text-[13px] font-bold leading-[1.2] text-white [font-family:var(--font-jua),-apple-system,sans-serif]"
+              className="text-[13px] font-medium leading-[1.2] text-white [font-family:var(--font-jua),-apple-system,sans-serif]"
               data-testid={servingsTestId}
             >
               {recipe.steps.length}단계
@@ -160,7 +157,7 @@ export function MobileCookModeView({
         </main>
       </div>
 
-      <div className="fixed inset-x-0 bottom-[80px] z-40 mx-auto max-w-[430px] bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.50))] px-4 pb-[18px] pt-3">
+      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.50))] px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-3">
         <div className="flex items-center gap-2">
           <button
             className="flex h-14 shrink-0 items-center justify-center rounded-xl border-0 bg-[rgba(255,255,255,0.12)] px-5 text-[14px] font-bold text-white disabled:opacity-60"
@@ -172,7 +169,7 @@ export function MobileCookModeView({
             취소
           </button>
           <button
-            className="flex h-14 min-w-0 flex-1 items-center justify-center rounded-xl border-0 bg-[#2AC1BC] px-4 text-[16px] font-extrabold leading-none text-white disabled:opacity-60 [font-family:var(--font-jua),-apple-system,sans-serif]"
+            className="flex h-14 min-w-0 flex-1 items-center justify-center rounded-xl border-0 bg-[#2AC1BC] px-4 text-[16px] font-bold leading-none text-white disabled:opacity-60 [font-family:var(--font-jua),-apple-system,sans-serif]"
             data-testid={completeButtonTestId}
             disabled={controlsDisabled}
             onClick={onComplete}
@@ -183,10 +180,6 @@ export function MobileCookModeView({
         </div>
       </div>
 
-      <Wave1MobileBottomTab
-        ariaLabel="요리모드 하단 탭"
-        currentTab={currentTab}
-      />
     </div>
   );
 }
@@ -224,7 +217,7 @@ function MobileStepList({
           >
             <div className="mb-2.5 flex items-center gap-2">
               <span
-                className="rounded-full px-2.5 py-[3px] text-[11px] font-extrabold leading-[1.2] text-white"
+                className="rounded-full px-2.5 py-[3px] text-[11px] font-bold leading-[1.2] text-white"
                 style={{ background: method.border }}
               >
                 STEP {step.step_number}
@@ -236,7 +229,7 @@ function MobileStepList({
                 {method.label}
               </span>
             </div>
-            <h2 className="mb-2 text-[18px] font-extrabold leading-[1.3] [font-family:var(--font-jua),-apple-system,sans-serif]">
+            <h2 className="mb-2 text-[18px] font-bold leading-[1.3] [font-family:var(--font-jua),-apple-system,sans-serif]">
               {title}
             </h2>
             <p className="text-[15px] font-medium leading-[1.6] text-[#1A1A2E]">

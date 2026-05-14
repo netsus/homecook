@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SettingsScreen } from "@/components/settings/settings-screen";
+import { SettingsMobileScreen } from "@/components/settings/settings-mobile-screen";
 
 const mockFetchUserProfile = vi.fn();
 const mockUpdateSettings = vi.fn();
@@ -100,6 +101,62 @@ const MOCK_PROFILE = {
   settings: { screen_wake_lock: false },
 };
 
+const SETTINGS_MOBILE_BASE_PROPS = {
+  columnAddError: null,
+  columnAddInput: "",
+  columnAddSaveDisabled: true,
+  columnRenameError: null,
+  columnRenameInput: "",
+  columnRenameSaveDisabled: true,
+  columnsError: null,
+  columnsLoading: false,
+  deleteColumnError: null,
+  deleteColumnTarget: null,
+  deleteError: null,
+  errorMessage: null,
+  isAddingColumn: false,
+  isDeleting: false,
+  isDeletingColumn: false,
+  isLoggingOut: false,
+  isRenamingColumn: false,
+  isSavingNickname: false,
+  logoutError: null,
+  nicknameError: null,
+  nicknameInput: "",
+  nicknameSaveDisabled: true,
+  plannerColumns: [],
+  profile: MOCK_PROFILE,
+  renameTarget: null,
+  showColumnAddSheet: false,
+  showDeleteDialog: false,
+  showLogoutDialog: false,
+  showNicknameSheet: false,
+  surface: "settings" as const,
+  onAddColumn: vi.fn(),
+  onCloseColumnAddSheet: vi.fn(),
+  onCloseDeleteColumnDialog: vi.fn(),
+  onCloseDeleteDialog: vi.fn(),
+  onCloseLogoutDialog: vi.fn(),
+  onCloseNicknameSheet: vi.fn(),
+  onCloseRenameColumnSheet: vi.fn(),
+  onColumnAddInputChange: vi.fn(),
+  onColumnRenameInputChange: vi.fn(),
+  onConfirmDelete: vi.fn(),
+  onConfirmDeleteColumn: vi.fn(),
+  onConfirmLogout: vi.fn(),
+  onDeleteColumnTarget: vi.fn(),
+  onOpenColumnAddSheet: vi.fn(),
+  onOpenDeleteDialog: vi.fn(),
+  onOpenLogoutDialog: vi.fn(),
+  onOpenNicknameSheet: vi.fn(),
+  onRenameColumn: vi.fn(),
+  onRenameColumnTarget: vi.fn(),
+  onRetryColumns: vi.fn(),
+  onSaveNickname: vi.fn(),
+  onToggleWakeLock: vi.fn(),
+  onNicknameInputChange: vi.fn(),
+};
+
 describe("SettingsScreen", () => {
   beforeEach(() => {
     mockFetchUserProfile.mockReset();
@@ -116,6 +173,29 @@ describe("SettingsScreen", () => {
   });
 
   // --- AppBar ---
+
+  it("does not render bottom tabs on the mobile push settings shell", () => {
+    render(<SettingsMobileScreen {...SETTINGS_MOBILE_BASE_PROPS} />);
+
+    expect(screen.getByRole("heading", { name: "설정" })).toBeTruthy();
+    expect(
+      screen.queryByRole("navigation", { name: "설정 하단 탭" }),
+    ).toBeNull();
+  });
+
+  it("does not render bottom tabs on the mobile account push shell", () => {
+    render(
+      <SettingsMobileScreen
+        {...SETTINGS_MOBILE_BASE_PROPS}
+        surface="account"
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "계정 정보" })).toBeTruthy();
+    expect(
+      screen.queryByRole("navigation", { name: "설정 하단 탭" }),
+    ).toBeNull();
+  });
 
   it("back button navigates to /mypage", async () => {
     mockFetchUserProfile.mockReturnValue(new Promise(() => {}));

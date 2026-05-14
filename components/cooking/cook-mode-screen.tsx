@@ -176,7 +176,7 @@ export function CookModeScreen({
   if (authState === "checking") {
     return (
       <div
-        className="flex min-h-dvh flex-col bg-[var(--background)]"
+        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
         data-testid="cook-mode-screen"
       >
         <div className="flex flex-1 items-center justify-center p-4">
@@ -195,7 +195,7 @@ export function CookModeScreen({
   if (authState === "unauthorized") {
     return (
       <div
-        className="flex min-h-dvh flex-col bg-[var(--background)]"
+        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
         data-testid="cook-mode-screen"
       >
         <div className="flex flex-1 items-center justify-center p-4">
@@ -217,7 +217,7 @@ export function CookModeScreen({
   if (visibleScreenState === "loading") {
     return (
       <div
-        className="flex min-h-dvh flex-col bg-[var(--background)]"
+        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
         data-testid="cook-mode-screen"
       >
         <div className="p-4" data-testid="cook-mode-loading">
@@ -242,7 +242,7 @@ export function CookModeScreen({
   if (visibleScreenState === "not_found") {
     return (
       <div
-        className="flex min-h-dvh flex-col bg-[var(--background)]"
+        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
         data-testid="cook-mode-screen"
       >
         <div className="flex flex-1 items-center justify-center p-4">
@@ -262,7 +262,7 @@ export function CookModeScreen({
   if (visibleScreenState === "error") {
     return (
       <div
-        className="flex min-h-dvh flex-col bg-[var(--background)]"
+        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
         data-testid="cook-mode-screen"
       >
         <div className="flex flex-1 items-center justify-center p-4">
@@ -287,7 +287,7 @@ export function CookModeScreen({
   ) {
     return (
       <div
-        className="flex min-h-dvh flex-col bg-[var(--background)]"
+        className="flex min-h-dvh flex-col bg-[var(--wave1-surface)]"
         data-testid="cook-mode-screen"
       >
         <div className="flex flex-1 items-center justify-center p-4">

@@ -45,10 +45,7 @@ export function AppShell({
       </div>
       {showSharedBottomTabs ? (
         <div className="lg:hidden">
-          <BottomTabs
-            compactOnNarrow={currentTab === "mypage"}
-            currentTab={currentTab}
-          />
+          <BottomTabs currentTab={currentTab} />
         </div>
       ) : null}
     </div>
