@@ -350,10 +350,17 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     // Save button should be disabled initially
     const saveButton = getSaveButton(page);
     await expect(saveButton).toBeDisabled();
+    const requirements = page.getByTestId("manual-save-requirements");
+    await expect(requirements).toContainText("요리 이름");
+    await expect(requirements).toContainText("재료");
+    await expect(requirements).toContainText("조리법");
 
     // Add title only
     await fillRecipeTitle(page, "테스트 레시피");
     await expect(saveButton).toBeDisabled(); // Still disabled (no ingredients/steps)
+    await expect(requirements).not.toContainText("요리 이름");
+    await expect(requirements).toContainText("재료");
+    await expect(requirements).toContainText("조리법");
 
     // Add ingredient
     await page.click("text=+ 재료 추가");
@@ -366,6 +373,8 @@ test.describe("Slice 18: Manual Recipe Create", () => {
     await ingredientModal.locator('button:has-text("완료")').click();
 
     await expect(saveButton).toBeDisabled(); // Still disabled (no steps)
+    await expect(requirements).not.toContainText("재료");
+    await expect(requirements).toContainText("조리법");
 
     // Add step
     await openStepAdd(page);
@@ -377,6 +386,7 @@ test.describe("Slice 18: Manual Recipe Create", () => {
 
     // Now save button should be enabled
     await expect(saveButton).toBeEnabled();
+    await expect(page.getByTestId("manual-save-requirements")).toHaveCount(0);
   });
 
   test("guest: redirects to login with return-to-action", async ({ page }) => {
