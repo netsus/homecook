@@ -44,7 +44,7 @@ function App() {
   const [lightbox, setLightbox] = useStateA({ open: false, photos: [], idx: 0 });
   const [pantryAddIng, setPantryAddIng] = useStateA(false);
   const [pantryAddBundle, setPantryAddBundle] = useStateA(false);
-  const [pantryReflect, setPantryReflect] = useStateA({ open: false, items: [] });
+  const [pantryReflect, setPantryReflect] = useStateA({ open: false, items: [], listId: null });
   const [nickname, setNickname] = useStateA(false);
   const [logout, setLogout] = useStateA(false);
   const [cookNotice, setCookNotice] = useStateA(false);
@@ -273,7 +273,7 @@ function App() {
         });
       }}
       onOpenMeal={(mid) => push({ screen: "MEAL", mealId: mid })}
-      onOpenShopping={() => push({ screen: "SHOPPING_DETAIL", listId: "sl1" })}
+      onOpenShopping={() => push({ screen: "SHOPPING_FLOW" })}
       stateOverride={plannerState}
       onStateOverride={setPlannerState}
     />;
@@ -420,11 +420,9 @@ function App() {
     body = <ShoppingDetailScreen
       list={list}
       pantryHeld={pantryHeld}
-      onTogglePantry={(id) => setPantryHeld(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; })}
       onBack={pop}
-      onMarkComplete={(lid) => toast("장보기를 완료했어요")}
       onOpenReAdd={(lid) => toast("다시 장보기로 복원 (데모)")}
-      onOpenPantryReflect={(items) => setPantryReflect({ open: true, items })}
+      onOpenPantryReflect={(items, listId) => setPantryReflect({ open: true, items, listId })}
       readOnly={list?.completed}
       toast={toast}
     />;
@@ -539,11 +537,12 @@ function App() {
       <PantryReflectModal
         open={pantryReflect.open}
         items={pantryReflect.items}
-        onClose={() => setPantryReflect({ open: false, items: [] })}
+        onClose={() => setPantryReflect({ open: false, items: [], listId: null })}
         onConfirm={(ings) => {
           setPantryHeld(p => { const n = new Set(p); ings.forEach(i => n.add(i)); return n; });
-          setPantryReflect({ open: false, items: [] });
-          toast(`${ings.length}개 재료를 팬트리에 반영했어요`);
+          const completedFromShopping = Boolean(pantryReflect.listId);
+          setPantryReflect({ open: false, items: [], listId: null });
+          toast(completedFromShopping ? "장보기를 완료하고 팬트리에 반영했어요" : `${ings.length}개 재료를 팬트리에 반영했어요`);
         }}
       />
       <NicknameModal

@@ -170,6 +170,7 @@ function PantryScreen({ pantryHeld, onTogglePantry, onOpenAddIngredient, onOpenA
   const [tab, setTab] = useS2("veg");
   const [query, setQuery] = useS2("");
   const [showOut, setShowOut] = useS2(true);
+  const tabs = D2.PANTRY_GROUPS;
 
   const currentGroup = D2.PANTRY_GROUPS.find(g => g.id === tab);
   const items = useMemo2(() => {
@@ -181,6 +182,18 @@ function PantryScreen({ pantryHeld, onTogglePantry, onOpenAddIngredient, onOpenA
 
   const heldCount = items.filter(i => pantryHeld.has(i.id)).length;
   const outCount  = items.filter(i => !pantryHeld.has(i.id)).length;
+
+  const onTabKeyDown = (e, id) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const idx = tabs.findIndex(t => t.id === id);
+    const dir = e.key === "ArrowRight" ? 1 : -1;
+    const next = tabs[(idx + dir + tabs.length) % tabs.length];
+    setTab(next.id);
+    window.requestAnimationFrame(() => {
+      document.querySelector(`[data-pantry-tab="${next.id}"]`)?.focus();
+    });
+  };
 
   return (
     <main className="screen">
@@ -195,18 +208,23 @@ function PantryScreen({ pantryHeld, onTogglePantry, onOpenAddIngredient, onOpenA
         </div>
       </div>
 
-      <div className="pantry-tabs">
-        {D2.PANTRY_GROUPS.map(g => {
+      <div className="pantry-cat-tabs" role="tablist" aria-label="팬트리 카테고리">
+        {tabs.map(g => {
           const heldHere = D2.INGREDIENTS.filter(i => g.cats.includes(i.cat) && pantryHeld.has(i.id)).length;
           const totalHere = D2.INGREDIENTS.filter(i => g.cats.includes(i.cat)).length;
           return (
             <button
               key={g.id}
-              className={`pantry-tab ${tab === g.id ? "active" : ""}`}
+              className={`pantry-cat-tab ${tab === g.id ? "active" : ""}`}
+              role="tab"
+              aria-selected={tab === g.id}
+              aria-controls="pantry-panel"
+              data-pantry-tab={g.id}
               onClick={() => setTab(g.id)}
+              onKeyDown={(e) => onTabKeyDown(e, g.id)}
             >
-              <span>{g.title}</span>
-              <span className="pantry-tab-count tabular">{heldHere}/{totalHere}</span>
+              <span className="pantry-cat-tab-label">{g.title}</span>
+              <span className="pantry-cat-tab-count tabular">{heldHere}/{totalHere}</span>
             </button>
           );
         })}
@@ -238,34 +256,36 @@ function PantryScreen({ pantryHeld, onTogglePantry, onOpenAddIngredient, onOpenA
         </div>
       </div>
 
-      {items.length === 0 ? (
-        <StatePanel
-          icon="fridge"
-          title="여기에는 아직 재료가 없어요"
-          desc="자주 쓰는 재료를 미리 등록해 두세요."
-          action={<Button variant="primary" leftIcon="plus" onClick={onOpenAddIngredient}>재료 추가</Button>}
-        />
-      ) : (
-        <div className="pantry-grid">
-          {items.map(i => {
-            const held = pantryHeld.has(i.id);
-            return (
-              <div key={i.id} className={`pantry-card ${held ? "" : "out"}`} onClick={() => onTogglePantry(i.id)}>
-                <div className="pantry-card-tag">
-                  <span className={`pantry-card-tag-pill ${held ? "held" : "out"}`}>
-                    {held ? "보유" : "없음"}
-                  </span>
-                </div>
-                <div className="pantry-card-icon">
-                  <Icon name={iconForIngredient(i)} size={28} color={held ? "var(--text-2)" : "var(--text-4)"} />
-                </div>
-                <div className="pantry-card-name">{i.name}</div>
-                <div className="pantry-card-meta">{i.cat}</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <section id="pantry-panel" className="pantry-panel" role="tabpanel" aria-label={currentGroup?.title}>
+        {items.length === 0 ? (
+          <StatePanel
+            icon="fridge"
+            title="여기에는 아직 재료가 없어요"
+            desc="자주 쓰는 재료를 미리 등록해 두세요."
+            action={<Button variant="primary" leftIcon="plus" onClick={onOpenAddIngredient}>재료 추가</Button>}
+          />
+        ) : (
+          <div className="pantry-grid">
+            {items.map(i => {
+              const held = pantryHeld.has(i.id);
+              return (
+                <button key={i.id} type="button" className={`pantry-card ${held ? "" : "out"}`} onClick={() => onTogglePantry(i.id)}>
+                  <div className="pantry-card-tag">
+                    <span className={`pantry-card-tag-pill ${held ? "held" : "out"}`}>
+                      {held ? "보유" : "없음"}
+                    </span>
+                  </div>
+                  <div className="pantry-card-icon">
+                    <Icon name={iconForIngredient(i)} size={28} color={held ? "var(--text-2)" : "var(--text-4)"} />
+                  </div>
+                  <div className="pantry-card-name">{i.name}</div>
+                  <div className="pantry-card-meta">{i.cat}</div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </main>
   );
 }
@@ -386,6 +406,7 @@ function MyPageScreen({
             onSaveToggle={onSaveToggle}
             onOpenRecipe={onOpenRecipe}
             onGoRecipebooks={onGoRecipebooks}
+            onGoShoppingLists={onGoShoppingLists}
           />
         )}
         {activeTab === "account" && (
@@ -404,7 +425,7 @@ function MyPageScreen({
   );
 }
 
-function MyPageSavedPanel({ savedSet, onSaveToggle, onOpenRecipe, onGoRecipebooks }) {
+function MyPageSavedPanel({ savedSet, onSaveToggle, onOpenRecipe, onGoRecipebooks, onGoShoppingLists }) {
   const savedRecipes = D2.RECIPES.filter(r => savedSet?.has(r.id));
   return (
     <div className="mypage-panel-grid">
@@ -437,6 +458,15 @@ function MyPageSavedPanel({ savedSet, onSaveToggle, onOpenRecipe, onGoRecipebook
         <span className="mypage-quick-nav-body">
           <span className="mypage-quick-nav-title">레시피북 관리</span>
           <span className="mypage-quick-nav-desc">내가 추가한 · 저장한 · 좋아요한 · 커스텀 북 6개</span>
+        </span>
+        <Icon name="chevR" size={16} color="var(--text-4)" />
+      </button>
+
+      <button className="mypage-quick-nav" type="button" onClick={onGoShoppingLists}>
+        <span className="meta-icon"><Icon name="cart" size={16} /></span>
+        <span className="mypage-quick-nav-body">
+          <span className="mypage-quick-nav-title">장보기 내역</span>
+          <span className="mypage-quick-nav-desc">진행 중 · 완료된 장보기 {D2.SHOPPING_LISTS.length}개</span>
         </span>
         <Icon name="chevR" size={16} color="var(--text-4)" />
       </button>

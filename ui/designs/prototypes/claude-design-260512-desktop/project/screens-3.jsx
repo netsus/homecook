@@ -742,7 +742,7 @@ function YtImportScreen({ dateISO, col, onBack, onCreateRecipe }) {
 /* ============================================
    SHOPPING_DETAIL (§12) — current week
    ============================================ */
-function ShoppingDetailScreen({ list, pantryHeld, onTogglePantry, onBack, onMarkComplete, onOpenReAdd, onOpenPantryReflect, readOnly, toast }) {
+function ShoppingDetailScreen({ list, pantryHeld, onBack, onOpenReAdd, onOpenPantryReflect, readOnly, toast }) {
   const [checked, setChecked] = useS3(new Set());
 
   if (!list) return null;
@@ -779,7 +779,7 @@ function ShoppingDetailScreen({ list, pantryHeld, onTogglePantry, onBack, onMark
               variant="primary"
               leftIcon={allDone ? "check" : "cart"}
               disabled={!allDone}
-              onClick={() => { if (allDone) { onOpenPantryReflect(reflectables); onMarkComplete(list.id); } }}
+              onClick={() => { if (allDone) onOpenPantryReflect(reflectables, list.id); }}
             >
               장보기 완료
             </Button>
@@ -790,6 +790,13 @@ function ShoppingDetailScreen({ list, pantryHeld, onTogglePantry, onBack, onMark
           ))
         }
       />
+
+      {readOnly && (
+        <div className="shopping-readonly-banner">
+          <Icon name="lock" size={15} />
+          <span>이 장보기는 완료되어 수정할 수 없어요. 수정 시도는 실제 서비스에서 409로 차단됩니다.</span>
+        </div>
+      )}
 
       {!list.completed && (
         <div className="shopping-progress-card">
@@ -887,7 +894,9 @@ function ShoppingFlowScreen({ onBack, onOpenCurrent, onOpenPast, onCreateNew, cu
             <div className="shopping-flow-meta tabular">
               {currentList.items.length}개 항목 · {currentList.mealIds.length}끼
             </div>
-            <Button variant="primary" rightIcon="chevR" size="sm">바로 시작</Button>
+            <span className="shopping-flow-cta primary">
+              바로 시작 <Icon name="chevR" size={14} />
+            </span>
           </div>
         )}
 
@@ -901,7 +910,9 @@ function ShoppingFlowScreen({ onBack, onOpenCurrent, onOpenPast, onCreateNew, cu
           <div className="shopping-flow-eyebrow">과거 목록</div>
           <div className="shopping-flow-title">지난 장보기 다시 보기</div>
           <div className="shopping-flow-meta">읽기 전용 · 다시 장보기로 복원 가능</div>
-          <Button variant="tertiary" rightIcon="chevR" size="sm">목록 열기</Button>
+          <span className="shopping-flow-cta">
+            목록 열기 <Icon name="chevR" size={14} />
+          </span>
         </div>
 
         <div
@@ -914,7 +925,9 @@ function ShoppingFlowScreen({ onBack, onOpenCurrent, onOpenPast, onCreateNew, cu
           <div className="shopping-flow-eyebrow">직접 만들기</div>
           <div className="shopping-flow-title">새 장보기 리스트</div>
           <div className="shopping-flow-meta">플래너 없이 항목만 적기</div>
-          <Button variant="tertiary" rightIcon="plus" size="sm">새로 만들기</Button>
+          <span className="shopping-flow-cta">
+            새로 만들기 <Icon name="plus" size={14} />
+          </span>
         </div>
       </div>
     </main>
@@ -926,6 +939,8 @@ function ShoppingFlowScreen({ onBack, onOpenCurrent, onOpenPast, onCreateNew, cu
    ============================================ */
 function ShoppingListsScreen({ onBack, onOpen }) {
   const lists = D3.SHOPPING_LISTS;
+  const inProgress = lists.filter(l => !l.completed);
+  const completed = lists.filter(l => l.completed);
   return (
     <main className="screen">
       <div className="breadcrumb">
@@ -936,20 +951,41 @@ function ShoppingListsScreen({ onBack, onOpen }) {
 
       <ScreenHeader title="장보기 목록" lead="진행 중과 완료된 장보기 리스트를 한곳에서 봅니다." />
 
-      <div className="meta-list">
-        {lists.map(l => (
-          <button key={l.id} className="meta-row" onClick={() => onOpen(l.id)}>
-            <div className="meta-icon"><Icon name="cart" size={16} /></div>
-            <div className="meta-body">
-              <div className="meta-title">{l.title}</div>
-              <div className="meta-sub tabular">{l.items.length}개 항목 · {l.completed ? "완료" : "진행 중"}</div>
-            </div>
-            {l.completed && <span className="tag">완료</span>}
-            <Icon name="chevR" size={16} color="var(--text-4)" />
-          </button>
-        ))}
-      </div>
+      {inProgress.length > 0 && (
+        <section className="shopping-history-section">
+          <h2 className="my-section-title">진행 중</h2>
+          <div className="shopping-history-list">
+            {inProgress.map(l => <ShoppingHistoryRow key={l.id} list={l} onOpen={onOpen} />)}
+          </div>
+        </section>
+      )}
+
+      <section className="shopping-history-section">
+        <h2 className="my-section-title">완료된 장보기</h2>
+        <div className="shopping-history-list">
+          {completed.map(l => <ShoppingHistoryRow key={l.id} list={l} onOpen={onOpen} />)}
+        </div>
+      </section>
     </main>
+  );
+}
+
+function ShoppingHistoryRow({ list, onOpen }) {
+  const checkedCount = list.items.filter(i => i.checked).length;
+  const progressText = list.completed
+    ? `${checkedCount}/${list.items.length}개 구매 · ${list.createdAt}`
+    : `${list.items.length}개 항목 · ${list.mealIds.length}끼`;
+
+  return (
+    <button className="shopping-history-row" type="button" onClick={() => onOpen(list.id)}>
+      <span className={`shopping-history-dot ${list.completed ? "done" : "active"}`} aria-hidden="true" />
+      <span className="shopping-history-body">
+        <span className="shopping-history-title">{list.title}</span>
+        <span className="shopping-history-meta tabular">{progressText}</span>
+      </span>
+      <Tag variant={list.completed ? undefined : "brand"}>{list.completed ? "완료" : "진행 중"}</Tag>
+      <Icon name="chevR" size={16} color="var(--text-4)" />
+    </button>
   );
 }
 
