@@ -15,7 +15,7 @@ const {
   SaveModal, PlannerAddModal, IngredientFilterModal, Lightbox,
   PlannedServingsConfirmModal,
   PantryAddIngredientModal, PantryAddBundleModal, PantryReflectModal,
-  NicknameModal, LogoutModal,
+  NicknameModal, RecipebookNameModal, LogoutModal,
 } = window.HC_MODALS;
 
 function normalizeShoppingList(list) {
@@ -48,6 +48,7 @@ function normalizeRecipebook(book) {
   return {
     ...book,
     recipeIds,
+    count: typeof book.count === "number" ? book.count : recipeIds.length,
     thumbs: book.thumbs || recipeIds.map(id => DA.RECIPE[id]?.photo).filter(Boolean),
   };
 }
@@ -119,6 +120,45 @@ function createShoppingListFromMeals(targetMeals, pantryHeld) {
   };
 }
 
+function createManualShoppingList() {
+  const stamp = Date.now();
+  return normalizeShoppingList({
+    id: `sl-manual-${stamp}`,
+    title: "새 장보기 리스트",
+    range: "직접 만든 목록",
+    createdAt: DA.TODAY_ISO,
+    completed: false,
+    origin: "manual",
+    mealIds: [],
+    items: [
+      { id: `manual-${stamp}-1`, ing: null, name: "직접 추가한 재료", amount: "1개", note: "" },
+    ],
+    excluded: [],
+  });
+}
+
+function cloneShoppingListForReadd(list) {
+  const stamp = Date.now();
+  return normalizeShoppingList({
+    id: `sl-readd-${stamp}`,
+    title: `${list.title} 다시 장보기`,
+    range: list.range || "다시 장보기",
+    createdAt: DA.TODAY_ISO,
+    completed: false,
+    origin: "readd",
+    mealIds: [],
+    items: (list.items || []).map((item, index) => ({
+      ...item,
+      id: `readd-${stamp}-${index}`,
+      checked: false,
+    })),
+    excluded: (list.excluded || []).map((item, index) => ({
+      ...item,
+      id: `readd-ex-${stamp}-${index}`,
+    })),
+  });
+}
+
 function App() {
   // Routing — stack-based
   const [stack, setStack] = useStateA([{ screen: "HOME" }]);
@@ -132,7 +172,7 @@ function App() {
   const [activeShoppingListId, setActiveShoppingListId] = useStateA(() => latestActiveShoppingList(DA.SHOPPING_LISTS)?.id || null);
   const [leftovers, setLeftovers] = useStateA(() => DA.LEFTOVERS.map(normalizeLeftover));
   const [ateItems, setAteItems] = useStateA(() => DA.ATE.map(normalizeAteItem));
-  const [recipebooks] = useStateA(() => DA.RECIPEBOOKS.map(normalizeRecipebook));
+  const [recipebooks, setRecipebooks] = useStateA(() => DA.RECIPEBOOKS.map(normalizeRecipebook));
   const [savedFilters, setSavedFilters] = useStateA(() => new Set());
 
   // Demo-state overrides
@@ -158,6 +198,7 @@ function App() {
   const [pantryAddBundle, setPantryAddBundle] = useStateA(false);
   const [pantryReflect, setPantryReflect] = useStateA({ open: false, items: [], listId: null, checkedItemIds: [] });
   const [nickname, setNickname] = useStateA(false);
+  const [recipebookNameModal, setRecipebookNameModal] = useStateA({ open: false, mode: "create", bookId: null });
   const [logout, setLogout] = useStateA(false);
   const [cookNotice, setCookNotice] = useStateA(false);
   const [account, setAccount] = useStateA(DA.ACCOUNT);
@@ -371,6 +412,75 @@ function App() {
     completeShoppingList(listId, checkedItemIds);
     toast("장보기를 완료했어요");
   }, [completeShoppingList, toast]);
+
+  const openManualShoppingList = useCallbackA(() => {
+    const list = createManualShoppingList();
+    setShoppingLists(prev => [list, ...prev]);
+    setActiveShoppingListId(list.id);
+    push({ screen: "SHOPPING_DETAIL", listId: list.id });
+    toast("새 장보기 리스트를 만들었어요");
+  }, [toast]);
+
+  const readdShoppingList = useCallbackA((listId) => {
+    const source = shoppingLists.find(list => list.id === listId);
+    if (!source || !source.completed) return;
+    const list = cloneShoppingListForReadd(source);
+    setShoppingLists(prev => [list, ...prev]);
+    setActiveShoppingListId(list.id);
+    push({ screen: "SHOPPING_DETAIL", listId: list.id });
+    toast("다시 장보기로 담았어요");
+  }, [shoppingLists, toast]);
+
+  const openCreateRecipebook = useCallbackA(() => {
+    setRecipebookNameModal({ open: true, mode: "create", bookId: null });
+  }, []);
+
+  const openEditRecipebook = useCallbackA((bookId) => {
+    setRecipebookNameModal({ open: true, mode: "edit", bookId });
+  }, []);
+
+  const closeRecipebookNameModal = useCallbackA(() => {
+    setRecipebookNameModal({ open: false, mode: "create", bookId: null });
+  }, []);
+
+  const saveRecipebookName = useCallbackA((title) => {
+    if (recipebookNameModal.mode === "edit") {
+      const bookId = recipebookNameModal.bookId;
+      setRecipebooks(prev => prev.map(book => (
+        book.id === bookId && book.type === "custom" ? { ...book, title } : book
+      )));
+      closeRecipebookNameModal();
+      toast("레시피북 이름을 수정했어요");
+      return;
+    }
+
+    const id = `rb-custom-${Date.now()}`;
+    const book = normalizeRecipebook({
+      id,
+      title,
+      type: "custom",
+      recipeIds: [],
+      count: 0,
+      thumbs: [],
+    });
+    setRecipebooks(prev => [...prev, book]);
+    closeRecipebookNameModal();
+    push({ screen: "RECIPEBOOK_DETAIL", bookId: id });
+    toast("새 레시피북을 만들었어요");
+  }, [recipebookNameModal, closeRecipebookNameModal, toast]);
+
+  const completeLogout = useCallbackA(() => {
+    setIsAuthenticated(false);
+    setLogout(false);
+    setNickname(false);
+    setSaveModal({ open: false, recipeId: null });
+    setPlannerAddModal({ open: false, recipeId: null, date: null, col: null, servings: null });
+    closeServingsConfirm();
+    setRecipebookNameModal({ open: false, mode: "create", bookId: null });
+    setLoginGate({ open: false, actionLabel: "", helper: "", resume: null });
+    toast("로그아웃했어요");
+    goTab("HOME");
+  }, [closeServingsConfirm, toast]);
 
   const leftoverNote = useCallbackA((recipe, servings) => {
     return `${recipe?.title || "요리"} ${servings}인분`;
@@ -685,7 +795,7 @@ function App() {
       recipebooks={recipebooks}
       onBack={pop}
       onOpenBook={(bid) => push({ screen: "RECIPEBOOK_DETAIL", bookId: bid })}
-      onCreateBook={() => toast("새 레시피북 만들기 (데모)")}
+      onCreateBook={openCreateRecipebook}
     />;
   } else if (s === "RECIPEBOOK_DETAIL") {
     const book = recipebooks.find(b => b.id === cur.bookId);
@@ -694,8 +804,8 @@ function App() {
       recipebooks={recipebooks}
       onBack={pop}
       onOpenRecipe={(rid) => push({ screen: "RECIPE", recipeId: rid })}
+      onEditBook={book?.type === "custom" ? () => openEditRecipebook(book.id) : null}
       onDeleteBook={book?.type === "custom" ? () => openRecipebookDeleteConfirm(book) : null}
-      toast={toast}
     />;
   } else if (s === "SHOPPING_FLOW") {
     body = <ShoppingFlowScreen
@@ -705,7 +815,7 @@ function App() {
         push({ screen: "SHOPPING_DETAIL", listId: lid });
       }}
       onOpenPast={() => push({ screen: "SHOPPING_LISTS" })}
-      onCreateNew={() => toast("새 장보기 만들기 (데모)")}
+      onCreateNew={openManualShoppingList}
       currentList={activeShoppingList}
     />;
   } else if (s === "SHOPPING_LISTS") {
@@ -724,7 +834,7 @@ function App() {
       list={list}
       pantryHeld={pantryHeld}
       onBack={pop}
-      onOpenReAdd={(lid) => toast("다시 장보기로 복원 (데모)")}
+      onOpenReAdd={readdShoppingList}
       onCompleteShopping={requestShoppingCompletion}
       readOnly={list?.completed}
       toast={toast}
@@ -819,7 +929,10 @@ function App() {
           setSaveModal({ open: false, recipeId: null });
           toast(`${books.length}개 북에 저장했어요`);
         }}
-        toast={toast}
+        onCreateBook={() => {
+          setSaveModal({ open: false, recipeId: null });
+          openCreateRecipebook();
+        }}
       />
       <PlannerAddModal
         open={plannerAddModal.open}
@@ -903,11 +1016,18 @@ function App() {
         onClose={() => setNickname(false)}
         onConfirm={(name) => { setAccount(a => ({ ...a, nickname: name })); setNickname(false); toast("닉네임을 변경했어요"); }}
       />
+      <RecipebookNameModal
+        open={recipebookNameModal.open}
+        mode={recipebookNameModal.mode}
+        currentTitle={recipebooks.find(book => book.id === recipebookNameModal.bookId)?.title || ""}
+        onClose={closeRecipebookNameModal}
+        onConfirm={saveRecipebookName}
+      />
       <LogoutModal
         open={logout}
         provider={account.provider}
         onClose={() => setLogout(false)}
-        onConfirm={() => { setLogout(false); toast("로그아웃했어요 (데모)"); }}
+        onConfirm={completeLogout}
       />
       <CookNoticeDialog
         open={cookNotice}
