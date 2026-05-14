@@ -1022,6 +1022,7 @@ function LeftoversScreen({ leftovers: liveLeftovers = D3.LEFTOVERS, onBack, onCo
         <div className="leftover-grid">
           {leftovers.map(lf => {
             const r = D3.RECIPE[lf.recipeId];
+            const sourceSlot = lf.sourceDate && lf.sourceCol ? plannerSlotLabel(lf.sourceDate, lf.sourceCol) : null;
             return (
               <div key={lf.id} className="leftover-card" tabIndex={0}>
                 <div className="leftover-thumb">
@@ -1032,7 +1033,9 @@ function LeftoversScreen({ leftovers: liveLeftovers = D3.LEFTOVERS, onBack, onCo
                     <div className="leftover-title">{r?.title}</div>
                     <Tag variant="brand">남은 요리</Tag>
                   </div>
-                  <div className="leftover-meta tabular">{D3.fmtPlannerDate(lf.createdAt)} · {lf.note}</div>
+                  <div className="leftover-meta tabular">
+                    {D3.fmtPlannerDate(lf.createdAt)} · {sourceSlot || "직접 기록"} · {lf.note}
+                  </div>
                   <div className="leftover-actions">
                     <Button variant="secondary" size="sm" leftIcon="cal" onClick={() => onReAddToPlanner(lf.id)}>플래너에 추가</Button>
                     <Button variant="tertiary" size="sm" leftIcon="pot" onClick={() => onCook(lf.id)}>요리하기</Button>
@@ -1077,6 +1080,7 @@ function AteListScreen({ ateItems: liveAteItems = D3.ATE, onBack, onOpenRecipe, 
           {ateItems.map(a => {
             const r = D3.RECIPE[a.recipeId];
             if (!r) return null;
+            const sourceSlot = a.sourceDate && a.sourceCol ? plannerSlotLabel(a.sourceDate, a.sourceCol) : null;
             return (
               <div key={a.id} className="ate-row">
                 <div className="ate-thumb">
@@ -1084,7 +1088,9 @@ function AteListScreen({ ateItems: liveAteItems = D3.ATE, onBack, onOpenRecipe, 
                 </div>
                 <div className="ate-body">
                   <div className="ate-title">{r.title}</div>
-                  <div className="ate-meta tabular">{D3.fmtPlannerDate(a.ateAt)}</div>
+                  <div className="ate-meta tabular">
+                    {D3.fmtPlannerDate(a.ateAt)} · {sourceSlot || "직접 기록"} · {a.servings || 1}인분
+                  </div>
                 </div>
                 <div className="ate-actions">
                   <Button variant="ghost" size="sm" leftIcon="swap" onClick={() => onUndoAte(a.id)}>되돌리기</Button>
