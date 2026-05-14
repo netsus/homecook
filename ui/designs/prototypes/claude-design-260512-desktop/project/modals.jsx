@@ -534,6 +534,68 @@ function PantryReflectModal({ open, items, onClose, onConfirm }) {
   );
 }
 
+/* ---------------- Consumed ingredients (post cooking) ---------------- */
+function ConsumedIngredientSheet({ open, recipe, mealId, ingredients, pantryHeld, onClose, onConfirm }) {
+  const [picked, setPicked] = useStateM(new Set());
+
+  useEffectM(() => {
+    if (!open) return;
+    setPicked(new Set((ingredients || []).filter(i => i.id && pantryHeld?.has(i.id)).map(i => i.id)));
+  }, [open, ingredients, pantryHeld]);
+
+  const toggle = (id) => setPicked(p => {
+    const n = new Set(p);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+
+  if (!recipe) return null;
+
+  return (
+    <DialogM
+      open={open}
+      onClose={onClose}
+      title="재료 차감"
+      helper={mealId ? "플래너 요리를 완료하고 팬트리를 정리합니다" : "독립 요리에 사용한 재료를 팬트리에서 차감합니다"}
+      footer={<>
+        <ButtonM variant="ghost" onClick={() => onConfirm([])}>차감 없이 완료</ButtonM>
+        <ButtonM variant="primary" leftIcon="check" onClick={() => onConfirm([...picked])}>
+          요리 완료 ({picked.size}개 차감)
+        </ButtonM>
+      </>}
+    >
+      <div className="consumed-sheet">
+        <p className="consumed-desc">
+          {recipe.title}에 사용한 재료 중 팬트리에서 차감할 항목을 선택하세요.
+        </p>
+        <div className="consumed-list">
+          {(ingredients || []).map((ing, idx) => {
+            const name = ing.id ? DM.ING[ing.id]?.name : ing.name;
+            const inPantry = ing.id && pantryHeld?.has(ing.id);
+            const on = ing.id && picked.has(ing.id);
+            return (
+              <button
+                key={ing.id || idx}
+                className={`consumed-item ${on ? "on" : ""}`}
+                type="button"
+                disabled={!inPantry}
+                onClick={() => inPantry && toggle(ing.id)}
+              >
+                <span className={`check-box ${on ? "on" : ""}`}>
+                  {on && <IconM name="check" size={12} />}
+                </span>
+                <span className="consumed-name">{name}</span>
+                <span className="consumed-amount tabular">{ing.amount}{ing.unit ? ` ${ing.unit}` : ""}</span>
+                <span className={`consumed-tag ${inPantry ? "held" : ""}`}>{inPantry ? "보유" : "없음"}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </DialogM>
+  );
+}
+
 /* ---------------- Nickname edit ---------------- */
 function NicknameModal({ open, current, onClose, onConfirm }) {
   const [val, setVal] = useStateM(current || "");
@@ -577,5 +639,6 @@ window.HC_MODALS = {
   SaveModal, PlannerAddModal, IngredientFilterModal, Lightbox,
   PlannedServingsConfirmModal, IngredientPickerModal_ManualCreate,
   PantryAddIngredientModal, PantryAddBundleModal, PantryReflectModal,
+  ConsumedIngredientSheet,
   NicknameModal, LogoutModal,
 };

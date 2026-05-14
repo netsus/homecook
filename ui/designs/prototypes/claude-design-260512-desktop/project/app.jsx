@@ -8,12 +8,14 @@ const {
   MealScreen, MenuAddScreen, ShoppingDetailScreen, ShoppingFlowScreen, ShoppingListsScreen,
   RecipeSearchPickerScreen, RecipeBookSelectorScreen, RecipeBookDetailPickerScreen, PantryMatchPickerScreen,
   ManualRecipeCreateScreen, YtImportScreen,
-  LeftoversScreen, AteListScreen, RecipebookDetailScreen, SettingsScreen, CookNoticeDialog,
+  LeftoversScreen, AteListScreen, CookReadyListScreen, CookModePlannerScreen, CookModeStandaloneScreen,
+  RecipebookDetailScreen, SettingsScreen, CookNoticeDialog,
 } = window.HC_S3;
 const {
   SaveModal, PlannerAddModal, IngredientFilterModal, Lightbox,
   PlannedServingsConfirmModal,
   PantryAddIngredientModal, PantryAddBundleModal, PantryReflectModal,
+  ConsumedIngredientSheet,
   NicknameModal, LogoutModal,
 } = window.HC_MODALS;
 
@@ -45,6 +47,7 @@ function App() {
   const [pantryAddIng, setPantryAddIng] = useStateA(false);
   const [pantryAddBundle, setPantryAddBundle] = useStateA(false);
   const [pantryReflect, setPantryReflect] = useStateA({ open: false, items: [], listId: null });
+  const [consumedSheet, setConsumedSheet] = useStateA({ open: false, recipe: null, mealId: null, ingredients: [] });
   const [nickname, setNickname] = useStateA(false);
   const [logout, setLogout] = useStateA(false);
   const [cookNotice, setCookNotice] = useStateA(false);
@@ -211,7 +214,9 @@ function App() {
     if (s === "PLANNER_WEEK" || s === "MEAL" || s === "MENU_ADD" ||
         s === "RECIPE_SEARCH_PICKER" || s === "RECIPEBOOK_SELECTOR" ||
         s === "RECIPEBOOK_DETAIL_PICKER" || s === "PANTRY_MATCH_PICKER" ||
-        s === "MANUAL_RECIPE_CREATE" || s === "YT_IMPORT") return "PLANNER_WEEK";
+        s === "MANUAL_RECIPE_CREATE" || s === "YT_IMPORT" ||
+        s === "COOK_READY_LIST" || s === "COOK_MODE_PLANNER") return "PLANNER_WEEK";
+    if (s === "COOK_MODE_STANDALONE") return "";
     if (s === "PANTRY") return "PANTRY";
     if (s === "MYPAGE" || s === "RECIPEBOOKS" || s === "RECIPEBOOK_DETAIL" || s === "SHOPPING_FLOW" ||
         s === "SHOPPING_DETAIL" || s === "SHOPPING_LISTS" || s === "LEFTOVERS" || s === "ATE_LIST" || s === "SETTINGS") return "MYPAGE";
@@ -256,7 +261,7 @@ function App() {
         actionLabel: "레시피북에 저장",
         helper: "저장할 레시피북을 고르려면 로그인이 필요해요.",
       }, () => setSaveModal({ open: true, recipeId: cur.recipeId }))}
-      onCook={() => setCookNotice(true)}
+      onCook={() => push({ screen: "COOK_MODE_STANDALONE", recipeId: cur.recipeId })}
       pantryHeld={pantryHeld}
       toast={toast}
     />;
@@ -274,6 +279,7 @@ function App() {
       }}
       onOpenMeal={(mid) => push({ screen: "MEAL", mealId: mid })}
       onOpenShopping={() => push({ screen: "SHOPPING_FLOW" })}
+      onOpenCookReady={() => push({ screen: "COOK_READY_LIST" })}
       stateOverride={plannerState}
       onStateOverride={setPlannerState}
     />;
@@ -282,7 +288,7 @@ function App() {
       mealId={cur.mealId}
       meal={meals.find(m => m.id === cur.mealId)}
       onBack={pop}
-      onCook={() => setCookNotice(true)}
+      onCook={(mid) => push({ screen: "COOK_MODE_PLANNER", mealId: mid })}
       onGoShopping={() => push({ screen: "SHOPPING_DETAIL", listId: "sl1" })}
       onGoRecipe={(rid) => push({ screen: "RECIPE", recipeId: rid })}
       onDelete={(mid) => openConfirm({
@@ -429,13 +435,64 @@ function App() {
   } else if (s === "LEFTOVERS") {
     body = <LeftoversScreen
       onBack={pop}
-      onCook={() => setCookNotice(true)}
+      onCook={(lfId) => {
+        const lf = DA.LEFTOVERS.find(l => l.id === lfId);
+        if (lf) push({ screen: "COOK_MODE_STANDALONE", recipeId: lf.recipeId });
+      }}
       onMarkAte={() => toast("다 먹은 목록에 추가했어요")}
+      onReAddToPlanner={() => toast("플래너에 다시 추가했어요 (데모)")}
+      onGoAteList={() => push({ screen: "ATE_LIST" })}
     />;
   } else if (s === "ATE_LIST") {
     body = <AteListScreen
       onBack={pop}
       onOpenRecipe={(rid) => push({ screen: "RECIPE", recipeId: rid })}
+      onUndoAte={() => toast("남은 요리로 되돌렸어요 (데모)")}
+      onRecreate={(rid) => push({ screen: "COOK_MODE_STANDALONE", recipeId: rid })}
+      onGoLeftovers={() => push({ screen: "LEFTOVERS" })}
+    />;
+  } else if (s === "COOK_READY_LIST") {
+    body = <CookReadyListScreen
+      meals={meals}
+      onBack={pop}
+      onStartCook={(mealId) => {
+        const meal = meals.find(m => m.id === mealId);
+        if (meal?.status !== "shopped") {
+          toast("장보기 완료 후 요리할 수 있어요");
+          return;
+        }
+        push({ screen: "COOK_MODE_PLANNER", mealId });
+      }}
+      onOpenMeal={(mid) => push({ screen: "MEAL", mealId: mid })}
+      onOpenNotice={() => setCookNotice(true)}
+    />;
+  } else if (s === "COOK_MODE_PLANNER") {
+    const meal = meals.find(m => m.id === cur.mealId);
+    const recipe = meal ? DA.RECIPE[meal.recipeId] : null;
+    body = <CookModePlannerScreen
+      meal={meal}
+      recipe={recipe}
+      onBack={pop}
+      onComplete={(mealId, completedRecipe) => setConsumedSheet({
+        open: true,
+        recipe: completedRecipe,
+        mealId,
+        ingredients: (completedRecipe?.ingredients || []).filter(i => i.id),
+      })}
+      pantryHeld={pantryHeld}
+    />;
+  } else if (s === "COOK_MODE_STANDALONE") {
+    const recipe = DA.RECIPE[cur.recipeId];
+    body = <CookModeStandaloneScreen
+      recipe={recipe}
+      onBack={pop}
+      onComplete={(completedRecipe) => setConsumedSheet({
+        open: true,
+        recipe: completedRecipe,
+        mealId: null,
+        ingredients: (completedRecipe?.ingredients || []).filter(i => i.id),
+      })}
+      pantryHeld={pantryHeld}
     />;
   } else if (s === "SETTINGS") {
     body = <SettingsScreen
@@ -545,6 +602,33 @@ function App() {
           toast(completedFromShopping ? "장보기를 완료하고 팬트리에 반영했어요" : `${ings.length}개 재료를 팬트리에 반영했어요`);
         }}
       />
+      <ConsumedIngredientSheet
+        open={consumedSheet.open}
+        recipe={consumedSheet.recipe}
+        mealId={consumedSheet.mealId}
+        ingredients={consumedSheet.ingredients}
+        pantryHeld={pantryHeld}
+        onClose={() => setConsumedSheet({ open: false, recipe: null, mealId: null, ingredients: [] })}
+        onConfirm={(deductIds) => {
+          setPantryHeld(p => {
+            const n = new Set(p);
+            deductIds.forEach(id => n.delete(id));
+            return n;
+          });
+          const fromPlanner = Boolean(consumedSheet.mealId);
+          if (fromPlanner) {
+            setMeals(ms => ms.map(m => m.id === consumedSheet.mealId ? { ...m, status: "cooked" } : m));
+          }
+          setConsumedSheet({ open: false, recipe: null, mealId: null, ingredients: [] });
+          toast(fromPlanner ? `요리 완료! ${deductIds.length}개 재료를 차감했어요` : `${deductIds.length}개 재료를 팬트리에서 차감했어요`);
+          if (fromPlanner) {
+            setStack([{ screen: "PLANNER_WEEK" }]);
+            window.scrollTo({ top: 0, behavior: "instant" });
+          } else {
+            pop();
+          }
+        }}
+      />
       <NicknameModal
         open={nickname}
         current={account.nickname}
@@ -560,6 +644,10 @@ function App() {
       <CookNoticeDialog
         open={cookNotice}
         onClose={() => setCookNotice(false)}
+        onGoToCookList={() => {
+          setCookNotice(false);
+          push({ screen: "COOK_READY_LIST" });
+        }}
       />
       <HC_.LoginGateDialog
         open={loginGate.open}

@@ -1,0 +1,42 @@
+{
+  "phase": 7,
+  "url": "http://127.0.0.1:4176/homecook%20desktop%20prototype.html",
+  "startedAt": "2026-05-14T03:49:01.295Z",
+  "screenshots": [
+    "cook-ready-list-1024.png",
+    "cook-ready-list-1280.png",
+    "cook-ready-empty-1280.png",
+    "cook-mode-planner-1024.png",
+    "cook-mode-planner-1280.png",
+    "consumed-sheet-1280.png",
+    "cook-notice-1280.png",
+    "leftovers-1024.png",
+    "leftovers-1280.png",
+    "leftovers-empty-1280.png",
+    "cook-mode-standalone-1280.png",
+    "cook-mode-standalone-recipe-1280.png",
+    "mypage-cooking-nav-1280.png",
+    "ate-list-1280.png",
+    "ate-list-empty-1280.png"
+  ],
+  "findings": [],
+  "console": [],
+  "pageErrors": [],
+  "failedRequests": [],
+  "invariants": {
+    "registeredMealsDoNotStartCooking": true,
+    "plannerCookMode": {
+      "noServingStepper": true,
+      "hasStatusPill": true
+    },
+    "standaloneCookMode": {
+      "noServingStepper": true,
+      "hasNoStatusPill": true,
+      "hasNotice": true
+    },
+    "noConsoleErrors": true,
+    "noPageErrors": true,
+    "noFailedRequests": true
+  },
+  "finishedAt": "2026-05-14T03:49:25.655Z"
+}

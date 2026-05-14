@@ -12,7 +12,7 @@ const D2 = window.HC_DATA;
 /* ============================================
    PLANNER_WEEK (§4)
    ============================================ */
-function PlannerWeekScreen({ meals, onOpenAdd, onOpenMeal, onOpenShopping, stateOverride, onStateOverride }) {
+function PlannerWeekScreen({ meals, onOpenAdd, onOpenMeal, onOpenShopping, onOpenCookReady, stateOverride, onStateOverride }) {
   const isEmpty = stateOverride === "empty" || meals.length === 0;
 
   const mealMap = useMemo2(() => {
@@ -42,6 +42,9 @@ function PlannerWeekScreen({ meals, onOpenAdd, onOpenMeal, onOpenShopping, state
         <div className="row gap-2">
           <Button variant="tertiary" leftIcon="chevL">이전 주</Button>
           <Button variant="tertiary" rightIcon="chevR">다음 주</Button>
+          <Button variant="tertiary" leftIcon="pot" onClick={onOpenCookReady}>
+            요리 준비
+          </Button>
           <Button variant="primary" leftIcon="cart" onClick={onOpenShopping}>
             장보기 미리보기
           </Button>
@@ -407,6 +410,8 @@ function MyPageScreen({
             onOpenRecipe={onOpenRecipe}
             onGoRecipebooks={onGoRecipebooks}
             onGoShoppingLists={onGoShoppingLists}
+            onGoLeftovers={onGoLeftovers}
+            onGoAteList={onGoAteList}
           />
         )}
         {activeTab === "account" && (
@@ -425,7 +430,15 @@ function MyPageScreen({
   );
 }
 
-function MyPageSavedPanel({ savedSet, onSaveToggle, onOpenRecipe, onGoRecipebooks, onGoShoppingLists }) {
+function MyPageSavedPanel({
+  savedSet,
+  onSaveToggle,
+  onOpenRecipe,
+  onGoRecipebooks,
+  onGoShoppingLists,
+  onGoLeftovers,
+  onGoAteList,
+}) {
   const savedRecipes = D2.RECIPES.filter(r => savedSet?.has(r.id));
   return (
     <div className="mypage-panel-grid">
@@ -467,6 +480,24 @@ function MyPageSavedPanel({ savedSet, onSaveToggle, onOpenRecipe, onGoRecipebook
         <span className="mypage-quick-nav-body">
           <span className="mypage-quick-nav-title">장보기 내역</span>
           <span className="mypage-quick-nav-desc">진행 중 · 완료된 장보기 {D2.SHOPPING_LISTS.length}개</span>
+        </span>
+        <Icon name="chevR" size={16} color="var(--text-4)" />
+      </button>
+
+      <button className="mypage-quick-nav" type="button" onClick={onGoLeftovers}>
+        <span className="meta-icon"><Icon name="fridge" size={16} /></span>
+        <span className="mypage-quick-nav-body">
+          <span className="mypage-quick-nav-title">남은 요리</span>
+          <span className="mypage-quick-nav-desc">남겨둔 음식 확인 · 플래너에 다시 추가</span>
+        </span>
+        <Icon name="chevR" size={16} color="var(--text-4)" />
+      </button>
+
+      <button className="mypage-quick-nav" type="button" onClick={onGoAteList}>
+        <span className="meta-icon"><Icon name="check" size={16} /></span>
+        <span className="mypage-quick-nav-body">
+          <span className="mypage-quick-nav-title">다먹은 목록</span>
+          <span className="mypage-quick-nav-desc">다시 만들기 · 되돌리기 액션 관리</span>
         </span>
         <Icon name="chevR" size={16} color="var(--text-4)" />
       </button>

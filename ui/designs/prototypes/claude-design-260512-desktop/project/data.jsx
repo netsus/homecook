@@ -384,7 +384,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "요리모드는 데스크탑에서 사용할 수 있나요?",
-    a: "이번 데스크탑 프로토타입에서는 Phase 7에서 별도 요리 화면으로 검증합니다. 지금은 레시피 확인과 장보기 흐름을 먼저 사용할 수 있어요.",
+    a: "데스크탑에서도 조리 단계를 보며 요리하고, 사용한 재료를 팬트리에서 차감할 수 있어요. 플래너 끼니는 장보기 완료 후에만 요리 완료로 바뀝니다.",
   },
 ];
 
@@ -409,6 +409,16 @@ const YT_DEMO_EXTRACTION = {
 };
 
 const UNIT_OPTIONS = ["g", "ml", "개", "큰술", "작은술", "공기", "컵", "팩", "대", "장"];
+
+/* ---------- 요리 단계 메서드 컬러 ---------- */
+const COOK_METHOD_COLORS = {
+  "준비":   { bg: "#FFF8EE", fg: "#B8860B" },
+  "볶기":   { bg: "#FFF0E6", fg: "#D4600A" },
+  "끓이기": { bg: "#FFECEC", fg: "#C13030" },
+  "데치기": { bg: "#EEFBFF", fg: "#0A7EA4" },
+  "굽기":   { bg: "#FFF5EE", fg: "#9A5A30" },
+  "무치기": { bg: "#EEFFF3", fg: "#1A7A35" },
+};
 
 /* ---------- 토스트 코어 ---------- */
 function makeToastBus() {
@@ -437,5 +447,6 @@ window.HC_DATA = {
   SHOPPING_LISTS, LEFTOVERS, ATE,
   ACCOUNT, RECIPEBOOKS, FAQ_ITEMS,
   YT_DEMO_EXTRACTION, UNIT_OPTIONS,
+  COOK_METHOD_COLORS,
   makeToastBus, fmtPlannerDate, fmtChipDate,
 };
