@@ -91,7 +91,7 @@ function App() {
   // Modals
   const [saveModal, setSaveModal] = useStateA({ open: false, recipeId: null });
   const [plannerAddModal, setPlannerAddModal] = useStateA({ open: false, recipeId: null, date: null, col: null });
-  const [servingsConfirm, setServingsConfirm] = useStateA({ open: false, recipe: null, date: null, col: null });
+  const [servingsConfirm, setServingsConfirm] = useStateA({ open: false, recipe: null, date: null, col: null, lockedSlot: false });
   const [filterModal, setFilterModal] = useStateA({ open: false });
   const [lightbox, setLightbox] = useStateA({ open: false, photos: [], idx: 0 });
   const [pantryAddIng, setPantryAddIng] = useStateA(false);
@@ -215,26 +215,47 @@ function App() {
       recipe,
       date: date || DA.TODAY_ISO,
       col: col || "col-d",
+      lockedSlot: Boolean(date && col),
     });
   }, []);
 
   const closeServingsConfirm = useCallbackA(() => {
-    setServingsConfirm({ open: false, recipe: null, date: null, col: null });
+    setServingsConfirm({ open: false, recipe: null, date: null, col: null, lockedSlot: false });
   }, []);
 
-  const addMealFromServingsConfirm = useCallbackA(({ recipeId, date, col, servings }) => {
-    const recipe = servingsConfirm.recipe;
-    if (recipe && !DA.RECIPE[recipeId]) {
-      DA.RECIPE[recipeId] = recipe;
+  const addPlannerMealToSlot = useCallbackA(({ recipe, recipeId, date, col, servings }) => {
+    const targetRecipeId = recipeId || recipe?.id;
+    if (!targetRecipeId) return;
+    if (recipe && !DA.RECIPE[targetRecipeId]) {
+      DA.RECIPE[targetRecipeId] = recipe;
       DA.RECIPES.push(recipe);
     }
     const id = `m-${Date.now()}`;
-    setMeals(ms => [...ms, { id, recipeId, date, col, servings, status: "registered" }]);
-    closeServingsConfirm();
+    setMeals(ms => [...ms, {
+      id,
+      recipeId: targetRecipeId,
+      date: date || DA.TODAY_ISO,
+      col: col || "col-d",
+      servings: servings || recipe?.baseServings || 2,
+      status: "registered",
+    }]);
     toast("플래너에 추가했어요");
     setStack([{ screen: "PLANNER_WEEK" }]);
     window.scrollTo({ top: 0, behavior: "instant" });
-  }, [servingsConfirm, closeServingsConfirm, toast]);
+  }, [toast]);
+
+  const addMealFromServingsConfirm = useCallbackA(({ recipeId, date, col, servings }) => {
+    addPlannerMealToSlot({ recipe: servingsConfirm.recipe, recipeId, date, col, servings });
+    closeServingsConfirm();
+  }, [servingsConfirm.recipe, addPlannerMealToSlot, closeServingsConfirm]);
+
+  const addCreatedRecipeFromMenuAdd = useCallbackA((recipe, date, col) => {
+    if (date && col) {
+      addPlannerMealToSlot({ recipe, date, col, servings: recipe.baseServings || 2 });
+      return;
+    }
+    openServingsConfirm(recipe, date, col);
+  }, [addPlannerMealToSlot, openServingsConfirm]);
 
   // Save toggle (from PhotoCard)
   const toggleSave = (rid) => {
@@ -406,14 +427,14 @@ function App() {
       dateISO={cur.date}
       col={cur.col}
       onBack={pop}
-      onCreateRecipe={(recipe) => openServingsConfirm(recipe, cur.date, cur.col)}
+      onCreateRecipe={(recipe) => addCreatedRecipeFromMenuAdd(recipe, cur.date, cur.col)}
     />;
   } else if (s === "YT_IMPORT") {
     body = <YtImportScreen
       dateISO={cur.date}
       col={cur.col}
       onBack={pop}
-      onCreateRecipe={(recipe) => openServingsConfirm(recipe, cur.date, cur.col)}
+      onCreateRecipe={(recipe) => addCreatedRecipeFromMenuAdd(recipe, cur.date, cur.col)}
     />;
   } else if (s === "PANTRY") {
     body = <PantryScreen
@@ -616,6 +637,7 @@ function App() {
         recipe={servingsConfirm.recipe}
         defaultDate={servingsConfirm.date}
         defaultCol={servingsConfirm.col}
+        lockedSlot={servingsConfirm.lockedSlot}
         onClose={closeServingsConfirm}
         onConfirm={addMealFromServingsConfirm}
       />
