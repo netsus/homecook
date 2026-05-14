@@ -744,7 +744,7 @@ function YtImportScreen({ dateISO, col, onBack, onCreateRecipe }) {
 /* ============================================
    SHOPPING_DETAIL (§12) — current week
    ============================================ */
-function ShoppingDetailScreen({ list, pantryHeld, onBack, onOpenReAdd, onOpenPantryReflect, readOnly, toast }) {
+function ShoppingDetailScreen({ list, pantryHeld, onBack, onOpenReAdd, onCompleteShopping, readOnly, toast }) {
   const [checked, setChecked] = useS3(new Set());
 
   if (!list) return null;
@@ -781,7 +781,7 @@ function ShoppingDetailScreen({ list, pantryHeld, onBack, onOpenReAdd, onOpenPan
               variant="primary"
               leftIcon={allDone ? "check" : "cart"}
               disabled={!allDone}
-              onClick={() => { if (allDone) onOpenPantryReflect(reflectables, list.id); }}
+              onClick={() => { if (allDone) onCompleteShopping(list.id, [...checked], reflectables); }}
             >
               장보기 완료
             </Button>
@@ -1254,7 +1254,7 @@ function CookModePlannerScreen({ meal, recipe, onBack, onComplete, pantryHeld })
             recipe={recipe}
             servings={meal.servings}
             pantryHeld={pantryHeld}
-            onComplete={() => onComplete(meal.id, recipe)}
+            onComplete={(deductIds) => onComplete(meal.id, recipe, deductIds)}
             onCancel={onBack}
           />
         </aside>
@@ -1292,7 +1292,7 @@ function CookModeStandaloneScreen({ recipe, onBack, onComplete, pantryHeld }) {
             recipe={recipe}
             servings={recipe.baseServings}
             pantryHeld={pantryHeld}
-            onComplete={() => onComplete(recipe)}
+            onComplete={(deductIds) => onComplete(recipe, deductIds)}
             onCancel={onBack}
           />
         </aside>
