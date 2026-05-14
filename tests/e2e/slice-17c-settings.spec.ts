@@ -564,6 +564,7 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("column-list")).toBeVisible();
+    await page.getByRole("button", { name: "편집" }).click();
     await page.getByTestId("delete-column-col-3").click();
 
     await expect(page.getByText("끼니 컬럼 삭제")).toBeVisible();
@@ -603,6 +604,7 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("column-list")).toBeVisible();
+    await page.getByRole("button", { name: "편집" }).click();
     await expect(page.getByTestId("delete-column-col-1")).toBeDisabled();
   });
 
@@ -651,6 +653,7 @@ test.describe("SETTINGS planner column management", () => {
     await page.goto("/settings");
 
     await expect(page.getByTestId("column-list")).toBeVisible();
+    await page.getByRole("button", { name: "편집" }).click();
     await page.getByTestId("delete-column-col-3").click();
 
     await expect(page.getByText("끼니 컬럼 삭제")).toBeVisible();
