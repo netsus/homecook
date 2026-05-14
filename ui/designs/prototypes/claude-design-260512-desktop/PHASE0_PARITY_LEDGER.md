@@ -70,7 +70,7 @@ These overrides intentionally differ from older ledgers:
 | Phase 5 | Recipebook, MyPage, settings | 13 owner rows | Verified in Phase 5; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-5/`. |
 | Phase 6 | Pantry and shopping | 11 owner rows | Verified in Phase 6; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-6/`. |
 | Phase 7 | Cooking, leftovers, ate list | 7 owner rows | Verified in Phase 7; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-7/`. |
-| Phase 8 | Full-surface QA | all rows | Open until every row has evidence. |
+| Phase 8 | Full-surface QA | all rows | Verified in Phase 8; final evidence at `ui/designs/evidence/desktop-modern-redesign/phase-8/`. |
 
 ## Screen Rows
 

@@ -1,0 +1,115 @@
+{
+  "phase": 8,
+  "url": "http://127.0.0.1:4176/homecook%20desktop%20prototype.html",
+  "startedAt": "2026-05-14T04:14:51.997Z",
+  "ledger": {
+    "rows": 53,
+    "unverifiedRows": [],
+    "missingEvidenceNotes": []
+  },
+  "priorPhaseReports": [
+    {
+      "phase": 2,
+      "findings": 0,
+      "console": 0,
+      "pageErrors": 0,
+      "failedRequests": 0,
+      "screenshots": 0
+    },
+    {
+      "phase": 3,
+      "findings": 0,
+      "console": 0,
+      "pageErrors": 0,
+      "failedRequests": 0,
+      "screenshots": 16
+    },
+    {
+      "phase": 4,
+      "findings": 0,
+      "console": 0,
+      "pageErrors": 0,
+      "failedRequests": 0,
+      "screenshots": 19
+    },
+    {
+      "phase": 5,
+      "findings": 0,
+      "console": 0,
+      "pageErrors": 0,
+      "failedRequests": 0,
+      "screenshots": 0
+    },
+    {
+      "phase": 6,
+      "findings": 0,
+      "console": 0,
+      "pageErrors": 0,
+      "failedRequests": 0,
+      "screenshots": 15
+    },
+    {
+      "phase": 7,
+      "findings": 0,
+      "console": 0,
+      "pageErrors": 0,
+      "failedRequests": 0,
+      "screenshots": 15
+    }
+  ],
+  "screenshots": [
+    "home-1024.png",
+    "planner-week-1024.png",
+    "mypage-1024.png",
+    "home-1280.png",
+    "planner-week-1280.png",
+    "mypage-1280.png",
+    "home-1440.png",
+    "planner-week-1440.png",
+    "mypage-1440.png",
+    "home-baseline-1280.png",
+    "recipe-detail-1280.png",
+    "cook-mode-standalone-1280.png",
+    "login-1280.png",
+    "home-authenticated-1280.png",
+    "meal-detail-1280.png",
+    "menu-add-1280.png",
+    "recipe-search-picker-1280.png",
+    "recipebook-selector-1280.png",
+    "pantry-match-picker-1280.png",
+    "manual-recipe-create-1280.png",
+    "yt-import-1280.png",
+    "pantry-1280.png",
+    "pantry-add-modal-1280.png",
+    "recipebooks-1280.png",
+    "recipebook-detail-1280.png",
+    "shopping-lists-1280.png",
+    "shopping-detail-1280.png",
+    "leftovers-1280.png",
+    "ate-list-1280.png",
+    "settings-1280.png",
+    "nickname-modal-1280.png",
+    "shopping-flow-1280.png",
+    "cook-ready-list-1280.png",
+    "cook-notice-1280.png",
+    "cook-mode-planner-1280.png",
+    "consumed-sheet-1280.png",
+    "home-mobile-390.png",
+    "planner-mobile-390.png",
+    "pantry-mobile-390.png",
+    "mypage-mobile-390.png"
+  ],
+  "findings": [],
+  "console": [],
+  "pageErrors": [],
+  "failedRequests": [],
+  "invariants": {
+    "noOpenLedgerRows": true,
+    "noMissingEvidenceNotes": true,
+    "priorPhaseReportsClean": true,
+    "noConsoleErrors": true,
+    "noPageErrors": true,
+    "noFailedRequests": true
+  },
+  "finishedAt": "2026-05-14T04:15:13.077Z"
+}
