@@ -607,7 +607,10 @@ export function ShoppingFlowScreen({
   // Loading state
   if (viewState === "loading") {
     return (
-      <div className="flex min-h-screen flex-col">
+      <div
+        className="flex min-h-screen flex-col bg-[var(--wave1-surface)]"
+        data-testid="shopping-flow-state-shell"
+      >
         <AppBar onBack={handleBack} />
         <div className="flex flex-1 items-center justify-center p-4">
           <ContentState
@@ -623,13 +626,16 @@ export function ShoppingFlowScreen({
   // Empty state
   if (viewState === "empty") {
     return (
-      <div className="flex min-h-screen flex-col">
+      <div
+        className="flex min-h-screen flex-col bg-[var(--wave1-surface)]"
+        data-testid="shopping-flow-state-shell"
+      >
         <AppBar onBack={handleBack} />
         <div className="flex flex-1 items-center justify-center p-4">
           <ContentState
             tone="empty"
             title="장보기 대상이 없어요"
-            description="플래너에 식사를 먼저 등록해 주세요."
+            description="플래너에 식사를 먼저 등록해 주세요. 등록 완료 전이거나 이미 장보기·요리 흐름에 들어간 식사는 제외돼요."
             actionLabel="플래너로 돌아가기"
             onAction={handleBack}
           />
@@ -641,7 +647,10 @@ export function ShoppingFlowScreen({
   // Error state
   if (viewState === "error") {
     return (
-      <div className="flex min-h-screen flex-col">
+      <div
+        className="flex min-h-screen flex-col bg-[var(--wave1-surface)]"
+        data-testid="shopping-flow-state-shell"
+      >
         <AppBar onBack={handleBack} />
         <div className="flex flex-1 items-center justify-center p-4">
           <ContentState
@@ -659,7 +668,10 @@ export function ShoppingFlowScreen({
   // Creating state
   if (viewState === "creating") {
     return (
-      <div className="flex min-h-screen flex-col">
+      <div
+        className="flex min-h-screen flex-col bg-[var(--wave1-surface)]"
+        data-testid="shopping-flow-state-shell"
+      >
         <AppBar onBack={handleBack} />
         <div className="flex flex-1 items-center justify-center p-4">
           <ContentState
@@ -715,7 +727,7 @@ export function ShoppingFlowScreen({
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen bg-[var(--wave1-surface-fill)]">
       <AppBar onBack={handleBack} />
 
       <main
@@ -783,7 +795,7 @@ interface AppBarProps {
 
 function AppBar({ onBack }: AppBarProps) {
   return (
-    <div className="shrink-0 border-b border-[var(--line)] bg-[var(--background)]">
+    <div className="shrink-0 border-b border-[var(--line)] bg-[var(--wave1-surface)]">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-2 px-6">
         <button
           aria-label="뒤로 가기"
@@ -983,7 +995,7 @@ function MobileSelectRow({
           {config.recipe_name}
         </p>
         <p className="mt-[2px] truncate text-[11px] font-medium leading-[1.3] text-[#868E96]">
-          {visual.meal} · {config.shopping_servings}인분 · 요리 완료
+          {visual.meal} · {config.shopping_servings}인분 · 장보기 대기
         </p>
       </div>
     </div>

@@ -30,7 +30,7 @@ export default async function ShoppingFlowPage() {
     <div className="relative min-h-screen">
       <div
         aria-hidden="true"
-        className="fixed inset-0 -z-10 bg-[var(--background)]"
+        className="fixed inset-0 -z-10 bg-[var(--wave1-surface)]"
       />
       <ShoppingFlowScreen initialAuthenticated={initialAuthenticated} />
     </div>

@@ -16,8 +16,25 @@ vi.mock("next/navigation", () => ({
 
 const mockPush = vi.fn();
 
+function setMatchMedia(matches: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockImplementation(() => ({
+      matches,
+      media: "(max-width: 1023px)",
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe("ShoppingDetailScreen", () => {
   beforeEach(() => {
+    setMatchMedia(false);
     (useRouter as ReturnType<typeof vi.fn>).mockReturnValue({
       push: mockPush,
       replace: vi.fn(),
@@ -32,6 +49,7 @@ describe("ShoppingDetailScreen", () => {
     cleanup();
     vi.restoreAllMocks();
     mockPush.mockClear();
+    Reflect.deleteProperty(window, "matchMedia");
   });
 
   const mockListDetail: ShoppingListDetail = {
@@ -84,6 +102,9 @@ describe("ShoppingDetailScreen", () => {
     render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
 
     expect(screen.getByText(/장보기 리스트를 불러오고 있어요/)).toBeTruthy();
+    expect(screen.getByTestId("shopping-detail-state-shell").className).toContain(
+      "bg-[var(--wave1-surface)]",
+    );
   });
 
   it("renders list detail after loading", async () => {
@@ -177,6 +198,9 @@ describe("ShoppingDetailScreen", () => {
 
     expect(screen.getByText(/✓ 완료됨 \(4월 13일\)/)).toBeTruthy();
     expect(screen.getByText(/구매한 재료 \(1개\)/)).toBeTruthy();
+    expect(screen.getByTestId("shopping-readonly-status-item-1").className).toContain(
+      "rounded-[6px]",
+    );
   });
 
   it("toggles item check status", async () => {
@@ -268,6 +292,24 @@ describe("ShoppingDetailScreen", () => {
     expect(screen.queryByRole("button", { name: /이미있음/ })).not.toBeTruthy();
     expect(screen.queryByRole("button", { name: /되살리기/ })).not.toBeTruthy();
     expect(screen.queryByRole("checkbox", { name: /구매 완료 표시/ })).not.toBeTruthy();
+  });
+
+  it("keeps planner active in mobile shopping detail navigation", async () => {
+    setMatchMedia(true);
+    vi.spyOn(shoppingApi, "fetchShoppingListDetail").mockResolvedValue(mockListDetail);
+
+    render(<ShoppingDetailScreen listId="list-1" initialAuthenticated={true} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("4월 12일 장보기")).toBeTruthy();
+    });
+
+    const nav = screen.getByRole("navigation", {
+      name: "장보기 상세 화면 하단 탐색",
+    });
+    const activeLink = nav.querySelector('a[aria-current="page"]');
+
+    expect(activeLink?.textContent).toContain("플래너");
   });
 
   it("switches to read-only mode when update returns 409 conflict", async () => {

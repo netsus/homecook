@@ -591,8 +591,38 @@ describe("CookModeScreen", () => {
     const completeButton = screen.getByTestId("complete-button");
     const fixedBottomBar = cancelButton.closest(".fixed");
 
+    expect(cancelButton.textContent).toBe("나가기");
     expect(fixedBottomBar).not.toBeNull();
     expect(fixedBottomBar?.contains(completeButton)).toBe(true);
+  });
+
+  it("uses square mobile check controls and lighter helper copy in the consumed sheet", async () => {
+    installMatchMedia(true);
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchCookMode.mockResolvedValue(buildCookModeData());
+
+    const CookModeScreen = await importCookModeScreen();
+    render(<CookModeScreen sessionId="session-1" initialAuthenticated />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("complete-button")).toBeTruthy();
+    });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("complete-button"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("consumed-ingredient-sheet")).toBeTruthy();
+    });
+
+    const helperText = screen.getByText(/체크된 재료는 팬트리에서 자동으로 빠져요/);
+    const checkVisual = screen
+      .getByTestId("consumed-check-ing-1")
+      .querySelector('[aria-hidden="true"]');
+
+    expect(helperText.className).toContain("text-[13px]");
+    expect(helperText.className).toContain("font-normal");
+    expect(checkVisual?.className).toContain("rounded-[4px]");
   });
 
   it("does not render bottom tabs in the mobile fullscreen cook mode", async () => {

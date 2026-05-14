@@ -144,6 +144,9 @@ describe("shopping flow screen", () => {
         screen.getByText("장볼 레시피를 불러오고 있어요")
       ).toBeTruthy();
       expect(screen.getByText("잠시만 기다려 주세요.")).toBeTruthy();
+      expect(screen.getByTestId("shopping-flow-state-shell").className).toContain(
+        "bg-[var(--wave1-surface)]",
+      );
     });
   });
 
@@ -157,10 +160,11 @@ describe("shopping flow screen", () => {
         expect(screen.getByText("장보기 대상이 없어요")).toBeTruthy();
       });
 
-      expect(
-        screen.getByText("플래너에 식사를 먼저 등록해 주세요.")
-      ).toBeTruthy();
+      expect(screen.getByText(/이미 장보기·요리 흐름에 들어간 식사는 제외/)).toBeTruthy();
       expect(screen.getByText("플래너로 돌아가기")).toBeTruthy();
+      expect(screen.getByTestId("shopping-flow-state-shell").className).toContain(
+        "bg-[var(--wave1-surface)]",
+      );
     });
 
     it("should navigate to planner when clicking back button", async () => {

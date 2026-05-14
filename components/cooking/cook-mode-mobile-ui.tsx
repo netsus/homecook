@@ -160,13 +160,13 @@ export function MobileCookModeView({
       <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[430px] bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.50))] px-4 pb-[calc(18px+env(safe-area-inset-bottom))] pt-3">
         <div className="flex items-center gap-2">
           <button
-            className="flex h-14 shrink-0 items-center justify-center rounded-xl border-0 bg-[rgba(255,255,255,0.12)] px-5 text-[14px] font-bold text-white disabled:opacity-60"
+            className="flex h-14 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-[rgba(255,255,255,0.08)] px-4 text-[14px] font-medium text-white/82 disabled:opacity-60"
             data-testid={cancelButtonTestId}
             disabled={controlsDisabled}
             onClick={onCancel}
             type="button"
           >
-            취소
+            나가기
           </button>
           <button
             className="flex h-14 min-w-0 flex-1 items-center justify-center rounded-xl border-0 bg-[#2AC1BC] px-4 text-[16px] font-bold leading-none text-white disabled:opacity-60 [font-family:var(--font-jua),-apple-system,sans-serif]"
