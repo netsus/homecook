@@ -266,7 +266,7 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     await screen.findByRole("heading", { name: "플래너" });
-    await user.click(screen.getAllByRole("button", { name: "+ 식사 추가" })[0]);
+    await user.click(screen.getByRole("button", { name: "3/24 아침 식사 추가" }));
 
     const sheet = screen.getByTestId("planner-meal-add-sheet");
     expect(within(sheet).getByRole("heading", { name: "3/24 아침 · 식사 추가" })).toBeTruthy();
@@ -318,7 +318,7 @@ describe("planner week screen", () => {
     expect(shoppingListLink.getAttribute("href")).toBe("/shopping/lists/shopping-list-1");
   });
 
-  it("compresses meal slot metadata while keeping empty slots with '+ 식사 추가' CTA (Wave1)", async () => {
+  it("compresses meal slot metadata while keeping empty slots with a quieter add CTA (Wave1)", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(
       createPlannerData({
@@ -343,9 +343,9 @@ describe("planner week screen", () => {
     const firstDayCard = await screen.findAllByLabelText(/식단 카드$/).then((cards) => cards[0]);
     // slot rows keep the meal link compact; empty rows open the Wave1 add sheet.
     const breakfastRow = within(firstDayCard).getByText("김치찌개").closest("a");
-    const dinnerButton = within(firstDayCard).getAllByRole("button", {
-      name: "+ 식사 추가",
-    })[2];
+    const dinnerButton = within(firstDayCard).getByRole("button", {
+      name: "3/24 저녁 식사 추가",
+    });
 
     expect(breakfastRow).not.toBeNull();
     expect(dinnerButton).toBeTruthy();
@@ -353,7 +353,7 @@ describe("planner week screen", () => {
     expect(within(breakfastRow as HTMLElement).getByText("2인분")).toBeTruthy();
     // Wave1: status badge removed — no "등록" text
     expect(within(breakfastRow as HTMLElement).queryByText("등록")).toBeNull();
-    expect(dinnerButton.textContent?.trim()).toBe("+ 식사 추가");
+    expect(dinnerButton.textContent?.replace(/\s+/g, " ").trim()).toBe("+추가");
   });
 
   it("marks leftover meals with an explicit leftover chip", async () => {
@@ -600,8 +600,30 @@ describe("planner week screen", () => {
     render(<PlannerWeekScreen />);
 
     expect(await screen.findByText(/아직 등록된 식사가 없어요/)).toBeTruthy();
-    expect(screen.getAllByText("+ 식사 추가").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("추가").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByPlaceholderText("새 끼니 컬럼 이름")).toBeNull();
+  });
+
+  it("scrolls to the selected day card when a current-week date chip is tapped", async () => {
+    const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    readE2EAuthOverride.mockReturnValue(true);
+    fetchPlanner.mockResolvedValue(createPlannerData({ meals: [] }));
+
+    render(<PlannerWeekScreen />);
+
+    await screen.findByRole("heading", { name: "플래너" });
+    await user.click(screen.getByRole("button", { name: "3/26 목 식단으로 이동" }));
+
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "start",
+    });
+    expect(screen.getByTestId("planner-day-card-2026-03-26").className).toContain(
+      "border-2",
+    );
   });
 
   // ─── Wave1 acceptance tests ─────────────────────────────────────────────────
@@ -690,7 +712,7 @@ describe("planner week screen", () => {
     expect(screen.queryByLabelText("요리 완료")).toBeNull();
   });
 
-  it("shows '+' button on filled slots and '+ 식사 추가' CTA on empty slots (Wave1)", async () => {
+  it("shows '+' button on filled slots and quieter add CTAs on empty slots (Wave1)", async () => {
     readE2EAuthOverride.mockReturnValue(true);
     fetchPlanner.mockResolvedValue(
       createPlannerData({
@@ -717,11 +739,11 @@ describe("planner week screen", () => {
       name: "3/24 아침 식사 추가",
     });
     const emptyAddButtons = within(firstDayCard).getAllByRole("button", {
-      name: "+ 식사 추가",
+      name: /3\/24 .* 식사 추가/,
     });
 
     expect(filledAddButton.textContent?.trim()).toBe("+");
-    expect(emptyAddButtons).toHaveLength(3);
+    expect(emptyAddButtons.filter((button) => button !== filledAddButton)).toHaveLength(3);
   });
 
   it("uses the floating shopping CTA from the Wave1 mobile reference", async () => {

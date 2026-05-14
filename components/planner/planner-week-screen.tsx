@@ -128,18 +128,21 @@ export function PlannerWeekScreen({
   const loadPlanner = usePlannerStore((state) => state.loadPlanner);
   const resetRange = usePlannerStore((state) => state.resetRange);
   const shiftRange = usePlannerStore((state) => state.shiftRange);
+  const todayKey = getTodayDateKey();
 
   const [authState, setAuthState] = useState<AuthState>(
     initialAuthenticated ? "authenticated" : "checking",
   );
   const [mealAddSheet, setMealAddSheet] = useState<MealAddSheetState>(null);
+  const [selectedDateKey, setSelectedDateKey] = useState<string>(() => todayKey);
+  const mobileDayCardRefs = useRef<Record<string, HTMLElement | null>>({});
+  const webDayCardRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const dateKeys = useMemo(
     () => buildDateKeys(rangeStartDate, rangeEndDate),
     [rangeEndDate, rangeStartDate],
   );
   const mealsByDateAndColumn = useMemo(() => buildMealMap(meals), [meals]);
-  const todayKey = getTodayDateKey();
   const mealStats = useMemo(() => {
     let cookDone = 0;
     let shoppingDone = 0;
@@ -357,6 +360,30 @@ export function PlannerWeekScreen({
     }
   }
 
+  function focusPlannerDate(dateKey: string) {
+    const dayCardRefs = isDesktopViewport ? webDayCardRefs : mobileDayCardRefs;
+
+    setSelectedDateKey(dateKey);
+    dayCardRefs.current[dateKey]?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
+  function handleDateChipClick(pageKey: "prev" | "current" | "next", dateKey: string) {
+    if (pageKey === "prev") {
+      runPlannerAction(shiftRange(-RANGE_SHIFT_DAYS));
+      return;
+    }
+
+    if (pageKey === "next") {
+      runPlannerAction(shiftRange(RANGE_SHIFT_DAYS));
+      return;
+    }
+
+    focusPlannerDate(dateKey);
+  }
+
   useEffect(() => {
     const e2eAuthOverride = readE2EAuthOverride();
 
@@ -439,6 +466,12 @@ export function PlannerWeekScreen({
       clearWeekStripSettleTimer();
     };
   }, []);
+
+  useEffect(() => {
+    if (!dateKeys.includes(selectedDateKey)) {
+      setSelectedDateKey(dateKeys.includes(todayKey) ? todayKey : dateKeys[0]);
+    }
+  }, [dateKeys, selectedDateKey, todayKey]);
 
   const plannerBodyMotionStyle = {
     opacity: isRefreshing ? 0.97 : 1,
@@ -660,23 +693,30 @@ export function PlannerWeekScreen({
                 >
                   <ol className="grid grid-cols-7 gap-1">
                     {page.dateKeys.map((dateKey) => {
-                      const isActive = page.key === "current" && dateKey === todayKey;
+                      const isToday = page.key === "current" && dateKey === todayKey;
+                      const isSelected = page.key === "current" && dateKey === selectedDateKey;
 
                       return (
                         <li className="list-none" key={dateKey}>
                           <button
+                            aria-current={isSelected ? "date" : undefined}
+                            aria-label={`${formatCompactDateLabel(dateKey)} ${formatWeekdayLabel(dateKey)} 식단으로 이동`}
                             className={[
-                              "flex h-[52px] w-full min-w-0 flex-col items-center justify-center gap-px rounded-[11px] text-center",
-                              isActive
-                                ? "border-2 border-[#2AC1BC] bg-[#E6F8F7] text-[#007A76]"
+                              "relative flex h-[54px] w-full min-w-0 flex-col items-center justify-center gap-px rounded-[11px] text-center transition-colors",
+                              isSelected
+                                ? "border-2 border-[#2AC1BC] bg-[#E6F8F7] text-[#007A76] shadow-[0_2px_8px_rgba(42,193,188,0.18)]"
                                 : "border border-[#DEE2E6] bg-white text-[#495057]",
                             ].join(" ")}
+                            onClick={() => handleDateChipClick(page.key, dateKey)}
                             type="button"
                           >
-                            <span className="text-[10px] font-extrabold leading-none">
+                            {isToday ? (
+                              <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-[#2AC1BC]" />
+                            ) : null}
+                            <span className="text-[10px] font-semibold leading-none">
                               {formatWeekdayLabel(dateKey)}
                             </span>
-                            <span className="text-[19px] font-bold leading-none">
+                            <span className="text-[19px] font-semibold leading-none">
                               {dateKey.slice(8)}
                             </span>
                           </button>
@@ -727,6 +767,7 @@ export function PlannerWeekScreen({
 
             {dateKeys.map((dateKey) => {
               const isToday = dateKey === todayKey;
+              const isSelected = dateKey === selectedDateKey;
               const dayMealCount = columns.filter((col) =>
                 mealsByDateAndColumn.has(`${dateKey}:${col.id}`),
               ).length;
@@ -736,22 +777,26 @@ export function PlannerWeekScreen({
                   aria-label={`${formatDateLabel(dateKey)} 식단 카드`}
                   className={[
                     "overflow-hidden rounded-[12px] bg-white",
-                    isToday
+                    isSelected
                       ? "border-2 border-[#2AC1BC] shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
                       : "border border-[#DEE2E6]",
                   ].join(" ")}
+                  data-testid={`planner-day-card-${dateKey}`}
                   key={dateKey}
+                  ref={(node) => {
+                    mobileDayCardRefs.current[dateKey] = node;
+                  }}
                 >
                   <div className="flex items-center border-b border-[#F1F3F5] px-4 py-3">
                     <span
                       className={[
-                        "mr-2.5 flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold",
+                        "mr-2.5 flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold",
                         isToday ? "bg-[#2AC1BC] text-white" : "bg-[#F8F9FA] text-[#212529]",
                       ].join(" ")}
                     >
                       {formatWeekdayLabel(dateKey)}
                     </span>
-                    <p className="flex-1 text-[16px] font-bold text-[#212529]">
+                    <p className="flex-1 text-[16px] font-semibold text-[#212529]">
                       {formatCompactDateLabel(dateKey)}
                     </p>
                     <span className="text-[12px] text-[#868E96]">
@@ -841,11 +886,15 @@ export function PlannerWeekScreen({
                             </>
                           ) : (
                             <button
-                              className="flex h-[42px] flex-1 items-center justify-center rounded-[8px] border border-dashed border-[#4DABF7] bg-[#E8F5FF] text-[13px] font-semibold text-[#4DABF7]"
+                              aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
+                              className="flex h-[38px] flex-1 items-center justify-center gap-1.5 rounded-[8px] border border-dashed border-[#DEE2E6] bg-[#F8F9FA] text-[12px] font-medium text-[#868E96]"
                               onClick={() => openMealAddSheet(dateKey, column)}
                               type="button"
                             >
-                              + 식사 추가
+                              <span className="text-[16px] leading-none text-[#4DABF7]" aria-hidden="true">
+                                +
+                              </span>
+                              <span>추가</span>
                             </button>
                           )}
                         </div>
@@ -1102,16 +1151,35 @@ export function PlannerWeekScreen({
                   data-testid={`planner-week-strip-page-${page.key}`}
                 >
                   <ol className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-medium text-[var(--muted)] sm:gap-2 sm:text-[11px]">
-                    {page.dateKeys.map((dateKey) => (
-                      <li key={dateKey} className="list-none">
-                        <div className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-1 py-1.5 sm:px-1.5 sm:py-2">
-                          <p>{formatWeekdayLabel(dateKey)}</p>
-                          <p className="mt-0.5 text-[clamp(0.84rem,3vw,0.94rem)] font-semibold text-[var(--foreground)]">
-                            {dateKey.slice(8)}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
+                    {page.dateKeys.map((dateKey) => {
+                      const isToday = page.key === "current" && dateKey === todayKey;
+                      const isSelected = page.key === "current" && dateKey === selectedDateKey;
+
+                      return (
+                        <li key={dateKey} className="list-none">
+                          <button
+                            aria-current={isSelected ? "date" : undefined}
+                            aria-label={`${formatCompactDateLabel(dateKey)} ${formatWeekdayLabel(dateKey)} 식단으로 이동`}
+                            className={[
+                              "relative w-full rounded-[var(--radius-md)] border px-1 py-1.5 transition-colors sm:px-1.5 sm:py-2",
+                              isSelected
+                                ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-deep)]"
+                                : "border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]",
+                            ].join(" ")}
+                            onClick={() => handleDateChipClick(page.key, dateKey)}
+                            type="button"
+                          >
+                            {isToday ? (
+                              <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-[var(--brand)]" />
+                            ) : null}
+                            <span className="block">{formatWeekdayLabel(dateKey)}</span>
+                            <span className="mt-0.5 block text-[clamp(0.84rem,3vw,0.94rem)] font-semibold text-[var(--foreground)]">
+                              {dateKey.slice(8)}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ol>
                 </section>
               ))}
@@ -1159,6 +1227,7 @@ export function PlannerWeekScreen({
 
           {dateKeys.map((dateKey) => {
             const isToday = dateKey === todayKey;
+            const isSelected = dateKey === selectedDateKey;
             const dayMealCount = columns.filter((col) =>
               mealsByDateAndColumn.has(`${dateKey}:${col.id}`),
             ).length;
@@ -1168,10 +1237,14 @@ export function PlannerWeekScreen({
                 key={dateKey}
                 aria-label={`${formatDateLabel(dateKey)} 식단 카드`}
                 className={`min-w-[148px] overflow-hidden rounded-[var(--radius-md)] bg-[var(--surface)] ${
-                  isToday
+                  isSelected
                     ? "border-2 border-[var(--brand)] shadow-[var(--shadow-2)]"
                     : "border border-[var(--line)]"
                 }`}
+                data-testid={`planner-day-card-${dateKey}`}
+                ref={(node) => {
+                  webDayCardRefs.current[dateKey] = node;
+                }}
               >
                 {/* Day header */}
                 <div

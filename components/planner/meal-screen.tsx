@@ -100,6 +100,14 @@ function getMealVisualMeta(meal: MealListItemData) {
   );
 }
 
+function getVisibleMealChips(chips: string[], limit = 3) {
+  const normalized = chips.filter((chip) => !/^\+\d+$/.test(chip));
+  const visible = normalized.slice(0, limit);
+  const hiddenCount = Math.max(0, normalized.length - visible.length);
+
+  return { hiddenCount, visible };
+}
+
 // ─── AppBar ──────────────────────────────────────────────────────────────────
 
 interface AppBarProps {
@@ -198,6 +206,7 @@ function MealCard({
 }: MealCardProps) {
   const isMin = meal.planned_servings <= 1;
   const visual = getMealVisualMeta(meal);
+  const { hiddenCount, visible } = getVisibleMealChips(visual.chips);
 
   function stopProp(e: React.MouseEvent) {
     e.stopPropagation();
@@ -240,7 +249,7 @@ function MealCard({
         </div>
         <div className="min-w-0 flex-1 pr-7">
           <button
-            className="block w-full truncate text-left text-[16px] font-extrabold leading-[1.3] text-[#212529] hover:text-[#2AC1BC]"
+            className="block w-full truncate text-left text-[16px] font-semibold leading-[1.3] text-[#212529] hover:text-[#2AC1BC]"
             data-testid={`meal-recipe-link-${meal.id}`}
             onClick={onRecipeClick}
             type="button"
@@ -260,7 +269,7 @@ function MealCard({
           role="group"
           aria-label="인분 조절"
         >
-          <span className="text-[12px] font-extrabold leading-[1.3] text-[#495057]">
+          <span className="text-[12px] font-semibold leading-[1.3] text-[#495057]">
             계획 인분
           </span>
           <div className="flex items-center gap-2.5">
@@ -274,12 +283,12 @@ function MealCard({
             <span aria-hidden="true" className="text-lg font-bold leading-none">−</span>
           </button>
           <span
-            className="min-w-[42px] text-center text-[16px] font-extrabold leading-[1.3] text-[#212529]"
+            className="min-w-[42px] text-center text-[17px] font-semibold leading-[1.3] text-[#212529]"
             aria-live="polite"
             aria-label={`${meal.planned_servings}인분`}
           >
             {meal.planned_servings}
-            <span className="ml-0.5 text-[16px] font-extrabold">인분</span>
+            <span className="ml-0.5 text-[16px] font-semibold">인분</span>
           </span>
           <button
             aria-label="인분 증가"
@@ -294,7 +303,7 @@ function MealCard({
         </div>
 
         <div className="mb-3 flex flex-wrap gap-[5px]">
-          {visual.chips.map((chip) => (
+          {visible.map((chip) => (
             <span
               className="rounded-full bg-[#F8F9FA] px-2 py-[5px] text-[11px] font-medium leading-[1.3] text-[#495057]"
               key={chip}
@@ -302,6 +311,11 @@ function MealCard({
               {chip}
             </span>
           ))}
+          {hiddenCount > 0 ? (
+            <span className="rounded-full bg-[#F1F3F5] px-2 py-[5px] text-[11px] font-semibold leading-[1.3] text-[#868E96]">
+              +{hiddenCount}
+            </span>
+          ) : null}
         </div>
 
         <div className="grid grid-cols-2 gap-2">
@@ -979,10 +993,10 @@ export function MealScreen({
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
             {screenState === "ready" ? (
               <section className="border-b border-[#DEE2E6] bg-white px-5 py-5">
-                <div className="mb-1 text-[12px] font-extrabold leading-[1.3] text-[#20A8A4]">
+                <div className="mb-1 text-[13px] font-semibold leading-[1.3] text-[#20A8A4]">
                   {formatDateShort(planDate)}{slotName ? ` · ${slotName}` : ""}
                 </div>
-                <h2 className="text-[22px] font-extrabold leading-[1.3] text-[#212529] [font-family:var(--font-jua),-apple-system,sans-serif]">
+                <h2 className="text-[24px] font-semibold leading-[1.25] text-[#212529]">
                   {summaryTitle}
                 </h2>
                 <div className="mt-3 flex flex-wrap gap-2">

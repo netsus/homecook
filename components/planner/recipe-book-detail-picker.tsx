@@ -51,11 +51,12 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
   if (presentation === "screen") {
     return (
       <button
-        className="overflow-hidden rounded-[12px] border border-[#DEE2E6] bg-white text-left"
+        aria-label={`${recipe.title} 선택`}
+        className="overflow-hidden rounded-[12px] border border-[#DEE2E6] bg-white text-left active:border-[#2AC1BC] active:bg-[#E6F8F7]"
         onClick={() => onSelect(recipe)}
         type="button"
       >
-        <div className="flex aspect-[4/3] w-full items-center justify-center bg-[#E6F8F7]">
+        <div className="flex aspect-[4/3] w-full items-center justify-center bg-[#F8F9FA]">
           <RecipeThumb recipe={recipe} />
         </div>
         <div className="p-2.5">
@@ -65,7 +66,9 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
           <p className="mt-0.5 truncate text-[11px] text-[#868E96]">
             {recipe.tags.slice(0, 2).join(" · ") || "저장한 레시피"}
           </p>
-          <span className="sr-only">선택</span>
+          <span className="mt-2 inline-flex rounded-[7px] bg-[#E6F8F7] px-2.5 py-1.5 text-[12px] font-semibold text-[#007A76]">
+            선택
+          </span>
         </div>
       </button>
     );

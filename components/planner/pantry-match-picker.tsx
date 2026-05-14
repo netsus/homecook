@@ -58,7 +58,8 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
 
     return (
       <button
-        className="mb-2 flex w-full gap-3 rounded-[12px] border border-[#DEE2E6] bg-white p-3 text-left"
+        aria-label={`${recipe.title} 선택`}
+        className="mb-2 flex w-full gap-3 rounded-[12px] border border-[#DEE2E6] bg-white p-3 text-left active:border-[#2AC1BC] active:bg-[#E6F8F7]"
         onClick={() => onSelect(recipe)}
         type="button"
       >
@@ -93,15 +94,28 @@ function PantryRecipeCard({ recipe, onSelect, presentation = "dialog" }: PantryR
             </span>
           </span>
           {recipe.missing_ingredients.length > 0 ? (
-            <span className="mt-1 block truncate text-[11px] text-[#868E96]">
-              부족 ·{" "}
-              {recipe.missing_ingredients
-                .slice(0, 3)
-                .map((ingredient) => ingredient.standard_name)
-                .join(", ")}
+            <span className="mt-2 flex flex-wrap gap-1">
+              <span className="mr-0.5 text-[11px] font-semibold text-[#495057]">
+                부족 ·
+              </span>
+              {recipe.missing_ingredients.slice(0, 3).map((ingredient) => (
+                <span
+                  className="rounded-[6px] bg-[#FFF3BF] px-1.5 py-0.5 text-[11px] font-semibold text-[#8A5A00]"
+                  key={ingredient.id}
+                >
+                  {ingredient.standard_name}
+                </span>
+              ))}
+              {recipe.missing_ingredients.length > 3 ? (
+                <span className="rounded-[6px] bg-[#F1F3F5] px-1.5 py-0.5 text-[11px] font-semibold text-[#868E96]">
+                  +{recipe.missing_ingredients.length - 3}
+                </span>
+              ) : null}
             </span>
           ) : null}
-          <span className="sr-only">선택</span>
+          <span className="mt-2 inline-flex rounded-[7px] bg-[#E6F8F7] px-2.5 py-1.5 text-[12px] font-semibold text-[#007A76]">
+            선택
+          </span>
         </span>
       </button>
     );
@@ -401,9 +415,9 @@ export function PantryMatchPicker({
           </h1>
           <div className="h-11 w-11 shrink-0" aria-hidden="true" />
         </div>
-        <div className="border-b border-[#DEE2E6] bg-[#E6F8F7] px-4 py-3.5">
-          <p className="text-[12px] font-bold leading-[1.5] text-[#20A8A4]">
-            팬트리에 있는 재료로 만들 수 있는 요리부터 보여드려요. 부족한 재료는 장보기 목록으로 모아보세요.
+        <div className="border-b border-[#DEE2E6] bg-white px-4 py-3.5">
+          <p className="text-[12px] font-medium leading-[1.5] text-[#495057]">
+            보유 재료가 많은 순서로 보여드려요. 부족한 재료만 확인하세요.
           </p>
         </div>
         <div className="p-3 pb-[112px]">{content}</div>

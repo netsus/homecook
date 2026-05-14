@@ -112,7 +112,8 @@ function ResultCard({ recipe, onSelect, presentation = "inline" }: ResultCardPro
   if (presentation === "screen") {
     return (
       <button
-        className="mb-2 flex w-full items-center gap-3 rounded-[12px] border border-[#DEE2E6] bg-white p-3 text-left"
+        aria-label={`${recipe.title} 선택`}
+        className="mb-2 flex w-full items-center gap-3 rounded-[12px] border border-[#DEE2E6] bg-white p-3 text-left active:border-[#2AC1BC] active:bg-[#E6F8F7]"
         onClick={() => onSelect(recipe)}
         type="button"
       >
@@ -128,7 +129,7 @@ function ResultCard({ recipe, onSelect, presentation = "inline" }: ResultCardPro
             {recipe.tags.length > 0 ? ` · ${recipe.tags.slice(0, 4).join(" · ")}` : ""}
           </span>
         </span>
-        <span className="rounded-[6px] bg-[#E6F8F7] px-2.5 py-1.5 text-[12px] font-bold text-[#20A8A4]">
+        <span className="rounded-[7px] bg-[#E6F8F7] px-3 py-2 text-[13px] font-semibold text-[#007A76]">
           선택
         </span>
       </button>
@@ -446,14 +447,14 @@ export function RecipeSearchPicker({
           <div className="flex items-center gap-2 rounded-[10px] bg-[#F8F9FA] px-3.5 py-2.5">
             <button
               aria-label="검색"
-              className="flex h-6 w-6 shrink-0 items-center justify-center text-[17px] text-[#868E96]"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-[#495057]"
               disabled={searchState === "loading"}
               onClick={() => void handleSearch()}
               type="button"
             >
               <svg
                 aria-hidden="true"
-                className="h-[18px] w-[18px]"
+                className="h-5 w-5"
                 fill="none"
                 stroke="currentColor"
                 strokeLinecap="round"
