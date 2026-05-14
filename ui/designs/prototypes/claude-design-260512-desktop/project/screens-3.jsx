@@ -1389,7 +1389,7 @@ function scaleIngredientAmount(ing, factor) {
 /* ============================================
    RECIPEBOOK_DETAIL — 한 북의 레시피들
    ============================================ */
-function RecipebookDetailScreen({ bookId, recipebooks = D3.RECIPEBOOKS, onBack, onOpenRecipe, onDeleteBook, toast }) {
+function RecipebookDetailScreen({ bookId, recipebooks = D3.RECIPEBOOKS, onBack, onOpenRecipe, onEditBook, onDeleteBook }) {
   const book = recipebooks.find(b => b.id === bookId);
   if (!book) return null;
 
@@ -1408,7 +1408,7 @@ function RecipebookDetailScreen({ bookId, recipebooks = D3.RECIPEBOOKS, onBack, 
         lead={`대표 ${recipes.length}개 레시피 · 전체 ${book.count}개`}
         right={book.type === "custom" ? (
           <div className="recipebook-detail-actions">
-            <Button variant="tertiary" leftIcon="edit" onClick={() => toast?.("레시피북 편집 (데모)")}>북 편집</Button>
+            <Button variant="tertiary" leftIcon="edit" onClick={onEditBook}>북 편집</Button>
             <Button variant="ghost" leftIcon="trash" onClick={onDeleteBook}>삭제</Button>
           </div>
         ) : null}

@@ -14,7 +14,7 @@ function plannerSlotText(dateISO, col) {
 }
 
 /* ---------------- Save modal ---------------- */
-function SaveModal({ open, recipeId, savedSet, recipebooks = DM.RECIPEBOOKS, onClose, onConfirm, toast }) {
+function SaveModal({ open, recipeId, savedSet, recipebooks = DM.RECIPEBOOKS, onClose, onConfirm, onCreateBook }) {
   const recipe = recipeId ? DM.RECIPE[recipeId] : null;
   const customs = recipebooks.filter(b => b.type === "custom");
   const [picked, setPicked] = useStateM(new Set(["rb-saved"]));
@@ -47,7 +47,7 @@ function SaveModal({ open, recipeId, savedSet, recipebooks = DM.RECIPEBOOKS, onC
           ))}
         </div>
 
-        <button className="save-newbook" onClick={() => toast("새 레시피북 만들기 (데모)")}>
+        <button className="save-newbook" onClick={onCreateBook}>
           <IconM name="plus" size={14} /> 새 레시피북 만들기
         </button>
       </div>
@@ -636,6 +636,49 @@ function NicknameModal({ open, current, onClose, onConfirm }) {
   );
 }
 
+/* ---------------- Recipebook name edit/create ---------------- */
+function RecipebookNameModal({ open, mode = "create", currentTitle = "", onClose, onConfirm }) {
+  const [val, setVal] = useStateM(currentTitle || "");
+  const isEdit = mode === "edit";
+  const normalized = val.trim();
+
+  useEffectM(() => {
+    if (open) setVal(currentTitle || "");
+  }, [open, currentTitle]);
+
+  return (
+    <DialogM
+      open={open}
+      onClose={onClose}
+      title={isEdit ? "레시피북 이름 수정" : "새 레시피북"}
+      helper={isEdit ? "커스텀 레시피북의 이름만 수정합니다." : "빈 커스텀 레시피북을 만듭니다."}
+      footer={<>
+        <ButtonM variant="ghost" onClick={onClose}>취소</ButtonM>
+        <ButtonM
+          variant="primary"
+          leftIcon={isEdit ? "edit" : "plus"}
+          disabled={!normalized || (isEdit && normalized === currentTitle)}
+          onClick={() => onConfirm(normalized)}
+        >
+          {isEdit ? "저장" : "만들기"}
+        </ButtonM>
+      </>}
+    >
+      <div className="form-row">
+        <label className="form-label">레시피북 이름</label>
+        <input
+          className="text-input"
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          placeholder="예: 도시락 메뉴"
+          maxLength={24}
+        />
+        <div className="form-help">커스텀 북 이름만 저장합니다. 설명이나 썸네일 편집은 이번 범위에서 제외됩니다.</div>
+      </div>
+    </DialogM>
+  );
+}
+
 /* ---------------- Logout confirm ---------------- */
 function LogoutModal({ open, provider, onClose, onConfirm }) {
   const label = provider === "kakao" ? "카카오" : provider === "naver" ? "네이버" : "구글";
@@ -658,5 +701,5 @@ window.HC_MODALS = {
   PlannedServingsConfirmModal, IngredientPickerModal_ManualCreate,
   PantryAddIngredientModal, PantryAddBundleModal, PantryReflectModal,
   ConsumedIngredientSheet,
-  NicknameModal, LogoutModal,
+  NicknameModal, RecipebookNameModal, LogoutModal,
 };
