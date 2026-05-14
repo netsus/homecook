@@ -15,7 +15,6 @@ const {
   SaveModal, PlannerAddModal, IngredientFilterModal, Lightbox,
   PlannedServingsConfirmModal,
   PantryAddIngredientModal, PantryAddBundleModal, PantryReflectModal,
-  ConsumedIngredientSheet,
   NicknameModal, LogoutModal,
 } = window.HC_MODALS;
 
@@ -59,6 +58,67 @@ function latestActiveShoppingList(lists) {
     .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")) || String(b.id).localeCompare(String(a.id)))[0] || null;
 }
 
+function mealSlotLabel(meal) {
+  const day = DA.WEEK_DATES.find(d => d.iso === meal.date);
+  const colName = DA.MEAL_COLUMNS.find(c => c.id === meal.col)?.name || "끼니";
+  return day ? `${day.dow} 5/${day.d} · ${colName}` : colName;
+}
+
+function shoppingIngredientName(ingredient) {
+  return ingredient.id ? (DA.ING[ingredient.id]?.name || ingredient.name || "재료") : (ingredient.name || "재료");
+}
+
+function shoppingIngredientAmount(ingredient, factor) {
+  const amount = typeof ingredient.amount === "number" ? ingredient.amount * factor : ingredient.amount;
+  const value = typeof amount === "number"
+    ? (amount >= 10 ? Math.round(amount * 10) / 10 : amount.toFixed(2).replace(/\.?0+$/, ""))
+    : amount;
+  return `${value || ""}${ingredient.unit ? ` ${ingredient.unit}` : ""}`.trim();
+}
+
+function createShoppingListFromMeals(targetMeals, pantryHeld) {
+  const stamp = Date.now();
+  const firstMeal = targetMeals[0];
+  const firstRecipe = firstMeal ? DA.RECIPE[firstMeal.recipeId] : null;
+  const title = targetMeals.length === 1 && firstRecipe
+    ? `${mealSlotLabel(firstMeal)} ${firstRecipe.title} 장보기`
+    : `${targetMeals.length}개 끼니 장보기`;
+  const items = [];
+  const excluded = [];
+
+  targetMeals.forEach(meal => {
+    const recipe = DA.RECIPE[meal.recipeId];
+    if (!recipe) return;
+    const factor = (meal.servings || recipe.baseServings || 1) / (recipe.baseServings || 1);
+    recipe.ingredients.forEach((ingredient, index) => {
+      const row = {
+        id: `${meal.id}-${ingredient.id || "custom"}-${index}`,
+        ing: ingredient.id || null,
+        name: shoppingIngredientName(ingredient),
+        amount: shoppingIngredientAmount(ingredient, factor),
+        note: recipe.title,
+      };
+      if (ingredient.id && pantryHeld.has(ingredient.id)) {
+        excluded.push(row);
+      } else {
+        items.push(row);
+      }
+    });
+  });
+
+  return {
+    id: `sl-${stamp}`,
+    title,
+    range: firstMeal ? mealSlotLabel(firstMeal) : "직접 만든 장보기",
+    createdAt: DA.TODAY_ISO,
+    completed: false,
+    origin: "planner-linked",
+    mealIds: targetMeals.map(meal => meal.id),
+    items,
+    excluded,
+  };
+}
+
 function App() {
   // Routing — stack-based
   const [stack, setStack] = useStateA([{ screen: "HOME" }]);
@@ -68,7 +128,7 @@ function App() {
   const [savedSet, setSavedSet] = useStateA(() => new Set(["r1", "r2", "r3", "r4", "r5", "r6"]));
   const [pantryHeld, setPantryHeld] = useStateA(() => new Set(DA.PANTRY_HELD));
   const [meals, setMeals] = useStateA(() => DA.MEALS);
-  const [shoppingLists] = useStateA(() => DA.SHOPPING_LISTS.map(normalizeShoppingList));
+  const [shoppingLists, setShoppingLists] = useStateA(() => DA.SHOPPING_LISTS.map(normalizeShoppingList));
   const [activeShoppingListId, setActiveShoppingListId] = useStateA(() => latestActiveShoppingList(DA.SHOPPING_LISTS)?.id || null);
   const [leftovers] = useStateA(() => DA.LEFTOVERS.map(normalizeLeftover));
   const [ateItems] = useStateA(() => DA.ATE.map(normalizeAteItem));
@@ -96,8 +156,7 @@ function App() {
   const [lightbox, setLightbox] = useStateA({ open: false, photos: [], idx: 0 });
   const [pantryAddIng, setPantryAddIng] = useStateA(false);
   const [pantryAddBundle, setPantryAddBundle] = useStateA(false);
-  const [pantryReflect, setPantryReflect] = useStateA({ open: false, items: [], listId: null });
-  const [consumedSheet, setConsumedSheet] = useStateA({ open: false, recipe: null, mealId: null, ingredients: [] });
+  const [pantryReflect, setPantryReflect] = useStateA({ open: false, items: [], listId: null, checkedItemIds: [] });
   const [nickname, setNickname] = useStateA(false);
   const [logout, setLogout] = useStateA(false);
   const [cookNotice, setCookNotice] = useStateA(false);
@@ -257,6 +316,83 @@ function App() {
     openServingsConfirm(recipe, date, col);
   }, [addPlannerMealToSlot, openServingsConfirm]);
 
+  const openShoppingForMeal = useCallbackA((mealId) => {
+    const meal = meals.find(m => m.id === mealId);
+    if (!meal || meal.status === "cooked") return;
+
+    if (meal.status === "registered") {
+      const activeLinked = shoppingLists.find(list => !list.completed && list.mealIds?.includes(meal.id));
+      if (activeLinked) {
+        setActiveShoppingListId(activeLinked.id);
+        push({ screen: "SHOPPING_DETAIL", listId: activeLinked.id });
+        return;
+      }
+      const newList = createShoppingListFromMeals([meal], pantryHeld);
+      setShoppingLists(prev => [newList, ...prev]);
+      setActiveShoppingListId(newList.id);
+      push({ screen: "SHOPPING_DETAIL", listId: newList.id });
+      return;
+    }
+
+    const linked = shoppingLists.find(list => list.mealIds?.includes(meal.id));
+    if (linked) {
+      if (!linked.completed) setActiveShoppingListId(linked.id);
+      push({ screen: "SHOPPING_DETAIL", listId: linked.id });
+      return;
+    }
+    toast("연결된 장보기 목록이 없어요");
+  }, [meals, shoppingLists, pantryHeld, toast]);
+
+  const completeShoppingList = useCallbackA((listId, checkedItemIds = []) => {
+    const target = shoppingLists.find(list => list.id === listId);
+    if (!target) return;
+    const checkedSet = new Set(checkedItemIds);
+    setShoppingLists(prev => prev.map(list => {
+      if (list.id !== listId) return list;
+      return {
+        ...list,
+        completed: true,
+        items: list.items.map(item => ({ ...item, checked: checkedSet.has(item.id) || Boolean(item.checked) })),
+      };
+    }));
+    setMeals(prev => prev.map(meal => (
+      target.mealIds?.includes(meal.id) && meal.status === "registered"
+        ? { ...meal, status: "shopped" }
+        : meal
+    )));
+    setActiveShoppingListId(current => current === listId ? null : current);
+  }, [shoppingLists]);
+
+  const requestShoppingCompletion = useCallbackA((listId, checkedItemIds, reflectableItems) => {
+    if (reflectableItems.length > 0) {
+      setPantryReflect({ open: true, items: reflectableItems, listId, checkedItemIds });
+      return;
+    }
+    completeShoppingList(listId, checkedItemIds);
+    toast("장보기를 완료했어요");
+  }, [completeShoppingList, toast]);
+
+  const completeCookSession = useCallbackA(({ mealId, recipe, deductIds = [] }) => {
+    setPantryHeld(prev => {
+      const next = new Set(prev);
+      deductIds.forEach(id => next.delete(id));
+      return next;
+    });
+    const fromPlanner = Boolean(mealId);
+    if (fromPlanner) {
+      setMeals(prev => prev.map(meal => meal.id === mealId ? { ...meal, status: "cooked" } : meal));
+    }
+    toast(fromPlanner
+      ? `요리 완료! ${deductIds.length}개 재료를 차감했어요`
+      : `${recipe?.title || "요리"} 완료! ${deductIds.length}개 재료를 차감했어요`);
+    if (fromPlanner) {
+      setStack([{ screen: "PLANNER_WEEK" }]);
+      window.scrollTo({ top: 0, behavior: "instant" });
+    } else {
+      pop();
+    }
+  }, [toast]);
+
   // Save toggle (from PhotoCard)
   const toggleSave = (rid) => {
     if (!rid || rid === "clear-all") {
@@ -360,7 +496,7 @@ function App() {
       meal={meals.find(m => m.id === cur.mealId)}
       onBack={pop}
       onCook={(mid) => push({ screen: "COOK_MODE_PLANNER", mealId: mid })}
-      onGoShopping={() => push({ screen: "SHOPPING_DETAIL", listId: "sl1" })}
+      onGoShopping={() => openShoppingForMeal(cur.mealId)}
       onGoRecipe={(rid) => push({ screen: "RECIPE", recipeId: rid })}
       onDelete={(mid) => openConfirm({
         title: "끼니를 삭제할까요?",
@@ -513,7 +649,7 @@ function App() {
       pantryHeld={pantryHeld}
       onBack={pop}
       onOpenReAdd={(lid) => toast("다시 장보기로 복원 (데모)")}
-      onOpenPantryReflect={(items, listId) => setPantryReflect({ open: true, items, listId })}
+      onCompleteShopping={requestShoppingCompletion}
       readOnly={list?.completed}
       toast={toast}
     />;
@@ -560,12 +696,7 @@ function App() {
       meal={meal}
       recipe={recipe}
       onBack={pop}
-      onComplete={(mealId, completedRecipe) => setConsumedSheet({
-        open: true,
-        recipe: completedRecipe,
-        mealId,
-        ingredients: (completedRecipe?.ingredients || []).filter(i => i.id),
-      })}
+      onComplete={(mealId, completedRecipe, deductIds) => completeCookSession({ mealId, recipe: completedRecipe, deductIds })}
       pantryHeld={pantryHeld}
     />;
   } else if (s === "COOK_MODE_STANDALONE") {
@@ -573,12 +704,7 @@ function App() {
     body = <CookModeStandaloneScreen
       recipe={recipe}
       onBack={pop}
-      onComplete={(completedRecipe) => setConsumedSheet({
-        open: true,
-        recipe: completedRecipe,
-        mealId: null,
-        ingredients: (completedRecipe?.ingredients || []).filter(i => i.id),
-      })}
+      onComplete={(completedRecipe, deductIds) => completeCookSession({ recipe: completedRecipe, deductIds })}
       pantryHeld={pantryHeld}
     />;
   } else if (s === "SETTINGS") {
@@ -683,39 +809,15 @@ function App() {
       <PantryReflectModal
         open={pantryReflect.open}
         items={pantryReflect.items}
-        onClose={() => setPantryReflect({ open: false, items: [], listId: null })}
+        onClose={() => setPantryReflect({ open: false, items: [], listId: null, checkedItemIds: [] })}
         onConfirm={(ings) => {
           setPantryHeld(p => { const n = new Set(p); ings.forEach(i => n.add(i)); return n; });
           const completedFromShopping = Boolean(pantryReflect.listId);
-          setPantryReflect({ open: false, items: [], listId: null });
+          if (completedFromShopping) {
+            completeShoppingList(pantryReflect.listId, pantryReflect.checkedItemIds);
+          }
+          setPantryReflect({ open: false, items: [], listId: null, checkedItemIds: [] });
           toast(completedFromShopping ? "장보기를 완료하고 팬트리에 반영했어요" : `${ings.length}개 재료를 팬트리에 반영했어요`);
-        }}
-      />
-      <ConsumedIngredientSheet
-        open={consumedSheet.open}
-        recipe={consumedSheet.recipe}
-        mealId={consumedSheet.mealId}
-        ingredients={consumedSheet.ingredients}
-        pantryHeld={pantryHeld}
-        onClose={() => setConsumedSheet({ open: false, recipe: null, mealId: null, ingredients: [] })}
-        onConfirm={(deductIds) => {
-          setPantryHeld(p => {
-            const n = new Set(p);
-            deductIds.forEach(id => n.delete(id));
-            return n;
-          });
-          const fromPlanner = Boolean(consumedSheet.mealId);
-          if (fromPlanner) {
-            setMeals(ms => ms.map(m => m.id === consumedSheet.mealId ? { ...m, status: "cooked" } : m));
-          }
-          setConsumedSheet({ open: false, recipe: null, mealId: null, ingredients: [] });
-          toast(fromPlanner ? `요리 완료! ${deductIds.length}개 재료를 차감했어요` : `${deductIds.length}개 재료를 팬트리에서 차감했어요`);
-          if (fromPlanner) {
-            setStack([{ screen: "PLANNER_WEEK" }]);
-            window.scrollTo({ top: 0, behavior: "instant" });
-          } else {
-            pop();
-          }
         }}
       />
       <NicknameModal

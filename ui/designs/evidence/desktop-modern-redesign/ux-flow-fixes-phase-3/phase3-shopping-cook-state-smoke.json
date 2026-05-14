@@ -1,0 +1,25 @@
+{
+  "url": "http://127.0.0.1:4174/homecook%20desktop%20prototype.html",
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "scenarios": [
+    {
+      "scenario": "registered-meal-reopens-active-linked-list",
+      "titleFirstOpen": "이번주 (5월 12일 - 5월 17일)",
+      "titleSecondOpen": "이번주 (5월 12일 - 5월 17일)"
+    },
+    {
+      "scenario": "shopping-complete-readonly",
+      "checkedRows": 10,
+      "readonlyBanner": 1
+    },
+    {
+      "scenario": "cook-complete-no-duplicate-modal",
+      "consumedModalCount": 0
+    }
+  ],
+  "consoleErrors": [],
+  "pageErrors": []
+}
