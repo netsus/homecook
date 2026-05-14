@@ -23,7 +23,7 @@ function App() {
   const cur = stack[stack.length - 1];
 
   // Persisted state
-  const [savedSet, setSavedSet] = useStateA(() => new Set(["r3", "r5"]));
+  const [savedSet, setSavedSet] = useStateA(() => new Set(["r1", "r2", "r3", "r4", "r5", "r6"]));
   const [pantryHeld, setPantryHeld] = useStateA(() => new Set(DA.PANTRY_HELD));
   const [meals, setMeals] = useStateA(() => DA.MEALS);
   const [savedFilters, setSavedFilters] = useStateA(() => new Set());
@@ -72,6 +72,32 @@ function App() {
   const replace = (entry) => { setStack(s => [...s.slice(0, -1), entry]); window.scrollTo({ top: 0, behavior: "instant" }); };
   const pop = () => { setStack(s => s.length > 1 ? s.slice(0, -1) : s); window.scrollTo({ top: 0, behavior: "instant" }); };
   const goTab = (tab) => { setStack([{ screen: tab }]); window.scrollTo({ top: 0, behavior: "instant" }); };
+
+  const openAccountDeleteConfirm = () => openConfirm({
+    title: "정말 계정을 삭제할까요?",
+    message: "모든 레시피북, 플래너 기록, 장보기 내역이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없어요.",
+    confirmLabel: "계정 삭제",
+    cancelLabel: "취소",
+    destructive: true,
+    icon: "trash",
+    onConfirm: () => {
+      toast("계정이 삭제되었습니다 (데모)");
+      goTab("HOME");
+    },
+  });
+
+  const openRecipebookDeleteConfirm = (book) => openConfirm({
+    title: `"${book.title}" 레시피북을 삭제할까요?`,
+    message: "레시피북만 삭제되며, 안에 담긴 레시피는 그대로 남아요.",
+    confirmLabel: "삭제",
+    cancelLabel: "취소",
+    destructive: true,
+    icon: "trash",
+    onConfirm: () => {
+      toast("레시피북을 삭제했어요 (데모)");
+      pop();
+    },
+  });
 
   const closeConfirm = useCallbackA(() => {
     setConfirmDialog({
@@ -349,6 +375,8 @@ function App() {
   } else if (s === "MYPAGE") {
     body = <MyPageScreen
       account={account}
+      savedSet={savedSet}
+      onSaveToggle={toggleSave}
       onGoRecipebooks={() => push({ screen: "RECIPEBOOKS" })}
       onGoShoppingLists={() => push({ screen: "SHOPPING_LISTS" })}
       onGoLeftovers={() => push({ screen: "LEFTOVERS" })}
@@ -356,6 +384,8 @@ function App() {
       onOpenSettings={() => push({ screen: "SETTINGS" })}
       onOpenNickname={() => setNickname(true)}
       onOpenLogout={() => setLogout(true)}
+      onOpenRecipe={(rid) => push({ screen: "RECIPE", recipeId: rid })}
+      onDeleteAccount={openAccountDeleteConfirm}
     />;
   } else if (s === "RECIPEBOOKS") {
     body = <RecipebooksScreen
@@ -364,10 +394,13 @@ function App() {
       onCreateBook={() => toast("새 레시피북 만들기 (데모)")}
     />;
   } else if (s === "RECIPEBOOK_DETAIL") {
+    const book = DA.RECIPEBOOKS.find(b => b.id === cur.bookId);
     body = <RecipebookDetailScreen
       bookId={cur.bookId}
       onBack={pop}
       onOpenRecipe={(rid) => push({ screen: "RECIPE", recipeId: rid })}
+      onDeleteBook={book?.type === "custom" ? () => openRecipebookDeleteConfirm(book) : null}
+      toast={toast}
     />;
   } else if (s === "SHOPPING_FLOW") {
     body = <ShoppingFlowScreen
@@ -407,7 +440,14 @@ function App() {
       onOpenRecipe={(rid) => push({ screen: "RECIPE", recipeId: rid })}
     />;
   } else if (s === "SETTINGS") {
-    body = <SettingsScreen onBack={pop} account={account} />;
+    body = <SettingsScreen
+      onBack={pop}
+      account={account}
+      onOpenNickname={() => setNickname(true)}
+      onOpenLogout={() => setLogout(true)}
+      onDeleteAccount={openAccountDeleteConfirm}
+      toast={toast}
+    />;
   }
 
   return (

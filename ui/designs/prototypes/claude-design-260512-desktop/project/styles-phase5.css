@@ -1,0 +1,507 @@
+/* ============================================
+   Phase 5 — MyPage, Recipebooks, Settings
+   ============================================ */
+
+.mypage .my-hero {
+  margin-bottom: 24px;
+}
+
+.my-avatar.small {
+  width: 48px;
+  height: 48px;
+  font-size: 16px;
+  flex: 0 0 auto;
+}
+
+.mypage-tabs {
+  display: flex;
+  gap: 0;
+  margin: 0 -32px;
+  padding: 0 32px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.mypage-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 46px;
+  padding: 0 20px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.mypage-tab:hover {
+  color: var(--text-1);
+}
+
+.mypage-tab.active {
+  color: var(--brand-deep);
+  border-bottom-color: var(--brand);
+}
+
+.mypage-tab:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+.mypage-panel {
+  padding-top: 32px;
+}
+
+.mypage-panel-grid {
+  display: grid;
+  gap: 28px;
+}
+
+.mypage-saved-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+@media (min-width: 1280px) {
+  .mypage-saved-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.mypage-account-section {
+  margin: 0;
+}
+
+.account-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.account-profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.account-profile-name {
+  color: var(--text-1);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.account-profile-provider {
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.settings-card {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  padding: 0 20px;
+}
+
+.notif-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--divider);
+}
+
+.notif-row:last-child {
+  border-bottom: none;
+}
+
+.notif-info {
+  min-width: 0;
+}
+
+.notif-title {
+  color: var(--text-1);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.notif-desc {
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.faq-list {
+  display: grid;
+  gap: 0;
+}
+
+.faq-item {
+  border-bottom: 1px solid var(--divider);
+}
+
+.faq-item:last-child {
+  border-bottom: none;
+}
+
+.faq-question {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 15px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-1);
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.faq-question:hover {
+  color: var(--brand-deep);
+}
+
+.faq-chevron {
+  margin-left: auto;
+  transition: transform 0.15s ease;
+}
+
+.faq-chevron.open {
+  transform: rotate(90deg);
+}
+
+.faq-answer {
+  padding: 0 0 15px 22px;
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.faq-contact {
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-alt);
+}
+
+.faq-contact-row {
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.mypage-quick-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg-alt);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.mypage-quick-nav:hover {
+  border-color: var(--brand);
+  background: var(--surface);
+}
+
+.mypage-quick-nav-body {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mypage-quick-nav-title,
+.mypage-quick-nav-desc {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mypage-quick-nav-title {
+  color: var(--text-1);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mypage-quick-nav-desc {
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.recipebook-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (min-width: 1280px) {
+  .recipebook-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+.recipebook-card-h {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.recipebook-card-h:hover {
+  border-color: rgba(0, 0, 0, 0.16);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
+}
+
+.recipebook-card-h:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.recipebook-card-mosaic-sq {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+  width: 80px;
+  height: 80px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: var(--image-placeholder);
+}
+
+@media (min-width: 1440px) {
+  .recipebook-card-mosaic-sq {
+    width: 96px;
+    height: 96px;
+  }
+}
+
+.recipebook-mosaic-cell-sq {
+  overflow: hidden;
+  background: var(--image-placeholder);
+}
+
+.recipebook-mosaic-cell-sq img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.recipebook-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.recipebook-card-info .recipebook-card-title {
+  overflow: hidden;
+  color: var(--text-1);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipebook-card-count {
+  margin-top: 3px;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.recipebook-card-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  margin-top: 8px;
+  padding: 0 8px;
+  border-radius: var(--r-pill);
+  background: var(--brand-wash);
+  color: var(--brand-deep);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.recipebook-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+main.screen.settings-screen {
+  max-width: var(--desktop-content-sm);
+}
+
+.settings-section-lead {
+  margin: -6px 0 12px;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.settings-row > div:first-child {
+  min-width: 0;
+}
+
+.meal-columns-editor {
+  display: grid;
+  gap: 12px;
+}
+
+.meal-columns-list {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.meal-col-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.meal-col-row:last-child {
+  border-bottom: none;
+}
+
+.meal-col-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-1);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.meal-col-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--r-pill);
+  background: var(--bg-alt);
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.meal-col-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.meal-col-delete:hover:not(:disabled) {
+  background: rgba(255, 59, 48, 0.06);
+  color: var(--error);
+}
+
+.meal-col-delete:disabled {
+  color: var(--text-4);
+  cursor: not-allowed;
+}
+
+.meal-columns-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.meal-col-rules {
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.meal-col-rules p {
+  margin: 0;
+}
+
+.settings-danger {
+  padding: 20px 24px;
+  border: 1px solid var(--error);
+  border-radius: var(--r-md);
+  background: rgba(255, 59, 48, 0.03);
+}
+
+.settings-danger-title {
+  margin-bottom: 4px;
+  color: var(--error);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.settings-danger-desc {
+  margin-bottom: 16px;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.mypage-quick-nav:focus-visible,
+.faq-question:focus-visible,
+.switch:focus-visible,
+.meal-col-delete:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+@media (min-width: 1440px) {
+  .mypage-tabs {
+    margin: 0 -40px;
+    padding: 0 40px;
+  }
+}

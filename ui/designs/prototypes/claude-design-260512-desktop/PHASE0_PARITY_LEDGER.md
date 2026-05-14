@@ -67,7 +67,7 @@ These overrides intentionally differ from older ledgers:
 | Phase 2 | Anchor screens | 3 owner rows | Verified in Phase 2; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-2/`. |
 | Phase 3 | Auth, gates, cross-cutting modals | 9 owner rows | Verified in Phase 3; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-3/`. |
 | Phase 4 | Planner, meal, menu add, pickers | 10 owner rows | Verified in Phase 4; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-4/`. |
-| Phase 5 | Recipebook, MyPage, settings | 13 owner rows | Open except Recipebooks foundation. |
+| Phase 5 | Recipebook, MyPage, settings | 13 owner rows | Verified in Phase 5; evidence at `ui/designs/evidence/desktop-modern-redesign/phase-5/`. |
 | Phase 6 | Pantry and shopping | 11 owner rows | Open except pantry foundation. |
 | Phase 7 | Cooking, leftovers, ate list | 7 owner rows | Open. |
 | Phase 8 | Full-surface QA | all rows | Open until every row has evidence. |
@@ -83,15 +83,15 @@ These overrides intentionally differ from older ledgers:
 | `screen:MEAL` | stack `MEAL`, `screens-3.jsx::MealScreen` | `MealDetailScreen`, `DesktopMealDetailScreen` | Phase 4 | `verified` | Evidence: `meal-detail-1024.png`, `meal-detail-1280.png`, `meal-detail-1440.png`, and `visual-qa-report.json`; pantry marks, stepper, status-aware actions, and no horizontal overflow verified. |
 | `screen:MENU_ADD` | stack `MENU_ADD`, `screens-3.jsx::MenuAddScreen` | `MenuAddScreen`, `DesktopMenuAddScreen` | Phase 4 | `verified` | Evidence: `menu-add-1024.png`, `menu-add-1280.png`, `menu-add-1440.png`, and `visual-qa-report.json`; six entry cards route to real picker/create screens except out-of-scope webpage import. |
 | `screen:PANTRY` | stack `PANTRY`, `screens-2.jsx::PantryScreen` | `PantryScreen`, `DesktopPantry` | Phase 6 | `verified-foundation` | Full pantry state screenshots, add/bundle/search/filter, empty/held/out states. |
-| `screen:MYPAGE` | stack `MYPAGE`, `screens-2.jsx::MyPageScreen` | `MyPageScreen`, `DesktopMyPage` | Phase 5 | `open` | MyPage overview plus named sub-surfaces; no hidden rows. |
-| `screen:RECIPEBOOKS` | stack `RECIPEBOOKS`, `screens-2.jsx::RecipebooksScreen` | `MyPageRecipebookTab`, `DesktopMyPageRecipebookList` | Phase 5 | `verified-foundation` | Full recipebook list/create/delete states; current mosaic foundation remains. |
-| `screen:RECIPEBOOK_DETAIL` | stack `RECIPEBOOK_DETAIL`, `screens-3.jsx::RecipebookDetailScreen` | `MyPageRecipebookDetailScreen`, `DesktopMyPageRecipebookDetail` | Phase 5 | `open` | Active reopened row; count/content consistency; owner/delete/remove states. |
+| `screen:MYPAGE` | stack `MYPAGE`, `screens-2.jsx::MyPageScreen` | `MyPageScreen`, `DesktopMyPage` | Phase 5 | `verified` | Evidence: `mypage-saved-1024.png`, `mypage-saved-1280.png`, `mypage-saved-1440.png`, `mypage-account-1280.png`, `mypage-notif-1280.png`, `mypage-help-1280.png`, and `visual-qa-report.json`; named sub-surfaces are tabbed and visible. |
+| `screen:RECIPEBOOKS` | stack `RECIPEBOOKS`, `screens-2.jsx::RecipebooksScreen` | `MyPageRecipebookTab`, `DesktopMyPageRecipebookList` | Phase 5 | `verified` | Evidence: `recipebooks-1024.png`, `recipebooks-1280.png`, `recipebooks-1440.png`, and `visual-qa-report.json`; horizontal recipebook cards remove huge-photo/tiny-label layout. |
+| `screen:RECIPEBOOK_DETAIL` | stack `RECIPEBOOK_DETAIL`, `screens-3.jsx::RecipebookDetailScreen` | `MyPageRecipebookDetailScreen`, `DesktopMyPageRecipebookDetail` | Phase 5 | `verified` | Evidence: `recipebook-detail-1280.png`, `recipebook-detail-delete-1280.png`, and `visual-qa-report.json`; custom-book actions and count/content copy verified. |
 | `screen:SHOPPING_FLOW` | stack `SHOPPING_FLOW`, `screens-3.jsx::ShoppingFlowScreen` | `ShoppingCreateScreen`, `DesktopShoppingCreateScreen` | Phase 6 | `verified-foundation` | Select/review/create flow, nested-button warning remains absent, shopping preview contract. |
 | `screen:SHOPPING_LISTS` | stack `SHOPPING_LISTS`, `screens-3.jsx::ShoppingListsScreen` | `MyPageShoppingTab`, `DesktopMyPageShoppingList` | Phase 6 | `open` | Completed/in-progress history, MyPage connection, reopen read-only detail. |
 | `screen:SHOPPING_DETAIL` | stack `SHOPPING_DETAIL`, `screens-3.jsx::ShoppingDetailScreen` | `ShoppingDetailScreen`, `DesktopShoppingDetailScreen` | Phase 6 | `open` | Completed read-only, server `409`, pantry reflect 3-way semantics. |
 | `screen:LEFTOVERS` | stack `LEFTOVERS`, `screens-3.jsx::LeftoversScreen` | `LeftoversScreen`, `DesktopLeftoversScreen` | Phase 7 | `open` | Leftover reuse, partial/eaten states, empty state. |
 | `screen:ATE_LIST` | stack `ATE_LIST`, `screens-3.jsx::AteListScreen` | `AteListScreen`, `DesktopAteListScreen` | Phase 7 | `open` | Ate history, undo/recreate, filters/list density. |
-| `screen:SETTINGS` | stack `SETTINGS`, `screens-3.jsx::SettingsScreen` | `SettingsScreen`, `DesktopSettingsScreen` | Phase 5 | `open` | Meal column management, account sections, active segmented states, danger actions. |
+| `screen:SETTINGS` | stack `SETTINGS`, `screens-3.jsx::SettingsScreen` | `SettingsScreen`, `DesktopSettingsScreen` | Phase 5 | `verified` | Evidence: `settings-1024.png`, `settings-1280.png`, `settings-danger-1280.png`, `settings-account-delete-1280.png`, and `visual-qa-report.json`; meal columns, account actions, segmented states, and danger path verified. |
 | `screen:COOK_READY_LIST` | missing; current cook entry is `CookNoticeDialog` only | `CookListScreen`, `DesktopCookListScreen` | Phase 7 | `open` | Real cook-ready list; planner/standalone entry separation. |
 | `screen:COOK_MODE_PLANNER` | missing; notice-only | `CookRunScreen`, `DesktopCookRunScreen` | Phase 7 | `open` | Planner cook mode, no serving adjustment UI, valid status transition. |
 | `screen:COOK_MODE_STANDALONE` | missing; notice-only | `CookRunScreen`, `DesktopCookRunScreen` | Phase 7 | `open` | Standalone cook mode must not alter planner meal status. |
@@ -112,12 +112,12 @@ These overrides intentionally differ from older ledgers:
 | `surface:PANTRY::PantrySearchToolbar` | `screens-2.jsx::PantryScreen` | `PantryScreen`, `DesktopPantry` | Phase 6 | `verified-foundation` | Toolbar/search works across categories and does not collapse. |
 | `surface:PANTRY::PantryBundlePicker` | `modals.jsx::PantryAddBundleModal` | `PantryBundlePicker`, `DesktopPantryBundleDialog` | Phase 6 | `open` | Bundle picker coverage and empty/duplicate behavior. |
 | `surface:PANTRY::PantryAddIngredient` | `modals.jsx::PantryAddIngredientModal` | `PantryAddSheet`, `DesktopPantryAddDialog` | Phase 6 | `open` | Add ingredient modal with category/search/duplicate states. |
-| `surface:MYPAGE::MyPageSaved` | not dedicated in 260512 | `MyPageSavedScreen` | Phase 5 | `open` | Named row; saved recipes evidence, not hidden in host `MYPAGE`. |
-| `surface:MYPAGE::MyPageAccount` | partly settings/account | `MyPageAccountScreen` | Phase 5 | `open` | Named row; account/provider/profile evidence. |
-| `surface:MYPAGE::MyPageNotif` | not dedicated in 260512 | `MyPageNotifScreen` | Phase 5 | `open` | Named row; notification settings evidence. |
-| `surface:MYPAGE::MyPageHelp` | not dedicated in 260512 | `MyPageHelpScreen` | Phase 5 | `open` | Named row; help/FAQ evidence. |
+| `surface:MYPAGE::MyPageSaved` | `screens-2.jsx::MyPageSavedPanel` | `MyPageSavedScreen` | Phase 5 | `verified` | Evidence: `mypage-saved-1024.png`, `mypage-saved-1280.png`, `mypage-saved-1440.png`, and `visual-qa-report.json`; saved recipes tab is a named visible surface. |
+| `surface:MYPAGE::MyPageAccount` | `screens-2.jsx::MyPageAccountPanel` | `MyPageAccountScreen` | Phase 5 | `verified` | Evidence: `mypage-account-1280.png`, `settings-account-delete-1280.png`, and `visual-qa-report.json`; profile, provider, logout, settings, and delete actions verified. |
+| `surface:MYPAGE::MyPageNotif` | `screens-2.jsx::MyPageNotifPanel` | `MyPageNotifScreen` | Phase 5 | `verified` | Evidence: `mypage-notif-1280.png` and `visual-qa-report.json`; notification toggles verified. |
+| `surface:MYPAGE::MyPageHelp` | `screens-2.jsx::MyPageHelpPanel` | `MyPageHelpScreen` | Phase 5 | `verified` | Evidence: `mypage-help-1280.png` and `visual-qa-report.json`; FAQ/help surface verified. |
 | `surface:MYPAGE::ShoppingHistory` | `ShoppingListsScreen` reachable from MYPAGE | `MyPageShoppingTab`, `DesktopMyPageShoppingList` | Phase 6 | `open` | Completed history and read-only reopen path. |
-| `surface:SETTINGS::MealColumns` | `screens-3.jsx::SettingsScreen` segmented demo | official planner column contract | Phase 5 | `open` | Lock min/max/delete/default column rules before final planner anchor closure. |
+| `surface:SETTINGS::MealColumns` | `screens-3.jsx::MealColumnsEditor` | official planner column contract | Phase 5 | `verified` | Evidence: `settings-1024.png`, `settings-1280.png`, and `visual-qa-report.json`; min/max/default/delete rules are visible. |
 
 ## Modal / Dialog / Gate Rows
 
@@ -130,10 +130,10 @@ These overrides intentionally differ from older ledgers:
 | `modal:GLOBAL::Lightbox` | `modals.jsx::Lightbox` | photo lightbox behavior | Phase 3 | `verified` | Evidence: `lightbox-1280.png` and `visual-qa-report.json`; dialog role, `aria-modal`, close focus, navigation controls, and no overflow verified. |
 | `modal:GLOBAL::ConfirmDialog` | `components.jsx::ConfirmDialog`, `app.jsx::MealScreen` delete path | `ConfirmDialog` | Phase 3 | `verified` | Evidence: `confirm-normal-1280.png`, `confirm-destructive-1280.png`, and `visual-qa-report.json`; normal/destructive variants, cancel focus, danger CTA, and meal-delete consumer verified. |
 | `modal:MANUAL_RECIPE_CREATE::IngredientPickerModal` | `modals.jsx::IngredientPickerModal_ManualCreate` | `IngredientPickerModal` | Phase 4 | `verified` | Evidence: `ingredient-picker-modal-1280.png`, `manual-create-with-ingredients-1280.png`, and `visual-qa-report.json`; manual-specific title/copy, plus affordance, selected pill bar, duplicate dimming, and add flow verified. |
-| `modal:SETTINGS::NicknameModal` | `modals.jsx::NicknameModal` | `NicknameEditSheet` | Phase 5 | `open` | Desktop dialog equivalent, profile update. |
-| `modal:SETTINGS::LogoutModal` | `modals.jsx::LogoutModal` | `LogoutConfirm` | Phase 5 | `open` | Confirm copy and auth state. |
-| `modal:SETTINGS::AccountDeleteConfirm` | missing in 260512 | `AccountDeleteConfirm` | Phase 5 | `open` | Destructive confirm, no accidental deletion. |
-| `modal:MYPAGE::RecipebookDeleteConfirm` | missing in 260512 | `RecipebookDeleteConfirm` | Phase 5 | `open` | Custom book only; confirm and ownership. |
+| `modal:SETTINGS::NicknameModal` | `modals.jsx::NicknameModal` | `NicknameEditSheet` | Phase 5 | `verified` | Evidence: `nickname-modal-1280.png` and `visual-qa-report.json`; desktop dialog opens from settings/profile update path. |
+| `modal:SETTINGS::LogoutModal` | `modals.jsx::LogoutModal` | `LogoutConfirm` | Phase 5 | `verified` | Evidence: `logout-modal-1280.png` and `visual-qa-report.json`; confirm copy and auth state verified. |
+| `modal:SETTINGS::AccountDeleteConfirm` | `components.jsx::ConfirmDialog` via settings/MyPage delete action | `AccountDeleteConfirm` | Phase 5 | `verified` | Evidence: `settings-account-delete-1280.png` and `visual-qa-report.json`; destructive confirm uses cancel-first dialog. |
+| `modal:MYPAGE::RecipebookDeleteConfirm` | `components.jsx::ConfirmDialog` via `RecipebookDetailScreen` custom book action | `RecipebookDeleteConfirm` | Phase 5 | `verified` | Evidence: `recipebook-detail-delete-1280.png` and `visual-qa-report.json`; custom book delete confirm verified. |
 | `modal:PANTRY::PantryAddIngredientModal` | `modals.jsx::PantryAddIngredientModal` | `PantryAddSheet`, `DesktopPantryAddDialog` | Phase 6 | `open` | Add multiple, search, empty state. |
 | `modal:PANTRY::PantryAddBundleModal` | `modals.jsx::PantryAddBundleModal` | `PantryBundlePicker`, `DesktopPantryBundleDialog` | Phase 6 | `open` | Bundle selection and confirmation. |
 | `modal:SHOPPING_DETAIL::PantryReflectModal` | `modals.jsx::PantryReflectModal` | `PantryReflectPicker`, `DesktopPantryReflectDialog` | Phase 6 | `open` | `null / [] / selected ids` semantics; pre-complete backdrop. |

@@ -1034,12 +1034,11 @@ function AteListScreen({ onBack, onOpenRecipe }) {
 /* ============================================
    RECIPEBOOK_DETAIL — 한 북의 레시피들
    ============================================ */
-function RecipebookDetailScreen({ bookId, onBack, onOpenRecipe }) {
+function RecipebookDetailScreen({ bookId, onBack, onOpenRecipe, onDeleteBook, toast }) {
   const book = D3.RECIPEBOOKS.find(b => b.id === bookId);
   if (!book) return null;
 
-  // For demo, show all recipes (would be filtered in production)
-  const recipes = D3.RECIPES.slice(0, Math.min(book.count, D3.RECIPES.length));
+  const recipes = recipesForBook(bookId);
 
   return (
     <main className="screen">
@@ -1051,23 +1050,36 @@ function RecipebookDetailScreen({ bookId, onBack, onOpenRecipe }) {
 
       <ScreenHeader
         title={book.title}
-        lead={`${book.count}개의 레시피`}
-        right={book.type === "custom" ? <Button variant="tertiary" leftIcon="edit">북 편집</Button> : null}
+        lead={`대표 ${recipes.length}개 레시피 · 전체 ${book.count}개`}
+        right={book.type === "custom" ? (
+          <div className="recipebook-detail-actions">
+            <Button variant="tertiary" leftIcon="edit" onClick={() => toast?.("레시피북 편집 (데모)")}>북 편집</Button>
+            <Button variant="ghost" leftIcon="trash" onClick={onDeleteBook}>삭제</Button>
+          </div>
+        ) : null}
       />
 
-      <div className="home-grid">
-        {recipes.map(r => (
-          <button key={r.id} className="photo-card" onClick={() => onOpenRecipe(r.id)}>
-            <div className="photo-card-thumb">
-              <img src={r.photo} alt={r.title} onError={(e) => { e.currentTarget.style.display = "none"; }} />
-            </div>
-            <div className="photo-card-body">
-              <div className="photo-card-title">{r.title}</div>
-              <div className="photo-card-meta tabular">{r.cookTime}분 · {r.baseServings}인분</div>
-            </div>
-          </button>
-        ))}
-      </div>
+      {recipes.length > 0 ? (
+        <div className="home-grid">
+          {recipes.map(r => (
+            <button key={r.id} className="photo-card" onClick={() => onOpenRecipe(r.id)}>
+              <div className="photo-card-thumb">
+                <img src={r.photo} alt={r.title} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+              </div>
+              <div className="photo-card-body">
+                <div className="photo-card-title">{r.title}</div>
+                <div className="photo-card-meta tabular">{r.cookTime}분 · {r.baseServings}인분</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <StatePanel
+          icon="book"
+          title="이 레시피북은 비어 있어요"
+          desc="레시피를 저장할 때 이 북에 담아보세요."
+        />
+      )}
     </main>
   );
 }
@@ -1075,13 +1087,13 @@ function RecipebookDetailScreen({ bookId, onBack, onOpenRecipe }) {
 /* ============================================
    SETTINGS
    ============================================ */
-function SettingsScreen({ onBack, account }) {
+function SettingsScreen({ onBack, account, onOpenNickname, onOpenLogout, onDeleteAccount, toast }) {
   const [pushNotif, setPushNotif] = useS3(true);
   const [unit, setUnit] = useS3("metric");
   const [theme, setTheme] = useS3("light");
 
   return (
-    <main className="screen">
+    <main className="screen settings-screen">
       <div className="breadcrumb">
         <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 마이페이지</button>
         <span className="breadcrumb-sep">/</span>
@@ -1089,6 +1101,12 @@ function SettingsScreen({ onBack, account }) {
       </div>
 
       <ScreenHeader title="설정" lead="알림 · 단위 · 테마를 한곳에서 관리합니다." />
+
+      <section className="settings-section">
+        <h3 className="settings-section-title">끼니 관리</h3>
+        <div className="settings-section-lead">플래너에 표시되는 식사 시간대를 관리합니다.</div>
+        <MealColumnsEditor toast={toast} />
+      </section>
 
       <section className="settings-section">
         <h3 className="settings-section-title">알림</h3>
@@ -1141,6 +1159,31 @@ function SettingsScreen({ onBack, account }) {
               <div className="meta-sub">{account.provider === "kakao" ? "카카오" : account.provider === "naver" ? "네이버" : "구글"} 로그인</div>
             </div>
           </div>
+          <button className="meta-row" type="button" onClick={onOpenNickname}>
+            <div className="meta-icon"><Icon name="edit" size={16} /></div>
+            <div className="meta-body">
+              <div className="meta-title">닉네임 변경</div>
+              <div className="meta-sub">마이페이지와 댓글에 표시되는 이름</div>
+            </div>
+            <Icon name="chevR" size={16} color="var(--text-4)" />
+          </button>
+          <button className="meta-row" type="button" onClick={onOpenLogout}>
+            <div className="meta-icon"><Icon name="logout" size={16} /></div>
+            <div className="meta-body">
+              <div className="meta-title">로그아웃</div>
+              <div className="meta-sub">현재 로그인한 계정에서 나갑니다.</div>
+            </div>
+            <Icon name="chevR" size={16} color="var(--text-4)" />
+          </button>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <h3 className="settings-section-title">위험 영역</h3>
+        <div className="settings-danger">
+          <div className="settings-danger-title">계정 삭제</div>
+          <div className="settings-danger-desc">모든 레시피북, 플래너, 장보기 기록이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없어요.</div>
+          <Button variant="danger" leftIcon="trash" onClick={onDeleteAccount}>계정 삭제하기</Button>
         </div>
       </section>
     </main>
@@ -1152,6 +1195,51 @@ function SwitchToggle({ on, onChange }) {
     <button className={`switch ${on ? "on" : ""}`} onClick={() => onChange(!on)} role="switch" aria-checked={on}>
       <span className="switch-thumb" />
     </button>
+  );
+}
+
+function MealColumnsEditor({ toast }) {
+  const defaultIds = new Set(["col-b", "col-l", "col-d"]);
+  const cols = D3.MEAL_COLUMNS;
+  const canAdd = cols.length < 5;
+  const canDelete = (col) => !defaultIds.has(col.id) && cols.length > 2;
+
+  return (
+    <div className="meal-columns-editor">
+      <div className="meal-columns-list">
+        {cols.map(col => (
+          <div key={col.id} className="meal-col-row">
+            <Icon name="drag" size={14} color="var(--text-4)" />
+            <span className="meal-col-name">{col.name}</span>
+            {defaultIds.has(col.id) && <span className="meal-col-badge">기본</span>}
+            <button
+              className="meal-col-delete"
+              type="button"
+              disabled={!canDelete(col)}
+              aria-label={`${col.name} 삭제`}
+              onClick={() => toast?.(`${col.name} 삭제 (데모)`)}
+            >
+              <Icon name="trash" size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="meal-columns-actions">
+        <Button
+          variant="tertiary"
+          leftIcon="plus"
+          disabled={!canAdd}
+          onClick={() => toast?.("끼니 추가 (데모)")}
+        >
+          끼니 추가
+        </Button>
+      </div>
+      <div className="meal-col-rules">
+        <p>최소 2개, 최대 5개의 끼니를 등록할 수 있어요.</p>
+        <p>기본 끼니(아침/점심/저녁)는 삭제할 수 없어요.</p>
+        <p>컬럼을 추가하면 플래너 그리드에도 같은 순서로 표시됩니다.</p>
+      </div>
+    </div>
   );
 }
 
