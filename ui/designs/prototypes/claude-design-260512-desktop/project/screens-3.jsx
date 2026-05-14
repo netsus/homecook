@@ -22,16 +22,10 @@ function recipeIngredientIds(recipe) {
   return (recipe?.ingredients || []).map(i => i.id).filter(Boolean);
 }
 
-function recipesForBook(bookId) {
-  const map = {
-    "rb-my": ["r6", "r1", "r2", "r8"],
-    "rb-saved": ["r5", "r3", "r4", "r7"],
-    "rb-liked": ["r3", "r6", "r2", "r1"],
-    "rb-c1": ["r1", "r4", "r7", "r8"],
-    "rb-c2": ["r5", "r8", "r1", "r3"],
-    "rb-c3": ["r6", "r2", "r3", "r7"],
-  };
-  return (map[bookId] || D3.RECIPES.map(r => r.id)).map(id => D3.RECIPE[id]).filter(Boolean);
+function recipesForBook(bookId, recipebooks = D3.RECIPEBOOKS) {
+  const book = recipebooks.find(b => b.id === bookId);
+  const recipeIds = Array.isArray(book?.recipeIds) ? book.recipeIds : [];
+  return recipeIds.map(id => D3.RECIPE[id]).filter(Boolean);
 }
 
 function createTempRecipe({ prefix, title, cookTime, baseServings, ingredients, memo, source, photo }) {
@@ -297,7 +291,7 @@ function RecipeSearchPickerScreen({ dateISO, col, onBack, onSelectRecipe }) {
 /* ============================================
    MENU_ADD PICKER — Recipebook selector
    ============================================ */
-function RecipeBookSelectorScreen({ dateISO, col, onBack, onOpenBook }) {
+function RecipeBookSelectorScreen({ dateISO, col, recipebooks = D3.RECIPEBOOKS, onBack, onOpenBook }) {
   return (
     <main className="screen">
       <div className="breadcrumb">
@@ -313,7 +307,7 @@ function RecipeBookSelectorScreen({ dateISO, col, onBack, onOpenBook }) {
       />
 
       <div className="meta-list picker-book-list">
-        {D3.RECIPEBOOKS.map(book => (
+        {recipebooks.map(book => (
           <button key={book.id} className="meta-row picker-book-row" onClick={() => onOpenBook(book.id)}>
             <div className="meta-icon"><Icon name={book.type === "custom" ? "bookOpen" : "book"} size={16} /></div>
             <div className="meta-body">
@@ -335,9 +329,9 @@ function RecipeBookSelectorScreen({ dateISO, col, onBack, onOpenBook }) {
   );
 }
 
-function RecipeBookDetailPickerScreen({ bookId, dateISO, col, onBack, onSelectRecipe }) {
-  const book = D3.RECIPEBOOKS.find(b => b.id === bookId);
-  const recipes = recipesForBook(bookId);
+function RecipeBookDetailPickerScreen({ bookId, dateISO, col, recipebooks = D3.RECIPEBOOKS, onBack, onSelectRecipe }) {
+  const book = recipebooks.find(b => b.id === bookId);
+  const recipes = recipesForBook(bookId, recipebooks);
   if (!book) return null;
 
   return (
@@ -351,12 +345,16 @@ function RecipeBookDetailPickerScreen({ bookId, dateISO, col, onBack, onSelectRe
       <ScreenHeader
         eyebrow={plannerSlotLabel(dateISO, col)}
         title={book.title}
-        lead={`${book.count}개의 레시피 중 끼니에 추가할 메뉴를 고르세요.`}
+        lead={recipes.length > 0 ? `대표 ${recipes.length}개 레시피 중 끼니에 추가할 메뉴를 고르세요.` : "아직 담긴 레시피가 없어요."}
       />
 
-      <div className="picker-recipe-grid">
-        {recipes.map(r => <PickerRecipeCard key={r.id} recipe={r} onPick={onSelectRecipe} />)}
-      </div>
+      {recipes.length > 0 ? (
+        <div className="picker-recipe-grid">
+          {recipes.map(r => <PickerRecipeCard key={r.id} recipe={r} onPick={onSelectRecipe} />)}
+        </div>
+      ) : (
+        <StatePanel icon="book" title="이 레시피북은 비어 있어요" desc="다른 북을 고르거나 새 레시피를 저장해보세요." />
+      )}
     </main>
   );
 }
@@ -941,10 +939,13 @@ function ShoppingFlowScreen({ onBack, onOpenCurrent, onOpenPast, onCreateNew, cu
 /* ============================================
    SHOPPING_LISTS — list of all shopping lists
    ============================================ */
-function ShoppingListsScreen({ onBack, onOpen }) {
-  const lists = D3.SHOPPING_LISTS;
-  const inProgress = lists.filter(l => !l.completed);
-  const completed = lists.filter(l => l.completed);
+function ShoppingListsScreen({ lists = D3.SHOPPING_LISTS, onBack, onOpen }) {
+  const sortedLists = [...lists].sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    return String(b.createdAt || "").localeCompare(String(a.createdAt || "")) || String(b.id).localeCompare(String(a.id));
+  });
+  const inProgress = sortedLists.filter(l => !l.completed);
+  const completed = sortedLists.filter(l => l.completed);
   return (
     <main className="screen">
       <div className="breadcrumb">
@@ -996,9 +997,9 @@ function ShoppingHistoryRow({ list, onOpen }) {
 /* ============================================
    LEFTOVERS (§15)
    ============================================ */
-function LeftoversScreen({ onBack, onCook, onMarkAte, onReAddToPlanner, onGoAteList }) {
+function LeftoversScreen({ leftovers: liveLeftovers = D3.LEFTOVERS, onBack, onCook, onMarkAte, onReAddToPlanner, onGoAteList }) {
   const [state, setState] = useS3("ok");
-  const leftovers = state === "empty" ? [] : D3.LEFTOVERS;
+  const leftovers = state === "empty" ? [] : liveLeftovers;
   return (
     <main className="screen">
       <div className="breadcrumb">
@@ -1050,9 +1051,9 @@ function LeftoversScreen({ onBack, onCook, onMarkAte, onReAddToPlanner, onGoAteL
 /* ============================================
    ATE_LIST (§16)
    ============================================ */
-function AteListScreen({ onBack, onOpenRecipe, onUndoAte, onRecreate, onGoLeftovers }) {
+function AteListScreen({ ateItems: liveAteItems = D3.ATE, onBack, onOpenRecipe, onUndoAte, onRecreate, onGoLeftovers }) {
   const [state, setState] = useS3("ok");
-  const ateItems = state === "empty" ? [] : D3.ATE;
+  const ateItems = state === "empty" ? [] : liveAteItems;
   return (
     <main className="screen">
       <div className="breadcrumb">
@@ -1382,11 +1383,11 @@ function scaleIngredientAmount(ing, factor) {
 /* ============================================
    RECIPEBOOK_DETAIL — 한 북의 레시피들
    ============================================ */
-function RecipebookDetailScreen({ bookId, onBack, onOpenRecipe, onDeleteBook, toast }) {
-  const book = D3.RECIPEBOOKS.find(b => b.id === bookId);
+function RecipebookDetailScreen({ bookId, recipebooks = D3.RECIPEBOOKS, onBack, onOpenRecipe, onDeleteBook, toast }) {
+  const book = recipebooks.find(b => b.id === bookId);
   if (!book) return null;
 
-  const recipes = recipesForBook(bookId);
+  const recipes = recipesForBook(bookId, recipebooks);
 
   return (
     <main className="screen">

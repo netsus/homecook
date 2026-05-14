@@ -19,6 +19,46 @@ const {
   NicknameModal, LogoutModal,
 } = window.HC_MODALS;
 
+function normalizeShoppingList(list) {
+  const origin = list.origin || (list.mealIds?.length ? "planner-linked" : "manual");
+  return { ...list, origin };
+}
+
+function normalizeLeftover(item) {
+  return {
+    servings: 1,
+    sourceMealId: null,
+    sourceDate: item.createdAt || null,
+    sourceCol: null,
+    ...item,
+  };
+}
+
+function normalizeAteItem(item) {
+  return {
+    servings: 1,
+    sourceMealId: null,
+    sourceDate: item.ateAt || null,
+    sourceCol: null,
+    ...item,
+  };
+}
+
+function normalizeRecipebook(book) {
+  const recipeIds = Array.isArray(book.recipeIds) ? book.recipeIds : [];
+  return {
+    ...book,
+    recipeIds,
+    thumbs: book.thumbs || recipeIds.map(id => DA.RECIPE[id]?.photo).filter(Boolean),
+  };
+}
+
+function latestActiveShoppingList(lists) {
+  return [...lists]
+    .filter(list => !list.completed)
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")) || String(b.id).localeCompare(String(a.id)))[0] || null;
+}
+
 function App() {
   // Routing — stack-based
   const [stack, setStack] = useStateA([{ screen: "HOME" }]);
@@ -28,6 +68,11 @@ function App() {
   const [savedSet, setSavedSet] = useStateA(() => new Set(["r1", "r2", "r3", "r4", "r5", "r6"]));
   const [pantryHeld, setPantryHeld] = useStateA(() => new Set(DA.PANTRY_HELD));
   const [meals, setMeals] = useStateA(() => DA.MEALS);
+  const [shoppingLists] = useStateA(() => DA.SHOPPING_LISTS.map(normalizeShoppingList));
+  const [activeShoppingListId, setActiveShoppingListId] = useStateA(() => latestActiveShoppingList(DA.SHOPPING_LISTS)?.id || null);
+  const [leftovers] = useStateA(() => DA.LEFTOVERS.map(normalizeLeftover));
+  const [ateItems] = useStateA(() => DA.ATE.map(normalizeAteItem));
+  const [recipebooks] = useStateA(() => DA.RECIPEBOOKS.map(normalizeRecipebook));
   const [savedFilters, setSavedFilters] = useStateA(() => new Set());
 
   // Demo-state overrides
@@ -37,6 +82,11 @@ function App() {
   // Toast bus
   const toastBus = useMemoA(() => DA.makeToastBus(), []);
   const toast = useCallbackA((m) => toastBus.show(m), [toastBus]);
+
+  const activeShoppingList = useMemoA(() => {
+    const explicit = shoppingLists.find(list => !list.completed && list.id === activeShoppingListId);
+    return explicit || latestActiveShoppingList(shoppingLists);
+  }, [shoppingLists, activeShoppingListId]);
 
   // Modals
   const [saveModal, setSaveModal] = useStateA({ open: false, recipeId: null });
@@ -330,6 +380,7 @@ function App() {
     body = <RecipeBookSelectorScreen
       dateISO={cur.date}
       col={cur.col}
+      recipebooks={recipebooks}
       onBack={pop}
       onOpenBook={(bookId) => push({ screen: "RECIPEBOOK_DETAIL_PICKER", bookId, date: cur.date, col: cur.col })}
     />;
@@ -338,6 +389,7 @@ function App() {
       bookId={cur.bookId}
       dateISO={cur.date}
       col={cur.col}
+      recipebooks={recipebooks}
       onBack={pop}
       onSelectRecipe={(recipe) => openServingsConfirm(recipe, cur.date, cur.col)}
     />;
@@ -382,6 +434,8 @@ function App() {
     body = <MyPageScreen
       account={account}
       savedSet={savedSet}
+      shoppingLists={shoppingLists}
+      recipebooks={recipebooks}
       onSaveToggle={toggleSave}
       onGoRecipebooks={() => push({ screen: "RECIPEBOOKS" })}
       onGoShoppingLists={() => push({ screen: "SHOPPING_LISTS" })}
@@ -395,14 +449,16 @@ function App() {
     />;
   } else if (s === "RECIPEBOOKS") {
     body = <RecipebooksScreen
+      recipebooks={recipebooks}
       onBack={pop}
       onOpenBook={(bid) => push({ screen: "RECIPEBOOK_DETAIL", bookId: bid })}
       onCreateBook={() => toast("새 레시피북 만들기 (데모)")}
     />;
   } else if (s === "RECIPEBOOK_DETAIL") {
-    const book = DA.RECIPEBOOKS.find(b => b.id === cur.bookId);
+    const book = recipebooks.find(b => b.id === cur.bookId);
     body = <RecipebookDetailScreen
       bookId={cur.bookId}
+      recipebooks={recipebooks}
       onBack={pop}
       onOpenRecipe={(rid) => push({ screen: "RECIPE", recipeId: rid })}
       onDeleteBook={book?.type === "custom" ? () => openRecipebookDeleteConfirm(book) : null}
@@ -411,18 +467,26 @@ function App() {
   } else if (s === "SHOPPING_FLOW") {
     body = <ShoppingFlowScreen
       onBack={pop}
-      onOpenCurrent={(lid) => push({ screen: "SHOPPING_DETAIL", listId: lid })}
+      onOpenCurrent={(lid) => {
+        setActiveShoppingListId(lid);
+        push({ screen: "SHOPPING_DETAIL", listId: lid });
+      }}
       onOpenPast={() => push({ screen: "SHOPPING_LISTS" })}
       onCreateNew={() => toast("새 장보기 만들기 (데모)")}
-      currentList={DA.SHOPPING_LISTS.find(l => !l.completed)}
+      currentList={activeShoppingList}
     />;
   } else if (s === "SHOPPING_LISTS") {
     body = <ShoppingListsScreen
+      lists={shoppingLists}
       onBack={pop}
-      onOpen={(lid) => push({ screen: "SHOPPING_DETAIL", listId: lid })}
+      onOpen={(lid) => {
+        const list = shoppingLists.find(l => l.id === lid);
+        if (list && !list.completed) setActiveShoppingListId(lid);
+        push({ screen: "SHOPPING_DETAIL", listId: lid });
+      }}
     />;
   } else if (s === "SHOPPING_DETAIL") {
-    const list = DA.SHOPPING_LISTS.find(l => l.id === cur.listId);
+    const list = shoppingLists.find(l => l.id === cur.listId);
     body = <ShoppingDetailScreen
       list={list}
       pantryHeld={pantryHeld}
@@ -434,9 +498,10 @@ function App() {
     />;
   } else if (s === "LEFTOVERS") {
     body = <LeftoversScreen
+      leftovers={leftovers}
       onBack={pop}
       onCook={(lfId) => {
-        const lf = DA.LEFTOVERS.find(l => l.id === lfId);
+        const lf = leftovers.find(l => l.id === lfId);
         if (lf) push({ screen: "COOK_MODE_STANDALONE", recipeId: lf.recipeId });
       }}
       onMarkAte={() => toast("다 먹은 목록에 추가했어요")}
@@ -445,6 +510,7 @@ function App() {
     />;
   } else if (s === "ATE_LIST") {
     body = <AteListScreen
+      ateItems={ateItems}
       onBack={pop}
       onOpenRecipe={(rid) => push({ screen: "RECIPE", recipeId: rid })}
       onUndoAte={() => toast("남은 요리로 되돌렸어요 (데모)")}
@@ -523,6 +589,7 @@ function App() {
         open={saveModal.open}
         recipeId={saveModal.recipeId}
         savedSet={savedSet}
+        recipebooks={recipebooks}
         onClose={() => setSaveModal({ open: false, recipeId: null })}
         onConfirm={(rid, books) => {
           setSavedSet(p => new Set([...p, rid]));

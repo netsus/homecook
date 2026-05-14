@@ -318,6 +318,8 @@ function MyPageScreen({
   onSaveToggle,
   account,
   savedSet,
+  shoppingLists = D2.SHOPPING_LISTS,
+  recipebooks = D2.RECIPEBOOKS,
 }) {
   const tabs = [
     { id: "saved", label: "저장한 레시피", icon: "bookmark" },
@@ -327,7 +329,7 @@ function MyPageScreen({
   ];
   const [activeTab, setActiveTab] = useS2("saved");
   const stats = {
-    saved: D2.RECIPEBOOKS.find(b => b.id === "rb-saved")?.count || 0,
+    saved: recipebooks.find(b => b.id === "rb-saved")?.count || 0,
     cooked: 26,
     plannerDone: 14,
   };
@@ -406,6 +408,8 @@ function MyPageScreen({
         {activeTab === "saved" && (
           <MyPageSavedPanel
             savedSet={savedSet}
+            shoppingLists={shoppingLists}
+            recipebooks={recipebooks}
             onSaveToggle={onSaveToggle}
             onOpenRecipe={onOpenRecipe}
             onGoRecipebooks={onGoRecipebooks}
@@ -432,6 +436,8 @@ function MyPageScreen({
 
 function MyPageSavedPanel({
   savedSet,
+  shoppingLists = D2.SHOPPING_LISTS,
+  recipebooks = D2.RECIPEBOOKS,
   onSaveToggle,
   onOpenRecipe,
   onGoRecipebooks,
@@ -444,7 +450,7 @@ function MyPageSavedPanel({
     <div className="mypage-panel-grid">
       <ScreenHeader
         title="저장한 레시피"
-        lead={`${D2.RECIPEBOOKS.find(b => b.id === "rb-saved")?.count || savedRecipes.length}개의 레시피를 저장했어요.`}
+        lead={`${recipebooks.find(b => b.id === "rb-saved")?.count || savedRecipes.length}개의 레시피를 저장했어요.`}
       />
       {savedRecipes.length > 0 ? (
         <div className="mypage-saved-grid">
@@ -470,7 +476,7 @@ function MyPageSavedPanel({
         <span className="meta-icon"><Icon name="book" size={16} /></span>
         <span className="mypage-quick-nav-body">
           <span className="mypage-quick-nav-title">레시피북 관리</span>
-          <span className="mypage-quick-nav-desc">내가 추가한 · 저장한 · 좋아요한 · 커스텀 북 6개</span>
+          <span className="mypage-quick-nav-desc">내가 추가한 · 저장한 · 좋아요한 · 커스텀 북 {recipebooks.length}개</span>
         </span>
         <Icon name="chevR" size={16} color="var(--text-4)" />
       </button>
@@ -479,7 +485,7 @@ function MyPageSavedPanel({
         <span className="meta-icon"><Icon name="cart" size={16} /></span>
         <span className="mypage-quick-nav-body">
           <span className="mypage-quick-nav-title">장보기 내역</span>
-          <span className="mypage-quick-nav-desc">진행 중 · 완료된 장보기 {D2.SHOPPING_LISTS.length}개</span>
+          <span className="mypage-quick-nav-desc">진행 중 · 완료된 장보기 {shoppingLists.length}개</span>
         </span>
         <Icon name="chevR" size={16} color="var(--text-4)" />
       </button>
@@ -654,9 +660,9 @@ function providerLabel(p) {
 /* ============================================
    RECIPEBOOKS list (§13a)
    ============================================ */
-function RecipebooksScreen({ onBack, onOpenBook, onCreateBook }) {
-  const sys = D2.RECIPEBOOKS.filter(b => b.type !== "custom");
-  const custom = D2.RECIPEBOOKS.filter(b => b.type === "custom");
+function RecipebooksScreen({ recipebooks = D2.RECIPEBOOKS, onBack, onOpenBook, onCreateBook }) {
+  const sys = recipebooks.filter(b => b.type !== "custom");
+  const custom = recipebooks.filter(b => b.type === "custom");
   return (
     <main className="screen">
       <div className="breadcrumb">

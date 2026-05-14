@@ -302,7 +302,7 @@ const PANTRY_BUNDLES = [
 const SHOPPING_LISTS = [
   {
     id:"sl1", title:"이번주 (5월 12일 - 5월 17일)", range:"5/12 - 5/17",
-    createdAt:"2026-05-12", completed:false,
+    createdAt:"2026-05-12", completed:false, origin:"planner-linked",
     mealIds:["m4","m5","m6","m7","m8","m9"],
     items: [
       { id:"i1", ing:"ing-beef",     name:"소고기 (양지)", amount:"450g",         note:"미역국·잡채용" },
@@ -327,7 +327,7 @@ const SHOPPING_LISTS = [
   },
   {
     id:"sl2", title:"지난주 (5월 5일 - 5월 11일)", range:"5/5 - 5/11",
-    createdAt:"2026-05-05", completed:true,
+    createdAt:"2026-05-05", completed:true, origin:"planner-linked",
     mealIds:["m1","m2"],
     items: [
       { id:"j1", ing:"ing-beef",     name:"소고기", amount:"400g", checked:true },
@@ -339,13 +339,13 @@ const SHOPPING_LISTS = [
 
 /* ---------- 남은 요리 ---------- */
 const LEFTOVERS = [
-  { id:"lf1", recipeId:"r5", createdAt:"2026-05-11", note:"불고기 2인분" },
-  { id:"lf2", recipeId:"r7", createdAt:"2026-05-09", note:"잡채 절반" },
+  { id:"lf1", recipeId:"r5", createdAt:"2026-05-11", note:"불고기 2인분", servings:2, sourceMealId:"m2", sourceDate:"2026-05-11", sourceCol:"col-d" },
+  { id:"lf2", recipeId:"r7", createdAt:"2026-05-09", note:"잡채 절반", servings:1, sourceMealId:null, sourceDate:"2026-05-09", sourceCol:null },
 ];
 /* ---------- 다먹은 목록 ---------- */
 const ATE = [
-  { id:"a1", recipeId:"r1", ateAt:"2026-05-08" },
-  { id:"a2", recipeId:"r3", ateAt:"2026-05-06" },
+  { id:"a1", recipeId:"r1", ateAt:"2026-05-08", servings:2, sourceMealId:null, sourceDate:"2026-05-08", sourceCol:null },
+  { id:"a2", recipeId:"r3", ateAt:"2026-05-06", servings:2, sourceMealId:null, sourceDate:"2026-05-06", sourceCol:null },
 ];
 
 /* ---------- 마이페이지 ---------- */
@@ -356,13 +356,21 @@ const ACCOUNT = {
 };
 
 /* 시스템 자동 레시피북 + 커스텀 */
+const RECIPEBOOK_RECIPE_IDS = {
+  "rb-my": ["r6", "r1", "r2", "r8"],
+  "rb-saved": ["r5", "r3", "r4", "r7"],
+  "rb-liked": ["r3", "r6", "r2", "r1"],
+  "rb-c1": ["r1", "r4", "r7", "r8"],
+  "rb-c2": ["r5", "r8", "r1", "r3"],
+  "rb-c3": ["r6", "r2", "r3", "r7"],
+};
 const RECIPEBOOKS = [
-  { id:"rb-my",     type:"my_added", title:"내가 추가한 레시피",  count:12, thumbs:[FOOD.bulgogi, FOOD.kimchi, FOOD.bowl] },
-  { id:"rb-saved",  type:"saved",    title:"저장한 레시피",       count:38, thumbs:[FOOD.pasta, FOOD.curry, FOOD.bibimbap] },
-  { id:"rb-liked",  type:"liked",    title:"좋아요한 레시피",     count:74, thumbs:[FOOD.salad, FOOD.ramen, FOOD.tteok] },
-  { id:"rb-c1",     type:"custom",   title:"엄마 레시피",         count:18, thumbs:[FOOD.soup, FOOD.jjigae, FOOD.japchae] },
-  { id:"rb-c2",     type:"custom",   title:"손님 초대",           count: 7, thumbs:[FOOD.bulgogi, FOOD.galbi, FOOD.pasta] },
-  { id:"rb-c3",     type:"custom",   title:"도시락 모음",         count:11, thumbs:[FOOD.sandwich, FOOD.salad, FOOD.bowl] },
+  { id:"rb-my",     type:"my_added", title:"내가 추가한 레시피",  count:12, thumbs:[FOOD.bulgogi, FOOD.kimchi, FOOD.bowl], recipeIds:RECIPEBOOK_RECIPE_IDS["rb-my"] },
+  { id:"rb-saved",  type:"saved",    title:"저장한 레시피",       count:38, thumbs:[FOOD.pasta, FOOD.curry, FOOD.bibimbap], recipeIds:RECIPEBOOK_RECIPE_IDS["rb-saved"] },
+  { id:"rb-liked",  type:"liked",    title:"좋아요한 레시피",     count:74, thumbs:[FOOD.salad, FOOD.ramen, FOOD.tteok], recipeIds:RECIPEBOOK_RECIPE_IDS["rb-liked"] },
+  { id:"rb-c1",     type:"custom",   title:"엄마 레시피",         count:18, thumbs:[FOOD.soup, FOOD.jjigae, FOOD.japchae], recipeIds:RECIPEBOOK_RECIPE_IDS["rb-c1"] },
+  { id:"rb-c2",     type:"custom",   title:"손님 초대",           count: 7, thumbs:[FOOD.bulgogi, FOOD.galbi, FOOD.pasta], recipeIds:RECIPEBOOK_RECIPE_IDS["rb-c2"] },
+  { id:"rb-c3",     type:"custom",   title:"도시락 모음",         count:11, thumbs:[FOOD.sandwich, FOOD.salad, FOOD.bowl], recipeIds:RECIPEBOOK_RECIPE_IDS["rb-c3"] },
 ];
 
 const FAQ_ITEMS = [

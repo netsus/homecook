@@ -8,9 +8,9 @@ const { Icon: IconM, Button: ButtonM, Chip: ChipM, Dialog: DialogM, SegmentedRow
 const DM = window.HC_DATA;
 
 /* ---------------- Save modal ---------------- */
-function SaveModal({ open, recipeId, savedSet, onClose, onConfirm, toast }) {
+function SaveModal({ open, recipeId, savedSet, recipebooks = DM.RECIPEBOOKS, onClose, onConfirm, toast }) {
   const recipe = recipeId ? DM.RECIPE[recipeId] : null;
-  const customs = DM.RECIPEBOOKS.filter(b => b.type === "custom");
+  const customs = recipebooks.filter(b => b.type === "custom");
   const [picked, setPicked] = useStateM(new Set(["rb-saved"]));
   useEffectM(() => { if (open) setPicked(new Set(["rb-saved"])); }, [open, recipeId]);
   const toggle = (id) => setPicked(p => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
