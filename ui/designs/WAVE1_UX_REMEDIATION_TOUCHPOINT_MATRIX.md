@@ -72,7 +72,7 @@ Mobile-only shell and shared visual foundation. This is not a global web/runtime
 - PANTRY tab uses a refrigerator icon, not the current container/box icon.
 - Loading background, button/chip radius, and modal/sheet chrome use the Phase 0 foundation spec.
 - Desktop/web is smoke-tested only; no web redesign is included.
-- Affected fixed references are either refrozen or explicitly superseded in `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md` before final exact parity is claimed. A `user-approved design evolution` note alone is not enough for closeout while the matrix still points to old screenshots.
+- Affected fixed references are either refrozen or cited through `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md` -> `2026-05-14 UX Remediation Supersession` before final exact parity is claimed. A `user-approved design evolution` note alone is not enough for closeout.
 
 ## Phase 2 — Discovery / Detail
 

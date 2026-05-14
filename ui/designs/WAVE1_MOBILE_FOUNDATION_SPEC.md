@@ -622,12 +622,14 @@ Phase 1 intentionally changes several fixed-reference visuals based on the user'
 - SETTINGS / ACCOUNT bottom tab: visible -> hidden
 - COOK_MODE bottom tab: visible -> hidden
 
-These changes are rational UX improvements, but they do not match the current fixed reference PNGs and the responsibility matrix does not allow unapproved icon substitutions or broad approved divergence. Before Phase 1 can claim exact parity, one of these must happen:
+These changes are rational UX improvements, but they do not match the current fixed reference PNGs and the responsibility matrix does not allow unapproved icon substitutions or broad approved divergence. The responsibility matrix now has a narrow `2026-05-14 UX Remediation Supersession` section that authorizes these exact shell/icon changes.
 
-1. the affected fixed prototype references are refrozen with the new UX direction; or
-2. `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md` is updated to explicitly supersede the old reference rows for these user-approved UX changes.
+Before Phase 1 final closeout, PR evidence must cite one of these:
 
-`user-approved design evolution` may be used as an interim planning/evidence label, but it is not enough for final exact-parity closeout while the responsibility matrix still points at the old fixed screenshots. Codex should not silently count these differences as passing visual parity.
+1. refreshed fixed prototype references with the new UX direction; or
+2. `ui/designs/WAVE1_APP_WEB_RESPONSIBILITY_MATRIX.md` → `2026-05-14 UX Remediation Supersession`.
+
+`user-approved design evolution` may be used as an interim planning/evidence label, but final closeout must cite the matrix supersession or refreshed references. Codex should not silently count unrelated visual differences as passing visual parity.
 
 ### 13.1 HOME_SORT_OPEN_STATE Reference Refresh (Pre-Phase 2)
 
