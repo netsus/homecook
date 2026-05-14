@@ -64,16 +64,17 @@ export function PantryMobileScreen({
           팬트리
         </h1>
         <button
+          aria-label={isSelectMode ? "편집 취소" : "팬트리 편집"}
           className={[
             "absolute right-[18px] top-1/2 flex h-[28px] min-w-[42px] -translate-y-1/2 items-center justify-center rounded-full border px-[10px] text-[11px] font-extrabold",
             isSelectMode
               ? "border-[#DEE2E6] bg-[#F8F9FA] text-[#495057]"
-              : "border-[#FF6B6B] bg-white text-[#FF6B6B]",
+              : "border-[#DEE2E6] bg-[#F8F9FA] text-[#495057]",
           ].join(" ")}
           onClick={isSelectMode ? onExitSelectMode : onStartSelectMode}
           type="button"
         >
-          {isSelectMode ? "취소" : "삭제"}
+          {isSelectMode ? "취소" : "편집"}
         </button>
       </div>
 
@@ -226,7 +227,10 @@ export function PantryMobileScreen({
       </main>
 
       {isSelectMode && selectedIds.size > 0 && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-[92px] z-40 flex flex-col items-center gap-2 px-4">
+        <div
+          className="pointer-events-none fixed inset-x-0 bottom-[calc(112px+env(safe-area-inset-bottom))] z-40 flex flex-col items-center gap-2 px-4"
+          data-testid="pantry-delete-action-bar"
+        >
           <span className="rounded-full bg-white/95 px-3 py-1 text-[12px] font-extrabold text-[#FF6B6B] shadow-[0_2px_8px_rgba(0,0,0,0.10)]">
             {selectedIds.size}개 선택됨
           </span>

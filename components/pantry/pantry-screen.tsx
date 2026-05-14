@@ -528,11 +528,11 @@ export function PantryScreen({
           </div>
           {!isSelectMode ? (
             <button
-              className="min-h-[44px] rounded-full border border-[var(--line)] px-5 text-sm font-semibold text-[var(--muted)] hover:border-[var(--danger)] hover:text-[var(--danger)]"
+              className="min-h-[44px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-5 text-sm font-semibold text-[var(--foreground)] hover:border-[var(--brand)] hover:text-[var(--brand)]"
               onClick={() => setIsSelectMode(true)}
               type="button"
             >
-              선택 모드
+              편집
             </button>
           ) : (
             <button
@@ -639,11 +639,11 @@ export function PantryScreen({
             </h2>
             {!isSelectMode ? (
               <button
-                className="rounded-full border border-[var(--line)] px-4 py-2 text-sm font-semibold text-[var(--muted)] hover:border-[var(--danger)] hover:text-[var(--danger)]"
+                className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] hover:border-[var(--brand)] hover:text-[var(--brand)]"
                 onClick={() => setIsSelectMode(true)}
                 type="button"
               >
-                삭제
+                편집
               </button>
             ) : (
               <button
@@ -718,7 +718,10 @@ export function PantryScreen({
 
       {/* Select mode action bar */}
       {isSelectMode && (
-        <div className="fixed inset-x-0 bottom-[calc(theme(spacing.4)+56px+env(safe-area-inset-bottom))] z-40 flex gap-2 border-t border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+        <div
+          className="fixed inset-x-0 bottom-[calc(104px+env(safe-area-inset-bottom))] z-40 flex gap-2 border-t border-[var(--line)] bg-[var(--panel)] px-4 py-3"
+          data-testid="pantry-delete-action-bar"
+        >
           <button
             className="flex min-h-[48px] flex-1 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-deep)] text-sm font-semibold text-[var(--surface)] disabled:opacity-50"
             disabled={selectedIds.size === 0}

@@ -233,11 +233,15 @@ export function PantryAddSheet({
                   return (
                     <button
                       aria-checked={isChecked}
-                      aria-label={ingredient.standard_name}
-                      className={[
-                        "flex min-h-[54px] items-center gap-2 rounded-xl border px-3 text-left",
+                      aria-label={
                         isExisting
-                          ? "border-[#E9ECEF] bg-[#F8F9FA]/65 opacity-[0.55]"
+                          ? `${ingredient.standard_name} 보유중`
+                          : ingredient.standard_name
+                      }
+                      className={[
+                        "flex min-h-[54px] items-center gap-2 rounded-xl border px-3 text-left disabled:opacity-100",
+                        isExisting
+                          ? "border-[#DEE2E6] bg-[#F8F9FA]"
                           : isChecked
                             ? "border-[#2AC1BC] bg-[#E8FAF8]"
                             : "border-[#DEE2E6] bg-white",
@@ -258,7 +262,7 @@ export function PantryAddSheet({
                         {ingredient.standard_name}
                       </span>
                       {isExisting ? (
-                        <span className="shrink-0 text-[10px] font-extrabold text-[#ADB5BD]">
+                        <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-extrabold text-[#495057]">
                           보유중
                         </span>
                       ) : isChecked ? (
@@ -408,7 +412,12 @@ export function PantryAddSheet({
                 return (
                   <button
                     aria-checked={isChecked}
-                    className="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition hover:bg-[var(--surface-fill)]"
+                    aria-label={
+                      isExisting
+                        ? `${ingredient.standard_name} 보유중`
+                        : ingredient.standard_name
+                    }
+                    className="flex w-full items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-left transition hover:bg-[var(--surface-fill)] disabled:opacity-100"
                     disabled={isExisting}
                     key={ingredient.id}
                     onClick={() => handleToggle(ingredient.id)}
@@ -434,8 +443,8 @@ export function PantryAddSheet({
                       {ingredient.standard_name}
                     </span>
                     {isExisting && (
-                      <span className="shrink-0 rounded-full bg-[var(--surface-fill)] px-2 py-0.5 text-xs text-[var(--text-3)]">
-                        보유 중
+                      <span className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 text-xs font-semibold text-[var(--text-2)]">
+                        보유중
                       </span>
                     )}
                   </button>
