@@ -4,7 +4,7 @@
    ============================================ */
 const { useState: useS2, useMemo: useMemo2 } = React;
 const {
-  Icon, Button, Chip, Tag, StatePanel,
+  Icon, Button, Chip, Tag, StatePanel, PhotoCard,
   ScreenHeader, SegmentedRow,
 } = window.HC;
 const D2 = window.HC_DATA;
@@ -282,16 +282,47 @@ function iconForIngredient(i) {
 /* ============================================
    MYPAGE (§13)
    ============================================ */
-function MyPageScreen({ onGoRecipebooks, onGoShoppingLists, onGoLeftovers, onGoAteList, onOpenSettings, onOpenNickname, onOpenLogout, account }) {
+function MyPageScreen({
+  onGoRecipebooks,
+  onGoShoppingLists,
+  onGoLeftovers,
+  onGoAteList,
+  onOpenSettings,
+  onOpenNickname,
+  onOpenLogout,
+  onOpenRecipe,
+  onDeleteAccount,
+  onSaveToggle,
+  account,
+  savedSet,
+}) {
+  const tabs = [
+    { id: "saved", label: "저장한 레시피", icon: "bookmark" },
+    { id: "account", label: "계정 관리", icon: "user" },
+    { id: "notif", label: "알림 설정", icon: "bell" },
+    { id: "help", label: "도움말", icon: "question" },
+  ];
+  const [activeTab, setActiveTab] = useS2("saved");
   const stats = {
-    saved: 38,
+    saved: D2.RECIPEBOOKS.find(b => b.id === "rb-saved")?.count || 0,
     cooked: 26,
     plannerDone: 14,
   };
 
+  const onTabKeyDown = (e, id) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const idx = tabs.findIndex(t => t.id === id);
+    const dir = e.key === "ArrowRight" ? 1 : -1;
+    const next = tabs[(idx + dir + tabs.length) % tabs.length];
+    setActiveTab(next.id);
+    window.requestAnimationFrame(() => {
+      document.querySelector(`[data-mypage-tab="${next.id}"]`)?.focus();
+    });
+  };
+
   return (
     <main className="screen mypage">
-      {/* Hero */}
       <section className="my-hero">
         <div className="my-avatar">{account.initials}</div>
         <div className="my-hero-text">
@@ -324,68 +355,231 @@ function MyPageScreen({ onGoRecipebooks, onGoShoppingLists, onGoLeftovers, onGoA
         </div>
       </section>
 
-      {/* 활동 */}
-      <section className="my-section">
-        <h2 className="my-section-title">활동</h2>
+      <div className="mypage-tabs" role="tablist" aria-label="마이페이지 세부 메뉴">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`mypage-tab ${activeTab === tab.id ? "active" : ""}`}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`mypage-panel-${tab.id}`}
+            data-mypage-tab={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            onKeyDown={(e) => onTabKeyDown(e, tab.id)}
+          >
+            <Icon name={tab.icon} size={15} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <section
+        className="mypage-panel"
+        id={`mypage-panel-${activeTab}`}
+        role="tabpanel"
+        aria-label={tabs.find(t => t.id === activeTab)?.label}
+      >
+        {activeTab === "saved" && (
+          <MyPageSavedPanel
+            savedSet={savedSet}
+            onSaveToggle={onSaveToggle}
+            onOpenRecipe={onOpenRecipe}
+            onGoRecipebooks={onGoRecipebooks}
+          />
+        )}
+        {activeTab === "account" && (
+          <MyPageAccountPanel
+            account={account}
+            onOpenNickname={onOpenNickname}
+            onOpenLogout={onOpenLogout}
+            onOpenSettings={onOpenSettings}
+            onDeleteAccount={onDeleteAccount}
+          />
+        )}
+        {activeTab === "notif" && <MyPageNotifPanel />}
+        {activeTab === "help" && <MyPageHelpPanel />}
+      </section>
+    </main>
+  );
+}
+
+function MyPageSavedPanel({ savedSet, onSaveToggle, onOpenRecipe, onGoRecipebooks }) {
+  const savedRecipes = D2.RECIPES.filter(r => savedSet?.has(r.id));
+  return (
+    <div className="mypage-panel-grid">
+      <ScreenHeader
+        title="저장한 레시피"
+        lead={`${D2.RECIPEBOOKS.find(b => b.id === "rb-saved")?.count || savedRecipes.length}개의 레시피를 저장했어요.`}
+      />
+      {savedRecipes.length > 0 ? (
+        <div className="mypage-saved-grid">
+          {savedRecipes.map(recipe => (
+            <PhotoCard
+              key={recipe.id}
+              recipe={recipe}
+              saved={savedSet?.has(recipe.id)}
+              onClick={() => onOpenRecipe(recipe.id)}
+              onSave={() => onSaveToggle(recipe.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <StatePanel
+          icon="bookmark"
+          title="저장한 레시피가 없어요"
+          desc="홈에서 마음에 드는 레시피를 저장해보세요."
+        />
+      )}
+
+      <button className="mypage-quick-nav" type="button" onClick={onGoRecipebooks}>
+        <span className="meta-icon"><Icon name="book" size={16} /></span>
+        <span className="mypage-quick-nav-body">
+          <span className="mypage-quick-nav-title">레시피북 관리</span>
+          <span className="mypage-quick-nav-desc">내가 추가한 · 저장한 · 좋아요한 · 커스텀 북 6개</span>
+        </span>
+        <Icon name="chevR" size={16} color="var(--text-4)" />
+      </button>
+    </div>
+  );
+}
+
+function MyPageAccountPanel({ account, onOpenNickname, onOpenLogout, onOpenSettings, onDeleteAccount }) {
+  return (
+    <div className="mypage-panel-grid">
+      <ScreenHeader title="계정 관리" lead="프로필, 로그인 상태, 계정 작업을 한곳에서 관리합니다." />
+
+      <section className="mypage-account-section">
+        <h2 className="my-section-title">프로필</h2>
+        <div className="account-profile-card">
+          <div className="my-avatar small">{account.initials}</div>
+          <div className="account-profile-info">
+            <div className="account-profile-name">{account.nickname}</div>
+            <div className="account-profile-provider">{providerLabel(account.provider)} 로그인</div>
+          </div>
+          <Button variant="tertiary" leftIcon="edit" onClick={onOpenNickname}>닉네임 변경</Button>
+        </div>
+      </section>
+
+      <section className="mypage-account-section">
+        <h2 className="my-section-title">계정 작업</h2>
         <div className="meta-list">
-          <button className="meta-row" onClick={onGoRecipebooks}>
-            <div className="meta-icon"><Icon name="book" size={16} /></div>
+          <button className="meta-row" type="button" onClick={onOpenLogout}>
+            <div className="meta-icon"><Icon name="logout" size={16} /></div>
             <div className="meta-body">
-              <div className="meta-title">레시피북</div>
-              <div className="meta-sub">내가 추가한 · 저장한 · 좋아요한 · 커스텀 6개</div>
+              <div className="meta-title">로그아웃</div>
+              <div className="meta-sub">{providerLabel(account.provider)} 계정에서 로그아웃합니다.</div>
             </div>
             <Icon name="chevR" size={16} color="var(--text-4)" />
           </button>
-          <button className="meta-row" onClick={onGoLeftovers}>
-            <div className="meta-icon"><Icon name="pot" size={16} /></div>
+          <button className="meta-row" type="button" onClick={onOpenSettings}>
+            <div className="meta-icon"><Icon name="settings" size={16} /></div>
             <div className="meta-body">
-              <div className="meta-title">남은 요리</div>
-              <div className="meta-sub">2건 — 불고기, 잡채</div>
-            </div>
-            <Icon name="chevR" size={16} color="var(--text-4)" />
-          </button>
-          <button className="meta-row" onClick={onGoAteList}>
-            <div className="meta-icon"><Icon name="check" size={16} /></div>
-            <div className="meta-body">
-              <div className="meta-title">다먹은 목록</div>
-              <div className="meta-sub">최근 30일 — 26건</div>
-            </div>
-            <Icon name="chevR" size={16} color="var(--text-4)" />
-          </button>
-          <button className="meta-row" onClick={onGoShoppingLists}>
-            <div className="meta-icon"><Icon name="cart" size={16} /></div>
-            <div className="meta-body">
-              <div className="meta-title">장보기 목록</div>
-              <div className="meta-sub">진행 1건 · 완료 1건</div>
+              <div className="meta-title">전체 설정</div>
+              <div className="meta-sub">알림, 단위, 테마, 끼니 컬럼을 관리합니다.</div>
             </div>
             <Icon name="chevR" size={16} color="var(--text-4)" />
           </button>
         </div>
       </section>
 
-      {/* 설정 */}
-      <section className="my-section">
-        <h2 className="my-section-title">설정</h2>
-        <div className="meta-list">
-          <button className="meta-row" onClick={onOpenSettings}>
-            <div className="meta-icon"><Icon name="settings" size={16} /></div>
-            <div className="meta-body">
-              <div className="meta-title">알림 · 단위 · 테마</div>
-              <div className="meta-sub">앱 설정 전체</div>
-            </div>
-            <Icon name="chevR" size={16} color="var(--text-4)" />
-          </button>
-          <button className="meta-row" onClick={onOpenLogout}>
-            <div className="meta-icon"><Icon name="logout" size={16} /></div>
-            <div className="meta-body">
-              <div className="meta-title">로그아웃</div>
-              <div className="meta-sub">{providerLabel(account.provider)} 계정</div>
-            </div>
-            <Icon name="chevR" size={16} color="var(--text-4)" />
-          </button>
+      <section className="mypage-account-section settings-danger">
+        <div className="settings-danger-title">계정 삭제</div>
+        <div className="settings-danger-desc">모든 레시피북, 플래너, 장보기 기록이 영구적으로 삭제됩니다.</div>
+        <Button variant="danger" leftIcon="trash" onClick={onDeleteAccount}>계정 삭제하기</Button>
+      </section>
+    </div>
+  );
+}
+
+function MyPageNotifPanel() {
+  const [prefs, setPrefs] = useS2({
+    cook: true,
+    shopping: true,
+    planner: false,
+    email: true,
+  });
+  const toggle = (key) => setPrefs(p => ({ ...p, [key]: !p[key] }));
+  return (
+    <div className="mypage-panel-grid">
+      <ScreenHeader title="알림 설정" lead="요리 시간, 장보기, 주간 리포트 알림을 조정합니다." />
+      <section className="settings-section">
+        <h2 className="settings-section-title">푸시 알림</h2>
+        <div className="settings-card">
+          <MyPageNotifRow title="요리 시간 알림" desc="등록한 끼니 30분 전에 알려드려요." on={prefs.cook} onChange={() => toggle("cook")} />
+          <MyPageNotifRow title="장보기 리마인드" desc="장보기가 미완료 상태일 때 오전에 알려드려요." on={prefs.shopping} onChange={() => toggle("shopping")} />
+          <MyPageNotifRow title="플래너 요약" desc="매주 월요일에 이번 주 식단을 요약해드려요." on={prefs.planner} onChange={() => toggle("planner")} />
         </div>
       </section>
-    </main>
+      <section className="settings-section">
+        <h2 className="settings-section-title">이메일</h2>
+        <div className="settings-card">
+          <MyPageNotifRow title="주간 리포트" desc="이번 주 요리 기록과 저장한 레시피를 이메일로 받아요." on={prefs.email} onChange={() => toggle("email")} />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function MyPageNotifRow({ title, desc, on, onChange }) {
+  return (
+    <div className="notif-row">
+      <div className="notif-info">
+        <div className="notif-title">{title}</div>
+        <div className="notif-desc">{desc}</div>
+      </div>
+      <MyPageSwitch on={on} onChange={onChange} />
+    </div>
+  );
+}
+
+function MyPageSwitch({ on, onChange }) {
+  return (
+    <button className={`switch ${on ? "on" : ""}`} onClick={onChange} role="switch" aria-checked={on}>
+      <span className="switch-thumb" />
+    </button>
+  );
+}
+
+function MyPageHelpPanel() {
+  const [openId, setOpenId] = useS2(0);
+  return (
+    <div className="mypage-panel-grid">
+      <ScreenHeader title="도움말" lead="자주 묻는 질문과 문의 채널을 확인하세요." />
+      <section className="settings-section">
+        <h2 className="settings-section-title">자주 묻는 질문</h2>
+        <div className="settings-card faq-list">
+          {D2.FAQ_ITEMS.map((item, idx) => {
+            const open = openId === idx;
+            return (
+              <div className="faq-item" key={item.q}>
+                <button
+                  className="faq-question"
+                  type="button"
+                  aria-expanded={open}
+                  aria-controls={`faq-answer-${idx}`}
+                  onClick={() => setOpenId(open ? null : idx)}
+                >
+                  <Icon name="question" size={14} color="var(--text-3)" />
+                  {item.q}
+                  <Icon className={`faq-chevron ${open ? "open" : ""}`} name="chevR" size={14} color="var(--text-4)" />
+                </button>
+                {open && (
+                  <div className="faq-answer" id={`faq-answer-${idx}`}>{item.a}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+      <section className="settings-section">
+        <h2 className="settings-section-title">문의</h2>
+        <div className="faq-contact">
+          <div className="faq-contact-row">이메일 문의: help@homecook.kr</div>
+          <div className="faq-contact-row">카카오톡 채널: @홈쿡</div>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -420,35 +614,46 @@ function RecipebooksScreen({ onBack, onOpenBook, onCreateBook }) {
 
       <section className="my-section">
         <h2 className="my-section-title">자동 분류</h2>
-        <div className="recipebook-grid">
-          {sys.map(b => <RecipebookCard key={b.id} book={b} onClick={() => onOpenBook(b.id)} />)}
+        <div className="recipebook-list">
+          {sys.map(b => <RecipebookCardH key={b.id} book={b} onClick={() => onOpenBook(b.id)} />)}
         </div>
       </section>
 
       <section className="my-section">
         <h2 className="my-section-title">커스텀</h2>
-        <div className="recipebook-grid">
-          {custom.map(b => <RecipebookCard key={b.id} book={b} onClick={() => onOpenBook(b.id)} />)}
+        <div className="recipebook-list">
+          {custom.map(b => <RecipebookCardH key={b.id} book={b} onClick={() => onOpenBook(b.id)} />)}
         </div>
       </section>
     </main>
   );
 }
 
-function RecipebookCard({ book, onClick }) {
+function recipebookTypeLabel(type) {
+  if (type === "my_added") return "내가 추가한";
+  if (type === "saved") return "저장됨";
+  if (type === "liked") return "좋아요";
+  return "커스텀";
+}
+
+function RecipebookCardH({ book, onClick }) {
+  const thumbs = [...book.thumbs];
+  while (thumbs.length < 4) thumbs.push(book.thumbs[thumbs.length % book.thumbs.length] || D2.FOOD.bowl);
   return (
-    <button className="recipebook-card" onClick={onClick}>
-      <div className="recipebook-mosaic">
-        {book.thumbs.slice(0, 3).map((t, i) => (
-          <div key={i} className={`recipebook-mosaic-cell pos-${i}`}>
+    <button className="recipebook-card-h" onClick={onClick}>
+      <div className="recipebook-card-mosaic-sq" aria-hidden="true">
+        {thumbs.slice(0, 4).map((t, i) => (
+          <div key={i} className="recipebook-mosaic-cell-sq">
             <img src={t} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} />
           </div>
         ))}
       </div>
-      <div className="recipebook-card-body">
+      <div className="recipebook-card-info">
         <div className="recipebook-card-title">{book.title}</div>
-        <div className="recipebook-card-meta tabular">{book.count}개</div>
+        <div className="recipebook-card-count tabular">{book.count}개 레시피 · {recipebookTypeLabel(book.type)}</div>
+        {book.type === "custom" && <span className="recipebook-card-badge">커스텀</span>}
       </div>
+      <Icon name="chevR" size={16} color="var(--text-4)" />
     </button>
   );
 }

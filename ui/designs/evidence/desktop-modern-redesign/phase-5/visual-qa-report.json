@@ -1,0 +1,95 @@
+{
+  "phase": 5,
+  "generatedAt": "2026-05-14T02:29:54.181Z",
+  "baseUrl": "http://127.0.0.1:4175/",
+  "captures": [
+    {
+      "name": "mypage-saved-1024.png",
+      "width": 1024,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/mypage-saved-1024.png"
+    },
+    {
+      "name": "mypage-saved-1280.png",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/mypage-saved-1280.png"
+    },
+    {
+      "name": "mypage-saved-1440.png",
+      "width": 1440,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/mypage-saved-1440.png"
+    },
+    {
+      "name": "mypage-account-1280.png",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/mypage-account-1280.png"
+    },
+    {
+      "name": "mypage-notif-1280.png",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/mypage-notif-1280.png"
+    },
+    {
+      "name": "mypage-help-1280.png",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/mypage-help-1280.png"
+    },
+    {
+      "name": "recipebooks-1024.png",
+      "width": 1024,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/recipebooks-1024.png"
+    },
+    {
+      "name": "recipebooks-1280.png",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/recipebooks-1280.png"
+    },
+    {
+      "name": "recipebooks-1440.png",
+      "width": 1440,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/recipebooks-1440.png"
+    },
+    {
+      "name": "recipebook-detail-1280.png",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/recipebook-detail-1280.png"
+    },
+    {
+      "name": "recipebook-detail-delete-1280.png",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/recipebook-detail-delete-1280.png"
+    },
+    {
+      "name": "settings-1024.png",
+      "width": 1024,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/settings-1024.png"
+    },
+    {
+      "name": "settings-1280.png",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/settings-1280.png"
+    },
+    {
+      "name": "settings-danger-1280.png",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/settings-danger-1280.png"
+    },
+    {
+      "name": "settings-account-delete-1280.png",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/settings-account-delete-1280.png"
+    },
+    {
+      "name": "nickname-modal-1280.png",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/nickname-modal-1280.png"
+    },
+    {
+      "name": "logout-modal-1280.png",
+      "width": 1280,
+      "screenshot": "ui/designs/evidence/desktop-modern-redesign/phase-5/logout-modal-1280.png"
+    }
+  ],
+  "errors": [],
+  "failedRequests": [],
+  "findings": []
+}

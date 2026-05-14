@@ -365,6 +365,29 @@ const RECIPEBOOKS = [
   { id:"rb-c3",     type:"custom",   title:"도시락 모음",         count:11, thumbs:[FOOD.sandwich, FOOD.salad, FOOD.bowl] },
 ];
 
+const FAQ_ITEMS = [
+  {
+    q: "플래너에 끼니를 추가하는 방법",
+    a: "플래너 화면의 빈 칸에서 추가 버튼을 누르거나, 레시피 상세에서 플래너에 추가를 선택하세요.",
+  },
+  {
+    q: "레시피북을 만들고 관리하는 방법",
+    a: "마이페이지의 레시피북 관리에서 새 레시피북을 만들고, 커스텀 북은 상세 화면에서 삭제할 수 있어요.",
+  },
+  {
+    q: "팬트리 재료를 등록하는 방법",
+    a: "팬트리 화면에서 재료 카드를 선택하면 보유 상태를 바꿀 수 있고, 재료 추가 버튼으로 여러 재료를 한 번에 담을 수 있어요.",
+  },
+  {
+    q: "장보기 리스트가 자동으로 만들어지나요?",
+    a: "플래너에 등록한 끼니의 재료에서 팬트리에 있는 재료를 제외해 장보기 리스트를 만들 수 있어요.",
+  },
+  {
+    q: "요리모드는 데스크탑에서 사용할 수 있나요?",
+    a: "이번 데스크탑 프로토타입에서는 Phase 7에서 별도 요리 화면으로 검증합니다. 지금은 레시피 확인과 장보기 흐름을 먼저 사용할 수 있어요.",
+  },
+];
+
 /* ---------- 메뉴 추가: 유튜브/직접 만들기 더미 데이터 ---------- */
 const YT_DEMO_EXTRACTION = {
   videoTitle: "초간단 김치볶음밥 만들기 | 10분 레시피",
@@ -412,7 +435,7 @@ window.HC_DATA = {
   MEAL_COLUMNS, WEEK_DATES, TODAY_ISO, MEALS,
   PANTRY_HELD, PANTRY_GROUPS, PANTRY_BUNDLES,
   SHOPPING_LISTS, LEFTOVERS, ATE,
-  ACCOUNT, RECIPEBOOKS,
+  ACCOUNT, RECIPEBOOKS, FAQ_ITEMS,
   YT_DEMO_EXTRACTION, UNIT_OPTIONS,
   makeToastBus, fmtPlannerDate, fmtChipDate,
 };
