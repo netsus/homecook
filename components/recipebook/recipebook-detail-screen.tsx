@@ -1014,11 +1014,11 @@ function MobileRecipeBookAppBar({
             aria-expanded={isMenuOpen}
             aria-haspopup="menu"
             aria-label={`${bookName} 옵션 메뉴`}
-            className="flex h-8 items-center justify-center rounded-full bg-white px-1 text-[13px] font-extrabold text-[#FF6B6B]"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[18px] font-bold leading-none text-[#868E96]"
             onClick={onMenuToggle}
             type="button"
           >
-            삭제
+            ⋯
           </button>
           {isMenuOpen ? (
             <div
@@ -1226,7 +1226,7 @@ function MobileRecipeBookRenameSheet({
 function getBookEmoji(bookType: RecipeBookType, bookName: string) {
   if (bookType === "saved") return "🔖";
   if (bookType === "liked") return "❤️";
-  if (bookType === "my_added") return "👩‍🍳";
+  if (bookType === "my_added") return "✏️";
   if (bookName.includes("주말")) return "🍽️";
   return "🍳";
 }

@@ -15,6 +15,7 @@ interface SettingsMobileScreenProps {
   columnRenameError: string | null;
   columnRenameInput: string;
   columnRenameSaveDisabled: boolean;
+  columnsEditMode: boolean;
   columnsError: string | null;
   columnsLoading: boolean;
   deleteColumnError: string | null;
@@ -46,6 +47,7 @@ interface SettingsMobileScreenProps {
   onCloseLogoutDialog: () => void;
   onCloseNicknameSheet: () => void;
   onCloseRenameColumnSheet: () => void;
+  onColumnsEditModeChange: (editing: boolean) => void;
   onColumnAddInputChange: (value: string) => void;
   onColumnRenameInputChange: (value: string) => void;
   onConfirmDelete: () => void;
@@ -71,6 +73,7 @@ export function SettingsMobileScreen({
   columnRenameError,
   columnRenameInput,
   columnRenameSaveDisabled,
+  columnsEditMode,
   columnsError,
   columnsLoading,
   deleteColumnError,
@@ -102,6 +105,7 @@ export function SettingsMobileScreen({
   onCloseLogoutDialog,
   onCloseNicknameSheet,
   onCloseRenameColumnSheet,
+  onColumnsEditModeChange,
   onColumnAddInputChange,
   onColumnRenameInputChange,
   onConfirmDelete,
@@ -148,12 +152,14 @@ export function SettingsMobileScreen({
       {surface === "settings" ? (
         <SettingsSurface
           columnAddInput={columnAddInput}
+          columnsEditMode={columnsEditMode}
           columnsError={columnsError}
           columnsLoading={columnsLoading}
           plannerColumns={plannerColumns}
           profile={profile}
           onAddColumn={onAddColumn}
           onColumnAddInputChange={onColumnAddInputChange}
+          onColumnsEditModeChange={onColumnsEditModeChange}
           onDeleteColumnTarget={onDeleteColumnTarget}
           onOpenColumnAddSheet={onOpenColumnAddSheet}
           onRenameColumnTarget={onRenameColumnTarget}
@@ -280,12 +286,14 @@ function MobileAppBar({
 
 function SettingsSurface({
   columnAddInput,
+  columnsEditMode,
   columnsError,
   columnsLoading,
   plannerColumns,
   profile,
   onAddColumn,
   onColumnAddInputChange,
+  onColumnsEditModeChange,
   onDeleteColumnTarget,
   onOpenColumnAddSheet,
   onRenameColumnTarget,
@@ -293,12 +301,14 @@ function SettingsSurface({
   onToggleWakeLock,
 }: {
   columnAddInput: string;
+  columnsEditMode: boolean;
   columnsError: string | null;
   columnsLoading: boolean;
   plannerColumns: PlannerColumnData[];
   profile: UserProfileData | null;
   onAddColumn: () => void;
   onColumnAddInputChange: (value: string) => void;
+  onColumnsEditModeChange: (editing: boolean) => void;
   onDeleteColumnTarget: (column: PlannerColumnData) => void;
   onOpenColumnAddSheet: () => void;
   onRenameColumnTarget: (column: PlannerColumnData) => void;
@@ -336,9 +346,20 @@ function SettingsSurface({
         className="px-4 pt-4"
         data-testid="column-management-section"
       >
-        <h2 className="mb-2 text-[16px] font-extrabold text-[#212529]">
-          플래너 끼니 컬럼
-        </h2>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h2 className="text-[16px] font-bold text-[#212529]">
+            플래너 끼니 컬럼
+          </h2>
+          {!columnsLoading && !columnsError ? (
+            <button
+              className="h-8 rounded-lg border border-[#DEE2E6] bg-white px-3 text-[12px] font-bold text-[#495057]"
+              onClick={() => onColumnsEditModeChange(!columnsEditMode)}
+              type="button"
+            >
+              {columnsEditMode ? "완료" : "편집"}
+            </button>
+          ) : null}
+        </div>
 
         {columnsLoading ? (
           <div
@@ -373,7 +394,11 @@ function SettingsSurface({
             <div className="space-y-[10px]" data-testid="column-list">
               {plannerColumns.map((column) => (
                 <div
-                  className="grid grid-cols-[minmax(0,1fr)_38px] gap-2"
+                  className={
+                    columnsEditMode
+                      ? "grid grid-cols-[minmax(0,1fr)_38px] gap-2"
+                      : "grid grid-cols-1"
+                  }
                   data-testid={`column-item-${column.id}`}
                   key={column.id}
                 >
@@ -385,21 +410,23 @@ function SettingsSurface({
                   >
                     {column.name}
                   </button>
-                  <button
-                    aria-label={`${column.name} 삭제`}
-                    className="flex h-[38px] items-center justify-center rounded-xl border border-[#DEE2E6] bg-white text-[18px] font-extrabold text-[#FF6B6B] disabled:text-[#ADB5BD]"
-                    data-testid={`delete-column-${column.id}`}
-                    disabled={plannerColumns.length <= 1}
-                    onClick={() => onDeleteColumnTarget(column)}
-                    type="button"
-                  >
-                    ×
-                  </button>
+                  {columnsEditMode ? (
+                    <button
+                      aria-label={`${column.name} 삭제`}
+                      className="flex h-[38px] items-center justify-center rounded-lg border border-[#FFD8D8] bg-white text-[16px] font-bold text-[#FF6B6B] disabled:border-[#DEE2E6] disabled:text-[#ADB5BD]"
+                      data-testid={`delete-column-${column.id}`}
+                      disabled={plannerColumns.length <= 1}
+                      onClick={() => onDeleteColumnTarget(column)}
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  ) : null}
                 </div>
               ))}
             </div>
 
-            <div className="mt-3 grid grid-cols-[minmax(0,1fr)_102px] gap-2">
+            <div className="mt-3 grid grid-cols-1 gap-2 min-[390px]:grid-cols-[minmax(0,1fr)_132px]">
               <input
                 aria-label="새 끼니 이름"
                 className="h-[38px] min-w-0 rounded-lg border border-[#DEE2E6] bg-white px-3 text-[14px] font-medium text-[#212529] outline-none placeholder:text-[#868E96] focus:ring-2 focus:ring-[#2AC1BC]"
@@ -410,7 +437,7 @@ function SettingsSurface({
                 value={columnAddInput}
               />
               <button
-                className="h-[38px] whitespace-nowrap rounded-xl bg-[#2AC1BC] text-[10.5px] font-bold text-white disabled:bg-[#DEE2E6]"
+                className="h-[38px] whitespace-nowrap rounded-lg bg-[#2AC1BC] px-3 text-[12px] font-bold text-white disabled:bg-[#DEE2E6]"
                 data-testid="add-column-button"
                 disabled={plannerColumns.length >= 5}
                 onClick={() => {
@@ -501,6 +528,13 @@ function SettingToggleRow({
   );
 }
 
+function formatProviderLabel(provider?: UserProfileData["social_provider"]) {
+  if (provider === "kakao") return "카카오 로그인";
+  if (provider === "naver") return "네이버 로그인";
+  if (provider === "google") return "Google 로그인";
+  return "소셜 로그인";
+}
+
 function AccountSurface({
   profile,
   onOpenNicknameSheet,
@@ -513,25 +547,21 @@ function AccountSurface({
   onOpenLogoutDialog: () => void;
 }) {
   const fields = [
-    ["이름", profile?.nickname ?? "집밥러버"],
-    ["이메일", profile?.email ?? "user@homecook.app"],
-    ["전화번호", "010-1234-5678"],
-    ["생일", "1995-04-12"],
-    ["요리 레벨", "레벨 5 · 집밥 러너"],
-    ["가입일", "2025년 11월 3일"],
+    ["닉네임", profile?.nickname ?? "집밥러버"],
+    ["이메일", profile?.email ?? "이메일 없음"],
+    ["로그인 방식", formatProviderLabel(profile?.social_provider)],
   ];
 
   return (
     <main className="px-4 py-4">
       <div className="overflow-hidden rounded-xl border border-[#DEE2E6] bg-white">
         {fields.map(([label, value], index) => (
-          <button
+          <div
             className={[
               "flex min-h-[49px] w-full items-center px-4 text-left",
               index < fields.length - 1 ? "border-b border-[#F1F3F5]" : "",
             ].join(" ")}
             key={label}
-            type="button"
           >
             <span
               className="shrink-0 text-[13px] font-bold text-[#868E96]"
@@ -540,19 +570,18 @@ function AccountSurface({
               {label}
             </span>
             <span
-              className="min-w-0 flex-1 truncate font-extrabold text-[#212529]"
+              className="min-w-0 flex-1 truncate font-semibold text-[#212529]"
               style={{ fontSize: "clamp(13px, 3.6vw, 14px)" }}
             >
               {value}
             </span>
-            <ChevronRightIcon />
-          </button>
+          </div>
         ))}
       </div>
 
-      <div className="mt-3 space-y-5">
+      <div className="mt-3 space-y-3">
         <button
-          className="h-12 w-full rounded-lg bg-[#2AC1BC] text-[16px] font-extrabold text-white"
+          className="h-12 w-full rounded-lg bg-[#2AC1BC] text-[15px] font-bold text-white"
           data-testid="nickname-row"
           onClick={onOpenNicknameSheet}
           type="button"
@@ -560,20 +589,14 @@ function AccountSurface({
           닉네임 변경
         </button>
         <button
-          className="h-12 w-full rounded-lg bg-transparent text-[16px] font-extrabold text-[#212529]"
-          type="button"
-        >
-          비밀번호 변경
-        </button>
-        <button
-          className="h-12 w-full rounded-lg bg-transparent text-[16px] font-extrabold text-[#212529]"
+          className="h-12 w-full rounded-lg border border-[#DEE2E6] bg-white text-[15px] font-bold text-[#212529]"
           onClick={onOpenLogoutDialog}
           type="button"
         >
           로그아웃
         </button>
         <button
-          className="h-12 w-full rounded-lg bg-[#FF6B6B] text-[16px] font-extrabold text-white"
+          className="h-12 w-full rounded-lg bg-transparent text-[14px] font-bold text-[#FF6B6B]"
           onClick={onOpenDeleteDialog}
           type="button"
         >
@@ -816,23 +839,6 @@ function BackIcon() {
       viewBox="0 0 24 24"
     >
       <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
-}
-
-function ChevronRightIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-5 w-5 shrink-0 text-[#868E96]"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2.4"
-      viewBox="0 0 24 24"
-    >
-      <path d="m9 18 6-6-6-6" />
     </svg>
   );
 }

@@ -175,13 +175,13 @@ test("capture Wave1 leftovers and ate-list authority evidence", async ({
     await expect(page.getByRole("heading", { name: "다먹은 요리" })).toBeVisible();
     await expect(page.getByText("된장찌개")).toBeVisible();
     await expect(page.getByRole("button", { name: "남은요리로 복귀" })).toBeVisible();
-    await expect(page.getByText("다먹음으로 기록")).toBeVisible();
+    await expect(page.getByText("다먹음으로 기록")).toHaveCount(0);
   });
 
   await capture(browser, viewports.narrow, "/leftovers/ate", "ate-list-narrow.png", async (page) => {
     await expect(page.getByRole("heading", { name: "다먹은 요리" })).toBeVisible();
     await expect(page.getByTestId("ate-list-card").first()).toBeVisible();
     await expect(page.getByRole("button", { name: "남은요리로 복귀" })).toBeVisible();
-    await expect(page.getByText("다먹음으로 기록")).toBeVisible();
+    await expect(page.getByText("다먹음으로 기록")).toHaveCount(0);
   });
 });

@@ -86,6 +86,7 @@ export function SettingsScreen({
   const [deleteColumnTarget, setDeleteColumnTarget] = useState<PlannerColumnData | null>(null);
   const [isDeletingColumn, setIsDeletingColumn] = useState(false);
   const [deleteColumnError, setDeleteColumnError] = useState<string | null>(null);
+  const [columnsEditMode, setColumnsEditMode] = useState(false);
 
   const loadProfile = useCallback(async () => {
     setViewState("loading");
@@ -348,6 +349,7 @@ export function SettingsScreen({
           .map((col, index) => ({ ...col, sort_order: index })),
       );
       setDeleteColumnTarget(null);
+      setColumnsEditMode(false);
     } catch (error) {
       if (isPlannerApiError(error)) {
         setDeleteColumnError(error.message);
@@ -461,6 +463,7 @@ export function SettingsScreen({
         columnRenameError={columnRenameError}
         columnRenameInput={columnRenameInput}
         columnRenameSaveDisabled={columnRenameSaveDisabled}
+        columnsEditMode={columnsEditMode}
         columnsError={columnsError}
         columnsLoading={columnsLoading}
         deleteColumnError={deleteColumnError}
@@ -510,6 +513,7 @@ export function SettingsScreen({
           setRenameTarget(null);
           setColumnRenameError(null);
         }}
+        onColumnsEditModeChange={setColumnsEditMode}
         onColumnAddInputChange={(value) => {
           setColumnAddInput(value);
           setColumnAddError(null);
@@ -634,6 +638,15 @@ export function SettingsScreen({
                     최소 1개 ~ 최대 5개 · 현재 {plannerColumns.length}개
                   </p>
                 </div>
+                {!columnsLoading && !columnsError ? (
+                  <button
+                    className="min-h-9 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--text-2)] hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                    onClick={() => setColumnsEditMode((current) => !current)}
+                    type="button"
+                  >
+                    {columnsEditMode ? "완료" : "편집"}
+                  </button>
+                ) : null}
               </div>
 
               {columnsLoading ? (
@@ -677,22 +690,24 @@ export function SettingsScreen({
                             <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         </button>
-                        <button
-                          aria-label={`${column.name} 삭제`}
-                          className={`flex h-11 w-11 shrink-0 items-center justify-center ${
-                            plannerColumns.length <= 1
-                              ? "cursor-not-allowed text-[var(--text-4)]"
-                              : "text-[var(--text-3)] hover:text-[var(--danger)]"
-                          }`}
-                          data-testid={`delete-column-${column.id}`}
-                          disabled={plannerColumns.length <= 1}
-                          onClick={() => setDeleteColumnTarget(column)}
-                          type="button"
-                        >
-                          <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </button>
+                        {columnsEditMode ? (
+                          <button
+                            aria-label={`${column.name} 삭제`}
+                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] ${
+                              plannerColumns.length <= 1
+                                ? "cursor-not-allowed text-[var(--text-4)]"
+                                : "text-[var(--danger)] hover:bg-[color-mix(in_srgb,var(--danger)_8%,transparent)]"
+                            }`}
+                            data-testid={`delete-column-${column.id}`}
+                            disabled={plannerColumns.length <= 1}
+                            onClick={() => setDeleteColumnTarget(column)}
+                            type="button"
+                          >
+                            <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                        ) : null}
                       </div>
                     ))}
                   </div>

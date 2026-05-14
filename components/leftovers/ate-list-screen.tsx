@@ -540,14 +540,6 @@ function AteListMobileView({
         </div>
       ) : null}
 
-      <button
-        aria-disabled="true"
-        className="fixed bottom-[calc(106px+env(safe-area-inset-bottom))] left-1/2 z-20 h-10 -translate-x-1/2 rounded-full bg-[#212529] px-5 text-[14px] font-extrabold text-white shadow-[0_8px_18px_rgba(0,0,0,0.18)]"
-        type="button"
-      >
-        다먹음으로 기록
-      </button>
-
       <Wave1MobileBottomTab ariaLabel="다먹은 요리 하단 탭" currentTab="mypage" />
     </div>
   );
@@ -585,20 +577,13 @@ function MobileAteCard({
         <div className="flex shrink-0 items-center gap-2">
           <button
             aria-label="남은요리로 복귀"
-            className="h-9 w-[78px] whitespace-nowrap rounded-lg border border-[#DEE2E6] bg-white px-1 text-[11px] font-bold text-[#495057] disabled:opacity-60"
+            className="h-9 w-[96px] whitespace-nowrap rounded-lg border border-[#DEE2E6] bg-white px-2 text-[11px] font-bold text-[#495057] disabled:opacity-60"
             data-testid="uneat-button"
             disabled={anyMutating}
             onClick={() => onUneat(item.id)}
             type="button"
           >
             {isUneating ? "처리 중..." : "남은 요리로"}
-          </button>
-          <button
-            aria-disabled="true"
-            className="h-9 w-[82px] whitespace-nowrap rounded-lg border border-[#2AC1BC] bg-white px-1 text-[11px] font-extrabold text-[#2AC1BC]"
-            type="button"
-          >
-            다시 만들기
           </button>
         </div>
       </div>

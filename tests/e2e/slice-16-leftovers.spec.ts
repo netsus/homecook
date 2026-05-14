@@ -279,11 +279,8 @@ test.describe("ATE_LIST screen", () => {
     await expect(
       page.getByText(isMobileViewport(page) ? "4/20 요리" : "4월 28일"),
     ).toBeVisible();
-    if (isMobileViewport(page)) {
-      await expect(page.getByText("다먹음으로 기록")).toBeVisible();
-    } else {
-      await expect(page.getByText(/다먹음/)).toHaveCount(0);
-    }
+    await expect(page.getByText("다먹음으로 기록")).toHaveCount(0);
+    await expect(page.getByText("다시 만들기")).toHaveCount(0);
   });
 
   test("uneat action removes item from eaten list", async ({ page }) => {

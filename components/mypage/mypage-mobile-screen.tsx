@@ -214,45 +214,37 @@ function MobileHomeSurface({
   const menuRows = [
     {
       detail: `${recipeBookCount}개`,
-      emoji: "📚",
+      icon: "book",
       label: "레시피북",
       onClick: () => onSurfaceChange("recipebook"),
     },
     {
       detail: `${shoppingCount}회`,
-      emoji: "🛒",
+      icon: "cart",
       label: "장보기 기록",
       onClick: () => onSurfaceChange("shopping"),
     },
     {
       detail: "관리",
-      emoji: "🍱",
+      icon: "box",
       href: "/leftovers",
       label: "남은요리",
     },
     {
       detail: "히스토리",
-      emoji: "🍽️",
+      icon: "check",
       href: "/leftovers/ate",
       label: "다먹은 요리",
     },
     {
-      emoji: "⚙️",
+      icon: "settings",
       href: "/settings",
       label: "환경설정",
     },
     {
-      emoji: "👤",
+      icon: "user",
       href: "/settings?view=account",
       label: "계정 정보",
-    },
-    {
-      emoji: "🔔",
-      label: "알림 설정",
-    },
-    {
-      emoji: "💬",
-      label: "도움말 · FAQ",
     },
   ];
 
@@ -324,9 +316,9 @@ function MobileHomeSurface({
               <>
                 <span
                   aria-hidden="true"
-                  className="w-7 shrink-0 text-[18px] leading-none"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F8F9FA] text-[#495057]"
                 >
-                  {row.emoji}
+                  <MenuLineIcon name={row.icon} />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-[#212529]">
                   {row.label}
@@ -386,6 +378,80 @@ function MobileStatCard({
         {label}
       </div>
     </div>
+  );
+}
+
+function MenuLineIcon({ name }: { name: string }) {
+  const commonProps = {
+    "aria-hidden": true,
+    className: "h-[15px] w-[15px]",
+    fill: "none",
+    stroke: "currentColor",
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    strokeWidth: 2,
+    viewBox: "0 0 24 24",
+  };
+
+  if (name === "book") {
+    return (
+      <svg {...commonProps}>
+        <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3V4Z" />
+        <path d="M5 4v19" />
+        <path d="M8 18h11" />
+      </svg>
+    );
+  }
+
+  if (name === "cart") {
+    return (
+      <svg {...commonProps}>
+        <path d="M6 6h15l-2 8H8L6 3H3" />
+        <path d="M9 20h.01M18 20h.01" />
+      </svg>
+    );
+  }
+
+  if (name === "box") {
+    return (
+      <svg {...commonProps}>
+        <path d="M21 8 12 3 3 8l9 5 9-5Z" />
+        <path d="M3 8v8l9 5 9-5V8" />
+        <path d="M12 13v8" />
+      </svg>
+    );
+  }
+
+  if (name === "check") {
+    return (
+      <svg {...commonProps}>
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+    );
+  }
+
+  if (name === "settings") {
+    return (
+      <svg {...commonProps}>
+        <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z" />
+        <path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12" />
+      </svg>
+    );
+  }
+
+  if (name === "user") {
+    return (
+      <svg {...commonProps}>
+        <path d="M20 21a8 8 0 0 0-16 0" />
+        <path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...commonProps}>
+      <path d="M4 5h16M4 12h16M4 19h16" />
+    </svg>
   );
 }
 
