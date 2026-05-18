@@ -5,6 +5,18 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
+import {
+  WebButton,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebEmptyState,
+  WebModal,
+  WebRecipeCard,
+  WebSkeleton,
+} from "@/components/web";
 import { fetchRecipeBookRecipes } from "@/lib/api/recipe";
 import type { RecipeBookRecipeItem, RecipeBookSummary } from "@/types/recipe";
 
@@ -16,7 +28,7 @@ export interface RecipeBookDetailPickerProps {
   onServingsConfirm: (servings: number) => void;
   onServingsCancel: () => void;
   onBack: () => void;
-  presentation?: "dialog" | "screen";
+  presentation?: "dialog" | "screen" | "web";
   slotLabel?: string;
 }
 
@@ -27,7 +39,7 @@ type LoadState = "idle" | "loading" | "ready" | "empty" | "error";
 interface RecipeCardProps {
   recipe: RecipeBookRecipeItem;
   onSelect: (recipe: RecipeBookRecipeItem) => void;
-  presentation?: "dialog" | "screen";
+  presentation?: "dialog" | "screen" | "web";
 }
 
 function RecipeThumb({ recipe }: { recipe: RecipeBookRecipeItem }) {
@@ -74,6 +86,25 @@ function RecipeCard({ recipe, onSelect, presentation = "dialog" }: RecipeCardPro
     );
   }
 
+  if (presentation === "web") {
+    return (
+      <button
+        aria-label={`${recipe.title} 선택`}
+        className="web-picker-recipe-card"
+        onClick={() => onSelect(recipe)}
+        type="button"
+      >
+        <WebRecipeCard
+          alt={recipe.title}
+          imageSrc={recipe.thumbnail_url ?? undefined}
+          meta={recipe.tags.slice(0, 2).join(" · ") || "저장한 레시피"}
+          title={recipe.title}
+        />
+        <span className="web-picker-select-badge">선택</span>
+      </button>
+    );
+  }
+
   return (
     <div className="rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
       <h3 className="line-clamp-2 text-2xl font-bold tracking-[-0.02em] text-[var(--foreground)]">
@@ -109,7 +140,7 @@ interface ServingsModalProps {
   isCreating: boolean;
   onConfirm: (servings: number) => void;
   onCancel: () => void;
-  presentation?: "dialog" | "screen";
+  presentation?: "dialog" | "screen" | "web";
   slotLabel?: string;
 }
 
@@ -195,6 +226,66 @@ function ServingsModal({
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (presentation === "web") {
+    return (
+      <WebModal onBackdropClick={onCancel}>
+        <WebDialog aria-labelledby="recipebook-servings-title" size="narrow">
+          <WebDialogHeader>
+            <WebDialogTitle id="recipebook-servings-title">
+              계획 인분 입력
+            </WebDialogTitle>
+            <button
+              aria-label="닫기"
+              className="web-modal-close"
+              onClick={onCancel}
+              type="button"
+            >
+              ×
+            </button>
+          </WebDialogHeader>
+          <WebDialogBody>
+            <p className="web-modal-copy">{recipe.title}</p>
+            {slotLabel ? (
+              <p className="web-modal-footer-note">대상 · {slotLabel}</p>
+            ) : null}
+            <div className="web-servings-stepper">
+              <div className="web-stepper" aria-label="계획 인분" role="group">
+                <button
+                  aria-label="인분 줄이기"
+                  disabled={isCreating || servings <= 1}
+                  onClick={() => setServings((value) => Math.max(1, value - 1))}
+                  type="button"
+                >
+                  −
+                </button>
+                <span>{servings}인분</span>
+                <button
+                  aria-label="인분 늘리기"
+                  disabled={isCreating}
+                  onClick={() => setServings((value) => value + 1)}
+                  type="button"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </WebDialogBody>
+          <WebDialogFooter>
+            <WebButton disabled={isCreating} onClick={onCancel} variant="secondary">
+              취소
+            </WebButton>
+            <WebButton
+              disabled={isCreating || servings < 1}
+              onClick={handleConfirm}
+            >
+              {isCreating ? "추가 중..." : "추가"}
+            </WebButton>
+          </WebDialogFooter>
+        </WebDialog>
+      </WebModal>
     );
   }
 
@@ -295,20 +386,34 @@ export function RecipeBookDetailPicker({
   const content = (
     <>
       {loadState === "loading" && (
-        <div className="py-8 text-center text-sm text-[var(--muted)]" aria-busy="true">
-          레시피 불러오는 중...
+        <div className={presentation === "web" ? "web-picker-grid web-picker-grid-four" : "py-8 text-center text-sm text-[var(--muted)]"} aria-busy="true">
+          {presentation === "web" ? (
+            Array.from({ length: 8 }).map((_, index) => (
+              <WebSkeleton className="h-[190px]" key={index} />
+            ))
+          ) : (
+            "레시피 불러오는 중..."
+          )}
         </div>
       )}
 
       {loadState === "empty" && (
-        <div className="py-8 text-center">
-          <p className="text-base font-semibold text-[var(--foreground)]">
-            레시피가 없어요
-          </p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            레시피를 저장하면 이 레시피북에 추가돼요.
-          </p>
-        </div>
+        presentation === "web" ? (
+          <WebEmptyState
+            description="레시피를 저장하면 이 레시피북에 추가돼요."
+            icon="🍳"
+            title="레시피가 없어요"
+          />
+        ) : (
+          <div className="py-8 text-center">
+            <p className="text-base font-semibold text-[var(--foreground)]">
+              레시피가 없어요
+            </p>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              레시피를 저장하면 이 레시피북에 추가돼요.
+            </p>
+          </div>
+        )
       )}
 
       {loadState === "error" && (
@@ -321,7 +426,7 @@ export function RecipeBookDetailPicker({
       )}
 
       {loadState === "ready" && recipes.length > 0 && (
-        <div className={presentation === "screen" ? "grid grid-cols-2 gap-2.5" : "space-y-3"}>
+        <div className={presentation === "screen" ? "grid grid-cols-2 gap-2.5" : presentation === "web" ? "web-picker-grid web-picker-grid-four" : "space-y-3"}>
           {recipes.map((recipe) => (
             <RecipeCard
               key={recipe.recipe_id}
@@ -365,6 +470,35 @@ export function RecipeBookDetailPicker({
         )}
         <Wave1MobileBottomTab ariaLabel="레시피북 상세 하단 탭" currentTab="planner" />
       </div>
+    );
+  }
+
+  if (presentation === "web") {
+    return (
+      <section className="web-picker-section" aria-label={`${book.name} 레시피`}>
+        <div className="web-picker-section-head">
+          <button
+            aria-label="레시피북 목록으로"
+            className="web-breadcrumb-link"
+            onClick={onBack}
+            type="button"
+          >
+            ‹ 레시피북
+          </button>
+          <h3>{book.name}</h3>
+        </div>
+        {content}
+        {selectedRecipe && (
+          <ServingsModal
+            isCreating={isCreating}
+            onCancel={onServingsCancel}
+            onConfirm={onServingsConfirm}
+            presentation="web"
+            recipe={selectedRecipe}
+            slotLabel={slotLabel}
+          />
+        )}
+      </section>
     );
   }
 

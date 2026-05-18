@@ -4,7 +4,18 @@ import Image from "next/image";
 import React, { useCallback, useEffect, useState } from "react";
 
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
-import { NumericStepperCompact } from "@/components/shared/numeric-stepper-compact";
+import {
+  WebButton,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebEmptyState,
+  WebModal,
+  WebRecipeCard,
+  WebSkeleton,
+} from "@/components/web";
 import { fetchRecipes } from "@/lib/api/recipe";
 import type { RecipeCardItem } from "@/types/recipe";
 
@@ -50,10 +61,10 @@ function SearchInput({
   );
 
   return (
-    <div className="relative">
+    <div className="web-picker-search">
+      <span aria-hidden="true">⌕</span>
       <input
         aria-label="레시피 검색"
-        className="h-11 w-full rounded-[12px] border border-[var(--line)] bg-[var(--surface)] px-4 text-base text-[var(--foreground)] placeholder-[var(--muted)] focus:border-[var(--brand)] focus:outline-none"
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
@@ -62,15 +73,15 @@ function SearchInput({
         type="text"
         value={value}
       />
-      <button
+      <WebButton
         aria-label="검색"
-        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-[9999px] bg-[var(--brand)] px-4 py-1.5 text-sm font-semibold text-white hover:bg-[var(--brand-deep)] disabled:opacity-50"
         disabled={disabled}
         onClick={onSearch}
+        size="sm"
         type="button"
       >
         검색
-      </button>
+      </WebButton>
     </div>
   );
 }
@@ -137,35 +148,25 @@ function ResultCard({ recipe, onSelect, presentation = "inline" }: ResultCardPro
   }
 
   return (
-    <div className="rounded-[16px] border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
-      <h3 className="line-clamp-2 text-2xl font-bold tracking-[-0.02em] text-[var(--foreground)]">
-        {recipe.title}
-      </h3>
-      {recipe.tags.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {recipe.tags.slice(0, 3).map((tag) => (
-            <span
-              key={tag}
-              className="inline-flex rounded-full bg-[var(--olive)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--olive)]"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="mt-2 flex items-center gap-3 text-sm text-[var(--muted)]">
-        <span>기본 {recipe.base_servings}인분</span>
-        <span>•</span>
-        <span>저장 {recipe.save_count}</span>
-      </div>
-      <button
-        className="mt-3 h-11 w-full rounded-[12px] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)]"
-        onClick={() => onSelect(recipe)}
-        type="button"
-      >
-        선택
-      </button>
-    </div>
+    <button
+      aria-label={`${recipe.title} 선택`}
+      className="web-picker-recipe-card"
+      onClick={() => onSelect(recipe)}
+      type="button"
+    >
+      <WebRecipeCard
+        alt={recipe.title}
+        imageSrc={recipe.thumbnail_url ?? undefined}
+        meta={
+          <>
+            <span>기본 {recipe.base_servings}인분</span>
+            <span>저장 {recipe.save_count}</span>
+          </>
+        }
+        title={recipe.title}
+      />
+      <span className="web-picker-select-badge">선택</span>
+    </button>
   );
 }
 
@@ -307,55 +308,62 @@ function ServingsModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-end bg-black/42 p-4 backdrop-blur-[1px] lg:items-center lg:justify-center"
-      onClick={onCancel}
-    >
-      <div
-        aria-labelledby="servings-modal-title"
-        aria-modal="true"
-        className="glass-panel w-full max-w-md rounded-[24px] px-5 py-6 md:px-6"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-      >
-        <h2
-          className="text-lg font-bold text-[var(--foreground)]"
-          id="servings-modal-title"
-        >
-          계획 인분 입력
-        </h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          {recipe.title} — 기본 {recipe.base_servings}인분
-        </p>
-        <div className="mt-4 flex items-center justify-center gap-4">
-          <NumericStepperCompact
-            disabled={isCreating}
-            min={1}
-            onChange={setServings}
-            unit="인분"
-            value={servings}
-          />
-        </div>
-        <div className="mt-6 flex gap-3">
+    <WebModal onBackdropClick={onCancel}>
+      <WebDialog aria-labelledby="servings-modal-title" size="narrow">
+        <WebDialogHeader>
+          <WebDialogTitle id="servings-modal-title">
+            계획 인분 입력
+          </WebDialogTitle>
           <button
-            className="h-11 flex-1 rounded-[12px] border border-[var(--line)] bg-[var(--surface)] text-base font-semibold text-[var(--foreground)] hover:bg-[var(--line)]"
-            disabled={isCreating}
+            aria-label="닫기"
+            className="web-modal-close"
             onClick={onCancel}
             type="button"
           >
-            취소
+            ×
           </button>
-          <button
-            className="h-11 flex-1 rounded-[12px] bg-[var(--brand)] text-base font-semibold text-white hover:bg-[var(--brand-deep)] disabled:opacity-50"
+        </WebDialogHeader>
+        <WebDialogBody>
+          <p className="web-modal-copy">{recipe.title}</p>
+          <p className="web-modal-footer-note">
+            기본 {recipe.base_servings}인분
+            {slotLabel ? ` · ${slotLabel}` : ""}
+          </p>
+          <div className="web-servings-stepper">
+            <div className="web-stepper" aria-label="계획 인분" role="group">
+              <button
+                aria-label="인분 줄이기"
+                disabled={isCreating || servings <= 1}
+                onClick={() => setServings((value) => Math.max(1, value - 1))}
+                type="button"
+              >
+                −
+              </button>
+              <span>{servings}인분</span>
+              <button
+                aria-label="인분 늘리기"
+                disabled={isCreating}
+                onClick={() => setServings((value) => value + 1)}
+                type="button"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton disabled={isCreating} onClick={onCancel} variant="secondary">
+            취소
+          </WebButton>
+          <WebButton
             disabled={isCreating || servings < 1}
             onClick={handleConfirm}
-            type="button"
           >
             {isCreating ? "추가 중..." : "추가"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
   );
 }
 
@@ -406,18 +414,12 @@ export function RecipeSearchPicker({
   }, []);
 
   const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim() && presentation === "inline") {
-      setSearchState("idle");
-      setResults([]);
-      return;
-    }
-
     await runSearch(searchQuery);
-  }, [presentation, runSearch, searchQuery]);
+  }, [runSearch, searchQuery]);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
-      if (presentation === "screen") {
+      if (presentation === "screen" || presentation === "inline") {
         void runSearch("");
       } else {
         setSearchState("idle");
@@ -555,20 +557,19 @@ export function RecipeSearchPicker({
         />
 
         {searchState === "loading" && (
-          <div className="py-8 text-center text-sm text-[var(--muted)]" aria-busy="true">
-            검색 중...
+          <div className="web-picker-grid" aria-busy="true">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <WebSkeleton className="h-[220px]" key={index} />
+            ))}
           </div>
         )}
 
         {searchState === "empty" && (
-          <div className="py-8 text-center">
-            <p className="text-base font-semibold text-[var(--foreground)]">
-              검색 결과가 없어요
-            </p>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              다른 키워드로 다시 검색해보세요.
-            </p>
-          </div>
+          <WebEmptyState
+            description="다른 키워드로 다시 검색해보세요."
+            icon="⌕"
+            title="검색 결과가 없어요"
+          />
         )}
 
         {searchState === "error" && (
@@ -581,7 +582,7 @@ export function RecipeSearchPicker({
         )}
 
         {searchState === "ready" && results.length > 0 && (
-          <div className="space-y-3">
+          <div className="web-picker-grid">
             {results.map((recipe) => (
               <ResultCard key={recipe.id} onSelect={onRecipeSelect} recipe={recipe} />
             ))}

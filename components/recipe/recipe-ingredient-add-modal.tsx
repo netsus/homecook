@@ -4,7 +4,21 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { ModalHeader } from "@/components/shared/modal-header";
 import { SelectionChipRail } from "@/components/shared/selection-chip-rail";
+import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Button } from "@/components/ui/button";
+import {
+  WebButton,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebEmptyState,
+  WebModal,
+  WebSkeleton,
+  WebTabButton,
+  WebTabs,
+} from "@/components/web";
 import { fetchIngredients } from "@/lib/api/ingredients";
 import {
   ALL_INGREDIENT_CATEGORY,
@@ -43,6 +57,7 @@ export function RecipeIngredientAddModal({
   const [listState, setListState] = useState<IngredientListState>("loading");
   const requestIdRef = useRef(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const isDesktopViewport = useDesktopViewport();
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -135,6 +150,163 @@ export function RecipeIngredientAddModal({
     setAmount("100");
     setUnit("g");
   };
+
+  if (isDesktopViewport) {
+    return (
+      <WebModal onBackdropClick={onClose}>
+        <WebDialog
+          aria-labelledby="ingredient-picker-title"
+          className="web-ingredient-dialog"
+          size="wide"
+        >
+          <WebDialogHeader>
+            <div>
+              <WebDialogTitle id="ingredient-picker-title">재료 추가</WebDialogTitle>
+              <p className="web-modal-copy">재료를 선택하고 수량과 단위를 정해요</p>
+            </div>
+            <button
+              aria-label="닫기"
+              className="web-modal-close"
+              onClick={onClose}
+              type="button"
+            >
+              ×
+            </button>
+          </WebDialogHeader>
+          <WebDialogBody>
+            <label className="web-picker-search">
+              <span aria-hidden="true">⌕</span>
+              <input
+                autoFocus
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="재료 검색"
+                ref={searchInputRef}
+                value={query}
+              />
+            </label>
+            <WebTabs className="web-picker-tabs" role="tablist">
+              {INGREDIENT_CATEGORY_OPTIONS.map((category) => (
+                <WebTabButton
+                  active={activeCategory === category}
+                  key={category}
+                  onClick={() => setActiveCategory(category)}
+                >
+                  {category}
+                </WebTabButton>
+              ))}
+            </WebTabs>
+
+            {listState === "loading" ? (
+              <div className="web-ingredient-grid" aria-busy="true">
+                {Array.from({ length: 15 }).map((_, index) => (
+                  <WebSkeleton className="h-16" key={index} />
+                ))}
+              </div>
+            ) : null}
+
+            {listState === "error" ? (
+              <WebEmptyState
+                description="잠시 후 다시 열어주세요."
+                icon="!"
+                title="재료 목록을 불러오지 못했어요"
+              />
+            ) : null}
+
+            {listState === "empty" ? (
+              <WebEmptyState
+                description="검색어를 바꾸거나 다른 카테고리를 선택해보세요."
+                icon="⌕"
+                title="검색 결과가 없어요"
+              />
+            ) : null}
+
+            {listState === "ready" ? (
+              <ul className="web-ingredient-grid">
+                {ingredients.map((ingredient) => {
+                  const isSelected = selectedIngredient?.id === ingredient.id;
+
+                  return (
+                    <li key={ingredient.id}>
+                      <button
+                        aria-pressed={isSelected}
+                        className={[
+                          "web-ingredient-cell",
+                          isSelected ? "web-ingredient-cell-selected" : "",
+                        ].join(" ")}
+                        onClick={() => setSelectedIngredient(ingredient)}
+                        type="button"
+                      >
+                        <span aria-hidden="true">🥬</span>
+                        <span>{ingredient.standard_name}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+
+            <div className="web-ingredient-editor" data-testid="ingredient-editor">
+              {addedIngredientLabels.length > 0 ? (
+                <div className="web-ingredient-added" data-testid="added-ingredient-chips">
+                  {addedIngredientLabels.map((label, index) => (
+                    <span key={`${label}-${index}`}>{label}</span>
+                  ))}
+                </div>
+              ) : null}
+
+              {selectedIngredient ? (
+                <div className="web-ingredient-selected">
+                  <span>{selectedIngredient.standard_name}</span>
+                  <input
+                    aria-invalid={!isAmountValid}
+                    aria-label="수량"
+                    inputMode="decimal"
+                    onChange={(event) => setAmount(event.target.value)}
+                    placeholder="수량"
+                    type="number"
+                    value={amount}
+                  />
+                  <div aria-label="단위" className="web-ingredient-units" role="group">
+                    {COOKING_UNIT_OPTIONS.map((option) => (
+                      <button
+                        aria-pressed={unit === option}
+                        className={unit === option ? "active" : ""}
+                        key={option}
+                        onClick={() => setUnit(option)}
+                        type="button"
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                  <WebButton
+                    disabled={!canAddIngredient}
+                    onClick={handleAdd}
+                    size="sm"
+                  >
+                    선택 재료 추가
+                  </WebButton>
+                </div>
+              ) : null}
+
+              <p
+                className="web-modal-footer-note"
+                role={selectedIngredient && !canAddIngredient ? "alert" : undefined}
+              >
+                {helperMessage}
+              </p>
+            </div>
+          </WebDialogBody>
+          <WebDialogFooter>
+            <span className="web-modal-footer-note">
+              {addedIngredientLabels.length}개 추가됨
+            </span>
+            <WebButton onClick={onClose}>완료</WebButton>
+          </WebDialogFooter>
+        </WebDialog>
+      </WebModal>
+    );
+  }
 
   return (
     <div

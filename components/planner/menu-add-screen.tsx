@@ -11,6 +11,12 @@ import { RecipeSearchPicker } from "@/components/planner/recipe-search-picker";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { useAppReturn } from "@/components/shared/use-app-return";
+import {
+  WebButton,
+  WebCard,
+  WebShell,
+  WebTopNav,
+} from "@/components/web";
 import { createMealSafe } from "@/lib/api/meal";
 import { buildReturnHref } from "@/lib/navigation/return-context";
 import type { LeftoverListItemData } from "@/types/leftover";
@@ -31,58 +37,12 @@ export interface MenuAddScreenProps {
 
 type PickerMode = "none" | "search" | "recipebook-selector" | "recipebook-detail" | "pantry" | "leftover";
 
-// ─── AppBar ──────────────────────────────────────────────────────────────────
-
-interface AppBarProps {
-  onBack: () => void;
-}
-
-function AppBar({ onBack }: AppBarProps) {
-  return (
-    <div className="shrink-0 border-b border-[var(--line)] bg-[var(--background)]">
-      <div className="flex h-14 items-center gap-2 px-2">
-        <button
-          aria-label="뒤로 가기"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--foreground)] hover:bg-white/60"
-          onClick={onBack}
-          type="button"
-        >
-          <svg
-            fill="none"
-            height="20"
-            viewBox="0 0 20 20"
-            width="20"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M12 5L7 10L12 15"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-            />
-          </svg>
-        </button>
-        <h1 className="min-w-0 flex-1 truncate text-xl font-extrabold tracking-[-0.02em] text-[var(--foreground)]">
-          식사 추가
-        </h1>
-        {/* Right spacer matching back button width */}
-        <div className="h-11 w-11 shrink-0" aria-hidden="true" />
-      </div>
-    </div>
-  );
-}
-
-// ─── Action Buttons ──────────────────────────────────────────────────────────
-
-interface ActionButtonsProps {
-  onSearchClick: () => void;
-  onRecipeBookClick: () => void;
-  onPantryClick: () => void;
-  onLeftoverClick: () => void;
-  onManualRecipeClick: () => void;
-  onYoutubeRecipeClick: () => void;
-}
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
 
 const MENU_ADD_OPTIONS = [
   { id: "search", emoji: "🔍", label: "검색", subtitle: "레시피 검색" },
@@ -101,51 +61,6 @@ function formatTargetLabel(planDate: string, slotName: string) {
 
   if (dateLabel && slotName) return `${dateLabel} ${slotName}`;
   return slotName || dateLabel || "플래너";
-}
-
-function ActionButtons({
-  onLeftoverClick,
-  onManualRecipeClick,
-  onPantryClick,
-  onRecipeBookClick,
-  onSearchClick,
-  onYoutubeRecipeClick,
-}: ActionButtonsProps) {
-  const actionMap: Record<(typeof MENU_ADD_OPTIONS)[number]["id"], () => void> = {
-    search: onSearchClick,
-    recipebook: onRecipeBookClick,
-    pantry: onPantryClick,
-    leftover: onLeftoverClick,
-    manual: onManualRecipeClick,
-    youtube: onYoutubeRecipeClick,
-  };
-
-  return (
-    <div className="mt-6 space-y-3">
-      <h2 className="text-sm font-semibold text-[var(--muted)]">
-        추가 방법 선택
-      </h2>
-      <div className="grid grid-cols-2 gap-3" data-testid="menu-add-option-grid">
-        {MENU_ADD_OPTIONS.map((option) => (
-          <button
-            key={option.id}
-            className="flex min-h-[72px] items-center gap-3 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-left hover:bg-[var(--surface-fill)]"
-            data-testid={`menu-add-option-${option.id}`}
-            onClick={actionMap[option.id]}
-            type="button"
-          >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-soft)] text-[20px]">
-              {option.emoji}
-            </span>
-            <div className="min-w-0">
-              <p className="text-[14px] font-bold text-[var(--foreground)]">{option.label}</p>
-              <p className="mt-0.5 truncate text-[11px] text-[var(--text-3)]">{option.subtitle}</p>
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -484,6 +399,15 @@ export function MenuAddScreen({
 
   const targetLabel = formatTargetLabel(planDate, slotName);
 
+  const desktopPickerTitle =
+    pickerMode === "recipebook-selector"
+      ? "레시피북에서 추가"
+      : pickerMode === "recipebook-detail"
+        ? selectedBook?.name ?? "레시피북"
+        : pickerMode === "pantry"
+          ? "팬트리 추천"
+          : "레시피 검색";
+
   const actionMapForMobile = (id: (typeof MENU_ADD_OPTIONS)[number]["id"]) => {
     const actionMap: Record<(typeof MENU_ADD_OPTIONS)[number]["id"], () => void> = {
       search: handleSearchOptionClick,
@@ -633,82 +557,165 @@ export function MenuAddScreen({
       ) : null}
 
       {shouldRenderWebView ? (
-        <div className="hidden h-screen flex-col bg-[var(--background)] lg:flex">
-          <AppBar onBack={handleBack} />
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
-            <div className="mx-auto max-w-2xl py-4">
-              <p className="text-sm text-[var(--muted)]">
-                레시피를 검색해서 식사에 추가할 수 있어요.
-              </p>
-              <div className="mt-4">
-                <RecipeSearchPicker
-                  isCreating={isCreating}
-                  onRecipeSelect={handleRecipeSelect}
-                  onServingsCancel={handleServingsCancel}
-                  onServingsConfirm={handleServingsConfirm}
-                  searchInputRef={searchInputRef}
-                  selectedRecipe={selectedRecipe}
-                />
+        <div className="hidden lg:block">
+          <WebShell wide className="web-menu-add-shell">
+            <WebTopNav activeId="planner" items={WEB_NAV_ITEMS} />
+            <nav aria-label="메뉴 추가 경로" className="web-breadcrumb">
+              <button
+                className="web-breadcrumb-link"
+                onClick={() => router.push("/planner")}
+                type="button"
+              >
+                Planner
+              </button>
+              <span className="web-breadcrumb-sep">/</span>
+              <button
+                className="web-breadcrumb-link"
+                onClick={handleBack}
+                type="button"
+              >
+                {targetLabel}
+              </button>
+              <span className="web-breadcrumb-sep">/</span>
+              <span className="web-breadcrumb-current">메뉴 추가</span>
+            </nav>
+
+            <div className="web-menu-add-hero">
+              <div>
+                <p className="web-menu-add-eyebrow">식사 추가</p>
+                <h1>어떤 방식으로 메뉴를 추가할까요?</h1>
+                <p>{targetLabel}에 넣을 레시피를 검색하거나 새로 등록할 수 있어요.</p>
               </div>
-              {creationError && (
-                <div
-                  className="mt-4 rounded-[12px] border border-red-300 bg-red-50 p-3 text-sm text-red-700"
-                  role="alert"
-                >
-                  {creationError}
-                </div>
-              )}
-              <ActionButtons
-                onLeftoverClick={handleLeftoverClick}
-                onManualRecipeClick={handleManualRecipeClick}
-                onPantryClick={handlePantryClick}
-                onRecipeBookClick={handleRecipeBookClick}
-                onSearchClick={handleSearchOptionClick}
-                onYoutubeRecipeClick={handleYoutubeRecipeClick}
-              />
+              <WebButton onClick={handleBack} variant="secondary">
+                플래너로 돌아가기
+              </WebButton>
             </div>
-          </div>
 
-          {/* Recipe Book Selector */}
-          {pickerMode === "recipebook-selector" && (
-            <RecipeBookSelector onBookSelect={handleBookSelect} onClose={handleRecipeBookClose} />
-          )}
+            <div className="web-menu-add-layout">
+              <section aria-labelledby="menu-add-options-title">
+                <h2 className="web-menu-add-section-title" id="menu-add-options-title">
+                  추가 방법
+                </h2>
+                <div className="web-menu-add-grid" data-testid="menu-add-option-grid">
+                  {MENU_ADD_OPTIONS.map((option) => {
+                    const onClick = actionMapForMobile(option.id);
+                    const active =
+                      (option.id === "search" && pickerMode === "search") ||
+                      (option.id === "recipebook" &&
+                        (pickerMode === "recipebook-selector" ||
+                          pickerMode === "recipebook-detail")) ||
+                      (option.id === "pantry" && pickerMode === "pantry");
 
-          {/* Recipe Book Detail Picker */}
-          {pickerMode === "recipebook-detail" && selectedBook && (
-            <RecipeBookDetailPicker
-              book={selectedBook}
-              isCreating={isCreating}
-              onBack={handleRecipeBookBack}
-              onRecipeSelect={handleBookRecipeSelect}
-              onServingsCancel={handleBookServingsCancel}
-              onServingsConfirm={handleBookServingsConfirm}
-              selectedRecipe={selectedBookRecipe}
-            />
-          )}
+                    return (
+                      <button
+                        className={[
+                          "web-menu-add-card",
+                          active ? "web-menu-add-card-active" : "",
+                        ].join(" ")}
+                        data-testid={`menu-add-option-${option.id}`}
+                        key={option.id}
+                        onClick={onClick}
+                        type="button"
+                      >
+                        <span className="web-menu-add-card-icon" aria-hidden="true">
+                          {option.emoji}
+                        </span>
+                        <span className="web-menu-add-card-copy">
+                          <span>{option.label}</span>
+                          <small>{option.subtitle}</small>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
 
-          {/* Pantry Match Picker */}
-          {pickerMode === "pantry" && (
-            <PantryMatchPicker
-              isCreating={isCreating}
-              onClose={handlePantryClose}
-              onRecipeSelect={handlePantryRecipeSelect}
-              onServingsCancel={handlePantryServingsCancel}
-              onServingsConfirm={handlePantryServingsConfirm}
-              selectedRecipe={selectedPantryRecipe}
-            />
-          )}
+              <WebCard className="web-menu-add-picker-panel">
+                <div className="web-menu-add-picker-head">
+                  <div>
+                    <p className="web-menu-add-eyebrow">현재 선택</p>
+                    <h2>{desktopPickerTitle}</h2>
+                  </div>
+                  {pickerMode !== "none" ? (
+                    <WebButton
+                      onClick={handlePickerBackToMenu}
+                      size="sm"
+                      variant="tertiary"
+                    >
+                      초기화
+                    </WebButton>
+                  ) : null}
+                </div>
 
-          {pickerMode === "leftover" && (
-            <LeftoverPicker
-              isCreating={isCreating}
-              onClose={handleLeftoverClose}
-              onLeftoverSelect={handleLeftoverSelect}
-              onServingsCancel={handleLeftoverServingsCancel}
-              onServingsConfirm={handleLeftoverServingsConfirm}
-              selectedLeftover={selectedLeftover}
-            />
-          )}
+                {creationError ? (
+                  <div className="web-menu-add-error" role="alert">
+                    {creationError}
+                  </div>
+                ) : null}
+
+                {(pickerMode === "none" || pickerMode === "search") && (
+                  <RecipeSearchPicker
+                    isCreating={isCreating}
+                    onRecipeSelect={handleRecipeSelect}
+                    onServingsCancel={handleServingsCancel}
+                    onServingsConfirm={handleServingsConfirm}
+                    searchInputRef={searchInputRef}
+                    selectedRecipe={selectedRecipe}
+                    slotLabel={targetLabel}
+                  />
+                )}
+
+                {pickerMode === "recipebook-selector" && (
+                  <RecipeBookSelector
+                    onBack={handlePickerBackToMenu}
+                    onBookSelect={handleBookSelect}
+                    onClose={handleRecipeBookClose}
+                    presentation="web"
+                    slotLabel={targetLabel}
+                  />
+                )}
+
+                {pickerMode === "recipebook-detail" && selectedBook && (
+                  <RecipeBookDetailPicker
+                    book={selectedBook}
+                    isCreating={isCreating}
+                    onBack={handleRecipeBookBack}
+                    onRecipeSelect={handleBookRecipeSelect}
+                    onServingsCancel={handleBookServingsCancel}
+                    onServingsConfirm={handleBookServingsConfirm}
+                    presentation="web"
+                    selectedRecipe={selectedBookRecipe}
+                    slotLabel={targetLabel}
+                  />
+                )}
+
+                {pickerMode === "pantry" && (
+                  <PantryMatchPicker
+                    isCreating={isCreating}
+                    onBack={handlePickerBackToMenu}
+                    onClose={handlePantryClose}
+                    onRecipeSelect={handlePantryRecipeSelect}
+                    onServingsCancel={handlePantryServingsCancel}
+                    onServingsConfirm={handlePantryServingsConfirm}
+                    presentation="web"
+                    selectedRecipe={selectedPantryRecipe}
+                    slotLabel={targetLabel}
+                  />
+                )}
+
+                {pickerMode === "leftover" && (
+                  <LeftoverPicker
+                    isCreating={isCreating}
+                    onClose={handleLeftoverClose}
+                    onLeftoverSelect={handleLeftoverSelect}
+                    onServingsCancel={handleLeftoverServingsCancel}
+                    onServingsConfirm={handleLeftoverServingsConfirm}
+                    selectedLeftover={selectedLeftover}
+                  />
+                )}
+              </WebCard>
+            </div>
+          </WebShell>
         </div>
       ) : null}
     </>
