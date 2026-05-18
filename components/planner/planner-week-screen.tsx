@@ -11,6 +11,15 @@ import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-ta
 import { ContentState } from "@/components/shared/content-state";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  WebButton,
+  WebEmptyState,
+  WebErrorState,
+  WebIconButton,
+  WebShell,
+  WebSkeleton,
+  WebTopNav,
+} from "@/components/web";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import {
   createDefaultPlannerRange,
@@ -20,7 +29,7 @@ import {
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasSupabasePublicEnv } from "@/lib/supabase/env";
 import { usePlannerStore } from "@/stores/planner-store";
-import type { PlannerMealData } from "@/types/planner";
+import type { PlannerColumnData, PlannerMealData } from "@/types/planner";
 
 type AuthState = "checking" | "authenticated" | "unauthorized";
 type MealAddSheetState = {
@@ -36,9 +45,13 @@ export interface PlannerWeekScreenProps {
 const RANGE_SHIFT_DAYS = 7;
 const WEEK_PAGE_INDEX_CURRENT = 1;
 const WEEK_SCROLL_SETTLE_MS = 96;
-const CTA_BUTTONS = ["장보기", "남은요리"] as const;
-const PLANNER_CTA_CLASS =
-  "min-h-[40px] rounded-[var(--radius-md)] border border-transparent px-2 py-2 text-[11px] font-medium leading-none tracking-[-0.01em] sm:px-3 sm:text-[12px]";
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
 
 function getTodayDateKey() {
   const now = new Date();
@@ -112,6 +125,531 @@ function buildMealMap(meals: PlannerMealData[]) {
   });
 
   return mealMap;
+}
+
+function getPlannerMealStatusClass(status: PlannerMealData["status"]) {
+  if (status === "shopping_done") {
+    return "shopped";
+  }
+
+  if (status === "cook_done") {
+    return "cooked";
+  }
+
+  return "registered";
+}
+
+function getPlannerMealStatusLabel(status: PlannerMealData["status"]) {
+  if (status === "shopping_done") {
+    return "장보기 완료";
+  }
+
+  if (status === "cook_done") {
+    return "요리 완료";
+  }
+
+  return "등록";
+}
+
+function findPlannerColumn(
+  columns: PlannerColumnData[],
+  preferredName: string,
+) {
+  return (
+    columns.find((column) => column.name.includes(preferredName)) ??
+    columns[0] ??
+    null
+  );
+}
+
+function getPlannerPrimaryColumn(columns: PlannerColumnData[]) {
+  return (
+    columns.find((column) => column.name.includes("저녁")) ??
+    columns.at(-1) ??
+    null
+  );
+}
+
+function WebProfileButton() {
+  return (
+    <Link
+      aria-label="마이페이지"
+      className="web-profile-button"
+      href="/mypage"
+      prefetch={false}
+    >
+      <UserIcon />
+    </Link>
+  );
+}
+
+function ChevronLeftIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      viewBox="0 0 18 18"
+      width="18"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M11 4.5L6.5 9l4.5 4.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="18"
+      viewBox="0 0 18 18"
+      width="18"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M7 4.5L11.5 9 7 13.5"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      viewBox="0 0 16 16"
+      width="16"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M8 3.5v9M3.5 8h9"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="16"
+      viewBox="0 0 16 16"
+      width="16"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle cx="7" cy="7" r="4.25" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M10.2 10.2L13 13"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="20"
+      viewBox="0 0 20 20"
+      width="20"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle cx="10" cy="7" r="3.25" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M4.75 17c.65-2.65 2.46-4 5.25-4s4.6 1.35 5.25 4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.6"
+      />
+    </svg>
+  );
+}
+
+function PlannerWeekWebView({
+  columns,
+  dateKeys,
+  errorMessage,
+  getMealAddHrefForSlot,
+  isCurrentRange,
+  isRefreshing,
+  loadPlanner,
+  mealStats,
+  meals,
+  mealsByDateAndColumn,
+  plannerBodyMotionStyle,
+  rangeContextLabel,
+  rangeEndDate,
+  rangeStartDate,
+  resetRange,
+  runPlannerAction,
+  screenState,
+  shiftRange,
+  shoppingListLinks,
+  todayKey,
+}: {
+  columns: PlannerColumnData[];
+  dateKeys: string[];
+  errorMessage: string | null;
+  getMealAddHrefForSlot: (dateKey: string, column: PlannerColumnData) => string;
+  isCurrentRange: boolean;
+  isRefreshing: boolean;
+  loadPlanner: () => Promise<void>;
+  mealStats: {
+    cookDone: number;
+    registered: number;
+    shoppingDone: number;
+    total: number;
+  };
+  meals: PlannerMealData[];
+  mealsByDateAndColumn: Map<string, PlannerMealData[]>;
+  plannerBodyMotionStyle: React.CSSProperties;
+  rangeContextLabel: string;
+  rangeEndDate: string;
+  rangeStartDate: string;
+  resetRange: () => Promise<void>;
+  runPlannerAction: (action: Promise<void>) => void;
+  screenState: "loading" | "ready" | "empty" | "error" | "read-only";
+  shiftRange: (dayDelta: number) => Promise<void>;
+  shoppingListLinks: Array<{ id: string; title: string }>;
+  todayKey: string;
+}) {
+  const primaryColumn = getPlannerPrimaryColumn(columns);
+  const lunchColumn = findPlannerColumn(columns, "점심");
+  const quickDateKey = dateKeys.includes(todayKey) ? todayKey : dateKeys[0];
+  const weekendDateKey = dateKeys.at(-1) ?? quickDateKey;
+  const recentMeals = [...meals]
+    .sort((a, b) => `${b.plan_date}:${b.id}`.localeCompare(`${a.plan_date}:${a.id}`))
+    .slice(0, 4);
+  const canShowGrid = screenState === "ready" || screenState === "empty";
+
+  return (
+    <WebShell className="web-planner" wide>
+      <WebTopNav
+        activeId="planner"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<WebProfileButton />}
+      />
+      <div className="web-screen web-planner-screen">
+        <header className="web-planner-page-head">
+          <div>
+            <p className="web-planner-eyebrow">{rangeContextLabel}</p>
+            <h1 className="web-planner-title">주간 플래너</h1>
+            <p className="web-planner-subtitle">
+              {formatRangeLabel(rangeStartDate, rangeEndDate)}
+            </p>
+          </div>
+          <div className="web-planner-actions" aria-label="플래너 작업">
+            <WebIconButton
+              aria-label="이전 주"
+              onClick={() => runPlannerAction(shiftRange(-RANGE_SHIFT_DAYS))}
+            >
+              <ChevronLeftIcon />
+            </WebIconButton>
+            {!isCurrentRange ? (
+              <WebButton
+                onClick={() => runPlannerAction(resetRange())}
+                variant="tertiary"
+              >
+                이번주로
+              </WebButton>
+            ) : null}
+            <WebIconButton
+              aria-label="다음 주"
+              onClick={() => runPlannerAction(shiftRange(RANGE_SHIFT_DAYS))}
+            >
+              <ChevronRightIcon />
+            </WebIconButton>
+            <Link className="web-button web-button-secondary" href="/cooking/ready">
+              요리 준비
+            </Link>
+            <Link className="web-button web-button-primary" href="/shopping/flow">
+              장보기 미리보기
+            </Link>
+          </div>
+        </header>
+
+        <div className="web-planner-layout">
+          <aside className="web-planner-side" aria-label="플래너 요약">
+            <section className="web-planner-side-section">
+              <p className="web-planner-side-label">이번 주 요약</p>
+              <div className="web-planner-stat-list">
+                <div className="web-planner-stat">
+                  <span>등록된 끼니</span>
+                  <strong>{mealStats.total}개</strong>
+                </div>
+                <div className="web-planner-stat web-planner-stat-success">
+                  <span><i className="web-planner-dot web-planner-dot-cooked" />요리 완료</span>
+                  <strong>{mealStats.cookDone}개</strong>
+                </div>
+                <div className="web-planner-stat web-planner-stat-warning">
+                  <span><i className="web-planner-dot web-planner-dot-shopped" />장본 끼니</span>
+                  <strong>{mealStats.shoppingDone}개</strong>
+                </div>
+                <div className="web-planner-stat">
+                  <span><i className="web-planner-dot web-planner-dot-registered" />등록</span>
+                  <strong>{mealStats.registered}개</strong>
+                </div>
+              </div>
+            </section>
+
+            <section className="web-planner-side-section">
+              <p className="web-planner-side-label">빠른 추가</p>
+              <div className="web-planner-quick-list">
+                {primaryColumn && quickDateKey ? (
+                  <Link
+                    className="web-planner-quick"
+                    href={getMealAddHrefForSlot(quickDateKey, primaryColumn)}
+                  >
+                    <PlusIcon />
+                    오늘 {primaryColumn.name}
+                  </Link>
+                ) : null}
+                {lunchColumn && weekendDateKey ? (
+                  <Link
+                    className="web-planner-quick"
+                    href={getMealAddHrefForSlot(weekendDateKey, lunchColumn)}
+                  >
+                    <PlusIcon />
+                    주말 {lunchColumn.name}
+                  </Link>
+                ) : null}
+                <Link className="web-planner-quick" href="/menu-add">
+                  <SearchIcon />
+                  레시피 검색
+                </Link>
+              </div>
+            </section>
+
+            <section className="web-planner-side-section">
+              <p className="web-planner-side-label">최근 계획</p>
+              {recentMeals.length > 0 ? (
+                <div className="web-planner-recent-list">
+                  {recentMeals.map((meal) => (
+                    <Link
+                      className="web-planner-recent"
+                      href={`/planner/${meal.plan_date}/${meal.column_id}`}
+                      key={meal.id}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="web-planner-recent-thumb"
+                        style={
+                          meal.recipe_thumbnail_url
+                            ? { backgroundImage: `url(${meal.recipe_thumbnail_url})` }
+                            : undefined
+                        }
+                      />
+                      <span className="web-planner-recent-copy">
+                        <span>{meal.recipe_title}</span>
+                        <small>
+                          {formatCompactDateLabel(meal.plan_date)} · {meal.planned_servings}인분
+                        </small>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="web-planner-side-empty">
+                  아직 최근 계획이 없어요.
+                </p>
+              )}
+            </section>
+
+            {shoppingListLinks.length > 0 ? (
+              <section className="web-planner-side-section">
+                <p className="web-planner-side-label">장보기 목록</p>
+                <div className="web-planner-shopping-list">
+                  {shoppingListLinks.map((shoppingList) => (
+                    <Link
+                      className="web-planner-shopping-link"
+                      href={`/shopping/lists/${shoppingList.id}`}
+                      key={shoppingList.id}
+                    >
+                      {shoppingList.title}
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </aside>
+
+          <section
+            aria-busy={isRefreshing}
+            aria-label="주간 플래너 본문"
+            className="web-planner-main"
+            data-testid="planner-week-shell"
+          >
+            {screenState === "loading" ? (
+              <div className="web-planner-skeleton-grid">
+                {Array.from({ length: 12 }).map((_, index) => (
+                  <WebSkeleton height={104} key={index} />
+                ))}
+              </div>
+            ) : null}
+
+            {screenState === "error" ? (
+              <WebErrorState
+                action={
+                  <WebButton onClick={() => runPlannerAction(loadPlanner())}>
+                    다시 시도
+                  </WebButton>
+                }
+                description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+                title="플래너를 불러오지 못했어요"
+              />
+            ) : null}
+
+            {canShowGrid ? (
+              <section
+                aria-label="주간 식단 표"
+                className="web-planner-table-wrap"
+                data-testid="planner-week-body"
+                style={plannerBodyMotionStyle}
+              >
+                {screenState === "empty" ? (
+                  <WebEmptyState
+                    action={
+                      primaryColumn && quickDateKey ? (
+                        <Link
+                          className="web-button web-button-secondary"
+                          href={getMealAddHrefForSlot(quickDateKey, primaryColumn)}
+                        >
+                          첫 식사 추가
+                        </Link>
+                      ) : null
+                    }
+                    className="web-planner-empty-callout"
+                    description="표의 빈 칸에서 바로 식사를 추가할 수 있어요."
+                    title="아직 등록된 식사가 없어요"
+                  />
+                ) : null}
+
+                <div className="web-planner-grid">
+                  <div className="web-planner-corner" aria-hidden="true" />
+                  {dateKeys.map((dateKey) => {
+                    const isToday = dateKey === todayKey;
+
+                    return (
+                      <div
+                        className={[
+                          "web-planner-head",
+                          isToday ? "web-planner-head-today" : "",
+                        ].join(" ")}
+                        key={dateKey}
+                      >
+                        <span>{formatWeekdayLabel(dateKey)}</span>
+                        <strong>{formatCompactDateLabel(dateKey)}</strong>
+                      </div>
+                    );
+                  })}
+
+                  {columns.map((column) => (
+                    <React.Fragment key={column.id}>
+                      <div className="web-planner-time">{column.name}</div>
+                      {dateKeys.map((dateKey) => {
+                        const slotKey = `${dateKey}:${column.id}`;
+                        const slotMeals = mealsByDateAndColumn.get(slotKey) ?? [];
+                        const visibleMeals = slotMeals.slice(0, 2);
+                        const overflowCount = Math.max(0, slotMeals.length - visibleMeals.length);
+                        const addHref = getMealAddHrefForSlot(dateKey, column);
+                        const mealHref = `/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`;
+                        const isToday = dateKey === todayKey;
+
+                        return (
+                          <div
+                            className={[
+                              "web-planner-cell",
+                              isToday ? "web-planner-cell-today" : "",
+                            ].join(" ")}
+                            key={slotKey}
+                          >
+                            {visibleMeals.map((meal) => (
+                              <Link
+                                className={[
+                                  "web-planner-meal",
+                                  `web-planner-meal-${getPlannerMealStatusClass(meal.status)}`,
+                                ].join(" ")}
+                                href={mealHref}
+                                key={meal.id}
+                              >
+                                <span
+                                  aria-hidden="true"
+                                  className="web-planner-meal-thumb"
+                                  style={
+                                    meal.recipe_thumbnail_url
+                                      ? {
+                                          backgroundImage: `url(${meal.recipe_thumbnail_url})`,
+                                        }
+                                      : undefined
+                                  }
+                                />
+                                <span className="web-planner-meal-copy">
+                                  <span className="web-planner-meal-title">
+                                    {meal.recipe_title}
+                                  </span>
+                                  <span className="web-planner-meal-meta">
+                                    {meal.planned_servings}인분 · {getPlannerMealStatusLabel(meal.status)}
+                                  </span>
+                                </span>
+                              </Link>
+                            ))}
+                            {overflowCount > 0 ? (
+                              <Link className="web-planner-more" href={mealHref}>
+                                +{overflowCount}개 더 보기
+                              </Link>
+                            ) : null}
+                            <Link
+                              aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
+                              className={[
+                                "web-planner-add",
+                                slotMeals.length > 0 ? "web-planner-add-compact" : "",
+                              ].join(" ")}
+                              href={addHref}
+                            >
+                              <PlusIcon />
+                              <span>{slotMeals.length > 0 ? "추가" : "식사 추가"}</span>
+                            </Link>
+                          </div>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </div>
+
+                <div className="web-planner-legend" aria-label="식사 상태 범례">
+                  <span><i className="web-planner-dot web-planner-dot-registered" />등록</span>
+                  <span><i className="web-planner-dot web-planner-dot-shopped" />장보기 완료</span>
+                  <span><i className="web-planner-dot web-planner-dot-cooked" />요리 완료</span>
+                </div>
+              </section>
+            ) : null}
+          </section>
+        </div>
+      </div>
+    </WebShell>
+  );
 }
 
 export function PlannerWeekScreen({
@@ -988,391 +1526,29 @@ export function PlannerWeekScreen({
       ) : null}
 
       {shouldRenderWebView ? (
-        <div className="hidden space-y-2.5 sm:space-y-3 lg:block">
-      <section className="rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] px-[clamp(14px,3.6vw,22px)] py-[clamp(12px,3vw,16px)] shadow-[var(--shadow-2)]">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--olive)]">
-              Planner Week
-            </p>
-            <h2 className="mt-1 text-[clamp(1.45rem,5vw,1.9rem)] font-bold tracking-[-0.025em] text-[var(--foreground)]">
-              식단 플래너
-            </h2>
-          </div>
-          <div
-            aria-label="플래너 보조 작업"
-            className="grid w-full grid-cols-2 gap-1 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-fill)] p-1 md:ml-6 md:w-auto md:min-w-[14rem]"
-            role="group"
-          >
-            {CTA_BUTTONS.map((label) => {
-              if (label === "장보기") {
-                return (
-                  <Link
-                    className={`${PLANNER_CTA_CLASS} flex items-center justify-center bg-[var(--brand)] text-[var(--surface)] shadow-[0_8px_18px_color-mix(in_srgb,var(--brand)_18%,transparent)]`}
-                    href="/shopping/flow"
-                    key={label}
-                  >
-                    {label}
-                  </Link>
-                );
-              }
-              if (label === "남은요리") {
-                return (
-                  <Link
-                    className={`${PLANNER_CTA_CLASS} flex items-center justify-center bg-[var(--brand)] text-[var(--surface)] shadow-[0_8px_18px_color-mix(in_srgb,var(--brand)_18%,transparent)]`}
-                    href="/leftovers"
-                    key={label}
-                  >
-                    {label}
-                  </Link>
-                );
-              }
-              return null;
-            })}
-          </div>
-        </div>
-      </section>
-
-      {screenState === "ready" || screenState === "empty" ? (
-        <section className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-5 py-4">
-          <p className="text-[clamp(1.1rem,4vw,1.25rem)] font-bold tracking-[-0.02em] text-[var(--foreground)]">
-            {isCurrentRange ? "이번 주 " : ""}{mealStats.total}끼 계획 중
-          </p>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <div className="rounded-[10px] bg-[var(--brand-soft)] p-3">
-              <p className="text-[11px] font-semibold text-[var(--brand-deep)]">요리 완료</p>
-              <p className="text-[20px] font-bold text-[var(--brand-deep)]">{mealStats.cookDone}끼</p>
-            </div>
-            <div className="rounded-[10px] bg-[color-mix(in_srgb,var(--olive)_12%,transparent)] p-3">
-              <p className="text-[11px] font-semibold text-[var(--olive)]">장보기 완료</p>
-              <p className="text-[20px] font-bold text-[var(--olive)]">{mealStats.shoppingDone}끼</p>
-            </div>
-            <div className="rounded-[10px] bg-[var(--surface-fill)] p-3">
-              <p className="text-[11px] font-semibold text-[var(--muted)]">등록</p>
-              <p className="text-[20px] font-bold text-[var(--foreground)]">{mealStats.registered}끼</p>
-            </div>
-          </div>
-          {shoppingListLinks.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {shoppingListLinks.map((shoppingList) => (
-                <Link
-                  className="inline-flex min-h-10 items-center justify-center rounded-full border border-[var(--olive)] bg-[color-mix(in_srgb,var(--olive)_8%,transparent)] px-4 py-2 text-[12px] font-bold text-[var(--olive)]"
-                  href={`/shopping/lists/${shoppingList.id}`}
-                  key={shoppingList.id}
-                >
-                  {shoppingList.title} 보기
-                </Link>
-              ))}
-            </div>
-          ) : null}
-        </section>
-      ) : null}
-
-      <section
-        className="sticky top-2 z-20 rounded-[var(--radius-xl)] border border-[var(--line)] bg-[var(--panel)] px-[clamp(12px,3vw,16px)] py-[clamp(11px,3vw,16px)] shadow-[var(--shadow-2)] backdrop-blur"
-        data-testid="planner-week-shell"
-      >
-        <div className="flex flex-col gap-2.5">
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold text-[var(--olive)] sm:text-[12px]">
-                {rangeContextLabel}
-              </p>
-              <div className="inline-flex w-fit items-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[10px] font-medium text-[var(--muted)] sm:text-[11px]">
-                식사 {meals.length}건
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--olive)]">
-                  현재 범위
-                </p>
-                <h3 className="mt-1 text-[clamp(1.15rem,4vw,1.45rem)] font-bold tracking-[-0.02em] text-[var(--foreground)]">
-                  {formatRangeLabel(rangeStartDate, rangeEndDate)}
-                </h3>
-              </div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                  <button
-                    aria-label="이전 주"
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] sm:h-10 sm:w-auto sm:px-4"
-                    onClick={() => runPlannerAction(shiftRange(-RANGE_SHIFT_DAYS))}
-                    type="button"
-                  >
-                    <svg className="h-4 w-4 sm:hidden" fill="none" viewBox="0 0 16 16"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeLinecap="round" strokeWidth="2"/></svg>
-                    <span className="hidden text-[12px] font-medium sm:inline">이전 주</span>
-                  </button>
-                  {!isCurrentRange ? (
-                    <button
-                      className="min-h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--muted)] sm:min-h-10 sm:px-4 sm:text-[12px]"
-                      onClick={() => runPlannerAction(resetRange())}
-                      type="button"
-                    >
-                      이번주로
-                    </button>
-                  ) : null}
-                  <button
-                    aria-label="다음 주"
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] sm:h-10 sm:w-auto sm:px-4"
-                    onClick={() => runPlannerAction(shiftRange(RANGE_SHIFT_DAYS))}
-                    type="button"
-                  >
-                    <svg className="h-4 w-4 sm:hidden" fill="none" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5" stroke="currentColor" strokeLinecap="round" strokeWidth="2"/></svg>
-                    <span className="hidden text-[12px] font-medium sm:inline">다음 주</span>
-                  </button>
-                </div>
-            </div>
-          </div>
-
-          <p className="sr-only" id="planner-week-strip-hint-web">
-            주간 날짜 스트립을 좌우로 넘기면 이전 주 또는 다음 주로 이동할 수 있어요.
-          </p>
-          <div
-            aria-describedby="planner-week-strip-hint-web"
-            aria-busy={isRefreshing}
-            aria-label="주간 날짜 스트립"
-            className="scrollbar-hide overflow-x-auto overscroll-x-contain snap-x snap-mandatory touch-pan-x"
-            data-testid="planner-week-strip-viewport"
-            onKeyDown={handleWeekStripKeyDown}
-            onScroll={handleWeekStripScroll}
-            onMouseDown={handleWeekStripInteractionStart}
-            onMouseUp={handleWeekStripInteractionEnd}
-            onMouseLeave={handleWeekStripInteractionEnd}
-            ref={webWeekStripViewportRef}
-            tabIndex={0}
-            onTouchCancel={handleWeekStripInteractionEnd}
-            onTouchEnd={handleWeekStripInteractionEnd}
-            onTouchStart={handleWeekStripInteractionStart}
-          >
-            <div className="flex">
-              {weekPages.map((page) => (
-                <section
-                  key={page.key}
-                  className="min-w-full snap-center snap-always"
-                  data-testid={`planner-week-strip-page-${page.key}`}
-                >
-                  <ol className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-medium text-[var(--muted)] sm:gap-2 sm:text-[11px]">
-                    {page.dateKeys.map((dateKey) => {
-                      const isToday = page.key === "current" && dateKey === todayKey;
-                      const isSelected = page.key === "current" && dateKey === selectedDateKey;
-
-                      return (
-                        <li key={dateKey} className="list-none">
-                          <button
-                            aria-current={isSelected ? "date" : undefined}
-                            aria-label={`${formatCompactDateLabel(dateKey)} ${formatWeekdayLabel(dateKey)} 식단으로 이동`}
-                            className={[
-                              "relative w-full rounded-[var(--radius-md)] border px-1 py-1.5 transition-colors sm:px-1.5 sm:py-2",
-                              isSelected
-                                ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-deep)]"
-                                : "border-[var(--line)] bg-[var(--surface)] text-[var(--muted)]",
-                            ].join(" ")}
-                            onClick={() => handleDateChipClick(page.key, dateKey)}
-                            type="button"
-                          >
-                            {isToday ? (
-                              <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-[var(--brand)]" />
-                            ) : null}
-                            <span className="block">{formatWeekdayLabel(dateKey)}</span>
-                            <span className="mt-0.5 block text-[clamp(0.84rem,3vw,0.94rem)] font-semibold text-[var(--foreground)]">
-                              {dateKey.slice(8)}
-                            </span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                </section>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {screenState === "loading" ? (
-        <div className="grid gap-3">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton
-              key={index}
-              className="min-h-36 border border-[var(--line)] shadow-[var(--shadow-1)]"
-              style={{ borderRadius: "var(--radius-xl)" }}
-            />
-          ))}
-        </div>
-      ) : null}
-
-      {screenState === "error" ? (
-        <ContentState
-          actionLabel="다시 시도"
-          description={errorMessage ?? "잠시 후 다시 시도해주세요."}
-          onAction={() => {
-            runPlannerAction(loadPlanner());
-          }}
-          tone="error"
-          title="플래너를 불러오지 못했어요"
-        />
-      ) : null}
-
-      {screenState === "ready" || screenState === "empty" ? (
-        <section
-          aria-busy={isRefreshing}
-          className="grid grid-cols-7 gap-3 overflow-x-auto pb-2"
-          data-testid="planner-week-body"
-          style={plannerBodyMotionStyle}
-        >
-          {screenState === "empty" ? (
-            <div className="rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--panel)] px-4 py-3 shadow-[var(--shadow-1)]">
-              <p className="text-sm text-[var(--muted)]">아직 등록된 식사가 없어요.</p>
-            </div>
-          ) : null}
-
-          {dateKeys.map((dateKey) => {
-            const isToday = dateKey === todayKey;
-            const isSelected = dateKey === selectedDateKey;
-            const dayMealCount = columns.filter((col) =>
-              mealsByDateAndColumn.has(`${dateKey}:${col.id}`),
-            ).length;
-
-            return (
-              <article
-                key={dateKey}
-                aria-label={`${formatDateLabel(dateKey)} 식단 카드`}
-                className={`min-w-[148px] overflow-hidden rounded-[var(--radius-md)] bg-[var(--surface)] ${
-                  isSelected
-                    ? "border-2 border-[var(--brand)] shadow-[var(--shadow-2)]"
-                    : "border border-[var(--line)]"
-                }`}
-                data-testid={`planner-day-card-${dateKey}`}
-                ref={(node) => {
-                  webDayCardRefs.current[dateKey] = node;
-                }}
-              >
-                {/* Day header */}
-                <div
-                  className={`flex items-center px-4 py-3 ${
-                    isToday
-                      ? "border-b border-[var(--surface-subtle)] bg-[var(--brand-soft)]"
-                      : "border-b border-[var(--surface-subtle)]"
-                  }`}
-                >
-                  <span
-                    className={`inline-flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-bold ${
-                      isToday
-                        ? "bg-[var(--brand)] text-[var(--surface)]"
-                        : "bg-[var(--surface-fill)] text-[var(--foreground)]"
-                    }`}
-                  >
-                    {formatWeekdayLabel(dateKey)}
-                  </span>
-                  <div className="ml-2.5 min-w-0 flex-1">
-                    <p className="text-[15px] font-bold text-[var(--foreground)]">
-                      {formatDateLabel(dateKey)}
-                      {isToday ? (
-                        <span className="ml-1 text-[12px] font-semibold text-[var(--brand)]">
-                          오늘
-                        </span>
-                      ) : null}
-                    </p>
-                  </div>
-                  <span className="text-[12px] text-[var(--text-3)]">
-                    {dayMealCount}/{columns.length}
-                  </span>
-                </div>
-
-                {/* Slot rows */}
-                <div className="divide-y divide-[var(--surface-subtle)]">
-                  {columns.map((column) => {
-                    const slotKey = `${dateKey}:${column.id}`;
-                    const slotMeals = mealsByDateAndColumn.get(slotKey) ?? [];
-                    const meal = slotMeals[0] ?? null;
-                    const mealHref = `/planner/${dateKey}/${column.id}?slot=${encodeURIComponent(column.name)}`;
-                    const addHref = getMealAddHrefForSlot(dateKey, column);
-
-                    return (
-                      <div
-                        key={slotKey}
-                        className="flex min-h-[44px] items-center gap-2 px-4 py-2.5"
-                      >
-                        <Link
-                          className="flex min-w-0 flex-1 items-center"
-                          href={meal ? mealHref : addHref}
-                        >
-                          {/* Slot name (text only, no emoji) */}
-                          <div className="w-12 shrink-0 text-center">
-                            <p className="text-[13px] font-bold text-[var(--foreground)]">
-                              {column.name}
-                            </p>
-                          </div>
-
-                          {meal ? (
-                            <>
-                              {/* Thumbnail */}
-                              {meal.recipe_thumbnail_url ? (
-                                <Image
-                                  alt=""
-                                  className="ml-1 mr-2.5 h-11 w-11 rounded-[var(--radius-sm)] object-cover"
-                                  height={44}
-                                  src={meal.recipe_thumbnail_url}
-                                  unoptimized
-                                  width={44}
-                                />
-                              ) : (
-                                <div className="ml-1 mr-2.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface-fill)]">
-                                  <span className="text-[13px] font-bold text-[var(--text-3)]">
-                                    {column.name.charAt(0)}
-                                  </span>
-                                </div>
-                              )}
-                              {/* Meal info */}
-                              <div className="min-w-0 flex-1">
-                                <p
-                                  className={`truncate text-[14px] font-semibold leading-tight ${meal.is_leftover ? "text-[var(--olive)]" : "text-[var(--foreground)]"}`}
-                                >
-                                  {meal.recipe_title}
-                                  {slotMeals.length > 1 ? (
-                                    <span className="ml-1 text-[10px] font-normal text-[var(--muted)]">
-                                      +{slotMeals.length - 1}
-                                    </span>
-                                  ) : null}
-                                </p>
-                                <div className="mt-0.5 flex items-center gap-1.5">
-                                  <span className="text-[11px] text-[var(--text-3)]">
-                                    {meal.planned_servings}인분
-                                  </span>
-                                  {meal.is_leftover ? (
-                                    <span
-                                      aria-label="남은요리 식사"
-                                      className="inline-flex shrink-0 rounded-[4px] bg-[color-mix(in_srgb,var(--olive)_14%,transparent)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--olive)]"
-                                    >
-                                      남은요리
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </div>
-                            </>
-                          ) : (
-                            <span className="ml-3 flex h-11 flex-1 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--brand)] bg-[var(--brand-soft)] text-[13px] font-bold text-[var(--brand)]">
-                              + 음식
-                            </span>
-                          )}
-                        </Link>
-                        {meal ? (
-                          <Link
-                            aria-label={`${formatCompactDateLabel(dateKey)} ${column.name} 식사 추가`}
-                            className="inline-flex shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--brand)] bg-[var(--brand-soft)] px-2 py-1 text-[11px] font-bold text-[var(--brand)]"
-                            href={addHref}
-                          >
-                            + 음식
-                          </Link>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              </article>
-            );
-          })}
-        </section>
-      ) : null}
+        <div className="hidden lg:block">
+          <PlannerWeekWebView
+            columns={columns}
+            dateKeys={dateKeys}
+            errorMessage={errorMessage}
+            getMealAddHrefForSlot={getMealAddHrefForSlot}
+            isCurrentRange={isCurrentRange}
+            isRefreshing={isRefreshing}
+            loadPlanner={loadPlanner}
+            mealStats={mealStats}
+            meals={meals}
+            mealsByDateAndColumn={mealsByDateAndColumn}
+            plannerBodyMotionStyle={plannerBodyMotionStyle}
+            rangeContextLabel={rangeContextLabel}
+            rangeEndDate={rangeEndDate}
+            rangeStartDate={rangeStartDate}
+            resetRange={resetRange}
+            runPlannerAction={runPlannerAction}
+            screenState={screenState}
+            shiftRange={shiftRange}
+            shoppingListLinks={shoppingListLinks}
+            todayKey={todayKey}
+          />
         </div>
       ) : null}
     </>

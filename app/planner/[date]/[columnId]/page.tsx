@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { BottomTabs } from "@/components/layout/bottom-tabs";
+import { AppShell } from "@/components/layout/app-shell";
 import { MealScreen } from "@/components/planner/meal-screen";
 import { resolveNextPath } from "@/lib/auth/callback";
 import { readE2EAuthOverrideCookie } from "@/lib/auth/e2e-auth-override";
@@ -39,20 +39,18 @@ export default async function MealScreenPage({
   }
 
   return (
-    <div className="relative min-h-screen">
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 -z-10 bg-[var(--background)]"
-      />
+    <AppShell
+      bottomTabsMode="hidden"
+      className="wave1-planner-shell wave1-meal-shell"
+      currentTab="planner"
+      headerMode="hidden"
+    >
       <MealScreen
         columnId={columnId}
         initialAuthenticated={initialAuthenticated}
         planDate={date}
         slotName={slot ?? ""}
       />
-      <div className="hidden lg:block">
-        <BottomTabs currentTab="planner" />
-      </div>
-    </div>
+    </AppShell>
   );
 }

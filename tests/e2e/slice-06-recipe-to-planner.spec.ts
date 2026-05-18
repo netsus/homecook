@@ -229,11 +229,11 @@ test.describe("Slice 06 recipe-to-planner", () => {
 
     await expect(
       page.getByRole("heading", {
-        name: isMobileViewport(page) ? "플래너" : "식단 플래너",
+        name: isMobileViewport(page) ? "플래너" : "주간 플래너",
       }),
     ).toBeVisible();
     await expect(
-      page.getByRole("link", { name: new RegExp(RECIPE_TITLE) }),
+      page.getByRole("link", { name: new RegExp(RECIPE_TITLE) }).first(),
     ).toBeVisible();
   });
 

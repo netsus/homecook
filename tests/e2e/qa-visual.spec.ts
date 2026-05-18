@@ -5,8 +5,12 @@ import { expect, test, type Page } from "@playwright/test";
 
 import {
   installDiscoveryRoutes,
+  installMealDetailRoutes,
+  installPlannerWeekRoutes,
   installRecipeDetailRoutes,
+  MEAL_VISUAL_PATH,
   RECIPE_PATH,
+  setE2EAuthOverride,
 } from "./helpers/mock-routes";
 
 const qaSnapshotFonts = [
@@ -37,6 +41,8 @@ const qaSnapshotFontFaces = qaSnapshotFonts
 const HOME_VISUAL_MAX_DIFF_PIXELS = 120;
 const HOME_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 1600;
 const RECIPE_DETAIL_VISUAL_MAX_DIFF_PIXELS = 400;
+const PLANNER_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
+const MEAL_DESKTOP_VISUAL_MAX_DIFF_PIXELS = 2000;
 
 function isMobileViewport(page: Page) {
   return (page.viewportSize()?.width ?? 1280) < 1024;
@@ -195,5 +201,71 @@ test.describe("QA visual regression", () => {
     await expect(loginGate).toHaveScreenshot("qa-login-gate-modal.png", {
       animations: "disabled",
     });
+  });
+
+  test("planner week desktop shell matches the visual baseline", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only prototype parity baseline");
+    await setE2EAuthOverride(page);
+    await installPlannerWeekRoutes(page);
+
+    await page.goto("/planner");
+    await expect(
+      page.getByRole("heading", { name: "주간 플래너" }),
+    ).toBeVisible();
+
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-planner-week.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: PLANNER_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+  });
+
+  test("meal desktop detail and confirm dialogs match the visual baseline", async ({
+    page,
+  }) => {
+    test.skip(isMobileViewport(page), "desktop-only prototype parity baseline");
+    await setE2EAuthOverride(page);
+    await installMealDetailRoutes(page);
+
+    await page.goto(MEAL_VISUAL_PATH);
+    await expect(
+      page.locator('[data-testid="meal-recipe-link-meal-visual-1"]:visible'),
+    ).toBeVisible();
+
+    await stabilizeVisualSnapshot(page);
+    await expect(page).toHaveScreenshot("qa-meal-detail.png", {
+      animations: "disabled",
+      fullPage: true,
+      maxDiffPixels: MEAL_DESKTOP_VISUAL_MAX_DIFF_PIXELS,
+    });
+
+    await page
+      .locator(".web-meal-rail .web-stepper")
+      .getByRole("button", { name: "인분 증가" })
+      .click();
+    const normalDialog = page.getByRole("dialog", { name: "인분 변경" });
+    await expect(normalDialog).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(normalDialog).toHaveScreenshot("qa-meal-confirm-normal.png", {
+      animations: "disabled",
+    });
+    await normalDialog.getByRole("button", { name: "취소" }).click();
+
+    await page
+      .locator('[data-testid="meal-delete-meal-visual-1"]:visible')
+      .first()
+      .click();
+    const destructiveDialog = page.getByRole("dialog", { name: "식사 삭제" });
+    await expect(destructiveDialog).toBeVisible();
+    await stabilizeVisualSnapshot(page);
+    await expect(destructiveDialog).toHaveScreenshot(
+      "qa-meal-confirm-destructive.png",
+      {
+        animations: "disabled",
+      },
+    );
   });
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
@@ -8,6 +9,21 @@ import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ModalHeader } from "@/components/shared/modal-header";
 import { useDesktopViewport } from "@/components/shared/use-desktop-viewport";
+import {
+  WebButton,
+  WebDialog,
+  WebDialogBody,
+  WebDialogFooter,
+  WebDialogHeader,
+  WebDialogTitle,
+  WebEmptyState,
+  WebErrorState,
+  WebIconButton,
+  WebModal,
+  WebShell,
+  WebSkeleton,
+  WebTopNav,
+} from "@/components/web";
 import { deleteMeal, fetchMeals, isMealApiError, updateMealServings } from "@/lib/api/meal";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -31,6 +47,13 @@ export interface MealScreenProps {
 }
 
 // Status data preserved for logic; visual badges removed per Wave1 port.
+
+const WEB_NAV_ITEMS = [
+  { id: "home", href: "/", label: "탐색" },
+  { id: "planner", href: "/planner", label: "플래너" },
+  { id: "pantry", href: "/pantry", label: "팬트리" },
+  { id: "mypage", href: "/mypage", label: "마이페이지" },
+] as const;
 
 function formatDateLong(planDate: string) {
   const date = new Date(`${planDate}T00:00:00.000Z`);
@@ -358,148 +381,471 @@ function getMealStatusLabel(status: MealListItemData["status"]) {
   return "등록";
 }
 
-function MealWebCard({
-  meal,
-  conflictError,
-  isPending,
+function getMealStatusClass(status: MealListItemData["status"]) {
+  if (status === "shopping_done") {
+    return "shopped";
+  }
+
+  if (status === "cook_done") {
+    return "cooked";
+  }
+
+  return "registered";
+}
+
+function MealWebProfileButton() {
+  return (
+    <Link
+      aria-label="마이페이지"
+      className="web-profile-button"
+      href="/mypage"
+      prefetch={false}
+    >
+      <UserIcon />
+    </Link>
+  );
+}
+
+function MealWebView({
+  addMealHref,
+  authState,
+  conflictErrors,
+  errorMessage,
+  meals,
+  onAddMeal,
+  onBack,
   onCreateShopping,
-  onStepDown,
-  onStepUp,
   onDelete,
   onRecipeClick,
+  onRetry,
   onStartCook,
-}: MealCardProps) {
-  const isMin = meal.planned_servings <= 1;
+  onStepDown,
+  onStepUp,
+  pendingMealIds,
+  planDate,
+  screenState,
+  slotName,
+  titleFull,
+  totalServings,
+}: {
+  addMealHref: string;
+  authState: AuthState;
+  conflictErrors: Record<string, string>;
+  errorMessage: string | null;
+  meals: MealListItemData[];
+  onAddMeal: () => void;
+  onBack: () => void;
+  onCreateShopping: () => void;
+  onDelete: (meal: MealListItemData) => void;
+  onRecipeClick: (meal: MealListItemData) => void;
+  onRetry: () => void;
+  onStartCook: () => void;
+  onStepDown: (meal: MealListItemData) => void;
+  onStepUp: (meal: MealListItemData) => void;
+  pendingMealIds: Set<string>;
+  planDate: string;
+  screenState: ScreenState;
+  slotName: string;
+  titleFull: string;
+  totalServings: number;
+}) {
+  const isLoading = authState === "checking" || screenState === "loading";
+  const primaryMeal = meals[0] ?? null;
+  const secondaryMeals = primaryMeal ? meals.slice(1) : [];
+  const primaryVisual = primaryMeal ? getMealVisualMeta(primaryMeal) : null;
+  const primaryIngredients = primaryVisual
+    ? getVisibleMealChips(primaryVisual.chips, 6).visible
+    : [];
 
   return (
-    <article
-      aria-label={`${meal.recipe_title} 식사 카드`}
-      className={`overflow-hidden rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow-1)] transition ${isPending ? "opacity-60" : "hover:-translate-y-0.5 hover:shadow-[var(--shadow-2)]"}`}
-    >
-      <div className="grid gap-5 p-5 md:grid-cols-[132px_minmax(0,1fr)]">
-        <button
-          aria-label={`${meal.recipe_title} 레시피 보기`}
-          className="relative aspect-square overflow-hidden rounded-[18px] bg-[#EAEDEF]"
-          onClick={onRecipeClick}
-          type="button"
-        >
-          {meal.recipe_thumbnail_url ? (
+    <WebShell className="web-meal" wide>
+      <WebTopNav
+        activeId="planner"
+        items={WEB_NAV_ITEMS}
+        rightSlot={<MealWebProfileButton />}
+      />
+      <div className="web-screen web-meal-screen">
+        <nav aria-label="식사 경로" className="web-breadcrumb">
+          <button
+            aria-label="플래너로 돌아가기"
+            className="web-breadcrumb-link"
+            onClick={onBack}
+            type="button"
+          >
+            <ChevronLeftIcon />
+            플래너
+          </button>
+          <span className="web-breadcrumb-sep">/</span>
+          <span className="web-breadcrumb-current">{titleFull}</span>
+        </nav>
+
+        {isLoading ? (
+          <div className="web-meal-layout">
+            <div className="web-meal-main">
+              <WebSkeleton className="web-meal-hero" />
+              <WebSkeleton height={44} width="60%" />
+              <WebSkeleton height={180} />
+            </div>
+            <aside className="web-meal-rail">
+              <WebSkeleton height={300} />
+            </aside>
+          </div>
+        ) : null}
+
+        {screenState === "error" ? (
+          <WebErrorState
+            action={<WebButton onClick={onRetry}>다시 시도</WebButton>}
+            data-testid="meal-screen-error"
+            description={errorMessage ?? "잠시 후 다시 시도해주세요."}
+            title="식사 목록을 불러오지 못했어요"
+          />
+        ) : null}
+
+        {screenState === "empty" ? (
+          <WebEmptyState
+            action={
+              <WebButton onClick={onAddMeal} data-testid="meal-screen-add-cta">
+                식사 추가
+              </WebButton>
+            }
+            data-testid="meal-screen-empty"
+            description="레시피 검색, 팬트리 추천, 직접 입력으로 식사를 추가할 수 있어요."
+            title="이 끼니에 등록된 식사가 없어요"
+          />
+        ) : null}
+
+        {screenState === "ready" && primaryMeal && primaryVisual ? (
+          <div className="web-meal-layout">
+            <section aria-label="식사 상세" className="web-meal-main">
+              <button
+                aria-label={`${primaryMeal.recipe_title} 레시피 보기`}
+                className="web-meal-hero"
+                onClick={() => onRecipeClick(primaryMeal)}
+                type="button"
+              >
+                {primaryMeal.recipe_thumbnail_url ? (
+                  <span
+                    aria-hidden="true"
+                    className="web-meal-hero-image"
+                    style={{ backgroundImage: `url(${primaryMeal.recipe_thumbnail_url})` }}
+                  />
+                ) : (
+                  <span className="web-meal-hero-fallback" aria-hidden="true">
+                    {primaryVisual.emoji}
+                  </span>
+                )}
+              </button>
+
+              <section className="web-meal-titleblock">
+                <div className="web-meal-title-meta">
+                  <span
+                    className={`web-meal-status web-meal-status-${getMealStatusClass(primaryMeal.status)}`}
+                  >
+                    {getMealStatusLabel(primaryMeal.status)}
+                  </span>
+                  {primaryMeal.is_leftover ? (
+                    <span className="web-meal-leftover">남은요리</span>
+                  ) : null}
+                </div>
+                <h1 className="web-meal-title">
+                  <button
+                    data-testid={`meal-recipe-link-${primaryMeal.id}`}
+                    onClick={() => onRecipeClick(primaryMeal)}
+                    type="button"
+                  >
+                    {primaryMeal.recipe_title}
+                  </button>
+                </h1>
+                <div className="web-meal-meta-row">
+                  <span>{formatDateLong(planDate)}</span>
+                  {slotName ? <span>{slotName}</span> : null}
+                  <span>{primaryMeal.planned_servings}인분</span>
+                  <span>{primaryVisual.minutes}분</span>
+                </div>
+              </section>
+
+              <section className="web-meal-section">
+                <div className="web-meal-section-head">
+                  <h2>재료</h2>
+                  <p>{primaryMeal.planned_servings}인분 기준</p>
+                </div>
+                <ul className="web-meal-ingredient-list">
+                  {primaryIngredients.map((ingredient) => (
+                    <li className="web-ingredient-row" key={ingredient}>
+                      <span className="web-ingredient-name">{ingredient}</span>
+                      <span className="web-ingredient-amount">준비</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              {secondaryMeals.length > 0 ? (
+                <section className="web-meal-section">
+                  <div className="web-meal-section-head">
+                    <h2>같은 끼니 음식</h2>
+                    <p>{secondaryMeals.length}개 더 있어요</p>
+                  </div>
+                  <div className="web-meal-secondary-list">
+                    {secondaryMeals.map((meal) => {
+                      const isPending = pendingMealIds.has(meal.id);
+                      const isMin = meal.planned_servings <= 1;
+
+                      return (
+                        <article className="web-meal-secondary" key={meal.id}>
+                          <button
+                            className="web-meal-secondary-title"
+                            data-testid={`meal-recipe-link-${meal.id}`}
+                            onClick={() => onRecipeClick(meal)}
+                            type="button"
+                          >
+                            {meal.recipe_title}
+                          </button>
+                          <div className="web-meal-inline-stepper" aria-label="인분 조절" role="group">
+                            <button
+                              aria-label="인분 감소"
+                              disabled={isMin || isPending}
+                              onClick={() => onStepDown(meal)}
+                              type="button"
+                            >
+                              -
+                            </button>
+                            <span aria-label={`${meal.planned_servings}인분`} aria-live="polite">
+                              {meal.planned_servings}인분
+                            </span>
+                            <button
+                              aria-label="인분 증가"
+                              disabled={isPending}
+                              onClick={() => onStepUp(meal)}
+                              type="button"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <button
+                            aria-label={`${meal.recipe_title} 삭제`}
+                            className="web-meal-delete-icon"
+                            data-testid={`meal-delete-${meal.id}`}
+                            disabled={isPending}
+                            onClick={() => onDelete(meal)}
+                            type="button"
+                          >
+                            <TrashIcon />
+                          </button>
+                          {conflictErrors[meal.id] ? (
+                            <p className="web-meal-conflict" role="alert">
+                              {conflictErrors[meal.id]}
+                            </p>
+                          ) : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              ) : null}
+            </section>
+
+            <aside className="web-meal-rail">
+              <div className="web-meal-rail-card">
+                <div className="web-meal-rail-head">
+                  <p>끼니 요약</p>
+                  <h2>{slotName || formatDateLong(planDate)}</h2>
+                </div>
+                <div className="web-meal-rail-stats">
+                  <div>
+                    <span>음식</span>
+                    <strong>{meals.length}개</strong>
+                  </div>
+                  <div>
+                    <span>총 인분</span>
+                    <strong>{totalServings}인분</strong>
+                  </div>
+                </div>
+
+                <div className="web-meal-rail-actions">
+                  <WebButton fullWidth onClick={onStartCook}>
+                    <CookIcon />
+                    요리하기
+                  </WebButton>
+                  <WebButton fullWidth onClick={onCreateShopping} variant="secondary">
+                    <ShoppingIcon />
+                    장보기
+                  </WebButton>
+                  <WebButton fullWidth onClick={() => onRecipeClick(primaryMeal)} variant="tertiary">
+                    레시피 보기
+                  </WebButton>
+                </div>
+
+                <div className="web-meal-rail-section">
+                  <span className="web-meal-rail-label">계획 인분</span>
+                  <div className="web-stepper" aria-label="인분 조절" role="group">
+                    <button
+                      aria-label="인분 감소"
+                      disabled={primaryMeal.planned_servings <= 1 || pendingMealIds.has(primaryMeal.id)}
+                      onClick={() => onStepDown(primaryMeal)}
+                      type="button"
+                    >
+                      -
+                    </button>
+                    <span aria-label={`${primaryMeal.planned_servings}인분`} aria-live="polite">
+                      {primaryMeal.planned_servings}인분
+                    </span>
+                    <button
+                      aria-label="인분 증가"
+                      disabled={pendingMealIds.has(primaryMeal.id)}
+                      onClick={() => onStepUp(primaryMeal)}
+                      type="button"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {conflictErrors[primaryMeal.id] ? (
+                  <p className="web-meal-conflict" role="alert">
+                    {conflictErrors[primaryMeal.id]}
+                  </p>
+                ) : null}
+
+                <button
+                  aria-label={`${primaryMeal.recipe_title} 삭제`}
+                  className="web-meal-delete-button"
+                  data-testid={`meal-delete-${primaryMeal.id}`}
+                  disabled={pendingMealIds.has(primaryMeal.id)}
+                  onClick={() => onDelete(primaryMeal)}
+                  type="button"
+                >
+                  <TrashIcon />
+                  식사 삭제
+                </button>
+
+                <Link className="web-meal-add-link" data-testid="meal-screen-add-cta" href={addMealHref}>
+                  <PlusIcon />
+                  식사 추가
+                </Link>
+              </div>
+            </aside>
+          </div>
+        ) : null}
+      </div>
+    </WebShell>
+  );
+}
+
+function MealWebConfirmDialog({
+  confirmLabel,
+  description,
+  onCancel,
+  onConfirm,
+  testId,
+  title,
+  titleId,
+  variant = "normal",
+}: {
+  confirmLabel: string;
+  description: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  testId: string;
+  title: string;
+  titleId: string;
+  variant?: "normal" | "destructive";
+}) {
+  return (
+    <WebModal onBackdropClick={onCancel}>
+      <WebDialog aria-labelledby={titleId} className="web-confirm-dialog" size="narrow">
+        <WebDialogHeader>
+          <WebDialogTitle id={titleId}>{title}</WebDialogTitle>
+          <WebIconButton aria-label="닫기" onClick={onCancel}>
+            <CloseIcon />
+          </WebIconButton>
+        </WebDialogHeader>
+        <WebDialogBody>
+          <div className="web-confirm-body">
             <span
               aria-hidden="true"
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${meal.recipe_thumbnail_url})` }}
-            />
-          ) : (
-            <span className="grid h-full place-items-center text-4xl font-black text-[var(--muted)]">
-              {meal.recipe_title.charAt(0)}
+              className={[
+                "web-confirm-icon",
+                variant === "destructive" ? "web-confirm-icon-danger" : "",
+              ].join(" ")}
+            >
+              {variant === "destructive" ? <TrashIcon /> : "?"}
             </span>
-          )}
-        </button>
-
-        <div className="min-w-0">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <span className="inline-flex rounded-full bg-[var(--brand-soft)] px-3 py-1 text-xs font-bold text-[var(--brand-deep)]">
-                {getMealStatusLabel(meal.status)}
-              </span>
-              {meal.is_leftover ? (
-                <span className="ml-2 inline-flex rounded-full bg-[color-mix(in_srgb,var(--olive)_12%,transparent)] px-3 py-1 text-xs font-bold text-[var(--olive)]">
-                  남은요리
-                </span>
-              ) : null}
-              <button
-                className="mt-3 block w-full truncate text-left text-2xl font-black tracking-[-0.02em] text-[var(--foreground)] hover:text-[var(--brand)]"
-                data-testid={`meal-recipe-link-${meal.id}`}
-                onClick={onRecipeClick}
-                type="button"
-              >
-                {meal.recipe_title}
-              </button>
-              <p className="mt-1 text-sm font-semibold text-[var(--muted)]">
-                {meal.planned_servings}인분 계획
-              </p>
-            </div>
-            <button
-              aria-label={`${meal.recipe_title} 삭제`}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-40"
-              data-testid={`meal-delete-${meal.id}`}
-              disabled={isPending}
-              onClick={onDelete}
-              type="button"
-            >
-              <svg fill="none" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"/>
-              </svg>
-            </button>
+            <p className="web-confirm-copy">{description}</p>
           </div>
-
-          <div
-            aria-label="인분 조절"
-            className="mt-5 flex items-center justify-between rounded-[16px] border border-[var(--line)] bg-[var(--surface-fill)] px-4 py-3"
-            role="group"
+        </WebDialogBody>
+        <WebDialogFooter>
+          <WebButton onClick={onCancel} variant="tertiary">
+            취소
+          </WebButton>
+          <WebButton
+            className={variant === "destructive" ? "web-confirm-danger" : undefined}
+            data-testid={testId}
+            onClick={onConfirm}
           >
-            <span className="text-sm font-bold text-[var(--text-2)]">계획 인분</span>
-            <div className="flex items-center gap-3">
-              <button
-                aria-label="인분 감소"
-                className="grid h-9 w-9 place-items-center rounded-full bg-[var(--panel)] text-lg font-bold text-[var(--foreground)] shadow-[var(--shadow-1)] disabled:opacity-40"
-                disabled={isMin || isPending}
-                onClick={onStepDown}
-                type="button"
-              >
-                -
-              </button>
-              <span
-                aria-label={`${meal.planned_servings}인분`}
-                aria-live="polite"
-                className="min-w-16 text-center text-lg font-black text-[var(--foreground)]"
-              >
-                {meal.planned_servings}인분
-              </span>
-              <button
-                aria-label="인분 증가"
-                className="grid h-9 w-9 place-items-center rounded-full bg-[var(--brand)] text-lg font-bold text-white shadow-[var(--shadow-1)] disabled:opacity-40"
-                disabled={isPending}
-                onClick={onStepUp}
-                type="button"
-              >
-                +
-              </button>
-            </div>
-          </div>
+            {confirmLabel}
+          </WebButton>
+        </WebDialogFooter>
+      </WebDialog>
+    </WebModal>
+  );
+}
 
-          <div className="mt-5 grid grid-cols-3 gap-2">
-            <button
-              className="min-h-11 rounded-[14px] border border-[var(--line)] bg-[var(--panel)] px-3 text-sm font-bold text-[var(--foreground)] hover:border-[var(--brand)]"
-              onClick={onRecipeClick}
-              type="button"
-            >
-              레시피 보기
-            </button>
-            <button
-              className="min-h-11 rounded-[14px] border border-[var(--line)] bg-[var(--panel)] px-3 text-sm font-bold text-[var(--foreground)] hover:border-[var(--brand)]"
-              onClick={onCreateShopping}
-              type="button"
-            >
-              장보기
-            </button>
-            <button
-              className="min-h-11 rounded-[14px] bg-[var(--brand)] px-3 text-sm font-bold text-white hover:brightness-95"
-              onClick={onStartCook}
-              type="button"
-            >
-              요리하기
-            </button>
-          </div>
+function ChevronLeftIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
+      <path d="M11 4.5L6.5 9l4.5 4.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    </svg>
+  );
+}
 
-          {conflictError ? (
-            <p className="mt-4 text-sm font-semibold text-[var(--danger)]" role="alert">
-              {conflictError}
-            </p>
-          ) : null}
-        </div>
-      </div>
-    </article>
+function CloseIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
+      <path d="M5 5l8 8M13 5l-8 8" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function CookIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
+      <path d="M5 14h8M6 7.5h6.2a2.8 2.8 0 010 5.6H6A3.8 3.8 0 116 5.5h1.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 16 16" width="16" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function ShoppingIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4.5 7h9l-.7 6.3a1.8 1.8 0 01-1.8 1.6H7a1.8 1.8 0 01-1.8-1.6L4.5 7z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.6" />
+      <path d="M6.5 7a2.5 2.5 0 015 0" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 18 18" width="18" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3.5 5h11M7 5V3.7c0-.7.5-1.2 1.2-1.2h1.6c.7 0 1.2.5 1.2 1.2V5m2.1 0l-.5 9a1.4 1.4 0 01-1.4 1.3H6.8A1.4 1.4 0 015.4 14L4.9 5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+      <path d="M7.8 8v4M10.2 8v4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="10" cy="7" r="3.25" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M4.75 17c.65-2.65 2.46-4 5.25-4s4.6 1.35 5.25 4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" />
+    </svg>
   );
 }
 
@@ -827,154 +1173,29 @@ export function MealScreen({
   return (
     <>
       {shouldRenderWebView ? (
-        <div className="hidden min-h-screen bg-[var(--surface-fill)] px-8 py-8 text-[var(--foreground)] lg:block">
-          <main className="mx-auto grid max-w-[1200px] gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <section className="min-w-0 space-y-5">
-              <div className="rounded-[24px] border border-[var(--line)] bg-[var(--panel)] p-6 shadow-[var(--shadow-1)]">
-                <button
-                  className="text-sm font-bold text-[var(--brand)]"
-                  onClick={navigateToPlanner}
-                  type="button"
-                >
-                  플래너로 돌아가기
-                </button>
-                <p className="mt-4 text-xs font-bold tracking-[0.2em] text-[var(--brand-deep)]">
-                  끼니 화면
-                </p>
-                <h1 className="mt-2 text-4xl font-black tracking-[-0.02em]">
-                  {titleFull}
-                </h1>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-[var(--surface-fill)] px-3 py-1.5 text-sm font-bold text-[var(--text-2)]">
-                    {formatDateLong(planDate)}
-                  </span>
-                  {slotName ? (
-                    <span className="rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-sm font-bold text-[var(--brand-deep)]">
-                      {slotName}
-                    </span>
-                  ) : null}
-                  <span className="rounded-full bg-[var(--surface-fill)] px-3 py-1.5 text-sm font-bold text-[var(--text-2)]">
-                    총 {totalServings}인분
-                  </span>
-                </div>
-              </div>
-
-              {authState === "checking" || screenState === "loading" ? (
-                <div className="grid gap-4">
-                  {Array.from({ length: 2 }).map((_, index) => (
-                    <div
-                      className="rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow-1)]"
-                      key={index}
-                    >
-                      <div className="h-5 w-48 animate-pulse rounded-full bg-[#EAEDEF]" />
-                      <div className="mt-4 h-24 animate-pulse rounded-[18px] bg-[#EAEDEF]" />
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {screenState === "error" ? (
-                <div
-                  className="rounded-[24px] border border-[var(--line)] bg-[var(--panel)] p-8 text-center shadow-[var(--shadow-1)]"
-                  data-testid="meal-screen-error"
-                >
-                  <h2 className="text-xl font-black">식사 목록을 불러오지 못했어요.</h2>
-                  {errorMessage ? (
-                    <p className="mt-2 text-sm text-[var(--muted)]">{errorMessage}</p>
-                  ) : null}
-                  <button
-                    className="mt-5 rounded-[14px] bg-[var(--brand)] px-5 py-3 text-sm font-bold text-white"
-                    onClick={() => void loadMeals()}
-                    type="button"
-                  >
-                    다시 시도
-                  </button>
-                </div>
-              ) : null}
-
-              {screenState === "empty" ? (
-                <div
-                  className="rounded-[24px] border border-dashed border-[var(--line)] bg-[var(--panel)] p-10 text-center"
-                  data-testid="meal-screen-empty"
-                >
-                  <h2 className="text-xl font-black">이 끼니에 등록된 식사가 없어요.</h2>
-                  <p className="mt-2 text-sm text-[var(--muted)]">
-                    레시피 검색, 팬트리 추천, 직접 입력으로 식사를 추가할 수 있어요.
-                  </p>
-                  <button
-                    className="mt-6 inline-flex min-h-12 items-center justify-center rounded-[14px] bg-[var(--brand)] px-6 text-sm font-bold text-white"
-                    data-testid="meal-screen-add-cta"
-                    onClick={() => router.push(addMealHref)}
-                    type="button"
-                  >
-                    + 식사 추가
-                  </button>
-                </div>
-              ) : null}
-
-              {screenState === "ready" ? (
-                <div className="space-y-4">
-                  {meals.map((meal) => (
-                    <MealWebCard
-                      key={meal.id}
-                      conflictError={conflictErrors[meal.id] ?? null}
-                      isPending={pendingMealIds.has(meal.id)}
-                      meal={meal}
-                      onCreateShopping={() => router.push("/shopping/flow")}
-                      onDelete={() => handleDeleteTap(meal.id)}
-                      onRecipeClick={() => router.push(`/recipe/${meal.recipe_id}`)}
-                      onStartCook={() => router.push("/cooking/ready")}
-                      onStepDown={() => handleStepperTap(meal, -1)}
-                      onStepUp={() => handleStepperTap(meal, 1)}
-                    />
-                  ))}
-                  <button
-                    className="flex min-h-12 w-full items-center justify-center rounded-[16px] border border-[var(--brand)] bg-[var(--panel)] text-sm font-bold text-[var(--brand)]"
-                    data-testid="meal-screen-add-cta"
-                    onClick={() => router.push(addMealHref)}
-                    type="button"
-                  >
-                    + 식사 추가
-                  </button>
-                </div>
-              ) : null}
-            </section>
-
-            <aside className="hidden xl:block">
-              <div className="sticky top-28 rounded-[24px] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow-1)]">
-                <p className="text-xs font-bold tracking-[0.2em] text-[var(--brand-deep)]">
-                  SUMMARY
-                </p>
-                <h2 className="mt-2 text-xl font-black">{summaryTitle}</h2>
-                <div className="mt-5 space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-[var(--muted)]">음식</span>
-                    <span className="font-bold">{meals.length}개</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--muted)]">총 인분</span>
-                    <span className="font-bold">{totalServings}인분</span>
-                  </div>
-                </div>
-                <div className="mt-5 grid gap-2">
-                  <button
-                    className="min-h-11 rounded-[14px] bg-[var(--brand)] text-sm font-bold text-white"
-                    onClick={() => router.push(addMealHref)}
-                    type="button"
-                  >
-                    식사 추가
-                  </button>
-                  <button
-                    className="min-h-11 rounded-[14px] border border-[var(--line)] bg-[var(--panel)] text-sm font-bold text-[var(--foreground)]"
-                    onClick={() => router.push("/shopping/flow")}
-                    type="button"
-                  >
-                    장보기 만들기
-                  </button>
-                </div>
-              </div>
-            </aside>
-          </main>
+        <div className="hidden lg:block">
+          <MealWebView
+            addMealHref={addMealHref}
+            authState={authState}
+            conflictErrors={conflictErrors}
+            errorMessage={errorMessage}
+            meals={meals}
+            onAddMeal={() => router.push(addMealHref)}
+            onBack={navigateToPlanner}
+            onCreateShopping={() => router.push("/shopping/flow")}
+            onDelete={(meal) => handleDeleteTap(meal.id)}
+            onRecipeClick={(meal) => router.push(`/recipe/${meal.recipe_id}`)}
+            onRetry={() => void loadMeals()}
+            onStartCook={() => router.push("/cooking/ready")}
+            onStepDown={(meal) => handleStepperTap(meal, -1)}
+            onStepUp={(meal) => handleStepperTap(meal, 1)}
+            pendingMealIds={pendingMealIds}
+            planDate={planDate}
+            screenState={screenState}
+            slotName={slotName}
+            titleFull={titleFull}
+            totalServings={totalServings}
+          />
         </div>
       ) : null}
       {shouldRenderAppView ? (
@@ -1102,64 +1323,89 @@ export function MealScreen({
 
       {/* Serving-change confirmation modal */}
       {modal?.type === "serving-change" ? (
-        <CenterModal labelledBy="serving-change-title" onClose={handleModalCancel}>
-          <ModalHeader
+        isDesktopViewport ? (
+          <MealWebConfirmDialog
+            confirmLabel="변경하기"
+            description="상태가 진행된 식사입니다. 인분 변경 시 다시 장보기/요리 흐름이 필요할 수 있어요."
+            onCancel={handleModalCancel}
+            onConfirm={handleServingChangeConfirm}
+            testId="serving-change-confirm"
             title="인분 변경"
             titleId="serving-change-title"
-            onClose={handleModalCancel}
           />
-          <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-            상태가 진행된 식사입니다. 인분 변경 시 다시 장보기/요리 흐름이 필요할 수 있어요.
-          </p>
-          <div className="mt-5 flex gap-2.5">
-            <button
-              className="flex-1 rounded-[14px] border border-[var(--line)] bg-white/60 py-3.5 text-sm font-semibold text-[var(--foreground)]"
-              onClick={handleModalCancel}
-              type="button"
-            >
-              취소
-            </button>
-            <button
-              className="flex-[2] rounded-[14px] bg-[var(--brand)] py-3.5 text-sm font-bold text-white"
-              data-testid="serving-change-confirm"
-              onClick={handleServingChangeConfirm}
-              type="button"
-            >
-              변경하기
-            </button>
-          </div>
-        </CenterModal>
+        ) : (
+          <CenterModal labelledBy="serving-change-title" onClose={handleModalCancel}>
+            <ModalHeader
+              title="인분 변경"
+              titleId="serving-change-title"
+              onClose={handleModalCancel}
+            />
+            <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+              상태가 진행된 식사입니다. 인분 변경 시 다시 장보기/요리 흐름이 필요할 수 있어요.
+            </p>
+            <div className="mt-5 flex gap-2.5">
+              <button
+                className="flex-1 rounded-[14px] border border-[var(--line)] bg-white/60 py-3.5 text-sm font-semibold text-[var(--foreground)]"
+                onClick={handleModalCancel}
+                type="button"
+              >
+                취소
+              </button>
+              <button
+                className="flex-[2] rounded-[14px] bg-[var(--brand)] py-3.5 text-sm font-bold text-white"
+                data-testid="serving-change-confirm"
+                onClick={handleServingChangeConfirm}
+                type="button"
+              >
+                변경하기
+              </button>
+            </div>
+          </CenterModal>
+        )
       ) : null}
 
       {/* Delete confirmation modal */}
       {modal?.type === "delete" ? (
-        <CenterModal labelledBy="delete-confirm-title" onClose={handleModalCancel}>
-          <ModalHeader
+        isDesktopViewport ? (
+          <MealWebConfirmDialog
+            confirmLabel="삭제"
+            description="이 식사를 삭제하시겠어요?"
+            onCancel={handleModalCancel}
+            onConfirm={handleDeleteConfirm}
+            testId="delete-confirm"
             title="식사 삭제"
             titleId="delete-confirm-title"
-            onClose={handleModalCancel}
+            variant="destructive"
           />
-          <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
-            이 식사를 삭제하시겠어요?
-          </p>
-          <div className="mt-5 flex gap-2.5">
-            <button
-              className="flex-1 rounded-[14px] border border-[var(--line)] bg-white/60 py-3.5 text-sm font-semibold text-[var(--foreground)]"
-              onClick={handleModalCancel}
-              type="button"
-            >
-              취소
-            </button>
-            <button
-              className="flex-[2] rounded-[14px] bg-[var(--brand-deep)] py-3.5 text-sm font-bold text-white"
-              data-testid="delete-confirm"
-              onClick={handleDeleteConfirm}
-              type="button"
-            >
-              삭제
-            </button>
-          </div>
-        </CenterModal>
+        ) : (
+          <CenterModal labelledBy="delete-confirm-title" onClose={handleModalCancel}>
+            <ModalHeader
+              title="식사 삭제"
+              titleId="delete-confirm-title"
+              onClose={handleModalCancel}
+            />
+            <p className="mt-3 text-sm leading-relaxed text-[var(--muted)]">
+              이 식사를 삭제하시겠어요?
+            </p>
+            <div className="mt-5 flex gap-2.5">
+              <button
+                className="flex-1 rounded-[14px] border border-[var(--line)] bg-white/60 py-3.5 text-sm font-semibold text-[var(--foreground)]"
+                onClick={handleModalCancel}
+                type="button"
+              >
+                취소
+              </button>
+              <button
+                className="flex-[2] rounded-[14px] bg-[var(--brand-deep)] py-3.5 text-sm font-bold text-white"
+                data-testid="delete-confirm"
+                onClick={handleDeleteConfirm}
+                type="button"
+              >
+                삭제
+              </button>
+            </div>
+          </CenterModal>
+        )
       ) : null}
     </>
   );

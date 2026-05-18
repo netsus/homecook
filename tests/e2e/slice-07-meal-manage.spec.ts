@@ -143,10 +143,12 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
 
     await page.goto(MEAL_SCREEN_URL);
 
-    // App bar should have the heading with date info
-    await expect(page.locator("h1:visible").first()).toBeVisible();
-    // Should include the slot name in the heading text
-    await expect(page.locator("h1:visible").first()).toContainText("아침");
+    if (page.viewportSize()?.width && page.viewportSize()!.width >= 1024) {
+      await expect(page.getByRole("navigation", { name: "식사 경로" })).toContainText("아침 음식");
+    } else {
+      await expect(page.locator("h1:visible").first()).toBeVisible();
+      await expect(page.locator("h1:visible").first()).toContainText("아침");
+    }
   });
 
   test("shows empty state when no meals registered for slot", async ({ page }) => {
@@ -156,7 +158,7 @@ test.describe("Slice 07 meal manage — MEAL_SCREEN", () => {
     await page.goto(MEAL_SCREEN_URL);
 
     await expect(visibleTestId(page, "meal-screen-empty")).toBeVisible();
-    await expect(visibleText(page, "이 끼니에 등록된 식사가 없어요.")).toBeVisible();
+    await expect(visibleTextContaining(page, "이 끼니에 등록된 식사가 없어요")).toBeVisible();
     await expect(visibleTestId(page, "meal-screen-add-cta")).toBeVisible();
   });
 

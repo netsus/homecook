@@ -3,8 +3,12 @@ import { expect, test, type Page } from "@playwright/test";
 
 import {
   installDiscoveryRoutes,
+  installMealDetailRoutes,
+  installPlannerWeekRoutes,
   installRecipeDetailRoutes,
+  MEAL_VISUAL_PATH,
   RECIPE_PATH,
+  setE2EAuthOverride,
 } from "./helpers/mock-routes";
 
 async function expectNoAxeViolations(
@@ -243,5 +247,39 @@ test.describe("QA accessibility smoke", () => {
       allowPrototypeDesktopColorContrast: true,
     });
     await expectReadableTouchTarget(getLoginActionButton(page));
+  });
+
+  test("planner and meal desktop screens are axe-clean", async ({ page }) => {
+    test.skip(isMobileViewport(page), "desktop-only planner/meal parity smoke");
+    await setE2EAuthOverride(page);
+    await installPlannerWeekRoutes(page);
+    await installMealDetailRoutes(page);
+
+    await page.goto("/planner");
+    await expect(
+      page.getByRole("heading", { name: "주간 플래너" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page.goto(MEAL_VISUAL_PATH);
+    await expect(
+      page.locator('[data-testid="meal-recipe-link-meal-visual-1"]:visible'),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
+
+    await page
+      .locator(".web-meal-rail .web-stepper")
+      .getByRole("button", { name: "인분 증가" })
+      .click();
+    await expect(
+      page.getByRole("dialog", { name: "인분 변경" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      allowPrototypeDesktopColorContrast: true,
+    });
   });
 });

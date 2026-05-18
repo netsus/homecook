@@ -18,6 +18,80 @@ export const GREEN_ONION_ID = MOCK_DISCOVERY_FILTER_GREEN_ONION_ID;
 export const BEEF_ID = MOCK_DISCOVERY_FILTER_BEEF_ID;
 export const RECIPE_ID = MOCK_RECIPE_ID;
 export const RECIPE_PATH = `/recipe/${RECIPE_ID}`;
+export const E2E_AUTH_OVERRIDE_KEY = "homecook.e2e-auth-override";
+export const E2E_APP_ORIGIN =
+  process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100";
+export const PLANNER_VISUAL_PATH = "/planner";
+export const MEAL_VISUAL_PLAN_DATE = "2026-05-18";
+export const MEAL_VISUAL_COLUMN_ID = "col-dinner";
+export const MEAL_VISUAL_SLOT_NAME = "저녁";
+export const MEAL_VISUAL_PATH = `/planner/${MEAL_VISUAL_PLAN_DATE}/${MEAL_VISUAL_COLUMN_ID}?slot=${encodeURIComponent(MEAL_VISUAL_SLOT_NAME)}`;
+
+const PLANNER_COLUMNS = [
+  { id: "col-breakfast", name: "아침", sort_order: 0 },
+  { id: "col-lunch", name: "점심", sort_order: 1 },
+  { id: MEAL_VISUAL_COLUMN_ID, name: "저녁", sort_order: 2 },
+] as const;
+
+const FOOD_IMAGES = {
+  bibimbap:
+    "https://images.unsplash.com/photo-1553163147-622ab57be1c7?w=900&h=675&fit=crop&q=80",
+  kimchi:
+    "https://images.unsplash.com/photo-1583224944844-5b268c057b72?w=900&h=675&fit=crop&q=80",
+  jjigae:
+    "https://images.unsplash.com/photo-1582450871972-ab5ca641643d?w=900&h=675&fit=crop&q=80",
+  salad:
+    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&h=675&fit=crop&q=80",
+  soup:
+    "https://images.unsplash.com/photo-1604152135912-04a022e23696?w=900&h=675&fit=crop&q=80",
+} as const;
+
+const MEAL_VISUAL_ITEMS = [
+  {
+    id: "meal-visual-1",
+    recipe_id: RECIPE_ID,
+    recipe_title: "김치찌개",
+    recipe_thumbnail_url: FOOD_IMAGES.jjigae,
+    planned_servings: 2,
+    status: "shopping_done",
+    is_leftover: false,
+  },
+  {
+    id: "meal-visual-2",
+    recipe_id: `${RECIPE_ID}-side`,
+    recipe_title: "미역국",
+    recipe_thumbnail_url: FOOD_IMAGES.soup,
+    planned_servings: 3,
+    status: "registered",
+    is_leftover: false,
+  },
+] as const;
+
+export async function setE2EAuthOverride(
+  page: Page,
+  value: "authenticated" | "guest" = "authenticated",
+) {
+  await page.context().addCookies([
+    {
+      name: E2E_AUTH_OVERRIDE_KEY,
+      sameSite: "Lax",
+      url: E2E_APP_ORIGIN,
+      value,
+    },
+  ]);
+  await page.addInitScript(
+    ({ key, state }) => {
+      window.localStorage.setItem(key, state);
+    },
+    { key: E2E_AUTH_OVERRIDE_KEY, state: value },
+  );
+}
+
+function shiftDateKey(dateKey: string, dayDelta: number) {
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + dayDelta);
+  return date.toISOString().slice(0, 10);
+}
 
 function buildRecipeItems(searchUrl: URL) {
   const query = searchUrl.searchParams.get("q")?.trim() ?? "";
@@ -220,4 +294,118 @@ export async function installRecipeDetailRoutes(
   if (RECIPE_PATH !== recipePath) {
     throw new Error(`Fixture recipe path drift detected: ${recipePath}`);
   }
+}
+
+export async function installPlannerWeekRoutes(page: Page) {
+  await page.route("**/api/v1/planner?*", async (route) => {
+    const requestUrl = new URL(route.request().url());
+    const startDate =
+      requestUrl.searchParams.get("start_date") ?? MEAL_VISUAL_PLAN_DATE;
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: {
+          columns: PLANNER_COLUMNS,
+          meals: [
+            {
+              id: "planner-meal-1",
+              recipe_id: RECIPE_ID,
+              recipe_title: "김치찌개",
+              recipe_thumbnail_url: FOOD_IMAGES.jjigae,
+              plan_date: startDate,
+              column_id: MEAL_VISUAL_COLUMN_ID,
+              planned_servings: 2,
+              status: "registered",
+              is_leftover: false,
+              shopping_list_id: null,
+              shopping_list_title: null,
+            },
+            {
+              id: "planner-meal-2",
+              recipe_id: `${RECIPE_ID}-doenjang`,
+              recipe_title: "된장찌개",
+              recipe_thumbnail_url: FOOD_IMAGES.soup,
+              plan_date: shiftDateKey(startDate, 1),
+              column_id: "col-lunch",
+              planned_servings: 3,
+              status: "shopping_done",
+              is_leftover: false,
+              shopping_list_id: "shopping-visual-1",
+              shopping_list_title: "이번 주 장보기",
+            },
+            {
+              id: "planner-meal-3",
+              recipe_id: `${RECIPE_ID}-salad`,
+              recipe_title: "닭가슴살 샐러드",
+              recipe_thumbnail_url: FOOD_IMAGES.salad,
+              plan_date: shiftDateKey(startDate, 2),
+              column_id: MEAL_VISUAL_COLUMN_ID,
+              planned_servings: 1,
+              status: "cook_done",
+              is_leftover: false,
+              shopping_list_id: "shopping-visual-1",
+              shopping_list_title: "이번 주 장보기",
+            },
+            {
+              id: "planner-meal-4",
+              recipe_id: `${RECIPE_ID}-fried-rice`,
+              recipe_title: "김치볶음밥",
+              recipe_thumbnail_url: FOOD_IMAGES.kimchi,
+              plan_date: shiftDateKey(startDate, 4),
+              column_id: "col-breakfast",
+              planned_servings: 2,
+              status: "registered",
+              is_leftover: true,
+              shopping_list_id: null,
+              shopping_list_title: null,
+            },
+          ],
+        },
+        error: null,
+      },
+    });
+  });
+}
+
+export async function installMealDetailRoutes(page: Page) {
+  await page.route("**/api/v1/meals?*", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+
+    await route.fulfill({
+      json: {
+        success: true,
+        data: { items: MEAL_VISUAL_ITEMS },
+        error: null,
+      },
+    });
+  });
+
+  await page.route("**/api/v1/meals/*", async (route) => {
+    const method = route.request().method();
+    if (method === "PATCH") {
+      await route.fulfill({
+        json: {
+          success: true,
+          data: {
+            id: "meal-visual-1",
+            planned_servings: 3,
+            status: "shopping_done",
+          },
+          error: null,
+        },
+      });
+      return;
+    }
+
+    if (method === "DELETE") {
+      await route.fulfill({ status: 204 });
+      return;
+    }
+
+    await route.continue();
+  });
 }
