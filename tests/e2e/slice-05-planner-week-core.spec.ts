@@ -106,6 +106,10 @@ async function mockPlannerRoutes(
 }
 
 async function centerWeekStrip(page: Page) {
+  if (!isMobileViewport(page)) {
+    return;
+  }
+
   const strip = page.getByTestId("planner-week-strip-viewport").filter({ visible: true });
 
   await strip.evaluate((element) => {
@@ -126,6 +130,23 @@ function visiblePlannerDayCard(page: Page) {
   return page.getByLabel(/식단 카드$/).filter({ visible: true }).first();
 }
 
+function visiblePlannerGridScope(page: Page) {
+  return isMobileViewport(page)
+    ? visiblePlannerDayCard(page)
+    : page.getByRole("region", { name: "주간 식단 표" }).filter({ visible: true }).first();
+}
+
+async function expectPlannerWeekDays(page: Page) {
+  if (isMobileViewport(page)) {
+    await expect(
+      page.getByTestId("planner-week-strip-page-current").filter({ visible: true }).locator("li"),
+    ).toHaveCount(7);
+    return;
+  }
+
+  await expect(page.locator(".web-planner-head").filter({ visible: true })).toHaveCount(7);
+}
+
 test.describe("Slice 05 planner week core", () => {
   test("authenticated user sees dynamic column day cards (Wave1 mobile shell, no emoji, no status badges)", async ({ page }) => {
     await setAuthOverride(page, "authenticated");
@@ -134,28 +155,24 @@ test.describe("Slice 05 planner week core", () => {
     await page.goto("/planner");
 
     const isMobile = isMobileViewport(page);
-    const firstDayCard = visiblePlannerDayCard(page);
+    const plannerGrid = visiblePlannerGridScope(page);
 
     await expect(
-      page.getByRole("heading", { name: isMobile ? "플래너" : "식단 플래너" }),
+      page.getByRole("heading", { name: isMobile ? "플래너" : "주간 플래너" }),
     ).toBeVisible();
     if (isMobile) {
       await expect(page.locator(':visible:has-text("음식 계획 중")').first()).toBeVisible();
-      await expect(page.getByText("현재 범위", { exact: true }).filter({ visible: true })).toHaveCount(0);
-    } else {
-      await expect(page.getByText("현재 범위", { exact: true }).filter({ visible: true })).toHaveCount(1);
     }
+    await expect(page.getByText("현재 범위", { exact: true }).filter({ visible: true })).toHaveCount(0);
     await expect(page.getByText("화면 상태")).toHaveCount(0);
     // Wave1: week nav buttons visible on all viewports
     await expect(page.getByRole("button", { name: "이전 주" })).toBeVisible();
     await expect(page.getByRole("button", { name: "다음 주" })).toBeVisible();
-    await expect(
-      page.getByTestId("planner-week-strip-page-current").filter({ visible: true }).locator("li"),
-    ).toHaveCount(7);
-    await expect(firstDayCard.getByText("아침")).toBeVisible();
-    await expect(firstDayCard.getByText("점심")).toBeVisible();
-    await expect(firstDayCard.getByText("간식")).toBeVisible();
-    await expect(firstDayCard.getByText("저녁")).toBeVisible();
+    await expectPlannerWeekDays(page);
+    await expect(plannerGrid.getByText("아침")).toBeVisible();
+    await expect(plannerGrid.getByText("점심")).toBeVisible();
+    await expect(plannerGrid.getByText("간식")).toBeVisible();
+    await expect(plannerGrid.getByText("저녁")).toBeVisible();
     await expect(visibleText(page, "김치찌개")).toBeVisible();
     await expect(visibleText(page, "샐러드")).toBeVisible();
     await expect(visibleText(page, "과일볼")).toBeVisible();
@@ -163,16 +180,19 @@ test.describe("Slice 05 planner week core", () => {
     await expect(page.getByLabel("식사 등록 완료")).toHaveCount(0);
     await expect(page.getByLabel("장보기 완료")).toHaveCount(0);
     await expect(page.getByLabel("요리 완료")).toHaveCount(0);
-    // Wave1: mobile uses a floating shopping CTA; desktop keeps the existing helper links.
-    await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveAttribute("href", "/shopping/flow");
+    // Wave1 mobile uses a floating shopping CTA; desktop uses the prototype top action label.
+    const shoppingLink = isMobile
+      ? page.getByRole("link", { name: "장보기", exact: true })
+      : page.getByRole("link", { name: "장보기 미리보기" });
+    await expect(shoppingLink).toHaveAttribute("href", "/shopping/flow");
     await expect(page.getByRole("link", { name: "요리하기" })).toHaveCount(0);
     if (isMobile) {
-      const shoppingLink = page.getByRole("link", { name: "장보기", exact: true });
       await expect(shoppingLink).toHaveClass(/fixed/);
       await expect(page.getByRole("navigation", { name: "플래너 하단 탭" })).toBeVisible();
       await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
     } else {
-      await expect(page.getByRole("link", { name: "남은요리" })).toHaveAttribute("href", "/leftovers");
+      await expect(page.getByRole("link", { name: "요리 준비" })).toHaveAttribute("href", "/cooking/ready");
+      await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
     }
     await expect(page.getByRole("button", { name: "컬럼 추가" })).toHaveCount(0);
 
@@ -214,14 +234,18 @@ test.describe("Slice 05 planner week core", () => {
 
     await page.goto("/planner");
 
-    await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveAttribute("href", "/shopping/flow");
+    const shoppingLink = isMobileViewport(page)
+      ? page.getByRole("link", { name: "장보기", exact: true })
+      : page.getByRole("link", { name: "장보기 미리보기" });
+    await expect(shoppingLink).toHaveAttribute("href", "/shopping/flow");
     await expect(page.getByRole("link", { name: "요리하기" })).toHaveCount(0);
     if (isMobileViewport(page)) {
-      await expect(page.getByRole("link", { name: "장보기", exact: true })).toHaveClass(/fixed/);
+      await expect(shoppingLink).toHaveClass(/fixed/);
       await expect(page.getByRole("navigation", { name: "플래너 하단 탭" })).toBeVisible();
       await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
     } else {
-      await expect(page.getByRole("link", { name: "남은요리" })).toHaveAttribute("href", "/leftovers");
+      await expect(page.getByRole("link", { name: "요리 준비" })).toHaveAttribute("href", "/cooking/ready");
+      await expect(page.getByRole("link", { name: "남은요리" })).toHaveCount(0);
     }
   });
 
@@ -246,7 +270,7 @@ test.describe("Slice 05 planner week core", () => {
 
     await expect(
       page.getByRole("heading", {
-        name: isMobileViewport(page) ? "플래너" : "식단 플래너",
+        name: isMobileViewport(page) ? "플래너" : "주간 플래너",
       }),
     ).toBeVisible();
     await expect(visibleText(page, "김치찌개")).toBeVisible();
@@ -276,13 +300,13 @@ test.describe("Slice 05 planner week core", () => {
     await mockPlannerRoutes(page, { columns: threeColumns, meals: threeMeals });
     await page.goto("/planner");
 
-    const firstDayCard = visiblePlannerDayCard(page);
+    const plannerGrid = visiblePlannerGridScope(page);
 
-    await expect(firstDayCard.getByText("아침")).toBeVisible();
-    await expect(firstDayCard.getByText("점심")).toBeVisible();
-    await expect(firstDayCard.getByText("저녁")).toBeVisible();
+    await expect(plannerGrid.getByText("아침")).toBeVisible();
+    await expect(plannerGrid.getByText("점심")).toBeVisible();
+    await expect(plannerGrid.getByText("저녁")).toBeVisible();
     // Should NOT show a 4th column
-    await expect(firstDayCard.getByText("간식")).not.toBeVisible();
+    await expect(plannerGrid.getByText("간식")).toHaveCount(0);
 
     await expect(visibleText(page, "토스트")).toBeVisible();
 
@@ -318,13 +342,13 @@ test.describe("Slice 05 planner week core", () => {
     await mockPlannerRoutes(page, { columns: fiveColumns, meals: fiveMeals });
     await page.goto("/planner");
 
-    const firstDayCard = visiblePlannerDayCard(page);
+    const plannerGrid = visiblePlannerGridScope(page);
 
-    await expect(firstDayCard.getByText("아침")).toBeVisible();
-    await expect(firstDayCard.getByText("점심")).toBeVisible();
-    await expect(firstDayCard.getByText("간식")).toBeVisible();
-    await expect(firstDayCard.getByText("저녁")).toBeVisible();
-    await expect(firstDayCard.getByText("야식")).toBeVisible();
+    await expect(plannerGrid.getByText("아침")).toBeVisible();
+    await expect(plannerGrid.getByText("점심")).toBeVisible();
+    await expect(plannerGrid.getByText("간식")).toBeVisible();
+    await expect(plannerGrid.getByText("저녁")).toBeVisible();
+    await expect(plannerGrid.getByText("야식")).toBeVisible();
 
     await expect(visibleText(page, "라면")).toBeVisible();
 

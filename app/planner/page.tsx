@@ -8,8 +8,9 @@ export default async function PlannerPage() {
   return (
     <AppShell
       bottomTabsMode="hidden"
-      className="wave1-planner-shell"
+      className="wave1-planner-shell wave1-planner-web-shell"
       currentTab="planner"
+      headerMode="hidden"
     >
       <PlannerWeekScreen initialAuthenticated={Boolean(user)} />
     </AppShell>

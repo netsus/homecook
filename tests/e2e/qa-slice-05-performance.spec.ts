@@ -109,7 +109,7 @@ test.describe("Slice 05 local long-run performance smoke", () => {
     await page
       .getByRole("button", { name: dataset.scenario.loginButtonLabel })
       .click();
-    await expect(page.getByRole("heading", { name: "식단 플래너" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "주간 플래너" })).toBeVisible();
     await centerWeekStrip(page);
     await waitForPlannerRange(page, {
       startDate: dataset.scenario.initialRangeStartDate,
