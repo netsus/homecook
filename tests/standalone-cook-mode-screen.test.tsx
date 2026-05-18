@@ -137,6 +137,7 @@ describe("StandaloneCookModeScreen", () => {
     fetchStandaloneCookMode.mockReset();
     completeStandaloneCooking.mockReset();
     mockRouterPush.mockReset();
+    installMatchMedia(false);
   });
 
   afterEach(async () => {

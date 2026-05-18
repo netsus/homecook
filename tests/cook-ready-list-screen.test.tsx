@@ -29,6 +29,22 @@ const isCookingApiError = vi.fn(
 );
 const mockRouterPush = vi.fn();
 
+function installMatchMedia(matchesAppView: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(max-width: 1023px)" ? matchesAppView : !matchesAppView,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 vi.mock("@/lib/auth/e2e-auth-override", () => ({
   readE2EAuthOverride: () => readE2EAuthOverride(),
 }));
@@ -103,10 +119,12 @@ describe("CookReadyListScreen", () => {
     isCookingApiError.mockClear();
     mockRouterPush.mockReset();
     resetCookingReadyStore();
+    installMatchMedia(false);
   });
 
   afterEach(() => {
     cleanup();
+    Reflect.deleteProperty(window, "matchMedia");
   });
 
   // ── Auth state ────────────────────────────────────────────────────────────

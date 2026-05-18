@@ -44,10 +44,12 @@ export function Wave1MobileBottomTab({
   return (
     <nav
       aria-label={ariaLabel}
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--wave1-border)] bg-[var(--wave1-surface)] px-4 pb-[calc(28px+env(safe-area-inset-bottom))] pt-2 lg:hidden"
-      style={{ borderTopWidth: "0.5px" }}
+      className="fixed inset-x-0 bottom-[calc(8px+env(safe-area-inset-bottom))] z-30 px-4 lg:hidden"
     >
-      <div className="mx-auto grid max-w-[430px] grid-cols-4">
+      <div
+        className="mx-auto grid h-16 max-w-[360px] grid-cols-4 rounded-full border border-[var(--wave1-border)] bg-[var(--wave1-surface)] px-2 shadow-[0_14px_36px_rgba(33,37,41,0.16)]"
+        data-slot="bottom-tab-container"
+      >
         {items.map((item) => {
           const active = item.id === currentTab;
 
@@ -55,10 +57,10 @@ export function Wave1MobileBottomTab({
             <Link
               aria-current={active ? "page" : undefined}
               className={[
-                "flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-[3px] py-1 text-[11px] transition-colors",
+                "flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-[3px] py-1 text-[11px] transition-colors",
                 active
-                  ? "font-bold text-[var(--wave1-mint)]"
-                  : "font-medium text-[var(--wave1-text-3)] hover:text-[var(--wave1-text-2)]",
+                  ? "bottom-tab-active-link font-extrabold text-[#111111]"
+                  : "font-semibold text-[var(--wave1-text-3)] hover:text-[var(--wave1-text-2)]",
               ].join(" ")}
               href={item.href}
               key={item.id}
@@ -78,7 +80,7 @@ function HomeIcon({ active }: { active: boolean }) {
   return (
     <svg
       aria-hidden="true"
-      className="h-6 w-6"
+      className={active ? "bottom-tab-active-icon h-6 w-6" : "h-6 w-6"}
       fill={active ? "currentColor" : "none"}
       stroke="currentColor"
       strokeLinejoin="round"
@@ -94,16 +96,37 @@ function CalendarIcon({ active }: { active: boolean }) {
   return (
     <svg
       aria-hidden="true"
-      className="h-6 w-6"
-      fill={active ? "currentColor" : "none"}
+      className={active ? "bottom-tab-active-icon h-6 w-6" : "h-6 w-6"}
+      data-testid="bottom-tab-icon-planner"
+      fill="none"
       stroke="currentColor"
       strokeLinecap="round"
       strokeLinejoin="round"
       strokeWidth="1.8"
       viewBox="0 0 24 24"
     >
+      {active ? (
+        <rect
+          fill="currentColor"
+          height="6.5"
+          rx="2"
+          stroke="none"
+          width="10.5"
+          x="6.75"
+          y="11"
+        />
+      ) : null}
       <path d="M7 3v3M17 3v3M4 8h16M5 5h14v15H5z" fill="none" />
-      {active ? <path d="M8 12h3v3H8zM13 12h3v3h-3z" stroke="none" /> : null}
+      {active ? (
+        <circle
+          cx="12"
+          cy="14.25"
+          data-testid="bottom-tab-planner-center-dot"
+          fill="var(--wave1-surface)"
+          r="2.1"
+          stroke="none"
+        />
+      ) : null}
     </svg>
   );
 }
@@ -114,7 +137,7 @@ function PantryIcon({ active }: { active: boolean }) {
   return (
     <svg
       aria-hidden="true"
-      className="h-6 w-6"
+      className={active ? "bottom-tab-active-icon h-6 w-6" : "h-6 w-6"}
       data-testid="bottom-tab-icon-pantry-fridge"
       fill={active ? "currentColor" : "none"}
       stroke="currentColor"
@@ -134,7 +157,7 @@ function UserIcon({ active }: { active: boolean }) {
   return (
     <svg
       aria-hidden="true"
-      className="h-6 w-6"
+      className={active ? "bottom-tab-active-icon h-6 w-6" : "h-6 w-6"}
       fill={active ? "currentColor" : "none"}
       stroke="currentColor"
       strokeLinecap="round"

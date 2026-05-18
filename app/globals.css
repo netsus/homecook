@@ -146,11 +146,32 @@ button {
 }
 
 .bottom-safe {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 88px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 80px);
 }
 
 .action-safe-bottom-panel {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 96px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 88px);
+}
+
+@keyframes bottom-tab-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.14);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.bottom-tab-active-icon {
+  animation: bottom-tab-pop 180ms ease-out;
+  transform-origin: center;
+}
+
+.bottom-tab-active-link {
+  color: #111111;
 }
 
 .recipe-overview-compact {

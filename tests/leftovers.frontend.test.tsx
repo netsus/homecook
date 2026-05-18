@@ -27,13 +27,18 @@ vi.mock("next/link", () => ({
   default: ({
     children,
     href,
+    prefetch: _prefetch,
     ...props
   }: {
     children: React.ReactNode;
     href: string;
+    prefetch?: boolean;
     [key: string]: unknown;
-  }) =>
-    React.createElement("a", { href, ...props }, children),
+  }) => {
+    void _prefetch;
+
+    return React.createElement("a", { href, ...props }, children);
+  },
 }));
 
 vi.mock("@/lib/supabase/browser", () => ({
@@ -66,6 +71,22 @@ vi.mock("@/components/auth/social-login-buttons", () => ({
   SocialLoginButtons: ({ nextPath }: { nextPath: string }) =>
     React.createElement("div", { "data-testid": "social-login-buttons", "data-next-path": nextPath }, "소셜 로그인"),
 }));
+
+function installMatchMedia(matchesAppView: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(max-width: 1023px)" ? matchesAppView : !matchesAppView,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
 
 const LEFTOVER_ITEMS: LeftoverListItemData[] = [
   {
@@ -111,12 +132,14 @@ const EATEN_ITEMS: LeftoverListItemData[] = [
 
 describe("LeftoversScreen", () => {
   beforeEach(() => {
+    installMatchMedia(false);
     vi.spyOn(leftoversApi, "isLeftoverApiError").mockReturnValue(false);
   });
 
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    Reflect.deleteProperty(window, "matchMedia");
   });
 
   it("renders unauthorized state when not authenticated", async () => {
@@ -406,12 +429,14 @@ describe("LeftoversScreen", () => {
 
 describe("AteListScreen", () => {
   beforeEach(() => {
+    installMatchMedia(false);
     vi.spyOn(leftoversApi, "isLeftoverApiError").mockReturnValue(false);
   });
 
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    Reflect.deleteProperty(window, "matchMedia");
   });
 
   it("renders unauthorized state when not authenticated", async () => {

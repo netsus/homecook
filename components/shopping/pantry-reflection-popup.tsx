@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 
-import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
+import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import type { ShoppingListItemSummary } from "@/types/shopping";
 
 export interface PantryReflectionPopupProps {
@@ -41,7 +41,7 @@ export function PantryReflectionPopup({
     // Pre-select all eligible items
     return new Set(eligibleItems.map((item) => item.id));
   });
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const isMobileViewport = useIsMobileViewport();
   const hasEligibleItems = eligibleItems.length > 0;
 
   useEffect(() => {
@@ -54,21 +54,6 @@ export function PantryReflectionPopup({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onCancel]);
-
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      typeof window.matchMedia !== "function"
-    ) {
-      return;
-    }
-
-    const query = window.matchMedia(APP_VIEW_MEDIA_QUERY);
-    const syncViewport = () => setIsMobileViewport(query.matches);
-    syncViewport();
-    query.addEventListener("change", syncViewport);
-    return () => query.removeEventListener("change", syncViewport);
-  }, []);
 
   const handleToggleItem = (itemId: string) => {
     setSelectedIds((prev) => {

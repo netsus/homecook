@@ -9,7 +9,7 @@ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
 import { Wave1MobileBottomTab } from "@/components/layout/wave1-mobile-bottom-tab";
 import { ContentState } from "@/components/shared/content-state";
-import { APP_VIEW_MEDIA_QUERY } from "@/components/shared/view-mode";
+import { useIsMobileViewport } from "@/components/shared/use-mobile-viewport";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isCookingApiError } from "@/lib/api/cooking";
 import { readE2EAuthOverride } from "@/lib/auth/e2e-auth-override";
@@ -231,25 +231,10 @@ export function CookReadyListScreen({
   const [sessionPendingRecipeId, setSessionPendingRecipeId] = useState<
     string | null
   >(null);
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const isMobileViewport = useIsMobileViewport();
   const sessionPendingRef = useRef(false);
   const navigationFallbackTimeoutRef = useRef<number | null>(null);
   const activeCreatingRecipeId = sessionPendingRecipeId ?? creatingRecipeId;
-
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      typeof window.matchMedia !== "function"
-    ) {
-      return;
-    }
-
-    const query = window.matchMedia(APP_VIEW_MEDIA_QUERY);
-    const syncViewport = () => setIsMobileViewport(query.matches);
-    syncViewport();
-    query.addEventListener("change", syncViewport);
-    return () => query.removeEventListener("change", syncViewport);
-  }, []);
 
   const clearNavigationFallback = useCallback(() => {
     if (
