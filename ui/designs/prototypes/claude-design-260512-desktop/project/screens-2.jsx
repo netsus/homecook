@@ -2,7 +2,7 @@
 /* ============================================
    PLANNER + PANTRY + MYPAGE — spec v1.5.2
    ============================================ */
-const { useState: useS2, useMemo: useMemo2 } = React;
+const { useState: useS2, useMemo: useMemo2, useEffect: useEffect2 } = React;
 const {
   Icon, Button, Chip, Tag, StatePanel, PhotoCard,
   ScreenHeader, SegmentedRow,
@@ -12,7 +12,7 @@ const D2 = window.HC_DATA;
 /* ============================================
    PLANNER_WEEK (§4)
    ============================================ */
-function PlannerWeekScreen({ meals, onOpenAdd, onOpenMeal, onOpenShopping, onOpenCookReady, stateOverride, onStateOverride }) {
+function PlannerWeekScreen({ meals, onOpenAdd, onOpenMeal, onOpenShopping, stateOverride, onStateOverride }) {
   const isEmpty = stateOverride === "empty" || meals.length === 0;
 
   const mealMap = useMemo2(() => {
@@ -42,9 +42,6 @@ function PlannerWeekScreen({ meals, onOpenAdd, onOpenMeal, onOpenShopping, onOpe
         <div className="row gap-2">
           <Button variant="tertiary" leftIcon="chevL">이전 주</Button>
           <Button variant="tertiary" rightIcon="chevR">다음 주</Button>
-          <Button variant="tertiary" leftIcon="pot" onClick={onOpenCookReady}>
-            요리하기
-          </Button>
           <Button variant="primary" leftIcon="cart" onClick={onOpenShopping}>
             장보기 미리보기
           </Button>
@@ -65,9 +62,9 @@ function PlannerWeekScreen({ meals, onOpenAdd, onOpenMeal, onOpenShopping, onOpe
         <aside className="planner-side">
           <section className="planner-side-section">
             <div className="planner-side-title">이번 주 요약</div>
-            <div className="planner-stat"><span>등록된 끼니</span><strong className="tabular">{summary.total}개</strong></div>
-            <div className="planner-stat"><span>장보기 완료</span><strong className="tabular">{summary.shopped}</strong></div>
-            <div className="planner-stat"><span>요리 완료</span><strong className="tabular">{summary.cookedDone}</strong></div>
+            <div className="planner-stat status-registered"><span><span className="planner-stat-dot status-registered" />등록 완료</span><strong className="tabular">{summary.registered}개</strong></div>
+            <div className="planner-stat status-shopped"><span><span className="planner-stat-dot status-shopped" />장보기 완료</span><strong className="tabular">{summary.shopped}개</strong></div>
+            <div className="planner-stat status-cooked"><span><span className="planner-stat-dot status-cooked" />요리 완료</span><strong className="tabular">{summary.cookedDone}개</strong></div>
           </section>
 
           <section className="planner-side-section">
@@ -158,9 +155,9 @@ function PlannerWeekScreen({ meals, onOpenAdd, onOpenMeal, onOpenShopping, onOpe
       </div>
 
       <div className="planner-legend">
-        <span className="planner-legend-item"><span className="planner-legend-dot status-registered" /> 등록됨</span>
-        <span className="planner-legend-item"><span className="planner-legend-dot status-shopped" /> 장보기 완료</span>
-        <span className="planner-legend-item"><span className="planner-legend-dot status-cooked" /> 요리 완료</span>
+        <span className="planner-legend-item status-registered"><span className="planner-legend-dot status-registered" /> 등록 완료</span>
+        <span className="planner-legend-item status-shopped"><span className="planner-legend-dot status-shopped" /> 장보기 완료</span>
+        <span className="planner-legend-item status-cooked"><span className="planner-legend-dot status-cooked" /> 요리 완료</span>
       </div>
     </main>
   );
@@ -306,6 +303,7 @@ function iconForIngredient(i) {
    MYPAGE (§13)
    ============================================ */
 function MyPageScreen({
+  initialTab = "saved",
   onGoRecipebooks,
   onGoShoppingLists,
   onGoLeftovers,
@@ -327,7 +325,11 @@ function MyPageScreen({
     { id: "notif", label: "알림 설정", icon: "bell" },
     { id: "help", label: "도움말", icon: "question" },
   ];
-  const [activeTab, setActiveTab] = useS2("saved");
+  const safeInitialTab = tabs.some(tab => tab.id === initialTab) ? initialTab : "saved";
+  const [activeTab, setActiveTab] = useS2(safeInitialTab);
+  useEffect2(() => {
+    setActiveTab(safeInitialTab);
+  }, [safeInitialTab]);
   const stats = {
     saved: recipebooks.find(b => b.id === "rb-saved")?.count || 0,
     cooked: 26,

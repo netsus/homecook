@@ -107,7 +107,7 @@ window.HC_DATA = {
 
 | Stack screen | Component | Entry points |
 | --- | --- | --- |
-| `COOK_READY_LIST` | `CookReadyListScreen` | MealScreen "요리하기" → redirected here; Planner "요리하기" button; replaced `setCookNotice(true)` calls |
+| `COOK_READY_LIST` | `CookReadyListScreen` | Direct hash / QA route; planner header button removed for app parity; replaced `setCookNotice(true)` calls |
 | `COOK_MODE_PLANNER` | `CookModePlannerScreen` | CookReadyListScreen "요리 시작" button for a specific meal |
 | `COOK_MODE_STANDALONE` | `CookModeStandaloneScreen` | RecipeDetailScreen "요리하기" button |
 

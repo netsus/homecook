@@ -243,12 +243,29 @@ main { display: block; }
 }
 .planner-stat {
   display: flex; justify-content: space-between;
+  align-items: center;
   padding: 8px 0;
   font-size: 14px;
   color: var(--text-2);
   letter-spacing: -0.3px;
 }
+.planner-stat span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
 .planner-stat strong { color: var(--text-1); font-weight: 700; }
+.planner-stat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  background: var(--text-4);
+}
+.planner-stat-dot.status-registered { background: var(--brand); }
+.planner-stat-dot.status-shopped { background: var(--warning); }
+.planner-stat-dot.status-cooked { background: var(--success); }
 
 .planner-quick {
   display: flex; align-items: center; gap: 8px;
