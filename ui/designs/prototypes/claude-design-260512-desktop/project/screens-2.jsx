@@ -43,7 +43,7 @@ function PlannerWeekScreen({ meals, onOpenAdd, onOpenMeal, onOpenShopping, onOpe
           <Button variant="tertiary" leftIcon="chevL">이전 주</Button>
           <Button variant="tertiary" rightIcon="chevR">다음 주</Button>
           <Button variant="tertiary" leftIcon="pot" onClick={onOpenCookReady}>
-            요리 준비
+            요리하기
           </Button>
           <Button variant="primary" leftIcon="cart" onClick={onOpenShopping}>
             장보기 미리보기
@@ -66,7 +66,7 @@ function PlannerWeekScreen({ meals, onOpenAdd, onOpenMeal, onOpenShopping, onOpe
           <section className="planner-side-section">
             <div className="planner-side-title">이번 주 요약</div>
             <div className="planner-stat"><span>등록된 끼니</span><strong className="tabular">{summary.total}개</strong></div>
-            <div className="planner-stat"><span>장본 끼니</span><strong className="tabular">{summary.shopped + summary.cookedDone}</strong></div>
+            <div className="planner-stat"><span>장보기 완료</span><strong className="tabular">{summary.shopped}</strong></div>
             <div className="planner-stat"><span>요리 완료</span><strong className="tabular">{summary.cookedDone}</strong></div>
           </section>
 
@@ -159,7 +159,7 @@ function PlannerWeekScreen({ meals, onOpenAdd, onOpenMeal, onOpenShopping, onOpe
 
       <div className="planner-legend">
         <span className="planner-legend-item"><span className="planner-legend-dot status-registered" /> 등록됨</span>
-        <span className="planner-legend-item"><span className="planner-legend-dot status-shopped" /> 장본 끼니</span>
+        <span className="planner-legend-item"><span className="planner-legend-dot status-shopped" /> 장보기 완료</span>
         <span className="planner-legend-item"><span className="planner-legend-dot status-cooked" /> 요리 완료</span>
       </div>
     </main>

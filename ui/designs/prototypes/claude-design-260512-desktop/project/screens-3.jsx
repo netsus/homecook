@@ -123,10 +123,6 @@ function MealScreen({ mealId, meal: mealProp, onBack, onCook, onGoShopping, onGo
                   <Icon name="check" size={16} />
                   <span>요리 완료된 끼니예요</span>
                 </div>
-              ) : meal.status === "registered" ? (
-                <Button variant="secondary" full leftIcon="cart" disabled>
-                  장보기 완료 후 요리 가능
-                </Button>
               ) : (
                 <Button variant="primary" full leftIcon="pot" onClick={() => onCook(meal.id)}>
                   요리하기
@@ -1315,12 +1311,12 @@ function CookReadyListScreen({ meals, onBack, onStartCook, onOpenMeal, onOpenNot
       <div className="breadcrumb">
         <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 플래너</button>
         <span className="breadcrumb-sep">/</span>
-        <span className="breadcrumb-cur">요리 준비</span>
+        <span className="breadcrumb-cur">요리하기</span>
       </div>
 
       <ScreenHeader
-        title="요리 준비"
-        lead="플래너에 등록한 끼니 중 요리할 수 있는 메뉴를 모아 보여드려요."
+        title="요리하기"
+        lead="플래너에 등록한 끼니를 바로 요리하거나, 장보기 완료된 끼니를 이어서 조리해 보세요."
         right={<Button variant="tertiary" leftIcon="info" onClick={onOpenNotice}>요리모드 안내</Button>}
       />
 
@@ -1368,7 +1364,6 @@ function CookReadyCard({ meal, onStartCook, onOpenMeal }) {
   const recipe = D3.RECIPE[meal.recipeId];
   if (!recipe) return null;
   const statusLabel = meal.status === "registered" ? "등록됨" : "장보기 완료";
-  const canStartCook = meal.status === "shopped";
   return (
     <div className="cook-ready-card">
       <div className="cook-ready-head">
@@ -1383,13 +1378,12 @@ function CookReadyCard({ meal, onStartCook, onOpenMeal }) {
       <div className="cook-ready-actions">
         <Button variant="tertiary" size="sm" leftIcon="eye" onClick={onOpenMeal}>상세 보기</Button>
         <Button
-          variant={canStartCook ? "primary" : "secondary"}
+          variant="primary"
           size="sm"
-          leftIcon={canStartCook ? "pot" : "cart"}
-          onClick={canStartCook ? onStartCook : undefined}
-          disabled={!canStartCook}
+          leftIcon="pot"
+          onClick={onStartCook}
         >
-          {canStartCook ? "요리 시작" : "장보기 필요"}
+          요리 시작
         </Button>
       </div>
     </div>
@@ -1398,19 +1392,19 @@ function CookReadyCard({ meal, onStartCook, onOpenMeal }) {
 
 function CookModePlannerScreen({ meal, recipe, onBack, onComplete, pantryHeld }) {
   if (!meal || !recipe) return null;
-  if (meal.status !== "shopped") {
+  if (meal.status === "cooked") {
     return (
       <main className="screen">
         <div className="breadcrumb">
-          <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 요리 준비</button>
+          <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 요리하기</button>
           <span className="breadcrumb-sep">/</span>
           <span className="breadcrumb-cur">플래너 요리모드</span>
         </div>
         <StatePanel
-          icon="cart"
-          title="장보기 완료 후 요리할 수 있어요"
-          desc="플래너 요리 완료 처리는 등록됨 상태를 건너뛰지 않도록 막아두었어요."
-          action={<Button variant="secondary" leftIcon="chevL" onClick={onBack}>요리 준비로 돌아가기</Button>}
+          icon="check"
+          title="이미 요리 완료된 끼니예요"
+          desc="요리할 다른 끼니를 선택해 주세요."
+          action={<Button variant="secondary" leftIcon="chevL" onClick={onBack}>요리하기로 돌아가기</Button>}
         />
       </main>
     );
@@ -1419,7 +1413,7 @@ function CookModePlannerScreen({ meal, recipe, onBack, onComplete, pantryHeld })
   return (
     <main className="screen cook-mode-screen">
       <div className="breadcrumb">
-        <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 요리 준비</button>
+        <button onClick={onBack} className="breadcrumb-link"><Icon name="chevL" size={14} /> 요리하기</button>
         <span className="breadcrumb-sep">/</span>
         <span className="breadcrumb-cur">플래너 요리모드</span>
       </div>
@@ -1818,7 +1812,7 @@ function CookNoticeDialog({ open, onClose, onGoToCookList }) {
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>닫기</Button>
-          <Button variant="primary" leftIcon="pot" onClick={onGoToCookList}>요리 준비 목록</Button>
+          <Button variant="primary" leftIcon="pot" onClick={onGoToCookList}>요리하기 목록</Button>
         </>
       }
     >
